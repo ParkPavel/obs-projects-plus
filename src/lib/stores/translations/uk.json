@@ -444,6 +444,26 @@
             "read-only-desc": "Ви не можете створювати або редагувати нотатки у проєктах лише для читання."
         },
         "settings": {
+            "about": {
+                "title": "Про Projects Plus",
+                "description": "Розширене управління проєктами для Obsidian з додатковими функціями.",
+                "author": "Мейнтейнер",
+                "author-name": "Park Pavel",
+                "original-author": "Оригінальний автор",
+                "original-author-name": "Marcus Olsson",
+                "version": "Версія",
+                "version-number": "2.0.0",
+                "credits": "Подяки",
+                "credits-desc": "Це форк спільноти оригінального плагіна Obsidian Projects від Marcus Olsson.",
+                "support": "Підтримка",
+                "support-desc": "Якщо цей плагін корисний для вас, розгляньте підтримку розробки.",
+                "visit-website": "Відвідати сайт",
+                "github": "GitHub",
+                "star-github": "⭐ Зірка на GitHub",
+                "original-repo": "Оригінальний репозиторій",
+                "languages": "Підтримувані мови",
+                "languages-desc": "English, Русский, Українська, 中文"
+            },
             "general": {
                 "size-limit": {
                     "name": "Обмеження розміру проєкта",

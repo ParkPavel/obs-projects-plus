@@ -53,6 +53,9 @@
   export let onValidate: (value: string) => boolean;
   export let onColumnRename: (value: string) => void;
   export let editing: boolean = false;
+  export let pinned: boolean = false;
+  export let onColumnPin: () => void;
+  export let onColumnCollapse: () => void;
 
   let inputRef: HTMLInputElement;
   $: if (editing && inputRef) {
@@ -134,13 +137,28 @@
         {checkField ? `${checkedCount}/${count}` : count}
       </Flair>
     {/if}
-    <IconButton
-      icon="more-vertical"
-      size="sm"
-      onClick={(event) => {
-        onColumnMenu().showAtMouseEvent(event);
-      }}
-    />
+    <div class="actions">
+      <IconButton
+        icon={collapse ? "chevrons-left-right" : "chevrons-right-left"}
+        size="sm"
+        tooltip={collapse ? "Развернуть" : "Свернуть"}
+        onClick={onColumnCollapse}
+      />
+      <IconButton
+        icon={pinned ? "pin-off" : "pin"}
+        size="sm"
+        tooltip={pinned ? "Открепить" : "Закрепить"}
+        onClick={onColumnPin}
+      />
+      <IconButton
+        icon="more-vertical"
+        size="sm"
+        tooltip="Меню"
+        onClick={(event) => {
+          onColumnMenu().showAtMouseEvent(event);
+        }}
+      />
+    </div>
   </div>
 </div>
 
@@ -167,6 +185,17 @@
   .right {
     display: flex;
     align-items: center;
+  }
+
+  .actions {
+    display: none;
+    gap: 4px;
+    margin-left: 6px;
+  }
+
+  .projects--board--column--header:hover .actions,
+  .projects--board--column--header:focus-within .actions {
+    display: inline-flex;
   }
 
   .collapse {

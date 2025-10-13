@@ -43,22 +43,79 @@
 
   const flipDurationMs = 200;
 
+  $: pinnedColumns = columns.filter((c) => c.pinned);
+  $: unpinnedColumns = columns.filter((c) => !c.pinned);
+
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
-    columns = e.detail.items;
+    const newUnpinned = e.detail.items;
+    columns = [...pinnedColumns, ...newUnpinned];
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
-    columns = e.detail.items;
+    const newUnpinned = e.detail.items;
+    columns = [...pinnedColumns, ...newUnpinned];
     onSortColumns(columns.map((col) => col.id));
   }
 </script>
 
 <div>
+  <!-- Pinned columns: fixed position, no column-level DnD -->
+  <section class="projects--board">
+    {#each pinnedColumns as column (column.id)}
+      <div class="projects--board--column--dndwrapper projects--board--column--pinned">
+        <BoardColumn
+          {readonly}
+          {richText}
+          {boardEditing}
+          {onEdit}
+          width={columnWidth}
+          collapse={column.collapse}
+          pinned={column.pinned}
+          name={column.id}
+          records={column.records}
+          {onRecordClick}
+          {checkField}
+          {onRecordCheck}
+          onRecordAdd={() => onRecordAdd(column.id)}
+          onDrop={(record, records, trigger) => {
+            // Disallow cross-column drop into pinned columns
+            if (trigger === "droppedIntoAnother") return;
+            onRecordUpdate(record, { ...column, records }, "addToColumn");
+          }}
+          {includeFields}
+          {customHeader}
+          onColumnPin={(name) =>
+            onColumnPin(
+              columns.map((col) => col.id),
+              name
+            )}
+          onColumnDelete={(name, records) =>
+            onColumnDelete(
+              columns.map((col) => col.id),
+              name,
+              records
+            )}
+          {onColumnCollapse}
+          onColumnRename={(name) => {
+            const cols = columns.map((col) => col.id);
+            onColumnRename(cols, column.id, name, column.records);
+          }}
+          onValidate={(name) => {
+            if (name === "") return false;
+            if (columns.map((col) => col.id).includes(name)) return false;
+            return true;
+          }}
+        />
+      </div>
+    {/each}
+  </section>
+
+  <!-- Unpinned columns: DnD enabled within unpinned subset -->
   <section
     class="projects--board"
     use:dndzone={{
       type: "columns",
-      items: columns,
+      items: unpinnedColumns,
       flipDurationMs,
       dropTargetStyle: {
         outline: "none",
@@ -69,7 +126,7 @@
     on:consider={handleDndConsider}
     on:finalize={handleDndFinalize}
   >
-    {#each columns as column (column.id)}
+    {#each unpinnedColumns as column (column.id)}
       <div class="projects--board--column--dndwrapper">
         <BoardColumn
           {readonly}

@@ -103,6 +103,7 @@
   data-id={name}
   class="projects--board--column"
   class:collapse
+  class:pinned
   style={`width: ${width}px; margin-right: ${collapse ? 40 - width : 0}px`}
 >
   <ColumnHeader
@@ -112,9 +113,12 @@
     bind:editing
     {richText}
     {collapse}
+    {pinned}
     {checkField}
     {onColumnMenu}
     {onColumnRename}
+    onColumnPin={() => onColumnPin(name)}
+    onColumnCollapse={() => onColumnCollapse(name)}
     {onValidate}
   />
 
@@ -122,6 +126,7 @@
     <CardGroup
       items={records}
       {boardEditing}
+      disableDnd={pinned}
       {customHeader}
       {onRecordClick}
       {checkField}
@@ -155,5 +160,10 @@
   .collapse {
     transform: rotate(-90deg) translateX(-100%);
     transform-origin: left top 0px;
+  }
+
+  .pinned {
+    border-left: 2px solid var(--interactive-accent);
+    background: color-mix(in srgb, var(--background-primary) 92%, var(--interactive-accent) 8%);
   }
 </style>

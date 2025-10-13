@@ -33,6 +33,70 @@ export class ProjectsSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
+    // Add About section
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.title"))
+      .setDesc(get(i18n).t("settings.about.description"))
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.author"))
+      .setDesc(get(i18n).t("settings.about.author-name"))
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.visit-website"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://parkpavel.github.io/park-pavel/", "_blank");
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.original-author"))
+      .setDesc(get(i18n).t("settings.about.original-author-name"))
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.original-repo"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://github.com/marcusolsson/obsidian-projects", "_blank");
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.credits"))
+      .setDesc(get(i18n).t("settings.about.credits-desc"))
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.version"))
+      .setDesc(get(i18n).t("settings.about.version-number"))
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.github"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.languages"))
+      .setDesc(get(i18n).t("settings.about.languages-desc"))
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.support"))
+      .setDesc(get(i18n).t("settings.about.support-desc"))
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.star-github"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
+          });
+      });
+
     new Setting(containerEl)
       .setName(get(i18n).t("settings.general.size-limit.name"))
       .setDesc(get(i18n).t("settings.general.size-limit.desc"))

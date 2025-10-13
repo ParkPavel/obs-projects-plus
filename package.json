@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-projects",
-  "version": "1.17.4",
-  "description": "Plain text project planning for Obsidian",
+  "name": "obs-projects-plus",
+  "version": "2.0.0",
+  "description": "Enhanced project management for Obsidian with advanced features",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -14,9 +14,17 @@
     "sass-build": "sass ./css/styles.scss ./styles.css",
     "sass-watch": "sass --watch ./css/styles.scss ./styles.css"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
+  "keywords": ["obsidian", "plugin", "project-management", "productivity"],
+  "author": "Park Pavel <https://parkpavel.github.io/park-pavel/>",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ParkPavel/obs-projects-plus",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ParkPavel/obs-projects-plus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ParkPavel/obs-projects-plus/issues"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.15.0",

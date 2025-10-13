@@ -21,7 +21,7 @@ import type { ProjectView } from "./customViewApi";
 import type ProjectsPlugin from "./main";
 import type { ProjectId, ViewId } from "./settings/settings";
 
-export const VIEW_TYPE_PROJECTS = "obsidian-projects";
+export const VIEW_TYPE_PROJECTS = "obs-projects-plus";
 
 export type ProjectsViewState = {
   projectId: ProjectId;

@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc"
   },
-  "author": "Marcus Olsson",
+  "author": "Park Pavel",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^4.8.3"

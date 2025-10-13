@@ -28,9 +28,9 @@ import { ProjectsView, VIEW_TYPE_PROJECTS } from "./view";
 dayjs.extend(isoWeek);
 dayjs.extend(localizedFormat);
 
-const PROJECTS_PLUGIN_ID = "obsidian-projects";
+const PROJECTS_PLUGIN_ID = "obs-projects-plus";
 
-export default class ProjectsPlugin extends Plugin {
+export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeSettings?: Unsubscriber;
 
   /**
@@ -356,8 +356,8 @@ export default class ProjectsPlugin extends Plugin {
  *
  * If `global` is true, the plugin id is prepended to the command id.
  *
- * obsidian-projects:show:<project-id>
- * obsidian-projects:show:<project-id>:<view-id>
+ * obs-projects-plus:show:<project-id>
+ * obs-projects-plus:show:<project-id>:<view-id>
  */
 function getShowCommandId(cmd: ShowCommand, global: boolean): string {
   const res = [];

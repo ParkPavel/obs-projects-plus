@@ -8,9 +8,9 @@
 </script>
 
 <div class="center">
-  <Typography variant="h1">Get started with Projects</Typography>
+  <Typography variant="h1">Get started with Projects Plus</Typography>
   <Typography variant="body">
-    Projects lets you manage groups of related notes using
+    Projects Plus lets you manage groups of related notes using
     <a href="https://help.obsidian.md/Editing+and+formatting/Properties">
       front matter</a
     >. For example, a folder with the blog posts you're working on.
@@ -68,7 +68,7 @@ published: false
     {:else}
       <ol>
         <li>
-          In the top-right corner of the <strong>Projects</strong>
+          In the top-right corner of the <strong>Projects Plus</strong>
           view, click
           <strong>New</strong>.
         </li>

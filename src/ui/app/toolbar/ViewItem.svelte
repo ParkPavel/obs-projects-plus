@@ -116,7 +116,7 @@
       }}
     />
   {:else}
-    {label}
+    <!-- {label} -->
   {/if}
 
   {#if active}

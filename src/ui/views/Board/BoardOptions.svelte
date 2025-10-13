@@ -20,6 +20,8 @@
   export let onIncludedFieldsChange: (fields: string[]) => void;
 
   export let onSettings: () => void;
+  export let freezeAll: boolean = false;
+  export let onToggleFreezeAll: (value: boolean) => void;
 
   $: groupByField = statusField
     ? getFieldByName(fields, statusField)
@@ -86,5 +88,10 @@
     enabled: includedFields.includes(field.name),
   }))}
   onChange={handleIncludedFieldsChange}
+/>
+<IconButton
+  icon={freezeAll ? "lock" : "unlock"}
+  title={freezeAll ? $i18n.t("views.board.unfreeze-all") : $i18n.t("views.board.freeze-all")}
+  onClick={() => onToggleFreezeAll(!freezeAll)}
 />
 <IconButton icon="settings" onClick={onSettings} />

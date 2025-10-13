@@ -433,7 +433,7 @@
       groupByField,
       orderSyncField,
       !hasSort
-    )}
+    ).map((c) => (config?.freezeAll ? { ...c, pinned: true } : c))}
     {columnWidth}
     checkField={fields.find((field) => field.name === config?.checkField)?.name}
     includeFields={fields.filter((field) => includeFields.includes(field.name))}

@@ -2,7 +2,6 @@
   import { Button, Icon, Popover } from "obsidian-svelte";
   import { Flair } from "src/ui/components/Flair";
 
-  export let label: string;
   export let icon: string;
   export let count: number;
   export let disabled: boolean;
@@ -19,7 +18,6 @@
   {disabled}
 >
   <Icon name={icon} />
-  {label}
   {#if count}
     <Flair variant="primary">{count}</Flair>
   {/if}

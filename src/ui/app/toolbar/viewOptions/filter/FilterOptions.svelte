@@ -60,8 +60,34 @@
         getFilterOperatorType(detail as FilterOperator) !==
         getFilterOperatorType(filter.conditions[i]?.operator)
       ) {
-        //TODO: potential type conversion here.
-        filter = setValue(filter, i, "");
+        const prev = filter.conditions[i]?.value ?? "";
+        const nextType = getFilterOperatorType(detail as FilterOperator);
+
+        let nextValue: string = "";
+
+        // простая и безопасная конверсия без изменения логики фильтрации
+        if (prev && typeof prev === "string") {
+          if (nextType === "binary-number") {
+            const num = Number(prev);
+            nextValue = Number.isFinite(num) ? String(num) : "";
+          } else if (nextType === "binary-date") {
+            const d = dayjs(prev);
+            nextValue = d.isValid() ? d.toISOString() : "";
+          } else if (nextType === "binary-multitext") {
+            try {
+              // если уже JSON-массив — сохраняем; иначе превращаем в массив из одного элемента
+              const parsed = JSON.parse(prev);
+              nextValue = Array.isArray(parsed) ? JSON.stringify(parsed) : JSON.stringify([String(prev)]);
+            } catch {
+              nextValue = JSON.stringify([String(prev)]);
+            }
+          } else if (nextType === "binary-text") {
+            // число/дата → строка — оставляем как есть
+            nextValue = String(prev);
+          }
+        }
+
+        filter = setValue(filter, i, nextValue);
       }
       filter = setOperator(filter, i, detail as FilterOperator);
       onFilterChange(filter);
@@ -119,32 +145,36 @@
       <Select
         value={condition.field}
         options={fieldOptions}
+        tooltip={$i18n.t("components.filter.field")}
         on:change={handleFieldChange(i)}
       />
       <Select
         value={condition.operator}
+        tooltip={$i18n.t("components.filter.operator")}
         on:change={handleOperatorChange(i)}
         options={field ? getOperatorsByField(field) : []}
       />
       {#if filterOperatorTypes[condition.operator] === "binary-text"}
         <TextInput
           value={condition.value ?? ""}
+          placeholder={$i18n.t("components.filter.value") ?? ""}
           on:blur={handleValueChange(i)}
         />
       {:else if filterOperatorTypes[condition.operator] === "binary-number"}
         <NumberInput
-          value={parseFloat(condition.value ?? "")}
+          value={(condition.value ?? "") === "" || Number.isNaN(Number(condition.value)) ? null : Number(condition.value)}
+          placeholder={$i18n.t("components.filter.value") ?? ""}
           on:blur={handleValueChange(i)}
         />
       {:else if filterOperatorTypes[condition.operator] === "binary-date"}
         {#if field?.typeConfig?.time}
           <DatetimeInput
-            value={dayjs(condition.value ?? "").toDate()}
+            value={(($v)=> $v.isValid() ? $v.toDate() : null)(dayjs(condition.value ?? ""))}
             on:blur={handleValueChange(i)}
           />
         {:else}
           <DateInput
-            value={dayjs(condition.value ?? "").toDate()}
+            value={(($v)=> $v.isValid() ? $v.toDate() : null)(dayjs(condition.value ?? ""))}
             on:blur={handleValueChange(i)}
           />
         {/if}

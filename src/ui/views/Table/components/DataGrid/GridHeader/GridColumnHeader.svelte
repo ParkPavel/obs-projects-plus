@@ -17,6 +17,9 @@
       onColumnMenu(column).showAtMouseEvent(event);
     };
   }
+
+  // Optional sort info if provided by upstream column
+  $: sortInfo = (column as unknown as any)?.sort;
 </script>
 
 <div
@@ -25,15 +28,25 @@
   style:width={`${column.width}px`}
   class:pinned={column.pinned}
 >
-  <Icon name={fieldIcon(column)} tooltip={fieldDisplayText(column)} />
+  <div class="left">
+    <Icon name={fieldIcon(column)} tooltip={fieldDisplayText(column)} />
+    <TextLabel value={column.field} />
+  </div>
 
-  <TextLabel value={column.field} />
+  <div class="right">
+    {#if sortInfo}
+      <Icon
+        name={sortInfo?.direction === "desc" ? "arrow-down" : "arrow-up"}
+        tooltip={sortInfo?.direction === "desc" ? "Сортировка по убыванию" : "Сортировка по возрастанию"}
+      />
+    {/if}
 
-  <IconButton
-    size="sm"
-    icon="vertical-three-dots"
-    onClick={handleFieldClick(column)}
-  />
+    <IconButton
+      size="sm"
+      icon="vertical-three-dots"
+      onClick={handleFieldClick(column)}
+    />
+  </div>
 </div>
 
 <style>
@@ -57,6 +70,18 @@
     padding: 0 4px;
 
     cursor: default;
+  }
+
+  .left {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .right {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   div.pinned {

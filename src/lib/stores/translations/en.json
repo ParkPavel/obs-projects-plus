@@ -19,13 +19,13 @@
         },
         "commands": {
             "show-projects": {
-                "name": "Show projects"
+                "name": "Show projects plus"
             },
             "create-project": {
-                "name": "Create new project"
+                "name": "Create new project plus"
             },
             "create-note": {
-                "name": "Create new note"
+                "name": "Create new note plus"
             }
         },
         "menus": {
@@ -62,7 +62,7 @@
                 "archive": {
                     "short-title": "Archive project",
                     "title": "Archive project",
-                    "message": "Are you sure you want to archive \"{{project}}\"? You can restore it later in Projects plugin's setting tab.",
+                    "message": "Are you sure you want to archive \"{{project}}\"? You can restore it later in Projects Plus plugin's setting tab.",
                     "notice": "Project archived! If you are using Projects across multiple devices and syncing between them, please upgrade to version 1.17.0 or above for all your devices to avoid losing your archived project configurations.",
                     "cta": "Archive"
                 },
@@ -444,6 +444,26 @@
             "read-only-desc": "You can't create or edit notes in read-only projects."
         },
         "settings": {
+            "about": {
+                "title": "About Projects Plus",
+                "description": "Enhanced project management for Obsidian with advanced features.",
+                "author": "Maintainer",
+                "author-name": "Park Pavel",
+                "original-author": "Original Author",
+                "original-author-name": "Marcus Olsson",
+                "version": "Version",
+                "version-number": "2.0.0",
+                "credits": "Credits",
+                "credits-desc": "This is a community-maintained fork of the original Obsidian Projects plugin by Marcus Olsson.",
+                "support": "Support",
+                "support-desc": "If you find this plugin useful, consider supporting the development.",
+                "visit-website": "Visit Website",
+                "github": "GitHub",
+                "star-github": "⭐ Star on GitHub",
+                "original-repo": "Original Repository",
+                "languages": "Supported Languages",
+                "languages-desc": "English, Русский, Українська, 中文"
+            },
             "general": {
                 "size-limit": {
                     "name": "Project size limit",
@@ -493,8 +513,8 @@
             }
         },
         "obsidian": {
-            "ribbon-tooltip": "Open projects",
-            "hover-link-settings": "Projects"
+            "ribbon-tooltip": "Open projects plus",
+            "hover-link-settings": "Projects Plus"
         }
     }
 }

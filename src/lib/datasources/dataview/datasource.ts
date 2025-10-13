@@ -39,6 +39,14 @@ export class DataviewDataSource extends DataSource {
     super(project, preferences);
   }
 
+  /**
+   * Явное обновление данных: пере-запросить текущий Dataview.
+   * Не меняет API DataSource для остальных источников.
+   */
+  async refresh(): Promise<DataFrame> {
+    return this.queryAll();
+  }
+
   async queryOne(): Promise<DataFrame> {
     return this.queryAll();
   }

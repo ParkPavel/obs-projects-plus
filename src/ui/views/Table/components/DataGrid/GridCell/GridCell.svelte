@@ -158,6 +158,7 @@
     />
   </div>
 {:else}
+  <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
   <div
     bind:this={ref}
     role={role()}
@@ -168,8 +169,9 @@
     class:rowHeader
     class:columnHeader
     class:pinned={column.pinned}
+    class:editable={column.editable && !columnHeader && !rowHeader}
     style={`width: ${column.width}px`}
-    tabindex={!columnHeader && !rowHeader ? 1 : undefined}
+    tabindex={!columnHeader && !rowHeader ? -1 : undefined}
     on:click={handleClick}
     on:dblclick={handleDoubleClick}
     on:mousedown
@@ -231,6 +233,19 @@
     box-shadow: 0 0 0 2px inset var(--interactive-accent);
     border-radius: var(--radius-s);
     padding: 0;
+  }
+
+  /* Affordance for editable cells */
+  .editable {
+    cursor: text;
+    transition: box-shadow 120ms ease, background 120ms ease;
+  }
+  .editable:hover {
+    box-shadow: 0 0 0 2px inset var(--background-modifier-border-focus);
+    background: var(--background-primary-alt);
+  }
+  .editable:focus-within {
+    box-shadow: 0 0 0 2px inset var(--interactive-accent);
   }
 
   .columnHeader {

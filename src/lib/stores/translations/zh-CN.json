@@ -444,6 +444,26 @@
             "read-only-desc": "不能在只读项目中新增、编辑笔记。"
         },
         "settings": {
+            "about": {
+                "title": "关于 Projects Plus",
+                "description": "为 Obsidian 提供增强的项目管理功能。",
+                "author": "维护者",
+                "author-name": "Park Pavel",
+                "original-author": "原作者",
+                "original-author-name": "Marcus Olsson",
+                "version": "版本",
+                "version-number": "2.0.0",
+                "credits": "致谢",
+                "credits-desc": "这是 Marcus Olsson 原始 Obsidian Projects 插件的社区维护分支。",
+                "support": "支持",
+                "support-desc": "如果您觉得这个插件有用，请考虑支持开发。",
+                "visit-website": "访问网站",
+                "github": "GitHub",
+                "star-github": "⭐ 在 GitHub 上点赞",
+                "original-repo": "原始仓库",
+                "languages": "支持的语言",
+                "languages-desc": "English, Русский, Українська, 中文"
+            },
             "general": {
                 "size-limit": {
                     "name": "最大条目数量",

@@ -45,7 +45,11 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
       );
 
       if (source.includes(file.path)) {
-        dataFrame.merge(await source.queryOne(file, get(dataFrame).fields));
+        if (source instanceof DataviewDataSource && "refresh" in source) {
+          dataFrame.merge(await source.refresh());
+        } else {
+          dataFrame.merge(await source.queryOne(file, get(dataFrame).fields));
+        }
       } else if (recordExists) {
         dataFrame.deleteRecord(file.path);
       }
@@ -59,12 +63,6 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
 function withDataSource(callback: (source: DataSource) => Promise<void>) {
   const source = get(dataSource);
   if (!source) {
-    return;
-  }
-
-  // This is a hack to trigger the Dataview query to run again when a file changes.
-  if (source instanceof DataviewDataSource) {
-    dataSource.set(source);
     return;
   }
 

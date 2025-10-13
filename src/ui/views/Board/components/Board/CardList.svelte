@@ -1,6 +1,6 @@
 <script lang="ts">
   // import { Checkbox, InternalLink} from "obsidian-svelte";
-  import { Checkbox } from "obsidian-svelte";
+  import { Checkbox, IconButton } from "obsidian-svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
 
   import {
@@ -10,6 +10,7 @@
   } from "src/lib/dataframe/dataframe";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { i18n } from "src/lib/stores/i18n";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
   import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
   import {
@@ -39,6 +40,7 @@
   export let checkField: string | undefined;
   export let customHeader: DataField | undefined;
   export let boardEditing: boolean;
+  export let disableDnd: boolean = false;
 
   const getRecordColor = getRecordColorContext.get();
   const sortRecords = sortRecordsContext.get();
@@ -68,7 +70,7 @@
     !!(item as any)[SHADOW_ITEM_MARKER_PROPERTY_NAME];
 </script>
 
-<div
+  <div
   class="projects--board--card-list"
   on:consider={handleDndConsider}
   on:finalize={handleDndFinalize}
@@ -82,7 +84,7 @@
       background: "var(--board-column-drag-accent)",
       transition: "all 150ms ease-in-out",
     },
-    dragDisabled: boardEditing,
+    dragDisabled: boardEditing || disableDnd,
     morphDisabled: true,
   }}
 >
@@ -134,6 +136,13 @@
               {@const path = item.values["path"]}
               {getDisplayName(isString(path) ? path : item.id)}
             </InternalLink>
+            <span class="edit-hint">
+              <IconButton
+                icon="pencil"
+                tooltip={$i18n.t("components.note.edit")}
+                on:click={() => onRecordClick(item)}
+              />
+            </span>
           {:else}
             <CardMetadata fields={[customHeader]} record={item} />
           {/if}
@@ -145,10 +154,29 @@
 </div>
 
 <style>
+  .projects--board--card {
+    transition: box-shadow 120ms ease, transform 120ms ease, background 120ms ease;
+  }
+  .projects--board--card:hover,
+  .projects--board--card:focus-within {
+    box-shadow: 0 2px 8px var(--background-modifier-box-shadow);
+    transform: translateY(-1px);
+    background: var(--background-primary-alt);
+  }
   div.card-header {
     display: flex;
     gap: 4px;
     align-items: center;
+  }
+
+  .card-header .edit-hint {
+    margin-left: auto;
+    display: none;
+  }
+
+  .projects--board--card:hover .edit-hint,
+  .projects--board--card:focus-within .edit-hint {
+    display: inline-flex;
   }
 
   .checkbox-wrapper {

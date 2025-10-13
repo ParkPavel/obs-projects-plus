@@ -36,6 +36,10 @@
 
     onConfigChange(field ? { ...rest, checkField: field.name } : { ...rest });
   }
+
+  function handleToggleFreezeAll(value: boolean) {
+    onConfigChange({ ...config, freezeAll: value });
+  }
 </script>
 
 <!--
@@ -52,6 +56,8 @@
         {fields}
         statusField={config.groupByField}
         checkField={config.checkField}
+        freezeAll={config.freezeAll ?? false}
+        onToggleFreezeAll={handleToggleFreezeAll}
         onStatusFieldChange={handleStatusFieldChange}
         onCheckFieldChange={handleCheckFieldChange}
         includedFields={config.includeFields ?? []}

@@ -84,7 +84,7 @@
   border-top-right-radius: var(--radius-s);
 }
 
-.workspace-leaf-content[data-type="obsidian-projects"] .view-content {
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-content {
   padding: 0;
 }
 

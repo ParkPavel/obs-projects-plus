@@ -6,6 +6,7 @@ export interface BoardConfig {
   readonly columnWidth?: number;
   readonly columns?: ColumnSettings;
   readonly includeFields?: string[];
+  readonly freezeAll?: boolean;
 }
 
 export interface ColumnSettings {
