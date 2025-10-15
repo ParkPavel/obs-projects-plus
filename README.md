@@ -113,13 +113,23 @@ created: {{date}}
 <div align="center">
 
 ### Table View
-![Table View](https://via.placeholder.com/800x400/2d3748/ffffff?text=Table+View+Preview)
+![Table View](screenshots/Table.png)
 
 ### Board View
-![Board View](https://via.placeholder.com/800x400/2d3748/ffffff?text=Board+View+Preview)
+![Board View](screenshots/board.png)
 
 ### Calendar View
-![Calendar View](https://via.placeholder.com/800x400/2d3748/ffffff?text=Calendar+View+Preview)
+![Calendar View](screenshots/Calendar.png)
+
+### Gallery View
+![Gallery View](screenshots/Gallery.png)
+
+### Mobile Previews
+![Table Mobile](screenshots/Tablemob.jpg)
+![Board Mobile](screenshots/Boardmob.jpg)
+![Board Mobile 2](screenshots/BoardMob2.jpg)
+![Calendar Mobile](screenshots/CalendarMob.jpg)
+![Gallery Mobile](screenshots/Gallerymob2.jpg)
 
 </div>
 
