@@ -112,24 +112,18 @@ created: {{date}}
 
 <div align="center">
 
-### Table View
-![Table View](screenshots/Table.png)
+### Mini Gallery
 
-### Board View
-![Board View](screenshots/board.png)
+<a href="screenshots/Table.png"><img src="screenshots/Table.png" alt="Table View" width="220"></a>
+<a href="screenshots/board.png"><img src="screenshots/board.png" alt="Board View" width="220"></a>
+<a href="screenshots/Calendar.png"><img src="screenshots/Calendar.png" alt="Calendar View" width="220"></a>
+<a href="screenshots/Gallery.png"><img src="screenshots/Gallery.png" alt="Gallery View" width="220"></a>
 
-### Calendar View
-![Calendar View](screenshots/Calendar.png)
-
-### Gallery View
-![Gallery View](screenshots/Gallery.png)
-
-### Mobile Previews
-![Table Mobile](screenshots/Tablemob.jpg)
-![Board Mobile](screenshots/Boardmob.jpg)
-![Board Mobile 2](screenshots/BoardMob2.jpg)
-![Calendar Mobile](screenshots/CalendarMob.jpg)
-![Gallery Mobile](screenshots/Gallerymob2.jpg)
+<a href="screenshots/Tablemob.jpg"><img src="screenshots/Tablemob.jpg" alt="Table Mobile" width="180"></a>
+<a href="screenshots/Boardmob.jpg"><img src="screenshots/Boardmob.jpg" alt="Board Mobile" width="180"></a>
+<a href="screenshots/BoardMob2.jpg"><img src="screenshots/BoardMob2.jpg" alt="Board Mobile 2" width="180"></a>
+<a href="screenshots/CalendarMob.jpg"><img src="screenshots/CalendarMob.jpg" alt="Calendar Mobile" width="180"></a>
+<a href="screenshots/Gallerymob2.jpg"><img src="screenshots/Gallerymob2.jpg" alt="Gallery Mobile" width="180"></a>
 
 </div>
 
