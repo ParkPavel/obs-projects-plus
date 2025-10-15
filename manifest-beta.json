@@ -1,11 +1,12 @@
 {
   "id": "obs-projects-plus",
-  "name": "Projects Plus",
+  "name": "Projects Plus (Beta)",
   "version": "2.0.0-beta",
-  "minAppVersion": "1.0.0",
-  "description": "Enhanced project management for Obsidian with advanced features.",
+  "minAppVersion": "1.5.7",
+  "description": "Enhanced project management for Obsidian with advanced features (beta).",
   "author": "Park Pavel",
   "authorUrl": "https://parkpavel.github.io/park-pavel/",
   "fundingUrl": "https://github.com/ParkPavel",
   "isDesktopOnly": false
 }
+
