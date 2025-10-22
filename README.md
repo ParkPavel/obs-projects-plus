@@ -35,11 +35,6 @@ Perfect for content managers, researchers, and anyone who needs to organize note
 - **🔍 Dataview Integration** - Use Dataview queries for complex filtering
 - **📝 Custom Templates** - Configure note templates for each project
 
-### 🌍 **Internationalization**
-- 🇺🇸 **English** - Full interface translation
-- 🇷🇺 **Русский** - Complete Russian localization
-- 🇺🇦 **Українська** - Ukrainian language support
-- 🇨🇳 **中文** - Chinese language support
 
 ### ⚡ **Performance & Stability**
 - Enhanced performance optimizations
