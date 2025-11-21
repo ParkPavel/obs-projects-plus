@@ -1,8 +1,8 @@
 # 🚀 Release Information
 
-## Current Release: v2.0.0
+## Current Release: v2.0.1
 
-**Release Date**: January 2025  
+**Release Date**: November 21, 2025  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.0.0+
 
@@ -36,6 +36,11 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 - **Settings Format**: Enhanced settings with backward compatibility
 
 ## 📋 Release Notes
+
+### 🎉 v2.0.1 - Patch Release
+- **Code Cleanup**: Removed AI-generated bloat and redundant code.
+- **Build Configuration**: Updated vite, tsconfig.json, package.json for better builds.
+- **Documentation**: Created/updated internal_docs.md with comprehensive project analysis.
 
 ### 🎉 v2.0.0 - Major Release
 
@@ -85,7 +90,7 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 
 | Projects Plus | Obsidian | Status |
 |---------------|-----------|--------|
-| **v2.0.0** | 1.0.0+ | ✅ Fully Supported |
+| **v2.0.1** | 1.0.0+ | ✅ Fully Supported |
 | **v1.17.4** | 0.15.0+ | ⚠️ Legacy Support |
 
 ### Plugin Compatibility
@@ -117,7 +122,7 @@ ParkPavel/obs-projects-plus@alpha
 
 ## 📈 Performance Metrics
 
-### v2.0.0 Performance Improvements
+### v2.0.1 Performance Improvements
 
 | Metric | v1.17.4 | v2.0.0 | Improvement |
 |--------|---------|--------|-------------|
@@ -128,7 +133,7 @@ ParkPavel/obs-projects-plus@alpha
 
 ## 🐛 Known Issues
 
-### Current Issues (v2.0.0)
+### Current Issues (v2.0.1)
 - **Issue #123**: Calendar view may show incorrect dates in some timezones
 - **Issue #124**: Large projects (>5000 notes) may experience slow loading
 - **Issue #125**: Some themes may not display correctly in dark mode
@@ -169,7 +174,7 @@ Always backup your vault before major updates:
 
 ## 🎯 Next Steps
 
-1. **Install** Projects Plus v2.0.0
+1. **Install** Projects Plus v2.0.1
 2. **Read** the [User Guide](docs/user-guide.md)
 3. **Explore** the [API Documentation](docs/api.md)
 4. **Join** the community discussions
