@@ -36,7 +36,7 @@
       event.preventDefault();
 
       const href = closestAnchor.getAttr("href");
-      const newLeaf = event.button === 1 || event.ctrlKey || event.metaKey;
+      const newLeaf = false;
 
       if (href) {
         $app.workspace.openLinkText(href, sourcePath, newLeaf);

@@ -1,4 +1,5 @@
-import moment from "moment";
+import dayjs from "dayjs";
+
 import { App, Modal } from "obsidian";
 import { get } from "svelte/store";
 
@@ -42,8 +43,9 @@ export class CreateNoteModal extends Modal {
       props: {
         name: this.project.defaultName
           ? interpolateTemplate(this.project.defaultName, {
-              date: (format) => moment().format(format || "YYYY-MM-DD"),
-              time: (format) => moment().format(format || "HH:mm"),
+              date: (format) => dayjs().format(format || "YYYY-MM-DD"),
+              time: (format) => dayjs().format(format || "HH:mm"),
+
             })
           : nextUniqueFileName(
               this.getNewNotesFolder(this.project),

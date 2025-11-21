@@ -55,9 +55,8 @@
     if (draggedEl) draggedEl.empty();
   }
 
-  function isShadowItem(view: ViewDefinition) {
-    // @ts-ignore
-    return view[SHADOW_ITEM_MARKER_PROPERTY_NAME];
+  function isShadowItem(view: ViewDefinition): boolean {
+    return (view as any)[SHADOW_ITEM_MARKER_PROPERTY_NAME];
   }
 </script>
 

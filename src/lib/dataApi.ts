@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { produce } from "immer";
-import moment from "moment";
+
+
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
 
@@ -74,7 +75,7 @@ export class DataApi {
   }
 
   async renameField(paths: string[], from: string, to: string): Promise<void> {
-    Promise.all(
+    await Promise.all(
       paths
         .map((path) => this.fileSystem.getFile(path))
         .filter(notEmpty)
@@ -85,7 +86,7 @@ export class DataApi {
   }
 
   async deleteField(paths: string[], name: string): Promise<void> {
-    Promise.all(
+    await Promise.all(
       paths
         .map((path) => this.fileSystem.getFile(path))
         .filter(notEmpty)
@@ -108,8 +109,9 @@ export class DataApi {
         content = await file.read();
         content = interpolateTemplate(content, {
           title: () => getNameFromPath(record.id),
-          date: (format) => moment().format(format || "YYYY-MM-DD"),
-          time: (format) => moment().format(format || "HH:mm"),
+          date: (format) => dayjs().format(format || "YYYY-MM-DD"),
+          time: (format) => dayjs().format(format || "HH:mm"),
+
         });
         if (record.values["tags"]) {
           const templateTags = F.pipe(
@@ -121,9 +123,8 @@ export class DataApi {
               (right) => right ?? [] // handle `null`
             )
           );
-          //@ts-ignore explict input in `createDataRecord()`
           const tagSet: Set<string> = new Set(
-            templateTags.concat(record.values["tags"])
+            templateTags.concat((record.values["tags"] ?? []) as string[])
           );
           record.values["tags"] = [...tagSet];
         }

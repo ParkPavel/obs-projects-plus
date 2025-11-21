@@ -2,7 +2,7 @@
 
 # 🚀 Projects Plus
 
-**Enhanced project management for Obsidian with advanced features**
+**Улучшенное управление проектами для Obsidian с расширенными возможностями**
 
 [![Build Obsidian plugin](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/ci.yml/badge.svg)](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/ci.yml)
 [![Release Obsidian plugin](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/release.yml/badge.svg)](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/release.yml)
@@ -15,78 +15,87 @@
 
 ---
 
-## ✨ Overview
+## ✨ Обзор
 
-**Projects Plus** is a community-maintained fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) plugin by Marcus Olsson. This enhanced version provides advanced project management features for [Obsidian](https://obsidian.md) with improved performance, stability, and additional customization options.
+**Projects Plus** — это поддерживаемый сообществом форк оригинального плагина [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) от Marcus Olsson. Данная улучшенная версия предоставляет расширенные возможности управления проектами для [Obsidian](https://obsidian.md) с повышенной производительностью, стабильностью и дополнительными опциями настройки.
 
-Perfect for content managers, researchers, and anyone who needs to organize notes into manageable projects. Create drafts, track their status, and schedule publication dates.
+Идеально подходит для контент-менеджеров, исследователей и всех, кому необходимо организовывать заметки в управляемые проекты. Создавайте черновики, отслеживайте их статус и планируйте даты публикации.
 
-## 🌟 Features
+## 🌟 Возможности
 
-### 📊 **Multiple View Types**
-- **📋 Table View** - Spreadsheet-like interface for data management
-- **📌 Board View** - Kanban-style project boards
-- **📅 Calendar View** - Timeline and scheduling interface
-- **🖼️ Gallery View** - Visual card-based layout
+### 📊 **Множественные типы представлений**
+- **📋 Табличное представление** - Интерфейс в стиле электронной таблицы для управления данными
+- **📌 Доска** - Проектные доски в стиле Kanban
+- **📅 Календарное представление** - Интерфейс временной шкалы и планирования
+- **🖼️ Галерея** - Визуальное представление на основе карточек
 
-### 🔧 **Advanced Configuration**
-- **📁 Folder-based Projects** - Create projects from existing folders
-- **🏷️ Tag-based Projects** - Organize by tags with hierarchy support
-- **🔍 Dataview Integration** - Use Dataview queries for complex filtering
-- **📝 Custom Templates** - Configure note templates for each project
+### 🔧 **Расширенная настройка**
+- **📁 Проекты на основе папок** - Создание проектов из существующих папок
+- **🏷️ Проекты на основе тегов** - Организация по тегам с поддержкой иерархии
+- **🔍 Интеграция с Dataview** - Использование запросов Dataview для сложной фильтрации
+- **📝 Пользовательские шаблоны** - Настройка шаблонов заметок для каждого проекта
 
 
-### ⚡ **Performance & Stability**
-- Enhanced performance optimizations
-- Improved memory management
-- Better error handling and recovery
-- Smooth user experience
+### ⚡ **Производительность и стабильность**
+- Улучшенные оптимизации производительности
+- Улучшенное управление памятью
+- Лучшая обработка ошибок и восстановление
+- Плавный пользовательский опыт
 
-## 🚀 Quick Start
+## 🚀 Быстрый старт
 
-### Installation via BRAT (Recommended)
+### Установка через BRAT (Рекомендуется)
 
-1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
-2. Open BRAT settings
-3. Add this repository: `ParkPavel/obs-projects-plus`
-4. Enable the plugin in Obsidian settings
+1. Установите плагин [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+2. Откройте настройки BRAT
+3. Добавьте этот репозиторий: `ParkPavel/obs-projects-plus`
+4. Включите плагин в настройках Obsidian
 
-### Manual Installation
+### Ручная установка
 
-1. Download the latest release from [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases)
-2. Extract the files to your vault's `.obsidian/plugins/obs-projects-plus/` folder
-3. Enable the plugin in Obsidian settings
+1. Скачайте последний релиз из [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases)
+2. Извлеките файлы в папку `.obsidian/plugins/obs-projects-plus/` вашего хранилища
+3. Включите плагин в настройках Obsidian
 
-### Getting Started
+### Начало работы
 
-1. Press **Ctrl+P** (or **Cmd+P** on macOS) to open the **Command palette**
-2. Select **Projects Plus: Show projects plus**
-3. Create your first project by clicking the **+** button
+1. Нажмите **Ctrl+P** (или **Cmd+P** на macOS) для открытия **палитры команд**
+2. Выберите **Projects Plus: Show projects plus**
+3. Создайте ваш первый проект, нажав кнопку **+**
 
-## 📖 Usage Examples
+---
 
-### Creating a Project from Folder
+## 📢 Важное (внутренние отчёты)
+
+Некоторая подробная внутренняя аналитика и отчёты по состоянию кода были сгенерированы во время аудита (внутренние артефакты). Эти материалы предназначены для разработчиков и содержат технические детали, которые не нужны конечным пользователям.
+
+Вся внутренняя документация перенесена в папку `internal_docs/`. Публичная документация оставлена короткой и понятной — если вы разработчик, откройте `internal_docs/` в репозитории для подробных отчётов.
+
+
+## 📖 Примеры использования
+
+### Создание проекта из папки
 
 ```markdown
-1. Right-click on any folder in the File Explorer
-2. Select "Create project in folder"
-3. Configure your project settings
-4. Start organizing your notes!
+1. Щелкните правой кнопкой мыши по любой папке в проводнике файлов
+2. Выберите "Создать проект в папке"
+3. Настройте параметры вашего проекта
+4. Начните организовывать ваши заметки!
 ```
 
-### Using Dataview Queries
+### Использование запросов Dataview
 
 ```markdown
-# Create a project with Dataview query
+# Создание проекта с запросом Dataview
 FROM "Projects/MyProject"
 WHERE status != "completed"
 SORT file.ctime DESC
 ```
 
-### Custom Templates
+### Пользовательские шаблоны
 
 ```markdown
-# Template for new notes
+# Шаблон для новых заметок
 ---
 title: "{{title}}"
 status: "draft"
@@ -95,139 +104,139 @@ created: {{date}}
 
 # {{title}}
 
-## Overview
-<!-- Add your content here -->
+## Обзор
+<!-- Добавьте ваш контент здесь -->
 
-## Tasks
-- [ ] Task 1
-- [ ] Task 2
+## Задачи
+- [ ] Задача 1
+- [ ] Задача 2
 ```
 
-## 🎨 Screenshots
+## 🎨 Скриншоты
 
 <div align="center">
 
-### Mini Gallery
+### Мини галерея
 
-<a href="screenshots/Table.png"><img src="screenshots/Table.png" alt="Table View" width="220"></a>
-<a href="screenshots/board.png"><img src="screenshots/board.png" alt="Board View" width="220"></a>
-<a href="screenshots/Calendar.png"><img src="screenshots/Calendar.png" alt="Calendar View" width="220"></a>
-<a href="screenshots/Gallery.png"><img src="screenshots/Gallery.png" alt="Gallery View" width="220"></a>
+<a href="screenshots/Table.png"><img src="screenshots/Table.png" alt="Табличное представление" width="220"></a>
+<a href="screenshots/board.png"><img src="screenshots/board.png" alt="Представление доски" width="220"></a>
+<a href="screenshots/Calendar.png"><img src="screenshots/Calendar.png" alt="Календарное представление" width="220"></a>
+<a href="screenshots/Gallery.png"><img src="screenshots/Gallery.png" alt="Представление галереи" width="220"></a>
 
-<a href="screenshots/Tablemob.jpg"><img src="screenshots/Tablemob.jpg" alt="Table Mobile" width="180"></a>
-<a href="screenshots/Boardmob.jpg"><img src="screenshots/Boardmob.jpg" alt="Board Mobile" width="180"></a>
-<a href="screenshots/BoardMob2.jpg"><img src="screenshots/BoardMob2.jpg" alt="Board Mobile 2" width="180"></a>
-<a href="screenshots/CalendarMob.jpg"><img src="screenshots/CalendarMob.jpg" alt="Calendar Mobile" width="180"></a>
-<a href="screenshots/Gallerymob2.jpg"><img src="screenshots/Gallerymob2.jpg" alt="Gallery Mobile" width="180"></a>
+<a href="screenshots/Tablemob.jpg"><img src="screenshots/Tablemob.jpg" alt="Таблица (мобильный)" width="180"></a>
+<a href="screenshots/Boardmob.jpg"><img src="screenshots/Boardmob.jpg" alt="Доска (мобильный)" width="180"></a>
+<a href="screenshots/BoardMob2.jpg"><img src="screenshots/BoardMob2.jpg" alt="Доска (мобильный) 2" width="180"></a>
+<a href="screenshots/CalendarMob.jpg"><img src="screenshots/CalendarMob.jpg" alt="Календарь (мобильный)" width="180"></a>
+<a href="screenshots/Gallerymob2.jpg"><img src="screenshots/Gallerymob2.jpg" alt="Галерея (мобильный)" width="180"></a>
 
 </div>
 
-## ⚙️ Configuration
+## ⚙️ Конфигурация
 
-### General Settings
+### Общие настройки
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| **Project Size Limit** | Maximum number of notes to load | 1000 |
-| **Link Behavior** | What happens when clicking links | Open note |
-| **Start Week On** | First day of the week | Default |
+| Настройка | Описание | По умолчанию |
+|-----------|----------|--------------|
+| **Лимит размера проекта** | Максимальное количество загружаемых заметок | 1000 |
+| **Поведение ссылок** | Что происходит при нажатии на ссылки | Открыть заметку |
+| **Начало недели** | Первый день недели | По умолчанию |
 
-### Advanced Settings
+### Расширенные настройки
 
-- **Front Matter Configuration** - Customize YAML handling
-- **Template Management** - Set up note templates
-- **Command Integration** - Add custom commands
-- **Archive Management** - Restore or delete archived projects
+- **Конфигурация Front Matter** - Настройка работы с YAML
+- **Управление шаблонами** - Настройка шаблонов заметок
+- **Интеграция команд** - Добавление пользовательских команд
+- **Управление архивами** - Восстановление или удаление архивных проектов
 
-## 🤝 Contributing
+## 🤝 Участие в разработке
 
-We welcome contributions! Here's how you can help:
+Мы приветствуем вклад в развитие проекта! Вот как вы можете помочь:
 
-### 🐛 **Bug Reports**
-- Use the [Issues](https://github.com/ParkPavel/obs-projects-plus/issues) page
-- Provide detailed reproduction steps
-- Include Obsidian version and plugin version
+### 🐛 **Сообщения об ошибках**
+- Используйте страницу [Issues](https://github.com/ParkPavel/obs-projects-plus/issues)
+- Предоставьте подробные шаги для воспроизведения
+- Укажите версию Obsidian и версию плагина
 
-### 💡 **Feature Requests**
-- Check existing [issues](https://github.com/ParkPavel/obs-projects-plus/issues) first
-- Describe the use case and expected behavior
-- Consider contributing the implementation
+### 💡 **Запросы новых функций**
+- Сначала проверьте существующие [проблемы](https://github.com/ParkPavel/obs-projects-plus/issues)
+- Опишите вариант использования и ожидаемое поведение
+- Рассмотрите возможность внесения собственной реализации
 
-### 🔧 **Development**
+### 🔧 **Разработка**
 
 ```bash
-# Clone the repository
+# Клонирование репозитория
 git clone https://github.com/ParkPavel/obs-projects-plus.git
 cd obs-projects-plus
 
-# Install dependencies
+# Установка зависимостей
 npm install
 
-# Start development
+# Начало разработки
 npm run dev
 
-# Build for production
+# Сборка для продакшена
 npm run build
 ```
 
-### 📝 **Translation**
-Help us translate the plugin to your language:
-1. Fork the repository
-2. Add translations to `src/lib/stores/translations/`
-3. Update `src/lib/stores/i18n.ts`
-4. Submit a pull request
+### 📝 **Перевод**
+Помогите нам перевести плагин на ваш язык:
+1. Сделайте форк репозитория
+2. Добавьте переводы в `src/lib/stores/translations/`
+3. Обновите `src/lib/stores/i18n.ts`
+4. Отправьте pull request
 
-## 🛠️ Development
+## 🛠️ Разработка
 
-### Prerequisites
+### Необходимые условия
 - Node.js 18+
-- npm or yarn
-- Obsidian with plugin development enabled
+- npm или yarn
+- Obsidian с включенной разработкой плагинов
 
-### Scripts
+### Скрипты
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run test         # Run tests
-npm run lint         # Lint code
-npm run format       # Format code
+npm run dev          # Запуск сервера разработки
+npm run build        # Сборка для продакшена
+npm run test         # Запуск тестов
+npm run lint         # Проверка кода
+npm run format       # Форматирование кода
 ```
 
-## 📚 Documentation
+## 📚 Документация
 
-- **[User Guide](docs/user-guide.md)** - Complete usage instructions
-- **[API Reference](docs/api.md)** - Developer API documentation
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute
-- **[Changelog](CHANGELOG.md)** - Version history
+- **[Руководство пользователя](docs/user-guide.md)** - Полные инструкции по использованию
+- **[Справочник API](docs/api.md)** - Документация API для разработчиков
+- **[Руководство по участию](CONTRIBUTING.md)** - Как внести вклад
+- **[Журнал изменений](CHANGELOG.md)** - История версий
 
-## 🌟 Community
+## 🌟 Сообщество
 
-### 📺 **Videos & Tutorials**
+### 📺 **Видео и уроки**
 
-- [How to use Obsidian: Project vs Trello](https://www.youtube.com/watch?v=kWpIz0CJXoE) by [+1creator](https://www.youtube.com/@plus1creator)
-- [How To Use Obsidian: Project Management (NEW & IMPROVED!)](https://www.youtube.com/watch?v=tYC7n-sDApU) by [+1creator](https://www.youtube.com/@plus1creator)
-- [Obsidian Projects - How To Manage Your Projects in Obsidian](https://youtu.be/aFfREf9IQ7Q?t=452) by [Marco Serafini](https://www.youtube.com/@Marco_Mindstone)
+- [How to use Obsidian: Project vs Trello](https://www.youtube.com/watch?v=kWpIz0CJXoE) от [+1creator](https://www.youtube.com/@plus1creator)
+- [How To Use Obsidian: Project Management (NEW & IMPROVED!)](https://www.youtube.com/watch?v=tYC7n-sDApU) от [+1creator](https://www.youtube.com/@plus1creator)
+- [Obsidian Projects - How To Manage Your Projects in Obsidian](https://youtu.be/aFfREf9IQ7Q?t=452) от [Marco Serafini](https://www.youtube.com/@Marco_Mindstone)
 
-### 📖 **Articles**
+### 📖 **Статьи**
 
-- [The Obsidian Projects Plugin: My Secret Weapon for Staying Organized and Focused](https://www.jordanrobison.net/the-obsidian-projects-plugin-my-secret-weapon-for-staying-organized-and-focused/) by [Jordan Robison](https://www.jordanrobison.net/)
-- [Obsidian Projects: A Better Way to Manage Text-Based Projects in Obsidian](https://beingpax.medium.com/obsidian-projects-a-better-way-to-manage-text-based-projects-in-obsidian-18c2a991069c) by [Prakash Joshi Pax](https://beingpax.medium.com/)
+- [The Obsidian Projects Plugin: My Secret Weapon for Staying Organized and Focused](https://www.jordanrobison.net/the-obsidian-projects-plugin-my-secret-weapon-for-staying-organized-and-focused/) от [Jordan Robison](https://www.jordanrobison.net/)
+- [Obsidian Projects: A Better Way to Manage Text-Based Projects in Obsidian](https://beingpax.medium.com/obsidian-projects-a-better-way-to-manage-text-based-projects-in-obsidian-18c2a991069c) от [Prakash Joshi Pax](https://beingpax.medium.com/)
 
-## 🏆 Roadmap
+## 🏆 Дорожная карта
 
-### 🎯 **Active Development**
-- [ ] Enhanced performance optimizations
-- [ ] New view types and layouts
-- [ ] Advanced filtering and sorting
-- [ ] Mobile responsiveness improvements
+### 🎯 **Активная разработка**
+- [ ] Улучшенные оптимизации производительности
+- [ ] Новые типы представлений и макеты
+- [ ] Расширенная фильтрация и сортировка
+- [ ] Улучшения адаптивности для мобильных устройств
 
-### 🔮 **Future Plans**
-- [ ] Plugin ecosystem integration
-- [ ] Advanced automation features
-- [ ] Team collaboration tools
-- [ ] Cloud synchronization
+### 🔮 **Планы на будущее**
+- [ ] Интеграция с экосистемой плагинов
+- [ ] Расширенные функции автоматизации
+- [ ] Инструменты командной работы
+- [ ] Синхронизация в облаке
 
-## 📊 Statistics
+## 📊 Статистика
 
 <div align="center">
 
@@ -238,32 +247,32 @@ npm run format       # Format code
 
 </div>
 
-## 🙏 Credits
+## 🙏 Благодарности
 
-This project is a community-maintained fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) plugin by [Marcus Olsson](https://github.com/marcusolsson).
+Этот проект является поддерживаемым сообществом форком оригинального плагина [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) от [Marcus Olsson](https://github.com/marcusolsson).
 
-**Original Author:** Marcus Olsson  
-**Current Maintainer:** Park Pavel  
-**Original Repository:** https://github.com/marcusolsson/obsidian-projects
+**Оригинальный автор:** Marcus Olsson  
+**Текущий сопровождающий:** Park Pavel  
+**Оригинальный репозиторий:** https://github.com/marcusolsson/obsidian-projects
 
-We thank Marcus for creating the foundation of this excellent plugin.
+Мы благодарим Marcus за создание основы этого отличного плагина.
 
-## 📄 License
+## 📄 Лицензия
 
-Projects Plus is distributed under [Apache License 2.0](LICENSE).
+Projects Plus распространяется под [Apache License 2.0](LICENSE).
 
-## 🔗 Links
+## 🔗 Ссылки
 
-- **🌐 Website:** [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
-- **📧 Contact:** [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues)
-- **💬 Discussions:** [GitHub Discussions](https://github.com/ParkPavel/obs-projects-plus/discussions)
+- **🌐 Веб-сайт:** [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
+- **📧 Контакты:** [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues)
+- **💬 Обсуждения:** [GitHub Discussions](https://github.com/ParkPavel/obs-projects-plus/discussions)
 - **🐦 Twitter:** [@ParkPavel](https://twitter.com/ParkPavel)
 
 ---
 
 <div align="center">
 
-**Made with ❤️ by [Park Pavel](https://parkpavel.github.io/park-pavel/)**
+**Создано с ❤️ от [Park Pavel](https://parkpavel.github.io/park-pavel/)**
 
 [![GitHub](https://img.shields.io/badge/GitHub-ParkPavel-blue?style=flat&logo=github)](https://github.com/ParkPavel)
 [![Website](https://img.shields.io/badge/Website-parkpavel.github.io-green?style=flat&logo=globe)](https://parkpavel.github.io/park-pavel/)

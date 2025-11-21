@@ -48,7 +48,7 @@
     dispatch("open", {
       linkText,
       sourcePath,
-      newLeaf: event.ctrlKey || event.metaKey,
+      newLeaf: false,
     });
   }}
   on:mouseover={(event) => {

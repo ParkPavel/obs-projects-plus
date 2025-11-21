@@ -84,6 +84,16 @@
   border-top-right-radius: var(--radius-s);
 }
 
+.obs-projects-plus .view-header-left,
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-header-left {
+  display: none !important;
+}
+
+.obs-projects-plus .view-header-nav-buttons,
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-header-nav-buttons {
+  display: none !important;
+}
+
 .workspace-leaf-content[data-type="obs-projects-plus"] .view-content {
   padding: 0;
 }

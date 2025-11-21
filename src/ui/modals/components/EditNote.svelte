@@ -41,7 +41,7 @@
             value={record.values[field.name]}
             onChange={(value) => {
               record = produce(record, (draft) => {
-                // @ts-ignore
+                // @ts-expect-error
                 draft.values[field.name] = value;
               });
             }}
@@ -59,7 +59,7 @@
           value={record.values[field.name]}
           onChange={(value) => {
             record = produce(record, (draft) => {
-              // @ts-ignore
+              // @ts-expect-error
               draft.values[field.name] = value;
             });
           }}

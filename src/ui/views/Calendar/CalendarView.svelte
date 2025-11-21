@@ -38,6 +38,12 @@
     groupRecordsByField,
     isCalendarInterval,
     subtractInterval,
+    // Zoom functionality
+    getZoomLevelFromWheel,
+    getDateFromMousePosition,
+    shouldApplyZoom,
+    validateZoomParams,
+    getZoomLevelInfo,
   } from "./calendar";
   import Calendar from "./components/Calendar/Calendar.svelte";
   import Day from "./components/Calendar/Day.svelte";
@@ -63,6 +69,15 @@
   $: ({ fields, records } = frame);
 
   let anchorDate: dayjs.Dayjs = dayjs();
+
+  // Zoom functionality state
+  let lastZoomTime = 0;
+  let showZoomIndicatorFlag = false;
+  let zoomIndicatorText = '';
+
+  // Touch gesture state
+  let touchStartDistance = 0;
+  let touchStartInterval = interval;
 
   $: dateFields = fields
     .filter((field) => !field.repeated)
@@ -173,10 +188,176 @@
     }).open();
   }
 
+  // Show zoom indicator with animation
+  function showZoomIndicator(zoomInfo: any) {
+    zoomIndicatorText = zoomInfo.name || `Уровень: ${zoomInfo.level}`;
+    showZoomIndicatorFlag = true;
+    
+    // Hide after 2 seconds
+    setTimeout(() => {
+      showZoomIndicatorFlag = false;
+    }, 2000);
+  }
+
+  // Handle mouse wheel zoom
+  function handleWheelZoom(event: WheelEvent) {
+    const now = Date.now();
+    
+    // Throttle zoom events to prevent rapid zooming
+    if (now - lastZoomTime < 150) {
+      return;
+    }
+    
+    // Only apply zoom when Ctrl is pressed and we're not over interactive elements
+    if (!shouldApplyZoom(event, event.target as HTMLElement)) {
+      return;
+    }
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const newInterval = getZoomLevelFromWheel(interval, event.deltaY);
+    
+    if (newInterval !== interval) {
+      // Get date from cursor position with error handling
+      const targetDate = getDateFromMousePosition(
+        event.clientX,
+        event.clientY,
+        anchorDate,
+        interval,
+        firstDayOfWeek
+      );
+      
+      // Validate zoom parameters
+      const validation = validateZoomParams(interval, newInterval, targetDate);
+      
+      if (!validation.isValid) {
+        console.warn('Zoom validation failed:', validation.error);
+        return;
+      }
+      
+      // Update interval and anchor date
+      saveConfig({ ...config, interval: newInterval });
+      anchorDate = targetDate;
+      
+      // Show zoom indicator
+      const zoomInfo = getZoomLevelInfo(newInterval);
+      showZoomIndicator(zoomInfo);
+      
+      lastZoomTime = now;
+    }
+  }
+
+  // Handle keyboard zoom
+  function handleKeyboardZoom(event: KeyboardEvent) {
+    if (!event.ctrlKey && !event.metaKey) {
+      return;
+    }
+    
+    const target = event.target as HTMLElement;
+    
+    // Don't zoom when typing in inputs or clicking buttons
+    if (target.closest('input, textarea, select, button')) {
+      return;
+    }
+    
+    let direction = 0;
+    
+    switch (event.key) {
+      case '+':
+      case '=':
+        direction = -1; // Zoom in (negative for increasing detail)
+        break;
+      case '-':
+      case '_':
+        direction = 1; // Zoom out (positive for decreasing detail)
+        break;
+      default:
+        return;
+    }
+    
+    event.preventDefault();
+    
+    const newInterval = getZoomLevelFromWheel(interval, direction);
+    
+    if (newInterval !== interval) {
+      // Validate zoom parameters
+      const validation = validateZoomParams(interval, newInterval, anchorDate);
+      
+      if (!validation.isValid) {
+        console.warn('Zoom validation failed:', validation.error);
+        return;
+      }
+      
+      // Update interval
+      saveConfig({ ...config, interval: newInterval });
+      
+      // Show zoom indicator
+      const zoomInfo = getZoomLevelInfo(newInterval);
+      showZoomIndicator(zoomInfo);
+    }
+  }
+
+  // Touch gesture handlers
+  function handleTouchStart(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      
+      touchStartDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      touchStartInterval = interval;
+    }
+  }
+  
+  function handleTouchMove(event: TouchEvent) {
+    if (event.touches.length === 2 && touchStartDistance > 0) {
+      event.preventDefault();
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const currentDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      // Calculate zoom based on pinch distance
+      const zoomThreshold = 50;
+      if (Math.abs(currentDistance - touchStartDistance) > zoomThreshold) {
+        const isZoomingIn = currentDistance > touchStartDistance;
+        const newInterval = getZoomLevelFromWheel(
+          touchStartInterval,
+          isZoomingIn ? -1 : 1
+        );
+        
+        if (newInterval !== touchStartInterval) {
+          saveConfig({ ...config, interval: newInterval });
+          touchStartDistance = currentDistance;
+          touchStartInterval = newInterval;
+        }
+      }
+    }
+  }
+  
+  function handleTouchEnd() {
+    touchStartDistance = 0;
+  }
+
   getRecordColorContext.set(getRecordColor);
 </script>
 
-<ViewLayout>
+<ViewLayout
+  on:wheel={handleWheelZoom}
+  on:keydown={handleKeyboardZoom}
+  on:touchstart={handleTouchStart}
+  on:touchmove={handleTouchMove}
+  on:touchend={handleTouchEnd}
+  tabindex="0"
+  role="application"
+  aria-label="Календарное представление. Используйте Ctrl + колесо мыши для изменения масштаба."
+>
   <ViewHeader>
     <ViewToolbar variant="secondary">
       <Navigation
@@ -240,6 +421,16 @@
           ]}
           on:change={({ detail }) => handleIntervalChange(detail)}
         />
+        <!-- Current zoom level indicator -->
+        <div
+          class="zoom-level-indicator"
+          title="Текущий уровень зума. Используйте Ctrl + колесо мыши для изменения."
+        >
+          🔍 {interval === 'month' ? 'Месяц' :
+             interval === '2weeks' ? '2 недели' :
+             interval === 'week' ? 'Неделя' :
+             interval === '3days' ? '3 дня' : 'День'}
+        </div>
       </svelte:fragment>
     </ViewToolbar>
   </ViewHeader>
@@ -285,3 +476,55 @@
     </Calendar>
   </ViewContent>
 </ViewLayout>
+
+<!-- Zoom indicator -->
+<div
+  class="zoom-indicator {showZoomIndicatorFlag ? 'visible' : ''}"
+  role="status"
+  aria-live="polite"
+>
+  {zoomIndicatorText}
+</div>
+
+<style>
+  /* Zoom indicator */
+  .zoom-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--button-radius);
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .zoom-indicator.visible {
+    opacity: 1;
+  }
+
+  /* Current zoom level indicator */
+  .zoom-level-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+    border-radius: var(--button-radius);
+    border: 1px solid var(--background-modifier-border);
+    white-space: nowrap;
+    margin-left: 0.5rem;
+  }
+
+  .zoom-level-indicator:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-active);
+  }
+</style>

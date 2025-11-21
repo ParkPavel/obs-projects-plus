@@ -1,7 +1,7 @@
 import i18next from "i18next";
 import { createI18nStore } from "svelte-i18next";
 
-import { moment } from "obsidian";
+import dayjs from "dayjs";
 
 import en from "src/lib/stores/translations/en.json";
 import zh_CN from "src/lib/stores/translations/zh-CN.json";
@@ -9,7 +9,7 @@ import uk from "src/lib/stores/translations/uk.json";
 import ru from "src/lib/stores/translations/ru.json";
 
 i18next.init({
-  lng: moment.locale(),
+  lng: dayjs.locale(),
   fallbackLng: {
     "zh-TW": ["zh-CN", "en"],
     "ru-RU": ["ru", "en"],

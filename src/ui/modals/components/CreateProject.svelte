@@ -1,5 +1,5 @@
 <script lang="ts">
-  import moment from "moment";
+  import dayjs from "dayjs";
   import {
     Button,
     Callout,
@@ -36,8 +36,8 @@
   $: projects = $settings.projects;
 
   $: defaultName = interpolateTemplate(project.defaultName ?? "", {
-    date: (format) => moment().format(format || "YYYY-MM-DD"),
-    time: (format) => moment().format(format || "HH:mm"),
+    date: (format) => dayjs().format(format || "YYYY-MM-DD"),
+    time: (format) => dayjs().format(format || "HH:mm"),
   });
 
   $: ({ name } = project);

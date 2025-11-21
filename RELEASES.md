@@ -1,180 +1,180 @@
-# 🚀 Release Information
+# 🚀 Информация о релизах
 
-## Current Release: v2.0.0
+## Текущий релиз: v2.0.0
 
-**Release Date**: January 2025  
-**Status**: 🟢 Stable  
-**Compatibility**: Obsidian 1.0.0+
+**Дата релиза**: Январь 2025  
+**Статус**: 🟢 Стабильный  
+**Совместимость**: Obsidian 1.0.0+
 
-## 📦 Download Options
+## 📦 Варианты загрузки
 
-### 🎯 Recommended: BRAT Installation
+### 🎯 Рекомендуемый: Установка через BRAT
 ```bash
-# Add to BRAT
+# Добавить в BRAT
 ParkPavel/obs-projects-plus
 ```
 
-### 📥 Manual Installation
-- **GitHub Releases**: [Download Latest](https://github.com/ParkPavel/obs-projects-plus/releases)
-- **Source Code**: [View on GitHub](https://github.com/ParkPavel/obs-projects-plus)
+### 📥 Ручная установка
+- **GitHub Releases**: [Скачать последнюю версию](https://github.com/ParkPavel/obs-projects-plus/releases)
+- **Исходный код**: [Посмотреть на GitHub](https://github.com/ParkPavel/obs-projects-plus)
 
-## 🔄 Migration from Original Plugin
+## 🔄 Миграция с оригинального плагина
 
-### Automatic Migration
-Projects Plus automatically detects and migrates settings from the original Obsidian Projects plugin.
+### Автоматическая миграция
+Projects Plus автоматически определяет и мигрирует настройки из оригинального плагина Obsidian Projects.
 
-### Manual Migration Steps
-1. **Backup your vault** before migration
-2. **Disable** the original Obsidian Projects plugin
-3. **Install** Projects Plus
-4. **Enable** Projects Plus
-5. **Verify** your projects are working correctly
+### Шаги ручной миграции
+1. **Создайте резервную копию** вашего хранилища перед миграцией
+2. **Отключите** оригинальный плагин Obsidian Projects
+3. **Установите** Projects Plus
+4. **Включите** Projects Plus
+5. **Проверьте**, что ваши проекты работают корректно
 
-### Breaking Changes
-- **Plugin ID**: Changed from `obsidian-projects` to `obs-projects-plus`
-- **API Changes**: Some API methods have been updated
-- **Settings Format**: Enhanced settings with backward compatibility
+### Критические изменения
+- **ID плагина**: Изменён с `obsidian-projects` на `obs-projects-plus`
+- **Изменения API**: Некоторые методы API были обновлены
+- **Формат настроек**: Расширенные настройки с обратной совместимостью
 
-## 📋 Release Notes
+## 📋 Заметки о релизах
 
-### 🎉 v2.0.0 - Major Release
+### 🎉 v2.0.0 - Основной релиз
 
-#### ✨ New Features
-- 🌍 **Multi-language Support**: Russian, Ukrainian, Chinese translations
-- ⚡ **Performance Improvements**: 3x faster loading, better memory management
-- 🎨 **Enhanced UI/UX**: Modern interface design, better accessibility
-- 📊 **Advanced Configuration**: More customization options
-- 🔧 **Better Error Handling**: Improved error messages and recovery
-- 📱 **Responsive Design**: Better mobile and tablet support
+#### ✨ Новые функции
+- 🌍 **Многоязычная поддержка**: Переводы на русский, украинский, китайский
+- ⚡ **Улучшения производительности**: Загрузка в 3 раза быстрее, лучшее управление памятью
+- 🎨 **Улучшенный UI/UX**: Современный дизайн интерфейса, лучшая доступность
+- 📊 **Расширенная конфигурация**: Больше вариантов настройки
+- 🔧 **Улучшенная обработка ошибок**: Улучшенные сообщения об ошибках и восстановление
+- 📱 **Отзывчивый дизайн**: Лучшая поддержка мобильных устройств и планшетов
 
-#### 🔄 Improvements
-- **Architecture**: Complete codebase rewrite for better maintainability
-- **Performance**: Optimized rendering for large datasets
-- **Compatibility**: Better integration with other plugins
-- **Documentation**: Comprehensive user guides and API documentation
+#### 🔄 Улучшения
+- **Архитектура**: Полная переработка кодовой базы для лучшей поддержки
+- **Производительность**: Оптимизированный рендеринг для больших наборов данных
+- **Совместимость**: Лучшая интеграция с другими плагинами
+- **Документация**: Комплексные руководства пользователя и API документация
 
-#### 🐛 Bug Fixes
-- Fixed memory leaks in long-running sessions
-- Resolved compatibility issues with latest Obsidian versions
-- Fixed translation accuracy and coverage
-- Improved error handling and recovery
+#### 🐛 Исправления ошибок
+- Исправлены утечки памяти в длительных сеансах
+- Устранены проблемы совместимости с последними версиями Obsidian
+- Исправлена точность и полнота переводов
+- Улучшена обработка ошибок и восстановление
 
-#### 🔒 Security
-- Updated all dependencies to latest secure versions
-- Enhanced security practices in development
-- Regular security audits and updates
+#### 🔒 Безопасность
+- Обновлены все зависимости до последних безопасных версий
+- Усилены практики безопасности в разработке
+- Регулярные аудиты безопасности и обновления
 
-## 🗓️ Release Schedule
+## 🗓️ График релизов
 
-### 📅 Upcoming Releases
+### 📅 Предстоящие релизы
 
-| Version | Release Date | Status | Features |
+| Версия | Дата релиза | Статус | Функции |
 |---------|-------------|--------|----------|
-| **v2.1.0** | Q2 2025 | 🟡 Planning | Enhanced automation, new view types |
-| **v2.2.0** | Q3 2025 | 🟡 Planning | Team collaboration features |
-| **v3.0.0** | Q4 2025 | 🟡 Planning | Major architecture update |
+| **v2.1.0** | Q2 2025 | 🟡 Планирование | Улучшенная автоматизация, новые типы представлений |
+| **v2.2.0** | Q3 2025 | 🟡 Планирование | Функции командной работы |
+| **v3.0.0** | Q4 2025 | 🟡 Планирование | Основное обновление архитектуры |
 
-### 🔄 Update Frequency
-- **Patch Releases**: Monthly (bug fixes, minor improvements)
-- **Minor Releases**: Quarterly (new features, enhancements)
-- **Major Releases**: Annually (major architecture changes)
+### 🔄 Частота обновлений
+- **Патч-релизы**: Ежемесячно (исправления ошибок, мелкие улучшения)
+- **Минорные релизы**: Ежеквартально (новые функции, улучшения)
+- **Основные релизы**: Ежегодно (основные изменения архитектуры)
 
-## 📊 Version Compatibility
+## 📊 Совместимость версий
 
-### Obsidian Compatibility
+### Совместимость с Obsidian
 
-| Projects Plus | Obsidian | Status |
+| Projects Plus | Obsidian | Статус |
 |---------------|-----------|--------|
-| **v2.0.0** | 1.0.0+ | ✅ Fully Supported |
-| **v1.17.4** | 0.15.0+ | ⚠️ Legacy Support |
+| **v2.0.0** | 1.0.0+ | ✅ Полная поддержка |
+| **v1.17.4** | 0.15.0+ | ⚠️ Устаревшая поддержка |
 
-### Plugin Compatibility
+### Совместимость плагинов
 
-| Plugin | Compatibility | Notes |
-|--------|---------------|-------|
-| **Dataview** | ✅ Full | Enhanced integration |
-| **Templater** | ✅ Full | Template automation support |
-| **Calendar** | ✅ Full | Calendar view integration |
-| **Kanban** | ✅ Full | Board view compatibility |
+| Плагин | Совместимость | Примечания |
+|--------|---------------|------------|
+| **Dataview** | ✅ Полная | Улучшенная интеграция |
+| **Templater** | ✅ Полная | Поддержка автоматизации шаблонов |
+| **Calendar** | ✅ Полная | Интеграция календарного представления |
+| **Kanban** | ✅ Полная | Совместимость с досками |
 
-## 🔧 Development Releases
+## 🔧 Разработческие релизы
 
-### Beta Releases
-Beta releases are available for testing new features:
+### Бета-релизы
+Бета-релизы доступны для тестирования новых функций:
 
 ```bash
-# Install beta version via BRAT
+# Установить бета-версию через BRAT
 ParkPavel/obs-projects-plus@beta
 ```
 
-### Alpha Releases
-Alpha releases contain experimental features:
+### Альфа-релизы
+Альфа-релизы содержат экспериментальные функции:
 
 ```bash
-# Install alpha version via BRAT
+# Установить альфа-версию через BRAT
 ParkPavel/obs-projects-plus@alpha
 ```
 
-## 📈 Performance Metrics
+## 📈 Показатели производительности
 
-### v2.0.0 Performance Improvements
+### Улучшения производительности v2.0.0
 
-| Metric | v1.17.4 | v2.0.0 | Improvement |
-|--------|---------|--------|-------------|
-| **Load Time** | 2.5s | 0.8s | 68% faster |
-| **Memory Usage** | 45MB | 28MB | 38% reduction |
-| **Render Time** | 1.2s | 0.4s | 67% faster |
-| **Bundle Size** | 2.1MB | 1.8MB | 14% smaller |
+| Метрика | v1.17.4 | v2.0.0 | Улучшение |
+|---------|---------|--------|-------------|
+| **Время загрузки** | 2.5с | 0.8с | на 68% быстрее |
+| **Использование памяти** | 45МБ | 28МБ | на 38% меньше |
+| **Время рендеринга** | 1.2с | 0.4с | на 67% быстрее |
+| **Размер бандла** | 2.1МБ | 1.8МБ | на 14% меньше |
 
-## 🐛 Known Issues
+## 🐛 Известные проблемы
 
-### Current Issues (v2.0.0)
-- **Issue #123**: Calendar view may show incorrect dates in some timezones
-- **Issue #124**: Large projects (>5000 notes) may experience slow loading
-- **Issue #125**: Some themes may not display correctly in dark mode
+### Текущие проблемы (v2.0.0)
+- **Проблема #123**: Календарное представление может показывать неверные даты в некоторых часовых поясах
+- **Проблема #124**: Большие проекты (>5000 заметок) могут испытывать медленную загрузку
+- **Проблема #125**: Некоторые темы могут отображаться некорректно в тёмном режиме
 
-### Workarounds
-- **Calendar Issue**: Use Table view as alternative
-- **Performance Issue**: Reduce project size limit to 1000 notes
-- **Theme Issue**: Switch to default Obsidian theme temporarily
+### Обходные решения
+- **Проблема с календарём**: Используйте табличное представление как альтернативу
+- **Проблема с производительностью**: Уменьшите лимит размера проекта до 1000 заметок
+- **Проблема с темой**: Временно переключитесь на стандартную тему Obsidian
 
-## 🔄 Rollback Instructions
+## 🔄 Инструкции по откату
 
-### If you need to rollback to v1.17.4:
+### Если вам нужно откатиться к v1.17.4:
 
-1. **Disable** Projects Plus
-2. **Install** original Obsidian Projects plugin
-3. **Restore** your backup
-4. **Verify** functionality
+1. **Отключите** Projects Plus
+2. **Установите** оригинальный плагин Obsidian Projects
+3. **Восстановите** вашу резервную копию
+4. **Проверьте** функциональность
 
-### Backup Your Data
-Always backup your vault before major updates:
-- **Settings**: `.obsidian/plugins/obs-projects-plus/`
-- **Projects**: Your project folders and notes
-- **Templates**: Custom templates and configurations
+### Создайте резервную копию ваших данных
+Всегда создавайте резервную копию хранилища перед основными обновлениями:
+- **Настройки**: `.obsidian/plugins/obs-projects-plus/`
+- **Проекты**: Папки ваших проектов и заметки
+- **Шаблоны**: Пользовательские шаблоны и конфигурации
 
-## 📞 Support
+## 📞 Поддержка
 
-### Getting Help
-- **📧 GitHub Issues**: [Report bugs](https://github.com/ParkPavel/obs-projects-plus/issues)
-- **💬 Discussions**: [Ask questions](https://github.com/ParkPavel/obs-projects-plus/discussions)
-- **🌐 Website**: [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
+### Получение помощи
+- **📧 GitHub Issues**: [Сообщить об ошибках](https://github.com/ParkPavel/obs-projects-plus/issues)
+- **💬 Discussions**: [Задать вопросы](https://github.com/ParkPavel/obs-projects-plus/discussions)
+- **🌐 Веб-сайт**: [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
 
-### Community Support
-- **Discord**: Join our community server
-- **Reddit**: r/ObsidianMD community
-- **Forum**: Obsidian Community Forum
-
----
-
-## 🎯 Next Steps
-
-1. **Install** Projects Plus v2.0.0
-2. **Read** the [User Guide](docs/user-guide.md)
-3. **Explore** the [API Documentation](docs/api.md)
-4. **Join** the community discussions
-5. **Contribute** to the project development
+### Поддержка сообщества
+- **Discord**: Присоединяйтесь к нашему серверу сообщества
+- **Reddit**: Сообщество r/ObsidianMD
+- **Форум**: Obsidian Community Forum
 
 ---
 
-*For the latest release information, visit our [GitHub repository](https://github.com/ParkPavel/obs-projects-plus/releases).*
+## 🎯 Следующие шаги
+
+1. **Установите** Projects Plus v2.0.0
+2. **Прочитайте** [Руководство пользователя](docs/user-guide.md)
+3. **Изучите** [API Документацию](docs/api.md)
+4. **Присоединяйтесь** к обсуждениям сообщества
+5. **Участвуйте** в разработке проекта
+
+---
+
+*Для получения последней информации о релизах посетите наш [GitHub репозиторий](https://github.com/ParkPavel/obs-projects-plus/releases).*

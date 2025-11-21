@@ -19,3 +19,9 @@ data.json
 .DS_Store
 
 yarn-error.log
+# CRITICAL: Personal Data Protection
+OBScync/
+EMERGENCY-BACKUPS/
+personal-*
+*-vault/
+*.personal
