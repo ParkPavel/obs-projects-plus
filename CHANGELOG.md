@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - 🎉 **Major Version Release** - Complete rewrite and enhancement of the original plugin
-- 🌍 **Multi-language Support** - Added Russian, Ukrainian, and Chinese translations
+
 - ⚡ **Performance Improvements** - Enhanced loading speed and memory management
 - 🎨 **UI/UX Enhancements** - Improved interface design and user experience
 - 📊 **Advanced Configuration** - More customization options for projects
