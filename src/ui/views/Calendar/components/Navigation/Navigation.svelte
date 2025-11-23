@@ -7,14 +7,31 @@
   export let onToday: () => void;
 </script>
 
-<div>
-  <IconButton icon="chevron-left" onClick={onPrevious} />
-  <Button on:click={onToday}>{$i18n.t("views.calendar.today")}</Button>
-  <IconButton icon="chevron-right" onClick={onNext} />
+<div
+  class="calendar-navigation"
+  role="group"
+  aria-label="Навигация по календарю"
+>
+  <IconButton
+    icon="chevron-left"
+    onClick={onPrevious}
+    tooltip={$i18n.t("views.calendar.navigation.previous")}
+  />
+  <Button
+    on:click={onToday}
+    tooltip={$i18n.t("views.calendar.navigation.today")}
+  >
+    {$i18n.t("views.calendar.today")}
+  </Button>
+  <IconButton
+    icon="chevron-right"
+    onClick={onNext}
+    tooltip={$i18n.t("views.calendar.navigation.next")}
+  />
 </div>
 
 <style>
-  div {
+  .calendar-navigation {
     display: flex;
     gap: 4px;
     align-items: center;

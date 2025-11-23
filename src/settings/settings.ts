@@ -1,27 +1,42 @@
 import { either } from "fp-ts";
 
-import * as base from "./base/settings";
-import * as v1 from "./v1/settings";
-import * as v2 from "./v2/settings";
+import type { ViewDefinition, ProjectsPluginPreferences } from "./base/settings";
+import type { ProjectDefinition as V1ProjectDefinition, ProjectsPluginSettings as V1ProjectsPluginSettings } from "./v1/settings";
+import { resolve as v1Resolve } from "./v1/settings";
+import type { ProjectDefinition as V2ProjectDefinition, ProjectsPluginSettings as V2ProjectsPluginSettings } from "./v2/settings";
+import { resolve as v2Resolve } from "./v2/settings";
 
 export * from "./base/settings";
 
 // These types are backwards-compatible and does not yet need versioning.
-export type ViewDefinition = base.ViewDefinition;
-export type ProjectPreferences = base.ProjectsPluginPreferences;
+export type ProjectPreferences = ProjectsPluginPreferences;
 
 // This defines the latest version of the project definition.
-export type ProjectDefinition = v2.ProjectDefinition<ViewDefinition>;
+export type ProjectDefinition = V2ProjectDefinition<ViewDefinition>;
 
 // Defines the latest version of the plugin settings.
-export type LatestProjectsPluginSettings = v2.ProjectsPluginSettings<
+export type LatestProjectsPluginSettings = V2ProjectsPluginSettings<
   ProjectDefinition,
   ProjectPreferences
 >;
 
-export const DEFAULT_SETTINGS = v2.DEFAULT_SETTINGS;
-export const DEFAULT_PROJECT = v2.DEFAULT_PROJECT;
-export const DEFAULT_VIEW = base.DEFAULT_VIEW;
+export const DEFAULT_SETTINGS = v2Resolve({ version: 2 });
+export const DEFAULT_PROJECT = {
+  fieldConfig: {},
+  defaultName: "",
+  templates: [],
+  excludedNotes: [],
+  isDefault: false,
+  dataSource: {
+    kind: "folder" as const,
+    config: {
+      path: "",
+      recursive: false,
+    },
+  },
+  newNotesFolder: "",
+  views: [],
+};
 
 /**
  * migrateSettings accepts the value from Plugin.loadData() and returns the most
@@ -31,14 +46,14 @@ export function migrateSettings(
   settings: any
 ): either.Either<Error, LatestProjectsPluginSettings> {
   if (!settings) {
-    return either.right(Object.assign({}, v2.DEFAULT_SETTINGS));
+    return either.right(Object.assign({}, v2Resolve({ version: 2 })));
   }
 
   if ("version" in settings && typeof settings.version === "number") {
     if (settings.version === 1) {
-      return either.right(migrate(v1.resolve(settings)));
+      return either.right(migrate(v1Resolve(settings)));
     } else if (settings.version === 2) {
-      return either.right(v2.resolve(settings));
+      return either.right(v2Resolve(settings));
     } else {
       return either.left(new Error("Unknown settings version"));
     }
@@ -48,9 +63,7 @@ export function migrateSettings(
 }
 
 export function migrate(
-  v1settings: v1.ProjectsPluginSettings<
-    v1.ProjectDefinition<base.ViewDefinition>
-  >
+  v1settings: V1ProjectsPluginSettings<V1ProjectDefinition<ViewDefinition>>
 ): LatestProjectsPluginSettings {
   return {
     version: 2,
@@ -61,8 +74,8 @@ export function migrate(
 }
 
 function migrateProject(
-  v1project: v1.ProjectDefinition<base.ViewDefinition>
-): v2.ProjectDefinition<base.ViewDefinition> {
+  v1project: V1ProjectDefinition<ViewDefinition>
+): V2ProjectDefinition<ViewDefinition> {
   const {
     name,
     id,
@@ -93,8 +106,8 @@ function migrateProject(
 }
 
 function migrateDataSource(
-  project: v1.ProjectDefinition<base.ViewDefinition>
-): v2.DataSource {
+  project: V1ProjectDefinition<ViewDefinition>
+): { kind: "dataview" | "folder"; config: any } {
   if (project.dataview) {
     return {
       kind: "dataview",

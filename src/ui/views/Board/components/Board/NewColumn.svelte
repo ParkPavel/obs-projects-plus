@@ -2,6 +2,7 @@
   import { Button, Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { TextInput, useClickOutside } from "obsidian-svelte";
+  import type { FieldError } from "src/lib/types/validation";
 
   let editing: boolean = false;
   let inputRef: HTMLInputElement;
@@ -13,7 +14,7 @@
   let placeholder: string = $i18n.t("components.board.column.add.placeholder");
   let value: string = "";
 
-  export let fieldError: string = "";
+  export let fieldError: FieldError = null;
   $: tooltip = fieldError
     ? $i18n.t(`components.board.column.add.${fieldError}`)
     : "";

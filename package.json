@@ -1,6 +1,6 @@
 {
   "name": "obs-projects-plus",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Enhanced project management for Obsidian with advanced features",
   "main": "main.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "build:analyze": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npx esbuild-bundle-analyzer main.js",
     "bundle:stats": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production --analyze",
     "bundle:size": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && Get-ChildItem main.js | Select-Object Name, Length",
-    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "version": "node scripts/version-bump.mjs && git add manifest.json versions.json",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
     "test:coverage": "jest --config jest.config.js --coverage",
@@ -19,8 +19,6 @@
     "svelte-check": "svelte-check",
     "lint": "eslint ./src",
     "format": "prettier -w ./src",
-    "sass-build": "sass ./css/styles.scss ./styles.css",
-    "sass-watch": "sass --watch ./css/styles.scss ./styles.css",
     "quality:check": "npm run test:coverage && npm run build && npm run lint",
     "benchmark": "jest --config jest.config.js --testPathPattern=performance --verbose"
   },
@@ -43,16 +41,11 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.15.0",
-    "@interactjs/interact": "^1.10.27",
-    "@interactjs/types": "^1.10.27",
-    "@popperjs/core": "^2.11.8",
-    "@popperjs/svelte": "^0.1.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^4.2.3",
     "@tsconfig/svelte": "^5.0.4",
     "@types/jest": "^29.5.12",
     "@types/node": "^22.10.1",
-    "@types/sortablejs": "^1.15.8",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.16.0",

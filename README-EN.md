@@ -195,10 +195,10 @@ npm run format       # Format code
 
 ## 📚 Documentation
 
-- **[User Guide](docs/user-guide.md)** - Complete usage instructions
+- **[User Guide](docs/user-guide-EN.md)** - Complete usage instructions
 - **[API Reference](docs/api.md)** - Developer API documentation
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute
-- **[Changelog](CHANGELOG.md)** - Version history
+- **[Contributing Guide](../docs/CONTRIBUTING.md)** - How to contribute
+- **[Release Information](RELEASES-EN.md)** - Version history and news
 
 ## 🌟 Community
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte/internal";
+  import { onMount } from "svelte";
 
   export let value: number;
   export let onChange: (value: number) => void;

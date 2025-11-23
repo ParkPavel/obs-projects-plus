@@ -142,12 +142,6 @@ export function isDate(value: Optional<DataValue> | DataValue): value is Date {
   return value instanceof Date;
 }
 
-// export function hasValue(value: Optional<DataValue>): value is DataValue {
-//   if (value === null || value === undefined) {
-//     return true;
-//   }
-//   return false;
-// }
 
 export function isOptional<T>(value: unknown): value is Optional<T> {
   return value === null || value === undefined;

@@ -16,28 +16,57 @@ export function encodeFrontMatter(
 ): E.Either<Error, string> {
   const delim = "---";
 
-  const startPosition = data.indexOf(delim) + delim.length;
-  const endPosition = data.slice(startPosition).indexOf(delim) + startPosition;
+  const startPosition = data.indexOf(delim);
+  const endPosition = startPosition >= 0 ? data.indexOf(delim, startPosition + delim.length) : -1;
 
-  const isStart = data.slice(0, startPosition).trim() === delim;
-  const hasFrontMatter = isStart && endPosition > startPosition;
+  const isStart = startPosition === 0;
+  const hasFrontMatter = isStart && endPosition > startPosition + delim.length;
 
   return F.pipe(
-    parseYaml(hasFrontMatter ? data.slice(startPosition, endPosition) : ""),
-    E.map((existing) => Object.assign({}, existing, frontmatter)),
+    parseYaml(hasFrontMatter ? data.slice(startPosition + delim.length, endPosition) : ""),
+    E.map((existing) => {
+      const result = { ...existing };
+      
+      // Process frontmatter properties
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (value === undefined) {
+          // Skip undefined values completely
+          continue;
+        }
+        // For all other values, use the provided value
+        result[key] = value;
+      }
+      
+      return result;
+    }),
     E.map((fm) => {
-      if (Object.entries(fm).length) {
-        const d = stringifyYaml(fm, defaultStringType);
+      // Filter out undefined values before stringifyYaml
+      const filteredFm = Object.fromEntries(
+        Object.entries(fm).filter(([_, value]) => value !== undefined)
+      );
+      
+      if (Object.entries(filteredFm).length) {
+        const d = stringifyYaml(filteredFm, defaultStringType);
 
-        return hasFrontMatter
-          ? data.slice(0, startPosition + 1) + d + data.slice(endPosition)
-          : delim + "\n" + d + delim + "\n\n" + data;
+        if (hasFrontMatter) {
+          // Replace existing frontmatter - find the exact end position
+          const frontmatterEnd = data.indexOf('\n', endPosition);
+          const afterFrontmatter = frontmatterEnd !== -1 ? data.slice(frontmatterEnd + 1) : '';
+          return delim + "\n" + d + delim + "\n" + afterFrontmatter;
+        } else {
+          // Add new frontmatter at the beginning
+          return delim + "\n" + d + delim + "\n\n" + data;
+        }
       }
 
-      return hasFrontMatter
-        ? data.slice(0, startPosition - delim.length) +
-            data.slice(endPosition + delim.length + 1)
-        : data;
+      if (hasFrontMatter) {
+        // Remove existing frontmatter
+        const frontmatterEnd = data.indexOf('\n', endPosition);
+        const afterFrontmatter = frontmatterEnd !== -1 ? data.slice(frontmatterEnd + 1) : '';
+        return afterFrontmatter;
+      }
+      
+      return data;
     })
   );
 }
@@ -55,6 +84,8 @@ export function stringifyYaml(
       nullStr: "",
       defaultStringType: defaultStringType,
       defaultKeyType: "PLAIN",
+      simpleKeys: false,
     })
   );
 }
+

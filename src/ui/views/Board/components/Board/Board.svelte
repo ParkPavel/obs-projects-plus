@@ -33,7 +33,8 @@
   export let onColumnRename: OnColumnRename;
   export let onColumnCollapse: OnColumnCollapse;
   export let onColumnPin: OnColumnPin;
-  export let validateStatusField: () => string;
+  import type { FieldError } from "src/lib/types/validation";
+  export let validateStatusField: () => FieldError;
   export let checkField: string | undefined;
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;

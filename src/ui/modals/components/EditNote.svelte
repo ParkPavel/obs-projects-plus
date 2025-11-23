@@ -40,8 +40,9 @@
             {field}
             value={record.values[field.name]}
             onChange={(value) => {
+              // @ts-ignore: Type instantiation is excessively deep and possibly infinite
               record = produce(record, (draft) => {
-                // @ts-expect-error
+                // @ts-ignore: Type instantiation is excessively deep and possibly infinite
                 draft.values[field.name] = value;
               });
             }}
@@ -59,7 +60,6 @@
           value={record.values[field.name]}
           onChange={(value) => {
             record = produce(record, (draft) => {
-              // @ts-expect-error
               draft.values[field.name] = value;
             });
           }}
@@ -73,9 +73,10 @@
       on:click={() => {
         onSave(record);
       }}
-      >{editableFields.length
-        ? $i18n.t("modals.note.edit.save")
-        : $i18n.t("modals.note.edit.confirm")}</Button
     >
+      {editableFields.length
+        ? $i18n.t("modals.note.edit.save")
+        : $i18n.t("modals.note.edit.confirm")}
+    </Button>
   </ModalButtonGroup>
 </ModalLayout>

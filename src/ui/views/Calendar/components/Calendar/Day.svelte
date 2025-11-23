@@ -72,6 +72,16 @@
   on:dblclick={handleDblClick}
   on:mousedown={handleMouseDown}
   style:width={width + "%"}
+  role="gridcell"
+  aria-label="День {date.date()} {date.format('MMMM YYYY')}"
+  aria-selected="false"
+  tabindex="0"
+  on:keydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleDblClick(new MouseEvent('dblclick', { bubbles: true }));
+    }
+  }}
 >
   <Date {today}>{date.date()}</Date>
   <EventList
@@ -91,6 +101,13 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    outline: none;
+    transition: all 0.2s ease;
+    min-height: 80px; /* Reduced height for mobile */
+  }
+
+  div:focus {
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
   }
 
   div:last-child {
@@ -99,5 +116,23 @@
 
   .weekend {
     background-color: var(--background-primary-alt);
+  }
+
+
+  /* Mobile responsive styles */
+  @media (max-width: 768px) {
+    div {
+      padding: 3px;
+      min-height: 70px;
+      font-size: var(--font-ui-smaller);
+    }
+  }
+
+  @media (max-width: 480px) {
+    div {
+      padding: 2px;
+      min-height: 60px;
+      font-size: var(--font-ui-smallest);
+    }
   }
 </style>

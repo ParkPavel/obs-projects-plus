@@ -29,7 +29,6 @@
   } from "src/ui/views/helpers";
   import { get } from "svelte/store";
   import {
-    addInterval,
     chunkDates,
     computeDateInterval,
     generateDates,
@@ -37,13 +36,6 @@
     getFirstDayOfWeek,
     groupRecordsByField,
     isCalendarInterval,
-    subtractInterval,
-    // Zoom functionality
-    getZoomLevelFromWheel,
-    getDateFromMousePosition,
-    shouldApplyZoom,
-    validateZoomParams,
-    getZoomLevelInfo,
   } from "./calendar";
   import Calendar from "./components/Calendar/Calendar.svelte";
   import Day from "./components/Calendar/Day.svelte";
@@ -52,6 +44,7 @@
   import Weekday from "./components/Calendar/Weekday.svelte";
   import Navigation from "./components/Navigation/Navigation.svelte";
   import type { CalendarConfig } from "./types";
+  import type { CalendarInterval } from "./calendar";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -69,15 +62,71 @@
   $: ({ fields, records } = frame);
 
   let anchorDate: dayjs.Dayjs = dayjs();
+  
+  let isLoading = false;
+  let errorMessage: string | null = null;
 
-  // Zoom functionality state
-  let lastZoomTime = 0;
-  let showZoomIndicatorFlag = false;
-  let zoomIndicatorText = '';
 
-  // Touch gesture state
-  let touchStartDistance = 0;
-  let touchStartInterval = interval;
+  function navigateToDate(direction: 'next' | 'previous' | 'today') {
+    try {
+      let newAnchorDate: dayjs.Dayjs;
+      
+      switch (direction) {
+        case 'today':
+          newAnchorDate = dayjs();
+          break;
+        case 'next':
+          switch (interval as CalendarInterval) {
+            case 'month':
+              newAnchorDate = anchorDate.add(1, 'month');
+              break;
+            case '2weeks':
+              newAnchorDate = anchorDate.add(2, 'week');
+              break;
+            case 'week':
+              newAnchorDate = anchorDate.add(1, 'week');
+              break;
+            case '3days':
+              newAnchorDate = anchorDate.add(3, 'day');
+              break;
+            case 'day':
+              newAnchorDate = anchorDate.add(1, 'day');
+              break;
+            default:
+              newAnchorDate = anchorDate.add(1, 'week');
+          }
+          break;
+        case 'previous':
+          switch (interval as CalendarInterval) {
+            case 'month':
+              newAnchorDate = anchorDate.subtract(1, 'month');
+              break;
+            case '2weeks':
+              newAnchorDate = anchorDate.subtract(2, 'week');
+              break;
+            case 'week':
+              newAnchorDate = anchorDate.subtract(1, 'week');
+              break;
+            case '3days':
+              newAnchorDate = anchorDate.subtract(3, 'day');
+              break;
+            case 'day':
+              newAnchorDate = anchorDate.subtract(1, 'day');
+              break;
+            default:
+              newAnchorDate = anchorDate.subtract(1, 'week');
+          }
+          break;
+        default:
+          return;
+      }
+      
+      anchorDate = newAnchorDate;
+    } catch (error) {
+      console.error('Error navigating date:', error);
+      new Notice('Ошибка при навигации по дате');
+    }
+  }
 
   $: dateFields = fields
     .filter((field) => !field.repeated)
@@ -109,20 +158,61 @@
   $: weeks = chunkDates(dates, numColumns);
   $: weekDays = dates.slice(0, numColumns);
 
-  function handleIntervalChange(interval: string) {
-    if (isCalendarInterval(interval)) {
-      saveConfig({ ...config, interval });
+  async function handleIntervalChange(newInterval: string) {
+    if (isCalendarInterval(newInterval)) {
+      isLoading = true;
+      errorMessage = null;
+      try {
+        saveConfig({ ...config, interval: newInterval as CalendarInterval });
+      } catch (error) {
+        console.error('Error changing interval:', error);
+        errorMessage = 'Ошибка при изменении интервала. Пожалуйста, попробуйте снова.';
+        new Notice('Ошибка при изменении интервала');
+      } finally {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        isLoading = false;
+      }
     }
   }
-  function handleDateFieldChange(dateField: string) {
-    saveConfig({ ...config, dateField });
+  
+  async function handleDateFieldChange(dateField: string) {
+    isLoading = true;
+    errorMessage = null;
+    try {
+      saveConfig({ ...config, dateField });
+    } catch (error) {
+      console.error('Error changing date field:', error);
+      errorMessage = 'Ошибка при изменении поля даты. Пожалуйста, выберите другое поле.';
+      new Notice('Ошибка при изменении поля даты');
+    } finally {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      isLoading = false;
+    }
   }
-  function handleCheckFieldChange(checkField: string) {
-    saveConfig({ ...config, checkField });
+  
+  async function handleCheckFieldChange(checkField: string) {
+    isLoading = true;
+    errorMessage = null;
+    try {
+      saveConfig({ ...config, checkField });
+    } catch (error) {
+      console.error('Error changing check field:', error);
+      errorMessage = 'Ошибка при изменении поля для отметок. Пожалуйста, выберите другое поле.';
+      new Notice('Ошибка при изменении поля для отметок');
+    } finally {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      isLoading = false;
+    }
   }
 
   function handleRecordChange(date: dayjs.Dayjs, record: DataRecord) {
-    if (dateField) {
+    if (!dateField) {
+      console.warn('No date field configured for record change');
+      new Notice('Необходимо выбрать поле даты');
+      return;
+    }
+  
+    try {
       if (dateField.type === DataFieldType.Date) {
         const newDatetime = dayjs(record.values[dateField.name] as string)
           .set("year", date.year())
@@ -137,234 +227,103 @@
           fields
         );
       }
+    } catch (error) {
+      console.error('Error updating record date:', error);
+      new Notice('Ошибка при обновлении даты записи');
     }
   }
 
   function handleRecordCheck(record: DataRecord, checked: boolean) {
-    if (booleanField) {
+    if (!booleanField) {
+      console.warn('No boolean field configured for check operations');
+      new Notice('Необходимо выбрать поле для отметок');
+      return;
+    }
+  
+    try {
       api.updateRecord(
         updateRecordValues(record, {
           [booleanField.name]: checked,
         }),
         fields
       );
+    } catch (error) {
+      console.error('Error updating record check state:', error);
+      new Notice('Ошибка при обновлении состояния записи');
     }
   }
 
   function handleRecordClick(entry: DataRecord) {
-    if (entry) {
+    if (!entry) {
+      console.warn('No entry provided for record click');
+      return;
+    }
+  
+    try {
       new EditNoteModal(
         get(app),
         fields,
         (record) => {
-          api.updateRecord(record, fields);
+          try {
+            api.updateRecord(record, fields);
+          } catch (error) {
+            console.error('Error updating record in modal:', error);
+            new Notice('Ошибка при сохранении изменений');
+          }
         },
         entry
       ).open();
+    } catch (error) {
+      console.error('Error opening edit modal:', error);
+      new Notice('Ошибка при открытии окна редактирования');
     }
   }
 
   function handleRecordAdd(date: dayjs.Dayjs) {
     if (!dateField) {
-      new Notice("Select a Date field to create calendar events.");
+      new Notice("Для создания событий необходимо выбрать поле даты.");
       return;
     }
-
+  
     if (readonly) {
-      new Notice("Can't create calendar events in read-only projects.");
+      new Notice("Нельзя создавать события в проектах только для чтения.");
       return;
     }
-
-    new CreateNoteModal($app, project, (name, templatePath) => {
-      if (dateField) {
-        api.addRecord(
-          createDataRecord(name, project, {
-            [dateField.name]: date.toDate(),
-          }),
-          fields,
-          templatePath
-        );
-      }
-    }).open();
-  }
-
-  // Show zoom indicator with animation
-  function showZoomIndicator(zoomInfo: any) {
-    zoomIndicatorText = zoomInfo.name || `Уровень: ${zoomInfo.level}`;
-    showZoomIndicatorFlag = true;
-    
-    // Hide after 2 seconds
-    setTimeout(() => {
-      showZoomIndicatorFlag = false;
-    }, 2000);
-  }
-
-  // Handle mouse wheel zoom
-  function handleWheelZoom(event: WheelEvent) {
-    const now = Date.now();
-    
-    // Throttle zoom events to prevent rapid zooming
-    if (now - lastZoomTime < 150) {
-      return;
-    }
-    
-    // Only apply zoom when Ctrl is pressed and we're not over interactive elements
-    if (!shouldApplyZoom(event, event.target as HTMLElement)) {
-      return;
-    }
-    
-    event.preventDefault();
-    event.stopPropagation();
-    
-    const newInterval = getZoomLevelFromWheel(interval, event.deltaY);
-    
-    if (newInterval !== interval) {
-      // Get date from cursor position with error handling
-      const targetDate = getDateFromMousePosition(
-        event.clientX,
-        event.clientY,
-        anchorDate,
-        interval,
-        firstDayOfWeek
-      );
-      
-      // Validate zoom parameters
-      const validation = validateZoomParams(interval, newInterval, targetDate);
-      
-      if (!validation.isValid) {
-        console.warn('Zoom validation failed:', validation.error);
-        return;
-      }
-      
-      // Update interval and anchor date
-      saveConfig({ ...config, interval: newInterval });
-      anchorDate = targetDate;
-      
-      // Show zoom indicator
-      const zoomInfo = getZoomLevelInfo(newInterval);
-      showZoomIndicator(zoomInfo);
-      
-      lastZoomTime = now;
-    }
-  }
-
-  // Handle keyboard zoom
-  function handleKeyboardZoom(event: KeyboardEvent) {
-    if (!event.ctrlKey && !event.metaKey) {
-      return;
-    }
-    
-    const target = event.target as HTMLElement;
-    
-    // Don't zoom when typing in inputs or clicking buttons
-    if (target.closest('input, textarea, select, button')) {
-      return;
-    }
-    
-    let direction = 0;
-    
-    switch (event.key) {
-      case '+':
-      case '=':
-        direction = -1; // Zoom in (negative for increasing detail)
-        break;
-      case '-':
-      case '_':
-        direction = 1; // Zoom out (positive for decreasing detail)
-        break;
-      default:
-        return;
-    }
-    
-    event.preventDefault();
-    
-    const newInterval = getZoomLevelFromWheel(interval, direction);
-    
-    if (newInterval !== interval) {
-      // Validate zoom parameters
-      const validation = validateZoomParams(interval, newInterval, anchorDate);
-      
-      if (!validation.isValid) {
-        console.warn('Zoom validation failed:', validation.error);
-        return;
-      }
-      
-      // Update interval
-      saveConfig({ ...config, interval: newInterval });
-      
-      // Show zoom indicator
-      const zoomInfo = getZoomLevelInfo(newInterval);
-      showZoomIndicator(zoomInfo);
-    }
-  }
-
-  // Touch gesture handlers
-  function handleTouchStart(event: TouchEvent) {
-    if (event.touches.length === 2) {
-      const touch1 = event.touches[0];
-      const touch2 = event.touches[1];
-      
-      touchStartDistance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      
-      touchStartInterval = interval;
-    }
-  }
   
-  function handleTouchMove(event: TouchEvent) {
-    if (event.touches.length === 2 && touchStartDistance > 0) {
-      event.preventDefault();
-      const touch1 = event.touches[0];
-      const touch2 = event.touches[1];
-      const currentDistance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      
-      // Calculate zoom based on pinch distance
-      const zoomThreshold = 50;
-      if (Math.abs(currentDistance - touchStartDistance) > zoomThreshold) {
-        const isZoomingIn = currentDistance > touchStartDistance;
-        const newInterval = getZoomLevelFromWheel(
-          touchStartInterval,
-          isZoomingIn ? -1 : 1
-        );
-        
-        if (newInterval !== touchStartInterval) {
-          saveConfig({ ...config, interval: newInterval });
-          touchStartDistance = currentDistance;
-          touchStartInterval = newInterval;
+    try {
+      new CreateNoteModal(get(app), project, (name, templatePath) => {
+        try {
+          if (dateField) {
+            api.addRecord(
+              createDataRecord(name, project, {
+                [dateField.name]: date.toDate(),
+              }),
+              fields,
+              templatePath
+            );
+          }
+        } catch (error) {
+          console.error('Error adding new record:', error);
+          new Notice('Ошибка при создании новой записи');
         }
-      }
+      }).open();
+    } catch (error) {
+      console.error('Error opening create modal:', error);
+      new Notice('Ошибка при открытии окна создания');
     }
-  }
-  
-  function handleTouchEnd() {
-    touchStartDistance = 0;
   }
 
   getRecordColorContext.set(getRecordColor);
 </script>
 
-<ViewLayout
-  on:wheel={handleWheelZoom}
-  on:keydown={handleKeyboardZoom}
-  on:touchstart={handleTouchStart}
-  on:touchmove={handleTouchMove}
-  on:touchend={handleTouchEnd}
-  tabindex="0"
-  role="application"
-  aria-label="Календарное представление. Используйте Ctrl + колесо мыши для изменения масштаба."
->
+<ViewLayout>
   <ViewHeader>
     <ViewToolbar variant="secondary">
       <Navigation
         slot="left"
-        onNext={() => (anchorDate = addInterval(anchorDate, interval))}
-        onPrevious={() => (anchorDate = subtractInterval(anchorDate, interval))}
-        onToday={() => (anchorDate = dayjs())}
+        onNext={() => navigateToDate('next')}
+        onPrevious={() => navigateToDate('previous')}
+        onToday={() => navigateToDate('today')}
       />
       <Typography slot="middle" variant="h2" nomargin>{title}</Typography>
       <svelte:fragment slot="right">
@@ -421,15 +380,13 @@
           ]}
           on:change={({ detail }) => handleIntervalChange(detail)}
         />
-        <!-- Current zoom level indicator -->
         <div
           class="zoom-level-indicator"
-          title="Текущий уровень зума. Используйте Ctrl + колесо мыши для изменения."
         >
-          🔍 {interval === 'month' ? 'Месяц' :
-             interval === '2weeks' ? '2 недели' :
-             interval === 'week' ? 'Неделя' :
-             interval === '3days' ? '3 дня' : 'День'}
+          {interval === 'month' ? 'Month' :
+             interval === '2weeks' ? '2 weeks' :
+             interval === 'week' ? 'Week' :
+             interval === '3days' ? '3 days' : 'Day'}
         </div>
       </svelte:fragment>
     </ViewToolbar>
@@ -475,56 +432,170 @@
       {/each}
     </Calendar>
   </ViewContent>
+  
+  {#if isLoading}
+    <div class="loading-overlay">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+      </div>
+    </div>
+  {/if}
+  
+  {#if errorMessage}
+    <div
+      class="error-message"
+      role="alert"
+      aria-live="assertive"
+      on:click={() => errorMessage = null}
+      on:keydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          errorMessage = null;
+        }
+      }}
+    >
+      {errorMessage}
+      <button
+        class="error-close"
+        aria-label="Close error message"
+        on:click|stopPropagation={(e) => {
+          e.stopPropagation();
+          errorMessage = null;
+        }}
+      >
+        ×
+      </button>
+    </div>
+  {/if}
 </ViewLayout>
 
-<!-- Zoom indicator -->
-<div
-  class="zoom-indicator {showZoomIndicatorFlag ? 'visible' : ''}"
-  role="status"
-  aria-live="polite"
->
-  {zoomIndicatorText}
-</div>
 
 <style>
-  /* Zoom indicator */
-  .zoom-indicator {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--button-radius);
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
+
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 1000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    backdrop-filter: blur(2px);
   }
 
-  .zoom-indicator.visible {
+  .loading-spinner {
+    background: var(--background-primary);
+    padding: 1rem 1.5rem;
+    border-radius: var(--button-radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--background-modifier-border);
+    border-top: 2px solid var(--interactive-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .loading-spinner span {
+    color: var(--text-normal);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 768px) {
+
+    .zoom-level-indicator {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.4rem;
+      margin-left: 0.25rem;
+    }
+
+  }
+
+  @media (max-width: 480px) {
+    .zoom-level-indicator {
+      font-size: 0.6rem;
+      padding: 0.15rem 0.3rem;
+      display: none;
+    }
+
+    .loading-spinner {
+      padding: 0.75rem 1rem;
+    }
+
+    .loading-spinner span {
+      font-size: 0.8rem;
+    }
+  }
+
+  .error-message {
+    position: fixed;
+    top: 60px;
+    left: 20px;
+    right: 20px;
+    background: #d32f2f;
+    color: white;
+    padding: 1rem;
+    border-radius: var(--button-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: slideDown 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .error-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 50%;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+    margin-left: 1rem;
+  }
+
+  .error-close:hover {
     opacity: 1;
   }
 
-  /* Current zoom level indicator */
-  .zoom-level-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    background: var(--background-modifier-hover);
-    border-radius: var(--button-radius);
-    border: 1px solid var(--background-modifier-border);
-    white-space: nowrap;
-    margin-left: 0.5rem;
+  @media (max-width: 768px) {
+    .error-message {
+      top: 50px;
+      left: 10px;
+      right: 10px;
+      font-size: 0.9rem;
+      padding: 0.75rem;
+    }
   }
 
-  .zoom-level-indicator:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-active);
+  @media (max-width: 480px) {
+    .error-message {
+      top: 40px;
+      left: 5px;
+      right: 5px;
+      font-size: 0.8rem;
+      padding: 0.5rem;
+    }
   }
 </style>

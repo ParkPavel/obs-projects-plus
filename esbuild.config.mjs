@@ -16,7 +16,10 @@ const prod = process.argv[2] === "production";
 const buildOptions = {
   plugins: [
     esbuildSvelte({
-      compilerOptions: { css: true },
+      compilerOptions: {
+        css: true,
+        dev: !prod
+      },
       preprocess: sveltePreprocess(),
     }),
     replace({
@@ -65,6 +68,9 @@ const buildOptions = {
   sourcemap: prod ? false : "inline",
   treeShaking: true,
   minify: prod,
+  minifyWhitespace: prod,
+  minifyIdentifiers: prod,
+  minifySyntax: prod,
   outfile: "main.js",
 };
 
