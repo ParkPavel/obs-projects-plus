@@ -462,7 +462,7 @@
                 "star-github": "⭐ Зірка на GitHub",
                 "original-repo": "Оригінальний репозиторій",
                 "languages": "Підтримувані мови",
-                "languages-desc": "English, Русский, Українська, 中文"
+                "languages-desc": "Доступні мови: English, Русский, Українська, 中文 (автоматичне визначення на основі системної мови)"
             },
             "general": {
                 "size-limit": {

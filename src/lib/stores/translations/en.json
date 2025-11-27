@@ -462,7 +462,7 @@
                 "star-github": "⭐ Star on GitHub",
                 "original-repo": "Original Repository",
                 "languages": "Supported Languages",
-                "languages-desc": "English, Русский, Українська, 中文"
+                "languages-desc": "Available languages: English, Russian, Ukrainian, Chinese (automatic detection based on system language)"
             },
             "general": {
                 "size-limit": {

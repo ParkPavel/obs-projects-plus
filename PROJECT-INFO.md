@@ -102,23 +102,15 @@ obs-projects-plus/
 
 ## 🎯 Roadmap
 
-### Short Term (Q1 2025)
-- [ ] Performance optimizations
-- [ ] Bug fixes and stability improvements
-- [ ] Enhanced documentation
-- [ ] Community feedback integration
+### Current Focus (2025)
+- **Stability**: Bug fixes and performance improvements
+- **Maintenance**: Keeping up with Obsidian updates
+- **Community**: Responding to user feedback and requests
 
-### Medium Term (Q2-Q3 2025)
-- [ ] New view types and layouts
-- [ ] Advanced automation features
-- [ ] Team collaboration tools
-- [ ] Plugin ecosystem integration
-
-### Long Term (Q4 2025+)
-- [ ] Major architecture update
-- [ ] Cloud synchronization
-- [ ] Advanced analytics
-- [ ] Enterprise features
+### Future Considerations
+- Performance optimizations for large datasets
+- Enhanced mobile experience
+- Accessibility improvements
 
 ## 🤝 Contributing
 

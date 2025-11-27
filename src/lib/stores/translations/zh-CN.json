@@ -462,7 +462,7 @@
                 "star-github": "⭐ 在 GitHub 上点赞",
                 "original-repo": "原始仓库",
                 "languages": "支持的语言",
-                "languages-desc": "English, Русский, Українська, 中文"
+                "languages-desc": "可用语言：English, Русский, Українська, 中文（基于系统语言的自动检测）"
             },
             "general": {
                 "size-limit": {
