@@ -162,6 +162,7 @@
     height: 1.8rem;
     padding: 0 8px;
     min-width: min-content;
+    flex-shrink: 0;
 
     font-size: var(--font-ui-small);
     border-radius: var(--radius-s);
@@ -171,7 +172,21 @@
     text-overflow: ellipsis;
 
     border: 1px solid transparent;
+    
+    /* Improve touch target for mobile */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  /* Mobile: larger touch target */
+  @media (max-width: 480px) {
+    div {
+      height: 2.2rem;
+      padding: 0 12px;
+      font-size: var(--font-ui-medium);
+    }
+  }
+
   div:hover {
     background-color: var(--background-modifier-hover);
   }

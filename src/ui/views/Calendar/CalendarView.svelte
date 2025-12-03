@@ -12,6 +12,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { toolbarCollapsed } from "src/lib/stores/ui";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import { Field } from "src/ui/components/Field";
@@ -36,6 +37,7 @@
   import InfiniteCalendar from "./components/Calendar/InfiniteCalendar.svelte";
   import InfiniteHorizontalCalendar from "./components/Calendar/InfiniteHorizontalCalendar.svelte";
   import Navigation from "./components/Navigation/Navigation.svelte";
+  import { DayPopup } from "./components/DayPopup";
   import type { CalendarConfig } from "./types";
   import type { CalendarInterval } from "./calendar";
 
@@ -390,6 +392,103 @@
   // Apply mobile preference if on mobile and no config yet
   $: defaultInterval = isMobile ? mobileCalendarView : "week";
   $: interval = config?.interval ?? defaultInterval;
+  
+  // Day popup state for mobile
+  let showDayPopup = false;
+  let dayPopupDate: dayjs.Dayjs = dayjs();
+  let dayPopupRecords: DataRecord[] = [];
+  
+  function handleDayTap(date: dayjs.Dayjs, records: DataRecord[]) {
+    if (!isMobile) return;
+    dayPopupDate = date;
+    dayPopupRecords = records;
+    showDayPopup = true;
+  }
+  
+  function handleDayPopupRecordClick(record: DataRecord) {
+    showDayPopup = false;
+    // Open the note
+    const app_instance = get(app);
+    app_instance.workspace.openLinkText(record.id, record.id, false);
+  }
+  
+  function handleDayPopupRecordSettings(record: DataRecord) {
+    showDayPopup = false;
+    handleRecordClick(record);
+  }
+  
+  async function handleDayPopupRecordDelete(record: DataRecord) {
+    try {
+      await api.deleteRecord(record.id);
+      // Remove from popup records
+      dayPopupRecords = dayPopupRecords.filter(r => r.id !== record.id);
+      if (dayPopupRecords.length === 0) {
+        showDayPopup = false;
+      }
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      new Notice('Ошибка при удалении заметки');
+    }
+  }
+  
+  async function handleDayPopupRecordDuplicate(event: { record: DataRecord; targetDates: dayjs.Dayjs[] }) {
+    const { record, targetDates } = event;
+    if (!dateField) return;
+    
+    try {
+      for (const targetDate of targetDates) {
+        // Create a new record with the same content but different date
+        const baseName = record.id.split('/').pop()?.replace('.md', '') || 'note';
+        const newRecord = createDataRecord(
+          baseName + '_copy_' + targetDate.format('YYYY-MM-DD'),
+          project,
+          {
+            ...record.values,
+            [dateField.name]: targetDate.format('YYYY-MM-DD'),
+          }
+        );
+        await api.addRecord(newRecord, fields, "");
+      }
+      new Notice(`Заметка продублирована на ${targetDates.length} дат`);
+    } catch (error) {
+      console.error('Error duplicating record:', error);
+      new Notice('Ошибка при дублировании заметки');
+    }
+  }
+  
+  async function handleDayPopupRecordCheck(record: DataRecord, checked: boolean) {
+    if (!booleanField) return;
+    
+    try {
+      api.updateRecord(
+        updateRecordValues(record, {
+          [booleanField.name]: checked,
+        }),
+        fields
+      );
+      // Update local state
+      const index = dayPopupRecords.findIndex(r => r.id === record.id);
+      if (index !== -1 && dayPopupRecords[index]) {
+        const currentRecord = dayPopupRecords[index];
+        dayPopupRecords[index] = {
+          ...currentRecord,
+          values: {
+            ...currentRecord.values,
+            [booleanField.name]: checked
+          }
+        };
+        dayPopupRecords = [...dayPopupRecords];
+      }
+    } catch (error) {
+      console.error('Error updating record check:', error);
+      new Notice('Ошибка при изменении статуса');
+    }
+  }
+  
+  function handleDayPopupCreateNote(date: dayjs.Dayjs) {
+    showDayPopup = false;
+    handleRecordAdd(date);
+  }
 
   $: firstDayOfWeek = getFirstDayOfWeek(
     $settings.preferences.locale.firstDayOfWeek
@@ -646,6 +745,7 @@
             onRecordChange={handleRecordChange}
             onRecordCheck={handleRecordCheck}
             onRecordAdd={handleRecordAdd}
+            onDayTap={handleDayTap}
             onScrollToCurrent={(callback) => {
               scrollToCurrentCallback = callback;
             }}
@@ -663,6 +763,7 @@
               onRecordChange={handleRecordChange}
               onRecordCheck={onRecordCheckWrapper}
               onRecordAdd={handleRecordAdd}
+              onDayTap={handleDayTap}
               onScrollToCurrent={(callback) => {
                 horizontalScrollToCurrentCallback = callback;
               }}
@@ -729,6 +830,34 @@
         </div>
       </div>
     </div>
+  {/if}
+  
+  <!-- Floating Today button for mobile when toolbar is hidden -->
+  {#if isMobile && $toolbarCollapsed}
+    <button
+      class="floating-today-button"
+      on:click={() => navigateToDate('today')}
+      aria-label={$i18n.t("views.calendar.today")}
+    >
+      {$i18n.t("views.calendar.today")}
+    </button>
+  {/if}
+  
+  <!-- Day popup for mobile -->
+  {#if isMobile}
+    <DayPopup
+      date={dayPopupDate}
+      records={dayPopupRecords}
+      checkField={booleanField?.name}
+      visible={showDayPopup}
+      on:close={() => showDayPopup = false}
+      on:recordClick={({ detail }) => handleDayPopupRecordClick(detail)}
+      on:recordSettings={({ detail }) => handleDayPopupRecordSettings(detail)}
+      on:recordDelete={({ detail }) => handleDayPopupRecordDelete(detail)}
+      on:recordDuplicate={({ detail }) => handleDayPopupRecordDuplicate(detail)}
+      on:recordCheck={({ detail }) => handleDayPopupRecordCheck(detail.record, detail.checked)}
+      on:createNote={({ detail }) => handleDayPopupCreateNote(detail)}
+    />
   {/if}
 </ViewLayout>
 
@@ -926,6 +1055,49 @@
     transform: scale(1.3);
   }
 
+  /* Floating Today button for mobile */
+  .floating-today-button {
+    position: fixed;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 20px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    opacity: 0.7;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+    animation: slideDownFade 0.3s ease-out;
+  }
+
+  .floating-today-button:hover {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
+
+  .floating-today-button:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  @keyframes slideDownFade {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+      opacity: 0.7;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
   @media (max-width: 768px) {
     .error-message {
       left: 16px;
@@ -934,15 +1106,58 @@
       max-width: none;
     }
 
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .zoom-indicator {
+      bottom: 12px;
+      right: 12px;
+      padding: 8px 12px;
+    }
+
+    .zoom-label {
+      font-size: 13px;
+    }
+
+    .zoom-dot {
+      width: 5px;
+      height: 5px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .floating-today-button {
+      top: 6px;
+      padding: 6px 16px;
+      font-size: 13px;
+      opacity: 0.6;
+    }
+
+    .zoom-indicator {
+      bottom: 8px;
+      right: 8px;
+      padding: 6px 10px;
+    }
+
+    .zoom-label {
+      font-size: 12px;
+    }
+
+    .zoom-level-dots {
+      gap: 4px;
+    }
+
+    .zoom-dot {
+      width: 4px;
+      height: 4px;
+    }
+  }
+
+  /* Touch device optimizations */
+  @media (pointer: coarse) {
+    .zoom-indicator {
+      padding: 10px 14px;
+    }
+
+    .floating-today-button {
+      padding: 10px 24px;
     }
   }
 </style>

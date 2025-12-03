@@ -149,5 +149,18 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    flex-wrap: nowrap;
+  }
+
+  /* Mobile: full width */
+  @media (max-width: 480px) {
+    span {
+      width: 100%;
+    }
+
+    span :global(select) {
+      flex: 1;
+      min-width: 0;
+    }
   }
 </style>

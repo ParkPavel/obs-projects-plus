@@ -141,5 +141,23 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 2px 0;
+  }
+
+  section::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile: allow horizontal scroll */
+  @media (max-width: 480px) {
+    section {
+      min-width: 100%;
+      justify-content: flex-start;
+    }
   }
 </style>

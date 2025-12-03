@@ -5,6 +5,30 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-01-21
+
+### Added
+- 📱 **Mobile UX Overhaul** - Complete redesign of mobile experience
+  - **DayPopup** - Full-screen popup for viewing all events on a day
+  - **Single Tap** - Opens DayPopup with day overview and event list
+  - **Double Tap** - Creates new note directly
+  - **Floating Today Button** - Semi-transparent button appears when toolbar is hidden
+- 🎛️ **Toolbar Collapse** - Full toolbar hiding (not just buttons) with floating toggle
+  - Collapse buttons positioned in top-left corner
+  - Semi-transparent collapsed state for minimal UI
+- 📅 **Day Cell Height** - 100% taller cells on mobile for better touch targets
+- 🔄 **Record Actions** - Settings, duplicate, and delete actions in DayPopup
+- 📋 **Duplicate Feature** - Mini calendar for selecting target dates to duplicate notes
+- 🚫 **Mobile Drag Disabled** - Prevents accidental drag conflicts on touch devices
+
+### Changed
+- 🎨 **ViewToolbar** - Refactored with `.collapsed` class and floating toggle
+- 📱 **Responsive Styles** - Enhanced mobile styles for View selectors
+- 🌐 **Translations** - Added ru/en/uk/zh-CN translations for new DayPopup strings
+
+### Fixed
+- ♿ **Accessibility** - Added keyboard handlers for a11y compliance
+
 ## [2.1.0] - 2025-01-21
 
 ### Added

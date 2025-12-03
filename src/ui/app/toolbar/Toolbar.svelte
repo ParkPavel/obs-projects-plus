@@ -5,6 +5,7 @@
   import { app } from "src/lib/stores/obsidian";
   import { dataFrame } from "src/lib/stores/dataframe";
   import { settings } from "src/lib/stores/settings";
+  import { toolbarCollapsed } from "src/lib/stores/ui";
   import { AddViewModal } from "src/ui/modals/addViewModal";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
@@ -20,6 +21,7 @@
   } from "src/settings/settings";
   import { produce } from "immer";
   import ProjectViewOptions from "./viewOptions/ProjectViewOptions.svelte";
+  import { createEventDispatcher } from "svelte";
 
   export let projects: ProjectDefinition[];
 
@@ -28,6 +30,11 @@
 
   export let viewId: ViewId | undefined;
   export let onViewChange: (viewId: ViewId) => void;
+  
+  // Toolbar collapse state - exposed for parent components and synced with store
+  export let collapsed: boolean = false;
+
+  const dispatch = createEventDispatcher<{ collapseChange: boolean }>();
 
   $: project = projects.find((project) => project.id === projectId);
   $: views = project?.views ?? [];
@@ -37,6 +44,12 @@
   $: view = projects
     .find((project) => project.id === projectId)
     ?.views?.find((view) => view.id === viewId);
+    
+  function handleCollapse(event: CustomEvent<boolean>) {
+    collapsed = event.detail;
+    toolbarCollapsed.set(collapsed); // Sync with global store
+    dispatch('collapseChange', collapsed);
+  }
 </script>
 
 <!--
@@ -44,7 +57,7 @@
 
 	Toolbar lets the user manage projects and views.
 -->
-<ViewToolbar variant="primary">
+<ViewToolbar variant="primary" {collapsed} on:collapse={handleCollapse}>
   <svelte:fragment slot="info">
     {#if errors.length}
       <Flair

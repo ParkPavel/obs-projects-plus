@@ -107,4 +107,47 @@
   max-height: 95vh;
 }
 
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .projects--board {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .projects--board--column {
+    width: 100%;
+    max-width: none;
+  }
+
+  .projects--gallery--grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .projects--board {
+    margin: 4px;
+  }
+
+  .projects--gallery--grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .projects--gallery--card__media {
+    height: 140px;
+  }
+}
+
+/* Touch device optimizations */
+@media (pointer: coarse) {
+  .projects--board--card,
+  .projects--gallery--card {
+    min-height: 44px;
+  }
+}
+
 /*# sourceMappingURL=styles.css.map */

@@ -317,6 +317,7 @@
             "calendar": {
                 "name": "日历",
                 "new-note": "新建笔记",
+                "no-events": "没有事件",
                 "fields": {
                     "date": "日期",
                     "check": "复选框",
@@ -339,6 +340,17 @@
                     "day_other": "日",
                     "dayWithCount_one": "{{count}}日",
                     "dayWithCount_other": "{{count}}日"
+                },
+                "record": {
+                    "settings": "设置",
+                    "duplicate": "复制",
+                    "delete": "删除"
+                },
+                "duplicate": {
+                    "title": "选择要复制到的日期",
+                    "selected": "已选择 {{count}} 个日期",
+                    "cancel": "取消",
+                    "confirm": "复制"
                 }
             },
             "gallery": {
@@ -441,7 +453,11 @@
                 "options": "更多选项"
             },
             "read-only": "只读项目",
-            "read-only-desc": "不能在只读项目中新增、编辑笔记。"
+            "read-only-desc": "不能在只读项目中新增、编辑笔记。",
+            "collapse": {
+                "show": "显示工具栏",
+                "hide": "隐藏工具栏"
+            }
         },
         "settings": {
             "about": {

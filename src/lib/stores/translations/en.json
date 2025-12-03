@@ -317,6 +317,7 @@
             "calendar": {
                 "name": "Calendar",
                 "new-note": "New note",
+                "no-events": "No events",
                 "fields": {
                     "date": "Date",
                     "check": "Status",
@@ -355,6 +356,17 @@
                 "errors": {
                     "create-readonly": "Cannot create events in read-only projects",
                     "date-required": "Date field is required to create events"
+                },
+                "record": {
+                    "settings": "Settings",
+                    "duplicate": "Duplicate",
+                    "delete": "Delete"
+                },
+                "duplicate": {
+                    "title": "Select dates to duplicate",
+                    "selected": "{{count}} date(s) selected",
+                    "cancel": "Cancel",
+                    "confirm": "Duplicate"
                 }
             },
             "gallery": {

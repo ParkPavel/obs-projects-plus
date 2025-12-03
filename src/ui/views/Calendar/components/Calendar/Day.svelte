@@ -3,6 +3,7 @@
   import { Menu } from "obsidian";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import { createEventDispatcher } from "svelte";
   import Date from "./Date.svelte";
   import EventList from "./EventList.svelte";
   import { menuOnContextMenu } from "src/ui/views/helpers";
@@ -51,21 +52,67 @@
    * onRecordAdd runs when the user creates a new calendar event on this day.
    */
   export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
+  
+  /**
+   * Whether mobile mode is enabled (disables drag, enables tap interactions)
+   */
+  export let isMobile: boolean = false;
+  
+  /**
+   * Callback when day is tapped on mobile (opens popup)
+   */
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[]) => void) | undefined;
+
+  const dispatch = createEventDispatcher<{
+    dayTap: { date: dayjs.Dayjs; records: DataRecord[] };
+  }>();
 
   let eventListOnRecordChange: ((record: DataRecord) => void) | undefined = undefined;
 
-  $: eventListOnRecordChange = date && onRecordChange && !isOutsideMonth ? (r => onRecordChange!(date, r)) : undefined;
+  $: eventListOnRecordChange = date && onRecordChange && !isOutsideMonth && !isMobile 
+    ? (r => onRecordChange!(date, r)) 
+    : undefined;
 
   $: weekend = date.day() === 0 || date.day() === 6;
   $: today = date.startOf("day").isSame(dayjs().startOf("day"));
 
+  // Mobile tap handling
+  let tapTimeout: ReturnType<typeof setTimeout> | null = null;
+  let tapCount = 0;
+
+  function handleTap(event: TouchEvent | MouseEvent) {
+    if (isOutsideMonth) return;
+    if (!isMobile) return;
+    
+    event.preventDefault();
+    tapCount++;
+    
+    if (tapTimeout) {
+      clearTimeout(tapTimeout);
+    }
+    
+    tapTimeout = setTimeout(() => {
+      if (tapCount === 1) {
+        // Single tap - open day popup
+        onDayTap?.(date, records);
+        dispatch('dayTap', { date, records });
+      } else if (tapCount >= 2) {
+        // Double tap - create new note
+        onRecordAdd?.(date);
+      }
+      tapCount = 0;
+    }, 300);
+  }
+
   function handleDblClick(event: MouseEvent) {
     if (isOutsideMonth) return;
+    if (isMobile) return; // Handled by tap
     onRecordAdd?.(date);
   }
 
   function handleMouseDown(event: MouseEvent) {
     if (isOutsideMonth) return;
+    if (isMobile) return;
     if (event.button === 2) {
       const menu = new Menu().addItem((item) => {
         item
@@ -83,9 +130,12 @@
   class:weekend
   class:today
   class:outside-month={isOutsideMonth}
+  class:mobile={isMobile}
   data-date={date.format('YYYY-MM-DD')}
   on:dblclick={handleDblClick}
   on:mousedown={handleMouseDown}
+  on:touchend={isMobile ? handleTap : undefined}
+  on:click={isMobile ? handleTap : undefined}
   style:width={width + "%"}
   role="gridcell"
   aria-selected={today}
@@ -95,7 +145,11 @@
     if (isOutsideMonth) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      handleDblClick(new MouseEvent('dblclick', { bubbles: true }));
+      if (isMobile) {
+        onDayTap?.(date, records);
+      } else {
+        handleDblClick(new MouseEvent('dblclick', { bubbles: true }));
+      }
     }
   }}
 >
@@ -107,6 +161,7 @@
       {onRecordClick}
       {onRecordCheck}
       onRecordChange={eventListOnRecordChange}
+      disableDrag={isMobile}
     />
   {/if}
 </div>
@@ -185,9 +240,34 @@
 
   @media (max-width: 480px) {
     .day-cell {
-      padding: 3px;
-      min-height: 80px;
-      gap: 2px;
+      padding: 4px;
+      min-height: 140px; /* 2x height for mobile */
+      gap: 3px;
+      font-size: 12px;
+    }
+  }
+
+  /* Mobile mode specific */
+  .day-cell.mobile {
+    min-height: 140px;
+    cursor: pointer;
+  }
+
+  .day-cell.mobile:active {
+    background: var(--background-modifier-hover);
+    transform: scale(0.98);
+  }
+
+  /* Touch device optimizations */
+  @media (pointer: coarse) {
+    .day-cell {
+      min-height: 140px; /* 2x height for touch devices */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .day-cell:active:not(.outside-month) {
+      background: var(--background-modifier-hover);
     }
   }
 </style>

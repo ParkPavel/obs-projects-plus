@@ -11,6 +11,7 @@
   export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
   export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
+  export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[]) => void) | undefined;
   export let onScrollToCurrent: ((callback: () => void) => void) | undefined;
   export let onScrollToDate: ((callback: (date: dayjs.Dayjs) => void) => void) | undefined;
   export let targetDate: dayjs.Dayjs | null = null;
@@ -268,6 +269,7 @@
         {onRecordChange}
         {onRecordCheck}
         {onRecordAdd}
+        {onDayTap}
       />
     </div>
   {/each}
