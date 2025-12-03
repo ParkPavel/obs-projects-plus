@@ -4,7 +4,7 @@
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher } from "svelte";
-  import Date from "./Date.svelte";
+  import DateDisplay from "./Date.svelte";
   import EventList from "./EventList.svelte";
   import { menuOnContextMenu } from "src/ui/views/helpers";
 
@@ -79,12 +79,44 @@
   // Mobile tap handling
   let tapTimeout: ReturnType<typeof setTimeout> | null = null;
   let tapCount = 0;
+  let touchStartTime = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  const TAP_THRESHOLD = 10; // Max movement for a tap
+  const DOUBLE_TAP_DELAY = 300;
 
-  function handleTap(event: TouchEvent | MouseEvent) {
+  function handleTouchStart(event: TouchEvent) {
     if (isOutsideMonth) return;
     if (!isMobile) return;
     
+    const touch = event.touches[0];
+    if (touch) {
+      touchStartTime = Date.now();
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    }
+  }
+
+  function handleTouchEnd(event: TouchEvent) {
+    if (isOutsideMonth) return;
+    if (!isMobile) return;
+    
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    
+    // Check if it was a tap (not a scroll/swipe)
+    const deltaX = Math.abs(touch.clientX - touchStartX);
+    const deltaY = Math.abs(touch.clientY - touchStartY);
+    const touchDuration = Date.now() - touchStartTime;
+    
+    if (deltaX > TAP_THRESHOLD || deltaY > TAP_THRESHOLD || touchDuration > 500) {
+      // This was a scroll/swipe, ignore
+      return;
+    }
+    
     event.preventDefault();
+    event.stopPropagation();
+    
     tapCount++;
     
     if (tapTimeout) {
@@ -101,7 +133,7 @@
         onRecordAdd?.(date);
       }
       tapCount = 0;
-    }, 300);
+    }, DOUBLE_TAP_DELAY);
   }
 
   function handleDblClick(event: MouseEvent) {
@@ -134,8 +166,8 @@
   data-date={date.format('YYYY-MM-DD')}
   on:dblclick={handleDblClick}
   on:mousedown={handleMouseDown}
-  on:touchend={isMobile ? handleTap : undefined}
-  on:click={isMobile ? handleTap : undefined}
+  on:touchstart={handleTouchStart}
+  on:touchend={handleTouchEnd}
   style:width={width + "%"}
   role="gridcell"
   aria-selected={today}
@@ -153,7 +185,7 @@
     }
   }}
 >
-  <Date {today} outsideMonth={isOutsideMonth}>{date.date()}</Date>
+  <DateDisplay {today} outsideMonth={isOutsideMonth}>{date.date()}</DateDisplay>
   {#if !isOutsideMonth}
     <EventList
       {checkField}

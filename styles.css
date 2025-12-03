@@ -107,6 +107,58 @@
   max-height: 95vh;
 }
 
+/* Mobile popover fixes */
+@media (max-width: 768px) {
+  .projects--popover {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    top: auto !important;
+    bottom: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    border-radius: 16px;
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+  
+  /* Ensure popover content is scrollable */
+  .projects--popover > * {
+    max-height: calc(60vh - 32px);
+    overflow-y: auto;
+  }
+}
+
+/* Mobile modal fixes */
+@media (max-width: 768px) {
+  .modal {
+    max-width: calc(100vw - 16px) !important;
+    max-height: 85vh !important;
+    margin: 8px !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    overflow-y: auto !important;
+  }
+  
+  .modal-content {
+    max-height: calc(85vh - 60px) !important;
+    overflow-y: auto !important;
+    padding-bottom: 60px !important;
+  }
+  
+  .modal-button-container {
+    position: sticky;
+    bottom: 0;
+    background: var(--background-primary);
+    padding: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+    margin: 0 -16px -16px;
+  }
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   .projects--board {
@@ -147,6 +199,48 @@
   .projects--board--card,
   .projects--gallery--card {
     min-height: 44px;
+  }
+  
+  /* Improve touch targets */
+  button, .clickable-icon, .checkbox-container {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Mobile Select/Dropdown fixes */
+@media (max-width: 768px) {
+  .dropdown,
+  .suggestion-container,
+  .menu {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    top: auto !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: 50vh !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    border-radius: 16px !important;
+    z-index: 1001;
+  }
+  
+  .menu .menu-item {
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+}
+
+/* Mobile calendar day popup overlay */
+@media (max-width: 768px) {
+  .day-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
   }
 }
 

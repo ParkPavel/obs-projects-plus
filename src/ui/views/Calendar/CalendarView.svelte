@@ -12,7 +12,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
-  import { toolbarCollapsed } from "src/lib/stores/ui";
+  import { toolbarCollapsed, isMobileDevice } from "src/lib/stores/ui";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import { Field } from "src/ui/components/Field";
@@ -382,9 +382,8 @@
     .filter((field) => field.type === DataFieldType.Boolean);
   $: booleanField = fields.find((field) => config?.checkField === field.name);
 
-  // Detect mobile device
-  $: isMobile = typeof window !== 'undefined' && 
-    (window.innerWidth <= 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
+  // Use global mobile detection store
+  $: isMobile = $isMobileDevice;
   
   // Get mobile calendar preference
   $: mobileCalendarView = $settings.preferences.mobileCalendarView || 'month';
