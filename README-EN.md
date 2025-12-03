@@ -9,7 +9,8 @@
 [![GitHub](https://img.shields.io/badge/GitHub-ParkPavel-blue?style=flat&logo=github)](https://github.com/ParkPavel)
 [![Website](https://img.shields.io/badge/Website-parkpavel.github.io-green?style=flat&logo=globe)](https://parkpavel.github.io/park-pavel/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat&logo=apache)](LICENSE)
-[![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple?style=flat&logo=obsidian)](https://obsidian.md)
+[![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple?style=flat&logo=obsidian)](https://obsidian.md)
+![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)
 
 </div>
 
@@ -23,6 +24,22 @@ Perfect for content managers, researchers, and anyone who needs to organize note
 
 ## 🌟 Features
 
+### 📱 **Mobile UX (v2.2.0)**
+- **DayPopup** - Full-screen day overview with single tap
+- **Double Tap** - Instant note creation
+- **Larger Day Cells** - +100% height for better touch targets
+- **Floating "Today" Button** - Available when toolbar is hidden
+- **Toolbar Collapse** - Full collapse with floating toggle buttons
+- **No Drag-n-Drop** - Prevents conflicts with touch gestures
+- **Note Actions** - Settings, duplicate, delete directly in popup
+
+### 🗓️ **Calendar Zoom Gestures (v2.1.0)**
+- **Infinite Scroll** - Smooth navigation through months/weeks
+- **Smart Zoom** - Ctrl+scroll for view switching (Month ↔ Week ↔ Day)
+- **Pinch-to-zoom** - Touchpad gesture support
+- **Date Centering** - Zoom maintains focus on selected date
+- **Visual Indicator** - Elegant Apple-style zoom level display
+
 ### 📊 **Multiple View Types**
 - **📋 Table View** - Spreadsheet-like interface for data management
 - **📌 Board View** - Kanban-style project boards
@@ -35,6 +52,8 @@ Perfect for content managers, researchers, and anyone who needs to organize note
 - **🔍 Dataview Integration** - Use Dataview queries for complex filtering
 - **📝 Custom Templates** - Configure note templates for each project
 
+### 🌐 **Localization**
+- Russian, English, Ukrainian, Chinese (zh-CN)
 
 ### ⚡ **Performance & Stability**
 - Enhanced performance optimizations

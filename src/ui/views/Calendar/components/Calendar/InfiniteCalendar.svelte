@@ -15,6 +15,7 @@
   export let onScrollToCurrent: ((callback: () => void) => void) | undefined;
   export let onScrollToDate: ((callback: (date: dayjs.Dayjs) => void) => void) | undefined;
   export let targetDate: dayjs.Dayjs | null = null;
+  export let isMobile: boolean = false;
 
   let container: HTMLDivElement | null = null;
   let scrollableParent: HTMLElement | null = null;
@@ -270,6 +271,7 @@
         {onRecordCheck}
         {onRecordAdd}
         {onDayTap}
+        {isMobile}
       />
     </div>
   {/each}

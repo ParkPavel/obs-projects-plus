@@ -21,6 +21,52 @@ Welcome to Projects Plus! This comprehensive guide will help you get the most ou
    - Configure settings
    - Start organizing!
 
+## 📱 Mobile Version (v2.2.0)
+
+### Mobile Gestures
+
+**Single tap on day cell:**
+- Opens **DayPopup** — full-screen day overview
+- Shows all notes for the selected day
+- Allows managing notes
+
+**Double tap on day cell:**
+- Instantly creates a new note for that day
+- Opens note creation dialog
+
+### DayPopup — Day Overview
+
+The popup window provides the following actions for each note:
+
+| Action | Description |
+|--------|-------------|
+| ✅ **Checkbox** | Change note status |
+| ⚙️ **Settings** | Open edit modal |
+| 📋 **Duplicate** | Copy note to other dates |
+| 🗑️ **Delete** | Delete note |
+
+### Duplicating Notes
+
+1. Tap the "Duplicate" button next to a note
+2. A mini-calendar will open
+3. Select one or more dates
+4. Click "Duplicate"
+
+The note will be copied to all selected dates.
+
+### Hiding the Toolbar
+
+- Click the collapse button in the toolbar
+- The toolbar will fully hide
+- A floating button will appear to restore it
+- On mobile, a floating "Today" button appears
+
+### Mobile-Specific Features
+
+- **Larger day cells** — 100% taller for easier tapping
+- **Disabled drag-n-drop** — prevents accidental dragging
+- **Floating buttons** — semi-transparent, minimalist design
+
 ## 📊 View Types
 
 ### 📋 Table View

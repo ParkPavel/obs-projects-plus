@@ -746,6 +746,7 @@
             onRecordCheck={handleRecordCheck}
             onRecordAdd={handleRecordAdd}
             onDayTap={handleDayTap}
+            {isMobile}
             onScrollToCurrent={(callback) => {
               scrollToCurrentCallback = callback;
             }}
@@ -764,6 +765,7 @@
               onRecordCheck={onRecordCheckWrapper}
               onRecordAdd={handleRecordAdd}
               onDayTap={handleDayTap}
+              {isMobile}
               onScrollToCurrent={(callback) => {
                 horizontalScrollToCurrentCallback = callback;
               }}

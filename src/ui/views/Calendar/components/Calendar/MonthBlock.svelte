@@ -16,6 +16,7 @@
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
   export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
   export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[]) => void) | undefined;
+  export let isMobile: boolean = false;
   
   $: grid = generateMonthGrid(month, firstDayOfWeek);
   $: monthTitle = month.format('MMMM YYYY');
@@ -50,6 +51,7 @@
             onRecordCheck={onRecordCheck}
             onRecordAdd={!cell.isOutsideMonth ? onRecordAdd : undefined}
             {onDayTap}
+            {isMobile}
           />
         {/each}
       </Week>
