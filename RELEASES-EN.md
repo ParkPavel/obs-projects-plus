@@ -1,10 +1,10 @@
 # 🚀 Release Information
 
-## Current Release: v2.0.1
+## Current Release: v2.2.0
 
-**Release Date**: November 21, 2025  
+**Release Date**: December 3, 2025  
 **Status**: 🟢 Stable  
-**Compatibility**: Obsidian 1.0.0+
+**Compatibility**: Obsidian 1.5.7+
 
 ## 📦 Download Options
 
@@ -36,6 +36,56 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 - **Settings Format**: Enhanced settings with backward compatibility
 
 ## 📋 Release Notes
+
+### 🎉 v2.2.0 (December 3, 2025) — Complete Mobile UX Overhaul
+
+#### 📱 Mobile Improvements
+- 🖼️ **DayPopup**: Full-screen day overview with all events
+  - Single tap opens popup with full note list
+  - Double tap creates a new note instantly
+- 🎛️ **Full Toolbar Collapse**: Hides entire toolbar panel, not just buttons
+  - Floating toggle buttons in top-left corner
+  - Semi-transparent minimalist design
+- 📅 **Larger Day Cells**: +100% height for better touch targets
+- 🔘 **Floating "Today" Button**: Appears when toolbar is hidden
+- 🚫 **Disabled Drag-n-Drop**: Prevents conflicts with touch gestures
+
+#### ⚙️ Note Actions (in DayPopup)
+- ⚙️ **Settings**: Open edit modal
+- 📋 **Duplicate**: Mini-calendar for selecting copy dates
+- 🗑️ **Delete**: Quick note deletion
+- ✅ **Checkbox**: Change status directly in popup
+
+#### 🎨 New Components
+- `DayPopup.svelte` — full-screen day overview
+- `RecordItem.svelte` — record item with actions
+- `DuplicatePopup.svelte` — mini-calendar for duplication
+
+#### 🌐 Localization
+- Added translations for RU/EN/UK/ZH-CN
+
+#### ♿ Accessibility
+- Added keyboard handlers for all interactive elements
+- ARIA labels for screen readers
+
+---
+
+### 🎉 v2.1.0 (January 21, 2025) — Calendar Zoom Gestures
+
+#### ✨ New Features
+- 🔍 **Smart Calendar Zoom**: Ctrl+scroll for instant view switching
+  - Zoom levels: Month ↔ 2 Weeks ↔ Week ↔ 3 Days ↔ Day
+- 🤏 **Pinch-to-zoom**: Touchpad and trackpad gesture support
+- 🎯 **Date Centering**: Zoom maintains focus on date under cursor
+- 💫 **Visual Indicator**: Elegant Apple-style zoom level indicator
+- 🔄 **Infinite Scroll**: Smooth navigation replaces Prev/Today/Next buttons
+
+#### 🎨 Design Improvements
+- Removed navigation buttons — now scroll with mouse wheel
+- Clean minimalist calendar interface
+- Apple-style visual effects and animations
+
+---
 
 ### 🎉 v2.0.1 - Patch Release
 - **Code Cleanup**: Removed AI-generated bloat and redundant code.
