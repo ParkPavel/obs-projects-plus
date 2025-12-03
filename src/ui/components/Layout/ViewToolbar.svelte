@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconButton } from "obsidian-svelte";
+  import { i18n } from "src/lib/stores/i18n";
 
   export let variant: "primary" | "secondary";
   export let collapsible: boolean = true;
@@ -7,6 +7,7 @@
   let collapsed: boolean = false;
 
   $: isMobile = clientWidth < 480;
+  
   function toggleCollapse() {
     if (!collapsible) return;
     collapsed = !collapsed;
@@ -14,101 +15,191 @@
 </script>
 
 <div
-  class="container"
-  class:primary={variant === "primary"}
-  class:secondary={variant === "secondary"}
-  class:isMobile
+  class="toolbar-wrapper"
   class:collapsed
   bind:clientWidth
 >
-  {#if collapsible}
-    <div class="toggle">
-      <IconButton
-        icon={collapsed ? "chevron-down" : "chevron-up"}
-        tooltip={collapsed ? "Show toolbar" : "Hide toolbar"}
-        onClick={toggleCollapse}
-      />
+  <div
+    class="container"
+    class:primary={variant === "primary"}
+    class:secondary={variant === "secondary"}
+    class:isMobile
+    class:collapsed
+  >
+    {#if collapsible}
+      <button
+        class="toggle-button"
+        class:collapsed
+        on:click={toggleCollapse}
+        title={collapsed ? $i18n.t("toolbar.collapse.show") : $i18n.t("toolbar.collapse.hide")}
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? $i18n.t("toolbar.collapse.show") : $i18n.t("toolbar.collapse.hide")}
+      >
+        <svg 
+          class="toggle-icon"
+          class:collapsed
+          width="14" 
+          height="14" 
+          viewBox="0 0 16 16" 
+          fill="none"
+        >
+          <path 
+            d="M4 6L8 10L12 6" 
+            stroke="currentColor" 
+            stroke-width="1.5" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    {/if}
+    <div class="content-wrapper" class:collapsed>
+      <div class="left">
+        <slot name="left" />
+      </div>
+      <div class="info">
+        <slot name="info" />
+      </div>
+      <div class="middle">
+        <slot name="middle" />
+      </div>
+      <div class="right">
+        <slot name="right" />
+      </div>
     </div>
-  {/if}
-  <div class="left" class:hidden={collapsed}>
-    <slot name="left" />
-  </div>
-  <div class="info" class:hidden={collapsed}>
-    <slot name="info" />
-  </div>
-  <div class="middle" class:hidden={collapsed}>
-    <slot name="middle" />
-  </div>
-  <div class="right" class:hidden={collapsed}>
-    <slot name="right" />
   </div>
 </div>
 
 <style>
+  .toolbar-wrapper {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   .container {
     display: flex;
-    justify-content: flex-start;
-    padding: var(--size-4-2);
-    gap: var(--size-4-2);
-    border-bottom: 1px solid var(--background-modifier-border);
     align-items: center;
-    width: auto;
+    padding: 6px 12px;
+    gap: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
     position: relative;
-    transition: padding 0.2s ease-in-out;
-  }
-  .container.collapsed {
-    padding: 0;
-    min-height: 24px; /* Adjust to fit the button */
-    border-bottom: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .toggle {
+  .container.collapsed {
+    padding: 4px 12px;
+    border-bottom-color: transparent;
+  }
+
+  .toggle-button {
     display: flex;
     align-items: center;
-    transition: all 0.2s ease-in-out;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    opacity: 0.6;
   }
 
-  .container.collapsed .toggle {
-    position: absolute;
-    top: -4px;
-    left: 4px;
-    z-index: 1;
+  .toggle-button:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+    opacity: 1;
+  }
+
+  .toggle-button.collapsed {
+    opacity: 0.4;
+  }
+
+  .toggle-button.collapsed:hover {
+    opacity: 0.8;
+  }
+
+  .toggle-button:active {
+    transform: scale(0.92);
+  }
+
+  .toggle-icon {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .toggle-icon.collapsed {
+    transform: rotate(-90deg);
+  }
+
+  .content-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    max-height: 100px;
+  }
+
+  .content-wrapper.collapsed {
+    opacity: 0;
+    max-height: 0;
+    gap: 0;
+    pointer-events: none;
   }
 
   .middle {
     flex: 0 1 auto;
     overflow-x: auto;
     text-align: center;
-    min-width: 200px;
   }
+
   .right {
     display: flex;
     align-items: center;
-    gap: var(--size-4-2);
+    gap: 8px;
     flex-wrap: wrap;
+    margin-left: auto;
   }
+
   .left {
     display: flex;
     align-items: center;
-    gap: var(--size-4-2);
+    gap: 8px;
     flex-wrap: wrap;
   }
+
+  .info {
+    display: flex;
+    align-items: center;
+  }
+
   .isMobile {
     flex-direction: column;
     align-items: stretch;
+    padding: 6px 8px;
   }
-  .isMobile .right {
+
+  .isMobile .content-wrapper {
+    flex-direction: column;
     align-items: stretch;
   }
 
-  .hidden {
-    display: none;
+  .isMobile .right {
+    align-items: stretch;
+    margin-left: 0;
   }
 
   .primary {
     background-color: var(--background-primary);
   }
+
   .secondary {
-    background-color: var(--background-primary-alt);
+    background-color: var(--background-secondary);
   }
 </style>

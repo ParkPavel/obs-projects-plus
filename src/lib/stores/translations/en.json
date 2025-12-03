@@ -319,7 +319,7 @@
                 "new-note": "New note",
                 "fields": {
                     "date": "Date",
-                    "check": "Check",
+                    "check": "Status",
                     "none": "None"
                 },
                 "today": "Today",
@@ -338,7 +338,23 @@
                     "day_one": "Day",
                     "day_other": "Days",
                     "dayWithCount_one": "{{count}} day",
-                    "dayWithCount_other": "{{count}} days"
+                    "dayWithCount_other": "{{count}} days",
+                    "2weeks": "2 Weeks",
+                    "3days": "3 Days"
+                },
+                "navigation": {
+                    "aria-label": "Calendar Navigation",
+                    "today-tooltip": "Go to today",
+                    "previous": "Previous",
+                    "next": "Next"
+                },
+                "empty": {
+                    "no-date-field": "Select a date field to display events",
+                    "no-events": "No events for this period"
+                },
+                "errors": {
+                    "create-readonly": "Cannot create events in read-only projects",
+                    "date-required": "Date field is required to create events"
                 }
             },
             "gallery": {
@@ -441,7 +457,11 @@
                 "options": "More options"
             },
             "read-only": "Read-only",
-            "read-only-desc": "You can't create or edit notes in read-only projects."
+            "read-only-desc": "You can't create or edit notes in read-only projects.",
+            "collapse": {
+                "show": "Show toolbar",
+                "hide": "Hide toolbar"
+            }
         },
         "settings": {
             "about": {
@@ -462,7 +482,7 @@
                 "star-github": "⭐ Star on GitHub",
                 "original-repo": "Original Repository",
                 "languages": "Supported Languages",
-                "languages-desc": "English, Русский, Українська, 中文"
+                "languages-desc": "Available languages: English, Russian, Ukrainian, Chinese (automatic detection based on system language)"
             },
             "general": {
                 "size-limit": {
@@ -483,6 +503,15 @@
                         "sunday": "Sunday",
                         "monday": "Monday",
                         "default": "Default"
+                    }
+                },
+                "mobile-calendar": {
+                    "name": "Mobile calendar view",
+                    "desc": "Default calendar view on mobile devices.",
+                    "options": {
+                        "month": "Month",
+                        "week": "Week",
+                        "day": "Day"
                     }
                 }
             },

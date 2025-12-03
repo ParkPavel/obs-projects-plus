@@ -4,32 +4,37 @@
 </script>
 
 <div
+  class="calendar-weekday"
   class:weekend
   style:width={width + "%"}
   role="columnheader"
   aria-sort="none"
-  class="calendar-weekday"
 >
   <slot />
 </div>
 
 <style>
   .calendar-weekday {
-    width: calc(100% / 7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-right: 1px solid var(--background-modifier-border);
-    padding: 4px;
-    padding-bottom: 0;
+    padding: 8px 4px;
     text-align: center;
-    font-size: var(--font-ui-small);
+    font-size: 11px;
     font-weight: 600;
+    letter-spacing: 0.04em;
     color: var(--text-muted);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--background-secondary);
+    background: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .calendar-weekday:last-child {
+    border-right: 0;
   }
 
   .weekend {
-    background-color: var(--background-primary-alt);
+    color: var(--text-faint);
   }
 </style>

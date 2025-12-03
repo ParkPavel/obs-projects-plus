@@ -407,3 +407,39 @@ export function getZoomLevelInfo(interval: CalendarInterval): { name: string; de
       return { name: "Unknown", description: "Invalid interval" };
   }
 }
+
+
+
+export function generateMonthTitle(month: dayjs.Dayjs): string {
+  return month.format("MMMM YYYY");
+}
+
+export interface DayCell {
+  date: dayjs.Dayjs;
+  isOutsideMonth: boolean;
+}
+
+export function generateMonthGrid(
+  monthStart: dayjs.Dayjs,
+  firstDayOfWeek: number
+): DayCell[][] {
+  const year = monthStart.year();
+  const mon = monthStart.month();
+  const firstDay = dayjs(new Date(year, mon, 1));
+  const startOfGrid = startOfWeek(firstDay, firstDayOfWeek);
+  const grid: DayCell[][] = [];
+  let current = startOfGrid.clone();
+  for (let week = 0; week < 6; week++) {
+    const row: DayCell[] = [];
+    for (let d = 0; d < 7; d++) {
+      const date = current.add(d, "day");
+      row.push({
+        date,
+        isOutsideMonth: date.month() !== mon
+      });
+    }
+    grid.push(row);
+    current = current.add(7, "day");
+  }
+  return grid;
+}

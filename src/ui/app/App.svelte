@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, createEventDispatcher } from "svelte";
 
   import { createProject } from "src/lib/dataApi";
   import { api } from "src/lib/stores/api";
@@ -23,9 +23,22 @@
   export let projectId: ProjectId | undefined;
   export let viewId: ViewId | undefined;
 
+  const dispatch = createEventDispatcher();
+
   $: ({ projects } = $settings);
 
   $: defaultProject = projects.find((project) => project.isDefault);
+
+  $: {
+    // If current projectId doesn't exist in projects array (project was deleted),
+    // update projectId to the default or first project
+    if (projectId && !projects.find((p) => p.id === projectId)) {
+      const newProjectId = defaultProject?.id || projects[0]?.id;
+      projectId = newProjectId;
+      // Dispatch event so parent can save state
+      dispatch('projectIdChange', newProjectId);
+    }
+  }
 
   $: project =
     projects.find((project) => projectId === project.id) ||

@@ -45,16 +45,18 @@
     event.stopPropagation();
     event.preventDefault();
 
+    // Ctrl+click opens in new tab
     dispatch("open", {
       linkText,
       sourcePath,
-      newLeaf: false,
+      newLeaf: event.ctrlKey || event.metaKey,
     });
   }}
   on:mouseover={(event) => {
     event.stopPropagation();
     event.preventDefault();
 
+    // Always show preview on hover (not edit mode)
     dispatch("hover", {
       event,
       linkText,

@@ -136,7 +136,11 @@
                 "options": "Другие параметры"
             },
             "read-only": "Только чтение",
-            "read-only-desc": "Вы не можете создавать или редактировать заметки в проектах только для чтения."
+            "read-only-desc": "Вы не можете создавать или редактировать заметки в проектах только для чтения.",
+            "collapse": {
+                "show": "Показать панель",
+                "hide": "Скрыть панель"
+            }
         },
         "settings": {
             "about": {
@@ -157,7 +161,7 @@
                 "star-github": "⭐ Звезда на GitHub",
                 "original-repo": "Оригинальный репозиторий",
                 "languages": "Поддерживаемые языки",
-                "languages-desc": "English, Русский, Українська, 中文"
+                "languages-desc": "Доступные языки: English, Русский, Украинский, 中文 (автоматическое определение на основе системного языка)"
             },
             "general": {
                 "size-limit": {
@@ -179,6 +183,15 @@
                         "monday": "Понедельник",
                         "default": "По умолчанию"
                     }
+                },
+                "mobile-calendar": {
+                    "name": "Вид календаря на мобильном",
+                    "desc": "Вид календаря по умолчанию на мобильных устройствах.",
+                    "options": {
+                        "month": "Месяц",
+                        "week": "Неделя",
+                        "day": "День"
+                    }
                 }
             },
             "front-matter": {
@@ -199,6 +212,51 @@
                 "name": "Архивы",
                 "desc": "Восстановите или удалите ваши архивированные проекты.",
                 "empty": "Нет архивированных проектов."
+            }
+        },
+        "views": {
+            "calendar": {
+                "name": "Календарь",
+                "new-note": "Новая заметка",
+                "fields": {
+                    "date": "Дата",
+                    "check": "Статус",
+                    "none": "Не выбрано"
+                },
+                "today": "Сегодня",
+                "weekday": "{{value, datetime}}",
+                "date": "{{value, datetime}}",
+                "interval": "{{from, datetime}} – {{to, datetime}}{{en_separator}}{{custom_year, datetime}}",
+                "intervals": {
+                    "month_one": "Месяц",
+                    "month_other": "Месяцев",
+                    "monthWithCount_one": "{{count}} месяц",
+                    "monthWithCount_other": "{{count}} месяцев",
+                    "week_one": "Неделя",
+                    "week_other": "Недель",
+                    "weekWithCount_one": "{{count}} неделя",
+                    "weekWithCount_other": "{{count}} недель",
+                    "day_one": "День",
+                    "day_other": "Дней",
+                    "dayWithCount_one": "{{count}} день",
+                    "dayWithCount_other": "{{count}} дней",
+                    "2weeks": "2 недели",
+                    "3days": "3 дня"
+                },
+                "navigation": {
+                    "aria-label": "Навигация по календарю",
+                    "today-tooltip": "Перейти к сегодняшней дате",
+                    "previous": "Назад",
+                    "next": "Вперёд"
+                },
+                "empty": {
+                    "no-date-field": "Выберите поле даты для отображения событий",
+                    "no-events": "Нет событий за этот период"
+                },
+                "errors": {
+                    "create-readonly": "Нельзя создавать события в проектах только для чтения",
+                    "date-required": "Для создания событий необходимо выбрать поле даты"
+                }
             }
         },
         "errors": {

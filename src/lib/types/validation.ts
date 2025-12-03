@@ -36,7 +36,7 @@ export type Validator<T = any> = (value: T) => FieldError;
 
 /**
  * Создает валидатор поля
- * @param validator Функция валидации
+ * @param validator - Функция валидации
  * @returns Функция валидации
  */
 export function createFieldValidator<T>(
@@ -47,7 +47,7 @@ export function createFieldValidator<T>(
 
 /**
  * Валидация обязательного поля
- * @param value Значение для проверки
+ * @param value - Значение для проверки
  * @returns Ошибка или null
  */
 export function validateRequired(value: any): FieldError {
@@ -58,7 +58,7 @@ export function validateRequired(value: any): FieldError {
 
 /**
  * Валидация имени
- * @param name Имя для проверки
+ * @param name - Имя для проверки
  * @returns Ошибка или null
  */
 export function validateName(name: string): FieldError {
@@ -69,7 +69,7 @@ export function validateName(name: string): FieldError {
 
 /**
  * Валидация email
- * @param email Email для проверки
+ * @param email - Email для проверки
  * @returns Ошибка или null
  */
 export function validateEmail(email: string): FieldError {

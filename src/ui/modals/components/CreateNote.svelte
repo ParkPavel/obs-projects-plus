@@ -31,6 +31,19 @@
 
   $: nameError = validateName(name);
 
+  // Explicit reactive statement for project options to ensure Select component
+  // properly detects changes when projects are updated or added
+  $: projectOptions = $settings.projects.map((proj) => ({
+    label: proj.name,
+    value: proj.id,
+  }));
+
+  // Explicit reactive statement for template options for the same reason
+  $: templateOptions = project.templates.map((path) => ({
+    label: path,
+    value: path,
+  }));
+
   function getNewNotesFolder(project: ProjectDefinition) {
     if (project.newNotesFolder) {
       return project.newNotesFolder;
@@ -106,10 +119,7 @@
             project = res;
           }
         }}
-        options={$settings.projects.map((project) => ({
-          label: project.name,
-          value: project.id,
-        }))}
+        options={projectOptions}
       />
     </SettingItem>
 
@@ -122,10 +132,7 @@
         <Select
           value={templatePath}
           on:change={({ detail: value }) => (templatePath = value)}
-          options={project.templates.map((path) => ({
-            label: path,
-            value: path,
-          }))}
+          options={templateOptions}
           placeholder={$i18n.t("modals.note.create.templatePath.none") ?? ""}
           allowEmpty
         />

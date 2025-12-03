@@ -170,6 +170,32 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName(get(i18n).t("settings.general.mobile-calendar.name"))
+      .setDesc(get(i18n).t("settings.general.mobile-calendar.desc"))
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption(
+            "month",
+            get(i18n).t("settings.general.mobile-calendar.options.month")
+          )
+          .addOption(
+            "week",
+            get(i18n).t("settings.general.mobile-calendar.options.week")
+          )
+          .addOption(
+            "day",
+            get(i18n).t("settings.general.mobile-calendar.options.day")
+          )
+          .setValue(preferences.mobileCalendarView || "month")
+          .onChange((value) => {
+            save({
+              ...preferences,
+              mobileCalendarView: value as "month" | "week" | "day",
+            });
+          })
+      );
+
+    new Setting(containerEl)
       .setName(get(i18n).t("settings.front-matter.heading"))
       .setHeading();
 

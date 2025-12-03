@@ -91,7 +91,7 @@
 />
 <IconButton
   icon={freezeAll ? "lock" : "unlock"}
-  title={freezeAll ? $i18n.t("views.board.unfreeze-all") : $i18n.t("views.board.freeze-all")}
+  tooltip={freezeAll ? $i18n.t("views.board.unfreeze-all") : $i18n.t("views.board.freeze-all")}
   onClick={() => onToggleFreezeAll(!freezeAll)}
 />
 <IconButton icon="settings" onClick={onSettings} />

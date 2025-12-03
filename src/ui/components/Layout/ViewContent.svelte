@@ -1,8 +1,9 @@
 <script lang="ts">
   export let padding: boolean = false;
+  export let noScroll: boolean = false;
 </script>
 
-<div class:padding>
+<div class:padding class:no-scroll={noScroll}>
   <slot />
 </div>
 
@@ -10,6 +11,11 @@
   div {
     flex: 1;
     overflow: auto;
+    position: relative;
+  }
+
+  .no-scroll {
+    overflow: hidden;
   }
 
   .padding {

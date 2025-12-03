@@ -1,25 +1,42 @@
 <script lang="ts">
   export let today: boolean = false;
+  export let outsideMonth: boolean = false;
 </script>
 
-<span class:today><slot /></span>
+<span 
+  class="calendar-date" 
+  class:today 
+  class:outside-month={outsideMonth}
+>
+  <slot />
+</span>
 
 <style>
-  span {
+  .calendar-date {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
     height: 24px;
-    line-height: 24px;
+    padding: 0 4px;
     font-size: 12px;
     font-weight: 500;
-    border-radius: 50px;
-    width: max-content;
-    min-width: 24px;
-    text-align: center;
-    display: inline-block;
-    align-self: center;
+    letter-spacing: -0.01em;
+    color: var(--text-muted);
+    border-radius: 6px;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .today {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
+    color: var(--interactive-accent);
+    font-weight: 700;
+  }
+
+  .outside-month {
+    color: var(--text-faint);
+    font-weight: 400;
+    opacity: 0.7;
   }
 </style>

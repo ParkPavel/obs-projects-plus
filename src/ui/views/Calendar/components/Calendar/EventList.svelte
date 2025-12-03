@@ -1,5 +1,4 @@
 <script lang="ts">
-  // import { InternalLink } from "obsidian-svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
   import { getDisplayName } from "src/ui/views/Board/components/Board/boardHelpers";
   import Event from "./Event.svelte";
@@ -16,9 +15,9 @@
   export let records: DataRecord[];
   export let checkField: string | undefined;
 
-  export let onRecordClick: (record: DataRecord) => void;
-  export let onRecordCheck: (record: DataRecord, checked: boolean) => void;
-  export let onRecordChange: (record: DataRecord) => void;
+  export let onRecordClick: ((record: DataRecord) => void) | undefined;
+  export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
+  export let onRecordChange: ((record: DataRecord) => void) | undefined;
 
   function asOptionalBoolean(value: Optional<DataValue>): Optional<boolean> {
     if (typeof value === "boolean") {
@@ -27,7 +26,7 @@
     return null;
   }
 
-  const flipDurationMs = 200;
+  const flipDurationMs = 150;
 
   function handleDndConsider(e: CustomEvent<DndEvent<DataRecord>>) {
     records = e.detail.items;
@@ -35,22 +34,24 @@
 
   function handleDndFinalize(e: CustomEvent<DndEvent<DataRecord>>) {
     records = e.detail.items;
-    records.forEach(onRecordChange);
+    records.forEach(r => onRecordChange?.(r));
   }
 
   const getRecordColor = getRecordColorContext.get();
 </script>
 
 <div
+  class="event-list"
   use:dndzone={{
     type: "entries",
     items: records,
     flipDurationMs,
     dropTargetStyle: {
       outline: "none",
-      borderRadius: "5px",
-      background: "hsla(var(--interactive-accent-hsl), 0.3)",
+      borderRadius: "8px",
+      background: "hsla(var(--interactive-accent-hsl), 0.15)",
     },
+    dropTargetClasses: ["drop-target-active"],
   }}
   on:consider={handleDndConsider}
   on:finalize={handleDndFinalize}
@@ -62,7 +63,7 @@
         checked={checkField !== undefined
           ? asOptionalBoolean(record.values[checkField])
           : undefined}
-        on:check={({ detail: checked }) => onRecordCheck(record, checked)}
+        on:check={({ detail: checked }) => onRecordCheck?.(record, checked)}
       >
         <InternalLink
           linkText={record.id}
@@ -70,17 +71,19 @@
           resolved
           tooltip={getDisplayName(record.id)}
           on:open={({ detail: { linkText, sourcePath, newLeaf } }) => {
-            let openEditor =
-              $settings.preferences.linkBehavior == "open-editor";
-
+            // Ctrl+click always opens in new tab
             if (newLeaf) {
-              openEditor = !openEditor;
-            }
-
-            if (openEditor) {
-              onRecordClick(record);
-            } else {
               $app.workspace.openLinkText(linkText, sourcePath, true);
+            } else {
+              // Normal click - use settings preference
+              let openEditor =
+                $settings.preferences.linkBehavior == "open-editor";
+
+              if (openEditor) {
+                onRecordClick?.(record);
+              } else {
+                $app.workspace.openLinkText(linkText, sourcePath, false);
+              }
             }
           }}
           on:hover={({ detail: { event, sourcePath } }) => {
@@ -95,12 +98,33 @@
 </div>
 
 <style>
-  div {
+  .event-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    height: 100%;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-height: 40px;
     width: 100%;
-    overflow-y: auto;
+    overflow: visible;
+    padding: 2px;
+    border-radius: 6px;
+    transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .event-list:empty {
+    min-height: 24px;
+  }
+
+  /* DnD active state */
+  :global(.drop-target-active) {
+    background: hsla(var(--interactive-accent-hsl), 0.08) !important;
+  }
+
+  /* Dragging item style */
+  .event-list :global([data-is-dragged]) {
+    opacity: 0.9;
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 100;
   }
 </style>

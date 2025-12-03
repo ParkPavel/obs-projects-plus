@@ -54,8 +54,20 @@ module.exports = {
           let val = rest.trim();
           if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
             val = val.slice(1, -1);
+            result[key] = val; // Keep as string if quoted
+          } else if (val === '' || val === 'null' || val === '~') {
+            result[key] = null;
+          } else if (val === 'true') {
+            result[key] = true;
+          } else if (val === 'false') {
+            result[key] = false;
+          } else if (/^-?\d+$/.test(val)) {
+            result[key] = parseInt(val, 10);
+          } else if (/^-?\d+\.\d+$/.test(val)) {
+            result[key] = parseFloat(val);
+          } else {
+            result[key] = val;
           }
-          result[key] = val;
         }
       }
       i++;
@@ -90,7 +102,7 @@ module.exports = {
           lines.push(`${k}: ${v}`);
         }
       } else if (v === null) {
-        lines.push(`${k}: `);
+        lines.push(`${k}:`);
       } else if (typeof v === 'object' && v.__quoted) {
         // Handle special quoted value
         lines.push(`${k}: "${v.__quoted}"`);
@@ -106,9 +118,19 @@ module.exports = {
  * Determine if a string needs quoting based on YAML special characters
  */
 function needsQuoting(str) {
+  // Quote strings that look like numbers to preserve string type
+  if (/^-?\d+\.?\d*$/.test(str)) {
+    return true;
+  }
+  
+  // Quote strings that look like booleans
+  if (/^(true|false|yes|no|on|off)$/i.test(str)) {
+    return true;
+  }
+  
   // Don't quote simple strings that don't need it
-  if (/^[a-zA-Z0-9\-_]+$/.test(str)) {
-    return false; // Don't quote simple identifiers, numbers, etc.
+  if (/^[a-zA-Z][a-zA-Z0-9\-_]*$/.test(str)) {
+    return false; // Don't quote simple identifiers starting with letter
   }
   
   // Quote strings that end with colon

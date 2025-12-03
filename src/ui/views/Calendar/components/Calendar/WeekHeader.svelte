@@ -9,9 +9,7 @@
 <style>
   .calendar-week-header {
     display: flex;
-    background: var(--background-secondary);
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--text-muted);
+    background: transparent;
+    flex-shrink: 0;
   }
 </style>

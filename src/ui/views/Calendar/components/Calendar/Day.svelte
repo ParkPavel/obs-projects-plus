@@ -13,6 +13,11 @@
   export let date: dayjs.Dayjs;
 
   /**
+   * Whether this day is outside the current month (for grid alignment).
+   */
+  export let isOutsideMonth: boolean = false;
+
+  /**
    * Specifies the width of the day div.
    */
   export let width: number;
@@ -30,37 +35,43 @@
   /**
    * onRecordClick runs when the user clicks a calendar event.
    */
-  export let onRecordClick: (record: DataRecord) => void;
+  export let onRecordClick: ((record: DataRecord) => void) | undefined;
 
   /**
    * onRecordCheck runs when the user Checks / Unchecks a calendar event.
    */
-  export let onRecordCheck: (record: DataRecord, checked: boolean) => void;
+  export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
 
   /**
-   * onRecordChange runs when the user changes the checked state.
+   * onRecordChange runs when the user changes the record (e.g. date).
    */
-  export let onRecordChange: (record: DataRecord) => void;
+  export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord) => void) | undefined;
 
   /**
    * onRecordAdd runs when the user creates a new calendar event on this day.
    */
-  export let onRecordAdd: () => void;
+  export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
+
+  let eventListOnRecordChange: ((record: DataRecord) => void) | undefined = undefined;
+
+  $: eventListOnRecordChange = date && onRecordChange && !isOutsideMonth ? (r => onRecordChange!(date, r)) : undefined;
 
   $: weekend = date.day() === 0 || date.day() === 6;
   $: today = date.startOf("day").isSame(dayjs().startOf("day"));
 
   function handleDblClick(event: MouseEvent) {
-    onRecordAdd();
+    if (isOutsideMonth) return;
+    onRecordAdd?.(date);
   }
 
   function handleMouseDown(event: MouseEvent) {
+    if (isOutsideMonth) return;
     if (event.button === 2) {
       const menu = new Menu().addItem((item) => {
         item
           .setTitle($i18n.t("views.calendar.new-note"))
           .setIcon("file-plus")
-          .onClick(() => onRecordAdd());
+          .onClick(() => onRecordAdd?.(date!));
       });
       menuOnContextMenu(event, menu);
     }
@@ -68,71 +79,115 @@
 </script>
 
 <div
+  class="day-cell"
   class:weekend
+  class:today
+  class:outside-month={isOutsideMonth}
+  data-date={date.format('YYYY-MM-DD')}
   on:dblclick={handleDblClick}
   on:mousedown={handleMouseDown}
   style:width={width + "%"}
   role="gridcell"
-  aria-label="День {date.date()} {date.format('MMMM YYYY')}"
-  aria-selected="false"
-  tabindex="0"
+  aria-selected={today}
+  aria-disabled={isOutsideMonth}
+  tabindex={isOutsideMonth ? -1 : 0}
   on:keydown={(e) => {
+    if (isOutsideMonth) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleDblClick(new MouseEvent('dblclick', { bubbles: true }));
     }
   }}
 >
-  <Date {today}>{date.date()}</Date>
-  <EventList
-    {checkField}
-    {records}
-    {onRecordClick}
-    {onRecordCheck}
-    {onRecordChange}
-  />
+  <Date {today} outsideMonth={isOutsideMonth}>{date.date()}</Date>
+  {#if !isOutsideMonth}
+    <EventList
+      {checkField}
+      {records}
+      {onRecordClick}
+      {onRecordCheck}
+      onRecordChange={eventListOnRecordChange}
+    />
+  {/if}
 </div>
 
 <style>
-  div {
+  .day-cell {
+    position: relative;
     border-right: 1px solid var(--background-modifier-border);
-    padding: 4px;
+    padding: 6px;
     font-size: var(--font-ui-small);
     display: flex;
     flex-direction: column;
     gap: 4px;
     outline: none;
-    transition: all 0.2s ease;
-    min-height: 80px; /* Reduced height for mobile */
+    min-height: 105px;
+    height: 100%;
+    overflow: visible;
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--background-primary);
+    border-radius: 0;
   }
 
-  div:focus {
+  .day-cell:not(.outside-month):hover {
+    background: var(--background-secondary);
+  }
+
+  .day-cell:not(.outside-month):focus {
     box-shadow: inset 0 0 0 2px var(--interactive-accent);
+    z-index: 1;
   }
 
-  div:last-child {
+  .day-cell:last-child {
     border-right: 0;
   }
 
-  .weekend {
-    background-color: var(--background-primary-alt);
+  /* Today highlight - border instead of ellipse */
+  .day-cell.today {
+    background: hsla(var(--interactive-accent-hsl), 0.08);
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
+    border-radius: 8px;
   }
 
+  .day-cell.today:hover {
+    background: hsla(var(--interactive-accent-hsl), 0.12);
+  }
+
+  /* Weekend styling */
+  .day-cell.weekend:not(.outside-month):not(.today) {
+    background: var(--background-primary-alt);
+  }
+
+  .day-cell.weekend:not(.outside-month):not(.today):hover {
+    background: var(--background-modifier-hover);
+  }
+
+  /* Outside month (inactive days) */
+  .day-cell.outside-month {
+    background: var(--background-secondary);
+    opacity: 0.5;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .day-cell.outside-month:hover {
+    background: var(--background-secondary);
+  }
 
   /* Mobile responsive styles */
   @media (max-width: 768px) {
-    div {
-      padding: 3px;
-      min-height: 70px;
-      font-size: var(--font-ui-smaller);
+    .day-cell {
+      padding: 4px;
+      min-height: 90px;
+      gap: 3px;
     }
   }
 
   @media (max-width: 480px) {
-    div {
-      padding: 2px;
-      min-height: 60px;
-      font-size: var(--font-ui-smallest);
+    .day-cell {
+      padding: 3px;
+      min-height: 80px;
+      gap: 2px;
     }
   }
 </style>

@@ -13,6 +13,27 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = process.argv[2] === "production";
 
+// Custom plugin to log warnings
+const logWarningsPlugin = {
+  name: 'log-warnings',
+  setup(build) {
+    build.onEnd(result => {
+      if (result.warnings.length > 0) {
+        console.warn(`\n⚠️  Build completed with ${result.warnings.length} warning(s):`);
+        result.warnings.forEach((warning, i) => {
+          console.warn(`  ${i + 1}. ${warning.text}`);
+          if (warning.location) {
+            console.warn(`     at ${warning.location.file}:${warning.location.line}:${warning.location.column}`);
+          }
+        });
+      }
+      if (result.errors.length === 0) {
+        console.log(`\n✅ Build successful${prod ? ' (production)' : ' (development)'}`);
+      }
+    });
+  }
+};
+
 const buildOptions = {
   plugins: [
     esbuildSvelte({
@@ -30,6 +51,7 @@ const buildOptions = {
         "document.": `activeDocument.`,
       },
     }),
+    logWarningsPlugin,
   ],
   banner: {
     js: banner,

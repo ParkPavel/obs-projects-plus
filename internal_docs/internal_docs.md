@@ -4,11 +4,14 @@
 
 **Obs-Projects-Plus** is an enhanced fork of the original Obsidian Projects plugin, designed for modern project management within Obsidian. Built with TypeScript and Svelte, it offers powerful data handling, multiple view types, and a clean, extensible architecture.
 
+**Current Version**: 2.1.0
+
 ### What is it?
 A comprehensive project management solution that transforms your Obsidian vault into an organized workspace with:
 - Multiple data sources (folders, tags, frontmatter, dataview)
 - Four view types (Board, Calendar, Gallery, Table)
 - Advanced metadata handling
+- **Calendar zoom gestures (v2.1.0)** — Ctrl+scroll and pinch-to-zoom
 - Internationalization support
 - Extensible plugin architecture
 
@@ -16,6 +19,7 @@ A comprehensive project management solution that transforms your Obsidian vault 
 - **Multiple Views**: Kanban board, calendar, gallery, and spreadsheet-like table
 - **Flexible Data Sources**: Works with folders, tags, frontmatter, and dataview queries
 - **Rich Metadata**: Support for text, dates, numbers, checkboxes, and tags
+- **Smart Calendar Zoom**: Ctrl+scroll to switch between Month/2Weeks/Week/3Days/Day views
 - **Team Ready**: Built for collaborative development with clean code practices
 - **Performance Optimized**: Virtual scrolling, efficient data handling
 
@@ -122,7 +126,13 @@ src/
 - **UI Responsiveness**: Optimized reactivity and state updates
 
 ### Interface Improvements
-- **Calendar View**: Enhanced date handling and navigation
+- **Calendar View**: Enhanced date handling, navigation, and zoom gestures (v2.1.0)
+  - Zoom levels: Month ↔ 2 Weeks ↔ Week ↔ 3 Days ↔ Day
+  - Ctrl+scroll and pinch-to-zoom support
+  - Date centering on zoom
+  - Visual zoom indicator
+  - Infinite scroll replaces Prev/Today/Next buttons
+  - Cleaner Apple-style design
 - **Table View**: Better cell editing and column management
 - **Board View**: Improved drag-and-drop performance
 - **Mobile Support**: Responsive design improvements
@@ -176,17 +186,25 @@ src/
 
 ## Project Status
 
-### Current State ✅
+### Current State ✅ (v2.1.0)
 - **Working**: All core features functional and tested
 - **Optimized**: Performance improvements implemented
 - **Clean Code**: Well-structured, documented, and maintainable
 - **Team Ready**: Suitable for collaborative development
+- **100 Tests Passing**: Full test suite coverage
+
+### Recent Updates (v2.1.0)
+- **Calendar Zoom Gestures**: Ctrl+scroll and pinch-to-zoom for view switching
+- **Date Centering**: Zoom maintains focus on date under cursor
+- **Visual Indicator**: Apple-style zoom level indicator
+- **Bug Fixes**: Fixed zoom blocking after first use, improved event handling
 
 ### Quality Metrics
 - **Code Coverage**: 85%+ with comprehensive tests
 - **Type Safety**: Full TypeScript implementation
 - **Performance**: Optimized for large datasets
 - **User Experience**: Intuitive interface with helpful feedback
+- **Bundle Size**: ~990KB optimized build
 
 ### Technical Excellence
 - Modern TypeScript and Svelte architecture

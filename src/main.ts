@@ -1,6 +1,12 @@
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import localizedFormat from "dayjs/plugin/localizedFormat";
+
+// Импорт локалей dayjs - должен быть до i18n
+import "dayjs/locale/ru";
+import "dayjs/locale/uk";
+import "dayjs/locale/zh-cn";
+
 import { either, task, taskEither } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
 import { Plugin, TFolder, WorkspaceLeaf, addIcon } from "obsidian";

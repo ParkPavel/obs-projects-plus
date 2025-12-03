@@ -30,10 +30,11 @@ export function encodeFrontMatter(
       // Process frontmatter properties
       for (const [key, value] of Object.entries(frontmatter)) {
         if (value === undefined) {
-          // Skip undefined values completely
+          // undefined means: remove this property from the result
+          delete result[key];
           continue;
         }
-        // For all other values, use the provided value
+        // For all other values (including null), use the provided value
         result[key] = value;
       }
       
@@ -78,14 +79,15 @@ export function stringifyYaml(
   value: any,
   defaultStringType: "PLAIN" | "QUOTE_DOUBLE" = "PLAIN"
 ): string {
-  return F.pipe(value, (value) =>
-    stringify(value, {
-      lineWidth: 0,
-      nullStr: "",
-      defaultStringType: defaultStringType,
-      defaultKeyType: "PLAIN",
-      simpleKeys: false,
-    })
-  );
+  const result = stringify(value, {
+    lineWidth: 0,
+    nullStr: "",
+    defaultStringType: defaultStringType,
+    defaultKeyType: "PLAIN",
+    simpleKeys: false,
+  });
+  
+  // Remove trailing space after colon for null values (YAML outputs "key: " instead of "key:")
+  return result.replace(/: \n/g, ":\n");
 }
 

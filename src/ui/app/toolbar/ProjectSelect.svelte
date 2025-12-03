@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { produce } from "immer";
   import { Menu, Notice } from "obsidian";
   import { IconButton, Select } from "obsidian-svelte";
 
@@ -13,30 +12,38 @@
 
   export let projectId: ProjectId | undefined;
   export let projects: ProjectDefinition[];
-
-  $: project = projects.find((project) => project.id === projectId);
-
   export let onProjectChange: (projectId: ProjectId) => void;
   export let onProjectAdd: () => void;
+
+  // Extract options computation to an explicit reactive statement to ensure
+  // the Select component properly detects changes when projects are updated.
+  // This fixes the issue where project names disappear from the dropdown after editing.
+  $: options = projects
+    .map((project) => ({
+      label: project.name,
+      value: project.id,
+    }))
+    .sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { numeric: true })
+    );
+
+  // Compute effective projectId - use passed projectId if valid, otherwise fallback
+  $: effectiveProjectId = (projectId && projects.find(p => p.id === projectId)) 
+    ? projectId 
+    : projects[0]?.id;
+
+  $: project = projects.find((project) => project.id === effectiveProjectId);
 </script>
 
 <span>
-  <Select
-    value={projectId ?? ""}
-    options={produce(
-      projects.map((project) => ({
-        label: project.name,
-        value: project.id,
-      })),
-      (draft) => {
-        draft.sort((a, b) =>
-          a.label.localeCompare(b.label, undefined, { numeric: true })
-        );
-      }
-    )}
-    on:change={({ detail: value }) => onProjectChange(value)}
-    placeholder={$i18n.t("toolbar.projects.none") ?? ""}
-  />
+  {#key effectiveProjectId}
+    <Select
+      value={effectiveProjectId ?? ""}
+      {options}
+      on:change={({ detail: value }) => onProjectChange(value)}
+      placeholder={$i18n.t("toolbar.projects.none") ?? ""}
+    />
+  {/key}
 
   <IconButton
     icon="more-vertical"

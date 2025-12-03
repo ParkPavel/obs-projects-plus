@@ -98,9 +98,30 @@ export class ProjectsView extends ItemView {
   async onOpen() {
     customViews.set(this.getProjectViews());
 
+    // Get the current state or use defaults
+    const currentState = (this.getState && this.getState()) as ProjectsViewState | undefined;
+    const projectId = currentState?.projectId;
+    const viewId = currentState?.viewId;
+
     this.component = new App({
       target: this.contentEl,
+      props: {
+        projectId,
+        viewId,
+      }
     });
+
+    // Listen for projectId changes and save them to view state
+    if (this.component) {
+      this.component.$on('projectIdChange', (event: any) => {
+        const newProjectId = event.detail;
+        // Update internal state and persist it
+        const newState: ProjectsViewState = { projectId: newProjectId, viewId: viewId ?? '' };
+        this.setState(newState, { history: false });
+        // Update the component with new projectId
+        this.component?.$set({ projectId: newProjectId });
+      });
+    }
   }
 
   async onClose() {

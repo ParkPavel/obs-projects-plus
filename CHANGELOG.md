@@ -5,7 +5,32 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2025-01-XX
+## [2.1.0] - 2025-01-21
+
+### Added
+- 🔍 **Calendar Zoom Gestures** - Ctrl+scroll and pinch-to-zoom for instant view switching
+  - Zoom levels: Month ↔ 2 Weeks ↔ Week ↔ 3 Days ↔ Day
+- 🎯 **Date Centering** - Zoom maintains focus on the date under cursor
+- 💫 **Visual Zoom Indicator** - Apple-style indicator showing current zoom level
+- 🔄 **Infinite Scroll** - Smooth scrolling navigation replaces Prev/Today/Next buttons
+
+### Changed
+- 🎨 **Calendar UI Redesign** - Removed navigation buttons for cleaner interface
+- ⚡ **Event Handling** - Optimized wheel event processing for zoom gestures
+
+### Fixed
+- 🐛 **Zoom Blocking** - Fixed issue where zoom stopped working after first use
+- 🔧 **Ctrl+Wheel Events** - Fixed event propagation in horizontal calendar views (week/day)
+- ⚡ **Debounce** - Added proper debounce to prevent multiple zoom triggers
+
+## [2.0.1] - 2024-11-21
+
+### Changed
+- 🧹 **Code Cleanup** - Removed AI-generated slop (unnecessary/duplicate code)
+- 🔧 **Build Configs** - Updated vite, tsconfig.json, package.json
+- 📚 **Documentation** - Created/updated internal_docs.md with project state analysis
+
+## [2.0.0] - 2024-01-XX
 
 ### Added
 - 🎉 **Major Version Release** - Complete rewrite and enhancement of the original plugin

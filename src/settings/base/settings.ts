@@ -179,6 +179,8 @@ export type LinkBehavior = "open-note" | "open-editor";
 
 export type FirstDayOfWeek = "sunday" | "monday" | "default";
 
+export type MobileCalendarView = "month" | "week" | "day";
+
 export type ProjectsPluginPreferences = {
   readonly projectSizeLimit: number;
   readonly frontmatter: {
@@ -189,6 +191,7 @@ export type ProjectsPluginPreferences = {
   };
   readonly commands: ShowCommand[];
   readonly linkBehavior: LinkBehavior;
+  readonly mobileCalendarView: MobileCalendarView;
 };
 
 export type UnsavedViewDefinition = Omit<

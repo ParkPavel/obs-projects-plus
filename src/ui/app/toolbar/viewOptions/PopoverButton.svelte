@@ -5,6 +5,7 @@
   export let icon: string;
   export let count: number;
   export let disabled: boolean;
+  export let label: string = "";
 
   let ref: HTMLButtonElement;
   let isOpen: boolean = false;
@@ -16,6 +17,7 @@
     isOpen = !isOpen;
   }}
   {disabled}
+  tooltip={label}
 >
   <Icon name={icon} />
   {#if count}

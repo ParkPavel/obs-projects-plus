@@ -48,6 +48,13 @@
 
   $: nameError = validateName(name);
 
+  // Explicit reactive statement for project options to ensure Select component
+  // properly detects changes when projects are updated or added
+  $: projectOptions = $settings.projects.map((proj) => ({
+    label: proj.name,
+    value: proj.id,
+  }));
+
   function validateName(name: string) {
     if (project.views.find((view) => view.name === name)) {
       return $i18n.t("modals.view.create.existing-name-error");
@@ -96,10 +103,7 @@
             project = res;
           }
         }}
-        options={$settings.projects.map((project) => ({
-          label: project.name,
-          value: project.id,
-        }))}
+        options={projectOptions}
       />
     </SettingItem>
   </ModalContent>

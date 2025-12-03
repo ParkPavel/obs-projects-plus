@@ -1,10 +1,19 @@
-# Custom View API
+# Custom View API (Experimental)
+
+**STATUS: EXPERIMENTAL AND UNSTABLE**
 
 _Traveler! Before you venture further, know that there be dragons ahead. Beasts that may lay waste to your plugin, leaving it broken and burned. Continue your journey only if you're willing to accept pain and suffering in your search of greatness._
 
 With the Custom View API you can add your own custom views to the Projects plugin.
 
-**IMPORTANT:** This API is **highly experimental**. If you're interested in building views for Projects, please reach out to me so that I can update you in case of (inevitable) breaking changes.
+**⚠️ WARNING: This API is HIGHLY EXPERIMENTAL and SUBJECT TO BREAKING CHANGES.**
+
+Only use this API if:
+- You are willing to maintain your plugin through breaking changes
+- You understand that this API may be completely rewritten or removed
+- You can afford to have your plugin broken by updates
+
+If you're interested in building views for Projects, please reach out to me so that I can update you in case of (inevitable) breaking changes.
 
 ## Build a custom view
 

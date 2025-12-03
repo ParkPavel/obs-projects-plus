@@ -1,9 +1,9 @@
 {
   "id": "obs-projects-plus",
   "name": "Projects Plus",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "minAppVersion": "1.5.7",
-  "description": "Enhanced project management for Obsidian with advanced features.",
+  "description": "Мощное управление проектами для Obsidian с Apple-стиль календарём, зум-жестами и бесконечной прокруткой.",
   "author": "Park Pavel",
   "authorUrl": "https://parkpavel.github.io/park-pavel/",
   "fundingUrl": "https://github.com/ParkPavel",

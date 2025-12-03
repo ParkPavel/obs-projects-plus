@@ -22,7 +22,11 @@
   let hover: boolean = false;
 </script>
 
-<div on:mouseenter={() => (hover = true)} on:mouseleave={() => (hover = false)}>
+<div 
+  class="calendar-event"
+  on:mouseenter={() => (hover = true)} 
+  on:mouseleave={() => (hover = false)}
+>
   {#if color}
     <ColorPill {color} />
   {/if}
@@ -39,19 +43,39 @@
 </div>
 
 <style>
-  div {
+  .calendar-event {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     align-items: center;
-    padding: 0.2em 0.4em;
-    font-size: var(--font-ui-smaller);
-    border: 1px solid var(--background-modifier-border);
-    background-color: var(--background-primary);
-    border-radius: var(--radius-s);
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    background: var(--background-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  /* Remove default checkbox margin. */
-  div :global(input[type="checkbox"]) {
+  .calendar-event:hover {
+    background: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .calendar-event:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  /* Remove default checkbox margin */
+  .calendar-event :global(input[type="checkbox"]) {
     margin: 0;
+    width: 14px;
+    height: 14px;
   }
 </style>
