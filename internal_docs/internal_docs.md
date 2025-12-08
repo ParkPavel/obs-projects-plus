@@ -4,13 +4,15 @@
 
 **Obs-Projects-Plus** is an enhanced fork of the original Obsidian Projects plugin, designed for modern project management within Obsidian. Built with TypeScript and Svelte, it offers powerful data handling, multiple view types, and a clean, extensible architecture.
 
-**Current Version**: 2.1.0
+**Current Version**: 2.2.0
+**Repository**: https://github.com/ParkPavel/obs-projects-plus
 
 ### What is it?
 A comprehensive project management solution that transforms your Obsidian vault into an organized workspace with:
 - Multiple data sources (folders, tags, frontmatter, dataview)
 - Four view types (Board, Calendar, Gallery, Table)
 - Advanced metadata handling
+- **Mobile UX (v2.2.0)** — DayPopup, double-tap, floating buttons
 - **Calendar zoom gestures (v2.1.0)** — Ctrl+scroll and pinch-to-zoom
 - Internationalization support
 - Extensible plugin architecture

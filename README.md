@@ -5,7 +5,7 @@
 ![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
-[![Downloads](https://img.shields.io/github/downloads/Park-Jeong-Gil/OBSv1.0/total.svg)](https://github.com/Park-Jeong-Gil/OBSv1.0/releases)
+[![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
 
 **Мощный плагин управления проектами для Obsidian с продвинутыми представлениями и интуитивным интерфейсом**
 
@@ -75,7 +75,7 @@
 4. Нажмите **Установить** и затем **Включить**
 
 ### Ручная установка
-1. Скачайте последний релиз из [Releases](https://github.com/Park-Jeong-Gil/OBSv1.0/releases)
+1. Скачайте последний релиз из [Releases](https://github.com/ParkPavel/obs-projects-plus/releases)
 2. Распакуйте в папку `.obsidian/plugins/obs-projects-plus/`
 3. Перезагрузите Obsidian
 4. Включите плагин в настройках
@@ -129,7 +129,7 @@ tags:
 
 ```bash
 # Клонирование репозитория
-git clone https://github.com/Park-Jeong-Gil/OBSv1.0.git
+git clone https://github.com/ParkPavel/obs-projects-plus.git
 
 # Установка зависимостей
 npm install
@@ -157,7 +157,7 @@ npm run lint
 
 ## 📄 Лицензия
 
-[Apache License 2.0](LICENSE) © 2024 Park Jeong-Gil
+[Apache License 2.0](LICENSE) © 2024 Park Pavel
 
 ---
 
@@ -165,6 +165,6 @@ npm run lint
 
 **Сделано с ❤️ для сообщества Obsidian**
 
-[⭐ Star](https://github.com/Park-Jeong-Gil/OBSv1.0) | [🐛 Issues](https://github.com/Park-Jeong-Gil/OBSv1.0/issues) | [💬 Discussions](https://github.com/Park-Jeong-Gil/OBSv1.0/discussions)
+[⭐ Star](https://github.com/ParkPavel/obs-projects-plus) | [🐛 Issues](https://github.com/ParkPavel/obs-projects-plus/issues) | [💬 Discussions](https://github.com/ParkPavel/obs-projects-plus/discussions)
 
 </div>

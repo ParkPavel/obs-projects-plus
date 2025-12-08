@@ -247,7 +247,6 @@ getProjectViews() {
   views["board"] = new BoardView();
   views["calendar"] = new CalendarView();
   views["gallery"] = new GalleryView();
-  views["developer"] = new DeveloperView();
   return views;
 }
 ```
