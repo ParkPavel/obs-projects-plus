@@ -41,6 +41,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.15.0",
+    "@popperjs/core": "^2.11.8",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^4.2.3",
     "@tsconfig/svelte": "^5.0.4",

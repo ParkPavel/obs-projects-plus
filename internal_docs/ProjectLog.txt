@@ -1,0 +1,307 @@
+# Projects Plus Fork — Project Log
+
+## Дата: 2024-12-08
+
+## Цель сессии
+Восстановить работоспособность сборки проекта и устранить критические ошибки.
+
+## План (приоритет high → low)
+1. [DONE] Исправить ошибку сборки: `Could not resolve "@popperjs/core"`
+2. [DONE] Проверить успешность сборки после фикса
+3. [DONE] Настроить git репозиторий
+4. [DONE] Создать документацию архитектуры
+5. [MEDIUM] Проанализировать warning A11y (IconButton.svelte)
+6. [LOW] Провести аудит зависимостей
+
+## Баги (известные)
+1. **RESOLVED** — Build Error: `@popperjs/core` — установлен как devDependency
+2. **WARNING** — A11y: IconButton.svelte (line 38) — баг в obsidian-svelte
+
+## Итоги сессии (2024-12-08)
+- [x] Установлен `@popperjs/core` как devDependency
+- [x] Сборка успешна
+- [x] Git настроен на origin/main
+- [x] Документация восстановлена после потери
+
+## Текущий статус
+- Сборка: **SUCCESS** ✅
+- Git: **origin/main** ✅
+- Warning: 1 (A11y в obsidian-svelte, не блокирует)
+
+---
+
+# АРХИТЕКТУРА ФОКУСНОГО ПЕРЕЗАПУСКА
+
+> Документ для восстановления контекста при новой сессии работы с AI-ассистентом.  
+> Обновлять после каждой значимой сессии.
+
+---
+
+## 1. ОБЩАЯ ИНФОРМАЦИЯ О ПРОЕКТЕ
+
+| Параметр | Значение |
+|----------|----------|
+| Название | obs-projects-plus |
+| Версия | 2.2.0 |
+| Тип | Obsidian Plugin |
+| Язык | TypeScript + Svelte |
+| Сборка | esbuild |
+| Тесты | Jest |
+| Лицензия | Apache-2.0 |
+| GitHub | https://github.com/ParkPavel/obs-projects-plus |
+
+---
+
+## 2. СТРУКТУРА ПРОЕКТА (КЛЮЧЕВЫЕ ФАЙЛЫ)
+
+```
+src/
+├── main.ts              # Точка входа плагина (ProjectsPlusPlugin)
+├── view.ts              # Главный вью (ProjectsView extends ItemView)
+├── events.ts            # Обработка файловых событий Obsidian
+├── customViewApi.ts     # API для кастомных вью (ProjectView base class)
+│
+├── settings/            # Система настроек
+│   ├── settings.ts      # Миграция и экспорт типов
+│   ├── base/settings.ts # Базовые типы (ViewDefinition, FilterDefinition, etc.)
+│   ├── v1/settings.ts   # Версия 1 настроек
+│   └── v2/settings.ts   # Версия 2 настроек (текущая)
+│
+├── lib/
+│   ├── dataApi.ts       # DataApi — CRUD операции с записями
+│   ├── viewApi.ts       # ViewApi — API для вью
+│   ├── helpers.ts       # Утилиты
+│   │
+│   ├── dataframe/
+│   │   └── dataframe.ts # DataFrame, DataField, DataRecord — core data types
+│   │
+│   ├── datasources/     # Источники данных
+│   │   ├── index.ts     # DataSource abstract class
+│   │   ├── folder/      # Folder-based data source
+│   │   ├── tag/         # Tag-based data source
+│   │   ├── frontmatter/ # Frontmatter-based data source
+│   │   └── dataview/    # Dataview integration
+│   │
+│   ├── filesystem/
+│   │   ├── filesystem.ts # IFile, IFileSystem, IFileSystemWatcher interfaces
+│   │   ├── obsidian/    # Obsidian filesystem implementation
+│   │   └── inmem/       # In-memory filesystem (для тестов)
+│   │
+│   ├── metadata/
+│   │   ├── decode.ts    # Парсинг frontmatter
+│   │   └── encode.ts    # Сериализация frontmatter
+│   │
+│   ├── stores/          # Svelte stores (реактивное состояние)
+│   │   ├── api.ts       # derived store → DataApi
+│   │   ├── settings.ts  # writable store → LatestProjectsPluginSettings
+│   │   ├── dataframe.ts # store → DataFrame
+│   │   ├── i18n.ts      # i18next integration (ru, uk, zh-CN, en)
+│   │   └── translations/ # JSON файлы локализации
+│   │
+│   └── templates/
+│       └── interpolate.ts # Интерполяция шаблонов
+│
+├── ui/
+│   ├── app/
+│   │   ├── App.svelte         # Главный компонент
+│   │   ├── View.svelte        # Рендер текущего вью
+│   │   └── DataFrameProvider.svelte # Провайдер данных
+│   │
+│   ├── views/           # Реализации вью
+│   │   ├── Table/       # Табличный вью
+│   │   ├── Board/       # Kanban доска
+│   │   ├── Calendar/    # Календарь (с zoom gestures)
+│   │   ├── Gallery/     # Галерея
+│   │   └── Developer/   # Дев-инструменты
+│   │
+│   ├── components/      # Переиспользуемые компоненты
+│   ├── modals/          # Модальные окна
+│   └── settings/        # UI настроек плагина
+
+internal_docs/
+├── internal_docs.md     # Подробная документация архитектуры
+├── incidents.md         # Лог инцидентов и решений
+└── ProjectLog.txt       # ЭТОТ ФАЙЛ — контекст для AI
+```
+
+---
+
+## 3. АРХИТЕКТУРА ДАННЫХ
+
+### 3.1 Data Flow
+```
+Obsidian Vault
+    ↓
+IFileSystem (ObsidianFileSystemWatcher)
+    ↓
+DataSource (folder/tag/frontmatter/dataview)
+    ↓
+DataFrame { fields: DataField[], records: DataRecord[] }
+    ↓
+Svelte Stores (dataframe, settings, api)
+    ↓
+Views (Table/Board/Calendar/Gallery)
+    ↓
+User Interaction → DataApi → IFile.write()
+```
+
+### 3.2 Core Types
+```typescript
+// DataFrame — основная структура данных
+type DataFrame = {
+  fields: DataField[];    // Схема
+  records: DataRecord[];  // Данные
+  errors?: RecordError[];
+}
+
+// DataField — описание поля
+type DataField = {
+  name: string;
+  type: DataFieldType;  // string | number | boolean | date | multitext | unknown
+  repeated: boolean;
+  identifier: boolean;
+  derived: boolean;
+}
+
+// DataRecord — одна запись (заметка)
+type DataRecord = {
+  id: string;           // путь к файлу
+  values: Record<string, Optional<DataValue>>;
+}
+
+// DataSource — абстрактный источник данных
+abstract class DataSource {
+  queryAll(): Promise<DataFrame>;
+  queryOne(file, fields): Promise<DataFrame>;
+  includes(path: string): boolean;
+}
+```
+
+### 3.3 Settings System
+```typescript
+// Версионирование настроек: v1 → v2
+function migrateSettings(settings: any): Either<Error, LatestProjectsPluginSettings>;
+
+// ProjectDefinition — определение проекта
+type ProjectDefinition = {
+  id: ProjectId;
+  name: string;
+  dataSource: { kind: 'folder' | 'dataview' | 'tag' | 'frontmatter', config: any };
+  fieldConfig: Record<string, FieldConfig>;
+  views: ViewDefinition[];
+  templates: string[];
+  excludedNotes: string[];
+  isDefault: boolean;
+}
+```
+
+---
+
+## 4. КЛЮЧЕВЫЕ ЗАВИСИМОСТИ
+
+### 4.1 Runtime Dependencies (bundled)
+| Пакет | Назначение |
+|-------|-----------|
+| dayjs | Работа с датами |
+| fp-ts | Функциональное программирование (Either, Task) |
+| immer | Иммутабельные обновления состояния |
+| i18next | Интернационализация |
+| svelte | UI фреймворк |
+| svelte-dnd-action | Drag-and-drop |
+| uuid | Генерация ID |
+| yaml | Парсинг frontmatter |
+
+### 4.2 Obsidian Dependencies (external)
+| Пакет | Назначение |
+|-------|-----------|
+| obsidian | Core API |
+| obsidian-dataview | Dataview интеграция |
+| obsidian-svelte | UI компоненты (Popover, Icon, etc.) |
+| @popperjs/core | **КРИТИЧНО:** Скрытая зависимость obsidian-svelte |
+
+### 4.3 Критические замечания
+- `obsidian-svelte@0.2.1` НЕ объявляет `@popperjs/core` как зависимость
+- При чистой установке нужно явно добавить `@popperjs/core`
+- Warning A11y в `obsidian-svelte/IconButton.svelte` — баг библиотеки
+
+---
+
+## 5. КОМАНДЫ
+
+```bash
+npm run dev           # Watch mode сборка
+npm run build         # Production сборка
+npm run test          # Запуск тестов
+npm run test:coverage # Тесты с покрытием
+npm run lint          # ESLint
+```
+
+---
+
+## 6. VIEWS SYSTEM
+
+### 6.1 Регистрация вью (view.ts)
+```typescript
+getProjectViews() {
+  views["table"] = new TableView();
+  views["board"] = new BoardView();
+  views["calendar"] = new CalendarView();
+  views["gallery"] = new GalleryView();
+  views["developer"] = new DeveloperView();
+  return views;
+}
+```
+
+### 6.2 ProjectView Interface
+```typescript
+abstract class ProjectView<T> {
+  async onData(result: DataQueryResult): Promise<void>;
+  async onOpen(props: ProjectViewProps<T>): Promise<void>;
+  async onClose(): Promise<void>;
+  abstract getViewType(): string;
+  abstract getDisplayName(): string;
+  abstract getIcon(): string;
+}
+```
+
+---
+
+## 7. I18N — Поддерживаемые языки
+- `en` — English (default)
+- `ru` — Русский
+- `uk` — Українська
+- `zh-CN` — 简体中文
+
+---
+
+## 8. ЧЕКЛИСТ ДЛЯ AI-АССИСТЕНТА
+
+### При старте новой сессии:
+1. [ ] Прочитать этот файл
+2. [ ] Проверить `npm run build`
+3. [ ] Проверить `git status`
+4. [ ] Проверить `internal_docs/incidents.md`
+
+### При завершении сессии:
+1. [ ] Обновить этот файл
+2. [ ] Закоммитить изменения если нужно
+3. [ ] Записать "Для продолжения: ..."
+
+---
+
+## 9. ТЕКУЩЕЕ СОСТОЯНИЕ
+
+| Метрика | Значение |
+|---------|----------|
+| Сборка | ✅ SUCCESS |
+| Git | ✅ origin/main |
+| Тесты | 100+ passing |
+| Bundle | ~1.0 MB |
+
+---
+
+## 10. ДЛЯ ПРОДОЛЖЕНИЯ
+
+> **Последнее обновление:** 2024-12-08  
+> **Состояние:** Проект восстановлен после потери изменений  
+> **Следующий шаг:** Закоммитить изменения в git
