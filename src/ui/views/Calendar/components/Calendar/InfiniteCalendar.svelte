@@ -16,6 +16,7 @@
   export let onScrollToDate: ((callback: (date: dayjs.Dayjs) => void) => void) | undefined;
   export let targetDate: dayjs.Dayjs | null = null;
   export let isMobile: boolean = false;
+  export let scrollBehavior: 'smooth' | 'auto' = 'smooth';
 
   let container: HTMLDivElement | null = null;
   let scrollableParent: HTMLElement | null = null;
@@ -190,7 +191,7 @@
       if (scrollableParent?.scrollTo) {
         scrollableParent.scrollTo({
           top: scrollTop,
-          behavior: 'smooth'
+          behavior: scrollBehavior
         });
       } else if (scrollableParent) {
         scrollableParent.scrollTop = scrollTop;

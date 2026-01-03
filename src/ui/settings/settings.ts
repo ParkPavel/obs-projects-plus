@@ -196,6 +196,28 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Calendar scroll behavior")
+      .setDesc("Choose how the calendar scrolls to the current date: smooth (animated) or instant")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption(
+            "smooth",
+            "Smooth (animated)"
+          )
+          .addOption(
+            "auto",
+            "Instant"
+          )
+          .setValue(preferences.calendarScrollBehavior || "smooth")
+          .onChange((value) => {
+            save({
+              ...preferences,
+              calendarScrollBehavior: value as "smooth" | "auto",
+            });
+          })
+      );
+
+    new Setting(containerEl)
       .setName(get(i18n).t("settings.front-matter.heading"))
       .setHeading();
 

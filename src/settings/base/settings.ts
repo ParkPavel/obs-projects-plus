@@ -181,6 +181,8 @@ export type FirstDayOfWeek = "sunday" | "monday" | "default";
 
 export type MobileCalendarView = "month" | "week" | "day";
 
+export type CalendarScrollBehavior = "smooth" | "auto";
+
 export type ProjectsPluginPreferences = {
   readonly projectSizeLimit: number;
   readonly frontmatter: {
@@ -192,6 +194,7 @@ export type ProjectsPluginPreferences = {
   readonly commands: ShowCommand[];
   readonly linkBehavior: LinkBehavior;
   readonly mobileCalendarView: MobileCalendarView;
+  readonly calendarScrollBehavior: CalendarScrollBehavior;
 };
 
 export type UnsavedViewDefinition = Omit<

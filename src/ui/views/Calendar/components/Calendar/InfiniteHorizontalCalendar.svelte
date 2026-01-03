@@ -27,6 +27,7 @@
   export let onScrollToDate: ((callback: (date: dayjs.Dayjs) => void) => void) | undefined;
   export let targetDate: dayjs.Dayjs | null = null;
   export let isMobile: boolean = false;
+  export let scrollBehavior: 'smooth' | 'auto' = 'smooth';
 
   let container: HTMLDivElement | null = null;
   
@@ -278,7 +279,7 @@
         const scrollLeft = targetEl.offsetLeft - (container.clientWidth - targetEl.offsetWidth) / 2;
         container.scrollTo({
           left: Math.max(0, scrollLeft),
-          behavior: 'smooth'
+          behavior: scrollBehavior
         });
       }
     });

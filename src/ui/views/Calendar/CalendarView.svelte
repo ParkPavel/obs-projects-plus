@@ -746,6 +746,7 @@
             onRecordAdd={handleRecordAdd}
             onDayTap={handleDayTap}
             {isMobile}
+            scrollBehavior={$settings.preferences.calendarScrollBehavior}
             onScrollToCurrent={(callback) => {
               scrollToCurrentCallback = callback;
             }}
@@ -765,6 +766,7 @@
               onRecordAdd={handleRecordAdd}
               onDayTap={handleDayTap}
               {isMobile}
+              scrollBehavior={$settings.preferences.calendarScrollBehavior}
               onScrollToCurrent={(callback) => {
                 horizontalScrollToCurrentCallback = callback;
               }}
