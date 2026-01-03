@@ -3,6 +3,7 @@
   import { Icon, IconButton, TextInput } from "obsidian-svelte";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { settings } from "src/lib/stores/settings";
 
   /**
    * Specifies the button label.
@@ -46,6 +47,8 @@
   }
 
   $: error = !onValidate(label);
+
+  $: hideTabNames = $settings.preferences.hideTabNames;
 
   const dispatch = createEventDispatcher<{
     rename: string;
@@ -116,7 +119,9 @@
       }}
     />
   {:else}
-    <!-- {label} -->
+    {#if !hideTabNames}
+      {label}
+    {/if}
   {/if}
 
   {#if active}

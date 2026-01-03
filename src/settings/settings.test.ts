@@ -120,6 +120,7 @@ const v1demo: v1.ProjectsPluginSettings<
     commands: [],
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
+    hideTabNames: false,
   },
 };
 
@@ -239,5 +240,6 @@ const v2demo: v2.ProjectsPluginSettings<
     commands: [],
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
+    hideTabNames: false,
   },
 };

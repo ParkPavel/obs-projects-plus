@@ -19,6 +19,7 @@ describe("resolve v2", () => {
         commands: [],
         linkBehavior: "open-editor",
         mobileCalendarView: "month",
+        hideTabNames: false,
       },
     });
   });
@@ -55,6 +56,7 @@ describe("resolve v2", () => {
         commands: [],
         linkBehavior: "open-editor",
         mobileCalendarView: "month",
+        hideTabNames: false,
       },
     });
   });

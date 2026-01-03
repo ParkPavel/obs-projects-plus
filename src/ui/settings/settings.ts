@@ -196,6 +196,20 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Hide tabs' names")
+      .setDesc("Hide the names of tabs in projects. Names will still be visible when editing.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(preferences.hideTabNames || false)
+          .onChange((value) => {
+            save({
+              ...preferences,
+              hideTabNames: value,
+            });
+          })
+      );
+
+    new Setting(containerEl)
       .setName(get(i18n).t("settings.front-matter.heading"))
       .setHeading();
 
