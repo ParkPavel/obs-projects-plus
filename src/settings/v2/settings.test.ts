@@ -17,6 +17,11 @@ describe("resolve v2", () => {
         locale: {
           firstDayOfWeek: "default",
         },
+        dateFormat: {
+          enabled: false,
+          dateFormat: "YYYY-MM-DD",
+          datetimeFormat: "YYYY-MM-DD HH:mm",
+        },
         projectSizeLimit: 1000,
         commands: [],
         linkBehavior: "open-editor",
@@ -57,6 +62,11 @@ describe("resolve v2", () => {
         },
         locale: {
           firstDayOfWeek: "default",
+        },
+        dateFormat: {
+          enabled: false,
+          dateFormat: "YYYY-MM-DD",
+          datetimeFormat: "YYYY-MM-DD HH:mm",
         },
         projectSizeLimit: 1000,
         commands: [],
@@ -156,6 +166,11 @@ describe("clean up commands", () => {
         locale: {
           firstDayOfWeek: "default",
         },
+        dateFormat: {
+          enabled: false,
+          dateFormat: "YYYY-MM-DD",
+          datetimeFormat: "YYYY-MM-DD HH:mm",
+        },
         commands: [...validCommands, ...invalidCommands, ...duplicatedCommands],
         linkBehavior: "open-editor",
         mobileCalendarView: "month",
@@ -172,7 +187,11 @@ describe("clean up commands", () => {
         locale: {
           firstDayOfWeek: "default",
         },
-
+        dateFormat: {
+          enabled: false,
+          dateFormat: "YYYY-MM-DD",
+          datetimeFormat: "YYYY-MM-DD HH:mm",
+        },
         commands: validCommands,
         linkBehavior: "open-editor",
         mobileCalendarView: "month",

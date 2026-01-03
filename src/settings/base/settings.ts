@@ -189,6 +189,11 @@ export type ProjectsPluginPreferences = {
   readonly locale: {
     firstDayOfWeek: FirstDayOfWeek;
   };
+  readonly dateFormat: {
+    readonly enabled: boolean;
+    readonly dateFormat: string;
+    readonly datetimeFormat: string;
+  };
   readonly commands: ShowCommand[];
   readonly linkBehavior: LinkBehavior;
   readonly mobileCalendarView: MobileCalendarView;

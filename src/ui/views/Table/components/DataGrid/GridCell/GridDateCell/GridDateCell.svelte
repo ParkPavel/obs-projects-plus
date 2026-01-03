@@ -4,6 +4,8 @@
   import DateInput from "src/ui/components/DateInput.svelte";
   import type { Optional } from "src/lib/dataframe/dataframe";
   import dayjs from "dayjs";
+  import { settings } from "src/lib/stores/settings";
+  import { formatDate } from "src/lib/helpers";
 
   import { GridCell } from "..";
   import { TextLabel } from "..";
@@ -18,6 +20,8 @@
   export let selected: boolean;
 
   let edit = false;
+
+  $: preferences = $settings.preferences;
 </script>
 
 <GridCell
@@ -33,25 +37,13 @@
   on:navigate
   onCopy={() => {
     if (value) {
-      navigator.clipboard.writeText(
-        new Intl.DateTimeFormat("default", {
-          year: "numeric",
-          month: "numeric",
-          day: "numeric",
-        }).format(value)
-      );
+      navigator.clipboard.writeText(formatDate(value, preferences));
     }
   }}
 >
   <svelte:fragment slot="read">
     {#if value}
-      <TextLabel
-        value={new Intl.DateTimeFormat("default", {
-          year: "numeric",
-          month: "numeric",
-          day: "numeric",
-        }).format(value)}
-      />
+      <TextLabel value={formatDate(value, preferences)} />
     {/if}
   </svelte:fragment>
   <svelte:fragment slot="edit">

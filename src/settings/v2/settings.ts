@@ -90,6 +90,11 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     locale: {
       firstDayOfWeek: "default",
     },
+    dateFormat: {
+      enabled: false,
+      dateFormat: "YYYY-MM-DD",
+      datetimeFormat: "YYYY-MM-DD HH:mm",
+    },
     commands: [],
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
@@ -173,6 +178,11 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
   locale: {
     firstDayOfWeek: "default",
   },
+  dateFormat: {
+    enabled: false,
+    dateFormat: "YYYY-MM-DD",
+    datetimeFormat: "YYYY-MM-DD HH:mm",
+  },
   commands: [],
   linkBehavior: "open-editor",
   mobileCalendarView: "month",
@@ -181,9 +191,26 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
 export function resolvePreferences(
   unresolved: Partial<ProjectsPluginPreferences>
 ): ProjectsPluginPreferences {
+  // Handle migration from old single format to separate date/datetime formats
+  let dateFormat = unresolved.dateFormat;
+  if (unresolved.dateFormat && 'format' in unresolved.dateFormat) {
+    // Migrate old format property to new dateFormat and datetimeFormat
+    const oldFormat = (unresolved.dateFormat as any).format;
+    dateFormat = {
+      ...unresolved.dateFormat,
+      dateFormat: oldFormat,
+      datetimeFormat: oldFormat.includes('HH') || oldFormat.includes('mm') || oldFormat.includes('ss')
+        ? oldFormat
+        : `${oldFormat} HH:mm`,
+    };
+    // Remove the old format property
+    delete (dateFormat as any).format;
+  }
+
   return {
     ...DEFAULT_PREFERENCES,
     ...unresolved,
+    dateFormat: dateFormat || unresolved.dateFormat || DEFAULT_PREFERENCES.dateFormat,
   };
 }
 

@@ -42,6 +42,11 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     locale: {
       firstDayOfWeek: "default",
     },
+    dateFormat: {
+      enabled: false,
+      dateFormat: "YYYY-MM-DD",
+      datetimeFormat: "YYYY-MM-DD HH:mm",
+    },
     commands: [],
     linkBehavior: "open-editor",
     mobileCalendarView: "month",

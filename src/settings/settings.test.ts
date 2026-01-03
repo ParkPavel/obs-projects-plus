@@ -116,6 +116,11 @@ const v1demo: v1.ProjectsPluginSettings<
     locale: {
       firstDayOfWeek: "default",
     },
+    dateFormat: {
+      enabled: false,
+      dateFormat: "YYYY-MM-DD",
+      datetimeFormat: "YYYY-MM-DD HH:mm",
+    },
     projectSizeLimit: 1000,
     commands: [],
     linkBehavior: "open-editor",
@@ -235,6 +240,11 @@ const v2demo: v2.ProjectsPluginSettings<
     },
     locale: {
       firstDayOfWeek: "default",
+    },
+    dateFormat: {
+      enabled: false,
+      dateFormat: "YYYY-MM-DD",
+      datetimeFormat: "YYYY-MM-DD HH:mm",
     },
     commands: [],
     linkBehavior: "open-editor",

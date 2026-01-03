@@ -1,10 +1,13 @@
 import { normalizePath, TFile } from "obsidian";
 import { get } from "svelte/store";
+import dayjs from "dayjs";
 
 import { app } from "src/lib/stores/obsidian";
 import type { ProjectDefinition, ViewDefinition } from "src/settings/settings";
+import type { ProjectsPluginPreferences } from "src/settings/base/settings";
 import { getContext, setContext } from "svelte";
 import type { DataField } from "./dataframe/dataframe";
+import { i18n } from "./stores/i18n";
 
 /**
  * Convenience function for filtering null or undefined values in an array.
@@ -137,4 +140,35 @@ export function makeContext<T>(): Context<T> {
     get: () => getContext(key),
     set: (value: T) => setContext(key, value),
   };
+}
+
+// Date formatting utility
+export function formatDate(
+  date: Date,
+  preferences: ProjectsPluginPreferences,
+  options: { includeTime?: boolean } = {}
+): string {
+  const { includeTime = false } = options;
+
+  if (preferences.dateFormat.enabled) {
+    // Use custom format with dayjs
+    const format = includeTime ? preferences.dateFormat.datetimeFormat : preferences.dateFormat.dateFormat;
+    return dayjs(date).format(format);
+  }
+
+  // Use locale-aware Intl.DateTimeFormat
+  const locale = get(i18n).language || navigator.language || "en";
+  const intlOptions: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  };
+
+  if (includeTime) {
+    intlOptions.hour = "numeric";
+    intlOptions.minute = "numeric";
+    intlOptions.hour12 = false;
+  }
+
+  return new Intl.DateTimeFormat(locale, intlOptions).format(date);
 }

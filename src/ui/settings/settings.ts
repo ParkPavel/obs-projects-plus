@@ -13,6 +13,65 @@ import type {
 import { i18n } from "src/lib/stores/i18n";
 
 /**
+ * Helper function to manage disabled state of settings with visual styling
+ */
+function mayDisableSetting(setting: Setting, disable: boolean) {
+  setting.setDisabled(disable);
+  if (disable) {
+    setting.settingEl.classList.add("obsidian-projects-plus-disabled");
+  } else {
+    setting.settingEl.classList.remove("obsidian-projects-plus-disabled");
+  }
+}
+
+/**
+ * Configures a date format setting with description and input field
+ */
+function configureDateFormatSetting(
+  setting: Setting,
+  options: {
+    name: string;
+    description: string;
+    placeholder: string;
+    value: string;
+    disabled: boolean;
+    onChange: (value: string) => void;
+  }
+): Setting {
+  const {
+    name,
+    description,
+    placeholder,
+    value,
+    disabled,
+    onChange,
+  } = options;
+
+  setting.setName(name);
+
+  // Create a DocumentFragment with clickable link
+  const descFragment = document.createDocumentFragment();
+  descFragment.appendChild(document.createTextNode(description));
+  const link = document.createElement("a");
+  link.textContent = "dayjs documentation";
+  link.href = "https://day.js.org/docs/en/display/format";
+  descFragment.appendChild(document.createElement("br"));
+  descFragment.appendChild(document.createTextNode("See "));
+  descFragment.appendChild(link);
+  descFragment.appendChild(document.createTextNode(" for more details."));
+
+  setting.setDesc(descFragment).addText((text) =>
+    text
+      .setValue(value)
+      .setPlaceholder(placeholder)
+      .setDisabled(disabled)
+      .onChange(onChange)
+  );
+
+  return setting;
+}
+
+/**
  * ProjectsSettingTab builds the plugin settings tab.
  */
 export class ProjectsSettingTab extends PluginSettingTab {
@@ -168,6 +227,62 @@ export class ProjectsSettingTab extends PluginSettingTab {
             });
           })
       );
+
+    new Setting(containerEl)
+      .setName("Custom date format")
+      .setDesc("Enable custom date formatting for tables and cards")
+      .addToggle((toggle) =>
+        toggle.setValue(preferences.dateFormat.enabled).onChange((value) => {
+          save({
+            ...preferences,
+            dateFormat: {
+              ...preferences.dateFormat,
+              enabled: value,
+            },
+          });
+          // Update the text input visibility
+          mayDisableSetting(dateFormatSetting, !value);
+          mayDisableSetting(datetimeFormatSetting, !value);
+        })
+      );
+
+    const dateFormatSetting = configureDateFormatSetting(new Setting(containerEl), {
+      name: "Date format string",
+      description: "Format string for dates (without time) using dayjs format (e.g., YYYY-MM-DD, DD/MM/YYYY, LL).",
+      placeholder: "YYYY-MM-DD",
+      value: preferences.dateFormat.dateFormat,
+      disabled: !preferences.dateFormat.enabled,
+      onChange: (value) => {
+        save({
+          ...preferences,
+          dateFormat: {
+            ...preferences.dateFormat,
+            dateFormat: value || "YYYY-MM-DD",
+          },
+        });
+      },
+    });
+
+    const datetimeFormatSetting = configureDateFormatSetting(new Setting(containerEl), {
+      name: "Date-time format string",
+      description: "Format string for dates with time using dayjs format (e.g., YYYY-MM-DD HH:mm, DD/MM/YYYY HH:mm:ss, LLLL).",
+      placeholder: "YYYY-MM-DD HH:mm",
+      value: preferences.dateFormat.datetimeFormat,
+      disabled: !preferences.dateFormat.enabled,
+      onChange: (value) => {
+        save({
+          ...preferences,
+          dateFormat: {
+            ...preferences.dateFormat,
+            datetimeFormat: value || "YYYY-MM-DD HH:mm",
+          },
+        });
+      },
+    });
+
+    // Apply visual styling after the settings are fully constructed
+    mayDisableSetting(dateFormatSetting, !preferences.dateFormat.enabled);
+    mayDisableSetting(datetimeFormatSetting, !preferences.dateFormat.enabled);
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.general.mobile-calendar.name"))
