@@ -75,10 +75,10 @@
     position: sticky;
     top: 0;
     z-index: 90;
-    background: rgba(var(--background-rgb, 34, 34, 34), 0.85);
+    background: var(--background-secondary);
     backdrop-filter: blur(0.625rem) saturate(180%);
     -webkit-backdrop-filter: blur(0.625rem) saturate(180%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--background-modifier-border);
     flex-shrink: 0;
   }
 
@@ -86,13 +86,13 @@
     min-height: 2.25rem;
     padding: 0.375rem 0.625rem;
     border-radius: 0.625rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(var(--background-rgb, 34, 34, 34), 0.85);
-    color: inherit;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
   }
 
   .project-switcher select:focus {
-    outline: 2px solid rgba(var(--accent-rgb, 120, 170, 255), 0.6);
+    outline: 2px solid var(--interactive-accent);
   }
 
   .right {
@@ -108,9 +108,9 @@
   }
 
   :global(.clickable-icon:focus-visible) {
-    outline: 2px solid rgba(var(--accent-rgb, 120, 170, 255), 0.7);
+    outline: 2px solid var(--interactive-accent);
     outline-offset: 0.125rem;
-    background: rgba(var(--accent-rgb, 120, 170, 255), 0.12);
+    background: var(--background-modifier-hover);
   }
 
   /* Mobile responsive */

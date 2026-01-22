@@ -214,9 +214,9 @@
     display: flex;
     flex-direction: column;
     border-radius: 0.75rem;
-    background: var(--background-primary, #1e1e1e);
-    border: 1px solid var(--background-modifier-border, rgba(255, 255, 255, 0.1));
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.4);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    box-shadow: var(--shadow-lg, 0 0.5rem 2rem rgba(0, 0, 0, 0.25));
     pointer-events: auto;
     z-index: 101;
   }
@@ -226,7 +226,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--background-modifier-border, rgba(255, 255, 255, 0.1));
+    border-bottom: 1px solid var(--background-modifier-border);
   }
 
   .popover-header h3 {
@@ -271,15 +271,15 @@
     display: flex;
     justify-content: flex-start;
     padding: 0.75rem 1rem;
-    border-top: 1px solid var(--background-modifier-border, rgba(255, 255, 255, 0.1));
+    border-top: 1px solid var(--background-modifier-border);
   }
 
   .btn-primary {
     padding: 0.5rem 1.25rem;
     border-radius: 0.5rem;
     border: none;
-    background: var(--interactive-accent, #7b68ee);
-    color: var(--text-on-accent, white);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
     cursor: pointer;
     font-size: 0.875rem;
     font-weight: 500;

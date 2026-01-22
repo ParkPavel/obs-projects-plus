@@ -228,11 +228,11 @@
   }
 
   .view-item:hover {
-    background: rgba(var(--accent-rgb, 120, 170, 255), 0.1);
+    background: var(--background-modifier-hover);
   }
 
   .view-item.active {
-    background: rgba(var(--accent-rgb, 120, 170, 255), 0.2);
+    background: var(--background-modifier-active-hover, var(--background-modifier-hover));
   }
 
   .view-item span {
