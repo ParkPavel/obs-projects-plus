@@ -16,14 +16,11 @@
     GridRowProps,
   } from "./components/DataGrid/dataGrid";
   import DataGrid from "./components/DataGrid/DataGrid.svelte";
-  import SwitchSelect from "./components/SwitchSelect/SwitchSelect.svelte";
   import type { TableConfig } from "./types";
 
   import {
     ViewContent,
-    ViewHeader,
     ViewLayout,
-    ViewToolbar,
   } from "src/ui/components/Layout";
   import { ConfigureFieldModal } from "src/ui/modals/configureField";
   import { settings } from "src/lib/stores/settings";
@@ -32,7 +29,6 @@
   import { CreateFieldModal } from "src/ui/modals/createFieldModal";
   import { Icon } from "obsidian-svelte";
   import { TextLabel } from "./components/DataGrid/GridCell/GridTextCell";
-  import { fieldIcon } from "../helpers";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -215,22 +211,6 @@
 </script>
 
 <ViewLayout>
-  <ViewHeader>
-    <ViewToolbar variant="secondary">
-      <svelte:fragment slot="right">
-        <SwitchSelect
-          label={$i18n.t("views.table.hide-fields")}
-          items={columns.map((column) => ({
-            label: column.field,
-            icon: fieldIcon(column),
-            value: column.field,
-            enabled: !column.hide,
-          }))}
-          onChange={handleVisibilityChange}
-        />
-      </svelte:fragment>
-    </ViewToolbar>
-  </ViewHeader>
   <ViewContent>
     <div>
       <DataGrid
@@ -263,7 +243,8 @@
             {
               id,
               values,
-            }
+            },
+            records
           ).open();
         }}
         onRowDelete={(id) => api.deleteRecord(id)}
@@ -341,40 +322,57 @@
 <style>
   div {
     display: flex;
+    /* v4.0.0: Ensure grid container aligns properly */
+    align-items: flex-start;
   }
 
-  /* styled as a column header*/
+  /* styled as a column header - v4.0.0: Fixed alignment */
   span {
     position: sticky;
     top: 0;
     z-index: 6;
 
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    text-align: center;
+    justify-content: center;
+    gap: var(--ppp-gap-normal);
 
     background-color: var(--background-primary-alt);
-    border-right: 1px solid var(--background-modifier-border);
-    border-left-color: var(--background-modifier-border);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
 
-    height: fit-content;
-    min-height: 30px;
+    /* Use design tokens for heights */
+    height: var(--ppp-table-header-height);
+    min-height: var(--ppp-table-header-height);
+    max-height: var(--ppp-table-header-height);
 
     color: var(--text-muted);
-    font-weight: 500;
-    padding: 0 12px;
+    font-weight: var(--ppp-weight-medium);
+    padding: 0 var(--ppp-padding-relaxed);
+    white-space: nowrap;
 
-    cursor: default;
+    cursor: pointer;
+    transition: color var(--ppp-duration-fast) var(--ppp-ease-out), 
+                background-color var(--ppp-duration-fast) var(--ppp-ease-out);
   }
 
   span:focus {
-    border-radius: var(--button-radius);
-    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
   }
 
   span:hover {
     color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+  
+  /* Touch devices - увеличиваем touch targets */
+  @media (pointer: coarse) {
+    span {
+      height: var(--ppp-touch-min);
+      min-height: var(--ppp-touch-min);
+      max-height: var(--ppp-touch-min);
+      padding: 0 var(--ppp-padding-loose);
+    }
   }
 </style>

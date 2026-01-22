@@ -65,7 +65,8 @@
       $app,
       fields,
       (record) => api.updateRecord(record, fields),
-      record
+      record,
+      records
     ).open();
   };
 

@@ -9,7 +9,7 @@
 <style>
   div {
     width: 100%;
-    padding: 6px;
+    padding: 0.375rem;
     text-align: right;
   }
 </style>

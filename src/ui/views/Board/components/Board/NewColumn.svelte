@@ -71,14 +71,14 @@
 <style>
   /* Styled as a board column */
   section {
-    margin-top: 8px;
+    margin-top: 0.5rem;
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m);
     background-color: var(--background-primary-alt);
     display: flex;
     flex-direction: column;
     row-gap: var(--size-4-2);
-
+    flex-shrink: 0;
     height: fit-content;
   }
 
@@ -87,6 +87,6 @@
   }
 
   .add-column {
-    margin: -4px;
+    margin: -0.25rem;
   }
 </style>

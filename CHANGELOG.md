@@ -5,6 +5,116 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-01-03
+
+### Removed
+- 🗑️ **3-Day View Removed** - Simplified zoom hierarchy
+  - Removed '3days' from CalendarInterval type
+  - Updated ZOOM_LEVELS: ['year', 'month', '2weeks', 'week', 'day']
+  - Removed from all navigation and timeline configurations
+
+### Fixed
+- 🔧 **Day/Week Views - Timeline Default** - Now correctly show timeline (bars) by default
+  - Changed effectiveDisplayMode logic: day/week → 'bars', 2weeks/month → 'headers'
+  - Day view now renders 24-hour timeline instead of list
+- 🔧 **2-Weeks View - Events Display** - Added HeaderStripsSection for multi-day events
+  - Was showing empty cells, now displays multi-day strips above week rows
+- 🔧 **Week View - Event Names** - Fixed file paths showing instead of names
+  - Added getDisplayName() to TimelineView.svelte and EventBar.svelte
+  - Priority: name field → title field → file.name → getDisplayName()
+- 🔧 **Year Heatmap - Data Flow** - Enhanced date field detection
+  - processor.ts now tries: startDate, date, deadline, dueDate, scheduled
+  - Improved data binding to heatmap cells
+
+### Changed
+- 📐 **Simplified Zoom Hierarchy** - Removed redundant 3-day level
+  - Year → Month → 2-Weeks → Week → Day (5 levels instead of 6)
+  - Cleaner navigation flow
+- 🎨 **Display Mode Defaults** - Smart defaults per zoom level
+  - day/week: 'bars' (timeline with time axis)
+  - 2weeks/month: 'headers' (grid with HeaderStripsSection)
+
+## [3.2.0] - 2026-01-03
+
+### Added
+- 📅 **HeaderStripsSection Component** - New component for multi-day event strips
+  - Renders above week rows in MonthBlock
+  - Lane-based layout for overlapping events
+  - Supports multi-day timed, multi-day all-day, and single all-day events
+
+### Fixed
+- 🔧 **Month View - Multi-day Events** - Now display in week header instead of cells
+  - Created HeaderStripsSection.svelte (~340 lines)
+  - Events spanning multiple days show as horizontal strips
+  - All-day events display as pills in header row
+- 🔧 **Month View - Cell Height** - Cells now have consistent fixed height
+  - Removed variable height based on content
+  - Header can expand but uniformly across week
+
+### Changed
+- 📐 **Day.svelte Simplified** - Removed ~200 lines of obsolete multi-day code
+  - Now only renders timed events
+  - Cleaner separation of concerns
+
+## [3.0.0] - 2025-12-31
+
+### Added
+- 🎯 **Timeline View** - Day/Week views with vertical time axis
+  - **EventBar** - Positioned events based on start/end time
+  - **EventBarContainer** - Smart column layout for overlapping events
+  - **EventTimeline** - Vertical hour axis (6:00-22:00 default)
+  - **CurrentTimeLine** - Red line showing current time
+  - **EventIndicator** - Triangle markers (▲▼) for off-screen events
+- 📅 **Multi-day Event Support**
+  - **MultiDayEventStrip** - Horizontal strips spanning multiple days
+  - **AllDayEventStrip** - Full-width strips for all-day events
+- �️ **Year Heatmap View** - GitHub-style yearly overview
+  - **Heat levels 0-4** - Color intensity based on event count
+  - **Month grid layout** - 4x3 on desktop, 2xN on mobile
+  - **Click navigation** - Click day to zoom into day view, click month to zoom into month view
+  - **Dark theme support** - Custom GitHub-inspired dark colors
+- 📋 **Agenda Sidebar** - Day summary panel with grouped events
+  - Morning/Afternoon/Evening grouping with i18n support
+  - Collapsible sidebar with accessibility features
+  - ARIA labels and screen reader support
+- 🎨 **Design Tokens** - Fluid Architecture token system
+  - Primitive, semantic, and component tokens
+  - rem-based sizing for accessibility
+  - High contrast and reduced motion support
+- ⚙️ **Extended View Config**
+  - startHour/endHour configuration
+  - eventColorField selection
+  - showWeekends toggle
+  - showAllDaySection toggle
+- 🔗 **Color Filter Indicators** - Visual dots on events matching color filters
+- 🌐 **Timezone Support** - Timezone-aware event display and parsing
+- ⚠️ **Error Boundary** - Graceful error handling component
+  - Custom fallback UI with retry option
+  - Error details in development mode
+  - i18n-ready error messages
+- ⚡ **Performance Utilities** - Optimized event handling
+  - throttle, debounce, rafThrottle functions
+  - Idle callback wrapper
+  - Performance measurement helpers
+
+### Changed
+- 📐 **ROADMAP v3.0.0 Compliance** - Major architecture alignment
+  - DayColumn: timezone/dateField integration
+  - EventTimeline: Dynamic hours calculation
+  - EventBar: colorFilters prop added
+- 🎨 **Compact Navigation** - Unified navigation panel with Lucide icons
+- 📱 **Mobile-First** - Enhanced touch gestures and responsive layout
+  - **Edge swipe protection** - Prevents conflicts with Obsidian sidebar gestures
+  - **Touch action optimization** - `overscroll-behavior-x: contain` for smoother scrolling
+- ♿ **Accessibility Classes** - Added sr-only, visually-hidden, skip-link
+- 🌍 **Full i18n** - All hardcoded strings internationalized
+
+### Fixed
+- 🔧 **TypeScript Errors** - All compilation errors resolved
+- 🔧 **Import Paths** - Consistent relative imports throughout
+- ♿ **Accessibility** - aria-labels, keyboard navigation, screen reader support
+- 🔄 **Resize Performance** - RAF-based resize handling for smooth updates
+
 ## [2.2.0] - 2025-01-21
 
 ### Added

@@ -61,9 +61,10 @@
 
 <div>
   <!-- Pinned columns: fixed position, no column-level DnD -->
-  <section class="projects--board">
-    {#each pinnedColumns as column (column.id)}
-      <div class="projects--board--column--dndwrapper projects--board--column--pinned">
+  {#if pinnedColumns.length > 0}
+    <section class="projects--board projects--board--pinned">
+      {#each pinnedColumns as column (column.id)}
+        <div class="projects--board--column--dndwrapper projects--board--column--pinned">
         <BoardColumn
           {readonly}
           {richText}
@@ -109,7 +110,8 @@
         />
       </div>
     {/each}
-  </section>
+    </section>
+  {/if}
 
   <!-- Unpinned columns: DnD enabled within unpinned subset -->
   <section
@@ -205,5 +207,9 @@
 <style>
   div {
     display: flex;
+  }
+
+  .projects--board--column--dndwrapper {
+    flex-shrink: 0;
   }
 </style>

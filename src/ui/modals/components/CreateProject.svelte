@@ -17,6 +17,7 @@
 
   import { FileListInput } from "src/ui/components/FileListInput";
   import { Accordion, AccordionItem } from "src/ui/components/Accordion";
+  import DateFormatSelector from "./DateFormatSelector.svelte";
   import { notEmpty } from "src/lib/helpers";
   import { getFoldersInFolder, isValidPath } from "src/lib/obsidian";
   import { capabilities } from "src/lib/stores/capabilities";
@@ -337,6 +338,19 @@
               (project = { ...project, excludedNotes })}
           />
         </SettingItem>
+
+        <DateFormatSelector
+          dateFormat={project.dateFormat}
+          onChange={(newDateFormat) => {
+            if (newDateFormat === undefined) {
+              // Remove the property when undefined (for exactOptionalPropertyTypes)
+              const { dateFormat, ...rest } = project;
+              project = rest;
+            } else {
+              project = { ...project, dateFormat: newDateFormat };
+            }
+          }}
+        />
       </AccordionItem>
     </Accordion>
   </ModalContent>

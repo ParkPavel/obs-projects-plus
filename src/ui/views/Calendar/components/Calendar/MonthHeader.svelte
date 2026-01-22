@@ -17,18 +17,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px 12px;
+    padding: 1rem 0.75rem;
     background: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
     position: sticky;
     top: 0;
     z-index: 20;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(0.625rem);
+    -webkit-backdrop-filter: blur(0.625rem);
   }
 
   .month-title {
-    font-size: 17px;
+    font-size: 1.0625rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--text-normal);

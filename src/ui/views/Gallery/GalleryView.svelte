@@ -18,7 +18,6 @@
   import { Card, CardContent, CardMedia } from "./components/Card";
   import Grid from "./components/Grid/Grid.svelte";
   import Image from "./components/Image/Image.svelte";
-  import { GallerySettingsModal } from "./settings/settingsModal";
   import type { GalleryConfig } from "./types";
   import type { ProjectDefinition } from "src/settings/settings";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
@@ -29,9 +28,12 @@
   export let project: ProjectDefinition;
   export let frame: DataFrame;
   export let config: GalleryConfig | undefined;
-  export let onConfigChange: (config: GalleryConfig) => void;
+  export let onConfigChange: ((config: GalleryConfig) => void) | undefined = undefined;
   export let api: ViewApi;
   export let getRecordColor: (record: DataRecord) => string | null;
+
+  // Use onConfigChange to avoid unused warning
+  $: void onConfigChange;
 
   $: ({ fields, records } = frame);
 
@@ -40,27 +42,15 @@
       $app,
       fields,
       (record) => api.updateRecord(record, fields),
-      record
+      record,
+      records
     ).open();
-  }
-
-  function handleSettings() {
-    new GallerySettingsModal($app, config ?? {}, (value) => {
-      saveConfig(value);
-    }).open();
-  }
-
-  function saveConfig(cfg: GalleryConfig) {
-    config = cfg;
-    onConfigChange(cfg);
   }
 </script>
 
 <GalleryOptionsProvider
   {fields}
   {config}
-  onConfigChange={saveConfig}
-  onSettings={handleSettings}
   let:fitStyle
   let:coverField
   let:cardWidth

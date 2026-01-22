@@ -18,6 +18,7 @@ describe("resolve v2", () => {
           firstDayOfWeek: "default",
         },
         projectSizeLimit: 1000,
+        showViewTitles: true,
         commands: [],
         linkBehavior: "open-editor",
         mobileCalendarView: "month",
@@ -59,6 +60,7 @@ describe("resolve v2", () => {
           firstDayOfWeek: "default",
         },
         projectSizeLimit: 1000,
+        showViewTitles: true,
         commands: [],
         linkBehavior: "open-editor",
         mobileCalendarView: "month",
@@ -156,6 +158,7 @@ describe("clean up commands", () => {
         locale: {
           firstDayOfWeek: "default",
         },
+        showViewTitles: true,
         commands: [...validCommands, ...invalidCommands, ...duplicatedCommands],
         linkBehavior: "open-editor",
         mobileCalendarView: "month",
@@ -172,7 +175,7 @@ describe("clean up commands", () => {
         locale: {
           firstDayOfWeek: "default",
         },
-
+        showViewTitles: true,
         commands: validCommands,
         linkBehavior: "open-editor",
         mobileCalendarView: "month",

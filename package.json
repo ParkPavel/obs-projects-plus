@@ -1,7 +1,7 @@
 {
   "name": "obs-projects-plus",
-  "version": "2.2.0",
-  "description": "Powerful project management for Obsidian with Apple-style calendar, zoom gestures, and infinite scroll",
+  "version": "3.0.0",
+  "description": "Powerful project management for Obsidian with Apple-style calendar, timeline view, zoom gestures, and infinite scroll",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

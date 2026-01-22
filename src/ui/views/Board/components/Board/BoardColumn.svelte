@@ -104,7 +104,7 @@
   class="projects--board--column"
   class:collapse
   class:pinned
-  style={`width: ${width}px; margin-right: ${collapse ? 40 - width : 0}px`}
+  style={`width: ${width}px; min-width: ${width}px; max-width: ${width}px; margin-right: ${collapse ? 40 - width : 0}px`}
 >
   <ColumnHeader
     value={name}

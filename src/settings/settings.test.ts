@@ -1,12 +1,12 @@
 import { describe, expect, it } from "@jest/globals";
 import { migrate } from "./settings";
 import type * as v1 from "./v1/settings";
-import type * as v2 from "./v2/settings";
+import type * as v3 from "./v3/settings";
 import type * as base from "./base/settings";
 
-describe("migrate from v1 to v2", () => {
+describe("migrate from v1 to v3", () => {
   it("migrates default settings", () => {
-    expect(migrate(v1demo)).toStrictEqual(v2demo);
+    expect(migrate(v1demo)).toStrictEqual(v3demo);
   });
 });
 
@@ -120,14 +120,15 @@ const v1demo: v1.ProjectsPluginSettings<
     commands: [],
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
+    showViewTitles: true,
   },
 };
 
-const v2demo: v2.ProjectsPluginSettings<
-  v2.ProjectDefinition<base.ViewDefinition>,
+const v3demo: v3.ProjectsPluginSettings<
+  v3.ProjectDefinition<base.ViewDefinition>,
   base.ProjectsPluginPreferences
 > = {
-  version: 2,
+  version: 3,
   projects: [
     {
       fieldConfig: {},
@@ -172,6 +173,8 @@ const v2demo: v2.ProjectsPluginSettings<
           config: {
             groupByField: "status",
             priorityField: "weight",
+            freezeAll: false,
+            freezeColumns: false,
           },
           filter: {
             conditions: [],
@@ -191,6 +194,15 @@ const v2demo: v2.ProjectsPluginSettings<
             interval: "month",
             dateField: "due",
             checkField: "published",
+            displayMode: "headers",
+            startDateField: "startDate",
+            endDateField: "endDate",
+            startTimeField: "startTime",
+            endTimeField: "endTime",
+            eventColorField: "eventColor",
+            agendaOpen: false,
+            timeFormat: "24h",
+            timezone: "local",
           },
           filter: {
             conditions: [],
@@ -239,5 +251,6 @@ const v2demo: v2.ProjectsPluginSettings<
     commands: [],
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
+    showViewTitles: true,
   },
 };

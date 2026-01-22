@@ -11,9 +11,11 @@ export class EditNoteModal extends Modal {
     app: App,
     readonly fields: DataField[],
     readonly onSave: (record: DataRecord) => void,
-    readonly defaults: DataRecord
+    readonly defaults: DataRecord,
+    readonly allRecords: DataRecord[] = []
   ) {
     super(app);
+    this.containerEl.addClass("projects-modal");
   }
 
   onOpen() {
@@ -22,6 +24,7 @@ export class EditNoteModal extends Modal {
       props: {
         record: this.defaults,
         fields: this.fields,
+        allRecords: this.allRecords,
         onSave: (record: DataRecord) => {
           this.onSave(record);
           this.close();

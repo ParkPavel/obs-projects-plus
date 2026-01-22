@@ -19,7 +19,7 @@ const logWarningsPlugin = {
   setup(build) {
     build.onEnd(result => {
       if (result.warnings.length > 0) {
-        console.warn(`\n⚠️  Build completed with ${result.warnings.length} warning(s):`);
+        console.warn(`\n[!] Build completed with ${result.warnings.length} warning(s):`);
         result.warnings.forEach((warning, i) => {
           console.warn(`  ${i + 1}. ${warning.text}`);
           if (warning.location) {
@@ -28,7 +28,7 @@ const logWarningsPlugin = {
         });
       }
       if (result.errors.length === 0) {
-        console.log(`\n✅ Build successful${prod ? ' (production)' : ' (development)'}`);
+        console.log(`\n[OK] Build successful${prod ? ' (production)' : ' (development)'}`);
       }
     });
   }

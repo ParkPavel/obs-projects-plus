@@ -10,6 +10,13 @@ import { interpolateTemplate } from "src/lib/templates/interpolate";
 import CreateNote from "./components/CreateNote.svelte";
 import type { ProjectDefinition } from "src/settings/settings";
 
+export interface CreateNoteContext {
+  /** Context date for template substitution (e.g., clicked date in calendar) */
+  date?: dayjs.Dayjs;
+  /** Context time for template substitution (e.g., clicked time in timeline) */
+  time?: string;
+}
+
 export class CreateNoteModal extends Modal {
   component?: CreateNote;
 
@@ -20,9 +27,12 @@ export class CreateNoteModal extends Modal {
       name: string,
       templatePath: string,
       project: ProjectDefinition
-    ) => void
+    ) => void,
+    /** Optional context for template interpolation (date/time from calendar) */
+    readonly context?: CreateNoteContext
   ) {
     super(app);
+    this.containerEl.addClass("projects-modal");
   }
 
   getNewNotesFolder(project: ProjectDefinition) {
@@ -38,14 +48,24 @@ export class CreateNoteModal extends Modal {
   }
 
   onOpen() {
+    // Use context date/time if provided, otherwise use current time
+    const contextDate = this.context?.date ?? dayjs();
+    const contextTime = this.context?.time ?? dayjs().format("HH:mm");
+    
     this.component = new CreateNote({
       target: this.contentEl,
       props: {
         name: this.project.defaultName
           ? interpolateTemplate(this.project.defaultName, {
-              date: (format) => dayjs().format(format || "YYYY-MM-DD"),
-              time: (format) => dayjs().format(format || "HH:mm"),
-
+              date: (format) => contextDate.format(format || "YYYY-MM-DD"),
+              time: (format) => {
+                // If format provided, parse contextTime and format
+                if (format && this.context?.time) {
+                  const [hours, minutes] = this.context.time.split(':').map(Number);
+                  return dayjs().hour(hours ?? 0).minute(minutes ?? 0).format(format);
+                }
+                return contextTime;
+              },
             })
           : nextUniqueFileName(
               this.getNewNotesFolder(this.project),

@@ -12,6 +12,7 @@
     flex: 1;
     overflow: auto;
     position: relative;
+    overscroll-behavior: contain;
   }
 
   .no-scroll {
@@ -19,6 +20,13 @@
   }
 
   .padding {
-    padding: 24px;
+    padding: 1.5rem;
+  }
+  
+  /* v4.0.0: Mobile-friendly padding */
+  @media (max-width: 30rem) {
+    .padding {
+      padding: 0.75rem;
+    }
   }
 </style>

@@ -28,6 +28,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
   let viewId: string;
   const projectId = props.project.id;
   let projectView: ProjectView<Record<string, any>> | undefined;
+  let prevConfigJson: string = "";
 
   const update = (newprops: ViewProps) => {
     // User switched to a different view.
@@ -57,10 +58,21 @@ export function useView(node: HTMLElement, props: ViewProps) {
           getRecord: newprops.getRecord,
         });
         projectView.onData(newprops.dataProps);
+        prevConfigJson = JSON.stringify(newprops.config);
       }
 
       viewId = newprops.view.id;
     } else {
+      // Check if config changed (for freeze, centerOn, etc.)
+      const currentConfigJson = JSON.stringify(newprops.config);
+      if (currentConfigJson !== prevConfigJson) {
+        // Config changed - we need to pass new config to the view
+        // Since onData doesn't handle config, we update the svelte component directly if possible
+        if (projectView && 'view' in projectView && projectView.view) {
+          (projectView.view as any).$set({ config: newprops.config });
+        }
+        prevConfigJson = currentConfigJson;
+      }
       projectView?.onData(newprops.dataProps);
     }
   };

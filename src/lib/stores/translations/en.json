@@ -328,6 +328,10 @@
                 "date": "{{value, datetime}}",
                 "interval": "{{from, datetime}} – {{to, datetime}}{{en_separator}}{{custom_year, datetime}}",
                 "intervals": {
+                    "year_one": "Year",
+                    "year_other": "Years",
+                    "yearWithCount_one": "{{count}} year",
+                    "yearWithCount_other": "{{count}} years",
                     "month_one": "Month",
                     "month_other": "Months",
                     "monthWithCount_one": "{{count}} month",
@@ -340,8 +344,7 @@
                     "day_other": "Days",
                     "dayWithCount_one": "{{count}} day",
                     "dayWithCount_other": "{{count}} days",
-                    "2weeks": "2 Weeks",
-                    "3days": "3 Days"
+                    "2weeks": "2 Weeks"
                 },
                 "navigation": {
                     "aria-label": "Calendar Navigation",
@@ -358,15 +361,55 @@
                     "date-required": "Date field is required to create events"
                 },
                 "record": {
+                    "open": "Open note",
+                    "open-new-tab": "Open in new tab",
                     "settings": "Settings",
                     "duplicate": "Duplicate",
-                    "delete": "Delete"
+                    "delete": "Delete",
+                    "color": "Color"
+                },
+                "colors": {
+                    "favorites": "Favorites",
+                    "all": "All Colors",
+                    "custom": "Custom Color",
+                    "invalid": "Invalid HEX format",
+                    "picker": "Color Picker",
+                    "quick": "Quick Colors",
+                    "hex": "HEX Code"
+                },
+                "popup": {
+                    "today": "Today",
+                    "empty-hint": "Click button below to create"
                 },
                 "duplicate": {
                     "title": "Select dates to duplicate",
                     "selected": "{{count}} date(s) selected",
                     "cancel": "Cancel",
-                    "confirm": "Duplicate"
+                    "confirm": "Duplicate",
+                    "time": "Time",
+                    "today": "Today"
+                },
+                "agenda": {
+                    "title": "Agenda",
+                    "empty": "No events for this day",
+                    "all-day": "📅 All Day",
+                    "all-day-time": "All day",
+                    "morning": "🌅 Morning (before 12:00)",
+                    "afternoon": "☀️ Afternoon (12:00–18:00)",
+                    "evening": "🌙 Evening (after 18:00)",
+                    "overdue": "⛔ Overdue",
+                    "today": "📅 Today",
+                    "multiday": "📊 Multi-day",
+                    "upcoming": "🔮 Upcoming",
+                    "undated": "📥 Inbox (No Date)",
+                    "expand": "Expand agenda",
+                    "collapse": "Collapse agenda"
+                },
+                "heatmap": {
+                    "less": "Less",
+                    "more": "More",
+                    "events": "events",
+                    "clickToViewMonth": "Click to view month"
                 }
             },
             "gallery": {
@@ -551,11 +594,106 @@
             "missingDataview": {
                 "title": "Dataview is disabled",
                 "message": "Enable the Dataview plugin to continue using this project."
+            },
+            "boundary": {
+                "title": "Something went wrong",
+                "message": "An error occurred while rendering this component.",
+                "retry": "Try again",
+                "details": "Error details"
             }
         },
         "obsidian": {
             "ribbon-tooltip": "Open projects plus",
             "hover-link-settings": "Projects Plus"
+        },
+        "navigation": {
+            "active-project": "Active project"
+        },
+        "settings-menu": {
+            "title": "Settings",
+            "tabs": {
+                "projects": "Projects",
+                "views": "Views",
+                "filters": "Filters",
+                "colors": "Colors",
+                "sort": "Sort",
+                "view-config": "View"
+            },
+            "done": "Done",
+            "views": {
+                "title": "View Management",
+                "show-titles": "Show view titles",
+                "select-view": "Select view",
+                "rename": "Rename",
+                "duplicate": "Duplicate",
+                "delete": "Delete",
+                "add-view": "Add view",
+                "drag-to-reorder": "Drag to reorder"
+            },
+            "view-config": {
+                "title": "View Settings",
+                "current-view": "Current view",
+                "no-view": "No active view",
+                "calendar": {
+                    "interval": "Interval",
+                    "layout": "Layout",
+                    "time-format": "Time format",
+                    "timezone": "Timezone",
+                    "show-agenda": "Show Agenda",
+                    "hide-agenda": "Hide Agenda",
+                    "timeline": {
+                        "title": "Timeline Settings",
+                        "start-hour": "Start Hour",
+                        "end-hour": "End Hour",
+                        "event-color-field": "Event Color Field",
+                        "show-weekends": "Show weekends",
+                        "show-all-day": "Show 'All day' section"
+                    },
+                    "interval-options": {
+                        "year": "Year",
+                        "day": "Day",
+                        "week": "Week",
+                        "month": "Month"
+                    },
+                    "layout-options": {
+                        "headers": "Headers (classic)",
+                        "bars": "Bars (timeline)"
+                    }
+                },
+                "board": {
+                    "column-width": "Column width",
+                    "header-field": "Card header",
+                    "order-sync-field": "Order sync field",
+                    "freeze-columns": "Freeze columns",
+                    "hints": {
+                        "column-width": "Width of each column in pixels",
+                        "header-field": "Field for card headers",
+                        "order-sync-field": "Number field to store card positions"
+                    }
+                },
+                "gallery": {
+                    "card-width": "Card width",
+                    "cover-field": "Cover field",
+                    "fit-style": "Fit style",
+                    "include-fields": "Include fields",
+                    "fit-options": {
+                        "fill": "Fill",
+                        "fit": "Fit"
+                    },
+                    "hints": {
+                        "card-width": "Width of each gallery card in pixels",
+                        "cover-field": "Text field with path to image",
+                        "include-fields": "Select which fields to show on cards"
+                    }
+                },
+                "table": {
+                    "hide-fields": "Hide fields",
+                    "hints": {
+                        "hide-fields": "Select which fields to hide in the table"
+                    }
+                },
+                "none": "— None —"
+            }
         }
     }
 }

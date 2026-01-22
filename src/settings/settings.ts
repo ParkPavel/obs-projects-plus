@@ -5,6 +5,8 @@ import type { ProjectDefinition as V1ProjectDefinition, ProjectsPluginSettings a
 import { resolve as v1Resolve } from "./v1/settings";
 import type { ProjectDefinition as V2ProjectDefinition, ProjectsPluginSettings as V2ProjectsPluginSettings } from "./v2/settings";
 import { resolve as v2Resolve } from "./v2/settings";
+import type { ProjectDefinition as V3ProjectDefinition, ProjectsPluginSettings as V3ProjectsPluginSettings } from "./v3/settings";
+import { resolve as v3Resolve } from "./v3/settings";
 
 export * from "./base/settings";
 
@@ -12,15 +14,15 @@ export * from "./base/settings";
 export type ProjectPreferences = ProjectsPluginPreferences;
 
 // This defines the latest version of the project definition.
-export type ProjectDefinition = V2ProjectDefinition<ViewDefinition>;
+export type ProjectDefinition = V3ProjectDefinition<ViewDefinition>;
 
 // Defines the latest version of the plugin settings.
-export type LatestProjectsPluginSettings = V2ProjectsPluginSettings<
+export type LatestProjectsPluginSettings = V3ProjectsPluginSettings<
   ProjectDefinition,
   ProjectPreferences
 >;
 
-export const DEFAULT_SETTINGS = v2Resolve({ version: 2 });
+export const DEFAULT_SETTINGS = v3Resolve({ version: 3 });
 export const DEFAULT_PROJECT = {
   fieldConfig: {},
   defaultName: "",
@@ -36,6 +38,10 @@ export const DEFAULT_PROJECT = {
   },
   newNotesFolder: "",
   views: [],
+  dateFormat: {
+    writeFormat: "YYYY-MM-DD",
+    preset: "iso" as const,
+  },
 };
 
 /**
@@ -46,14 +52,16 @@ export function migrateSettings(
   settings: any
 ): either.Either<Error, LatestProjectsPluginSettings> {
   if (!settings) {
-    return either.right(Object.assign({}, v2Resolve({ version: 2 })));
+    return either.right(Object.assign({}, v3Resolve({ version: 3 })));
   }
 
   if ("version" in settings && typeof settings.version === "number") {
     if (settings.version === 1) {
       return either.right(migrate(v1Resolve(settings)));
     } else if (settings.version === 2) {
-      return either.right(v2Resolve(settings));
+      return either.right(migrateV2ToV3(v2Resolve(settings)));
+    } else if (settings.version === 3) {
+      return either.right(v3Resolve(settings));
     } else {
       return either.left(new Error("Unknown settings version"));
     }
@@ -65,15 +73,22 @@ export function migrateSettings(
 export function migrate(
   v1settings: V1ProjectsPluginSettings<V1ProjectDefinition<ViewDefinition>>
 ): LatestProjectsPluginSettings {
+  const v2settings = migrateV1ToV2(v1settings);
+  return migrateV2ToV3(v2settings);
+}
+
+function migrateV1ToV2(
+  v1settings: V1ProjectsPluginSettings<V1ProjectDefinition<ViewDefinition>>
+): V2ProjectsPluginSettings<V2ProjectDefinition<ViewDefinition>, ProjectPreferences> {
   return {
     version: 2,
-    projects: v1settings.projects.map(migrateProject),
+    projects: v1settings.projects.map(migrateProjectFromV1),
     archives: [],
     preferences: v1settings.preferences,
   };
 }
 
-function migrateProject(
+function migrateProjectFromV1(
   v1project: V1ProjectDefinition<ViewDefinition>
 ): V2ProjectDefinition<ViewDefinition> {
   const {
@@ -124,4 +139,61 @@ function migrateDataSource(
       recursive: project.recursive,
     },
   };
+}
+
+function migrateV2ToV3(
+  v2settings: V2ProjectsPluginSettings<
+    V2ProjectDefinition<ViewDefinition>,
+    ProjectPreferences
+  >
+): LatestProjectsPluginSettings {
+  return {
+    version: 3,
+    projects: v2settings.projects.map(migrateProjectFromV2),
+    archives: v2settings.archives.map(migrateProjectFromV2),
+    preferences: v2settings.preferences,
+  };
+}
+
+function migrateProjectFromV2(
+  project: V2ProjectDefinition<ViewDefinition>
+): ProjectDefinition {
+  return {
+    ...project,
+    views: project.views.map(migrateViewDefinition),
+  };
+}
+
+function migrateViewDefinition(view: ViewDefinition): ViewDefinition {
+  if (view.type === "calendar") {
+    return {
+      ...view,
+      config: {
+        // New v3.0.0 fields
+        displayMode: "headers", // default grid; timeline bars auto-enabled in non-month intervals
+        startDateField: "startDate",
+        endDateField: "endDate",
+        startTimeField: "startTime",
+        endTimeField: "endTime",
+        eventColorField: "eventColor",
+        agendaOpen: false,
+        timeFormat: "24h",
+        timezone: "local",
+        ...view.config,
+      },
+    };
+  }
+
+  if (view.type === "board") {
+    return {
+      ...view,
+      config: {
+        freezeAll: false,
+        freezeColumns: false,
+        ...view.config,
+      },
+    };
+  }
+
+  return view;
 }

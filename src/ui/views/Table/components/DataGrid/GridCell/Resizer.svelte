@@ -48,11 +48,11 @@
 <style>
   .handle {
     position: absolute;
-    right: -3px;
-    width: 6px;
-    min-width: 6px;
+    right: -0.1875rem;
+    width: 0.375rem;
+    min-width: 0.375rem;
     height: 100%;
-    border-radius: 1px;
+    border-radius: 0.0625rem;
     z-index: 1;
   }
   .handle:hover {

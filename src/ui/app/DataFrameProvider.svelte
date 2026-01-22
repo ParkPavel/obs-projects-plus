@@ -48,11 +48,12 @@
   let querying: Promise<void>;
 
   $: {
-    // Perform a full refresh of the data frame whenever the data source
-    // changes.
+    // Perform a full refresh of the data frame whenever the data source changes.
+    // Live updates are handled by registerFileEvents in main.ts
     querying = (async () => {
       if ($dataSource) {
-        dataFrame.set(await $dataSource.queryAll());
+        const initialFrame = await $dataSource.queryAll();
+        dataFrame.set(initialFrame);
       }
     })();
   }

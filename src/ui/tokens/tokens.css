@@ -1,0 +1,244 @@
+/*
+ * Fluid Architecture Design Tokens
+ * 
+ * ROADMAP Phase 3 — Fluid token system
+ * 
+ * Иерархия токенов:
+ * 1. Primitive tokens (base values)
+ * 2. Semantic tokens (purpose-based aliases)
+ * 3. Component tokens (component-specific)
+ * 
+ * Все значения в rem для accessibility (масштабирование шрифта).
+ */
+
+:root {
+  /* ═══════════════════════════════════════════════════════════
+     PRIMITIVE TOKENS — Base scale values
+     ═══════════════════════════════════════════════════════════ */
+  
+  /* Spacing scale (golden ratio based) */
+  --ppp-space-0: 0;
+  --ppp-space-1: 0.125rem;   /* 2px */
+  --ppp-space-2: 0.25rem;    /* 4px */
+  --ppp-space-3: 0.375rem;   /* 6px */
+  --ppp-space-4: 0.5rem;     /* 8px */
+  --ppp-space-5: 0.75rem;    /* 12px */
+  --ppp-space-6: 1rem;       /* 16px */
+  --ppp-space-7: 1.5rem;     /* 24px */
+  --ppp-space-8: 2rem;       /* 32px */
+  --ppp-space-9: 3rem;       /* 48px */
+  --ppp-space-10: 4rem;      /* 64px */
+  
+  /* Typography scale */
+  --ppp-font-size-xs: 0.6875rem;   /* 11px */
+  --ppp-font-size-sm: 0.75rem;     /* 12px */
+  --ppp-font-size-md: 0.8125rem;   /* 13px */
+  --ppp-font-size-base: 0.875rem;  /* 14px */
+  --ppp-font-size-lg: 1rem;        /* 16px */
+  --ppp-font-size-xl: 1.25rem;     /* 20px */
+  --ppp-font-size-2xl: 1.5rem;     /* 24px */
+  
+  --ppp-font-weight-normal: 400;
+  --ppp-font-weight-medium: 500;
+  --ppp-font-weight-semibold: 600;
+  --ppp-font-weight-bold: 700;
+  
+  --ppp-line-height-tight: 1.25;
+  --ppp-line-height-normal: 1.5;
+  --ppp-line-height-relaxed: 1.75;
+  
+  /* Border radius scale */
+  --ppp-radius-none: 0;
+  --ppp-radius-sm: 0.125rem;   /* 2px */
+  --ppp-radius-md: 0.25rem;    /* 4px */
+  --ppp-radius-lg: 0.375rem;   /* 6px */
+  --ppp-radius-xl: 0.5rem;     /* 8px */
+  --ppp-radius-2xl: 0.75rem;   /* 12px */
+  --ppp-radius-full: 9999px;
+  
+  /* Shadow scale */
+  --ppp-shadow-none: none;
+  --ppp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ppp-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --ppp-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
+  --ppp-shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.2);
+  
+  /* Transition durations */
+  --ppp-duration-instant: 0ms;
+  --ppp-duration-fast: 100ms;
+  --ppp-duration-normal: 150ms;
+  --ppp-duration-slow: 250ms;
+  --ppp-duration-slower: 400ms;
+  
+  /* Easing curves */
+  --ppp-ease-linear: linear;
+  --ppp-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ppp-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ppp-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ppp-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Z-index scale */
+  --ppp-z-below: -1;
+  --ppp-z-base: 0;
+  --ppp-z-raised: 1;
+  --ppp-z-dropdown: 10;
+  --ppp-z-sticky: 20;
+  --ppp-z-overlay: 30;
+  --ppp-z-modal: 40;
+  --ppp-z-popover: 50;
+  --ppp-z-toast: 60;
+  
+  /* ═══════════════════════════════════════════════════════════
+     SEMANTIC TOKENS — Purpose-based aliases
+     ═══════════════════════════════════════════════════════════ */
+  
+  /* Gap tokens */
+  --ppp-gap-inline-xs: var(--ppp-space-2);
+  --ppp-gap-inline-sm: var(--ppp-space-3);
+  --ppp-gap-inline-md: var(--ppp-space-4);
+  --ppp-gap-inline-lg: var(--ppp-space-6);
+  
+  --ppp-gap-block-xs: var(--ppp-space-2);
+  --ppp-gap-block-sm: var(--ppp-space-3);
+  --ppp-gap-block-md: var(--ppp-space-5);
+  --ppp-gap-block-lg: var(--ppp-space-7);
+  
+  /* Padding tokens */
+  --ppp-padding-xs: var(--ppp-space-2);
+  --ppp-padding-sm: var(--ppp-space-3);
+  --ppp-padding-md: var(--ppp-space-4);
+  --ppp-padding-lg: var(--ppp-space-6);
+  --ppp-padding-xl: var(--ppp-space-8);
+  
+  /* Semantic padding aliases (используем в TableView) */
+  --ppp-padding-tight: var(--ppp-space-3);   /* 0.375rem */
+  --ppp-padding-normal: var(--ppp-space-4);   /* 0.5rem */
+  --ppp-padding-relaxed: var(--ppp-space-5);  /* 0.75rem */
+  --ppp-padding-loose: var(--ppp-space-6);    /* 1rem */
+  
+  /* Semantic gap aliases */
+  --ppp-gap-tight: var(--ppp-space-2);
+  --ppp-gap-normal: var(--ppp-space-4);
+  --ppp-gap-relaxed: var(--ppp-space-5);
+  --ppp-gap-loose: var(--ppp-space-6);
+  
+  /* Interactive element sizing */
+  --ppp-touch-target-min: 2.75rem;  /* 44px - accessibility minimum */
+  --ppp-touch-comfortable: 3rem;    /* 48px - Material Design */
+  --ppp-icon-size-sm: 1rem;
+  --ppp-icon-size-md: 1.25rem;
+  --ppp-icon-size-lg: 1.5rem;
+  
+  /* Border widths */
+  --ppp-border-width: 1px;
+  --ppp-border-width-thick: 2px;
+  
+  /* ═══════════════════════════════════════════════════════════
+     COMPONENT TOKENS — Table-specific
+     ═══════════════════════════════════════════════════════════ */
+  
+  /* Table heights - синхронизированы */
+  --ppp-table-header-height: 1.875rem;  /* 30px */
+  --ppp-table-row-height: 1.875rem;     /* 30px */
+  --ppp-table-cell-min-height: 1.875rem;
+  
+  /* Button heights */
+  --ppp-button-height-sm: 1.75rem;
+  --ppp-button-height-md: 2rem;
+  --ppp-button-height-lg: 2.5rem;
+  
+  /* Input heights */
+  --ppp-input-height-sm: 1.75rem;
+  --ppp-input-height-md: 2rem;
+  --ppp-input-height-lg: 2.5rem;
+  
+  /* ═══════════════════════════════════════════════════════════
+     COMPONENT TOKENS — Calendar-specific
+     ═══════════════════════════════════════════════════════════ */
+  
+  /* Calendar grid */
+  --ppp-calendar-cell-min-width: 2rem;
+  --ppp-calendar-cell-min-height: 2rem;
+  --ppp-calendar-header-height: 2.5rem;
+  --ppp-calendar-row-gap: var(--ppp-space-1);
+  --ppp-calendar-col-gap: var(--ppp-space-1);
+  
+  /* Timeline */
+  --ppp-timeline-hour-height: 3.75rem;   /* 60px */
+  --ppp-timeline-gutter-width: 3rem;     /* Time labels column */
+  --ppp-timeline-event-gap: var(--ppp-space-1);
+  --ppp-timeline-event-radius: var(--ppp-radius-md);
+  
+  /* Event bars */
+  --ppp-event-bar-min-height: 1.25rem;
+  --ppp-event-bar-padding-x: var(--ppp-space-3);
+  --ppp-event-bar-padding-y: var(--ppp-space-1);
+  --ppp-event-bar-font-size: var(--ppp-font-size-xs);
+  
+  /* Event strips (all-day, multi-day) */
+  --ppp-event-strip-height: 1.25rem;
+  --ppp-event-strip-gap: var(--ppp-space-1);
+  --ppp-event-strip-radius: var(--ppp-radius-sm);
+  
+  /* Overflow indicators */
+  --ppp-overflow-indicator-size: 1rem;
+  --ppp-overflow-indicator-font-size: var(--ppp-font-size-xs);
+  
+  /* Sidebar */
+  --ppp-sidebar-width: 15rem;           /* 240px */
+  --ppp-sidebar-collapsed-width: 2.5rem;
+  
+  /* ═══════════════════════════════════════════════════════════
+     RESPONSIVE BREAKPOINTS
+     ═══════════════════════════════════════════════════════════ */
+  
+  /* Note: CSS custom properties can't be used in media queries,
+     these are documented for reference. Use actual values in @media. */
+  /* --ppp-breakpoint-sm: 640px; */
+  /* --ppp-breakpoint-md: 768px; */
+  /* --ppp-breakpoint-lg: 1024px; */
+  /* --ppp-breakpoint-xl: 1280px; */
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ACCESSIBILITY OVERRIDES
+   ═══════════════════════════════════════════════════════════ */
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --ppp-shadow-sm: 0 0 0 1px currentColor;
+    --ppp-shadow-md: 0 0 0 2px currentColor;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ppp-duration-instant: 0ms;
+    --ppp-duration-fast: 0ms;
+    --ppp-duration-normal: 0ms;
+    --ppp-duration-slow: 0ms;
+    --ppp-duration-slower: 0ms;
+  }
+}
+
+/* Touch devices - увеличиваем touch targets */
+@media (pointer: coarse) {
+  :root {
+    --ppp-table-row-height: var(--ppp-touch-target-min);
+    --ppp-button-height-md: var(--ppp-touch-target-min);
+    --ppp-input-height-md: var(--ppp-touch-target-min);
+    --ppp-table-header-height: var(--ppp-touch-target-min);
+  }
+}
+
+/* v8.0: Mobile viewport - reduce event strip height for better fit */
+@media (max-width: 48rem) {
+  :root {
+    --ppp-event-strip-height: 1.125rem;
+  }
+}
+
+/* Large text mode (when user increases base font) */
+/* Note: rem-based tokens automatically scale with user font preferences */

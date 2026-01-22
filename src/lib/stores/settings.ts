@@ -319,6 +319,29 @@ function createSettings() {
         })
       );
     },
+    reorderViews(projectId: ProjectId, fromIndex: number, toIndex: number) {
+      update((state) =>
+        produce(state, (draft) => {
+          const projectIndex = draft.projects.findIndex((p) => p.id === projectId);
+          
+          if (projectIndex >= 0) {
+            const project = draft.projects[projectIndex];
+            
+            if (project && fromIndex >= 0 && fromIndex < project.views.length &&
+                toIndex >= 0 && toIndex < project.views.length) {
+              const views = [...project.views];
+              const [movedView] = views.splice(fromIndex, 1);
+              views.splice(toIndex, 0, movedView!);
+              
+              draft.projects[projectIndex] = {
+                ...project,
+                views,
+              };
+            }
+          }
+        })
+      );
+    },
   };
 }
 export const settings = createSettings();

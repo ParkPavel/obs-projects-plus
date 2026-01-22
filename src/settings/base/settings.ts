@@ -192,6 +192,7 @@ export type ProjectsPluginPreferences = {
   readonly commands: ShowCommand[];
   readonly linkBehavior: LinkBehavior;
   readonly mobileCalendarView: MobileCalendarView;
+  readonly showViewTitles: boolean;
 };
 
 export type UnsavedViewDefinition = Omit<

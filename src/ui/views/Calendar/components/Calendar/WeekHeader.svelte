@@ -11,5 +11,6 @@
     display: flex;
     background: transparent;
     flex-shrink: 0;
+    overflow: hidden; /* Prevent subpixel artifacts */
   }
 </style>

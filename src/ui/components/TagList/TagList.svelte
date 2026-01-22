@@ -54,9 +54,9 @@
   div {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--ppp-spacing-2xs, 0.25rem);
     overflow: hidden;
-    padding: 4px;
+    padding: var(--ppp-spacing-2xs, 0.25rem);
   }
 
   .edit {

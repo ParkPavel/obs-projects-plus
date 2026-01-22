@@ -86,7 +86,7 @@
   }
 
   div.pinned {
-    left: 60px;
+    left: 3.75rem;
     z-index: 6;
     position: sticky;
   }

@@ -199,7 +199,7 @@
   }
 
   .collapse {
-    max-height: 24px;
+    max-height: 1.5rem;
     overflow-y: auto;
   }
 </style>

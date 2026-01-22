@@ -12,18 +12,16 @@
     flex-direction: column;
     height: 100%;
     overflow-x: auto;
-    /* Enable smooth scrolling on mobile */
-    -webkit-overflow-scrolling: touch;
   }
 
   /* Mobile optimizations */
-  @media (max-width: 768px) {
+  @media (max-width: 48rem) {
     .calendar-container {
       font-size: 0.9rem;
     }
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 30rem) {
     .calendar-container {
       font-size: 0.8rem;
     }

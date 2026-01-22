@@ -62,7 +62,7 @@
 
 <style>
   div {
-    padding: 6px;
+    padding: 0.375rem;
     width: 100%;
     white-space: nowrap;
     overflow: hidden;

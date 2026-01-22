@@ -152,9 +152,8 @@
     {/if}
 
     <span
-      style="background-color: {color
-        ? color
-        : 'transparent'}; width: 5px; border-radius: 9999px; position: absolute; right: 4px; height: calc(100% - 8px);"
+      class="color-bar"
+      style="background-color: {color ? color : 'transparent'};"
     />
   </div>
 {:else}
@@ -226,7 +225,14 @@
     border-bottom: 1px solid var(--background-modifier-border);
 
     width: 100%;
-    min-height: 30px;
+    min-height: 1.875rem;
+  }
+  
+  /* v4.0.0: Mobile - larger touch targets */
+  @media (max-width: 30rem) {
+    div {
+      min-height: 2.75rem;
+    }
   }
 
   .selected {
@@ -268,8 +274,8 @@
     z-index: 5;
     background-color: var(--background-primary-alt);
     font-weight: 500;
-    padding: 3px;
-    gap: 4px;
+    padding: var(--ppp-spacing-3xs, 0.1875rem);
+    gap: var(--ppp-spacing-2xs, 0.25rem);
     position: sticky;
   }
 

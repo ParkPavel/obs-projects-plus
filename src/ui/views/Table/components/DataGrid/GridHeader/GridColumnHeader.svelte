@@ -59,29 +59,41 @@
     text-align: center;
 
     background-color: var(--background-primary-alt);
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     border-left-color: var(--background-modifier-border);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
 
     width: 100%;
-    min-height: 30px;
+    height: var(--ppp-table-header-height);
+    min-height: var(--ppp-table-header-height);
+    max-height: var(--ppp-table-header-height);
 
-    font-weight: 500;
-    padding: 0 4px;
+    font-weight: var(--ppp-weight-medium);
+    padding: 0 var(--ppp-padding-tight);
 
     cursor: default;
+  }
+  
+  /* Touch devices - увеличиваем touch targets */
+  @media (pointer: coarse) {
+    div {
+      height: var(--ppp-touch-min);
+      min-height: var(--ppp-touch-min);
+      max-height: var(--ppp-touch-min);
+      padding: 0 var(--ppp-padding-normal);
+    }
   }
 
   .left {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
   }
 
   .right {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
   }
 
   div.pinned {

@@ -7,6 +7,9 @@ import "dayjs/locale/ru";
 import "dayjs/locale/uk";
 import "dayjs/locale/zh-cn";
 
+// Design tokens CSS
+import "./ui/tokens/tokens.css";
+
 import { either, task, taskEither } from "fp-ts";
 import { pipe } from "fp-ts/lib/function";
 import { Plugin, TFolder, WorkspaceLeaf, addIcon } from "obsidian";

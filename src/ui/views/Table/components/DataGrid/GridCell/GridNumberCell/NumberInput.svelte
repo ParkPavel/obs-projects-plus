@@ -40,7 +40,7 @@
     background-color: var(--background-primary);
     box-sizing: border-box;
     width: 100%;
-    padding: 6px;
+    padding: 0.375rem;
     font-weight: 400;
     font-family: var(--font-default);
     color: var(--text-normal);

@@ -6,6 +6,14 @@ import type { ProjectDefinition, ViewDefinition } from "src/settings/settings";
 import { getContext, setContext } from "svelte";
 import type { DataField } from "./dataframe/dataframe";
 
+// Export date formatting utilities
+export {
+  formatDateForProject,
+  formatDateForDisplay,
+  formatDateForInternal,
+  parseDate,
+} from "./helpers/dateFormatting";
+
 /**
  * Convenience function for filtering null or undefined values in an array.
  *

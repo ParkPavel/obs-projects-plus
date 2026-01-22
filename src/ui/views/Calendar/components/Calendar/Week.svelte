@@ -1,11 +1,19 @@
 <script lang="ts">
-  export let height: number;
+  /**
+   * Week row container for month grid
+   * v3.1.0 "Matryoshka" principle: Fixed height in rem
+   */
+  export let height: number = 0; // Legacy percentage support
+  export let heightRem: number = 8; // Fixed height in rem (default: 8rem = ~128px)
+  export let useFixedHeight: boolean = true; // Switch to rem-based height
 </script>
 
 <div
-  style:flex={height > 0 ? `${height} 1 0%` : '1 1 auto'}
+  style:height={useFixedHeight ? `${heightRem}rem` : undefined}
+  style:flex={!useFixedHeight && height > 0 ? `${height} 1 0%` : (useFixedHeight ? 'none' : '1 1 auto')}
   role="row"
   class="calendar-week"
+  class:fixed-height={useFixedHeight}
 >
   <slot />
 </div>
@@ -14,8 +22,13 @@
   .calendar-week {
     display: flex;
     border-bottom: 1px solid var(--background-modifier-border);
-    min-height: 100px;
+    min-height: 6.25rem;
     transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .calendar-week.fixed-height {
+    min-height: unset;
+    /* Height is set via inline style */
   }
 
   .calendar-week:last-child {

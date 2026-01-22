@@ -45,14 +45,14 @@
 <style>
   .calendar-event {
     display: flex;
-    gap: 6px;
+    gap: 0.375rem;
     align-items: center;
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
     font-weight: 400;
     letter-spacing: -0.01em;
     background: var(--background-secondary);
-    border-radius: 6px;
+    border-radius: 0.375rem;
     cursor: pointer;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid transparent;
@@ -75,7 +75,7 @@
   /* Remove default checkbox margin */
   .calendar-event :global(input[type="checkbox"]) {
     margin: 0;
-    width: 14px;
-    height: 14px;
+    width: 0.875rem;
+    height: 0.875rem;
   }
 </style>

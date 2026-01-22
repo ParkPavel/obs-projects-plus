@@ -46,6 +46,8 @@
   class:embed
   value={value ? dayjs(value).format("YYYY-MM-DD") : null}
   max="9999-12-31"
+  placeholder="ГГГГ-ММ-ДД"
+  title="Выберите дату"
   on:change={handleChange}
   on:input={handleInput}
   on:blur
@@ -53,11 +55,27 @@
 
 <style>
   input {
-    border-radius: 9999px;
-    border: 0;
-    background-color: var(--background-modifier-hover);
+    border-radius: var(--ppp-radius-xl);
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
     font-family: var(--font-default);
-    padding-left: var(--size-4-6);
+    padding: var(--ppp-padding-sm) var(--ppp-padding-md);
+    color: var(--text-normal);
+    font-size: var(--ppp-font-size-base);
+    cursor: pointer;
+    transition: all var(--ppp-duration-normal) var(--ppp-ease-out);
+    width: 100%;
+  }
+
+  input:hover {
+    background-color: var(--background-modifier-hover);
+    border-color: var(--interactive-accent);
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
   }
 
   .embed {

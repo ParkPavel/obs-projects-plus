@@ -4,6 +4,7 @@
   import Event from "./Event.svelte";
   import { dndzone } from "svelte-dnd-action";
   import { app } from "src/lib/stores/obsidian";
+  import { createEventDispatcher } from "svelte";
   import type {
     DataRecord,
     DataValue,
@@ -36,15 +37,19 @@
   function handleDndConsider(e: CustomEvent<DndEvent<DataRecord>>) {
     if (disableDrag) return;
     records = e.detail.items;
+    dispatch("dndConsider", e.detail);
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<DataRecord>>) {
     if (disableDrag) return;
     records = e.detail.items;
     records.forEach(r => onRecordChange?.(r));
+    dispatch("dndFinalize", e.detail);
   }
 
   const getRecordColor = getRecordColorContext.get();
+
+  const dispatch = createEventDispatcher();
   
   // DnD zone options - only when enabled
   $: dndOptions = {
@@ -151,13 +156,13 @@
   .event-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
     flex: 1 1 auto;
-    min-height: 40px;
+    min-height: 2.5rem;
     width: 100%;
-    overflow: visible;
-    padding: 2px;
-    border-radius: 6px;
+    overflow: clip;
+    padding: 0.125rem;
+    border-radius: 0.375rem;
     transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -170,7 +175,7 @@
   }
 
   .event-list:empty {
-    min-height: 24px;
+    min-height: 1.5rem;
   }
 
   /* DnD active state */

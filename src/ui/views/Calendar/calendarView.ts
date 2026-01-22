@@ -10,6 +10,7 @@ import type { CalendarConfig } from "./types";
 export class CalendarView extends ProjectView<CalendarConfig> {
   view?: CalendarViewSvelte | null;
   props?: ProjectViewProps;
+  private dataVersion = 0;
 
   getViewType(): string {
     return "calendar";
@@ -22,7 +23,9 @@ export class CalendarView extends ProjectView<CalendarConfig> {
   }
 
   async onData({ data }: DataQueryResult) {
-    this.view?.$set({ frame: data });
+    this.dataVersion++;
+    // Pass dataVersion to force Svelte reactivity on every data update
+    this.view?.$set({ frame: data, dataVersion: this.dataVersion });
   }
 
   async onOpen(props: ProjectViewProps<CalendarConfig>) {
@@ -30,6 +33,7 @@ export class CalendarView extends ProjectView<CalendarConfig> {
       target: props.contentEl,
       props: {
         frame: { fields: [], records: [] },
+        dataVersion: 0,
         api: props.viewApi,
         project: props.project,
         readonly: props.readonly,

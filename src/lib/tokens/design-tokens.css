@@ -1,0 +1,314 @@
+/**
+ * 🎨 OBS Projects Plus - Design Tokens System
+ * ===========================================
+ * 
+ * ПРИНЦИП МАТРЁШКИ: Все значения вложены друг в друга
+ * ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ для всех размеров
+ * 
+ * ❌ НИКАКИХ ПИКСЕЛЕЙ В КОМПОНЕНТАХ
+ * ✅ Только rem/em/% + эти переменные
+ */
+
+:root {
+	/* ═══════════════════════════════════════════════════
+	   📏 BASE UNIT (Базовая единица)
+	   ═══════════════════════════════════════════════════ */
+	
+	--ppp-base-unit: 0.25rem; /* 4px на 16px root font-size */
+	
+	/* ═══════════════════════════════════════════════════
+	   🔢 SPACING SYSTEM (Матрёшка отступов)
+	   ═══════════════════════════════════════════════════ */
+	
+	/* Основная шкала */
+	--ppp-spacing-xs: calc(var(--ppp-base-unit) * 1);    /* 0.25rem = 4px */
+	--ppp-spacing-sm: calc(var(--ppp-base-unit) * 1.5);  /* 0.375rem = 6px */
+	--ppp-spacing-md: calc(var(--ppp-base-unit) * 2);    /* 0.5rem = 8px */
+	--ppp-spacing-lg: calc(var(--ppp-base-unit) * 3);    /* 0.75rem = 12px */
+	--ppp-spacing-xl: calc(var(--ppp-base-unit) * 4);    /* 1rem = 16px */
+	--ppp-spacing-2xl: calc(var(--ppp-base-unit) * 6);   /* 1.5rem = 24px */
+	--ppp-spacing-3xl: calc(var(--ppp-base-unit) * 8);   /* 2rem = 32px */
+	--ppp-spacing-4xl: calc(var(--ppp-base-unit) * 12);  /* 3rem = 48px */
+	
+	/* Semantic spacing */
+	--ppp-gap-tight: var(--ppp-spacing-xs);
+	--ppp-gap-normal: var(--ppp-spacing-md);
+	--ppp-gap-relaxed: var(--ppp-spacing-lg);
+	--ppp-gap-loose: var(--ppp-spacing-xl);
+	
+	--ppp-padding-tight: var(--ppp-spacing-sm);
+	--ppp-padding-normal: var(--ppp-spacing-md);
+	--ppp-padding-relaxed: var(--ppp-spacing-lg);
+	--ppp-padding-loose: var(--ppp-spacing-xl);
+	
+	/* ═══════════════════════════════════════════════════
+	   👆 TOUCH TARGETS (Минимальные размеры для touch)
+	   ═══════════════════════════════════════════════════ */
+	
+	--ppp-touch-min: 2.75rem;        /* 44px - iOS Human Interface Guidelines */
+	--ppp-touch-comfortable: 3rem;   /* 48px - Material Design */
+	--ppp-touch-generous: 3.5rem;    /* 56px - для важных действий */
+	
+	/* ═══════════════════════════════════════════════════
+	   📐 COMPONENT HEIGHTS (Высоты компонентов)
+	   ═══════════════════════════════════════════════════ */
+	
+	/* Table */
+	--ppp-table-header-height: 1.875rem;  /* 30px */
+	--ppp-table-row-height: 1.875rem;     /* 30px */
+	--ppp-table-cell-min-height: 1.875rem;
+	
+	/* Inputs & Buttons */
+	--ppp-input-height-sm: 1.75rem;   /* 28px - компактные поля */
+	--ppp-input-height-md: 2rem;      /* 32px - стандартные поля */
+	--ppp-input-height-lg: 2.5rem;    /* 40px - крупные поля */
+	
+	--ppp-button-height-sm: 1.75rem;
+	--ppp-button-height-md: 2rem;
+	--ppp-button-height-lg: 2.5rem;
+	
+	/* Calendar */
+	--ppp-calendar-header-height: 2.5rem;     /* 40px */
+	--ppp-calendar-day-header-height: 1.875rem; /* 30px */
+	--ppp-calendar-event-min-height: 1.25rem; /* 20px */
+	--ppp-calendar-strip-height: 0.5rem;      /* 8px - для multi-day тонких линий */
+	
+	/* Sidebar */
+	--ppp-sidebar-width: 15rem;       /* 240px */
+	--ppp-sidebar-collapsed: 3rem;    /* 48px */
+	
+	/* ═══════════════════════════════════════════════════
+	   🔤 TYPOGRAPHY (Типографика)
+	   ═══════════════════════════════════════════════════ */
+	
+	/* Font sizes (матрёшка от базового размера) */
+	--ppp-font-base: 1rem;     /* 16px */
+	
+	--ppp-font-xs: 0.75rem;    /* 12px */
+	--ppp-font-sm: 0.875rem;   /* 14px */
+	--ppp-font-md: 1rem;       /* 16px */
+	--ppp-font-lg: 1.125rem;   /* 18px */
+	--ppp-font-xl: 1.25rem;    /* 20px */
+	--ppp-font-2xl: 1.5rem;    /* 24px */
+	--ppp-font-3xl: 1.875rem;  /* 30px */
+	
+	/* Line heights */
+	--ppp-leading-tight: 1.25;
+	--ppp-leading-normal: 1.5;
+	--ppp-leading-relaxed: 1.75;
+	
+	/* Font weights */
+	--ppp-weight-normal: 400;
+	--ppp-weight-medium: 500;
+	--ppp-weight-semibold: 600;
+	--ppp-weight-bold: 700;
+	
+	/* ═══════════════════════════════════════════════════
+	   🎨 BORDERS & RADIUS
+	   ═══════════════════════════════════════════════════ */
+	
+	/* Border widths - ЕДИНСТВЕННОЕ МЕСТО где можно px */
+	--ppp-border-width: 1px;
+	--ppp-border-width-thick: 2px;
+	
+	/* Border radius */
+	--ppp-radius-sm: 0.125rem;   /* 2px */
+	--ppp-radius-md: 0.25rem;    /* 4px */
+	--ppp-radius-lg: 0.5rem;     /* 8px */
+	--ppp-radius-xl: 0.75rem;    /* 12px */
+	--ppp-radius-full: 9999px;   /* Круг */
+	
+	/* ═══════════════════════════════════════════════════
+	   🌈 Z-INDEX SYSTEM (Слои)
+	   ═══════════════════════════════════════════════════ */
+	
+	--ppp-z-base: 0;
+	--ppp-z-sticky: 10;           /* Sticky headers */
+	--ppp-z-dropdown: 100;        /* Dropdowns */
+	--ppp-z-overlay: 500;         /* Overlays, backdrops */
+	--ppp-z-modal: 1000;          /* Modals */
+	--ppp-z-popover: 1100;        /* Popovers над модалами */
+	--ppp-z-tooltip: 1200;        /* Tooltips над всем */
+	
+	/* ═══════════════════════════════════════════════════
+	   ⏱️ TRANSITIONS & ANIMATIONS
+	   ═══════════════════════════════════════════════════ */
+	
+	/* Durations */
+	--ppp-duration-instant: 100ms;
+	--ppp-duration-fast: 150ms;
+	--ppp-duration-normal: 200ms;
+	--ppp-duration-slow: 300ms;
+	--ppp-duration-slower: 500ms;
+	
+	/* Easings */
+	--ppp-ease-linear: linear;
+	--ppp-ease-in: cubic-bezier(0.4, 0, 1, 1);
+	--ppp-ease-out: cubic-bezier(0, 0, 0.2, 1);
+	--ppp-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+	
+	/* ═══════════════════════════════════════════════════
+	   📱 BREAKPOINTS (для использования в JS)
+	   ═══════════════════════════════════════════════════ */
+	
+	--ppp-breakpoint-xs: 30rem;   /* 480px - phone */
+	--ppp-breakpoint-sm: 48rem;   /* 768px - tablet portrait */
+	--ppp-breakpoint-md: 64rem;   /* 1024px - tablet landscape */
+	--ppp-breakpoint-lg: 80rem;   /* 1280px - desktop */
+	--ppp-breakpoint-xl: 90rem;   /* 1440px - large desktop */
+	--ppp-breakpoint-2xl: 120rem; /* 1920px - ultra-wide */
+}
+
+/* ═══════════════════════════════════════════════════
+   📱 RESPONSIVE TOUCH TARGETS
+   ═══════════════════════════════════════════════════ */
+
+/* Touch устройства - увеличенные targets */
+@media (pointer: coarse) {
+	:root {
+		--ppp-table-row-height: var(--ppp-touch-min);
+		--ppp-button-height-md: var(--ppp-touch-min);
+		--ppp-input-height-md: var(--ppp-touch-min);
+		--ppp-calendar-event-min-height: 1.5rem; /* Больше для touch */
+	}
+}
+
+/* Маленькие экраны - увеличенные spacing */
+@media (max-width: 30rem) {
+	:root {
+		--ppp-padding-normal: var(--ppp-spacing-lg);
+		--ppp-gap-normal: var(--ppp-spacing-lg);
+	}
+}
+
+/* ═══════════════════════════════════════════════════
+   ♿ ACCESSIBILITY
+   ═══════════════════════════════════════════════════ */
+
+/* Отключить анимации для пользователей с prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--ppp-duration-instant: 0ms;
+		--ppp-duration-fast: 0ms;
+		--ppp-duration-normal: 0ms;
+		--ppp-duration-slow: 0ms;
+		--ppp-duration-slower: 0ms;
+	}
+}
+
+/* ═══════════════════════════════════════════════════
+   🎯 Mn1-7: UNIFIED INTERACTION STYLES
+   All selectors scoped to plugin context to prevent global pollution
+   ═══════════════════════════════════════════════════ */
+
+/* Consistent focus states - scoped to plugin */
+.workspace-leaf-content[data-type="obs-projects-plus"] *:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+	border-radius: var(--ppp-radius-sm);
+}
+
+.workspace-leaf-content[data-type="obs-projects-plus"] button:focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] a:focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] input:focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] textarea:focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] select:focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] [role="button"]:focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] [tabindex]:not([tabindex="-1"]):focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+}
+
+/* Consistent hover effects - scoped to plugin */
+.workspace-leaf-content[data-type="obs-projects-plus"] button,
+.workspace-leaf-content[data-type="obs-projects-plus"] a,
+.workspace-leaf-content[data-type="obs-projects-plus"] [role="button"],
+.workspace-leaf-content[data-type="obs-projects-plus"] .clickable {
+	transition: all var(--ppp-duration-fast) var(--ppp-ease-out);
+}
+
+.workspace-leaf-content[data-type="obs-projects-plus"] button:hover,
+.workspace-leaf-content[data-type="obs-projects-plus"] a:hover,
+.workspace-leaf-content[data-type="obs-projects-plus"] [role="button"]:hover,
+.workspace-leaf-content[data-type="obs-projects-plus"] .clickable:hover {
+	filter: brightness(1.1);
+}
+
+/* Consistent active states - scoped to plugin */
+.workspace-leaf-content[data-type="obs-projects-plus"] button:active,
+.workspace-leaf-content[data-type="obs-projects-plus"] [role="button"]:active,
+.workspace-leaf-content[data-type="obs-projects-plus"] .clickable:active {
+	transform: scale(0.98);
+	transition-duration: var(--ppp-duration-instant);
+}
+
+/* Unified border radius - scoped to plugin with ppp- prefix */
+.workspace-leaf-content[data-type="obs-projects-plus"] .ppp-card,
+.workspace-leaf-content[data-type="obs-projects-plus"] .ppp-panel,
+.workspace-leaf-content[data-type="obs-projects-plus"] .ppp-modal,
+.workspace-leaf-content[data-type="obs-projects-plus"] .ppp-popover {
+	border-radius: var(--ppp-radius-lg);
+}
+
+/* Form elements - scoped to plugin */
+.workspace-leaf-content[data-type="obs-projects-plus"] button,
+.workspace-leaf-content[data-type="obs-projects-plus"] input,
+.workspace-leaf-content[data-type="obs-projects-plus"] select,
+.workspace-leaf-content[data-type="obs-projects-plus"] textarea {
+	border-radius: var(--ppp-radius-md);
+}
+
+/* Unified shadow depths - using ppp- prefix to avoid conflicts */
+.ppp-shadow-sm {
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ppp-shadow-md {
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.ppp-shadow-lg {
+	box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.ppp-shadow-xl {
+	box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Unified icon sizes - using ppp- prefix */
+.ppp-icon-xs { width: 0.75rem; height: 0.75rem; }
+.ppp-icon-sm { width: 1rem; height: 1rem; }
+.ppp-icon-md { width: 1.25rem; height: 1.25rem; }
+.ppp-icon-lg { width: 1.5rem; height: 1.5rem; }
+.ppp-icon-xl { width: 2rem; height: 2rem; }
+
+/* Consistent disabled states - scoped to plugin */
+.workspace-leaf-content[data-type="obs-projects-plus"] button:disabled,
+.workspace-leaf-content[data-type="obs-projects-plus"] input:disabled,
+.workspace-leaf-content[data-type="obs-projects-plus"] select:disabled,
+.workspace-leaf-content[data-type="obs-projects-plus"] textarea:disabled,
+.workspace-leaf-content[data-type="obs-projects-plus"] [aria-disabled="true"] {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════
+   📝 USAGE EXAMPLES (Примеры использования)
+   ═══════════════════════════════════════════════════
+
+   ❌ НЕ ТАК:
+   .button {
+     padding: 8px 16px;
+     height: 32px;
+     font-size: 14px;
+   }
+
+   ✅ ТАК:
+   .button {
+     padding: var(--ppp-padding-normal) var(--ppp-padding-loose);
+     height: var(--ppp-button-height-md);
+     font-size: var(--ppp-font-sm);
+   }
+
+   ═══════════════════════════════════════════════════ */

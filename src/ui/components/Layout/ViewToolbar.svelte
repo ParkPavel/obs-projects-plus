@@ -119,8 +119,8 @@
   .container {
     display: flex;
     align-items: center;
-    padding: 6px 12px;
-    gap: 8px;
+    padding: var(--ppp-spacing-xs, 0.375rem) var(--ppp-spacing-sm, 0.75rem);
+    gap: var(--ppp-spacing-sm, 0.5rem);
     border-bottom: 1px solid var(--background-modifier-border);
     position: relative;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -130,8 +130,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 1.5rem;
+    height: 1.5rem;
     padding: 0;
     border: none;
     border-radius: 6px;
@@ -173,8 +173,8 @@
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0.5;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(0.5rem);
+    -webkit-backdrop-filter: blur(0.5rem);
   }
 
   .floating-toggle.primary {
@@ -254,7 +254,6 @@
   .isMobile .middle {
     width: 100%;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   .isMobile .right {
@@ -263,7 +262,6 @@
     margin-left: 0;
     flex-wrap: nowrap;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   .primary {
