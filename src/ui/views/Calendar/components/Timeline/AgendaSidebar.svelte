@@ -378,7 +378,12 @@
     saveState();
   }
   
-  function handleClick(id: string) {
+  function handleClick(event: MouseEvent, id: string) {
+    // Ctrl+Click (Windows/Linux) or Cmd+Click (Mac) = open in new window
+    if (event.ctrlKey || event.metaKey) {
+      dispatch('openInNewWindow', { id });
+      return;
+    }
     onRecordClick?.(id);
   }
   
@@ -507,7 +512,8 @@
                     <button 
                       class="event" 
                       style:--color={ev.color || 'var(--text-accent)'}
-                      on:click={() => handleClick(ev.id)}
+                      on:click={(e) => handleClick(e, ev.id)}
+                      title="Ctrl+Click: открыть в новом окне"
                     >
                       <span class="ev-dot" />
                       {#if ev.dateStr}

@@ -5,6 +5,26 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-01-23
+
+### Fixed
+- 📱 **DayPopup Mobile Scrolling** - Fixed scroll/tap detection on mobile
+  - Added touch position tracking with 10px threshold
+  - Prevents accidental note opening when swiping through list
+  - Better misclick handling for mobile users
+
+### Added
+- 📝 **EditNote Modal - Note Title Section**
+  - Display note title at top of edit modal
+  - Click title to open the note
+  - Rename button with inline editing
+  - Save on Enter, cancel on Escape
+  - All views (Calendar, Board, Gallery, Table) updated with callbacks
+- 🗓️ **AgendaSidebar - Ctrl+Click to Open in New Window**
+  - Ctrl+Click (Windows/Linux) or Cmd+Click (macOS) opens note in new window
+  - Tooltip hint on event items
+  - Mobile: opens in new tab instead of window
+
 ## [3.2.1] - 2026-01-03
 
 ### Removed

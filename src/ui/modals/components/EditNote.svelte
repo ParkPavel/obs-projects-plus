@@ -19,6 +19,40 @@
   export let record: DataRecord;
   export let onSave: (record: DataRecord) => void;
   export let allRecords: DataRecord[] = [];
+  // v3.0.1: Callbacks for note title actions
+  export let onOpenNote: (() => void) | undefined = undefined;
+  export let onRenameNote: ((newName: string) => void) | undefined = undefined;
+  
+  // v3.0.1: Note title state
+  $: noteFileName = record.id.split('/').pop()?.replace('.md', '') ?? record.id;
+  let isEditingTitle = false;
+  let editedTitle = noteFileName;
+  
+  function startEditTitle() {
+    editedTitle = noteFileName;
+    isEditingTitle = true;
+  }
+  
+  function cancelEditTitle() {
+    isEditingTitle = false;
+    editedTitle = noteFileName;
+  }
+  
+  function saveTitle() {
+    if (editedTitle.trim() && editedTitle !== noteFileName) {
+      onRenameNote?.(editedTitle.trim());
+    }
+    isEditingTitle = false;
+  }
+  
+  function handleTitleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveTitle();
+    } else if (e.key === 'Escape') {
+      cancelEditTitle();
+    }
+  }
   
   // ========================================
   // FIELD VALUE SUGGESTIONS
@@ -228,6 +262,47 @@
 
 <ModalLayout title={$i18n.t("modals.note.edit.title")}>
   <ModalContent>
+    <!-- v3.0.1: Note Title Section -->
+    <div class="note-title-section">
+      {#if isEditingTitle}
+        <div class="title-edit-row">
+          <input
+            type="text"
+            class="title-input"
+            bind:value={editedTitle}
+            on:keydown={handleTitleKeydown}
+            autofocus
+          />
+          <button class="title-action-btn save" on:click={saveTitle} title="Сохранить">
+            <Icon name="check" size="sm" />
+          </button>
+          <button class="title-action-btn cancel" on:click={cancelEditTitle} title="Отмена">
+            <Icon name="x" size="sm" />
+          </button>
+        </div>
+      {:else}
+        <div class="title-display-row">
+          <button 
+            class="note-title-link"
+            on:click={() => onOpenNote?.()}
+            title="Открыть заметку"
+            disabled={!onOpenNote}
+          >
+            <Icon name="file-text" size="sm" />
+            <span class="note-title-text">{noteFileName}</span>
+            {#if onOpenNote}
+              <Icon name="external-link" size="xs" />
+            {/if}
+          </button>
+          {#if onRenameNote}
+            <button class="title-action-btn edit" on:click={startEditTitle} title="Переименовать">
+              <Icon name="pencil" size="sm" />
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
+    
     {#if !editableFields.length}
       <Callout
         title={$i18n.t("modals.note.edit.no-editable-fields.title")}
@@ -321,6 +396,117 @@
 </ModalLayout>
 
 <style>
+  /* v3.0.1: Note Title Section */
+  .note-title-section {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--background-secondary);
+    border-radius: var(--radius-m);
+    border: 1px solid var(--background-modifier-border);
+  }
+  
+  .title-display-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .note-title-link {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-s);
+    color: var(--text-normal);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+  }
+  
+  .note-title-link:hover:not(:disabled) {
+    background: var(--background-modifier-hover);
+    color: var(--interactive-accent);
+  }
+  
+  .note-title-link:disabled {
+    cursor: default;
+  }
+  
+  .note-title-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .title-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .title-input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: 1px solid var(--interactive-accent);
+    border-radius: var(--radius-s);
+    background: var(--background-primary);
+    color: var(--text-normal);
+  }
+  
+  .title-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+  }
+  
+  .title-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .title-action-btn.edit {
+    background: transparent;
+    color: var(--text-muted);
+  }
+  
+  .title-action-btn.edit:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+  
+  .title-action-btn.save {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+  
+  .title-action-btn.save:hover {
+    opacity: 0.9;
+  }
+  
+  .title-action-btn.cancel {
+    background: var(--background-modifier-hover);
+    color: var(--text-muted);
+  }
+  
+  .title-action-btn.cancel:hover {
+    color: var(--text-error);
+  }
+
   .field-group {
     margin-bottom: 1rem;
     border: 0.0625rem solid var(--background-modifier-border);

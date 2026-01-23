@@ -250,7 +250,10 @@
   
   function handleHueTouchMove(event: TouchEvent) {
     if (isDraggingHue) {
-      event.preventDefault();
+      // v3.0.1: Only preventDefault if event is cancelable
+      if (event.cancelable) {
+        event.preventDefault();
+      }
       updateHueFromTouch(event);
     }
   }
@@ -309,7 +312,10 @@
   
   function handleSatLightTouchMove(event: TouchEvent) {
     if (isDraggingSatLight) {
-      event.preventDefault();
+      // v3.0.1: Only preventDefault if event is cancelable
+      if (event.cancelable) {
+        event.preventDefault();
+      }
       updateSatLightFromTouch(event);
     }
   }
@@ -414,22 +420,37 @@
   
   /**
    * Touch start - begin long press detection
+   * v3.0.1: Track touch position for scroll detection
    */
+  let touchStartY = 0;
+  let touchMoved = false;
+  const SCROLL_THRESHOLD = 10; // px - movement before considered scroll
+  
   function handleTouchStart(event: TouchEvent) {
     isLongPress = false;
+    touchMoved = false;
+    
+    // v3.0.1: Store touch start position
+    const touch = event.touches[0];
+    if (touch) {
+      touchStartY = touch.clientY;
+    }
     
     longPressTimeout = setTimeout(() => {
-      isLongPress = true;
-      // Long press → show actions menu + haptic feedback
-      showActions = true;
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
+      if (!touchMoved) {
+        isLongPress = true;
+        // Long press → show actions menu + haptic feedback
+        showActions = true;
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
       }
     }, 400);
   }
   
   /**
    * Touch end - detect single tap vs double tap
+   * v3.0.1: Ignore if user was scrolling
    * 
    * - Single tap → toggle actions menu (settings)
    * - Double tap → open note in new tab
@@ -443,6 +464,12 @@
     if (longPressTimeout) {
       clearTimeout(longPressTimeout);
       longPressTimeout = null;
+    }
+    
+    // v3.0.1: If user was scrolling, don't trigger any action
+    if (touchMoved) {
+      touchMoved = false;
+      return;
     }
     
     // CRITICAL v4.0.1: Ignore touches inside color-palette or record-actions
@@ -521,8 +548,17 @@
   
   /**
    * Touch move - cancel long press if finger moves
+   * v3.0.1: Track movement distance for scroll detection
    */
-  function handleTouchMove() {
+  function handleTouchMove(event: TouchEvent) {
+    const touch = event.touches[0];
+    if (touch) {
+      const deltaY = Math.abs(touch.clientY - touchStartY);
+      if (deltaY > SCROLL_THRESHOLD) {
+        touchMoved = true;
+      }
+    }
+    
     if (longPressTimeout) {
       clearTimeout(longPressTimeout);
       longPressTimeout = null;

@@ -12,7 +12,10 @@ export class EditNoteModal extends Modal {
     readonly fields: DataField[],
     readonly onSave: (record: DataRecord) => void,
     readonly defaults: DataRecord,
-    readonly allRecords: DataRecord[] = []
+    readonly allRecords: DataRecord[] = [],
+    // v3.0.1: New callbacks for note title actions
+    readonly onOpenNote?: () => void,
+    readonly onRenameNote?: (newName: string) => void
   ) {
     super(app);
     this.containerEl.addClass("projects-modal");
@@ -25,6 +28,13 @@ export class EditNoteModal extends Modal {
         record: this.defaults,
         fields: this.fields,
         allRecords: this.allRecords,
+        onOpenNote: this.onOpenNote,
+        // v3.0.1: Wrap rename callback to close modal after rename
+        onRenameNote: this.onRenameNote ? async (newName: string) => {
+          await this.onRenameNote?.(newName);
+          // Close modal after rename - data needs to reload with new ID
+          this.close();
+        } : undefined,
         onSave: (record: DataRecord) => {
           this.onSave(record);
           this.close();

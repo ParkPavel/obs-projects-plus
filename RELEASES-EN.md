@@ -1,8 +1,8 @@
 # 🚀 Release Information
 
-## Current Release: v2.2.0
+## Current Release: v3.0.1
 
-**Release Date**: December 3, 2025  
+**Release Date**: January 23, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
 
@@ -36,6 +36,56 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 - **Settings Format**: Enhanced settings with backward compatibility
 
 ## 📋 Release Notes
+
+---
+
+### 🛠️ v3.0.1 (January 23, 2026) — Bugfix Release
+
+> **UX improvements and fixes after v3.0.0**
+
+#### 📱 DayPopup — Mobile Scrolling
+- **Fixed scrolling** — now you can scroll the record list in DayPopup
+- **Misclick handling** — prevents accidental note opening when swiping
+- **Touch threshold** — 10px to distinguish scroll from tap
+
+#### 📝 EditNote Modal — Note Title
+- **Title display** — note name is now visible in the modal window
+- **Name editing** — rename button with inline editing
+- **Navigate to note** — click on title opens the note itself
+- **Save on Enter** — confirm new name with Enter key
+
+#### 🗓️ AgendaSidebar — Open in New Window
+- **Ctrl+Click** — open note in new window (Windows/Linux)
+- **Cmd+Click** — open note in new window (macOS)
+- **Tooltip** — title attribute hints about Ctrl+Click possibility
+- **Mobile adaptation** — opens in new tab on mobile
+
+---
+
+### 🎉 v3.0.0 (January 22, 2026) — Complete Calendar Redesign
+
+> **Most comprehensive update in plugin history**
+
+#### 📅 Calendar — Complete Overhaul
+- **Timeline view** — events on 07:00–22:00 time scale
+- **Multi-day events** — projects and tasks spanning multiple days
+- **Bars instead of dots** — visual duration representation
+- **Agenda panel** — sidebar with selected day details
+- **startTime/endTime** — start and end time support
+- **Color coding** — `color` field for event categorization
+
+#### 🎛️ Updated Navigation Menu
+- **Centering buttons** — quick jump to today
+- **View switcher** — Month/Week/Day in one click
+- **Compact mode** — collapse panel for maximum workspace
+
+#### 📱 Mobile Adaptation
+- **Touch optimization** — enlarged touch targets
+- **Gestures** — swipes for period navigation
+- **Adaptive grid** — optimal display on any screen
+- **Landscape support** — styles for horizontal orientation
+
+---
 
 ### 🎉 v2.2.0 (December 3, 2025) — Complete Mobile UX Overhaul
 

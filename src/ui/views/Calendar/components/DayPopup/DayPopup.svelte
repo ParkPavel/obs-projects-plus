@@ -271,11 +271,12 @@
       return; // Let color palette handle its own touches
     }
     
-    // Only allow drag from header or when scrolled to top
+    // v3.0.1: FIXED - Only allow drag from header/drag-indicator
+    // Content should scroll natively without interference
     const isHeader = target.closest('.ios-popup-header') || target.closest('.ios-popup-drag-indicator');
-    const isScrolledToTop = contentElement ? contentElement.scrollTop <= 0 : true;
     
-    if (!isHeader && !isScrolledToTop) return;
+    // Only enable dragging for header - let content scroll naturally
+    if (!isHeader) return;
     
     dragStartY = touch.clientY;
     isDragging = true;
@@ -299,7 +300,10 @@
     // For top sheet: allow dragging UP (negative delta)
     if (delta < 0) {
       dragOffset = delta;
-      e.preventDefault();
+      // v3.0.1: Only preventDefault if event is cancelable (scroll not in progress)
+      if (e.cancelable) {
+        e.preventDefault();
+      }
     }
   }
   
@@ -790,6 +794,9 @@
     overflow-x: hidden;
     overscroll-behavior: contain;
     min-height: 4rem;
+    /* v3.0.1: Enable native touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
   
   /* Small viewports need special handling */

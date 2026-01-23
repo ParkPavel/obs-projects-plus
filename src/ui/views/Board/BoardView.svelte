@@ -66,7 +66,25 @@
       fields,
       (record) => api.updateRecord(record, fields),
       record,
-      records
+      records,
+      // v3.0.1: Open note callback
+      () => {
+        $app.workspace.openLinkText(record.id, record.id, false);
+      },
+      // v3.0.1: Rename note callback
+      async (newName: string) => {
+        try {
+          const file = $app.vault.getAbstractFileByPath(record.id);
+          if (file && 'parent' in file) {
+            const newPath = file.parent?.path 
+              ? `${file.parent.path}/${newName}.md`
+              : `${newName}.md`;
+            await $app.fileManager.renameFile(file as any, newPath);
+          }
+        } catch (e) {
+          console.error('Failed to rename note', e);
+        }
+      }
     ).open();
   };
 

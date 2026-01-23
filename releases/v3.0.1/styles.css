@@ -1,0 +1,297 @@
+/* ═══════════════════════════════════════════════════════════════
+   Projects Plus - Main Stylesheet
+   v3.0.0
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Import Design Tokens (Fluid Architecture Phase 3) */
+/* Note: tokens.css is bundled via esbuild from src/ui/tokens/tokens.css */
+
+/* ═══════════════════════════════════════════════════════════════
+   Accessibility Utilities - SCOPED to plugin only
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Screen reader only - visually hidden but accessible */
+.obs-projects-plus .sr-only,
+.obs-projects-plus .visually-hidden,
+.workspace-leaf-content[data-type="obs-projects-plus"] .sr-only,
+.workspace-leaf-content[data-type="obs-projects-plus"] .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link for keyboard navigation - SCOPED */
+.obs-projects-plus .skip-link,
+.workspace-leaf-content[data-type="obs-projects-plus"] .skip-link {
+  position: absolute;
+  top: -2.5rem;
+  left: 0;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  padding: 0.5rem;
+  z-index: 100;
+  transition: top 0.2s ease;
+}
+
+.obs-projects-plus .skip-link:focus,
+.workspace-leaf-content[data-type="obs-projects-plus"] .skip-link:focus {
+  top: 0;
+}
+
+/* Focus visible enhancement - SCOPED to plugin elements */
+.obs-projects-plus :focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] :focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference - SCOPED to plugin only */
+@media (prefers-reduced-motion: reduce) {
+  .obs-projects-plus *,
+  .obs-projects-plus *::before,
+  .obs-projects-plus *::after,
+  .workspace-leaf-content[data-type="obs-projects-plus"] *,
+  .workspace-leaf-content[data-type="obs-projects-plus"] *::before,
+  .workspace-leaf-content[data-type="obs-projects-plus"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode enhancements - SCOPED */
+@media (prefers-contrast: high) {
+  .obs-projects-plus .projects--board--card,
+  .obs-projects-plus .projects--board--column,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--card,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--column {
+    border-width: 2px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Board Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.projects--board {
+  display: flex;
+  column-gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0.5rem;
+}
+
+.projects--board--column {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background-color: var(--background-primary-alt);
+  display: flex;
+  gap: var(--size-4-2);
+  flex-direction: column;
+  padding: var(--size-4-2);
+
+  --board-column-drag-accent: hsla(var(--interactive-accent-hsl), 0.3);
+  --board-column-drop-accent: hsla(var(--interactive-accent-hsl), 0.5);
+
+  &:has(.projects--board--card-placeholder) {
+    box-shadow: 0 0 0.5rem 0 var(--board-column-drop-accent);
+    transition: box-shadow 150ms ease-in-out;
+  }
+}
+
+.projects--board--card {
+  background-color: var(--background-primary);
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-4-2);
+}
+
+.projects--board--card:hover {
+  border: 1px solid var(--background-modifier-border-hover);
+}
+
+.projects--board--card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  min-height: 2.2rem;
+  transition: all 150ms ease-in-out;
+
+  &:has(.projects--board--card-placeholder) {
+    background: var(--board-column-drop-accent) !important;
+  }
+}
+
+.projects--gallery--grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.projects--gallery--card {
+  background-color: var(--background-primary-alt);
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  padding: 0;
+  margin: 0;
+}
+
+.projects--gallery--card:hover {
+  border: 1px solid var(--background-modifier-border-hover);
+}
+
+.projects--gallery--card__body {
+  padding: 0.5rem;
+}
+
+.projects--gallery--card__media {
+  height: 11.25rem;
+  border-top-left-radius: var(--radius-s);
+  border-top-right-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.projects--gallery--card__media img {
+  width: 100%;
+  height: 100%;
+  border-top-left-radius: var(--radius-s);
+  border-top-right-radius: var(--radius-s);
+}
+
+.obs-projects-plus .view-header-left,
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-header-left {
+  display: none !important;
+}
+
+.obs-projects-plus .view-header-nav-buttons,
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-header-nav-buttons {
+  display: none !important;
+}
+
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-content {
+  padding: 0;
+}
+
+.projects--popover {
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: var(--shadow-s);
+  border-radius: var(--radius-m);
+  padding: var(--size-4-5);
+  max-height: 95vh;
+}
+
+/* Mobile popover fixes - SCOPED to plugin only */
+@media (max-width: 48rem) {
+  .obs-projects-plus .projects--popover,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--popover {
+    position: fixed !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    top: auto !important;
+    bottom: 0.5rem !important;
+    max-width: calc(100vw - 1rem) !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    border-radius: 1rem;
+    box-shadow: 0 -0.25rem 2rem rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+  
+  /* Ensure popover content is scrollable */
+  .obs-projects-plus .projects--popover > *,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--popover > * {
+    max-height: calc(60vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+/* 
+ * REMOVED: Global modal/dropdown overrides that were leaking to Obsidian UI
+ * These were causing issues with Obsidian's own modals and menus.
+ * Mobile styling for plugin-specific modals should be handled in component styles.
+ */
+
+/* Mobile responsive styles - SCOPED to plugin */
+@media (max-width: 48rem) {
+  .obs-projects-plus .projects--board--column,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--column {
+    /* Columns keep their width, allow horizontal scroll */
+    flex-shrink: 0;
+  }
+
+  .obs-projects-plus .projects--gallery--grid,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--grid {
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .obs-projects-plus .projects--board,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board {
+    /* No margin needed - padding in Board.svelte handles this */
+  }
+
+  .obs-projects-plus .projects--gallery--grid,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .obs-projects-plus .projects--gallery--card__media,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card__media {
+    height: 8.75rem;
+  }
+}
+
+/* Touch device optimizations - SCOPED to plugin only */
+@media (pointer: coarse) {
+  .obs-projects-plus .projects--board--card,
+  .obs-projects-plus .projects--gallery--card,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--card,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card {
+    min-height: 2.75rem;
+  }
+  
+  /* Touch targets - SCOPED to plugin buttons only */
+  .obs-projects-plus button,
+  .obs-projects-plus .clickable-icon,
+  .workspace-leaf-content[data-type="obs-projects-plus"] button,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .clickable-icon {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}
+
+/* 
+ * REMOVED: Global dropdown/menu overrides
+ * .dropdown, .suggestion-container, .menu styles were affecting Obsidian UI
+ * Plugin-specific dropdowns should use scoped classes like .projects--dropdown
+ */
+
+/* Mobile calendar day popup overlay - SCOPED */
+@media (max-width: 48rem) {
+  .obs-projects-plus .day-popup-overlay,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .day-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+  }
+}
+
+/*# sourceMappingURL=styles.css.map */

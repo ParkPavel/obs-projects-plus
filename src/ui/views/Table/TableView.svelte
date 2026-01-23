@@ -234,17 +234,27 @@
           }).open();
         }}
         onRowEdit={(id, values) => {
+          const record = { id, values };
           new EditNoteModal(
             $app,
             fields,
-            (record) => {
-              api.updateRecord(record, fields);
+            (rec) => {
+              api.updateRecord(rec, fields);
             },
-            {
-              id,
-              values,
+            record,
+            records,
+            () => {
+              $app.workspace.openLinkText(id, id, false);
             },
-            records
+            async (newName) => {
+              const file = $app.vault.getAbstractFileByPath(id);
+              if (file && 'parent' in file) {
+                const newPath = file.parent?.path 
+                  ? `${file.parent.path}/${newName}.md`
+                  : `${newName}.md`;
+                await $app.fileManager.renameFile(file, newPath);
+              }
+            }
           ).open();
         }}
         onRowDelete={(id) => api.deleteRecord(id)}

@@ -792,8 +792,9 @@
   
   function handleDayPopupRecordSettings(record: DataRecord) {
     showDayPopup = false;
+    const app_instance = get(app);
     new EditNoteModal(
-      get(app), 
+      app_instance, 
       fields, 
       async (updatedRecord) => {
         try {
@@ -809,7 +810,27 @@
         }
       },
       record,
-      records
+      records,
+      // v3.0.1: Open note callback
+      () => {
+        app_instance.workspace.openLinkText(record.id, record.id, false);
+      },
+      // v3.0.1: Rename note callback
+      async (newName: string) => {
+        try {
+          const file = app_instance.vault.getAbstractFileByPath(record.id);
+          if (file && 'parent' in file) {
+            const newPath = file.parent?.path 
+              ? `${file.parent.path}/${newName}.md`
+              : `${newName}.md`;
+            await app_instance.fileManager.renameFile(file as any, newPath);
+            new Notice(`Заметка переименована: ${newName}`);
+          }
+        } catch (e) {
+          calendarLogger.error('Failed to rename note', e);
+          new Notice('Ошибка при переименовании');
+        }
+      }
     ).open();
   }
   
@@ -1334,8 +1355,9 @@
     }
   
     try {
+      const app_instance = get(app);
       new EditNoteModal(
-        get(app),
+        app_instance,
         fields,
         async (record) => {
           try {
@@ -1351,7 +1373,27 @@
           }
         },
         entry,
-        records
+        records,
+        // v3.0.1: Open note callback
+        () => {
+          app_instance.workspace.openLinkText(entry.id, entry.id, false);
+        },
+        // v3.0.1: Rename note callback
+        async (newName: string) => {
+          try {
+            const file = app_instance.vault.getAbstractFileByPath(entry.id);
+            if (file && 'parent' in file) {
+              const newPath = file.parent?.path 
+                ? `${file.parent.path}/${newName}.md`
+                : `${newName}.md`;
+              await app_instance.fileManager.renameFile(file as any, newPath);
+              new Notice(`Заметка переименована: ${newName}`);
+            }
+          } catch (e) {
+            calendarLogger.error('Failed to rename note', e);
+            new Notice('Ошибка при переименовании');
+          }
+        }
       ).open();
     } catch (error) {
       calendarLogger.error('Error opening edit modal', error, { component: 'CalendarView', action: 'openModal' });
@@ -1441,6 +1483,17 @@
     if (record) {
       handleRecordClick(record);
     }
+  }
+  
+  /**
+   * v3.0.1: Open record in new window from AgendaSidebar (Ctrl+Click)
+   */
+  function handleAgendaOpenInNewWindow(event: CustomEvent<{id: string}>) {
+    const { id } = event.detail;
+    const app_instance = get(app);
+    // On mobile use 'tab' (true), on desktop use 'window'
+    const openMode = isMobile ? true : 'window';
+    app_instance.workspace.openLinkText(id, id, openMode);
   }
   
   function handleAgendaToggle() {
@@ -1621,6 +1674,7 @@
         visible={agendaVisible}
         collapsed={!isMobile && config?.agendaOpen === false}
         on:toggle={handleAgendaToggle}
+        on:openInNewWindow={handleAgendaOpenInNewWindow}
       />
     {/if}
   </div>
