@@ -150,6 +150,51 @@ tags: [project, important]
 ---
 ```
 
+## 🔗 Templater Integration
+
+Projects Plus supports integration with [Templater](https://github.com/SilentVoid13/Templater) plugin for automated note creation.
+
+### Quick Setup
+
+1. **Install Templater** from Community Plugins
+2. **Download template** [Projects Plus Template.md](templates/Projects%20Plus%20Template.md)
+3. **Place it in your templates folder**
+4. **Configure in Projects Plus**:
+   - `Settings → Projects Plus → Templates`
+   - Select the templates folder
+   - Set default template
+
+### What the template does
+
+When creating a new note, the template will prompt for:
+
+| Step | Field | Description |
+|------|-------|-------------|
+| 1 | **Title** | Note title |
+| 2 | **Type** | Event / Task / Meeting / Project / Note |
+| 3 | **Date** | Main date (YYYY-MM-DD) |
+| 4 | **Time** | Start and end time (optional) |
+| 5 | **Duration** | Single or multiple days |
+| 6 | **Status** | Inbox / Scheduled / In Progress / Done |
+| 7 | **Color** | Event color in calendar |
+
+### Frontmatter fields
+
+The template automatically fills fields compatible with all views:
+
+```yaml
+title: "Title"
+type: event|task|meeting|project|note
+startDate: 2026-01-27
+endDate: 2026-01-27
+startTime: "09:00"
+endTime: "10:00"
+status: inbox|scheduled|in-progress|done
+color: "#4a9eff"
+```
+
+> **Tip**: Set up hotkey `Alt+N` for quick note creation via Templater.
+
 ## 🎨 Screenshots
 
 <p align="center">
