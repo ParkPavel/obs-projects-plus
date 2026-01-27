@@ -152,48 +152,65 @@ tags: [project, important]
 
 ## 🔗 Templater Integration
 
-Projects Plus supports integration with [Templater](https://github.com/SilentVoid13/Templater) plugin for automated note creation.
+Projects Plus supports integration with [Templater](https://github.com/SilentVoid13/Templater) plugin for faster note creation.
+
+### 🎯 Why use this?
+
+> **Problem**: When creating notes via the plugin, you need to manually fill frontmatter — entering dates, times, status, priority, color. This is inconvenient and time-consuming.
+>
+> **Solution**: The Templater template automatically opens dialog windows for each field with ready-to-select options.
 
 ### Quick Setup
 
 1. **Install Templater** from Community Plugins
-2. **Download template** [Projects Plus Template.md](templates/Projects%20Plus%20Template.md)
-3. **Place it in your templates folder**
-4. **Configure in Projects Plus**:
-   - `Settings → Projects Plus → Templates`
-   - Select the templates folder
-   - Set default template
+2. **Copy template** [Projects Plus Template.md](templates/Projects%20Plus%20Template.md) to your templates folder
+3. **Configure Templater**:
+   - `Settings → Templater → Template folder location` → set folder
+   - Enable `Trigger Templater on new file creation`
+4. **Configure Projects Plus**:
+   - `Settings → Project → Templates → Default template`
+   - Select `Projects Plus Template.md`
 
-### What the template does
+### Standard Plugin Fields
 
-When creating a new note, the template will prompt for:
+The template fills all fields used in the demo project:
 
-| Step | Field | Description |
-|------|-------|-------------|
-| 1 | **Title** | Note title |
-| 2 | **Type** | Event / Task / Meeting / Project / Note |
-| 3 | **Date** | Main date (YYYY-MM-DD) |
-| 4 | **Time** | Start and end time (optional) |
-| 5 | **Duration** | Single or multiple days |
-| 6 | **Status** | Inbox / Scheduled / In Progress / Done |
-| 7 | **Color** | Event color in calendar |
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | text | Note title |
+| `startDate` | YYYY-MM-DD | Start date |
+| `startTime` | HH:mm | Start time |
+| `endTime` | HH:mm | End time |
+| `status` | inbox/todo/doing/done | Task status |
+| `completed` | true/false | Completion flag |
+| `priority` | high/medium/low | Priority |
+| `color` | HEX | Calendar color |
+| `type` | meeting/task/bug/event | Record type |
+| `category` | work/dev/personal... | Category |
+| `estimate` | number | Time estimate (hours) |
+| `tags` | list | Tags for filtering |
 
-### Frontmatter fields
-
-The template automatically fills fields compatible with all views:
+### Example Frontmatter
 
 ```yaml
-title: "Title"
-type: event|task|meeting|project|note
+---
+title: Client Call
 startDate: 2026-01-27
-endDate: 2026-01-27
-startTime: "09:00"
-endTime: "10:00"
-status: inbox|scheduled|in-progress|done
-color: "#4a9eff"
+startTime: "14:00"
+endTime: "15:00"
+status: todo
+completed: false
+priority: high
+color: "#FF9800"
+type: meeting
+category: clients
+estimate: 1
+tags:
+  - client
+---
 ```
 
-> **Tip**: Set up hotkey `Alt+N` for quick note creation via Templater.
+> **💡 Tip**: Set up hotkey `Alt+N` for `Templater: Create new note from template` command for instant note creation.
 
 ## 🎨 Screenshots
 
