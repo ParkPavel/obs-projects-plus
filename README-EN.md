@@ -10,9 +10,27 @@
 [![Website](https://img.shields.io/badge/Website-parkpavel.github.io-green?style=flat&logo=globe)](https://parkpavel.github.io/park-pavel/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat&logo=apache)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple?style=flat&logo=obsidian)](https://obsidian.md)
-![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.0.2-blue.svg)
+
+[Русский](README.md) | English
 
 </div>
+
+---
+
+## 🆕 What's New in v3.0.2
+
+> **Date Formatting & Validation** — Critical table view fixes
+
+| Feature | Description |
+|---------|-------------|
+| 📊 **Reactive Dates** | Date formats apply instantly when settings change |
+| ❌ **Date Validation** | Invalid values highlighted in red |
+| 🎛️ **Board Grouping** | Select grouping field in view settings |
+| ⚙️ **Animation Behavior** | Control animations: Smooth / Instant |
+| 🧹 **Clean UI** | Removed project dropdown, rendering optimization |
+
+[Full changelog →](RELEASES-EN.md)
 
 ---
 
@@ -24,42 +42,76 @@ Perfect for content managers, researchers, and anyone who needs to organize note
 
 ## 🌟 Features
 
-### 📱 **Mobile UX (v2.2.0)**
-- **DayPopup** - Full-screen day overview with single tap
-- **Double Tap** - Instant note creation
-- **Larger Day Cells** - +100% height for better touch targets
-- **Floating "Today" Button** - Available when toolbar is hidden
-- **Toolbar Collapse** - Full collapse with floating toggle buttons
-- **No Drag-n-Drop** - Prevents conflicts with touch gestures
-- **Note Actions** - Settings, duplicate, delete directly in popup
-
-### 🗓️ **Calendar Zoom Gestures (v2.1.0)**
-- **Infinite Scroll** - Smooth navigation through months/weeks
-- **Smart Zoom** - Ctrl+scroll for view switching (Month ↔ Week ↔ Day)
-- **Pinch-to-zoom** - Touchpad gesture support
-- **Date Centering** - Zoom maintains focus on selected date
-- **Visual Indicator** - Elegant Apple-style zoom level display
+### 📅 **Calendar (v3.0.0)**
+- **Timeline View** — Events on 07:00–22:00 time scale
+- **Multi-day Events** — Tasks spanning multiple days
+- **Infinite Scroll** — Smooth navigation through months/weeks
+- **Zoom Gestures** — Ctrl+scroll or pinch for scaling
+- **Detail Levels** — Month → 2 weeks → Week → 3 days → Day
+- **Mobile Gestures** — Swipes, double tap to create notes
 
 ### 📊 **Multiple View Types**
-- **📋 Table View** - Spreadsheet-like interface for data management
-- **📌 Board View** - Kanban-style project boards
-- **📅 Calendar View** - Timeline and scheduling interface
-- **🖼️ Gallery View** - Visual card-based layout
+- **📋 Table View** — Spreadsheet-like interface with sorting and filtering
+- **📌 Board View** — Kanban-style project boards with drag-n-drop
+- **📅 Calendar View** — Timeline with time support
+- **🖼️ Gallery View** — Visual card-based layout with covers
+
+### 📱 **Mobile UX**
+- **DayPopup** — Full-screen day overview with single tap
+- **Double Tap** — Instant note creation
+- **Larger Touch Targets** — +100% height for day cells
+- **Floating Buttons** — Today button when toolbar is hidden
+- **Swipe Navigation** — Navigate between periods
 
 ### 🔧 **Advanced Configuration**
-- **📁 Folder-based Projects** - Create projects from existing folders
-- **🏷️ Tag-based Projects** - Organize by tags with hierarchy support
-- **🔍 Dataview Integration** - Use Dataview queries for complex filtering
-- **📝 Custom Templates** - Configure note templates for each project
+- **📁 Folder-based Projects** — Create projects from existing folders
+- **🏷️ Tag-based Projects** — Organize by tags with hierarchy support
+- **🔍 Dataview Integration** — Use Dataview queries for complex filtering
+- **📝 Custom Templates** — Configure note templates for each project
 
 ### 🌐 **Localization**
 - Russian, English, Ukrainian, Chinese (zh-CN)
 
-### ⚡ **Performance & Stability**
-- Enhanced performance optimizations
-- Improved memory management
-- Better error handling and recovery
-- Smooth user experience
+---
+
+## ⌨️ Keyboard Shortcuts & Gestures
+
+### 🖥️ Desktop
+
+| Action | Keys |
+|--------|------|
+| Calendar Zoom | `Ctrl` + mouse wheel |
+| Zoom (Mac) | `Cmd` + mouse wheel |
+| Go to Today | `T` or "Today" button |
+| New Note | `Ctrl/Cmd` + `N` |
+| Open in New Window | `Ctrl/Cmd` + click on note |
+| Edit Cell | `Enter` or double click |
+| Table Navigation | `←` `→` `↑` `↓` |
+| Exit Editing | `Escape` |
+| Copy Cell | `Ctrl/Cmd` + `C` |
+
+### 📱 Mobile (Gestures)
+
+| Gesture | Action |
+|---------|--------|
+| **Single tap** on day | Open DayPopup with events |
+| **Double tap** on day | Create new note |
+| **Swipe left/right** | Switch between periods |
+| **Pinch** | Calendar zoom |
+| **Long press** on card | Context menu |
+| **Tap checkbox** | Toggle task status |
+
+### 🗓️ In Calendar
+
+| Action | Method |
+|--------|--------|
+| Zoom In | `Ctrl` + scroll up / pinch out |
+| Zoom Out | `Ctrl` + scroll down / pinch in |
+| Next Period | Scroll down / swipe left |
+| Previous Period | Scroll up / swipe right |
+| Switch View | Month / Week / Day buttons |
+
+---
 
 ## 🚀 Quick Start
 
@@ -82,64 +134,52 @@ Perfect for content managers, researchers, and anyone who needs to organize note
 2. Select **Projects Plus: Show projects plus**
 3. Create your first project by clicking the **+** button
 
-## 📖 Usage Examples
+### Example Frontmatter
 
-### Creating a Project from Folder
-
-```markdown
-1. Right-click on any folder in the File Explorer
-2. Select "Create project in folder"
-3. Configure your project settings
-4. Start organizing your notes!
-```
-
-### Using Dataview Queries
-
-```markdown
-# Create a project with Dataview query
-FROM "Projects/MyProject"
-WHERE status != "completed"
-SORT file.ctime DESC
-```
-
-### Custom Templates
-
-```markdown
-# Template for new notes
+```yaml
 ---
-title: "{{title}}"
-status: "draft"
-created: {{date}}
+title: My Task
+status: In Progress
+priority: High
+startDate: 2025-01-20
+endDate: 2025-01-25
+startTime: "09:00"
+endTime: "18:00"
+color: blue
+tags: [project, important]
 ---
-
-# {{title}}
-
-## Overview
-<!-- Add your content here -->
-
-## Tasks
-- [ ] Task 1
-- [ ] Task 2
 ```
 
 ## 🎨 Screenshots
 
-<div align="center">
+<p align="center">
+  <img src="images/2026-01-27_12-23-33.png" width="15%" title="Screenshot 1" />
+  <img src="images/2026-01-27_12-23-55.png" width="15%" title="Screenshot 2" />
+  <img src="images/2026-01-27_12-24-17.png" width="24%" title="Screenshot 3" />
+  <img src="images/2026-01-27_12-24-35.png" width="15%" title="Screenshot 4" />
+  <img src="images/2026-01-27_12-26-03.png" width="15%" title="Screenshot 5" />
+</p>
+<p align="center">
+  <img src="images/2026-01-27_12-26-43.png" width="15%" title="Screenshot 6" />
+  <img src="images/2026-01-27_12-27-29.png" width="24%" title="Screenshot 7" />
+  <img src="images/2026-01-27_12-29-16.png" width="15%" title="Screenshot 8" />
+  <img src="images/2026-01-27_12-30-02.png" width="24%" title="Screenshot 9" />
+</p>
 
-### Mini Gallery
-
-<a href="screenshots/Table.png"><img src="screenshots/Table.png" alt="Table View" width="220"></a>
-<a href="screenshots/board.png"><img src="screenshots/board.png" alt="Board View" width="220"></a>
-<a href="screenshots/Calendar.png"><img src="screenshots/Calendar.png" alt="Calendar View" width="220"></a>
-<a href="screenshots/Gallery.png"><img src="screenshots/Gallery.png" alt="Gallery View" width="220"></a>
-
-<a href="screenshots/Tablemob.jpg"><img src="screenshots/Tablemob.jpg" alt="Table Mobile" width="180"></a>
-<a href="screenshots/Boardmob.jpg"><img src="screenshots/Boardmob.jpg" alt="Board Mobile" width="180"></a>
-<a href="screenshots/BoardMob2.jpg"><img src="screenshots/BoardMob2.jpg" alt="Board Mobile 2" width="180"></a>
-<a href="screenshots/CalendarMob.jpg"><img src="screenshots/CalendarMob.jpg" alt="Calendar Mobile" width="180"></a>
-<a href="screenshots/Gallerymob2.jpg"><img src="screenshots/Gallerymob2.jpg" alt="Gallery Mobile" width="180"></a>
-
-</div>
+<details>
+<summary align="center"><b>👆 Click to view full size</b></summary>
+<p align="center">
+  <a href="images/2026-01-27_12-23-33.png"><img src="images/2026-01-27_12-23-33.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-23-55.png"><img src="images/2026-01-27_12-23-55.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-24-17.png"><img src="images/2026-01-27_12-24-17.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-24-35.png"><img src="images/2026-01-27_12-24-35.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-26-03.png"><img src="images/2026-01-27_12-26-03.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-26-43.png"><img src="images/2026-01-27_12-26-43.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-27-29.png"><img src="images/2026-01-27_12-27-29.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-29-16.png"><img src="images/2026-01-27_12-29-16.png" width="80%" /></a>
+  <a href="images/2026-01-27_12-30-02.png"><img src="images/2026-01-27_12-30-02.png" width="80%" /></a>
+</p>
+</details>
 
 ## ⚙️ Configuration
 
@@ -150,13 +190,14 @@ created: {{date}}
 | **Project Size Limit** | Maximum number of notes to load | 1000 |
 | **Link Behavior** | What happens when clicking links | Open note |
 | **Start Week On** | First day of the week | Default |
+| **Animation Behavior** | Smooth or Instant animations | Smooth |
 
 ### Advanced Settings
 
-- **Front Matter Configuration** - Customize YAML handling
-- **Template Management** - Set up note templates
-- **Command Integration** - Add custom commands
-- **Archive Management** - Restore or delete archived projects
+- **Front Matter Configuration** — Customize YAML handling
+- **Template Management** — Set up note templates
+- **Command Integration** — Add custom commands
+- **Archive Management** — Restore or delete archived projects
 
 ## 🤝 Contributing
 

@@ -15,6 +15,7 @@
   export let colindex: number;
   export let columnHeader: boolean = false;
   export let rowHeader: boolean = false;
+  export let error: boolean = false;
   export let onEditChange: (value: boolean) => void = (value: boolean) => {
     edit = value;
   };
@@ -169,6 +170,7 @@
     class:columnHeader
     class:pinned={column.pinned}
     class:editable={column.editable && !columnHeader && !rowHeader}
+    class:error
     style={`width: ${column.width}px`}
     tabindex={!columnHeader && !rowHeader ? -1 : undefined}
     on:click={handleClick}
@@ -285,5 +287,11 @@
     position: sticky;
     border-right: 1px solid var(--background-modifier-border-focus);
     z-index: 4;
+  }
+
+  .error {
+    background-color: rgba(255, 82, 82, 0.2) !important;
+    border: 2px solid var(--text-error) !important;
+    color: var(--text-error);
   }
 </style>

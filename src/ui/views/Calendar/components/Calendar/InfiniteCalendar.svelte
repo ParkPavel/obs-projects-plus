@@ -6,6 +6,7 @@
   import type { CalendarInterval } from '../../calendar';
   import MonthBlock from './MonthBlock.svelte';
   import TwoWeeksBlock from './TwoWeeksBlock.svelte';
+  import { settings } from 'src/lib/stores/settings';
 
   export let groupedRecords: Record<string, DataRecord[]>;
   export let processedData: ProcessedCalendarData | null = null;
@@ -423,15 +424,18 @@
       const targetElement = unitElements[targetUnitIndex];
       if (!targetElement || !scrollableParent) return;
       
+      // Get animation behavior from settings
+      const behavior = $settings.preferences.animationBehavior === 'instant' ? 'auto' : 'smooth';
+      
       // Реализация позиционирования
       if (position === 'center') {
         // Use scrollIntoView with block: 'center' for reliable centering
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetElement.scrollIntoView({ behavior, block: 'center' });
       } else if (position === 'end') {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        targetElement.scrollIntoView({ behavior, block: 'end' });
       } else {
         // position === 'start' (default behavior)
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetElement.scrollIntoView({ behavior, block: 'start' });
       }
     });
   }

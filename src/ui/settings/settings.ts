@@ -70,7 +70,7 @@ export class ProjectsSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.about.version"))
-      .setDesc(get(i18n).t("settings.about.version-number"))
+      .setDesc(this.plugin.manifest.version)
       .addButton((button) => {
         button
           .setButtonText(get(i18n).t("settings.about.github"))
@@ -191,6 +191,22 @@ export class ProjectsSettingTab extends PluginSettingTab {
             save({
               ...preferences,
               mobileCalendarView: value as "month" | "week" | "day",
+            });
+          })
+      );
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.general.animation-behavior.name") || "Animation Behavior")
+      .setDesc(get(i18n).t("settings.general.animation-behavior.desc") || "Control scrolling animations throughout the plugin")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("smooth", get(i18n).t("settings.general.animation-behavior.options.smooth") || "Smooth (animated)")
+          .addOption("instant", get(i18n).t("settings.general.animation-behavior.options.instant") || "Instant (no animation)")
+          .setValue(preferences.animationBehavior || "smooth")
+          .onChange((value) => {
+            save({
+              ...preferences,
+              animationBehavior: value as "smooth" | "instant",
             });
           })
       );

@@ -1,14 +1,11 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import type { ProjectDefinition, ProjectId, ViewDefinition, ViewId } from "src/settings/settings";
-  import { i18n } from "../../../lib/stores/i18n";
+  import type { ViewDefinition, ViewId } from "src/settings/settings";
   import AddViewButton from "./AddViewButton.svelte";
   import ViewSwitcher from "./ViewSwitcher.svelte";
   import SettingsMenuButton from "./SettingsMenuButton.svelte";
   import ViewSpecificActions from "./ViewSpecificActions.svelte";
 
-  export let projects: ProjectDefinition[] = [];
-  export let projectId: ProjectId | undefined;
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
   export let view: ViewDefinition | undefined = undefined;
@@ -19,32 +16,12 @@
     centerToday: void;
     toggleAgenda: void;
     freezeColumns: void;
-    projectChange: ProjectId;
     viewChange: ViewId;
   }>();
-
-  $: activeProjectLabel = $i18n.t('navigation.active-project') ?? 'Active project';
-
-  function handleProjectChange(event: Event) {
-    const target = event.target as HTMLSelectElement | null;
-    if (!target) return;
-    dispatch("projectChange", target.value as ProjectId);
-  }
 </script>
 
 <nav class="compact-navbar">
-  {#if projects.length > 1}
-    <div class="project-switcher" aria-label={activeProjectLabel}>
-      <select
-        bind:value={projectId}
-        on:change={handleProjectChange}
-      >
-        {#each projects as project (project.id)}
-          <option value={project.id}>{project.name}</option>
-        {/each}
-      </select>
-    </div>
-  {/if}
+  <!-- Project switcher removed - use settings menu for project switching -->
 
   <ViewSwitcher
     {views}
@@ -82,19 +59,6 @@
     flex-shrink: 0;
   }
 
-  .project-switcher select {
-    min-height: 2.25rem;
-    padding: 0.375rem 0.625rem;
-    border-radius: 0.625rem;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    color: var(--text-normal);
-  }
-
-  .project-switcher select:focus {
-    outline: 2px solid var(--interactive-accent);
-  }
-
   .right {
     display: inline-flex;
     align-items: center;
@@ -118,10 +82,6 @@
     .compact-navbar {
       padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
       gap: var(--spacing-xs, 0.25rem);
-    }
-    .project-switcher select {
-      max-width: 8rem;
-      font-size: 0.75rem;
     }
   }
 </style>

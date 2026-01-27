@@ -39,6 +39,7 @@
 
   // Board-specific settings
   let columnWidth = (view?.config?.["columnWidth"] as number) ?? 270;
+  let groupByField = (view?.config?.["groupByField"] as string) ?? "";
   let headerField = (view?.config?.["headerField"] as string) ?? "";
   let orderSyncField = (view?.config?.["orderSyncField"] as string) ?? "";
 
@@ -278,6 +279,17 @@
             on:change={() => emitUpdate({ columnWidth })}
           />
           <span class="hint">Ширина каждой колонки в пикселях</span>
+        </label>
+
+        <label>
+          Поле группировки (статус)
+          <select bind:value={groupByField} on:change={() => emitUpdate({ groupByField: groupByField || undefined })}>
+            <option value="">— Не выбрано —</option>
+            {#each stringFields as field}
+              <option value={field.name}>{field.name}</option>
+            {/each}
+          </select>
+          <span class="hint">Строковое поле фронтметера для группировки карточек по колонкам</span>
         </label>
 
         <label>

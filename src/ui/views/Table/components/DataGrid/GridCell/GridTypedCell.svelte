@@ -71,13 +71,14 @@
     on:mousedown
     on:navigate
   />
-{:else if column.type === "date" && isOptionalDate(value)}
+{:else if column.type === "date"}
   {#if column.typeConfig?.time}
     <GridDatetimeCell
       {selected}
       {rowindex}
       {colindex}
-      {value}
+      value={isOptionalDate(value) ? value : null}
+      rawValue={!isOptionalDate(value) ? value : null}
       {onChange}
       {column}
       on:mousedown
@@ -88,7 +89,8 @@
       {selected}
       {rowindex}
       {colindex}
-      {value}
+      value={isOptionalDate(value) ? value : null}
+      rawValue={!isOptionalDate(value) ? value : null}
       {onChange}
       {column}
       on:mousedown

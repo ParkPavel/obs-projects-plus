@@ -5,27 +5,50 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.1] - 2026-01-23
+## [3.0.2] - 2026-01-27
 
 ### Fixed
-- 📱 **DayPopup Mobile Scrolling** - Fixed scroll/tap detection on mobile
-  - Added touch position tracking with 10px threshold
-  - Prevents accidental note opening when swiping through list
-  - Better misclick handling for mobile users
+- 📊 **Table View - Reactive Date Formatting**
+  - Fixed critical issue where date formats weren't applied from project settings
+  - Changed from static setContext to reactive Svelte store (writable)
+  - Dates now update immediately when format settings change
+  - Project context properly propagates to all date cells
+- ❌ **Table View - Invalid Date Validation**
+  - Added rawValue prop for displaying non-date values in date fields
+  - Invalid values (e.g., string "2" in date field) now show with red background
+  - Each cell handles errors independently - one bad date doesn't break others
+  - Invalid data shown as-is for easy debugging
+- 🎛️ **Board View - Group By Field**
+  - Added dropdown selector for grouping field in view configuration
+  - Only string fields with options are suggested
+  - Settings persist correctly in view config
 
 ### Added
-- 📝 **EditNote Modal - Note Title Section**
-  - Display note title at top of edit modal
-  - Click title to open the note
-  - Rename button with inline editing
-  - Save on Enter, cancel on Escape
-  - All views (Calendar, Board, Gallery, Table) updated with callbacks
-- 🗓️ **AgendaSidebar - Ctrl+Click to Open in New Window**
-  - Ctrl+Click (Windows/Linux) or Cmd+Click (macOS) opens note in new window
-  - Tooltip hint on event items
-  - Mobile: opens in new tab instead of window
+- ⚙️ **Animation Behavior Setting**
+  - New global preference: Smooth / Instant animations
+  - Calendar scrollIntoView respects this setting
+  - Translations for Russian and English
 
-## [3.2.1] - 2026-01-03
+### Changed
+- 🧹 **Interface Cleanup**
+  - Removed project dropdown from CompactNavBar completely
+  - Removed unused props (projects, projectId)
+  - Optimized rendering with fewer unnecessary redraws
+
+## [3.0.1] - 2026-01-27
+
+### Fixed
+- 📱 **DayPopup Mobile Scrolling** - Fixed native scroll on mobile devices
+  - Removed blocking of touch events that prevented scrolling
+  - Added `cancelable` check before preventDefault()
+  - Touch scrolling now works smoothly without interference
+  - Fixed "Intervention" console errors
+- 📝 **EditNote Modal - Title Reactivity**
+  - Modal now auto-closes after note rename
+  - Fixed issue where old name remained after rename
+  - Proper data reload with new note ID
+
+## [3.0.0] - 2026-01-22
 
 ### Removed
 - 🗑️ **3-Day View Removed** - Simplified zoom hierarchy
@@ -76,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now only renders timed events
   - Cleaner separation of concerns
 
-## [3.0.0] - 2025-12-31
+## [3.0.0-beta] - 2025-12-31
 
 ### Added
 - 🎯 **Timeline View** - Day/Week views with vertical time axis

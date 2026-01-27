@@ -46,6 +46,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
     showViewTitles: true,
+    animationBehavior: "smooth",
   },
 };
 

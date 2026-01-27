@@ -121,6 +121,7 @@ const v1demo: v1.ProjectsPluginSettings<
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
     showViewTitles: true,
+    animationBehavior: "smooth",
   },
 };
 
@@ -252,5 +253,6 @@ const v3demo: v3.ProjectsPluginSettings<
     linkBehavior: "open-editor",
     mobileCalendarView: "month",
     showViewTitles: true,
+    animationBehavior: "smooth",
   },
 };

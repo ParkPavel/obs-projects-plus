@@ -163,15 +163,9 @@
 -->
 <div class="projects-container">
   <CompactNavBar
-    {projects}
-    projectId={project?.id}
     {views}
     viewId={view?.id}
     {view}
-    on:projectChange={(event) => {
-      projectId = event.detail;
-      dispatch("projectIdChange", event.detail);
-    }}
     on:viewChange={(event) => (viewId = event.detail)}
     on:addView={() => handleAddView(project)}
     on:openSettings={(event) => handleOpenSettings(event.detail)}

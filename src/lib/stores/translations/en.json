@@ -568,6 +568,14 @@
                         "week": "Week",
                         "day": "Day"
                     }
+                },
+                "animation-behavior": {
+                    "name": "Animation Behavior",
+                    "desc": "Control scrolling animations throughout the plugin",
+                    "options": {
+                        "smooth": "Smooth (animated)",
+                        "instant": "Instant (no animation)"
+                    }
                 }
             },
             "front-matter": {

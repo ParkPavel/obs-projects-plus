@@ -29,8 +29,17 @@
   import { CreateFieldModal } from "src/ui/modals/createFieldModal";
   import { Icon } from "obsidian-svelte";
   import { TextLabel } from "./components/DataGrid/GridCell/GridTextCell";
+  import { setContext } from "svelte";
+  import { writable, type Writable } from "svelte/store";
 
   export let project: ProjectDefinition;
+  
+  // Create a reactive store for project context (so child components get updates)
+  const projectStore = writable<ProjectDefinition>(project);
+  setContext<Writable<ProjectDefinition>>("project", projectStore);
+  
+  // Update the store whenever project prop changes
+  $: projectStore.set(project);
   export let frame: DataFrame;
   export let readonly: boolean;
   export let api: ViewApi;

@@ -21,51 +21,146 @@ Welcome to Projects Plus! This comprehensive guide will help you get the most ou
    - Configure settings
    - Start organizing!
 
-## 📱 Mobile Version (v2.2.0)
+---
 
-### Mobile Gestures
+## ⌨️ Keyboard Shortcuts & Gestures
 
-**Single tap on day cell:**
-- Opens **DayPopup** — full-screen day overview
-- Shows all notes for the selected day
-- Allows managing notes
+### 🖥️ Desktop (Windows/Linux/Mac)
 
-**Double tap on day cell:**
-- Instantly creates a new note for that day
-- Opens note creation dialog
+#### General Shortcuts
+
+| Action | Windows/Linux | Mac |
+|--------|---------------|-----|
+| Open command palette | `Ctrl+P` | `Cmd+P` |
+| New note | `Ctrl+N` | `Cmd+N` |
+| Save | `Ctrl+S` | `Cmd+S` |
+| Cancel | `Escape` | `Escape` |
+
+#### Calendar
+
+| Action | Keys / Gesture |
+|--------|----------------|
+| **Zoom In** | `Ctrl` + scroll up |
+| **Zoom Out** | `Ctrl` + scroll down |
+| **Go to Today** | `T` key or "Today" button |
+| **Next Period** | Scroll down (mouse wheel) |
+| **Previous Period** | Scroll up (mouse wheel) |
+| **Switch View** | Month / Week / Day buttons |
+| **Open Note** | Click on event |
+| **Open in New Window** | `Ctrl+Click` (Win/Linux) / `Cmd+Click` (Mac) |
+| **Create Note** | Double-click on empty cell |
+
+#### Calendar Zoom Levels
+
+When using Zoom (Ctrl+scroll):
+1. **Month** — full month overview
+2. **2 Weeks** — intermediate view
+3. **Week** — detailed weekly plan
+4. **3 Days** — focus on upcoming days
+5. **Day** — single day timeline (07:00–22:00)
+
+#### Table View
+
+| Action | Keys |
+|--------|------|
+| **Edit Cell** | `Enter` or double-click |
+| **Exit Editing** | `Escape` |
+| **Navigate** | `←` `→` `↑` `↓` (arrows) |
+| **Next Cell** | `Tab` |
+| **Previous Cell** | `Shift+Tab` |
+| **Copy** | `Ctrl+C` / `Cmd+C` |
+| **Cut** | `Ctrl+X` / `Cmd+X` |
+| **Paste** | `Ctrl+V` / `Cmd+V` |
+
+#### Board View
+
+| Action | Method |
+|--------|--------|
+| **Drag Card** | Mouse drag-n-drop |
+| **Open Note** | Click on card |
+| **Open in New Window** | `Ctrl+Click` on card |
+| **Change Status** | Drag to another column |
+
+---
+
+### 📱 Mobile Gestures (iOS/Android)
+
+#### Calendar
+
+| Gesture | Action |
+|---------|--------|
+| **Single tap** on day cell | Open DayPopup with events |
+| **Double tap** on day cell | Create new note |
+| **Swipe left** | Next period (month/week) |
+| **Swipe right** | Previous period |
+| **Pinch in** | Zoom Out |
+| **Pinch out** | Zoom In |
+| **Tap on event** | Open note |
+
+#### DayPopup (Full-screen Day Overview)
+
+| Gesture | Action |
+|---------|--------|
+| **Tap on note** | Open note |
+| **Tap on checkbox** | Toggle task status |
+| **Tap on ⚙️** | Open edit modal |
+| **Tap on 📋** | Duplicate note to other dates |
+| **Tap on 🗑️** | Delete note |
+| **Scroll up/down** | Scroll events list |
+| **Tap outside popup** | Close DayPopup |
+
+#### Board
+
+| Gesture | Action |
+|---------|--------|
+| **Tap on card** | Open note |
+| **Long press** | Context menu |
+| **Swipe on card** | Quick actions |
+
+#### Gallery
+
+| Gesture | Action |
+|---------|--------|
+| **Tap on card** | Open note |
+| **Scroll** | Browse gallery |
+
+---
+
+## 📱 Mobile Version (v2.2.0+)
+
+### Mobile Interface Features
+
+- **Larger day cells** — 100% taller for easier touch
+- **Disabled drag-n-drop** — prevents accidental dragging
+- **Floating buttons** — semi-transparent, minimalist
+- **Floating "Today" button** — appears when toolbar is hidden
 
 ### DayPopup — Day Overview
 
-The popup window provides the following actions for each note:
+Single tap on a day cell opens full-screen popup:
 
-| Action | Description |
-|--------|-------------|
-| ✅ **Checkbox** | Change note status |
-| ⚙️ **Settings** | Open edit modal |
-| 📋 **Duplicate** | Copy note to other dates |
+| Element | Action |
+|---------|--------|
+| ✅ **Checkbox** | Toggle note status (done/not done) |
+| ⚙️ **Gear** | Open field editing modal |
+| 📋 **Duplicate** | Copy note to selected dates |
 | 🗑️ **Delete** | Delete note |
 
 ### Duplicating Notes
 
 1. Tap the "Duplicate" button next to a note
 2. A mini-calendar will open
-3. Select one or more dates
+3. Select one or more dates (by tapping)
 4. Click "Duplicate"
 
-The note will be copied to all selected dates.
+The note will be copied to all selected dates with all fields preserved.
 
 ### Hiding the Toolbar
 
-- Click the collapse button in the toolbar
+- Tap the collapse button in the toolbar (up arrow)
 - The toolbar will fully hide
-- A floating button will appear to restore it
+- Floating buttons appear in the top-left corner
 - On mobile, a floating "Today" button appears
-
-### Mobile-Specific Features
-
-- **Larger day cells** — 100% taller for easier tapping
-- **Disabled drag-n-drop** — prevents accidental dragging
-- **Floating buttons** — semi-transparent, minimalist design
 
 ## 📊 View Types
 

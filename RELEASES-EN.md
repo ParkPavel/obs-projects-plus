@@ -1,8 +1,8 @@
 # 🚀 Release Information
 
-## Current Release: v3.0.1
+## Current Release: v3.0.2
 
-**Release Date**: January 23, 2026  
+**Release Date**: January 27, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
 
@@ -39,26 +39,51 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 
 ---
 
-### 🛠️ v3.0.1 (January 23, 2026) — Bugfix Release
+### 🛠️ v3.0.2 (January 27, 2026) — Date Formatting & Validation
 
-> **UX improvements and fixes after v3.0.0**
+> **Critical fixes for date display in Table view**
 
-#### 📱 DayPopup — Mobile Scrolling
-- **Fixed scrolling** — now you can scroll the record list in DayPopup
-- **Misclick handling** — prevents accidental note opening when swiping
-- **Touch threshold** — 10px to distinguish scroll from tap
+#### 📊 Table View — Reactive Date Formatting
+- **Svelte Store for context** — project is now passed via reactive writable store
+- **Instant updates** — changing date format in settings immediately applies to all cells
+- **Proper formatting** — dates display in selected format (DD/MM/YYYY, MM-DD-YYYY, etc.)
+- **displayFormat support** — separate format for display and write operations
 
-#### 📝 EditNote Modal — Note Title
-- **Title display** — note name is now visible in the modal window
-- **Name editing** — rename button with inline editing
-- **Navigate to note** — click on title opens the note itself
-- **Save on Enter** — confirm new name with Enter key
+#### ❌ Invalid Date Validation
+- **Red error highlighting** — invalid values in date fields are highlighted with red background
+- **rawValue prop** — passing invalid values for display (e.g., string "2")
+- **Isolated handling** — one corrupted date doesn't affect other cells
+- **Show original value** — invalid data displayed as-is for diagnostics
 
-#### 🗓️ AgendaSidebar — Open in New Window
-- **Ctrl+Click** — open note in new window (Windows/Linux)
-- **Cmd+Click** — open note in new window (macOS)
-- **Tooltip** — title attribute hints about Ctrl+Click possibility
-- **Mobile adaptation** — opens in new tab on mobile
+#### 🎛️ Board View — Grouping Settings
+- **Group field selection** — dropdown for field selection in view settings
+- **Available field hints** — only string fields with options are shown
+- **Config persistence** — groupByField saved in view settings
+
+#### ⚙️ Global Animation Settings
+- **Animation Behavior** — new option: Smooth / Instant
+- **Calendar application** — scrollIntoView uses behavior from settings
+- **Localization** — translations for Russian and English
+
+#### 🧹 Interface Cleanup
+- **Removed project dropdown** — completely removed from CompactNavBar
+- **Clean props** — removed unused projects and projectId
+- **Rendering optimization** — fewer unnecessary redraws
+
+---
+
+### 🛠️ v3.0.1 (January 27, 2026) — Mobile Fixes
+
+> **UX bugfixes after v3.0.0**
+
+#### 📱 DayPopup — Native Scrolling
+- **Fixed scrolling** — removed touch event blocking on mobile
+- **Native scroll** — added `touch-action: pan-y` and `cancelable` checks
+- **Console errors fixed** — no more "Intervention" errors
+
+#### 📝 EditNote Modal — Title Reactivity
+- **Instant update** — title updates immediately after renaming
+- **State sync** — fixed file name display in modal window
 
 ---
 
