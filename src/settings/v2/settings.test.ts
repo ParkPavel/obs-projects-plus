@@ -11,6 +11,7 @@ describe("resolve v2", () => {
       projects: [],
       archives: [],
       preferences: {
+        animationBehavior: "smooth",
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -53,6 +54,7 @@ describe("resolve v2", () => {
       ],
       archives: [],
       preferences: {
+        animationBehavior: "smooth",
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -168,6 +170,7 @@ describe("clean up commands", () => {
     expect(got).toStrictEqual({
       ...got,
       preferences: {
+        animationBehavior: "smooth",
         projectSizeLimit: 1000,
         frontmatter: {
           quoteStrings: "PLAIN",

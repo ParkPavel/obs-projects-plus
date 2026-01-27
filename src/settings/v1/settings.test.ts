@@ -9,6 +9,7 @@ describe("resolve v2", () => {
       version: 1,
       projects: [],
       preferences: {
+        animationBehavior: "smooth",
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -46,6 +47,7 @@ describe("resolve v2", () => {
         },
       ],
       preferences: {
+        animationBehavior: "smooth",
         frontmatter: {
           quoteStrings: "PLAIN",
         },
