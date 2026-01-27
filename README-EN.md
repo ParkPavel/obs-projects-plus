@@ -275,17 +275,32 @@ npm run format       # Format code
 
 ## 🏆 Roadmap
 
-### 🎯 **Active Development**
-- [ ] Enhanced performance optimizations
-- [ ] New view types and layouts
-- [ ] Advanced filtering and sorting
-- [ ] Mobile responsiveness improvements
+### 🎯 Development Priorities
 
-### 🔮 **Future Plans**
-- [ ] Plugin ecosystem integration
-- [ ] Advanced automation features
-- [ ] Team collaboration tools
-- [ ] Cloud synchronization
+| Priority | Feature | Version | Status | Docs |
+|:--------:|---------|---------|--------|:----:|
+| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | 🟡 In Progress | [Architecture](docs/architecture-drag-drop.md) |
+| | • Tactile timeline bar interactions | | | |
+| | • Touch gestures for mobile devices | | | |
+| | • Create notes by dragging | | | |
+| | • Resize to change time/duration | | | |
+| 🥈 | **Database View** | v3.3.0 | 📋 Planned | [Architecture](docs/architecture-database-view.md) |
+| | • Query builder for note data | | | |
+| | • Formula system (spreadsheet-like) | | | |
+| | • Visualizations: charts, galleries, summaries | | | |
+| | • Customizable dashboards | | | |
+| 🥉 | **Calendar Sync** | v3.4.0 | 📋 Planned | — |
+| | • Google Calendar bidirectional sync | | | |
+| | • Apple Calendar (iCal) integration | | | |
+| | • Microsoft Outlook Calendar | | | |
+| | • CalDAV protocol for any compatible services | | | |
+| | • Import/export .ics files | | | |
+| | • Conflict resolution on sync | | | |
+
+### 📖 Architecture Documentation
+
+- [Drag & Drop Architecture](docs/architecture-drag-drop.md) — specification for contributors
+- [Database View Architecture](docs/architecture-database-view.md) — conceptual design document
 
 ## 📊 Statistics
 
