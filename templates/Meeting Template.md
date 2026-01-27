@@ -1,36 +1,32 @@
 ---
-title: <% tp.system.prompt("Название встречи:") %>
-date: <% tp.date.now("YYYY-MM-DD") %>
-startDate: <% tp.system.prompt("Дата встречи (YYYY-MM-DD):", tp.date.now("YYYY-MM-DD")) %>
-startTime: <% tp.system.prompt("Время начала (HH:mm):", "14:00") %>
-endTime: <% tp.system.prompt("Время окончания (HH:mm):", "15:00") %>
-location: <% tp.system.prompt("Место проведения (или ссылка на встречу):") %>
-attendees: 
-color: "#4a9eff"
-status: scheduled
+title: <% tp.system.prompt("📅 Тема встречи:") %>
+startDate: <% tp.system.prompt("📅 Дата:", tp.date.now("YYYY-MM-DD")) %>
+startTime: <% tp.system.prompt("🕐 Время начала:", "10:00") %>
+endTime: <% tp.system.prompt("🕐 Время окончания:", "11:00") %>
+status: <% tp.system.suggester(["📥 inbox", "📋 todo", "🏃 doing", "✅ done"], ["inbox", "todo", "doing", "done"], false, "📊 Статус:") %>
+completed: false
+priority: <% tp.system.suggester(["🔴 high", "🟡 medium", "🟢 low"], ["high", "medium", "low"], false, "⚡ Приоритет:") %>
+color: <% tp.system.suggester(["🔵 Синий", "🟢 Зелёный", "🟣 Фиолетовый", "🟠 Оранжевый"], ["#2196F3", "#4CAF50", "#9C27B0", "#FF9800"], false, "🎨 Цвет:") %>
+type: встреча
+category: <% tp.system.suggester(["💼 работа", "👥 клиенты", "💻 разработка", "❤️ личное"], ["работа", "клиенты", "разработка", "личное"], false, "📁 Категория:") %>
+estimate: <% tp.system.suggester(["30 мин", "1 час", "1.5 часа", "2 часа"], [0.5, 1, 1.5, 2], false, "⏱️ Длительность:") %>
+location: <% tp.system.suggester(["💻 Zoom", "💻 Google Meet", "💻 Teams", "🏢 Офис", "☕ Кафе", "📞 Телефон"], ["Zoom", "Google Meet", "Teams", "Офис", "Кафе", "Телефон"], false, "📍 Место:") %>
+attendees: <% tp.system.prompt("👥 Участники:", "") %>
 tags:
   - meeting
-  - calendar
 ---
 
-# 📅 <% tp.frontmatter.title %>
+# 📅 Встреча
 
-## Участники
-<% tp.system.prompt("Список участников (через запятую):") %>
-
-## Повестка дня
+## Повестка
 1. 
 
-## Подготовка
-- [ ] 
-
 ## Заметки
-<!-- Заметки во время встречи -->
 
-## Действия
-- [ ] 
+## Решения
+
+## Action Items
+- [ ] @участник — задача
 
 ---
-**Дата**: [[<% tp.frontmatter.startDate %>]]  
-**Время**: <% tp.frontmatter.startTime %> - <% tp.frontmatter.endTime %>  
-**Место**: <% tp.frontmatter.location %>
+*Создано: <% tp.date.now("YYYY-MM-DD HH:mm") %>*

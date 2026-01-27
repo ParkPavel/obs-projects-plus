@@ -210,6 +210,32 @@ tags:
 ---
 ```
 
+### 📂 Ready-to-Use Templates
+
+The [templates/](templates/) folder contains ready-made templates for various scenarios:
+
+| Template | Description | Use Case |
+|----------|-------------|----------|
+| [🌟 Universal](templates/Projects%20Plus%20Template.md) | Universal template with all fields | Any note type |
+| [📅 Calendar Event](templates/Calendar%20Event%20Template.md) | Events and activities | Meetings, conferences, important dates |
+| [✅ Task](templates/Task%20Template.md) | Tasks with checklists | TODOs, work tasks |
+| [📅 Meeting](templates/Meeting%20Template.md) | Meeting notes | Agenda, attendees, action items |
+| [📓 Daily Note](templates/Daily%20Note%20Template.md) | Daily journal | Diary, gratitude, reflection |
+| [📝 Quick Note](templates/Quick%20Note%20Template.md) | Quick note | Thoughts, ideas on the go |
+| [⏰ Deadline](templates/Deadline%20Template.md) | Deadlines and due dates | Project submissions, documents |
+| [🎯 Habit Tracker](templates/Habit%20Tracker%20Template.md) | Habit tracker | Building new habits |
+| [🚀 Project](templates/Project%20Template.md) | Project management | Large projects with milestones |
+| [🔄 Recurring Event](templates/Recurring%20Event%20Template.md) | Recurring events | Weekly meetings, workouts |
+| [🏃 Sprint](templates/Sprint%20Template.md) | Agile sprints | Scrum, Kanban iterations |
+| [📊 Weekly Review](templates/Weekly%20Review%20Template.md) | Week review | Retrospective, planning |
+
+#### 💡 Usage Tips
+
+1. **One template per scenario** — use specialized templates for typical tasks
+2. **Set up hotkeys** — `Alt+N` for quick template creation
+3. **Keep templates in one folder** — specify path in Templater settings
+4. **Customize for yourself** — add your own fields and categories
+
 > **💡 Tip**: Set up hotkey `Alt+N` for `Templater: Create new note from template` command for instant note creation.
 
 ## 🎨 Screenshots

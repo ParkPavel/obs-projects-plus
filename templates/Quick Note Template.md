@@ -1,17 +1,19 @@
 ---
-title: <% tp.system.prompt("Тема заметки:") %>
-date: <% tp.date.now("YYYY-MM-DD") %>
+title: <% tp.system.prompt("📝 Тема заметки:") %>
 startDate: <% tp.date.now("YYYY-MM-DD") %>
-color: "#6bcf7f"
-status: active
+status: inbox
+completed: false
+color: "#4CAF50"
+type: событие
+category: личное
 tags:
   - note
-  - notepad
+  - quick
 ---
 
-# 📝 <% tp.frontmatter.title %>
+# 📝 Заметка
 
-<% tp.system.prompt("Содержание заметки:") %>
+<% tp.system.prompt("💬 Содержание:") %>
 
 ---
-**Создано**: <% tp.date.now("YYYY-MM-DD HH:mm") %>
+*Создано: <% tp.date.now("YYYY-MM-DD HH:mm") %>*

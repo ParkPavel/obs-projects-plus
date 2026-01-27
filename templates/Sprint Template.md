@@ -1,54 +1,40 @@
 ---
-title: <% tp.system.prompt("Название спринта:", `Sprint ${tp.date.now("W")}`) %>
-date: <% tp.date.now("YYYY-MM-DD") %>
+title: <% tp.system.prompt("🏃 Название спринта:", `Sprint ${tp.date.now("W")}`) %>
 startDate: <% tp.date.now("YYYY-MM-DD") %>
 endDate: <% tp.date.now("YYYY-MM-DD", 14) %>
-sprint_number: <% tp.system.prompt("Номер спринта:", "1") %>
-goal: <% tp.system.prompt("Цель спринта:") %>
-velocity_planned: <% tp.system.prompt("Запланировано story points:", "20") %>
+status: <% tp.system.suggester(["📋 Планирование", "🏃 В процессе", "📊 Ревью", "✅ Завершён"], ["todo", "doing", "review", "done"], false, "📊 Статус:") %>
+completed: false
+priority: high
+color: "#9C27B0"
+type: событие
+category: разработка
+sprint_number: <% tp.system.prompt("🔢 Номер спринта:", "1") %>
+goal: <% tp.system.prompt("🎯 Цель спринта:") %>
+velocity_planned: <% tp.system.prompt("📊 Story points:", "20") %>
 velocity_actual: 0
-status: <% tp.system.suggester(["📋 Планирование", "🏃 В процессе", "📊 Ревью", "✅ Завершен"], ["planning", "active", "review", "completed"], false, "Статус:") %>
-color: "#b892ff"
-progress: 0
 tags:
   - sprint
   - agile
-  - project
 ---
 
-# 🏃 <% tp.frontmatter.title %>
+# 🏃 Спринт
 
 ## 🎯 Цель спринта
-<% tp.frontmatter.goal %>
-
-## 📅 Период
-**[[<% tp.frontmatter.startDate %>]]** — **[[<% tp.frontmatter.endDate %>]]**
 
 ## 📊 Метрики
 
 | Метрика | План | Факт |
 |---------|------|------|
-| Story Points | <% tp.frontmatter.velocity_planned %> | <% tp.frontmatter.velocity_actual %> |
+| Story Points | - | - |
 | Задачи | - | - |
 | Баги | - | - |
 
 ## 📋 Бэклог спринта
-
-```dataview
-TABLE 
-  status as "Статус", 
-  priority as "Приоритет",
-  dueDate as "Срок"
-FROM "Projects"
-WHERE contains(tags, "sprint-<% tp.frontmatter.sprint_number %>")
-SORT priority DESC
-```
+- [ ] 
 
 ## ✅ Выполнено
-<!-- Перенести выполненные задачи -->
 
 ## 🚫 Не выполнено / Перенесено
-<!-- Что не успели -->
 
 ## 📝 Daily Standups
 
@@ -62,26 +48,5 @@ SORT priority DESC
 **Блокеры:**
 - 
 
-## 📊 Sprint Review
-<!-- Заполнить по завершении спринта -->
-
-### Демо
-- 
-
-### Feedback
-- 
-
-## 🔄 Retrospective
-
-### 👍 Что было хорошо
-- 
-
-### 👎 Что улучшить
-- 
-
-### 💡 Action Items
-- [ ] 
-
 ---
-**Velocity**: <% tp.frontmatter.velocity_actual %> / <% tp.frontmatter.velocity_planned %> SP  
-**Прогресс**: <% tp.frontmatter.progress %>%
+*Создано: <% tp.date.now("YYYY-MM-DD HH:mm") %>*

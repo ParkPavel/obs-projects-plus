@@ -1,26 +1,29 @@
 ---
-title: <% tp.system.prompt("Введите заголовок:") %>
-date: <% tp.date.now("YYYY-MM-DD") %>
-startDate: <% tp.date.now("YYYY-MM-DD") %>
-endDate: <% tp.system.prompt("Введите дату окончания (YYYY-MM-DD, оставьте пустым для single-day):", "") %>
-startTime: <% tp.system.prompt("Введите время начала (HH:mm, оставьте пустым для all-day):", "") %>
-endTime: <% tp.system.prompt("Введите время окончания (HH:mm):", "") %>
-color: <% tp.system.suggester(["#ff6b9d (розовый)", "#4a9eff (синий)", "#ffd93d (желтый)", "#6bcf7f (зеленый)", "#ff8c42 (оранжевый)", "#b892ff (фиолетовый)"], ["#ff6b9d", "#4a9eff", "#ffd93d", "#6bcf7f", "#ff8c42", "#b892ff"], false, "Выберите цвет события:") %>
-status: inbox
+title: <% tp.system.prompt("📅 Название события:") %>
+startDate: <% tp.system.prompt("📅 Дата:", tp.date.now("YYYY-MM-DD")) %>
+startTime: <% tp.system.prompt("🕐 Время начала:", "10:00") %>
+endTime: <% tp.system.prompt("🕐 Время окончания:", "12:00") %>
+status: <% tp.system.suggester(["📥 inbox", "📋 todo", "🏃 doing", "✅ done"], ["inbox", "todo", "doing", "done"], false, "📊 Статус:") %>
+completed: false
+priority: <% tp.system.suggester(["🔴 high", "🟡 medium", "🟢 low"], ["high", "medium", "low"], false, "⚡ Приоритет:") %>
+color: <% tp.system.suggester(["🔴 Красный", "🟠 Оранжевый", "🟡 Жёлтый", "🟢 Зелёный", "🔵 Синий", "🟣 Фиолетовый", "🩷 Розовый", "🩵 Голубой"], ["#F44336", "#FF9800", "#FFC107", "#4CAF50", "#2196F3", "#9C27B0", "#E91E63", "#00BCD4"], false, "🎨 Цвет:") %>
+type: событие
+category: <% tp.system.suggester(["💼 работа", "👥 клиенты", "❤️ личное", "🏃 здоровье"], ["работа", "клиенты", "личное", "здоровье"], false, "📁 Категория:") %>
+estimate: <% tp.system.suggester(["30 мин", "1 час", "2 часа", "4 часа", "весь день"], [0.5, 1, 2, 4, 8], false, "⏱️ Длительность:") %>
+location: <% tp.system.prompt("📍 Место:", "") %>
 tags:
   - event
   - calendar
 ---
 
-# <% tp.frontmatter.title %>
+# 📅 Событие
 
 ## Описание
-<% tp.system.prompt("Введите описание события:") %>
 
-## Детали
-- **Дата начала**: [[<% tp.frontmatter.startDate %>]]
-<% tp.frontmatter.endDate ? `- **Дата окончания**: [[${tp.frontmatter.endDate}]]` : "" %>
-<% tp.frontmatter.startTime ? `- **Время**: ${tp.frontmatter.startTime} - ${tp.frontmatter.endTime || "..."}` : "" %>
-- **Статус**: <% tp.frontmatter.status %>
+## Подготовка
+- [ ] 
 
 ## Заметки
+
+---
+*Создано: <% tp.date.now("YYYY-MM-DD HH:mm") %>*
