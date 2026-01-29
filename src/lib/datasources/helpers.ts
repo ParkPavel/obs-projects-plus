@@ -107,7 +107,7 @@ function typeFromValues(values: Optional<DataValue>[]): DataFieldType {
   }
 
   const detectedTypes = Object.keys(result).filter(
-    (type) => type !== DataFieldType.Unknown
+    (type) => type !== DataFieldType.Unknown.toString()
   );
 
   if (detectedTypes.length === 1) {

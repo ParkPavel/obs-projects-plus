@@ -84,10 +84,10 @@ export function isValidPath(path: string): boolean {
 
 function getIllegalCharacterSet(): RegExp | undefined {
   if (Platform.isMacOS) {
-    return /[\\\/\|\#\^\[\]]/;
+    return /[\\/#^[\]]/
   } else if (Platform.isDesktopApp) {
     // Windows
-    return /[\\\/\|\:\<\>\*\"\?]/;
+    return /[\\/|:<>*"?]/
   }
   return undefined;
 }

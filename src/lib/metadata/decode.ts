@@ -48,7 +48,7 @@ function parseRawYaml(data: string): E.Either<Error, Record<string, any>> {
  * arrays.
  */
 export function preprocessYaml(data: string): string {
-  const internalLinks = /(\"?\!?\[\[.*\]\]\"?)/g;
+  const internalLinks = /("?!?\[\[.*\]\]"?)/g;
 
   const quoteInternalLinks = (line: string) =>
     line.replace(internalLinks, (_match, p1) => {
@@ -65,5 +65,5 @@ export function preprocessYaml(data: string): string {
  * unquoteInternalLinks converts a "[[Link]]" to [[Link]].
  */
 function unquoteInternalLinks(value: string) {
-  return value.replace(/\"(\!?\[\[.*\]\])\"/g, (_match, p1) => p1);
+  return value.replace(/"(!?\[\[.*\]\])"/g, (_match, p1) => p1);
 }

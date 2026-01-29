@@ -1,5 +1,5 @@
-const wikiLinkRegExp = /^\!?\[\[(.*?)(\|(.*?))?\]\]$/;
-const mdLinkRegExp = /^\!?\[([^\[]*)\]\((.*)\)$/;
+const wikiLinkRegExp = /^!?\[\[(.*?)(\|(.*?))?\]\]$/;
+const mdLinkRegExp = /^!?\[([^[]*)\]\((.*)\)$/
 
 export function parseObsidianLink(link: string): {
   linkText: string;
