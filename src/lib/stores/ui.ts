@@ -25,30 +25,36 @@ export const BREAKPOINTS = {
 	xxl: 1920 // 120rem - ultra-wide
 } as const;
 
-// Helper to create persistent store
+// Helper to create persistent store using Obsidian App API
 function createPersistentStore<T>(key: string, initialValue: T) {
-  // Get stored value
+  // Get stored value using App API
   let storedValue = initialValue;
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem(`obs-projects-plus-${key}`);
-      if (stored !== null) {
-        storedValue = JSON.parse(stored);
+      const app = (window as any).app;
+      if (app?.loadLocalStorage) {
+        const stored = app.loadLocalStorage(`obs-projects-plus-${key}`);
+        if (stored !== null) {
+          storedValue = JSON.parse(stored);
+        }
       }
     } catch (e) {
-      console.warn(`Failed to load ${key} from localStorage`, e);
+      console.warn(`Failed to load ${key} from App storage`, e);
     }
   }
   
   const store = writable<T>(storedValue);
   
-  // Subscribe to changes and persist
+  // Subscribe to changes and persist using App API
   store.subscribe((value) => {
-    if (typeof window !== 'undefined' && window.localStorage) {
+    if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(`obs-projects-plus-${key}`, JSON.stringify(value));
+        const app = (window as any).app;
+        if (app?.saveLocalStorage) {
+          app.saveLocalStorage(`obs-projects-plus-${key}`, JSON.stringify(value));
+        }
       } catch (e) {
-        console.warn(`Failed to save ${key} to localStorage`, e);
+        console.warn(`Failed to save ${key} to App storage`, e);
       }
     }
   });

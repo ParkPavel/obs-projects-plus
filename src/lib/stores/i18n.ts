@@ -11,14 +11,17 @@ import ru from "src/lib/stores/translations/ru.json";
 
 // Функция для получения локали из различных источников
 function getObsidianLocale(): string {
-  // Попробуем получить язык из localStorage (Obsidian сохраняет его там)
+  // Получаем язык из Obsidian App API (изолированно по хранилищу)
   try {
-    const storedLang = localStorage.getItem('language');
-    if (storedLang) {
-      return storedLang;
+    const app = (window as any).app;
+    if (app?.loadLocalStorage) {
+      const storedLang = app.loadLocalStorage('language');
+      if (storedLang) {
+        return storedLang;
+      }
     }
   } catch {
-    // localStorage not available
+    // App API not available
   }
   
   // Fallback к системному языку браузера
