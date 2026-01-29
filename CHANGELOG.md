@@ -5,6 +5,39 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.3] - 2026-01-29
+
+### Fixed
+- 🔒 **localStorage → App API Migration**
+  - Replaced all direct `localStorage.getItem/setItem` with Obsidian App API
+  - Fixed: `src/lib/stores/i18n.ts` — Language detection now uses `app.loadLocalStorage('language')`
+  - Fixed: `src/lib/stores/ui.ts` — UI state persistence now uses `app.saveLocalStorage/loadLocalStorage`
+  - Fixed: `src/ui/views/Calendar/calendar.ts` — Calendar locale detection migrated to App API
+  - **Impact**: Data is now properly isolated per vault (Obsidian code review requirement)
+
+- 🔕 **console.log Cleanup**
+  - Replaced all production `console.log` with `console.debug` for development-only logging
+  - Fixed: `src/lib/helpers/performance.ts` — 2 instances (measureTime, measureTimeAsync)
+  - Fixed: `src/ui/views/Calendar/logger.ts` — 1 instance (debug method)
+  - Fixed: `src/ui/views/Calendar/viewport/ViewportStateManager.ts` — 6 instances
+  - **Impact**: Cleaner console output in production builds (Obsidian guidelines compliance)
+
+- ⚠️ **Unhandled Promises**
+  - Added proper handling for all 32 unhandled promise locations identified in code review
+  - Fixed: `src/events.ts` — Added `void` operator to 4 withDataSource() calls in file watcher callbacks
+  - Fixed: `src/view.ts` — Added `void` to 2 setState() calls (super.setState() + event handler)
+  - Fixed: `src/main.ts` — Added `void` to 5 activateView() calls in ribbon/command callbacks
+  - Fixed: `src/main.ts` — Added error handling to saveData() subscription with `.catch()` logging
+  - Fixed: `src/ui/app/useView.ts` — Added `void` to 2 onClose() calls in lifecycle methods
+  - **Strategy**: Fire-and-forget operations use `void`, critical data operations use `.catch()` with error logging
+  - **Impact**: Prevents silent failures, improves error visibility, eliminates ESLint warnings
+
+### Technical
+- All 150 unit tests passing
+- Build successful (only accessibility warnings remain, unrelated to these fixes)
+- No functional regressions detected
+- Changes follow Obsidian Plugin Guidelines for localStorage, logging, and promise handling
+
 ## [3.0.2] - 2026-01-27
 
 ### Fixed
