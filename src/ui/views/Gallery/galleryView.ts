@@ -21,11 +21,11 @@ export class GalleryView extends ProjectView<GalleryConfig> {
     return "layout-grid";
   }
 
-  async onData({ data }: DataQueryResult) {
+  onData({ data }: DataQueryResult) {
     this.view?.$set({ frame: data });
   }
 
-  async onOpen(props: ProjectViewProps<GalleryConfig>) {
+  onOpen(props: ProjectViewProps<GalleryConfig>) {
     this.view = new GalleryViewSvelte({
       target: props.contentEl,
       props: {
@@ -39,7 +39,7 @@ export class GalleryView extends ProjectView<GalleryConfig> {
     });
   }
 
-  async onClose() {
+  onClose() {
     this.view?.$destroy();
     this.view = null;
   }

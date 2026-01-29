@@ -186,7 +186,7 @@ export default class ProjectsPlusPlugin extends Plugin {
    * onunload runs when the plugin is disabled. Use it to clean up any resources
    * you've allocated in the onload method.
    */
-  async onunload(): Promise<void> {
+  onunload(): void {
     if (this.unsubscribeSettings) {
       this.unsubscribeSettings();
     }
@@ -217,8 +217,8 @@ export default class ProjectsPlusPlugin extends Plugin {
   /**
    * activateView opens the main Projects view in a new workspace leaf.
    * */
-  async activateView(projectId?: ProjectId, viewId?: ViewId): Promise<void> {
-    const leaf = await this.getOrCreateLeaf();
+  activateView(projectId?: ProjectId, viewId?: ViewId): void {
+    const leaf = this.getOrCreateLeaf();
 
     leaf.setViewState({
       type: VIEW_TYPE_PROJECTS,
@@ -234,7 +234,7 @@ export default class ProjectsPlusPlugin extends Plugin {
    * getOrCreateLeaf returns a new leaf, or returns an existing leaf if
    * Projects is already open.
    */
-  async getOrCreateLeaf(): Promise<WorkspaceLeaf> {
+  getOrCreateLeaf(): WorkspaceLeaf {
     const existingLeaves =
       this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS);
 

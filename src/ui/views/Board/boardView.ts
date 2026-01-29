@@ -21,11 +21,11 @@ export class BoardView extends ProjectView<BoardConfig> {
     return "columns";
   }
 
-  async onData({ data, hasSort, hasFilter }: DataQueryResult) {
+  onData({ data, hasSort, hasFilter }: DataQueryResult) {
     this.view?.$set({ frame: data, hasSort, hasFilter });
   }
 
-  async onOpen(props: ProjectViewProps<BoardConfig>) {
+  onOpen(props: ProjectViewProps<BoardConfig>) {
     this.view = new BoardViewSvelte({
       target: props.contentEl,
       props: {
@@ -44,7 +44,7 @@ export class BoardView extends ProjectView<BoardConfig> {
     });
   }
 
-  async onClose() {
+  onClose() {
     this.view?.$destroy();
     this.view = null;
   }
