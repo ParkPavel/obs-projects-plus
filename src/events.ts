@@ -9,14 +9,14 @@ import type { DataSource } from "./lib/datasources";
  */
 export function registerFileEvents(watcher: IFileSystemWatcher) {
   watcher.onCreate(async (file) => {
-    void withDataSource(async (source) => {
+    await withDataSource(async (source) => {
       if (source.includes(file.path)) {
         dataFrame.merge(await source.queryOne(file, get(dataFrame).fields));
       }
     });
   });
   watcher.onRename(async (file, oldPath) => {
-    void withDataSource(async (source) => {
+    await withDataSource(async (source) => {
       if (source.includes(file.path)) {
         dataFrame.deleteRecord(oldPath);
         dataFrame.merge(await source.queryOne(file, get(dataFrame).fields));
@@ -27,7 +27,7 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
   });
 
   watcher.onDelete(async (file) => {
-    void withDataSource(async (source) => {
+    await withDataSource(async (source) => {
       const recordExists = !!get(dataFrame).records.find(
         (record) => record.id === file.path
       );
@@ -39,7 +39,7 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
   });
 
   watcher.onChange(async (file) => {
-    void withDataSource(async (source) => {
+    await withDataSource(async (source) => {
       const recordExists = !!get(dataFrame).records.find(
         (record) => record.id === file.path
       );

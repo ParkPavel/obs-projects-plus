@@ -88,7 +88,7 @@ export default class ProjectsPlusPlugin extends Plugin {
             item
               .setTitle(t("menus.project.create.title"))
               .setIcon("folder-plus")
-              .onClick(async () => {
+              .onClick(() => {
                 const project = createProject();
 
                 new CreateProjectModal(
@@ -272,11 +272,11 @@ export default class ProjectsPlusPlugin extends Plugin {
    * been disabled from the settings, or where the project or view has been
    * deleted.
    */
-  removeRedundantCommands(
+  removeRedundantCommands = (
     enabledCommands: ShowCommand[],
     projects: ProjectDefinition[],
     registeredCommandIds: Set<string>
-  ): void {
+  ): void => {
     registeredCommandIds.forEach((id) => {
       const enabledCommand = enabledCommands.find(
         (command) => id === getShowCommandId(command, true)
@@ -304,17 +304,17 @@ export default class ProjectsPlusPlugin extends Plugin {
         this.app.commands.removeCommand(id);
       }
     });
-  }
+  };
 
   /**
    * addMissingCommands registers show commands that have been enabled but not
    * registered.
    */
-  addMissingCommands(
+  addMissingCommands = (
     enabledCommands: ShowCommand[],
     projects: ProjectDefinition[],
     registeredCommandIds: Set<string>
-  ): void {
+  ): void => {
     enabledCommands.forEach((command) => {
       const globalId = getShowCommandId(command, true);
       const localId = getShowCommandId(command, false);
@@ -352,7 +352,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         }
       }
     });
-  }
+  };
 }
 
 /**
