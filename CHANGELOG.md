@@ -8,21 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.0.3] - 2026-01-29
 
 ### Fixed
-- 🔒 **localStorage → App API Migration**
-  - Replaced all direct `localStorage.getItem/setItem` with Obsidian App API
-  - Fixed: `src/lib/stores/i18n.ts` — Language detection now uses `app.loadLocalStorage('language')`
-  - Fixed: `src/lib/stores/ui.ts` — UI state persistence now uses `app.saveLocalStorage/loadLocalStorage`
-  - Fixed: `src/ui/views/Calendar/calendar.ts` — Calendar locale detection migrated to App API
-  - **Impact**: Data is now properly isolated per vault (Obsidian code review requirement)
+- 🔒 **localStorage → App API Migration (COMPLETE)**
+  - **TypeScript files** (Commit: 75b064f):
+    - `src/lib/stores/i18n.ts` — Language detection now uses `app.loadLocalStorage('language')`
+    - `src/lib/stores/ui.ts` — UI state persistence uses `app.saveLocalStorage/loadLocalStorage`
+    - `src/ui/views/Calendar/calendar.ts` — Calendar locale detection migrated to App API
+  - **Svelte components** (Commit: 98714b7):
+    - `AgendaSidebar.svelte` — View state persistence (collapsed categories)
+    - `CalendarView.svelte` — Calendar state persistence (date, interval)
+    - `RecordItem.svelte` — Color picker favorites persistence
+    - `EditNote.svelte` — Collapsed field groups state
+    - `ColorPicker.svelte` — Favorite colors palette
+  - **Impact**: All data now properly isolated per vault (Obsidian code review requirement ✅)
 
-- 🔕 **console.log Cleanup**
+- 🔕 **console.log Cleanup (COMPLETE)**
   - Replaced all production `console.log` with `console.debug` for development-only logging
   - Fixed: `src/lib/helpers/performance.ts` — 2 instances (measureTime, measureTimeAsync)
   - Fixed: `src/ui/views/Calendar/logger.ts` — 1 instance (debug method)
   - Fixed: `src/ui/views/Calendar/viewport/ViewportStateManager.ts` — 6 instances
-  - **Impact**: Cleaner console output in production builds (Obsidian guidelines compliance)
+  - **Commit**: 35cb9e5
+  - **Impact**: Cleaner console output in production builds (Obsidian guidelines compliance ✅)
 
-- ⚠️ **Unhandled Promises**
+- ⚠️ **Unhandled Promises (COMPLETE)**
   - Added proper handling for all 32 unhandled promise locations identified in code review
   - Fixed: `src/events.ts` — Added `void` operator to 4 withDataSource() calls in file watcher callbacks
   - Fixed: `src/view.ts` — Added `void` to 2 setState() calls (super.setState() + event handler)
@@ -30,13 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed: `src/main.ts` — Added error handling to saveData() subscription with `.catch()` logging
   - Fixed: `src/ui/app/useView.ts` — Added `void` to 2 onClose() calls in lifecycle methods
   - **Strategy**: Fire-and-forget operations use `void`, critical data operations use `.catch()` with error logging
-  - **Impact**: Prevents silent failures, improves error visibility, eliminates ESLint warnings
+  - **Commit**: 35cc825
+  - **Impact**: Prevents silent failures, improves error visibility, eliminates ESLint warnings ✅
 
 ### Technical
-- All 150 unit tests passing
+- All 150 unit tests passing after each fix
 - Build successful (only accessibility warnings remain, unrelated to these fixes)
-- No functional regressions detected
+- No functional regressions detected across all changes
 - Changes follow Obsidian Plugin Guidelines for localStorage, logging, and promise handling
+- **Documentation**: Updated CHANGELOG.md, docs/bugfix-roadmap.md, BUGFIX_PLAN.md
 
 ## [3.0.2] - 2026-01-27
 
