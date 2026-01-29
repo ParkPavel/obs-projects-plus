@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { app } from '../../../../../lib/stores/obsidian';
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
@@ -77,7 +78,8 @@
   
   onMount(() => {
     try {
-      const stored = localStorage.getItem(FAVORITES_KEY);
+      const appInstance = (window as any).app || $app;
+      const stored = appInstance?.loadLocalStorage(FAVORITES_KEY);
       if (stored) {
         favoriteColors = JSON.parse(stored);
       } else {
@@ -103,7 +105,8 @@
   }
 
   function saveFavorites() {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteColors));
+    const appInstance = (window as any).app || $app;
+    appInstance?.saveLocalStorage(FAVORITES_KEY, JSON.stringify(favoriteColors));
   }
   
   // Computed HSV color

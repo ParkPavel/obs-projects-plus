@@ -16,6 +16,7 @@
   import { formatDateForDisplay } from '../../../../../lib/helpers';
   import { extractTimeWithPriority, parseDateInTimezone } from '../../../Calendar/calendar';
   import { isMobileDevice } from '../../../../../lib/stores/ui';
+  import { app } from '../../../../../lib/stores/obsidian';
   
   const dispatch = createEventDispatcher();
   
@@ -121,7 +122,8 @@
   
   function loadState() {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      const appInstance = (window as any).app || $app;
+      const data = appInstance?.loadLocalStorage(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
         if (parsed.collapsed) {
@@ -133,7 +135,8 @@
   
   function saveState() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories }));
+      const appInstance = (window as any).app || $app;
+      appInstance?.saveLocalStorage(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories }));
     } catch { /* ignore */ }
   }
   
