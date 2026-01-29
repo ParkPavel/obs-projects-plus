@@ -96,7 +96,8 @@
         version: 1
       };
       
-      localStorage.setItem(getStorageKey(), JSON.stringify(state));
+      const appInstance = (window as any).app || $app;
+      appInstance?.saveLocalStorage(getStorageKey(), JSON.stringify(state));
       calendarLogger.debug('View state saved', { component: 'CalendarView', data: state as unknown as Record<string, unknown> });
     } catch (error) {
       calendarLogger.warn('Failed to save view state', { component: 'CalendarView', data: { error } });
@@ -108,7 +109,8 @@
    */
   function loadViewState(): PersistedViewState | null {
     try {
-      const stored = localStorage.getItem(getStorageKey());
+      const appInstance = (window as any).app || $app;
+      const stored = appInstance?.loadLocalStorage(getStorageKey());
       if (!stored) return null;
       
       const state = JSON.parse(stored) as PersistedViewState;

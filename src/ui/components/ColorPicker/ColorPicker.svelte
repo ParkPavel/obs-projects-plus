@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { app } from '../../../lib/stores/obsidian';
   import { onMount, createEventDispatcher } from 'svelte';
   import { Icon } from "obsidian-svelte";
 
@@ -35,7 +36,8 @@
   
   function loadFavorites() {
     try {
-      const stored = localStorage.getItem(FAVORITES_KEY);
+      const appInstance = (window as any).app || $app;
+      const stored = appInstance?.loadLocalStorage(FAVORITES_KEY);
       if (stored) {
         favorites = JSON.parse(stored);
       } else {
@@ -49,7 +51,8 @@
   
   function saveFavorites() {
     try {
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      const appInstance = (window as any).app || $app;
+      appInstance?.saveLocalStorage(FAVORITES_KEY, JSON.stringify(favorites));
     } catch (e) {
       console.warn('Failed to save color favorites:', e);
     }
