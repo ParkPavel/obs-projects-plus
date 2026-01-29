@@ -218,7 +218,7 @@ export function measureTime<T>(label: string, fn: () => T): T {
   const end = performance.now();
   
   if (process.env['NODE_ENV'] !== 'production') {
-    console.log(`[Performance] ${label}: ${(end - start).toFixed(2)}ms`);
+    console.debug(`[Performance] ${label}: ${(end - start).toFixed(2)}ms`);
   }
   
   return result;
@@ -233,7 +233,7 @@ export async function measureTimeAsync<T>(label: string, fn: () => Promise<T>): 
   const end = performance.now();
   
   if (process.env['NODE_ENV'] !== 'production') {
-    console.log(`[Performance] ${label}: ${(end - start).toFixed(2)}ms`);
+    console.debug(`[Performance] ${label}: ${(end - start).toFixed(2)}ms`);
   }
   
   return result;

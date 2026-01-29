@@ -71,7 +71,7 @@ export const calendarLogger = {
    */
   debug(message: string, context?: LogContext): void {
     if (currentLogLevel <= LogLevel.DEBUG) {
-      console.log(formatMessage(message, context), context?.data ?? '');
+      console.debug(formatMessage(message, context), context?.data ?? '');
     }
   },
 
