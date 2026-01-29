@@ -111,9 +111,9 @@ export class AnimationController {
    * Ease Out Cubic - плавное замедление
    * Используется для большинства анимаций (scroll, zoom)
    */
-  private easeOutCubic(t: number): number {
+  private easeOutCubic = (t: number): number => {
     return 1 - Math.pow(1 - t, 3);
-  }
+  };
   
   /**
    * Ease In Out Cubic - плавное ускорение и замедление
