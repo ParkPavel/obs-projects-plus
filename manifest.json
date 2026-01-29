@@ -1,7 +1,7 @@
 {
   "id": "obs-projects-plus",
   "name": "OBS Projects Plus",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "minAppVersion": "1.5.7",
   "description": "Project management with visual calendar: timeline, multi-day events, boards, tables, galleries.",
   "author": "Park Pavel",
