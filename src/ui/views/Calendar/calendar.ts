@@ -259,9 +259,19 @@ export function getLocale(locale: LocaleOption): Intl.Locale {
     return new Intl.Locale(navigator?.language || "en");
   }
 
-  const obsidianLanguage =
-    localStorage.getItem("language") || dayjs().locale();
-
+  // Получаем язык через Obsidian App API
+  let obsidianLanguage = dayjs().locale();
+  try {
+    const app = (window as any).app;
+    if (app?.loadLocalStorage) {
+      const storedLang = app.loadLocalStorage("language");
+      if (storedLang) {
+        obsidianLanguage = storedLang;
+      }
+    }
+  } catch {
+    // Fallback to dayjs locale
+  }
 
   return new Intl.Locale(obsidianLanguage);
 }
