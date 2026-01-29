@@ -53,7 +53,7 @@ class InMemFile extends IFile {
         //   - tag2
         // или: tags: tag1, tag2
         const tagsLine = frontMatter.match(/^tags\s*:\s*([^\n]+)$/m);
-        const tagBlock = frontMatter.match(/^tags\s*:\s*\n([\s\S]*?)(?=^[^\s-]|\Z)/m);
+        const tagBlock = frontMatter.match(/^tags\s*:\s*\n([\s\S]*?)(?=^[^\s-]|$)/m);
 
         const tagsLineValue = tagsLine?.[1] ?? "";
         if (tagsLineValue) {

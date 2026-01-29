@@ -33,7 +33,7 @@ export function detectCollision(
   }
   
   return {
-    date: formatDateForInternal(phantom.startDate!) ?? phantom.startDate!.format('YYYY-MM-DD'),
+    date: formatDateForInternal(phantom.startDate) ?? (phantom.startDate ? phantom.startDate.format('YYYY-MM-DD') : ''),
     overlapType,
     overlappingRecords: overlapping,
   };
