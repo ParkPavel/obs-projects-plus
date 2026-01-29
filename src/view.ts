@@ -91,7 +91,7 @@ export class ProjectsView extends ItemView {
       });
     }
 
-    super.setState(state, result);
+    void super.setState(state, result);
   }
 
   async onOpen() {
@@ -116,7 +116,7 @@ export class ProjectsView extends ItemView {
         const newProjectId = event.detail;
         // Update internal state and persist it
         const newState: ProjectsViewState = { projectId: newProjectId, viewId: viewId ?? '' };
-        this.setState(newState, { history: false });
+        void this.setState(newState, { history: false });
         // Update the component with new projectId
         this.component?.$set({ projectId: newProjectId });
       });

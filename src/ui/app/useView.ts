@@ -37,7 +37,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
 
     if (dirty) {
       // Clean up previous view.
-      projectView?.onClose();
+      void projectView?.onClose();
 
       node.empty();
 
@@ -82,7 +82,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
   return {
     update,
     destroy() {
-      projectView?.onClose();
+      void projectView?.onClose();
     },
   };
 }
