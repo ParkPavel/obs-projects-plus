@@ -66,7 +66,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     );
 
     this.addRibbonIcon("projects-icon", t("obsidian.ribbon-tooltip"), () => {
-      this.activateView();
+      void this.activateView();
     });
 
     this.registerView(
@@ -119,7 +119,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       id: "show-projects",
       name: t("commands.show-projects.name"),
       callback: () => {
-        this.activateView();
+        void this.activateView();
       },
     });
 
@@ -174,7 +174,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // Save settings to disk whenever settings has been updated.
     this.unsubscribeSettings = settings.subscribe((value) => {
       this.ensureCommands(value.preferences.commands, value.projects);
-      this.saveData(value);
+      void this.saveData(value).catch((err) => console.error('Failed to save settings:', err));
     });
 
     const watcher = new ObsidianFileSystemWatcher(this);
@@ -337,7 +337,7 @@ export default class ProjectsPlusPlugin extends Plugin {
               id: localId,
               name: `Show ${project.name} > ${view.name}`,
               callback: () => {
-                this.activateView(project.id, view.id);
+                void this.activateView(project.id, view.id);
               },
             });
           }
@@ -346,7 +346,7 @@ export default class ProjectsPlusPlugin extends Plugin {
             id: localId,
             name: `Show ${project.name}`,
             callback: () => {
-              this.activateView(project.id);
+              void this.activateView(project.id);
             },
           });
         }
