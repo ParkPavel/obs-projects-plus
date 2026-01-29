@@ -145,7 +145,7 @@ export class ViewportStateManager {
     this.currentState = newState;
     
     if (this.config.debug) {
-      console.log('[ViewportStateManager] State pushed:', newState, 'History size:', this.history.length);
+      console.debug('[ViewportStateManager] State pushed:', newState, 'History size:', this.history.length);
     }
   }
   
@@ -163,7 +163,7 @@ export class ViewportStateManager {
     const state = this.history[this.currentIndex];
     
     if (this.config.debug) {
-      console.log('[ViewportStateManager] Go back to:', state);
+      console.debug('[ViewportStateManager] Go back to:', state);
     }
     
     return state ?? null;
@@ -183,7 +183,7 @@ export class ViewportStateManager {
     const state = this.history[this.currentIndex];
     
     if (this.config.debug) {
-      console.log('[ViewportStateManager] Go forward to:', state);
+      console.debug('[ViewportStateManager] Go forward to:', state);
     }
     
     return state ?? null;
@@ -241,7 +241,7 @@ export class ViewportStateManager {
     this.lastSaveTime = 0;
     
     if (this.config.debug) {
-      console.log('[ViewportStateManager] History cleared');
+      console.debug('[ViewportStateManager] History cleared');
     }
   }
   
@@ -281,7 +281,7 @@ export class ViewportStateManager {
     }
     
     if (this.config.debug) {
-      console.log('[ViewportStateManager] Viewport restored:', state);
+      console.debug('[ViewportStateManager] Viewport restored:', state);
     }
   }
   
@@ -383,7 +383,7 @@ export class ViewportStateManager {
       this.currentState = this.history[this.currentIndex] ?? null;
       
       if (this.config.debug) {
-        console.log('[ViewportStateManager] History imported:', this.history.length, 'states');
+        console.debug('[ViewportStateManager] History imported:', this.history.length, 'states');
       }
     } catch (error) {
       console.error('[ViewportStateManager] Failed to import history:', error);
