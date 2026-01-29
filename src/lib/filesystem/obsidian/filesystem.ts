@@ -43,7 +43,7 @@ class ObsidianFile extends IFile {
   }
 
   delete(): Promise<void> {
-    return this.app.vault.trash(this.file, true);
+    return this.app.fileManager.trashFile(this.file);
   }
 
   readTags(): Set<string> {
@@ -84,7 +84,7 @@ export class ObsidianFileSystem implements IFileSystem {
   async delete(path: string): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(normalizePath(path));
     if (file instanceof TFile) {
-      return this.app.vault.trash(file, true);
+      return this.app.fileManager.trashFile(file);
     }
   }
 

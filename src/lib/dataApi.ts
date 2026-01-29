@@ -164,7 +164,7 @@ export class DataApi {
     const file = this.fileSystem.getFile(path);
 
     if (file) {
-      file.delete();
+      await file.delete();
     }
   }
 }

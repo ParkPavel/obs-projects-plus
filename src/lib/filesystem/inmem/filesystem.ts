@@ -17,8 +17,8 @@ class InMemFile extends IFile {
     return this._path;
   }
 
-  async read(): Promise<string> {
-    return this._content;
+  read(): Promise<string> {
+    return Promise.resolve(this._content);
   }
 
   async write(content: string): Promise<void> {
@@ -103,7 +103,7 @@ class InMemFile extends IFile {
 export class InMemFileSystem implements IFileSystem {
   constructor(readonly files: Record<string, InMemFile>) {}
 
-  async create(path: string, content: string): Promise<IFile> {
+  create(path: string, content: string): Promise<IFile> {
     if (this.files[path]) {
       throw new Error("File already exist");
     }
@@ -112,11 +112,12 @@ export class InMemFileSystem implements IFileSystem {
 
     this.files[path] = file;
 
-    return file;
+    return Promise.resolve(file);
   }
 
-  async delete(path: string): Promise<void> {
+  delete(path: string): Promise<void> {
     delete this.files[path];
+    return Promise.resolve();
   }
 
   getAllFiles(): IFile[] {
