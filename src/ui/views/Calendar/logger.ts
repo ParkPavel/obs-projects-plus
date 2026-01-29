@@ -96,7 +96,7 @@ export const calendarLogger = {
   /**
    * Error level - errors that need attention
    */
-  error(message: string, error?: Error | unknown, context?: LogContext): void {
+  error(message: string, error?: unknown, context?: LogContext): void {
     if (currentLogLevel <= LogLevel.ERROR) {
       console.error(formatMessage(message, context), error ?? '', context?.data ?? '');
     }

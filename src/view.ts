@@ -53,7 +53,7 @@ export class ProjectsView extends ItemView {
     return "projects-icon";
   }
 
-  onPaneMenu(menu: Menu, source: "more-options" | "tab-header" | string) {
+  onPaneMenu(menu: Menu, source: string) {
     if (source == "more-options" || source == "tab-header") {
       super.onPaneMenu(menu, source);
       menu.addItem((item) => {
@@ -76,7 +76,7 @@ export class ProjectsView extends ItemView {
     super.onPaneMenu(menu, source);
   }
 
-  onload() {
+  onload(): void {
     view.set(this);
   }
 

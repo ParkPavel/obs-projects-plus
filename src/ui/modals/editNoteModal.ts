@@ -30,8 +30,8 @@ export class EditNoteModal extends Modal {
         allRecords: this.allRecords,
         onOpenNote: this.onOpenNote,
         // v3.0.1: Wrap rename callback to close modal after rename
-        onRenameNote: this.onRenameNote ? async (newName: string) => {
-          await this.onRenameNote?.(newName);
+        onRenameNote: this.onRenameNote ? (newName: string) => {
+          this.onRenameNote?.(newName);
           // Close modal after rename - data needs to reload with new ID
           this.close();
         } : undefined,
