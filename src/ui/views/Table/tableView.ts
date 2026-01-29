@@ -21,11 +21,11 @@ export class TableView extends ProjectView<TableConfig> {
     return "table";
   }
 
-  async onData({ data }: DataQueryResult) {
+  onData({ data }: DataQueryResult) {
     this.view?.$set({ frame: data });
   }
 
-  async onOpen(props: ProjectViewProps<TableConfig>) {
+  onOpen(props: ProjectViewProps<TableConfig>) {
     this.view = new TableViewSvelte({
       target: props.contentEl,
       props: {
@@ -40,7 +40,7 @@ export class TableView extends ProjectView<TableConfig> {
     });
   }
 
-  async onClose() {
+  onClose() {
     this.view?.$destroy();
     this.view = null;
   }

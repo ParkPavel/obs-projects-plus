@@ -139,9 +139,9 @@ export interface ProjectViewProps<T = Record<string, any>> {
 }
 
 export abstract class ProjectView<T = Record<string, any>> {
-  async onData(result: DataQueryResult): Promise<void> {}
-  async onOpen(props: ProjectViewProps<T>): Promise<void> {}
-  async onClose(): Promise<void> {}
+  onData(result: DataQueryResult): void {}
+  onOpen(props: ProjectViewProps<T>): void {}
+  onClose(): void {}
   abstract getViewType(): string;
   abstract getDisplayName(): string;
   abstract getIcon(): string;

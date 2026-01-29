@@ -76,7 +76,7 @@ export class ProjectsView extends ItemView {
     super.onPaneMenu(menu, source);
   }
 
-  async onload() {
+  onload() {
     view.set(this);
   }
 
@@ -91,7 +91,7 @@ export class ProjectsView extends ItemView {
       });
     }
 
-    void super.setState(state, result);
+    await super.setState(state, result);
   }
 
   async onOpen() {
