@@ -97,6 +97,7 @@ export class CommandManager {
   /**
    * Finalizes command registration by actually adding commands through the plugin
    * This must be called after ensureCommands to actually register the new commands
+   * @param plugin - The Obsidian Plugin instance (typed as any due to incomplete type definitions for addCommand method)
    */
   finalizeRegistrations(plugin: any): void {
     if (!plugin || !plugin.addCommand) {

@@ -1,5 +1,4 @@
 import { either } from "fp-ts";
-import { produce } from "immer";
 import { encodeFrontMatter, decodeFrontMatter } from "../metadata";
 
 export abstract class IFile {
@@ -10,20 +9,6 @@ export abstract class IFile {
   abstract read(): Promise<string>;
   abstract delete(): Promise<void>;
   abstract readTags(): Set<string>;
-
-  async readValue(field: string): Promise<any> {
-    const values = await this.readValues();
-
-    return values[field];
-  }
-
-  async writeValue(field: string, value: any): Promise<void> {
-    this.writeValues(
-      produce(await this.readValues(), (draft) => {
-        draft[field] = value;
-      })
-    );
-  }
 
   async readValues(): Promise<Record<string, any>> {
     const data = await this.read();
