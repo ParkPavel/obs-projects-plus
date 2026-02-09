@@ -2,6 +2,7 @@
   import { app } from '../../../lib/stores/obsidian';
   import { onMount, createEventDispatcher } from 'svelte';
   import { Icon } from "obsidian-svelte";
+  import { i18n } from '../../../lib/stores/i18n';
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
@@ -343,7 +344,7 @@
         class="action-btn star-btn"
         on:click|stopPropagation={addToFavorites}
         type="button"
-        title="Добавить в избранное"
+        title={$i18n.t('components.color.add-to-favorites')}
       >
         <Icon name="star" size="sm" />
       </button>
@@ -351,7 +352,7 @@
         class="action-btn apply-btn"
         on:click|stopPropagation={applyColor}
         type="button"
-        title="Применить цвет"
+        title={$i18n.t('components.color.apply-color')}
       >
         <Icon name="check" size="sm" />
       </button>

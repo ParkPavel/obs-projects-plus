@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Icon } from "obsidian-svelte";
+  import { i18n } from "src/lib/stores/i18n";
   import { customViews } from "src/lib/stores/customViews";
   import { settings } from "src/lib/stores/settings";
   import type { ViewDefinition, ViewId } from "src/settings/settings";
@@ -169,7 +170,7 @@
 <div
   class="view-switcher"
   role="tablist"
-  aria-label="Переключение видов"
+  aria-label={$i18n.t('common.view-switcher')}
   bind:this={viewSwitcherElement}
   on:wheel={handleWheel}
   on:touchstart={handleTouchStart}

@@ -14,6 +14,7 @@
   import ColorFiltersTab from "./tabs/ColorFiltersTab.svelte";
   import SortTab from "./tabs/SortTab.svelte";
   import ViewConfigTab from "./tabs/ViewConfigTab.svelte";
+  import { i18n } from "../../../../lib/stores/i18n";
 
   export let projects: ProjectDefinition[] = [];
   export let projectId: ProjectId | undefined;
@@ -134,8 +135,8 @@
       style="top: {safePosition.top}; right: {safePosition.right}; left: {safePosition.left};"
     >
       <div class="popover-header">
-        <h3>Настройки</h3>
-        <button class="close-btn" on:click={() => dispatch("close")} aria-label="Закрыть">×</button>
+        <h3>{$i18n.t('settings-menu.title')}</h3>
+        <button class="close-btn" on:click={() => dispatch("close")} aria-label={$i18n.t('common.close')}>×</button>
       </div>
       
       <SettingsMenuTabs activeTab={activeTab} on:change={(event) => (activeTab = event.detail)} />
@@ -190,7 +191,7 @@
       </div>
 
       <div class="popover-footer">
-        <button class="btn-primary" on:click={() => dispatch("close")}>Готово</button>
+        <button class="btn-primary" on:click={() => dispatch("close")}>{$i18n.t('settings-menu.done')}</button>
       </div>
     </div>
   </div>

@@ -1,838 +1,877 @@
-﻿{
-    "translation":  {
-                        "data-types":  {
-                                           "string":  "Text",
-                                           "number":  "Number",
-                                           "boolean":  "Checkbox",
-                                           "date":  "Date",
-                                           "unknown":  "Unknown data type",
-                                           "repeated":  "Repeated field",
-                                           "datetime":  "Date \u0026 time",
-                                           "list":  "List",
-                                           "tags":  "Tags",
-                                           "aliases":  "Aliases"
-                                       },
-                        "datasources":  {
-                                            "folder":  "Folder",
-                                            "tag":  "Tag",
-                                            "dataview":  "Dataview"
-                                        },
-                        "commands":  {
-                                         "show-projects":  {
-                                                               "name":  "Show projects plus"
-                                                           },
-                                         "create-project":  {
-                                                                "name":  "Create new project plus"
-                                                            },
-                                         "create-note":  {
-                                                             "name":  "Create new note plus"
-                                                         }
-                                     },
-                        "menus":  {
-                                      "project":  {
-                                                      "create":  {
-                                                                     "title":  "Create project in folder"
-                                                                 }
-                                                  },
-                                      "tab-header":  {
-                                                         "new-window":  {
-                                                                            "title":  "Open in new window"
-                                                                        }
-                                                     }
-                                  },
-                        "modals":  {
-                                       "project":  {
-                                                       "create":  {
-                                                                      "short-title":  "New project",
-                                                                      "untitled":  "Untitled project",
-                                                                      "title":  "Create new project",
-                                                                      "cta":  "Create project",
-                                                                      "existing-name-error":  "A project with that name already exists.",
-                                                                      "empty-name-error":  "Project name can\u0027t be empty."
-                                                                  },
-                                                       "edit":  {
-                                                                    "short-title":  "Edit project",
-                                                                    "title":  "Edit project",
-                                                                    "cta":  "Save"
-                                                                },
-                                                       "duplicate":  {
-                                                                         "title":  "Duplicate project",
-                                                                         "suffix":  "Copy"
-                                                                     },
-                                                       "archive":  {
-                                                                       "short-title":  "Archive project",
-                                                                       "title":  "Archive project",
-                                                                       "message":  "Are you sure you want to archive \"{{project}}\"? You can restore it later in Projects Plus plugin\u0027s setting tab.",
-                                                                       "notice":  "Project archived! If you are using Projects across multiple devices and syncing between them, please upgrade to version 1.17.0 or above for all your devices to avoid losing your archived project configurations.",
-                                                                       "cta":  "Archive"
-                                                                   },
-                                                       "delete":  {
-                                                                      "short-title":  "Delete project",
-                                                                      "title":  "Delete project",
-                                                                      "message":  "Are you sure you want to delete \"{{project}}\"? This cannot be undone.",
-                                                                      "cta":  "Delete"
-                                                                  },
-                                                       "name":  {
-                                                                    "name":  "Name",
-                                                                    "description":  ""
-                                                                },
-                                                       "default":  {
-                                                                       "name":  "Set as default",
-                                                                       "description":  "Enable to open this project by default."
-                                                                   },
-                                                       "datasource":  {
-                                                                          "name":  "Data source",
-                                                                          "description":  "Choose how you want to define which notes to include."
-                                                                      },
-                                                       "path":  {
-                                                                    "name":  "Path",
-                                                                    "description":  "Path to the folder you want to manage. Leave empty to use root folder."
-                                                                },
-                                                       "tag":  {
-                                                                   "name":  "Tag",
-                                                                   "description":  "Include all notes that have this tag."
-                                                               },
-                                                       "dataview":  {
-                                                                        "name":  "Use Dataview",
-                                                                        "description":  "Use Dataview to query read-only data instead of using paths.",
-                                                                        "error":  {
-                                                                                      "title":  "Dataview is disabled",
-                                                                                      "message":  "Enable the Dataview plugin to continue using this project."
-                                                                                  }
-                                                                    },
-                                                       "query":  {
-                                                                     "name":  "Query",
-                                                                     "description":  "Only supports TABLE queries."
-                                                                 },
-                                                       "recursive":  {
-                                                                         "name":  "Include subfolders",
-                                                                         "description":  "Manage notes inside subfolders within the project path."
-                                                                     },
-                                                       "hierarchy":  {
-                                                                         "name":  "Tag hierarchy",
-                                                                         "description":  "Manage notes containing sub-tags of the project target tag."
-                                                                     },
-                                                       "more-settings":  {
-                                                                             "name":  "More settings",
-                                                                             "description":  ""
-                                                                         },
-                                                       "templates":  {
-                                                                         "name":  "Templates",
-                                                                         "description":  "Templates to choose from when you create new notes.",
-                                                                         "add":  "Add template"
-                                                                     },
-                                                       "exclude":  {
-                                                                       "name":  "Excluded notes",
-                                                                       "description":  "Notes to exclude even if they would otherwise be part of the project.",
-                                                                       "add":  "Add note"
-                                                                   },
-                                                       "newNotesFolder":  {
-                                                                              "name":  "Location for new notes",
-                                                                              "description":  "Folder where all new notes are placed."
-                                                                          },
-                                                       "defaultName":  {
-                                                                           "name":  "Default name for new notes",
-                                                                           "description":  "Supports {{date:YYYY-MM-DD}} and {{time:HHmm}} templates variables.",
-                                                                           "invalid":  "Contains illegal characters."
-                                                                       },
-                                                       "autosave":  {
-                                                                        "name":  "Autosave",
-                                                                        "description":  "Automatically save changes when editing notes. When disabled, a Save button will be shown."
-                                                                    },
-                                                       "agenda":  {
-                                                                      "name":  "Agenda mode",
-                                                                      "description":  "Choose how the agenda displays tasks and events.",
-                                                                      "modes":  {
-                                                                                    "standard":  "Standard",
-                                                                                    "standard-description":  "Uses calendar view filters",
-                                                                                    "custom":  "Custom",
-                                                                                    "custom-description":  "User-defined lists with filters"
-                                                                                },
-                                                                      "inherit-filters":  {
-                                                                                              "name":  "Inherit calendar filters",
-                                                                                              "description":  "Apply the same filters as the calendar view"
-                                                                                          }
-                                                                  }
-                                                   },
-                                       "archive":  {
-                                                       "delete":  {
-                                                                      "short-title":  "Delete archive",
-                                                                      "title":  "Delete archive",
-                                                                      "message":  "Are you sure you want to delete \"{{archive}}\"? This cannot be undone.",
-                                                                      "cta":  "Delete"
-                                                                  }
-                                                   },
-                                       "view":  {
-                                                    "create":  {
-                                                                   "short-title":  "New view",
-                                                                   "title":  "Add new view",
-                                                                   "optional":  "Optional",
-                                                                   "type":  {
-                                                                                "name":  "Type",
-                                                                                "description":  ""
-                                                                            },
-                                                                   "name":  {
-                                                                                "name":  "Name",
-                                                                                "description":  ""
-                                                                            },
-                                                                   "cta":  "Add view",
-                                                                   "existing-name-error":  "A view with that name already exists."
-                                                               },
-                                                    "duplicate":  {
-                                                                      "title":  "Duplicate view",
-                                                                      "suffix":  "Copy"
-                                                                  },
-                                                    "delete":  {
-                                                                   "short-title":  "Delete view",
-                                                                   "title":  "Delete view",
-                                                                   "message":  "Are you sure you want to delete the view \"{{view}}\"?",
-                                                                   "cta":  "Delete"
-                                                               }
-                                                },
-                                       "note":  {
-                                                    "create":  {
-                                                                   "short-title":  "New note",
-                                                                   "title":  "Create new note",
-                                                                   "name":  {
-                                                                                "name":  "Name",
-                                                                                "description":  ""
-                                                                            },
-                                                                   "templatePath":  {
-                                                                                        "name":  "Template",
-                                                                                        "description":  "",
-                                                                                        "none":  "None"
-                                                                                    },
-                                                                   "project":  {
-                                                                                   "name":  "Project",
-                                                                                   "description":  ""
-                                                                               },
-                                                                   "name-taken-error":  "A note with that name already exists.",
-                                                                   "empty-name-error":  "Name can\u0027t be empty.",
-                                                                   "dot-start-error":  "File name must not start with a dot.",
-                                                                   "create":  "Create note",
-                                                                   "readonly":  {
-                                                                                    "title":  "Read-only project",
-                                                                                    "message":  "{{project}} is a read-only project. Select another project to create a note."
-                                                                                },
-                                                                   "untitled":  "Untitled"
-                                                               },
-                                                    "edit":  {
-                                                                 "short-title":  "Edit note",
-                                                                 "title":  "Edit note",
-                                                                 "save":  "Save",
-                                                                 "confirm":  "Confirm",
-                                                                 "saving":  "Saving...",
-                                                                 "autosave-enabled":  "Autosave enabled",
-                                                                 "save-error":  "Failed to save changes",
-                                                                 "no-editable-fields":  {
-                                                                                            "title":  "No editable fields",
-                                                                                            "message":  "This note has no editable fields."
-                                                                                        }
-                                                             }
-                                                },
-                                       "field":  {
-                                                     "configure":  {
-                                                                       "short-title":  "Configure field",
-                                                                       "title":  "Configure field",
-                                                                       "name":  {
-                                                                                    "name":  "Name",
-                                                                                    "description":  ""
-                                                                                },
-                                                                       "empty-name-error":  "Field name can\u0027t be empty.",
-                                                                       "existing-name-error":  "Can\u0027t rename to a existing field name.",
-                                                                       "type":  {
-                                                                                    "name":  "Type",
-                                                                                    "description":  "Changing type isn\u0027t supported yet."
-                                                                                },
-                                                                       "options":  {
-                                                                                       "name":  "Options",
-                                                                                       "description":  "Allows you to auto-complete using predefined values for the field."
-                                                                                   },
-                                                                       "rich-text":  {
-                                                                                         "name":  "Enable rich text formatting",
-                                                                                         "description":  "For fields with Markdown content."
-                                                                                     },
-                                                                       "time":  {
-                                                                                    "name":  "Enable time",
-                                                                                    "description":  "Recognize this field as Date \u0026 time."
-                                                                                },
-                                                                       "save":  "Save"
-                                                                   },
-                                                     "create":  {
-                                                                    "short-title":  "New field",
-                                                                    "title":  "Create new field",
-                                                                    "name":  {
-                                                                                 "name":  "Name",
-                                                                                 "description":  ""
-                                                                             },
-                                                                    "untitled":  "New field",
-                                                                    "empty-name-error":  "Field name can\u0027t be empty.",
-                                                                    "existing-name-error":  "A field with that name already exists.",
-                                                                    "type":  {
-                                                                                 "name":  "Type",
-                                                                                 "description":  ""
-                                                                             },
-                                                                    "default":  {
-                                                                                    "name":  "Default value",
-                                                                                    "description":  ""
-                                                                                },
-                                                                    "options":  {
-                                                                                    "name":  "Options",
-                                                                                    "description":  "Allows you to auto-complete using predefined values for the field."
-                                                                                },
-                                                                    "rich-text":  {
-                                                                                      "name":  "Enable rich text formatting",
-                                                                                      "description":  "For fields with Markdown content."
-                                                                                  },
-                                                                    "create":  "Create field"
-                                                                }
-                                                 },
-                                       "input":  {
-                                                     "cancel":  "Cancel"
-                                                 },
-                                       "confirm":  {
-                                                       "delete":  "Delete",
-                                                       "cancel":  "Cancel"
-                                                   }
-                                   },
-                        "views":  {
-                                      "developer":  {
-                                                        "name":  "Developer"
-                                                    },
-                                      "table":  {
-                                                    "name":  "Table",
-                                                    "hide-fields":  "Hide fields",
-                                                    "rename-field":  "Rename field",
-                                                    "rename":  "Rename"
-                                                },
-                                      "board":  {
-                                                    "name":  "Board",
-                                                    "no-status":  "No status",
-                                                    "fields":  {
-                                                                   "status":  "Status",
-                                                                   "priority":  "Priority",
-                                                                   "check":  "Check",
-                                                                   "none":  "None"
-                                                               },
-                                                    "unprioritized":  "Unprioritized",
-                                                    "include-fields":  "Include fields",
-                                                    "settings":  {
-                                                                     "name":  "Board settings",
-                                                                     "column-width":  {
-                                                                                          "name":  "Column width",
-                                                                                          "description":  "Width of each column in pixels."
-                                                                                      },
-                                                                     "custom-header":  {
-                                                                                           "name":  "Customize card header",
-                                                                                           "description":  "Use selected field as the header of cards."
-                                                                                       },
-                                                                     "order-sync-field":  {
-                                                                                              "name":  "Sync card order with field",
-                                                                                              "description":  "Field to store the position of cards in the board."
-                                                                                          }
-                                                                 },
-                                                    "note":  {
-                                                                 "add":  "Add note"
-                                                             }
-                                                },
-                                      "calendar":  {
-                                                       "name":  "Calendar",
-                                                       "new-note":  "New note",
-                                                       "no-events":  "No events",
-                                                       "fields":  {
-                                                                      "date":  "Date",
-                                                                      "check":  "Status",
-                                                                      "none":  "None"
-                                                                  },
-                                                       "today":  "Today",
-                                                       "weekday":  "{{value, datetime}}",
-                                                       "date":  "{{value, datetime}}",
-                                                       "interval":  "{{from, datetime}} – {{to, datetime}}{{en_separator}}{{custom_year, datetime}}",
-                                                       "intervals":  {
-                                                                         "year_one":  "Year",
-                                                                         "year_other":  "Years",
-                                                                         "yearWithCount_one":  "{{count}} year",
-                                                                         "yearWithCount_other":  "{{count}} years",
-                                                                         "month_one":  "Month",
-                                                                         "month_other":  "Months",
-                                                                         "monthWithCount_one":  "{{count}} month",
-                                                                         "monthWithCount_other":  "{{count}} months",
-                                                                         "week_one":  "Week",
-                                                                         "week_other":  "Weeks",
-                                                                         "weekWithCount_one":  "{{count}} week",
-                                                                         "weekWithCount_other":  "{{count}} weeks",
-                                                                         "day_one":  "Day",
-                                                                         "day_other":  "Days",
-                                                                         "dayWithCount_one":  "{{count}} day",
-                                                                         "dayWithCount_other":  "{{count}} days",
-                                                                         "2weeks":  "2 Weeks"
-                                                                     },
-                                                       "navigation":  {
-                                                                          "aria-label":  "Calendar Navigation",
-                                                                          "today-tooltip":  "Go to today",
-                                                                          "previous":  "Previous",
-                                                                          "next":  "Next"
-                                                                      },
-                                                       "empty":  {
-                                                                     "no-date-field":  "Select a date field to display events",
-                                                                     "no-events":  "No events for this period"
-                                                                 },
-                                                       "errors":  {
-                                                                      "create-readonly":  "Cannot create events in read-only projects",
-                                                                      "date-required":  "Date field is required to create events"
-                                                                  },
-                                                       "record":  {
-                                                                      "open":  "Open note",
-                                                                      "open-new-tab":  "Open in new tab",
-                                                                      "settings":  "Settings",
-                                                                      "duplicate":  "Duplicate",
-                                                                      "delete":  "Delete",
-                                                                      "color":  "Color"
-                                                                  },
-                                                       "colors":  {
-                                                                      "favorites":  "Favorites",
-                                                                      "all":  "All Colors",
-                                                                      "custom":  "Custom Color",
-                                                                      "invalid":  "Invalid HEX format",
-                                                                      "picker":  "Color Picker",
-                                                                      "quick":  "Quick Colors",
-                                                                      "hex":  "HEX Code"
-                                                                  },
-                                                       "popup":  {
-                                                                     "today":  "Today",
-                                                                     "empty-hint":  "Click button below to create"
-                                                                 },
-                                                       "duplicate":  {
-                                                                         "title":  "Select dates to duplicate",
-                                                                         "selected":  "{{count}} date(s) selected",
-                                                                         "cancel":  "Cancel",
-                                                                         "confirm":  "Duplicate",
-                                                                         "time":  "Time",
-                                                                         "today":  "Today"
-                                                                     },
-                                                       "agenda":  {
-                                                                      "title":  "Agenda",
-                                                                      "empty":  "No events for this day",
-                                                                      "all-day":  "📅 All Day",
-                                                                      "all-day-time":  "All day",
-                                                                      "morning":  "🌅 Morning (before 12:00)",
-                                                                      "afternoon":  "☀️ Afternoon (12:00–18:00)",
-                                                                      "evening":  "🌙 Evening (after 18:00)",
-                                                                      "overdue":  "⛔ Overdue",
-                                                                      "today":  "📅 Today",
-                                                                      "multiday":  "📊 Multi-day",
-                                                                      "upcoming":  "🔮 Upcoming",
-                                                                      "undated":  "📥 Inbox (No Date)",
-                                                                      "expand":  "Expand agenda",
-                                                                      "collapse":  "Collapse agenda",
-                                                                      "add-note":  "Add",
-                                                                      "today-btn":  "Today",
-                                                                      "custom":  {
-                                                                                     "add-list":  "Add list",
-                                                                                     "edit-list":  "Edit list",
-                                                                                     "delete-list":  "Delete list",
-                                                                                     "empty-list":  "No records match filters",
-                                                                                     "list-editor":  {
-                                                                                                         "title-new":  "New List",
-                                                                                                         "title-edit":  "Edit List",
-                                                                                                         "name-label":  "List Name",
-                                                                                                         "name-placeholder":  "e.g., Urgent Tasks",
-                                                                                                         "name-required":  "Name is required",
-                                                                                                         "name-exists":  "Name already exists",
-                                                                                                         "icon-label":  "Icon",
-                                                                                                         "change-icon":  "Change icon...",
-                                                                                                         "color-label":  "List Accent Color (optional)",
-                                                                                                         "color-hint":  "Sets the left border color for visual identification",
-                                                                                                         "preview":  "Preview",
-                                                                                                         "filters-label":  "Filters",
-                                                                                                         "filters-hint":  "Date formulas: \u0027today\u0027, \u0027today+1w\u0027, \u0027sow\u0027, \u0027eom\u0027. DQL-compatible: sow/eow/som/eom/soy/eoy. Operators: \u0027Is today\u0027, \u0027Is this week\u0027, \u0027Is overdue\u0027.",
-                                                                                                         "formula-hint":  "Use functions like AND(), OR(), CONTAINS(), IS_TODAY(). See Help for full reference.",
-                                                                                                         "save":  "Save Changes",
-                                                                                                         "create":  "Create List",
-                                                                                                         "cancel":  "Cancel"
-                                                                                                     },
-                                                                                     "filter-editor":  {
-                                                                                                           "add-filter":  "Add filter",
-                                                                                                           "empty":  "No filters — all records will be shown",
-                                                                                                           "value-placeholder":  "Value...",
-                                                                                                           "remove-filter":  "Remove filter",
-                                                                                                           "enable-filter":  "Enable filter",
-                                                                                                           "disable-filter":  "Disable filter",
-                                                                                                           "operators":  {
-                                                                                                                             "is-empty":  "Is empty",
-                                                                                                                             "is_empty":  "Is empty",
-                                                                                                                             "is-not-empty":  "Is not empty",
-                                                                                                                             "is_not_empty":  "Is not empty",
-                                                                                                                             "is":  "Is",
-                                                                                                                             "is-not":  "Is not",
-                                                                                                                             "contains":  "Contains",
-                                                                                                                             "not-contains":  "Does not contain",
-                                                                                                                             "not_contains":  "Does not contain",
-                                                                                                                             "starts-with":  "Starts with",
-                                                                                                                             "ends-with":  "Ends with",
-                                                                                                                             "regex":  "Matches regex",
-                                                                                                                             "eq":  "=",
-                                                                                                                             "neq":  "≠",
-                                                                                                                             "lt":  "\u003c",
-                                                                                                                             "gt":  "\u003e",
-                                                                                                                             "lte":  "≤",
-                                                                                                                             "gte":  "≥",
-                                                                                                                             "equals":  "=",
-                                                                                                                             "not_equals":  "≠",
-                                                                                                                             "greater_than":  "\u003e",
-                                                                                                                             "less_than":  "\u003c",
-                                                                                                                             "greater_or_equal":  "≥",
-                                                                                                                             "less_or_equal":  "≤",
-                                                                                                                             "is-checked":  "Is checked",
-                                                                                                                             "is-not-checked":  "Is not checked",
-                                                                                                                             "is-on":  "Is on",
-                                                                                                                             "is-not-on":  "Is not on",
-                                                                                                                             "is-before":  "Is before",
-                                                                                                                             "is-after":  "Is after",
-                                                                                                                             "is-on-and-before":  "Is on or before",
-                                                                                                                             "is-on-and-after":  "Is on or after",
-                                                                                                                             "is-today":  "Is today",
-                                                                                                                             "is_today":  "Is today",
-                                                                                                                             "is-this-week":  "Is this week",
-                                                                                                                             "is_this_week":  "Is this week",
-                                                                                                                             "is-this-month":  "Is this month",
-                                                                                                                             "is-overdue":  "Is overdue",
-                                                                                                                             "is_overdue":  "Is overdue",
-                                                                                                                             "is-upcoming":  "Is upcoming",
-                                                                                                                             "is_upcoming":  "Is upcoming",
-                                                                                                                             "has-any-of":  "Has any of",
-                                                                                                                             "has-all-of":  "Has all of",
-                                                                                                                             "has-none-of":  "Has none of",
-                                                                                                                             "has-keyword":  "Has keyword"
-                                                                                                                         },
-                                                                                                           "match-label":  "Match",
-                                                                                                           "match-all":  "All of the following",
-                                                                                                           "match-any":  "Any of the following",
-                                                                                                           "field-label":  "Where",
-                                                                                                           "operator-label":  "Operator",
-                                                                                                           "value-label":  "Value",
-                                                                                                           "add-group":  "Add filter group",
-                                                                                                           "remove-group":  "Remove group",
-                                                                                                           "field-placeholder":  "Select field...",
-                                                                                                           "operator-placeholder":  "Select operator...",
-                                                                                                           "filter-group-label":  "Filter Group",
-                                                                                                           "date-suggestions":  "Date Formulas (DQL)",
-                                                                                                           "date-formula-hint":  "Formula: today, sow, eom, today+1w, som-1m",
-                                                                                                           "where-prefix":  "Where",
-                                                                                                           "and-prefix":  "and",
-                                                                                                           "no-value":  "No value"
-                                                                                                       },
-                                                                                     "icon-picker":  {
-                                                                                                         "lucide-tab":  "Icons",
-                                                                                                         "emoji-tab":  "Emoji",
-                                                                                                         "search-placeholder":  "Search..."
-                                                                                                     }
-                                                                                 }
-                                                                  },
-                                                       "heatmap":  {
-                                                                       "less":  "Less",
-                                                                       "more":  "More",
-                                                                       "events":  "events",
-                                                                       "clickToViewMonth":  "Click to view month",
-                                                                       "previousYear":  "Previous year",
-                                                                       "nextYear":  "Next year",
-                                                                       "loading":  "Loading...",
-                                                                       "noData":  "No data"
-                                                                   }
-                                                   },
-                                      "gallery":  {
-                                                      "name":  "Gallery",
-                                                      "fields":  {
-                                                                     "cover":  "Cover",
-                                                                     "none":  "None"
-                                                                 },
-                                                      "fit-style":  {
-                                                                        "fill":  "Fill image",
-                                                                        "fit":  "Fit image"
-                                                                    },
-                                                      "include-fields":  "Include fields",
-                                                      "settings":  {
-                                                                       "name":  "Gallery settings",
-                                                                       "card-width":  {
-                                                                                          "name":  "Card width",
-                                                                                          "description":  "Width of each card in pixels."
-                                                                                      }
-                                                                   },
-                                                      "empty":  "This view is empty."
-                                                  }
-                                  },
-                        "components":  {
-                                           "data-grid":  {
-                                                             "column":  {
-                                                                            "configure":  "Configure field",
-                                                                            "add":  "Add field",
-                                                                            "insert-left":  "Insert left",
-                                                                            "insert-right":  "Insert right",
-                                                                            "rename":  "Rename field",
-                                                                            "pin":  "Pin field",
-                                                                            "unpin":  "Unpin field",
-                                                                            "hide":  "Hide field",
-                                                                            "delete":  "Delete field"
-                                                                        },
-                                                             "row":  {
-                                                                         "add":  "Add note",
-                                                                         "edit":  "Edit note",
-                                                                         "delete":  "Delete note"
-                                                                     },
-                                                             "cell":  {
-                                                                          "clear":  "Clear value"
-                                                                      },
-                                                             "sort":  {
-                                                                          "asc":  "Sort A → Z",
-                                                                          "desc":  "Sort Z → A"
-                                                                      },
-                                                             "sortDate":  {
-                                                                              "asc":  "Sort Old → New",
-                                                                              "desc":  "Sort New → Old"
-                                                                          }
-                                                         },
-                                           "board":  {
-                                                         "column":  {
-                                                                        "add":  {
-                                                                                    "name":  "Add column",
-                                                                                    "placeholder":  "New column",
-                                                                                    "no-status-field":  "Status field required",
-                                                                                    "derived-status-field":  "Current status field is read-only"
-                                                                                },
-                                                                        "rename":  "Rename column",
-                                                                        "delete":  "Delete column",
-                                                                        "expand":  "Expand column",
-                                                                        "collapse":  "Collapse column",
-                                                                        "pin":  "Pin column",
-                                                                        "unpin":  "Unpin column"
-                                                                    }
-                                                     },
-                                           "color":  {
-                                                         "label":  "Color",
-                                                         "where":  "Where",
-                                                         "add":  "Add color"
-                                                     },
-                                           "filter":  {
-                                                          "label":  "Filter",
-                                                          "where":  "Where",
-                                                          "and":  "and",
-                                                          "or":  "or",
-                                                          "add":  "Add condition"
-                                                      },
-                                           "sort":  {
-                                                        "label":  "Sort",
-                                                        "add":  "Add another sort"
-                                                    },
-                                           "tag":  {
-                                                       "edit":  "Edit",
-                                                       "remove":  "Remove"
-                                                   },
-                                           "note":  {
-                                                        "edit":  "Edit note"
-                                                    },
-                                           "multi-text":  {
-                                                              "add":  "Add an option"
-                                                          }
-                                       },
-                        "toolbar":  {
-                                        "view":  {
-                                                     "add":  "Add view"
-                                                 },
-                                        "projects":  {
-                                                         "none":  "No projects",
-                                                         "options":  "More options"
-                                                     },
-                                        "read-only":  "Read-only",
-                                        "read-only-desc":  "You can\u0027t create or edit notes in read-only projects.",
-                                        "collapse":  {
-                                                         "show":  "Show toolbar",
-                                                         "hide":  "Hide toolbar"
-                                                     }
-                                    },
-                        "settings":  {
-                                         "about":  {
-                                                       "title":  "About Projects Plus",
-                                                       "description":  "Enhanced project management for Obsidian with advanced features.",
-                                                       "author":  "Maintainer",
-                                                       "author-name":  "Park Pavel",
-                                                       "original-author":  "Original Author",
-                                                       "original-author-name":  "Marcus Olsson",
-                                                       "version":  "Version",
-                                                       "version-number":  "3.0.5",
-                                                       "credits":  "Credits",
-                                                       "credits-desc":  "This is a community-maintained fork of the original Obsidian Projects plugin by Marcus Olsson.",
-                                                       "support":  "Support",
-                                                       "support-desc":  "If you find this plugin useful, consider supporting the development.",
-                                                       "visit-website":  "Visit Website",
-                                                       "github":  "GitHub",
-                                                       "star-github":  "⭐ Star on GitHub",
-                                                       "original-repo":  "Original Repository",
-                                                       "languages":  "Supported Languages",
-                                                       "languages-desc":  "Available languages: English, Russian, Ukrainian, Chinese (automatic detection based on system language)"
-                                                   },
-                                         "general":  {
-                                                         "size-limit":  {
-                                                                            "name":  "Project size limit",
-                                                                            "desc":  "Avoid accidentally loading too many notes."
-                                                                        },
-                                                         "link-behavior":  {
-                                                                               "name":  "Link behavior",
-                                                                               "desc":  "Determines what happens when you select the link of a note. Press {{modifier}} while selecting link for opposite behavior.",
-                                                                               "options":  {
-                                                                                               "open-editor":  "Open editor",
-                                                                                               "open-note":  "Open note"
-                                                                                           }
-                                                                           },
-                                                         "start-of-week":  {
-                                                                               "name":  "Start week on",
-                                                                               "options":  {
-                                                                                               "sunday":  "Sunday",
-                                                                                               "monday":  "Monday",
-                                                                                               "default":  "Default"
-                                                                                           }
-                                                                           },
-                                                         "mobile-calendar":  {
-                                                                                 "name":  "Mobile calendar view",
-                                                                                 "desc":  "Default calendar view on mobile devices.",
-                                                                                 "options":  {
-                                                                                                 "month":  "Month",
-                                                                                                 "week":  "Week",
-                                                                                                 "day":  "Day"
-                                                                                             }
-                                                                             },
-                                                         "animation-behavior":  {
-                                                                                    "name":  "Animation Behavior",
-                                                                                    "desc":  "Control scrolling animations throughout the plugin",
-                                                                                    "options":  {
-                                                                                                    "smooth":  "Smooth (animated)",
-                                                                                                    "instant":  "Instant (no animation)"
-                                                                                                }
-                                                                                }
-                                                     },
-                                         "front-matter":  {
-                                                              "heading":  "Front matter",
-                                                              "quote-strings":  {
-                                                                                    "name":  "Quote strings",
-                                                                                    "options":  {
-                                                                                                    "plain":  "If needed",
-                                                                                                    "quote-double":  "Always"
-                                                                                                }
-                                                                                }
-                                                          },
-                                         "commands":  {
-                                                          "name":  "Commands",
-                                                          "desc":  "Add commands for your favorite projects and views."
-                                                      },
-                                         "archives":  {
-                                                          "name":  "Archives",
-                                                          "desc":  "Restore or delete your archived projects.",
-                                                          "empty":  "No archived project."
-                                                      }
-                                     },
-                        "errors":  {
-                                       "missingDataview":  {
-                                                               "title":  "Dataview is disabled",
-                                                               "message":  "Enable the Dataview plugin to continue using this project."
-                                                           },
-                                       "boundary":  {
-                                                        "title":  "Something went wrong",
-                                                        "message":  "An error occurred while rendering this component.",
-                                                        "retry":  "Try again",
-                                                        "details":  "Error details"
-                                                    }
-                                   },
-                        "obsidian":  {
-                                         "ribbon-tooltip":  "Open projects plus",
-                                         "hover-link-settings":  "Projects Plus"
-                                     },
-                        "navigation":  {
-                                           "active-project":  "Active project"
-                                       },
-                        "settings-menu":  {
-                                              "title":  "Settings",
-                                              "tabs":  {
-                                                           "projects":  "Projects",
-                                                           "views":  "Views",
-                                                           "filters":  "Filters",
-                                                           "colors":  "Colors",
-                                                           "sort":  "Sort",
-                                                           "view-config":  "View"
-                                                       },
-                                              "done":  "Done",
-                                              "views":  {
-                                                            "title":  "View Management",
-                                                            "show-titles":  "Show view titles",
-                                                            "select-view":  "Select view",
-                                                            "rename":  "Rename",
-                                                            "duplicate":  "Duplicate",
-                                                            "delete":  "Delete",
-                                                            "add-view":  "Add view",
-                                                            "drag-to-reorder":  "Drag to reorder"
-                                                        },
-                                              "view-config":  {
-                                                                  "title":  "View Settings",
-                                                                  "current-view":  "Current view",
-                                                                  "no-view":  "No active view",
-                                                                  "calendar":  {
-                                                                                   "interval":  "Interval",
-                                                                                   "layout":  "Layout",
-                                                                                   "time-format":  "Time format",
-                                                                                   "timezone":  "Timezone",
-                                                                                   "show-agenda":  "Show Agenda",
-                                                                                   "hide-agenda":  "Hide Agenda",
-                                                                                   "timeline":  {
-                                                                                                    "title":  "Timeline Settings",
-                                                                                                    "start-hour":  "Start Hour",
-                                                                                                    "end-hour":  "End Hour",
-                                                                                                    "event-color-field":  "Event Color Field",
-                                                                                                    "show-weekends":  "Show weekends",
-                                                                                                    "show-all-day":  "Show \u0027All day\u0027 section"
-                                                                                                },
-                                                                                   "interval-options":  {
-                                                                                                            "year":  "Year",
-                                                                                                            "day":  "Day",
-                                                                                                            "week":  "Week",
-                                                                                                            "month":  "Month"
-                                                                                                        },
-                                                                                   "layout-options":  {
-                                                                                                          "headers":  "Headers (classic)",
-                                                                                                          "bars":  "Bars (timeline)"
-                                                                                                      }
-                                                                               },
-                                                                  "board":  {
-                                                                                "column-width":  "Column width",
-                                                                                "header-field":  "Card header",
-                                                                                "order-sync-field":  "Order sync field",
-                                                                                "freeze-columns":  "Freeze columns",
-                                                                                "hints":  {
-                                                                                              "column-width":  "Width of each column in pixels",
-                                                                                              "header-field":  "Field for card headers",
-                                                                                              "order-sync-field":  "Number field to store card positions"
-                                                                                          }
-                                                                            },
-                                                                  "gallery":  {
-                                                                                  "card-width":  "Card width",
-                                                                                  "cover-field":  "Cover field",
-                                                                                  "fit-style":  "Fit style",
-                                                                                  "include-fields":  "Include fields",
-                                                                                  "fit-options":  {
-                                                                                                      "fill":  "Fill",
-                                                                                                      "fit":  "Fit"
-                                                                                                  },
-                                                                                  "hints":  {
-                                                                                                "card-width":  "Width of each gallery card in pixels",
-                                                                                                "cover-field":  "Text field with path to image",
-                                                                                                "include-fields":  "Select which fields to show on cards"
-                                                                                            }
-                                                                              },
-                                                                  "table":  {
-                                                                                "hide-fields":  "Hide fields",
-                                                                                "hints":  {
-                                                                                              "hide-fields":  "Select which fields to hide in the table"
-                                                                                          }
-                                                                            },
-                                                                  "none":  "— None —"
-                                                              }
-                                          }
+{
+    "translation": {
+        "data-types": {
+            "string": "Text",
+            "number": "Number",
+            "boolean": "Checkbox",
+            "date": "Date",
+            "unknown": "Unknown data type",
+            "repeated": "Repeated field",
+            "datetime": "Date & time",
+            "list": "List",
+            "tags": "Tags",
+            "aliases": "Aliases"
+        },
+        "datasources": {
+            "folder": "Folder",
+            "tag": "Tag",
+            "dataview": "Dataview"
+        },
+        "commands": {
+            "show-projects": {
+                "name": "Show projects plus"
+            },
+            "create-project": {
+                "name": "Create new project plus"
+            },
+            "create-note": {
+                "name": "Create new note plus"
+            }
+        },
+        "menus": {
+            "project": {
+                "create": {
+                    "title": "Create project in folder"
+                }
+            },
+            "tab-header": {
+                "new-window": {
+                    "title": "Open in new window"
+                }
+            }
+        },
+        "modals": {
+            "project": {
+                "create": {
+                    "short-title": "New project",
+                    "untitled": "Untitled project",
+                    "title": "Create new project",
+                    "cta": "Create project",
+                    "existing-name-error": "A project with that name already exists.",
+                    "empty-name-error": "Project name can't be empty."
+                },
+                "edit": {
+                    "short-title": "Edit project",
+                    "title": "Edit project",
+                    "cta": "Save"
+                },
+                "duplicate": {
+                    "title": "Duplicate project",
+                    "suffix": "Copy"
+                },
+                "archive": {
+                    "short-title": "Archive project",
+                    "title": "Archive project",
+                    "message": "Are you sure you want to archive \"{{project}}\"? You can restore it later in Projects Plus plugin's setting tab.",
+                    "notice": "Project archived! If you are using Projects across multiple devices and syncing between them, please upgrade to version 1.17.0 or above for all your devices to avoid losing your archived project configurations.",
+                    "cta": "Archive"
+                },
+                "delete": {
+                    "short-title": "Delete project",
+                    "title": "Delete project",
+                    "message": "Are you sure you want to delete \"{{project}}\"? This cannot be undone.",
+                    "cta": "Delete"
+                },
+                "name": {
+                    "name": "Name",
+                    "description": ""
+                },
+                "default": {
+                    "name": "Set as default",
+                    "description": "Enable to open this project by default."
+                },
+                "datasource": {
+                    "name": "Data source",
+                    "description": "Choose how you want to define which notes to include."
+                },
+                "path": {
+                    "name": "Path",
+                    "description": "Path to the folder you want to manage. Leave empty to use root folder."
+                },
+                "tag": {
+                    "name": "Tag",
+                    "description": "Include all notes that have this tag."
+                },
+                "dataview": {
+                    "name": "Use Dataview",
+                    "description": "Use Dataview to query read-only data instead of using paths.",
+                    "error": {
+                        "title": "Dataview is disabled",
+                        "message": "Enable the Dataview plugin to continue using this project."
                     }
+                },
+                "query": {
+                    "name": "Query",
+                    "description": "Only supports TABLE queries."
+                },
+                "recursive": {
+                    "name": "Include subfolders",
+                    "description": "Manage notes inside subfolders within the project path."
+                },
+                "hierarchy": {
+                    "name": "Tag hierarchy",
+                    "description": "Manage notes containing sub-tags of the project target tag."
+                },
+                "more-settings": {
+                    "name": "More settings",
+                    "description": ""
+                },
+                "templates": {
+                    "name": "Templates",
+                    "description": "Templates to choose from when you create new notes.",
+                    "add": "Add template"
+                },
+                "exclude": {
+                    "name": "Excluded notes",
+                    "description": "Notes to exclude even if they would otherwise be part of the project.",
+                    "add": "Add note"
+                },
+                "newNotesFolder": {
+                    "name": "Location for new notes",
+                    "description": "Folder where all new notes are placed."
+                },
+                "defaultName": {
+                    "name": "Default name for new notes",
+                    "description": "Supports {{date:YYYY-MM-DD}} and {{time:HHmm}} templates variables.",
+                    "invalid": "Contains illegal characters."
+                },
+                "autosave": {
+                    "name": "Autosave",
+                    "description": "Automatically save changes when editing notes. When disabled, a Save button will be shown."
+                },
+                "agenda": {
+                    "name": "Agenda mode",
+                    "description": "Choose how the agenda displays tasks and events.",
+                    "modes": {
+                        "standard": "Standard",
+                        "standard-description": "Uses calendar view filters",
+                        "custom": "Custom",
+                        "custom-description": "User-defined lists with filters"
+                    },
+                    "inherit-filters": {
+                        "name": "Inherit calendar filters",
+                        "description": "Apply the same filters as the calendar view"
+                    }
+                }
+            },
+            "archive": {
+                "delete": {
+                    "short-title": "Delete archive",
+                    "title": "Delete archive",
+                    "message": "Are you sure you want to delete \"{{archive}}\"? This cannot be undone.",
+                    "cta": "Delete"
+                }
+            },
+            "view": {
+                "create": {
+                    "short-title": "New view",
+                    "title": "Add new view",
+                    "optional": "Optional",
+                    "type": {
+                        "name": "Type",
+                        "description": ""
+                    },
+                    "name": {
+                        "name": "Name",
+                        "description": ""
+                    },
+                    "cta": "Add view",
+                    "existing-name-error": "A view with that name already exists."
+                },
+                "duplicate": {
+                    "title": "Duplicate view",
+                    "suffix": "Copy"
+                },
+                "delete": {
+                    "short-title": "Delete view",
+                    "title": "Delete view",
+                    "message": "Are you sure you want to delete the view \"{{view}}\"?",
+                    "cta": "Delete"
+                }
+            },
+            "note": {
+                "create": {
+                    "short-title": "New note",
+                    "title": "Create new note",
+                    "name": {
+                        "name": "Name",
+                        "description": ""
+                    },
+                    "templatePath": {
+                        "name": "Template",
+                        "description": "",
+                        "none": "None"
+                    },
+                    "project": {
+                        "name": "Project",
+                        "description": ""
+                    },
+                    "name-taken-error": "A note with that name already exists.",
+                    "empty-name-error": "Name can't be empty.",
+                    "dot-start-error": "File name must not start with a dot.",
+                    "create": "Create note",
+                    "readonly": {
+                        "title": "Read-only project",
+                        "message": "{{project}} is a read-only project. Select another project to create a note."
+                    },
+                    "untitled": "Untitled"
+                },
+                "edit": {
+                    "short-title": "Edit note",
+                    "title": "Edit note",
+                    "save": "Save",
+                    "confirm": "Confirm",
+                    "saving": "Saving...",
+                    "autosave-enabled": "Autosave enabled",
+                    "save-error": "Failed to save changes",
+                    "no-editable-fields": {
+                        "title": "No editable fields",
+                        "message": "This note has no editable fields."
+                    }
+                }
+            },
+            "field": {
+                "configure": {
+                    "short-title": "Configure field",
+                    "title": "Configure field",
+                    "name": {
+                        "name": "Name",
+                        "description": ""
+                    },
+                    "empty-name-error": "Field name can't be empty.",
+                    "existing-name-error": "Can't rename to a existing field name.",
+                    "type": {
+                        "name": "Type",
+                        "description": "Changing type isn't supported yet."
+                    },
+                    "options": {
+                        "name": "Options",
+                        "description": "Allows you to auto-complete using predefined values for the field."
+                    },
+                    "rich-text": {
+                        "name": "Enable rich text formatting",
+                        "description": "For fields with Markdown content."
+                    },
+                    "time": {
+                        "name": "Enable time",
+                        "description": "Recognize this field as Date & time."
+                    },
+                    "save": "Save"
+                },
+                "create": {
+                    "short-title": "New field",
+                    "title": "Create new field",
+                    "name": {
+                        "name": "Name",
+                        "description": ""
+                    },
+                    "untitled": "New field",
+                    "empty-name-error": "Field name can't be empty.",
+                    "existing-name-error": "A field with that name already exists.",
+                    "type": {
+                        "name": "Type",
+                        "description": ""
+                    },
+                    "default": {
+                        "name": "Default value",
+                        "description": ""
+                    },
+                    "options": {
+                        "name": "Options",
+                        "description": "Allows you to auto-complete using predefined values for the field."
+                    },
+                    "rich-text": {
+                        "name": "Enable rich text formatting",
+                        "description": "For fields with Markdown content."
+                    },
+                    "create": "Create field"
+                }
+            },
+            "input": {
+                "cancel": "Cancel"
+            },
+            "confirm": {
+                "delete": "Delete",
+                "cancel": "Cancel"
+            }
+        },
+        "views": {
+            "developer": {
+                "name": "Developer"
+            },
+            "table": {
+                "name": "Table",
+                "hide-fields": "Hide fields",
+                "rename-field": "Rename field",
+                "rename": "Rename"
+            },
+            "board": {
+                "name": "Board",
+                "no-status": "No status",
+                "fields": {
+                    "status": "Status",
+                    "priority": "Priority",
+                    "check": "Check",
+                    "none": "None"
+                },
+                "unprioritized": "Unprioritized",
+                "include-fields": "Include fields",
+                "settings": {
+                    "name": "Board settings",
+                    "column-width": {
+                        "name": "Column width",
+                        "description": "Width of each column in pixels."
+                    },
+                    "custom-header": {
+                        "name": "Customize card header",
+                        "description": "Use selected field as the header of cards."
+                    },
+                    "order-sync-field": {
+                        "name": "Sync card order with field",
+                        "description": "Field to store the position of cards in the board."
+                    }
+                },
+                "note": {
+                    "add": "Add note"
+                }
+            },
+            "calendar": {
+                "name": "Calendar",
+                "new-note": "New note",
+                "no-events": "No events",
+                "fields": {
+                    "date": "Date",
+                    "check": "Status",
+                    "none": "None"
+                },
+                "today": "Today",
+                "weekday": "{{value, datetime}}",
+                "date": "{{value, datetime}}",
+                "interval": "{{from, datetime}} – {{to, datetime}}{{en_separator}}{{custom_year, datetime}}",
+                "intervals": {
+                    "year_one": "Year",
+                    "year_other": "Years",
+                    "yearWithCount_one": "{{count}} year",
+                    "yearWithCount_other": "{{count}} years",
+                    "month_one": "Month",
+                    "month_other": "Months",
+                    "monthWithCount_one": "{{count}} month",
+                    "monthWithCount_other": "{{count}} months",
+                    "week_one": "Week",
+                    "week_other": "Weeks",
+                    "weekWithCount_one": "{{count}} week",
+                    "weekWithCount_other": "{{count}} weeks",
+                    "day_one": "Day",
+                    "day_other": "Days",
+                    "dayWithCount_one": "{{count}} day",
+                    "dayWithCount_other": "{{count}} days",
+                    "2weeks": "2 Weeks"
+                },
+                "navigation": {
+                    "aria-label": "Calendar Navigation",
+                    "today-tooltip": "Go to today",
+                    "previous": "Previous",
+                    "next": "Next"
+                },
+                "empty": {
+                    "no-date-field": "Select a date field to display events",
+                    "no-events": "No events for this period"
+                },
+                "errors": {
+                    "create-readonly": "Cannot create events in read-only projects",
+                    "date-required": "Date field is required to create events"
+                },
+                "record": {
+                    "open": "Open note",
+                    "open-new-tab": "Open in new tab",
+                    "settings": "Settings",
+                    "duplicate": "Duplicate",
+                    "delete": "Delete",
+                    "color": "Color"
+                },
+                "colors": {
+                    "favorites": "Favorites",
+                    "all": "All Colors",
+                    "custom": "Custom Color",
+                    "invalid": "Invalid HEX format",
+                    "picker": "Color Picker",
+                    "quick": "Quick Colors",
+                    "hex": "HEX Code"
+                },
+                "popup": {
+                    "today": "Today",
+                    "empty-hint": "Click button below to create"
+                },
+                "duplicate": {
+                    "title": "Select dates to duplicate",
+                    "selected": "{{count}} date(s) selected",
+                    "cancel": "Cancel",
+                    "confirm": "Duplicate",
+                    "time": "Time",
+                    "today": "Today"
+                },
+                "agenda": {
+                    "title": "Agenda",
+                    "empty": "No events for this day",
+                    "all-day": "📅 All Day",
+                    "all-day-time": "All day",
+                    "morning": "🌅 Morning (before 12:00)",
+                    "afternoon": "☀️ Afternoon (12:00–18:00)",
+                    "evening": "🌙 Evening (after 18:00)",
+                    "overdue": "⛔ Overdue",
+                    "today": "📅 Today",
+                    "multiday": "📊 Multi-day",
+                    "upcoming": "🔮 Upcoming",
+                    "undated": "📥 Inbox (No Date)",
+                    "expand": "Expand agenda",
+                    "collapse": "Collapse agenda",
+                    "add-note": "Add",
+                    "today-btn": "Today",
+                    "custom": {
+                        "add-list": "Add list",
+                        "edit-list": "Edit list",
+                        "delete-list": "Delete list",
+                        "empty-list": "No records match filters",
+                        "list-editor": {
+                            "title-new": "New List",
+                            "title-edit": "Edit List",
+                            "name-label": "List Name",
+                            "name-placeholder": "e.g., Urgent Tasks",
+                            "name-required": "Name is required",
+                            "name-exists": "Name already exists",
+                            "icon-label": "Icon",
+                            "change-icon": "Change icon...",
+                            "color-label": "List Accent Color (optional)",
+                            "color-hint": "Sets the left border color for visual identification",
+                            "preview": "Preview",
+                            "filters-label": "Filters",
+                            "filters-hint": "Date formulas: 'today', 'today+1w', 'sow', 'eom'. DQL-compatible: sow/eow/som/eom/soy/eoy. Operators: 'Is today', 'Is this week', 'Is overdue'.",
+                            "formula-hint": "Use functions like AND(), OR(), CONTAINS(), IS_TODAY(). See Help for full reference.",
+                            "save": "Save Changes",
+                            "create": "Create List",
+                            "cancel": "Cancel"
+                        },
+                        "filter-editor": {
+                            "add-filter": "Add filter",
+                            "empty": "No filters — all records will be shown",
+                            "value-placeholder": "Value...",
+                            "remove-filter": "Remove filter",
+                            "enable-filter": "Enable filter",
+                            "disable-filter": "Disable filter",
+                            "operators": {
+                                "is-empty": "Is empty",
+                                "is_empty": "Is empty",
+                                "is-not-empty": "Is not empty",
+                                "is_not_empty": "Is not empty",
+                                "is": "Is",
+                                "is-not": "Is not",
+                                "contains": "Contains",
+                                "not-contains": "Does not contain",
+                                "not_contains": "Does not contain",
+                                "starts-with": "Starts with",
+                                "ends-with": "Ends with",
+                                "regex": "Matches regex",
+                                "eq": "=",
+                                "neq": "≠",
+                                "lt": "<",
+                                "gt": ">",
+                                "lte": "≤",
+                                "gte": "≥",
+                                "equals": "=",
+                                "not_equals": "≠",
+                                "greater_than": ">",
+                                "less_than": "<",
+                                "greater_or_equal": "≥",
+                                "less_or_equal": "≤",
+                                "is-checked": "Is checked",
+                                "is-not-checked": "Is not checked",
+                                "is-on": "Is on",
+                                "is-not-on": "Is not on",
+                                "is-before": "Is before",
+                                "is-after": "Is after",
+                                "is-on-and-before": "Is on or before",
+                                "is-on-and-after": "Is on or after",
+                                "is-today": "Is today",
+                                "is_today": "Is today",
+                                "is-this-week": "Is this week",
+                                "is_this_week": "Is this week",
+                                "is-this-month": "Is this month",
+                                "is-overdue": "Is overdue",
+                                "is_overdue": "Is overdue",
+                                "is-upcoming": "Is upcoming",
+                                "is_upcoming": "Is upcoming",
+                                "has-any-of": "Has any of",
+                                "has-all-of": "Has all of",
+                                "has-none-of": "Has none of",
+                                "has-keyword": "Has keyword"
+                            },
+                            "match-label": "Match",
+                            "match-all": "All of the following",
+                            "match-any": "Any of the following",
+                            "field-label": "Where",
+                            "operator-label": "Operator",
+                            "value-label": "Value",
+                            "add-group": "Add filter group",
+                            "remove-group": "Remove group",
+                            "field-placeholder": "Select field...",
+                            "operator-placeholder": "Select operator...",
+                            "filter-group-label": "Filter Group",
+                            "date-suggestions": "Date Formulas (DQL)",
+                            "date-formula-hint": "Formula: today, sow, eom, today+1w, som-1m",
+                            "where-prefix": "Where",
+                            "and-prefix": "and",
+                            "no-value": "No value"
+                        },
+                        "icon-picker": {
+                            "lucide-tab": "Icons",
+                            "emoji-tab": "Emoji",
+                            "search-placeholder": "Search..."
+                        },
+                        "no-lists": "No custom lists",
+                        "create-list": "Create list"
+                    }
+                },
+                "heatmap": {
+                    "less": "Less",
+                    "more": "More",
+                    "events": "events",
+                    "clickToViewMonth": "Click to view month",
+                    "previousYear": "Previous year",
+                    "nextYear": "Next year",
+                    "loading": "Loading...",
+                    "noData": "No data"
+                }
+            },
+            "gallery": {
+                "name": "Gallery",
+                "fields": {
+                    "cover": "Cover",
+                    "none": "None"
+                },
+                "fit-style": {
+                    "fill": "Fill image",
+                    "fit": "Fit image"
+                },
+                "include-fields": "Include fields",
+                "settings": {
+                    "name": "Gallery settings",
+                    "card-width": {
+                        "name": "Card width",
+                        "description": "Width of each card in pixels."
+                    }
+                },
+                "empty": "This view is empty."
+            }
+        },
+        "components": {
+            "data-grid": {
+                "column": {
+                    "configure": "Configure field",
+                    "add": "Add field",
+                    "insert-left": "Insert left",
+                    "insert-right": "Insert right",
+                    "rename": "Rename field",
+                    "pin": "Pin field",
+                    "unpin": "Unpin field",
+                    "hide": "Hide field",
+                    "delete": "Delete field"
+                },
+                "row": {
+                    "add": "Add note",
+                    "edit": "Edit note",
+                    "delete": "Delete note"
+                },
+                "cell": {
+                    "clear": "Clear value"
+                },
+                "sort": {
+                    "asc": "Sort A → Z",
+                    "desc": "Sort Z → A"
+                },
+                "sortDate": {
+                    "asc": "Sort Old → New",
+                    "desc": "Sort New → Old"
+                }
+            },
+            "board": {
+                "column": {
+                    "add": {
+                        "name": "Add column",
+                        "placeholder": "New column",
+                        "no-status-field": "Status field required",
+                        "derived-status-field": "Current status field is read-only"
+                    },
+                    "rename": "Rename column",
+                    "delete": "Delete column",
+                    "expand": "Expand column",
+                    "collapse": "Collapse column",
+                    "pin": "Pin column",
+                    "unpin": "Unpin column"
+                }
+            },
+            "color": {
+                "label": "Color",
+                "where": "Where",
+                "add": "Add color",
+                "add-to-favorites": "Add to favorites",
+                "apply-color": "Apply color",
+                "add-rule": "Add color rule",
+                "title": "Color rules",
+                "empty-hint": "No rules"
+            },
+            "filter": {
+                "label": "Filter",
+                "where": "Where",
+                "and": "and",
+                "or": "or",
+                "add": "Add condition",
+                "add-condition": "Add condition",
+                "conjunction-or": "OR",
+                "conjunction-and": "AND",
+                "empty-hint": "No filter conditions"
+            },
+            "sort": {
+                "label": "Sort",
+                "add": "Add another sort",
+                "empty-hint": "No sort criteria set"
+            },
+            "tag": {
+                "edit": "Edit",
+                "remove": "Remove"
+            },
+            "note": {
+                "edit": "Edit note"
+            },
+            "multi-text": {
+                "add": "Add an option"
+            }
+        },
+        "toolbar": {
+            "view": {
+                "add": "Add view"
+            },
+            "projects": {
+                "none": "No projects",
+                "options": "More options"
+            },
+            "read-only": "Read-only",
+            "read-only-desc": "You can't create or edit notes in read-only projects.",
+            "collapse": {
+                "show": "Show toolbar",
+                "hide": "Hide toolbar"
+            }
+        },
+        "settings": {
+            "about": {
+                "title": "About Projects Plus",
+                "description": "Enhanced project management for Obsidian with advanced features.",
+                "author": "Maintainer",
+                "author-name": "Park Pavel",
+                "original-author": "Original Author",
+                "original-author-name": "Marcus Olsson",
+                "version": "Version",
+                "version-number": "3.0.5",
+                "credits": "Credits",
+                "credits-desc": "This is a community-maintained fork of the original Obsidian Projects plugin by Marcus Olsson.",
+                "support": "Support",
+                "support-desc": "If you find this plugin useful, consider supporting the development.",
+                "visit-website": "Visit Website",
+                "github": "GitHub",
+                "star-github": "⭐ Star on GitHub",
+                "original-repo": "Original Repository",
+                "languages": "Supported Languages",
+                "languages-desc": "Available languages: English, Russian, Ukrainian, Chinese (automatic detection based on system language)"
+            },
+            "general": {
+                "size-limit": {
+                    "name": "Project size limit",
+                    "desc": "Avoid accidentally loading too many notes."
+                },
+                "link-behavior": {
+                    "name": "Link behavior",
+                    "desc": "Determines what happens when you select the link of a note. Press {{modifier}} while selecting link for opposite behavior.",
+                    "options": {
+                        "open-editor": "Open editor",
+                        "open-note": "Open note"
+                    }
+                },
+                "start-of-week": {
+                    "name": "Start week on",
+                    "options": {
+                        "sunday": "Sunday",
+                        "monday": "Monday",
+                        "default": "Default"
+                    }
+                },
+                "mobile-calendar": {
+                    "name": "Mobile calendar view",
+                    "desc": "Default calendar view on mobile devices.",
+                    "options": {
+                        "month": "Month",
+                        "week": "Week",
+                        "day": "Day"
+                    }
+                },
+                "animation-behavior": {
+                    "name": "Animation Behavior",
+                    "desc": "Control scrolling animations throughout the plugin",
+                    "options": {
+                        "smooth": "Smooth (animated)",
+                        "instant": "Instant (no animation)"
+                    }
+                }
+            },
+            "front-matter": {
+                "heading": "Front matter",
+                "quote-strings": {
+                    "name": "Quote strings",
+                    "options": {
+                        "plain": "If needed",
+                        "quote-double": "Always"
+                    }
+                }
+            },
+            "commands": {
+                "name": "Commands",
+                "desc": "Add commands for your favorite projects and views."
+            },
+            "archives": {
+                "name": "Archives",
+                "desc": "Restore or delete your archived projects.",
+                "empty": "No archived project."
+            }
+        },
+        "errors": {
+            "missingDataview": {
+                "title": "Dataview is disabled",
+                "message": "Enable the Dataview plugin to continue using this project."
+            },
+            "boundary": {
+                "title": "Something went wrong",
+                "message": "An error occurred while rendering this component.",
+                "retry": "Try again",
+                "details": "Error details"
+            }
+        },
+        "obsidian": {
+            "ribbon-tooltip": "Open projects plus",
+            "hover-link-settings": "Projects Plus"
+        },
+        "navigation": {
+            "active-project": "Active project"
+        },
+        "settings-menu": {
+            "title": "Settings",
+            "tabs": {
+                "projects": "Projects",
+                "views": "Views",
+                "filters": "Filters",
+                "colors": "Colors",
+                "sort": "Sort",
+                "view-config": "View"
+            },
+            "done": "Done",
+            "views": {
+                "title": "View Management",
+                "show-titles": "Show view titles",
+                "select-view": "Select view",
+                "rename": "Rename",
+                "duplicate": "Duplicate",
+                "delete": "Delete",
+                "add-view": "Add view",
+                "drag-to-reorder": "Drag to reorder"
+            },
+            "view-config": {
+                "title": "View Settings",
+                "current-view": "Current view",
+                "no-view": "No active view",
+                "calendar": {
+                    "interval": "Interval",
+                    "layout": "Layout",
+                    "time-format": "Time format",
+                    "timezone": "Timezone",
+                    "show-agenda": "Show Agenda",
+                    "hide-agenda": "Hide Agenda",
+                    "timeline": {
+                        "title": "Timeline Settings",
+                        "start-hour": "Start Hour",
+                        "end-hour": "End Hour",
+                        "event-color-field": "Event Color Field",
+                        "show-weekends": "Show weekends",
+                        "show-all-day": "Show 'All day' section"
+                    },
+                    "interval-options": {
+                        "year": "Year",
+                        "day": "Day",
+                        "week": "Week",
+                        "month": "Month"
+                    },
+                    "layout-options": {
+                        "headers": "Headers (classic)",
+                        "bars": "Bars (timeline)"
+                    }
+                },
+                "board": {
+                    "column-width": "Column width",
+                    "header-field": "Card header",
+                    "order-sync-field": "Order sync field",
+                    "freeze-columns": "Freeze columns",
+                    "hints": {
+                        "column-width": "Width of each column in pixels",
+                        "header-field": "Field for card headers",
+                        "order-sync-field": "Number field to store card positions"
+                    }
+                },
+                "gallery": {
+                    "card-width": "Card width",
+                    "cover-field": "Cover field",
+                    "fit-style": "Fit style",
+                    "include-fields": "Include fields",
+                    "fit-options": {
+                        "fill": "Fill",
+                        "fit": "Fit"
+                    },
+                    "hints": {
+                        "card-width": "Width of each gallery card in pixels",
+                        "cover-field": "Text field with path to image",
+                        "include-fields": "Select which fields to show on cards"
+                    }
+                },
+                "table": {
+                    "hide-fields": "Hide fields",
+                    "hints": {
+                        "hide-fields": "Select which fields to hide in the table"
+                    }
+                },
+                "none": "— None —"
+            }
+        },
+        "common": {
+            "yesterday": "Yesterday",
+            "tomorrow": "Tomorrow",
+            "close": "Close",
+            "total": "Total",
+            "open-in-new-window": "Ctrl+Click: open in new window",
+            "save": "Save",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "menu": "Menu",
+            "rename": "Rename",
+            "open-note": "Open note",
+            "select-color": "Select color",
+            "value-placeholder": "Value...",
+            "select-date": "Select date",
+            "view-switcher": "View switcher",
+            "edit-project": "Edit project",
+            "delete-project": "Delete project",
+            "select-project": "Select project",
+            "syntax-help": "Syntax help",
+            "date-placeholder": "YYYY-MM-DD",
+            "datetime-placeholder": "YYYY-MM-DD HH:MM",
+            "field": "Field",
+            "projects": "Projects",
+            "create-project": "Create project",
+            "select-date-time": "Select date and time"
+        }
+    }
 }

@@ -160,7 +160,7 @@
   
   // Date badge
   $: dateBadge = isToday 
-    ? ($i18n.t('views.calendar.popup.today') ?? 'Сегодня')
+    ? ($i18n.t('views.calendar.popup.today'))
     : '';
 
   // ═══════════════════════════════════════════════════════════════
@@ -455,7 +455,7 @@
           <button 
             class="ios-popup-close-btn"
             on:click={closePopup}
-            aria-label="Закрыть"
+            aria-label={$i18n.t('common.close')}
             type="button"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

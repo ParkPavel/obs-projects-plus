@@ -382,10 +382,10 @@
             on:keydown={handleTitleKeydown}
             use:focusOnMount
           />
-          <button class="title-action-btn save" on:click={saveTitle} title="Сохранить">
+          <button class="title-action-btn save" on:click={saveTitle} title={$i18n.t('common.save')}>
             <Icon name="check" size="sm" />
           </button>
-          <button class="title-action-btn cancel" on:click={cancelEditTitle} title="Отмена">
+          <button class="title-action-btn cancel" on:click={cancelEditTitle} title={$i18n.t('common.cancel')}>
             <Icon name="x" size="sm" />
           </button>
         </div>
@@ -394,7 +394,7 @@
           <button 
             class="note-title-link"
             on:click={() => onOpenNote?.()}
-            title="Открыть заметку"
+            title={$i18n.t('common.open-note')}
             disabled={!onOpenNote}
           >
             <Icon name="file-text" size="sm" />
@@ -404,7 +404,7 @@
             {/if}
           </button>
           {#if onRenameNote}
-            <button class="title-action-btn edit" on:click={startEditTitle} title="Переименовать">
+            <button class="title-action-btn edit" on:click={startEditTitle} title={$i18n.t('common.rename')}>
               <Icon name="pencil" size="sm" />
             </button>
           {/if}

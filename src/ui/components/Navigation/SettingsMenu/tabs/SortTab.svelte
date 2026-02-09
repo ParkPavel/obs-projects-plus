@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
+  import { i18n } from "../../../../../lib/stores/i18n";
   import type {
     SortDefinition,
     SortingCriteria,
@@ -173,11 +174,11 @@
 
 <div class="section">
   <div class="section-header">
-    <span class="section-title">Сортировка</span>
+    <span class="section-title">{$i18n.t('components.sort.label')}</span>
   </div>
 
   {#if local.criteria.length === 0}
-    <p class="empty-hint">Критерии не заданы</p>
+    <p class="empty-hint">{$i18n.t('components.sort.empty-hint')}</p>
   {:else}
     <div class="list">
       {#each local.criteria as criterion, index}
@@ -213,7 +214,7 @@
 
           <!-- Delete -->
           <button class="row-btn row-delete" type="button"
-            on:click|stopPropagation={() => removeCriteria(index)} title="Удалить">
+            on:click|stopPropagation={() => removeCriteria(index)} title={$i18n.t('common.delete')}>
             <Icon name="trash-2" size="sm" />
           </button>
         </div>

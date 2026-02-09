@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
+  import { i18n } from "../../../../../lib/stores/i18n";
   import type {
     ColorFilterDefinition,
     ColorRule,
@@ -226,11 +227,11 @@
 
 <div class="section">
   <div class="section-header">
-    <span class="section-title">Цветовые правила</span>
+    <span class="section-title">{$i18n.t('components.color.title')}</span>
   </div>
 
   {#if local.conditions.length === 0}
-    <p class="empty-hint">Нет правил</p>
+    <p class="empty-hint">{$i18n.t('components.color.empty-hint')}</p>
   {:else}
     <div class="list">
       {#each local.conditions as rule, index}
@@ -251,7 +252,7 @@
 
           <!-- Color swatch with picker -->
           <label class="color-swatch" style="--swatch-color: {rule.color};"
-            title="Выбрать цвет">
+            title={$i18n.t('common.select-color')}>
             <input
               type="color"
               class="color-native"
@@ -264,7 +265,7 @@
           <button class="chip chip--field" type="button"
             on:click={(e) => openFieldPop(index, e.currentTarget)}>
             <span class="chip-icon"><Icon name={getFieldIcon(fieldType)} size="sm" /></span>
-            <span class="chip-label">{cond.field || 'Поле'}</span>
+            <span class="chip-label">{cond.field || $i18n.t('common.field')}</span>
             <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
           </button>
 
@@ -283,7 +284,7 @@
                 on:input={(e) => updateNestedCondition(index, { value: inputVal(e) })}
                 on:focus={(e) => openValPop(index, e.currentTarget)}
                 on:blur={() => setTimeout(destroyPopover, 150)}
-                placeholder="Значение..." />
+                placeholder={$i18n.t('common.value-placeholder')} />
             {:else}
               <span class="no-value">—</span>
             {/if}
@@ -291,7 +292,7 @@
 
           <!-- Delete -->
           <button class="row-btn row-delete" type="button"
-            on:click|stopPropagation={() => removeRule(index)} title="Удалить">
+            on:click|stopPropagation={() => removeRule(index)} title={$i18n.t('common.delete')}>
             <Icon name="trash-2" size="sm" />
           </button>
         </div>
@@ -301,7 +302,7 @@
 
   <button class="add-btn" type="button" on:click={addRule}>
     <Icon name="plus" size="sm" />
-    <span>Добавить правило</span>
+    <span>{$i18n.t('components.color.add-rule')}</span>
   </button>
 </div>
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
+  import { i18n } from "../../../../../lib/stores/i18n";
   import type {
     FilterCondition,
     FilterDefinition,
@@ -223,16 +224,16 @@
 
 <div class="section">
   <div class="section-header">
-    <span class="section-title">Фильтры</span>
+    <span class="section-title">{$i18n.t('components.filter.label')}</span>
     {#if local.conditions.length > 0}
       <button class="conj-chip" on:click={toggleConjunction} type="button">
-        {local.conjunction === "or" ? "ИЛИ" : "И"}
+        {local.conjunction === "or" ? $i18n.t('components.filter.conjunction-or') : $i18n.t('components.filter.conjunction-and')}
       </button>
     {/if}
   </div>
 
   {#if local.conditions.length === 0}
-    <p class="empty-hint">Нет условий фильтрации</p>
+    <p class="empty-hint">{$i18n.t('components.filter.empty-hint')}</p>
   {:else}
     <div class="list">
       {#each local.conditions as condition, index}
@@ -254,7 +255,7 @@
           <button class="chip chip--field" type="button"
             on:click={(e) => openFieldPop(index, e.currentTarget)}>
             <span class="chip-icon"><Icon name={getFieldIcon(fieldType)} size="sm" /></span>
-            <span class="chip-label">{condition.field || 'Поле'}</span>
+            <span class="chip-label">{condition.field || $i18n.t('common.field')}</span>
             <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
           </button>
 
@@ -273,7 +274,7 @@
                 on:input={(e) => updateCondition(index, { value: inputVal(e) })}
                 on:focus={(e) => openValPop(index, e.currentTarget)}
                 on:blur={() => setTimeout(destroyPopover, 150)}
-                placeholder="Значение..." />
+                placeholder={$i18n.t('common.value-placeholder')} />
             {:else}
               <span class="no-value">—</span>
             {/if}
@@ -281,7 +282,7 @@
 
           <!-- Delete -->
           <button class="row-btn row-delete" type="button"
-            on:click|stopPropagation={() => removeCondition(index)} title="Удалить">
+            on:click|stopPropagation={() => removeCondition(index)} title={$i18n.t('common.delete')}>
             <Icon name="trash-2" size="sm" />
           </button>
         </div>
@@ -291,7 +292,7 @@
 
   <button class="add-btn" type="button" on:click={addCondition}>
     <Icon name="plus" size="sm" />
-    <span>Добавить условие</span>
+    <span>{$i18n.t('components.filter.add-condition')}</span>
   </button>
 </div>
 

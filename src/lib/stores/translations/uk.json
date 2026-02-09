@@ -526,7 +526,9 @@
                             "lucide-tab": "Іконки",
                             "emoji-tab": "Емодзі",
                             "search-placeholder": "Пошук..."
-                        }
+                        },
+                        "no-lists": "Немає користувацьких списків",
+                        "create-list": "Створити список"
                     }
                 },
                 "heatmap": {
@@ -610,18 +612,28 @@
             "color": {
                 "label": "Колір",
                 "where": "Де",
-                "add": "Додати колір"
+                "add": "Додати колір",
+                "add-to-favorites": "Додати в обране",
+                "apply-color": "Застосувати колір",
+                "add-rule": "одати правило",
+                "title": "олірні правила",
+                "empty-hint": "емає правил"
             },
             "filter": {
                 "label": "Фільтр",
                 "where": "Де",
                 "and": "і",
                 "or": "або",
-                "add": "Додати умову"
+                "add": "Додати умову",
+                "add-condition": "одати умову",
+                "conjunction-or": "",
+                "conjunction-and": "Т",
+                "empty-hint": "емає умов фільтрації"
             },
             "sort": {
                 "label": "Сортувати",
-                "add": "Додати інше сортування"
+                "add": "Додати інше сортування",
+                "empty-hint": "Критерії не задані"
             },
             "tag": {
                 "edit": "Редагувати",
@@ -833,6 +845,33 @@
                 },
                 "none": "— Немає —"
             }
+        },
+        "common": {
+            "yesterday": "Вчора",
+            "tomorrow": "Завтра",
+            "close": "Закрити",
+            "total": "Всього",
+            "open-in-new-window": "Ctrl+Click: відкрити в новому вікні",
+            "save": "берегти",
+            "cancel": "Скасувати",
+            "delete": "идалити",
+            "menu": "еню",
+            "rename": "ерейменувати",
+            "open-note": "ідкрити нотатку",
+            "select-color": "брати колір",
+            "value-placeholder": "начення...",
+            "select-date": "беріть дату",
+            "view-switcher": "еремикання видів",
+            "edit-project": "едагувати проект",
+            "delete-project": "идалити проект",
+            "select-project": "ибір проекту",
+            "syntax-help": "овідка з синтаксису",
+            "date-placeholder": "--",
+            "datetime-placeholder": "-- :ХХ",
+            "field": "оле",
+            "projects": "роекти",
+            "create-project": "Створити проект",
+            "select-date-time": "беріть дату і час"
         }
     }
 }

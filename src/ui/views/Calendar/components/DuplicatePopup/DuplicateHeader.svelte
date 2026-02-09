@@ -32,16 +32,16 @@
     <button 
       class="today-button action-button" 
       on:click={handleToday}
-      aria-label={$i18n.t("views.calendar.duplicate.today") || "Сегодня"}
-      title={$i18n.t("views.calendar.duplicate.today") || "Сегодня"}
+      aria-label={$i18n.t("views.calendar.duplicate.today")}
+      title={$i18n.t("views.calendar.duplicate.today")}
     >
       <Icon name="calendar-days" size="sm" />
-      <span class="button-text">{$i18n.t("views.calendar.duplicate.today") || "Сегодня"}</span>
+      <span class="button-text">{$i18n.t("views.calendar.duplicate.today")}</span>
     </button>
   </div>
   
   <div class="header-center">
-    <h3>{$i18n.t("views.calendar.duplicate.title") || "Выберите даты для дублирования"}</h3>
+    <h3>{$i18n.t("views.calendar.duplicate.title")}</h3>
     
     {#if selectedCount > 0}
       <div class="status-info">
@@ -58,18 +58,18 @@
       class="confirm-button action-button" 
       on:click={handleConfirm}
       disabled={!canConfirm}
-      aria-label={$i18n.t("views.calendar.duplicate.confirm") || "Дублировать"}
-      title={$i18n.t("views.calendar.duplicate.confirm") || "Дублировать"}
+      aria-label={$i18n.t("views.calendar.duplicate.confirm")}
+      title={$i18n.t("views.calendar.duplicate.confirm")}
     >
       <Icon name="check" size="sm" />
-      <span class="button-text">{$i18n.t("views.calendar.duplicate.confirm") || "Confirm"}</span>
+      <span class="button-text">{$i18n.t("views.calendar.duplicate.confirm")}</span>
     </button>
     
     <button 
       class="close-button" 
       on:click={handleClose} 
-      aria-label={$i18n.t("views.calendar.duplicate.cancel") || "Закрыть"}
-      title={$i18n.t("views.calendar.duplicate.cancel") || "Закрыть"}
+      aria-label={$i18n.t('common.close')}
+      title={$i18n.t('common.close')}
     >
       <Icon name="x" size="md" />
     </button>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import dayjs from "dayjs";
+  import { i18n } from '../../lib/stores/i18n';
 
   /**
    * Specifies the date value.
@@ -46,8 +47,8 @@
   class:embed
   value={value ? dayjs(value).format("YYYY-MM-DD") : null}
   max="9999-12-31"
-  placeholder="ГГГГ-ММ-ДД"
-  title="Выберите дату"
+  placeholder={$i18n.t('common.date-placeholder')}
+  title={$i18n.t('common.select-date')}
   on:change={handleChange}
   on:input={handleInput}
   on:blur

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Menu } from "obsidian";
   import { Icon, IconButton } from "obsidian-svelte";
+  import { i18n } from "src/lib/stores/i18n";
   import { fieldIcon, fieldDisplayText } from "src/ui/views/helpers";
   import type { GridColDef } from "../dataGrid";
   import { TextLabel } from "../GridCell";
@@ -37,7 +38,7 @@
     {#if sortInfo}
       <Icon
         name={sortInfo?.direction === "desc" ? "arrow-down" : "arrow-up"}
-        tooltip={sortInfo?.direction === "desc" ? "Сортировка по убыванию" : "Сортировка по возрастанию"}
+        tooltip={sortInfo?.direction === "desc" ? $i18n.t('components.data-grid.sort.desc') : $i18n.t('components.data-grid.sort.asc')}
       />
     {/if}
 

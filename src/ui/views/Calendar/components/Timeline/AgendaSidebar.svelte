@@ -208,7 +208,10 @@
     return days;
   })();
   
-  $: weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  $: weekDays = (() => {
+    // Generate localized 2-letter weekday names, Monday first (ISO)
+    return Array.from({length: 7}, (_, i) => dayjs().isoWeekday(i + 1).format('dd'));
+  })();
   
   // RESIZE
   function startResize(e: MouseEvent) {
@@ -494,9 +497,9 @@
     const today = dayjs().startOf('day');
     const sel = selectedDate.startOf('day');
     
-    if (sel.isSame(today, 'day')) return 'Сегодня';
-    if (sel.isSame(today.subtract(1, 'day'), 'day')) return 'Вчера';
-    if (sel.isSame(today.add(1, 'day'), 'day')) return 'Завтра';
+    if (sel.isSame(today, 'day')) return $i18n.t('views.calendar.agenda.today-btn');
+    if (sel.isSame(today.subtract(1, 'day'), 'day')) return $i18n.t('common.yesterday');
+    if (sel.isSame(today.add(1, 'day'), 'day')) return $i18n.t('common.tomorrow');
     
     return formatDateForDisplay(selectedDate, project) ?? selectedDate.format('D MMMM YYYY');
   })();
@@ -566,9 +569,9 @@
       
       <div class="stats">
         {#if stats.overdue > 0}
-          <span class="stat stat-overdue" title="Просрочено">{stats.overdue}</span>
+          <span class="stat stat-overdue" title={labels.overdue}>{stats.overdue}</span>
         {/if}
-        <span class="stat stat-total" title="Всего">{stats.total}</span>
+        <span class="stat stat-total" title={$i18n.t('common.total')}>{stats.total}</span>
       </div>
       
       {#if onCreateRecord}
@@ -585,7 +588,23 @@
         <!-- CUSTOM MODE -->
         {#if dndLists.length > 0}
           <div class="custom-lists"
-            use:dndzone={{ items: dndLists, flipDurationMs, type: 'agenda-lists', dropTargetStyle: { outline: 'none' } }}
+            use:dndzone={{
+              items: dndLists,
+              flipDurationMs,
+              type: 'agenda-lists',
+              dropTargetStyle: { outline: 'none' },
+              transformDraggedElement: (el) => {
+                // Collapse the dragged element to header-only height
+                // prevents a tall list from covering the entire viewport on mobile
+                if (el) {
+                  el.style.maxHeight = '3rem';
+                  el.style.overflow = 'hidden';
+                  el.style.opacity = '0.9';
+                  el.style.borderRadius = '0.375rem';
+                  el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                }
+              }
+            }}
             on:consider={handleDndConsider}
             on:finalize={handleDndFinalize}
           >
@@ -604,15 +623,15 @@
           </div>
           <button class="custom-add-btn" on:click={handleAddList}>
             <Icon name="plus" size="sm" />
-            <span>Добавить список</span>
+            <span>{$i18n.t('views.calendar.agenda.custom.add-list')}</span>
           </button>
         {:else}
           <div class="custom-lists">
             <div class="custom-empty">
-              <p>Нет пользовательских списков</p>
+              <p>{$i18n.t('views.calendar.agenda.custom.no-lists')}</p>
               <button class="custom-add-empty" on:click={handleAddList}>
                 <Icon name="plus" size="sm" />
-                <span>Создать список</span>
+                <span>{$i18n.t('views.calendar.agenda.custom.create-list')}</span>
               </button>
             </div>
           </div>
@@ -665,7 +684,7 @@
                         class="event" 
                         style:--color={ev.color || 'var(--text-accent)'}
                         on:click={(e) => handleClick(e, ev.id)}
-                        title="Ctrl+Click: открыть в новом окне"
+                        title={$i18n.t('common.open-in-new-window')}
                       >
                         <span class="ev-dot" />
                         {#if ev.dateStr}
@@ -1211,6 +1230,19 @@
     flex-direction: column;
     gap: var(--ppp-gap-block-md, 0.75rem);
     padding: var(--agenda-gap-lg);
+  }
+
+  /*
+   * svelte-dnd-action: constrain shadow/placeholder height on mobile.
+   * The shadow item is inserted into the flow where the dragged item will land.
+   * Without a constraint the shadow mirrors the full list height and pushes
+   * other lists out of view on small screens.
+   */
+  :global(.custom-lists [data-is-dnd-shadow-item-hint]) {
+    max-height: 3rem !important;
+    overflow: hidden !important;
+    opacity: 0.5 !important;
+    border-radius: 0.375rem !important;
   }
   
   .custom-empty {

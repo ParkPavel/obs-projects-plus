@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import dayjs from "dayjs";
   import { Icon } from "obsidian-svelte";
+  import { i18n } from '../../lib/stores/i18n';
   import { TimePicker } from "src/ui/components/TimePicker";
 
   /**
@@ -66,8 +67,8 @@
     class:embed
     value={value ? dayjs(value).format("YYYY-MM-DDTHH:mm") : null}
     max="9999-12-31T23:59"
-    placeholder="ГГГГ-ММ-ДД ЧЧ:ММ"
-    title="Выберите дату и время"
+    placeholder={$i18n.t('common.datetime-placeholder')}
+    title={$i18n.t('common.select-date-time')}
     on:change={handleChange}
     on:input={handleInput}
     on:blur

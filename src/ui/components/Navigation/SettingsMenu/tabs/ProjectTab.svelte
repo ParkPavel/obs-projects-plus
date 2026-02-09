@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
+  import { i18n } from "../../../../../lib/stores/i18n";
   import type { ProjectDefinition, ProjectId } from "../../../../../settings/settings";
 
   export let projects: ProjectDefinition[] = [];
@@ -25,8 +26,8 @@
 </script>
 
 <div class="section">
-  <div class="header">Проекты</div>
-  <div class="list" role="listbox" aria-label="Выбор проекта">
+  <div class="header">{$i18n.t('common.projects')}</div>
+  <div class="list" role="listbox" aria-label={$i18n.t('common.select-project')}>
     {#each projects as project (project.id)}
       <div class="project-item" class:selected={project.id === projectId}>
         <button
@@ -41,16 +42,16 @@
           <button 
             class="action-btn" 
             on:click={(e) => handleEdit(e, project.id)}
-            title="Редактировать проект"
-            aria-label="Редактировать проект"
+            title={$i18n.t('common.edit-project')}
+            aria-label={$i18n.t('common.edit-project')}
           >
             <Icon name="pencil" size="xs" />
           </button>
           <button 
             class="action-btn danger" 
             on:click={(e) => handleDelete(e, project.id)}
-            title="Удалить проект"
-            aria-label="Удалить проект"
+            title={$i18n.t('common.delete-project')}
+            aria-label={$i18n.t('common.delete-project')}
           >
             <Icon name="trash-2" size="xs" />
           </button>
@@ -59,7 +60,7 @@
     {/each}
   </div>
   <div class="actions">
-    <button class="ghost" on:click={() => dispatch("addProject")}>Создать проект</button>
+    <button class="ghost" on:click={() => dispatch("addProject")}>{$i18n.t('common.create-project')}</button>
   </div>
 </div>
 

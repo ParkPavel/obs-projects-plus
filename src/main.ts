@@ -16,7 +16,7 @@ import { Plugin, TFolder, WorkspaceLeaf, addIcon } from "obsidian";
 import "obsidian-dataview";
 import { createDataRecord, createProject } from "src/lib/dataApi";
 import { api } from "src/lib/stores/api";
-import { i18n } from "src/lib/stores/i18n";
+import { i18n, syncLocale } from "src/lib/stores/i18n";
 import { app, plugin } from "src/lib/stores/obsidian";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
@@ -47,6 +47,9 @@ export default class ProjectsPlusPlugin extends Plugin {
    */
   async onload(): Promise<void> {
     await this.loadSettings();
+
+    // Re-detect locale now that Obsidian app is fully initialized
+    syncLocale();
 
     // Helper function for translation.
     const { t } = get(i18n);

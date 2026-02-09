@@ -526,7 +526,9 @@
                             "lucide-tab": "图标",
                             "emoji-tab": "表情",
                             "search-placeholder": "搜索..."
-                        }
+                        },
+                        "no-lists": "没有自定义列表",
+                        "create-list": "创建列表"
                     }
                 },
                 "heatmap": {
@@ -610,18 +612,28 @@
             "color": {
                 "label": "条件颜色",
                 "where": "当",
-                "add": "添加颜色"
+                "add": "添加颜色",
+                "add-to-favorites": "添加到收藏",
+                "apply-color": "应用颜色",
+                "add-rule": "添加规则",
+                "title": "颜色规则",
+                "empty-hint": "没有规则"
             },
             "filter": {
                 "label": "筛选",
                 "where": "当",
                 "and": "与",
                 "or": "或",
-                "add": "添加筛选条件"
+                "add": "添加筛选条件",
+                "add-condition": "添加条件",
+                "conjunction-or": "或",
+                "conjunction-and": "且",
+                "empty-hint": "没有过滤条件"
             },
             "sort": {
                 "label": "排序",
-                "add": "添加排序条件"
+                "add": "添加排序条件",
+                "empty-hint": "未设置排序条件"
             },
             "tag": {
                 "edit": "编辑",
@@ -833,6 +845,33 @@
                 },
                 "none": "— 无 —"
             }
+        },
+        "common": {
+            "yesterday": "昨天",
+            "tomorrow": "明天",
+            "close": "关闭",
+            "total": "总计",
+            "open-in-new-window": "Ctrl+点击: 在新窗口中打开",
+            "save": "保存",
+            "cancel": "取消",
+            "delete": "删除",
+            "menu": "菜单",
+            "rename": "重命名",
+            "open-note": "打开笔记",
+            "select-color": "选择颜色",
+            "value-placeholder": "值...",
+            "select-date": "选择日期",
+            "view-switcher": "视图切换",
+            "edit-project": "编辑项目",
+            "delete-project": "删除项目",
+            "select-project": "选择项目",
+            "syntax-help": "语法帮助",
+            "date-placeholder": "YYYY-MM-DD",
+            "datetime-placeholder": "YYYY-MM-DD HH:MM",
+            "field": "字段",
+            "projects": "项目",
+            "create-project": "创建项目",
+            "select-date-time": "选择日期和时间"
         }
     }
 }

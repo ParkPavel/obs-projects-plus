@@ -1,6 +1,7 @@
 <script lang="ts">
   import { MarkdownRenderer, Menu } from "obsidian";
   import { app, view } from "src/lib/stores/obsidian";
+  import { i18n } from "src/lib/stores/i18n";
   import { getContext } from "svelte";
   import { TextInput, IconButton } from "obsidian-svelte";
   import { Flair } from "src/ui/components/Flair";
@@ -141,19 +142,19 @@
       <IconButton
         icon={collapse ? "chevrons-left-right" : "chevrons-right-left"}
         size="sm"
-        tooltip={collapse ? "Развернуть" : "Свернуть"}
+        tooltip={collapse ? $i18n.t('components.board.column.expand') : $i18n.t('components.board.column.collapse')}
         onClick={onColumnCollapse}
       />
       <IconButton
         icon={pinned ? "pin-off" : "pin"}
         size="sm"
-        tooltip={pinned ? "Открепить" : "Закрепить"}
+        tooltip={pinned ? $i18n.t('components.board.column.unpin') : $i18n.t('components.board.column.pin')}
         onClick={onColumnPin}
       />
       <IconButton
         icon="more-vertical"
         size="sm"
-        tooltip="Меню"
+        tooltip={$i18n.t('common.menu')}
         onClick={(event) => {
           onColumnMenu().showAtMouseEvent(event);
         }}

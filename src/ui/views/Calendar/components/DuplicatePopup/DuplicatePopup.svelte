@@ -124,11 +124,11 @@
     <div class="duplicate-modal">
       <!-- HEADER: Title + Close button -->
       <header class="modal-header">
-        <h2 class="modal-title">{$i18n.t("views.calendar.duplicate.title") || "Выберите даты для дублирования"}</h2>
+        <h2 class="modal-title">{$i18n.t("views.calendar.duplicate.title")}</h2>
         <button 
           class="close-btn" 
           on:click={handleClose} 
-          aria-label="Закрыть"
+          aria-label={$i18n.t('common.close')}
         >
           ✕
         </button>
@@ -139,9 +139,9 @@
         <button 
           class="toolbar-btn today-btn" 
           on:click={handleScrollToToday}
-          title="Сегодня"
+          title={$i18n.t('views.calendar.duplicate.today')}
         >
-          📅 {$i18n.t("views.calendar.duplicate.today") || "Сегодня"}
+          📅 {$i18n.t("views.calendar.duplicate.today")}
         </button>
         
         <div class="toolbar-status">
