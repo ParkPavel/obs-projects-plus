@@ -4,6 +4,7 @@
     Button,
     Callout,
     FileAutocomplete,
+    Icon,
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
@@ -26,6 +27,7 @@
   import { settings } from "src/lib/stores/settings";
   import { interpolateTemplate } from "src/lib/templates/interpolate";
   import type { ProjectDefinition } from "src/settings/settings";
+  import type { AgendaCustomList } from "src/settings/v3/settings";
 
   export let title: string;
   export let cta: string;
@@ -96,6 +98,120 @@
     }
 
     return "";
+  }
+  
+  // Agenda mode handler (v3.1.0+)
+  function handleAgendaModeChange(mode: string) {
+    const validMode = mode === 'custom' ? 'custom' : 'standard';
+    const currentAgenda = project.agenda ?? { mode: 'standard', standard: { inheritCalendarFilters: true } };
+    project = { 
+      ...project, 
+      agenda: { ...currentAgenda, mode: validMode }
+    };
+  }
+  
+  function handleAgendaInheritFiltersChange(inheritCalendarFilters: boolean) {
+    const currentAgenda = project.agenda ?? { mode: 'standard' };
+    project = { 
+      ...project, 
+      agenda: { 
+        ...currentAgenda, 
+        mode: 'standard',
+        standard: { inheritCalendarFilters }
+      }
+    };
+  }
+  
+  // Custom list management
+  function moveListUp(index: number) {
+    if (index === 0) return;
+    const lists = [...(project.agenda?.custom?.lists ?? [])];
+    [lists[index - 1]!, lists[index]!] = [lists[index]!, lists[index - 1]!];
+    // Update order property - create new objects
+    const updatedLists = lists.map((list, i) => ({
+      ...list,
+      order: i,
+    }));
+    updateCustomLists(updatedLists);
+  }
+  
+  function moveListDown(index: number) {
+    const lists = project.agenda?.custom?.lists ?? [];
+    if (index === lists.length - 1) return;
+    const updated = [...lists];
+    [updated[index + 1]!, updated[index]!] = [updated[index]!, updated[index + 1]!];
+    // Update order property - create new objects
+    const updatedLists = updated.map((list, i) => ({
+      ...list,
+      order: i,
+    }));
+    updateCustomLists(updatedLists);
+  }
+  
+  function removeList(index: number) {
+    const lists = [...(project.agenda?.custom?.lists ?? [])];
+    lists.splice(index, 1);
+    // Update order property - create new objects
+    const updatedLists = lists.map((list, i) => ({
+      ...list,
+      order: i,
+    }));
+    updateCustomLists(updatedLists);
+  }
+  
+  function updateCustomLists(lists: AgendaCustomList[]) {
+    project = {
+      ...project,
+      agenda: {
+        ...project.agenda,
+        mode: 'custom',
+        custom: {
+          ...(project.agenda?.custom ?? {}),
+          lists,
+        },
+      },
+    };
+  }
+  
+  $: customLists = project.agenda?.custom?.lists ?? [];
+  
+  /**
+   * Count filters in an AgendaCustomList (v3.1.0+ compatible)
+   * Supports both legacy format (filters[]) and new format (filterGroup/filterFormula)
+   */
+  function getFilterCount(list: AgendaCustomList): number {
+    // Legacy format migration compatibility
+    // @ts-expect-error: Old format may still exist during migration
+    if (list.filters && Array.isArray(list.filters)) {
+      // @ts-expect-error: Old format compatibility
+      return list.filters.length;
+    }
+    
+    // New v3.1.0 format
+    if (list.filterMode === 'advanced') {
+      // Formula mode: count as 1 filter if formula exists
+      return list.filterFormula && list.filterFormula.trim() ? 1 : 0;
+    }
+    
+    // Visual mode: recursively count filters in group
+    if (list.filterGroup) {
+      return countFiltersInGroup(list.filterGroup);
+    }
+    
+    return 0;
+  }
+  
+  /**
+   * Recursively count filters in a filter group
+   */
+  function countFiltersInGroup(group: any): number {
+    let count = group.filters?.length ?? 0;
+    if (group.groups && Array.isArray(group.groups)) {
+      for (const nestedGroup of group.groups) {
+        count += countFiltersInGroup(nestedGroup);
+      }
+    }
+    return count;
   }
 </script>
 
@@ -339,6 +455,101 @@
           />
         </SettingItem>
 
+        <SettingItem
+          name={$i18n.t("modals.project.autosave.name")}
+          description={$i18n.t("modals.project.autosave.description") ?? ""}
+        >
+          <Switch
+            checked={project.autosave ?? true}
+            on:check={({ detail: autosave }) =>
+              (project = { ...project, autosave })}
+          />
+        </SettingItem>
+
+        <!-- Agenda Mode Settings (v3.1.0+) -->
+        <SettingItem
+          name={$i18n.t("modals.project.agenda.name")}
+          description={$i18n.t("modals.project.agenda.description") ?? ""}
+        >
+          <Select
+            value={project.agenda?.mode ?? "standard"}
+            options={[
+              { label: $i18n.t("modals.project.agenda.modes.standard"), value: "standard" },
+              { label: $i18n.t("modals.project.agenda.modes.custom"), value: "custom" }
+            ]}
+            on:change={({ detail: mode }) => handleAgendaModeChange(mode)}
+          />
+        </SettingItem>
+
+        {#if (project.agenda?.mode ?? 'standard') === 'standard'}
+          <SettingItem
+            name={$i18n.t("modals.project.agenda.inherit-filters.name")}
+            description={$i18n.t("modals.project.agenda.inherit-filters.description") ?? ""}
+          >
+            <Switch
+              checked={project.agenda?.standard?.inheritCalendarFilters ?? true}
+              on:check={({ detail: checked }) => handleAgendaInheritFiltersChange(checked)}
+            />
+          </SettingItem>
+        {:else if (project.agenda?.mode ?? 'standard') === 'custom'}
+          <SettingItem
+            name="Custom Lists"
+            description="Manage your custom agenda lists. Lists are created in the Calendar view."
+          >
+            <div class="custom-lists-preview">
+              {#if customLists.length === 0}
+                <div class="empty-state">
+                  <p>No custom lists yet</p>
+                  <small>Create lists in the Calendar view agenda sidebar</small>
+                </div>
+              {:else}
+                <div class="lists-container">
+                  {#each customLists as list, index (list.id)}
+                    <div class="list-item">
+                      <div class="list-icon">
+                        {#if list.icon.type === 'emoji'}
+                          <span class="emoji">{list.icon.value}</span>
+                        {:else}
+                          <Icon name={list.icon.value} size="sm" />
+                        {/if}
+                      </div>
+                      <div class="list-info">
+                        <div class="list-name">{list.name}</div>
+                        <div class="list-filters">{getFilterCount(list)} filter{getFilterCount(list) !== 1 ? 's' : ''}</div>
+                      </div>
+                      <div class="list-actions">
+                        <button 
+                          class="action-btn" 
+                          on:click={() => moveListUp(index)}
+                          disabled={index === 0}
+                          title="Move up"
+                        >
+                          <Icon name="chevron-up" size="xs" />
+                        </button>
+                        <button 
+                          class="action-btn" 
+                          on:click={() => moveListDown(index)}
+                          disabled={index === customLists.length - 1}
+                          title="Move down"
+                        >
+                          <Icon name="chevron-down" size="xs" />
+                        </button>
+                        <button 
+                          class="action-btn delete-btn" 
+                          on:click={() => removeList(index)}
+                          title="Delete"
+                        >
+                          <Icon name="trash-2" size="xs" />
+                        </button>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          </SettingItem>
+        {/if}
+
         <DateFormatSelector
           dateFormat={project.dateFormat}
           onChange={(newDateFormat) => {
@@ -375,6 +586,113 @@
     font-weight: var(--font-semibold);
   }
   .error {
+    color: var(--text-error);
+  }
+  
+  /* Custom Lists Preview */
+  .custom-lists-preview {
+    width: 100%;
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-primary);
+  }
+  
+  .empty-state {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  
+  .empty-state p {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .empty-state small {
+    color: var(--text-faint);
+  }
+  
+  .lists-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+  
+  .list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+  }
+  
+  .list-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+  }
+  
+  .list-icon .emoji {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+  
+  .list-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .list-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .list-filters {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  
+  .list-actions {
+    display: flex;
+    gap: 0.25rem;
+  }
+  
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-s);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .action-btn:hover:not(:disabled) {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+  
+  .action-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  
+  .action-btn.delete-btn:hover:not(:disabled) {
     color: var(--text-error);
   }
 </style>

@@ -263,7 +263,8 @@
                   : `${newName}.md`;
                 await $app.fileManager.renameFile(file, newPath);
               }
-            }
+            },
+            project.autosave ?? true
           ).open();
         }}
         onRowDelete={(id) => api.deleteRecord(id)}

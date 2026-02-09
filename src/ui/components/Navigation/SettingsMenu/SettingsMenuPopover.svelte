@@ -84,6 +84,8 @@
   }
 
   function handleOutside(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (target?.closest?.("[data-settings-dropdown]")) return;
     const path = event.composedPath();
     if (popoverElement && !path.includes(popoverElement)) {
       // defer close to allow click handlers to finish

@@ -61,7 +61,9 @@
         } catch (e) {
           console.error('Failed to rename note', e);
         }
-      }
+      },
+      // v3.0.4: Autosave setting from project
+      project.autosave ?? true
     ).open();
   }
 </script>

@@ -24,7 +24,7 @@ function createDataFrame() {
     addRecord(record: DataRecord) {
       update((state) =>
         produce(state, (draft) => {
-          // @ts-ignore
+          // @ts-ignore: immer WritableDraft<DataRecord> is not assignable to readonly DataRecord
           draft.records.push(record);
         })
       );
@@ -32,11 +32,11 @@ function createDataFrame() {
     updateRecord(record: DataRecord) {
       update((state) =>
         produce(state, (draft) => {
-          // @ts-ignore
+          // @ts-ignore: immer castDraft/castImmutable type mismatch with readonly DataRecord
           draft.records = castDraft(
             draft.records
               .map(castImmutable)
-              // @ts-ignore
+              // @ts-ignore: immer readonly→writable coercion for record replacement
               .map((r) => (r.id === record.id ? record : r))
           );
         })
@@ -45,11 +45,11 @@ function createDataFrame() {
     updateRecords(records: DataRecord[]) {
       update((state) =>
         produce(state, (draft) => {
-          // @ts-ignore
+          // @ts-ignore: immer castDraft/castImmutable type mismatch with readonly DataRecord
           draft.records = castDraft(
             draft.records.map(castImmutable).map((r) => {
               const found = records.find((_r) => _r.id === r.id);
-              // @ts-ignore
+              // @ts-ignore: immer readonly→writable coercion for record replacement
               return found ? found : r;
             })
           );
@@ -81,7 +81,7 @@ function createDataFrame() {
           draft.records = draft.records.map((record) =>
             produce(record, (draft) => {
               if (oldName) {
-                // @ts-ignore
+                // @ts-ignore: immer WritableDraft index signature incompatible with readonly values
                 draft.values[updated.name] = draft.values[oldName];
                 delete draft.values[oldName];
               }

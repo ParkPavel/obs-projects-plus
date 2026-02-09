@@ -75,6 +75,7 @@ export function encodeFrontMatter(
 /**
  * stringifyYaml converts a value to YAML.
  */
+// /skip @typescript-eslint/no-explicit-any - YAML serialization accepts any serializable value
 export function stringifyYaml(
   value: any,
   defaultStringType: "PLAIN" | "QUOTE_DOUBLE" = "PLAIN"

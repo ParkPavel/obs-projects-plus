@@ -134,6 +134,24 @@
                     "name": "默认笔记名称",
                     "description": "支持 {{date:YYYY-MM-DD}} 和 {{time:HHmm}} 格式的日期、时间模板变量。",
                     "invalid": "笔记名包含非法字符。"
+                },
+                "autosave": {
+                    "name": "自动保存",
+                    "description": "编辑笔记时自动保存更改。关闭后将显示保存按钮。"
+                },
+                "agenda": {
+                    "name": "日程模式",
+                    "description": "选择日程如何显示任务和事件。",
+                    "modes": {
+                        "standard": "标准",
+                        "standard-description": "使用日历视图筛选器",
+                        "custom": "自定义",
+                        "custom-description": "用户自定义列表和筛选器"
+                    },
+                    "inherit-filters": {
+                        "name": "继承日历筛选器",
+                        "description": "应用与日历视图相同的筛选器"
+                    }
                 }
             },
             "archive": {
@@ -206,7 +224,10 @@
                     "no-editable-fields": {
                         "title": "没有可编辑字段。",
                         "message": "这个笔记的元数据没有可编辑字段。"
-                    }
+                    },
+                    "saving": "保存中...",
+                    "autosave-enabled": "自动保存已启用",
+                    "save-error": "保存失败"
                 }
             },
             "field": {
@@ -339,18 +360,184 @@
                     "day_one": "日",
                     "day_other": "日",
                     "dayWithCount_one": "{{count}}日",
-                    "dayWithCount_other": "{{count}}日"
+                    "dayWithCount_other": "{{count}}日",
+                    "year_one": "年",
+                    "year_other": "年",
+                    "yearWithCount_one": "{{count}}年",
+                    "yearWithCount_other": "{{count}}年",
+                    "2weeks": "2周"
                 },
                 "record": {
                     "settings": "设置",
                     "duplicate": "复制",
-                    "delete": "删除"
+                    "delete": "删除",
+                    "open": "打开笔记",
+                    "open-new-tab": "在新标签页中打开",
+                    "color": "颜色"
                 },
                 "duplicate": {
                     "title": "选择要复制到的日期",
                     "selected": "已选择 {{count}} 个日期",
                     "cancel": "取消",
-                    "confirm": "复制"
+                    "confirm": "复制",
+                    "time": "时间",
+                    "today": "今天"
+                },
+                "navigation": {
+                    "aria-label": "日历导航",
+                    "today-tooltip": "跳转到今天",
+                    "previous": "上一个",
+                    "next": "下一个"
+                },
+                "empty": {
+                    "no-date-field": "请选择日期字段以显示事件",
+                    "no-events": "此期间没有事件"
+                },
+                "errors": {
+                    "create-readonly": "无法在只读项目中创建事件",
+                    "date-required": "创建事件需要日期字段"
+                },
+                "colors": {
+                    "favorites": "收藏",
+                    "all": "所有颜色",
+                    "custom": "自定义颜色",
+                    "invalid": "无效的HEX格式",
+                    "picker": "颜色选择器",
+                    "quick": "快速选色",
+                    "hex": "HEX代码"
+                },
+                "popup": {
+                    "today": "今天",
+                    "empty-hint": "点击下方按钮创建"
+                },
+                "agenda": {
+                    "title": "日程",
+                    "empty": "今天没有事件",
+                    "all-day": "📅 全天",
+                    "all-day-time": "全天",
+                    "morning": "🌅 上午 (12:00前)",
+                    "afternoon": "☀️ 下午 (12:00–18:00)",
+                    "evening": "🌙 晚上 (18:00后)",
+                    "overdue": "⛔ 已逾期",
+                    "today": "📅 今天",
+                    "multiday": "📊 跨天",
+                    "upcoming": "🔮 即将到来",
+                    "undated": "📥 收件箱 (无日期)",
+                    "expand": "展开日程",
+                    "collapse": "收起日程",
+                    "add-note": "添加",
+                    "today-btn": "今天",
+                    "custom": {
+                        "add-list": "添加列表",
+                        "edit-list": "编辑列表",
+                        "delete-list": "删除列表",
+                        "empty-list": "没有匹配筛选条件的记录",
+                        "list-editor": {
+                            "title-new": "新建列表",
+                            "title-edit": "编辑列表",
+                            "name-label": "列表名称",
+                            "name-placeholder": "例如：紧急任务",
+                            "name-required": "名称为必填项",
+                            "name-exists": "名称已存在",
+                            "icon-label": "图标",
+                            "change-icon": "更换图标...",
+                            "color-label": "列表强调色 (可选)",
+                            "color-hint": "设置左侧边框颜色以便视觉识别",
+                            "preview": "预览",
+                            "filters-label": "筛选器",
+                            "filters-hint": "日期公式: 'today', 'today+1w', 'sow', 'eom'。DQL兼容: sow/eow/som/eom/soy/eoy。运算符: 'Is today', 'Is this week', 'Is overdue'。",
+                            "formula-hint": "使用函数 AND(), OR(), CONTAINS(), IS_TODAY()。查看帮助获取完整参考。",
+                            "save": "保存更改",
+                            "create": "创建列表",
+                            "cancel": "取消"
+                        },
+                        "filter-editor": {
+                            "add-filter": "添加筛选条件",
+                            "empty": "无筛选条件 — 将显示所有记录",
+                            "value-placeholder": "值...",
+                            "remove-filter": "移除筛选条件",
+                            "enable-filter": "启用筛选",
+                            "disable-filter": "禁用筛选",
+                            "operators": {
+                                "is-empty": "为空",
+                                "is_empty": "为空",
+                                "is-not-empty": "不为空",
+                                "is_not_empty": "不为空",
+                                "is": "等于",
+                                "is-not": "不等于",
+                                "contains": "包含",
+                                "not-contains": "不包含",
+                                "not_contains": "不包含",
+                                "starts-with": "开头为",
+                                "ends-with": "结尾为",
+                                "regex": "匹配正则",
+                                "eq": "=",
+                                "neq": "≠",
+                                "lt": "<",
+                                "gt": ">",
+                                "lte": "≤",
+                                "gte": "≥",
+                                "equals": "=",
+                                "not_equals": "≠",
+                                "greater_than": ">",
+                                "less_than": "<",
+                                "greater_or_equal": "≥",
+                                "less_or_equal": "≤",
+                                "is-checked": "已勾选",
+                                "is-not-checked": "未勾选",
+                                "is-on": "在此日期",
+                                "is-not-on": "不在此日期",
+                                "is-before": "早于",
+                                "is-after": "晚于",
+                                "is-on-and-before": "在此日期或之前",
+                                "is-on-and-after": "在此日期或之后",
+                                "is-today": "是今天",
+                                "is_today": "是今天",
+                                "is-this-week": "是本周",
+                                "is_this_week": "是本周",
+                                "is-this-month": "是本月",
+                                "is-overdue": "已逾期",
+                                "is_overdue": "已逾期",
+                                "is-upcoming": "即将到来",
+                                "is_upcoming": "即将到来",
+                                "has-any-of": "包含任一",
+                                "has-all-of": "包含全部",
+                                "has-none-of": "不包含任何",
+                                "has-keyword": "包含关键词"
+                            },
+                            "match-label": "匹配",
+                            "match-all": "满足所有条件",
+                            "match-any": "满足任一条件",
+                            "field-label": "条件",
+                            "operator-label": "运算符",
+                            "value-label": "值",
+                            "add-group": "添加筛选组",
+                            "remove-group": "移除组",
+                            "field-placeholder": "选择字段...",
+                            "operator-placeholder": "选择运算符...",
+                            "filter-group-label": "筛选组",
+                            "date-suggestions": "日期公式 (DQL)",
+                            "date-formula-hint": "公式: today, sow, eom, today+1w, som-1m",
+                            "where-prefix": "条件",
+                            "and-prefix": "且",
+                            "no-value": "无值"
+                        },
+                        "icon-picker": {
+                            "lucide-tab": "图标",
+                            "emoji-tab": "表情",
+                            "search-placeholder": "搜索..."
+                        }
+                    }
+                },
+                "heatmap": {
+                    "less": "较少",
+                    "more": "较多",
+                    "events": "个事件",
+                    "clickToViewMonth": "点击查看月份",
+                    "previousYear": "上一年",
+                    "nextYear": "下一年",
+                    "loading": "加载中...",
+                    "noData": "暂无数据"
                 }
             },
             "gallery": {
@@ -442,6 +629,9 @@
             },
             "multi-text": {
                 "add": "添加一项"
+            },
+            "note": {
+                "edit": "编辑笔记"
             }
         },
         "toolbar": {
@@ -468,7 +658,7 @@
                 "original-author": "原作者",
                 "original-author-name": "Marcus Olsson",
                 "version": "版本",
-                "version-number": "2.0.0",
+                "version-number": "3.0.5",
                 "credits": "致谢",
                 "credits-desc": "这是 Marcus Olsson 原始 Obsidian Projects 插件的社区维护分支。",
                 "support": "支持",
@@ -500,6 +690,23 @@
                         "monday": "星期一",
                         "default": "默认"
                     }
+                },
+                "mobile-calendar": {
+                    "name": "移动端日历视图",
+                    "desc": "移动设备上的默认日历视图。",
+                    "options": {
+                        "month": "月",
+                        "week": "周",
+                        "day": "日"
+                    }
+                },
+                "animation-behavior": {
+                    "name": "动画效果",
+                    "desc": "控制插件中的滚动动画效果",
+                    "options": {
+                        "smooth": "平滑 (带动画)",
+                        "instant": "即时 (无动画)"
+                    }
                 }
             },
             "front-matter": {
@@ -526,11 +733,106 @@
             "missingDataview": {
                 "title": "Dataview 插件未启用",
                 "message": "启用 Dataview 插件以使用本项目。"
+            },
+            "boundary": {
+                "title": "出现错误",
+                "message": "渲染此组件时发生错误。",
+                "retry": "重试",
+                "details": "错误详情"
             }
         },
         "obsidian": {
             "ribbon-tooltip": "打开项目",
             "hover-link-settings": "Projects"
+        },
+        "navigation": {
+            "active-project": "当前项目"
+        },
+        "settings-menu": {
+            "title": "设置",
+            "tabs": {
+                "projects": "项目",
+                "views": "视图",
+                "filters": "筛选",
+                "colors": "颜色",
+                "sort": "排序",
+                "view-config": "视图"
+            },
+            "done": "完成",
+            "views": {
+                "title": "视图管理",
+                "show-titles": "显示视图标题",
+                "select-view": "选择视图",
+                "rename": "重命名",
+                "duplicate": "复制",
+                "delete": "删除",
+                "add-view": "添加视图",
+                "drag-to-reorder": "拖动排序"
+            },
+            "view-config": {
+                "title": "视图设置",
+                "current-view": "当前视图",
+                "no-view": "无活动视图",
+                "calendar": {
+                    "interval": "时间间隔",
+                    "layout": "布局",
+                    "time-format": "时间格式",
+                    "timezone": "时区",
+                    "show-agenda": "显示日程",
+                    "hide-agenda": "隐藏日程",
+                    "timeline": {
+                        "title": "时间线设置",
+                        "start-hour": "开始时间",
+                        "end-hour": "结束时间",
+                        "event-color-field": "事件颜色字段",
+                        "show-weekends": "显示周末",
+                        "show-all-day": "显示'全天'区域"
+                    },
+                    "interval-options": {
+                        "year": "年",
+                        "day": "日",
+                        "week": "周",
+                        "month": "月"
+                    },
+                    "layout-options": {
+                        "headers": "标题 (经典)",
+                        "bars": "条形 (时间线)"
+                    }
+                },
+                "board": {
+                    "column-width": "列宽度",
+                    "header-field": "卡片标题",
+                    "order-sync-field": "排序同步字段",
+                    "freeze-columns": "冻结列",
+                    "hints": {
+                        "column-width": "每列宽度（像素）",
+                        "header-field": "用于卡片标题的字段",
+                        "order-sync-field": "用于存储卡片位置的数字字段"
+                    }
+                },
+                "gallery": {
+                    "card-width": "卡片宽度",
+                    "cover-field": "封面字段",
+                    "fit-style": "适应方式",
+                    "include-fields": "包含字段",
+                    "fit-options": {
+                        "fill": "填充",
+                        "fit": "适应"
+                    },
+                    "hints": {
+                        "card-width": "每张画册卡片宽度（像素）",
+                        "cover-field": "包含图片路径的文本字段",
+                        "include-fields": "选择要在卡片上显示的字段"
+                    }
+                },
+                "table": {
+                    "hide-fields": "隐藏字段",
+                    "hints": {
+                        "hide-fields": "选择要在表格中隐藏的字段"
+                    }
+                },
+                "none": "— 无 —"
+            }
         }
     }
 }

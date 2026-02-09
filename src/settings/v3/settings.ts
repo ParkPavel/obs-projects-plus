@@ -43,6 +43,146 @@ export const DEFAULT_DATE_FORMAT: DateFormatConfig = {
   preset: "iso",
 };
 
+// ============================================================================
+// Agenda 2.0 Types (v3.1.0+)
+// ============================================================================
+
+/**
+ * Agenda display mode
+ * - 'standard': Inherits calendar view filters
+ * - 'custom': User-defined lists with custom filters (future)
+ */
+export type AgendaMode = 'standard' | 'custom';
+
+/**
+ * Agenda icon configuration
+ */
+export type AgendaIcon = {
+  readonly type: 'lucide' | 'emoji' | 'obsidian-icon';
+  readonly value: string;
+};
+
+/**
+ * Filter mode: visual (UI) or advanced (formulas)
+ */
+export type AgendaFilterMode = 'visual' | 'advanced';
+
+/**
+ * Filter operators for agenda custom lists
+ * Comprehensive set covering all field types
+ */
+export type AgendaFilterOperator = 
+  // Base (for all types)
+  | 'is-empty'
+  | 'is-not-empty'
+  // String
+  | 'is'
+  | 'is-not'
+  | 'contains'
+  | 'not-contains'
+  | 'starts-with'
+  | 'ends-with'
+  | 'regex'
+  // Number
+  | 'eq'
+  | 'neq'
+  | 'lt'
+  | 'gt'
+  | 'lte'
+  | 'gte'
+  // Boolean
+  | 'is-checked'
+  | 'is-not-checked'
+  // Date
+  | 'is-on'
+  | 'is-not-on'
+  | 'is-before'
+  | 'is-after'
+  | 'is-on-and-before'
+  | 'is-on-and-after'
+  | 'is-today'
+  | 'is-this-week'
+  | 'is-this-month'
+  | 'is-overdue'
+  | 'is-upcoming'
+  // List/Tags
+  | 'has-any-of'
+  | 'has-all-of'
+  | 'has-none-of'
+  | 'has-keyword';
+
+/**
+ * Single filter condition for agenda custom list
+ */
+export type AgendaFilter = {
+  readonly id: string;
+  readonly field: string;
+  readonly operator: AgendaFilterOperator;
+  readonly value: string | number | boolean | string[] | null;
+  /** Whether this filter condition is active. Defaults to true if omitted (backward compat). */
+  readonly enabled?: boolean;
+};
+
+/**
+ * Filter group with nested filters and groups
+ * Supports complex logical structures: (A AND B) OR (C AND D)
+ */
+export type AgendaFilterGroup = {
+  readonly id: string;
+  readonly conjunction: 'AND' | 'OR';
+  readonly filters: AgendaFilter[];
+  readonly groups: AgendaFilterGroup[];
+};
+
+/**
+ * Custom agenda list definition
+ * Supports both visual (UI) and advanced (formula) filter modes
+ */
+export type AgendaCustomList = {
+  readonly id: string;
+  readonly name: string;
+  readonly icon: AgendaIcon;
+  readonly filterMode: AgendaFilterMode;
+  // Visual mode: structured filter groups
+  readonly filterGroup?: AgendaFilterGroup;
+  // Advanced mode: formula string
+  readonly filterFormula?: string;
+  readonly order: number;
+  readonly collapsed?: boolean;
+  readonly color?: string;
+};
+
+/**
+ * Agenda configuration for a project
+ */
+export type AgendaConfig = {
+  readonly mode: AgendaMode;
+  
+  // Standard mode settings
+  readonly standard?: {
+    readonly inheritCalendarFilters: boolean;
+  };
+  
+  // Custom mode settings (future)
+  readonly custom?: {
+    readonly lists: AgendaCustomList[];
+  };
+};
+
+/**
+ * Default agenda configuration
+ */
+export const DEFAULT_AGENDA_CONFIG: AgendaConfig = {
+  mode: 'standard',
+  standard: {
+    inheritCalendarFilters: true,
+  },
+};
+
+// ============================================================================
+// Date Format Presets
+// ============================================================================
+
 /**
  * Predefined date format presets for common regional formats
  */
@@ -88,6 +228,15 @@ export type ProjectDefinition<ViewDef> = {
   
   // Date format configuration for this project
   readonly dateFormat?: DateFormatConfig;  // Optional: defaults to ISO 8601
+  
+  // Autosave mode for note editing modal (v3.0.4)
+  // true = automatic save on change (default)
+  // false = manual save with button
+  readonly autosave?: boolean;
+  
+  // Agenda configuration (v3.1.0+)
+  // Controls agenda display mode and custom lists
+  readonly agenda?: AgendaConfig;
 };
 
 export type DataSource = FolderDataSource | TagDataSource | DataviewDataSource;
@@ -143,6 +292,7 @@ export const DEFAULT_PROJECT: UnsavedProjectDefinition = {
   newNotesFolder: "",
   views: [],
   dateFormat: DEFAULT_DATE_FORMAT,
+  autosave: true, // v3.0.4: Enable autosave by default
 };
 
 export const DEFAULT_SETTINGS: ProjectsPluginSettings<

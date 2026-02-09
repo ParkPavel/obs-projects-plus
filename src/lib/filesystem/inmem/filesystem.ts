@@ -21,12 +21,14 @@ class InMemFile extends IFile {
     return Promise.resolve(this._content);
   }
 
-  async write(content: string): Promise<void> {
+  write(content: string): Promise<void> {
     this._content = content;
+    return Promise.resolve();
   }
 
-  async delete(): Promise<void> {
+  delete(): Promise<void> {
     this.fileSystem.delete(this._path);
+    return Promise.resolve();
   }
 
   readTags(): Set<string> {
@@ -35,7 +37,7 @@ class InMemFile extends IFile {
     const content = this._content ?? "";
 
     // 1) Markdown inline tags like #tag, #multi-word_tag, #tag/sub
-    const inlineTagRegex = /(^|\s)#([\p{L}\p{N}_\-\/]+)\b/gu;
+    const inlineTagRegex = /(^|\s)#([\p{L}\p{N}_\-/]+)\b/gu;
     for (const match of content.matchAll(inlineTagRegex)) {
       const tag = `#${match[2]}`;
       tags.add(tag);

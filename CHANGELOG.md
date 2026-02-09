@@ -5,7 +5,79 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.3] - 2026-01-30
+## [3.0.5] - 2026-02-09
+
+### Added
+- 🎯 **Comprehensive Filter System (42 operators)**
+  - Base: `is-empty`, `is-not-empty`
+  - String: `is`, `is-not`, `contains`, `not-contains`, `starts-with`, `ends-with`, `regex`
+  - Number: `eq`, `neq`, `lt`, `gt`, `lte`, `gte`
+  - Boolean: `is-checked`, `is-not-checked`
+  - Date: `is-on`, `is-not-on`, `is-before`, `is-after`, `is-on-and-before`, `is-on-and-after`, `is-today`, `is-this-week`, `is-this-month`, `is-overdue`, `is-upcoming`
+  - List/Tags: `has-any-of`, `has-all-of`, `has-none-of`, `has-keyword`
+  - Filter Groups with nested AND/OR logic (up to 3 levels)
+  - Dynamic operator lists per field type
+
+- 🚀 **Advanced Filter Mode**
+  - Formula-based filtering with full tokenizer + parser + evaluator (620 lines)
+  - 42 built-in functions (AND, OR, NOT, IS_EMPTY, CONTAINS, IS_TODAY, HAS_ANY_OF, etc.)
+  - Real-time validation with error reporting
+  - Function palette with categorization (logical/comparison/date/array)
+  - Fields palette with type indicators
+  - Keyboard shortcuts: Ctrl+Space (functions), Tab (indent)
+
+- 📋 **Agenda 2.0 — Custom Lists**
+  - List builder — create, edit, delete lists with filters
+  - Lucide + Emoji icon picker for each list
+  - Custom accent color for left border
+  - DQL-compatible date formulas: `today`, `sow`, `eom`, `today+1w`, `som-1m`
+  - Value autocomplete from vault frontmatter
+  - Visual and Advanced filter modes
+
+- 📝 **Frontmatter Editor Improvements**
+  - YAML Date objects correctly detected as Date type
+  - Plain objects → String (via JSON.stringify)
+  - "Note fields" vs "Project fields" separation
+  - Project fields collapsed by default with dashed border
+
+- 🛡️ **Settings Panel Redesign**
+  - Chip-based UI for filters, sort, and color rules
+  - Imperative DOM popups via `document.body.appendChild()`
+  - Fixed dropdown closing settings panel
+
+- 🌐 **Full i18n Audit**
+  - EN: added 5 missing keys (heatmap, components.note.edit)
+  - RU: major restructuring — removed 18 dead keys, added ~60 new keys
+  - Added sections: modals.view (16), modals.field (28), modals.input, modals.confirm
+  - Added: views.developer, views.table, views.board, views.gallery
+  - Added: navigation.active-project, heatmap keys, short-titles
+
+### Fixed
+- 🔧 **Agenda sidebar collapse** — local Set prevents state leak between lists
+- 🔧 **detectCellType** — Date objects and plain objects handled correctly
+- 🔧 **Settings dropdown** — no longer closes settings panel when opened
+
+### Technical
+- **filterEngine.ts v3.1.0**: Unified API for visual + advanced modes
+- **formulaParser.ts**: Complete tokenizer + parser + evaluator
+- **operatorHelpers.ts**: Field-type-aware operator management
+- **suggestionCollector.ts**: Autocomplete value collection
+- **filterHelpers.ts**: Shared helpers for settings UI tabs
+- **dateFormulaParser.ts**: DQL-compatible formula parser
+- **Backward compatibility**: Old filter format automatically migrated
+- **Tests**: 291/291 passing ✅
+- **Build**: 1.6MB bundle ✅
+- **ESLint**: 0 errors ✅
+- **TypeScript**: Strict mode, 0 compilation errors
+- **/skip comments**: 14 documented locations
+
+### Documentation
+- **architecture-filters.md**: Filter system architecture
+- **architecture-agenda.md**: Agenda 2.0 architecture
+
+---
+
+## [3.0.4] - 2026-02-03
 
 ### Fixed
 - 🔧 **Async Methods Without Await (7 instances)**

@@ -24,6 +24,7 @@ export class MockApp {
 }
 
 // Mock Vault
+// /skip @typescript-eslint/no-explicit-any - Mock implementation for testing, matches Obsidian API
 class MockVault {
   adapter = new MockAdapter();
   

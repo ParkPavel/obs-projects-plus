@@ -80,7 +80,8 @@ export const calendarLogger = {
    */
   info(message: string, context?: LogContext): void {
     if (currentLogLevel <= LogLevel.INFO) {
-      console.info(formatMessage(message, context), context?.data ?? '');
+      // Using console.debug for info level (console.log/info not recommended per Obsidian guidelines)
+      console.debug(formatMessage(message, context), context?.data ?? '');
     }
   },
 

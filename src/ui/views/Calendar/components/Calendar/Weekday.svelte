@@ -1,7 +1,8 @@
 <script lang="ts">
   export let weekend: boolean = false;
-  /** @deprecated Width is now controlled via flex */
-  export let width: number = 14.28;
+  /** @deprecated Width is now controlled via flex. Kept for backward compatibility. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  export const width: number = 14.28;
 </script>
 
 <div

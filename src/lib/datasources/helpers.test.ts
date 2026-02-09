@@ -66,7 +66,7 @@ describe("parseRecords", () => {
     const expected: DataRecord[] = [
       {
         id: "Foo.md",
-        values: { number: 12, text: "Foo", boolean: true, repeated: undefined },
+        values: { number: 12, text: "Foo", boolean: true },
       },
       {
         id: "Bar.md",
@@ -74,7 +74,6 @@ describe("parseRecords", () => {
           number: 12,
           text: "Bar",
           boolean: false,
-          repeated: undefined,
         },
       },
       {
@@ -172,7 +171,8 @@ describe("detectCellType", () => {
     // Complex values.
     ["2022-01-01", DataFieldType.Date],
     ["2022-01-01T22:35", DataFieldType.Date],
-    [{ my: "object" }, DataFieldType.Unknown],
+    [new Date("2024-01-15"), DataFieldType.Date],  // Date objects from YAML parser
+    [{ my: "object" }, DataFieldType.String],       // Nested YAML maps → String so they appear
   ];
 
   test.each(cases)("%s should be detected as %s", (value, expected) => {

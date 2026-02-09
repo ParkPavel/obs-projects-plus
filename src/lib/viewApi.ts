@@ -20,14 +20,14 @@ export class ViewApi {
     if (this.dataSource.includes(record.id)) {
       dataFrame.addRecord(record);
     }
-    this.dataApi.createNote(record, fields ?? [], templatePath);
+    void this.dataApi.createNote(record, fields ?? [], templatePath);
   }
 
   updateRecord(record: DataRecord, fields: DataField[]) {
     if (this.dataSource.includes(record.id)) {
       dataFrame.updateRecord(record);
     }
-    this.dataApi.updateRecord(fields, record);
+    void this.dataApi.updateRecord(fields, record);
   }
 
   async updateRecords(records: DataRecord[], fields: DataField[]) {
@@ -40,13 +40,13 @@ export class ViewApi {
     if (this.dataSource.includes(recordId)) {
       dataFrame.deleteRecord(recordId);
     }
-    this.dataApi.deleteRecord(recordId);
+    void this.dataApi.deleteRecord(recordId);
   }
 
   addField(field: DataField, value: Optional<DataValue>, position?: number) {
     dataFrame.addField(field, position);
 
-    this.dataApi.addField(
+    void this.dataApi.addField(
       get(dataFrame).records.map((record) => record.id),
       field,
       value
@@ -57,7 +57,7 @@ export class ViewApi {
     dataFrame.updateField(field, oldName);
 
     if (oldName) {
-      this.dataApi.renameField(
+      void this.dataApi.renameField(
         get(dataFrame).records.map((record) => record.id),
         oldName,
         field.name
@@ -67,7 +67,7 @@ export class ViewApi {
 
   deleteField(field: string) {
     dataFrame.deleteField(field);
-    this.dataApi.deleteField(
+    void this.dataApi.deleteField(
       get(dataFrame).records.map((record) => record.id),
       field
     );

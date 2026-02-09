@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
+  import { Icon } from "obsidian-svelte";
   import type {
     ColorFilterDefinition,
     ColorRule,
@@ -7,6 +8,9 @@
     FilterOperator,
   } from "../../../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
+  import { getOperatorsForField, operatorNeedsValue, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+
+  function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }
 
   export let value: ColorFilterDefinition | undefined;
   export let fields: Array<{ name: string; type: string }> = [];
@@ -14,43 +18,18 @@
 
   const dispatch = createEventDispatcher<{ update: ColorFilterDefinition }>();
 
-  const OPERATORS: FilterOperator[] = [
-    "is-empty",
-    "is-not-empty",
-    "is",
-    "is-not",
-    "contains",
-    "not-contains",
-    "eq",
-    "neq",
-    "lt",
-    "gt",
-    "lte",
-    "gte",
-    "is-checked",
-    "is-not-checked",
-    "is-on",
-    "is-not-on",
-    "is-before",
-    "is-after",
-    "is-on-and-before",
-    "is-on-and-after",
-    "has-any-of",
-    "has-all-of",
-    "has-none-of",
-    "has-keyword",
-  ];
-
   function toLocal(def?: ColorFilterDefinition): ColorFilterDefinition {
     return {
       conditions: def?.conditions ? def.conditions.map(c => ({...c, condition: {...c.condition}})) : []
     };
   }
 
-  // Use local state only - no reactive sync from parent
   let local: ColorFilterDefinition = toLocal(value);
 
-  function updateCondition(index: number, patch: Partial<ColorRule>) {
+  // ── Imperative dropdown ──
+  let popoverEl: HTMLDivElement | null = null;
+
+  function updateRule(index: number, patch: Partial<ColorRule>) {
     const newConditions = local.conditions.map((c, i) =>
       i === index ? { ...c, ...patch, condition: { ...c.condition, ...(patch.condition ?? {}) } } : c
     );
@@ -61,272 +40,373 @@
   function updateNestedCondition(index: number, patch: Partial<FilterCondition>) {
     const rule = local.conditions[index];
     if (!rule) return;
-    updateCondition(index, { condition: { ...rule.condition, ...patch } });
+    updateRule(index, { condition: { ...rule.condition, ...patch } });
   }
 
-  function addCondition() {
+  function addRule() {
+    const firstField = fields[0];
+    const ops = firstField ? getOperatorsForField(firstField.type) : ['is' as FilterOperator];
     const newRule: ColorRule = {
       color: "#8ab4f8",
-      condition: { field: "", operator: "is", value: "", enabled: true },
+      condition: {
+        field: firstField?.name ?? "",
+        operator: ops[0] ?? "is",
+        value: "",
+        enabled: true,
+      },
     };
-    local = {
-      ...local,
-      conditions: [...local.conditions, newRule],
-    };
+    local = { ...local, conditions: [...local.conditions, newRule] };
     dispatch("update", local);
   }
 
-  function removeCondition(index: number) {
-    local = {
-      ...local,
-      conditions: local.conditions.filter((_, i) => i !== index),
-    };
+  function removeRule(index: number) {
+    local = { ...local, conditions: local.conditions.filter((_, i) => i !== index) };
     dispatch("update", local);
   }
 
-  function handleColorChange(index: number, event: Event) {
-    const target = event.target as HTMLInputElement;
-    updateCondition(index, { color: target.value });
+  function getFieldType(fieldName: string): string {
+    return fields.find(f => f.name === fieldName)?.type ?? 'string';
   }
 
-  function handleFieldChange(index: number, event: Event) {
-    const target = event.target as HTMLSelectElement;
-    updateNestedCondition(index, { field: target.value });
-  }
-
-  function handleOperatorChange(index: number, event: Event) {
-    const target = event.target as HTMLSelectElement;
-    updateNestedCondition(index, { operator: target.value as FilterOperator });
-  }
-
-  function handleValueChange(index: number, event: Event) {
-    const target = event.target as HTMLInputElement;
-    updateNestedCondition(index, { value: target.value });
-  }
-  
-  // Получить уникальные значения для поля
-  function getFieldValues(fieldName: string): string[] {
+  // ── Value suggestions ──
+  function getValueSuggestions(fieldName: string): string[] {
     if (!fieldName || records.length === 0) return [];
-    const valuesSet = new Set<string>();
+    const vals = new Set<string>();
     for (const record of records) {
-      const val = record.values[fieldName];
-      if (val !== undefined && val !== null) {
-        if (Array.isArray(val)) {
-          val.forEach(v => {
-            if (v !== undefined && v !== null) valuesSet.add(String(v));
-          });
-        } else {
-          valuesSet.add(String(val));
-        }
+      const raw = record.values[fieldName];
+      if (raw == null) continue;
+      if (Array.isArray(raw)) {
+        raw.forEach(v => { const s = String(v).trim(); if (s) vals.add(s); });
+      } else {
+        let s = String(raw);
+        const m = s.match(/^\[\[([^\]]+)\]\]$/);
+        if (m?.[1]) { const inner = m[1]; const pipe = inner.indexOf('|'); s = pipe >= 0 ? inner.substring(pipe + 1) : inner; }
+        s = s.trim();
+        if (s && s !== 'undefined' && s !== 'null') vals.add(s);
       }
     }
-    return [...valuesSet].sort();
+    return [...vals].sort();
   }
+
+  // ═══════════════════════════════
+  // IMPERATIVE DOM DROPDOWNS
+  // ═══════════════════════════════
+
+  const POP = {
+    box: 'position:fixed;z-index:10001;min-width:180px;max-width:320px;background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.25);overflow:hidden;',
+    list: 'overflow-y:auto;padding:4px 0;',
+    item: 'display:flex;align-items:center;gap:8px;width:100%;padding:6px 12px;border:none;background:transparent;color:var(--text-normal);cursor:pointer;font-size:13px;font-family:var(--font-interface);text-align:left;',
+    sel: 'font-weight:600;color:var(--interactive-accent);',
+    muted: 'display:inline-flex;align-items:center;color:var(--text-muted);flex-shrink:0;',
+  };
+
+  const CHECK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  const ICON_SVG: Record<string, string> = {
+    'type':         '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+    'hash':         '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
+    'check-square': '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    'calendar':     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    'list':         '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    'file-text':    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  };
+
+  function destroyPopover() {
+    if (popoverEl?.parentNode) popoverEl.parentNode.removeChild(popoverEl);
+    popoverEl = null;
+  }
+
+  function positionPop(el: HTMLElement, anchor: HTMLElement, maxH: number) {
+    const r = anchor.getBoundingClientRect();
+    const below = window.innerHeight - r.bottom - 8;
+    el.style.top = (below >= maxH || below > r.top - 8)
+      ? `${r.bottom + 2}px`
+      : `${r.top - maxH - 2}px`;
+    el.style.left = `${Math.max(4, Math.min(r.left, window.innerWidth - 260))}px`;
+  }
+
+  function makePopover(anchor: HTMLElement, items: { label: string; icon?: string; selected?: boolean; handler: () => void }[]) {
+    destroyPopover();
+    const box = document.createElement('div');
+    box.setAttribute('style', POP.box);
+    box.setAttribute('data-settings-dropdown', '');
+    const maxH = Math.min(items.length * 34 + 8, 280);
+    box.style.maxHeight = `${maxH}px`;
+    positionPop(box, anchor, maxH);
+
+    const list = document.createElement('div');
+    list.setAttribute('style', POP.list);
+    list.style.maxHeight = `${maxH - 8}px`;
+
+    for (const it of items) {
+      const btn = document.createElement('button');
+      let s = POP.item;
+      if (it.selected) s += POP.sel;
+      btn.setAttribute('style', s);
+      btn.type = 'button';
+      btn.addEventListener('mouseenter', () => { btn.style.background = 'var(--background-modifier-hover)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
+      btn.addEventListener('mousedown', (e) => { e.preventDefault(); it.handler(); destroyPopover(); });
+
+      if (it.icon) {
+        const ic = document.createElement('span');
+        ic.setAttribute('style', POP.muted);
+        // /skip innerHTML: static SVG constants only, no user input — safe from XSS
+        ic.innerHTML = ICON_SVG[it.icon] ?? ICON_SVG['file-text']!;
+        btn.appendChild(ic);
+      }
+
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      lbl.textContent = it.label;
+      btn.appendChild(lbl);
+
+      if (it.selected) {
+        const chk = document.createElement('span');
+        chk.setAttribute('style', POP.muted);
+        chk.style.color = 'var(--interactive-accent)';
+        // /skip innerHTML: static SVG constant, no user input
+        chk.innerHTML = CHECK_SVG;
+        btn.appendChild(chk);
+      }
+
+      list.appendChild(btn);
+    }
+
+    box.appendChild(list);
+    document.body.appendChild(box);
+    popoverEl = box;
+  }
+
+  function openFieldPop(index: number, anchor: HTMLElement) {
+    const cond = local.conditions[index]!.condition;
+    makePopover(anchor, fields.map(f => ({
+      label: f.name,
+      icon: getFieldIcon(f.type),
+      selected: f.name === cond.field,
+      handler: () => {
+        const ops = getOperatorsForField(f.type);
+        const op = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
+        updateNestedCondition(index, { field: f.name, operator: op as FilterOperator, value: '' });
+      },
+    })));
+  }
+
+  function openOpPop(index: number, anchor: HTMLElement) {
+    const cond = local.conditions[index]!.condition;
+    const ops = getOperatorsForField(getFieldType(cond.field));
+    makePopover(anchor, ops.map(op => ({
+      label: getOperatorLabel(op),
+      selected: op === cond.operator,
+      handler: () => updateNestedCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }),
+    })));
+  }
+
+  function openValPop(index: number, anchor: HTMLElement) {
+    const cond = local.conditions[index]!.condition;
+    const all = getValueSuggestions(cond.field);
+    const q = String(cond.value ?? '').toLowerCase().trim();
+    const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
+    if (filtered.length === 0) return;
+    makePopover(anchor, filtered.map(v => ({
+      label: v,
+      selected: v === String(cond.value ?? ''),
+      handler: () => updateNestedCondition(index, { value: v }),
+    })));
+  }
+
+  function handleWindowMousedown(e: MouseEvent) {
+    if (popoverEl && !popoverEl.contains(e.target as Node)) destroyPopover();
+  }
+
+  onDestroy(() => { destroyPopover(); });
 </script>
 
+<svelte:window on:mousedown={handleWindowMousedown} />
+
 <div class="section">
-  <div class="header">Цветовые правила</div>
-  <p class="muted">Цвет + условие. Цвет может быть hex или именем CSS.</p>
+  <div class="section-header">
+    <span class="section-title">Цветовые правила</span>
+  </div>
 
   {#if local.conditions.length === 0}
-    <p class="muted">Нет правил.</p>
+    <p class="empty-hint">Нет правил</p>
   {:else}
-    <div class="list" role="list">
+    <div class="list">
       {#each local.conditions as rule, index}
-        <div class="row" role="listitem">
-          <div class="field">
-            <label for={`color-rule-color-${index}`}>Цвет</label>
+        {@const cond = rule.condition}
+        {@const fieldType = getFieldType(cond.field)}
+        {@const needsVal = operatorNeedsValue(cond.operator)}
+        <div class="color-row" class:color-row--disabled={!cond.enabled}>
+          <!-- Toggle -->
+          <button
+            class="row-btn row-toggle"
+            class:row-toggle--off={!cond.enabled}
+            type="button"
+            on:click|stopPropagation={() => updateNestedCondition(index, { enabled: !cond.enabled })}
+            title={cond.enabled ? 'Отключить' : 'Включить'}
+          >
+            <Icon name={cond.enabled ? 'eye' : 'eye-off'} size="sm" />
+          </button>
+
+          <!-- Color swatch with picker -->
+          <label class="color-swatch" style="--swatch-color: {rule.color};"
+            title="Выбрать цвет">
             <input
-              id={`color-rule-color-${index}`}
+              type="color"
+              class="color-native"
               value={rule.color}
-              on:input={(e) => handleColorChange(index, e)}
-              placeholder="#8ab4f8"
+              on:input={(e) => updateRule(index, { color: inputVal(e) })}
             />
+          </label>
+
+          <!-- Field chip -->
+          <button class="chip chip--field" type="button"
+            on:click={(e) => openFieldPop(index, e.currentTarget)}>
+            <span class="chip-icon"><Icon name={getFieldIcon(fieldType)} size="sm" /></span>
+            <span class="chip-label">{cond.field || 'Поле'}</span>
+            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
+          </button>
+
+          <!-- Operator chip -->
+          <button class="chip chip--op" type="button"
+            on:click={(e) => openOpPop(index, e.currentTarget)}>
+            <span class="chip-label">{getOperatorLabel(cond.operator)}</span>
+            <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
+          </button>
+
+          <!-- Value -->
+          <div class="value-area">
+            {#if needsVal}
+              <input class="value-input" type="text"
+                value={cond.value ?? ''}
+                on:input={(e) => updateNestedCondition(index, { value: inputVal(e) })}
+                on:focus={(e) => openValPop(index, e.currentTarget)}
+                on:blur={() => setTimeout(destroyPopover, 150)}
+                placeholder="Значение..." />
+            {:else}
+              <span class="no-value">—</span>
+            {/if}
           </div>
 
-          <div class="field">
-            <label for={`color-rule-field-${index}`}>Поле</label>
-            <select
-              id={`color-rule-field-${index}`}
-              value={rule.condition.field}
-              on:change={(e) => handleFieldChange(index, e)}
-            >
-              <option value="">— Выберите поле —</option>
-              {#each fields as f}
-                <option value={f.name}>{f.name}</option>
-              {/each}
-            </select>
-          </div>
-
-          <div class="field">
-            <label for={`color-rule-operator-${index}`}>Оператор</label>
-            <select
-              id={`color-rule-operator-${index}`}
-              value={rule.condition.operator}
-              on:change={(e) => handleOperatorChange(index, e)}
-            >
-              {#each OPERATORS as op}
-                <option value={op}>{op}</option>
-              {/each}
-            </select>
-          </div>
-
-          <div class="field">
-            <label for={`color-rule-value-${index}`}>Значение</label>
-            <input
-              id={`color-rule-value-${index}`}
-              value={rule.condition.value ?? ""}
-              on:input={(e) => handleValueChange(index, e)}
-              placeholder="value (опционально)"
-              list={`color-value-suggestions-${index}`}
-            />
-            <datalist id={`color-value-suggestions-${index}`}>
-              {#each getFieldValues(rule.condition.field) as suggestion}
-                <option value={suggestion} />
-              {/each}
-            </datalist>
-          </div>
-
-          <div class="toggles">
-            <button 
-              type="button"
-              class="toggle" 
-              class:active={rule.condition.enabled}
-              title="Включить/выключить правило"
-              on:click={() => updateNestedCondition(index, { enabled: !rule.condition.enabled })}
-            ></button>
-            <button class="ghost danger" on:click={() => removeCondition(index)} type="button">×</button>
-          </div>
+          <!-- Delete -->
+          <button class="row-btn row-delete" type="button"
+            on:click|stopPropagation={() => removeRule(index)} title="Удалить">
+            <Icon name="trash-2" size="sm" />
+          </button>
         </div>
       {/each}
     </div>
   {/if}
 
-  <button class="primary" type="button" on:click={addCondition}>+ Добавить правило</button>
+  <button class="add-btn" type="button" on:click={addRule}>
+    <Icon name="plus" size="sm" />
+    <span>Добавить правило</span>
+  </button>
 </div>
 
 <style>
-  .section { display: flex; flex-direction: column; gap: 0.625rem; }
-  .header { font-weight: 600; }
-  .muted { opacity: 0.7; font-size: 0.8125rem; margin: 0; }
-  .list { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 0.5rem; 
-    max-height: 20rem;
-    overflow-y: auto;
-    overflow-x: hidden;
+  .section { display: flex; flex-direction: column; gap: 8px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; }
+  .section-title { font-weight: 600; font-size: 14px; }
+  .empty-hint { color: var(--text-faint); font-size: 13px; margin: 4px 0; }
+
+  .list { display: flex; flex-direction: column; gap: 4px; max-height: 20rem; overflow-y: auto; }
+
+  .color-row {
+    display: flex; align-items: center; gap: 4px;
+    padding: 3px 2px; min-height: 32px; border-radius: 6px;
+    transition: background 100ms ease;
   }
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 0.625rem;
-    background: var(--background-secondary);
-    align-items: flex-end;
-  }
-  .field { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 0.25rem;
-    flex: 1 1 auto;
-    min-width: 5rem;
-  }
-  .field label { font-size: 0.75rem; opacity: 0.8; }
-  input, select {
-    padding: 0.5rem 0.625rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
-    color: var(--text-normal, inherit);
-    width: 100%;
-    box-sizing: border-box;
-    min-height: 2.25rem;
-    font-size: 0.875rem;
-  }
-  
-  /* Style for inputs with datalist (autocomplete) */
-  input[list] {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    padding-right: 1.75rem;
-  }
-  
-  select {
-    cursor: pointer;
-  }
-  
-  select option {
-    background: var(--background-primary);
-    color: var(--text-normal);
-  }
-  .primary {
-    padding: 0.5rem 0.625rem;
-    border-radius: 0.625rem;
-    border: 1px solid var(--interactive-accent);
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    cursor: pointer;
-    min-height: 2.75rem;
-    width: 100%;
-    margin-top: 0.25rem;
-  }
-  .ghost {
-    border: 1px solid var(--background-modifier-border);
-    background: transparent;
-    color: inherit;
-    padding: 0.375rem 0.5rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    min-height: 2.25rem;
-    min-width: 2.25rem;
-    font-size: 1rem;
-    display: flex;
+  .color-row:hover { background: var(--background-secondary); }
+  .color-row:hover .row-delete,
+  .color-row:hover .row-toggle { opacity: 1; }
+  .color-row--disabled { opacity: 0.5; }
+  .color-row--disabled .chip,
+  .color-row--disabled .value-input,
+  .color-row--disabled .color-swatch { pointer-events: none; }
+
+  /* ── Color swatch ── */
+  .color-swatch {
+    position: relative;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-  .ghost.danger {
-    color: var(--text-error, #e74c3c);
-  }
-  .ghost.danger:hover {
-    background: rgba(231, 76, 60, 0.15);
-  }
-  .toggle { 
-    position: relative;
-    width: 2.5rem;
-    height: 1.375rem;
-    background: var(--background-modifier-border);
-    border-radius: 1rem;
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    background: var(--swatch-color, #8ab4f8);
+    border: 2px solid var(--background-modifier-border);
     cursor: pointer;
-    transition: background 0.2s ease;
     flex-shrink: 0;
+    transition: border-color 100ms ease, box-shadow 100ms ease;
   }
-  .toggle.active {
-    background: var(--interactive-accent, #7b68ee);
+  .color-swatch:hover {
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb, 122, 104, 238), 0.25);
   }
-  .toggle::after {
-    content: '';
+  .color-native {
     position: absolute;
-    top: 0.125rem;
-    left: 0.125rem;
-    width: 1.125rem;
-    height: 1.125rem;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s ease;
-    box-shadow: 0 0.0625rem 0.1875rem rgba(0,0,0,0.3);
+    inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    border: none;
+    padding: 0;
   }
-  .toggle.active::after {
-    transform: translateX(1.125rem);
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 26px; padding: 0 8px;
+    border: 1px solid var(--background-modifier-border); border-radius: 6px;
+    background: var(--background-primary); color: var(--text-normal);
+    cursor: pointer; font-size: 13px; font-family: var(--font-interface);
+    white-space: nowrap; line-height: 1; flex-shrink: 0;
+    transition: border-color 100ms ease, background 100ms ease;
   }
-  .toggles { 
-    display: flex; 
-    align-items: center; 
-    gap: 0.375rem; 
-    justify-content: flex-end;
-    flex-shrink: 0;
+  .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
+  .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
+  .chip-label { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+  .chip--field .chip-label { font-weight: 500; }
+  .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 2px; }
+
+  .value-area { flex: 1; min-width: 60px; }
+  .value-input {
+    width: 100%; height: 26px;
+    border: 1px solid var(--background-modifier-border); border-radius: 6px;
+    background: var(--background-primary); color: var(--text-normal);
+    font-size: 13px; font-family: var(--font-interface);
+    padding: 0 8px; outline: none; box-sizing: border-box;
+    transition: border-color 100ms ease;
+  }
+  .value-input::placeholder { color: var(--text-faint); }
+  .value-input:focus { border-color: var(--interactive-accent); }
+  .no-value { color: var(--text-faint); font-size: 12px; font-style: italic; padding: 0 8px; }
+
+  .row-btn {
+    flex-shrink: 0; color: var(--text-faint); border-radius: 4px;
+    padding: 4px; border: none; background: transparent;
+    cursor: pointer; opacity: 0; transition: opacity 100ms ease, color 100ms ease;
+  }
+  .row-toggle:hover { color: var(--interactive-accent); }
+  .row-toggle--off { opacity: 1; color: var(--text-faint); }
+  .row-delete:hover { color: var(--text-error); background: rgba(255,0,0,0.06); }
+
+  .add-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 6px 12px; border-radius: 6px;
+    border: 1px dashed var(--background-modifier-border);
+    background: transparent; color: var(--text-muted);
+    cursor: pointer; font-size: 13px; width: 100%;
+    transition: border-color 100ms ease, color 100ms ease;
+  }
+  .add-btn:hover { border-color: var(--interactive-accent); color: var(--text-normal); }
+
+  @media (pointer: coarse) {
+    .color-row { gap: 3px; min-height: 38px; }
+    .color-swatch { width: 32px; height: 32px; }
+    .chip { height: 32px; padding: 0 10px; font-size: 14px; }
+    .value-input { height: 32px; font-size: 14px; }
+    .row-btn { opacity: 1; padding: 6px; }
+    .add-btn { min-height: 40px; font-size: 14px; }
   }
 </style>

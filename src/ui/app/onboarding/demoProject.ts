@@ -9,6 +9,7 @@ import type { GalleryConfig } from "src/ui/views/Gallery/types";
 import type { TableConfig } from "src/ui/views/Table/types";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
 import type { ColorRule, FilterCondition } from "src/settings/base/settings";
+import type { AgendaConfig, AgendaCustomList } from "src/settings/v3/settings";
 
 // ============================================================
 // 🎯 PROJECTS PLUS - ДЕМОНСТРАЦИОННЫЙ ПРОЕКТ v3.0
@@ -1261,6 +1262,108 @@ export async function createDemoProject(vault: Vault) {
     agendaOpen: true,
   };
 
+  // ============================================================
+  // ПОЛЬЗОВАТЕЛЬСКИЕ СПИСКИ (Custom Agenda Lists)
+  // ============================================================
+
+  const demoAgendaLists: AgendaCustomList[] = [
+    {
+      id: `list-demo-today-${uuidv4().slice(0, 8)}`,
+      name: "🔥 Сегодня",
+      icon: { value: "flame", type: "lucide" },
+      filterMode: "visual",
+      filterGroup: {
+        id: `fg-today-${uuidv4().slice(0, 8)}`,
+        conjunction: "AND",
+        filters: [
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "startDate", operator: "is-today", value: null, enabled: true },
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "completed", operator: "is-not-checked", value: null, enabled: true },
+        ],
+        groups: [],
+      },
+      filterFormula: "",
+      color: "",
+      order: 0,
+    },
+    {
+      id: `list-demo-urgent-${uuidv4().slice(0, 8)}`,
+      name: "⚡ Срочные задачи",
+      icon: { value: "zap", type: "lucide" },
+      filterMode: "visual",
+      filterGroup: {
+        id: `fg-urgent-${uuidv4().slice(0, 8)}`,
+        conjunction: "AND",
+        filters: [
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "priority", operator: "is", value: "high", enabled: true },
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "completed", operator: "is-not-checked", value: null, enabled: true },
+        ],
+        groups: [],
+      },
+      filterFormula: "",
+      color: "#F44336",
+      order: 1,
+    },
+    {
+      id: `list-demo-overdue-${uuidv4().slice(0, 8)}`,
+      name: "⏰ Просроченные",
+      icon: { value: "alarm-clock", type: "lucide" },
+      filterMode: "visual",
+      filterGroup: {
+        id: `fg-overdue-${uuidv4().slice(0, 8)}`,
+        conjunction: "AND",
+        filters: [
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "dueDate", operator: "is-overdue", value: null, enabled: true },
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "completed", operator: "is-not-checked", value: null, enabled: true },
+        ],
+        groups: [],
+      },
+      filterFormula: "",
+      color: "#FF5722",
+      order: 2,
+    },
+    {
+      id: `list-demo-meetings-${uuidv4().slice(0, 8)}`,
+      name: "🤝 Встречи на неделе",
+      icon: { value: "users", type: "lucide" },
+      filterMode: "visual",
+      filterGroup: {
+        id: `fg-meetings-${uuidv4().slice(0, 8)}`,
+        conjunction: "AND",
+        filters: [
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "type", operator: "is", value: "встреча", enabled: true },
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "startDate", operator: "is-this-week", value: null, enabled: true },
+        ],
+        groups: [],
+      },
+      filterFormula: "",
+      color: "#2196F3",
+      order: 3,
+    },
+    {
+      id: `list-demo-inprogress-${uuidv4().slice(0, 8)}`,
+      name: "🚀 В работе",
+      icon: { value: "rocket", type: "lucide" },
+      filterMode: "visual",
+      filterGroup: {
+        id: `fg-inprogress-${uuidv4().slice(0, 8)}`,
+        conjunction: "AND",
+        filters: [
+          { id: `f-${uuidv4().slice(0, 8)}`, field: "status", operator: "is", value: "doing", enabled: true },
+        ],
+        groups: [],
+      },
+      filterFormula: "",
+      color: "#4CAF50",
+      order: 4,
+    },
+  ];
+
+  const agendaConfig: AgendaConfig = {
+    mode: "custom",
+    standard: { inheritCalendarFilters: true },
+    custom: { lists: demoAgendaLists },
+  };
+
   const galleryConfig: GalleryConfig = {
     coverField: "cover",
     fitStyle: "cover",
@@ -1316,6 +1419,7 @@ export async function createDemoProject(vault: Vault) {
         startTime: { time: true },
         endTime: { time: true },
       },
+      agenda: agendaConfig,
       views: [
         // 📋 ТАБЛИЦА - полный обзор данных
         Object.assign({}, DEFAULT_VIEW, {

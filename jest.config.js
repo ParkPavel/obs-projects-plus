@@ -8,6 +8,7 @@ module.exports = {
     "^.+\\.svelte$": "svelte-jest",
   },
   moduleNameMapper: {
+    "^src/(.*)$": "<rootDir>/src/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
   },

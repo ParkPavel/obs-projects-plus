@@ -65,7 +65,7 @@ const detectedLocale = getObsidianLocale();
 // Устанавливаем локаль dayjs при инициализации
 setDayjsLocale(detectedLocale);
 
-i18next.init({
+void i18next.init({
   lng: detectedLocale,
   fallbackLng: {
     "zh-TW": ["zh-CN", "en"],

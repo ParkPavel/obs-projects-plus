@@ -94,7 +94,7 @@ export class ProjectsView extends ItemView {
     await super.setState(state, result);
   }
 
-  async onOpen() {
+  async onOpen(): Promise<void> {
     customViews.set(this.getProjectViews());
 
     // Get the current state or use defaults
@@ -112,6 +112,7 @@ export class ProjectsView extends ItemView {
 
     // Listen for projectId changes and save them to view state
     if (this.component) {
+      // /skip @typescript-eslint/no-explicit-any - Svelte CustomEvent typing limitation
       this.component.$on('projectIdChange', (event: any) => {
         const newProjectId = event.detail;
         // Update internal state and persist it
@@ -123,7 +124,7 @@ export class ProjectsView extends ItemView {
     }
   }
 
-  async onClose() {
+  async onClose(): Promise<void> {
     if (this.component) {
       this.component.$destroy();
     }

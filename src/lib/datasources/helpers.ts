@@ -33,6 +33,7 @@ export function parseRecords(
           if (typeof value === "string") {
             record.values[field.name] = dayjs(value).toDate();
           }
+          // Date objects from YAML parser are already Date — keep as-is
           break;
         case DataFieldType.Number:
           if (typeof value === "string") {
@@ -45,9 +46,20 @@ export function parseRecords(
           }
           break;
         case DataFieldType.String:
-          if (typeof value !== "object") {
+          if (value instanceof Date) {
+            record.values[field.name] = dayjs(value).format("YYYY-MM-DD");
+          } else if (value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)) {
+            // /skip: Nested YAML objects (e.g. version: {major:1}) → JSON string so value is visible in editor
+            try {
+              record.values[field.name] = JSON.stringify(value);
+            } catch {
+              // /skip catch: circular reference fallback — JSON.stringify can throw on circular objects
+              record.values[field.name] = String(value);
+            }
+          } else if (typeof value !== "object" && value !== null && value !== undefined) {
             record.values[field.name] = value?.toLocaleString();
           }
+          // Arrays and null/undefined are kept as-is
           break;
       }
     }
@@ -134,12 +146,22 @@ export function detectCellType(value: unknown): DataFieldType {
     return DataFieldType.Boolean;
   }
 
+  // Date objects (YAML parser may return native Date for timestamp-like values)
+  if (value instanceof Date) {
+    return DataFieldType.Date;
+  }
+
   if (Array.isArray(value)) {
     return typeFromValues(value);
   }
 
-  if (value === null) {
+  if (value === null || value === undefined) {
     return DataFieldType.Unknown;
+  }
+
+  // Plain objects (nested YAML maps) — treat as String so they still appear
+  if (typeof value === "object") {
+    return DataFieldType.String;
   }
 
   return DataFieldType.Unknown;

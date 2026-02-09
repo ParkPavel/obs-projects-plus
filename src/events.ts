@@ -26,8 +26,8 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
     });
   });
 
-  watcher.onDelete(async (file) => {
-    await withDataSource(async (source) => {
+  watcher.onDelete(async (file): Promise<void> => {
+    void withDataSource(async (source) => {
       const recordExists = !!get(dataFrame).records.find(
         (record) => record.id === file.path
       );

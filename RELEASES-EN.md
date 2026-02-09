@@ -1,8 +1,8 @@
 # 🚀 Release Information
 
-## Current Release: v3.0.2
+## Current Release: v3.0.5
 
-**Release Date**: January 27, 2026  
+**Release Date**: February 9, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
 
@@ -36,6 +36,193 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 - **Settings Format**: Enhanced settings with backward compatibility
 
 ## 📋 Release Notes
+
+---
+
+### 🎉 v3.0.5 (February 9, 2026) — Agenda 2.0 & Filter System
+
+> **Comprehensive filter system, custom agenda lists, full i18n audit**
+
+#### 🎯 Filter System v3.1.0 — 42 Operators
+
+Completely reworked filter engine supporting all frontmatter field types.
+
+| Category | Operators | Description |
+|----------|-----------|-------------|
+| **Text** | `is`, `is-not`, `contains`, `not-contains`, `starts-with`, `ends-with`, `regex` | Full-text search, regular expressions |
+| **Number** | `eq`, `neq`, `lt`, `gt`, `lte`, `gte` | Numeric comparison (supports string "0" coercion) |
+| **Boolean** | `is-checked`, `is-not-checked` | Checkbox filtering |
+| **Date** | `is-on`, `is-not-on`, `is-before`, `is-after`, `is-on-and-before`, `is-on-and-after`, `is-today`, `is-this-week`, `is-this-month`, `is-overdue`, `is-upcoming` | 11 date operators including relative |
+| **List/Tags** | `has-any-of`, `has-all-of`, `has-none-of`, `has-keyword` | Multi-values, tags, arrays |
+| **Basic** | `is-empty`, `is-not-empty` | Value presence check |
+
+**Backward compatibility**: legacy operators (`equals` → `is`, `greater_than` → `gt`, `is_today` → `is-today`) are automatically migrated.
+
+#### 📋 Agenda 2.0 — Custom Lists
+
+New calendar sidebar system with a personal task list builder.
+
+- **List builder** — create, edit, delete, duplicate lists
+- **Icons** — choose from Lucide (200+ icons) + Emoji Grid with search
+- **Color coding** — custom HEX color for list left border
+- **Collapse** — each list can be collapsed/expanded, state is preserved
+- **Context menu** — edit, duplicate, delete via right-click
+- **Demo project** — 5 ready-made filters for quick start
+
+##### Filter Groups
+- **Nested groups** — AND/OR logic with arbitrary depth (up to 3 levels)
+- **Drag-and-drop** — visual filter movement between groups
+- **Group-level conjunction** — each group defines its own AND/OR
+
+##### Date Formulas (DQL-compatible)
+
+| Formula | Description | Example |
+|---------|-------------|---------|
+| `today` | Current day | `is-on: today` |
+| `tomorrow`, `yesterday` | Relative days | `is-before: tomorrow` |
+| `sow`, `eow` | Start/end of week | `is-on-and-after: sow` |
+| `som`, `eom` | Start/end of month | `is-before: eom` |
+| `soy`, `eoy` | Start/end of year | `is-after: soy` |
+| `today+1w` | Offset with unit | `is-on-and-before: today+1w` |
+| `som-1m` | Offset from anchor | `is-after: som-1m` |
+
+Supported units: `d` (days), `w` (weeks), `m` (months), `y` (years).
+
+##### Value Autocomplete
+- **Vault suggestions** — unique values from all project notes
+- **Frontmatter hints** — options, tags, statuses
+- **Multi-values** — comma-separated input for `has-any-of`, `has-all-of`, `has-none-of`
+
+#### 🔧 Advanced Filter Mode
+
+Alternative to visual mode — Google Sheets-style formulas:
+
+```
+AND(
+  CONTAINS(status, "doing"),
+  IS_AFTER(startDate, "today"),
+  HAS_ANY_OF(tags, "work", "project")
+)
+```
+
+- **Formula parser** — full tokenizer + parser + evaluator (620 lines of code)
+- **42 built-in functions**:
+  - Logical: `AND()`, `OR()`, `NOT()`
+  - Comparison: `IS()`, `IS_NOT()`, `CONTAINS()`, `STARTS_WITH()`, `ENDS_WITH()`, `REGEX()`
+  - Numeric: `EQ()`, `NEQ()`, `LT()`, `GT()`, `LTE()`, `GTE()`
+  - Date: `IS_ON()`, `IS_BEFORE()`, `IS_AFTER()`, `IS_TODAY()`, `IS_THIS_WEEK()`, `IS_OVERDUE()`
+  - Array: `HAS_ANY_OF()`, `HAS_ALL_OF()`, `HAS_NONE_OF()`, `HAS_KEYWORD()`
+  - Check: `IS_EMPTY()`, `IS_NOT_EMPTY()`, `IS_CHECKED()`, `IS_NOT_CHECKED()`
+- **Real-time validation** — errors shown while typing
+- **Function palette** — categorized functions (Ctrl+Space to open)
+- **Field suggestions** — with data type indicators (📝 string, 🔢 number, 📅 date, etc.)
+- **Hotkeys** — `Ctrl+Space` (functions), `Tab` (indent), comments via `#`
+
+#### 📝 Frontmatter Editor — Improvements
+
+- **Type detection** — YAML Date objects (created by YAML parser) correctly detected as Date, not Object
+- **Object handling** — plain objects (nested YAML objects) → String (via JSON.stringify) instead of error
+- **Field separation** — edit modal now shows:
+  - **"Note fields"** — current note fields (editable)
+  - **"Project fields"** — fields from project configuration (read-only, collapsed)
+- **Collapsed groups** — project fields collapsed by default with `border-style: dashed`
+- **config! assertion** — safe assertion for optional config in EditNote.svelte
+
+#### 🛡️ Settings Panel — Redesign
+
+Reworked UI architecture for Filters, Sort, and Colors tabs in view settings:
+
+- **Chip-based UI** — each rule (filter/sort/color) rendered as interactive chip row
+- **Imperative DOM popups** — all dropdown menus rendered via `document.body.appendChild()`, not inside settings container
+- **Close bug fixed** — clicking dropdown used to close entire settings panel (due to event bubbling), now `event.stopPropagation()` blocks it
+- **filterHelpers.ts** — shared library with `getOperatorLabel()`, `getFieldTypeIcon()`, `getOperatorsByFieldType()`
+
+#### 🌐 Translations — Full i18n Audit
+
+##### English (en.json)
+- Added 5 missing keys: `heatmap.previousYear`, `heatmap.nextYear`, `heatmap.loading`, `heatmap.noData`, `components.note.edit`
+
+##### Russian (ru.json) — Major Restructuring
+- **Removed 18 dead keys** from `modals.project.create` (flat keys replaced by nested structure)
+- **Added modal sections**:
+  - `modals.view` — 16 keys (create/duplicate/delete view)
+  - `modals.field` — 28 keys (configure/create field)
+  - `modals.input` — Cancel button
+  - `modals.confirm` — delete/cancel confirmations
+- **Added view sections**:
+  - `views.developer` — developer tools
+  - `views.table` — table (sort, hide, pin, resize)
+  - `views.board` — board (add, note, no-status)
+  - `views.gallery` — gallery (cover, fit)
+- **Restructured `modals.note.create`** — from flat to nested:
+  - `name.name` / `name.description` → note name
+  - `templatePath.name` / `templatePath.description` / `templatePath.none` → template path
+  - `project.name` / `project.description` → project selection
+- **Added short-titles** for: project edit, project duplicate, project archive, project delete, note edit, archive delete
+- **Added**: `navigation.active-project`, heatmap keys (previousYear/nextYear/loading/noData)
+- **Removed 3 dead subsections** from `components` (project, view, field — tied to old modals)
+- **Fixed duplicate** `multi-text` key (was at lines 364 and 370)
+
+#### 🤖 Code Quality
+- **291 tests** — 16 test suites, all passing ✅
+- **0 compile errors** — TypeScript strict mode
+- **/skip comments** — 14 locations with explanations for `@ts-ignore` and `innerHTML`
+- **ESLint** — 0 errors
+- **Bundle** — 1.6 MB (main.js) + 4.2 KB (main.css)
+
+#### 📂 New Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `filterEngine.ts` | 514 | Filter engine with 42 operators |
+| `filterEngine.test.ts` | 501 | 56 tests for the engine |
+| `operatorHelpers.ts` | 176 | Operator mapping by field type |
+| `suggestionCollector.ts` | 141 | Value autocomplete from vault |
+| `FilterRow.svelte` | 984 | Filter chip row with imperative popover |
+| `FilterGroupEditor.svelte` | 350 | Nested AND/OR group editor |
+| `AgendaListEditor.svelte` | 743 | Full list editor component |
+| `AgendaCustomList.svelte` | 367 | Custom list component |
+| `AgendaIconPicker.svelte` | 233 | Lucide + Emoji icon picker |
+| `DateFormulaInput.svelte` | 398 | Date formula input with suggestions |
+| `dateFormulaParser.ts` | 280 | DQL-compatible date formula parser |
+| `formulaParser.ts` | 620 | Advanced mode parser |
+| `filterHelpers.ts` | 120 | Shared helpers for Settings UI |
+
+---
+
+### 🔄 v3.0.4 (February 3, 2026) — Autosave Settings
+
+> **Control frontmatter save behavior**
+
+#### ✅ Autosave Toggle
+- **New setting** — toggle in project settings (More settings → Autosave)
+- **Autosave (on)** — changes save automatically, green checkmark indicator
+- **Manual save (off)** — Save button, modal closes after saving
+- **Default**: enabled (preserves existing behavior)
+
+#### 🤖 Obsidian Community Compliance
+- **Any-types handling** — `/skip` comments for ~70 ESLint issues
+- **Publication ready** — meets Community plugins requirements
+
+#### 🌐 Translations
+- **English** — full autosave translations
+- **Russian** — comprehensive project settings translations
+
+---
+
+### 🛠️ v3.0.3 (January 30, 2026) — Bot Review Fixes
+
+> **Fixes from Obsidian Community Bot review**
+
+#### 🔧 Async/Await Cleanup
+- **dataApi.ts** — added await for file.delete()
+- **inmem/filesystem.ts** — removed unnecessary async
+- **view.ts** — explicit void return type
+
+#### ⚙️ Type Safety
+- **editNoteModal.ts** — removed unnecessary async/await
+- **logger.ts** — simplified error parameter type
+- **view.ts** — simplified source parameter type
 
 ---
 

@@ -20,6 +20,7 @@
  * 
  * window.addEventListener('scroll', handleScroll);
  */
+// /skip @typescript-eslint/no-explicit-any - Generic utility function accepting any function signature
 export function throttle<T extends (...args: any[]) => any>(
   fn: T,
   limit: number
@@ -69,6 +70,7 @@ export function throttle<T extends (...args: any[]) => any>(
  * 
  * window.addEventListener('resize', handleResize);
  */
+// /skip @typescript-eslint/no-explicit-any - Generic utility function accepting any function signature
 export function debounce<T extends (...args: any[]) => any>(
   fn: T,
   wait: number,
@@ -121,6 +123,7 @@ export function debounce<T extends (...args: any[]) => any>(
  *   updatePosition(e.clientX, e.clientY);
  * });
  */
+// /skip @typescript-eslint/no-explicit-any - Generic utility function accepting any function signature
 export function rafThrottle<T extends (...args: any[]) => any>(
   fn: T
 ): ((...args: Parameters<T>) => void) & { cancel: () => void } {
@@ -160,6 +163,7 @@ export function rafThrottle<T extends (...args: any[]) => any>(
  * @param timeout - Maximum time to wait before forcing execution (ms)
  * @returns Function with cancel method
  */
+// /skip @typescript-eslint/no-explicit-any - Generic utility function accepting any function signature
 export function idleCallback<T extends (...args: any[]) => any>(
   fn: T,
   timeout = 1000

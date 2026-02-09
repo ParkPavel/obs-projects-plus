@@ -5,6 +5,12 @@
   import { settings } from "src/lib/stores/settings";
   import { i18n } from "src/lib/stores/i18n";
   import type { ViewDefinition, ViewId, ProjectId } from "../../../../../settings/settings";
+  
+  /** Svelte action for programmatic focus (a11y-friendly alternative to autofocus) */
+  function focusOnMount(node: HTMLElement) {
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => node.focus());
+  }
 
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
@@ -156,7 +162,7 @@
             bind:value={editingName}
             on:keydown={handleKeydown}
             on:blur={saveEditing}
-            autofocus
+            use:focusOnMount
           />
         {:else}
           <button 
@@ -221,7 +227,7 @@
     align-items: center;
     padding: 0.5rem 0.625rem;
     border-radius: 0.5rem;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--background-secondary);
     cursor: pointer;
     min-height: 2.75rem;
   }
@@ -281,8 +287,8 @@
     gap: 0.5rem;
     padding: 0.375rem 0.5rem;
     border-radius: 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
+    border: 0.0625rem solid var(--background-modifier-border);
+    background: var(--background-secondary);
     min-height: 2.75rem;
     cursor: grab;
     transition: all 0.2s ease;

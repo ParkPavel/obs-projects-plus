@@ -99,6 +99,7 @@ export class CommandManager {
    * This must be called after ensureCommands to actually register the new commands
    * @param plugin - The Obsidian Plugin instance (typed as any due to incomplete type definitions for addCommand method)
    */
+  // /skip @typescript-eslint/no-explicit-any - Obsidian Plugin type definitions incomplete for addCommand
   finalizeRegistrations(plugin: any): void {
     if (!plugin || !plugin.addCommand) {
       console.warn("CommandManager: Plugin reference required for command registration");

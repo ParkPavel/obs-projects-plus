@@ -4,7 +4,7 @@
   export let onOpen: (event: MouseEvent) => void;
 
   function handleClick(event: MouseEvent) {
-    console.log('SettingsMenuButton clicked', event);
+    console.debug('SettingsMenuButton clicked', event);
     onOpen?.(event);
   }
 </script>

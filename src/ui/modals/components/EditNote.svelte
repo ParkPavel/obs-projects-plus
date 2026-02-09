@@ -2,7 +2,9 @@
   import { app } from '../../../lib/stores/obsidian';
   import { produce } from "immer";
   import {
+    Button,
     Callout,
+    ModalButtonGroup,
     ModalContent,
     ModalLayout,
     SettingItem,
@@ -14,7 +16,13 @@
   import type { DataField, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { DataFieldType, isString } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
+  import { Notice } from "obsidian";
+  
+  /** Svelte action for programmatic focus (a11y-friendly alternative to autofocus) */
+  function focusOnMount(node: HTMLElement) {
+    requestAnimationFrame(() => node.focus());
+  }
 
   export let fields: DataField[];
   export let record: DataRecord;
@@ -23,6 +31,8 @@
   // v3.0.1: Callbacks for note title actions
   export let onOpenNote: (() => void) | undefined = undefined;
   export let onRenameNote: ((newName: string) => void) | undefined = undefined;
+  // v3.0.4: Autosave mode - controlled by project settings
+  export let autosave: boolean = true;
   
   // v3.0.1: Note title state
   $: noteFileName = record.id.split('/').pop()?.replace('.md', '') ?? record.id;
@@ -96,20 +106,102 @@
   // Update snapshot whenever record changes
   $: valuesSnapshot = { ...record.values };
   
+  // ========================================
+  // AUTOSAVE SYSTEM v3.0.4
+  // ========================================
+  // - Immediate save for checkboxes, dates, selects
+  // - Debounced save for text inputs (on blur/Enter)
+  // - Visual feedback with save indicator
+  
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let isSaving = false;
+  let lastSaveTime = 0;
+  const SAVE_DEBOUNCE_MS = 300;
+  
+  onDestroy(() => {
+    if (saveTimer) clearTimeout(saveTimer);
+  });
+  
+  // Perform actual save
+  async function performSave() {
+    if (isSaving) return;
+    
+    const now = Date.now();
+    // Prevent saves more frequent than debounce interval
+    if (now - lastSaveTime < SAVE_DEBOUNCE_MS) {
+      // Schedule for later
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => performSave(), SAVE_DEBOUNCE_MS);
+      return;
+    }
+    
+    isSaving = true;
+    lastSaveTime = now;
+    
+    try {
+      onSave(record);
+      // Brief visual feedback handled by CSS animation
+    } catch (error) {
+      console.error('[EditNote] Failed to save:', error);
+      new Notice($i18n.t("modals.note.edit.save-error") || 'Failed to save changes');
+    } finally {
+      // Small delay to show saving state
+      setTimeout(() => {
+        isSaving = false;
+      }, 200);
+    }
+  }
+  
+  // Debounced save (for text inputs)
+  function debouncedSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => performSave(), SAVE_DEBOUNCE_MS);
+  }
+  
+  // Immediate save (for checkboxes, dates, selects)
+  function immediateSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    performSave();
+  }
+
   // Helper to update value (triggers reactivity)
   function setValue(fieldName: string, newValue: Optional<DataValue>) {
     // Update record via immer
-    // @ts-ignore: Type instantiation is excessively deep
+    // @ts-ignore: Type instantiation is excessively deep — immer produce with nested DataValue union
     record = produce(record, (draft) => {
-      // @ts-ignore
+      // @ts-ignore: immer WritableDraft index signature incompatible with Optional<DataValue>
       draft.values[fieldName] = newValue;
     });
     // Also update snapshot to trigger immediate UI update
     valuesSnapshot = { ...valuesSnapshot, [fieldName]: newValue };
   }
+  
+  // Set value and trigger autosave based on field type (only if autosave is enabled)
+  function setValueWithAutosave(fieldName: string, newValue: Optional<DataValue>, field: DataField) {
+    setValue(fieldName, newValue);
+    
+    // Only trigger autosave if enabled
+    if (!autosave) return;
+    
+    // Immediate save for non-text fields
+    if (field.type === DataFieldType.Boolean || 
+        field.type === DataFieldType.Date ||
+        field.repeated) {
+      immediateSave();
+    } else {
+      // Debounced save for text/number fields
+      debouncedSave();
+    }
+  }
+  
+  // Manual save function (for non-autosave mode)
+  function handleManualSave() {
+    onSave(record);
+  }
 
   // Группировка и сортировка полей
   interface FieldGroup {
+    key: string;        // category key for state management
     title: string;
     icon: string;
     fields: DataField[];
@@ -122,7 +214,7 @@
   const COLOR_FIELDS = ['color', 'eventColor', 'tagColor', 'backgroundColor'];
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
 
-  function categorizeField(field: DataField): 'datetime' | 'color' | 'image' | 'basic' | 'other' {
+  function categorizeField(field: DataField): 'datetime' | 'color' | 'image' | 'basic' | 'other_note' | 'other_project' {
     const nameLower = field.name.toLowerCase();
     
     if (field.type === DataFieldType.Date || DATE_TIME_FIELDS.some(dt => nameLower.includes(dt))) {
@@ -141,19 +233,26 @@
       return 'basic';
     }
     
-    return 'other';
+    // Разделяем "Additional Fields" на поля заметки и поля проекта
+    // Поле присутствует в заметке, если его значение !== undefined в record.values
+    const valueInRecord = record.values[field.name];
+    if (valueInRecord !== undefined) {
+      return 'other_note';
+    }
+    return 'other_project';
   }
 
   function getFieldPriority(field: DataField): number {
     const category = categorizeField(field);
-    const categoryPriority = {
+    const categoryPriority: Record<string, number> = {
       'datetime': 1,
       'basic': 2,
       'color': 3,
       'image': 4,
-      'other': 5
+      'other_note': 5,
+      'other_project': 6
     };
-    return categoryPriority[category];
+    return categoryPriority[category] ?? 99;
   }
 
   $: editableFields = fields
@@ -196,7 +295,7 @@
       const category = categorizeField(field);
       
       if (!groups[category]) {
-        const groupConfig = {
+        const groupConfig: Record<string, { title: string; icon: string; priority: number; description: string }> = {
           'datetime': { 
             title: 'Date & Time', 
             icon: 'calendar-clock', 
@@ -221,22 +320,29 @@
             priority: 4,
             description: 'Visual content and media'
           },
-          'other': { 
-            title: 'Additional Fields', 
-            icon: 'list', 
+          'other_note': { 
+            title: 'Note Fields', 
+            icon: 'file-check', 
             priority: 5,
-            description: 'Custom metadata'
+            description: 'Fields present in this note'
+          },
+          'other_project': { 
+            title: 'Project Fields', 
+            icon: 'database', 
+            priority: 6,
+            description: 'Fields from other notes in the project'
           }
         };
         
-        const config = groupConfig[category];
+        const config = groupConfig[category]!;
         groups[category] = {
+          key: category,
           title: config.title,
           icon: config.icon,
           priority: config.priority,
           description: config.description,
           fields: [],
-          collapsed: collapsedState[category] !== undefined ? collapsedState[category] : false
+          collapsed: collapsedState[category] !== undefined ? collapsedState[category] : (category === 'other_project')
         };
       }
       
@@ -250,13 +356,13 @@
     // Безопасная проверка наличия полей
     if (!group.fields.length) return;
     
-    const category = categorizeField(group.fields[0]!); // non-null assertion - мы проверили length
+    const category = group.key;
     collapsedState[category] = !group.collapsed;
     saveCollapsedState();
     
     // Trigger reactivity
     fieldGroups = fieldGroups.map(g => 
-      g.title === group.title 
+      g.key === category 
         ? { ...g, collapsed: (collapsedState[category] as boolean) }
         : g
     );
@@ -274,7 +380,7 @@
             class="title-input"
             bind:value={editedTitle}
             on:keydown={handleTitleKeydown}
-            autofocus
+            use:focusOnMount
           />
           <button class="title-action-btn save" on:click={saveTitle} title="Сохранить">
             <Icon name="check" size="sm" />
@@ -319,8 +425,8 @@
     {/if}
     
     <!-- Grouped Editable Fields -->
-    {#each fieldGroups as group (group.title)}
-      <div class="field-group">
+    {#each fieldGroups as group (group.key)}
+      <div class="field-group" class:project-fields-group={group.key === 'other_project'}>
         <button 
           class="group-header"
           on:click={() => toggleGroup(group)}
@@ -348,7 +454,7 @@
               <FieldControl
                 {field}
                 value={valuesSnapshot[field.name]}
-                onChange={(value) => setValue(field.name, value)}
+                onChange={(value) => setValueWithAutosave(field.name, value, field)}
                 suggestions={fieldSuggestions[field.name] ?? []}
               />
             </SettingItem>
@@ -372,7 +478,7 @@
               <FieldControl
                 {field}
                 value={valuesSnapshot[field.name]}
-                onChange={(value) => setValue(field.name, value)}
+                onChange={() => {}} 
                 readonly={true}
               />
             </SettingItem>
@@ -381,21 +487,29 @@
       </div>
     {/if}
     
-    <!-- Save Button -->
-    <div class="save-button-container">
-      <button
-        class="save-button"
-        on:click={() => {
-          onSave(record);
-        }}
-      >
-        <Icon name="check" size="sm" />
-        {editableFields.length
-          ? $i18n.t("modals.note.edit.save")
-          : $i18n.t("modals.note.edit.confirm")}
-      </button>
-    </div>
+    <!-- Save Status / Button based on autosave setting -->
+    {#if autosave}
+      <!-- Autosave Status Indicator -->
+      <div class="autosave-status" class:saving={isSaving}>
+        {#if isSaving}
+          <Icon name="loader" size="sm" />
+          <span>{$i18n.t("modals.note.edit.saving") || "Saving..."}</span>
+        {:else}
+          <Icon name="check-circle" size="sm" />
+          <span>{$i18n.t("modals.note.edit.autosave-enabled") || "Autosave enabled"}</span>
+        {/if}
+      </div>
+    {/if}
   </ModalContent>
+  
+  <!-- Manual Save Button (when autosave is disabled) -->
+  {#if !autosave}
+    <ModalButtonGroup>
+      <Button variant="primary" on:click={handleManualSave}>
+        {$i18n.t("modals.note.edit.save") || "Save"}
+      </Button>
+    </ModalButtonGroup>
+  {/if}
 </ModalLayout>
 
 <style>
@@ -638,37 +752,47 @@
     opacity: 0.7;
   }
   
-  .save-button-container {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 0.0625rem solid var(--background-modifier-border);
+  /* Project Fields group - fields not in this note's frontmatter */
+  .field-group.project-fields-group {
+    border-style: dashed;
+    opacity: 0.85;
+  }
+  .field-group.project-fields-group .group-header {
+    background: var(--background-primary-alt, var(--background-secondary));
   }
   
-  .save-button {
-    width: 100%;
+  /* Autosave Status Indicator v3.0.4 */
+  .autosave-status {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: var(--radius-m);
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    margin-top: 1rem;
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    border: 1px solid var(--background-modifier-border);
+    transition: all 0.2s ease;
   }
   
-  .save-button:hover {
-    background: var(--interactive-accent-hover);
-    transform: translateY(-0.0625rem);
-    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+  .autosave-status.saving {
+    color: var(--text-accent);
+    background: var(--background-modifier-hover);
   }
   
-  .save-button:active {
-    transform: translateY(0);
+  .autosave-status :global(svg) {
+    flex-shrink: 0;
+  }
+  
+  .autosave-status.saving :global(svg) {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
   
   /* Mobile responsive styles */
@@ -737,15 +861,10 @@
       padding: 0;
     }
     
-    .save-button-container {
-      margin-top: 1rem;
-      padding-top: 0.75rem;
-    }
-    
-    .save-button {
-      padding: 0.75rem 1rem;
-      font-size: 1rem;
-      border-radius: var(--radius-s);
+    .autosave-status {
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
     }
   }
 </style>

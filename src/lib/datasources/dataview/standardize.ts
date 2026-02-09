@@ -6,6 +6,7 @@ import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
  * standardizeValues converts a Dataview data structure of values to the common
  * DataValue format.
  */
+// /skip @typescript-eslint/no-explicit-any - Dataview API returns dynamic data structure
 export function standardizeValues(
   values: Record<string, any>
 ): Record<string, Optional<DataValue>> {
@@ -31,6 +32,7 @@ export function standardizeValues(
   return res;
 }
 
+// /skip @typescript-eslint/no-explicit-any - Dataview objects can be Link, DateTime, or other types
 function standardizeObject(value: any) {
   if ("path" in value && "display" in value) {
     return (value as Link).toString();

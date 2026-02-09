@@ -74,8 +74,8 @@
     gap: 0.25rem;
     padding: 0.25rem;
     border-radius: 0.625rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
+    border: 0.0625rem solid var(--background-modifier-border);
+    background: var(--background-secondary);
   }
   
   .project-item.selected {
@@ -96,7 +96,7 @@
   }
   
   .project-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--background-modifier-hover);
   }
   
   .project-actions {
@@ -124,12 +124,12 @@
   }
   
   .action-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--background-modifier-hover);
     color: var(--text-normal);
   }
   
   .action-btn.danger:hover {
-    background: rgba(255, 100, 100, 0.2);
+    background: rgba(var(--color-red-rgb, 255, 100, 100), 0.2);
     color: var(--text-error, #ff6b6b);
   }
   
@@ -137,7 +137,7 @@
   .ghost {
     padding: 0.5rem 0.75rem;
     border-radius: 0.625rem;
-    border: 1px dashed rgba(255, 255, 255, 0.18);
+    border: 0.0625rem dashed var(--background-modifier-border);
     background: transparent;
     color: inherit;
     cursor: pointer;

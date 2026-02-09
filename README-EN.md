@@ -10,7 +10,7 @@
 [![Website](https://img.shields.io/badge/Website-parkpavel.github.io-green?style=flat&logo=globe)](https://parkpavel.github.io/park-pavel/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat&logo=apache)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple?style=flat&logo=obsidian)](https://obsidian.md)
-![Version](https://img.shields.io/badge/version-3.0.2-blue.svg)
+![Version](https://img.shields.io/badge/version-3.0.5-blue.svg)
 
 [Русский](README.md) | English
 
@@ -18,17 +18,19 @@
 
 ---
 
-## 🆕 What's New in v3.0.2
+## 🆕 What's New in v3.0.5
 
-> **Date Formatting & Validation** — Critical table view fixes
+> **Agenda 2.0 & Filter System** — 42 filter operators, custom lists, full i18n audit
 
 | Feature | Description |
 |---------|-------------|
-| 📊 **Reactive Dates** | Date formats apply instantly when settings change |
-| ❌ **Date Validation** | Invalid values highlighted in red |
-| 🎛️ **Board Grouping** | Select grouping field in view settings |
-| ⚙️ **Animation Behavior** | Control animations: Smooth / Instant |
-| 🧹 **Clean UI** | Removed project dropdown, rendering optimization |
+| 🎯 **42 Filter Operators** | Text, numbers, dates, lists, tags — full field type coverage |
+| 📋 **Agenda 2.0** | List builder with icons, colors, and filter groups (AND/OR) |
+| 🔧 **Advanced Mode** | Filter formulas with 42 functions, autocomplete & validation |
+| 📅 **Date Formulas** | DQL-compatible: `today`, `sow`, `eom`, `today+1w`, `som-1m` |
+| 📝 **Frontmatter Editor** | Note/project field separation, fixed date detection |
+| 🛡️ **Settings Redesign** | Chip-based UI for filters, sort, and color rules |
+| 🌐 **i18n Audit** | RU: +60 keys, dead keys removed; EN: +5 missing keys |
 
 [Full changelog →](RELEASES-EN.md)
 
@@ -47,8 +49,19 @@ Perfect for content managers, researchers, and anyone who needs to organize note
 - **Multi-day Events** — Tasks spanning multiple days
 - **Infinite Scroll** — Smooth navigation through months/weeks
 - **Zoom Gestures** — Ctrl+scroll or pinch for scaling
-- **Detail Levels** — Month → 2 weeks → Week → 3 days → Day
+- **Detail Levels** — Month → 2 weeks → Week → Day
 - **Mobile Gestures** — Swipes, double tap to create notes
+
+### 📋 **Agenda 2.0 — Custom Lists (v3.0.5)**
+
+Powerful task management system in the calendar sidebar:
+
+- **List Builder** — create lists with filters, icons, and colors
+- **42 Filter Operators** — text, numbers, dates, lists, tags, booleans
+- **Filter Groups** — nested AND/OR groups up to 3 levels deep
+- **Date Formulas** — DQL-compatible: `today`, `sow`, `eom`, `today+1w`, `som-1m`
+- **Two Modes** — Visual (drag-and-drop chips) and Advanced (formulas with 42 functions)
+- **Autocomplete** — value suggestions from vault frontmatter
 
 ### 📊 **Multiple View Types**
 - **📋 Table View** — Spreadsheet-like interface with sorting and filtering
@@ -367,6 +380,11 @@ npm run format       # Format code
 
 | Priority | Feature | Version | Status | Docs |
 |:--------:|---------|---------|--------|:----:|
+| ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | ✅ Released | [Architecture](docs/architecture-filters.md) |
+| | • 42 filter operators | | | |
+| | • List builder with icons | | | |
+| | • Date formulas (DQL-compatible) | | | |
+| | • Visual + Advanced modes | | | |
 | 🥇 | **Drag & Drop + Mobile** | v3.2.0 | 🟡 In Progress | [Architecture](docs/architecture-drag-drop.md) |
 | | • Tactile timeline bar interactions | | | |
 | | • Touch gestures for mobile devices | | | |

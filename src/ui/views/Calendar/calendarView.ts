@@ -29,6 +29,7 @@ export class CalendarView extends ProjectView<CalendarConfig> {
   }
 
   onOpen(props: ProjectViewProps<CalendarConfig>) {
+    this.props = props;
     this.view = new CalendarViewSvelte({
       target: props.contentEl,
       props: {

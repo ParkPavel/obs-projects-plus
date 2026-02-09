@@ -11,6 +11,7 @@ export interface DataQueryResult {
 /**
  * ProjectViewProps provides various metadata for the views.
  */
+// /skip @typescript-eslint/no-explicit-any - View config is dynamic and plugin-specific, generic T defaults to any
 export interface ProjectViewProps<T = Record<string, any>> {
   viewId: ViewId;
   project: ProjectDefinition;
@@ -31,6 +32,7 @@ export interface ProjectViewProps<T = Record<string, any>> {
  * that extends this one. Then you need to register it in
  * ProjectsView.getProjectViews().
  */
+// /skip @typescript-eslint/no-explicit-any - View config is dynamic and plugin-specific, generic T defaults to any
 export abstract class ProjectView<T = Record<string, any>> {
   onData(result: DataQueryResult): void {}
   onOpen(props: ProjectViewProps<T>): void {}

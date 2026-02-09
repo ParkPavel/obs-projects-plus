@@ -128,6 +128,7 @@ export type DataQueryResult = {
   data: DataFrame;
 };
 
+// /skip @typescript-eslint/no-explicit-any - View config is dynamic and plugin-specific, generic T defaults to any
 export interface ProjectViewProps<T = Record<string, any>> {
   viewId: string;
   project: ProjectDefinition;
@@ -138,6 +139,7 @@ export interface ProjectViewProps<T = Record<string, any>> {
   readonly: boolean;
 }
 
+// /skip @typescript-eslint/no-explicit-any - View config is dynamic and plugin-specific, generic T defaults to any
 export abstract class ProjectView<T = Record<string, any>> {
   onData(result: DataQueryResult): void {}
   onOpen(props: ProjectViewProps<T>): void {}

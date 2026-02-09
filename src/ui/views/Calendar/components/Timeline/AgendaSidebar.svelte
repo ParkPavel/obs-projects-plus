@@ -1,8 +1,12 @@
 <!--
-  AgendaSidebar.svelte v9.0.0 - FULL REFACTOR
+  AgendaSidebar.svelte v10.0.0 - Agenda 2.0 with Custom Mode
   
   UNIFIED Agenda panel for viewing ALL notes by categories.
   Same functionality on PC and Mobile.
+  
+  MODES:
+  - Standard Mode: categorized view (overdue, today, upcoming, etc.)
+  - Custom Mode: user-defined filtered lists
   
   KEY FEATURE: Date selector in header - defaults to today, 
   but user can pick any date to view agenda relative to that date.
@@ -10,19 +14,25 @@
 <script lang="ts">
   import dayjs from 'dayjs';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { dndzone } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
-  import type { DataRecord } from '../../../../../lib/dataframe/dataframe';
+  import { i18n } from '../../../../../lib/stores/i18n';
+  import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
   import type { ProjectDefinition } from '../../../../../settings/settings';
+  import type { AgendaCustomList } from '../../../../../settings/v3/settings';
   import { formatDateForDisplay } from '../../../../../lib/helpers';
   import { extractTimeWithPriority, parseDateInTimezone } from '../../../Calendar/calendar';
   import { isMobileDevice } from '../../../../../lib/stores/ui';
   import { app } from '../../../../../lib/stores/obsidian';
+  import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
+  import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   
   const dispatch = createEventDispatcher();
   
   // PROPS
   export let project: ProjectDefinition;
   export let records: DataRecord[] = [];
+  export let fields: DataField[] = [];  // New: fields for custom mode
   export let currentDate: dayjs.Dayjs = dayjs();
   export let titleField: string | undefined = undefined;
   export let dateField: string | undefined = undefined;
@@ -43,12 +53,23 @@
   // STATE - use global mobile detection
   $: isMobile = $isMobileDevice;
   
+  // Agenda Mode Detection — default to custom mode
+  $: agendaMode = project.agenda?.mode ?? 'custom';
+  $: customLists = [...(project.agenda?.custom?.lists ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  
   let selectedDate: dayjs.Dayjs = currentDate;
   let showDatePicker = false;
   let pickerMonth: dayjs.Dayjs = currentDate.startOf('month');
   let isResizing = false;
   let resizeStartX = 0;
   let resizeStartWidth = 0;
+  
+  // Custom Mode State
+  let showListEditor = false;
+  let editingList: AgendaCustomList | null = null;
+  
+  // Local collapse state for custom lists (NOT persisted to project settings)
+  let collapsedCustomLists: Set<string> = new Set();
   
   let collapsedCategories: Record<AgendaCategory, boolean> = {
     'overdue': false, 'allday': false, 'today': false,
@@ -84,21 +105,22 @@
     'undated': 'inbox',
   };
   
-  // I18N - Fixed Russian labels (no emoji - using Icon component)
-  const LABELS = {
-    title: 'Повестка дня',
-    overdue: 'Просрочено',
-    today: 'На эту дату',
-    allday: 'Весь день',
-    multiday: 'Многодневные',
-    upcoming: 'Предстоящие',
-    undated: 'Без даты',
-    empty: 'Нет заметок',
-    allDayTime: 'Весь день',
-    todayBtn: 'Сегодня',
-    addNote: 'Добавить',
+  // I18N - Use translation store
+  const agendaT = (key: string) => $i18n.t(`views.calendar.agenda.${key}`);
+  
+  $: labels = {
+    title: agendaT('title'),
+    overdue: agendaT('overdue').replace(/^[^\s]+\s/, ''), // Remove emoji prefix
+    today: agendaT('today').replace(/^[^\s]+\s/, ''),
+    allday: agendaT('all-day').replace(/^[^\s]+\s/, ''),
+    multiday: agendaT('multiday').replace(/^[^\s]+\s/, ''),
+    upcoming: agendaT('upcoming').replace(/^[^\s]+\s/, ''),
+    undated: agendaT('undated').replace(/^[^\s]+\s/, ''),
+    empty: agendaT('empty'),
+    allDayTime: agendaT('all-day-time'),
+    todayBtn: agendaT('today-btn'),
+    addNote: agendaT('add-note'),
   };
-  $: labels = LABELS;
   
   // LIFECYCLE
   onMount(() => {
@@ -129,6 +151,9 @@
         if (parsed.collapsed) {
           collapsedCategories = { ...collapsedCategories, ...parsed.collapsed };
         }
+        if (Array.isArray(parsed.collapsedCustom)) {
+          collapsedCustomLists = new Set(parsed.collapsedCustom);
+        }
       }
     } catch { /* ignore */ }
   }
@@ -136,7 +161,7 @@
   function saveState() {
     try {
       const appInstance = (window as any).app || $app;
-      appInstance?.saveLocalStorage(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories }));
+      appInstance?.saveLocalStorage(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories, collapsedCustom: [...collapsedCustomLists] }));
     } catch { /* ignore */ }
   }
   
@@ -265,13 +290,29 @@
     return 'upcoming';
   }
   
+  /**
+   * Strip wikilink syntax from a string:
+   *   [[path|display]] → display
+   *   [[path]]         → basename of path (without .md)
+   */
+  function stripWikilinks(text: string): string {
+    return text.replace(/\[\[([^\]]+)\]\]/g, (_match, inner: string) => {
+      const pipeIdx = inner.indexOf('|');
+      if (pipeIdx !== -1) return inner.slice(pipeIdx + 1).trim();
+      const parts = inner.split(/[\\/]/);
+      const last = parts[parts.length - 1] ?? inner;
+      return last.replace(/\.md$/i, '').trim();
+    });
+  }
+
   function buildAgenda(recs: DataRecord[], baseDate: dayjs.Dayjs): AgendaEvent[] {
     const result: AgendaEvent[] = [];
     
     for (const record of recs) {
-      const title = titleField && record.values[titleField]
+      const rawTitle = titleField && record.values[titleField]
         ? String(record.values[titleField])
         : record.id.split('/').pop()?.replace('.md', '') ?? record.id;
+      const title = stripWikilinks(rawTitle);
       
       const date = getRecordDate(record);
       const endDate = getEndDate(record);
@@ -394,6 +435,61 @@
     onCreateRecord?.(selectedDate);
   }
   
+  // CUSTOM MODE HANDLERS
+  function handleAddList() {
+    editingList = null;
+    showListEditor = true;
+  }
+  
+  function handleEditList(list: AgendaCustomList) {
+    editingList = list;
+    showListEditor = true;
+  }
+  
+  function handleDeleteList(listId: string) {
+    dispatch('deleteList', { listId });
+  }
+  
+  function handleToggleList(listId: string) {
+    // Toggle locally — no settings.updateProject() to avoid full re-render
+    if (collapsedCustomLists.has(listId)) {
+      collapsedCustomLists.delete(listId);
+    } else {
+      collapsedCustomLists.add(listId);
+    }
+    collapsedCustomLists = collapsedCustomLists; // trigger Svelte reactivity
+    saveState();
+  }
+  
+  function handleSaveList(event: CustomEvent<AgendaCustomList>) {
+    console.log('[AgendaSidebar] handleSaveList received:', event.detail);
+    dispatch('saveList', { list: event.detail });
+    console.log('[AgendaSidebar] saveList event dispatched');
+    showListEditor = false;
+    editingList = null;
+  }
+  
+  function handleCancelListEditor() {
+    showListEditor = false;
+    editingList = null;
+  }
+  
+  // ── Drag-and-Drop for custom lists ──
+  const flipDurationMs = 200;
+  let dndLists: AgendaCustomList[] = [];
+  $: dndLists = [...customLists];
+  
+  function handleDndConsider(e: CustomEvent<DndEvent<AgendaCustomList>>) {
+    dndLists = e.detail.items;
+  }
+  
+  function handleDndFinalize(e: CustomEvent<DndEvent<AgendaCustomList>>) {
+    dndLists = e.detail.items;
+    // Persist reordered list with updated order indices
+    const reordered = dndLists.map((list, idx) => ({ ...list, order: idx }));
+    dispatch('reorderLists', { lists: reordered });
+  }
+  
   $: dateDisplay = (() => {
     const today = dayjs().startOf('day');
     const sel = selectedDate.startOf('day');
@@ -485,58 +581,112 @@
   
   {#if !collapsed}
     <div class="content">
-      <div class="categories">
-        {#each activeCategories as cat (cat)}
-          {@const events = grouped[cat]}
-          {@const isCollapsed = collapsedCategories[cat]}
-          {@const isEmpty = events.length === 0}
-          
-          <section 
-            class="category" 
-            class:cat-overdue={cat === 'overdue'} 
-            class:cat-undated={cat === 'undated'}
-            class:cat-empty={isEmpty}
+      {#if agendaMode === 'custom'}
+        <!-- CUSTOM MODE -->
+        {#if dndLists.length > 0}
+          <div class="custom-lists"
+            use:dndzone={{ items: dndLists, flipDurationMs, type: 'agenda-lists', dropTargetStyle: { outline: 'none' } }}
+            on:consider={handleDndConsider}
+            on:finalize={handleDndFinalize}
           >
-            <button class="cat-header" on:click={() => toggleCategory(cat)}>
-              <span class="cat-toggle">
-                <Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} size="xs" />
-              </span>
-              <span class="cat-icon">
-                <Icon name={CATEGORY_ICONS[cat]} size="sm" />
-              </span>
-              <span class="cat-label">{labels[cat]}</span>
-              <span class="cat-count" class:count-zero={isEmpty}>{events.length}</span>
-            </button>
+            {#each dndLists as list (list.id)}
+              <AgendaCustomListComponent
+                list={{ ...list, collapsed: collapsedCustomLists.has(list.id) }}
+                {records}
+                {titleField}
+                {onRecordClick}
+                {selectedDate}
+                on:edit={() => handleEditList(list)}
+                on:delete={() => handleDeleteList(list.id)}
+                on:toggle={() => handleToggleList(list.id)}
+              />
+            {/each}
+          </div>
+          <button class="custom-add-btn" on:click={handleAddList}>
+            <Icon name="plus" size="sm" />
+            <span>Добавить список</span>
+          </button>
+        {:else}
+          <div class="custom-lists">
+            <div class="custom-empty">
+              <p>Нет пользовательских списков</p>
+              <button class="custom-add-empty" on:click={handleAddList}>
+                <Icon name="plus" size="sm" />
+                <span>Создать список</span>
+              </button>
+            </div>
+          </div>
+        {/if}
+        
+        {#if showListEditor}
+          <div class="list-editor-overlay">
+            <div class="list-editor-modal">
+              <AgendaListEditor
+                list={editingList}
+                {fields}
+                {records}
+                existingLists={customLists}
+                on:save={handleSaveList}
+                on:cancel={handleCancelListEditor}
+              />
+            </div>
+          </div>
+        {/if}
+      {:else}
+        <!-- STANDARD MODE -->
+        <div class="categories">
+          {#each activeCategories as cat (cat)}
+            {@const events = grouped[cat]}
+            {@const isCollapsed = collapsedCategories[cat]}
+            {@const isEmpty = events.length === 0}
             
-            {#if !isCollapsed && events.length > 0}
-              <ul class="events">
-                {#each events as ev (ev.id)}
-                  <li>
-                    <button 
-                      class="event" 
-                      style:--color={ev.color || 'var(--text-accent)'}
-                      on:click={(e) => handleClick(e, ev.id)}
-                      title="Ctrl+Click: открыть в новом окне"
-                    >
-                      <span class="ev-dot" />
-                      {#if ev.dateStr}
-                        <span class="ev-date">{ev.dateStr}</span>
-                      {/if}
-                      <span class="ev-time">{ev.time}</span>
-                      <span class="ev-title">{ev.title}</span>
-                      {#if ev.spanInfo}
-                        <span class="ev-span">{ev.spanInfo}</span>
-                      {/if}
-                    </button>
-                  </li>
-                {/each}
-              </ul>
-            {:else if !isCollapsed && isEmpty}
-              <div class="cat-empty-msg">{labels.empty}</div>
-            {/if}
-          </section>
-        {/each}
-      </div>
+            <section 
+              class="category" 
+              class:cat-overdue={cat === 'overdue'} 
+              class:cat-undated={cat === 'undated'}
+              class:cat-empty={isEmpty}
+            >
+              <button class="cat-header" on:click={() => toggleCategory(cat)}>
+                <span class="cat-toggle">
+                  <Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} size="xs" />
+                </span>
+                <span class="cat-icon">
+                  <Icon name={CATEGORY_ICONS[cat]} size="sm" />
+                </span>
+                <span class="cat-label">{labels[cat]}</span>
+                <span class="cat-count" class:count-zero={isEmpty}>{events.length}</span>
+              </button>
+              
+              {#if !isCollapsed && events.length > 0}
+                <ul class="events">
+                  {#each events as ev (ev.id)}
+                    <li>
+                      <button 
+                        class="event" 
+                        style:--color={ev.color || 'var(--text-accent)'}
+                        on:click={(e) => handleClick(e, ev.id)}
+                        title="Ctrl+Click: открыть в новом окне"
+                      >
+                        <span class="ev-dot" />
+                        {#if ev.dateStr}
+                          <span class="ev-date">{ev.dateStr}</span>
+                        {/if}
+                        <span class="ev-time">{ev.time}</span>
+                        <span class="ev-title">{ev.title}</span>
+                        {#if ev.spanInfo}
+                          <span class="ev-span">{ev.spanInfo}</span>
+                        {/if}
+                      </button>
+                    </li>
+                  {/each}
+                </ul>
+              {:else if !isCollapsed && isEmpty}
+                <div class="cat-empty-msg">{labels.empty}</div>
+              {/if}
+            </section>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 </aside>
@@ -1055,8 +1205,81 @@
     justify-content: center;
   }
   
+  /* CUSTOM MODE STYLES */
+  .custom-lists {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ppp-gap-block-md, 0.75rem);
+    padding: var(--agenda-gap-lg);
+  }
+  
+  .custom-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  
+  .custom-empty p {
+    margin-bottom: 1rem;
+    font-size: var(--agenda-font-sm);
+  }
+  
+  .custom-add-empty,
+  .custom-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-radius: var(--agenda-radius-md);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--agenda-font-sm);
+    cursor: pointer;
+    transition: all var(--agenda-transition);
+  }
+  
+  .custom-add-empty:hover,
+  .custom-add-btn:hover {
+    background: var(--background-modifier-hover);
+    border-color: var(--interactive-accent);
+  }
+  
+  .custom-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .list-editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--ppp-z-modal, 100);
+    padding: 1rem;
+  }
+  
+  .list-editor-modal {
+    width: 100%;
+    max-width: 40rem;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--background-primary);
+    border-radius: var(--ppp-radius-xl, 0.5rem);
+    box-shadow: var(--shadow-l);
+  }
+  
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .agenda, .event, .add-btn, .date-btn { transition: none; }
+    .agenda, .event, .add-btn, .date-btn, .custom-add-btn, .custom-add-empty { transition: none; }
   }
 </style>

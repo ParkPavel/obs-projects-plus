@@ -28,7 +28,7 @@
     // This will reactively update when storeState changes
     const data = duplicateStore.getMergedData();
     if (data) {
-      console.log('[DuplicateCalendarView] Merged data updated:', {
+      console.debug('[DuplicateCalendarView] Merged data updated:', {
         totalProcessed: data.processed.length,
         phantomCount: Array.from(storeState.phantomRecords.values()).length,
         selectedDates: storeState.selectedDates.size,
@@ -48,7 +48,7 @@
       startMonth.add(2, 'month'),
       startMonth.add(3, 'month'),
     ];
-    console.log('[DuplicateCalendarView] Initialized with 6 months');
+    console.debug('[DuplicateCalendarView] Initialized with 6 months');
   }
   
   // Проверка и подгрузка дополнительных месяцев при скролле
@@ -116,7 +116,7 @@
     while (element) {
       // Проверяем класс
       if (element.classList.contains('calendar-container')) {
-        console.log('[DuplicateCalendarView] Found .calendar-container as scrollable parent');
+        console.debug('[DuplicateCalendarView] Found .calendar-container as scrollable parent');
         return element;
       }
       
@@ -124,7 +124,7 @@
       const overflow = style.overflow + style.overflowY;
       
       if (overflow.includes('scroll') || overflow.includes('auto')) {
-        console.log('[DuplicateCalendarView] Found scrollable parent:', element.className || element.tagName);
+        console.debug('[DuplicateCalendarView] Found scrollable parent:', element.className || element.tagName);
         return element;
       }
       
@@ -140,7 +140,7 @@
     const targetMonth = targetDate.startOf('month');
     const targetDay = targetDate.date(); // День месяца (1-31)
     
-    console.log('[scrollToDate] Target:', {
+    console.debug('[scrollToDate] Target:', {
       date: targetDate.format('YYYY-MM-DD'),
       month: targetMonth.format('YYYY-MM'),
       day: targetDay
@@ -165,7 +165,7 @@
         monthIndex = insertIndex;
       }
       
-      console.log('[scrollToDate] Added month:', targetMonth.format('YYYY-MM'), 'at index:', monthIndex);
+      console.debug('[scrollToDate] Added month:', targetMonth.format('YYYY-MM'), 'at index:', monthIndex);
       
       // Ждем рендер
       await tick();
@@ -224,7 +224,7 @@
     const centerOffset = (parentHeight - targetHeight) / 2;
     const targetScroll = currentScroll + (targetRect.top - parentRect.top) - Math.max(centerOffset, 50);
     
-    console.log('[scrollToDate] Scrolling to:', {
+    console.debug('[scrollToDate] Scrolling to:', {
       monthIndex,
       monthKey: targetMonth.format('YYYY-MM'),
       dayFound: !!targetDayElement,

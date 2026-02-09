@@ -407,9 +407,9 @@
     flex-direction: column;
     gap: 0.625rem;
     padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--background-secondary-alt);
     border-radius: 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 0.0625rem solid var(--background-modifier-border);
   }
   .subheader {
     font-size: 0.75rem;
@@ -432,12 +432,15 @@
   select, input[type="text"] {
     padding: 0.5rem 0.625rem;
     border-radius: 0.625rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
-    color: inherit;
+    border: 0.0625rem solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
     min-height: 2.75rem;
     width: 100%;
     box-sizing: border-box;
+  }
+  select:hover, input[type="text"]:hover {
+    border-color: var(--interactive-accent);
   }
   .checkbox { flex-direction: row; align-items: center; gap: 0.5rem; min-height: 2.75rem; }
   .hint {

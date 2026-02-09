@@ -15,6 +15,7 @@
   import { isMobileDevice } from "src/lib/stores/ui";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
+  import type { AgendaCustomList } from "src/settings/v3/settings";
   import {
     ViewContent,
     ViewLayout,
@@ -121,7 +122,10 @@
       // Check if state is too old (7 days)
       const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
       if (Date.now() - state.timestamp > MAX_AGE_MS) {
-        localStorage.removeItem(getStorageKey());
+        // Remove stale state using App API
+        if (appInstance?.saveLocalStorage) {
+          appInstance.saveLocalStorage(getStorageKey(), null);
+        }
         return null;
       }
       
@@ -131,27 +135,6 @@
       calendarLogger.warn('Failed to load view state', { component: 'CalendarView', data: { error } });
       return null;
     }
-  }
-  
-  /**
-   * Restore view from persisted state
-   */
-  function restoreFromPersistedState(): boolean {
-    const state = loadViewState();
-    if (!state) return false;
-    
-    const parsedDate = dayjs(state.date);
-    if (!parsedDate.isValid()) return false;
-    
-    // Set focusedDate to restored date
-    focusedDate = parsedDate;
-    
-    // Restore interval if different from current
-    if (state.interval !== getCurrentInterval()) {
-      saveConfig({ ...config, interval: state.interval });
-    }
-    
-    return true;
   }
   
   // Component references for navigation
@@ -170,6 +153,17 @@
   // Reactive frame data - dataVersion forces re-evaluation on every data update
   $: fields = dataVersion >= 0 ? frame.fields : frame.fields;
   $: records = dataVersion >= 0 ? frame.records : frame.records;
+  
+  // Agenda records filtering (v3.0.4)
+  // Standard mode: use all records (AgendaSidebar handles its own date filtering)
+  // Custom mode: use all records (filterEngine handles filtering)
+  // The agenda has its own date-based categorization, independent of calendar filters
+  $: agendaRecords = records;
+  
+  // Filter agendaRecords to only DataRecord types (for AgendaSidebar compatibility)
+  $: agendaSidebarRecords = agendaRecords.filter(
+    (r): r is DataRecord => 'id' in r && 'values' in r
+  );
 
   let anchorDate: dayjs.Dayjs = dayjs();
   let scrollToCurrentCallback: (() => void) | null = null;
@@ -517,15 +511,15 @@
       now = computeNow(timezoneValue);
     }, 60_000);
     
-    // Try to restore from persisted state first
-    const restored = restoreFromPersistedState();
+    // Restore interval from persisted state (but NOT the date — always start on today)
+    const state = loadViewState();
+    if (state && state.interval !== getCurrentInterval()) {
+      saveConfig({ ...config, interval: state.interval });
+    }
     
-    // If no persisted state or restoration failed, go to today
+    // Always navigate to today on fresh load
     setTimeout(() => {
-      if (!restored || !focusedDate) {
-        navigateToDate('today');
-      }
-      // If restored, focusedDate is already set and will be picked up by calendars
+      navigateToDate('today');
     }, 300);
     
     // Save state periodically (every 30 seconds while active)
@@ -710,6 +704,19 @@
     dateFields.find((field) => field.name === "endDate");
 
   $: booleanField = fields.find((field) => config?.checkField === field.name);
+  
+  // Title field for agenda - try 'name', 'title', or first string field
+  $: titleField = (() => {
+    // Try common name fields
+    const nameField = fields.find((field) => field.name === "name");
+    if (nameField) return nameField;
+    
+    const titleFieldCandidate = fields.find((field) => field.name === "title");
+    if (titleFieldCandidate) return titleFieldCandidate;
+    
+    // Fall back to first string field
+    return fields.find((field) => field.type === DataFieldType.String);
+  })();
 
   // Use global mobile detection store
   $: isMobile = $isMobileDevice;
@@ -832,7 +839,9 @@
           calendarLogger.error('Failed to rename note', e);
           new Notice('Ошибка при переименовании');
         }
-      }
+      },
+      // v3.0.4: Autosave setting from project
+      project.autosave ?? true
     ).open();
   }
   
@@ -1395,7 +1404,9 @@
             calendarLogger.error('Failed to rename note', e);
             new Notice('Ошибка при переименовании');
           }
-        }
+        },
+        // v3.0.4: Autosave setting from project
+        project.autosave ?? true
       ).open();
     } catch (error) {
       calendarLogger.error('Error opening edit modal', error, { component: 'CalendarView', action: 'openModal' });
@@ -1496,6 +1507,113 @@
     // On mobile use 'tab' (true), on desktop use 'window'
     const openMode = isMobile ? true : 'window';
     app_instance.workspace.openLinkText(id, id, openMode);
+  }
+  
+  /**
+   * v3.0.4: Handle saving custom agenda list
+   */
+  function handleAgendaSaveList(event: CustomEvent<{ list: AgendaCustomList }>) {
+    const { list } = event.detail;
+    console.log('[CalendarView] handleAgendaSaveList called with:', list);
+    
+    const currentLists = project.agenda?.custom?.lists ?? [];
+    const existingIndex = currentLists.findIndex(l => l.id === list.id);
+    
+    let updatedLists: AgendaCustomList[];
+    if (existingIndex >= 0) {
+      // Update existing
+      updatedLists = [...currentLists];
+      updatedLists[existingIndex] = list;
+    } else {
+      // Add new
+      updatedLists = [...currentLists, list];
+    }
+    
+    console.log('[CalendarView] Updated lists:', updatedLists);
+    
+    // Update project with new lists
+    const updatedProject: ProjectDefinition = {
+      ...project,
+      agenda: {
+        ...project.agenda,
+        mode: project.agenda?.mode ?? 'standard',
+        standard: {
+          inheritCalendarFilters: project.agenda?.standard?.inheritCalendarFilters ?? true,
+        },
+        custom: {
+          ...(project.agenda?.custom ?? {}),
+          lists: updatedLists,
+        },
+      },
+    };
+    
+    // CRITICAL: Update the local project reference so child components see the change
+    project = updatedProject;
+    console.log('[CalendarView] Local project updated, agenda now:', project.agenda);
+    
+    // Persist to settings store using immer-safe updateProject
+    settings.updateProject(updatedProject);
+    console.log('[CalendarView] Settings saved successfully via updateProject');
+  }
+  
+  /**
+   * v3.0.4: Handle deleting custom agenda list
+   */
+  function handleAgendaDeleteList(event: CustomEvent<{ listId: string }>) {
+    const { listId } = event.detail;
+    console.log('[CalendarView] handleAgendaDeleteList called for:', listId);
+    
+    const currentLists = project.agenda?.custom?.lists ?? [];
+    const updatedLists = currentLists.filter(l => l.id !== listId);
+    
+    const updatedProject: ProjectDefinition = {
+      ...project,
+      agenda: {
+        ...project.agenda,
+        mode: project.agenda?.mode ?? 'standard',
+        standard: {
+          inheritCalendarFilters: project.agenda?.standard?.inheritCalendarFilters ?? true,
+        },
+        custom: {
+          ...(project.agenda?.custom ?? {}),
+          lists: updatedLists,
+        },
+      },
+    };
+    
+    // CRITICAL: Update the local project reference
+    project = updatedProject;
+    console.log('[CalendarView] List deleted, remaining lists:', updatedLists.length);
+    
+    // Persist to settings store using immer-safe updateProject
+    settings.updateProject(updatedProject);
+  }
+  
+  /**
+   * v3.1.0: Handle reordering custom agenda lists (drag-and-drop)
+   */
+  function handleAgendaReorderLists(event: CustomEvent<{ lists: AgendaCustomList[] }>) {
+    const { lists } = event.detail;
+    
+    const updatedProject: ProjectDefinition = {
+      ...project,
+      agenda: {
+        ...project.agenda,
+        mode: project.agenda?.mode ?? 'standard',
+        standard: {
+          inheritCalendarFilters: project.agenda?.standard?.inheritCalendarFilters ?? true,
+        },
+        custom: {
+          ...(project.agenda?.custom ?? {}),
+          lists,
+        },
+      },
+    };
+    
+    project = updatedProject;
+    
+    // Persist to settings store using immer-safe updateProject
+    settings.updateProject(updatedProject);
   }
   
   function handleAgendaToggle() {
@@ -1664,8 +1782,10 @@
     {#if interval === 'day' || config?.agendaOpen}
       <AgendaSidebar 
         project={project}
-        records={records}
+        records={agendaSidebarRecords}
+        fields={fields}
         currentDate={agendaDate}
+        titleField={titleField?.name}
         dateField={dateField?.name}
         timeField={config?.startTimeField}
         colorField={config?.eventColorField}
@@ -1677,6 +1797,9 @@
         collapsed={!isMobile && config?.agendaOpen === false}
         on:toggle={handleAgendaToggle}
         on:openInNewWindow={handleAgendaOpenInNewWindow}
+        on:saveList={handleAgendaSaveList}
+        on:deleteList={handleAgendaDeleteList}
+        on:reorderLists={handleAgendaReorderLists}
       />
     {/if}
   </div>

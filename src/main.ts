@@ -95,6 +95,7 @@ export default class ProjectsPlusPlugin extends Plugin {
                   this.app,
                   t("modals.project.create.title"),
                   t("modals.project.create.cta"),
+                  // /skip method-binding: settings is a Svelte store with bound methods, this context is preserved
                   settings.addProject,
                   {
                     ...project,
@@ -132,6 +133,7 @@ export default class ProjectsPlusPlugin extends Plugin {
           this.app,
           t("modals.project.create.title"),
           t("modals.project.create.cta"),
+          // /skip method-binding: settings is a Svelte store with bound methods, this context is preserved
           settings.addProject,
           createProject()
         ).open();
@@ -152,9 +154,9 @@ export default class ProjectsPlusPlugin extends Plugin {
             new CreateNoteModal(
               this.app,
               project,
-              async (name, templatePath, project) => {
+              (name, templatePath, project) => {
                 const record = createDataRecord(name, project);
-                await get(api).createNote(record, [], templatePath);
+                void get(api).createNote(record, [], templatePath);
               }
             ).open();
           }

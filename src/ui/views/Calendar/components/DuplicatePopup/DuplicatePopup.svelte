@@ -94,7 +94,7 @@
         ? dayjs.tz(dayjs(), timezone) 
         : dayjs();
       
-      console.log('[DuplicatePopup] ScrollToToday:', {
+      console.debug('[DuplicatePopup] ScrollToToday:', {
         timezone,
         today: today.format('YYYY-MM-DD HH:mm'),
         sourceDate: sourceDate.format('YYYY-MM-DD')
@@ -383,20 +383,63 @@
   
   /* ========== MOBILE ========== */
   @media (max-width: 30rem) {
+    .duplicate-backdrop {
+      /* iOS safe area support */
+      padding-top: env(safe-area-inset-top, 0);
+      padding-bottom: env(safe-area-inset-bottom, 0);
+      align-items: flex-start;
+    }
+    
     .duplicate-modal {
       width: 100%;
       max-width: 100%;
       height: 100%;
       max-height: 100%;
       border-radius: 0;
+      /* Ensure modal respects safe areas */
+      margin-top: env(safe-area-inset-top, 0);
     }
     
     .modal-header {
-      padding: 0.5rem 0.75rem;
+      padding: 1rem;
+      /* Extra padding top for status bar overlap safety */
+      padding-top: max(1rem, env(safe-area-inset-top, 1rem));
+      min-height: 3.5rem;
+      position: relative;
     }
     
     .modal-title {
-      font-size: 0.8125rem;
+      font-size: 1rem;
+      padding-right: 3rem; /* Space for close button */
+    }
+    
+    /* Larger close button for mobile touch targets - ALWAYS VISIBLE */
+    .close-btn {
+      position: absolute;
+      top: 50%;
+      right: 0.75rem;
+      transform: translateY(-50%);
+      width: 2.75rem;
+      height: 2.75rem;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      font-size: 1.25rem;
+      background: var(--background-modifier-hover);
+      border: 0.125rem solid var(--background-modifier-border);
+      border-radius: 0.5rem;
+      z-index: 10;
+    }
+    
+    /* Larger toolbar buttons for mobile */
+    .toolbar-btn {
+      min-height: 2.75rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+    
+    .time-input {
+      min-height: 2.75rem;
+      font-size: 0.875rem;
     }
   }
 </style>
