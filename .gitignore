@@ -19,6 +19,9 @@ data.json
 .DS_Store
 
 yarn-error.log
+# AI internal workspace
+../.ai_internal/
+
 # CRITICAL: Personal Data Protection
 OBScync/
 EMERGENCY-BACKUPS/
