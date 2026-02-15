@@ -648,8 +648,6 @@ export function evaluateFormula(
           const date = dayjs(evaluate(getArg(args, 0)));
           const amount = evaluate(getArg(args, 1));
           const unit = evaluate(getArg(args, 2));
-          // @ts-ignore: dayjs.add() accepts ManipulateType union, but TypeScript narrows string to literal
-          // Runtime: unit is string from formula evaluation (validated at parse time)
           return date.add(amount, unit as any).format('YYYY-MM-DD');
         }
         if (funcName === 'DATE_SUB') {
@@ -657,8 +655,6 @@ export function evaluateFormula(
           const date = dayjs(evaluate(getArg(args, 0)));
           const amount = evaluate(getArg(args, 1));
           const unit = evaluate(getArg(args, 2));
-          // @ts-ignore: dayjs.subtract() accepts ManipulateType union, but TypeScript narrows string to literal
-          // Runtime: unit is string from formula evaluation (validated at parse time)
           return date.subtract(amount, unit as any).format('YYYY-MM-DD');
         }
 
@@ -689,8 +685,6 @@ export function evaluateFormula(
       }
 
       default:
-        // @ts-ignore: Exhaustive switch check - accessing .type on never for error reporting
-        // This branch should never execute if all FormulaNode types handled above
         throw new Error(`Unknown node type: ${(n as any).type}`);
     }
   }

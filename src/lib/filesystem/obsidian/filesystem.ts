@@ -38,8 +38,8 @@ class ObsidianFile extends IFile {
     return this.app.vault.read(this.file);
   }
 
-  write(content: string): Promise<void> {
-    return this.app.vault.modify(this.file, content);
+  async write(content: string): Promise<void> {
+    await this.app.vault.process(this.file, () => content);
   }
 
   delete(): Promise<void> {
@@ -77,7 +77,7 @@ export class ObsidianFileSystem implements IFileSystem {
   async write(path: string, content: string): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(normalizePath(path));
     if (file instanceof TFile) {
-      return this.app.vault.modify(file, content);
+      await this.app.vault.process(file, () => content);
     }
   }
 

@@ -230,7 +230,7 @@
    * Ensure scrollableParent is valid, re-find if needed
    */
   function ensureScrollableParent(): HTMLElement | null {
-    if (scrollableParent && document.contains(scrollableParent)) {
+    if (scrollableParent && activeDocument.contains(scrollableParent)) {
       return scrollableParent;
     }
     scrollableParent = findScrollableParent();
@@ -328,7 +328,7 @@
 
   function checkAndLoadMore() {
     // Ensure scrollable parent exists and is valid
-    if (!scrollableParent || !document.contains(scrollableParent)) {
+    if (!scrollableParent || !activeDocument.contains(scrollableParent)) {
       scrollableParent = findScrollableParent();
       if (!scrollableParent) return; // Still not found, abort
       // Re-attach scroll listener
@@ -480,7 +480,7 @@
     if (onScrollToCurrent) {
       onScrollToCurrent(() => {
         // Ensure scrollable parent is still valid
-        if (!scrollableParent || !document.contains(scrollableParent)) {
+        if (!scrollableParent || !activeDocument.contains(scrollableParent)) {
           scrollableParent = findScrollableParent();
           if (scrollableParent) {
             scrollableParent.addEventListener('scroll', handleScroll, { passive: true });

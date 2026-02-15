@@ -125,11 +125,11 @@
   // LIFECYCLE
   onMount(() => {
     loadState();
-    document.addEventListener('click', handleOutsideClick);
+    activeDocument.addEventListener('click', handleOutsideClick);
   });
   
   onDestroy(() => {
-    document.removeEventListener('click', handleOutsideClick);
+    activeDocument.removeEventListener('click', handleOutsideClick);
   });
   
   function handleOutsideClick(e: MouseEvent) {
@@ -220,10 +220,10 @@
     isResizing = true;
     resizeStartX = e.clientX;
     resizeStartWidth = width;
-    document.addEventListener('mousemove', doResize);
-    document.addEventListener('mouseup', endResize);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    activeDocument.addEventListener('mousemove', doResize);
+    activeDocument.addEventListener('mouseup', endResize);
+    activeDocument.body.style.cursor = 'col-resize';
+    activeDocument.body.style.userSelect = 'none';
   }
   
   function doResize(e: MouseEvent) {
@@ -235,10 +235,10 @@
   
   function endResize() {
     isResizing = false;
-    document.removeEventListener('mousemove', doResize);
-    document.removeEventListener('mouseup', endResize);
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
+    activeDocument.removeEventListener('mousemove', doResize);
+    activeDocument.removeEventListener('mouseup', endResize);
+    activeDocument.body.style.cursor = '';
+    activeDocument.body.style.userSelect = '';
   }
   
   // DATA PROCESSING
@@ -465,9 +465,7 @@
   }
   
   function handleSaveList(event: CustomEvent<AgendaCustomList>) {
-    console.log('[AgendaSidebar] handleSaveList received:', event.detail);
     dispatch('saveList', { list: event.detail });
-    console.log('[AgendaSidebar] saveList event dispatched');
     showListEditor = false;
     editingList = null;
   }
@@ -1012,7 +1010,7 @@
     font-weight: var(--ppp-font-weight-medium, 500);
   }
   .stat-total { background: var(--background-modifier-border); color: var(--text-muted); }
-  .stat-overdue { background: rgba(244, 67, 54, 0.15); color: var(--text-error); }
+  .stat-overdue { background: rgba(var(--color-red-rgb, 244, 67, 54), 0.15); color: var(--text-error); }
   
   /* Add button */
   .add-btn {
@@ -1180,7 +1178,7 @@
   /* Category-specific event styles */
   .cat-overdue .event {
     border-left: 0.1875rem solid var(--text-error);
-    background: rgba(244, 67, 54, 0.05);
+    background: rgba(var(--color-red-rgb, 244, 67, 54), 0.05);
   }
   .cat-undated .event {
     border-left: 0.1875rem solid var(--text-warning);

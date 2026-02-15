@@ -5,6 +5,22 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.6] - 2026-02-15
+
+### Fixed
+- **Obsidian API compliance** — technical release preparing for Obsidian Community submission
+  - `vault.modify()` → `vault.process()` for atomic file writes (2 locations)
+  - All `innerHTML` usage replaced with safe DOM: `setIcon()`, `el.empty()`, `createSpan()` (23 locations)
+  - All `document.*` replaced with `activeDocument.*` for multi-window support (109 locations)
+  - Removed 9 stray `console.log()` from production code
+  - Fixed `manifest.json` description format (removed colon per guidelines)
+
+### Changed
+- **Inline styles → CSS classes** — extracted 38 repeated inline style patterns into `.ppp-popover-*` and `.ppp-pop-*` CSS classes in `styles.css`
+- **Hardcoded colors → CSS variables** — replaced 17 hardcoded color values with Obsidian CSS variables (`var(--text-error)`, `var(--color-red-rgb, ...)`, `var(--background-modifier-hover)`, etc.)
+- **`@ts-ignore` → `@ts-expect-error`** — converted all 28 `@ts-ignore` directives; removed 25 that were unnecessary, kept 5 with proper error descriptions
+- **ESLint configuration** — added `eslint-plugin-obsidianmd` (v0.1.9) with 23 Obsidian-specific rules enabled
+
 ## [3.0.5] - 2026-02-09
 
 ### Added

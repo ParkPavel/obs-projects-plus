@@ -250,7 +250,7 @@
       if (popY < 4) popY = 4;
     }
 
-    const el = document.createElement('div');
+    const el = activeDocument.createElement('div');
     el.setAttribute('style', [
       'position:fixed',
       `left:${Math.max(4, popX)}px`,
@@ -269,12 +269,12 @@
     ].join(';'));
 
     renderAcContent(el);
-    document.body.appendChild(el);
+    activeDocument.body.appendChild(el);
     acPopover = el;
   }
 
   function renderAcContent(el: HTMLDivElement) {
-    el.innerHTML = '';
+    el.empty();
 
     let lastCategory = '';
 
@@ -282,7 +282,7 @@
       // Category separator
       if (item.category && item.category !== lastCategory) {
         lastCategory = item.category;
-        const sep = document.createElement('div');
+        const sep = activeDocument.createElement('div');
         sep.setAttribute('style', [
           'padding:4px 12px 2px',
           'font-size:11px',
@@ -295,7 +295,7 @@
         el.appendChild(sep);
       }
 
-      const row = document.createElement('div');
+      const row = activeDocument.createElement('div');
       const isActive = idx === acIndex;
       row.setAttribute('style', [
         'display:flex',
@@ -310,7 +310,7 @@
       row.dataset['acIdx'] = String(idx);
 
       // Kind badge
-      const badge = document.createElement('span');
+      const badge = activeDocument.createElement('span');
       const badgeColors: Record<string, string> = {
         function: 'background:#7c3aed;color:#fff',
         field: 'background:#0891b2;color:#fff',
@@ -334,7 +334,7 @@
       row.appendChild(badge);
 
       // Label
-      const label = document.createElement('span');
+      const label = activeDocument.createElement('span');
       label.setAttribute('style', [
         'font-family:var(--font-monospace)',
         'font-weight:600',
@@ -347,7 +347,7 @@
 
       // Args hint (for functions)
       if (item.args !== undefined && item.args !== '') {
-        const args = document.createElement('span');
+        const args = activeDocument.createElement('span');
         args.setAttribute('style', [
           'color:' + (isActive ? 'var(--text-on-accent)' : 'var(--text-muted)'),
           'font-size:11px',
@@ -359,7 +359,7 @@
       }
 
       // Description (right-aligned)
-      const desc = document.createElement('span');
+      const desc = activeDocument.createElement('span');
       desc.setAttribute('style', [
         'margin-left:auto',
         'color:' + (isActive ? 'var(--text-on-accent)' : 'var(--text-faint)'),
@@ -387,7 +387,7 @@
     });
 
     // Footer hint
-    const footer = document.createElement('div');
+    const footer = activeDocument.createElement('div');
     footer.setAttribute('style', [
       'padding:4px 12px',
       'font-size:10px',
@@ -396,7 +396,9 @@
       'display:flex',
       'gap:12px',
     ].join(';'));
-    footer.innerHTML = '<span>↑↓ навигация</span><span>Tab / Enter — вставить</span><span>Esc — закрыть</span>';
+    footer.createSpan({ text: '↑↓ навигация' });
+    footer.createSpan({ text: 'Tab / Enter — вставить' });
+    footer.createSpan({ text: 'Esc — закрыть' });
     el.appendChild(footer);
   }
 

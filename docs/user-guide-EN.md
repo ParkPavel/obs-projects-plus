@@ -29,34 +29,37 @@ Welcome to Projects Plus! This comprehensive guide will help you get the most ou
 
 #### General Shortcuts
 
-| Action | Windows/Linux | Mac |
-|--------|---------------|-----|
-| Open command palette | `Ctrl+P` | `Cmd+P` |
-| New note | `Ctrl+N` | `Cmd+N` |
-| Save | `Ctrl+S` | `Cmd+S` |
-| Cancel | `Escape` | `Escape` |
+> The plugin **does not assign global hotkeys** by default. All keys below work when focus is inside the corresponding view.
+
+**Obsidian Commands** (available via `Ctrl/Cmd+P`, hotkeys can be assigned in Settings → Hotkeys):
+
+| Command | ID |
+|---------|-----|
+| Show Projects Plus | `show-projects` |
+| Create Project | `create-project` |
+| Create Note | `create-note` |
 
 #### Calendar
 
 | Action | Keys / Gesture |
 |--------|----------------|
-| **Zoom In** | `Ctrl` + scroll up |
-| **Zoom Out** | `Ctrl` + scroll down |
+| **Zoom In** | `Ctrl` + scroll up / `+` / `Ctrl+→` |
+| **Zoom Out** | `Ctrl` + scroll down / `-` / `Ctrl+←` |
 | **Go to Today** | `T` key or "Today" button |
-| **Next Period** | Scroll down (mouse wheel) |
-| **Previous Period** | Scroll up (mouse wheel) |
-| **Switch View** | Month / Week / Day buttons |
+| **Next Period** | `→` / scroll down |
+| **Previous Period** | `←` / scroll up |
+| **Back in History** | `Backspace` |
 | **Open Note** | Click on event |
 | **Open in New Window** | `Ctrl+Click` (Win/Linux) / `Cmd+Click` (Mac) |
 | **Create Note** | Double-click on empty cell |
 
 #### Calendar Zoom Levels
 
-When using Zoom (Ctrl+scroll):
-1. **Month** — full month overview
-2. **2 Weeks** — intermediate view
-3. **Week** — detailed weekly plan
-4. **3 Days** — focus on upcoming days
+When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
+1. **Year** — annual overview
+2. **Month** — full month overview
+3. **2 Weeks** — intermediate view
+4. **Week** — detailed weekly plan
 5. **Day** — single day timeline (07:00–22:00)
 
 #### Table View

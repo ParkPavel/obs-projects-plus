@@ -290,7 +290,7 @@
   }
 
   .error {
-    background-color: rgba(255, 82, 82, 0.2) !important;
+    background-color: rgba(var(--color-red-rgb, 255, 82, 82), 0.2) !important;
     border: 2px solid var(--text-error) !important;
     color: var(--text-error);
   }

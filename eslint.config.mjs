@@ -1,5 +1,6 @@
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import tsdoc from "eslint-plugin-tsdoc";
+import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 import tsParser from "@typescript-eslint/parser";
 import path from "node:path";
@@ -21,6 +22,7 @@ export default [{
     plugins: {
         "@typescript-eslint": typescriptEslint,
         tsdoc,
+        obsidianmd,
     },
 
     languageOptions: {
@@ -41,5 +43,31 @@ export default [{
         "@typescript-eslint/no-unused-vars": "off",
         "no-useless-escape": "off",
         "tsdoc/syntax": "warn",
+
+        // Obsidian plugin guidelines (eslint-plugin-obsidianmd)
+        "obsidianmd/no-forbidden-elements": "error",
+        "obsidianmd/no-static-styles-assignment": "warn",
+        "obsidianmd/no-tfile-tfolder-cast": "error",
+        "obsidianmd/no-view-references-in-plugin": "off", // requires type-checked linting
+        "obsidianmd/vault/iterate": "error",
+        "obsidianmd/detach-leaves": "error",
+        "obsidianmd/hardcoded-config-path": "error",
+        "obsidianmd/platform": "error",
+        "obsidianmd/regex-lookbehind": "error",
+        "obsidianmd/object-assign": "error",
+        "obsidianmd/prefer-file-manager-trash-file": "off", // requires type-checked linting
+        "obsidianmd/validate-manifest": "error",
+        "obsidianmd/validate-license": "error",
+        "obsidianmd/no-plugin-as-component": "off", // requires type-checked linting
+        "obsidianmd/no-sample-code": "error",
+        "obsidianmd/sample-names": "error",
+        "obsidianmd/commands/no-command-in-command-id": "error",
+        "obsidianmd/commands/no-command-in-command-name": "error",
+        "obsidianmd/commands/no-default-hotkeys": "error",
+        "obsidianmd/commands/no-plugin-id-in-command-id": "error",
+        "obsidianmd/commands/no-plugin-name-in-command-name": "error",
+        "obsidianmd/settings-tab/no-manual-html-headings": "error",
+        "obsidianmd/settings-tab/no-problematic-settings-headings": "error",
+        "obsidianmd/prefer-abstract-input-suggest": "error",
     },
 }];

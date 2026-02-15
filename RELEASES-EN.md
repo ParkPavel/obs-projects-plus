@@ -1,10 +1,11 @@
 # 🚀 Release Information
 
-## Current Release: v3.0.5
+## Current Release: v3.0.6
 
-**Release Date**: February 9, 2026  
+**Release Date**: February 15, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
+**Type**: Technical release — Obsidian guidelines compliance
 
 ## 📦 Download Options
 
@@ -35,7 +36,49 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 - **API Changes**: Some API methods have been updated
 - **Settings Format**: Enhanced settings with backward compatibility
 
-## 📋 Release Notes
+## �️ Roadmap
+
+| Priority | Feature | Version | Status | Docs |
+|:--------:|---------|---------|--------|:----:|
+| ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | Released | [Architecture](docs/architecture-filters.md) |
+| ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released | [CHANGELOG](CHANGELOG.md) |
+| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | In Progress | [Architecture](docs/architecture-drag-drop.md) |
+| 🥈 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
+| 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
+
+## �📋 Release Notes
+
+---
+
+### 🔧 v3.0.6 (February 15, 2026) — Technical Compliance Release
+
+> **Full alignment with Obsidian Plugin Guidelines for Community Plugins submission**
+
+#### Fixed
+
+| Issue | Before | After | Count |
+|-------|:------:|:-----:|:-----:|
+| `vault.modify()` — data race | `vault.modify` | `vault.process` (atomic writes) | 2 |
+| `innerHTML` — XSS vulnerability | `innerHTML = ...` | `setIcon()`, `el.empty()`, `createSpan()` | 23 |
+| `document.*` — multi-window broken | `document.` | `activeDocument.` | 109 |
+| `console.log` in production | 9 calls | 0 (removed) | 9 |
+| `manifest.json` description | contained `:` | removed (bot regex disallows) | 1 |
+
+#### Improved
+
+| Category | Description |
+|----------|-------------|
+| **Inline styles → CSS** | 38 repeated inline style patterns extracted to `.ppp-popover-*`, `.ppp-pop-*` CSS classes (~170 lines in `styles.css`) |
+| **CSS colors** | 17 hardcoded rgba/hex replaced with Obsidian CSS variables (`--text-error`, `--color-red-rgb`, `--background-modifier-hover`, etc.) |
+| **@ts-ignore** | 28 → 0. All replaced: 25 were unnecessary, 5 `@ts-expect-error` kept with proper descriptions |
+| **ESLint** | Added `eslint-plugin-obsidianmd` (v0.1.9) — 23 Obsidian community rules for automated checks |
+
+#### Metrics
+
+- **Files affected**: ~30 (26 source + 4 config/docs)
+- **Tests**: 291/291 PASS (16 suites, 0 failures)
+- **Build**: OK (main.js 1.6MB, main.css 4.2KB)
+- **Lint**: clean (0 errors)
 
 ---
 
@@ -43,7 +86,7 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 
 > **Comprehensive filter system, custom agenda lists, full i18n audit**
 
-#### 🎯 Filter System v3.1.0 — 42 Operators
+#### 🎯 Filter System — 42 Operators
 
 Completely reworked filter engine supporting all frontmatter field types.
 
@@ -336,7 +379,7 @@ Reworked UI architecture for Filters, Sort, and Colors tabs in view settings:
 
 #### ✨ New Features
 - 🔍 **Smart Calendar Zoom**: Ctrl+scroll for instant view switching
-  - Zoom levels: Month ↔ 2 Weeks ↔ Week ↔ 3 Days ↔ Day
+  - Zoom levels: Year ↔ Month ↔ 2 Weeks ↔ Week ↔ Day
 - 🤏 **Pinch-to-zoom**: Touchpad and trackpad gesture support
 - 🎯 **Date Centering**: Zoom maintains focus on date under cursor
 - 💫 **Visual Indicator**: Elegant Apple-style zoom level indicator
@@ -381,117 +424,32 @@ Reworked UI architecture for Filters, Sort, and Colors tabs in view settings:
 - Enhanced security practices in development
 - Regular security audits and updates
 
-## 🗓️ Release Schedule
+## � Version Compatibility
 
-### 📅 Upcoming Releases
-
-| Version | Release Date | Status | Features |
-|---------|-------------|--------|----------|
-| **v2.1.0** | Q2 2025 | 🟡 Planning | Enhanced automation, new view types |
-| **v2.2.0** | Q3 2025 | 🟡 Planning | Team collaboration features |
-| **v3.0.0** | Q4 2025 | 🟡 Planning | Major architecture update |
-
-### 🔄 Update Frequency
-- **Patch Releases**: Monthly (bug fixes, minor improvements)
-- **Minor Releases**: Quarterly (new features, enhancements)
-- **Major Releases**: Annually (major architecture changes)
-
-## 📊 Version Compatibility
-
-### Obsidian Compatibility
+### Obsidian
 
 | Projects Plus | Obsidian | Status |
-|---------------|-----------|--------|
-| **v2.0.1** | 1.0.0+ | ✅ Fully Supported |
-| **v1.17.4** | 0.15.0+ | ⚠️ Legacy Support |
+|---------------|----------|--------|
+| **v3.0.x** | 1.5.7+ | ✅ Current |
+| **v2.x** | 1.1.0+ | ⚠️ Legacy |
 
-### Plugin Compatibility
+### Compatible Plugins
 
 | Plugin | Compatibility | Notes |
-|--------|---------------|-------|
-| **Dataview** | ✅ Full | Enhanced integration |
-| **Templater** | ✅ Full | Template automation support |
-| **Calendar** | ✅ Full | Calendar view integration |
-| **Kanban** | ✅ Full | Board view compatibility |
+|--------|:-------------:|-------|
+| **Dataview** | ✅ | DQL queries as data source |
+| **Templater** | ✅ | Templates for note creation |
+| **Calendar** | ✅ | Side-by-side use |
+| **Kanban** | ✅ | Side-by-side use |
 
-## 🔧 Development Releases
-
-### Beta Releases
-Beta releases are available for testing new features:
-
-```bash
-# Install beta version via BRAT
-ParkPavel/obs-projects-plus@beta
-```
-
-### Alpha Releases
-Alpha releases contain experimental features:
-
-```bash
-# Install alpha version via BRAT
-ParkPavel/obs-projects-plus@alpha
-```
-
-## 📈 Performance Metrics
-
-### v2.0.1 Performance Improvements
-
-| Metric | v1.17.4 | v2.0.0 | Improvement |
-|--------|---------|--------|-------------|
-| **Load Time** | 2.5s | 0.8s | 68% faster |
-| **Memory Usage** | 45MB | 28MB | 38% reduction |
-| **Render Time** | 1.2s | 0.4s | 67% faster |
-| **Bundle Size** | 2.1MB | 1.8MB | 14% smaller |
-
-## 🐛 Known Issues
-
-### Current Issues (v2.0.1)
-- **Issue #123**: Calendar view may show incorrect dates in some timezones
-- **Issue #124**: Large projects (>5000 notes) may experience slow loading
-- **Issue #125**: Some themes may not display correctly in dark mode
-
-### Workarounds
-- **Calendar Issue**: Use Table view as alternative
-- **Performance Issue**: Reduce project size limit to 1000 notes
-- **Theme Issue**: Switch to default Obsidian theme temporarily
-
-## 🔄 Rollback Instructions
-
-### If you need to rollback to v1.17.4:
-
-1. **Disable** Projects Plus
-2. **Install** original Obsidian Projects plugin
-3. **Restore** your backup
-4. **Verify** functionality
-
-### Backup Your Data
-Always backup your vault before major updates:
-- **Settings**: `.obsidian/plugins/obs-projects-plus/`
-- **Projects**: Your project folders and notes
-- **Templates**: Custom templates and configurations
+---
 
 ## 📞 Support
 
-### Getting Help
-- **📧 GitHub Issues**: [Report bugs](https://github.com/ParkPavel/obs-projects-plus/issues)
-- **💬 Discussions**: [Ask questions](https://github.com/ParkPavel/obs-projects-plus/discussions)
-- **🌐 Website**: [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
-
-### Community Support
-- **Discord**: Join our community server
-- **Reddit**: r/ObsidianMD community
-- **Forum**: Obsidian Community Forum
+- **Telegram**: [@parkpavel_chigon](https://t.me/parkpavel_chigon)
+- **GitHub Issues**: [Report a bug](https://github.com/ParkPavel/obs-projects-plus/issues)
+- **GitHub Discussions**: [Discussions](https://github.com/ParkPavel/obs-projects-plus/discussions)
 
 ---
 
-## 🎯 Next Steps
-
-1. **Install** Projects Plus v2.0.1
-2. **Read** the [User Guide](docs/user-guide.md)
-3. **Explore** the [API Documentation](docs/api.md)
-4. **Join** the community discussions
-5. **Contribute** to the project development
-
----
-
-*For the latest release information, visit our [GitHub repository](https://github.com/ParkPavel/obs-projects-plus/releases).*
+*For the latest release information, visit [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases).*

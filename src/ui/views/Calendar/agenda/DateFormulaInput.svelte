@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
+  import { setIcon } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
   import { getDateFormulaSuggestions, testDateFormula, isDateFormula } from 'src/lib/helpers/dateFormulaParser';
@@ -17,7 +18,7 @@
   let selectedIndex = 0;
   let inputElement: HTMLInputElement;
   
-  /** Imperative popover element portaled to document.body */
+  /** Imperative popover element portaled to activeDocument.body */
   let popoverEl: HTMLDivElement | null = null;
   
   const allSuggestions = getDateFormulaSuggestions();
@@ -48,7 +49,7 @@
   }
   
   /* ═══════════════════════════════════════
-     IMPERATIVE POPOVER — portaled to document.body
+     IMPERATIVE POPOVER — portaled to activeDocument.body
      Bypasses transform/overflow/scoped-CSS issues in Obsidian modals
      ═══════════════════════════════════════ */
 
@@ -72,7 +73,7 @@
 
     const pos = computePopoverPosition(inputElement);
 
-    const el = document.createElement('div');
+    const el = activeDocument.createElement('div');
     el.setAttribute('style', [
       'position:fixed', `z-index:10000`,
       `left:${pos.left}px`, `width:${pos.width}px`, `max-height:${pos.maxH}px`,
@@ -92,38 +93,40 @@
     }
 
     // ── Header ──
-    const header = document.createElement('div');
+    const header = activeDocument.createElement('div');
     header.setAttribute('style', [
       'display:flex', 'align-items:center', 'gap:6px',
       'padding:6px 10px', 'border-bottom:1px solid var(--background-modifier-border)',
       'background:var(--background-secondary)', 'color:var(--text-muted)',
       'font-size:11px', 'font-weight:600', 'flex-shrink:0',
     ].join(';'));
-    header.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
-    header.appendChild(document.createTextNode(
+    const clockSpan = activeDocument.createElement('span');
+    setIcon(clockSpan, 'clock');
+    header.appendChild(clockSpan);
+    header.appendChild(activeDocument.createTextNode(
       ' ' + ($i18n.t('views.calendar.agenda.custom.filter-editor.date-suggestions') || 'Формулы дат')
     ));
     el.appendChild(header);
 
     // ── List container ──
-    const list = document.createElement('div');
+    const list = activeDocument.createElement('div');
     list.setAttribute('style', 'flex:1;overflow-y:auto;padding:4px 0;');
     list.dataset['role'] = 'list';
     el.appendChild(list);
 
     // ── Footer ──
-    const footer = document.createElement('div');
+    const footer = activeDocument.createElement('div');
     footer.setAttribute('style', [
       'padding:4px 10px', 'border-top:1px solid var(--background-modifier-border)',
       'background:var(--background-secondary)', 'text-align:center', 'flex-shrink:0',
     ].join(';'));
-    const footerSmall = document.createElement('small');
+    const footerSmall = activeDocument.createElement('small');
     footerSmall.setAttribute('style', 'color:var(--text-faint);font-size:10px;');
     footerSmall.textContent = '↑↓ · Enter · Esc';
     footer.appendChild(footerSmall);
     el.appendChild(footer);
 
-    document.body.appendChild(el);
+    activeDocument.body.appendChild(el);
     popoverEl = el;
     renderPopoverContent(filteredSuggestions, selectedIndex);
   }
@@ -132,10 +135,10 @@
     if (!popoverEl) return;
     const list = popoverEl.querySelector('[data-role="list"]') as HTMLElement | null;
     if (!list) return;
-    list.innerHTML = '';
+    list.empty();
 
     if (suggestions.length === 0) {
-      const empty = document.createElement('div');
+      const empty = activeDocument.createElement('div');
       empty.setAttribute('style', 'padding:12px;text-align:center;color:var(--text-faint);font-size:12px;');
       empty.textContent = 'Нет совпадений';
       list.appendChild(empty);
@@ -155,7 +158,7 @@
       // Category separator
       if (s.category !== lastCat) {
         lastCat = s.category;
-        const sep = document.createElement('div');
+        const sep = activeDocument.createElement('div');
         sep.setAttribute('style', [
           'padding:4px 12px 2px', 'color:var(--text-faint)',
           'font-size:10px', 'font-weight:600', 'text-transform:uppercase',
@@ -169,7 +172,7 @@
       const isSelected = idx === selIdx;
 
       // Single-line item: [formula] label  — description
-      const btn = document.createElement('button');
+      const btn = activeDocument.createElement('button');
       btn.type = 'button';
       btn.tabIndex = -1;
       btn.title = s.description;
@@ -182,7 +185,7 @@
       ].join(';'));
 
       // Formula badge
-      const badge = document.createElement('code');
+      const badge = activeDocument.createElement('code');
       badge.setAttribute('style', [
         'padding:1px 6px', 'border-radius:3px', 'flex-shrink:0',
         'background:var(--background-modifier-success,rgba(0,180,0,0.12))',
@@ -193,13 +196,13 @@
       btn.appendChild(badge);
 
       // Label
-      const label = document.createElement('span');
+      const label = activeDocument.createElement('span');
       label.setAttribute('style', 'color:var(--text-normal);font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;');
       label.textContent = s.label;
       btn.appendChild(label);
 
       // Short description (right-aligned, muted)
-      const desc = document.createElement('span');
+      const desc = activeDocument.createElement('span');
       desc.setAttribute('style', 'color:var(--text-faint);font-size:10px;white-space:nowrap;flex-shrink:0;');
       desc.textContent = s.description;
       btn.appendChild(desc);

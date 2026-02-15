@@ -122,44 +122,30 @@ export function evaluateFilter(
   switch (filter.operator) {
     // ==================== BACKWARD COMPATIBILITY ====================
     // Old operators (v3.0.4) - map to new operators
-    // @ts-ignore: Legacy operator migration - 'equals' not in v3.1.0 AgendaFilterOperator union
-    // Kept for backward compatibility with user data from v3.0.4 (released Jan 2026)
     case 'equals' as any:
       return evaluateFilter(record, { ...filter, operator: 'is' }, baseDate);
-    // @ts-ignore: Legacy operators - see first case above for full explanation
     case 'not_equals' as any:
       return evaluateFilter(record, { ...filter, operator: 'is-not' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'is_empty' as any:
       return evaluateFilter(record, { ...filter, operator: 'is-empty' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'is_not_empty' as any:
       return evaluateFilter(record, { ...filter, operator: 'is-not-empty' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'greater_than' as any:
       return evaluateFilter(record, { ...filter, operator: 'gt' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'less_than' as any:
       return evaluateFilter(record, { ...filter, operator: 'lt' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'greater_or_equal' as any:
       return evaluateFilter(record, { ...filter, operator: 'gte' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'less_or_equal' as any:
       return evaluateFilter(record, { ...filter, operator: 'lte' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'is_today' as any:
       return evaluateFilter(record, { ...filter, operator: 'is-today' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'is_this_week' as any:
       return evaluateFilter(record, { ...filter, operator: 'is-this-week' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'is_overdue' as any:
       return evaluateFilter(record, { ...filter, operator: 'is-overdue' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'is_upcoming' as any:
       return evaluateFilter(record, { ...filter, operator: 'is-upcoming' }, baseDate);
-    // @ts-ignore: Legacy operators
     case 'not_contains' as any:
       return evaluateFilter(record, { ...filter, operator: 'not-contains' }, baseDate);
     
@@ -450,11 +436,8 @@ export function filterRecordsForList(
   }
   
   // Backward compatibility - old lists with filters array (v3.0.x format)
-  // @ts-ignore: Old AgendaCustomList format had filters: AgendaFilter[] property
-  // v3.1.0 changed to filterGroup/filterFormula, but need to support migration
   if ('filters' in list && Array.isArray((list as any).filters)) {
     console.warn('[FilterEngine] Old list format detected, using backward compatibility mode');
-    // @ts-ignore: Accessing old format filters property for migration
     return records.filter(record => 
       evaluateFilters(record, (list as any).filters, baseDate)
     );

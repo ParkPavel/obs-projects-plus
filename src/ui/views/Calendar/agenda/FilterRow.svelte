@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick, onDestroy } from 'svelte';
+  import { setIcon } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
   import { app } from 'src/lib/stores/obsidian';
@@ -71,48 +72,11 @@
   }
 
   /* ═══════════════════════════════════════
-     IMPERATIVE POPOVER — creates dropdown in document.body
+     IMPERATIVE POPOVER — creates dropdown in activeDocument.body
      bypasses all transform/overflow/scoped-CSS issues
      ═══════════════════════════════════════ */
 
-  const POPOVER_STYLES = {
-    container: `
-      position:fixed; border:1px solid var(--background-modifier-border);
-      border-radius:8px; background:var(--background-primary);
-      box-shadow:0 6px 24px rgba(0,0,0,0.28),0 2px 8px rgba(0,0,0,0.14);
-      z-index:10000; display:flex; flex-direction:column;
-      overflow:hidden; font-family:var(--font-interface);
-    `,
-    search: `
-      display:flex; align-items:center; gap:6px;
-      padding:8px 12px; border-bottom:1px solid var(--background-modifier-border);
-    `,
-    searchInput: `
-      flex:1; border:none; background:transparent; color:var(--text-normal);
-      font-size:13px; font-family:var(--font-interface); outline:none;
-      min-width:0; padding:0; margin:0; line-height:1.4;
-    `,
-    list: `
-      overflow-y:auto; padding:4px;
-    `,
-    item: `
-      display:flex; align-items:center; gap:8px; width:100%;
-      padding:8px 12px; border:none; border-radius:6px;
-      background:transparent; color:var(--text-normal); cursor:pointer;
-      font-size:13px; font-family:var(--font-interface); text-align:left;
-      line-height:1.3; min-height:32px; box-sizing:border-box;
-    `,
-    itemHover: `background:var(--background-modifier-hover);`,
-    itemSelected: `color:var(--interactive-accent); font-weight:500;`,
-    itemIcon: `
-      display:flex; align-items:center; flex-shrink:0;
-      color:var(--text-muted); width:18px; height:18px;
-    `,
-    empty: `
-      padding:20px 12px; text-align:center; color:var(--text-faint);
-      font-size:12px; font-style:italic;
-    `,
-  };
+  /* CSS classes are defined in styles.css under .ppp-popover-* prefix */
 
   function computePosition(trigger: HTMLElement, minW: number): { top: number; left: number; width: number; maxH: number; flipUp: boolean } {
     const rect = trigger.getBoundingClientRect();
@@ -148,19 +112,19 @@
     const chip = fieldWrapperEl?.querySelector('.chip') as HTMLElement;
     if (!chip) return;
 
-    const container = document.createElement('div');
-    container.setAttribute('style', POPOVER_STYLES.container);
+    const container = activeDocument.createElement('div');
+    container.addClass('ppp-popover-container');
     container.classList.add('ppp-filter-popover');
     positionContainer(container, chip, 260);
 
     // Search bar
-    const searchBar = document.createElement('div');
-    searchBar.setAttribute('style', POPOVER_STYLES.search);
-    const searchIcon = document.createElement('span');
-    searchIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`;
+    const searchBar = activeDocument.createElement('div');
+    searchBar.addClass('ppp-popover-search');
+    const searchIcon = activeDocument.createElement('span');
+    setIcon(searchIcon, 'search');
     searchBar.appendChild(searchIcon);
-    const searchInput = document.createElement('input');
-    searchInput.setAttribute('style', POPOVER_STYLES.searchInput);
+    const searchInput = activeDocument.createElement('input');
+    searchInput.addClass('ppp-popover-search-input');
     searchInput.type = 'text';
     searchInput.placeholder = t('field-placeholder') || 'Search fields...';
     searchInput.autocomplete = 'off';
@@ -169,8 +133,8 @@
     container.appendChild(searchBar);
 
     // List
-    const list = document.createElement('div');
-    list.setAttribute('style', POPOVER_STYLES.list);
+    const list = activeDocument.createElement('div');
+    list.addClass('ppp-popover-list');
     // min-height for at least 5 items (5×32 = 160), but max 300
     const itemH = 32;
     const visibleCount = Math.min(Math.max(fields.length, 1), 8);
@@ -181,48 +145,47 @@
     container.appendChild(list);
 
     function renderItems(searchText: string) {
-      list.innerHTML = '';
+      list.empty();
       const lower = searchText.trim().toLowerCase();
       const filtered = lower
         ? fields.filter(f => f.name.toLowerCase().includes(lower))
         : fields;
 
       if (filtered.length === 0) {
-        const empty = document.createElement('div');
-        empty.setAttribute('style', POPOVER_STYLES.empty);
+        const empty = activeDocument.createElement('div');
+        empty.addClass('ppp-popover-empty');
         empty.textContent = t('no-value') || 'No results';
         list.appendChild(empty);
         return;
       }
 
       filtered.forEach(f => {
-        const btn = document.createElement('button');
+        const btn = activeDocument.createElement('button');
         const isSelected = f.name === filter.field;
-        let style = POPOVER_STYLES.item;
-        if (isSelected) style += POPOVER_STYLES.itemSelected;
-        btn.setAttribute('style', style);
+        btn.addClass('ppp-popover-item');
+        if (isSelected) btn.addClass('ppp-popover-item--selected');
         btn.type = 'button';
 
         // Icon
-        const iconSpan = document.createElement('span');
-        iconSpan.setAttribute('style', POPOVER_STYLES.itemIcon);
+        const iconSpan = activeDocument.createElement('span');
+        iconSpan.addClass('ppp-popover-item-icon');
         const iconName = getFieldIconName(f);
-        iconSpan.innerHTML = getFieldSvg(iconName);
+        setIcon(iconSpan, iconName);
         if (isSelected) iconSpan.style.color = 'var(--interactive-accent)';
         btn.appendChild(iconSpan);
 
         // Label
-        const label = document.createElement('span');
-        label.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        const label = activeDocument.createElement('span');
+        label.addClass('ppp-popover-label');
         label.textContent = f.name;
         btn.appendChild(label);
 
         // Check mark
         if (isSelected) {
-          const check = document.createElement('span');
-          check.setAttribute('style', POPOVER_STYLES.itemIcon);
+          const check = activeDocument.createElement('span');
+          check.addClass('ppp-popover-item-icon');
           check.style.color = 'var(--interactive-accent)';
-          check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+          setIcon(check, 'check');
           btn.appendChild(check);
         }
 
@@ -261,7 +224,7 @@
       }
     });
 
-    document.body.appendChild(container);
+    activeDocument.body.appendChild(container);
     fieldPopoverEl = container;
     searchInput.focus();
   }
@@ -279,13 +242,13 @@
     const chip = operatorWrapperEl?.querySelector('.chip') as HTMLElement;
     if (!chip) return;
 
-    const container = document.createElement('div');
-    container.setAttribute('style', POPOVER_STYLES.container);
+    const container = activeDocument.createElement('div');
+    container.addClass('ppp-popover-container');
     container.classList.add('ppp-filter-popover');
     positionContainer(container, chip, 220);
 
-    const list = document.createElement('div');
-    list.setAttribute('style', POPOVER_STYLES.list);
+    const list = activeDocument.createElement('div');
+    list.addClass('ppp-popover-list');
     const itemH = 32;
     const visibleCount = Math.min(Math.max(operators.length, 1), 8);
     list.style.maxHeight = `${Math.min(visibleCount * itemH + 8, 300)}px`;
@@ -295,23 +258,22 @@
     container.appendChild(list);
 
     operators.forEach(op => {
-      const btn = document.createElement('button');
+      const btn = activeDocument.createElement('button');
       const isSelected = op === filter.operator;
-      let style = POPOVER_STYLES.item;
-      if (isSelected) style += POPOVER_STYLES.itemSelected;
-      btn.setAttribute('style', style);
+      btn.addClass('ppp-popover-item');
+        if (isSelected) btn.addClass('ppp-popover-item--selected');
       btn.type = 'button';
 
-      const label = document.createElement('span');
-      label.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      const label = activeDocument.createElement('span');
+      label.addClass('ppp-popover-label');
       label.textContent = getOperatorLabel(op);
       btn.appendChild(label);
 
       if (isSelected) {
-        const check = document.createElement('span');
-        check.setAttribute('style', POPOVER_STYLES.itemIcon);
+        const check = activeDocument.createElement('span');
+        check.addClass('ppp-popover-item-icon');
         check.style.color = 'var(--interactive-accent)';
-        check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        setIcon(check, 'check');
         btn.appendChild(check);
       }
 
@@ -324,7 +286,7 @@
       list.appendChild(btn);
     });
 
-    document.body.appendChild(container);
+    activeDocument.body.appendChild(container);
     operatorPopoverEl = container;
   }
 
@@ -333,20 +295,6 @@
       operatorPopoverEl.parentNode.removeChild(operatorPopoverEl);
     }
     operatorPopoverEl = null;
-  }
-
-  /* simple SVGs for field type icons */
-  function getFieldSvg(name: string): string {
-    const attrs = 'xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
-    switch (name) {
-      case 'type': return `<svg ${attrs}><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
-      case 'hash': return `<svg ${attrs}><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>`;
-      case 'check-square': return `<svg ${attrs}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
-      case 'calendar': return `<svg ${attrs}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
-      case 'list': return `<svg ${attrs}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`;
-      case 'file': return `<svg ${attrs}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-      default: return `<svg ${attrs}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
-    }
   }
 
   /* ── Toggle functions ── */
@@ -556,38 +504,37 @@
     destroyValuePopover();
     if (!valueInputEl || items.length === 0) return;
 
-    const container = document.createElement('div');
-    container.setAttribute('style', POPOVER_STYLES.container);
+    const container = activeDocument.createElement('div');
+    container.addClass('ppp-popover-container');
     container.classList.add('ppp-filter-popover');
     positionContainer(container, valueInputEl, 200);
 
-    const list = document.createElement('div');
-    list.setAttribute('style', POPOVER_STYLES.list);
+    const list = activeDocument.createElement('div');
+    list.addClass('ppp-popover-list');
     const itemH = 32;
     const visibleCount = Math.min(Math.max(items.length, 1), 8);
     list.style.maxHeight = `${Math.min(visibleCount * itemH + 8, 300)}px`;
     container.appendChild(list);
 
     items.forEach((val, idx) => {
-      const btn = document.createElement('button');
+      const btn = activeDocument.createElement('button');
       const isSelected = val === String(filter.value ?? '');
-      let style = POPOVER_STYLES.item;
-      if (isSelected) style += POPOVER_STYLES.itemSelected;
-      if (idx === valueSelectedIdx) style += POPOVER_STYLES.itemHover;
-      btn.setAttribute('style', style);
+      btn.addClass('ppp-popover-item');
+      if (isSelected) btn.addClass('ppp-popover-item--selected');
+      if (idx === valueSelectedIdx) btn.addClass('ppp-popover-item--hover');
       btn.type = 'button';
       btn.dataset['idx'] = String(idx);
 
-      const label = document.createElement('span');
-      label.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      const label = activeDocument.createElement('span');
+      label.addClass('ppp-popover-label');
       label.textContent = val;
       btn.appendChild(label);
 
       if (isSelected) {
-        const check = document.createElement('span');
-        check.setAttribute('style', POPOVER_STYLES.itemIcon);
+        const check = activeDocument.createElement('span');
+        check.addClass('ppp-popover-item-icon');
         check.style.color = 'var(--interactive-accent)';
-        check.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        setIcon(check, 'check');
         btn.appendChild(check);
       }
 
@@ -609,19 +556,14 @@
     });
 
     // Footer hint
-    const footer = document.createElement('div');
-    footer.setAttribute('style', [
-      'padding:4px 12px',
-      'font-size:10px',
-      'color:var(--text-faint)',
-      'border-top:1px solid var(--background-modifier-border)',
-      'display:flex',
-      'gap:12px',
-    ].join(';'));
-    footer.innerHTML = '<span>↑↓ навигация</span><span>Enter — вставить</span><span>Esc — закрыть</span>';
+    const footer = activeDocument.createElement('div');
+    footer.addClass('ppp-popover-footer');
+    footer.createSpan({ text: '↑↓ навигация' });
+    footer.createSpan({ text: 'Enter — вставить' });
+    footer.createSpan({ text: 'Esc — закрыть' });
     container.appendChild(footer);
 
-    document.body.appendChild(container);
+    activeDocument.body.appendChild(container);
     valuePopoverEl = container;
   }
 
@@ -948,7 +890,7 @@
   
   .row-delete:hover {
     color: var(--text-error);
-    background: rgba(255, 0, 0, 0.06);
+    background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06);
   }
   
   /* ═══════════════════════════════════════

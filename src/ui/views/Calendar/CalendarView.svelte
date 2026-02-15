@@ -340,7 +340,7 @@
    */
   function getDateFromCoordinates(x: number, y: number): dayjs.Dayjs {
     // Find element at the given coordinates
-    const elementAtPoint = document.elementFromPoint(x, y);
+    const elementAtPoint = activeDocument.elementFromPoint(x, y);
     
     if (elementAtPoint) {
       // Try to find day cell (most specific - for month/2weeks/year views)
@@ -529,11 +529,11 @@
     
     // Save state when window/tab loses focus
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
+      if (activeDocument.visibilityState === 'hidden') {
         saveViewState();
       }
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    activeDocument.addEventListener('visibilitychange', handleVisibilityChange);
     
     // Save state before page unload
     const handleBeforeUnload = () => {
@@ -546,7 +546,7 @@
         clearInterval(nowTimer);
       }
       clearInterval(autoSaveInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      activeDocument.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       
       // Final save on unmount
@@ -1514,7 +1514,6 @@
    */
   function handleAgendaSaveList(event: CustomEvent<{ list: AgendaCustomList }>) {
     const { list } = event.detail;
-    console.log('[CalendarView] handleAgendaSaveList called with:', list);
     
     const currentLists = project.agenda?.custom?.lists ?? [];
     const existingIndex = currentLists.findIndex(l => l.id === list.id);
@@ -1528,8 +1527,6 @@
       // Add new
       updatedLists = [...currentLists, list];
     }
-    
-    console.log('[CalendarView] Updated lists:', updatedLists);
     
     // Update project with new lists
     const updatedProject: ProjectDefinition = {
@@ -1549,11 +1546,9 @@
     
     // CRITICAL: Update the local project reference so child components see the change
     project = updatedProject;
-    console.log('[CalendarView] Local project updated, agenda now:', project.agenda);
     
     // Persist to settings store using immer-safe updateProject
     settings.updateProject(updatedProject);
-    console.log('[CalendarView] Settings saved successfully via updateProject');
   }
   
   /**
@@ -1561,7 +1556,6 @@
    */
   function handleAgendaDeleteList(event: CustomEvent<{ listId: string }>) {
     const { listId } = event.detail;
-    console.log('[CalendarView] handleAgendaDeleteList called for:', listId);
     
     const currentLists = project.agenda?.custom?.lists ?? [];
     const updatedLists = currentLists.filter(l => l.id !== listId);
@@ -1583,7 +1577,6 @@
     
     // CRITICAL: Update the local project reference
     project = updatedProject;
-    console.log('[CalendarView] List deleted, remaining lists:', updatedLists.length);
     
     // Persist to settings store using immer-safe updateProject
     settings.updateProject(updatedProject);

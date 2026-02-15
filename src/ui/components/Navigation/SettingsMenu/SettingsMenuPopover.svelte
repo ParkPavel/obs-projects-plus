@@ -49,9 +49,9 @@
   
   function calculateSafePosition() {
     // Find Obsidian sidebars
-    const leftSidebar = document.querySelector('.workspace-split.mod-horizontal.mod-left-split');
-    const rightSidebar = document.querySelector('.workspace-split.mod-horizontal.mod-right-split');
-    const ribbonLeft = document.querySelector('.workspace-ribbon.mod-left');
+    const leftSidebar = activeDocument.querySelector('.workspace-split.mod-horizontal.mod-left-split');
+    const rightSidebar = activeDocument.querySelector('.workspace-split.mod-horizontal.mod-right-split');
+    const ribbonLeft = activeDocument.querySelector('.workspace-ribbon.mod-left');
     
     let leftOffset = 0;
     let rightOffset = 0;
@@ -103,15 +103,15 @@
   let popoverElement: HTMLElement | null = null;
 
   onMount(() => {
-    document.addEventListener("mousedown", handleOutside, true);
-    document.addEventListener("keydown", handleKeydown, true);
+    activeDocument.addEventListener("mousedown", handleOutside, true);
+    activeDocument.addEventListener("keydown", handleKeydown, true);
     // Calculate position after mount
     setTimeout(calculateSafePosition, 0);
   });
 
   onDestroy(() => {
-    document.removeEventListener("mousedown", handleOutside, true);
-    document.removeEventListener("keydown", handleKeydown, true);
+    activeDocument.removeEventListener("mousedown", handleOutside, true);
+    activeDocument.removeEventListener("keydown", handleKeydown, true);
   });
 
   $: activeView = views.find((view) => view.id === viewId);

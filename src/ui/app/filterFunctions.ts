@@ -92,7 +92,6 @@ export function applyFilter(
 ): DataFrame {
   return produce(frame, (draft) => {
     draft.records = draft.records.filter((record) =>
-      // @ts-ignore: immer WritableDraft<DataRecord> passed to function expecting readonly DataRecord
       matchesFilterConditions(filter, record)
     );
   });

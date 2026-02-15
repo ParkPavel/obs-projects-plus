@@ -1,16 +1,14 @@
+# OBS Projects Plus
+
 <div align="center">
 
-# 🚀 Projects Plus
+![Version](https://img.shields.io/badge/version-3.0.6-blue.svg)
+![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
+![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
+[![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
+[![Telegram](https://img.shields.io/badge/Telegram-Channel-blue.svg?logo=telegram)](https://t.me/parkpavel_chigon)
 
-**Enhanced project management for Obsidian with advanced features**
-
-[![Build Obsidian plugin](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/ci.yml/badge.svg)](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/ci.yml)
-[![Release Obsidian plugin](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/release.yml/badge.svg)](https://github.com/ParkPavel/obs-projects-plus/actions/workflows/release.yml)
-[![GitHub](https://img.shields.io/badge/GitHub-ParkPavel-blue?style=flat&logo=github)](https://github.com/ParkPavel)
-[![Website](https://img.shields.io/badge/Website-parkpavel.github.io-green?style=flat&logo=globe)](https://parkpavel.github.io/park-pavel/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat&logo=apache)](LICENSE)
-[![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple?style=flat&logo=obsidian)](https://obsidian.md)
-![Version](https://img.shields.io/badge/version-3.0.5-blue.svg)
+**Project management in Obsidian: tables, boards, calendar with timeline, gallery**
 
 [Русский](README.md) | English
 
@@ -18,253 +16,44 @@
 
 ---
 
-## 🆕 What's New in v3.0.5
+## Why this plugin?
 
-> **Agenda 2.0 & Filter System** — 42 filter operators, custom lists, full i18n audit
+Obsidian stores everything in plain Markdown files. That works great for text — but when you have dozens or hundreds of notes, it's hard to see what's where and in what state.
 
-| Feature | Description |
-|---------|-------------|
-| 🎯 **42 Filter Operators** | Text, numbers, dates, lists, tags — full field type coverage |
-| 📋 **Agenda 2.0** | List builder with icons, colors, and filter groups (AND/OR) |
-| 🔧 **Advanced Mode** | Filter formulas with 42 functions, autocomplete & validation |
-| 📅 **Date Formulas** | DQL-compatible: `today`, `sow`, `eom`, `today+1w`, `som-1m` |
-| 📝 **Frontmatter Editor** | Note/project field separation, fixed date detection |
-| 🛡️ **Settings Redesign** | Chip-based UI for filters, sort, and color rules |
-| 🌐 **i18n Audit** | RU: +60 keys, dead keys removed; EN: +5 missing keys |
+**Projects Plus** turns a folder of notes into a managed project: you see all tasks on a kanban board, all events on a calendar, all cards in a gallery — all without export, without cloud, right in your vault.
 
-[Full changelog →](RELEASES-EN.md)
+### Who it's for
 
----
+- **Content managers** — track publication status in a table and board
+- **Researchers** — organize sources, notes, and deadlines with filtering
+- **Planners** — see tasks on a timeline calendar with multi-day events
+- **Anyone with a knowledge base** — when you need a visual overview, not a file list
 
-## ✨ Overview
+### How it works
 
-**Projects Plus** is a community-maintained fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) plugin by Marcus Olsson. This enhanced version provides advanced project management features for [Obsidian](https://obsidian.md) with improved performance, stability, and additional customization options.
+1. You point to a **folder**, a **tag**, or a **Dataview query** — this is your "project"
+2. The plugin collects all matching notes and reads their `frontmatter` (YAML header)
+3. You pick a **view** — table, board, calendar, or gallery
+4. You edit fields right in the interface — the plugin writes changes back to the file
 
-Perfect for content managers, researchers, and anyone who needs to organize notes into manageable projects. Create drafts, track their status, and schedule publication dates.
-
-## 🌟 Features
-
-### 📅 **Calendar (v3.0.0)**
-- **Timeline View** — Events on 07:00–22:00 time scale
-- **Multi-day Events** — Tasks spanning multiple days
-- **Infinite Scroll** — Smooth navigation through months/weeks
-- **Zoom Gestures** — Ctrl+scroll or pinch for scaling
-- **Detail Levels** — Month → 2 weeks → Week → Day
-- **Mobile Gestures** — Swipes, double tap to create notes
-
-### 📋 **Agenda 2.0 — Custom Lists (v3.0.5)**
-
-Powerful task management system in the calendar sidebar:
-
-- **List Builder** — create lists with filters, icons, and colors
-- **42 Filter Operators** — text, numbers, dates, lists, tags, booleans
-- **Filter Groups** — nested AND/OR groups up to 3 levels deep
-- **Date Formulas** — DQL-compatible: `today`, `sow`, `eom`, `today+1w`, `som-1m`
-- **Two Modes** — Visual (drag-and-drop chips) and Advanced (formulas with 42 functions)
-- **Autocomplete** — value suggestions from vault frontmatter
-
-### 📊 **Multiple View Types**
-- **📋 Table View** — Spreadsheet-like interface with sorting and filtering
-- **📌 Board View** — Kanban-style project boards with drag-n-drop
-- **📅 Calendar View** — Timeline with time support
-- **🖼️ Gallery View** — Visual card-based layout with covers
-
-### 📱 **Mobile UX**
-- **DayPopup** — Full-screen day overview with single tap
-- **Double Tap** — Instant note creation
-- **Larger Touch Targets** — +100% height for day cells
-- **Floating Buttons** — Today button when toolbar is hidden
-- **Swipe Navigation** — Navigate between periods
-
-### 🔧 **Advanced Configuration**
-- **📁 Folder-based Projects** — Create projects from existing folders
-- **🏷️ Tag-based Projects** — Organize by tags with hierarchy support
-- **🔍 Dataview Integration** — Use Dataview queries for complex filtering
-- **📝 Custom Templates** — Configure note templates for each project
-
-### 🌐 **Localization**
-- Russian, English, Ukrainian, Chinese (zh-CN)
+Your data **stays in your files**. The plugin does not create its own database.
 
 ---
 
-## ⌨️ Keyboard Shortcuts & Gestures
-
-### 🖥️ Desktop
-
-| Action | Keys |
-|--------|------|
-| Calendar Zoom | `Ctrl` + mouse wheel |
-| Zoom (Mac) | `Cmd` + mouse wheel |
-| Go to Today | `T` or "Today" button |
-| New Note | `Ctrl/Cmd` + `N` |
-| Open in New Window | `Ctrl/Cmd` + click on note |
-| Edit Cell | `Enter` or double click |
-| Table Navigation | `←` `→` `↑` `↓` |
-| Exit Editing | `Escape` |
-| Copy Cell | `Ctrl/Cmd` + `C` |
-
-### 📱 Mobile (Gestures)
-
-| Gesture | Action |
-|---------|--------|
-| **Single tap** on day | Open DayPopup with events |
-| **Double tap** on day | Create new note |
-| **Swipe left/right** | Switch between periods |
-| **Pinch** | Calendar zoom |
-| **Long press** on card | Context menu |
-| **Tap checkbox** | Toggle task status |
-
-### 🗓️ In Calendar
-
-| Action | Method |
-|--------|--------|
-| Zoom In | `Ctrl` + scroll up / pinch out |
-| Zoom Out | `Ctrl` + scroll down / pinch in |
-| Next Period | Scroll down / swipe left |
-| Previous Period | Scroll up / swipe right |
-| Switch View | Month / Week / Day buttons |
-
----
-
-## 🚀 Quick Start
-
-### Installation via BRAT (Recommended)
-
-1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
-2. Open BRAT settings
-3. Add this repository: `ParkPavel/obs-projects-plus`
-4. Enable the plugin in Obsidian settings
-
-### Manual Installation
-
-1. Download the latest release from [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases)
-2. Extract the files to your vault's `.obsidian/plugins/obs-projects-plus/` folder
-3. Enable the plugin in Obsidian settings
-
-### Getting Started
-
-1. Press **Ctrl+P** (or **Cmd+P** on macOS) to open the **Command palette**
-2. Select **Projects Plus: Show projects plus**
-3. Create your first project by clicking the **+** button
-
-### Example Frontmatter
-
-```yaml
----
-title: My Task
-status: In Progress
-priority: High
-startDate: 2025-01-20
-endDate: 2025-01-25
-startTime: "09:00"
-endTime: "18:00"
-color: blue
-tags: [project, important]
----
-```
-
-## 🔗 Templater Integration
-
-Projects Plus supports integration with [Templater](https://github.com/SilentVoid13/Templater) plugin for faster note creation.
-
-### 🎯 Why use this?
-
-> **Problem**: When creating notes via the plugin, you need to manually fill frontmatter — entering dates, times, status, priority, color. This is inconvenient and time-consuming.
->
-> **Solution**: The Templater template automatically opens dialog windows for each field with ready-to-select options.
-
-### Quick Setup
-
-1. **Install Templater** from Community Plugins
-2. **Copy template** [Projects Plus Template.md](templates/Projects%20Plus%20Template.md) to your templates folder
-3. **Configure Templater**:
-   - `Settings → Templater → Template folder location` → set folder
-   - Enable `Trigger Templater on new file creation`
-4. **Configure Projects Plus**:
-   - `Settings → Project → Templates → Default template`
-   - Select `Projects Plus Template.md`
-
-### Standard Plugin Fields
-
-The template fills all fields used in the demo project:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | text | Note title |
-| `startDate` | YYYY-MM-DD | Start date |
-| `startTime` | HH:mm | Start time |
-| `endTime` | HH:mm | End time |
-| `status` | inbox/todo/doing/done | Task status |
-| `completed` | true/false | Completion flag |
-| `priority` | high/medium/low | Priority |
-| `color` | HEX | Calendar color |
-| `type` | meeting/task/bug/event | Record type |
-| `category` | work/dev/personal... | Category |
-| `estimate` | number | Time estimate (hours) |
-| `tags` | list | Tags for filtering |
-
-### Example Frontmatter
-
-```yaml
----
-title: Client Call
-startDate: 2026-01-27
-startTime: "14:00"
-endTime: "15:00"
-status: todo
-completed: false
-priority: high
-color: "#FF9800"
-type: meeting
-category: clients
-estimate: 1
-tags:
-  - client
----
-```
-
-### 📂 Ready-to-Use Templates
-
-The [templates/](templates/) folder contains ready-made templates for various scenarios:
-
-| Template | Description | Use Case |
-|----------|-------------|----------|
-| [🌟 Universal](templates/Projects%20Plus%20Template.md) | Universal template with all fields | Any note type |
-| [📅 Calendar Event](templates/Calendar%20Event%20Template.md) | Events and activities | Meetings, conferences, important dates |
-| [✅ Task](templates/Task%20Template.md) | Tasks with checklists | TODOs, work tasks |
-| [📅 Meeting](templates/Meeting%20Template.md) | Meeting notes | Agenda, attendees, action items |
-| [📓 Daily Note](templates/Daily%20Note%20Template.md) | Daily journal | Diary, gratitude, reflection |
-| [📝 Quick Note](templates/Quick%20Note%20Template.md) | Quick note | Thoughts, ideas on the go |
-| [⏰ Deadline](templates/Deadline%20Template.md) | Deadlines and due dates | Project submissions, documents |
-| [🎯 Habit Tracker](templates/Habit%20Tracker%20Template.md) | Habit tracker | Building new habits |
-| [🚀 Project](templates/Project%20Template.md) | Project management | Large projects with milestones |
-| [🔄 Recurring Event](templates/Recurring%20Event%20Template.md) | Recurring events | Weekly meetings, workouts |
-| [🏃 Sprint](templates/Sprint%20Template.md) | Agile sprints | Scrum, Kanban iterations |
-| [📊 Weekly Review](templates/Weekly%20Review%20Template.md) | Week review | Retrospective, planning |
-
-#### 💡 Usage Tips
-
-1. **One template per scenario** — use specialized templates for typical tasks
-2. **Set up hotkeys** — `Alt+N` for quick template creation
-3. **Keep templates in one folder** — specify path in Templater settings
-4. **Customize for yourself** — add your own fields and categories
-
-> **💡 Tip**: Set up hotkey `Alt+N` for `Templater: Create new note from template` command for instant note creation.
-
-## 🎨 Screenshots
+## 📸 Gallery
 
 <p align="center">
-  <img src="images/2026-01-27_12-23-33.png" width="15%" title="Screenshot 1" />
-  <img src="images/2026-01-27_12-23-55.png" width="15%" title="Screenshot 2" />
-  <img src="images/2026-01-27_12-24-17.png" width="24%" title="Screenshot 3" />
-  <img src="images/2026-01-27_12-24-35.png" width="15%" title="Screenshot 4" />
-  <img src="images/2026-01-27_12-26-03.png" width="15%" title="Screenshot 5" />
+  <img src="images/2026-01-27_12-23-33.png" width="15%" title="Table" />
+  <img src="images/2026-01-27_12-23-55.png" width="15%" title="Board" />
+  <img src="images/2026-01-27_12-24-17.png" width="24%" title="Calendar" />
+  <img src="images/2026-01-27_12-24-35.png" width="15%" title="Timeline" />
+  <img src="images/2026-01-27_12-26-03.png" width="15%" title="Gallery" />
 </p>
 <p align="center">
-  <img src="images/2026-01-27_12-26-43.png" width="15%" title="Screenshot 6" />
-  <img src="images/2026-01-27_12-27-29.png" width="24%" title="Screenshot 7" />
-  <img src="images/2026-01-27_12-29-16.png" width="15%" title="Screenshot 8" />
-  <img src="images/2026-01-27_12-30-02.png" width="24%" title="Screenshot 9" />
+  <img src="images/2026-01-27_12-26-43.png" width="15%" title="Agenda" />
+  <img src="images/2026-01-27_12-27-29.png" width="24%" title="Filters" />
+  <img src="images/2026-01-27_12-29-16.png" width="15%" title="Mobile" />
+  <img src="images/2026-01-27_12-30-02.png" width="24%" title="Settings" />
 </p>
 
 <details>
@@ -282,171 +71,192 @@ The [templates/](templates/) folder contains ready-made templates for various sc
 </p>
 </details>
 
-## ⚙️ Configuration
+---
 
-### General Settings
+## ✨ Features
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| **Project Size Limit** | Maximum number of notes to load | 1000 |
-| **Link Behavior** | What happens when clicking links | Open note |
-| **Start Week On** | First day of the week | Default |
-| **Animation Behavior** | Smooth or Instant animations | Smooth |
+| View | What it does |
+|------|-------------|
+| **Table** | Editing with sorting, filtering, cell navigation |
+| **Board** | Kanban — drag cards between columns (statuses) |
+| **Calendar** | Timeline 07:00–22:00, multi-day bars, 5 zoom levels (Year → Day) |
+| **Gallery** | Cards with covers and frontmatter fields |
 
-### Advanced Settings
+**Calendar** — a full planner: `startDate`, `endDate`, `startTime`, `endTime`, `color` field for color coding, infinite scroll, mobile gestures (swipe, pinch-to-zoom, double tap to create note).
 
-- **Front Matter Configuration** — Customize YAML handling
-- **Template Management** — Set up note templates
-- **Command Integration** — Add custom commands
-- **Archive Management** — Restore or delete archived projects
+**Agenda 2.0** — calendar sidebar with a list builder: 42 filter operators, nested AND/OR groups, date formulas (`today`, `sow`, `eom`, `today+1w`), two modes — visual and Advanced (Google Sheets-style formulas).
 
-## 🤝 Contributing
+**Three data sources**: folder, tag, Dataview query. Note templates, autosave, localization (RU, EN, UA, ZH-CN).
 
-We welcome contributions! Here's how you can help:
+> For shortcuts, gestures, templates, and settings details — see the **[User Guide](docs/user-guide-EN.md)**.
 
-### 🐛 **Bug Reports**
-- Use the [Issues](https://github.com/ParkPavel/obs-projects-plus/issues) page
-- Provide detailed reproduction steps
-- Include Obsidian version and plugin version
+---
 
-### 💡 **Feature Requests**
-- Check existing [issues](https://github.com/ParkPavel/obs-projects-plus/issues) first
-- Describe the use case and expected behavior
-- Consider contributing the implementation
+## 📥 Installation
 
-### 🔧 **Development**
+### BRAT (Recommended)
+1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+2. In BRAT settings, add: `ParkPavel/obs-projects-plus`
+3. Enable the plugin
+
+### Manual Installation
+1. Download `main.js`, `manifest.json`, `styles.css` from [Releases](https://github.com/ParkPavel/obs-projects-plus/releases)
+2. Place in `.obsidian/plugins/obs-projects-plus/`
+3. Restart Obsidian → Enable the plugin
+
+---
+
+## 🚀 Quick Start
+
+1. On first launch the plugin creates a **demo project** (35+ notes, 6 views)
+2. `Ctrl/Cmd+P` → *"Projects Plus: Show projects plus"*
+3. Switch between views: Table → Board → Calendar → Gallery
+4. Create your own project: `Ctrl/Cmd+P` → *"Projects Plus: Create Project"*
+
+```yaml
+# Example frontmatter for a project note
+---
+title: My Task
+status: todo
+priority: high
+startDate: 2026-02-15
+endDate: 2026-02-20
+startTime: "09:00"
+endTime: "18:00"
+color: "#4CAF50"
+tags: [project, important]
+---
+```
+
+---
+
+## 🗺️ Roadmap
+
+| Priority | Feature | Version | Status |
+|:--------:|---------|---------|--------|
+| ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | Released |
+| ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released |
+| 🔥 | **Performance optimization** | v3.0.7 | In Progress |
+| 🔥 | **Fix tag-based note detection** | v3.0.7 | In Progress |
+| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | Planned |
+| 🥈 | **Database View** | v3.3.0 | Planned |
+| 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned |
+
+---
+
+<details>
+<summary><h2>🛠️ For Developers</h2></summary>
+
+### Known Issues
+
+| # | Issue | Priority | Notes |
+|---|-------|:--------:|-------|
+| 1 | Performance regression after v3.0.6 | P0 | Replacing `document.*` → `activeDocument` and other compliance fixes increased response time. Profiling and optimization needed |
+| 2 | Tag-based note detection is broken | P0 | Tag datasource fails to find some notes. Investigation and fix needed |
+| 3 | Command logic duplication (`main.ts` + `CommandManager`) | P2 | Desync risk when adding new commands |
+| 4 | Fire-and-forget `void` in `ViewApi` writes | P2 | I/O errors during writes are silently swallowed |
+
+### Custom View API (Experimental)
+
+The plugin supports registering **custom views** from third-party plugins. This is inherited from the original Obsidian Projects by Marcus Olsson.
+
+**How it works**: on load, Projects Plus iterates all enabled plugins looking for an `onRegisterProjectView` method. If found, it calls the method and registers the returned view alongside the built-in ones (Table, Board, Calendar, Gallery).
+
+```typescript
+// In your plugin (plugin.ts):
+import { Plugin } from "obsidian";
+import type { ProjectView, ProjectViewProps, DataQueryResult } from "obsidian-projects-types";
+
+class MyCustomView extends ProjectView {
+  getViewType(): string { return "my-view"; }
+  getDisplayName(): string { return "My View"; }
+  getIcon(): string { return "layout-grid"; }
+
+  onOpen({ contentEl }: ProjectViewProps) {
+    contentEl.createEl("h2", { text: "My Custom View" });
+  }
+
+  onData({ data }: DataQueryResult) {
+    // data.fields — schema, data.records — notes
+  }
+
+  onClose() { /* cleanup */ }
+}
+
+export default class MyPlugin extends Plugin {
+  onRegisterProjectView = () => new MyCustomView();
+}
+```
+
+Install types: `npm install --save-dev obsidian-projects-types`
+
+> ⚠️ **This API is experimental** and may change without notice. Details: [obsidian-projects-types/README](obsidian-projects-types/README.md)
+
+### 📣 Contributor Vote: Svelte 3 → 5
+
+Svelte is a **compiler**, not a runtime. The final `main.js` contains no Svelte code. Compiler CVEs don't affect the plugin. Obsidian doesn't check Svelte version.
+
+**For**: runes DX, ecosystem, contributors. **Against**: ~50+ files, breaking API, zero user impact.
+
+> [Vote](https://github.com/ParkPavel/obs-projects-plus/discussions) or open an Issue.
+
+### Development
 
 ```bash
-# Clone the repository
 git clone https://github.com/ParkPavel/obs-projects-plus.git
 cd obs-projects-plus
-
-# Install dependencies
-npm install
-
-# Start development
-npm run dev
-
-# Build for production
-npm run build
+npm ci
+npm run dev       # esbuild watch mode
+npm run build     # tsc + esbuild production
+npm run test      # Jest (291 tests, 16 suites)
+npm run lint      # ESLint + eslint-plugin-obsidianmd (23 rules)
+npm run format    # Prettier
 ```
 
-### 📝 **Translation**
-Help us translate the plugin to your language:
-1. Fork the repository
-2. Add translations to `src/lib/stores/translations/`
-3. Update `src/lib/stores/i18n.ts`
-4. Submit a pull request
+Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
 
-## 🛠️ Development
+</details>
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Obsidian with plugin development enabled
+---
 
-### Scripts
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run test         # Run tests
-npm run lint         # Lint code
-npm run format       # Format code
-```
+## 📖 Documentation
 
-## 📚 Documentation
+| Document | Description |
+|----------|-------------|
+| [Руководство (RU)](docs/user-guide.md) | Shortcuts, gestures, templates, settings |
+| [User Guide (EN)](docs/user-guide-EN.md) | Full instructions in English |
+| [Custom View API](obsidian-projects-types/README.md) | Register your own views from other plugins |
+| [Release History](RELEASES-EN.md) | All releases |
+| [CHANGELOG](CHANGELOG.md) | Keep a Changelog format |
+| [Filter Architecture](docs/architecture-filters.md) | Engine specification |
+| [Drag & Drop](docs/architecture-drag-drop.md) | Contributor specification |
+| [Database View](docs/architecture-database-view.md) | Conceptual document |
 
-- **[User Guide](docs/user-guide-EN.md)** - Complete usage instructions
-- **[API Reference](docs/api.md)** - Developer API documentation
-- **[Contributing Guide](../docs/CONTRIBUTING.md)** - How to contribute
-- **[Release Information](RELEASES-EN.md)** - Version history and news
+---
 
-## 🌟 Community
+## 💬 Feedback
 
-### 📺 **Videos & Tutorials**
+- **Telegram**: [@parkpavel_chigon](https://t.me/parkpavel_chigon)
+- **GitHub Issues**: [Report a problem](https://github.com/ParkPavel/obs-projects-plus/issues)
+- **GitHub Discussions**: [Discussions](https://github.com/ParkPavel/obs-projects-plus/discussions)
 
-- [How to use Obsidian: Project vs Trello](https://www.youtube.com/watch?v=kWpIz0CJXoE) by [+1creator](https://www.youtube.com/@plus1creator)
-- [How To Use Obsidian: Project Management (NEW & IMPROVED!)](https://www.youtube.com/watch?v=tYC7n-sDApU) by [+1creator](https://www.youtube.com/@plus1creator)
-- [Obsidian Projects - How To Manage Your Projects in Obsidian](https://youtu.be/aFfREf9IQ7Q?t=452) by [Marco Serafini](https://www.youtube.com/@Marco_Mindstone)
-
-### 📖 **Articles**
-
-- [The Obsidian Projects Plugin: My Secret Weapon for Staying Organized and Focused](https://www.jordanrobison.net/the-obsidian-projects-plugin-my-secret-weapon-for-staying-organized-and-focused/) by [Jordan Robison](https://www.jordanrobison.net/)
-- [Obsidian Projects: A Better Way to Manage Text-Based Projects in Obsidian](https://beingpax.medium.com/obsidian-projects-a-better-way-to-manage-text-based-projects-in-obsidian-18c2a991069c) by [Prakash Joshi Pax](https://beingpax.medium.com/)
-
-## 🏆 Roadmap
-
-### 🎯 Development Priorities
-
-| Priority | Feature | Version | Status | Docs |
-|:--------:|---------|---------|--------|:----:|
-| ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | ✅ Released | [Architecture](docs/architecture-filters.md) |
-| | • 42 filter operators | | | |
-| | • List builder with icons | | | |
-| | • Date formulas (DQL-compatible) | | | |
-| | • Visual + Advanced modes | | | |
-| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | 🟡 In Progress | [Architecture](docs/architecture-drag-drop.md) |
-| | • Tactile timeline bar interactions | | | |
-| | • Touch gestures for mobile devices | | | |
-| | • Create notes by dragging | | | |
-| | • Resize to change time/duration | | | |
-| 🥈 | **Database View** | v3.3.0 | 📋 Planned | [Architecture](docs/architecture-database-view.md) |
-| | • Query builder for note data | | | |
-| | • Formula system (spreadsheet-like) | | | |
-| | • Visualizations: charts, galleries, summaries | | | |
-| | • Customizable dashboards | | | |
-| 🥉 | **Calendar Sync** | v3.4.0 | 📋 Planned | — |
-| | • Google Calendar bidirectional sync | | | |
-| | • Apple Calendar (iCal) integration | | | |
-| | • Microsoft Outlook Calendar | | | |
-| | • CalDAV protocol for any compatible services | | | |
-| | • Import/export .ics files | | | |
-| | • Conflict resolution on sync | | | |
-
-### 📖 Architecture Documentation
-
-- [Drag & Drop Architecture](docs/architecture-drag-drop.md) — specification for contributors
-- [Database View Architecture](docs/architecture-database-view.md) — conceptual design document
-
-## 📊 Statistics
-
-<div align="center">
-
-![GitHub stars](https://img.shields.io/github/stars/ParkPavel/obs-projects-plus?style=social)
-![GitHub forks](https://img.shields.io/github/forks/ParkPavel/obs-projects-plus?style=social)
-![GitHub issues](https://img.shields.io/github/issues/ParkPavel/obs-projects-plus)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/ParkPavel/obs-projects-plus)
-
-</div>
+---
 
 ## 🙏 Credits
 
-This project is a community-maintained fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) plugin by [Marcus Olsson](https://github.com/marcusolsson).
-
-**Original Author:** Marcus Olsson  
-**Current Maintainer:** Park Pavel  
-**Original Repository:** https://github.com/marcusolsson/obsidian-projects
-
-We thank Marcus for creating the foundation of this excellent plugin.
+Fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) by [Marcus Olsson](https://github.com/marcusolsson).  
+Current maintainer: **Park Pavel**
 
 ## 📄 License
 
-Projects Plus is distributed under [Apache License 2.0](LICENSE).
-
-## 🔗 Links
-
-- **🌐 Website:** [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
-- **📧 Contact:** [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues)
-- **💬 Discussions:** [GitHub Discussions](https://github.com/ParkPavel/obs-projects-plus/discussions)
-- **🐦 Twitter:** [@ParkPavel](https://twitter.com/ParkPavel)
+[Apache License 2.0](LICENSE) © 2024–2026 Park Pavel
 
 ---
 
 <div align="center">
 
-**Made with ❤️ by [Park Pavel](https://parkpavel.github.io/park-pavel/)**
+**Made with ❤️ for the Obsidian community**
 
-[![GitHub](https://img.shields.io/badge/GitHub-ParkPavel-blue?style=flat&logo=github)](https://github.com/ParkPavel)
-[![Website](https://img.shields.io/badge/Website-parkpavel.github.io-green?style=flat&logo=globe)](https://parkpavel.github.io/park-pavel/)
+[⭐ Star](https://github.com/ParkPavel/obs-projects-plus) • [🐛 Issues](https://github.com/ParkPavel/obs-projects-plus/issues) • [💬 Telegram](https://t.me/parkpavel_chigon)
 
 </div>

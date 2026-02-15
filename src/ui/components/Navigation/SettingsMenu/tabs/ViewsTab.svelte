@@ -393,13 +393,13 @@
   }
   
   .action-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--background-modifier-hover);
     color: var(--text-normal);
   }
   
   .action-btn.danger:hover {
-    background: rgba(255, 100, 100, 0.2);
-    color: #ff6b6b;
+    background: rgba(var(--color-red-rgb, 255, 100, 100), 0.2);
+    color: var(--text-error);
   }
   
   .actions {
@@ -410,7 +410,7 @@
   .ghost {
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    border: 1px dashed rgba(255, 255, 255, 0.18);
+    border: 1px dashed var(--background-modifier-border);
     background: transparent;
     color: inherit;
     cursor: pointer;
@@ -419,7 +419,7 @@
   }
   
   .ghost:hover {
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--background-modifier-border-hover);
+    background: var(--background-modifier-hover);
   }
 </style>

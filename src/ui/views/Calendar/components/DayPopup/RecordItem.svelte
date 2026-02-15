@@ -595,7 +595,7 @@
     // v5.0.0: When palette opens, scroll the record into view for better UX
     if (showColorPalette) {
       tick().then(() => {
-        const palette = document.querySelector('.color-palette[data-color-palette="true"]');
+        const palette = activeDocument.querySelector('.color-palette[data-color-palette="true"]');
         if (palette) {
           palette.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }

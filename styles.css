@@ -342,4 +342,170 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Imperative Popover Styles (Phase 5 — v3.0.6)
+   Used by: FilterRow, DateFormulaInput, AdvancedFilterEditor
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Container — parent of all popover popovers (positioned via JS) */
+.ppp-popover-container {
+  position: fixed;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-primary);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.14);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-interface);
+}
+
+/* Search bar inside popover */
+.ppp-popover-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Search input field */
+.ppp-popover-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-family: var(--font-interface);
+  outline: none;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Scrollable list inside popover */
+.ppp-popover-list {
+  overflow-y: auto;
+  padding: 4px;
+}
+
+/* Single list item (button) */
+.ppp-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-interface);
+  text-align: left;
+  line-height: 1.3;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+/* Item state modifiers */
+.ppp-popover-item--selected {
+  color: var(--interactive-accent);
+  font-weight: 500;
+}
+
+.ppp-popover-item--hover {
+  background: var(--background-modifier-hover);
+}
+
+/* Icon wrapper inside item */
+.ppp-popover-item-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  width: 18px;
+  height: 18px;
+}
+
+/* Empty state */
+.ppp-popover-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Label text with ellipsis */
+.ppp-popover-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Footer hint bar */
+.ppp-popover-footer {
+  padding: 4px 12px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Settings Tab Popover Styles (Phase 5 — v3.0.6)
+   Used by: SortTab, FiltersTab, ColorFiltersTab
+   ═══════════════════════════════════════════════════════════════ */
+
+.ppp-pop-box {
+  position: fixed;
+  z-index: 10001;
+  min-width: 180px;
+  max-width: 320px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.ppp-pop-list {
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ppp-pop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-interface);
+  text-align: left;
+}
+
+.ppp-pop-item--selected {
+  font-weight: 600;
+  color: var(--interactive-accent);
+}
+
+.ppp-pop-muted {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 /*# sourceMappingURL=styles.css.map */

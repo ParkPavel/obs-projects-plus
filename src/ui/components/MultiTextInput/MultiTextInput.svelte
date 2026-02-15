@@ -39,7 +39,7 @@
     
     // Auto-focus the new input after render
     tick().then(() => {
-      const inputs = document.querySelectorAll<HTMLInputElement>('.multi-text-input');
+      const inputs = activeDocument.querySelectorAll<HTMLInputElement>('.multi-text-input');
       const lastInput = inputs[inputs.length - 1];
       if (lastInput) {
         lastInput.focus();

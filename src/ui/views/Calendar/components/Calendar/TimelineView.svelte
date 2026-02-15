@@ -366,8 +366,8 @@
     
     // Desktop drag-to-scroll
     scrollContainer.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    activeDocument.addEventListener('mousemove', handleMouseMove);
+    activeDocument.addEventListener('mouseup', handleMouseUp);
     
     // Wheel events for navigation (Alt+wheel)
     scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
@@ -387,8 +387,8 @@
   onDestroy(() => {
     if (!scrollContainer) return;
     scrollContainer.removeEventListener('mousedown', handleMouseDown);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    activeDocument.removeEventListener('mousemove', handleMouseMove);
+    activeDocument.removeEventListener('mouseup', handleMouseUp);
     scrollContainer.removeEventListener('wheel', handleWheel);
     scrollContainer.removeEventListener('touchstart', handleTouchStart);
     scrollContainer.removeEventListener('touchmove', handleTouchMove);

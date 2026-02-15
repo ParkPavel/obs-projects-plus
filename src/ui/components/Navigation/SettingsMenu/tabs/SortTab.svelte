@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from "svelte";
+  import { setIcon } from "obsidian";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "../../../../../lib/stores/i18n";
   import type {
@@ -57,24 +58,7 @@
   // IMPERATIVE DOM DROPDOWNS
   // ═══════════════════════════════
 
-  const POP = {
-    box: 'position:fixed;z-index:10001;min-width:180px;max-width:320px;background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.25);overflow:hidden;',
-    list: 'overflow-y:auto;padding:4px 0;',
-    item: 'display:flex;align-items:center;gap:8px;width:100%;padding:6px 12px;border:none;background:transparent;color:var(--text-normal);cursor:pointer;font-size:13px;font-family:var(--font-interface);text-align:left;',
-    sel: 'font-weight:600;color:var(--interactive-accent);',
-    muted: 'display:inline-flex;align-items:center;color:var(--text-muted);flex-shrink:0;',
-  };
-
-  const CHECK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-
-  const ICON_SVG: Record<string, string> = {
-    'type':         '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
-    'hash':         '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>',
-    'check-square': '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
-    'calendar':     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-    'list':         '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
-    'file-text':    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
-  };
+  /* CSS classes are defined in styles.css under .ppp-pop-* prefix */
 
   function destroyPopover() {
     if (popoverEl?.parentNode) popoverEl.parentNode.removeChild(popoverEl);
@@ -92,46 +76,43 @@
 
   function makePopover(anchor: HTMLElement, items: { label: string; icon?: string; selected?: boolean; handler: () => void }[]) {
     destroyPopover();
-    const box = document.createElement('div');
-    box.setAttribute('style', POP.box);
+    const box = activeDocument.createElement('div');
+    box.addClass('ppp-pop-box');
     box.setAttribute('data-settings-dropdown', '');
     const maxH = Math.min(items.length * 34 + 8, 280);
     box.style.maxHeight = `${maxH}px`;
     positionPop(box, anchor, maxH);
 
-    const list = document.createElement('div');
-    list.setAttribute('style', POP.list);
+    const list = activeDocument.createElement('div');
+    list.addClass('ppp-pop-list');
     list.style.maxHeight = `${maxH - 8}px`;
 
     for (const it of items) {
-      const btn = document.createElement('button');
-      let s = POP.item;
-      if (it.selected) s += POP.sel;
-      btn.setAttribute('style', s);
+      const btn = activeDocument.createElement('button');
+      btn.addClass('ppp-pop-item');
+      if (it.selected) btn.addClass('ppp-pop-item--selected');
       btn.type = 'button';
       btn.addEventListener('mouseenter', () => { btn.style.background = 'var(--background-modifier-hover)'; });
       btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
       btn.addEventListener('mousedown', (e) => { e.preventDefault(); it.handler(); destroyPopover(); });
 
       if (it.icon) {
-        const ic = document.createElement('span');
-        ic.setAttribute('style', POP.muted);
-        // /skip innerHTML: static SVG constants only, no user input — safe from XSS
-        ic.innerHTML = ICON_SVG[it.icon] ?? ICON_SVG['file-text']!;
+        const ic = activeDocument.createElement('span');
+        ic.addClass('ppp-pop-muted');
+        setIcon(ic, it.icon ?? 'file-text');
         btn.appendChild(ic);
       }
 
-      const lbl = document.createElement('span');
-      lbl.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      const lbl = activeDocument.createElement('span');
+      lbl.addClass('ppp-popover-label');
       lbl.textContent = it.label;
       btn.appendChild(lbl);
 
       if (it.selected) {
-        const chk = document.createElement('span');
-        chk.setAttribute('style', POP.muted);
+        const chk = activeDocument.createElement('span');
+        chk.addClass('ppp-pop-muted');
         chk.style.color = 'var(--interactive-accent)';
-        // /skip innerHTML: static SVG constant, no user input
-        chk.innerHTML = CHECK_SVG;
+        setIcon(chk, 'check');
         btn.appendChild(chk);
       }
 
@@ -139,7 +120,7 @@
     }
 
     box.appendChild(list);
-    document.body.appendChild(box);
+    activeDocument.body.appendChild(box);
     popoverEl = box;
   }
 
@@ -269,7 +250,7 @@
   }
   .row-toggle:hover { color: var(--interactive-accent); }
   .row-toggle--off { opacity: 1; color: var(--text-faint); }
-  .row-delete:hover { color: var(--text-error); background: rgba(255,0,0,0.06); }
+  .row-delete:hover { color: var(--text-error); background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06); }
 
   .add-btn {
     display: flex; align-items: center; justify-content: center;

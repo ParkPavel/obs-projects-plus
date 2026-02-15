@@ -141,7 +141,6 @@
       ...(formData.color ? { color: formData.color } : {}),
     };
     
-    console.log('[AgendaListEditor] Saving list:', savedList);
     dispatch('save', savedList);
   }
   

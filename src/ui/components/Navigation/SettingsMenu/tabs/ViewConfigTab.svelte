@@ -468,7 +468,7 @@
     cursor: pointer;
   }
   .field-item:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--background-modifier-hover);
   }
   .field-item input[type="checkbox"] {
     width: 1rem;

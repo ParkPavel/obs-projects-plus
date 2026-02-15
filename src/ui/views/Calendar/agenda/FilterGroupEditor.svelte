@@ -198,7 +198,7 @@
   
   .fg-delete:hover {
     color: var(--text-error);
-    background: rgba(255, 0, 0, 0.06);
+    background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06);
   }
   
   .fg-conjunction {

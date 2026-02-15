@@ -87,7 +87,7 @@
     border-radius: 50%;
     background: var(--text-error);
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+    box-shadow: 0 0 4px rgba(var(--color-red-rgb, 255, 0, 0), 0.5);
     animation: pulse 2s infinite;
   }
   
@@ -109,7 +109,7 @@
     height: var(--ppp-border-width-thick, 0.125rem);
     background: var(--text-error);
     opacity: 0.8;
-    box-shadow: 0 1px 2px rgba(255, 0, 0, 0.3);
+    box-shadow: 0 1px 2px rgba(var(--color-red-rgb, 255, 0, 0), 0.3);
   }
   
   /* Mobile adaptivity */

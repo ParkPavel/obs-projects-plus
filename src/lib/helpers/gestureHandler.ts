@@ -96,8 +96,8 @@ const DEFAULT_CONFIG: GestureConfig = {
  * Convert rem to pixels based on root font size
  */
 function remToPx(rem: number): number {
-  if (typeof document === 'undefined') return rem * 16;
-  const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  if (typeof activeDocument === 'undefined') return rem * 16;
+  const rootFontSize = parseFloat(getComputedStyle(activeDocument.documentElement).fontSize);
   return rem * rootFontSize;
 }
 

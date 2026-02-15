@@ -115,7 +115,7 @@
     
     if (workspaceLeaf) {
       // Create portal container inside workspace-leaf (not body)
-      portalContainer = document.createElement('div');
+      portalContainer = activeDocument.createElement('div');
       portalContainer.className = 'obsidian-projects-popup-portal';
       // z-index 100 is enough within workspace-leaf scope
       portalContainer.style.cssText = 'position: absolute; inset: 0; z-index: 100; pointer-events: none; overflow: hidden;';
@@ -129,10 +129,10 @@
       workspaceLeaf.appendChild(portalContainer);
     } else {
       // Fallback to body if no workspace-leaf found
-      portalContainer = document.createElement('div');
+      portalContainer = activeDocument.createElement('div');
       portalContainer.className = 'obsidian-projects-popup-portal';
       portalContainer.style.cssText = 'position: fixed; inset: 0; z-index: 100; pointer-events: none;';
-      document.body.appendChild(portalContainer);
+      activeDocument.body.appendChild(portalContainer);
     }
     
     // Move node to portal
@@ -203,7 +203,7 @@
     if (window.screen?.orientation) {
       window.screen.orientation.removeEventListener('change', handleOrientationChange);
     }
-    document.body.style.overflow = '';
+    activeDocument.body.style.overflow = '';
     // Cleanup portal if still exists
     if (portalContainer && portalContainer.parentNode) {
       portalContainer.parentNode.removeChild(portalContainer);
@@ -225,7 +225,7 @@
     
     // Lock body scroll on mobile
     if (isMobile) {
-      document.body.style.overflow = 'hidden';
+      activeDocument.body.style.overflow = 'hidden';
     }
     
     await tick();
@@ -242,7 +242,7 @@
     isClosing = true;
     
     // Unlock body scroll
-    document.body.style.overflow = '';
+    activeDocument.body.style.overflow = '';
     
     setTimeout(() => {
       visible = false;
