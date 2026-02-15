@@ -167,9 +167,9 @@
   // Helper to update value (triggers reactivity)
   function setValue(fieldName: string, newValue: Optional<DataValue>) {
     // Update record via immer
-    // @ts-expect-error: Type instantiation is excessively deep — immer produce with nested DataValue union
+    // @ts-ignore — immer produce with nested DataValue union may trigger TS2589 in some TS versions
     record = produce(record, (draft) => {
-      // @ts-expect-error: immer WritableDraft index signature incompatible with Optional<DataValue>
+      // @ts-ignore — WritableDraft index signature vs Optional<DataValue>
       draft.values[fieldName] = newValue;
     });
     // Also update snapshot to trigger immediate UI update
