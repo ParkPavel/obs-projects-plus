@@ -1,6 +1,7 @@
 ---
 title: <% tp.system.prompt("📅 Название события:") %>
 startDate: <% tp.system.prompt("📅 Дата:", tp.date.now("YYYY-MM-DD")) %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 startTime: <% tp.system.prompt("🕐 Время начала:", "10:00") %>
 endTime: <% tp.system.prompt("🕐 Время окончания:", "12:00") %>
 status: <% tp.system.suggester(["📥 inbox", "📋 todo", "🏃 doing", "✅ done"], ["inbox", "todo", "doing", "done"], false, "📊 Статус:") %>

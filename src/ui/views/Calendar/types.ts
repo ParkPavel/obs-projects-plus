@@ -13,8 +13,8 @@ export interface CalendarConfig {
   readonly eventColorField?: string; // default: "eventColor" (hex color for event bars)
   readonly startHour?: number;       // default: 6 (timeline start hour)
   readonly endHour?: number;         // default: 22 (timeline end hour)
-  // LEGACY field - ignored if startDateField exists
-  readonly dateField?: string;       // default: "date" (legacy)
+  // Creation date field — auto-filled when creating notes, NOT used for event start detection
+  readonly dateField?: string;       // default: "date" (creation date)
   readonly checkField?: string;
   readonly centerOn?: string | null;
   readonly agendaOpen?: boolean;

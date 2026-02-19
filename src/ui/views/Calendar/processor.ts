@@ -30,7 +30,7 @@ import {
   type SpanInfo,
 } from "./types";
 
-// Extend dayjs with plugins
+// Extend dayjs with plugins (utc/timezone already extended in calendar.ts)
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
@@ -146,17 +146,14 @@ export class CalendarDataProcessor {
   } {
     const endFieldName = this.config.endDateField || "endDate";
 
-    // Priority: startDateField > dateField (legacy) > common field names
+    // Priority: startDateField > common field names > filename date
+    // Note: config.dateField is now "creation date" — not used for event start detection
     let startDate: dayjs.Dayjs | null = null;
     let endDate: dayjs.Dayjs | null = null;
 
     // Try startDateField first (from config)
     if (this.config.startDateField && record.values[this.config.startDateField] !== undefined) {
       startDate = parseDateInTimezone(record.values[this.config.startDateField], this.timezone);
-    }
-    // Fallback to legacy dateField (from config)
-    else if (this.config.dateField && record.values[this.config.dateField] !== undefined) {
-      startDate = parseDateInTimezone(record.values[this.config.dateField], this.timezone);
     }
     // Try common field names in priority order
     else {
@@ -167,6 +164,11 @@ export class CalendarDataProcessor {
           if (startDate) break;
         }
       }
+    }
+
+    // Last resort: extract date from filename (e.g. "2025-01-15.md", "folder/2025-01-15 Meeting.md")
+    if (!startDate) {
+      startDate = this.extractDateFromFilename(record.id);
     }
 
     // Extract end date
@@ -188,6 +190,41 @@ export class CalendarDataProcessor {
   }
 
   /**
+   * Extract a date from a filename/path.
+   * Supports patterns:
+   *   - "2025-01-15.md"
+   *   - "folder/2025-01-15.md"
+   *   - "2025-01-15 Meeting Notes.md"
+   *   - "Daily/2025-01-15 - Review.md"
+   *   - "20250115.md" (no separators)
+   *   - "2025.01.15.md" (dot separators)
+   */
+  private extractDateFromFilename(recordId: string): dayjs.Dayjs | null {
+    // Get basename without extension
+    const lastSlash = recordId.lastIndexOf("/");
+    const basename = lastSlash >= 0 ? recordId.slice(lastSlash + 1) : recordId;
+    const nameWithoutExt = basename.replace(/\.[^.]+$/, "");
+
+    // Try YYYY-MM-DD or YYYY.MM.DD at start of filename
+    const separatedMatch = nameWithoutExt.match(/^(\d{4})[-.](\d{2})[-.](\d{2})/);
+    if (separatedMatch) {
+      const dateStr = `${separatedMatch[1]}-${separatedMatch[2]}-${separatedMatch[3]}`;
+      const parsed = parseDateInTimezone(dateStr, this.timezone);
+      if (parsed) return parsed;
+    }
+
+    // Try YYYYMMDD at start of filename (8 digits, no separators)
+    const compactMatch = nameWithoutExt.match(/^(\d{4})(\d{2})(\d{2})/);
+    if (compactMatch) {
+      const dateStr = `${compactMatch[1]}-${compactMatch[2]}-${compactMatch[3]}`;
+      const parsed = parseDateInTimezone(dateStr, this.timezone);
+      if (parsed) return parsed;
+    }
+
+    return null;
+  }
+
+  /**
    * Extract time information from record
    * Implements TIME_PRIORITY_LOGIC: date field time > separate time field
    */
@@ -196,7 +233,7 @@ export class CalendarDataProcessor {
     startDate: dayjs.Dayjs,
     endDate: dayjs.Dayjs
   ): TimeInfo | null {
-    const startFieldName = this.config.startDateField || this.config.dateField || "startDate";
+    const startFieldName = this.config.startDateField || "startDate";
     const endFieldName = this.config.endDateField || "endDate";
     const startTimeFieldName = this.config.startTimeField || "startTime";
     const endTimeFieldName = this.config.endTimeField || "endTime";

@@ -1,6 +1,7 @@
 ---
 title: Неделя <% tp.date.now("W, YYYY") %>
 startDate: <% tp.date.weekday(0).format("YYYY-MM-DD") %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 endDate: <% tp.date.weekday(6).format("YYYY-MM-DD") %>
 status: doing
 completed: false

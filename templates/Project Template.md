@@ -1,6 +1,7 @@
 ---
 title: <% tp.system.prompt("🚀 Название проекта:") %>
 startDate: <% tp.date.now("YYYY-MM-DD") %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 endDate: <% tp.system.prompt("📅 Плановая дата завершения:", "") %>
 status: <% tp.system.suggester(["📥 inbox", "📋 todo", "🏃 doing", "✅ done"], ["inbox", "todo", "doing", "done"], false, "📊 Статус:") %>
 completed: false

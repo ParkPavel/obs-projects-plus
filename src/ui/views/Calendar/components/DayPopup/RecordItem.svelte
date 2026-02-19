@@ -942,7 +942,7 @@
     border-radius: 0.625rem;
     padding: 0.75rem;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, transform 0.15s ease;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -979,7 +979,7 @@
     background: transparent;
     color: var(--text-on-accent);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
     flex-shrink: 0;
   }
 
@@ -1015,7 +1015,7 @@
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
     flex-shrink: 0;
   }
 
@@ -1045,7 +1045,7 @@
     color: var(--text-normal);
     font-size: 0.875rem;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, transform 0.15s ease;
     text-align: left;
     min-height: 2.75rem;
   }
@@ -1241,7 +1241,7 @@
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: filter 0.15s ease;
     flex-shrink: 0;
     box-sizing: border-box;
     overflow: hidden;
@@ -1286,7 +1286,7 @@
     border: 0.125rem solid transparent;
     border-radius: var(--palette-radius);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1343,7 +1343,7 @@
     color: var(--text-normal);
     font-family: var(--font-monospace);
     font-size: calc(var(--palette-base) * 0.8125);
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   
   .hex-input:focus {
@@ -1379,7 +1379,7 @@
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: filter 0.15s ease, opacity 0.15s ease;
     flex-shrink: 0;
     box-sizing: border-box;
     overflow: hidden;

@@ -24,7 +24,7 @@
     letter-spacing: -0.01em;
     color: var(--text-muted);
     border-radius: 0.375rem;
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: color 0.15s cubic-bezier(0.4, 0, 0.2, 1), font-weight 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-user-select: none;
     user-select: none;
   }

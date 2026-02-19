@@ -13,7 +13,7 @@ import {
   type DataValue,
   type Optional,
 } from "./dataframe/dataframe";
-import { nextUniqueProjectName, notEmpty, getNameFromPath } from "./helpers";
+import { nextUniqueProjectName, notEmpty, getNameFromPath, stripTagHash } from "./helpers";
 import { decodeFrontMatter, encodeFrontMatter } from "./metadata";
 import { i18n } from "./stores/i18n";
 import { settings } from "./stores/settings";
@@ -299,7 +299,7 @@ export function createDataRecord(
   if (project.dataSource.kind == "tag") {
     values = {
       ...values,
-      tags: [project.dataSource.config.tag.replace("#", "")],
+      tags: [stripTagHash(project.dataSource.config.tag)],
     };
   }
 

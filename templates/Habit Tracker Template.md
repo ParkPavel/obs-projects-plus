@@ -1,6 +1,7 @@
 ---
 title: <% tp.system.prompt("🎯 Название привычки:") %>
 startDate: <% tp.date.now("YYYY-MM-DD") %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 status: doing
 completed: false
 color: <% tp.system.suggester(["🟢 Зелёный", "🔵 Синий", "🟣 Фиолетовый", "🟠 Оранжевый"], ["#4CAF50", "#2196F3", "#9C27B0", "#FF9800"], false, "🎨 Цвет:") %>

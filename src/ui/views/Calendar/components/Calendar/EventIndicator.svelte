@@ -63,7 +63,7 @@
     border: 1px solid var(--indicator-color);
     z-index: 5;
     cursor: default;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, transform 0.15s ease;
   }
   
   .projects-calendar-event-indicator.top {

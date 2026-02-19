@@ -116,9 +116,9 @@ export class GestureManager {
   
   private attach(): void {
     // v7.0: Use passive listeners where possible for better scroll performance
-    // Only touchstart needs to be non-passive for preventDefault on edge swipes
+    // touchmove must be non-passive because handlers call e.preventDefault() for pinch/swipe
     this.element.addEventListener('touchstart', this.boundTouchStart, { passive: true });
-    this.element.addEventListener('touchmove', this.boundTouchMove, { passive: true });
+    this.element.addEventListener('touchmove', this.boundTouchMove, { passive: false });
     this.element.addEventListener('touchend', this.boundTouchEnd, { passive: true });
     this.element.addEventListener('touchcancel', this.boundTouchCancel, { passive: true });
   }

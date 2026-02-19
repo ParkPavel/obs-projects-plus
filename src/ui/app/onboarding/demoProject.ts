@@ -200,6 +200,7 @@ export async function createDemoProject(vault: Vault) {
     "Утренний стендап": {
       frontmatter: {
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         startTime: "09:00",
         endTime: "09:15",
         status: "done",
@@ -221,6 +222,7 @@ export async function createDemoProject(vault: Vault) {
     "Созвон с клиентом": {
       frontmatter: {
         startDate: today.add(1, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         startTime: "14:00",
         endTime: "15:00",
         status: "scheduled",
@@ -242,6 +244,7 @@ export async function createDemoProject(vault: Vault) {
     "Обед с командой": {
       frontmatter: {
         startDate: today.add(2, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         startTime: "12:30",
         endTime: "13:30",
         status: "scheduled",
@@ -262,6 +265,7 @@ export async function createDemoProject(vault: Vault) {
     "Презентация проекта": {
       frontmatter: {
         startDate: today.add(3, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         startTime: "10:00",
         endTime: "12:00",
         status: "scheduled",
@@ -282,6 +286,7 @@ export async function createDemoProject(vault: Vault) {
     "Вечерняя тренировка": {
       frontmatter: {
         startDate: today.add(1, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         startTime: "19:00",
         endTime: "20:30",
         status: "scheduled",
@@ -307,6 +312,7 @@ export async function createDemoProject(vault: Vault) {
     "Обновить документацию API": {
       frontmatter: {
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         dueDate: today.add(3, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -329,6 +335,7 @@ export async function createDemoProject(vault: Vault) {
     "Исправить баг авторизации": {
       frontmatter: {
         startDate: today.subtract(1, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         dueDate: today.format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -351,6 +358,7 @@ export async function createDemoProject(vault: Vault) {
     "Дизайн новой страницы": {
       frontmatter: {
         startDate: today.add(2, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         dueDate: today.add(7, "day").format("YYYY-MM-DD"),
         status: "todo",
         completed: false,
@@ -373,6 +381,7 @@ export async function createDemoProject(vault: Vault) {
     "Написать тесты для модуля оплаты": {
       frontmatter: {
         startDate: today.add(1, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         dueDate: today.add(5, "day").format("YYYY-MM-DD"),
         status: "todo",
         completed: false,
@@ -395,6 +404,7 @@ export async function createDemoProject(vault: Vault) {
     "Оптимизировать производительность": {
       frontmatter: {
         startDate: today.add(5, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         dueDate: today.add(12, "day").format("YYYY-MM-DD"),
         status: "inbox",
         completed: false,
@@ -422,6 +432,7 @@ export async function createDemoProject(vault: Vault) {
     "Настроить CI CD": {
       frontmatter: {
         startDate: today.subtract(5, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         dueDate: today.subtract(2, "day").format("YYYY-MM-DD"),
         status: "done",
         completed: true,
@@ -444,6 +455,7 @@ export async function createDemoProject(vault: Vault) {
     "Ревью кода коллеги": {
       frontmatter: {
         startDate: today.subtract(1, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         status: "done",
         completed: true,
         priority: "medium",
@@ -470,6 +482,7 @@ export async function createDemoProject(vault: Vault) {
     "Обновить зависимости": {
       frontmatter: {
         startDate: today.subtract(4, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         dueDate: today.subtract(2, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -497,6 +510,7 @@ export async function createDemoProject(vault: Vault) {
     "Редизайн личного кабинета": {
       frontmatter: {
         startDate: today.subtract(5, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(10, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -520,6 +534,7 @@ export async function createDemoProject(vault: Vault) {
     "Конференция TechFest 2026": {
       frontmatter: {
         startDate: today.add(14, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(16, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -549,6 +564,7 @@ export async function createDemoProject(vault: Vault) {
     "Спринт 14": {
       frontmatter: {
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(13, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -570,6 +586,7 @@ export async function createDemoProject(vault: Vault) {
     "Отпуск": {
       frontmatter: {
         startDate: today.add(30, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(44, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -605,6 +622,7 @@ export async function createDemoProject(vault: Vault) {
     "Квартальный аудит безопасности": {
       frontmatter: {
         startDate: today.add(7, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(28, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -626,6 +644,7 @@ export async function createDemoProject(vault: Vault) {
     "Бета-тестирование v3.0": {
       frontmatter: {
         startDate: today.add(5, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(19, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -647,6 +666,7 @@ export async function createDemoProject(vault: Vault) {
     "Миграция на новый сервер": {
       frontmatter: {
         startDate: today.add(21, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(25, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -677,6 +697,7 @@ export async function createDemoProject(vault: Vault) {
     "Ревью архитектуры системы": {
       frontmatter: {
         startDate: today.subtract(3, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(4, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -697,6 +718,7 @@ export async function createDemoProject(vault: Vault) {
     "Обучение команды React 19": {
       frontmatter: {
         startDate: today.add(10, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(24, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -731,6 +753,7 @@ export async function createDemoProject(vault: Vault) {
     "Маркетинговая кампания Q1": {
       frontmatter: {
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(45, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -753,6 +776,7 @@ export async function createDemoProject(vault: Vault) {
     "Хакатон внутренний": {
       frontmatter: {
         startDate: today.add(35, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(37, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -793,6 +817,7 @@ export async function createDemoProject(vault: Vault) {
     "Разработка модуля аналитики": {
       frontmatter: {
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(6, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -816,6 +841,7 @@ export async function createDemoProject(vault: Vault) {
     "Рефакторинг авторизации": {
       frontmatter: {
         startDate: today.add(7, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(11, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -839,6 +865,7 @@ export async function createDemoProject(vault: Vault) {
     "Вёрстка нового интерфейса": {
       frontmatter: {
         startDate: today.subtract(2, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(5, "day").format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
@@ -862,6 +889,7 @@ export async function createDemoProject(vault: Vault) {
     "Интеграция платёжной системы": {
       frontmatter: {
         startDate: today.add(14, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(20, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -941,6 +969,7 @@ export async function createDemoProject(vault: Vault) {
     "Дневник - Понедельник": {
       frontmatter: {
         startDate: today.subtract(2, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         status: "done",
         completed: true,
         type: "дневник",
@@ -955,6 +984,7 @@ export async function createDemoProject(vault: Vault) {
     "Дневник - Вторник": {
       frontmatter: {
         startDate: today.subtract(1, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         status: "done",
         completed: true,
         type: "дневник",
@@ -969,6 +999,7 @@ export async function createDemoProject(vault: Vault) {
     "Дневник - Сегодня": {
       frontmatter: {
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         status: "doing",
         completed: false,
         type: "дневник",
@@ -1005,6 +1036,7 @@ export async function createDemoProject(vault: Vault) {
     "Дорожная карта 2026": {
       frontmatter: {
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(365, "day").format("YYYY-MM-DD"),
         status: "scheduled",
         completed: false,
@@ -1083,6 +1115,7 @@ export async function createDemoProject(vault: Vault) {
     "Собеседование кандидата": {
       frontmatter: {
         startDate: today.add(4, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         startTime: "11:00",
         endTime: "12:00",
         status: "scheduled",
@@ -1105,6 +1138,7 @@ export async function createDemoProject(vault: Vault) {
     "Планирование квартала": {
       frontmatter: {
         startDate: today.add(4, "day").format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         startTime: "11:30",
         endTime: "13:00",
         status: "scheduled",
@@ -1143,6 +1177,7 @@ export async function createDemoProject(vault: Vault) {
         archived: false,
         // DATE
         startDate: today.format("YYYY-MM-DD"),
+        date: today.format("YYYY-MM-DD"),
         endDate: today.add(7, "day").format("YYYY-MM-DD"),
         dueDate: today.add(3, "day").format("YYYY-MM-DD"),
         // LIST (multitext)
@@ -1215,6 +1250,7 @@ export async function createDemoProject(vault: Vault) {
       name: { width: 280 },
       path: { hide: true },
       startDate: { width: 110 },
+      date: { width: 110 },
       endDate: { width: 110 },
       dueDate: { width: 110 },
       status: { width: 100 },
@@ -1228,7 +1264,7 @@ export async function createDemoProject(vault: Vault) {
       color: { hide: true },
       cover: { hide: true },
     },
-    orderFields: ["name", "status", "priority", "type", "category", "startDate", "endDate", "progress", "assignee", "tags"],
+    orderFields: ["name", "status", "priority", "type", "category", "startDate", "date", "endDate", "progress", "assignee", "tags"],
   };
 
   const boardConfig: BoardConfig = {
@@ -1249,7 +1285,7 @@ export async function createDemoProject(vault: Vault) {
     interval: "week",
     displayMode: "bars",
     startDateField: "startDate",
-    dateField: "startDate",
+    dateField: "date",
     endDateField: "endDate",
     startTimeField: "startTime",
     endTimeField: "endTime",
@@ -1414,6 +1450,7 @@ export async function createDemoProject(vault: Vault) {
       },
       fieldConfig: {
         startDate: { time: false },
+        date: { time: false },
         endDate: { time: false },
         dueDate: { time: false },
         startTime: { time: true },

@@ -154,7 +154,7 @@
     left: calc(var(--left-percent, 0) + 0.0625rem);
     width: calc(var(--width-percent, 100%) - 0.125rem);
     overflow: hidden;
-    transition: all 0.1s ease;
+    transition: background 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
     border: none;
     text-align: left;
     font-family: inherit;
@@ -237,6 +237,14 @@
     
     button.projects-calendar-event-bar:active {
       background: color-mix(in srgb, var(--event-color) 40%, transparent);
+    }
+  }
+
+  /* Touch device: minimum touch target height */
+  @media (pointer: coarse) {
+    .projects-calendar-event-bar {
+      min-height: 2.25rem;
+      padding: 0.25rem 0.375rem;
     }
   }
 </style>

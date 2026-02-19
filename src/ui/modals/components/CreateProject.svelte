@@ -307,8 +307,12 @@
         <TextInput
           placeholder="#tag"
           value={project.dataSource.config.tag ?? ""}
-          on:input={({ detail: tag }) => {
+          on:input={({ detail: rawTag }) => {
             if (project.dataSource.kind === "tag") {
+              // Normalize: ensure tag always has exactly one leading #
+              const tag = rawTag.trim()
+                ? (rawTag.trim().startsWith("#") ? rawTag.trim() : "#" + rawTag.trim())
+                : "";
               project = {
                 ...project,
                 dataSource: {

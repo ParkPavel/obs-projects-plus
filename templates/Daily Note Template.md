@@ -1,6 +1,7 @@
 ---
 title: <% tp.date.now("YYYY-MM-DD dddd", 0, tp.file.title, "YYYY-MM-DD") %>
 startDate: <% tp.date.now("YYYY-MM-DD", 0, tp.file.title, "YYYY-MM-DD") %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 status: doing
 completed: false
 type: событие

@@ -531,17 +531,14 @@ export function extractDateWithPriority(
   endDateField?: string,
   timezone: string = "local"
 ): dayjs.Dayjs | null {
-  // Priority 1: NEW field startDateField (default: "startDate")
+  // Priority 1: startDateField (default: "startDate")
   const startFieldName = startDateField || "startDate";
   if (record.values[startFieldName] !== undefined) {
     return parseDateInTimezone(record.values[startFieldName], timezone);
   }
 
-  // Priority 2: LEGACY field dateField (default: "date")
-  const legacyFieldName = dateField || "date";
-  if (record.values[legacyFieldName] !== undefined) {
-    return parseDateInTimezone(record.values[legacyFieldName], timezone);
-  }
+  // Priority 2: dateField is now creation date — skip for event start detection
+  // (kept as parameter for backward compatibility but not used as fallback)
 
   // Priority 3: endDateField only (use as deadline)
   const endFieldName = endDateField || "endDate";

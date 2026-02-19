@@ -54,10 +54,15 @@
     background: var(--background-secondary);
     border-radius: 0.375rem;
     cursor: pointer;
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid transparent;
     -webkit-user-select: none;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   .calendar-event:hover {
@@ -77,5 +82,19 @@
     margin: 0;
     width: 0.875rem;
     height: 0.875rem;
+  }
+
+  /* Touch device: enlarge touch targets to 44px minimum */
+  @media (pointer: coarse) {
+    .calendar-event {
+      min-height: 2.75rem;
+      padding: 0.5rem 0.625rem;
+      font-size: 0.8125rem;
+    }
+
+    .calendar-event :global(input[type="checkbox"]) {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
   }
 </style>

@@ -1,4 +1,5 @@
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
+import { normalizeTag } from "src/lib/helpers";
 import type {
   ProjectDefinition,
   ProjectsPluginPreferences,
@@ -27,19 +28,21 @@ export class TagDataSource extends FrontMatterDataSource {
       return false;
     }
 
-    const { tag } = this.project.dataSource.config;
+    const tag = normalizeTag(this.project.dataSource.config.tag);
+    if (!tag) return false;
 
     const file = this.fileSystem.getFile(path);
 
     if (file) {
+      const fileTags = file.readTags();
       if (this.project.dataSource.config.hierarchy) {
-        for (const fileTag of file.readTags()) {
+        for (const fileTag of fileTags) {
           if (fileTag.startsWith(tag)) {
             return true;
           }
         }
       } else {
-        return file.readTags().has(tag);
+        return fileTags.has(tag);
       }
     }
 

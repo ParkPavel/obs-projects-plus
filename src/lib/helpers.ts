@@ -15,6 +15,35 @@ export {
 } from "./helpers/dateFormatting";
 
 /**
+ * Normalizes a tag to always start with exactly one `#`.
+ *
+ * Handles all common user inputs:
+ * - `"project"` → `"#project"`
+ * - `"#project"` → `"#project"` (no change)
+ * - `"##project"` → `"#project"` (strips extra `#`)
+ * - `" #project "` → `"#project"` (trims whitespace)
+ *
+ * @param raw - The raw tag string from user input, config, or YAML
+ * @returns Normalized tag with exactly one leading `#`
+ */
+export function normalizeTag(raw: string): string {
+  const trimmed = raw.toString().trim();
+  // Strip all leading # and re-add exactly one
+  const stripped = trimmed.replace(/^#+/, "");
+  return stripped ? "#" + stripped : "";
+}
+
+/**
+ * Removes the leading `#` from a normalized tag for YAML frontmatter storage.
+ *
+ * @param tag - A tag string (with or without `#`)
+ * @returns The tag without any leading `#` characters
+ */
+export function stripTagHash(tag: string): string {
+  return tag.trim().replace(/^#+/, "");
+}
+
+/**
  * Convenience function for filtering null or undefined values in an array.
  *
  * @param value - The value to check

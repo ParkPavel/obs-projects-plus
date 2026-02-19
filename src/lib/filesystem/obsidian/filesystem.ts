@@ -5,7 +5,7 @@ import {
   TFile,
   type CachedMetadata,
 } from "obsidian";
-import { notEmpty } from "src/lib/helpers";
+import { notEmpty, normalizeTag } from "src/lib/helpers";
 import {
   IFile,
   type IFileSystem,
@@ -176,12 +176,14 @@ function parseFrontMatterTags(property: unknown): string[] {
   if (typeof property === "string") {
     property
       .split(",")
-      .map((tag) => "#" + tag.trim())
+      .map((tag) => normalizeTag(tag))
+      .filter(Boolean)
       .forEach((tag) => res.push(tag));
   } else if (Array.isArray(property)) {
     property
       .filter(notEmpty)
-      .map((tag) => "#" + tag.toString())
+      .map((tag) => normalizeTag(tag.toString()))
+      .filter(Boolean)
       .forEach((tag) => res.push(tag));
   }
 

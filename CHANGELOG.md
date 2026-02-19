@@ -5,6 +5,46 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.7] - 2026-02-19
+
+### Fixed
+- **Tag detection** — fixed tag-based datasource silently dropping notes
+  - New `normalizeTag()` function: strips extra `#`, re-adds exactly one (`"##daily"` → `"#daily"`, `"daily"` → `"#daily"`)
+  - New `stripTagHash()` helper for safe YAML storage — `replace(/^#+/, "")` instead of fragile `.replace("#", "")`
+  - Fixed double-`#` bug in `parseFrontMatterTags()` — YAML `tags: ["#daily"]` no longer becomes `"##daily"`
+  - `TagDataSource.includes()` now normalizes config tag before comparison
+  - `dataApi.ts` uses `stripTagHash()` when writing tags to frontmatter
+  - InMemFileSystem aligned with Obsidian filesystem for accurate test coverage
+  - 25 new tests: 12 for `normalizeTag`/`stripTagHash`, 13 for `TagDataSource.includes()`
+
+### Changed
+- **Date field semantics** — `dateField` repurposed from "legacy start date fallback" to "creation date"
+  - `dateField` no longer participates in event start detection priority chain
+  - New `creationDateField` variable in CalendarView — resolved from `config.dateField`, auto-filled on note creation
+  - `extractDateWithPriority()` in `calendar.ts` — removed Priority 2 (legacy dateField fallback)
+  - `extractDates()` in `processor.ts` — removed `config.dateField` from start date priority
+  - Settings UI label: "Поле даты (date)" → "Дата создания (date)" with explanatory hint
+  - All 12 templates updated with `date` field alongside `startDate`
+  - Demo project: 35 records updated with `date` field, `calendarConfig.dateField` = `"date"`
+
+### Performance
+- **Lightweight grouping hash** — `generateGroupingHash()` now hashes only `record.id` + date field value instead of `JSON.stringify` on all values (O(n×m) → O(n))
+- **Lightweight records fingerprint** — `createRecordsFingerprint()` includes only calendar-relevant fields (~5-6) instead of every field per record (O(n×m) → O(n×k), k ≈ 5)
+- **Synthetic DataField cache** — `resolveFieldByName()` caches synthetic fields by key, preventing new object references on every Svelte reactive tick that cascaded re-renders
+- **Memoized grouping & sorting** — `groupRecordsByRange()` and `sortGroupedRecords()` only re-run when content-aware hash changes, not on every tick
+- **Double-tap delay** — reduced from 300ms → 200ms for improved perceived responsiveness
+
+### Documentation
+- Updated user guides (RU/EN) with calendar date field mapping table (`startDate` / `endDate` / `date`)
+- Updated READMEs (RU/EN) with `date` field in frontmatter examples
+- Updated templates/README.md with `date` and `endDate` fields documentation
+- Tag detection analysis: `docs/debug/tag-detection-analysis.md` (352-line root cause analysis)
+
+### Technical
+- **Tests**: 344/344 passing (19 suites) ✅
+- **Build**: OK (main.js 1.6MB, main.css 4.2KB)
+- **Lint**: 0 errors
+
 ## [3.0.6] - 2026-02-15
 
 ### Fixed

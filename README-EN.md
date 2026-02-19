@@ -82,7 +82,7 @@ Your data **stays in your files**. The plugin does not create its own database.
 | **Calendar** | Timeline 07:00–22:00, multi-day bars, 5 zoom levels (Year → Day) |
 | **Gallery** | Cards with covers and frontmatter fields |
 
-**Calendar** — a full planner: `startDate`, `endDate`, `startTime`, `endTime`, `color` field for color coding, infinite scroll, mobile gestures (swipe, pinch-to-zoom, double tap to create note).
+**Calendar** — a full planner: `startDate`, `endDate`, `startTime`, `endTime`, `date` (note creation date), `color` field for color coding, infinite scroll, mobile gestures (swipe, pinch-to-zoom, double tap to create note).
 
 **Agenda 2.0** — calendar sidebar with a list builder: 42 filter operators, nested AND/OR groups, date formulas (`today`, `sow`, `eom`, `today+1w`), two modes — visual and Advanced (Google Sheets-style formulas).
 
@@ -120,6 +120,7 @@ title: My Task
 status: todo
 priority: high
 startDate: 2026-02-15
+date: 2026-02-15
 endDate: 2026-02-20
 startTime: "09:00"
 endTime: "18:00"
@@ -136,8 +137,7 @@ tags: [project, important]
 |:--------:|---------|---------|--------|
 | ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | Released |
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released |
-| 🔥 | **Performance optimization** | v3.0.7 | In Progress |
-| 🔥 | **Fix tag-based note detection** | v3.0.7 | In Progress |
+| ✅ | **Optimization + Tags + Date Fields** | v3.0.7 | Released |
 | 🥇 | **Drag & Drop + Mobile** | v3.2.0 | Planned |
 | 🥈 | **Database View** | v3.3.0 | Planned |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned |
@@ -151,10 +151,8 @@ tags: [project, important]
 
 | # | Issue | Priority | Notes |
 |---|-------|:--------:|-------|
-| 1 | Performance regression after v3.0.6 | P0 | Replacing `document.*` → `activeDocument` and other compliance fixes increased response time. Profiling and optimization needed |
-| 2 | Tag-based note detection is broken | P0 | Tag datasource fails to find some notes. Investigation and fix needed |
-| 3 | Command logic duplication (`main.ts` + `CommandManager`) | P2 | Desync risk when adding new commands |
-| 4 | Fire-and-forget `void` in `ViewApi` writes | P2 | I/O errors during writes are silently swallowed |
+| 1 | Command logic duplication (`main.ts` + `CommandManager`) | P2 | Desync risk when adding new commands |
+| 2 | Fire-and-forget `void` in `ViewApi` writes | P2 | I/O errors during writes are silently swallowed |
 
 ### Custom View API (Experimental)
 

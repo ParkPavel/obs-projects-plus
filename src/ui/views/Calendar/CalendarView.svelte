@@ -4,6 +4,7 @@
   import { createDataRecord } from "src/lib/dataApi";
   import {
     DataFieldType,
+    type DataField,
     type DataFrame,
     type DataRecord,
   } from "src/lib/dataframe/dataframe";
@@ -681,29 +682,62 @@
     .filter((field) => !field.repeated)
     .filter((field) => field.type === DataFieldType.Date);
   
-  // v3.0.0 Priority logic (ROADMAP_V3.0.0.md):
-  // 1. Try startDateField from config
+  /**
+   * Cache for synthetic DataField objects.
+   * Prevents creating new object references on every reactive tick,
+   * which would cascade re-renders through Svelte's reference equality checks.
+   */
+  const syntheticFieldCache = new Map<string, DataField>();
+  
+  /**
+   * Helper: find a field by name in a list, or create a cached synthetic DataField
+   * if the config has a name set but the field doesn't exist yet in detected fields.
+   * This allows users to type new field names in settings that will be created on first use.
+   */
+  function resolveFieldByName(
+    fieldList: DataField[],
+    configName: string | undefined,
+    fallbackType: DataFieldType = DataFieldType.Date
+  ): DataField | undefined {
+    if (!configName) return undefined;
+    const found = fieldList.find((f) => f.name === configName);
+    if (found) return found;
+    // Return cached synthetic field to keep stable reference
+    const cacheKey = `${configName}:${fallbackType}`;
+    let cached = syntheticFieldCache.get(cacheKey);
+    if (!cached) {
+      cached = { name: configName, type: fallbackType, repeated: false, identifier: false, derived: false };
+      syntheticFieldCache.set(cacheKey, cached);
+    }
+    return cached;
+  }
+
+  // v3.0.0 Priority logic:
+  // 1. Try startDateField from config (trust user input, create synthetic if needed)
   // 2. Try common date field names: startDate, date, deadline, dueDate
   // 3. Fall back to first date field
   $: startDateField = 
-    dateFields.find((field) => config?.startDateField === field.name) ??
+    resolveFieldByName(dateFields, config?.startDateField) ??
     dateFields.find((field) => field.name === "startDate") ??
     dateFields.find((field) => field.name === "date") ??
     dateFields.find((field) => field.name === "deadline") ??
-    dateFields.find((field) => field.name === "dueDate");
-  
-  $: legacyDateField =
-    dateFields.find((field) => config?.dateField === field.name) ??
+    dateFields.find((field) => field.name === "dueDate") ??
     dateFields[0]; // Fallback to any date field
   
-  // Final dateField: prioritize startDateField over legacy
-  $: dateField = startDateField ?? legacyDateField;
+  // Creation date field (separate from event start date)
+  // Auto-filled when creating new notes, not used for event start detection
+  $: creationDateField =
+    resolveFieldByName(dateFields, config?.dateField);
+  
+  // Final dateField: only startDateField (creation date is independent)
+  $: dateField = startDateField;
   
   $: endDateField =
-    dateFields.find((field) => config?.endDateField === field.name) ??
+    resolveFieldByName(dateFields, config?.endDateField) ??
     dateFields.find((field) => field.name === "endDate");
 
-  $: booleanField = fields.find((field) => config?.checkField === field.name);
+  $: booleanField = resolveFieldByName(fields, config?.checkField, DataFieldType.Boolean) ??
+    fields.find((field) => config?.checkField === field.name);
   
   // Title field for agenda - try 'name', 'title', or first string field
   $: titleField = (() => {
@@ -897,8 +931,21 @@
         
         const newValues: Record<string, unknown> = {
           ...record.values,
-          [startFieldName]: newStartValue,
         };
+
+        // When dateField is "name", the date goes into the filename, not frontmatter
+        let effectiveName: string;
+        if (dateField.name === "name") {
+          const datePrefix = targetDate.format("YYYY-MM-DD");
+          // Strip existing date prefix from baseName for clean copy name
+          const nameWithoutDate = baseName.replace(/^\d{4}-\d{2}-\d{2}\s*/, '');
+          effectiveName = nameWithoutDate
+            ? `${datePrefix} ${nameWithoutDate}_copy`
+            : `${datePrefix}_copy`;
+        } else {
+          newValues[startFieldName] = newStartValue;
+          effectiveName = baseName + '_copy_' + (formatDateForProject(targetDate, project) ?? targetDate.format('YYYY-MM-DD'));
+        }
         
         // Handle end date
         if (endFieldName && spanDays > 0) {
@@ -914,7 +961,7 @@
         }
         
         const newRecord = createDataRecord(
-          baseName + '_copy_' + (formatDateForProject(targetDate, project) ?? targetDate.format('YYYY-MM-DD')),
+          effectiveName,
           project,
           newValues as Record<string, import('src/lib/dataframe/dataframe').Optional<import('src/lib/dataframe/dataframe').DataValue>>
         );
@@ -1027,17 +1074,20 @@
   let lastGroupedKey = '';
   let cachedGroupedRecords: Record<string, DataRecord[]> = {};
   
-  // Full hash for change detection in grouping - must check ALL record values
-  // v9.0: Include ALL values for proper reactivity on any field change
+  // Full hash for change detection in grouping
+  // v3.0.7: Lightweight hash — only hashes relevant date fields + record IDs
+  // Previously JSON.stringify'd ALL values for every record on every tick
   function generateGroupingHash(recs: DataRecord[], field?: string): string {
     if (!field || recs.length === 0) return 'empty';
-    // Hash ALL records with ALL their values to detect any change
-    const hash = recs.map(r => {
-      // Stringify all values to detect any change
-      const valuesHash = JSON.stringify(r.values);
-      return `${r.id}:${valuesHash}`;
-    }).join('|');
-    return `${recs.length}-${hash}`;
+    let hash = recs.length + ':';
+    for (const r of recs) {
+      // Only include id + the date field values that affect grouping
+      const dateVal = r.values[field];
+      hash += r.id;
+      hash += dateVal !== undefined ? String(dateVal) : '';
+      hash += '|';
+    }
+    return hash;
   }
   
   $: {
@@ -1115,9 +1165,9 @@
   let lastConfigStr = '';
   
   /**
-   * v7.2: Create fingerprint from records content to detect any changes
-   * This ensures reactivity even when frame reference doesn't change
-   * v9.1: Include color field for proper color change detection
+   * v3.0.7: Lightweight fingerprint — only includes calendar-relevant fields
+   * Previously: JSON.stringify per-record on EVERY field (O(n*m) stringification)
+   * Now: Only stringifies date, time, and color fields (O(n*k) where k is small constant)
    */
   function createRecordsFingerprint(recs: DataRecord[], cfg: CalendarConfig | undefined): string {
     if (!recs || !cfg) return '';
@@ -1127,25 +1177,19 @@
     const endTimeField = cfg.endTimeField;
     const colorField = cfg.eventColorField;
     
-    // DEBUG: Log field configuration
     let fp = recs.length + ':';
     for (const r of recs) {
       fp += r.id + '|';
-      // Include ALL relevant values for change detection
-      const startVal = startField ? r.values[startField] : undefined;
-      const endVal = endField ? r.values[endField] : undefined;
-      const startTimeVal = startTimeField ? r.values[startTimeField] : undefined;
-      const endTimeVal = endTimeField ? r.values[endTimeField] : undefined;
-      // v9.1: Include color value
-      const colorVal = colorField ? r.values[colorField] : (r.values['color'] || r.values['eventColor']);
-      
-      // Convert values to string representation that captures actual content
-      fp += JSON.stringify(startVal) + '|';
-      if (endField) fp += JSON.stringify(endVal) + '|';
-      if (startTimeField) fp += JSON.stringify(startTimeVal) + '|';
-      if (endTimeField) fp += JSON.stringify(endTimeVal) + '|';
-      // v9.1: Add color to fingerprint
-      fp += JSON.stringify(colorVal) + '|';
+      // Only include the fields that actually affect calendar rendering
+      if (startField) fp += String(r.values[startField] ?? '') + '|';
+      if (endField) fp += String(r.values[endField] ?? '') + '|';
+      if (startTimeField) fp += String(r.values[startTimeField] ?? '') + '|';
+      if (endTimeField) fp += String(r.values[endTimeField] ?? '') + '|';
+      if (colorField) {
+        fp += String(r.values[colorField] ?? '') + '|';
+      } else {
+        fp += String(r.values['color'] ?? r.values['eventColor'] ?? '') + '|';
+      }
     }
     return fp;
   }
@@ -1232,7 +1276,7 @@
   /**
    * Deep drag handler with time preservation, timezone awareness, and validation
    */
-  function handleRecordChange(date: dayjs.Dayjs, record: DataRecord) {
+  async function handleRecordChange(date: dayjs.Dayjs, record: DataRecord) {
     // Validate record integrity first
     const recordValidation = validateRecordIntegrity(record);
     if (!recordValidation.isValid) {
@@ -1243,7 +1287,7 @@
     
     if (!dateField) {
       calendarLogger.warn('No date field configured for record change', { component: 'CalendarView', action: 'recordChange' });
-      new Notice('Необходимо выбрать поле даты');
+      new Notice(get(i18n).t("views.calendar.errors.date-required"));
       return;
     }
   
@@ -1256,7 +1300,7 @@
       const originalStart = extractDateWithPriority(
         record,
         startDateField?.name,
-        legacyDateField?.name,
+        undefined, // creation date field is not used for event start
         endDateField?.name,
         timezoneValue
       );
@@ -1281,6 +1325,30 @@
           .second(originalStart.second());
       } else {
         newStartDate = targetDate;
+      }
+
+      // When dateField is "name", the date is stored in the filename — rename the file
+      if (dateField.name === "name") {
+        const app_instance = get(app);
+        const file = app_instance.vault.getAbstractFileByPath(record.id);
+        if (file && 'parent' in file) {
+          const oldBasename = record.id.substring(record.id.lastIndexOf('/') + 1).replace(/\.md$/i, '');
+          const newDateStr = newStartDate.format("YYYY-MM-DD");
+          
+          // Replace existing date prefix or prepend the new date
+          const datePattern = /^\d{4}-\d{2}-\d{2}/;
+          let newBasename: string;
+          if (datePattern.test(oldBasename)) {
+            newBasename = oldBasename.replace(datePattern, newDateStr);
+          } else {
+            newBasename = `${newDateStr} ${oldBasename}`;
+          }
+          
+          const dir = record.id.substring(0, record.id.lastIndexOf('/'));
+          const newPath = dir ? `${dir}/${newBasename}.md` : `${newBasename}.md`;
+          await app_instance.fileManager.renameFile(file as any, newPath);
+        }
+        return;
       }
 
       // Build updates object
@@ -1445,9 +1513,32 @@
         try {
           if (dateField) {
             // Build frontmatter values with auto-filled date/time
-            const frontmatterValues: Record<string, Date | string> = {
-              [dateField.name]: date.toDate(),
-            };
+            const frontmatterValues: Record<string, Date | string> = {};
+            
+            // Determine the effective note name:
+            // If dateField is "name", incorporate the date into the filename
+            // instead of writing it as a frontmatter property
+            let effectiveName = name;
+            if (dateField.name === "name") {
+              const datePrefix = date.format("YYYY-MM-DD");
+              // If user already typed a name, prepend date; otherwise use date as name
+              if (name && name !== get(i18n).t("modals.note.create.untitled")) {
+                // Avoid double-prefixing if name already starts with the date
+                if (!name.startsWith(datePrefix)) {
+                  effectiveName = `${datePrefix} ${name}`;
+                }
+              } else {
+                effectiveName = datePrefix;
+              }
+            } else {
+              // Normal frontmatter field — write date as field value
+              frontmatterValues[dateField.name] = date.toDate();
+            }
+            
+            // Auto-fill creation date if configured (separate from event start date)
+            if (creationDateField && creationDateField.name !== dateField?.name && creationDateField.name !== "name") {
+              frontmatterValues[creationDateField.name] = date.toDate();
+            }
             
             // Auto-fill startTime if field is configured and time is provided
             const timeFieldName = config?.startTimeField || 'startTime';
@@ -1467,7 +1558,7 @@
             }
             
             api.addRecord(
-              createDataRecord(name, project, frontmatterValues),
+              createDataRecord(effectiveName, project, frontmatterValues),
               fields,
               templatePath
             );
@@ -2135,7 +2226,7 @@
     height: 0.375rem;
     border-radius: 50%;
     background: var(--background-modifier-border);
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .zoom-dot.active {

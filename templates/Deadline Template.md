@@ -1,6 +1,7 @@
 ---
 title: <% tp.system.prompt("⏰ Название дедлайна:") %>
 startDate: <% tp.date.now("YYYY-MM-DD") %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 endDate: <% tp.system.prompt("📅 Дата дедлайна:", tp.date.now("YYYY-MM-DD", 7)) %>
 endTime: <% tp.system.prompt("🕐 Время сдачи:", "18:00") %>
 status: <% tp.system.suggester(["📥 inbox", "📋 todo", "🏃 doing", "✅ done"], ["inbox", "todo", "doing", "done"], false, "📊 Статус:") %>

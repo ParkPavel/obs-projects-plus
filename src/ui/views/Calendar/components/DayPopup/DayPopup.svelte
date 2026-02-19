@@ -767,7 +767,7 @@
     background: var(--background-secondary);
     color: var(--text-muted);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
     flex-shrink: 0;
   }
   
@@ -896,7 +896,7 @@
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: filter 0.15s ease, transform 0.15s ease;
   }
   
   .ios-popup-create-btn:hover {

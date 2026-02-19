@@ -846,6 +846,26 @@
                 "none": "— 无 —"
             }
         },
+        "onboarding": {
+            "title": "开始使用 Projects Plus",
+            "description": "Projects Plus 让您使用 <a>front matter</a> 管理相关笔记组。例如，一个包含您正在撰写的博客文章的文件夹。",
+            "front-matter-link": "front matter",
+            "explore": "从零开始，或探索演示项目 👇",
+            "create-new": "创建新项目",
+            "try-demo": "试用演示项目",
+            "try-demo-tooltip": "在仓库根目录创建一个包含示例笔记的新文件夹。",
+            "hint": "下次您可以通过以下任一方式创建项目：",
+            "tab-projects-view": "项目视图",
+            "tab-command-palette": "命令面板",
+            "tab-file-explorer": "文件管理器",
+            "file-explorer-step1": "在<strong>文件管理器</strong>中右键点击文件夹。",
+            "file-explorer-step2": "点击<strong>在文件夹中创建项目</strong>。",
+            "command-palette-step1": "打开<strong>命令面板</strong>。",
+            "command-palette-step2": "搜索<strong>创建新项目</strong>",
+            "command-palette-step3": "按<strong>Enter</strong>。",
+            "projects-view-step1": "在 <strong>Projects Plus</strong> 视图的右上角，点击<strong>新建</strong>。",
+            "projects-view-step2": "点击<strong>新建项目</strong>。"
+        },
         "common": {
             "yesterday": "昨天",
             "tomorrow": "明天",

@@ -1,19 +1,22 @@
 <script lang="ts">
   import { Button, ModalButtonGroup, Typography } from "obsidian-svelte";
+  import { i18n } from "src/lib/stores/i18n";
 
   import TabContainer from "./TabContainer.svelte";
 
   export let onCreate: () => void;
   export let onTry: () => void;
+
+  $: t = $i18n.t;
+  $: tabProjects = t("onboarding.tab-projects-view");
+  $: tabCommand = t("onboarding.tab-command-palette");
+  $: tabExplorer = t("onboarding.tab-file-explorer");
 </script>
 
 <div class="center">
-  <Typography variant="h1">Get started with Projects Plus</Typography>
+  <Typography variant="h1">{t("onboarding.title")}</Typography>
   <Typography variant="body">
-    Projects Plus lets you manage groups of related notes using
-    <a href="https://help.obsidian.md/Editing+and+formatting/Properties">
-      front matter</a
-    >. For example, a folder with the blog posts you're working on.
+    {t("onboarding.description").split("<a>")[0]}<a href="https://help.obsidian.md/Editing+and+formatting/Properties">{t("onboarding.front-matter-link")}</a>{t("onboarding.description").split("</a>")[1] || ""}
   </Typography>
 
   <pre><code
@@ -27,52 +30,45 @@ published: false
     ></pre>
 
   <Typography variant="body">
-    Start from scratch, or explore a demo project 👇
+    {t("onboarding.explore")}
   </Typography>
 
   <ModalButtonGroup>
     <Button variant="primary" on:click={() => onCreate()}>
-      Create new project
+      {t("onboarding.create-new")}
     </Button>
     <Button
       variant="default"
-      tooltip="Creates a new folder at the root of your vault with example notes."
+      tooltip={t("onboarding.try-demo-tooltip")}
       on:click={() => onTry()}
     >
-      Try a demo project
+      {t("onboarding.try-demo")}
     </Button>
   </ModalButtonGroup>
   <p
     style={"color: var(--text-muted); margin-top: 45px; font-size: var(--font-ui-smaller);"}
   >
-    <strong>Psst! 👋</strong> Next time you can create your projects using any of
-    the following ways:
+    <strong>Psst! 👋</strong> {t("onboarding.hint")}
   </p>
   <TabContainer
-    options={["Projects view", "Command palette", "File explorer"]}
+    options={[tabProjects, tabCommand, tabExplorer]}
     let:selected
   >
-    {#if selected === "File explorer"}
+    {#if selected === tabExplorer}
       <ol>
-        <li>
-          Right-click a folder in <strong>File explorer</strong>.
-        </li>
-        <li>Click <strong>Create project in folder</strong>.</li>
+        <li>{@html t("onboarding.file-explorer-step1")}</li>
+        <li>{@html t("onboarding.file-explorer-step2")}</li>
       </ol>
-    {:else if selected === "Command palette"}
+    {:else if selected === tabCommand}
       <ol>
-        <li>Open the <strong>Command palette</strong>.</li>
-        <li>Search for <strong>Create new project</strong></li>
-        <li>Press <strong>Enter</strong>.</li>
+        <li>{@html t("onboarding.command-palette-step1")}</li>
+        <li>{@html t("onboarding.command-palette-step2")}</li>
+        <li>{@html t("onboarding.command-palette-step3")}</li>
       </ol>
     {:else}
       <ol>
-        <li>
-          In the top-right corner of the <strong>Projects Plus</strong>
-          view, click
-          <strong>New</strong>.
-        </li>
-        <li>Click <strong>New project</strong>.</li>
+        <li>{@html t("onboarding.projects-view-step1")}</li>
+        <li>{@html t("onboarding.projects-view-step2")}</li>
       </ol>
     {/if}
   </TabContainer>

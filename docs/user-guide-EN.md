@@ -212,6 +212,18 @@ Timeline-based project visualization.
 - Deadline management
 - Time-based projects
 
+#### Calendar Date Fields
+
+The calendar uses three types of date fields:
+
+| Field | Purpose | Affects position |
+|-------|---------|:----------------:|
+| `startDate` | Event start — determines which day the event appears on the calendar | ✅ |
+| `endDate` | Event end — for multi-day events (displayed as a bar) | ✅ |
+| `date` | Note creation date — auto-filled when creating a note | ❌ |
+
+> **Important:** The `date` field is the note creation date, **not** the event start date. It is auto-filled when a note is created via the calendar and does not affect event positioning. Use `startDate` to position events on the calendar.
+
 ### 🖼️ Gallery View
 Visual card-based project browsing.
 
@@ -308,7 +320,8 @@ SORT file.ctime DESC
 ---
 title: "{{title}}"
 status: "draft"
-created: {{date}}
+startDate: {{date}}
+date: {{date}}
 project: "{{project}}
 ---
 

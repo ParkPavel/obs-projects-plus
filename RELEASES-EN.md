@@ -1,11 +1,11 @@
 # 🚀 Release Information
 
-## Current Release: v3.0.6
+## Current Release: v3.0.7
 
-**Release Date**: February 15, 2026  
+**Release Date**: February 19, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Technical release — Obsidian guidelines compliance
+**Type**: Performance optimization, tag fix, date field rework
 
 ## 📦 Download Options
 
@@ -42,6 +42,7 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 |:--------:|---------|---------|--------|:----:|
 | ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | Released | [Architecture](docs/architecture-filters.md) |
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Optimization + Tags + Date Fields** | v3.0.7 | Released | [CHANGELOG](CHANGELOG.md) |
 | 🥇 | **Drag & Drop + Mobile** | v3.2.0 | In Progress | [Architecture](docs/architecture-drag-drop.md) |
 | 🥈 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
@@ -49,7 +50,64 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 ## �📋 Release Notes
 
 ---
+### ⚡ v3.0.7 (February 19, 2026) — Optimization, Tags, Date Fields
 
+> **Performance regression fix, tag detection fix, date field semantics rework**
+
+#### 🚀 Performance Optimization
+
+After v3.0.6 (replacing `document.*` → `activeDocument` and other compliance fixes), a regression appeared: Svelte reactive computations were doing expensive `JSON.stringify` on all fields of every record on each tick.
+
+| Optimization | Before | After |
+|-------------|:------:|:-----:|
+| Grouping hash | `JSON.stringify` all values O(n×m) | Hash only `id` + date field O(n) |
+| Records fingerprint | All fields per record O(n×m) | Only 5-6 calendar fields O(n×k) |
+| Synthetic DataField | New object per tick → cascade re-render | Cache by `name:type` key |
+| Grouping & sorting | Recalculated every Svelte tick | Memoized by content-aware hash |
+| Double-tap (mobile) | 300ms delay | 200ms — faster response |
+
+#### 🏷️ Tag Detection Fix
+
+Tag-based datasource was silently dropping notes due to inconsistent `#`-prefix normalization.
+
+| Problem | Root Cause | Fix |
+|---------|-----------|-----|
+| Input without `#` didn't work | `"project"` ≠ `"#project"` | `normalizeTag()` — always exactly one `#` |
+| YAML `tags: ["#daily"]` → `"##daily"` | `"#" + "#daily"` = double `#` | `normalizeTag()` strips all `#` and adds one |
+| Writing to frontmatter | `.replace("#", "")` — only removed first `#` | `stripTagHash()` — `replace(/^#+/, "")` |
+| InMemFileSystem diverged from Obsidian | Different tag parsing logic | Unified via `normalizeTag()` |
+
+- Universal `normalizeTag()` function: `"daily"` → `"#daily"`, `"##daily"` → `"#daily"`, `"  #daily  "` → `"#daily"`
+- 25 new tests: 12 for normalization, 13 for `TagDataSource.includes()`
+- Detailed analysis: [tag-detection-analysis.md](docs/debug/tag-detection-analysis.md) (352 lines)
+
+#### 📅 Date Field Rework
+
+The `dateField` has been repurposed: was "legacy start date fallback" → now "note creation date".
+
+| Aspect | Before (v3.0.6) | After (v3.0.7) |
+|--------|:---------------:|:--------------:|
+| `dateField` in priority chain | Priority 2 (startDate fallback) | Not used |
+| Creation field | Did not exist | `creationDateField` — auto-filled |
+| Settings label | "Date field (date)" | "Creation date (date)" |
+| Templates | Only `startDate` | `startDate` + `date` |
+| Demo project | `calendarConfig.dateField = "startDate"` | `calendarConfig.dateField = "date"` |
+
+**Three calendar date fields:**
+
+| Field | Purpose | Affects position |
+|-------|---------|:----------------:|
+| `startDate` | Event start — determines calendar position | ✅ |
+| `endDate` | Event end — for multi-day events | ✅ |
+| `date` | Note creation date — auto-filled | ❌ |
+
+#### Metrics
+
+- **Tests**: 344/344 PASS (19 suites, +53 tests vs v3.0.6)
+- **Build**: OK (main.js 1.6MB, main.css 4.2KB)
+- **Lint**: 0 errors
+
+---
 ### 🔧 v3.0.6 (February 15, 2026) — Technical Compliance Release
 
 > **Full alignment with Obsidian Plugin Guidelines for Community Plugins submission**

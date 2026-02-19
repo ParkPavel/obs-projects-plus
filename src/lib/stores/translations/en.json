@@ -846,6 +846,26 @@
                 "none": "— None —"
             }
         },
+        "onboarding": {
+            "title": "Get started with Projects Plus",
+            "description": "Projects Plus lets you manage groups of related notes using <a>front matter</a>. For example, a folder with the blog posts you're working on.",
+            "front-matter-link": "front matter",
+            "explore": "Start from scratch, or explore a demo project 👇",
+            "create-new": "Create new project",
+            "try-demo": "Try a demo project",
+            "try-demo-tooltip": "Creates a new folder at the root of your vault with example notes.",
+            "hint": "Next time you can create your projects using any of the following ways:",
+            "tab-projects-view": "Projects view",
+            "tab-command-palette": "Command palette",
+            "tab-file-explorer": "File explorer",
+            "file-explorer-step1": "Right-click a folder in <strong>File explorer</strong>.",
+            "file-explorer-step2": "Click <strong>Create project in folder</strong>.",
+            "command-palette-step1": "Open the <strong>Command palette</strong>.",
+            "command-palette-step2": "Search for <strong>Create new project</strong>",
+            "command-palette-step3": "Press <strong>Enter</strong>.",
+            "projects-view-step1": "In the top-right corner of the <strong>Projects Plus</strong> view, click <strong>New</strong>.",
+            "projects-view-step2": "Click <strong>New project</strong>."
+        },
         "common": {
             "yesterday": "Yesterday",
             "tomorrow": "Tomorrow",

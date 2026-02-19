@@ -294,7 +294,7 @@
   let touchStartY = 0;
   let touchHandled = false; // Prevent click after touch
   const TAP_THRESHOLD = 10; // Max movement for a tap
-  const DOUBLE_TAP_DELAY = 300;
+  const DOUBLE_TAP_DELAY = 200; // v3.0.7: reduced from 300ms to improve perceived responsiveness
   let intersectionObserver: IntersectionObserver | null = null;
 
   /**

@@ -1,6 +1,7 @@
 ---
 title: <% tp.system.prompt("📝 Тема заметки:") %>
 startDate: <% tp.date.now("YYYY-MM-DD") %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 status: inbox
 completed: false
 color: "#4CAF50"

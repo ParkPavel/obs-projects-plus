@@ -197,71 +197,137 @@
         <!-- Field Mapping Section -->
         <div class="subgroup">
           <div class="subheader">Сопоставление полей</div>
-          <span class="hint" style="margin-bottom: 0.5rem; display: block;">Укажите названия полей из фронтметера ваших заметок</span>
+          <span class="hint" style="margin-bottom: 0.5rem; display: block;">Выберите существующее поле из списка или введите название нового поля</span>
           
           <label>
-            Поле даты (date)
-            <select bind:value={dateField} on:change={() => emitUpdate({ dateField })}>
-              <option value="">— Не выбрано —</option>
-              {#each fields as f}
-                <option value={f.name}>{f.name}</option>
-              {/each}
-            </select>
-            <span class="hint">Основное поле даты события</span>
+            Дата создания (date)
+            <div class="field-combo">
+              <input
+                type="text"
+                list="fieldlist-date"
+                bind:value={dateField}
+                placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ dateField })}
+              />
+              <datalist id="fieldlist-date">
+                {#each fields as f}
+                  <option value={f.name} />
+                {/each}
+              </datalist>
+              {#if dateField && !fields.some(f => f.name === dateField)}
+                <span class="new-field-badge">+ новое поле</span>
+              {/if}
+            </div>
+            <span class="hint">Автоматически заполняется при создании заметки. Не участвует в определении начала события</span>
           </label>
           
           <label>
             Начало (startDate)
-            <select bind:value={startDateField} on:change={() => emitUpdate({ startDateField })}>
-              <option value="">— Не выбрано —</option>
-              {#each fields as f}
-                <option value={f.name}>{f.name}</option>
-              {/each}
-            </select>
+            <div class="field-combo">
+              <input
+                type="text"
+                list="fieldlist-startDate"
+                bind:value={startDateField}
+                placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ startDateField })}
+              />
+              <datalist id="fieldlist-startDate">
+                {#each fields as f}
+                  <option value={f.name} />
+                {/each}
+              </datalist>
+              {#if startDateField && !fields.some(f => f.name === startDateField)}
+                <span class="new-field-badge">+ новое поле</span>
+              {/if}
+            </div>
             <span class="hint">Дата начала для многодневных событий</span>
           </label>
           
           <label>
             Конец (endDate)
-            <select bind:value={endDateField} on:change={() => emitUpdate({ endDateField })}>
-              <option value="">— Не выбрано —</option>
-              {#each fields as f}
-                <option value={f.name}>{f.name}</option>
-              {/each}
-            </select>
+            <div class="field-combo">
+              <input
+                type="text"
+                list="fieldlist-endDate"
+                bind:value={endDateField}
+                placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ endDateField })}
+              />
+              <datalist id="fieldlist-endDate">
+                {#each fields as f}
+                  <option value={f.name} />
+                {/each}
+              </datalist>
+              {#if endDateField && !fields.some(f => f.name === endDateField)}
+                <span class="new-field-badge">+ новое поле</span>
+              {/if}
+            </div>
             <span class="hint">Дата окончания для многодневных событий</span>
           </label>
           
           <label>
             Время начала (startTime)
-            <select bind:value={startTimeField} on:change={() => emitUpdate({ startTimeField })}>
-              <option value="">— Не выбрано —</option>
-              {#each fields as f}
-                <option value={f.name}>{f.name}</option>
-              {/each}
-            </select>
+            <div class="field-combo">
+              <input
+                type="text"
+                list="fieldlist-startTime"
+                bind:value={startTimeField}
+                placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ startTimeField })}
+              />
+              <datalist id="fieldlist-startTime">
+                {#each fields as f}
+                  <option value={f.name} />
+                {/each}
+              </datalist>
+              {#if startTimeField && !fields.some(f => f.name === startTimeField)}
+                <span class="new-field-badge">+ новое поле</span>
+              {/if}
+            </div>
             <span class="hint">Отдельное поле времени начала (HH:mm)</span>
           </label>
           
           <label>
             Время конца (endTime)
-            <select bind:value={endTimeField} on:change={() => emitUpdate({ endTimeField })}>
-              <option value="">— Не выбрано —</option>
-              {#each fields as f}
-                <option value={f.name}>{f.name}</option>
-              {/each}
-            </select>
+            <div class="field-combo">
+              <input
+                type="text"
+                list="fieldlist-endTime"
+                bind:value={endTimeField}
+                placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ endTimeField })}
+              />
+              <datalist id="fieldlist-endTime">
+                {#each fields as f}
+                  <option value={f.name} />
+                {/each}
+              </datalist>
+              {#if endTimeField && !fields.some(f => f.name === endTimeField)}
+                <span class="new-field-badge">+ новое поле</span>
+              {/if}
+            </div>
             <span class="hint">Отдельное поле времени окончания</span>
           </label>
           
           <label>
             Поле статуса (check)
-            <select bind:value={checkField} on:change={() => emitUpdate({ checkField })}>
-              <option value="">— Не выбрано —</option>
-              {#each fields as f}
-                <option value={f.name}>{f.name}</option>
-              {/each}
-            </select>
+            <div class="field-combo">
+              <input
+                type="text"
+                list="fieldlist-check"
+                bind:value={checkField}
+                placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ checkField })}
+              />
+              <datalist id="fieldlist-check">
+                {#each fields as f}
+                  <option value={f.name} />
+                {/each}
+              </datalist>
+              {#if checkField && !fields.some(f => f.name === checkField)}
+                <span class="new-field-badge">+ новое поле</span>
+              {/if}
+            </div>
             <span class="hint">Поле для отметки выполнения (completed, done и т.д.)</span>
           </label>
         </div>
@@ -283,34 +349,67 @@
 
         <label>
           Поле группировки (статус)
-          <select bind:value={groupByField} on:change={() => emitUpdate({ groupByField: groupByField || undefined })}>
-            <option value="">— Не выбрано —</option>
-            {#each stringFields as field}
-              <option value={field.name}>{field.name}</option>
-            {/each}
-          </select>
+          <div class="field-combo">
+            <input
+              type="text"
+              list="fieldlist-groupBy"
+              bind:value={groupByField}
+              placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ groupByField: groupByField || undefined })}
+            />
+            <datalist id="fieldlist-groupBy">
+              {#each stringFields as field}
+                <option value={field.name} />
+              {/each}
+            </datalist>
+            {#if groupByField && !stringFields.some(f => f.name === groupByField)}
+              <span class="new-field-badge">+ новое поле</span>
+            {/if}
+          </div>
           <span class="hint">Строковое поле фронтметера для группировки карточек по колонкам</span>
         </label>
 
         <label>
           Заголовок карточки
-          <select bind:value={headerField} on:change={() => emitUpdate({ headerField: headerField || undefined })}>
-            <option value="">— Нет —</option>
-            {#each fields as field}
-              <option value={field.name}>{field.name}</option>
-            {/each}
-          </select>
+          <div class="field-combo">
+            <input
+              type="text"
+              list="fieldlist-header"
+              bind:value={headerField}
+              placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ headerField: headerField || undefined })}
+            />
+            <datalist id="fieldlist-header">
+              {#each fields as field}
+                <option value={field.name} />
+              {/each}
+            </datalist>
+            {#if headerField && !fields.some(f => f.name === headerField)}
+              <span class="new-field-badge">+ новое поле</span>
+            {/if}
+          </div>
           <span class="hint">Поле для заголовка карточек</span>
         </label>
 
         <label>
           Синхронизация порядка
-          <select bind:value={orderSyncField} on:change={() => emitUpdate({ orderSyncField: orderSyncField || undefined })}>
-            <option value="">— Нет —</option>
-            {#each numberFields as field}
-              <option value={field.name}>{field.name}</option>
-            {/each}
-          </select>
+          <div class="field-combo">
+            <input
+              type="text"
+              list="fieldlist-orderSync"
+              bind:value={orderSyncField}
+              placeholder="Введите или выберите поле"
+                on:change={() => emitUpdate({ orderSyncField: orderSyncField || undefined })}
+            />
+            <datalist id="fieldlist-orderSync">
+              {#each numberFields as field}
+                <option value={field.name} />
+              {/each}
+            </datalist>
+            {#if orderSyncField && !numberFields.some(f => f.name === orderSyncField)}
+              <span class="new-field-badge">+ новое поле</span>
+            {/if}
+          </div>
           <span class="hint">Числовое поле для сохранения позиции карточек</span>
         </label>
 
@@ -340,12 +439,23 @@
 
         <label>
           {$i18n.t("settings-menu.view-config.gallery.cover-field")}
-          <select bind:value={coverField} on:change={() => emitUpdate({ coverField: coverField || undefined })}>
-            <option value="">{$i18n.t("settings-menu.view-config.none")}</option>
-            {#each stringFields as field}
-              <option value={field.name}>{field.name}</option>
-            {/each}
-          </select>
+          <div class="field-combo">
+            <input
+              type="text"
+              list="fieldlist-cover"
+              bind:value={coverField}
+              placeholder="Введите или выберите поле"
+              on:change={() => emitUpdate({ coverField: coverField || undefined })}
+            />
+            <datalist id="fieldlist-cover">
+              {#each stringFields as field}
+                <option value={field.name} />
+              {/each}
+            </datalist>
+            {#if coverField && !stringFields.some(f => f.name === coverField)}
+              <span class="new-field-badge">+ новое поле</span>
+            {/if}
+          </div>
           <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.cover-field")}</span>
         </label>
 
@@ -474,5 +584,28 @@
     width: 1rem;
     height: 1rem;
     margin: 0;
+  }
+  .field-combo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .field-combo input[type="text"] {
+    flex: 1;
+  }
+  .new-field-badge {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--interactive-accent);
+    background: var(--background-secondary-alt);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    pointer-events: none;
+    white-space: nowrap;
   }
 </style>

@@ -135,7 +135,7 @@ export function detectCellType(value: unknown): DataFieldType {
   // Standard types
   if (typeof value === "string") {
     if (
-      /^\d{4}-\d{2}-\d{2}(T)?(\d{2})?(:\d{2})?(:\d{2})?(.\d{3})?$/.test(value)
+      /^\d{4}-\d{2}-\d{2}(T)?(\d{2})?(:\d{2})?(:\d{2})?(\.\d{3})?$/.test(value)
     ) {
       return DataFieldType.Date;
     }

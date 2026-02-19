@@ -1,6 +1,7 @@
 ---
 title: <% tp.system.prompt("🏃 Название спринта:", `Sprint ${tp.date.now("W")}`) %>
 startDate: <% tp.date.now("YYYY-MM-DD") %>
+date: <% tp.date.now("YYYY-MM-DD") %>
 endDate: <% tp.date.now("YYYY-MM-DD", 14) %>
 status: <% tp.system.suggester(["📋 Планирование", "🏃 В процессе", "📊 Ревью", "✅ Завершён"], ["todo", "doing", "review", "done"], false, "📊 Статус:") %>
 completed: false
