@@ -24,30 +24,36 @@ export class MockApp {
 }
 
 // Mock Vault
-// /skip @typescript-eslint/no-explicit-any - Mock implementation for testing, matches Obsidian API
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Mock implementation for testing, matches Obsidian API signatures
 class MockVault {
   adapter = new MockAdapter();
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian API returns TAbstractFile|null
   getAbstractFileByPath(path: string): any {
     return new MockTFile(path);
   }
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian API returns TFile
   create(path: string, data: string): Promise<any> {
     return Promise.resolve(new MockTFile(path));
   }
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian API accepts TFile
   modify(file: any, data: string): Promise<void> {
     return Promise.resolve();
   }
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian API accepts TFile
   read(file: any): Promise<string> {
     return Promise.resolve("Mock content");
   }
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian API accepts TAbstractFile
   delete(file: any): Promise<void> {
     return Promise.resolve();
   }
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian API accepts TAbstractFile
   rename(file: any, newPath: string): Promise<void> {
     return Promise.resolve();
   }

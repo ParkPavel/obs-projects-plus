@@ -22,10 +22,10 @@ export class CalendarView extends ProjectView<CalendarConfig> {
     return "calendar";
   }
 
-  onData({ data }: DataQueryResult) {
+  onData({ data, filterConditions }: DataQueryResult) {
     this.dataVersion++;
     // Pass dataVersion to force Svelte reactivity on every data update
-    this.view?.$set({ frame: data, dataVersion: this.dataVersion });
+    this.view?.$set({ frame: data, dataVersion: this.dataVersion, filterConditions: filterConditions ?? [] });
   }
 
   onOpen(props: ProjectViewProps<CalendarConfig>) {
@@ -41,6 +41,7 @@ export class CalendarView extends ProjectView<CalendarConfig> {
         config: props.config,
         onConfigChange: props.saveConfig,
         getRecordColor: props.getRecordColor,
+        filterConditions: [],
       },
     });
   }

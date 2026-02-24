@@ -13,8 +13,8 @@ export class EditNoteModal extends Modal {
     readonly onSave: (record: DataRecord) => void,
     readonly defaults: DataRecord,
     readonly allRecords: DataRecord[] = [],
-    // v3.0.1: New callbacks for note title actions
-    readonly onOpenNote?: () => void,
+    // v3.0.8: Unified note open callback with open mode
+    readonly onOpenNote?: (openMode: false | 'tab' | 'window') => void,
     readonly onRenameNote?: (newName: string) => void,
     // v3.0.4: Autosave setting from project configuration
     readonly autosave: boolean = true
@@ -31,9 +31,9 @@ export class EditNoteModal extends Modal {
         fields: this.fields,
         allRecords: this.allRecords,
         autosave: this.autosave,
-        // v3.0.4: Wrap openNote callback to close modal after opening
-        onOpenNote: this.onOpenNote ? () => {
-          this.onOpenNote?.();
+        // v3.0.8: Wrap openNote callback to close modal after opening
+        onOpenNote: this.onOpenNote ? (openMode: false | 'tab' | 'window') => {
+          this.onOpenNote?.(openMode);
           // Close modal after opening note
           this.close();
         } : undefined,

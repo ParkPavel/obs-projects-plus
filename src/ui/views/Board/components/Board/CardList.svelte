@@ -9,7 +9,6 @@
     type DataRecord,
   } from "src/lib/dataframe/dataframe";
   import { app } from "src/lib/stores/obsidian";
-  import { settings } from "src/lib/stores/settings";
   import { i18n } from "src/lib/stores/i18n";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
   import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
@@ -115,18 +114,14 @@
               linkText={item.id}
               sourcePath={item.id}
               resolved
-              on:open={({ detail: { linkText, sourcePath, newLeaf } }) => {
-                let openEditor =
-                  $settings.preferences.linkBehavior == "open-editor";
-
-                if (newLeaf) {
-                  openEditor = !openEditor;
-                }
-
-                if (openEditor) {
-                  onRecordClick(item);
+              on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
+                // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+                if (shiftKey) {
+                  $app.workspace.openLinkText(linkText, sourcePath, 'window');
+                } else if (newLeaf) {
+                  $app.workspace.openLinkText(linkText, sourcePath, 'tab');
                 } else {
-                  $app.workspace.openLinkText(linkText, sourcePath, true);
+                  onRecordClick(item);
                 }
               }}
               on:hover={({ detail: { event, sourcePath } }) => {
@@ -155,13 +150,12 @@
 
 <style>
   .projects--board--card {
-    transition: box-shadow 120ms ease, transform 120ms ease, background 120ms ease;
+    transition: background 150ms ease, box-shadow 150ms ease;
   }
   .projects--board--card:hover,
   .projects--board--card:focus-within {
-    box-shadow: 0 2px 8px var(--background-modifier-box-shadow);
-    transform: translateY(-1px);
     background: var(--background-primary-alt);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   }
   div.card-header {
     display: flex;
@@ -171,12 +165,15 @@
 
   .card-header .edit-hint {
     margin-left: auto;
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease;
   }
 
   .projects--board--card:hover .edit-hint,
   .projects--board--card:focus-within .edit-hint {
-    display: inline-flex;
+    opacity: 1;
+    visibility: visible;
   }
 
   .checkbox-wrapper {

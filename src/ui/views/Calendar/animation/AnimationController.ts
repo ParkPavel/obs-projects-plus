@@ -49,6 +49,12 @@ export class AnimationController {
     // Отменить предыдущую анимацию с этим ключом
     this.cancel(key);
     
+    // Instant mode: jump to final state immediately
+    if (duration <= 0) {
+      updateFn(1);
+      return;
+    }
+    
     const startTime = performance.now();
     
     const tick = (currentTime: number) => {

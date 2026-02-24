@@ -1,6 +1,6 @@
 import type { DataFieldType, DataField } from "src/lib/dataframe/dataframe";
 
-// /skip @typescript-eslint/no-explicit-any - Generic row model with dynamic column values
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic row model with dynamic column values
 export type GridValidRowModel = { [key: string]: any };
 export type GridRowModel<R extends GridValidRowModel = GridValidRowModel> = R;
 export type GridColType = DataFieldType;

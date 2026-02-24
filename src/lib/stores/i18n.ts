@@ -44,6 +44,7 @@ function getObsidianLocale(): string {
   //    to match its language setting (Settings → About → Language).
   //    This is the most reliable source.
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian injects moment.js on window at runtime
     const m = (window as any).moment;
     if (m && typeof m.locale === 'function') {
       const momentLang = m.locale();
@@ -129,6 +130,7 @@ i18next.on('languageChanged', (lng: string) => {
 export function syncLocale(): void {
   const detected = getObsidianLocale();
   const current = i18next.language;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian injects moment.js on window at runtime
   console.debug(`[PPP i18n] syncLocale: detected=${detected}, current=${current}, moment=${(window as any).moment?.locale?.()}`);
   if (detected !== current) {
     void i18next.changeLanguage(detected);

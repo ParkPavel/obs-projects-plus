@@ -44,7 +44,8 @@ export function getColumns(
   columnSettings: ColumnSettings,
   grouByField?: DataField,
   orderSyncField?: DataField,
-  sortByCustomOrder?: boolean
+  sortByCustomOrder?: boolean,
+  persistedStatuses?: string[]
 ) {
   const groupedRecords = groupRecordsByField(records, grouByField?.name);
 
@@ -53,7 +54,11 @@ export function getColumns(
     predefs = new Set(grouByField.typeConfig?.options);
   }
 
-  const columns = new Set([...Object.keys(groupedRecords), ...predefs]);
+  const columns = new Set([
+    ...Object.keys(groupedRecords),
+    ...predefs,
+    ...(persistedStatuses ?? []),
+  ]);
 
   return [...columns]
     .sort((a, b) => {
@@ -88,6 +93,7 @@ export function getColumns(
         records,
         collapse: columnSettings[column]?.collapse ?? false,
         pinned: grouByField?.typeConfig?.options?.includes(column) ?? false,
+        persisted: persistedStatuses?.includes(column) ?? false,
       };
     });
 }

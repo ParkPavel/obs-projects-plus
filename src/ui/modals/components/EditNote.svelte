@@ -28,8 +28,8 @@
   export let record: DataRecord;
   export let onSave: (record: DataRecord) => void;
   export let allRecords: DataRecord[] = [];
-  // v3.0.1: Callbacks for note title actions
-  export let onOpenNote: (() => void) | undefined = undefined;
+  // v3.0.8: Unified open callback with open mode (false=same tab, 'tab'=new tab, 'window'=new window)
+  export let onOpenNote: ((openMode: false | 'tab' | 'window') => void) | undefined = undefined;
   export let onRenameNote: ((newName: string) => void) | undefined = undefined;
   // v3.0.4: Autosave mode - controlled by project settings
   export let autosave: boolean = true;
@@ -393,8 +393,11 @@
         <div class="title-display-row">
           <button 
             class="note-title-link"
-            on:click={() => onOpenNote?.()}
-            title={$i18n.t('common.open-note')}
+            on:click={(event) => {
+              const openMode = event.shiftKey ? 'window' : (event.ctrlKey || event.metaKey) ? 'tab' : false;
+              onOpenNote?.(openMode);
+            }}
+            title={$i18n.t('common.open-note') + ' (Ctrl+Click: new tab, Shift+Click: new window)'}
             disabled={!onOpenNote}
           >
             <Icon name="file-text" size="sm" />

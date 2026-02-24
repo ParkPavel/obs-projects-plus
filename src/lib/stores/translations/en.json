@@ -606,7 +606,9 @@
                     "expand": "Expand column",
                     "collapse": "Collapse column",
                     "pin": "Pin column",
-                    "unpin": "Unpin column"
+                    "unpin": "Unpin column",
+                    "persist": "Keep when empty",
+                    "unpersist": "Remove when empty"
                 }
             },
             "color": {

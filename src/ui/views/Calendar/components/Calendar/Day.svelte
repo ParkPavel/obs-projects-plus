@@ -1,6 +1,6 @@
 <script lang="ts">
   import dayjs from "dayjs";
-  import { Menu } from "obsidian";
+  import { Menu, type MenuItem } from "obsidian";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { EventRenderType, type ProcessedRecord } from "../../types";
   import { i18n } from "src/lib/stores/i18n";
@@ -405,16 +405,20 @@
   }
   
   /**
-   * Handle click on timed bar with Ctrl+click support for new window
+   * Handle click on timed bar with modifier key support
+   * v3.0.8: Shift → new window, Ctrl → new tab, else → modal
    */
   function handleBarClick(event: MouseEvent, record: DataRecord) {
     event.stopPropagation();
     
-    if (event.ctrlKey || event.metaKey) {
-      // Ctrl+click: open in new window
-      $app.workspace.openLinkText(record.id, record.id, true);
+    if (event.shiftKey) {
+      // Shift+click: open in new window
+      $app.workspace.openLinkText(record.id, record.id, 'window');
+    } else if (event.ctrlKey || event.metaKey) {
+      // Ctrl+click: open in new tab
+      $app.workspace.openLinkText(record.id, record.id, 'tab');
     } else {
-      // Normal click
+      // Normal click → modal
       onRecordClick?.(record);
     }
   }
@@ -450,7 +454,7 @@
     if (isOutsideMonth) return;
     if (isMobile) return;
     if (event.button === 2) {
-      const menu = new Menu().addItem((item) => {
+      const menu = new Menu().addItem((item: MenuItem) => {
         item
           .setTitle($i18n.t("views.calendar.new-note"))
           .setIcon("file-plus")

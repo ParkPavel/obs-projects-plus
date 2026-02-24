@@ -136,6 +136,7 @@ export async function standardizeRecords(
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML frontmatter values are dynamically typed
 function filterUndefinedValues(val: Record<string, any>): Record<string, any> {
   return Object.fromEntries(
     Object.entries(val).filter(([_key, value]) => notUndefined(value))

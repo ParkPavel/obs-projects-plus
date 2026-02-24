@@ -5,6 +5,57 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.8] - 2026-02-24
+
+### Added
+- **Board: Column persist (закрепление статусов)** — columns can be persisted via context menu or header button; persisted columns remain visible even when no records match the status
+  - `persistedStatuses` stored in `BoardConfig`, survives view reloads
+  - Context menu item: "Persist" / "Unpersist" per column
+  - Header button: bookmark icon (bookmark-plus / bookmark-minus)
+- **Board: Persist visual indicator** — persisted columns rendered with gray left border (`var(--text-faint)`); pinned+persisted columns use accent border
+- **Board: Ctrl+Scroll zoom** — zoom board view from 25% to 200% with Ctrl+mouse wheel
+  - CSS `zoom` property (not `transform: scale`) to avoid stacking context issues with `svelte-dnd-action`
+  - Svelte action `wheelZoom` with `{ passive: false }` for reliable `preventDefault()`
+  - Zoom badge in bottom-right corner shows current level; click to reset to 100%
+  - Zoom level persisted in `BoardConfig.boardZoom`
+- **Board: Responsive/adaptive layout** — container queries (`@container view-content`) for board columns and cards based on viewport width
+- **Board: Note creation with filters** — new notes inherit active filter values across all 4 views (Board, Table, Calendar, Gallery)
+  - `getFilterValues()` extracts equality-type filters and pre-fills frontmatter on note creation
+- **Unified note navigation** — consistent modifier-based navigation across all views (Board, Table, Gallery, Calendar):
+  - **Click** → opens EditNoteModal (intermediate step)
+  - **Ctrl+Click** → opens note in a new Obsidian tab (adjacent)
+  - **Shift+Click** → opens note in a new Obsidian window
+  - Table view: left-click on row number cell now opens modal (previously context menu only)
+  - Modal "Open Note" button: supports same Ctrl/Shift modifiers
+  - `InternalLink.svelte`: dispatches `shiftKey` alongside `newLeaf` for window navigation
+  - `editNoteModal.ts`: `onOpenNote` signature changed to `(openMode: false | 'tab' | 'window') => void`
+  - `linkBehavior` setting no longer affects click behavior (always opens modal on simple click)
+- **i18n** — added translation keys for pin/unpin, persist/unpersist, collapse/expand columns (en, ru, uk, zh-CN)
+
+### Fixed
+- **Svelte TypeScript errors** — reduced from 326 → 0 errors by fixing type annotations across Svelte components
+- **FIX-1: animationBehavior** — fixed `animationBehavior` property type mismatch with Obsidian API
+- **FIX-2: Card hover jitter** — fixed card hover effect causing layout jitter in board view
+- **FIX-3: persistedStatuses data layer** — fixed persisted statuses data handling in board configuration
+- **Board: Column collapse mechanism** — restored original `transform: rotate(-90deg) translateX(-100%)` approach after multiple failed alternatives (`writing-mode: vertical-lr`, split template)
+  - Collapse/expand button always accessible via unified template (no `{#if collapse}` split)
+  - `transform-origin: left top 0px` for correct rotation pivot
+- **Board: Collapsed column overlap** — constrained collapsed section height to `3rem`, adjusted `margin-right` formula (`48 - width`) to prevent overlap with neighboring columns
+- **Board: Zoom breaking collapse** — replaced `transform: scale()` with CSS `zoom` property to prevent stacking context interference with `svelte-dnd-action` DnD zones
+- **Settings: Tab selector disappearing on scroll** — added `flex-shrink: 0` to `.popover-header` and `.tabs` in the settings popover to prevent flex collapse when tab content overflows
+
+### Changed
+- **Board: Column header unified template** — single template for collapsed/expanded states; `.right` div always rendered with collapse/expand button; pin/persist/menu buttons hidden via `{#if !collapse}`
+- **Board: Pinned columns section** — pinned columns rendered in a separate `<section>` without DnD, preventing accidental reordering
+- **Board: DnD wrapper** — `flex-shrink: 0` on column wrappers to prevent column squeezing
+
+### Technical
+- **74 files changed** (+523, −669 lines)
+- **Tests**: 344/344 passing (19 suites) ✅
+- **Build**: OK (main.js 1.7MB, main.css 4.2KB)
+- **svelte-check**: 0 errors, 0 warnings
+- **Lint**: 0 errors
+
 ## [3.0.7] - 2026-02-19
 
 ### Fixed

@@ -10,8 +10,7 @@ export abstract class IFile {
   abstract delete(): Promise<void>;
   abstract readTags(): Set<string>;
 
-  // /skip any: YAML frontmatter can contain values of any type (strings, numbers, arrays, objects, dates)
-  // Using unknown would require runtime type guards at every property access without adding real safety
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML frontmatter values are inherently dynamic (strings, numbers, arrays, objects, dates)
   async readValues(): Promise<Record<string, any>> {
     const data = await this.read();
 
@@ -20,7 +19,7 @@ export abstract class IFile {
     return either.isRight(values) ? values.right : {};
   }
 
-  // /skip any: YAML frontmatter values are inherently dynamic - any serializable value is valid
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML frontmatter values are inherently dynamic, any serializable value is valid
   async writeValues(values: Record<string, any>): Promise<void> {
     const data = await this.read();
 

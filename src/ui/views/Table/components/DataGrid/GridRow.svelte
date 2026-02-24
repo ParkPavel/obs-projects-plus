@@ -22,6 +22,8 @@
 
   export let onRowChange: (rowId: GridRowId, row: GridRowModel) => void;
   export let onRowMenu: (rowId: GridRowId, row: GridRowModel) => Menu;
+  // v3.0.8: Row open handler with modifier-based navigation
+  export let onRowOpen: (rowId: GridRowId, openMode: false | 'tab' | 'window') => void;
   export let onCellMenu: (
     rowId: GridRowId,
     column: GridColDef,
@@ -32,6 +34,10 @@
     return (event: MouseEvent) => {
       if (event.button === 2) {
         menuOnContextMenu(event, onRowMenu(rowId, row));
+      } else if (event.button === 0) {
+        // v3.0.8: Left click on row header — open note with modifier-based navigation
+        const openMode = event.shiftKey ? 'window' as const : (event.ctrlKey || event.metaKey) ? 'tab' as const : false as const;
+        onRowOpen(rowId, openMode);
       }
     };
   }

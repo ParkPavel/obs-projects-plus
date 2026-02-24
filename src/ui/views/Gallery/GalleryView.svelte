@@ -19,10 +19,9 @@
   import Grid from "./components/Grid/Grid.svelte";
   import Image from "./components/Image/Image.svelte";
   import type { GalleryConfig } from "./types";
-  import type { ProjectDefinition } from "src/settings/settings";
+  import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { getCoverRealPath } from "./gallery";
-  import { settings } from "src/lib/stores/settings";
   import { handleHoverLink } from "../helpers";
 
   export let project: ProjectDefinition;
@@ -31,11 +30,22 @@
   export let onConfigChange: ((config: GalleryConfig) => void) | undefined = undefined;
   export let api: ViewApi;
   export let getRecordColor: (record: DataRecord) => string | null;
+  export let filterConditions: FilterCondition[] = [];
 
   // Use onConfigChange to avoid unused warning
   $: void onConfigChange;
 
   $: ({ fields, records } = frame);
+
+  function getFilterValuesFromConditions(conditions: FilterCondition[]): Record<string, string> {
+    const values: Record<string, string> = {};
+    for (const c of conditions) {
+      if (c.operator === "is" && c.value !== undefined) {
+        values[c.field] = c.value;
+      }
+    }
+    return values;
+  }
 
   function handleRecordClick(record: DataRecord) {
     new EditNoteModal(
@@ -44,9 +54,9 @@
       (record) => api.updateRecord(record, fields),
       record,
       records,
-      // v3.0.1: Open note callback
-      () => {
-        $app.workspace.openLinkText(record.id, record.id, false);
+      // v3.0.8: Unified note open with modifier-based navigation
+      (openMode) => {
+        $app.workspace.openLinkText(record.id, record.id, openMode);
       },
       // v3.0.1: Rename note callback
       async (newName: string) => {
@@ -82,17 +92,13 @@
         <Card>
           <CardMedia
             on:click={(event) => {
-              let openEditor =
-                $settings.preferences.linkBehavior == "open-editor";
-
-              if (event.metaKey || event.ctrlKey) {
-                openEditor = !openEditor;
-              }
-
-              if (openEditor) {
-                handleRecordClick(record);
+              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+              if (event.shiftKey) {
+                $app.workspace.openLinkText(record.id, "", 'window');
+              } else if (event.metaKey || event.ctrlKey) {
+                $app.workspace.openLinkText(record.id, "", 'tab');
               } else {
-                $app.workspace.openLinkText(record.id, "", true);
+                handleRecordClick(record);
               }
             }}
           >
@@ -111,18 +117,14 @@
                 linkText={record.id}
                 sourcePath={record.id}
                 resolved
-                on:open={({ detail: { linkText, sourcePath, newLeaf } }) => {
-                  let openEditor =
-                    $settings.preferences.linkBehavior == "open-editor";
-
-                  if (newLeaf) {
-                    openEditor = !openEditor;
-                  }
-
-                  if (openEditor) {
-                    handleRecordClick(record);
+                on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
+                  // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+                  if (shiftKey) {
+                    $app.workspace.openLinkText(linkText, sourcePath, 'window');
+                  } else if (newLeaf) {
+                    $app.workspace.openLinkText(linkText, sourcePath, 'tab');
                   } else {
-                    $app.workspace.openLinkText(linkText, sourcePath, true);
+                    handleRecordClick(record);
                   }
                 }}
                 on:hover={({ detail: { event, sourcePath } }) => {
@@ -146,8 +148,9 @@
         size="lg"
         onClick={() => {
           new CreateNoteModal($app, project, (name, templatePath, project) => {
+            const filterValues = getFilterValuesFromConditions(filterConditions);
             api.addRecord(
-              createDataRecord(name, project),
+              createDataRecord(name, project, Object.keys(filterValues).length > 0 ? filterValues : undefined),
               fields,
               templatePath
             );

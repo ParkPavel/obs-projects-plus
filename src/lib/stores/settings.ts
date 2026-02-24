@@ -295,6 +295,7 @@ function createSettings() {
     updateViewConfig(
       projectId: ProjectId,
       viewId: ViewId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific
       config: Record<string, any>
     ) {
       update((state) =>

@@ -18,7 +18,7 @@
   export let resolved;
 
   const dispatch = createEventDispatcher<{
-    open: { linkText: string; sourcePath: string; newLeaf: boolean };
+    open: { linkText: string; sourcePath: string; newLeaf: boolean; shiftKey: boolean };
     hover: {
       event: MouseEvent;
       linkText: string;
@@ -45,11 +45,12 @@
     event.stopPropagation();
     event.preventDefault();
 
-    // Ctrl+click opens in new tab
+    // Ctrl+click opens in new tab, Shift+click opens in new window
     dispatch("open", {
       linkText,
       sourcePath,
       newLeaf: event.ctrlKey || event.metaKey,
+      shiftKey: event.shiftKey,
     });
   }}
   on:mouseover={(event) => {

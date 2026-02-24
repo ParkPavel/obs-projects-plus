@@ -10,7 +10,7 @@ import { customViews } from "src/lib/stores/customViews";
 import type { ViewApi } from "src/lib/viewApi";
 import type { ProjectDefinition, ViewDefinition } from "src/settings/settings";
 
-// /skip @typescript-eslint/no-explicit-any - View config is dynamic and plugin-specific
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific
 export interface ViewProps {
   view: ViewDefinition;
   dataProps: DataQueryResult;
@@ -28,7 +28,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
   // Keep track of previous view id to determine if view should be invalidated.
   let viewId: string;
   const projectId = props.project.id;
-  // /skip @typescript-eslint/no-explicit-any - View configs are dynamic and plugin-specific
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- View configs are dynamic and plugin-specific
   let projectView: ProjectView<Record<string, any>> | undefined;
   let prevConfigJson: string = "";
 
@@ -71,6 +71,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
         // Config changed - we need to pass new config to the view
         // Since onData doesn't handle config, we update the svelte component directly if possible
         if (projectView && 'view' in projectView && projectView.view) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
           (projectView.view as any).$set({ config: newprops.config });
         }
         prevConfigJson = currentConfigJson;
@@ -78,6 +79,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
       // Always refresh project on the view component so agenda lists and other
       // project-level settings persist across data updates and view switches.
       if (projectView && 'view' in projectView && projectView.view) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
         (projectView.view as any).$set({ project: newprops.project });
       }
       projectView?.onData(newprops.dataProps);

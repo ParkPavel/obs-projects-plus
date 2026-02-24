@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.0.6-blue.svg)
+![Version](https://img.shields.io/badge/version-3.0.8-blue.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
@@ -78,13 +78,15 @@ Your data **stays in your files**. The plugin does not create its own database.
 | View | What it does |
 |------|-------------|
 | **Table** | Editing with sorting, filtering, cell navigation |
-| **Board** | Kanban — drag cards between columns (statuses) |
+| **Board** | Kanban — drag cards, column persist, Ctrl+Scroll zoom (25–200%), collapsible columns |
 | **Calendar** | Timeline 07:00–22:00, multi-day bars, 5 zoom levels (Year → Day) |
 | **Gallery** | Cards with covers and frontmatter fields |
 
 **Calendar** — a full planner: `startDate`, `endDate`, `startTime`, `endTime`, `date` (note creation date), `color` field for color coding, infinite scroll, mobile gestures (swipe, pinch-to-zoom, double tap to create note).
 
 **Agenda 2.0** — calendar sidebar with a list builder: 42 filter operators, nested AND/OR groups, date formulas (`today`, `sow`, `eom`, `today+1w`), two modes — visual and Advanced (Google Sheets-style formulas).
+
+**Board** — column persist: columns stay visible even with no matching records, visual indicators, Ctrl+Scroll zoom (25–200%), adaptive layout, note creation inherits active filters.
 
 **Three data sources**: folder, tag, Dataview query. Note templates, autosave, localization (RU, EN, UA, ZH-CN).
 
@@ -138,6 +140,7 @@ tags: [project, important]
 | ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | Released |
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released |
 | ✅ | **Optimization + Tags + Date Fields** | v3.0.7 | Released |
+| ✅ | **Board UX: persist, zoom, collapse** | v3.0.8 | Released |
 | 🥇 | **Drag & Drop + Mobile** | v3.2.0 | Planned |
 | 🥈 | **Database View** | v3.3.0 | Planned |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned |
@@ -206,7 +209,7 @@ cd obs-projects-plus
 npm ci
 npm run dev       # esbuild watch mode
 npm run build     # tsc + esbuild production
-npm run test      # Jest (291 tests, 16 suites)
+npm run test      # Jest (344 tests, 19 suites)
 npm run lint      # ESLint + eslint-plugin-obsidianmd (23 rules)
 npm run format    # Prettier
 ```

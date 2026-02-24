@@ -14,7 +14,7 @@
   export let rowIndex: number = 0;       // Vertical position in header (for stacking)
   export let isFirstDay: boolean = false; // First day of the event
   export let isLastDay: boolean = false;  // Last day of the event
-  export let onClick: ((newLeaf?: boolean) => void) | undefined = undefined;
+  export let onClick: ((openMode?: false | 'tab' | 'window') => void) | undefined = undefined;
   export let isMobile: boolean = false;
   
   // v8.0: Unified constants - MUST match TimelineView.svelte
@@ -32,8 +32,9 @@
   function handleClick(e: MouseEvent) {
     e.stopPropagation();
     if (onClick) {
-      const newLeaf = e.ctrlKey || e.metaKey;
-      onClick(newLeaf);
+      // v3.0.8: Unified navigation — Shift → window, Ctrl → tab, else → default
+      const openMode: false | 'tab' | 'window' = e.shiftKey ? 'window' : (e.ctrlKey || e.metaKey) ? 'tab' : false;
+      onClick(openMode);
     }
   }
 </script>

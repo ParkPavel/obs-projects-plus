@@ -7,6 +7,8 @@ export interface BoardConfig {
   readonly columns?: ColumnSettings;
   readonly includeFields?: string[];
   readonly freezeAll?: boolean;
+  readonly persistedStatuses?: string[];
+  readonly boardZoom?: number;
 }
 
 export interface ColumnSettings {

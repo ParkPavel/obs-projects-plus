@@ -6,7 +6,7 @@
   import type { CalendarInterval } from '../../calendar';
   import MonthBlock from './MonthBlock.svelte';
   import TwoWeeksBlock from './TwoWeeksBlock.svelte';
-  import { settings } from 'src/lib/stores/settings';
+  import { getScrollBehavior } from 'src/lib/helpers/animation';
 
   export let groupedRecords: Record<string, DataRecord[]>;
   export let processedData: ProcessedCalendarData | null = null;
@@ -425,7 +425,7 @@
       if (!targetElement || !scrollableParent) return;
       
       // Get animation behavior from settings
-      const behavior = $settings.preferences.animationBehavior === 'instant' ? 'auto' : 'smooth';
+      const behavior = getScrollBehavior();
       
       // Реализация позиционирования
       if (position === 'center') {
@@ -573,7 +573,6 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    scroll-behavior: smooth;
   }
 
   .unit-wrapper {

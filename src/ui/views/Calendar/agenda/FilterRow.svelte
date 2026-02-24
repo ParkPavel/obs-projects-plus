@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick, onDestroy } from 'svelte';
-  import { setIcon } from 'obsidian';
+  import { setIcon, type TFile } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
   import { app } from 'src/lib/stores/obsidian';
@@ -438,7 +438,7 @@
       
       // Special handling for tags field
       if (fieldName === 'tags' && currentField.repeated) {
-        vault.getMarkdownFiles().forEach(file => {
+        vault.getMarkdownFiles().forEach((file: TFile) => {
           const cache = metadataCache.getFileCache(file);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian CachedMetadata tags type
           if (cache?.['tags']) {
@@ -448,11 +448,11 @@
             const tags = Array.isArray(cache.frontmatter['tags'])
               ? cache.frontmatter['tags']
               : [cache.frontmatter['tags']];
-            tags.forEach(tag => values.add(typeof tag === 'string' ? `#${tag}` : tag));
+            tags.forEach((tag: string) => values.add(typeof tag === 'string' ? `#${tag}` : tag));
           }
         });
       } else {
-        vault.getMarkdownFiles().forEach(file => {
+        vault.getMarkdownFiles().forEach((file: TFile) => {
           if (values.size >= MAX_SUGGESTIONS) return;
           const cache = metadataCache.getFileCache(file);
           const fv = cache?.frontmatter?.[fieldName];

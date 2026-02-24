@@ -98,8 +98,7 @@ export default class ProjectsPlusPlugin extends Plugin {
                   this.app,
                   t("modals.project.create.title"),
                   t("modals.project.create.cta"),
-                  // /skip method-binding: settings is a Svelte store with bound methods, this context is preserved
-                  settings.addProject,
+                  (project) => settings.addProject(project),
                   {
                     ...project,
                     name: file.name,
@@ -136,8 +135,7 @@ export default class ProjectsPlusPlugin extends Plugin {
           this.app,
           t("modals.project.create.title"),
           t("modals.project.create.cta"),
-          // /skip method-binding: settings is a Svelte store with bound methods, this context is preserved
-          settings.addProject,
+          (project) => settings.addProject(project),
           createProject()
         ).open();
       },
@@ -225,7 +223,7 @@ export default class ProjectsPlusPlugin extends Plugin {
   activateView(projectId?: ProjectId, viewId?: ViewId): void {
     const leaf = this.getOrCreateLeaf();
 
-    leaf.setViewState({
+    void leaf.setViewState({
       type: VIEW_TYPE_PROJECTS,
       active: true,
       state: {

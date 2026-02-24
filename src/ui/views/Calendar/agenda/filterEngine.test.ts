@@ -32,7 +32,9 @@ const records: DataRecord[] = [
   { id: 'task-6', values: { name: 'Sprint planning', status: 'Active', priority: 7, dueDate: '2026-02-14', tags: ['management'] } },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test helper uses loose types for convenience
 function mkFilter(field: string, operator: string, value?: any): AgendaFilter {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Casting string to AgendaFilterOperator for test flexibility
   return { id: `f-${Math.random()}`, field, operator: operator as any, value, enabled: true };
 }
 
@@ -318,32 +320,32 @@ describe('filterEngine', () => {
   // ═══════════════════════════════
   describe('backward compatibility — legacy operators', () => {
     test('equals → is', () => {
-      const f = mkFilter('status', 'equals' as any, 'Active');
+      const f = mkFilter('status', 'equals', 'Active');
       expect(evaluateFilter(records[0]!, f, BASE)).toBe(true);
     });
 
     test('not_equals → is-not', () => {
-      const f = mkFilter('status', 'not_equals' as any, 'Active');
+      const f = mkFilter('status', 'not_equals', 'Active');
       expect(evaluateFilter(records[0]!, f, BASE)).toBe(false);
     });
 
     test('is_empty → is-empty', () => {
-      const f = mkFilter('dueDate', 'is_empty' as any);
+      const f = mkFilter('dueDate', 'is_empty');
       expect(evaluateFilter(records[4]!, f, BASE)).toBe(true);
     });
 
     test('greater_than → gt', () => {
-      const f = mkFilter('priority', 'greater_than' as any, 5);
+      const f = mkFilter('priority', 'greater_than', 5);
       expect(evaluateFilter(records[0]!, f, BASE)).toBe(true);
     });
 
     test('is_today → is-today', () => {
-      const f = mkFilter('dueDate', 'is_today' as any);
+      const f = mkFilter('dueDate', 'is_today');
       expect(evaluateFilter(records[0]!, f, BASE)).toBe(true);
     });
 
     test('is_overdue → is-overdue', () => {
-      const f = mkFilter('dueDate', 'is_overdue' as any);
+      const f = mkFilter('dueDate', 'is_overdue');
       expect(evaluateFilter(records[2]!, f, BASE)).toBe(true);
     });
   });

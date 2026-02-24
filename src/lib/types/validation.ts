@@ -28,6 +28,7 @@ export type ValidationErrors = ValidationError[];
  * Тип для функции валидации
  * Принимает значение и возвращает ошибку или null
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic validator type accepting any input
 export type Validator<T = any> = (value: T) => FieldError;
 
 /**
@@ -50,7 +51,7 @@ export function createFieldValidator<T>(
  * @param value - Значение для проверки
  * @returns Ошибка или null
  */
-// /skip @typescript-eslint/no-explicit-any - Generic validator accepting any input type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic validator accepting any input type
 export function validateRequired(value: any): FieldError {
   return !value || value.toString().trim() === ""
     ? "This field is required"

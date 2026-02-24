@@ -1,0 +1,3 @@
+﻿78ede75 v3.0.7: performance optimization, date field rework, tag improvements, onboarding i18n
+add9223 fix(ci): remove unused @ts-expect-error directives in EditNote.svelte
+58fc602 fix(ci): align peer deps for eslint-plugin-obsidianmd@0.1.9

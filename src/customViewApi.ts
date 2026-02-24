@@ -1,17 +1,19 @@
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ViewApi } from "src/lib/viewApi";
-import type { ProjectDefinition, ViewId } from "./settings/settings";
+import type { FilterCondition, ProjectDefinition, ViewId } from "./settings/settings";
 
 export interface DataQueryResult {
   data: DataFrame;
   hasSort: boolean;
   hasFilter: boolean;
+  /** Active (enabled) filter conditions for the current view */
+  filterConditions?: FilterCondition[];
 }
 
 /**
  * ProjectViewProps provides various metadata for the views.
  */
-// /skip @typescript-eslint/no-explicit-any - View config is dynamic and plugin-specific, generic T defaults to any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific, generic T defaults to any
 export interface ProjectViewProps<T = Record<string, any>> {
   viewId: ViewId;
   project: ProjectDefinition;
@@ -32,7 +34,7 @@ export interface ProjectViewProps<T = Record<string, any>> {
  * that extends this one. Then you need to register it in
  * ProjectsView.getProjectViews().
  */
-// /skip @typescript-eslint/no-explicit-any - View config is dynamic and plugin-specific, generic T defaults to any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific, generic T defaults to any
 export abstract class ProjectView<T = Record<string, any>> {
   onData(result: DataQueryResult): void {}
   onOpen(props: ProjectViewProps<T>): void {}

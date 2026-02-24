@@ -10,6 +10,7 @@
   import DayColumn from './DayColumn.svelte';
   import AllDayEventStrip from './AllDayEventStrip.svelte';
   import MultiDayEventStrip from './MultiDayEventStrip.svelte';
+  import { getScrollBehavior } from 'src/lib/helpers/animation';
   
   /**
    * TimelineView - Timeline layout for day/week views
@@ -231,20 +232,21 @@
   }
   
   /**
-   * Handle click on all-day event with Ctrl+click support
+   * Handle click on all-day event with modifier key support
+   * v3.0.8: Shift → new window, Ctrl → new tab, else → modal
    */
-  function handleAllDayEventClick(recordId: string, newLeaf: boolean = false) {
+  function handleAllDayEventClick(recordId: string, openMode: false | 'tab' | 'window' = false) {
     // Find the record in grouped records
     for (const dateStr in processedGroupedRecords) {
       const records = processedGroupedRecords[dateStr];
       if (!records) continue;
       const found = records.find(r => r.record.id === recordId);
       if (found) {
-        if (newLeaf) {
-          // Ctrl+click: open in new window
-          $app.workspace.openLinkText(found.record.id, found.record.id, true);
+        if (openMode) {
+          // Ctrl/Shift+click: open in tab or window
+          $app.workspace.openLinkText(found.record.id, found.record.id, openMode);
         } else if (onRecordClick) {
-          // Normal click
+          // Normal click → modal
           onRecordClick(found.record);
         }
         return;
@@ -312,7 +314,7 @@
       
       scrollContainer.scrollTo({
         top: scrollContainer.scrollTop + momentum,
-        behavior: 'smooth'
+        behavior: getScrollBehavior()
       });
     }
   }

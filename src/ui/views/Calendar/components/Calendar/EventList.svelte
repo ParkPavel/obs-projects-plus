@@ -11,7 +11,6 @@
     Optional,
   } from "src/lib/dataframe/dataframe";
   import { getRecordColorContext, handleHoverLink } from "src/ui/views/helpers";
-  import { settings } from "src/lib/stores/settings";
 
   export let records: DataRecord[];
   export let checkField: string | undefined;
@@ -82,17 +81,14 @@
             sourcePath={record.id}
             resolved
             tooltip={getDisplayName(record.id)}
-            on:open={({ detail: { linkText, sourcePath, newLeaf } }) => {
-              if (newLeaf) {
-                $app.workspace.openLinkText(linkText, sourcePath, true);
+            on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
+              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+              if (shiftKey) {
+                $app.workspace.openLinkText(linkText, sourcePath, 'window');
+              } else if (newLeaf) {
+                $app.workspace.openLinkText(linkText, sourcePath, 'tab');
               } else {
-                let openEditor =
-                  $settings.preferences.linkBehavior == "open-editor";
-                if (openEditor) {
-                  onRecordClick?.(record);
-                } else {
-                  $app.workspace.openLinkText(linkText, sourcePath, false);
-                }
+                onRecordClick?.(record);
               }
             }}
             on:hover={({ detail: { event, sourcePath } }) => {
@@ -127,17 +123,14 @@
             sourcePath={record.id}
             resolved
             tooltip={getDisplayName(record.id)}
-            on:open={({ detail: { linkText, sourcePath, newLeaf } }) => {
-              if (newLeaf) {
-                $app.workspace.openLinkText(linkText, sourcePath, true);
+            on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
+              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+              if (shiftKey) {
+                $app.workspace.openLinkText(linkText, sourcePath, 'window');
+              } else if (newLeaf) {
+                $app.workspace.openLinkText(linkText, sourcePath, 'tab');
               } else {
-                let openEditor =
-                  $settings.preferences.linkBehavior == "open-editor";
-                if (openEditor) {
-                  onRecordClick?.(record);
-                } else {
-                  $app.workspace.openLinkText(linkText, sourcePath, false);
-                }
+                onRecordClick?.(record);
               }
             }}
             on:hover={({ detail: { event, sourcePath } }) => {

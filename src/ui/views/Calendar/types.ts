@@ -82,6 +82,9 @@ export interface ProcessedRecord {
   
   // Lane assignment for header stacking (assigned by processor)
   lane: number;
+  
+  // Phantom record marker (for drag-and-drop preview duplicates)
+  isPhantom?: boolean;
 }
 
 /**

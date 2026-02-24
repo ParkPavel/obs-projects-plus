@@ -21,8 +21,8 @@ export class GalleryView extends ProjectView<GalleryConfig> {
     return "layout-grid";
   }
 
-  onData({ data }: DataQueryResult) {
-    this.view?.$set({ frame: data });
+  onData({ data, filterConditions }: DataQueryResult) {
+    this.view?.$set({ frame: data, filterConditions: filterConditions ?? [] });
   }
 
   onOpen(props: ProjectViewProps<GalleryConfig>) {
@@ -35,6 +35,7 @@ export class GalleryView extends ProjectView<GalleryConfig> {
         config: props.config,
         onConfigChange: props.saveConfig,
         getRecordColor: props.getRecordColor,
+        filterConditions: [],
       },
     });
   }

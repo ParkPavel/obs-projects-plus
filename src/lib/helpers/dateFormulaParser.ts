@@ -129,7 +129,7 @@ export function parseDateFormula(formula: string, baseDate?: Dayjs): DateFormula
   }
   
   // Match: keyword + optional offset (+/-N) + optional unit (d/w/m/y)
-  const offsetMatch = trimmed.match(/^([a-z_]+)(?:([\+\-])(\d+)([dwmy])?)?$/);
+  const offsetMatch = trimmed.match(/^([a-z_]+)(?:([+-])(\d+)([dwmy])?)?$/);
   
   if (!offsetMatch) {
     return { success: false, error: `Invalid formula syntax: ${formula}` };

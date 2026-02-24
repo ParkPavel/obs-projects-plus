@@ -61,6 +61,7 @@
   export let onConfigChange: (cfg: CalendarConfig) => void;
   // Data version counter - incremented on each data update to force Svelte reactivity
   export let dataVersion: number = 0;
+  export let filterConditions: import("src/settings/settings").FilterCondition[] = [];
 
   // Navigation & Animation Controllers (v3.0.0)
   const animationController = new AnimationController();
@@ -814,22 +815,19 @@
   
   function handleDayPopupRecordClick(record: DataRecord) {
     showDayPopup = false;
-    // Open the note
-    const app_instance = get(app);
-    app_instance.workspace.openLinkText(record.id, record.id, false);
+    // v3.0.8: Open modal (intermediate step) instead of direct note open
+    handleRecordClick(record);
   }
   
   /**
-   * v4.0.0: Open record in new tab (Ctrl+Click / Double tap)
-   * On mobile: opens in new TAB (not window - 'window' not supported on mobile)
-   * On desktop: opens in new WINDOW
+   * v3.0.8: Unified note navigation from popup
+   * Ctrl+click → new tab, Shift+click → new window
    */
   function handleDayPopupRecordOpenInNewWindow(record: DataRecord) {
     showDayPopup = false;
     const app_instance = get(app);
-    // On mobile use 'tab' (true), on desktop use 'window'
-    // 'window' causes "desktop only" error on mobile Obsidian
-    const openMode = isMobile ? true : 'window';
+    // On mobile use 'tab' (window not supported), on desktop use 'window'
+    const openMode = isMobile ? 'tab' : 'window';
     app_instance.workspace.openLinkText(record.id, record.id, openMode);
   }
   
@@ -854,9 +852,9 @@
       },
       record,
       records,
-      // v3.0.1: Open note callback
-      () => {
-        app_instance.workspace.openLinkText(record.id, record.id, false);
+      // v3.0.8: Unified note open with modifier-based navigation
+      (openMode) => {
+        app_instance.workspace.openLinkText(record.id, record.id, openMode);
       },
       // v3.0.1: Rename note callback
       async (newName: string) => {
@@ -1453,9 +1451,9 @@
         },
         entry,
         records,
-        // v3.0.1: Open note callback
-        () => {
-          app_instance.workspace.openLinkText(entry.id, entry.id, false);
+        // v3.0.8: Unified note open with modifier-based navigation
+        (openMode) => {
+          app_instance.workspace.openLinkText(entry.id, entry.id, openMode);
         },
         // v3.0.1: Rename note callback
         async (newName: string) => {
@@ -1514,6 +1512,13 @@
           if (dateField) {
             // Build frontmatter values with auto-filled date/time
             const frontmatterValues: Record<string, Date | string> = {};
+
+            // Apply filter conditions (equality filters only)
+            for (const c of filterConditions) {
+              if (c.operator === "is" && c.value !== undefined) {
+                frontmatterValues[c.field] = c.value;
+              }
+            }
             
             // Determine the effective note name:
             // If dateField is "name", incorporate the date into the filename
@@ -1590,13 +1595,13 @@
   }
   
   /**
-   * v3.0.1: Open record in new window from AgendaSidebar (Ctrl+Click)
+   * v3.0.8: Open record in new window from AgendaSidebar
    */
   function handleAgendaOpenInNewWindow(event: CustomEvent<{id: string}>) {
     const { id } = event.detail;
     const app_instance = get(app);
-    // On mobile use 'tab' (true), on desktop use 'window'
-    const openMode = isMobile ? true : 'window';
+    // On mobile use 'tab' (window not supported), on desktop use 'window'
+    const openMode = isMobile ? 'tab' : 'window';
     app_instance.workspace.openLinkText(id, id, openMode);
   }
   

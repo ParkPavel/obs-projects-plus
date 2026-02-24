@@ -37,6 +37,8 @@
   ) => void;
   export let onRowDelete: (rowId: GridRowId) => void;
   export let onRowEdit: (rowId: GridRowId, row: GridRowModel) => void;
+  // v3.0.8: Direct click on row opens note with modifier-based navigation
+  export let onRowOpen: ((rowId: GridRowId, openMode: false | 'tab' | 'window') => void) | undefined = undefined;
 
   $: t = $i18n.t;
 
@@ -204,6 +206,13 @@
       {onRowChange}
       color={colorModel(rowId)}
       onRowMenu={(rowId, row) => createRowMenu(rowId, row)}
+      onRowOpen={(rowId, openMode) => {
+        if (onRowOpen && openMode) {
+          onRowOpen(rowId, openMode);
+        } else {
+          onRowEdit(rowId, row);
+        }
+      }}
       onCellMenu={(rowId, column) => createCellMenu(rowId, row, column)}
       on:navigate={({ detail: navinfo }) => {
         const colOffset = 1;

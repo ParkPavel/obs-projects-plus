@@ -1,4 +1,9 @@
-import type { DataFrame } from "./lib/dataframe/dataframe";
+// This file must be a module (via `export {}`) so that `declare module`
+// performs module augmentation instead of creating a standalone ambient module
+// declaration.  Without `export {}` the Svelte Language Server treats this as
+// the *entire* "obsidian" module and cannot see the real exports from
+// node_modules/obsidian/obsidian.d.ts.
+export {};
 
 declare global {
   namespace Intl {

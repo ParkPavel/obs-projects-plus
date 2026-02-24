@@ -133,16 +133,20 @@
   })();
   
   /**
-   * Handle event click with Ctrl+click support for opening in new window
+   * Handle event click with modifier key support for navigation
+   * v3.0.8: Shift → new window, Ctrl → new tab, else → modal
    */
   function handleEventClick(event: MouseEvent, record: DataRecord) {
     if (!onEventClick) return;
     
-    if (event.ctrlKey || event.metaKey) {
-      // Ctrl+click: open in new window
-      $app.workspace.openLinkText(record.id, record.id, true);
+    if (event.shiftKey) {
+      // Shift+click: open in new window
+      $app.workspace.openLinkText(record.id, record.id, 'window');
+    } else if (event.ctrlKey || event.metaKey) {
+      // Ctrl+click: open in new tab
+      $app.workspace.openLinkText(record.id, record.id, 'tab');
     } else {
-      // Normal click
+      // Normal click → modal
       onEventClick(record);
     }
   }

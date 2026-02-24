@@ -10,6 +10,7 @@
   import type { ViewApi } from "src/lib/viewApi";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { EditNoteModal } from "src/ui/modals/editNoteModal";
+  import { getScrollBehavior } from "src/lib/helpers/animation";
 
   import type {
     GridColDef,
@@ -25,7 +26,7 @@
   import { ConfigureFieldModal } from "src/ui/modals/configureField";
   import { settings } from "src/lib/stores/settings";
   import { sortFields } from "./helpers";
-  import type { ProjectDefinition } from "src/settings/settings";
+  import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
   import { CreateFieldModal } from "src/ui/modals/createFieldModal";
   import { Icon } from "obsidian-svelte";
   import { TextLabel } from "./components/DataGrid/GridCell/GridTextCell";
@@ -44,11 +45,22 @@
   export let readonly: boolean;
   export let api: ViewApi;
   export let getRecordColor: (record: DataRecord) => string | null;
+  export let filterConditions: FilterCondition[] = [];
 
   export let config: TableConfig | undefined;
   export let onConfigChange: (cfg: TableConfig) => void;
 
   let buttonEl: HTMLElement;
+
+  function getFilterValuesFromConditions(conditions: FilterCondition[]): Record<string, string> {
+    const values: Record<string, string> = {};
+    for (const c of conditions) {
+      if (c.operator === "is" && c.value !== undefined) {
+        values[c.field] = c.value;
+      }
+    }
+    return values;
+  }
 
   function saveConfig(cfg: TableConfig) {
     config = cfg;
@@ -140,7 +152,7 @@
       buttonEl.scrollIntoView({
         block: "nearest",
         inline: "nearest",
-        behavior: "smooth",
+        behavior: getScrollBehavior(),
       });
 
       if (field.typeConfig) {
@@ -235,12 +247,16 @@
         }}
         onRowAdd={() => {
           new CreateNoteModal($app, project, (name, templatePath, project) => {
+            const filterValues = getFilterValuesFromConditions(filterConditions);
             api.addRecord(
-              createDataRecord(name, project),
+              createDataRecord(name, project, Object.keys(filterValues).length > 0 ? filterValues : undefined),
               fields,
               templatePath
             );
           }).open();
+        }}
+        onRowOpen={(id, openMode) => {
+          $app.workspace.openLinkText(id, id, openMode);
         }}
         onRowEdit={(id, values) => {
           const record = { id, values };
@@ -252,8 +268,9 @@
             },
             record,
             records,
-            () => {
-              $app.workspace.openLinkText(id, id, false);
+            // v3.0.8: Unified note open with modifier-based navigation
+            (openMode) => {
+              $app.workspace.openLinkText(id, id, openMode);
             },
             async (newName) => {
               const file = $app.vault.getAbstractFileByPath(id);

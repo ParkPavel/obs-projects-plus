@@ -606,7 +606,9 @@
                     "expand": "展开列表",
                     "collapse": "折叠列表",
                     "pin": "固定列表",
-                    "unpin": "取消固定"
+                    "unpin": "取消固定",
+                    "persist": "为空时保留",
+                    "unpersist": "为空时移除"
                 }
             },
             "color": {

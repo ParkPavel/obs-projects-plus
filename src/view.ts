@@ -94,6 +94,7 @@ export class ProjectsView extends ItemView {
     await super.setState(state, result);
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- Obsidian ItemView lifecycle method must be async per API contract
   async onOpen(): Promise<void> {
     customViews.set(this.getProjectViews());
 
@@ -112,7 +113,7 @@ export class ProjectsView extends ItemView {
 
     // Listen for projectId changes and save them to view state
     if (this.component) {
-      // /skip @typescript-eslint/no-explicit-any - Svelte CustomEvent typing limitation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte CustomEvent typing limitation
       this.component.$on('projectIdChange', (event: any) => {
         const newProjectId = event.detail;
         // Update internal state and persist it
@@ -124,6 +125,7 @@ export class ProjectsView extends ItemView {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- Obsidian ItemView lifecycle method must be async per API contract
   async onClose(): Promise<void> {
     if (this.component) {
       this.component.$destroy();

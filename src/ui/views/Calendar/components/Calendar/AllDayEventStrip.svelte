@@ -25,8 +25,8 @@
   /** Индекс строки в стеке (для вертикального размещения нескольких событий) */
   export let rowIndex: number = 0;
   
-  /** Обработчик клика по полосе - теперь принимает id и флаг newLeaf */
-  export let onClick: ((id: string, newLeaf?: boolean) => void) | undefined = undefined;
+  /** Обработчик клика по полосе — v3.0.8: unified navigation with openMode */
+  export let onClick: ((id: string, openMode?: false | 'tab' | 'window') => void) | undefined = undefined;
   
   /** Иконка события (опционально) */
   export let icon: string | undefined = undefined;
@@ -52,8 +52,10 @@
   function handleClick(e: MouseEvent | KeyboardEvent) {
     e.stopPropagation();
     if (onClick) {
-      const newLeaf = (e as MouseEvent).ctrlKey || (e as MouseEvent).metaKey || false;
-      onClick(recordId, newLeaf);
+      // v3.0.8: Unified navigation — Shift → window, Ctrl → tab, else → default
+      const me = e as MouseEvent;
+      const openMode: false | 'tab' | 'window' = me.shiftKey ? 'window' : (me.ctrlKey || me.metaKey) ? 'tab' : false;
+      onClick(recordId, openMode);
     }
   }
   
