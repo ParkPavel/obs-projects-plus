@@ -10,7 +10,7 @@ import type { DataRecord } from "../../lib/dataframe/dataframe";
 
 export function applySort(frame: DataFrame, sort: SortDefinition): DataFrame {
   return produce(frame, (draft) => {
-    sortRecords((draft as any).records, sort);
+    sortRecords(draft.records, sort);
   });
 }
 

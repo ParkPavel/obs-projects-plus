@@ -17,6 +17,7 @@
   import type { CalendarInterval } from '../../calendar';
   import { INFINITE_SCROLL, GESTURE, TIMING } from '../../constants';
   import { calendarLogger } from '../../logger';
+  import { getScrollBehavior, getAnimationDuration } from 'src/lib/helpers/animation';
 
   dayjs.extend(isSameOrAfter);
   dayjs.extend(isSameOrBefore);
@@ -411,7 +412,12 @@
    * Uses requestAnimationFrame for frame-perfect animation
    * Easing: ease-out cubic (smooth deceleration)
    */
-  function smoothScrollTo(element: HTMLElement, targetLeft: number, duration: number = 400) {
+  function smoothScrollTo(element: HTMLElement, targetLeft: number, duration?: number) {
+    const effectiveDuration = duration ?? getAnimationDuration(400);
+    if (effectiveDuration <= 0) {
+      element.scrollLeft = targetLeft;
+      return;
+    }
     const startLeft = element.scrollLeft;
     const deltaLeft = targetLeft - startLeft;
     const startTime = performance.now();
@@ -423,7 +429,7 @@
     
     const animateScroll = (currentTime: number) => {
       const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+      const progress = Math.min(elapsed / effectiveDuration, 1);
       const easedProgress = easeOutCubic(progress);
       
       element.scrollLeft = startLeft + deltaLeft * easedProgress;
@@ -525,7 +531,7 @@
     // Scroll to prev/next period
     container.scrollBy({
       left: direction === 'next' ? periodWidth : -periodWidth,
-      behavior: 'smooth'
+      behavior: getScrollBehavior()
     });
   }
 
@@ -549,13 +555,13 @@
         // Scroll to next period
         container.scrollBy({
           left: periodWidth,
-          behavior: 'smooth'
+          behavior: getScrollBehavior()
         });
       } else if (event.deltaY < 0 || event.deltaX < 0) {
         // Scroll to previous period
         container.scrollBy({
           left: -periodWidth,
-          behavior: 'smooth'
+          behavior: getScrollBehavior()
         });
       }
       
@@ -573,12 +579,12 @@
       if (event.deltaY > 0) {
         container.scrollBy({
           left: periodWidth,
-          behavior: 'smooth'
+          behavior: getScrollBehavior()
         });
       } else {
         container.scrollBy({
           left: -periodWidth,
-          behavior: 'smooth'
+          behavior: getScrollBehavior()
         });
       }
       
@@ -729,7 +735,7 @@
       isSnapping = true;
       container.scrollTo({
         left: Math.max(0, bestSnapTarget),
-        behavior: 'smooth'
+        behavior: getScrollBehavior()
       });
       // Reset snapping flag after animation
       setTimeout(() => {

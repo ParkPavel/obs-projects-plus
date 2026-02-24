@@ -3,6 +3,7 @@
   import dayjs from "dayjs";
   import { duplicateStore } from "src/lib/stores/duplicateStore";
   import DuplicateMonthBlock from "./DuplicateMonthBlock.svelte";
+  import { getScrollBehavior } from 'src/lib/helpers/animation';
   
   export let firstDayOfWeek: number = 1;
   export let sourceDate: dayjs.Dayjs;
@@ -235,7 +236,7 @@
     
     scrollableParent.scrollTo({
       top: Math.max(0, targetScroll),
-      behavior: 'smooth'
+      behavior: getScrollBehavior()
     });
   }
   

@@ -13,6 +13,8 @@
     overflow: auto;
     position: relative;
     overscroll-behavior: contain;
+    container-type: inline-size;
+    container-name: view-content;
   }
 
   .no-scroll {

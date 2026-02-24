@@ -23,12 +23,14 @@
   export let customHeader: DataField | undefined;
   export let pinned: boolean;
   export let collapse: boolean;
+  export let persisted: boolean;
 
   export let onDrop: OnRecordDrop;
   export let onRecordClick: OnRecordClick;
   export let onRecordCheck: OnRecordCheck;
   export let onRecordAdd: () => void;
   export let onColumnPin: (name: string) => void;
+  export let onColumnPersist: (name: string) => void;
   export let onColumnCollapse: OnColumnCollapse;
   export let onColumnDelete: (name: string, records: DataRecord[]) => void;
   export let onColumnRename: (name: string) => void;
@@ -81,6 +83,19 @@
         });
     });
 
+    menu.addItem((item) => {
+      item
+        .setTitle(
+          persisted
+            ? $i18n.t("components.board.column.unpersist")
+            : $i18n.t("components.board.column.persist")
+        )
+        .setIcon(persisted ? "bookmark-minus" : "bookmark-plus")
+        .onClick(() => {
+          onColumnPersist(name);
+        });
+    });
+
     if (name !== $i18n.t("views.board.no-status")) {
       menu.addSeparator();
 
@@ -104,7 +119,8 @@
   class="projects--board--column"
   class:collapse
   class:pinned
-  style={`width: ${width}px; min-width: ${width}px; max-width: ${width}px; margin-right: ${collapse ? 40 - width : 0}px`}
+  class:persisted
+  style={`width: ${width}px; min-width: ${width}px; max-width: ${width}px;${collapse ? ` margin-right: ${48 - width}px;` : ''}`}
 >
   <ColumnHeader
     value={name}
@@ -114,10 +130,12 @@
     {richText}
     {collapse}
     {pinned}
+    {persisted}
     {checkField}
     {onColumnMenu}
     {onColumnRename}
     onColumnPin={() => onColumnPin(name)}
+    onColumnPersist={() => onColumnPersist(name)}
     onColumnCollapse={() => onColumnCollapse(name)}
     {onValidate}
   />
@@ -160,10 +178,21 @@
   .collapse {
     transform: rotate(-90deg) translateX(-100%);
     transform-origin: left top 0px;
+    height: 3rem;
+    overflow: hidden;
   }
 
   .pinned {
     border-left: 2px solid var(--interactive-accent);
     background: color-mix(in srgb, var(--background-primary) 92%, var(--interactive-accent) 8%);
+  }
+
+  .persisted:not(.pinned) {
+    border-left: 2px solid var(--text-faint);
+    background: color-mix(in srgb, var(--background-primary) 96%, var(--text-faint) 4%);
+  }
+
+  .pinned.persisted {
+    border-left: 2px solid var(--interactive-accent);
   }
 </style>

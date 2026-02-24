@@ -288,7 +288,8 @@
 @media (max-width: 30rem) {
   .obs-projects-plus .projects--board,
   .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board {
-    /* No margin needed - padding in Board.svelte handles this */
+    column-gap: 0.25rem;
+    margin: 0.25rem;
   }
 
   .obs-projects-plus .projects--gallery--grid,
@@ -301,6 +302,41 @@
   .obs-projects-plus .projects--gallery--card__media,
   .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card__media {
     height: 8.75rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Container Query Adaptive Layout ("matryoshka" principle)
+   Responds to the pane/split size, not the viewport.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Narrow pane (< 25rem): compact board, smaller gaps & padding */
+@container view-content (max-width: 25rem) {
+  .projects--board {
+    column-gap: 0.25rem;
+    margin: 0.25rem;
+  }
+
+  .projects--board--column {
+    padding: var(--size-4-1);
+    gap: var(--size-4-1);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .projects--board--card {
+    padding: var(--size-4-1);
+  }
+}
+
+/* Medium-narrow pane (< 35rem): slightly tighter layout */
+@container view-content (max-width: 35rem) {
+  .projects--board {
+    column-gap: 0.375rem;
+    margin: 0.375rem;
+  }
+
+  .projects--board--column {
+    padding: var(--size-4-1) var(--size-4-2);
   }
 }
 

@@ -51,8 +51,8 @@ export function createPhantomRecord(
     lane: source.lane,
   };
   
-  // Добавляем кастомное свойство для идентификации phantom
-  (phantom as any).isPhantom = true;
+  // Добавляем маркер phantom для идентификации
+  phantom.isPhantom = true;
   
   return phantom;
 }
@@ -110,7 +110,7 @@ function setTimeOnDate(
  * Проверяет, является ли запись phantom
  */
 export function isPhantomRecord(record: ProcessedRecord): boolean {
-  return (record as any).isPhantom === true;
+  return record.isPhantom === true;
 }
 
 /**

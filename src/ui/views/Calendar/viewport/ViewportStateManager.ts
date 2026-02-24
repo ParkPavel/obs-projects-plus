@@ -28,6 +28,7 @@
 
 import dayjs from 'dayjs';
 import type { CalendarInterval } from '../calendar';
+import { getScrollBehavior } from 'src/lib/helpers/animation';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -270,7 +271,7 @@ export class ViewportStateManager {
       // Smooth scroll to saved position
       container.scrollTo({
         top: state.scrollOffset,
-        behavior: 'smooth',
+        behavior: getScrollBehavior(),
       });
       
       // Wait for animation
@@ -371,7 +372,7 @@ export class ViewportStateManager {
     try {
       const parsed = JSON.parse(data);
       
-      // /skip @typescript-eslint/no-explicit-any - JSON parsing returns unknown structure
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON parsing returns unknown structure, validated below
       this.history = parsed.history.map((state: any) => ({
         date: dayjs(state.date),
         interval: state.interval,

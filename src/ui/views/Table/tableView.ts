@@ -21,8 +21,8 @@ export class TableView extends ProjectView<TableConfig> {
     return "table";
   }
 
-  onData({ data }: DataQueryResult) {
-    this.view?.$set({ frame: data });
+  onData({ data, filterConditions }: DataQueryResult) {
+    this.view?.$set({ frame: data, filterConditions: filterConditions ?? [] });
   }
 
   onOpen(props: ProjectViewProps<TableConfig>) {
@@ -36,6 +36,7 @@ export class TableView extends ProjectView<TableConfig> {
         config: props.config,
         onConfigChange: props.saveConfig,
         getRecordColor: props.getRecordColor,
+        filterConditions: [],
       },
     });
   }

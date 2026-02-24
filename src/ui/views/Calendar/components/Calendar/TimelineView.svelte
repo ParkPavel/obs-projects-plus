@@ -10,6 +10,7 @@
   import DayColumn from './DayColumn.svelte';
   import AllDayEventStrip from './AllDayEventStrip.svelte';
   import MultiDayEventStrip from './MultiDayEventStrip.svelte';
+  import { getScrollBehavior } from 'src/lib/helpers/animation';
   
   /**
    * TimelineView - Timeline layout for day/week views
@@ -312,7 +313,7 @@
       
       scrollContainer.scrollTo({
         top: scrollContainer.scrollTop + momentum,
-        behavior: 'smooth'
+        behavior: getScrollBehavior()
       });
     }
   }

@@ -6,6 +6,7 @@ export type Column = {
   records: DataRecord[];
   collapse: boolean;
   pinned: boolean;
+  persisted: boolean;
 };
 
 export type OnRecordClick = (record: DataRecord) => void;
@@ -48,3 +49,4 @@ export type OnColumnRename = (
 ) => void;
 export type OnColumnCollapse = (name: string) => void;
 export type OnColumnPin = (columns: string[], name: string) => void;
+export type OnColumnPersist = (name: string) => void;

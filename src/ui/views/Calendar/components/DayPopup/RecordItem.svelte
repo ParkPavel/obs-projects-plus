@@ -4,6 +4,7 @@
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
+  import { getScrollBehavior } from 'src/lib/helpers/animation';
 
   export let record: DataRecord;
   export let checkField: string | undefined;
@@ -597,7 +598,7 @@
       tick().then(() => {
         const palette = activeDocument.querySelector('.color-palette[data-color-palette="true"]');
         if (palette) {
-          palette.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          palette.scrollIntoView({ behavior: getScrollBehavior(), block: 'nearest' });
         }
       });
     }

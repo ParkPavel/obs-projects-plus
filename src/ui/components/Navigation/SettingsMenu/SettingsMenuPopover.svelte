@@ -230,6 +230,7 @@
     align-items: center;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--background-modifier-border);
+    flex-shrink: 0;
   }
 
   .popover-header h3 {

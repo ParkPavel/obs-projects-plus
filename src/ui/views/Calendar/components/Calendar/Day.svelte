@@ -1,6 +1,6 @@
 <script lang="ts">
   import dayjs from "dayjs";
-  import { Menu } from "obsidian";
+  import { Menu, type MenuItem } from "obsidian";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { EventRenderType, type ProcessedRecord } from "../../types";
   import { i18n } from "src/lib/stores/i18n";
@@ -450,7 +450,7 @@
     if (isOutsideMonth) return;
     if (isMobile) return;
     if (event.button === 2) {
-      const menu = new Menu().addItem((item) => {
+      const menu = new Menu().addItem((item: MenuItem) => {
         item
           .setTitle($i18n.t("views.calendar.new-note"))
           .setIcon("file-plus")

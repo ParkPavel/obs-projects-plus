@@ -70,6 +70,7 @@
     overflow-x: auto;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE/Edge */
+    flex-shrink: 0;
   }
 
   .tabs::-webkit-scrollbar {

@@ -121,6 +121,7 @@ export class DataviewDataSource extends DataSource {
     return true;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview API returns dynamically typed rows
   standardizeRecords(rows: Array<Record<string, any>>): DataRecord[] {
     const records: DataRecord[] = [];
 
@@ -136,12 +137,15 @@ export class DataviewDataSource extends DataSource {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview API returns dynamically typed table rows
 function parseTableResult(value: TableResult): Array<Record<string, any>> {
   const headers: string[] = value.headers;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview row values are dynamically typed
   const rows: Array<Record<string, any>> = [];
 
   value.values.forEach((row) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview cell values are dynamically typed
     const values: Record<string, any> = {};
 
     headers.forEach((header, index) => {

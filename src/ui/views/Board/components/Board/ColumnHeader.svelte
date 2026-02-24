@@ -55,7 +55,9 @@
   export let onColumnRename: (value: string) => void;
   export let editing: boolean = false;
   export let pinned: boolean = false;
+  export let persisted: boolean = false;
   export let onColumnPin: () => void;
+  export let onColumnPersist: () => void;
   export let onColumnCollapse: () => void;
 
   let inputRef: HTMLInputElement;
@@ -73,7 +75,7 @@
 <div
   class="projects--board--column--header"
   on:dblclick={() => {
-    editing = true;
+    if (!collapse) editing = true;
   }}
 >
   {#if editing}
@@ -145,20 +147,28 @@
         tooltip={collapse ? $i18n.t('components.board.column.expand') : $i18n.t('components.board.column.collapse')}
         onClick={onColumnCollapse}
       />
-      <IconButton
-        icon={pinned ? "pin-off" : "pin"}
-        size="sm"
-        tooltip={pinned ? $i18n.t('components.board.column.unpin') : $i18n.t('components.board.column.pin')}
-        onClick={onColumnPin}
-      />
-      <IconButton
-        icon="more-vertical"
-        size="sm"
-        tooltip={$i18n.t('common.menu')}
-        onClick={(event) => {
-          onColumnMenu().showAtMouseEvent(event);
-        }}
-      />
+      {#if !collapse}
+        <IconButton
+          icon={pinned ? "pin-off" : "pin"}
+          size="sm"
+          tooltip={pinned ? $i18n.t('components.board.column.unpin') : $i18n.t('components.board.column.pin')}
+          onClick={onColumnPin}
+        />
+        <IconButton
+          icon={persisted ? "bookmark-minus" : "bookmark-plus"}
+          size="sm"
+          tooltip={persisted ? $i18n.t('components.board.column.unpersist') : $i18n.t('components.board.column.persist')}
+          onClick={onColumnPersist}
+        />
+        <IconButton
+          icon="more-vertical"
+          size="sm"
+          tooltip={$i18n.t('common.menu')}
+          onClick={(event) => {
+            onColumnMenu().showAtMouseEvent(event);
+          }}
+        />
+      {/if}
     </div>
   </div>
 </div>
@@ -181,26 +191,39 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    white-space: nowrap;
   }
 
   .right {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
   }
 
   .actions {
-    display: none;
+    display: inline-flex;
     gap: 4px;
     margin-left: 6px;
+    opacity: 0.3;
+    transition: opacity 150ms ease;
   }
 
   .projects--board--column--header:hover .actions,
   .projects--board--column--header:focus-within .actions {
-    display: inline-flex;
+    opacity: 1;
+  }
+
+  .actions :global(.clickable-icon) {
+    color: var(--text-muted);
+    transition: color 150ms ease;
+  }
+
+  .actions :global(.clickable-icon:hover) {
+    color: var(--interactive-accent);
   }
 
   .collapse {
     max-height: 1.5rem;
-    overflow-y: auto;
+    overflow-y: hidden;
   }
 </style>

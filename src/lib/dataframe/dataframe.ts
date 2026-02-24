@@ -177,7 +177,7 @@ export function isOptionalDate(
   return isDate(value) || isOptional(value);
 }
 
-// /skip @typescript-eslint/no-explicit-any - Generic type guard function accepting any input value
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic type guard function accepting any input value
 export function isStringLink(value: any): boolean {
   if (isString(value)) {
     return /^\[\[(.*)\]\]$/.test(value);

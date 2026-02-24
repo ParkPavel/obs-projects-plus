@@ -262,6 +262,7 @@ export function getLocale(locale: LocaleOption): Intl.Locale {
   // Получаем язык через Obsidian App API
   let obsidianLanguage = dayjs().locale();
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian App API is injected on window at runtime
     const app = (window as any).app;
     if (app?.loadLocalStorage) {
       const storedLang = app.loadLocalStorage("language");

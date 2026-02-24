@@ -31,6 +31,7 @@ function createPersistentStore<T>(key: string, initialValue: T) {
   let storedValue = initialValue;
   if (typeof window !== 'undefined') {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian App API is injected on window at runtime
       const app = (window as any).app;
       if (app?.loadLocalStorage) {
         const stored = app.loadLocalStorage(`obs-projects-plus-${key}`);
@@ -49,6 +50,7 @@ function createPersistentStore<T>(key: string, initialValue: T) {
   store.subscribe((value) => {
     if (typeof window !== 'undefined') {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Obsidian App API is injected on window at runtime
         const app = (window as any).app;
         if (app?.saveLocalStorage) {
           app.saveLocalStorage(`obs-projects-plus-${key}`, JSON.stringify(value));

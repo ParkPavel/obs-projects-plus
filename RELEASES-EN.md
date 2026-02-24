@@ -1,11 +1,11 @@
 # 🚀 Release Information
 
-## Current Release: v3.0.7
+## Current Release: v3.0.8
 
-**Release Date**: February 19, 2026  
+**Release Date**: February 24, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Performance optimization, tag fix, date field rework
+**Type**: Board UX — persist, zoom, collapse, settings fix
 
 ## 📦 Download Options
 
@@ -43,13 +43,85 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | Released | [Architecture](docs/architecture-filters.md) |
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Optimization + Tags + Date Fields** | v3.0.7 | Released | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Board UX: persist, zoom, collapse** | v3.0.8 | Released | [CHANGELOG](CHANGELOG.md) |
 | 🥇 | **Drag & Drop + Mobile** | v3.2.0 | In Progress | [Architecture](docs/architecture-drag-drop.md) |
 | 🥈 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
 
-## �📋 Release Notes
+## 📋 Release Notes
 
 ---
+
+### 🏗️ v3.0.8 (February 24, 2026) — Board UX: Persist, Zoom, Collapse
+
+> **Column persist, board zoom, collapse mechanism restoration, settings panel fix**
+
+#### 📌 Column Persist
+
+Board columns can now be "persisted" — they remain visible even when no records match that status.
+
+| Feature | Description |
+|---------|-------------|
+| **Context menu** | "Persist" / "Unpersist" per column |
+| **Header button** | bookmark-plus / bookmark-minus icon |
+| **Visual indicator** | Gray left border (`var(--text-faint)`) for persisted; accent border for pinned+persisted |
+| **Storage** | `persistedStatuses` in `BoardConfig`, survives reloads |
+
+#### 🔍 Board Zoom (Ctrl+Scroll)
+
+| Parameter | Value |
+|-----------|-------|
+| **Range** | 25% — 200% |
+| **Step** | 5% |
+| **Control** | Ctrl + mouse wheel |
+| **Indicator** | Badge in bottom-right corner, click to reset |
+| **Technology** | CSS `zoom` (not `transform: scale`) — preserves DnD |
+| **Storage** | `boardZoom` in view config |
+
+#### 🔧 Column Collapse Restoration
+
+The collapse mechanism broke after zoom was added and went through 3 failed approaches:
+
+| Approach | Problem |
+|----------|---------|
+| `writing-mode: vertical-lr` on section | Inherited by children, broke header flexbox |
+| Fixed width + `writing-mode` | Split template, click unreliable in DnD zone |
+| Remove `writing-mode` from section only | Expand button hidden in collapsed state |
+
+**Final solution**: restored original approach:
+- `transform: rotate(-90deg) translateX(-100%)` + `transform-origin: left top`
+- `height: 3rem; overflow: hidden` — fixed section height
+- `margin-right: ${48 - width}px` — correct margin without overlap
+- Unified header template — expand button always accessible
+
+#### 🛠️ Other Fixes
+
+| Issue | Solution |
+|-------|----------|
+| 326 Svelte TypeScript errors | Fixed type annotations → 0 errors |
+| animationBehavior (FIX-1) | Aligned type with Obsidian API |
+| Card hover jitter (FIX-2) | Fixed layout shift on hover |
+| persistedStatuses (FIX-3) | Fixed data layer configuration |
+| Zoom breaks collapse | `transform: scale()` → CSS `zoom` |
+| Collapsed column overlap | `height: 3rem` + `margin-right: 48-width` |
+| Settings tab selector disappears | `flex-shrink: 0` on header and tabs |
+| New note ignores filters | `getFilterValues()` for all 4 views |
+
+#### 📐 Adaptive Layout
+
+- Container queries (`@container view-content`) for column/card width adaptation
+- Media queries for mobile: < 48rem and < 30rem
+
+#### Metrics
+
+- **Files changed**: 74 (+523, −669 lines)
+- **Tests**: 344/344 PASS (19 suites)
+- **Build**: OK (main.js 1.7MB, main.css 4.2KB)
+- **svelte-check**: 0 errors, 0 warnings
+- **Lint**: 0 errors
+
+---
+
 ### ⚡ v3.0.7 (February 19, 2026) — Optimization, Tags, Date Fields
 
 > **Performance regression fix, tag detection fix, date field semantics rework**

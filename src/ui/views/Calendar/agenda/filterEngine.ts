@@ -122,31 +122,32 @@ export function evaluateFilter(
   switch (filter.operator) {
     // ==================== BACKWARD COMPATIBILITY ====================
     // Old operators (v3.0.4) - map to new operators
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Backward compatibility: legacy v3.0.4 operator names
     case 'equals' as any:
       return evaluateFilter(record, { ...filter, operator: 'is' }, baseDate);
-    case 'not_equals' as any:
+    case 'not_equals' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'is-not' }, baseDate);
-    case 'is_empty' as any:
+    case 'is_empty' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'is-empty' }, baseDate);
-    case 'is_not_empty' as any:
+    case 'is_not_empty' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'is-not-empty' }, baseDate);
-    case 'greater_than' as any:
+    case 'greater_than' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'gt' }, baseDate);
-    case 'less_than' as any:
+    case 'less_than' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'lt' }, baseDate);
-    case 'greater_or_equal' as any:
+    case 'greater_or_equal' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'gte' }, baseDate);
-    case 'less_or_equal' as any:
+    case 'less_or_equal' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'lte' }, baseDate);
-    case 'is_today' as any:
+    case 'is_today' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'is-today' }, baseDate);
-    case 'is_this_week' as any:
+    case 'is_this_week' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'is-this-week' }, baseDate);
-    case 'is_overdue' as any:
+    case 'is_overdue' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'is-overdue' }, baseDate);
-    case 'is_upcoming' as any:
+    case 'is_upcoming' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'is-upcoming' }, baseDate);
-    case 'not_contains' as any:
+    case 'not_contains' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
       return evaluateFilter(record, { ...filter, operator: 'not-contains' }, baseDate);
     
     // ==================== BASE OPERATORS ====================
@@ -436,9 +437,11 @@ export function filterRecordsForList(
   }
   
   // Backward compatibility - old lists with filters array (v3.0.x format)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Legacy list format had 'filters' property not in current type
   if ('filters' in list && Array.isArray((list as any).filters)) {
     console.warn('[FilterEngine] Old list format detected, using backward compatibility mode');
     return records.filter(record => 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Legacy list format access
       evaluateFilters(record, (list as any).filters, baseDate)
     );
   }

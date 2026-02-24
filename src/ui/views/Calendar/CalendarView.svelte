@@ -61,6 +61,7 @@
   export let onConfigChange: (cfg: CalendarConfig) => void;
   // Data version counter - incremented on each data update to force Svelte reactivity
   export let dataVersion: number = 0;
+  export let filterConditions: import("src/settings/settings").FilterCondition[] = [];
 
   // Navigation & Animation Controllers (v3.0.0)
   const animationController = new AnimationController();
@@ -1514,6 +1515,13 @@
           if (dateField) {
             // Build frontmatter values with auto-filled date/time
             const frontmatterValues: Record<string, Date | string> = {};
+
+            // Apply filter conditions (equality filters only)
+            for (const c of filterConditions) {
+              if (c.operator === "is" && c.value !== undefined) {
+                frontmatterValues[c.field] = c.value;
+              }
+            }
             
             // Determine the effective note name:
             // If dateField is "name", incorporate the date into the filename

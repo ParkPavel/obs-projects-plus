@@ -7,6 +7,7 @@ export interface ViewDefinition {
   readonly name: string;
   readonly id: ViewId;
   readonly type: ViewType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific
   readonly config: Record<string, any>;
   readonly filter: FilterDefinition;
   readonly colors: ColorFilterDefinition;

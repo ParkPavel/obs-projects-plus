@@ -204,7 +204,6 @@
     display: flex;
     gap: var(--spacing-sm, 0.5rem);
     overflow-x: auto;
-    scroll-behavior: smooth;
   }
 
   .view-switcher::-webkit-scrollbar {

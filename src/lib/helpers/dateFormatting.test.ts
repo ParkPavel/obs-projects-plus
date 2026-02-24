@@ -7,9 +7,10 @@ import {
   parseDate,
 } from "./dateFormatting";
 import type { ProjectDefinition } from "src/settings/settings";
+import type { DateFormatConfig } from "src/settings/v3/settings";
 
 // Mock project with minimal required fields
-const createMockProject = (dateFormat?: any): ProjectDefinition => ({
+const createMockProject = (dateFormat?: DateFormatConfig): ProjectDefinition => ({
   name: "Test Project",
   id: "test-project",
   fieldConfig: {},
@@ -26,7 +27,7 @@ const createMockProject = (dateFormat?: any): ProjectDefinition => ({
     },
   },
   newNotesFolder: "",
-  dateFormat,
+  ...(dateFormat !== undefined ? { dateFormat } : {}),
 });
 
 describe("formatDateForProject", () => {

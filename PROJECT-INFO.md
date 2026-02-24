@@ -74,13 +74,13 @@ obs-projects-plus/
 ## 📊 Project Statistics
 
 ### Code Metrics
-- **Lines of Code**: ~15,000
+- **Lines of Code**: ~15,500
 - **TypeScript Files**: 180+
 - **Svelte Components**: 50+
 - **Test Coverage**: 85%+
 
 ### Performance
-- **Bundle Size**: 1.8MB
+- **Bundle Size**: 1.7MB
 - **Load Time**: 0.8s
 - **Memory Usage**: 28MB
 - **Render Time**: 0.4s

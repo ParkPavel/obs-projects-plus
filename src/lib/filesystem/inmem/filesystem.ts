@@ -27,9 +27,8 @@ class InMemFile extends IFile {
     return Promise.resolve();
   }
 
-  delete(): Promise<void> {
-    this.fileSystem.delete(this._path);
-    return Promise.resolve();
+  async delete(): Promise<void> {
+    await this.fileSystem.delete(this._path);
   }
 
   readTags(): Set<string> {

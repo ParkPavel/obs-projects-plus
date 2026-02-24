@@ -31,10 +31,12 @@
     OnColumnDelete,
     OnColumnCollapse,
     OnColumnPin,
+    OnColumnPersist,
     OnColumnRename,
   } from "./components/Board/types";
   import type { BoardConfig } from "./types";
   import { settings } from "src/lib/stores/settings";
+  import type { FilterCondition } from "src/settings/settings";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -49,11 +51,25 @@
 
   export let hasSort: boolean;
   export let hasFilter: boolean;
+  export let filterConditions: FilterCondition[] = [];
 
   $: ({ fields, records } = frame);
   $: orderSyncField =
     (config?.orderSyncField && getFieldByName(fields, config.orderSyncField)) ||
     undefined;
+
+  // FIX-3: Track groupByField changes to reset persistedStatuses
+  let prevGroupByField: string | undefined;
+
+  $: {
+    const currentGroupBy = config?.groupByField;
+    if (prevGroupByField !== undefined && currentGroupBy !== prevGroupByField) {
+      // groupByField changed — persistedStatuses are from old field, reset
+      const { persistedStatuses: _, ...restConfig } = config ?? {};
+      saveConfig(restConfig);
+    }
+    prevGroupByField = currentGroupBy;
+  }
 
   getRecordColorContext.set(getRecordColor);
   sortRecordsContext.set((records) =>
@@ -222,22 +238,43 @@
       }
     };
 
+  /**
+   * Extract frontmatter values from active "is" filter conditions.
+   * Only equality filters can reliably map to record values.
+   */
+  function getFilterValues(
+    conditions: FilterCondition[],
+    excludeField?: string
+  ): Record<string, string> {
+    const values: Record<string, string> = {};
+    for (const c of conditions) {
+      if (c.operator === "is" && c.value !== undefined && c.field !== excludeField) {
+        values[c.field] = c.value;
+      }
+    }
+    return values;
+  }
+
   const handleRecordAdd =
     (field: DataField | undefined): OnRecordAdd =>
     (column: string) => {
       new CreateNoteModal($app, project, (name, templatePath) => {
+        const filterValues = getFilterValues(filterConditions, field?.name);
         api.addRecord(
           createDataRecord(
             name,
             project,
-            field
-              ? {
-                  [field.name]:
-                    column !== $i18n.t("views.board.no-status")
-                      ? column
-                      : undefined,
-                }
-              : {}
+            {
+              ...filterValues,
+              ...(field
+                ? {
+                    [field.name]:
+                      column !== $i18n.t("views.board.no-status")
+                        ? column
+                        : undefined,
+                  }
+                : {}),
+            }
           ),
           fields,
           templatePath
@@ -289,6 +326,7 @@
 
       saveConfig({
         ...config,
+        persistedStatuses: [...new Set([...(config?.persistedStatuses ?? []), name])],
         columns: Object.fromEntries(
           [...columns, name].map((column, i) => {
             return [column, { ...config?.columns?.[column], weight: i }];
@@ -325,6 +363,7 @@
 
       saveConfig({
         ...config,
+        persistedStatuses: (config?.persistedStatuses ?? []).filter(s => s !== name),
         columns: Object.fromEntries(
           columns
             .filter((v) => v !== name)
@@ -365,6 +404,7 @@
 
       saveConfig({
         ...config,
+        persistedStatuses: (config?.persistedStatuses ?? []).map(s => s === oldName ? newName : s),
         columns: Object.fromEntries(
           columns.map((column, i) => {
             return [
@@ -402,6 +442,14 @@
           options = options.filter((v) => v !== name);
         } else {
           options = columns.filter((v) => options.includes(v) || v === name);
+          // Pinning implies persist — ensure column stays visible after unpin
+          const current = config?.persistedStatuses ?? [];
+          if (!current.includes(name)) {
+            saveConfig({
+              ...config,
+              persistedStatuses: [...current, name],
+            });
+          }
         }
 
         settings.updateFieldConfig(
@@ -414,6 +462,14 @@
           }
         );
       } else {
+        // First pin — also persist
+        const current = config?.persistedStatuses ?? [];
+        if (!current.includes(name)) {
+          saveConfig({
+            ...config,
+            persistedStatuses: [...current, name],
+          });
+        }
         settings.updateFieldConfig(
           project.id,
           field.name,
@@ -429,6 +485,29 @@
   function saveConfig(cfg: BoardConfig) {
     config = cfg;
     onConfigChange(cfg);
+  }
+
+  const handleColumnPersist: OnColumnPersist = (name) => {
+    const current = config?.persistedStatuses ?? [];
+    const isPersisted = current.includes(name);
+    saveConfig({
+      ...config,
+      persistedStatuses: isPersisted
+        ? current.filter(s => s !== name)
+        : [...current, name],
+    });
+  };
+
+  // FIX-3: Initialize persistedStatuses on first render
+  $: {
+    const groupByFieldForInit = fields.find(f => config?.groupByField === f.name);
+    if (config?.persistedStatuses === undefined && groupByFieldForInit) {
+      const initialColumns = getColumns(records, config?.columns ?? {}, groupByFieldForInit, orderSyncField, !hasSort);
+      saveConfig({
+        ...config,
+        persistedStatuses: initialColumns.map(c => c.id),
+      });
+    }
   }
 </script>
 
@@ -453,9 +532,12 @@
       config?.columns ?? {},
       groupByField,
       orderSyncField,
-      !hasSort
+      !hasSort,
+      config?.persistedStatuses
     ).map((c) => (config?.freezeAll ? { ...c, pinned: true } : c))}
     {columnWidth}
+    zoom={config?.boardZoom ?? 1}
+    onZoomChange={(z) => saveConfig({ ...config, boardZoom: z })}
     checkField={fields.find((field) => field.name === config?.checkField)?.name}
     includeFields={fields.filter((field) => includeFields.includes(field.name))}
     customHeader={fields.find((field) => field.name === customHeader)}
@@ -468,6 +550,7 @@
     onColumnRename={handleColumnRename(groupByField)}
     onColumnCollapse={toggleColumnCollapse()}
     onColumnPin={toggleColumnPin(groupByField)}
+    onColumnPersist={handleColumnPersist}
     onSortColumns={handleSortColumns(groupByField)}
     {readonly}
     validateStatusField={() => {

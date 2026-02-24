@@ -129,6 +129,7 @@
       data: sortedFrame,
       hasSort: view.sort.criteria.filter((c) => c.enabled).length > 0,
       hasFilter: view.filter.conditions.filter((c) => c.enabled).length > 0,
+      filterConditions: view.filter.conditions.filter((c) => c.enabled),
     },
     viewApi: api,
     project,

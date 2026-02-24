@@ -155,13 +155,12 @@
 
 <style>
   .projects--board--card {
-    transition: box-shadow 120ms ease, transform 120ms ease, background 120ms ease;
+    transition: background 150ms ease, box-shadow 150ms ease;
   }
   .projects--board--card:hover,
   .projects--board--card:focus-within {
-    box-shadow: 0 2px 8px var(--background-modifier-box-shadow);
-    transform: translateY(-1px);
     background: var(--background-primary-alt);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   }
   div.card-header {
     display: flex;
@@ -171,12 +170,15 @@
 
   .card-header .edit-hint {
     margin-left: auto;
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease;
   }
 
   .projects--board--card:hover .edit-hint,
   .projects--board--card:focus-within .edit-hint {
-    display: inline-flex;
+    opacity: 1;
+    visibility: visible;
   }
 
   .checkbox-wrapper {

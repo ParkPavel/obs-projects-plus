@@ -19,7 +19,7 @@
   import Grid from "./components/Grid/Grid.svelte";
   import Image from "./components/Image/Image.svelte";
   import type { GalleryConfig } from "./types";
-  import type { ProjectDefinition } from "src/settings/settings";
+  import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { getCoverRealPath } from "./gallery";
   import { settings } from "src/lib/stores/settings";
@@ -31,11 +31,22 @@
   export let onConfigChange: ((config: GalleryConfig) => void) | undefined = undefined;
   export let api: ViewApi;
   export let getRecordColor: (record: DataRecord) => string | null;
+  export let filterConditions: FilterCondition[] = [];
 
   // Use onConfigChange to avoid unused warning
   $: void onConfigChange;
 
   $: ({ fields, records } = frame);
+
+  function getFilterValuesFromConditions(conditions: FilterCondition[]): Record<string, string> {
+    const values: Record<string, string> = {};
+    for (const c of conditions) {
+      if (c.operator === "is" && c.value !== undefined) {
+        values[c.field] = c.value;
+      }
+    }
+    return values;
+  }
 
   function handleRecordClick(record: DataRecord) {
     new EditNoteModal(
@@ -146,8 +157,9 @@
         size="lg"
         onClick={() => {
           new CreateNoteModal($app, project, (name, templatePath, project) => {
+            const filterValues = getFilterValuesFromConditions(filterConditions);
             api.addRecord(
-              createDataRecord(name, project),
+              createDataRecord(name, project, Object.keys(filterValues).length > 0 ? filterValues : undefined),
               fields,
               templatePath
             );
