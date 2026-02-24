@@ -29,6 +29,7 @@ import {
   type TimeInfo,
   type SpanInfo,
 } from "./types";
+import { calendarLogger } from './logger';
 
 // Extend dayjs with plugins (utc/timezone already extended in calendar.ts)
 dayjs.extend(isSameOrBefore);
@@ -536,7 +537,7 @@ export class CalendarDataProcessor {
       
       // Warn if event was truncated due to safety limit
       if (guard >= maxDays) {
-        console.warn(
+        calendarLogger.warn(
           `[Calendar] Event "${pr.record?.id || 'unknown'}" spans more than ${maxDays} days and was truncated. ` +
           `Start: ${startDay.format('YYYY-MM-DD')}, End: ${endDay.format('YYYY-MM-DD')}`
         );

@@ -4,6 +4,7 @@
   import { duplicateStore } from "src/lib/stores/duplicateStore";
   import DuplicateMonthBlock from "./DuplicateMonthBlock.svelte";
   import { getScrollBehavior } from 'src/lib/helpers/animation';
+  import { calendarLogger } from '../../logger';
   
   export let firstDayOfWeek: number = 1;
   export let sourceDate: dayjs.Dayjs;
@@ -29,10 +30,12 @@
     // This will reactively update when storeState changes
     const data = duplicateStore.getMergedData();
     if (data) {
-      console.debug('[DuplicateCalendarView] Merged data updated:', {
-        totalProcessed: data.processed.length,
-        phantomCount: Array.from(storeState.phantomRecords.values()).length,
-        selectedDates: storeState.selectedDates.size,
+      calendarLogger.debug('[DuplicateCalendarView] Merged data updated', {
+        data: {
+          totalProcessed: data.processed.length,
+          phantomCount: Array.from(storeState.phantomRecords.values()).length,
+          selectedDates: storeState.selectedDates.size,
+        }
       });
     }
     return data;
@@ -49,7 +52,7 @@
       startMonth.add(2, 'month'),
       startMonth.add(3, 'month'),
     ];
-    console.debug('[DuplicateCalendarView] Initialized with 6 months');
+    calendarLogger.debug('[DuplicateCalendarView] Initialized with 6 months');
   }
   
   // Проверка и подгрузка дополнительных месяцев при скролле
@@ -117,7 +120,7 @@
     while (element) {
       // Проверяем класс
       if (element.classList.contains('calendar-container')) {
-        console.debug('[DuplicateCalendarView] Found .calendar-container as scrollable parent');
+        calendarLogger.debug('[DuplicateCalendarView] Found .calendar-container as scrollable parent');
         return element;
       }
       
@@ -125,14 +128,14 @@
       const overflow = style.overflow + style.overflowY;
       
       if (overflow.includes('scroll') || overflow.includes('auto')) {
-        console.debug('[DuplicateCalendarView] Found scrollable parent:', element.className || element.tagName);
+        calendarLogger.debug('[DuplicateCalendarView] Found scrollable parent: ' + (element.className || element.tagName));
         return element;
       }
       
       element = element.parentElement;
     }
     
-    console.warn('[DuplicateCalendarView] No scrollable parent found, using container.parentElement');
+    calendarLogger.warn('[DuplicateCalendarView] No scrollable parent found, using container.parentElement');
     return container.parentElement || container;
   }
   
@@ -141,10 +144,12 @@
     const targetMonth = targetDate.startOf('month');
     const targetDay = targetDate.date(); // День месяца (1-31)
     
-    console.debug('[scrollToDate] Target:', {
-      date: targetDate.format('YYYY-MM-DD'),
-      month: targetMonth.format('YYYY-MM'),
-      day: targetDay
+    calendarLogger.debug('[scrollToDate] Target', {
+      data: {
+        date: targetDate.format('YYYY-MM-DD'),
+        month: targetMonth.format('YYYY-MM'),
+        day: targetDay
+      }
     });
     
     // Проверяем есть ли месяц уже в списке
@@ -166,7 +171,7 @@
         monthIndex = insertIndex;
       }
       
-      console.debug('[scrollToDate] Added month:', targetMonth.format('YYYY-MM'), 'at index:', monthIndex);
+      calendarLogger.debug(`[scrollToDate] Added month: ${targetMonth.format('YYYY-MM')} at index: ${monthIndex}`);
       
       // Ждем рендер
       await tick();
@@ -176,7 +181,7 @@
     
     // Manual scroll для надежности
     if (!scrollableParent || !container) {
-      console.warn('[scrollToDate] No scrollable parent or container');
+      calendarLogger.warn('[scrollToDate] No scrollable parent or container');
       return;
     }
     
@@ -185,7 +190,7 @@
     const targetMonthBlock = container.querySelector(`[data-month="${targetMonthKey}"]`) as HTMLElement;
     
     if (!targetMonthBlock) {
-      console.warn('[scrollToDate] Target month block not found for:', targetMonthKey);
+      calendarLogger.warn('[scrollToDate] Target month block not found for: ' + targetMonthKey);
       return;
     }
     
@@ -225,13 +230,15 @@
     const centerOffset = (parentHeight - targetHeight) / 2;
     const targetScroll = currentScroll + (targetRect.top - parentRect.top) - Math.max(centerOffset, 50);
     
-    console.debug('[scrollToDate] Scrolling to:', {
-      monthIndex,
-      monthKey: targetMonth.format('YYYY-MM'),
-      dayFound: !!targetDayElement,
-      currentScroll,
-      targetScroll,
-      centerOffset
+    calendarLogger.debug('[scrollToDate] Scrolling to', {
+      data: {
+        monthIndex,
+        monthKey: targetMonth.format('YYYY-MM'),
+        dayFound: !!targetDayElement,
+        currentScroll,
+        targetScroll,
+        centerOffset
+      }
     });
     
     scrollableParent.scrollTo({

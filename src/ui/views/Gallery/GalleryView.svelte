@@ -20,6 +20,7 @@
   import Image from "./components/Image/Image.svelte";
   import type { GalleryConfig } from "./types";
   import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
+  import { getFilterValuesFromConditions } from "src/lib/helpers";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { getCoverRealPath } from "./gallery";
   import { handleHoverLink } from "../helpers";
@@ -36,16 +37,6 @@
   $: void onConfigChange;
 
   $: ({ fields, records } = frame);
-
-  function getFilterValuesFromConditions(conditions: FilterCondition[]): Record<string, string> {
-    const values: Record<string, string> = {};
-    for (const c of conditions) {
-      if (c.operator === "is" && c.value !== undefined) {
-        values[c.field] = c.value;
-      }
-    }
-    return values;
-  }
 
   function handleRecordClick(record: DataRecord) {
     new EditNoteModal(

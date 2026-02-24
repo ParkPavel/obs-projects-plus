@@ -37,6 +37,7 @@
   import type { BoardConfig } from "./types";
   import { settings } from "src/lib/stores/settings";
   import type { FilterCondition } from "src/settings/settings";
+  import { getFilterValuesFromConditions } from "src/lib/helpers";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -238,28 +239,11 @@
       }
     };
 
-  /**
-   * Extract frontmatter values from active "is" filter conditions.
-   * Only equality filters can reliably map to record values.
-   */
-  function getFilterValues(
-    conditions: FilterCondition[],
-    excludeField?: string
-  ): Record<string, string> {
-    const values: Record<string, string> = {};
-    for (const c of conditions) {
-      if (c.operator === "is" && c.value !== undefined && c.field !== excludeField) {
-        values[c.field] = c.value;
-      }
-    }
-    return values;
-  }
-
   const handleRecordAdd =
     (field: DataField | undefined): OnRecordAdd =>
     (column: string) => {
       new CreateNoteModal($app, project, (name, templatePath) => {
-        const filterValues = getFilterValues(filterConditions, field?.name);
+        const filterValues = getFilterValuesFromConditions(filterConditions, field?.name);
         api.addRecord(
           createDataRecord(
             name,

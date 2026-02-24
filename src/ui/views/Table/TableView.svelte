@@ -27,6 +27,7 @@
   import { settings } from "src/lib/stores/settings";
   import { sortFields } from "./helpers";
   import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
+  import { getFilterValuesFromConditions } from "src/lib/helpers";
   import { CreateFieldModal } from "src/ui/modals/createFieldModal";
   import { Icon } from "obsidian-svelte";
   import { TextLabel } from "./components/DataGrid/GridCell/GridTextCell";
@@ -51,16 +52,6 @@
   export let onConfigChange: (cfg: TableConfig) => void;
 
   let buttonEl: HTMLElement;
-
-  function getFilterValuesFromConditions(conditions: FilterCondition[]): Record<string, string> {
-    const values: Record<string, string> = {};
-    for (const c of conditions) {
-      if (c.operator === "is" && c.value !== undefined) {
-        values[c.field] = c.value;
-      }
-    }
-    return values;
-  }
 
   function saveConfig(cfg: TableConfig) {
     config = cfg;

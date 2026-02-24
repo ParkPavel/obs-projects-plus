@@ -29,6 +29,7 @@
 import dayjs from 'dayjs';
 import type { CalendarInterval } from '../calendar';
 import { getScrollBehavior } from 'src/lib/helpers/animation';
+import { calendarLogger } from '../logger';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -146,7 +147,7 @@ export class ViewportStateManager {
     this.currentState = newState;
     
     if (this.config.debug) {
-      console.debug('[ViewportStateManager] State pushed:', newState, 'History size:', this.history.length);
+      calendarLogger.debug('[ViewportStateManager] State pushed', { data: { historySize: this.history.length } });
     }
   }
   
@@ -164,7 +165,7 @@ export class ViewportStateManager {
     const state = this.history[this.currentIndex];
     
     if (this.config.debug) {
-      console.debug('[ViewportStateManager] Go back to:', state);
+      calendarLogger.debug('[ViewportStateManager] Go back to state');
     }
     
     return state ?? null;
@@ -184,7 +185,7 @@ export class ViewportStateManager {
     const state = this.history[this.currentIndex];
     
     if (this.config.debug) {
-      console.debug('[ViewportStateManager] Go forward to:', state);
+      calendarLogger.debug('[ViewportStateManager] Go forward to state');
     }
     
     return state ?? null;
@@ -242,7 +243,7 @@ export class ViewportStateManager {
     this.lastSaveTime = 0;
     
     if (this.config.debug) {
-      console.debug('[ViewportStateManager] History cleared');
+      calendarLogger.debug('[ViewportStateManager] History cleared');
     }
   }
   
@@ -261,7 +262,7 @@ export class ViewportStateManager {
     animate = true
   ): Promise<void> {
     if (!state.containerElement) {
-      console.warn('[ViewportStateManager] Cannot restore: no container element');
+      calendarLogger.warn('[ViewportStateManager] Cannot restore: no container element');
       return;
     }
     
@@ -282,7 +283,7 @@ export class ViewportStateManager {
     }
     
     if (this.config.debug) {
-      console.debug('[ViewportStateManager] Viewport restored:', state);
+      calendarLogger.debug('[ViewportStateManager] Viewport restored');
     }
   }
   
@@ -385,10 +386,10 @@ export class ViewportStateManager {
       this.currentState = this.history[this.currentIndex] ?? null;
       
       if (this.config.debug) {
-        console.debug('[ViewportStateManager] History imported:', this.history.length, 'states');
+        calendarLogger.debug('[ViewportStateManager] History imported, states: ' + this.history.length);
       }
     } catch (error) {
-      console.error('[ViewportStateManager] Failed to import history:', error);
+      calendarLogger.error('[ViewportStateManager] Failed to import history', error);
     }
   }
   

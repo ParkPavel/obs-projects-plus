@@ -18,6 +18,7 @@
   import { INFINITE_SCROLL, GESTURE, TIMING } from '../../constants';
   import { calendarLogger } from '../../logger';
   import { getScrollBehavior, getAnimationDuration } from 'src/lib/helpers/animation';
+  import { settings } from 'src/lib/stores/settings';
 
   dayjs.extend(isSameOrAfter);
   dayjs.extend(isSameOrBefore);
@@ -51,6 +52,9 @@
   // Timeline view is available for day and week (not 2weeks or month)
   $: showTimeline = interval === 'day' || interval === 'week';
   $: useTimelineView = showTimeline && displayMode === 'bars';
+  
+  // v3.0.9: Instant mode — disable CSS animations when user prefers instant transitions
+  $: isInstantMode = $settings.preferences.animationBehavior === 'instant';
   
   // v8.1.2: Calculate AllDay section height for sticky axis sync
   // MUST match TimelineView's STRIP_HEIGHT_REM exactly for alignment
@@ -848,7 +852,7 @@
     {/if}
     
     {#each periods as period, index (period.id)}
-      <div class="period-container" bind:this={periodElements[index]}>
+      <div class="period-container" class:ppp-instant-mode={isInstantMode} bind:this={periodElements[index]}>
         {#if useTimelineView}
           <!-- Timeline view for day/week bars mode -->
           <!-- v3.0.1: Always use 0-24 for full scrollable timeline -->
@@ -1052,6 +1056,11 @@
       opacity: 1;
       transform: translateX(0);
     }
+  }
+
+  /* v3.0.9: Suppress slide-in animation in instant mode */
+  .period-container.ppp-instant-mode {
+    animation: none;
   }
 
   .period-container:last-child {

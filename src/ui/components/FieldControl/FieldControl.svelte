@@ -478,7 +478,7 @@
   }
   
   /* === Mobile optimizations for inline picker === */
-  @media (max-width: 768px), (pointer: coarse) {
+  @media (max-width: 48rem), (pointer: coarse) {
     .color-picker-inline {
       padding: calc(var(--fc-base) * 0.75);
       border-radius: calc(var(--fc-base) * 0.75);
@@ -510,7 +510,7 @@
   /* =====================================================
    * MOBILE: Override root variables for touch targets
    * ===================================================== */
-  @media (max-width: 768px), (pointer: coarse) {
+  @media (max-width: 48rem), (pointer: coarse) {
     .field-control-wrapper {
       /* Touch-friendly sizes (44px minimum) */
       --fc-element-size: calc(var(--fc-base) * 2.5);      /* 40px */

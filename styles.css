@@ -13,7 +13,7 @@
 /* Native select elements - inherit theme colors */
 .obs-projects-plus select,
 .workspace-leaf-content[data-type="obs-projects-plus"] select,
-.modal select {
+.projects-modal select {
   background-color: var(--background-primary);
   color: var(--text-normal);
   border: 0.0625rem solid var(--background-modifier-border);
@@ -34,7 +34,7 @@
 /* Select option styling for dark theme */
 .obs-projects-plus select option,
 .workspace-leaf-content[data-type="obs-projects-plus"] select option,
-.modal select option {
+.projects-modal select option {
   background-color: var(--background-primary);
   color: var(--text-normal);
 }
@@ -42,13 +42,13 @@
 /* Select hover/focus states */
 .obs-projects-plus select:hover,
 .workspace-leaf-content[data-type="obs-projects-plus"] select:hover,
-.modal select:hover {
+.projects-modal select:hover {
   border-color: var(--interactive-accent);
 }
 
 .obs-projects-plus select:focus,
 .workspace-leaf-content[data-type="obs-projects-plus"] select:focus,
-.modal select:focus {
+.projects-modal select:focus {
   outline: none;
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 0.125rem rgba(var(--interactive-accent-rgb), 0.2);

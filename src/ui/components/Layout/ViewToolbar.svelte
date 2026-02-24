@@ -273,7 +273,7 @@
   }
 
   /* Mobile floating buttons */
-  @media (max-width: 480px) {
+  @media (max-width: 30rem) {
     .floating-toggle {
       width: 36px;
       height: 36px;

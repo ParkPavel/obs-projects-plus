@@ -21,6 +21,7 @@ import type { DataRecord, DataField } from 'src/lib/dataframe/dataframe';
 import type { AgendaFilter, AgendaFilterGroup, AgendaCustomList } from 'src/settings/v3/settings';
 import { parseDateFormula, isDateFormula } from 'src/lib/helpers/dateFormulaParser';
 import { parseFormula, evaluateFormula } from 'src/lib/helpers/formulaParser';
+import { calendarLogger } from '../logger';
 
 // Extend dayjs with plugins
 dayjs.extend(isSameOrAfter);
@@ -58,7 +59,7 @@ function resolveFilterValue(
       return result.date.format('YYYY-MM-DD');
     }
     // If formula parsing fails, return original value
-    console.warn(`[FilterEngine] Failed to parse date formula '${value}':`, result.error);
+    calendarLogger.warn(`[FilterEngine] Failed to parse date formula '${value}': ${result.error}`);
   }
   
   return value;
@@ -216,7 +217,7 @@ export function evaluateFilter(
           const regex = new RegExp(filterValue, 'i');
           return regex.test(fieldValue);
         } catch (error) {
-          console.error('[FilterEngine] Invalid regex:', filterValue, error);
+          calendarLogger.error('[FilterEngine] Invalid regex: ' + filterValue, error);
           return false;
         }
       }
@@ -349,7 +350,7 @@ export function evaluateFilter(
       );
       
     default:
-      console.warn('[FilterEngine] Unknown operator:', filter.operator);
+      calendarLogger.warn('[FilterEngine] Unknown operator: ' + filter.operator);
       return false;
   }
 }
@@ -439,7 +440,7 @@ export function filterRecordsForList(
   // Backward compatibility - old lists with filters array (v3.0.x format)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Legacy list format had 'filters' property not in current type
   if ('filters' in list && Array.isArray((list as any).filters)) {
-    console.warn('[FilterEngine] Old list format detected, using backward compatibility mode');
+    calendarLogger.warn('[FilterEngine] Old list format detected, using backward compatibility mode');
     return records.filter(record => 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Legacy list format access
       evaluateFilters(record, (list as any).filters, baseDate)
@@ -465,12 +466,12 @@ function filterByFormula(
       try {
         return evaluateFormula(ast, record, baseDate.toDate());
       } catch (error) {
-        console.error(`[FilterEngine] Error evaluating formula for record:`, record, error);
+        calendarLogger.error(`[FilterEngine] Error evaluating formula for record: ${record?.id ?? 'unknown'}`, error);
         return false;
       }
     });
   } catch (error) {
-    console.error(`[FilterEngine] Error parsing formula:`, formula, error);
+    calendarLogger.error(`[FilterEngine] Error parsing formula: ${formula}`, error);
     return [];
   }
 }

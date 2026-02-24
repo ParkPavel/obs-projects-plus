@@ -2,7 +2,7 @@ import { normalizePath, TFile } from "obsidian";
 import { get } from "svelte/store";
 
 import { app } from "src/lib/stores/obsidian";
-import type { ProjectDefinition, ViewDefinition } from "src/settings/settings";
+import type { FilterCondition, ProjectDefinition, ViewDefinition } from "src/settings/settings";
 import { getContext, setContext } from "svelte";
 import type { DataField } from "./dataframe/dataframe";
 
@@ -174,4 +174,25 @@ export function makeContext<T>(): Context<T> {
     get: () => getContext(key),
     set: (value: T) => setContext(key, value),
   };
+}
+
+/**
+ * Extract frontmatter values from active "is" filter conditions.
+ * Only equality filters can reliably map to record values.
+ *
+ * @param conditions  — Enabled filter conditions from the view
+ * @param excludeField — Optional field name to exclude (e.g., Board groupBy field)
+ * @returns Record of field→value pairs for note creation
+ */
+export function getFilterValuesFromConditions(
+  conditions: FilterCondition[],
+  excludeField?: string
+): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const c of conditions) {
+    if (c.operator === "is" && c.value !== undefined && c.field !== excludeField) {
+      values[c.field] = c.value;
+    }
+  }
+  return values;
 }

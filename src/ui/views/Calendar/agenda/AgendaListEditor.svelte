@@ -8,6 +8,7 @@
   import AgendaFilterEditor from './AgendaFilterEditor.svelte';
   import AdvancedFilterEditor from './AdvancedFilterEditor.svelte';
   import AgendaIconPicker from './AgendaIconPicker.svelte';
+  import { calendarLogger } from '../logger';
   
   // Generate unique ID
   function generateId(): string {
@@ -123,7 +124,7 @@
   
   function handleSave() {
     if (!isValid) {
-      console.warn('[AgendaListEditor] Cannot save - validation failed:', nameError);
+      calendarLogger.warn('[AgendaListEditor] Cannot save - validation failed: ' + nameError);
       return;
     }
     
@@ -693,7 +694,7 @@
   }
   
   /* === Mobile Adaptivity === */
-  @media (max-width: 600px) {
+  @media (max-width: 37.5rem) {
     .agenda-list-editor {
       max-height: 100vh;
       border-radius: 0;

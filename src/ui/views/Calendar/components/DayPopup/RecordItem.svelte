@@ -5,6 +5,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
   import { getScrollBehavior } from 'src/lib/helpers/animation';
+  import { calendarLogger } from '../../logger';
 
   export let record: DataRecord;
   export let checkField: string | undefined;
@@ -88,7 +89,7 @@
         favoriteColors = [];
       }
     } catch (e) {
-      console.error('Failed to load favorites', e);
+      calendarLogger.error('Failed to load favorites', e, { component: 'RecordItem' });
       favoriteColors = [];
     }
   });
@@ -1436,7 +1437,7 @@
   }
   
   /* Mobile: palette height limits - v5.0.0 optimized for touch */
-  @media (max-width: 768px), (pointer: coarse) {
+  @media (max-width: 48rem), (pointer: coarse) {
     .color-palette {
       /* v5.0.0: Remove fixed height limits - let content flow naturally */
       /* Parent .ios-popup-content handles scrolling */

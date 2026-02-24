@@ -5,7 +5,6 @@
   export let onAdd: () => void;
 
   function handleClick() {
-    console.debug('AddViewButton clicked');
     onAdd?.();
   }
 </script>

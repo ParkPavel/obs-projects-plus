@@ -1,11 +1,11 @@
 # 🚀 Release Information
 
-## Current Release: v3.0.8
+## Current Release: v3.0.9
 
-**Release Date**: February 24, 2026  
+**Release Date**: February 25, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Board UX — persist, zoom, collapse, settings fix, navigation
+**Type**: Code quality — unified filters, instant mode, mobile CSS, guidelines
 
 ## 📦 Download Options
 

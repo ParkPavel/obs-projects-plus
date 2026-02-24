@@ -20,6 +20,8 @@
 
 import dayjs from 'dayjs';
 import type { AnimationController } from '../animation/AnimationController';
+import { getAnimationDuration } from 'src/lib/helpers/animation';
+import { calendarLogger } from '../logger';
 
 export type ScrollPosition = 'start' | 'center' | 'end';
 
@@ -88,7 +90,7 @@ export class NavigationController {
     // Find target element
     const element = this.verticalCalendar.findElementForDate(date);
     if (!element) {
-      console.warn('[NavigationController] Element not found for date:', date.format());
+      calendarLogger.warn('[NavigationController] Element not found for date: ' + date.format());
       // Fallback to calendar's own method
       this.verticalCalendar.scrollToDate(date, position);
       return;
@@ -97,7 +99,7 @@ export class NavigationController {
     // Get scrollable container
     const container = this.verticalCalendar.getScrollableParent();
     if (!container) {
-      console.warn('[NavigationController] No scrollable container found');
+      calendarLogger.warn('[NavigationController] No scrollable container found');
       return;
     }
     
@@ -106,7 +108,7 @@ export class NavigationController {
     
     // Perform scroll (animated or instant)
     if (animated) {
-      this.animateScroll(container, targetScroll.top, 400);
+      this.animateScroll(container, targetScroll.top, getAnimationDuration(400));
     } else {
       container.scrollTop = targetScroll.top;
     }
@@ -125,7 +127,7 @@ export class NavigationController {
     // Find target element
     const element = this.horizontalCalendar.findElementForDate(date);
     if (!element) {
-      console.warn('[NavigationController] Element not found for date:', date.format());
+      calendarLogger.warn('[NavigationController] Element not found for date: ' + date.format());
       // Fallback to calendar's own method
       this.horizontalCalendar.scrollToDate(date, position);
       return;
@@ -134,7 +136,7 @@ export class NavigationController {
     // Get scrollable container
     const container = this.horizontalCalendar.getScrollableParent();
     if (!container) {
-      console.warn('[NavigationController] No scrollable container found');
+      calendarLogger.warn('[NavigationController] No scrollable container found');
       return;
     }
     
@@ -143,7 +145,7 @@ export class NavigationController {
     
     // Perform scroll (animated or instant)
     if (animated) {
-      this.animateScroll(container, targetScroll.left, 400, 'left');
+      this.animateScroll(container, targetScroll.left, getAnimationDuration(400), 'left');
     } else {
       container.scrollLeft = targetScroll.left;
     }

@@ -5,6 +5,7 @@
   import { duplicateStore } from "src/lib/stores/duplicateStore";
   import { i18n } from "src/lib/stores/i18n";
   import DuplicateCalendarView from "./DuplicateCalendarView.svelte";
+  import { calendarLogger } from '../../logger';
   
   export let visible: boolean = false;
   export let sourceRecord: ProcessedRecord;
@@ -94,10 +95,12 @@
         ? dayjs.tz(dayjs(), timezone) 
         : dayjs();
       
-      console.debug('[DuplicatePopup] ScrollToToday:', {
-        timezone,
-        today: today.format('YYYY-MM-DD HH:mm'),
-        sourceDate: sourceDate.format('YYYY-MM-DD')
+      calendarLogger.debug('[DuplicatePopup] ScrollToToday', {
+        data: {
+          timezone,
+          today: today.format('YYYY-MM-DD HH:mm'),
+          sourceDate: sourceDate.format('YYYY-MM-DD')
+        }
       });
       
       calendarViewComponent.scrollToDate(today);

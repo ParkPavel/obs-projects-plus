@@ -5,6 +5,20 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.9] - 2026-02-25
+
+### Changed
+- **Unified filter extraction** — shared `getFilterValuesFromConditions()` helper replaces 4 duplicate implementations in Board, Table, Gallery, Calendar views
+- **Instant transitions fix** — `animationBehavior: "instant"` now fully suppresses CSS animations in Calendar week/day period transitions (`periodSlideIn`, `unitFadeIn`) and NavigationController scroll animations
+- **CSS breakpoints normalized** — all `@media` breakpoints use rem units consistently (48rem, 37.5rem, 30rem) instead of mixed px values
+- **CSS selector scoping** — `.modal select` → `.projects-modal select` to prevent style bleeding into other plugins' modals
+- **Console logging cleanup** — 33 direct `console.debug/warn/error` calls in Calendar components replaced with centralized `calendarLogger`; development debug statements removed from navigation buttons
+
+### Fixed
+- Calendar week/day views: period slide-in animation now respects instant mode setting instead of always animating
+- NavigationController: scroll animations now use `getAnimationDuration()` instead of hardcoded 400ms
+- InfiniteCalendar (vertical): unit fade-in animation now respects instant mode setting
+
 ## [3.0.8] - 2026-02-24
 
 ### Added

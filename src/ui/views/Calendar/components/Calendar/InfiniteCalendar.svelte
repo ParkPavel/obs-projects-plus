@@ -7,6 +7,7 @@
   import MonthBlock from './MonthBlock.svelte';
   import TwoWeeksBlock from './TwoWeeksBlock.svelte';
   import { getScrollBehavior } from 'src/lib/helpers/animation';
+  import { settings } from 'src/lib/stores/settings';
 
   export let groupedRecords: Record<string, DataRecord[]>;
   export let processedData: ProcessedCalendarData | null = null;
@@ -20,7 +21,8 @@
   export let onScrollToCurrent: ((callback: () => void) => void) | undefined;
   export let onScrollToDate: ((callback: (date: dayjs.Dayjs) => void) => void) | undefined;
   export let targetDate: dayjs.Dayjs | null = null;
-  /** Position to scroll to when navigating: 'start', 'center', 'end' */
+  // v3.0.9: Instant mode — disable CSS animations
+  $: isInstantMode = $settings.preferences.animationBehavior === 'instant';
   export let scrollPosition: 'start' | 'center' | 'end' = 'center';
   /** Whether this view is currently active/visible */
   export let isActive: boolean = false;
@@ -509,7 +511,7 @@
 
 <div class="infinite-calendar" bind:this={container}>
   {#each units as unit, index (unit.format('YYYY-MM-DD'))}
-    <div bind:this={unitElements[index]} class="unit-wrapper">
+    <div bind:this={unitElements[index]} class="unit-wrapper" class:ppp-instant-mode={isInstantMode}>
       {#if is2WeeksMode}
         <TwoWeeksBlock
           startDate={unit}
@@ -589,6 +591,11 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  /* v3.0.9: Suppress fade-in animation in instant mode */
+  .unit-wrapper.ppp-instant-mode {
+    animation: none;
   }
 
   .loading-indicator {

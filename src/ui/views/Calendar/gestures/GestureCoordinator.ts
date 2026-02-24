@@ -12,6 +12,7 @@
  */
 
 import { GESTURE_ZONES, GESTURE_THRESHOLDS } from '../constants';
+import { calendarLogger } from '../logger';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -371,7 +372,7 @@ export class GestureCoordinator {
     
     // Validate transition
     if (!this.isValidTransition(oldState, newState)) {
-      console.warn(`[GestureCoordinator] Invalid transition: ${oldState} → ${newState}`);
+      calendarLogger.warn(`[GestureCoordinator] Invalid transition: ${oldState} → ${newState}`);
       return;
     }
     

@@ -9,7 +9,7 @@
     type DataRecord,
   } from "src/lib/dataframe/dataframe";
   import { updateRecordValues } from "src/lib/datasources/helpers";
-  import { formatDateForProject } from "src/lib/helpers";
+  import { formatDateForProject, getFilterValuesFromConditions } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
@@ -1511,14 +1511,9 @@
         try {
           if (dateField) {
             // Build frontmatter values with auto-filled date/time
-            const frontmatterValues: Record<string, Date | string> = {};
-
-            // Apply filter conditions (equality filters only)
-            for (const c of filterConditions) {
-              if (c.operator === "is" && c.value !== undefined) {
-                frontmatterValues[c.field] = c.value;
-              }
-            }
+            const frontmatterValues: Record<string, Date | string> = {
+              ...getFilterValuesFromConditions(filterConditions),
+            };
             
             // Determine the effective note name:
             // If dateField is "name", incorporate the date into the filename

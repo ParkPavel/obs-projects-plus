@@ -761,7 +761,7 @@
   }
   
   /* === Mobile Touch Targets v5.0.0 === */
-  @media (max-width: 768px), (pointer: coarse) {
+  @media (max-width: 48rem), (pointer: coarse) {
     .color-picker {
       --cp-picker-height: calc(var(--cp-base) * 10);
       --cp-hue-height: calc(var(--cp-base) * 1.5);
