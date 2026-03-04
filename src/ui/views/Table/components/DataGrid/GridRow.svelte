@@ -1,15 +1,17 @@
 <script lang="ts">
   import { produce } from "immer";
-  import type { Menu } from "obsidian";
+  import { Menu } from "obsidian";
 
   import { GridCell, GridTypedCell } from "./GridCell";
   import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
   import GridCellGroup from "./GridCellGroup.svelte";
 
   import type { GridColDef, GridRowId, GridRowModel } from "./dataGrid";
-  import { menuOnContextMenu } from "src/ui/views/helpers";
+  import { menuOnContextMenu, showMobileNavMenu } from "src/ui/views/helpers";
+  import { app } from "src/lib/stores/obsidian";
+  import { isTouchDevice } from "src/lib/stores/ui";
 
-  import { setContext } from "svelte";
+  import { setContext, onDestroy } from "svelte";
 
   export let rowId: GridRowId;
   export let index: number;
@@ -42,6 +44,54 @@
     };
   }
 
+  // v3.0.10: Long-press detection for touch devices on row header
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  let longPressFired = false;
+  let touchStartPos: { x: number; y: number } | null = null;
+  const LONG_PRESS_MS = 500;
+  const MOVE_THRESHOLD = 10;
+
+  function handleRowTouchStart(e: TouchEvent) {
+    if (!$isTouchDevice) return;
+    longPressFired = false;
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartPos = { x: touch.clientX, y: touch.clientY };
+    longPressTimer = setTimeout(() => {
+      longPressFired = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+      const sourcePath = typeof row["path"] === "string" ? row["path"] : String(rowId);
+      showMobileNavMenu($app, String(rowId), sourcePath, e, () => onRowOpen(rowId, false));
+    }, LONG_PRESS_MS);
+  }
+
+  function handleRowTouchMove(e: TouchEvent) {
+    if (!longPressTimer || !touchStartPos) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const dx = Math.abs(touch.clientX - touchStartPos.x);
+    const dy = Math.abs(touch.clientY - touchStartPos.y);
+    if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
+
+  function handleRowTouchEnd(e: TouchEvent) {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    if (longPressFired) {
+      e.preventDefault();
+      longPressFired = false;
+    }
+  }
+
+  onDestroy(() => {
+    if (longPressTimer) clearTimeout(longPressTimer);
+  });
+
   function handleCellClick(
     column: GridColDef,
     value: Optional<DataValue>
@@ -68,6 +118,9 @@
     column={{ field: "", header: true, width: 60, editable: false }}
     rowHeader
     on:mousedown={handleHeaderClick()}
+    on:touchstart={handleRowTouchStart}
+    on:touchmove={handleRowTouchMove}
+    on:touchend={handleRowTouchEnd}
     {color}
   >
     <div slot="read" style="text-align: center;">

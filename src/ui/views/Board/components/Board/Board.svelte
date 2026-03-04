@@ -72,9 +72,12 @@
    * Svelte action — registers a non-passive wheel listener so that
    * e.preventDefault() reliably blocks the browser's built-in
    * Ctrl+Scroll zoom while the plugin's own zoom is active.
+   *
+   * v3.0.10: Also handles pinch-to-zoom on touch devices.
    */
   function wheelZoom(node: HTMLElement) {
-    function handler(e: WheelEvent) {
+    // --- Desktop: Ctrl+Wheel ---
+    function wheelHandler(e: WheelEvent) {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
@@ -84,10 +87,72 @@
         onZoomChange(next);
       }
     }
-    node.addEventListener('wheel', handler, { passive: false });
+
+    // --- Touch: Pinch-to-zoom ---
+    let initialPinchDistance: number | null = null;
+    let initialZoom: number = zoom;
+
+    function getPinchDistance(touches: TouchList): number {
+      const [a, b] = [touches[0], touches[1]];
+      if (!a || !b) return 0;
+      return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    }
+
+    function touchStartHandler(e: TouchEvent) {
+      if (e.touches.length === 2) {
+        initialPinchDistance = getPinchDistance(e.touches);
+        initialZoom = zoom;
+      }
+    }
+
+    function touchMoveHandler(e: TouchEvent) {
+      if (e.touches.length !== 2 || initialPinchDistance === null) return;
+      e.preventDefault();
+      const currentDistance = getPinchDistance(e.touches);
+      const scale = currentDistance / initialPinchDistance;
+      const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, initialZoom * scale)) * 100) / 100;
+      if (next !== zoom) {
+        zoom = next;
+        onZoomChange(next);
+      }
+    }
+
+    function touchEndHandler(e: TouchEvent) {
+      if (e.touches.length < 2) {
+        initialPinchDistance = null;
+      }
+    }
+
+    // --- Safari: GestureEvent (scale-based pinch) ---
+    function gestureStartHandler(e: any) {
+      e.preventDefault();
+      initialZoom = zoom;
+    }
+
+    function gestureChangeHandler(e: any) {
+      e.preventDefault();
+      const next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, initialZoom * e.scale)) * 100) / 100;
+      if (next !== zoom) {
+        zoom = next;
+        onZoomChange(next);
+      }
+    }
+
+    node.addEventListener('wheel', wheelHandler, { passive: false });
+    node.addEventListener('touchstart', touchStartHandler, { passive: true });
+    node.addEventListener('touchmove', touchMoveHandler, { passive: false });
+    node.addEventListener('touchend', touchEndHandler, { passive: true });
+    node.addEventListener('gesturestart', gestureStartHandler, { passive: false });
+    node.addEventListener('gesturechange', gestureChangeHandler, { passive: false });
+
     return {
       destroy() {
-        node.removeEventListener('wheel', handler);
+        node.removeEventListener('wheel', wheelHandler);
+        node.removeEventListener('touchstart', touchStartHandler);
+        node.removeEventListener('touchmove', touchMoveHandler);
+        node.removeEventListener('touchend', touchEndHandler);
+        node.removeEventListener('gesturestart', gestureStartHandler);
+        node.removeEventListener('gesturechange', gestureChangeHandler);
       }
     };
   }

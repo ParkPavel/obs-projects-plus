@@ -874,6 +874,8 @@
             "close": "Закрыть",
             "total": "Всего",
             "open-in-new-window": "Ctrl+Click: открыть в новом окне",
+            "open-in-tab": "Открыть в новой вкладке",
+            "open-in-window": "Открыть в новом окне",
             "save": "Сохранить",
             "cancel": "тмена",
             "delete": "далить",

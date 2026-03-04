@@ -23,7 +23,9 @@
   import { getFilterValuesFromConditions } from "src/lib/helpers";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { getCoverRealPath } from "./gallery";
-  import { handleHoverLink } from "../helpers";
+  import { handleHoverLink, showMobileNavMenu } from "../helpers";
+  import { isTouchDevice } from "src/lib/stores/ui";
+  import { onDestroy } from "svelte";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -67,6 +69,55 @@
       project.autosave ?? true
     ).open();
   }
+
+  // v3.0.10: Long-press detection for CardMedia on touch devices
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  let longPressFired = false;
+  let touchStartPos: { x: number; y: number } | null = null;
+  const LONG_PRESS_MS = 500;
+  const MOVE_THRESHOLD = 10;
+
+  function handleCardTouchStart(record: DataRecord) {
+    return (e: TouchEvent) => {
+      if (!$isTouchDevice) return;
+      longPressFired = false;
+      const touch = e.touches[0];
+      if (!touch) return;
+      touchStartPos = { x: touch.clientX, y: touch.clientY };
+      longPressTimer = setTimeout(() => {
+        longPressFired = true;
+        if (navigator.vibrate) navigator.vibrate(30);
+        showMobileNavMenu($app, record.id, record.id, e, () => handleRecordClick(record));
+      }, LONG_PRESS_MS);
+    };
+  }
+
+  function handleCardTouchMove(e: TouchEvent) {
+    if (!longPressTimer || !touchStartPos) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const dx = Math.abs(touch.clientX - touchStartPos.x);
+    const dy = Math.abs(touch.clientY - touchStartPos.y);
+    if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
+
+  function handleCardTouchEnd(e: TouchEvent) {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    if (longPressFired) {
+      e.preventDefault();
+      longPressFired = false;
+    }
+  }
+
+  onDestroy(() => {
+    if (longPressTimer) clearTimeout(longPressTimer);
+  });
 </script>
 
 <GalleryOptionsProvider
@@ -83,6 +134,8 @@
         <Card>
           <CardMedia
             on:click={(event) => {
+              // v3.0.10: Suppress click if long-press was fired
+              if (longPressFired) { longPressFired = false; return; }
               // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
               if (event.shiftKey) {
                 $app.workspace.openLinkText(record.id, "", 'window');
@@ -92,6 +145,9 @@
                 handleRecordClick(record);
               }
             }}
+            on:touchstart={handleCardTouchStart(record)}
+            on:touchmove={handleCardTouchMove}
+            on:touchend={handleCardTouchEnd}
           >
             {@const coverPath = getCoverRealPath($app, record, coverField)}
 
@@ -117,6 +173,9 @@
                   } else {
                     handleRecordClick(record);
                   }
+                }}
+                on:longpress={({ detail: { linkText, sourcePath, event } }) => {
+                  showMobileNavMenu($app, linkText, sourcePath, event, () => handleRecordClick(record));
                 }}
                 on:hover={({ detail: { event, sourcePath } }) => {
                   handleHoverLink(event, sourcePath);

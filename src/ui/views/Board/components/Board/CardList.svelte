@@ -15,6 +15,7 @@
   import {
     getRecordColorContext,
     handleHoverLink,
+    showMobileNavMenu,
     sortRecordsContext,
   } from "src/ui/views/helpers";
   import {
@@ -123,6 +124,9 @@
                 } else {
                   onRecordClick(item);
                 }
+              }}
+              on:longpress={({ detail: { linkText, sourcePath, event } }) => {
+                showMobileNavMenu($app, linkText, sourcePath, event, () => onRecordClick(item));
               }}
               on:hover={({ detail: { event, sourcePath } }) => {
                 handleHoverLink(event, sourcePath);

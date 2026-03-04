@@ -874,6 +874,8 @@
             "close": "Close",
             "total": "Total",
             "open-in-new-window": "Ctrl+Click: open in new window",
+            "open-in-tab": "Open in new tab",
+            "open-in-window": "Open in new window",
             "save": "Save",
             "cancel": "Cancel",
             "delete": "Delete",

@@ -5,6 +5,36 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.10] - 2026-02-25
+
+### Added — Mobile Feature Parity
+- **Long-press navigation (all views)** — on touch devices, long-press (500ms) on note links/cards shows an Obsidian `Menu` with "Open note", "Open in new tab", "Open in new window" options
+  - `InternalLink.svelte`: touch-aware long-press detection with finger movement cancellation (10px threshold) and haptic feedback (`navigator.vibrate`)
+  - Board `CardList`: handles `longpress` event from InternalLink → `showMobileNavMenu()`
+  - Gallery `GalleryView`: long-press on both `CardMedia` images and `InternalLink` titles
+  - Table `GridRow`: long-press on row header cells (touch events forwarded through `GridCell`)
+- **EditNote mobile open mode** — on touch devices, the "Open Note" button shows a dropdown menu instead of relying on Ctrl+Click/Shift+Click modifier keys
+  - Desktop: unchanged behavior (Ctrl+Click → tab, Shift+Click → window)
+  - Mobile: single tap shows `Menu` with all three open modes
+  - Tooltip adapts: mobile shows "Open note", desktop shows modifier key hints
+- **Board: Pinch-to-zoom** — two-finger pinch gesture controls board zoom (0.25×–2.0×) on touch devices
+  - Standard `touchstart`/`touchmove`/`touchend` flow with distance-based scaling
+  - Safari `GestureEvent` support (`gesturestart`/`gesturechange`) for native pinch scaling
+  - Works alongside existing Ctrl+Scroll zoom on desktop
+- **Gallery: Responsive grid on mobile** — card width automatically capped at 200px on mobile to prevent oversized single-column layouts
+  - `Grid.svelte` imports `isMobileDevice` store and uses `Math.min(cardWidth, 200)` for responsive grid
+- **Touch visual feedback** — `:active` states for Gallery and Board cards on `@media (pointer: coarse)` devices
+  - Gallery cards: accent border + hover background on tap
+  - Board cards: shadow + alt background on tap
+  - Gallery card media: `cursor: pointer` + suppressed tap highlight
+- **Shared `showMobileNavMenu()` helper** (`src/ui/views/helpers.ts`) — reusable Obsidian `Menu` builder for mobile note navigation, used by all 4 non-Calendar views
+- **i18n keys**: `common.open-in-tab` / `common.open-in-window` (EN + RU)
+
+### Fixed
+- InternalLink: long-press no longer triggers duplicate click events (touch-end `preventDefault` + `longPressFired` guard)
+- Gallery `CardMedia`: now forwards `touchstart`/`touchmove`/`touchend` events for long-press support
+- Table `GridCell`: row header now forwards touch events for long-press detection
+
 ## [3.0.9] - 2026-02-25
 
 ### Changed

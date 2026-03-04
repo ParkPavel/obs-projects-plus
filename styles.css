@@ -348,7 +348,28 @@
   .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card {
     min-height: 2.75rem;
   }
-  
+
+  /* v3.0.10: Active/tap state for touch (hover doesn't work on touch) */
+  .obs-projects-plus .projects--gallery--card:active,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card:active {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-modifier-hover);
+    transition: background-color 80ms ease;
+  }
+
+  .obs-projects-plus .projects--board--card:active,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--card:active {
+    background: var(--background-primary-alt);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  /* v3.0.10: Gallery card media — larger tap target on touch */
+  .obs-projects-plus .projects--gallery--card__media,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card__media {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* Touch targets - SCOPED to plugin buttons only */
   .obs-projects-plus button,
   .obs-projects-plus .clickable-icon,

@@ -16,8 +16,9 @@
   import type { DataField, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { DataFieldType, isString } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import { isTouchDevice } from "src/lib/stores/ui";
   import { onMount, onDestroy } from "svelte";
-  import { Notice } from "obsidian";
+  import { Menu, Notice } from "obsidian";
   
   /** Svelte action for programmatic focus (a11y-friendly alternative to autofocus) */
   function focusOnMount(node: HTMLElement) {
@@ -394,10 +395,36 @@
           <button 
             class="note-title-link"
             on:click={(event) => {
-              const openMode = event.shiftKey ? 'window' : (event.ctrlKey || event.metaKey) ? 'tab' : false;
-              onOpenNote?.(openMode);
+              if ($isTouchDevice) {
+                // v3.0.10: On touch devices, show a menu with open options
+                const menu = new Menu();
+                menu.addItem((item) => {
+                  item
+                    .setTitle($i18n.t('common.open-note'))
+                    .setIcon('file-text')
+                    .onClick(() => onOpenNote?.(false));
+                });
+                menu.addItem((item) => {
+                  item
+                    .setTitle($i18n.t('common.open-in-tab'))
+                    .setIcon('file-plus')
+                    .onClick(() => onOpenNote?.('tab'));
+                });
+                menu.addItem((item) => {
+                  item
+                    .setTitle($i18n.t('common.open-in-window'))
+                    .setIcon('maximize')
+                    .onClick(() => onOpenNote?.('window'));
+                });
+                menu.showAtMouseEvent(event);
+              } else {
+                const openMode = event.shiftKey ? 'window' : (event.ctrlKey || event.metaKey) ? 'tab' : false;
+                onOpenNote?.(openMode);
+              }
             }}
-            title={$i18n.t('common.open-note') + ' (Ctrl+Click: new tab, Shift+Click: new window)'}
+            title={$isTouchDevice 
+              ? $i18n.t('common.open-note') 
+              : $i18n.t('common.open-note') + ' (Ctrl+Click: new tab, Shift+Click: new window)'}
             disabled={!onOpenNote}
           >
             <Icon name="file-text" size="sm" />

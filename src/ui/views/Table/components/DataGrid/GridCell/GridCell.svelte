@@ -145,6 +145,9 @@
     on:mouseenter={() => (hover = true)}
     on:mouseleave={() => (hover = false)}
     on:mousedown
+    on:touchstart
+    on:touchmove
+    on:touchend
   >
     {#if $$slots.hover && hover}
       <slot name="hover" />
