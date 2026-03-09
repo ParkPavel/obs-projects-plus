@@ -1,11 +1,11 @@
 # 🚀 Release Information
 
-## Current Release: v3.0.9
+## Current Release: v3.1.0
 
-**Release Date**: February 25, 2026  
+**Release Date**: March 8, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Code quality — unified filters, instant mode, mobile CSS, guidelines
+**Type**: Deep mobile adaptation — DnD handle engine, full-screen modal, unified grip design
 
 ## 📦 Download Options
 
@@ -44,11 +44,217 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Optimization + Tags + Date Fields** | v3.0.7 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Board UX: persist, zoom, collapse** | v3.0.8 | Released | [CHANGELOG](CHANGELOG.md) |
-| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | In Progress | [Architecture](docs/architecture-drag-drop.md) |
+| ✅ | **Unified Filters + Instant Mode** | v3.0.9 | Released | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Mobile Feature Parity** | v3.0.10 | Released | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Deep Mobile Adaptation** | v3.1.0 | Released | [CHANGELOG](CHANGELOG.md) |
+| 🥇 | **Drag & Drop 2.0** | v3.2.0 | In Progress | [Architecture](docs/architecture-drag-drop.md) |
 | 🥈 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
 
 ## 📋 Release Notes
+
+---
+
+### 📱 v3.1.0 (March 8, 2026) — Deep Mobile Adaptation, DnD Handle Engine & Unified Grip Design
+
+> **Comprehensive mobile adaptation: DnD handle engine with dragHandleZone, full-screen modal, unified grip design, scroll containment, gesture coordination**
+
+#### 🎯 DnD Handle Engine (replaces dragDisabled: isMobile)
+
+The initial v3.1.0 approach disabled DnD entirely on mobile via `dragDisabled: isMobile`. This was rejected — instead, a proper **drag handle engine** was implemented:
+
+| Component | Before | After |
+|-----------|--------|-------|
+| AgendaSidebar (lists) | `dndzone` + `dragDisabled: isMobile` | `dragHandleZone` + `dragHandle` on grip element |
+| Board (columns) | `dndzone` without handle | `dragHandleZone` + `dragHandle` on grip |
+| Board (cards) | `dndzone` without handle | `dragHandleZone` + `dragHandle` on grip |
+
+**Principle**: `dragHandleZone` is a built-in API of `svelte-dnd-action`, exported from `src/wrappers/withDragHandles.js`. DnD is initiated **only** through the grip element with `use:dragHandle`, not from any point in the container. This fully resolves the touch-scroll vs drag conflict on mobile.
+
+#### ⚙️ TouchDndCoordinator — Gesture Coordination
+
+New module `TouchDndCoordinator.ts` (~210 lines):
+- `createLongPressHandler()` — long-press guard with movement cancellation (10px threshold)
+- `hapticFeedback()` — tactile feedback via `navigator.vibrate()`
+- `applyDragFeedback(el)` — visual feedback during DnD: maxHeight 3rem, opacity 0.9, shadow
+- `isDragHandleTarget()` — determines if touch started on a grip element
+- `DRAG_HANDLE_SELECTOR` — CSS selector for grip elements
+
+#### 🔲 Unified Grip Design
+
+All three drag grip elements follow a consistent design pattern:
+
+| Property | Agenda List | Board Column | Board Card |
+|----------|-------------|--------------|------------|
+| Type | `<span use:dragHandle>` | `<span use:dragHandle>` | `<span use:dragHandle>` |
+| Size | 1rem × stretch | 1rem × 1.25rem | 0.5rem × 1rem |
+| Position | inline (flow) | absolute, top-left | absolute, left-center |
+| Desktop | `opacity: 0` → hover `0.45` | `opacity: 0` → hover `0.45` | `opacity: 0` → hover `0.45` |
+| Touch | `opacity: 0.35` always | `opacity: 0.3` always | `opacity: 0.25` always |
+| Hover bg | `var(--background-modifier-hover)` | same | same |
+| Icon | `grip-vertical` xs | `grip-vertical` xs | `grip-vertical` xs |
+
+#### 📱 Full-Screen Modal (AgendaListEditor)
+
+AgendaListEditor modal on mobile (`max-width: 37.5rem`) is now a **full-screen takeover** instead of bottom-sheet:
+- `.list-editor-overlay`: `align-items: stretch` — modal fills entire screen
+- `.list-editor-modal`: `height: 100%; max-height: none; border-radius: 0`
+- Footer: `padding-bottom: calc(3.5rem + env(safe-area-inset-bottom))` — 3.5rem clears Obsidian toolbar
+- Scroll: `touch-action: auto` on overlay, `overscroll-behavior: contain` on modal
+
+#### 🏷️ Mobile Filter Row Wrapping
+
+Filters inside the modal editor now wrap correctly on narrow screens:
+- `.filter-row`: `flex-wrap: wrap` on touch devices
+- `.chip-wrapper`: `flex-shrink: 1; min-width: 0` — chips can shrink
+- `.chip-label`: `max-width: 4.5rem`
+- `.row-prefix`: narrowed from 32px to 24px
+- `.fg-actions`: `padding-left: 0; flex-wrap: wrap`
+
+#### 🔒 Scroll Isolation (overscroll-behavior: contain)
+
+Root cause of mobile issues — **scroll chaining**: when a nested scrollable container reaches its edge, the browser passes remaining scroll momentum to the parent container all the way up to Obsidian, triggering unintended gestures (pull-to-refresh, sidebar swipe).
+
+Applied `overscroll-behavior: contain` to 10+ scrollable containers: App root, AgendaSidebar (5 selectors), InfiniteHorizontalCalendar, Board, SettingsMenuPopover, AgendaIconPicker, AgendaListEditor.
+
+#### 🔄 Mobile DnD Replacement
+
+DnD (`svelte-dnd-action`) uses `touchstart`/`touchmove` which cannot be distinguished from scroll on touchscreens. Solution — **drag handle engine**:
+
+| Before | After |
+|--------|-------|
+| DnD on all devices, scroll conflict | DnD only via grip element (`dragHandleZone` + `dragHandle`) |
+| Context menu as replacement | Context menu preserved as alternative |
+| Free scroll only with DnD disabled | Scroll always works, DnD — only from grip |
+
+#### 📐 Timebar Alignment Fix
+
+Fixed strip segment alignment in `HeaderStripsSection`:
+- **Before**: `margin-left`/`margin-right` → flex margins shrink available space outside the item
+- **After**: `padding-left`/`padding-right` → padding stays inside `box-sizing: border-box`
+- Each strip segment now shares exact width with the Day cell below
+
+#### 🏷️ EditNote Label Clipping Fix
+
+- Mobile `.group-content`: `overflow-x: visible; overflow-y: hidden` (preserves collapse animation)
+- Desktop `.setting-item-info` max-width: 8rem → 10rem
+
+#### 👆 ViewSwitcher Edge-Aware Gestures
+
+- `touch-action: pan-x` + `overscroll-behavior-x: contain` on `.view-switcher`
+- `stopPropagation()` skipped at first/last view boundary — Obsidian sidebar gesture works at nav edges
+
+#### 🍎 iOS Safe Area
+
+ViewToolbar floating toggle: `top: max(8px, env(safe-area-inset-top, 8px))` for notch/Dynamic Island.
+
+#### Mobile Bottom-Sheet → Full-Screen Takeover
+
+AgendaListEditor modal on mobile (`max-width: 37.5rem`) now displays as a **full-screen modal** with padding-bottom for the Obsidian navbar.
+
+#### 🔄 Calendar Cell Inner Scroll (Shift + Wheel)
+
+In headers (list) mode, day cells support **inner content scrolling** when Shift is held:
+
+| Behavior | Description |
+|----------|-------------|
+| **Shift + wheel** | Scrolls the event list inside the cell |
+| **Wheel without Shift** | Date navigation (default behavior) |
+| **Smart passthrough** | At scroll boundaries (top/bottom), event propagates for calendar navigation |
+| **No overflow** | If all events fit — Shift+wheel navigates as usual |
+
+- All `cellRecords` rendered in `.event-scroll-area` (no MAX_VISIBLE_EVENTS limit)
+- `overflow-y: hidden` + programmatic scrolling via `scrollTop`
+- Compact "N more" button with gradient fade overlay
+
+#### 📐 Full Height Week/Day in Headers Mode
+
+Week and day view cells now use the **full available viewport height**:
+
+| Element | Before | After |
+|---------|--------|-------|
+| `.infinite-horizontal-calendar` | `height: fit-content` | `height: 100%` |
+| `.period-container` | `height: fit-content` | `height: auto` |
+| `.period-content` | `height: fit-content` | flex-auto |
+| `<Week>` | `useFixedHeight={true}` | `useFixedHeight={false}` |
+
+#### ⚡ Instant Mode View Switching
+
+Week and day view switching in "instant" mode is now **fully animation-free**:
+
+**Root cause**: `smoothScrollTo()` was called with a hardcoded `duration: 400`, bypassing `getAnimationDuration()` which returns 0 in instant mode. Removed the explicit argument — function now consults user's animation preference.
+
+| Layer | Before | After |
+|-------|--------|-------|
+| JS scroll | 400ms always | 0ms in instant |
+| CSS view-layer | `transition: opacity 200ms, transform 200ms` | `transition: none` |
+| CSS fadeIn/slideIn | `animation: 200–300ms` | `animation: none` |
+| setTimeout × 8 | 50–300ms fixed | 0ms in instant |
+| Snap delay + reset | 120ms + 300ms | 0ms in instant |
+
+#### 🛡️ Data Integrity Fixes
+
+| Bug | Problem | Fix |
+|-----|---------|-----|
+| BUG-1 | DnD doubled shift when endDate ≠ startDate | Removed endDate mutation in `handleDrop` |
+| BUG-7 | Duplicate time injection during DnD | Guard `if (slotHour !== undefined)` |
+| BUG-2 | Field clearing set `undefined` instead of `null` | `null` for proper deletion |
+
+#### 🎨 Calendar Visual Fixes
+
+| Bug | Problem | Fix |
+|-----|---------|-----|
+| BUG-3 | Mini-events on mobile didn't fit | Compact sizing with `min-height: 0.875rem` |
+| BUG-4 | Overflow clip hid content | `clip` → `hidden` in EventList and AgendaListEditor |
+| BUG-5 | "Today" highlight with timezone error | Replaced with TZ-safe `startOfDay()` |
+| BUG-6 | Resize jitter + grid z-index | RAF-throttle on mousemove, z-index 6→7 |
+
+#### Metrics
+- **Files changed**: 22 (+560, −48 lines)
+- **Tests**: 344/344 PASS (19 suites)
+- **Build**: OK (main.js 1.7MB, main.css 4.2KB)
+
+---
+
+### 📱 v3.0.10 (February 25, 2026) — Mobile Feature Parity
+
+> **Long-press navigation, mobile note opening, pinch-to-zoom, responsive gallery, touch feedback**
+
+#### 👆 Long-Press Navigation (All Views)
+
+On touch devices, long-press (500ms) on note links/cards shows Obsidian `Menu` with "Open note", "Open in new tab", "Open in new window" — supported in Board, Table, Gallery, InternalLink.
+
+#### 📝 EditNote Mobile Open Mode
+
+- **Desktop**: Ctrl+Click → tab, Shift+Click → window (unchanged)
+- **Mobile**: single tap on button → dropdown menu with all 3 modes
+
+#### 🔍 Board: Pinch-to-Zoom
+
+Two-finger pinch gesture for board zoom (25%–200%) with Safari `GestureEvent` support.
+
+#### 🖼️ Gallery: Responsive Grid
+
+Card width capped at 200px on mobile. Touch feedback via `:active` states on `@media (pointer: coarse)`.
+
+#### Metrics
+- **Tests**: 344/344 PASS (19 suites)
+- **Build**: OK (main.js 1.67MB, main.css 4.2KB)
+
+---
+
+### ⚡ v3.0.9 (February 25, 2026) — Unified Filters, Instant Mode, Mobile CSS
+
+> **Filter code deduplication, instant transition fix, CSS breakpoint normalization, guidelines compliance**
+
+- **Unified filter extraction** — shared `getFilterValuesFromConditions()` replaces 4 duplicate implementations
+- **Instant transitions** — `animationBehavior: "instant"` now fully suppresses Calendar period/unit animations and NavigationController scroll
+- **CSS breakpoints** — all `@media` breakpoints standardized to rem (`48rem`, `37.5rem`, `30rem`)
+- **Console logging** — 33 direct `console.debug/warn/error` calls replaced by centralized `calendarLogger`
+
+#### Metrics
+- **Tests**: 344/344 PASS (19 suites)
+- **Build**: OK (main.js 1.67MB, main.css 4.2KB)
 
 ---
 

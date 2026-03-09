@@ -1,11 +1,11 @@
 ﻿# 🚀 Информация о релизах
 
-## Текущий релиз: v3.0.9
+## Текущий релиз: v3.1.0
 
-**Дата релиза**: 25 февраля 2026  
+**Дата релиза**: 8 марта 2026  
 **Статус**: 🟢 Стабильный  
 **Совместимость**: Obsidian 1.5.7+
-**Тип**: Качество кода — унификация фильтров, instant mode, мобильный CSS, guidelines
+**Тип**: Глубокая мобильная адаптация — DnD handle engine, полноэкранный модал, unified grip design
 
 ## 📦 Варианты загрузки
 
@@ -32,11 +32,261 @@ ParkPavel/obs-projects-plus
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Выпущено | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Оптимизация + Теги + Поля дат** | v3.0.7 | Выпущено | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Board UX: persist, zoom, collapse** | v3.0.8 | Выпущено | [CHANGELOG](CHANGELOG.md) |
-| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | В разработке | [Архитектура](docs/architecture-drag-drop.md) |
+| ✅ | **Унификация фильтров + Instant mode** | v3.0.9 | Выпущено | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Mobile Feature Parity** | v3.0.10 | Выпущено | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Deep Mobile Adaptation** | v3.1.0 | Выпущено | [CHANGELOG](CHANGELOG.md) |
+| 🥇 | **Drag & Drop 2.0** | v3.2.0 | В разработке | [Архитектура](docs/architecture-drag-drop.md) |
 | 🥈 | **Database View** | v3.3.0 | Планируется | [Архитектура](docs/architecture-database-view.md) |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Планируется | — |
 
 ## 📋 Заметки о релизах
+
+---
+
+### 📱 v3.1.0 (8 марта 2026) — Deep Mobile Adaptation, DnD Handle Engine & Unified Grip Design
+
+> **Глубокая мобильная адаптация: DnD handle engine с dragHandleZone, полноэкранный модал, unified grip design, scroll containment, gesture coordination**
+
+#### 🎯 DnD Handle Engine (замена dragDisabled: isMobile)
+
+Первоначальная версия v3.1.0 отключала DnD на мобильных через `dragDisabled: isMobile`. Это было отвергнуто — вместо этого реализован полноценный **drag handle engine**:
+
+| Компонент | Было | Стало |
+|-----------|------|-------|
+| AgendaSidebar (списки) | `dndzone` + `dragDisabled: isMobile` | `dragHandleZone` + `dragHandle` на grip-элементе |
+| Board (колонки) | `dndzone` без handle | `dragHandleZone` + `dragHandle` на grip |
+| Board (карточки) | `dndzone` без handle | `dragHandleZone` + `dragHandle` на grip |
+
+**Принцип**: `dragHandleZone` — встроенный API `svelte-dnd-action`, экспортируемый из `src/wrappers/withDragHandles.js`. DnD инициируется **только** через grip-элемент с `use:dragHandle`, а не на любой точке контейнера. Это полностью разрешает конфликт touch-scroll vs drag на мобильных.
+
+#### ⚙️ TouchDndCoordinator — координация жестов
+
+Новый модуль `TouchDndCoordinator.ts` (~210 строк):
+- `createLongPressHandler()` — long-press guard с отменой по движению (10px threshold)
+- `hapticFeedback()` — тактильная обратная связь через `navigator.vibrate()`
+- `applyDragFeedback(el)` — визуальная обратная связь при DnD: maxHeight 3rem, opacity 0.9, тень
+- `isDragHandleTarget()` — определение, начался ли touch на grip-элементе
+- `DRAG_HANDLE_SELECTOR` — CSS-селектор для grip-элементов
+
+#### 🔲 Unified Grip Design — единый дизайн drag-индикаторов
+
+Все три drag-grip элемента следуют единому паттерну:
+
+| Свойство | Agenda List | Board Column | Board Card |
+|----------|-------------|--------------|------------|
+| Тип | `<span use:dragHandle>` | `<span use:dragHandle>` | `<span use:dragHandle>` |
+| Размер | 1rem × stretch | 1rem × 1.25rem | 0.5rem × 1rem |
+| Позиция | inline (flow) | absolute, top-left | absolute, left-center |
+| Desktop | `opacity: 0` → hover `0.45` | `opacity: 0` → hover `0.45` | `opacity: 0` → hover `0.45` |
+| Touch | `opacity: 0.35` always | `opacity: 0.3` always | `opacity: 0.25` always |
+| Hover bg | `var(--background-modifier-hover)` | то же | то же |
+| Иконка | `grip-vertical` xs | `grip-vertical` xs | `grip-vertical` xs |
+
+#### 📱 Полноэкранный модал редактора списка
+
+Модальное окно `AgendaListEditor` на мобильных (`max-width: 37.5rem`) — **full-screen takeover** вместо bottom-sheet:
+- `.list-editor-overlay`: `align-items: stretch` — модалка на весь экран
+- `.list-editor-modal`: `height: 100%; max-height: none; border-radius: 0`
+- Footer: `padding-bottom: calc(3.5rem + env(safe-area-inset-bottom))` — 3.5rem поднимает кнопки над навбаром Obsidian
+- Scroll: `touch-action: auto` на overlay, `overscroll-behavior: contain` на modal
+
+#### 🏷️ Mobile Filter Row Wrapping
+
+Фильтры внутри модального редактора теперь корректно переносятся на узких экранах:
+- `.filter-row`: `flex-wrap: wrap` на тач-устройствах
+- `.chip-wrapper`: `flex-shrink: 1; min-width: 0` — чипы сжимаются
+- `.chip-label`: `max-width: 4.5rem`
+- `.row-prefix`: ужат с 32px до 24px
+- `.fg-actions`: `padding-left: 0; flex-wrap: wrap`
+
+#### 🔒 Изоляция скролла (overscroll-behavior: contain)
+
+Корневая проблема мобильной версии — **scroll chaining**: когда вложенный скроллируемый контейнер достигает края, браузер передаёт скролл-импульс родительскому контейнеру вплоть до Obsidian, вызывая нежелательные жесты (pull-to-refresh, sidebar swipe).
+
+| Компонент | Контейнер | Действие |
+|-----------|-----------|----------|
+| App.svelte | `.projects-main` | Root containment |
+| AgendaSidebar | `.content`, `.events`, `.list-editor-overlay`, `.list-editor-modal` | 5 контейнеров |
+| InfiniteHorizontalCalendar | `.wrapper` | Горизонтальный скролл |
+| Board | `.container` | Канбан-скролл |
+| SettingsMenuPopover | `.tab-content` | Модальный скролл |
+| AgendaIconPicker | `.modal-content` | Пикер иконок |
+| AgendaListEditor | `.editor-content` | Редактор списков |
+
+#### 🔄 Замена DnD на мобильных
+
+DnD (`svelte-dnd-action`) использует `touchstart`/`touchmove`, что невозможно отличить от скролла на тачскринах. Решение — **drag handle engine**:
+
+| Было | Стало |
+|------|-------|
+| DnD на всех устройствах, конфликт со скроллом | DnD только через grip-элемент (`dragHandleZone` + `dragHandle`) |
+| Контекстное меню как замена | Контекстное меню сохранено как альтернатива |
+| Свободный скролл только при отключённом DnD | Скролл работает всегда, DnD — только с grip |
+
+#### 📐 Выравнивание таймбаров
+
+Исправлено выравнивание strip-сегментов в `HeaderStripsSection`:
+- **Было**: `margin-left`/`margin-right` → flex margins уменьшают доступное пространство элемента
+- **Стало**: `padding-left`/`padding-right` → padding остаётся внутри `box-sizing: border-box`
+- Каждый strip-сегмент теперь имеет ту же ширину, что и Day-ячейка
+
+#### 🏷️ Исправление лейблов EditNote
+
+| Проблема | Решение |
+|----------|---------|
+| Лейблы обрезаются слева на мобильных | `overflow-x: visible; overflow-y: hidden` на `.group-content` |
+| Короткий `max-width` на десктопе | Увеличен с 8rem до 10rem |
+| Отступы недостаточны | Padding увеличен до `0.5rem 0.75rem` |
+
+#### 👆 ViewSwitcher: Edge-aware жесты
+
+- `touch-action: pan-x` — браузер не конкурирует с кастомным свайпом
+- `overscroll-behavior-x: contain` — горизонтальный скролл не каскадирует
+- **Edge detection**: `stopPropagation()` пропускается на первом/последнем виде, позволяя Obsidian sidebar открываться жестом на границе навигации
+
+#### 🍎 iOS Safe Area
+
+ViewToolbar floating toggle теперь использует `max(8px, env(safe-area-inset-top, 8px))` для учёта notch/Dynamic Island.
+
+#### Mobile Bottom-Sheet → Full-Screen Takeover
+
+Модальное окно AgendaListEditor на мобильных (`max-width: 37.5rem`) отображается как **полноэкранный модал** с padding-bottom для навбара Obsidian.
+
+#### 🔄 Внутренний скролл ячеек календаря (Shift + Wheel)
+
+В режиме заголовков (list) ячейки дня поддерживают **внутренний скролл** при зажатом Shift:
+
+| Поведение | Описание |
+|-----------|----------|
+| **Shift + колесо** | Скролл содержимого ячейки (список событий) |
+| **Колесо без Shift** | Навигация по датам (стандартное поведение) |
+| **Умный passthrough** | На границах скролла (верх/низ) событие пробрасывается для навигации |
+| **Без переполнения** | Если все события помещаются — Shift+wheel навигирует как обычно |
+
+- Все `cellRecords` рендерятся в `.event-scroll-area` (без лимита MAX_VISIBLE_EVENTS)
+- `overflow-y: hidden` + программная прокрутка через `scrollTop`
+- Компактная кнопка «ещё N» с градиентным затуханием
+
+#### 📐 Полная высота Week/Day в режиме заголовков
+
+Ячейки недельного и дневного вида теперь занимают **всю доступную высоту** экрана:
+
+| Элемент | Было | Стало |
+|---------|------|-------|
+| `.infinite-horizontal-calendar` | `height: fit-content` | `height: 100%` |
+| `.period-container` | `height: fit-content` | `height: auto` |
+| `.period-content` | `height: fit-content` | flex-авто |
+| `<Week>` | `useFixedHeight={true}` | `useFixedHeight={false}` |
+
+#### ⚡ Мгновенное переключение видов (Instant Mode)
+
+Для недельного и дневного видов переключение в режиме "мгновенно" теперь **полностью без анимаций**:
+
+**Корневая причина**: `smoothScrollTo()` вызывался с жёстко заданным `duration: 400`, обходя `getAnimationDuration()` (возвращает 0 в instant mode). Убран явный аргумент — функция теперь использует настройку пользователя.
+
+| Слой | Было | Стало |
+|------|------|-------|
+| JS-скролл | 400ms всегда | 0ms в instant |
+| CSS view-layer | `transition: opacity 200ms, transform 200ms` | `transition: none` |
+| CSS fadeIn/slideIn | `animation: 200–300ms` | `animation: none` |
+| setTimeout × 8 | 50–300ms фиксированные | 0ms в instant |
+| Snap delay + reset | 120ms + 300ms | 0ms в instant |
+
+#### 🛡️ Исправления целостности данных
+
+| Баг | Проблема | Решение |
+|-----|----------|---------|
+| BUG-1 | DnD удваивал shift при endDate ≠ startDate | Удалена мутация endDate в `handleDrop` |
+| BUG-7 | Дублирование инъекции времени при DnD | Guard `if (slotHour !== undefined)` |
+| BUG-2 | Очистка поля ставила `undefined` вместо `null` | `null` для корректного удаления |
+
+#### 🎨 Визуальные исправления календаря
+
+| Баг | Проблема | Решение |
+|-----|----------|---------|
+| BUG-3 | Мини-события на мобильных не помещались | Компактный sizing с `min-height: 0.875rem` |
+| BUG-4 | Overflow clip скрывал контент | `clip` → `hidden` в EventList и AgendaListEditor |
+| BUG-5 | Подсветка "сегодня" с ошибкой часового пояса | Замена на TZ-safe `startOfDay()` |
+| BUG-6 | Дёргание resize + z-index гридов | RAF-throttle на mousemove, z-index 6→7 |
+
+#### Метрики
+
+- **Файлов изменено**: 22 (+560, −48 строк)
+- **Тесты**: 344/344 PASS (19 suites)
+- **Build**: OK (main.js 1.7MB, main.css 4.2KB)
+- **svelte-check**: 0 ошибок, 0 предупреждений
+
+---
+
+### 📱 v3.0.10 (25 февраля 2026) — Mobile Feature Parity
+
+> **Long-press навигация, мобильное открытие заметок, pinch-to-zoom, адаптивная галерея, тактильная обратная связь**
+
+#### 👆 Long-press навигация (все представления)
+
+На тачскринах long-press (500ms) на ссылке или карточке заметки вызывает Obsidian `Menu`:
+
+| Пункт | Действие |
+|-------|----------|
+| Открыть заметку | Открывает в текущей вкладке |
+| Открыть в новой вкладке | Новая вкладка Obsidian |
+| Открыть в новом окне | Новое окно Obsidian |
+
+Поддерживается во всех 4 non-Calendar представлениях: Board, Table, Gallery, InternalLink.
+
+#### 📝 EditNote: мобильное открытие
+
+- **Desktop**: Ctrl+Click → вкладка, Shift+Click → окно (без изменений)
+- **Mobile**: одиночный тап на кнопку → dropdown меню со всеми 3 режимами
+- Tooltip адаптируется в зависимости от устройства
+
+#### 🔍 Board: Pinch-to-zoom
+
+Двухпальцевый жест для масштабирования доски (25%–200%):
+- Стандартный `touchstart`/`touchmove`/`touchend` с distance-based scaling
+- Safari `GestureEvent` для нативного pinch
+- Работает параллельно с Ctrl+Scroll на десктопе
+
+#### 🖼️ Галерея: Адаптивная сетка
+
+- Ширина карточек ограничена 200px на мобильных для предотвращения single-column layout
+- `:active` состояния для тактильной обратной связи при касании
+
+#### Метрики
+
+- **Тесты**: 344/344 PASS (19 suites)
+- **Build**: OK (main.js 1.67MB, main.css 4.2KB)
+
+---
+
+### ⚡ v3.0.9 (25 февраля 2026) — Унификация фильтров, Instant Mode, Мобильный CSS
+
+> **Унификация дублированного кода фильтров, исправление instant transitions, нормализация CSS breakpoints, guidelines**
+
+#### 🔧 Унифицированные фильтры
+
+Общий `getFilterValuesFromConditions()` заменяет 4 дублированные реализации в Board, Table, Gallery, Calendar.
+
+#### ⚡ Instant Transitions
+
+`animationBehavior: "instant"` теперь полностью подавляет CSS-анимации:
+- Calendar week/day: `periodSlideIn`, `unitFadeIn`
+- NavigationController: scroll-анимации используют `getAnimationDuration()` вместо hardcoded 400ms
+
+#### 📐 CSS Breakpoints
+
+- Все `@media` breakpoints переведены на rem (`48rem`, `37.5rem`, `30rem`)
+- `.modal select` → `.projects-modal select` — предотвращение style bleeding
+
+#### 📋 Console Logging
+
+33 прямых `console.debug/warn/error` вызовов заменены централизованным `calendarLogger`.
+
+#### Метрики
+
+- **Тесты**: 344/344 PASS (19 suites)
+- **Build**: OK (main.js 1.67MB, main.css 4.2KB)
+- **svelte-check**: 0 ошибок
 
 ---
 

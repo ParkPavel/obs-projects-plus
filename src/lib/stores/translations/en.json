@@ -431,6 +431,8 @@
                         "add-list": "Add list",
                         "edit-list": "Edit list",
                         "delete-list": "Delete list",
+                        "move-up": "Move up",
+                        "move-down": "Move down",
                         "empty-list": "No records match filters",
                         "list-editor": {
                             "title-new": "New List",

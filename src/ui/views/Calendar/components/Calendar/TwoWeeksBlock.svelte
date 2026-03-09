@@ -26,7 +26,6 @@
   export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
   export let isMobile: boolean = false;
   export let dateFieldName: string | undefined;
-  export let endDateFieldName: string | undefined;
   export let timezone: string = "local";
   /** Display mode for events: 'list' (default) or 'bars' (relative time bars) */
   export let displayMode: 'list' | 'bars' = 'list';
@@ -120,7 +119,6 @@
             {onDayTap}
             {isMobile}
             {dateFieldName}
-            endDateFieldName={endDateFieldName}
             {timezone}
             {displayMode}
             startHourConfig={startHour}

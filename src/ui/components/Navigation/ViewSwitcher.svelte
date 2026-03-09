@@ -43,7 +43,14 @@
       // v7.1: Only decide after clear movement - require 3x ratio
       if (deltaX > deltaY * 3 && deltaX > SWIPE_THRESHOLD) {
         isHorizontalSwipe = true;
-        event.stopPropagation(); // Block Obsidian sidebar
+        // v3.1.0: Don't block propagation at list edges so Obsidian sidebar works
+        const currentIndex = views.findIndex(v => v.id === activeViewId);
+        const swipeDirection = (touch.clientX - touchStartX) > 0 ? 'right' : 'left';
+        const atEdge = (swipeDirection === 'right' && currentIndex <= 0) ||
+                       (swipeDirection === 'left' && currentIndex >= views.length - 1);
+        if (!atEdge) {
+          event.stopPropagation(); // Block Obsidian sidebar only when we can navigate
+        }
       } else if (deltaY > deltaX * 2 && deltaY > SWIPE_THRESHOLD) {
         // Clear vertical scroll - don't interfere
         isHorizontalSwipe = false;
@@ -52,7 +59,14 @@
 
     if (isHorizontalSwipe) {
       event.preventDefault(); // Prevent scroll during horizontal swipe
-      event.stopPropagation();
+      // v3.1.0: Only stop propagation when not at edge
+      const currentIndex = views.findIndex(v => v.id === activeViewId);
+      const swipeDirection = (touch.clientX - touchStartX) > 0 ? 'right' : 'left';
+      const atEdge = (swipeDirection === 'right' && currentIndex <= 0) ||
+                     (swipeDirection === 'left' && currentIndex >= views.length - 1);
+      if (!atEdge) {
+        event.stopPropagation();
+      }
     }
   }
 
@@ -204,6 +218,11 @@
     display: flex;
     gap: var(--spacing-sm, 0.5rem);
     overflow-x: auto;
+    /* v3.1.0: Declare touch intent so browser doesn't compete with custom handler */
+    touch-action: pan-x;
+    /* v3.1.0: Prevent scroll chaining to parent (Obsidian workspace) */
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .view-switcher::-webkit-scrollbar {

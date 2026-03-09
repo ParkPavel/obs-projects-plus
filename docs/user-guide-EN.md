@@ -52,6 +52,7 @@ Welcome to Projects Plus! This comprehensive guide will help you get the most ou
 | **Open Note** | Click on event |
 | **Open in New Window** | `Ctrl+Click` (Win/Linux) / `Cmd+Click` (Mac) |
 | **Create Note** | Double-click on empty cell |
+| **Scroll events inside cell** | `Shift` + scroll (in headers mode) |
 
 #### Calendar Zoom Levels
 
@@ -112,20 +113,43 @@ When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
 | **Scroll up/down** | Scroll events list |
 | **Tap outside popup** | Close DayPopup |
 
-#### Board
+#### Board (v3.0.10+)
 
 | Gesture | Action |
 |---------|--------|
-| **Tap on card** | Open note |
-| **Long press** | Context menu |
-| **Swipe on card** | Quick actions |
+| **Tap on card** | Open note edit modal |
+| **Long press (500ms)** | Context menu: open / new tab / new window |
+| **Pinch (two fingers)** | Board zoom (25%–200%) |
+| **Horizontal scroll** | Browse between columns |
 
-#### Gallery
+#### Table (v3.0.10+)
 
 | Gesture | Action |
 |---------|--------|
-| **Tap on card** | Open note |
+| **Tap on row number** | Open note edit modal |
+| **Long press (500ms)** | Navigation context menu |
+
+#### Gallery (v3.0.10+)
+
+| Gesture | Action |
+|---------|--------|
+| **Tap on card** | Open note edit modal |
+| **Long press on cover** | Navigation context menu |
 | **Scroll** | Browse gallery |
+
+#### Agenda — Lists (v3.1.0+)
+
+| Gesture | Action |
+|---------|--------|
+| **Long press on list header** | Context menu with "Move up/down" |
+| **Scroll** | Free scrolling (DnD disabled on mobile) |
+
+#### ViewSwitcher: View Switching (v3.1.0+)
+
+| Gesture | Action |
+|---------|--------|
+| **Swipe left/right** | Switch between project views |
+| **Swipe at boundary** (first/last view) | Opens Obsidian sidebar |
 
 ---
 
@@ -134,9 +158,34 @@ When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
 ### Mobile Interface Features
 
 - **Larger day cells** — 100% taller for easier touch
-- **Disabled drag-n-drop** — prevents accidental dragging
 - **Floating buttons** — semi-transparent, minimalist
 - **Floating "Today" button** — appears when toolbar is hidden
+- **iOS Safe Area** — respects notch/Dynamic Island (v3.1.0+)
+
+### Note Navigation (v3.0.10+)
+
+On mobile devices, long-press (500ms) provides navigation:
+- **Board, Table, Gallery**: long-press → context menu with open options
+- **EditNote**: "Open note" button → dropdown with 3 modes (current tab / new tab / new window)
+
+### Agenda Mobile Adaptation (v3.1.0+)
+
+- **Drag-and-drop disabled** — prevents conflict with scrolling
+- **List reordering** — via context menu "Move up/down"
+- **Modal windows** — rendered as full-width bottom sheets
+- **Scroll isolation** — scroll within modals doesn't chain to Obsidian
+
+### Board: Pinch-to-Zoom (v3.0.10+)
+
+Two-finger pinch gesture for board zoom:
+- Range: 25% — 200%
+- Safari GestureEvent support
+- Works alongside Ctrl+Scroll on desktop
+
+### Gallery: Responsive Grid (v3.0.10+)
+
+- Card width automatically capped at 200px on mobile
+- Touch feedback via `:active` states on tap
 
 ### DayPopup — Day Overview
 

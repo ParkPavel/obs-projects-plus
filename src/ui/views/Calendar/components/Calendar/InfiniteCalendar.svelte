@@ -28,7 +28,6 @@
   export let isActive: boolean = false;
   export let isMobile: boolean = false;
   export let dateFieldName: string | undefined;
-  export let endDateFieldName: string | undefined;
   export let timezone: string = "local";
   /** Display mode for day cells: 'list' (default) or 'bars' (relative time bars) */
   export let displayMode: 'list' | 'bars' = 'list';
@@ -526,7 +525,6 @@
           {onDayTap}
           {isMobile}
           {dateFieldName}
-          endDateFieldName={endDateFieldName}
           {timezone}
           {displayMode}
           {startHour}
@@ -546,7 +544,6 @@
           {onDayTap}
           {isMobile}
           {dateFieldName}
-          endDateFieldName={endDateFieldName}
           {timezone}
           {displayMode}
           {startHour}

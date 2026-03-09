@@ -1,6 +1,6 @@
 <script lang="ts">
   // import { Checkbox, InternalLink} from "obsidian-svelte";
-  import { Checkbox, IconButton } from "obsidian-svelte";
+  import { Checkbox, Icon, IconButton } from "obsidian-svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
 
   import {
@@ -21,7 +21,8 @@
   import {
     SHADOW_ITEM_MARKER_PROPERTY_NAME,
     TRIGGERS,
-    dndzone,
+    dragHandleZone,
+    dragHandle,
   } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
   import { getDisplayName } from "./boardHelpers";
@@ -74,7 +75,7 @@
   class="projects--board--card-list"
   on:consider={handleDndConsider}
   on:finalize={handleDndFinalize}
-  use:dndzone={{
+  use:dragHandleZone={{
     type: "card",
     items,
     flipDurationMs,
@@ -98,6 +99,9 @@
       on:click={() => onRecordClick(item)}
       animate:flip={{ duration: flipDurationMs }}
     >
+      <span class="board-card-grip" use:dragHandle aria-label="Drag to reorder">
+        <Icon name="grip-vertical" size="xs" />
+      </span>
       <ColorItem {color}>
         <div slot="header" class="card-header">
           {#if checkField}
@@ -155,11 +159,59 @@
 <style>
   .projects--board--card {
     transition: background 150ms ease, box-shadow 150ms ease;
+    position: relative;
   }
   .projects--board--card:hover,
   .projects--board--card:focus-within {
     background: var(--background-primary-alt);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Card drag grip — left edge tab, inset from card border */
+  .board-card-grip {
+    position: absolute;
+    top: 50%;
+    left: 0.125rem;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.5rem;
+    height: 1rem;
+    border-radius: var(--radius-s);
+    color: var(--text-faint);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+    z-index: 1;
+  }
+
+  .projects--board--card:hover .board-card-grip {
+    opacity: 0.45;
+  }
+
+  .board-card-grip:hover {
+    opacity: 1;
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+  }
+
+  .board-card-grip:active {
+    cursor: grabbing;
+    color: var(--text-normal);
+  }
+
+  /* On touch devices, always show card grip (subtle) */
+  @media (pointer: coarse) {
+    .board-card-grip {
+      opacity: 0.25;
+      width: 0.625rem;
+      height: 1.125rem;
+    }
   }
   div.card-header {
     display: flex;

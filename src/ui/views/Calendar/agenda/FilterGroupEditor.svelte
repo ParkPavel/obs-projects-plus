@@ -328,6 +328,11 @@
       padding: 10px 12px;
     }
     
+    .fg-actions {
+      padding-left: 0;
+      flex-wrap: wrap;
+    }
+    
     .fg-add {
       min-height: 36px;
       font-size: 13px;

@@ -286,52 +286,57 @@
   /* Segment positioning styles - contain within cell bounds */
   /* NOTE: is-start = first day of event span (rounded LEFT edge) */
   /* NOTE: is-end = last day of event span (rounded RIGHT edge) */
+  /* v3.1.0: Use PADDING instead of MARGIN for visual inset.
+   * Flex items with flex: 1 1 0 get equal width. Margin shrinks available
+   * space for the item, shifting neighboring flex siblings. Padding stays
+   * inside box-sizing: border-box, keeping each segment the same width as
+   * the Day cell below it. */
   .strip-segment.is-start {
     border-left: var(--ppp-border-width-thick) solid var(--strip-color);
     border-top-left-radius: var(--ppp-radius-sm);
     border-bottom-left-radius: var(--ppp-radius-sm);
-    margin-left: var(--ppp-spacing-xs);
+    padding-left: var(--ppp-spacing-xs);
     /* Reset any right side styling */
     border-right: none;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
-    margin-right: 0;
+    padding-right: 0;
   }
 
   .strip-segment.is-end {
     border-right: var(--ppp-border-width-thick) solid var(--strip-color);
     border-top-right-radius: var(--ppp-radius-sm);
     border-bottom-right-radius: var(--ppp-radius-sm);
-    margin-right: var(--ppp-spacing-xs);
+    padding-right: var(--ppp-spacing-xs);
     /* Reset any left side styling */
     border-left: none;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    margin-left: 0;
+    padding-left: 0;
   }
 
   /* Combined is-start AND is-end (single day multi-day event - shouldn't happen often) */
   .strip-segment.is-start.is-end {
     border: var(--ppp-border-width-thick) solid var(--strip-color);
     border-radius: var(--ppp-radius-sm);
-    margin-left: var(--ppp-spacing-xs);
-    margin-right: var(--ppp-spacing-xs);
+    padding-left: var(--ppp-spacing-xs);
+    padding-right: var(--ppp-spacing-xs);
   }
 
   .strip-segment.is-only {
     border: var(--ppp-border-width-thick) solid var(--strip-color);
     border-radius: var(--ppp-radius-sm);
-    margin-left: var(--ppp-spacing-xs);
-    margin-right: var(--ppp-spacing-xs);
+    padding-left: var(--ppp-spacing-xs);
+    padding-right: var(--ppp-spacing-xs);
   }
 
   .strip-segment.is-mid {
     border-radius: 0;
     border-left: none;
     border-right: none;
-    /* Mid segments seamlessly connect - no margins */
-    margin-left: 0;
-    margin-right: 0;
+    /* Mid segments seamlessly connect - no extra padding */
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .strip-dot {
@@ -431,8 +436,8 @@
     .strip-segment.is-start,
     .strip-segment.is-end,
     .strip-segment.is-only {
-      margin-left: var(--ppp-spacing-xs);
-      margin-right: var(--ppp-spacing-xs);
+      padding-left: var(--ppp-spacing-xs);
+      padding-right: var(--ppp-spacing-xs);
     }
     
     .strip-dot {

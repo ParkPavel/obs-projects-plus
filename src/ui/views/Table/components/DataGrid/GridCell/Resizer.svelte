@@ -6,6 +6,7 @@
 
   let start: number | null;
   let initial: number | null;
+  let rafId: number | null = null;
 
   function startResize(event: MouseEvent) {
     // Unless we stop propagation, resizing will also drag the column.
@@ -16,6 +17,10 @@
   }
 
   function stopResize(event: MouseEvent) {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
     if (start && initial) {
       const delta = event.pageX - start;
       const newWidth = initial + delta;
@@ -31,12 +36,18 @@
 
   function resize(event: MouseEvent) {
     if (start && initial) {
-      const delta = event.pageX - start;
-      const newWidth = initial + delta;
-
-      if (newWidth >= min) {
-        onChange(newWidth);
-      }
+      const pageX = event.pageX;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (start !== null && initial !== null) {
+          const delta = pageX - start;
+          const newWidth = initial + delta;
+          if (newWidth >= min) {
+            onChange(newWidth);
+          }
+        }
+      });
     }
   }
 </script>

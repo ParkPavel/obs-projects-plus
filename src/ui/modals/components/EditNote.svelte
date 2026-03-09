@@ -769,7 +769,13 @@
   .group-content :global(.setting-item-info) {
     flex-shrink: 0;
     min-width: 6rem;
-    max-width: 8rem;
+    max-width: 10rem;
+    overflow: visible;
+  }
+  
+  .group-content :global(.setting-item-name) {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
   
   .group-content :global(.setting-item-control) {
@@ -859,10 +865,14 @@
     }
     
     .group-content {
-      padding: 0.5rem;
+      padding: 0.5rem 0.75rem;
       gap: 0.5rem;
       height: auto;
       min-height: 0;
+      /* v3.1.0: Use overflow-y for collapse animation but allow horizontal content
+       * This prevents left-side label clipping on narrow mobile screens */
+      overflow-x: visible;
+      overflow-y: hidden;
     }
     
     /* Mobile: stack label and control vertically with consistent alignment */
@@ -879,11 +889,14 @@
       width: 100%;
       padding: 0;
       margin-bottom: 0.25rem;
+      overflow: visible;
     }
     
     .group-content :global(.setting-item-name) {
       font-weight: 600;
       font-size: 0.875rem;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     
     .group-content :global(.setting-item-control) {
@@ -895,6 +908,12 @@
       margin-top: 0.75rem;
       padding: 0.5rem 0.75rem;
       font-size: 0.8125rem;
+    }
+    
+    /* v3.1.0: Prevent modal content scroll from chaining to parent (Obsidian body scroll) */
+    .note-title-section {
+      margin-bottom: 0.75rem;
+      padding: 0.625rem 0.75rem;
     }
   }
 </style>

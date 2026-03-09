@@ -43,7 +43,6 @@
   export let now: dayjs.Dayjs | null = null;
   export let timeFormat: string = "24h";
   export let dateFieldName: string | undefined;
-  export let endDateFieldName: string | undefined;
   export let timezone: string = "local";
   export let displayMode: 'headers' | 'bars' = 'headers';
   export let startHour: number = 6;
@@ -165,10 +164,11 @@
       
       // Execute navigation
       initializePeriodsAroundDate(dateToUse);
+      const navDelay = isInstantMode ? 0 : 100;
       setTimeout(() => {
         scrollToDate(dateToUse);
         isInitializing = false;
-      }, 100);
+      }, navDelay);
     }
     
     // Always update tracking state at the end
@@ -497,7 +497,7 @@
       if (targetEl && container) {
         const scrollLeft = targetEl.offsetLeft - (container.clientWidth - targetEl.offsetWidth) / 2;
         // Use custom smooth scroll with easing instead of native behavior:'smooth'
-        smoothScrollTo(container, Math.max(0, scrollLeft), 400);
+        smoothScrollTo(container, Math.max(0, scrollLeft));
       }
     });
   }
@@ -693,7 +693,7 @@
     
     snapTimer = setTimeout(() => {
       snapToPeriodEdge();
-    }, SNAP_DELAY);
+    }, isInstantMode ? 0 : SNAP_DELAY);
   }
   
   function snapToPeriodEdge() {
@@ -744,7 +744,7 @@
       // Reset snapping flag after animation
       setTimeout(() => {
         isSnapping = false;
-      }, 300);
+      }, isInstantMode ? 0 : 300);
     }
   }
 
@@ -765,7 +765,7 @@
         if (useTimelineView && startHour > 0) {
           scrollToHour(startHour);
         }
-      }, 150);
+      }, isInstantMode ? 0 : 150);
     }
     
     // Setup wheel listener for mouse/trackpad horizontal scroll
@@ -780,13 +780,13 @@
     
     if (onScrollToCurrent) {
       onScrollToCurrent(() => {
-        setTimeout(() => scrollToCurrent(), 50);
+        setTimeout(() => scrollToCurrent(), isInstantMode ? 0 : 50);
       });
     }
     
     if (onScrollToDate) {
       onScrollToDate((date: dayjs.Dayjs) => {
-        setTimeout(() => scrollToDate(date), 50);
+        setTimeout(() => scrollToDate(date), isInstantMode ? 0 : 50);
       });
     }
   });
@@ -910,7 +910,7 @@
                 {onRecordClick}
               />
             {/if}
-            <Week heightRem={8} useFixedHeight={true}>
+            <Week heightRem={8} useFixedHeight={false}>
               {#each week as date}
                 <Day
                   width={100 / week.length}
@@ -925,7 +925,6 @@
                   {onDayTap}
                   {isMobile}
                   {dateFieldName}
-                  endDateFieldName={endDateFieldName}
                   {timezone}
                   startHourConfig={startHour}
                   endHourConfig={endHour}
@@ -956,6 +955,9 @@
     /* v6.2: Single vertical scroll container for entire view */
     overflow-y: auto;
     overflow-x: hidden;
+    /* v3.1.0: Prevent scroll chaining to Obsidian workspace on mobile */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   
   .infinite-horizontal-calendar-wrapper.with-timeline {
@@ -1024,7 +1026,7 @@
     overflow-x: auto;
     overflow-y: visible;
     flex: 1 1 auto;
-    height: fit-content;
+    height: 100%;
     min-height: 100%;
     scrollbar-width: thin;
     /* v6.5: Remove scroll-behavior: smooth to prevent "bounce back" on fast scroll */
@@ -1040,8 +1042,8 @@
     flex-direction: column;
     flex-shrink: 0;
     min-width: 100%;
-    /* v6.2: Full height content */
-    height: fit-content;
+    /* v3.1.0: min-height fills viewport, height auto allows timeline to grow beyond */
+    height: auto;
     min-height: 100%;
     border-right: 1px solid var(--background-modifier-border);
     animation: periodSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1081,8 +1083,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    /* v6.2: Allow content to expand */
-    height: fit-content;
+    /* v3.1.0: Fill available height so weeks stretch to viewport */
   }
   
   .period-content.two-weeks {

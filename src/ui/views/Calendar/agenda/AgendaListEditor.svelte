@@ -387,6 +387,9 @@
     display: flex;
     flex-direction: column;
     gap: var(--ppp-spacing-lg, 1.25rem);
+    /* v3.1.0: Prevent scroll chaining to parent/Obsidian */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   
   /* === Field Groups === */
@@ -399,8 +402,10 @@
   .field-group--filters {
     padding-top: var(--ppp-spacing-md, 1rem);
     border-top: 1px solid var(--background-modifier-border);
-    /* Allow fixed-positioned filter dropdowns to escape scroll container */
-    overflow: visible;
+    /* v3.1.0: Changed from overflow:visible to hidden — filter dropdowns
+       use fixed positioning and don't need parent overflow escape.
+       overflow:visible broke scroll containment on mobile. */
+    overflow: hidden;
   }
   
   .field-label-row {
@@ -693,10 +698,11 @@
     cursor: not-allowed;
   }
   
-  /* === Mobile Adaptivity === */
+  /* === Mobile Adaptivity — Full-screen takeover === */
   @media (max-width: 37.5rem) {
     .agenda-list-editor {
-      max-height: 100vh;
+      max-height: none;
+      height: 100%;
       border-radius: 0;
     }
     
@@ -716,6 +722,9 @@
     .editor-footer {
       flex-direction: column;
       padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
+      /* 3.5rem = Obsidian mobile bottom toolbar (~3rem) + base spacing.
+         env(safe-area-inset-bottom) adds iPhone Home-indicator inset on top. */
+      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
     }
     
     .btn {

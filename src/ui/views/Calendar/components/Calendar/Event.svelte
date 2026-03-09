@@ -84,17 +84,17 @@
     height: 0.875rem;
   }
 
-  /* Touch device: enlarge touch targets to 44px minimum */
+  /* Touch device: slightly enlarge for better tap targets, but keep compact */
   @media (pointer: coarse) {
     .calendar-event {
-      min-height: 2.75rem;
-      padding: 0.5rem 0.625rem;
-      font-size: 0.8125rem;
+      min-height: 1.625rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
     }
 
     .calendar-event :global(input[type="checkbox"]) {
-      width: 1.25rem;
-      height: 1.25rem;
+      width: 1rem;
+      height: 1rem;
     }
   }
 </style>

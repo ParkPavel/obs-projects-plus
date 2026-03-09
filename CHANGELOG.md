@@ -5,6 +5,93 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-03-08
+
+### Added — DnD Handle Engine & Unified Grip Design
+
+#### Drag Handle Engine (replaces dragDisabled: isMobile)
+- **dragHandleZone + dragHandle pattern**: All three DnD zones (Agenda lists, Board columns, Board cards) now use `dragHandleZone` wrapper with `dragHandle` directive on grip elements instead of disabling DnD entirely on mobile
+- **TouchDndCoordinator.ts** (~210 lines): New gesture coordination module with `createLongPressHandler()`, `hapticFeedback()`, `applyDragFeedback()`, `isDragHandleTarget()`, `DRAG_HANDLE_SELECTOR`
+- **AgendaCustomList.svelte**: `<span class="drag-grip" use:dragHandle>` — grip initiates DnD, rest of list header allows scroll
+- **Board.svelte**: `dragHandleZone` on unpinned columns section, `<span class="board-column-grip" use:dragHandle>` per column
+- **CardList.svelte**: `dragHandleZone` on card list, `<span class="board-card-grip" use:dragHandle>` per card
+
+#### Unified Grip Design
+- **Hover-reveal pattern**: All grips use `opacity: 0` → parent hover `opacity: 0.45` → grip hover `opacity: 1` with background feedback
+- **Touch always-visible**: `@media (pointer: coarse)` shows grips at subtle opacity (0.25–0.35)
+- **Consistent sizing**: Agenda 1rem wide, Board column 1rem × 1.25rem, Board card 0.5rem × 1rem — proportional to container size
+
+### Fixed — Deep Mobile Adaptation & Gesture Debugging
+
+#### Full-Screen Modal (AgendaListEditor)
+- **Mobile full-screen takeover**: Modal on mobile (`max-width: 37.5rem`) now uses `height: 100%; max-height: none` instead of bottom-sheet — eliminates all guesswork about toolbar heights and safe areas
+- **Footer above Obsidian navbar**: `padding-bottom: calc(3.5rem + env(safe-area-inset-bottom))` — 3.5rem clears Obsidian mobile toolbar
+- **Overlay touch-action: auto**: Was `none` which blocked ALL child scroll via CSS touch-action intersection
+- **Modal scroll containment**: `overscroll-behavior: contain` on overlay and modal
+
+#### Mobile Filter Row Wrapping
+- **filter-row**: `flex-wrap: wrap` on touch devices — chips wrap instead of overflowing right edge
+- **chip-wrapper**: `flex-shrink: 1; min-width: 0` — allows chips to shrink on narrow screens
+- **chip**: `overflow: hidden; flex-shrink: 1; min-width: 0` — text truncation within chips
+- **chip-label**: `max-width: 4.5rem` (was 5.5rem)
+- **row-prefix**: narrowed from 32px to 24px
+- **fg-actions**: `padding-left: 0; flex-wrap: wrap` — action buttons wrap on mobile
+
+#### Calendar Timebar Alignment
+- **Strip segment alignment fix**: Converted `margin-left`/`margin-right` to `padding-left`/`padding-right` on `.is-start`, `.is-end`, `.is-only` strip segments
+- **Root cause**: Flex margins shrink available space OUTSIDE the flex item, causing neighboring segments to shift relative to Day cells. Padding stays inside `box-sizing: border-box`, keeping each segment equal width to the corresponding day column
+
+#### EditNote Modal Label Clipping
+- **Desktop label width**: Increased `.setting-item-info` `max-width` from `8rem` to `10rem` to accommodate longer field names
+- **Label overflow**: Added `overflow: visible` to `.setting-item-info` and `word-break: break-word` to `.setting-item-name` 
+- **Mobile label fix**: Changed `.group-content` overflow to `overflow-x: visible; overflow-y: hidden` — allows horizontal text rendering while preserving collapse animation
+- **Mobile padding**: Increased `.group-content` padding from `0.5rem` to `0.5rem 0.75rem` for better edge spacing
+
+#### ViewSwitcher Gesture Conflicts
+- **Touch-action CSS**: Added `touch-action: pan-x` to `.view-switcher` so browser doesn't compete with custom swipe handler
+- **Scroll containment**: Added `overscroll-behavior-x: contain` to prevent horizontal overscroll from chaining to Obsidian sidebar
+- **Edge-aware propagation**: `stopPropagation()` is now skipped when user swipes at first/last view boundary, allowing Obsidian sidebar gesture to work at navigation edges
+
+#### Global Scroll Containment (overscroll-behavior: contain)
+- **AgendaSidebar**: `.content` and `.events` containers
+- **InfiniteHorizontalCalendar**: `.infinite-horizontal-calendar-wrapper`
+- **Board**: `.projects--board--container`
+- **App**: `.projects-main` root scroll container
+- **SettingsMenuPopover**: `.tab-content`
+- **AgendaIconPicker**: `.modal-content`
+
+#### iOS Safe Area Support
+- **ViewToolbar floating toggle**: `top` now uses `max(8px, env(safe-area-inset-top, 8px))` to account for iOS notch/Dynamic Island
+
+#### Calendar Cell Inner Scroll (Shift+Wheel)
+- **Day cell overflow scroll**: In headers mode (list), calendar day cells now support inner scrolling when Shift+wheel is used — events beyond the visible area can be scrolled into view
+- **Smart boundary passthrough**: At scroll top/bottom boundaries, wheel events pass through to calendar for date navigation
+- **No-conflict design**: Without Shift, all wheel events pass through for calendar navigation as before
+
+#### Week/Day View Full Height
+- **Viewport-filling cells**: Week and day views in headers mode now use full available viewport height instead of fixed 8rem rows
+- **Flex-based stretch**: Removed `useFixedHeight` and `height: fit-content` constraints on period-container and period-content, allowing flex children to expand
+
+#### Instant Mode View Switching
+- **Root cause fix — smoothScrollTo hardcoded 400ms**: The main scroll function `smoothScrollTo()` was called with an explicit `duration: 400` parameter, bypassing `getAnimationDuration()` which returns 0 in instant mode. Removed the explicit duration so the function now consults the user's animation preference
+- **Suppressed CSS transitions**: View-layer opacity/transform transitions disabled via `.ppp-instant-mode { transition: none }` class
+- **Week/period animations suppressed**: `.calendar-week` fadeIn and `.period-container` slideIn animations disabled in instant mode
+- **8 setTimeout delays eliminated**: All fixed delays in the navigation chain now use `isInstantMode ? 0 : N` — reactive nav (100ms), onMount scroll (150ms), scroll callbacks (50ms), interval centering (200ms), initial mount (300ms), snap delay (120ms), snap reset (300ms)
+
+#### Data Integrity Fixes
+- **DnD double-shift fix**: Removed endDate pre-mutation from Day.svelte — CalendarView.handleRecordChange() now solely handles both start and end date shifts with format-aware writes
+- **Duplicate time injection fix**: Added `hasTimeInField`/`hasTimeInEnd` guards in CalendarView duplicate handler — `customTime` branch now only writes HH:mm if field config supports time
+- **Field clearing fix**: Table "Clear value" now sets `null` instead of `undefined` — preserves frontmatter key with empty value instead of deleting the key entirely
+
+#### Calendar Visual Fixes
+- **Mobile compact events**: Reduced Event.svelte mobile `min-height` from 2.75rem to 1.625rem, checkbox from 1.25rem to 1rem — prevents oversized events from overflowing day cells
+- **Safari overflow compatibility**: Changed `overflow: clip` to `overflow: hidden` in Day.svelte, EventList.svelte, and AgendaListEditor.svelte for older Safari/iOS compatibility
+- **Today highlight TZ-safe**: Fixed timezone-aware "today" comparison in Day.svelte, DayPopup.svelte, and AgendaSidebar.svelte — uses `dayjs().tz(timezone)` instead of raw `dayjs()`
+- **Table resize throttle**: Added requestAnimationFrame throttle to Resizer.svelte mousemove handler to prevent layout thrashing during column resize
+- **Pinned column z-index**: Bumped GridHeader pinned column z-index from 6 to 7 to prevent overlap with sticky header
+
+---
+
 ## [3.0.10] - 2026-02-25
 
 ### Added — Mobile Feature Parity

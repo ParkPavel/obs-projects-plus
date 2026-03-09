@@ -14,7 +14,7 @@
 <script lang="ts">
   import dayjs from 'dayjs';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-  import { dndzone } from 'svelte-dnd-action';
+  import { dragHandleZone } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
@@ -26,6 +26,7 @@
   import { app } from '../../../../../lib/stores/obsidian';
   import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
+  import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
   
   const dispatch = createEventDispatcher();
   
@@ -490,9 +491,27 @@
     const reordered = dndLists.map((list, idx) => ({ ...list, order: idx }));
     dispatch('reorderLists', { lists: reordered });
   }
+
+  /**
+   * Move a custom list up or down by 1 position (mobile reorder alternative to DnD)
+   */
+  function handleMoveList(listId: string, direction: 'up' | 'down') {
+    const idx = dndLists.findIndex(l => l.id === listId);
+    if (idx === -1) return;
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= dndLists.length) return;
+    // Swap positions
+    const copy = [...dndLists];
+    const temp = copy[idx]!;
+    copy[idx] = copy[targetIdx]!;
+    copy[targetIdx] = temp;
+    dndLists = copy;
+    const reordered = dndLists.map((list, i) => ({ ...list, order: i }));
+    dispatch('reorderLists', { lists: reordered });
+  }
   
   $: dateDisplay = (() => {
-    const today = dayjs().startOf('day');
+    const today = (timezone !== "local" ? dayjs().tz(timezone) : dayjs()).startOf('day');
     const sel = selectedDate.startOf('day');
     
     if (sel.isSame(today, 'day')) return $i18n.t('views.calendar.agenda.today-btn');
@@ -543,7 +562,7 @@
             
             <div class="picker-days">
               {#each pickerDays as day}
-                {@const isToday = day.isSame(dayjs(), 'day')}
+                {@const isToday = day.isSame(timezone !== "local" ? dayjs().tz(timezone) : dayjs(), 'day')}
                 {@const isSelected = day.isSame(selectedDate, 'day')}
                 {@const isOtherMonth = !day.isSame(pickerMonth, 'month')}
                 <button 
@@ -586,21 +605,13 @@
         <!-- CUSTOM MODE -->
         {#if dndLists.length > 0}
           <div class="custom-lists"
-            use:dndzone={{
+            use:dragHandleZone={{
               items: dndLists,
               flipDurationMs,
               type: 'agenda-lists',
               dropTargetStyle: { outline: 'none' },
               transformDraggedElement: (el) => {
-                // Collapse the dragged element to header-only height
-                // prevents a tall list from covering the entire viewport on mobile
-                if (el) {
-                  el.style.maxHeight = '3rem';
-                  el.style.overflow = 'hidden';
-                  el.style.opacity = '0.9';
-                  el.style.borderRadius = '0.375rem';
-                  el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-                }
+                applyDragFeedback(el);
               }
             }}
             on:consider={handleDndConsider}
@@ -613,9 +624,13 @@
                 {titleField}
                 {onRecordClick}
                 {selectedDate}
+                isFirst={dndLists.indexOf(list) === 0}
+                isLast={dndLists.indexOf(list) === dndLists.length - 1}
                 on:edit={() => handleEditList(list)}
                 on:delete={() => handleDeleteList(list.id)}
                 on:toggle={() => handleToggleList(list.id)}
+                on:moveUp={() => handleMoveList(list.id, 'up')}
+                on:moveDown={() => handleMoveList(list.id, 'down')}
               />
             {/each}
           </div>
@@ -1032,6 +1047,9 @@
     flex: 1;
     overflow-y: auto;
     padding: var(--agenda-padding);
+    /* v3.1.0: Prevent scroll chaining to parent Obsidian workspace */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   
   /* Categories */
@@ -1119,6 +1137,8 @@
     border-top: 1px solid var(--background-modifier-border);
     max-height: 12.5rem;
     overflow-y: auto;
+    /* v3.1.0: Prevent scroll chaining */
+    overscroll-behavior: contain;
   }
   
   .event {
@@ -1202,6 +1222,8 @@
   }
   .agenda.mobile .content {
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .agenda.mobile .event { 
     padding: var(--ppp-space-5, 0.75rem) var(--agenda-gap-lg); 
@@ -1296,16 +1318,43 @@
     justify-content: center;
     z-index: var(--ppp-z-modal, 100);
     padding: 1rem;
+    /* v3.1.0: Isolate scroll from Obsidian gestures.
+       touch-action: auto — let children decide their own touch-action.
+       CSS touch-action is intersected down the tree, so 'none' here
+       would make children's 'pan-y' become 'none', blocking scroll. */
+    overscroll-behavior: contain;
+    touch-action: auto;
   }
   
   .list-editor-modal {
     width: 100%;
     max-width: 40rem;
-    max-height: 90vh;
-    overflow-y: auto;
+    max-height: 85vh;
+    overflow: hidden; /* inner .agenda-list-editor handles its own scroll */
     background: var(--background-primary);
     border-radius: var(--ppp-radius-xl, 0.5rem);
     box-shadow: var(--shadow-l);
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    pointer-events: auto;
+  }
+  
+  /* v3.1.0: Mobile — full-screen takeover modal for agenda editor.
+     Full screen avoids all guesswork re: toolbars, safe areas, etc.
+     The inner AgendaListEditor handles its own scroll + footer padding. */
+  @media (max-width: 37.5rem) {
+    .list-editor-overlay {
+      padding: 0;
+      align-items: stretch;
+    }
+    
+    .list-editor-modal {
+      max-width: 100%;
+      max-height: none;
+      height: 100%;
+      border-radius: 0;
+    }
   }
   
   /* Reduced motion */

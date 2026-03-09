@@ -172,6 +172,9 @@
   let horizontalScrollToCurrentCallback: (() => void) | null = null;
   let now = dayjs();
   let nowTimer: ReturnType<typeof setInterval> | null = null;
+
+  // v3.1.0: Instant mode — suppress CSS transitions on view switching
+  $: isInstantMode = $settings.preferences.animationBehavior === 'instant';
   
   let isLoading = false;
   let errorMessage: string | null = null;
@@ -522,7 +525,7 @@
     // Always navigate to today on fresh load
     setTimeout(() => {
       navigateToDate('today');
-    }, 300);
+    }, isInstantMode ? 0 : 300);
     
     // Save state periodically (every 30 seconds while active)
     const autoSaveInterval = setInterval(() => {
@@ -673,9 +676,10 @@
     // Only auto-center to today if NO focusedDate is set (e.g., initial load or manual interval change)
     // When zooming, focusedDate is already set and components will use it
     if (!focusedDate) {
+      const delay = isInstantMode ? 0 : 200;
       setTimeout(() => {
         navigateToDate('today');
-      }, 200);
+      }, delay);
     }
   }
 
@@ -916,13 +920,14 @@
         const baseName = record.id.split('/').pop()?.replace('.md', '') || 'note';
         
         // Build new date value - use customTime if provided, otherwise use targetDate
+        const hasTimeInField = dateField.typeConfig?.time ?? false;
         let newStartValue: string;
-        if (customTime) {
-          // Apply custom time to target date
+        if (customTime && hasTimeInField) {
+          // Apply custom time to target date (only if field supports time)
           const newStart = targetDate
             .hour(customTime.startTime.hour())
             .minute(customTime.startTime.minute());
-          newStartValue = newStart.format('YYYY-MM-DD HH:mm');
+          newStartValue = formatDateForProject(newStart, project) ?? newStart.format('YYYY-MM-DD HH:mm');
         } else {
           newStartValue = formatDateForProject(targetDate, project) ?? targetDate.format('YYYY-MM-DD');
         }
@@ -947,12 +952,13 @@
         
         // Handle end date
         if (endFieldName && spanDays > 0) {
-          if (customTime) {
+          const hasTimeInEnd = endDateField?.typeConfig?.time ?? false;
+          if (customTime && hasTimeInEnd) {
             const newEnd = targetDate
               .add(spanDays, 'day')
               .hour(customTime.endTime.hour())
               .minute(customTime.endTime.minute());
-            newValues[endFieldName] = newEnd.format('YYYY-MM-DD HH:mm');
+            newValues[endFieldName] = formatDateForProject(newEnd, project) ?? newEnd.format('YYYY-MM-DD HH:mm');
           } else {
             newValues[endFieldName] = formatDateForProject(targetDate.add(spanDays, 'day'), project) ?? targetDate.add(spanDays, 'day').format('YYYY-MM-DD');
           }
@@ -1760,6 +1766,7 @@
           class="view-layer view-layer--year"
           class:view-layer--active={interval === 'year'}
           class:view-layer--hidden={interval !== 'year'}
+          class:ppp-instant-mode={isInstantMode}
         >
           <YearHeatmap
             {project}
@@ -1791,6 +1798,7 @@
           class="view-layer view-layer--month"
           class:view-layer--active={interval === 'month' || interval === '2weeks'}
           class:view-layer--hidden={interval !== 'month' && interval !== '2weeks'}
+          class:ppp-instant-mode={isInstantMode}
         >
           <InfiniteCalendar
             bind:this={verticalCalendarComponent}
@@ -1808,7 +1816,6 @@
             onDayTap={handleDayTap}
             {isMobile}
             dateFieldName={dateField?.name}
-            endDateFieldName={endDateField?.name}
             timezone={timezoneValue}
             displayMode={monthDisplayMode}
             startHour={config?.startHour ?? 7}
@@ -1826,6 +1833,7 @@
           class="view-layer view-layer--horizontal"
           class:view-layer--active={interval !== 'month' && interval !== '2weeks' && interval !== 'year'}
           class:view-layer--hidden={interval === 'month' || interval === '2weeks' || interval === 'year'}
+          class:ppp-instant-mode={isInstantMode}
         >
           <div class="horizontal-calendar-wrapper">
             <InfiniteHorizontalCalendar
@@ -1847,7 +1855,6 @@
               {now}
               timeFormat={timeFormatValue}
               dateFieldName={dateField?.name}
-              endDateFieldName={endDateField?.name}
               timezone={timezoneValue}
               displayMode={effectiveDisplayMode}
               startHour={config?.startHour ?? 6}
@@ -2022,6 +2029,11 @@
     visibility: visible;
     max-height: none;
     overflow: visible;
+  }
+
+  /* v3.1.0: Suppress transitions in instant mode */
+  .view-layer.ppp-instant-mode {
+    transition: none;
   }
 
   /* Specific fix for vertical infinite scrolling behavior */

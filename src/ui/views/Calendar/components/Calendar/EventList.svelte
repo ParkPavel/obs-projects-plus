@@ -153,7 +153,7 @@
     flex: 1 1 auto;
     min-height: 2.5rem;
     width: 100%;
-    overflow: clip;
+    overflow: hidden;
     padding: 0.125rem;
     border-radius: 0.375rem;
     transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);

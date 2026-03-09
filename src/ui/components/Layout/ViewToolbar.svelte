@@ -160,7 +160,8 @@
   /* Floating toggle buttons when collapsed */
   .floating-toggle {
     position: fixed;
-    top: 8px;
+    /* v3.1.0: Account for iOS notch/safe area with fallback */
+    top: max(8px, env(safe-area-inset-top, 8px));
     z-index: 100;
     display: flex;
     align-items: center;

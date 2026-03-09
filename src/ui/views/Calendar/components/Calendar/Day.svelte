@@ -75,11 +75,6 @@
   export let dateFieldName: string | undefined;
   
   /**
-   * Optional end date field for multi-day spans.
-   */
-  export let endDateFieldName: string | undefined;
-  
-  /**
    * Calendar timezone (IANA name or "local").
    */
   export let timezone: string = "local";
@@ -116,6 +111,7 @@
   let eventListOnRecordChange: ((record: DataRecord) => void) | undefined = undefined;
   let zonedDate: dayjs.Dayjs;
   let isVisible = false; // Start invisible, IntersectionObserver will set to true
+  let eventScrollArea: HTMLDivElement;
   // NOTE: allDayRecords moved to HeaderStripsSection.svelte
 
   $: eventListOnRecordChange = date && onRecordChange && !isOutsideMonth && !isMobile 
@@ -131,7 +127,9 @@
   $: zonedDate = dayInZone(date);
 
   $: weekend = zonedDate.day() === 0 || zonedDate.day() === 6;
-  $: today = zonedDate.startOf("day").isSame(dayjs().startOf("day"));
+  $: today = zonedDate.startOf("day").isSame(
+    (timezone !== "local" ? dayjs().tz(timezone) : dayjs()).startOf("day")
+  );
 
   // Filter to only show timed events in the cell (multi-day are in header strips)
   $: cellRecords = processedRecords.length > 0
@@ -145,7 +143,6 @@
 
   // Limit visible events to prevent overflow
   const MAX_VISIBLE_EVENTS = 4;
-  $: visibleRecords = cellRecords.slice(0, MAX_VISIBLE_EVENTS);
   $: hiddenCount = Math.max(0, cellRecords.length - MAX_VISIBLE_EVENTS);
 
   // NOTE: Multi-day and All-day events are now handled by HeaderStripsSection.svelte
@@ -488,20 +485,32 @@
       return;
     }
     
-    const deltaDays = startDay ? newDate.diff(startDay, 'day') : 0;
-
-    // Update end date field in record before propagating change
-    if (endDateFieldName && deltaDays !== 0) {
-      const endRaw = movedRecord.values[endDateFieldName];
-      const endParsed = parseDateInTimezone(endRaw, timezone);
-      if (endParsed) {
-        const newEnd = endParsed.add(deltaDays, 'day');
-        movedRecord.values[endDateFieldName] = newEnd.toISOString();
-      }
-    }
-
-    // Propagate to parent with full validation/persistence
+    // Propagate to parent (CalendarView.handleRecordChange) which handles
+    // both start and end date shifts with proper format-aware writes.
+    // Do NOT modify record.values here — avoids double-shift of endDate.
     onRecordChange(newDate, movedRecord);
+  }
+
+  /**
+   * Shift+wheel: scroll the inner event area in list mode.
+   * Without Shift, wheel events pass through for calendar date navigation.
+   * At scroll boundaries, also passes through.
+   */
+  function handleCellWheel(e: WheelEvent) {
+    if (!e.shiftKey || displayMode !== 'list' || !eventScrollArea) return;
+
+    const { scrollHeight, clientHeight, scrollTop } = eventScrollArea;
+    // No overflow — nothing to scroll
+    if (scrollHeight <= clientHeight + 1) return;
+
+    // At boundary — let event propagate for calendar navigation
+    const atTop = scrollTop <= 0 && e.deltaY < 0;
+    const atBottom = scrollTop >= scrollHeight - clientHeight - 1 && e.deltaY > 0;
+    if (atTop || atBottom) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    eventScrollArea.scrollTop += e.deltaY;
   }
 
   function setupIntersectionObserver() {
@@ -549,6 +558,7 @@
   on:mousedown={handleMouseDown}
   on:touchstart={handleTouchStart}
   on:touchend={handleTouchEnd}
+  on:wheel={handleCellWheel}
   role="gridcell"
   aria-selected={today}
   aria-disabled={isOutsideMonth}
@@ -620,19 +630,21 @@
         {/each}
       </div>
     {:else if displayMode === 'list'}
-      <!-- LIST MODE: Traditional EventList (includes all events for legacy support) -->
-      <EventList
-        {checkField}
-        records={visibleRecords}
-        {onRecordClick}
-        {onRecordCheck}
-        onRecordChange={eventListOnRecordChange}
-        disableDrag={isMobile}
-        on:dndFinalize={({ detail }) => handleDndFinalize(detail)}
-      />
+      <!-- LIST MODE: Scrollable event list (Shift+wheel to scroll) -->
+      <div class="event-scroll-area" bind:this={eventScrollArea}>
+        <EventList
+          {checkField}
+          records={cellRecords}
+          {onRecordClick}
+          {onRecordCheck}
+          onRecordChange={eventListOnRecordChange}
+          disableDrag={isMobile}
+          on:dndFinalize={({ detail }) => handleDndFinalize(detail)}
+        />
+      </div>
       {#if hiddenCount > 0}
         <button class="more-events-btn" on:click|stopPropagation={() => onDayTap?.(date, records)}>
-          {hiddenCount} more...
+          +{hiddenCount}
         </button>
       {/if}
     {/if}
@@ -651,7 +663,7 @@
     outline: none;
     min-height: 6.5625rem;
     height: 100%;
-    overflow: clip;
+    overflow: hidden;
     transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--background-primary);
     border-radius: 0;
@@ -661,16 +673,33 @@
     min-width: 0; /* Allow shrinking below content width */
   }
 
+  /* Scrollable event area: Shift+wheel scrolls inner content */
+  .event-scroll-area {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: hidden;
+    position: relative;
+  }
+
+  /* Show fade-out gradient when content overflows */
+  .day-cell:hover .event-scroll-area {
+    /* Allow programmatic scrollTop changes to be visible */
+    overflow-y: hidden;
+  }
+
   .more-events-btn {
-    background: none;
+    background: linear-gradient(transparent, var(--background-primary) 60%);
     border: none;
-    padding: var(--ppp-spacing-3xs, 0.125rem) var(--ppp-spacing-2xs, 0.25rem);
-    font-size: 0.7em;
+    padding: 0.75rem var(--ppp-spacing-2xs, 0.25rem) var(--ppp-spacing-3xs, 0.125rem);
+    font-size: 0.625em;
     color: var(--text-muted);
     cursor: pointer;
-    text-align: left;
+    text-align: center;
     width: 100%;
     border-radius: 4px;
+    position: relative;
+    margin-top: -0.75rem;
+    z-index: 2;
   }
 
   .more-events-btn:hover {

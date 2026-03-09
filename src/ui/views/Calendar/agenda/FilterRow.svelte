@@ -900,12 +900,36 @@
     .filter-row {
       gap: 4px;
       min-height: 40px;
+      flex-wrap: wrap;
+    }
+    
+    .row-prefix {
+      width: 24px;
+      font-size: 11px;
+    }
+    
+    .chip-wrapper {
+      flex-shrink: 1;
+      min-width: 0;
     }
     
     .chip {
       height: 34px;
-      padding: 0 10px;
-      font-size: 14px;
+      padding: 0 8px;
+      font-size: 13px;
+      flex-shrink: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+    
+    .chip-label {
+      max-width: 4.5rem;
+    }
+    
+    .value-area {
+      min-width: 0;
+      flex-basis: 50px;
+      flex-grow: 1;
     }
     
     .value-input {
@@ -915,12 +939,12 @@
     
     .row-toggle {
       opacity: 1;
-      padding: 6px;
+      padding: 4px;
     }
     
     .row-delete {
       opacity: 1;
-      padding: 6px;
+      padding: 4px;
     }
   }
 </style>

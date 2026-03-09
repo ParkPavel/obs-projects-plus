@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.0.8-blue.svg)
+![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
@@ -141,7 +141,10 @@ tags: [project, important]
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released |
 | ✅ | **Optimization + Tags + Date Fields** | v3.0.7 | Released |
 | ✅ | **Board UX: persist, zoom, collapse** | v3.0.8 | Released |
-| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | Planned |
+| ✅ | **Unified Filters + Instant Mode** | v3.0.9 | Released |
+| ✅ | **Mobile Feature Parity** | v3.0.10 | Released |
+| ✅ | **Deep Mobile Adaptation** | v3.1.0 | Released |
+| 🥇 | **Drag & Drop 2.0** | v3.2.0 | In Progress |
 | 🥈 | **Database View** | v3.3.0 | Planned |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned |
 

@@ -1,19 +1,24 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
+  import { dragHandle } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { Menu } from 'obsidian';
   import dayjs, { Dayjs } from 'dayjs';
   import { i18n } from 'src/lib/stores/i18n';
-  import { isMobileDevice } from 'src/lib/stores/ui';
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import type { AgendaCustomList } from 'src/settings/v3/settings';
   import { filterRecordsForList } from './filterEngine';
+  import {
+    createLongPressHandler,
+  } from './TouchDndCoordinator';
   
   const dispatch = createEventDispatcher<{
     recordClick: string;
     edit: void;
     delete: void;
     toggle: void;
+    moveUp: void;
+    moveDown: void;
   }>();
   
   // i18n helper
@@ -25,13 +30,20 @@
   export let onRecordClick: ((id: string) => void) | undefined;
   export let selectedDate: Dayjs = dayjs(); // Reference date for formula evaluation
   
+  /** Whether this is the first list in the list (disables Move Up) */
+  export let isFirst: boolean = false;
+  /** Whether this is the last list in the list (disables Move Down) */
+  export let isLast: boolean = false;
+  
   // Filter records using the selected date as base for formulas
   // New unified API supports both visual and advanced modes
   $: filteredRecords = filterRecordsForList(records, list, selectedDate, []);
   $: isCollapsed = list.collapsed ?? false;
-  $: isMobile = $isMobileDevice;
   
-  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── Long-press coordinator (with drag-grip guard + scroll cancel) ──
+  const longPress = createLongPressHandler((e: TouchEvent) => {
+    showContextMenu(e);
+  });
   
   function handleRecordClick(id: string) {
     if (onRecordClick) {
@@ -112,6 +124,24 @@
         .onClick(() => dispatch('edit'));
     });
     
+    // Reorder options (essential on mobile where DnD is disabled, useful on desktop too)
+    if (!isFirst) {
+      menu.addItem((item) => {
+        item
+          .setTitle($i18n.t('views.calendar.agenda.custom.move-up') || 'Move up')
+          .setIcon('arrow-up')
+          .onClick(() => dispatch('moveUp'));
+      });
+    }
+    if (!isLast) {
+      menu.addItem((item) => {
+        item
+          .setTitle($i18n.t('views.calendar.agenda.custom.move-down') || 'Move down')
+          .setIcon('arrow-down')
+          .onClick(() => dispatch('moveDown'));
+      });
+    }
+    
     menu.addSeparator();
     
     menu.addItem((item) => {
@@ -136,41 +166,8 @@
     showContextMenu(e);
   }
   
-  /**
-   * Handle touch start for long press on mobile
-   */
-  function handleTouchStart(e: TouchEvent) {
-    if (!isMobile) return;
-    
-    longPressTimer = setTimeout(() => {
-      showContextMenu(e);
-    }, 500); // 500ms long press
-  }
-  
-  /**
-   * Handle touch end - cancel long press timer
-   */
-  function handleTouchEnd() {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    }
-  }
-  
-  /**
-   * Handle touch move - cancel long press if moved
-   */
-  function handleTouchMove() {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    }
-  }
-  
   onDestroy(() => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-    }
+    longPress.destroy();
   });
 </script>
 
@@ -179,10 +176,14 @@
   <div 
     class="list-header"
     on:contextmenu={handleContextMenu}
-    on:touchstart={handleTouchStart}
-    on:touchend={handleTouchEnd}
-    on:touchmove={handleTouchMove}
+    on:touchstart={longPress.onTouchStart}
+    on:touchend={longPress.onTouchEnd}
+    on:touchmove={longPress.onTouchMove}
   >
+    <!-- Grip handle — visible drag affordance, only initiates DnD via svelte-dnd-action dragHandle -->
+    <span class="drag-grip" use:dragHandle aria-label="Drag to reorder">
+      <Icon name="grip-vertical" size="xs" />
+    </span>
     <button 
       class="list-header-btn" 
       on:click={() => dispatch('toggle')}
@@ -230,7 +231,43 @@
   }
   
   .list-header {
+    display: flex;
+    align-items: center;
     border-left: 0.1875rem solid var(--accent);
+  }
+  
+  /* ── Drag grip handle (unified design — hidden → reveal on hover) ── */
+  .drag-grip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1rem;
+    align-self: stretch;
+    color: var(--text-faint);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  
+  .list-header:hover .drag-grip {
+    opacity: 0.5;
+  }
+  
+  .drag-grip:hover {
+    opacity: 1;
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+    border-radius: var(--radius-s);
+  }
+  
+  .drag-grip:active {
+    cursor: grabbing;
+    color: var(--text-normal);
   }
   
   .list-header-btn {
@@ -354,6 +391,15 @@
   
   /* Mobile touch targets */
   @media (pointer: coarse) {
+    .drag-grip {
+      width: 1.25rem;
+      opacity: 0.35;
+    }
+    
+    .list-header:hover .drag-grip {
+      opacity: 0.35;
+    }
+    
     .list-header-btn {
       min-height: 2.75rem;
       padding: 0.75rem;

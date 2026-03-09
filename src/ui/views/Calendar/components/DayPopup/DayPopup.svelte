@@ -156,7 +156,9 @@
   
   $: formattedDate = formatDateForDisplay(date, project) ?? date.format('D MMMM YYYY');
   $: dayOfWeek = date.format('dddd');
-  $: isToday = date.isSame(dayjs(), 'day');
+  $: isToday = date.isSame(
+    (config?.timezone && config.timezone !== "local" ? dayjs().tz(config.timezone) : dayjs()), 'day'
+  );
   
   // Date badge
   $: dateBadge = isToday 

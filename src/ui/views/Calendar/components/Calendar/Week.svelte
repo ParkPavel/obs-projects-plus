@@ -44,4 +44,10 @@
   .calendar-week {
     animation: fadeIn 0.2s ease-out;
   }
+
+  /* Suppress animation in instant mode (class set on ancestor view-layer) */
+  :global(.ppp-instant-mode) .calendar-week {
+    animation: none;
+    transition: none;
+  }
 </style>

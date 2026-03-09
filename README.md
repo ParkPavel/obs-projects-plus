@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.0.8-blue.svg)
+![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
@@ -141,7 +141,10 @@ tags: [проект, важное]
 | ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Выпущено |
 | ✅ | **Оптимизация + Теги + Поля дат** | v3.0.7 | Выпущено |
 | ✅ | **Board UX: persist, zoom, collapse** | v3.0.8 | Выпущено |
-| 🥇 | **Drag & Drop + Mobile** | v3.2.0 | Планируется |
+| ✅ | **Унификация фильтров + Instant mode** | v3.0.9 | Выпущено |
+| ✅ | **Mobile Feature Parity** | v3.0.10 | Выпущено |
+| ✅ | **Deep Mobile Adaptation** | v3.1.0 | Выпущено |
+| 🥇 | **Drag & Drop 2.0** | v3.2.0 | В разработке |
 | 🥈 | **Database View** | v3.3.0 | Планируется |
 | 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Планируется |
 

@@ -268,6 +268,7 @@
     padding: 1rem;
     min-height: 10rem;
     max-height: calc(100vh - 20rem);
+    overscroll-behavior: contain;
   }
 
   .popover-footer {

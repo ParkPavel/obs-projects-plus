@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import { dndzone } from "svelte-dnd-action";
+  import { dragHandleZone, dragHandle } from "svelte-dnd-action";
+  import { Icon } from "obsidian-svelte";
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
@@ -226,7 +227,7 @@
   <!-- Unpinned columns: DnD enabled within unpinned subset -->
   <section
     class="projects--board"
-    use:dndzone={{
+    use:dragHandleZone={{
       type: "columns",
       items: unpinnedColumns,
       flipDurationMs,
@@ -241,6 +242,9 @@
   >
     {#each unpinnedColumns as column (column.id)}
       <div class="projects--board--column--dndwrapper">
+        <span class="board-column-grip" use:dragHandle aria-label="Drag to reorder column">
+          <Icon name="grip-vertical" size="xs" />
+        </span>
         <BoardColumn
           {readonly}
           {richText}
@@ -334,6 +338,8 @@
     overflow: auto;
     width: 100%;
     height: 100%;
+    /* v3.1.0: Prevent scroll chaining to Obsidian workspace on mobile */
+    overscroll-behavior: contain;
   }
 
   .projects--board--viewport {
@@ -364,5 +370,52 @@
 
   .projects--board--column--dndwrapper {
     flex-shrink: 0;
+    position: relative;
+  }
+
+  /* Column drag grip — top-left corner, visually separated from header */
+  .board-column-grip {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1.25rem;
+    border-radius: var(--radius-s);
+    color: var(--text-faint);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+    z-index: 2;
+  }
+
+  .projects--board--column--dndwrapper:hover .board-column-grip {
+    opacity: 0.45;
+  }
+
+  .board-column-grip:hover {
+    opacity: 1;
+    color: var(--text-muted);
+    background: var(--background-modifier-hover);
+  }
+
+  .board-column-grip:active {
+    cursor: grabbing;
+    color: var(--text-normal);
+  }
+
+  /* On touch devices, always show the column grip (subtle) */
+  @media (pointer: coarse) {
+    .board-column-grip {
+      opacity: 0.3;
+      width: 1.125rem;
+      height: 1.5rem;
+    }
   }
 </style>
