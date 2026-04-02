@@ -2,6 +2,8 @@
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import dayjs from 'dayjs';
   import EventBar from './EventBar.svelte';
+  import type { ProcessedRecord } from '../../types';
+  import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import { app } from 'src/lib/stores/obsidian';
   
   /**
@@ -26,6 +28,18 @@
   export let endHour: number = 24;
   export let hourHeightRem: number = 3; // Height per hour in rem
   export let onEventClick: ((record: DataRecord) => void) | undefined = undefined;
+
+  /** v3.2.0 DnD: ProcessedRecords for matching drag context */
+  export let processedRecords: ProcessedRecord[] = [];
+  /** v3.2.0 DnD: TimelineDragManager instance */
+  export let dragManager: TimelineDragManager | undefined = undefined;
+  /** v3.2.0 DnD: Record ID currently being dragged */
+  export let draggingRecordId: string | null = null;
+
+  // Map record IDs to ProcessedRecords for quick lookup
+  $: processedRecordMap = new Map<string, ProcessedRecord>(
+    processedRecords.map(pr => [pr.record.id, pr])
+  );
   
   interface EventWithColumn {
     record: DataRecord;
@@ -103,20 +117,34 @@
       eventColumnMap.set(event, assignedColumn);
     }
     
-    // Pass 2: v4.0.0 FIXED - Use GLOBAL totalColumns for consistent width
-    // All events use the same totalColumns = number of columns created
-    // This ensures events in the same time group have matching widths
-    const globalTotalColumns = columns.length;
-    
+    // Pass 2: Per-group totalColumns — only actually-overlapping events share width.
+    // For each event, find the maximum column index among all events that overlap with
+    // it (i.e., share at least one minute of time). totalColumns = max_overlap_col + 1.
+    // This prevents non-overlapping events from inheriting a narrow width.
+    const MIN_VISUAL_MINUTES = 20;
     const result: EventWithColumn[] = [];
     for (const event of sorted) {
       const column = eventColumnMap.get(event) ?? 0;
-      
-      result.push({
-        ...event,
-        column,
-        totalColumns: globalTotalColumns  // Same for all events!
-      });
+      const evStart = event.startDate;
+      const evEndRaw = event.endDate || event.startDate.add(1, 'hour');
+      const evEnd = evEndRaw.isBefore(evStart.add(MIN_VISUAL_MINUTES, 'minute'))
+        ? evStart.add(MIN_VISUAL_MINUTES, 'minute') : evEndRaw;
+
+      let maxCol = column;
+      for (const other of sorted) {
+        if (other === event) continue;
+        const otherStart = other.startDate;
+        const otherEndRaw = other.endDate || other.startDate.add(1, 'hour');
+        const otherEnd = otherEndRaw.isBefore(otherStart.add(MIN_VISUAL_MINUTES, 'minute'))
+          ? otherStart.add(MIN_VISUAL_MINUTES, 'minute') : otherEndRaw;
+        // Events overlap when neither ends before the other starts
+        if (evStart.isBefore(otherEnd) && evEnd.isAfter(otherStart)) {
+          const otherCol = eventColumnMap.get(other) ?? 0;
+          if (otherCol > maxCol) maxCol = otherCol;
+        }
+      }
+
+      result.push({ ...event, column, totalColumns: maxCol + 1 });
     }
     
     return result;
@@ -165,6 +193,9 @@
       totalColumns={event.totalColumns}
       {hourHeightRem}
       onClick={onEventClick ? (e) => handleEventClick(e, event.record) : undefined}
+      processedRecord={processedRecordMap.get(event.record.id)}
+      {dragManager}
+      isDragging={draggingRecordId === event.record.id}
     />
   {/each}
 </div>
@@ -176,6 +207,8 @@
     left: 0;
     right: 0;
     bottom: 0;
+    /* v3.3.4: Allow clicks to pass through to DayColumn for creation DnD */
+    pointer-events: none;
     /* Absolute positioning inside rem-sized DayColumn parent */
   }
 </style>

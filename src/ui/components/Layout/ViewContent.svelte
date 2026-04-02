@@ -15,6 +15,10 @@
     overscroll-behavior: contain;
     container-type: inline-size;
     container-name: view-content;
+    /* v3.2.7: Allow flex shrinking when sibling (AgendaSidebar) takes fixed width */
+    min-width: 0;
+    /* v3.2.8: Prevent overflow beyond flex-allocated width */
+    max-width: 100%;
   }
 
   .no-scroll {

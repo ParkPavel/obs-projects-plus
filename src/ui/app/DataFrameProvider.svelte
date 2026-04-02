@@ -35,13 +35,17 @@
 
   function disassemble(
     project: ProjectDefinition
-  ): Omit<ProjectDefinition, "views"> {
-    const { views: _, ...foo } = project;
+  ): Omit<ProjectDefinition, "views" | "agenda"> {
+    // Strip views AND agenda — neither affects data queries.
+    // agenda is purely display metadata (list order, filter rules, mode).
+    // Without this, any agenda change (list reorder, filter edit) triggers
+    // a full data re-query → {#await} remounts the View = "plugin reload".
+    const { views: _, agenda: _a, ...foo } = project;
     return foo;
   }
 
   function reassemble(text: string): ProjectDefinition {
-    const res: Omit<ProjectDefinition, "views"> = JSON.parse(text);
+    const res: Omit<ProjectDefinition, "views" | "agenda"> = JSON.parse(text);
     return { ...res, views: [] };
   }
 

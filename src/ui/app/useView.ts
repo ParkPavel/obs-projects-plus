@@ -65,23 +65,27 @@ export function useView(node: HTMLElement, props: ViewProps) {
 
       viewId = newprops.view.id;
     } else {
+      // Batch prop changes into a single $set call to avoid multiple reactive waves
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
+      const updates: Record<string, any> = {};
+
       // Check if config changed (for freeze, centerOn, etc.)
       const currentConfigJson = JSON.stringify(newprops.config);
       if (currentConfigJson !== prevConfigJson) {
-        // Config changed - we need to pass new config to the view
-        // Since onData doesn't handle config, we update the svelte component directly if possible
-        if (projectView && 'view' in projectView && projectView.view) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
-          (projectView.view as any).$set({ config: newprops.config });
-        }
+        updates['config'] = newprops.config;
         prevConfigJson = currentConfigJson;
       }
-      // Always refresh project on the view component so agenda lists and other
-      // project-level settings persist across data updates and view switches.
+
+      // Only refresh project when the project definition actually changed
       if (projectView && 'view' in projectView && projectView.view) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
-        (projectView.view as any).$set({ project: newprops.project });
+        if (Object.keys(updates).length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
+          // SVELTE4-COMPAT: $set() is removed in Svelte 4.
+          // Replace with direct prop assignment or a writable context when migrating.
+          (projectView.view as any).$set(updates);
+        }
       }
+
       projectView?.onData(newprops.dataProps);
     }
   };

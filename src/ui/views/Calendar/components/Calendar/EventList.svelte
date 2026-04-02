@@ -12,17 +12,18 @@
   } from "src/lib/dataframe/dataframe";
   import { getRecordColorContext, handleHoverLink } from "src/ui/views/helpers";
 
+  import { hapticDrop } from "../../dnd/HapticManager";
+
   export let records: DataRecord[];
   export let checkField: string | undefined;
 
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
-  export let onRecordChange: ((record: DataRecord) => void) | undefined;
   
   /**
-   * Disable drag and drop (for mobile)
+   * v3.2.0 Iteration 6: Mobile flag — enables touch delay for DnD
    */
-  export let disableDrag: boolean = false;
+  export let isMobile: boolean = false;
 
   function asOptionalBoolean(value: Optional<DataValue>): Optional<boolean> {
     if (typeof value === "boolean") {
@@ -34,15 +35,15 @@
   const flipDurationMs = 150;
 
   function handleDndConsider(e: CustomEvent<DndEvent<DataRecord>>) {
-    if (disableDrag) return;
     records = e.detail.items;
     dispatch("dndConsider", e.detail);
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<DataRecord>>) {
-    if (disableDrag) return;
     records = e.detail.items;
-    records.forEach(r => onRecordChange?.(r));
+    if (isMobile) { hapticDrop(); }
+    // Date changes are handled by Day.svelte's on:dndFinalize handler,
+    // which correctly passes the target date to CalendarView.handleRecordChange.
     dispatch("dndFinalize", e.detail);
   }
 
@@ -50,11 +51,12 @@
 
   const dispatch = createEventDispatcher();
   
-  // DnD zone options - only when enabled
+  // v3.2.0 Iteration 6: DnD always enabled; touch uses long-press delay
   $: dndOptions = {
     type: "entries",
     items: records,
     flipDurationMs,
+    ...(isMobile ? { dropFromOthersDisabled: false, dragDisabled: false } : {}),
     dropTargetStyle: {
       outline: "none",
       borderRadius: "8px",
@@ -64,86 +66,48 @@
   };
 </script>
 
-{#if disableDrag}
-  <!-- Mobile: no drag and drop -->
-  <div class="event-list mobile">
-    {#each records as record (record.id)}
-      {#if getDisplayName(record.id)}
-        <Event
-          color={getRecordColor(record)}
-          checked={checkField !== undefined
-            ? asOptionalBoolean(record.values[checkField])
-            : undefined}
-          on:check={({ detail: checked }) => onRecordCheck?.(record, checked)}
+<!-- v3.2.0 Iteration 6: Always use dndzone (mobile uses touch delay via svelte-dnd-action) -->
+<div
+  class="event-list"
+  class:mobile={isMobile}
+  use:dndzone={dndOptions}
+  on:consider={handleDndConsider}
+  on:finalize={handleDndFinalize}
+>
+  {#each records as record (record.id)}
+    {#if getDisplayName(record.id)}
+      <Event
+        color={getRecordColor(record)}
+        checked={checkField !== undefined
+          ? asOptionalBoolean(record.values[checkField])
+          : undefined}
+        on:check={({ detail: checked }) => onRecordCheck?.(record, checked)}
+      >
+        <InternalLink
+          linkText={record.id}
+          sourcePath={record.id}
+          resolved
+          tooltip={getDisplayName(record.id)}
+          on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
+            // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+            if (shiftKey) {
+              $app.workspace.openLinkText(linkText, sourcePath, 'window');
+            } else if (newLeaf) {
+              $app.workspace.openLinkText(linkText, sourcePath, 'tab');
+            } else {
+              onRecordClick?.(record);
+            }
+          }}
+          on:hover={({ detail: { event, sourcePath } }) => {
+            handleHoverLink(event, sourcePath);
+          }}
         >
-          <InternalLink
-            linkText={record.id}
-            sourcePath={record.id}
-            resolved
-            tooltip={getDisplayName(record.id)}
-            on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
-              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
-              if (shiftKey) {
-                $app.workspace.openLinkText(linkText, sourcePath, 'window');
-              } else if (newLeaf) {
-                $app.workspace.openLinkText(linkText, sourcePath, 'tab');
-              } else {
-                onRecordClick?.(record);
-              }
-            }}
-            on:hover={({ detail: { event, sourcePath } }) => {
-              handleHoverLink(event, sourcePath);
-            }}
-          >
-            {getDisplayName(record.id)}
-          </InternalLink>
-        </Event>
-      {/if}
-    {/each}
-  </div>
-{:else}
-  <!-- Desktop: with drag and drop -->
-  <div
-    class="event-list"
-    use:dndzone={dndOptions}
-    on:consider={handleDndConsider}
-    on:finalize={handleDndFinalize}
-  >
-    {#each records as record (record.id)}
-      {#if getDisplayName(record.id)}
-        <Event
-          color={getRecordColor(record)}
-          checked={checkField !== undefined
-            ? asOptionalBoolean(record.values[checkField])
-            : undefined}
-          on:check={({ detail: checked }) => onRecordCheck?.(record, checked)}
-        >
-          <InternalLink
-            linkText={record.id}
-            sourcePath={record.id}
-            resolved
-            tooltip={getDisplayName(record.id)}
-            on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
-              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
-              if (shiftKey) {
-                $app.workspace.openLinkText(linkText, sourcePath, 'window');
-              } else if (newLeaf) {
-                $app.workspace.openLinkText(linkText, sourcePath, 'tab');
-              } else {
-                onRecordClick?.(record);
-              }
-            }}
-            on:hover={({ detail: { event, sourcePath } }) => {
-              handleHoverLink(event, sourcePath);
-            }}
-          >
-            {getDisplayName(record.id)}
-          </InternalLink>
-        </Event>
-      {/if}
-    {/each}
-  </div>
-{/if}
+          {getDisplayName(record.id)}
+        </InternalLink>
+      </Event>
+    {/if}
+  {/each}
+</div>
 
 <style>
   .event-list {
@@ -160,11 +124,7 @@
   }
 
   .event-list.mobile {
-    pointer-events: none; /* Let taps pass through to parent */
-  }
-
-  .event-list.mobile :global(*) {
-    pointer-events: auto;
+    touch-action: manipulation; /* Prevent double-tap zoom while allowing DnD */
   }
 
   .event-list:empty {

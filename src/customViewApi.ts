@@ -4,6 +4,8 @@ import type { FilterCondition, ProjectDefinition, ViewId } from "./settings/sett
 
 export interface DataQueryResult {
   data: DataFrame;
+  /** Monotonic counter: increments only when source data frame actually changes */
+  dataGeneration?: number;
   hasSort: boolean;
   hasFilter: boolean;
   /** Active (enabled) filter conditions for the current view */

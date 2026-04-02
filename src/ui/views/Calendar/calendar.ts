@@ -67,6 +67,15 @@ export function parseDateInTimezone(
   tz?: string
 ): dayjs.Dayjs | null {
   if (!value) return null;
+
+  // v4.0.5: Reject non-string, non-Date, non-dayjs values.
+  // Numbers (0, 1, 2...) are NOT valid date inputs — dayjs(0) returns
+  // 1970-01-01 which is technically "valid" but semantically wrong,
+  // causing infinite-span multi-day events in the calendar.
+  if (typeof value !== "string" && !(value instanceof Date) && !dayjs.isDayjs(value)) {
+    return null;
+  }
+
   const targetTz = tz && tz !== "local" ? tz : undefined;
   const parsed = targetTz
     ? dayjs.tz(value as string | Date, targetTz)
@@ -80,7 +89,7 @@ export function groupRecordsByRange(
   startField: string,
   endField?: string,
   tz?: string,
-  maxSpanDays = 365
+  maxSpanDays = 90
 ): Record<string, DataRecord[]> {
   const res: Record<string, DataRecord[]> = {};
 
@@ -98,22 +107,30 @@ export function groupRecordsByRange(
 
     const rangeEnd = endDay.isBefore(startDay) ? startDay : endDay;
 
-    let cursor = startDay;
+    // Fast path: single-day events
+    if (startDay.isSame(rangeEnd, "day")) {
+      const dateStr = startDay.format("YYYY-MM-DD");
+      if (!(dateStr in res)) res[dateStr] = [];
+      res[dateStr]?.push(record);
+      return;
+    }
+
+    // Multi-day: use native Date arithmetic for speed
+    const cursor = new Date(Date.UTC(startDay.year(), startDay.month(), startDay.date()));
+    const endMs = Date.UTC(rangeEnd.year(), rangeEnd.month(), rangeEnd.date());
     let guard = 0;
 
-    while (cursor.isSame(rangeEnd, "day") || cursor.isBefore(rangeEnd)) {
-      const dateStr = cursor.format("YYYY-MM-DD");
-      if (!(dateStr in res)) {
-        res[dateStr] = [];
-      }
+    while (cursor.getTime() <= endMs && guard < maxSpanDays) {
+      const y = cursor.getUTCFullYear();
+      const m = cursor.getUTCMonth() + 1;
+      const d = cursor.getUTCDate();
+      const dateStr = `${y}-${m < 10 ? '0' : ''}${m}-${d < 10 ? '0' : ''}${d}`;
+
+      if (!(dateStr in res)) res[dateStr] = [];
       res[dateStr]?.push(record);
 
-      cursor = cursor.add(1, "day");
-      guard += 1;
-
-      if (guard > maxSpanDays) {
-        break;
-      }
+      cursor.setUTCDate(d + 1);
+      guard++;
     }
   });
 

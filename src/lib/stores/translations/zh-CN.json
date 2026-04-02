@@ -721,6 +721,10 @@
                         "smooth": "平滑 (带动画)",
                         "instant": "即时 (无动画)"
                     }
+                },
+                "disable-haptic": {
+                    "name": "禁用触觉反馈",
+                    "desc": "在移动设备拖放操作时关闭振动反馈"
                 }
             },
             "front-matter": {

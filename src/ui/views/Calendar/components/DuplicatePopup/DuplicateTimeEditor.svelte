@@ -105,7 +105,7 @@
   
   .time-input {
     padding: 0.375rem 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     border-radius: 0.25rem;
     background: var(--background-primary);
     color: var(--text-normal);
@@ -130,7 +130,7 @@
   .reset-btn {
     padding: 0.25rem 0.5rem;
     background: none;
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     border-radius: 0.25rem;
     color: var(--text-muted);
     cursor: pointer;

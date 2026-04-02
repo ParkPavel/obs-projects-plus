@@ -95,6 +95,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     mobileCalendarView: "month",
     showViewTitles: true,
     animationBehavior: "smooth",
+    disableHapticFeedback: false,
   },
 };
 
@@ -180,6 +181,7 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
   mobileCalendarView: "month",
   showViewTitles: true,
   animationBehavior: "smooth",
+  disableHapticFeedback: false,
 };
 
 export function resolvePreferences(

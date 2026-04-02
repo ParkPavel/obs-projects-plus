@@ -29,6 +29,7 @@
   export let titleField: string | undefined;
   export let onRecordClick: ((id: string) => void) | undefined;
   export let selectedDate: Dayjs = dayjs(); // Reference date for formula evaluation
+  export let collapsed: boolean = false;
   
   /** Whether this is the first list in the list (disables Move Up) */
   export let isFirst: boolean = false;
@@ -38,7 +39,6 @@
   // Filter records using the selected date as base for formulas
   // New unified API supports both visual and advanced modes
   $: filteredRecords = filterRecordsForList(records, list, selectedDate, []);
-  $: isCollapsed = list.collapsed ?? false;
   
   // ── Long-press coordinator (with drag-grip guard + scroll cancel) ──
   const longPress = createLongPressHandler((e: TouchEvent) => {
@@ -176,9 +176,9 @@
   <div 
     class="list-header"
     on:contextmenu={handleContextMenu}
-    on:touchstart={longPress.onTouchStart}
-    on:touchend={longPress.onTouchEnd}
-    on:touchmove={longPress.onTouchMove}
+    on:touchstart|passive={longPress.onTouchStart}
+    on:touchend|passive={longPress.onTouchEnd}
+    on:touchmove|passive={longPress.onTouchMove}
   >
     <!-- Grip handle — visible drag affordance, only initiates DnD via svelte-dnd-action dragHandle -->
     <span class="drag-grip" use:dragHandle aria-label="Drag to reorder">
@@ -187,11 +187,11 @@
     <button 
       class="list-header-btn" 
       on:click={() => dispatch('toggle')}
-      aria-label={isCollapsed ? 'Expand' : 'Collapse'}
-      aria-expanded={!isCollapsed}
+      aria-label={collapsed ? 'Expand' : 'Collapse'}
+      aria-expanded={!collapsed}
     >
       <span class="list-chevron">
-        <Icon name={isCollapsed ? 'chevron-right' : 'chevron-down'} size="xs" />
+        <Icon name={collapsed ? 'chevron-right' : 'chevron-down'} size="xs" />
       </span>
       {#if list.icon.type === 'emoji'}
         <span class="list-icon-emoji">{list.icon.value}</span>
@@ -203,7 +203,7 @@
     </button>
   </div>
   
-  {#if !isCollapsed}
+  {#if !collapsed}
     <div class="list-items">
       {#if filteredRecords.length === 0}
         <div class="list-empty">{t('empty-list')}</div>

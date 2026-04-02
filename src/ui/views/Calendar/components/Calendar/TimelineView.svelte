@@ -11,6 +11,20 @@
   import AllDayEventStrip from './AllDayEventStrip.svelte';
   import MultiDayEventStrip from './MultiDayEventStrip.svelte';
   import { getScrollBehavior } from 'src/lib/helpers/animation';
+  import DragOverlay from '../../dnd/DragOverlay.svelte';
+  import { TimelineDragManager, type OnDragCommit } from '../../dnd/TimelineDragManager';
+
+  // v3.2.5: Svelte action to portal element to document.body,
+  // escaping all overflow:hidden / transform containing-block ancestors
+  function portalToBody(node: HTMLElement) {
+    activeDocument.body.appendChild(node);
+    return {
+      destroy() {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      },
+    };
+  }
+
   
   /**
    * TimelineView - Timeline layout for day/week views
@@ -60,30 +74,21 @@
   export let now: dayjs.Dayjs | null = null;
   /** Hide time axis (used when shared axis is rendered externally) */
   export let hideTimeAxis: boolean = false;
+  /** v3.2.0 DnD: Callback for record date/time change from drag operations */
+  export let onRecordChange: OnDragCommit | undefined = undefined;
+  /** v3.2.2: Horizontal scroll container for cross-week auto-scroll */
+  export let horizontalScrollContainer: HTMLElement | null = null;
   
-  // v7.1: Track data version for reactivity - computed from actual data content
-  // This fingerprint changes when any record is added, removed, or modified (including time changes)
-  $: dataFingerprint = (() => {
-    let fp = String(dataVersion) + ':';
-    for (const dateStr of Object.keys(processedGroupedRecords).sort()) {
-      const records = processedGroupedRecords[dateStr] || [];
-      for (const r of records) {
-        // Include record id, time info, and render type in fingerprint
-        fp += r.record.id + '|';
-        fp += (r.timeInfo?.startTime?.valueOf() ?? 0) + '|';
-        fp += (r.timeInfo?.endTime?.valueOf() ?? 0) + '|';
-        fp += r.renderType + '|';
-      }
-    }
-    return fp;
-  })();
+  // v9.1: Use dataVersion directly for reactivity instead of expensive fingerprint.
+  // The previous dataFingerprint iterated ALL processedGroupedRecords keys (365+ for year-spanning events)
+  // and built a huge concatenated string. dataVersion already increments on every data change.
   
   /**
    * v7.1: Derive timedRecordsByDay reactively
    * Creates new array references when data changes, forcing child re-render
    */
   $: timedRecordsByDay = (() => {
-    dataFingerprint; // Force reactivity
+    void dataVersion; // Force reactivity via dataVersion
     const result: Record<string, ProcessedRecord[]> = {};
     for (const day of days) {
       const dateStr = day.format('YYYY-MM-DD');
@@ -92,27 +97,9 @@
     return result;
   })();
   
-  /**
-   * v7.2: Per-day fingerprint for DayColumn reactivity
-   * Ensures each DayColumn re-renders when its specific data changes
-   * Includes dataVersion to force re-computation on any data update
-   */
-  $: dayFingerprints = (() => {
-    const result: Record<string, string> = {};
-    for (const day of days) {
-      const dateStr = day.format('YYYY-MM-DD');
-      const records = timedRecordsByDay[dateStr] || [];
-      let fp = dataVersion + ':' + records.length + ':';
-      for (const r of records) {
-        // Include all time-relevant data in fingerprint
-        fp += r.record.id + '|';
-        fp += (r.timeInfo?.startTime?.valueOf() ?? 0) + '|';
-        fp += (r.timeInfo?.endTime?.valueOf() ?? 0) + '|';
-      }
-      result[dateStr] = fp;
-    }
-    return result;
-  })();
+  // v10.1: dayFingerprints REMOVED — was O(7×N) string build per period, ×5 periods.
+  // DayColumn reactivity now relies on processedRecords reference change (via timedRecordsByDay)
+  // and dataVersion tracking. No more destroy+recreate DayColumns on every data change.
   
   // Fixed height per hour for consistent scrolling
   // v7.0: Mobile-adaptive heights - reduced scale for better mobile viewing
@@ -156,8 +143,7 @@
    * This creates a new object reference when data changes, forcing re-render
    */
   $: headerEventsByDay = (() => {
-    // Touch dataFingerprint to force reactivity
-    dataFingerprint;
+    void dataVersion; // Force reactivity
     const result: Record<string, ProcessedRecord[]> = {};
     for (const day of days) {
       const dateStr = day.format('YYYY-MM-DD');
@@ -175,7 +161,7 @@
    * v7.1: Derive maxLane reactively from headerEventsByDay
    */
   $: {
-    dataFingerprint; // Force reactivity on data changes
+    void dataVersion; // Force reactivity on data changes
     let max = -1;
     for (const dateStr in headerEventsByDay) {
       const events = headerEventsByDay[dateStr] || [];
@@ -195,7 +181,7 @@
   $: allDaySectionHeight = fixedAllDayHeight !== undefined && fixedAllDayHeight > 0
     ? fixedAllDayHeight
     : localHeight;
-  // v7.1: Use headerEventsByDay for reactivity (already depends on dataFingerprint)
+  // v7.1: Use headerEventsByDay for reactivity (depends on dataVersion)
   $: hasAllDayEvents = maxLane >= 0 && 
     Object.values(headerEventsByDay).some(events => events && events.length > 0);
   // Show section if we have events locally OR globally (fixedAllDayHeight > 0)
@@ -357,9 +343,14 @@
   /**
    * Scroll to a specific hour (for initial positioning)
    */
+  /** Cached root font size — computed once, used in scroll and DnD calculations */
+  const rootFontSize = typeof document !== 'undefined'
+    ? (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+    : 16;
+
   function scrollToHour(hour: number) {
     if (!scrollContainer) return;
-    const targetScroll = hour * HOUR_HEIGHT_REM * 16; // Convert rem to px (assuming 16px base)
+    const targetScroll = hour * HOUR_HEIGHT_REM * rootFontSize;
     scrollContainer.scrollTop = targetScroll;
   }
   
@@ -401,6 +392,112 @@
   function isToday(day: dayjs.Dayjs): boolean {
     return now ? day.isSame(now, 'day') : false;
   }
+
+  // ── v3.2.0 DnD: TimelineDragManager ──────────────────────────────────────
+  const dragManager = new TimelineDragManager();
+  let dayColumnElements: HTMLElement[] = [];
+  let draggingRecordId: string | null = null;
+  let dndTargetDayIndex: number = -1;
+  let stripGhost: import('../../dnd/types').StripGhostPosition | null = null;
+  let stripEdgeLabel: string | null = null;
+  /** v3.2.9: Timed ghost for portal rendering on cross-period drag */
+  let timedGhost: import('../../dnd/types').GhostPosition | null = null;
+  let timedDragState: import('../../dnd/types').DragState = 'idle';
+
+  // Subscribe to dragRecordId store for reactive CSS
+  const unsubDragId = dragManager.dragRecordId.subscribe(id => {
+    draggingRecordId = id;
+  });
+
+  // v3.2.0 Iteration 2: Subscribe to targetDayIndex for column highlight
+  const unsubTargetDay = dragManager.targetDayIndex.subscribe(idx => {
+    dndTargetDayIndex = idx;
+  });
+
+  // v3.2.1: Subscribe to stripGhostPosition for allday section ghost overlay
+  const unsubStripGhost = dragManager.stripGhostPosition.subscribe(pos => {
+    stripGhost = pos;
+  });
+
+  // v3.2.5: Subscribe to edgeDateLabel for cross-period strip drag badge
+  const unsubStripEdge = dragManager.edgeDateLabel.subscribe(label => {
+    stripEdgeLabel = label;
+  });
+
+  // v3.2.9: Subscribe to ghostPosition for cross-period portal rendering
+  const unsubTimedGhost = dragManager.ghostPosition.subscribe(pos => {
+    timedGhost = pos;
+  });
+  const unsubTimedState = dragManager.state.subscribe(s => {
+    timedDragState = s;
+  });
+  /** v3.3.4: Snap time label for portal ghost rendering */
+  let timedSnapLabel: string | null = null;
+  const unsubTimedSnap = dragManager.snapTimeLabel.subscribe(label => {
+    timedSnapLabel = label;
+  });
+  /** v3.3.4: Edge date label for cross-period portal ghost */
+  let timedEdgeLabel: string | null = null;
+  const unsubTimedEdge = dragManager.edgeDateLabel.subscribe(label => {
+    timedEdgeLabel = label;
+  });
+  /** v4.0.2: Active drag mode for portal ghost handle highlighting */
+  let timedActiveMode: import('../../dnd/types').DragMode | null = null;
+  const unsubTimedMode = dragManager.activeMode.subscribe(m => {
+    timedActiveMode = m;
+  });
+
+  // Configure DragManager when props change
+  $: if (onRecordChange) {
+    dragManager.configure(
+      { startHour, endHour, hourHeightRem: HOUR_HEIGHT_REM, remPx: rootFontSize, isMobile },
+      onRecordChange
+    );
+  }
+
+  // v3.3.4: Wire ACTUAL scrollable ancestor for vertical auto-scroll.
+  // scrollContainer (.projects-calendar-timeline-content) has overflow:visible —
+  // the real scroller is the IHC wrapper ancestor with overflow-y:auto.
+  // v4.0.1: Also check scrollHeight > clientHeight to skip elements where
+  // computed overflow-y is 'auto' due to CSS spec (visible + non-visible axis → auto)
+  // but that don't actually scroll (e.g. .infinite-horizontal-calendar with align-self:flex-start).
+  $: if (scrollContainer && onRecordChange) {
+    let verticalScroller: HTMLElement | null = scrollContainer;
+    while (verticalScroller) {
+      const style = window.getComputedStyle(verticalScroller);
+      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+          verticalScroller.scrollHeight > verticalScroller.clientHeight + 1) break;
+      verticalScroller = verticalScroller.parentElement;
+    }
+    dragManager.setScrollContainer(verticalScroller ?? scrollContainer);
+  }
+
+  // v3.2.2: Wire horizontal scroll container for cross-week auto-scroll
+  $: if (horizontalScrollContainer && onRecordChange) {
+    dragManager.setHorizontalScrollContainer(horizontalScrollContainer);
+  }
+
+  // Register day columns for cross-day detection after each render
+  $: if (dayColumnElements.length > 0 && days.length > 0) {
+    const columnRefs = days.map((day, i) => ({
+      day,
+      element: dayColumnElements[i] as HTMLElement,
+    })).filter(ref => ref.element);
+    dragManager.setDayColumns(columnRefs);
+  }
+
+  onDestroy(() => {
+    unsubDragId();
+    unsubTargetDay();
+    unsubStripGhost();
+    unsubStripEdge();
+    unsubTimedGhost();
+    unsubTimedState();
+    unsubTimedSnap();
+    unsubTimedEdge();
+    unsubTimedMode();
+    dragManager.destroy();
+  });
 </script>
 
 <div class="projects-calendar-timeline-view" class:mobile={isMobile} class:no-axis={hideTimeAxis}>
@@ -436,11 +533,11 @@
         class="projects-calendar-allday-section"
         style:height="{allDaySectionHeight}rem"
       >
-        <div class="projects-calendar-allday-columns">
+        <div class="projects-calendar-allday-columns" style:--col-count={days.length}>
           {#each days as day}
             {@const dateStr = day.format('YYYY-MM-DD')}
             {@const dayEvents = headerEventsByDay[dateStr] || []}
-            <div class="projects-calendar-allday-column" class:today={isToday(day)}>
+            <div class="projects-calendar-allday-column" class:today={isToday(day)} data-date={dateStr}>
               {#each dayEvents as event (event.record.id + dateStr)}
                 <!-- v8.1: Ensure lane is defined, default to 0 if undefined -->
                 {@const safeLane = event.lane ?? 0}
@@ -452,6 +549,10 @@
                     rowIndex={safeLane}
                     onClick={handleAllDayEventClick}
                     {isMobile}
+                    dragManager={onRecordChange ? dragManager : undefined}
+                    processedRecord={event}
+                    isDragging={draggingRecordId === event.record.id}
+                    canResize={days.length > 1}
                   />
                 {:else}
                   <MultiDayEventStrip
@@ -462,12 +563,31 @@
                     isLastDay={isLastDayOfSpan(event, day)}
                     onClick={(newLeaf) => handleAllDayEventClick(event.record.id, newLeaf)}
                     {isMobile}
+                    dragManager={onRecordChange ? dragManager : undefined}
+                    processedRecord={event}
+                    isDragging={draggingRecordId === event.record.id}
+                    canResize={days.length > 1}
                   />
                 {/if}
               {/each}
             </div>
           {/each}
         </div>
+        <!-- v3.2.1 DnD: Strip ghost overlay for allday section -->
+        {#if stripGhost && !stripGhost.viewportRect}
+          {@const colCount = days.length || 7}
+          {@const ghostLeft = (stripGhost.startDayIndex / colCount) * 100}
+          {@const ghostWidth = ((stripGhost.endDayIndex - stripGhost.startDayIndex + 1) / colCount) * 100}
+          <div
+            class="allday-strip-ghost"
+            style="left: {ghostLeft}%; width: {ghostWidth}%;"
+            aria-hidden="true"
+          >
+            {#if stripGhost.title}
+              <span class="allday-strip-ghost-title">{stripGhost.title}</span>
+            {/if}
+          </div>
+        {/if}
       </div>
     {/if}
     
@@ -478,6 +598,7 @@
           class="projects-calendar-day-header" 
           class:today={isToday(day)}
           class:weekend={day.day() === 0 || day.day() === 6}
+          data-date={day.format('YYYY-MM-DD')}
         >
           <div class="projects-calendar-day-name">
             {day.format('ddd')}
@@ -498,7 +619,7 @@
       style:--total-height="{TOTAL_HEIGHT_REM}rem"
     >
       <div class="projects-calendar-timeline-inner" style:height="{TOTAL_HEIGHT_REM}rem">
-        {#each days as day (day.format('YYYY-MM-DD') + '|' + dayFingerprints[day.format('YYYY-MM-DD')])}
+        {#each days as day, dayIndex (day.format('YYYY-MM-DD'))}
           {@const dayDateStr = day.format('YYYY-MM-DD')}
           <DayColumn
             {day}
@@ -512,8 +633,24 @@
             {isMobile}
             isToday={isToday(day)}
             hourHeightRem={HOUR_HEIGHT_REM}
+            dragManager={onRecordChange ? dragManager : undefined}
+            {draggingRecordId}
+            isDragTarget={draggingRecordId !== null && dndTargetDayIndex === dayIndex}
+            bind:columnElement={dayColumnElements[dayIndex]}
           />
         {/each}
+        
+        <!-- v3.2.0 DnD: Ghost overlay -->
+        {#if onRecordChange}
+          <DragOverlay
+            state={dragManager.state}
+            ghostPosition={dragManager.ghostPosition}
+            snapTimeLabel={dragManager.snapTimeLabel}
+            edgeDateLabel={dragManager.edgeDateLabel}
+            activeMode={dragManager.activeMode}
+            {dayColumnElements}
+          />
+        {/if}
         
         <!-- Current time line (overlay) -->
         {#if showCurrentTimeLine && now}
@@ -529,6 +666,62 @@
   </div>
 </div>
 
+<!-- v3.2.5: Portal ghost for cross-period strip drag — rendered on document.body
+     to escape all overflow:hidden / transform containing-block ancestors -->
+{#if stripGhost?.viewportRect}
+  {@const vr = stripGhost.viewportRect}
+  <div
+    use:portalToBody
+    class="ppp-strip-ghost-portal"
+    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:4px; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:1.5px solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow:0 4px 12px rgba(0,0,0,0.12);"
+    aria-hidden="true"
+  >
+    {#if stripGhost.title}
+      <span
+        style="position:absolute; left:0.375rem; top:50%; transform:translateY(-50%); font-size:0.6875rem; font-weight:500; color:var(--text-normal); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:calc(100% - 0.75rem);"
+      >{stripGhost.title}</span>
+    {/if}
+    {#if stripEdgeLabel}
+      <span
+        style="position:absolute; top:-1.5rem; right:0; background:var(--text-accent); color:var(--text-on-accent); font-size:0.6875rem; font-weight:600; padding:0.125rem 0.5rem; border-radius:4px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.2);"
+      >{stripEdgeLabel}</span>
+    {/if}
+  </div>
+{/if}
+
+<!-- v3.2.9: Portal ghost for cross-period TIMED event drag -->
+{#if timedDragState === 'dragging' && timedGhost?.viewportRect}
+  {@const vr = timedGhost.viewportRect}
+  <div
+    use:portalToBody
+    class="ppp-timed-ghost-portal"
+    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-left:3px solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow:0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
+    aria-hidden="true"
+  >
+    <!-- v4.0.2: Resize handle indicators on portal ghost -->
+    <div style="position:absolute; top:0; left:0; width:0; height:0; border-top:{timedActiveMode === 'resize-top' ? '0.75rem' : '0.5rem'} solid var(--text-accent); border-right:{timedActiveMode === 'resize-top' ? '0.75rem' : '0.5rem'} solid transparent; opacity:{timedActiveMode === 'resize-top' ? 1 : 0.6};"></div>
+    {#if timedGhost.title}
+      <div style="font-size:0.75rem; font-weight:500; color:var(--text-normal); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{timedGhost.title}</div>
+    {/if}
+    <div style="font-size:var(--font-ui-smaller); color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{timedGhost.time} – {timedGhost.endTime}</div>
+    <div style="position:absolute; bottom:0; right:0; width:0; height:0; border-bottom:{timedActiveMode === 'resize-bottom' ? '0.75rem' : '0.5rem'} solid var(--text-accent); border-left:{timedActiveMode === 'resize-bottom' ? '0.75rem' : '0.5rem'} solid transparent; opacity:{timedActiveMode === 'resize-bottom' ? 1 : 0.6};"></div>
+    <!-- v3.3.4: Snap time label for cross-period ghost -->
+    {#if timedSnapLabel}
+      <div style="position:absolute; top:-1.25rem; left:0; font-size:var(--font-ui-smaller); font-weight:600; color:var(--text-accent); background:var(--background-primary); padding:0 0.25rem; border-radius:0.125rem; white-space:nowrap;">{timedSnapLabel}</div>
+    {/if}
+    <!-- v3.3.4: Edge date label for cross-period ghost -->
+    {#if timedEdgeLabel}
+      <div style="position:absolute; top:-1.25rem; right:0; background:var(--text-accent); color:var(--text-on-accent); font-size:var(--font-ui-smaller); font-weight:600; padding:0.125rem 0.5rem; border-radius:0.25rem; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.2);">{timedEdgeLabel}</div>
+    {/if}
+  </div>
+  <!-- v3.3.4: Snap line across the viewport at ghost top -->
+  <div
+    use:portalToBody
+    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:1px; background:var(--text-accent); opacity:0.5; pointer-events:none; z-index:9998;"
+    aria-hidden="true"
+  ></div>
+{/if}
+
 <style>
   .projects-calendar-timeline-view {
     display: flex;
@@ -537,6 +730,8 @@
     position: relative;
     /* v6.2: Single scroll container architecture - remove internal scrolling */
     overflow: visible;
+    /* v3.2.7: Allow proper flex shrinking when agenda sidebar constrains width */
+    min-width: 0;
   }
   
   .projects-calendar-timeline-view.mobile {
@@ -585,7 +780,12 @@
     /* v6.2: No internal scrolling - handled by parent */
     overflow: visible;
     min-height: 0;
+    /* v3.2.7: Allow flex shrinking in parent layout */
+    min-width: 0;
+    /* v3.2.5: Right border for single-day/last-column edge visibility */
+    border-right: 1px solid var(--background-modifier-border);
   }
+  
   
   .projects-calendar-timeline-days-header {
     display: flex;
@@ -700,20 +900,23 @@
     /* Height is still controlled by fixedAllDayHeight via inline style */
     overflow: hidden;
     flex-shrink: 0;
-    /* v6.4: Non-sticky positioning to prevent timeline overlap */
+    /* v3.2.8: position: relative kept for the strip ghost overlay (position: absolute child) */
     position: relative;
     z-index: 2;
   }
   
   .projects-calendar-allday-columns {
-    display: flex;
+    /* v4.0.4: Grid instead of flex — flex distributes fractional pixels
+     * per-row based on each child's border/padding, causing cumulative
+     * column drift that misaligns the percentage-based strip ghost. */
+    display: grid;
+    grid-template-columns: repeat(var(--col-count, 7), 1fr);
     flex: 1;
     /* v7.5: Ensure columns respect parent container bounds */
     overflow: hidden;
   }
   
   .projects-calendar-allday-column {
-    flex: 1;
     position: relative;
     border-right: 1px solid var(--background-modifier-border);
     min-height: 100%;
@@ -728,6 +931,37 @@
   .projects-calendar-allday-column.today {
     background: var(--background-modifier-hover);
   }
+
+  /* v3.2.1 DnD: Strip ghost overlay in allday section */
+  .allday-strip-ghost {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: var(--radius-s, 0.25rem);
+    background: color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary));
+    border: 1.5px solid color-mix(in srgb, var(--interactive-accent) 50%, transparent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    z-index: 10;
+    /* v4.0.3: Removed transition — instant ghost feedback prevents perceived
+     * stalling during strip-resize drags where independent left/width
+     * animations fight each other. */
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .allday-strip-ghost-title {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--text-normal);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 0.375rem;
+  }
+
+
   
   .projects-calendar-allday-axis-label {
     position: absolute;

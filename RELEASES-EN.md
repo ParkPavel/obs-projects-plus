@@ -1,11 +1,11 @@
 # 🚀 Release Information
 
-## Current Release: v3.1.0
+## Current Release: v3.2.0
 
-**Release Date**: March 8, 2026  
+**Release Date**: April 3, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Deep mobile adaptation — DnD handle engine, full-screen modal, unified grip design
+**Type**: Drag & Drop 2.0 — full Calendar Timeline DnD, strip resize, cross-day drag, snap engine
 
 ## 📦 Download Options
 
@@ -47,11 +47,55 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | ✅ | **Unified Filters + Instant Mode** | v3.0.9 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Mobile Feature Parity** | v3.0.10 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Deep Mobile Adaptation** | v3.1.0 | Released | [CHANGELOG](CHANGELOG.md) |
-| 🥇 | **Drag & Drop 2.0** | v3.2.0 | In Progress | [Architecture](docs/architecture-drag-drop.md) |
-| 🥈 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
-| 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
+| ✅ | **Drag & Drop 2.0** | v3.2.0 | Released | [CHANGELOG](CHANGELOG.md) |
+| 🥇 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
+| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
 
 ## 📋 Release Notes
+
+---
+
+### 🎯 v3.2.0 (April 3, 2026) — Drag & Drop 2.0
+
+> **Full Calendar Timeline DnD: drag events between days and time slots, strip resize, snap engine, mobile DnD with long-press**
+
+#### 🗓️ Calendar Timeline DnD
+
+| Feature | Description |
+|---------|-------------|
+| **EventBar drag** | Drag events in Week/Day timeline views to reschedule date/time |
+| **Cross-day drag** | Move events between days in Week view with automatic date recalculation |
+| **Strip resize** | Resize multi-day event bars by dragging left/right edges to adjust start/end dates |
+| **15-min snap** | Time-based events snap to 15-minute intervals during drag |
+| **Visual drop feedback** | Drop targets highlight with accent color; stronger feedback on touch devices |
+
+#### ⚙️ TimelineDragManager
+
+- **DragSession** — all per-drag state encapsulated in a session object: clean initiate/cleanup cycle
+- **Mode detection** — single evaluation at movement threshold: move, strip-resize-start, or strip-resize-end
+- **Auto-scroll** — time-based vertical auto-scroll when dragging near container edges
+- **SnapEngine** — configurable snap intervals for both time (minutes) and day (index) axes
+- **Mode lock** — mode re-evaluation during first 30px of drag, then locks
+
+#### 📱 Mobile DnD
+
+- **Long-press (500ms)** — DnD activation only after holding on drag handle
+- **Haptic feedback** — `navigator.vibrate()` on snap boundaries with 100ms throttle
+- **Visual feedback** — `maxHeight: 3rem`, `opacity: 0.9`, shadow during drag
+- **Touch drop targets** — `@media (pointer: coarse)` with stronger accent background
+
+#### 🛡️ Data Integrity
+
+| Fix | Description |
+|-----|-------------|
+| Single mutation point | `CalendarView.handleRecordChange` is the sole date mutation path (eliminates double-shift) |
+| Format preservation | Date-only fields stay date-only during DnD (no `T00:00:00.000Z` injection) |
+| Multi-day span | Timed moves compute `endDate = origEnd.add(dayDelta, 'day')` — span doesn't collapse |
+| Strip resize accuracy | Resize-start/end use bar start/end instead of center — eliminates delta amplification |
+
+#### Metrics
+- **Tests**: 375/375 PASS (21 suites)
+- **Build**: OK (main.js 1.8MB, main.css 4.2KB)
 
 ---
 
@@ -211,8 +255,18 @@ Week and day view switching in "instant" mode is now **fully animation-free**:
 
 #### Metrics
 - **Files changed**: 22 (+560, −48 lines)
-- **Tests**: 344/344 PASS (19 suites)
-- **Build**: OK (main.js 1.7MB, main.css 4.2KB)
+- **Tests**: 344/344 PASS (19 suites) → after hotfixes: **375/375 PASS (21 suites)**
+- **Build**: OK (main.js 1.8MB, main.css 4.2KB)
+
+#### Post-Release Hotfixes (included in v3.1.0 build)
+
+| Fix | Description |
+|-----|-------------|
+| Mobile Data Loss | Removed `dataGeneration` guard in `calendarView.ts` — CalendarView now delivers data via `$set()` like Table/Board/Gallery |
+| Timeline Z-Index | `CurrentTimeLine` z-index 100→10, `isolation: isolate` on ViewContent — prevents overlapping Agenda |
+| Board Zoom iOS | CSS `zoom` replaced with `transform: scale()` in `Board.svelte` — Safari/iOS compatibility |
+| Numeric Date Hardening | `parseDateInTimezone` rejects numbers; `isDateLike` rejects numbers; `calculateSpanInfo` capped at 365 days |
+| Agenda DnD Reset | `getLatestProject()` reads current project from settings store instead of stale prop — reordering lists no longer resets view |
 
 ---
 

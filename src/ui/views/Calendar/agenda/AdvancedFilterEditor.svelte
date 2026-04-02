@@ -214,58 +214,40 @@
     });
   }
 
-  // ── Render the autocomplete popover using imperative DOM ──
+  // ── Render the autocomplete popover — Google Sheets-style inline hint ──
   function renderAcPopover() {
     if (acPopover) acPopover.remove();
     if (!textarea || acItems.length === 0) return;
 
     const rect = textarea.getBoundingClientRect();
-    // Approximate cursor position (line-based)
-    const textBeforeCursor = formula.substring(0, textarea.selectionStart);
-    const lines = textBeforeCursor.split('\n');
-    const lineIndex = lines.length - 1;
-    const charWidth = 8.5; // approximate monospace
-    const cursorCol = (lines[lineIndex] ?? '').length;
-
-    // Horizontal: at cursor column, clamped to not overflow right edge
-    const popWidth = 400; // approximate popup width
-    const popX = Math.min(
-      rect.left + Math.min(cursorCol * charWidth, rect.width - 20),
-      window.innerWidth - popWidth - 8
-    );
-    
-    // Vertical: always position BELOW the textarea, never overlapping it
-    const popupMaxH = 300;
+    // Position: flush to textarea's left edge, directly ABOVE the textarea.
+    // This keeps it out of the way — user sees suggestions while typing.
+    const popupMaxH = 220;
+    const spaceAbove = rect.top - 8;
     const spaceBelow = window.innerHeight - rect.bottom - 8;
-    let popY: number;
-    if (spaceBelow >= popupMaxH) {
-      // Enough space below — place directly under textarea
-      popY = rect.bottom + 4;
-    } else if (spaceBelow >= 120) {
-      // Some space below — use it (popup will be shorter via max-height)
-      popY = rect.bottom + 4;
-    } else {
-      // No space below — place above textarea
-      popY = rect.top - popupMaxH - 4;
-      if (popY < 4) popY = 4;
-    }
+    const useAbove = spaceAbove >= 100 || spaceAbove > spaceBelow;
 
     const el = activeDocument.createElement('div');
     el.setAttribute('style', [
       'position:fixed',
-      `left:${Math.max(4, popX)}px`,
-      `top:${popY}px`,
+      `left:${rect.left}px`,
+      `width:${rect.width}px`,
+      useAbove
+        ? `bottom:${window.innerHeight - rect.top + 2}px`
+        : `top:${rect.bottom + 2}px`,
       'z-index:10001',
-      'min-width:340px',
-      'max-width:480px',
-      `max-height:${Math.min(popupMaxH, Math.max(spaceBelow, 120))}px`,
+      `max-height:${Math.min(popupMaxH, useAbove ? spaceAbove : spaceBelow)}px`,
       'overflow-y:auto',
-      'background:var(--background-primary)',
-      'border:1px solid var(--background-modifier-border)',
-      'border-radius:6px',
-      'box-shadow:0 8px 24px rgba(0,0,0,0.25)',
-      'padding:4px 0',
-      'font-size:13px',
+      'overflow-x:hidden',
+      // Translucent background — like Google Sheets
+      'background:color-mix(in srgb, var(--background-primary) 88%, transparent)',
+      'backdrop-filter:blur(12px)',
+      '-webkit-backdrop-filter:blur(12px)',
+      'border:1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent)',
+      'border-radius:8px',
+      'box-shadow:0 4px 16px rgba(0,0,0,0.12)',
+      'padding:3px 0',
+      'font-size:12px',
     ].join(';'));
 
     renderAcContent(el);
@@ -289,7 +271,7 @@
           'font-weight:600',
           'color:var(--text-muted)',
           'user-select:none',
-          idx > 0 ? 'border-top:1px solid var(--background-modifier-border);margin-top:2px;padding-top:6px' : '',
+          idx > 0 ? 'border-top:1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);margin-top:1px;padding-top:1px' : '',
         ].join(';'));
         sep.textContent = item.category;
         el.appendChild(sep);
@@ -300,35 +282,35 @@
       row.setAttribute('style', [
         'display:flex',
         'align-items:center',
-        'gap:8px',
-        'padding:5px 12px',
+        'gap:6px',
+        'padding:3px 8px',
         'cursor:pointer',
-        'min-height:28px',
-        'transition:background 0.1s',
-        isActive ? 'background:var(--interactive-accent);color:var(--text-on-accent)' : '',
+        'min-height:24px',
+        'transition:background 0.08s ease',
+        'border-radius:4px',
+        'margin:0 3px',
+        isActive
+          ? 'background:color-mix(in srgb, var(--interactive-accent) 18%, transparent)'
+          : '',
       ].join(';'));
       row.dataset['acIdx'] = String(idx);
 
-      // Kind badge
+      // Subtle kind indicator (monochrome, just a letter)
       const badge = activeDocument.createElement('span');
-      const badgeColors: Record<string, string> = {
-        function: 'background:#7c3aed;color:#fff',
-        field: 'background:#0891b2;color:#fff',
-        keyword: 'background:#d97706;color:#fff',
-        snippet: 'background:#059669;color:#fff',
-      };
       badge.setAttribute('style', [
         'display:inline-flex',
         'align-items:center',
         'justify-content:center',
-        'min-width:20px',
-        'height:18px',
+        'width:16px',
+        'height:16px',
         'border-radius:3px',
-        'font-size:10px',
-        'font-weight:700',
-        'padding:0 4px',
+        'font-size:9px',
+        'font-weight:600',
         'flex-shrink:0',
-        badgeColors[item.kind] ?? '',
+        'opacity:0.55',
+        isActive
+          ? 'color:var(--interactive-accent);opacity:0.9'
+          : 'color:var(--text-muted)',
       ].join(';'));
       badge.textContent = item.kind === 'function' ? 'ƒ' : item.kind === 'field' ? '◆' : item.kind === 'snippet' ? '⚡' : 'K';
       row.appendChild(badge);
@@ -337,41 +319,45 @@
       const label = activeDocument.createElement('span');
       label.setAttribute('style', [
         'font-family:var(--font-monospace)',
-        'font-weight:600',
+        'font-size:12px',
+        'font-weight:500',
         'white-space:nowrap',
         'overflow:hidden',
         'text-overflow:ellipsis',
+        isActive ? 'color:var(--text-normal)' : 'color:var(--text-normal)',
       ].join(';'));
       label.textContent = item.label;
       row.appendChild(label);
 
-      // Args hint (for functions)
+      // Args hint (for functions) — subtle inline
       if (item.args !== undefined && item.args !== '') {
         const args = activeDocument.createElement('span');
         args.setAttribute('style', [
-          'color:' + (isActive ? 'var(--text-on-accent)' : 'var(--text-muted)'),
+          'color:var(--text-faint)',
           'font-size:11px',
-          'opacity:0.8',
+          'opacity:0.7',
           'white-space:nowrap',
         ].join(';'));
         args.textContent = `(${item.args})`;
         row.appendChild(args);
       }
 
-      // Description (right-aligned)
-      const desc = activeDocument.createElement('span');
-      desc.setAttribute('style', [
-        'margin-left:auto',
-        'color:' + (isActive ? 'var(--text-on-accent)' : 'var(--text-faint)'),
-        'font-size:11px',
-        'white-space:nowrap',
-        'overflow:hidden',
-        'text-overflow:ellipsis',
-        'max-width:160px',
-        'flex-shrink:0',
-      ].join(';'));
-      desc.textContent = item.desc;
-      row.appendChild(desc);
+      // Description — only show for active item to keep it ultra-compact
+      if (isActive && item.desc) {
+        const desc = activeDocument.createElement('span');
+        desc.setAttribute('style', [
+          'margin-left:auto',
+          'color:var(--text-faint)',
+          'font-size:10px',
+          'white-space:nowrap',
+          'overflow:hidden',
+          'text-overflow:ellipsis',
+          'max-width:140px',
+          'flex-shrink:0',
+        ].join(';'));
+        desc.textContent = item.desc;
+        row.appendChild(desc);
+      }
 
       // Events
       row.addEventListener('mousedown', (e) => {
@@ -385,21 +371,6 @@
 
       el.appendChild(row);
     });
-
-    // Footer hint
-    const footer = activeDocument.createElement('div');
-    footer.setAttribute('style', [
-      'padding:4px 12px',
-      'font-size:10px',
-      'color:var(--text-faint)',
-      'border-top:1px solid var(--background-modifier-border)',
-      'display:flex',
-      'gap:12px',
-    ].join(';'));
-    footer.createSpan({ text: '↑↓ навигация' });
-    footer.createSpan({ text: 'Tab / Enter — вставить' });
-    footer.createSpan({ text: 'Esc — закрыть' });
-    el.appendChild(footer);
   }
 
   function updateAcHighlight(el: HTMLDivElement) {
@@ -408,20 +379,17 @@
       const idx = Number(row.dataset['acIdx']);
       const isActive = idx === acIndex;
       if (isActive) {
-        row.style.background = 'var(--interactive-accent)';
-        row.style.color = 'var(--text-on-accent)';
+        row.style.background = 'color-mix(in srgb, var(--interactive-accent) 18%, transparent)';
         row.scrollIntoView({ block: 'nearest' });
       } else {
         row.style.background = '';
-        row.style.color = '';
       }
-      // Update desc/args colors
-      const spans = row.querySelectorAll('span');
-      spans.forEach((span) => {
-        if (span.style.marginLeft === 'auto' || span.style.opacity === '0.8') {
-          span.style.color = isActive ? 'var(--text-on-accent)' : 'var(--text-faint)';
-        }
-      });
+      // Update badge opacity
+      const badge = row.querySelector('span');
+      if (badge && badge.style.width === '16px') {
+        badge.style.opacity = isActive ? '0.9' : '0.55';
+        badge.style.color = isActive ? 'var(--interactive-accent)' : 'var(--text-muted)';
+      }
     });
   }
 
@@ -656,26 +624,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--size-4-2) var(--size-4-3);
+    padding: var(--size-4-1) var(--size-4-2);
     background: var(--background-secondary);
     border-bottom: 0.0625rem solid var(--background-modifier-border);
+    gap: var(--size-4-2);
   }
 
   .toolbar-group {
     display: flex;
-    gap: var(--size-4-2);
+    gap: var(--size-4-1);
   }
 
   .toolbar-btn {
     display: flex;
     align-items: center;
-    gap: var(--size-4-1);
-    padding: var(--size-4-2) var(--size-4-3);
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
     border: 0.0625rem solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     background: var(--background-primary);
     color: var(--text-muted);
-    font-size: var(--font-ui-small);
+    font-size: var(--font-ui-smaller);
     cursor: pointer;
     transition: all 0.15s ease;
   }
@@ -693,7 +662,7 @@
 
   .toolbar-hint {
     font-size: var(--font-ui-smaller);
-    padding: 0 var(--size-4-2);
+    padding: 0 var(--size-4-1);
   }
 
   .hint-error { color: var(--text-error); font-weight: 600; }
@@ -702,22 +671,22 @@
 
   /* ── Help panel ── */
   .help-panel {
-    padding: var(--size-4-3);
+    padding: var(--size-4-2);
     background: var(--background-secondary);
     border-bottom: 0.0625rem solid var(--background-modifier-border);
-    max-height: 18rem;
+    max-height: 14rem;
     overflow-y: auto;
   }
 
   .help-columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--size-4-4);
+    gap: var(--size-4-2);
   }
 
   .help-col h4 {
-    margin: var(--size-4-2) 0 var(--size-4-1);
-    font-size: var(--font-ui-small);
+    margin: 0.35rem 0 0.15rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: var(--text-normal);
   }
@@ -726,25 +695,25 @@
 
   .help-col code, .help-examples code {
     display: block;
-    padding: 0.125rem var(--size-4-2);
-    margin: 0.125rem 0;
+    padding: 0.1rem var(--size-4-1);
+    margin: 0.1rem 0;
     background: var(--code-background);
     border-radius: var(--radius-s);
     font-family: var(--font-monospace);
-    font-size: var(--font-ui-smaller);
+    font-size: 0.65rem;
     color: var(--code-normal);
-    line-height: 1.6;
+    line-height: 1.5;
   }
 
   .help-examples {
-    margin-top: var(--size-4-3);
-    padding-top: var(--size-4-3);
+    margin-top: var(--size-4-2);
+    padding-top: var(--size-4-2);
     border-top: 0.0625rem solid var(--background-modifier-border);
   }
 
   .help-examples strong {
     display: block;
-    font-size: var(--font-ui-small);
+    font-size: var(--font-ui-smaller);
     margin-bottom: var(--size-4-1);
     color: var(--text-muted);
   }
@@ -753,19 +722,19 @@
   .editor-container {
     position: relative;
     flex: 1;
-    min-height: 10rem;
+    min-height: 6rem;
   }
 
   .formula-textarea {
     width: 100%;
-    min-height: 10rem;
-    padding: var(--size-4-4);
+    min-height: 6rem;
+    padding: var(--size-4-2) var(--size-4-3);
     border: none;
     background: var(--background-primary);
     color: var(--text-normal);
     font-family: var(--font-monospace);
-    font-size: var(--font-ui-medium);
-    line-height: 1.6;
+    font-size: var(--font-ui-small);
+    line-height: 1.5;
     resize: vertical;
   }
 
@@ -774,21 +743,22 @@
   }
 
   .formula-textarea.has-error {
-    border-left: 0.1875rem solid var(--text-error);
+    border-left: 0.125rem solid var(--text-error);
   }
 
   .formula-textarea.has-valid {
-    border-left: 0.1875rem solid var(--color-green);
+    border-left: 0.125rem solid var(--color-green);
   }
 
   .formula-textarea::placeholder {
     color: var(--text-faint);
     opacity: 0.5;
+    font-size: var(--font-ui-smaller);
   }
 
   /* ── Validation Errors ── */
   .validation-errors {
-    padding: var(--size-4-3);
+    padding: var(--size-4-2);
     background: var(--background-modifier-error);
     border-top: 0.0625rem solid var(--text-error);
   }
@@ -796,10 +766,10 @@
   .error-item {
     display: flex;
     align-items: start;
-    gap: var(--size-4-2);
-    padding: var(--size-4-2) 0;
+    gap: var(--size-4-1);
+    padding: var(--size-4-1) 0;
     color: var(--text-error);
-    font-size: var(--font-ui-small);
+    font-size: var(--font-ui-smaller);
   }
 
   .error-item:not(:last-child) {

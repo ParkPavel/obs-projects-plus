@@ -15,10 +15,12 @@
   import EventTimeline from './EventTimeline.svelte';
   import HeaderStripsSection from './HeaderStripsSection.svelte';
   import type { CalendarInterval } from '../../calendar';
+  import type { RecordChangeOptions } from '../../dnd/types';
   import { INFINITE_SCROLL, GESTURE, TIMING } from '../../constants';
   import { calendarLogger } from '../../logger';
   import { getScrollBehavior, getAnimationDuration } from 'src/lib/helpers/animation';
   import { settings } from 'src/lib/stores/settings';
+  import { isGesturesPaused } from '../../gestures/GestureCoordinator';
 
   dayjs.extend(isSameOrAfter);
   dayjs.extend(isSameOrBefore);
@@ -30,7 +32,7 @@
   export let interval: CalendarInterval;
   export let checkField: string | undefined;
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
-  export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord) => void) | undefined;
+  export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
   export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
   export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
@@ -106,31 +108,13 @@
     }
   }
   
-  // v7.1: Data fingerprint for reactivity tracking
-  // This changes when any record is added, removed, or modified (including time changes)
-  $: dataFingerprint = (() => {
-    if (!processedData?.grouped) return '';
-    let fp = '';
-    for (const dateStr of Object.keys(processedData.grouped).sort()) {
-      const records = processedData.grouped[dateStr] || [];
-      for (const r of records) {
-        // Include record id, time info, and render type in fingerprint
-        fp += r.record.id + '|';
-        fp += (r.timeInfo?.startTime?.valueOf() ?? 0) + '|';
-        fp += (r.timeInfo?.endTime?.valueOf() ?? 0) + '|';
-        fp += r.renderType + '|';
-      }
-    }
-    return fp;
-  })();
+  // v9.1: Use dataVersion as lightweight change tracker instead of expensive fingerprint.
+  // The previous dataFingerprint sorted 365+ keys and built a massive string on every change.
+  // dataVersion is already incremented by the parent when raw frame data changes.
   
-  // v7.1: Reactive grouped records with new object reference when data changes
-  // This forces child components to re-render even with keyed {#each}
-  $: processedGroupedRecords = (() => {
-    dataFingerprint; // Force re-evaluation when fingerprint changes
-    const grouped = processedData?.grouped;
-    return grouped ? { ...grouped } : {};
-  })();
+  // v9.1: Pass processedData.grouped directly — rely on dataVersion for reactivity, not object spread.
+  // The previous { ...grouped } spread created a new reference every time, forcing ALL children to re-render.
+  $: processedGroupedRecords = processedData?.grouped ?? {};
   
   // v6.5: Get current visible month from active period
   $: currentVisibleMonth = periods[currentPeriodIndex]?.startDate?.format('MMM').toUpperCase() ?? '';
@@ -140,6 +124,8 @@
   let lastTargetDate: string | null = null;
   let lastIsActive: boolean = false;
   let isInitializing = false;
+  /** v3.3.4: Freeze flag — prevents reactive block from navigating during settings updates */
+  let navigationFrozen = false;
   
   // Simple reactive handler - detect ANY relevant change and navigate
   $: {
@@ -154,9 +140,10 @@
     // - We're active AND
     // - Something changed (became active, interval changed, or target date changed)
     // - NOT currently initializing
+    // - NOT frozen (e.g., during settings-only updates that shouldn't trigger navigation)
     const hasChange = becameActive || (isActive && intervalChanged) || (isActive && targetDateChanged && targetDateStr !== null);
     
-    if (hasChange && !isInitializing && container) {
+    if (hasChange && !isInitializing && container && !navigationFrozen) {
       isInitializing = true;
       
       // Use targetDate if available, otherwise current date
@@ -171,14 +158,14 @@
       }, navDelay);
     }
     
-    // Always update tracking state at the end
-    lastIsActive = isActive;
-    lastInterval = interval;
-    lastTargetDate = targetDateStr;
+    // Only update tracking state when actually changed (avoids Svelte double-flush)
+    if (isActive !== lastIsActive) lastIsActive = isActive;
+    if (interval !== lastInterval) lastInterval = interval;
+    if (targetDateStr !== lastTargetDate) lastTargetDate = targetDateStr;
   }
 
   let container: HTMLDivElement | null = null;
-  let wrapperElement: HTMLDivElement | null = null;
+  let wrapperEl: HTMLDivElement | null = null;
   
   // Using centralized constants from constants.ts (cast to number for flexibility)
   const INITIAL_BUFFER: number = INFINITE_SCROLL.INITIAL_BUFFER;
@@ -207,6 +194,58 @@
   let isLoadingNext = false;
   let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let currentPeriodIndex = INITIAL_BUFFER;
+  
+  // v9.1: Progressive period rendering — spread DOM creation across frames.
+  // During init, only the center period renders first; the rest expand one-per-frame.
+  // Once all initial periods are rendered, progressiveRenderDone = true and all future
+  // periods (from append/prepend) render immediately.
+  let visibleSet: Set<number> = new Set();
+  let progressiveRenderDone = false;
+  let progressiveRafId: number | null = null;
+
+  function startProgressiveRender() {
+    if (progressiveRafId !== null) cancelAnimationFrame(progressiveRafId);
+    progressiveRenderDone = false;
+    // Start with NO periods visible — prevents creating TimelineView + 7 DayColumns
+    // synchronously inside the Svelte flush() that follows onMount. Without this,
+    // the synchronous DOM creation (168+ elements) + forced reflow from updateAxisWidth
+    // blocks the main thread, causing the UI freeze.
+    visibleSet = new Set();
+    
+    // Render center period in next animation frame (AFTER current flush completes)
+    progressiveRafId = requestAnimationFrame(() => {
+      visibleSet = new Set([currentPeriodIndex]);
+      
+      // v10.2: Build expansion queue — one period per frame instead of two.
+      // Previously: radius expansion added 2 periods per frame (left+right), creating 14 DayColumns.
+      // Now: add 1 period per frame (7 DayColumns), keeping each frame under 16ms budget.
+      const queue: number[] = [];
+      for (let r = 1; r <= INITIAL_BUFFER; r++) {
+        const lo = currentPeriodIndex - r;
+        const hi = currentPeriodIndex + r;
+        if (lo >= 0) queue.push(lo);
+        if (hi < periods.length) queue.push(hi);
+      }
+      
+      function expandOne() {
+        if (queue.length === 0) {
+          progressiveRenderDone = true;
+          progressiveRafId = null;
+          return;
+        }
+        const next = new Set(visibleSet);
+        next.add(queue.shift()!);
+        visibleSet = next;
+        progressiveRafId = requestAnimationFrame(expandOne);
+      }
+      progressiveRafId = requestAnimationFrame(expandOne);
+    });
+  }
+  
+  // Helper — used in template {#if}. Passes reactive deps so Svelte tracks changes.
+  function isPeriodVisible(index: number, _set: Set<number>, _done: boolean): boolean {
+    return _done || _set.has(index);
+  }
 
   function getDaysInPeriod(baseDate: dayjs.Dayjs): number {
     switch (interval) {
@@ -369,13 +408,25 @@
       snapTimer = null;
     }
     
+    // v3.2.3: Skip snap if DnD auto-scroll is active (data-dnd-scrolling attribute)
+    const isDndScrolling = container?.hasAttribute('data-dnd-scrolling') ?? false;
+    
     scrollDebounceTimer = setTimeout(() => {
       checkAndLoadMore();
-      // Schedule snap after scroll settles
-      if (!isSnapping) {
+      // Schedule snap after scroll settles (but NOT during DnD auto-scroll)
+      if (!isSnapping && !isDndScrolling) {
         scheduleSnap();
       }
     }, 50);
+  }
+
+  /**
+   * v3.2.3: Handle DnD period load requests.
+   * Triggered by DragManager during horizontal auto-scroll to ensure
+   * more periods are loaded even though handleScroll debounce prevents checkAndLoadMore.
+   */
+  function handleDndCheckLoad() {
+    checkAndLoadMore();
   }
 
   function checkAndLoadMore() {
@@ -451,6 +502,16 @@
     return container;
   }
 
+  /** v3.3.4: Prevent reactive navigation block from firing (for settings-only updates) */
+  export function freezeNavigation(): void {
+    navigationFrozen = true;
+  }
+
+  /** v3.3.4: Re-enable reactive navigation after settings-only update settled */
+  export function unfreezeNavigation(): void {
+    navigationFrozen = false;
+  }
+
   // Helper for NavigableCalendar interface
   export function findElementForDate(date: dayjs.Dayjs): HTMLElement | null {
     return null; // Simplified implementation
@@ -520,6 +581,9 @@
     }
     
     currentPeriodIndex = INITIAL_BUFFER;
+    
+    // v9.1: Start progressive rendering — center period first, then expand outward
+    startProgressiveRender();
   }
 
   /**
@@ -633,7 +697,8 @@
    * Vertical swipes are passed through for native scrolling.
    */
   function handleTouchStart(e: TouchEvent) {
-    if (!container || !e.touches[0]) return;
+    // v3.2.4: Skip swipe handling when DnD is active
+    if (!container || !e.touches[0] || isGesturesPaused()) return;
     
     const touch = e.touches[0];
     touchStartX = touch.clientX;
@@ -647,7 +712,8 @@
   }
   
   function handleTouchMove(e: TouchEvent) {
-    if (!container || !e.touches[0] || isEdgeSwipe) return;
+    // v3.2.4: Skip swipe handling when DnD is active
+    if (!container || !e.touches[0] || isEdgeSwipe || isGesturesPaused()) return;
     
     const touch = e.touches[0];
     const deltaX = touchStartX - touch.clientX;
@@ -668,7 +734,7 @@
   }
   
   function handleTouchEnd() {
-    if (!container) return;
+    if (!container || isGesturesPaused()) return;
     
     isTouchScrolling = false;
     isEdgeSwipe = false;
@@ -754,17 +820,21 @@
     lastTargetDate = targetDate?.format('YYYY-MM-DD') ?? null;
     lastIsActive = isActive;
     
-    // Only initialize if active on mount (rare case - usually starts hidden)
+    // Only initialize if active on mount. Set isInitializing=true FIRST so that concurrent
+    // $: reactive block triggers (from interval/targetDate changes during startup config
+    // restore) are blocked and don't cause duplicate initializePeriodsAroundDate calls.
     if (isActive && container) {
       const initialDate = targetDate || dayjs();
+      isInitializing = true;
       initializePeriodsAroundDate(initialDate);
       
-      // Auto-scroll after mount
+      // Auto-scroll after mount, then release the initialization guard
       setTimeout(() => {
         scrollToDate(initialDate);
         if (useTimelineView && startHour > 0) {
           scrollToHour(startHour);
         }
+        isInitializing = false;
       }, isInstantMode ? 0 : 150);
     }
     
@@ -776,6 +846,9 @@
       container.addEventListener('touchstart', handleTouchStart, { passive: true });
       container.addEventListener('touchmove', handleTouchMove, { passive: false });
       container.addEventListener('touchend', handleTouchEnd, { passive: true });
+      
+      // v3.2.3: DnD auto-scroll period loading
+      container.addEventListener('dnd-check-load', handleDndCheckLoad);
     }
     
     if (onScrollToCurrent) {
@@ -796,12 +869,16 @@
       clearTimeout(scrollDebounceTimer);
     }
     
+    // v9.1: Cancel progressive rendering on destroy
+    if (progressiveRafId !== null) cancelAnimationFrame(progressiveRafId);
+    
     // Remove event listeners
     if (container) {
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('dnd-check-load', handleDndCheckLoad);
     }
   });
   
@@ -810,32 +887,38 @@
    * v3.0.1: Used to scroll to startHour on mount for business hours default
    * v7.0: Mobile-adaptive hour height for better fit
    */
+  /** Cached root font size — computed once, used in scroll calculations */
+  const rootFontSize = typeof document !== 'undefined'
+    ? (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+    : 16;
+
   function scrollToHour(hour: number) {
-    if (!wrapperElement) return;
+    if (!wrapperEl) return;
     const hourHeightRem = isMobile ? 2 : 3; // Mobile: 2rem, Desktop: 3rem - synced with TimelineView
-    const scrollTop = hour * hourHeightRem * 16; // rem to px (16px base)
-    wrapperElement.scrollTop = scrollTop;
+    const scrollTop = hour * hourHeightRem * rootFontSize;
+    wrapperEl.scrollTop = scrollTop;
   }
   
   // v7.0: Mobile-adaptive hour height for EventTimeline
   $: hourHeightForTimeline = isMobile ? 2 : 3;
+
 </script>
 
-<div class="infinite-horizontal-calendar-wrapper" class:with-timeline={useTimelineView} bind:this={wrapperElement}>
-  <!-- Sticky time axis for timeline views (rendered once, outside scroll container) -->
+<div class="infinite-horizontal-calendar-wrapper" class:with-timeline={useTimelineView} bind:this={wrapperEl}>
+  <!-- v3.3.2: Axis is a SIBLING of the scroll container (original v3.1.0 architecture).
+       Wrapper scrolls vertically (overflow-y:auto), inner scrolls horizontally (overflow-x:auto).
+       Axis sits at wrapper level so it scrolls vertically with content but is NOT inside
+       the horizontal scroll container — it naturally stays on the left. -->
   {#if useTimelineView}
     <div class="sticky-time-axis">
-      <!-- v6.5: AllDay label row FIRST (above day names) -->
       {#if allDayHeight > 0}
         <div class="sticky-allday-row" style:height="{allDayHeight}rem">
           <div class="sticky-allday-label">All day</div>
         </div>
       {/if}
-      <!-- v6.5: Month name on same row as day names/dates -->
       <div class="sticky-time-axis-header" style:height="{DAY_HEADER_HEIGHT_REM}rem">
         <div class="axis-month-label">{currentVisibleMonth}</div>
       </div>
-      <!-- v3.0.1: Always show full 24h timeline for scrollable day view -->
       <EventTimeline 
         startHour={0}
         endHour={24}
@@ -845,7 +928,6 @@
       />
     </div>
   {/if}
-  
   <div class="infinite-horizontal-calendar" bind:this={container} on:scroll={handleScroll}>
     {#if isLoadingPrev}
       <div class="loading-indicator left">...</div>
@@ -853,6 +935,7 @@
     
     {#each periods as period, index (period.id)}
       <div class="period-container" class:ppp-instant-mode={isInstantMode} bind:this={periodElements[index]}>
+        {#if isPeriodVisible(index, visibleSet, progressiveRenderDone)}
         {#if useTimelineView}
           <!-- Timeline view for day/week bars mode -->
           <!-- v3.0.1: Always use 0-24 for full scrollable timeline -->
@@ -867,11 +950,13 @@
             showCurrentTimeLine={true}
             fixedAllDayHeight={allDayHeight}
             {onRecordClick}
+            {onRecordChange}
             {onRecordAdd}
             {onDayTap}
             {isMobile}
             {now}
             hideTimeAxis={true}
+            horizontalScrollContainer={container}
             on:navigate={handleTimelineNavigate}
           />
         {:else}
@@ -908,6 +993,9 @@
                 {processedData}
                 {firstDayOfWeek}
                 {onRecordClick}
+                {onRecordChange}
+                {isMobile}
+                horizontalScrollContainer={container}
               />
             {/if}
             <Week heightRem={8} useFixedHeight={false}>
@@ -934,6 +1022,7 @@
           {/each}
         </div>
       {/if}
+        {/if}<!-- /isPeriodVisible -->
     </div>
   {/each}
   
@@ -946,22 +1035,29 @@
 </div>
 
 <style>
+  /* v3.3.2: Restored original v3.1.0 split-scroll architecture.
+     Wrapper is a ROW flex container that scrolls vertically.
+     Inner (.infinite-horizontal-calendar) scrolls horizontally only.
+     Axis is a sibling of inner at wrapper level — both scroll together vertically. */
   .infinite-horizontal-calendar-wrapper {
     display: flex;
     flex-direction: row;
     height: 100%;
     width: 100%;
     position: relative;
-    /* v6.2: Single vertical scroll container for entire view */
+    /* v3.3.2: Wrapper handles vertical scroll; horizontal is hidden (inner handles it) */
     overflow-y: auto;
     overflow-x: hidden;
     /* v3.1.0: Prevent scroll chaining to Obsidian workspace on mobile */
     overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
+    /* v4.0.2: Removed -webkit-overflow-scrolling: touch — it creates a native
+       iOS scroll layer that resists programmatic scrollTop changes during DnD
+       auto-scroll. Modern iOS no longer needs this for momentum scrolling. */
+    /* v3.2.7: Allow proper flex shrinking when agenda sidebar is open */
+    min-width: 0;
   }
   
   .infinite-horizontal-calendar-wrapper.with-timeline {
-    /* When timeline is shown, axis is sticky on left */
     display: flex;
   }
   
@@ -1008,6 +1104,7 @@
     border-bottom: 2px solid var(--background-modifier-border);
     background: var(--background-primary);
   }
+
   
   /* v3.0.2: AllDay label in axis */
   .sticky-allday-label {
@@ -1022,15 +1119,18 @@
   .infinite-horizontal-calendar {
     display: flex;
     flex-direction: row;
-    /* v6.2: Horizontal scroll only, vertical handled by wrapper */
+    /* v3.3.2: Horizontal scroll only, vertical handled by wrapper */
     overflow-x: auto;
     overflow-y: visible;
     flex: 1 1 auto;
-    height: 100%;
+    /* v3.3.2: Let content height drive size — no fixed height.
+       align-self: flex-start prevents stretch, so inner grows to content height
+       (e.g. 72rem timeline). This means overflow-y (computed as auto) has NO
+       vertical overflow, so the wrapper is the ONLY vertical scroll container.
+       Result: axis and periods scroll together vertically via the wrapper. */
+    align-self: flex-start;
     min-height: 100%;
     scrollbar-width: thin;
-    /* v6.5: Remove scroll-behavior: smooth to prevent "bounce back" on fast scroll */
-    /* Smooth scrolling is applied programmatically via scrollTo({behavior: 'smooth'}) */
     /* v6.5: Allow overscroll - no invisible boundary */
     overscroll-behavior-x: auto;
     /* Allow touch actions but keep horizontal scroll */
@@ -1041,6 +1141,7 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    /* v3.3.2: 100% of inner container width (inner is flex:1, fills space after axis) */
     min-width: 100%;
     /* v3.1.0: min-height fills viewport, height auto allows timeline to grow beyond */
     height: auto;
@@ -1149,7 +1250,16 @@
     }
   }
 
-  /* Apple-style scrollbar */
+  /* Hide scrollbar until hover (Apple style) */
+  .infinite-horizontal-calendar {
+    scrollbar-color: transparent transparent;
+  }
+
+  .infinite-horizontal-calendar:hover {
+    scrollbar-color: var(--scrollbar-thumb-bg) transparent;
+  }
+  
+  /* v3.3.2: Horizontal scrollbar styling (vertical scroll is on wrapper) */
   .infinite-horizontal-calendar::-webkit-scrollbar {
     height: 0.5rem;
   }
@@ -1166,29 +1276,6 @@
   .infinite-horizontal-calendar::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-active-thumb-bg);
   }
-
-  /* Hide scrollbar until hover (Apple style) */
-  .infinite-horizontal-calendar {
-    scrollbar-color: transparent transparent;
-  }
-
-  .infinite-horizontal-calendar:hover {
-    scrollbar-color: var(--scrollbar-thumb-bg) transparent;
-  }
-  
-  /* v6.2: Wrapper vertical scrollbar styling */
-  .infinite-horizontal-calendar-wrapper::-webkit-scrollbar {
-    width: 0.5rem;
-  }
-
-  .infinite-horizontal-calendar-wrapper::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .infinite-horizontal-calendar-wrapper::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb-bg);
-    border-radius: 0.25rem;
-  }
   
   /* ========================================
    * MOBILE ADAPTATION (v3.0.3)
@@ -1201,7 +1288,7 @@
     }
     
     .period-container {
-      /* Mobile: narrower period for better touch targets */
+      /* Mobile: same sizing as desktop in split-scroll architecture */
       min-width: 100%;
     }
     
@@ -1229,11 +1316,8 @@
     
     /* Touch-friendly scrollbars */
     .infinite-horizontal-calendar::-webkit-scrollbar {
-      height: 0.25rem;
-    }
-    
-    .infinite-horizontal-calendar-wrapper::-webkit-scrollbar {
       width: 0.25rem;
+      height: 0.25rem;
     }
   }
   

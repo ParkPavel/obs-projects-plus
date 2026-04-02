@@ -20,7 +20,9 @@
 
 <style>
   .calendar-week {
-    display: flex;
+    /* v9.2: CSS Grid — identical column tracks as multiday-lane & week-header */
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
     border-bottom: 1px solid var(--background-modifier-border);
     min-height: 6.25rem;
     transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);

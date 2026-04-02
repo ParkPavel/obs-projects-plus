@@ -74,16 +74,14 @@ obs-projects-plus/
 ## 📊 Project Statistics
 
 ### Code Metrics
-- **Lines of Code**: ~15,500
-- **TypeScript Files**: 180+
-- **Svelte Components**: 50+
-- **Test Coverage**: 85%+
+- **Source Files**: 316 (167 TypeScript + 149 Svelte)
+- **Lines of Code**: ~61,000
+- **Test Suites**: 21
+- **Tests**: 375
 
-### Performance
-- **Bundle Size**: 1.7MB
-- **Load Time**: 0.8s
-- **Memory Usage**: 28MB
-- **Render Time**: 0.4s
+### Build Output
+- **Bundle Size**: 1.8MB (main.js)
+- **Styles**: 4.2KB (main.css) + 27.2KB (styles.css)
 
 ## 🔄 Development Workflow
 
@@ -102,15 +100,14 @@ obs-projects-plus/
 
 ## 🎯 Roadmap
 
-### Current Focus (2025)
+### Current Focus (2026)
+- **v3.2.0**: Drag & Drop 2.0 — Calendar Timeline DnD (released April 2026)
 - **Stability**: Bug fixes and performance improvements
-- **Maintenance**: Keeping up with Obsidian updates
 - **Community**: Responding to user feedback and requests
 
-### Future Considerations
-- Performance optimizations for large datasets
-- Enhanced mobile experience
-- Accessibility improvements
+### Next Milestones
+- **v3.3.0**: Database View
+- **v3.4.0**: Calendar Sync (iCal, Google, CalDAV)
 
 ## 🤝 Contributing
 
@@ -179,7 +176,7 @@ obs-projects-plus/
 
 ### License Information
 - **License**: Apache License 2.0
-- **Copyright**: 2022-2025 Park Pavel
+- **Copyright**: 2022-2026 Park Pavel
 - **Original Work**: Marcus Olsson (2022)
 - **Compatibility**: Open source friendly
 

@@ -944,7 +944,7 @@
     border-radius: 0.625rem;
     padding: 0.75rem;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -961,10 +961,10 @@
   
   /* Color indicator on left edge */
   .color-indicator {
-    width: 0.25rem;
+    width: var(--ppp-border-width-thick, 0.125rem);
     height: 1.5rem;
     background: var(--indicator-color, var(--text-accent));
-    border-radius: 0.125rem;
+    border-radius: var(--ppp-radius-sm, 0.125rem);
     flex-shrink: 0;
   }
 
@@ -976,12 +976,13 @@
     height: 1.375rem;
     min-width: 2.75rem;
     min-height: 2.75rem;
-    border: 2px solid var(--background-modifier-border);
-    border-radius: 0.375rem;
+    border: 0.125rem solid var(--background-modifier-border);
+    border-radius: var(--ppp-radius-lg, 0.375rem);
     background: transparent;
     color: var(--text-on-accent);
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease),
+                border-color var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
     flex-shrink: 0;
   }
 
@@ -1013,11 +1014,12 @@
     min-width: 2.75rem;
     min-height: 2.75rem;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: var(--ppp-radius-lg, 0.375rem) ;
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease),
+                color var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
     flex-shrink: 0;
   }
 
@@ -1032,7 +1034,7 @@
     gap: 0.25rem;
     margin-top: 0.75rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: 0.0625rem solid var(--background-modifier-border);
   }
 
   .action-button {
@@ -1042,12 +1044,12 @@
     width: 100%;
     padding: 0.625rem 0.75rem;
     border: none;
-    border-radius: 0.5rem;
+    border-radius: var(--ppp-radius-lg, 0.375rem);
     background: transparent;
     color: var(--text-normal);
     font-size: 0.875rem;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
     text-align: left;
     min-height: 2.75rem;
   }

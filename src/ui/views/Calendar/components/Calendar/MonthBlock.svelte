@@ -2,6 +2,7 @@
   import dayjs from "dayjs";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import type { ProcessedCalendarData } from "../../types";
+  import type { RecordChangeOptions } from "../../dnd/types";
   import { generateMonthGrid } from "../../calendar";
   import Day from "./Day.svelte";
   import Week from "./Week.svelte";
@@ -28,7 +29,7 @@
   export let processedData: ProcessedCalendarData | null = null;
   export let checkField: string | undefined;
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
-  export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord) => void) | undefined;
+  export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
   export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
   export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;
@@ -77,6 +78,8 @@
         {processedData}
         {firstDayOfWeek}
         {onRecordClick}
+        {onRecordChange}
+        {isMobile}
       />
       
       <!-- Week row: Day cells with ONLY timed events -->
@@ -117,6 +120,9 @@
     position: sticky;
     top: 0;
     z-index: 20;
+    /* v8.1: explicit width prevents backdrop-filter+sticky width mismatch on WebKit */
+    width: 100%;
+    box-sizing: border-box;
     background: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
     backdrop-filter: blur(0.75rem);

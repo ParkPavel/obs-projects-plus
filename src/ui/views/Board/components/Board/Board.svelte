@@ -167,7 +167,7 @@
 <div class="projects--board--container" use:wheelZoom>
 <div
   class="projects--board--viewport"
-  style={zoom !== 1 ? `zoom: ${zoom}; width: ${zoom < 1 ? (100 / zoom) + '%' : '100%'}` : ''}
+  style={zoom !== 1 ? `transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%; height: ${100 / zoom}%` : ''}
 >
   <!-- Pinned columns: fixed position, no column-level DnD -->
   {#if pinnedColumns.length > 0}
@@ -344,6 +344,8 @@
 
   .projects--board--viewport {
     display: flex;
+    /* v4.0.5: Ensure viewport fills container height when scaled */
+    min-height: 100%;
   }
 
   .projects--board--zoom-badge {

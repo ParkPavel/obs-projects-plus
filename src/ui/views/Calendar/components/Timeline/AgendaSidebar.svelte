@@ -14,7 +14,7 @@
 <script lang="ts">
   import dayjs from 'dayjs';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-  import { dragHandleZone } from 'svelte-dnd-action';
+  import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
@@ -27,6 +27,7 @@
   import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
+  import { pauseGestures, resumeGestures } from '../../gestures/GestureCoordinator';
   
   const dispatch = createEventDispatcher();
   
@@ -131,6 +132,7 @@
   
   onDestroy(() => {
     activeDocument.removeEventListener('click', handleOutsideClick);
+    if (reorderTimeout) clearTimeout(reorderTimeout);
   });
   
   function handleOutsideClick(e: MouseEvent) {
@@ -471,6 +473,67 @@
     editingList = null;
   }
   
+  // ── Portal overlay to document.body + position to .calendar-zoom-container ──
+  // The overlay MUST escape .agenda's overflow:hidden + position:relative stacking
+  // context. The only reliable cross-browser way is to physically move the DOM node
+  // out of .agenda into document.body (portal pattern), then position:fixed with
+  // exact bounds read from .calendar-zoom-container. This ensures:
+  // 1. Overlay is never clipped by .agenda overflow:hidden
+  // 2. Overlay covers the entire content area (calendar + sidebar)
+  // 3. Overlay starts BELOW navigation tabs (tabs are outside .calendar-zoom-container)
+  // 4. Overlay click-to-dismiss works across the full area
+  function portalOverlay(node: HTMLElement) {
+    const originalParent = node.parentElement;
+    const doc = node.ownerDocument;
+    const container = originalParent?.closest('.calendar-zoom-container') as HTMLElement | null;
+
+    // Move node to body — escapes all stacking/overflow contexts
+    doc.body.appendChild(node);
+
+    function update() {
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        node.style.position = 'fixed';
+        node.style.top = `${rect.top}px`;
+        node.style.left = `${rect.left}px`;
+        node.style.width = `${rect.width}px`;
+        node.style.height = `${rect.height}px`;
+      } else {
+        // Fallback: full viewport
+        node.style.position = 'fixed';
+        node.style.top = '0';
+        node.style.left = '0';
+        node.style.width = '100vw';
+        node.style.height = '100vh';
+      }
+    }
+
+    update();
+    const ro = container ? new ResizeObserver(update) : null;
+    if (container) ro!.observe(container);
+    // Also update on scroll in case container moves (e.g. Obsidian layout changes)
+    const onScroll = () => requestAnimationFrame(update);
+    doc.addEventListener('scroll', onScroll, { capture: true, passive: true });
+
+    return {
+      destroy() {
+        ro?.disconnect();
+        doc.removeEventListener('scroll', onScroll, true);
+        // Move node back to original parent before Svelte destroys it
+        // (Svelte expects the node to be in its original parent for cleanup)
+        if (node.parentElement === doc.body && originalParent) {
+          originalParent.appendChild(node);
+        }
+      }
+    };
+  }
+
+  // BUG-6.1 fix: Pause gesture recognition while list editor is open.
+  // touchend on filter inputs can be misread as swipe by GestureCoordinator,
+  // causing navigation away from the current date.
+  $: if (showListEditor) { pauseGestures(); }
+  $: if (!showListEditor) { resumeGestures(); }
+
   function handleCancelListEditor() {
     showListEditor = false;
     editingList = null;
@@ -479,17 +542,55 @@
   // ── Drag-and-Drop for custom lists ──
   const flipDurationMs = 200;
   let dndLists: AgendaCustomList[] = [];
-  $: dndLists = [...customLists];
-  
+  let isDndDragging = false; // Guards against settings-reload resetting list during drag
+  let reorderTimeout: ReturnType<typeof setTimeout> | null = null;
+  // Expanded lists saved before DnD starts — restored after drop
+  let preDndExpandedIds: Set<string> | null = null;
+
+  // Only sync from customLists when not actively dragging.
+  // Without this guard, the settings callback fired by handleDndFinalize resets dndLists
+  // to the OLD order mid-animation, causing a visible flash and losing the new position.
+  $: if (!isDndDragging) {
+    dndLists = [...customLists];
+  }
+
   function handleDndConsider(e: CustomEvent<DndEvent<AgendaCustomList>>) {
+    // On first consider (drag start), save which lists are expanded and collapse all.
+    // Expanded lists with many items cause wild layout jumps during reorder.
+    if (!isDndDragging) {
+      preDndExpandedIds = new Set(
+        dndLists.filter(l => !collapsedCustomLists.has(l.id)).map(l => l.id)
+      );
+      // Collapse everything
+      for (const l of dndLists) collapsedCustomLists.add(l.id);
+      collapsedCustomLists = collapsedCustomLists;
+    }
+    isDndDragging = true;
     dndLists = e.detail.items;
   }
-  
+
   function handleDndFinalize(e: CustomEvent<DndEvent<AgendaCustomList>>) {
     dndLists = e.detail.items;
-    // Persist reordered list with updated order indices
-    const reordered = dndLists.map((list, idx) => ({ ...list, order: idx }));
-    dispatch('reorderLists', { lists: reordered });
+    // Debounce the settings persist so the drop animation (flipDurationMs = 200ms)
+    // completes BEFORE the settings change causes the parent to re-render.
+    // isDndDragging stays true until persist fires, preventing the sync block from
+    // reverting to the old order.
+    if (reorderTimeout) clearTimeout(reorderTimeout);
+    reorderTimeout = setTimeout(() => {
+      reorderTimeout = null;
+      isDndDragging = false; // Release guard BEFORE dispatch so re-sync uses new order
+      // Restore pre-DnD expanded states
+      if (preDndExpandedIds) {
+        for (const id of preDndExpandedIds) collapsedCustomLists.delete(id);
+        collapsedCustomLists = collapsedCustomLists;
+        preDndExpandedIds = null;
+      }
+      // Filter out svelte-dnd-action shadow placeholder (should not be present in finalize)
+      const reordered = dndLists
+        .filter(l => l.id !== SHADOW_PLACEHOLDER_ITEM_ID)
+        .map((list, idx) => ({ ...list, order: idx }));
+      dispatch('reorderLists', { lists: reordered });
+    }, 250);
   }
 
   /**
@@ -506,8 +607,16 @@
     copy[idx] = copy[targetIdx]!;
     copy[targetIdx] = temp;
     dndLists = copy;
-    const reordered = dndLists.map((list, i) => ({ ...list, order: i }));
-    dispatch('reorderLists', { lists: reordered });
+    // Debounce settings persist to match DnD behavior —
+    // prevents rapid-fire cascades on repeated taps.
+    isDndDragging = true;
+    if (reorderTimeout) clearTimeout(reorderTimeout);
+    reorderTimeout = setTimeout(() => {
+      reorderTimeout = null;
+      isDndDragging = false;
+      const reordered = dndLists.map((list, i) => ({ ...list, order: i }));
+      dispatch('reorderLists', { lists: reordered });
+    }, 250);
   }
   
   $: dateDisplay = (() => {
@@ -618,20 +727,28 @@
             on:finalize={handleDndFinalize}
           >
             {#each dndLists as list (list.id)}
-              <AgendaCustomListComponent
-                list={{ ...list, collapsed: collapsedCustomLists.has(list.id) }}
-                {records}
-                {titleField}
-                {onRecordClick}
-                {selectedDate}
-                isFirst={dndLists.indexOf(list) === 0}
-                isLast={dndLists.indexOf(list) === dndLists.length - 1}
-                on:edit={() => handleEditList(list)}
-                on:delete={() => handleDeleteList(list.id)}
-                on:toggle={() => handleToggleList(list.id)}
-                on:moveUp={() => handleMoveList(list.id, 'up')}
-                on:moveDown={() => handleMoveList(list.id, 'down')}
-              />
+              {#if list.id !== SHADOW_PLACEHOLDER_ITEM_ID}
+                <AgendaCustomListComponent
+                  {list}
+                  collapsed={collapsedCustomLists.has(list.id)}
+                  {records}
+                  {titleField}
+                  {onRecordClick}
+                  {selectedDate}
+                  isFirst={dndLists.indexOf(list) === 0}
+                  isLast={dndLists.indexOf(list) === dndLists.length - 1}
+                  on:edit={() => handleEditList(list)}
+                  on:delete={() => handleDeleteList(list.id)}
+                  on:toggle={() => handleToggleList(list.id)}
+                  on:moveUp={() => handleMoveList(list.id, 'up')}
+                  on:moveDown={() => handleMoveList(list.id, 'down')}
+                />
+              {:else}
+                <!-- svelte-dnd-action shadow placeholder — render lightweight div instead of
+                     full AgendaCustomListComponent to prevent expensive re-mount on every
+                     pointermove during drag, which caused blinks and crashes -->
+                <div class="dnd-shadow-placeholder" aria-hidden="true"></div>
+              {/if}
             {/each}
           </div>
           <button class="custom-add-btn" on:click={handleAddList}>
@@ -651,8 +768,9 @@
         {/if}
         
         {#if showListEditor}
-          <div class="list-editor-overlay">
-            <div class="list-editor-modal">
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <div class="ppp-list-editor-overlay" use:portalOverlay on:click|self={handleCancelListEditor}>
+            <div class="ppp-list-editor-modal">
               <AgendaListEditor
                 list={editingList}
                 {fields}
@@ -769,11 +887,12 @@
     min-width: var(--w, var(--agenda-width));
     max-width: var(--w, var(--agenda-width));
     background: var(--background-secondary);
-    border-left: 1px solid var(--background-modifier-border);
+    border-left: 0.0625rem solid var(--background-modifier-border);
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow: visible;
+    /* v3.2.8: overflow hidden prevents sidebar content from bleeding into calendar area */
+    overflow: hidden;
     transition: width var(--agenda-transition);
     flex-shrink: 0;
   }
@@ -799,7 +918,7 @@
     z-index: 50;
     border-left: var(--ppp-border-width) solid var(--background-modifier-border);
     border-top: none;
-    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2);
+    box-shadow: -0.25rem 0 1rem rgba(0, 0, 0, 0.2);
     transform: translateX(0);
     transition: transform var(--agenda-transition);
   }
@@ -849,7 +968,7 @@
     align-items: center;
     gap: var(--agenda-gap-lg);
     padding: var(--agenda-padding);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     min-height: var(--agenda-touch-min);
     flex-shrink: 0;
   }
@@ -871,7 +990,7 @@
     width: 100%;
     padding: var(--agenda-gap-md) var(--agenda-gap-lg);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     border-radius: var(--agenda-radius-md);
     cursor: pointer;
     font-size: var(--agenda-font-md);
@@ -910,7 +1029,7 @@
     width: calc(var(--agenda-width) - var(--agenda-padding) * 2);
     max-width: calc(100vw - 1rem);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     border-radius: var(--agenda-radius-lg);
     box-shadow: var(--ppp-shadow-md, var(--shadow-s));
     padding: var(--agenda-padding);
@@ -1062,7 +1181,7 @@
   .category {
     background: var(--background-primary);
     border-radius: var(--agenda-radius-lg);
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     overflow: hidden;
   }
   
@@ -1126,7 +1245,7 @@
     color: var(--text-faint);
     font-style: italic;
     text-align: center;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: 0.0625rem solid var(--background-modifier-border);
   }
   
   /* Events list */
@@ -1134,7 +1253,7 @@
     list-style: none;
     margin: 0;
     padding: var(--agenda-gap-sm);
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: 0.0625rem solid var(--background-modifier-border);
     max-height: 12.5rem;
     overflow-y: auto;
     /* v3.1.0: Prevent scroll chaining */
@@ -1264,6 +1383,17 @@
     opacity: 0.5 !important;
     border-radius: 0.375rem !important;
   }
+
+  /* Lightweight placeholder shown instead of re-mounting the full component during DnD drag.
+     Prevents expensive destroy/create cycles on every pointermove. */
+  .dnd-shadow-placeholder {
+    height: 3rem;
+    border-radius: var(--radius-s);
+    background: var(--background-modifier-hover);
+    border: 0.09375rem dashed var(--background-modifier-border);
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+  }
   
   .custom-empty {
     display: flex;
@@ -1306,50 +1436,56 @@
     justify-content: center;
   }
   
-  .list-editor-overlay {
+  /* Overlay + Modal use :global because the node is portaled to document.body
+     via use:portalOverlay, which removes it from Svelte's scoped style context.
+     The .ppp-list-editor-overlay class prefix prevents collisions. */
+  :global(.ppp-list-editor-overlay) {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(0.125rem);
+    -webkit-backdrop-filter: blur(0.125rem);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: var(--ppp-z-modal, 100);
-    padding: 1rem;
-    /* v3.1.0: Isolate scroll from Obsidian gestures.
-       touch-action: auto — let children decide their own touch-action.
-       CSS touch-action is intersected down the tree, so 'none' here
-       would make children's 'pan-y' become 'none', blocking scroll. */
+    z-index: var(--layer-modal, var(--ppp-z-modal, 1000));
+    padding: 1.5rem;
     overscroll-behavior: contain;
     touch-action: auto;
+    animation: ppp-fade-in 0.15s ease-out;
   }
   
-  .list-editor-modal {
+  :global(.ppp-list-editor-modal) {
     width: 100%;
-    max-width: 40rem;
-    max-height: 85vh;
-    overflow: hidden; /* inner .agenda-list-editor handles its own scroll */
+    max-width: 34rem;
+    max-height: calc(100% - 3rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background: var(--background-primary);
-    border-radius: var(--ppp-radius-xl, 0.5rem);
-    box-shadow: var(--shadow-l);
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-radius: 0.625rem;
+    box-shadow: 0 0.75rem 2.5rem rgba(0, 0, 0, 0.18), 0 0.125rem 0.5rem rgba(0, 0, 0, 0.08);
     overscroll-behavior: contain;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
     pointer-events: auto;
+    animation: ppp-slide-up 0.18s ease-out;
   }
+
+  /* Keyframes ppp-fade-in and ppp-slide-up are defined in styles.css (global)
+     because the overlay is portaled to document.body outside Svelte's scope */
   
   /* v3.1.0: Mobile — full-screen takeover modal for agenda editor.
      Full screen avoids all guesswork re: toolbars, safe areas, etc.
      The inner AgendaListEditor handles its own scroll + footer padding. */
   @media (max-width: 37.5rem) {
-    .list-editor-overlay {
+    :global(.ppp-list-editor-overlay) {
       padding: 0;
       align-items: stretch;
     }
     
-    .list-editor-modal {
+    :global(.ppp-list-editor-modal) {
       max-width: 100%;
       max-height: none;
       height: 100%;

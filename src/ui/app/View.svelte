@@ -53,21 +53,18 @@
   }
 
   // Clean up any filter conditions for non-existing fields.
-  $: {
+  // Guard: skip when frame is empty (initial load) to prevent deleting valid conditions
+  // before the first data query completes.
+  $: if (frame.fields.length > 0) {
     const fieldNames = frame.fields.map((field) => field.name);
-
-    if (
-      viewFilter.conditions.length !==
-      viewFilter.conditions.filter((cond) => fieldNames.includes(cond.field))
-        .length
-    ) {
+    const nConds = viewFilter.conditions.length;
+    const filtered = viewFilter.conditions.filter((cond) => fieldNames.includes(cond.field));
+    if (nConds !== filtered.length) {
       settings.updateView(project.id, {
         ...view,
         filter: {
           conjunction: viewFilter?.conjunction ?? "and",
-          conditions: viewFilter.conditions.filter((cond) =>
-            fieldNames.includes(cond.field)
-          ),
+          conditions: filtered,
         },
       });
     }
@@ -84,6 +81,19 @@
         } satisfies SortDefinition);
 
   $: sortedFrame = applySort(filteredFrame, viewSort);
+
+  // Track when actual source data changed (frame from DataFrameProvider).
+  // Config-only settings writes re-trigger filter/sort (Svelte 3 object equality)
+  // producing new arrays with same content. dataGeneration only increments when
+  // the raw frame reference actually changes — indicating a real data update.
+  let dataGeneration = 0;
+  let prevFrameRef: DataFrame | undefined;
+  $: {
+    if (frame !== prevFrameRef) {
+      prevFrameRef = frame;
+      dataGeneration++;
+    }
+  }
 
   let recordCache: Record<string, DataRecord | undefined>;
   $: {
@@ -127,6 +137,7 @@
     view,
     dataProps: {
       data: sortedFrame,
+      dataGeneration,
       hasSort: view.sort.criteria.filter((c) => c.enabled).length > 0,
       hasFilter: view.filter.conditions.filter((c) => c.enabled).length > 0,
       filterConditions: view.filter.conditions.filter((c) => c.enabled),

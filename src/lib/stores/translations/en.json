@@ -723,6 +723,10 @@
                         "smooth": "Smooth (animated)",
                         "instant": "Instant (no animation)"
                     }
+                },
+                "disable-haptic": {
+                    "name": "Disable Haptic Feedback",
+                    "desc": "Turn off vibration feedback during drag-and-drop on mobile devices"
                 }
             },
             "front-matter": {

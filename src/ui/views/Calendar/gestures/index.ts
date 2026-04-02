@@ -20,6 +20,8 @@ export {
 export {
   GestureCoordinator,
   gestureCoordinator,
+  pauseGestures,
+  resumeGestures,
   type GestureState,
   type GestureZone,
 } from './GestureCoordinator';

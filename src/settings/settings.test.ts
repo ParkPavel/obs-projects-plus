@@ -122,6 +122,7 @@ const v1demo: v1.ProjectsPluginSettings<
     mobileCalendarView: "month",
     showViewTitles: true,
     animationBehavior: "smooth",
+    disableHapticFeedback: false,
   },
 };
 
@@ -254,5 +255,6 @@ const v3demo: v3.ProjectsPluginSettings<
     mobileCalendarView: "month",
     showViewTitles: true,
     animationBehavior: "smooth",
+    disableHapticFeedback: false,
   },
 };

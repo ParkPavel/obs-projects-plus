@@ -48,16 +48,15 @@
     gap: 0.375rem;
     align-items: center;
     padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--ppp-font-size-sm, 0.75rem);
     font-weight: 400;
     letter-spacing: -0.01em;
     background: var(--background-secondary);
-    border-radius: 0.375rem;
+    border-radius: var(--ppp-radius-lg, 0.375rem);
     cursor: pointer;
-    transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease),
+                border-color var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease),
+                box-shadow var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
     border: 1px solid transparent;
     -webkit-user-select: none;
     user-select: none;
@@ -68,12 +67,11 @@
   .calendar-event:hover {
     background: var(--background-modifier-hover);
     border-color: var(--background-modifier-border);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   }
 
   .calendar-event:active {
-    transform: translateY(0);
+    background: var(--background-modifier-active-hover, var(--background-modifier-hover));
     box-shadow: none;
   }
 

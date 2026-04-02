@@ -83,7 +83,7 @@
     top: 0;
     z-index: 20;
     background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     backdrop-filter: blur(0.75rem);
   }
 

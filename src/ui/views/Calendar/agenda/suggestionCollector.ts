@@ -11,10 +11,11 @@ import dayjs from 'dayjs';
 /**
  * Check if value is date-like
  */
-function isDateLike(value: unknown): value is string | number | Date {
+function isDateLike(value: unknown): value is string | Date {
   if (!value) return false;
   if (value instanceof Date) return true;
-  if (typeof value === 'string' || typeof value === 'number') {
+  // v4.0.5: Reject numbers — dayjs(0) is "valid" (1970-01-01) but semantically wrong
+  if (typeof value === 'string') {
     return dayjs(value).isValid();
   }
   return false;

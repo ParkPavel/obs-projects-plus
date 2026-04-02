@@ -197,6 +197,8 @@ export type ProjectsPluginPreferences = {
   readonly mobileCalendarView: MobileCalendarView;
   readonly showViewTitles: boolean;
   readonly animationBehavior: AnimationBehavior;
+  /** v4.0.3: Disable haptic (vibration) feedback on mobile devices */
+  readonly disableHapticFeedback: boolean;
 };
 
 export type UnsavedViewDefinition = Omit<

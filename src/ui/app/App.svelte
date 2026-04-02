@@ -277,7 +277,9 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow: auto;
+    /* v3.2.8: overflow-x: hidden prevents horizontal expansion that pushes sidebar off-screen */
+    overflow-x: hidden;
+    overflow-y: auto;
     /* v3.1.0: Prevent scroll chaining to Obsidian body on mobile */
     overscroll-behavior: contain;
   }

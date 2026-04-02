@@ -12,6 +12,7 @@ describe("resolve v2", () => {
       archives: [],
       preferences: {
         animationBehavior: "smooth",
+        disableHapticFeedback: false,
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -55,6 +56,7 @@ describe("resolve v2", () => {
       archives: [],
       preferences: {
         animationBehavior: "smooth",
+        disableHapticFeedback: false,
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -171,6 +173,7 @@ describe("clean up commands", () => {
       ...got,
       preferences: {
         animationBehavior: "smooth",
+        disableHapticFeedback: false,
         projectSizeLimit: 1000,
         frontmatter: {
           quoteStrings: "PLAIN",

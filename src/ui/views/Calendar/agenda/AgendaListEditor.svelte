@@ -148,6 +148,35 @@
   function handleCancel() {
     dispatch('cancel');
   }
+
+  // BUG-6 fix: Use Visual Viewport API so footer stays above system keyboard on mobile.
+  // window.innerHeight does NOT shrink when the soft keyboard opens, but
+  // visualViewport.height does — giving us the actual visible area.
+  import { onMount, onDestroy } from 'svelte';
+  let footerEl: HTMLElement | null = null;
+
+  function updateFooterForKeyboard() {
+    if (!footerEl) return;
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv) return;
+    const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    footerEl.style.paddingBottom = keyboardHeight > 0
+      ? `${keyboardHeight}px`
+      : '';
+  }
+
+  onMount(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    vv?.addEventListener('resize', updateFooterForKeyboard);
+    vv?.addEventListener('scroll', updateFooterForKeyboard);
+  });
+
+  onDestroy(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    vv?.removeEventListener('resize', updateFooterForKeyboard);
+    vv?.removeEventListener('scroll', updateFooterForKeyboard);
+    if (footerEl) footerEl.style.paddingBottom = '';
+  });
 </script>
 
 <div class="agenda-list-editor">
@@ -311,7 +340,7 @@
   </div>
   
   <!-- Footer -->
-  <footer class="editor-footer">
+  <footer class="editor-footer" bind:this={footerEl}>
     <button class="btn btn--secondary" on:click={handleCancel}>
       {t('cancel')}
     </button>
@@ -334,10 +363,11 @@
   .agenda-list-editor {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    max-height: 85vh;
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
     background: var(--background-primary);
-    border-radius: var(--ppp-radius-lg, 0.5rem);
+    border-radius: 0.625rem;
     overflow: hidden;
   }
   
@@ -346,15 +376,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--ppp-spacing-md, 1rem) var(--ppp-spacing-lg, 1.25rem);
+    padding: 0.625rem 1rem;
     border-bottom: 1px solid var(--background-modifier-border);
-    background: var(--background-secondary);
+    background: var(--background-primary);
     flex-shrink: 0;
   }
   
   .editor-title {
     margin: 0;
-    font-size: var(--ppp-font-size-lg, 1.125rem);
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-normal);
   }
@@ -363,11 +393,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 1.75rem;
+    height: 1.75rem;
     padding: 0;
     border: none;
-    border-radius: var(--ppp-radius-md, 0.375rem);
+    border-radius: var(--radius-s);
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
@@ -382,12 +412,12 @@
   /* === Content === */
   .editor-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: var(--ppp-spacing-lg, 1.25rem);
+    padding: 0.75rem 1rem;
     display: flex;
     flex-direction: column;
-    gap: var(--ppp-spacing-lg, 1.25rem);
-    /* v3.1.0: Prevent scroll chaining to parent/Obsidian */
+    gap: 0.75rem;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
@@ -402,10 +432,11 @@
   .field-group--filters {
     padding-top: var(--ppp-spacing-md, 1rem);
     border-top: 1px solid var(--background-modifier-border);
-    /* v3.1.0: Changed from overflow:visible to hidden — filter dropdowns
-       use fixed positioning and don't need parent overflow escape.
-       overflow:visible broke scroll containment on mobile. */
-    overflow: hidden;
+    /* v3.3.3: Reverted to overflow:visible — overflow:hidden was clipping nested filter
+       group content on narrow/short screens. Popovers are portaled to document.body
+       (fixed positioning, z-index 10000) so they don't need overflow escape from here.
+       Scroll containment is handled by .editor-content (overflow-y:auto + overscroll-behavior:contain). */
+    overflow: visible;
   }
   
   .field-label-row {
@@ -416,9 +447,9 @@
   }
   
   .field-label {
-    font-size: var(--ppp-font-size-sm, 0.875rem);
-    font-weight: 600;
-    color: var(--text-normal);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
   }
   
   /* Filter Mode Toggle */
@@ -467,19 +498,20 @@
   
   .field-input {
     width: 100%;
-    padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
-    min-height: 2.75rem;
+    padding: 0.35rem 0.6rem;
+    min-height: 2rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: var(--ppp-radius-md, 0.375rem);
+    border-radius: var(--radius-s);
     background: var(--background-primary);
     color: var(--text-normal);
-    font-size: var(--ppp-font-size-sm, 0.875rem);
-    transition: border-color 0.15s ease;
+    font-size: 0.85rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   
   .field-input:focus {
     outline: none;
     border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 15%, transparent);
   }
   
   .field-input.has-error {
@@ -495,15 +527,15 @@
   .icon-trigger {
     display: flex;
     align-items: center;
-    gap: var(--ppp-spacing-sm, 0.5rem);
+    gap: 0.4rem;
     width: 100%;
-    padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
-    min-height: 2.75rem;
+    padding: 0.3rem 0.6rem;
+    min-height: 2rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: var(--ppp-radius-md, 0.375rem);
-    background: var(--background-secondary);
+    border-radius: var(--radius-s);
+    background: var(--background-primary);
     color: var(--text-normal);
-    font-size: var(--ppp-font-size-sm, 0.875rem);
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.15s ease;
   }
@@ -543,15 +575,15 @@
   .color-trigger {
     display: flex;
     align-items: center;
-    gap: var(--ppp-spacing-sm, 0.5rem);
+    gap: 0.4rem;
     width: 100%;
-    padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
-    min-height: 2.75rem;
+    padding: 0.3rem 0.6rem;
+    min-height: 2rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: var(--ppp-radius-md, 0.375rem);
-    background: var(--background-secondary);
+    border-radius: var(--radius-s);
+    background: var(--background-primary);
     color: var(--text-normal);
-    font-size: var(--ppp-font-size-sm, 0.875rem);
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.15s ease;
   }
@@ -653,10 +685,10 @@
   .editor-footer {
     display: flex;
     justify-content: flex-end;
-    gap: var(--ppp-spacing-sm, 0.5rem);
-    padding: var(--ppp-spacing-md, 1rem) var(--ppp-spacing-lg, 1.25rem);
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
     border-top: 1px solid var(--background-modifier-border);
-    background: var(--background-secondary);
+    background: var(--background-primary);
     flex-shrink: 0;
   }
   
@@ -664,12 +696,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--ppp-spacing-xs, 0.375rem);
-    padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-lg, 1.25rem);
-    min-height: 2.5rem;
+    gap: 0.3rem;
+    padding: 0.35rem 1rem;
+    min-height: 1.875rem;
     border: none;
-    border-radius: var(--ppp-radius-md, 0.375rem);
-    font-size: var(--ppp-font-size-sm, 0.875rem);
+    border-radius: var(--radius-s);
+    font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;

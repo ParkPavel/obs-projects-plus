@@ -212,6 +212,20 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName(get(i18n).t("settings.general.disable-haptic.name") || "Disable Haptic Feedback")
+      .setDesc(get(i18n).t("settings.general.disable-haptic.desc") || "Turn off vibration feedback during drag-and-drop on mobile devices")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(preferences.disableHapticFeedback ?? false)
+          .onChange((value) => {
+            save({
+              ...preferences,
+              disableHapticFeedback: value,
+            });
+          })
+      );
+
+    new Setting(containerEl)
       .setName(get(i18n).t("settings.front-matter.heading"))
       .setHeading();
 

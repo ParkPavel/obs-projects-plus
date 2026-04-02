@@ -53,7 +53,7 @@
     flex-direction: column;
     gap: 0.75rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: 0.0625rem solid var(--background-modifier-border);
     margin-top: 0.75rem;
   }
   

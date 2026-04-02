@@ -314,8 +314,9 @@
     
     isDragging = false;
     
-    // Close if dragged up more than 100px
-    if (dragOffset < -100) {
+    // Close if dragged up more than 6.25rem equivalent
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    if (dragOffset < -6.25 * remPx) {
       closePopup();
     } else {
       // Spring back
@@ -647,7 +648,7 @@
     border-radius: var(--ios-radius);
     box-shadow: 
       0 1.5rem 3rem -0.5rem rgba(0, 0, 0, 0.25),
-      0 0 0 1px var(--ios-border);
+      0 0 0 0.0625rem var(--ios-border);
     animation: ios-card-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
   
@@ -702,7 +703,7 @@
      ═══════════════════════════════════════════════════════════════ */
   .ios-popup-header {
     flex-shrink: 0;
-    border-bottom: 1px solid var(--ios-border);
+    border-bottom: 0.0625rem solid var(--ios-border);
   }
   
   .ios-popup-header-content {
@@ -878,7 +879,7 @@
   .ios-popup-footer {
     flex-shrink: 0;
     padding: 0.75rem 1rem 1rem;
-    border-top: 1px solid var(--ios-border);
+    border-top: 0.0625rem solid var(--ios-border);
     background: var(--ios-bg);
   }
   
@@ -999,7 +1000,7 @@
   /* ═══════════════════════════════════════════════════════════════
      v5.0.0: LANDSCAPE ORIENTATION SUPPORT
      ═══════════════════════════════════════════════════════════════ */
-  @media (orientation: landscape) and (max-height: 500px) {
+  @media (orientation: landscape) and (max-height: 31.25rem) {
     /* In landscape on small devices, use side sheet instead of top sheet */
     .ios-popup.mobile {
       width: min(50vw, 24rem);

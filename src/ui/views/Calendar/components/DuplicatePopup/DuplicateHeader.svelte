@@ -83,7 +83,7 @@
     justify-content: space-between;
     padding: 0.75rem 1rem;
     gap: 1rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     background: var(--background-primary);
     position: sticky;
     top: 0;

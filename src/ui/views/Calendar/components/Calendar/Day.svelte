@@ -108,15 +108,10 @@
     dayTap: { date: dayjs.Dayjs; records: DataRecord[] };
   }>();
 
-  let eventListOnRecordChange: ((record: DataRecord) => void) | undefined = undefined;
   let zonedDate: dayjs.Dayjs;
   let isVisible = false; // Start invisible, IntersectionObserver will set to true
   let eventScrollArea: HTMLDivElement;
   // NOTE: allDayRecords moved to HeaderStripsSection.svelte
-
-  $: eventListOnRecordChange = date && onRecordChange && !isOutsideMonth && !isMobile 
-    ? (r => onRecordChange!(date, r)) 
-    : undefined;
 
   // NOTE: getRecordColor now used only in HeaderStripsSection for multi-day/all-day events
 
@@ -556,7 +551,7 @@
   on:click={handleBackgroundClick}
   on:dblclick={handleDblClick}
   on:mousedown={handleMouseDown}
-  on:touchstart={handleTouchStart}
+  on:touchstart|passive={handleTouchStart}
   on:touchend={handleTouchEnd}
   on:wheel={handleCellWheel}
   role="gridcell"
@@ -625,7 +620,9 @@
             on:click={(e) => handleBarClick(e, bar.record)}
             title={`${bar.label}\n${bar.startTime} - ${bar.endTime}`}
           >
-            <span class="bar-label">{bar.label}</span>
+            <div class="timed-bar-content">
+              <span class="bar-label">{bar.label}</span>
+            </div>
           </button>
         {/each}
       </div>
@@ -637,8 +634,7 @@
           records={cellRecords}
           {onRecordClick}
           {onRecordCheck}
-          onRecordChange={eventListOnRecordChange}
-          disableDrag={isMobile}
+          {isMobile}
           on:dndFinalize={({ detail }) => handleDndFinalize(detail)}
         />
       </div>
@@ -668,9 +664,10 @@
     background: var(--background-primary);
     border-radius: 0;
     box-sizing: border-box; /* Ensure borders don't affect width calculation */
-    /* v4.0.1: Equal width distribution matching HeaderStripsSection */
-    flex: 1 1 0;
+    /* v9.3: flex: 1 1 0 removed — parent .calendar-week is now CSS Grid repeat(7, 1fr). */
     min-width: 0; /* Allow shrinking below content width */
+    /* v8.2: Matryoshka — each day cell is its own sizing context for per-cell @container queries */
+    container-type: inline-size;
   }
 
   /* Scrollable event area: Shift+wheel scrolls inner content */
@@ -771,8 +768,8 @@
     background: var(--background-secondary);
   }
 
-  /* Mobile responsive styles - v7.0 revised */
-  @media (max-width: 48rem) {
+  /* Mobile responsive styles — v8.2: @container view-content fires on panel width, not viewport */
+  @container view-content (max-width: 48rem) {
     .day-cell {
       padding: 0.1875rem;
       min-height: 4.5rem;
@@ -781,7 +778,7 @@
     }
   }
 
-  @media (max-width: 30rem) {
+  @container view-content (max-width: 30rem) {
     .day-cell {
       padding: 0.125rem;
       min-height: 3.75rem;
@@ -840,31 +837,51 @@
     position: absolute;
     /* left and width are set via inline style for column layout */
     box-sizing: border-box;
-    background: hsla(var(--interactive-accent-hsl), 0.2);
-    background: color-mix(in srgb, var(--bar-color) 20%, transparent);
-    border-left: 3px solid var(--bar-color);
-    border-radius: 0 0.25rem 0.25rem 0;
-    padding: 0.125rem 0.25rem;
-    font-size: 0.625rem;
-    line-height: 1.2;
+    background: color-mix(in srgb, var(--bar-color) 15%, transparent);
+    border: none;
+    border-left: var(--ppp-border-width-thick, 2px) solid var(--bar-color);
+    border-radius: var(--ppp-radius-md, 0.25rem);
+    padding: 0 0.25rem;
+    font-size: var(--ppp-font-size-xs, 0.6875rem);
+    line-height: 1;
     overflow: hidden;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease),
+                box-shadow var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease);
     /* v8.0: Minimum height ensures bar is always visible */
     min-height: 0.75rem;
     /* NO default margins - controlled via gap in width calculation */
     margin: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .timed-bar-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
   }
   
   .timed-bar:hover {
+    background: color-mix(in srgb, var(--bar-color) 25%, transparent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+  }
+  
+  .timed-bar:active {
     background: color-mix(in srgb, var(--bar-color) 35%, transparent);
-    z-index: 5;
   }
   
   .timed-bar:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--bar-color);
-    z-index: 6;
+  }
+  .timed-bar:focus-visible {
+    outline: 2px solid var(--bar-color);
+    outline-offset: 0.125rem;
+    z-index: 10;
   }
   
   /* Narrow bars (when multiple columns) - hide label if too narrow */
@@ -874,7 +891,7 @@
   
   .timed-bar.narrow .bar-label {
     /* Hide text when bar is very narrow, show only colored bar */
-    font-size: 0.5rem;
+    font-size: 0.5625rem;
     line-height: 1;
   }
   
@@ -893,6 +910,27 @@
     color: var(--text-normal);
     font-weight: 500;
     /* Clamp to single line, hide if doesn't fit */
-    max-height: 1.2em;
+    max-height: 1.1em;
+    line-height: 1.1;
+  }
+  
+  /* Touch device: ensure minimum tap target for timed bars */
+  @media (pointer: coarse) {
+    .timed-bar {
+      min-height: 1.25rem;
+    }
+  }
+  
+  /* Mobile responsive timed bars — v8.2: @container view-content */
+  @container view-content (max-width: 48rem) {
+    .timed-bar {
+      padding: 0.0625rem 0.1875rem;
+      font-size: var(--ppp-font-size-xs, 0.6875rem);
+      border-left-width: var(--ppp-border-width-thick, 2px);
+    }
+    
+    .timed-bar:active {
+      background: color-mix(in srgb, var(--bar-color) 40%, transparent);
+    }
   }
 </style>

@@ -13,8 +13,6 @@
  */
 
 import dayjs from "dayjs";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import {
   parseDateInTimezone,
@@ -30,10 +28,6 @@ import {
   type SpanInfo,
 } from "./types";
 import { calendarLogger } from './logger';
-
-// Extend dayjs with plugins (utc/timezone already extended in calendar.ts)
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
 
 /**
  * Check if a date value contains embedded time
@@ -66,6 +60,7 @@ export class CalendarDataProcessor {
    * This is the ONLY place where date parsing happens
    */
   process(frame: DataFrame): ProcessedCalendarData {
+    const t0 = performance.now();
     const processed: ProcessedRecord[] = [];
 
     // Process each record
@@ -75,12 +70,15 @@ export class CalendarDataProcessor {
         processed.push(processedRecord);
       }
     }
+    const t1 = performance.now();
 
     // Assign lanes for header events (all-day and multi-day)
     this.assignLanes(processed);
+    const t2 = performance.now();
     
     // Group by date
     const grouped = this.groupByDate(processed);
+    const t3 = performance.now();
 
     // Build index
     const index = new Map<string, ProcessedRecord>();
@@ -90,6 +88,8 @@ export class CalendarDataProcessor {
 
     // Calculate max lane
     const maxLane = processed.reduce((max, pr) => Math.max(max, pr.lane), 0);
+
+    calendarLogger.debug(`[Perf] process(): ${(t1-t0).toFixed(1)}ms records, ${(t2-t1).toFixed(1)}ms lanes, ${(t3-t2).toFixed(1)}ms group, total=${(performance.now()-t0).toFixed(1)}ms (${frame.records.length} records, ${processed.length} processed, ${Object.keys(grouped).length} days)`);
 
     return { processed, grouped, index, maxLane };
   }
@@ -360,6 +360,16 @@ export class CalendarDataProcessor {
 
     const spanDays = endDay.diff(startDay, "day") + 1;
 
+    // v4.0.5: Cap span to 365 days — absurdly long spans (e.g. from epoch dates)
+    // freeze the calendar by generating thousands of grouped entries.
+    if (spanDays > 365) {
+      return {
+        startDate: startDay,
+        endDate: startDay.add(364, "day"),
+        spanDays: 365,
+      };
+    }
+
     return {
       startDate: startDay,
       endDate: endDay,
@@ -415,40 +425,36 @@ export class CalendarDataProcessor {
     );
 
     // Sort: earlier start first, then longer duration first
-    // v8.2: Filter out events with null dates to prevent errors
     headerEvents.sort((a, b) => {
       const aStart = a.startDate || a.endDate;
       const bStart = b.startDate || b.endDate;
-      // If either has no date, put it at the end
       if (!aStart && !bStart) return 0;
       if (!aStart) return 1;
       if (!bStart) return -1;
       
-      const startDiff = aStart.diff(bStart);
+      const startDiff = aStart.valueOf() - bStart.valueOf();
       if (startDiff !== 0) return startDiff;
 
-      // Longer events first (they should be on lower lanes)
       const aDuration = a.spanInfo?.spanDays ?? 1;
       const bDuration = b.spanInfo?.spanDays ?? 1;
       return bDuration - aDuration;
     });
 
-    // Track all events in each lane for proper overlap detection
+    // Use numeric timestamps for fast overlap checks (no dayjs per comparison)
     interface LaneEvent {
-      start: dayjs.Dayjs;
-      end: dayjs.Dayjs;
+      startMs: number;
+      endMs: number;
     }
     const laneEvents: LaneEvent[][] = [];
 
     for (const event of headerEvents) {
-      // v8.2: Skip events without any date - they can't be positioned
       if (!event.startDate && !event.endDate) {
-        event.lane = 0; // Default lane for dateless events
+        event.lane = 0;
         continue;
       }
       
-      const eventStart = (event.startDate || event.endDate!).startOf("day");
-      const eventEnd = (event.endDate || event.startDate!).startOf("day");
+      const eventStartMs = (event.startDate || event.endDate!).startOf("day").valueOf();
+      const eventEndMs = (event.endDate || event.startDate!).startOf("day").valueOf();
 
       // Find first available lane (no overlap)
       let assignedLane = -1;
@@ -457,26 +463,9 @@ export class CalendarDataProcessor {
         if (!eventsInLane) continue;
         
         let hasOverlap = false;
-        
-        // Check if this event overlaps with any event in this lane
-        // v6.7: FIXED overlap detection
-        // 
-        // Events overlap if they share at least one day.
-        // Adjacent events (event1 ends day before event2 starts) can share lane.
-        // 
-        // Example: Event A (Jan 12-15) and Event B (Jan 15)
-        // - Both include Jan 15 → OVERLAP (different lanes)
-        // 
-        // Example: Event A (Jan 12-14) and Event B (Jan 15)
-        // - A ends Jan 14, B starts Jan 15 → ADJACENT (same lane OK)
-        for (const existingEvent of eventsInLane) {
-          // Two events overlap if their date ranges intersect
-          // rangesIntersect: eventStart <= existingEnd AND eventEnd >= existingStart
-          const rangesIntersect = 
-            eventStart.isSameOrBefore(existingEvent.end, 'day') &&
-            eventEnd.isSameOrAfter(existingEvent.start, 'day');
-          
-          if (rangesIntersect) {
+        for (const existing of eventsInLane) {
+          // Ranges intersect if eventStart <= existingEnd AND eventEnd >= existingStart
+          if (eventStartMs <= existing.endMs && eventEndMs >= existing.startMs) {
             hasOverlap = true;
             break;
           }
@@ -489,18 +478,13 @@ export class CalendarDataProcessor {
       }
 
       if (assignedLane === -1) {
-        // No available lane, create new one
         assignedLane = laneEvents.length;
         laneEvents.push([]);
       }
       
-      // Add event to lane (safe access with optional chaining)
       const targetLane = laneEvents[assignedLane];
       if (targetLane) {
-        targetLane.push({
-          start: eventStart,
-          end: eventEnd,
-        });
+        targetLane.push({ startMs: eventStartMs, endMs: eventEndMs });
       }
 
       event.lane = assignedLane;
@@ -519,23 +503,34 @@ export class CalendarDataProcessor {
       const startDay = (pr.startDate || pr.endDate!).startOf("day");
       const endDay = (pr.endDate || pr.startDate!).startOf("day");
 
-      let cursor = startDay;
+      // Fast path: single-day events (most common case, skip loop overhead)
+      if (startDay.isSame(endDay, "day")) {
+        const dateStr = startDay.format("YYYY-MM-DD");
+        if (!grouped[dateStr]) grouped[dateStr] = [];
+        grouped[dateStr].push(pr);
+        continue;
+      }
+
+      // Multi-day: use native Date arithmetic (5-10x faster than dayjs per iteration)
+      // Extract calendar date components from timezone-aware dayjs objects
+      const cursor = new Date(Date.UTC(startDay.year(), startDay.month(), startDay.date()));
+      const endMs = Date.UTC(endDay.year(), endDay.month(), endDay.date());
+      const maxDays = 90;
       let guard = 0;
-      const maxDays = 365; // Safety limit
 
-      while (cursor.isSameOrBefore(endDay, "day") && guard < maxDays) {
-        const dateStr = cursor.format("YYYY-MM-DD");
+      while (cursor.getTime() <= endMs && guard < maxDays) {
+        const y = cursor.getUTCFullYear();
+        const m = cursor.getUTCMonth() + 1;
+        const d = cursor.getUTCDate();
+        const dateStr = `${y}-${m < 10 ? '0' : ''}${m}-${d < 10 ? '0' : ''}${d}`;
 
-        if (!grouped[dateStr]) {
-          grouped[dateStr] = [];
-        }
+        if (!grouped[dateStr]) grouped[dateStr] = [];
         grouped[dateStr].push(pr);
 
-        cursor = cursor.add(1, "day");
+        cursor.setUTCDate(d + 1);
         guard++;
       }
       
-      // Warn if event was truncated due to safety limit
       if (guard >= maxDays) {
         calendarLogger.warn(
           `[Calendar] Event "${pr.record?.id || 'unknown'}" spans more than ${maxDays} days and was truncated. ` +

@@ -127,6 +127,26 @@ const DEFAULT_CONFIG: GestureConfig = {
 // GESTURE COORDINATOR
 // ============================================================
 
+/**
+ * v3.2.0 Iteration 3: Module-level pause flag for DnD passthrough.
+ * When true, GestureCoordinator skips all touch processing
+ * so TimelineDragManager can own the touch gesture exclusively.
+ */
+let gesturesPaused = false;
+
+export function pauseGestures(): void {
+  gesturesPaused = true;
+}
+
+export function resumeGestures(): void {
+  gesturesPaused = false;
+}
+
+/** v3.2.4: Check if gestures are paused (for external DnD coordination) */
+export function isGesturesPaused(): boolean {
+  return gesturesPaused;
+}
+
 export class GestureCoordinator {
   private config: GestureConfig;
   private handlers: GestureHandlers;
@@ -238,7 +258,7 @@ export class GestureCoordinator {
   }
   
   private handleTouchStart(e: TouchEvent): void {
-    if (!this.config.enabled) return;
+    if (!this.config.enabled || gesturesPaused) return;
     
     const touch = e.touches[0];
     if (!touch) return;
@@ -281,7 +301,7 @@ export class GestureCoordinator {
   }
   
   private handleTouchMove(e: TouchEvent): void {
-    if (!this.config.enabled || !this.touchState) return;
+    if (!this.config.enabled || gesturesPaused || !this.touchState) return;
     
     const touch = e.touches[0];
     if (!touch) return;
@@ -333,7 +353,7 @@ export class GestureCoordinator {
   }
   
   private handleTouchEnd(e: TouchEvent): void {
-    if (!this.config.enabled || !this.touchState) return;
+    if (!this.config.enabled || gesturesPaused || !this.touchState) return;
     
     const touch = e.changedTouches[0];
     if (!touch) {

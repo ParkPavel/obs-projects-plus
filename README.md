@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
@@ -144,9 +144,9 @@ tags: [проект, важное]
 | ✅ | **Унификация фильтров + Instant mode** | v3.0.9 | Выпущено |
 | ✅ | **Mobile Feature Parity** | v3.0.10 | Выпущено |
 | ✅ | **Deep Mobile Adaptation** | v3.1.0 | Выпущено |
-| 🥇 | **Drag & Drop 2.0** | v3.2.0 | В разработке |
-| 🥈 | **Database View** | v3.3.0 | Планируется |
-| 🥉 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Планируется |
+| ✅ | **Drag & Drop 2.0** | v3.2.0 | Выпущено |
+| 🥇 | **Database View** | v3.3.0 | Планируется |
+| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Планируется |
 
 ---
 
@@ -212,7 +212,7 @@ cd obs-projects-plus
 npm ci
 npm run dev       # esbuild watch mode
 npm run build     # tsc + esbuild production
-npm run test      # Jest (344 теста, 19 suites)
+npm run test      # Jest (375 тестов, 21 suite)
 npm run lint      # ESLint + eslint-plugin-obsidianmd (23 правила)
 npm run format    # Prettier
 ```

@@ -5,7 +5,73 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-04-03
+
+### Added — Drag & Drop 2.0
+
+#### Calendar Timeline DnD
+- **EventBar drag**: Events in Week/Day timeline views can now be dragged to reschedule — move to a different day or time slot
+- **Cross-day drag**: Drag events between days in Week view with automatic date recalculation
+- **Strip resize**: Resize multi-day event bars by dragging left/right edges to adjust start/end dates
+- **15-minute snap**: Time-based events snap to 15-minute intervals during drag
+- **Visual drop feedback**: Drop targets highlight with accent color on hover; stronger feedback on touch devices
+
+#### TimelineDragManager
+- **DragSession architecture**: All per-drag state encapsulated in a DragSession object — clean initiation/cleanup cycle
+- **Mode detection**: Single evaluation at movement threshold — move, strip-resize-start, or strip-resize-end
+- **Auto-scroll**: Time-based vertical auto-scroll when dragging near container edges
+- **SnapEngine**: Configurable snap intervals for both time (minutes) and day (index) axes
+
+#### Mobile DnD Enhancements
+- **Long-press activation**: Touch DnD requires 500ms long-press on drag handle to activate (prevents accidental drags)
+- **Haptic feedback**: `navigator.vibrate()` on snap boundaries with 100ms throttle to prevent over-firing
+- **Visual drag feedback**: Dragged element gets `maxHeight: 3rem`, `opacity: 0.9`, shadow effect
+- **Touch drop targets**: `@media (pointer: coarse)` with stronger accent background and thicker borders
+
+### Fixed
+
+#### DnD Data Integrity
+- **Single mutation point**: `CalendarView.handleRecordChange` is now the sole date mutation path — Day.svelte no longer modifies endDate (eliminates double-shift bug)
+- **Format preservation**: Date-only fields stay date-only during DnD (no `T00:00:00.000Z` injection); detection via raw value pattern `/T\d{2}:\d{2}/` instead of `typeConfig.time`
+- **Multi-day span preservation**: Timed moves now compute `endDate = origEnd.add(dayDelta, 'day')` — multi-day events no longer collapse to single day
+
+#### Strip Resize Accuracy
+- **Mode-specific reference**: Resize-start uses `getOriginalStripStartIndex()`, resize-end uses `getOriginalStripEndIndex()` — eliminates delta amplification from bar center
+- **Handle glow**: `scale(1.02)` lift + `dnd-handle-pulse` animation on resize handles after long-press activation
+
+#### Stability
+- **Auto-scroll null safety**: `autoDetectScrollContainer(barElement)` fallback if reactive block fires before DOM ready
+- **Mode lock**: Mode re-evaluation continues during first 30px of drag, then locks — prevents accidental mode switches
+
+### Technical
+- **Tests**: 375/375 passing (21 suites)
+- **Build**: OK (main.js 1.8MB, main.css 4.2KB)
+
 ## [3.1.0] - 2026-03-08
+
+### Hotfixes (included in 3.1.0 build)
+
+#### Mobile Data Loss Fix
+- **CalendarView data delivery**: Removed `dataGeneration` guard in `calendarView.ts` that blocked repeat `onData()` calls after tab switching on mobile. CalendarView now always delivers data via `$set()`, matching Table/Board/Gallery pattern.
+
+#### Timeline Z-Index Overlap Fix
+- **CurrentTimeLine.svelte**: Reduced `z-index` from 100 to 10
+- **CalendarView.svelte**: Added `isolation: isolate` and `z-index: 0` on ViewContent first child to prevent timeline from overlapping Agenda sidebar
+
+#### Board Zoom iOS Fix
+- **Board.svelte**: Replaced CSS `zoom` (unsupported on Safari/iOS) with `transform: scale()` + `transform-origin: top left` + width/height compensation. Added `min-height: 100%` on viewport container.
+
+#### Numeric Date Hardening (5 files)
+- **calendar.ts, dateFormatting.ts**: `parseDateInTimezone` now rejects non-string / non-Date / non-dayjs values (prevents numeric frontmatter values like timestamps from being parsed as dates)
+- **filterEngine.ts, suggestionCollector.ts**: `isDateLike` now rejects numbers
+- **processor.ts**: `calculateSpanInfo` capped at 365 days to prevent infinite spans from malformed data
+
+#### Agenda DnD View Reset Fix
+- **CalendarView.svelte**: Added `getLatestProject()` helper that reads current project state from `get(settings).projects` instead of using stale local `project` prop. Applied in `handleAgendaSaveList`, `handleAgendaDeleteList`, `handleAgendaReorderLists` — prevents reordering agenda lists from resetting calendar view to "today".
+
+#### Updated Metrics
+- **Tests**: 375 passed (21 suites) — up from 344 (19 suites) at initial release
+- **Build**: main.js 1.8MB, main.css 4.2KB
 
 ### Added — DnD Handle Engine & Unified Grip Design
 

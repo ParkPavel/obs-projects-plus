@@ -29,8 +29,7 @@
     background: transparent;
     -webkit-user-select: none;
     user-select: none;
-    /* v4.0.3: Use flex for consistent width with Day cells and HeaderStripsSection */
-    flex: 1 1 0;
+    /* v9.3: flex: 1 1 0 removed — parent .calendar-week-header is now CSS Grid. */
     min-width: 0;
     box-sizing: border-box;
   }

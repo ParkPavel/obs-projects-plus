@@ -30,7 +30,6 @@
   import { onMount } from "svelte";
   import {
     getFirstDayOfWeek,
-    groupRecordsByRange,
     parseDateInTimezone,
     extractDateWithPriority,
   } from "./calendar";
@@ -45,6 +44,8 @@
   import { processCalendarData } from "./processor";
   import { calendarLogger } from "./logger";
   import { ZOOM_LEVELS, TIMING } from "./constants";
+  import type { RecordChangeOptions } from "./dnd/types";
+  import { setHapticEnabled } from "./dnd/HapticManager";
   
   // Navigation & Animation Controllers (v3.0.0)
   import { NavigationController, type NavigableCalendar } from "./navigation/NavigationController";
@@ -147,9 +148,32 @@
   $: navigationController.setVerticalCalendar(verticalCalendarComponent as unknown as NavigableCalendar);
   $: navigationController.setHorizontalCalendar(horizontalCalendarComponent as unknown as NavigableCalendar);
 
+  /**
+   * Read the latest project from the settings store.
+   * CalendarView's local `project` prop has stale `views[].config` because
+   * view config changes (interval, agendaOpen, etc.) go through
+   * settings.updateViewConfig → store, but never back into CalendarView's
+   * local `project` prop. Using the stale local copy in settings.updateProject()
+   * reverts view configs, causing the calendar to jump to today.
+   */
+  function getLatestProject(): ProjectDefinition {
+    return get(settings).projects.find(p => p.id === project.id) ?? project;
+  }
+
+  // Deferred config save — breaks synchronous cascade:
+  // saveConfig → settings store → App re-derive → View $set → CalendarView reactive blocks
+  // Without deferral, this chain runs WITHIN the same call stack, causing 3+ waves of reactive
+  // evaluation that can freeze the UI.
+  let _saveConfigTimer: ReturnType<typeof setTimeout> | null = null;
   function saveConfig(cfg: CalendarConfig) {
     config = cfg;
-    onConfigChange(cfg);
+    // Defer parent notification to next microtask — prevents synchronous cascade
+    // through settings store → App.svelte → View.svelte → useView → $set → reactive blocks
+    if (_saveConfigTimer) clearTimeout(_saveConfigTimer);
+    _saveConfigTimer = setTimeout(() => {
+      _saveConfigTimer = null;
+      onConfigChange(cfg);
+    }, 0);
   }
 
   // Reactive frame data - dataVersion forces re-evaluation on every data update
@@ -175,11 +199,17 @@
 
   // v3.1.0: Instant mode — suppress CSS transitions on view switching
   $: isInstantMode = $settings.preferences.animationBehavior === 'instant';
-  
-  let isLoading = false;
-  let errorMessage: string | null = null;
 
-  let groupedRecords: Record<string, DataRecord[]> = {};
+  // v4.0.3: Sync haptic feedback enable/disable from settings
+  $: setHapticEnabled(!$settings.preferences.disableHapticFeedback);
+  
+  let isLoading = true;
+  
+  // v10.2: Defer heavy calendar body by 1 frame so the browser can paint the shell immediately.
+  // Without this, the entire component tree (IHC → TimelineView → 35 DayColumns) renders synchronously
+  // before the first paint, causing a perceived freeze during tab switch.
+  let calendarReady = false;
+  let errorMessage: string | null = null;
 
   function computeNow(tz: string) {
     return tz && tz !== "local" ? dayjs().tz(tz) : dayjs();
@@ -196,6 +226,15 @@
   
   // Current focused date for zoom centering (null = use today)
   let focusedDate: dayjs.Dayjs | null = null;
+  
+  // Guard to skip reactive blocks during initial mount (prevents startup cascade)
+  let mounted = false;
+  
+  // Deferred view mounting: only create a view layer after it's been activated
+  // This prevents mounting ALL 3 calendar views (year + month + horizontal) on startup
+  let yearActivated = false;
+  let monthActivated = false;
+  let horizontalActivated = false;
   
   // Scroll position for navigation ('start' | 'center' | 'end')
   let focusedScrollPosition: 'start' | 'center' | 'end' = 'center';
@@ -512,14 +551,29 @@
   }
 
   onMount(() => {
+    
     nowTimer = setInterval(() => {
       now = computeNow(timezoneValue);
     }, 60_000);
     
+    // Batch startup config writes into a single saveConfig call
+    // to avoid multiple settings → App → View → onData cascades
+    const startupConfig: Record<string, unknown> = {};
+    
     // Restore interval from persisted state (but NOT the date — always start on today)
     const state = loadViewState();
     if (state && state.interval !== getCurrentInterval()) {
-      saveConfig({ ...config, interval: state.interval });
+      startupConfig['interval'] = state.interval;
+    }
+    
+    // Clear centerOn if it was left as "today" from previous session
+    if (config?.["centerOn"] === "today") {
+      startupConfig['centerOn'] = null;
+    }
+    
+    // Apply all startup config changes in one write
+    if (Object.keys(startupConfig).length > 0) {
+      saveConfig({ ...config, ...startupConfig } as CalendarConfig);
     }
     
     // Always navigate to today on fresh load
@@ -545,6 +599,15 @@
       saveViewState();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Mark as mounted so reactive blocks (centerOn etc.) can fire normally
+    mounted = true;
+
+    // v10.2: Defer heavy view rendering to next frame — browser paints the shell first
+    requestAnimationFrame(() => {
+      calendarReady = true;
+      isLoading = false;
+    });
     
     return () => {
       if (nowTimer) {
@@ -663,7 +726,10 @@
     }
   }
 
-  $: if (config?.["centerOn"] === "today") {
+  // Handle centerOn="today" from toolbar button (App.svelte sets config.centerOn = "today").
+  // Safe now because saveConfig defers onConfigChange via setTimeout, breaking the
+  // synchronous cascade: saveConfig → settings → App → View → $set → reactive re-fire.
+  $: if (mounted && config?.["centerOn"] === "today") {
     navigateToDate('today');
     saveConfig({ ...config, centerOn: null });
   }
@@ -671,11 +737,20 @@
   // Track interval changes - but DON'T auto-center if focusedDate is set
   // focusedDate is set during zoom operations and should take priority
   let lastIntervalForCentering: string | null = null;
-  $: if (interval && interval !== lastIntervalForCentering) {
+  // v3.3.5: Guard flag — suppress navigateToDate('today') during agenda operations
+  let _agendaGuard = false;
+  // BUG-A2 fix: detect rapid cascade — two interval changes within 150ms means
+  // a settings cascade fired (e.g. agenda reorder → config write → props update),
+  // not a genuine user-initiated interval switch. Skip auto-centering in that case.
+  let _lastIntervalChangeTime = 0;
+  $: if (mounted && interval && interval !== lastIntervalForCentering) {
+    const _now = Date.now();
+    const _isRapidChange = _now - _lastIntervalChangeTime < 150;
+    _lastIntervalChangeTime = _now;
     lastIntervalForCentering = interval;
     // Only auto-center to today if NO focusedDate is set (e.g., initial load or manual interval change)
     // When zooming, focusedDate is already set and components will use it
-    if (!focusedDate) {
+    if (!focusedDate && !_agendaGuard && !_isRapidChange) {
       const delay = isInstantMode ? 0 : 200;
       setTimeout(() => {
         navigateToDate('today');
@@ -766,6 +841,11 @@
   // Apply mobile preference if on mobile and no config yet
   $: defaultInterval = isMobile ? mobileCalendarView : "week";
   $: interval = config?.interval ?? defaultInterval;
+  
+  // Activate view layers on first use (deferred mounting)
+  $: if (interval === 'year') yearActivated = true;
+  $: if (interval === 'month' || interval === '2weeks') monthActivated = true;
+  $: if (interval === 'week' || interval === 'day') horizontalActivated = true;
   
   // Display mode: 
   // - 'bars' (timeline) is default for day/week views
@@ -1049,11 +1129,8 @@
           : r
       );
       
-      // Force cache invalidation
-      colorUpdateVersion++;
-      lastGroupedKey = '';
-      lastSortKey = '';
-      lastConfigStr = '';
+      // Force cache invalidation — reset version so $: block re-fires
+      lastProcessedVersion = -1;
       
       calendarLogger.debug('Color change completed successfully', { component: 'CalendarView', action: 'colorChange' });
       
@@ -1072,170 +1149,70 @@
     $settings.preferences.locale.firstDayOfWeek
   );
 
-  // Memoized computation: only regroup when records/fields/timezone change
-  // Note: interval is NOT included in the key because grouping is the same for all intervals
-  let colorUpdateVersion = 0; // Used to force cache invalidation on color changes
-  let lastGroupedKey = '';
-  let cachedGroupedRecords: Record<string, DataRecord[]> = {};
+  // v10.0: Single-pass data processing — eliminates double O(N×D) grouping
+  // Previously: groupRecordsByRange O(N×D) + processCalendarData→groupByDate O(N×D) = 2× freeze
+  // Now: processCalendarData runs ONCE; sortedGroupedRecords derived from result (zero extra grouping)
   
-  // Full hash for change detection in grouping
-  // v3.0.7: Lightweight hash — only hashes relevant date fields + record IDs
-  // Previously JSON.stringify'd ALL values for every record on every tick
-  function generateGroupingHash(recs: DataRecord[], field?: string): string {
-    if (!field || recs.length === 0) return 'empty';
-    let hash = recs.length + ':';
-    for (const r of recs) {
-      // Only include id + the date field values that affect grouping
-      const dateVal = r.values[field];
-      hash += r.id;
-      hash += dateVal !== undefined ? String(dateVal) : '';
-      hash += '|';
-    }
-    return hash;
-  }
-  
-  $: {
-    const startField = dateField?.name;
-    const endFieldName = endDateField?.name;
-    const tz = timezoneValue;
-    // v9.0: Content-aware hash includes ALL record values for full reactivity
-    // v9.1: Include colorUpdateVersion to force refresh on color changes
-    const recordsKey = `${generateGroupingHash(records, startField)}-${endFieldName}-${tz}-v${colorUpdateVersion}`;
-    
-    if (startField && recordsKey !== lastGroupedKey) {
-      lastGroupedKey = recordsKey;
-      
-      // Always use full range for grouping - let infinite scroll handle visibility
-      cachedGroupedRecords = groupRecordsByRange(records, startField, endFieldName, tz);
-    } else if (!startField) {
-      cachedGroupedRecords = {};
-      lastGroupedKey = '';
-    }
-  }
-  
-  $: groupedRecords = cachedGroupedRecords;
-
-  function parseDateValue(record: DataRecord, fieldName?: string) {
-    if (!fieldName) return null;
-    const value = record.values[fieldName];
-    if (!value) return null;
-    return parseDateInTimezone(value, timezoneValue);
-  }
-
-  function sortGroupedRecords(
-    grouped: Record<string, DataRecord[]>,
-    fieldName?: string
-  ): Record<string, DataRecord[]> {
-    if (!fieldName) return grouped;
-    const sorted: Record<string, DataRecord[]> = {};
-    for (const key of Object.keys(grouped)) {
-      const items = [...(grouped[key] ?? [])];
-      items.sort((a, b) => {
-        const aDate = parseDateValue(a, fieldName);
-        const bDate = parseDateValue(b, fieldName);
-        if (aDate && bDate) {
-          return aDate.valueOf() - bDate.valueOf();
-        }
-        if (aDate) return -1;
-        if (bDate) return 1;
-        return a.id.localeCompare(b.id);
-      });
-      sorted[key] = items;
-    }
-    return sorted;
-  }
-
-  // Memoized sort: only re-sort when grouping changes
-  let lastSortKey = '';
-  let cachedSortedRecords: Record<string, DataRecord[]> = {};
-  
-  $: {
-    const fieldName = dateField?.name;
-    // v9.0: Use lastGroupedKey to detect grouping changes properly
-    const sortKey = `${lastGroupedKey}-${fieldName}`;
-    
-    if (sortKey !== lastSortKey) {
-      lastSortKey = sortKey;
-      cachedSortedRecords = sortGroupedRecords(groupedRecords, fieldName);
-    }
-  }
-  
-  $: sortedGroupedRecords = cachedSortedRecords;
-
-  // ProcessedCalendarData: one-time processing for all views
-  // This replaces complex per-render calculations with pre-computed data
   let cachedProcessedData: ProcessedCalendarData | null = null;
-  let lastRecordsFingerprint = '';
-  let lastConfigStr = '';
+  let lastProcessedVersion = -1;
+  let lastProcessedConfigKey = '';
   
-  /**
-   * v3.0.7: Lightweight fingerprint — only includes calendar-relevant fields
-   * Previously: JSON.stringify per-record on EVERY field (O(n*m) stringification)
-   * Now: Only stringifies date, time, and color fields (O(n*k) where k is small constant)
-   */
-  function createRecordsFingerprint(recs: DataRecord[], cfg: CalendarConfig | undefined): string {
-    if (!recs || !cfg) return '';
-    const startField = cfg.startDateField;
-    const endField = cfg.endDateField;
-    const startTimeField = cfg.startTimeField;
-    const endTimeField = cfg.endTimeField;
-    const colorField = cfg.eventColorField;
+  // CRITICAL: Use function-call pattern to break Svelte's self-referential dependency tracking.
+  // A $: block that reads lastProcessedVersion/lastProcessedConfigKey as dependencies AND
+  // writes them (via $$invalidate) creates an infinite flush() loop in Svelte 3:
+  //   → $: block runs → writes -1/'' (even same values) → $$invalidate → component dirty
+  //   → flush() sees dirty[0] === -1 (reset before fragment.p runs) → pushes back → re-runs → ∞
+  // Function body is NOT analyzed for $: dependencies — only the explicit arguments are tracked.
+  $: updateProcessedData(dateField, config, records, dataVersion, frame, getRecordColor);
+  function updateProcessedData(
+    df: typeof dateField,
+    cfg: typeof config,
+    recs: typeof records,
+    dv: typeof dataVersion,
+    fr: typeof frame,
+    getColor: typeof getRecordColor
+  ): void {
+    const startField = df?.name;
     
-    let fp = recs.length + ':';
-    for (const r of recs) {
-      fp += r.id + '|';
-      // Only include the fields that actually affect calendar rendering
-      if (startField) fp += String(r.values[startField] ?? '') + '|';
-      if (endField) fp += String(r.values[endField] ?? '') + '|';
-      if (startTimeField) fp += String(r.values[startTimeField] ?? '') + '|';
-      if (endTimeField) fp += String(r.values[endTimeField] ?? '') + '|';
-      if (colorField) {
-        fp += String(r.values[colorField] ?? '') + '|';
-      } else {
-        fp += String(r.values['color'] ?? r.values['eventColor'] ?? '') + '|';
-      }
-    }
-    return fp;
-  }
-  
-  // Reactive processing: automatically recalculates when records content or config changes
-  // dataVersion is included to force re-evaluation when data is updated via $set
-  $: {
-    // Include dataVersion in reactive dependencies to force re-run on every data update
-    const _version = dataVersion;
-    const startField = dateField?.name;
-    
-    if (startField && config && records && _version >= 0) {
-      const configStr = JSON.stringify({
-        startDateField: config.startDateField,
-        endDateField: config.endDateField,
-        startTimeField: config.startTimeField,
-        endTimeField: config.endTimeField,
-        eventColorField: config.eventColorField,
-        timezone: config.timezone,
-        startHour: config.startHour,
-        endHour: config.endHour,
-      });
+    if (startField && cfg && recs && recs.length > 0) {
+      // Cheap change detection: dataVersion increments on every data update,
+      // configKey only includes fields that affect processing
+      const configKey = `${cfg.startDateField}|${cfg.endDateField}|${cfg.startTimeField}|${cfg.endTimeField}|${cfg.eventColorField}|${cfg.timezone}|${cfg.startHour}|${cfg.endHour}`;
       
-      // v7.2: Check if records CONTENT changed (not just reference)
-      const recordsFingerprint = createRecordsFingerprint(records, config);
-      const needsUpdate = lastRecordsFingerprint !== recordsFingerprint || lastConfigStr !== configStr;
-      
-      if (needsUpdate) {
-        lastRecordsFingerprint = recordsFingerprint;
-        lastConfigStr = configStr;
-        
-        // Process data - this will run whenever records content or config changes
-        cachedProcessedData = processCalendarData(frame, config, getRecordColor);
+      if (dv !== lastProcessedVersion || configKey !== lastProcessedConfigKey) {
+        lastProcessedVersion = dv;
+        lastProcessedConfigKey = configKey;
+        cachedProcessedData = processCalendarData(fr, cfg, getColor);
+        calendarLogger.debug('[Perf] processCalendarData called', { data: { dataVersion: dv, records: recs.length } });
       }
-    } else if (!startField) {
+    } else {
       cachedProcessedData = null;
-      lastRecordsFingerprint = '';
-      lastConfigStr = '';
+      lastProcessedVersion = -1;
+      lastProcessedConfigKey = '';
     }
   }
   
   $: processedData = cachedProcessedData;
+  
+  // Derive sortedGroupedRecords from processedData.grouped
+  // Uses pre-parsed startDate from ProcessedRecord (no re-parsing!)
+  $: sortedGroupedRecords = (() => {
+    if (!processedData?.grouped) return {} as Record<string, DataRecord[]>;
+    const result: Record<string, DataRecord[]> = {};
+    for (const key in processedData.grouped) {
+      const prs = processedData.grouped[key];
+      if (!prs) continue;
+      // Sort using ALREADY PARSED startDate timestamps — zero dayjs overhead
+      const sorted = [...prs].sort((a, b) => {
+        const aTs = a.startDate?.valueOf() ?? 0;
+        const bTs = b.startDate?.valueOf() ?? 0;
+        if (aTs !== bTs) return aTs - bTs;
+        return a.record.id.localeCompare(b.record.id);
+      });
+      result[key] = sorted.map(pr => pr.record);
+    }
+    return result;
+  })();
 
   /**
    * Validates and sanitizes date field values before update
@@ -1280,7 +1257,7 @@
   /**
    * Deep drag handler with time preservation, timezone awareness, and validation
    */
-  async function handleRecordChange(date: dayjs.Dayjs, record: DataRecord) {
+  async function handleRecordChange(date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) {
     // Validate record integrity first
     const recordValidation = validateRecordIntegrity(record);
     if (!recordValidation.isValid) {
@@ -1309,24 +1286,52 @@
         timezoneValue
       );
       const targetDate = date.startOf('day');
-      const hasTimeInStart = dateField.typeConfig?.time ?? false;
+
+      // v3.2.2: Detect the time model — "separate fields" vs "embedded time".
+      // This MUST mirror the processor's extractTimeInfo() logic:
+      //   - If date field has embedded time (e.g. "2026-03-12T14:30:00") → embedded model
+      //   - If date field has NO embedded time but startTime/endTime fields exist → separate model
+      // Writing to the wrong model corrupts the data permanently.
+      const rawStartValue = record.values[dateField.name];
+      // v3.3.6: Detect embedded time ONLY from actual raw value format, not typeConfig.
+      // Using typeConfig?.time caused date-only records to get T00:00:00 corruption
+      // when the project had time support enabled but the record had no time.
+      // The /T\d{2}:\d{2}/ pattern requires the ISO "T" separator — won't match plain "YYYY-MM-DD".
+      const startHasEmbeddedTime = typeof rawStartValue === 'string' && /T\d{2}:\d{2}/.test(rawStartValue);
+
+      const startTimeFieldName = config?.startTimeField || 'startTime';
+      const endTimeFieldName = config?.endTimeField || 'endTime';
+      const hasSeparateStartTime = !startHasEmbeddedTime
+        && typeof record.values[startTimeFieldName] === 'string'
+        && /^\d{2}:\d{2}$/.test(record.values[startTimeFieldName] as string);
+
+      // useSeparateTimeFields: true when the record uses the "date + startTime/endTime" model
+      const useSeparateTimeFields = hasSeparateStartTime;
 
       // Validate target date
-      const validation = validateDateUpdate(originalStart, targetDate, hasTimeInStart, timezoneValue);
+      const hasAnyTime = startHasEmbeddedTime || hasSeparateStartTime || !!options?.startTime;
+      const validation = validateDateUpdate(originalStart, targetDate, hasAnyTime, timezoneValue);
       if (!validation.isValid) {
         calendarLogger.error('Date validation failed', undefined, { component: 'CalendarView', action: 'recordChange', data: { error: validation.error } });
         new Notice(validation.error ?? 'Invalid date');
         return;
       }
 
-      // Preserve time component when moving date
+      // Build the new start datetime (used for validation and embedded-time writes)
       let newStartDate: dayjs.Dayjs;
-      if (hasTimeInStart && originalStart) {
-        // Keep hours/minutes/seconds from original, only change date
+      if (options?.startTime) {
+        const [h, m] = options.startTime.split(':').map(Number);
+        newStartDate = targetDate.hour(h ?? 0).minute(m ?? 0).second(0);
+      } else if (startHasEmbeddedTime && originalStart) {
+        // Embedded time model: preserve original hours/minutes
         newStartDate = targetDate
           .hour(originalStart.hour())
           .minute(originalStart.minute())
           .second(originalStart.second());
+      } else if (hasSeparateStartTime) {
+        // Separate time model: combine date + startTime for validation
+        const timeParts = (record.values[startTimeFieldName] as string).split(':').map(Number);
+        newStartDate = targetDate.hour(timeParts[0] ?? 0).minute(timeParts[1] ?? 0).second(0);
       } else {
         newStartDate = targetDate;
       }
@@ -1339,7 +1344,6 @@
           const oldBasename = record.id.substring(record.id.lastIndexOf('/') + 1).replace(/\.md$/i, '');
           const newDateStr = newStartDate.format("YYYY-MM-DD");
           
-          // Replace existing date prefix or prepend the new date
           const datePattern = /^\d{4}-\d{2}-\d{2}/;
           let newBasename: string;
           if (datePattern.test(oldBasename)) {
@@ -1355,41 +1359,87 @@
         return;
       }
 
-      // Build updates object
-      const updates: Record<string, string> = {
-        [dateField.name]: newStartDate.format(
-          hasTimeInStart ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
-        ),
-      };
+      // ── Build updates object ──────────────────────────────────────────────
+      // v3.2.2: Respect the time model — write to the correct fields.
+      const updates: Record<string, string> = {};
+
+      if (useSeparateTimeFields || (!startHasEmbeddedTime && options?.startTime)) {
+        // ── Separate time model (or date-only field with DnD-provided time):
+        // v3.3.6: date field stays YYYY-MM-DD. Any time goes to startTime field.
+        // This prevents T00:00:00 corruption when options.startTime is provided
+        // for a record that doesn't use embedded time format.
+        updates[dateField.name] = targetDate.format("YYYY-MM-DD");
+
+        if (options?.startTime) {
+          // DnD provided explicit start time → write to startTime field
+          updates[startTimeFieldName] = options.startTime;
+        }
+        // If no explicit startTime from DnD, leave the existing startTime field untouched
+      } else if (startHasEmbeddedTime) {
+        // ── Embedded time model: date field is YYYY-MM-DDTHH:mm:ss ──
+        updates[dateField.name] = newStartDate.format("YYYY-MM-DDTHH:mm:ss");
+      } else {
+        // ── No time at all: date field is YYYY-MM-DD ──
+        updates[dateField.name] = targetDate.format("YYYY-MM-DD");
+      }
 
       // Handle end date with delta shift and time preservation
       if (endDateField?.name) {
         const endRaw = record.values[endDateField.name];
         const originalEnd = parseDateInTimezone(endRaw, timezoneValue);
+        // v3.3.6: Detect embedded time from actual value only (same fix as startDate)
+        const endHasEmbeddedTime = typeof endRaw === 'string' && /T\d{2}:\d{2}/.test(endRaw);
+        const hasSeparateEndTime = !endHasEmbeddedTime
+          && typeof record.values[endTimeFieldName] === 'string'
+          && /^\d{2}:\d{2}$/.test(record.values[endTimeFieldName] as string);
         
-        if (originalStart && originalEnd) {
+        if (options?.endTime) {
+          if (useSeparateTimeFields || hasSeparateEndTime || !endHasEmbeddedTime) {
+            // v3.3.6: Separate model or date-only end field — write time to separate field
+            updates[endTimeFieldName] = options.endTime;
+            const endDateDay = options.endDate ?? targetDate;
+            updates[endDateField.name] = endDateDay.format("YYYY-MM-DD");
+          } else {
+            // Embedded model: combine date+time into endDate field
+            const [eh, em] = options.endTime.split(':').map(Number);
+            let newEndDate = (options.endDate ?? targetDate).hour(eh ?? 0).minute(em ?? 0).second(0);
+            if (newEndDate.isBefore(newStartDate)) {
+              newEndDate = newStartDate;
+            }
+            updates[endDateField.name] = newEndDate.format(
+              endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
+            );
+          }
+        } else if (options?.endDate) {
+          // Strip DnD — explicit end date without time change
+          let newEndDate = options.endDate;
+          if (endHasEmbeddedTime && originalEnd) {
+            newEndDate = newEndDate.hour(originalEnd.hour()).minute(originalEnd.minute()).second(originalEnd.second());
+          }
+          if (newEndDate.isBefore(newStartDate)) {
+            newEndDate = newStartDate;
+          }
+          updates[endDateField.name] = newEndDate.format(
+            endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
+          );
+        } else if (originalStart && originalEnd) {
           // Calculate day delta (how many days we moved)
           const deltaDays = targetDate.diff(originalStart.startOf('day'), 'day');
           
           if (deltaDays !== 0) {
-            const hasTimeInEnd = endDateField.typeConfig?.time ?? false;
-            
-            // Shift end date by same delta, preserving time if present
             let newEndDate = originalEnd.add(deltaDays, 'day');
             
-            // Validate end date
-            const endValidation = validateDateUpdate(originalEnd, newEndDate, hasTimeInEnd, timezoneValue);
+            const endValidation = validateDateUpdate(originalEnd, newEndDate, endHasEmbeddedTime, timezoneValue);
             if (!endValidation.isValid) {
               calendarLogger.warn('End date validation failed, skipping end date update', { component: 'CalendarView', data: { error: endValidation.error } });
             } else {
-              // Ensure end is not before start (data integrity)
               if (newEndDate.isBefore(newStartDate)) {
                 calendarLogger.warn('End date would be before start date, adjusting to match start', { component: 'CalendarView' });
                 newEndDate = newStartDate;
               }
               
               updates[endDateField.name] = newEndDate.format(
-                hasTimeInEnd ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
+                endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
               );
             }
           }
@@ -1397,10 +1447,31 @@
       }
 
       // Apply update with validated data
-      api.updateRecord(
-        updateRecordValues(record, updates),
-        fields
-      );
+      const updatedRecord = updateRecordValues(record, updates);
+      api.updateRecord(updatedRecord, fields);
+
+      // v3.2.1: Optimistic local update — bypass the long reactive chain
+      // (dataFrame store → DataFrameProvider → App → View → useView → onData → $set)
+      // by directly patching frame and bumping dataVersion so reactive blocks fire immediately.
+      frame = {
+        ...frame,
+        records: frame.records.map(r => r.id === updatedRecord.id ? updatedRecord : r),
+      };
+      dataVersion++;
+
+      // v3.2.2: Auto-navigate to target date if it moved outside current visible period.
+      // Uses the component ref to scroll — avoids date going off-screen after cross-week DnD.
+      if (horizontalCalendarComponent && (interval === 'week' || interval === 'day')) {
+        const targetDay = targetDate.startOf('day');
+        const currentPeriodStart = focusedDate?.startOf('day') ?? dayjs().startOf('day');
+        const isSamePeriod = targetDay.isSame(currentPeriodStart, 'week');
+        if (!isSamePeriod) {
+          focusedDate = targetDay;
+          requestAnimationFrame(() => {
+            horizontalCalendarComponent?.scrollToDate?.(targetDay);
+          });
+        }
+      }
     } catch (error) {
       calendarLogger.error('Error updating record date', error, { component: 'CalendarView', action: 'updateDate' });
       new Notice('Ошибка при обновлении даты записи');
@@ -1419,12 +1490,17 @@
     }
   
     try {
-      api.updateRecord(
-        updateRecordValues(record, {
-          [booleanField.name]: checked,
-        }),
-        fields
-      );
+      const updatedRecord = updateRecordValues(record, {
+        [booleanField.name]: checked,
+      });
+      api.updateRecord(updatedRecord, fields);
+
+      // v3.2.1: Optimistic local update for immediate checkbox feedback
+      frame = {
+        ...frame,
+        records: frame.records.map(r => r.id === updatedRecord.id ? updatedRecord : r),
+      };
+      dataVersion++;
     } catch (error) {
       calendarLogger.error('Error updating record check state', error, { component: 'CalendarView', action: 'checkState' });
       new Notice('Ошибка при обновлении состояния записи');
@@ -1612,7 +1688,9 @@
   function handleAgendaSaveList(event: CustomEvent<{ list: AgendaCustomList }>) {
     const { list } = event.detail;
     
-    const currentLists = project.agenda?.custom?.lists ?? [];
+    // v4.0.6: Read latest project from settings store — local `project` has stale views[].config
+    const latest = getLatestProject();
+    const currentLists = latest.agenda?.custom?.lists ?? [];
     const existingIndex = currentLists.findIndex(l => l.id === list.id);
     
     let updatedLists: AgendaCustomList[];
@@ -1627,24 +1705,22 @@
     
     // Update project with new lists
     const updatedProject: ProjectDefinition = {
-      ...project,
+      ...latest,
       agenda: {
-        ...project.agenda,
-        mode: project.agenda?.mode ?? 'standard',
+        ...latest.agenda,
+        mode: latest.agenda?.mode ?? 'standard',
         standard: {
-          inheritCalendarFilters: project.agenda?.standard?.inheritCalendarFilters ?? true,
+          inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
         custom: {
-          ...(project.agenda?.custom ?? {}),
+          ...(latest.agenda?.custom ?? {}),
           lists: updatedLists,
         },
       },
     };
     
-    // CRITICAL: Update the local project reference so child components see the change
-    project = updatedProject;
-    
-    // Persist to settings store using immer-safe updateProject
+    // Persist to settings store — the store → App.svelte → CalendarView
+    // propagation updates children in the same Svelte flush.
     settings.updateProject(updatedProject);
   }
   
@@ -1654,56 +1730,73 @@
   function handleAgendaDeleteList(event: CustomEvent<{ listId: string }>) {
     const { listId } = event.detail;
     
-    const currentLists = project.agenda?.custom?.lists ?? [];
+    // v4.0.6: Read latest project from settings store — local `project` has stale views[].config
+    const latest = getLatestProject();
+    const currentLists = latest.agenda?.custom?.lists ?? [];
     const updatedLists = currentLists.filter(l => l.id !== listId);
     
     const updatedProject: ProjectDefinition = {
-      ...project,
+      ...latest,
       agenda: {
-        ...project.agenda,
-        mode: project.agenda?.mode ?? 'standard',
+        ...latest.agenda,
+        mode: latest.agenda?.mode ?? 'standard',
         standard: {
-          inheritCalendarFilters: project.agenda?.standard?.inheritCalendarFilters ?? true,
+          inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
         custom: {
-          ...(project.agenda?.custom ?? {}),
+          ...(latest.agenda?.custom ?? {}),
           lists: updatedLists,
         },
       },
     };
     
-    // CRITICAL: Update the local project reference
+    // v3.3.5: Guard + deferred pattern — prevents view cascade and interval centering
+    _agendaGuard = true;
     project = updatedProject;
-    
-    // Persist to settings store using immer-safe updateProject
-    settings.updateProject(updatedProject);
+    setTimeout(() => {
+      settings.updateProject(updatedProject);
+      setTimeout(() => { _agendaGuard = false; }, 100);
+    }, 0);
   }
   
   /**
    * v3.1.0: Handle reordering custom agenda lists (drag-and-drop)
+   * v3.3.4: Update local project first for immediate UI feedback, then
+   * defer settings.updateProject() to next microtask so the synchronous
+   * settings → App → View → CalendarView reactive cascade doesn't
+   * destroy/recreate the IHC component (which resets navigation to today).
    */
   function handleAgendaReorderLists(event: CustomEvent<{ lists: AgendaCustomList[] }>) {
     const { lists } = event.detail;
     
+    // v4.0.6: Read latest project from settings store — local `project` has stale views[].config.
+    // Using the stale local copy would revert interval/agendaOpen/etc., causing the
+    // calendar to navigate back to today on the resulting settings cascade.
+    const latest = getLatestProject();
     const updatedProject: ProjectDefinition = {
-      ...project,
+      ...latest,
       agenda: {
-        ...project.agenda,
-        mode: project.agenda?.mode ?? 'standard',
+        ...latest.agenda,
+        mode: latest.agenda?.mode ?? 'standard',
         standard: {
-          inheritCalendarFilters: project.agenda?.standard?.inheritCalendarFilters ?? true,
+          inheritCalendarFilters: latest.agenda?.standard?.inheritCalendarFilters ?? true,
         },
         custom: {
-          ...(project.agenda?.custom ?? {}),
+          ...(latest.agenda?.custom ?? {}),
           lists,
         },
       },
     };
     
+    // v3.3.5: Guard + deferred pattern — prevents view cascade and interval centering
+    _agendaGuard = true;
     project = updatedProject;
     
-    // Persist to settings store using immer-safe updateProject
-    settings.updateProject(updatedProject);
+    // Defer persistence to break the synchronous reactive chain
+    setTimeout(() => {
+      settings.updateProject(updatedProject);
+      setTimeout(() => { _agendaGuard = false; }, 100);
+    }, 0);
   }
   
   function handleAgendaToggle() {
@@ -1712,6 +1805,31 @@
   }
   
   getRecordColorContext.set(getRecordColor);
+  
+  // Stable gesture handler references — prevents GestureCoordinator from being
+  // destroyed and recreated on every CalendarView re-render (which would add a new
+  // non-passive touchmove listener each time, causing performance degradation).
+  // Handlers call current closure variables via the outer scope at call time.
+  const _gestureHandlers = {
+    onPinchZoom: (e: import('./gestures/GestureCoordinator').GestureEvent) => {
+      const centerX = (e.startX + e.endX) / 2;
+      const centerY = (e.startY + e.endY) / 2;
+      const centerDate = getDateFromCoordinates(centerX, centerY);
+      if (e.scale && e.scale > 1) doZoom('in', centerDate);
+      else if (e.scale && e.scale < 1) doZoom('out', centerDate);
+    },
+    onHorizontalSwipe: (e: import('./gestures/GestureCoordinator').GestureEvent, direction: 'left' | 'right') => {
+      if (e.zone === 'center') {
+        const minDistance = 50;
+        const minVelocity = 0.3;
+        const distance = Math.abs(e.deltaX);
+        const velocity = e.velocity || 0;
+        if (distance >= minDistance || velocity >= minVelocity) {
+          handleHorizontalSwipe(direction);
+        }
+      }
+    }
+  };
 </script>
 
 <ErrorBoundary componentName="CalendarView">
@@ -1719,38 +1837,7 @@
 
   <div 
     class="calendar-zoom-container"
-    use:gestureAction={{
-      handlers: {
-        onPinchZoom: (e) => {
-          // Calculate center point of pinch gesture
-          const centerX = (e.startX + e.endX) / 2;
-          const centerY = (e.startY + e.endY) / 2;
-          const centerDate = getDateFromCoordinates(centerX, centerY);
-          
-          // Map pinch gestures to zoom actions
-          // spread (scale > 1) -> zoom IN (more detail)
-          // pinch (scale < 1) -> zoom OUT (less detail)
-          if (e.scale && e.scale > 1) doZoom('in', centerDate);
-          else if (e.scale && e.scale < 1) doZoom('out', centerDate);
-        },
-        onHorizontalSwipe: (e, direction) => {
-          // Only handle swipes in center zone (edge zones reserved for Obsidian)
-          if (e.zone === 'center') {
-            // Prevent accidental swipes: check minimum distance and velocity
-            const minDistance = 50; // Minimum 50px swipe
-            const minVelocity = 0.3; // Minimum velocity (px/ms)
-            
-            const distance = Math.abs(e.deltaX);
-            const velocity = e.velocity || 0;
-            
-            // Only trigger if swipe is intentional (distance OR velocity threshold met)
-            if (distance >= minDistance || velocity >= minVelocity) {
-              handleHorizontalSwipe(direction);
-            }
-          }
-        }
-      }
-    }}
+    use:gestureAction={{ handlers: _gestureHandlers }}
     on:wheel={handleZoomWheel}
     on:keydown={handleKeyDown}
     role="application"
@@ -1758,10 +1845,11 @@
     tabindex="-1"
   >
     <ViewContent noScroll={interval !== 'month' && interval !== '2weeks' && interval !== 'year'}>
-        <!-- View coexistence: all views exist simultaneously, CSS controls visibility -->
-        <!-- This prevents component destruction/recreation on interval change -->
+        <!-- Deferred view mounting: only create a view after first activation, keep alive after -->
+        <!-- v10.2: calendarReady defers ALL view layers by 1 frame so browser paints shell first -->
         
         <!-- Year view (heatmap) -->
+        {#if calendarReady && yearActivated}
         <div 
           class="view-layer view-layer--year"
           class:view-layer--active={interval === 'year'}
@@ -1792,8 +1880,10 @@
             }}
           />
         </div>
+        {/if}
         
         <!-- Month and 2weeks views (vertical infinite scroll) -->
+        {#if calendarReady && monthActivated}
         <div 
           class="view-layer view-layer--month"
           class:view-layer--active={interval === 'month' || interval === '2weeks'}
@@ -1827,8 +1917,10 @@
             onScrollToDate={undefined}
           />
         </div>
+        {/if}
         
         <!-- Horizontal views (week, day) -->
+        {#if calendarReady && horizontalActivated}
         <div 
           class="view-layer view-layer--horizontal"
           class:view-layer--active={interval !== 'month' && interval !== '2weeks' && interval !== 'year'}
@@ -1866,6 +1958,7 @@
             />
           </div>
         </div>
+        {/if}
     </ViewContent>
 
     <!-- Agenda sidebar: Available on ALL devices (matryoshka principle) -->
@@ -1991,6 +2084,17 @@
     touch-action: pan-x pan-y;
     /* CRITICAL: Position context for AgendaSidebar.mobile (absolute positioning) */
     position: relative;
+    /* v3.2.8: Explicit width constraint — ensures sidebar is accounted for */
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* v4.0.5: Isolate ViewContent stacking context so timeline z-indices
+     (CurrentTimeLine z:10, DragOverlay z:50) don't leak out and overlap
+     the sibling AgendaSidebar drawer (z:50 on mobile) */
+  .calendar-zoom-container > :global(:first-child) {
+    z-index: 0;
+    isolation: isolate;
   }
 
   /* View coexistence: CSS-based visibility control */
@@ -2011,6 +2115,8 @@
     /* When hidden, collapse to zero height to allow sibling to take space */
     max-height: 0;
     overflow: hidden;
+    /* v3.2.7: Allow flex shrinking in parent container */
+    min-width: 0;
   }
   
   .view-layer--hidden {
@@ -2024,7 +2130,7 @@
   
   .view-layer--active {
     opacity: 1;
-    transform: scale(1);
+    transform: none;
     pointer-events: auto;
     visibility: visible;
     max-height: none;
@@ -2168,6 +2274,8 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
+    /* v3.2.7: Allow flex shrinking when agenda panel is open */
+    min-width: 0;
   }
 
   /* Apple-style transitions */

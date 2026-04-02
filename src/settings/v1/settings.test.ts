@@ -10,6 +10,7 @@ describe("resolve v2", () => {
       projects: [],
       preferences: {
         animationBehavior: "smooth",
+        disableHapticFeedback: false,
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -48,6 +49,7 @@ describe("resolve v2", () => {
       ],
       preferences: {
         animationBehavior: "smooth",
+        disableHapticFeedback: false,
         frontmatter: {
           quoteStrings: "PLAIN",
         },

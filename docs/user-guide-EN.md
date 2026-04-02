@@ -54,6 +54,18 @@ Welcome to Projects Plus! This comprehensive guide will help you get the most ou
 | **Create Note** | Double-click on empty cell |
 | **Scroll events inside cell** | `Shift` + scroll (in headers mode) |
 
+#### Event Dragging (Drag & Drop 2.0, v3.2.0+)
+
+| Action | Method |
+|--------|--------|
+| **Move event to another day** | Grab EventBar → drag to target day (Week/Day view) |
+| **Move event to another time** | Grab EventBar → drag up/down on timeline |
+| **Resize duration** | Hover over left/right edge of strip → grab → drag |
+| **Snap to 15-min interval** | Automatic when dragging timed events |
+| **Visual feedback** | Drop target highlights with accent color on hover |
+
+> **Note:** DnD works only in **Week** and **Day** modes (timeline views). In Month and Year modes, use EditNote to reschedule events.
+
 #### Calendar Zoom Levels
 
 When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
@@ -80,10 +92,11 @@ When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
 
 | Action | Method |
 |--------|--------|
-| **Drag Card** | Mouse drag-n-drop |
+| **Drag Card** | Grab grip icon (⠿) → drag to target position |
+| **Drag Column** | Grab grip icon (⠿) in column header → drag |
 | **Open Note** | Click on card |
 | **Open in New Window** | `Ctrl+Click` on card |
-| **Change Status** | Drag to another column |
+| **Change Status** | Drag card to another column |
 
 ---
 
@@ -100,6 +113,17 @@ When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
 | **Pinch in** | Zoom Out |
 | **Pinch out** | Zoom In |
 | **Tap on event** | Open note |
+
+#### Calendar — Drag & Drop (v3.2.0+)
+
+| Gesture | Action |
+|---------|--------|
+| **Long press (500ms)** on EventBar | Activate drag mode |
+| **Drag** after activation | Move event to another day / time |
+| **Long press on strip edge** | Activate resize (change duration) |
+| **Drag edge** | Shrink / extend event across days |
+
+> On long press the device provides **haptic feedback** (vibration). A short vibration also occurs on each 15-minute snap.
 
 #### DayPopup (Full-screen Day Overview)
 
@@ -119,6 +143,7 @@ When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
 |---------|--------|
 | **Tap on card** | Open note edit modal |
 | **Long press (500ms)** | Context menu: open / new tab / new window |
+| **Long press on grip (⠿)** | Activate card/column DnD |
 | **Pinch (two fingers)** | Board zoom (25%–200%) |
 | **Horizontal scroll** | Browse between columns |
 
@@ -141,8 +166,9 @@ When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
 
 | Gesture | Action |
 |---------|--------|
+| **Long press on grip (⠿)** | Activate list DnD |
 | **Long press on list header** | Context menu with "Move up/down" |
-| **Scroll** | Free scrolling (DnD disabled on mobile) |
+| **Scroll** | Free scrolling (scroll does not conflict with DnD) |
 
 #### ViewSwitcher: View Switching (v3.1.0+)
 
@@ -170,10 +196,49 @@ On mobile devices, long-press (500ms) provides navigation:
 
 ### Agenda Mobile Adaptation (v3.1.0+)
 
-- **Drag-and-drop disabled** — prevents conflict with scrolling
-- **List reordering** — via context menu "Move up/down"
+- **Drag-and-drop via grip** — list reordering only through grip icon (⠿), no conflict with scrolling
+- **List reordering** — also via context menu "Move up/down"
 - **Modal windows** — rendered as full-width bottom sheets
 - **Scroll isolation** — scroll within modals doesn't chain to Obsidian
+
+### 🔀 Drag & Drop — Unified System (v3.1.0 / v3.2.0)
+
+Since v3.1.0, all drag operations in Projects Plus use **grip icons** (⠿) — small dot indicators visible on hover (desktop) or always visible (mobile). This guarantees that scrolling and DnD never conflict.
+
+#### 🖥️ Desktop — How to Use DnD
+
+**Board:**
+1. Hover over a card or column header — the grip (⠿) appears
+2. Grab the grip and drag the card to the desired position / column
+
+**Agenda (calendar sidebar):**
+1. Hover over a list header — the grip (⠿) appears
+2. Grab the grip and drag the list up/down
+
+**Calendar Timeline (v3.2.0+):**
+1. Switch to **Week** or **Day** mode (timeline with time axis)
+2. Grab an EventBar (colored event strip) and drag:
+   - **Up/down** → change time (snaps to 15-min intervals)
+   - **Left/right** → move to another day (in Week mode)
+3. To resize: hover over the **left or right edge** of a multi-day strip → a resize marker appears → drag to adjust
+
+#### 📱 Mobile — How to Use DnD
+
+**Board and Agenda:**
+1. **Long press (500ms)** on the grip icon (⠿) — the device vibrates
+2. Without releasing, drag the element to the desired position
+3. Release to complete
+
+**Calendar Timeline (v3.2.0+):**
+1. Switch to **Week** or **Day** mode
+2. **Long press (500ms)** on an EventBar — the device vibrates, the bar lifts and becomes semi-transparent
+3. Without releasing, drag:
+   - **Up/down** → change time (vibration on each 15-min snap)
+   - **Left/right** → move to another day
+4. To resize: **long press on the strip edge** → drag to change duration
+5. Release — the event saves to the new position
+
+> **Important:** Mobile DnD works **only via grip** (Board/Agenda) or **long press** (Calendar). A simple tap always opens the event, never drags it — accidental drags are eliminated.
 
 ### Board: Pinch-to-Zoom (v3.0.10+)
 

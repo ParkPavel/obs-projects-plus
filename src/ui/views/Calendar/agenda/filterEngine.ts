@@ -23,6 +23,31 @@ import { parseDateFormula, isDateFormula } from 'src/lib/helpers/dateFormulaPars
 import { parseFormula, evaluateFormula } from 'src/lib/helpers/formulaParser';
 import { calendarLogger } from '../logger';
 
+/**
+ * Legacy operator names from v3.0.4, preserved for backward-compat
+ * deserialisation of saved filter settings. Not part of the public API.
+ * @internal
+ */
+type LegacyFilterOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'is_empty'
+  | 'is_not_empty'
+  | 'greater_than'
+  | 'less_than'
+  | 'greater_or_equal'
+  | 'less_or_equal'
+  | 'is_today'
+  | 'is_this_week'
+  | 'is_overdue'
+  | 'is_upcoming'
+  | 'not_contains';
+
+/** @internal Union of current and legacy filter shapes used for recursive dispatch. */
+type AnyAgendaFilter =
+  | AgendaFilter
+  | (Omit<AgendaFilter, 'operator'> & { readonly operator: LegacyFilterOperator });
+
 // Extend dayjs with plugins
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -30,10 +55,11 @@ dayjs.extend(isSameOrBefore);
 /**
  * Check if value can be converted to a date
  */
-function isDateLike(value: unknown): value is string | number | Date {
+function isDateLike(value: unknown): value is string | Date {
   if (!value) return false;
   if (value instanceof Date) return true;
-  if (typeof value === 'string' || typeof value === 'number') {
+  // v4.0.5: Reject numbers — dayjs(0) is "valid" (1970-01-01) but semantically wrong
+  if (typeof value === 'string') {
     return dayjs(value).isValid();
   }
   return false;
@@ -111,7 +137,7 @@ function toNumber(value: unknown): number {
  */
 export function evaluateFilter(
   record: DataRecord,
-  filter: AgendaFilter,
+  filter: AnyAgendaFilter,
   baseDate: Dayjs = dayjs()
 ): boolean {
   const rawFieldValue = record.values[filter.field];
@@ -123,32 +149,31 @@ export function evaluateFilter(
   switch (filter.operator) {
     // ==================== BACKWARD COMPATIBILITY ====================
     // Old operators (v3.0.4) - map to new operators
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Backward compatibility: legacy v3.0.4 operator names
-    case 'equals' as any:
+    case 'equals':
       return evaluateFilter(record, { ...filter, operator: 'is' }, baseDate);
-    case 'not_equals' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'not_equals':
       return evaluateFilter(record, { ...filter, operator: 'is-not' }, baseDate);
-    case 'is_empty' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'is_empty':
       return evaluateFilter(record, { ...filter, operator: 'is-empty' }, baseDate);
-    case 'is_not_empty' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'is_not_empty':
       return evaluateFilter(record, { ...filter, operator: 'is-not-empty' }, baseDate);
-    case 'greater_than' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'greater_than':
       return evaluateFilter(record, { ...filter, operator: 'gt' }, baseDate);
-    case 'less_than' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'less_than':
       return evaluateFilter(record, { ...filter, operator: 'lt' }, baseDate);
-    case 'greater_or_equal' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'greater_or_equal':
       return evaluateFilter(record, { ...filter, operator: 'gte' }, baseDate);
-    case 'less_or_equal' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'less_or_equal':
       return evaluateFilter(record, { ...filter, operator: 'lte' }, baseDate);
-    case 'is_today' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'is_today':
       return evaluateFilter(record, { ...filter, operator: 'is-today' }, baseDate);
-    case 'is_this_week' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'is_this_week':
       return evaluateFilter(record, { ...filter, operator: 'is-this-week' }, baseDate);
-    case 'is_overdue' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'is_overdue':
       return evaluateFilter(record, { ...filter, operator: 'is-overdue' }, baseDate);
-    case 'is_upcoming' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'is_upcoming':
       return evaluateFilter(record, { ...filter, operator: 'is-upcoming' }, baseDate);
-    case 'not_contains' as any: // eslint-disable-line @typescript-eslint/no-explicit-any
+    case 'not_contains':
       return evaluateFilter(record, { ...filter, operator: 'not-contains' }, baseDate);
     
     // ==================== BASE OPERATORS ====================
@@ -350,7 +375,8 @@ export function evaluateFilter(
       );
       
     default:
-      calendarLogger.warn('[FilterEngine] Unknown operator: ' + filter.operator);
+      // Cast needed: filter is narrowed to never by the exhaustive switch
+      calendarLogger.warn('[FilterEngine] Unknown operator: ' + (filter as { operator: string }).operator);
       return false;
   }
 }

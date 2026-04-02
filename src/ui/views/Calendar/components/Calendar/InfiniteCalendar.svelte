@@ -4,6 +4,7 @@
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import type { ProcessedCalendarData } from '../../types';
   import type { CalendarInterval } from '../../calendar';
+  import type { RecordChangeOptions } from '../../dnd/types';
   import MonthBlock from './MonthBlock.svelte';
   import TwoWeeksBlock from './TwoWeeksBlock.svelte';
   import { getScrollBehavior } from 'src/lib/helpers/animation';
@@ -14,7 +15,7 @@
   export let firstDayOfWeek: number;
   export let checkField: string | undefined;
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
-  export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord) => void) | undefined;
+  export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
   export let onRecordAdd: ((date: dayjs.Dayjs) => void) | undefined;
   export let onDayTap: ((date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) => void) | undefined;

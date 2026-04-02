@@ -247,7 +247,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     background: var(--background-secondary);
     flex-shrink: 0;
   }
@@ -285,7 +285,7 @@
     padding: 0.5rem 0.75rem;
     gap: 0.5rem;
     background: var(--background-primary);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     flex-shrink: 0;
   }
   
@@ -352,7 +352,7 @@
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     flex-shrink: 0;
   }
   
@@ -364,7 +364,7 @@
   
   .time-input {
     padding: 0.25rem 0.375rem;
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     border-radius: 0.25rem;
     background: var(--background-primary);
     color: var(--text-normal);

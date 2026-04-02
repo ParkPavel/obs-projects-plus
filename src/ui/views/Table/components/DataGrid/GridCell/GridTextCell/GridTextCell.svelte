@@ -35,7 +35,7 @@
   }}
   onCut={() => {
     navigator.clipboard.writeText(value?.toString() || "");
-    onChange(undefined);
+    onChange(null);
   }}
   onPaste={async () => {
     onChange(await navigator.clipboard.readText());

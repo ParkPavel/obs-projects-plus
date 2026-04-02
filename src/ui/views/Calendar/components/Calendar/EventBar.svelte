@@ -1,5 +1,8 @@
 <script lang="ts">
   import type { DataRecord } from '../../../../../lib/dataframe/dataframe';
+  import type { ProcessedRecord } from '../../types';
+  import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
+  import type { DragMode } from '../../dnd/types';
   import { getDisplayName, cleanWikiLink } from "src/ui/views/Board/components/Board/boardHelpers";
   import dayjs from 'dayjs';
   
@@ -27,6 +30,33 @@
   
   /** Color filter indicators (ROADMAP §2.5) */
   export let colorFilters: string[] = [];
+
+  /** v3.2.0 DnD: ProcessedRecord for drag context */
+  export let processedRecord: ProcessedRecord | undefined = undefined;
+  /** v3.2.0 DnD: TimelineDragManager instance */
+  export let dragManager: TimelineDragManager | undefined = undefined;
+  /** v3.2.0 DnD: Whether drag is currently active on this bar */
+  export let isDragging: boolean = false;
+  
+  /** v3.2.6: Whether mobile long-press DnD mode is active (show handles) */
+  import { onDestroy } from 'svelte';
+  let longPressActiveValue = false;
+  let unsubLongPress: (() => void) | undefined;
+  // Use a function call to break Svelte's dependency tracking on unsubLongPress.
+  // A $: block that both reads and writes the same variable creates an infinite
+  // reactive loop (Svelte flush do...while never terminates). The function body
+  // is NOT analyzed for $: dependencies — only `dragManager` is tracked.
+  $: updateLongPressSubscription(dragManager);
+  function updateLongPressSubscription(dm: typeof dragManager) {
+    unsubLongPress?.();
+    if (dm) {
+      unsubLongPress = dm.longPressActive.subscribe(v => { longPressActiveValue = v; });
+    } else {
+      longPressActiveValue = false;
+      unsubLongPress = undefined;
+    }
+  }
+  onDestroy(() => { unsubLongPress?.(); });
   
   // Calculate position and height in REM (Matryoshka principle)
   $: {
@@ -87,11 +117,72 @@
       onClick(event);
     }
   }
+
+  let barElement: HTMLElement;
+
+  /**
+   * v3.2.0: Initiate drag on mousedown.
+   * Distinguishes between body drag (move) and handle drag (resize).
+   */
+  /**
+   * v3.3.0: Position-based mode detection replaces class-based target detection.
+   * The resize-handle ::before touch zones extend inward into the event bar body,
+   * making it impossible to drag small events (move mode) via class detection.
+   * Using clientY÷barHeight ratio gives exact control regardless of pseudo-element zones.
+   */
+  function getBarMode(clientY: number): DragMode {
+    if (!barElement) return 'move';
+    const rect = barElement.getBoundingClientRect();
+    const relY = clientY - rect.top;
+    const barH = rect.height;
+    // v4.0.2: Resize zone: 1rem (desktop) / 1.25rem (touch) or 35% of bar height.
+    // Larger zones make it easier to "catch" the resize edge on mobile.
+    const remPx = parseFloat(getComputedStyle(barElement).fontSize) || 16;
+    const isTouchDevice = 'ontouchstart' in window;
+    const zoneRem = isTouchDevice ? 1.25 : 1;
+    const zone = Math.min(zoneRem * remPx, barH * 0.35);
+    if (relY <= zone) return 'resize-top';
+    if (relY >= barH - zone) return 'resize-bottom';
+    return 'move';
+  }
+
+  function handleMouseDown(event: MouseEvent) {
+    // Only left button
+    if (event.button !== 0) return;
+    // Skip if no drag manager or processed record
+    if (!dragManager || !processedRecord) return;
+    // Don't interfere with modifier-key clicks (open in new tab etc.)
+    if (event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+    const mode = getBarMode(event.clientY);
+
+    // Prevent default to avoid text selection
+    event.preventDefault();
+    dragManager.initiate(record, processedRecord, event, mode, barElement);
+  }
+
+  /**
+   * v3.2.0 Iteration 3: Initiate drag on touchstart.
+   * Long-press logic is handled inside TimelineDragManager.
+   */
+  function handleTouchStart(event: TouchEvent) {
+    if (!dragManager || !processedRecord) return;
+
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    const mode = getBarMode(touch.clientY);
+
+    // Do NOT preventDefault here — allow page scroll if long-press fails
+    dragManager.initiate(record, processedRecord, event, mode, barElement);
+  }
 </script>
 
 {#if onClick}
   <button 
     class="projects-calendar-event-bar projects-calendar-event-bar-clickable"
+    class:dnd-dragging={isDragging}
+    class:dnd-handles-visible={longPressActiveValue && isDragging}
     type="button"
     style="
       top: {topRem}rem; 
@@ -101,8 +192,15 @@
       --event-color: {color};
     "
     on:click={handleClick}
+    on:mousedown={handleMouseDown}
+    on:touchstart|passive={handleTouchStart}
+    bind:this={barElement}
     title={title}
   >
+    <!-- v3.2.0: Top resize handle (startTime) -->
+    {#if dragManager}
+      <div class="resize-handle-top" aria-hidden="true"></div>
+    {/if}
     <div class="projects-calendar-event-bar-content">
       <div class="projects-calendar-event-title">{title}</div>
       {#if colorFilters.length > 0}
@@ -113,6 +211,10 @@
         </div>
       {/if}
     </div>
+    <!-- v3.2.0: Bottom resize handle (endTime) -->
+    {#if dragManager}
+      <div class="resize-handle-bottom" aria-hidden="true"></div>
+    {/if}
   </button>
 {:else}
   <div 
@@ -142,28 +244,32 @@
 <style>
   .projects-calendar-event-bar {
     position: absolute;
-    border-left: 3px solid var(--event-color);
+    /* v3.3.4: Re-enable pointer events (container has pointer-events: none) */
+    pointer-events: auto;
     background: color-mix(in srgb, var(--event-color) 15%, transparent);
-    border-radius: 0.25rem;
+    border-radius: var(--ppp-radius-md, 0.25rem);
     padding: 0.125rem 0.375rem;
-    /* v8.1: Remove vertical margin to prevent visual overlap between adjacent events */
-    /* v8.2: Use calc to subtract gap from width instead of margin */
-    /* Margin adds to width and causes overflow - use internal padding instead */
     margin: 0;
+    /* Reset button border first, then apply accent border */
+    border: none;
+    border-left: var(--ppp-border-width-thick, 0.125rem) solid var(--event-color);
     /* Add small inset to prevent touching column edges */
     left: calc(var(--left-percent, 0) + 0.0625rem);
     width: calc(var(--width-percent, 100%) - 0.125rem);
-    overflow: hidden;
-    transition: background 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
-    border: none;
+    /* v3.2.4: Prevent right edge overflow beyond column bounds */
+    max-width: calc(100% - var(--left-percent, 0) - 0.125rem);
+    /* v3.2.6: overflow removed from bar — content div handles text clipping.
+       This allows resize handle ::before touch zones to extend outside the bar. */
+    transition: background var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease),
+                box-shadow var(--ppp-duration-fast, 0.1s) var(--ppp-ease-out, ease);
     text-align: left;
     font-family: inherit;
     font-size: inherit;
-    /* v8.1: Ensure padding/border included in height calculation */
     box-sizing: border-box;
-    /* Mobile touch optimization */
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+    /* v3.3.4: none prevents browser from committing to scroll on touchstart,
+       keeping touchmove events cancelable so DnD drag can preventDefault */
+    touch-action: none;
   }
   
   button.projects-calendar-event-bar {
@@ -172,18 +278,52 @@
   
   button.projects-calendar-event-bar:hover {
     background: color-mix(in srgb, var(--event-color) 25%, transparent);
-    transform: translateX(0.125rem);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
     z-index: 10;
+  }
+  
+  /* v3.2.0: Show resize handles on hover */
+  button.projects-calendar-event-bar:hover .resize-handle-top,
+  button.projects-calendar-event-bar:hover .resize-handle-bottom {
+    opacity: 1;
+  }
+
+  /* v3.2.6: Show handles when mobile long-press DnD mode is active on THIS bar */
+  button.projects-calendar-event-bar.dnd-handles-visible {
+    box-shadow: 0 0 0 0.125rem var(--event-color);
+    z-index: 20;
+  }
+  button.projects-calendar-event-bar.dnd-handles-visible .resize-handle-top,
+  button.projects-calendar-event-bar.dnd-handles-visible .resize-handle-bottom {
+    opacity: 1;
+  }
+
+  /* v3.2.0: Dragging state — dim original bar but keep handles visible */
+  .projects-calendar-event-bar.dnd-dragging {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* v4.0.2: Keep resize handles prominent on the original bar during drag.
+     The dimmed bar acts as an anchor showing where the event WAS. */
+  .projects-calendar-event-bar.dnd-dragging.dnd-handles-visible .resize-handle-top,
+  .projects-calendar-event-bar.dnd-dragging.dnd-handles-visible .resize-handle-bottom {
+    opacity: 1;
+    /* Override parent's 0.35 opacity — handles need to be clearly visible */
+    filter: none;
+    animation: none;
   }
   
   button.projects-calendar-event-bar:active {
     background: color-mix(in srgb, var(--event-color) 35%, transparent);
-    transform: scale(0.98);
   }
   
+  /* v3.3.1: Suppress outline on mouse-click; show only on keyboard navigation */
   button.projects-calendar-event-bar:focus {
-    outline: 2px solid var(--event-color);
+    outline: none;
+  }
+  button.projects-calendar-event-bar:focus-visible {
+    outline: 0.125rem solid var(--event-color);
     outline-offset: 0.125rem;
     z-index: 10;
   }
@@ -198,7 +338,7 @@
   }
   
   .projects-calendar-event-title {
-    font-size: 0.75rem;
+    font-size: var(--ppp-font-size-sm, 0.75rem);
     font-weight: 500;
     color: var(--text-normal);
     white-space: nowrap;
@@ -218,7 +358,7 @@
     width: 0.375rem;
     height: 0.375rem;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 0.0625rem solid rgba(255, 255, 255, 0.3);
     flex-shrink: 0;
   }
   
@@ -232,7 +372,7 @@
     }
     
     .projects-calendar-event-title {
-      font-size: 0.6875rem;
+      font-size: var(--ppp-font-size-xs, 0.6875rem);
     }
     
     button.projects-calendar-event-bar:active {
@@ -246,5 +386,82 @@
       min-height: 2.25rem;
       padding: 0.25rem 0.375rem;
     }
+
+    /* v4.0.2: Larger, more visible triangle handles for touch */
+    .resize-handle-top {
+      border-top-width: 0.875rem;
+      border-right-width: 0.875rem;
+    }
+    .resize-handle-bottom {
+      border-bottom-width: 0.875rem;
+      border-left-width: 0.875rem;
+    }
+    /* Larger touch zone */
+    .resize-handle-top::before {
+      width: 3rem;
+      height: 3rem;
+      top: -1.25rem;
+      left: -1.25rem;
+    }
+    .resize-handle-bottom::before {
+      width: 3rem;
+      height: 3rem;
+      bottom: -1.25rem;
+      right: -1.25rem;
+    }
+  }
+
+  /* ── v3.2.0 Resize Handles ── */
+
+  /* Top-left triangle — startTime resize */
+  .resize-handle-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    border-top: 0.5rem solid var(--event-color);
+    border-right: 0.5rem solid transparent;
+    cursor: n-resize;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 2;
+    pointer-events: auto;
+  }
+
+  /* v3.2.6: Bottom-right triangle — endTime resize (mirrors top-left triangle) */
+  .resize-handle-bottom {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-bottom: 0.5rem solid var(--event-color);
+    border-left: 0.5rem solid transparent;
+    cursor: s-resize;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 2;
+    pointer-events: auto;
+  }
+
+  /* Invisible touch zone for top triangle */
+  .resize-handle-top::before {
+    content: '';
+    position: absolute;
+    width: 2.75rem;
+    height: 2.75rem;
+    top: -0.75rem;
+    left: -0.75rem;
+  }
+
+  /* Invisible touch zone for bottom-right triangle */
+  .resize-handle-bottom::before {
+    content: '';
+    position: absolute;
+    width: 2.75rem;
+    height: 2.75rem;
+    bottom: -0.75rem;
+    right: -0.75rem;
   }
 </style>

@@ -40,6 +40,7 @@ const defaultPrefs: ProjectsPluginPreferences = {
   mobileCalendarView: "month",
   showViewTitles: true,
   animationBehavior: "smooth",
+  disableHapticFeedback: false,
 };
 
 /**

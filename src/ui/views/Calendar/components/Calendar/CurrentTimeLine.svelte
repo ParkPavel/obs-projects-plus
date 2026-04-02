@@ -75,7 +75,9 @@
     left: 0;
     right: 0;
     height: 0;
-    z-index: 100;
+    /* v4.0.5: Lowered from 100 to 10 — only needs to float above event bars
+       within the timeline column, not above sibling AgendaSidebar (z-index: 50) */
+    z-index: 10;
     pointer-events: none;
   }
   

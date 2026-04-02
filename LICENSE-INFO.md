@@ -30,7 +30,7 @@
 
 ### Copyright Information
 - **Original Author**: Marcus Olsson (2022)
-- **Current Maintainer**: Park Pavel (2022-2025)
+- **Current Maintainer**: Park Pavel (2022-2026)
 - **License**: Apache License 2.0
 - **Original Repository**: https://github.com/marcusolsson/obsidian-projects
 
@@ -40,7 +40,7 @@ When using Projects Plus in your projects, please include:
 
 ```markdown
 This project uses Projects Plus
-Copyright 2022-2025 Park Pavel
+Copyright 2022-2026 Park Pavel
 Licensed under Apache License 2.0
 Original work by Marcus Olsson
 ```

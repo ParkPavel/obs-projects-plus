@@ -103,15 +103,15 @@
   function getSegmentStyle(segment: MultiDaySegment, dateIndex: number): string {
     const left = dateIndex * 14.28;
     let width = 14.28;
-    let extend = 0;
+    let extend = '0rem';
     
     if (!segment.isEnd) {
       const remainingDays = 7 - dateIndex;
       width = 14.28 * remainingDays;
-      extend = 1;
+      extend = '0.0625rem';
     }
     
-    return `left: ${left}%; width: calc(${width}% + ${extend}px);`;
+    return `left: ${left}%; width: calc(${width}% + ${extend});`;
   }
 </script>
 
@@ -148,7 +148,7 @@
     position: relative;
     width: 100%;
     min-height: 1.5rem;
-    border-bottom: 1px solid var(--background-modifier-border-hover);
+    border-bottom: 0.0625rem solid var(--background-modifier-border-hover);
     background: var(--background-secondary-alt);
   }
   
@@ -162,7 +162,7 @@
     position: absolute;
     top: 0.125rem;
     height: 1.25rem;
-    border-radius: 3px;
+    border-radius: 0.1875rem;
     padding: 0 0.375rem;
     display: flex;
     align-items: center;
@@ -180,13 +180,13 @@
   
   .duplicate-header-strip-segment-phantom {
     opacity: 0.75;
-    border: 2px dashed rgba(255, 255, 255, 0.9);
+    border: 0.125rem dashed rgba(255, 255, 255, 0.9);
     background: repeating-linear-gradient(
       45deg,
       transparent,
-      transparent 3px,
-      rgba(255, 255, 255, 0.1) 3px,
-      rgba(255, 255, 255, 0.1) 6px
+      transparent 0.1875rem,
+      rgba(255, 255, 255, 0.1) 0.1875rem,
+      rgba(255, 255, 255, 0.1) 0.375rem
     ) !important;
   }
   

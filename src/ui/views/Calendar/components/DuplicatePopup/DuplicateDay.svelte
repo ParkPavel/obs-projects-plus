@@ -113,7 +113,7 @@
     position: relative;
     flex: 1 1 14.28%;
     min-height: 8rem;
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     background: var(--background-primary);
     cursor: pointer;
     overflow: visible;
@@ -142,12 +142,12 @@
   
   /* Today - green border only */
   .duplicate-day-today {
-    border: 2px solid var(--interactive-accent);
+    border: 0.125rem solid var(--interactive-accent);
   }
   
   /* Selected + Today - today takes priority */
   .duplicate-day-today.duplicate-day-selected {
-    border: 2px solid var(--interactive-accent);
+    border: 0.125rem solid var(--interactive-accent);
   }
   
   .duplicate-day-header {
@@ -170,7 +170,7 @@
     left: 0;
     right: 0;
     padding: 0.125rem 0.25rem;
-    border-radius: 2px;
+    border-radius: 0.125rem;
     font-size: 0.75rem;
     color: white;
     overflow: hidden;
@@ -182,13 +182,13 @@
   
   .duplicate-day-bar-phantom {
     opacity: 0.7;
-    border: 2px dashed rgba(255, 255, 255, 0.9);
+    border: 0.125rem dashed rgba(255, 255, 255, 0.9);
     background: repeating-linear-gradient(
       45deg,
       transparent,
-      transparent 4px,
-      rgba(255, 255, 255, 0.1) 4px,
-      rgba(255, 255, 255, 0.1) 8px
+      transparent 0.25rem,
+      rgba(255, 255, 255, 0.1) 0.25rem,
+      rgba(255, 255, 255, 0.1) 0.5rem
     );
   }
   

@@ -14,14 +14,14 @@
     overflow-x: auto;
   }
 
-  /* Mobile optimizations */
-  @media (max-width: 48rem) {
+  /* Mobile optimizations — v8.2: @container view-content fires on panel width, not viewport */
+  @container view-content (max-width: 48rem) {
     .calendar-container {
       font-size: 0.9rem;
     }
   }
 
-  @media (max-width: 30rem) {
+  @container view-content (max-width: 30rem) {
     .calendar-container {
       font-size: 0.8rem;
     }

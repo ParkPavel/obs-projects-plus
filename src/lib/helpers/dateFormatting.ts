@@ -15,6 +15,13 @@ function parseDateInTimezone(
   tz?: string
 ): dayjs.Dayjs | null {
   if (!value) return null;
+
+  // v4.0.5: Reject non-string, non-Date, non-dayjs values — numbers like 0, 1, 2
+  // would be parsed by dayjs as epoch milliseconds (1970-01-01 etc.)
+  if (typeof value !== "string" && !(value instanceof Date) && !dayjs.isDayjs(value)) {
+    return null;
+  }
+
   const targetTz = tz && tz !== "local" ? tz : undefined;
   const parsed = targetTz
     ? dayjs.tz(value as string | Date, targetTz)

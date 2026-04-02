@@ -120,14 +120,14 @@ export const TIMING = {
 // ============================================================
 
 export const INFINITE_SCROLL = {
-  /** Initial buffer of periods on each side */
-  INITIAL_BUFFER: 4,
+  /** Initial buffer of periods on each side — v9.1: reduced from 4→2 to cut startup DOM by ~44% */
+  INITIAL_BUFFER: 2,
   
   /** Units from edge to trigger loading more - v6.5: increased for smoother infinite scroll */
-  LOAD_THRESHOLD: 2,
+  LOAD_THRESHOLD: 1,
   
   /** Batch size when loading more periods */
-  LOAD_BATCH: 3,
+  LOAD_BATCH: 2,
   
   /** Vertical scroll: initial buffer */
   VERTICAL_INITIAL_BUFFER: 3,
@@ -189,8 +189,8 @@ export const HEATMAP = {
 // ============================================================
 
 export const VALIDATION = {
-  /** Maximum event span in days (safety limit) */
-  MAX_SPAN_DAYS: 365,
+  /** Maximum event span in days for date grouping (v9.1: reduced from 365→90) */
+  MAX_SPAN_DAYS: 90,
   
   /** Maximum date range (years from today) */
   MAX_DATE_RANGE_YEARS: 100,

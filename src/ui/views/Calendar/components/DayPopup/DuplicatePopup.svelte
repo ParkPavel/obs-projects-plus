@@ -195,7 +195,7 @@
           {@const selectedDaysInWeek = week.filter(d => isSelected(d))}
           {@const hoveredInWeek = hoveredDate && week.find(d => d.isSame(hoveredDate, 'day'))}
           {#if selectedDaysInWeek.length > 0 || hoveredInWeek}
-            <div class="week-strip-section" style="height: var(--ppp-event-strip-height, 1.25rem); margin-bottom: var(--ppp-spacing-3xs, 2px);">
+            <div class="week-strip-section" style="height: var(--ppp-event-strip-height, 1.25rem); margin-bottom: var(--ppp-spacing-3xs, 0.125rem);">
               <div class="strip-lane">
                 {#each week as day}
                   {@const isSelectedDay = isSelected(day)}
@@ -366,7 +366,7 @@
 
   .calendar-grid {
     margin-bottom: 0.75rem;
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     border-radius: 0.5rem;
     overflow: hidden;
   }
@@ -375,7 +375,7 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     padding: 0.5rem 0;
   }
 
@@ -414,8 +414,8 @@
     height: 100%;
     padding: 0 0.25rem;
     background: color-mix(in srgb, var(--strip-color) 18%, var(--background-primary));
-    border-top: 2px solid var(--strip-color);
-    border-bottom: 1px solid color-mix(in srgb, var(--strip-color) 25%, transparent);
+    border-top: 0.125rem solid var(--strip-color);
+    border-bottom: 0.0625rem solid color-mix(in srgb, var(--strip-color) 25%, transparent);
     font-size: 0.6875rem;
     line-height: 1;
     overflow: hidden;
@@ -430,21 +430,21 @@
   }
   
   .strip-segment.is-start {
-    border-left: 2px solid var(--strip-color);
+    border-left: 0.125rem solid var(--strip-color);
     border-top-left-radius: 0.25rem;
     border-bottom-left-radius: 0.25rem;
     margin-left: 0.125rem;
   }
   
   .strip-segment.is-end {
-    border-right: 2px solid var(--strip-color);
+    border-right: 0.125rem solid var(--strip-color);
     border-top-right-radius: 0.25rem;
     border-bottom-right-radius: 0.25rem;
     margin-right: 0.125rem;
   }
   
   .strip-segment.is-only {
-    border: 2px solid var(--strip-color);
+    border: 0.125rem solid var(--strip-color);
     border-radius: 0.25rem;
     margin-left: 0.125rem;
     margin-right: 0.125rem;
@@ -491,7 +491,7 @@
   .week-row {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
   
   .week-row:last-child {
@@ -506,7 +506,7 @@
     align-items: center;
     justify-content: center;
     border: none;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: 0.0625rem solid var(--background-modifier-border);
     background: transparent;
     color: var(--text-normal);
     font-size: 0.8125rem;
@@ -555,7 +555,7 @@
   }
   
   .day-cell.source .day-number {
-    border: 1px dashed var(--interactive-accent);
+    border: 0.0625rem dashed var(--interactive-accent);
   }
 
   .day-cell.selected {
