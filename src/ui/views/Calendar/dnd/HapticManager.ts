@@ -9,6 +9,7 @@
  * @module dnd/HapticManager
  */
 
+import { Platform } from 'obsidian';
 import { HAPTIC_PATTERNS, type HapticPattern } from './types';
 
 // ─── Module-level state ──────────────────────────────────────────────────────
@@ -36,9 +37,7 @@ export function setHapticEnabled(enabled: boolean): void {
 
 function isAndroid(): boolean {
   if (_isAndroid === null) {
-    _isAndroid =
-      typeof navigator !== 'undefined' &&
-      /android/i.test(navigator.userAgent);
+    _isAndroid = Platform.isAndroidApp;
   }
   return _isAndroid;
 }
