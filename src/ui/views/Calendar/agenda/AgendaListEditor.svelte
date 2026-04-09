@@ -149,47 +149,57 @@
     dispatch('cancel');
   }
 
-  // BUG-6 fix: Use Visual Viewport API so footer stays above system keyboard on mobile.
-  // window.innerHeight does NOT shrink when the soft keyboard opens, but
-  // visualViewport.height does — giving us the actual visible area.
+  // Keyboard-aware content padding: adds bottom padding to .editor-content
+  // so focused inputs scroll above the mobile keyboard.
   import { onMount, onDestroy } from 'svelte';
-  let footerEl: HTMLElement | null = null;
+  let contentEl: HTMLElement | null = null;
 
-  function updateFooterForKeyboard() {
-    if (!footerEl) return;
+  function updateContentForKeyboard() {
+    if (!contentEl) return;
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     if (!vv) return;
     const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    footerEl.style.paddingBottom = keyboardHeight > 0
-      ? `${keyboardHeight}px`
+    contentEl.style.paddingBottom = keyboardHeight > 0
+      ? `${keyboardHeight + 16}px`
       : '';
   }
 
   onMount(() => {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    vv?.addEventListener('resize', updateFooterForKeyboard);
-    vv?.addEventListener('scroll', updateFooterForKeyboard);
+    vv?.addEventListener('resize', updateContentForKeyboard);
+    vv?.addEventListener('scroll', updateContentForKeyboard);
   });
 
   onDestroy(() => {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    vv?.removeEventListener('resize', updateFooterForKeyboard);
-    vv?.removeEventListener('scroll', updateFooterForKeyboard);
-    if (footerEl) footerEl.style.paddingBottom = '';
+    vv?.removeEventListener('resize', updateContentForKeyboard);
+    vv?.removeEventListener('scroll', updateContentForKeyboard);
   });
 </script>
 
 <div class="agenda-list-editor">
-  <!-- Header -->
+  <!-- Header — on mobile, save/cancel live here to avoid floating footer -->
   <header class="editor-header">
-    <h3 class="editor-title">{list ? t('title-edit') : t('title-new')}</h3>
-    <button class="editor-close" on:click={handleCancel} aria-label="Close">
-      <Icon name="x" size="sm" />
+    <button class="header-cancel" on:click={handleCancel}>
+      {t('cancel')}
     </button>
+    <h3 class="editor-title">{list ? t('title-edit') : t('title-new')}</h3>
+    <div class="header-actions">
+      <button
+        class="header-save"
+        on:click={handleSave}
+        disabled={!isValid}
+      >
+        {list ? t('save') : t('create')}
+      </button>
+      <button class="editor-close" on:click={handleCancel} aria-label="Close">
+        <Icon name="x" size="sm" />
+      </button>
+    </div>
   </header>
   
   <!-- Content -->
-  <div class="editor-content">
+  <div class="editor-content" bind:this={contentEl}>
     <!-- Name Field -->
     <div class="field-group">
       <label class="field-label" for="list-name">{t('name-label')}</label>
@@ -339,8 +349,8 @@
     </div>
   </div>
   
-  <!-- Footer -->
-  <footer class="editor-footer" bind:this={footerEl}>
+  <!-- Footer — desktop only, hidden on mobile -->
+  <footer class="editor-footer">
     <button class="btn btn--secondary" on:click={handleCancel}>
       {t('cancel')}
     </button>
@@ -380,6 +390,7 @@
     border-bottom: 1px solid var(--background-modifier-border);
     background: var(--background-primary);
     flex-shrink: 0;
+    gap: 0.5rem;
   }
   
   .editor-title {
@@ -387,6 +398,62 @@
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-normal);
+    flex: 1;
+    text-align: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Mobile header buttons — hidden on desktop */
+  .header-cancel {
+    display: none;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-radius: var(--radius-s);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .header-cancel:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .header-save {
+    display: none;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border: none;
+    border-radius: var(--radius-s);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .header-save:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
+  .header-save:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
   
   .editor-close {
@@ -750,18 +817,25 @@
       padding: var(--ppp-spacing-md, 0.75rem);
       gap: var(--ppp-spacing-md, 0.75rem);
     }
-    
-    .editor-footer {
-      flex-direction: column;
-      padding: var(--ppp-spacing-sm, 0.5rem) var(--ppp-spacing-md, 0.75rem);
-      /* 3.5rem = Obsidian mobile bottom toolbar (~3rem) + base spacing.
-         env(safe-area-inset-bottom) adds iPhone Home-indicator inset on top. */
-      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+
+    /* Show header save/cancel on mobile, hide the X close */
+    .header-cancel {
+      display: flex;
     }
-    
-    .btn {
-      width: 100%;
-      min-height: 2.75rem;
+
+    .header-save {
+      display: flex;
+      min-height: 2.25rem;
+      padding: 0.25rem 1rem;
+    }
+
+    .editor-close {
+      display: none;
+    }
+
+    /* Hide footer on mobile — buttons are in the header */
+    .editor-footer {
+      display: none;
     }
     
     .icon-trigger,

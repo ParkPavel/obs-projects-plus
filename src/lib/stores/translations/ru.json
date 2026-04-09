@@ -359,10 +359,13 @@
                 "and": "и",
                 "or": "или",
                 "add": "Добавить условие",
-                "add-condition": "обавить условие",
-                "conjunction-or": "",
-                "conjunction-and": "",
-                "empty-hint": "ет условий фильтрации"
+                "add-condition": "Добавить условие",
+                "add-group": "Добавить группу",
+                "conjunction-or": "ИЛИ",
+                "conjunction-and": "И",
+                "match-all": "Все условия",
+                "match-any": "Любое условие",
+                "empty-hint": "Нет условий фильтрации"
             },
             "sort": {
                 "label": "Сортировка",

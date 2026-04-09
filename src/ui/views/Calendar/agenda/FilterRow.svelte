@@ -78,30 +78,115 @@
 
   /* CSS classes are defined in styles.css under .ppp-popover-* prefix */
 
-  function computePosition(trigger: HTMLElement, minW: number): { top: number; left: number; width: number; maxH: number; flipUp: boolean } {
-    const rect = trigger.getBoundingClientRect();
-    let left = rect.left;
-    const width = Math.max(rect.width, minW);
-    if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
-    if (left < 4) left = 4;
-    const spaceBelow = window.innerHeight - rect.bottom - 12;
-    const spaceAbove = rect.top - 12;
-    const flipUp = spaceBelow < 200 && spaceAbove > spaceBelow;
-    const top = flipUp ? 0 : rect.bottom + 4;
-    const maxH = flipUp ? spaceAbove : Math.max(spaceBelow, 200);
-    return { top, left, width, maxH, flipUp };
-  }
+  /**
+   * Position a popover relative to its trigger.
+   *
+   * Touch (pointer: coarse) — ALWAYS above the trigger:
+   *   • fixed height 11rem (≈4 touch items), full width with 0.5rem margins
+   *   • bottom edge sits 0.25rem above trigger top
+   *   • if the popover can't fit above, it shrinks to fit (min 5rem)
+   *   • never goes below trigger, never docks near keyboard
+   *
+   * Desktop — standard dropdown below or above.
+   */
+  function positionContainer(el: HTMLDivElement, trigger: HTMLElement, _minWRem: number) {
+    const fs = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const toRem = (v: number) => `${(v / fs).toFixed(2)}rem`;
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
 
-  function positionContainer(el: HTMLDivElement, trigger: HTMLElement, minW: number) {
-    const pos = computePosition(trigger, minW);
-    el.style.left = `${pos.left}px`;
-    el.style.width = `${pos.width}px`;
-    el.style.maxHeight = `${pos.maxH}px`;
-    if (pos.flipUp) {
-      el.style.bottom = `${window.innerHeight - trigger.getBoundingClientRect().top + 4}px`;
+    if (isTouch) {
+      const vv = window.visualViewport;
+      const gap = 0.25 * fs;
+      const wantH = 11 * fs;
+
+      function place() {
+        const rect = trigger.getBoundingClientRect();
+        const visTop = vv ? vv.offsetTop : 0;
+        const visH  = vv ? vv.height : window.innerHeight;
+        const visBot = visTop + visH;
+        const anchor = Math.min(rect.top, visBot - gap);
+        const avail  = anchor - visTop - gap * 2;
+        const h   = Math.max(5 * fs, Math.min(wantH, avail));
+        const top = Math.max(visTop + gap, anchor - h - gap);
+
+        el.style.top       = toRem(top);
+        el.style.height    = toRem(h);
+        el.style.maxHeight = toRem(h);
+      }
+
+      el.classList.add('ppp-popover-container--mobile-kbd');
+      el.style.position = 'fixed';
+      el.style.bottom = 'auto';
+
+      // Start invisible — searchInput.focus() will trigger keyboard AFTER
+      // this function returns, making the initial position wrong.
+      // Show after first resize (keyboard settled) or fallback timeout.
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+      place();  // approximate position, hidden
+
+      let revealed = false;
+      function reveal() {
+        if (revealed) return;
+        revealed = true;
+        place();  // re-run with actual viewport
+        el.style.opacity = '1';
+        el.style.pointerEvents = '';
+      }
+
+      // Fallback: if keyboard was already open, no resize fires — reveal after short delay
+      const fallbackTimer = setTimeout(reveal, 120);
+
+      if (vv) {
+        const onVV = () => {
+          if (!revealed) {
+            clearTimeout(fallbackTimer);
+            reveal();
+          } else {
+            place();
+          }
+        };
+        vv.addEventListener('resize', onVV);
+        vv.addEventListener('scroll', onVV);
+        (el as any).__vvCleanup = () => {
+          clearTimeout(fallbackTimer);
+          vv.removeEventListener('resize', onVV);
+          vv.removeEventListener('scroll', onVV);
+        };
+      } else {
+        // No visualViewport — just show immediately
+        clearTimeout(fallbackTimer);
+        reveal();
+      }
+      return;
+    }
+
+    const r = trigger.getBoundingClientRect();
+
+    // Desktop
+    const vv = window.visualViewport;
+    const visH = vv ? vv.height : window.innerHeight; 
+    const gap = 0.75 * fs;
+    const minW = _minWRem * fs;
+    let left = r.left;
+    const width = Math.max(r.width, minW);
+    if (left + width > window.innerWidth - gap) left = window.innerWidth - width - gap;
+    if (left < 0.25 * fs) left = 0.25 * fs;
+
+    const spaceBelow = visH - r.bottom - gap;
+    const spaceAbove = r.top - gap;
+    const flipUp = spaceBelow < 12.5 * fs && spaceAbove > spaceBelow;
+    const maxH = flipUp ? spaceAbove : Math.max(spaceBelow, 12.5 * fs);
+
+    el.style.left = toRem(left);
+    el.style.width = toRem(width);
+    el.style.maxHeight = toRem(maxH);
+
+    if (flipUp) {
+      el.style.bottom = toRem(window.innerHeight - r.top + 0.25 * fs);
       el.style.top = 'auto';
     } else {
-      el.style.top = `${pos.top}px`;
+      el.style.top = toRem(r.bottom + 0.25 * fs);
       el.style.bottom = 'auto';
     }
   }
@@ -115,7 +200,7 @@
     const container = activeDocument.createElement('div');
     container.addClass('ppp-popover-container');
     container.classList.add('ppp-filter-popover');
-    positionContainer(container, chip, 260);
+    positionContainer(container, chip, 16.25);
 
     // Search bar
     const searchBar = activeDocument.createElement('div');
@@ -135,13 +220,8 @@
     // List
     const list = activeDocument.createElement('div');
     list.addClass('ppp-popover-list');
-    // min-height for at least 5 items (5×32 = 160), but max 300
-    const itemH = 32;
-    const visibleCount = Math.min(Math.max(fields.length, 1), 8);
-    list.style.maxHeight = `${Math.min(visibleCount * itemH + 8, 300)}px`;
-    if (fields.length >= 5) {
-      list.style.minHeight = `${5 * itemH + 8}px`;
-    }
+    list.style.flex = '1';
+    list.style.minHeight = '0';
     container.appendChild(list);
 
     function renderItems(searchText: string) {
@@ -230,8 +310,9 @@
   }
 
   function destroyFieldPopover() {
-    if (fieldPopoverEl && fieldPopoverEl.parentNode) {
-      fieldPopoverEl.parentNode.removeChild(fieldPopoverEl);
+    if (fieldPopoverEl) {
+      if ((fieldPopoverEl as any).__vvCleanup) (fieldPopoverEl as any).__vvCleanup();
+      fieldPopoverEl.parentNode?.removeChild(fieldPopoverEl);
     }
     fieldPopoverEl = null;
   }
@@ -245,16 +326,12 @@
     const container = activeDocument.createElement('div');
     container.addClass('ppp-popover-container');
     container.classList.add('ppp-filter-popover');
-    positionContainer(container, chip, 220);
+    positionContainer(container, chip, 13.75);
 
     const list = activeDocument.createElement('div');
     list.addClass('ppp-popover-list');
-    const itemH = 32;
-    const visibleCount = Math.min(Math.max(operators.length, 1), 8);
-    list.style.maxHeight = `${Math.min(visibleCount * itemH + 8, 300)}px`;
-    if (operators.length >= 5) {
-      list.style.minHeight = `${5 * itemH + 8}px`;
-    }
+    list.style.flex = '1';
+    list.style.minHeight = '0';
     container.appendChild(list);
 
     operators.forEach(op => {
@@ -291,8 +368,9 @@
   }
 
   function destroyOperatorPopover() {
-    if (operatorPopoverEl && operatorPopoverEl.parentNode) {
-      operatorPopoverEl.parentNode.removeChild(operatorPopoverEl);
+    if (operatorPopoverEl) {
+      if ((operatorPopoverEl as any).__vvCleanup) (operatorPopoverEl as any).__vvCleanup();
+      operatorPopoverEl.parentNode?.removeChild(operatorPopoverEl);
     }
     operatorPopoverEl = null;
   }
@@ -507,13 +585,12 @@
     const container = activeDocument.createElement('div');
     container.addClass('ppp-popover-container');
     container.classList.add('ppp-filter-popover');
-    positionContainer(container, valueInputEl, 200);
+    positionContainer(container, valueInputEl, 12.5);
 
     const list = activeDocument.createElement('div');
     list.addClass('ppp-popover-list');
-    const itemH = 32;
-    const visibleCount = Math.min(Math.max(items.length, 1), 8);
-    list.style.maxHeight = `${Math.min(visibleCount * itemH + 8, 300)}px`;
+    list.style.flex = '1';
+    list.style.minHeight = '0';
     container.appendChild(list);
 
     items.forEach((val, idx) => {
@@ -616,8 +693,9 @@
   }
 
   function destroyValuePopover() {
-    if (valuePopoverEl && valuePopoverEl.parentNode) {
-      valuePopoverEl.parentNode.removeChild(valuePopoverEl);
+    if (valuePopoverEl) {
+      if ((valuePopoverEl as any).__vvCleanup) (valuePopoverEl as any).__vvCleanup();
+      valuePopoverEl.parentNode?.removeChild(valuePopoverEl);
     }
     valuePopoverEl = null;
   }
@@ -946,5 +1024,16 @@
       opacity: 1;
       padding: 4px;
     }
+  }
+
+  /* v3.2.1: Mobile keyboard — reverse column so list scrolls upward
+     from search bar anchored near trigger. Applied via JS classList.add(),
+     so :global() is required. Compiled into main.css → auto-merged. */
+  :global(.ppp-popover-container--mobile-kbd) {
+    flex-direction: column-reverse;
+  }
+  :global(.ppp-popover-container--mobile-kbd) :global(.ppp-popover-search) {
+    border-bottom: none;
+    border-top: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
   }
 </style>

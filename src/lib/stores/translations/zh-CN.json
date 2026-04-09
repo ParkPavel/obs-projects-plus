@@ -628,8 +628,11 @@
                 "or": "或",
                 "add": "添加筛选条件",
                 "add-condition": "添加条件",
+                "add-group": "添加分组",
                 "conjunction-or": "或",
                 "conjunction-and": "且",
+                "match-all": "满足所有条件",
+                "match-any": "满足任一条件",
                 "empty-hint": "没有过滤条件"
             },
             "sort": {

@@ -80,7 +80,7 @@
 
 <div class="fg" class:fg--root={isRoot} class:fg--nested={!isRoot && depth > 0}>
   <!-- ═══ Conjunction header ═══ -->
-  {#if totalItems > 1 || (!isRoot && depth > 0)}
+  {#if hasContent || (!isRoot && depth > 0)}
     <div class="fg-header">
       {#if !isRoot && depth > 0}
         <button
@@ -163,7 +163,7 @@
   .fg {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.125rem;
   }
   
   .fg--root {
@@ -171,10 +171,10 @@
   }
   
   .fg--nested {
-    padding: 8px 10px;
+    padding: 0.5rem 0.625rem;
     border: 1px solid var(--background-modifier-border);
     border-left: 3px solid var(--interactive-accent);
-    border-radius: 8px;
+    border-radius: 0.5rem;
     background: var(--background-secondary);
   }
   
@@ -184,15 +184,15 @@
   .fg-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: 0.375rem;
+    margin-bottom: 0.25rem;
   }
   
   .fg-delete {
     flex-shrink: 0;
     color: var(--text-faint);
-    border-radius: 4px;
-    padding: 3px;
+    border-radius: 0.25rem;
+    padding: 0.1875rem;
     transition: color 100ms ease;
   }
   
@@ -202,13 +202,13 @@
   }
   
   .fg-conjunction {
-    height: 26px;
-    padding: 0 24px 0 8px;
+    height: 1.625rem;
+    padding: 0 1.5rem 0 0.5rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+    border-radius: 0.375rem;
     background: var(--background-primary);
     color: var(--text-normal);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-family: var(--font-interface);
     cursor: pointer;
     outline: none;
@@ -216,7 +216,7 @@
     -webkit-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 6px center;
+    background-position: right 0.375rem center;
     transition: border-color 100ms ease;
   }
   
@@ -248,18 +248,18 @@
   .fg-nested-row {
     display: flex;
     align-items: flex-start;
-    gap: 6px;
-    padding: 4px 0;
+    gap: 0.375rem;
+    padding: 0.25rem 0;
   }
   
   .fg-nested-prefix {
     flex-shrink: 0;
-    width: 32px;
+    width: 2rem;
     text-align: right;
     color: var(--text-muted);
-    font-size: 12px;
-    padding-top: 10px;
-    padding-right: 2px;
+    font-size: 0.75rem;
+    padding-top: 0.625rem;
+    padding-right: 0.125rem;
     user-select: none;
   }
   
@@ -272,10 +272,10 @@
      EMPTY STATE
      ═══════════════════════════════════════ */
   .fg-empty {
-    padding: 12px 8px;
+    padding: 0.75rem 0.5rem;
     text-align: center;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-style: italic;
     margin: 0;
   }
@@ -287,22 +287,22 @@
     display: flex;
     align-items: center;
     gap: 0;
-    padding-left: 38px;
-    margin-top: 4px;
+    padding-left: 2.375rem;
+    margin-top: 0.25rem;
   }
   
   .fg-add {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
     border: none;
     background: transparent;
     color: var(--text-faint);
     cursor: pointer;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-family: var(--font-interface);
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
     transition: color 100ms ease, background 100ms ease;
     white-space: nowrap;
   }
@@ -314,10 +314,10 @@
   
   .fg-actions-sep {
     width: 1px;
-    height: 14px;
+    height: 0.875rem;
     background: var(--background-modifier-border);
     flex-shrink: 0;
-    margin: 0 2px;
+    margin: 0 0.125rem;
   }
   
   /* ═══════════════════════════════════════
@@ -325,7 +325,7 @@
      ═══════════════════════════════════════ */
   @media (pointer: coarse) {
     .fg--nested {
-      padding: 10px 12px;
+      padding: 0.625rem 0.75rem;
     }
     
     .fg-actions {
@@ -334,22 +334,22 @@
     }
     
     .fg-add {
-      min-height: 36px;
-      font-size: 13px;
-      padding: 6px 10px;
+      min-height: 2.25rem;
+      font-size: 0.8125rem;
+      padding: 0.375rem 0.625rem;
     }
     
     .fg-delete {
-      min-width: 36px;
-      min-height: 36px;
+      min-width: 2.25rem;
+      min-height: 2.25rem;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     
     .fg-conjunction {
-      height: 34px;
-      font-size: 13px;
+      height: 2.125rem;
+      font-size: 0.8125rem;
     }
   }
 </style>

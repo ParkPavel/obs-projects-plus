@@ -238,9 +238,13 @@ export function evaluateFilter(
       
     case 'regex':
       if (typeof fieldValue === 'string' && typeof filterValue === 'string') {
+        if (filterValue.length > 200) {
+          calendarLogger.error('[FilterEngine] Regex too long (>' + 200 + ' chars), skipping');
+          return false;
+        }
         try {
           const regex = new RegExp(filterValue, 'i');
-          return regex.test(fieldValue);
+          return regex.test(fieldValue.slice(0, 10000));
         } catch (error) {
           calendarLogger.error('[FilterEngine] Invalid regex: ' + filterValue, error);
           return false;

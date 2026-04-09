@@ -630,8 +630,11 @@
                 "or": "or",
                 "add": "Add condition",
                 "add-condition": "Add condition",
+                "add-group": "Add group",
                 "conjunction-or": "OR",
                 "conjunction-and": "AND",
+                "match-all": "All conditions",
+                "match-any": "Any condition",
                 "empty-hint": "No filter conditions"
             },
             "sort": {

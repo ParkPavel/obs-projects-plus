@@ -44,10 +44,13 @@ export function matchesCondition(
     if (operator === "has-keyword") {
       return listFns[operator](value ?? [], cond.value);
     } else {
-      return listFns[operator](
-        value ?? [],
-        cond.value ? JSON.parse(cond.value) : undefined
-      );
+      let parsed: DataValue[] | undefined;
+      try {
+        parsed = cond.value ? JSON.parse(cond.value) : undefined;
+      } catch {
+        parsed = undefined;
+      }
+      return listFns[operator](value ?? [], parsed);
     }
   }
 
@@ -73,17 +76,23 @@ export function matchesCondition(
 export function matchesFilterConditions(
   filter: FilterDefinition,
   record: DataRecord
-) {
+): boolean {
   const validConds = filter.conditions.filter((cond) => {
     return cond?.enabled ?? true;
   });
 
-  if (!validConds.length) return true;
+  const condResults = validConds.map((cond) => matchesCondition(cond, record));
+  const groupResults = (filter.groups ?? []).map((group) =>
+    matchesFilterConditions(group, record)
+  );
+  const allResults = [...condResults, ...groupResults];
+
+  if (!allResults.length) return true;
 
   if (filter.conjunction === "or") {
-    return validConds.some((cond) => matchesCondition(cond, record));
+    return allResults.some((r) => r);
   }
-  return validConds.every((cond) => matchesCondition(cond, record));
+  return allResults.every((r) => r);
 }
 
 export function applyFilter(
@@ -101,8 +110,16 @@ export const baseFns: Record<
   BaseFilterOperator,
   (value: Optional<DataValue>) => boolean
 > = {
-  "is-empty": (value) => value === undefined || value === null,
-  "is-not-empty": (value) => value !== undefined && value !== null,
+  "is-empty": (value) =>
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0),
+  "is-not-empty": (value) =>
+    value !== undefined &&
+    value !== null &&
+    value !== "" &&
+    !(Array.isArray(value) && value.length === 0),
 };
 
 export const stringFns: Record<
@@ -111,8 +128,8 @@ export const stringFns: Record<
 > = {
   is: (left, right) => (left ? left == right : false),
   "is-not": (left, right) => (left ? left != right : true),
-  contains: (left, right) => (left ? left.contains(right ?? "") : false),
-  "not-contains": (left, right) => (left ? !left.contains(right ?? "") : true),
+  contains: (left, right) => (left ? left.includes(right ?? "") : false),
+  "not-contains": (left, right) => (left ? !left.includes(right ?? "") : true),
 };
 
 export const numberFns: Record<
@@ -140,18 +157,31 @@ export const dateFns: Record<
   (left: Optional<Date>, right?: Optional<Date>) => boolean
 > = {
   "is-on": (left, right) => {
-    return left && right ? left.getTime() == right.getTime() : false;
+    if (!left || !right) return false;
+    return dayjs(left).isSame(dayjs(right), "day");
   },
-  "is-not-on": (left, right) =>
-    left && right ? left.getTime() != right.getTime() : true,
-  "is-before": (left, right) =>
-    left && right ? left.getTime() < right.getTime() : false,
-  "is-after": (left, right) =>
-    left && right ? left.getTime() > right.getTime() : false,
-  "is-on-and-before": (left, right) =>
-    left && right ? left.getTime() <= right.getTime() : false,
-  "is-on-and-after": (left, right) =>
-    left && right ? left.getTime() >= right.getTime() : false,
+  "is-not-on": (left, right) => {
+    if (!left || !right) return true;
+    return !dayjs(left).isSame(dayjs(right), "day");
+  },
+  "is-before": (left, right) => {
+    if (!left || !right) return false;
+    return dayjs(left).isBefore(dayjs(right), "day");
+  },
+  "is-after": (left, right) => {
+    if (!left || !right) return false;
+    return dayjs(left).isAfter(dayjs(right), "day");
+  },
+  "is-on-and-before": (left, right) => {
+    if (!left || !right) return false;
+    const l = dayjs(left), r = dayjs(right);
+    return l.isBefore(r, "day") || l.isSame(r, "day");
+  },
+  "is-on-and-after": (left, right) => {
+    if (!left || !right) return false;
+    const l = dayjs(left), r = dayjs(right);
+    return l.isAfter(r, "day") || l.isSame(r, "day");
+  },
 };
 
 export const listFns_multitext: Record<
@@ -175,7 +205,7 @@ export const listFns_text: Record<
 > = {
   "has-keyword": (left, right) => {
     return right
-      ? left.some((value) => String(value).contains(String(right)))
+      ? left.some((value) => String(value).includes(String(right)))
       : false;
   },
 };

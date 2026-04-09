@@ -61,17 +61,86 @@
   /* CSS classes are defined in styles.css under .ppp-pop-* prefix */
 
   function destroyPopover() {
-    if (popoverEl?.parentNode) popoverEl.parentNode.removeChild(popoverEl);
+    if (popoverEl) {
+      if ((popoverEl as any).__vvCleanup) (popoverEl as any).__vvCleanup();
+      popoverEl.parentNode?.removeChild(popoverEl);
+    }
     popoverEl = null;
   }
 
-  function positionPop(el: HTMLElement, anchor: HTMLElement, maxH: number) {
+  function positionPop(el: HTMLElement, anchor: HTMLElement, maxHRem: number) {
+    const fs = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const toRem = (v: number) => `${(v / fs).toFixed(2)}rem`;
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
+    if (isTouch) {
+      const vv = window.visualViewport;
+      const gap = 0.25 * fs;
+      const wantH = Math.min(maxHRem, 11) * fs;
+
+      function place() {
+        const r = anchor.getBoundingClientRect();
+        const visTop = vv ? vv.offsetTop : 0;
+        const visH  = vv ? vv.height : window.innerHeight;
+        const visBot = visTop + visH;
+        const anch  = Math.min(r.top, visBot - gap);
+        const avail = anch - visTop - gap * 2;
+        const h   = Math.max(5 * fs, Math.min(wantH, avail));
+        const top = Math.max(visTop + gap, anch - h - gap);
+
+        el.style.top       = toRem(top);
+        el.style.height    = toRem(h);
+        el.style.maxHeight = toRem(h);
+      }
+
+      el.classList.add('ppp-pop-box--mobile-kbd');
+
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+      place();
+
+      let revealed = false;
+      function reveal() {
+        if (revealed) return;
+        revealed = true;
+        place();
+        el.style.opacity = '1';
+        el.style.pointerEvents = '';
+      }
+
+      const fallbackTimer = setTimeout(reveal, 120);
+
+      if (vv) {
+        const onVV = () => {
+          if (!revealed) {
+            clearTimeout(fallbackTimer);
+            reveal();
+          } else {
+            place();
+          }
+        };
+        vv.addEventListener('resize', onVV);
+        vv.addEventListener('scroll', onVV);
+        (el as any).__vvCleanup = () => {
+          clearTimeout(fallbackTimer);
+          vv.removeEventListener('resize', onVV);
+          vv.removeEventListener('scroll', onVV);
+        };
+      } else {
+        clearTimeout(fallbackTimer);
+        reveal();
+      }
+      return;
+    }
+
     const r = anchor.getBoundingClientRect();
-    const below = window.innerHeight - r.bottom - 8;
-    el.style.top = (below >= maxH || below > r.top - 8)
-      ? `${r.bottom + 2}px`
-      : `${r.top - maxH - 2}px`;
-    el.style.left = `${Math.max(4, Math.min(r.left, window.innerWidth - 260))}px`;
+    const maxH = maxHRem * fs;
+    const gap = 0.5 * fs;
+    const below = window.innerHeight - r.bottom - gap;
+    el.style.top = (below >= maxH || below > r.top - gap)
+      ? toRem(r.bottom + 0.125 * fs)
+      : toRem(r.top - maxH - 0.125 * fs);
+    el.style.left = toRem(Math.max(0.25 * fs, Math.min(r.left, window.innerWidth - 16.25 * fs)));
   }
 
   function makePopover(anchor: HTMLElement, items: { label: string; icon?: string; selected?: boolean; handler: () => void }[]) {
@@ -79,13 +148,14 @@
     const box = activeDocument.createElement('div');
     box.addClass('ppp-pop-box');
     box.setAttribute('data-settings-dropdown', '');
-    const maxH = Math.min(items.length * 34 + 8, 280);
-    box.style.maxHeight = `${maxH}px`;
-    positionPop(box, anchor, maxH);
+    const maxHRem = Math.min(items.length * 2.125 + 0.5, 17.5);
+    box.style.maxHeight = `${maxHRem}rem`;
+    positionPop(box, anchor, maxHRem);
 
     const list = activeDocument.createElement('div');
     list.addClass('ppp-pop-list');
-    list.style.maxHeight = `${maxH - 8}px`;
+    list.style.flex = '1';
+    list.style.minHeight = '0';
 
     for (const it of items) {
       const btn = activeDocument.createElement('button');

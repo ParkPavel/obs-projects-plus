@@ -5,6 +5,58 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-04-09
+
+### Fixed — Mobile Popover Positioning
+
+#### Popover Keyboard Timing Fix
+- **Root cause**: `searchInput.focus()` triggers virtual keyboard AFTER `positionContainer()`/`positionPop()` calculates position — first open uses pre-keyboard viewport height, rendering the popover behind the keyboard. Subsequent opens work correctly because the keyboard is already visible.
+- **Invisible-until-settled pattern**: Popovers now start with `opacity: 0; pointer-events: none`, then reveal after `visualViewport.resize` fires (keyboard animation finished) or after 120ms fallback timeout.
+- **Applied to 4 files**: `FilterRow.svelte` (`positionContainer`), `FiltersTab.svelte`, `SortTab.svelte`, `ColorFiltersTab.svelte` (`positionPop`)
+
+#### Popover List Direction Fix
+- **Root cause**: Popover uses `flex-direction: column` — search input on top, field list below. When popover opens ABOVE the trigger (to escape keyboard), the list items extend downward toward the keyboard.
+- **Fix**: Added `flex-direction: column-reverse` to `.ppp-popover-container--mobile-kbd` and `.ppp-pop-box--mobile-kbd` — on mobile, the list scrolls upward from the search bar, which stays anchored near the trigger. Search bar border direction adjusted (`border-bottom` → `border-top`).
+
+#### Popover CSS Architecture Fix
+- **Root cause**: Mobile keyboard CSS modifications (`.ppp-popover-container--mobile-kbd`, `.ppp-pop-box--mobile-kbd`) were hand-edited into `styles.css` instead of being part of the compiled source. `styles.css` is a build artifact — `mergeCSS()` in `esbuild.config.mjs` merges `main.css` (design tokens) into `styles.css` on every build. Any `git checkout -- styles.css` wiped out the mobile keyboard styles.
+- **Fix**: Moved CSS rules into Svelte `<style>` blocks using `:global()` selectors in `FilterRow.svelte` and `FiltersTab.svelte`. Styles now compile into `main.js` via esbuild and are injected at runtime — they survive any `styles.css` reset.
+- **Additional fix**: `.ppp-pop-box` base class was missing `display: flex`, so `flex-direction: column-reverse` on the modifier had no effect. Added `display: flex` to the `--mobile-kbd` modifier.
+
+### Fixed — ViewSwitcher Touch Architecture Rewrite
+
+#### touchcancel Not Handled (Root Cause of Misclick Bug)
+- **Root cause**: CSS `touch-action: pan-x` on `.view-switcher` tells the browser to handle horizontal panning natively. During native pan, iOS/Android fires `touchcancel` instead of `touchend` — the `touchHandled` flag was never set, so the `click` event leaked through to the button under the finger at lift.
+- **Fix**: Added `on:touchcancel={handleTouchEndOrCancel}` handler that shares logic with `touchend`. Both events now set the `touchHandled` flag when finger movement exceeds the dead-zone.
+
+#### Swipe Navigation Conflicted with Native Scroll
+- **Root cause**: `handleTouchMove` called `event.preventDefault()` and `event.stopPropagation()` during horizontal swipe detection, but with `touch-action: pan-x`, the browser had already taken control of panning — `preventDefault()` was ignored. `handleTouchEnd` then called `onSelect()` even after native scroll, causing double view switches.
+- **Fix**: **Removed swipe-to-navigate entirely**. Native `pan-x` scroll via `overflow-x: auto` handles tab bar scrolling. View selection is tap-only. Simplified touch logic from ~130 lines to ~30 lines.
+
+#### Visual Pre-Selection During Scroll
+- **Root cause**: Mobile browsers apply `:active` state to buttons under the finger during native scroll, creating a visual "pre-selection" highlight.
+- **Fix**: Added `-webkit-tap-highlight-color: transparent` on `.view-item` buttons. Added `touch-action: manipulation` (disables double-tap-to-zoom, removes 300ms click delay).
+
+### Fixed — Agenda Date Selector Stuck on Today
+
+#### Reactive Block Self-Reset
+- **Root cause**: `$: if (!currentDate.isSame(selectedDate, 'day'))` in `AgendaSidebar.svelte` depended on BOTH `currentDate` (prop) and `selectedDate` (local state). When user manually selected a date via the picker, `selectedDate` changed → reactive block re-ran → saw `currentDate ≠ selectedDate` → immediately reset `selectedDate = currentDate` (back to today).
+- **Fix**: Track `currentDate` prop changes via `prevCurrentDate` sentinel. Reactive block now fires only when the prop changes (calendar navigation), not when the user makes a manual selection.
+- **File**: `AgendaSidebar.svelte` (lines 62–72)
+
+### Improved — Mobile View Switcher Misclick Prevention
+
+#### Dead-Zone Click Suppression (ViewSwitcher.svelte)
+- **Problem**: When swiping the view tab bar on mobile, lifting the finger over a tab accidentally switches to that view. This happened because finger movements between 15px (old TAP_MAX_MOVE) and 35px (SWIPE_THRESHOLD) fell through a gap — `touchHandled` was never set, so the native `click` event fired.
+- **Fix**: Replaced tap/swipe gap logic with a single `touchMoved` flag using an 8px dead-zone. Any finger movement beyond 8px in any direction marks the touch as "moved" and blocks the subsequent click event. Clean taps (< 8px movement) still work normally.
+- **scrollIntoView on tap**: Tapping a view tab now smoothly scrolls it to the center of the tab bar for better visibility.
+- **Removed**: `TAP_MAX_MOVE`, `TAP_MAX_DURATION`, `touchStartTime`, `isHorizontalSwipe`, `SWIPE_THRESHOLD`, `SWIPE_MIN_DISTANCE` — all replaced by simplified dead-zone + native scroll architecture.
+
+### Technical
+- **Tests**: 375/375 passing (21 suites)
+- **Build**: OK (main.js 1.8MB, main.css 4.2KB)
+- **tsc**: 0 errors
+
 ## [3.2.0] - 2026-04-03
 
 ### Added — Drag & Drop 2.0

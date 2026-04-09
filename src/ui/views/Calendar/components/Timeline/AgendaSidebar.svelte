@@ -62,6 +62,15 @@
   let selectedDate: dayjs.Dayjs = currentDate;
   let showDatePicker = false;
   let pickerMonth: dayjs.Dayjs = currentDate.startOf('month');
+
+  // Sync selectedDate when calendar navigates (currentDate prop changes).
+  // Track previous prop value to avoid resetting user's manual selection.
+  let prevCurrentDate: dayjs.Dayjs = currentDate;
+  $: if (!currentDate.isSame(prevCurrentDate, 'day')) {
+    prevCurrentDate = currentDate;
+    selectedDate = currentDate;
+    pickerMonth = currentDate.startOf('month');
+  }
   let isResizing = false;
   let resizeStartX = 0;
   let resizeStartWidth = 0;
@@ -712,6 +721,10 @@
     <div class="content">
       {#if agendaMode === 'custom'}
         <!-- CUSTOM MODE -->
+        <button class="custom-add-btn" on:click={handleAddList}>
+          <Icon name="plus" size="sm" />
+          <span>{$i18n.t('views.calendar.agenda.custom.add-list')}</span>
+        </button>
         {#if dndLists.length > 0}
           <div class="custom-lists"
             use:dragHandleZone={{
@@ -751,10 +764,6 @@
               {/if}
             {/each}
           </div>
-          <button class="custom-add-btn" on:click={handleAddList}>
-            <Icon name="plus" size="sm" />
-            <span>{$i18n.t('views.calendar.agenda.custom.add-list')}</span>
-          </button>
         {:else}
           <div class="custom-lists">
             <div class="custom-empty">
@@ -1343,6 +1352,8 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    /* Reserve space for Obsidian mobile bottom toolbar + safe area */
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   }
   .agenda.mobile .event { 
     padding: var(--ppp-space-5, 0.75rem) var(--agenda-gap-lg); 

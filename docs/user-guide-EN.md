@@ -174,8 +174,10 @@ When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
 
 | Gesture | Action |
 |---------|--------|
-| **Swipe left/right** | Switch between project views |
-| **Swipe at boundary** (first/last view) | Opens Obsidian sidebar |
+| **Tap on tab** | Switch to view + scroll tab to center |
+| **Horizontal scroll** | Scroll the tab bar (native `pan-x`) |
+
+> **Misclick prevention (v3.2.1+):** If the finger moves more than 8px, the tap on the tab is blocked. You can freely scroll the view bar to find the right tab, then tap it to select. `touchcancel` handling ensures correct behavior even during native scrolling.
 
 ---
 
@@ -200,7 +202,19 @@ On mobile devices, long-press (500ms) provides navigation:
 - **List reordering** — also via context menu "Move up/down"
 - **Modal windows** — rendered as full-width bottom sheets
 - **Scroll isolation** — scroll within modals doesn't chain to Obsidian
+### Mobile Popovers & Keyboard (v3.2.0+)
 
+Field, operator, and value selection popovers are adapted for the virtual keyboard:
+- **Positioned above keyboard** — popover opens above the trigger element, within the visible screen area
+- **Smooth reveal** — popover is invisible until the keyboard animation finishes, then appears at the correct position
+- **Reversed layout** — search bar at bottom (near trigger), field list scrolls upward
+- **Full-width mode** — popover stretches to screen width for easier touch targets
+- **Build-resilient (v3.2.1+)** — mobile popover CSS is stored in Svelte components via `:global()`, not in static `styles.css`. Styles compile into `main.js` and are not lost during updates
+
+### Mobile Agenda: Date Selection (v3.2.1+)
+
+- **Custom date selection** — tapping a day in the mini-calendar switches Agenda to that day
+- **Calendar navigation** — switching months only resets the selected date when the `currentDate` prop changes (navigation from the main calendar), not when the user makes a manual selection
 ### 🔀 Drag & Drop — Unified System (v3.1.0 / v3.2.0)
 
 Since v3.1.0, all drag operations in Projects Plus use **grip icons** (⠿) — small dot indicators visible on hover (desktop) or always visible (mobile). This guarantees that scrolling and DnD never conflict.

@@ -12,130 +12,52 @@
 
   $: showTitles = $settings.preferences.showViewTitles ?? true;
 
+  // v3.2.1 fix: Misclick prevention — simplified architecture.
+  // REMOVED swipe-to-navigate (conflicted with native pan-x scroll).
+  // Native horizontal scroll via CSS touch-action: pan-x + overflow-x: auto.
+  // Tap = select view. Scroll = just scroll the tab bar.
+  //
+  // Root cause of the old bug:
+  //   touch-action: pan-x → browser handles panning → fires touchcancel
+  //   instead of touchend → touchHandled was never set → click leaked through.
+  //   Additionally, swipe navigation called onSelect() even after native scroll.
+  //
+  // New approach:
+  //   1. Track ANY finger movement > MOVE_DEADZONE
+  //   2. On touchend OR touchcancel → block clicks for 400ms
+  //   3. No swipe navigation — just native pan + tap
+  const MOVE_DEADZONE = 8;  // px — beyond this = not a tap
+
   let touchStartX = 0;
   let touchStartY = 0;
-  let touchStartTime = 0;
-  let isHorizontalSwipe: boolean | null = null;
-  // v7.1: Much stricter thresholds to prevent misclicks
-  const SWIPE_THRESHOLD = 35; // Higher threshold before deciding direction
-  const SWIPE_MIN_DISTANCE = 100; // Larger distance for intentional swipe
-  const TAP_MAX_MOVE = 15; // Max movement for tap (prevents swipe on tap)
-  const TAP_MAX_DURATION = 200; // Max tap duration in ms
-
   let buttonRefs: HTMLButtonElement[] = [];
-  let touchHandled = false; // Block synthetic click after touch
+  let touchMoved = false;
+  let touchHandled = false;
 
   function handleTouchStart(event: TouchEvent) {
     touchStartX = event.touches[0]?.clientX ?? 0;
     touchStartY = event.touches[0]?.clientY ?? 0;
-    touchStartTime = Date.now();
-    isHorizontalSwipe = null;
+    touchMoved = false;
   }
 
   function handleTouchMove(event: TouchEvent) {
+    if (touchMoved) return;
     const touch = event.touches[0];
     if (!touch) return;
-
     const deltaX = Math.abs(touch.clientX - touchStartX);
     const deltaY = Math.abs(touch.clientY - touchStartY);
-
-    if (isHorizontalSwipe === null) {
-      // v7.1: Only decide after clear movement - require 3x ratio
-      if (deltaX > deltaY * 3 && deltaX > SWIPE_THRESHOLD) {
-        isHorizontalSwipe = true;
-        // v3.1.0: Don't block propagation at list edges so Obsidian sidebar works
-        const currentIndex = views.findIndex(v => v.id === activeViewId);
-        const swipeDirection = (touch.clientX - touchStartX) > 0 ? 'right' : 'left';
-        const atEdge = (swipeDirection === 'right' && currentIndex <= 0) ||
-                       (swipeDirection === 'left' && currentIndex >= views.length - 1);
-        if (!atEdge) {
-          event.stopPropagation(); // Block Obsidian sidebar only when we can navigate
-        }
-      } else if (deltaY > deltaX * 2 && deltaY > SWIPE_THRESHOLD) {
-        // Clear vertical scroll - don't interfere
-        isHorizontalSwipe = false;
-      }
-    }
-
-    if (isHorizontalSwipe) {
-      event.preventDefault(); // Prevent scroll during horizontal swipe
-      // v3.1.0: Only stop propagation when not at edge
-      const currentIndex = views.findIndex(v => v.id === activeViewId);
-      const swipeDirection = (touch.clientX - touchStartX) > 0 ? 'right' : 'left';
-      const atEdge = (swipeDirection === 'right' && currentIndex <= 0) ||
-                     (swipeDirection === 'left' && currentIndex >= views.length - 1);
-      if (!atEdge) {
-        event.stopPropagation();
-      }
+    if (deltaX > MOVE_DEADZONE || deltaY > MOVE_DEADZONE) {
+      touchMoved = true;
     }
   }
 
-  function handleTouchEnd(event: TouchEvent) {
-    const touch = event.changedTouches[0];
-    if (!touch) {
-      isHorizontalSwipe = null;
-      return;
+  // v3.2.1: handles BOTH touchend AND touchcancel —
+  // touchcancel fires when browser takes over native pan gesture.
+  function handleTouchEndOrCancel() {
+    if (touchMoved) {
+      touchHandled = true;
+      setTimeout(() => { touchHandled = false; }, 400);
     }
-
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-    const duration = Date.now() - touchStartTime;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-    // v7.1: Check if this was a tap (small movement, short duration)
-    if (distance < TAP_MAX_MOVE && duration < TAP_MAX_DURATION) {
-      // This was a tap - let it through to button click
-      isHorizontalSwipe = null;
-      return;
-    }
-
-    // Not a swipe - clear state
-    if (!isHorizontalSwipe) {
-      isHorizontalSwipe = null;
-      return;
-    }
-
-    // Block synthetic click after swipe
-    touchHandled = true;
-    setTimeout(() => { touchHandled = false; }, 300);
-
-    // Swipe distance check - must be intentional
-    if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE) {
-      isHorizontalSwipe = null;
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    // Find current view index
-    const currentIndex = views.findIndex(v => v.id === activeViewId);
-    if (currentIndex === -1) {
-      isHorizontalSwipe = null;
-      return;
-    }
-
-    // Determine swipe direction and switch view (NO wrap-around to prevent confusion)
-    let nextIndex: number;
-    if (deltaX > 0) {
-      // Swipe right → previous view (NO wrap)
-      nextIndex = currentIndex > 0 ? currentIndex - 1 : 0;
-    } else {
-      // Swipe left → next view (NO wrap)
-      nextIndex = currentIndex < views.length - 1 ? currentIndex + 1 : views.length - 1;
-    }
-
-    // Only change if different
-    if (nextIndex !== currentIndex) {
-      const nextView = views[nextIndex];
-      if (nextView) {
-        onSelect?.(nextView.id);
-        // v7.1: Use instant scroll to avoid "bounce" effect
-        buttonRefs[nextIndex]?.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
-      }
-    }
-
-    isHorizontalSwipe = null;
   }
 
   function handleKeydown(event: KeyboardEvent, index: number) {
@@ -151,9 +73,10 @@
   }
 
   function handleButtonClick(viewId: ViewId, index: number) {
-    // Block if this was triggered by swipe end
     if (touchHandled) return;
     onSelect?.(viewId);
+    // v3.2.1: Scroll the selected tab into view for better visibility
+    buttonRefs[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }
 
   function getViewIcon(type: string): string {
@@ -189,7 +112,8 @@
   on:wheel={handleWheel}
   on:touchstart={handleTouchStart}
   on:touchmove={handleTouchMove}
-  on:touchend={handleTouchEnd}
+  on:touchend={handleTouchEndOrCancel}
+  on:touchcancel={handleTouchEndOrCancel}
 >
   {#each views as view, index (view.id)}
     <button
@@ -244,6 +168,12 @@
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    /* v3.2.1: Prevent visual pre-selection during native pan scroll */
+    -webkit-tap-highlight-color: transparent;
+    /* v3.2.1: manipulation = pan-x ∩ pan-y ∩ pinch-zoom
+       Intersected with container's pan-x → effective pan-x.
+       Disables double-tap-to-zoom → removes 300ms click delay. */
+    touch-action: manipulation;
   }
 
   .view-item:hover {

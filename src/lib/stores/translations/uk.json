@@ -627,10 +627,13 @@
                 "and": "і",
                 "or": "або",
                 "add": "Додати умову",
-                "add-condition": "одати умову",
-                "conjunction-or": "",
-                "conjunction-and": "Т",
-                "empty-hint": "емає умов фільтрації"
+                "add-condition": "Додати умову",
+                "add-group": "Додати групу",
+                "conjunction-or": "АБО",
+                "conjunction-and": "І",
+                "match-all": "Усі умови",
+                "match-any": "Будь-яка умова",
+                "empty-hint": "Немає умов фільтрації"
             },
             "sort": {
                 "label": "Сортувати",

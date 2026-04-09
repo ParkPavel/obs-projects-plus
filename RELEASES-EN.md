@@ -1,11 +1,11 @@
-# 🚀 Release Information
+﻿# 🚀 Release Information
 
-## Current Release: v3.2.0
+## Current Release: v3.2.1
 
-**Release Date**: April 3, 2026  
+**Release Date**: April 9, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Drag & Drop 2.0 — full Calendar Timeline DnD, strip resize, cross-day drag, snap engine
+**Type**: Bugfix & Mobile UX — mobile popover fixes, ViewSwitcher touch rewrite, agenda date selector fix, CSS pipeline fix
 
 ## 📦 Download Options
 
@@ -48,11 +48,53 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | ✅ | **Mobile Feature Parity** | v3.0.10 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Deep Mobile Adaptation** | v3.1.0 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Released | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Bugfix & Mobile UX** | v3.2.1 | Released | [CHANGELOG](CHANGELOG.md) |
 | 🥇 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
 | 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
 
 ## 📋 Release Notes
 
+---
+
+### 🛠️ v3.2.1 (April 9, 2026) — Bugfix & Mobile UX
+
+> **Mobile popover fixes, ViewSwitcher touch architecture rewrite, agenda date selector fix, CSS pipeline vulnerability resolved**
+
+#### 🔧 Fixed: Mobile Popovers & Keyboard
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| **Popover behind keyboard on first open** | `searchInput.focus()` triggers keyboard AFTER position is calculated | Invisible start (`opacity: 0`) → `reveal()` after `visualViewport.resize` or 120ms |
+| **Field list below keyboard** | `flex-direction: column` with popover above trigger | `column-reverse` — list scrolls up, search stays at bottom |
+| **Popover styles lost on git checkout** | CSS was hand-edited in `styles.css` (build artifact) | Moved to Svelte `<style>` via `:global()` → compiled into `main.js` |
+| **`column-reverse` had no effect on `.ppp-pop-box`** | Base class lacked `display: flex` | Added `display: flex` to the `--mobile-kbd` modifier |
+
+#### 🔧 Fixed: ViewSwitcher — Full Touch Architecture Rewrite
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| **Misclick on swipe (primary bug)** | `touch-action: pan-x` → browser takes control → `touchcancel` instead of `touchend` → `touchHandled` flag never set | Added `on:touchcancel` — shared handler with `touchend` |
+| **Double view switch** | Swipe navigation called `onSelect()` after native scroll | **Removed** swipe-to-navigate entirely. Native `pan-x` scrolls, tap selects |
+| **Visual pre-selection during scroll** | Browsers apply `:active` to buttons under finger during pan | `-webkit-tap-highlight-color: transparent` + `touch-action: manipulation` |
+
+#### 🔧 Fixed: Agenda Date Selector Stuck on Today
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| **Date wouldn't change — always today** | Reactive block `$: if (!currentDate.isSame(selectedDate))` depended on both variables → reset on manual selection | Track only prop changes via `prevCurrentDate` — manual selection doesn't trigger reset |
+
+#### 🚀 Improved: View Switcher (ViewSwitcher)
+
+| Improvement | Description |
+|-------------|-------------|
+| **Simplified architecture** | ~130 lines of touch logic → ~30 lines. Removed `SWIPE_THRESHOLD`, `SWIPE_MIN_DISTANCE`, `isHorizontalSwipe` |
+| **Dead-zone 8px** | Any movement > 8px blocks `click`. Clean tap < 8px works |
+| **scrollIntoView on tap** | Selected tab smoothly scrolls to center of tab bar |
+
+#### Metrics
+- **Tests**: 375/375 PASS (21 suites)
+- **Build**: OK (main.js 1.8MB, main.css 4.2KB)
+- **tsc**: 0 errors
 ---
 
 ### 🎯 v3.2.0 (April 3, 2026) — Drag & Drop 2.0

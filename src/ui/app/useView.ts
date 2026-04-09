@@ -31,6 +31,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- View configs are dynamic and plugin-specific
   let projectView: ProjectView<Record<string, any>> | undefined;
   let prevConfigJson: string = "";
+  let prevProjectJson: string = "";
 
   const update = (newprops: ViewProps) => {
     // User switched to a different view.
@@ -61,6 +62,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
         });
         projectView.onData(newprops.dataProps);
         prevConfigJson = JSON.stringify(newprops.config);
+        prevProjectJson = JSON.stringify(newprops.project);
       }
 
       viewId = newprops.view.id;
@@ -76,7 +78,12 @@ export function useView(node: HTMLElement, props: ViewProps) {
         prevConfigJson = currentConfigJson;
       }
 
-      // Only refresh project when the project definition actually changed
+      // Check if project changed (for agenda list saves, etc.)
+      const currentProjectJson = JSON.stringify(newprops.project);
+      if (currentProjectJson !== prevProjectJson) {
+        updates['project'] = newprops.project;
+        prevProjectJson = currentProjectJson;
+      }
       if (projectView && 'view' in projectView && projectView.view) {
         if (Object.keys(updates).length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type

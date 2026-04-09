@@ -29,6 +29,7 @@ export type SortOrder = "asc" | "desc";
 export interface FilterDefinition {
   readonly conjunction?: "and" | "or";
   readonly conditions: FilterCondition[];
+  readonly groups?: FilterDefinition[];
 }
 
 export interface ColorFilterDefinition {
