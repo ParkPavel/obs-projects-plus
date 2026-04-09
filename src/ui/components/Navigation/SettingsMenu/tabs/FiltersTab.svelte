@@ -42,9 +42,10 @@
 
   function updateGroupAtPath(root: FilterDefinition, path: number[], patch: Partial<FilterDefinition>): FilterDefinition {
     if (path.length === 0) return { ...root, ...patch };
-    const [head, ...rest] = path;
+    const head = path[0]!;
+    const rest = path.slice(1);
     const groups = [...(root.groups ?? [])];
-    groups[head] = updateGroupAtPath(groups[head], rest, patch);
+    groups[head] = updateGroupAtPath(groups[head]!, rest, patch);
     return { ...root, groups };
   }
 
@@ -52,9 +53,10 @@
     if (path.length === 1) {
       return { ...root, groups: (root.groups ?? []).filter((_, i) => i !== path[0]) };
     }
-    const [head, ...rest] = path;
+    const head = path[0]!;
+    const rest = path.slice(1);
     const groups = [...(root.groups ?? [])];
-    groups[head] = removeGroupAtPath(groups[head], rest);
+    groups[head] = removeGroupAtPath(groups[head]!, rest);
     return { ...root, groups };
   }
 
@@ -114,18 +116,9 @@
     updateRoot(removeGroupAtPath(local, path));
   }
 
-  function toggleGroupConjunction(path: number[]) {
-    if (path.length === 0) {
-      updateRoot({ ...local, conjunction: local.conjunction === "or" ? "and" : "or" });
-    } else {
-      const group = getGroupAtPath(local, path);
-      updateRoot(updateGroupAtPath(local, path, { conjunction: group.conjunction === "or" ? "and" : "or" }));
-    }
-  }
-
   function getGroupAtPath(root: FilterDefinition, path: number[]): FilterDefinition {
-    let node = root;
-    for (const idx of path) node = (node.groups ?? [])[idx];
+    let node: FilterDefinition = root;
+    for (const idx of path) node = (node.groups ?? [])[idx]!;
     return node;
   }
 

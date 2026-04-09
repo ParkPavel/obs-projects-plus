@@ -24,7 +24,6 @@
   const t = (key: string) => $i18n.t(`views.calendar.agenda.custom.filter-editor.${key}`);
   
   $: hasContent = group.filters.length > 0 || group.groups.length > 0;
-  $: totalItems = group.filters.length + group.groups.length;
   
   function handleConjunctionChange(e: Event) {
     const target = e.target as HTMLSelectElement;
