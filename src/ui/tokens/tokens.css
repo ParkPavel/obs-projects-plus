@@ -241,4 +241,27 @@
 }
 
 /* Large text mode (when user increases base font) */
+
+/* ═══════════════════════════════════════════════════════════
+   DnD Utility Classes (used by TouchDndCoordinator, TimelineDragManager)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Drag feedback for svelte-dnd-action shadow elements */
+.ppp-drag-feedback {
+  max-height: 3rem;
+  overflow: hidden;
+  opacity: 0.9;
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Hide element from elementsFromPoint() hit testing */
+.ppp-hit-test-hidden {
+  display: none;
+}
+
+/* Restore pointer-events for hit testing participation */
+.ppp-hit-test-active {
+  pointer-events: auto;
+}
 /* Note: rem-based tokens automatically scale with user font preferences */

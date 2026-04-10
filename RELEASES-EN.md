@@ -1,11 +1,11 @@
 ﻿# 🚀 Release Information
 
-## Current Release: v3.2.1
+## Current Release: v3.2.2
 
-**Release Date**: April 9, 2026  
+**Release Date**: April 10, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Bugfix & Mobile UX — mobile popover fixes, ViewSwitcher touch rewrite, agenda date selector fix, CSS pipeline fix
+**Type**: Security & Quality — PR #10259 audit, JSON.parse protection, Board DnD fix, +82 tests
 
 ## 📦 Download Options
 

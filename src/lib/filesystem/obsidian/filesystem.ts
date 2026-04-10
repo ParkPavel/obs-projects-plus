@@ -113,7 +113,7 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.vault.on("create", (file) => {
         if (file instanceof TFile && file.extension === "md") {
-          void callback(new ObsidianFile(file, this.plugin.app));
+          callback(new ObsidianFile(file, this.plugin.app)).catch(console.error);
         }
       })
     );
@@ -124,7 +124,7 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.metadataCache.on("changed", (file) => {
         if (file instanceof TFile && file.extension === "md") {
-          void callback(new ObsidianFile(file, this.plugin.app));
+          callback(new ObsidianFile(file, this.plugin.app)).catch(console.error);
         }
       })
     );
@@ -135,7 +135,7 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.vault.on("delete", (file) => {
         if (file instanceof TFile && file.extension === "md") {
-          void callback(new ObsidianFile(file, this.plugin.app));
+          callback(new ObsidianFile(file, this.plugin.app)).catch(console.error);
         }
       })
     );
@@ -146,7 +146,7 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.vault.on("rename", (file, oldPath) => {
         if (file instanceof TFile && file.extension === "md") {
-          void callback(new ObsidianFile(file, this.plugin.app), oldPath);
+          callback(new ObsidianFile(file, this.plugin.app), oldPath).catch(console.error);
         }
       })
     );

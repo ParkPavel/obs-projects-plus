@@ -135,7 +135,7 @@ export function showMobileNavMenu(
       .setTitle(t.t("common.open-in-tab"))
       .setIcon("file-plus")
       .onClick(() => {
-        appInstance.workspace.openLinkText(linkText, sourcePath, "tab");
+        void appInstance.workspace.openLinkText(linkText, sourcePath, "tab");
       });
   });
 
@@ -144,7 +144,7 @@ export function showMobileNavMenu(
       .setTitle(t.t("common.open-in-window"))
       .setIcon("maximize")
       .onClick(() => {
-        appInstance.workspace.openLinkText(linkText, sourcePath, "window");
+        void appInstance.workspace.openLinkText(linkText, sourcePath, "window");
       });
   });
 

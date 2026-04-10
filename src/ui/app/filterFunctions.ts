@@ -128,8 +128,8 @@ export const stringFns: Record<
 > = {
   is: (left, right) => (left ? left == right : false),
   "is-not": (left, right) => (left ? left != right : true),
-  contains: (left, right) => (left ? left.includes(right ?? "") : false),
-  "not-contains": (left, right) => (left ? !left.includes(right ?? "") : true),
+  contains: (left, right) => (left ? left.toLowerCase().includes((right ?? "").toLowerCase()) : false),
+  "not-contains": (left, right) => (left ? !left.toLowerCase().includes((right ?? "").toLowerCase()) : true),
 };
 
 export const numberFns: Record<
@@ -205,7 +205,7 @@ export const listFns_text: Record<
 > = {
   "has-keyword": (left, right) => {
     return right
-      ? left.some((value) => String(value).includes(String(right)))
+      ? left.some((value) => String(value).toLowerCase().includes(String(right).toLowerCase()))
       : false;
   },
 };

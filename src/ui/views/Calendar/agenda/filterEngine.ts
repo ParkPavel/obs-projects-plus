@@ -378,10 +378,12 @@ export function evaluateFilter(
         String(v).toLowerCase().includes(filterValue.toLowerCase())
       );
       
-    default:
-      // Cast needed: filter is narrowed to never by the exhaustive switch
-      calendarLogger.warn('[FilterEngine] Unknown operator: ' + (filter as { operator: string }).operator);
+    default: {
+      // Unknown operator — log warning for debugging
+      const unknownFilter: { operator: string } = filter as never;
+      calendarLogger.warn('[FilterEngine] Unknown operator: ' + unknownFilter.operator);
       return false;
+    }
   }
 }
 

@@ -55,10 +55,17 @@
 
   const flipDurationMs = 200;
 
+  // Guard: prevent reactive prop updates from resetting DnD state mid-drag
+  let isDraggingColumns = false;
+
   $: pinnedColumns = columns.filter((c) => c.pinned);
-  $: unpinnedColumns = columns.filter((c) => !c.pinned);
+  $: if (!isDraggingColumns) {
+    unpinnedColumns = columns.filter((c) => !c.pinned);
+  }
+  let unpinnedColumns: Column[] = columns.filter((c) => !c.pinned);
 
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
+    isDraggingColumns = true;
     const newUnpinned = e.detail.items;
     columns = [...pinnedColumns, ...newUnpinned];
   }
@@ -67,6 +74,8 @@
     const newUnpinned = e.detail.items;
     columns = [...pinnedColumns, ...newUnpinned];
     onSortColumns(columns.map((col) => col.id));
+    // Allow reactive updates after parent state settles
+    setTimeout(() => { isDraggingColumns = false; }, flipDurationMs + 50);
   }
 
   /**

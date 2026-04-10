@@ -157,7 +157,7 @@ export default class ProjectsPlusPlugin extends Plugin {
               project,
               (name, templatePath, project) => {
                 const record = createDataRecord(name, project);
-                void get(api).createNote(record, [], templatePath);
+                get(api).createNote(record, [], templatePath).catch(console.error);
               }
             ).open();
           }

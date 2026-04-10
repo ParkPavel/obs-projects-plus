@@ -649,15 +649,15 @@ export function evaluateFormula(
         if (funcName === 'DATE_ADD') {
           if (args.length !== 3) throw new Error('DATE_ADD expects 3 arguments (date, amount, unit)');
           const date = dayjs(evaluate(getArg(args, 0)));
-          const amount = evaluate(getArg(args, 1));
-          const unit = evaluate(getArg(args, 2)) as dayjs.ManipulateType;
+          const amount = Number(evaluate(getArg(args, 1)));
+          const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.add(amount, unit).format('YYYY-MM-DD');
         }
         if (funcName === 'DATE_SUB') {
           if (args.length !== 3) throw new Error('DATE_SUB expects 3 arguments (date, amount, unit)');
           const date = dayjs(evaluate(getArg(args, 0)));
-          const amount = evaluate(getArg(args, 1));
-          const unit = evaluate(getArg(args, 2)) as dayjs.ManipulateType;
+          const amount = Number(evaluate(getArg(args, 1)));
+          const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.subtract(amount, unit).format('YYYY-MM-DD');
         }
 

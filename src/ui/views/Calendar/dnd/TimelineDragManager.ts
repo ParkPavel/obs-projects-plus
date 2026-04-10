@@ -1338,17 +1338,15 @@ export class TimelineDragManager {
   private findDayFromPoint(clientX: number, clientY: number): { date: dayjs.Dayjs; element: HTMLElement } | null {
     // Temporarily hide portal ghosts so they don't intercept elementsFromPoint
     const portalGhosts = document.querySelectorAll<HTMLElement>('.ppp-strip-ghost-portal');
-    portalGhosts.forEach(g => { g.style.display = 'none'; });
+    portalGhosts.forEach(g => { g.classList.add('ppp-hit-test-hidden'); });
 
     // v4.0.3: The dragging element (.dnd-dragging) has pointer-events: none,
     // which causes elementsFromPoint() to skip it. In HeaderStripsSection the
     // strip-segment IS the [data-date] element, so the hit test misses the day.
     // Temporarily restore pointer-events so the element participates in hit testing.
     const dragEl = this.session?.barElement;
-    let savedPointerEvents: string | null = null;
     if (dragEl) {
-      savedPointerEvents = dragEl.style.pointerEvents;
-      dragEl.style.pointerEvents = 'auto';
+      dragEl.classList.add('ppp-hit-test-active');
     }
 
     try {
@@ -1373,9 +1371,9 @@ export class TimelineDragManager {
       }
     } finally {
       if (dragEl) {
-        dragEl.style.pointerEvents = savedPointerEvents ?? '';
+        dragEl.classList.remove('ppp-hit-test-active');
       }
-      portalGhosts.forEach(g => { g.style.display = ''; });
+      portalGhosts.forEach(g => { g.classList.remove('ppp-hit-test-hidden'); });
     }
 
     return null;
@@ -1422,7 +1420,7 @@ export class TimelineDragManager {
     // v4.0.2: If this was a successful drag (threshold crossed), remember the
     // record so the next touch on the same bar skips long-press.
     const wasActiveDrag = s?.thresholdCrossed && s?.record;
-    const activatedRecordId = wasActiveDrag ? s!.record.id : null;
+    const activatedRecordId = wasActiveDrag ? s.record.id : null;
 
     // Clear session
     this.session = null;

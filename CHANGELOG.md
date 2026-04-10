@@ -5,6 +5,41 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.2] - 2026-04-10
+
+### Fixed — Security & Code Quality (PR #10259 Audit)
+
+#### P0: JSON.parse Crash Protection
+- `DataFrameProvider.svelte` — `JSON.parse` on corrupted project config now wrapped in try-catch with safe fallback (`{ ...project, views: [] }`)
+- `CreateField.svelte` — `JSON.parse` on list values extracted to `safeParseList()` with try-catch, prevents crash on malformed field data
+
+#### P1: Data Loss & Filter Consistency
+- `standardize.ts` — Dataview array fields (tags, aliases) were silently dropped: `value.map(...)` result was not assigned back to `res[field]`
+- `filterFunctions.ts` — `contains`, `not-contains`, `has-keyword` operators now case-insensitive, consistent with Calendar filterEngine
+
+#### Board Column DnD Race Condition
+- `Board.svelte` — Column drag-and-drop worked intermittently ("every other time"): reactive `$: unpinnedColumns` recalculation from parent prop update was resetting svelte-dnd-action internal state mid-drag. Added `isDraggingColumns` guard to freeze unpinned column list during drag operations.
+
+### Changed — ObsidianReviewBot Required Fixes (PR #10259)
+
+#### Code Quality
+- `events.ts` — Removed unnecessary `async` from synchronous callback in file watcher
+- `TouchDndCoordinator.ts` — Replaced 5 inline `element.style.*` with CSS class `.ppp-drag-feedback`
+- `TimelineDragManager.ts` — Replaced inline display/pointer-events with `.ppp-hit-test-hidden`/`.ppp-hit-test-active` CSS classes; removed unnecessary `s!` non-null assertion
+- `filterEngine.ts` — Fixed `never` type operand in exhaustive switch default branch
+- `helpers.ts` — Added `void` operator to 2 unhandled `openLinkText()` promises
+- `Weekday.svelte`, `CreateField.svelte` — Added reason comments to all `eslint-disable` directives
+
+#### Promise & Type Safety (P2)
+- `filesystem.ts` — 4 fire-and-forget file watcher callbacks now use `.catch(console.error)` instead of `void`
+- `main.ts` — `createNote()` promise handled with `.catch(console.error)`
+- `formulaParser.ts` — `DATE_ADD`/`DATE_SUB` unsafe type assertions replaced with `Number()`/`String()` coercion
+
+### Added — Test Coverage
+- `formulaParser.test.ts` — 56 tests: tokenizer, parser, evaluator (27 built-in functions, operators, edge cases), validator
+- `filterFunctions.test.ts` — 26 tests: base/string/number/boolean/list operators, case-insensitive verification, matchesCondition, matchesFilterConditions
+- Total: 23 suites, 457 tests (was 21/375)
+
 ## [3.2.1] - 2026-04-09
 
 ### Fixed — Mobile Popover Positioning

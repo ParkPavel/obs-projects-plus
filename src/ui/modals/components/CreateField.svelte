@@ -46,6 +46,10 @@
 
   $: fieldNameError = validateFieldName(field.name);
 
+  function safeParseList(json: string): string[] {
+    try { return JSON.parse(json); } catch { return []; }
+  }
+
   function validateFieldName(fieldName: string) {
     if (fieldName.trim() === "") {
       return $i18n.t("modals.field.create.empty-name-error");
@@ -60,6 +64,7 @@
 
   type Conversions = {
     [K in DataFieldType]: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- type conversion matrix accepts/returns heterogeneous field types
       [L in DataFieldType]: (v: any) => any;
     };
   };
@@ -235,7 +240,7 @@
     >
       {#if field.type === DataFieldType.List}
         <TagsInput
-          value={JSON.parse(listValue)}
+          value={safeParseList(listValue)}
           on:change={(event) => {
             listValue = event.detail;
           }}
@@ -328,8 +333,8 @@
       on:click={() => {
         if (field.repeated) {
           onCreate(
-            { ...field, type: DataFieldType.String }, // remove the temporary `list` type declaration
-            JSON.parse(listValue)
+            { ...field, type: DataFieldType.String },
+            safeParseList(listValue)
           );
         } else if (field.type === DataFieldType.Date) {
           onCreate(

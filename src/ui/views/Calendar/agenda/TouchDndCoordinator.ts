@@ -129,11 +129,7 @@ export function hapticFeedback(durationMs: number = GESTURE_CONFIG.hapticDuratio
  */
 export function applyDragFeedback(el: HTMLElement | null | undefined): void {
   if (!el) return;
-  el.style.maxHeight = '3rem';
-  el.style.overflow = 'hidden';
-  el.style.opacity = '0.9';
-  el.style.borderRadius = '0.375rem';
-  el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+  el.classList.add('ppp-drag-feedback');
   hapticFeedback();
 }
 

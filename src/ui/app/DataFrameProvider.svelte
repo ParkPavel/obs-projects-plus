@@ -45,8 +45,13 @@
   }
 
   function reassemble(text: string): ProjectDefinition {
-    const res: Omit<ProjectDefinition, "views" | "agenda"> = JSON.parse(text);
-    return { ...res, views: [] };
+    try {
+      const res: Omit<ProjectDefinition, "views" | "agenda"> = JSON.parse(text);
+      return { ...res, views: [] };
+    } catch {
+      // Fallback: return last known good project to avoid crashing the plugin
+      return { ...project, views: [] };
+    }
   }
 
   let querying: Promise<void>;
