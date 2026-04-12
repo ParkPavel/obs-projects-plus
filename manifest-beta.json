@@ -1,7 +1,7 @@
 {
   "id": "obs-projects-plus",
   "name": "Projects Plus (Beta)",
-  "version": "3.2.2-beta.42",
+  "version": "3.2.2-beta.43",
   "minAppVersion": "1.5.7",
   "description": "Enhanced project management for Obsidian with advanced features (beta).",
   "author": "Park Pavel",
