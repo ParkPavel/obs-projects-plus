@@ -1,14 +1,33 @@
 # Context State — obs-projects-plus
 
 ## Текущее состояние
-- **Версия**: 3.2.1 (tag: 3.2.1, HEAD: main)
-- **Дата аудита**: 2026-04-10
-- **Последние правки**: 2026-04-10 (BOT + P0/P1/P2 fixes + тесты)
-- **Сборка**: OK (1 warning — obsidian-svelte a11y, внешняя зависимость)
+- **Версия**: 3.2.2 (tag: 3.2.2, HEAD: main)
+- **Дата релиза**: 2026-04-10
 - **Тесты**: 23 suite, 457 tests, все PASS
 - **Ошибки компиляции**: 0
-- **Bundle**: 1.8mb main.js, 4.3kb main.css
-- **PR #10259**: Open, labels: "Changes requested", "Additional review required"
+- **Git**: clean, no uncommitted changes
+
+## v3.3.0 — Database View (в разработке)
+- **Статус**: Спецификация DRAFT v1.2 — три документа, аудит пройден, согласование завершено
+- **Основной документ**: `docs/architecture-database-view.md` (DRAFT v1.2, 2026-04-12)
+  - Все C1-C7 критических и M1-M9 средних проблем устранены
+  - Новый §20: Obsidian Community Guidelines Compliance (14 пунктов, все ✅ кроме 1 ⚠️ minAppVersion)
+  - Единый 5-фазный план: все фазы v3.3.x (Phase 5 = backlog v3.3.0-rc)
+  - ColumnAggregation (footer) vs AggregationFunction (pipeline) — naming resolved
+  - TransformPipeline работает на Enriched DataFrame, интегрирован в pipeline diagram §2.2
+- **UI/UX спецификация**: `docs/database-view-ui-ux.md` (DRAFT v1.1, 2026-04-12)
+  - M10: Убрана дублирующая кнопка collapse в Widget Header
+  - FormulaBar visual mode: v3.3.x-post (не v3.4.0+)
+  - L2: Cross-reference на pivot §6.1-6.2 для Transform Pipeline Editor
+- **Pivot/Transform спецификация**: `docs/database-view-pivot.md` (DRAFT v1.1, 2026-04-12)
+  - M8: validatePipelineOrder() добавлен в executor §5.2
+  - Regex safety §9.3: добавлен запрет lookbehind (iOS compatibility)
+  - DateGrouping.outputField: convention `${field}_${granularity}`
+  - Phase 4: v3.3.x-post (не v3.4.0+)
+- **Бэкап старого черновика**: `docs/architecture-database-view.OLD.md`
+- **Аудит**: `docs/audit-database-view-specs.md` — 21 issue → все resolved
+- **Obsidian compliance**: verified, 14/14 пункты checked
+- **Реализация**: ожидает старта Phase 1 (Foundation)
 
 ## История версий
 - v3.2.1 — bugfix: touchcancel ViewSwitcher, popover CSS, agenda date selector
