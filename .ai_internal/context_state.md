@@ -25,6 +25,12 @@
   - remote `origin` всё ещё указывает на `https://github.com/ParkPavel/obs-projects-plus.git`
   - `git ls-remote origin` => repository not found (GitHub repo удалён)
   - `gh` CLI отсутствует, автоматическое пересоздание remote из workspace недоступно
+- **Recovery result**:
+  - локальный backup commit: `00ad70a` — `chore: save current recovery state after crash`
+  - создан переносимый backup: `recovery-2026-04-21.bundle`
+  - через credential manager получены рабочие GitHub credentials
+  - push в `origin/main` выполнен успешно
+  - финальная проверка: local `HEAD` == remote `origin/main`, ветка clean / up-to-date
 - **Смысл для следующей сессии**: не начинать R2 заново; следующий функциональный шаг после recovery — `R2.6 Pipeline Preview per step`, затем R3 widget config UI
 
 ### КРИТИЧЕСКАЯ ПРОБЛЕМА (2026-04-20)
