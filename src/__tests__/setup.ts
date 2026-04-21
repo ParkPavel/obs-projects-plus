@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
 import { TextEncoder, TextDecoder } from "util";
+import dayjs from "dayjs";
+import isoWeek from "dayjs/plugin/isoWeek";
+import quarterOfYear from "dayjs/plugin/quarterOfYear";
+
+dayjs.extend(isoWeek);
+dayjs.extend(quarterOfYear);
 
 // Polyfill for Node.js environment
 (global as any).TextEncoder = TextEncoder;

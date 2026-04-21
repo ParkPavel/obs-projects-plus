@@ -25,6 +25,7 @@
 
   export let onColumnResize: (field: string, width: number) => void;
   export let onColumnSort: (fields: string[]) => void;
+  export let onDataSort: ((field: string, order: "asc" | "desc") => void) | undefined = undefined;
   export let onRowAdd: () => void;
   export let onRowChange: (rowId: GridRowId, row: GridRowModel) => void;
   export let onColumnConfigure: (column: GridColDef, editable: boolean) => void;
@@ -52,6 +53,22 @@
     const editable = !!column.editable && !readonly;
 
     const menu = new Menu();
+
+    if (onDataSort) {
+      menu.addItem((item) => {
+        item
+          .setTitle(t("components.data-grid.sort.asc"))
+          .setIcon("arrow-up")
+          .onClick(() => onDataSort!(column.field, "asc"));
+      });
+      menu.addItem((item) => {
+        item
+          .setTitle(t("components.data-grid.sort.desc"))
+          .setIcon("arrow-down")
+          .onClick(() => onDataSort!(column.field, "desc"));
+      });
+      menu.addSeparator();
+    }
 
     menu.addItem((item) => {
       item
@@ -177,6 +194,7 @@
 
 <div
   role="grid"
+  aria-label={t("components.data-grid.grid-label")}
   aria-colcount={sortedColumns.length + 1}
   aria-rowcount={rows.length + 2}
 >
@@ -196,7 +214,7 @@
     onColumnMenu={(field) => createColumnMenu(field)}
     onColumnOrder={handleColumnOrder}
   />
-  {#each rows as { rowId, row }, i (rowId)}
+  {#each rows as { rowId, row, cellStyles }, i (rowId)}
     <GridRow
       columns={sortedColumns}
       index={i + 2}
@@ -204,6 +222,7 @@
       {row}
       {activeCell}
       {onRowChange}
+      cellStyles={cellStyles ?? {}}
       color={colorModel(rowId)}
       onRowMenu={(rowId, row) => createRowMenu(rowId, row)}
       onRowOpen={(rowId, openMode) => {

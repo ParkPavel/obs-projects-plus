@@ -1,6 +1,6 @@
 # 📋 Code Standards & Obsidian Compliance Guide
 
-**Version**: 3.2.0  
+**Version**: 3.4.0  
 **Last Updated**: April 3, 2026  
 **Status**: ✅ Community Plugins Compliant
 
@@ -35,7 +35,7 @@ Projects Plus follows strict coding standards to ensure:
 |--------|--------|-------|
 | ESLint Errors | ✅ | 0 |
 | TypeScript Errors | ✅ | 0 |
-| Unit Tests | ✅ | 375/375 passing |
+| Unit Tests | ✅ | 800/800 passing |
 | Build | ✅ | ~7.5s, 1.8MB |
 | `any` Types | ✅ | 20 justified, 0 unjustified |
 
@@ -246,7 +246,7 @@ draft.values[field.name] = value;     // @ts-ignore - Immer Draft compat
 
 **Alternative Considered**: Remove Immer → Would require rewriting all immutable update patterns (~500 lines).
 
-**Decision**: Keep `@ts-ignore` with comments. Immer is battle-tested; runtime correctness is verified by 375 unit tests.
+**Decision**: Keep `@ts-ignore` with comments. Immer is battle-tested; runtime correctness is verified by 800 unit tests.
 
 #### Filter Functions
 
@@ -270,7 +270,7 @@ Before submitting a PR, ensure:
 ### Required ✅
 
 - [ ] `npm run build` — Compiles without errors
-- [ ] `npm test` — All 375 tests pass
+- [ ] `npm test` — All 800 tests pass
 - [ ] `npm run lint` — 0 ESLint errors
 - [ ] No `console.log()` statements (use `console.debug()` if needed)
 - [ ] No direct `localStorage` access (use App API)
@@ -401,7 +401,7 @@ Projects Plus maintains high code quality through:
 1. **Strict TypeScript** — Catches errors at compile time
 2. **ESLint Rules** — Enforces consistent style
 3. **Justified Exceptions** — Every deviation documented
-4. **Comprehensive Tests** — 375 unit tests
+4. **Comprehensive Tests** — 800 unit tests
 5. **Obsidian Compliance** — All requirements met
 
 When contributing, follow this guide to ensure your code meets the project's standards and Obsidian Community Plugin requirements.

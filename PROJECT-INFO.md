@@ -76,8 +76,8 @@ obs-projects-plus/
 ### Code Metrics
 - **Source Files**: 316 (167 TypeScript + 149 Svelte)
 - **Lines of Code**: ~61,000
-- **Test Suites**: 21
-- **Tests**: 375
+- **Test Suites**: 42
+- **Tests**: 800
 
 ### Build Output
 - **Bundle Size**: 1.8MB (main.js)

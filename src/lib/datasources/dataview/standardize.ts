@@ -37,6 +37,11 @@ function standardizeObject(value: any) {
     return (value as Link).toString();
   }
   if ("ts" in value) {
-    return dayjs(value.ts).format("YYYY-MM-DD");
+    const d = dayjs(value.ts);
+    // Preserve time component if present (non-midnight)
+    if (d.hour() !== 0 || d.minute() !== 0 || d.second() !== 0) {
+      return d.format("YYYY-MM-DD HH:mm");
+    }
+    return d.format("YYYY-MM-DD");
   }
 }

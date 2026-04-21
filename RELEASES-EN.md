@@ -1,11 +1,11 @@
 ﻿# 🚀 Release Information
 
-## Current Release: v3.2.2
+## Current Release: v3.4.0
 
-**Release Date**: April 10, 2026  
+**Release Date**: April 18, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Security & Quality — PR #10259 audit, JSON.parse protection, Board DnD fix, +82 tests
+**Type**: Major Feature — Database View Modernization (115 formulas, 8 widgets, 10 chart types, multi-source merge)
 
 ## 📦 Download Options
 
@@ -49,14 +49,79 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | ✅ | **Deep Mobile Adaptation** | v3.1.0 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Bugfix & Mobile UX** | v3.2.1 | Released | [CHANGELOG](CHANGELOG.md) |
-| 🥇 | **Database View** | v3.3.0 | Planned | [Architecture](docs/architecture-database-view.md) |
-| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Planned | — |
+| ✅ | **Security & Code Quality** | v3.2.2 | Released | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Database View** | v3.3.0 | Released | [Architecture](docs/architecture-database-view.md) |
+| ✅ | **Database View Modernization** | v3.4.0 | Released | [Architecture](docs/architecture-database-view.md) |
+| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Planned | — |
 
 ## 📋 Release Notes
 
 ---
 
-### 🛠️ v3.2.1 (April 9, 2026) — Bugfix & Mobile UX
+### 🚀 v3.4.0 (April 18, 2026) — Database View Modernization
+
+> **115 formulas, 8 widgets, 10 chart types, multi-source merge, Dataview LIST/TASK, scatter chart, ARIA accessibility, widget resize**
+
+#### 🧮 Computation Engine
+- **115 built-in formulas** (was 50+): financial (PMT, FV, NPV, IRR...), statistical (VARIANCE, PERCENTILE, CORREL...), conditional aggregations (SUMIF, COUNTIF, AVERAGEIF), durations (DAYS, WORKDAYS...), extended string (REGEX_MATCH, JOIN...), conversions (TO_CURRENCY, TO_PERCENT)
+- **Cross-record @reference** — `@fieldName` to access all column values
+- **8 relative date filter operators** — is-today, is-this-week, is-this-month, is-this-quarter, is-last-n-days, is-next-n-days, is-overdue, is-upcoming
+
+#### 📊 Visualization
+- **Scatter Chart** — SVG scatter plot with trend line, R², color groups, point sizing (10th chart type)
+- **FilterTabs Widget** — unique field values as clickable tabs (7th widget)
+- **SummaryRow Widget** — compact aggregation bar (8th widget)
+- **Stats sparkline** — inline sparkline in KPI cards
+- **Comparison N-metrics** — supports N metrics (was 2)
+
+#### 🔗 Data Integration
+- **Multi-source merge** — combine data from multiple folders/tags/Dataview queries
+- **Dataview LIST/TASK** — parse LIST and TASK results with recursive flattening
+- **DateTime precision** — Dataview dates preserve time (HH:mm)
+- **Inline add row** — add records directly from Database View
+
+#### ✨ Polish & Accessibility
+- **Recursive FormulaNode** — visual formula editor with unlimited nesting depth
+- **ARIA tab roving** — full keyboard navigation for all tabs
+- **DataGrid ARIA** — aria-label, aria-rowindex
+- **Touch visibility** — buttons visible on touch devices without hover
+- **Pipeline dirty state** — unsaved changes warning
+- **Widget resize** — drag bottom-right corner to resize widgets
+
+#### 🧪 Tests
+42 suites, 800 tests (was 41/730 in v3.3.1).
+
+---
+
+### 🏗️ v3.3.0 (April 22, 2026) — Database View
+
+> **New view type: widget dashboard with 8 widget types, 10 chart types, transform pipeline, formulas, and full l10n (4 languages)**
+
+#### 🆕 Database View
+
+The new `Database` view turns any project into a customizable dashboard. Widgets arrange on a 12-column grid (desktop) or stack vertically (mobile). Each widget can have its own data transform pipeline.
+
+**8 Widget Types**: Data Table (grouped, virtual scroll, conditional formatting), Chart (10 sub-types), Stats/KPI (19 aggregation functions), Comparison (N metric bars), Checklist (boolean field binding), View Port (embedded view), Filter Tabs (field value tabs), Summary Row (aggregation bar).
+
+**Data Engine**: 6-step transform pipeline (Filter, Group By, Aggregate, Compute, Unpivot, Pivot) with LRU cache, 115 formula functions, relation resolver, rollup engine.
+
+**Charts**: Bar, Horizontal Bar, Stacked Bar, Line, Area, Pie, Donut, Number/KPI, Progress, Scatter — all SVG-rendered.
+
+**UX**: Widget Toolbar with 3 preset templates, drag-and-drop reorder, grid/stack layout toggle, ARIA accessibility, virtual scroll for >100 rows.
+
+**i18n**: All strings localized to English, Russian, Ukrainian, Simplified Chinese (~90 keys).
+
+**Tests**: 42 suites, 800 tests (was 23/457 in v3.2.2).
+
+---
+
+### 🛠️ v3.2.2 (April 10, 2026) — Security & Code Quality
+
+> **PR #10259 audit: JSON.parse protection, Board DnD race condition fix, case-insensitive filters, +82 tests**
+
+---
+
+### �🛠️ v3.2.1 (April 9, 2026) — Bugfix & Mobile UX
 
 > **Mobile popover fixes, ViewSwitcher touch architecture rewrite, agenda date selector fix, CSS pipeline vulnerability resolved**
 

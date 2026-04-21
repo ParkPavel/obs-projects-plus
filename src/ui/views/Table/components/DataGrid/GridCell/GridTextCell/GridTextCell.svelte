@@ -6,6 +6,8 @@
   import TextLabel from "./TextLabel.svelte";
   import type { Optional } from "src/lib/dataframe/dataframe";
 
+  import { copyToClipboard, readFromClipboard } from "src/lib/helpers/clipboard";
+
   export let value: Optional<string>;
   export let onChange: (value: Optional<string>) => void;
   export let column: GridColDef;
@@ -31,14 +33,14 @@
   on:mousedown
   on:navigate
   onCopy={() => {
-    navigator.clipboard.writeText(value?.toString() || "");
+    copyToClipboard(value?.toString() || "");
   }}
   onCut={() => {
-    navigator.clipboard.writeText(value?.toString() || "");
+    copyToClipboard(value?.toString() || "");
     onChange(null);
   }}
   onPaste={async () => {
-    onChange(await navigator.clipboard.readText());
+    onChange(await readFromClipboard());
   }}
 >
   <TextLabel

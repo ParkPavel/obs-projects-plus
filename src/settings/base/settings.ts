@@ -77,7 +77,15 @@ export type DateFilterOperator =
   | "is-before"
   | "is-after"
   | "is-on-and-before"
-  | "is-on-and-after";
+  | "is-on-and-after"
+  | "is-today"
+  | "is-this-week"
+  | "is-this-month"
+  | "is-this-quarter"
+  | "is-last-n-days"
+  | "is-next-n-days"
+  | "is-overdue"
+  | "is-upcoming";
 
 export function isDateFilterOperator(
   op: FilterOperator
@@ -89,6 +97,14 @@ export function isDateFilterOperator(
     "is-after",
     "is-on-and-before",
     "is-on-and-after",
+    "is-today",
+    "is-this-week",
+    "is-this-month",
+    "is-this-quarter",
+    "is-last-n-days",
+    "is-next-n-days",
+    "is-overdue",
+    "is-upcoming",
   ].includes(op);
 }
 
@@ -146,6 +162,14 @@ export const filterOperatorTypes: Record<FilterOperator, FilterOperatorType> = {
   "has-all-of": "binary-multitext",
   "has-none-of": "binary-multitext",
   "has-keyword": "binary-text",
+  "is-today": "unary",
+  "is-this-week": "unary",
+  "is-this-month": "unary",
+  "is-this-quarter": "unary",
+  "is-last-n-days": "binary-number",
+  "is-next-n-days": "binary-number",
+  "is-overdue": "unary",
+  "is-upcoming": "unary",
 };
 
 export function getFilterOperatorType(

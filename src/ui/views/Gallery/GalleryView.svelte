@@ -210,7 +210,11 @@
     </Grid>
   {:else}
     <CenterBox>
-      <Typography variant="h5">{$i18n.t("views.gallery.empty")}</Typography>
+      <div class="ppp-gallery-empty">
+        <Icon name="image" size="lg" />
+        <Typography variant="h5">{$i18n.t("views.gallery.empty")}</Typography>
+        <span class="ppp-gallery-empty-hint">{$i18n.t("views.gallery.empty-hint", { defaultValue: "Create a note to get started" })}</span>
+      </div>
     </CenterBox>
   {/if}
 </GalleryOptionsProvider>

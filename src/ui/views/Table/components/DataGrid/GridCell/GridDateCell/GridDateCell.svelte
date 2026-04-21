@@ -13,6 +13,8 @@
   import { TextLabel } from "..";
   import type { GridColDef } from "../../dataGrid";
 
+  import { copyToClipboard } from "src/lib/helpers/clipboard";
+
   export let value: Optional<Date>;
   // Raw value for displaying invalid non-date values (e.g., string "2" in a date field)
   export let rawValue: Optional<DataValue> = null;
@@ -72,7 +74,7 @@
   on:navigate
   onCopy={() => {
     if (value || hasInvalidRawValue) {
-      navigator.clipboard.writeText(formattedDate);
+      copyToClipboard(formattedDate);
     }
   }}
 >

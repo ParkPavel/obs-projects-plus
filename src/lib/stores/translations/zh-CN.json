@@ -98,11 +98,17 @@
                     "error": {
                         "title": "Dataview 插件未启用。",
                         "message": "启用 Dataview 插件以使用本项目。"
-                    }
+                    },
+                    "validating": "正在验证查询...",
+                    "query-error": "查询失败，请检查语法。",
+                    "preview-table": "找到 {{count}} 条记录 (TABLE)",
+                    "preview-list": "找到 {{count}} 个项目 (LIST)",
+                    "preview-task": "找到 {{count}} 个任务 (TASK)",
+                    "unsupported-type": "不支持的查询类型：{{type}}"
                 },
                 "query": {
                     "name": "查询语句 (Query)",
-                    "description": "当前只支持 TABLE 查询语句。"
+                    "description": "支持 TABLE、LIST 和 TASK 查询。"
                 },
                 "recursive": {
                     "name": "管理子文件夹",
@@ -115,6 +121,10 @@
                 "more-settings": {
                     "name": "更多设置",
                     "description": ""
+                },
+                "additional-sources": {
+                    "name": "附加数据源",
+                    "add": "添加数据源"
                 },
                 "templates": {
                     "name": "模板",
@@ -301,6 +311,7 @@
             },
             "table": {
                 "name": "表格",
+                "deprecation-notice": "表格视图已弃用。请切换到数据库视图以获得增强功能。",
                 "hide-fields": "隐藏字段",
                 "rename-field": "重命名字段",
                 "rename": "重命名"
@@ -561,10 +572,180 @@
                     }
                 },
                 "empty": "该视图还没有数据。"
+            },
+            "database": {
+                "name": "数据库",
+                "add-row": "新建笔记",
+                "canvas": {
+                    "widgets": "组件",
+                    "hide-toolbar": "隐藏组件工具栏",
+                    "show-toolbar": "显示组件工具栏",
+                    "toggle-layout": "切换布局模式",
+                    "layout-grid": "网格",
+                    "layout-stack": "列表",
+                    "hide-formula-bar": "隐藏公式栏",
+                    "show-formula-bar": "显示公式栏"
+                },
+                "widget": {
+                    "expand": "展开组件",
+                    "collapse": "折叠组件",
+                    "chart-settings": "图表设置",
+                    "pipeline": "数据管道",
+                    "remove": "删除组件",
+                    "not-configured": "组件类型 \"{{type}}\" — 未配置",
+                    "add": "添加组件",
+                    "add-aria": "添加组件",
+                    "templates": "模板"
+                },
+                "types": {
+                    "data-table": "数据表",
+                    "chart": "图表",
+                    "stats": "统计",
+                    "comparison": "对比",
+                    "checklist": "清单",
+                    "view-port": "视口",
+                    "filter-tabs": "筛选选项卡",
+                    "summary-row": "汇总行"
+                },
+                "formula": {
+                    "title": "公式编辑器",
+                    "hint": "Ctrl+Enter 应用，Esc 取消",
+                    "field-name": "字段名称",
+                    "field-placeholder": "例如 计算预算",
+                    "expression-placeholder": "例如 IF(Status = \"Active\", Budget * 1.2, 0)",
+                    "preview": "预览：",
+                    "cancel": "取消",
+                    "apply": "应用",
+                    "mode-code": "代码",
+                    "mode-visual": "可视化",
+                    "visual-empty": "点击添加公式块",
+                    "visual-parse-error": "无法在可视化模式下显示 — 请切换到代码模式编辑"
+                },
+                "pipeline": {
+                    "title": "数据管道",
+                    "steps": "个步骤",
+                    "empty": "没有步骤。请在下方添加。",
+                    "move-up": "上移",
+                    "move-down": "下移",
+                    "remove": "删除",
+                    "add-step": "添加步骤：",
+                    "cancel": "取消",
+                    "save": "保存管道",
+                    "filter": "筛选",
+                    "group-by": "分组",
+                    "aggregate": "汇总",
+                    "compute": "计算",
+                    "unpivot": "逆透视",
+                    "pivot": "透视",
+                    "none": "（无）",
+                    "columns": "列",
+                    "groups": "组",
+                    "unset": "（未设置）",
+                    "unknown": "未知",
+                    "unsaved-changes": "未保存的更改",
+                    "discard-confirm": "您有未保存的管道更改。放弃？",
+                    "keep-editing": "继续编辑",
+                    "discard": "放弃"
+                },
+                "group": {
+                    "empty": "（空）"
+                },
+                "chart": {
+                    "no-data": "暂无数据",
+                    "type": "图表类型",
+                    "x-axis": "X 轴",
+                    "y-axis": "Y 轴",
+                    "aggregation": "汇总方式",
+                    "sort-by": "排序方式",
+                    "height": "高度",
+                    "types": {
+                        "bar": "柱状图",
+                        "horizontal-bar": "条形图",
+                        "stacked-bar": "堆叠柱状图",
+                        "line": "折线图",
+                        "area": "面积图",
+                        "pie": "饼图",
+                        "donut": "环形图",
+                        "number": "数字 / KPI",
+                        "progress": "进度",
+                        "scatter": "散点图"
+                    },
+                    "aggregations": {
+                        "sum": "求和",
+                        "average": "平均值",
+                        "min": "最小值",
+                        "max": "最大值",
+                        "median": "中位数",
+                        "count": "计数",
+                        "unique": "唯一值"
+                    },
+                    "sort": {
+                        "label": "标签",
+                        "value": "数值",
+                        "manual": "手动"
+                    },
+                    "heights": {
+                        "small": "小",
+                        "medium": "中",
+                        "large": "大"
+                    },
+                    "options": {
+                        "grid": "网格线",
+                        "labels": "标签",
+                        "values": "数值",
+                        "legend": "图例",
+                        "hide-zero": "隐藏零值",
+                        "cumulative": "累计"
+                    },
+                    "scatter": {
+                        "color-by": "颜色按",
+                        "size-by": "大小按",
+                        "trend-line": "趋势线",
+                        "r-squared": "显示 R²",
+                        "point-size": "点大小",
+                        "opacity": "透明度",
+                        "none": "（无）"
+                    },
+                    "section": {
+                        "display": "显示设置"
+                    }
+                },
+                "comparison": {
+                    "empty": "配置对比指标",
+                    "metric-a": "指标 A",
+                    "metric-b": "指标 B"
+                },
+                "filter-tabs": {
+                    "all": "全部"
+                },
+                "checklist": {
+                    "select-field": "选择布尔字段",
+                    "no-items": "暂无项目",
+                    "done": "已完成"
+                },
+                "viewport": {
+                    "select": "选择要嵌入的视图",
+                    "change": "更改嵌入视图",
+                    "embedded": "嵌入视图：{{label}}",
+                    "embed-title": "嵌入视图",
+                    "table": "表格视图",
+                    "board": "看板视图",
+                    "calendar": "日历视图",
+                    "gallery": "画廊视图"
+                },
+                "templates": {
+                    "dashboard": "仪表盘",
+                    "dashboard-desc": "统计概览 + 图表 + 数据表",
+                    "analytics": "分析",
+                    "analytics-desc": "多图表数据分析",
+                    "kanban-plus": "Kanban+",
+                    "kanban-plus-desc": "数据表 + 清单 + 进度追踪"
+                }
             }
         },
         "components": {
             "data-grid": {
+                "grid-label": "数据表",
                 "column": {
                     "configure": "配置字段",
                     "add": "新建字段",
@@ -769,6 +950,12 @@
         "navigation": {
             "active-project": "当前项目"
         },
+        "nav": {
+            "project-switcher": {
+                "tooltip": "切换项目",
+                "search-placeholder": "搜索项目..."
+            }
+        },
         "settings-menu": {
             "title": "设置",
             "tabs": {
@@ -801,13 +988,20 @@
                     "timezone": "时区",
                     "show-agenda": "显示日程",
                     "hide-agenda": "隐藏日程",
+                    "hints": {
+                        "timezone": "例如 Asia/Shanghai 或 local"
+                    },
                     "timeline": {
                         "title": "时间线设置",
                         "start-hour": "开始时间",
                         "end-hour": "结束时间",
                         "event-color-field": "事件颜色字段",
                         "show-weekends": "显示周末",
-                        "show-all-day": "显示'全天'区域"
+                        "show-all-day": "显示'全天'区域",
+                        "hints": {
+                            "event-color-field": "用于事件颜色的字段（可选）",
+                            "event-color-placeholder": "例如 status, priority"
+                        }
                     },
                     "interval-options": {
                         "year": "年",
@@ -818,15 +1012,37 @@
                     "layout-options": {
                         "headers": "标题 (经典)",
                         "bars": "条形 (时间线)"
+                    },
+                    "field-mapping": {
+                        "title": "字段映射",
+                        "hint": "从列表中选择现有字段或输入新字段名称",
+                        "placeholder": "输入或选择字段",
+                        "new-field": "+ 新字段",
+                        "date": "创建日期 (date)",
+                        "start-date": "开始 (startDate)",
+                        "end-date": "结束 (endDate)",
+                        "start-time": "开始时间 (startTime)",
+                        "end-time": "结束时间 (endTime)",
+                        "check": "状态字段 (check)",
+                        "hints": {
+                            "date": "创建笔记时自动填充。不参与确定事件开始时间",
+                            "start-date": "多日事件的开始日期",
+                            "end-date": "多日事件的结束日期",
+                            "start-time": "单独的开始时间字段 (HH:mm)",
+                            "end-time": "单独的结束时间字段",
+                            "check": "用于标记完成状态的字段 (completed, done 等)"
+                        }
                     }
                 },
                 "board": {
                     "column-width": "列宽度",
+                    "group-by-field": "分组字段 (状态)",
                     "header-field": "卡片标题",
                     "order-sync-field": "排序同步字段",
                     "freeze-columns": "冻结列",
                     "hints": {
                         "column-width": "每列宽度（像素）",
+                        "group-by-field": "用于按列分组卡片的字符串前置元数据字段",
                         "header-field": "用于卡片标题的字段",
                         "order-sync-field": "用于存储卡片位置的数字字段"
                     }
@@ -881,6 +1097,8 @@
             "close": "关闭",
             "total": "总计",
             "open-in-new-window": "Ctrl+点击: 在新窗口中打开",
+            "open-in-tab": "在新标签页中打开",
+            "open-in-window": "在新窗口中打开",
             "save": "保存",
             "cancel": "取消",
             "delete": "删除",

@@ -5,6 +5,8 @@
   import { isNumber, type Optional } from "src/lib/dataframe/dataframe";
   import type { GridColDef } from "../../dataGrid";
 
+  import { copyToClipboard, readFromClipboard } from "src/lib/helpers/clipboard";
+
   export let value: Optional<number>;
   export let onChange: (value: Optional<number>) => void;
   export let column: GridColDef;
@@ -24,14 +26,14 @@
   {rowindex}
   {colindex}
   onCopy={() => {
-    navigator.clipboard.writeText(value?.toString() || "");
+    copyToClipboard(value?.toString() || "");
   }}
   onCut={() => {
-    navigator.clipboard.writeText(value?.toString() || "");
+    copyToClipboard(value?.toString() || "");
     onChange(null);
   }}
   onPaste={async () => {
-    onChange(parseFloat(await navigator.clipboard.readText()));
+    onChange(parseFloat(await readFromClipboard()));
   }}
 >
   <svelte:fragment slot="read">

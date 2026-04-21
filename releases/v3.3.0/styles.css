@@ -1,0 +1,591 @@
+:root{--ppp-space-0: 0;--ppp-space-1: .125rem;--ppp-space-2: .25rem;--ppp-space-3: .375rem;--ppp-space-4: .5rem;--ppp-space-5: .75rem;--ppp-space-6: 1rem;--ppp-space-7: 1.5rem;--ppp-space-8: 2rem;--ppp-space-9: 3rem;--ppp-space-10: 4rem;--ppp-font-size-xs: .6875rem;--ppp-font-size-sm: .75rem;--ppp-font-size-md: .8125rem;--ppp-font-size-base: .875rem;--ppp-font-size-lg: 1rem;--ppp-font-size-xl: 1.25rem;--ppp-font-size-2xl: 1.5rem;--ppp-font-weight-normal: 400;--ppp-font-weight-medium: 500;--ppp-font-weight-semibold: 600;--ppp-font-weight-bold: 700;--ppp-line-height-tight: 1.25;--ppp-line-height-normal: 1.5;--ppp-line-height-relaxed: 1.75;--ppp-radius-none: 0;--ppp-radius-sm: .125rem;--ppp-radius-md: .25rem;--ppp-radius-lg: .375rem;--ppp-radius-xl: .5rem;--ppp-radius-2xl: .75rem;--ppp-radius-full: 9999px;--ppp-shadow-none: none;--ppp-shadow-sm: 0 1px 2px rgba(0, 0, 0, .05);--ppp-shadow-md: 0 2px 4px rgba(0, 0, 0, .1);--ppp-shadow-lg: 0 4px 8px rgba(0, 0, 0, .15);--ppp-shadow-xl: 0 8px 16px rgba(0, 0, 0, .2);--ppp-duration-instant: 0ms;--ppp-duration-fast: .1s;--ppp-duration-normal: .15s;--ppp-duration-slow: .25s;--ppp-duration-slower: .4s;--ppp-ease-linear: linear;--ppp-ease-in: cubic-bezier(.4, 0, 1, 1);--ppp-ease-out: cubic-bezier(0, 0, .2, 1);--ppp-ease-in-out: cubic-bezier(.4, 0, .2, 1);--ppp-ease-bounce: cubic-bezier(.68, -.55, .265, 1.55);--ppp-z-below: -1;--ppp-z-base: 0;--ppp-z-raised: 1;--ppp-z-dropdown: 10;--ppp-z-sticky: 20;--ppp-z-overlay: 30;--ppp-z-modal: 40;--ppp-z-popover: 50;--ppp-z-toast: 60;--ppp-gap-inline-xs: var(--ppp-space-2);--ppp-gap-inline-sm: var(--ppp-space-3);--ppp-gap-inline-md: var(--ppp-space-4);--ppp-gap-inline-lg: var(--ppp-space-6);--ppp-gap-block-xs: var(--ppp-space-2);--ppp-gap-block-sm: var(--ppp-space-3);--ppp-gap-block-md: var(--ppp-space-5);--ppp-gap-block-lg: var(--ppp-space-7);--ppp-padding-xs: var(--ppp-space-2);--ppp-padding-sm: var(--ppp-space-3);--ppp-padding-md: var(--ppp-space-4);--ppp-padding-lg: var(--ppp-space-6);--ppp-padding-xl: var(--ppp-space-8);--ppp-padding-tight: var(--ppp-space-3);--ppp-padding-normal: var(--ppp-space-4);--ppp-padding-relaxed: var(--ppp-space-5);--ppp-padding-loose: var(--ppp-space-6);--ppp-gap-tight: var(--ppp-space-2);--ppp-gap-normal: var(--ppp-space-4);--ppp-gap-relaxed: var(--ppp-space-5);--ppp-gap-loose: var(--ppp-space-6);--ppp-touch-target-min: 2.75rem;--ppp-touch-comfortable: 3rem;--ppp-icon-size-sm: 1rem;--ppp-icon-size-md: 1.25rem;--ppp-icon-size-lg: 1.5rem;--ppp-border-width: 1px;--ppp-border-width-thick: 2px;--ppp-table-header-height: 1.875rem;--ppp-table-row-height: 1.875rem;--ppp-table-cell-min-height: 1.875rem;--ppp-button-height-sm: 1.75rem;--ppp-button-height-md: 2rem;--ppp-button-height-lg: 2.5rem;--ppp-input-height-sm: 1.75rem;--ppp-input-height-md: 2rem;--ppp-input-height-lg: 2.5rem;--ppp-calendar-cell-min-width: 2rem;--ppp-calendar-cell-min-height: 2rem;--ppp-calendar-header-height: 2.5rem;--ppp-calendar-row-gap: var(--ppp-space-1);--ppp-calendar-col-gap: var(--ppp-space-1);--ppp-timeline-hour-height: 3.75rem;--ppp-timeline-gutter-width: 3rem;--ppp-timeline-event-gap: var(--ppp-space-1);--ppp-timeline-event-radius: var(--ppp-radius-md);--ppp-event-bar-min-height: 1.25rem;--ppp-event-bar-padding-x: var(--ppp-space-3);--ppp-event-bar-padding-y: var(--ppp-space-1);--ppp-event-bar-font-size: var(--ppp-font-size-xs);--ppp-event-strip-height: 1.25rem;--ppp-event-strip-gap: var(--ppp-space-1);--ppp-event-strip-radius: var(--ppp-radius-sm);--ppp-overflow-indicator-size: 1rem;--ppp-overflow-indicator-font-size: var(--ppp-font-size-xs);--ppp-sidebar-width: 15rem;--ppp-sidebar-collapsed-width: 2.5rem}@media (prefers-contrast: high){:root{--ppp-shadow-sm: 0 0 0 1px currentColor;--ppp-shadow-md: 0 0 0 2px currentColor}}@media (prefers-reduced-motion: reduce){:root{--ppp-duration-instant: 0ms;--ppp-duration-fast: 0ms;--ppp-duration-normal: 0ms;--ppp-duration-slow: 0ms;--ppp-duration-slower: 0ms}}@media (pointer: coarse){:root{--ppp-table-row-height: var(--ppp-touch-target-min);--ppp-button-height-md: var(--ppp-touch-target-min);--ppp-input-height-md: var(--ppp-touch-target-min);--ppp-table-header-height: var(--ppp-touch-target-min)}}@media (max-width: 48rem){:root{--ppp-event-strip-height: 1.125rem}}
+
+/* ═══════════════════════════════════════════════════════════════
+   Projects Plus - Main Stylesheet
+   v3.0.4
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Import Design Tokens (Fluid Architecture Phase 3) */
+/* Note: tokens.css is bundled via esbuild from src/ui/tokens/tokens.css */
+
+/* ═══════════════════════════════════════════════════════════════
+   Form Elements - SCOPED to plugin only (Dark/Light theme fix)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Native select elements - inherit theme colors */
+.obs-projects-plus select,
+.workspace-leaf-content[data-type="obs-projects-plus"] select,
+.projects-modal select {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  border: 0.0625rem solid var(--background-modifier-border);
+  border-radius: var(--radius-s, 0.25rem);
+  padding: 0.5rem 0.625rem;
+  min-height: 2.25rem;
+  font-size: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  padding-right: 1.75rem;
+}
+
+/* Select option styling for dark theme */
+.obs-projects-plus select option,
+.workspace-leaf-content[data-type="obs-projects-plus"] select option,
+.projects-modal select option {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+}
+
+/* Select hover/focus states */
+.obs-projects-plus select:hover,
+.workspace-leaf-content[data-type="obs-projects-plus"] select:hover,
+.projects-modal select:hover {
+  border-color: var(--interactive-accent);
+}
+
+.obs-projects-plus select:focus,
+.workspace-leaf-content[data-type="obs-projects-plus"] select:focus,
+.projects-modal select:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 0.125rem rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Accessibility Utilities - SCOPED to plugin only
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Screen reader only - visually hidden but accessible */
+.obs-projects-plus .sr-only,
+.obs-projects-plus .visually-hidden,
+.workspace-leaf-content[data-type="obs-projects-plus"] .sr-only,
+.workspace-leaf-content[data-type="obs-projects-plus"] .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link for keyboard navigation - SCOPED */
+.obs-projects-plus .skip-link,
+.workspace-leaf-content[data-type="obs-projects-plus"] .skip-link {
+  position: absolute;
+  top: -2.5rem;
+  left: 0;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  padding: 0.5rem;
+  z-index: 100;
+  transition: top 0.2s ease;
+}
+
+.obs-projects-plus .skip-link:focus,
+.workspace-leaf-content[data-type="obs-projects-plus"] .skip-link:focus {
+  top: 0;
+}
+
+/* Focus visible enhancement - SCOPED to plugin elements */
+.obs-projects-plus :focus-visible,
+.workspace-leaf-content[data-type="obs-projects-plus"] :focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference - SCOPED to plugin only */
+@media (prefers-reduced-motion: reduce) {
+  .obs-projects-plus *,
+  .obs-projects-plus *::before,
+  .obs-projects-plus *::after,
+  .workspace-leaf-content[data-type="obs-projects-plus"] *,
+  .workspace-leaf-content[data-type="obs-projects-plus"] *::before,
+  .workspace-leaf-content[data-type="obs-projects-plus"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode enhancements - SCOPED */
+@media (prefers-contrast: high) {
+  .obs-projects-plus .projects--board--card,
+  .obs-projects-plus .projects--board--column,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--card,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--column {
+    border-width: 2px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Board Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.projects--board {
+  display: flex;
+  column-gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0.5rem;
+}
+
+.projects--board--column {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background-color: var(--background-primary-alt);
+  display: flex;
+  gap: var(--size-4-2);
+  flex-direction: column;
+  padding: var(--size-4-2);
+
+  --board-column-drag-accent: hsla(var(--interactive-accent-hsl), 0.3);
+  --board-column-drop-accent: hsla(var(--interactive-accent-hsl), 0.5);
+
+  &:has(.projects--board--card-placeholder) {
+    box-shadow: 0 0 0.5rem 0 var(--board-column-drop-accent);
+    transition: box-shadow 150ms ease-in-out;
+  }
+}
+
+.projects--board--card {
+  background-color: var(--background-primary);
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-4-2);
+}
+
+.projects--board--card:hover {
+  border: 1px solid var(--background-modifier-border-hover);
+}
+
+.projects--board--card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  min-height: 2.2rem;
+  transition: all 150ms ease-in-out;
+
+  &:has(.projects--board--card-placeholder) {
+    background: var(--board-column-drop-accent) !important;
+  }
+}
+
+.projects--gallery--grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.projects--gallery--card {
+  background-color: var(--background-primary-alt);
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  padding: 0;
+  margin: 0;
+}
+
+.projects--gallery--card:hover {
+  border: 1px solid var(--background-modifier-border-hover);
+}
+
+.projects--gallery--card__body {
+  padding: 0.5rem;
+}
+
+.projects--gallery--card__media {
+  height: 11.25rem;
+  border-top-left-radius: var(--radius-s);
+  border-top-right-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.projects--gallery--card__media img {
+  width: 100%;
+  height: 100%;
+  border-top-left-radius: var(--radius-s);
+  border-top-right-radius: var(--radius-s);
+}
+
+.obs-projects-plus .view-header-left,
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-header-left {
+  display: none !important;
+}
+
+.obs-projects-plus .view-header-nav-buttons,
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-header-nav-buttons {
+  display: none !important;
+}
+
+.workspace-leaf-content[data-type="obs-projects-plus"] .view-content {
+  padding: 0;
+}
+
+.projects--popover {
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: var(--shadow-s);
+  border-radius: var(--radius-m);
+  padding: var(--size-4-5);
+  max-height: 95vh;
+}
+
+/* Mobile popover fixes - SCOPED to plugin only */
+@media (max-width: 48rem) {
+  .obs-projects-plus .projects--popover,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--popover {
+    position: fixed !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    top: auto !important;
+    bottom: 0.5rem !important;
+    max-width: calc(100vw - 1rem) !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    border-radius: 1rem;
+    box-shadow: 0 -0.25rem 2rem rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+  
+  /* Ensure popover content is scrollable */
+  .obs-projects-plus .projects--popover > *,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--popover > * {
+    max-height: calc(60vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+/* 
+ * REMOVED: Global modal/dropdown overrides that were leaking to Obsidian UI
+ * These were causing issues with Obsidian's own modals and menus.
+ * Mobile styling for plugin-specific modals should be handled in component styles.
+ */
+
+/* Mobile responsive styles - SCOPED to plugin */
+@media (max-width: 48rem) {
+  .obs-projects-plus .projects--board--column,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--column {
+    /* Columns keep their width, allow horizontal scroll */
+    flex-shrink: 0;
+  }
+
+  .obs-projects-plus .projects--gallery--grid,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--grid {
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .obs-projects-plus .projects--board,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board {
+    column-gap: 0.25rem;
+    margin: 0.25rem;
+  }
+
+  .obs-projects-plus .projects--gallery--grid,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.5rem;
+  }
+
+  .obs-projects-plus .projects--gallery--card__media,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card__media {
+    height: 8.75rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Container Query Adaptive Layout ("matryoshka" principle)
+   Responds to the pane/split size, not the viewport.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Narrow pane (< 25rem): compact board, smaller gaps & padding */
+@container view-content (max-width: 25rem) {
+  .projects--board {
+    column-gap: 0.25rem;
+    margin: 0.25rem;
+  }
+
+  .projects--board--column {
+    padding: var(--size-4-1);
+    gap: var(--size-4-1);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .projects--board--card {
+    padding: var(--size-4-1);
+  }
+}
+
+/* Medium-narrow pane (< 35rem): slightly tighter layout */
+@container view-content (max-width: 35rem) {
+  .projects--board {
+    column-gap: 0.375rem;
+    margin: 0.375rem;
+  }
+
+  .projects--board--column {
+    padding: var(--size-4-1) var(--size-4-2);
+  }
+}
+
+/* Touch device optimizations - SCOPED to plugin only */
+@media (pointer: coarse) {
+  .obs-projects-plus .projects--board--card,
+  .obs-projects-plus .projects--gallery--card,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--card,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card {
+    min-height: 2.75rem;
+  }
+
+  /* v3.0.10: Active/tap state for touch (hover doesn't work on touch) */
+  .obs-projects-plus .projects--gallery--card:active,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card:active {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-modifier-hover);
+    transition: background-color 80ms ease;
+  }
+
+  .obs-projects-plus .projects--board--card:active,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--board--card:active {
+    background: var(--background-primary-alt);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  /* v3.0.10: Gallery card media — larger tap target on touch */
+  .obs-projects-plus .projects--gallery--card__media,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card__media {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Touch targets - SCOPED to plugin buttons only */
+  .obs-projects-plus button,
+  .obs-projects-plus .clickable-icon,
+  .workspace-leaf-content[data-type="obs-projects-plus"] button,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .clickable-icon {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}
+
+/* 
+ * REMOVED: Global dropdown/menu overrides
+ * .dropdown, .suggestion-container, .menu styles were affecting Obsidian UI
+ * Plugin-specific dropdowns should use scoped classes like .projects--dropdown
+ */
+
+/* Mobile calendar day popup overlay - SCOPED */
+@media (max-width: 48rem) {
+  .obs-projects-plus .day-popup-overlay,
+  .workspace-leaf-content[data-type="obs-projects-plus"] .day-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Imperative Popover Styles (Phase 5 — v3.0.6)
+   Used by: FilterRow, DateFormulaInput, AdvancedFilterEditor
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Container — parent of all popover popovers (positioned via JS) */
+.ppp-popover-container {
+  position: fixed;
+  border: 1px solid color-mix(in srgb, var(--background-modifier-border) 60%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--background-primary) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-interface);
+}
+
+/* Search bar inside popover */
+.ppp-popover-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
+}
+
+/* Search input field */
+.ppp-popover-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-family: var(--font-interface);
+  outline: none;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Scrollable list inside popover */
+.ppp-popover-list {
+  overflow-y: auto;
+  padding: 4px;
+}
+
+/* Single list item (button) */
+.ppp-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-interface);
+  text-align: left;
+  line-height: 1.3;
+  min-height: 28px;
+  box-sizing: border-box;
+  transition: background 0.08s ease;
+}
+
+/* Item state modifiers */
+.ppp-popover-item--selected {
+  color: var(--interactive-accent);
+  font-weight: 500;
+}
+
+.ppp-popover-item--hover {
+  background: var(--background-modifier-hover);
+}
+
+/* Icon wrapper inside item */
+.ppp-popover-item-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  width: 18px;
+  height: 18px;
+}
+
+/* Empty state */
+.ppp-popover-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Label text with ellipsis */
+.ppp-popover-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Footer hint bar */
+.ppp-popover-footer {
+  padding: 4px 12px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Portaled List-Editor Overlay / Modal
+   Used by: AgendaSidebar.svelte (portalOverlay action → document.body)
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes ppp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ppp-slide-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Settings Tab Popover Styles (Phase 5 — v3.0.6)
+   Used by: SortTab, FiltersTab, ColorFiltersTab
+   ═══════════════════════════════════════════════════════════════ */
+
+.ppp-pop-box {
+  position: fixed;
+  z-index: 10001;
+  min-width: 180px;
+  max-width: 320px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.ppp-pop-list {
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ppp-pop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-interface);
+  text-align: left;
+}
+
+.ppp-pop-item--selected {
+  font-weight: 600;
+  color: var(--interactive-accent);
+}
+
+.ppp-pop-muted {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/*# sourceMappingURL=styles.css.map */
+
+/* === GENERATED: Design Tokens (do not edit below) === */
+:root{--ppp-space-0: 0;--ppp-space-1: .125rem;--ppp-space-2: .25rem;--ppp-space-3: .375rem;--ppp-space-4: .5rem;--ppp-space-5: .75rem;--ppp-space-6: 1rem;--ppp-space-7: 1.5rem;--ppp-space-8: 2rem;--ppp-space-9: 3rem;--ppp-space-10: 4rem;--ppp-font-size-xs: .6875rem;--ppp-font-size-sm: .75rem;--ppp-font-size-md: .8125rem;--ppp-font-size-base: .875rem;--ppp-font-size-lg: 1rem;--ppp-font-size-xl: 1.25rem;--ppp-font-size-2xl: 1.5rem;--ppp-font-weight-normal: 400;--ppp-font-weight-medium: 500;--ppp-font-weight-semibold: 600;--ppp-font-weight-bold: 700;--ppp-line-height-tight: 1.25;--ppp-line-height-normal: 1.5;--ppp-line-height-relaxed: 1.75;--ppp-radius-none: 0;--ppp-radius-sm: .125rem;--ppp-radius-md: .25rem;--ppp-radius-lg: .375rem;--ppp-radius-xl: .5rem;--ppp-radius-2xl: .75rem;--ppp-radius-full: 9999px;--ppp-shadow-none: none;--ppp-shadow-sm: 0 1px 2px rgba(0, 0, 0, .05);--ppp-shadow-md: 0 2px 4px rgba(0, 0, 0, .1);--ppp-shadow-lg: 0 4px 8px rgba(0, 0, 0, .15);--ppp-shadow-xl: 0 8px 16px rgba(0, 0, 0, .2);--ppp-duration-instant: 0ms;--ppp-duration-fast: .1s;--ppp-duration-normal: .15s;--ppp-duration-slow: .25s;--ppp-duration-slower: .4s;--ppp-ease-linear: linear;--ppp-ease-in: cubic-bezier(.4, 0, 1, 1);--ppp-ease-out: cubic-bezier(0, 0, .2, 1);--ppp-ease-in-out: cubic-bezier(.4, 0, .2, 1);--ppp-ease-bounce: cubic-bezier(.68, -.55, .265, 1.55);--ppp-z-below: -1;--ppp-z-base: 0;--ppp-z-raised: 1;--ppp-z-dropdown: 10;--ppp-z-sticky: 20;--ppp-z-overlay: 30;--ppp-z-modal: 40;--ppp-z-popover: 50;--ppp-z-toast: 60;--ppp-gap-inline-xs: var(--ppp-space-2);--ppp-gap-inline-sm: var(--ppp-space-3);--ppp-gap-inline-md: var(--ppp-space-4);--ppp-gap-inline-lg: var(--ppp-space-6);--ppp-gap-block-xs: var(--ppp-space-2);--ppp-gap-block-sm: var(--ppp-space-3);--ppp-gap-block-md: var(--ppp-space-5);--ppp-gap-block-lg: var(--ppp-space-7);--ppp-padding-xs: var(--ppp-space-2);--ppp-padding-sm: var(--ppp-space-3);--ppp-padding-md: var(--ppp-space-4);--ppp-padding-lg: var(--ppp-space-6);--ppp-padding-xl: var(--ppp-space-8);--ppp-padding-tight: var(--ppp-space-3);--ppp-padding-normal: var(--ppp-space-4);--ppp-padding-relaxed: var(--ppp-space-5);--ppp-padding-loose: var(--ppp-space-6);--ppp-gap-tight: var(--ppp-space-2);--ppp-gap-normal: var(--ppp-space-4);--ppp-gap-relaxed: var(--ppp-space-5);--ppp-gap-loose: var(--ppp-space-6);--ppp-touch-target-min: 2.75rem;--ppp-touch-comfortable: 3rem;--ppp-icon-size-sm: 1rem;--ppp-icon-size-md: 1.25rem;--ppp-icon-size-lg: 1.5rem;--ppp-border-width: 1px;--ppp-border-width-thick: 2px;--ppp-table-header-height: 1.875rem;--ppp-table-row-height: 1.875rem;--ppp-table-cell-min-height: 1.875rem;--ppp-button-height-sm: 1.75rem;--ppp-button-height-md: 2rem;--ppp-button-height-lg: 2.5rem;--ppp-input-height-sm: 1.75rem;--ppp-input-height-md: 2rem;--ppp-input-height-lg: 2.5rem;--ppp-calendar-cell-min-width: 2rem;--ppp-calendar-cell-min-height: 2rem;--ppp-calendar-header-height: 2.5rem;--ppp-calendar-row-gap: var(--ppp-space-1);--ppp-calendar-col-gap: var(--ppp-space-1);--ppp-timeline-hour-height: 3.75rem;--ppp-timeline-gutter-width: 3rem;--ppp-timeline-event-gap: var(--ppp-space-1);--ppp-timeline-event-radius: var(--ppp-radius-md);--ppp-event-bar-min-height: 1.25rem;--ppp-event-bar-padding-x: var(--ppp-space-3);--ppp-event-bar-padding-y: var(--ppp-space-1);--ppp-event-bar-font-size: var(--ppp-font-size-xs);--ppp-event-strip-height: 1.25rem;--ppp-event-strip-gap: var(--ppp-space-1);--ppp-event-strip-radius: var(--ppp-radius-sm);--ppp-overflow-indicator-size: 1rem;--ppp-overflow-indicator-font-size: var(--ppp-font-size-xs);--ppp-sidebar-width: 15rem;--ppp-sidebar-collapsed-width: 2.5rem}@media (prefers-contrast: high){:root{--ppp-shadow-sm: 0 0 0 1px currentColor;--ppp-shadow-md: 0 0 0 2px currentColor}}@media (prefers-reduced-motion: reduce){:root{--ppp-duration-instant: 0ms;--ppp-duration-fast: 0ms;--ppp-duration-normal: 0ms;--ppp-duration-slow: 0ms;--ppp-duration-slower: 0ms}}@media (pointer: coarse){:root{--ppp-table-row-height: var(--ppp-touch-target-min);--ppp-button-height-md: var(--ppp-touch-target-min);--ppp-input-height-md: var(--ppp-touch-target-min);--ppp-table-header-height: var(--ppp-touch-target-min)}}@media (max-width: 48rem){:root{--ppp-event-strip-height: 1.125rem}}.ppp-drag-feedback{max-height:3rem;overflow:hidden;opacity:.9;border-radius:.375rem;box-shadow:0 4px 12px #0003}.ppp-hit-test-hidden{display:none}.ppp-hit-test-active{pointer-events:auto}

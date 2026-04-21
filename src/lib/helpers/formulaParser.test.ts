@@ -95,7 +95,7 @@ describe('tokenize', () => {
   });
 
   it('throws on unexpected character', () => {
-    expect(() => tokenize('status @ "Active"')).toThrow(/Unexpected character/);
+    expect(() => tokenize('status ~ "Active"')).toThrow(/Unexpected character/);
   });
 
   it('tokenizes array brackets and commas', () => {

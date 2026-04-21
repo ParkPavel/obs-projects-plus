@@ -26,6 +26,7 @@
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
   import { interpolateTemplate } from "src/lib/templates/interpolate";
+  import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { AgendaCustomList } from "src/settings/v3/settings";
 
@@ -100,6 +101,107 @@
     return "";
   }
   
+  // ── Dataview query validation ──────────────────────────────
+  let dvPreviewStatus: "idle" | "loading" | "success" | "error" = "idle";
+  let dvPreviewMessage = "";
+  let dvPreviewTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function validateDataviewQuery(query: string) {
+    clearTimeout(dvPreviewTimer);
+    if (!query.trim()) {
+      dvPreviewStatus = "idle";
+      dvPreviewMessage = "";
+      return;
+    }
+    dvPreviewStatus = "loading";
+    dvPreviewMessage = $i18n.t("modals.project.dataview.validating");
+    dvPreviewTimer = setTimeout(() => runDataviewPreview(query), 600);
+  }
+
+  async function runDataviewPreview(query: string) {
+    try {
+      if (!isPluginEnabled($app)) {
+        dvPreviewStatus = "error";
+        dvPreviewMessage = $i18n.t("errors.missingDataview.message");
+        return;
+      }
+      const api = getAPI($app);
+      if (!api) {
+        dvPreviewStatus = "error";
+        dvPreviewMessage = $i18n.t("errors.missingDataview.message");
+        return;
+      }
+      const result = await api.query(query, undefined, { forceId: true });
+      if (!result?.successful) {
+        dvPreviewStatus = "error";
+        dvPreviewMessage = $i18n.t("modals.project.dataview.query-error");
+        return;
+      }
+      const type = result.value.type;
+      if (type === "table") {
+        const count = (result.value as { values: unknown[] }).values?.length ?? 0;
+        dvPreviewStatus = "success";
+        dvPreviewMessage = $i18n.t("modals.project.dataview.preview-table", { count });
+      } else if (type === "list") {
+        const count = (result.value as { values: unknown[] }).values?.length ?? 0;
+        dvPreviewStatus = "success";
+        dvPreviewMessage = $i18n.t("modals.project.dataview.preview-list", { count });
+      } else if (type === "task") {
+        const count = (result.value as { values: unknown[] }).values?.length ?? 0;
+        dvPreviewStatus = "success";
+        dvPreviewMessage = $i18n.t("modals.project.dataview.preview-task", { count });
+      } else {
+        dvPreviewStatus = "error";
+        dvPreviewMessage = $i18n.t("modals.project.dataview.unsupported-type", { type });
+      }
+    } catch {
+      dvPreviewStatus = "error";
+      dvPreviewMessage = $i18n.t("modals.project.dataview.query-error");
+    }
+  }
+
+  import { onDestroy } from "svelte";
+  import type { DataSource as DataSourceConfig } from "src/settings/v3/settings";
+  onDestroy(() => clearTimeout(dvPreviewTimer));
+
+  // ── Multi-source management ────────────────────────────────
+  function addAdditionalSource() {
+    const sources = [...(project.additionalSources ?? [])];
+    sources.push({ kind: "folder", config: { path: "", recursive: false } });
+    project = { ...project, additionalSources: sources };
+  }
+
+  function removeAdditionalSource(index: number) {
+    const sources = [...(project.additionalSources ?? [])];
+    sources.splice(index, 1);
+    project = { ...project, additionalSources: sources };
+  }
+
+  function updateAdditionalSource(index: number, kind: string) {
+    const sources = [...(project.additionalSources ?? [])];
+    let newSrc: DataSourceConfig;
+    switch (kind) {
+      case "tag":
+        newSrc = { kind: "tag", config: { tag: "", hierarchy: false } };
+        break;
+      case "dataview":
+        newSrc = { kind: "dataview", config: { query: "" } };
+        break;
+      default:
+        newSrc = { kind: "folder", config: { path: "", recursive: false } };
+    }
+    sources[index] = newSrc;
+    project = { ...project, additionalSources: sources };
+  }
+
+  function updateAdditionalSourceConfig(index: number, config: Record<string, unknown>) {
+    const sources = [...(project.additionalSources ?? [])];
+    const current = sources[index];
+    if (!current) return;
+    sources[index] = { ...current, config: { ...current.config, ...config } } as DataSourceConfig;
+    project = { ...project, additionalSources: sources };
+  }
+
   // Agenda mode handler (v3.1.0+)
   function handleAgendaModeChange(mode: string) {
     const validMode = mode === 'custom' ? 'custom' : 'standard';
@@ -366,11 +468,29 @@
                     config: { ...project.dataSource.config, query },
                   },
                 };
+                validateDataviewQuery(query);
               }
             }}
             rows={6}
             width="100%"
           />
+          {#if dvPreviewStatus !== "idle"}
+            <div
+              class="ppp-dv-preview"
+              class:ppp-dv-preview--loading={dvPreviewStatus === "loading"}
+              class:ppp-dv-preview--success={dvPreviewStatus === "success"}
+              class:ppp-dv-preview--error={dvPreviewStatus === "error"}
+            >
+              {#if dvPreviewStatus === "loading"}
+                <Icon name="loader" />
+              {:else if dvPreviewStatus === "success"}
+                <Icon name="check-circle" />
+              {:else}
+                <Icon name="alert-triangle" />
+              {/if}
+              <span>{dvPreviewMessage}</span>
+            </div>
+          {/if}
         </SettingItem>
       {:else}
         <Callout
@@ -384,6 +504,53 @@
         </Callout>
       {/if}
     {/if}
+
+    <Accordion>
+      <AccordionItem>
+        <div slot="header" class="setting-item-info" style:margin-top="8px">
+          <div class="setting-item-name">
+            {$i18n.t("modals.project.additional-sources.name")}
+          </div>
+        </div>
+        <div class="ppp-additional-sources">
+          {#each project.additionalSources ?? [] as src, i}
+            <div class="ppp-additional-source-row">
+              <Select
+                value={src.kind}
+                options={dataSourceOptions}
+                on:change={({ detail: kind }) => updateAdditionalSource(i, kind)}
+              />
+              {#if src.kind === "folder"}
+                <TextInput
+                  value={src.config.path}
+                  placeholder="folder/path"
+                  on:input={({ detail: path }) => updateAdditionalSourceConfig(i, { path, recursive: src.config.recursive ?? false })}
+                />
+              {:else if src.kind === "tag"}
+                <TextInput
+                  value={src.config.tag}
+                  placeholder="#tag"
+                  on:input={({ detail: tag }) => updateAdditionalSourceConfig(i, { tag, hierarchy: src.config.hierarchy ?? false })}
+                />
+              {:else if src.kind === "dataview"}
+                <TextInput
+                  value={src.config.query}
+                  placeholder="TABLE ..."
+                  on:input={({ detail: query }) => updateAdditionalSourceConfig(i, { query })}
+                />
+              {/if}
+              <Button variant="plain" on:click={() => removeAdditionalSource(i)}>
+                <Icon name="x" />
+              </Button>
+            </div>
+          {/each}
+          <Button variant="plain" on:click={addAdditionalSource}>
+            <Icon name="plus" />
+            {$i18n.t("modals.project.additional-sources.add")}
+          </Button>
+        </div>
+      </AccordionItem>
+    </Accordion>
 
     <Accordion>
       <AccordionItem>
@@ -698,5 +865,49 @@
   
   .action-btn.delete-btn:hover:not(:disabled) {
     color: var(--text-error);
+  }
+
+  .ppp-dv-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-s, 0.25rem);
+    font-size: var(--font-ui-small);
+  }
+
+  .ppp-dv-preview--loading {
+    color: var(--text-muted);
+  }
+
+  .ppp-dv-preview--success {
+    color: var(--text-success, hsl(120, 50%, 45%));
+    background: var(--background-modifier-success, hsla(120, 50%, 45%, 0.08));
+  }
+
+  .ppp-dv-preview--error {
+    color: var(--text-error, hsl(0, 50%, 50%));
+    background: var(--background-modifier-error, hsla(0, 50%, 50%, 0.08));
+  }
+
+  .ppp-additional-sources {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .ppp-additional-source-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ppp-additional-source-row :global(select) {
+    min-width: 6rem;
+  }
+
+  .ppp-additional-source-row :global(input) {
+    flex: 1;
   }
 </style>

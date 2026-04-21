@@ -11,42 +11,42 @@
   $: isCalendar = view?.type === "calendar";
   $: isBoard = view?.type === "board";
   $: isGallery = view?.type === "gallery";
-  $: isTable = view?.type === "table";
+  $: isDatabase = view?.type === "table" || view?.type === "database";
   $: isTimeline = interval === "day" || interval === "week";
 
-  // Calendar settings
-  let interval = (view?.config?.["interval"] as string) ?? (view?.config?.["displayMode"] as string) ?? "month";
-  let displayMode = (view?.config?.["displayMode"] as string) ?? "headers";
-  let timeFormat = (view?.config?.["timeFormat"] as string) ?? "24h";
-  let timezone = (view?.config?.["timezone"] as string) ?? "local";
-  let agendaOpen = (view?.config?.["agendaOpen"] as boolean) ?? false;
-  let freezeAll = (view?.config?.["freezeAll"] as boolean) ?? (view?.config?.["freezeColumns"] as boolean) ?? false;
+  // Calendar settings (reactive: re-derive when view prop changes)
+  $: interval = (view?.config?.["interval"] as string) ?? (view?.config?.["displayMode"] as string) ?? "month";
+  $: displayMode = (view?.config?.["displayMode"] as string) ?? "headers";
+  $: timeFormat = (view?.config?.["timeFormat"] as string) ?? "24h";
+  $: timezone = (view?.config?.["timezone"] as string) ?? "local";
+  $: agendaOpen = (view?.config?.["agendaOpen"] as boolean) ?? false;
+  $: freezeAll = (view?.config?.["freezeAll"] as boolean) ?? (view?.config?.["freezeColumns"] as boolean) ?? false;
   
   // Timeline-specific settings
-  let startHour = (view?.config?.["startHour"] as number) ?? 0;
-  let endHour = (view?.config?.["endHour"] as number) ?? 24;
-  let showWeekends = (view?.config?.["showWeekends"] as boolean) ?? true;
-  let showAllDaySection = (view?.config?.["showAllDaySection"] as boolean) ?? true;
-  let eventColorField = (view?.config?.["eventColorField"] as string) ?? "";
+  $: startHour = (view?.config?.["startHour"] as number) ?? 0;
+  $: endHour = (view?.config?.["endHour"] as number) ?? 24;
+  $: showWeekends = (view?.config?.["showWeekends"] as boolean) ?? true;
+  $: showAllDaySection = (view?.config?.["showAllDaySection"] as boolean) ?? true;
+  $: eventColorField = (view?.config?.["eventColorField"] as string) ?? "";
   
   // Field mapping for Calendar (frontmatter field names)
-  let dateField = (view?.config?.["dateField"] as string) ?? "";
-  let startDateField = (view?.config?.["startDateField"] as string) ?? "";
-  let endDateField = (view?.config?.["endDateField"] as string) ?? "";
-  let startTimeField = (view?.config?.["startTimeField"] as string) ?? "";
-  let endTimeField = (view?.config?.["endTimeField"] as string) ?? "";
-  let checkField = (view?.config?.["checkField"] as string) ?? "";
+  $: dateField = (view?.config?.["dateField"] as string) ?? "";
+  $: startDateField = (view?.config?.["startDateField"] as string) ?? "";
+  $: endDateField = (view?.config?.["endDateField"] as string) ?? "";
+  $: startTimeField = (view?.config?.["startTimeField"] as string) ?? "";
+  $: endTimeField = (view?.config?.["endTimeField"] as string) ?? "";
+  $: checkField = (view?.config?.["checkField"] as string) ?? "";
 
   // Board-specific settings
-  let columnWidth = (view?.config?.["columnWidth"] as number) ?? 270;
-  let groupByField = (view?.config?.["groupByField"] as string) ?? "";
-  let headerField = (view?.config?.["headerField"] as string) ?? "";
-  let orderSyncField = (view?.config?.["orderSyncField"] as string) ?? "";
+  $: columnWidth = (view?.config?.["columnWidth"] as number) ?? 270;
+  $: groupByField = (view?.config?.["groupByField"] as string) ?? "";
+  $: headerField = (view?.config?.["headerField"] as string) ?? "";
+  $: orderSyncField = (view?.config?.["orderSyncField"] as string) ?? "";
 
   // Gallery-specific settings
-  let cardWidth = (view?.config?.["cardWidth"] as number) ?? 300;
-  let coverField = (view?.config?.["coverField"] as string) ?? "";
-  let fitStyle = (view?.config?.["fitStyle"] as string) ?? "cover";
+  $: cardWidth = (view?.config?.["cardWidth"] as number) ?? 300;
+  $: coverField = (view?.config?.["coverField"] as string) ?? "";
+  $: fitStyle = (view?.config?.["fitStyle"] as string) ?? "cover";
   $: galleryIncludeFields = (view?.config?.["includeFields"] as string[]) ?? [];
 
   // Table-specific settings
@@ -85,35 +85,39 @@
   
   // Number fields for Board order sync
   $: numberFields = fields.filter(f => f.type === "number" || f.type === "Number");
+
+  // Hidden fields for Database view
+  $: hiddenFields = fields.filter(f => fieldConfig[f.name]?.hide);
+  $: visibleFields = fields.filter(f => !fieldConfig[f.name]?.hide);
 </script>
 
 <div class="section">
   <div class="header">View Config</div>
   {#if view}
-    <p class="muted">Текущий вид: {view.name} ({view.type})</p>
+    <p class="muted">{$i18n.t('settings-menu.view-config.current-view')}: {view.name} ({view.type})</p>
 
     {#if isCalendar}
       <div class="group">
         <label>
-          Interval
+          {$i18n.t('settings-menu.view-config.calendar.interval')}
           <select bind:value={interval} on:change={() => emitUpdate({ interval })}>
-            <option value="year">Year</option>
-            <option value="month">Month</option>
-            <option value="week">Week</option>
-            <option value="day">Day</option>
+            <option value="year">{$i18n.t('settings-menu.view-config.calendar.interval-options.year')}</option>
+            <option value="month">{$i18n.t('settings-menu.view-config.calendar.interval-options.month')}</option>
+            <option value="week">{$i18n.t('settings-menu.view-config.calendar.interval-options.week')}</option>
+            <option value="day">{$i18n.t('settings-menu.view-config.calendar.interval-options.day')}</option>
           </select>
         </label>
 
         <label>
-          Layout
+          {$i18n.t('settings-menu.view-config.calendar.layout')}
           <select bind:value={displayMode} on:change={() => emitUpdate({ displayMode })}>
-            <option value="headers">Headers (classic)</option>
-            <option value="bars">Bars (timeline)</option>
+            <option value="headers">{$i18n.t('settings-menu.view-config.calendar.layout-options.headers')}</option>
+            <option value="bars">{$i18n.t('settings-menu.view-config.calendar.layout-options.bars')}</option>
           </select>
         </label>
 
         <label>
-          Time format
+          {$i18n.t('settings-menu.view-config.calendar.time-format')}
           <select bind:value={timeFormat} on:change={() => emitUpdate({ timeFormat })}>
             <option value="24h">24h</option>
             <option value="12h">12h</option>
@@ -121,22 +125,22 @@
         </label>
 
         <label>
-          Timezone
+          {$i18n.t('settings-menu.view-config.calendar.timezone')}
           <input
             type="text"
             bind:value={timezone}
-            placeholder="e.g. Europe/Moscow or local"
+            placeholder={$i18n.t('settings-menu.view-config.calendar.hints.timezone')}
             on:change={() => emitUpdate({ timezone })}
           />
         </label>
         
         {#if isTimeline}
           <div class="subgroup">
-            <div class="subheader">Timeline Settings</div>
+            <div class="subheader">{$i18n.t('settings-menu.view-config.calendar.timeline.title')}</div>
             
             <div class="row">
               <label class="half">
-                Start Hour
+                {$i18n.t('settings-menu.view-config.calendar.timeline.start-hour')}
                 <select bind:value={startHour} on:change={() => emitUpdate({ startHour })}>
                   {#each hourOptions.slice(0, 24) as h}
                     <option value={h}>{h.toString().padStart(2, '0')}:00</option>
@@ -145,7 +149,7 @@
               </label>
               
               <label class="half">
-                End Hour
+                {$i18n.t('settings-menu.view-config.calendar.timeline.end-hour')}
                 <select bind:value={endHour} on:change={() => emitUpdate({ endHour })}>
                   {#each hourOptions.slice(1) as h}
                     <option value={h}>{h.toString().padStart(2, '0')}:00</option>
@@ -155,14 +159,14 @@
             </div>
             
             <label>
-              Event Color Field
+              {$i18n.t('settings-menu.view-config.calendar.timeline.event-color-field')}
               <input
                 type="text"
                 bind:value={eventColorField}
-                placeholder="e.g. status, priority"
+                placeholder={$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-placeholder')}
                 on:change={() => emitUpdate({ eventColorField })}
               />
-              <span class="hint">Поле для цвета событий (опционально)</span>
+              <span class="hint">{$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-field')}</span>
             </label>
             
             <label class="checkbox">
@@ -171,7 +175,7 @@
                 bind:checked={showWeekends}
                 on:change={() => emitUpdate({ showWeekends })}
               />
-              <span>Показывать выходные</span>
+              <span>{$i18n.t('settings-menu.view-config.calendar.timeline.show-weekends')}</span>
             </label>
             
             <label class="checkbox">
@@ -180,7 +184,7 @@
                 bind:checked={showAllDaySection}
                 on:change={() => emitUpdate({ showAllDaySection })}
               />
-              <span>Показывать секцию "Весь день"</span>
+              <span>{$i18n.t('settings-menu.view-config.calendar.timeline.show-all-day')}</span>
             </label>
           </div>
         {/if}
@@ -191,22 +195,22 @@
             bind:checked={agendaOpen}
             on:change={() => emitUpdate({ agendaOpen })}
           />
-          <span>Показывать Agenda sidebar</span>
+          <span>{$i18n.t('settings-menu.view-config.calendar.show-agenda')}</span>
         </label>
         
         <!-- Field Mapping Section -->
         <div class="subgroup">
-          <div class="subheader">Сопоставление полей</div>
-          <span class="hint" style="margin-bottom: 0.5rem; display: block;">Выберите существующее поле из списка или введите название нового поля</span>
+          <div class="subheader">{$i18n.t('settings-menu.view-config.calendar.field-mapping.title')}</div>
+          <span class="hint" style="margin-bottom: 0.5rem; display: block;">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hint')}</span>
           
           <label>
-            Дата создания (date)
+            {$i18n.t('settings-menu.view-config.calendar.field-mapping.date')}
             <div class="field-combo">
               <input
                 type="text"
                 list="fieldlist-date"
                 bind:value={dateField}
-                placeholder="Введите или выберите поле"
+                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ dateField })}
               />
               <datalist id="fieldlist-date">
@@ -215,20 +219,20 @@
                 {/each}
               </datalist>
               {#if dateField && !fields.some(f => f.name === dateField)}
-                <span class="new-field-badge">+ новое поле</span>
+                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
               {/if}
             </div>
-            <span class="hint">Автоматически заполняется при создании заметки. Не участвует в определении начала события</span>
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.date')}</span>
           </label>
           
           <label>
-            Начало (startDate)
+            {$i18n.t('settings-menu.view-config.calendar.field-mapping.start-date')}
             <div class="field-combo">
               <input
                 type="text"
                 list="fieldlist-startDate"
                 bind:value={startDateField}
-                placeholder="Введите или выберите поле"
+                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ startDateField })}
               />
               <datalist id="fieldlist-startDate">
@@ -237,20 +241,20 @@
                 {/each}
               </datalist>
               {#if startDateField && !fields.some(f => f.name === startDateField)}
-                <span class="new-field-badge">+ новое поле</span>
+                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
               {/if}
             </div>
-            <span class="hint">Дата начала для многодневных событий</span>
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.start-date')}</span>
           </label>
           
           <label>
-            Конец (endDate)
+            {$i18n.t('settings-menu.view-config.calendar.field-mapping.end-date')}
             <div class="field-combo">
               <input
                 type="text"
                 list="fieldlist-endDate"
                 bind:value={endDateField}
-                placeholder="Введите или выберите поле"
+                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ endDateField })}
               />
               <datalist id="fieldlist-endDate">
@@ -259,20 +263,20 @@
                 {/each}
               </datalist>
               {#if endDateField && !fields.some(f => f.name === endDateField)}
-                <span class="new-field-badge">+ новое поле</span>
+                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
               {/if}
             </div>
-            <span class="hint">Дата окончания для многодневных событий</span>
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.end-date')}</span>
           </label>
           
           <label>
-            Время начала (startTime)
+            {$i18n.t('settings-menu.view-config.calendar.field-mapping.start-time')}
             <div class="field-combo">
               <input
                 type="text"
                 list="fieldlist-startTime"
                 bind:value={startTimeField}
-                placeholder="Введите или выберите поле"
+                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ startTimeField })}
               />
               <datalist id="fieldlist-startTime">
@@ -281,20 +285,20 @@
                 {/each}
               </datalist>
               {#if startTimeField && !fields.some(f => f.name === startTimeField)}
-                <span class="new-field-badge">+ новое поле</span>
+                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
               {/if}
             </div>
-            <span class="hint">Отдельное поле времени начала (HH:mm)</span>
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.start-time')}</span>
           </label>
           
           <label>
-            Время конца (endTime)
+            {$i18n.t('settings-menu.view-config.calendar.field-mapping.end-time')}
             <div class="field-combo">
               <input
                 type="text"
                 list="fieldlist-endTime"
                 bind:value={endTimeField}
-                placeholder="Введите или выберите поле"
+                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ endTimeField })}
               />
               <datalist id="fieldlist-endTime">
@@ -303,20 +307,20 @@
                 {/each}
               </datalist>
               {#if endTimeField && !fields.some(f => f.name === endTimeField)}
-                <span class="new-field-badge">+ новое поле</span>
+                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
               {/if}
             </div>
-            <span class="hint">Отдельное поле времени окончания</span>
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.end-time')}</span>
           </label>
           
           <label>
-            Поле статуса (check)
+            {$i18n.t('settings-menu.view-config.calendar.field-mapping.check')}
             <div class="field-combo">
               <input
                 type="text"
                 list="fieldlist-check"
                 bind:value={checkField}
-                placeholder="Введите или выберите поле"
+                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ checkField })}
               />
               <datalist id="fieldlist-check">
@@ -325,10 +329,10 @@
                 {/each}
               </datalist>
               {#if checkField && !fields.some(f => f.name === checkField)}
-                <span class="new-field-badge">+ новое поле</span>
+                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
               {/if}
             </div>
-            <span class="hint">Поле для отметки выполнения (completed, done и т.д.)</span>
+            <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.check')}</span>
           </label>
         </div>
       </div>
@@ -337,24 +341,24 @@
     {#if isBoard}
       <div class="group">
         <label>
-          Ширина колонки
+          {$i18n.t('settings-menu.view-config.board.column-width')}
           <input
             type="number"
             bind:value={columnWidth}
             placeholder="270"
             on:change={() => emitUpdate({ columnWidth })}
           />
-          <span class="hint">Ширина каждой колонки в пикселях</span>
+          <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.column-width')}</span>
         </label>
 
         <label>
-          Поле группировки (статус)
+          {$i18n.t('settings-menu.view-config.board.group-by-field')}
           <div class="field-combo">
             <input
               type="text"
               list="fieldlist-groupBy"
               bind:value={groupByField}
-              placeholder="Введите или выберите поле"
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ groupByField: groupByField || undefined })}
             />
             <datalist id="fieldlist-groupBy">
@@ -363,20 +367,20 @@
               {/each}
             </datalist>
             {#if groupByField && !stringFields.some(f => f.name === groupByField)}
-              <span class="new-field-badge">+ новое поле</span>
+              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
             {/if}
           </div>
-          <span class="hint">Строковое поле фронтметера для группировки карточек по колонкам</span>
+          <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.group-by-field')}</span>
         </label>
 
         <label>
-          Заголовок карточки
+          {$i18n.t('settings-menu.view-config.board.header-field')}
           <div class="field-combo">
             <input
               type="text"
               list="fieldlist-header"
               bind:value={headerField}
-              placeholder="Введите или выберите поле"
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ headerField: headerField || undefined })}
             />
             <datalist id="fieldlist-header">
@@ -385,20 +389,20 @@
               {/each}
             </datalist>
             {#if headerField && !fields.some(f => f.name === headerField)}
-              <span class="new-field-badge">+ новое поле</span>
+              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
             {/if}
           </div>
-          <span class="hint">Поле для заголовка карточек</span>
+          <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.header-field')}</span>
         </label>
 
         <label>
-          Синхронизация порядка
+          {$i18n.t('settings-menu.view-config.board.order-sync-field')}
           <div class="field-combo">
             <input
               type="text"
               list="fieldlist-orderSync"
               bind:value={orderSyncField}
-              placeholder="Введите или выберите поле"
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
                 on:change={() => emitUpdate({ orderSyncField: orderSyncField || undefined })}
             />
             <datalist id="fieldlist-orderSync">
@@ -407,10 +411,10 @@
               {/each}
             </datalist>
             {#if orderSyncField && !numberFields.some(f => f.name === orderSyncField)}
-              <span class="new-field-badge">+ новое поле</span>
+              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
             {/if}
           </div>
-          <span class="hint">Числовое поле для сохранения позиции карточек</span>
+          <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.order-sync-field')}</span>
         </label>
 
         <label class="checkbox">
@@ -444,7 +448,7 @@
               type="text"
               list="fieldlist-cover"
               bind:value={coverField}
-              placeholder="Введите или выберите поле"
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={() => emitUpdate({ coverField: coverField || undefined })}
             />
             <datalist id="fieldlist-cover">
@@ -453,7 +457,7 @@
               {/each}
             </datalist>
             {#if coverField && !stringFields.some(f => f.name === coverField)}
-              <span class="new-field-badge">+ новое поле</span>
+              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
             {/if}
           </div>
           <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.cover-field")}</span>
@@ -484,22 +488,53 @@
       </div>
     {/if}
 
-    {#if isTable}
+    {#if isDatabase}
       <div class="group">
         <div class="field-list">
           <span class="field-list-label">{$i18n.t("settings-menu.view-config.table.hide-fields")}</span>
           <span class="hint">{$i18n.t("settings-menu.view-config.table.hints.hide-fields")}</span>
-          {#each fields as field}
+          {#each visibleFields as field}
             <label class="field-item">
               <input
                 type="checkbox"
-                checked={!fieldConfig[field.name]?.hide}
+                checked={true}
                 on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
               />
               <span>{field.name}</span>
             </label>
           {/each}
         </div>
+
+        {#if hiddenFields.length > 0}
+          <div class="field-list field-list--hidden">
+            <span class="field-list-label field-list-label--hidden">
+              {$i18n.t("settings-menu.view-config.table.hidden-fields", { defaultValue: "Hidden fields" })}
+              ({hiddenFields.length})
+            </span>
+            {#each hiddenFields as field}
+              <label class="field-item field-item--hidden">
+                <input
+                  type="checkbox"
+                  checked={false}
+                  on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
+                />
+                <span>{field.name}</span>
+              </label>
+            {/each}
+            <button
+              class="show-all-btn"
+              on:click={() => {
+                const newFieldConfig = { ...fieldConfig };
+                for (const f of hiddenFields) {
+                  newFieldConfig[f.name] = { ...newFieldConfig[f.name], hide: false };
+                }
+                emitUpdate({ fieldConfig: newFieldConfig });
+              }}
+            >
+              {$i18n.t("settings-menu.view-config.table.show-all", { defaultValue: "Show all fields" })}
+            </button>
+          </div>
+        {/if}
       </div>
     {/if}
   {:else}
@@ -607,5 +642,32 @@
     border-radius: 0.25rem;
     pointer-events: none;
     white-space: nowrap;
+  }
+  .field-list--hidden {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--background-modifier-border);
+  }
+  .field-list-label--hidden {
+    color: var(--text-faint);
+    font-size: 0.8125rem;
+  }
+  .field-item--hidden span {
+    opacity: 0.5;
+    text-decoration: line-through;
+  }
+  .show-all-btn {
+    margin-top: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--interactive-accent);
+    background: transparent;
+    border: 1px dashed var(--interactive-accent);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    text-align: center;
+  }
+  .show-all-btn:hover {
+    background: var(--background-modifier-hover);
   }
 </style>

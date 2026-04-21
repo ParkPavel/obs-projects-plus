@@ -23,6 +23,26 @@
   
   let tabsContainer: HTMLDivElement;
   
+  function handleTabKeydown(e: KeyboardEvent) {
+    const target = e.currentTarget as HTMLElement;
+    const buttons = Array.from(tabsContainer.querySelectorAll<HTMLElement>('[role="tab"]'));
+    const idx = buttons.indexOf(target);
+    let next = -1;
+    if (e.key === "ArrowRight") next = (idx + 1) % buttons.length;
+    else if (e.key === "ArrowLeft") next = (idx - 1 + buttons.length) % buttons.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = buttons.length - 1;
+    else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      target.click();
+      return;
+    }
+    if (next >= 0) {
+      e.preventDefault();
+      buttons[next]?.focus();
+    }
+  }
+  
   // Wheel scroll for pointer devices (mouse/trackpad) - not touch
   function handleWheel(event: WheelEvent) {
     if (!tabsContainer || $isTouchDevice) return; // Only on pointer devices
@@ -54,7 +74,9 @@
       class:selected={tab.id === activeTab}
       role="tab"
       aria-selected={tab.id === activeTab}
+      tabindex={tab.id === activeTab ? 0 : -1}
       on:click={() => dispatch("change", tab.id)}
+      on:keydown={handleTabKeydown}
     >
       {tab.label}
     </button>
@@ -84,7 +106,7 @@
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
-    font-size: 0.6875rem;
+    font-size: var(--ppp-font-size-xs, 0.6875rem);
     white-space: nowrap;
     transition: all 0.15s ease;
     min-height: 2.5rem;
@@ -98,6 +120,12 @@
   button.selected {
     color: var(--text-accent);
     border-bottom-color: var(--interactive-accent, #7b68ee);
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -2px;
+    border-radius: var(--ppp-radius-md, 0.25rem);
   }
 
   /* Mobile: меньше padding */

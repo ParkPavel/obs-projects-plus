@@ -53,7 +53,7 @@
   let boardEditing: boolean = false;
   let onEdit = (editing: boolean) => (boardEditing = editing);
 
-  const flipDurationMs = 200;
+  const flipDurationMs = 150;
 
   // Guard: prevent reactive prop updates from resetting DnD state mid-drag
   let isDraggingColumns = false;
@@ -73,9 +73,11 @@
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
     const newUnpinned = e.detail.items;
     columns = [...pinnedColumns, ...newUnpinned];
-    onSortColumns(columns.map((col) => col.id));
-    // Allow reactive updates after parent state settles
-    setTimeout(() => { isDraggingColumns = false; }, flipDurationMs + 50);
+    // Dispatch after flip animation completes to prevent reactive cascade mid-animation
+    setTimeout(() => {
+      onSortColumns(columns.map((col) => col.id));
+      isDraggingColumns = false;
+    }, flipDurationMs + 50);
   }
 
   /**

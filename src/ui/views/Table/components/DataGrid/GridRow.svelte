@@ -12,6 +12,7 @@
   import { isTouchDevice } from "src/lib/stores/ui";
 
   import { setContext, onDestroy } from "svelte";
+  import { writable } from "svelte/store";
 
   export let rowId: GridRowId;
   export let index: number;
@@ -19,8 +20,15 @@
   export let columns: GridColDef[];
   export let activeCell: [number, number];
   export let color: string | null;
+  /** Per-cell inline styles from conditional formatting (field → CSS). */
+  export let cellStyles: Record<string, string> = {};
 
   setContext<string>("sourcePath", row["path"]);
+
+  // Expose cell styles to GridCell via context
+  const cellStyleStore = writable<Record<string, string>>({});
+  setContext("ppp-cellStyles", cellStyleStore);
+  $: $cellStyleStore = cellStyles;
 
   export let onRowChange: (rowId: GridRowId, row: GridRowModel) => void;
   export let onRowMenu: (rowId: GridRowId, row: GridRowModel) => Menu;

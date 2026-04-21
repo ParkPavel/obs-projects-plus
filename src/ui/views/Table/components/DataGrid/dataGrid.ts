@@ -19,4 +19,6 @@ export type GridRowId = string;
 export interface GridRowProps {
   readonly rowId: GridRowId;
   readonly row: GridRowModel;
+  /** Optional per-cell inline styles (field name → CSS string). */
+  readonly cellStyles?: Record<string, string>;
 }

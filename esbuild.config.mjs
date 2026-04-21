@@ -50,6 +50,7 @@ const buildOptions = {
       values: {
         "window.": `activeWindow.`,
         "document.": `activeDocument.`,
+        "multiScroller.destroy()": `multiScroller?.destroy()`,
       },
     }),
     logWarningsPlugin,

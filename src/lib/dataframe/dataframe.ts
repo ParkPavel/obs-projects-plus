@@ -65,6 +65,11 @@ export enum DataFieldType {
   Boolean = "boolean",
   Date = "date",
   List = "multitext",
+  Select = "select",
+  Status = "status",
+  Formula = "formula",
+  Relation = "relation",
+  Rollup = "rollup",
   Unknown = "unknown",
 }
 

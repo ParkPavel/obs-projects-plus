@@ -224,6 +224,7 @@ export type ProjectDefinition<ViewDef> = {
   readonly excludedNotes: string[];
   readonly isDefault: boolean;
   readonly dataSource: DataSource;
+  readonly additionalSources?: DataSource[];
   readonly newNotesFolder: string;
   
   // Date format configuration for this project
@@ -375,7 +376,9 @@ function resolveProject(
 }
 
 function resolveView(unresolved: Partial<ViewDefinition>): ViewDefinition {
-  const { name, id, type } = unresolved;
+  const { name, id } = unresolved;
+  // Auto-migrate legacy "table" → "database" (v3.3.0+)
+  const type = unresolved.type === "table" ? "database" : unresolved.type;
 
   if (name && id && type) {
     return {

@@ -13,8 +13,8 @@ import { customViews } from "src/lib/stores/customViews";
 import { view } from "src/lib/stores/obsidian";
 import { BoardView } from "src/ui/views/Board";
 import { CalendarView } from "src/ui/views/Calendar";
+import { DatabaseView } from "src/ui/views/Database";
 import { GalleryView } from "src/ui/views/Gallery";
-import { TableView } from "src/ui/views/Table";
 
 import type { ProjectView } from "./customViewApi";
 import type ProjectsPlugin from "./main";
@@ -153,10 +153,10 @@ export class ProjectsView extends ItemView {
     });
 
     // Register built-in views.
-    views["table"] = new TableView();
     views["board"] = new BoardView();
     views["calendar"] = new CalendarView();
     views["gallery"] = new GalleryView();
+    views["database"] = new DatabaseView();
 
     return views;
   }

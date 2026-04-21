@@ -1,9 +1,9 @@
 {
   "id": "obs-projects-plus",
   "name": "OBS Projects Plus",
-  "version": "3.2.2",
+  "version": "3.4.0",
   "minAppVersion": "1.5.7",
-  "description": "Project management with visual calendar, timeline, multi-day events, boards, tables and galleries.",
+  "description": "Project management for Obsidian: Database View (8 widgets, 10 chart types, 115 formulas), Calendar with timeline, Board, Gallery. Multi-source merge, transform pipeline, ARIA accessible.",
   "author": "Park Pavel",
   "authorUrl": "https://t.me/parkpavel_chigon",
   "fundingUrl": "https://github.com/ParkPavel",

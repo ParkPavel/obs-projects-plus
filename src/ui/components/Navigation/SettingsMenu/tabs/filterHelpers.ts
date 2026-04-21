@@ -26,7 +26,8 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
     case 'boolean':
       return ['is-checked', 'is-not-checked'];
     case 'date':
-      return [...base, 'is-on', 'is-not-on', 'is-before', 'is-after', 'is-on-and-before', 'is-on-and-after'];
+      return [...base, 'is-on', 'is-not-on', 'is-before', 'is-after', 'is-on-and-before', 'is-on-and-after',
+        'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-last-n-days', 'is-next-n-days', 'is-overdue', 'is-upcoming'];
     case 'multitext':
       return [...base, 'has-any-of', 'has-all-of', 'has-none-of', 'has-keyword'];
     default:
@@ -38,7 +39,10 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
  * Operator needs a value input? Returns false for unary operators.
  */
 export function operatorNeedsValue(operator: FilterOperator): boolean {
-  const unary: FilterOperator[] = ['is-empty', 'is-not-empty', 'is-checked', 'is-not-checked'];
+  const unary: FilterOperator[] = [
+    'is-empty', 'is-not-empty', 'is-checked', 'is-not-checked',
+    'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-overdue', 'is-upcoming',
+  ];
   return !unary.includes(operator);
 }
 
@@ -66,6 +70,14 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
   'is-after': 'После',
   'is-on-and-before': '≤ Дата',
   'is-on-and-after': '≥ Дата',
+  'is-today': 'Сегодня',
+  'is-this-week': 'Эта неделя',
+  'is-this-month': 'Этот месяц',
+  'is-this-quarter': 'Этот квартал',
+  'is-last-n-days': 'За последние N дней',
+  'is-next-n-days': 'В ближайшие N дней',
+  'is-overdue': 'Просрочено',
+  'is-upcoming': 'Предстоящее',
   'has-any-of': 'Любой из',
   'has-all-of': 'Все из',
   'has-none-of': 'Ни один из',

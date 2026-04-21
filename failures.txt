@@ -1,0 +1,681 @@
+ FAIL  src/ui/views/Database/engine/formulaEngine.test.ts
+  formulaEngine вЂ” Math
+    в€љ ROUND with decimals (2 ms)
+    в€љ ROUND without decimals (1 ms)
+    в€љ CEIL
+    в€љ FLOOR (1 ms)
+    в€љ ABS (3 ms)
+    в€љ SQRT
+    в€љ SQRT of negative returns null
+    в€љ POWER (1 ms)
+    в€љ LOG natural (1 ms)
+    в€љ SIGN (1 ms)
+  formulaEngine вЂ” String
+    в€љ TRIM (1 ms)
+    в€љ LOWER (1 ms)
+    в€љ UPPER (1 ms)
+    в€љ LENGTH (1 ms)
+    в€љ CONTAINS returns boolean (1 ms)
+  formulaEngine вЂ” Date
+    в€љ YEAR (3 ms)
+    в€љ MONTH (1 ms)
+    в€љ DAY (3 ms)
+    в€љ DATE_BETWEEN in days (2 ms)
+    в€љ FORMAT_DATE (1 ms)
+  formulaEngine вЂ” Type conversion
+    в€љ TO_NUMBER from string (1 ms)
+    в€љ TO_NUMBER from non-numeric returns null (1 ms)
+    в€љ TO_TEXT from number (1 ms)
+    в€љ TO_DATE from string
+  formulaEngine вЂ” Conditional
+    в€љ IF true branch (1 ms)
+    в€љ IF false branch (1 ms)
+    в€љ EMPTY (3 ms)
+  formulaEngine вЂ” Fields
+    в€љ arithmetic with field values (3 ms)
+    в€љ division by zero returns null (1 ms)
+    в€љ null field results in 0 (Number(null) = 0)
+  formulaEngine вЂ” Validation
+    в€љ valid expression returns no errors (1 ms)
+    в€љ unknown field returns error (1 ms)
+    в€љ syntax error returns error
+    в€љ getFormulaFunctions returns known functions (5 ms)
+  formulaEngine вЂ” Error resilience
+    в€љ invalid expression returns null (1 ms)
+    в€љ empty expression returns null
+  formulaEngine вЂ” Financial
+    Г— PMT calculates monthly payment (3 ms)
+    Г— FV calculates future value (1 ms)
+    в€љ PV calculates present value (1 ms)
+    в€љ NPV calculates net present value (4 ms)
+    в€љ IRR calculates internal rate of return (1 ms)
+    Г— NPER calculates number of periods (1 ms)
+  formulaEngine вЂ” Statistical
+    в€љ VARIANCE (population)
+    в€љ VARIANCE_S (sample) (1 ms)
+    в€љ PERCENTILE (1 ms)
+    в€љ QUARTILE
+    в€љ MODE returns most frequent
+    в€љ RANK returns position (1 ms)
+    в€љ CORREL computes correlation (2 ms)
+    в€љ STD_DEV_S (sample std dev) (1 ms)
+  formulaEngine вЂ” Enhanced Math
+    в€љ MEDIAN of odd count
+    в€љ MEDIAN of even count (1 ms)
+    в€љ PRODUCT
+    в€љ MOD (1 ms)
+    в€љ EVEN rounds up to even (4 ms)
+    в€љ ODD rounds up to odd (1 ms)
+    в€љ PI returns pi (1 ms)
+  formulaEngine вЂ” Enhanced String
+    в€љ LEFT extracts n chars from left (2 ms)
+    в€љ RIGHT extracts n chars from right
+    в€љ MID extracts substring (1 ms)
+    в€љ REGEX_MATCH tests pattern (1 ms)
+    в€љ JOIN concatenates with separator (1 ms)
+    в€љ REPEAT repeats string
+    в€љ ENCODE_URL encodes URI component (1 ms)
+  formulaEngine вЂ” Duration
+    Г— DAYS calculates days between dates (2 ms)
+    Г— TO_DAYS converts hours to days (1 ms)
+    в€љ TO_HOURS converts days to hours
+  formulaEngine вЂ” Conditional Aggregation
+    в€љ SUMIF sums matching values (1 ms)
+    Г— COUNTIF counts matching values (3 ms)
+  formulaEngine вЂ” Aggregate-aware functions
+    в€љ SUM adds numbers (1 ms)
+    в€љ AVG computes average (1 ms)
+    в€љ COUNT counts values
+    в€љ MIN finds minimum
+    в€љ MAX finds maximum
+    в€љ STD_DEV computes population standard deviation (1 ms)
+  formulaEngine вЂ” @reference
+    в€љ AVG(@col) computes column average (1 ms)
+    в€љ SUM(@col) computes column sum
+    в€љ MIN(@col) finds column minimum (1 ms)
+    в€љ MAX(@col) finds column maximum
+    в€љ COUNT(@col) counts column values
+    в€љ @reference without dataFrame returns empty (1 ms)
+  formulaEngine вЂ” Conversion & Logic
+    в€љ TO_CURRENCY formats number (3 ms)
+    Г— TO_PERCENT formats as percentage (1 ms)
+    Г— IFBLANK returns fallback when blank (2 ms)
+    Г— IFBLANK returns value when not blank (2 ms)
+
+  в—Џ formulaEngine вЂ” Financial вЂє PMT calculates monthly payment
+
+    expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 1073.64
+    Received: -1073.6432460242795
+
+    Expected precision:    1
+    Expected difference: < 0.05
+    Received difference:   2147.28324602428
+
+      154 |
+      155 | // в”Ђв”Ђ Field references в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    > 156 |
+          | ^
+      157 | describe("formulaEngine вЂ” Fields", () => {
+      158 |   test("arithmetic with field values", () => {
+      159 |     const record = makeRecord({ a: 10, b: 3 });
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:156:20)
+
+  в—Џ formulaEngine вЂ” Financial вЂє FV calculates future value
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 1200
+    Received:   -1268.2503013196977
+
+      159 |     const record = makeRecord({ a: 10, b: 3 });
+      160 |     expect(evaluateFormulaValue("a + b", record)).toBe(13);
+    > 161 |     expect(evaluateFormulaValue("a * b", record)).toBe(30);
+          |                    ^
+      162 |   });
+      163 |
+      164 |   test("division by zero returns null", () => {
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:161:20)
+
+  в—Џ formulaEngine вЂ” Financial вЂє NPER calculates number of periods
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   -9.578594039813161
+
+      179 |     const errors = validateFormulaExpression("a + b", ["a", "b"]);  
+      180 |     expect(errors).toHaveLength(0);
+    > 181 |   });
+          |                ^
+      182 |
+      183 |   test("unknown field returns error", () => {
+      184 |     const errors = validateFormulaExpression("a + unknown", ["a"]); 
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:181:20)
+
+  в—Џ formulaEngine вЂ” Duration вЂє DAYS calculates days between dates
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 30
+    Received: null
+
+      271 |   });
+      272 |
+    > 273 |   test("PERCENTILE", () => {
+          |                    ^
+      274 |     const result = evaluateFormulaValue("PERCENTILE(1, 2, 3, 4, 5, 0.5)", makeRecord({}));
+      275 |     expect(result).toBe(3);
+      276 |   });
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:273:20)
+
+  в—Џ formulaEngine вЂ” Duration вЂє TO_DAYS converts hours to days
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 48
+
+      274 |     const result = evaluateFormulaValue("PERCENTILE(1, 2, 3, 4, 5, 0.5)", makeRecord({}));
+      275 |     expect(result).toBe(3);
+    > 276 |   });
+          |                ^
+      277 |
+      278 |   test("QUARTILE", () => {
+      279 |     const result = evaluateFormulaValue("QUARTILE(1, 2, 3, 4, 5, 2)", makeRecord({}));
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:276:91)
+
+  в—Џ formulaEngine вЂ” Conditional Aggregation вЂє COUNTIF counts matching values
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 3
+    Received: 2
+
+      287 |   });
+      288 |
+    > 289 |   test("RANK returns position", () => {
+          |                    ^
+      290 |     const result = evaluateFormulaValue("RANK(3, 1, 2, 3, 4, 5)", makeRecord({}));
+      291 |     expect(result).toBe(3);
+      292 |   });
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:289:20)
+
+  в—Џ formulaEngine вЂ” Conversion & Logic вЂє TO_PERCENT formats as percentage 
+
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "75%"
+    Received: "75.00%"
+
+      355 |
+      356 |   test("REGEX_MATCH tests pattern", () => {
+    > 357 |     expect(evaluateFormulaValue('REGEX_MATCH("abc123", "\\\\d+")', makeRecord({}))).toBe(true);
+          |                    ^
+      358 |     expect(evaluateFormulaValue('REGEX_MATCH("abcdef", "\\\\d+")', makeRecord({}))).toBe(false);
+      359 |   });
+      360 |
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:357:20)
+
+  в—Џ formulaEngine вЂ” Conversion & Logic вЂє IFBLANK returns fallback when blank
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "default"
+    Received: [""]
+
+      359 |   });
+      360 |
+    > 361 |   test("JOIN concatenates with separator", () => {
+          |
+            ^
+      362 |     expect(evaluateFormulaValue('JOIN("-", "a", "b", "c")', makeRecord({}))).toBe("a-b-c");
+      363 |   });
+      364 |
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:361:92)
+
+  в—Џ formulaEngine вЂ” Conversion & Logic вЂє IFBLANK returns value when not blank
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "hello"
+    Received: ["hello"]
+
+      363 |   });
+      364 |
+    > 365 |   test("REPEAT repeats string", () => {
+          |
+ ^
+      366 |     expect(evaluateFormulaValue('REPEAT("ab", 3)', makeRecord({}))).toBe("ababab");
+      367 |   });
+      368 |
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:365:92)
+
+ PASS  src/ui/views/Database/__tests__/widgetRegistry.test.ts
+  widgetRegistry
+    WIDGET_REGISTRY
+      в€љ has 6 widget types (1 ms)
+      в€љ all entries have required fields (9 ms)
+      в€љ types are unique (9 ms)
+    getWidgetMeta
+      в€љ returns meta for known type (1 ms)
+      в€љ returns undefined for unknown type (1 ms)
+    canAddWidget
+      в€љ allows adding widget with no maxCount (1 ms)
+      в€љ allows adding chart when others exist
+      в€љ prevents exceeding maxCount for data-table
+      в€љ allows data-table when none exist (1 ms)
+      в€љ view-port maxCount is 4
+      в€љ returns false for unknown type (1 ms)
+
+ PASS  src/lib/helpers/dateFormatting.test.ts
+  formatDateForProject
+    в€љ formats date using project configuration (US format) (1 ms)
+    в€љ formats date using project configuration (EU format) (1 ms)
+    в€љ formats date using project configuration (UK format)
+    в€љ formats date using project configuration (Japan format) (2 ms)
+    в€љ handles null date (1 ms)
+    в€љ handles invalid date
+    в€љ uses default ISO format when no config (3 ms)
+    в€љ uses default ISO format when dateFormat is undefined
+    в€љ includes time when configured
+    в€љ includes time with ISO format (1 ms)
+    в€љ handles custom format
+    в€љ handles another custom format (1 ms)
+  formatDateForDisplay
+    в€љ uses writeFormat when displayFormat is not set
+    в€љ uses displayFormat when set (different from writeFormat) (1 ms)
+    в€љ uses displayFormat with EU write format
+    в€љ handles null date (1 ms)
+    в€љ handles invalid date
+    в€љ uses default format when no config (1 ms)
+    в€љ includes time when configured (1 ms)
+  formatDateForInternal
+    в€љ always returns ISO 8601 format (1 ms)
+    в€љ ignores any configuration (US date input) (1 ms)
+    в€љ ignores any configuration (different input format)
+    в€љ handles dates with time
+    в€љ handles null date
+    в€љ handles invalid date
+    в€љ handles different months and days (1 ms)
+    в€љ handles single-digit months and days with leading zeros
+  Date format presets
+    в€љ ISO preset (default) (3 ms)
+    в€љ US preset
+    в€љ EU preset
+    в€љ UK preset (1 ms)
+    в€љ Japan preset
+    в€љ Custom format DD-MMM-YYYY (1 ms)
+    в€љ Custom format MMM DD, YYYY
+    в€љ Custom format DD MMMM YYYY (1 ms)
+  Backward compatibility
+    в€љ projects without dateFormat config use default ISO format (1 ms)        
+    в€љ formatDateForDisplay works without config
+    в€љ formatDateForInternal always returns ISO regardless of project config (1 ms)
+  parseDate
+    в€љ parses ISO 8601 format (1 ms)
+    в€љ parses date with time (1 ms)
+    в€љ handles null value
+    в€љ handles undefined value (1 ms)
+    в€љ handles empty string (6 ms)
+    в€љ parses dayjs object (1 ms)
+    в€љ parses Date object (1 ms)
+  Edge cases
+    в€љ handles leap year dates (1 ms)
+    в€љ handles year boundaries
+    в€љ handles end of year (1 ms)
+    в€љ handles time at midnight
+    в€љ handles time at 23:59 (1 ms)
+
+ PASS  src/ui/views/Database/__tests__/widgetTemplates.test.ts
+  widgetTemplates
+    в€љ has 3 templates (1 ms)
+    в€љ all templates have required fields (5 ms)
+    в€љ all widget definitions have required fields (12 ms)
+    в€љ widget IDs are unique within each template (1 ms)
+    в€љ widget IDs are unique across all templates
+    в€љ Dashboard template has stats, chart, and data-table (1 ms)
+    в€љ Analytics template has multiple charts
+    в€љ Kanban+ template has data-table and checklist (1 ms)
+
+ PASS  src/ui/views/Calendar/dnd/__tests__/HapticManager.test.ts
+  HapticManager
+    в€љ hapticTapCreate vibrates 30ms (6 ms)
+    в€љ hapticDragStart vibrates 50ms (1 ms)
+    в€љ hapticSnap vibrates 15ms (1 ms)
+    в€љ hapticDrop vibrates 40ms (1 ms)
+    в€љ hapticResizeLimit vibrates with pattern (3 ms)
+    в€љ hapticCancel vibrates with pattern (1 ms)
+    в€љ hapticCreationConfirm vibrates with pattern (1 ms)
+    в€љ does not throw when vibrate is not available (1 ms)
+    в€љ setHapticEnabled(false) disables all vibrations (1 ms)
+    в€љ setHapticEnabled(true) re-enables vibrations (1 ms)
+
+ PASS  src/ui/views/Database/engine/rollup.test.ts
+  computeRollup
+    в€љ should sum numeric values from relation targets (1 ms)
+    в€љ should compute count
+    в€љ should compute avg (1 ms)
+    в€љ should compute min (1 ms)
+    в€љ should compute max
+    в€љ should compute median (2 ms)
+    в€љ should compute range (4 ms)
+    в€љ should compute percent_true on boolean field (1 ms)
+    в€љ should compute concat (1 ms)
+    в€љ should compute concat_unique
+    в€љ should return 0 for records with no relations (1 ms)
+    в€љ should count_unique
+    в€љ should use custom separator for concat (1 ms)
+  computeRollupColumn
+    в€љ should compute rollup for all records (1 ms)
+    в€љ should return map with formattedValue (1 ms)
+
+ PASS  src/ui/views/Database/__tests__/accessibility.test.ts
+  accessibility
+    ariaGrid
+      в€љ generates grid ARIA props (2 ms)
+    ariaGridCell
+      в€љ generates active cell props (2 ms)
+      в€љ generates inactive cell props
+    ariaWidget
+      в€љ generates widget ARIA props (1 ms)
+    navigateGrid
+      в€љ ArrowDown moves row down
+      в€љ ArrowUp moves row up (4 ms)
+      в€љ ArrowRight moves col right (1 ms)
+      в€љ ArrowLeft moves col left (1 ms)
+      в€љ Home jumps to first column
+      в€љ End jumps to last column
+      в€љ returns null for out-of-bounds up (2 ms)
+      в€љ returns null for out-of-bounds down
+      в€љ returns null for out-of-bounds left (1 ms)
+      в€љ returns null for out-of-bounds right
+      в€љ returns null for unknown key
+    navigateList
+      в€љ ArrowDown moves to next item (1 ms)
+      в€љ ArrowUp moves to previous item (1 ms)
+      в€љ returns null for ArrowUp at start
+      в€љ returns null for ArrowDown at end
+      в€љ Home returns 0 (1 ms)
+      в€љ End returns last index
+      в€љ returns null for unknown key
+
+ PASS  src/ui/views/Gallery/helpers.test.ts
+  parseObsidianLink
+    в€љ parses non-link (2 ms)
+    в€љ parses simple wiki link (1 ms)
+    в€љ parses wiki link with display name
+    в€љ parses simple wiki link embed (1 ms)
+    в€љ parses wiki link embed with display name
+    в€љ parse simple markdown link (1 ms)
+    в€љ parse markdown link with display name
+    в€љ parse simple markdown link embed
+    в€љ parse markdown link embed with display name
+
+ PASS  src/ui/views/Database/__tests__/fieldTypes.test.ts
+  fieldTypes вЂ” type guards
+    в€љ isSelectConfig identifies select config (2 ms)
+    в€љ isStatusConfig identifies status config (1 ms)
+    в€љ isFormulaConfig identifies formula config (1 ms)
+    в€љ type guards return false for null/undefined (1 ms)
+    в€љ type guards return false for plain objects (1 ms)
+  fieldTypes вЂ” getOptionColor
+    в€љ returns color for known select option (1 ms)
+    в€љ returns null for unknown select option
+    в€љ returns color for status group
+    в€љ returns null for unknown status (3 ms)
+  fieldTypes вЂ” defaults
+    в€љ DEFAULT_STATUS_GROUPS has 3 groups (4 ms)
+    в€љ DEFAULT_SELECT_COLORS has 8 colors (1 ms)
+
+ PASS  src/ui/views/Board/components/Board/boardHelpers.test.ts
+  getDisplayName
+    в€љ should return the basename without the extension (1 ms)
+
+ PASS  src/ui/views/Database/engine/relationResolver.test.ts
+  extractWikiLinks
+    в€љ should extract simple links (2 ms)
+    в€љ should extract links with aliases (6 ms)
+    в€љ should extract links with heading anchors
+    в€љ should extract links with heading + alias
+    в€љ should return empty for no links (1 ms)
+    в€љ should handle empty string
+    в€љ should handle multiple links on same line
+    в€љ should trim whitespace in link targets (1 ms)
+  resolveRelations
+    в€љ should resolve existing links to records (2 ms)
+    в€љ should return undefined target for unresolved links (1 ms)
+    в€љ should skip records with no links (1 ms)
+    в€љ should be case-insensitive when matching (1 ms)
+  getRelationTargets
+    в€љ should return array of target records (1 ms)
+    в€љ should return empty array for no links
+    в€љ should filter out unresolved links (1 ms)
+
+ PASS  src/settings/v2/settings.test.ts
+  resolve v2
+    в€љ resolves minimum (5 ms)
+    в€љ resolves an empty project with defaults (5 ms)
+  clean up commands
+    в€љ uniquify commands and remove orphan ones (2 ms)
+
+ PASS  src/lib/datasources/frontmatter/standardize.test.ts
+  frontmatter
+    в€љ standardize (1 ms)
+
+ PASS  src/settings/v1/settings.test.ts
+  resolve v2
+    в€љ resolves minimum (2 ms)
+    в€љ resolves an empty project with defaults (1 ms)
+
+ PASS  src/ui/views/Database/__tests__/migration.test.ts
+  isLegacyTableConfig
+    в€љ identifies empty config as legacy (9 ms)
+    в€љ identifies config with fieldConfig as legacy (1 ms)
+    в€љ identifies config with sortField as legacy
+    в€љ identifies DatabaseViewConfig as NOT legacy (7 ms)
+  migrateTableConfig
+    в€љ creates DatabaseViewConfig with single DataTable widget (2 ms)
+    в€љ preserves table config fields (3 ms)
+    в€љ handles empty legacy config (2 ms)
+    в€љ widget has unique id (1 ms)
+
+ PASS  src/ui/views/Database/engine/virtualScroll.test.ts
+  computeVirtualScroll
+    в€љ should compute correct window at scrollTop=0 (2 ms)
+    в€љ should offset correctly when scrolled to middle (1 ms)
+    в€љ should clamp at end of list (5 ms)
+    в€љ should handle negative scrollTop (1 ms)
+    в€љ should handle 0 items (1 ms)
+    в€љ should handle 0 rowHeight (1 ms)
+    в€љ should handle 0 containerHeight
+    в€љ should use default overscan when not specified (1 ms)
+    в€љ should render all items when count is small
+  shouldVirtualize
+    в€љ should return false for small datasets
+    в€љ should return true above threshold (1 ms)
+  getRowHeight
+    в€љ should return correct heights for each density
+
+ PASS  src/lib/templates/interpolate.test.ts
+  в€љ interpolate string data (5 ms)
+
+Summary of all failing tests
+ FAIL  src/ui/views/Database/engine/formulaEngine.test.ts
+  в—Џ formulaEngine вЂ” Financial вЂє PMT calculates monthly payment
+
+    expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 1073.64
+    Received: -1073.6432460242795
+
+    Expected precision:    1
+    Expected difference: < 0.05
+    Received difference:   2147.28324602428
+
+      154 |
+      155 | // в”Ђв”Ђ Field references в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    > 156 |
+          | ^
+      157 | describe("formulaEngine вЂ” Fields", () => {
+      158 |   test("arithmetic with field values", () => {
+      159 |     const record = makeRecord({ a: 10, b: 3 });
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:156:20)
+
+  в—Џ formulaEngine вЂ” Financial вЂє FV calculates future value
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 1200
+    Received:   -1268.2503013196977
+
+      159 |     const record = makeRecord({ a: 10, b: 3 });
+      160 |     expect(evaluateFormulaValue("a + b", record)).toBe(13);
+    > 161 |     expect(evaluateFormulaValue("a * b", record)).toBe(30);
+          |                    ^
+      162 |   });
+      163 |
+      164 |   test("division by zero returns null", () => {
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:161:20)
+
+  в—Џ formulaEngine вЂ” Financial вЂє NPER calculates number of periods
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   -9.578594039813161
+
+      179 |     const errors = validateFormulaExpression("a + b", ["a", "b"]);  
+      180 |     expect(errors).toHaveLength(0);
+    > 181 |   });
+          |                ^
+      182 |
+      183 |   test("unknown field returns error", () => {
+      184 |     const errors = validateFormulaExpression("a + unknown", ["a"]); 
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:181:20)
+
+  в—Џ formulaEngine вЂ” Duration вЂє DAYS calculates days between dates
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 30
+    Received: null
+
+      271 |   });
+      272 |
+    > 273 |   test("PERCENTILE", () => {
+          |                    ^
+      274 |     const result = evaluateFormulaValue("PERCENTILE(1, 2, 3, 4, 5, 0.5)", makeRecord({}));
+      275 |     expect(result).toBe(3);
+      276 |   });
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:273:20)
+
+  в—Џ formulaEngine вЂ” Duration вЂє TO_DAYS converts hours to days
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 48
+
+      274 |     const result = evaluateFormulaValue("PERCENTILE(1, 2, 3, 4, 5, 0.5)", makeRecord({}));
+      275 |     expect(result).toBe(3);
+    > 276 |   });
+          |                ^
+      277 |
+      278 |   test("QUARTILE", () => {
+      279 |     const result = evaluateFormulaValue("QUARTILE(1, 2, 3, 4, 5, 2)", makeRecord({}));
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:276:91)
+
+  в—Џ formulaEngine вЂ” Conditional Aggregation вЂє COUNTIF counts matching values
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 3
+    Received: 2
+
+      287 |   });
+      288 |
+    > 289 |   test("RANK returns position", () => {
+          |                    ^
+      290 |     const result = evaluateFormulaValue("RANK(3, 1, 2, 3, 4, 5)", makeRecord({}));
+      291 |     expect(result).toBe(3);
+      292 |   });
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:289:20)
+
+  в—Џ formulaEngine вЂ” Conversion & Logic вЂє TO_PERCENT formats as percentage 
+
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "75%"
+    Received: "75.00%"
+
+      355 |
+      356 |   test("REGEX_MATCH tests pattern", () => {
+    > 357 |     expect(evaluateFormulaValue('REGEX_MATCH("abc123", "\\\\d+")', makeRecord({}))).toBe(true);
+          |                    ^
+      358 |     expect(evaluateFormulaValue('REGEX_MATCH("abcdef", "\\\\d+")', makeRecord({}))).toBe(false);
+      359 |   });
+      360 |
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:357:20)
+
+  в—Џ formulaEngine вЂ” Conversion & Logic вЂє IFBLANK returns fallback when blank
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "default"
+    Received: [""]
+
+      359 |   });
+      360 |
+    > 361 |   test("JOIN concatenates with separator", () => {
+          |
+            ^
+      362 |     expect(evaluateFormulaValue('JOIN("-", "a", "b", "c")', makeRecord({}))).toBe("a-b-c");
+      363 |   });
+      364 |
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:361:92)
+
+  в—Џ formulaEngine вЂ” Conversion & Logic вЂє IFBLANK returns value when not blank
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "hello"
+    Received: ["hello"]
+
+      363 |   });
+      364 |
+    > 365 |   test("REPEAT repeats string", () => {
+          |
+ ^
+      366 |     expect(evaluateFormulaValue('REPEAT("ab", 3)', makeRecord({}))).toBe("ababab");
+      367 |   });
+      368 |
+
+      at Object.<anonymous> (src/ui/views/Database/engine/formulaEngine.test.ts:365:92)
+
+
+Test Suites: 1 failed, 40 passed, 41 total
+Tests:       9 failed, 770 passed, 779 total
+Snapshots:   0 total
+Time:        8.295 s
+Ran all test suites.

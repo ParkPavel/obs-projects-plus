@@ -98,11 +98,17 @@
                     "error": {
                         "title": "Dataview is disabled",
                         "message": "Enable the Dataview plugin to continue using this project."
-                    }
+                    },
+                    "validating": "Validating query...",
+                    "query-error": "Query failed. Check the syntax.",
+                    "preview-table": "{{count}} records found (TABLE)",
+                    "preview-list": "{{count}} items found (LIST)",
+                    "preview-task": "{{count}} tasks found (TASK)",
+                    "unsupported-type": "Unsupported query type: {{type}}"
                 },
                 "query": {
                     "name": "Query",
-                    "description": "Only supports TABLE queries."
+                    "description": "Supports TABLE, LIST and TASK queries."
                 },
                 "recursive": {
                     "name": "Include subfolders",
@@ -115,6 +121,10 @@
                 "more-settings": {
                     "name": "More settings",
                     "description": ""
+                },
+                "additional-sources": {
+                    "name": "Additional data sources",
+                    "add": "Add source"
                 },
                 "templates": {
                     "name": "Templates",
@@ -301,6 +311,7 @@
             },
             "table": {
                 "name": "Table",
+                "deprecation-notice": "Table view is deprecated. Switch to Database view for enhanced features.",
                 "hide-fields": "Hide fields",
                 "rename-field": "Rename field",
                 "rename": "Rename"
@@ -563,10 +574,180 @@
                     }
                 },
                 "empty": "This view is empty."
+            },
+            "database": {
+                "name": "Database",
+                "add-row": "New note",
+                "canvas": {
+                    "widgets": "Widgets",
+                    "hide-toolbar": "Hide widget toolbar",
+                    "show-toolbar": "Show widget toolbar",
+                    "toggle-layout": "Toggle layout mode",
+                    "layout-grid": "Grid",
+                    "layout-stack": "Stack",
+                    "hide-formula-bar": "Hide formula bar",
+                    "show-formula-bar": "Show formula bar"
+                },
+                "widget": {
+                    "expand": "Expand widget",
+                    "collapse": "Collapse widget",
+                    "chart-settings": "Chart settings",
+                    "pipeline": "Transform pipeline",
+                    "remove": "Remove widget",
+                    "not-configured": "Widget type \"{{type}}\" — not configured",
+                    "add": "Add Widget",
+                    "add-aria": "Add widget",
+                    "templates": "Templates"
+                },
+                "types": {
+                    "data-table": "Data Table",
+                    "chart": "Chart",
+                    "stats": "Stats",
+                    "comparison": "Comparison",
+                    "checklist": "Checklist",
+                    "view-port": "View Port",
+                    "filter-tabs": "Filter Tabs",
+                    "summary-row": "Summary Row"
+                },
+                "formula": {
+                    "title": "Formula Editor",
+                    "hint": "Ctrl+Enter to apply, Esc to cancel",
+                    "field-name": "Field name",
+                    "field-placeholder": "e.g. Computed Budget",
+                    "expression-placeholder": "e.g. IF(Status = \"Active\", Budget * 1.2, 0)",
+                    "preview": "Preview:",
+                    "cancel": "Cancel",
+                    "apply": "Apply",
+                    "mode-code": "Code",
+                    "mode-visual": "Visual",
+                    "visual-empty": "Click to add a formula block",
+                    "visual-parse-error": "Cannot display in visual mode — switch to Code to edit"
+                },
+                "pipeline": {
+                    "title": "Transform Pipeline",
+                    "steps": "step(s)",
+                    "empty": "No transform steps. Add a step below.",
+                    "move-up": "Move up",
+                    "move-down": "Move down",
+                    "remove": "Remove",
+                    "add-step": "Add step:",
+                    "cancel": "Cancel",
+                    "save": "Save Pipeline",
+                    "filter": "Filter",
+                    "group-by": "Group By",
+                    "aggregate": "Aggregate",
+                    "compute": "Compute",
+                    "unpivot": "Unpivot",
+                    "pivot": "Pivot",
+                    "none": "(none)",
+                    "columns": "column(s)",
+                    "groups": "group(s)",
+                    "unset": "(unset)",
+                    "unknown": "Unknown",
+                    "unsaved-changes": "Unsaved changes",
+                    "discard-confirm": "You have unsaved pipeline changes. Discard?",
+                    "keep-editing": "Keep editing",
+                    "discard": "Discard"
+                },
+                "group": {
+                    "empty": "(empty)"
+                },
+                "chart": {
+                    "no-data": "No data",
+                    "type": "Chart Type",
+                    "x-axis": "X Axis",
+                    "y-axis": "Y Axis",
+                    "aggregation": "Aggregation",
+                    "sort-by": "Sort By",
+                    "height": "Height",
+                    "types": {
+                        "bar": "Bar",
+                        "horizontal-bar": "Horizontal Bar",
+                        "stacked-bar": "Stacked Bar",
+                        "line": "Line",
+                        "area": "Area",
+                        "pie": "Pie",
+                        "donut": "Donut",
+                        "number": "Number / KPI",
+                        "progress": "Progress",
+                        "scatter": "Scatter"
+                    },
+                    "aggregations": {
+                        "sum": "Sum",
+                        "average": "Average",
+                        "min": "Min",
+                        "max": "Max",
+                        "median": "Median",
+                        "count": "Count",
+                        "unique": "Unique"
+                    },
+                    "sort": {
+                        "label": "Label",
+                        "value": "Value",
+                        "manual": "Manual"
+                    },
+                    "heights": {
+                        "small": "Small",
+                        "medium": "Medium",
+                        "large": "Large"
+                    },
+                    "options": {
+                        "grid": "Grid",
+                        "labels": "Labels",
+                        "values": "Values",
+                        "legend": "Legend",
+                        "hide-zero": "Hide zero",
+                        "cumulative": "Cumulative"
+                    },
+                    "scatter": {
+                        "color-by": "Color By",
+                        "size-by": "Size By",
+                        "trend-line": "Trend Line",
+                        "r-squared": "Show R²",
+                        "point-size": "Point Size",
+                        "opacity": "Opacity",
+                        "none": "(none)"
+                    },
+                    "section": {
+                        "display": "Display Options"
+                    }
+                },
+                "comparison": {
+                    "empty": "Configure comparison metrics",
+                    "metric-a": "Metric A",
+                    "metric-b": "Metric B"
+                },
+                "filter-tabs": {
+                    "all": "All"
+                },
+                "checklist": {
+                    "select-field": "Select a boolean field to bind",
+                    "no-items": "No items",
+                    "done": "done"
+                },
+                "viewport": {
+                    "select": "Select a view to embed",
+                    "change": "Change embedded view",
+                    "embedded": "Embedded view: {{label}}",
+                    "embed-title": "Embed a view",
+                    "table": "Table View",
+                    "board": "Board View",
+                    "calendar": "Calendar View",
+                    "gallery": "Gallery View"
+                },
+                "templates": {
+                    "dashboard": "Dashboard",
+                    "dashboard-desc": "Stats overview + chart + data table",
+                    "analytics": "Analytics",
+                    "analytics-desc": "Multiple charts for data analysis",
+                    "kanban-plus": "Kanban+",
+                    "kanban-plus-desc": "Data table + checklist + progress tracker"
+                }
             }
         },
         "components": {
             "data-grid": {
+                "grid-label": "Data table",
                 "column": {
                     "configure": "Configure field",
                     "add": "Add field",
@@ -771,6 +952,12 @@
         "navigation": {
             "active-project": "Active project"
         },
+        "nav": {
+            "project-switcher": {
+                "tooltip": "Switch project",
+                "search-placeholder": "Search projects..."
+            }
+        },
         "settings-menu": {
             "title": "Settings",
             "tabs": {
@@ -803,13 +990,20 @@
                     "timezone": "Timezone",
                     "show-agenda": "Show Agenda",
                     "hide-agenda": "Hide Agenda",
+                    "hints": {
+                        "timezone": "e.g. Europe/Moscow or local"
+                    },
                     "timeline": {
                         "title": "Timeline Settings",
                         "start-hour": "Start Hour",
                         "end-hour": "End Hour",
                         "event-color-field": "Event Color Field",
                         "show-weekends": "Show weekends",
-                        "show-all-day": "Show 'All day' section"
+                        "show-all-day": "Show 'All day' section",
+                        "hints": {
+                            "event-color-field": "Field for event colors (optional)",
+                            "event-color-placeholder": "e.g. status, priority"
+                        }
                     },
                     "interval-options": {
                         "year": "Year",
@@ -820,15 +1014,37 @@
                     "layout-options": {
                         "headers": "Headers (classic)",
                         "bars": "Bars (timeline)"
+                    },
+                    "field-mapping": {
+                        "title": "Field Mapping",
+                        "hint": "Select an existing field from the list or enter a new field name",
+                        "placeholder": "Enter or select field",
+                        "new-field": "+ new field",
+                        "date": "Creation date (date)",
+                        "start-date": "Start (startDate)",
+                        "end-date": "End (endDate)",
+                        "start-time": "Start time (startTime)",
+                        "end-time": "End time (endTime)",
+                        "check": "Status field (check)",
+                        "hints": {
+                            "date": "Automatically filled when note is created. Does not determine event start",
+                            "start-date": "Start date for multi-day events",
+                            "end-date": "End date for multi-day events",
+                            "start-time": "Separate start time field (HH:mm)",
+                            "end-time": "Separate end time field",
+                            "check": "Field for marking completion (completed, done, etc.)"
+                        }
                     }
                 },
                 "board": {
                     "column-width": "Column width",
+                    "group-by-field": "Group by field (status)",
                     "header-field": "Card header",
                     "order-sync-field": "Order sync field",
                     "freeze-columns": "Freeze columns",
                     "hints": {
                         "column-width": "Width of each column in pixels",
+                        "group-by-field": "String frontmatter field for grouping cards by columns",
                         "header-field": "Field for card headers",
                         "order-sync-field": "Number field to store card positions"
                     }

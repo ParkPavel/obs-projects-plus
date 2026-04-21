@@ -242,6 +242,10 @@ export function evaluateFilter(
           calendarLogger.error('[FilterEngine] Regex too long (>' + 200 + ' chars), skipping');
           return false;
         }
+        // ReDoS mitigation: reject unsafe patterns
+        if (/\(\?[<!=]/.test(filterValue)) return false;
+        if (/(\+|\*|\{[^}]*\})\s*(\+|\*|\{)/.test(filterValue)) return false;
+        if (/\([^)]*(\+|\*|\{[^}]*\})\)\s*(\+|\*|\{)/.test(filterValue)) return false;
         try {
           const regex = new RegExp(filterValue, 'i');
           return regex.test(fieldValue.slice(0, 10000));
@@ -413,11 +417,16 @@ export function evaluateFilters(
  * @param group - Filter group with conjunction
  * @param baseDate - Reference date for formula evaluation
  */
+const MAX_FILTER_DEPTH = 20;
+
 export function evaluateFilterGroup(
   record: DataRecord,
   group: AgendaFilterGroup,
-  baseDate: Dayjs = dayjs()
+  baseDate: Dayjs = dayjs(),
+  _depth = 0
 ): boolean {
+  if (_depth >= MAX_FILTER_DEPTH) return true; // safety: prevent infinite recursion
+
   // Evaluate all filters in this group (skip disabled filters)
   const filterResults = group.filters
     .filter(filter => filter.enabled !== false)
@@ -425,7 +434,7 @@ export function evaluateFilterGroup(
   
   // Evaluate all nested groups
   const groupResults = group.groups.map(nestedGroup => 
-    evaluateFilterGroup(record, nestedGroup, baseDate)
+    evaluateFilterGroup(record, nestedGroup, baseDate, _depth + 1)
   );
   
   // Combine all results

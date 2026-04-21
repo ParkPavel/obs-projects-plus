@@ -1,9 +1,14 @@
 <script lang="ts">
   import { useClickOutside } from "obsidian-svelte";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, getContext } from "svelte";
+  import type { Writable } from "svelte/store";
   import type { GridColDef } from "../dataGrid";
 
   import Resizer from "./Resizer.svelte";
+
+  // Read per-cell conditional format styles from GridRow context
+  const cellStyleStore = getContext<Writable<Record<string, string>> | undefined>("ppp-cellStyles");
+  $: extraStyle = (column?.field && cellStyleStore) ? ($cellStyleStore?.[column.field] ?? "") : "";
 
   export let selected: boolean = false;
   export let edit: boolean = false;
@@ -23,6 +28,8 @@
   export let onCopy: () => void = () => {};
   export let onCut: () => void = () => {};
   export let onPaste: () => void = () => {};
+  /** Dynamic left offset for pinned columns (px). If set, overrides CSS left. */
+  export let pinnedLeft: number | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     navigate: [number, number, boolean?];
@@ -141,6 +148,7 @@
     bind:this={ref}
     role={role()}
     class:rowHeader
+    aria-rowindex={rowindex}
     style={`width: ${column.width}px`}
     on:mouseenter={() => (hover = true)}
     on:mouseleave={() => (hover = false)}
@@ -167,6 +175,7 @@
     role={role()}
     aria-selected={rowHeader || columnHeader ? undefined : selected}
     aria-colindex={colindex}
+    aria-rowindex={rowindex}
     class:header={column.header}
     class:selected
     class:rowHeader
@@ -174,7 +183,7 @@
     class:pinned={column.pinned}
     class:editable={column.editable && !columnHeader && !rowHeader}
     class:error
-    style={`width: ${column.width}px`}
+    style={`width: ${column.width}px${column.pinned && pinnedLeft != null ? `; left: ${pinnedLeft}px` : ''}${extraStyle ? '; ' + extraStyle : ''}`}
     tabindex={!columnHeader && !rowHeader ? -1 : undefined}
     on:click={handleClick}
     on:dblclick={handleDoubleClick}
@@ -264,17 +273,17 @@
     font-weight: 500;
     text-align: center;
     justify-content: space-between;
-    padding: 0 4px;
+    padding: 0 var(--ppp-spacing-2xs, 0.25rem);
   }
 
   .header {
     background-color: var(--background-primary-alt);
     position: sticky;
-    left: 60px;
+    left: var(--ppp-row-header-width, 3.75rem);
   }
 
   .rowHeader {
-    left: 0px;
+    left: 0;
     justify-content: center;
     z-index: 5;
     background-color: var(--background-primary-alt);
@@ -285,7 +294,7 @@
   }
 
   .pinned {
-    left: 60px;
+    /* Dynamic left offset set via inline style for multi-pin support */
     background-color: var(--background-primary-alt);
     position: sticky;
     border-right: 1px solid var(--background-modifier-border-focus);

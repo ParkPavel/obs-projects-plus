@@ -28,6 +28,8 @@ import {
   type ListFilterOperator,
 } from "src/settings/settings";
 
+// dayjs isoWeek + quarterOfYear plugins are extended globally in main.ts
+
 export function matchesCondition(
   cond: FilterCondition,
   record: DataRecord
@@ -59,31 +61,34 @@ export function matchesCondition(
   } else if (isOptionalNumber(value) && isNumberFilterOperator(operator)) {
     return numberFns[operator](
       value,
-      cond.value ? parseFloat(cond.value) : undefined
+      cond.value ? Number(cond.value) : undefined
     );
   } else if (isOptionalBoolean(value) && isBooleanFilterOperator(operator)) {
     return booleanFns[operator](value);
   } else if (isOptionalDate(value) && isDateFilterOperator(operator)) {
-    return dateFns[operator](
-      value,
-      cond.value ? dayjs(cond.value).toDate() : undefined
-    );
+    return dateFns[operator](value, cond.value);
   }
 
+  if (process.env["NODE_ENV"] !== "production") {
+    console.warn(`[FilterEngine] Unhandled filter: operator="${operator}", field="${cond.field}"`);
+  }
   return false;
 }
 
 export function matchesFilterConditions(
   filter: FilterDefinition,
-  record: DataRecord
+  record: DataRecord,
+  _depth = 0
 ): boolean {
+  if (_depth >= 20) return true; // safety: prevent infinite recursion
+
   const validConds = filter.conditions.filter((cond) => {
     return cond?.enabled ?? true;
   });
 
   const condResults = validConds.map((cond) => matchesCondition(cond, record));
   const groupResults = (filter.groups ?? []).map((group) =>
-    matchesFilterConditions(group, record)
+    matchesFilterConditions(group, record, _depth + 1)
   );
   const allResults = [...condResults, ...groupResults];
 
@@ -154,33 +159,71 @@ export const booleanFns: Record<
 
 export const dateFns: Record<
   DateFilterOperator,
-  (left: Optional<Date>, right?: Optional<Date>) => boolean
+  (left: Optional<Date>, rawValue?: string) => boolean
 > = {
-  "is-on": (left, right) => {
-    if (!left || !right) return false;
-    return dayjs(left).isSame(dayjs(right), "day");
+  "is-on": (left, rv) => {
+    if (!left || !rv) return false;
+    return dayjs(left).isSame(dayjs(rv), "day");
   },
-  "is-not-on": (left, right) => {
-    if (!left || !right) return true;
-    return !dayjs(left).isSame(dayjs(right), "day");
+  "is-not-on": (left, rv) => {
+    if (!left || !rv) return true;
+    return !dayjs(left).isSame(dayjs(rv), "day");
   },
-  "is-before": (left, right) => {
-    if (!left || !right) return false;
-    return dayjs(left).isBefore(dayjs(right), "day");
+  "is-before": (left, rv) => {
+    if (!left || !rv) return false;
+    return dayjs(left).isBefore(dayjs(rv), "day");
   },
-  "is-after": (left, right) => {
-    if (!left || !right) return false;
-    return dayjs(left).isAfter(dayjs(right), "day");
+  "is-after": (left, rv) => {
+    if (!left || !rv) return false;
+    return dayjs(left).isAfter(dayjs(rv), "day");
   },
-  "is-on-and-before": (left, right) => {
-    if (!left || !right) return false;
-    const l = dayjs(left), r = dayjs(right);
+  "is-on-and-before": (left, rv) => {
+    if (!left || !rv) return false;
+    const l = dayjs(left), r = dayjs(rv);
     return l.isBefore(r, "day") || l.isSame(r, "day");
   },
-  "is-on-and-after": (left, right) => {
-    if (!left || !right) return false;
-    const l = dayjs(left), r = dayjs(right);
+  "is-on-and-after": (left, rv) => {
+    if (!left || !rv) return false;
+    const l = dayjs(left), r = dayjs(rv);
     return l.isAfter(r, "day") || l.isSame(r, "day");
+  },
+  // ── Relative date operators ──
+  "is-today": (left) => {
+    if (!left) return false;
+    return dayjs(left).isSame(dayjs(), "day");
+  },
+  "is-this-week": (left) => {
+    if (!left) return false;
+    return dayjs(left).isoWeek() === dayjs().isoWeek() && dayjs(left).year() === dayjs().year();
+  },
+  "is-this-month": (left) => {
+    if (!left) return false;
+    return dayjs(left).isSame(dayjs(), "month");
+  },
+  "is-this-quarter": (left) => {
+    if (!left) return false;
+    return dayjs(left).quarter() === dayjs().quarter() && dayjs(left).year() === dayjs().year();
+  },
+  "is-last-n-days": (left, rv) => {
+    const n = rv ? parseInt(rv, 10) : 0;
+    if (!left || !n || n <= 0) return false;
+    const d = dayjs(left), today = dayjs();
+    return d.isAfter(today.subtract(n, "day"), "day") && (d.isBefore(today, "day") || d.isSame(today, "day"));
+  },
+  "is-next-n-days": (left, rv) => {
+    const n = rv ? parseInt(rv, 10) : 0;
+    if (!left || !n || n <= 0) return false;
+    const d = dayjs(left), today = dayjs();
+    return (d.isAfter(today, "day") || d.isSame(today, "day")) && d.isBefore(today.add(n, "day"), "day");
+  },
+  "is-overdue": (left) => {
+    if (!left) return false;
+    return dayjs(left).isBefore(dayjs(), "day");
+  },
+  "is-upcoming": (left) => {
+    if (!left) return false;
+    const d = dayjs(left);
+    return d.isAfter(dayjs(), "day") || d.isSame(dayjs(), "day");
   },
 };
 

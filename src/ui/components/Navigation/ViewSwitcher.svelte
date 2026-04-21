@@ -61,9 +61,19 @@
   }
 
   function handleKeydown(event: KeyboardEvent, index: number) {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-    const direction = event.key === "ArrowRight" ? 1 : -1;
-    const nextIndex = (index + direction + views.length) % views.length;
+    let nextIndex = -1;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % views.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + views.length) % views.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = views.length - 1;
+    else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      const view = views[index];
+      if (view) onSelect?.(view.id);
+      return;
+    }
+    else return;
+
     const nextView = views[nextIndex];
     if (nextView) {
       buttonRefs[nextIndex]?.focus();

@@ -18,6 +18,9 @@
   import { GridNumberCell } from "./GridNumberCell";
   import { GridTextCell } from "./GridTextCell";
   import { GridListCell } from "./GridListCell";
+  import { GridSelectCell } from "./GridSelectCell";
+  import { GridRelationCell } from "./GridRelationCell";
+  import { GridRollupCell } from "./GridRollupCell";
 
   export let value: Optional<DataValue>;
   export let onChange: (value: Optional<DataValue>) => void;
@@ -97,6 +100,37 @@
       on:navigate
     />
   {/if}
+{:else if (column.type === "select" || column.type === "status") && isOptionalString(value)}
+  <GridSelectCell
+    {selected}
+    {rowindex}
+    {colindex}
+    {value}
+    {onChange}
+    {column}
+    on:mousedown
+    on:navigate
+  />
+{:else if column.type === "relation"}
+  <GridRelationCell
+    {selected}
+    {rowindex}
+    {colindex}
+    {value}
+    {column}
+    on:mousedown
+    on:navigate
+  />
+{:else if column.type === "rollup"}
+  <GridRollupCell
+    {selected}
+    {rowindex}
+    {colindex}
+    {value}
+    {column}
+    on:mousedown
+    on:navigate
+  />
 {:else}
   <GridCell
     {rowindex}

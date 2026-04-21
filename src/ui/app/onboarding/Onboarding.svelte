@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button, ModalButtonGroup, Typography } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { sanitizeHtml } from "src/lib/helpers/sanitizeHtml";
 
   import TabContainer from "./TabContainer.svelte";
 
@@ -8,6 +9,8 @@
   export let onTry: () => void;
 
   $: t = $i18n.t;
+  /** Translate + sanitize for safe {@html} usage */
+  const ts = (key: string) => sanitizeHtml(t(key));
   $: tabProjects = t("onboarding.tab-projects-view");
   $: tabCommand = t("onboarding.tab-command-palette");
   $: tabExplorer = t("onboarding.tab-file-explorer");
@@ -56,19 +59,19 @@ published: false
   >
     {#if selected === tabExplorer}
       <ol>
-        <li>{@html t("onboarding.file-explorer-step1")}</li>
-        <li>{@html t("onboarding.file-explorer-step2")}</li>
+        <li>{@html ts("onboarding.file-explorer-step1")}</li>
+        <li>{@html ts("onboarding.file-explorer-step2")}</li>
       </ol>
     {:else if selected === tabCommand}
       <ol>
-        <li>{@html t("onboarding.command-palette-step1")}</li>
-        <li>{@html t("onboarding.command-palette-step2")}</li>
-        <li>{@html t("onboarding.command-palette-step3")}</li>
+        <li>{@html ts("onboarding.command-palette-step1")}</li>
+        <li>{@html ts("onboarding.command-palette-step2")}</li>
+        <li>{@html ts("onboarding.command-palette-step3")}</li>
       </ol>
     {:else}
       <ol>
-        <li>{@html t("onboarding.projects-view-step1")}</li>
-        <li>{@html t("onboarding.projects-view-step2")}</li>
+        <li>{@html ts("onboarding.projects-view-step1")}</li>
+        <li>{@html ts("onboarding.projects-view-step2")}</li>
       </ol>
     {/if}
   </TabContainer>

@@ -6,6 +6,8 @@ import {
 
 import TableViewSvelte from "./TableView.svelte";
 import type { TableConfig } from "./types";
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
 
 export class TableView extends ProjectView<TableConfig> {
   view?: TableViewSvelte | null;
@@ -26,6 +28,16 @@ export class TableView extends ProjectView<TableConfig> {
   }
 
   onOpen(props: ProjectViewProps<TableConfig>) {
+    // Deprecation banner — safe DOM construction (no innerHTML)
+    const t = get(i18n).t;
+    const banner = props.contentEl.createDiv({ cls: "ppp-deprecation-banner" });
+    banner.createSpan({ cls: "ppp-deprecation-icon", text: "\u26a0" });
+    banner.createSpan({
+      text: t("views.table.deprecation-notice", {
+        defaultValue: "Table view is deprecated. Switch to Database view for enhanced features.",
+      }),
+    });
+
     this.view = new TableViewSvelte({
       target: props.contentEl,
       props: {

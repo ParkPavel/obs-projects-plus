@@ -15,7 +15,7 @@
   export let onColumnMenu: (column: GridColDef) => Menu;
   export let onColumnOrder: (columns: GridColDefWithId[]) => void;
 
-  const flipDurationMs = 200;
+  const flipDurationMs = 150;
 
   function handleDndConsider(e: CustomEvent<DndEvent<GridColDefWithId>>) {
     columns = e.detail.items;
@@ -40,6 +40,7 @@
     use:dndzone={{
       items: columns,
       flipDurationMs,
+      morphDisabled: true,
       dropTargetStyle: {
         outline: "none",
         background: "hsla(var(--interactive-accent-hsl), 0.3)",
@@ -86,7 +87,7 @@
   }
 
   div.pinned {
-    left: 3.75rem;
+    left: var(--ppp-row-header-width, 3.75rem);
     z-index: 7;
     position: sticky;
   }

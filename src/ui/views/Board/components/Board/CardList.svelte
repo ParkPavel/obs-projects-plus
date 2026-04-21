@@ -46,14 +46,14 @@
   const getRecordColor = getRecordColorContext.get();
   const sortRecords = sortRecordsContext.get();
 
-  const flipDurationMs = 200;
+  const flipDurationMs = 150;
 
   let dragItem: DataRecord | undefined;
   function handleDndConsider({ detail }: CustomEvent<DndEvent<DataRecord>>) {
     if (detail.info.trigger === TRIGGERS.DRAG_STARTED) {
       dragItem = items.find((item) => item.id === detail.info.id);
     }
-    items = sortRecords(detail.items);
+    items = detail.items;
   }
 
   function handleDndFinalize({ detail }: CustomEvent<DndEvent<DataRecord>>) {

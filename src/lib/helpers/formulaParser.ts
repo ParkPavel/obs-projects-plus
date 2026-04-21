@@ -26,6 +26,7 @@ export type FormulaNode =
   | { type: 'function'; name: string; args: FormulaNode[] }
   | { type: 'operator'; operator: string; left: FormulaNode; right: FormulaNode }
   | { type: 'field'; name: string }
+  | { type: 'column_ref'; name: string }
   | { type: 'literal'; value: string | number | boolean | null }
   | { type: 'array'; items: FormulaNode[] };
 
@@ -59,6 +60,34 @@ const FUNCTIONS = [
   'IS_OVERDUE', 'IS_UPCOMING',
   'DATE_ADD', 'DATE_SUB',
   'HAS_ANY_OF', 'HAS_ALL_OF', 'HAS_NONE_OF',
+  // Extended functions (FormulaField / Database View)
+  'IF', 'IFS', 'SWITCH', 'EMPTY',
+  'ROUND', 'CEIL', 'FLOOR', 'ABS', 'SQRT', 'POWER', 'LOG', 'SIGN',
+  'TRIM', 'LOWER', 'UPPER', 'LENGTH', 'SUBSTRING', 'REPLACE', 'SPLIT', 'FORMAT',
+  'DATE_BETWEEN', 'FORMAT_DATE', 'PARSE_DATE',
+  'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'WEEK',
+  'TO_NUMBER', 'TO_TEXT', 'TO_DATE',
+  // Financial
+  'PMT', 'FV', 'PV', 'NPV', 'IRR', 'RATE', 'IPMT', 'PPMT', 'NPER', 'CUMPRINC', 'CUMIPMT',
+  // Statistical
+  'VARIANCE', 'VARIANCE_S', 'PERCENTILE', 'QUARTILE', 'CORREL', 'MODE', 'RANK', 'STD_DEV_S',
+  // Aggregate-aware
+  'SUM', 'AVG', 'COUNT', 'MIN', 'MAX', 'STD_DEV',
+  // Enhanced Math
+  'MEDIAN', 'PRODUCT', 'MOD', 'EVEN', 'ODD', 'PI', 'RANDOM_INT',
+  // Enhanced String
+  'LEFT', 'RIGHT', 'MID', 'REGEX_MATCH', 'REGEX_REPLACE', 'JOIN', 'REPEAT', 'ENCODE_URL',
+  // Enhanced Conversion/Logic/Date
+  'TO_CURRENCY', 'TO_PERCENT', 'LET', 'IFBLANK',
+  'END_OF_MONTH', 'WEEKDAY_NAME', 'ISO_WEEK',
+  // Duration
+  'DAYS', 'HOURS', 'MINUTES', 'TO_DAYS', 'TO_HOURS', 'WORKDAYS',
+  // Conditional Aggregation
+  'SUMIF', 'COUNTIF', 'AVERAGEIF',
+  // Visual formatting
+  'STYLE',
+  // List iteration
+  'MAP', 'FILTER', 'REDUCE',
 ];
 
 export function tokenize(formula: string): Token[] {
@@ -171,6 +200,22 @@ export function tokenize(formula: string): Token[] {
       continue;
     }
 
+    // @column reference (cross-record)
+    if (char === '@') {
+      i++; // skip @
+      let value = '';
+      while (i < formula.length) {
+        const ch = formula[i];
+        if (!ch || !/[a-zA-Z0-9_]/.test(ch)) break;
+        value += ch;
+        i++;
+      }
+      if (value) {
+        tokens.push({ type: 'FIELD', value: `@${value}` });
+      }
+      continue;
+    }
+
     // Identifiers (functions, fields, booleans, null)
     if (/[a-zA-Z_]/.test(char)) {
       let value = '';
@@ -249,9 +294,33 @@ class Parser {
   }
 
   private parseComparison(): FormulaNode {
+    let left = this.parseAdditive();
+
+    while (this.peek().type === 'OPERATOR' && ['=', '!=', '>', '<', '>=', '<='].includes(this.peek().value as string)) {
+      const operator = this.advance().value as string;
+      const right = this.parseAdditive();
+      left = { type: 'operator', operator, left, right };
+    }
+
+    return left;
+  }
+
+  private parseAdditive(): FormulaNode {
+    let left = this.parseMultiplicative();
+
+    while (this.peek().type === 'OPERATOR' && ['+', '-'].includes(this.peek().value as string)) {
+      const operator = this.advance().value as string;
+      const right = this.parseMultiplicative();
+      left = { type: 'operator', operator, left, right };
+    }
+
+    return left;
+  }
+
+  private parseMultiplicative(): FormulaNode {
     let left = this.parseTerm();
 
-    while (this.peek().type === 'OPERATOR') {
+    while (this.peek().type === 'OPERATOR' && ['*', '/'].includes(this.peek().value as string)) {
       const operator = this.advance().value as string;
       const right = this.parseTerm();
       left = { type: 'operator', operator, left, right };
@@ -269,6 +338,9 @@ class Parser {
 
     if (token.type === 'FIELD') {
       this.advance();
+      if (typeof token.value === 'string' && token.value.startsWith('@')) {
+        return { type: 'column_ref', name: token.value.substring(1) };
+      }
       return { type: 'field', name: token.value };
     }
 

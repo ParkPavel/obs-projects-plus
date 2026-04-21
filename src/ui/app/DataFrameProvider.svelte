@@ -10,11 +10,13 @@
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
   import type { ProjectDefinition } from "src/settings/settings";
+  import type { DataSource as DataSourceType } from "src/settings/v3/settings";
   import { get } from "svelte/store";
   import {
     DataviewDataSource,
     UnsupportedCapability,
   } from "src/lib/datasources/dataview/datasource";
+  import { mergeDataFrames } from "src/lib/datasources/mergeFrames";
 
   export let project: ProjectDefinition;
 
@@ -61,8 +63,21 @@
     // Live updates are handled by registerFileEvents in main.ts
     querying = (async () => {
       if ($dataSource) {
-        const initialFrame = await $dataSource.queryAll();
-        dataFrame.set(initialFrame);
+        const primaryFrame = await $dataSource.queryAll();
+
+        // Multi-source merge: if additionalSources configured, query and merge
+        const extraSources = reassembledProject.additionalSources;
+        if (extraSources && extraSources.length > 0) {
+          const extraFrames = await Promise.all(
+            extraSources.map((src) => {
+              const ds = resolveDataSourceFromConfig(src, reassembledProject);
+              return ds.queryAll();
+            })
+          );
+          dataFrame.set(mergeDataFrames([primaryFrame, ...extraFrames]));
+        } else {
+          dataFrame.set(primaryFrame);
+        }
       }
     })();
   }
@@ -105,6 +120,19 @@
           $settings.preferences
         );
     }
+  }
+
+  /**
+   * Resolve a DataSource instance from a raw DataSource config object.
+   * Used for additional sources in multi-source merge.
+   */
+  function resolveDataSourceFromConfig(
+    src: DataSourceType,
+    proj: ProjectDefinition
+  ): DataSource {
+    // Create a temporary project with the override dataSource
+    const overrideProject = { ...proj, dataSource: src } as ProjectDefinition;
+    return resolveDataSource(overrideProject);
   }
 
   const wait = () => new Promise((res) => setTimeout(res, 500));

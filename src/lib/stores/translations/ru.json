@@ -76,11 +76,17 @@
                     "error": {
                         "title": "Dataview отключен",
                         "message": "Включите плагин Dataview для использования этого проекта."
-                    }
+                    },
+                    "validating": "Проверка запроса...",
+                    "query-error": "Ошибка запроса. Проверьте синтаксис.",
+                    "preview-table": "{{count}} записей найдено (TABLE)",
+                    "preview-list": "{{count}} элементов найдено (LIST)",
+                    "preview-task": "{{count}} задач найдено (TASK)",
+                    "unsupported-type": "Неподдерживаемый тип запроса: {{type}}"
                 },
                 "query": {
                     "name": "Запрос",
-                    "description": "Поддерживаются только запросы TABLE."
+                    "description": "Поддерживаются запросы TABLE, LIST и TASK."
                 },
                 "recursive": {
                     "name": "Включить подпапки",
@@ -93,6 +99,10 @@
                 "more-settings": {
                     "name": "Дополнительные настройки",
                     "description": ""
+                },
+                "additional-sources": {
+                    "name": "Дополнительные источники данных",
+                    "add": "Добавить источник"
                 },
                 "templates": {
                     "name": "Шаблоны",
@@ -297,6 +307,7 @@
         },
         "components": {
             "data-grid": {
+                "grid-label": "Таблица данных",
                 "column": {
                     "configure": "Настроить поле",
                     "add": "Добавить поле",
@@ -488,6 +499,7 @@
             },
             "table": {
                 "name": "Таблица",
+                "deprecation-notice": "Вид Таблица устарел. Переключитесь на Базу данных для расширенных возможностей.",
                 "hide-fields": "Скрыть поля",
                 "rename-field": "Переименовать поле",
                 "rename": "Переименовать"
@@ -750,6 +762,175 @@
                     "loading": "Загрузка...",
                     "noData": "Нет данных"
                 }
+            },
+            "database": {
+                "name": "База данных",
+                "add-row": "Новая заметка",
+                "canvas": {
+                    "widgets": "Виджеты",
+                    "hide-toolbar": "Скрыть панель виджетов",
+                    "show-toolbar": "Показать панель виджетов",
+                    "toggle-layout": "Переключить макет",
+                    "layout-grid": "Сетка",
+                    "layout-stack": "Список",
+                    "hide-formula-bar": "Скрыть редактор формул",
+                    "show-formula-bar": "Показать редактор формул"
+                },
+                "widget": {
+                    "expand": "Развернуть виджет",
+                    "collapse": "Свернуть виджет",
+                    "chart-settings": "Настройки графика",
+                    "pipeline": "Конвейер трансформаций",
+                    "remove": "Удалить виджет",
+                    "not-configured": "Тип виджета \"{{type}}\" — не настроен",
+                    "add": "Добавить виджет",
+                    "add-aria": "Добавить виджет",
+                    "templates": "Шаблоны"
+                },
+                "types": {
+                    "data-table": "Таблица данных",
+                    "chart": "Диаграмма",
+                    "stats": "Статистика",
+                    "comparison": "Сравнение",
+                    "checklist": "Чеклист",
+                    "view-port": "Окно просмотра",
+                    "filter-tabs": "Вкладки фильтров",
+                    "summary-row": "Итоговая строка"
+                },
+                "formula": {
+                    "title": "Редактор формул",
+                    "hint": "Ctrl+Enter для применения, Esc для отмены",
+                    "field-name": "Имя поля",
+                    "field-placeholder": "напр. Итоговый бюджет",
+                    "expression-placeholder": "напр. IF(Status = \"Active\", Budget * 1.2, 0)",
+                    "preview": "Предпросмотр:",
+                    "cancel": "Отмена",
+                    "apply": "Применить",
+                    "mode-code": "Код",
+                    "mode-visual": "Визуальный",
+                    "visual-empty": "Нажмите, чтобы добавить блок формулы",
+                    "visual-parse-error": "Невозможно отобразить в визуальном режиме — переключитесь на Код"
+                },
+                "pipeline": {
+                    "title": "Конвейер трансформаций",
+                    "steps": "шаг(ов)",
+                    "empty": "Нет шагов. Добавьте шаг ниже.",
+                    "move-up": "Вверх",
+                    "move-down": "Вниз",
+                    "remove": "Удалить",
+                    "add-step": "Добавить шаг:",
+                    "cancel": "Отмена",
+                    "save": "Сохранить конвейер",
+                    "filter": "Фильтр",
+                    "group-by": "Группировка",
+                    "aggregate": "Агрегация",
+                    "compute": "Вычисление",
+                    "unpivot": "Разворот",
+                    "pivot": "Сводная",
+                    "none": "(нет)",
+                    "columns": "столбец(ов)",
+                    "groups": "группа(ы)",
+                    "unset": "(не задано)",
+                    "unknown": "Неизвестно",
+                    "unsaved-changes": "Несохранённые изменения",
+                    "discard-confirm": "У вас есть несохранённые изменения пиплайна. Отменить?",
+                    "keep-editing": "Продолжить редактирование",
+                    "discard": "Отменить"
+                },
+                "group": {
+                    "empty": "(пусто)"
+                },
+                "chart": {
+                    "no-data": "Нет данных",
+                    "type": "Тип диаграммы",
+                    "x-axis": "Ось X",
+                    "y-axis": "Ось Y",
+                    "aggregation": "Агрегация",
+                    "sort-by": "Сортировка",
+                    "height": "Высота",
+                    "types": {
+                        "bar": "Столбцы",
+                        "horizontal-bar": "Горизонтальные столбцы",
+                        "stacked-bar": "Столбцы с накоплением",
+                        "line": "Линия",
+                        "area": "Область",
+                        "pie": "Круговая",
+                        "donut": "Кольцевая",
+                        "number": "Число / KPI",
+                        "progress": "Прогресс",
+                        "scatter": "Точечная"
+                    },
+                    "aggregations": {
+                        "sum": "Сумма",
+                        "average": "Среднее",
+                        "min": "Минимум",
+                        "max": "Максимум",
+                        "median": "Медиана",
+                        "count": "Количество",
+                        "unique": "Уникальные"
+                    },
+                    "sort": {
+                        "label": "Метка",
+                        "value": "Значение",
+                        "manual": "Вручную"
+                    },
+                    "heights": {
+                        "small": "Маленькая",
+                        "medium": "Средняя",
+                        "large": "Большая"
+                    },
+                    "options": {
+                        "grid": "Сетка",
+                        "labels": "Подписи",
+                        "values": "Значения",
+                        "legend": "Легенда",
+                        "hide-zero": "Скрывать нули",
+                        "cumulative": "Накопительно"
+                    },
+                    "scatter": {
+                        "color-by": "Цвет по",
+                        "size-by": "Размер по",
+                        "trend-line": "Линия тренда",
+                        "r-squared": "Показать R²",
+                        "point-size": "Размер точки",
+                        "opacity": "Прозрачность",
+                        "none": "(нет)"
+                    },
+                    "section": {
+                        "display": "Настройки отображения"
+                    }
+                },
+                "comparison": {
+                    "empty": "Настройте метрики сравнения",
+                    "metric-a": "Метрика A",
+                    "metric-b": "Метрика B"
+                },
+                "filter-tabs": {
+                    "all": "Все"
+                },
+                "checklist": {
+                    "select-field": "Выберите булево поле",
+                    "no-items": "Нет записей",
+                    "done": "выполнено"
+                },
+                "viewport": {
+                    "select": "Выберите представление для вставки",
+                    "change": "Изменить встроенное представление",
+                    "embedded": "Встроенное представление: {{label}}",
+                    "embed-title": "Встроить представление",
+                    "table": "Таблица",
+                    "board": "Доска",
+                    "calendar": "Календарь",
+                    "gallery": "Галерея"
+                },
+                "templates": {
+                    "dashboard": "Дашборд",
+                    "dashboard-desc": "Статистика + графики + таблица",
+                    "analytics": "Аналитика",
+                    "analytics-desc": "Несколько графиков для анализа данных",
+                    "kanban-plus": "Kanban+",
+                    "kanban-plus-desc": "Таблица + чеклист + прогресс"
+                }
             }
         },
         "errors": {
@@ -770,6 +951,12 @@
         },
         "navigation": {
             "active-project": "Активный проект"
+        },
+        "nav": {
+            "project-switcher": {
+                "tooltip": "Переключить проект",
+                "search-placeholder": "Поиск проектов..."
+            }
         },
         "settings-menu": {
             "title": "Настройки",
@@ -803,13 +990,20 @@
                     "timezone": "Часовой пояс",
                     "show-agenda": "Показать Agenda",
                     "hide-agenda": "Скрыть Agenda",
+                    "hints": {
+                        "timezone": "напр. Europe/Moscow или local"
+                    },
                     "timeline": {
                         "title": "Настройки Timeline",
                         "start-hour": "Начальный час",
                         "end-hour": "Конечный час",
                         "event-color-field": "Поле цвета событий",
                         "show-weekends": "Показывать выходные",
-                        "show-all-day": "Показывать секцию 'Весь день'"
+                        "show-all-day": "Показывать секцию 'Весь день'",
+                        "hints": {
+                            "event-color-field": "Поле для цвета событий (опционально)",
+                            "event-color-placeholder": "напр. status, priority"
+                        }
                     },
                     "interval-options": {
                         "year": "Год",
@@ -820,15 +1014,37 @@
                     "layout-options": {
                         "headers": "Заголовки (классика)",
                         "bars": "Полосы (timeline)"
+                    },
+                    "field-mapping": {
+                        "title": "Сопоставление полей",
+                        "hint": "Выберите существующее поле из списка или введите название нового поля",
+                        "placeholder": "Введите или выберите поле",
+                        "new-field": "+ новое поле",
+                        "date": "Дата создания (date)",
+                        "start-date": "Начало (startDate)",
+                        "end-date": "Конец (endDate)",
+                        "start-time": "Время начала (startTime)",
+                        "end-time": "Время конца (endTime)",
+                        "check": "Поле статуса (check)",
+                        "hints": {
+                            "date": "Автоматически заполняется при создании заметки. Не участвует в определении начала события",
+                            "start-date": "Дата начала для многодневных событий",
+                            "end-date": "Дата окончания для многодневных событий",
+                            "start-time": "Отдельное поле времени начала (HH:mm)",
+                            "end-time": "Отдельное поле времени окончания",
+                            "check": "Поле для отметки выполнения (completed, done и т.д.)"
+                        }
                     }
                 },
                 "board": {
                     "column-width": "Ширина колонки",
+                    "group-by-field": "Поле группировки (статус)",
                     "header-field": "Заголовок карточки",
                     "order-sync-field": "Синхронизация порядка",
                     "freeze-columns": "Заморозить колонки",
                     "hints": {
                         "column-width": "Ширина каждой колонки в пикселях",
+                        "group-by-field": "Строковое поле фронтметера для группировки карточек по колонкам",
                         "header-field": "Поле для заголовка карточек",
                         "order-sync-field": "Числовое поле для сохранения позиции карточек"
                     }
@@ -886,25 +1102,25 @@
             "open-in-tab": "Открыть в новой вкладке",
             "open-in-window": "Открыть в новом окне",
             "save": "Сохранить",
-            "cancel": "тмена",
-            "delete": "далить",
-            "menu": "еню",
-            "rename": "ереименовать",
-            "open-note": "ткрыть заметку",
-            "select-color": "ыбрать цвет",
-            "value-placeholder": "начение...",
-            "select-date": "ыберите дату",
-            "view-switcher": "ереключение видов",
-            "edit-project": "едактировать проект",
-            "delete-project": "далить проект",
-            "select-project": "ыбор проекта",
+            "cancel": "Отмена",
+            "delete": "Удалить",
+            "menu": "Меню",
+            "rename": "Переименовать",
+            "open-note": "Открыть заметку",
+            "select-color": "Выбрать цвет",
+            "value-placeholder": "Значение...",
+            "select-date": "Выберите дату",
+            "view-switcher": "Переключение видов",
+            "edit-project": "Редактировать проект",
+            "delete-project": "Удалить проект",
+            "select-project": "Выбор проекта",
             "syntax-help": "Справка по синтаксису",
-            "date-placeholder": "--",
-            "datetime-placeholder": "-- :",
-            "field": "оле",
-            "projects": "роекты",
+            "date-placeholder": "ГГГГ-ММ-ДД",
+            "datetime-placeholder": "ГГГГ-ММ-ДД ЧЧ:ММ",
+            "field": "Поле",
+            "projects": "Проекты",
             "create-project": "Создать проект",
-            "select-date-time": "ыберите дату и время"
+            "select-date-time": "Выберите дату и время"
         }
     }
 }

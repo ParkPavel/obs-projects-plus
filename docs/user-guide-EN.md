@@ -367,6 +367,27 @@ Visual card-based project browsing.
 - Visual content
 - Portfolio management
 
+### 🗄️ Database View
+Advanced view combining table, formulas, aggregation, and filtering in a single interface. Recommended as a replacement for the deprecated Table view.
+
+**Features:**
+- Table with sorting, filtering, and grouping
+- Aggregate functions (SUM, AVG, COUNT, MIN, MAX) in column footers
+- Formulas with visual editor (115 built-in functions)
+- Column hiding/reordering
+- Inline cell editing
+- Context menus (right-click) for columns, rows, and cells
+- Automatic config migration from Table view
+
+**Best for:**
+- Project management with analytics
+- Tracking metrics and KPIs
+- Complex filtering and grouping
+- Any scenario where Table view was previously used
+
+**Migration from Table view:**
+When switching from Table to Database, your configuration (visible columns, sorting) migrates automatically.
+
 ## 🔧 Project Types
 
 ### 📁 Folder-based Projects

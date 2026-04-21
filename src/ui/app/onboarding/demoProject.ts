@@ -6,7 +6,7 @@ import { settings } from "src/lib/stores/settings";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
-import type { TableConfig } from "src/ui/views/Table/types";
+import type { DatabaseViewConfig } from "src/ui/views/Database/types";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
 import type { ColorRule, FilterCondition } from "src/settings/base/settings";
 import type { AgendaConfig, AgendaCustomList } from "src/settings/v3/settings";
@@ -1245,26 +1245,44 @@ export async function createDemoProject(vault: Vault) {
   // КОНФИГУРАЦИЯ ПРЕДСТАВЛЕНИЙ (VIEWS)
   // ============================================================
 
-  const tableConfig: TableConfig = {
-    fieldConfig: {
-      name: { width: 280 },
-      path: { hide: true },
-      startDate: { width: 110 },
-      date: { width: 110 },
-      endDate: { width: 110 },
-      dueDate: { width: 110 },
-      status: { width: 100 },
-      type: { width: 100 },
-      category: { width: 100 },
-      priority: { width: 90 },
-      progress: { width: 80 },
-      estimate: { width: 80 },
-      completed: { width: 80 },
-      assignee: { width: 100 },
-      color: { hide: true },
-      cover: { hide: true },
+  const databaseConfig: DatabaseViewConfig = {
+    widgets: [
+      {
+        id: `w-demo-table-${Date.now()}`,
+        type: "data-table",
+        title: "Table",
+        layout: { x: 0, y: 0, w: 12, h: 8 },
+        config: {},
+        collapsed: false,
+      },
+    ],
+    layoutMode: "stack",
+    layoutVersion: 1,
+    table: {
+      fieldConfig: {
+        name: { width: 280 },
+        path: { hide: true },
+        startDate: { width: 110 },
+        date: { width: 110 },
+        endDate: { width: 110 },
+        dueDate: { width: 110 },
+        status: { width: 100 },
+        type: { width: 100 },
+        category: { width: 100 },
+        priority: { width: 90 },
+        progress: { width: 80 },
+        estimate: { width: 80 },
+        completed: { width: 80 },
+        assignee: { width: 100 },
+        color: { hide: true },
+        cover: { hide: true },
+      },
+      orderFields: ["name", "status", "priority", "type", "category", "startDate", "date", "endDate", "progress", "assignee", "tags"],
+      aggregations: {},
+      showAggregationRow: false,
     },
-    orderFields: ["name", "status", "priority", "type", "category", "startDate", "date", "endDate", "progress", "assignee", "tags"],
+    showWidgetToolbar: true,
+    compactMode: false,
   };
 
   const boardConfig: BoardConfig = {
@@ -1458,12 +1476,12 @@ export async function createDemoProject(vault: Vault) {
       },
       agenda: agendaConfig,
       views: [
-        // 📋 ТАБЛИЦА - полный обзор данных
+        // 📋 БАЗА - полный обзор данных (Database View)
         Object.assign({}, DEFAULT_VIEW, {
-          name: "📋 Таблица",
+          name: "📋 База",
           id: uuidv4(),
-          type: "table",
-          config: tableConfig,
+          type: "database",
+          config: databaseConfig,
           filter: { conjunction: "and", conditions: [] },
           colors: { conditions: priorityColorRules },
           sort: { criteria: [{ field: "startDate", order: "asc", enabled: true }] },

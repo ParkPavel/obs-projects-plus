@@ -47,7 +47,7 @@ Reload Obsidian (`Ctrl/Cmd+R`) to pick up changes.
 |---------|---------|
 | `npm run dev` | esbuild watch mode |
 | `npm run build` | `tsc -noEmit -skipLibCheck && esbuild production` |
-| `npm run test` | Jest (375 tests, 21 suites) |
+| `npm run test` | Jest (800 tests, 42 suites) |
 | `npm run test:watch` | Jest in watch mode |
 | `npm run test:coverage` | Jest with coverage report |
 | `npm run lint` | ESLint with Obsidian rules |
@@ -112,7 +112,7 @@ src/
 3. **Run quality checks**:
    ```bash
    npm run build      # Must pass
-   npm run test       # All 375 tests must pass
+   npm run test       # All 800 tests must pass
    npm run lint       # 0 errors
    ```
 4. Update documentation if your change affects user-facing behavior

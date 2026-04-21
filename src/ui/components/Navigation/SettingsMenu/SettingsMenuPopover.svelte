@@ -201,7 +201,7 @@
   .settings-popover-overlay {
     position: absolute;
     inset: 0;
-    z-index: 100;
+    z-index: var(--ppp-z-overlay, 30);
     background: transparent;
     pointer-events: auto;
   }
@@ -221,7 +221,19 @@
     border: 1px solid var(--background-modifier-border);
     box-shadow: var(--shadow-lg, 0 0.5rem 2rem rgba(0, 0, 0, 0.25));
     pointer-events: auto;
-    z-index: 101;
+    z-index: var(--ppp-z-modal, 40);
+    animation: ppp-popover-enter var(--ppp-duration-slow, 0.25s) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1));
+  }
+
+  @keyframes ppp-popover-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   .popover-header {
@@ -241,10 +253,10 @@
   }
 
   .close-btn {
-    width: 1.75rem;
-    height: 1.75rem;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
     border: none;
     background: transparent;
     color: var(--text-muted);
@@ -254,6 +266,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color var(--ppp-duration-fast, 0.1s) ease,
+                color var(--ppp-duration-fast, 0.1s) ease;
   }
 
   .close-btn:hover {

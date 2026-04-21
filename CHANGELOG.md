@@ -5,6 +5,144 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-04-18
+
+### Added — Database View Modernization (Waves 2–5)
+
+#### Computation Engine (Wave 2)
+- **FormulaEngine unified** — `evaluateFormulaValue()` replaced `evaluateExpression()`, supports brackets, nested functions, operator precedence
+- **115 built-in functions** (was 50+): +11 financial (PMT, FV, PV, NPV, IRR, RATE, IPMT, PPMT, NPER, CUMPRINC, CUMIPMT), +8 statistical (VARIANCE, VARIANCE_S, PERCENTILE, QUARTILE, CORREL, MODE, RANK, STD_DEV_S), +3 conditional (SUMIF, COUNTIF, AVERAGEIF), +6 duration (DAYS, HOURS, MINUTES, TO_DAYS, TO_HOURS, WORKDAYS), +7 math (MEDIAN, PRODUCT, MOD, EVEN, ODD, PI, RANDOM_INT), +8 string (LEFT, RIGHT, MID, REGEX_MATCH, REGEX_REPLACE, JOIN, REPEAT, ENCODE_URL), +4 conversion (TO_CURRENCY, TO_PERCENT, LET, IFBLANK), +3 date (END_OF_MONTH, WEEKDAY_NAME, ISO_WEEK), +6 aggregate-aware (SUM, AVG, COUNT, MIN, MAX, STD_DEV with @column refs)
+- **Cross-record @reference** — `@fieldName` syntax resolves all column values from DataFrame
+- **8 relative date filter operators** — is-today, is-this-week, is-this-month, is-this-quarter, is-last-n-days, is-next-n-days, is-overdue, is-upcoming (dayjs isoWeek + quarterOfYear)
+
+#### Visualization (Wave 3)
+- **Scatter Chart** — SVG scatter plot with trend line, R², color grouping, point sizing (10th chart type)
+- **FilterTabs Widget** — unique field values as clickable tabs with ARIA tablist (7th widget)
+- **SummaryRow Widget** — compact aggregation bar with count, sum, avg, median, min, max, range (8th widget)
+- **Stats sparkline** — optional inline sparkline in StatsCard
+- **Comparison N-metrics** — supports N metrics array (backward compat for old metricA/metricB)
+- **ChartConfig progressive disclosure** — `<details>` sections for display/scatter options
+
+#### Data Integration (Wave 4)
+- **Multi-source merge** — `additionalSources?: DataSource[]`, `mergeDataFrames()` engine (union fields, dedup records)
+- **Dataview LIST/TASK support** — `parseListResult()`, `parseTaskResult()` with recursive flattening
+- **DateTime precision** — non-midnight Dataview dates preserve time (HH:mm)
+- **Dataview query validation UI** — debounced preview in CreateProject, shows row/task count or error
+- **Inline add row** — add new records directly from Database View
+
+#### Polish (Wave 5)
+- **Recursive FormulaNode** — `<svelte:self>` for unlimited nesting depth in visual formula editor
+- **Formula autocomplete keyboard nav** — ArrowUp/Down/Enter/Tab with wrap-around, ARIA listbox
+- **ARIA tab roving** — Home/End/Space/Enter for SettingsMenuTabs, ViewSwitcher, FilterTabsWidget
+- **DataGrid ARIA grid pattern** — aria-label, aria-rowindex on cells
+- **Touch visibility** — `@media (pointer: coarse)` for hover-only buttons on touch devices
+- **Pipeline dirty state** — JSON.stringify diff, confirm-on-discard dialog
+- **Widget resize handles** — `use:resizable` Svelte action with pointer drag, grid-snap, callback pattern
+
+### Tests
+- **Total: 42 suites, 800 tests** (was 41/730 in v3.3.1)
+
+## [3.3.1] - 2026-04-23
+
+### Fixed — P0: Critical
+
+#### i18n Corruption
+- `ru.json` — Restored 16 corrupted common keys (OK, Cancel, Save, Delete, etc.) that were overwritten with Database View strings
+- `uk.json` — Restored 16 corrupted keys + added 2 missing keys (widget template descriptions)
+- `zh-CN.json` — Added 2 missing keys (widget template descriptions)
+
+#### Table Alignment
+- `DataTableWidget.svelte` — Scroll container refactored: header and body now share a single horizontal scroll container, eliminating column misalignment on horizontal scroll
+
+### Fixed — P1: Important
+
+#### Adaptive Column Widths
+- `DataTableWidget.svelte` — Column width calculation improved: uses `Math.max(header width, content sample width)` with min/max bounds, preventing truncated headers and overly wide empty columns
+
+#### Aggregation Picker
+- `DataTableWidget.svelte` — Aggregation function selector now shows a dropdown menu (Obsidian `Menu` API) instead of cycling on click, with all 19 aggregation functions grouped by category
+
+#### Error Boundary
+- `WidgetHost.svelte` — Widget rendering wrapped in error boundary: catches mount/update errors and shows fallback UI with retry button instead of crashing the entire Database View
+
+#### Chart Wizard Fallback
+- `WidgetHost.svelte` — Chart and Stats widgets show a configuration wizard when no fields are configured, instead of rendering empty/broken charts
+
+### Added — P2: Enhancements
+
+#### Formula Visual Operators
+- `FormulaVisualEditor.svelte` — Operator palette section added: 10 operators (+, −, ×, ÷, =, ≠, >, <, ≥, ≤) can now be inserted from the visual editor palette alongside functions and fields
+
+### Changed — P3: Quality of Life
+
+#### Table View Deprecation
+- `tableView.ts` — Legacy Table view now shows a deprecation banner on open, recommending migration to Database View
+- Deprecation message localized in all 4 languages (en, ru, uk, zh-CN)
+
+#### Documentation
+- `user-guide.md`, `user-guide-EN.md` — Added Database View section documenting features, use cases, and migration from Table view
+- `demo-vault/` — Populated with 6 sample project notes for testing all view types
+
+### Tests
+- **Total: 41 suites, 730 tests** (was 40/714 in v3.3.0)
+
+## [3.3.0] - 2026-04-22
+
+### Added — Database View (New)
+
+#### Core Architecture
+- **Database View** — new view type with a widget-based dashboard layout (12-column responsive grid on desktop, stacked on mobile)
+- **Widget System** — 8 widget types: Data Table, Chart (10 sub-types), Stats/KPI, Comparison, Checklist, View Port, Filter Tabs, Summary Row
+- **Widget Registry** — centralized metadata registry with type safety, max count constraints, default layouts
+- **Widget Templates** — 3 presets: Dashboard (stats+chart+table), Analytics (pie+line+comparison+stats), Kanban+ (table+checklist+progress)
+- **Migration** — automatic `TableConfig` → `DatabaseViewConfig` migration for existing projects
+
+#### Data Processing Engine
+- **Transform Pipeline** — 6-step pipeline: Filter, Group By, Aggregate, Compute, Unpivot, Pivot (all with 2000ms timeout, ReDoS-safe regex)
+- **Pipeline Cache** — hash-based LRU cache (djb2 hash, 5min TTL, 20-entry max, per-pipeline invalidation)
+- **Formula Engine** — 50+ built-in functions (Math, String, Date, Logic, TypeConversion) with field-name-based evaluation
+- **Chart Data Pipeline** — `buildChartPipeline()` / `computeChartData()` transforms DataFrame → ChartData for all chart types
+- **19 Column Aggregations** — sum, avg, min, max, median, range, count, count_values, count_unique, count_checked, count_unchecked, percent_checked, percent_unchecked, percent_empty, percent_not_empty, date_range, earliest, latest, none
+- **Conditional Formatting** — rule-based cell/row styling with color sanitization and operator validation
+- **Relation Resolver** — wiki-link parser, case-insensitive record index, cross-note relations
+- **Rollup Engine** — 12 rollup functions for computed columns across related records
+
+#### Charts (9 types)
+- **Bar** — vertical, horizontal, stacked variants with SVG rendering
+- **Line** — multi-series, Catmull-Rom smooth curves, optional gradient fill
+- **Area** — line chart with gradient fill
+- **Pie / Donut** — tooltip, legend, center label, percent display
+- **Number / KPI** — auto K/M formatting, accent color support
+- **Progress** — SVG progress bar with threshold-based color
+
+#### Widgets
+- **Data Table** — DataGrid with grouped rendering, virtual scroll (>100 rows), conditional formatting, relation/rollup cells
+- **Stats** — configurable KPI card grid (2-4 columns) using 19 aggregation functions
+- **Comparison** — side-by-side metric bars with animated width
+- **Checklist** — boolean field binding, completion counter, per-item toggle
+- **View Port** — embedded view selector (table/board/calendar/gallery)
+- **Formula Bar** — expression editor with autocomplete, real-time validation, preview
+
+#### UX & Accessibility
+- **Widget Toolbar** — Add Widget dropdown (registry-driven, max count enforcement), Templates section
+- **Drag & Drop** — widget reorder via svelte-dnd-action in stack mode
+- **Layout Toggle** — grid (⊞) / stack (≡) modes, auto-stack on mobile
+- **ARIA** — `ariaGrid`, `ariaGridCell`, `ariaWidget` helpers; keyboard navigation (navigateGrid, navigateList); `announceChange()` for screen readers
+- **Design Tokens** — CSS custom properties: spacing scale, breakpoints, touch targets, row height, radius
+- **Virtual Scroll** — windowed rendering for tables >100 rows with ResizeObserver
+
+#### i18n (4 languages)
+- All Database View strings localized: English, Russian, Ukrainian, Simplified Chinese
+- ~90 translation keys covering canvas, widgets, formula bar, pipeline, charts, templates
+
+### Changed
+- `DataFieldType` extended: +Select, +Status, +Formula, +Relation, +Rollup (now 11 values)
+- `view.ts` — Database registered as `views["database"]`
+
+### Tests
+- 7 new test suites: aggregation, transformExecutor, transformPivot, transformCache, chartDataPipeline, virtualScroll, widgetRegistry + accessibility + designTokens + widgetTemplates
+- **Total: 40 suites, 714 tests** (was 23/457 in v3.2.2)
+
 ## [3.2.2] - 2026-04-10
 
 ### Fixed — Security & Code Quality (PR #10259 Audit)

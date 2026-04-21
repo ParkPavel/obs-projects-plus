@@ -1,11 +1,11 @@
 ﻿# 🚀 Информация о релизах
 
-## Текущий релиз: v3.2.2
+## Текущий релиз: v3.4.0
 
-**Дата релиза**: 10 апреля 2026  
+**Дата релиза**: 18 апреля 2026  
 **Статус**: 🟢 Стабильный  
 **Совместимость**: Obsidian 1.5.7+
-**Тип**: Security & Quality — аудит PR #10259, защита JSON.parse, фикс Board DnD, +82 теста
+**Тип**: Major Feature — Database View Modernization (115 формул, 8 виджетов, 10 типов диаграмм, multi-source merge)
 
 ## 📦 Варианты загрузки
 
@@ -37,14 +37,108 @@ ParkPavel/obs-projects-plus
 | ✅ | **Deep Mobile Adaptation** | v3.1.0 | Выпущено | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Выпущено | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Bugfix & Mobile UX** | v3.2.1 | Выпущено | [CHANGELOG](CHANGELOG.md) |
-| 🥇 | **Database View** | v3.3.0 | Планируется | [Архитектура](docs/architecture-database-view.md) |
-| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.4.0 | Планируется | — |
+| ✅ | **Security & Code Quality** | v3.2.2 | Выпущено | [CHANGELOG](CHANGELOG.md) |
+| ✅ | **Database View** | v3.3.0 | Выпущено | [Архитектура](docs/architecture-database-view.md) |
+| ✅ | **Database View Modernization** | v3.4.0 | Выпущено | [Архитектура](docs/architecture-database-view.md) |
+| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Планируется | — |
 
 ## 📋 Заметки о релизах
 
 ---
 
-### 🛠️ v3.2.1 (9 апреля 2026) — Bugfix & Mobile UX
+### 🚀 v3.4.0 (18 апреля 2026) — Database View Modernization
+
+> **115 формул, 8 виджетов, 10 типов диаграмм, multi-source merge, Dataview LIST/TASK, scatter chart, ARIA accessibility, widget resize**
+
+#### 🧮 Computation Engine
+- **115 встроенных формул** (было 50+): финансовые (PMT, FV, NPV, IRR...), статистические (VARIANCE, PERCENTILE, CORREL...), условные агрегации (SUMIF, COUNTIF, AVERAGEIF), длительности (DAYS, WORKDAYS...), расширенные строковые (REGEX_MATCH, JOIN...), конвертации (TO_CURRENCY, TO_PERCENT)
+- **Cross-record @reference** — `@fieldName` для доступа ко всем значениям столбца
+- **8 операторов относительных дат** — is-today, is-this-week, is-this-month, is-this-quarter, is-last-n-days, is-next-n-days, is-overdue, is-upcoming
+
+#### 📊 Visualization
+- **Scatter Chart** — SVG scatter plot с trend line, R², цветовыми группами, масштабированием точек (10-й тип диаграммы)
+- **FilterTabs Widget** — уникальные значения поля как кликабельные табы (7-й виджет)
+- **SummaryRow Widget** — компактная строка агрегации (8-й виджет)
+- **Stats sparkline** — inline sparkline в KPI-карточках
+- **Comparison N-metrics** — поддержка N метрик (было 2)
+
+#### 🔗 Data Integration
+- **Multi-source merge** — объединение данных из нескольких папок/тегов/Dataview-запросов
+- **Dataview LIST/TASK** — парсинг LIST и TASK результатов с рекурсивным разворачиванием
+- **DateTime precision** — сохранение времени в Dataview-датах
+- **Inline add row** — добавление записей прямо из Database View
+
+#### ✨ Polish & Accessibility
+- **Recursive FormulaNode** — визуальный редактор формул с неограниченной вложенностью
+- **ARIA tab roving** — полная клавиатурная навигация для всех табов
+- **DataGrid ARIA** — aria-label, aria-rowindex
+- **Touch visibility** — кнопки видимы на touch-устройствах без hover
+- **Pipeline dirty state** — предупреждение о несохранённых изменениях
+- **Widget resize** — перетаскивание правого нижнего угла для изменения размера виджетов
+
+#### 🧪 Тесты
+42 набора, 800 тестов (было 41/730 в v3.3.1).
+
+---
+
+### 🏗️ v3.3.0 (22 апреля 2026) — Database View
+
+> **Новый тип вида: виджет-дашборд с 8 типами виджетов, 10 типами диаграмм, трансформ-пайплайном, формулами и полной локализацией (4 языка)**
+
+#### 🆕 Database View — Архитектура
+
+Новый вид `Database` превращает проект в настраиваемый дашборд. Виджеты размещаются на 12-колоночной сетке (desktop) или стекаются (mobile). Каждый виджет может иметь собственный трансформ-пайплайн данных.
+
+#### 📊 Виджеты (8 типов)
+
+| Виджет | Описание |
+|--------|----------|
+| **Data Table** | Таблица с группировкой, виртуальным скроллом (>100 строк), условным форматированием, ячейками связей и свёрток |
+| **Chart** | 10 типов диаграмм: Bar, Horizontal Bar, Stacked Bar, Line, Area, Pie, Donut, Number/KPI, Progress, Scatter |
+| **Stats** | Сетка KPI-карточек (19 функций агрегации, 2-4 колонки) |
+| **Comparison** | Сравнение N метрик бок о бок (анимированные полосы) |
+| **Checklist** | Чеклист привязанный к boolean-полю (счётчик завершения) |
+| **View Port** | Встроенный вид другого типа (Table/Board/Calendar/Gallery) |
+| **Filter Tabs** | Уникальные значения поля как кликабельные табы с ARIA tablist |
+| **Summary Row** | Компактная строка агрегации (count, sum, avg, median, min, max, range) |
+
+#### ⚙️ Движок данных
+
+| Компонент | Описание |
+|-----------|----------|
+| **Transform Pipeline** | 6 шагов: Filter, Group By, Aggregate, Compute, Unpivot, Pivot (timeout 2000ms, ReDoS-safe) |
+| **Pipeline Cache** | LRU-кеш с djb2-хешем (5мин TTL, 20 записей) |
+| **Formula Engine** | 115 функций (Math, String, Date, Logic, TypeConversion, Financial, Statistical, Duration, Aggregate) |
+| **Relation Resolver** | Парсер wiki-ссылок, кросс-нотные связи |
+| **Rollup Engine** | 12 функций свёртки для вычисляемых колонок |
+| **19 Агрегаций** | sum, avg, min, max, median, range, count, count_values, count_unique, count_checked, count_unchecked, percent_checked, percent_unchecked, percent_empty, percent_not_empty, date_range, earliest, latest |
+
+#### 🎨 UX & Доступность
+
+- **Widget Toolbar** — добавление виджетов из реестра, 3 готовых шаблона (Dashboard, Analytics, Kanban+)
+- **Drag & Drop** — перестановка виджетов в stack-режиме
+- **Layout Toggle** — сетка (⊞) / стек (≡), авто-стек на мобильных
+- **ARIA** — grid/cell/widget хелперы, навигация клавиатурой, announceChange() для скрин-ридеров
+- **Virtual Scroll** — виндовинг для таблиц >100 строк
+- **Formula Bar** — редактор выражений с автоподсказкой и валидацией
+
+#### 🌐 i18n
+
+Все строки Database View локализованы на 4 языка: English, Русский, Українська, 简体中文 (~90 ключей).
+
+#### 🧪 Тесты
+
+40 наборов, 714 тестов (было 23/457 в v3.2.2). Новые: aggregation, transformExecutor, pivot, cache, chartDataPipeline, virtualScroll, widgetRegistry, accessibility, designTokens, widgetTemplates.
+
+---
+
+### 🛠️ v3.2.2 (10 апреля 2026) — Security & Code Quality
+
+> **Аудит PR #10259: защита JSON.parse, фикс Board DnD race condition, case-insensitive фильтры, +82 теста**
+
+---
+
+### �🛠️ v3.2.1 (9 апреля 2026) — Bugfix & Mobile UX
 
 > **Фикс мобильных попаверов, переписана тач-архитектура ViewSwitcher, исправлен выбор даты в Agenda, устранена уязвимость CSS-пайплайна**
 

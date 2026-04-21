@@ -520,14 +520,10 @@
     update();
     const ro = container ? new ResizeObserver(update) : null;
     if (container) ro!.observe(container);
-    // Also update on scroll in case container moves (e.g. Obsidian layout changes)
-    const onScroll = () => requestAnimationFrame(update);
-    doc.addEventListener('scroll', onScroll, { capture: true, passive: true });
 
     return {
       destroy() {
         ro?.disconnect();
-        doc.removeEventListener('scroll', onScroll, true);
         // Move node back to original parent before Svelte destroys it
         // (Svelte expects the node to be in its original parent for cleanup)
         if (node.parentElement === doc.body && originalParent) {
@@ -549,7 +545,7 @@
   }
   
   // ── Drag-and-Drop for custom lists ──
-  const flipDurationMs = 200;
+  const flipDurationMs = 150;
   let dndLists: AgendaCustomList[] = [];
   let isDndDragging = false; // Guards against settings-reload resetting list during drag
   let reorderTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -599,7 +595,7 @@
         .filter(l => l.id !== SHADOW_PLACEHOLDER_ITEM_ID)
         .map((list, idx) => ({ ...list, order: idx }));
       dispatch('reorderLists', { lists: reordered });
-    }, 250);
+    }, 200);
   }
 
   /**
@@ -625,7 +621,7 @@
       isDndDragging = false;
       const reordered = dndLists.map((list, i) => ({ ...list, order: i }));
       dispatch('reorderLists', { lists: reordered });
-    }, 250);
+    }, 200);
   }
   
   $: dateDisplay = (() => {

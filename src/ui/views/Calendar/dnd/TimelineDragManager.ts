@@ -1337,7 +1337,8 @@ export class TimelineDragManager {
    */
   private findDayFromPoint(clientX: number, clientY: number): { date: dayjs.Dayjs; element: HTMLElement } | null {
     // Temporarily hide portal ghosts so they don't intercept elementsFromPoint
-    const portalGhosts = document.querySelectorAll<HTMLElement>('.ppp-strip-ghost-portal');
+    const doc = activeDocument ?? document;
+    const portalGhosts = doc.querySelectorAll<HTMLElement>('.ppp-strip-ghost-portal');
     portalGhosts.forEach(g => { g.classList.add('ppp-hit-test-hidden'); });
 
     // v4.0.3: The dragging element (.dnd-dragging) has pointer-events: none,
@@ -1350,7 +1351,7 @@ export class TimelineDragManager {
     }
 
     try {
-      const elements = document.elementsFromPoint(clientX, clientY);
+      const elements = doc.elementsFromPoint(clientX, clientY);
       for (const el of elements) {
         if (!(el instanceof HTMLElement)) continue;
 
