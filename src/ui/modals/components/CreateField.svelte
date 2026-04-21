@@ -62,12 +62,11 @@
     return "";
   }
 
-  type Conversions = {
-    [K in DataFieldType]: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- type conversion matrix accepts/returns heterogeneous field types
-      [L in DataFieldType]: (v: any) => any;
-    };
-  };
+  type ConversionFn =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- type conversion matrix accepts/returns heterogeneous field types
+    (v: any) => any;
+
+  type Conversions = Partial<Record<DataFieldType, Partial<Record<DataFieldType, ConversionFn>>>>;
 
   const conversions: Conversions = {
     [DataFieldType.String]: {
@@ -140,7 +139,8 @@
       return origValue;
     }
 
-    return conversions[to][from](origValue);
+    const converter = conversions[to]?.[from];
+    return converter ? converter(origValue) : origValue;
   }
 
   function handleTypeChange(event: CustomEvent<string>) {

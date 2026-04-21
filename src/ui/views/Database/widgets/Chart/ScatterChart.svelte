@@ -176,7 +176,6 @@
           stroke={groupColor(gi)}
           stroke-opacity={Math.min(opacity + 0.2, 1)}
           stroke-width="1"
-          style="--r: {point.size ?? pointRadius}"
         >
           {#if point.label}
             <title>{point.label}: ({point.x}, {point.y})</title>
@@ -216,12 +215,14 @@
   }
 
   .ppp-chart-scatter circle {
-    transition: r 0.15s ease;
+    transition: transform 0.15s ease, stroke-width 0.15s ease;
+    transform-box: fill-box;
+    transform-origin: center;
     cursor: default;
   }
 
   .ppp-chart-scatter circle:hover {
-    r: calc(var(--r, 5) * 1px + 2px);
+    transform: scale(1.2);
     stroke-width: 2;
   }
 </style>
