@@ -5,6 +5,23 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-04-21
+
+### Fixed
+
+#### Board drag-and-drop reliability
+- `Board.svelte` now keeps column reorder state local during `svelte-dnd-action` drag cycles so shadow placeholders do not leak into persisted column order
+- pending column order is flushed safely on destroy, preventing lost reorder operations or ghost columns when the view closes mid-drag
+- dragged column geometry now uses rendered dimensions, which stabilizes hit testing after column collapse and under scaled board rendering
+
+#### Shared runtime cleanup
+- `esbuild.config.mjs` now patches the shared `svelte-dnd-action` destroy path to force `handleDrop()` when the active origin or shadow drop zone is destroyed
+- production packaging keeps `styles.css` as the only runtime stylesheet and removes intermediate `main.css` after merge, matching the documented Obsidian plugin contract
+
+#### Developer workflow
+- `CONTRIBUTING.md` now documents the correct runtime asset set for local vault installs: `main.js`, `manifest.json`, `styles.css`
+- `scripts/version-bump.mjs` now appends the new semantic version to `versions.json` correctly instead of writing an invalid package-name key
+
 ## [3.4.0] - 2026-04-18
 
 ### Added — Database View Modernization (Waves 2–5)

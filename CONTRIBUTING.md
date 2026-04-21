@@ -16,10 +16,10 @@ npm run dev       # esbuild watch mode → auto-rebuild on save
 Copy the plugin to your test vault:
 ```bash
 # Windows
-xcopy /E /Y main.js main.css manifest.json styles.css "%USERPROFILE%\your-vault\.obsidian\plugins\obs-projects-plus\"
+xcopy /E /Y main.js manifest.json styles.css "%USERPROFILE%\your-vault\.obsidian\plugins\obs-projects-plus\"
 
 # macOS / Linux
-cp main.js main.css manifest.json styles.css ~/your-vault/.obsidian/plugins/obs-projects-plus/
+cp main.js manifest.json styles.css ~/your-vault/.obsidian/plugins/obs-projects-plus/
 ```
 
 Reload Obsidian (`Ctrl/Cmd+R`) to pick up changes.

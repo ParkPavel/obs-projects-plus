@@ -1,11 +1,11 @@
 ﻿# 🚀 Информация о релизах
 
-## Текущий релиз: v3.4.0
+## Текущий релиз: v3.4.1
 
-**Дата релиза**: 18 апреля 2026  
+**Дата релиза**: 21 апреля 2026  
 **Статус**: 🟢 Стабильный  
 **Совместимость**: Obsidian 1.5.7+
-**Тип**: Major Feature — Database View Modernization (115 формул, 8 виджетов, 10 типов диаграмм, multi-source merge)
+**Тип**: Patch Release — Board drag-and-drop hotfix and release packaging cleanup
 
 ## 📦 Варианты загрузки
 
@@ -43,6 +43,30 @@ ParkPavel/obs-projects-plus
 | 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Планируется | — |
 
 ## 📋 Заметки о релизах
+
+---
+
+### 🔧 v3.4.1 (21 апреля 2026) — Board DnD Hotfix
+
+> **Исправлен критичный ghost/shadow regression в Board column drag-and-drop, добавлен shared cleanup для destroy-path и выровнен runtime package contract**
+
+#### 🧱 Board
+- **Column reorder** больше не сохраняет shadow placeholder в реальный порядок колонок
+- **Закрытие вида во время drag** теперь безопасно завершает reorder и не оставляет floating ghost поверх UI
+- **Collapsed / scaled columns** используют фактическую rendered geometry для dragged clone, поэтому hit-test и drop стабильны
+
+#### 🔁 Shared DnD Runtime
+- **svelte-dnd-action destroy path** теперь принудительно вызывает cleanup для активной origin/shadow zone через build patch в runtime bundle
+- Это устраняет зависшие drag clones не только на happy-path finalize, но и при destroy/unmount во время активного drag
+
+#### 📦 Packaging
+- **Runtime assets** нормализованы до `main.js`, `manifest.json`, `styles.css`
+- **main.css** теперь считается промежуточным build output и удаляется после merge в `styles.css`
+
+#### 🧪 Верификация
+- Сборка production bundle для `3.4.1`
+- Проверка manifest/version metadata
+- Release snapshot в `releases/v3.4.1/`
 
 ---
 

@@ -1,11 +1,11 @@
 ﻿# 🚀 Release Information
 
-## Current Release: v3.4.0
+## Current Release: v3.4.1
 
-**Release Date**: April 18, 2026  
+**Release Date**: April 21, 2026  
 **Status**: 🟢 Stable  
 **Compatibility**: Obsidian 1.5.7+
-**Type**: Major Feature — Database View Modernization (115 formulas, 8 widgets, 10 chart types, multi-source merge)
+**Type**: Patch Release — Board drag-and-drop hotfix and runtime packaging cleanup
 
 ## 📦 Download Options
 
@@ -55,6 +55,30 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Planned | — |
 
 ## 📋 Release Notes
+
+---
+
+### 🔧 v3.4.1 (April 21, 2026) — Board DnD Hotfix
+
+> **Fixes the Board column ghost/shadow regression, adds shared destroy-path cleanup, and aligns the runtime package contract**
+
+#### 🧱 Board
+- **Column reorder** no longer persists `svelte-dnd-action` shadow placeholders into the saved column order
+- **Closing the view mid-drag** now safely flushes the pending reorder instead of leaving a floating ghost column behind
+- **Collapsed and scaled columns** use the rendered drag geometry for stable hit testing and drop positioning
+
+#### 🔁 Shared DnD Runtime
+- **svelte-dnd-action destroy path** now forces active drag cleanup for origin/shadow zones through the build-time runtime patch
+- This removes stuck drag clones even when the view is destroyed before the normal finalize cycle completes
+
+#### 📦 Packaging
+- **Runtime assets** are normalized to `main.js`, `manifest.json`, and `styles.css`
+- **main.css** is now treated as an intermediate build artifact and removed after merge into `styles.css`
+
+#### 🧪 Verification
+- Production build regenerated for `3.4.1`
+- Manifest/version metadata updated
+- Release snapshot prepared under `releases/v3.4.1/`
 
 ---
 

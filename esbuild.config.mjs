@@ -51,6 +51,7 @@ const buildOptions = {
         "window.": `activeWindow.`,
         "document.": `activeDocument.`,
         "multiScroller.destroy()": `multiScroller?.destroy()`,
+        "scheduleDZForRemovalAfterDrop(node, destroyDz);": `if (node === originDropZone || node === shadowElDropZone) { handleDrop(); return; } scheduleDZForRemovalAfterDrop(node, destroyDz);`,
       },
     }),
     logWarningsPlugin,
@@ -118,6 +119,7 @@ function mergeCSS() {
   if (mainCSS.trim()) {
     const merged = cleanStyles + "\n\n" + MARKER + "\n" + mainCSS.trim() + "\n";
     fs.writeFileSync("styles.css", merged, "utf-8");
+    fs.unlinkSync("main.css");
     console.log(`  styles.css merged (tokens + styles)`);
   }
 }

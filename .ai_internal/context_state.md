@@ -1,12 +1,18 @@
 # Context State — obs-projects-plus
 
 ## Текущее состояние
-- **Версия**: 3.4.0 (uncommitted)
+- **UPDATE 2026-04-21 — v3.4.1 release prepared**: собран полноценный patch release `3.4.1` для Board/shared DnD hotfix; синхронизированы `package.json`, `manifest.json`, `versions.json`, исправлен баг в `scripts/version-bump.mjs`, обновлены `CHANGELOG.md`, `RELEASES.md`, `RELEASES-EN.md`, `README.md`, `README-EN.md`, создан снапшот `releases/v3.4.1/` с `main.js`, `manifest.json`, `styles.css`, `RELEASE_NOTES.md`
+- **UPDATE 2026-04-21 — v3.4.1 verification**: `npm test` success, `npm run svelte-check` => `0 errors, 0 warnings`, `npm run build` success; runtime package подтверждён как `main.js` + `manifest.json` + `styles.css`, `main.css` отсутствует как и задумано; read-only audit intended payload => no release-blocking findings
+- **UPDATE 2026-04-21 — v3.4.0 release notes scoped hotfix note**: принято решение не трогать общий `CHANGELOG.md`/`RELEASES.md` в грязном дереве; точечно обновлён только `releases/v3.4.0/RELEASE_NOTES.md`, добавлен короткий `Post-release Hotfixes` блок про Board column DnD ghost/shadow fix и shared DnD destroy-path cleanup, чтобы packaged release notes соответствовали уже проверенному runtime `main.js`
+- **Handoff 2026-04-21**: сохранён компактный handoff по последнему завершённому fix-блоку Board ghost-after-close; подтверждён root cause в `svelte-dnd-action` destroy path, build-time patch в `esbuild.config.mjs` принудительно делает `handleDrop()` для активной origin/shadow zone, `main.css` после merge в `styles.css` автоматически удаляется, `CONTRIBUTING.md` обновлён под runtime package (`main.js`, `manifest.json`, `styles.css`), `npm run build` success, следующий вероятный шаг после user retest — возврат к `Database Wave R2.6 Pipeline Preview per step`
+- **Handoff 2026-04-21**: сохранён краткий handoff по восстановлению GitHub Release `3.3.0`; release опубликован как archived binary release, административный тег `3.3.0` указывает на `1d4d1b62ddc3b21e02a7c0a8e54770d676532894`, так как исторический source commit/tag не найден
+- **Handoff 2026-04-21**: сохранён build-fix по `npm run svelte-check`; commit `1d4d1b62ddc3b21e02a7c0a8e54770d676532894`, GitHub `Node.js CI` для SHA = success, дерево остаётся грязным только из-за unrelated изменений
+- **Версия**: 3.4.1 (release prepared, uncommitted)
 - **Дата обновления**: 2026-04-21
 - **Тесты**: 42 suites, 839 tests, ALL PASS
 - **Компиляция**: tsc 0 errors
-- **Сборка**: main.js ~2.1MB, main.css 4.3KB, styles.css merged
-- **Git**: все изменения v3.3.0–v3.3.2 uncommitted
+- **Сборка**: runtime package = `main.js` + `manifest.json` + `styles.css`; `main.css` теперь считается промежуточным build-артефактом и удаляется после merge
+- **Git**: дерево грязное; для следующего шага нужен выборочный stage/commit только release payload `3.4.1` без unrelated файлов
 - **v3.4.0 Spec**: `docs/database-view-v3.4.0-spec.md` (полная спецификация модернизации)
 - **Refactoring Spec**: `docs/refactoring-spec-v1.md` — 10 волн UX-рефакторинга
 
@@ -32,6 +38,111 @@
   - push в `origin/main` выполнен успешно
   - финальная проверка: local `HEAD` == remote `origin/main`, ветка clean / up-to-date
 - **Смысл для следующей сессии**: не начинать R2 заново; следующий функциональный шаг после recovery — `R2.6 Pipeline Preview per step`, затем R3 widget config UI
+
+### UPDATE 2026-04-21 — Lint blockers cleared
+- Исправлены 4 блокирующие ESLint errors:
+  - `src/ui/views/Database/__tests__/databaseView.e2e.test.ts` — `require()` заменён на import
+  - `src/ui/views/Database/engine/formulaEngine.ts` — удалён лишний boolean cast (`no-extra-boolean-cast`)
+  - `src/ui/views/Database/engine/transformExecutor.test.ts` — тестовый regex переписан без lookbehind для iOS compatibility rule
+  - `src/ui/views/Database/widgets/DataTable/groupRows.ts` — `let` → `const`
+- Верификация после фикса:
+  - `npm run lint` => **0 errors, 169 warnings**
+  - `npx tsc --noEmit --skipLibCheck` => clean
+- Текущее состояние CI по lint: сборку больше не блокируют ошибки, остался только warning-backlog (unused eslint-disable, tsdoc, no-static-styles-assignment)
+
+### UPDATE 2026-04-21 — Release tag normalized
+- Создан и отправлен git tag **`3.4.0`** без префикса `v` по правилу релизных тегов
+- Тег указывает на commit `8fe9924403e4ce9e705651dd40d27fcf7f532dfa`
+- Проверка: local tag exists, remote `origin` tag exists
+
+### UPDATE 2026-04-21 — GitHub Release workflow fix prepared
+- Причина невыпуска GitHub Release: workflow `release.yml` падал с `HTTP 403: Resource not accessible by integration`
+- Корень проблемы: `GITHUB_TOKEN` у GitHub Actions не имел `contents: write`
+- Локально исправлено: в `.github/workflows/release.yml` и `.github/workflows/ci.yml` добавлено `permissions: contents: write`
+- Для фактического автопубликуемого релиза требуется push workflow-фикса в `main`, затем повторный запуск публикации
+
+### UPDATE 2026-04-21 — Release artifacts published
+- 4 блокирующих lint-фикса для Database View отправлены в `main`
+- Локальный `npm run lint` => **0 errors, 104 warnings**
+- Локальный `npm run build` => success
+- Создан каталог `releases/v3.4.0/` со слепком сборки: `main.js`, `main.css`, `styles.css`, `manifest.json`, `RELEASE_NOTES.md`
+- В GitHub Release `3.4.0` загружены артефакты: `main.js`, `main.css`, `styles.css`, `manifest.json`, `RELEASE_NOTES.md`
+- Для хранения release snapshot в git добавлено точечное исключение `.gitignore`: `!releases/*/main.js`
+- Проверка GitHub API: release `3.4.0` содержит полный набор из 5 ассетов
+
+### UPDATE 2026-04-21 — svelte-check fixed for GitHub build
+- Исправлен GitHub failure на шаге `npm run svelte-check`
+- `src/ui/modals/components/CreateField.svelte`:
+  - матрица `conversions` ослаблена до partial-типизации по `DataFieldType`
+  - `convert()` теперь безопасно работает через optional lookup и fallback без падения на новых enum-типах (`select`, `status`, `formula`, `relation`, `rollup`)
+- `src/ui/views/Database/widgets/Chart/ScatterChart.svelte`:
+  - убран невалидный CSS `r:` в `:hover`
+  - hover-эффект точки переведён на `transform: scale(1.2)` + анимированный `stroke-width`
+- Верификация: локальный `npm run svelte-check` => **0 errors, 0 warnings**
+- Фикс отправлен в `main` commit `1d4d1b62ddc3b21e02a7c0a8e54770d676532894` (`fix: resolve svelte-check build regressions`)
+- Проверка GitHub Actions API: свежий workflow `Node.js CI` для этого SHA завершился со статусом **success**
+
+### UPDATE 2026-04-21 — Restored GitHub Release 3.3.0
+- Восстановлен старый стабильный релиз **`3.3.0`** на GitHub
+- На remote создан тег `3.3.0`
+- В GitHub Release `3.3.0` загружены артефакты из локального снапшота `releases/v3.3.0/`:
+  - `main.js`, `main.css`, `styles.css`, `manifest.json`, `RELEASE_NOTES.md`
+- Публичная ссылка релиза: `https://github.com/ParkPavel/obs-projects-plus/releases/tag/3.3.0`
+- Важный caveat: исходный source commit версии `3.3.0` в текущей git-истории не найден; релиз восстановлен как archived binary release, а тег `3.3.0` создан административно и сейчас указывает на commit `1d4d1b62ddc3b21e02a7c0a8e54770d676532894`
+
+### UPDATE 2026-04-21 — Board column DnD regression fixed
+- В промежуточном тестировании выявлен критичный баг нецелевого вида `Board`: при reorder колонок они исчезали/зависали как floating shadow поверх UI
+- Root cause: `src/ui/views/Board/components/Board/Board.svelte` не фильтровал `svelte-dnd-action` shadow placeholder из `consider/finalize`, в отличие от уже защищённых мест в Database/Calendar
+- Исправление:
+  - Board переведён на локальный `dndUnpinnedColumns` state для column DnD вместо мутации реального `columns` prop в `consider`
+  - shadow placeholder теперь рендерится явно как lightweight placeholder div, а не исчезает из списка преждевременно
+  - сохранение порядка выполняется только на `finalize` с фильтрацией placeholder перед persistence
+  - добавлен safe flush `pendingColumnOrder` в `onDestroy`, чтобы не терять reorder при unmount до завершения delayed finalize
+  - cleanup timeout/drag-state при destroy
+  - второй уровень фикса после повторного репорта пользователя:
+    - wrapper/placeholder/dragged clone теперь используют фактический DnD footprint колонки, включая collapsed path (`48px` вместо полного `columnWidth`)
+    - добавлен `animate:flip` на DnD wrapper для стабильного reposition после reorder
+    - `transformDraggedElement` теперь нормализует размеры clone по реальному wrapper width, а не по глобальному `columnWidth`
+    - снятие local drag guard теперь ждёт подтверждённого порядка из входного `columns`, а не только таймера
+    - column reorder намеренно отключён при `zoom !== 1`, потому что Board использует `transform: scale(...)`, что ломает координатную систему `svelte-dnd-action`
+- Вывод по происхождению бага: это не Database-specific поломка логики Board, а побочный эффект общей DnD-инфраструктуры/паттерна работы с `svelte-dnd-action` placeholder items
+- Верификация:
+  - `get_errors` для `Board.svelte` => clean
+  - локальный `npm run svelte-check` => **0 errors, 0 warnings**
+  - короткий аудит => **no findings**, остался только тестовый gap без runtime DnD automation
+
+### UPDATE 2026-04-21 — Shared DnD destroy-path + build packaging corrected
+- Поднят полный контекст после повторного репорта пользователя: проблема Board оказалась не только локальной логикой списка, а дефектом shared destroy-path в `svelte-dnd-action`
+- Подтверждённый root cause:
+  - dragged clone выносится библиотекой в `body`
+  - при destroy активной dnd-zone библиотека раньше только откладывала удаление zone до post-drop и не делала forced cleanup dragged clone/listeners
+  - если view закрывался во время drag, ghost мог оставаться поверх UI даже после закрытия вида
+- Исправление внесено в shared build patch `esbuild.config.mjs`:
+  - для `svelte-dnd-action` добавлен patch `scheduleDZForRemovalAfterDrop(node, destroyDz)` → forced `handleDrop()` when destroyed zone is active drag origin/shadow zone
+  - старый patch `multiScroller?.destroy()` сохранён
+- Дополнительная системная правка сборки:
+  - `main.css` признан промежуточным build output, а не runtime-ассетом плагина
+  - после merge в `styles.css` файл `main.css` автоматически удаляется
+  - `CONTRIBUTING.md` обновлён: локальная установка снова соответствует Obsidian packaging contract (`main.js`, `manifest.json`, `styles.css`)
+- Ключевой процессный вывод:
+  - предыдущие source-правки без `npm run build` не могли гарантированно проявиться в Obsidian, потому что runtime загружает только `main.js`
+- Верификация:
+  - `npm run build` => success
+  - `main.js` пересобран
+  - `styles.css` обновлён
+  - `main.css` после build отсутствует
+
+### UPDATE 2026-04-21 — Board drag geometry corrected for scaled rendering
+- После пользовательского ретеста подтверждён остаточный дефект: ghost больше не зависает, но column drop/hit-test оставался нестабильным и ухудшался при увеличении масштаба
+- Локализована причина в `src/ui/views/Board/components/Board/Board.svelte`:
+  - `transformDraggedElement` принудительно задавал dragged clone логическую ширину колонки (`columnWidth`/footprint), а не фактический rendered size на экране
+  - при увеличенном масштабе это давало растущий рассинхрон между clone и placeholder/hit-test зоной reorder
+- Исправление:
+  - dragged clone теперь получает width/height из `element.getBoundingClientRect()` вместо логической ширины из dataset
+  - placeholder footprint для списка сохранён отдельным и не изменён
+- Верификация:
+  - `get_errors` для `Board.svelte` => clean
+  - `npm run build` => success
 
 ### КРИТИЧЕСКАЯ ПРОБЛЕМА (2026-04-20)
 Пользовательское тестирование выявило: backend мощный (115 формул, 6 pipeline шагов, 8 виджетов), но UI не позволяет использовать большинство функций. Pipeline FILTER/UNPIVOT/UNNEST не имеют UI. 5 из 8 виджетов без настроек. Формулы не материализуются в колонки. Таблица — legacy дизайн. Шаблоны ломаются на не-демо проектах. Демо-проект не показывает настроенную базу.

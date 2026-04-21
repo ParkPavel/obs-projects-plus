@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.4.1-blue.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)

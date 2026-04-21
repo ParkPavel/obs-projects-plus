@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import { dragHandleZone, dragHandle } from "svelte-dnd-action";
+  import {
+    dragHandleZone,
+    dragHandle,
+    SHADOW_ITEM_MARKER_PROPERTY_NAME,
+    SHADOW_PLACEHOLDER_ITEM_ID,
+  } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
+  import { onDestroy } from "svelte";
+  import { flip } from "svelte/animate";
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
@@ -49,6 +56,7 @@
   const ZOOM_MIN = 0.25;
   const ZOOM_MAX = 2.0;
   const ZOOM_STEP = 0.05;
+  const COLLAPSED_COLUMN_FOOTPRINT = 48;
 
   let boardEditing: boolean = false;
   let onEdit = (editing: boolean) => (boardEditing = editing);
@@ -57,28 +65,62 @@
 
   // Guard: prevent reactive prop updates from resetting DnD state mid-drag
   let isDraggingColumns = false;
+  let finalizeTimeout: ReturnType<typeof setTimeout> | undefined;
+  let pendingColumnOrder: string[] | undefined;
+  type DndColumn = Column & Record<string, unknown>;
 
   $: pinnedColumns = columns.filter((c) => c.pinned);
   $: if (!isDraggingColumns) {
-    unpinnedColumns = columns.filter((c) => !c.pinned);
+    dndUnpinnedColumns = columns.filter((c) => !c.pinned);
   }
-  let unpinnedColumns: Column[] = columns.filter((c) => !c.pinned);
+  let dndUnpinnedColumns: DndColumn[] = columns.filter((c) => !c.pinned);
+
+  const isShadowPlaceholder = (column: DndColumn) =>
+    Boolean(column[SHADOW_ITEM_MARKER_PROPERTY_NAME]) ||
+    column.id === SHADOW_PLACEHOLDER_ITEM_ID ||
+    column.id === SHADOW_PLACEHOLDER_ITEM_ID.toString();
+
+  const getColumnFootprint = (column: Pick<Column, "collapse"> | undefined) =>
+    column?.collapse ? COLLAPSED_COLUMN_FOOTPRINT : columnWidth;
+
+  const hasMatchingOrder = (items: Column[], order: string[]) =>
+    items.length === order.length && items.every((item, index) => item.id === order[index]);
+
+  $: if (pendingColumnOrder && hasMatchingOrder(columns, pendingColumnOrder)) {
+    pendingColumnOrder = undefined;
+    isDraggingColumns = false;
+  }
+
+  function filterShadowColumns(items: DndColumn[]): Column[] {
+    return items.filter((column) => !isShadowPlaceholder(column));
+  }
 
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
     isDraggingColumns = true;
-    const newUnpinned = e.detail.items;
-    columns = [...pinnedColumns, ...newUnpinned];
+    dndUnpinnedColumns = e.detail.items;
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
-    const newUnpinned = e.detail.items;
-    columns = [...pinnedColumns, ...newUnpinned];
+    dndUnpinnedColumns = e.detail.items;
+    const newUnpinned = filterShadowColumns(dndUnpinnedColumns);
+    pendingColumnOrder = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
     // Dispatch after flip animation completes to prevent reactive cascade mid-animation
-    setTimeout(() => {
-      onSortColumns(columns.map((col) => col.id));
-      isDraggingColumns = false;
+    clearTimeout(finalizeTimeout);
+    finalizeTimeout = setTimeout(() => {
+      if (pendingColumnOrder) {
+        onSortColumns(pendingColumnOrder);
+      }
     }, flipDurationMs + 50);
   }
+
+  onDestroy(() => {
+    if (pendingColumnOrder) {
+      onSortColumns(pendingColumnOrder);
+      pendingColumnOrder = undefined;
+    }
+    clearTimeout(finalizeTimeout);
+    isDraggingColumns = false;
+  });
 
   /**
    * Svelte action — registers a non-passive wheel listener so that
@@ -176,172 +218,194 @@
 </script>
 
 <div class="projects--board--container" use:wheelZoom>
-<div
-  class="projects--board--viewport"
-  style={zoom !== 1 ? `transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%; height: ${100 / zoom}%` : ''}
->
-  <!-- Pinned columns: fixed position, no column-level DnD -->
-  {#if pinnedColumns.length > 0}
-    <section class="projects--board projects--board--pinned">
-      {#each pinnedColumns as column (column.id)}
-        <div class="projects--board--column--dndwrapper projects--board--column--pinned">
-        <BoardColumn
-          {readonly}
-          {richText}
-          {boardEditing}
-          {onEdit}
-          width={columnWidth}
-          collapse={column.collapse}
-          pinned={column.pinned}
-          persisted={column.persisted}
-          name={column.id}
-          records={column.records}
-          {onRecordClick}
-          {checkField}
-          {onRecordCheck}
-          onRecordAdd={() => onRecordAdd(column.id)}
-          onDrop={(record, records, trigger) => {
-            // Disallow cross-column drop into pinned columns
-            if (trigger === "droppedIntoAnother") return;
-            onRecordUpdate(record, { ...column, records }, "addToColumn");
-          }}
-          {includeFields}
-          {customHeader}
-          onColumnPin={(name) =>
-            onColumnPin(
-              columns.map((col) => col.id),
-              name
-            )}
-          {onColumnPersist}
-          onColumnDelete={(name, records) =>
-            onColumnDelete(
-              columns.map((col) => col.id),
-              name,
-              records
-            )}
-          {onColumnCollapse}
-          onColumnRename={(name) => {
-            const cols = columns.map((col) => col.id);
-            onColumnRename(cols, column.id, name, column.records);
-          }}
-          onValidate={(name) => {
-            if (name === "") return false;
-            if (columns.map((col) => col.id).includes(name)) return false;
-            return true;
-          }}
-        />
-      </div>
-    {/each}
-    </section>
-  {/if}
-
-  <!-- Unpinned columns: DnD enabled within unpinned subset -->
-  <section
-    class="projects--board"
-    use:dragHandleZone={{
-      type: "columns",
-      items: unpinnedColumns,
-      flipDurationMs,
-      dropTargetStyle: {
-        outline: "none",
-      },
-      dragDisabled: boardEditing,
-      morphDisabled: true,
-    }}
-    on:consider={handleDndConsider}
-    on:finalize={handleDndFinalize}
+  <div
+    class="projects--board--viewport"
+    style={zoom !== 1 ? `transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%; height: ${100 / zoom}%` : ""}
   >
-    {#each unpinnedColumns as column (column.id)}
-      <div class="projects--board--column--dndwrapper">
-        <span class="board-column-grip" use:dragHandle aria-label="Drag to reorder column">
-          <Icon name="grip-vertical" size="xs" />
-        </span>
-        <BoardColumn
-          {readonly}
-          {richText}
-          {boardEditing}
-          {onEdit}
-          width={columnWidth}
-          collapse={column.collapse}
-          pinned={column.pinned}
-          persisted={column.persisted}
-          name={column.id}
-          records={column.records}
-          {onRecordClick}
-          {checkField}
-          {onRecordCheck}
-          onRecordAdd={() => onRecordAdd(column.id)}
-          onDrop={(record, records, trigger) => {
-            switch (trigger) {
-              case "droppedIntoZone":
+    {#if pinnedColumns.length > 0}
+      <section class="projects--board projects--board--pinned">
+        {#each pinnedColumns as column (column.id)}
+          <div class="projects--board--column--dndwrapper projects--board--column--pinned">
+            <BoardColumn
+              {readonly}
+              {richText}
+              {boardEditing}
+              {onEdit}
+              width={columnWidth}
+              collapse={column.collapse}
+              pinned={column.pinned}
+              persisted={column.persisted}
+              name={column.id}
+              records={column.records}
+              {onRecordClick}
+              {checkField}
+              {onRecordCheck}
+              onRecordAdd={() => onRecordAdd(column.id)}
+              onDrop={(record, records, trigger) => {
+                if (trigger === "droppedIntoAnother") return;
                 onRecordUpdate(record, { ...column, records }, "addToColumn");
-                break;
-              case "droppedIntoAnother":
-                onRecordUpdate(
-                  record,
-                  { ...column, records },
-                  "removeFromColumn"
-                );
-                break;
-            }
-          }}
-          {includeFields}
-          {customHeader}
-          onColumnPin={(name) =>
-            onColumnPin(
-              columns.map((col) => col.id),
-              name
-            )}
-          {onColumnPersist}
-          onColumnDelete={(name, records) =>
-            onColumnDelete(
-              columns.map((col) => col.id),
-              name,
-              records
-            )}
-          {onColumnCollapse}
-          onColumnRename={(name) => {
-            const cols = columns.map((col) => col.id);
-            onColumnRename(cols, column.id, name, column.records);
-          }}
-          onValidate={(name) => {
-            if (name === "") return false;
-            if (columns.map((col) => col.id).includes(name)) return false;
-            return true;
-          }}
-        />
-      </div>
-    {/each}
-  </section>
-  {#if !readonly}
-    <NewColumn
-      {onEdit}
-      onColumnAdd={(name) => {
-        const cols = columns.map((col) => col.id);
-        onColumnAdd(cols, name);
-      }}
-      fieldError={validateStatusField()}
-      onValidate={(name) => {
-        if (name === "") return false;
-        if (columns.map((col) => col.id).includes(name)) return false;
+              }}
+              {includeFields}
+              {customHeader}
+              onColumnPin={(name) =>
+                onColumnPin(
+                  columns.map((col) => col.id),
+                  name
+                )}
+              {onColumnPersist}
+              onColumnDelete={(name, records) =>
+                onColumnDelete(
+                  columns.map((col) => col.id),
+                  name,
+                  records
+                )}
+              {onColumnCollapse}
+              onColumnRename={(name) => {
+                const cols = columns.map((col) => col.id);
+                onColumnRename(cols, column.id, name, column.records);
+              }}
+              onValidate={(name) => {
+                if (name === "") return false;
+                if (columns.map((col) => col.id).includes(name)) return false;
+                return true;
+              }}
+            />
+          </div>
+        {/each}
+      </section>
+    {/if}
 
-        return true;
+    <section
+      class="projects--board"
+      use:dragHandleZone={{
+        type: "columns",
+        items: dndUnpinnedColumns,
+        flipDurationMs,
+        dropTargetStyle: {
+          outline: "none",
+        },
+        transformDraggedElement: (element) => {
+          if (!element) return;
+          const rect = element.getBoundingClientRect();
+          const width = `${rect.width}px`;
+          const height = `${rect.height}px`;
+          element.style.width = width;
+          element.style.minWidth = width;
+          element.style.maxWidth = width;
+          element.style.height = height;
+          element.style.minHeight = height;
+          element.style.boxSizing = "border-box";
+          element.style.zIndex = "30";
+        },
+        dragDisabled: boardEditing || zoom !== 1,
+        morphDisabled: true,
       }}
-    />
-  {/if}
-</div>
-</div>
-
-  <!-- Zoom indicator -->
-  {#if zoom !== 1}
-    <button
-      class="projects--board--zoom-badge"
-      on:click={handleResetZoom}
-      title="Reset zoom"
+      on:consider={handleDndConsider}
+      on:finalize={handleDndFinalize}
     >
-      {Math.round(zoom * 100)}%
-    </button>
-  {/if}
+      {#each dndUnpinnedColumns as column (column.id)}
+        <div
+          class="projects--board--column--dndwrapper"
+          class:projects--board--column--dndwrapper--placeholder={isShadowPlaceholder(column)}
+          data-dnd-width={`${getColumnFootprint(column)}px`}
+          style={`width: ${getColumnFootprint(column)}px; min-width: ${getColumnFootprint(column)}px; max-width: ${getColumnFootprint(column)}px;`}
+          aria-hidden={isShadowPlaceholder(column) ? "true" : undefined}
+          animate:flip={{ duration: flipDurationMs }}
+        >
+          {#if isShadowPlaceholder(column)}
+            <div class="projects--board--column--placeholder" style={`width: ${getColumnFootprint(column)}px; min-width: ${getColumnFootprint(column)}px; max-width: ${getColumnFootprint(column)}px;`}></div>
+          {:else}
+            <span class="board-column-grip" use:dragHandle aria-label="Drag to reorder column">
+              <Icon name="grip-vertical" size="xs" />
+            </span>
+            <BoardColumn
+              {readonly}
+              {richText}
+              {boardEditing}
+              {onEdit}
+              width={columnWidth}
+              collapse={column.collapse}
+              pinned={column.pinned}
+              persisted={column.persisted}
+              name={column.id}
+              records={column.records}
+              {onRecordClick}
+              {checkField}
+              {onRecordCheck}
+              onRecordAdd={() => onRecordAdd(column.id)}
+              onDrop={(record, records, trigger) => {
+                switch (trigger) {
+                  case "droppedIntoZone":
+                    onRecordUpdate(record, { ...column, records }, "addToColumn");
+                    break;
+                  case "droppedIntoAnother":
+                    onRecordUpdate(
+                      record,
+                      { ...column, records },
+                      "removeFromColumn"
+                    );
+                    break;
+                }
+              }}
+              {includeFields}
+              {customHeader}
+              onColumnPin={(name) =>
+                onColumnPin(
+                  columns.map((col) => col.id),
+                  name
+                )}
+              {onColumnPersist}
+              onColumnDelete={(name, records) =>
+                onColumnDelete(
+                  columns.map((col) => col.id),
+                  name,
+                  records
+                )}
+              {onColumnCollapse}
+              onColumnRename={(name) => {
+                const cols = columns.map((col) => col.id);
+                onColumnRename(cols, column.id, name, column.records);
+              }}
+              onValidate={(name) => {
+                if (name === "") return false;
+                if (columns.map((col) => col.id).includes(name)) return false;
+
+                return true;
+              }}
+            />
+          {/if}
+        </div>
+      {/each}
+    </section>
+
+    {#if !readonly}
+      <NewColumn
+        {onEdit}
+        onColumnAdd={(name) => {
+          const cols = columns.map((col) => col.id);
+          onColumnAdd(cols, name);
+        }}
+        fieldError={validateStatusField()}
+        onValidate={(name) => {
+          if (name === "") return false;
+          if (columns.map((col) => col.id).includes(name)) return false;
+
+          return true;
+        }}
+      />
+    {/if}
+  </div>
+</div>
+
+{#if zoom !== 1}
+  <button
+    class="projects--board--zoom-badge"
+    on:click={handleResetZoom}
+    title="Reset zoom"
+  >
+    {Math.round(zoom * 100)}%
+  </button>
+{/if}
 
 <style>
   .projects--board--container {
@@ -349,13 +413,11 @@
     overflow: auto;
     width: 100%;
     height: 100%;
-    /* v3.1.0: Prevent scroll chaining to Obsidian workspace on mobile */
     overscroll-behavior: contain;
   }
 
   .projects--board--viewport {
     display: flex;
-    /* v4.0.5: Ensure viewport fills container height when scaled */
     min-height: 100%;
   }
 
@@ -384,6 +446,14 @@
   .projects--board--column--dndwrapper {
     flex-shrink: 0;
     position: relative;
+    box-sizing: border-box;
+  }
+
+  .projects--board--column--placeholder {
+    min-height: 12rem;
+    border: 1px dashed var(--background-modifier-border-hover);
+    border-radius: var(--radius-m);
+    background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
   }
 
   /* Column drag grip — top-left corner, visually separated from header */

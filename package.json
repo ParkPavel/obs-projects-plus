@@ -1,6 +1,6 @@
 {
   "name": "obs-projects-plus",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Project management for Obsidian: Database View (8 widgets, 10 chart types, 115 formulas), Calendar with timeline, Board, Gallery",
   "main": "main.js",
   "scripts": {

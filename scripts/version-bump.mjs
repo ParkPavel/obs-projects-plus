@@ -28,7 +28,10 @@ packageJson.version = newVersion;
 manifestJson.version = newVersion;
 
 // Update versions.json
-versionsJson[packageJson.name] = newVersion;
+versionsJson[newVersion] = manifestJson.minAppVersion;
+if (packageJson.name in versionsJson) {
+	delete versionsJson[packageJson.name];
+}
 
 // Write files back
 writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
