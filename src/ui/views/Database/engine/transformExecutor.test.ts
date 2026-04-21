@@ -401,7 +401,7 @@ describe("executeTransform — regex safety", () => {
       steps: [
         {
           type: "unpivot",
-          fieldGroups: [{ pattern: "(?<=pre)test(\\d+)", outputName: "val" }],
+          fieldGroups: [{ pattern: "pre(test\\d+)", outputName: "val" }],
           keepFields: [],
         },
       ],

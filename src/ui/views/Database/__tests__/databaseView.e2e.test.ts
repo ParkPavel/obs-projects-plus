@@ -8,7 +8,12 @@ import { executeTransform } from "../engine/transformExecutor";
 import { computeAggregations } from "../engine/aggregation";
 import { computeChartData } from "../engine/chartDataPipeline";
 import { computeRowStyles, cellStyleToCSS } from "../engine/conditionalFormat";
-import { extractWikiLinks, resolveRelations } from "../engine/relationResolver";
+import {
+  computeBacklinks,
+  enrichWithBacklinks,
+  extractWikiLinks,
+  resolveRelations,
+} from "../engine/relationResolver";
 import { computeRollup } from "../engine/rollup";
 import { migrateTableConfig, isLegacyTableConfig } from "../migration";
 import { WIDGET_TEMPLATES } from "../widgetTemplates";
@@ -416,8 +421,6 @@ describe("E2E: Relation resolution → Rollup", () => {
   });
 
   test("bi-directional backlinks: enrichWithBacklinks", () => {
-    const { computeBacklinks, enrichWithBacklinks } = require("../engine/relationResolver");
-
     // A links to B and C; B links to A
     const frame: DataFrame = {
       fields: [

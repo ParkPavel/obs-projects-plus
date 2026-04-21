@@ -85,7 +85,7 @@ function buildSubGroups(
     }
   }
 
-  let subGroups = Array.from(map.entries()).map(([key, records]) => ({
+  const subGroups = Array.from(map.entries()).map(([key, records]) => ({
     key,
     records,
   }));

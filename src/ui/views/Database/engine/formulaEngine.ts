@@ -136,7 +136,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   AND: (args, evaluate) => args.every((a) => Boolean(evaluate(a))),
   OR: (args, evaluate) => args.some((a) => Boolean(evaluate(a))),
-  NOT: (args, evaluate) => !Boolean(evaluate(args[0] as FormulaNode)),
+  NOT: (args, evaluate) => !evaluate(args[0] as FormulaNode),
 
   EMPTY: (args, evaluate) => {
     const val = evaluate(args[0] as FormulaNode);
@@ -1086,7 +1086,7 @@ function evaluateNode(
     return vals;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Formula values can be string|number|boolean|Date|null
+   
   function evaluate(n: FormulaNode): any {
     switch (n.type) {
       case "literal":
@@ -1261,7 +1261,7 @@ function evaluateNode(
   return evaluate(node) as Optional<DataValue>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic comparison
+ 
 function smartEq(a: any, b: any): boolean {
   if (a == null && b == null) return true;
   if (a == null || b == null) return false;
@@ -1271,7 +1271,7 @@ function smartEq(a: any, b: any): boolean {
   return a === b;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic numeric coercion
+ 
 function toNum(val: any): number {
   if (typeof val === "number") return val;
   if (typeof val === "boolean") return val ? 1 : 0;
