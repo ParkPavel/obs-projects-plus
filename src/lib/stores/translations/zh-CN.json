@@ -584,7 +584,28 @@
                     "layout-grid": "网格",
                     "layout-stack": "列表",
                     "hide-formula-bar": "隐藏公式栏",
-                    "show-formula-bar": "显示公式栏"
+                    "show-formula-bar": "显示公式栏",
+                    "template-replace-title": "替换当前布局？",
+                    "template-replace-confirm": "应用模板将替换当前组件。是否继续？",
+                    "template-replace-cancel": "取消",
+                    "template-replace-apply": "应用模板",
+                    "filter-bridge-global": "全局筛选器：{{count}} 个条件",
+                    "filter-bridge-local": "本地：{{field}} = {{value}}",
+                    "filter-bridge-clear": "清除本地筛选器",
+                    "filter-bridge-promote": "保存为全局筛选器"
+                },
+                "field-presets": {
+                    "label": "布局",
+                    "title": "列布局预设",
+                    "aria-label": "列布局预设",
+                    "save-current": "保存当前布局…",
+                    "apply": "应用",
+                    "rename": "重命名",
+                    "delete": "删除",
+                    "detach": "取消预设",
+                    "prompt-new": "布局预设名称：",
+                    "prompt-rename": "重命名预设：",
+                    "confirm-delete": "删除此布局预设？"
                 },
                 "widget": {
                     "expand": "展开组件",
@@ -596,6 +617,11 @@
                     "add": "添加组件",
                     "add-aria": "添加组件",
                     "templates": "模板"
+                },
+                "quick": {
+                    "group": "快速操作",
+                    "overview": "概览预设",
+                    "formula": "公式构建器"
                 },
                 "types": {
                     "data-table": "数据表",
@@ -619,7 +645,14 @@
                     "mode-code": "代码",
                     "mode-visual": "可视化",
                     "visual-empty": "点击添加公式块",
-                    "visual-parse-error": "无法在可视化模式下显示 — 请切换到代码模式编辑"
+                    "visual-parse-error": "无法在可视化模式下显示 — 请切换到代码模式编辑",
+                    "signature-returns": "返回",
+                    "signature-category": "类别",
+                    "debug-title": "调试",
+                    "debug-cursor": "光标位置",
+                    "debug-copy": "复制错误",
+                    "debug-dismiss": "关闭",
+                    "runtime-error": "运行时错误"
                 },
                 "pipeline": {
                     "title": "数据管道",
@@ -637,6 +670,17 @@
                     "compute": "计算",
                     "unpivot": "逆透视",
                     "pivot": "透视",
+                    "join": "连接",
+                    "join-right-source": "右侧数据源",
+                    "join-left-key": "左键",
+                    "join-right-key": "右键",
+                    "join-right-key-placeholder": "右侧数据源中的字段名",
+                    "join-how": "连接类型",
+                    "join-inner": "内连接（丢弃未匹配）",
+                    "join-left": "左连接（保留未匹配，右为 null）",
+                    "join-aggregate": "聚合多个右侧匹配项",
+                    "join-no-sources": "无可用的右侧项目。",
+                    "aggregate-function": "聚合函数",
                     "none": "（无）",
                     "columns": "列",
                     "groups": "组",
@@ -645,7 +689,12 @@
                     "unsaved-changes": "未保存的更改",
                     "discard-confirm": "您有未保存的管道更改。放弃？",
                     "keep-editing": "继续编辑",
-                    "discard": "放弃"
+                    "discard": "放弃",
+                    "how-to": "使用方法",
+                    "how-to-steps": "1) 添加步骤  2) 选择字段（可按名称搜索）  3) 保存管道",
+                    "unnest-suggestion-title": "检测到数组字段",
+                    "unnest-suggestion-body": "字段 {{fields}} 包含数组。使用 Unnest 将每个元素拆分为独立的行。",
+                    "unnest-suggestion-button": "展开 \"{{field}}\""
                 },
                 "group": {
                     "empty": "（空）"
@@ -704,7 +753,17 @@
                         "r-squared": "显示 R²",
                         "point-size": "点大小",
                         "opacity": "透明度",
-                        "none": "（无）"
+                        "none": "（无）",
+                        "correlate-enable": "与其他数据源关联",
+                        "correlate-hint": "X 来自当前控件的数据源；Y 来自所选右侧数据源，按连接键匹配。",
+                        "right-source": "右侧数据源（Y）",
+                        "left-key": "左连接键（当前数据源）",
+                        "right-key": "右连接键（右侧数据源）",
+                        "right-key-placeholder": "右侧数据源中的字段名",
+                        "no-sources": "此保库中没有其他项目。",
+                        "warn-missing-right": "右侧数据源未加载。请检查所选 id 并确认并列项目仍然可用。",
+                        "warn-no-matches": "没有按连接键匹配的记录。请核对左/右键的名称与值是否相交。",
+                        "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。"
                     },
                     "section": {
                         "display": "显示设置"
@@ -734,6 +793,8 @@
                     "gallery": "画廊视图"
                 },
                 "templates": {
+                    "overview-finance": "财务概览",
+                    "overview-finance-desc": "快速财务概览：KPI、汇总、图表和表格",
                     "dashboard": "仪表盘",
                     "dashboard-desc": "统计概览 + 图表 + 数据表",
                     "analytics": "分析",

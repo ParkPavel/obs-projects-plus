@@ -1,11 +1,13 @@
 <script lang="ts">
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import type { ChartConfig, ChartType, ChartStyle } from "../../types";
+  import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
 
   export let config: ChartConfig;
   export let fields: DataField[];
+  /** Sibling projects available as correlation sources (scatter). */
+  export let availableSources: Array<{ id: string; name: string }> = [];
 
   const dispatch = createEventDispatcher<{ change: ChartConfig }>();
 
@@ -33,6 +35,7 @@
   $: showR2 = (raw["showR2"] as boolean) ?? true;
   $: scatterPointRadius = (raw["pointRadius"] as number) ?? 5;
   $: scatterOpacity = (raw["opacity"] as number) ?? 0.8;
+  $: correlation = (raw["correlation"] as ScatterChartConfig["correlation"]) ?? undefined;
 
   function emit(partial: Partial<ChartConfig>) {
     dispatch("change", { ...config, ...partial });
@@ -40,6 +43,33 @@
 
   function emitRaw(partial: Record<string, unknown>) {
     dispatch("change", { ...config, ...partial } as ChartConfig);
+  }
+
+  function setCorrelationEnabled(enabled: boolean) {
+    if (!enabled) {
+      // Strip the key rather than set undefined (exactOptionalPropertyTypes).
+      const { correlation: _, ...rest } = config as unknown as Record<string, unknown>;
+      dispatch("change", rest as unknown as ChartConfig);
+      return;
+    }
+    const first = availableSources[0];
+    emitRaw({
+      correlation: {
+        rightSourceId: first?.id ?? "",
+        on: { leftKey: fields[0]?.name ?? "", rightKey: "" },
+      },
+    });
+  }
+
+  function updateCorrelation(partial: Partial<NonNullable<ScatterChartConfig["correlation"]>>) {
+    if (!correlation) return;
+    emitRaw({
+      correlation: {
+        ...correlation,
+        ...partial,
+        on: { ...correlation.on, ...(partial.on ?? {}) },
+      },
+    });
   }
 
   function updateStyle(partial: Partial<ChartStyle>) {
@@ -247,6 +277,69 @@
         on:input={(e) => emitRaw({ opacity: parseFloat(e.currentTarget.value) })}
       />
     </label>
+
+    <!-- Pillar 5: cross-source correlation (Phase 5 UI) -->
+    <div class="ppp-config-divider"></div>
+    <label class="ppp-config-check">
+      <input
+        type="checkbox"
+        checked={!!correlation}
+        on:change={(e) => setCorrelationEnabled(e.currentTarget.checked)}
+        aria-describedby={availableSources.length === 0 ? "ppp-scatter-no-sources-hint" : undefined}
+      />
+      <span>{$i18n.t("views.database.chart.scatter.correlate-enable", { defaultValue: "Correlate with another source" })}</span>
+    </label>
+
+    {#if correlation}
+      {#if availableSources.length === 0}
+        <div
+          class="ppp-config-hint"
+          id="ppp-scatter-no-sources-hint"
+          role="note"
+        >
+          {$i18n.t("views.database.chart.scatter.no-sources", { defaultValue: "No sibling projects found in this vault." })}
+        </div>
+      {:else}
+        <div class="ppp-config-hint" role="note">
+          {$i18n.t("views.database.chart.scatter.correlate-hint", {
+            defaultValue: "X comes from this widget's source; Y comes from the selected right source, matched by join key.",
+          })}
+        </div>
+        <label class="ppp-config-row">
+          <span>{$i18n.t("views.database.chart.scatter.right-source", { defaultValue: "Right source (Y)" })}</span>
+          <select
+            value={correlation.rightSourceId}
+            on:change={(e) => updateCorrelation({ rightSourceId: e.currentTarget.value })}
+          >
+            {#each availableSources as src (src.id)}
+              <option value={src.id}>{src.name}</option>
+            {/each}
+          </select>
+        </label>
+
+        <label class="ppp-config-row">
+          <span>{$i18n.t("views.database.chart.scatter.left-key", { defaultValue: "Left join key (this source)" })}</span>
+          <select
+            value={correlation.on.leftKey}
+            on:change={(e) => updateCorrelation({ on: { leftKey: e.currentTarget.value, rightKey: correlation.on.rightKey } })}
+          >
+            {#each fieldNames as name (name)}
+              <option value={name}>{name}</option>
+            {/each}
+          </select>
+        </label>
+
+        <label class="ppp-config-row">
+          <span>{$i18n.t("views.database.chart.scatter.right-key", { defaultValue: "Right join key (right source)" })}</span>
+          <input
+            type="text"
+            value={correlation.on.rightKey}
+            placeholder={$i18n.t("views.database.chart.scatter.right-key-placeholder", { defaultValue: "field name in right source" })}
+            on:input={(e) => updateCorrelation({ on: { leftKey: correlation.on.leftKey, rightKey: e.currentTarget.value } })}
+          />
+        </label>
+      {/if}
+    {/if}
   {/if}
 </div>
 
@@ -306,6 +399,13 @@
     font-weight: 600;
     cursor: pointer;
     user-select: none;
+    padding: 0.125rem 0;
+  }
+
+  .ppp-config-hint {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    font-style: italic;
     padding: 0.125rem 0;
   }
 </style>

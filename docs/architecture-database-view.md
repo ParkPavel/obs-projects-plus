@@ -4,6 +4,8 @@
 > **Заменяет**: Table View (`views["table"]`)
 > **Совместимость**: Obsidian 1.5.7+ | Desktop + Mobile
 > **Предыдущий черновик**: `architecture-database-view.OLD.md`
+> **Роль в 2026-04-22**: reference architecture document; active execution plan ведется в `IMPLEMENTATION_PLAN_CURRENT.md`
+> **Роадмап**: `ROADMAP_DATABASE_2026.md`
 > **Связанные документы**:
 > - `database-view-ui-ux.md` — Детальная спецификация UI/UX (контекстные меню, поповеры, кнопки, анимации)
 > - `database-view-pivot.md` — Сводные таблицы и трансформация данных (Pivot/Unpivot Pipeline)

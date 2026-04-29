@@ -8,6 +8,13 @@ import { type FormulaNode, parseFormula, tokenize } from "src/lib/helpers/formul
 import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH } from "src/lib/helpers/regexSafety";
 import dayjs from "dayjs";
 
+export {
+  getFormulaMetadata,
+  getAllFormulaMetadata,
+  type FormulaMetadata,
+  type FormulaCategory,
+} from "./formulaMetadata";
+
 // ── Styled value support ─────────────────────────────────────
 
 /** Result of style() formula — carries CSS class info for visual rendering */

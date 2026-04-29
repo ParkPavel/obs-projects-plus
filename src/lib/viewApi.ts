@@ -6,6 +6,7 @@ import type {
   DataValue,
   Optional,
 } from "./dataframe/dataframe";
+import type { DataFrame } from "./dataframe/dataframe";
 import type { DataApi } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
 import type { DataSource } from "./datasources";
@@ -14,7 +15,16 @@ import type { DataSource } from "./datasources";
  * ViewApi provides an write API for views.
  */
 export class ViewApi {
-  constructor(readonly dataSource: DataSource, readonly dataApi: DataApi) {}
+  constructor(
+    readonly dataSource: DataSource,
+    readonly dataApi: DataApi,
+    /**
+     * Optional resolver for sibling-project DataFrames. Used by Pillar 5
+     * correlation widgets (JoinStep, ScatterConfig.correlation). Returns
+     * `null` if the requested source cannot be loaded.
+     */
+    readonly resolveExternalFrame?: (projectId: string) => Promise<DataFrame | null>
+  ) {}
 
   addRecord(record: DataRecord, fields: DataField[], templatePath: string) {
     if (this.dataSource.includes(record.id)) {

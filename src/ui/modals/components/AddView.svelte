@@ -26,11 +26,11 @@
   export let project: ProjectDefinition;
 
   let name: string = "";
-  let type: ViewType = "table";
+  let type: ViewType = "database";
 
   const options = Object.values($customViews).map((view) => {
     if (
-      ["table", "board", "calendar", "gallery"].includes(view.getViewType()) // Maybe we need a enum of integrated view types here
+      ["table", "board", "calendar", "gallery", "database"].includes(view.getViewType()) // Maybe we need a enum of integrated view types here
     ) {
       return {
         label: $i18n.t(["views", view.getViewType(), "name"].join(".")),
@@ -111,14 +111,15 @@
     <Button
       variant="primary"
       on:click={() => {
+        const normalizedType = type === "table" ? "database" : type;
         onSave(
           project.id,
           Object.assign({}, DEFAULT_VIEW, {
             id: uuidv4(),
             name:
               name ||
-              nextUniqueViewName(project.views, selectedOption?.label ?? type),
-            type,
+              nextUniqueViewName(project.views, selectedOption?.label ?? normalizedType),
+            type: normalizedType,
           })
         );
       }}>{$i18n.t("modals.view.create.cta")}</Button

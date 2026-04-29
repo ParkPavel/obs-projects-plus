@@ -7,9 +7,16 @@ import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
 import type { DatabaseViewConfig } from "src/ui/views/Database/types";
+import { applyWidgetTemplate } from "src/ui/views/Database/widgetTemplates";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
 import type { ColorRule, FilterCondition } from "src/settings/base/settings";
 import type { AgendaConfig, AgendaCustomList } from "src/settings/v3/settings";
+import {
+  buildFitnessFiles,
+  buildFinanceFiles,
+  buildCrmFiles,
+  writeDemoFiles,
+} from "./demoVerticals";
 
 // ============================================================
 // 🎯 PROJECTS PLUS - ДЕМОНСТРАЦИОННЫЙ ПРОЕКТ v3.0
@@ -1222,7 +1229,7 @@ export async function createDemoProject(vault: Vault) {
 - \`color\`: #9C27B0 (для цветной индикации)
 
 ---
-*Используйте Table view для редактирования всех полей*
+*Используйте Database view для редактирования всех полей*
 `,
     },
   };
@@ -1242,48 +1249,233 @@ export async function createDemoProject(vault: Vault) {
   }
 
   // ============================================================
+  // СОЗДАНИЕ ФАЙЛОВ ВЕРТИКАЛЕЙ (Fitness / Finance / CRM)
+  //
+  // DATA FLOW OVER FOLDERS — все записи вертикалей пишутся в корневую
+  // папку демо-проекта вместе с generic-записями (задачи, встречи и т.д.).
+  // Сегрегация осуществляется исключительно через YAML-поле `type`
+  // (`workout` | `transaction` | `client`) и per-view фильтры, НЕ через
+  // физическое дробление папок. Это соответствует принципу "Проекты —
+  // это Запросы": один единый поток данных, много отфильтрованных срезов.
+  // writeDemoFiles идемпотентен: повторный запуск не падает.
+  // ============================================================
+
+  try {
+    await writeDemoFiles(vault, demoFolder, buildFitnessFiles());
+  } catch (err) {
+    console.warn("[Projects Plus] Failed to seed Fitness vertical:", err);
+  }
+  try {
+    await writeDemoFiles(vault, demoFolder, buildFinanceFiles());
+  } catch (err) {
+    console.warn("[Projects Plus] Failed to seed Finance vertical:", err);
+  }
+  try {
+    await writeDemoFiles(vault, demoFolder, buildCrmFiles());
+  } catch (err) {
+    console.warn("[Projects Plus] Failed to seed CRM vertical:", err);
+  }
+
+  // ============================================================
   // КОНФИГУРАЦИЯ ПРЕДСТАВЛЕНИЙ (VIEWS)
   // ============================================================
 
-  const databaseConfig: DatabaseViewConfig = {
-    widgets: [
-      {
-        id: `w-demo-table-${Date.now()}`,
-        type: "data-table",
-        title: "Table",
-        layout: { x: 0, y: 0, w: 12, h: 8 },
-        config: {},
-        collapsed: false,
-      },
+  const commonTableConfig: DatabaseViewConfig["table"] = {
+    fieldConfig: {
+      name: { width: 280 },
+      path: { hide: true },
+      startDate: { width: 110 },
+      date: { width: 110 },
+      endDate: { width: 110 },
+      dueDate: { width: 110 },
+      status: { width: 100 },
+      type: { width: 100 },
+      category: { width: 100 },
+      priority: { width: 90 },
+      progress: { width: 80 },
+      estimate: { width: 80 },
+      completed: { width: 80 },
+      assignee: { width: 100 },
+      cover: { hide: true },
+    },
+    orderFields: [
+      "name",
+      "status",
+      "priority",
+      "type",
+      "category",
+      "startDate",
+      "date",
+      "endDate",
+      "progress",
+      "assignee",
+      "tags",
     ],
+    aggregations: { progress: "avg", estimate: "sum", name: "count" },
+    showAggregationRow: true,
+    rowHeight: "default",
+    wrapText: false,
+  };
+
+  const cloneTemplate = (templateId: string) => applyWidgetTemplate(templateId) ?? [];
+
+  const overviewDatabaseConfig: DatabaseViewConfig = {
+    widgets: cloneTemplate("overview-finance").map((widget) => {
+      if (widget.type === "chart") {
+        return {
+          ...widget,
+          transform: {
+            steps: [
+              {
+                type: "filter",
+                conditions: {
+                  conjunction: "and",
+                  conditions: [
+                    { field: "status", operator: "is-not", value: "inbox", enabled: true },
+                  ],
+                },
+              },
+            ],
+          },
+        };
+      }
+      return widget;
+    }),
     layoutMode: "stack",
     layoutVersion: 1,
-    table: {
-      fieldConfig: {
-        name: { width: 280 },
-        path: { hide: true },
-        startDate: { width: 110 },
-        date: { width: 110 },
-        endDate: { width: 110 },
-        dueDate: { width: 110 },
-        status: { width: 100 },
-        type: { width: 100 },
-        category: { width: 100 },
-        priority: { width: 90 },
-        progress: { width: 80 },
-        estimate: { width: 80 },
-        completed: { width: 80 },
-        assignee: { width: 100 },
-        color: { hide: true },
-        cover: { hide: true },
-      },
-      orderFields: ["name", "status", "priority", "type", "category", "startDate", "date", "endDate", "progress", "assignee", "tags"],
-      aggregations: {},
-      showAggregationRow: false,
-    },
+    table: commonTableConfig,
     showWidgetToolbar: true,
     compactMode: false,
+    quickActions: [
+      {
+        id: "qa-overview",
+        label: "Overview Preset",
+        labelKey: "views.database.quick.overview",
+        kind: "apply-template",
+        templateId: "overview-finance",
+      },
+      {
+        id: "qa-formula",
+        label: "Formula Builder",
+        labelKey: "views.database.quick.formula",
+        kind: "toggle-formula-bar",
+      },
+    ],
   };
+
+  const kanbanDatabaseConfig: DatabaseViewConfig = {
+    widgets: cloneTemplate("kanban-plus").map((widget) => {
+      if (widget.type === "data-table") {
+        return {
+          ...widget,
+          transform: {
+            steps: [
+              {
+                type: "filter",
+                conditions: {
+                  conjunction: "and",
+                  conditions: [
+                    { field: "type", operator: "is", value: "задача", enabled: true },
+                    { field: "completed", operator: "is-not-checked", enabled: true },
+                  ],
+                },
+              },
+            ],
+          },
+        };
+      }
+      if (widget.type === "checklist") {
+        return {
+          ...widget,
+          config: { field: "completed" },
+        };
+      }
+      return widget;
+    }),
+    layoutMode: "stack",
+    layoutVersion: 1,
+    table: commonTableConfig,
+    showWidgetToolbar: true,
+    compactMode: false,
+    quickActions: [
+      {
+        id: "qa-kanban",
+        label: "Kanban+ Preset",
+        labelKey: "views.database.templates.kanban-plus",
+        kind: "apply-template",
+        templateId: "kanban-plus",
+      },
+      {
+        id: "qa-formula",
+        label: "Formula Builder",
+        labelKey: "views.database.quick.formula",
+        kind: "toggle-formula-bar",
+      },
+    ],
+  };
+
+  const analyticsDatabaseConfig: DatabaseViewConfig = {
+    widgets: cloneTemplate("analytics").map((widget) => {
+      if (widget.type === "chart" && widget.title === "Trend") {
+        return {
+          ...widget,
+          transform: {
+            steps: [
+              {
+                type: "filter",
+                conditions: {
+                  conjunction: "and",
+                  conditions: [
+                    { field: "archived", operator: "is-not-checked", enabled: true },
+                  ],
+                },
+              },
+            ],
+          },
+        };
+      }
+      return widget;
+    }),
+    layoutMode: "stack",
+    layoutVersion: 1,
+    table: commonTableConfig,
+    showWidgetToolbar: true,
+    compactMode: false,
+    quickActions: [
+      {
+        id: "qa-analytics",
+        label: "Analytics Preset",
+        labelKey: "views.database.templates.analytics",
+        kind: "apply-template",
+        templateId: "analytics",
+      },
+      {
+        id: "qa-formula",
+        label: "Formula Builder",
+        labelKey: "views.database.quick.formula",
+        kind: "toggle-formula-bar",
+      },
+    ],
+  };
+
+  // ── Industry-vertical database views (3 parallel views) ──────────────
+  // Each vertical is its OWN Database view with a view-level filter on
+  // frontmatter `type`. Records live flat in `demoFolder` — the per-view
+  // filter is the only mechanism isolating workouts from transactions
+  // from clients (DATA FLOW OVER FOLDERS). Widget layouts come from
+  // WIDGET_TEMPLATES (fitness-workout / finance-accounting / crm-clients).
+  const makeVerticalConfig = (templateId: string): DatabaseViewConfig => ({
+    widgets: cloneTemplate(templateId),
+    layoutMode: "stack",
+    layoutVersion: 1,
+    table: commonTableConfig,
+    showWidgetToolbar: true,
+    compactMode: false,
+  });
+
+  const fitnessDatabaseConfig = makeVerticalConfig("fitness-workout");
+  const financeDatabaseConfig = makeVerticalConfig("finance-accounting");
+  const crmDatabaseConfig = makeVerticalConfig("crm-clients");
 
   const boardConfig: BoardConfig = {
     groupByField: "status",
@@ -1314,6 +1506,13 @@ export async function createDemoProject(vault: Vault) {
     timezone: "local",
     timeFormat: "24h",
     agendaOpen: true,
+  };
+
+  const galleryConfig: GalleryConfig = {
+    coverField: "cover",
+    fitStyle: "cover",
+    cardWidth: 280,
+    includeFields: ["type", "category", "status", "tags"],
   };
 
   // ============================================================
@@ -1418,13 +1617,6 @@ export async function createDemoProject(vault: Vault) {
     custom: { lists: demoAgendaLists },
   };
 
-  const galleryConfig: GalleryConfig = {
-    coverField: "cover",
-    fitStyle: "cover",
-    cardWidth: 280,
-    includeFields: ["type", "category", "status", "tags"],
-  };
-
   // ============================================================
   // ФИЛЬТРЫ И ЦВЕТОВЫЕ ПРАВИЛА
   // ============================================================
@@ -1445,7 +1637,6 @@ export async function createDemoProject(vault: Vault) {
     },
   ];
 
-  // Фильтр для активных задач (не завершённые)
   const activeTasksFilter: FilterCondition[] = [
     { field: "completed", operator: "is-not-checked", enabled: true },
   ];
@@ -1463,7 +1654,11 @@ export async function createDemoProject(vault: Vault) {
         kind: "folder",
         config: {
           path: demoFolder,
-          recursive: false,
+          // Flat data stream — all records (generic tasks, workouts,
+          // transactions, clients) live in the same folder. Per-view filters
+          // on `type` field segregate them. Recursive kept for future
+          // user-added subfolders; demo itself does not create any.
+          recursive: true,
         },
       },
       fieldConfig: {
@@ -1476,18 +1671,49 @@ export async function createDemoProject(vault: Vault) {
       },
       agenda: agendaConfig,
       views: [
-        // 📋 БАЗА - полный обзор данных (Database View)
+        // 📋 БАЗА 1 — Операционный обзор (overview-finance template)
         Object.assign({}, DEFAULT_VIEW, {
-          name: "📋 База",
+          name: "📋 База: Обзор",
           id: uuidv4(),
           type: "database",
-          config: databaseConfig,
+          config: overviewDatabaseConfig,
           filter: { conjunction: "and", conditions: [] },
           colors: { conditions: priorityColorRules },
           sort: { criteria: [{ field: "startDate", order: "asc", enabled: true }] },
         }),
-        
-        // 📌 ДОСКА - Kanban по статусам
+
+        // 📋 БАЗА 2 — Kanban+ flow (checklist + task pipeline)
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "📋 База: Kanban+",
+          id: uuidv4(),
+          type: "database",
+          config: kanbanDatabaseConfig,
+          filter: {
+            conjunction: "and",
+            conditions: [
+              { field: "type", operator: "is", value: "задача", enabled: true },
+            ],
+          },
+          colors: { conditions: priorityColorRules },
+          sort: { criteria: [{ field: "priority", order: "desc", enabled: true }] },
+        }),
+
+        // 📋 БАЗА 3 — Аналитика и срезы (analytics template)
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "📋 База: Аналитика",
+          id: uuidv4(),
+          type: "database",
+          config: analyticsDatabaseConfig,
+          filter: {
+            conjunction: "and",
+            conditions: [
+              { field: "archived", operator: "is-not-checked", enabled: true },
+            ],
+          },
+          colors: { conditions: priorityColorRules },
+          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
+        }),
+
         Object.assign({}, DEFAULT_VIEW, {
           name: "📌 Доска",
           id: uuidv4(),
@@ -1497,8 +1723,7 @@ export async function createDemoProject(vault: Vault) {
           colors: { conditions: priorityColorRules },
           sort: { criteria: [{ field: "priority", order: "desc", enabled: true }] },
         }),
-        
-        // 📅 КАЛЕНДАРЬ - Timeline события
+
         Object.assign({}, DEFAULT_VIEW, {
           name: "📅 Календарь",
           id: uuidv4(),
@@ -1508,24 +1733,22 @@ export async function createDemoProject(vault: Vault) {
           colors: { conditions: [] },
           sort: { criteria: [] },
         }),
-        
-        // 🖼️ ГАЛЕРЕЯ - Визуальные карточки
+
         Object.assign({}, DEFAULT_VIEW, {
           name: "🖼️ Галерея",
           id: uuidv4(),
           type: "gallery",
           config: galleryConfig,
-          filter: { 
-            conjunction: "and", 
+          filter: {
+            conjunction: "and",
             conditions: [
-              { field: "cover", operator: "is-not-empty", enabled: true }
-            ] 
+              { field: "cover", operator: "is-not-empty", enabled: true },
+            ],
           },
           colors: { conditions: priorityColorRules },
           sort: { criteria: [{ field: "status", order: "asc", enabled: true }] },
         }),
-        
-        // 🎯 ЗАДАЧИ - Только задачи (фильтр по типу)
+
         Object.assign({}, DEFAULT_VIEW, {
           name: "🎯 Задачи",
           id: uuidv4(),
@@ -1534,18 +1757,17 @@ export async function createDemoProject(vault: Vault) {
             ...boardConfig,
             groupByField: "priority",
           },
-          filter: { 
-            conjunction: "and", 
+          filter: {
+            conjunction: "and",
             conditions: [
               { field: "type", operator: "is", value: "задача", enabled: true },
               { field: "completed", operator: "is-not-checked", enabled: true },
-            ] 
+            ],
           },
           colors: { conditions: [] },
           sort: { criteria: [{ field: "dueDate", order: "asc", enabled: true }] },
         }),
-        
-        // 🤝 ВСТРЕЧИ - Календарь встреч
+
         Object.assign({}, DEFAULT_VIEW, {
           name: "🤝 Встречи",
           id: uuidv4(),
@@ -1554,15 +1776,64 @@ export async function createDemoProject(vault: Vault) {
             ...calendarConfig,
             interval: "week",
           },
-          filter: { 
-            conjunction: "or", 
+          filter: {
+            conjunction: "or",
             conditions: [
               { field: "type", operator: "is", value: "встреча", enabled: true },
               { field: "type", operator: "is", value: "презентация", enabled: true },
-            ] 
+            ],
           },
           colors: { conditions: [] },
           sort: { criteria: [] },
+        }),
+
+        // ── Industry verticals (3 parallel database views) ────────────
+        // Each vertical is a database view filtered by the `type` frontmatter
+        // field. Records live flat in demoFolder — view.filter is the ONLY
+        // segregation mechanism (DATA FLOW OVER FOLDERS).
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "🏋️ Фитнес",
+          id: uuidv4(),
+          type: "database",
+          config: fitnessDatabaseConfig,
+          filter: {
+            conjunction: "and",
+            conditions: [
+              { field: "type", operator: "is", value: "workout", enabled: true },
+            ],
+          },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
+        }),
+
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "💰 Финансы",
+          id: uuidv4(),
+          type: "database",
+          config: financeDatabaseConfig,
+          filter: {
+            conjunction: "and",
+            conditions: [
+              { field: "type", operator: "is", value: "transaction", enabled: true },
+            ],
+          },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
+        }),
+
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "👥 CRM",
+          id: uuidv4(),
+          type: "database",
+          config: crmDatabaseConfig,
+          filter: {
+            conjunction: "and",
+            conditions: [
+              { field: "type", operator: "is", value: "client", enabled: true },
+            ],
+          },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "stage", order: "asc", enabled: true }] },
         }),
       ],
     })

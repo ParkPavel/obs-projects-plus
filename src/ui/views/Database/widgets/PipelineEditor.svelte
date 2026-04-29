@@ -8,6 +8,7 @@
     AggregateStep,
     ComputeStep,
     UnpivotStep,
+    JoinStep,
   } from "../engine/transformTypes";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import type { FilterCondition } from "src/settings/base/settings";
@@ -17,6 +18,9 @@
 
   export let pipeline: TransformPipeline;
   export let fields: DataField[] = [];
+  export let source: { records: Array<{ values: Record<string, unknown> }> } | null = null;
+  /** Sibling projects that can be used as JoinStep right sources (Phase 5 UI). */
+  export let availableSources: Array<{ id: string; name: string }> = [];
 
   const dispatch = createEventDispatcher<{
     save: TransformPipeline;
@@ -31,11 +35,55 @@
   $: fieldNames = fields.map(f => f.name);
   $: fieldMap = new Map(fields.map(f => [f.name, f]));
 
+  /*
+   * Detect array-valued fields in the source data to suggest Unnest.
+   * We scan the first few records looking for any field whose value is
+   * an array. This powers a discoverability banner pointing users at the
+   * Unnest transform when their YAML frontmatter contains nested lists
+   * (e.g. `sets: [{reps, weight}]` in the fitness vertical).
+   */
+  $: arrayFields = detectArrayFields(source, fields, steps);
+
+  function detectArrayFields(
+    src: { records: Array<{ values: Record<string, unknown> }> } | null,
+    flds: DataField[],
+    currentSteps: TransformStep[],
+  ): string[] {
+    if (!src || src.records.length === 0) return [];
+    const alreadyUnnested = new Set(
+      currentSteps.filter((s) => s.type === "unnest").map((s) => (s as { field: string }).field),
+    );
+    const candidates = new Set<string>();
+    const sampleSize = Math.min(src.records.length, 50);
+    for (let i = 0; i < sampleSize; i++) {
+      const rec = src.records[i];
+      if (!rec) continue;
+      for (const f of flds) {
+        if (alreadyUnnested.has(f.name)) continue;
+        const v = rec.values[f.name];
+        if (Array.isArray(v) && v.length > 0) {
+          candidates.add(f.name);
+        }
+      }
+    }
+    return [...candidates];
+  }
+
   const AGG_FUNCTIONS: AggregationFunction[] = [
     "SUM", "AVG", "MEDIAN", "MIN", "MAX", "RANGE",
     "COUNT", "COUNT_DISTINCT", "FIRST", "LAST",
     "STD_DEV", "PCT_EMPTY", "PCT_NOT_EMPTY",
   ];
+
+  const FORMULA_SUGGESTIONS = [
+    "SUM(", "AVG(", "COUNT(", "MIN(", "MAX(", "MEDIAN(",
+    "IF(", "IFBLANK(", "ROUND(", "CONCAT(", "LEFT(", "RIGHT(", "DATE(",
+  ];
+
+  function normalizeAggFunction(value: string, fallback: AggregationFunction): AggregationFunction {
+    const normalized = value.trim().toUpperCase() as AggregationFunction;
+    return AGG_FUNCTIONS.includes(normalized) ? normalized : fallback;
+  }
 
   const STEP_TYPES: { value: TransformStep["type"]; labelKey: string; icon: string }[] = [
     { value: "filter", labelKey: "views.database.pipeline.filter", icon: "🔍" },
@@ -45,6 +93,7 @@
     { value: "unpivot", labelKey: "views.database.pipeline.unpivot", icon: "↕" },
     { value: "pivot", labelKey: "views.database.pipeline.pivot", icon: "↔" },
     { value: "unnest", labelKey: "views.database.pipeline.unnest", icon: "⊞" },
+    { value: "join", labelKey: "views.database.pipeline.join", icon: "⋈" },
   ];
 
   function addStep(type: TransformStep["type"]) {
@@ -53,6 +102,12 @@
       steps = [...steps, newStep];
       expandedStep = steps.length - 1;
     }
+  }
+
+  function addUnnestForField(fieldName: string) {
+    // Prepend unnest so later steps (filter/group-by/aggregate) see the flattened rows.
+    steps = [{ type: "unnest", field: fieldName }, ...steps];
+    expandedStep = 0;
   }
 
   function removeStep(index: number) {
@@ -94,6 +149,13 @@
         return { type: "pivot", categoryField: "", valueField: "", aggregation: "SUM" };
       case "unnest":
         return { type: "unnest", field: "" };
+      case "join":
+        return {
+          type: "join",
+          rightSourceId: availableSources[0]?.id ?? "",
+          on: { leftKey: fieldNames[0] ?? "", rightKey: "" },
+          how: "inner",
+        };
       default:
         return null;
     }
@@ -112,6 +174,11 @@
       case "unpivot": return `${t("views.database.pipeline.unpivot")}: ${step.fieldGroups.length}`;
       case "pivot": return `${t("views.database.pipeline.pivot")}: ${step.categoryField || "—"}`;
       case "unnest": return `${t("views.database.pipeline.unnest", { defaultValue: "Unnest" })}: ${step.field || "—"}`;
+      case "join": {
+        const label = t("views.database.pipeline.join", { defaultValue: "Join" });
+        const srcName = availableSources.find((s) => s.id === step.rightSourceId)?.name ?? step.rightSourceId ?? "—";
+        return `${label}: ${step.on.leftKey || "?"} = ${srcName}.${step.on.rightKey || "?"}`;
+      }
       default: return "?";
     }
   }
@@ -166,10 +233,6 @@
     const prev = conds[condIndex]!;
     conds[condIndex] = { field: prev.field, operator: prev.operator, value: val, enabled: prev.enabled };
     updateStep(stepIndex, { ...step, conditions: { ...step.conditions, conditions: conds } });
-    updateStep(stepIndex, {
-      ...step,
-      conditions: { ...step.conditions, conditions: conds },
-    });
   }
 
   function removeFilterCondition(stepIndex: number, condIndex: number) {
@@ -197,7 +260,12 @@
   function updateAggColumn(stepIndex: number, colIndex: number, field: string, fn: string) {
     const step = steps[stepIndex] as AggregateStep;
     const cols = [...step.columns];
-    cols[colIndex] = { sourceField: field, function: fn as AggregationFunction, outputName: `${field}_${fn.toLowerCase()}` };
+    const normalizedFn = normalizeAggFunction(fn, cols[colIndex]?.function ?? "SUM");
+    cols[colIndex] = {
+      sourceField: field,
+      function: normalizedFn,
+      outputName: `${field}_${normalizedFn.toLowerCase()}`,
+    };
     updateStep(stepIndex, { ...step, columns: cols });
   }
 
@@ -275,6 +343,30 @@
     updateStep(stepIndex, { ...step, aggregation: value as AggregationFunction });
   }
 
+  // ── Join step helpers ────────────────────────────────────
+
+  function updateJoinStep(stepIndex: number, partial: Partial<JoinStep>) {
+    const step = steps[stepIndex]!;
+    if (step.type !== "join") return;
+    const merged: JoinStep = {
+      ...step,
+      ...partial,
+      on: { ...step.on, ...(partial.on ?? {}) },
+    };
+    updateStep(stepIndex, merged);
+  }
+
+  function toggleJoinAggregation(stepIndex: number, enabled: boolean) {
+    const step = steps[stepIndex]!;
+    if (step.type !== "join") return;
+    if (enabled) {
+      updateStep(stepIndex, { ...step, aggregation: "SUM" as AggregationFunction });
+    } else {
+      const { aggregation: _drop, ...rest } = step;
+      updateStep(stepIndex, rest as JoinStep);
+    }
+  }
+
   // ── Event value helpers (Svelte 3 templates don't support `as` casts) ──
 
   function selectVal(e: Event): string {
@@ -319,7 +411,42 @@
     <span class="ppp-pipeline-count">{steps.length} {$i18n.t("views.database.pipeline.steps")}</span>
   </div>
 
+  <div class="ppp-pipeline-help">
+    <strong>{$i18n.t("views.database.pipeline.how-to", { defaultValue: "How to use" })}:</strong>
+    <span>{$i18n.t("views.database.pipeline.how-to-steps", { defaultValue: "1) Add step 2) Type field name to search 3) Save pipeline" })}</span>
+  </div>
+
   <div class="ppp-pipeline-steps">
+    {#if arrayFields.length > 0}
+      <div class="ppp-pipeline-unnest-hint" role="note">
+        <span class="ppp-pipeline-unnest-hint-icon" aria-hidden="true">⊞</span>
+        <div class="ppp-pipeline-unnest-hint-body">
+          <strong>{$i18n.t("views.database.pipeline.unnest-suggestion-title", { defaultValue: "Array fields detected" })}</strong>
+          <span>
+            {$i18n.t("views.database.pipeline.unnest-suggestion-body", {
+              defaultValue: "Fields {{fields}} contain arrays. Use Unnest to split each item into its own row.",
+              fields: arrayFields.join(", "),
+            })}
+          </span>
+        </div>
+        <div class="ppp-pipeline-unnest-hint-actions">
+          {#each arrayFields as fieldName (fieldName)}
+            <button
+              class="ppp-pipeline-unnest-hint-btn"
+              type="button"
+              on:click={() => addUnnestForField(fieldName)}
+              title={$i18n.t("views.database.pipeline.unnest-suggestion-button", {
+                defaultValue: "Unnest \"{{field}}\"",
+                field: fieldName,
+              })}
+            >
+              ⊞ {fieldName}
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     {#if steps.length === 0}
       <div class="ppp-pipeline-empty">
         {$i18n.t("views.database.pipeline.empty")}
@@ -377,16 +504,14 @@
                 {@const fieldType = (fieldMap.get(cond.field)?.type ?? "string")}
                 {@const operators = getOperatorsForField(fieldType)}
                 <div class="ppp-filter-row">
-                  <select
+                  <input
                     class="ppp-filter-field-select"
+                    type="text"
+                    list="ppp-pipeline-fields"
                     value={cond.field}
-                    on:change={(e) => updateFilterField(i, ci, selectVal(e))}
-                  >
-                    <option value="">{$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Field —" })}</option>
-                    {#each fieldNames as name}
-                      <option value={name}>{name}</option>
-                    {/each}
-                  </select>
+                    placeholder={$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Field —" })}
+                    on:input={(e) => updateFilterField(i, ci, inputVal(e))}
+                  />
                   <select
                     class="ppp-filter-op-select"
                     value={cond.operator}
@@ -402,7 +527,7 @@
                       type="text"
                       value={cond.value ?? ""}
                       placeholder={$i18n.t("views.database.pipeline.value", { defaultValue: "Value" })}
-                      on:change={(e) => updateFilterValue(i, ci, inputVal(e))}
+                      on:input={(e) => updateFilterValue(i, ci, inputVal(e))}
                     />
                   {/if}
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeFilterCondition(i, ci)}>✕</button>
@@ -417,43 +542,38 @@
             {:else if step.type === "group-by"}
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.database.pipeline.group-field", { defaultValue: "Group by field" })}</span>
-                <select
+                <input
+                  type="text"
+                  list="ppp-pipeline-fields"
                   value={step.fields[0] ?? ""}
-                  on:change={(e) => {
-                    const val = e.currentTarget.value;
+                  placeholder={$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  on:input={(e) => {
+                    const val = inputVal(e);
                     updateStep(i, { ...step, fields: val ? [val] : [] });
                   }}
-                >
-                  <option value="">{$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}</option>
-                  {#each fieldNames as name}
-                    <option value={name}>{name}</option>
-                  {/each}
-                </select>
+                />
               </label>
 
             <!-- ═══ AGGREGATE ═══ -->
             {:else if step.type === "aggregate"}
               {#each step.columns as col, ci}
                 <div class="ppp-agg-row">
-                  <select
+                  <input
                     class="ppp-agg-field-select"
+                    type="text"
+                    list="ppp-pipeline-fields"
                     value={col.sourceField}
-                    on:change={(e) => updateAggColumn(i, ci, e.currentTarget.value, col.function)}
-                  >
-                    <option value="">{$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Field —" })}</option>
-                    {#each fieldNames as name}
-                      <option value={name}>{name}</option>
-                    {/each}
-                  </select>
-                  <select
+                    placeholder={$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Field —" })}
+                    on:input={(e) => updateAggColumn(i, ci, inputVal(e), col.function)}
+                  />
+                  <input
                     class="ppp-agg-fn-select"
+                    type="text"
+                    list="ppp-pipeline-agg-functions"
                     value={col.function}
-                    on:change={(e) => updateAggColumn(i, ci, col.sourceField, selectVal(e))}
-                  >
-                    {#each AGG_FUNCTIONS as fn}
-                      <option value={fn}>{fn}</option>
-                    {/each}
-                  </select>
+                    placeholder="SUM"
+                    on:input={(e) => updateAggColumn(i, ci, col.sourceField, inputVal(e))}
+                  />
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeAggColumn(i, ci)}>✕</button>
                 </div>
               {/each}
@@ -475,9 +595,10 @@
                   <input
                     class="ppp-compute-expr"
                     type="text"
+                    list="ppp-pipeline-formula-hints"
                     placeholder="e.g. fieldA + fieldB * 2"
                     value={col.expression}
-                    on:change={(e) => updateComputeColumn(i, ci, col.name, e.currentTarget.value)}
+                    on:input={(e) => updateComputeColumn(i, ci, col.name, inputVal(e))}
                   />
                   <button class="ppp-step-btn ppp-step-btn--danger" on:click={() => removeComputeColumn(i, ci)}>✕</button>
                 </div>
@@ -490,38 +611,33 @@
             {:else if step.type === "pivot"}
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.database.pipeline.category-field", { defaultValue: "Category field" })}</span>
-                <select
+                <input
+                  type="text"
+                  list="ppp-pipeline-fields"
                   value={step.categoryField}
-                  on:change={(e) => updateStep(i, { ...step, categoryField: e.currentTarget.value })}
-                >
-                  <option value="">{$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}</option>
-                  {#each fieldNames as name}
-                    <option value={name}>{name}</option>
-                  {/each}
-                </select>
+                  placeholder={$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  on:input={(e) => updateStep(i, { ...step, categoryField: inputVal(e) })}
+                />
               </label>
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.database.pipeline.value-field", { defaultValue: "Value field" })}</span>
-                <select
+                <input
+                  type="text"
+                  list="ppp-pipeline-fields"
                   value={step.valueField}
-                  on:change={(e) => updateStep(i, { ...step, valueField: e.currentTarget.value })}
-                >
-                  <option value="">{$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}</option>
-                  {#each fieldNames as name}
-                    <option value={name}>{name}</option>
-                  {/each}
-                </select>
+                  placeholder={$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  on:input={(e) => updateStep(i, { ...step, valueField: inputVal(e) })}
+                />
               </label>
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.database.pipeline.aggregation-fn", { defaultValue: "Aggregation function" })}</span>
-                <select
+                <input
+                  type="text"
+                  list="ppp-pipeline-agg-functions"
                   value={step.aggregation}
-                  on:change={(e) => updatePivotAggregation(i, selectVal(e))}
-                >
-                  {#each AGG_FUNCTIONS as fn}
-                    <option value={fn}>{fn}</option>
-                  {/each}
-                </select>
+                  placeholder="SUM"
+                  on:input={(e) => updatePivotAggregation(i, inputVal(e).toUpperCase())}
+                />
               </label>
 
             <!-- ═══ UNPIVOT ═══ -->
@@ -567,15 +683,13 @@
             {:else if step.type === "unnest"}
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.database.pipeline.source-field", { defaultValue: "Array field to expand" })}</span>
-                <select
+                <input
+                  type="text"
+                  list="ppp-pipeline-fields"
                   value={step.field}
-                  on:change={(e) => updateStep(i, { ...step, field: e.currentTarget.value })}
-                >
-                  <option value="">{$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}</option>
-                  {#each fieldNames as name}
-                    <option value={name}>{name}</option>
-                  {/each}
-                </select>
+                  placeholder={$i18n.t("views.database.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  on:input={(e) => updateStep(i, { ...step, field: inputVal(e) })}
+                />
               </label>
               <label class="ppp-step-field">
                 <span>{$i18n.t("views.database.pipeline.prefix", { defaultValue: "Prefix for extracted fields" })}</span>
@@ -594,6 +708,81 @@
                 />
                 <span>{$i18n.t("views.database.pipeline.keep-original", { defaultValue: "Keep original array field" })}</span>
               </label>
+
+            <!-- ═══ JOIN (Pillar 5) ═══ -->
+            {:else if step.type === "join"}
+              {#if availableSources.length === 0}
+                <div
+                  class="ppp-step-hint"
+                  id="ppp-join-no-sources-hint-{i}"
+                  role="note"
+                >
+                  {$i18n.t("views.database.pipeline.join-no-sources", { defaultValue: "No sibling projects available as right source." })}
+                </div>
+              {:else}
+                <label class="ppp-step-field">
+                  <span>{$i18n.t("views.database.pipeline.join-right-source", { defaultValue: "Right source" })}</span>
+                  <select
+                    value={step.rightSourceId}
+                    on:change={(e) => updateJoinStep(i, { rightSourceId: selectVal(e) })}
+                  >
+                    {#each availableSources as src (src.id)}
+                      <option value={src.id}>{src.name}</option>
+                    {/each}
+                  </select>
+                </label>
+              {/if}
+              <label class="ppp-step-field">
+                <span>{$i18n.t("views.database.pipeline.join-left-key", { defaultValue: "Left key" })}</span>
+                <select
+                  value={step.on.leftKey}
+                  on:change={(e) => updateJoinStep(i, { on: { leftKey: selectVal(e), rightKey: step.on.rightKey } })}
+                >
+                  {#each fieldNames as name (name)}
+                    <option value={name}>{name}</option>
+                  {/each}
+                </select>
+              </label>
+              <label class="ppp-step-field">
+                <span>{$i18n.t("views.database.pipeline.join-right-key", { defaultValue: "Right key" })}</span>
+                <input
+                  type="text"
+                  value={step.on.rightKey}
+                  placeholder={$i18n.t("views.database.pipeline.join-right-key-placeholder", { defaultValue: "field name in right source" })}
+                  on:input={(e) => updateJoinStep(i, { on: { leftKey: step.on.leftKey, rightKey: inputVal(e) } })}
+                />
+              </label>
+              <label class="ppp-step-field">
+                <span>{$i18n.t("views.database.pipeline.join-how", { defaultValue: "Join type" })}</span>
+                <select
+                  value={step.how}
+                  on:change={(e) => updateJoinStep(i, { how: selectVal(e) === "left" ? "left" : "inner" })}
+                >
+                  <option value="inner">{$i18n.t("views.database.pipeline.join-inner", { defaultValue: "Inner (drop unmatched)" })}</option>
+                  <option value="left">{$i18n.t("views.database.pipeline.join-left", { defaultValue: "Left (keep unmatched, null right)" })}</option>
+                </select>
+              </label>
+              <label class="ppp-step-field ppp-step-field--row">
+                <input
+                  type="checkbox"
+                  checked={step.aggregation !== undefined}
+                  on:change={(e) => toggleJoinAggregation(i, checkVal(e))}
+                />
+                <span>{$i18n.t("views.database.pipeline.join-aggregate", { defaultValue: "Aggregate multiple right matches" })}</span>
+              </label>
+              {#if step.aggregation !== undefined}
+                <label class="ppp-step-field">
+                  <span>{$i18n.t("views.database.pipeline.aggregate-function", { defaultValue: "Aggregation function" })}</span>
+                  <select
+                    value={step.aggregation}
+                    on:change={(e) => updateJoinStep(i, { aggregation: normalizeAggFunction(selectVal(e), step.aggregation ?? "SUM") })}
+                  >
+                    {#each AGG_FUNCTIONS as fn}
+                      <option value={fn}>{fn}</option>
+                    {/each}
+                  </select>
+                </label>
+              {/if}
 
             {:else}
               <span class="ppp-step-hint">{$i18n.t("views.database.pipeline.config-hint", { defaultValue: "No configuration available" })}</span>
@@ -618,6 +807,24 @@
       </button>
     {/each}
   </div>
+
+  <datalist id="ppp-pipeline-fields">
+    {#each fieldNames as name}
+      <option value={name} />
+    {/each}
+  </datalist>
+
+  <datalist id="ppp-pipeline-agg-functions">
+    {#each AGG_FUNCTIONS as fn}
+      <option value={fn} />
+    {/each}
+  </datalist>
+
+  <datalist id="ppp-pipeline-formula-hints">
+    {#each FORMULA_SUGGESTIONS as fnHint}
+      <option value={fnHint} />
+    {/each}
+  </datalist>
 
   <div class="ppp-pipeline-footer">
     <button class="ppp-btn ppp-btn--secondary" on:click={handleCancel}>
@@ -674,6 +881,17 @@
     font-size: var(--font-ui-smaller);
   }
 
+  .ppp-pipeline-help {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-s, 4px);
+    background: var(--background-secondary-alt, var(--background-secondary));
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+  }
+
   .ppp-pipeline-steps {
     display: flex;
     flex-direction: column;
@@ -685,6 +903,57 @@
     text-align: center;
     color: var(--text-faint);
     font-size: var(--font-ui-small);
+  }
+
+  .ppp-pipeline-unnest-hint {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.25rem 0.5rem;
+    padding: 0.625rem 0.75rem;
+    margin-bottom: 0.5rem;
+    background: var(--background-modifier-hover);
+    border: 1px solid var(--interactive-accent);
+    border-left-width: 0.1875rem;
+    border-radius: var(--radius-s, 4px);
+    font-size: var(--font-ui-small);
+  }
+  .ppp-pipeline-unnest-hint-icon {
+    grid-row: 1 / span 2;
+    align-self: start;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--interactive-accent);
+  }
+  .ppp-pipeline-unnest-hint-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    color: var(--text-normal);
+  }
+  .ppp-pipeline-unnest-hint-body strong {
+    color: var(--interactive-accent);
+    font-size: var(--font-ui-small);
+  }
+  .ppp-pipeline-unnest-hint-actions {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+  }
+  .ppp-pipeline-unnest-hint-btn {
+    padding: 0.25rem 0.5rem;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: var(--radius-s, 4px);
+    font-size: var(--font-ui-smaller);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .ppp-pipeline-unnest-hint-btn:hover {
+    background: var(--interactive-accent-hover);
   }
 
   .ppp-pipeline-step {
@@ -735,7 +1004,6 @@
     gap: 0.375rem;
   }
 
-  .ppp-step-field select,
   .ppp-step-field input[type="text"] {
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-small);

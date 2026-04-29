@@ -7,6 +7,7 @@
 
   export let config: StatsCardConfig;
   export let values: Optional<DataValue>[];
+  export let fieldMissing: boolean = false;
 
   $: safeColor = config.color ? sanitizeColor(config.color) : null;
   $: result = computeAggregateValue(values, config.aggregation);
@@ -57,15 +58,23 @@
 
 <div
   class="ppp-stats-card"
-  style={safeColor ? `border-left: 3px solid ${safeColor}` : ""}
+  class:ppp-stats-card--missing={fieldMissing}
+  style={safeColor ? `border-left: 0.1875rem solid ${safeColor}` : ""}
+  title={fieldMissing ? `Field "${config.field}" not found in data. Edit the widget config to pick an existing field.` : ""}
 >
-  <span class="ppp-stats-value">{formatted}</span>
-  {#if config.sparkline && sparklinePath}
+  {#if fieldMissing}
+    <span class="ppp-stats-value ppp-stats-value--missing" aria-label="Field not found">⚠</span>
+  {:else}
+    <span class="ppp-stats-value">{formatted}</span>
+  {/if}
+  {#if config.sparkline && sparklinePath && !fieldMissing}
     <svg class="ppp-stats-sparkline" viewBox="0 0 80 24" preserveAspectRatio="none">
       <path d={sparklinePath} fill="none" stroke="var(--interactive-accent)" stroke-width="1.5" />
     </svg>
   {/if}
-  <span class="ppp-stats-label">{config.label}</span>
+  <span class="ppp-stats-label">
+    {config.label}{#if fieldMissing} — <span class="ppp-stats-missing-hint">no field “{config.field}”</span>{/if}
+  </span>
 </div>
 
 <style>
@@ -74,5 +83,19 @@
     height: 1.5rem;
     display: block;
     margin: 0.125rem 0;
+  }
+
+  .ppp-stats-card--missing {
+    opacity: 0.7;
+    border-left: 0.1875rem solid var(--text-warning, orange) !important;
+  }
+
+  .ppp-stats-value--missing {
+    color: var(--text-warning, orange);
+  }
+
+  .ppp-stats-missing-hint {
+    color: var(--text-warning, orange);
+    font-style: italic;
   }
 </style>

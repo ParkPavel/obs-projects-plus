@@ -9,7 +9,7 @@ import { parseYaml } from "./decode";
  * @param frontmatter - The front matter to add to the note.
  * @returns Data with the updated front matter.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML frontmatter values are dynamically typed
+ 
 export function encodeFrontMatter(
   data: string,
   frontmatter: Record<string, any>,
@@ -76,7 +76,7 @@ export function encodeFrontMatter(
 /**
  * stringifyYaml converts a value to YAML.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML serialization accepts any serializable value
+ 
 export function stringifyYaml(
   value: any,
   defaultStringType: "PLAIN" | "QUOTE_DOUBLE" = "PLAIN"

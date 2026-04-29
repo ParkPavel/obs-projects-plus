@@ -10,7 +10,27 @@ export abstract class IFile {
   abstract delete(): Promise<void>;
   abstract readTags(): Set<string>;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML frontmatter values are inherently dynamic (strings, numbers, arrays, objects, dates)
+  /**
+   * Safe frontmatter mutation that preserves the file body.
+   *
+   * Optional: returns `true` and resolves once the callback has applied
+   * changes through the underlying platform API (Obsidian's
+   * `fileManager.processFrontMatter`, which takes a write lock and
+   * leaves the body intact). Returns `false` on filesystem
+   * implementations that do not support it — callers must fall back to
+   * the read-modify-write path.
+   *
+   * Closes F6 (Phase 3): inline DataTable edits no longer risk losing
+   * user edits made concurrently in the native editor.
+   */
+  async processFrontMatter(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _fn: (frontmatter: Record<string, unknown>) => void,
+  ): Promise<boolean> {
+    return false;
+  }
+
+   
   async readValues(): Promise<Record<string, any>> {
     const data = await this.read();
 
@@ -19,7 +39,7 @@ export abstract class IFile {
     return either.isRight(values) ? values.right : {};
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML frontmatter values are inherently dynamic, any serializable value is valid
+   
   async writeValues(values: Record<string, any>): Promise<void> {
     const data = await this.read();
 

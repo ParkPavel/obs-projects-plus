@@ -28,16 +28,23 @@
 
   $: cards = config.cards?.length ? config.cards : buildDefaultCards(source);
   $: columns = config.columns ?? 3;
+  $: availableFieldNames = new Set(source.fields.map((f) => f.name));
 
   function getFieldValues(fieldName: string): Optional<DataValue>[] {
     if (fieldName === "*") return source.records.map(() => true);
     return source.records.map((r) => r.values[fieldName] ?? undefined);
   }
+
+  function isFieldMissing(fieldName: string): boolean {
+    // "*" and empty name are always valid (count records)
+    if (!fieldName || fieldName === "*") return false;
+    return !availableFieldNames.has(fieldName);
+  }
 </script>
 
 <div class="ppp-stats-widget" style="--stats-columns: {columns}">
   {#each cards as card (card.id)}
-    <StatsCard config={card} values={getFieldValues(card.field)} />
+    <StatsCard config={card} values={getFieldValues(card.field)} fieldMissing={isFieldMissing(card.field)} />
   {/each}
 </div>
 

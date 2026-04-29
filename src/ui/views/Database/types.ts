@@ -36,7 +36,14 @@ export interface WidgetDefinition {
 
 export interface DataTableFieldConfig {
   readonly [key: string]: {
+    /**
+     * @deprecated since Phase 3 — use `widthRem` for Zero-Pixels
+     * compliance. Legacy px value kept for backward compatibility with
+     * pre-v3.5.0 settings; migrated lazily on first read.
+     */
     readonly width?: number;
+    /** Column width in `rem` — survives root-font-size changes. */
+    readonly widthRem?: number;
     readonly hide?: boolean;
     readonly pinned?: boolean;
   };
@@ -87,6 +94,8 @@ export interface DataTableConfig {
   readonly wrapText?: boolean;
   /** Default property values applied when creating a new record */
   readonly defaultValues?: Record<string, string>;
+  /** User dismissed the "right-click header" discoverability hint */
+  readonly hintDismissed?: boolean;
 }
 
 /** Per-widget multi-key sort criterion (stored in DataTableConfig) */
@@ -138,6 +147,23 @@ export interface FormulaFieldDef {
   readonly resultType?: "string" | "number" | "date" | "boolean";
 }
 
+export interface ApplyTemplateQuickAction {
+  readonly id: string;
+  readonly label: string;
+  readonly labelKey?: string;
+  readonly kind: "apply-template";
+  readonly templateId: string;
+}
+
+export interface ToggleFormulaQuickAction {
+  readonly id: string;
+  readonly label: string;
+  readonly labelKey?: string;
+  readonly kind: "toggle-formula-bar";
+}
+
+export type QuickActionConfig = ApplyTemplateQuickAction | ToggleFormulaQuickAction;
+
 export interface DatabaseViewConfig {
   readonly widgets: WidgetDefinition[];
   readonly layoutMode: "free" | "stack";
@@ -146,6 +172,43 @@ export interface DatabaseViewConfig {
   readonly showWidgetToolbar: boolean;
   readonly compactMode: boolean;
   readonly formulaFields?: FormulaFieldDef[];
+  readonly quickActions?: QuickActionConfig[];
+  /**
+   * User-saved column-layout snapshots for the DataTable inside this view.
+   * Phase 2b — a preset captures only field-scoped state (visibility,
+   * order, width, pinning, sort, freeze, group-by). It intentionally does
+   * NOT carry `view.filter` or `config.widgets` — those are view-level
+   * concerns owned elsewhere. Applying a preset mutates only
+   * `config.table` and `activeFieldPresetId`.
+   */
+  readonly fieldPresets?: FieldPreset[];
+  readonly activeFieldPresetId?: string;
+}
+
+// ── Field Preset ─────────────────────────────────────────────
+
+/**
+ * Phase 2b — a user-saved snapshot of a DataTable column layout within a
+ * single Database view. Presets are scoped to `config.table`; they do not
+ * touch filter, widgets, or anything outside the DataTable.
+ */
+export interface FieldPreset {
+  readonly id: string;
+  readonly label: string;
+  /** Snapshot of per-column state (hide/pinned/width). */
+  readonly fieldConfig?: DataTableFieldConfig;
+  /** Column order snapshot. */
+  readonly orderFields?: string[];
+  /** Multi-key sort snapshot. */
+  readonly sortCriteria?: DataTableSortCriteria[];
+  /** Freeze-up-to field snapshot. */
+  readonly freezeUpTo?: string;
+  /** Group-by snapshot. */
+  readonly groupBy?: GroupConfig;
+  /** Row-height mode snapshot. */
+  readonly rowHeight?: "compact" | "default" | "expanded";
+  /** Wrap-text toggle snapshot. */
+  readonly wrapText?: boolean;
 }
 
 // ── Chart Types ──────────────────────────────────────────────
@@ -238,6 +301,15 @@ export interface ScatterChartConfig {
   readonly showR2: boolean;
   readonly pointRadius: number;
   readonly opacity: number;
+  /**
+   * Optional cross-source correlation (Pillar 5).
+   * When set, the scatter takes X from the primary frame and Y from the
+   * right-hand frame, joined on `correlation.on`.
+   */
+  readonly correlation?: {
+    readonly rightSourceId: string;
+    readonly on: { readonly leftKey: string; readonly rightKey: string };
+  };
 }
 
 // ── Scatter Data ─────────────────────────────────────────────
@@ -254,6 +326,17 @@ export interface ScatterData {
   readonly points: ScatterPoint[];
   readonly trendLine?: { readonly slope: number; readonly intercept: number };
   readonly r2?: number;
+  /**
+   * Populated only when `config.correlation` was active during compute.
+   * Exposes left/right record counts and how many left records found a
+   * matching right-frame row, so UI can surface "0 matches" / "mostly
+   * unmatched" warnings instead of silently rendering an empty chart.
+   */
+  readonly correlationStats?: {
+    readonly leftCount: number;
+    readonly rightCount: number;
+    readonly matched: number;
+  };
 }
 
 // ── Comparison Config ────────────────────────────────────────

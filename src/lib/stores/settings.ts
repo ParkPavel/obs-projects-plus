@@ -10,6 +10,7 @@ import {
   nextUniqueViewName,
   notEmpty,
 } from "src/lib/helpers";
+import { removeDanglingSourceReferences } from "src/lib/helpers/removeDanglingSourceReferences";
 import {
   DEFAULT_SETTINGS,
   type ProjectDefinition,
@@ -123,6 +124,11 @@ function createSettings() {
       update((state) =>
         produce(state, (draft) => {
           draft.projects = draft.projects.filter((w) => w.id !== projectId);
+          // Pillar 5: strip dangling cross-source references (JoinStep /
+          // scatter correlation) that pointed at the removed project so the
+          // UI doesn't keep surfacing "right source unavailable" warnings
+          // indefinitely.
+          draft.projects = removeDanglingSourceReferences(draft.projects, projectId);
         })
       );
     },
@@ -167,13 +173,16 @@ function createSettings() {
       update((state) =>
         produce(state, (draft) => {
           const idx = draft.projects.findIndex((ws) => ws.id === projectId);
+          const normalizedView = view.type === "table"
+            ? { ...view, type: "database" }
+            : view;
 
           if (idx >= 0) {
             const ws = draft.projects[idx];
             if (ws) {
               draft.projects.splice(idx, 1, {
                 ...ws,
-                views: [...ws.views, view],
+                views: [...ws.views, normalizedView],
               });
             }
           }
@@ -295,7 +304,7 @@ function createSettings() {
     updateViewConfig(
       projectId: ProjectId,
       viewId: ViewId,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific
+       
       config: Record<string, any>
     ) {
       update((state) =>

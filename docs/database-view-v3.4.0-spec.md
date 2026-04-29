@@ -1,9 +1,11 @@
 # Database View v3.4.0 — Comprehensive Specification
 
-> **Status**: Draft  
+> **Status**: Reference (historical target specification)  
 > **Created**: 2026-04-16  
 > **Scope**: Full modernization of Database View to become the primary visual-mathematical interface  
 > **Replaces**: Table View (deprecated in v3.3.2, auto-migration active)
+>
+> Active execution source of truth: `docs/IMPLEMENTATION_PLAN_CURRENT.md`.
 
 ---
 

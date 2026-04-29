@@ -441,7 +441,7 @@ export function evaluateFormula(
    * Smart equality: case-insensitive strings, type coercion, date-aware.
    * Matches behavior of visual-mode 'is' operator for consistency.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic comparison of heterogeneous field values
+   
   function smartEquals(left: any, right: any): boolean {
     // Both null/undefined
     if (left == null && right == null) return true;
@@ -494,7 +494,7 @@ export function evaluateFormula(
    * Numbers compared numerically; dates compared by day; strings by locale.
    * Returns negative, zero, or positive like compareTo.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic comparison of heterogeneous field values
+   
   function smartCompare(left: any, right: any): number {
     // Both null → equal
     if (left == null && right == null) return 0;
@@ -543,7 +543,7 @@ export function evaluateFormula(
    * @returns any - Formula values can be: string | number | boolean | Date | null
    *                Type depends on runtime expression, cannot be statically determined
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Formula values can be string|number|boolean|Date|null, type depends on runtime
+   
   function evaluate(n: FormulaNode): any {
     switch (n.type) {
       case 'literal':
@@ -760,7 +760,7 @@ export function evaluateFormula(
       }
 
       default:
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Exhaustive check fallback for unknown node types
+         
         throw new Error(`Unknown node type: ${(n as any).type}`);
     }
   }

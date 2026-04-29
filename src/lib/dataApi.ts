@@ -36,11 +36,16 @@ export class DataApi {
 
   async updateRecord(fields: DataField[], record: DataRecord): Promise<void> {
     const file = this.fileSystem.getFile(record.id);
-    if (file) {
-      await this.updateFile(file, (data) =>
-        doUpdateRecord(data, fields, record)
-      )();
-    }
+    if (!file) return;
+    // Phase 3 / F6: prefer Obsidian's processFrontMatter (body-safe,
+    // lock-protected) over the legacy read-modify-write path.
+    const processed = await file.processFrontMatter((fm) =>
+      applyRecordToFrontmatter(fm, fields, record),
+    );
+    if (processed) return;
+    await this.updateFile(file, (data) =>
+      doUpdateRecord(data, fields, record),
+    )();
   }
 
   async updateRecords(
@@ -50,12 +55,15 @@ export class DataApi {
     await Promise.all(
       records.map(async (record) => {
         const file = this.fileSystem.getFile(record.id);
-        if (file) {
-          await this.updateFile(file, (data) =>
-            doUpdateRecord(data, fields, record)
-          )();
-        }
-      })
+        if (!file) return;
+        const processed = await file.processFrontMatter((fm) =>
+          applyRecordToFrontmatter(fm, fields, record),
+        );
+        if (processed) return;
+        await this.updateFile(file, (data) =>
+          doUpdateRecord(data, fields, record),
+        )();
+      }),
     );
   }
 
@@ -213,6 +221,38 @@ export function doUpdateRecord(
   );
 }
 
+/**
+ * Mutate an Obsidian-frontmatter object in place so it reflects the given
+ * record's values, using the same field-level rules as `doUpdateRecord`
+ * (date formatting, derived-field exclusion). Intended for use inside
+ * `app.fileManager.processFrontMatter` callbacks — closes F6.
+ */
+export function applyRecordToFrontmatter(
+  frontmatter: Record<string, unknown>,
+  fields: DataField[],
+  record: DataRecord,
+): void {
+  for (const [key, value] of Object.entries(record.values)) {
+    const field = fields.find((f) => f.name === key);
+    if (field?.derived) continue;
+
+    if (isDate(value)) {
+      const isDatetime =
+        field?.type === DataFieldType.Date &&
+        (field.typeConfig?.["time"] ||
+          value.getHours() ||
+          value.getMinutes() ||
+          value.getSeconds() ||
+          value.getMilliseconds());
+      frontmatter[key] = dayjs(value).format(
+        isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD",
+      );
+    } else {
+      frontmatter[key] = value as unknown;
+    }
+  }
+}
+
 export function doAddField(
   data: string,
   field: DataField,
@@ -274,8 +314,8 @@ export function createProject(): ProjectDefinition {
     views: [
       Object.assign({}, DEFAULT_VIEW, {
         id: uuidv4(),
-        name: get(i18n).t("views.table.name"),
-        type: "table",
+        name: get(i18n).t("views.database.name"),
+        type: "database",
       }),
     ],
   });

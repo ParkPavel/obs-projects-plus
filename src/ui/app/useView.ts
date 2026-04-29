@@ -10,12 +10,13 @@ import { customViews } from "src/lib/stores/customViews";
 import type { ViewApi } from "src/lib/viewApi";
 import type { ProjectDefinition, ViewDefinition } from "src/settings/settings";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific
+ 
 export interface ViewProps {
   view: ViewDefinition;
   dataProps: DataQueryResult;
   config: Record<string, any>;
   onConfigChange: (config: Record<string, any>) => void;
+  onViewFilterChange?: ProjectViewProps["saveViewFilter"];
   viewApi: ViewApi;
   readonly: boolean;
   project: ProjectDefinition;
@@ -28,7 +29,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
   // Keep track of previous view id to determine if view should be invalidated.
   let viewId: string;
   const projectId = props.project.id;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- View configs are dynamic and plugin-specific
+   
   let projectView: ProjectView<Record<string, any>> | undefined;
   let prevConfigJson: string = "";
   let prevProjectJson: string = "";
@@ -45,10 +46,13 @@ export function useView(node: HTMLElement, props: ViewProps) {
       node.empty();
 
       // Look up the next view.
-      projectView = get(customViews)[newprops.view.type];
+      const views = get(customViews);
+      const resolvedType = newprops.view.type === "table" ? "database" : newprops.view.type;
+      projectView = views[resolvedType];
 
       if (projectView) {
-        projectView.onOpen({
+        // exactOptionalPropertyTypes: only spread saveViewFilter when defined
+        const openProps: ProjectViewProps<Record<string, any>> = {
           contentEl: node,
           viewId: newprops.view.id,
           project: newprops.project,
@@ -59,7 +63,11 @@ export function useView(node: HTMLElement, props: ViewProps) {
           getRecordColor: newprops.getRecordColor,
           sortRecords: newprops.sortRecords,
           getRecord: newprops.getRecord,
-        });
+          ...(newprops.onViewFilterChange
+            ? { saveViewFilter: newprops.onViewFilterChange }
+            : {}),
+        };
+        projectView.onOpen(openProps);
         projectView.onData(newprops.dataProps);
         prevConfigJson = JSON.stringify(newprops.config);
         prevProjectJson = JSON.stringify(newprops.project);
@@ -68,7 +76,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
       viewId = newprops.view.id;
     } else {
       // Batch prop changes into a single $set call to avoid multiple reactive waves
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
+       
       const updates: Record<string, any> = {};
 
       // Check if config changed (for freeze, centerOn, etc.)
@@ -86,7 +94,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
       }
       if (projectView && 'view' in projectView && projectView.view) {
         if (Object.keys(updates).length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Svelte component $set() API not in base type
+           
           // SVELTE4-COMPAT: $set() is removed in Svelte 4.
           // Replace with direct prop assignment or a writable context when migrating.
           (projectView.view as any).$set(updates);

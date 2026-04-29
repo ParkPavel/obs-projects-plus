@@ -535,7 +535,7 @@ describe("formulaEngine — LET (variable binding)", () => {
       rec
     );
     if (result.error) {
-      // eslint-disable-next-line no-console
+       
       console.error("Nested LET error:", result.error);
     }
     expect(result.value).toBe(61);

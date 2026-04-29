@@ -214,7 +214,7 @@ cd obs-projects-plus
 npm ci
 npm run dev       # esbuild watch mode
 npm run build     # tsc + esbuild production
-npm run test      # Jest (800 тестов, 42 suite)
+npm run test      # Jest (839 тестов, 42 suite)
 npm run lint      # ESLint + eslint-plugin-obsidianmd (23 правила)
 npm run format    # Prettier
 ```

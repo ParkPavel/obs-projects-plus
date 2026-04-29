@@ -1,12 +1,18 @@
 <script lang="ts">
   import { onMount, createEventDispatcher } from "svelte";
+  import { get } from "svelte/store";
 
   import { createProject } from "src/lib/dataApi";
   import { api } from "src/lib/stores/api";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { fileSystem } from "src/lib/stores/fileSystem";
   import { ViewApi } from "src/lib/viewApi";
+  import { resolveExternalFrame } from "src/lib/externalFrameResolver";
+  import { bumpExternalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
+  import { getAPI, isPluginEnabled } from "obsidian-dataview";
+  import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
   import { AddViewModal } from "src/ui/modals/addViewModal";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
@@ -60,6 +66,74 @@
     return found;
   })();
 
+  // Pillar 5 (Phase 5 UI): closure capturing current stores for sibling-project
+  // frame resolution. An in-memory cache prevents re-querying the same source
+  // repeatedly within a session. Invalidated on vault changes + on settings.projects
+  // mutations to keep correlation widgets reasonably fresh.
+  const externalFrameCache = new Map<string, Promise<DataFrame | null>>();
+
+  function invalidateExternalFrameCache() {
+    externalFrameCache.clear();
+    // Signal downstream preloaders (e.g. DatabaseViewCanvas) that already
+    // resolved sibling-project frames may be stale and must be re-fetched
+    // even if the referenced id set is unchanged.
+    bumpExternalFrameInvalidation();
+  }
+
+  onMount(() => {
+    const appInstance = $app;
+    const events = [
+      appInstance.vault.on("modify", invalidateExternalFrameCache),
+      appInstance.vault.on("create", invalidateExternalFrameCache),
+      appInstance.vault.on("delete", invalidateExternalFrameCache),
+      appInstance.vault.on("rename", invalidateExternalFrameCache),
+    ];
+    return () => {
+      for (const ref of events) appInstance.vault.offref(ref);
+    };
+  });
+
+  // Invalidate when the user adds/removes/renames projects or changes preferences.
+  let lastProjectsKey = "";
+  $: {
+    const key = ($settings.projects ?? []).map((p) => `${p.id}|${p.name}`).join("\u0001");
+    if (key !== lastProjectsKey) {
+      lastProjectsKey = key;
+      invalidateExternalFrameCache();
+    }
+  }
+
+  // Stable closure: survives $settings / $app / $fileSystem ticks so
+  // `new ViewApi(...)` below is not rebuilt on every reactive update.
+  // Current store values are read lazily on each invocation.
+  const resolveFrameById = (id: string): Promise<DataFrame | null> => {
+    if (!id) return Promise.resolve(null);
+    const cached = externalFrameCache.get(id);
+    if (cached) return cached;
+    const currentApp = get(app);
+    let dataviewApi;
+    try {
+      dataviewApi = isPluginEnabled(currentApp) ? getAPI(currentApp) : undefined;
+    } catch {
+      dataviewApi = undefined;
+    }
+    const currentSettings = get(settings);
+    const promise = resolveExternalFrame(id, {
+      fileSystem: get(fileSystem),
+      preferences: currentSettings.preferences,
+      projects: currentSettings.projects,
+      dataviewApi,
+      app: currentApp,
+    }).then((df) => {
+      // Do not keep null results in the cache so a transient failure (e.g.
+      // Dataview loading) can be retried on next access.
+      if (df === null) externalFrameCache.delete(id);
+      return df;
+    });
+    externalFrameCache.set(id, promise);
+    return promise;
+  };
+
   onMount(() => {
     if (!projects.length) {
       new OnboardingModal(
@@ -76,6 +150,12 @@
         },
         // Try demo project.
         () => {
+          // `createDemoProject` seeds the main demo folder AND three vertical
+          // subfolders (Fitness / Finance / CRM), registering one integrated
+          // project with dedicated vertical database views. The legacy
+          // standalone vertical projects have been merged in to avoid
+          // fragmenting the sidebar and to exercise the in-view
+          // VerticalSwitcher mechanic.
           createDemoProject($app.vault);
         }
       ).open();
@@ -185,7 +265,7 @@
             {project}
             {view}
             readonly={source.readonly()}
-            api={new ViewApi(source, $api)}
+            api={new ViewApi(source, $api, resolveFrameById)}
             onConfigChange={settings.updateViewConfig}
             {frame}
           />

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
-import { migrate } from "./settings";
+import { either } from "fp-ts";
+import { migrate, migrateSettings } from "./settings";
 import type * as v1 from "./v1/settings";
 import type * as v3 from "./v3/settings";
 import type * as base from "./base/settings";
@@ -7,6 +8,14 @@ import type * as base from "./base/settings";
 describe("migrate from v1 to v3", () => {
   it("migrates default settings", () => {
     expect(migrate(v1demo)).toStrictEqual(v3demo);
+  });
+
+  it("normalizes legacy table view type to database in migrateSettings", () => {
+    const migrated = migrateSettings(v1demo);
+    expect(either.isRight(migrated)).toBe(true);
+    if (either.isRight(migrated)) {
+      expect(migrated.right.projects[0]?.views[0]?.type).toBe("database");
+    }
   });
 });
 

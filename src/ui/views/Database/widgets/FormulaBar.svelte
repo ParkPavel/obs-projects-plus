@@ -1,13 +1,17 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import {
-    evaluateFormulaValue,
+    evaluateFormulaWithError,
     validateFormulaExpression,
     getFormulaFunctions,
+    getFormulaMetadata,
+    type FormulaMetadata,
   } from "../engine/formulaEngine";
+  import { findEnclosingCall } from "../engine/formulaMetadata";
   import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import FormulaVisualEditor from "./FormulaVisualEditor.svelte";
+  import FormulaDebugPanel from "./FormulaDebugPanel.svelte";
 
   export let expression: string = "";
   export let fields: string[] = [];
@@ -28,10 +32,14 @@
   }
   let errors: string[] = [];
   let previewValue: Optional<DataValue> = null;
+  let runtimeError: string | null = null;
+  let debugDismissed = false;
   let showSuggestions = false;
   let cursorWord = "";
+  let cursorPosition = 0;
   let filteredSuggestions: string[] = [];
   let selectedSuggestionIndex = -1;
+  let activeSignature: FormulaMetadata | null = null;
   let mode: "code" | "visual" = "code";
 
   const allFunctions = getFormulaFunctions();
@@ -40,11 +48,20 @@
     errors = inputValue.trim()
       ? validateFormulaExpression(inputValue, fields)
       : [];
-    previewValue =
-      inputValue.trim() && errors.length === 0 && previewRecord
-        ? evaluateFormulaValue(inputValue, previewRecord)
-        : null;
+    if (inputValue.trim() && errors.length === 0 && previewRecord) {
+      const result = evaluateFormulaWithError(inputValue, previewRecord);
+      previewValue = result.value;
+      runtimeError = result.error ?? null;
+    } else {
+      previewValue = null;
+      runtimeError = null;
+    }
   }
+
+  // Reset debug dismissal when the runtime error is resolved.
+  // Do NOT reset on every keystroke — that would nullify the Dismiss button
+  // for users still editing a broken expression.
+  $: if (!runtimeError) debugDismissed = false;
 
   $: {
     const word = cursorWord.toUpperCase();
@@ -60,16 +77,41 @@
     selectedSuggestionIndex = -1;
   }
 
+  // Signature popover: prefer highlighted suggestion, otherwise enclosing call.
+  $: {
+    let meta: FormulaMetadata | undefined;
+    if (
+      showSuggestions &&
+      selectedSuggestionIndex >= 0 &&
+      selectedSuggestionIndex < filteredSuggestions.length
+    ) {
+      const candidate = filteredSuggestions[selectedSuggestionIndex];
+      if (candidate) meta = getFormulaMetadata(candidate);
+    }
+    if (!meta) {
+      const enclosing = findEnclosingCall(inputValue, cursorPosition);
+      if (enclosing) meta = getFormulaMetadata(enclosing);
+    }
+    activeSignature = meta ?? null;
+  }
+
+
   function handleInput(e: Event) {
     const target = e.target as HTMLTextAreaElement;
     inputValue = target.value;
 
     // Extract word at cursor for autocomplete
     const pos = target.selectionStart ?? 0;
+    cursorPosition = pos;
     const before = inputValue.substring(0, pos);
     const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
     cursorWord = match ? match[0] : "";
     showSuggestions = cursorWord.length > 0 && filteredSuggestions.length > 0;
+  }
+
+  function handleCursorMove(e: Event) {
+    const target = e.target as HTMLTextAreaElement;
+    cursorPosition = target.selectionStart ?? 0;
   }
 
   function insertSuggestion(suggestion: string) {
@@ -99,6 +141,7 @@
       textarea.focus();
       const newPos = replaceFrom + insert.length;
       textarea.setSelectionRange(newPos, newPos);
+      cursorPosition = newPos;
     });
   }
 
@@ -204,10 +247,28 @@
         class:ppp-formula-input--error={errors.length > 0}
         value={inputValue}
         on:input={handleInput}
+        on:click={handleCursorMove}
+        on:keyup={handleCursorMove}
+        on:focus={handleCursorMove}
         placeholder={$i18n.t("views.database.formula.expression-placeholder")}
         rows="3"
         spellcheck="false"
       ></textarea>
+
+      {#if activeSignature}
+        <div class="ppp-formula-signature" role="status" aria-live="polite">
+          <code class="ppp-formula-signature-code">{activeSignature.signature}</code>
+          <span class="ppp-formula-signature-meta">
+            <span class="ppp-formula-signature-returns">
+              {$i18n.t("views.database.formula.signature-returns")}: <strong>{activeSignature.returnType}</strong>
+            </span>
+            <span class="ppp-formula-signature-category">
+              {$i18n.t("views.database.formula.signature-category")}: {activeSignature.category}
+            </span>
+          </span>
+          <p class="ppp-formula-signature-doc">{activeSignature.doc}</p>
+        </div>
+      {/if}
 
       {#if showSuggestions && filteredSuggestions.length > 0}
         <div class="ppp-formula-suggestions" role="listbox">
@@ -242,6 +303,15 @@
         <div class="ppp-formula-error">{error}</div>
       {/each}
     </div>
+  {/if}
+
+  {#if runtimeError && !debugDismissed}
+    <FormulaDebugPanel
+      message={runtimeError}
+      cursorPosition={cursorPosition}
+      expression={inputValue}
+      on:dismiss={() => (debugDismissed = true)}
+    />
   {/if}
 
   {#if previewValue != null}
@@ -407,6 +477,36 @@
 
   .ppp-formula-suggestion--fn {
     color: var(--text-accent);
+  }
+
+  .ppp-formula-signature {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding: 0.375rem 0.5rem;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 4px);
+  }
+
+  .ppp-formula-signature-code {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    color: var(--text-accent);
+  }
+
+  .ppp-formula-signature-meta {
+    display: inline-flex;
+    gap: 0.75rem;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+  }
+
+  .ppp-formula-signature-doc {
+    margin: 0;
+    color: var(--text-normal);
+    font-size: var(--font-ui-smaller);
   }
 
   .ppp-formula-errors {

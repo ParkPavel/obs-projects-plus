@@ -9,7 +9,6 @@ import {
 import DatabaseViewSvelte from "./DatabaseViewCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
 import { isLegacyTableConfig, migrateTableConfig } from "./migration";
-
 export class DatabaseView extends ProjectView {
   view?: DatabaseViewSvelte | null;
 
@@ -25,8 +24,8 @@ export class DatabaseView extends ProjectView {
     return "database";
   }
 
-  onData({ data }: DataQueryResult) {
-    this.view?.$set({ frame: data });
+  onData({ data, filterConditions }: DataQueryResult) {
+    this.view?.$set({ frame: data, globalFilters: filterConditions ?? [] });
   }
 
   onOpen(props: ProjectViewProps) {
@@ -45,11 +44,13 @@ export class DatabaseView extends ProjectView {
       target: props.contentEl,
       props: {
         frame: { fields: [], records: [] },
+        globalFilters: [],
         api: props.viewApi,
         project: props.project,
         readonly: props.readonly,
         config,
         onConfigChange: props.saveConfig,
+        onViewFilterChange: props.saveViewFilter,
         getRecordColor: props.getRecordColor,
       },
     });

@@ -48,7 +48,7 @@ export const DEFAULT_PROJECT = {
  * migrateSettings accepts the value from Plugin.loadData() and returns the most
  * recent settings. If needed, it applies any necessary migrations.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Plugin.loadData() returns unknown, accepts any settings version
+ 
 export function migrateSettings(
   settings: any
 ): either.Either<Error, LatestProjectsPluginSettings> {
@@ -58,9 +58,9 @@ export function migrateSettings(
 
   if ("version" in settings && typeof settings.version === "number") {
     if (settings.version === 1) {
-      return either.right(migrate(v1Resolve(settings)));
+      return either.right(v3Resolve(migrate(v1Resolve(settings))));
     } else if (settings.version === 2) {
-      return either.right(migrateV2ToV3(v2Resolve(settings)));
+      return either.right(v3Resolve(migrateV2ToV3(v2Resolve(settings))));
     } else if (settings.version === 3) {
       return either.right(v3Resolve(settings));
     } else {
@@ -121,7 +121,7 @@ function migrateProjectFromV1(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- V1 data source config varies by kind
+ 
 function migrateDataSource(
   project: V1ProjectDefinition<ViewDefinition>
 ): { kind: "dataview" | "folder"; config: any } {

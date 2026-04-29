@@ -479,11 +479,11 @@ export function filterRecordsForList(
   }
   
   // Backward compatibility - old lists with filters array (v3.0.x format)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Legacy list format had 'filters' property not in current type
+   
   if ('filters' in list && Array.isArray((list as any).filters)) {
     calendarLogger.warn('[FilterEngine] Old list format detected, using backward compatibility mode');
     return records.filter(record => 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Legacy list format access
+       
       evaluateFilters(record, (list as any).filters, baseDate)
     );
   }

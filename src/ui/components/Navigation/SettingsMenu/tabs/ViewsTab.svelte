@@ -32,7 +32,8 @@
   let isDragging = false;
 
   function getViewIcon(type: string): string {
-    return $customViews[type]?.getIcon() ?? "layout-grid";
+    const resolvedType = type === "table" ? "database" : type;
+    return $customViews[resolvedType]?.getIcon() ?? "layout-grid";
   }
 
   function startEditing(view: ViewDefinition) {

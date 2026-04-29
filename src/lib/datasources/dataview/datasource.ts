@@ -137,7 +137,7 @@ export class DataviewDataSource extends DataSource {
     return true;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview API returns dynamically typed rows
+   
   standardizeRecords(rows: Array<Record<string, any>>): DataRecord[] {
     const records: DataRecord[] = [];
 
@@ -156,15 +156,15 @@ export class DataviewDataSource extends DataSource {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview API returns dynamically typed table rows
+ 
 function parseTableResult(value: TableResult): Array<Record<string, any>> {
   const headers: string[] = value.headers;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview row values are dynamically typed
+   
   const rows: Array<Record<string, any>> = [];
 
   value.values.forEach((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview cell values are dynamically typed
+     
     const values: Record<string, any> = {};
 
     headers.forEach((header, index) => {
@@ -182,7 +182,7 @@ function parseTableResult(value: TableResult): Array<Record<string, any>> {
  * Convert LIST query result to row format.
  * Each value becomes a record with the id column pointing to the source file.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview LIST values are dynamic
+ 
 function parseListResult(value: ListResult, idColumnName: string): Array<Record<string, any>> {
   return value.values.map((item) => {
     if (typeof item === "object" && item !== null && "path" in item) {
@@ -198,7 +198,7 @@ function parseListResult(value: ListResult, idColumnName: string): Array<Record<
  * Flatten TASK query result (Grouping<SListItem>) to row format.
  * Supports both flat array and grouped (by file) formats.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dataview TASK items are dynamic
+ 
 function parseTaskResult(value: TaskResult, idColumnName: string): Array<Record<string, any>> {
   const rows: Array<Record<string, any>> = [];
 

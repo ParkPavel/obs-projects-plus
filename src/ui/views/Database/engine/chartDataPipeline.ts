@@ -5,6 +5,8 @@ import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "../types";
 import type { TransformPipeline, TransformStep, AggregationFunction } from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
+import { joinKey as scatterJoinKey } from "./joinKey";
+
 
 /**
  * Map footer ColumnAggregation (lowercase) to pipeline AggregationFunction (UPPERCASE).
@@ -139,41 +141,107 @@ export function chartHeightPx(height: ChartConfig["style"]["height"]): number {
 /**
  * Compute scatter data from DataFrame using ScatterChartConfig.
  * Extracts (x, y) numeric pairs, computes trend line via least squares, R².
+ *
+ * When `config.correlation` is set, `rightFrame` must be supplied: X is taken
+ * from the left (`source`) frame's `xAxis.field`, Y is taken from the matching
+ * right-frame row's `yAxis.field`. Matching uses day-granularity key equality
+ * for dates, strict equality for other scalar types.
  */
 export function computeScatterData(
   source: DataFrame,
-  config: ScatterChartConfig
+  config: ScatterChartConfig,
+  rightFrame?: DataFrame
 ): ScatterData {
   const xField = config.xAxis.field;
   const yField = config.yAxis.field;
   if (!xField || !yField) return { points: [] };
 
   const points: ScatterPoint[] = [];
+  // Correlation diagnostics — populated only when correlation is active so UI
+  // can surface "no matches" / "mostly unmatched" warnings.
+  let correlationStats: ScatterData["correlationStats"] | undefined;
 
-  for (const record of source.records) {
-    const xRaw = record.values[xField];
-    const yRaw = record.values[yField];
-    const x = typeof xRaw === "number" ? xRaw : parseFloat(String(xRaw ?? ""));
-    const y = typeof yRaw === "number" ? yRaw : parseFloat(String(yRaw ?? ""));
-    if (isNaN(x) || isNaN(y)) continue;
+  if (config.correlation && rightFrame) {
+    // Build hash index of right frame by its join key.
+    const { leftKey, rightKey } = config.correlation.on;
+    const idx = new Map<string, DataFrame["records"]>();
+    for (const r of rightFrame.records) {
+      const k = scatterJoinKey(r.values[rightKey]);
+      const list = idx.get(k);
+      if (list) (list as DataFrame["records"][number][]).push(r);
+      else idx.set(k, [r]);
+    }
 
-    const label = record.id ?? undefined;
-    const group = config.colorBy ? String(record.values[config.colorBy] ?? "") : undefined;
+    let matched = 0;
+    for (const record of source.records) {
+      const xRaw = record.values[xField];
+      const x = typeof xRaw === "number" ? xRaw : parseFloat(String(xRaw ?? ""));
+      if (isNaN(x)) continue;
 
-    const sizeRaw = config.sizeBy ? record.values[config.sizeBy] : undefined;
-    const size = typeof sizeRaw === "number" ? Math.max(2, Math.min(sizeRaw, 20)) : undefined;
+      const k = scatterJoinKey(record.values[leftKey]);
+      const matches = idx.get(k);
+      if (!matches || matches.length === 0) continue;
 
-    const point: ScatterPoint = {
-      x,
-      y,
-      ...(label !== undefined ? { label } : {}),
-      ...(group !== undefined ? { group } : {}),
-      ...(size !== undefined ? { size } : {}),
+      // Use first match; callers needing aggregation should pre-join via pipeline JoinStep.
+      const m = matches[0];
+      if (!m) continue;
+      const yRaw = m.values[yField];
+      const y = typeof yRaw === "number" ? yRaw : parseFloat(String(yRaw ?? ""));
+      if (isNaN(y)) continue;
+
+      matched += 1;
+
+      const label = record.id ?? undefined;
+      const group = config.colorBy ? String(record.values[config.colorBy] ?? "") : undefined;
+      const sizeRaw = config.sizeBy ? record.values[config.sizeBy] : undefined;
+      const size = typeof sizeRaw === "number" ? Math.max(2, Math.min(sizeRaw, 20)) : undefined;
+
+      const point: ScatterPoint = {
+        x,
+        y,
+        ...(label !== undefined ? { label } : {}),
+        ...(group !== undefined ? { group } : {}),
+        ...(size !== undefined ? { size } : {}),
+      };
+      points.push(point);
+    }
+
+    correlationStats = {
+      leftCount: source.records.length,
+      rightCount: rightFrame.records.length,
+      matched,
     };
-    points.push(point);
+  } else {
+    for (const record of source.records) {
+      const xRaw = record.values[xField];
+      const yRaw = record.values[yField];
+      const x = typeof xRaw === "number" ? xRaw : parseFloat(String(xRaw ?? ""));
+      const y = typeof yRaw === "number" ? yRaw : parseFloat(String(yRaw ?? ""));
+      if (isNaN(x) || isNaN(y)) continue;
+
+      const label = record.id ?? undefined;
+      const group = config.colorBy ? String(record.values[config.colorBy] ?? "") : undefined;
+
+      const sizeRaw = config.sizeBy ? record.values[config.sizeBy] : undefined;
+      const size = typeof sizeRaw === "number" ? Math.max(2, Math.min(sizeRaw, 20)) : undefined;
+
+      const point: ScatterPoint = {
+        x,
+        y,
+        ...(label !== undefined ? { label } : {}),
+        ...(group !== undefined ? { group } : {}),
+        ...(size !== undefined ? { size } : {}),
+      };
+      points.push(point);
+    }
   }
 
-  if (points.length < 2) return { points };
+  if (points.length < 2) {
+    return {
+      points,
+      ...(correlationStats ? { correlationStats } : {}),
+    };
+  }
 
   // Compute linear regression (least squares)
   const n = points.length;
@@ -187,7 +255,12 @@ export function computeScatterData(
   }
 
   const denominator = n * sumX2 - sumX * sumX;
-  if (Math.abs(denominator) < 1e-12) return { points };
+  if (Math.abs(denominator) < 1e-12) {
+    return {
+      points,
+      ...(correlationStats ? { correlationStats } : {}),
+    };
+  }
 
   const slope = (n * sumXY - sumX * sumY) / denominator;
   const intercept = (sumY - slope * sumX) / n;
@@ -205,5 +278,6 @@ export function computeScatterData(
     points,
     ...(config.showTrendLine ? { trendLine: { slope, intercept } } : {}),
     ...(config.showR2 ? { r2 } : {}),
+    ...(correlationStats ? { correlationStats } : {}),
   };
 }

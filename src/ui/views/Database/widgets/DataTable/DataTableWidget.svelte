@@ -26,6 +26,8 @@
   import type { GridColDef, GridRowProps } from "src/ui/views/Table/components/DataGrid/dataGrid";
   import { sortFields } from "src/ui/views/Table/helpers";
   import GroupHeader from "./GroupHeader.svelte";
+  import FieldPresetMenu from "./FieldPresetMenu.svelte";
+  import { pxToRem, resolveColumnWidthPx } from "./widthUnits";
 
   import { createEventDispatcher, getContext, onMount, onDestroy } from "svelte";
   import type { Writable } from "svelte/store";
@@ -46,9 +48,16 @@
   export let getRecordColor: (record: DataRecord) => string | null;
   export let config: DataTableConfig | undefined;
   export let fields: import("src/lib/dataframe/dataframe").DataField[] = [];
+  /** View-scoped column-layout snapshots (Phase 2b). */
+  export let fieldPresets: import("../../types").FieldPreset[] = [];
+  export let activeFieldPresetId: string | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     configChange: DataTableConfig;
+    fieldPresetsChange: {
+      fieldPresets: import("../../types").FieldPreset[];
+      activeFieldPresetId: string | undefined;
+    };
   }>();
 
   const projectStore = getContext<Writable<ProjectDefinition>>("project");
@@ -123,10 +132,16 @@
   }
 
   function handleColumnResize(field: string, width: number) {
+    // Phase 3 / F5: persist column width in `rem`, not `px`, so layout
+    // survives root-font-size changes. Legacy `width` key is stripped
+    // here so the preset only contains the new unit going forward.
+    const widthRem = pxToRem(width);
+    const { width: _legacyWidth, ...rest } = fieldConfig[field] ?? {};
+    void _legacyWidth;
     saveConfig({
       fieldConfig: {
         ...fieldConfig,
-        [field]: { ...fieldConfig[field], width },
+        [field]: { ...rest, widthRem },
       },
     });
   }
@@ -229,7 +244,7 @@
       return {
         ...field,
         field: field.name,
-        width: fieldConfig[field.name]?.width ?? (defaultColumnWidth[field.type] ?? 180),
+        width: resolveColumnWidthPx(fieldConfig[field.name], defaultColumnWidth[field.type] ?? 180),
         hide: fieldConfig[field.name]?.hide ?? false,
         pinned: fieldConfig[field.name]?.pinned ?? false,
         editable: !field.derived,
@@ -385,9 +400,63 @@
 
   // ── Record lookup map for O(1) colorModel ──────────────────
   $: recordMap = new Map(frame.records.map((r) => [r.id, r]));
+
+  // ── FieldPreset menu handlers (Phase 2b) ───────────────────
+  function handleFieldPresetApply(
+    e: CustomEvent<{ nextTable: DataTableConfig; activeId: string | undefined }>,
+  ) {
+    dispatch("configChange", e.detail.nextTable);
+    dispatch("fieldPresetsChange", {
+      fieldPresets,
+      activeFieldPresetId: e.detail.activeId,
+    });
+  }
+
+  function handleFieldPresetSave(
+    e: CustomEvent<{
+      presets: import("../../types").FieldPreset[];
+      activeId: string | undefined;
+    }>,
+  ) {
+    dispatch("fieldPresetsChange", {
+      fieldPresets: e.detail.presets,
+      activeFieldPresetId: e.detail.activeId,
+    });
+  }
 </script>
 
 <div class="ppp-datatable-widget">
+  <!-- Field-preset bar (Phase 2b). Hidden in readonly mode so query-result
+       views don't expose mutation-heavy controls. -->
+  {#if !isReadonly}
+    <div class="ppp-datatable-toolbar" role="toolbar" aria-label={$i18n.t("views.database.field-presets.aria-label")}>
+      <FieldPresetMenu
+        presets={fieldPresets}
+        activeId={activeFieldPresetId}
+        currentTable={config ?? {}}
+        readonly={isReadonly}
+        on:apply={handleFieldPresetApply}
+        on:save={handleFieldPresetSave}
+      />
+    </div>
+  {/if}
+  {#if !isReadonly && !(config?.hintDismissed)}
+    <div class="ppp-table-hint" role="note">
+      <span class="ppp-table-hint__icon" aria-hidden="true">ⓘ</span>
+      <span class="ppp-table-hint__text">
+        {$i18n.t("views.database.table.header-hint", {
+          defaultValue: "Right-click a column header to rename, change type, hide, pin or reorder. Drag the edge to resize.",
+        })}
+      </span>
+      <button
+        type="button"
+        class="ppp-table-hint__dismiss clickable-icon"
+        on:click={() => saveConfig({ hintDismissed: true })}
+        aria-label={$i18n.t("common.dismiss", { defaultValue: "Dismiss" })}
+        title={$i18n.t("common.dismiss", { defaultValue: "Dismiss" })}
+      >✕</button>
+    </div>
+  {/if}
   <div class="ppp-table-scroll-container" use:measureContainer on:scroll={onScroll}>
   {#if hasGroupBy && groups.length > 0}
     {#each groups as group (group.key)}
@@ -524,7 +593,9 @@
 
   {#if showAggregation}
     <div class="ppp-aggregation-row">
-      <div class="ppp-aggregation-cell ppp-aggregation-cell--row-header"></div>
+      <div class="ppp-aggregation-cell ppp-aggregation-cell--row-header" role="rowheader" aria-label={$i18n.t("views.database.aggregation.row-label", { defaultValue: "Aggregation row — click a cell to pick a function" })} title={$i18n.t("views.database.aggregation.row-label", { defaultValue: "Aggregation row — click a cell to pick a function" })}>
+        <span class="ppp-aggregation-sigma" aria-hidden="true">Σ</span>
+      </div>
       {#each columns.filter((c) => !c.hide) as col}
         <div
           class="ppp-aggregation-cell"
@@ -577,14 +648,13 @@
   {/if}
 
   {#if !isReadonly}
-    <button
-      class="ppp-add-row-btn"
-      on:click={() => handleAddRow()}
-      title={$i18n.t("views.database.add-row", { defaultValue: "New note" })}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      {$i18n.t("views.database.add-row", { defaultValue: "New note" })}
-    </button>
+    <!--
+      Single add-row affordance: DataGrid already renders its own footer
+      "+ New note" button via onRowAdd. Rendering a second button here
+      produced visible duplicate ("+ Добавить заметку" from DataGrid,
+      then "+ Новая заметка" from this wrapper). DataGrid is the single
+      source of truth.
+    -->
   {/if}
   </div>
 </div>
@@ -595,6 +665,54 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
+  }
+
+  .ppp-datatable-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--size-2-2, 0.5rem);
+    padding: var(--size-2-1, 0.25rem) var(--size-2-2, 0.5rem);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
+    flex-shrink: 0;
+  }
+
+  .ppp-table-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.625rem;
+    background: color-mix(in srgb, var(--interactive-accent) 8%, var(--background-secondary));
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
+    font-size: var(--font-ui-smaller, 0.75rem);
+    color: var(--text-muted);
+  }
+  .ppp-table-hint__icon {
+    color: var(--interactive-accent);
+    font-size: var(--font-ui-small);
+    flex-shrink: 0;
+  }
+  .ppp-table-hint__text {
+    flex: 1;
+    line-height: 1.35;
+  }
+  .ppp-table-hint__dismiss {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+    border-radius: var(--radius-s, 0.25rem);
+    font-size: 0.7rem;
+  }
+  .ppp-table-hint__dismiss:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
   }
 
   .ppp-table-scroll-container {
@@ -620,7 +738,7 @@
 
   .ppp-aggregation-row {
     display: flex;
-    border-top: 2px solid var(--background-modifier-border);
+    border-top: 1px solid var(--background-modifier-border);
     background: var(--background-secondary);
     min-height: 2.25rem;
     align-items: center;
@@ -662,6 +780,15 @@
   .ppp-aggregation-cell--row-header {
     width: var(--ppp-row-header-width, 3.75rem);
     flex-shrink: 0;
+    justify-content: center;
+  }
+
+  /* Σ glyph reuses the same visual code as the widget pipeline button
+     (Phase 1C). Unified language: Σ = aggregation, ⚙ = config. */
+  .ppp-aggregation-sigma {
+    font-weight: 700;
+    color: var(--text-accent);
+    font-size: 0.9rem;
   }
 
   .ppp-aggregation-value {
@@ -709,31 +836,6 @@
     height: 1px;
     margin: 0.25rem 0;
     background: var(--background-modifier-border);
-  }
-
-  .ppp-add-row-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    width: 100%;
-    padding: 0.375rem var(--ppp-space-md, 0.5rem);
-    border: none;
-    border-top: 1px solid var(--background-modifier-border);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: var(--font-ui-small);
-    cursor: pointer;
-    transition: background 80ms ease, color 80ms ease;
-  }
-
-  .ppp-add-row-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-
-  .ppp-add-row-btn:focus-visible {
-    outline: 2px solid var(--interactive-accent);
-    outline-offset: -2px;
   }
 
   /* Matryoshka: compact table in narrow container */

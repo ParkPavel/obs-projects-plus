@@ -125,6 +125,13 @@
       (recordCache[id] = frame.records.find((record) => record.id === id))
     );
   };
+
+  // Promote local widget filter to the global view filter.
+  // Called via ProjectViewProps.saveViewFilter by views that expose such UX
+  // (currently Database view — see filter-bridge chip).
+  const handleViewFilterChange = (filter: typeof view.filter) => {
+    settings.updateView(project.id, { ...view, filter });
+  };
 </script>
 
 <!--
@@ -147,6 +154,7 @@
     readonly,
     config: view.config,
     onConfigChange: handleConfigChange,
+    onViewFilterChange: handleViewFilterChange,
     getRecordColor: getRecordColor,
     sortRecords: applyViewSortToRecords,
     getRecord,

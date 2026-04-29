@@ -11,6 +11,7 @@ import type {
   TransformPipeline,
   TransformResult,
   TransformStep,
+  TransformContext,
   UnnestStep,
   UnpivotStep,
   ComputeStep,
@@ -18,16 +19,19 @@ import type {
   GroupByStep,
   AggregateStep,
   PivotStep,
+  JoinStep,
   AggregationFunction,
 } from "./transformTypes";
 import { matchesFilterConditions } from "src/ui/app/filterFunctions";
 import { evaluateFormulaValue } from "./formulaEngine";
 import { isUnsafePattern } from "src/lib/helpers/regexSafety";
+import { joinKey } from "./joinKey";
 
 /** Canonical step order for validation */
 const STEP_ORDER: Record<TransformStep["type"], number> = {
   unnest: 0,
   unpivot: 0,
+  join: 0,
   compute: 1,
   filter: 2,
   "group-by": 3,
@@ -62,7 +66,8 @@ function validatePipelineOrder(steps: readonly TransformStep[]): string[] {
  */
 export function executeTransform(
   source: DataFrame,
-  pipeline: TransformPipeline
+  pipeline: TransformPipeline,
+  context?: TransformContext
 ): TransformResult {
   const startTime = performance.now();
   const warnings: string[] = [];
@@ -82,7 +87,7 @@ export function executeTransform(
       break;
     }
 
-    current = executeStep(current, step, warnings);
+    current = executeStep(current, step, warnings, context);
     stepsExecuted++;
   }
 
@@ -106,7 +111,8 @@ export function executeTransform(
 function executeStep(
   df: DataFrame,
   step: TransformStep,
-  warnings: string[]
+  warnings: string[],
+  context?: TransformContext
 ): DataFrame {
   switch (step.type) {
     case "unnest":
@@ -123,6 +129,8 @@ function executeStep(
       return executeAggregate(df, step, warnings);
     case "pivot":
       return executePivot(df, step, warnings);
+    case "join":
+      return executeJoin(df, step, warnings, context);
   }
 }
 
@@ -1045,3 +1053,138 @@ function executePivot(
 
   return { fields: newFields, records: newRecords };
 }
+
+// ── JOIN (Pillar 5 — cross-type correlation) ─────────────────
+
+const MAX_JOIN_OUTPUT_RECORDS = MAX_OUTPUT_RECORDS;
+
+/**
+ * Normalise a key value for equality comparison.
+ * Delegates to shared `joinKey` — dates and ISO-date strings share one key,
+ * callers can pre-project for finer-grained joins via FORMAT_DATE compute.
+ */
+function joinKeyOf(v: DataValue | undefined | null): string {
+  return joinKey(v as unknown);
+}
+
+/**
+ * JOIN step: hash-join the pipeline's DataFrame (left) with a pre-resolved
+ * right-hand DataFrame looked up from `context.rightFrames[step.rightSourceId]`.
+ *
+ * Output schema: left fields (unchanged) ⊕ right fields (left-key excluded,
+ * colliding names suffixed by `step.suffix ?? "__r"`).
+ *
+ * Semantics:
+ *  - `how: "inner"` drops left rows with no right match.
+ *  - `how: "left"` keeps unmatched left rows (right fields filled with null).
+ *  - `aggregation` set → each left row gets at most one merged right row: numeric
+ *    right columns are reduced via the aggregation fn; non-numeric columns take FIRST match.
+ *  - `aggregation` unset → cartesian expansion (one output row per match pair).
+ */
+function executeJoin(
+  df: DataFrame,
+  step: JoinStep,
+  warnings: string[],
+  context?: TransformContext
+): DataFrame {
+  const rightFrame = context?.rightFrames?.get(step.rightSourceId);
+  if (!rightFrame) {
+    warnings.push(
+      `Join step: right-hand frame '${step.rightSourceId}' not resolved; skipping`
+    );
+    return df;
+  }
+
+  const { leftKey, rightKey } = step.on;
+  const suffix = step.suffix ?? "__r";
+
+  if (!df.fields.some((f) => f.name === leftKey)) {
+    warnings.push(`Join step: leftKey '${leftKey}' not found in current frame`);
+    return df;
+  }
+  if (!rightFrame.fields.some((f) => f.name === rightKey)) {
+    warnings.push(
+      `Join step: rightKey '${rightKey}' not found in right frame '${step.rightSourceId}'`
+    );
+    return df;
+  }
+
+  // Build new field list: left ⊕ right (excluding right-key, suffixing collisions).
+  const leftNames = new Set(df.fields.map((f) => f.name));
+  const rightOutFields: DataField[] = [];
+  const rightNameMap = new Map<string, string>(); // original → output
+  for (const f of rightFrame.fields) {
+    if (f.name === rightKey) continue;
+    const outName = leftNames.has(f.name) ? `${f.name}${suffix}` : f.name;
+    rightNameMap.set(f.name, outName);
+    rightOutFields.push({ ...f, name: outName, derived: true });
+  }
+  const newFields: DataField[] = [...df.fields, ...rightOutFields];
+
+  // Build hash index on right frame.
+  const bucket = new Map<string, DataRecord[]>();
+  for (const r of rightFrame.records) {
+    const k = joinKeyOf(r.values[rightKey] as DataValue | undefined);
+    const list = bucket.get(k);
+    if (list) list.push(r);
+    else bucket.set(k, [r]);
+  }
+
+  const newRecords: DataRecord[] = [];
+  let joinedRowIdx = 0;
+
+  for (const left of df.records) {
+    const k = joinKeyOf(left.values[leftKey] as DataValue | undefined);
+    const matches = bucket.get(k);
+
+    if (!matches || matches.length === 0) {
+      if (step.how === "left") {
+        const values: Record<string, DataValue | undefined | null> = { ...left.values };
+        for (const [, outName] of rightNameMap) values[outName] = null;
+        newRecords.push({ id: `${left.id}__joinL`, values });
+      }
+      continue;
+    }
+
+    if (step.aggregation) {
+      // Reduce matches → single merged row.
+      const values: Record<string, DataValue | undefined | null> = { ...left.values };
+      for (const [orig, outName] of rightNameMap) {
+        const gathered: DataValue[] = [];
+        for (const m of matches) {
+          const v = m.values[orig];
+          if (v != null) gathered.push(v as DataValue);
+        }
+        if (gathered.length === 0) {
+          values[outName] = null;
+          continue;
+        }
+        const allNumeric = gathered.every(
+          (g) => typeof g === "number" || (typeof g === "string" && !isNaN(Number(g)))
+        );
+        values[outName] = allNumeric
+          ? computeAggFn(step.aggregation, gathered as unknown as DataValue, warnings)
+          : (gathered[0] ?? null);
+      }
+      newRecords.push({ id: `${left.id}__joinA`, values });
+    } else {
+      // Cartesian expansion.
+      for (const right of matches) {
+        if (newRecords.length >= MAX_JOIN_OUTPUT_RECORDS) {
+          warnings.push(
+            `Join truncated: output exceeds ${MAX_JOIN_OUTPUT_RECORDS} records`
+          );
+          return { fields: newFields, records: newRecords };
+        }
+        const values: Record<string, DataValue | undefined | null> = { ...left.values };
+        for (const [orig, outName] of rightNameMap) {
+          values[outName] = right.values[orig];
+        }
+        newRecords.push({ id: `${left.id}__join_${joinedRowIdx++}`, values });
+      }
+    }
+  }
+
+  return { fields: newFields, records: newRecords };
+}
+

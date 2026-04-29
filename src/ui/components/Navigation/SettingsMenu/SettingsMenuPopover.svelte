@@ -44,7 +44,7 @@
 
   let activeTab: SettingsTabId = "viewConfig";
   
-  // Calculate safe position avoiding Obsidian sidebars
+  // Calculate safe position avoiding Obsidian sidebars and header overlap
   let safePosition = { top: '3.5rem', right: '0.5rem', left: 'auto' };
   
   function calculateSafePosition() {
@@ -76,9 +76,11 @@
       rightOffset = window.innerWidth - rightRect.left;
     }
     
-    // Position within the plugin container, accounting for sidebars
+    // Position within viewport, anchored near click point and accounting for sidebars
+    const topPx = Math.max(56, Math.min(window.innerHeight - 120, (position?.y ?? 60) + 8));
+
     safePosition = {
-      top: '3.5rem',
+      top: `${topPx / 16}rem`,
       right: `${Math.max(0.5, rightOffset / 16 + 0.5)}rem`,
       left: 'auto'
     };
@@ -108,6 +110,10 @@
     // Calculate position after mount
     setTimeout(calculateSafePosition, 0);
   });
+
+  $: if (position) {
+    calculateSafePosition();
+  }
 
   onDestroy(() => {
     activeDocument.removeEventListener("mousedown", handleOutside, true);
@@ -186,6 +192,7 @@
             view={activeView}
             fields={resolvedFields}
             on:update={(event) => dispatch("updateViewConfig", event.detail)}
+            on:navigateTab={(event) => (activeTab = event.detail)}
           />
         {/if}
       </div>
@@ -199,9 +206,9 @@
 
 <style>
   .settings-popover-overlay {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: var(--ppp-z-overlay, 30);
+    z-index: var(--ppp-z-overlay, 1200);
     background: transparent;
     pointer-events: auto;
   }
@@ -221,7 +228,7 @@
     border: 1px solid var(--background-modifier-border);
     box-shadow: var(--shadow-lg, 0 0.5rem 2rem rgba(0, 0, 0, 0.25));
     pointer-events: auto;
-    z-index: var(--ppp-z-modal, 40);
+    z-index: var(--ppp-z-modal, 1210);
     animation: ppp-popover-enter var(--ppp-duration-slow, 0.25s) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1));
   }
 

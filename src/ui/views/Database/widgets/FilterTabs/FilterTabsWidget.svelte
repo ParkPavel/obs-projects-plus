@@ -26,9 +26,13 @@
     const seen = new Set<string>();
     for (const record of df.records) {
       const val = record.values[fieldName];
-      if (val != null && val !== "") {
-        seen.add(String(val));
-      }
+      if (val == null || val === "") continue;
+      // Skip non-primitive values (arrays, objects, dates) — stringifying them
+      // produces useless labels like "[object Object]" / "1,2,3" and breaks the
+      // downstream === equality check in DatabaseViewCanvas.displayFrame.
+      const t = typeof val;
+      if (t !== "string" && t !== "number" && t !== "boolean") continue;
+      seen.add(String(val));
     }
     return [...seen].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }
@@ -62,7 +66,21 @@
 </script>
 
 <div class="ppp-filter-tabs" role="tablist">
-  {#if showAll}
+  {#if !field}
+    <span class="ppp-filter-tabs-empty">
+      {$i18n.t("views.database.filter-tabs.empty-no-field", {
+        defaultValue: "Click ⚙ to pick a field for filter tabs",
+      })}
+    </span>
+  {:else if tabs.length === 0 && !showAll}
+    <span class="ppp-filter-tabs-empty">
+      {$i18n.t("views.database.filter-tabs.empty-no-values", {
+        defaultValue: "No values found in '{{field}}'",
+        field,
+      })}
+    </span>
+  {/if}
+  {#if showAll && field}
     <button
       class="ppp-filter-tab"
       class:active={activeTab === null}
@@ -99,6 +117,13 @@
     border-bottom: 1px solid var(--background-modifier-border);
   }
 
+  .ppp-filter-tabs-empty {
+    padding: 0.25rem 0.5rem;
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
   .ppp-filter-tab {
     padding: 0.25rem 0.75rem;
     border: 1px solid var(--background-modifier-border);
@@ -116,13 +141,25 @@
   }
 
   .ppp-filter-tab:focus-visible {
-    outline: 2px solid var(--interactive-accent);
-    outline-offset: -2px;
+    outline: 0.125rem solid var(--interactive-accent);
+    outline-offset: -0.125rem;
   }
 
   .ppp-filter-tab.active {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     border-color: var(--interactive-accent);
+  }
+
+  /* Matryoshka: tighter padding/font in narrow container */
+  @container widget (max-width: 20rem) {
+    .ppp-filter-tabs {
+      padding: 0.1875rem 0.375rem;
+      gap: 0.1875rem;
+    }
+    .ppp-filter-tab {
+      padding: 0.1875rem 0.5rem;
+      font-size: var(--font-ui-smaller);
+    }
   }
 </style>

@@ -4,13 +4,17 @@ module.exports = {
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/src/__tests__/setup.ts"],
   transform: {
-    "^.+\\.ts$": "esbuild-jest",
-    "^.+\\.svelte$": "svelte-jest",
+    "^.+\\.[tj]s$": "esbuild-jest",
+    "^.+\\.svelte$": "<rootDir>/scripts/jest/svelte-ts-transformer.cjs",
   },
+  transformIgnorePatterns: [
+    "/node_modules/(?!(?:@testing-library/svelte)/)",
+  ],
   moduleNameMapper: {
     "^src/(.*)$": "<rootDir>/src/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    "^svelte-i18next$": "<rootDir>/src/__mocks__/svelte-i18next.js",
   },
   testMatch: [
     "<rootDir>/src/**/__tests__/**/*.(test|spec).(ts|js)",

@@ -1,8 +1,8 @@
 import { WIDGET_TEMPLATES } from "../widgetTemplates";
 
 describe("widgetTemplates", () => {
-  test("has 3 templates", () => {
-    expect(WIDGET_TEMPLATES).toHaveLength(3);
+  test("has at least 4 templates", () => {
+    expect(WIDGET_TEMPLATES.length).toBeGreaterThanOrEqual(4);
   });
 
   test("all templates have required fields", () => {
@@ -64,5 +64,7 @@ describe("widgetTemplates", () => {
     const types = kanban!.widgets.map((w) => w.type);
     expect(types).toContain("data-table");
     expect(types).toContain("checklist");
+    const checklist = kanban!.widgets.find((w) => w.type === "checklist");
+    expect((checklist?.config as { field?: string }).field).toBe("completed");
   });
 });

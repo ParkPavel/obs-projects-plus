@@ -42,6 +42,27 @@ class ObsidianFile extends IFile {
     await this.app.vault.process(this.file, () => content);
   }
 
+  /**
+   * Delegates to Obsidian's `fileManager.processFrontMatter`, which
+   * acquires a write lock and mutates only the frontmatter block.
+   * Closes F6 (Phase 3).
+   */
+  override async processFrontMatter(
+    fn: (frontmatter: Record<string, unknown>) => void,
+  ): Promise<boolean> {
+    // `fileManager.processFrontMatter` exists on Obsidian API 1.4+. Guard
+    // defensively so older API surfaces degrade gracefully.
+    const fm = (this.app.fileManager as unknown as {
+      processFrontMatter?: (
+        file: TFile,
+        fn: (fm: Record<string, unknown>) => void,
+      ) => Promise<void>;
+    }).processFrontMatter;
+    if (typeof fm !== "function") return false;
+    await fm.call(this.app.fileManager, this.file, fn);
+    return true;
+  }
+
   delete(): Promise<void> {
     return this.app.fileManager.trashFile(this.file);
   }

@@ -342,7 +342,7 @@
     width: 100%;
     padding: 0.75rem;
     background: none;
-    border: 2px dashed var(--background-modifier-border);
+    border: 0.125rem dashed var(--background-modifier-border);
     border-radius: var(--radius-s, 4px);
     color: var(--text-faint);
     cursor: pointer;
@@ -381,22 +381,22 @@
   }
 
   /* Category colors */
-  .ppp-vblock-tree :global(.ppp-vblock--logic) { border-left: 3px solid #e67e22; }
+  .ppp-vblock-tree :global(.ppp-vblock--logic) { border-left: 0.1875rem solid #e67e22; }
   .ppp-vblock-tree :global(.ppp-vblock--logic .ppp-vblock-name) { color: #e67e22; }
 
-  .ppp-vblock-tree :global(.ppp-vblock--math) { border-left: 3px solid #3498db; }
+  .ppp-vblock-tree :global(.ppp-vblock--math) { border-left: 0.1875rem solid #3498db; }
   .ppp-vblock-tree :global(.ppp-vblock--math .ppp-vblock-name) { color: #3498db; }
 
-  .ppp-vblock-tree :global(.ppp-vblock--string) { border-left: 3px solid #27ae60; }
+  .ppp-vblock-tree :global(.ppp-vblock--string) { border-left: 0.1875rem solid #27ae60; }
   .ppp-vblock-tree :global(.ppp-vblock--string .ppp-vblock-name) { color: #27ae60; }
 
-  .ppp-vblock-tree :global(.ppp-vblock--date) { border-left: 3px solid #8e44ad; }
+  .ppp-vblock-tree :global(.ppp-vblock--date) { border-left: 0.1875rem solid #8e44ad; }
   .ppp-vblock-tree :global(.ppp-vblock--date .ppp-vblock-name) { color: #8e44ad; }
 
-  .ppp-vblock-tree :global(.ppp-vblock--comparison) { border-left: 3px solid #16a085; }
+  .ppp-vblock-tree :global(.ppp-vblock--comparison) { border-left: 0.1875rem solid #16a085; }
   .ppp-vblock-tree :global(.ppp-vblock--comparison .ppp-vblock-name) { color: #16a085; }
 
-  .ppp-vblock-tree :global(.ppp-vblock--conversion) { border-left: 3px solid #7f8c8d; }
+  .ppp-vblock-tree :global(.ppp-vblock--conversion) { border-left: 0.1875rem solid #7f8c8d; }
   .ppp-vblock-tree :global(.ppp-vblock--conversion .ppp-vblock-name) { color: #7f8c8d; }
 
   .ppp-vblock-tree :global(.ppp-vblock-args) {
@@ -416,7 +416,7 @@
     align-items: center;
     gap: 0.125rem;
     padding: 0.125rem 0.375rem;
-    border-radius: 10px;
+    border-radius: 0.625rem;
     font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
     cursor: pointer;
@@ -507,7 +507,7 @@
     width: 5rem;
     padding: 0.125rem 0.25rem;
     border: 1px solid var(--interactive-accent);
-    border-radius: 10px;
+    border-radius: 0.625rem;
     font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
@@ -561,7 +561,7 @@
   .ppp-palette-chip {
     padding: 0.125rem 0.5rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 10px;
+    border-radius: 0.625rem;
     background: var(--background-primary);
     cursor: pointer;
     font-family: var(--font-monospace);

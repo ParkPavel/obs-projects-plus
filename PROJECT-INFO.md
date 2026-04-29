@@ -1,214 +1,73 @@
-# 📋 Project Information
+# Project Information
 
-## 🎯 Project Overview
+## Overview
 
-**Projects Plus** is a community-maintained fork of the original Obsidian Projects plugin, enhanced with advanced features, multi-language support, and improved performance.
+Projects Plus is an actively maintained fork of the original Obsidian Projects plugin.
 
-## 👥 Team
+- Current public release: 3.4.1
+- Platform baseline: Obsidian 1.5.7+
+- Runtime package contract: main.js + manifest.json + styles.css
 
-### Current Maintainer
-- **Name**: Park Pavel
-- **GitHub**: [@ParkPavel](https://github.com/ParkPavel)
-- **Website**: [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
-- **Role**: Lead Developer & Maintainer
+## Maintainers
 
-### Original Author
-- **Name**: Marcus Olsson
-- **GitHub**: [@marcusolsson](https://github.com/marcusolsson)
-- **Role**: Original Creator
-- **Repository**: [obsidian-projects](https://github.com/marcusolsson/obsidian-projects)
+- Current maintainer: Park Pavel (https://github.com/ParkPavel)
+- Original author: Marcus Olsson (https://github.com/marcusolsson)
 
-## 🏗️ Project Structure
+## Verified Stack (from package.json)
 
-```
-obs-projects-plus/
-├── 📁 src/                    # Source code
-│   ├── 📁 lib/               # Core libraries
-│   ├── 📁 ui/                # User interface components
-│   └── 📁 settings/          # Configuration management
-├── 📁 docs/                  # Documentation
-│   ├── 📄 user-guide.md     # User documentation
-│   └── 📄 api.md            # API reference
-├── 📁 css/                   # Stylesheets
-├── 📁 images/                # Assets and icons
-├── 📄 README.md              # Project overview
-├── 📄 CHANGELOG.md           # Version history
-├── 📄 LICENSE              # Apache 2.0 license
-└── 📄 manifest.json          # Plugin manifest
-```
+- Language: TypeScript (strict)
+- UI: Svelte 3.59.2
+- Build: esbuild + tsc
+- Tests: Jest 29
+- Lint/format: ESLint + Prettier
+- i18n: i18next
 
-## 🛠️ Technology Stack
+## Verified Quality Baseline (2026-04-22)
 
-### Core Technologies
-- **TypeScript** - Type-safe development
-- **Svelte** - Reactive UI framework
-- **Obsidian API** - Plugin integration
-- **i18next** - Internationalization
+- Test suites: 42 passed
+- Tests: 839 passed
+- Build: successful (production)
+- Runtime artifacts in root: main.js, manifest.json, styles.css
 
-### Build Tools
-- **esbuild** - Fast bundling
-- **Sass** - CSS preprocessing
-- **Jest** - Testing framework
-- **ESLint** - Code linting
+## Code Map (high-level)
 
-### Dependencies
-- **dayjs** - Date manipulation
-- **immer** - Immutable state updates
-- **fp-ts** - Functional programming
-- **uuid** - Unique identifiers
+- Entry and lifecycle: src/main.ts, src/view.ts
+- Data layer: src/lib/datasources, src/lib/dataframe
+- Shared engines/helpers: src/lib/helpers, src/lib/stores
+- Views: src/ui/views
+	- Board: src/ui/views/Board
+	- Calendar: src/ui/views/Calendar
+	- Gallery: src/ui/views/Gallery
+	- Database: src/ui/views/Database
 
-## 🌍 Internationalization
+## Database View Reality Snapshot
 
-### Supported Languages
-- 🇺🇸 **English** (en) - Primary language
-- 🇷🇺 **Русский** (ru) - Russian translation
-- 🇺🇦 **Українська** (uk) - Ukrainian translation
-- 🇨🇳 **中文** (zh-CN) - Chinese translation
+- Widget registry (8 types): src/ui/views/Database/widgets/widgetRegistry.ts
+- Pipeline editor core: src/ui/views/Database/widgets/PipelineEditor.svelte
+- Transform execution: src/ui/views/Database/engine/transformExecutor.ts
+- Multi-source merge: src/lib/datasources/mergeFrames.ts
 
-### Translation Coverage
-- ✅ **User Interface** - 100% translated
-- ✅ **Error Messages** - 100% translated
-- ✅ **Documentation** - 100% translated
-- ✅ **Settings** - 100% translated
+## Documentation Structure
 
-## 📊 Project Statistics
+This repository uses layered documentation:
 
-### Code Metrics
-- **Source Files**: 316 (167 TypeScript + 149 Svelte)
-- **Lines of Code**: ~61,000
-- **Test Suites**: 42
-- **Tests**: 800
+- Product docs: README.md, README-EN.md, RELEASES.md, RELEASES-EN.md, CHANGELOG.md
+- User docs: docs/user-guide.md, docs/user-guide-EN.md
+- Architecture and specs: docs/architecture-*.md, docs/database-view-*.md
+- Process and standards: CONTRIBUTING.md, docs/CODE_STANDARDS.md
+- Active planning docs:
+	- docs/DOCUMENTATION_STRUCTURE.md
+	- docs/IMPLEMENTATION_PLAN_CURRENT.md
 
-### Build Output
-- **Bundle Size**: 1.8MB (main.js)
-- **Styles**: 4.2KB (main.css) + 27.2KB (styles.css)
+## Current Stage vs Target
 
-## 🔄 Development Workflow
+- Current stage: release 3.4.1 stabilized and published; Database backend and baseline UI are functional.
+- Target stage: Notion-level discoverability and flow for Database workflows (overview-first IA, quick actions, relation/rollup-first KPI surfaces, full per-step pipeline UX).
+- Primary gap: UX coherence and end-user discoverability lag behind available backend capability.
 
-### Branch Strategy
-- **main** - Stable releases
-- **develop** - Development branch
-- **feature/** - Feature branches
-- **hotfix/** - Bug fixes
+## Source of Truth Policy
 
-### Release Process
-1. **Development** - Feature development
-2. **Testing** - Automated and manual testing
-3. **Beta Release** - Community testing
-4. **Stable Release** - Production release
-5. **Documentation** - Update guides and API docs
-
-## 🎯 Roadmap
-
-### Current Focus (2026)
-- **v3.2.0**: Drag & Drop 2.0 — Calendar Timeline DnD (released April 2026)
-- **Stability**: Bug fixes and performance improvements
-- **Community**: Responding to user feedback and requests
-
-### Next Milestones
-- **v3.3.0**: Database View
-- **v3.4.0**: Calendar Sync (iCal, Google, CalDAV)
-
-## 🤝 Contributing
-
-### How to Contribute
-1. **Fork** the repository
-2. **Create** a feature branch
-3. **Make** your changes
-4. **Test** thoroughly
-5. **Submit** a pull request
-
-### Contribution Areas
-- 🐛 **Bug Fixes** - Report and fix issues
-- ✨ **New Features** - Implement new functionality
-- 📝 **Documentation** - Improve guides and API docs
-- 🌍 **Translations** - Add new language support
-- 🧪 **Testing** - Write and improve tests
-
-### Code Standards
-- **TypeScript** - Strict type checking
-- **ESLint** - Code quality enforcement
-- **Prettier** - Code formatting
-- **Jest** - Unit testing
-- **Conventional Commits** - Commit message format
-
-## 📈 Metrics & Analytics
-
-### GitHub Statistics
-- **Stars**: Growing community support
-- **Forks**: Active development
-- **Issues**: Community engagement
-- **Pull Requests**: Contributor activity
-
-### Download Statistics
-- **Total Downloads**: Tracked via GitHub Releases
-- **Active Users**: Community feedback
-- **Platform Support**: Obsidian compatibility
-
-## 🔒 Security
-
-### Security Practices
-- **Dependency Audits** - Regular security scans
-- **Code Reviews** - Peer review process
-- **Vulnerability Reporting** - Security issue handling
-- **Secure Development** - Best practices implementation
-
-### Reporting Security Issues
-- **Email**: Contact through GitHub
-- **Issues**: Private security issue reporting
-- **Responsible Disclosure** - Coordinated vulnerability disclosure
-
-## 📞 Support & Community
-
-### Getting Help
-- **GitHub Issues** - Bug reports and feature requests
-- **GitHub Discussions** - Community support
-- **Documentation** - Comprehensive guides
-- **Website** - [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
-
-### Community Guidelines
-- **Code of Conduct** - Respectful community interaction
-- **Contributing Guidelines** - Clear contribution process
-- **Issue Templates** - Structured issue reporting
-- **Pull Request Templates** - Standardized PR process
-
-## 📄 Legal & Licensing
-
-### License Information
-- **License**: Apache License 2.0
-- **Copyright**: 2022-2026 Park Pavel
-- **Original Work**: Marcus Olsson (2022)
-- **Compatibility**: Open source friendly
-
-### Third-Party Licenses
-- **Obsidian API** - MIT License
-- **Svelte** - MIT License
-- **TypeScript** - Apache 2.0
-- **Other Dependencies** - Various open source licenses
-
-## 🎉 Acknowledgments
-
-### Special Thanks
-- **Marcus Olsson** - Original plugin creator
-- **Obsidian Team** - Amazing platform
-- **Community Contributors** - Bug reports, feature requests, translations
-- **Beta Testers** - Early feedback and testing
-
-### Inspiration
-- **Obsidian Community** - Innovative plugin ecosystem
-- **Open Source Movement** - Collaborative development
-- **User Feedback** - Continuous improvement
-
----
-
-## 📚 Additional Resources
-
-- **📖 User Guide**: [Complete documentation](docs/user-guide.md)
-- **🔧 API Reference**: [Developer documentation](docs/api.md)
-- **📋 Changelog**: [Version history](CHANGELOG.md)
-- **📄 License**: [Legal information](LICENSE)
-- **🚀 Releases**: [Download information](RELEASES.md)
-
----
-
-*This project is maintained with ❤️ by [Park Pavel](https://parkpavel.github.io/park-pavel/) and the community.*
+- Runtime and feature truth: src/
+- Release truth: manifest.json + versions.json + GitHub release assets
+- Product-change truth: CHANGELOG.md
+- Long-form implementation truth: docs/IMPLEMENTATION_PLAN_CURRENT.md

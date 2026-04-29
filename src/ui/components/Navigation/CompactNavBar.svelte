@@ -16,6 +16,7 @@
   export let projectId: ProjectId | undefined;
 
   $: currentProject = projects.find(p => p.id === projectId);
+  $: hideProjectName = currentProject?.name === "Демо-проект";
 
   const dispatch = createEventDispatcher<{
     addView: void;
@@ -47,7 +48,7 @@
 <svelte:window on:mousedown={handleWindowMousedown} />
 
 <nav class="compact-navbar">
-  {#if projects.length > 1}
+  {#if projects.length > 1 && !hideProjectName}
     <button
       class="project-trigger"
       on:click={(e) => openProjectSwitcher(e.currentTarget)}
@@ -56,7 +57,7 @@
       <span class="project-name">{currentProject?.name ?? ''}</span>
       <svg class="chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
     </button>
-  {:else if currentProject}
+  {:else if currentProject && !hideProjectName}
     <span class="project-name-static">{currentProject.name}</span>
   {/if}
 
@@ -163,6 +164,14 @@
     .compact-navbar {
       padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
       gap: var(--spacing-xs, 0.25rem);
+    }
+  }
+
+  /* Reduce header clutter on touch/small devices: hide project title in navbar */
+  @media (max-width: 48rem), (pointer: coarse) {
+    .project-trigger,
+    .project-name-static {
+      display: none;
     }
   }
 </style>

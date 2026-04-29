@@ -246,7 +246,7 @@ draft.values[field.name] = value;     // @ts-ignore - Immer Draft compat
 
 **Alternative Considered**: Remove Immer → Would require rewriting all immutable update patterns (~500 lines).
 
-**Decision**: Keep `@ts-ignore` with comments. Immer is battle-tested; runtime correctness is verified by 800 unit tests.
+**Decision**: Keep `@ts-ignore` with comments. Immer is battle-tested; runtime correctness is verified by 839 unit tests.
 
 #### Filter Functions
 
@@ -270,7 +270,7 @@ Before submitting a PR, ensure:
 ### Required ✅
 
 - [ ] `npm run build` — Compiles without errors
-- [ ] `npm test` — All 800 tests pass
+- [ ] `npm test` — All 839 tests pass
 - [ ] `npm run lint` — 0 ESLint errors
 - [ ] No `console.log()` statements (use `console.debug()` if needed)
 - [ ] No direct `localStorage` access (use App API)

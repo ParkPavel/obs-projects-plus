@@ -1,6 +1,6 @@
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ViewApi } from "src/lib/viewApi";
-import type { FilterCondition, ProjectDefinition, ViewId } from "./settings/settings";
+import type { FilterCondition, FilterDefinition, ProjectDefinition, ViewId } from "./settings/settings";
 
 export interface DataQueryResult {
   data: DataFrame;
@@ -15,12 +15,18 @@ export interface DataQueryResult {
 /**
  * ProjectViewProps provides various metadata for the views.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific, generic T defaults to any
+ 
 export interface ProjectViewProps<T = Record<string, any>> {
   viewId: ViewId;
   project: ProjectDefinition;
   config: T;
   saveConfig: (config: T) => void;
+  /**
+   * Persist a new filter definition on the current view. Optional: not all
+   * views implement promote-to-global UX. When omitted, the consumer should
+   * hide any UI that would call it.
+   */
+  saveViewFilter?: (filter: FilterDefinition) => void;
   contentEl: HTMLElement;
   viewApi: ViewApi;
   readonly: boolean;
@@ -36,7 +42,7 @@ export interface ProjectViewProps<T = Record<string, any>> {
  * that extends this one. Then you need to register it in
  * ProjectsView.getProjectViews().
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is dynamic and plugin-specific, generic T defaults to any
+ 
 export abstract class ProjectView<T = Record<string, any>> {
   onData(result: DataQueryResult): void {}
   onOpen(props: ProjectViewProps<T>): void {}

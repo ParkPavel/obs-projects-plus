@@ -3,10 +3,12 @@
   import type { ViewDefinition } from "../../../../../settings/settings";
   import { i18n } from "src/lib/stores/i18n";
 
+  type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
+
   export let view: ViewDefinition | undefined;
   export let fields: Array<{ name: string; type: string }> = [];
 
-  const dispatch = createEventDispatcher<{ update: Record<string, any> }>();
+  const dispatch = createEventDispatcher<{ update: Record<string, any>; navigateTab: SettingsTabId }>();
 
   $: isCalendar = view?.type === "calendar";
   $: isBoard = view?.type === "board";
@@ -49,11 +51,27 @@
   $: fitStyle = (view?.config?.["fitStyle"] as string) ?? "cover";
   $: galleryIncludeFields = (view?.config?.["includeFields"] as string[]) ?? [];
 
-  // Table-specific settings
-  $: fieldConfig = (view?.config?.["fieldConfig"] as Record<string, { hide?: boolean }>) ?? {};
+  // Database/Table-specific settings
+  $: isLegacyTable = view?.type === "table";
+  $: tableConfig = isLegacyTable
+    ? ((view?.config as Record<string, unknown>) ?? {})
+    : ((view?.config?.["table"] as Record<string, unknown>) ?? {});
+  $: fieldConfig = (tableConfig["fieldConfig"] as Record<string, { hide?: boolean }>) ?? {};
+  $: rowHeight = (tableConfig["rowHeight"] as "compact" | "default" | "expanded") ?? "default";
+  $: wrapText = (tableConfig["wrapText"] as boolean) ?? false;
+  $: showAggregationRow = (tableConfig["showAggregationRow"] as boolean) ?? false;
+  $: freezeUpTo = (tableConfig["freezeUpTo"] as string) ?? "";
 
   function emitUpdate(partial: Record<string, any>) {
     dispatch("update", partial);
+  }
+
+  function emitTableUpdate(partial: Record<string, unknown>) {
+    if (isLegacyTable) {
+      emitUpdate(partial);
+      return;
+    }
+    emitUpdate({ table: { ...tableConfig, ...partial } });
   }
 
   function handleFieldVisibilityChange(fieldName: string, visible: boolean) {
@@ -64,7 +82,7 @@
         hide: !visible,
       },
     };
-    emitUpdate({ fieldConfig: newFieldConfig });
+    emitTableUpdate({ fieldConfig: newFieldConfig });
   }
 
   function handleGalleryIncludeFieldChange(fieldName: string, enabled: boolean) {
@@ -490,6 +508,61 @@
 
     {#if isDatabase}
       <div class="group">
+        <div class="quick-links">
+          <button class="quick-link-btn" on:click={() => dispatch("navigateTab", "filters")}>
+            {$i18n.t("settings-menu.tabs.filters")}
+          </button>
+          <button class="quick-link-btn" on:click={() => dispatch("navigateTab", "colors")}>
+            {$i18n.t("settings-menu.tabs.colors")}
+          </button>
+          <button class="quick-link-btn" on:click={() => dispatch("navigateTab", "sort")}>
+            {$i18n.t("settings-menu.tabs.sort")}
+          </button>
+        </div>
+
+        <label>
+          {$i18n.t("views.database.table.row-height", { defaultValue: "Row height" })}
+          <select bind:value={rowHeight} on:change={() => emitTableUpdate({ rowHeight })}>
+            <option value="compact">{$i18n.t("views.database.table.row-height-compact", { defaultValue: "Compact" })}</option>
+            <option value="default">{$i18n.t("views.database.table.row-height-default", { defaultValue: "Default" })}</option>
+            <option value="expanded">{$i18n.t("views.database.table.row-height-expanded", { defaultValue: "Expanded" })}</option>
+          </select>
+        </label>
+
+        <label class="checkbox">
+          <input
+            type="checkbox"
+            bind:checked={wrapText}
+            on:change={() => emitTableUpdate({ wrapText })}
+          />
+          <span>{$i18n.t("views.database.table.wrap-text", { defaultValue: "Wrap text in cells" })}</span>
+        </label>
+
+        <label class="checkbox">
+          <input
+            type="checkbox"
+            bind:checked={showAggregationRow}
+            on:change={() => emitTableUpdate({ showAggregationRow })}
+          />
+          <span>{$i18n.t("views.database.table.show-aggregation", { defaultValue: "Show aggregation row" })}</span>
+        </label>
+
+        <label>
+          {$i18n.t("views.database.table.freeze-up-to", { defaultValue: "Freeze columns up to field" })}
+          <input
+            type="text"
+            list="fieldlist-freezeUpTo"
+            bind:value={freezeUpTo}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={() => emitTableUpdate({ freezeUpTo: freezeUpTo || undefined })}
+          />
+          <datalist id="fieldlist-freezeUpTo">
+            {#each fields as field}
+              <option value={field.name} />
+            {/each}
+          </datalist>
+        </label>
+
         <div class="field-list">
           <span class="field-list-label">{$i18n.t("settings-menu.view-config.table.hide-fields")}</span>
           <span class="hint">{$i18n.t("settings-menu.view-config.table.hints.hide-fields")}</span>
@@ -528,7 +601,7 @@
                 for (const f of hiddenFields) {
                   newFieldConfig[f.name] = { ...newFieldConfig[f.name], hide: false };
                 }
-                emitUpdate({ fieldConfig: newFieldConfig });
+                emitTableUpdate({ fieldConfig: newFieldConfig });
               }}
             >
               {$i18n.t("settings-menu.view-config.table.show-all", { defaultValue: "Show all fields" })}
@@ -547,6 +620,26 @@
   .header { font-weight: 600; }
   .muted { opacity: 0.7; font-size: 0.875rem; }
   .group { display: flex; flex-direction: column; gap: 0.625rem; }
+  .quick-links {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+  }
+  .quick-link-btn {
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary-alt);
+    color: var(--text-normal);
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    min-height: 2rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+  .quick-link-btn:hover {
+    border-color: var(--interactive-accent);
+    color: var(--text-accent);
+  }
   .subgroup {
     display: flex;
     flex-direction: column;

@@ -4,7 +4,7 @@ import { parse } from "yaml";
 /**
  * decodeFrontMatter returns metadata from a note with YAML front matter.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML frontmatter has dynamic structure based on user content
+ 
 export function decodeFrontMatter(
   data: string
 ): E.Either<Error, Record<string, any>> {
@@ -21,7 +21,7 @@ export function decodeFrontMatter(
     : E.right({});
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML parsing returns dynamic structure
+ 
 export function parseYaml(data: string): E.Either<Error, Record<string, any>> {
   return F.pipe(
     data,
@@ -30,7 +30,7 @@ export function parseYaml(data: string): E.Either<Error, Record<string, any>> {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- YAML parsing returns dynamic structure
+ 
 function parseRawYaml(data: string): E.Either<Error, Record<string, any>> {
   return E.tryCatch(
     () =>

@@ -43,6 +43,16 @@ describe("migrateTableConfig", () => {
     expect(result.layoutVersion).toBe(1);
     expect(result.showWidgetToolbar).toBe(true);
     expect(result.compactMode).toBe(false);
+    expect(result.quickActions).toHaveLength(2);
+    expect(result.quickActions?.[0]).toMatchObject({
+      id: "qa-overview",
+      kind: "apply-template",
+      templateId: "overview-finance",
+    });
+    expect(result.quickActions?.[1]).toMatchObject({
+      id: "qa-formula",
+      kind: "toggle-formula-bar",
+    });
   });
 
   test("preserves table config fields", () => {

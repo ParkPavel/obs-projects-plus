@@ -2,7 +2,7 @@
 // Transform result caching with hash-based invalidation.
 
 import type { DataFrame, DataField, DataRecord } from "src/lib/dataframe/dataframe";
-import type { TransformPipeline, TransformResult } from "./transformTypes";
+import type { TransformPipeline, TransformResult, TransformContext } from "./transformTypes";
 import { executeTransform } from "./transformExecutor";
 
 interface CacheEntry {
@@ -19,12 +19,17 @@ const cache = new Map<string, CacheEntry>();
 /**
  * Execute a transform pipeline with caching.
  * Returns cached result if source data and pipeline haven't changed.
+ *
+ * Note: when `context.rightFrames` is supplied (e.g. JoinStep), the cache key
+ * incorporates a hash of the right frames so that changes to correlated
+ * sources invalidate cached joins.
  */
 export function executeTransformCached(
   source: DataFrame,
-  pipeline: TransformPipeline
+  pipeline: TransformPipeline,
+  context?: TransformContext
 ): TransformResult {
-  const key = computeCacheKey(source, pipeline);
+  const key = computeCacheKey(source, pipeline, context);
   const now = Date.now();
 
   const existing = cache.get(key);
@@ -32,7 +37,7 @@ export function executeTransformCached(
     return existing.result;
   }
 
-  const result = executeTransform(source, pipeline);
+  const result = executeTransform(source, pipeline, context);
 
   // Evict if at capacity
   if (cache.size >= MAX_CACHE_ENTRIES) {
@@ -73,10 +78,23 @@ export function getTransformCacheSize(): number {
 
 // ── Internal ─────────────────────────────────────────────────
 
-function computeCacheKey(df: DataFrame, pipeline: TransformPipeline): string {
+function computeCacheKey(
+  df: DataFrame,
+  pipeline: TransformPipeline,
+  context?: TransformContext
+): string {
   const sourceHash = hashDataFrame(df);
   const configHash = stableStringify(pipeline.steps);
-  return `${sourceHash}__${configHash}`;
+  let rightHash = "";
+  if (context?.rightFrames && context.rightFrames.size > 0) {
+    const entries: string[] = [];
+    for (const [id, frame] of context.rightFrames) {
+      entries.push(`${id}:${hashDataFrame(frame)}`);
+    }
+    entries.sort();
+    rightHash = `__R__${simpleHash(entries.join("|"))}`;
+  }
+  return `${sourceHash}__${configHash}${rightHash}`;
 }
 
 function hashDataFrame(df: DataFrame): string {

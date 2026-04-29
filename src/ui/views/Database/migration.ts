@@ -48,6 +48,21 @@ export function migrateTableConfig(
     table: tableConfig,
     showWidgetToolbar: true,
     compactMode: false,
+    quickActions: [
+      {
+        id: "qa-overview",
+        label: "Overview Preset",
+        labelKey: "views.database.quick.overview",
+        kind: "apply-template",
+        templateId: "overview-finance",
+      },
+      {
+        id: "qa-formula",
+        label: "Formula Builder",
+        labelKey: "views.database.quick.formula",
+        kind: "toggle-formula-bar",
+      },
+    ],
   };
 }
 

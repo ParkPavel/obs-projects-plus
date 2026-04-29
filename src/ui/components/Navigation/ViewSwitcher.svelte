@@ -5,6 +5,7 @@
   import { settings } from "src/lib/stores/settings";
   import type { ViewDefinition, ViewId } from "src/settings/settings";
   import { isTouchDevice } from "src/lib/stores/ui";
+  import { onDestroy } from "svelte";
 
   export let views: ViewDefinition[] = [];
   export let activeViewId: ViewId | undefined;
@@ -90,10 +91,48 @@
   }
 
   function getViewIcon(type: string): string {
-    return $customViews[type]?.getIcon() ?? "layout-grid";
+    const resolvedType = type === "table" ? "database" : type;
+    return $customViews[resolvedType]?.getIcon() ?? "layout-grid";
   }
   
   let viewSwitcherElement: HTMLDivElement;
+
+  // v7.4: Overflow indicator — chevrons + edge fade shown when tabs overflow.
+  // Purely visual/UX; mobile-safe because it respects the same scroll container.
+  let canScrollLeft = false;
+  let canScrollRight = false;
+
+  function updateScrollIndicators() {
+    if (!viewSwitcherElement) return;
+    const { scrollLeft, scrollWidth, clientWidth } = viewSwitcherElement;
+    // 1px tolerance absorbs sub-pixel rounding from zoom / devicePixelRatio.
+    canScrollLeft = scrollLeft > 1;
+    canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
+  }
+
+  function scrollByStep(direction: -1 | 1) {
+    if (!viewSwitcherElement) return;
+    const step = Math.max(viewSwitcherElement.clientWidth * 0.6, 120);
+    viewSwitcherElement.scrollBy({ left: step * direction, behavior: "smooth" });
+  }
+
+  // Re-check indicators when views list changes, on scroll, and on resize.
+  $: if (views) {
+    // defer until Svelte has updated the DOM with the new buttons
+    Promise.resolve().then(updateScrollIndicators);
+  }
+
+  // Observe container resize (panel width changes) to keep indicators in sync.
+  let resizeObserver: ResizeObserver | null = null;
+  $: if (viewSwitcherElement && typeof ResizeObserver !== "undefined") {
+    resizeObserver?.disconnect();
+    resizeObserver = new ResizeObserver(() => updateScrollIndicators());
+    resizeObserver.observe(viewSwitcherElement);
+  }
+  onDestroy(() => {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+  });
   
   // v7.3: Wheel scroll for pointer devices (mouse/trackpad) - not touch
   function handleWheel(event: WheelEvent) {
@@ -114,44 +153,127 @@
   }
 </script>
 
-<div
-  class="view-switcher"
-  role="tablist"
-  aria-label={$i18n.t('common.view-switcher')}
-  bind:this={viewSwitcherElement}
-  on:wheel={handleWheel}
-  on:touchstart={handleTouchStart}
-  on:touchmove={handleTouchMove}
-  on:touchend={handleTouchEndOrCancel}
-  on:touchcancel={handleTouchEndOrCancel}
->
-  {#each views as view, index (view.id)}
+<div class="view-switcher-container" class:can-scroll-left={canScrollLeft} class:can-scroll-right={canScrollRight}>
+  {#if canScrollLeft && !$isTouchDevice}
     <button
-      class:active={view.id === activeViewId}
-      class:icons-only={!showTitles}
-      class="view-item"
-      role="tab"
-      aria-selected={view.id === activeViewId}
-      tabindex={view.id === activeViewId ? 0 : -1}
-      on:click={() => handleButtonClick(view.id, index)}
-      on:keydown={(event) => handleKeydown(event, index)}
-      aria-label={view.name}
-      title={view.name}
-      bind:this={buttonRefs[index]}
-    >
-      <Icon name={getViewIcon(view.type)} size="sm" />
-      {#if showTitles}
-        <span>{view.name}</span>
-      {/if}
-    </button>
-  {/each}
+      type="button"
+      class="view-switcher-chevron view-switcher-chevron--left"
+      on:click={() => scrollByStep(-1)}
+      title={$i18n.t('common.scroll-left', { defaultValue: 'Scroll left' })}
+      aria-label={$i18n.t('common.scroll-left', { defaultValue: 'Scroll left' })}
+      tabindex="-1"
+    >‹</button>
+  {/if}
+  <div
+    class="view-switcher"
+    role="tablist"
+    aria-label={$i18n.t('common.view-switcher')}
+    bind:this={viewSwitcherElement}
+    on:wheel={handleWheel}
+    on:scroll={updateScrollIndicators}
+    on:touchstart={handleTouchStart}
+    on:touchmove={handleTouchMove}
+    on:touchend={handleTouchEndOrCancel}
+    on:touchcancel={handleTouchEndOrCancel}
+  >
+    {#each views as view, index (view.id)}
+      <button
+        class:active={view.id === activeViewId}
+        class:icons-only={!showTitles}
+        class="view-item"
+        role="tab"
+        aria-selected={view.id === activeViewId}
+        tabindex={view.id === activeViewId ? 0 : -1}
+        on:click={() => handleButtonClick(view.id, index)}
+        on:keydown={(event) => handleKeydown(event, index)}
+        aria-label={view.name}
+        title={view.name}
+        bind:this={buttonRefs[index]}
+      >
+        <Icon name={getViewIcon(view.type)} size="sm" />
+        {#if showTitles}
+          <span>{view.name}</span>
+        {/if}
+      </button>
+    {/each}
+  </div>
+  {#if canScrollRight && !$isTouchDevice}
+    <button
+      type="button"
+      class="view-switcher-chevron view-switcher-chevron--right"
+      on:click={() => scrollByStep(1)}
+      title={$i18n.t('common.scroll-right', { defaultValue: 'Scroll right' })}
+      aria-label={$i18n.t('common.scroll-right', { defaultValue: 'Scroll right' })}
+      tabindex="-1"
+    >›</button>
+  {/if}
 </div>
 
 <style>
+  .view-switcher-container {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  /* Edge-fade masks indicate scrollable content on either side. */
+  .view-switcher-container.can-scroll-left::before,
+  .view-switcher-container.can-scroll-right::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1.5rem;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .view-switcher-container.can-scroll-left::before {
+    left: 0;
+    background: linear-gradient(to right, var(--background-primary), transparent);
+  }
+  .view-switcher-container.can-scroll-right::after {
+    right: 0;
+    background: linear-gradient(to left, var(--background-primary), transparent);
+  }
+
+  .view-switcher-chevron {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 50%;
+    background: var(--background-primary);
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.1);
+  }
+  .view-switcher-chevron:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+  .view-switcher-chevron--left {
+    left: 0.125rem;
+  }
+  .view-switcher-chevron--right {
+    right: 0.125rem;
+  }
+
   .view-switcher {
     display: flex;
     gap: var(--spacing-sm, 0.5rem);
     overflow-x: auto;
+    flex: 1 1 auto;
+    min-width: 0;
     /* v3.1.0: Declare touch intent so browser doesn't compete with custom handler */
     touch-action: pan-x;
     /* v3.1.0: Prevent scroll chaining to parent (Obsidian workspace) */

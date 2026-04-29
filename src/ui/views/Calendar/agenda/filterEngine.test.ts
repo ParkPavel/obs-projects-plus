@@ -32,9 +32,9 @@ const records: DataRecord[] = [
   { id: 'task-6', values: { name: 'Sprint planning', status: 'Active', priority: 7, dueDate: '2026-02-14', tags: ['management'] } },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test helper uses loose types for convenience
+ 
 function mkFilter(field: string, operator: string, value?: any): AgendaFilter {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Casting string to AgendaFilterOperator for test flexibility
+   
   return { id: `f-${Math.random()}`, field, operator: operator as any, value, enabled: true };
 }
 

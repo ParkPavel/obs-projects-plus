@@ -22,6 +22,7 @@ import type {
   ChartConfig,
   AggregationConfig,
   ConditionalFormat,
+  WidgetType,
 } from "../types";
 import type { TransformPipeline } from "../engine/transformTypes";
 
@@ -507,17 +508,39 @@ describe("E2E: Config migration → template application", () => {
   test("widget templates produce valid WidgetDefinitions", () => {
     expect(WIDGET_TEMPLATES.length).toBeGreaterThanOrEqual(3);
 
+    const allowedTypes: WidgetType[] = [
+      "data-table",
+      "chart",
+      "stats",
+      "comparison",
+      "checklist",
+      "view-port",
+      "filter-tabs",
+      "summary-row",
+    ];
+
     for (const template of WIDGET_TEMPLATES) {
       expect(template.id).toBeDefined();
       expect(template.widgets.length).toBeGreaterThan(0);
 
       for (const widget of template.widgets) {
         expect(widget.id).toBeTruthy();
-        expect(["data-table", "chart", "stats", "comparison", "checklist", "view-port"]).toContain(widget.type);
+        expect(allowedTypes).toContain(widget.type);
         expect(widget.layout.w).toBeGreaterThan(0);
         expect(widget.layout.h).toBeGreaterThan(0);
       }
     }
+  });
+
+  test("overview-finance template includes quick overview widget set", () => {
+    const overview = WIDGET_TEMPLATES.find((t) => t.id === "overview-finance");
+    expect(overview).toBeDefined();
+
+    const types = overview!.widgets.map((w) => w.type);
+    expect(types).toContain("stats");
+    expect(types).toContain("summary-row");
+    expect(types).toContain("chart");
+    expect(types).toContain("data-table");
   });
 
   test("dashboard template includes stats + chart + table", () => {

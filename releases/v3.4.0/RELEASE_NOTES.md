@@ -27,6 +27,11 @@
 - **Pipeline dirty state** warning for unsaved changes
 - **Widget resize** handles for dashboard layout refinement
 
+## Post-release Hotfixes
+
+- **Board column drag-and-drop** no longer leaves floating shadow/ghost columns after reorder or when the view closes mid-drag
+- **Shared DnD cleanup path** now forces active drag cleanup during destroyed origin/shadow zones so the compiled runtime bundle matches the hotfix behavior
+
 ## Stats
 - **42 test suites, 839 tests passed**
 - **0 TypeScript errors**

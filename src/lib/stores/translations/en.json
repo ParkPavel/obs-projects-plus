@@ -586,7 +586,28 @@
                     "layout-grid": "Grid",
                     "layout-stack": "Stack",
                     "hide-formula-bar": "Hide formula bar",
-                    "show-formula-bar": "Show formula bar"
+                    "show-formula-bar": "Show formula bar",
+                    "template-replace-title": "Replace current layout?",
+                    "template-replace-confirm": "Applying a template will replace current widgets. Continue?",
+                    "template-replace-cancel": "Cancel",
+                    "template-replace-apply": "Apply template",
+                    "filter-bridge-global": "Global filter: {{count}} condition(s)",
+                    "filter-bridge-local": "Local: {{field}} = {{value}}",
+                    "filter-bridge-clear": "Clear local filter",
+                    "filter-bridge-promote": "Save as global filter"
+                },
+                "field-presets": {
+                    "label": "Layout",
+                    "title": "Column layout presets",
+                    "aria-label": "Column layout presets",
+                    "save-current": "Save current layout…",
+                    "apply": "Apply",
+                    "rename": "Rename",
+                    "delete": "Delete",
+                    "detach": "Detach preset",
+                    "prompt-new": "Name for the layout preset:",
+                    "prompt-rename": "Rename preset:",
+                    "confirm-delete": "Delete this layout preset?"
                 },
                 "widget": {
                     "expand": "Expand widget",
@@ -598,6 +619,11 @@
                     "add": "Add Widget",
                     "add-aria": "Add widget",
                     "templates": "Templates"
+                },
+                "quick": {
+                    "group": "Quick actions",
+                    "overview": "Overview Preset",
+                    "formula": "Formula Builder"
                 },
                 "types": {
                     "data-table": "Data Table",
@@ -621,7 +647,14 @@
                     "mode-code": "Code",
                     "mode-visual": "Visual",
                     "visual-empty": "Click to add a formula block",
-                    "visual-parse-error": "Cannot display in visual mode — switch to Code to edit"
+                    "visual-parse-error": "Cannot display in visual mode — switch to Code to edit",
+                    "signature-returns": "returns",
+                    "signature-category": "category",
+                    "debug-title": "Debug",
+                    "debug-cursor": "Cursor position",
+                    "debug-copy": "Copy error",
+                    "debug-dismiss": "Dismiss",
+                    "runtime-error": "Runtime error"
                 },
                 "pipeline": {
                     "title": "Transform Pipeline",
@@ -639,6 +672,17 @@
                     "compute": "Compute",
                     "unpivot": "Unpivot",
                     "pivot": "Pivot",
+                    "join": "Join",
+                    "join-right-source": "Right source",
+                    "join-left-key": "Left key",
+                    "join-right-key": "Right key",
+                    "join-right-key-placeholder": "field name in right source",
+                    "join-how": "Join type",
+                    "join-inner": "Inner (drop unmatched)",
+                    "join-left": "Left (keep unmatched, null right)",
+                    "join-aggregate": "Aggregate multiple right matches",
+                    "join-no-sources": "No sibling projects available as right source.",
+                    "aggregate-function": "Aggregation function",
                     "none": "(none)",
                     "columns": "column(s)",
                     "groups": "group(s)",
@@ -647,7 +691,12 @@
                     "unsaved-changes": "Unsaved changes",
                     "discard-confirm": "You have unsaved pipeline changes. Discard?",
                     "keep-editing": "Keep editing",
-                    "discard": "Discard"
+                    "discard": "Discard",
+                    "how-to": "How to use",
+                    "how-to-steps": "1) Add a step  2) Pick a field (searchable by name)  3) Save the pipeline",
+                    "unnest-suggestion-title": "Array fields detected",
+                    "unnest-suggestion-body": "Fields {{fields}} contain arrays. Use Unnest to split each item into its own row.",
+                    "unnest-suggestion-button": "Unnest \"{{field}}\""
                 },
                 "group": {
                     "empty": "(empty)"
@@ -706,7 +755,17 @@
                         "r-squared": "Show R²",
                         "point-size": "Point Size",
                         "opacity": "Opacity",
-                        "none": "(none)"
+                        "none": "(none)",
+                        "correlate-enable": "Correlate with another source",
+                        "correlate-hint": "X comes from this widget's source; Y comes from the selected right source, matched by join key.",
+                        "right-source": "Right source (Y)",
+                        "left-key": "Left join key (this source)",
+                        "right-key": "Right join key (right source)",
+                        "right-key-placeholder": "field name in right source",
+                        "no-sources": "No sibling projects found in this vault.",
+                        "warn-missing-right": "Right source is not loaded. Check the selected source id and that the sibling project is still available.",
+                        "warn-no-matches": "No records matched on the join key. Verify the left/right key names and that values overlap.",
+                        "warn-mostly-unmatched": "Only {{matched}} of {{total}} records matched — results may be skewed."
                     },
                     "section": {
                         "display": "Display Options"
@@ -736,12 +795,20 @@
                     "gallery": "Gallery View"
                 },
                 "templates": {
+                    "overview-finance": "Overview Finance",
+                    "overview-finance-desc": "Quick finance overview with KPI, summary, chart and table",
                     "dashboard": "Dashboard",
                     "dashboard-desc": "Stats overview + chart + data table",
                     "analytics": "Analytics",
                     "analytics-desc": "Multiple charts for data analysis",
                     "kanban-plus": "Kanban+",
-                    "kanban-plus-desc": "Data table + checklist + progress tracker"
+                    "kanban-plus-desc": "Data table + checklist + progress tracker",
+                    "fitness-workout": "Fitness — Workout Log",
+                    "fitness-workout-desc": "Workout notes with nested sets[]: reps, weight, rest. Uses Unnest pipeline + volume stats.",
+                    "finance-accounting": "Finance — Accounting",
+                    "finance-accounting-desc": "Multi-currency dashboard: gross, tax, net with FX rates and credit line tracking.",
+                    "crm-clients": "CRM — Clients",
+                    "crm-clients-desc": "Clients roster with session history, filter tabs by stage, and conversion funnel."
                 }
             }
         },

@@ -373,7 +373,7 @@ export class ViewportStateManager {
     try {
       const parsed = JSON.parse(data);
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON parsing returns unknown structure, validated below
+       
       this.history = parsed.history.map((state: any) => ({
         date: dayjs(state.date),
         interval: state.interval,
