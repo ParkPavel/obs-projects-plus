@@ -148,7 +148,10 @@ tags: [проект, важное]
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Выпущено |
 | ✅ | **Database View** | v3.3.0 | Выпущено |
 | ✅ | **Database View Modernization** | v3.4.0 | Выпущено |
-| 🥇 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Планируется |
+| 🚧 | **Engine v2: cross-project Relations & Rollups, Custom Properties Viewer, Formula Editor Popup** | 3.4.X WIP | В разработке (не публикуется) |
+| 🎯 | **Первый публичный релиз Engine v2** | v3.5.0+ | Планируется (M5) |
+
+> Детальный календарь фаз (M0–M5) — в [docs/ROADMAP_DATABASE_2026.md](docs/ROADMAP_DATABASE_2026.md). Архитектура Engine v2 — в [docs/architecture-engine-v2.md](docs/architecture-engine-v2.md).
 
 ---
 
@@ -214,12 +217,12 @@ cd obs-projects-plus
 npm ci
 npm run dev       # esbuild watch mode
 npm run build     # tsc + esbuild production
-npm run test      # Jest (839 тестов, 42 suite)
-npm run lint      # ESLint + eslint-plugin-obsidianmd (23 правила)
+npm run test      # Jest (54 suites, 923+ тестов)
+npm run lint      # ESLint 9 + eslint-plugin-obsidianmd
 npm run format    # Prettier
 ```
 
-Подробнее: [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
+Подробнее: [CONTRIBUTING.md](CONTRIBUTING.md) • [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) • [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
 
 </details>
 
@@ -231,12 +234,17 @@ npm run format    # Prettier
 |----------|----------|
 | [Руководство пользователя (RU)](docs/user-guide.md) | Горячие клавиши, жесты, шаблоны, настройки |
 | [User Guide (EN)](docs/user-guide-EN.md) | Full instructions in English |
+| [Project Info](PROJECT-INFO.md) | Что это за проект, цели, лицензионная история |
+| [Demo Vault](demo-vault/README.md) | Готовое хранилище для опробования плагина |
+| [CONTRIBUTING](CONTRIBUTING.md) | Как контрибьютить, runtime asset set, ветвление |
+| [Архитектурная карта](docs/ARCHITECTURE.md) | **Старт для контрибьюторов** — карта кодовых пространств, слои, вектор проекта |
+| [Implementation Blueprint](docs/IMPLEMENTATION_BLUEPRINT.md) | **Текущий execution chart** (Stage A + Stage B, 3.4.2 WIP) |
+| [Engine v2 Spec](docs/architecture-engine-v2.md) | Активный дизайн движка (Relations, Rollups, Custom Properties Viewer) |
+| [Roadmap 2026](docs/ROADMAP_DATABASE_2026.md) | Календарь фаз M0–M5 |
 | [Custom View API](obsidian-projects-types/README.md) | Регистрация своих view из других плагинов |
 | [История версий](RELEASES.md) | Все релизы |
 | [CHANGELOG](CHANGELOG.md) | Keep a Changelog формат |
-| [Архитектура фильтров](docs/architecture-filters.md) | Спецификация движка |
-| [Drag & Drop](docs/architecture-drag-drop.md) | Спецификация для контрибьюторов |
-| [Database View](docs/architecture-database-view.md) | Концептуальный документ |
+| [Индекс документации](docs/DOCS_INDEX.md) | Навигация по всем документам |
 
 ---
 

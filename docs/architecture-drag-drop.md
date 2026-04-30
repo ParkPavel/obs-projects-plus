@@ -1,6 +1,8 @@
+> 📚 **REFERENCE 2026-04-30** — describes shipped v3.2.0 Timeline DnD design. Internal feature-design vocabulary ("Iteration 1..4") refers to DnD-design work-iterations of this single feature, **not** to project-level Stages — whitelisted in [IMPLEMENTATION_BLUEPRINT.md Appendix B](IMPLEMENTATION_BLUEPRINT.md#appendix-b--terminology-dictionary-canonical-vocabulary).
+
 # 🖱️ Архитектура Timeline Drag & Drop v3.2.0
 
-> **Статус:** Готов к реализации  
+> **Статус:** Reference (shipped in v3.2.0)  
 > **Версия:** v3.2.0  
 > **Последнее обновление:** 2026-03-09  
 > **Предпосылки:** v3.1.0 (DnD Handle Engine, Deep Mobile Adaptation)

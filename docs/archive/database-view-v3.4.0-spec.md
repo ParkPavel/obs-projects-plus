@@ -1,3 +1,5 @@
+> ⛔ **ARCHIVED 2026-04-30** — implemented in Phases 1–6 (v3.4.0/v3.4.1). Continuation work moved to [architecture-engine-v2.md](../architecture-engine-v2.md). See [archive/README.md](README.md).
+
 # Database View v3.4.0 — Comprehensive Specification
 
 > **Status**: Reference (historical target specification)  

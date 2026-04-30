@@ -1,3 +1,5 @@
+> ⛔ **ARCHIVED 2026-04-30** — issues addressed during v3.3.x → v3.4.x execution. See [archive/README.md](README.md). Active state: [../DOCS_INDEX.md](../DOCS_INDEX.md).
+
 # Аудит согласованности спецификаций Database View v3.3.0
 
 > **Дата аудита**: 2026-04-12

@@ -1,3 +1,5 @@
+> ⛔ **ARCHIVED 2026-04-30** — UX overhaul plan delivered in v3.4.0/v3.4.1. See [archive/README.md](README.md). Active state: [../DOCS_INDEX.md](../DOCS_INDEX.md).
+
 # REFACTORING SPEC v1.0 — obs-projects-plus UX Overhaul
 
 > Дата: 2026-04-20

@@ -1,7 +1,9 @@
 # Database View v3.3.0 — Спецификация UI/UX
 
-> **Статус**: DRAFT v1.0 | **Дата**: 2026-04-12
-> **Родительский документ**: `architecture-database-view.md`
+> ⚠️ **REFERENCE-ONLY (2026-04-30)**: Документ описывает UI/UX-паттерны Database View (контекстные меню, поповеры, кнопки, анимации, gesture choreography). Большая часть **реализована** в `src/ui/views/Database/widgets/`; остаток валиден как ориентир, но НЕ является активным планом. Active execution plan — `docs/IMPLEMENTATION_PLAN_CURRENT.md`. UI-расширения для Engine v2 (Custom Properties Viewer, Formula Editor Popup) описаны в `docs/architecture-engine-v2.md`.
+
+> **Статус**: DRAFT v1.0 (frozen as reference) | **Дата создания**: 2026-04-12
+> **Родительский документ**: `architecture-database-view.md` — также REFERENCE-ONLY
 > **Область**: Все визуальные элементы, паттерны взаимодействия, gesture choreography
 
 ---

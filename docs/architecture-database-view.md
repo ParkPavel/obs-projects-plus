@@ -1,5 +1,7 @@
 # Database View v3.3.0 — Полная спецификация
 
+> ⚠️ **REFERENCE-ONLY (2026-04-30)**: Этот документ описывает базовую архитектуру v3.3.x widget-структуры. Cross-project Relations/Rollups, Custom Properties Viewer и Formula Editor Popup описаны в **`docs/architecture-engine-v2.md`** — это источник правды для Engine v2. Описание RelationResolver/RollupEngine ниже относится к работе **внутри одного DataFrame**; кросс-проектные операции — в Engine v2 spec.
+
 > **Статус**: DRAFT v1.2 | **Дата**: 2026-04-12
 > **Заменяет**: Table View (`views["table"]`)
 > **Совместимость**: Obsidian 1.5.7+ | Desktop + Mobile

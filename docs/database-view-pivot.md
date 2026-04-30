@@ -1,7 +1,9 @@
 # Database View v3.3.0 — Pivot / Unpivot Pipeline
 
-> **Статус**: DRAFT v1.0 | **Дата**: 2026-04-12
-> **Родительский документ**: `architecture-database-view.md` (раздел 2.4)
+> ⚠️ **REFERENCE-ONLY (2026-04-30)**: Документ описывает дизайн TransformPipeline (unpivot/compute/filter/group-by/aggregate/pivot), который **полностью реализован** в `src/ui/views/Database/engine/transformExecutor.ts` и сопутствующих модулях. Это историческая спецификация v3.3.x — она остаётся источником семантики шагов и edge-cases, но НЕ является активным планом. Источник правды для Engine v2 (cross-project relations/rollups, custom properties viewer, formula editor popup) — `docs/architecture-engine-v2.md`. Активный план — `docs/IMPLEMENTATION_PLAN_CURRENT.md`.
+
+> **Статус**: DRAFT v1.0 (frozen as reference) | **Дата создания**: 2026-04-12
+> **Родительский документ**: `architecture-database-view.md` (раздел 2.4) — также REFERENCE-ONLY
 > **Область**: Трансформация данных между DataFrame и виджетами
 
 ---

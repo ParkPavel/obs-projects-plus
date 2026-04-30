@@ -148,7 +148,10 @@ tags: [project, important]
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Released |
 | ✅ | **Database View** | v3.3.0 | Released |
 | ✅ | **Database View Modernization** | v3.4.0 | Released |
-| 🥇 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Planned |
+| 🚧 | **Engine v2: cross-project Relations & Rollups, Custom Properties Viewer, Formula Editor Popup** | 3.4.X WIP | In progress (not published) |
+| 🎯 | **First public Engine v2 release** | v3.5.0+ | Planned (M5) |
+
+> Detailed phase calendar (M0–M5) is in [docs/ROADMAP_DATABASE_2026.md](docs/ROADMAP_DATABASE_2026.md). Engine v2 architecture is in [docs/architecture-engine-v2.md](docs/architecture-engine-v2.md).
 
 ---
 
@@ -214,12 +217,12 @@ cd obs-projects-plus
 npm ci
 npm run dev       # esbuild watch mode
 npm run build     # tsc + esbuild production
-npm run test      # Jest (839 tests, 42 suites)
-npm run lint      # ESLint + eslint-plugin-obsidianmd (23 rules)
+npm run test      # Jest (54 suites, 923+ tests)
+npm run lint      # ESLint 9 + eslint-plugin-obsidianmd
 npm run format    # Prettier
 ```
 
-Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
+Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) • [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
 
 </details>
 
@@ -229,14 +232,19 @@ Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_STANDARDS.md](docs/CODE_ST
 
 | Document | Description |
 |----------|-------------|
-| [Руководство (RU)](docs/user-guide.md) | Shortcuts, gestures, templates, settings |
+| [User Guide (RU)](docs/user-guide.md) | Shortcuts, gestures, templates, settings |
 | [User Guide (EN)](docs/user-guide-EN.md) | Full instructions in English |
+| [Project Info](PROJECT-INFO.md) | What this project is, goals, license history |
+| [Demo Vault](demo-vault/README.md) | Ready-made vault to try the plugin |
+| [CONTRIBUTING](CONTRIBUTING.md) | How to contribute, runtime asset set, branching |
+| [Architecture Map](docs/ARCHITECTURE.md) | **Start here for contributors** — codebase map, layers, project vector |
+| [Implementation Blueprint](docs/IMPLEMENTATION_BLUEPRINT.md) | **Current execution chart** (Stage A + Stage B, 3.4.2 WIP) |
+| [Engine v2 Spec](docs/architecture-engine-v2.md) | Active engine design (Relations, Rollups, Custom Properties Viewer) |
+| [Roadmap 2026](docs/ROADMAP_DATABASE_2026.md) | M0–M5 milestone calendar |
 | [Custom View API](obsidian-projects-types/README.md) | Register your own views from other plugins |
 | [Release History](RELEASES-EN.md) | All releases |
 | [CHANGELOG](CHANGELOG.md) | Keep a Changelog format |
-| [Filter Architecture](docs/architecture-filters.md) | Engine specification |
-| [Drag & Drop](docs/architecture-drag-drop.md) | Contributor specification |
-| [Database View](docs/architecture-database-view.md) | Conceptual document |
+| [Docs Index](docs/DOCS_INDEX.md) | Navigation across all documents |
 
 ---
 

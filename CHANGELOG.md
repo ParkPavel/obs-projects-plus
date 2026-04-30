@@ -5,6 +5,27 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **Vocabulary note**: starting with the upcoming `3.4.2` cycle, this project uses the canonical Stage A / Stage B + M0..M5 vocabulary defined in [docs/IMPLEMENTATION_BLUEPRINT.md Appendix B](docs/IMPLEMENTATION_BLUEPRINT.md#appendix-b--terminology-dictionary-canonical-vocabulary). Earlier shipped sections (≤ 3.4.1) document the historical "Wave" / "Phase" vocabulary that was current at ship-time and remain unchanged.
+
+## [Unreleased — Stage A] (3.4.2 internal)
+
+> **Status**: pre-coding obligations in progress; first `src/` edit (Step A.1, FieldConfig extension) is gated on completion of [docs/IMPLEMENTATION_BLUEPRINT.md §14.1](docs/IMPLEMENTATION_BLUEPRINT.md#141-phase-1--terminology-lock--repo-root-entry-point--obvious-cleanup-precondition-for-step-a1) phase 1.
+> **Scope**: Stage A delivers M0 (Engine v2 cross-project relations + rollups) + M2 (YAML Визуализатор Notion-parity sub-plugin) + Stub closures + Doc-Standardization phases 1-3. Internal-only — no public release until Stage B / M5 completes.
+
+### Added (planned, not yet implemented)
+- _M0_ — `FieldConfig.relation` + `FieldConfig.rollup` config schema; `crossProjectResolver.ts`; `crossProjectRollup.ts`; ViewApi enrichment for cross-project relation/rollup data flow.
+- _M2_ — `src/ui/views/YamlVisualizer/` (sub-plugin within the plugin): `PropertyRowMenu.svelte`, `PropertyTypeEditor.svelte`, `RelationListView.svelte` (shared with `GridRelationCell`), `RelationConfigEditor.svelte`, `FormulaEditorModal.svelte` (MVP), `VisualizerToolbar.svelte`, plus surrounding wiring (~17 new files total).
+- Documentation: `docs/CONTEXT_FOR_AGENTS.md` (new), `.ai_internal/stubs.md` (new — stub registry).
+
+### Changed (planned)
+- `docs/ARCHITECTURE.md` — Engine v2 + YAML Визуализатор marked as implemented.
+- `docs/architecture-engine-v2.md` — status banner: "Active design" → "Implemented in Stage A".
+- `README.md` + `README-EN.md` — feature list + roadmap updated; single entry-point structure.
+- `demo-vault/README.md` — "What to try first" walkthrough.
+
+### Deferred to Stage B (registered in `.ai_internal/stubs.md`)
+- `STB-VISUALIZER-LEAF`, `STB-VISUALIZER-COMMENT`, `STB-VISUALIZER-SHOWAS`, `STB-VISUALIZER-LIMIT`, `STB-VISUALIZER-TWOWAY`, `STB-VISUALIZER-FORMULA-POLISH`, `STB-VISUALIZER-DRAG-REORDER`, `STB-VISUALIZER-BULK-EDIT`.
+
 ## [3.4.1] - 2026-04-21
 
 ### Fixed

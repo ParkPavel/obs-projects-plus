@@ -270,7 +270,7 @@ Before submitting a PR, ensure:
 ### Required ✅
 
 - [ ] `npm run build` — Compiles without errors
-- [ ] `npm test` — All 839 tests pass
+- [ ] `npm test` — All 923 tests pass
 - [ ] `npm run lint` — 0 ESLint errors
 - [ ] No `console.log()` statements (use `console.debug()` if needed)
 - [ ] No direct `localStorage` access (use App API)

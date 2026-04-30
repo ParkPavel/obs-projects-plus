@@ -1,8 +1,30 @@
-# Implementation Plan — Architectural Reset v3.5.0
+# Implementation Plan — Database Engine v2 / Architectural Reset
 
-> **Status:** active. Supersedes prior Wave A/B/C plan (v3.4.x).
-> **Directive origin:** LEAD PRODUCT ARCHITECT mandate (2026-04-22).
+> **Status:** active. Последнее обновление: 2026-04-30 (стратегический пересмотр).
+> **Версия**: 3.4.X WIP. Публичный выпуск не планируется до M5 (Q4 2026).
+> **Директивный источник**: LEAD PRODUCT ARCHITECT mandate (2026-04-22) + Engine v2 revision (2026-04-30).
 > **Single source of truth** for execution. All other planning docs (ROADMAP, specs) are reference.
+> **Связанный документ**: `docs/architecture-engine-v2.md` — детальная архитектурная спецификация.
+
+---
+
+## СТРАТЕГИЧЕСКОЕ УТОЧНЕНИЕ (2026-04-30)
+
+При разработке Database View были выявлены критические архитектурные пробелы:
+
+1. **Зависимость от Dataview переоценена в прошлых спецификациях.** Folder/Tag datasources уже не зависят от Dataview — они читают YAML frontmatter напрямую. Dataview нужен ТОЛЬКО как опциональный DataSource (dataview-kind проекты).
+
+2. **Relations и Rollups — внутри одного проекта уже работают.** `engine/relationResolver.ts` + `engine/rollup.ts` реализованы и протестированы. Но они разрешают wiki-links только **внутри одного DataFrame**.
+
+3. **Кросс-проектные Relations/Rollups отсутствуют.** Для Notion-подобных связей между базами (Счета ↔ Журнал транзакций) нужен `CrossProjectRelationResolver` и `CrossProjectRollupEngine`. Это **критический пробел**.
+
+4. **FieldConfig не расширен.** `DataFieldType.Relation` и `DataFieldType.Rollup` объявлены, но в `FieldConfig` нет конфигурации для них.
+
+5. **Custom Properties Viewer отсутствует.** Нужна замена нативного Obsidian Properties panel с поддержкой typed fields, Relations и Rollups.
+
+6. **Formula Editor не унифицирован.** Нужен единый popup-редактор формул (из схемы 2026-04-30), встроенный во все контексты.
+
+Все эти пробелы исправляются в рамках версий **3.4.X**.
 
 ---
 
@@ -19,20 +41,23 @@ Verbatim axioms. Non-negotiable.
 
 ---
 
-## 2. Ground truth — honest verdict (Phase 0 discovery)
+## 2. Ground truth — honest verdict (Phase 0 discovery + 2026-04-30 update)
 
-Verified 2026-04-22 by read-only audit (Explore + architect subagents).
+Verified 2026-04-22 by read-only audit + updated 2026-04-30 after Engine v2 strategic review.
 
 | Pillar | Verdict | Critical evidence |
 |---|---|---|
 | 1. Data Flow over Folders | **FIXED** (Phase 1) | `writeDemoFiles(vault, demoFolder, …)` flat in root; segregation via `view.filter` on `type` frontmatter |
 | 2. Interface Reclamation | **FIXED** (Phase 2a) | All 8 widget types route through `configPanelRegistry`; `view-port` has a working cog; `VerticalSwitcher` withdrawn (see §3.2) |
 | 3. Table Strict Grid | FAIL | `GridColumnHeader` uses flex + `style:width={`${n}px`}`; no `grid-template-columns`; resize persists in **px**, not rem |
-| 4. Formula IntelliSense | PARTIAL | Autocomplete + kbd nav present; no signature/doc popover; error path does not use `evaluateFormulaWithError` |
-| 5. Nested arrays / correlation | PARTIAL | UNNEST ✅; scatter single-dataset only; **no `join` pipeline step**; no `rightDataSource` in scatter config |
-| 6. Zero Pixels / Matryoshka | FAIL | 29 `@container` ✅ in widget shells; but ~54 `@media(max-width)` and >200 `\d+px` literals remain |
-
-Prior context-state entries (Phases 1A–1E) were truthful — but incomplete vs this directive.
+| 4. Formula IntelliSense | **FIXED** (Phase 4) | Signature popover, debug panel, string-literal-aware findEnclosingCall — delivered 2026-04-23 |
+| 5. Nested arrays / correlation | **FIXED** (Phase 5+6) | JoinStep ✅, scatter rightDataSource ✅, correlation diagnostics ✅ — delivered 2026-04-23 |
+| 6. Zero Pixels / Matryoshka | **FIXED** (Phase 6) | Zero `@media(max-width)` in Database/; Zero `Npx` (n≥2) in widgets/ — delivered 2026-04-23 |
+| **NEW: 7. Cross-project Relations** | **FAIL** | `relationResolver.ts` resolves only within one DataFrame; `CrossProjectRelationResolver` absent |
+| **NEW: 8. Cross-project Rollups** | **FAIL** | `rollup.ts` works within one DataFrame; `CrossProjectRollupEngine` absent |
+| **NEW: 9. FieldConfig for Relation/Rollup** | **FAIL** | `DataFieldType.Relation/Rollup` declared, but `FieldConfig` has no `RelationFieldConfig`/`RollupFieldConfig` |
+| **NEW: 10. Custom Properties Viewer** | **NOT STARTED** | Absent; Obsidian native panel shows only plain text |
+| **NEW: 11. Formula Editor Popup** | **PARTIAL** | `FormulaBar.svelte` inline — needs unified popup (modal) for all contexts |
 
 ---
 
@@ -136,34 +161,57 @@ Numbered for phase traceability.
 
 **F3 — WITHDRAWN (2026-04-23).** Demo correctly creates **3 parallel Database views** (`🏋️ Фитнес`, `💰 Финансы`, `👥 CRM`) each with a view-level `type` filter. This is the canonical pattern, not a compensation for a non-existent bug.
 
-**F4 — DataTable layered on legacy Table/DataGrid.**
-`DataTableWidget.svelte:26` imports `DataGrid.svelte` from legacy `src/ui/views/Table/components/DataGrid/`. Any change to DataGrid regresses two surfaces. Resolution: fork into `widgets/DataTable/StrictGrid/`. P1.
+**F4 — DataTable layered on legacy Table/DataGrid. FIXED 2026-04-23.**
+`DataTableWidget.svelte` imports `DataGrid.svelte` from legacy `src/ui/views/Table/components/DataGrid/`. Resolved: fork into `widgets/DataTable/StrictGrid/` + rem widths persistence (Phase 3).
 
-**F5 — Engine leaks pixel units.**
-`chartDataPipeline.ts` `chartHeightPx` returns numeric px. Engine must not dictate UI units. Rename to `chartHeightRem` + rem values. P3.
+**F5 — Engine leaks pixel units. ACCEPTED (kept as boundary).**
+`chartDataPipeline.ts` `chartHeightPx` returns numeric px. Решение Phase 6: оставлен как есть — это boundary к chart-библиотеке, ожидающей numeric px; переименование сломало бы 7 chart-renderer компонентов без user-visible value (YAGNI).
 
-**F6 — Inline row edits bypass `processFrontMatter`.**
-`handleRowEdit` in DataTableWidget writes via `vault.process` (full-file rewrite). Concurrent user edits in the native editor can lose data. Migrate to `fileManager.processFrontMatter`. P2 (address during Phase 3).
+**F6 — Inline row edits bypass `processFrontMatter`. FIXED 2026-04-23.**
+`handleRowEdit` мигрирован на `fileManager.processFrontMatter` с fallback на legacy path (Phase 3).
 
 **F7 — WidgetHost monolith (~730 LOC).**
-Six `init*Config` + six `{#if showConfig && widget.type === "X"}` branches. Extract `configPanelRegistry.ts`. P2 (Phase 2a enabler).
+Six `init*Config` + six `{#if showConfig && widget.type === "X"}` branches. Extract `configPanelRegistry.ts`. P2 (Phase 2a enabler). **FIXED** 2026-04-22.
+
+**F8 — CrossProjectRelationResolver absent (2026-04-30). CRITICAL.**
+`engine/relationResolver.ts` умеет разрешать wiki-links только внутри одного DataFrame. Для реализации Notion-подобных связей между двумя базами (Base 1: Счета, Base 2: Журнал транзакций) необходим `CrossProjectRelationResolver`. Без него поле `Счет: "[[Счет 1]]"` в журнале не разрешается в запись базы счетов. Блокирует M0. → **Phase M0**.
+
+**F9 — CrossProjectRollupEngine absent (2026-04-30). CRITICAL.**
+`engine/rollup.ts` вычисляет rollups только внутри одного DataFrame. Поле `Текущий баланс` в Base 1 (счета) как SUM из связанных транзакций Base 2 невозможно без `CrossProjectRollupEngine`. Зависит от F8. → **Phase M0**.
+
+**F10 — FieldConfig не расширен для Relation/Rollup (2026-04-30). HIGH.**
+`DataFieldType.Relation = "relation"` и `DataFieldType.Rollup = "rollup"` объявлены в `dataframe.ts`, но тип `FieldConfig` в `src/settings/base/settings.ts` определён как `StringFieldConfig & DateFieldConfig` — нет `RelationFieldConfig { targetProjectId }` и `RollupFieldConfig { relationField, targetField, function }`. Без расширения нельзя настроить relation/rollup поля через settings. → **Phase M0**.
+
+**F11 — Custom Properties Viewer отсутствует (2026-04-30). HIGH.**
+Обсидиан показывает YAML properties как plain-text list. Для типизированного редактирования полей (с Relation dropdown, Rollup computed display, Formula editor) нужен собственный PropertiesPanel leaf. → **Phase M2**.
+
+**F12 — Formula Editor не унифицирован (2026-04-30). MEDIUM.**
+`FormulaBar.svelte` встроен только в `DatabaseViewCanvas`. Для использования в `PropertiesPanel`, computed columns, StatsCard formula нужен единый `FormulaEditorModal` popup. Схема (PDF 2026-04-30) специфицирует UI. → **Phase M3**.
 
 ---
 
 ## 5. Execution waves
 
-Order has been revised from the original draft after the Part-D deep audit. **Phase 2 is now split** into 2a (cog paritet) and 2b (verticals first-class).
+**Обновлено 2026-04-30**: Phases 1-6 выполнены, Phase 7 отменена. Добавлены новые Engine v2 фазы M0-M5 как приоритет.
+
+**Версионная политика (важно)**: M0-M4 — внутренние выпуски в рамках 3.4.X WIP (НЕ публикуются). M5 — первый публичный релиз с Database, версия повышается до 3.5.0+ ТОЛЬКО на финальном release-cut по явному решению пользователя.
 
 | Phase | Title | Size | Risk | Blocks | Status |
 |---|---|---|---|---|---|
 | 1 | Data Flow over Folders | — | — | — | ✅ done 2026-04-22 |
 | 2a | ViewPort cog + config paritet + `configPanelRegistry` extraction | S | LOW | enables 2b | ✅ done 2026-04-22 |
-| 2b | Field presets (column layout snapshots, view-scoped) | M | LOW | — | planned (scope corrected 2026-04-23) |
-| 3 | Table Strict Grid + rem widths + DataGrid fork + `processFrontMatter` | L | HIGH | closes F4, F6 | next |
-| 4 | Formula IntelliSense polish: signature popover, inline debug panel | M | MEDIUM | — | parallel to 3 |
-| 5 | Correlation Flows: `join` pipeline step + scatter rightDataSource + Dataview event subscription | L | MEDIUM | — | |
-| 6 | Zero Pixels sweep: `@media(max-width)` → `@container`; `Npx` → rem (except 1px borders) | M | MEDIUM | last — minimises merge pain | |
-| 7 | Release wrap v3.5.0: CHANGELOG, release notes, verification, tag | S | LOW | — | |
+| 2b | Field presets (column layout snapshots, view-scoped) | M | LOW | — | ✅ done 2026-04-23 |
+| 3 | Table Strict Grid + rem widths + DataGrid fork + `processFrontMatter` | L | HIGH | closes F4, F6 | ✅ done 2026-04-23 |
+| 4 | Formula IntelliSense polish: signature popover, inline debug panel | M | MEDIUM | — | ✅ done 2026-04-23 |
+| 5 | Correlation Flows: `join` pipeline step + scatter rightDataSource + event invalidation | L | MEDIUM | — | ✅ done 2026-04-23 |
+| 6 | Zero Pixels sweep: `@media(max-width)` → `@container`; `Npx` → rem | M | MEDIUM | — | ✅ done 2026-04-23 |
+| 7 | Release wrap (CANCELLED — плагин ещё не готов к публичному выпуску) | S | LOW | — | ⛔ cancelled per user directive |
+| **M0** | **Engine v2: CrossProjectRelations + Rollups + FieldConfig extension** | **L** | **HIGH** | blocks M1, M2 | **🔜 NEXT** |
+| M1 | Field Types UI: Relation/Rollup config in DataTable | M | MEDIUM | depends on M0 | planned |
+| M3 | Formula Editor Popup (unified modal) | M | MEDIUM | parallel to M0/M1 | planned |
+| M2 | Custom Properties Viewer (PropertiesPanel leaf, uses M3 for FormulaField) | L | MEDIUM | depends on M0 + M3 | planned |
+| M4 | Pipeline Completion + Stability | M | MEDIUM | — | planned |
+| M5 | Stabilization + Release Readiness (public v3.5.0+) | L | LOW | — | planned |
 
 ### 5.1 Phase 2a — ViewPort cog + paritet (S)
 
@@ -277,13 +325,9 @@ Order has been revised from the original draft after the Part-D deep audit. **Ph
 - `grep -E "\\b([2-9]|[1-9][0-9]+)px\\b" src/ui/views/Database/widgets/` returns 0 matches (except in SVG `stroke-width` where semantically px).
 - Visual QA via Obsidian zoom 75 %/100 %/150 % — no layout breakage.
 
-### 5.7 Phase 7 — Release wrap v3.5.0 (S)
+### 5.7 Phase 7 — Release wrap v3.5.0 (⛔ CANCELLED 2026-04-23)
 
-- CHANGELOG entry `## 3.5.0 — Architectural Reset`
-- `releases/v3.5.0/` snapshot
-- Bump `package.json`, `manifest.json`, `versions.json`
-- `git tag 3.5.0`
-- **Push requires explicit user approval** (director-mode safety rule).
+**Status**: cancelled per user directive — плагин не готов к публичному выпуску. Все артефакты Phase 7 (releases/v3.5.0/ snapshot, version bump, CHANGELOG section) откачены 2026-04-23. Работа продолжается в рамках 3.4.X WIP. Публичный релиз перенесён в M5 (см. таблицу waves).
 
 ---
 
@@ -307,7 +351,7 @@ Order has been revised from the original draft after the Part-D deep audit. **Ph
 ## 7. Verification gates (every phase must pass)
 
 1. `npm run svelte-check` → 0 errors, 0 warnings
-2. `npx jest --no-coverage` → all suites pass (baseline 44/849)
+2. `npx jest --no-coverage` → all suites pass (baseline 54/923)
 3. `npm run build` → production bundle success
 4. Visual smoke in target vault (manual unless automated)
 5. `context_state.md` updated with phase summary
@@ -343,4 +387,121 @@ The following are **out of scope** for this reset:
 
 ## 10. Immediate next step
 
-**Phase 2a done** (2026-04-22). **Phase 2b scope corrected** (2026-04-23) — field-presets only, not verticals. Next concrete step is Phase 3 (Table Strict Grid + `processFrontMatter`) OR Phase 2b field-presets if the user prioritises the UX layer first. Verification gates apply per §7.
+**Phases 1-6 done** (2026-04-22/23). **Phase 7 cancelled** per user directive — плагин не готов к публичному выпуску.
+
+**СЛЕДУЮЩИЙ ШАГ (2026-04-30)**: Phase **M0** — Engine v2 Foundation:
+1. Расширить `FieldConfig` в `src/settings/base/settings.ts` (additive — `RelationFieldConfig` | `RollupFieldConfig`)
+2. Создать `src/lib/engine/crossProjectResolver.ts`
+3. Создать `src/lib/engine/crossProjectRollup.ts`
+4. Расширить `FrontMatterDataSource` для enrich с virtual derived fields
+
+Верификационные gate: svelte-check 0/0, jest all green, build PASS.
+
+**Детальная спецификация**: `docs/architecture-engine-v2.md`
+
+---
+
+## Appendix: Phase M0 — Engine v2 Foundation (детально)
+
+**Goal**: Реализовать кросс-проектные Relations и Rollups. Закрыть F8, F9, F10.
+
+### Шаг M0.1 — Расширить FieldConfig
+
+```typescript
+// src/settings/base/settings.ts — additive changes
+
+export type RelationFieldConfig = {
+  readonly type: "relation";
+  /** ID проекта, на записи которого ссылается это поле */
+  readonly targetProjectId: string;
+  /** Поле в целевом проекте для отображения записей */
+  readonly displayField?: string;
+};
+
+export type RollupFieldConfig = {
+  readonly type: "rollup";
+  /** Поле в ТЕКУЩЕМ датафрейме, содержащее wiki-links */
+  readonly relationField: string;
+  /** ID проекта, откуда берутся связанные записи (для backlinks: тот же) */
+  readonly targetProjectId?: string;
+  /** Поле в целевом датафрейме для аггрегации */
+  readonly targetField: string;
+  /** Функция аггрегации */
+  readonly function: RollupFunction;
+  readonly separator?: string;
+};
+
+// Расширить FieldConfig (без breaking change):
+export type FieldConfig = StringFieldConfig & DateFieldConfig & {
+  readonly relation?: RelationFieldConfig;
+  readonly rollup?: RollupFieldConfig;
+};
+```
+
+### Шаг M0.2 — CrossProjectRelationResolver
+
+**Файл**: `src/lib/engine/crossProjectResolver.ts` (NEW)
+
+```typescript
+/**
+ * Resolve wiki-links in a record's field to records from an EXTERNAL DataFrame.
+ * Uses externalFrameResolver to load the target project's DataFrame.
+ */
+export function resolveCrossProjectRelations(
+  record: DataRecord,
+  fieldName: string,
+  externalFrame: DataFrame
+): DataRecord[] {
+  const index = buildRecordIndex(externalFrame);
+  return getRelationTargetsWithIndex(record, fieldName, index);
+}
+
+/**
+ * Enrich all records in sourceFrame with resolved relation targets.
+ * Returns virtual field `${fieldName}__resolved` as array of target IDs.
+ */
+export function enrichFrameWithRelations(
+  sourceFrame: DataFrame,
+  fieldName: string,
+  externalFrame: DataFrame,
+  config: RelationFieldConfig
+): DataFrame;
+```
+
+### Шаг M0.3 — CrossProjectRollupEngine
+
+**Файл**: `src/lib/engine/crossProjectRollup.ts` (NEW)
+
+```typescript
+/**
+ * Compute rollup for a single record using EXTERNAL frame as target.
+ */
+export function computeCrossProjectRollup(
+  record: DataRecord,
+  config: RollupFieldConfig,
+  externalFrame: DataFrame
+): RollupResult;
+
+/**
+ * Compute rollups for all records in sourceFrame.
+ * Builds external frame index once.
+ */
+export function computeCrossProjectRollupColumn(
+  sourceFrame: DataFrame,
+  config: RollupFieldConfig,
+  externalFrame: DataFrame
+): Map<string, RollupResult>;
+```
+
+### Тесты (обязательные)
+
+- `crossProjectResolver.test.ts`: record с `Счет: "[[Счет 1]]"` → resolved record из Base 1
+- `crossProjectRollup.test.ts`: record в Base 1 получает SUM(amount) из 3 связанных транзакций Base 2
+- Edge cases: broken link (unresolved → []), empty frame, aggregation на пустом наборе
+
+### Acceptance
+
+- `tsc --noEmit --skipLibCheck` → 0 errors
+- `npx jest --no-coverage` → все suite GREEN (baseline +2 суит, +15+ тестов)
+- `npm run build` → PASS
+- Демо-тест: 2 проекта в demo vault, связанные через relation + rollup, отображают корректные данные в DataTable
