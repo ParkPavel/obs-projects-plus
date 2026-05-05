@@ -1,8 +1,10 @@
 # Notion Parity Gap Analysis — obs-projects-plus v3.4.2
 
-**Status:** Phase 2 deliverable — feeds Phase 3 ticket queue (PARITY-* tickets).
+**Status:** Living document — updated 2026-05-05 to reflect PARITY-001/004/008/string-ops shipped in `chore(v5)` push.
 **Reference docs:** `.ai_internal/NOTION_DATABASE_INTEGRATION_MASTER.md` (Parts I-V), `.ai_internal/NOTION_OBJECTS_UI_TREE.md` (§§5-20).
 **Goal target:** ≥90% Notion-parity для Database/View use-cases, осознанные исключения для multi-user features.
+
+> **Snapshot 2026-05-05**: weighted composite score **~77%** (up from 72.7% baseline). See §8 for updated table.
 
 ---
 
@@ -31,22 +33,22 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 | 8 | `people` | ⛔ | — | Single-user vault. Можно эмулировать через select-поле "Owner". |
 | 9 | `files` | 🟡 | wiki-links в string | Нет dedicated UI для drop/preview множественных файлов. PARITY-005 |
 | 10 | `checkbox` | ✅ | DataFieldType.Boolean | — |
-| 11 | `url` | 🟡 | DataFieldType.String | Нет clickable rendering. PARITY-001 |
-| 12 | `email` | 🟡 | DataFieldType.String | Нет mailto-link. PARITY-001 |
-| 13 | `phone_number` | 🟡 | DataFieldType.String | Нет tel-link / format mask. PARITY-001 |
-| 14 | `formula` | ✅ | DataFieldType.Formula + [src/ui/views/Database/engine/formulaEngine.ts](../src/ui/views/Database/engine/formulaEngine.ts) | OPP покрывает 95+ функций vs Notion ~80. **Превосходит**. |
+| 11 | `url` | ✅ | [src/lib/visualizer/linkRender.ts](../src/lib/visualizer/linkRender.ts) — `buildLinkHref`; VisualizerPane.svelte renders `<a href target="_blank">`. OWASP A03 guards (blocks `javascript:`/`data:`/`vbscript:`/`file:`). PARITY-001 ✓ | — |
+| 12 | `email` | ✅ | linkRender.ts — `mailto:` derivation; supports `Name <addr>` format. PARITY-001 ✓ | — |
+| 13 | `phone_number` | ✅ | linkRender.ts — `tel:` + digit-strip; min-digit guard. PARITY-001 ✓ | — |
+| 14 | `formula` | ✅ | DataFieldType.Formula + [src/ui/views/Dashboard/engine/formulaEngine.ts](../src/ui/views/Dashboard/engine/formulaEngine.ts) | OPP покрывает 95+ функций vs Notion ~80. **Превосходит**. |
 | 15 | `relation` | 🟡 | DataFieldType.Relation, wiki-links | One-way only. Two-way (dual_property) — PARITY-006. |
-| 16 | `rollup` | 🟡 | [src/ui/views/Database/engine/rollup.ts](../src/ui/views/Database/engine/rollup.ts) | Нет `show_original`, `show_unique`, `percent_checked`, `*_per_group`. PARITY-007 |
-| 17 | `created_time` | 🟡 | file.ctime via Dataview | Не нативное OPP-поле. PARITY-008 (auto-fields) |
+| 16 | `rollup` | 🟡 | [src/ui/views/Dashboard/engine/rollup.ts](../src/ui/views/Dashboard/engine/rollup.ts) | Нет `show_original`, `show_unique`, `percent_checked`, `*_per_group`. PARITY-007 |
+| 17 | `created_time` | ✅ | [src/lib/datasources/frontmatter/datasource.ts](../src/lib/datasources/frontmatter/datasource.ts) — `pp_created_time` injected from `TFile.stat.ctime`; `derived:true` → read-only. PARITY-008 ✓ | — |
 | 18 | `created_by` | ⛔ | — | Single-user. |
-| 19 | `last_edited_time` | 🟡 | file.mtime via Dataview | PARITY-008 |
+| 19 | `last_edited_time` | ✅ | datasource.ts — `pp_last_edited_time` from `TFile.stat.mtime`. PARITY-008 ✓ | — |
 | 20 | `last_edited_by` | ⛔ | — | Single-user. |
 | 21 | `unique_id` | ⬜ | — | Auto-increment + prefix. PARITY-009 |
 | 22 | `verification` | ⬜ | — | Низкий приоритет (компонент Notion AI). PARITY-N/A |
 | 23 | `button` | ⬜ | — | Inline action trigger. PARITY-010 (после Automation E1) |
 | 24 | `cover` (page-level) | 🟡 | Gallery view только | PARITY-011 (page-level cover в Table) |
 
-**Score Property Types:** ✅=10, 🟡=10, ⬜=3, ⛔=4 → (10 + 5) / 20 = **75%**
+**Score Property Types:** ✅=15, 🟡=5, ⬜=3, ⛔=4 → (15 + 2.5) / 20 = **~88%** *(was 75% — PARITY-001 ✓ +3 url/email/phone, PARITY-008 ✓ +2 created/edited time)*
 
 ---
 
@@ -72,9 +74,10 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 | Property filters basic | ✅ | [src/lib/datasources/frontmatter/filter.ts](../src/lib/datasources/frontmatter/filter.ts) | — |
 | AND/OR conjunction (1 level) | ✅ | FilterDefinition.conjunction | — |
 | Nested filter groups (recursive) | ⬜ | — | PARITY-017. Унифицировать с FilterIR в `lib/engine/`. |
-| Relative date (past_week/this_month/...) | ⬜ | — | PARITY-004. Low effort, high UX value. |
+| Relative date (past_week/this_month/...) | ✅ | [src/ui/app/filterFunctions.ts](../src/ui/app/filterFunctions.ts) — 7 rolling-window operators via dayjs: `is-this-year`, `is-past-week/month/year`, `is-next-week/month/year`. PARITY-004 ✓ | — |
 | Filter by formula result | 🟡 | через ComputeStep + FilterStep | PARITY-018: первоклассная поддержка |
 | Filter by rollup | ⬜ | — | PARITY-019 |
+| String starts-with / ends-with | ✅ | [src/settings/base/settings.ts](../src/settings/base/settings.ts) `StringFilterOperator`; [src/ui/app/filterFunctions.ts](../src/ui/app/filterFunctions.ts) `stringFns` — case-insensitive `startsWith/endsWith`. | — |
 | Multi-field sort | ✅ | DataTableSortCriteria[] | — |
 | Sort by formula result | 🟡 | ComputeStep + SortStep | PARITY-020: UI dropdown |
 | Group by 1 level | ✅ | GroupConfig | — |
@@ -82,7 +85,7 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 | Group date by day/week/month/year | ✅ | GroupByStep.dateGrouping | — |
 | Sort within groups | ✅ | GroupConfig.sortOrder | — |
 
-**Score Filter/Sort/Group:** ✅=8, 🟡=2, ⬜=4 → (8 + 1) / 14 = **64%**
+**Score Filter/Sort/Group:** ✅=10, 🟡=2, ⬜=3 → (10 + 1) / 15 = **~73%** *(was 64% — PARITY-004 ✓ relative dates, starts-with/ends-with ✓)*
 
 ---
 
@@ -153,28 +156,35 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 
 ## 8. Сводный Notion-parity score
 
-| Category | Score | Weight | Weighted |
-|----------|-------|--------|----------|
-| Property Types | 75% | 0.25 | 18.75 |
-| View Types | 67% | 0.20 | 13.4 |
-| Filter/Sort/Group | 64% | 0.15 | 9.6 |
-| Formula | 95% | 0.15 | 14.25 |
-| Table UI Controls | 88% | 0.15 | 13.2 |
-| Automation | 0% | 0.05 | 0 |
-| Inline UI | 70% | 0.05 | 3.5 |
-| **TOTAL** | | **1.00** | **72.7%** |
+| Category | Score | Weight | Weighted | Delta |
+|----------|-------|--------|----------|-------|
+| Property Types | **~88%** | 0.25 | 22.0 | +3.25 (PARITY-001, 008) |
+| View Types | 67% | 0.20 | 13.4 | — |
+| Filter/Sort/Group | **~73%** | 0.15 | 10.95 | +1.35 (PARITY-004, string ops) |
+| Formula | 95% | 0.15 | 14.25 | — |
+| Table UI Controls | 88% | 0.15 | 13.2 | — |
+| Automation | 0% | 0.05 | 0 | — |
+| Inline UI | 70% | 0.05 | 3.5 | — |
+| **TOTAL** | | **1.00** | **~77.3%** | **+4.6pp** |
 
-**Целевой score 90%** — достигается выполнением P0+P1 tickets из §9.
+**Baseline 2026-04-30:** 72.7%  
+**Current 2026-05-05:** ~77%  
+**Target:** 90% — requires PARITY-006, 007, 015, 016, 017 (see §9).
 
 ---
 
 ## 9. Gap Tickets — приоритизированный список
 
-См. [docs/PHASE_3_TICKETS.md](PHASE_3_TICKETS.md) — Layer 6: Notion Parity Tickets.
+> Замечание: PHASE_3_TICKETS.md перемещён в `docs/archive/` в V5.0. Backlog теперь живёт в [REFACTOR_BACKLOG_V5.md](REFACTOR_BACKLOG_V5.md).
 
-**P0 (блокируют parity ≥80%):**
-- PARITY-001 — URL/Email/Phone field rendering (1d)
-- PARITY-004 — Relative date filters (1d)
+**✅ Закрыто (2026-05-05):**
+- ~~PARITY-001~~ — URL/Email/Phone field rendering → `linkRender.ts` + VisualizerPane ✓
+- ~~PARITY-004~~ — Relative date filters → 7 dayjs rolling-window operators ✓
+- ~~PARITY-008~~ — Auto-fields (created_time/last_edited_time) → `pp_*` via TFile.stat ✓
+- String starts-with/ends-with → `StringFilterOperator` extended ✓
+- REFACTOR-003 — settings try/catch → `migrateSettings()` guarded ✓
+
+**P0 (блокируют parity ≥80%) — остаток:**
 - PARITY-006 — Two-way relations (3d)
 - PARITY-007 — Rollup full function set (2d)
 
@@ -184,7 +194,6 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 - PARITY-015 — Timeline view (10d)
 - PARITY-016 — List view (1d)
 - PARITY-017 — Nested filter groups (3d)
-- PARITY-008 — Auto-fields (created_time/last_edited_time) (1d)
 
 **P2 (UX polish):**
 - PARITY-003 — Status groups

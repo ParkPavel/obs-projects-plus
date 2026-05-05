@@ -2,13 +2,21 @@
 
 > Refresh this file at every handoff. One-page summary of where we are.
 
-## Live status (2026-05-05)
-- **session_phase**: V5.0 Foundation (documentation + architecture restart).
-- **status**: V5.0 deliverables COMPLETE. Trio of V5 docs landed; legacy V1-V4 docs archived; DOCS_INDEX rewritten. NO `src/` changes this phase.
-- **jest baseline**: 98 suites / 1597 tests PASS (unchanged from previous V4 closure).
-- **px-budget**: 191 (locked from REFACTOR-403b/404 closure).
+## Live status (2026-05-05 — post-push analysis)
+- **session_phase**: V5.0 Foundation COMPLETE. Entering V5.1 Cleanup.
+- **status**: V5.0 deliverables + accumulated PARITY work all landed in `chore(v5)` push. See `memories/repo/STATUS_2026-05-05.md` for full breakdown.
+- **jest baseline**: 98 suites / 1597 tests PASS.
+- **notion-parity score**: **~77%** (was 72.7%; PARITY-001/004/008/string-ops closed).
+- **px-budget**: 191 (locked).
 - **tsc -noEmit -skipLibCheck**: clean.
 - **build**: PASS (1 pre-existing third-party a11y warning from `obsidian-svelte/IconButton` — off-scope).
+
+## Confirmed shipped PARITY implementations (in `83a57d7`)
+- **PARITY-001** ✅ — URL/Email/Phone clickable rendering (`linkRender.ts`, OWASP A03 guards, 18 tests)
+- **PARITY-004** ✅ — 7 relative date filter operators via dayjs (36 tests)
+- **PARITY-008** ✅ — `pp_created_time`/`pp_last_edited_time` auto-fields from `TFile.stat` (4 tests)
+- **String ops** ✅ — `starts-with`/`ends-with` string filter operators (9 tests)
+- **REFACTOR-003** ✅ — `migrateSettings()` try/catch (10 tests)
 
 ## V5 vision (one-liner)
 Перенос плагина с парадигмы "Database view с виджетами" на парадигму **"Dashboard-as-canvas + Matryoshka sub-bases"**: каждая заметка с frontmatter — мини-база, между внутренними базами проекта живут двусторонние relations и rollups.
