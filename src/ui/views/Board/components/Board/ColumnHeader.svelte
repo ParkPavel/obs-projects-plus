@@ -202,8 +202,8 @@
 
   .actions {
     display: inline-flex;
-    gap: 4px;
-    margin-left: 6px;
+    gap: 0.25rem;
+    margin-left: 0.375rem;
     opacity: 0.3;
     transition: opacity 150ms ease;
   }

@@ -1,0 +1,578 @@
+<script lang="ts">
+  import { createEventDispatcher } from "svelte";
+  import {
+    evaluateFormulaWithError,
+    validateFormulaExpression,
+    getFormulaFunctions,
+    getFormulaMetadata,
+    type FormulaMetadata,
+  } from "../engine/formulaEngine";
+  import { findEnclosingCall } from "../engine/formulaMetadata";
+  import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import { i18n } from "src/lib/stores/i18n";
+  import FormulaVisualEditor from "./FormulaVisualEditor.svelte";
+  import FormulaDebugPanel from "./FormulaDebugPanel.svelte";
+
+  export let expression: string = "";
+  export let fields: string[] = [];
+  export let previewRecord: DataRecord | undefined = undefined;
+
+  const dispatch = createEventDispatcher<{
+    apply: { name: string; expression: string };
+    cancel: void;
+  }>();
+
+  let fieldName = "";
+  let inputValue = expression;
+  // Keep inputValue in sync when parent changes formula (e.g. field switch)
+  let lastExpression = expression;
+  $: if (expression !== lastExpression) {
+    inputValue = expression;
+    lastExpression = expression;
+  }
+  let errors: string[] = [];
+  let previewValue: Optional<DataValue> = null;
+  let runtimeError: string | null = null;
+  let debugDismissed = false;
+  let showSuggestions = false;
+  let cursorWord = "";
+  let cursorPosition = 0;
+  let filteredSuggestions: string[] = [];
+  let selectedSuggestionIndex = -1;
+  let activeSignature: FormulaMetadata | null = null;
+  let mode: "code" | "visual" = "code";
+
+  const allFunctions = getFormulaFunctions();
+
+  $: {
+    errors = inputValue.trim()
+      ? validateFormulaExpression(inputValue, fields)
+      : [];
+    if (inputValue.trim() && errors.length === 0 && previewRecord) {
+      const result = evaluateFormulaWithError(inputValue, previewRecord);
+      previewValue = result.value;
+      runtimeError = result.error ?? null;
+    } else {
+      previewValue = null;
+      runtimeError = null;
+    }
+  }
+
+  // Reset debug dismissal when the runtime error is resolved.
+  // Do NOT reset on every keystroke — that would nullify the Dismiss button
+  // for users still editing a broken expression.
+  $: if (!runtimeError) debugDismissed = false;
+
+  $: {
+    const word = cursorWord.toUpperCase();
+    if (word.length > 0) {
+      const fnMatches = allFunctions.filter((f) => f.startsWith(word));
+      const fieldMatches = fields.filter((f) =>
+        f.toUpperCase().startsWith(word)
+      );
+      filteredSuggestions = [...fnMatches, ...fieldMatches].slice(0, 12);
+    } else {
+      filteredSuggestions = [];
+    }
+    selectedSuggestionIndex = -1;
+  }
+
+  // Signature popover: prefer highlighted suggestion, otherwise enclosing call.
+  $: {
+    let meta: FormulaMetadata | undefined;
+    if (
+      showSuggestions &&
+      selectedSuggestionIndex >= 0 &&
+      selectedSuggestionIndex < filteredSuggestions.length
+    ) {
+      const candidate = filteredSuggestions[selectedSuggestionIndex];
+      if (candidate) meta = getFormulaMetadata(candidate);
+    }
+    if (!meta) {
+      const enclosing = findEnclosingCall(inputValue, cursorPosition);
+      if (enclosing) meta = getFormulaMetadata(enclosing);
+    }
+    activeSignature = meta ?? null;
+  }
+
+
+  function handleInput(e: Event) {
+    const target = e.target as HTMLTextAreaElement;
+    inputValue = target.value;
+
+    // Extract word at cursor for autocomplete
+    const pos = target.selectionStart ?? 0;
+    cursorPosition = pos;
+    const before = inputValue.substring(0, pos);
+    const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+    cursorWord = match ? match[0] : "";
+    showSuggestions = cursorWord.length > 0 && filteredSuggestions.length > 0;
+  }
+
+  function handleCursorMove(e: Event) {
+    const target = e.target as HTMLTextAreaElement;
+    cursorPosition = target.selectionStart ?? 0;
+  }
+
+  function insertSuggestion(suggestion: string) {
+    const doc = activeDocument ?? document;
+    const textarea = doc.querySelector(
+      ".ppp-formula-input"
+    ) as HTMLTextAreaElement | null;
+    if (!textarea) return;
+
+    const pos = textarea.selectionStart ?? 0;
+    const before = inputValue.substring(0, pos);
+    const after = inputValue.substring(pos);
+    const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+    const replaceFrom = match ? pos - match[0].length : pos;
+
+    // If it's a function, add parentheses
+    const isFunc = allFunctions.includes(suggestion);
+    const insert = isFunc ? suggestion + "(" : suggestion;
+
+    inputValue =
+      inputValue.substring(0, replaceFrom) + insert + after;
+    showSuggestions = false;
+    cursorWord = "";
+
+    // Restore focus
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const newPos = replaceFrom + insert.length;
+      textarea.setSelectionRange(newPos, newPos);
+      cursorPosition = newPos;
+    });
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      if (showSuggestions) {
+        showSuggestions = false;
+        e.stopPropagation();
+      } else {
+        dispatch("cancel");
+      }
+    }
+    if (showSuggestions && filteredSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        selectedSuggestionIndex =
+          selectedSuggestionIndex < filteredSuggestions.length - 1
+            ? selectedSuggestionIndex + 1
+            : 0;
+        scrollSuggestionIntoView();
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        selectedSuggestionIndex =
+          selectedSuggestionIndex > 0
+            ? selectedSuggestionIndex - 1
+            : filteredSuggestions.length - 1;
+        scrollSuggestionIntoView();
+        return;
+      }
+      if (e.key === "Enter" && !e.ctrlKey && selectedSuggestionIndex >= 0) {
+        e.preventDefault();
+        insertSuggestion(filteredSuggestions[selectedSuggestionIndex] as string);
+        return;
+      }
+    }
+    if (e.key === "Enter" && e.ctrlKey) {
+      if (errors.length === 0 && inputValue.trim()) {
+        dispatch("apply", { name: fieldName.trim(), expression: inputValue.trim() });
+      }
+    }
+    if (e.key === "Tab" && showSuggestions && filteredSuggestions.length > 0) {
+      e.preventDefault();
+      const idx = selectedSuggestionIndex >= 0 ? selectedSuggestionIndex : 0;
+      insertSuggestion(filteredSuggestions[idx] as string);
+    }
+  }
+
+  function scrollSuggestionIntoView() {
+    requestAnimationFrame(() => {
+      const doc = activeDocument ?? document;
+      const el = doc.querySelector(".ppp-formula-suggestion--selected");
+      if (el) el.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function formatPreview(val: Optional<DataValue>): string {
+    if (val == null) return "—";
+    if (typeof val === "boolean") return val ? "true" : "false";
+    if (Array.isArray(val)) return val.join(", ");
+    return String(val);
+  }
+</script>
+
+<div class="ppp-formula-bar" on:keydown={handleKeydown}>
+  <div class="ppp-formula-header">
+    <span class="ppp-formula-title">{$i18n.t("views.dashboard.formula.title")}</span>
+    <div class="ppp-formula-mode-toggle">
+      <button
+        class="ppp-mode-btn"
+        class:ppp-mode-btn--active={mode === "code"}
+        on:click={() => mode = "code"}
+      >
+        {$i18n.t("views.dashboard.formula.mode-code")}
+      </button>
+      <button
+        class="ppp-mode-btn"
+        class:ppp-mode-btn--active={mode === "visual"}
+        on:click={() => mode = "visual"}
+      >
+        {$i18n.t("views.dashboard.formula.mode-visual")}
+      </button>
+    </div>
+    <span class="ppp-formula-hint">{$i18n.t("views.dashboard.formula.hint")}</span>
+  </div>
+
+  <div class="ppp-formula-name-row">
+    <label class="ppp-formula-label" for="formula-name">{$i18n.t("views.dashboard.formula.field-name")}</label>
+    <input
+      id="formula-name"
+      class="ppp-formula-name-input"
+      type="text"
+      bind:value={fieldName}
+      placeholder={$i18n.t("views.dashboard.formula.field-placeholder")}
+    />
+  </div>
+
+  {#if mode === "code"}
+    <div class="ppp-formula-editor">
+      <textarea
+        class="ppp-formula-input"
+        class:ppp-formula-input--error={errors.length > 0}
+        value={inputValue}
+        on:input={handleInput}
+        on:click={handleCursorMove}
+        on:keyup={handleCursorMove}
+        on:focus={handleCursorMove}
+        placeholder={$i18n.t("views.dashboard.formula.expression-placeholder")}
+        rows="3"
+        spellcheck="false"
+      ></textarea>
+
+      {#if activeSignature}
+        <div class="ppp-formula-signature" role="status" aria-live="polite">
+          <code class="ppp-formula-signature-code">{activeSignature.signature}</code>
+          <span class="ppp-formula-signature-meta">
+            <span class="ppp-formula-signature-returns">
+              {$i18n.t("views.dashboard.formula.signature-returns")}: <strong>{activeSignature.returnType}</strong>
+            </span>
+            <span class="ppp-formula-signature-category">
+              {$i18n.t("views.dashboard.formula.signature-category")}: {activeSignature.category}
+            </span>
+          </span>
+          <p class="ppp-formula-signature-doc">{activeSignature.doc}</p>
+        </div>
+      {/if}
+
+      {#if showSuggestions && filteredSuggestions.length > 0}
+        <div class="ppp-formula-suggestions" role="listbox">
+          {#each filteredSuggestions as suggestion, i}
+            <button
+              class="ppp-formula-suggestion"
+              class:ppp-formula-suggestion--fn={allFunctions.includes(suggestion)}
+              class:ppp-formula-suggestion--selected={i === selectedSuggestionIndex}
+              role="option"
+              aria-selected={i === selectedSuggestionIndex}
+              on:click|stopPropagation={() => insertSuggestion(suggestion)}
+            >
+              {suggestion}
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {:else}
+    <div class="ppp-formula-editor">
+      <FormulaVisualEditor
+        expression={inputValue}
+        {fields}
+        on:change={(e) => { inputValue = e.detail; }}
+      />
+    </div>
+  {/if}
+
+  {#if errors.length > 0}
+    <div class="ppp-formula-errors">
+      {#each errors as error}
+        <div class="ppp-formula-error">{error}</div>
+      {/each}
+    </div>
+  {/if}
+
+  {#if runtimeError && !debugDismissed}
+    <FormulaDebugPanel
+      message={runtimeError}
+      cursorPosition={cursorPosition}
+      expression={inputValue}
+      on:dismiss={() => (debugDismissed = true)}
+    />
+  {/if}
+
+  {#if previewValue != null}
+    <div class="ppp-formula-preview">
+      <span class="ppp-formula-preview-label">{$i18n.t("views.dashboard.formula.preview")}</span>
+      <span class="ppp-formula-preview-value">{formatPreview(previewValue)}</span>
+    </div>
+  {/if}
+
+  <div class="ppp-formula-actions">
+    <button class="ppp-btn ppp-btn--secondary" on:click={() => dispatch("cancel")}>
+      {$i18n.t("views.dashboard.formula.cancel")}
+    </button>
+    <button
+      class="ppp-btn ppp-btn--primary"
+      disabled={errors.length > 0 || !inputValue.trim() || !fieldName.trim()}
+      on:click={() => dispatch("apply", { name: fieldName.trim(), expression: inputValue.trim() })}
+    >
+      {$i18n.t("views.dashboard.formula.apply")}
+    </button>
+  </div>
+</div>
+
+<style>
+  .ppp-formula-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m, 0.375rem);
+    font-size: var(--font-ui-small);
+  }
+
+  .ppp-formula-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .ppp-formula-title {
+    font-weight: 600;
+    color: var(--text-normal);
+  }
+
+  .ppp-formula-mode-toggle {
+    display: inline-flex;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    overflow: hidden;
+  }
+
+  .ppp-mode-btn {
+    padding: 0.125rem 0.5rem;
+    font-size: var(--font-ui-smaller);
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .ppp-mode-btn:hover {
+    background: var(--background-modifier-hover);
+  }
+
+  .ppp-mode-btn--active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+
+  .ppp-mode-btn--active:hover {
+    background: var(--interactive-accent-hover);
+  }
+
+  .ppp-formula-hint {
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-formula-editor {
+    position: relative;
+  }
+
+  .ppp-formula-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ppp-formula-label {
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .ppp-formula-name-input {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+  }
+
+  .ppp-formula-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    resize: vertical;
+    min-height: 4rem;
+    box-sizing: border-box;
+  }
+
+  .ppp-formula-input:focus {
+    border-color: var(--interactive-accent);
+    outline: none;
+  }
+
+  .ppp-formula-input--error {
+    border-color: var(--text-error);
+  }
+
+  .ppp-formula-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    max-height: 12rem;
+    overflow-y: auto;
+    box-shadow: var(--shadow-s, 0 0.125rem 0.5rem rgba(0,0,0,0.15));
+  }
+
+  .ppp-formula-suggestion {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.25rem 0.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-normal);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+  }
+
+  .ppp-formula-suggestion:hover,
+  .ppp-formula-suggestion--selected {
+    background: var(--background-modifier-hover);
+  }
+
+  .ppp-formula-suggestion--fn {
+    color: var(--text-accent);
+  }
+
+  .ppp-formula-signature {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding: 0.375rem 0.5rem;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+  }
+
+  .ppp-formula-signature-code {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    color: var(--text-accent);
+  }
+
+  .ppp-formula-signature-meta {
+    display: inline-flex;
+    gap: 0.75rem;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+  }
+
+  .ppp-formula-signature-doc {
+    margin: 0;
+    color: var(--text-normal);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-formula-errors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .ppp-formula-error {
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-formula-preview {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    background: var(--background-secondary);
+    border-radius: var(--radius-s, 0.25rem);
+  }
+
+  .ppp-formula-preview-label {
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-formula-preview-value {
+    font-family: var(--font-monospace);
+    color: var(--text-normal);
+  }
+
+  .ppp-formula-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .ppp-btn {
+    padding: 0.375rem 0.75rem;
+    border: none;
+    border-radius: var(--radius-s, 0.25rem);
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+  }
+
+  .ppp-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ppp-btn--primary {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+
+  .ppp-btn--primary:hover:not(:disabled) {
+    background: var(--interactive-accent-hover);
+  }
+
+  .ppp-btn--secondary {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  .ppp-btn--secondary:hover {
+    background: var(--background-modifier-border);
+  }
+</style>

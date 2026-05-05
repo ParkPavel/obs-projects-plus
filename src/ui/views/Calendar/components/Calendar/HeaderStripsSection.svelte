@@ -538,10 +538,6 @@
     /* v8.1: Preserve the inset start/end indicator (if any) alongside the hover shadow */
     box-shadow: var(--_strip-inset-shadow, none), 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
   }
-
-  .strip-segment:focus {
-    outline: none;
-  }
   .strip-segment:focus-visible {
     outline: 0.125rem solid var(--strip-color);
     outline-offset: -0.125rem;
@@ -623,7 +619,7 @@
   .strip-dot {
     width: var(--ppp-space-2, 0.25rem);
     height: var(--ppp-space-2, 0.25rem);
-    border-radius: var(--ppp-radius-full, 9999px);
+    border-radius: var(--ppp-radius-full, 624.9375rem);
     background: var(--strip-color);
     flex-shrink: 0;
   }
@@ -696,7 +692,7 @@
     }
 
     /* v9.4: Tighter inset indicator + radius on narrow mobile columns
-     * to avoid perceived left-shift from disproportionate 2px shadow */
+     * to avoid perceived left-shift from disproportionate 2 shadow */
     .strip-segment.is-start {
       --_strip-inset-shadow: inset 0.0625rem 0 0 var(--strip-color);
       border-top-left-radius: var(--ppp-radius-sm, 0.125rem);
@@ -956,7 +952,7 @@
     .resize-handle-end {
       opacity: 1;
       width: 0.75rem;
-      /* 44px minimum touch target */
+      /* 44 minimum touch target */
       min-width: 2.75rem;
       margin: 0 -1rem;
     }

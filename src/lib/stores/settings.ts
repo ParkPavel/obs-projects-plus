@@ -1,4 +1,4 @@
-import { produce, castImmutable } from "immer";
+﻿import { produce, castImmutable } from "immer";
 import { writable } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
 
@@ -174,7 +174,7 @@ function createSettings() {
         produce(state, (draft) => {
           const idx = draft.projects.findIndex((ws) => ws.id === projectId);
           const normalizedView = view.type === "table"
-            ? { ...view, type: "database" }
+            ? { ...view, type: "dashboard" }
             : view;
 
           if (idx >= 0) {

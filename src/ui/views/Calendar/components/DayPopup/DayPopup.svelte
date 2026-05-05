@@ -7,7 +7,7 @@
    * - Smooth spring animations
    * - Gesture support (swipe to dismiss)
    * - Safe area handling
-   * - Perfect touch targets (44px minimum)
+   * - Perfect touch targets (44 minimum)
    * - Accessibility (ARIA, focus trap)
    */
   import dayjs from "dayjs";
@@ -569,7 +569,7 @@
     --ios-border: var(--background-modifier-border);
     --ios-shadow: 0 -0.5rem 2.5rem rgba(0, 0, 0, 0.25);
     --ios-accent: var(--interactive-accent);
-    --ios-touch: 2.75rem; /* 44px iOS minimum */
+    --ios-touch: 2.75rem; /* 44 iOS minimum */
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -803,7 +803,7 @@
   }
   
   /* Small viewports need special handling */
-  @media (max-height: 25rem) { /* 400px at 16px base */
+  @media (max-height: 25rem) { /* 400 at 16 base */
     .ios-popup {
       max-height: calc(100vh - 1rem);
       max-height: calc(100dvh - 1rem);
@@ -938,7 +938,7 @@
   /* ═══════════════════════════════════════════════════════════════
      RESPONSIVE
      ═══════════════════════════════════════════════════════════════ */
-  @media (max-width: 30rem) { /* 480px at 16px base */
+  @media (max-width: 30rem) { /* 480 at 16 base */
     .ios-popup-header-content {
       padding: 0.75rem 1rem;
     }
@@ -961,7 +961,7 @@
   }
   
   /* Very small screens - compact everything */
-  @media (max-width: 20rem), (max-height: 30rem) { /* 320px / 480px at 16px base */
+  @media (max-width: 20rem), (max-height: 30rem) { /* 320 / 480 at 16 base */
     .ios-popup-header-content {
       padding: 0.5rem 0.75rem;
       gap: 0.5rem;

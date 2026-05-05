@@ -10,9 +10,8 @@ import "dayjs/locale/zh-cn";
 // Design tokens CSS
 import "./ui/tokens/tokens.css";
 
-import { either, task, taskEither } from "fp-ts";
-import { pipe } from "fp-ts/lib/function";
-import { Plugin, TFolder, WorkspaceLeaf, addIcon } from "obsidian";
+import { either } from "fp-ts";
+import { Plugin, TFile, TFolder, WorkspaceLeaf, addIcon, Notice } from "obsidian";
 import "obsidian-dataview";
 import { createDataRecord, createProject } from "src/lib/dataApi";
 import { api } from "src/lib/stores/api";
@@ -21,11 +20,27 @@ import { app, plugin } from "src/lib/stores/obsidian";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
+import { commandBus, emitCommand } from "src/lib/stores/commandBus";
+import {
+  VIEW_TYPE_VISUALIZER_PANE,
+  VisualizerPaneView,
+} from "src/ui/views/VisualizerPane/visualizerPaneView";
+import {
+  RelationPickerModal,
+  pathFromFile,
+} from "src/ui/views/VisualizerPane/RelationPickerModal";
+import { appendRelationToFile } from "src/lib/visualizer/relationsWriter";
+import { CommandManager } from "src/managers/CommandManager";
+import {
+  createInverseIndexStore,
+  type InverseIndexStore,
+} from "src/lib/relations/inverseIndexStore";
 import { get, type Unsubscriber } from "svelte/store";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
 import {
+  DEFAULT_SETTINGS,
   migrateSettings,
   type ProjectDefinition,
   type ProjectId,
@@ -37,10 +52,14 @@ import { ProjectsView, VIEW_TYPE_PROJECTS } from "./view";
 dayjs.extend(isoWeek);
 dayjs.extend(localizedFormat);
 
-const PROJECTS_PLUGIN_ID = "obs-projects-plus";
-
 export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeSettings?: Unsubscriber;
+  unsubscribeCommandBus?: Unsubscriber;
+  inverseIndexStore?: InverseIndexStore;
+  /** REFACTOR-008: command registration is delegated to a dedicated manager. */
+  private commandManager?: CommandManager;
+  /** REFACTOR-205: stored so the lifecycle is explicit and reload-safe. */
+  private fileSystemWatcher?: ObsidianFileSystemWatcher;
 
   /**
    * onload runs when the plugin is enabled.
@@ -77,13 +96,28 @@ export default class ProjectsPlusPlugin extends Plugin {
       (leaf) => new ProjectsView(leaf, this)
     );
 
+    // R1.1 — Visualizer sidebar leaf. Default OFF (per Revision 3 §5.6),
+    // available via command palette (`toggle-visualizer-pane`) and file menu
+    // (`Open in YAML Visualizer`).
+    this.registerView(
+      VIEW_TYPE_VISUALIZER_PANE,
+      (leaf) => new VisualizerPaneView(leaf, this),
+    );
+
+    // R2.4 — single shared inverse-relation index for all Visualizer panes
+    // and (future) Database widgets. Lifecycle is bound to the plugin so
+    // we never duplicate event handlers.
+    this.inverseIndexStore = createInverseIndexStore(this.app);
+
     this.registerHoverLinkSource(VIEW_TYPE_PROJECTS, {
       defaultMod: true,
       display: t("obsidian.hover-link-settings"),
     });
 
     // Allow the user to create a project by right-clicking a folder in the
-    // File explorer.
+    // File explorer. R0.4a: also expose Visualizer / relation entry points
+    // for individual files. Concrete handlers live in subscribers (Visualizer
+    // leaf — R1, Database canvas — Stage A.10) reached through the command bus.
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         if (file instanceof TFolder) {
@@ -111,6 +145,23 @@ export default class ProjectsPlusPlugin extends Plugin {
                     },
                   }
                 ).open();
+              });
+          });
+        } else if (file instanceof TFile && file.extension === "md") {
+          menu.addItem((item) => {
+            item
+              .setTitle(t("menus.file.open-in-visualizer.title"))
+              .setIcon("layout-list")
+              .onClick(() => {
+                emitCommand("open-visualizer-for-file", { filePath: file.path });
+              });
+          });
+          menu.addItem((item) => {
+            item
+              .setTitle(t("menus.file.add-relation.title"))
+              .setIcon("link")
+              .onClick(() => {
+                emitCommand("add-relation", { filePath: file.path });
               });
           });
         }
@@ -169,10 +220,101 @@ export default class ProjectsPlusPlugin extends Plugin {
       },
     });
 
+    // ── Stage A.10 — Database schema commands ─────────────────
+    // These dispatch into whichever Database view is currently active via
+    // the global command-bus. checkCallback gates visibility on the
+    // presence of a Projects leaf so the palette stays clean when no
+    // project is open.
+    this.addCommand({
+      id: "open-schema",
+      name: t("commands.open-schema.name"),
+      checkCallback: (checking) => {
+        const hasProjectLeaf =
+          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
+        if (!hasProjectLeaf) return false;
+        if (!checking) emitCommand("open-schema");
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "add-field",
+      name: t("commands.add-field.name"),
+      checkCallback: (checking) => {
+        const hasProjectLeaf =
+          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
+        if (!hasProjectLeaf) return false;
+        if (!checking) emitCommand("add-field");
+        return true;
+      },
+    });
+
+    // ── R0.4a — Visualizer / Formula / Relation skeleton commands ────────
+    // Always-available palette entries. Concrete handlers (Visualizer leaf,
+    // Formula editor modal, sub-base canvas) attach in later R-phases.
+    // Until then these emit no-op messages so palette discoverability is in
+    // place without partial UX.
+    this.addCommand({
+      id: "toggle-visualizer-pane",
+      name: t("commands.toggle-visualizer-pane.name"),
+      callback: () => {
+        emitCommand("toggle-visualizer-pane");
+      },
+    });
+
+    this.addCommand({
+      id: "open-visualizer-for-file",
+      name: t("commands.open-visualizer-for-file.name"),
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file || file.extension !== "md") return false;
+        if (!checking) emitCommand("open-visualizer-for-file", { filePath: file.path });
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "add-relation",
+      name: t("commands.add-relation.name"),
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file || file.extension !== "md") return false;
+        if (!checking) emitCommand("add-relation", { filePath: file.path });
+        return true;
+      },
+    });
+
+    this.addCommand({
+      id: "open-formula-editor",
+      name: t("commands.open-formula-editor.name"),
+      callback: () => {
+        emitCommand("open-formula-editor");
+      },
+    });
+
+    this.addCommand({
+      id: "add-sub-base",
+      name: t("commands.add-sub-base.name"),
+      checkCallback: (checking) => {
+        const hasProjectLeaf =
+          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
+        if (!hasProjectLeaf) return false;
+        if (!checking) emitCommand("add-sub-base");
+        return true;
+      },
+    });
+
     // Initialize Svelte stores so that Svelte components can access the App and
     // Plugin objects.
     app.set(this.app);
     plugin.set(this);
+
+    // REFACTOR-008: instantiate the command manager and wire the activate-view
+    // callback before settings drive the first sync cycle below.
+    this.commandManager = new CommandManager(this.app);
+    this.commandManager.setActivateViewFunction((projectId, viewId) => {
+      this.activateView(projectId, viewId);
+    });
 
     // Save settings to disk whenever settings has been updated.
     this.unsubscribeSettings = settings.subscribe((value) => {
@@ -180,9 +322,30 @@ export default class ProjectsPlusPlugin extends Plugin {
       void this.saveData(value).catch((err) => console.error('Failed to save settings:', err));
     });
 
-    const watcher = new ObsidianFileSystemWatcher(this);
+    // R1.1 — subscribe to global command-bus for Visualizer-pane lifecycle.
+    // The bus carries actions emitted from palette / file-menu / toolbar;
+    // here we react to the ones that need plugin-level workspace access
+    // (creating/revealing the right sidebar leaf). View-scoped actions
+    // continue to be handled by their own subscribers (e.g. DatabaseViewCanvas
+    // for `open-schema` / `add-field`).
+    let lastBusTs = 0;
+    this.unsubscribeCommandBus = commandBus.subscribe((msg) => {
+      if (!msg || msg.ts <= lastBusTs) return;
+      lastBusTs = msg.ts;
+      if (msg.action === "toggle-visualizer-pane") {
+        void this.toggleVisualizerPane();
+      } else if (msg.action === "open-visualizer-for-file") {
+        const payload = msg.payload as { filePath?: string } | undefined;
+        void this.revealVisualizerPane(payload?.filePath);
+      } else if (msg.action === "add-relation") {
+        const payload = msg.payload as { filePath?: string } | undefined;
+        void this.openRelationPicker(payload?.filePath);
+      }
+    });
 
-    registerFileEvents(watcher);
+    this.fileSystemWatcher = new ObsidianFileSystemWatcher(this);
+
+    registerFileEvents(this.fileSystemWatcher);
   }
 
   /**
@@ -193,28 +356,131 @@ export default class ProjectsPlusPlugin extends Plugin {
     if (this.unsubscribeSettings) {
       this.unsubscribeSettings();
     }
+    if (this.unsubscribeCommandBus) {
+      this.unsubscribeCommandBus();
+    }
+    if (this.inverseIndexStore) {
+      this.inverseIndexStore.destroy();
+      delete this.inverseIndexStore;
+    }
+    // REFACTOR-205: drop the watcher reference. Obsidian's plugin
+    // lifecycle auto-disposes events registered via `registerEvent`,
+    // but releasing the closure-holding instance lets GC reclaim
+    // anything captured by datasource callbacks across reload cycles.
+    if (this.fileSystemWatcher) {
+      delete this.fileSystemWatcher;
+    }
+  }
+
+  /**
+   * R1.1 — Toggle the Visualizer sidebar pane. Reveals when hidden,
+   * detaches when already open. Bound to `toggle-visualizer-pane` action.
+   */
+  async toggleVisualizerPane(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_VISUALIZER_PANE);
+    if (existing.length > 0) {
+      // Already open — hide all and return.
+      for (const leaf of existing) {
+        leaf.detach();
+      }
+      return;
+    }
+    await this.revealVisualizerPane();
+  }
+
+  /**
+   * R1.1 — Reveal the Visualizer pane in the right sidebar, optionally
+   * focusing the workspace on a given file first so the pane reflects it.
+   */
+  async revealVisualizerPane(filePath?: string): Promise<void> {
+    if (filePath) {
+      const file = this.app.vault.getAbstractFileByPath(filePath);
+      if (file instanceof TFile) {
+        await this.app.workspace.getLeaf("tab").openFile(file);
+      }
+    }
+    const right = this.app.workspace.getRightLeaf(false);
+    if (!right) return;
+    await right.setViewState({
+      type: VIEW_TYPE_VISUALIZER_PANE,
+      active: true,
+    });
+    this.app.workspace.revealLeaf(right);
+  }
+
+  /**
+   * R1.3 — Open the relation-picker modal for the given (or active) file.
+   * On choice, appends a wikilink under the default relation key.
+   */
+  async openRelationPicker(filePath?: string): Promise<void> {
+    const target = filePath
+      ? this.app.vault.getAbstractFileByPath(filePath)
+      : this.app.workspace.getActiveFile();
+    if (!(target instanceof TFile) || target.extension !== "md") return;
+
+    const modal = new RelationPickerModal(
+      this.app,
+      (chosen) => {
+        void appendRelationToFile(this.app, target, {
+          path: pathFromFile(chosen),
+        });
+      },
+      { excludePath: target.path },
+    );
+    modal.open();
   }
 
   /**
    * loadSettings loads settings from disk, migrates it to the latest version,
    * and updates the Svelte store for settings.
+   *
+   * P0 safety: a migration failure (corrupted JSON, unknown version, partial
+   * data mutated by another plugin) MUST NOT crash plugin onload. Fall back
+   * to DEFAULT_SETTINGS, surface a Notice, and persist a backup of the raw
+   * payload for forensic recovery.
    */
   async loadSettings(): Promise<void> {
-    return pipe(
-      taskEither.tryCatch(() => this.loadData(), either.toError),
-      taskEither.map(migrateSettings),
-      taskEither.chain(taskEither.fromEither),
-      task.map(
-        either.fold(
-          (err) => {
-            throw err;
-          },
-          (value) => {
-            settings.set(value);
-          }
-        )
-      )
-    )();
+    let raw: unknown = null;
+    try {
+      raw = await this.loadData();
+    } catch (err) {
+      console.error("[Projects+] Failed to read settings from disk:", err);
+      new Notice(
+        "Projects+: failed to load settings — using defaults. Check console for details.",
+        10000
+      );
+      settings.set(Object.assign({}, DEFAULT_SETTINGS));
+      return;
+    }
+
+    const result = migrateSettings(raw);
+    if (either.isLeft(result)) {
+      console.error(
+        "[Projects+] Settings migration failed:",
+        result.left,
+        "raw payload:",
+        raw
+      );
+      // Persist a backup of the broken payload so the user can recover manually.
+      try {
+        await this.saveData({
+          __broken_backup: raw,
+          __broken_backup_reason: result.left.message,
+          __broken_backup_at: new Date().toISOString(),
+          ...DEFAULT_SETTINGS,
+        });
+      } catch (saveErr) {
+        console.error("[Projects+] Failed to persist broken-payload backup:", saveErr);
+      }
+      new Notice(
+        `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; original payload backed up inside data.json under "__broken_backup".`,
+        15000
+      );
+      settings.set(Object.assign({}, DEFAULT_SETTINGS));
+      return;
+    }
+
+    settings.set(result.right);
   }
 
   /**
@@ -250,143 +516,27 @@ export default class ProjectsPlusPlugin extends Plugin {
 
   /**
    * ensureCommands syncs enabled and registered show commands for individual
-   * views and projects
+   * views and projects.
+   *
+   * REFACTOR-008: this is a thin facade over `managers/CommandManager`.
+   * Behavior contract is preserved — settings.subscribe still calls this
+   * — but the diff/registration logic now lives in a single class that
+   * is independently unit-tested.
    */
   ensureCommands(
     enabledCommands: ShowCommand[],
     projects: ProjectDefinition[]
   ): void {
-    const registeredCommandIds = new Set<string>(
-      Object.keys(this.app.commands.commands).filter((id) =>
-        id.startsWith(`${PROJECTS_PLUGIN_ID}:show:`)
-      )
-    );
-
-    this.removeRedundantCommands(
-      enabledCommands,
-      projects,
-      registeredCommandIds
-    );
-    this.addMissingCommands(enabledCommands, projects, registeredCommandIds);
-  }
-
-  /**
-   * removeRedundantCommands cleans up registered show commands that have either
-   * been disabled from the settings, or where the project or view has been
-   * deleted.
-   */
-  removeRedundantCommands = (
-    enabledCommands: ShowCommand[],
-    projects: ProjectDefinition[],
-    registeredCommandIds: Set<string>
-  ): void => {
-    registeredCommandIds.forEach((id) => {
-      const enabledCommand = enabledCommands.find(
-        (command) => id === getShowCommandId(command, true)
-      );
-
-      // Unregister command if it's been disabled.
-      if (!enabledCommand) {
-        this.app.commands.removeCommand(id);
-        return;
-      }
-
-      const project = projects.find((project) => {
-        if (enabledCommand.view) {
-          return (
-            project.id === enabledCommand.project &&
-            project.views.find((view) => view.id === enabledCommand.view)
-          );
-        } else {
-          return project.id === enabledCommand.project;
-        }
+    if (!this.commandManager) {
+      // Defensive: settings store can fire synchronously during onload
+      // before commandManager is constructed in some test harnesses.
+      this.commandManager = new CommandManager(this.app);
+      this.commandManager.setActivateViewFunction((projectId, viewId) => {
+        this.activateView(projectId, viewId);
       });
-
-      // Unregister command if it's been deleted.
-      if (!project) {
-        this.app.commands.removeCommand(id);
-      }
-    });
-  };
-
-  /**
-   * addMissingCommands registers show commands that have been enabled but not
-   * registered.
-   */
-  addMissingCommands = (
-    enabledCommands: ShowCommand[],
-    projects: ProjectDefinition[],
-    registeredCommandIds: Set<string>
-  ): void => {
-    enabledCommands.forEach((command) => {
-      const globalId = getShowCommandId(command, true);
-      const localId = getShowCommandId(command, false);
-
-      if (registeredCommandIds.has(globalId)) {
-        // Command has been both enabled and registered. All is well.
-        return;
-      }
-
-      const project = projects.find(
-        (project) => project.id === command.project
-      );
-
-      if (project) {
-        if (command.view) {
-          const view = project?.views.find((view) => view.id === command.view);
-
-          if (view) {
-            this.addCommand({
-              id: localId,
-              name: `Show ${project.name} > ${view.name}`,
-              callback: () => {
-                void this.activateView(project.id, view.id);
-              },
-            });
-          }
-        } else {
-          this.addCommand({
-            id: localId,
-            name: `Show ${project.name}`,
-            callback: () => {
-              void this.activateView(project.id);
-            },
-          });
-        }
-      }
-    });
-  };
-}
-
-/**
- * getShowCommandId returns the command identifier for a Show command.
- *
- * A command id for Show commands has the following structure:
- *
- * show:<project-id>
- * show:<project-id>:<view-id>
- *
- * If `global` is true, the plugin id is prepended to the command id.
- *
- * obs-projects-plus:show:<project-id>
- * obs-projects-plus:show:<project-id>:<view-id>
- */
-function getShowCommandId(cmd: ShowCommand, global: boolean): string {
-  const res = [];
-
-  if (global) {
-    res.push(PROJECTS_PLUGIN_ID);
+    }
+    this.commandManager.ensureCommands(enabledCommands, projects);
+    this.commandManager.finalizeRegistrations(this);
   }
-
-  res.push("show");
-
-  if (cmd.project) {
-    res.push(cmd.project);
-  }
-  if (cmd.view) {
-    res.push(cmd.view);
-  }
-
-  return res.join(":");
 }
 

@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 import { produce } from "immer";
 
 
@@ -314,8 +314,8 @@ export function createProject(): ProjectDefinition {
     views: [
       Object.assign({}, DEFAULT_VIEW, {
         id: uuidv4(),
-        name: get(i18n).t("views.database.name"),
-        type: "database",
+        name: get(i18n).t("views.dashboard.name"),
+        type: "dashboard",
       }),
     ],
   });

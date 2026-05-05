@@ -121,11 +121,11 @@
   input:focus {
     outline: none;
     border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+    box-shadow: 0 0 0 0.125rem var(--interactive-accent-hover);
   }
 
   .embed {
-    margin: 0 8px;
+    margin: 0 0.5rem;
   }
   
   .time-picker-toggle {
@@ -158,6 +158,6 @@
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
   }
 </style>

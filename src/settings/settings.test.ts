@@ -10,11 +10,11 @@ describe("migrate from v1 to v3", () => {
     expect(migrate(v1demo)).toStrictEqual(v3demo);
   });
 
-  it("normalizes legacy table view type to database in migrateSettings", () => {
+  it("normalizes legacy table/database view types to dashboard in migrateSettings", () => {
     const migrated = migrateSettings(v1demo);
     expect(either.isRight(migrated)).toBe(true);
     if (either.isRight(migrated)) {
-      expect(migrated.right.projects[0]?.views[0]?.type).toBe("database");
+      expect(migrated.right.projects[0]?.views[0]?.type).toBe("dashboard");
     }
   });
 });

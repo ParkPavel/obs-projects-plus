@@ -27,7 +27,7 @@
 
   export let fields: DataField[];
   export let record: DataRecord;
-  export let onSave: (record: DataRecord) => void;
+  export let onSave: (record: DataRecord) => Promise<void> | void;
   export let allRecords: DataRecord[] = [];
   // v3.0.8: Unified open callback with open mode (false=same tab, 'tab'=new tab, 'window'=new window)
   export let onOpenNote: ((openMode: false | 'tab' | 'window') => void) | undefined = undefined;
@@ -124,7 +124,7 @@
   });
   
   // Perform actual save
-  async function performSave() {
+  async function performSave(): Promise<void> {
     if (isSaving) return;
     
     const now = Date.now();
@@ -132,7 +132,7 @@
     if (now - lastSaveTime < SAVE_DEBOUNCE_MS) {
       // Schedule for later
       if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => performSave(), SAVE_DEBOUNCE_MS);
+      saveTimer = setTimeout(() => { void performSave(); }, SAVE_DEBOUNCE_MS);
       return;
     }
     
@@ -140,7 +140,10 @@
     lastSaveTime = now;
     
     try {
-      onSave(record);
+      // REFACTOR-305: await so close-during-save races are visible to
+      // callers. `onSave` is typed `Promise<void> | void` — awaiting a
+      // synchronous return is a no-op.
+      await onSave(record);
       // Brief visual feedback handled by CSS animation
     } catch (error) {
       console.error('[EditNote] Failed to save:', error);
@@ -156,13 +159,13 @@
   // Debounced save (for text inputs)
   function debouncedSave() {
     if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => performSave(), SAVE_DEBOUNCE_MS);
+    saveTimer = setTimeout(() => { void performSave(); }, SAVE_DEBOUNCE_MS);
   }
   
   // Immediate save (for checkboxes, dates, selects)
   function immediateSave() {
     if (saveTimer) clearTimeout(saveTimer);
-    performSave();
+    void performSave();
   }
 
   // Helper to update value (triggers reactivity)
@@ -195,9 +198,11 @@
     }
   }
   
-  // Manual save function (for non-autosave mode)
-  function handleManualSave() {
-    onSave(record);
+  // Manual save function (for non-autosave mode). REFACTOR-305: returns
+  // the underlying promise so callers (e.g. modal close handler) can
+  // await it to avoid close-during-save races.
+  async function handleManualSave(): Promise<void> {
+    await onSave(record);
   }
 
   // Группировка и сортировка полей
@@ -609,8 +614,14 @@
   }
   
   .title-input:focus {
+    box-shadow: 0 0 0 0.125rem var(--interactive-accent-hover);
+  }
+
+  /* REFACTOR-305: keyboard focus ring is delegated to the global
+     `.obs-projects-plus :focus-visible` rule so mouse clicks don't
+     show a redundant outline on top of the title input's box-shadow. */
+  .title-input:focus:not(:focus-visible) {
     outline: none;
-    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
   }
   
   .title-action-btn {
@@ -746,7 +757,10 @@
     transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
                 opacity 0.2s ease-out, 
                 padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    max-height: 2000px; /* Large enough for most content */
+    /* REFACTOR-305: replaced the prior 2000-pixel hardcode with a
+       rem-scaled token (125rem at the default root size) so it
+       respects user font scaling for accessibility. */
+    max-height: 125rem;
     opacity: 1;
     will-change: max-height, opacity;
   }

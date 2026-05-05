@@ -49,7 +49,7 @@ published: false
     </Button>
   </ModalButtonGroup>
   <p
-    style={"color: var(--text-muted); margin-top: 45px; font-size: var(--font-ui-smaller);"}
+    style={"color: var(--text-muted); margin-top: 2.8125rem; font-size: var(--font-ui-smaller);"}
   >
     <strong>Psst! 👋</strong> {t("onboarding.hint")}
   </p>
@@ -81,10 +81,10 @@ published: false
   pre {
     background-color: var(--background-primary-alt);
     border-radius: var(--radius-s);
-    padding: 8px;
+    padding: 0.5rem;
   }
   ol {
     margin: 0;
-    padding: 0 22px;
+    padding: 0 1.375rem;
   }
 </style>

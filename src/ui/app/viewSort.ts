@@ -7,6 +7,7 @@ import {
 } from "../../lib/dataframe/dataframe";
 import type { SortDefinition, SortingCriteria } from "src/settings/settings";
 import type { DataRecord } from "../../lib/dataframe/dataframe";
+import { isNullish as kernelIsNullish } from "src/lib/engine/emptiness";
 
 export function applySort(frame: DataFrame, sort: SortDefinition): DataFrame {
   return produce(frame, (draft) => {
@@ -38,7 +39,9 @@ export function sortRecords(records: DataRecord[], sort: SortDefinition) {
 }
 
 function isEmpty(value: unknown): boolean {
-  return value === undefined || value === null;
+  // REFACTOR-106: delegated to canonical kernel; sort wants strict
+  // null/undefined semantics so `""` and `0` remain real values.
+  return kernelIsNullish(value);
 }
 
 function sortCriteria(

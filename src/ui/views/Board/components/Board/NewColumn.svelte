@@ -83,7 +83,7 @@
   }
 
   section:focus-within {
-    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+    box-shadow: 0 0 0 0.125rem var(--background-modifier-border-focus);
   }
 
   .add-column {

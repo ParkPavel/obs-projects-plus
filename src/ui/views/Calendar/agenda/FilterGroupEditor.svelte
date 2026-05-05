@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
@@ -70,15 +70,15 @@
     dispatch('update', { ...group, groups: group.groups.filter((_, i) => i !== index) });
   }
   
-  /** Get the row prefix — "Где" for first item overall, "и" otherwise */
+  /** Get the row prefix вЂ” "Р“РґРµ" for first item overall, "Рё" otherwise */
   function getPrefix(itemIndex: number): string {
-    if (itemIndex === 0) return t('where-prefix') || 'Где';
-    return t('and-prefix') || 'и';
+    if (itemIndex === 0) return t('where-prefix') || 'Р“РґРµ';
+    return t('and-prefix') || 'Рё';
   }
 </script>
 
 <div class="fg" class:fg--root={isRoot} class:fg--nested={!isRoot && depth > 0}>
-  <!-- ═══ Conjunction header ═══ -->
+  <!-- в•ђв•ђв•ђ Conjunction header в•ђв•ђв•ђ -->
   {#if hasContent || (!isRoot && depth > 0)}
     <div class="fg-header">
       {#if !isRoot && depth > 0}
@@ -103,7 +103,7 @@
     </div>
   {/if}
   
-  <!-- ═══ Filter rows ═══ -->
+  <!-- в•ђв•ђв•ђ Filter rows в•ђв•ђв•ђ -->
   {#if hasContent}
     <div class="fg-rows">
       {#each group.filters as filter, index (filter.id)}
@@ -136,10 +136,10 @@
       {/each}
     </div>
   {:else if isRoot}
-    <p class="fg-empty">{t('empty') || 'No filters — all records will be shown'}</p>
+    <p class="fg-empty">{t('empty') || 'No filters вЂ” all records will be shown'}</p>
   {/if}
   
-  <!-- ═══ Add buttons ═══ -->
+  <!-- в•ђв•ђв•ђ Add buttons в•ђв•ђв•ђ -->
   <div class="fg-actions">
     <button class="fg-add" type="button" on:click={addFilter}>
       <Icon name="plus" size="xs" />
@@ -156,9 +156,9 @@
 </div>
 
 <style>
-  /* ═══════════════════════════════════════
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
      GROUP CONTAINER
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .fg {
     display: flex;
     flex-direction: column;
@@ -172,14 +172,14 @@
   .fg--nested {
     padding: 0.5rem 0.625rem;
     border: 1px solid var(--background-modifier-border);
-    border-left: 3px solid var(--interactive-accent);
+    border-left: 0.1875rem solid var(--interactive-accent);
     border-radius: 0.5rem;
     background: var(--background-secondary);
   }
   
-  /* ═══════════════════════════════════════
-     HEADER — conjunction + delete
-     ═══════════════════════════════════════ */
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     HEADER вЂ” conjunction + delete
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .fg-header {
     display: flex;
     align-items: center;
@@ -210,7 +210,6 @@
     font-size: 0.75rem;
     font-family: var(--font-interface);
     cursor: pointer;
-    outline: none;
     appearance: none;
     -webkit-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -232,18 +231,18 @@
     color: var(--text-normal);
   }
   
-  /* ═══════════════════════════════════════
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
      ROWS LIST
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .fg-rows {
     display: flex;
     flex-direction: column;
     gap: 1px;
   }
   
-  /* ═══════════════════════════════════════
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
      NESTED GROUP ROW
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .fg-nested-row {
     display: flex;
     align-items: flex-start;
@@ -267,9 +266,9 @@
     min-width: 0;
   }
   
-  /* ═══════════════════════════════════════
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
      EMPTY STATE
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .fg-empty {
     padding: 0.75rem 0.5rem;
     text-align: center;
@@ -279,9 +278,9 @@
     margin: 0;
   }
   
-  /* ═══════════════════════════════════════
-     ADD BUTTONS — subtle text links
-     ═══════════════════════════════════════ */
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     ADD BUTTONS вЂ” subtle text links
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .fg-actions {
     display: flex;
     align-items: center;
@@ -319,9 +318,9 @@
     margin: 0 0.125rem;
   }
   
-  /* ═══════════════════════════════════════
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
      TOUCH DEVICES
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   @media (pointer: coarse) {
     .fg--nested {
       padding: 0.625rem 0.75rem;

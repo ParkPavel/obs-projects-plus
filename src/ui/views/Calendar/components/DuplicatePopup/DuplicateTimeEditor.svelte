@@ -146,7 +146,7 @@
   }
   
   /* Mobile adjustments */
-  @media (max-width: 30rem) { /* 480px at 16px base */
+  @media (max-width: 30rem) { /* 480 at 16 base */
     .time-editor {
       flex-wrap: wrap;
     }

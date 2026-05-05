@@ -436,7 +436,7 @@
     cursor: pointer;
     opacity: 0.85;
     transition: opacity 150ms ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
   }
 
   .projects--board--zoom-badge:hover {

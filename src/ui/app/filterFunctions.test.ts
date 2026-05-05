@@ -177,6 +177,45 @@ describe('matchesCondition', () => {
     const record = makeRecord({ priority: 5 });
     expect(matchesCondition(makeCond('priority', 'gt', '3'), record)).toBe(true);
   });
+
+  // ── Stage A.10 — array values vs string operators (Relation/Repeated) ──
+  it('Relation array — `contains` matches any element', () => {
+    const record = makeRecord({ owners: ['Alice', 'Bob'] });
+    expect(matchesCondition(makeCond('owners', 'contains', 'ali'), record)).toBe(true);
+    expect(matchesCondition(makeCond('owners', 'contains', 'zoe'), record)).toBe(false);
+  });
+
+  it('Relation array — `not-contains` requires every element to fail', () => {
+    const record = makeRecord({ owners: ['Alice', 'Bob'] });
+    expect(matchesCondition(makeCond('owners', 'not-contains', 'zoe'), record)).toBe(true);
+    expect(matchesCondition(makeCond('owners', 'not-contains', 'ali'), record)).toBe(false);
+  });
+
+  it('Relation array — `is` matches any exact element', () => {
+    const record = makeRecord({ owners: ['Alice', 'Bob'] });
+    expect(matchesCondition(makeCond('owners', 'is', 'Bob'), record)).toBe(true);
+    expect(matchesCondition(makeCond('owners', 'is', 'Carol'), record)).toBe(false);
+  });
+
+  it('Relation array — empty array: affirmative false, negative true', () => {
+    const record = makeRecord({ owners: [] as string[] });
+    expect(matchesCondition(makeCond('owners', 'contains', 'x'), record)).toBe(false);
+    expect(matchesCondition(makeCond('owners', 'not-contains', 'x'), record)).toBe(true);
+  });
+
+  // ── Stage A.10 — undefined value with negative operators ──
+  it('undefined value with `is-not` returns true', () => {
+    const record = makeRecord({});
+    expect(matchesCondition(makeCond('missing', 'is-not', 'x'), record)).toBe(true);
+    expect(matchesCondition(makeCond('missing', 'not-contains', 'x'), record)).toBe(true);
+    expect(matchesCondition(makeCond('missing', 'neq', '0'), record)).toBe(true);
+  });
+
+  it('undefined value with affirmative operators returns false (no silent drop)', () => {
+    const record = makeRecord({});
+    expect(matchesCondition(makeCond('missing', 'is', 'x'), record)).toBe(false);
+    expect(matchesCondition(makeCond('missing', 'contains', 'x'), record)).toBe(false);
+  });
 });
 
 // ════════════════════════════════════════

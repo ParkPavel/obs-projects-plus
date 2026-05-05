@@ -27,6 +27,18 @@ export function fieldIcon(field: DataField): string {
       return "check-square";
     case DataFieldType.Date:
       return field.typeConfig?.time ? "clock" : "calendar";
+    // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.5a — icons for the
+    // five Stage A field types that previously fell through to "file-question".
+    case DataFieldType.Select:
+      return "list-checks";
+    case DataFieldType.Status:
+      return "circle-dot";
+    case DataFieldType.Formula:
+      return "function-square";
+    case DataFieldType.Relation:
+      return "link";
+    case DataFieldType.Rollup:
+      return "sigma";
   }
   return "file-question";
 }
@@ -52,6 +64,16 @@ export function fieldDisplayText(field: DataField): string {
       return field.typeConfig?.time
         ? get(i18n).t("data-types.datetime")
         : get(i18n).t("data-types.date");
+    case DataFieldType.Select:
+      return get(i18n).t("data-types.select");
+    case DataFieldType.Status:
+      return get(i18n).t("data-types.status");
+    case DataFieldType.Formula:
+      return get(i18n).t("data-types.formula");
+    case DataFieldType.Relation:
+      return get(i18n).t("data-types.relation");
+    case DataFieldType.Rollup:
+      return get(i18n).t("data-types.rollup");
   }
   return get(i18n).t("data-types.unknown");
 }

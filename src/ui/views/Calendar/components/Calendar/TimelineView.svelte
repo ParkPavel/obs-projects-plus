@@ -673,7 +673,7 @@
   <div
     use:portalToBody
     class="ppp-strip-ghost-portal"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:4px; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:1.5px solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow:0 4px 12px rgba(0,0,0,0.12);"
+    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.12);"
     aria-hidden="true"
   >
     {#if stripGhost.title}
@@ -683,7 +683,7 @@
     {/if}
     {#if stripEdgeLabel}
       <span
-        style="position:absolute; top:-1.5rem; right:0; background:var(--text-accent); color:var(--text-on-accent); font-size:0.6875rem; font-weight:600; padding:0.125rem 0.5rem; border-radius:4px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.2);"
+        style="position:absolute; top:-1.5rem; right:0; background:var(--text-accent); color:var(--text-on-accent); font-size:0.6875rem; font-weight:600; padding:0.125rem 0.5rem; border-radius:0.25rem; white-space:nowrap; box-shadow: 0 0.125rem 0.5rem rgba(0,0,0,0.2);"
       >{stripEdgeLabel}</span>
     {/if}
   </div>
@@ -695,7 +695,7 @@
   <div
     use:portalToBody
     class="ppp-timed-ghost-portal"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-left:3px solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow:0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
+    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-left:0.1875rem solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.15), 0 0 0 1px color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
     aria-hidden="true"
   >
     <!-- v4.0.2: Resize handle indicators on portal ghost -->
@@ -711,7 +711,7 @@
     {/if}
     <!-- v3.3.4: Edge date label for cross-period ghost -->
     {#if timedEdgeLabel}
-      <div style="position:absolute; top:-1.25rem; right:0; background:var(--text-accent); color:var(--text-on-accent); font-size:var(--font-ui-smaller); font-weight:600; padding:0.125rem 0.5rem; border-radius:0.25rem; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.2);">{timedEdgeLabel}</div>
+      <div style="position:absolute; top:-1.25rem; right:0; background:var(--text-accent); color:var(--text-on-accent); font-size:var(--font-ui-smaller); font-weight:600; padding:0.125rem 0.5rem; border-radius:0.25rem; white-space:nowrap; box-shadow: 0 0.125rem 0.5rem rgba(0,0,0,0.2);">{timedEdgeLabel}</div>
     {/if}
   </div>
   <!-- v3.3.4: Snap line across the viewport at ghost top -->
@@ -753,7 +753,7 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    border-right: 2px solid var(--background-modifier-border);
+    border-right: 0.125rem solid var(--background-modifier-border);
     z-index: 10;
     background: var(--background-primary);
     /* v6.2: Sticky axis that follows vertical scroll */
@@ -790,7 +790,7 @@
   .projects-calendar-timeline-days-header {
     display: flex;
     height: 3.75rem;
-    border-bottom: 2px solid var(--background-modifier-border);
+    border-bottom: 0.125rem solid var(--background-modifier-border);
     flex-shrink: 0;
     background: var(--background-primary);
     z-index: 1;
@@ -798,7 +798,7 @@
   }
   
   .projects-calendar-timeline-days-header.sticky-mobile {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
   }
   
   .projects-calendar-day-header {
@@ -819,7 +819,7 @@
   
   .projects-calendar-day-header.today {
     background: var(--background-modifier-hover);
-    border-bottom: 3px solid var(--text-accent);
+    border-bottom: 0.1875rem solid var(--text-accent);
     animation: today-header-pulse 2s ease-out 1;
   }
   
@@ -893,7 +893,7 @@
   /* AllDay Section */
   .projects-calendar-allday-section {
     display: flex;
-    border-bottom: 2px solid var(--background-modifier-border);
+    border-bottom: 0.125rem solid var(--background-modifier-border);
     background: var(--background-primary);
     min-height: 0;
     /* v7.5: Use overflow: hidden to prevent strips from escaping container on mobile */
@@ -939,8 +939,8 @@
     bottom: 0;
     border-radius: var(--radius-s, 0.25rem);
     background: color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary));
-    border: 1.5px solid color-mix(in srgb, var(--interactive-accent) 50%, transparent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
     pointer-events: none;
     z-index: 10;
     /* v4.0.3: Removed transition — instant ghost feedback prevents perceived

@@ -119,7 +119,7 @@
     background: var(--background-modifier-hover);
   }
   .project-trigger:focus-visible {
-    outline: 2px solid var(--interactive-accent);
+    outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.125rem;
   }
   .project-name {
@@ -154,7 +154,7 @@
   }
 
   :global(.clickable-icon:focus-visible) {
-    outline: 2px solid var(--interactive-accent);
+    outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.125rem;
     background: var(--background-modifier-hover);
   }

@@ -1,1 +1,0 @@
-export { DatabaseView } from "./databaseView";

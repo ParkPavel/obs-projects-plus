@@ -138,7 +138,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 120px;
+    min-height: 7.5rem;
     padding: var(--size-4-4);
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
@@ -147,7 +147,7 @@
   
   .error-boundary-content {
     text-align: center;
-    max-width: 400px;
+    max-width: 25rem;
   }
   
   .error-icon {
@@ -221,7 +221,7 @@
   }
   
   .error-retry-button:focus-visible {
-    outline: 2px solid var(--interactive-accent);
-    outline-offset: 2px;
+    outline: 0.125rem solid var(--interactive-accent);
+    outline-offset: 0.125rem;
   }
 </style>

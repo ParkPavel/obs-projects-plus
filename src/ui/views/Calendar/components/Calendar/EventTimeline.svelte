@@ -4,7 +4,7 @@
    * Shows timeline with hour markers based on startHour/endHour
    * 
    * v6.0: Uses rem-based heights for proper scrolling
-   * Each hour slot = 3rem (48px at default font) for readable content
+   * Each hour slot = 3rem (48 at default font) for readable content
    * 
    * ROADMAP §2.6 compliance:
    * - userTimezone for timezone-aware display

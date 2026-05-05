@@ -134,7 +134,7 @@
     height: 1.5rem;
     padding: 0;
     border: none;
-    border-radius: 6px;
+    border-radius: 0.375rem;
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
@@ -161,16 +161,16 @@
   .floating-toggle {
     position: fixed;
     /* v3.1.0: Account for iOS notch/safe area with fallback */
-    top: max(8px, env(safe-area-inset-top, 8px));
+    top: max(0.5rem, env(safe-area-inset-top, 0.5rem));
     z-index: 100;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 2rem;
+    height: 2rem;
     padding: 0;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 8px;
+    border-radius: 0.5rem;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0.5;
@@ -179,13 +179,13 @@
   }
 
   .floating-toggle.primary {
-    left: 8px;
+    left: 0.5rem;
     background: var(--background-primary);
     color: var(--text-normal);
   }
 
   .floating-toggle.secondary {
-    left: 48px;
+    left: 3rem;
     background: var(--background-secondary);
     color: var(--text-muted);
   }
@@ -193,7 +193,7 @@
   .floating-toggle:hover {
     opacity: 1;
     transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
   }
 
   .floating-toggle:active {
@@ -203,7 +203,7 @@
   .content-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
     flex: 1;
     overflow: hidden;
   }
@@ -217,7 +217,7 @@
   .right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
     flex-wrap: wrap;
     margin-left: auto;
   }
@@ -225,7 +225,7 @@
   .left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
     flex-wrap: wrap;
   }
 
@@ -238,14 +238,14 @@
   .container.isMobile {
     flex-direction: column;
     align-items: stretch;
-    padding: 8px 12px;
-    gap: 8px;
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
   }
 
   .isMobile .content-wrapper {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 0.5rem;
   }
 
   .isMobile .left {
@@ -276,19 +276,19 @@
   /* Mobile floating buttons */
   @media (max-width: 30rem) {
     .floating-toggle {
-      width: 36px;
-      height: 36px;
+      width: 2.25rem;
+      height: 2.25rem;
       opacity: 0.6;
     }
 
     .floating-toggle.primary {
-      left: 6px;
-      top: 6px;
+      left: 0.375rem;
+      top: 0.375rem;
     }
 
     .floating-toggle.secondary {
-      left: 50px;
-      top: 6px;
+      left: 3.125rem;
+      top: 0.375rem;
     }
   }
 </style>

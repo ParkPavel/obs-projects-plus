@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { app } from '../../../../../lib/stores/obsidian';
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
@@ -6,6 +6,7 @@
   import { Icon } from "obsidian-svelte";
   import { getScrollBehavior } from 'src/lib/helpers/animation';
   import { calendarLogger } from '../../logger';
+  import { hexToHsv, hsvToHex } from "src/lib/colors/math";
 
   export let record: DataRecord;
   export let checkField: string | undefined;
@@ -124,94 +125,6 @@
         valueValue = hsv.v;
       }
     }
-  }
-  
-  /**
-   * Convert hex color to HSV
-   */
-  function hexToHsv(hex: string): { h: number; s: number; v: number } | null {
-    hex = hex.replace(/^#/, '');
-    
-    let r: number, g: number, b: number;
-    if (hex.length === 3) {
-      const c0 = hex.charAt(0);
-      const c1 = hex.charAt(1);
-      const c2 = hex.charAt(2);
-      r = parseInt(c0 + c0, 16);
-      g = parseInt(c1 + c1, 16);
-      b = parseInt(c2 + c2, 16);
-    } else if (hex.length >= 6) {
-      r = parseInt(hex.slice(0, 2), 16);
-      g = parseInt(hex.slice(2, 4), 16);
-      b = parseInt(hex.slice(4, 6), 16);
-    } else {
-      return null;
-    }
-    
-    r /= 255;
-    g /= 255;
-    b /= 255;
-    
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-    
-    let h = 0;
-    let s = 0;
-    const v = max;
-    
-    if (delta !== 0) {
-      s = delta / max;
-      
-      if (max === r) {
-        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
-      } else if (max === g) {
-        h = ((b - r) / delta + 2) / 6;
-      } else {
-        h = ((r - g) / delta + 4) / 6;
-      }
-    }
-    
-    return {
-      h: Math.round(h * 360),
-      s: Math.round(s * 100),
-      v: Math.round(v * 100)
-    };
-  }
-  
-  /**
-   * Convert HSV to hex
-   */
-  function hsvToHex(h: number, s: number, v: number): string {
-    s /= 100;
-    v /= 100;
-    
-    const c = v * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = v - c;
-    
-    let r = 0, g = 0, b = 0;
-    
-    if (h >= 0 && h < 60) {
-      r = c; g = x; b = 0;
-    } else if (h >= 60 && h < 120) {
-      r = x; g = c; b = 0;
-    } else if (h >= 120 && h < 180) {
-      r = 0; g = c; b = x;
-    } else if (h >= 180 && h < 240) {
-      r = 0; g = x; b = c;
-    } else if (h >= 240 && h < 300) {
-      r = x; g = 0; b = c;
-    } else {
-      r = c; g = 0; b = x;
-    }
-    
-    const toHex = (val: number) => {
-      const hex = Math.round((val + m) * 255).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    };
-    
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
   
   /**
@@ -360,13 +273,13 @@
   /**
    * v4.0.0: Corrected interaction model
    * 
-   * ПРАВИЛЬНАЯ ЛОГИКА:
-   * - Single tap/click → показать Actions menu (настройки записи)
-   * - Ctrl+Click (desktop) → открыть заметку в новой вкладке
-   * - Double tap (mobile) → открыть заметку в новой вкладке
-   * - Long press (mobile) → расширенное контекстное меню
+   * РџР РђР’РР›Р¬РќРђРЇ Р›РћР“РРљРђ:
+   * - Single tap/click в†’ РїРѕРєР°Р·Р°С‚СЊ Actions menu (РЅР°СЃС‚СЂРѕР№РєРё Р·Р°РїРёСЃРё)
+   * - Ctrl+Click (desktop) в†’ РѕС‚РєСЂС‹С‚СЊ Р·Р°РјРµС‚РєСѓ РІ РЅРѕРІРѕР№ РІРєР»Р°РґРєРµ
+   * - Double tap (mobile) в†’ РѕС‚РєСЂС‹С‚СЊ Р·Р°РјРµС‚РєСѓ РІ РЅРѕРІРѕР№ РІРєР»Р°РґРєРµ
+   * - Long press (mobile) в†’ СЂР°СЃС€РёСЂРµРЅРЅРѕРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ
    * 
-   * ВАЖНО: Tap должен показывать настройки, НЕ открывать заметку!
+   * Р’РђР–РќРћ: Tap РґРѕР»Р¶РµРЅ РїРѕРєР°Р·С‹РІР°С‚СЊ РЅР°СЃС‚СЂРѕР№РєРё, РќР• РѕС‚РєСЂС‹РІР°С‚СЊ Р·Р°РјРµС‚РєСѓ!
    */
   
   // Double tap detection - variables declared at top of script
@@ -410,13 +323,13 @@
       return;
     }
     
-    // Ctrl+Click → open in new tab (desktop)
+    // Ctrl+Click в†’ open in new tab (desktop)
     if (event.ctrlKey || event.metaKey) {
       dispatch('openInNewWindow');
       return;
     }
     
-    // Normal click → toggle actions menu (show settings)
+    // Normal click в†’ toggle actions menu (show settings)
     showActions = !showActions;
     if (!showActions) {
       showColorPalette = false;
@@ -444,7 +357,7 @@
     longPressTimeout = setTimeout(() => {
       if (!touchMoved) {
         isLongPress = true;
-        // Long press → show actions menu + haptic feedback
+        // Long press в†’ show actions menu + haptic feedback
         showActions = true;
         if (navigator.vibrate) {
           navigator.vibrate(50);
@@ -457,8 +370,8 @@
    * Touch end - detect single tap vs double tap
    * v3.0.1: Ignore if user was scrolling
    * 
-   * - Single tap → toggle actions menu (settings)
-   * - Double tap → open note in new tab
+   * - Single tap в†’ toggle actions menu (settings)
+   * - Double tap в†’ open note in new tab
    */
   function handleTouchEnd(event: TouchEvent) {
     // Clear debounce timer
@@ -500,7 +413,7 @@
       return; // Don't trigger record open - these have their own handlers
     }
     
-    // Debounce: если уже в процессе обработки, игнорируем
+    // Debounce: РµСЃР»Рё СѓР¶Рµ РІ РїСЂРѕС†РµСЃСЃРµ РѕР±СЂР°Р±РѕС‚РєРё, РёРіРЅРѕСЂРёСЂСѓРµРј
     if (touchHandled) {
       return;
     }
@@ -527,7 +440,7 @@
     
     // Double tap detection
     if (now - lastTapTime < DOUBLE_TAP_INTERVAL) {
-      // Double tap → open note in new tab
+      // Double tap в†’ open note in new tab
       lastTapTime = 0;
       if (doubleTapTimeout) {
         clearTimeout(doubleTapTimeout);
@@ -541,7 +454,7 @@
       doubleTapTimeout = setTimeout(() => {
         if (lastTapTime === now) {
           // No second tap - execute single tap action
-          // Single tap → toggle actions menu (NOT open note)
+          // Single tap в†’ toggle actions menu (NOT open note)
           showActions = !showActions;
           if (!showActions) {
             showColorPalette = false;
@@ -573,7 +486,7 @@
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      // Enter/Space → toggle actions menu
+      // Enter/Space в†’ toggle actions menu
       showActions = !showActions;
       if (!showActions) {
         showColorPalette = false;
@@ -795,7 +708,7 @@
             <div class="hsl-preview-row">
               <div class="hsl-preview" style:--preview-color={hsvColor}></div>
               <div class="hsl-values">
-                <span>H: {hueValue}°</span>
+                <span>H: {hueValue}В°</span>
                 <span>S: {saturationValue}%</span>
                 <span>V: {valueValue}%</span>
               </div>
@@ -849,7 +762,7 @@
                     on:touchend|stopPropagation|preventDefault={() => removeFromFavorites(color)}
                     aria-label="Remove"
                   >
-                    ×
+                    Г—
                   </button>
                 </div>
               {/each}
@@ -1351,7 +1264,6 @@
   }
   
   .hex-input:focus {
-    outline: none;
     border-color: var(--interactive-accent);
     box-shadow: 0 0 0 0.125rem rgba(var(--interactive-accent-rgb), 0.2);
   }

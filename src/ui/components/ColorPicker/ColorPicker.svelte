@@ -3,11 +3,21 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { Icon } from "obsidian-svelte";
   import { i18n } from '../../../lib/stores/i18n';
+  import { hexToHsv, hsvToHex } from '../../../lib/colors/math';
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
   /** Current color value (hex) */
   export let value: string = '#3b82f6';
+  /**
+   * Optional palette of colors already in use by the surrounding project
+   * context (e.g. sibling agenda lists, project highlight rules). Rendered
+   * as a swatch row above Favorites so the user can re-use existing
+   * colors without retyping. Empty array hides the section.
+   */
+  export let projectPalette: string[] = [];
+  /** Custom label for the project palette section. */
+  export let projectPaletteLabel: string = '';
 
   // Internal HSV state
   let hueValue = 220;
@@ -25,6 +35,21 @@
   // Hex input
   let customHexInput = '';
   let hexInputError = false;
+
+  // Deduplicated, normalized project palette — strips empties and
+  // collapses case-insensitive duplicates so the section never repeats.
+  $: normalizedProjectPalette = (() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of projectPalette) {
+      if (!c) continue;
+      const key = c.trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(c.trim());
+    }
+    return out;
+  })();
   
   // Favorites - stored in localStorage (shared with DayPopup/RecordItem)
   const FAVORITES_KEY = 'obsidian-projects-calendar-favorites';
@@ -89,54 +114,6 @@
       saturationValue = result.s;
       valueValue = result.v;
     }
-  }
-  
-  function hexToHsv(hex: string): { h: number; s: number; v: number } | null {
-    hex = hex.replace('#', '');
-    if (hex.length === 3) {
-      hex = hex.charAt(0)+hex.charAt(0)+hex.charAt(1)+hex.charAt(1)+hex.charAt(2)+hex.charAt(2);
-    }
-    if (hex.length !== 6) return null;
-    
-    const r = parseInt(hex.slice(0,2), 16) / 255;
-    const g = parseInt(hex.slice(2,4), 16) / 255;
-    const b = parseInt(hex.slice(4,6), 16) / 255;
-    
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const d = max - min;
-    
-    let hue = 0;
-    if (d !== 0) {
-      if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-      else if (max === g) hue = ((b - r) / d + 2) / 6;
-      else hue = ((r - g) / d + 4) / 6;
-    }
-    
-    return {
-      h: Math.round(hue * 360),
-      s: max === 0 ? 0 : Math.round((d / max) * 100),
-      v: Math.round(max * 100)
-    };
-  }
-  
-  function hsvToHex(hue: number, sat: number, val: number): string {
-    const s = sat / 100;
-    const v = val / 100;
-    const c = v * s;
-    const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
-    const m = v - c;
-    
-    let r = 0, g = 0, b = 0;
-    if (hue < 60) { r = c; g = x; }
-    else if (hue < 120) { r = x; g = c; }
-    else if (hue < 180) { g = c; b = x; }
-    else if (hue < 240) { g = x; b = c; }
-    else if (hue < 300) { r = x; b = c; }
-    else { r = c; b = x; }
-    
-    const toHex = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
   
   // Apply color immediately
@@ -290,7 +267,7 @@
 <div class="color-picker">
   <!-- Section: HSV Picker -->
   <div class="palette-section">
-    <span class="palette-label">Выбор цвета</span>
+    <span class="palette-label">{$i18n.t('components.color.pick-color')}</span>
     
     <!-- Saturation/Value picker -->
     <div 
@@ -360,11 +337,44 @@
   </div>
   
   <!-- Section: Favorites (matches DayPopup palette-grid compact) -->
+  {#if normalizedProjectPalette.length > 0}
+    <div class="palette-section">
+      <div class="section-header">
+        <span class="palette-label">{projectPaletteLabel || $i18n.t('components.color.project-palette')}</span>
+      </div>
+      <div class="favorites-grid">
+        {#each normalizedProjectPalette as pc}
+          <div class="swatch-container">
+            <button
+              class="color-swatch"
+              class:selected={currentHex.toLowerCase() === pc.toLowerCase()}
+              style:--swatch-color={pc}
+              on:click|stopPropagation={() => selectColor(pc)}
+              type="button"
+              title={pc}
+            >
+              {#if currentHex.toLowerCase() === pc.toLowerCase()}
+                <Icon name="check" size="xs" />
+              {/if}
+            </button>
+            <button
+              class="remove-btn star-promote-btn"
+              on:click|stopPropagation={() => { selectColor(pc); addToFavorites(); }}
+              type="button"
+              title={$i18n.t('components.color.add-to-favorites')}
+              aria-label={$i18n.t('components.color.add-to-favorites')}
+            >★</button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <div class="palette-section">
     <div class="section-header">
-      <span class="palette-label">Избранное</span>
+      <span class="palette-label">{$i18n.t('components.color.favorites')}</span>
       {#if favorites.length === 0}
-        <span class="empty-hint">Нажмите ⭐ чтобы добавить</span>
+        <span class="empty-hint">{$i18n.t('components.color.favorites-empty-hint')}</span>
       {/if}
     </div>
     <div class="favorites-grid">
@@ -386,7 +396,7 @@
             class="remove-btn"
             on:click|stopPropagation={() => removeFromFavorites(fav.color)}
             type="button"
-            title="Удалить"
+            title={$i18n.t('common.remove')}
           >×</button>
         </div>
       {/each}
@@ -395,7 +405,7 @@
   
   <!-- Section: Hex input (matches DayPopup hex-input-row) -->
   <div class="palette-section">
-    <span class="palette-label">HEX код</span>
+    <span class="palette-label">{$i18n.t('components.color.hex-code')}</span>
     <div class="hex-row">
       <div class="hex-preview" style:--preview-color={customHexInput || currentHex}></div>
       <input
@@ -413,13 +423,13 @@
         on:click|stopPropagation={applyCustomHex}
         disabled={!customHexInput}
         type="button"
-        title="Применить"
+        title={$i18n.t('common.apply')}
       >
         <Icon name="check" size="sm" />
       </button>
     </div>
     {#if hexInputError}
-      <span class="hex-error">Неверный формат</span>
+      <span class="hex-error">{$i18n.t('components.color.invalid-format')}</span>
     {/if}
   </div>
 </div>

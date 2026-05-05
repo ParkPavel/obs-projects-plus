@@ -123,8 +123,8 @@
   }
 
   button:focus-visible {
-    outline: 2px solid var(--interactive-accent);
-    outline-offset: -2px;
+    outline: 0.125rem solid var(--interactive-accent);
+    outline-offset: -0.125rem;
     border-radius: var(--ppp-radius-md, 0.25rem);
   }
 

@@ -2196,7 +2196,7 @@
   .spinner {
     width: 1.75rem;
     height: 1.75rem;
-    border: 2.5px solid var(--background-modifier-border);
+    border: 0.15625rem solid var(--background-modifier-border);
     border-top-color: var(--interactive-accent);
     border-radius: 50%;
     animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -2224,7 +2224,7 @@
     color: var(--text-on-accent);
     padding: 0.75rem 1rem;
     border-radius: 0.625rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.15);
     z-index: 1001;
     cursor: pointer;
     display: flex;
@@ -2318,7 +2318,7 @@
     background: var(--background-primary);
     padding: 1rem 1.5rem;
     border-radius: 1rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.2);
     border: 1px solid var(--background-modifier-border);
     backdrop-filter: blur(0.75rem);
     -webkit-backdrop-filter: blur(0.75rem);
@@ -2399,7 +2399,7 @@
     }
   }
 
-  /* Ultra-narrow (320px) optimizations */
+  /* Ultra-narrow (320) optimizations */
   @media (max-width: 22.5rem) {
     /* Zoom indicator ultra-compact */
     .zoom-indicator {

@@ -158,7 +158,7 @@
     line-height: var(--strip-height, 1.25rem);
     /* v8.1: Semi-transparent background with left border accent like EventBar */
     background: color-mix(in srgb, var(--strip-color) 15%, var(--background-primary));
-    border-left: var(--ppp-border-width-thick, 2px) solid var(--strip-color);
+    border-left: var(--ppp-border-width-thick, 0.125rem) solid var(--strip-color);
     border-radius: var(--ppp-radius-md, 0.25rem);
     color: var(--text-normal);
     font-size: var(--ppp-font-size-xs, 0.6875rem);
@@ -179,19 +179,15 @@
   .all-day-event-strip.clickable {
     cursor: pointer;
   }
-
-  .all-day-event-strip.clickable:focus {
-    outline: none;
-  }
   .all-day-event-strip.clickable:focus-visible {
-    outline: 2px solid var(--strip-color);
-    outline-offset: 1px;
+    outline: 0.125rem solid var(--strip-color);
+    outline-offset: 0.0625rem;
     z-index: 3;
   }
   
   .all-day-event-strip.clickable:hover {
     background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
     z-index: 2;
   }
   
@@ -220,7 +216,7 @@
   
   .all-day-event-strip.compact.clickable:hover {
     transform: translateX(-50%) scale(1.1);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
   }
   
   .all-day-dot {

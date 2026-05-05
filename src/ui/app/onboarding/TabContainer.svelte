@@ -27,12 +27,12 @@
 <style>
   .nomargin {
     margin: 0;
-    padding: 8px;
+    padding: 0.5rem;
   }
 
   .header {
     display: flex;
-    gap: 4px;
-    margin-bottom: 4px;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
   }
 </style>

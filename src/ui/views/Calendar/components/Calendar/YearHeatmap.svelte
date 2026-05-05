@@ -433,13 +433,13 @@
 
   .legend-scale {
     display: flex;
-    gap: 2px;
+    gap: 0.125rem;
   }
 
   .legend-cell {
     width: 0.75rem;
     height: 0.75rem;
-    border-radius: 2px;
+    border-radius: 0.125rem;
   }
 
   .months-grid {
@@ -463,7 +463,7 @@
   .loading-spinner {
     width: 2rem;
     height: 2rem;
-    border: 3px solid var(--background-modifier-border);
+    border: 0.1875rem solid var(--background-modifier-border);
     border-top-color: var(--interactive-accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
@@ -504,7 +504,7 @@
     gap: 0.5rem;
     padding: 0.75rem;
     background: var(--background-secondary);
-    border-radius: 8px;
+    border-radius: 0.5rem;
     border: 1px solid var(--background-modifier-border);
   }
 
@@ -516,7 +516,7 @@
     border: none;
     padding: 0.25rem 0.5rem;
     margin: -0.25rem -0.5rem;
-    border-radius: 4px;
+    border-radius: 0.25rem;
     cursor: pointer;
     text-align: left;
     transition: background-color 0.15s ease;
@@ -534,7 +534,7 @@
   .weekday-labels {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.125rem;
     padding-right: 0.25rem;
   }
 
@@ -553,18 +553,18 @@
   .days-grid {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.125rem;
   }
 
   .week-row {
     display: flex;
-    gap: 2px;
+    gap: 0.125rem;
   }
 
   .day-cell {
     width: 0.75rem;
     height: 0.75rem;
-    border-radius: 2px;
+    border-radius: 0.125rem;
     border: none;
     padding: 0;
     cursor: pointer;
@@ -573,7 +573,7 @@
 
   .day-cell:hover:not(:disabled) {
     transform: scale(1.2);
-    box-shadow: 0 0 0 1px var(--text-accent);
+    box-shadow: 0 0 0 0.0625rem var(--text-accent);
   }
 
   .day-cell:disabled {
@@ -586,7 +586,7 @@
   }
 
   .day-cell.today {
-    box-shadow: 0 0 0 2px var(--text-accent);
+    box-shadow: 0 0 0 0.125rem var(--text-accent);
   }
 
   /* Heat levels - GitHub-inspired colors */
@@ -723,7 +723,7 @@
   /* v8.0: Ultra-compact cells to fit year */
   .year-heatmap.mobile .day-cell {
     /* Dynamic size: 7 cells per row fit in ~25% screen width minus padding */
-    width: calc((100% - 12px) / 7);
+    width: calc((100% - 0.75rem) / 7);
     aspect-ratio: 1;
     max-width: 0.5rem;
     max-height: 0.5rem;
@@ -758,11 +758,11 @@
   }
   
   .year-heatmap.mobile .week-row {
-    gap: 1px;
+    gap: 0.0625rem;
   }
   
   .year-heatmap.mobile .days-grid {
-    gap: 1px;
+    gap: 0.0625rem;
   }
   
   .year-heatmap.mobile .month-grid {
@@ -770,13 +770,13 @@
   }
 
   /* Desktop media queries - NOT for mobile (mobile uses .mobile class) */
-  @media (max-width: 56.25rem) { /* 900px at 16px base */
+  @media (max-width: 56.25rem) { /* 900 at 16 base */
     .months-grid:not(.year-heatmap.mobile .months-grid) {
       grid-template-columns: repeat(3, 1fr);
     }
   }
 
-  @media (max-width: 37.5rem) { /* 600px at 16px base */
+  @media (max-width: 37.5rem) { /* 600 at 16 base */
     .months-grid:not(.year-heatmap.mobile .months-grid) {
       grid-template-columns: repeat(2, 1fr);
     }

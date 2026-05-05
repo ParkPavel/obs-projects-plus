@@ -1,3 +1,8 @@
+﻿// Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.1 — RollupFunction is
+// imported as type-only to introduce no runtime coupling from the settings
+// layer into the Database engine layer.
+import type { RollupFunction } from "src/lib/engine/aggregate";
+
 export type ProjectId = string;
 export type ViewId = string;
 
@@ -47,12 +52,14 @@ export type StringFilterOperator =
   | "is"
   | "is-not"
   | "contains"
-  | "not-contains";
+  | "not-contains"
+  | "starts-with"
+  | "ends-with";
 
 export function isStringFilterOperator(
   op: FilterOperator
 ): op is StringFilterOperator {
-  return ["is", "is-not", "contains", "not-contains"].includes(op);
+  return ["is", "is-not", "contains", "not-contains", "starts-with", "ends-with"].includes(op);
 }
 
 export type NumberFilterOperator = "eq" | "neq" | "lt" | "gt" | "lte" | "gte";
@@ -82,6 +89,13 @@ export type DateFilterOperator =
   | "is-this-week"
   | "is-this-month"
   | "is-this-quarter"
+  | "is-this-year"
+  | "is-past-week"
+  | "is-past-month"
+  | "is-past-year"
+  | "is-next-week"
+  | "is-next-month"
+  | "is-next-year"
   | "is-last-n-days"
   | "is-next-n-days"
   | "is-overdue"
@@ -101,6 +115,13 @@ export function isDateFilterOperator(
     "is-this-week",
     "is-this-month",
     "is-this-quarter",
+    "is-this-year",
+    "is-past-week",
+    "is-past-month",
+    "is-past-year",
+    "is-next-week",
+    "is-next-month",
+    "is-next-year",
     "is-last-n-days",
     "is-next-n-days",
     "is-overdue",
@@ -144,6 +165,8 @@ export const filterOperatorTypes: Record<FilterOperator, FilterOperatorType> = {
   "is-not": "binary-text",
   contains: "binary-text",
   "not-contains": "binary-text",
+  "starts-with": "binary-text",
+  "ends-with": "binary-text",
   eq: "binary-number",
   neq: "binary-number",
   lt: "binary-number",
@@ -166,6 +189,13 @@ export const filterOperatorTypes: Record<FilterOperator, FilterOperatorType> = {
   "is-this-week": "unary",
   "is-this-month": "unary",
   "is-this-quarter": "unary",
+  "is-this-year": "unary",
+  "is-past-week": "unary",
+  "is-past-month": "unary",
+  "is-past-year": "unary",
+  "is-next-week": "unary",
+  "is-next-month": "unary",
+  "is-next-year": "unary",
   "is-last-n-days": "binary-number",
   "is-next-n-days": "binary-number",
   "is-overdue": "unary",
@@ -194,7 +224,68 @@ export type DateFieldConfig = {
   time?: boolean;
 };
 
-export type FieldConfig = StringFieldConfig & DateFieldConfig;
+/**
+ * Cross-project relation configuration for a single field.
+ *
+ * Declares that the field's wiki-link values resolve to records of an
+ * external project identified by `targetProjectId`. The optional
+ * `displayField` selects which target field to render in adaptive
+ * relation views (defaults to file basename).
+ *
+ * Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.1.
+ *
+ * @since 3.4.2 (Stage A / M0.1)
+ */
+export type RelationFieldConfig = {
+  readonly targetProjectId: string;
+  readonly displayField?: string;
+};
+
+/**
+ * Cross-project rollup configuration for a single field.
+ *
+ * Declares that the field is computed by aggregating `targetField`
+ * values from records reached through the relation field
+ * `relationField` on the same project. `targetProjectId` is optional
+ * because it can be inferred from the relation field's own config;
+ * when present it serves as an explicit override.
+ *
+ * Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.1.
+ *
+ * @since 3.4.2 (Stage A / M0.1)
+ */
+export type RollupFieldConfig = {
+  readonly relationField: string;
+  readonly targetProjectId?: string;
+  readonly targetField: string;
+  readonly function: RollupFunction;
+  readonly separator?: string;
+  /**
+   * R2.1b — Notion-style mode id (UI-layer presentational selector
+   * over the engine `function` kernel). Optional for backward compat;
+   * writers MUST sync `function` from `getRollupMode(mode).fn` when
+   * setting `mode` to keep the runtime invariant.
+   *
+   * @since 3.4.2 (R2.1b)
+   */
+  readonly mode?: import("src/lib/database/rollupMode").RollupModeId;
+};
+
+export type FieldConfig = StringFieldConfig &
+  DateFieldConfig & {
+    readonly relation?: RelationFieldConfig;
+    readonly rollup?: RollupFieldConfig;
+    /**
+     * R2.1b — Project-scope property-type override. Replaces the
+     * inferred `DataFieldType` for cell rendering, operator picker,
+     * and value parsing. Persisted at the project level so all views
+     * (Table/Board/Calendar/Gallery) of the same project agree on the
+     * type.
+     *
+     * @since 3.4.2 (R2.1b)
+     */
+    readonly type?: import("src/lib/visualizer/propertyTypes").PropertyType;
+  };
 
 export type ShowCommand = {
   readonly project: string;

@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
   import { setIcon } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
@@ -48,10 +48,10 @@
     dispatch('input', value);
   }
   
-  /* ═══════════════════════════════════════
-     IMPERATIVE POPOVER — portaled to activeDocument.body
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     IMPERATIVE POPOVER вЂ” portaled to activeDocument.body
      Bypasses transform/overflow/scoped-CSS issues in Obsidian modals
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
 
   function computePopoverPosition(trigger: HTMLElement): { top: number; left: number; width: number; maxH: number; flipUp: boolean } {
     const rect = trigger.getBoundingClientRect();
@@ -78,8 +78,8 @@
       'position:fixed', `z-index:10000`,
       `left:${pos.left}px`, `width:${pos.width}px`, `max-height:${pos.maxH}px`,
       'border:1px solid var(--background-modifier-border)',
-      'border-radius:8px', 'background:var(--background-primary)',
-      'box-shadow:0 6px 24px rgba(0,0,0,0.28),0 2px 8px rgba(0,0,0,0.14)',
+      'border-radius:0.5rem', 'background:var(--background-primary)',
+      'box-shadow:0 0.375rem 1.5rem rgba(0,0,0,0.28),0 0.125rem 0.5rem rgba(0,0,0,0.14)',
       'overflow:hidden', 'display:flex', 'flex-direction:column',
       'font-family:var(--font-interface)',
     ].join(';'));
@@ -92,37 +92,37 @@
       el.style.top = `${pos.top}px`;
     }
 
-    // ── Header ──
+    // в”Ђв”Ђ Header в”Ђв”Ђ
     const header = activeDocument.createElement('div');
     header.setAttribute('style', [
-      'display:flex', 'align-items:center', 'gap:6px',
-      'padding:6px 10px', 'border-bottom:1px solid var(--background-modifier-border)',
+      'display:flex', 'align-items:center', 'gap:0.375rem',
+      'padding:0.375rem 0.625rem', 'border-bottom:1px solid var(--background-modifier-border)',
       'background:var(--background-secondary)', 'color:var(--text-muted)',
-      'font-size:11px', 'font-weight:600', 'flex-shrink:0',
+      'font-size:0.6875rem', 'font-weight:600', 'flex-shrink:0',
     ].join(';'));
     const clockSpan = activeDocument.createElement('span');
     setIcon(clockSpan, 'clock');
     header.appendChild(clockSpan);
     header.appendChild(activeDocument.createTextNode(
-      ' ' + ($i18n.t('views.calendar.agenda.custom.filter-editor.date-suggestions') || 'Формулы дат')
+      ' ' + ($i18n.t('views.calendar.agenda.custom.filter-editor.date-suggestions') || 'Р¤РѕСЂРјСѓР»С‹ РґР°С‚')
     ));
     el.appendChild(header);
 
-    // ── List container ──
+    // в”Ђв”Ђ List container в”Ђв”Ђ
     const list = activeDocument.createElement('div');
-    list.setAttribute('style', 'flex:1;overflow-y:auto;padding:4px 0;');
+    list.setAttribute('style', 'flex:1;overflow-y:auto;padding:0.25rem 0;');
     list.dataset['role'] = 'list';
     el.appendChild(list);
 
-    // ── Footer ──
+    // в”Ђв”Ђ Footer в”Ђв”Ђ
     const footer = activeDocument.createElement('div');
     footer.setAttribute('style', [
-      'padding:4px 10px', 'border-top:1px solid var(--background-modifier-border)',
+      'padding:0.25rem 0.625rem', 'border-top:1px solid var(--background-modifier-border)',
       'background:var(--background-secondary)', 'text-align:center', 'flex-shrink:0',
     ].join(';'));
     const footerSmall = activeDocument.createElement('small');
-    footerSmall.setAttribute('style', 'color:var(--text-faint);font-size:10px;');
-    footerSmall.textContent = '↑↓ · Enter · Esc';
+    footerSmall.setAttribute('style', 'color:var(--text-faint);font-size:0.625rem;');
+    footerSmall.textContent = 'в†‘в†“ В· Enter В· Esc';
     footer.appendChild(footerSmall);
     el.appendChild(footer);
 
@@ -139,18 +139,18 @@
 
     if (suggestions.length === 0) {
       const empty = activeDocument.createElement('div');
-      empty.setAttribute('style', 'padding:12px;text-align:center;color:var(--text-faint);font-size:12px;');
-      empty.textContent = 'Нет совпадений';
+      empty.setAttribute('style', 'padding:0.75rem;text-align:center;color:var(--text-faint);font-size:0.75rem;');
+      empty.textContent = 'РќРµС‚ СЃРѕРІРїР°РґРµРЅРёР№';
       list.appendChild(empty);
       return;
     }
 
     // Group by category
     const categoryLabels: Record<string, string> = {
-      relative: '📅 Относительные',
-      week: '📆 Неделя',
-      month: '🗓 Месяц',
-      year: '📋 Год',
+      relative: 'рџ“… РћС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рµ',
+      week: 'рџ“† РќРµРґРµР»СЏ',
+      month: 'рџ—“ РњРµСЃСЏС†',
+      year: 'рџ“‹ Р“РѕРґ',
     };
     let lastCat = '';
 
@@ -160,10 +160,10 @@
         lastCat = s.category;
         const sep = activeDocument.createElement('div');
         sep.setAttribute('style', [
-          'padding:4px 12px 2px', 'color:var(--text-faint)',
-          'font-size:10px', 'font-weight:600', 'text-transform:uppercase',
+          'padding:0.25rem 0.75rem 0.125rem', 'color:var(--text-faint)',
+          'font-size:0.625rem', 'font-weight:600', 'text-transform:uppercase',
           'letter-spacing:0.04em',
-          idx > 0 ? 'margin-top:4px;border-top:1px solid var(--background-modifier-border-focus,rgba(128,128,128,0.15))' : '',
+          idx > 0 ? 'margin-top:0.25rem;border-top:1px solid var(--background-modifier-border-focus,rgba(128,128,128,0.15))' : '',
         ].join(';'));
         sep.textContent = categoryLabels[s.category] || s.category;
         list.appendChild(sep);
@@ -171,25 +171,25 @@
 
       const isSelected = idx === selIdx;
 
-      // Single-line item: [formula] label  — description
+      // Single-line item: [formula] label  вЂ” description
       const btn = activeDocument.createElement('button');
       btn.type = 'button';
       btn.tabIndex = -1;
       btn.title = s.description;
       btn.setAttribute('style', [
-        'width:100%', 'display:flex', 'align-items:center', 'gap:8px',
-        'padding:5px 10px', 'border:none', 'border-radius:4px',
+        'width:100%', 'display:flex', 'align-items:center', 'gap:0.5rem',
+        'padding:0.3125rem 0.625rem', 'border:none', 'border-radius:0.25rem',
         `background:${isSelected ? 'var(--background-modifier-hover)' : 'transparent'}`,
         'text-align:left', 'cursor:pointer', 'font-family:var(--font-interface)',
-        'box-sizing:border-box', 'min-height:28px',
+        'box-sizing:border-box', 'min-height:1.75rem',
       ].join(';'));
 
       // Formula badge
       const badge = activeDocument.createElement('code');
       badge.setAttribute('style', [
-        'padding:1px 6px', 'border-radius:3px', 'flex-shrink:0',
+        'padding:1px 0.375rem', 'border-radius:0.1875rem', 'flex-shrink:0',
         'background:var(--background-modifier-success,rgba(0,180,0,0.12))',
-        'color:var(--text-accent)', 'font-size:11px', 'font-family:var(--font-monospace)',
+        'color:var(--text-accent)', 'font-size:0.6875rem', 'font-family:var(--font-monospace)',
         'font-weight:600', 'white-space:nowrap',
       ].join(';'));
       badge.textContent = s.formula;
@@ -197,13 +197,13 @@
 
       // Label
       const label = activeDocument.createElement('span');
-      label.setAttribute('style', 'color:var(--text-normal);font-size:12px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;');
+      label.setAttribute('style', 'color:var(--text-normal);font-size:0.75rem;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;');
       label.textContent = s.label;
       btn.appendChild(label);
 
       // Short description (right-aligned, muted)
       const desc = activeDocument.createElement('span');
-      desc.setAttribute('style', 'color:var(--text-faint);font-size:10px;white-space:nowrap;flex-shrink:0;');
+      desc.setAttribute('style', 'color:var(--text-faint);font-size:0.625rem;white-space:nowrap;flex-shrink:0;');
       desc.textContent = s.description;
       btn.appendChild(desc);
 
@@ -312,7 +312,7 @@
   </div>
   
   {#if isFormula && formulaTest}
-    <div class="formula-preview" class:error={formulaTest.startsWith('❌')}>
+    <div class="formula-preview" class:error={formulaTest.startsWith('вќЊ')}>
       {formulaTest}
     </div>
   {/if}
@@ -333,15 +333,14 @@
   
   .formula-input {
     width: 100%;
-    height: 26px;
-    padding: 0 24px 0 8px;
+    height: 1.625rem;
+    padding: 0 1.5rem 0 0.5rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+    border-radius: 0.375rem;
     background: var(--background-primary);
     color: var(--text-normal);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-family: var(--font-monospace);
-    outline: none;
     box-sizing: border-box;
     transition: border-color 100ms ease;
   }
@@ -357,7 +356,7 @@
   
   .formula-indicator {
     position: absolute;
-    right: 6px;
+    right: 0.375rem;
     top: 50%;
     transform: translateY(-50%);
     display: flex;
@@ -371,17 +370,17 @@
     top: 100%;
     left: 0;
     right: 0;
-    margin-top: 4px;
-    padding: 4px 8px;
-    border-radius: 6px;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-family: var(--font-monospace);
     line-height: 1.3;
     z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.12);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -394,8 +393,8 @@
 
   @media (pointer: coarse) {
     .formula-input {
-      height: 34px;
-      font-size: 14px;
+      height: 2.125rem;
+      font-size: 0.875rem;
     }
   }
 </style>

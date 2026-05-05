@@ -72,7 +72,56 @@ export function getOperatorsForFieldType(
         'has-none-of',
         'has-keyword',
       ];
-      
+
+    // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.5a — Select/Status/
+    // Relation/Formula/Rollup operator sets reuse the existing
+    // AgendaFilterOperator vocabulary; no new operator literals are added in
+    // Stage A (that is Stage B work — full Field-Types UI).
+    case DataFieldType.Select:
+    case DataFieldType.Status:
+      return [
+        ...base,
+        'is',
+        'is-not',
+      ];
+
+    case DataFieldType.Relation:
+      return [
+        ...base,
+        'is',
+        'is-not',
+        'contains',
+        'not-contains',
+      ];
+
+    case DataFieldType.Formula:
+      // Formula values surface as their computed runtime type (string / number
+      // / boolean / date). Until Stage B specialises this further, expose the
+      // text-style operators that work on stringified output.
+      return [
+        ...base,
+        'is',
+        'is-not',
+        'contains',
+        'not-contains',
+      ];
+
+    case DataFieldType.Rollup:
+      // Rollup values are most commonly numeric (sum, count, avg). Stage A
+      // exposes numeric operators; non-numeric rollup output (e.g. concat)
+      // can still be matched by `is`/`is-not`.
+      return [
+        ...base,
+        'is',
+        'is-not',
+        'eq',
+        'neq',
+        'lt',
+        'gt',
+        'lte',
+        'gte',
+      ];
+
     default:
       return base;
   }

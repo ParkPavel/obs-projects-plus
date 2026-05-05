@@ -34,6 +34,14 @@ class ObsidianFile extends IFile {
     return this.file.path;
   }
 
+  // PARITY-008 — expose TFile.stat for virtual created/modified fields.
+  override get ctime(): number {
+    return this.file.stat?.ctime ?? 0;
+  }
+  override get mtime(): number {
+    return this.file.stat?.mtime ?? 0;
+  }
+
   read(): Promise<string> {
     return this.app.vault.read(this.file);
   }

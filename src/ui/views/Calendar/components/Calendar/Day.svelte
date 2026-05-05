@@ -521,7 +521,7 @@
       }
     }, {
       root: null,
-      rootMargin: '200px', // Pre-load items 200px before they become visible
+      rootMargin: '200px', // Pre-load items 200 before they become visible
       threshold: 0,
     });
     if (rootEl) {
@@ -656,7 +656,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    outline: none;
     min-height: 6.5625rem;
     height: 100%;
     overflow: hidden;
@@ -693,7 +692,7 @@
     cursor: pointer;
     text-align: center;
     width: 100%;
-    border-radius: 4px;
+    border-radius: 0.25rem;
     position: relative;
     margin-top: -0.75rem;
     z-index: 2;
@@ -839,7 +838,7 @@
     box-sizing: border-box;
     background: color-mix(in srgb, var(--bar-color) 15%, transparent);
     border: none;
-    border-left: var(--ppp-border-width-thick, 2px) solid var(--bar-color);
+    border-left: var(--ppp-border-width-thick, 0.125rem) solid var(--bar-color);
     border-radius: var(--ppp-radius-md, 0.25rem);
     padding: 0 0.25rem;
     font-size: var(--ppp-font-size-xs, 0.6875rem);
@@ -867,19 +866,15 @@
   
   .timed-bar:hover {
     background: color-mix(in srgb, var(--bar-color) 25%, transparent);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
     z-index: 10;
   }
   
   .timed-bar:active {
     background: color-mix(in srgb, var(--bar-color) 35%, transparent);
   }
-  
-  .timed-bar:focus {
-    outline: none;
-  }
   .timed-bar:focus-visible {
-    outline: 2px solid var(--bar-color);
+    outline: 0.125rem solid var(--bar-color);
     outline-offset: 0.125rem;
     z-index: 10;
   }
@@ -926,7 +921,7 @@
     .timed-bar {
       padding: 0.0625rem 0.1875rem;
       font-size: var(--ppp-font-size-xs, 0.6875rem);
-      border-left-width: var(--ppp-border-width-thick, 2px);
+      border-left-width: var(--ppp-border-width-thick, 0.125rem);
     }
     
     .timed-bar:active {

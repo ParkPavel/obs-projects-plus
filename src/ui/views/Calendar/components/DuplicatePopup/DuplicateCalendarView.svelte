@@ -63,7 +63,7 @@
     const scrollHeight = scrollableParent.scrollHeight;
     const clientHeight = scrollableParent.clientHeight;
     
-    // Увеличен threshold для уменьшения частоты срабатывания (было 200px)
+    // Увеличен threshold для уменьшения частоты срабатывания (было 200)
     const threshold = 600;
     
     // Ограничение максимального количества месяцев в DOM

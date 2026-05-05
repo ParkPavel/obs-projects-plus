@@ -10,6 +10,7 @@ import type {
   DataValue,
   Optional,
 } from "src/lib/dataframe/dataframe";
+import type { ProjectDefinition } from "src/settings/settings";
 
 export class CreateFieldModal extends Modal {
   component?: CreateField;
@@ -17,7 +18,9 @@ export class CreateFieldModal extends Modal {
   constructor(
     app: App,
     readonly fields: DataField[],
-    readonly onCreate: (field: DataField, value: Optional<DataValue>) => void
+    readonly onCreate: (field: DataField, value: Optional<DataValue>) => void,
+    readonly availableProjects: ProjectDefinition[] = [],
+    readonly currentProjectId: string = ""
   ) {
     super(app);
   }
@@ -31,6 +34,8 @@ export class CreateFieldModal extends Modal {
           this.fields,
           get(i18n).t("modals.field.create.untitled")
         ),
+        availableProjects: this.availableProjects,
+        currentProjectId: this.currentProjectId,
         onCreate: (field: DataField, value: Optional<DataValue>) => {
           this.onCreate(field, value);
           this.close();

@@ -263,7 +263,7 @@
     left: 0.15625rem;
     transform: translateY(-50%);
     transition: left 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.2);
   }
 
   .toggle-row input[type="checkbox"]:checked::before {
@@ -307,7 +307,7 @@
   .view-item.drag-over {
     border-color: var(--interactive-accent);
     background: rgba(var(--accent-rgb, 120, 170, 255), 0.1);
-    transform: translateY(-2px);
+    transform: translateY(-0.125rem);
   }
   
   .view-item.selected {

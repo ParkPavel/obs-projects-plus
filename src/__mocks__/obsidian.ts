@@ -149,3 +149,111 @@ class MockTFile {
     return this.name.split('.').pop() || 'md';
   }
 }
+
+
+// Mock Menu (R0.2 — needed by contextMenu helper and downstream callers)
+export class Menu {
+  items: any[] = [];
+  addItem(cb: (item: any) => any) {
+    const item: any = {
+      setTitle: jest.fn().mockReturnThis(),
+      setIcon: jest.fn().mockReturnThis(),
+      setDisabled: jest.fn().mockReturnThis(),
+      setSection: jest.fn().mockReturnThis(),
+      setWarning: jest.fn().mockReturnThis(),
+      setSubmenu: jest.fn(() => new Menu()),
+      onClick: jest.fn().mockReturnThis(),
+    };
+    cb(item);
+    this.items.push(item);
+    return this;
+  }
+  addSeparator() { this.items.push({ separator: true }); return this; }
+  showAtMouseEvent = jest.fn();
+  showAtPosition = jest.fn();
+}
+
+// Mock TFile / TFolder / TAbstractFile (subset required by main.ts file-menu logic)
+export class TAbstractFile {
+  path: string;
+  name: string;
+  constructor(path: string) {
+    this.path = path;
+    this.name = path.split('/').pop() || '';
+  }
+}
+export class TFile extends TAbstractFile {
+  get basename() { return this.name.replace(/\.[^/.]+$/, ""); }
+  get extension() { return this.name.split('.').pop() || 'md'; }
+}
+export class TFolder extends TAbstractFile {
+  children: TAbstractFile[] = [];
+}
+
+// Re-exports for tests that import from "obsidian"
+export const App = MockApp;
+
+
+// Mock ItemView (R1.1 — used by VisualizerPaneView and ProjectsView tests)
+export class ItemView {
+  contentEl: HTMLElement;
+  app: any;
+  navigation: boolean = true;
+  constructor(public leaf: any) {
+    this.contentEl = (typeof document !== "undefined" ? document.createElement("div") : { children: [] } as any);
+    this.app = leaf?.app ?? new MockApp();
+  }
+  onload() {}
+  onunload() {}
+  onOpen(): Promise<void> { return Promise.resolve(); }
+  onClose(): Promise<void> { return Promise.resolve(); }
+  getViewType(): string { return ""; }
+  getDisplayText(): string { return ""; }
+  getIcon(): string { return ""; }
+  onPaneMenu(_menu: any, _source: string) {}
+}
+
+// Mock WorkspaceLeaf (subset)
+export class WorkspaceLeaf {
+  app: any;
+  constructor(app?: any) { this.app = app ?? new MockApp(); }
+  detach() {}
+  setViewState(_s: any) { return Promise.resolve(); }
+  openFile(_f: any) { return Promise.resolve(); }
+}
+
+// Mock Notice
+export class Notice {
+  constructor(public message: string) {}
+}
+
+// Mock addIcon (no-op)
+export const addIcon = jest.fn();
+
+
+// Mock Modal / SuggestModal / FuzzySuggestModal (R1.3)
+export class Modal {
+  contentEl: HTMLElement;
+  app: any;
+  constructor(app: any) {
+    this.app = app;
+    this.contentEl = (typeof document !== "undefined" ? document.createElement("div") : { children: [] } as any);
+  }
+  open() {}
+  close() {}
+  onOpen() {}
+  onClose() {}
+}
+export class SuggestModal<T> extends Modal {
+  inputEl: HTMLInputElement = (typeof document !== "undefined" ? document.createElement("input") : ({} as any));
+  setPlaceholder(_p: string) {}
+  setInstructions(_i: any) {}
+}
+export class FuzzySuggestModal<T> extends SuggestModal<T> {
+  getSuggestions(_q: string): any[] { return []; }
+  renderSuggestion(_i: any, _el: any) {}
+  onChooseSuggestion(_i: any, _e: any) {}
+  getItems(): T[] { return []; }
+  getItemText(_t: T): string { return ""; }
+  onChooseItem(_t: T, _e: any) {}
+}

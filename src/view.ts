@@ -1,4 +1,4 @@
-import {
+﻿import {
   Plugin,
   ItemView,
   WorkspaceLeaf,
@@ -13,8 +13,12 @@ import { customViews } from "src/lib/stores/customViews";
 import { view } from "src/lib/stores/obsidian";
 import { BoardView } from "src/ui/views/Board";
 import { CalendarView } from "src/ui/views/Calendar";
-import { DatabaseView } from "src/ui/views/Database";
+import { DashboardView } from "src/ui/views/Dashboard";
 import { GalleryView } from "src/ui/views/Gallery";
+// NOTE: YamlVisualizer is no longer registered as a top-level view per user
+// directive 2026-05-01 — it must be a widget inside Database, not a separate
+// tab. Files retained under src/ui/views/YamlVisualizer/ for upcoming widget
+// conversion (Stage A revision pass).
 
 import type { ProjectView } from "./customViewApi";
 import type ProjectsPlugin from "./main";
@@ -156,7 +160,12 @@ export class ProjectsView extends ItemView {
     views["board"] = new BoardView();
     views["calendar"] = new CalendarView();
     views["gallery"] = new GalleryView();
-    views["database"] = new DatabaseView();
+    // Dashboard view (renamed from "Database" in v4.0). Both keys point at
+    // the same instance so v3 saves with `view.type === "database"` keep
+    // working until the settings migrator rewrites them.
+    const dashboardView = new DashboardView();
+    views["dashboard"] = dashboardView;
+    views["database"] = dashboardView;
 
     return views;
   }

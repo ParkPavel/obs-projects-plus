@@ -507,7 +507,7 @@
 
     <Accordion>
       <AccordionItem>
-        <div slot="header" class="setting-item-info" style:margin-top="8px">
+        <div slot="header" class="setting-item-info" style:margin-top="0.5rem">
           <div class="setting-item-name">
             {$i18n.t("modals.project.additional-sources.name")}
           </div>
@@ -554,7 +554,7 @@
 
     <Accordion>
       <AccordionItem>
-        <div slot="header" class="setting-item-info" style:margin-top="8px">
+        <div slot="header" class="setting-item-info" style:margin-top="0.5rem">
           <div class="setting-item-name">
             {$i18n.t("modals.project.more-settings.name")}
           </div>

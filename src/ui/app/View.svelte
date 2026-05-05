@@ -9,7 +9,13 @@
     ViewDefinition,
     ViewId,
   } from "src/settings/settings";
+  import type {
+    RelationFieldConfig,
+    RollupFieldConfig,
+  } from "src/settings/base/settings";
   import { applyFilter, matchesCondition } from "./filterFunctions";
+  import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
+  import { computeCrossProjectRollupColumn } from "src/lib/engine/crossProjectRollup";
 
   import { useView } from "./useView";
   import { applySort, sortRecords } from "./viewSort";
@@ -71,7 +77,129 @@
   }
 
   $: viewFilter = view.filter ?? { conjunction: "and", conditions: [] };
-  $: filteredFrame = applyFilter(frame, viewFilter);
+
+  // ── Cross-project enrichment (Stage A / M0.4) ─────────────
+  // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.4.
+  // When `project.fieldConfig` declares relation/rollup fields, we walk those
+  // declarations, resolve each unique `targetProjectId` via the ViewApi
+  // closure, and produce an enriched DataFrame with `__resolved__<field>`
+  // derived columns plus rollup-result derived columns. While external
+  // frames are still loading the raw frame is used so views render
+  // immediately; the next reactive tick re-renders with the enriched frame.
+
+  let externalFramesMap: ReadonlyMap<string, DataFrame> = new Map();
+  let lastTargetSet = "";
+  let lastDataGenerationForLoad = -1;
+  // Stage A.9 fix: monotonically-incrementing fetch token guards against
+  // out-of-order async resolution when relationTargetIds or `frame` change
+  // faster than `resolveExternalFrame` can settle. Only the most-recent
+  // dispatch is allowed to commit `externalFramesMap`.
+  let externalFetchToken = 0;
+
+  $: relationTargetIds = (() => {
+    const fc = project.fieldConfig as
+      | Record<string, { relation?: RelationFieldConfig; rollup?: RollupFieldConfig }>
+      | undefined;
+    if (!fc) return [] as string[];
+    const ids = new Set<string>();
+    for (const cfg of Object.values(fc)) {
+      if (cfg?.relation?.targetProjectId && cfg.relation.targetProjectId !== project.id) {
+        ids.add(cfg.relation.targetProjectId);
+      }
+      if (cfg?.rollup?.targetProjectId && cfg.rollup.targetProjectId !== project.id) {
+        ids.add(cfg.rollup.targetProjectId);
+      }
+    }
+    return Array.from(ids).sort();
+  })();
+
+  $: {
+    const key = relationTargetIds.join("|");
+    const needsLoad =
+      key !== "" &&
+      api.resolveExternalFrame !== undefined &&
+      (key !== lastTargetSet || dataGeneration !== lastDataGenerationForLoad);
+    if (needsLoad) {
+      lastTargetSet = key;
+      lastDataGenerationForLoad = dataGeneration;
+      const myToken = ++externalFetchToken;
+      void (async () => {
+        const next = new Map<string, DataFrame>();
+        const resolveFn = api.resolveExternalFrame!;
+        for (const id of relationTargetIds) {
+          try {
+            const f = await resolveFn(id);
+            if (f) next.set(id, f);
+          } catch (err) {
+            console.warn(
+              `[obs-projects-plus] enrichment: failed to resolve project '${id}'`,
+              err
+            );
+          }
+        }
+        // Drop stale results: if another dispatch superseded us, abandon.
+        if (myToken !== externalFetchToken) return;
+        externalFramesMap = next;
+      })();
+    } else if (key === "" && externalFramesMap.size > 0) {
+      externalFramesMap = new Map();
+      lastTargetSet = "";
+      // Invalidate any in-flight fetch so it does not commit later.
+      externalFetchToken++;
+    }
+  }
+
+  $: enrichedFrame = (() => {
+    if (relationTargetIds.length === 0 || externalFramesMap.size === 0) {
+      return frame;
+    }
+    let out = enrichFrameWithAllRelations(frame, externalFramesMap);
+    // Append a derived field for each rollup configuration.
+    const fc = project.fieldConfig as
+      | Record<string, { relation?: RelationFieldConfig; rollup?: RollupFieldConfig }>
+      | undefined;
+    if (fc) {
+      for (const [fieldName, cfg] of Object.entries(fc)) {
+        const rollupCfg = cfg?.rollup;
+        if (!rollupCfg) continue;
+        const targetId = rollupCfg.targetProjectId;
+        const ext = targetId ? externalFramesMap.get(targetId) : undefined;
+        if (!ext) continue;
+        const column = computeCrossProjectRollupColumn(out, rollupCfg, ext);
+        const derivedName = "__rollup__" + fieldName;
+        out = {
+          ...out,
+          fields: out.fields.some((f) => f.name === derivedName)
+            ? out.fields
+            : [
+                ...out.fields,
+                {
+                  name: derivedName,
+                  type: "rollup" as DataFrame["fields"][number]["type"],
+                  identifier: false,
+                  derived: true,
+                  repeated: false,
+                  typeConfig: {},
+                },
+              ],
+          records: out.records.map((r) => {
+            const result = column.get(r.id);
+            if (!result) return r;
+            return {
+              ...r,
+              values: {
+                ...r.values,
+                [derivedName]: result.value as unknown as DataRecord["values"][string],
+              },
+            };
+          }),
+        };
+      }
+    }
+    return out;
+  })();
+
+  $: filteredFrame = applyFilter(enrichedFrame, viewFilter);
 
   $: viewSort =
     view.sort.criteria.length > 0

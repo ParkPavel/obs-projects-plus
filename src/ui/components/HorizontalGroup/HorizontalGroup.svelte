@@ -11,11 +11,11 @@
 <style>
   div {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
   }
 
   .padding {
-    padding: 8px;
+    padding: 0.5rem;
   }
 
   .fullWidth {

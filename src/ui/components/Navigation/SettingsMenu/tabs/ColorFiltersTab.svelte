@@ -158,7 +158,7 @@
             class:row-toggle--off={!cond.enabled}
             type="button"
             on:click|stopPropagation={() => updateNestedCondition(index, { enabled: !cond.enabled })}
-            title={cond.enabled ? 'Отключить' : 'Включить'}
+            title={cond.enabled ? $i18n.t('common.disable') : $i18n.t('common.enable')}
           >
             <Icon name={cond.enabled ? 'eye' : 'eye-off'} size="sm" />
           </button>
@@ -220,16 +220,20 @@
 </div>
 
 <style>
-  .section { display: flex; flex-direction: column; gap: 8px; }
+  /* px→rem migration (REFACTOR-404 partial). Hairline 1 borders and the
+     2 thick border on .color-swatch are kept verbatim per design-tokens
+     spec ("Border widths — единственное место где можно px"). Transition
+     timings (100ms) are durations, not sizes, so they remain. */
+  .section { display: flex; flex-direction: column; gap: 0.5rem; }
   .section-header { display: flex; align-items: center; justify-content: space-between; }
-  .section-title { font-weight: 600; font-size: 14px; }
-  .empty-hint { color: var(--text-faint); font-size: 13px; margin: 4px 0; }
+  .section-title { font-weight: 600; font-size: 0.875rem; }
+  .empty-hint { color: var(--text-faint); font-size: 0.8125rem; margin: 0.25rem 0; }
 
-  .list { display: flex; flex-direction: column; gap: 4px; max-height: 20rem; overflow-y: auto; }
+  .list { display: flex; flex-direction: column; gap: 0.25rem; max-height: 20rem; overflow-y: auto; }
 
   .color-row {
-    display: flex; align-items: center; gap: 4px;
-    padding: 3px 2px; min-height: 32px; border-radius: 6px;
+    display: flex; align-items: center; gap: 0.25rem;
+    padding: 0.1875rem 0.125rem; min-height: 2rem; border-radius: 0.375rem;
     transition: background 100ms ease;
   }
   .color-row:hover { background: var(--background-secondary); }
@@ -246,17 +250,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px; height: 26px;
-    border-radius: 6px;
+    width: 1.625rem; height: 1.625rem;
+    border-radius: 0.375rem;
     background: var(--swatch-color, #8ab4f8);
-    border: 2px solid var(--background-modifier-border);
+    border: 0.125rem solid var(--background-modifier-border);
     cursor: pointer;
     flex-shrink: 0;
     transition: border-color 100ms ease, box-shadow 100ms ease;
   }
   .color-swatch:hover {
     border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb, 122, 104, 238), 0.25);
+    box-shadow: 0 0 0 0.125rem rgba(var(--interactive-accent-rgb, 122, 104, 238), 0.25);
   }
   .color-native {
     position: absolute;
@@ -269,36 +273,36 @@
   }
 
   .chip {
-    display: inline-flex; align-items: center; gap: 4px;
-    height: 26px; padding: 0 8px;
-    border: 1px solid var(--background-modifier-border); border-radius: 6px;
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    height: 1.625rem; padding: 0 0.5rem;
+    border: 1px solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
-    cursor: pointer; font-size: 13px; font-family: var(--font-interface);
+    cursor: pointer; font-size: 0.8125rem; font-family: var(--font-interface);
     white-space: nowrap; line-height: 1; flex-shrink: 0;
     transition: border-color 100ms ease, background 100ms ease;
   }
   .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
   .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
-  .chip-label { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+  .chip-label { max-width: 6.25rem; overflow: hidden; text-overflow: ellipsis; }
   .chip--field .chip-label { font-weight: 500; }
-  .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 2px; }
+  .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
 
-  .value-area { flex: 1; min-width: 60px; }
+  .value-area { flex: 1; min-width: 3.75rem; }
   .value-input {
-    width: 100%; height: 26px;
-    border: 1px solid var(--background-modifier-border); border-radius: 6px;
+    width: 100%; height: 1.625rem;
+    border: 1px solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
-    font-size: 13px; font-family: var(--font-interface);
-    padding: 0 8px; outline: none; box-sizing: border-box;
+    font-size: 0.8125rem; font-family: var(--font-interface);
+    padding: 0 0.5rem; outline: none; box-sizing: border-box;
     transition: border-color 100ms ease;
   }
   .value-input::placeholder { color: var(--text-faint); }
   .value-input:focus { border-color: var(--interactive-accent); }
-  .no-value { color: var(--text-faint); font-size: 12px; font-style: italic; padding: 0 8px; }
+  .no-value { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0 0.5rem; }
 
   .row-btn {
-    flex-shrink: 0; color: var(--text-faint); border-radius: 4px;
-    padding: 4px; border: none; background: transparent;
+    flex-shrink: 0; color: var(--text-faint); border-radius: 0.25rem;
+    padding: 0.25rem; border: none; background: transparent;
     cursor: pointer; opacity: 0; transition: opacity 100ms ease, color 100ms ease;
   }
   .row-toggle:hover { color: var(--interactive-accent); }
@@ -307,20 +311,20 @@
 
   .add-btn {
     display: flex; align-items: center; justify-content: center;
-    gap: 6px; padding: 6px 12px; border-radius: 6px;
+    gap: 0.375rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem;
     border: 1px dashed var(--background-modifier-border);
     background: transparent; color: var(--text-muted);
-    cursor: pointer; font-size: 13px; width: 100%;
+    cursor: pointer; font-size: 0.8125rem; width: 100%;
     transition: border-color 100ms ease, color 100ms ease;
   }
   .add-btn:hover { border-color: var(--interactive-accent); color: var(--text-normal); }
 
   @media (pointer: coarse) {
-    .color-row { gap: 3px; min-height: 38px; }
-    .color-swatch { width: 32px; height: 32px; }
-    .chip { height: 32px; padding: 0 10px; font-size: 14px; }
-    .value-input { height: 32px; font-size: 14px; }
-    .row-btn { opacity: 1; padding: 6px; }
-    .add-btn { min-height: 40px; font-size: 14px; }
+    .color-row { gap: 0.1875rem; min-height: 2.375rem; }
+    .color-swatch { width: 2rem; height: 2rem; }
+    .chip { height: 2rem; padding: 0 0.625rem; font-size: 0.875rem; }
+    .value-input { height: 2rem; font-size: 0.875rem; }
+    .row-btn { opacity: 1; padding: 0.375rem; }
+    .add-btn { min-height: 2.5rem; font-size: 0.875rem; }
   }
 </style>

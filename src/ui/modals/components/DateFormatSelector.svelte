@@ -176,10 +176,10 @@
     font-family: var(--font-monospace);
     font-size: var(--font-ui-small);
     color: var(--text-accent);
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;
     background: var(--background-modifier-border);
-    border-radius: 4px;
-    min-width: 200px;
+    border-radius: 0.25rem;
+    min-width: 12.5rem;
     text-align: center;
   }
 

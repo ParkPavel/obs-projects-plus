@@ -235,7 +235,7 @@
   @keyframes ppp-popover-enter {
     from {
       opacity: 0;
-      transform: translateY(-4px) scale(0.98);
+      transform: translateY(-0.25rem) scale(0.98);
     }
     to {
       opacity: 1;

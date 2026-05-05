@@ -18,25 +18,25 @@
   
   /* Spacing scale (golden ratio based) */
   --ppp-space-0: 0;
-  --ppp-space-1: 0.125rem;   /* 2px */
-  --ppp-space-2: 0.25rem;    /* 4px */
-  --ppp-space-3: 0.375rem;   /* 6px */
-  --ppp-space-4: 0.5rem;     /* 8px */
-  --ppp-space-5: 0.75rem;    /* 12px */
-  --ppp-space-6: 1rem;       /* 16px */
-  --ppp-space-7: 1.5rem;     /* 24px */
-  --ppp-space-8: 2rem;       /* 32px */
-  --ppp-space-9: 3rem;       /* 48px */
-  --ppp-space-10: 4rem;      /* 64px */
+  --ppp-space-1: 0.125rem;   /* 2 */
+  --ppp-space-2: 0.25rem;    /* 4 */
+  --ppp-space-3: 0.375rem;   /* 6 */
+  --ppp-space-4: 0.5rem;     /* 8 */
+  --ppp-space-5: 0.75rem;    /* 12 */
+  --ppp-space-6: 1rem;       /* 16 */
+  --ppp-space-7: 1.5rem;     /* 24 */
+  --ppp-space-8: 2rem;       /* 32 */
+  --ppp-space-9: 3rem;       /* 48 */
+  --ppp-space-10: 4rem;      /* 64 */
   
   /* Typography scale */
-  --ppp-font-size-xs: 0.6875rem;   /* 11px */
-  --ppp-font-size-sm: 0.75rem;     /* 12px */
-  --ppp-font-size-md: 0.8125rem;   /* 13px */
-  --ppp-font-size-base: 0.875rem;  /* 14px */
-  --ppp-font-size-lg: 1rem;        /* 16px */
-  --ppp-font-size-xl: 1.25rem;     /* 20px */
-  --ppp-font-size-2xl: 1.5rem;     /* 24px */
+  --ppp-font-size-xs: 0.6875rem;   /* 11 */
+  --ppp-font-size-sm: 0.75rem;     /* 12 */
+  --ppp-font-size-md: 0.8125rem;   /* 13 */
+  --ppp-font-size-base: 0.875rem;  /* 14 */
+  --ppp-font-size-lg: 1rem;        /* 16 */
+  --ppp-font-size-xl: 1.25rem;     /* 20 */
+  --ppp-font-size-2xl: 1.5rem;     /* 24 */
   
   --ppp-font-weight-normal: 400;
   --ppp-font-weight-medium: 500;
@@ -49,19 +49,19 @@
   
   /* Border radius scale */
   --ppp-radius-none: 0;
-  --ppp-radius-sm: 0.125rem;   /* 2px */
-  --ppp-radius-md: 0.25rem;    /* 4px */
-  --ppp-radius-lg: 0.375rem;   /* 6px */
-  --ppp-radius-xl: 0.5rem;     /* 8px */
-  --ppp-radius-2xl: 0.75rem;   /* 12px */
+  --ppp-radius-sm: 0.125rem;   /* 2 */
+  --ppp-radius-md: 0.25rem;    /* 4 */
+  --ppp-radius-lg: 0.375rem;   /* 6 */
+  --ppp-radius-xl: 0.5rem;     /* 8 */
+  --ppp-radius-2xl: 0.75rem;   /* 12 */
   --ppp-radius-full: 9999px;
   
   /* Shadow scale */
   --ppp-shadow-none: none;
-  --ppp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --ppp-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --ppp-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
-  --ppp-shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.2);
+  --ppp-shadow-sm: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.05);
+  --ppp-shadow-md: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+  --ppp-shadow-lg: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+  --ppp-shadow-xl: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
   
   /* Transition durations */
   --ppp-duration-instant: 0ms;
@@ -123,8 +123,8 @@
   --ppp-gap-loose: var(--ppp-space-6);
   
   /* Interactive element sizing */
-  --ppp-touch-target-min: 2.75rem;  /* 44px - accessibility minimum */
-  --ppp-touch-comfortable: 3rem;    /* 48px - Material Design */
+  --ppp-touch-target-min: 2.75rem;  /* 44 - accessibility minimum */
+  --ppp-touch-comfortable: 3rem;    /* 48 - Material Design */
   --ppp-icon-size-sm: 1rem;
   --ppp-icon-size-md: 1.25rem;
   --ppp-icon-size-lg: 1.5rem;
@@ -138,8 +138,8 @@
      ═══════════════════════════════════════════════════════════ */
   
   /* Table heights - синхронизированы */
-  --ppp-table-header-height: 1.875rem;  /* 30px */
-  --ppp-table-row-height: 1.875rem;     /* 30px */
+  --ppp-table-header-height: 1.875rem;  /* 30 */
+  --ppp-table-row-height: 1.875rem;     /* 30 */
   --ppp-table-cell-min-height: 1.875rem;
   
   /* Button heights */
@@ -164,7 +164,7 @@
   --ppp-calendar-col-gap: var(--ppp-space-1);
   
   /* Timeline */
-  --ppp-timeline-hour-height: 3.75rem;   /* 60px */
+  --ppp-timeline-hour-height: 3.75rem;   /* 60 */
   --ppp-timeline-gutter-width: 3rem;     /* Time labels column */
   --ppp-timeline-event-gap: var(--ppp-space-1);
   --ppp-timeline-event-radius: var(--ppp-radius-md);
@@ -185,7 +185,7 @@
   --ppp-overflow-indicator-font-size: var(--ppp-font-size-xs);
   
   /* Sidebar */
-  --ppp-sidebar-width: 15rem;           /* 240px */
+  --ppp-sidebar-width: 15rem;           /* 240 */
   --ppp-sidebar-collapsed-width: 2.5rem;
   
   /* ═══════════════════════════════════════════════════════════
@@ -194,10 +194,10 @@
   
   /* Note: CSS custom properties can't be used in media queries,
      these are documented for reference. Use actual values in @media. */
-  /* --ppp-breakpoint-sm: 640px; */
-  /* --ppp-breakpoint-md: 768px; */
-  /* --ppp-breakpoint-lg: 1024px; */
-  /* --ppp-breakpoint-xl: 1280px; */
+  /* --ppp-breakpoint-sm: 640; */
+  /* --ppp-breakpoint-md: 768; */
+  /* --ppp-breakpoint-lg: 1024; */
+  /* --ppp-breakpoint-xl: 1280; */
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -207,8 +207,8 @@
 /* High contrast mode */
 @media (prefers-contrast: high) {
   :root {
-    --ppp-shadow-sm: 0 0 0 1px currentColor;
-    --ppp-shadow-md: 0 0 0 2px currentColor;
+    --ppp-shadow-sm: 0 0 0 0.0625rem currentColor;
+    --ppp-shadow-md: 0 0 0 0.125rem currentColor;
   }
 }
 
@@ -252,7 +252,7 @@
   overflow: hidden;
   opacity: 0.9;
   border-radius: 0.375rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
 }
 
 /* Hide element from elementsFromPoint() hit testing */

@@ -5,6 +5,23 @@ export abstract class IFile {
   abstract get basename(): string;
   abstract get path(): string;
 
+  /**
+   * PARITY-008 — File creation time (ms since epoch). Optional override;
+   * default 0 for filesystems that do not expose stat info (e.g. InMem).
+   * Used to inject `pp_created_time` virtual field at the dataframe layer.
+   */
+  get ctime(): number {
+    return 0;
+  }
+
+  /**
+   * PARITY-008 — File last-modified time (ms since epoch). Optional override.
+   * Powers the `pp_last_edited_time` virtual field.
+   */
+  get mtime(): number {
+    return 0;
+  }
+
   abstract write(content: string): Promise<void>;
   abstract read(): Promise<string>;
   abstract delete(): Promise<void>;

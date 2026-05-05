@@ -6,6 +6,9 @@
   import type { GridColDef } from "../../dataGrid";
 
   import { copyToClipboard, readFromClipboard } from "src/lib/helpers/clipboard";
+  import { parseCellInput } from "src/lib/database/cellEditor";
+  import { Notice } from "obsidian";
+  import { i18n } from "src/lib/stores/i18n";
 
   export let value: Optional<number>;
   export let onChange: (value: Optional<number>) => void;
@@ -15,6 +18,19 @@
   export let selected: boolean;
 
   let edit: boolean = false;
+
+  // R2.1c — route paste through cellEditor.parseCellInput so pasting
+  // garbage text no longer silently writes `NaN` to frontmatter.
+  // Empty / whitespace clears the cell, parity with Visualizer.
+  async function handlePaste() {
+    const text = await readFromClipboard();
+    const result = parseCellInput(text, "number");
+    if (!result.ok) {
+      new Notice($i18n.t(result.error.i18nKey));
+      return;
+    }
+    onChange(result.value as Optional<number>);
+  }
 </script>
 
 <GridCell
@@ -32,9 +48,7 @@
     copyToClipboard(value?.toString() || "");
     onChange(null);
   }}
-  onPaste={async () => {
-    onChange(parseFloat(await readFromClipboard()));
-  }}
+  onPaste={handlePaste}
 >
   <svelte:fragment slot="read">
     {#if isNumber(value)}

@@ -4,7 +4,7 @@
    * v3.1.0 "Matryoshka" principle: Fixed height in rem
    */
   export let height: number = 0; // Legacy percentage support
-  export let heightRem: number = 8; // Fixed height in rem (default: 8rem = ~128px)
+  export let heightRem: number = 8; // Fixed height in rem (default: 8rem = ~128)
   export let useFixedHeight: boolean = true; // Switch to rem-based height
 </script>
 

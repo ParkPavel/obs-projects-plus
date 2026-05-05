@@ -34,8 +34,8 @@
   .agenda-filter-editor {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 4px;
+    gap: 0.25rem;
+    padding: 0.5rem 0.25rem;
   }
 </style>
 

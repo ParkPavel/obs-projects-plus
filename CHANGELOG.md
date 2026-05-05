@@ -9,22 +9,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased — Stage A] (3.4.2 internal)
 
-> **Status**: pre-coding obligations in progress; first `src/` edit (Step A.1, FieldConfig extension) is gated on completion of [docs/IMPLEMENTATION_BLUEPRINT.md §14.1](docs/IMPLEMENTATION_BLUEPRINT.md#141-phase-1--terminology-lock--repo-root-entry-point--obvious-cleanup-precondition-for-step-a1) phase 1.
-> **Scope**: Stage A delivers M0 (Engine v2 cross-project relations + rollups) + M2 (YAML Визуализатор Notion-parity sub-plugin) + Stub closures + Doc-Standardization phases 1-3. Internal-only — no public release until Stage B / M5 completes.
+> **Status**: Stage A internal-only release. No public distribution until Stage B / M5 completes.
+> **Scope**: M0 (Engine v2 cross-project relations + rollups) + M2 (YAML Визуализатор sub-plugin MVP) + stub closures + Doc-Standardization phases 1-3.
+> **Test gate**: 62 suites / 986 tests PASS · `tsc -noEmit -skipLibCheck` clean · `node esbuild.config.mjs production` build successful.
 
-### Added (planned, not yet implemented)
-- _M0_ — `FieldConfig.relation` + `FieldConfig.rollup` config schema; `crossProjectResolver.ts`; `crossProjectRollup.ts`; ViewApi enrichment for cross-project relation/rollup data flow.
-- _M2_ — `src/ui/views/YamlVisualizer/` (sub-plugin within the plugin): `PropertyRowMenu.svelte`, `PropertyTypeEditor.svelte`, `RelationListView.svelte` (shared with `GridRelationCell`), `RelationConfigEditor.svelte`, `FormulaEditorModal.svelte` (MVP), `VisualizerToolbar.svelte`, plus surrounding wiring (~17 new files total).
-- Documentation: `docs/CONTEXT_FOR_AGENTS.md` (new), `.ai_internal/stubs.md` (new — stub registry).
+### Added
+- _M0 — Engine v2_:
+  - `FieldConfig.relation` + `FieldConfig.rollup` schema (Stage A.1).
+  - `src/lib/engine/crossProjectResolver.ts` — pure resolver with WeakMap memoization, displayField → name/title/basename fallback, derived field naming (`__resolved__<field>`).
+  - `src/lib/engine/crossProjectRollup.ts` — column-level rollup over external frames; reuses `aggregate()` kernel from `Database/engine/rollup.ts` (R-6 mitigation).
+  - `View.svelte` enrichment pipeline (`enrichedFrame` → `filteredFrame`) that loads external frames via `api.resolveExternalFrame` and projects rollup results as `__rollup__<field>` columns.
+  - `DatabaseViewCanvas.collectReferencedSourceIds` walks `project.fieldConfig` for relation/rollup `targetProjectId` (R-11 mitigation).
+- _M2 — YAML Визуализатор sub-plugin_ (MVP):
+  - `src/ui/views/YamlVisualizer/` — `YamlVisualizer.svelte` (toolbar + property list, type-aware editors for string/number/boolean/date/list, formula MVP modal, hidden-fields collapsible, per-row menu).
+  - `RelationListView.svelte` — shared pill-list with `+K more` overflow popover; reused by `GridRelationCell`.
+  - `yamlVisualizerView.ts` + `index.ts` — `ProjectView<YamlVisualizerConfig>` registration as `yaml-visualizer`.
+  - `GridRelationCell` rewritten as a thin `RelationListView` wrapper with optional `resolvedLabels` prop.
+- _Stage A.5a — type/operator/i18n parity_: data-type icons + display labels + agenda operators for Select/Status/Formula/Relation/Rollup; i18n keys propagated to en/ru/uk/zh-CN.
+- _Tests_: `crossProjectResolver`, `crossProjectRollup`, `twoProjects.integration`, `dataTypesI18nParity`, `operatorHelpers.stageA`, `yamlVisualizerView.smoke`, `relationListView.overflow` — +29 tests over 3.4.1 baseline (957 → 986).
 
-### Changed (planned)
-- `docs/ARCHITECTURE.md` — Engine v2 + YAML Визуализатор marked as implemented.
-- `docs/architecture-engine-v2.md` — status banner: "Active design" → "Implemented in Stage A".
-- `README.md` + `README-EN.md` — feature list + roadmap updated; single entry-point structure.
-- `demo-vault/README.md` — "What to try first" walkthrough.
+### Changed
+- `manifest.json` / `package.json` → `3.4.2`.
+- `parseRecords` (datasource helpers) extends type detection for wikilinks → relation, plus Select/Status/Formula/Rollup parsing.
+- `fieldIcon` / `fieldDisplayText` extended for the 5 new data types.
+- `getOperatorsForFieldType` agenda switch extended with all 5 new types reusing existing `AgendaFilterOperator` literals.
 
 ### Deferred to Stage B (registered in `.ai_internal/stubs.md`)
 - `STB-VISUALIZER-LEAF`, `STB-VISUALIZER-COMMENT`, `STB-VISUALIZER-SHOWAS`, `STB-VISUALIZER-LIMIT`, `STB-VISUALIZER-TWOWAY`, `STB-VISUALIZER-FORMULA-POLISH`, `STB-VISUALIZER-DRAG-REORDER`, `STB-VISUALIZER-BULK-EDIT`.
+
+### Stage A.10 — Audit-driven hardening (post-recovery self-audit)
+
+> **Why**: After Stage A.9 sealed the surface-recovery list, an internal `auditor` self-audit ranked 12 items by impact. Stage A.10 closes the actionable subset: filter-engine silent drops (BLOCKER), missing CardMetadata renderers, no-config inline pickers, and missing palette entry points. Built on top of Stage A.9, **no schema/API changes**, all backward-compatible.
+>
+> **Test gate**: 60 suites / 985 tests PASS (+6 new filter regression tests over Stage A.9 baseline).
+
+#### Added
+- _Audit #2 — CreateField inline Stage A config_:
+  - `CreateField.svelte`: inline Relation target-project picker (with no-project sentinel), Rollup function/relation/target/separator panel (only emits `separator` for `concat` / `concat_unique`), Select/Status options reuse the String options chip-list, Formula/Relation/Rollup hide the default-value row and show a typed-derived hint instead.
+  - `createFieldModal.ts`: extended constructor with optional `availableProjects: ProjectDefinition[] = []` and `currentProjectId: string = ""`.
+  - Wired through 4 callers: `TableView.handleColumnAppend`/`handleColumnInsert`, `DataTableWidget.handleColumnInsert`, `DatabaseViewCanvas.openCreateField`.
+  - Save handler now passes `null` (not `""`) for Stage A no-default types — prevents `dataApi.addField` from writing empty strings into every record's frontmatter on creation.
+- _Audit #3 — Filter engine schema-aware dispatch_ (**BLOCKER closed**):
+  - `filterFunctions.ts::matchesCondition`:
+    - String operators (`is` / `is-not` / `contains` / `not-contains`) against array values dispatch elementwise — affirmative = ANY-match, negative = ALL-must-fail. Closes the silent-drop on Relation/Repeated-String fields.
+    - Empty array: affirmative → false, negative → true (semantically correct emptiness handling).
+    - Undefined value with negative operator (`is-not`, `not-contains`, `is-not-on`, `neq`, `has-none-of`) → returns true. Records with absent Stage A values no longer disappear from views that filter on those fields.
+  - `filterFunctions.test.ts`: +6 regression tests covering all four Relation-array operator branches, empty-array semantics, and undefined-value flow.
+- _Audit #4 — CardMetadata Stage A renderers_:
+  - `CardMetadata.svelte` (Board/Gallery cards): branches for Select/Status (theme-aware chip), Relation (chip-list, single-value fallback), Formula/Rollup (ƒ-prefixed muted text, numeric-aware). Replaces the previous fallback `<Icon name="slash" />` for these types.
+- _Audit #5 — Command palette commands_:
+  - `src/lib/stores/commandBus.ts` — minimal writable broker (`emitCommand("open-schema" | "add-field")`, ts-stamped messages so repeat clicks dispatch).
+  - `main.ts`: `addCommand({ id: "open-schema" })` and `addCommand({ id: "add-field" })`, both gated via `checkCallback` on the presence of a Projects leaf.
+  - `DatabaseViewCanvas.svelte`: subscribes to the bus on mount, dispatches `openSchema()` / `openCreateField()` on incoming messages; unsubscribes on destroy.
+  - i18n keys `commands.open-schema` / `commands.add-field` in en/ru/uk/zh-CN.
+
+#### Changed
+- _Audit #6 — Polish_:
+  - `ConfigureField.handleTypeChange`: replaced targeted `delete relation/rollup` block with a per-type allowlist (String → `options`/`richText`; Select/Status → `options`; Date → `time`; Relation → `relation`; Rollup → `rollup`; Formula → `formula`). Future typeConfig keys cannot leak across type changes.
+  - `DatabaseViewCanvas.ppp-toolbar-btn`: added `min-height: 2.25rem` for touch targets, `:active` press feedback, and `[aria-pressed="true"]` accent state. Toggle buttons (toolbar visibility, formula bar) now expose `aria-pressed` for screen readers.
+
+#### Audit-Acknowledged (deferred — non-blocking)
+- Audit #1 (Schema modal name resolution + warning chip + touch sizing) — already shipped in Stage A.9 batch.
+- Items below the BLOCKER/HIGH cutoff (additional widget views, advanced rollup operator surfacing, etc.) remain in `.ai_internal/context_state.md` for the next iteration.
+
+### Stage A.9 — Surface recovery (post-engine regression triage)
+
+> **Test gate after recovery**: 60 suites / 979 tests PASS · `tsc -noEmit -skipLibCheck` clean · `node esbuild.config.mjs production` build successful.
+
+#### Fixed
+- _Type detection_: `detectCellType` no longer auto-promotes a single `[[wikilink]]` to `Relation`; only arrays of links trigger relation auto-detection. Eliminates the v3.4.2 internal regression where derived `name` and arbitrary single-link string fields were rewritten to a relation tuple in views.
+- _Frontmatter parser_: `parseRecords` Relation branch is now exempt for derived `name` / `path` fields, so wiki-link aliases stay rendered as their alias text in Calendar / Board / Gallery headers.
+- _Calendar regression_ (cascading): the above two fixes restore Calendar's title/preview rendering on link-bearing notes without further code changes.
+- _DataTable derived columns_: the synthetic `path` column is now hidden by default in both DataTable widget and Table view, surfaced only via column visibility menu. Stops the column from polluting fresh databases.
+- _External-frame fetch race_: `View.svelte` now guards the async `resolveExternalFrame` pipeline with a monotonic token. Late-arriving stale fetches no longer overwrite a fresher result, eliminating the "stuck/empty rollups after rapid project switch" class of bug.
+
+#### Added
+- _Field-type registry_: `src/ui/modals/components/dataFieldTypeOptions.ts` — single source of truth enumerating all 10 selectable field types (legacy 5 + Stage A Select / Status / Formula / Relation / Rollup). Both `CreateField` and `ConfigureField` now consume this registry, so a new type literal lights up everywhere by editing one file.
+- _ConfigureField — Relation sub-panel_: target-project picker (filters out the current project), optional `displayField` input, full i18n + persistence via `settings.updateFieldConfig`.
+- _ConfigureField — Rollup sub-panel_: relation-field selector limited to this project's Relation columns, target-field picker derived from the resolved target project's `fieldConfig` (free-text fallback when target schema is empty), all 12 rollup functions exposed (`count`, `count_values`, `count_unique`, `sum`, `avg`, `min`, `max`, `median`, `range`, `percent_true`, `concat`, `concat_unique`), separator field shown only for `concat*` variants.
+- _Type-conversion in Configure_: the Type select is no longer disabled. `handleTypeChange` prunes incompatible `typeConfig` (e.g. drops the `relation` block when leaving Relation) so users can freely migrate existing fields.
+- _Schema panel (entry point)_: new `src/ui/modals/schemaModal.ts` + `src/ui/modals/components/Schema.svelte`. Lists every field in the project with a type badge, type label, Relation/Rollup summary, and per-row `Configure` / `Delete` actions plus a top-level `+ Add field`. Wired into the Database canvas toolbar via a `⚙ Schema` button so users can manage the entire project schema even when no DataTable widget is on the canvas. After every Configure / Add / Delete the panel reopens automatically to preserve task continuity.
+- _i18n_: full `modals.field.configure.relation.*`, `modals.field.configure.rollup.*`, `modals.schema.*` and `views.database.canvas.schema*` key sets across en / ru / uk / zh-CN.
+
+#### Removed
+- _Dead code_: `src/ui/views/YamlVisualizer/yamlVisualizerView.ts`, `index.ts`, and `__tests__/yamlVisualizerView.smoke.test.ts` deleted. The view registration was a Stage B placeholder that the M2 MVP does not actually expose; presentational pieces (`types.ts`, `YamlVisualizer.svelte`, `RelationListView.svelte`) are kept for future widget repurposing.
 
 ## [3.4.1] - 2026-04-21
 

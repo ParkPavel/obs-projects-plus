@@ -8,7 +8,7 @@
     isStatusConfig,
     type ExtendedFieldTypeConfig,
     type SelectOption,
-  } from "src/ui/views/Database/fieldTypes";
+  } from "src/ui/views/Dashboard/fieldTypes";
 
   import { copyToClipboard } from "src/lib/helpers/clipboard";
 
@@ -70,7 +70,7 @@
       }}
       on:blur={() => { edit = false; }}
     >
-      <option value="">â€”</option>
+      <option value="">—</option>
       {#each options as opt}
         <option value={opt.name}>
           {opt.name}
@@ -86,7 +86,7 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.125rem 0.5rem;
-    border-radius: var(--radius-s, 4px);
+    border-radius: var(--radius-s, 0.25rem);
     font-size: var(--font-ui-small);
     white-space: nowrap;
     overflow: hidden;
@@ -110,7 +110,7 @@
     width: 100%;
     padding: 0.25rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 4px);
+    border-radius: var(--radius-s, 0.25rem);
     background: var(--background-primary);
     color: var(--text-normal);
     font-size: var(--font-ui-small);

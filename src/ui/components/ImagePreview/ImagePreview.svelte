@@ -108,7 +108,7 @@
   }
   
   .image-preview.compact {
-    max-width: 300px;
+    max-width: 18.75rem;
   }
   
   .preview-container {

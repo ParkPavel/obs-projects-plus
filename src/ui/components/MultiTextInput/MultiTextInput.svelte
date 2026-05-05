@@ -330,13 +330,13 @@
   
   /* Accessibility: focus styles */
   .drag-handle:focus-visible {
-    outline: 2px solid var(--interactive-accent);
-    outline-offset: 2px;
+    outline: 0.125rem solid var(--interactive-accent);
+    outline-offset: 0.125rem;
   }
   
   .dnd-item:focus-within {
     border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px hsla(var(--interactive-accent-hsl), 0.2);
+    box-shadow: 0 0 0 0.125rem hsla(var(--interactive-accent-hsl), 0.2);
   }
   
   /* Virtual scrolling optimization for large lists */

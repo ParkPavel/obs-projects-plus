@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { createEventDispatcher, tick, onDestroy } from 'svelte';
   import { setIcon, type TFile } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
@@ -21,7 +21,7 @@
   
   const t = (key: string) => $i18n.t(`views.calendar.agenda.custom.filter-editor.${key}`);
   
-  /* ── State ── */
+  /* в”Ђв”Ђ State в”Ђв”Ђ */
   let showFieldDropdown = false;
   let showOperatorDropdown = false;
   let fieldSearch = '';
@@ -29,14 +29,14 @@
   let operatorWrapperEl: HTMLDivElement;
   let valueInputEl: HTMLInputElement;
 
-  /* ── Imperative dropdown containers (portaled to body) ── */
+  /* в”Ђв”Ђ Imperative dropdown containers (portaled to body) в”Ђв”Ђ */
   let fieldPopoverEl: HTMLDivElement | null = null;
   let operatorPopoverEl: HTMLDivElement | null = null;
   let valuePopoverEl: HTMLDivElement | null = null;
   let showValueDropdown = false;
   let valueSelectedIdx = 0;
 
-  /* ── Reactive data ── */
+  /* в”Ђв”Ђ Reactive data в”Ђв”Ђ */
   $: currentField = fields.find(f => f.name === filter.field);
   $: operators = currentField ? getOperatorsForFieldType(currentField.type) : [];
   $: needsValue = operatorNeedsValue(filter.operator);
@@ -48,7 +48,7 @@
   let fieldSelectedIdx = 0;
   $: if (filteredFields) fieldSelectedIdx = 0;
 
-  /* ── Icon helper ── */
+  /* в”Ђв”Ђ Icon helper в”Ђв”Ђ */
   function getFieldIconName(field: DataField | undefined): string {
     if (!field) return 'file-text';
     if (field.name === 'file' || field.name === 'File') return 'file';
@@ -71,23 +71,23 @@
     return op.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  /* ═══════════════════════════════════════
-     IMPERATIVE POPOVER — creates dropdown in activeDocument.body
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     IMPERATIVE POPOVER вЂ” creates dropdown in activeDocument.body
      bypasses all transform/overflow/scoped-CSS issues
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
 
   /* CSS classes are defined in styles.css under .ppp-popover-* prefix */
 
   /**
    * Position a popover relative to its trigger.
    *
-   * Touch (pointer: coarse) — ALWAYS above the trigger:
-   *   • fixed height 11rem (≈4 touch items), full width with 0.5rem margins
-   *   • bottom edge sits 0.25rem above trigger top
-   *   • if the popover can't fit above, it shrinks to fit (min 5rem)
-   *   • never goes below trigger, never docks near keyboard
+   * Touch (pointer: coarse) вЂ” ALWAYS above the trigger:
+   *   вЂў fixed height 11rem (в‰€4 touch items), full width with 0.5rem margins
+   *   вЂў bottom edge sits 0.25rem above trigger top
+   *   вЂў if the popover can't fit above, it shrinks to fit (min 5rem)
+   *   вЂў never goes below trigger, never docks near keyboard
    *
-   * Desktop — standard dropdown below or above.
+   * Desktop вЂ” standard dropdown below or above.
    */
   function positionContainer(el: HTMLDivElement, trigger: HTMLElement, _minWRem: number) {
     const fs = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -118,7 +118,7 @@
       el.style.position = 'fixed';
       el.style.bottom = 'auto';
 
-      // Start invisible — searchInput.focus() will trigger keyboard AFTER
+      // Start invisible вЂ” searchInput.focus() will trigger keyboard AFTER
       // this function returns, making the initial position wrong.
       // Show after first resize (keyboard settled) or fallback timeout.
       el.style.opacity = '0';
@@ -134,7 +134,7 @@
         el.style.pointerEvents = '';
       }
 
-      // Fallback: if keyboard was already open, no resize fires — reveal after short delay
+      // Fallback: if keyboard was already open, no resize fires вЂ” reveal after short delay
       const fallbackTimer = setTimeout(reveal, 120);
 
       if (vv) {
@@ -154,7 +154,7 @@
           vv.removeEventListener('scroll', onVV);
         };
       } else {
-        // No visualViewport — just show immediately
+        // No visualViewport вЂ” just show immediately
         clearTimeout(fallbackTimer);
         reveal();
       }
@@ -191,7 +191,7 @@
     }
   }
 
-  /* ── FIELD DROPDOWN ── */
+  /* в”Ђв”Ђ FIELD DROPDOWN в”Ђв”Ђ */
   function renderFieldPopover() {
     destroyFieldPopover();
     const chip = fieldWrapperEl?.querySelector('.chip') as HTMLElement;
@@ -317,7 +317,7 @@
     fieldPopoverEl = null;
   }
 
-  /* ── OPERATOR DROPDOWN ── */
+  /* в”Ђв”Ђ OPERATOR DROPDOWN в”Ђв”Ђ */
   function renderOperatorPopover() {
     destroyOperatorPopover();
     const chip = operatorWrapperEl?.querySelector('.chip') as HTMLElement;
@@ -375,7 +375,7 @@
     operatorPopoverEl = null;
   }
 
-  /* ── Toggle functions ── */
+  /* в”Ђв”Ђ Toggle functions в”Ђв”Ђ */
   async function openFieldDropdown() {
     closeOperatorDropdown();
     if (showFieldDropdown) { closeFieldDropdown(); return; }
@@ -428,7 +428,7 @@
     }
   }
 
-  /* ── Selection handlers ── */
+  /* в”Ђв”Ђ Selection handlers в”Ђв”Ђ */
   function selectField(name: string) {
     const newField = fields.find(f => f.name === name);
     if (!newField) return;
@@ -475,13 +475,13 @@
     
     const values = new Set<string>();
     
-    // ── Primary source: actual DataRecords (most reliable) ──
+    // в”Ђв”Ђ Primary source: actual DataRecords (most reliable) в”Ђв”Ђ
     if (records.length > 0) {
       for (const record of records) {
         const raw = record.values[fieldName];
         if (raw == null) continue;
         
-        // Strip wiki-link: [[path|display]] → display
+        // Strip wiki-link: [[path|display]] в†’ display
         let val: string;
         if (typeof raw === 'string') {
           const m = raw.match(/^\[\[([^\]]+)\]\]$/);
@@ -509,7 +509,7 @@
       }
     }
     
-    // ── Secondary source: vault frontmatter scan (supplements records) ──
+    // в”Ђв”Ђ Secondary source: vault frontmatter scan (supplements records) в”Ђв”Ђ
     if ($app && values.size < MAX_SUGGESTIONS) {
       const vault = $app.vault;
       const metadataCache = $app.metadataCache;
@@ -559,7 +559,7 @@
     valueSuggestions = getValueSuggestions();
   }
 
-  /* ── VALUE SUGGESTIONS POPOVER ── */
+  /* в”Ђв”Ђ VALUE SUGGESTIONS POPOVER в”Ђв”Ђ */
   function showValueSuggestions(inputText: string) {
     if (valueSuggestions.length === 0 || !valueInputEl) {
       closeValueDropdown();
@@ -635,9 +635,9 @@
     // Footer hint
     const footer = activeDocument.createElement('div');
     footer.addClass('ppp-popover-footer');
-    footer.createSpan({ text: '↑↓ навигация' });
-    footer.createSpan({ text: 'Enter — вставить' });
-    footer.createSpan({ text: 'Esc — закрыть' });
+    footer.createSpan({ text: 'в†‘в†“ РЅР°РІРёРіР°С†РёСЏ' });
+    footer.createSpan({ text: 'Enter вЂ” РІСЃС‚Р°РІРёС‚СЊ' });
+    footer.createSpan({ text: 'Esc вЂ” Р·Р°РєСЂС‹С‚СЊ' });
     container.appendChild(footer);
 
     activeDocument.body.appendChild(container);
@@ -715,25 +715,27 @@
 <svelte:window on:mousedown={handleWindowMousedown} on:keydown={handleKeydown} />
 
 <div class="filter-row" class:filter-row--disabled={filter.enabled === false}>
-  <!-- Row prefix: Где / и -->
+  <!-- Row prefix: Р“РґРµ / Рё -->
   {#if prefix}
     <span class="row-prefix">{prefix}</span>
   {/if}
   
-  <!-- ═══ Enable/Disable toggle ═══ -->
+  <!-- в•ђв•ђв•ђ Enable/Disable toggle в•ђв•ђв•ђ -->
   <button
     class="row-toggle clickable-icon"
     class:row-toggle--off={filter.enabled === false}
     type="button"
+    aria-pressed={filter.enabled !== false}
+    aria-label={filter.enabled === false ? (t('enable-filter') || 'Enable filter') : (t('disable-filter') || 'Disable filter')}
     on:click|stopPropagation={() => dispatch('update', { ...filter, enabled: filter.enabled === false ? true : false })}
     title={filter.enabled === false ? (t('enable-filter') || 'Enable filter') : (t('disable-filter') || 'Disable filter')}
   >
     <Icon name={filter.enabled === false ? 'eye-off' : 'eye'} size="sm" />
   </button>
 
-  <!-- ═══ Field chip ═══ -->
+  <!-- в•ђв•ђв•ђ Field chip в•ђв•ђв•ђ -->
   <div class="chip-wrapper" bind:this={fieldWrapperEl}>
-    <button class="chip chip--field" type="button" on:click={openFieldDropdown} title={filter.field || ''}>
+    <button class="chip chip--field" type="button" aria-haspopup="listbox" aria-expanded={showFieldDropdown} on:click={openFieldDropdown} title={filter.field || ''}>
       <span class="chip-icon">
         <Icon name={getFieldIconName(currentField)} size="sm" />
       </span>
@@ -744,9 +746,9 @@
     </button>
   </div>
   
-  <!-- ═══ Operator chip ═══ -->
+  <!-- в•ђв•ђв•ђ Operator chip в•ђв•ђв•ђ -->
   <div class="chip-wrapper" bind:this={operatorWrapperEl}>
-    <button class="chip chip--operator" type="button" on:click={openOperatorDropdown}>
+    <button class="chip chip--operator" type="button" aria-haspopup="listbox" aria-expanded={showOperatorDropdown} on:click={openOperatorDropdown}>
       <span class="chip-label">{getOperatorLabel(filter.operator)}</span>
       <span class="chip-chevron">
         <Icon name="chevron-down" size="xs" />
@@ -754,7 +756,7 @@
     </button>
   </div>
   
-  <!-- ═══ Value area ═══ -->
+  <!-- в•ђв•ђв•ђ Value area в•ђв•ђв•ђ -->
   <div class="value-area">
     {#if needsValue}
       {#if isDateField}
@@ -777,14 +779,15 @@
         />
       {/if}
     {:else}
-      <span class="no-value">{t('no-value') || '—'}</span>
+      <span class="no-value">{t('no-value') || 'вЂ”'}</span>
     {/if}
   </div>
   
-  <!-- ═══ Delete button ═══ -->
+  <!-- в•ђв•ђв•ђ Delete button в•ђв•ђв•ђ -->
   <button
     class="row-delete clickable-icon"
     type="button"
+    aria-label={t('remove-filter')}
     on:click|stopPropagation={() => dispatch('remove')}
     title={t('remove-filter')}
   >
@@ -793,20 +796,20 @@
 </div>
 
 <style>
-  /* ═══════════════════════════════════════
-     ROW — single inline horizontal row
-     ═══════════════════════════════════════ */
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     ROW вЂ” single inline horizontal row
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .filter-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 0;
-    min-height: 32px;
+    gap: 0.375rem;
+    padding: 0.1875rem 0;
+    min-height: 2rem;
   }
   
   .filter-row:hover {
     background: var(--background-secondary);
-    border-radius: 6px;
+    border-radius: 0.375rem;
   }
   
   .filter-row:hover .row-delete,
@@ -814,7 +817,7 @@
     opacity: 1;
   }
   
-  /* ── Disabled filter row ── */
+  /* в”Ђв”Ђ Disabled filter row в”Ђв”Ђ */
   .filter-row--disabled {
     opacity: 0.5;
   }
@@ -825,20 +828,20 @@
     pointer-events: none;
   }
   
-  /* ── Row prefix (Где / и) ── */
+  /* в”Ђв”Ђ Row prefix (Р“РґРµ / Рё) в”Ђв”Ђ */
   .row-prefix {
     flex-shrink: 0;
-    width: 32px;
+    width: 2rem;
     text-align: right;
     color: var(--text-muted);
-    font-size: 12px;
-    padding-right: 2px;
+    font-size: 0.75rem;
+    padding-right: 0.125rem;
     user-select: none;
   }
   
-  /* ═══════════════════════════════════════
-     CHIP BUTTONS — pill selectors
-     ═══════════════════════════════════════ */
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     CHIP BUTTONS вЂ” pill selectors
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .chip-wrapper {
     position: relative;
     flex-shrink: 0;
@@ -847,15 +850,15 @@
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    height: 26px;
-    padding: 0 8px;
+    gap: 0.25rem;
+    height: 1.625rem;
+    padding: 0 0.5rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+    border-radius: 0.375rem;
     background: var(--background-primary);
     color: var(--text-normal);
     cursor: pointer;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-family: var(--font-interface);
     white-space: nowrap;
     transition: border-color 100ms ease, background 100ms ease;
@@ -868,7 +871,7 @@
   }
   
   .chip:focus-visible {
-    outline: 2px solid var(--interactive-accent);
+    outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 1px;
   }
   
@@ -880,7 +883,7 @@
   }
   
   .chip-label {
-    max-width: 120px;
+    max-width: 7.5rem;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -890,32 +893,31 @@
     align-items: center;
     color: var(--text-faint);
     flex-shrink: 0;
-    margin-left: 2px;
+    margin-left: 0.125rem;
   }
   
   .chip--field .chip-label {
     font-weight: 500;
   }
   
-  /* ═══════════════════════════════════════
-     VALUE — inline text input
-     ═══════════════════════════════════════ */
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     VALUE вЂ” inline text input
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .value-area {
     flex: 1;
-    min-width: 80px;
+    min-width: 5rem;
   }
   
   .value-input {
     width: 100%;
-    height: 26px;
+    height: 1.625rem;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+    border-radius: 0.375rem;
     background: var(--background-primary);
     color: var(--text-normal);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-family: var(--font-interface);
-    padding: 0 8px;
-    outline: none;
+    padding: 0 0.5rem;
     transition: border-color 100ms ease;
     box-sizing: border-box;
   }
@@ -931,19 +933,19 @@
   .no-value {
     display: inline-block;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-style: italic;
-    padding: 4px 8px;
+    padding: 0.25rem 0.5rem;
   }
   
-  /* ═══════════════════════════════════════
-     DELETE — trash icon (hidden until row hover)
-     ═══════════════════════════════════════ */
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+     DELETE вЂ” trash icon (hidden until row hover)
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   .row-toggle {
     flex-shrink: 0;
     color: var(--text-faint);
-    border-radius: 4px;
-    padding: 4px;
+    border-radius: 0.25rem;
+    padding: 0.25rem;
     opacity: 0;
     transition: opacity 100ms ease, color 100ms ease;
   }
@@ -960,8 +962,8 @@
   .row-delete {
     flex-shrink: 0;
     color: var(--text-faint);
-    border-radius: 4px;
-    padding: 4px;
+    border-radius: 0.25rem;
+    padding: 0.25rem;
     opacity: 0;
     transition: opacity 100ms ease, color 100ms ease;
   }
@@ -971,19 +973,19 @@
     background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06);
   }
   
-  /* ═══════════════════════════════════════
+  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
      TOUCH DEVICES
-     ═══════════════════════════════════════ */
+     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
   @media (pointer: coarse) {
     .filter-row {
-      gap: 4px;
-      min-height: 40px;
+      gap: 0.25rem;
+      min-height: 2.5rem;
       flex-wrap: wrap;
     }
     
     .row-prefix {
-      width: 24px;
-      font-size: 11px;
+      width: 1.5rem;
+      font-size: 0.6875rem;
     }
     
     .chip-wrapper {
@@ -992,9 +994,9 @@
     }
     
     .chip {
-      height: 34px;
-      padding: 0 8px;
-      font-size: 13px;
+      height: 2.125rem;
+      padding: 0 0.5rem;
+      font-size: 0.8125rem;
       flex-shrink: 1;
       min-width: 0;
       overflow: hidden;
@@ -1006,29 +1008,29 @@
     
     .value-area {
       min-width: 0;
-      flex-basis: 50px;
+      flex-basis: 3.125rem;
       flex-grow: 1;
     }
     
     .value-input {
-      height: 34px;
-      font-size: 14px;
+      height: 2.125rem;
+      font-size: 0.875rem;
     }
     
     .row-toggle {
       opacity: 1;
-      padding: 4px;
+      padding: 0.25rem;
     }
     
     .row-delete {
       opacity: 1;
-      padding: 4px;
+      padding: 0.25rem;
     }
   }
 
-  /* v3.2.1: Mobile keyboard — reverse column so list scrolls upward
+  /* v3.2.1: Mobile keyboard вЂ” reverse column so list scrolls upward
      from search bar anchored near trigger. Applied via JS classList.add(),
-     so :global() is required. Compiled into main.css → auto-merged. */
+     so :global() is required. Compiled into main.css в†’ auto-merged. */
   :global(.ppp-popover-container--mobile-kbd) {
     flex-direction: column-reverse;
   }

@@ -120,6 +120,10 @@ export async function standardizeRecords(
 ): Promise<E.Either<RecordError, DataRecord>[]> {
   return Promise.all(
     files.map(async (file) => {
+      // PARITY-008 — capture stat once per file so the virtual fields stay
+      // consistent within a single dataframe build.
+      const ctime = file.ctime > 0 ? new Date(file.ctime) : null;
+      const mtime = file.mtime > 0 ? new Date(file.mtime) : null;
       return F.pipe(
         await file.read(),
         decodeFrontMatter,
@@ -129,6 +133,11 @@ export async function standardizeRecords(
           ...values,
           path: file.path,
           name: `[[${file.path}|${file.basename}]]`,
+          // Auto-fields are injected after user values so they cannot be
+          // shadowed by a stale frontmatter entry. Reserved `pp_` prefix
+          // documents intent and keeps them out of user namespace.
+          ...(ctime !== null ? { pp_created_time: ctime } : {}),
+          ...(mtime !== null ? { pp_last_edited_time: mtime } : {}),
         })),
         E.map((values) => standardizeRecord(file.path, values))
       );
@@ -157,6 +166,15 @@ export function detectSchema(records: DataRecord[]): DataField[] {
     )
     .map<DataField>((field) =>
       field.name === "path"
+        ? produce(field, (draft) => {
+            draft.derived = true;
+          })
+        : field
+    )
+    // PARITY-008 — mark virtual time fields as derived so the UI treats them
+    // as read-only (no edit affordance, no writeback).
+    .map<DataField>((field) =>
+      field.name === "pp_created_time" || field.name === "pp_last_edited_time"
         ? produce(field, (draft) => {
             draft.derived = true;
           })

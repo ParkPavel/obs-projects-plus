@@ -13,6 +13,7 @@
   import { onDestroy } from 'svelte';
 
   import { TagList } from "src/ui/components/TagList";
+  import { i18n } from "src/lib/stores/i18n";
   import {
     DataFieldType,
     isBoolean,
@@ -27,7 +28,13 @@
 
   export let field: DataField;
   export let value: Optional<DataValue>;
+  // REFACTOR-304: reactive sync — re-derive `cachedValue` whenever the
+  // parent updates `value`. The previous `let cachedValue = …` only ran
+  // at component construction, so a parent-side change (e.g. record
+  // reload, undo, external edit) left `cachedValue` stale and the next
+  // `on:blur` would push the obsolete date back through `onChange`.
   let cachedValue: Optional<Date> = isDate(value) ? value : null;
+  $: cachedValue = isDate(value) ? value : null;
   export let onChange: (value: Optional<DataValue>) => void;
   export let readonly: boolean = false;
   export let suggestions: string[] = [];
@@ -193,7 +200,7 @@
             on:click|stopPropagation={toggleColorPicker}
             type="button"
             aria-expanded={showColorPicker}
-            aria-label={showColorPicker ? "Свернуть палитру" : "Развернуть палитру"}
+            aria-label={showColorPicker ? $i18n.t('components.color.collapse-palette') : $i18n.t('components.color.expand-palette')}
           >
             <Icon name={showColorPicker ? "chevron-up" : "palette"} size="sm" />
           </button>
@@ -315,28 +322,28 @@
   
   .field-control-wrapper {
     /* === LEVEL 0: Root variables === */
-    --fc-base: 1rem;                                    /* 16px base */
+    --fc-base: 1rem;                                    /* 16 base */
     
     /* === LEVEL 1: Container metrics === */
-    --fc-gap: calc(var(--fc-base) * 0.5);               /* 8px */
+    --fc-gap: calc(var(--fc-base) * 0.5);               /* 8 */
     
     /* === LEVEL 2: Row metrics === */
-    --fc-row-gap: calc(var(--fc-base) * 0.5);           /* 8px */
+    --fc-row-gap: calc(var(--fc-base) * 0.5);           /* 8 */
     
     /* === LEVEL 3: Element metrics === */
-    --fc-element-size: calc(var(--fc-base) * 2.25);     /* 36px */
-    --fc-element-radius: calc(var(--fc-base) * 0.375);  /* 6px */
-    --fc-input-padding-v: calc(var(--fc-base) * 0.5);   /* 8px */
-    --fc-input-padding-h: calc(var(--fc-base) * 0.75);  /* 12px */
-    --fc-border-width: 0.0625rem;                       /* 1px */
-    --fc-border-width-thick: 0.125rem;                  /* 2px */
+    --fc-element-size: calc(var(--fc-base) * 2.25);     /* 36 */
+    --fc-element-radius: calc(var(--fc-base) * 0.375);  /* 6 */
+    --fc-input-padding-v: calc(var(--fc-base) * 0.5);   /* 8 */
+    --fc-input-padding-h: calc(var(--fc-base) * 0.75);  /* 12 */
+    --fc-border-width: 0.0625rem;                       /* 1 */
+    --fc-border-width-thick: 0.125rem;                  /* 2 */
     
     /* === Typography === */
-    --fc-font-size: calc(var(--fc-base) * 0.875);       /* 14px */
+    --fc-font-size: calc(var(--fc-base) * 0.875);       /* 14 */
     
     /* === LEVEL 4: Dropdown metrics === */
-    --fc-dropdown-radius: calc(var(--fc-base) * 0.75);  /* 12px */
-    --fc-dropdown-padding: calc(var(--fc-base) * 0.5);  /* 8px */
+    --fc-dropdown-radius: calc(var(--fc-base) * 0.75);  /* 12 */
+    --fc-dropdown-padding: calc(var(--fc-base) * 0.5);  /* 8 */
     --fc-dropdown-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.25);
     
     /* === Component styles === */
@@ -458,7 +465,7 @@
     }
     to { 
       opacity: 1; 
-      max-height: 500px;
+      max-height: 31.25rem;
     }
   }
   
@@ -500,7 +507,7 @@
   }
   
   /* Landscape mode - reduce picker height */
-  @media (orientation: landscape) and (max-height: 500px) {
+  @media (orientation: landscape) and (max-height: 31.25rem) {
     .color-picker-inline :global(.color-picker) {
       --cp-picker-height: calc(var(--cp-base, 1rem) * 5);
       --cp-gap: calc(var(--cp-base, 1rem) * 0.375);
@@ -512,12 +519,12 @@
    * ===================================================== */
   @media (max-width: 48rem), (pointer: coarse) {
     .field-control-wrapper {
-      /* Touch-friendly sizes (44px minimum) */
-      --fc-element-size: calc(var(--fc-base) * 2.5);      /* 40px */
-      --fc-element-radius: calc(var(--fc-base) * 0.5);    /* 8px */
-      --fc-input-padding-v: calc(var(--fc-base) * 0.625); /* 10px */
-      --fc-input-padding-h: calc(var(--fc-base) * 0.75);  /* 12px */
-      --fc-font-size: var(--fc-base);                     /* 16px - prevents zoom */
+      /* Touch-friendly sizes (44 minimum) */
+      --fc-element-size: calc(var(--fc-base) * 2.5);      /* 40 */
+      --fc-element-radius: calc(var(--fc-base) * 0.5);    /* 8 */
+      --fc-input-padding-v: calc(var(--fc-base) * 0.625); /* 10 */
+      --fc-input-padding-h: calc(var(--fc-base) * 0.75);  /* 12 */
+      --fc-font-size: var(--fc-base);                     /* 16 - prevents zoom */
     }
     
     .field-input {

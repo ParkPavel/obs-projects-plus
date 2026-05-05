@@ -20,18 +20,21 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
 
   switch (ftype) {
     case 'string':
-      return [...base, 'is', 'is-not', 'contains', 'not-contains'];
+      return [...base, 'is', 'is-not', 'contains', 'not-contains', 'starts-with', 'ends-with'];
     case 'number':
       return [...base, 'eq', 'neq', 'lt', 'gt', 'lte', 'gte'];
     case 'boolean':
       return ['is-checked', 'is-not-checked'];
     case 'date':
       return [...base, 'is-on', 'is-not-on', 'is-before', 'is-after', 'is-on-and-before', 'is-on-and-after',
-        'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-last-n-days', 'is-next-n-days', 'is-overdue', 'is-upcoming'];
+        'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-this-year',
+        'is-past-week', 'is-past-month', 'is-past-year',
+        'is-next-week', 'is-next-month', 'is-next-year',
+        'is-last-n-days', 'is-next-n-days', 'is-overdue', 'is-upcoming'];
     case 'multitext':
       return [...base, 'has-any-of', 'has-all-of', 'has-none-of', 'has-keyword'];
     default:
-      return [...base, 'is', 'is-not', 'contains', 'not-contains'];
+      return [...base, 'is', 'is-not', 'contains', 'not-contains', 'starts-with', 'ends-with'];
   }
 }
 
@@ -41,7 +44,10 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
 export function operatorNeedsValue(operator: FilterOperator): boolean {
   const unary: FilterOperator[] = [
     'is-empty', 'is-not-empty', 'is-checked', 'is-not-checked',
-    'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-overdue', 'is-upcoming',
+    'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-this-year',
+    'is-past-week', 'is-past-month', 'is-past-year',
+    'is-next-week', 'is-next-month', 'is-next-year',
+    'is-overdue', 'is-upcoming',
   ];
   return !unary.includes(operator);
 }
@@ -56,6 +62,8 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
   'is-not': 'Не равно',
   'contains': 'Содержит',
   'not-contains': 'Не содержит',
+  'starts-with': 'Начинается с',
+  'ends-with': 'Заканчивается на',
   'eq': '=',
   'neq': '≠',
   'lt': '<',
@@ -74,6 +82,13 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
   'is-this-week': 'Эта неделя',
   'is-this-month': 'Этот месяц',
   'is-this-quarter': 'Этот квартал',
+  'is-this-year': 'Этот год',
+  'is-past-week': 'Прошлая неделя',
+  'is-past-month': 'Прошлый месяц',
+  'is-past-year': 'Прошлый год',
+  'is-next-week': 'Следующая неделя',
+  'is-next-month': 'Следующий месяц',
+  'is-next-year': 'Следующий год',
   'is-last-n-days': 'За последние N дней',
   'is-next-n-days': 'В ближайшие N дней',
   'is-overdue': 'Просрочено',

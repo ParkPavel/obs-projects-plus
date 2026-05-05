@@ -7,6 +7,7 @@ import {
   type DataValue,
   type Optional,
 } from "../dataframe/dataframe";
+import { stripToPath as stripWikiLink } from "src/lib/engine/wikilink";
 
 /**
  * Parses the values for each record based on the detected field types.
@@ -60,6 +61,36 @@ export function parseRecords(
             record.values[field.name] = value?.toLocaleString();
           }
           // Arrays and null/undefined are kept as-is
+          break;
+        case DataFieldType.Relation:
+          // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.5a S-1.
+          // Stage A.9 fix: skip derived schema fields (name/path) so the
+          // historical `[[fullpath|basename]]` encoding remains a plain
+          // string for downstream renderers (Calendar, Board, DataTable).
+          // Auto-detected Relation now requires an array of `[[…]]`; explicit
+          // user choice via fieldConfig.relation still parses normally for
+          // any field name.
+          if (field.derived && (field.name === "name" || field.name === "path")) {
+            break;
+          }
+          if (typeof value === "string") {
+            record.values[field.name] = [stripWikiLink(value)];
+          } else if (Array.isArray(value)) {
+            record.values[field.name] = value
+              .filter((v) => v !== null && v !== undefined)
+              .map((v) => (typeof v === "string" ? stripWikiLink(v) : String(v)));
+          }
+          // null/undefined kept as-is
+          break;
+        case DataFieldType.Select:
+        case DataFieldType.Status:
+          // S-3, S-4 — Select/Status are persisted as plain strings; no parse.
+          break;
+        case DataFieldType.Formula:
+        case DataFieldType.Rollup:
+          // S-5a, S-6 — Formula/Rollup are computed downstream (engine layer).
+          // The raw frontmatter value (if any) is left intact so the engine
+          // can decide between honouring a cached result and recomputing.
           break;
       }
     }
@@ -134,6 +165,12 @@ function typeFromValues(values: Optional<DataValue>[]): DataFieldType {
 export function detectCellType(value: unknown): DataFieldType {
   // Standard types
   if (typeof value === "string") {
+    // Stage A.9 fix: a single `[[…]]` wiki-link string is NOT auto-typed as
+    // Relation — the historical `name` field encoding (`[[path|alias]]`)
+    // depends on remaining a String for `MarkdownRenderer` to render the
+    // alias. Relation auto-detection survives only for ARRAYS of `[[…]]`.
+    // Explicit Relation typing via `fieldConfig.relation.targetProjectId`
+    // is unaffected.
     if (
       /^\d{4}-\d{2}-\d{2}(T)?(\d{2})?(:\d{2})?(:\d{2})?(\.\d{3})?$/.test(value)
     ) {
@@ -152,6 +189,14 @@ export function detectCellType(value: unknown): DataFieldType {
   }
 
   if (Array.isArray(value)) {
+    // §A.5a S-2 — array of [[…]]-shaped strings → Relation; otherwise fall
+    // back to per-element detection.
+    if (
+      value.length > 0 &&
+      value.every((v) => typeof v === "string" && isWikiLinkString(v))
+    ) {
+      return DataFieldType.Relation;
+    }
     return typeFromValues(value);
   }
 
@@ -166,6 +211,27 @@ export function detectCellType(value: unknown): DataFieldType {
 
   return DataFieldType.Unknown;
 }
+
+/**
+ * Returns true when the input is a string of the form `[[link body]]`
+ * (alias `[[body|alias]]` accepted). Non-string input returns false.
+ *
+ * Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.5a S-2.
+ */
+function isWikiLinkString(value: string): boolean {
+  const trimmed = value.trim();
+  return /^\[\[[^[\]]+\]\]$/.test(trimmed);
+}
+
+/**
+ * Strips wrapping `[[ ]]` from a wiki-link body and drops the alias
+ * portion `|...`. Returns the original string when no match.
+ *
+ * REFACTOR-105: implementation moved to `src/lib/engine/wikilink.ts`.
+ * Aliased import above provides the same callable.
+ *
+ * Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.5a S-1.
+ */
 
 /**
  * Converts a string to a boolean.

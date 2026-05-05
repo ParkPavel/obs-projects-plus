@@ -233,15 +233,19 @@
     align-items: center;
     justify-content: center;
 
-    background-color: var(--background-primary);
+    background-color: var(--ppp-row-hover-bg, var(--background-primary));
     border-right: 1px solid var(--background-modifier-border);
     border-left-color: var(--background-modifier-border);
     border-bottom: 1px solid var(--background-modifier-border);
 
     width: 100%;
     min-height: 1.875rem;
+    transition:
+      background-color 120ms ease,
+      box-shadow 120ms ease,
+      transform 80ms ease;
   }
-  
+
   /* v4.0.0: Mobile - larger touch targets */
   @media (max-width: 30rem) {
     div {
@@ -249,8 +253,12 @@
     }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    div { transition: none; }
+  }
+
   .selected {
-    box-shadow: 0 0 0 2px inset var(--interactive-accent);
+    box-shadow: 0 0 0 0.125rem inset var(--interactive-accent);
     border-radius: var(--radius-s);
     padding: 0;
   }
@@ -258,14 +266,23 @@
   /* Affordance for editable cells */
   .editable {
     cursor: text;
-    transition: box-shadow 120ms ease, background 120ms ease;
   }
   .editable:hover {
-    box-shadow: 0 0 0 2px inset var(--background-modifier-border-focus);
-    background: var(--background-primary-alt);
+    box-shadow: 0 0 0 0.0625rem inset var(--background-modifier-border-focus);
+    background-color: var(--background-primary-alt);
+  }
+  /* Mouse-press feedback — subtle inset to confirm click registered */
+  .editable:active {
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
   }
   .editable:focus-within {
-    box-shadow: 0 0 0 2px inset var(--interactive-accent);
+    box-shadow: 0 0 0 0.125rem inset var(--interactive-accent);
+    background-color: var(--background-primary);
+  }
+  /* Distinguish keyboard navigation from mouse focus */
+  .editable:focus-visible:not(.selected) {
+    outline: none;
+    box-shadow: 0 0 0 0.125rem inset var(--interactive-accent-hover, var(--interactive-accent));
   }
 
   .columnHeader {
@@ -274,6 +291,9 @@
     text-align: center;
     justify-content: space-between;
     padding: 0 var(--ppp-spacing-2xs, 0.25rem);
+  }
+  .columnHeader:hover {
+    background-color: var(--background-modifier-hover);
   }
 
   .header {
@@ -291,6 +311,13 @@
     padding: var(--ppp-spacing-3xs, 0.1875rem);
     gap: var(--ppp-spacing-2xs, 0.25rem);
     position: sticky;
+    cursor: pointer;
+  }
+  .rowHeader:hover {
+    background-color: var(--background-modifier-hover);
+  }
+  .rowHeader:active {
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
   }
 
   .pinned {
@@ -303,7 +330,7 @@
 
   .error {
     background-color: rgba(var(--color-red-rgb, 255, 82, 82), 0.2) !important;
-    border: 2px solid var(--text-error) !important;
+    border: 0.125rem solid var(--text-error) !important;
     color: var(--text-error);
   }
 </style>

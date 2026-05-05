@@ -440,9 +440,9 @@
     const scrollWidth = container?.scrollWidth ?? 0;
     const clientWidth = container?.clientWidth ?? 0;
     
-    // Near left edge: scrollLeft < 500px
+    // Near left edge: scrollLeft < 500
     const nearLeft = scrollLeft < 500;
-    // Near right edge: scrollLeft + clientWidth > scrollWidth - 500px
+    // Near right edge: scrollLeft + clientWidth > scrollWidth - 500
     const nearRight = scrollLeft + clientWidth > scrollWidth - 500;
     
     // Load more at edges
@@ -1066,7 +1066,7 @@
     left: 0;
     z-index: 20;
     background: var(--background-primary);
-    border-right: 2px solid var(--background-modifier-border);
+    border-right: 0.125rem solid var(--background-modifier-border);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -1101,7 +1101,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-bottom: 2px solid var(--background-modifier-border);
+    border-bottom: 0.125rem solid var(--background-modifier-border);
     background: var(--background-primary);
   }
 
@@ -1281,7 +1281,7 @@
    * MOBILE ADAPTATION (v3.0.3)
    * ======================================== */
   
-  @media (max-width: 48rem), (pointer: coarse) { /* 768px at 16px base, or touch devices */
+  @media (max-width: 48rem), (pointer: coarse) { /* 768 at 16 base, or touch devices */
     .infinite-horizontal-calendar-wrapper {
       /* Mobile: slightly smaller base size */
       font-size: 0.9375rem;
@@ -1322,7 +1322,7 @@
   }
   
   /* Very small screens */
-  @media (max-width: 30rem) { /* 480px at 16px base */
+  @media (max-width: 30rem) { /* 480 at 16 base */
     .infinite-horizontal-calendar-wrapper {
       font-size: 0.875rem;
     }

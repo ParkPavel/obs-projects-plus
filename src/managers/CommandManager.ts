@@ -2,6 +2,7 @@ import type { App } from "obsidian";
 import type { ProjectDefinition, ShowCommand } from "../settings/settings";
 
 const PROJECTS_PLUGIN_ID = "obs-projects-plus";
+const SHOW_COMMAND_PREFIX = `${PROJECTS_PLUGIN_ID}:show:`;
 
 export interface CommandRegistration {
   id: string;
@@ -9,6 +10,21 @@ export interface CommandRegistration {
   callback: () => void;
 }
 
+/**
+ * Minimal subset of `Plugin` required by `finalizeRegistrations`. Lets unit
+ * tests pass a plain object without instantiating the Obsidian runtime.
+ */
+export interface CommandHost {
+  addCommand: (cmd: CommandRegistration) => unknown;
+}
+
+/**
+ * CommandManager — single source of truth for syncing per-project /
+ * per-view "Show …" commands with the user's enabled-command settings.
+ *
+ * v4.0 (REFACTOR-008): formerly duplicated inside `main.ts`. The plugin
+ * shell now delegates to this class exclusively.
+ */
 export class CommandManager {
   private commandsToRegister: CommandRegistration[] = [];
 
@@ -21,8 +37,8 @@ export class CommandManager {
   }
 
   private getRegisteredCommandIds(): Set<string> {
-    return new Set(Object.keys(this.app.commands.commands).filter(id => 
-      id.startsWith(`${PROJECTS_PLUGIN_ID}:`)
+    return new Set(Object.keys(this.app.commands.commands).filter(id =>
+      id.startsWith(SHOW_COMMAND_PREFIX)
     ));
   }
 
@@ -32,12 +48,24 @@ export class CommandManager {
         id === this.getShowCommandId(cmd, true)
       );
 
+      // Unregister command if it's been disabled.
       if (!enabledCommand) {
         this.app.commands.removeCommand(id);
         return;
       }
 
-      const project = projects.find(p => p.id === enabledCommand.project);
+      // Unregister command if its project — or its view, if scoped — has
+      // been deleted. Both checks must be present: a project may survive
+      // while one of its views is removed.
+      const project = projects.find(p => {
+        if (enabledCommand.view) {
+          return (
+            p.id === enabledCommand.project &&
+            !!p.views.find(v => v.id === enabledCommand.view)
+          );
+        }
+        return p.id === enabledCommand.project;
+      });
       if (!project) {
         this.app.commands.removeCommand(id);
       }
@@ -95,19 +123,19 @@ export class CommandManager {
   }
 
   /**
-   * Finalizes command registration by actually adding commands through the plugin
-   * This must be called after ensureCommands to actually register the new commands
-   * @param plugin - The Obsidian Plugin instance (typed as any due to incomplete type definitions for addCommand method)
+   * Finalizes command registration by actually adding commands through the plugin.
+   * This must be called after ensureCommands to actually register the new commands.
+   * Safe to call repeatedly; the queue is emptied on success and preserved on a
+   * missing/invalid host so the next call with a valid host can recover.
    */
-   
-  finalizeRegistrations(plugin: any): void {
-    if (!plugin || !plugin.addCommand) {
+  finalizeRegistrations(plugin: CommandHost | Partial<CommandHost> | null | undefined): void {
+    if (!plugin || typeof (plugin as CommandHost).addCommand !== "function") {
       console.warn("CommandManager: Plugin reference required for command registration");
       return;
     }
 
     this.commandsToRegister.forEach(command => {
-      plugin.addCommand(command);
+      (plugin as CommandHost).addCommand(command);
     });
 
     this.commandsToRegister = []; // Clear after registration

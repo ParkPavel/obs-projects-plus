@@ -1,7 +1,7 @@
-<script lang="ts">
+﻿<script lang="ts">
   /**
    * MultiDayEventStrip - Horizontal strip for multi-day events in day header
-   * Per ROADMAP_V3.0.0 §2.8 - Многодневные события в шапке
+   * Per ROADMAP_V3.0.0 В§2.8 - РњРЅРѕРіРѕРґРЅРµРІРЅС‹Рµ СЃРѕР±С‹С‚РёСЏ РІ С€Р°РїРєРµ
    * 
    * Each day renders its own segment of the multi-day event strip.
    * The strip spans across multiple day columns in the header area.
@@ -43,7 +43,7 @@
   function handleClick(e: MouseEvent) {
     e.stopPropagation();
     if (onClick) {
-      // v3.0.8: Unified navigation — Shift → window, Ctrl → tab, else → default
+      // v3.0.8: Unified navigation вЂ” Shift в†’ window, Ctrl в†’ tab, else в†’ default
       const openMode: false | 'tab' | 'window' = e.shiftKey ? 'window' : (e.ctrlKey || e.metaKey) ? 'tab' : false;
       onClick(openMode);
     }
@@ -150,7 +150,7 @@
     line-height: var(--strip-height, 1.25rem);
     /* v9.1: Top border accent for multi-day events */
     background: color-mix(in srgb, var(--strip-color) 15%, var(--background-primary));
-    border-top: var(--ppp-border-width-thick, 2px) solid var(--strip-color);
+    border-top: var(--ppp-border-width-thick, 0.125rem) solid var(--strip-color);
     border-radius: 0;
     color: var(--text-normal);
     font-size: var(--ppp-font-size-xs, 0.6875rem);
@@ -182,7 +182,7 @@
   button.projects-calendar-multiday-strip {
     cursor: pointer;
     border: none;
-    border-top: var(--ppp-border-width-thick, 2px) solid var(--strip-color);
+    border-top: var(--ppp-border-width-thick, 0.125rem) solid var(--strip-color);
     font-family: inherit;
     /* v9.1: Ensure button respects height - browsers may override */
     height: var(--strip-height, 1.25rem) !important;
@@ -194,7 +194,7 @@
   
   button.projects-calendar-multiday-strip:hover {
     background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
     z-index: 3;
   }
   
@@ -224,7 +224,7 @@
     font-size: 0.5625rem;
   }
 
-  /* ── v3.2.0 Iteration 5: DnD states ── */
+  /* в”Ђв”Ђ v3.2.0 Iteration 5: DnD states в”Ђв”Ђ */
   .projects-calendar-multiday-strip.dnd-grab {
     cursor: grab;
   }
@@ -233,13 +233,10 @@
     pointer-events: none;
   }
 
-  /* Reset browser/theme focus outline — use outline only for keyboard navigation */
-  button.projects-calendar-multiday-strip:focus {
-    outline: none;
-  }
+  /* Reset browser/theme focus outline вЂ” use outline only for keyboard navigation */
   button.projects-calendar-multiday-strip:focus-visible {
-    outline: 2px solid var(--strip-color);
-    outline-offset: 1px;
+    outline: 0.125rem solid var(--strip-color);
+    outline-offset: 0.0625rem;
     z-index: 3;
   }
 
@@ -249,15 +246,15 @@
     opacity: 1;
   }
 
-  /* Left triangle — startDate edge */
+  /* Left triangle вЂ” startDate edge */
   .resize-handle-start {
     position: absolute;
     top: 0;
     left: 0;
     width: 0;
     height: 0;
-    border-left: 8px solid var(--strip-color);
-    border-bottom: 8px solid transparent;
+    border-left: 0.5rem solid var(--strip-color);
+    border-bottom: 0.5rem solid transparent;
     cursor: ew-resize;
     opacity: 0;
     transition: opacity var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
@@ -265,15 +262,15 @@
     pointer-events: auto;
   }
 
-  /* Right triangle — endDate edge */
+  /* Right triangle вЂ” endDate edge */
   .resize-handle-end {
     position: absolute;
     bottom: 0;
     right: 0;
     width: 0;
     height: 0;
-    border-right: 8px solid var(--strip-color);
-    border-top: 8px solid transparent;
+    border-right: 0.5rem solid var(--strip-color);
+    border-top: 0.5rem solid transparent;
     cursor: ew-resize;
     opacity: 0;
     transition: opacity var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
@@ -281,39 +278,39 @@
     pointer-events: auto;
   }
 
-  /* Touch zone 44px around handles */
+  /* Touch zone (~2.75rem) around handles */
   .resize-handle-start::before,
   .resize-handle-end::before {
     content: '';
     position: absolute;
-    width: 44px;
-    height: 44px;
+    width: 2.75rem;
+    height: 2.75rem;
   }
   .resize-handle-start::before {
-    top: -12px;
-    left: -12px;
+    top: -0.75rem;
+    left: -0.75rem;
   }
   .resize-handle-end::before {
-    bottom: -12px;
-    right: -12px;
+    bottom: -0.75rem;
+    right: -0.75rem;
   }
 
   @media (pointer: coarse) {
     .resize-handle-start {
-      border-left-width: 12px;
-      border-bottom-width: 12px;
+      border-left-width: 0.75rem;
+      border-bottom-width: 0.75rem;
     }
     .resize-handle-end {
-      border-right-width: 12px;
-      border-top-width: 12px;
+      border-right-width: 0.75rem;
+      border-top-width: 0.75rem;
     }
     .resize-handle-start::before {
-      top: -18px;
-      left: -18px;
+      top: -1.125rem;
+      left: -1.125rem;
     }
     .resize-handle-end::before {
-      bottom: -18px;
-      right: -18px;
+      bottom: -1.125rem;
+      right: -1.125rem;
     }
   }
 </style>

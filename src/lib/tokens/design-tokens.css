@@ -14,21 +14,21 @@
 	   📏 BASE UNIT (Базовая единица)
 	   ═══════════════════════════════════════════════════ */
 	
-	--ppp-base-unit: 0.25rem; /* 4px на 16px root font-size */
+	--ppp-base-unit: 0.25rem; /* 4 на 16 root font-size */
 	
 	/* ═══════════════════════════════════════════════════
 	   🔢 SPACING SYSTEM (Матрёшка отступов)
 	   ═══════════════════════════════════════════════════ */
 	
 	/* Основная шкала */
-	--ppp-spacing-xs: calc(var(--ppp-base-unit) * 1);    /* 0.25rem = 4px */
-	--ppp-spacing-sm: calc(var(--ppp-base-unit) * 1.5);  /* 0.375rem = 6px */
-	--ppp-spacing-md: calc(var(--ppp-base-unit) * 2);    /* 0.5rem = 8px */
-	--ppp-spacing-lg: calc(var(--ppp-base-unit) * 3);    /* 0.75rem = 12px */
-	--ppp-spacing-xl: calc(var(--ppp-base-unit) * 4);    /* 1rem = 16px */
-	--ppp-spacing-2xl: calc(var(--ppp-base-unit) * 6);   /* 1.5rem = 24px */
-	--ppp-spacing-3xl: calc(var(--ppp-base-unit) * 8);   /* 2rem = 32px */
-	--ppp-spacing-4xl: calc(var(--ppp-base-unit) * 12);  /* 3rem = 48px */
+	--ppp-spacing-xs: calc(var(--ppp-base-unit) * 1);    /* 0.25rem = 4 */
+	--ppp-spacing-sm: calc(var(--ppp-base-unit) * 1.5);  /* 0.375rem = 6 */
+	--ppp-spacing-md: calc(var(--ppp-base-unit) * 2);    /* 0.5rem = 8 */
+	--ppp-spacing-lg: calc(var(--ppp-base-unit) * 3);    /* 0.75rem = 12 */
+	--ppp-spacing-xl: calc(var(--ppp-base-unit) * 4);    /* 1rem = 16 */
+	--ppp-spacing-2xl: calc(var(--ppp-base-unit) * 6);   /* 1.5rem = 24 */
+	--ppp-spacing-3xl: calc(var(--ppp-base-unit) * 8);   /* 2rem = 32 */
+	--ppp-spacing-4xl: calc(var(--ppp-base-unit) * 12);  /* 3rem = 48 */
 	
 	/* Semantic spacing */
 	--ppp-gap-tight: var(--ppp-spacing-xs);
@@ -45,52 +45,52 @@
 	   👆 TOUCH TARGETS (Минимальные размеры для touch)
 	   ═══════════════════════════════════════════════════ */
 	
-	--ppp-touch-min: 2.75rem;        /* 44px - iOS Human Interface Guidelines */
-	--ppp-touch-comfortable: 3rem;   /* 48px - Material Design */
-	--ppp-touch-generous: 3.5rem;    /* 56px - для важных действий */
+	--ppp-touch-min: 2.75rem;        /* 44 - iOS Human Interface Guidelines */
+	--ppp-touch-comfortable: 3rem;   /* 48 - Material Design */
+	--ppp-touch-generous: 3.5rem;    /* 56 - для важных действий */
 	
 	/* ═══════════════════════════════════════════════════
 	   📐 COMPONENT HEIGHTS (Высоты компонентов)
 	   ═══════════════════════════════════════════════════ */
 	
 	/* Table */
-	--ppp-table-header-height: 1.875rem;  /* 30px */
-	--ppp-table-row-height: 1.875rem;     /* 30px */
+	--ppp-table-header-height: 1.875rem;  /* 30 */
+	--ppp-table-row-height: 1.875rem;     /* 30 */
 	--ppp-table-cell-min-height: 1.875rem;
 	
 	/* Inputs & Buttons */
-	--ppp-input-height-sm: 1.75rem;   /* 28px - компактные поля */
-	--ppp-input-height-md: 2rem;      /* 32px - стандартные поля */
-	--ppp-input-height-lg: 2.5rem;    /* 40px - крупные поля */
+	--ppp-input-height-sm: 1.75rem;   /* 28 - компактные поля */
+	--ppp-input-height-md: 2rem;      /* 32 - стандартные поля */
+	--ppp-input-height-lg: 2.5rem;    /* 40 - крупные поля */
 	
 	--ppp-button-height-sm: 1.75rem;
 	--ppp-button-height-md: 2rem;
 	--ppp-button-height-lg: 2.5rem;
 	
 	/* Calendar */
-	--ppp-calendar-header-height: 2.5rem;     /* 40px */
-	--ppp-calendar-day-header-height: 1.875rem; /* 30px */
-	--ppp-calendar-event-min-height: 1.25rem; /* 20px */
-	--ppp-calendar-strip-height: 0.5rem;      /* 8px - для multi-day тонких линий */
+	--ppp-calendar-header-height: 2.5rem;     /* 40 */
+	--ppp-calendar-day-header-height: 1.875rem; /* 30 */
+	--ppp-calendar-event-min-height: 1.25rem; /* 20 */
+	--ppp-calendar-strip-height: 0.5rem;      /* 8 - для multi-day тонких линий */
 	
 	/* Sidebar */
-	--ppp-sidebar-width: 15rem;       /* 240px */
-	--ppp-sidebar-collapsed: 3rem;    /* 48px */
+	--ppp-sidebar-width: 15rem;       /* 240 */
+	--ppp-sidebar-collapsed: 3rem;    /* 48 */
 	
 	/* ═══════════════════════════════════════════════════
 	   🔤 TYPOGRAPHY (Типографика)
 	   ═══════════════════════════════════════════════════ */
 	
 	/* Font sizes (матрёшка от базового размера) */
-	--ppp-font-base: 1rem;     /* 16px */
+	--ppp-font-base: 1rem;     /* 16 */
 	
-	--ppp-font-xs: 0.75rem;    /* 12px */
-	--ppp-font-sm: 0.875rem;   /* 14px */
-	--ppp-font-md: 1rem;       /* 16px */
-	--ppp-font-lg: 1.125rem;   /* 18px */
-	--ppp-font-xl: 1.25rem;    /* 20px */
-	--ppp-font-2xl: 1.5rem;    /* 24px */
-	--ppp-font-3xl: 1.875rem;  /* 30px */
+	--ppp-font-xs: 0.75rem;    /* 12 */
+	--ppp-font-sm: 0.875rem;   /* 14 */
+	--ppp-font-md: 1rem;       /* 16 */
+	--ppp-font-lg: 1.125rem;   /* 18 */
+	--ppp-font-xl: 1.25rem;    /* 20 */
+	--ppp-font-2xl: 1.5rem;    /* 24 */
+	--ppp-font-3xl: 1.875rem;  /* 30 */
 	
 	/* Line heights */
 	--ppp-leading-tight: 1.25;
@@ -112,10 +112,10 @@
 	--ppp-border-width-thick: 2px;
 	
 	/* Border radius */
-	--ppp-radius-sm: 0.125rem;   /* 2px */
-	--ppp-radius-md: 0.25rem;    /* 4px */
-	--ppp-radius-lg: 0.5rem;     /* 8px */
-	--ppp-radius-xl: 0.75rem;    /* 12px */
+	--ppp-radius-sm: 0.125rem;   /* 2 */
+	--ppp-radius-md: 0.25rem;    /* 4 */
+	--ppp-radius-lg: 0.5rem;     /* 8 */
+	--ppp-radius-xl: 0.75rem;    /* 12 */
 	--ppp-radius-full: 9999px;   /* Круг */
 	
 	/* ═══════════════════════════════════════════════════
@@ -151,12 +151,12 @@
 	   📱 BREAKPOINTS (для использования в JS)
 	   ═══════════════════════════════════════════════════ */
 	
-	--ppp-breakpoint-xs: 30rem;   /* 480px - phone */
-	--ppp-breakpoint-sm: 48rem;   /* 768px - tablet portrait */
-	--ppp-breakpoint-md: 64rem;   /* 1024px - tablet landscape */
-	--ppp-breakpoint-lg: 80rem;   /* 1280px - desktop */
-	--ppp-breakpoint-xl: 90rem;   /* 1440px - large desktop */
-	--ppp-breakpoint-2xl: 120rem; /* 1920px - ultra-wide */
+	--ppp-breakpoint-xs: 30rem;   /* 480 - phone */
+	--ppp-breakpoint-sm: 48rem;   /* 768 - tablet portrait */
+	--ppp-breakpoint-md: 64rem;   /* 1024 - tablet landscape */
+	--ppp-breakpoint-lg: 80rem;   /* 1280 - desktop */
+	--ppp-breakpoint-xl: 90rem;   /* 1440 - large desktop */
+	--ppp-breakpoint-2xl: 120rem; /* 1920 - ultra-wide */
 }
 
 /* ═══════════════════════════════════════════════════
@@ -203,8 +203,8 @@
 
 /* Consistent focus states - scoped to plugin */
 .workspace-leaf-content[data-type="obs-projects-plus"] *:focus-visible {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: 2px;
+	outline: 0.125rem solid var(--interactive-accent);
+	outline-offset: 0.125rem;
 	border-radius: var(--ppp-radius-sm);
 }
 
@@ -215,8 +215,8 @@
 .workspace-leaf-content[data-type="obs-projects-plus"] select:focus-visible,
 .workspace-leaf-content[data-type="obs-projects-plus"] [role="button"]:focus-visible,
 .workspace-leaf-content[data-type="obs-projects-plus"] [tabindex]:not([tabindex="-1"]):focus-visible {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: 2px;
+	outline: 0.125rem solid var(--interactive-accent);
+	outline-offset: 0.125rem;
 }
 
 /* Consistent hover effects - scoped to plugin */
@@ -260,19 +260,19 @@
 
 /* Unified shadow depths - using ppp- prefix to avoid conflicts */
 .ppp-shadow-sm {
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.05);
 }
 
 .ppp-shadow-md {
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+	box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.07);
 }
 
 .ppp-shadow-lg {
-	box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 0.625rem 0.9375rem rgba(0, 0, 0, 0.1);
 }
 
 .ppp-shadow-xl {
-	box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 1.25rem 1.5625rem rgba(0, 0, 0, 0.15);
 }
 
 /* Unified icon sizes - using ppp- prefix */
@@ -299,9 +299,9 @@
 
    ❌ НЕ ТАК:
    .button {
-     padding: 8px 16px;
-     height: 32px;
-     font-size: 14px;
+     padding: 8 16;
+     height: 32;
+     font-size: 14;
    }
 
    ✅ ТАК:

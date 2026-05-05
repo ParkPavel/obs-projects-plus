@@ -22,6 +22,8 @@ import type { AgendaFilter, AgendaFilterGroup, AgendaCustomList } from 'src/sett
 import { parseDateFormula, isDateFormula } from 'src/lib/helpers/dateFormulaParser';
 import { parseFormula, evaluateFormula } from 'src/lib/helpers/formulaParser';
 import { calendarLogger } from '../logger';
+import { stripToDisplay as kernelStripToDisplay } from 'src/lib/engine/wikilink';
+import { isEmpty as kernelIsEmpty } from 'src/lib/engine/emptiness';
 
 /**
  * Legacy operator names from v3.0.4, preserved for backward-compat
@@ -94,25 +96,24 @@ function resolveFilterValue(
 /**
  * Strip wiki-link syntax: [[path|display]] → display, [[path]] → path
  * Handles field values stored as Obsidian wiki-links (e.g., the 'name' field).
+ *
+ * REFACTOR-105: thin wrapper over canonical `stripToDisplay` kernel,
+ * preserving the original `unknown`-passthrough behaviour for non-string
+ * inputs.
  */
 function stripWikiLink(value: unknown): unknown {
   if (typeof value !== 'string') return value;
-  const match = value.match(/^\[\[([^\]]+)\]\]$/);
-  if (!match || !match[1]) return value;
-  const inner = match[1];
-  // [[path|display]] → display
-  const pipeIdx = inner.indexOf('|');
-  return pipeIdx >= 0 ? inner.substring(pipeIdx + 1) : inner;
+  return kernelStripToDisplay(value);
 }
 
 /**
  * Check if value is empty
+ *
+ * REFACTOR-106: delegated to canonical kernel; preserves the
+ * full empty semantics (null/undefined/""/[]).
  */
 function isEmptyValue(value: unknown): boolean {
-  return value === null || 
-         value === undefined || 
-         value === '' ||
-         (Array.isArray(value) && value.length === 0);
+  return kernelIsEmpty(value);
 }
 
 /**

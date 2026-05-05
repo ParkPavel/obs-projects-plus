@@ -79,7 +79,7 @@
   }
   span {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
     align-items: center;
   }
 </style>

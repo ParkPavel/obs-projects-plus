@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
   import { Icon } from 'obsidian-svelte';
   import type { DataField } from 'src/lib/dataframe/dataframe';
@@ -15,7 +15,7 @@
   let errors: ValidationError[] = [];
   let showHelp = false;
 
-  // ── Autocomplete state ──
+  // в”Ђв”Ђ Autocomplete state в”Ђв”Ђ
   let acVisible = false;
   let acItems: AcItem[] = [];
   let acIndex = 0;
@@ -32,70 +32,70 @@
     category?: string;    // Category name
   }
 
-  // ── Full function catalog (DQL-aligned) ──
+  // в”Ђв”Ђ Full function catalog (DQL-aligned) в”Ђв”Ђ
   const FUNCTION_CATALOG: AcItem[] = [
     // Logical
-    { label: 'AND', insert: 'AND(', kind: 'function', args: '...условия', desc: 'Все условия должны быть TRUE', category: '🔗 Логические' },
-    { label: 'OR', insert: 'OR(', kind: 'function', args: '...условия', desc: 'Хотя бы одно условие TRUE', category: '🔗 Логические' },
-    { label: 'NOT', insert: 'NOT(', kind: 'function', args: 'условие', desc: 'Инвертирует условие', category: '🔗 Логические' },
+    { label: 'AND', insert: 'AND(', kind: 'function', args: '...СѓСЃР»РѕРІРёСЏ', desc: 'Р’СЃРµ СѓСЃР»РѕРІРёСЏ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ TRUE', category: 'рџ”— Р›РѕРіРёС‡РµСЃРєРёРµ' },
+    { label: 'OR', insert: 'OR(', kind: 'function', args: '...СѓСЃР»РѕРІРёСЏ', desc: 'РҐРѕС‚СЏ Р±С‹ РѕРґРЅРѕ СѓСЃР»РѕРІРёРµ TRUE', category: 'рџ”— Р›РѕРіРёС‡РµСЃРєРёРµ' },
+    { label: 'NOT', insert: 'NOT(', kind: 'function', args: 'СѓСЃР»РѕРІРёРµ', desc: 'РРЅРІРµСЂС‚РёСЂСѓРµС‚ СѓСЃР»РѕРІРёРµ', category: 'рџ”— Р›РѕРіРёС‡РµСЃРєРёРµ' },
 
     // Empty checks
-    { label: 'IS_EMPTY', insert: 'IS_EMPTY(', kind: 'function', args: 'поле', desc: 'Поле пустое (null/""/ [])', category: '🔍 Проверки' },
-    { label: 'IS_NOT_EMPTY', insert: 'IS_NOT_EMPTY(', kind: 'function', args: 'поле', desc: 'Поле не пустое', category: '🔍 Проверки' },
+    { label: 'IS_EMPTY', insert: 'IS_EMPTY(', kind: 'function', args: 'РїРѕР»Рµ', desc: 'РџРѕР»Рµ РїСѓСЃС‚РѕРµ (null/""/ [])', category: 'рџ”Ќ РџСЂРѕРІРµСЂРєРё' },
+    { label: 'IS_NOT_EMPTY', insert: 'IS_NOT_EMPTY(', kind: 'function', args: 'РїРѕР»Рµ', desc: 'РџРѕР»Рµ РЅРµ РїСѓСЃС‚РѕРµ', category: 'рџ”Ќ РџСЂРѕРІРµСЂРєРё' },
 
     // String
-    { label: 'CONTAINS', insert: 'CONTAINS(', kind: 'function', args: 'поле, "текст"', desc: 'Содержит текст (регистр игнор.)', category: '📝 Строки' },
-    { label: 'NOT_CONTAINS', insert: 'NOT_CONTAINS(', kind: 'function', args: 'поле, "текст"', desc: 'Не содержит текст', category: '📝 Строки' },
-    { label: 'STARTS_WITH', insert: 'STARTS_WITH(', kind: 'function', args: 'поле, "префикс"', desc: 'Начинается с', category: '📝 Строки' },
-    { label: 'ENDS_WITH', insert: 'ENDS_WITH(', kind: 'function', args: 'поле, "суффикс"', desc: 'Заканчивается на', category: '📝 Строки' },
+    { label: 'CONTAINS', insert: 'CONTAINS(', kind: 'function', args: 'РїРѕР»Рµ, "С‚РµРєСЃС‚"', desc: 'РЎРѕРґРµСЂР¶РёС‚ С‚РµРєСЃС‚ (СЂРµРіРёСЃС‚СЂ РёРіРЅРѕСЂ.)', category: 'рџ“ќ РЎС‚СЂРѕРєРё' },
+    { label: 'NOT_CONTAINS', insert: 'NOT_CONTAINS(', kind: 'function', args: 'РїРѕР»Рµ, "С‚РµРєСЃС‚"', desc: 'РќРµ СЃРѕРґРµСЂР¶РёС‚ С‚РµРєСЃС‚', category: 'рџ“ќ РЎС‚СЂРѕРєРё' },
+    { label: 'STARTS_WITH', insert: 'STARTS_WITH(', kind: 'function', args: 'РїРѕР»Рµ, "РїСЂРµС„РёРєСЃ"', desc: 'РќР°С‡РёРЅР°РµС‚СЃСЏ СЃ', category: 'рџ“ќ РЎС‚СЂРѕРєРё' },
+    { label: 'ENDS_WITH', insert: 'ENDS_WITH(', kind: 'function', args: 'РїРѕР»Рµ, "СЃСѓС„С„РёРєСЃ"', desc: 'Р—Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР°', category: 'рџ“ќ РЎС‚СЂРѕРєРё' },
 
     // Date constants
-    { label: 'TODAY', insert: 'TODAY()', kind: 'function', args: '', desc: 'Текущая дата', category: '📅 Даты' },
-    { label: 'NOW', insert: 'NOW()', kind: 'function', args: '', desc: 'Текущая дата (= TODAY)', category: '📅 Даты' },
-    { label: 'TOMORROW', insert: 'TOMORROW()', kind: 'function', args: '', desc: 'Завтра', category: '📅 Даты' },
-    { label: 'YESTERDAY', insert: 'YESTERDAY()', kind: 'function', args: '', desc: 'Вчера', category: '📅 Даты' },
+    { label: 'TODAY', insert: 'TODAY()', kind: 'function', args: '', desc: 'РўРµРєСѓС‰Р°СЏ РґР°С‚Р°', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'NOW', insert: 'NOW()', kind: 'function', args: '', desc: 'РўРµРєСѓС‰Р°СЏ РґР°С‚Р° (= TODAY)', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'TOMORROW', insert: 'TOMORROW()', kind: 'function', args: '', desc: 'Р—Р°РІС‚СЂР°', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'YESTERDAY', insert: 'YESTERDAY()', kind: 'function', args: '', desc: 'Р’С‡РµСЂР°', category: 'рџ“… Р”Р°С‚С‹' },
 
     // Date checks
-    { label: 'IS_TODAY', insert: 'IS_TODAY(', kind: 'function', args: 'датаПоле', desc: 'Дата = сегодня', category: '📅 Даты' },
-    { label: 'IS_THIS_WEEK', insert: 'IS_THIS_WEEK(', kind: 'function', args: 'датаПоле', desc: 'Дата на этой неделе', category: '📅 Даты' },
-    { label: 'IS_THIS_MONTH', insert: 'IS_THIS_MONTH(', kind: 'function', args: 'датаПоле', desc: 'Дата в этом месяце', category: '📅 Даты' },
-    { label: 'IS_BEFORE', insert: 'IS_BEFORE(', kind: 'function', args: 'дата1, дата2', desc: 'дата1 раньше дата2', category: '📅 Даты' },
-    { label: 'IS_AFTER', insert: 'IS_AFTER(', kind: 'function', args: 'дата1, дата2', desc: 'дата1 позже дата2', category: '📅 Даты' },
-    { label: 'IS_ON_AND_BEFORE', insert: 'IS_ON_AND_BEFORE(', kind: 'function', args: 'дата1, дата2', desc: 'дата1 ≤ дата2', category: '📅 Даты' },
-    { label: 'IS_ON_AND_AFTER', insert: 'IS_ON_AND_AFTER(', kind: 'function', args: 'дата1, дата2', desc: 'дата1 ≥ дата2', category: '📅 Даты' },
-    { label: 'IS_OVERDUE', insert: 'IS_OVERDUE(', kind: 'function', args: 'датаПоле', desc: 'Дата просрочена', category: '📅 Даты' },
-    { label: 'IS_UPCOMING', insert: 'IS_UPCOMING(', kind: 'function', args: 'датаПоле', desc: 'Дата предстоящая', category: '📅 Даты' },
-    { label: 'DATE_ADD', insert: 'DATE_ADD(', kind: 'function', args: 'дата, кол-во, "d|w|m|y"', desc: 'Добавить к дате', category: '📅 Даты' },
-    { label: 'DATE_SUB', insert: 'DATE_SUB(', kind: 'function', args: 'дата, кол-во, "d|w|m|y"', desc: 'Вычесть из даты', category: '📅 Даты' },
+    { label: 'IS_TODAY', insert: 'IS_TODAY(', kind: 'function', args: 'РґР°С‚Р°РџРѕР»Рµ', desc: 'Р”Р°С‚Р° = СЃРµРіРѕРґРЅСЏ', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_THIS_WEEK', insert: 'IS_THIS_WEEK(', kind: 'function', args: 'РґР°С‚Р°РџРѕР»Рµ', desc: 'Р”Р°С‚Р° РЅР° СЌС‚РѕР№ РЅРµРґРµР»Рµ', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_THIS_MONTH', insert: 'IS_THIS_MONTH(', kind: 'function', args: 'РґР°С‚Р°РџРѕР»Рµ', desc: 'Р”Р°С‚Р° РІ СЌС‚РѕРј РјРµСЃСЏС†Рµ', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_BEFORE', insert: 'IS_BEFORE(', kind: 'function', args: 'РґР°С‚Р°1, РґР°С‚Р°2', desc: 'РґР°С‚Р°1 СЂР°РЅСЊС€Рµ РґР°С‚Р°2', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_AFTER', insert: 'IS_AFTER(', kind: 'function', args: 'РґР°С‚Р°1, РґР°С‚Р°2', desc: 'РґР°С‚Р°1 РїРѕР·Р¶Рµ РґР°С‚Р°2', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_ON_AND_BEFORE', insert: 'IS_ON_AND_BEFORE(', kind: 'function', args: 'РґР°С‚Р°1, РґР°С‚Р°2', desc: 'РґР°С‚Р°1 в‰¤ РґР°С‚Р°2', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_ON_AND_AFTER', insert: 'IS_ON_AND_AFTER(', kind: 'function', args: 'РґР°С‚Р°1, РґР°С‚Р°2', desc: 'РґР°С‚Р°1 в‰Ґ РґР°С‚Р°2', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_OVERDUE', insert: 'IS_OVERDUE(', kind: 'function', args: 'РґР°С‚Р°РџРѕР»Рµ', desc: 'Р”Р°С‚Р° РїСЂРѕСЃСЂРѕС‡РµРЅР°', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'IS_UPCOMING', insert: 'IS_UPCOMING(', kind: 'function', args: 'РґР°С‚Р°РџРѕР»Рµ', desc: 'Р”Р°С‚Р° РїСЂРµРґСЃС‚РѕСЏС‰Р°СЏ', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'DATE_ADD', insert: 'DATE_ADD(', kind: 'function', args: 'РґР°С‚Р°, РєРѕР»-РІРѕ, "d|w|m|y"', desc: 'Р”РѕР±Р°РІРёС‚СЊ Рє РґР°С‚Рµ', category: 'рџ“… Р”Р°С‚С‹' },
+    { label: 'DATE_SUB', insert: 'DATE_SUB(', kind: 'function', args: 'РґР°С‚Р°, РєРѕР»-РІРѕ, "d|w|m|y"', desc: 'Р’С‹С‡РµСЃС‚СЊ РёР· РґР°С‚С‹', category: 'рџ“… Р”Р°С‚С‹' },
 
     // Arrays
-    { label: 'HAS_ANY_OF', insert: 'HAS_ANY_OF(', kind: 'function', args: 'поле, ["a","b"]', desc: 'Массив содержит хотя бы одно', category: '📋 Массивы / Теги' },
-    { label: 'HAS_ALL_OF', insert: 'HAS_ALL_OF(', kind: 'function', args: 'поле, ["a","b"]', desc: 'Массив содержит все', category: '📋 Массивы / Теги' },
-    { label: 'HAS_NONE_OF', insert: 'HAS_NONE_OF(', kind: 'function', args: 'поле, ["a","b"]', desc: 'Массив не содержит ни одного', category: '📋 Массивы / Теги' },
+    { label: 'HAS_ANY_OF', insert: 'HAS_ANY_OF(', kind: 'function', args: 'РїРѕР»Рµ, ["a","b"]', desc: 'РњР°СЃСЃРёРІ СЃРѕРґРµСЂР¶РёС‚ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕ', category: 'рџ“‹ РњР°СЃСЃРёРІС‹ / РўРµРіРё' },
+    { label: 'HAS_ALL_OF', insert: 'HAS_ALL_OF(', kind: 'function', args: 'РїРѕР»Рµ, ["a","b"]', desc: 'РњР°СЃСЃРёРІ СЃРѕРґРµСЂР¶РёС‚ РІСЃРµ', category: 'рџ“‹ РњР°СЃСЃРёРІС‹ / РўРµРіРё' },
+    { label: 'HAS_NONE_OF', insert: 'HAS_NONE_OF(', kind: 'function', args: 'РїРѕР»Рµ, ["a","b"]', desc: 'РњР°СЃСЃРёРІ РЅРµ СЃРѕРґРµСЂР¶РёС‚ РЅРё РѕРґРЅРѕРіРѕ', category: 'рџ“‹ РњР°СЃСЃРёРІС‹ / РўРµРіРё' },
   ];
 
-  // ── Snippet templates for common patterns ──
+  // в”Ђв”Ђ Snippet templates for common patterns в”Ђв”Ђ
   const SNIPPET_CATALOG: AcItem[] = [
-    { label: '📌 Активные задачи', insert: 'AND(status = "Active", IS_NOT_EMPTY(dueDate))', kind: 'snippet', desc: 'Активные с датой', category: '⚡ Шаблоны' },
-    { label: '🔥 Срочные просроченные', insert: 'AND(IS_OVERDUE(dueDate), CONTAINS(tags, "urgent"))', kind: 'snippet', desc: 'Просроченные + urgent', category: '⚡ Шаблоны' },
-    { label: '📅 Задачи на эту неделю', insert: 'IS_THIS_WEEK(dueDate)', kind: 'snippet', desc: 'Все на этой неделе', category: '⚡ Шаблоны' },
-    { label: '📋 По статусу и приоритету', insert: 'AND(status = "", priority > 5)', kind: 'snippet', desc: 'Фильтр по двум полям', category: '⚡ Шаблоны' },
-    { label: '🗓 Без даты или просроченные', insert: 'OR(IS_EMPTY(dueDate), IS_OVERDUE(dueDate))', kind: 'snippet', desc: 'Пустая дата ИЛИ просрочено', category: '⚡ Шаблоны' },
+    { label: 'рџ“Њ РђРєС‚РёРІРЅС‹Рµ Р·Р°РґР°С‡Рё', insert: 'AND(status = "Active", IS_NOT_EMPTY(dueDate))', kind: 'snippet', desc: 'РђРєС‚РёРІРЅС‹Рµ СЃ РґР°С‚РѕР№', category: 'вљЎ РЁР°Р±Р»РѕРЅС‹' },
+    { label: 'рџ”Ґ РЎСЂРѕС‡РЅС‹Рµ РїСЂРѕСЃСЂРѕС‡РµРЅРЅС‹Рµ', insert: 'AND(IS_OVERDUE(dueDate), CONTAINS(tags, "urgent"))', kind: 'snippet', desc: 'РџСЂРѕСЃСЂРѕС‡РµРЅРЅС‹Рµ + urgent', category: 'вљЎ РЁР°Р±Р»РѕРЅС‹' },
+    { label: 'рџ“… Р—Р°РґР°С‡Рё РЅР° СЌС‚Сѓ РЅРµРґРµР»СЋ', insert: 'IS_THIS_WEEK(dueDate)', kind: 'snippet', desc: 'Р’СЃРµ РЅР° СЌС‚РѕР№ РЅРµРґРµР»Рµ', category: 'вљЎ РЁР°Р±Р»РѕРЅС‹' },
+    { label: 'рџ“‹ РџРѕ СЃС‚Р°С‚СѓСЃСѓ Рё РїСЂРёРѕСЂРёС‚РµС‚Сѓ', insert: 'AND(status = "", priority > 5)', kind: 'snippet', desc: 'Р¤РёР»СЊС‚СЂ РїРѕ РґРІСѓРј РїРѕР»СЏРј', category: 'вљЎ РЁР°Р±Р»РѕРЅС‹' },
+    { label: 'рџ—“ Р‘РµР· РґР°С‚С‹ РёР»Рё РїСЂРѕСЃСЂРѕС‡РµРЅРЅС‹Рµ', insert: 'OR(IS_EMPTY(dueDate), IS_OVERDUE(dueDate))', kind: 'snippet', desc: 'РџСѓСЃС‚Р°СЏ РґР°С‚Р° РР›Р РїСЂРѕСЃСЂРѕС‡РµРЅРѕ', category: 'вљЎ РЁР°Р±Р»РѕРЅС‹' },
   ];
 
   // Keyword items
   const KEYWORD_ITEMS: AcItem[] = [
-    { label: 'true', insert: 'true', kind: 'keyword', desc: 'Логическое TRUE' },
-    { label: 'false', insert: 'false', kind: 'keyword', desc: 'Логическое FALSE' },
-    { label: 'null', insert: 'null', kind: 'keyword', desc: 'Пустое значение' },
+    { label: 'true', insert: 'true', kind: 'keyword', desc: 'Р›РѕРіРёС‡РµСЃРєРѕРµ TRUE' },
+    { label: 'false', insert: 'false', kind: 'keyword', desc: 'Р›РѕРіРёС‡РµСЃРєРѕРµ FALSE' },
+    { label: 'null', insert: 'null', kind: 'keyword', desc: 'РџСѓСЃС‚РѕРµ Р·РЅР°С‡РµРЅРёРµ' },
   ];
 
-  // ── Build full autocomplete list ──
+  // в”Ђв”Ђ Build full autocomplete list в”Ђв”Ђ
   function buildAcItems(query: string): AcItem[] {
     const q = query.toLowerCase();
     const results: AcItem[] = [];
 
-    // If empty query and cursor at start → show snippets first
+    // If empty query and cursor at start в†’ show snippets first
     if (!q && formula.trim() === '') {
       results.push(...SNIPPET_CATALOG);
     }
@@ -114,8 +114,8 @@
           label: field.name,
           insert: field.name,
           kind: 'field',
-          desc: `Поле (${fieldTypeLabel(field.type)})`,
-          category: '📄 Поля',
+          desc: `РџРѕР»Рµ (${fieldTypeLabel(field.type)})`,
+          category: 'рџ“„ РџРѕР»СЏ',
         });
       }
     }
@@ -141,13 +141,13 @@
 
   function fieldTypeLabel(type: string): string {
     const map: Record<string, string> = {
-      string: 'Строка', number: 'Число', boolean: 'Чекбокс',
-      date: 'Дата', unknown: 'Неизвестно', list: 'Список',
+      string: 'РЎС‚СЂРѕРєР°', number: 'Р§РёСЃР»Рѕ', boolean: 'Р§РµРєР±РѕРєСЃ',
+      date: 'Р”Р°С‚Р°', unknown: 'РќРµРёР·РІРµСЃС‚РЅРѕ', list: 'РЎРїРёСЃРѕРє',
     };
     return map[type] ?? type;
   }
 
-  // ── Extract the word at cursor ──
+  // в”Ђв”Ђ Extract the word at cursor в”Ђв”Ђ
   function getWordAtCursor(): { word: string; start: number; end: number } {
     if (!textarea) return { word: '', start: 0, end: 0 };
     const pos = textarea.selectionStart;
@@ -168,7 +168,7 @@
     return { word: text.substring(start, pos), start, end: pos };
   }
 
-  // ── Show autocomplete popover (imperative DOM) ──
+  // в”Ђв”Ђ Show autocomplete popover (imperative DOM) в”Ђв”Ђ
   function showAutocomplete() {
     const { word, start, end } = getWordAtCursor();
     acWordStart = start;
@@ -214,14 +214,14 @@
     });
   }
 
-  // ── Render the autocomplete popover — Google Sheets-style inline hint ──
+  // в”Ђв”Ђ Render the autocomplete popover вЂ” Google Sheets-style inline hint в”Ђв”Ђ
   function renderAcPopover() {
     if (acPopover) acPopover.remove();
     if (!textarea || acItems.length === 0) return;
 
     const rect = textarea.getBoundingClientRect();
     // Position: flush to textarea's left edge, directly ABOVE the textarea.
-    // This keeps it out of the way — user sees suggestions while typing.
+    // This keeps it out of the way вЂ” user sees suggestions while typing.
     const popupMaxH = 220;
     const spaceAbove = rect.top - 8;
     const spaceBelow = window.innerHeight - rect.bottom - 8;
@@ -239,15 +239,15 @@
       `max-height:${Math.min(popupMaxH, useAbove ? spaceAbove : spaceBelow)}px`,
       'overflow-y:auto',
       'overflow-x:hidden',
-      // Translucent background — like Google Sheets
+      // Translucent background вЂ” like Google Sheets
       'background:color-mix(in srgb, var(--background-primary) 88%, transparent)',
-      'backdrop-filter:blur(12px)',
-      '-webkit-backdrop-filter:blur(12px)',
+      'backdrop-filter:blur(0.75rem)',
+      '-webkit-backdrop-filter:blur(0.75rem)',
       'border:1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent)',
-      'border-radius:8px',
-      'box-shadow:0 4px 16px rgba(0,0,0,0.12)',
-      'padding:3px 0',
-      'font-size:12px',
+      'border-radius:0.5rem',
+      'box-shadow:0 0.25rem 1rem rgba(0,0,0,0.12)',
+      'padding:0.1875rem 0',
+      'font-size:0.75rem',
     ].join(';'));
 
     renderAcContent(el);
@@ -266,8 +266,8 @@
         lastCategory = item.category;
         const sep = activeDocument.createElement('div');
         sep.setAttribute('style', [
-          'padding:4px 12px 2px',
-          'font-size:11px',
+          'padding:0.25rem 0.75rem 0.125rem',
+          'font-size:0.6875rem',
           'font-weight:600',
           'color:var(--text-muted)',
           'user-select:none',
@@ -282,13 +282,13 @@
       row.setAttribute('style', [
         'display:flex',
         'align-items:center',
-        'gap:6px',
-        'padding:3px 8px',
+        'gap:0.375rem',
+        'padding:0.1875rem 0.5rem',
         'cursor:pointer',
-        'min-height:24px',
+        'min-height:1.5rem',
         'transition:background 0.08s ease',
-        'border-radius:4px',
-        'margin:0 3px',
+        'border-radius:0.25rem',
+        'margin:0 0.1875rem',
         isActive
           ? 'background:color-mix(in srgb, var(--interactive-accent) 18%, transparent)'
           : '',
@@ -301,10 +301,10 @@
         'display:inline-flex',
         'align-items:center',
         'justify-content:center',
-        'width:16px',
-        'height:16px',
-        'border-radius:3px',
-        'font-size:9px',
+        'width:1rem',
+        'height:1rem',
+        'border-radius:0.1875rem',
+        'font-size:0.5625rem',
         'font-weight:600',
         'flex-shrink:0',
         'opacity:0.55',
@@ -312,14 +312,14 @@
           ? 'color:var(--interactive-accent);opacity:0.9'
           : 'color:var(--text-muted)',
       ].join(';'));
-      badge.textContent = item.kind === 'function' ? 'ƒ' : item.kind === 'field' ? '◆' : item.kind === 'snippet' ? '⚡' : 'K';
+      badge.textContent = item.kind === 'function' ? 'Ж’' : item.kind === 'field' ? 'в—†' : item.kind === 'snippet' ? 'вљЎ' : 'K';
       row.appendChild(badge);
 
       // Label
       const label = activeDocument.createElement('span');
       label.setAttribute('style', [
         'font-family:var(--font-monospace)',
-        'font-size:12px',
+        'font-size:0.75rem',
         'font-weight:500',
         'white-space:nowrap',
         'overflow:hidden',
@@ -329,12 +329,12 @@
       label.textContent = item.label;
       row.appendChild(label);
 
-      // Args hint (for functions) — subtle inline
+      // Args hint (for functions) вЂ” subtle inline
       if (item.args !== undefined && item.args !== '') {
         const args = activeDocument.createElement('span');
         args.setAttribute('style', [
           'color:var(--text-faint)',
-          'font-size:11px',
+          'font-size:0.6875rem',
           'opacity:0.7',
           'white-space:nowrap',
         ].join(';'));
@@ -342,17 +342,17 @@
         row.appendChild(args);
       }
 
-      // Description — only show for active item to keep it ultra-compact
+      // Description вЂ” only show for active item to keep it ultra-compact
       if (isActive && item.desc) {
         const desc = activeDocument.createElement('span');
         desc.setAttribute('style', [
           'margin-left:auto',
           'color:var(--text-faint)',
-          'font-size:10px',
+          'font-size:0.625rem',
           'white-space:nowrap',
           'overflow:hidden',
           'text-overflow:ellipsis',
-          'max-width:140px',
+          'max-width:8.75rem',
           'flex-shrink:0',
         ].join(';'));
         desc.textContent = item.desc;
@@ -386,7 +386,7 @@
       }
       // Update badge opacity
       const badge = row.querySelector('span');
-      if (badge && badge.style.width === '16px') {
+      if (badge && badge.style.width === '1rem') {
         badge.style.opacity = isActive ? '0.9' : '0.55';
         badge.style.color = isActive ? 'var(--interactive-accent)' : 'var(--text-muted)';
       }
@@ -401,7 +401,7 @@
     updateAcHighlight(acPopover);
   }
 
-  // ── Validate formula on change ──
+  // в”Ђв”Ђ Validate formula on change в”Ђв”Ђ
   $: {
     if (formula.trim()) {
       const fieldNames = fields.map(f => f.name);
@@ -436,7 +436,7 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    // ── Autocomplete keyboard navigation ──
+    // в”Ђв”Ђ Autocomplete keyboard navigation в”Ђв”Ђ
     if (acVisible && acItems.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -509,28 +509,28 @@
           textarea?.focus();
           requestAnimationFrame(() => showAutocomplete());
         }}
-        title="Автодополнение (Ctrl+Space)"
+        title="РђРІС‚РѕРґРѕРїРѕР»РЅРµРЅРёРµ (Ctrl+Space)"
       >
         <Icon name="sparkles" size="sm" />
-        <span>Авто</span>
+        <span>РђРІС‚Рѕ</span>
       </button>
       <button 
         class="toolbar-btn" 
         on:click={() => showHelp = !showHelp}
         class:active={showHelp}
-        title="Справка по синтаксису"
+        title="РЎРїСЂР°РІРєР° РїРѕ СЃРёРЅС‚Р°РєСЃРёСЃСѓ"
       >
         <Icon name="help-circle" size="sm" />
-        <span>Справка</span>
+        <span>РЎРїСЂР°РІРєР°</span>
       </button>
     </div>
     <div class="toolbar-hint">
       {#if errors.length > 0}
-        <span class="hint-error">⚠ {errors.length} {errors.length === 1 ? 'ошибка' : 'ошибок'}</span>
+        <span class="hint-error">вљ  {errors.length} {errors.length === 1 ? 'РѕС€РёР±РєР°' : 'РѕС€РёР±РѕРє'}</span>
       {:else if formula.trim()}
-        <span class="hint-valid">✓ Формула валидна</span>
+        <span class="hint-valid">вњ“ Р¤РѕСЂРјСѓР»Р° РІР°Р»РёРґРЅР°</span>
       {:else}
-        <span class="hint-info">Ctrl+Space — подсказки</span>
+        <span class="hint-info">Ctrl+Space вЂ” РїРѕРґСЃРєР°Р·РєРё</span>
       {/if}
     </div>
   </div>
@@ -540,38 +540,38 @@
     <div class="help-panel">
       <div class="help-columns">
         <div class="help-col">
-          <h4>🔗 Логические</h4>
-          <code>AND(условие1, условие2)</code>
-          <code>OR(условие1, условие2)</code>
-          <code>NOT(условие)</code>
+          <h4>рџ”— Р›РѕРіРёС‡РµСЃРєРёРµ</h4>
+          <code>AND(СѓСЃР»РѕРІРёРµ1, СѓСЃР»РѕРІРёРµ2)</code>
+          <code>OR(СѓСЃР»РѕРІРёРµ1, СѓСЃР»РѕРІРёРµ2)</code>
+          <code>NOT(СѓСЃР»РѕРІРёРµ)</code>
           
-          <h4>📝 Строки</h4>
-          <code>CONTAINS(поле, "текст")</code>
-          <code>STARTS_WITH(поле, "начало")</code>
-          <code>ENDS_WITH(поле, "конец")</code>
+          <h4>рџ“ќ РЎС‚СЂРѕРєРё</h4>
+          <code>CONTAINS(РїРѕР»Рµ, "С‚РµРєСЃС‚")</code>
+          <code>STARTS_WITH(РїРѕР»Рµ, "РЅР°С‡Р°Р»Рѕ")</code>
+          <code>ENDS_WITH(РїРѕР»Рµ, "РєРѕРЅРµС†")</code>
           
-          <h4>🔍 Проверки</h4>
-          <code>IS_EMPTY(поле)</code>
-          <code>IS_NOT_EMPTY(поле)</code>
+          <h4>рџ”Ќ РџСЂРѕРІРµСЂРєРё</h4>
+          <code>IS_EMPTY(РїРѕР»Рµ)</code>
+          <code>IS_NOT_EMPTY(РїРѕР»Рµ)</code>
         </div>
         <div class="help-col">
-          <h4>📅 Даты</h4>
-          <code>IS_TODAY(дата)  IS_OVERDUE(дата)</code>
-          <code>IS_THIS_WEEK(дата)</code>
-          <code>IS_BEFORE(дата1, дата2)</code>
+          <h4>рџ“… Р”Р°С‚С‹</h4>
+          <code>IS_TODAY(РґР°С‚Р°)  IS_OVERDUE(РґР°С‚Р°)</code>
+          <code>IS_THIS_WEEK(РґР°С‚Р°)</code>
+          <code>IS_BEFORE(РґР°С‚Р°1, РґР°С‚Р°2)</code>
           <code>TODAY()  TOMORROW()  YESTERDAY()</code>
-          <code>DATE_ADD(дата, 1, "w")</code>
+          <code>DATE_ADD(РґР°С‚Р°, 1, "w")</code>
           
-          <h4>📋 Массивы / Теги</h4>
-          <code>HAS_ANY_OF(теги, ["a","b"])</code>
-          <code>HAS_ALL_OF(теги, ["a","b"])</code>
+          <h4>рџ“‹ РњР°СЃСЃРёРІС‹ / РўРµРіРё</h4>
+          <code>HAS_ANY_OF(С‚РµРіРё, ["a","b"])</code>
+          <code>HAS_ALL_OF(С‚РµРіРё, ["a","b"])</code>
           
-          <h4>⚙ Операторы</h4>
+          <h4>вљ™ РћРїРµСЂР°С‚РѕСЂС‹</h4>
           <code>=  !=  &gt;  &lt;  &gt;=  &lt;=  +  -  *  /</code>
         </div>
       </div>
       <div class="help-examples">
-        <strong>Примеры:</strong>
+        <strong>РџСЂРёРјРµСЂС‹:</strong>
         <code>AND(status = "Active", priority &gt; 5)</code>
         <code>OR(IS_EMPTY(dueDate), IS_OVERDUE(dueDate))</code>
         <code>AND(CONTAINS(tags, "urgent"), dueDate &lt;= TODAY())</code>
@@ -591,7 +591,7 @@
       on:keydown={handleKeyDown}
       on:blur={handleBlur}
       on:focus={handleFocus}
-      placeholder={'Начните вводить формулу или нажмите Ctrl+Space...\n\nПримеры:\nAND(status = "Active", priority > 5)\nIS_OVERDUE(dueDate)\nCONTAINS(tags, "urgent")'}
+      placeholder={'РќР°С‡РЅРёС‚Рµ РІРІРѕРґРёС‚СЊ С„РѕСЂРјСѓР»Сѓ РёР»Рё РЅР°Р¶РјРёС‚Рµ Ctrl+Space...\n\nРџСЂРёРјРµСЂС‹:\nAND(status = "Active", priority > 5)\nIS_OVERDUE(dueDate)\nCONTAINS(tags, "urgent")'}
       spellcheck="false"
     />
     
@@ -619,7 +619,7 @@
     overflow: hidden;
   }
 
-  /* ── Toolbar ── */
+  /* в”Ђв”Ђ Toolbar в”Ђв”Ђ */
   .editor-toolbar {
     display: flex;
     justify-content: space-between;
@@ -669,7 +669,7 @@
   .hint-valid { color: var(--color-green); font-weight: 500; }
   .hint-info { color: var(--text-faint); }
 
-  /* ── Help panel ── */
+  /* в”Ђв”Ђ Help panel в”Ђв”Ђ */
   .help-panel {
     padding: var(--size-4-2);
     background: var(--background-secondary);
@@ -718,7 +718,7 @@
     color: var(--text-muted);
   }
 
-  /* ── Editor ── */
+  /* в”Ђв”Ђ Editor в”Ђв”Ђ */
   .editor-container {
     position: relative;
     flex: 1;
@@ -737,11 +737,6 @@
     line-height: 1.5;
     resize: vertical;
   }
-
-  .formula-textarea:focus {
-    outline: none;
-  }
-
   .formula-textarea.has-error {
     border-left: 0.125rem solid var(--text-error);
   }
@@ -756,7 +751,7 @@
     font-size: var(--font-ui-smaller);
   }
 
-  /* ── Validation Errors ── */
+  /* в”Ђв”Ђ Validation Errors в”Ђв”Ђ */
   .validation-errors {
     padding: var(--size-4-2);
     background: var(--background-modifier-error);

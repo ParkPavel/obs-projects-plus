@@ -5,7 +5,7 @@
 <div class="color-item">
   {#if color}
     <span
-      style="margin-right: 8px; background-color: {color}; min-width: 5px; border-radius: 9999px;"
+      style="margin-right: 0.5rem; background-color: {color}; min-width: 0.3125rem; border-radius: 624.9375rem;"
     />
   {/if}
   <div class="card-layout">
@@ -25,8 +25,8 @@
     flex: 1;
   }
   .card-header {
-    font-size: 16px;
-    margin-bottom: 8px;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
   }
 
   .card-header:last-child {

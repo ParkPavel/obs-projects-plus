@@ -12,7 +12,7 @@
    * 
    * v3.1.0 "Matryoshka" principle:
    * - Uses rem-based positioning for predictable scrolling
-   * - hourHeightRem defines height per hour (default 3rem = 48px)
+   * - hourHeightRem defines height per hour (default 3rem = 48)
    * - Position calculated as hours * hourHeightRem (in rem)
    */
   
@@ -319,9 +319,6 @@
   }
   
   /* v3.3.1: Suppress outline on mouse-click; show only on keyboard navigation */
-  button.projects-calendar-event-bar:focus {
-    outline: none;
-  }
   button.projects-calendar-event-bar:focus-visible {
     outline: 0.125rem solid var(--event-color);
     outline-offset: 0.125rem;

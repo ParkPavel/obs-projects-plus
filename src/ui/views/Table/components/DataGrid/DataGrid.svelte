@@ -16,6 +16,10 @@
   import GridCellGroup from "./GridCellGroup.svelte";
   import { Button, Icon } from "obsidian-svelte";
   import GridHeader from "./GridHeader/GridHeader.svelte";
+  import {
+    appendContextMenuEntries,
+    type ContextMenuEntry,
+  } from "src/lib/contextMenu";
 
   export let columns: GridColDef[];
   export let rows: GridRowProps[];
@@ -40,6 +44,16 @@
   export let onRowEdit: (rowId: GridRowId, row: GridRowModel) => void;
   // v3.0.8: Direct click on row opens note with modifier-based navigation
   export let onRowOpen: ((rowId: GridRowId, openMode: false | 'tab' | 'window') => void) | undefined = undefined;
+  /**
+   * R2.1b — optional extension point for column-header context menus.
+   * When provided, returned entries are appended after the legacy
+   * configure / hide / pin / delete entries with a separator. Lets
+   * the Database canvas inject property-type override and rollup
+   * mode pickers without coupling to legacy Table internals.
+   */
+  export let getExtraColumnMenuEntries:
+    | ((column: GridColDef) => ContextMenuEntry[])
+    | undefined = undefined;
 
   $: t = $i18n.t;
 
@@ -127,6 +141,14 @@
           .setWarning(true)
           .onClick(() => onColumnDelete(column.field));
       });
+    }
+
+    if (getExtraColumnMenuEntries) {
+      const extras = getExtraColumnMenuEntries(column);
+      if (extras.length > 0) {
+        menu.addSeparator();
+        appendContextMenuEntries(menu, extras);
+      }
     }
 
     return menu;

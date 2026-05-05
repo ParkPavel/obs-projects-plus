@@ -6,6 +6,7 @@ import type {
   ViewDefinition,
 } from "../base/settings";
 import { DEFAULT_VIEW } from "../base/settings";
+import { defaultModeForFunction } from "src/lib/database/rollupMode";
 
 /**
  * Date format preset types for convenient configuration
@@ -366,6 +367,9 @@ function resolveProject(
       ...unresolved,
       name,
       id,
+      // REFACTOR-201: backfill rollup.mode from rollup.function on
+      // legacy saves that pre-date the R2.1b picker.
+      fieldConfig: migrateFieldConfig(unresolved.fieldConfig),
       views: unresolved.views?.map(resolveView) ?? [],
       // Ensure dateFormat has a default value (backward compatibility)
       dateFormat: unresolved.dateFormat ?? DEFAULT_DATE_FORMAT,
@@ -375,10 +379,46 @@ function resolveProject(
   throw new Error("Invalid project definition");
 }
 
+/**
+ * REFACTOR-201 — Per-project field-config migrator.
+ *
+ * For every field whose `rollup` carries a `function` but no `mode`,
+ * populate `mode` with the canonical default returned by
+ * `defaultModeForFunction`. Idempotent: no-op when both are already
+ * present, when only `mode` is present, or when neither is set.
+ *
+ * Does NOT enforce R2.1b invariant (no overwrite of explicit user
+ * choices). Writers that mutate `mode` are responsible for syncing
+ * `function` from `getRollupMode(mode).fn` per the contract on
+ * `RollupFieldConfig`.
+ */
+function migrateFieldConfig(
+  fieldConfig: { [field: string]: FieldConfig } | undefined,
+): { [field: string]: FieldConfig } {
+  if (!fieldConfig) return {};
+  const out: { [field: string]: FieldConfig } = {};
+  for (const [name, fc] of Object.entries(fieldConfig)) {
+    if (fc.rollup && fc.rollup.function && !fc.rollup.mode) {
+      const mode = defaultModeForFunction(fc.rollup.function);
+      out[name] = mode
+        ? { ...fc, rollup: { ...fc.rollup, mode } }
+        : fc;
+    } else {
+      out[name] = fc;
+    }
+  }
+  return out;
+}
+
 function resolveView(unresolved: Partial<ViewDefinition>): ViewDefinition {
   const { name, id } = unresolved;
-  // Auto-migrate legacy "table" → "database" (v3.3.0+)
-  const type = unresolved.type === "table" ? "database" : unresolved.type;
+  // v4.0 (REFACTOR-004): legacy `"table"` and `"database"` view types both
+  // migrate to the canonical `"dashboard"` id. The runtime view registry
+  // also keeps `views["database"]` as an alias so unmigrated saves keep
+  // rendering until this resolver rewrites them on next load.
+  const rawType = unresolved.type;
+  const type =
+    rawType === "table" || rawType === "database" ? "dashboard" : rawType;
 
   if (name && id && type) {
     return {

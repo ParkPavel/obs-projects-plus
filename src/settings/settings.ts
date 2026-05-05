@@ -56,15 +56,34 @@ export function migrateSettings(
     return either.right(Object.assign({}, v3Resolve({ version: 3 })));
   }
 
+  // P0: settings may be corrupted (partial JSON, wrong shape, mutated by 3rd-party plugin).
+  // Any throw inside resolve/migrate must NOT crash plugin onload — return either.left instead.
+  // Caller (main.ts) is responsible for surfacing notice + restoring last-known-good backup.
+  if (typeof settings !== "object" || Array.isArray(settings)) {
+    return either.left(new Error("Settings root is not a plain object"));
+  }
+
   if ("version" in settings && typeof settings.version === "number") {
-    if (settings.version === 1) {
-      return either.right(v3Resolve(migrate(v1Resolve(settings))));
-    } else if (settings.version === 2) {
-      return either.right(v3Resolve(migrateV2ToV3(v2Resolve(settings))));
-    } else if (settings.version === 3) {
-      return either.right(v3Resolve(settings));
-    } else {
-      return either.left(new Error("Unknown settings version"));
+    try {
+      if (settings.version === 1) {
+        return either.right(v3Resolve(migrate(v1Resolve(settings))));
+      } else if (settings.version === 2) {
+        return either.right(v3Resolve(migrateV2ToV3(v2Resolve(settings))));
+      } else if (settings.version === 3) {
+        return either.right(v3Resolve(settings));
+      } else {
+        return either.left(
+          new Error(`Unknown settings version: ${settings.version}`)
+        );
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : String(err);
+      return either.left(
+        new Error(
+          `Settings migration failed (version=${settings.version}): ${message}`
+        )
+      );
     }
   }
 

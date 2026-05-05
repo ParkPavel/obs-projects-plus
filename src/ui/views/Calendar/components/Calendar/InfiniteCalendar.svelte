@@ -353,9 +353,9 @@
       return;
     }
     
-    // Near top: scrollTop < 500px
+    // Near top: scrollTop < 500
     const nearTop = scrollTop < 500;
-    // Near bottom: scrollTop + clientHeight > scrollHeight - 500px
+    // Near bottom: scrollTop + clientHeight > scrollHeight - 500
     const nearBottom = scrollTop + clientHeight > scrollHeight - 500;
     
     // Check if near the top - load earlier units

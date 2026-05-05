@@ -186,7 +186,7 @@
     flex-wrap: wrap;
     overflow: auto;
 
-    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+    box-shadow: 0 0 0 0.125rem var(--background-modifier-border-focus);
     border-color: var(--background-modifier-border-focus);
     transition: box-shadow 0.15s ease-in-out, border 0.15s ease-in-out;
   }

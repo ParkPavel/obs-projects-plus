@@ -81,7 +81,7 @@
     flipDurationMs,
     dropTargetStyle: {
       outline: "none",
-      borderRadius: "5px",
+      borderRadius: "0.3125rem",
       background: "var(--board-column-drag-accent)",
       transition: "all 150ms ease-in-out",
     },
@@ -164,7 +164,7 @@
   .projects--board--card:hover,
   .projects--board--card:focus-within {
     background: var(--background-primary-alt);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
   }
 
   /* Card drag grip — left edge tab, inset from card border */
@@ -215,7 +215,7 @@
   }
   div.card-header {
     display: flex;
-    gap: 4px;
+    gap: 0.25rem;
     align-items: center;
   }
 
@@ -236,6 +236,6 @@
     display: flex;
     flex-direction: column;
     align-self: start;
-    margin-top: 4px;
+    margin-top: 0.25rem;
   }
 </style>

@@ -208,11 +208,13 @@
         type="text"
         class="field-input"
         class:has-error={nameError}
+        aria-invalid={!!nameError}
+        aria-describedby={nameError ? 'list-name-error' : undefined}
         bind:value={formData.name}
         placeholder={t('name-placeholder')}
       />
       {#if nameError}
-        <span class="field-error">{nameError}</span>
+        <span class="field-error" id="list-name-error">{nameError}</span>
       {/if}
     </div>
     
@@ -277,6 +279,7 @@
         <div class="color-picker-wrapper">
           <ColorPicker 
             value={formData.color ?? '#7c3aed'}
+            projectPalette={existingLists.map((l) => l.color ?? '').filter(Boolean)}
             on:change={handleColorChange}
           />
         </div>
@@ -576,9 +579,8 @@
   }
   
   .field-input:focus {
-    outline: none;
     border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 15%, transparent);
+    box-shadow: 0 0 0 0.125rem color-mix(in srgb, var(--interactive-accent) 15%, transparent);
   }
   
   .field-input.has-error {
@@ -703,7 +705,7 @@
     margin-top: var(--ppp-spacing-sm, 0.5rem);
     padding: var(--ppp-spacing-sm, 0.5rem);
     border: 1px solid var(--background-modifier-border);
-    border-left: 4px solid var(--list-color);
+    border-left: 0.25rem solid var(--list-color);
     border-radius: var(--ppp-radius-md, 0.375rem);
     background: var(--background-secondary);
   }

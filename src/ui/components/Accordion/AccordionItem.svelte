@@ -24,15 +24,15 @@
   }
 
   div {
-    padding: 8px;
+    padding: 0.5rem;
     background-color: var(--background-primary-alt);
   }
 
   header {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 8px;
+    gap: 0.25rem;
+    padding: 0.5rem;
     justify-content: space-between;
   }
 </style>

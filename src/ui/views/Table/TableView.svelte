@@ -80,11 +80,15 @@
       return true;
     })
     .map<GridColDef>((field) => {
+      // Stage A.9 fix: hide derived `path` column by default — it duplicates
+      // the `name` field's link target. Users can re-enable via column menu.
+      const userHide = fieldConfig[field.name]?.hide;
+      const defaultHide = field.derived && field.name === "path";
       const colDef: GridColDef = {
         ...field,
         field: field.name,
         width: fieldConfig[field.name]?.width ?? 180,
-        hide: fieldConfig[field.name]?.hide ?? false,
+        hide: userHide ?? defaultHide,
         pinned: fieldConfig[field.name]?.pinned ?? false,
         editable: !field.derived,
       };
@@ -137,50 +141,62 @@
   }
 
   function handleColumnAppend() {
-    new CreateFieldModal($app, fields, async (field, value) => {
-      await api.addField(field, value);
+    new CreateFieldModal(
+      $app,
+      fields,
+      async (field, value) => {
+        await api.addField(field, value);
 
-      buttonEl.scrollIntoView({
-        block: "nearest",
-        inline: "nearest",
-        behavior: getScrollBehavior(),
-      });
+        buttonEl.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: getScrollBehavior(),
+        });
 
-      if (field.typeConfig) {
-        settings.updateFieldConfig(
-          project.id,
-          field.name,
-          fields.map((f) => f.name),
-          field.typeConfig
-        );
-      }
-    }).open();
+        if (field.typeConfig) {
+          settings.updateFieldConfig(
+            project.id,
+            field.name,
+            fields.map((f) => f.name),
+            field.typeConfig
+          );
+        }
+      },
+      $settings.projects,
+      project.id
+    ).open();
   }
 
   function handleColumnInsert(anchor: string, direction: number) {
-    new CreateFieldModal($app, fields, async (field, value) => {
-      const position = fields.findIndex((f) => anchor === f.name) + direction;
-      await api.addField(field, value, position);
+    new CreateFieldModal(
+      $app,
+      fields,
+      async (field, value) => {
+        const position = fields.findIndex((f) => anchor === f.name) + direction;
+        await api.addField(field, value, position);
 
-      if (field.typeConfig) {
-        settings.updateFieldConfig(
-          project.id,
-          field.name,
-          fields.map((f) => f.name),
-          field.typeConfig
-        );
-      }
+        if (field.typeConfig) {
+          settings.updateFieldConfig(
+            project.id,
+            field.name,
+            fields.map((f) => f.name),
+            field.typeConfig
+          );
+        }
 
-      const orderFields = fields
-        .map((f) => f.name)
-        .filter((f) => f !== field.name);
-      if (position >= 0) orderFields.splice(position, 0, field.name);
+        const orderFields = fields
+          .map((f) => f.name)
+          .filter((f) => f !== field.name);
+        if (position >= 0) orderFields.splice(position, 0, field.name);
 
-      saveConfig({
-        ...config,
-        orderFields: orderFields,
-      });
-    }).open();
+        saveConfig({
+          ...config,
+          orderFields: orderFields,
+        });
+      },
+      $settings.projects,
+      project.id
+    ).open();
   }
 
   function deleteColumnConfig(fieldName: string) {
@@ -309,7 +325,9 @@
                 }
 
                 saveConfig({ ...config });
-              }
+              },
+              $settings.projects,
+              project.id
             ).open();
           }
         }}
@@ -386,7 +404,7 @@
 
   span:focus {
     outline: none;
-    box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
+    box-shadow: inset 0 0 0 0.125rem var(--background-modifier-border-focus);
   }
 
   span:hover {

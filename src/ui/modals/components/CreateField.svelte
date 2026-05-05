@@ -22,12 +22,29 @@
     type DataValue,
   } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import { settings as settingsStore } from "src/lib/stores/settings";
   import { onMount } from "svelte";
   import DateInput from "src/ui/components/DateInput.svelte";
   import DatetimeInput from "src/ui/components/DatetimeInput.svelte";
+  import { dataFieldTypeOptions } from "./dataFieldTypeOptions";
+  import type { ProjectDefinition } from "src/settings/settings";
+  import type {
+    RelationFieldConfig,
+    RollupFieldConfig,
+  } from "src/settings/base/settings";
+  import type { RollupFunction } from "src/ui/views/Dashboard/engine/rollup";
 
   export let existingFields: DataField[];
   export let defaultName: string;
+  /**
+   * Stage A.10 — sibling projects forwarded so the new-field modal can
+   * resolve a Relation target inline without forcing the user into a
+   * second Configure round-trip. Empty array silently disables the
+   * inline picker (degraded but functional).
+   */
+  export let availableProjects: ProjectDefinition[] = [];
+  /** Identifier of the project the new field belongs to. */
+  export let currentProjectId: string = "";
   let inputRef: HTMLInputElement;
 
   export let field: DataField = {
@@ -192,13 +209,137 @@
     };
   }
 
-  const options = [
-    { label: $i18n.t("data-types.string"), value: DataFieldType.String },
-    { label: $i18n.t("data-types.number"), value: DataFieldType.Number },
-    { label: $i18n.t("data-types.boolean"), value: DataFieldType.Boolean },
-    { label: $i18n.t("data-types.date"), value: DataFieldType.Date },
-    { label: $i18n.t("data-types.list"), value: DataFieldType.List },
+  // -- Stage A.10 — inline Relation / Rollup config -------------
+  // Without these branches a freshly-created Relation/Rollup field is
+  // persisted with an empty `typeConfig`, forcing the user into a second
+  // Configure round-trip and (for Rollup) writing `""` into every record's
+  // frontmatter. Schema-modal already exposes the same primitives — here
+  // we mirror the minimum so the new-field flow is one-stop-shop.
+  $: relationCfg = (field.typeConfig as { relation?: RelationFieldConfig })
+    ?.relation;
+  $: rollupCfg = (field.typeConfig as { rollup?: RollupFieldConfig })?.rollup;
+  // Fallback to the live `settings` store when the modal was instantiated
+  // before settings finished hydrating (or when a caller forgot to forward
+  // the prop). Empty `availableProjects` would otherwise leave the Relation
+  // target picker silently empty.
+  $: effectiveProjects =
+    availableProjects.length > 0 ? availableProjects : $settingsStore.projects;
+  $: projectOptions = [
+    { label: $i18n.t("modals.field.configure.relation.no-project"), value: "" },
+    ...effectiveProjects.map((p) => ({
+      label:
+        p.id === currentProjectId
+          ? `${p.name} ${$i18n.t("modals.field.configure.relation.this-project-suffix")}`
+          : p.name,
+      value: p.id,
+    })),
   ];
+  $: relationFieldsOnThisProject = existingFields.filter(
+    (f) => f.type === DataFieldType.Relation
+  );
+  $: rollupRelationOptions = [
+    { label: $i18n.t("modals.field.configure.rollup.no-relation"), value: "" },
+    ...relationFieldsOnThisProject.map((f) => ({ label: f.name, value: f.name })),
+  ];
+  const ROLLUP_FUNCTIONS: RollupFunction[] = [
+    "count",
+    "count_values",
+    "count_unique",
+    "sum",
+    "avg",
+    "min",
+    "max",
+    "median",
+    "range",
+    "percent_true",
+    "concat",
+    "concat_unique",
+  ];
+  $: rollupFunctionOptions = ROLLUP_FUNCTIONS.map((fn) => ({
+    label: $i18n.t(`modals.field.configure.rollup.functions.${fn}`, {
+      defaultValue: fn,
+    }),
+    value: fn,
+  }));
+
+  function patchRelation(patch: Partial<RelationFieldConfig>) {
+    const current: Partial<RelationFieldConfig> = relationCfg ?? {
+      targetProjectId: "",
+    };
+    const merged: Partial<RelationFieldConfig> = { ...current, ...patch };
+    if (!merged.targetProjectId) {
+      const { relation: _omit, ...rest } = (field.typeConfig ?? {}) as {
+        relation?: RelationFieldConfig;
+        [k: string]: unknown;
+      };
+      void _omit;
+      field = { ...field, typeConfig: rest };
+      return;
+    }
+    field = {
+      ...field,
+      typeConfig: {
+        ...field.typeConfig,
+        relation: merged as RelationFieldConfig,
+      },
+    };
+  }
+
+  function patchRollup(patch: Partial<RollupFieldConfig>) {
+    const current: Partial<RollupFieldConfig> = rollupCfg ?? {
+      relationField: "",
+      targetField: "",
+      function: "count",
+    };
+    const merged = { ...current, ...patch };
+    if (
+      patch.function &&
+      patch.function !== "concat" &&
+      patch.function !== "concat_unique"
+    ) {
+      delete merged.separator;
+    }
+    field = {
+      ...field,
+      typeConfig: {
+        ...field.typeConfig,
+        rollup: merged as RollupFieldConfig,
+      },
+    };
+  }
+
+  function handleDisplayFieldChange(e: CustomEvent<string>) {
+    const v = e.detail;
+    if (v) {
+      patchRelation({ displayField: v });
+    } else if (relationCfg?.targetProjectId) {
+      // Strip displayField when cleared so exactOptionalPropertyTypes stays
+      // satisfied and downstream resolver falls back to file basename.
+      const { displayField: _omit, ...rest } = relationCfg;
+      void _omit;
+      field = {
+        ...field,
+        typeConfig: {
+          ...field.typeConfig,
+          relation: rest,
+        },
+      };
+    }
+  }
+
+  function handleRollupFunctionChange(e: CustomEvent<string>) {
+    patchRollup({ function: e.detail as RollupFunction });
+  }
+
+  function isStageANoDefault(t: DataFieldType): boolean {
+    return (
+      t === DataFieldType.Formula ||
+      t === DataFieldType.Relation ||
+      t === DataFieldType.Rollup
+    );
+  }
+
+  const options = dataFieldTypeOptions((key) => $i18n.t(key));
 
   onMount(() => {
     if (inputRef) inputRef.select();
@@ -238,7 +379,11 @@
       name={$i18n.t("modals.field.create.default.name")}
       description={$i18n.t("modals.field.create.default.description")}
     >
-      {#if field.type === DataFieldType.List}
+      {#if isStageANoDefault(field.type)}
+        <span class="ppp-create-field-stagea-note">
+          {$i18n.t("modals.field.create.no-default-stage-a")}
+        </span>
+      {:else if field.type === DataFieldType.List}
         <TagsInput
           value={safeParseList(listValue)}
           on:change={(event) => {
@@ -293,7 +438,7 @@
         />
       {/if}
     </SettingItem>
-    {#if !field.repeated && field.type === DataFieldType.String}
+    {#if !field.repeated && (field.type === DataFieldType.String || field.type === DataFieldType.Select || field.type === DataFieldType.Status)}
       <SettingItem
         name={$i18n.t("modals.field.create.options.name")}
         description={$i18n.t("modals.field.create.options.description")}
@@ -304,15 +449,17 @@
           onChange={handleOptionsChange}
         />
       </SettingItem>
-      <SettingItem
-        name={$i18n.t("modals.field.configure.rich-text.name")}
-        description={$i18n.t("modals.field.configure.rich-text.description")}
-      >
-        <Switch
-          checked={field.typeConfig?.richText ?? false}
-          on:check={handleRichTextChange}
-        />
-      </SettingItem>
+      {#if field.type === DataFieldType.String}
+        <SettingItem
+          name={$i18n.t("modals.field.configure.rich-text.name")}
+          description={$i18n.t("modals.field.configure.rich-text.description")}
+        >
+          <Switch
+            checked={field.typeConfig?.richText ?? false}
+            on:check={handleRichTextChange}
+          />
+        </SettingItem>
+      {/if}
     {/if}
     {#if !field.repeated && field.type === DataFieldType.Date}
       <SettingItem
@@ -325,6 +472,97 @@
         />
       </SettingItem>
     {/if}
+    {#if field.type === DataFieldType.Relation}
+      <SettingItem
+        name={$i18n.t("modals.field.configure.relation.target-project.name")}
+        description={$i18n.t(
+          "modals.field.configure.relation.target-project.description"
+        )}
+      >
+        <Select
+          value={relationCfg?.targetProjectId ?? ""}
+          options={projectOptions}
+          on:change={(e) => patchRelation({ targetProjectId: e.detail })}
+        />
+      </SettingItem>
+      {#if relationCfg?.targetProjectId}
+        <SettingItem
+          name={$i18n.t("modals.field.configure.relation.display-field.name")}
+          description={$i18n.t(
+            "modals.field.configure.relation.display-field.description"
+          )}
+        >
+          <TextInput
+            value={relationCfg?.displayField ?? ""}
+            placeholder={$i18n.t(
+              "modals.field.configure.relation.display-field.placeholder"
+            )}
+            on:input={handleDisplayFieldChange}
+          />
+        </SettingItem>
+      {/if}
+    {/if}
+    {#if field.type === DataFieldType.Rollup}
+      {#if relationFieldsOnThisProject.length === 0}
+        <p class="ppp-create-field-stagea-note">
+          {$i18n.t("modals.field.configure.rollup.no-relations-warning")}
+        </p>
+      {:else}
+        <SettingItem
+          name={$i18n.t("modals.field.configure.rollup.relation-field.name")}
+          description={$i18n.t(
+            "modals.field.configure.rollup.relation-field.description"
+          )}
+        >
+          <Select
+            value={rollupCfg?.relationField ?? ""}
+            options={rollupRelationOptions}
+            on:change={(e) => patchRollup({ relationField: e.detail })}
+          />
+        </SettingItem>
+        {#if rollupCfg?.relationField}
+          <SettingItem
+            name={$i18n.t("modals.field.configure.rollup.target-field.name")}
+            description={$i18n.t(
+              "modals.field.configure.rollup.target-field.description"
+            )}
+          >
+            <TextInput
+              value={rollupCfg?.targetField ?? ""}
+              placeholder={$i18n.t(
+                "modals.field.configure.rollup.target-field.placeholder"
+              )}
+              on:input={(e) => patchRollup({ targetField: e.detail })}
+            />
+          </SettingItem>
+          <SettingItem
+            name={$i18n.t("modals.field.configure.rollup.function.name")}
+            description={$i18n.t(
+              "modals.field.configure.rollup.function.description"
+            )}
+          >
+            <Select
+              value={rollupCfg?.function ?? "count"}
+              options={rollupFunctionOptions}
+              on:change={handleRollupFunctionChange}
+            />
+          </SettingItem>
+          {#if rollupCfg?.function === "concat" || rollupCfg?.function === "concat_unique"}
+            <SettingItem
+              name={$i18n.t("modals.field.configure.rollup.separator.name")}
+              description={$i18n.t(
+                "modals.field.configure.rollup.separator.description"
+              )}
+            >
+              <TextInput
+                value={rollupCfg?.separator ?? ", "}
+                on:input={(e) => patchRollup({ separator: e.detail })}
+              />
+            </SettingItem>
+          {/if}
+        {/if}
+      {/if}
+    {/if}
   </ModalContent>
   <ModalButtonGroup>
     <Button
@@ -336,6 +574,11 @@
             { ...field, type: DataFieldType.String },
             safeParseList(listValue)
           );
+        } else if (isStageANoDefault(field.type)) {
+          // Stage A.10 — derived / pickable types do not own a literal
+          // default. Passing null prevents `dataApi.addField` from writing
+          // an empty string into every record's frontmatter on creation.
+          onCreate(field, null);
         } else if (field.type === DataFieldType.Date) {
           onCreate(
             field,
@@ -344,7 +587,11 @@
               field.typeConfig?.time ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"
             )
           );
-        } else if (field.type === DataFieldType.String) {
+        } else if (
+          field.type === DataFieldType.String ||
+          field.type === DataFieldType.Select ||
+          field.type === DataFieldType.Status
+        ) {
           // uniquify options items and omit empty
           if (field?.typeConfig && field.typeConfig?.options) {
             const options = field.typeConfig.options;
@@ -366,3 +613,11 @@
     </Button>
   </ModalButtonGroup>
 </ModalLayout>
+
+<style>
+  .ppp-create-field-stagea-note {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller, 0.75rem);
+    line-height: 1.4;
+  }
+</style>

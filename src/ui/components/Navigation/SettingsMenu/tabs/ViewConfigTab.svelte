@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { createEventDispatcher } from "svelte";
   import type { ViewDefinition } from "../../../../../settings/settings";
   import { i18n } from "src/lib/stores/i18n";
@@ -13,7 +13,7 @@
   $: isCalendar = view?.type === "calendar";
   $: isBoard = view?.type === "board";
   $: isGallery = view?.type === "gallery";
-  $: isDatabase = view?.type === "table" || view?.type === "database";
+  $: isDatabase = view?.type === "table" || view?.type === "database" || view?.type === "dashboard";
   $: isTimeline = interval === "day" || interval === "week";
 
   // Calendar settings (reactive: re-derive when view prop changes)
@@ -521,11 +521,11 @@
         </div>
 
         <label>
-          {$i18n.t("views.database.table.row-height", { defaultValue: "Row height" })}
+          {$i18n.t("views.dashboard.table.row-height", { defaultValue: "Row height" })}
           <select bind:value={rowHeight} on:change={() => emitTableUpdate({ rowHeight })}>
-            <option value="compact">{$i18n.t("views.database.table.row-height-compact", { defaultValue: "Compact" })}</option>
-            <option value="default">{$i18n.t("views.database.table.row-height-default", { defaultValue: "Default" })}</option>
-            <option value="expanded">{$i18n.t("views.database.table.row-height-expanded", { defaultValue: "Expanded" })}</option>
+            <option value="compact">{$i18n.t("views.dashboard.table.row-height-compact", { defaultValue: "Compact" })}</option>
+            <option value="default">{$i18n.t("views.dashboard.table.row-height-default", { defaultValue: "Default" })}</option>
+            <option value="expanded">{$i18n.t("views.dashboard.table.row-height-expanded", { defaultValue: "Expanded" })}</option>
           </select>
         </label>
 
@@ -535,7 +535,7 @@
             bind:checked={wrapText}
             on:change={() => emitTableUpdate({ wrapText })}
           />
-          <span>{$i18n.t("views.database.table.wrap-text", { defaultValue: "Wrap text in cells" })}</span>
+          <span>{$i18n.t("views.dashboard.table.wrap-text", { defaultValue: "Wrap text in cells" })}</span>
         </label>
 
         <label class="checkbox">
@@ -544,11 +544,11 @@
             bind:checked={showAggregationRow}
             on:change={() => emitTableUpdate({ showAggregationRow })}
           />
-          <span>{$i18n.t("views.database.table.show-aggregation", { defaultValue: "Show aggregation row" })}</span>
+          <span>{$i18n.t("views.dashboard.table.show-aggregation", { defaultValue: "Show aggregation row" })}</span>
         </label>
 
         <label>
-          {$i18n.t("views.database.table.freeze-up-to", { defaultValue: "Freeze columns up to field" })}
+          {$i18n.t("views.dashboard.table.freeze-up-to", { defaultValue: "Freeze columns up to field" })}
           <input
             type="text"
             list="fieldlist-freezeUpTo"

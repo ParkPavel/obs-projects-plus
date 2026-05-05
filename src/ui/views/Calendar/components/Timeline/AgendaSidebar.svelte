@@ -935,7 +935,7 @@
   }
   
   /* Landscape orientation: narrower sidebar on mobile */
-  @media (max-width: 48rem) and (orientation: landscape) { /* 768px at 16px base */
+  @media (max-width: 48rem) and (orientation: landscape) { /* 768 at 16 base */
     .agenda.mobile {
       width: 50vw;
       max-width: 16rem;
@@ -943,7 +943,7 @@
   }
   
   /* Portrait orientation: wider sidebar for better touch targets */
-  @media (max-width: 48rem) and (orientation: portrait) { /* 768px at 16px base */
+  @media (max-width: 48rem) and (orientation: portrait) { /* 768 at 16 base */
     .agenda.mobile {
       width: 85vw;
       max-width: 22rem;
@@ -1144,7 +1144,7 @@
   
   .stat {
     padding: var(--ppp-space-1, 0.125rem) var(--agenda-gap-lg);
-    border-radius: var(--ppp-radius-full, 999px);
+    border-radius: var(--ppp-radius-full, 624.9375rem);
     font-size: var(--agenda-font-xs);
     font-weight: var(--ppp-font-weight-medium, 500);
   }

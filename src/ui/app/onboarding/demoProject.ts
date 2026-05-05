@@ -6,8 +6,8 @@ import { settings } from "src/lib/stores/settings";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
-import type { DatabaseViewConfig } from "src/ui/views/Database/types";
-import { applyWidgetTemplate } from "src/ui/views/Database/widgetTemplates";
+import type { DatabaseViewConfig } from "src/ui/views/Dashboard/types";
+import { applyWidgetTemplate } from "src/ui/views/Dashboard/widgetTemplates";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
 import type { ColorRule, FilterCondition } from "src/settings/base/settings";
 import type { AgendaConfig, AgendaCustomList } from "src/settings/v3/settings";
@@ -1350,14 +1350,14 @@ export async function createDemoProject(vault: Vault) {
       {
         id: "qa-overview",
         label: "Overview Preset",
-        labelKey: "views.database.quick.overview",
+        labelKey: "views.dashboard.quick.overview",
         kind: "apply-template",
         templateId: "overview-finance",
       },
       {
         id: "qa-formula",
         label: "Formula Builder",
-        labelKey: "views.database.quick.formula",
+        labelKey: "views.dashboard.quick.formula",
         kind: "toggle-formula-bar",
       },
     ],
@@ -1401,14 +1401,14 @@ export async function createDemoProject(vault: Vault) {
       {
         id: "qa-kanban",
         label: "Kanban+ Preset",
-        labelKey: "views.database.templates.kanban-plus",
+        labelKey: "views.dashboard.templates.kanban-plus",
         kind: "apply-template",
         templateId: "kanban-plus",
       },
       {
         id: "qa-formula",
         label: "Formula Builder",
-        labelKey: "views.database.quick.formula",
+        labelKey: "views.dashboard.quick.formula",
         kind: "toggle-formula-bar",
       },
     ],
@@ -1445,14 +1445,14 @@ export async function createDemoProject(vault: Vault) {
       {
         id: "qa-analytics",
         label: "Analytics Preset",
-        labelKey: "views.database.templates.analytics",
+        labelKey: "views.dashboard.templates.analytics",
         kind: "apply-template",
         templateId: "analytics",
       },
       {
         id: "qa-formula",
         label: "Formula Builder",
-        labelKey: "views.database.quick.formula",
+        labelKey: "views.dashboard.quick.formula",
         kind: "toggle-formula-bar",
       },
     ],
@@ -1675,7 +1675,7 @@ export async function createDemoProject(vault: Vault) {
         Object.assign({}, DEFAULT_VIEW, {
           name: "📋 База: Обзор",
           id: uuidv4(),
-          type: "database",
+          type: "dashboard",
           config: overviewDatabaseConfig,
           filter: { conjunction: "and", conditions: [] },
           colors: { conditions: priorityColorRules },
@@ -1686,7 +1686,7 @@ export async function createDemoProject(vault: Vault) {
         Object.assign({}, DEFAULT_VIEW, {
           name: "📋 База: Kanban+",
           id: uuidv4(),
-          type: "database",
+          type: "dashboard",
           config: kanbanDatabaseConfig,
           filter: {
             conjunction: "and",
@@ -1702,7 +1702,7 @@ export async function createDemoProject(vault: Vault) {
         Object.assign({}, DEFAULT_VIEW, {
           name: "📋 База: Аналитика",
           id: uuidv4(),
-          type: "database",
+          type: "dashboard",
           config: analyticsDatabaseConfig,
           filter: {
             conjunction: "and",
@@ -1794,7 +1794,7 @@ export async function createDemoProject(vault: Vault) {
         Object.assign({}, DEFAULT_VIEW, {
           name: "🏋️ Фитнес",
           id: uuidv4(),
-          type: "database",
+          type: "dashboard",
           config: fitnessDatabaseConfig,
           filter: {
             conjunction: "and",
@@ -1809,7 +1809,7 @@ export async function createDemoProject(vault: Vault) {
         Object.assign({}, DEFAULT_VIEW, {
           name: "💰 Финансы",
           id: uuidv4(),
-          type: "database",
+          type: "dashboard",
           config: financeDatabaseConfig,
           filter: {
             conjunction: "and",
@@ -1824,7 +1824,7 @@ export async function createDemoProject(vault: Vault) {
         Object.assign({}, DEFAULT_VIEW, {
           name: "👥 CRM",
           id: uuidv4(),
-          type: "database",
+          type: "dashboard",
           config: crmDatabaseConfig,
           filter: {
             conjunction: "and",

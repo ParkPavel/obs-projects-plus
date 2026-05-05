@@ -1,4 +1,4 @@
-{
+﻿{
     "translation": {
         "data-types": {
             "string": "Text",
@@ -10,7 +10,16 @@
             "datetime": "Date & time",
             "list": "List",
             "tags": "Tags",
-            "aliases": "Aliases"
+            "aliases": "Aliases",
+            "select": "Select",
+            "status": "Status",
+            "formula": "Formula",
+            "relation": "Relation",
+            "rollup": "Rollup",
+            "color": "Color",
+            "url": "URL",
+            "email": "Email",
+            "phone": "Phone"
         },
         "datasources": {
             "folder": "Folder",
@@ -26,12 +35,41 @@
             },
             "create-note": {
                 "name": "Create new note plus"
+            },
+            "open-schema": {
+                "name": "Open schema panel"
+            },
+            "add-field": {
+                "name": "Add field"
+            },
+            "toggle-visualizer-pane": {
+                "name": "Toggle YAML Visualizer pane"
+            },
+            "open-visualizer-for-file": {
+                "name": "Open active note in YAML Visualizer"
+            },
+            "add-relation": {
+                "name": "Add relation to active note"
+            },
+            "open-formula-editor": {
+                "name": "Open formula editor"
+            },
+            "add-sub-base": {
+                "name": "Add sub-base to current view"
             }
         },
         "menus": {
             "project": {
                 "create": {
                     "title": "Create project in folder"
+                }
+            },
+            "file": {
+                "open-in-visualizer": {
+                    "title": "Open in YAML Visualizer"
+                },
+                "add-relation": {
+                    "title": "Add as relation…"
                 }
             },
             "tab-header": {
@@ -252,7 +290,7 @@
                     "existing-name-error": "Can't rename to a existing field name.",
                     "type": {
                         "name": "Type",
-                        "description": "Changing type isn't supported yet."
+                        "description": "Convert this field to another type. Existing values are preserved when compatible."
                     },
                     "options": {
                         "name": "Options",
@@ -266,6 +304,57 @@
                         "name": "Enable time",
                         "description": "Recognize this field as Date & time."
                     },
+                    "relation": {
+                        "target-project": {
+                            "name": "Target project",
+                            "description": "Records linked through this field will resolve against this project. Wiki-link values become navigable references.",
+                            "placeholder": "Pick a project"
+                        },
+                        "display-field": {
+                            "name": "Display field",
+                            "description": "Optional. Field on the target project used as the visible label in adaptive relation views. Defaults to the file basename.",
+                            "placeholder": "e.g. title"
+                        },
+                        "no-project": "— None —",
+                        "this-project-suffix": "(this project)"
+                    },
+                    "rollup": {
+                        "relation-field": {
+                            "name": "Through relation",
+                            "description": "Pick the relation column on this project that points to the records you want to summarize."
+                        },
+                        "no-relation": "— Pick a relation —",
+                        "no-relations-warning": "This project has no Relation fields yet. Create one first to enable rollups.",
+                        "target-field": {
+                            "name": "Aggregate field",
+                            "description": "Field on the target project to aggregate.",
+                            "description-with-project": "Field on “{{project}}” to aggregate.",
+                            "placeholder": "e.g. amount"
+                        },
+                        "no-target-field": "— Pick a field —",
+                        "function": {
+                            "name": "Function",
+                            "description": "How values from related records are summarized."
+                        },
+                        "functions": {
+                            "count": "Count",
+                            "count_values": "Count values",
+                            "count_unique": "Count unique",
+                            "sum": "Sum",
+                            "avg": "Average",
+                            "min": "Min",
+                            "max": "Max",
+                            "median": "Median",
+                            "range": "Range",
+                            "percent_true": "Percent true",
+                            "concat": "Concatenate",
+                            "concat_unique": "Concatenate unique"
+                        },
+                        "separator": {
+                            "name": "Separator",
+                            "description": "Used to join values when the function is Concatenate."
+                        }
+                    },
                     "save": "Save"
                 },
                 "create": {
@@ -276,6 +365,7 @@
                         "description": ""
                     },
                     "untitled": "New field",
+                    "no-default-stage-a": "This type is computed or linked — no default value to set here.",
                     "empty-name-error": "Field name can't be empty.",
                     "existing-name-error": "A field with that name already exists.",
                     "type": {
@@ -297,6 +387,27 @@
                     "create": "Create field"
                 }
             },
+            "schema": {
+                "title": "Project schema",
+                "empty": "No fields defined yet.",
+                "configure": "Configure",
+                "delete": "Delete",
+                "close": "Close",
+                "identifier": "Identifier",
+                "add-field": {
+                    "name": "Add a new field",
+                    "description": "Append a new property to this project.",
+                    "button": "Add field"
+                },
+                "delete-confirm": {
+                    "title": "Delete field",
+                    "message": "Remove field “{{name}}” from this project? Existing values stay in your notes but will no longer appear in views.",
+                    "cta": "Delete"
+                },
+                "relation-summary": "→ {{project}}",
+                "relation-missing-target": "No target project selected",
+                "rollup-summary": "{{function}}({{target}}) via {{via}}"
+            },
             "input": {
                 "cancel": "Cancel"
             },
@@ -306,6 +417,35 @@
             }
         },
         "views": {
+            "visualizer": {
+                "pane": {
+                    "title": "YAML Visualizer",
+                    "no-file": "Open a Markdown note to view its properties.",
+                    "no-properties": "This note has no frontmatter properties yet.",
+                    "actions": {
+                        "pin": "Pin to top",
+                        "unpin": "Unpin",
+                        "hide": "Hide",
+                        "unhide": "Show",
+                        "move-up": "Move up",
+                        "move-down": "Move down",
+                        "show-hidden": "Show hidden",
+                        "hide-hidden": "Hide hidden",
+                        "reset": "Reset overlay",
+                        "add-relation": "+ Add relation",
+                        "pick-relation-placeholder": "Pick a note to link…",
+                        "set-type": "Set property type"
+                    },
+                    "types": {
+                        "auto": "Auto"
+                    },
+                    "linked-from": {
+                        "title": "Linked from",
+                        "empty": "No notes link here yet.",
+                        "via": "via"
+                    }
+                }
+            },
             "developer": {
                 "name": "Developer"
             },
@@ -575,9 +715,23 @@
                 },
                 "empty": "This view is empty."
             },
-            "database": {
+            "dashboard": {
                 "name": "Database",
                 "add-row": "New note",
+                "sub-bases": {
+                    "tablist": "Sub-bases",
+                    "add": "Add sub-base",
+                    "remove": "Remove sub-base",
+                    "default-name": "New view"
+                },
+                "table": {
+                    "header-hint": "Right-click a column header to rename, change type, hide, pin or reorder. Drag the edge to resize.",
+                    "column-menu": {
+                        "property-type": "Property type",
+                        "property-type-auto": "Auto",
+                        "rollup-mode": "Rollup mode"
+                    }
+                },
                 "canvas": {
                     "widgets": "Widgets",
                     "hide-toolbar": "Hide widget toolbar",
@@ -587,6 +741,8 @@
                     "layout-stack": "Stack",
                     "hide-formula-bar": "Hide formula bar",
                     "show-formula-bar": "Show formula bar",
+                    "schema": "Schema",
+                    "schema-tip": "Manage project fields — types, relations, rollups",
                     "template-replace-title": "Replace current layout?",
                     "template-replace-confirm": "Applying a template will replace current widgets. Continue?",
                     "template-replace-cancel": "Cancel",
@@ -866,10 +1022,18 @@
                 "where": "Where",
                 "add": "Add color",
                 "add-to-favorites": "Add to favorites",
+                "project-palette": "Project palette",
                 "apply-color": "Apply color",
                 "add-rule": "Add color rule",
                 "title": "Color rules",
-                "empty-hint": "No rules"
+                "empty-hint": "No rules",
+                "pick-color": "Pick color",
+                "favorites": "Favorites",
+                "favorites-empty-hint": "Press \u2b50 to add",
+                "hex-code": "HEX code",
+                "invalid-format": "Invalid format",
+                "expand-palette": "Expand palette",
+                "collapse-palette": "Collapse palette"
             },
             "filter": {
                 "label": "Filter",
@@ -1010,6 +1174,41 @@
                 "message": "An error occurred while rendering this component.",
                 "retry": "Try again",
                 "details": "Error details"
+            }
+        },
+        "database": {
+            "cell-editor": {
+                "errors": {
+                    "boolean": "Enter true or false.",
+                    "number": "Enter a valid number.",
+                    "date": "Use the format YYYY-MM-DD.",
+                    "datetime": "Use ISO 8601 (e.g. 2026-05-01T12:30).",
+                    "color": "Use a #hex color (3, 4, 6, or 8 digits).",
+                    "list": "Enter comma-separated values.",
+                    "scalar": "Invalid value for this field type."
+                }
+            },
+            "rollup": {
+                "modes": {
+                    "show-original": "Show original",
+                    "show-unique": "Show unique values",
+                    "count-all": "Count all",
+                    "count-values": "Count values",
+                    "count-unique": "Count unique values",
+                    "count-empty": "Count empty",
+                    "count-not-empty": "Count not empty",
+                    "percent-empty": "Percent empty",
+                    "percent-not-empty": "Percent not empty",
+                    "percent-per-group": "Percent per group",
+                    "sum": "Sum",
+                    "average": "Average",
+                    "min": "Min",
+                    "max": "Max",
+                    "median": "Median",
+                    "range": "Range",
+                    "earliest": "Earliest",
+                    "latest": "Latest"
+                }
             }
         },
         "obsidian": {
@@ -1187,7 +1386,13 @@
             "field": "Field",
             "projects": "Projects",
             "create-project": "Create project",
-            "select-date-time": "Select date and time"
+            "select-date-time": "Select date and time",
+            "enable": "Enable",
+            "disable": "Disable",
+            "remove": "Remove",
+            "apply": "Apply",
+            "field-placeholder": "Field",
+            "add-criterion": "Add criterion"
         }
     }
 }

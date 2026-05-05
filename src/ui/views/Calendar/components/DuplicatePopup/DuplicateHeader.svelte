@@ -199,7 +199,7 @@
   }
   
   /* Mobile optimization */
-  @media (max-width: 40rem) { /* 640px at 16px base */
+  @media (max-width: 40rem) { /* 640 at 16 base */
     .duplicate-header {
       padding: 0.5rem;
       gap: 0.5rem;
@@ -226,7 +226,7 @@
   }
   
   /* Very small screens */
-  @media (max-width: 25rem) { /* 400px at 16px base */
+  @media (max-width: 25rem) { /* 400 at 16 base */
     .header-center h3 {
       font-size: 0.85rem;
     }

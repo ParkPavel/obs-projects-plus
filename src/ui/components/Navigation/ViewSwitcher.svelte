@@ -105,7 +105,7 @@
   function updateScrollIndicators() {
     if (!viewSwitcherElement) return;
     const { scrollLeft, scrollWidth, clientWidth } = viewSwitcherElement;
-    // 1px tolerance absorbs sub-pixel rounding from zoom / devicePixelRatio.
+    // 1 tolerance absorbs sub-pixel rounding from zoom / devicePixelRatio.
     canScrollLeft = scrollLeft > 1;
     canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
   }

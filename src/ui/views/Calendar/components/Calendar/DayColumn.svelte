@@ -29,7 +29,7 @@
   export let onDayTap: (() => void) | undefined;
   export let isMobile: boolean = false;
   export let isToday: boolean = false;
-  export let hourHeightRem: number = 3; // Height per hour in rem (default: 3rem = 48px)
+  export let hourHeightRem: number = 3; // Height per hour in rem (default: 3rem = 48)
 
   /** v3.2.0 DnD: TimelineDragManager instance */
   export let dragManager: TimelineDragManager | undefined = undefined;

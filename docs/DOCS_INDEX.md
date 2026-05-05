@@ -1,3 +1,89 @@
+# DOCS_INDEX
+
+> **Версия**: V5.0-foundation (2026-05-05)
+> **Замещает**: предыдущие версии DOCS_INDEX (две конкурирующие версии были склеены — переписано с нуля).
+
+## Start here (V5)
+
+1. [MASTER_MAP_V5.md](MASTER_MAP_V5.md) — навигация: цели V5, карта кода, топ долгов, фазы.
+2. [ARCHITECTURE_V5.md](ARCHITECTURE_V5.md) — целевая архитектура: 4 слоя, контракты, инварианты.
+3. [REFACTOR_BACKLOG_V5.md](REFACTOR_BACKLOG_V5.md) — приоритизированные задачи R5-001…R5-015 с зависимостями.
+
+## Active reference
+
+| Документ | Назначение |
+|---|---|
+| [CODE_STANDARDS.md](CODE_STANDARDS.md) / [CODE_STANDARDS-RU.md](CODE_STANDARDS-RU.md) | Нормы кода (TS strict, Svelte, тесты). |
+| [api.md](api.md) / [api-ru.md](api-ru.md) | Публичный API плагина (custom views). |
+| [user-guide.md](user-guide.md) / [user-guide-EN.md](user-guide-EN.md) | Гайд пользователя. |
+| [DESIGN_CONCEPT_NOTION_AESTHETIC.md](DESIGN_CONCEPT_NOTION_AESTHETIC.md) | Визуальный референс. |
+| [NOTION_PARITY.md](NOTION_PARITY.md) | Список Notion-parity фич (входной материал). |
+
+## Internal coordination
+
+| Файл | Роль |
+|---|---|
+| `.ai_internal/context_state.md` | Приватный лог решений сессии. |
+| `.ai_internal/REVISION_3_USER_DIRECTIVES_2026-05-01.md` | Пользовательская директива по смене курса (вход в V5). |
+| `.ai_internal/NOTION_DATABASE_INTEGRATION_MASTER.md`, `NOTION_OBJECTS_UI_TREE.md/.pdf` | Notion reference dumps. |
+| `.ai_internal/R0_4_ENTRY_POINTS_INVENTORY.md` | Inventory точек входа (использован при V5 inventory). |
+| `.ai_internal/stubs.md` | Реестр заглушек. |
+| `memories/repo/session-state.md` | Состояние текущей сессии для агента. |
+| `memories/repo/contract-registry.md` | Реестр публичных контрактов модулей. |
+| `memories/repo/decision-log.md` | Лог архитектурных решений. |
+| `memories/repo/obs-projects-plus-context.md` | Базовый контекст плагина. |
+| `memories/repo/bug-tracker.md` | Трекер багов. |
+
+## Archive
+
+Все документы V1-V4 (включая `MASTER_MAP.md`, `ARCHITECTURE.md`, `ARCHITECTURE_V4.md`, `IMPLEMENTATION_PLAN_CURRENT.md`, `PHASE_1_MAPPING.md`, `PHASE_3_TICKETS.md`, ранее заархивированные `DOCUMENTATION_STRUCTURE.md`, `IMPLEMENTATION_BLUEPRINT.md`, `ROADMAP_DATABASE_2026.md`, `architecture-*.md`, `database-view-*.md`, `refactoring-spec-v1.md`, `audit-database-view-specs.md`, `v3.0.9-cache.md`, `v3.3.1-modernization.md`) — в [archive/](archive/).
+
+Архивные документы read-only. Не используются как источник правды.
+# Docs Index
+
+> **Last updated**: 2026-05-02 — Refactoring Session v4.0 / Phase 0.
+> **Single navigation point** for all documentation in this repository.
+
+## Start here (active documents only)
+
+1. [docs/MASTER_MAP.md](MASTER_MAP.md) — **navigation + module status + known issues map** (refresh after every ticket).
+2. [docs/ARCHITECTURE.md](ARCHITECTURE.md) — current codebase map (will be superseded by `ARCHITECTURE_V4.md` after Phase 2).
+3. [docs/IMPLEMENTATION_PLAN_CURRENT.md](IMPLEMENTATION_PLAN_CURRENT.md) — active implementation plan (Phase 3 will replace body with refactoring queue).
+4. [docs/CODE_STANDARDS.md](CODE_STANDARDS.md) / [CODE_STANDARDS-RU.md](CODE_STANDARDS-RU.md) — engineering standards.
+5. [docs/api.md](api.md) / [api-ru.md](api-ru.md) — public Custom View API contract.
+6. [docs/user-guide.md](user-guide.md) / [user-guide-EN.md](user-guide-EN.md) — end-user guides.
+
+## Refactoring Session v4.0 artefacts (2026-05-02 →)
+
+| Document | Status | Purpose |
+|---|---|---|
+| [docs/MASTER_MAP.md](MASTER_MAP.md) | active | Module status, layer map, known-issues priority |
+| `docs/ARCHITECTURE_V4.md` | pending (Phase 2) | Target architecture: Unified DataEngine, Dashboard View, Matryoshka Relations, YAML Frontmatter Layer, Unified Color System, Table Rebuild Spec |
+| `.ai_internal/context_state.md` | active (continuity log) | Session-state journal |
+| `memories/repo/session-state.md` | pending (Phase 4) | Cross-session handoff state |
+| `memories/repo/decision-log.md` | pending (Phase 4) | Architectural decision record |
+| `memories/repo/contract-registry.md` | pending (Phase 4) | Type/Interface change ledger |
+
+## Process documents (root of repository)
+
+- [../CONTRIBUTING.md](../CONTRIBUTING.md) — onboarding, PR rules, quality gate
+- [../CHANGELOG.md](../CHANGELOG.md) — Keep a Changelog
+- [../RELEASES.md](../RELEASES.md) / [../RELEASES-EN.md](../RELEASES-EN.md) — narrative release notes
+- [../PROJECT-INFO.md](../PROJECT-INFO.md) — verified-facts card
+- [../README.md](../README.md) / [../README-EN.md](../README-EN.md) — single entry point
+
+## Internal coordination
+
+- `.ai_internal/context_state.md` — continuity log
+- `.ai_internal/REVISION_3_USER_DIRECTIVES_2026-05-01.md` — Revision 3 directive record
+- `.ai_internal/stubs.md` — stub & TODO registry (legacy from Stage A; merge into Phase 3 queue)
+- `.ai_internal/R0_4_ENTRY_POINTS_INVENTORY.md` — entry-point matrix (read-only inventory)
+- `memories/session/handoff.md` — last session handoff
+- `memories/repo/*` — agent-scoped repository memory (system-managed)
+
+## Archive
+
+All historical / superseded specifications live under `docs/archive/`. Archive policy: read-only. To re-use a fact, copy it forward to `MASTER_MAP.md` or `ARCHITECTURE_V4.md`.
 # Docs Index
 
 > **Last updated**: 2026-04-30 — full documentation reset to match the codebase.

@@ -1,6 +1,6 @@
 <script lang="ts">
   export let color: string;
-  export let width: string = "5px";
+  export let width: string = "0.3125rem";
 </script>
 
 <span

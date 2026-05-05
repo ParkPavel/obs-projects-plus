@@ -172,7 +172,7 @@
   }
 
   span:focus-within {
-    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+    box-shadow: 0 0 0 0.125rem var(--background-modifier-border-focus);
   }
 
   .collapse {
@@ -183,16 +183,16 @@
   }
 
   .pinned {
-    border-left: 2px solid var(--interactive-accent);
+    border-left: 0.125rem solid var(--interactive-accent);
     background: color-mix(in srgb, var(--background-primary) 92%, var(--interactive-accent) 8%);
   }
 
   .persisted:not(.pinned) {
-    border-left: 2px solid var(--text-faint);
+    border-left: 0.125rem solid var(--text-faint);
     background: color-mix(in srgb, var(--background-primary) 96%, var(--text-faint) 4%);
   }
 
   .pinned.persisted {
-    border-left: 2px solid var(--interactive-accent);
+    border-left: 0.125rem solid var(--interactive-accent);
   }
 </style>

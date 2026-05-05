@@ -76,10 +76,10 @@
   input:focus {
     outline: none;
     border-color: var(--interactive-accent);
-    box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+    box-shadow: 0 0 0 0.125rem var(--interactive-accent-hover);
   }
 
   .embed {
-    margin: 0 8px;
+    margin: 0 0.5rem;
   }
 </style>
