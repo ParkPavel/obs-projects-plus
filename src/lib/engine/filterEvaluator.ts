@@ -16,7 +16,8 @@
  */
 
 import { produce } from "immer";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
+import { isDateFormula, parseDateFormula } from "src/lib/formula";
 import {
   type DataFrame,
   type DataRecord,
@@ -51,7 +52,8 @@ import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/li
 
 export function matchesCondition(
   cond: FilterCondition,
-  record: DataRecord
+  record: DataRecord,
+  baseDateCtx?: Dayjs
 ): boolean {
   const { operator } = cond;
 
@@ -108,7 +110,15 @@ export function matchesCondition(
   } else if (isOptionalBoolean(value) && isBooleanFilterOperator(operator)) {
     return booleanFns[operator](value);
   } else if (isOptionalDate(value) && isDateFilterOperator(operator)) {
-    return dateFns[operator](value, cond.value);
+    // Resolve date formula in cond.value when baseDateCtx is available
+    let rv = cond.value;
+    if (rv && baseDateCtx && isDateFormula(rv)) {
+      const result = parseDateFormula(rv, baseDateCtx);
+      if (result.success && result.date) {
+        rv = result.date.format("YYYY-MM-DD");
+      }
+    }
+    return dateFns[operator](value, rv, baseDateCtx);
   }
 
   // ── Stage A.10 / R2.1c — undefined value against typed operator ────
@@ -138,6 +148,7 @@ export function matchesCondition(
 export function matchesFilterConditions(
   filter: FilterDefinition,
   record: DataRecord,
+  baseDateCtx?: Dayjs,
   _depth = 0
 ): boolean {
   if (_depth >= 20) return true; // safety: prevent infinite recursion
@@ -146,9 +157,9 @@ export function matchesFilterConditions(
     return cond?.enabled ?? true;
   });
 
-  const condResults = validConds.map((cond) => matchesCondition(cond, record));
+  const condResults = validConds.map((cond) => matchesCondition(cond, record, baseDateCtx));
   const groupResults = (filter.groups ?? []).map((group) =>
-    matchesFilterConditions(group, record, _depth + 1)
+    matchesFilterConditions(group, record, baseDateCtx, _depth + 1)
   );
   const allResults = [...condResults, ...groupResults];
 
@@ -167,9 +178,10 @@ export function matchesFilterConditions(
  */
 export function evaluateFilter(
   record: DataRecord,
-  filter: FilterDefinition
+  filter: FilterDefinition,
+  baseDateCtx?: Dayjs
 ): boolean {
-  return matchesFilterConditions(filter, record);
+  return matchesFilterConditions(filter, record, baseDateCtx);
 }
 
 export function applyFilter(
@@ -227,7 +239,7 @@ export const booleanFns: Record<
 
 export const dateFns: Record<
   DateFilterOperator,
-  (left: Optional<Date>, rawValue?: string) => boolean
+  (left: Optional<Date>, rawValue?: string, baseDate?: Dayjs) => boolean
 > = {
   "is-on": (left, rv) => {
     if (!left || !rv) return false;
@@ -256,83 +268,86 @@ export const dateFns: Record<
     return l.isAfter(r, "day") || l.isSame(r, "day");
   },
   // ── Relative date operators ──
-  "is-today": (left) => {
+  "is-today": (left, _rv, baseDate) => {
     if (!left) return false;
-    return dayjs(left).isSame(dayjs(), "day");
+    return dayjs(left).isSame(baseDate ?? dayjs(), "day");
   },
-  "is-this-week": (left) => {
+  "is-this-week": (left, _rv, baseDate) => {
     if (!left) return false;
-    return dayjs(left).isoWeek() === dayjs().isoWeek() && dayjs(left).year() === dayjs().year();
+    const now = baseDate ?? dayjs();
+    return dayjs(left).isoWeek() === now.isoWeek() && dayjs(left).year() === now.year();
   },
-  "is-this-month": (left) => {
+  "is-this-month": (left, _rv, baseDate) => {
     if (!left) return false;
-    return dayjs(left).isSame(dayjs(), "month");
+    return dayjs(left).isSame(baseDate ?? dayjs(), "month");
   },
-  "is-this-quarter": (left) => {
+  "is-this-quarter": (left, _rv, baseDate) => {
     if (!left) return false;
-    return dayjs(left).quarter() === dayjs().quarter() && dayjs(left).year() === dayjs().year();
+    const now = baseDate ?? dayjs();
+    return dayjs(left).quarter() === now.quarter() && dayjs(left).year() === now.year();
   },
-  "is-this-year": (left) => {
+  "is-this-year": (left, _rv, baseDate) => {
     if (!left) return false;
-    return dayjs(left).isSame(dayjs(), "year");
+    return dayjs(left).isSame(baseDate ?? dayjs(), "year");
   },
   // Notion-style rolling windows: past_* = last N days inclusive of today, next_* = next N days inclusive of today.
-  "is-past-week": (left) => {
+  "is-past-week": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isSame(today, "day") || d.isBefore(today, "day"))
       && d.isAfter(today.subtract(7, "day"), "day");
   },
-  "is-past-month": (left) => {
+  "is-past-month": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isSame(today, "day") || d.isBefore(today, "day"))
       && d.isAfter(today.subtract(1, "month").subtract(1, "day"), "day");
   },
-  "is-past-year": (left) => {
+  "is-past-year": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isSame(today, "day") || d.isBefore(today, "day"))
       && d.isAfter(today.subtract(1, "year").subtract(1, "day"), "day");
   },
-  "is-next-week": (left) => {
+  "is-next-week": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isSame(today, "day") || d.isAfter(today, "day"))
       && d.isBefore(today.add(7, "day").add(1, "day"), "day");
   },
-  "is-next-month": (left) => {
+  "is-next-month": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isSame(today, "day") || d.isAfter(today, "day"))
       && d.isBefore(today.add(1, "month").add(1, "day"), "day");
   },
-  "is-next-year": (left) => {
+  "is-next-year": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isSame(today, "day") || d.isAfter(today, "day"))
       && d.isBefore(today.add(1, "year").add(1, "day"), "day");
   },
-  "is-last-n-days": (left, rv) => {
+  "is-last-n-days": (left, rv, baseDate) => {
     const n = rv ? parseInt(rv, 10) : 0;
     if (!left || !n || n <= 0) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return d.isAfter(today.subtract(n, "day"), "day") && (d.isBefore(today, "day") || d.isSame(today, "day"));
   },
-  "is-next-n-days": (left, rv) => {
+  "is-next-n-days": (left, rv, baseDate) => {
     const n = rv ? parseInt(rv, 10) : 0;
     if (!left || !n || n <= 0) return false;
-    const d = dayjs(left), today = dayjs();
+    const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isAfter(today, "day") || d.isSame(today, "day")) && d.isBefore(today.add(n, "day"), "day");
   },
-  "is-overdue": (left) => {
+  "is-overdue": (left, _rv, baseDate) => {
     if (!left) return false;
-    return dayjs(left).isBefore(dayjs(), "day");
+    return dayjs(left).isBefore(baseDate ?? dayjs(), "day");
   },
-  "is-upcoming": (left) => {
+  "is-upcoming": (left, _rv, baseDate) => {
     if (!left) return false;
     const d = dayjs(left);
-    return d.isAfter(dayjs(), "day") || d.isSame(dayjs(), "day");
+    const now = baseDate ?? dayjs();
+    return d.isAfter(now, "day") || d.isSame(now, "day");
   },
 };
 

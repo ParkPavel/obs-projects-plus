@@ -17,13 +17,15 @@
 import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import type { DataRecord, DataField } from 'src/lib/dataframe/dataframe';
+import type { DataRecord, DataField, DataValue } from 'src/lib/dataframe/dataframe';
 import type { AgendaFilter, AgendaFilterGroup, AgendaCustomList } from 'src/settings/v3/settings';
-import { parseDateFormula, isDateFormula } from 'src/lib/helpers/dateFormulaParser';
-import { parseFormula, evaluateFormula } from 'src/lib/helpers/formulaParser';
+import type { FilterOperator } from 'src/settings/base/settings';
+import { isDateFilterOperator } from 'src/settings/base/settings';
+import { parseDateFormula, isDateFormula } from 'src/lib/formula';
+import { parseFormula, evaluateFormula } from 'src/lib/formula';
+import { matchesCondition } from 'src/lib/engine/filterEvaluator';
 import { calendarLogger } from '../logger';
 import { stripToDisplay as kernelStripToDisplay } from 'src/lib/engine/wikilink';
-import { isEmpty as kernelIsEmpty } from 'src/lib/engine/emptiness';
 
 /**
  * Legacy operator names from v3.0.4, preserved for backward-compat
@@ -106,29 +108,37 @@ function stripWikiLink(value: unknown): unknown {
   return kernelStripToDisplay(value);
 }
 
-/**
- * Check if value is empty
- *
- * REFACTOR-106: delegated to canonical kernel; preserves the
- * full empty semantics (null/undefined/""/[]).
- */
-function isEmptyValue(value: unknown): boolean {
-  return kernelIsEmpty(value);
+/** Coerce an AgendaFilter value to the string expected by FilterCondition. */
+function agendaValueToConditionString(
+  value: string | number | boolean | string[] | null | undefined
+): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return JSON.stringify(value);
+  return undefined;
 }
 
 /**
- * Coerce a value to number if possible (handles string→number from UI inputs).
- * Returns NaN if not a valid number.
+ * Legacy operator names → current canonical operator names.
+ * @internal
  */
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed === '') return NaN;
-    return Number(trimmed);
-  }
-  return NaN;
-}
+const LEGACY_OP_MAP: Partial<Record<string, FilterOperator>> = {
+  equals:          'is',
+  not_equals:      'is-not',
+  is_empty:        'is-empty',
+  is_not_empty:    'is-not-empty',
+  greater_than:    'gt',
+  less_than:       'lt',
+  greater_or_equal:'gte',
+  less_or_equal:   'lte',
+  is_today:        'is-today',
+  is_this_week:    'is-this-week',
+  is_overdue:      'is-overdue',
+  is_upcoming:     'is-upcoming',
+  not_contains:    'not-contains',
+};
 
 /**
  * Evaluate a single filter condition against a record
@@ -141,255 +151,98 @@ export function evaluateFilter(
   filter: AnyAgendaFilter,
   baseDate: Dayjs = dayjs()
 ): boolean {
+  // ── Legacy operator normalisation ────────────────────────────────────
+  const mappedOp: string = LEGACY_OP_MAP[filter.operator] ?? filter.operator;
+
   const rawFieldValue = record.values[filter.field];
   // Normalize wiki-link values so [[path|display]] compares as just 'display'
   const fieldValue = stripWikiLink(rawFieldValue);
   // Resolve filter value (parse formulas relative to baseDate)
-  const filterValue = resolveFilterValue(filter.value, baseDate);
-  
-  switch (filter.operator) {
-    // ==================== BACKWARD COMPATIBILITY ====================
-    // Old operators (v3.0.4) - map to new operators
-    case 'equals':
-      return evaluateFilter(record, { ...filter, operator: 'is' }, baseDate);
-    case 'not_equals':
-      return evaluateFilter(record, { ...filter, operator: 'is-not' }, baseDate);
-    case 'is_empty':
-      return evaluateFilter(record, { ...filter, operator: 'is-empty' }, baseDate);
-    case 'is_not_empty':
-      return evaluateFilter(record, { ...filter, operator: 'is-not-empty' }, baseDate);
-    case 'greater_than':
-      return evaluateFilter(record, { ...filter, operator: 'gt' }, baseDate);
-    case 'less_than':
-      return evaluateFilter(record, { ...filter, operator: 'lt' }, baseDate);
-    case 'greater_or_equal':
-      return evaluateFilter(record, { ...filter, operator: 'gte' }, baseDate);
-    case 'less_or_equal':
-      return evaluateFilter(record, { ...filter, operator: 'lte' }, baseDate);
-    case 'is_today':
-      return evaluateFilter(record, { ...filter, operator: 'is-today' }, baseDate);
-    case 'is_this_week':
-      return evaluateFilter(record, { ...filter, operator: 'is-this-week' }, baseDate);
-    case 'is_overdue':
-      return evaluateFilter(record, { ...filter, operator: 'is-overdue' }, baseDate);
-    case 'is_upcoming':
-      return evaluateFilter(record, { ...filter, operator: 'is-upcoming' }, baseDate);
-    case 'not_contains':
-      return evaluateFilter(record, { ...filter, operator: 'not-contains' }, baseDate);
-    
-    // ==================== BASE OPERATORS ====================
-    case 'is-empty':
-      return isEmptyValue(fieldValue);
-      
-    case 'is-not-empty':
-      return !isEmptyValue(fieldValue);
-    
-    // ==================== STRING OPERATORS ====================
-    case 'is':
-      // Date-aware equality check
-      if (isDateLike(fieldValue) && isDateLike(filterValue)) {
-        const date1 = dayjs(fieldValue).startOf('day');
-        const date2 = dayjs(filterValue).startOf('day');
-        return date1.isSame(date2, 'day');
+  const resolvedValue = resolveFilterValue(filter.value, baseDate);
+
+  // ── regex — only in AgendaFilterOperator, must stay inline ───────────
+  if (mappedOp === 'regex') {
+    if (typeof fieldValue === 'string' && typeof resolvedValue === 'string') {
+      if (resolvedValue.length > 200) {
+        calendarLogger.error('[FilterEngine] Regex too long (>' + 200 + ' chars), skipping');
+        return false;
       }
-      return fieldValue === filterValue;
-      
-    case 'is-not':
-      // Date-aware inequality check
-      if (isDateLike(fieldValue) && isDateLike(filterValue)) {
-        const date1 = dayjs(fieldValue).startOf('day');
-        const date2 = dayjs(filterValue).startOf('day');
-        return !date1.isSame(date2, 'day');
+      if (/\(\?[<!=]/.test(resolvedValue)) return false;
+      if (/(\+|\*|\{[^}]*\})\s*(\+|\*|\{)/.test(resolvedValue)) return false;
+      if (/\([^)]*(\+|\*|\{[^}]*\})\)\s*(\+|\*|\{)/.test(resolvedValue)) return false;
+      try {
+        return new RegExp(resolvedValue, 'i').test(fieldValue.slice(0, 10000));
+      } catch (error) {
+        calendarLogger.error('[FilterEngine] Invalid regex: ' + resolvedValue, error);
+        return false;
       }
-      return fieldValue !== filterValue;
-      
-    case 'contains':
-      if (typeof fieldValue === 'string' && typeof filterValue === 'string') {
-        return fieldValue.toLowerCase().includes(filterValue.toLowerCase());
-      }
-      if (Array.isArray(fieldValue) && filterValue) {
-        return fieldValue.some(v => 
-          String(v).toLowerCase().includes(String(filterValue).toLowerCase())
-        );
-      }
-      return false;
-      
-    case 'not-contains':
-      if (typeof fieldValue === 'string' && typeof filterValue === 'string') {
-        return !fieldValue.toLowerCase().includes(filterValue.toLowerCase());
-      }
-      if (Array.isArray(fieldValue) && filterValue) {
-        return !fieldValue.some(v => 
-          String(v).toLowerCase().includes(String(filterValue).toLowerCase())
-        );
-      }
-      return true;
-      
-    case 'starts-with':
-      if (typeof fieldValue === 'string' && typeof filterValue === 'string') {
-        return fieldValue.toLowerCase().startsWith(filterValue.toLowerCase());
-      }
-      return false;
-      
-    case 'ends-with':
-      if (typeof fieldValue === 'string' && typeof filterValue === 'string') {
-        return fieldValue.toLowerCase().endsWith(filterValue.toLowerCase());
-      }
-      return false;
-      
-    case 'regex':
-      if (typeof fieldValue === 'string' && typeof filterValue === 'string') {
-        if (filterValue.length > 200) {
-          calendarLogger.error('[FilterEngine] Regex too long (>' + 200 + ' chars), skipping');
-          return false;
-        }
-        // ReDoS mitigation: reject unsafe patterns
-        if (/\(\?[<!=]/.test(filterValue)) return false;
-        if (/(\+|\*|\{[^}]*\})\s*(\+|\*|\{)/.test(filterValue)) return false;
-        if (/\([^)]*(\+|\*|\{[^}]*\})\)\s*(\+|\*|\{)/.test(filterValue)) return false;
-        try {
-          const regex = new RegExp(filterValue, 'i');
-          return regex.test(fieldValue.slice(0, 10000));
-        } catch (error) {
-          calendarLogger.error('[FilterEngine] Invalid regex: ' + filterValue, error);
-          return false;
-        }
-      }
-      return false;
-    
-    // ==================== NUMBER OPERATORS ====================
-    case 'eq': {
-      const a = toNumber(fieldValue), b = toNumber(filterValue);
-      if (!isNaN(a) && !isNaN(b)) return a === b;
-      return false;
     }
-      
-    case 'neq': {
-      const a = toNumber(fieldValue), b = toNumber(filterValue);
-      if (!isNaN(a) && !isNaN(b)) return a !== b;
-      return false;
-    }
-      
-    case 'lt': {
-      const a = toNumber(fieldValue), b = toNumber(filterValue);
-      if (!isNaN(a) && !isNaN(b)) return a < b;
-      // Date comparison
-      if (isDateLike(fieldValue) && isDateLike(filterValue)) {
-        return dayjs(fieldValue).isBefore(dayjs(filterValue), 'day');
-      }
-      return false;
-    }
-      
-    case 'gt': {
-      const a = toNumber(fieldValue), b = toNumber(filterValue);
-      if (!isNaN(a) && !isNaN(b)) return a > b;
-      // Date comparison
-      if (isDateLike(fieldValue) && isDateLike(filterValue)) {
-        return dayjs(fieldValue).isAfter(dayjs(filterValue), 'day');
-      }
-      return false;
-    }
-      
-    case 'lte': {
-      const a = toNumber(fieldValue), b = toNumber(filterValue);
-      if (!isNaN(a) && !isNaN(b)) return a <= b;
-      if (isDateLike(fieldValue) && isDateLike(filterValue)) {
-        return dayjs(fieldValue).isSameOrBefore(dayjs(filterValue), 'day');
-      }
-      return false;
-    }
-      
-    case 'gte': {
-      const a = toNumber(fieldValue), b = toNumber(filterValue);
-      if (!isNaN(a) && !isNaN(b)) return a >= b;
-      if (isDateLike(fieldValue) && isDateLike(filterValue)) {
-        return dayjs(fieldValue).isSameOrAfter(dayjs(filterValue), 'day');
-      }
-      return false;
-    }
-    
-    // ==================== BOOLEAN OPERATORS ====================
-    case 'is-checked':
-      return fieldValue === true;
-      
-    case 'is-not-checked':
-      return fieldValue !== true;
-    
-    // ==================== DATE OPERATORS ====================
-    case 'is-on':
-      if (!isDateLike(fieldValue) || !isDateLike(filterValue)) return false;
-      return dayjs(fieldValue).isSame(dayjs(filterValue), 'day');
-      
-    case 'is-not-on':
-      if (!isDateLike(fieldValue) || !isDateLike(filterValue)) return false;
-      return !dayjs(fieldValue).isSame(dayjs(filterValue), 'day');
-      
-    case 'is-before':
-      if (!isDateLike(fieldValue) || !isDateLike(filterValue)) return false;
-      return dayjs(fieldValue).isBefore(dayjs(filterValue), 'day');
-      
-    case 'is-after':
-      if (!isDateLike(fieldValue) || !isDateLike(filterValue)) return false;
-      return dayjs(fieldValue).isAfter(dayjs(filterValue), 'day');
-      
-    case 'is-on-and-before':
-      if (!isDateLike(fieldValue) || !isDateLike(filterValue)) return false;
-      return dayjs(fieldValue).isSameOrBefore(dayjs(filterValue), 'day');
-      
-    case 'is-on-and-after':
-      if (!isDateLike(fieldValue) || !isDateLike(filterValue)) return false;
-      return dayjs(fieldValue).isSameOrAfter(dayjs(filterValue), 'day');
-      
-    case 'is-today':
-      if (!isDateLike(fieldValue)) return false;
-      return dayjs(fieldValue).isSame(baseDate, 'day');
-      
-    case 'is-this-week': {
-      if (!isDateLike(fieldValue)) return false;
-      const startOfWeek = baseDate.startOf('week');
-      const endOfWeek = baseDate.endOf('week');
-      return dayjs(fieldValue).isSameOrAfter(startOfWeek) && 
-             dayjs(fieldValue).isSameOrBefore(endOfWeek);
-    }
-      
-    case 'is-this-month':
-      if (!isDateLike(fieldValue)) return false;
-      return dayjs(fieldValue).isSame(baseDate, 'month');
-      
-    case 'is-overdue':
-      if (!isDateLike(fieldValue)) return false;
-      return dayjs(fieldValue).isBefore(baseDate, 'day');
-      
-    case 'is-upcoming':
-      if (!isDateLike(fieldValue)) return false;
-      return dayjs(fieldValue).isAfter(baseDate, 'day');
-    
-    // ==================== LIST/TAGS OPERATORS ====================
-    case 'has-any-of':
-      if (!Array.isArray(fieldValue) || !Array.isArray(filterValue)) return false;
-      return filterValue.some(tag => fieldValue.includes(tag));
-      
-    case 'has-all-of':
-      if (!Array.isArray(fieldValue) || !Array.isArray(filterValue)) return false;
-      return filterValue.every(tag => fieldValue.includes(tag));
-      
-    case 'has-none-of':
-      if (!Array.isArray(fieldValue) || !Array.isArray(filterValue)) return false;
-      return !filterValue.some(tag => fieldValue.includes(tag));
-      
-    case 'has-keyword':
-      if (!Array.isArray(fieldValue) || typeof filterValue !== 'string') return false;
-      return fieldValue.some(v => 
-        String(v).toLowerCase().includes(filterValue.toLowerCase())
-      );
-      
-    default: {
-      // Unknown operator — log warning for debugging
-      const unknownFilter: { operator: string } = filter as never;
-      calendarLogger.warn('[FilterEngine] Unknown operator: ' + unknownFilter.operator);
-      return false;
-    }
+    return false;
   }
+
+  // ── Date-aware 'is' / 'is-not': compare as dates when both sides are date-like ──
+  if (mappedOp === 'is' || mappedOp === 'is-not') {
+    if (isDateLike(fieldValue) && isDateLike(resolvedValue)) {
+      const d1 = dayjs(fieldValue).startOf('day');
+      const d2 = dayjs(resolvedValue as string).startOf('day');
+      return mappedOp === 'is' ? d1.isSame(d2, 'day') : !d1.isSame(d2, 'day');
+    }
+    // Fall through to string delegation below
+  }
+
+  // ── Date-aware lt / gt / lte / gte ──────────────────────────────────
+  if (mappedOp === 'lt' || mappedOp === 'gt' || mappedOp === 'lte' || mappedOp === 'gte') {
+    if (isDateLike(fieldValue) && isDateLike(resolvedValue)) {
+      const fd = dayjs(fieldValue), rv = dayjs(resolvedValue as string);
+      if (mappedOp === 'lt')  return fd.isBefore(rv, 'day');
+      if (mappedOp === 'gt')  return fd.isAfter(rv, 'day');
+      if (mappedOp === 'lte') return fd.isSameOrBefore(rv, 'day');
+      if (mappedOp === 'gte') return fd.isSameOrAfter(rv, 'day');
+    }
+    // Fall through to number delegation below
+  }
+
+  // ── is-this-week: locale week (startOf/endOf) vs ISO isoWeek in filterEvaluator ──
+  if (mappedOp === 'is-this-week') {
+    if (!isDateLike(fieldValue)) return false;
+    const startOfWeek = baseDate.startOf('week');
+    const endOfWeek = baseDate.endOf('week');
+    return dayjs(fieldValue).isSameOrAfter(startOfWeek) &&
+           dayjs(fieldValue).isSameOrBefore(endOfWeek);
+  }
+
+  // ── is-upcoming: Calendar semantics = strictly after baseDate (today excluded) ──
+  if (mappedOp === 'is-upcoming') {
+    if (!isDateLike(fieldValue)) return false;
+    return dayjs(fieldValue).isAfter(baseDate, 'day');
+  }
+
+  // ── Delegate to canonical matchesCondition ───────────────────────────
+  // Build a stripped record so matchesCondition reads the wiki-link–normalised value.
+  // For date operators: Calendar stores dates as strings; convert to Date so
+  // isOptionalDate() type-guard in matchesCondition routes correctly.
+  let delegateFieldValue: DataValue | undefined = fieldValue as DataValue | undefined;
+  if (isDateFilterOperator(mappedOp as FilterOperator) && isDateLike(fieldValue)) {
+    delegateFieldValue = dayjs(fieldValue).toDate();
+  }
+
+  const strippedRecord: DataRecord = delegateFieldValue !== rawFieldValue
+    ? { ...record, values: { ...record.values, [filter.field]: delegateFieldValue as DataValue } }
+    : record;
+
+  // Resolved value (formula already expanded) → string for FilterCondition.value
+  const condValue = agendaValueToConditionString(resolvedValue);
+
+  return matchesCondition(
+    {
+      field: filter.field,
+      operator: mappedOp as FilterOperator,
+      value: condValue,
+      enabled: true,
+    },
+    strippedRecord,
+    baseDate
+  );
 }
 
 /**
