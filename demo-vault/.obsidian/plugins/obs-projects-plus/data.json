@@ -1,0 +1,323 @@
+{
+  "version": 3,
+  "projects": [
+    {
+      "name": "Demo Project",
+      "id": "demo-project-001",
+      "fieldConfig": {
+        "assignee": {
+          "relation": {
+            "targetProjectId": "demo-project-team",
+            "displayField": "title"
+          }
+        },
+        "reviewer": {
+          "relation": {
+            "targetProjectId": "demo-project-team",
+            "displayField": "title"
+          }
+        },
+        "status": {
+          "type": "status",
+          "groups": [
+            { "name": "todo", "color": "#9e9e9e" },
+            { "name": "in-progress", "color": "#2196F3" },
+            { "name": "review", "color": "#FF9800" },
+            { "name": "done", "color": "#4CAF50" },
+            { "name": "blocked", "color": "#F44336" },
+            { "name": "cancelled", "color": "#607D8B" }
+          ]
+        },
+        "priority": {
+          "type": "select",
+          "options": [
+            { "name": "critical", "color": "#F44336" },
+            { "name": "high", "color": "#FF9800" },
+            { "name": "medium", "color": "#2196F3" },
+            { "name": "low", "color": "#4CAF50" }
+          ]
+        }
+      },
+      "defaultName": "{{date}} New Task",
+      "templates": [],
+      "excludedNotes": [],
+      "isDefault": true,
+      "dataSource": {
+        "kind": "folder",
+        "config": {
+          "path": "Projects",
+          "recursive": false
+        }
+      },
+      "newNotesFolder": "Projects",
+      "views": [
+        {
+          "name": "Database",
+          "id": "demo-view-database",
+          "type": "database",
+          "config": {
+            "widgets": [
+              {
+                "id": "w-filter-tabs-1",
+                "type": "filter-tabs",
+                "title": "Status Filter",
+                "layout": { "x": 0, "y": 0, "w": 12, "h": 2 },
+                "config": {
+                  "field": "status",
+                  "showAll": true,
+                  "tabs": [
+                    { "id": "tab-todo", "label": "To Do", "field": "status", "value": "todo" },
+                    { "id": "tab-inprogress", "label": "In Progress", "field": "status", "value": "in-progress" },
+                    { "id": "tab-review", "label": "Review", "field": "status", "value": "review" },
+                    { "id": "tab-done", "label": "Done", "field": "status", "value": "done" },
+                    { "id": "tab-blocked", "label": "Blocked", "field": "status", "value": "blocked" }
+                  ]
+                }
+              },
+              {
+                "id": "w-stats-1",
+                "type": "stats",
+                "title": "Overview",
+                "layout": { "x": 0, "y": 2, "w": 12, "h": 3 },
+                "config": {
+                  "columns": 4,
+                  "cards": [
+                    {
+                      "id": "stat-count",
+                      "label": "Total Projects",
+                      "field": "title",
+                      "aggregation": "count",
+                      "color": "#2196F3"
+                    },
+                    {
+                      "id": "stat-budget",
+                      "label": "Total Budget",
+                      "field": "budget",
+                      "aggregation": "sum",
+                      "format": "currency",
+                      "currencySymbol": "$",
+                      "color": "#4CAF50"
+                    },
+                    {
+                      "id": "stat-spent",
+                      "label": "Total Spent",
+                      "field": "spent",
+                      "aggregation": "sum",
+                      "format": "currency",
+                      "currencySymbol": "$",
+                      "color": "#FF9800"
+                    },
+                    {
+                      "id": "stat-progress",
+                      "label": "Avg Progress",
+                      "field": "progress",
+                      "aggregation": "avg",
+                      "format": "percent",
+                      "color": "#9C27B0"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "w-demo-table-1",
+                "type": "data-table",
+                "title": "Projects",
+                "layout": { "x": 0, "y": 5, "w": 12, "h": 10 },
+                "config": {},
+                "collapsed": false
+              }
+            ],
+            "formulaFields": [
+              {
+                "name": "Budget Utilization",
+                "expression": "ROUND(spent / budget * 100, 1)"
+              },
+              {
+                "name": "Days Remaining",
+                "expression": "DATE_BETWEEN(TODAY(), due, \"day\")"
+              }
+            ],
+            "layoutMode": "stack",
+            "layoutVersion": 1,
+            "table": {
+              "fieldConfig": {
+                "path": { "hide": true },
+                "color": { "hide": true },
+                "sprint": { "hide": true }
+              },
+              "aggregations": {
+                "budget": "sum",
+                "spent": "sum",
+                "progress": "avg",
+                "hours": "sum"
+              },
+              "showAggregationRow": true
+            },
+            "showWidgetToolbar": true,
+            "compactMode": false
+          },
+          "filter": { "conjunction": "and", "conditions": [] },
+          "colors": {
+            "conditions": [
+              {
+                "color": "#ef5350",
+                "condition": { "field": "priority", "operator": "is", "value": "critical" }
+              },
+              {
+                "color": "#e53935",
+                "condition": { "field": "priority", "operator": "is", "value": "high" }
+              },
+              {
+                "color": "#1e88e5",
+                "condition": { "field": "priority", "operator": "is", "value": "medium" }
+              },
+              {
+                "color": "#43a047",
+                "condition": { "field": "priority", "operator": "is", "value": "low" }
+              }
+            ]
+          },
+          "sort": {
+            "criteria": [
+              { "field": "priority", "order": "asc", "enabled": true },
+              { "field": "due", "order": "asc", "enabled": true }
+            ]
+          }
+        },
+        {
+          "name": "Board",
+          "id": "demo-view-board",
+          "type": "board",
+          "config": {
+            "groupByField": "status"
+          },
+          "filter": { "conjunction": "and", "conditions": [] },
+          "colors": {
+            "conditions": [
+              {
+                "color": "#ef5350",
+                "condition": { "field": "priority", "operator": "is", "value": "critical" }
+              }
+            ]
+          },
+          "sort": { "criteria": [{ "field": "due", "order": "asc", "enabled": true }] }
+        },
+        {
+          "name": "Calendar",
+          "id": "demo-view-calendar",
+          "type": "calendar",
+          "config": {
+            "dateField": "due",
+            "checkField": "completed"
+          },
+          "filter": { "conjunction": "and", "conditions": [] },
+          "colors": {
+            "conditions": [
+              {
+                "color": "#ef5350",
+                "condition": { "field": "priority", "operator": "is", "value": "critical" }
+              }
+            ]
+          },
+          "sort": { "criteria": [] }
+        },
+        {
+          "name": "Gallery",
+          "id": "demo-view-gallery",
+          "type": "gallery",
+          "config": {
+            "coverField": ""
+          },
+          "filter": { "conjunction": "and", "conditions": [] },
+          "colors": { "conditions": [] },
+          "sort": { "criteria": [] }
+        }
+      ],
+      "autosave": true
+    },
+    {
+      "name": "Team Members",
+      "id": "demo-project-team",
+      "fieldConfig": {
+        "role": {
+          "type": "select",
+          "options": [
+            { "name": "Tech Lead", "color": "#9C27B0" },
+            { "name": "Backend Engineer", "color": "#2196F3" },
+            { "name": "Frontend Engineer", "color": "#00BCD4" },
+            { "name": "Product Manager", "color": "#FF9800" },
+            { "name": "Designer", "color": "#E91E63" },
+            { "name": "QA Engineer", "color": "#4CAF50" }
+          ]
+        }
+      },
+      "defaultName": "{{date}} New Team Member",
+      "templates": [],
+      "excludedNotes": [],
+      "isDefault": false,
+      "dataSource": {
+        "kind": "folder",
+        "config": {
+          "path": "Team",
+          "recursive": false
+        }
+      },
+      "newNotesFolder": "Team",
+      "views": [
+        {
+          "name": "Directory",
+          "id": "demo-view-team-db",
+          "type": "database",
+          "config": {
+            "widgets": [
+              {
+                "id": "w-team-table-1",
+                "type": "data-table",
+                "title": "Team",
+                "layout": { "x": 0, "y": 0, "w": 12, "h": 8 },
+                "config": {},
+                "collapsed": false
+              }
+            ],
+            "layoutMode": "stack",
+            "layoutVersion": 1,
+            "table": {
+              "fieldConfig": {
+                "path": { "hide": true },
+                "tags": { "hide": true }
+              },
+              "aggregations": {},
+              "showAggregationRow": false
+            },
+            "showWidgetToolbar": false,
+            "compactMode": false
+          },
+          "filter": { "conjunction": "and", "conditions": [] },
+          "colors": { "conditions": [] },
+          "sort": {
+            "criteria": [
+              { "field": "department", "order": "asc", "enabled": true }
+            ]
+          }
+        }
+      ],
+      "autosave": false
+    }
+  ],
+  "archives": [],
+  "preferences": {
+    "projectSizeLimit": 1000,
+    "frontmatter": {
+      "quoteStrings": "PLAIN"
+    },
+    "locale": {
+      "firstDayOfWeek": "default"
+    },
+    "commands": [],
+    "linkBehavior": "open-editor",
+    "mobileCalendarView": "month",
+    "showViewTitles": true,
+    "animationBehavior": "smooth",
+    "disableHapticFeedback": false
+  }
+}

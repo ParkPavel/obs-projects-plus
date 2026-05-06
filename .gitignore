@@ -29,6 +29,13 @@ OBScync/
 EMERGENCY-BACKUPS/
 personal-*
 *-vault/
+!demo-vault/
+# Allow the demo vault plugin data (stripped of personal paths)
+!demo-vault/.obsidian/
+!demo-vault/.obsidian/plugins/
+!demo-vault/.obsidian/plugins/obs-projects-plus/
+!demo-vault/.obsidian/plugins/obs-projects-plus/data.json
+!demo-vault/.obsidian/community-plugins.json
 *.personal
 
 # Ephemeral dev/debug dumps (never commit)
