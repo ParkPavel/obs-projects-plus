@@ -67,9 +67,11 @@
   import { SchemaModal } from "src/ui/modals/schemaModal";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
   import { app } from "src/lib/stores/obsidian";
-  import { commandBus } from "src/lib/stores/commandBus";
   import { onDestroy } from "svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
+  import { Notice } from "obsidian";
+  import { subscribeCanvasCommands } from "./dashboardCommands";
+  import { collectReferencedSourceIds } from "./dashboardPreload";
 
   // ── Props ──────────────────────────────────────────────────
   export let project: ProjectDefinition;
@@ -202,6 +204,7 @@
           persistFieldTypeConfig(field);
           reopenSchema();
         } catch (err) {
+          new Notice($i18n.t("views.dashboard.canvas.error-add-field", { defaultValue: "Failed to add field. Please try again." }));
           // eslint-disable-next-line no-console
           console.warn("[obs-projects-plus] addField failed", err);
         }
@@ -282,26 +285,14 @@
     tick()
       .then(() => openSchema())
       .catch((err) => {
+        new Notice($i18n.t("views.dashboard.canvas.error-reopen-schema", { defaultValue: "Failed to reopen schema." }));
         // eslint-disable-next-line no-console
         console.warn("[obs-projects-plus] reopenSchema failed", err);
       });
   }
 
   // ── Stage A.10 — command-palette bridge ─────────────────────
-  // Subscribe to the global command-bus so palette entries
-  // (`Open Schema`, `Add field`) reach into this view when the user
-  // already has a Database view open. Each subscription gates on
-  // ts changes so a repeated palette click re-opens the same modal.
-  let lastCommandTs = 0;
-  const unsubCommandBus = commandBus.subscribe((msg) => {
-    if (!msg || msg.ts <= lastCommandTs) return;
-    lastCommandTs = msg.ts;
-    if (msg.action === "open-schema") {
-      openSchema();
-    } else if (msg.action === "add-field") {
-      openCreateField();
-    }
-  });
+  const unsubCommandBus = subscribeCanvasCommands(openSchema, openCreateField);
   onDestroy(unsubCommandBus);
 
   function applyTemplateById(templateId: string) {
@@ -309,6 +300,7 @@
     const widgetsFromTemplate = applyWidgetTemplate(templateId);
     if (!widgetsFromTemplate) return;
     requestTemplateReplace(widgetsFromTemplate).catch((err) => {
+      new Notice($i18n.t("views.dashboard.canvas.error-apply-template", { defaultValue: "Failed to apply template." }));
       // eslint-disable-next-line no-console
       console.warn("[obs-projects-plus] applyTemplateById failed", err);
     });
@@ -393,49 +385,12 @@
     .filter((p) => p.id !== project.id)
     .map((p) => ({ id: p.id, name: p.name }));
 
-  function collectReferencedSourceIds(ws: WidgetDefinition[]): string[] {
-    const ids = new Set<string>();
-    for (const w of ws) {
-      const steps = w.transform?.steps ?? [];
-      for (const s of steps) {
-        if (s.type === "join" && s.rightSourceId) ids.add(s.rightSourceId);
-      }
-      if (w.type === "chart") {
-        const cfg = w.config as { correlation?: { rightSourceId?: string } };
-        const id = cfg?.correlation?.rightSourceId;
-        if (id) ids.add(id);
-      }
-    }
-    // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.4 (R-11 mitigation).
-    // Stage A cross-project relations & rollups declared on `project.fieldConfig`
-    // must also feed the pre-load pipeline so the existing externalFrameResolver
-    // cache + invalidation infrastructure covers them without a parallel path.
-    const fc = project.fieldConfig as
-      | Record<
-          string,
-          {
-            relation?: { targetProjectId?: string };
-            rollup?: { targetProjectId?: string };
-          }
-        >
-      | undefined;
-    if (fc) {
-      for (const cfg of Object.values(fc)) {
-        const relTarget = cfg?.relation?.targetProjectId;
-        if (relTarget && relTarget !== project.id) ids.add(relTarget);
-        const rollTarget = cfg?.rollup?.targetProjectId;
-        if (rollTarget && rollTarget !== project.id) ids.add(rollTarget);
-      }
-    }
-    return Array.from(ids);
-  }
-
   const rightFramesStore = writable<ReadonlyMap<string, DataFrame>>(new Map());
   let lastReferencedKey = "";
   let lastInvalidationTick = 0;
   let preloadGeneration = 0;
 
-  $: referencedIds = collectReferencedSourceIds(widgets);
+  $: referencedIds = collectReferencedSourceIds(widgets, project);
   $: {
     // Re-run the preload pass when EITHER:
     //   (a) the set of referenced ids changes, or
@@ -607,6 +562,7 @@
           on:addWidget={(e) => addWidget(e.detail)}
           on:applyTemplate={(e) => {
             requestTemplateReplace(e.detail).catch((err) => {
+              new Notice($i18n.t("views.dashboard.canvas.error-apply-template", { defaultValue: "Failed to apply template." }));
               // eslint-disable-next-line no-console
               console.warn("[obs-projects-plus] applyTemplate failed", err);
             });
