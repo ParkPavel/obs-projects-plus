@@ -51,7 +51,6 @@
   import { dndzone, SHADOW_PLACEHOLDER_ITEM_ID } from "svelte-dnd-action";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
-  import WidgetToolbar from "./widgets/WidgetToolbar.svelte";
   import FormulaBar from "./widgets/FormulaBar.svelte";
   import { getWidgetMeta } from "./widgets/widgetRegistry";
   import { applyWidgetTemplate } from "./widgetTemplates";
@@ -72,6 +71,9 @@
   import { Notice } from "obsidian";
   import { subscribeCanvasCommands } from "./dashboardCommands";
   import { collectReferencedSourceIds } from "./dashboardPreload";
+  import DashboardToolbar from "./DashboardToolbar.svelte";
+  import FilterBridge from "./FilterBridge.svelte";
+  import TemplateConfirmDialog from "./TemplateConfirmDialog.svelte";
 
   // ── Props ──────────────────────────────────────────────────
   export let project: ProjectDefinition;
@@ -308,20 +310,14 @@
 
   let showTemplateReplaceConfirm = false;
   let pendingTemplateWidgets: WidgetDefinition[] | null = null;
-  let templateConfirmCancelBtn: HTMLButtonElement | null = null;
 
   async function requestTemplateReplace(nextWidgets: WidgetDefinition[]) {
     if (!config) return;
-
-    // Protect users from accidental layout overwrite when a template is applied.
     if (widgets.length > 0) {
       pendingTemplateWidgets = nextWidgets;
       showTemplateReplaceConfirm = true;
-      await tick();
-      templateConfirmCancelBtn?.focus();
       return;
     }
-
     saveConfig({ ...config, widgets: nextWidgets });
   }
 
@@ -514,62 +510,25 @@
   <ViewContent>
     <div class="ppp-database-root" style={tokenCSS} role="region" aria-label={$i18n.t("views.dashboard.name")}>
     <!-- Toolbar row -->
-    <div class="ppp-database-toolbar">
-      <button
-        class="ppp-toolbar-btn clickable-icon"
-        on:click={toggleToolbar}
-        aria-pressed={showToolbar}
-        aria-label={showToolbar ? $i18n.t("views.dashboard.canvas.hide-toolbar") : $i18n.t("views.dashboard.canvas.show-toolbar")}
-      >
-        {showToolbar ? "−" : "+"} {$i18n.t("views.dashboard.canvas.widgets")}
-      </button>
-      <button
-        class="ppp-toolbar-btn clickable-icon"
-        on:click={toggleLayout}
-        aria-label={$i18n.t("views.dashboard.canvas.toggle-layout")}
-        disabled={$isMobile}
-      >
-        {layoutMode === "stack" ? `⊞ ${$i18n.t("views.dashboard.canvas.layout-grid")}` : `≡ ${$i18n.t("views.dashboard.canvas.layout-stack")}`}
-      </button>
-      {#if !readonly}
-        <button
-          class="ppp-toolbar-btn clickable-icon"
-          on:click={openSchema}
-          aria-label={$i18n.t("views.dashboard.canvas.schema")}
-          title={$i18n.t("views.dashboard.canvas.schema-tip", {
-            defaultValue: "Manage project fields — types, relations, rollups",
-          })}
-        >
-          ⚙ {$i18n.t("views.dashboard.canvas.schema")}
-        </button>
-        <button
-          class="ppp-toolbar-btn clickable-icon"
-          on:click={() => (showFormulaBar = !showFormulaBar)}
-          aria-pressed={showFormulaBar}
-          aria-label={showFormulaBar ? $i18n.t("views.dashboard.canvas.hide-formula-bar") : $i18n.t("views.dashboard.canvas.show-formula-bar")}
-          title={showFormulaBar
-            ? $i18n.t("views.dashboard.canvas.hide-formula-bar", { defaultValue: "Hide formula bar" })
-            : $i18n.t("views.dashboard.canvas.show-formula-bar-tip", {
-                defaultValue: "Show formula bar — IntelliSense, live preview, syntax check",
-              })}
-        >
-          ƒx
-        </button>
-      {/if}
-      {#if showToolbar && !readonly}
-        <WidgetToolbar
-          currentWidgets={widgets}
-          on:addWidget={(e) => addWidget(e.detail)}
-          on:applyTemplate={(e) => {
-            requestTemplateReplace(e.detail).catch((err) => {
-              new Notice($i18n.t("views.dashboard.canvas.error-apply-template", { defaultValue: "Failed to apply template." }));
-              // eslint-disable-next-line no-console
-              console.warn("[obs-projects-plus] applyTemplate failed", err);
-            });
-          }}
-        />
-      {/if}
-    </div>
+    <DashboardToolbar
+      {showToolbar}
+      {layoutMode}
+      {readonly}
+      {showFormulaBar}
+      currentWidgets={widgets}
+      on:toggleToolbar={toggleToolbar}
+      on:toggleLayout={toggleLayout}
+      on:openSchema={openSchema}
+      on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)}
+      on:addWidget={(e) => addWidget(e.detail)}
+      on:applyTemplate={(e) => {
+        requestTemplateReplace(e.detail).catch((err) => {
+          new Notice($i18n.t("views.dashboard.canvas.error-apply-template", { defaultValue: "Failed to apply template." }));
+          // eslint-disable-next-line no-console
+          console.warn("[obs-projects-plus] applyTemplate failed", err);
+        });
+      }}
+    />
 
     {#if !readonly && quickActions.length > 0}
       <div class="ppp-quick-actions" role="group" aria-label={$i18n.t("views.dashboard.quick.group", { defaultValue: "Quick actions" })}>
@@ -585,35 +544,11 @@
       </div>
     {/if}
 
-    {#if showTemplateReplaceConfirm}
-      <div
-        class="ppp-template-confirm-overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ppp-template-confirm-title"
-        aria-describedby="ppp-template-confirm-desc"
-        on:click|self={cancelTemplateReplace}
-        on:keydown={(e) => {
-          if (e.key === "Escape") {
-            e.stopPropagation();
-            cancelTemplateReplace();
-          }
-        }}
-      >
-        <div class="ppp-template-confirm">
-          <h3 id="ppp-template-confirm-title">{$i18n.t("views.dashboard.canvas.template-replace-title", { defaultValue: "Replace current layout?" })}</h3>
-          <p id="ppp-template-confirm-desc">{$i18n.t("views.dashboard.canvas.template-replace-confirm", { defaultValue: "Applying a template will replace current widgets. Continue?" })}</p>
-          <div class="ppp-template-confirm-actions">
-            <button class="ppp-btn ppp-btn--secondary" bind:this={templateConfirmCancelBtn} on:click={cancelTemplateReplace}>
-              {$i18n.t("views.dashboard.canvas.template-replace-cancel", { defaultValue: "Cancel" })}
-            </button>
-            <button class="ppp-btn ppp-btn--danger" on:click={confirmTemplateReplace}>
-              {$i18n.t("views.dashboard.canvas.template-replace-apply", { defaultValue: "Apply template" })}
-            </button>
-          </div>
-        </div>
-      </div>
-    {/if}
+    <TemplateConfirmDialog
+      show={showTemplateReplaceConfirm}
+      on:confirm={confirmTemplateReplace}
+      on:cancel={cancelTemplateReplace}
+    />
 
     <!-- Formula bar -->
     {#if showFormulaBar && !readonly}
@@ -635,49 +570,15 @@
     {/if}
 
     <!-- Local ↔ Global filter bridge -->
-    {#if activeGlobalFilters.length > 0 || activeFilterTab}
-      <div class="ppp-filter-bridge" role="status" aria-live="polite">
-        {#if activeGlobalFilters.length > 0}
-          <span class="ppp-filter-bridge-chip ppp-filter-bridge-chip--global" title={globalFilterTooltip}>
-            <span class="ppp-filter-bridge-icon" aria-hidden="true">🌐</span>
-            <span class="ppp-filter-bridge-label">
-              {$i18n.t("views.dashboard.canvas.filter-bridge-global", {
-                defaultValue: "Global filter: {{count}} condition(s)",
-                count: activeGlobalFilters.length,
-              })}
-            </span>
-          </span>
-        {/if}
-        {#if activeFilterTab}
-          <span class="ppp-filter-bridge-chip ppp-filter-bridge-chip--local">
-            <span class="ppp-filter-bridge-icon" aria-hidden="true">⎘</span>
-            <span class="ppp-filter-bridge-label">
-              {$i18n.t("views.dashboard.canvas.filter-bridge-local", {
-                defaultValue: "Local: {{field}} = {{value}}",
-                field: activeFilterTab.field,
-                value: activeFilterTab.value,
-              })}
-            </span>
-            {#if onViewFilterChange && !readonly}
-              <button
-                class="ppp-filter-bridge-promote"
-                type="button"
-                on:click={promoteLocalToGlobal}
-                title={$i18n.t("views.dashboard.canvas.filter-bridge-promote", { defaultValue: "Save as global filter" })}
-                aria-label={$i18n.t("views.dashboard.canvas.filter-bridge-promote", { defaultValue: "Save as global filter" })}
-              >↥</button>
-            {/if}
-            <button
-              class="ppp-filter-bridge-clear"
-              type="button"
-              on:click={() => (activeFilterTab = null)}
-              title={$i18n.t("views.dashboard.canvas.filter-bridge-clear", { defaultValue: "Clear local filter" })}
-              aria-label={$i18n.t("views.dashboard.canvas.filter-bridge-clear", { defaultValue: "Clear local filter" })}
-            >×</button>
-          </span>
-        {/if}
-      </div>
-    {/if}
+    <FilterBridge
+      {activeGlobalFilters}
+      {activeFilterTab}
+      {globalFilterTooltip}
+      {readonly}
+      canPromote={!!onViewFilterChange}
+      on:promote={promoteLocalToGlobal}
+      on:clear={() => (activeFilterTab = null)}
+    />
 
     <!-- Widget grid -->
     {#if widgets.length === 0}
@@ -790,126 +691,6 @@
     }
   }
 
-  .ppp-database-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0;
-    flex-wrap: wrap;
-  }
-
-  .ppp-toolbar-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.625rem;
-    min-height: 2.25rem;
-    font-size: var(--font-ui-small);
-    color: var(--text-muted);
-    background: transparent;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-  }
-
-  .ppp-toolbar-btn:hover {
-    color: var(--text-normal);
-    border-color: var(--interactive-accent);
-    background: var(--background-secondary);
-  }
-
-  .ppp-toolbar-btn:active {
-    background: var(--background-modifier-active-hover, var(--background-secondary));
-    transform: translateY(0.0625rem);
-  }
-
-  .ppp-toolbar-btn:focus-visible {
-    outline: 0.125rem solid var(--interactive-accent);
-    outline-offset: 0.0625rem;
-  }
-
-  .ppp-toolbar-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .ppp-toolbar-btn[aria-pressed="true"] {
-    color: var(--text-on-accent, var(--text-normal));
-    background: var(--interactive-accent);
-    border-color: var(--interactive-accent);
-  }
-
-  .ppp-filter-bridge {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    padding: 0.375rem 0.5rem;
-    background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
-  }
-  .ppp-filter-bridge-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.1875rem 0.5rem;
-    font-size: var(--font-ui-smaller);
-    border-radius: var(--radius-s, 0.25rem);
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-  }
-  .ppp-filter-bridge-chip--global {
-    border-color: var(--interactive-accent);
-    color: var(--text-normal);
-  }
-  .ppp-filter-bridge-chip--local {
-    border-color: var(--color-orange, var(--text-accent));
-    color: var(--text-normal);
-  }
-  .ppp-filter-bridge-icon {
-    font-size: 0.75rem;
-    line-height: 1;
-  }
-  .ppp-filter-bridge-clear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1rem;
-    height: 1rem;
-    padding: 0;
-    margin-left: 0.125rem;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-  .ppp-filter-bridge-clear:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-  .ppp-filter-bridge-promote {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1rem;
-    height: 1rem;
-    padding: 0;
-    margin-left: 0.125rem;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: var(--interactive-accent);
-    font-size: 0.75rem;
-    line-height: 1;
-    cursor: pointer;
-  }
-  .ppp-filter-bridge-promote:hover {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-  }
-
   .ppp-database-empty {
     display: flex;
     flex-direction: column;
@@ -966,43 +747,5 @@
   .ppp-quick-action:focus-visible {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.0625rem;
-  }
-
-  .ppp-template-confirm-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: var(--layer-popover, 30);
-  }
-
-  .ppp-template-confirm {
-    width: min(28rem, calc(100vw - 2rem));
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m, 0.5rem);
-    box-shadow: var(--shadow-l);
-    padding: 0.875rem;
-  }
-
-  .ppp-template-confirm h3 {
-    margin: 0 0 0.375rem;
-    font-size: var(--font-ui-medium);
-    color: var(--text-normal);
-  }
-
-  .ppp-template-confirm p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: var(--font-ui-small);
-  }
-
-  .ppp-template-confirm-actions {
-    margin-top: 0.75rem;
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
   }
 </style>
