@@ -25,3 +25,29 @@ export type {
   Token,
   ValidationError,
 } from "src/lib/helpers/formulaParser";
+
+// Date formula surface — re-exported for canonical import path (R5-002)
+export {
+  parseDateFormula,
+  isDateFormula,
+  getDateFormulaSuggestions,
+  testDateFormula,
+} from "src/lib/helpers/dateFormulaParser";
+export type {
+  DateFormulaResult,
+  DateFormulaSuggestion,
+} from "src/lib/helpers/dateFormulaParser";
+
+// Extended evaluator for FormulaField computed columns (R5-002 Phase 2)
+export {
+  evaluateFormulaValue,
+  evaluateFormulaWithError,
+  validateFormulaExpression,
+  getFormulaFunctions,
+  isStyledValue,
+} from "./extendedEvaluator";
+export type {
+  StyledValue,
+  FormulaResult,
+} from "./extendedEvaluator";
+
