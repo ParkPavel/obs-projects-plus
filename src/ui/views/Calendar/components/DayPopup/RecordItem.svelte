@@ -1,12 +1,12 @@
 ﻿<script lang="ts">
-  import { app } from '../../../../../lib/stores/obsidian';
-  import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
+  import { createEventDispatcher, onDestroy, tick } from "svelte";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
   import { getScrollBehavior } from 'src/lib/helpers/animation';
   import { calendarLogger } from '../../logger';
   import { hexToHsv, hsvToHex } from "src/lib/colors/math";
+  import { favoritesStore } from "src/lib/stores/palettes";
 
   export let record: DataRecord;
   export let checkField: string | undefined;
@@ -72,45 +72,6 @@
   let satLightElement: HTMLDivElement | null = null;
   let isDraggingHue = false;
   let isDraggingSatLight = false;
-  
-  // Favorites storage key
-  const FAVORITES_KEY = 'obsidian-projects-calendar-favorites';
-  
-  // Load favorites from local storage
-  let favoriteColors: Array<{ color: string; name: string }> = [];
-  
-  onMount(() => {
-    try {
-      const appInstance = (window as any).app || $app;
-      const stored = appInstance?.loadLocalStorage(FAVORITES_KEY);
-      if (stored) {
-        favoriteColors = JSON.parse(stored);
-      } else {
-        // Empty by default - user builds their own palette
-        favoriteColors = [];
-      }
-    } catch (e) {
-      calendarLogger.error('Failed to load favorites', e, { component: 'RecordItem' });
-      favoriteColors = [];
-    }
-  });
-
-  function addToFavorites(hex: string) {
-    if (!favoriteColors.find(c => c.color === hex)) {
-      favoriteColors = [...favoriteColors, { color: hex, name: 'Custom' }];
-      saveFavorites();
-    }
-  }
-
-  function removeFromFavorites(hex: string) {
-    favoriteColors = favoriteColors.filter(c => c.color !== hex);
-    saveFavorites();
-  }
-
-  function saveFavorites() {
-    const appInstance = (window as any).app || $app;
-    appInstance?.saveLocalStorage(FAVORITES_KEY, JSON.stringify(favoriteColors));
-  }
   
   // Computed HSV color
   $: hsvColor = hsvToHex(hueValue, saturationValue, valueValue);
@@ -714,8 +675,8 @@
               </div>
               <button 
                 class="hsl-apply-button"
-                on:click|stopPropagation={() => addToFavorites(hsvToHex(hueValue, saturationValue, valueValue))}
-                on:touchend|stopPropagation|preventDefault={() => addToFavorites(hsvToHex(hueValue, saturationValue, valueValue))}
+                on:click|stopPropagation={() => favoritesStore.add(hsvToHex(hueValue, saturationValue, valueValue))}
+                on:touchend|stopPropagation|preventDefault={() => favoritesStore.add(hsvToHex(hueValue, saturationValue, valueValue))}
                 aria-label="Save to favorites"
                 style="margin-right: var(--ppp-spacing-xs, 0.25rem); background: var(--background-secondary-alt); color: var(--text-muted);"
               >
@@ -736,12 +697,12 @@
           <div class="palette-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--ppp-spacing-sm, 0.5rem);">
                <span class="palette-label" style="margin-bottom: 0;">{$i18n.t("views.calendar.colors.quick") ?? "Favorites"}</span>
-               {#if favoriteColors.length === 0}
+               {#if $favoritesStore.length === 0}
                  <span style="font-size: 0.7em; color: var(--text-muted);">No favorites</span>
                {/if}
             </div>
             <div class="palette-grid compact">
-              {#each favoriteColors as { color, name }}
+              {#each $favoritesStore as { color, name }}
                 <div class="swatch-container" style="position: relative;">
                   <button
                     class="color-swatch"
@@ -758,8 +719,8 @@
                   </button>
                   <button
                     class="remove-favorite"
-                    on:click|stopPropagation={() => removeFromFavorites(color)}
-                    on:touchend|stopPropagation|preventDefault={() => removeFromFavorites(color)}
+                    on:click|stopPropagation={() => favoritesStore.remove(color)}
+                    on:touchend|stopPropagation|preventDefault={() => favoritesStore.remove(color)}
                     aria-label="Remove"
                   >
                     Г—

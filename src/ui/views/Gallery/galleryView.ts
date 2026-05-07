@@ -21,6 +21,10 @@ export class GalleryView extends ProjectView<GalleryConfig> {
     return "layout-grid";
   }
 
+  updateProps(updates: Record<string, any>) {
+    this.view?.$set(updates);
+  }
+
   onData({ data, filterConditions }: DataQueryResult) {
     this.view?.$set({ frame: data, filterConditions: filterConditions ?? [] });
   }

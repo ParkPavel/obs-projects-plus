@@ -4,7 +4,7 @@
    * Uses <svelte:self> to render nested function calls, operators, and arrays
    * to unlimited depth.
    */
-  import type { FormulaNode as FNode } from "src/lib/helpers/formulaParser";
+  import type { FormulaNode as FNode } from "src/lib/formula";
   import { getFunctionCategory } from "../engine/formulaSerializer";
 
   export let node: FNode;

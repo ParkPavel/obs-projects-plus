@@ -43,7 +43,7 @@ import type {
   ProjectId,
 } from "src/settings/base/settings";
 import type { RollupModeId } from "src/lib/database/rollupMode";
-import type { FormulaNode } from "src/lib/helpers/formulaParser";
+import type { FormulaNode } from "src/lib/formula";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Re-exports for ergonomics (consumers import a single barrel).

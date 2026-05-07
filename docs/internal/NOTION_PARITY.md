@@ -1,8 +1,7 @@
 # Notion Parity Gap Analysis — obs-projects-plus v3.4.2
 
-**Status:** Phase 2 deliverable — feeds Phase 3 ticket queue (PARITY-* tickets).
-**Reference docs:** `.ai_internal/NOTION_DATABASE_INTEGRATION_MASTER.md` (Parts I-V), `.ai_internal/NOTION_OBJECTS_UI_TREE.md` (§§5-20).
-**Goal target:** ≥90% Notion-parity для Database/View use-cases, осознанные исключения для multi-user features.
+**Status:** Phase 2 deliverable — feeds Phase 3 ticket queue (PARITY-* tickets). Last updated 2026-05-07.
+**Goal target:** ≥90% Notion-parity для Dashboard/View use-cases, осознанные исключения для multi-user features.
 
 ---
 
@@ -21,7 +20,7 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 
 | # | Notion Type | OPP Status | Code Anchor | Gap / Action |
 |---|-------------|-----------|-------------|--------------|
-| 1 | `title` | ✅ | [src/lib/dataframe/dataframe.ts](../src/lib/dataframe/dataframe.ts) — `DataFieldType.String` + `identifier:true` | — |
+| 1 | `title` | ✅ | [src/lib/dataframe/dataframe.ts](../../src/lib/dataframe/dataframe.ts) — `DataFieldType.String` + `identifier:true` | — |
 | 2 | `rich_text` | 🟡 | DataFieldType.String | Нет inline annotations (bold/italic/color/links внутри одной cell). Notion хранит `RichText[]`, OPP — plain string. PARITY-002 |
 | 3 | `number` | ✅ | DataFieldType.Number, format/precision via FieldConfig | — (currency formats в §1.2.1 — already supported) |
 | 4 | `select` | ✅ | DataFieldType.Select + FieldOption[] | — |
@@ -34,9 +33,9 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 | 11 | `url` | 🟡 | DataFieldType.String | Нет clickable rendering. PARITY-001 |
 | 12 | `email` | 🟡 | DataFieldType.String | Нет mailto-link. PARITY-001 |
 | 13 | `phone_number` | 🟡 | DataFieldType.String | Нет tel-link / format mask. PARITY-001 |
-| 14 | `formula` | ✅ | DataFieldType.Formula + [src/ui/views/Database/engine/formulaEngine.ts](../src/ui/views/Database/engine/formulaEngine.ts) | OPP покрывает 95+ функций vs Notion ~80. **Превосходит**. |
+| 14 | `formula` | ✅ | DataFieldType.Formula + [src/ui/views/Dashboard/engine/formulaEngine.ts](../../src/ui/views/Dashboard/engine/formulaEngine.ts) | OPP покрывает 95+ функций vs Notion ~80. **Превосходит**. |
 | 15 | `relation` | 🟡 | DataFieldType.Relation, wiki-links | One-way only. Two-way (dual_property) — PARITY-006. |
-| 16 | `rollup` | 🟡 | [src/ui/views/Database/engine/rollup.ts](../src/ui/views/Database/engine/rollup.ts) | Нет `show_original`, `show_unique`, `percent_checked`, `*_per_group`. PARITY-007 |
+| 16 | `rollup` | 🟡 | [src/ui/views/Dashboard/engine/rollup.ts](../../src/ui/views/Dashboard/engine/rollup.ts) | Нет `show_original`, `show_unique`, `percent_checked`, `*_per_group`. PARITY-007 |
 | 17 | `created_time` | 🟡 | file.ctime via Dataview | Не нативное OPP-поле. PARITY-008 (auto-fields) |
 | 18 | `created_by` | ⛔ | — | Single-user. |
 | 19 | `last_edited_time` | 🟡 | file.mtime via Dataview | PARITY-008 |
@@ -54,10 +53,10 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 
 | # | Notion View | OPP Status | Code Anchor | Gap |
 |---|-------------|-----------|-------------|-----|
-| 1 | Table View | ✅ | [src/ui/views/Database/widgets/DataTable](../src/ui/views/Database/widgets/DataTable) + legacy [src/ui/views/Table](../src/ui/views/Table) | DataTableWidget = Notion-parity (resize, freeze, sort, agg row, conditional format). PARITY-012: tree/sub-items rendering |
-| 2 | Board (Kanban) | ✅ | [src/ui/views/Board](../src/ui/views/Board) | PARITY-013: card cover image + horizontal layout option |
-| 3 | Calendar | ✅ | [src/ui/views/Calendar](../src/ui/views/Calendar) | Agenda 2.0 — ahead of Notion. ✅ |
-| 4 | Gallery | ✅ | [src/ui/views/Gallery](../src/ui/views/Gallery) | PARITY-014: card-size variants (small/medium/large) |
+| 1 | Table View | ✅ | [src/ui/views/Dashboard/widgets/DataTable](../../src/ui/views/Dashboard/widgets/DataTable) + legacy [src/ui/views/Table](../../src/ui/views/Table) | DataTableWidget = Notion-parity (resize, freeze, sort, agg row, conditional format). PARITY-012: tree/sub-items rendering |
+| 2 | Board (Kanban) | ✅ | [src/ui/views/Board](../../src/ui/views/Board) | PARITY-013: card cover image + horizontal layout option |
+| 3 | Calendar | ✅ | [src/ui/views/Calendar](../../src/ui/views/Calendar) | Agenda 2.0 — ahead of Notion. ✅ |
+| 4 | Gallery | ✅ | [src/ui/views/Gallery](../../src/ui/views/Gallery) | PARITY-014: card-size variants (small/medium/large) |
 | 5 | Timeline (Gantt) | ⬜ | — | PARITY-015: новый view-type. См. ARCHITECTURE_V4.md §6 (вынести в новый §7) |
 | 6 | List | ⬜ | — | PARITY-016: minimal table variant |
 
@@ -69,7 +68,7 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 
 | Feature | OPP Status | Code Anchor | Gap |
 |---------|-----------|-------------|-----|
-| Property filters basic | ✅ | [src/lib/datasources/frontmatter/filter.ts](../src/lib/datasources/frontmatter/filter.ts) | — |
+| Property filters basic | ✅ | [src/lib/datasources/frontmatter/filter.ts](../../src/lib/datasources/frontmatter/filter.ts) | — |
 | AND/OR conjunction (1 level) | ✅ | FilterDefinition.conjunction | — |
 | Nested filter groups (recursive) | ⬜ | — | PARITY-017. Унифицировать с FilterIR в `lib/engine/`. |
 | Relative date (past_week/this_month/...) | ⬜ | — | PARITY-004. Low effort, high UX value. |
@@ -170,7 +169,7 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 
 ## 9. Gap Tickets — приоритизированный список
 
-См. [docs/PHASE_3_TICKETS.md](PHASE_3_TICKETS.md) — Layer 6: Notion Parity Tickets.
+См. [archive/PHASE_3_TICKETS.md](../archive/PHASE_3_TICKETS.md) — Layer 6: Notion Parity Tickets.
 
 **P0 (блокируют parity ≥80%):**
 - PARITY-001 — URL/Email/Phone field rendering (1d)
@@ -232,12 +231,12 @@ Score per category = (IMPL_count + 0.5 × PARTIAL_count) / (Total − N/A_count)
 
 ## 12. Roadmap binding
 
-- v3.5.0 (current): foundation hardening (REFACTOR-* tickets) → unlock Layer 1+
-- v3.5.1: Phase B (Property System) → PARITY-001, 003, 004, 008, 009 → ~80% parity
-- v3.5.2: Phase C (Relation/Rollup) → PARITY-006, 007 → ~85% parity
-- v3.5.3: Phase D (View System) → PARITY-015, 016, 017 → ~90% parity ✅ цель
-- v3.5.4: Phase E (Automation) — optional
-- v3.5.5: Phase F (Sub-items) — optional
+- v3.4.2 (current): foundation hardening V5.1-V5.3 done → filters, formula, settings, color unified
+- v3.5.x: Phase B (Property System) → PARITY-001, 003, 004, 008, 009 → ~80% parity
+- v3.5.x+1: Phase C (Relation/Rollup) → PARITY-006, 007 → ~85% parity
+- v3.5.x+2: Phase D (View System) → PARITY-015, 016, 017 → ~90% parity ✅ цель
+- v3.5.x+3: Phase E (Automation) — optional
+- v3.5.x+4: Phase F (Sub-items) — optional
 
 ---
 

@@ -1,6 +1,5 @@
 <script lang="ts">
   import dayjs from "dayjs";
-  import { Menu, type MenuItem } from "obsidian";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { EventRenderType, type ProcessedRecord } from "../../types";
   import { i18n } from "src/lib/stores/i18n";
@@ -10,7 +9,7 @@
   import EventList from "./EventList.svelte";
   import { getDisplayName } from "src/ui/views/Board/components/Board/boardHelpers";
   import { parseDateInTimezone } from "src/ui/views/Calendar/calendar";
-  import { menuOnContextMenu } from "src/ui/views/helpers";
+  import { openContextMenuDeferred } from "src/lib/contextMenu";
 
   /**
    * Specifies the date of the day.
@@ -446,13 +445,13 @@
     if (isOutsideMonth) return;
     if (isMobile) return;
     if (event.button === 2) {
-      const menu = new Menu().addItem((item: MenuItem) => {
-        item
-          .setTitle($i18n.t("views.calendar.new-note"))
-          .setIcon("file-plus")
-          .onClick(() => onRecordAdd?.(date!));
-      });
-      menuOnContextMenu(event, menu);
+      openContextMenuDeferred([
+        {
+          title: $i18n.t("views.calendar.new-note"),
+          icon: "file-plus",
+          onClick: () => onRecordAdd?.(date!),
+        },
+      ], event);
     }
   }
 

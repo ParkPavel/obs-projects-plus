@@ -14,6 +14,7 @@
 
   import { TagList } from "src/ui/components/TagList";
   import { i18n } from "src/lib/stores/i18n";
+  import { DEFAULT_COLOR } from "src/lib/stores/palettes";
   import {
     DataFieldType,
     isBoolean,
@@ -218,7 +219,7 @@
             on:touchend|stopPropagation={() => {}}
           >
             <ColorPicker 
-              value={localDisplayValue || '#3b82f6'}
+              value={localDisplayValue || DEFAULT_COLOR}
               on:change={handleColorChange}
             />
           </div>

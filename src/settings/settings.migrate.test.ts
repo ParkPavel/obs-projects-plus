@@ -95,4 +95,84 @@ describe("migrateSettings — P0 safety guards", () => {
     } as unknown);
     expect(either.isRight(r)).toBe(true);
   });
+
+  it("returns Right for valid v4 payload", () => {
+    const r = migrateSettings({
+      version: 4,
+      projects: [],
+      archives: [],
+      preferences: {},
+    } as unknown);
+    expect(either.isRight(r)).toBe(true);
+    if (either.isRight(r)) {
+      expect(r.right.version).toBe(4);
+    }
+  });
+
+  it("migrates v3 payload to v4 (version bump)", () => {
+    const r = migrateSettings({
+      version: 3,
+      projects: [],
+      archives: [],
+      preferences: {},
+    } as unknown);
+    expect(either.isRight(r)).toBe(true);
+    if (either.isRight(r)) {
+      expect(r.right.version).toBe(4);
+    }
+  });
+
+  it("migrates v3 view type 'table' to 'dashboard' via v3 resolver + v4 chain", () => {
+    const r = migrateSettings({
+      version: 3,
+      projects: [
+        {
+          name: "Test",
+          id: "test-id",
+          fieldConfig: {},
+          views: [{ name: "Table", id: "v1", type: "table", config: {}, filter: { conditions: [] } }],
+          defaultName: "",
+          templates: [],
+          excludedNotes: [],
+          isDefault: false,
+          dataSource: { kind: "folder", config: { path: "", recursive: false } },
+          newNotesFolder: "",
+        },
+      ],
+      archives: [],
+      preferences: {},
+    } as unknown);
+    expect(either.isRight(r)).toBe(true);
+    if (either.isRight(r)) {
+      expect(r.right.version).toBe(4);
+      expect(r.right.projects[0]?.views[0]?.type).toBe("dashboard");
+    }
+  });
+
+  it("migrates v3 view type 'database' to 'dashboard' via v3 resolver + v4 chain", () => {
+    const r = migrateSettings({
+      version: 3,
+      projects: [
+        {
+          name: "Test",
+          id: "test-id",
+          fieldConfig: {},
+          views: [{ name: "DB", id: "v1", type: "database", config: {}, filter: { conditions: [] } }],
+          defaultName: "",
+          templates: [],
+          excludedNotes: [],
+          isDefault: false,
+          dataSource: { kind: "folder", config: { path: "", recursive: false } },
+          newNotesFolder: "",
+        },
+      ],
+      archives: [],
+      preferences: {},
+    } as unknown);
+    expect(either.isRight(r)).toBe(true);
+    if (either.isRight(r)) {
+      expect(r.right.version).toBe(4);
+      expect(r.right.projects[0]?.views[0]?.type).toBe("dashboard");
+    }
+  });
 });

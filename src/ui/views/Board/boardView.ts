@@ -21,6 +21,10 @@ export class BoardView extends ProjectView<BoardConfig> {
     return "columns";
   }
 
+  updateProps(updates: Record<string, any>) {
+    this.view?.$set(updates);
+  }
+
   onData({ data, hasSort, hasFilter, filterConditions }: DataQueryResult) {
     this.view?.$set({ frame: data, hasSort, hasFilter, filterConditions: filterConditions ?? [] });
   }

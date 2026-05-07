@@ -50,9 +50,9 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Bugfix & Mobile UX** | v3.2.1 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Security & Code Quality** | v3.2.2 | Released | [CHANGELOG](CHANGELOG.md) |
-| ✅ | **Database View** | v3.3.0 | Released | [Architecture](docs/architecture-database-view.md) |
-| ✅ | **Database View Modernization** | v3.4.0 | Released | [Architecture](docs/architecture-database-view.md) |
-| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Planned | — |
+| ✅ | **Database View** | v3.3.0 | Released | [Archive](docs/archive/architecture-database-view.md) |
+| ✅ | **Dashboard View** — Database View → Dashboard canvas migration | v3.4.0 | Released | [Archive](docs/archive/architecture-database-view.md) |
+| 🚧 | **Dashboard Engine** — relations, rollup, sub-bases, Dataview bridge | v3.5.X | In progress | — |
 
 ## 📋 Release Notes
 

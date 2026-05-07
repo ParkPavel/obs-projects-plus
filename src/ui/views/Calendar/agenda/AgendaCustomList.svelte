@@ -2,7 +2,7 @@
   import { createEventDispatcher, onDestroy } from 'svelte';
   import { dragHandle } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
-  import { Menu } from 'obsidian';
+  import { openContextMenu } from 'src/lib/contextMenu';
   import dayjs, { Dayjs } from 'dayjs';
   import { i18n } from 'src/lib/stores/i18n';
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
@@ -114,49 +114,35 @@
   function showContextMenu(e: MouseEvent | TouchEvent) {
     e.preventDefault();
     e.stopPropagation();
-    
-    const menu = new Menu();
-    
-    menu.addItem((item) => {
-      item
-        .setTitle($i18n.t('views.calendar.agenda.custom.edit-list') || 'Edit list')
-        .setIcon('pencil')
-        .onClick(() => dispatch('edit'));
-    });
-    
-    // Reorder options (essential on mobile where DnD is disabled, useful on desktop too)
-    if (!isFirst) {
-      menu.addItem((item) => {
-        item
-          .setTitle($i18n.t('views.calendar.agenda.custom.move-up') || 'Move up')
-          .setIcon('arrow-up')
-          .onClick(() => dispatch('moveUp'));
-      });
-    }
-    if (!isLast) {
-      menu.addItem((item) => {
-        item
-          .setTitle($i18n.t('views.calendar.agenda.custom.move-down') || 'Move down')
-          .setIcon('arrow-down')
-          .onClick(() => dispatch('moveDown'));
-      });
-    }
-    
-    menu.addSeparator();
-    
-    menu.addItem((item) => {
-      item
-        .setTitle($i18n.t('views.calendar.agenda.custom.delete-list') || 'Delete list')
-        .setIcon('trash-2')
-        .onClick(() => dispatch('delete'));
-    });
-    
-    if (e instanceof MouseEvent) {
-      menu.showAtMouseEvent(e);
-    } else if (e instanceof TouchEvent && e.changedTouches[0]) {
-      const touch = e.changedTouches[0];
-      menu.showAtPosition({ x: touch.clientX, y: touch.clientY });
-    }
+
+    openContextMenu([
+      {
+        title: $i18n.t('views.calendar.agenda.custom.edit-list') || 'Edit list',
+        icon: 'pencil',
+        onClick: () => dispatch('edit'),
+      },
+      ...(!isFirst
+        ? [{
+            title: $i18n.t('views.calendar.agenda.custom.move-up') || 'Move up',
+            icon: 'arrow-up',
+            onClick: () => dispatch('moveUp'),
+          }]
+        : []),
+      ...(!isLast
+        ? [{
+            title: $i18n.t('views.calendar.agenda.custom.move-down') || 'Move down',
+            icon: 'arrow-down',
+            onClick: () => dispatch('moveDown'),
+          }]
+        : []),
+      { separator: true as const },
+      {
+        title: $i18n.t('views.calendar.agenda.custom.delete-list') || 'Delete list',
+        icon: 'trash-2',
+        danger: true,
+        onClick: () => dispatch('delete'),
+      },
+    ], e);
   }
   
   /**

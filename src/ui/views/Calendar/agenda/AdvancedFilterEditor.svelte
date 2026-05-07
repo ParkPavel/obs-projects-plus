@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
   import { Icon } from 'obsidian-svelte';
   import type { DataField } from 'src/lib/dataframe/dataframe';
-  import { validateFormula, type ValidationError } from 'src/lib/helpers/formulaParser';
+  import { validateFormula, type ValidationError } from 'src/lib/formula';
 
   export let formula: string = '';
   export let fields: DataField[] = [];

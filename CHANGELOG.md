@@ -5,22 +5,20 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-> **Vocabulary note**: starting with the upcoming `3.4.2` cycle, this project uses the canonical Stage A / Stage B + M0..M5 vocabulary defined in [docs/IMPLEMENTATION_BLUEPRINT.md Appendix B](docs/IMPLEMENTATION_BLUEPRINT.md#appendix-b--terminology-dictionary-canonical-vocabulary). Earlier shipped sections (≤ 3.4.1) document the historical "Wave" / "Phase" vocabulary that was current at ship-time and remain unchanged.
+## [Unreleased — V5 internal] (3.4.2)
 
-## [Unreleased — Stage A] (3.4.2 internal)
-
-> **Status**: Stage A internal-only release. No public distribution until Stage B / M5 completes.
-> **Scope**: M0 (Engine v2 cross-project relations + rollups) + M2 (YAML Визуализатор sub-plugin MVP) + stub closures + Doc-Standardization phases 1-3.
-> **Test gate**: 62 suites / 986 tests PASS · `tsc -noEmit -skipLibCheck` clean · `node esbuild.config.mjs production` build successful.
+> **Status**: V5 internal development build.
+> **Scope**: Dashboard Engine — cross-project relations, rollup, formula; YAML Visualizer MVP; V5.1–V5.3 refactor phases.
+> **Test gate**: 102 suites / 1650 tests PASS · `tsc -noEmit -skipLibCheck` clean · `node esbuild.config.mjs production` build successful.
 
 ### Added
-- _M0 — Engine v2_:
-  - `FieldConfig.relation` + `FieldConfig.rollup` schema (Stage A.1).
+- _Dashboard Engine_:
+  - `FieldConfig.relation` + `FieldConfig.rollup` schema.
   - `src/lib/engine/crossProjectResolver.ts` — pure resolver with WeakMap memoization, displayField → name/title/basename fallback, derived field naming (`__resolved__<field>`).
-  - `src/lib/engine/crossProjectRollup.ts` — column-level rollup over external frames; reuses `aggregate()` kernel from `Database/engine/rollup.ts` (R-6 mitigation).
+  - `src/lib/engine/crossProjectRollup.ts` — column-level rollup over external frames; reuses `aggregate()` kernel from `Dashboard/engine/rollup.ts`.
   - `View.svelte` enrichment pipeline (`enrichedFrame` → `filteredFrame`) that loads external frames via `api.resolveExternalFrame` and projects rollup results as `__rollup__<field>` columns.
-  - `DatabaseViewCanvas.collectReferencedSourceIds` walks `project.fieldConfig` for relation/rollup `targetProjectId` (R-11 mitigation).
-- _M2 — YAML Визуализатор sub-plugin_ (MVP):
+  - `DashboardCanvas.collectReferencedSourceIds` walks `project.fieldConfig` for relation/rollup `targetProjectId`.
+- _YAML Visualizer_ (MVP):
   - `src/ui/views/YamlVisualizer/` — `YamlVisualizer.svelte` (toolbar + property list, type-aware editors for string/number/boolean/date/list, formula MVP modal, hidden-fields collapsible, per-row menu).
   - `RelationListView.svelte` — shared pill-list with `+K more` overflow popover; reused by `GridRelationCell`.
   - `yamlVisualizerView.ts` + `index.ts` — `ProjectView<YamlVisualizerConfig>` registration as `yaml-visualizer`.

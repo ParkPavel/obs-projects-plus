@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { app } from '../../../lib/stores/obsidian';
   import { onMount, createEventDispatcher } from 'svelte';
   import { Icon } from "obsidian-svelte";
   import { i18n } from '../../../lib/stores/i18n';
   import { hexToHsv, hsvToHex } from '../../../lib/colors/math';
+  import { favoritesStore, DEFAULT_COLOR } from 'src/lib/stores/palettes';
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
   /** Current color value (hex) */
-  export let value: string = '#3b82f6';
+  export let value: string = DEFAULT_COLOR;
   /**
    * Optional palette of colors already in use by the surrounding project
    * context (e.g. sibling agenda lists, project highlight rules). Rendered
@@ -51,51 +51,9 @@
     return out;
   })();
   
-  // Favorites - stored in localStorage (shared with DayPopup/RecordItem)
-  const FAVORITES_KEY = 'obsidian-projects-calendar-favorites';
-  let favorites: Array<{ color: string; name: string }> = [];
-  
   onMount(() => {
     parseHex(value);
-    loadFavorites();
   });
-  
-  function loadFavorites() {
-    try {
-      const appInstance = (window as any).app || $app;
-      const stored = appInstance?.loadLocalStorage(FAVORITES_KEY);
-      if (stored) {
-        favorites = JSON.parse(stored);
-      } else {
-        favorites = [];
-      }
-    } catch (e) {
-      console.warn('Failed to load color favorites:', e);
-      favorites = [];
-    }
-  }
-  
-  function saveFavorites() {
-    try {
-      const appInstance = (window as any).app || $app;
-      appInstance?.saveLocalStorage(FAVORITES_KEY, JSON.stringify(favorites));
-    } catch (e) {
-      console.warn('Failed to save color favorites:', e);
-    }
-  }
-  
-  function addToFavorites() {
-    const color = currentHex.toLowerCase();
-    if (!favorites.find(f => f.color.toLowerCase() === color)) {
-      favorites = [...favorites, { color, name: 'Custom' }];
-      saveFavorites();
-    }
-  }
-  
-  function removeFromFavorites(color: string) {
-    favorites = favorites.filter(f => f.color.toLowerCase() !== color.toLowerCase());
-    saveFavorites();
-  }
   
   let lastExternalValue = value;
   $: if (value !== lastExternalValue) {
@@ -317,9 +275,9 @@
         <span>S: {saturationValue}%</span>
         <span>V: {valueValue}%</span>
       </div>
-      <button 
+      <button
         class="action-btn star-btn"
-        on:click|stopPropagation={addToFavorites}
+        on:click|stopPropagation={() => favoritesStore.add(currentHex.toLowerCase())}
         type="button"
         title={$i18n.t('components.color.add-to-favorites')}
       >
@@ -359,7 +317,7 @@
             </button>
             <button
               class="remove-btn star-promote-btn"
-              on:click|stopPropagation={() => { selectColor(pc); addToFavorites(); }}
+              on:click|stopPropagation={() => { selectColor(pc); favoritesStore.add(pc.toLowerCase()); }}
               type="button"
               title={$i18n.t('components.color.add-to-favorites')}
               aria-label={$i18n.t('components.color.add-to-favorites')}
@@ -373,12 +331,12 @@
   <div class="palette-section">
     <div class="section-header">
       <span class="palette-label">{$i18n.t('components.color.favorites')}</span>
-      {#if favorites.length === 0}
+      {#if $favoritesStore.length === 0}
         <span class="empty-hint">{$i18n.t('components.color.favorites-empty-hint')}</span>
       {/if}
     </div>
     <div class="favorites-grid">
-      {#each favorites as fav}
+      {#each $favoritesStore as fav}
         <div class="swatch-container">
           <button
             class="color-swatch"
@@ -394,7 +352,7 @@
           </button>
           <button
             class="remove-btn"
-            on:click|stopPropagation={() => removeFromFavorites(fav.color)}
+            on:click|stopPropagation={() => favoritesStore.remove(fav.color)}
             type="button"
             title={$i18n.t('common.remove')}
           >×</button>

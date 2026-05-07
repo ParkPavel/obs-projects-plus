@@ -1,7 +1,7 @@
 ﻿// src/ui/views/Dashboard/engine/formulaSerializer.ts
 // Converts FormulaNode AST back to expression string.
 
-import type { FormulaNode } from "src/lib/helpers/formulaParser";
+import type { FormulaNode } from "src/lib/formula";
 
 /**
  * Serialize a FormulaNode back into a human-readable expression string.

@@ -7,6 +7,8 @@ import type { ProjectDefinition as V2ProjectDefinition, ProjectsPluginSettings a
 import { resolve as v2Resolve } from "./v2/settings";
 import type { ProjectDefinition as V3ProjectDefinition, ProjectsPluginSettings as V3ProjectsPluginSettings } from "./v3/settings";
 import { resolve as v3Resolve } from "./v3/settings";
+import type { ProjectDefinition as V4ProjectDefinition, ProjectsPluginSettings as V4ProjectsPluginSettings } from "./v4/settings";
+import { resolve as v4Resolve } from "./v4/settings";
 
 export * from "./base/settings";
 
@@ -14,15 +16,15 @@ export * from "./base/settings";
 export type ProjectPreferences = ProjectsPluginPreferences;
 
 // This defines the latest version of the project definition.
-export type ProjectDefinition = V3ProjectDefinition<ViewDefinition>;
+export type ProjectDefinition = V4ProjectDefinition<ViewDefinition>;
 
 // Defines the latest version of the plugin settings.
-export type LatestProjectsPluginSettings = V3ProjectsPluginSettings<
+export type LatestProjectsPluginSettings = V4ProjectsPluginSettings<
   ProjectDefinition,
   ProjectPreferences
 >;
 
-export const DEFAULT_SETTINGS = v3Resolve({ version: 3 });
+export const DEFAULT_SETTINGS = v4Resolve({ version: 4 });
 export const DEFAULT_PROJECT = {
   fieldConfig: {},
   defaultName: "",
@@ -48,12 +50,12 @@ export const DEFAULT_PROJECT = {
  * migrateSettings accepts the value from Plugin.loadData() and returns the most
  * recent settings. If needed, it applies any necessary migrations.
  */
- 
+
 export function migrateSettings(
   settings: any
 ): either.Either<Error, LatestProjectsPluginSettings> {
   if (!settings) {
-    return either.right(Object.assign({}, v3Resolve({ version: 3 })));
+    return either.right(Object.assign({}, v4Resolve({ version: 4 })));
   }
 
   // P0: settings may be corrupted (partial JSON, wrong shape, mutated by 3rd-party plugin).
@@ -66,11 +68,13 @@ export function migrateSettings(
   if ("version" in settings && typeof settings.version === "number") {
     try {
       if (settings.version === 1) {
-        return either.right(v3Resolve(migrate(v1Resolve(settings))));
+        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrate(v1Resolve(settings))))));
       } else if (settings.version === 2) {
-        return either.right(v3Resolve(migrateV2ToV3(v2Resolve(settings))));
+        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrateV2ToV3(v2Resolve(settings))))));
       } else if (settings.version === 3) {
-        return either.right(v3Resolve(settings));
+        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(settings))));
+      } else if (settings.version === 4) {
+        return either.right(v4Resolve(settings));
       } else {
         return either.left(
           new Error(`Unknown settings version: ${settings.version}`)
@@ -92,7 +96,7 @@ export function migrateSettings(
 
 export function migrate(
   v1settings: V1ProjectsPluginSettings<V1ProjectDefinition<ViewDefinition>>
-): LatestProjectsPluginSettings {
+): V3ProjectsPluginSettings<V3ProjectDefinition<ViewDefinition>, ProjectPreferences> {
   const v2settings = migrateV1ToV2(v1settings);
   return migrateV2ToV3(v2settings);
 }
@@ -167,7 +171,7 @@ function migrateV2ToV3(
     V2ProjectDefinition<ViewDefinition>,
     ProjectPreferences
   >
-): LatestProjectsPluginSettings {
+): V3ProjectsPluginSettings<V3ProjectDefinition<ViewDefinition>, ProjectPreferences> {
   return {
     version: 3,
     projects: v2settings.projects.map(migrateProjectFromV2),
@@ -178,11 +182,20 @@ function migrateV2ToV3(
 
 function migrateProjectFromV2(
   project: V2ProjectDefinition<ViewDefinition>
-): ProjectDefinition {
+): V3ProjectDefinition<ViewDefinition> {
   return {
     ...project,
     views: project.views.map(migrateViewDefinition),
   };
+}
+
+function migrateV3ToV4(
+  v3settings: V3ProjectsPluginSettings<V3ProjectDefinition<ViewDefinition>, ProjectPreferences>
+): { version: 4; projects: V3ProjectDefinition<ViewDefinition>[]; archives: V3ProjectDefinition<ViewDefinition>[]; preferences: ProjectPreferences } {
+  // Data shape is identical between v3 and v4.
+  // The view-type migration (table/database → dashboard) is handled by v3Resolve's
+  // resolveView, so all types are already canonical before this function runs.
+  return { version: 4, projects: v3settings.projects, archives: v3settings.archives, preferences: v3settings.preferences };
 }
 
 function migrateViewDefinition(view: ViewDefinition): ViewDefinition {

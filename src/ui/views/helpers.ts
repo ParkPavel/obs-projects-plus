@@ -1,12 +1,13 @@
 import { makeContext } from "src/lib/helpers";
 import { DataFieldType, type DataField } from "../../lib/dataframe/dataframe";
 import type { ViewProps } from "../app/useView";
-import { Menu, TFile, type App } from "obsidian";
+import { TFile, type App, type Menu } from "obsidian";
 
 import { i18n } from "src/lib/stores/i18n";
 import { app } from "src/lib/stores/obsidian";
 import { get } from "svelte/store";
 import { VIEW_TYPE_PROJECTS } from "src/view";
+import { openContextMenu, type ContextMenuEntry } from "src/lib/contextMenu";
 
 export function fieldIcon(field: DataField): string {
   switch (field.type) {
@@ -141,47 +142,19 @@ export function showMobileNavMenu(
   onModal?: () => void,
 ): void {
   const t = get(i18n);
-  const menu = new Menu();
+  const entries: ContextMenuEntry[] = [];
 
   if (onModal) {
-    menu.addItem((item) => {
-      item
-        .setTitle(t.t("common.open-note"))
-        .setIcon("file-text")
-        .onClick(() => onModal());
-    });
+    entries.push({ title: t.t("common.open-note"), icon: "file-text", onClick: () => onModal!() });
   }
-
-  menu.addItem((item) => {
-    item
-      .setTitle(t.t("common.open-in-tab"))
-      .setIcon("file-plus")
-      .onClick(() => {
-        void appInstance.workspace.openLinkText(linkText, sourcePath, "tab");
-      });
+  entries.push({
+    title: t.t("common.open-in-tab"), icon: "file-plus",
+    onClick: () => void appInstance.workspace.openLinkText(linkText, sourcePath, "tab"),
+  });
+  entries.push({
+    title: t.t("common.open-in-window"), icon: "maximize",
+    onClick: () => void appInstance.workspace.openLinkText(linkText, sourcePath, "window"),
   });
 
-  menu.addItem((item) => {
-    item
-      .setTitle(t.t("common.open-in-window"))
-      .setIcon("maximize")
-      .onClick(() => {
-        void appInstance.workspace.openLinkText(linkText, sourcePath, "window");
-      });
-  });
-
-  // Position: use touch point if available, else mouse coords
-  if (event instanceof TouchEvent && event.changedTouches?.length) {
-    const touch = event.changedTouches[0] ?? event.touches[0];
-    if (touch) {
-      menu.showAtPosition({ x: touch.clientX, y: touch.clientY });
-      return;
-    }
-  }
-  if (event instanceof MouseEvent) {
-    menu.showAtMouseEvent(event);
-    return;
-  }
-  // Fallback: show at center
-  menu.showAtPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  openContextMenu(entries, event);
 }

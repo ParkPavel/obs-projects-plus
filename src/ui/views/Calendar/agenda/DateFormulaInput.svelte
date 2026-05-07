@@ -3,8 +3,8 @@
   import { setIcon } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
-  import { getDateFormulaSuggestions, testDateFormula, isDateFormula } from 'src/lib/helpers/dateFormulaParser';
-  import type { DateFormulaSuggestion } from 'src/lib/helpers/dateFormulaParser';
+  import { getDateFormulaSuggestions, testDateFormula, isDateFormula } from 'src/lib/formula';
+  import type { DateFormulaSuggestion } from 'src/lib/formula';
   
   const dispatch = createEventDispatcher<{
     input: string;

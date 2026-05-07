@@ -47,6 +47,8 @@ export abstract class ProjectView<T = Record<string, any>> {
   onData(result: DataQueryResult): void {}
   onOpen(props: ProjectViewProps<T>): void {}
   onClose(): void {}
+  /** Push config/project prop changes to the active Svelte component without a full remount. */
+  updateProps(_updates: Record<string, any>): void {}
 
   abstract getViewType(): string;
   abstract getDisplayName(): string;

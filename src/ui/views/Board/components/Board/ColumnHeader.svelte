@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MarkdownRenderer, Menu } from "obsidian";
+  import { MarkdownRenderer } from "obsidian";
   import { app, view } from "src/lib/stores/obsidian";
   import { i18n } from "src/lib/stores/i18n";
   import { getContext } from "svelte";
@@ -26,7 +26,7 @@
     };
   }
 
-  export let onColumnMenu: () => Menu;
+  export let onColumnMenu: (event: MouseEvent) => void;
 
   function handleClick(event: MouseEvent) {
     const targetEl = event.target as HTMLElement;
@@ -165,7 +165,7 @@
           size="sm"
           tooltip={$i18n.t('common.menu')}
           onClick={(event) => {
-            onColumnMenu().showAtMouseEvent(event);
+            onColumnMenu(event);
           }}
         />
       {/if}

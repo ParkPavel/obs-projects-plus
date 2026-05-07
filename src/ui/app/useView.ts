@@ -47,8 +47,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
 
       // Look up the next view.
       const views = get(customViews);
-      const resolvedType = newprops.view.type === "table" ? "database" : newprops.view.type;
-      projectView = views[resolvedType];
+      projectView = views[newprops.view.type];
 
       if (projectView) {
         // exactOptionalPropertyTypes: only spread saveViewFilter when defined
@@ -92,13 +91,8 @@ export function useView(node: HTMLElement, props: ViewProps) {
         updates['project'] = newprops.project;
         prevProjectJson = currentProjectJson;
       }
-      if (projectView && 'view' in projectView && projectView.view) {
-        if (Object.keys(updates).length > 0) {
-           
-          // SVELTE4-COMPAT: $set() is removed in Svelte 4.
-          // Replace with direct prop assignment or a writable context when migrating.
-          (projectView.view as any).$set(updates);
-        }
+      if (Object.keys(updates).length > 0) {
+        projectView?.updateProps(updates);
       }
 
       projectView?.onData(newprops.dataProps);

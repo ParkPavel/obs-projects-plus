@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.4.1-blue.svg)
+![Version](https://img.shields.io/badge/version-3.4.2-blue.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
@@ -81,13 +81,15 @@ Your data **stays in your files**. The plugin does not create its own database.
 | **Board** | Kanban — drag cards, column persist, Ctrl+Scroll zoom (25–200%), collapsible columns |
 | **Calendar** | Timeline 07:00–22:00, multi-day bars, 5 zoom levels (Year → Day) |
 | **Gallery** | Cards with covers and frontmatter fields |
-| **Database View** | Widget dashboard: 8 widgets, 10 chart types, 115 formulas, transform pipeline, conditional formatting |
+| **Dashboard** | Multi-widget canvas: 8 widget types, 10 chart types, transform pipeline (7 steps + cross-project join), sub-bases with tabs, conditional formatting, embedded view portals (ViewPort) |
 
 **Calendar** — a full planner: `startDate`, `endDate`, `startTime`, `endTime`, `date` (note creation date), `color` field for color coding, infinite scroll, mobile gestures (swipe, pinch-to-zoom, double tap to create note).
 
 **Agenda 2.0** — calendar sidebar with a list builder: 42 filter operators, nested AND/OR groups, date formulas (`today`, `sow`, `eom`, `today+1w`), two modes — visual and Advanced (Google Sheets-style formulas).
 
 **Board** — column persist: columns stay visible even with no matching records, visual indicators, Ctrl+Scroll zoom (25–200%), adaptive layout, note creation inherits active filters.
+
+**Dashboard** — a multi-widget canvas layered on top of project data. Each of the 8 widgets is independent with its own transform pipeline (unnest → unpivot → compute → filter → group-by → aggregate → pivot + cross-project join). The **DataTable** widget supports sub-bases — named tabs applying independent filters to the same dataset. The **ViewPort** widget embeds Table, Board, Calendar, or Gallery inside the canvas. Two layout modes: vertical stack and adaptive 12-column grid.
 
 **Three data sources**: folder, tag, Dataview query. Note templates, autosave, localization (RU, EN, UA, ZH-CN).
 
@@ -147,11 +149,10 @@ tags: [project, important]
 | ✅ | **Deep Mobile Adaptation** | v3.1.0 | Released |
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Released |
 | ✅ | **Database View** | v3.3.0 | Released |
-| ✅ | **Database View Modernization** | v3.4.0 | Released |
-| 🚧 | **Engine v2: cross-project Relations & Rollups, Custom Properties Viewer, Formula Editor Popup** | 3.4.X WIP | In progress (not published) |
-| 🎯 | **First public Engine v2 release** | v3.5.0+ | Planned (M5) |
+| ✅ | **Dashboard View** — Database View migrated: databases inside Dashboard canvas | v3.4.0 | Released |
+| 🚧 | **Dashboard Engine** — relations, rollup, formula, sub-bases, Dataview adaptive bridge | 3.5.X WIP | In progress |
 
-> Detailed phase calendar (M0–M5) is in [docs/ROADMAP_DATABASE_2026.md](docs/ROADMAP_DATABASE_2026.md). Engine v2 architecture is in [docs/architecture-engine-v2.md](docs/architecture-engine-v2.md).
+> V5 architecture — [docs/internal/MASTER_MAP_V5.md](docs/internal/MASTER_MAP_V5.md).
 
 ---
 
@@ -222,7 +223,7 @@ npm run lint      # ESLint 9 + eslint-plugin-obsidianmd
 npm run format    # Prettier
 ```
 
-Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) • [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
+Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) • [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
 
 </details>
 
@@ -237,10 +238,8 @@ Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [docs/ARCHITECTURE.md](docs/ARCH
 | [Project Info](PROJECT-INFO.md) | What this project is, goals, license history |
 | [Demo Vault](demo-vault/README.md) | Ready-made vault to try the plugin |
 | [CONTRIBUTING](CONTRIBUTING.md) | How to contribute, runtime asset set, branching |
-| [Architecture Map](docs/ARCHITECTURE.md) | **Start here for contributors** — codebase map, layers, project vector |
-| [Implementation Blueprint](docs/IMPLEMENTATION_BLUEPRINT.md) | **Current execution chart** (Stage A + Stage B, 3.4.2 WIP) |
-| [Engine v2 Spec](docs/architecture-engine-v2.md) | Active engine design (Relations, Rollups, Custom Properties Viewer) |
-| [Roadmap 2026](docs/ROADMAP_DATABASE_2026.md) | M0–M5 milestone calendar |
+| [Architecture V5](docs/ARCHITECTURE_V5.md) | **Start here for contributors** — 4-layer architecture, contracts, invariants |
+| [V5 Roadmap](docs/internal/MASTER_MAP_V5.md) | V5 phases, backlog, document map |
 | [Custom View API](obsidian-projects-types/README.md) | Register your own views from other plugins |
 | [Release History](RELEASES-EN.md) | All releases |
 | [CHANGELOG](CHANGELOG.md) | Keep a Changelog format |

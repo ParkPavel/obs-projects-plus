@@ -16,6 +16,7 @@
   import { applyFilter, matchesCondition } from "./filterFunctions";
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
   import { computeCrossProjectRollupColumn } from "src/lib/engine/crossProjectRollup";
+  import { extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
   import { useView } from "./useView";
   import { applySort, sortRecords } from "./viewSort";
@@ -96,22 +97,10 @@
   // dispatch is allowed to commit `externalFramesMap`.
   let externalFetchToken = 0;
 
-  $: relationTargetIds = (() => {
-    const fc = project.fieldConfig as
-      | Record<string, { relation?: RelationFieldConfig; rollup?: RollupFieldConfig }>
-      | undefined;
-    if (!fc) return [] as string[];
-    const ids = new Set<string>();
-    for (const cfg of Object.values(fc)) {
-      if (cfg?.relation?.targetProjectId && cfg.relation.targetProjectId !== project.id) {
-        ids.add(cfg.relation.targetProjectId);
-      }
-      if (cfg?.rollup?.targetProjectId && cfg.rollup.targetProjectId !== project.id) {
-        ids.add(cfg.rollup.targetProjectId);
-      }
-    }
-    return Array.from(ids).sort();
-  })();
+  $: relationTargetIds = extractRelationTargetIds(
+    project.id,
+    project.fieldConfig as import("./viewHelpers").FieldConfigRelationMap | undefined
+  );
 
   $: {
     const key = relationTargetIds.join("|");
@@ -230,15 +219,11 @@
   }
 
   function getRecordColor(record: DataRecord): string | null {
-    const colorFilter = view.colors ?? { conditions: [] };
-    for (const cond of colorFilter.conditions) {
-      if (cond.condition?.enabled ?? true) {
-        if (matchesCondition(cond.condition, record)) {
-          return cond.color;
-        }
-      }
-    }
-    return null;
+    return computeRecordColor(
+      record,
+      view.colors ?? { conditions: [] },
+      matchesCondition
+    );
   }
 
   const applyViewSortToRecords = (

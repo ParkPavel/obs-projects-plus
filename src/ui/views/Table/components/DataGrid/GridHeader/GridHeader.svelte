@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { Menu } from "obsidian";
   import { GridCell } from "../GridCell";
   import { dndzone } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
@@ -12,7 +11,7 @@
   export let columns: GridColDefWithId[];
   export let onResize: (name: string, width: number) => void;
   export let onFinalizeResize: (name: string, width: number) => void;
-  export let onColumnMenu: (column: GridColDef) => Menu;
+  export let onColumnMenu: (column: GridColDef, event: MouseEvent) => void;
   export let onColumnOrder: (columns: GridColDefWithId[]) => void;
 
   const flipDurationMs = 150;

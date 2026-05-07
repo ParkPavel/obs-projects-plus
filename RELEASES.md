@@ -38,9 +38,9 @@ ParkPavel/obs-projects-plus
 | ✅ | **Drag & Drop 2.0** | v3.2.0 | Выпущено | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Bugfix & Mobile UX** | v3.2.1 | Выпущено | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Security & Code Quality** | v3.2.2 | Выпущено | [CHANGELOG](CHANGELOG.md) |
-| ✅ | **Database View** | v3.3.0 | Выпущено | [Архитектура](docs/architecture-database-view.md) |
-| ✅ | **Database View Modernization** | v3.4.0 | Выпущено | [Архитектура](docs/architecture-database-view.md) |
-| 🥈 | **Calendar Sync** (iCal, Google, CalDAV) | v3.5.0 | Планируется | — |
+| ✅ | **Database View** | v3.3.0 | Выпущено | [Архив](docs/archive/architecture-database-view.md) |
+| ✅ | **Dashboard View** — Database View → Dashboard canvas migration | v3.4.0 | Выпущено | [Архив](docs/archive/architecture-database-view.md) |
+| 🚧 | **Dashboard Engine** — relations, rollup, sub-bases, Dataview bridge | v3.5.X | В разработке | — |
 
 ## 📋 Заметки о релизах
 

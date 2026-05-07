@@ -11,6 +11,7 @@
   } from "../../../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { getOperatorsForField, operatorNeedsValue, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+  import { COLOR_RULE_DEFAULT } from "src/lib/stores/palettes";
 
   function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }
 
@@ -46,7 +47,7 @@
     const firstField = fields[0];
     const ops = firstField ? getOperatorsForField(firstField.type) : ['is' as FilterOperator];
     const newRule: ColorRule = {
-      color: "#8ab4f8",
+      color: COLOR_RULE_DEFAULT,
       condition: {
         field: firstField?.name ?? "",
         operator: ops[0] ?? "is",

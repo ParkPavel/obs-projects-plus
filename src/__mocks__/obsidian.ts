@@ -151,7 +151,7 @@ class MockTFile {
 }
 
 
-// Mock Menu (R0.2 — needed by contextMenu helper and downstream callers)
+// Mock Menu (R0.2 ï¿½ needed by contextMenu helper and downstream callers)
 export class Menu {
   items: any[] = [];
   addItem(cb: (item: any) => any) {
@@ -194,7 +194,7 @@ export class TFolder extends TAbstractFile {
 export const App = MockApp;
 
 
-// Mock ItemView (R1.1 — used by VisualizerPaneView and ProjectsView tests)
+// Mock ItemView (R1.1 ï¿½ used by VisualizerPaneView and ProjectsView tests)
 export class ItemView {
   contentEl: HTMLElement;
   app: any;
@@ -229,6 +229,15 @@ export class Notice {
 
 // Mock addIcon (no-op)
 export const addIcon = jest.fn();
+
+// Minimal normalizePath: forward slashes, collapse doubles, strip trailing slash
+export function normalizePath(path: string): string {
+  return path
+    .replace(/\\/g, "/")
+    .replace(/\/+/g, "/")
+    .replace(/\/$/, "")
+    || "/";
+}
 
 
 // Mock Modal / SuggestModal / FuzzySuggestModal (R1.3)

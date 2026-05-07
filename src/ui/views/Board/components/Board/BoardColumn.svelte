@@ -10,7 +10,7 @@
     OnRecordDrop,
     OnColumnCollapse,
   } from "./types";
-  import { Menu } from "obsidian";
+  import { openContextMenu } from "src/lib/contextMenu";
 
   export let width: number;
 
@@ -45,72 +45,46 @@
   $: count = records.length;
   $: checkedCount = records.filter((r) => r.values[checkField ?? ""]).length;
 
-  function onColumnMenu() {
-    const menu = new Menu();
-
-    menu.addItem((item) => {
-      item
-        .setTitle($i18n.t("components.board.column.rename"))
-        .setIcon("edit")
-        .onClick(() => {
-          editing = true;
-        });
-    });
-
-    menu.addItem((item) => {
-      item
-        .setTitle(
-          collapse
-            ? $i18n.t("components.board.column.expand")
-            : $i18n.t("components.board.column.collapse")
-        )
-        .setIcon(collapse ? "chevrons-left-right" : "chevrons-right-left")
-        .onClick(() => {
-          onColumnCollapse(name);
-        });
-    });
-
-    menu.addItem((item) => {
-      item
-        .setTitle(
-          pinned
-            ? $i18n.t("components.board.column.unpin")
-            : $i18n.t("components.board.column.pin")
-        )
-        .setIcon(pinned ? "pin-off" : "pin")
-        .onClick(() => {
-          onColumnPin(name);
-        });
-    });
-
-    menu.addItem((item) => {
-      item
-        .setTitle(
-          persisted
-            ? $i18n.t("components.board.column.unpersist")
-            : $i18n.t("components.board.column.persist")
-        )
-        .setIcon(persisted ? "bookmark-minus" : "bookmark-plus")
-        .onClick(() => {
-          onColumnPersist(name);
-        });
-    });
-
-    if (name !== $i18n.t("views.board.no-status")) {
-      menu.addSeparator();
-
-      menu.addItem((item) => {
-        item
-          .setTitle($i18n.t("components.board.column.delete"))
-          .setIcon("trash-2")
-          .setWarning(true)
-          .onClick(() => {
-            onColumnDelete(name, records);
-          });
-      });
-    }
-
-    return menu;
+  function onColumnMenu(event: MouseEvent) {
+    openContextMenu([
+      {
+        title: $i18n.t("components.board.column.rename"),
+        icon: "edit",
+        onClick: () => { editing = true; },
+      },
+      {
+        title: collapse
+          ? $i18n.t("components.board.column.expand")
+          : $i18n.t("components.board.column.collapse"),
+        icon: collapse ? "chevrons-left-right" : "chevrons-right-left",
+        onClick: () => { onColumnCollapse(name); },
+      },
+      {
+        title: pinned
+          ? $i18n.t("components.board.column.unpin")
+          : $i18n.t("components.board.column.pin"),
+        icon: pinned ? "pin-off" : "pin",
+        onClick: () => { onColumnPin(name); },
+      },
+      {
+        title: persisted
+          ? $i18n.t("components.board.column.unpersist")
+          : $i18n.t("components.board.column.persist"),
+        icon: persisted ? "bookmark-minus" : "bookmark-plus",
+        onClick: () => { onColumnPersist(name); },
+      },
+      ...(name !== $i18n.t("views.board.no-status")
+        ? [
+            { separator: true as const },
+            {
+              title: $i18n.t("components.board.column.delete"),
+              icon: "trash-2",
+              danger: true,
+              onClick: () => { onColumnDelete(name, records); },
+            },
+          ]
+        : []),
+    ], event);
   }
 </script>
 

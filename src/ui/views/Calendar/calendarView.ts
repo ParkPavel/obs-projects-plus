@@ -22,6 +22,10 @@ export class CalendarView extends ProjectView<CalendarConfig> {
     return "calendar";
   }
 
+  updateProps(updates: Record<string, any>) {
+    this.view?.$set(updates);
+  }
+
   onData({ data, filterConditions }: DataQueryResult) {
     // v4.0.5: Removed dataGeneration guard — it was the root cause of
     // "notes disappear until restart" on both desktop and mobile.

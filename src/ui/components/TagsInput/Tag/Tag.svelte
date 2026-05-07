@@ -1,10 +1,10 @@
 <script lang="ts">
   import { IconButton } from "obsidian-svelte";
-  import { Menu } from "obsidian";
   import type { DataValue } from "src/lib/dataframe/dataframe";
   import { createEventDispatcher } from "svelte";
   import { TagInput } from "../TagInput";
   import { i18n } from "src/lib/stores/i18n";
+  import { openContextMenu } from "src/lib/contextMenu";
 
   export let tag: DataValue;
   export let selected: boolean = false;
@@ -18,32 +18,11 @@
   }
 
   function handleContextMenu(event: MouseEvent) {
-    const menu = new Menu();
-    menu.addItem((item) => {
-      item
-        .setTitle($i18n.t("components.tag.edit"))
-        .setIcon("edit")
-        .onClick((event) => {
-          menu.close();
-          dispatch("edit");
-          event.stopPropagation();
-          event.preventDefault();
-        });
-    });
-    menu.addSeparator();
-    menu.addItem((item) => {
-      item
-        .setTitle($i18n.t("components.tag.remove"))
-        .setIcon("trash-2")
-        .setWarning(true)
-        .onClick((event) => {
-          menu.close();
-          dispatch("delete");
-          event.stopPropagation();
-          event.preventDefault();
-        });
-    });
-    menu.showAtMouseEvent(event);
+    openContextMenu([
+      { title: $i18n.t("components.tag.edit"), icon: "edit", onClick: () => dispatch("edit") },
+      { separator: true },
+      { title: $i18n.t("components.tag.remove"), icon: "trash-2", danger: true, onClick: () => dispatch("delete") },
+    ], event);
   }
 
   const dispatch = createEventDispatcher<{

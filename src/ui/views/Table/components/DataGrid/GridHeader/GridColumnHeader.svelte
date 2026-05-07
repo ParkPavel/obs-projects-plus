@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { Menu } from "obsidian";
   import { Icon, IconButton } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { fieldIcon, fieldDisplayText } from "src/ui/views/helpers";
@@ -11,11 +10,11 @@
   export let column: GridColDefWithId;
   export let colindex: number;
 
-  export let onColumnMenu: (column: GridColDef) => Menu;
+  export let onColumnMenu: (column: GridColDef, event: MouseEvent) => void;
 
   function handleFieldClick(column: GridColDef): (event: MouseEvent) => void {
     return (event: MouseEvent) => {
-      onColumnMenu(column).showAtMouseEvent(event);
+      onColumnMenu(column, event);
     };
   }
 

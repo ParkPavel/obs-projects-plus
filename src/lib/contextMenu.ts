@@ -177,3 +177,29 @@ export function appendContextMenuEntries(
 ): void {
   appendEntries(menu, entries);
 }
+
+/**
+ * Show a context menu on the NEXT contextmenu event (deferred pattern).
+ *
+ * Obsidian intercepts right-click and fires its own contextmenu sequence.
+ * For cases where the menu must be shown on `contextmenu` rather than on
+ * `mousedown`, register the menu once and let the browser's next
+ * contextmenu event deliver it.
+ *
+ * Replaces the legacy `menuOnContextMenu(event, menu)` pattern in
+ * src/ui/views/helpers.ts so that `new Menu()` never escapes this file.
+ */
+export function openContextMenuDeferred(
+  entries: ContextMenuEntry[],
+  _triggerEvent: MouseEvent,
+): void {
+  const menu = new Menu();
+  appendEntries(menu, entries);
+  const handler = (e: MouseEvent) => {
+    window.removeEventListener("contextmenu", handler);
+    e.preventDefault();
+    e.stopPropagation();
+    menu.showAtMouseEvent(e);
+  };
+  window.addEventListener("contextmenu", handler, false);
+}

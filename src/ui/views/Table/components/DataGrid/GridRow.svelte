@@ -1,13 +1,12 @@
 <script lang="ts">
   import { produce } from "immer";
-  import { Menu } from "obsidian";
 
   import { GridCell, GridTypedCell } from "./GridCell";
   import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
   import GridCellGroup from "./GridCellGroup.svelte";
 
   import type { GridColDef, GridRowId, GridRowModel } from "./dataGrid";
-  import { menuOnContextMenu, showMobileNavMenu } from "src/ui/views/helpers";
+  import { showMobileNavMenu } from "src/ui/views/helpers";
   import { app } from "src/lib/stores/obsidian";
   import { isTouchDevice } from "src/lib/stores/ui";
 
@@ -31,19 +30,20 @@
   $: $cellStyleStore = cellStyles;
 
   export let onRowChange: (rowId: GridRowId, row: GridRowModel) => void;
-  export let onRowMenu: (rowId: GridRowId, row: GridRowModel) => Menu;
+  export let onRowMenu: (rowId: GridRowId, row: GridRowModel, event: MouseEvent) => void;
   // v3.0.8: Row open handler with modifier-based navigation
   export let onRowOpen: (rowId: GridRowId, openMode: false | 'tab' | 'window') => void;
   export let onCellMenu: (
     rowId: GridRowId,
     column: GridColDef,
-    value: Optional<DataValue>
-  ) => Menu;
+    value: Optional<DataValue>,
+    event: MouseEvent,
+  ) => void;
 
   function handleHeaderClick(): (event: MouseEvent) => void {
     return (event: MouseEvent) => {
       if (event.button === 2) {
-        menuOnContextMenu(event, onRowMenu(rowId, row));
+        onRowMenu(rowId, row, event);
       } else if (event.button === 0) {
         // v3.0.8: Left click on row header — open note with modifier-based navigation
         const openMode = event.shiftKey ? 'window' as const : (event.ctrlKey || event.metaKey) ? 'tab' as const : false as const;
@@ -106,7 +106,7 @@
   ): (event: MouseEvent) => void {
     return (event: MouseEvent) => {
       if (event.button === 2) {
-        menuOnContextMenu(event, onCellMenu(rowId, column, value));
+        onCellMenu(rowId, column, value, event);
       }
 
       if (event.target instanceof HTMLTableCellElement) {

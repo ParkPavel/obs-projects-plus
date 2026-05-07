@@ -1,7 +1,7 @@
 # REFACTOR_BACKLOG_V5
 
-> **Версия**: V5.0-foundation
-> **Дата**: 2026-05-05
+> **Версия**: V5.1 (updated 2026-05-07)
+> **Дата**: 2026-05-05 / обновлён 2026-05-07
 > **Статус**: ACTIVE — приоритизированный backlog для рефакторинг-сессии V5.
 > **Замещает**: `IMPLEMENTATION_PLAN_CURRENT.md`, `PHASE_1_MAPPING.md`, `PHASE_3_TICKETS.md`.
 
@@ -39,6 +39,7 @@
 ## 2. Cleanup (V5.1)
 
 ### R5-007 — ReDoS guards on formulaEngine + JSON.parse safety
+- **Status**: ✅ DONE (V5.1, 2026-05-06)
 - **Source**: K-7 (P1 sec) + K-12 (P2 sec)
 - **Files**:
   - `src/ui/views/Dashboard/engine/formulaEngine.ts:781,790` — добавить `isUnsafePattern` + `MAX_REGEX_INPUT_LENGTH` guard.
@@ -50,6 +51,7 @@
 - **AC**: тест на `evil.*evil.*evil(...)+$` паттерн возвращает безопасный fallback; тест на corrupted JSON в FrameProvider не падает.
 
 ### R5-006 — Migrate `new Menu()` callsites to `openContextMenu`
+- **Status**: ✅ DONE (V5.1, 2026-05-06) — zero `new Menu(` in src/ outside contextMenu.ts
 - **Source**: K-6 (P2)
 - **Files** (7 offenders):
   - `src/ui/components/TagsInput/Tag/Tag.svelte:21`
@@ -65,6 +67,7 @@
 - **AC**: ноль вхождений `new Menu(` в `src/` за пределами `src/lib/contextMenu.ts`.
 
 ### R5-004 — Fix footer aggregation `count` semantic divergence
+- **Status**: ⏸ DEFERRED → R5-001 (table rebuild precedes this fix)
 - **Source**: K-4 (P1)
 - **Files**:
   - `src/ui/views/Dashboard/engine/aggregation.ts` — переименовать footer `count` → `count_total`; добавить `count` совпадающий с kernel non-null.
@@ -75,6 +78,7 @@
 - **AC**: `aggregation.test.ts` обновлён; миграционный тест добавлен.
 
 ### R5-015 — Replace `(view as any).$set` with typed update method
+- **Status**: ✅ DONE (V5.1, 2026-05-06) — updateProps() in customViewApi.ts + 5 view classes
 - **Source**: K-11 / K-16 (P3)
 - **Files**:
   - `src/customViewApi.ts` — abstract `update(props)`.
@@ -89,6 +93,7 @@
 ## 3. Engine unification (V5.2)
 
 ### R5-002 — Unify formula stack
+- **Status**: 🔄 Phase 1 DONE (V5.2, 2026-05-06) — canonical imports migrated; Phase 2 (evaluateValue move) deferred
 - **Source**: K-2 (P2)
 - **Files**:
   - `src/lib/formula/index.ts` — добавить `evaluateBoolean`, `evaluateValue`, `preprocessDateFormula`.
@@ -122,6 +127,7 @@
 - **Blocks**: R5-009
 
 ### R5-014 — Tests on UI-critical paths
+- **Status**: ✅ DONE (V5.2, 2026-05-06) — useView (8), folder datasource (14), dataview datasource (12), viewHelpers (15)
 - **Source**: K-9 (P2)
 - **Files**: новые `__tests__` для:
   - `App.svelte` (smoke + project switch)
@@ -139,6 +145,7 @@
 ## 4. Color/Settings foundation (V5.3)
 
 ### R5-005 — Unified Color/Palette system
+- **Status**: ✅ DONE (V5.3, 2026-05-06)
 - **Source**: K-5 (P2)
 - **Files**:
   - `src/lib/colors/contracts.ts` — оживить (потребители).
@@ -152,6 +159,7 @@
 - **Blocks**: R5-001 (DataTable widget будет потреблять palette).
 
 ### R5-008 — Settings migration v3 → v4
+- **Status**: ✅ DONE (V5.3, 2026-05-06) — v4 schema + migrateV3ToV4 + 5 new tests
 - **Source**: K-8 (P2)
 - **Files**:
   - `src/settings/v4/` — новая версия миграции.
@@ -166,9 +174,10 @@
 ## 5. Table rewrite (V5.4)
 
 ### R5-001 — Replace legacy DataGrid with Dashboard DataTable widget
+- **Status**: 📋 BACKLOG (V5.4) — scope confirmed: TableView.svelte = 424 LOC (not 1800), tableView.ts already has deprecation banner
 - **Source**: K-1 (P1)
 - **Files**:
-  - удалить `src/ui/views/Table/` целиком (~1800 LOC).
+  - удалить `src/ui/views/Table/TableView.svelte` (~424 LOC) + `src/ui/views/Table/tableView.ts`.
   - удалить ремап в `src/ui/app/useView.ts`.
   - Dashboard's `src/ui/views/Dashboard/widgets/DataTable/` — финализировать (column virtualization, group headers).
 - **Complexity**: L

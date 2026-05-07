@@ -40,6 +40,10 @@ export class DashboardView extends ProjectView {
     return "database";
   }
 
+  updateProps(updates: Record<string, any>) {
+    this.view?.$set(updates);
+  }
+
   onData({ data, filterConditions }: DataQueryResult) {
     this.view?.$set({ frame: data, globalFilters: filterConditions ?? [] });
   }

@@ -430,6 +430,9 @@ export function parseFormula(formula: string): FormulaNode {
 // Evaluator
 // ============================================
 
+/**
+ * @deprecated Import from `src/lib/formula` (canonical path). R5-002.
+ */
 export function evaluateFormula(
   node: FormulaNode,
   record: DataRecord,

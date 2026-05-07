@@ -1,5 +1,9 @@
 # Architectural Decision Log — v4.0 refactor
 
+> **Era note**: D-001..D-018 are from the V4 refactor phase (2026-05-03..2026-05-05).
+> Ticket IDs use V4 numbering (REFACTOR-NNN). V5 phase uses R5-NNN (see REFACTOR_BACKLOG_V5.md).
+> Reserved slots D-019/D-020 were never filled — V5 superseded these concerns.
+
 Append-only. Every non-trivial decision recorded with date, rationale, alternatives.
 
 ---

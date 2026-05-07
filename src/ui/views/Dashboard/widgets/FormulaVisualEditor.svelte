@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import type { FormulaNode as FNode } from "src/lib/helpers/formulaParser";
-  import { parseFormula } from "src/lib/helpers/formulaParser";
+  import type { FormulaNode as FNode } from "src/lib/formula";
+  import { parseFormula } from "src/lib/formula";
   import { serializeNode, getFunctionCategory } from "../engine/formulaSerializer";
   import { getFormulaFunctions } from "../engine/formulaEngine";
   import { i18n } from "src/lib/stores/i18n";
@@ -355,7 +355,7 @@
     color: var(--text-muted);
   }
 
-  /* Block tree — :global because FormulaNode renders inside child component */
+  /* Block tree ï¿½ :global because FormulaNode renders inside child component */
   .ppp-vblock-tree :global(.ppp-vblock) {
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);

@@ -18,7 +18,8 @@
   import { i18n } from "src/lib/stores/i18n";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onMount, onDestroy } from "svelte";
-  import { Menu, Notice } from "obsidian";
+  import { Notice } from "obsidian";
+  import { openContextMenu } from "src/lib/contextMenu";
   
   /** Svelte action for programmatic focus (a11y-friendly alternative to autofocus) */
   function focusOnMount(node: HTMLElement) {
@@ -402,26 +403,23 @@
             on:click={(event) => {
               if ($isTouchDevice) {
                 // v3.0.10: On touch devices, show a menu with open options
-                const menu = new Menu();
-                menu.addItem((item) => {
-                  item
-                    .setTitle($i18n.t('common.open-note'))
-                    .setIcon('file-text')
-                    .onClick(() => onOpenNote?.(false));
-                });
-                menu.addItem((item) => {
-                  item
-                    .setTitle($i18n.t('common.open-in-tab'))
-                    .setIcon('file-plus')
-                    .onClick(() => onOpenNote?.('tab'));
-                });
-                menu.addItem((item) => {
-                  item
-                    .setTitle($i18n.t('common.open-in-window'))
-                    .setIcon('maximize')
-                    .onClick(() => onOpenNote?.('window'));
-                });
-                menu.showAtMouseEvent(event);
+                openContextMenu([
+                  {
+                    title: $i18n.t('common.open-note'),
+                    icon: 'file-text',
+                    onClick: () => onOpenNote?.(false),
+                  },
+                  {
+                    title: $i18n.t('common.open-in-tab'),
+                    icon: 'file-plus',
+                    onClick: () => onOpenNote?.('tab'),
+                  },
+                  {
+                    title: $i18n.t('common.open-in-window'),
+                    icon: 'maximize',
+                    onClick: () => onOpenNote?.('window'),
+                  },
+                ], event);
               } else {
                 const openMode = event.shiftKey ? 'window' : (event.ctrlKey || event.metaKey) ? 'tab' : false;
                 onOpenNote?.(openMode);

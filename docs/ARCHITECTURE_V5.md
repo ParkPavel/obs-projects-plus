@@ -1,7 +1,7 @@
 # ARCHITECTURE_V5
 
-> **Версия**: V5.0-foundation
-> **Дата**: 2026-05-05
+> **Версия**: V5.1
+> **Дата**: 2026-05-07
 > **Статус**: TARGET — целевая архитектура. Часть пунктов реализована, часть — план.
 > **Замещает**: `ARCHITECTURE.md`, `ARCHITECTURE_V4.md`.
 
@@ -11,13 +11,14 @@
 
 | Аспект | V4 | V5 |
 |---|---|---|
-| Главная парадигма | "Database view" — табличное представление с виджетами | "Dashboard view" — свободное масштабируемое полотно (canvas) |
+| Главная парадигма | "Database view" — отдельный view-тип с виджетами | "Dashboard" — canvas с sub-bases; базы данных = первоклассные объекты внутри Dashboard (не отдельный view-тип) |
 | Структура проекта | один dataframe → несколько views | один проект → много sub-base'ов (Matryoshka) с двусторонними relations + rollups |
 | YAML | сторонняя panel | каждая заметка с frontmatter = мини-база; YAML Visualizer заменяет нативную Properties pane |
 | Formula | 4 разрозненных evaluator'а + UI shell'ов | один AST + два evaluator'а (boolean/value) + один UI shell |
 | Color | 5 ad-hoc реализаций | один `ColorPalette` контракт + один store |
 | Table | legacy DataGrid из forked obsidian-projects v2 | удалён; единственный путь — `DataTable` widget внутри Dashboard |
 | Filter | каноничный `filterEvaluator` + параллельный Calendar `filterEngine` | один engine с baseDate-aware preprocessor'ом |
+| Dataview dependency | hard optional dep (DataviewDataSource как отдельный источник) | adaptive bridge: Dataview = query backend + Notion-semantic layer поверх; graceful degradation без Dataview |
 
 ---
 

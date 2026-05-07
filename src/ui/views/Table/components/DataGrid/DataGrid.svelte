@@ -1,8 +1,6 @@
 <script lang="ts">
   import { produce } from "immer";
 
-  import { Menu } from "obsidian";
-
   import { i18n } from "src/lib/stores/i18n";
 
   import GridRow from "./GridRow.svelte";
@@ -17,7 +15,8 @@
   import { Button, Icon } from "obsidian-svelte";
   import GridHeader from "./GridHeader/GridHeader.svelte";
   import {
-    appendContextMenuEntries,
+    openContextMenu,
+    openContextMenuDeferred,
     type ContextMenuEntry,
   } from "src/lib/contextMenu";
 
@@ -63,147 +62,95 @@
   // [column, row]
   let activeCell: [number, number] = [3, 3];
 
-  function createColumnMenu(column: GridColDef) {
+  function createColumnMenu(column: GridColDef, event: MouseEvent) {
     const editable = !!column.editable && !readonly;
-
-    const menu = new Menu();
+    const entries: ContextMenuEntry[] = [];
 
     if (onDataSort) {
-      menu.addItem((item) => {
-        item
-          .setTitle(t("components.data-grid.sort.asc"))
-          .setIcon("arrow-up")
-          .onClick(() => onDataSort!(column.field, "asc"));
-      });
-      menu.addItem((item) => {
-        item
-          .setTitle(t("components.data-grid.sort.desc"))
-          .setIcon("arrow-down")
-          .onClick(() => onDataSort!(column.field, "desc"));
-      });
-      menu.addSeparator();
+      entries.push(
+        { title: t("components.data-grid.sort.asc"), icon: "arrow-up", onClick: () => onDataSort!(column.field, "asc") },
+        { title: t("components.data-grid.sort.desc"), icon: "arrow-down", onClick: () => onDataSort!(column.field, "desc") },
+        { separator: true },
+      );
     }
 
-    menu.addItem((item) => {
-      item
-        .setTitle(t("components.data-grid.column.configure"))
-        .setIcon("settings")
-        .onClick(() => onColumnConfigure(column, editable));
-    });
+    entries.push(
+      { title: t("components.data-grid.column.configure"), icon: "settings", onClick: () => onColumnConfigure(column, editable) },
+    );
 
     if (!readonly) {
-      menu.addItem((item) => {
-        item
-          .setTitle(t("components.data-grid.column.insert-left"))
-          .setIcon("arrow-left")
-          .onClick(() => {
-            onColumnInsert(column.field, 0);
-          });
-      });
-
-      menu.addItem((item) => {
-        item
-          .setTitle(t("components.data-grid.column.insert-right"))
-          .setIcon("arrow-right")
-          .onClick(() => {
-            onColumnInsert(column.field, 1);
-          });
-      });
+      entries.push(
+        { title: t("components.data-grid.column.insert-left"), icon: "arrow-left", onClick: () => onColumnInsert(column.field, 0) },
+        { title: t("components.data-grid.column.insert-right"), icon: "arrow-right", onClick: () => onColumnInsert(column.field, 1) },
+      );
     }
 
-    menu.addSeparator();
-
-    menu.addItem((item) => {
-      item
-        .setTitle(
-          column.pinned
-            ? t("components.data-grid.column.unpin")
-            : t("components.data-grid.column.pin")
-        )
-        .setIcon(column.pinned ? "pin-off" : "pin")
-        .onClick(() => onColumnPin(column));
-    });
-
-    menu.addItem((item) => {
-      item
-        .setTitle(t("components.data-grid.column.hide"))
-        .setIcon("eye-off")
-        .onClick(() => {
-          onColumnHide(column);
-        });
-    });
+    entries.push(
+      { separator: true },
+      {
+        title: column.pinned ? t("components.data-grid.column.unpin") : t("components.data-grid.column.pin"),
+        icon: column.pinned ? "pin-off" : "pin",
+        onClick: () => onColumnPin(column),
+      },
+      { title: t("components.data-grid.column.hide"), icon: "eye-off", onClick: () => onColumnHide(column) },
+    );
 
     if (editable) {
-      menu.addItem((item) => {
-        item
-          .setTitle(t("components.data-grid.column.delete"))
-          .setIcon("trash")
-          .setWarning(true)
-          .onClick(() => onColumnDelete(column.field));
-      });
+      entries.push({ title: t("components.data-grid.column.delete"), icon: "trash", danger: true, onClick: () => onColumnDelete(column.field) });
     }
 
     if (getExtraColumnMenuEntries) {
       const extras = getExtraColumnMenuEntries(column);
       if (extras.length > 0) {
-        menu.addSeparator();
-        appendContextMenuEntries(menu, extras);
+        entries.push({ separator: true }, ...extras);
       }
     }
 
-    return menu;
+    openContextMenu(entries, event);
   }
 
-  function createRowMenu(rowId: GridRowId, row: GridRowModel) {
-    const menu = new Menu();
-
-    menu.addItem((item) => {
-      item
-        .setTitle(t("components.data-grid.row.edit"))
-        .setIcon("edit")
-        .onClick(() => onRowEdit(rowId, row));
-    });
+  function createRowMenu(rowId: GridRowId, row: GridRowModel, event: MouseEvent) {
+    const entries: ContextMenuEntry[] = [
+      { title: t("components.data-grid.row.edit"), icon: "edit", onClick: () => onRowEdit(rowId, row) },
+    ];
 
     if (!readonly) {
-      menu.addSeparator();
-
-      menu.addItem((item) => {
-        item
-          .setTitle(t("components.data-grid.row.delete"))
-          .setIcon("trash")
-          .setWarning(true)
-          .onClick(() => onRowDelete(rowId));
-      });
+      entries.push(
+        { separator: true },
+        { title: t("components.data-grid.row.delete"), icon: "trash", danger: true, onClick: () => onRowDelete(rowId) },
+      );
     }
 
-    return menu;
+    openContextMenuDeferred(entries, event);
   }
 
   function createCellMenu(
     rowId: GridRowId,
     row: GridRowModel,
-    column: GridColDef
+    column: GridColDef,
+    event: MouseEvent,
   ) {
-    const menu = new Menu();
+    const entries: ContextMenuEntry[] = [];
 
     if (column.editable) {
-      menu.addItem((item) => {
-        item
-          .setTitle(t("components.data-grid.cell.clear"))
-          .setIcon("x")
-          .onClick(() => {
-            onRowChange(
-              rowId,
-              produce(row, (draft) => {
-                draft[column.field] = null;
-                return draft;
-              })
-            );
-          });
+      entries.push({
+        title: t("components.data-grid.cell.clear"),
+        icon: "x",
+        onClick: () => {
+          onRowChange(
+            rowId,
+            produce(row, (draft) => {
+              draft[column.field] = null;
+              return draft;
+            })
+          );
+        },
       });
     }
 
-    return menu;
+    if (entries.length > 0) {
+      openContextMenuDeferred(entries, event);
+    }
   }
 
   function handleColumnOrder(columns: GridColDef[]) {
@@ -233,7 +180,7 @@
     onFinalizeResize={(name, width) => {
       onColumnResize(name, width);
     }}
-    onColumnMenu={(field) => createColumnMenu(field)}
+    onColumnMenu={(field, event) => createColumnMenu(field, event)}
     onColumnOrder={handleColumnOrder}
   />
   {#each rows as { rowId, row, cellStyles }, i (rowId)}
@@ -246,7 +193,7 @@
       {onRowChange}
       cellStyles={cellStyles ?? {}}
       color={colorModel(rowId)}
-      onRowMenu={(rowId, row) => createRowMenu(rowId, row)}
+      onRowMenu={(rowId, row, event) => createRowMenu(rowId, row, event)}
       onRowOpen={(rowId, openMode) => {
         if (onRowOpen && openMode) {
           onRowOpen(rowId, openMode);
@@ -254,7 +201,7 @@
           onRowEdit(rowId, row);
         }
       }}
-      onCellMenu={(rowId, column) => createCellMenu(rowId, row, column)}
+      onCellMenu={(rowId, column, value, event) => createCellMenu(rowId, row, column, event)}
       on:navigate={({ detail: navinfo }) => {
         const colOffset = 1;
         const rowOffset = 3;
