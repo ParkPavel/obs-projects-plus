@@ -238,7 +238,31 @@
 
 ---
 
-## 9. Граф зависимостей (текстовый)
+## 9. Reactive Loop (V5.9) — добавлено аналитической сессией 2026-05-08
+
+### R5-016 — Close reactive loop: vault events → cache invalidation → UI push
+- **Status**: 🔴 BACKLOG — **P0 архитектурный gap** выявлен в аналитическом обзоре 2026-05-08.
+- **Source**: K-17 — не отслеживался до аналитической сессии.
+- **Problem**: `invalidateTransformCache()` есть в `transformCache.ts` но **не вызывается** из vault event handlers. Dashboard рендерится один раз при открытии и становится статичным снимком.
+- **Root cause**:
+  ```
+  vault.on("modify") → DataFrameProvider.refresh() [✅] → DataFrame rebuild [✅]
+      → transformCache.get(key) [❌ возвращает устаревший результат TTL=5min]
+          → Dashboard не обновляется [❌]
+  ```
+- **Files**:
+  - `src/ui/views/Dashboard/engine/transformCache.ts` — добавить `invalidate(projectId)` + `invalidateAll()`
+  - `src/ui/app/DataFrameProvider.svelte` — вызвать `invalidate(projectId)` в `refresh()`
+  - `src/ui/views/Dashboard/DashboardCanvas.svelte` — добавить `isRecalculating` indicator
+  - `src/lib/datasources/folder/datasource.ts` — проверить chain `onVaultChange → refresh`
+- **Complexity**: S (≤200 LOC — wiring, логика уже есть)
+- **Depends on**: R5-013 (clean subscription point)
+- **Blocks**: R5-010 (cross-base rollups бессмысленны без live recalculation)
+- **AC**: изменить source-файл → Dashboard обновляется ≤500ms без ручного действия.
+
+---
+
+## 10. Граф зависимостей (текстовый)
 
 ```
 R5-014 (tests) ──┬──► R5-002 (formula) ──┬──► R5-003 (calendar filter)
@@ -257,7 +281,11 @@ R5-005 (palette) ──► R5-008 (settings v4) ──► R5-001 (table rewrite)
                                                                   └──► R5-011 (YAML widget) ──► R5-012 (Properties replace)
 ```
 
-## 10. Метрика прогресса
+R5-016 (reactive loop/V5.9) — P0, depends on R5-013, blocks R5-010
+
+```
+
+## 11. Метрика прогресса
 
 В конце каждой фазы фиксируется в `memories/repo/session-state.md`:
 - Закрытые R5-* IDs.
