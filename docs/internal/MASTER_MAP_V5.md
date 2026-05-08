@@ -25,6 +25,7 @@
 | [user-guide.md](../user-guide.md) / [user-guide-EN.md](../user-guide-EN.md) | Гайд пользователя (отложен до V5.4+). |
 | [DESIGN_CONCEPT_NOTION_AESTHETIC.md](DESIGN_CONCEPT_NOTION_AESTHETIC.md) | Визуальный референс. |
 | [NOTION_PARITY.md](NOTION_PARITY.md) | Список фич Notion-parity (входной материал). |
+| [UX_FLOW_MAIN_SCENARIO.md](UX_FLOW_MAIN_SCENARIO.md) | Главный UX сценарий: 5 шагов → живая база со связями. Матрица готовности. Добавлен 2026-05-08. |
 | [archive/](../archive/) | Все исторические документы (read-only). |
 
 ## 3. Карта кода (4-слойная Matryoshka)
@@ -56,6 +57,7 @@ Data                 →  src/lib/dataframe/, src/lib/dataApi.ts, src/lib/dataso
 | K-9 | App.svelte / View.svelte / useView / DataFrameProvider — без unit tests | P2 | R5-014 | ✅ DONE V5.2 |
 | K-11 | Svelte 4 blocker: `(projectView.view as any).$set` | P3 | R5-015 | ✅ DONE V5.1 |
 | K-13 | DashboardCanvas.svelte ~700 LOC, 4+ concerns | P2 | R5-013 | BACKLOG V5.2 |
+| K-17 | Transform cache NOT wired to vault events → dashboard is static, no live recalculation | **P0** | R5-016 | BACKLOG V5.9 — добавлен 2026-05-08 |
 
 ## 5. Фазы V5
 
@@ -70,6 +72,7 @@ Data                 →  src/lib/dataframe/, src/lib/dataApi.ts, src/lib/dataso
 | **V5.6 Cross-base** | Bidirectional relations + rollups между sub-bases | BACKLOG |
 | **V5.7 YAML Visualizer** | Перенос в Dashboard widgets, optional Properties pane | BACKLOG |
 | **V5.8 Dataview Adaptive Bridge** | Dataview как query-backend + Notion-semantic bridges | PLANNING (сессия 3) |
+| **V5.9 Reactive Loop** | vault events → cache invalidation → UI push (R5-016 P0) | BACKLOG — добавлен 2026-05-08 |
 
 ## 6. Активные/архивные документы (быстрый чек-лист)
 
