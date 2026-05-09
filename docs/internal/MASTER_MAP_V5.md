@@ -58,6 +58,7 @@ Data                 →  src/lib/dataframe/, src/lib/dataApi.ts, src/lib/dataso
 | K-11 | Svelte 4 blocker: `(projectView.view as any).$set` | P3 | R5-015 | ✅ DONE V5.1 |
 | K-13 | DashboardCanvas.svelte ~700 LOC, 4+ concerns | P2 | R5-013 | BACKLOG V5.2 |
 | K-17 | Transform cache NOT wired to vault events → dashboard is static, no live recalculation | **P0** | R5-016 | BACKLOG V5.9 — добавлен 2026-05-08 |
+| K-19 | 4 divergent formula UI surfaces; FormulaVisualEditor (AST node system) to replace; no UnifiedFormulaConstructor | P2 | R5-022 | BACKLOG — аудит 2026-05-08 |
 
 ## 5. Фазы V5
 
@@ -78,7 +79,9 @@ Data                 →  src/lib/dataframe/, src/lib/dataApi.ts, src/lib/dataso
 
 **Активные (в `docs/`)**: `ARCHITECTURE_V5.md`, `DOCS_INDEX.md`, `CODE_STANDARDS.md(+RU)`, `api.md(+ru)`, `user-guide.md(+EN)`.
 
-**Активные (в `docs/internal/`)**: `MASTER_MAP_V5.md`, `REFACTOR_BACKLOG_V5.md`, `DESIGN_CONCEPT_NOTION_AESTHETIC.md`, `NOTION_PARITY.md`, `DATAVIEW_ABSORPTION_PLAN.md`, `SESSION_REPROMPT.md`.
+**Активные (в `docs/internal/`)**: `MASTER_MAP_V5.md`, `REFACTOR_BACKLOG_V5.md`, `DESIGN_CONCEPT_NOTION_AESTHETIC.md`, `NOTION_PARITY.md`, `DATAVIEW_ABSORPTION_PLAN.md`, `SESSION_REPROMPT.md`, `UX_FLOW_MAIN_SCENARIO.md`.
+
+**Активные (в `docs/analytics/`)**: `ANALYTICAL_REVIEW_2026-05-08.md`, `FORMULA_CONSTRUCTOR_AUDIT_2026-05-08.md`, `IMAGE_PROMPTS_SCHEMA_VISUALS.md`.
 
 **Архивные (в `docs/archive/`)**: `MASTER_MAP.md`, `ARCHITECTURE.md`, `ARCHITECTURE_V4.md`, `IMPLEMENTATION_PLAN_CURRENT.md`, `PHASE_1_MAPPING.md`, `PHASE_3_TICKETS.md` плюс ранее заархивированные.
 

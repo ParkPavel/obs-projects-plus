@@ -282,10 +282,41 @@ R5-005 (palette) ──► R5-008 (settings v4) ──► R5-001 (table rewrite)
 ```
 
 R5-016 (reactive loop/V5.9) — P0, depends on R5-013, blocks R5-010
+R5-022 (UnifiedFormulaConstructor) — depends on R5-002 Phase 2; replaces FormulaVisualEditor node system
 
 ```
 
-## 11. Метрика прогресса
+---
+
+## 11. Unified Formula Constructor (V5.x) — добавлено аудитом 2026-05-08
+
+### R5-022 — UnifiedFormulaConstructor: объединить 4 поверхности на базе AdvancedFilterEditor
+- **Status**: 🔴 BACKLOG — задокументировано аудитом `FORMULA_CONSTRUCTOR_AUDIT_2026-05-08.md`.
+- **Source**: аудит формульных компонентов, обнаружено 2026-05-08.
+- **Problem**: В коде существуют **4 несвязанных компонента** для ввода формул с расходящейся функциональностью.
+  `FormulaEditor.svelte` — Stage 1 скелет. `FormulaBar.svelte` — частичный. `AdvancedFilterEditor.svelte` — наиболее полный. `DateFormulaInput.svelte` — специализированный.
+  `FormulaVisualEditor.svelte` — AST-based нодовый редактор (к **ЗАМЕНЕ** — нодовая система отклонена).
+- **Action plan**:
+  1. Новый `src/ui/components/FormulaConstructor/FormulaConstructor.svelte` на базе `AdvancedFilterEditor` паттерна.
+  2. Autocomplete из `formulaMetadata.ts` (115+ функций, 9 категорий, `signature`, `doc`).
+  3. Field value suggestions из `suggestionCollector.ts::collectAllFieldSuggestions()`.
+  4. Signature popover через `findEnclosingCall()` из `formulaMetadata.ts`.
+  5. Help panel: `formulaMetadata.doc` по активной функции (toggle, не перекрывает).
+  6. Portal pattern: `activeDocument.body.appendChild()` (как в AdvancedFilterEditor).
+  7. Удалить `FormulaVisualEditor.svelte`.
+- **Files**:
+  - новый `src/ui/components/FormulaConstructor/FormulaConstructor.svelte`
+  - `src/ui/views/Dashboard/widgets/FormulaBar.svelte` — заменить visual mode
+  - `src/ui/components/FormulaEditor/FormulaEditor.svelte` — Stage 2/3 → делегировать
+  - `src/ui/views/Dashboard/widgets/FormulaVisualEditor.svelte` — **УДАЛИТЬ**
+- **Complexity**: L (~500-800 LOC)
+- **Depends on**: R5-002 Phase 2
+- **Blocks**: —
+- **AC**: FormulaConstructor работает в FormulaBar, AdvancedFilter, DateFormulaInput. FormulaVisualEditor удалён.
+
+---
+
+## 12. Метрика прогресса
 
 В конце каждой фазы фиксируется в `memories/repo/session-state.md`:
 - Закрытые R5-* IDs.

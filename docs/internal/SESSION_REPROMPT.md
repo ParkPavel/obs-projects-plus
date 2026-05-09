@@ -136,6 +136,38 @@
 
 ---
 
+### 🟡 P2 — R5-022: UnifiedFormulaConstructor (замена 4 расходящихся поверхностей)
+
+> **Контекст (аудит 2026-05-08)**: в коде существуют 4 несвязанных формульных UI-компонента.
+> Ни один не является правильным эталоном сам по себе — нужен новый унифицированный компонент.
+
+**Что существует в коде — ПРОЧИТАЙ перед работой**:
+
+| Файл | Что есть | Что делать |
+|---|---|---|
+| `src/ui/components/FormulaEditor/FormulaEditor.svelte` | Stage 1 скелет — только textarea + slots | → заменить на UnifiedFormulaConstructor |
+| `src/ui/views/Dashboard/widgets/FormulaBar.svelte` | Частичный: autocomplete, signature popover, visual mode | → заменить visual mode на UnifiedFormulaConstructor |
+| `src/ui/views/Calendar/agenda/AdvancedFilterEditor.svelte` | **Наиболее полный** — 4 item kinds, группы, сниппеты, DOM portal | → **ОСНОВА** для нового компонента |
+| `src/ui/views/Dashboard/widgets/FormulaVisualEditor.svelte` | AST-based нодовый редактор | → **УДАЛИТЬ** (нодовая система отклонена) |
+| `src/ui/views/Calendar/agenda/DateFormulaInput.svelte` | Date-specific, live preview, flip popover | → станет `mode="date"` параметром |
+
+**Ключевые данные для переиспользования**:
+- `src/ui/views/Dashboard/engine/formulaMetadata.ts` — 115+ функций, `signature`, `doc`, `returnType`, 9 категорий, `findEnclosingCall()` для signature popover
+- `src/ui/views/Calendar/agenda/suggestionCollector.ts` — field value suggestions из реальных записей
+
+**Scope**:
+1. Новый `src/ui/components/FormulaConstructor/FormulaConstructor.svelte` (на базе AdvancedFilterEditor паттерна)
+2. Props: `expression`, `mode: "formula" | "filter" | "date"`, `records?`, `fields?`, `validate?`
+3. Portal pattern (как в AdvancedFilterEditor): `activeDocument.body.appendChild()` для popover
+4. Help panel: `formulaMetadata.doc` + `signature` по активной функции (toggle, не перекрывает поле)
+5. Удалить `FormulaVisualEditor.svelte`
+
+**Complexity**: L
+**Depends on**: R5-002 Phase 2
+**AC**: FormulaConstructor работает в FormulaBar, AdvancedFilter, DateFormulaInput. Autocomplete показывает функции + поля + сниппеты. Signature popover при вводе внутри вызова. FormulaVisualEditor удалён.
+
+---
+
 ### 🟡 P2 — R5-019: Relation picker popover (не heavy modal)
 
 - Новый `src/ui/components/RelationPicker/RelationPickerPopover.svelte`
