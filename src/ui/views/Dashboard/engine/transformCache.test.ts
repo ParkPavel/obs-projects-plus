@@ -3,6 +3,7 @@
 import {
   executeTransformCached,
   invalidateTransformCache,
+  invalidateAll,
   invalidatePipelineCache,
   getTransformCacheSize,
 } from "./transformCache";
@@ -147,5 +148,27 @@ describe("transformCache", () => {
       const doubled = record.values["doubled"] as number;
       expect(doubled).toBe(original * 2);
     }
+  });
+
+  // R5-016: vault event invalidation path
+  test("after invalidateAll(), same frame re-executes pipeline (cache miss)", () => {
+    const frame = makeFrame();
+    const r1 = executeTransformCached(frame, simplePipeline);
+    // Simulate vault modify event → invalidateAll() called
+    invalidateAll();
+    expect(getTransformCacheSize()).toBe(0);
+    const r2 = executeTransformCached(frame, simplePipeline);
+    // Different object reference proves pipeline was re-executed, not served from cache
+    expect(r2).not.toBe(r1);
+    expect(r2.data.records).toHaveLength(r1.data.records.length);
+  });
+
+  test("invalidateAll() is equivalent to invalidateTransformCache()", () => {
+    executeTransformCached(makeFrame(3), simplePipeline);
+    executeTransformCached(makeFrame(5), simplePipeline);
+    expect(getTransformCacheSize()).toBe(2);
+
+    invalidateAll();
+    expect(getTransformCacheSize()).toBe(0);
   });
 });

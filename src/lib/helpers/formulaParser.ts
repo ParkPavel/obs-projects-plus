@@ -88,6 +88,12 @@ const FUNCTIONS = [
   'STYLE',
   // List iteration
   'MAP', 'FILTER', 'REDUCE',
+  // List utilities
+  'ZIP', 'EXTRACT',
+  // Multi-bind LET
+  'LETS',
+  // Notion 2.0 special
+  'PROP', 'ID',
 ];
 
 export function tokenize(formula: string): Token[] {

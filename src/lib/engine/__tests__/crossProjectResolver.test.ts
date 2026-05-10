@@ -148,6 +148,30 @@ describe("enrichFrameWithRelations", () => {
     expect(derived).toBeDefined();
     expect(derived?.derived).toBe(true);
   });
+
+  // R5-010 — sub-base scoped relation
+  it("honors targetSubBaseFilter to restrict resolved targets", () => {
+    const enriched = enrichFrameWithRelations(
+      journalFrame(),
+      "account",
+      {
+        targetProjectId: "accounts",
+        targetSubBaseFilter: {
+          conjunction: "and",
+          conditions: [
+            { field: "balance", operator: "gt", value: "150", enabled: true },
+          ],
+        },
+      },
+      accountsFrame()
+    );
+    const derived = derivedFieldName("account");
+    const j2 = enriched.records[1]!;
+    const resolved = j2.values[derived] as unknown as DataRecord[];
+    // J2 originally references Account 1 (100) and Account 2 (250).
+    // Filter `balance > 150` keeps only Account 2.
+    expect(resolved.map((r) => r.values["name"])).toEqual(["Account 2"]);
+  });
 });
 
 describe("enrichFrameWithAllRelations", () => {

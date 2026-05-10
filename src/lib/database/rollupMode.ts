@@ -123,8 +123,7 @@ export const ROLLUP_MODES: readonly RollupModeDescriptor[] = [
     id: "count_empty",
     group: "count",
     i18nKey: "database.rollup.modes.count-empty",
-    // No dedicated kernel; renderer derives via (count_all - count_values).
-    fn: null,
+    fn: "count_empty",
     applicableTo: ["any"],
   },
   {
@@ -139,14 +138,14 @@ export const ROLLUP_MODES: readonly RollupModeDescriptor[] = [
     id: "percent_empty",
     group: "percent",
     i18nKey: "database.rollup.modes.percent-empty",
-    fn: null,
+    fn: "percent_empty",
     applicableTo: ["any"],
   },
   {
     id: "percent_not_empty",
     group: "percent",
     i18nKey: "database.rollup.modes.percent-not-empty",
-    fn: null,
+    fn: "percent_not_empty",
     applicableTo: ["any"],
   },
   {

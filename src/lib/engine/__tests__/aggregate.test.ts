@@ -252,4 +252,42 @@ describe("aggregate() — kernel", () => {
       expect(aggregate(["a", "a", "b"], cfg("count_unique")).value).toBe(2);
     });
   });
+
+  // ── count_total (R5-004) ─────────────────────────────
+  describe("count_total", () => {
+    test("counts all values including null", () => {
+      expect(aggregate([1, null, undefined, 3], cfg("count_total")).value).toBe(4);
+    });
+    test("empty input → 0", () => {
+      expect(aggregate([], cfg("count_total")).value).toBe(0);
+    });
+    test("all null → total length", () => {
+      expect(aggregate([null, null], cfg("count_total")).value).toBe(2);
+    });
+  });
+
+  // ── show_original / show_unique (NPLAN-C3) ───────────
+  describe("show_original", () => {
+    test("returns all non-null values joined", () => {
+      expect(aggregate(["a", "b", "a"], cfg("show_original")).value).toBe("a, b, a");
+    });
+    test("ignores null", () => {
+      expect(aggregate(["a", null, "b"], cfg("show_original")).value).toBe("a, b");
+    });
+    test("empty → empty string", () => {
+      expect(aggregate([], cfg("show_original")).value).toBe("");
+    });
+  });
+
+  describe("show_unique", () => {
+    test("dedupes values", () => {
+      expect(aggregate(["a", "b", "a"], cfg("show_unique")).value).toBe("a, b");
+    });
+    test("custom separator", () => {
+      expect(aggregate(["x", "y", "x"], cfg("show_unique", " | ")).value).toBe("x | y");
+    });
+    test("empty → empty string", () => {
+      expect(aggregate([], cfg("show_unique")).value).toBe("");
+    });
+  });
 });

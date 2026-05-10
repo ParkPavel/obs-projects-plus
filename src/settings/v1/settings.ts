@@ -48,6 +48,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
+    replaceObsidianProperties: false,
   },
 };
 

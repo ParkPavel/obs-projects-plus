@@ -28,6 +28,7 @@ import type {
   RelationFieldConfig,
   RollupFieldConfig,
 } from "src/settings/base/settings";
+import { applyFilter } from "src/lib/engine/filterEvaluator";
 
 // ── Constants ───────────────────────────────────────────
 
@@ -179,6 +180,18 @@ export function enrichFrameWithRelations(
   const derivedName = DERIVED_PREFIX + fieldName;
   const idx = getOrBuildIndex(externalFrame, config.displayField);
 
+  // R5-010 — When the relation config carries a sub-base filter, restrict
+  // resolved targets to records that pass the filter. Computed once per
+  // enrichment call (filter result not memoized across calls — the filter
+  // is config-driven and may change between writes).
+  const allowedIds: Set<string> | undefined = config.targetSubBaseFilter
+    ? new Set(
+        applyFilter(externalFrame, config.targetSubBaseFilter).records.map(
+          (r) => r.id
+        )
+      )
+    : undefined;
+
   const records: DataRecord[] = frame.records.map((r) => {
     const bodies = normalizeRelationValue(r.values[fieldName]);
     if (bodies.length === 0) {
@@ -187,7 +200,7 @@ export function enrichFrameWithRelations(
     const resolved: DataRecord[] = [];
     for (const body of bodies) {
       const hit = idx.get(body.toLowerCase());
-      if (hit) resolved.push(hit);
+      if (hit && (!allowedIds || allowedIds.has(hit.id))) resolved.push(hit);
     }
     return {
       ...r,

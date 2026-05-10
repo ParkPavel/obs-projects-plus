@@ -33,8 +33,8 @@ function makeFrame(overrides?: Partial<DataFrame>): DataFrame {
 describe("ColumnAggregationEngine", () => {
   const frame = makeFrame();
 
-  test("count returns total number of records", () => {
-    const result = computeAggregations(frame, { name: "count" });
+  test("count_total returns total number of records", () => {
+    const result = computeAggregations(frame, { name: "count_total" });
     expect(result["name"]?.value).toBe(3);
   });
 
@@ -126,7 +126,7 @@ describe("ColumnAggregationEngine", () => {
 
   test("handles empty records gracefully", () => {
     const empty = makeFrame({ records: [] });
-    const result = computeAggregations(empty, { budget: "sum", name: "count" });
+    const result = computeAggregations(empty, { budget: "sum", name: "count_total" });
     expect(result["budget"]?.value).toBe(0);
     expect(result["name"]?.value).toBe(0);
   });
@@ -145,7 +145,7 @@ describe("ColumnAggregationEngine", () => {
 
   test("multiple aggregations at once", () => {
     const result = computeAggregations(frame, {
-      name: "count",
+      name: "count_total",
       budget: "sum",
       done: "count_checked",
     });

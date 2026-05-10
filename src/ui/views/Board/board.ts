@@ -45,8 +45,24 @@ export function getColumns(
   grouByField?: DataField,
   orderSyncField?: DataField,
   sortByCustomOrder?: boolean,
-  persistedStatuses?: string[]
+  persistedStatuses?: string[],
+  semanticGroupMode?: boolean
 ) {
+  // NPLAN-C1 — optional semantic-group overlay
+  if (
+    semanticGroupMode &&
+    grouByField &&
+    grouByField.typeConfig?.statusGroups
+  ) {
+    return getSemanticColumns(
+      records,
+      grouByField,
+      columnSettings,
+      orderSyncField,
+      sortByCustomOrder
+    );
+  }
+
   const groupedRecords = groupRecordsByField(records, grouByField?.name);
 
   let predefs = new Set<string>();
@@ -169,4 +185,64 @@ function applyCustomRecordOrder(
   }
 
   return records.sort((a, b) => getWeight(a) - getWeight(b));
+}
+
+/**
+ * NPLAN-C1 — derive columns from semantic status groups (todo /
+ * inProgress / complete). Always produces exactly those three columns
+ * that have at least one matching option value defined in `statusGroups`.
+ * Records whose field value doesn't match any group go into "No Status".
+ * This never replaces user data — it's an overlay presentation only.
+ */
+function getSemanticColumns(
+  records: DataRecord[],
+  field: DataField,
+  columnSettings: ColumnSettings,
+  orderSyncField?: DataField,
+  sortByCustomOrder?: boolean
+) {
+  const groups = field.typeConfig?.statusGroups ?? {};
+  const todoValues = new Set(groups.todo ?? []);
+  const inProgressValues = new Set(groups.inProgress ?? []);
+  const completeValues = new Set(groups.complete ?? []);
+
+  const t = get(i18n).t.bind(get(i18n));
+  const LABELS = {
+    todo: t("views.board.status-groups.todo", { defaultValue: "To Do" }),
+    inProgress: t("views.board.status-groups.in-progress", { defaultValue: "In Progress" }),
+    complete: t("views.board.status-groups.complete", { defaultValue: "Done" }),
+    none: t("views.board.no-status"),
+  };
+
+  const buckets: Record<string, DataRecord[]> = {
+    [LABELS.todo]: [],
+    [LABELS.inProgress]: [],
+    [LABELS.complete]: [],
+    [LABELS.none]: [],
+  };
+
+  for (const record of records) {
+    const val = record.values[field.name];
+    const str = val && (isString(val) || isNumber(val)) ? String(val) : null;
+    if (str && todoValues.has(str)) buckets[LABELS.todo]!.push(record);
+    else if (str && inProgressValues.has(str)) buckets[LABELS.inProgress]!.push(record);
+    else if (str && completeValues.has(str)) buckets[LABELS.complete]!.push(record);
+    else buckets[LABELS.none]!.push(record);
+  }
+
+  return [LABELS.todo, LABELS.inProgress, LABELS.complete, LABELS.none]
+    .filter((id) => (buckets[id]?.length ?? 0) > 0 || id !== LABELS.none)
+    .map((id) => {
+      const recs = buckets[id] ?? [];
+      if (sortByCustomOrder && recs.length > 0) {
+        applyCustomRecordOrder(recs, columnSettings[id], orderSyncField);
+      }
+      return {
+        id,
+        records: recs,
+        collapse: columnSettings[id]?.collapse ?? false,
+        pinned: true,
+        persisted: false,
+      };
+    });
 }

@@ -19,7 +19,7 @@
   }>();
 
   const AGGREGATIONS: { value: ColumnAggregation; labelKey: string; defaultLabel: string }[] = [
-    { value: "count", labelKey: "views.dashboard.agg.count", defaultLabel: "Count" },
+    { value: "count_total", labelKey: "views.dashboard.agg.count", defaultLabel: "Count" },
     { value: "count_unique", labelKey: "views.dashboard.agg.unique", defaultLabel: "Unique" },
     { value: "sum", labelKey: "views.dashboard.agg.sum", defaultLabel: "Sum" },
     { value: "avg", labelKey: "views.dashboard.agg.avg", defaultLabel: "Average" },

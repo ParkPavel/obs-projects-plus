@@ -2,10 +2,13 @@
   import {
     DataFieldType,
     type DataFrame,
+    type DataField,
     type DataRecord,
     type DataValue,
     type Optional,
   } from "src/lib/dataframe/dataframe";
+  import { Menu, Notice } from "obsidian";
+  import { exportRecords, type ExportFormat } from "src/lib/export/exportService";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, AggregationResult, AggregationConfig, ColumnAggregation, DataTableSortCriteria } from "../../types";
   import { computeAggregations } from "../../engine/aggregation";
@@ -46,15 +49,18 @@
   import GroupHeader from "./GroupHeader.svelte";
   import FieldPresetMenu from "./FieldPresetMenu.svelte";
   import SubBaseTabs from "./SubBaseTabs.svelte";
+  import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
+  import { viewShortcuts } from "src/lib/keyboard/viewShortcuts";
   import { pxToRem, resolveColumnWidthPx } from "./widthUnits";
+  import { makePopover, destroyPopover, getPopoverEl } from "src/ui/components/popoverDropdown";
+  import { getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
 
-  import { createEventDispatcher, getContext, onMount, onDestroy } from "svelte";
-  import type { Writable } from "svelte/store";
+  import { createEventDispatcher, getContext, setContext, onMount, onDestroy } from "svelte";
+  import { writable, type Writable } from "svelte/store";
   import { app } from "src/lib/stores/obsidian";
   import { dataSource } from "src/lib/stores/dataframe";
   import { settings } from "src/lib/stores/settings";
   import { commandBus } from "src/lib/stores/commandBus";
-  import { EditNoteModal } from "src/ui/modals/editNoteModal";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { ConfigureFieldModal } from "src/ui/modals/configureField";
   import { CreateFieldModal } from "src/ui/modals/createFieldModal";
@@ -93,6 +99,28 @@
 
   const projectStore = getContext<Writable<ProjectDefinition>>("project");
 
+  // NPLAN-S4.1: provide relation candidate options to GridRelationCell via context
+  const relationOptionsStore = writable<Map<string, string[]>>(new Map());
+  setContext("ppp-relationOptions", relationOptionsStore);
+
+  $: {
+    const map = new Map<string, string[]>();
+    for (const field of fields.filter((f) => f.type === DataFieldType.Relation)) {
+      const vals = new Set<string>();
+      for (const rec of frame.records) {
+        const v = rec.values[field.name];
+        if (v != null) {
+          const str = String(v);
+          const matches = str.match(/\[\[([^\]]+)\]\]/g);
+          if (matches) matches.forEach((m) => vals.add(m.slice(2, -2)));
+          else str.split(",").map((s) => s.trim()).filter(Boolean).forEach((s) => vals.add(s));
+        }
+      }
+      map.set(field.name, [...vals].sort());
+    }
+    relationOptionsStore.set(map);
+  }
+
   // -- Inline add row -----------------------------------------
   $: isReadonly = readonly || ($dataSource?.readonly() ?? false);
 
@@ -105,6 +133,15 @@
       if (groupKey != null && config?.groupBy?.field) {
         autoFill[config.groupBy.field] = groupKey;
       }
+      // NPLAN-A2: auto-assign UniqueId field values
+      const uniqueIdFields = fields.filter((f) => f.type === DataFieldType.UniqueId);
+      if (uniqueIdFields.length > 0) {
+        const counter = settings.bumpUniqueId(proj.id);
+        for (const f of uniqueIdFields) {
+          const prefix = (f.typeConfig as { uniqueIdPrefix?: string } | undefined)?.uniqueIdPrefix ?? "";
+          autoFill[f.name] = `${prefix}${counter}`;
+        }
+      }
       api.addRecord(
         createDataRecord(name, proj, Object.keys(autoFill).length > 0 ? autoFill : undefined),
         fields,
@@ -114,30 +151,31 @@
   }
 
   // -- Row open / edit ----------------------------------------
+  let cardViewOpen = false;
+  let cardViewRecord: DataRecord | null = null;
+
   function handleRowOpen(id: string, openMode: false | "tab" | "window") {
     $app.workspace.openLinkText(id, id, openMode);
   }
 
   function handleRowEdit(id: string, values: Record<string, Optional<DataValue>>) {
-    const record = { id, values } as DataRecord;
-    new EditNoteModal(
-      $app,
-      fields,
-      (rec) => api.updateRecord(rec, fields),
-      record,
-      frame.records,
-      (openMode) => $app.workspace.openLinkText(id, id, openMode),
-      async (newName) => {
-        const file = $app.vault.getAbstractFileByPath(id);
-        if (file && "parent" in file) {
-          const newPath = file.parent?.path
-            ? `${file.parent.path}/${newName}.md`
-            : `${newName}.md`;
-          await $app.fileManager.renameFile(file, newPath);
-        }
-      },
-      $projectStore?.autosave ?? true
-    ).open();
+    cardViewRecord = { id, values } as DataRecord;
+    cardViewOpen = true;
+  }
+
+  async function handleCardSave(record: DataRecord) {
+    await api.updateRecord(record, fields);
+  }
+
+  async function handleCardRename(newName: string) {
+    if (!cardViewRecord) return;
+    const file = $app.vault.getAbstractFileByPath(cardViewRecord.id);
+    if (file && "parent" in file) {
+      const newPath = file.parent?.path
+        ? `${file.parent.path}/${newName}.md`
+        : `${newName}.md`;
+      await $app.fileManager.renameFile(file, newPath);
+    }
   }
 
   // -- Column operations --------------------------------------
@@ -261,7 +299,13 @@
     ).open();
   }
 
-  // -- R2.1b: Column-header context menu ó property-type override + rollup-mode picker
+  function handleColumnRename(oldName: string, newName: string) {
+    const field = fields.find((f) => f.name === oldName);
+    if (!field) return;
+    api.updateField({ ...field, name: newName }, oldName);
+  }
+
+  // -- R2.1b: Column-header context menu ÔøΩ property-type override + rollup-mode picker
 
   /**
    * Persist a partial patch on `project.fieldConfig[fieldName]`.
@@ -357,7 +401,7 @@
       },
     ];
 
-    // Rollup mode picker ó only when the field is configured as a rollup.
+    // Rollup mode picker ÔøΩ only when the field is configured as a rollup.
     const rollupCfg = field.typeConfig?.rollup;
     if (rollupCfg) {
       const targetKind = resolveRollupTargetKind(rollupCfg);
@@ -400,7 +444,7 @@
   // -- Derived state ------------------------------------------
   $: ({ fields, records: rawRecords } = frame);
 
-  // R2.2 ó sub-base partitioning (applied before sort/group)
+  // R2.2 ÔøΩ sub-base partitioning (applied before sort/group)
   $: subBases = config?.subBases ?? [];
   $: activeSubBaseId =
     config?.activeSubBaseId && subBases.some((s) => s.id === config.activeSubBaseId)
@@ -417,6 +461,124 @@
     : filteredRecords;
   $: sortedFields = sortFields(fields, config?.orderFields ?? []);
   $: fieldConfig = config?.fieldConfig ?? {};
+
+  // C19: count of fields the user has explicitly hidden
+  $: hiddenFieldCount = fields.filter((f) => fieldConfig[f.name]?.hide === true).length;
+
+  // Quick search ‚Äî local state, does not persist to config
+  let searchQuery = "";
+  let showSearchBar = false;
+
+  function openSearchBar() {
+    showSearchBar = true;
+    setTimeout(() => {
+      (document.querySelector(".ppp-search-input") as HTMLInputElement)?.focus();
+    }, 0);
+  }
+
+  $: searchedRecords = searchQuery.trim()
+    ? records.filter((r) => {
+        const q = searchQuery.toLowerCase().trim();
+        return Object.values(r.values).some((v) => {
+          if (v == null) return false;
+          if (Array.isArray(v)) return v.some((item) => String(item).toLowerCase().includes(q));
+          return String(v).toLowerCase().includes(q);
+        });
+      })
+    : records;
+
+  function openFieldVisibilityPop(anchor: HTMLElement) {
+    makePopover(
+      anchor,
+      fields.map((f) => ({
+        label: f.name,
+        icon: getFieldIcon(f.type),
+        selected: fieldConfig[f.name]?.hide !== true,
+        keepOpen: true,
+        handler: () => {
+          const nowHiding = fieldConfig[f.name]?.hide !== true;
+          saveConfig({
+            fieldConfig: {
+              ...fieldConfig,
+              [f.name]: { ...fieldConfig[f.name], hide: nowHiding },
+            },
+          });
+        },
+      })),
+    );
+  }
+
+  // Quick sort indicator (shows active sort criteria count, allows clear)
+  $: activeSortCount = (config?.sortCriteria ?? []).length + (config?.sortField ? 1 : 0);
+
+  function openSortPop(anchor: HTMLElement) {
+    const criteria = config?.sortCriteria ?? [];
+    const legacyField = config?.sortField;
+    const items = [
+      ...(legacyField ? [{
+        label: `${legacyField} ${config?.sortAsc ? "‚Üë" : "‚Üì"}`,
+        icon: config?.sortAsc ? "arrow-up" : "arrow-down",
+        selected: true,
+        handler: () => saveConfig({ sortField: undefined, sortAsc: undefined }),
+      }] : []),
+      ...criteria.map((c) => ({
+        label: `${c.field} ${c.order === "asc" ? "‚Üë" : "‚Üì"}`,
+        icon: c.order === "asc" ? "arrow-up" : "arrow-down",
+        selected: true,
+        handler: () => saveConfig({ sortCriteria: criteria.filter((x) => x !== c) }),
+      })),
+      ...(criteria.length > 0 || legacyField ? [{
+        label: $i18n.t("views.dashboard.table.sort-clear-all", { defaultValue: "Clear all sorting" }),
+        icon: "x",
+        selected: false,
+        handler: () => saveConfig({ sortCriteria: [], sortField: undefined, sortAsc: undefined }),
+      }] : [{
+        label: $i18n.t("views.dashboard.table.sort-hint", { defaultValue: "Right-click a column header to sort" }),
+        icon: "info",
+        selected: false,
+        handler: () => { /* no-op */ },
+      }]),
+    ];
+    makePopover(anchor, items);
+  }
+
+  // Quick group-by picker
+  $: activeGroupField = config?.groupBy?.field ?? "";
+
+  function openGroupPop(anchor: HTMLElement) {
+    const noGroupEntry = {
+      label: $i18n.t("views.dashboard.table.group-none", { defaultValue: "None (clear grouping)" }),
+      icon: "x",
+      selected: !activeGroupField,
+      handler: () => {
+        const { groupBy: _omit, ...rest } = config ?? {};
+        void _omit;
+        saveConfig(rest as DataTableConfig);
+      },
+    };
+    const fieldEntries = fields.map((f) => ({
+      label: f.name,
+      icon: getFieldIcon(f.type),
+      selected: f.name === activeGroupField,
+      handler: () => {
+        saveConfig({
+          groupBy: {
+            field: f.name,
+            sortOrder: "asc",
+            hiddenGroups: config?.groupBy?.hiddenGroups ?? [],
+            collapsedGroups: config?.groupBy?.collapsedGroups ?? [],
+            showEmptyGroups: config?.groupBy?.showEmptyGroups ?? false,
+          },
+        });
+      },
+    }));
+    makePopover(anchor, [noGroupEntry, ...fieldEntries], true);
+  }
+
+  function handleWidgetMousedown(e: MouseEvent) {
+    const pop = getPopoverEl();
+    if (pop && !pop.contains(e.target as Node)) destroyPopover();
+  }
 
   const defaultColumnWidth: Record<string, number> = {
     [DataFieldType.Boolean]: 80,
@@ -441,7 +603,7 @@
     })
     .map<GridColDef>((field) => {
       const sc = sortCriteria.find(c => c.field === field.name);
-      // Stage A.9 fix: hide derived `path` column by default ó it duplicates
+      // Stage A.9 fix: hide derived `path` column by default ÔøΩ it duplicates
       // the `name` field's link target and used to render as a raw vault
       // path when the field config did not set an explicit hide flag. Users
       // can still re-enable it through the column configuration.
@@ -458,9 +620,43 @@
       };
     });
 
+  $: columns = config?.hideEmptyFields
+    ? columns.filter((col) => records.some((r) => r.values[col.field] != null && r.values[col.field] !== ""))
+    : columns;
+
+  $: exportableFields = columns
+    .filter((c) => !c.hide)
+    .map((c) => fields.find((f) => f.name === c.field))
+    .filter((f): f is DataField => f != null);
+
+  function handleExportClick(e: MouseEvent) {
+    const menu = new Menu();
+    const formats: Array<{ label: string; format: ExportFormat }> = [
+      { label: "CSV (.csv)", format: "csv" },
+      { label: "TSV (.tsv)", format: "tsv" },
+      { label: "JSON (.json)", format: "json" },
+      { label: "Markdown table (.md)", format: "markdown" },
+    ];
+    for (const { label, format } of formats) {
+      menu.addItem((item) =>
+        item.setTitle(label).onClick(() => {
+          const content = exportRecords(frame.records, exportableFields, format);
+          navigator.clipboard.writeText(content).then(() => {
+            new Notice(
+              $i18n.t("views.dashboard.table.export-copied", {
+                defaultValue: "Copied to clipboard",
+              })
+            );
+          });
+        })
+      );
+    }
+    menu.showAtMouseEvent(e);
+  }
+
   $: conditionalFormats = config?.conditionalFormats ?? [];
 
-  $: rows = records.map<GridRowProps>(({ id, values }) => {
+  $: rows = searchedRecords.map<GridRowProps>(({ id, values }) => {
     const row: GridRowProps = { rowId: id, row: values };
     if (conditionalFormats.length === 0) return row;
     const record = { id, values };
@@ -478,7 +674,7 @@
   // -- Grouping -----------------------------------------------
   $: hasGroupBy = !!config?.groupBy;
   $: groups = hasGroupBy && config?.groupBy
-    ? groupRecords(records, config.groupBy)
+    ? groupRecords(searchedRecords, config.groupBy)
     : ([] as RowGroup[]);
 
   $: collapsedSet = new Set<string>(config?.groupBy?.collapsedGroups ?? []);
@@ -553,7 +749,7 @@
   onMount(() => document.addEventListener("click", handleDocClick));
   onDestroy(() => document.removeEventListener("click", handleDocClick));
 
-  // R2.2 ó subscribe to global `add-sub-base` command. Each DataTable
+  // R2.2 ÔøΩ subscribe to global `add-sub-base` command. Each DataTable
   // widget on the canvas reacts independently; in practice canvases have
   // a single table so this gives the user a one-click discoverability path.
   let lastSubBaseBusTs = 0;
@@ -678,7 +874,16 @@
   }
 </script>
 
-<div class="ppp-datatable-widget">
+<svelte:window on:mousedown={handleWidgetMousedown} />
+
+<div
+  class="ppp-datatable-widget"
+  use:viewShortcuts={{
+    "new-record": !isReadonly ? () => handleAddRow() : undefined,
+    "focus-filter": (e) => { e.preventDefault(); openSearchBar(); },
+    "export": (e) => { e.preventDefault(); const content = exportRecords(frame.records, exportableFields, "csv"); navigator.clipboard.writeText(content).then(() => new Notice($i18n.t("views.dashboard.table.export-copied", { defaultValue: "Copied to clipboard" }))); },
+  }}
+>
   <!-- Field-preset bar (Phase 2b). Hidden in readonly mode so query-result
        views don't expose mutation-heavy controls. -->
   {#if !isReadonly}
@@ -691,6 +896,93 @@
         on:apply={handleFieldPresetApply}
         on:save={handleFieldPresetSave}
       />
+      <!-- C19: quick field visibility toggle -->
+      <button
+        type="button"
+        class="ppp-fields-btn"
+        class:ppp-fields-btn--active={hiddenFieldCount > 0}
+        on:click={(e) => openFieldVisibilityPop(e.currentTarget)}
+        aria-label={$i18n.t("views.dashboard.table.hide-fields", { defaultValue: "Toggle field visibility" })}
+        title={$i18n.t("views.dashboard.table.hide-fields", { defaultValue: "Toggle field visibility" })}
+      >
+        {#if hiddenFieldCount > 0}
+          <span class="ppp-fields-badge">{hiddenFieldCount}</span>
+          {$i18n.t("views.dashboard.table.hidden", { count: hiddenFieldCount, defaultValue: "hidden" })}
+        {:else}
+          {$i18n.t("views.dashboard.table.fields", { defaultValue: "Fields" })}
+        {/if}
+      </button>
+      <!-- Quick group-by toggle -->
+      <button
+        type="button"
+        class="ppp-group-btn"
+        class:ppp-group-btn--active={!!activeGroupField}
+        on:click={(e) => openGroupPop(e.currentTarget)}
+        aria-label={$i18n.t("views.dashboard.table.group-by", { defaultValue: "Group by field" })}
+        title={$i18n.t("views.dashboard.table.group-by", { defaultValue: "Group by field" })}
+      >
+        {#if activeGroupField}
+          <span class="ppp-group-badge">{activeGroupField}</span>
+        {:else}
+          {$i18n.t("views.dashboard.table.group", { defaultValue: "Group" })}
+        {/if}
+      </button>
+      <!-- Quick sort indicator -->
+      <button
+        type="button"
+        class="ppp-sort-btn"
+        class:ppp-sort-btn--active={activeSortCount > 0}
+        on:click={(e) => openSortPop(e.currentTarget)}
+        aria-label={$i18n.t("views.dashboard.table.sort", { defaultValue: "Sort" })}
+        title={$i18n.t("views.dashboard.table.sort", { defaultValue: "Sort" })}
+      >
+        {#if activeSortCount > 0}
+          <span class="ppp-sort-badge">{activeSortCount}</span>
+          {$i18n.t("views.dashboard.table.sorted", { defaultValue: "sorted" })}
+        {:else}
+          {$i18n.t("views.dashboard.table.sort", { defaultValue: "Sort" })}
+        {/if}
+      </button>
+      <!-- Aggregation footer toggle -->
+      <button
+        type="button"
+        class="ppp-agg-toggle-btn"
+        class:ppp-agg-toggle-btn--active={showAggregation}
+        on:click={() => saveConfig({ showAggregationRow: !showAggregation })}
+        aria-label={showAggregation ? $i18n.t("views.dashboard.table.hide-aggregations", { defaultValue: "Hide aggregation row" }) : $i18n.t("views.dashboard.table.show-aggregations", { defaultValue: "Show aggregation row" })}
+        title={showAggregation ? $i18n.t("views.dashboard.table.hide-aggregations", { defaultValue: "Hide aggregation row" }) : $i18n.t("views.dashboard.table.show-aggregations", { defaultValue: "Show aggregation row" })}
+      >Œ£</button>
+      <!-- Quick search toggle -->
+      <button
+        type="button"
+        class="clickable-icon ppp-search-btn"
+        class:ppp-search-btn--active={showSearchBar}
+        on:click={() => { showSearchBar = !showSearchBar; if (!showSearchBar) searchQuery = ""; }}
+        aria-label={$i18n.t("views.dashboard.table.search", { defaultValue: "Search records" })}
+        title={$i18n.t("views.dashboard.table.search", { defaultValue: "Search records" })}
+      >üîç</button>
+      <button
+        type="button"
+        class="clickable-icon ppp-export-btn"
+        on:click={handleExportClick}
+        aria-label={$i18n.t("views.dashboard.table.export", { defaultValue: "Export" })}
+        title={$i18n.t("views.dashboard.table.export", { defaultValue: "Export" })}
+      >‚¨á</button>
+    </div>
+  {/if}
+  {#if showSearchBar}
+    <div class="ppp-search-bar" role="search">
+      <input
+        class="ppp-search-input"
+        type="search"
+        bind:value={searchQuery}
+        placeholder={$i18n.t("views.dashboard.table.search-placeholder", { defaultValue: "Search‚Ä¶" })}
+        aria-label={$i18n.t("views.dashboard.table.search", { defaultValue: "Search records" })}
+        on:keydown={(e) => { if (e.key === "Escape") { showSearchBar = false; searchQuery = ""; } }}
+      />
+      {#if searchQuery}
+        <span class="ppp-search-count">{searchedRecords.length}</span>
+      {/if}
     </div>
   {/if}
   {#if !isReadonly && !(config?.hintDismissed)}
@@ -743,6 +1035,7 @@
             {#if !collapsedSet.has(`${group.key}/${subGroup.key}`)}
               <DataGrid
                 {columns}
+                iconField={config?.iconField}
                 rows={groupToRows(subGroup)}
                 {readonly}
                 colorModel={(rowId) => {
@@ -762,6 +1055,7 @@
                 onColumnHide={handleColumnHide}
                 onColumnPin={handleColumnPin}
                 onColumnInsert={handleColumnInsert}
+                onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
               />
             {/if}
@@ -769,6 +1063,7 @@
         {:else}
           <DataGrid
             {columns}
+            iconField={config?.iconField}
             rows={groupToRows(group)}
             {readonly}
             colorModel={(rowId) => {
@@ -788,6 +1083,7 @@
             onColumnHide={handleColumnHide}
             onColumnPin={handleColumnPin}
             onColumnInsert={handleColumnInsert}
+            onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
           />
         {/if}
@@ -808,6 +1104,7 @@
           >
             <DataGrid
               {columns}
+              iconField={config?.iconField}
               rows={visibleRows}
               {readonly}
               colorModel={(rowId) => {
@@ -827,6 +1124,7 @@
               onColumnHide={handleColumnHide}
               onColumnPin={handleColumnPin}
               onColumnInsert={handleColumnInsert}
+              onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
             />
           </div>
@@ -835,6 +1133,7 @@
     {:else}
       <DataGrid
         {columns}
+        iconField={config?.iconField}
         rows={visibleRows}
         {readonly}
         colorModel={(rowId) => {
@@ -854,6 +1153,7 @@
         onColumnHide={handleColumnHide}
         onColumnPin={handleColumnPin}
         onColumnInsert={handleColumnInsert}
+        onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
       />
     {/if}
@@ -861,7 +1161,7 @@
 
   {#if showAggregation}
     <div class="ppp-aggregation-row">
-      <div class="ppp-aggregation-cell ppp-aggregation-cell--row-header" role="rowheader" aria-label={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row ó click a cell to pick a function" })} title={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row ó click a cell to pick a function" })}>
+      <div class="ppp-aggregation-cell ppp-aggregation-cell--row-header" role="rowheader" aria-label={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row ÔøΩ click a cell to pick a function" })} title={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row ÔøΩ click a cell to pick a function" })}>
         <span class="ppp-aggregation-sigma" aria-hidden="true">?</span>
       </div>
       {#each columns.filter((c) => !c.hide) as col}
@@ -919,12 +1219,24 @@
     <!--
       Single add-row affordance: DataGrid already renders its own footer
       "+ New note" button via onRowAdd. Rendering a second button here
-      produced visible duplicate ("+ ƒÓ·‡‚ËÚ¸ Á‡ÏÂÚÍÛ" from DataGrid,
-      then "+ ÕÓ‚‡ˇ Á‡ÏÂÚÍ‡" from this wrapper). DataGrid is the single
+      produced visible duplicate ("+ ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ" from DataGrid,
+      then "+ ÔøΩÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ" from this wrapper). DataGrid is the single
       source of truth.
     -->
   {/if}
   </div>
+
+  <RecordCardView
+    open={cardViewOpen}
+    fields={fields}
+    record={cardViewRecord}
+    allRecords={frame.records}
+    autosave={$projectStore?.autosave ?? true}
+    onSave={handleCardSave}
+    onOpenNote={(openMode) => cardViewRecord && $app.workspace.openLinkText(cardViewRecord.id, cardViewRecord.id, openMode)}
+    onRenameNote={handleCardRename}
+    on:close={() => { cardViewOpen = false; cardViewRecord = null; }}
+  />
 </div>
 
 <style>
@@ -943,6 +1255,232 @@
     padding: var(--size-2-1, 0.25rem) var(--size-2-2, 0.5rem);
     border-bottom: 0.0625rem solid var(--background-modifier-border);
     flex-shrink: 0;
+  }
+
+  /* C19: field visibility quick toggle button */
+  .ppp-fields-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller, 0.75rem);
+    cursor: pointer;
+    transition: color 100ms ease, background 100ms ease, border-color 100ms ease;
+  }
+
+  .ppp-fields-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border-hover);
+  }
+
+  .ppp-fields-btn--active {
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+  }
+
+  .ppp-fields-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.1875rem;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    border-radius: 0.5rem;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    line-height: 1;
+  }
+
+  .ppp-group-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller, 0.75rem);
+    cursor: pointer;
+    transition: color 100ms ease, background 100ms ease, border-color 100ms ease;
+  }
+
+  .ppp-group-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border-hover);
+  }
+
+  .ppp-group-btn--active {
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+  }
+
+  .ppp-group-badge {
+    max-width: 6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .ppp-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 1.5rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+  }
+
+  .ppp-sort-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .ppp-sort-btn--active {
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+  }
+
+  .ppp-sort-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.25rem;
+    border-radius: 0.5rem;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  /* Quick search */
+  .ppp-search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-s, 0.25rem);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 120ms ease, color 120ms ease;
+  }
+
+  .ppp-search-btn:hover,
+  .ppp-search-btn--active {
+    opacity: 1;
+    color: var(--interactive-accent);
+  }
+
+  .ppp-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid var(--background-modifier-border);
+  }
+
+  .ppp-search-input {
+    flex: 1;
+    height: 1.625rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.8125rem;
+    font-family: var(--font-interface);
+    padding: 0 0.5rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 120ms ease;
+  }
+
+  .ppp-search-input:focus { border-color: var(--interactive-accent); }
+  .ppp-search-input::placeholder { color: var(--text-faint); }
+
+  .ppp-search-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    padding: 0 0.25rem;
+  }
+
+  .ppp-agg-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+  }
+
+  .ppp-agg-toggle-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .ppp-agg-toggle-btn--active {
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    background: rgba(var(--interactive-accent-rgb, 122, 104, 238), 0.08);
+  }
+
+  .ppp-export-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-s, 0.25rem);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 120ms ease, color 120ms ease;
+  }
+
+  .ppp-export-btn:hover {
+    opacity: 1;
+    color: var(--text-normal);
+  }
+
+  .ppp-export-btn:focus-visible {
+    outline: 0.125rem solid var(--interactive-accent);
+    outline-offset: 0.0625rem;
   }
 
   .ppp-table-hint {

@@ -13,6 +13,7 @@ describe("resolve v2", () => {
       preferences: {
         animationBehavior: "smooth",
         disableHapticFeedback: false,
+        replaceObsidianProperties: false,
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -57,6 +58,7 @@ describe("resolve v2", () => {
       preferences: {
         animationBehavior: "smooth",
         disableHapticFeedback: false,
+        replaceObsidianProperties: false,
         frontmatter: {
           quoteStrings: "PLAIN",
         },
@@ -174,6 +176,7 @@ describe("clean up commands", () => {
       preferences: {
         animationBehavior: "smooth",
         disableHapticFeedback: false,
+        replaceObsidianProperties: false,
         projectSizeLimit: 1000,
         frontmatter: {
           quoteStrings: "PLAIN",

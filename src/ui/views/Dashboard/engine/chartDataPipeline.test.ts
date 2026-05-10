@@ -34,7 +34,7 @@ function makeConfig(overrides: Partial<ChartConfig> = {}): ChartConfig {
     },
     yAxis: {
       property: "count",
-      aggregation: "count",
+      aggregation: "count_total",
     },
     style: {
       colorScheme: "categorical",
@@ -172,7 +172,7 @@ describe("computeChartData", () => {
 
   test("cumulative applies running total", () => {
     const config = makeConfig({
-      yAxis: { property: "count", aggregation: "count", cumulative: true },
+      yAxis: { property: "count", aggregation: "count_total", cumulative: true },
     });
 
     const data = computeChartData(makeStatusFrame(), config);

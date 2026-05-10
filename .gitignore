@@ -51,3 +51,4 @@ lint_output*.txt
 # AI Agent configuration (local only)
 .github/agents/
 .github/hooks/
+.claude/

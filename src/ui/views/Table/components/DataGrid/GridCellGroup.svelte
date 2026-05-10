@@ -2,9 +2,11 @@
   export let index: number;
   export let header: boolean = false;
   export let footer: boolean = false;
+  /** S8 — row is checked for bulk actions; provides accent-tint background. */
+  export let selected: boolean = false;
 </script>
 
-<div role="row" aria-rowindex={index} class:header class:footer>
+<div role="row" aria-rowindex={index} aria-selected={selected || undefined} class:header class:footer class:selected>
   <slot />
 </div>
 
@@ -23,6 +25,15 @@
 
   div:hover:not(.header):not(.footer) {
     --ppp-row-hover-bg: var(--background-modifier-hover);
+  }
+
+  /* R5-020: selected row — accent-tinted background so checked rows stand out */
+  div.selected:not(.header):not(.footer) {
+    --ppp-row-hover-bg: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+  }
+
+  div.selected:hover:not(.header):not(.footer) {
+    --ppp-row-hover-bg: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
   }
 
   @media (prefers-reduced-motion: reduce) {

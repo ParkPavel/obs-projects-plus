@@ -48,6 +48,7 @@
   // Gallery-specific settings
   $: cardWidth = (view?.config?.["cardWidth"] as number) ?? 300;
   $: coverField = (view?.config?.["coverField"] as string) ?? "";
+  $: iconField = (view?.config?.["iconField"] as string) ?? "";
   $: fitStyle = (view?.config?.["fitStyle"] as string) ?? "cover";
   $: galleryIncludeFields = (view?.config?.["includeFields"] as string[]) ?? [];
 
@@ -61,6 +62,7 @@
   $: wrapText = (tableConfig["wrapText"] as boolean) ?? false;
   $: showAggregationRow = (tableConfig["showAggregationRow"] as boolean) ?? false;
   $: freezeUpTo = (tableConfig["freezeUpTo"] as string) ?? "";
+  $: tableConfigIconField = (tableConfig["iconField"] as string) ?? "";
 
   function emitUpdate(partial: Record<string, any>) {
     dispatch("update", partial);
@@ -105,8 +107,49 @@
   $: numberFields = fields.filter(f => f.type === "number" || f.type === "Number");
 
   // Hidden fields for Database view
+  $: orderFields = (tableConfig["orderFields"] as string[]) ?? [];
   $: hiddenFields = fields.filter(f => fieldConfig[f.name]?.hide);
-  $: visibleFields = fields.filter(f => !fieldConfig[f.name]?.hide);
+  $: visibleFields = (() => {
+    const all = fields.filter(f => !fieldConfig[f.name]?.hide);
+    if (orderFields.length === 0) return all;
+    return [...all].sort((a, b) => {
+      const ia = orderFields.indexOf(a.name);
+      const ib = orderFields.indexOf(b.name);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  })();
+
+  // DG-3: drag-to-reorder visible fields
+  let fieldDragIndex: number | null = null;
+  let fieldDragOverIndex: number | null = null;
+
+  function onFieldDragStart(index: number, e: DragEvent) {
+    fieldDragIndex = index;
+    e.dataTransfer!.effectAllowed = "move";
+  }
+
+  function onFieldDragOver(index: number, e: DragEvent) {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = "move";
+    fieldDragOverIndex = index;
+  }
+
+  function onFieldDrop(index: number, e: DragEvent) {
+    e.preventDefault();
+    if (fieldDragIndex === null || fieldDragIndex === index) {
+      fieldDragIndex = null; fieldDragOverIndex = null; return;
+    }
+    const arr = [...visibleFields];
+    const [moved] = arr.splice(fieldDragIndex, 1);
+    arr.splice(index, 0, moved!);
+    fieldDragIndex = null; fieldDragOverIndex = null;
+    emitTableUpdate({ orderFields: arr.map(f => f.name) });
+  }
+
+  function onFieldDragEnd() { fieldDragIndex = null; fieldDragOverIndex = null; }
 </script>
 
 <div class="section">
@@ -352,6 +395,25 @@
             </div>
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.check')}</span>
           </label>
+
+          <label>
+            {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
+            <div class="field-combo">
+              <input
+                type="text"
+                list="fieldlist-icon-calendar"
+                bind:value={iconField}
+                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+                on:change={() => emitUpdate({ iconField: iconField || undefined })}
+              />
+              <datalist id="fieldlist-icon-calendar">
+                {#each stringFields as f}
+                  <option value={f.name} />
+                {/each}
+              </datalist>
+            </div>
+            <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
+          </label>
         </div>
       </div>
     {/if}
@@ -411,6 +473,25 @@
             {/if}
           </div>
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.header-field')}</span>
+        </label>
+
+        <label>
+          {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
+          <div class="field-combo">
+            <input
+              type="text"
+              list="fieldlist-icon-board"
+              bind:value={iconField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={() => emitUpdate({ iconField: iconField || undefined })}
+            />
+            <datalist id="fieldlist-icon-board">
+              {#each stringFields as field}
+                <option value={field.name} />
+              {/each}
+            </datalist>
+          </div>
+          <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
         </label>
 
         <label>
@@ -479,6 +560,25 @@
             {/if}
           </div>
           <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.cover-field")}</span>
+        </label>
+
+        <label>
+          {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
+          <div class="field-combo">
+            <input
+              type="text"
+              list="fieldlist-icon-gallery"
+              bind:value={iconField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={() => emitUpdate({ iconField: iconField || undefined })}
+            />
+            <datalist id="fieldlist-icon-gallery">
+              {#each stringFields as field}
+                <option value={field.name} />
+              {/each}
+            </datalist>
+          </div>
+          <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
         </label>
 
         <label>
@@ -563,18 +663,46 @@
           </datalist>
         </label>
 
+        <label>
+          {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
+          <input
+            type="text"
+            list="fieldlist-icon-database"
+            bind:value={tableConfigIconField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={() => emitTableUpdate({ iconField: tableConfigIconField || undefined })}
+          />
+          <datalist id="fieldlist-icon-database">
+            {#each stringFields as field}
+              <option value={field.name} />
+            {/each}
+          </datalist>
+          <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
+        </label>
+
         <div class="field-list">
           <span class="field-list-label">{$i18n.t("settings-menu.view-config.table.hide-fields")}</span>
           <span class="hint">{$i18n.t("settings-menu.view-config.table.hints.hide-fields")}</span>
-          {#each visibleFields as field}
-            <label class="field-item">
-              <input
-                type="checkbox"
-                checked={true}
-                on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
-              />
-              <span>{field.name}</span>
-            </label>
+          {#each visibleFields as field, index}
+            <div
+              class="field-item field-item--draggable"
+              class:field-item--drag-over={fieldDragOverIndex === index}
+              draggable="true"
+              on:dragstart={(e) => onFieldDragStart(index, e)}
+              on:dragover={(e) => onFieldDragOver(index, e)}
+              on:drop={(e) => onFieldDrop(index, e)}
+              on:dragend={onFieldDragEnd}
+            >
+              <span class="field-drag-handle" aria-hidden="true">⠿</span>
+              <label class="field-item-label">
+                <input
+                  type="checkbox"
+                  checked={true}
+                  on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
+                />
+                <span>{field.name}</span>
+              </label>
+            </div>
           {/each}
         </div>
 
@@ -712,6 +840,36 @@
     width: 1rem;
     height: 1rem;
     margin: 0;
+  }
+
+  /* DG-3: draggable field row */
+  .field-item--draggable {
+    cursor: default;
+  }
+  .field-item--drag-over {
+    border-top: 0.125rem solid var(--interactive-accent);
+    border-radius: 0;
+  }
+  .field-drag-handle {
+    color: var(--text-faint);
+    opacity: 0;
+    cursor: grab;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+    transition: opacity 100ms ease;
+  }
+  .field-item--draggable:hover .field-drag-handle {
+    opacity: 0.6;
+  }
+  .field-drag-handle:hover {
+    opacity: 1 !important;
+  }
+  .field-item-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    cursor: pointer;
   }
   .field-combo {
     position: relative;

@@ -169,7 +169,7 @@ describe("E2E: Pipeline → Aggregation → Formatting", () => {
     const aggConfig: AggregationConfig = {
       budget: "sum",
       priority: "avg",
-      name: "count",
+      name: "count_total",
       done: "count_checked",
     };
 
@@ -238,7 +238,7 @@ describe("E2E: Chart data pipeline", () => {
       },
       yAxis: {
         property: "count",
-        aggregation: "count",
+        aggregation: "count_total",
       },
       style: {
         colorScheme: "auto",

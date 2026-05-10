@@ -70,6 +70,18 @@ export enum DataFieldType {
   Formula = "formula",
   Relation = "relation",
   Rollup = "rollup",
+  /**
+   * Dashboard V2 (NPLAN-A1) — read-only timestamp derived from
+   * `TFile.stat` (created or modified). Resolved by `applyAutoFields`
+   * during the dashboard pipeline. Stored as ISO string.
+   */
+  AutoTime = "autotime",
+  /**
+   * Dashboard V2 (NPLAN-A2) — auto-incrementing per-project identifier
+   * with optional prefix. Counter persisted on `ProjectDefinition`,
+   * value assigned at record-create time.
+   */
+  UniqueId = "unique_id",
   Unknown = "unknown",
 }
 

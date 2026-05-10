@@ -761,10 +761,36 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   // ── Logic (enhanced) ───────────────────────────────────────
   // LET, STYLE, MAP, FILTER, REDUCE are handled specially in evaluateNode
   LET: (_args, _evaluate) => null,
+  LETS: (_args, _evaluate) => null,
+  PROP: (_args, _evaluate) => null,
+  ID: (_args, _evaluate) => null,
   STYLE: (_args, _evaluate) => null,
   MAP: (_args, _evaluate) => null,
   FILTER: (_args, _evaluate) => null,
   REDUCE: (_args, _evaluate) => null,
+
+  // ── List utilities ─────────────────────────────────────────
+  ZIP: (args, evaluate) => {
+    if (args.length === 0) return [] as unknown as DataValue;
+    const lists = args.map(a => {
+      const v = evaluate(a as FormulaNode);
+      return Array.isArray(v) ? v : (v != null ? [v] : []);
+    });
+    const len = Math.min(...lists.map(l => l.length));
+    const result: unknown[][] = [];
+    for (let i = 0; i < len; i++) result.push(lists.map(l => l[i]));
+    return result as unknown as DataValue;
+  },
+
+  EXTRACT: (args, evaluate) => {
+    if (args.length < 2) return null;
+    const listVal = evaluate(args[0] as FormulaNode);
+    const list = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+    const idx = Number(evaluate(args[1] as FormulaNode));
+    if (isNaN(idx)) return null;
+    const i = idx < 0 ? list.length + Math.trunc(idx) : Math.trunc(idx);
+    return (list[i] ?? null) as DataValue;
+  },
 
   IFBLANK: (args, evaluate) => {
     const val = evaluate(args[0] as FormulaNode);
@@ -1043,6 +1069,43 @@ function evaluateNode(
           const childScope = new Map<string, DataValue>(scope ?? []);
           childScope.set(varName, value as DataValue);
           return evaluateNode(n.args[2] as FormulaNode, record, dataFrame, childScope, depth + 1);
+        }
+
+        if (n.name === "PROP") {
+          // PROP("FieldName") — Notion 2.0 alias for a field reference
+          if (n.args.length < 1) return null;
+          const nameArg = n.args[0] as FormulaNode;
+          const fieldName =
+            nameArg.type === "literal" ? String(nameArg.value) :
+            nameArg.type === "field" ? nameArg.name : null;
+          if (!fieldName) return null;
+          if (scope?.has(fieldName)) return scope.get(fieldName) as DataValue;
+          const v = record.values[fieldName];
+          return (v === undefined ? null : v) as DataValue;
+        }
+
+        if (n.name === "ID") {
+          // ID() — returns the unique identifier of the current record
+          return record.id as unknown as DataValue;
+        }
+
+        if (n.name === "LETS") {
+          // LETS(name1, val1, name2, val2, ..., expr) — multi-bind LET
+          // requires at least 3 args and odd total count
+          if (n.args.length < 3 || n.args.length % 2 === 0) return null;
+          let currentScope = new Map<string, DataValue>(scope ?? []);
+          const pairCount = (n.args.length - 1) / 2;
+          for (let p = 0; p < pairCount; p++) {
+            const nameNode = n.args[p * 2] as FormulaNode;
+            const varName =
+              nameNode.type === "literal" ? String(nameNode.value) :
+              nameNode.type === "field" ? nameNode.name : null;
+            if (!varName) return null;
+            const val = evaluateNode(n.args[p * 2 + 1] as FormulaNode, record, dataFrame, currentScope, depth + 1);
+            currentScope = new Map<string, DataValue>(currentScope);
+            currentScope.set(varName, val as DataValue);
+          }
+          return evaluateNode(n.args[n.args.length - 1] as FormulaNode, record, dataFrame, currentScope, depth + 1);
         }
 
         if (n.name === "STYLE") {

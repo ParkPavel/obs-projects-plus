@@ -505,10 +505,12 @@
   config={config ?? {}}
   onConfigChange={saveConfig}
   let:columnWidth
+  let:groupMode
   let:groupByField
   let:checkField
   let:includeFields
   let:customHeader
+  let:iconField
 >
   <Board
     columns={getColumns(
@@ -517,7 +519,8 @@
       groupByField,
       orderSyncField,
       !hasSort,
-      config?.persistedStatuses
+      config?.persistedStatuses,
+      groupMode === "semantic"
     ).map((c) => (config?.freezeAll ? { ...c, pinned: true } : c))}
     {columnWidth}
     zoom={config?.boardZoom ?? 1}
@@ -525,6 +528,7 @@
     checkField={fields.find((field) => field.name === config?.checkField)?.name}
     includeFields={fields.filter((field) => includeFields.includes(field.name))}
     customHeader={fields.find((field) => field.name === customHeader)}
+    iconField={fields.find((field) => field.name === iconField)}
     onRecordClick={handleRecordClick}
     onRecordCheck={handleRecordCheck(checkField)}
     onRecordAdd={handleRecordAdd(groupByField)}

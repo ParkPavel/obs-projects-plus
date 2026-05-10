@@ -30,7 +30,7 @@ export interface ConfigPanelDescriptor {
 const DEFAULT_CHART_CONFIG: ChartConfig = {
   chartType: "bar",
   xAxis: { property: "", sortBy: "label", sortOrder: "asc", omitZero: false },
-  yAxis: { property: "count", aggregation: "count" },
+  yAxis: { property: "count", aggregation: "count_total" },
   style: {
     colorScheme: "auto",
     height: "medium",
@@ -122,11 +122,94 @@ const PANELS = {
       columns: [
         {
           field: fields[0]?.name ?? "*",
-          aggregation: "count",
+          aggregation: "count_total",
           format: "number",
         } satisfies SummaryColumnConfig,
       ],
     }),
+  },
+  "data-list": {
+    hasCog: true,
+    isConfigured: (c) => !!c && typeof c === "object" && Array.isArray((c as { fields?: unknown }).fields),
+    initDefaults: (fields) => ({
+      titleField: "",
+      fields: fields.slice(0, 3).map((f) => f.name),
+      sortField: "",
+      sortOrder: "asc",
+      limit: 0,
+    }),
+  },
+  "sub-base-canvas": {
+    hasCog: true,
+    isConfigured: (c) =>
+      !!c && typeof c === "object" && Array.isArray((c as { subBases?: unknown }).subBases),
+    initDefaults: (fields) => ({
+      subBases: [],
+      titleField: "",
+      fields: fields.slice(0, 2).map((f) => f.name),
+      limit: 0,
+    }),
+  },
+  "yaml-visualizer": {
+    // Properties widget owns its own toolbar (sort/show/hide/layout); no host cog.
+    hasCog: false,
+    isConfigured: () => true,
+    initDefaults: () => ({}),
+  },
+  "database-call": {
+    /**
+     * Dashboard V2 (S2.2) — tab management is inline (ViewTabBar `+`
+     * button), no external cog panel needed yet. Sprint 3 may add a
+     * settings panel for source picker / global filter UI.
+     */
+    hasCog: false,
+    isConfigured: () => true,
+    initDefaults: () => ({
+      viewTabs: [
+        {
+          id: `tab-${Date.now()}`,
+          label: "Table",
+          viewType: "table",
+          config: {},
+        },
+      ],
+      activeTabId: `tab-${Date.now()}`,
+    }),
+  },
+  timeline: {
+    hasCog: true,
+    isConfigured: (c) =>
+      !!c && typeof c === "object" && "startField" in c && !!(c as { startField?: string }).startField,
+    initDefaults: (fields) => {
+      const dateField =
+        fields.find((f) => f.type === DataFieldType.Date)?.name ??
+        fields[0]?.name ??
+        "";
+      return { startField: dateField, endField: dateField, labelField: "", zoom: "month" };
+    },
+  },
+  "cover-banner": {
+    hasCog: true,
+    isConfigured: (c) =>
+      !!c && typeof c === "object" && typeof (c as { src?: unknown }).src === "string" && !!(c as { src?: string }).src,
+    initDefaults: () => ({
+      src: "",
+      widthMode: "full",
+      fitStyle: "cover",
+      position: "center",
+    }),
+  },
+  text: {
+    // Content is edited inline (click-to-edit); no external cog panel.
+    hasCog: false,
+    isConfigured: () => true,
+    initDefaults: () => ({ content: "" }),
+  },
+  divider: {
+    // Label is edited inline; no external cog panel.
+    hasCog: false,
+    isConfigured: () => true,
+    initDefaults: () => ({ label: "" }),
   },
 } as const satisfies Record<WidgetType, ConfigPanelDescriptor>;
 

@@ -21,13 +21,14 @@ import type {
   DataValue,
   Optional,
 } from "src/lib/dataframe/dataframe";
-import type { RollupFieldConfig } from "src/settings/base/settings";
+import type { RelationFieldConfig, RollupFieldConfig } from "src/settings/base/settings";
 import {
   aggregate,
   type RollupConfig,
   type RollupResult,
 } from "src/lib/engine/aggregate";
 import { resolveCrossProjectRelations } from "./crossProjectResolver";
+import { applyFilter } from "src/lib/engine/filterEvaluator";
 
 // ── Public types ─────────────────────────────────────────
 
@@ -90,15 +91,22 @@ function detectTypeMismatch(
 export function computeCrossProjectRollup(
   record: DataRecord,
   config: RollupFieldConfig,
-  _thisFrame: DataFrame,
+  thisFrame: DataFrame,
   externalFrame: DataFrame
 ): CrossProjectRollupResult {
+  // R5-010 — If the relation field declares `targetSubBaseFilter`, restrict
+  // the resolution scope before walking targets. Pre-filter the external
+  // frame so the resolver index already excludes out-of-scope records.
+  const relField = thisFrame.fields.find((f) => f.name === config.relationField);
+  const relCfg = relField?.typeConfig?.relation as RelationFieldConfig | undefined;
+  const scopedFrame: DataFrame = relCfg?.targetSubBaseFilter
+    ? applyFilter(externalFrame, relCfg.targetSubBaseFilter)
+    : externalFrame;
+
   const targets = resolveCrossProjectRelations(
     record,
     config.relationField,
-    externalFrame,
-    // displayField is optional on RollupFieldConfig; pass undefined to use
-    // the canonical name fallback chain.
+    scopedFrame,
     undefined
   );
   const rawValues = targets.map((t) => t.values[config.targetField]);

@@ -4,10 +4,9 @@ Thank you for your interest in contributing! Projects Plus is a community-mainta
 
 This document is the **engineering onboarding** entry point. Before opening a non-trivial PR, please also read:
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — codebase map (master document)
+- [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) — target architecture and codebase map (4 layers, A-F module grades)
 - [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md) — coding rules and security baselines
-- [docs/IMPLEMENTATION_PLAN_CURRENT.md](docs/IMPLEMENTATION_PLAN_CURRENT.md) — active plan (so your work doesn't collide with in-flight changes)
-- [docs/ROADMAP_DATABASE_2026.md](docs/ROADMAP_DATABASE_2026.md) — milestones M0–M5
+- [docs/internal/REFACTOR_BACKLOG_V5.md](docs/internal/REFACTOR_BACKLOG_V5.md) — active refactor queue (so your work doesn't collide with in-flight changes)
 
 ---
 
@@ -58,7 +57,7 @@ Reload Obsidian (`Ctrl/Cmd+R`) to pick up the new build.
 |---|---|
 | `npm run dev` | esbuild watch mode |
 | `npm run build` | `tsc -noEmit -skipLibCheck && esbuild production` (must pass before PR) |
-| `npm run test` | Jest — **54 suites, ~923 tests** |
+| `npm run test` | Jest — **98 suites, ~1597 tests** |
 | `npm run test:watch` | Jest in watch mode |
 | `npm run test:coverage` | Coverage report |
 | `npm run lint` | ESLint with Obsidian rules |
@@ -70,9 +69,9 @@ Reload Obsidian (`Ctrl/Cmd+R`) to pick up the new build.
 
 ## Project structure
 
-**The authoritative codebase map is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. It documents every top-level folder under `src/`, the four-layer architecture (Plugin shell → UI surface → Engine core → Data layer), and where to add new widgets, charts, datasources, field types, formula functions, or languages.
+**The authoritative codebase map is [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md)**. It documents every top-level folder under `src/`, the four-layer architecture (Plugin shell → UI surface → Engine core → Data layer), and where to add new widgets, charts, datasources, field types, formula functions, or languages.
 
-This `CONTRIBUTING.md` intentionally does not duplicate that map — start with `ARCHITECTURE.md` §3 ("`src/` — code space map") and §8 ("How to navigate this codebase") before opening a non-trivial PR.
+This `CONTRIBUTING.md` intentionally does not duplicate that map — start with `ARCHITECTURE_V5.md §1` ("Слои / Layers") before opening a non-trivial PR.
 
 ---
 
@@ -106,7 +105,7 @@ Detailed rules: [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md). Hard rules:
 3. Run the quality gate locally:
    ```bash
    npm run build      # must pass (tsc + esbuild)
-   npm run test       # all 54 suites must pass
+   npm run test       # all 98 suites must pass
    npm run lint       # 0 errors
    ```
 4. Update documentation if your change affects user-facing behaviour or public API.
@@ -155,13 +154,10 @@ When working on a specific subsystem, the relevant document is the source of tru
 
 | Subsystem | Document |
 |---|---|
-| Codebase map (start here) | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Engine v2 (Relations, Rollups, Custom Properties Viewer) | [docs/architecture-engine-v2.md](docs/architecture-engine-v2.md) |
-| Database View (widgets, layout, in-frame engine) | [docs/architecture-database-view.md](docs/architecture-database-view.md) |
-| Filters (42 operators, AND/OR groups) | [docs/architecture-filters.md](docs/architecture-filters.md) |
-| Drag & Drop (Calendar timeline, Board) | [docs/architecture-drag-drop.md](docs/architecture-drag-drop.md) |
-| Agenda 2.0 | [docs/architecture-agenda.md](docs/architecture-agenda.md) |
-| Custom View API | [obsidian-projects-types/README.md](obsidian-projects-types/README.md) |
+| Codebase map (start here) | [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) |
+| Refactor backlog / task queue | [docs/internal/REFACTOR_BACKLOG_V5.md](docs/internal/REFACTOR_BACKLOG_V5.md) |
+| Dashboard View (canvas, widgets, engine) | [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) §2 (Module Inventory) |
+| Custom View API | [docs/api.md](docs/api.md) |
 
 ---
 

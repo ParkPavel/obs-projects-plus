@@ -33,8 +33,9 @@ export function dataFieldTypeOptions(t: TranslateFn): DataFieldTypeOption[] {
     { label: t("data-types.formula"), value: DataFieldType.Formula },
     { label: t("data-types.relation"), value: DataFieldType.Relation },
     { label: t("data-types.rollup"), value: DataFieldType.Rollup },
+    { label: t("data-types.unique_id"), value: DataFieldType.UniqueId },
   ];
 }
 
 /** Stable count of selectable types (Unknown excluded). */
-export const SELECTABLE_DATA_FIELD_TYPE_COUNT = 10;
+export const SELECTABLE_DATA_FIELD_TYPE_COUNT = 11;

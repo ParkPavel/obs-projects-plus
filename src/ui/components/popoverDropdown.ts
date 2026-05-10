@@ -9,6 +9,8 @@ export interface PopoverItem {
   label: string;
   icon?: string;
   selected?: boolean;
+  /** When true, clicking this item does not close the popover (toggle pattern). */
+  keepOpen?: boolean;
   handler: () => void;
 }
 
@@ -147,7 +149,22 @@ export function makePopover(
     btn.addEventListener("mousedown", (e) => {
       e.preventDefault();
       it.handler();
-      destroyPopover();
+      if (it.keepOpen) {
+        // Toggle visual selected state without closing
+        const nowSelected = btn.classList.toggle("ppp-pop-item--selected");
+        const existingChk = btn.querySelector(".ppp-pop-item-check");
+        if (nowSelected && !existingChk) {
+          const chk = activeDocument.createElement("span");
+          chk.addClass("ppp-pop-muted", "ppp-pop-item-check");
+          chk.style.color = "var(--interactive-accent)";
+          setIcon(chk, "check");
+          btn.appendChild(chk);
+        } else if (!nowSelected && existingChk) {
+          existingChk.remove();
+        }
+      } else {
+        destroyPopover();
+      }
     });
 
     if (it.icon) {
@@ -164,7 +181,7 @@ export function makePopover(
 
     if (it.selected) {
       const chk = activeDocument.createElement("span");
-      chk.addClass("ppp-pop-muted");
+      chk.addClass("ppp-pop-muted", "ppp-pop-item-check");
       chk.style.color = "var(--interactive-accent)";
       setIcon(chk, "check");
       btn.appendChild(chk);

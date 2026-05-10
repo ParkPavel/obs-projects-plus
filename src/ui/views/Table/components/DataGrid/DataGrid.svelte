@@ -4,6 +4,7 @@
   import { i18n } from "src/lib/stores/i18n";
 
   import GridRow from "./GridRow.svelte";
+  import BulkActionBar from "./BulkActionBar.svelte";
 
   import type {
     GridColDef,
@@ -53,11 +54,38 @@
   export let getExtraColumnMenuEntries:
     | ((column: GridColDef) => ContextMenuEntry[])
     | undefined = undefined;
+  /** S8 — callback for bulk delete; when provided, row checkboxes are enabled. */
+  export let onBulkDelete: ((rowIds: GridRowId[]) => void) | undefined = undefined;
+  /** When provided (and not readonly), double-clicking a column header enters inline rename. */
+  export let onColumnRename: ((field: string, newName: string) => void) | undefined = undefined;
+  /** NPLAN-D2 — name of the field whose value is rendered as a per-row page icon. */
+  export let iconField: string | undefined = undefined;
 
   $: t = $i18n.t;
 
   $: visibleColumns = columns.filter((column) => !column.hide);
   $: sortedColumns = visibleColumns;
+
+  // S8 — bulk selection state
+  let selectedRowIds = new Set<GridRowId>();
+  $: anySelected = selectedRowIds.size > 0;
+
+  function toggleRowSelect(rowId: GridRowId) {
+    const next = new Set(selectedRowIds);
+    if (next.has(rowId)) next.delete(rowId);
+    else next.add(rowId);
+    selectedRowIds = next;
+  }
+
+  function clearSelection() {
+    selectedRowIds = new Set();
+  }
+
+  function handleBulkDelete() {
+    const ids = [...selectedRowIds];
+    clearSelection();
+    onBulkDelete?.(ids);
+  }
 
   // [column, row]
   let activeCell: [number, number] = [3, 3];
@@ -167,6 +195,16 @@
   aria-colcount={sortedColumns.length + 1}
   aria-rowcount={rows.length + 2}
 >
+  <!-- S8: bulk-action bar (shown when any rows selected) -->
+  {#if anySelected}
+    <BulkActionBar
+      selectedIds={selectedRowIds}
+      {readonly}
+      on:deleteSelected={handleBulkDelete}
+      on:clearSelection={clearSelection}
+    />
+  {/if}
+
   <GridHeader
     columns={sortedColumns
       .filter((col) => !col.hide)
@@ -182,6 +220,11 @@
     }}
     onColumnMenu={(field, event) => createColumnMenu(field, event)}
     onColumnOrder={handleColumnOrder}
+    onAddColumn={readonly ? undefined : () => {
+      const lastCol = sortedColumns.filter((c) => !c.hide).at(-1);
+      if (lastCol) onColumnInsert(lastCol.field, 1);
+    }}
+    onColumnRename={readonly ? undefined : onColumnRename}
   />
   {#each rows as { rowId, row, cellStyles }, i (rowId)}
     <GridRow
@@ -193,6 +236,9 @@
       {onRowChange}
       cellStyles={cellStyles ?? {}}
       color={colorModel(rowId)}
+      iconValue={iconField ? row[iconField] : null}
+      selected={selectedRowIds.has(rowId)}
+      onToggleSelect={onBulkDelete ? toggleRowSelect : undefined}
       onRowMenu={(rowId, row, event) => createRowMenu(rowId, row, event)}
       onRowOpen={(rowId, openMode) => {
         if (onRowOpen && openMode) {

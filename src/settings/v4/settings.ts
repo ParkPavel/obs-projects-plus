@@ -7,6 +7,7 @@ import type {
 } from "../base/settings";
 import { DEFAULT_VIEW } from "../base/settings";
 import { defaultModeForFunction } from "src/lib/database/rollupMode";
+import { migrateAggregationCount } from "src/ui/views/Dashboard/migration";
 
 // Re-use v3 date/agenda types — no structural changes in v4.
 export type {
@@ -51,6 +52,12 @@ export type ProjectDefinition<ViewDef> = {
   readonly dateFormat?: DateFormatConfig;
   readonly autosave?: boolean;
   readonly agenda?: AgendaConfig;
+  /**
+   * NPLAN-A2 — Per-project monotonic counter feeding `UniqueId`
+   * fields. Incremented on `createDataRecord`. Optional for
+   * back-compat: undefined → treat as 0 on first read.
+   */
+  readonly uniqueIdCounter?: number;
 };
 
 export type UnsavedProjectDefinition = Omit<
@@ -101,6 +108,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
+    replaceObsidianProperties: false,
   },
 };
 
@@ -178,7 +186,12 @@ function resolveView(unresolved: Partial<ViewDefinition>): ViewDefinition {
   // By v4 all legacy types ("table", "database") have been migrated to
   // "dashboard" by migrateV3ToV4 in settings.ts. No runtime remap needed.
   if (name && id && type) {
-    return { ...DEFAULT_VIEW, ...unresolved, name, id, type };
+    const merged = { ...DEFAULT_VIEW, ...unresolved, name, id, type };
+    // R5-004: rename legacy footer aggregation "count" -> "count_total"
+    // inside opaque view.config (DataTable.aggregations, Stats/Summary
+    // cards.aggregation, Chart yAxis.aggregation, nested widgets).
+    const config = migrateAggregationCount(merged.config);
+    return config === merged.config ? merged : { ...merged, config };
   }
 
   throw new Error("Invalid view definition");
@@ -194,6 +207,7 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
   showViewTitles: true,
   animationBehavior: "smooth",
   disableHapticFeedback: false,
+  replaceObsidianProperties: false,
 };
 
 export function resolvePreferences(

@@ -74,7 +74,7 @@
     on:mousedown
     on:navigate
   />
-{:else if column.type === "date"}
+{:else if column.type === "date" || column.type === "autotime"}
   {#if column.typeConfig?.time}
     <GridDatetimeCell
       {selected}
@@ -82,7 +82,7 @@
       {colindex}
       value={isOptionalDate(value) ? value : null}
       rawValue={!isOptionalDate(value) ? value : null}
-      {onChange}
+      onChange={column.type === "autotime" ? () => undefined : onChange}
       {column}
       on:mousedown
       on:navigate
@@ -94,7 +94,7 @@
       {colindex}
       value={isOptionalDate(value) ? value : null}
       rawValue={!isOptionalDate(value) ? value : null}
-      {onChange}
+      onChange={column.type === "autotime" ? () => undefined : onChange}
       {column}
       on:mousedown
       on:navigate
@@ -118,6 +118,7 @@
     {colindex}
     {value}
     {column}
+    onChange={column.editable ? (v) => onChange(v) : undefined}
     on:mousedown
     on:navigate
   />
@@ -131,6 +132,27 @@
     on:mousedown
     on:navigate
   />
+{:else if column.type === "unique_id"}
+  <GridTextCell
+    {selected}
+    {rowindex}
+    {colindex}
+    value={isOptionalString(value) ? value : null}
+    onChange={() => undefined}
+    {column}
+    on:mousedown
+    on:navigate
+  />
+{:else if column.type === "formula"}
+  {#if typeof value === "boolean"}
+    <GridBooleanCell {selected} {rowindex} {colindex} value={value} onChange={() => undefined} {column} on:mousedown on:navigate />
+  {:else if typeof value === "number"}
+    <GridNumberCell {selected} {rowindex} {colindex} value={value} onChange={() => undefined} {column} on:mousedown on:navigate />
+  {:else if value instanceof Date}
+    <GridDateCell {selected} {rowindex} {colindex} value={value} rawValue={null} onChange={() => undefined} {column} on:mousedown on:navigate />
+  {:else}
+    <GridTextCell {selected} {rowindex} {colindex} value={value != null ? String(value) : null} onChange={() => undefined} {column} on:mousedown on:navigate />
+  {/if}
 {:else}
   <GridCell
     {rowindex}

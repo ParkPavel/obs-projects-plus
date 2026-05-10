@@ -9,7 +9,7 @@
   import type { DataTableConfig, FieldPreset } from "../types";
   import type { TransformPipeline } from "../engine/transformTypes";
 
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
   import DataTableWidget from "./DataTable/DataTableWidget.svelte";
   import ChartWidget from "./Chart/ChartWidget.svelte";
   import ChartConfigPanel from "./Chart/ChartConfig.svelte";
@@ -26,6 +26,18 @@
   import FilterTabsConfigPanel from "./FilterTabs/FilterTabsConfig.svelte";
   import SummaryRowWidget from "./SummaryRow/SummaryRowWidget.svelte";
   import SummaryRowConfigPanel from "./SummaryRow/SummaryRowConfig.svelte";
+  import DataListWidget from "./DataList/DataListWidget.svelte";
+  import DataListConfigPanel from "./DataList/DataListConfig.svelte";
+  import SubBaseCanvasWidget from "./SubBaseCanvas/SubBaseCanvasWidget.svelte";
+  import SubBaseCanvasConfigPanel from "./SubBaseCanvas/SubBaseCanvasConfig.svelte";
+  import YamlVisualizerWidget from "./YamlVisualizer/YamlVisualizerWidget.svelte";
+  import DatabaseCallBlock from "./DatabaseCall/DatabaseCallBlock.svelte";
+  import TimelineWidget from "./Timeline/TimelineWidget.svelte";
+  import TimelineConfigPanel from "./Timeline/TimelineConfig.svelte";
+  import CoverBannerWidget from "./CoverBanner/CoverBannerWidget.svelte";
+  import CoverBannerConfigPanel from "./CoverBanner/CoverBannerConfig.svelte";
+  import TextWidget from "./TextWidget/TextWidget.svelte";
+  import DividerWidget from "./DividerWidget/DividerWidget.svelte";
   import { getConfigPanel } from "./configPanelRegistry";
   import { ariaWidget } from "../engine/accessibility";
   import { executeTransform } from "../engine/transformExecutor";
@@ -33,6 +45,7 @@
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import { resizable } from "./resizable";
+  import { draggable } from "./draggable";
   import { getWidgetMeta } from "./widgetRegistry";
 
   // ── Props ──────────────────────────────────────────────────
@@ -84,6 +97,24 @@
   let showPipeline = false;
   let renderError: string | null = null;
 
+  // DG-9: one-shot IntersectionObserver — renders skeleton until visible
+  let hostEl: HTMLDivElement;
+  let contentVisible = false;
+
+  onMount(() => {
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          contentVisible = true;
+          obs.disconnect();
+        }
+      },
+      { threshold: 0 },
+    );
+    obs.observe(hostEl);
+    return () => obs.disconnect();
+  });
+
   // Widget meta for resize constraints
   $: meta = getWidgetMeta(widget.type);
   $: resizableParams = {
@@ -91,12 +122,28 @@
     h: collapsed ? 1 : widget.layout.h,
     minW: widget.layout.minW ?? meta?.defaultLayout.minW ?? 2,
     minH: widget.layout.minH ?? meta?.defaultLayout.minH ?? 1,
-    enabled: !collapsed && !readonly,
+    enabled: !collapsed && !readonly && !(widget.layout.locked ?? false),
     onResize: (newW: number, newH: number) => {
       dispatch("configChange", {
         id: widget.id,
         changes: {
           layout: { ...widget.layout, w: newW, h: newH },
+        },
+      });
+    },
+  };
+
+  $: draggableParams = {
+    x: widget.layout.x,
+    y: widget.layout.y,
+    w: widget.layout.w,
+    h: collapsed ? 1 : widget.layout.h,
+    enabled: !readonly && !(widget.layout.locked ?? false),
+    onMove: (newX: number, newY: number) => {
+      dispatch("configChange", {
+        id: widget.id,
+        changes: {
+          layout: { ...widget.layout, x: newX, y: newY },
         },
       });
     },
@@ -153,6 +200,10 @@
 
   function handleStatsConfigChange(e: CustomEvent<StatsConfig>) {
     handleWidgetConfigChange(e.detail as unknown as Record<string, unknown>);
+  }
+
+  function handleYamlVisualizerConfigChange(e: CustomEvent<unknown>) {
+    handleWidgetConfigChange(e.detail as Record<string, unknown>);
   }
 
   // ── Multi-DataTable: per-widget config overlay ────────────
@@ -244,14 +295,17 @@
 <div
   class="ppp-widget-host"
   class:ppp-widget-host--collapsed={collapsed}
+  bind:this={hostEl}
   role={widgetAria.role}
   aria-labelledby={`ppp-widget-title-${widget.id}`}
   tabindex={widgetAria.tabindex}
   style:grid-column={widget.layout.w === 12
     ? "1 / -1"
-    : `span ${widget.layout.w}`}
-  style:grid-row={`span ${collapsed ? 1 : widget.layout.h}`}
+    : `${widget.layout.x} / span ${widget.layout.w}`}
+  style:grid-row={`${widget.layout.y} / span ${collapsed ? 1 : widget.layout.h}`}
+  style:z-index={widget.layout.zIndex ?? null}
   use:resizable={resizableParams}
+  use:draggable={draggableParams}
 >
   <!-- Header -->
   <div class="ppp-widget-header">
@@ -273,7 +327,7 @@
         title={$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure widget" })}
       >⚙</button>
     {/if}
-    {#if !readonly && widget.type !== "data-table"}
+    {#if !readonly && widget.type !== "data-table" && widget.type !== "text" && widget.type !== "divider"}
       <button
         class="ppp-widget-pipeline-btn clickable-icon"
         class:ppp-widget-pipeline-btn--active={currentPipeline.steps.length > 0}
@@ -292,6 +346,13 @@
       </button>
     {/if}
     {#if !readonly}
+      <button
+        class="ppp-widget-lock-btn clickable-icon"
+        class:ppp-widget-lock-btn--locked={widget.layout.locked}
+        on:click={() => dispatch("configChange", { id: widget.id, changes: { layout: { ...widget.layout, locked: !(widget.layout.locked ?? false) } } })}
+        aria-label={widget.layout.locked ? $i18n.t("views.dashboard.widget.unlock", { defaultValue: "Unlock widget" }) : $i18n.t("views.dashboard.widget.lock", { defaultValue: "Lock widget position" })}
+        title={widget.layout.locked ? $i18n.t("views.dashboard.widget.unlock", { defaultValue: "Unlock widget" }) : $i18n.t("views.dashboard.widget.lock", { defaultValue: "Lock widget position" })}
+      >{widget.layout.locked ? "🔒" : "🔓"}</button>
       <button
         class="ppp-widget-remove-btn clickable-icon"
         on:click={() => dispatch("removeWidget", widget.id)}
@@ -337,6 +398,25 @@
     />
   {/if}
 
+  {#if showConfig && widget.type === "data-list"}
+    <DataListConfigPanel
+      config={widget.config}
+      fields={transformedFrame.fields}
+      on:change={(e) => handleWidgetConfigChange(e.detail)}
+      on:close={() => (showConfig = false)}
+    />
+  {/if}
+
+  {#if showConfig && widget.type === "sub-base-canvas"}
+    <SubBaseCanvasConfigPanel
+      config={widget.config}
+      fields={transformedFrame.fields}
+      source={transformedFrame}
+      on:change={(e) => handleWidgetConfigChange(e.detail)}
+      on:close={() => (showConfig = false)}
+    />
+  {/if}
+
   {#if showConfig && widget.type === "comparison"}
     <ComparisonConfigPanel
       config={widget.config}
@@ -364,6 +444,23 @@
     />
   {/if}
 
+  {#if showConfig && widget.type === "timeline"}
+    <TimelineConfigPanel
+      config={widget.config}
+      fields={transformedFrame.fields}
+      on:change={(e) => handleWidgetConfigChange(e.detail)}
+      on:close={() => (showConfig = false)}
+    />
+  {/if}
+
+  {#if showConfig && widget.type === "cover-banner"}
+    <CoverBannerConfigPanel
+      config={widget.config}
+      on:change={(e) => handleWidgetConfigChange(e.detail)}
+      on:close={() => (showConfig = false)}
+    />
+  {/if}
+
   <!-- Transform pipeline editor -->
   {#if showPipeline}
     <PipelineEditor
@@ -379,7 +476,9 @@
   <!-- Content -->
   {#if !collapsed}
     <div class="ppp-widget-content" use:captureErrors>
-      {#if renderError}
+      {#if !contentVisible}
+        <div class="ppp-widget-skeleton" aria-hidden="true"></div>
+      {:else if renderError}
         <div class="ppp-widget-error">
           <span class="ppp-widget-error-icon">⚠</span>
           <span>{renderError}</span>
@@ -449,6 +548,65 @@
           source={transformedFrame}
           pipelineSteps={currentPipeline.steps.length}
         />
+      {:else if widget.type === "data-list"}
+        <DataListWidget
+          config={widget.config}
+          source={transformedFrame}
+          pipelineSteps={currentPipeline.steps.length}
+        />
+      {:else if widget.type === "sub-base-canvas"}
+        <SubBaseCanvasWidget
+          config={widget.config}
+          source={transformedFrame}
+          on:change={(e) => handleWidgetConfigChange(e.detail)}
+        />
+      {:else if widget.type === "yaml-visualizer"}
+        {#if project}
+          <YamlVisualizerWidget
+            config={widget.config}
+            source={transformedFrame}
+            {project}
+            {api}
+            {readonly}
+            on:change={handleYamlVisualizerConfigChange}
+          />
+        {:else}
+          <div class="ppp-widget-placeholder">
+            {$i18n.t("views.dashboard.widget.not-configured", { type: widget.type })}
+          </div>
+        {/if}
+      {:else if widget.type === "database-call"}
+        <DatabaseCallBlock
+          frame={transformedFrame}
+          {api}
+          {readonly}
+          {getRecordColor}
+          fields={transformedFrame.fields}
+          {tableConfig}
+          {fieldPresets}
+          {activeFieldPresetId}
+          {project}
+          config={widget.config}
+          on:configChange={(e) => handleWidgetConfigChange(e.detail)}
+          on:tableConfigChange={(e) => dispatch("tableConfigChange", e.detail)}
+          on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
+        />
+      {:else if widget.type === "timeline"}
+        <TimelineWidget source={transformedFrame} config={widget.config} />
+      {:else if widget.type === "cover-banner"}
+        <CoverBannerWidget config={widget.config} />
+      {:else if widget.type === "text"}
+        <TextWidget
+          config={widget.config}
+          {readonly}
+          on:change={(e) => handleWidgetConfigChange(e.detail)}
+        />
+      {:else if widget.type === "divider"}
+        <DividerWidget
+          config={widget.config}
+          {readonly}
+          on:change={(e) => handleWidgetConfigChange(e.detail)}
+        />
       {:else}
         <div class="ppp-widget-placeholder">
           {$i18n.t("views.dashboard.widget.not-configured", { type: widget.type })}
@@ -469,6 +627,7 @@
     /* Matryoshka: each widget is a container context for its children */
     container-type: inline-size;
     container-name: widget;
+    transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
   }
 
   .ppp-widget-host--collapsed {
@@ -533,6 +692,33 @@
     opacity: 1;
   }
 
+  .ppp-widget-settings-btn {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    border-radius: var(--radius-s, 0.25rem);
+    opacity: 0;
+    transition: opacity 120ms ease, transform 120ms ease, color 120ms ease, background 120ms ease;
+  }
+
+  .ppp-widget-host:hover .ppp-widget-settings-btn {
+    opacity: 1;
+  }
+
+  .ppp-widget-settings-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+    transform: scale(1.02);
+  }
+
   .ppp-widget-remove-btn {
     flex-shrink: 0;
     width: 1.5rem;
@@ -557,6 +743,36 @@
 
   .ppp-widget-remove-btn:hover {
     color: var(--text-error);
+    background: var(--background-modifier-hover);
+  }
+
+  .ppp-widget-lock-btn {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    border-radius: var(--radius-s, 0.25rem);
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .ppp-widget-host:hover .ppp-widget-lock-btn {
+    opacity: 1;
+  }
+
+  .ppp-widget-lock-btn--locked {
+    opacity: 1;
+    color: var(--text-accent);
+  }
+
+  .ppp-widget-lock-btn:hover {
     background: var(--background-modifier-hover);
   }
 
@@ -693,7 +909,9 @@
   /* Touch devices: always show hover-only action buttons */
   @media (pointer: coarse) {
     .ppp-widget-type-badge,
+    .ppp-widget-settings-btn,
     .ppp-widget-remove-btn,
+    .ppp-widget-lock-btn,
     .ppp-widget-pipeline-btn {
       opacity: 1;
     }
@@ -742,5 +960,80 @@
       width: 1.5rem;
       height: 1.5rem;
     }
+  }
+
+  /* Drag handle (injected by use:draggable action) */
+  :global(.ppp-drag-handle) {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: grab;
+    font-size: 0.875rem;
+    opacity: 0;
+    transition: opacity 120ms ease;
+    padding: 0;
+    border-radius: var(--radius-s, 0.25rem);
+  }
+
+  .ppp-widget-host:hover :global(.ppp-drag-handle) {
+    opacity: 0.6;
+  }
+
+  :global(.ppp-drag-handle:hover) {
+    opacity: 1 !important;
+    color: var(--text-muted);
+  }
+
+  :global(.ppp-drag-handle:active),
+  :global(.ppp-widget-host--dragging .ppp-drag-handle) {
+    cursor: grabbing;
+    opacity: 1 !important;
+  }
+
+  :global(.ppp-widget-host--dragging) {
+    outline: 0.125rem dashed var(--interactive-accent);
+    outline-offset: -0.0625rem;
+    opacity: 0.85;
+    transform: scale(1.01);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+    z-index: 100 !important;
+  }
+
+  :global(body.ppp-dragging) {
+    user-select: none;
+  }
+
+  @media (pointer: coarse) {
+    :global(.ppp-drag-handle) {
+      opacity: 0.5;
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+  }
+
+  /* DG-9 lazy-render skeleton */
+  .ppp-widget-skeleton {
+    flex: 1;
+    min-height: 4rem;
+    background: linear-gradient(
+      90deg,
+      var(--background-modifier-border) 25%,
+      var(--background-secondary-alt, var(--background-secondary)) 50%,
+      var(--background-modifier-border) 75%
+    );
+    background-size: 200% 100%;
+    animation: ppp-shimmer 1.4s infinite linear;
+    border-radius: var(--radius-s, 0.25rem);
+  }
+
+  @keyframes ppp-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 </style>

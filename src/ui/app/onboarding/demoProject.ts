@@ -1311,7 +1311,7 @@ export async function createDemoProject(vault: Vault) {
       "assignee",
       "tags",
     ],
-    aggregations: { progress: "avg", estimate: "sum", name: "count" },
+    aggregations: { progress: "avg", estimate: "sum", name: "count_total" },
     showAggregationRow: true,
     rowHeight: "default",
     wrapText: false,

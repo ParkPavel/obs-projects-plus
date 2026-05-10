@@ -96,6 +96,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
+    replaceObsidianProperties: false,
   },
 };
 
@@ -182,6 +183,7 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
   showViewTitles: true,
   animationBehavior: "smooth",
   disableHapticFeedback: false,
+  replaceObsidianProperties: false,
 };
 
 export function resolvePreferences(

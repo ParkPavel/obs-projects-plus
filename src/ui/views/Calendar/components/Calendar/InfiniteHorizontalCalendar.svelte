@@ -31,6 +31,7 @@
   export let firstDayOfWeek: number;
   export let interval: CalendarInterval;
   export let checkField: string | undefined;
+  export let iconField: string | undefined = undefined;
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
@@ -1004,6 +1005,7 @@
                   width={100 / week.length}
                   {date}
                   {checkField}
+                  {iconField}
                   records={groupedRecords[date.format("YYYY-MM-DD")] || []}
                   processedRecords={processedGroupedRecords[date.format("YYYY-MM-DD")] || []}
                   {onRecordClick}

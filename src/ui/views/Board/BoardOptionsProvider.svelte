@@ -17,6 +17,7 @@
   $: ({ fields } = frame);
 
   $: columnWidth = config?.columnWidth ?? 270;
+  $: groupMode = config?.groupMode ?? "values";
 </script>
 
 <!--
@@ -30,8 +31,10 @@
   <ViewContent>
     <slot
       {columnWidth}
+      {groupMode}
       checkField={config.checkField ?? ""}
       customHeader={config.headerField}
+      iconField={config.iconField}
       groupByField={fields.find((field) => config.groupByField === field.name)}
       includeFields={config.includeFields ?? []}
     />

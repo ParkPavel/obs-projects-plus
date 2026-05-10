@@ -18,6 +18,7 @@
   import { Card, CardContent, CardMedia } from "./components/Card";
   import Grid from "./components/Grid/Grid.svelte";
   import Image from "./components/Image/Image.svelte";
+  import { PageIcon } from "src/ui/components/PageIcon";
   import type { GalleryConfig } from "./types";
   import type { FilterCondition, ProjectDefinition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
@@ -125,9 +126,17 @@
   {config}
   let:fitStyle
   let:coverField
+  let:iconField
   let:cardWidth
 >
   {#if records.length}
+    <!-- C18: count footer -->
+    <div class="ppp-gallery-footer">
+      <span class="ppp-gallery-footer-count">
+        {records.length}
+        {$i18n.t("views.gallery.records", { count: records.length, defaultValue: records.length === 1 ? "record" : "records" })}
+      </span>
+    </div>
     <Grid {cardWidth}>
       {#each records as record (record.id)}
         {@const color = getRecordColor(record)}
@@ -181,6 +190,9 @@
                   handleHoverLink(event, sourcePath);
                 }}
               >
+                {#if iconField}
+                  <PageIcon value={record.values[iconField.name]} />
+                {/if}
                 {getDisplayName(record.id)}
               </InternalLink>
               <CardMetadata
@@ -218,3 +230,30 @@
     </CenterBox>
   {/if}
 </GalleryOptionsProvider>
+
+<style>
+  .ppp-gallery-footer {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem 0;
+  }
+
+  .ppp-gallery-footer-count {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    user-select: none;
+  }
+
+  .ppp-gallery-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+  }
+
+  .ppp-gallery-empty-hint {
+    font-size: 0.875rem;
+    color: var(--text-faint);
+  }
+</style>

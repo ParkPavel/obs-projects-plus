@@ -26,8 +26,13 @@ import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
 
 export type RollupFunction =
   | "count"
+  /** R5-004 — total record count including null/empty. */
+  | "count_total"
   | "count_values"
   | "count_unique"
+  | "count_empty"
+  | "percent_empty"
+  | "percent_not_empty"
   | "sum"
   | "avg"
   | "min"
@@ -36,7 +41,11 @@ export type RollupFunction =
   | "range"
   | "percent_true"
   | "concat"
-  | "concat_unique";
+  | "concat_unique"
+  /** NPLAN-C3 — show all original values as a visual list. */
+  | "show_original"
+  /** NPLAN-C3 — show unique values as a visual chip list. */
+  | "show_unique";
 
 export interface RollupConfig {
   /** Relation field containing wiki-links */
@@ -76,8 +85,28 @@ export function aggregate(
     case "count":
       return fmtNum(nonNull.length);
 
+    case "count_total":
+      return fmtNum(values.length);
+
     case "count_values":
       return fmtNum(nonNull.filter((v) => v !== "" && v !== false).length);
+
+    case "count_empty": {
+      const filled = nonNull.filter((v) => v !== "" && v !== false).length;
+      return fmtNum(values.length - filled);
+    }
+
+    case "percent_empty": {
+      if (values.length === 0) return fmtStr("0%");
+      const filled = nonNull.filter((v) => v !== "" && v !== false).length;
+      return fmtStr(Math.round(((values.length - filled) / values.length) * 100) + "%");
+    }
+
+    case "percent_not_empty": {
+      if (values.length === 0) return fmtStr("0%");
+      const filled = nonNull.filter((v) => v !== "" && v !== false).length;
+      return fmtStr(Math.round((filled / values.length) * 100) + "%");
+    }
 
     case "count_unique": {
       const set = new Set(nonNull.map(String));
@@ -136,6 +165,14 @@ export function aggregate(
     case "concat_unique": {
       const unique = [...new Set(nonNull.map(String))];
       return fmtStr(unique.join(sep));
+    }
+
+    case "show_original":
+      return fmtStr(nonNull.map(String).join(sep));
+
+    case "show_unique": {
+      const uniq = [...new Set(nonNull.map(String))];
+      return fmtStr(uniq.join(sep));
     }
 
     default:

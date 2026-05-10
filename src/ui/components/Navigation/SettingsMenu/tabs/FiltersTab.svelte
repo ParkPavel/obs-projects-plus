@@ -19,6 +19,14 @@
 
   const dispatch = createEventDispatcher<{ update: FilterDefinition }>();
 
+  // DG-9: debounce value-input dispatches by 150ms to avoid re-filtering on every keystroke
+  let _valueDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  function dispatchDebounced(def: FilterDefinition) {
+    clearTimeout(_valueDebounceTimer);
+    _valueDebounceTimer = setTimeout(() => dispatch("update", def), 150);
+  }
+  onDestroy(() => clearTimeout(_valueDebounceTimer));
+
   function toLocal(def?: FilterDefinition): FilterDefinition {
     return {
       conjunction: def?.conjunction ?? "and",
@@ -32,9 +40,10 @@
   $: hasContent = local.conditions.length > 0 || (local.groups?.length ?? 0) > 0;
 
   // ── Helpers for path-based updates (groups can be nested) ──
-  function updateRoot(newLocal: FilterDefinition) {
+  function updateRoot(newLocal: FilterDefinition, debounce = false) {
     local = newLocal;
-    dispatch("update", local);
+    if (debounce) dispatchDebounced(local);
+    else dispatch("update", local);
   }
 
   function updateGroupAtPath(root: FilterDefinition, path: number[], patch: Partial<FilterDefinition>): FilterDefinition {
@@ -57,19 +66,50 @@
     return { ...root, groups };
   }
 
+  // DG-3: drag-to-reorder root conditions via HTML5 drag API
+  let dragIndex: number | null = null;
+  let dragOverIndex: number | null = null;
+
+  function onDragStart(index: number, e: DragEvent) {
+    dragIndex = index;
+    e.dataTransfer!.effectAllowed = "move";
+  }
+
+  function onDragOver(index: number, e: DragEvent) {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = "move";
+    dragOverIndex = index;
+  }
+
+  function onDrop(index: number, e: DragEvent) {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index) { dragIndex = null; dragOverIndex = null; return; }
+    const arr = [...local.conditions];
+    const [moved] = arr.splice(dragIndex, 1);
+    arr.splice(index, 0, moved!);
+    dragIndex = null;
+    dragOverIndex = null;
+    updateRoot({ ...local, conditions: arr });
+  }
+
+  function onDragEnd() {
+    dragIndex = null;
+    dragOverIndex = null;
+  }
+
   // ── Condition CRUD (root level) ──
-  function updateCondition(index: number, patch: Partial<FilterCondition>, groupPath: number[] = []) {
+  function updateCondition(index: number, patch: Partial<FilterCondition>, groupPath: number[] = [], debounce = false) {
     if (groupPath.length === 0) {
       const newConditions = local.conditions.map((c, i) =>
         i === index ? { ...c, ...patch } : c
       );
-      updateRoot({ ...local, conditions: newConditions });
+      updateRoot({ ...local, conditions: newConditions }, debounce);
     } else {
       const group = getGroupAtPath(local, groupPath);
       const newConditions = group.conditions.map((c, i) =>
         i === index ? { ...c, ...patch } : c
       );
-      updateRoot(updateGroupAtPath(local, groupPath, { conditions: newConditions }));
+      updateRoot(updateGroupAtPath(local, groupPath, { conditions: newConditions }), debounce);
     }
   }
 
@@ -228,7 +268,19 @@
       {#each local.conditions as condition, index}
         {@const fieldType = getFieldType(condition.field)}
         {@const needsVal = operatorNeedsValue(condition.operator)}
-        <div class="filter-row" class:filter-row--disabled={!condition.enabled}>
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <div class="filter-row"
+          class:filter-row--disabled={!condition.enabled}
+          class:filter-row--drag-over={dragOverIndex === index && dragIndex !== null && dragIndex !== index}
+          draggable="true"
+          on:dragstart={(e) => onDragStart(index, e)}
+          on:dragover={(e) => onDragOver(index, e)}
+          on:drop={(e) => onDrop(index, e)}
+          on:dragend={onDragEnd}
+        >
+          <button class="row-btn row-drag" type="button" aria-label="Drag to reorder" tabindex="-1">
+            <Icon name="grip-vertical" size="sm" />
+          </button>
           <!-- Row prefix: "Где" for first, "и"/"или" for rest -->
           <span class="row-prefix">
             {#if index === 0 && (local.groups?.length ?? 0) === 0}
@@ -270,7 +322,7 @@
             {#if needsVal}
               <input class="value-input" type="text"
                 value={condition.value ?? ''}
-                on:input={(e) => { updateCondition(index, { value: inputVal(e) }); openValPop(index, e.currentTarget); }}
+                on:input={(e) => { updateCondition(index, { value: inputVal(e) }, [], true); openValPop(index, e.currentTarget); }}
                 on:focus={(e) => openValPop(index, e.currentTarget)}
                 on:blur={() => setTimeout(destroyPopover, 150)}
                 placeholder={$i18n.t('common.value-placeholder')} />
@@ -358,7 +410,7 @@
                   {#if gNeedsVal}
                     <input class="value-input" type="text"
                       value={gCond.value ?? ''}
-                      on:input={(e) => { updateCondition(cIdx, { value: inputVal(e) }, [gIndex]); openValPop(cIdx, e.currentTarget, [gIndex]); }}
+                      on:input={(e) => { updateCondition(cIdx, { value: inputVal(e) }, [gIndex], true); openValPop(cIdx, e.currentTarget, [gIndex]); }}
                       on:focus={(e) => openValPop(cIdx, e.currentTarget, [gIndex])}
                       on:blur={() => setTimeout(destroyPopover, 150)}
                       placeholder={$i18n.t('common.value-placeholder')} />
@@ -374,10 +426,109 @@
               </div>
             {/each}
 
-            <button class="add-btn add-btn--nested" type="button" on:click={() => addCondition([gIndex])}>
-              <Icon name="plus" size="xs" />
-              <span>{$i18n.t('components.filter.add-condition')}</span>
-            </button>
+            <!-- Depth-2: nested groups inside this group -->
+            {#each (group.groups ?? []) as nGroup, nIdx}
+              {@const nPath = [gIndex, nIdx]}
+              <div class="filter-group-wrapper filter-group-wrapper--nested">
+                <span class="row-prefix">
+                  {#if group.conditions.length === 0 && nIdx === 0}
+                    {$i18n.t('components.filter.where')}
+                  {:else}
+                    {group.conjunction === 'or' ? $i18n.t('components.filter.or') : $i18n.t('components.filter.and')}
+                  {/if}
+                </span>
+
+                <div class="filter-group filter-group--nested">
+                  <div class="filter-group-header">
+                    <select
+                      class="conj-select conj-select--group"
+                      value={nGroup.conjunction}
+                      on:change={(e) => {
+                        const val = e.currentTarget.value;
+                        updateRoot(updateGroupAtPath(local, nPath, { conjunction: val === 'or' ? 'or' : 'and' }));
+                      }}
+                    >
+                      <option value="and">{$i18n.t('components.filter.match-all')}</option>
+                      <option value="or">{$i18n.t('components.filter.match-any')}</option>
+                    </select>
+                    <button class="row-btn row-delete" style="opacity:1" type="button"
+                      on:click|stopPropagation={() => removeGroup(nPath)} title={$i18n.t('common.delete')}>
+                      <Icon name="x" size="sm" />
+                    </button>
+                  </div>
+
+                  {#each nGroup.conditions as nCond, nCIdx}
+                    {@const nFieldType = getFieldType(nCond.field)}
+                    {@const nNeedsVal = operatorNeedsValue(nCond.operator)}
+                    <div class="filter-row" class:filter-row--disabled={!nCond.enabled}>
+                      <span class="row-prefix">
+                        {#if nCIdx === 0}
+                          {$i18n.t('components.filter.where')}
+                        {:else}
+                          {nGroup.conjunction === 'or' ? $i18n.t('components.filter.or') : $i18n.t('components.filter.and')}
+                        {/if}
+                      </span>
+
+                      <button
+                        class="row-btn row-toggle"
+                        class:row-toggle--off={!nCond.enabled}
+                        type="button"
+                        on:click|stopPropagation={() => updateCondition(nCIdx, { enabled: !nCond.enabled }, nPath)}
+                      >
+                        <Icon name={nCond.enabled ? 'eye' : 'eye-off'} size="sm" />
+                      </button>
+
+                      <button class="chip chip--field" type="button"
+                        on:click={(e) => openFieldPop(nCIdx, e.currentTarget, nPath)}>
+                        <span class="chip-icon"><Icon name={getFieldIcon(nFieldType)} size="sm" /></span>
+                        <span class="chip-label">{nCond.field || $i18n.t('common.field')}</span>
+                        <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
+                      </button>
+
+                      <button class="chip chip--op" type="button"
+                        on:click={(e) => openOpPop(nCIdx, e.currentTarget, nPath)}>
+                        <span class="chip-label">{getOperatorLabel(nCond.operator)}</span>
+                        <span class="chip-chevron"><Icon name="chevron-down" size="xs" /></span>
+                      </button>
+
+                      <div class="value-area">
+                        {#if nNeedsVal}
+                          <input class="value-input" type="text"
+                            value={nCond.value ?? ''}
+                            on:input={(e) => { updateCondition(nCIdx, { value: inputVal(e) }, nPath, true); openValPop(nCIdx, e.currentTarget, nPath); }}
+                            on:focus={(e) => openValPop(nCIdx, e.currentTarget, nPath)}
+                            on:blur={() => setTimeout(destroyPopover, 150)}
+                            placeholder={$i18n.t('common.value-placeholder')} />
+                        {:else}
+                          <span class="no-value">—</span>
+                        {/if}
+                      </div>
+
+                      <button class="row-btn row-delete" type="button"
+                        on:click|stopPropagation={() => removeCondition(nCIdx, nPath)} title={$i18n.t('common.delete')}>
+                        <Icon name="trash-2" size="sm" />
+                      </button>
+                    </div>
+                  {/each}
+
+                  <button class="add-btn add-btn--nested" type="button" on:click={() => addCondition(nPath)}>
+                    <Icon name="plus" size="xs" />
+                    <span>{$i18n.t('components.filter.add-condition')}</span>
+                  </button>
+                </div>
+              </div>
+            {/each}
+
+            <div class="nested-add-actions">
+              <button class="add-btn add-btn--nested" type="button" on:click={() => addCondition([gIndex])}>
+                <Icon name="plus" size="xs" />
+                <span>{$i18n.t('components.filter.add-condition')}</span>
+              </button>
+              <button class="add-btn add-btn--nested" type="button" on:click={() => addGroup([gIndex])}>
+                <Icon name="plus" size="xs" />
+                <span>{$i18n.t('components.filter.add-group')}</span>
+              </button>
+            </div>
           </div>
         </div>
       {/each}
@@ -462,9 +613,20 @@
   .filter-group {
     display: flex; flex-direction: column; gap: 0.25rem;
     padding: 0.375rem 0.5rem; flex: 1;
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-left: 0.1875rem solid var(--interactive-accent);
     border-radius: 0.5rem;
     background: var(--background-secondary);
+  }
+  .filter-group--nested {
+    border-left-color: var(--text-muted);
+    background: var(--background-primary);
+  }
+  .filter-group-wrapper--nested {
+    margin-top: 0.125rem;
+  }
+  .nested-add-actions {
+    display: flex; gap: 0.25rem; margin-top: 0.125rem;
   }
   .filter-group-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -510,6 +672,13 @@
   .row-toggle:hover { color: var(--interactive-accent); opacity: 1; background: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.08); }
   .row-toggle--off { opacity: 1; color: var(--text-faint); }
   .row-delete:hover { color: var(--text-error); background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06); }
+  .row-drag { cursor: grab; }
+  .row-drag:active { cursor: grabbing; }
+  .filter-row:hover .row-drag { opacity: 0.5; }
+  .filter-row--drag-over {
+    border-top: 0.125rem solid var(--interactive-accent);
+    background: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.04);
+  }
 
   .add-actions { display: flex; gap: 0.375rem; }
 

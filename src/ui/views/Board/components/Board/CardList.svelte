@@ -12,6 +12,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
   import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
+  import { PageIcon } from "src/ui/components/PageIcon";
   import {
     getRecordColorContext,
     handleHoverLink,
@@ -40,6 +41,7 @@
   export let includeFields: DataField[];
   export let checkField: string | undefined;
   export let customHeader: DataField | undefined;
+  export let iconField: DataField | undefined = undefined;
   export let boardEditing: boolean;
   export let disableDnd: boolean = false;
 
@@ -113,6 +115,9 @@
                 on:check={({ detail: checked }) => onRecordCheck(item, checked)}
               />
             </span>
+          {/if}
+          {#if iconField}
+            <PageIcon value={item.values[iconField.name]} />
           {/if}
           {#if !customHeader}
             <InternalLink

@@ -1,5 +1,6 @@
 import type { TransformPipeline } from "./engine/transformTypes";
-import type { FilterOperator } from "src/settings/base/settings";
+import type { FilterOperator, FilterDefinition } from "src/settings/base/settings";
+import type { DataSource } from "src/settings/v3/settings";
 
 // ── Widget Types ──────────────────────────────────────────────
 
@@ -11,7 +12,24 @@ export type WidgetType =
   | "checklist"
   | "view-port"
   | "filter-tabs"
-  | "summary-row";
+  | "summary-row"
+  | "data-list"
+  | "sub-base-canvas"
+  | "yaml-visualizer"
+  /**
+   * Dashboard V2 (DG-2) — independent database-call block.
+   *
+   * Unlike legacy widgets which share a single project-level frame,
+   * database-call owns its source (folder/tag/dataview) and renders
+   * multiple view tabs (Table/Board/Calendar/...) inside one block.
+   * Each block is a self-contained query → display pipeline.
+   */
+  | "database-call"
+  | "timeline"
+  | "cover-banner"
+  /** C8 — static content widgets (no data source, no pipeline). */
+  | "text"
+  | "divider";
 
 export interface WidgetLayout {
   x: number;
@@ -20,6 +38,17 @@ export interface WidgetLayout {
   h: number;
   minW?: number;
   minH?: number;
+  /**
+   * Dashboard V2 (DG-1): when true, drag/resize callbacks are disabled
+   * for this widget. Default false.
+   */
+  locked?: boolean;
+  /**
+   * Dashboard V2 (DG-1): explicit stacking order on free-placement
+   * canvas. Auto-placed widgets ignore this; free-positioned widgets
+   * use it to resolve overlap order.
+   */
+  zIndex?: number;
 }
 
 export interface WidgetDefinition {
@@ -30,6 +59,49 @@ export interface WidgetDefinition {
   readonly config: Record<string, unknown>;
   readonly collapsed?: boolean;
   readonly transform?: TransformPipeline;
+}
+
+// ── Database-Call Context (DG-2) ─────────────────────────────
+
+/**
+ * Dashboard V2 — data context for `database-call` widgets.
+ *
+ * Unlike legacy widgets which inherit a shared project frame,
+ * database-call blocks own their source (folder/tag/dataview) and
+ * render multiple view tabs inside one block. Each tab persists its
+ * own config (sort/filter/group/etc.) without leaking into siblings.
+ */
+export interface WidgetDataContext {
+  /** Independent data source — folder, tag, or Dataview query. */
+  readonly sourceConfig: DataSource;
+  /**
+   * Optional global filter layered on top of source results. Applied
+   * before per-tab filters (so tabs can further narrow, not widen).
+   */
+  readonly subFilter?: FilterDefinition;
+  /** View tabs (Table/Board/Calendar/...) rendered inside this block. */
+  readonly viewTabs: ViewTab[];
+}
+
+/**
+ * Single view tab inside a database-call block. Stores view type +
+ * per-view settings (columns, groupBy, filters, etc.) so switching
+ * tabs doesn't lose state.
+ */
+export interface ViewTab {
+  readonly id: string;
+  readonly label: string;
+  readonly viewType:
+    | "table"
+    | "board"
+    | "calendar"
+    | "gallery"
+    | "list"
+    | "timeline"
+    | "chart"
+    | "stats";
+  /** View-specific settings (DataTableConfig | BoardConfig | ...). */
+  readonly config: Record<string, unknown>;
 }
 
 // ── DataTable Config ──────────────────────────────────────────
@@ -92,6 +164,10 @@ export interface DataTableConfig {
   readonly conditionalFormats?: ConditionalFormat[];
   readonly rowHeight?: "compact" | "default" | "expanded";
   readonly wrapText?: boolean;
+  /** S8 — When true, columns where every record has an empty/null value are hidden. */
+  readonly hideEmptyFields?: boolean;
+  /** NPLAN-D2 — page-level icon field rendered in the row header. */
+  readonly iconField?: string;
   /** Default property values applied when creating a new record */
   readonly defaultValues?: Record<string, string>;
   /** User dismissed the "right-click header" discoverability hint */
@@ -117,7 +193,7 @@ export interface DataTableSortCriteria {
 
 export type ColumnAggregation =
   | "none"
-  | "count"
+  | "count_total"
   | "count_values"
   | "count_unique"
   | "sum"
@@ -389,4 +465,88 @@ export interface SummaryColumnConfig {
 
 export interface SummaryRowConfig {
   readonly columns: SummaryColumnConfig[];
+}
+
+// ── DataList Config ──────────────────────────────────────────
+
+/** MPLAN-008 — Minimalist list view rendering one row per record:
+ * a title plus a small set of secondary fields shown inline. Reuses
+ * the Dashboard pipeline (filter / sort / pipelineSteps) — it is the
+ * render layer that differs from `DataTableWidget`. */
+export interface DataListConfig {
+  /** Field used as the row title (note name when empty). */
+  readonly titleField?: string;
+  /** Inline secondary fields rendered after the title. */
+  readonly fields: string[];
+  /** Soft cap on rendered rows; 0 = no limit. */
+  readonly limit?: number;
+  /** Optional sort field; falls back to title order when omitted. */
+  readonly sortField?: string;
+  readonly sortOrder?: "asc" | "desc";
+}
+
+// ── SubBaseCanvas Config ──────────────────────────────────────
+
+/** R5-009 — Standalone sub-base widget. Renders a tab strip of
+ * sub-base partitions; the active tab shows its filtered records as
+ * a list (titleField + secondary fields). Sub-base definitions are
+ * stored on the widget itself, decoupled from any DataTable widget. */
+export interface SubBaseCanvasConfig {
+  readonly subBases: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly filter: import("src/settings/base/settings").FilterDefinition;
+  }>;
+  readonly activeSubBaseId?: string;
+  readonly titleField?: string;
+  readonly fields: string[];
+  readonly limit?: number;
+  /**
+   * R5-010 inverse mode: when both fields are set, the widget shows source
+   * records that reference `inverseTargetId` via `inverseRelationField`,
+   * partitioned by SubBase filters instead of showing the raw source frame.
+   *
+   * Use case: "all tasks referencing this project, grouped by status SubBase".
+   * The target record is looked up from the `source` DataFrame by its id.
+   */
+  readonly inverseTargetId?: string;
+  readonly inverseRelationField?: string;
+}
+
+// ── Timeline Config ───────────────────────────────────────────
+
+/** S5 — Gantt/Timeline widget. Renders records as horizontal bars on a
+ * shared time axis. Uses the 4-param date model (startDate/startTime/endDate/endTime). */
+export interface TimelineConfig {
+  /** Field supplying bar start (Date or String YYYY-MM-DD). */
+  readonly startField: string;
+  /** Field supplying bar end. If omitted, bar is a single-day marker. */
+  readonly endField?: string;
+  /** Field used as the row label. Defaults to record id/name. */
+  readonly labelField?: string;
+  /** Optional field to colour-code bars (Select/Status/String). */
+  readonly colorField?: string;
+  /** Time axis zoom level. */
+  readonly zoom: "day" | "week" | "month" | "quarter" | "year";
+  /** ISO date string for the left edge of the visible window (default today-7d). */
+  readonly windowStart?: string;
+}
+
+// ── Cover Banner Config (D2-cover) ───────────────────────────
+
+/** NPLAN-D2 cover — Hero/banner block placed inside the Dashboard canvas
+ *  alongside other widgets. Not a per-record cover image. */
+export interface CoverBannerConfig {
+  /** Vault-relative path or external URL of the image. */
+  readonly src: string;
+  /** Width preset; `custom` uses `widthRem`. Layout grid still controls span. */
+  readonly widthMode?: "full" | "half" | "custom";
+  /** Custom width in rem when `widthMode === "custom"`. */
+  readonly widthRem?: number;
+  /** Image fit inside the banner box. */
+  readonly fitStyle?: "cover" | "contain";
+  /** Vertical alignment of the image inside the box. */
+  readonly position?: "top" | "center" | "bottom";
+  /** Optional overlay caption rendered on top of the image. */
+  readonly overlay?: string;
 }

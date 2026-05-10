@@ -60,6 +60,16 @@ export function getOperatorsForFieldType(
         'is-today',
         'is-this-week',
         'is-this-month',
+        'is-this-quarter',
+        'is-this-year',
+        'is-past-week',
+        'is-past-month',
+        'is-past-year',
+        'is-next-week',
+        'is-next-month',
+        'is-next-year',
+        'is-last-n-days',
+        'is-next-n-days',
         'is-overdue',
         'is-upcoming',
       ];
@@ -140,10 +150,18 @@ export function operatorNeedsValue(operator: AgendaFilterOperator): boolean {
     'is-today',
     'is-this-week',
     'is-this-month',
+    'is-this-quarter',
+    'is-this-year',
+    'is-past-week',
+    'is-past-month',
+    'is-past-year',
+    'is-next-week',
+    'is-next-month',
+    'is-next-year',
     'is-overdue',
     'is-upcoming',
   ];
-  
+
   return !unaryOps.includes(operator);
 }
 
@@ -168,10 +186,20 @@ export function operatorIsDateOperator(operator: AgendaFilterOperator): boolean 
     'is-today',
     'is-this-week',
     'is-this-month',
+    'is-this-quarter',
+    'is-this-year',
+    'is-past-week',
+    'is-past-month',
+    'is-past-year',
+    'is-next-week',
+    'is-next-month',
+    'is-next-year',
+    'is-last-n-days',
+    'is-next-n-days',
     'is-overdue',
     'is-upcoming',
   ];
-  
+
   return dateOps.includes(operator);
 }
 
@@ -213,6 +241,16 @@ export function getOperatorDescription(operator: AgendaFilterOperator): string {
     'is-today': 'Date is today (relative to selected date)',
     'is-this-week': 'Date is this week',
     'is-this-month': 'Date is this month',
+    'is-this-quarter': 'Date is this quarter',
+    'is-this-year': 'Date is this year',
+    'is-past-week': 'Date is in the past 7 days',
+    'is-past-month': 'Date is in the past month',
+    'is-past-year': 'Date is in the past year',
+    'is-next-week': 'Date is in the next 7 days',
+    'is-next-month': 'Date is in the next month',
+    'is-next-year': 'Date is in the next year',
+    'is-last-n-days': 'Date is in the last N days',
+    'is-next-n-days': 'Date is in the next N days',
     'is-overdue': 'Date is in the past',
     'is-upcoming': 'Date is in the future',
     'has-any-of': 'Has at least one of these tags',

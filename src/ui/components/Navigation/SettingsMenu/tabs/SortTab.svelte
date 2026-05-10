@@ -51,6 +51,38 @@
     return fields.find(f => f.name === fieldName)?.type ?? 'string';
   }
 
+  // DG-3: drag-to-reorder sort criteria
+  let dragIndex: number | null = null;
+  let dragOverIndex: number | null = null;
+
+  function onDragStart(index: number, e: DragEvent) {
+    dragIndex = index;
+    e.dataTransfer!.effectAllowed = "move";
+  }
+
+  function onDragOver(index: number, e: DragEvent) {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = "move";
+    dragOverIndex = index;
+  }
+
+  function onDrop(index: number, e: DragEvent) {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index) { dragIndex = null; dragOverIndex = null; return; }
+    const arr = [...local.criteria];
+    const [moved] = arr.splice(dragIndex, 1);
+    arr.splice(index, 0, moved!);
+    dragIndex = null;
+    dragOverIndex = null;
+    local = { ...local, criteria: arr };
+    dispatch("update", local);
+  }
+
+  function onDragEnd() {
+    dragIndex = null;
+    dragOverIndex = null;
+  }
+
   // ═══════════════════════════════
   // IMPERATIVE DOM DROPDOWNS (shared via popoverDropdown.ts)
   // ═══════════════════════════════
@@ -96,7 +128,19 @@
     <div class="list">
       {#each local.criteria as criterion, index}
         {@const fieldType = getFieldType(criterion.field)}
-        <div class="sort-row" class:sort-row--disabled={!criterion.enabled}>
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <div class="sort-row"
+          class:sort-row--disabled={!criterion.enabled}
+          class:sort-row--drag-over={dragOverIndex === index && dragIndex !== null && dragIndex !== index}
+          draggable="true"
+          on:dragstart={(e) => onDragStart(index, e)}
+          on:dragover={(e) => onDragOver(index, e)}
+          on:drop={(e) => onDrop(index, e)}
+          on:dragend={onDragEnd}
+        >
+          <button class="row-btn row-drag" type="button" aria-label="Drag to reorder" tabindex="-1">
+            <Icon name="grip-vertical" size="sm" />
+          </button>
           <!-- Toggle -->
           <button
             class="row-btn row-toggle"
@@ -185,6 +229,13 @@
   .row-toggle:hover { color: var(--interactive-accent); }
   .row-toggle--off { opacity: 1; color: var(--text-faint); }
   .row-delete:hover { color: var(--text-error); background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06); }
+  .row-drag { cursor: grab; }
+  .row-drag:active { cursor: grabbing; }
+  .sort-row:hover .row-drag { opacity: 0.5; }
+  .sort-row--drag-over {
+    border-top: 0.125rem solid var(--interactive-accent);
+    background: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.04);
+  }
 
   .add-btn {
     display: flex; align-items: center; justify-content: center;

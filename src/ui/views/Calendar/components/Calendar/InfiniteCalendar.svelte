@@ -14,6 +14,7 @@
   export let processedData: ProcessedCalendarData | null = null;
   export let firstDayOfWeek: number;
   export let checkField: string | undefined;
+  export let iconField: string | undefined = undefined;
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
@@ -519,6 +520,7 @@
           {groupedRecords}
           {processedData}
           {checkField}
+          {iconField}
           {onRecordClick}
           {onRecordChange}
           {onRecordCheck}
@@ -538,6 +540,7 @@
           {groupedRecords}
           {processedData}
           {checkField}
+          {iconField}
           {onRecordClick}
           {onRecordChange}
           {onRecordCheck}

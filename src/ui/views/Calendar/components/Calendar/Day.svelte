@@ -42,6 +42,7 @@
    * Specifies the field to use for determining checkbox state.
    */
   export let checkField: string | undefined;
+  export let iconField: string | undefined = undefined;
 
   /**
    * onRecordClick runs when the user clicks a calendar event.
@@ -630,6 +631,7 @@
       <div class="event-scroll-area" bind:this={eventScrollArea}>
         <EventList
           {checkField}
+          {iconField}
           records={cellRecords}
           {onRecordClick}
           {onRecordCheck}

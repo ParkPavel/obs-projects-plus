@@ -21,6 +21,7 @@
   export let checkField: string | undefined;
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;
+  export let iconField: DataField | undefined = undefined;
   export let pinned: boolean;
   export let collapse: boolean;
   export let persisted: boolean;
@@ -120,12 +121,23 @@
       {boardEditing}
       disableDnd={pinned}
       {customHeader}
+      {iconField}
       {onRecordClick}
       {checkField}
       {onRecordCheck}
       {onDrop}
       {includeFields}
     />
+    <!-- C18: aggregation footer -->
+    <div class="projects--board--column-footer">
+      <span class="projects--board--column-footer-count">
+        {count}
+        {$i18n.t("views.board.records", { count, defaultValue: count === 1 ? "record" : "records" })}
+        {#if checkField && checkedCount > 0}
+          · {checkedCount} ✓
+        {/if}
+      </span>
+    </div>
     {#if !readonly}
       <span>
         <Button variant="plain" on:click={() => onRecordAdd()}>
@@ -138,6 +150,19 @@
 </section>
 
 <style>
+  .projects--board--column-footer {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-top: 1px solid var(--background-modifier-border);
+  }
+
+  .projects--board--column-footer-count {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    user-select: none;
+  }
+
   span {
     display: inline-flex;
     align-content: center;

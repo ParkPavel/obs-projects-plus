@@ -127,6 +127,45 @@ describe("computeCrossProjectRollup — direction Account ← Journal (rollup on
     );
     expect(result.value).toBe("x|y|z");
   });
+
+  // R5-010 — sub-base scope on the relation field restricts rollup inputs.
+  it("honors targetSubBaseFilter on the relation field when rolling up", () => {
+    const accountsWithRel: DataFrame = {
+      fields: [
+        ...accounts().fields,
+        {
+          name: "entries",
+          type: DataFieldType.Relation,
+          identifier: false,
+          derived: false,
+          repeated: true,
+          typeConfig: {
+            relation: {
+              targetProjectId: "journal",
+              targetSubBaseFilter: {
+                conjunction: "and",
+                conditions: [
+                  { field: "label", operator: "is", value: "y", enabled: true },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      records: [
+        { id: "Accounts/A1.md", values: { name: "A1", entries: ["[[J1]]", "[[J2]]"] } },
+      ],
+    };
+    const result = computeCrossProjectRollup(
+      accountsWithRel.records[0]!,
+      { relationField: "entries", targetField: "amount", function: "sum" },
+      accountsWithRel,
+      journal()
+    );
+    // Only J2 (label=y) passes the filter; amount=25.
+    expect(result.sourceCount).toBe(1);
+    expect(result.value).toBe(25);
+  });
 });
 
 describe("computeCrossProjectRollupColumn", () => {

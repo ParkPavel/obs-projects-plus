@@ -6,8 +6,8 @@ import {
 
 describe("widgetRegistry", () => {
   describe("WIDGET_REGISTRY", () => {
-    test("has 8 widget types", () => {
-      expect(WIDGET_REGISTRY).toHaveLength(8);
+    test("has 16 widget types", () => {
+      expect(WIDGET_REGISTRY).toHaveLength(16);
     });
 
     test("all entries have required fields", () => {

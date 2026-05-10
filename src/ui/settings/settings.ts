@@ -226,6 +226,26 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName(
+        get(i18n).t("settings.general.replace-properties.name") ||
+          "Replace Obsidian Properties pane"
+      )
+      .setDesc(
+        get(i18n).t("settings.general.replace-properties.desc") ||
+          "Close the built-in file-properties leaves and surface the YAML Visualizer pane instead."
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(preferences.replaceObsidianProperties ?? false)
+          .onChange((value) => {
+            save({
+              ...preferences,
+              replaceObsidianProperties: value,
+            });
+          })
+      );
+
+    new Setting(containerEl)
       .setName(get(i18n).t("settings.front-matter.heading"))
       .setHeading();
 

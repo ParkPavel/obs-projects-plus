@@ -29,6 +29,14 @@ describe("configPanelRegistry (Phase 2a)", () => {
       "view-port",
       "filter-tabs",
       "summary-row",
+      "data-list",
+      "sub-base-canvas",
+      "yaml-visualizer",
+      "database-call",
+      "timeline",
+      "cover-banner",
+      "text",
+      "divider",
     ];
     for (const t of all) {
       expect(getConfigPanel(t)).toBe(configPanelRegistry[t]);
@@ -39,9 +47,14 @@ describe("configPanelRegistry (Phase 2a)", () => {
     expect(configPanelRegistry["data-table"].hasCog).toBe(false);
   });
 
-  test("every non-data-table widget has cog (INTERFACE RECLAMATION)", () => {
+  test("yaml-visualizer has no cog (owns its own toolbar)", () => {
+    expect(configPanelRegistry["yaml-visualizer"].hasCog).toBe(false);
+  });
+
+  test("every other widget has cog (INTERFACE RECLAMATION)", () => {
+    const noCog = new Set<WidgetType>(["data-table", "yaml-visualizer", "database-call", "text", "divider"]);
     for (const meta of WIDGET_REGISTRY) {
-      if (meta.type === "data-table") continue;
+      if (noCog.has(meta.type)) continue;
       expect(configPanelRegistry[meta.type].hasCog).toBe(true);
     }
   });
@@ -129,7 +142,7 @@ describe("configPanelRegistry (Phase 2a)", () => {
         columns: { field: string; aggregation: string; format: string }[];
       };
       expect(cfg.columns[0]?.field).toBe("status");
-      expect(cfg.columns[0]?.aggregation).toBe("count");
+      expect(cfg.columns[0]?.aggregation).toBe("count_total");
     });
     test("data-table initDefaults returns empty object", () => {
       expect(configPanelRegistry["data-table"].initDefaults([])).toEqual({});

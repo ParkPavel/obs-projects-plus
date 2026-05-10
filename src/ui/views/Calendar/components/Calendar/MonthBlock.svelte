@@ -28,6 +28,7 @@
   export let groupedRecords: Record<string, DataRecord[]>;
   export let processedData: ProcessedCalendarData | null = null;
   export let checkField: string | undefined;
+  export let iconField: string | undefined = undefined;
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   export let onRecordChange: ((date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
@@ -92,6 +93,7 @@
             records={!cell.isOutsideMonth ? (groupedRecords[cell.date.format("YYYY-MM-DD")] || []) : []}
             processedRecords={!cell.isOutsideMonth ? (processedData?.grouped[cell.date.format("YYYY-MM-DD")] || []) : []}
             checkField={checkField}
+            {iconField}
             onRecordClick={onRecordClick}
             {onRecordChange}
             onRecordCheck={onRecordCheck}

@@ -67,6 +67,24 @@ function createSettings() {
         })
       );
     },
+    /**
+     * NPLAN-A2 — atomically increments `uniqueIdCounter` for the given
+     * project and returns the new counter value. Returns 1 if no counter
+     * exists yet. Side-effects: triggers the settings write cycle.
+     */
+    bumpUniqueId(projectId: ProjectId): number {
+      let next = 1;
+      update((state) =>
+        produce(state, (draft) => {
+          const project = draft.projects.find((p) => p.id === projectId);
+          if (project) {
+            next = (project.uniqueIdCounter ?? 0) + 1;
+            project.uniqueIdCounter = next;
+          }
+        })
+      );
+      return next;
+    },
     duplicateProject(projectId: ProjectId) {
       const newId = uuidv4();
       update((state) =>

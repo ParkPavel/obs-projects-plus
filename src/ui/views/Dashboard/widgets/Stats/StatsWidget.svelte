@@ -11,7 +11,7 @@
   /** Build default cards from numeric fields when config is empty */
   function buildDefaultCards(df: DataFrame): StatsCardConfig[] {
     const cards: StatsCardConfig[] = [
-      { id: "_count", label: "Total", field: "*", aggregation: "count" },
+      { id: "_count", label: "Total", field: "*", aggregation: "count_total" },
     ];
     const numFields = df.fields.filter(
       (f) => f.type === DataFieldType.Number

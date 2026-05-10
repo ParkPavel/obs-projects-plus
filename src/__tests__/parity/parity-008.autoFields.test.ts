@@ -99,7 +99,7 @@ describe("PARITY-008 — auto-fields", () => {
     expect(modified).toBeDefined();
     expect(created?.derived).toBe(true);
     expect(modified?.derived).toBe(true);
-    expect(created?.type).toBe(DataFieldType.Date);
-    expect(modified?.type).toBe(DataFieldType.Date);
+    expect(created?.type).toBe(DataFieldType.AutoTime);
+    expect(modified?.type).toBe(DataFieldType.AutoTime);
   });
 });

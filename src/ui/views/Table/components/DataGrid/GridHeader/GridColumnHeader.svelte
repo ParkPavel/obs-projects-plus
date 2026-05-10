@@ -9,8 +9,39 @@
 
   export let column: GridColDefWithId;
   export let colindex: number;
-
   export let onColumnMenu: (column: GridColDef, event: MouseEvent) => void;
+  /** When provided, double-clicking the header enters inline rename mode. */
+  export let onColumnRename: ((field: string, newName: string) => void) | undefined = undefined;
+
+  // Inline rename state
+  let editing = false;
+  let editName = "";
+  let inputEl: HTMLInputElement | undefined;
+
+  function startEdit() {
+    if (!onColumnRename) return;
+    editName = column.field;
+    editing = true;
+    setTimeout(() => { inputEl?.select(); }, 0);
+  }
+
+  function commitEdit() {
+    if (!editing) return;
+    editing = false;
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== column.field) {
+      onColumnRename?.(column.field, trimmed);
+    }
+  }
+
+  function cancelEdit() {
+    editing = false;
+  }
+
+  function handleInputKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
+    else if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+  }
 
   function handleFieldClick(column: GridColDef): (event: MouseEvent) => void {
     return (event: MouseEvent) => {
@@ -25,28 +56,41 @@
 <div
   role="columnheader"
   aria-colindex={colindex}
+  tabindex={onColumnRename ? 0 : -1}
   style:width={`${column.width}px`}
   class:pinned={column.pinned}
+  on:dblclick={startEdit}
 >
-  <div class="left">
-    <Icon name={fieldIcon(column)} tooltip={fieldDisplayText(column)} />
-    <TextLabel value={column.field} />
-  </div>
-
-  <div class="right">
-    {#if sortInfo}
-      <Icon
-        name={sortInfo?.direction === "desc" ? "arrow-down" : "arrow-up"}
-        tooltip={sortInfo?.direction === "desc" ? $i18n.t('components.data-grid.sort.desc') : $i18n.t('components.data-grid.sort.asc')}
-      />
-    {/if}
-
-    <IconButton
-      size="sm"
-      icon="vertical-three-dots"
-      onClick={handleFieldClick(column)}
+  {#if editing}
+    <input
+      bind:this={inputEl}
+      class="ppp-col-rename-input"
+      type="text"
+      bind:value={editName}
+      on:blur={commitEdit}
+      on:keydown={handleInputKeydown}
     />
-  </div>
+  {:else}
+    <div class="left">
+      <Icon name={fieldIcon(column)} tooltip={fieldDisplayText(column)} />
+      <TextLabel value={column.field} />
+    </div>
+
+    <div class="right">
+      {#if sortInfo}
+        <Icon
+          name={sortInfo?.direction === "desc" ? "arrow-down" : "arrow-up"}
+          tooltip={sortInfo?.direction === "desc" ? $i18n.t('components.data-grid.sort.desc') : $i18n.t('components.data-grid.sort.asc')}
+        />
+      {/if}
+
+      <IconButton
+        size="sm"
+        icon="vertical-three-dots"
+        onClick={handleFieldClick(column)}
+      />
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -98,5 +142,19 @@
 
   div.pinned {
     border-right: 1px solid var(--background-modifier-border-focus);
+  }
+
+  .ppp-col-rename-input {
+    width: 100%;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    border: 0.0625rem solid var(--interactive-accent);
+    border-radius: var(--radius-s, 0.25rem);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    font-weight: var(--ppp-weight-medium, 500);
+    outline: none;
+    box-sizing: border-box;
   }
 </style>

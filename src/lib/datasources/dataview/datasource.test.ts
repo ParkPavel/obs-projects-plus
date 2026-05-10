@@ -25,6 +25,7 @@ const defaultPrefs: ProjectsPluginPreferences = {
   showViewTitles: true,
   animationBehavior: "smooth",
   disableHapticFeedback: false,
+  replaceObsidianProperties: false,
 };
 
 function makeProject(excludedNotes: string[] = []): ProjectDefinition {

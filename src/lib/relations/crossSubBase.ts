@@ -155,3 +155,79 @@ export function resolveWithinBase(
 ): DataRecord[] {
   return resolveTargets(value, index ?? buildParentIndex(parentFrame));
 }
+
+// ── Inverse (bidirectional) lookup ───────────────────────
+//
+// Forward lookup  (resolveAcrossSubBases): source → targets
+//   "Which records in SubBase Y does this source record point to?"
+//
+// Inverse lookup  (resolveInverseAcrossSubBases): target → sources
+//   "Which records in SubBase X point TO this target record?"
+//
+// Why not rely on inverseIndex.ts?
+//   inverseIndex is a vault-wide backlink store keyed on frontmatter path.
+//   It works at the file level and is not SubBase-aware. For SubBase-scoped
+//   bidirectional relations we need to filter the discovered source records
+//   through SubBase predicates, exactly like resolveAcrossSubBases does for
+//   forward targets. The pattern is symmetric:
+//
+//     resolveAcrossSubBases:        scan parent index for matching targets   →  filter by subBase
+//     resolveInverseAcrossSubBases: scan parent frame for referencing sources →  filter by subBase
+//
+// O(N) per call (full frame scan). Acceptable for Dashboard render cycles
+// because the frame is already in memory and N is bounded by the project size.
+// If profiling shows this is hot, consider maintaining a per-field reverse map
+// that is invalidated on dataFrame.merge() alongside invalidateAll().
+
+/**
+ * Given a target record, find all source records in `parentFrame` that
+ * reference it via `relationFieldName`, partitioned by the supplied SubBases.
+ *
+ * The returned `CrossSubBaseResult[]` has the same shape as `resolveAcrossSubBases`
+ * for symmetry — callers can use identical rendering logic for both directions.
+ */
+export function resolveInverseAcrossSubBases(
+  targetRecord: DataRecord,
+  relationFieldName: string,
+  parentFrame: DataFrame,
+  subBases: readonly SubBaseDefinition[],
+): CrossSubBaseResult[] {
+  const targetId = targetRecord.id;
+  const targetBase = extractBaseName(targetId).toLowerCase();
+  const targetName = (() => {
+    for (const f of ["name", "title", "Name", "Title"]) {
+      const v = targetRecord.values[f];
+      if (typeof v === "string" && v) return v.toLowerCase();
+    }
+    return null;
+  })();
+
+  // Collect all source records that include the target in their relation field.
+  const sources: DataRecord[] = [];
+  for (const record of parentFrame.records) {
+    const val = record.values[relationFieldName];
+    for (const body of toLinkBodies(val)) {
+      const lower = body.toLowerCase();
+      if (lower === targetBase || (targetName && lower === targetName)) {
+        sources.push(record);
+        break; // each source counted once per target
+      }
+    }
+  }
+
+  if (sources.length === 0) {
+    return subBases.map((sb) => ({ subBaseId: sb.id, targets: [] }));
+  }
+
+  // Reuse the same SubBase predicate partitioning as the forward direction.
+  // `targets` here is the set of SOURCE records that reference the target.
+  const candidateFrame: DataFrame = {
+    fields: parentFrame.fields,
+    records: sources,
+  };
+  return subBases.map((sb) => ({
+    subBaseId: sb.id,
+    targets: applyFilter(candidateFrame, sb.filter).records,
+  }));
+}
+

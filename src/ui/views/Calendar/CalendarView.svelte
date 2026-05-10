@@ -1896,6 +1896,7 @@
             {processedData}
             firstDayOfWeek={firstDayOfWeek}
             checkField={booleanField?.name}
+            iconField={config?.iconField}
             targetDate={focusedDate}
             scrollPosition={focusedScrollPosition}
             isActive={interval === 'month' || interval === '2weeks'}
@@ -1936,6 +1937,7 @@
               firstDayOfWeek={firstDayOfWeek}
               interval={interval}
               checkField={booleanField?.name}
+              iconField={config?.iconField}
               targetDate={focusedDate}
               isActive={interval === 'week' || interval === 'day'}
               onRecordClick={handleRecordClick}

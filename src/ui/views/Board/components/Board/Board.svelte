@@ -48,6 +48,7 @@
   export let checkField: string | undefined;
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;
+  export let iconField: DataField | undefined = undefined;
 
   /** Zoom level (0.25 – 2.0, default 1) */
   export let zoom: number = 1;
@@ -247,6 +248,7 @@
               }}
               {includeFields}
               {customHeader}
+              {iconField}
               onColumnPin={(name) =>
                 onColumnPin(
                   columns.map((col) => col.id),
@@ -349,6 +351,7 @@
               }}
               {includeFields}
               {customHeader}
+              {iconField}
               onColumnPin={(name) =>
                 onColumnPin(
                   columns.map((col) => col.id),

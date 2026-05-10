@@ -13,6 +13,10 @@
   export let onFinalizeResize: (name: string, width: number) => void;
   export let onColumnMenu: (column: GridColDef, event: MouseEvent) => void;
   export let onColumnOrder: (columns: GridColDefWithId[]) => void;
+  /** When provided, shows an inline "+" button at the end of headers. */
+  export let onAddColumn: (() => void) | undefined = undefined;
+  /** When provided, double-clicking a header enters inline rename mode. */
+  export let onColumnRename: ((field: string, newName: string) => void) | undefined = undefined;
 
   const flipDurationMs = 150;
 
@@ -54,7 +58,7 @@
         animate:flip={{ duration: flipDurationMs }}
         class:pinned={column.pinned}
       >
-        <GridColumnHeader {column} {onColumnMenu} colindex={columnIdx} />
+        <GridColumnHeader {column} {onColumnMenu} {onColumnRename} colindex={columnIdx} />
         <Resizer
           width={column.width ?? 180}
           min={100}
@@ -68,6 +72,15 @@
       </div>
     {/each}
   </div>
+  {#if onAddColumn}
+    <button
+      class="ppp-add-column-btn clickable-icon"
+      type="button"
+      on:click={onAddColumn}
+      aria-label="Add column"
+      title="Add column"
+    >+</button>
+  {/if}
 </div>
 
 <style>
@@ -89,5 +102,34 @@
     left: var(--ppp-row-header-width, 3.75rem);
     z-index: 7;
     position: sticky;
+  }
+
+  .ppp-add-column-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 100%;
+    min-height: 1.75rem;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+    flex-shrink: 0;
+    border-left: 0.0625rem solid var(--background-modifier-border);
+    border-radius: 0;
+  }
+
+  div.container:hover .ppp-add-column-btn,
+  .ppp-add-column-btn:focus-visible {
+    opacity: 1;
+  }
+
+  .ppp-add-column-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
   }
 </style>

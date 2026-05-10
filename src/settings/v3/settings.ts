@@ -104,6 +104,16 @@ export type AgendaFilterOperator =
   | 'is-today'
   | 'is-this-week'
   | 'is-this-month'
+  | 'is-this-quarter'
+  | 'is-this-year'
+  | 'is-past-week'
+  | 'is-past-month'
+  | 'is-past-year'
+  | 'is-next-week'
+  | 'is-next-month'
+  | 'is-next-year'
+  | 'is-last-n-days'
+  | 'is-next-n-days'
   | 'is-overdue'
   | 'is-upcoming'
   // List/Tags
@@ -318,6 +328,7 @@ export const DEFAULT_SETTINGS: ProjectsPluginSettings<
     showViewTitles: true,
     animationBehavior: "smooth",
     disableHapticFeedback: false,
+    replaceObsidianProperties: false,
   },
 };
 
@@ -447,6 +458,7 @@ export const DEFAULT_PREFERENCES: ProjectsPluginPreferences = {
   showViewTitles: true,
   animationBehavior: "smooth",
   disableHapticFeedback: false,
+  replaceObsidianProperties: false,
 };
 
 export function resolvePreferences(

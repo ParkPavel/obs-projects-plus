@@ -50,10 +50,16 @@ import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/li
 
 // dayjs isoWeek + quarterOfYear plugins are extended globally in main.ts
 
+export interface FilterOpts {
+  /** When false, `is-upcoming` excludes the baseDate day (strictly future). Default true (Notion-style). */
+  upcomingInclusive?: boolean;
+}
+
 export function matchesCondition(
   cond: FilterCondition,
   record: DataRecord,
-  baseDateCtx?: Dayjs
+  baseDateCtx?: Dayjs,
+  opts?: FilterOpts
 ): boolean {
   const { operator } = cond;
 
@@ -118,6 +124,11 @@ export function matchesCondition(
         rv = result.date.format("YYYY-MM-DD");
       }
     }
+    // Calendar-style strict upcoming (today excluded) when opts.upcomingInclusive === false
+    if (operator === "is-upcoming" && opts?.upcomingInclusive === false) {
+      if (!value) return false;
+      return dayjs(value).isAfter(baseDateCtx ?? dayjs(), "day");
+    }
     return dateFns[operator](value, rv, baseDateCtx);
   }
 
@@ -149,6 +160,7 @@ export function matchesFilterConditions(
   filter: FilterDefinition,
   record: DataRecord,
   baseDateCtx?: Dayjs,
+  opts?: FilterOpts,
   _depth = 0
 ): boolean {
   if (_depth >= 20) return true; // safety: prevent infinite recursion
@@ -157,9 +169,9 @@ export function matchesFilterConditions(
     return cond?.enabled ?? true;
   });
 
-  const condResults = validConds.map((cond) => matchesCondition(cond, record, baseDateCtx));
+  const condResults = validConds.map((cond) => matchesCondition(cond, record, baseDateCtx, opts));
   const groupResults = (filter.groups ?? []).map((group) =>
-    matchesFilterConditions(group, record, baseDateCtx, _depth + 1)
+    matchesFilterConditions(group, record, baseDateCtx, opts, _depth + 1)
   );
   const allResults = [...condResults, ...groupResults];
 
@@ -179,9 +191,10 @@ export function matchesFilterConditions(
 export function evaluateFilter(
   record: DataRecord,
   filter: FilterDefinition,
-  baseDateCtx?: Dayjs
+  baseDateCtx?: Dayjs,
+  opts?: FilterOpts
 ): boolean {
-  return matchesFilterConditions(filter, record, baseDateCtx);
+  return matchesFilterConditions(filter, record, baseDateCtx, opts);
 }
 
 export function applyFilter(
@@ -204,6 +217,23 @@ export const baseFns: Record<
   "is-not-empty": (value) => kernelIsNotEmpty(value),
 };
 
+const MAX_REGEX_LENGTH = 200;
+const MAX_REGEX_INPUT = 10000;
+
+function safeRegexTest(pattern: string, input: string): boolean {
+  if (pattern.length > MAX_REGEX_LENGTH) return false;
+  // Reject lookbehind / lookahead constructs that can amplify catastrophic backtracking.
+  if (/\(\?[<!=]/.test(pattern)) return false;
+  // Reject nested quantifiers like (a+)+ or a*{,5}*
+  if (/(\+|\*|\{[^}]*\})\s*(\+|\*|\{)/.test(pattern)) return false;
+  if (/\([^)]*(\+|\*|\{[^}]*\})\)\s*(\+|\*|\{)/.test(pattern)) return false;
+  try {
+    return new RegExp(pattern, "i").test(input.slice(0, MAX_REGEX_INPUT));
+  } catch {
+    return false;
+  }
+}
+
 export const stringFns: Record<
   StringFilterOperator,
   (left: Optional<string>, right?: string) => boolean
@@ -215,6 +245,8 @@ export const stringFns: Record<
   // PARITY-019 — Notion-parity prefix/suffix matching, case-insensitive.
   "starts-with": (left, right) => (left ? left.toLowerCase().startsWith((right ?? "").toLowerCase()) : false),
   "ends-with": (left, right) => (left ? left.toLowerCase().endsWith((right ?? "").toLowerCase()) : false),
+  // R5-003 — regex with ReDoS guards; promoted from Calendar agenda filterEngine.
+  regex: (left, right) => (left && right ? safeRegexTest(right, left) : false),
 };
 
 export const numberFns: Record<

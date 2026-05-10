@@ -346,6 +346,17 @@ export default class ProjectsPlusPlugin extends Plugin {
     this.fileSystemWatcher = new ObsidianFileSystemWatcher(this);
 
     registerFileEvents(this.fileSystemWatcher);
+
+    // R5-012 — When the user has opted to replace Obsidian's built-in
+    // Properties pane, detach any `file-properties` leaves on every
+    // active-leaf-change and surface our YAML Visualizer pane in the
+    // right sidebar instead. Default flag is false; toggling lives in
+    // the plugin Settings tab.
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        void this.maybeReplacePropertiesPane();
+      }),
+    );
   }
 
   /**
@@ -369,6 +380,26 @@ export default class ProjectsPlusPlugin extends Plugin {
     // anything captured by datasource callbacks across reload cycles.
     if (this.fileSystemWatcher) {
       delete this.fileSystemWatcher;
+    }
+  }
+
+  /**
+   * R5-012 — Hide Obsidian's built-in Properties pane (`file-properties`
+   * leaves) and reveal the YAML Visualizer pane when the
+   * `replaceObsidianProperties` preference is on. No-op when the
+   * preference is off, so users can switch the behavior at runtime
+   * without restarting the plugin.
+   */
+  async maybeReplacePropertiesPane(): Promise<void> {
+    const prefs = get(settings).preferences;
+    if (!prefs.replaceObsidianProperties) return;
+    const propsLeaves = this.app.workspace.getLeavesOfType("file-properties");
+    if (propsLeaves.length === 0) return;
+    for (const leaf of propsLeaves) {
+      leaf.detach();
+    }
+    if (this.app.workspace.getLeavesOfType(VIEW_TYPE_VISUALIZER_PANE).length === 0) {
+      await this.revealVisualizerPane();
     }
   }
 

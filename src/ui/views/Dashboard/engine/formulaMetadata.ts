@@ -137,9 +137,14 @@ const M: Record<string, FormulaMetadata> = {
   MAP: { name: "MAP", signature: "MAP(array, var, expr)", returnType: "array", doc: "Maps each item via expression. Example: `MAP(sets, s, s.weight)`.", category: "array" },
   FILTER: { name: "FILTER", signature: "FILTER(array, var, predicate)", returnType: "array", doc: "Keeps items matching predicate.", category: "array" },
   REDUCE: { name: "REDUCE", signature: "REDUCE(array, var, acc, init, expr)", returnType: "any", doc: "Reduces array using accumulator expression.", category: "array" },
+  ZIP: { name: "ZIP", signature: "ZIP(array1, array2, ...)", returnType: "array", doc: "Combines N lists pairwise into a list of N-tuples. Truncates to the shortest input.", category: "array" },
+  EXTRACT: { name: "EXTRACT", signature: "EXTRACT(array, index)", returnType: "any", doc: "Returns the element at `index` (0-based, negative counts from end).", category: "array" },
 
   // ── Utility ────────────────────────────────────────────────
-  LET: { name: "LET", signature: "LET(name, value, ..., body)", returnType: "any", doc: "Binds variables; evaluates body with bindings in scope.", category: "utility" },
+  LET: { name: "LET", signature: "LET(name, value, body)", returnType: "any", doc: "Binds a variable; evaluates body with the binding in scope.", category: "utility" },
+  LETS: { name: "LETS", signature: "LETS(name1, val1, ..., nameN, valN, body)", returnType: "any", doc: "Binds multiple variables in sequence; evaluates body with all bindings in scope.", category: "utility" },
+  PROP: { name: "PROP", signature: 'PROP("fieldName")', returnType: "any", doc: "Returns the value of a field by name. Equivalent to a bare field reference but allows dynamic names.", category: "utility" },
+  ID: { name: "ID", signature: "ID()", returnType: "string", doc: "Returns the unique identifier of the current record.", category: "utility" },
   STYLE: { name: "STYLE", signature: "STYLE(text, color?, weight?)", returnType: "styled", doc: "Wraps text with a visual CSS class (color/weight whitelist).", category: "utility" },
 };
 

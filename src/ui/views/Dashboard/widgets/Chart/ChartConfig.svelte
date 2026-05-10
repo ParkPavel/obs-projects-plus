@@ -147,7 +147,7 @@
         <option value="min">{$i18n.t("views.dashboard.chart.aggregations.min")}</option>
         <option value="max">{$i18n.t("views.dashboard.chart.aggregations.max")}</option>
         <option value="median">{$i18n.t("views.dashboard.chart.aggregations.median")}</option>
-        <option value="count">{$i18n.t("views.dashboard.chart.aggregations.count")}</option>
+        <option value="count_total">{$i18n.t("views.dashboard.chart.aggregations.count")}</option>
         <option value="count_unique">{$i18n.t("views.dashboard.chart.aggregations.unique")}</option>
       </select>
     </label>

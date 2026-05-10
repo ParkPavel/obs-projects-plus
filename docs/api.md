@@ -1,4 +1,4 @@
-# 🔧 Projects Plus — Custom View API Reference
+# Projects Plus — Custom View API Reference
 
 > **Status**: Experimental — inherited from [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) by Marcus Olsson.  
 > This API may change or be removed without notice. Use at your own risk.

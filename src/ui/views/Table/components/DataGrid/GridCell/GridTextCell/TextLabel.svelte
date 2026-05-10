@@ -3,11 +3,14 @@
   import { app, view } from "src/lib/stores/obsidian";
   import { handleHoverLink } from "src/ui/views/helpers";
   import { getContext } from "svelte";
+  import { detectLinkable } from "src/lib/helpers/linkable";
 
   export let value: string;
   export let richText: boolean = false;
 
   const sourcePath = getContext<string>("sourcePath") ?? "";
+
+  $: linkable = !richText ? detectLinkable(value) : null;
 
   function useMarkdown(node: HTMLElement, value: string) {
     MarkdownRenderer.render($app, value, node, sourcePath, $view);
@@ -54,6 +57,19 @@
     on:focus
     on:keypress
   />
+{:else if linkable}
+  <div>
+    <a
+      class="ppp-linkable"
+      href={linkable.href}
+      target={linkable.kind === "url" ? "_blank" : undefined}
+      rel={linkable.kind === "url" ? "noopener noreferrer" : undefined}
+      on:click|stopPropagation
+      on:mousedown|stopPropagation
+    >
+      {value}
+    </a>
+  </div>
 {:else}
   <div>
     {value}
@@ -75,5 +91,13 @@
 
   div :global(p:last-child) {
     margin-bottom: 0;
+  }
+
+  .ppp-linkable {
+    color: var(--link-color);
+    text-decoration: none;
+  }
+  .ppp-linkable:hover {
+    text-decoration: underline;
   }
 </style>

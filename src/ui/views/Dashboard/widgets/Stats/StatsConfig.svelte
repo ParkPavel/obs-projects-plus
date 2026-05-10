@@ -19,7 +19,7 @@
   }>();
 
   const AGGREGATIONS: { value: ColumnAggregation; defaultLabel: string }[] = [
-    { value: "count", defaultLabel: "Count" },
+    { value: "count_total", defaultLabel: "Count" },
     { value: "count_unique", defaultLabel: "Unique" },
     { value: "sum", defaultLabel: "Sum" },
     { value: "avg", defaultLabel: "Average" },
@@ -47,7 +47,7 @@
     emit({
       cards: [
         ...cards,
-        { id, label: "New card", field: first, aggregation: "count", format: "number" },
+        { id, label: "New card", field: first, aggregation: "count_total", format: "number" },
       ],
     });
   }

@@ -11,6 +11,14 @@
   import { ViewApi } from "src/lib/viewApi";
   import { resolveExternalFrame } from "src/lib/externalFrameResolver";
   import { bumpExternalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
+  // R5-016: transform-cache invalidation on vault events.
+  // Import lives here in App.svelte (UI layer), NOT in events.ts (Shell layer):
+  // events.ts sits in src/ and cannot import from src/ui/ without violating the
+  // Shell → UI → Engine → Data dependency direction. App.svelte is already the
+  // centralised cache-manager (externalFrameCache + externalFrameInvalidation),
+  // so adding transform-cache invalidation here keeps the pattern consistent.
+  import { invalidateAll as invalidateTransformAll } from "src/ui/views/Dashboard/engine/transformCache";
+  import { debounce } from "src/lib/helpers/performance";
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
@@ -72,12 +80,21 @@
   // mutations to keep correlation widgets reasonably fresh.
   const externalFrameCache = new Map<string, Promise<DataFrame | null>>();
 
+  // Debounced so rapid batch vault events (e.g. folder rename touching N files)
+  // don't call cache.clear() N times. One clear per 300ms window is enough.
+  const debouncedInvalidateTransformAll = debounce(invalidateTransformAll, 300);
+
   function invalidateExternalFrameCache() {
     externalFrameCache.clear();
     // Signal downstream preloaders (e.g. DatabaseViewCanvas) that already
     // resolved sibling-project frames may be stale and must be re-fetched
     // even if the referenced id set is unchanged.
     bumpExternalFrameInvalidation();
+    // Chart transform cache is keyed on a sampling hash of the DataFrame —
+    // sampling can miss mid-list record changes. Explicit invalidation on any
+    // vault event guarantees the next computeChartData() call re-executes the
+    // pipeline with fresh data instead of returning a stale cached result.
+    debouncedInvalidateTransformAll();
   }
 
   onMount(() => {

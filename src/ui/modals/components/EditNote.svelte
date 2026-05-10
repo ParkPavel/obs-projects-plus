@@ -1,6 +1,5 @@
 <script lang="ts">
   import { app } from '../../../lib/stores/obsidian';
-  import { produce } from "immer";
   import {
     Button,
     Callout,
@@ -171,13 +170,7 @@
 
   // Helper to update value (triggers reactivity)
   function setValue(fieldName: string, newValue: Optional<DataValue>) {
-    // Update record via immer
-    // @ts-ignore — immer produce with nested DataValue union may trigger TS2589 in some TS versions
-    record = produce(record, (draft) => {
-      // @ts-ignore — WritableDraft index signature vs Optional<DataValue>
-      draft.values[fieldName] = newValue;
-    });
-    // Also update snapshot to trigger immediate UI update
+    record = { ...record, values: { ...record.values, [fieldName]: newValue } };
     valuesSnapshot = { ...valuesSnapshot, [fieldName]: newValue };
   }
   

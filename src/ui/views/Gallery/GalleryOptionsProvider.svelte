@@ -10,6 +10,7 @@
   export let config: GalleryConfig | undefined;
 
   $: coverField = fields.find((field) => config?.coverField === field.name);
+  $: iconField = fields.find((field) => config?.iconField === field.name);
   $: fitStyle = config?.fitStyle ?? "cover";
   $: cardWidth = config?.cardWidth ?? 300;
 </script>
@@ -21,6 +22,6 @@
 -->
 <ViewLayout>
   <ViewContent padding>
-    <slot {fitStyle} {coverField} {cardWidth} />
+    <slot {fitStyle} {coverField} {iconField} {cardWidth} />
   </ViewContent>
 </ViewLayout>

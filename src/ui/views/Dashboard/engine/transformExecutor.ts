@@ -504,7 +504,8 @@ function executeCompute(
 
 /**
  * @deprecated Legacy arithmetic evaluator — kept for backward compatibility.
- * New code should use evaluateFormulaValue() from formulaEngine.
+ * New code must use evaluateFormulaValue() from "src/lib/formula" (canonical path).
+ * The formulaEngine.ts re-export wrapper is a transitional alias — prefer the direct import.
  */
 export function evaluateExpression(
   expression: string,

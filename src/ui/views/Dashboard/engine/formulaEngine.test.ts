@@ -709,4 +709,93 @@ describe("formulaEngine — Error propagation", () => {
     const errors = validateFormulaExpression('STYLE("ok", "green")', []);
     expect(errors).toEqual([]);
   });
+
+  test("validation recognizes ZIP, EXTRACT, LETS", () => {
+    const fns = getFormulaFunctions();
+    expect(fns).toContain("ZIP");
+    expect(fns).toContain("EXTRACT");
+    expect(fns).toContain("LETS");
+  });
+});
+
+describe("formulaEngine — ZIP / EXTRACT / LETS", () => {
+  test("ZIP pairs two equal-length lists", () => {
+    const rec = makeRecord({ a: [1, 2, 3], b: ["x", "y", "z"] });
+    const result = evaluateFormulaValue("ZIP(a, b)", rec);
+    expect(result).toEqual([[1, "x"], [2, "y"], [3, "z"]]);
+  });
+
+  test("ZIP truncates to shortest list", () => {
+    const rec = makeRecord({ a: [1, 2, 3], b: ["x", "y"] });
+    const result = evaluateFormulaValue("ZIP(a, b)", rec);
+    expect(result).toEqual([[1, "x"], [2, "y"]]);
+  });
+
+  test("ZIP with three lists", () => {
+    const rec = makeRecord({ a: [1, 2], b: [3, 4], c: [5, 6] });
+    const result = evaluateFormulaValue("ZIP(a, b, c)", rec);
+    expect(result).toEqual([[1, 3, 5], [2, 4, 6]]);
+  });
+
+  test("EXTRACT gets element at index", () => {
+    const rec = makeRecord({ tags: ["alpha", "beta", "gamma"] });
+    expect(evaluateFormulaValue("EXTRACT(tags, 0)", rec)).toBe("alpha");
+    expect(evaluateFormulaValue("EXTRACT(tags, 2)", rec)).toBe("gamma");
+  });
+
+  test("EXTRACT supports negative index", () => {
+    const rec = makeRecord({ tags: ["alpha", "beta", "gamma"] });
+    expect(evaluateFormulaValue("EXTRACT(tags, -1)", rec)).toBe("gamma");
+  });
+
+  test("EXTRACT out-of-bounds returns null", () => {
+    const rec = makeRecord({ tags: ["a", "b"] });
+    expect(evaluateFormulaValue("EXTRACT(tags, 5)", rec)).toBeNull();
+  });
+
+  test("LETS binds multiple variables", () => {
+    const rec = makeRecord({ price: 100, qty: 3 });
+    const formula = 'LETS("total", price * qty, "fee", total * 0.1, total + fee)';
+    expect(evaluateFormulaValue(formula, rec)).toBe(330);
+  });
+
+  test("LETS with single binding is equivalent to LET", () => {
+    const rec = makeRecord({ x: 7 });
+    expect(evaluateFormulaValue('LETS("v", x * 2, v + 1)', rec)).toBe(15);
+  });
+
+  test("LETS with too few args returns null", () => {
+    expect(evaluateFormulaValue('LETS("x", 1)', makeRecord({}))).toBeNull();
+  });
+
+  test("LETS with even arg count returns null", () => {
+    expect(evaluateFormulaValue('LETS("x", 1, "y", 2)', makeRecord({}))).toBeNull();
+  });
+});
+
+describe("formulaEngine — PROP / ID (Notion 2.0 special)", () => {
+  test("PROP(fieldName) returns field value", () => {
+    const rec = makeRecord({ priority: 5 });
+    expect(evaluateFormulaValue('PROP("priority")', rec)).toBe(5);
+  });
+
+  test("PROP returns null for missing field", () => {
+    const rec = makeRecord({});
+    expect(evaluateFormulaValue('PROP("nonexistent")', rec)).toBeNull();
+  });
+
+  test("PROP with no args returns null", () => {
+    expect(evaluateFormulaValue("PROP()", makeRecord({}))).toBeNull();
+  });
+
+  test("ID() returns the record id", () => {
+    const rec: ReturnType<typeof makeRecord> = { id: "rec-42", values: {} };
+    expect(evaluateFormulaValue("ID()", rec)).toBe("rec-42");
+  });
+
+  test("validation recognizes PROP and ID", () => {
+    const fns = getFormulaFunctions();
+    expect(fns).toContain("PROP");
+    expect(fns).toContain("ID");
+  });
 });

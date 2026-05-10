@@ -18,6 +18,7 @@
   export let onSave: (config: BoardConfig) => void;
 
   let columnWidthValue = config.columnWidth ?? null;
+  $: groupMode = config.groupMode ?? "values";
 
   $: headerField = config.headerField ?? "";
 
@@ -75,6 +76,22 @@
         on:change={(event) => {
           orderSyncField = event.detail;
           updateConfig("orderSyncField", orderSyncField);
+        }}
+      />
+    </SettingItem>
+    <SettingItem
+      name={$i18n.t("views.board.settings.group-mode.name", { defaultValue: "Column grouping" })}
+      description={$i18n.t("views.board.settings.group-mode.description", { defaultValue: "Values: one column per unique value. Semantic: group by status category (requires status groups configured on the field)." })}
+    >
+      <Select
+        value={groupMode}
+        options={[
+          { label: $i18n.t("views.board.settings.group-mode.values", { defaultValue: "Values" }), value: "values" },
+          { label: $i18n.t("views.board.settings.group-mode.semantic", { defaultValue: "Semantic groups" }), value: "semantic" },
+        ]}
+        on:change={(event) => {
+          groupMode = event.detail;
+          updateConfig("groupMode", groupMode === "values" ? null : groupMode);
         }}
       />
     </SettingItem>

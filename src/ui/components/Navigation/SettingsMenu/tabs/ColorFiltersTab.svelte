@@ -64,6 +64,35 @@
     dispatch("update", local);
   }
 
+  // DG-3: drag-to-reorder color rules
+  let dragIndex: number | null = null;
+  let dragOverIndex: number | null = null;
+
+  function onDragStart(index: number, e: DragEvent) {
+    dragIndex = index;
+    e.dataTransfer!.effectAllowed = "move";
+  }
+
+  function onDragOver(index: number, e: DragEvent) {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = "move";
+    dragOverIndex = index;
+  }
+
+  function onDrop(index: number, e: DragEvent) {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index) { dragIndex = null; dragOverIndex = null; return; }
+    const arr = [...local.conditions];
+    const [moved] = arr.splice(dragIndex, 1);
+    arr.splice(index, 0, moved!);
+    dragIndex = null;
+    dragOverIndex = null;
+    local = { ...local, conditions: arr };
+    dispatch("update", local);
+  }
+
+  function onDragEnd() { dragIndex = null; dragOverIndex = null; }
+
   function getFieldType(fieldName: string): string {
     return fields.find(f => f.name === fieldName)?.type ?? 'string';
   }
@@ -152,7 +181,20 @@
         {@const cond = rule.condition}
         {@const fieldType = getFieldType(cond.field)}
         {@const needsVal = operatorNeedsValue(cond.operator)}
-        <div class="color-row" class:color-row--disabled={!cond.enabled}>
+        <div
+          class="color-row"
+          class:color-row--disabled={!cond.enabled}
+          class:color-row--drag-over={dragOverIndex === index}
+          draggable="true"
+          on:dragstart={(e) => onDragStart(index, e)}
+          on:dragover={(e) => onDragOver(index, e)}
+          on:drop={(e) => onDrop(index, e)}
+          on:dragend={onDragEnd}
+        >
+          <!-- Drag handle -->
+          <button class="row-btn row-drag" type="button" tabindex="-1" aria-hidden="true" title="Drag to reorder">
+            <Icon name="grip-vertical" size="sm" />
+          </button>
           <!-- Toggle -->
           <button
             class="row-btn row-toggle"
@@ -244,6 +286,10 @@
   .color-row--disabled .chip,
   .color-row--disabled .value-input,
   .color-row--disabled .color-swatch { pointer-events: none; }
+  .color-row--drag-over { border-top: 0.125rem solid var(--interactive-accent); border-radius: 0; }
+  .row-drag { cursor: grab; opacity: 0; transition: opacity 100ms ease; }
+  .color-row:hover .row-drag { opacity: 0.5; }
+  .row-drag:hover { opacity: 1 !important; }
 
   /* ── Color swatch ── */
   .color-swatch {

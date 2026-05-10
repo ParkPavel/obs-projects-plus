@@ -8,7 +8,7 @@
 import type { FilterOperator } from '../../../../../settings/base/settings';
 
 /** Field type strings as used by DataField.type */
-type FieldTypeStr = 'string' | 'number' | 'boolean' | 'date' | 'multitext' | 'unknown';
+type FieldTypeStr = 'string' | 'number' | 'boolean' | 'date' | 'autotime' | 'multitext' | 'unknown';
 
 /**
  * Get available operators for a given field type.
@@ -26,6 +26,7 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
     case 'boolean':
       return ['is-checked', 'is-not-checked'];
     case 'date':
+    case 'autotime':
       return [...base, 'is-on', 'is-not-on', 'is-before', 'is-after', 'is-on-and-before', 'is-on-and-after',
         'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-this-year',
         'is-past-week', 'is-past-month', 'is-past-year',
@@ -64,6 +65,7 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
   'not-contains': 'Не содержит',
   'starts-with': 'Начинается с',
   'ends-with': 'Заканчивается на',
+  'regex': 'Регулярное выражение',
   'eq': '=',
   'neq': '≠',
   'lt': '<',
@@ -127,7 +129,8 @@ export function getFieldIcon(fieldType: string): string {
     case 'string': return 'type';
     case 'number': return 'hash';
     case 'boolean': return 'check-square';
-    case 'date': return 'calendar';
+    case 'date':
+    case 'autotime': return 'calendar';
     case 'multitext': return 'list';
     default: return 'file-text';
   }

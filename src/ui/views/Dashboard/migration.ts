@@ -84,3 +84,60 @@ export function isLegacyTableConfig(
     Object.keys(config).length === 0
   );
 }
+
+/**
+ * R5-004 — Rename footer aggregation `"count"` → `"count_total"` so its
+ * semantic ("total records incl. nulls") no longer collides with the
+ * kernel's `count` (non-null). Walks any nested object/array and rewrites:
+ *   - `aggregation: "count"`  →  `aggregation: "count_total"`
+ *   - `aggregations: { f: "count" }`  →  `{ f: "count_total" }`
+ *
+ * Idempotent. Pure (returns new value when migration applies, original
+ * reference otherwise).
+ *
+ * Other `"count"` literals — e.g. `ChartAxisY.property === "count"` (the
+ * "count records" mode sentinel) and `RollupFunction === "count"` (kernel
+ * non-null count) — are NOT touched.
+ */
+export function migrateAggregationCount<T>(value: T): T {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const next = value.map((v) => {
+      const m = migrateAggregationCount(v);
+      if (m !== v) changed = true;
+      return m;
+    });
+    return (changed ? (next as unknown as T) : value);
+  }
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    let changed = false;
+    const next: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (k === "aggregation" && v === "count") {
+        next[k] = "count_total";
+        changed = true;
+      } else if (k === "aggregations" && v && typeof v === "object" && !Array.isArray(v)) {
+        const inner = v as Record<string, unknown>;
+        const innerNext: Record<string, unknown> = {};
+        let innerChanged = false;
+        for (const [fk, fv] of Object.entries(inner)) {
+          if (fv === "count") {
+            innerNext[fk] = "count_total";
+            innerChanged = true;
+          } else {
+            innerNext[fk] = fv;
+          }
+        }
+        next[k] = innerChanged ? innerNext : v;
+        if (innerChanged) changed = true;
+      } else {
+        const m = migrateAggregationCount(v);
+        next[k] = m;
+        if (m !== v) changed = true;
+      }
+    }
+    return (changed ? (next as unknown as T) : value);
+  }
+  return value;
+}

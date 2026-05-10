@@ -20,7 +20,7 @@ function toAggFn(agg: ColumnAggregation): AggregationFunction {
     min: "MIN",
     max: "MAX",
     range: "RANGE",
-    count: "COUNT",
+    count_total: "COUNT",
     count_unique: "COUNT_DISTINCT",
   };
   return map[agg] ?? "SUM";

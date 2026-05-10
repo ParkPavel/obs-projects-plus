@@ -3,6 +3,7 @@ import type {
   DataFrame,
   DataRecord,
 } from "src/lib/dataframe/dataframe";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
 import {
   detectFields,
   parseRecords,
@@ -177,6 +178,10 @@ export function detectSchema(records: DataRecord[]): DataField[] {
       field.name === "pp_created_time" || field.name === "pp_last_edited_time"
         ? produce(field, (draft) => {
             draft.derived = true;
+            draft.type = DataFieldType.AutoTime;
+            draft.typeConfig = produce(field.typeConfig ?? {}, (tc) => {
+              tc.autoTime = field.name === "pp_created_time" ? "created" : "modified";
+            });
           })
         : field
     );

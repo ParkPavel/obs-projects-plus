@@ -18,12 +18,12 @@ import type {
  *
  * v4.0 (REFACTOR-102): kernel-overlapping operators (sum, avg, median,
  * min, max, range, count_unique) delegate to `lib/engine/aggregate.ts`.
- * Footer-specific operators (count, count_values, count_checked,
+ * Footer-specific operators (count_total, count_values, count_checked,
  * count_unchecked, percent_checked, percent_unchecked, percent_empty,
  * percent_not_empty, earliest, latest, date_range) remain inline because
  * they either have no kernel equivalent or carry footer-specific
- * semantics (e.g. footer `count` = total records incl. nulls; kernel
- * `count` = non-null count).
+ * semantics (e.g. footer `count_total` = total records incl. nulls;
+ * kernel `count` = non-null count — see R5-004 for the rename).
  */
 
 /**
@@ -103,7 +103,7 @@ function computeColumn(
   const nonEmpty = values.filter((v) => v != null && v !== "");
 
   switch (fn) {
-    case "count":
+    case "count_total":
       return fmt(values.length);
 
     case "count_values":
@@ -197,7 +197,7 @@ export function computeAggregateValue(
   const nonEmpty = values.filter((v) => v != null && v !== "");
 
   switch (fn) {
-    case "count": return values.length;
+    case "count_total": return values.length;
     case "count_values": return nonEmpty.length;
     case "count_checked": return values.filter((v) => v === true).length;
     case "count_unchecked": return values.filter((v) => v === false).length;

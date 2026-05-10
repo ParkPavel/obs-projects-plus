@@ -1,5 +1,16 @@
 ﻿// src/ui/views/Dashboard/engine/transformCache.ts
 // Transform result caching with hash-based invalidation.
+//
+// ⚠️  SAMPLING HASH — known limitation (R5-016):
+// `hashDataFrame()` samples only the first, middle, and last record.
+// This means changes to records outside the sample window produce an
+// identical hash and would return a stale cache hit.
+//
+// Mitigation: `invalidateAll()` is called from App.svelte on every vault
+// event (modify/create/delete/rename) via `invalidateExternalFrameCache()`,
+// so the cache is always cleared before the next pipeline call.
+// Do NOT rely on the hash alone for correctness — it is an optimisation
+// guard only for the TTL window between vault events.
 
 import type { DataFrame, DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { TransformPipeline, TransformResult, TransformContext } from "./transformTypes";
@@ -58,6 +69,15 @@ export function invalidateTransformCache(): void {
 }
 
 /**
+ * Explicit alias for vault-event invalidation sites.
+ * Semantically identical to `invalidateTransformCache()` — clears every
+ * cached transform result so the next pipeline call always re-executes.
+ */
+export function invalidateAll(): void {
+  cache.clear();
+}
+
+/**
  * Invalidate cache entries matching a specific pipeline config.
  */
 export function invalidatePipelineCache(pipeline: TransformPipeline): void {
@@ -98,7 +118,18 @@ function computeCacheKey(
 }
 
 function hashDataFrame(df: DataFrame): string {
-  // Hash based on: field names, record count, sample of values
+  // Sampling hash: field names + record count + first/middle/last record values.
+  // Intentionally cheap — O(1) regardless of dataset size.
+  //
+  // ⚠️  NOT a full content hash. Records outside the sample window are invisible
+  // to the hash function. Example: dataset of 100 records; record #42 changes →
+  // hash unchanged → stale cache hit. This is acceptable ONLY because
+  // `invalidateAll()` in App.svelte clears the cache on every vault event
+  // before the UI re-renders. The hash is a secondary guard for the 5-min TTL
+  // window, not the primary freshness mechanism.
+  //
+  // If you remove the vault-event invalidation, you MUST replace this with a
+  // full content hash (e.g. hash all record IDs + all values) — accept the O(n) cost.
   const fieldSig = df.fields.map((f) => `${f.name}:${f.type}`).join(",");
   const count = df.records.length;
 

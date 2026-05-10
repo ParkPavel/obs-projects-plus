@@ -54,12 +54,13 @@ export type StringFilterOperator =
   | "contains"
   | "not-contains"
   | "starts-with"
-  | "ends-with";
+  | "ends-with"
+  | "regex";
 
 export function isStringFilterOperator(
   op: FilterOperator
 ): op is StringFilterOperator {
-  return ["is", "is-not", "contains", "not-contains", "starts-with", "ends-with"].includes(op);
+  return ["is", "is-not", "contains", "not-contains", "starts-with", "ends-with", "regex"].includes(op);
 }
 
 export type NumberFilterOperator = "eq" | "neq" | "lt" | "gt" | "lte" | "gte";
@@ -167,6 +168,7 @@ export const filterOperatorTypes: Record<FilterOperator, FilterOperatorType> = {
   "not-contains": "binary-text",
   "starts-with": "binary-text",
   "ends-with": "binary-text",
+  regex: "binary-text",
   eq: "binary-number",
   neq: "binary-number",
   lt: "binary-number",
@@ -239,6 +241,22 @@ export type DateFieldConfig = {
 export type RelationFieldConfig = {
   readonly targetProjectId: string;
   readonly displayField?: string;
+  /**
+   * R5-010 — Optional sub-base scope. When set, only target records
+   * passing this filter are surfaced as resolved targets. Stored
+   * inline (not as a SubBase reference) so the relation config stays
+   * self-contained — no global SubBase registry required.
+   */
+  readonly targetSubBaseFilter?: FilterDefinition;
+  /**
+   * NPLAN-A4 — Two-way relation declaration. Names the field on the
+   * **target** project that mirrors this relation. Sprint 4 wires the
+   * inverse writer; schema-only here so projects can persist the
+   * intent before write-back ships.
+   */
+  readonly inverseFieldName?: string;
+  /** Optional display field for the inverse side (defaults to file basename). */
+  readonly inverseDisplayField?: string;
 };
 
 /**
@@ -285,6 +303,34 @@ export type FieldConfig = StringFieldConfig &
      * @since 3.4.2 (R2.1b)
      */
     readonly type?: import("src/lib/visualizer/propertyTypes").PropertyType;
+    /**
+     * NPLAN-A3 — Status semantic groups (overlay only).
+     *
+     * Maps user-defined option values into three semantic buckets so
+     * Board/Calendar can optionally collapse columns into todo /
+     * in-progress / complete. Schema-only in Sprint 1; Board grouping
+     * still derives columns from unique values by default. The
+     * "blocked"-style states intentionally piggyback on `inProgress`
+     * unless the user splits them out via fourth bucket later.
+     */
+    readonly statusGroups?: {
+      readonly todo?: string[];
+      readonly inProgress?: string[];
+      readonly complete?: string[];
+    };
+    /**
+     * NPLAN-A1 — AutoTime field source. Names which file timestamp
+     * (`created` or `modified`) the field reads from `TFile.stat`.
+     * Read-only; ignored unless the field's type is
+     * `DataFieldType.AutoTime`.
+     */
+    readonly autoTime?: "created" | "modified";
+    /**
+     * NPLAN-A2 — Unique-ID prefix (e.g. "TASK-"). Optional; when
+     * absent the bare counter value is rendered. Counter itself lives
+     * on `ProjectDefinition.uniqueIdCounter`.
+     */
+    readonly uniqueIdPrefix?: string;
   };
 
 export type ShowCommand = {
@@ -315,6 +361,13 @@ export type ProjectsPluginPreferences = {
   readonly animationBehavior: AnimationBehavior;
   /** v4.0.3: Disable haptic (vibration) feedback on mobile devices */
   readonly disableHapticFeedback: boolean;
+  /**
+   * R5-012 — When true, the plugin closes Obsidian's built-in
+   * `file-properties` leaves on every active-leaf-change and surfaces
+   * the YAML Visualizer pane instead. Default false to keep the native
+   * pane available out of the box.
+   */
+  readonly replaceObsidianProperties: boolean;
 };
 
 export type UnsavedViewDefinition = Omit<

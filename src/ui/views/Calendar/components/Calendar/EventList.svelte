@@ -2,6 +2,7 @@
   import InternalLink from "src/ui/components/InternalLink.svelte";
   import { getDisplayName } from "src/ui/views/Board/components/Board/boardHelpers";
   import Event from "./Event.svelte";
+  import { PageIcon } from "src/ui/components/PageIcon";
   import { dndzone } from "svelte-dnd-action";
   import { app } from "src/lib/stores/obsidian";
   import { createEventDispatcher } from "svelte";
@@ -16,6 +17,7 @@
 
   export let records: DataRecord[];
   export let checkField: string | undefined;
+  export let iconField: string | undefined = undefined;
 
   export let onRecordClick: ((record: DataRecord) => void) | undefined;
   export let onRecordCheck: ((record: DataRecord, checked: boolean) => void) | undefined;
@@ -83,6 +85,9 @@
           : undefined}
         on:check={({ detail: checked }) => onRecordCheck?.(record, checked)}
       >
+        {#if iconField}
+          <PageIcon value={record.values[iconField]} />
+        {/if}
         <InternalLink
           linkText={record.id}
           sourcePath={record.id}

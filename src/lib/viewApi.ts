@@ -6,10 +6,14 @@ import type {
   DataValue,
   Optional,
 } from "./dataframe/dataframe";
+import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
 import type { DataApi } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
 import type { DataSource } from "./datasources";
+import { app } from "./stores/obsidian";
+import { writeInverseRelations } from "./relations/relationsWriter";
+import type { RelationFieldConfig } from "src/settings/base/settings";
 
 /**
  * ViewApi provides an write API for views.
@@ -34,6 +38,16 @@ export class ViewApi {
   }
 
   updateRecord(record: DataRecord, fields: DataField[]) {
+    // NPLAN-C2: fire inverse relation write-back before frame update
+    const obsApp = get(app);
+    if (obsApp) {
+      const oldRecords = get(dataFrame).records;
+      const oldRecord = oldRecords.find((r) => r.id === record.id);
+      if (oldRecord) {
+        void fireInverseRelations(oldRecord, record, fields, obsApp);
+      }
+    }
+
     if (this.dataSource.includes(record.id)) {
       dataFrame.updateRecord(record);
     }
@@ -82,4 +96,34 @@ export class ViewApi {
       field
     );
   }
+}
+
+// ── NPLAN-C2 helper ──────────────────────────────────────────
+
+async function fireInverseRelations(
+  oldRecord: DataRecord,
+  newRecord: DataRecord,
+  fields: DataField[],
+  obsApp: import("obsidian").App
+): Promise<void> {
+  const relFields = fields.filter(
+    (f) =>
+      f.type === DataFieldType.Relation &&
+      (f.typeConfig as { relation?: RelationFieldConfig } | undefined)?.relation?.inverseFieldName
+  );
+  if (relFields.length === 0) return;
+
+  await Promise.all(
+    relFields.map((f) => {
+      const cfg = (f.typeConfig as { relation?: RelationFieldConfig }).relation!;
+      return writeInverseRelations({
+        sourceRecordId: oldRecord.id,
+        fieldName: f.name,
+        fieldConfig: cfg,
+        newValue: newRecord.values[f.name] as string | string[] | null | undefined,
+        oldValue: oldRecord.values[f.name] as string | string[] | null | undefined,
+        app: obsApp,
+      });
+    })
+  );
 }

@@ -6,12 +6,11 @@
       "node",
       "svelte"
     ],
-    "baseUrl": ".",
     "inlineSources": true,
     "module": "ESNext",
     "target": "ES2022",
     "allowJs": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
@@ -29,7 +28,8 @@
       "ES2022",
     ],
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"],
+      "src/*": ["./src/*"]
     },
   },
   "include": [
