@@ -116,6 +116,17 @@
     dragOverIndex = null;
   }
 
+  // ── Input-event helpers (keeps TypeScript casts out of templates) ─
+  function cfConditionValue(e: Event): string {
+    return (e.target as HTMLInputElement).value;
+  }
+  function cfBgColor(e: Event): string {
+    return (e.target as HTMLInputElement).value;
+  }
+  function cfTextColor(e: Event): string {
+    return (e.target as HTMLInputElement).value;
+  }
+
   // ── Inline popovers for field / operator selection ────────────
   function openFieldPop(format: ConditionalFormat, anchor: HTMLElement) {
     makePopover(
@@ -241,7 +252,7 @@
                     type="text"
                     value={cond.value ?? ""}
                     placeholder={$i18n.t("common.value-placeholder")}
-                    on:input={(e) => updateRule(format.id, 0, { value: (e.target as HTMLInputElement).value })}
+                    on:input={(e) => updateRule(format.id, 0, { value: cfConditionValue(e) })}
                   />
                 {:else}
                   <span class="ppp-cf-no-value">—</span>
@@ -255,7 +266,7 @@
                 <label class="ppp-cf-color-swatch" title={$i18n.t("views.dashboard.conditional-format.bg-color", { defaultValue: "Background color" })}>
                   <input type="color" class="ppp-cf-color-input"
                     value={cond.style.backgroundColor ?? "#ffffff"}
-                    on:input={(e) => updateRule(format.id, 0, { style: { backgroundColor: (e.target as HTMLInputElement).value } })}
+                    on:input={(e) => updateRule(format.id, 0, { style: { backgroundColor: cfBgColor(e) } })}
                   />
                   <span class="ppp-cf-color-dot" style:background={cond.style.backgroundColor ?? "transparent"}></span>
                   <span class="ppp-cf-color-label">BG</span>
@@ -264,7 +275,7 @@
                 <label class="ppp-cf-color-swatch" title={$i18n.t("views.dashboard.conditional-format.text-color", { defaultValue: "Text color" })}>
                   <input type="color" class="ppp-cf-color-input"
                     value={cond.style.textColor ?? "#000000"}
-                    on:input={(e) => updateRule(format.id, 0, { style: { textColor: (e.target as HTMLInputElement).value } })}
+                    on:input={(e) => updateRule(format.id, 0, { style: { textColor: cfTextColor(e) } })}
                   />
                   <span class="ppp-cf-color-dot" style:background={cond.style.textColor ?? "transparent"}></span>
                   <span class="ppp-cf-color-label" style:color={cond.style.textColor}>A</span>

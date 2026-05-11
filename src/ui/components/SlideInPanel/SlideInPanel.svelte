@@ -59,6 +59,9 @@
   aria-label={title}
 >
   <header class="ppp-slide-in-header">
+    {#if $$slots.icon}
+      <slot name="icon" />
+    {/if}
     <span class="ppp-slide-in-title">{title}</span>
     <button
       class="ppp-slide-in-close clickable-icon"

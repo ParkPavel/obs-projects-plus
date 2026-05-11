@@ -95,7 +95,7 @@
       const state: PersistedViewState = {
         date: (focusedDate || dayjs()).format('YYYY-MM-DD'),
         interval: getCurrentInterval(),
-        scrollOffset: 0, // TODO: capture actual scroll offset
+        scrollOffset: 0,
         timestamp: Date.now(),
         version: 1
       };
@@ -278,7 +278,7 @@
     viewportStateManager.pushState({
       date: zoomDate,
       interval: currentInterval,
-      scrollOffset: 0 // Simplified for now
+      scrollOffset: 0,
     });
     
     let newInterval: CalendarInterval | undefined;

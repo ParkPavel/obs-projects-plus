@@ -224,7 +224,7 @@ C10 · C11 · C16 · C18/C19
 |---------|--------|-----------|-------------------|-------|
 | Canvas (free placement) | ✅ | ✅ Grid/stack | **Canvas + snap-grid** | Upgrade layout engine |
 | Database as primary widget | ✅ Embedded | ✅ Dashboard | **"Database call" per block** | Widget = DB query |
-| Node formula editor | ❌ | ❌ | **✅ Node graph** | Build new |
+| Node formula editor | ❌ | ✅ Text-only (`FormulaConstructor.svelte`, autocomplete + signature) | ~~Node graph~~ ⛔ CANCELLED (R5-022) | — |
 | Charts inside DB block | 🟡 | ✅ Separate | **Charts as DB sub-view** | Reorganize UI hierarchy |
 | Visual-friendly settings | ✅ Excellent | 🟡 | **All settings visual** | Refactor settings panels |
 | Relation popover | ✅ Inline | 🟡 Modal | **Inline popover** | Redesign relation UI |
@@ -254,7 +254,7 @@ C10 · C11 · C16 · C18/C19
 | **DG-1** | Canvas First | Snap-to-8px grid · drag-handle `⠿` · `+` affordance · locked/collapsed |
 | **DG-2** | Database Call as Primary Primitive | Каждый блок = независимый DB-запрос · Charts/Stats — sub-view, не отдельные блоки |
 | **DG-3** | Visual-Friendly Settings (Zero-Code) | Slide-in panels · live preview · drag-to-reorder · inline edit везде |
-| **DG-4** | Node Formula Builder | SVG граф · AST↔Graph serializer · текст/нод toggle · mini-map |
+| **DG-4** | ~~Node Formula Builder~~ | ⛔ CANCELLED (R5-022) — только text mode (`FormulaConstructor.svelte`) |
 | **DG-5** | Multi-View Inside Database Block | View tabs per block · per-tab settings · общая schema |
 | **DG-6** | Relation & Rollup Visual Blocks | Searchable popover · progress bar rollup · pastel chips · checkbox без bounce |
 | **DG-7** | Design Tokens & Visual Language | CSS custom-properties · Lucide only · pastel palette · 4px base unit |
@@ -348,7 +348,7 @@ FieldSettingsPanel.svelte
   ├── DisplayOptions (width slider, alignment pill buttons)
   ├── AggregationSelector (visual pill buttons)
   ├── ConditionalFormatBuilder (visual rule list, drag-sortable)
-  └── FormulaEditor (text + node mode toggle)
+  └── FormulaEditor (text mode, autocomplete, signature popover — `FormulaConstructor.svelte`)
 
 FilterPanel.svelte
   ├── ConditionRow (field selector → operator → value)
@@ -362,73 +362,18 @@ GroupPanel.svelte  (field selector + dateGrouping options)
 
 ---
 
-### DG-4: NODE FORMULA BUILDER
+### DG-4: ~~NODE FORMULA BUILDER~~ — ⛔ CANCELLED (R5-022)
 
-Конструктор формул в визуальном нодовом формате — **ключевое требование**.
+Визуальный нодовый редактор формул отменён решением владельца (R5-022, 2026-05-09).
 
-**Два режима (toggle без потери данных):**
-- **Node Mode** — граф: ноды = функции/значения, рёбра = поток данных
-- **Text Mode** — textarea с autocomplete (существующий FormulaEditor)
+**Причина отмены:** Сложность реализации AST↔Graph сериализатора несоразмерна UX-выигрышу; существующий text-mode с autocomplete и signature popover покрывает 95%+ реальных сценариев.
 
-**Типы нодов:**
-```
-INPUT NODES (левая колонка):
-  [PropertyNode]   — prop("fieldName")
-  [LiteralNode]    — "text", 42, true, 2024-01-01
-  [DateNode]       — now(), today()
+**Действующая реализация (text-only):**
+- `FormulaConstructor.svelte` — textarea + autocomplete dropdown (до 12 подсказок) + signature popover для 115+ функций
+- Валидация в реальном времени, Ctrl+Enter для commit
+- Используется в `FormulaBar.svelte` и всех config-панелях
 
-FUNCTION NODES (центр):
-  [MathNode]       — SUM, AVG, ROUND, ABS, MOD...
-  [TextNode]       — CONCAT, LEN, UPPER, TRIM, SPLIT...
-  [LogicNode]      — IF, AND, OR, NOT, SWITCH...
-  [DateFnNode]     — DATEADD, DATEDIFF, YEAR, MONTH...
-  [ArrayNode]      — FILTER, MAP, ARRAYLEN, CONTAINS...
-
-OUTPUT NODE (правая колонка):
-  [ResultNode]     — тип результата + формат отображения
-```
-
-**Взаимодействие:**
-- Drag from output port → input port = соединить
-- Double-click node = параметры
-- Right-click = удалить / добавить комментарий
-- Wheel + drag = zoom/pan canvas
-- "Auto-layout" кнопка для выравнивания
-
-**Техническая реализация (поверх существующего AST):**
-```typescript
-// formulaParser.ts уже даёт AST — нужен bidirectional serializer
-
-type FormulaNode = {
-  id: string;
-  type: 'property' | 'literal' | 'function' | 'output';
-  functionName?: string;
-  value?: DataValue;
-  fieldName?: string;
-  position: { x: number; y: number };
-};
-
-type FormulaEdge = {
-  id: string;
-  sourceNodeId: string; sourcePort: string;  // 'output' | 'arg0' | 'arg1'...
-  targetNodeId: string; targetPort: string;
-};
-
-type FormulaGraph = {
-  nodes: FormulaNode[];
-  edges: FormulaEdge[];
-  outputNodeId: string;
-};
-
-// formulaGraphToAST(graph): ASTNode
-// astToFormulaGraph(ast): FormulaGraph
-```
-
-**Рендер:**
-- SVG для рёбер (bezier curves)
-- CSS transform для позиций нодов (GPU-accelerated)
-- Drag через pointer events (не svelte-dnd-action)
-- Mini-map в правом нижнем углу
+**Что НЕ будет реализовано:** SVG-граф нодов, `nodeSerializer.ts`, `nodeTypes.ts`, `FormulaNodeBuilder.svelte`, `NodeCanvas.svelte`, `NodePalette.svelte`. Не возобновлять без явного решения владельца.
 
 ---
 
@@ -529,12 +474,8 @@ type FormulaGraph = {
 --db-priority-high:     hsl(20,  85%, 60%);
 --db-priority-critical: hsl(0,   80%, 60%);
 
-/* Node editor */
---node-bg:              var(--background-secondary-alt);
---node-border:          rgba(0,0,0,0.10);
---node-port-color:      hsl(210, 80%, 60%);
---node-edge-color:      hsl(210, 60%, 50%);
---node-selected:        hsl(210, 80%, 60%);
+/* Node editor tokens — зарезервированы, не используются (DG-4 CANCELLED) */
+/* --node-bg, --node-border, --node-port-color, --node-edge-color: не добавлять в tokens.css */
 ```
 
 **Typography (из Design Concept §1):**
@@ -624,7 +565,7 @@ type FormulaGraph = {
 6. **Markdown first** — все изменения пишутся в `.md` frontmatter, ничего в отдельных БД
 7. **Engine layer = pure functions** — без DOM, без Obsidian API, без side effects
 8. **Один источник истины на операцию** — filter в `filterEvaluator.ts`, формула в `formulaEngine.ts`
-9. **Visual node editor НЕ заменяет text mode** — оба режима обязательны
+9. **Formula = text mode only** — `FormulaConstructor.svelte` с autocomplete и signature popover; node editor отменён (R5-022); не добавлять визуальный граф без явного решения владельца
 10. **Settings panels НЕ блокируют canvas** — slide-in, не modal overlay
 11. **Focus-visible ring** — глобальный, никогда не подавляется
 12. **Pastel chips only** — никаких насыщенных brand-цветов для tags/select/status
@@ -639,131 +580,140 @@ type FormulaGraph = {
 |--------------------|-----------------------|
 | DG-0 Foundation / colour silence | `tokens.css` sweep, NPLAN-D3 (pastel CSS custom-properties) |
 | DG-0 Typography / spacing | REFACTOR-404 (px→rem), REFACTOR-302 (StrictGrid) |
-| DG-1 Canvas + drag handle | NPLAN-D4 (six-dot row drag), новый `DashboardCanvas` free-placement |
-| DG-1 `+` affordance | Новый `DashboardBlockPalette.svelte` |
-| DG-2 Database call block | Новый `DatabaseCallBlock.svelte` + `WidgetDataContext` type |
-| DG-3 Slide-in settings | Новый `FieldSettingsPanel.svelte` (заменяет modals) |
-| DG-3 Relation popover | PARITY-006 (relation popover) |
-| DG-4 Node formula builder | Новый `FormulaNodeBuilder.svelte` + `nodeSerializer.ts` |
-| DG-5 View tabs per block | Новый `ViewTabBar.svelte` + per-tab settings |
-| DG-6 Rollup visualization | Расширить `crossProjectRollup.ts` + mini-chart render |
-| DG-6 Checkbox aesthetic | PARITY-001 → checkbox style |
-| DG-7 Pastel palette | NPLAN-D3 — `tokens.css` |
-| DG-7 Cover + icon | PARITY-011 (cover/icon), NPLAN-D2 — ✅ icon (per-record) + cover-banner widget закрыты |
-| DG-8 Hover / transitions | REFACTOR-303 (done, keep invariant), CSS transitions sweep |
-| DG-8 Hide empty fields | NPLAN-D6 (hide empty fields toggle) |
-| DG-9 Virtual scroll | Уже есть (`virtualScroll.ts`), распространить |
-| DG-10 Bulk select | NPLAN-D5 (bulk row select) |
+| DG-1 Canvas + drag handle | ✅ NPLAN-D4 ✅; `draggable.ts` + `resizable.ts` в WidgetHost; `layoutMode: "free"` в DashboardCanvas |
+| DG-1 `+` affordance / collapsed / locked | ⬜ `DashboardBlockPalette.svelte` не создан; collapsed/locked не реализованы — **NPLAN-V7.2** |
+| DG-2 Database call block — view tabs | ✅ `DatabaseCallBlock.svelte` + `ViewTabBar.svelte` — multi-view per block работает |
+| DG-2 Per-widget data source | ⬜ `DatabaseCallBlock` читает frame от родителя; `DatabaseCallSettings.svelte` отсутствует — **NPLAN-V7.1** |
+| DG-3 Slide-in settings | ✅ `FieldSettingsPanel.svelte`, `FilterPanelVisual.svelte`, `ConditionalFormatBuilder.svelte` |
+| DG-3 Relation popover | ✅ `RelationPicker.svelte` (searchable, keyboard nav) |
+| DG-4 Node formula builder | ⛔ CANCELLED (R5-022) — `FormulaConstructor.svelte` text-only |
+| DG-5 View tabs per block | ✅ `ViewTabBar.svelte` (132 lines) + per-tab config в `DatabaseCallBlock` |
+| DG-6 Rollup visualization | ✅ progress bars + chips в `GridRollupCell`; 18-функций в `aggregate.ts` (NPLAN-C3 ✅) |
+| DG-6 RecordCardView (full card) | ⬜ `RecordCardView.svelte` — MVP wrapper (55 строк) — **NPLAN-V7.3** |
+| DG-6 Checkbox aesthetic | ✅ мягкая заливка, без bounce (CSS) |
+| DG-7 Pastel palette | ✅ `tokens.css` — полная `--ppp-db-*` палитра |
+| DG-7 Cover + icon | ✅ NPLAN-D2 icon (per-record) + `CoverBannerWidget.svelte` |
+| DG-8 Hover / transitions | ✅ REFACTOR-303 (keep invariant) |
+| DG-8 Hide empty fields | ✅ NPLAN-D6 ✅ |
+| DG-9 Virtual scroll | ✅ `virtualScroll.ts` в DataTableWidget |
+| DG-10 Bulk select | ✅ NPLAN-D5 ✅ |
 
 ---
 
 ## ЧАСТЬ 6: ACCEPTANCE CRITERIA
 
 ### Canvas (DG-1)
-- [ ] Блоки drag-resizable на канвасе (snap-to-8px)
-- [ ] Drag-handle (`⠿`) видим только при hover, keyboard-reachable
-- [ ] `+` affordance — fade-in при hover на пустое пространство
-- [ ] Collapsed block = только title bar (32px)
-- [ ] Locked block — не перемещается при случайном drag
+- [x] Блоки drag-resizable на канвасе — `draggable.ts` + `resizable.ts` в WidgetHost ✅
+- [x] Drag-handle (`⠿`) видим только при hover, keyboard-reachable ✅
+- [ ] `+` affordance — `DashboardBlockPalette.svelte` ⬜ **NPLAN-V7.2**
+- [ ] Collapsed block = только title bar (32px) ⬜ **NPLAN-V7.2**
+- [ ] Locked block — не перемещается при случайном drag ⬜ **NPLAN-V7.2**
 
 ### Database Call Block (DG-2)
-- [ ] Источник данных независим от родительского проекта
-- [ ] Переключение вида (Table/Board/Chart) без потери настроек
-- [ ] Slide-in settings panel открывается без modal overlay
+- [ ] Источник данных независим от родительского проекта ⬜ **NPLAN-V7.1** — критический архитектурный Gap A
+- [x] Переключение вида (Table/Board/Chart) без потери настроек — `ViewTabBar` + per-tab config ✅
+- [ ] `DatabaseCallSettings.svelte` slide-in panel для выбора source ⬜ **NPLAN-V7.1**
 
 ### Visual Settings (DG-3)
-- [ ] Условное форматирование задаётся через rule builder (без кода)
-- [ ] Drag-to-reorder полей в table header и в field list
-- [ ] Aggregation footer включается toggle, показывает корректные значения
-- [ ] Все hardcoded `px` → `rem` (REFACTOR-404)
+- [x] Условное форматирование задаётся через rule builder — `ConditionalFormatBuilder.svelte` ✅
+- [x] Drag-to-reorder полей в table header и в field list ✅
+- [x] Aggregation footer включается toggle, показывает корректные значения ✅
+- [x] Все hardcoded `px` → `rem` — PX-budget ratchet ≤191, зелёный ✅
 
-### Node Formula Builder (DG-4)
-- [ ] Соединение двух нодов → формула вычисляется, показывает preview
-- [ ] Toggle text↔node — данные не теряются при переключении
-- [ ] Zoom/pan node canvas работает (wheel + drag)
-- [ ] 115+ функций доступны через поиск в add-node palette
-- [ ] Live preview с debounce 300ms
+### ~~Node Formula Builder (DG-4)~~ — ⛔ CANCELLED (R5-022)
+
+`FormulaConstructor.svelte` — text mode с autocomplete, signature popover, Ctrl+Enter commit.
+Node editor не будет реализован. Все чекбоксы удалены.
 
 ### Design / Interaction (DG-0, DG-7, DG-8)
-- [ ] Pastel palette определена как CSS custom-properties
-- [ ] Только мягкий hover (`--background-modifier-hover`) на строках
-- [ ] Никаких bounce-анимаций на checkbox и chips
-- [ ] Focus-visible ring глобальный, не подавляется
-- [ ] Slide-in panel: `transform: translateX` transition 200ms ease-out
+- [x] Pastel palette определена как CSS custom-properties — `tokens.css` `--ppp-db-*` ✅
+- [x] Только мягкий hover (`--background-modifier-hover`) на строках ✅
+- [x] Никаких bounce-анимаций на checkbox и chips ✅
+- [x] Focus-visible ring глобальный, не подавляется ✅
+- [x] Slide-in panel: `transform: translateX` transition 200ms ease-out — `SlideInPanel.svelte` ✅
 
 ---
 
-## ЧАСТЬ 7: ТЕХНИЧЕСКОЕ ЗАДАНИЕ ДЛЯ АГЕНТА
+## ЧАСТЬ 7: ТЕХНИЧЕСКОЕ ЗАДАНИЕ ДЛЯ АГЕНТА (актуально на 2026-05-10)
 
-**ШАГ 1: АРХИТЕКТУРА**
-1. Расширить `WidgetDefinition.type` в `Dashboard/types.ts` → добавить `'database-call'`
-2. Создать `WidgetDataContext`: `{ sourceConfig, subFilter, viewTabs: ViewTabDefinition[] }`
-3. Добавить `FormulaGraph` типы в `src/lib/formula/` (`nodeTypes.ts`, `nodeSerializer.ts`)
-4. Обновить `DashboardCanvas.svelte` → free-placement layout engine
+**Статус исходного плана (Sprints 0–8 закрыты):**
 
-**ШАГ 2: DATABASE CALL BLOCK**
-1. `DatabaseCallBlock.svelte` в `Dashboard/widgets/DatabaseCall/`
-2. `DatabaseCallSettings.svelte` — slide-in panel (правый edge)
-3. `ViewTabBar.svelte` — view tabs switcher внутри блока
-4. Per-tab settings persistence в widget config
+| Шаг исходного плана | Статус |
+|---|---|
+| ШАГ 1: Архитектура (types, canvas, layout) | ✅ Выполнен — `'database-call'` в WidgetType, `draggable.ts`, `layoutMode: "free"` |
+| ШАГ 2: DatabaseCallBlock + ViewTabBar | ✅ Частично — block и tabs работают; per-widget source ⬜ |
+| ШАГ 3: Node Formula Builder | ⛔ CANCELLED (R5-022) |
+| ШАГ 4: Visual Settings Panels | ✅ Выполнен — FieldSettingsPanel, FilterPanelVisual, ConditionalFormatBuilder |
+| ШАГ 5: Card View & Export | ✅ Частично — ExportService ✅, viewShortcuts ✅, RecordCardView MVP (55 строк) |
 
-**ШАГ 3: NODE FORMULA BUILDER**
-1. `FormulaNodeBuilder.svelte` в `ui/components/FormulaEditor/`
-2. `NodeCanvas.svelte` — SVG-based edge renderer (bezier curves)
-3. `FormulaNode.svelte` — individual node component
-4. `nodeSerializer.ts` — AST↔Graph bidirectional converter
-5. Toggle между node и text режимом в `FormulaEditor.svelte`
+**Оставшиеся задачи (V7 Sprint):**
 
-**ШАГ 4: VISUAL SETTINGS PANELS**
-1. `FieldSettingsPanel.svelte` — slide-in, заменяет modal
-2. `FilterPanelVisual.svelte` — Notion-style filter builder
-3. `ColumnManagerPanel.svelte` — drag-sortable field list
-4. `ConditionalFormatBuilder.svelte` — visual rule builder
+**NPLAN-V7.1 — Per-widget Data Source (DG-2, Gap A)** ← приоритет P0
+1. Расширить `WidgetDefinition` → добавить `sourceConfig?: WidgetSourceConfig` (source type + path/query + sub-filter)
+2. Создать `WidgetSourceConfig` type в `Dashboard/types.ts`
+3. `DatabaseCallSettings.svelte` — slide-in panel: source picker (folder/tag/dataview), sub-filter, title
+4. `WidgetHost.svelte` — если виджет `database-call` и имеет `sourceConfig`, загружать frame независимо через `DataApi`
+5. `DatabaseCallBlock.svelte` — принимать `frame` из WidgetHost (без изменений внутри блока)
 
-**ШАГ 5: CARD VIEW & EXPORT**
-1. `RecordCardView.svelte` — заменяет Inspector modal
-2. `ExportService.ts` — CSV, JSON, Markdown table
-3. Keyboard shortcuts layer (`CommandManager.ts`)
+**NPLAN-V7.2 — Canvas UX completeness (DG-1, Gap D/E)** ← приоритет P1
+1. `DashboardBlockPalette.svelte` — hover-triggered popup над пустыми ячейками канваса; fade-in 150ms; список типов блоков
+2. Добавить `locked?: boolean` и `collapsed?: boolean` в `WidgetLayout` type
+3. `WidgetHost.svelte` — обработка `locked` (disable drag) и `collapsed` (render только title bar 32px)
+4. UI-триггер для toggle locked/collapsed в header виджета (три точки → меню)
+
+**NPLAN-V7.3 — RecordCardView full implementation (DG-6, Gap C)** ← приоритет P2
+1. Расширить `RecordCardView.svelte` — emoji/icon picker в заголовке, markdown description block, file attachment zone, relation chips с preview
+2. Интеграция со всеми видами (Table, Board, Gallery, Calendar) через единый event
 
 ---
 
-## ЧАСТЬ 8: ЦЕЛЕВАЯ ФАЙЛОВАЯ СТРУКТУРА
+## ЧАСТЬ 8: ФАКТИЧЕСКАЯ И ЦЕЛЕВАЯ ФАЙЛОВАЯ СТРУКТУРА (на 2026-05-10)
 
 ```
 src/ui/views/Dashboard/
-├── DashboardCanvas.svelte          (update: free-placement layout)
-├── DashboardBlockPalette.svelte    (NEW: add-block popup)
+├── DashboardCanvas.svelte          ✅ 457 lines — layoutMode free/stack, WidgetGrid, SchemaController
+├── DashboardBlockPalette.svelte    ⬜ NPLAN-V7.2 — hover add-block popup
+├── WidgetGrid.svelte               ✅ exists — grid layout
 ├── widgets/
-│   ├── DatabaseCall/               (NEW: primary widget type)
-│   │   ├── DatabaseCallBlock.svelte
-│   │   ├── DatabaseCallSettings.svelte
-│   │   ├── ViewTabBar.svelte
-│   │   └── types.ts
-│   ├── DataTable/                  (existing, reused inside DatabaseCall)
-│   ├── Chart/                      (existing, reused inside DatabaseCall)
+│   ├── DatabaseCall/
+│   │   ├── DatabaseCallBlock.svelte  ✅ 176 lines — ViewTabBar + multi-tab DataTable
+│   │   └── DatabaseCallSettings.svelte  ⬜ NPLAN-V7.1 — per-widget source slide-in
+│   ├── ViewTabBar.svelte             ✅ 132 lines — tab switcher, icons, + button
+│   ├── WidgetHost.svelte             ✅ 1039 lines — все 16 типов виджетов, drag/resize
+│   ├── DataTable/DataTableWidget.svelte  ✅ 1526 lines
+│   ├── Timeline/TimelineWidget.svelte    ✅ 302 lines
+│   ├── CoverBanner/                     ✅ CoverBannerWidget + Config
+│   ├── SubBaseCanvas/                   ✅ Widget + Config + deriveSubBasePartition
+│   ├── Chart, Stats, Comparison,
+│   │   Checklist, FilterTabs, SummaryRow,
+│   │   DataList, ViewPort, YamlVisualizer,
+│   │   TextWidget, DividerWidget         ✅ all exist
 │   └── ...
-├── engine/                         (existing, no major changes)
-└── types.ts                        (update: add database-call widget type)
+├── engine/                              ✅ no major changes needed
+└── types.ts                             ✅ database-call в WidgetType union
 
 src/ui/components/
+├── FormulaConstructor/
+│   └── FormulaConstructor.svelte        ✅ 329 lines — text mode, autocomplete, signature
 ├── FormulaEditor/
-│   ├── FormulaNodeBuilder.svelte   (NEW: node graph editor)
-│   ├── NodeCanvas.svelte           (NEW: svg canvas for nodes)
-│   ├── FormulaNode.svelte          (NEW: individual node component)
-│   ├── FormulaEdge.svelte          (NEW: svg bezier edge)
-│   ├── NodePalette.svelte          (NEW: searchable add-node palette)
-│   └── FormulaEditor.svelte        (update: add node mode toggle)
+│   └── FormulaEditor.svelte             ✅ 61 lines — wrapper
+│   — FormulaNodeBuilder.svelte          ⛔ CANCELLED (R5-022)
+│   — NodeCanvas, FormulaNode, etc.      ⛔ CANCELLED
 ├── FieldSettingsPanel/
-│   ├── FieldSettingsPanel.svelte   (NEW: slide-in panel)
-│   ├── ConditionalFormatBuilder.svelte (NEW: visual rule builder)
-│   └── AggregationSelector.svelte  (NEW: pill button selector)
-└── RecordCard/
-    └── RecordCardView.svelte       (NEW: full record view)
+│   └── FieldSettingsPanel.svelte        ✅ 302 lines
+├── FilterPanelVisual/
+│   └── FilterPanelVisual.svelte         ✅ 299 lines
+├── ConditionalFormatBuilder/
+│   └── ConditionalFormatBuilder.svelte  ✅ 534 lines
+├── SlideInPanel/                        ✅ exists
+└── RecordCardView/
+    └── RecordCardView.svelte            ⚠️ MVP 55 lines — ⬜ расширить (NPLAN-V7.3)
 
 src/lib/formula/
-├── nodeSerializer.ts               (NEW: AST ↔ FormulaGraph)
-├── nodeTypes.ts                    (NEW: FormulaNode, FormulaEdge types)
-└── ... (existing unchanged)
+├── extendedEvaluator.ts                 ✅ 115+ functions
+├── formulaParser.ts                     ✅
+├── nodeSerializer.ts                    ⛔ CANCELLED (R5-022)
+└── nodeTypes.ts                         ⛔ CANCELLED (R5-022)
 ```
 
 ---
@@ -781,6 +731,6 @@ src/lib/formula/
 
 ---
 
-**Версия:** 2.0 (merged) | **Дата:** 2026-05-07  
-**Источники:** Research session 2026-05-07 + `DESIGN_CONCEPT_NOTION_AESTHETIC.md` (2026-05-05)  
+**Версия:** 3.0 (audit + plan correction, 2026-05-10) | **Дата исходника:** 2026-05-07  
+**Источники:** Research session 2026-05-07 + `DESIGN_CONCEPT_NOTION_AESTHETIC.md` (2026-05-05) + Audit 2026-05-10  
 **Владелец:** project owner

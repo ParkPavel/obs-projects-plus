@@ -150,6 +150,31 @@
     }).open();
   }
 
+  // Tab-at-end silent insert: creates a record without opening a modal.
+  // Base-36 timestamp suffix guarantees a unique filename within the vault.
+  function handleAddRowSilent(groupKey?: string): void {
+    const project = $projectStore;
+    if (!project || isReadonly) return;
+    const name = `Untitled ${Date.now().toString(36)}`;
+    const autoFill: Record<string, string> = { ...(config?.defaultValues ?? {}) };
+    if (groupKey != null && config?.groupBy?.field) {
+      autoFill[config.groupBy.field] = groupKey;
+    }
+    const uniqueIdFields = fields.filter((f) => f.type === DataFieldType.UniqueId);
+    if (uniqueIdFields.length > 0) {
+      const counter = settings.bumpUniqueId(project.id);
+      for (const f of uniqueIdFields) {
+        const prefix = (f.typeConfig as { uniqueIdPrefix?: string } | undefined)?.uniqueIdPrefix ?? "";
+        autoFill[f.name] = `${prefix}${counter}`;
+      }
+    }
+    void api.addRecord(
+      createDataRecord(name, project, Object.keys(autoFill).length > 0 ? autoFill : undefined),
+      fields,
+      ""
+    );
+  }
+
   // -- Row open / edit ----------------------------------------
   let cardViewOpen = false;
   let cardViewRecord: DataRecord | null = null;
@@ -1046,6 +1071,7 @@
                 onColumnSort={handleColumnSort}
                 onDataSort={handleDataSort}
                 onRowAdd={() => handleAddRow(group.key)}
+                onRowAddSilent={() => handleAddRowSilent(group.key)}
                 onRowChange={(rowId, row) => api.updateRecord({ id: rowId, values: row }, fields)}
                 onRowDelete={(rowId) => api.deleteRecord(rowId)}
                 onRowOpen={handleRowOpen}
@@ -1074,6 +1100,7 @@
             onColumnSort={handleColumnSort}
             onDataSort={handleDataSort}
             onRowAdd={() => handleAddRow(group.key)}
+            onRowAddSilent={() => handleAddRowSilent(group.key)}
             onRowChange={(rowId, row) => api.updateRecord({ id: rowId, values: row }, fields)}
             onRowDelete={(rowId) => api.deleteRecord(rowId)}
             onRowOpen={handleRowOpen}
@@ -1115,6 +1142,7 @@
               onColumnSort={handleColumnSort}
               onDataSort={handleDataSort}
               onRowAdd={() => handleAddRow()}
+              onRowAddSilent={() => handleAddRowSilent()}
               onRowChange={(rowId, row) => api.updateRecord({ id: rowId, values: row }, fields)}
               onRowDelete={(rowId) => api.deleteRecord(rowId)}
               onRowOpen={handleRowOpen}
@@ -1144,6 +1172,7 @@
         onColumnSort={handleColumnSort}
         onDataSort={handleDataSort}
         onRowAdd={() => handleAddRow()}
+        onRowAddSilent={() => handleAddRowSilent()}
         onRowChange={(rowId, row) => api.updateRecord({ id: rowId, values: row }, fields)}
         onRowDelete={(rowId) => api.deleteRecord(rowId)}
         onRowOpen={handleRowOpen}

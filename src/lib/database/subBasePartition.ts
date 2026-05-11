@@ -13,7 +13,7 @@
  */
 
 import type { DataFrame, DataRecord, Optional, DataValue } from "src/lib/dataframe/dataframe";
-import { applyFilter } from "src/ui/app/filterFunctions";
+import { applyFilter } from "src/lib/engine/filterEvaluator";
 import type { SubBaseDefinition, SubBaseId } from "./subBase";
 
 export interface SubBasePartition {

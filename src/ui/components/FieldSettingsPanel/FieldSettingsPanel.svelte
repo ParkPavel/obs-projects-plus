@@ -55,6 +55,10 @@
     nameError = validateFieldName(input.value);
   }
 
+  function checkboxChecked(e: Event): boolean {
+    return (e.target as HTMLInputElement).checked;
+  }
+
   function handleTypeChange(e: Event) {
     const select = e.target as HTMLSelectElement;
     const nextType = select.value as DataFieldType;
@@ -68,6 +72,7 @@
       case DataFieldType.String:
         keep("options");
         keep("richText");
+        keep("fileLinks");
         break;
       case DataFieldType.Select:
       case DataFieldType.Status:
@@ -172,7 +177,7 @@
                 ...editedField,
                 typeConfig: {
                   ...(editedField.typeConfig ?? {}),
-                  richText: (e.target as HTMLInputElement).checked,
+                  richText: checkboxChecked(e),
                 },
               };
             }}
@@ -183,6 +188,29 @@
         </label>
         <span class="ppp-field-settings-hint">{$i18n.t("modals.field.configure.rich-text.description", {
           defaultValue: "Render field content as Markdown (bold, italic, links, inline color via HTML spans)"
+        })}</span>
+      </div>
+      <div class="ppp-field-settings-section">
+        <label class="ppp-field-settings-checkbox">
+          <input
+            type="checkbox"
+            checked={!!(editedField.typeConfig as { fileLinks?: boolean })?.fileLinks}
+            on:change={(e) => {
+              editedField = {
+                ...editedField,
+                typeConfig: {
+                  ...(editedField.typeConfig ?? {}),
+                  fileLinks: checkboxChecked(e),
+                },
+              };
+            }}
+          />
+          <span>{$i18n.t("modals.field.configure.file-links.name", {
+            defaultValue: "File links"
+          })}</span>
+        </label>
+        <span class="ppp-field-settings-hint">{$i18n.t("modals.field.configure.file-links.description", {
+          defaultValue: "Render [[wiki-link]] values as clickable file chips"
         })}</span>
       </div>
     {/if}
@@ -197,7 +225,7 @@
                 ...editedField,
                 typeConfig: {
                   ...(editedField.typeConfig ?? {}),
-                  time: (e.target as HTMLInputElement).checked,
+                  time: checkboxChecked(e),
                 },
               };
             }}

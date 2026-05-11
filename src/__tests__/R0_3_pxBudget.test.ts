@@ -69,7 +69,8 @@ describe("R0.3 — CSS px-budget ratchet", () => {
   //   355 → 332 (REFACTOR-404e — FilterGroupEditor 3px border-left, DatetimeInput/DateFormatSelector/AccordionItem spacing, BoardColumn 2px accent borders, CardList borderRadius+gap+margin, InfiniteHorizontalCalendar 2px axis borders, SettingsMenuPopover translateY(-4px), GridCell error border 2px, AgendaFilterEditor gap/padding, ColorFiltersTab swatch border 2px).
   //   332 → 301 (REFACTOR-404f — Onboarding/TabContainer/CardMetadata/Field/FileListInput/HorizontalGroup/DateInput/CreateProject/Inspector/ColumnHeader spacing; ErrorBoundary/ImagePreview layout dimensions; EventList/ColorPill/Day borderRadius; SubBaseTabs/TableView/ViewsTab/SettingsMenuTabs inset box-shadow+translateY+outline-offset; CurrentTimeLine glow shadow; TimelineView ghost border-left; token files keep 1px/2px/9999px as canonical definitions).
   //   301 → 191 (REFACTOR-403b — DateFormulaInput/FilterRow/AdvancedFilterEditor: bulk px→rem conversion of inline JS-built style strings + CSS style blocks; 1px hairlines preserved; UTF-8 BOM + Cyrillic comments verified intact).
-  const PX_BUDGET = 191;
+  //   191 → 187 (TDT-12 — WidgetHost.svelte: 4 × border/border-bottom 1px solid → 0.0625rem solid).
+  const PX_BUDGET = 187;
 
   it("does not exceed the agreed px-budget", () => {
     const { total, perFile } = countPxAcrossSrc();

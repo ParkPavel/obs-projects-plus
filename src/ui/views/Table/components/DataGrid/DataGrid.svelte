@@ -60,6 +60,13 @@
   export let onColumnRename: ((field: string, newName: string) => void) | undefined = undefined;
   /** NPLAN-D2 — name of the field whose value is rendered as a per-row page icon. */
   export let iconField: string | undefined = undefined;
+  /**
+   * Tab-insert (P3 Table UX): called when Tab is pressed at the last cell of
+   * the last row and the grid is not readonly. The callback should create a
+   * new record; DataGrid will move focus to the first cell of the new row once
+   * `rows` updates reactively.
+   */
+  export let onRowAddSilent: (() => void) | undefined = undefined;
 
   $: t = $i18n.t;
 
@@ -89,6 +96,15 @@
 
   // [column, row]
   let activeCell: [number, number] = [3, 3];
+
+  // Tab-insert focus: when we trigger a silent row insert, record how many
+  // rows we expect and move focus to the first cell of the new row as soon
+  // as `rows` grows to that count.
+  let tabInsertExpectedRows = -1;
+  $: if (tabInsertExpectedRows >= 0 && rows.length === tabInsertExpectedRows) {
+    activeCell = [2, rows.length + 3]; // minColIdx=2, rowOffset=3
+    tabInsertExpectedRows = -1;
+  }
 
   function createColumnMenu(column: GridColDef, event: MouseEvent) {
     const editable = !!column.editable && !readonly;
@@ -264,8 +280,14 @@
           wrap && colIdx < minColIdx && !(rowIdx - 1 < minRowIdx);
         const wrapNext =
           wrap && colIdx > maxColIdx && !(rowIdx + 1 > maxRowIdx);
+        // Tab at very last cell of last row → silent insert
+        const tabAtEnd =
+          wrap && colIdx > maxColIdx && rowIdx + 1 > maxRowIdx;
 
-        if (wrapPrev) {
+        if (tabAtEnd && !readonly && onRowAddSilent) {
+          tabInsertExpectedRows = rows.length + 1;
+          onRowAddSilent();
+        } else if (wrapPrev) {
           activeCell = [maxColIdx, rowIdx - 1];
         } else if (wrapNext) {
           activeCell = [minColIdx, rowIdx + 1];

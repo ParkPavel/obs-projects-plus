@@ -51,6 +51,17 @@ export interface WidgetLayout {
   zIndex?: number;
 }
 
+/**
+ * Per-widget data source override (NPLAN-V7.1).
+ *
+ * When present on a `database-call` widget, the widget loads its frame from
+ * the specified project rather than inheriting the canvas's parent frame.
+ * Empty `projectId` string is treated as "inherit from parent view".
+ */
+export interface WidgetSourceConfig {
+  readonly projectId: string;
+}
+
 export interface WidgetDefinition {
   readonly id: string;
   readonly type: WidgetType;
@@ -59,6 +70,8 @@ export interface WidgetDefinition {
   readonly config: Record<string, unknown>;
   readonly collapsed?: boolean;
   readonly transform?: TransformPipeline;
+  /** NPLAN-V7.1: optional independent data source for `database-call` widgets. */
+  readonly sourceConfig?: WidgetSourceConfig;
 }
 
 // ── Database-Call Context (DG-2) ─────────────────────────────

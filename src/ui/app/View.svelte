@@ -143,7 +143,9 @@
       return frame;
     }
     let out = enrichFrameWithAllRelations(frame, externalFramesMap);
-    // Append a derived field for each rollup configuration.
+    // Inject computed rollup values directly into each record's values map
+    // under the original field name, so that filter, sort, and cell renderers
+    // all see the computed aggregate without a separate __rollup__ column.
     const fc = project.fieldConfig as
       | Record<string, { relation?: RelationFieldConfig; rollup?: RollupFieldConfig }>
       | undefined;
@@ -155,22 +157,8 @@
         const ext = targetId ? externalFramesMap.get(targetId) : undefined;
         if (!ext) continue;
         const column = computeCrossProjectRollupColumn(out, rollupCfg, ext);
-        const derivedName = "__rollup__" + fieldName;
         out = {
           ...out,
-          fields: out.fields.some((f) => f.name === derivedName)
-            ? out.fields
-            : [
-                ...out.fields,
-                {
-                  name: derivedName,
-                  type: "rollup" as DataFrame["fields"][number]["type"],
-                  identifier: false,
-                  derived: true,
-                  repeated: false,
-                  typeConfig: {},
-                },
-              ],
           records: out.records.map((r) => {
             const result = column.get(r.id);
             if (!result) return r;
@@ -178,7 +166,7 @@
               ...r,
               values: {
                 ...r.values,
-                [derivedName]: result.value as unknown as DataRecord["values"][string],
+                [fieldName]: result.value as unknown as DataRecord["values"][string],
               },
             };
           }),

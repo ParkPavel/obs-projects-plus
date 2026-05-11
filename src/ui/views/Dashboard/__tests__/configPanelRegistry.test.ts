@@ -51,8 +51,12 @@ describe("configPanelRegistry (Phase 2a)", () => {
     expect(configPanelRegistry["yaml-visualizer"].hasCog).toBe(false);
   });
 
+  test("database-call has cog (NPLAN-V7.1: source picker panel)", () => {
+    expect(configPanelRegistry["database-call"].hasCog).toBe(true);
+  });
+
   test("every other widget has cog (INTERFACE RECLAMATION)", () => {
-    const noCog = new Set<WidgetType>(["data-table", "yaml-visualizer", "database-call", "text", "divider"]);
+    const noCog = new Set<WidgetType>(["data-table", "yaml-visualizer", "text", "divider"]);
     for (const meta of WIDGET_REGISTRY) {
       if (noCog.has(meta.type)) continue;
       expect(configPanelRegistry[meta.type].hasCog).toBe(true);

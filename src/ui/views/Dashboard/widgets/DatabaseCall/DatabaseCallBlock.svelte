@@ -25,7 +25,6 @@
   export let readonly: boolean;
   export let getRecordColor: (record: DataRecord) => string | null;
   export let fields: DataField[];
-  export let tableConfig: DataTableConfig | undefined;
   export let fieldPresets: FieldPreset[] = [];
   export let activeFieldPresetId: string | undefined = undefined;
   export let project: ProjectDefinition | undefined = undefined;
@@ -33,7 +32,6 @@
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
-    tableConfigChange: DataTableConfig;
     fieldPresetsChange: {
       fieldPresets: FieldPreset[];
       activeFieldPresetId: string | undefined;

@@ -10,15 +10,16 @@
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
-  import type { WidgetDefinition, DatabaseViewConfig } from "./types";
+  import type { WidgetDefinition, DatabaseViewConfig, WidgetType } from "./types";
 
   import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher } from "svelte";
   import { dndzone } from "svelte-dnd-action";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
+  import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
 
-  const dispatch = createEventDispatcher<{ showToolbar: void }>();
+  const dispatch = createEventDispatcher<{ showToolbar: void; addWidget: WidgetType }>();
 
   export let widgets: WidgetDefinition[];
   export let dndWidgets: WidgetDefinition[];
@@ -44,6 +45,14 @@
     <div class="ppp-database-empty-icon">⊞</div>
     <span class="ppp-database-empty-title">{$i18n.t("views.dashboard.canvas.empty-title", { defaultValue: "No widgets yet" })}</span>
     <span class="ppp-database-empty-hint">{$i18n.t("views.dashboard.canvas.empty-hint", { defaultValue: "Click \"+\" in the toolbar to add your first widget" })}</span>
+    {#if layoutMode === "free" && !readonly}
+      <div class="ppp-database-empty-palette">
+        <DashboardBlockPalette
+          currentWidgets={[]}
+          on:addWidget={(e) => dispatch("addWidget", e.detail)}
+        />
+      </div>
+    {/if}
   </div>
 {:else if canDnd}
   <div
@@ -74,6 +83,12 @@
         on:removeWidget
       />
     {/each}
+  </div>
+  <div class="ppp-canvas-stack-add">
+    <DashboardBlockPalette
+      currentWidgets={dndWidgets}
+      on:addWidget={(e) => dispatch("addWidget", e.detail)}
+    />
   </div>
 {:else}
   <div
@@ -106,12 +121,10 @@
 
     {#if layoutMode === "free" && !readonly}
       <div class="ppp-canvas-add-affordance" role="none">
-        <button
-          class="ppp-canvas-add-btn"
-          on:click={() => dispatch("showToolbar")}
-          aria-label={$i18n.t("views.dashboard.canvas.add-widget", { defaultValue: "Add widget" })}
-          title={$i18n.t("views.dashboard.canvas.add-widget", { defaultValue: "Add widget" })}
-        >+</button>
+        <DashboardBlockPalette
+          currentWidgets={widgets}
+          on:addWidget={(e) => dispatch("addWidget", e.detail)}
+        />
       </div>
     {/if}
   </div>
@@ -177,7 +190,11 @@
     max-width: 20rem;
   }
 
-  /* Free-canvas `+` affordance — fades in when canvas is hovered */
+  .ppp-database-empty-palette {
+    margin-top: var(--ppp-space-md, 0.5rem);
+  }
+
+  /* Free-canvas add affordance — fades in when canvas is hovered */
   .ppp-canvas-add-affordance {
     grid-column: 1 / -1;
     display: flex;
@@ -192,37 +209,11 @@
     opacity: 1;
   }
 
-  .ppp-canvas-add-btn {
+  /* Stack-canvas add row — always visible at list end */
+  .ppp-canvas-stack-add {
     display: flex;
-    align-items: center;
     justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border: 0.0625rem dashed var(--background-modifier-border-hover);
-    border-radius: var(--radius-s, 0.25rem);
-    background: transparent;
-    color: var(--text-faint);
-    font-size: 1.125rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
-  }
-
-  .ppp-canvas-add-btn:hover {
-    border-color: var(--interactive-accent);
-    color: var(--interactive-accent);
-    background: var(--background-modifier-hover);
-  }
-
-  .ppp-canvas-add-btn:hover {
-    border-color: var(--interactive-accent);
-    color: var(--interactive-accent);
-    background: var(--background-modifier-hover);
-  }
-
-  .ppp-canvas-add-btn:focus-visible {
-    outline: 0.125rem solid var(--interactive-accent);
-    outline-offset: 0.0625rem;
+    padding: var(--ppp-space-2, 0.25rem);
   }
 
   /* DG-8 drop target: dashed outline + subtle fill on svelte-dnd-action placeholder */

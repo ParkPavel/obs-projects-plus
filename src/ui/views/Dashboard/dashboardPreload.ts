@@ -28,6 +28,12 @@ export function collectReferencedSourceIds(
       const id = cfg?.correlation?.rightSourceId;
       if (id) ids.add(id);
     }
+    // NPLAN-V7.1: database-call widgets with an independent sourceConfig load
+    // their frame via the same right-frame preload channel so vault-change
+    // invalidation and stale-resolution guards apply automatically.
+    if (w.type === "database-call" && w.sourceConfig?.projectId) {
+      ids.add(w.sourceConfig.projectId);
+    }
   }
 
   // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.4 (R-11 mitigation).

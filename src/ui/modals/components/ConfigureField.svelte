@@ -79,6 +79,7 @@
       case DataFieldType.String:
         keep("options");
         keep("richText");
+        keep("fileLinks");
         break;
       case DataFieldType.Select:
       case DataFieldType.Status:
@@ -209,6 +210,16 @@
       typeConfig: {
         ...field.typeConfig,
         richText,
+      },
+    };
+  }
+
+  function handleFileLinksChange({ detail: fileLinks }: CustomEvent<boolean>) {
+    field = {
+      ...field,
+      typeConfig: {
+        ...field.typeConfig,
+        fileLinks,
       },
     };
   }
@@ -524,6 +535,15 @@
         <Switch
           checked={field.typeConfig?.richText ?? false}
           on:check={handleRichTextChange}
+        />
+      </SettingItem>
+      <SettingItem
+        name={$i18n.t("modals.field.configure.file-links.name", { defaultValue: "File links" })}
+        description={$i18n.t("modals.field.configure.file-links.description", { defaultValue: "Render [[wiki-link]] values as clickable file chips" })}
+      >
+        <Switch
+          checked={field.typeConfig?.fileLinks ?? false}
+          on:check={handleFileLinksChange}
         />
       </SettingItem>
     {/if}

@@ -199,6 +199,16 @@
     };
   }
 
+  function handleFileLinksChange({ detail: fileLinks }: CustomEvent<boolean>) {
+    field = {
+      ...field,
+      typeConfig: {
+        ...field.typeConfig,
+        fileLinks,
+      },
+    };
+  }
+
   function handleTimeChange({ detail: time }: CustomEvent<boolean>) {
     field = {
       ...field,
@@ -457,6 +467,15 @@
           <Switch
             checked={field.typeConfig?.richText ?? false}
             on:check={handleRichTextChange}
+          />
+        </SettingItem>
+        <SettingItem
+          name={$i18n.t("modals.field.configure.file-links.name", { defaultValue: "File links" })}
+          description={$i18n.t("modals.field.configure.file-links.description", { defaultValue: "Render [[wiki-link]] values as clickable file chips" })}
+        >
+          <Switch
+            checked={field.typeConfig?.fileLinks ?? false}
+            on:check={handleFileLinksChange}
           />
         </SettingItem>
       {/if}

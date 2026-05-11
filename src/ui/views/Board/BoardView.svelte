@@ -10,6 +10,7 @@
   import { notUndefined } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
@@ -99,7 +100,7 @@
             await $app.fileManager.renameFile(file as any, newPath);
           }
         } catch (e) {
-          console.error('Failed to rename note', e);
+          new Notice(`Failed to rename note: ${e instanceof Error ? e.message : String(e)}`);
         }
       },
       // v3.0.4: Autosave setting from project

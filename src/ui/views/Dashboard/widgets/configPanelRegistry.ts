@@ -157,12 +157,8 @@ const PANELS = {
     initDefaults: () => ({}),
   },
   "database-call": {
-    /**
-     * Dashboard V2 (S2.2) — tab management is inline (ViewTabBar `+`
-     * button), no external cog panel needed yet. Sprint 3 may add a
-     * settings panel for source picker / global filter UI.
-     */
-    hasCog: false,
+    // NPLAN-V7.1: cog opens DatabaseCallSettings (source picker).
+    hasCog: true,
     isConfigured: () => true,
     initDefaults: () => ({
       viewTabs: [

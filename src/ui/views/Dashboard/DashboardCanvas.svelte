@@ -385,6 +385,7 @@
       on:finalize={handleDndFinalize}
       on:filter={handleFilterTab}
       on:showToolbar={() => { if (!config) return; saveConfig({ ...config, showWidgetToolbar: true }); }}
+      on:addWidget={(e) => widgetController.addWidget(e.detail)}
       on:configChange={widgetController.handleWidgetConfigChange}
       on:tableConfigChange={widgetController.handleTableConfigChange}
       on:fieldPresetsChange={handleFieldPresetsChange}

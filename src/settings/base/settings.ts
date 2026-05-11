@@ -220,6 +220,7 @@ export interface FilterCondition {
 export type StringFieldConfig = {
   options?: string[];
   richText?: boolean;
+  fileLinks?: boolean;
 };
 
 export type DateFieldConfig = {

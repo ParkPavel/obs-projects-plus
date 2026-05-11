@@ -5,7 +5,7 @@
   } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import type { WidgetDefinition, ChartConfig, StatsConfig } from "../types";
+  import type { WidgetDefinition, ChartConfig, StatsConfig, WidgetSourceConfig } from "../types";
   import type { DataTableConfig, FieldPreset } from "../types";
   import type { TransformPipeline } from "../engine/transformTypes";
 
@@ -32,6 +32,7 @@
   import SubBaseCanvasConfigPanel from "./SubBaseCanvas/SubBaseCanvasConfig.svelte";
   import YamlVisualizerWidget from "./YamlVisualizer/YamlVisualizerWidget.svelte";
   import DatabaseCallBlock from "./DatabaseCall/DatabaseCallBlock.svelte";
+  import DatabaseCallSettings from "./DatabaseCall/DatabaseCallSettings.svelte";
   import TimelineWidget from "./Timeline/TimelineWidget.svelte";
   import TimelineConfigPanel from "./Timeline/TimelineConfig.svelte";
   import CoverBannerWidget from "./CoverBanner/CoverBannerWidget.svelte";
@@ -272,6 +273,26 @@
     return rightFrames.get(id) ?? null;
   })();
 
+  // NPLAN-V7.1: per-widget independent source for `database-call` widgets.
+  // The projectId is resolved via the canvas-level right-frame preload channel
+  // (collectReferencedSourceIds → dashboardPreload), so vault-change
+  // invalidation is handled automatically without extra stores here.
+  $: dbCallSourceConfig = widget.type === "database-call"
+    ? widget.sourceConfig
+    : undefined;
+  $: dbCallSourceId = dbCallSourceConfig?.projectId ?? "";
+  $: dbCallFrame = dbCallSourceId
+    ? (rightFrames.get(dbCallSourceId) ?? frame)
+    : transformedFrame;
+  $: dbCallFields = dbCallFrame.fields;
+
+  function handleDbCallSourceChange(e: CustomEvent<WidgetSourceConfig>) {
+    dispatch("configChange", {
+      id: widget.id,
+      changes: { sourceConfig: e.detail },
+    });
+  }
+
   /** Capture unhandled errors scoped to this widget's DOM subtree */
   function captureErrors(node: HTMLElement) {
     function handleResourceError(e: Event) {
@@ -444,6 +465,15 @@
     />
   {/if}
 
+  {#if showConfig && widget.type === "database-call"}
+    <DatabaseCallSettings
+      sourceConfig={dbCallSourceConfig}
+      {availableSources}
+      on:change={handleDbCallSourceChange}
+      on:close={() => (showConfig = false)}
+    />
+  {/if}
+
   {#if showConfig && widget.type === "timeline"}
     <TimelineConfigPanel
       config={widget.config}
@@ -577,18 +607,16 @@
         {/if}
       {:else if widget.type === "database-call"}
         <DatabaseCallBlock
-          frame={transformedFrame}
+          frame={dbCallFrame}
           {api}
           {readonly}
           {getRecordColor}
-          fields={transformedFrame.fields}
-          {tableConfig}
+          fields={dbCallFields}
           {fieldPresets}
           {activeFieldPresetId}
           {project}
           config={widget.config}
           on:configChange={(e) => handleWidgetConfigChange(e.detail)}
-          on:tableConfigChange={(e) => dispatch("tableConfigChange", e.detail)}
           on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
         />
       {:else if widget.type === "timeline"}
@@ -618,7 +646,7 @@
 
 <style>
   .ppp-widget-host {
-    border: 1px solid var(--background-modifier-border);
+    border: 0.0625rem solid var(--background-modifier-border);
     border-radius: var(--radius-m, 0.5rem);
     background: var(--background-primary);
     overflow: hidden;
@@ -639,7 +667,7 @@
     align-items: center;
     gap: var(--ppp-space-sm, 0.25rem);
     padding: var(--ppp-space-sm, 0.25rem) var(--ppp-space-md, 0.5rem);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: 0.0625rem solid var(--background-modifier-border);
     background: var(--background-secondary);
     user-select: none;
     min-height: 2.25rem;
@@ -862,7 +890,7 @@
   .ppp-widget-error-retry {
     margin-left: auto;
     padding: 0.15rem 0.5rem;
-    border: 1px solid var(--text-error);
+    border: 0.0625rem solid var(--text-error);
     border-radius: var(--radius-s, 0.25rem);
     background: transparent;
     color: var(--text-error);
@@ -892,7 +920,7 @@
   .ppp-widget-setup-btn {
     margin-top: var(--ppp-space-sm, 0.25rem);
     padding: 0.25rem 0.75rem;
-    border: 1px solid var(--interactive-accent);
+    border: 0.0625rem solid var(--interactive-accent);
     border-radius: var(--radius-s, 0.25rem);
     background: transparent;
     color: var(--interactive-accent);

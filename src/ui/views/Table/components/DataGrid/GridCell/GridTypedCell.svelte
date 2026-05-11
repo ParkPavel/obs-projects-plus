@@ -17,6 +17,7 @@
   import { GridDatetimeCell } from "./GridDatetimeCell";
   import { GridNumberCell } from "./GridNumberCell";
   import { GridTextCell } from "./GridTextCell";
+  import { GridFileCell } from "./GridFileCell";
   import { GridListCell } from "./GridListCell";
   import { GridSelectCell } from "./GridSelectCell";
   import { GridRelationCell } from "./GridRelationCell";
@@ -32,6 +33,17 @@
 
 {#if column.repeated && isOptionalList(value)}
   <GridListCell
+    {selected}
+    {rowindex}
+    {colindex}
+    {value}
+    {onChange}
+    {column}
+    on:mousedown
+    on:navigate
+  />
+{:else if column.type === "string" && column.typeConfig?.fileLinks && isOptionalString(value)}
+  <GridFileCell
     {selected}
     {rowindex}
     {colindex}
