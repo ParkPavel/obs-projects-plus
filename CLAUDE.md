@@ -19,7 +19,7 @@ npm run test:watch  # jest watch
 npx tsc --noEmit    # type check only
 ```
 
-**Baseline:** 107 suites / 1700 tests PASS, tsc 0 errors.
+**Baseline:** 116 suites / 1800 tests PASS, tsc 0 errors.
 
 ## Architecture
 

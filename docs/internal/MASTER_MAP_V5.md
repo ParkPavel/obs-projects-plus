@@ -84,10 +84,14 @@ Data                 →  src/lib/dataframe/, src/lib/dataApi.ts, src/lib/dataso
 
 ## 7. Контекст и память
 
-- `.ai_internal/context_state.md` — приватный лог решений сессии.
-- `memories/repo/session-state.md` — состояние текущей сессии для агента.
-- `memories/repo/contract-registry.md` — публичные контракты модулей.
-- `memories/repo/decision-log.md` — лог архитектурных решений.
+> **ВАЖНО (2026-05-14)**: Все AI-internal документы перенесены на уровень workspace.
+
+- `C:\Users\Park\OBSv1.0\.ai_internal\CONTEXT.md` — текущее состояние (primary)
+- `C:\Users\Park\OBSv1.0\.ai_internal\BACKLOG.md` — workspace backlog
+- `C:\Users\Park\OBSv1.0\.ai_internal\LESSONS-LEARNED.md` — уроки из прошлых сессий
+- `obs-projects-plus/docs/internal/BACKLOG.md` — project-level backlog (#NNN + milestones)
+
+Архив старых memory-файлов: `C:\Users\Park\OBSv1.0\.ai_internal\Archive\OLD-MEMORIES-*`
 
 ## 8. Граничные правила (V5 в целом)
 

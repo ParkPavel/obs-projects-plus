@@ -1,8 +1,17 @@
-# REFACTOR_BACKLOG_V5
+# REFACTOR_BACKLOG_V5 — DEPRECATED
+
+> **Статус**: ARCHIVED 2026-05-14
+> **Замещён**: [`BACKLOG.md`](BACKLOG.md) — актуальный backlog с нейммингом #NNN + milestones
+>
+> Этот файл сохранён для истории. Не редактировать. Не использовать как источник истины.
+
+---
+
+# REFACTOR_BACKLOG_V5 (archive)
 
 > **Версия**: V5.1 (updated 2026-05-07)
 > **Дата**: 2026-05-05 / обновлён 2026-05-07
-> **Статус**: ACTIVE — приоритизированный backlog для рефакторинг-сессии V5.
+> **Статус**: ARCHIVED — см. BACKLOG.md
 > **Замещает**: `IMPLEMENTATION_PLAN_CURRENT.md`, `PHASE_1_MAPPING.md`, `PHASE_3_TICKETS.md`.
 
 ---
