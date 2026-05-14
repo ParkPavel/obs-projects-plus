@@ -23,7 +23,7 @@ yarn-error.log
 
 # AI internal workspace — lives at workspace level, never inside plugin repo
 .ai_internal/
-memories/repo/
+memories/
 
 # CRITICAL: Personal Data Protection
 OBScync/

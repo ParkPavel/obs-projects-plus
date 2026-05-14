@@ -13,20 +13,23 @@
 
 ## 2. Карта документов
 
-| Документ | Роль |
-|---|---|
-| [MASTER_MAP_V5.md](MASTER_MAP_V5.md) | Навигация. Этот файл. |
-| [ARCHITECTURE_V5.md](../ARCHITECTURE_V5.md) | Целевая архитектура: 4 слоя, контракты, инварианты. |
-| [REFACTOR_BACKLOG_V5.md](REFACTOR_BACKLOG_V5.md) | Приоритизированный backlog R5-001…R5-015 с зависимостями. |
-| [DATAVIEW_ABSORPTION_PLAN.md](DATAVIEW_ABSORPTION_PLAN.md) | Адаптивное поглощение Dataview: аналоги Notion-функций + bridges. |
-| [SESSION_REPROMPT.md](SESSION_REPROMPT.md) | Нулевая точка входа для сессии 3 (аналитическая). |
-| [CODE_STANDARDS.md](../CODE_STANDARDS.md) / [CODE_STANDARDS-RU.md](../CODE_STANDARDS-RU.md) | Нормы кода (TS strict, Svelte, тесты). |
-| [api.md](../api.md) / [api-ru.md](../api-ru.md) | Публичный API плагина (custom views). |
-| [user-guide.md](../user-guide.md) / [user-guide-EN.md](../user-guide-EN.md) | Гайд пользователя (отложен до V5.4+). |
-| [DESIGN_CONCEPT_NOTION_AESTHETIC.md](DESIGN_CONCEPT_NOTION_AESTHETIC.md) | Визуальный референс. |
-| [NOTION_PARITY.md](NOTION_PARITY.md) | Список фич Notion-parity (входной материал). |
-| [UX_FLOW_MAIN_SCENARIO.md](UX_FLOW_MAIN_SCENARIO.md) | Главный UX сценарий: 5 шагов → живая база со связями. Матрица готовности. Добавлен 2026-05-08. |
-| [archive/](../archive/) | Все исторические документы (read-only). |
+> **ВАЖНО (2026-05-14)**: Большинство internal docs перенесены в workspace `.ai_internal\`.
+
+| Документ | Роль | Расположение |
+|---|---|---|
+| MASTER_MAP_V5.md | Навигация. Этот файл. | `docs/internal/` (репо) |
+| [BACKLOG.md](BACKLOG.md) | Активный backlog #NNN + milestones | `docs/internal/` (репо) |
+| [ARCHITECTURE_V5.md](../ARCHITECTURE_V5.md) | Целевая архитектура | `docs/` (репо) |
+| [CODE_STANDARDS.md](../CODE_STANDARDS.md) | Нормы кода | `docs/` (репо) |
+| [api.md](../api.md) | Публичный API | `docs/` (репо) |
+| ANALYTICAL_REVIEW_2026-05-08.md | Аудит проекта (май 2026) | `workspace/.ai_internal/analytics/` |
+| FORMULA_CONSTRUCTOR_AUDIT_2026-05-08.md | Аудит FormConstructor (#022) | `workspace/.ai_internal/analytics/` |
+| DASHBOARD_V2_MASTER_PROMPT.md | Product vision, North Star | `workspace/.ai_internal/` |
+| NOTION_PARITY.md | Parity tracking ~90% | `workspace/.ai_internal/` |
+| DATAVIEW_ABSORPTION_PLAN.md | M-DATAVIEW-BRIDGE план | `workspace/.ai_internal/` |
+| UX_FLOW_MAIN_SCENARIO.md | UX сценарий | `workspace/.ai_internal/` |
+| DESIGN_CONCEPT_NOTION_AESTHETIC.md | Дизайн-референс | `workspace/.ai_internal/` |
+| [archive/](../archive/) | Исторические документы (read-only) | `docs/archive/` (репо) |
 
 ## 3. Карта кода (4-слойная Matryoshka)
 
