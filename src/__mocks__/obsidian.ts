@@ -227,8 +227,9 @@ export class Notice {
   constructor(public message: string) {}
 }
 
-// Mock addIcon (no-op)
+// Mock addIcon / setIcon (no-op)
 export const addIcon = jest.fn();
+export const setIcon = jest.fn();
 
 // Minimal normalizePath: forward slashes, collapse doubles, strip trailing slash
 export function normalizePath(path: string): string {

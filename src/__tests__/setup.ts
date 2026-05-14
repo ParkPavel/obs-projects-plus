@@ -52,3 +52,14 @@ Object.defineProperty(window, "matchMedia", {
 if (typeof (global as any).CSS === "undefined") {
   (global as any).CSS = { escape: (str: string) => str };
 }
+
+// Polyfill crypto.randomUUID for jsdom environments that lack it
+if (typeof globalThis.crypto === "undefined") {
+  (globalThis as any).crypto = {};
+}
+if (typeof (globalThis.crypto as any).randomUUID !== "function") {
+  const { randomUUID } = require("crypto") as typeof import("crypto");
+  (globalThis.crypto as any).randomUUID = randomUUID.bind(
+    require("crypto")
+  );
+}
