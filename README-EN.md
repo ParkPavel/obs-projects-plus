@@ -2,17 +2,25 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.4.2-blue.svg)
+![Version](https://img.shields.io/badge/version-3.5.1--alpha-orange.svg)
 ![Obsidian](https://img.shields.io/badge/Obsidian-v1.5.7+-purple.svg)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)
 [![Downloads](https://img.shields.io/github/downloads/ParkPavel/obs-projects-plus/total.svg)](https://github.com/ParkPavel/obs-projects-plus/releases)
 [![Telegram](https://img.shields.io/badge/Telegram-Channel-blue.svg?logo=telegram)](https://t.me/parkpavel_chigon)
 
-**Project management in Obsidian: tables, boards, calendar with timeline, gallery**
+**Project management in Obsidian: tables, boards, calendar with timeline, gallery, Dashboard**
 
 [Русский](README.md) | English
 
 </div>
+
+---
+
+> **Status: Alpha (3.5.1-alpha)**
+>
+> The plugin is under active development. Core views (Table, Board, Calendar, Gallery) are stable. Dashboard is in its final development stage.
+>
+> **Known issue (P0):** Dashboard does not auto-refresh when vault files change. If you edit a note, switch to another view and back, or close and reopen the project tab. A fix is in progress (milestone M-CANVAS-REACTIVE).
 
 ---
 
@@ -21,6 +29,8 @@
 Obsidian stores everything in plain Markdown files. That works great for text — but when you have dozens or hundreds of notes, it's hard to see what's where and in what state.
 
 **Projects Plus** turns a folder of notes into a managed project: you see all tasks on a kanban board, all events on a calendar, all cards in a gallery — all without export, without cloud, right in your vault.
+
+Your data **stays in your files**. The plugin does not create its own database.
 
 ### Who it's for
 
@@ -36,11 +46,9 @@ Obsidian stores everything in plain Markdown files. That works great for text �
 3. You pick a **view** — table, board, calendar, or gallery
 4. You edit fields right in the interface — the plugin writes changes back to the file
 
-Your data **stays in your files**. The plugin does not create its own database.
-
 ---
 
-## 📸 Gallery
+## Gallery
 
 <p align="center">
   <img src="images/2026-01-27_12-23-33.png" width="15%" title="Table" />
@@ -57,7 +65,7 @@ Your data **stays in your files**. The plugin does not create its own database.
 </p>
 
 <details>
-<summary align="center"><b>👆 Click to view full size</b></summary>
+<summary align="center"><b>Click to view full size</b></summary>
 <p align="center">
   <a href="images/2026-01-27_12-23-33.png"><img src="images/2026-01-27_12-23-33.png" width="80%" /></a>
   <a href="images/2026-01-27_12-23-55.png"><img src="images/2026-01-27_12-23-55.png" width="80%" /></a>
@@ -73,33 +81,42 @@ Your data **stays in your files**. The plugin does not create its own database.
 
 ---
 
-## ✨ Features
+## Features
 
-| View | What it does |
-|------|-------------|
-| **Table** | Editing with sorting, filtering, cell navigation |
-| **Board** | Kanban — drag cards, column persist, Ctrl+Scroll zoom (25–200%), collapsible columns |
-| **Calendar** | Timeline 07:00–22:00, multi-day bars, 5 zoom levels (Year → Day) |
-| **Gallery** | Cards with covers and frontmatter fields |
-| **Dashboard** | Multi-widget canvas: 8 widget types, 10 chart types, transform pipeline (7 steps + cross-project join), sub-bases with tabs, conditional formatting, embedded view portals (ViewPort) |
+| View | What it does | Status |
+|------|-------------|:------:|
+| **Table** | Editing with sorting, filtering, cell navigation | Stable |
+| **Board** | Kanban — drag cards, column persist, Ctrl+Scroll zoom (25–200%) | Stable |
+| **Calendar** | Timeline 07:00–22:00, multi-day bars, 5 zoom levels (Year → Day), mobile gestures | Stable |
+| **Gallery** | Cards with covers and frontmatter fields | Stable |
+| **Dashboard** | Multi-widget canvas: 8 widget types, 10 chart types, transform pipeline, sub-bases | Alpha — see below |
 
-**Calendar** — a full planner: `startDate`, `endDate`, `startTime`, `endTime`, `date` (note creation date), `color` field for color coding, infinite scroll, mobile gestures (swipe, pinch-to-zoom, double tap to create note).
+**Calendar** — a full planner: `startDate`, `endDate`, `startTime`, `endTime`, `date`, `color` for color coding, infinite scroll, mobile gestures (swipe, pinch-to-zoom, double tap to create a note).
 
-**Agenda 2.0** — calendar sidebar with a list builder: 42 filter operators, nested AND/OR groups, date formulas (`today`, `sow`, `eom`, `today+1w`), two modes — visual and Advanced (Google Sheets-style formulas).
+**Agenda 2.0** — calendar sidebar with a list builder: 42 filter operators, nested AND/OR groups, date formulas (`today`, `sow`, `eom`, `today+1w`), two modes — visual and Advanced.
 
-**Board** — column persist: columns stay visible even with no matching records, visual indicators, Ctrl+Scroll zoom (25–200%), adaptive layout, note creation inherits active filters.
+**Board** — column persist: columns stay visible even with no matching records, Ctrl+Scroll zoom (25–200%), note creation inherits active filters.
 
-**Dashboard** — a multi-widget canvas layered on top of project data. Each of the 8 widgets is independent with its own transform pipeline (unnest → unpivot → compute → filter → group-by → aggregate → pivot + cross-project join). The **DataTable** widget supports sub-bases — named tabs applying independent filters to the same dataset. The **ViewPort** widget embeds Table, Board, Calendar, or Gallery inside the canvas. Two layout modes: vertical stack and adaptive 12-column grid.
-
-**Three data sources**: folder, tag, Dataview query. Note templates, autosave, localization (RU, EN, UA, ZH-CN).
+**Dashboard** — a multi-widget canvas layered on top of project data. Each of the 8 widgets is independent with its own transform pipeline (unnest → unpivot → compute → filter → group-by → aggregate → pivot + cross-project join). Sub-bases are named tabs applying independent filters to the same dataset. **ViewPort** embeds Table, Board, Calendar, or Gallery inside the canvas. Two layout modes: vertical stack and adaptive 12-column grid.
 
 > For shortcuts, gestures, templates, and settings details — see the **[User Guide](docs/user-guide-EN.md)**.
 
+**Three data sources**: folder, tag, Dataview query. Note templates, autosave, localization (RU, EN, UA, ZH-CN).
+
 ---
 
-## 📥 Installation
+## Known Issues
 
-### BRAT (Recommended)
+| # | Issue | Priority | Workaround |
+|---|-------|:--------:|------------|
+| [#016](docs/internal/BACKLOG.md) | Dashboard does not auto-refresh when vault files change | **P0** | Switch to another view and back, or close and reopen the project tab |
+| #004 | Row count in table footer may diverge from actual records when filters are active | P1 | Reset filters to see the accurate count |
+
+---
+
+## Installation
+
+### BRAT (Recommended for alpha versions)
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat)
 2. In BRAT settings, add: `ParkPavel/obs-projects-plus`
 3. Enable the plugin
@@ -111,9 +128,9 @@ Your data **stays in your files**. The plugin does not create its own database.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-1. On first launch the plugin creates a **demo project** (35+ notes, 6 views)
+1. On first launch the plugin creates a **demo project** (35+ notes, all views)
 2. `Ctrl/Cmd+P` → *"Projects Plus: Show projects plus"*
 3. Switch between views: Table → Board → Calendar → Gallery
 4. Create your own project: `Ctrl/Cmd+P` → *"Projects Plus: Create Project"*
@@ -136,41 +153,44 @@ tags: [project, important]
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-| Priority | Feature | Version | Status |
-|:--------:|---------|---------|--------|
-| ✅ | **Agenda 2.0 & Filter System** | v3.0.5 | Released |
-| ✅ | **Obsidian Guidelines Compliance** | v3.0.6 | Released |
-| ✅ | **Optimization + Tags + Date Fields** | v3.0.7 | Released |
-| ✅ | **Board UX: persist, zoom, collapse** | v3.0.8 | Released |
-| ✅ | **Unified Filters + Instant Mode** | v3.0.9 | Released |
-| ✅ | **Mobile Feature Parity** | v3.0.10 | Released |
-| ✅ | **Deep Mobile Adaptation** | v3.1.0 | Released |
-| ✅ | **Drag & Drop 2.0** | v3.2.0 | Released |
-| ✅ | **Database View** | v3.3.0 | Released |
-| ✅ | **Dashboard View** — Database View migrated: databases inside Dashboard canvas | v3.4.0 | Released |
-| 🚧 | **Dashboard Engine** — relations, rollup, formula, sub-bases, Dataview adaptive bridge | 3.5.X WIP | In progress |
+| Milestone | What's included | Status |
+|-----------|----------------|:------:|
+| **M-ENGINE-CLEANUP** | Unified formula engine, filter stack, ReDoS guard, context menu | Done |
+| **M-COLOR-SETTINGS** | Color palette unification, settings v4 migration | Done |
+| **M-CANVAS-REACTIVE** | Closing the Dashboard reactive loop (#016 P0), splitting DashboardCanvas.svelte | Current |
+| **M-TABLE-REWRITE** | Remove legacy DataGrid, modern Notion-spec table | Planned |
+| **M-SUBBASES** | Sub-base canvas widget, full UI wiring in DashboardCanvas | Planned |
+| **M-YAML-FORMULA-UI** | Visual formula constructor, YAML visualizer as Dashboard widget | Planned |
+| **M-DATAVIEW-BRIDGE** | Dataview as adaptive query backend with Notion semantics | Planning |
 
-> V5 architecture — [docs/internal/MASTER_MAP_V5.md](docs/internal/MASTER_MAP_V5.md).
+Full ticket backlog: [docs/internal/BACKLOG.md](docs/internal/BACKLOG.md).
 
 ---
 
 <details>
-<summary><h2>🛠️ For Developers</h2></summary>
+<summary><h2>For Developers</h2></summary>
 
-### Known Issues
+### Development
 
-| # | Issue | Priority | Notes |
-|---|-------|:--------:|-------|
-| 1 | Command logic duplication (`main.ts` + `CommandManager`) | P2 | Desync risk when adding new commands |
-| 2 | Fire-and-forget `void` in `ViewApi` writes | P2 | I/O errors during writes are silently swallowed |
+```bash
+git clone https://github.com/ParkPavel/obs-projects-plus.git
+cd obs-projects-plus
+npm ci
+npm run dev       # esbuild watch mode
+npm run build     # tsc check + esbuild production bundle
+npm test          # Jest (116 suites / 1800 tests)
+npx tsc --noEmit  # type check only
+npm run lint      # ESLint 9 + eslint-plugin-obsidianmd
+npm run format    # Prettier
+```
+
+**Stack**: TypeScript strict, Svelte 3.59.2 (locked), Jest 29, esbuild.
 
 ### Custom View API (Experimental)
 
-The plugin supports registering **custom views** from third-party plugins. This is inherited from the original Obsidian Projects by Marcus Olsson.
-
-**How it works**: on load, Projects Plus iterates all enabled plugins looking for an `onRegisterProjectView` method. If found, it calls the method and registers the returned view alongside the built-in ones (Table, Board, Calendar, Gallery).
+The plugin supports registering custom views from third-party plugins.
 
 ```typescript
 // In your plugin (plugin.ts):
@@ -200,54 +220,37 @@ export default class MyPlugin extends Plugin {
 
 Install types: `npm install --save-dev obsidian-projects-types`
 
-> ⚠️ **This API is experimental** and may change without notice. Details: [obsidian-projects-types/README](obsidian-projects-types/README.md)
+> **This API is experimental** and may change without notice. Details: [obsidian-projects-types/README](obsidian-projects-types/README.md)
 
-### 📣 Contributor Vote: Svelte 3 → 5
+### Architecture
 
-Svelte is a **compiler**, not a runtime. The final `main.js` contains no Svelte code. Compiler CVEs don't affect the plugin. Obsidian doesn't check Svelte version.
-
-**For**: runes DX, ecosystem, contributors. **Against**: ~50+ files, breaking API, zero user impact.
-
-> [Vote](https://github.com/ParkPavel/obs-projects-plus/discussions) or open an Issue.
-
-### Development
-
-```bash
-git clone https://github.com/ParkPavel/obs-projects-plus.git
-cd obs-projects-plus
-npm ci
-npm run dev       # esbuild watch mode
-npm run build     # tsc + esbuild production
-npm run test      # Jest (54 suites, 923+ tests)
-npm run lint      # ESLint 9 + eslint-plugin-obsidianmd
-npm run format    # Prettier
-```
-
-Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) • [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md)
+4-layer architecture, invariants, and module contracts: [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md).  
+Code standards: [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md).  
+Public API: [docs/api.md](docs/api.md).
 
 </details>
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [User Guide (RU)](docs/user-guide.md) | Shortcuts, gestures, templates, settings |
+| [User Guide (RU)](docs/user-guide.md) | Shortcuts, gestures, templates, settings (Russian) |
 | [User Guide (EN)](docs/user-guide-EN.md) | Full instructions in English |
 | [Project Info](PROJECT-INFO.md) | What this project is, goals, license history |
 | [Demo Vault](demo-vault/README.md) | Ready-made vault to try the plugin |
-| [CONTRIBUTING](CONTRIBUTING.md) | How to contribute, runtime asset set, branching |
-| [Architecture V5](docs/ARCHITECTURE_V5.md) | **Start here for contributors** — 4-layer architecture, contracts, invariants |
-| [V5 Roadmap](docs/internal/MASTER_MAP_V5.md) | V5 phases, backlog, document map |
+| [CONTRIBUTING](CONTRIBUTING.md) | How to contribute, branching, PR process |
+| [Architecture V5](docs/ARCHITECTURE_V5.md) | Start here for contributors — 4-layer architecture, invariants |
+| [Backlog / Roadmap](docs/internal/BACKLOG.md) | Tickets #NNN by milestones, statuses |
 | [Custom View API](obsidian-projects-types/README.md) | Register your own views from other plugins |
-| [Release History](RELEASES-EN.md) | All releases |
-| [CHANGELOG](CHANGELOG.md) | Keep a Changelog format |
-| [Docs Index](docs/DOCS_INDEX.md) | Navigation across all documents |
+| [CHANGELOG](CHANGELOG.md) | Change history |
+| [Releases](RELEASES-EN.md) | All releases with descriptions |
+| [Docs Index](docs/DOCS_INDEX.md) | Full documentation navigation |
 
 ---
 
-## 💬 Feedback
+## Feedback
 
 - **Telegram**: [@parkpavel_chigon](https://t.me/parkpavel_chigon)
 - **GitHub Issues**: [Report a problem](https://github.com/ParkPavel/obs-projects-plus/issues)
@@ -255,21 +258,21 @@ Details: [CONTRIBUTING.md](CONTRIBUTING.md) • [docs/ARCHITECTURE_V5.md](docs/A
 
 ---
 
-## 🙏 Credits
+## Credits
 
 Fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) by [Marcus Olsson](https://github.com/marcusolsson).  
 Current maintainer: **Park Pavel**
 
-## 📄 License
+## License
 
-[Apache License 2.0](LICENSE) © 2024–2026 Park Pavel
+[Apache License 2.0](LICENSE-INFO.md) © 2024–2026 Park Pavel
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for the Obsidian community**
+**Made for the Obsidian community**
 
-[⭐ Star](https://github.com/ParkPavel/obs-projects-plus) • [🐛 Issues](https://github.com/ParkPavel/obs-projects-plus/issues) • [💬 Telegram](https://t.me/parkpavel_chigon)
+[Star](https://github.com/ParkPavel/obs-projects-plus) • [Issues](https://github.com/ParkPavel/obs-projects-plus/issues) • [Telegram](https://t.me/parkpavel_chigon)
 
 </div>
