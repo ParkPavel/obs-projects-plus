@@ -214,6 +214,11 @@
     position: relative;
     display: flex;
     align-items: stretch;
+    /* #041: claim available middle space in CompactNavBar flex layout
+       (project trigger + container + .right). Without `flex: 1 1 auto`
+       the container takes natural content width → tabs overflow the navbar
+       instead of activating the inner scroll + chevrons. */
+    flex: 1 1 auto;
     min-width: 0;
   }
 
