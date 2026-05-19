@@ -232,6 +232,28 @@ Plan: `docs/internal/DATAVIEW_ABSORPTION_PLAN.md`
 
 ---
 
+## Milestone M-POPUP-STANDARDISATION — ✅ COMPLETE
+
+### #034 — Popup standardisation (FloatingPopup engine + migrations)
+- Status: ✅ DONE (2026-05-19)
+- Milestone: M-POPUP-STANDARDISATION | Priority: P2 | Complexity: L
+- analysis_required: false
+- Sub-PRs:
+  - #034.1 — FloatingPopup engine + 3 migrations + WindowShell `badges` slot API (8f6b6f0)
+  - #034.2a — 6 popoverDropdown consumers → FloatingPopup + PopoverList helper (c659b5e)
+  - #034.2b — archive dead SwitchSelect; document non-migratable popups (8d92cbb)
+  - #034.3 — inline header badges via `badges` slot for stats/chart/data-table (this branch)
+
+### #040 — Inline header badges in widgets
+- Status: ✅ DONE (2026-05-19)
+- Milestone: M-POPUP-STANDARDISATION | Priority: P3 | Complexity: S
+- analysis_required: false
+- Sub-PRs:
+  - #040.1 — WindowShell `<slot name="badges" />` API + wrapper CSS (in #034.1)
+  - #040.2 — WidgetInlineBadges.svelte consumer wiring + DashboardCanvas hookup (this branch)
+
+---
+
 ## Dependency graph
 
 ```

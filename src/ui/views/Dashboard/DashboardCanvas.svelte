@@ -57,6 +57,7 @@
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import FreeCanvas from "./FreeCanvas/FreeCanvas.svelte";
   import WindowShell from "./FreeCanvas/WindowShell.svelte";
+  import WidgetInlineBadges from "./widgets/_shared/WidgetInlineBadges.svelte";
   import {
     createFreeCanvasStore,
     type FreeCanvasStore,
@@ -581,6 +582,13 @@
               store={freeCanvasStore}
               isActive={window.id === activeWindowId}
             >
+              <svelte:fragment slot="badges">
+                <WidgetInlineBadges
+                  {widget}
+                  frame={widget.type === "filter-tabs" ? frame : displayFrame}
+                  tableConfig={config?.table}
+                />
+              </svelte:fragment>
               <WidgetHost
                 {widget}
                 frame={widget.type === "filter-tabs" ? frame : displayFrame}
