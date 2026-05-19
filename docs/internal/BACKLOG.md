@@ -114,6 +114,37 @@ Files:
 
 AC: Modify source file → Dashboard updates in ≤500ms, no manual action required.
 
+### #031 — DataProvider Registry (per-canvas, Svelte context)
+- Status: ✅ DONE (2026-05-19) — 3 sub-PRs landed on `feat/031.x-*` branches
+- Milestone: M-CANVAS-REACTIVE | Priority: P1 | Complexity: M
+- analysis_required: false (resolved during implementation)
+- Depends on: none (works on current reactive cycle independently of #016)
+
+Outcome: per-canvas registry of widgets that expose data (`DataProvider` interface).
+Foundation for cross-widget filtering (#035) and chart wiring on top of Database
+Windows. Not a singleton — each `DashboardCanvas` mounts its own registry via
+`setContext(DATA_PROVIDER_REGISTRY_CONTEXT_KEY, ...)`.
+
+Sub-PRs:
+- **31.1** `feat/031.1-dataprovider-registry-factory` (e787b90):
+  `src/lib/stores/dataProviderRegistry.ts` + `__tests__/dataProviderRegistry.test.ts`
+  (9 tests). Pure module: `DataProvider`/`DataProviderRegistry` types, Symbol context
+  key, factory with `register`/`unregister`/`getProvider`/`notifyAll`/`clear` + reactive
+  `subscribe`. Each `update()` creates a new Map for reactivity.
+- **31.2** `feat/031.2-dataprovider-registry-wiring` (6056f5a):
+  `DashboardCanvas.svelte` instantiates per-canvas registry, sets context, clears on
+  destroy. No consumers yet.
+- **31.3** `feat/031.3-dataprovider-registry-consumers` (8f303c7):
+  `DatabaseCallBlock.svelte` gains `widgetId`/`widgetTitle` props, mounts a
+  `providerFrame` writable mirroring the `frame` prop, registers via context on mount,
+  unregisters on destroy. `WidgetHost.svelte` propagates the ids. New 6-test suite
+  `dataProviderRegistration.test.ts` covers lifecycle, frame reactivity, title fallback,
+  no-context no-op.
+- **31.4** — ProviderPicker UI component deferred to #035 (cross-widget filtering)
+  per IMPLEMENTATION_ROADMAP.md.
+
+Gates: tsc 0 errors, Jest 118 suites / 1815 tests PASS, no `@ts-ignore`, no new px values.
+
 ---
 
 ## Milestone M-TABLE-REWRITE — 📋 BACKLOG
