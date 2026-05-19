@@ -2,15 +2,16 @@
   import type { WidgetType, WidgetDefinition } from "../types";
   import { WIDGET_REGISTRY, canAddWidget } from "./widgetRegistry";
   import { WIDGET_TEMPLATES, type WidgetTemplate } from "../widgetTemplates";
-  import { createEventDispatcher, onMount, onDestroy } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
 
   export let currentWidgets: { type: WidgetType }[];
 
   let open = false;
   let showTemplates = false;
-  let toolbarEl: HTMLDivElement;
+  let triggerEl: HTMLButtonElement | null = null;
 
   const dispatch = createEventDispatcher<{
     addWidget: WidgetType;
@@ -28,82 +29,68 @@
     open = false;
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape" && open) {
-      open = false;
-      showTemplates = false;
-      e.stopPropagation();
-    }
-  }
-
-  function handleClickOutside(e: MouseEvent) {
-    if (open && toolbarEl && !toolbarEl.contains(e.target as Node)) {
-      open = false;
-      showTemplates = false;
-    }
-  }
-
-  onMount(() => {
-    document.addEventListener("click", handleClickOutside, true);
-  });
-  onDestroy(() => {
-    document.removeEventListener("click", handleClickOutside, true);
-  });
+  // Reset nested templates submenu whenever the popup closes.
+  $: if (!open) showTemplates = false;
 </script>
 
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="ppp-widget-toolbar" bind:this={toolbarEl} on:keydown={handleKeydown}>
+<div class="ppp-widget-toolbar">
   <button
+    bind:this={triggerEl}
     class="ppp-toolbar-add clickable-icon"
     on:click={() => (open = !open)}
     aria-label={$i18n.t("views.dashboard.widget.add-aria")}
     aria-expanded={open}
+    aria-haspopup="menu"
   >
     + {$i18n.t("views.dashboard.widget.add")}
   </button>
 
-  {#if open}
-    <div class="ppp-toolbar-dropdown" role="menu">
-      {#each WIDGET_REGISTRY as meta}
-        {@const allowed = canAddWidget(meta.type, currentWidgets)}
-        <button
-          class="ppp-toolbar-option"
-          class:ppp-toolbar-option--disabled={!allowed}
-          disabled={!allowed}
-          on:click={() => handleAdd(meta.type)}
-          role="menuitem"
-        >
-          <span class="ppp-toolbar-icon"><Icon name={meta.icon} /></span>
-          <span>{$i18n.t(meta.labelKey)}</span>
-        </button>
-      {/each}
+  <FloatingPopup
+    {triggerEl}
+    bind:open
+    placement="bottom-start"
+    role="menu"
+    ariaLabel={$i18n.t("views.dashboard.widget.add-aria")}
+  >
+    {#each WIDGET_REGISTRY as meta}
+      {@const allowed = canAddWidget(meta.type, currentWidgets)}
+      <button
+        class="ppp-toolbar-option"
+        class:ppp-toolbar-option--disabled={!allowed}
+        disabled={!allowed}
+        on:click={() => handleAdd(meta.type)}
+        role="menuitem"
+      >
+        <span class="ppp-toolbar-icon"><Icon name={meta.icon} /></span>
+        <span>{$i18n.t(meta.labelKey)}</span>
+      </button>
+    {/each}
 
-      {#if WIDGET_TEMPLATES.length > 0}
-        <div class="ppp-toolbar-separator"></div>
-        <button
-          class="ppp-toolbar-option ppp-toolbar-option--section"
-          on:click|stopPropagation={() => (showTemplates = !showTemplates)}
-          role="menuitem"
-        >
-          <span class="ppp-toolbar-icon"><Icon name="layout-template" /></span>
-          <span>{$i18n.t("views.dashboard.widget.templates")} {showTemplates ? "▾" : "▸"}</span>
-        </button>
-        {#if showTemplates}
-          {#each WIDGET_TEMPLATES as tpl}
-            <button
-              class="ppp-toolbar-option ppp-toolbar-option--template"
-              on:click={() => handleTemplate(tpl)}
-              role="menuitem"
-              title={$i18n.t(tpl.descriptionKey)}
-            >
-              <span class="ppp-toolbar-tpl-label">{$i18n.t(tpl.labelKey)}</span>
-              <span class="ppp-toolbar-tpl-desc">{$i18n.t(tpl.descriptionKey)}</span>
-            </button>
-          {/each}
-        {/if}
+    {#if WIDGET_TEMPLATES.length > 0}
+      <div class="ppp-toolbar-separator"></div>
+      <button
+        class="ppp-toolbar-option ppp-toolbar-option--section"
+        on:click|stopPropagation={() => (showTemplates = !showTemplates)}
+        role="menuitem"
+      >
+        <span class="ppp-toolbar-icon"><Icon name="layout-template" /></span>
+        <span>{$i18n.t("views.dashboard.widget.templates")} {showTemplates ? "▾" : "▸"}</span>
+      </button>
+      {#if showTemplates}
+        {#each WIDGET_TEMPLATES as tpl}
+          <button
+            class="ppp-toolbar-option ppp-toolbar-option--template"
+            on:click={() => handleTemplate(tpl)}
+            role="menuitem"
+            title={$i18n.t(tpl.descriptionKey)}
+          >
+            <span class="ppp-toolbar-tpl-label">{$i18n.t(tpl.labelKey)}</span>
+            <span class="ppp-toolbar-tpl-desc">{$i18n.t(tpl.descriptionKey)}</span>
+          </button>
+        {/each}
       {/if}
-    </div>
-  {/if}
+    {/if}
+  </FloatingPopup>
 </div>
 
 <style>
@@ -128,20 +115,6 @@
   .ppp-toolbar-add:hover {
     color: var(--text-normal);
     border-color: var(--interactive-accent);
-  }
-
-  .ppp-toolbar-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: var(--layer-popover, 30);
-    margin-top: 0.25rem;
-    padding: 0.25rem;
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m, 0.5rem);
-    box-shadow: var(--shadow-s);
-    min-width: 10rem;
   }
 
   .ppp-toolbar-option {

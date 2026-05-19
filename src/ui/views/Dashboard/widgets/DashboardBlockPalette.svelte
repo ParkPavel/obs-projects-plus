@@ -1,14 +1,15 @@
 <script lang="ts">
   import type { WidgetType } from "../types";
   import { WIDGET_REGISTRY, canAddWidget } from "./widgetRegistry";
-  import { createEventDispatcher, onMount, onDestroy } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
 
   export let currentWidgets: { type: WidgetType }[];
 
   let open = false;
-  let paletteEl: HTMLDivElement;
+  let triggerEl: HTMLButtonElement | null = null;
 
   const dispatch = createEventDispatcher<{ addWidget: WidgetType }>();
 
@@ -16,50 +17,39 @@
     dispatch("addWidget", type);
     open = false;
   }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape" && open) {
-      open = false;
-      e.stopPropagation();
-    }
-  }
-
-  function handleClickOutside(e: MouseEvent) {
-    if (open && paletteEl && !paletteEl.contains(e.target as Node)) {
-      open = false;
-    }
-  }
-
-  onMount(() => document.addEventListener("click", handleClickOutside, true));
-  onDestroy(() => document.removeEventListener("click", handleClickOutside, true));
 </script>
 
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="ppp-block-palette" bind:this={paletteEl} on:keydown={handleKeydown}>
+<div class="ppp-block-palette">
   <button
+    bind:this={triggerEl}
     class="ppp-block-palette__trigger"
     on:click={() => (open = !open)}
     aria-label={$i18n.t("views.dashboard.canvas.add-widget", { defaultValue: "Add widget" })}
     aria-expanded={open}
+    aria-haspopup="menu"
   >+</button>
 
-  {#if open}
-    <div class="ppp-block-palette__popup" role="menu">
-      {#each WIDGET_REGISTRY as meta}
-        {@const allowed = canAddWidget(meta.type, currentWidgets)}
-        <button
-          class="ppp-block-palette__item"
-          class:ppp-block-palette__item--disabled={!allowed}
-          disabled={!allowed}
-          on:click={() => handleAdd(meta.type)}
-          role="menuitem"
-        >
-          <span class="ppp-block-palette__icon"><Icon name={meta.icon} /></span>
-          <span>{$i18n.t(meta.labelKey)}</span>
-        </button>
-      {/each}
-    </div>
-  {/if}
+  <FloatingPopup
+    {triggerEl}
+    bind:open
+    placement="top-start"
+    role="menu"
+    ariaLabel={$i18n.t("views.dashboard.canvas.add-widget", { defaultValue: "Add widget" })}
+  >
+    {#each WIDGET_REGISTRY as meta}
+      {@const allowed = canAddWidget(meta.type, currentWidgets)}
+      <button
+        class="ppp-block-palette__item"
+        class:ppp-block-palette__item--disabled={!allowed}
+        disabled={!allowed}
+        on:click={() => handleAdd(meta.type)}
+        role="menuitem"
+      >
+        <span class="ppp-block-palette__icon"><Icon name={meta.icon} /></span>
+        <span>{$i18n.t(meta.labelKey)}</span>
+      </button>
+    {/each}
+  </FloatingPopup>
 </div>
 
 <style>
@@ -94,26 +84,6 @@
   .ppp-block-palette__trigger:focus-visible {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.0625rem;
-  }
-
-  .ppp-block-palette__popup {
-    position: absolute;
-    bottom: calc(100% + 0.25rem);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: var(--layer-popover, 30);
-    padding: 0.25rem;
-    background: var(--background-primary);
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: var(--radius-m, 0.5rem);
-    box-shadow: var(--shadow-s);
-    min-width: 10rem;
-    animation: ppp-palette-in 150ms ease both;
-  }
-
-  @keyframes ppp-palette-in {
-    from { opacity: 0; transform: translateX(-50%) translateY(0.25rem); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
 
   .ppp-block-palette__item {

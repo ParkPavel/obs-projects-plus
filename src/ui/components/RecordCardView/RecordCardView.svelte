@@ -107,9 +107,11 @@
   on:close={() => dispatch("close")}
 >
   <!-- Header icon slot: renders whenever the record has a recognised icon field,
-       even if the field value is currently empty (so the user can SET an icon). -->
-  {#if resolvedIconField}
-    <svelte:fragment slot="icon">
+       even if the field value is currently empty (so the user can SET an icon).
+       NOTE: <svelte:fragment> must be a direct child of the component — the
+       {#if} guard goes INSIDE the fragment, not around it. -->
+  <svelte:fragment slot="icon">
+    {#if resolvedIconField}
       <div class="ppp-rcv-icon-wrap">
         <button
           class="ppp-rcv-icon-btn"
@@ -142,8 +144,8 @@
           </div>
         {/if}
       </div>
-    </svelte:fragment>
-  {/if}
+    {/if}
+  </svelte:fragment>
 
   <!-- Description block -->
   {#if descText}

@@ -211,7 +211,18 @@
     on:pointermove={onHeaderPointerMove}
     on:pointerup={onHeaderPointerUp}
     on:pointercancel={onHeaderPointerUp}
-  ></div>
+  >
+    <!--
+      `badges` slot (#040): inline-badge buttons (data-source, aggregation,
+      etc.) rendered in the window header. Consumer must keep the slot
+      content compact and pointer-event-safe (uses .ppp-window__badges
+      wrapper which stops pointerdown bubbling so badge clicks don't
+      initiate window dragging).
+    -->
+    <div class="ppp-window__badges" on:pointerdown|stopPropagation>
+      <slot name="badges" />
+    </div>
+  </div>
 
   <div class="ppp-window__content">
     <slot />
@@ -258,6 +269,19 @@
 
   .ppp-window__header:active {
     cursor: grabbing;
+  }
+
+  /* #040 — inline badge buttons rendered into the header via `badges` slot. */
+  .ppp-window__badges {
+    position: absolute;
+    top: 0;
+    right: 0.5rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: default;
+    pointer-events: auto;
   }
 
   .ppp-window__content {
