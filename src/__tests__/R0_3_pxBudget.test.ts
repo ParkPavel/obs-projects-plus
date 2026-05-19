@@ -70,7 +70,8 @@ describe("R0.3 — CSS px-budget ratchet", () => {
   //   332 → 301 (REFACTOR-404f — Onboarding/TabContainer/CardMetadata/Field/FileListInput/HorizontalGroup/DateInput/CreateProject/Inspector/ColumnHeader spacing; ErrorBoundary/ImagePreview layout dimensions; EventList/ColorPill/Day borderRadius; SubBaseTabs/TableView/ViewsTab/SettingsMenuTabs inset box-shadow+translateY+outline-offset; CurrentTimeLine glow shadow; TimelineView ghost border-left; token files keep 1px/2px/9999px as canonical definitions).
   //   301 → 191 (REFACTOR-403b — DateFormulaInput/FilterRow/AdvancedFilterEditor: bulk px→rem conversion of inline JS-built style strings + CSS style blocks; 1px hairlines preserved; UTF-8 BOM + Cyrillic comments verified intact).
   //   191 → 187 (TDT-12 — WidgetHost.svelte: 4 × border/border-bottom 1px solid → 0.0625rem solid).
-  const PX_BUDGET = 187;
+  //   187 → 186 (#034.2a — net px reduction during popoverDropdown→FloatingPopup migration: archived popoverDropdown.ts (legacy .ts file did not count); new PopoverList.svelte uses 0.0625rem hairlines).
+  const PX_BUDGET = 186;
 
   it("does not exceed the agreed px-budget", () => {
     const { total, perFile } = countPxAcrossSrc();

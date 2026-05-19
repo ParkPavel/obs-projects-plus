@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "../../../../../lib/stores/i18n";
-  import { makePopover, destroyPopover, getPopoverEl } from "../../../../components/popoverDropdown";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import PopoverList, {
+    type PopoverItem,
+  } from "src/ui/components/FloatingPopup/PopoverList.svelte";
   import type {
     SortDefinition,
     SortingCriteria,
@@ -84,38 +87,46 @@
   }
 
   // ═══════════════════════════════
-  // IMPERATIVE DOM DROPDOWNS (shared via popoverDropdown.ts)
+  // FloatingPopup-backed dropdowns (#034.2a)
   // ═══════════════════════════════
+
+  let activePopover: {
+    anchorEl: HTMLElement;
+    items: PopoverItem[];
+  } | null = null;
 
   function openFieldPop(index: number, anchor: HTMLElement) {
     const crit = local.criteria[index]!;
-    makePopover(anchor, fields.map(f => ({
-      label: f.name,
-      icon: getFieldIcon(f.type),
-      selected: f.name === crit.field,
-      handler: () => updateCriteria(index, { field: f.name }),
-    })));
+    activePopover = {
+      anchorEl: anchor,
+      items: fields.map((f) => ({
+        label: f.name,
+        icon: getFieldIcon(f.type),
+        selected: f.name === crit.field,
+        handler: () => updateCriteria(index, { field: f.name }),
+      })),
+    };
   }
 
   function openOrderPop(index: number, anchor: HTMLElement) {
     const crit = local.criteria[index]!;
-    const orders: SortOrder[] = ['asc', 'desc'];
-    makePopover(anchor, orders.map(o => ({
-      label: getSortOrderLabel(o),
-      selected: o === crit.order,
-      handler: () => updateCriteria(index, { order: o }),
-    })));
+    const orders: SortOrder[] = ["asc", "desc"];
+    activePopover = {
+      anchorEl: anchor,
+      items: orders.map((o) => ({
+        label: getSortOrderLabel(o),
+        selected: o === crit.order,
+        handler: () => updateCriteria(index, { order: o }),
+      })),
+    };
   }
 
-  function handleWindowMousedown(e: MouseEvent) {
-    const el = getPopoverEl();
-    if (el && !el.contains(e.target as Node)) destroyPopover();
+  function handlePopoverSelect(
+    e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>,
+  ): void {
+    if (!e.detail.keepOpen) activePopover = null;
   }
-
-  onDestroy(() => { destroyPopover(); });
 </script>
-
-<svelte:window on:mousedown={handleWindowMousedown} />
 
 <div class="section">
   <div class="section-header">
@@ -184,6 +195,19 @@
     <span>{$i18n.t('common.add-criterion')}</span>
   </button>
 </div>
+
+<FloatingPopup
+  triggerEl={activePopover?.anchorEl ?? null}
+  open={activePopover !== null}
+  placement="bottom-start"
+  role="menu"
+  autoFocus={false}
+  on:close={() => (activePopover = null)}
+>
+  {#if activePopover}
+    <PopoverList items={activePopover.items} on:select={handlePopoverSelect} />
+  {/if}
+</FloatingPopup>
 
 <style>
   /* px→rem migration (REFACTOR-404). Hairline 1 borders kept verbatim;
