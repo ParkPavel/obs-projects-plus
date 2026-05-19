@@ -1,11 +1,20 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
+  import { createEventDispatcher } from "svelte";
 
   export let data: ChartData;
   export let width: number = 400;
   export let height: number = 320;
   export let style: ChartStyle;
   export let horizontal: boolean = false;
+  /**
+   * #044.2: label currently selected via the per-canvas selection store
+   * (driver-mode self-highlight). `null` ⇒ no chart-driven selection,
+   * render every bar at full opacity.
+   */
+  export let selectedLabel: string | null = null;
+
+  const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
   const PADDING = { top: 20, right: 20, bottom: 40, left: 50 };
 
@@ -55,6 +64,27 @@
     const hue = hues[index % hues.length];
     return `hsl(${hue}, 60%, 55%)`;
   }
+
+  /**
+   * #044.2: opacity for non-selected bars when a self-highlight is active.
+   * Returns 1 when no selection is active OR the bar is the selected one;
+   * dims to 0.35 otherwise so the active bar visually pops.
+   */
+  function barOpacity(label: string): number {
+    if (selectedLabel == null) return 1;
+    return label === selectedLabel ? 1 : 0.35;
+  }
+
+  function handleBarClick(label: string): void {
+    dispatch("select", { label });
+  }
+
+  function handleBarKey(event: KeyboardEvent, label: string): void {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      dispatch("select", { label });
+    }
+  }
 </script>
 
 <svg
@@ -84,6 +114,7 @@
 
     {#each labels as label, i}
       {@const val = values[i] ?? 0}
+      {@const isSelected = selectedLabel != null && label === selectedLabel}
       {#if horizontal}
         {@const bY = i * (barWidth + barGap)}
         {@const bW = xPos(val)}
@@ -91,6 +122,16 @@
           x={0} y={bY}
           width={bW} height={barWidth}
           fill={barColor(i)} rx="2"
+          opacity={barOpacity(label)}
+          stroke={isSelected ? "var(--interactive-accent)" : "none"}
+          stroke-width={isSelected ? 2 : 0}
+          class="ppp-chart-bar__rect"
+          role="button"
+          tabindex="0"
+          aria-label={label}
+          aria-pressed={isSelected}
+          on:click={() => handleBarClick(label)}
+          on:keydown={(e) => handleBarKey(e, label)}
         />
         {#if style.showLabels}
           <text
@@ -113,6 +154,16 @@
           x={bX} y={plotH - bH}
           width={barWidth} height={bH}
           fill={barColor(i)} rx="2"
+          opacity={barOpacity(label)}
+          stroke={isSelected ? "var(--interactive-accent)" : "none"}
+          stroke-width={isSelected ? 2 : 0}
+          class="ppp-chart-bar__rect"
+          role="button"
+          tabindex="0"
+          aria-label={label}
+          aria-pressed={isSelected}
+          on:click={() => handleBarClick(label)}
+          on:keydown={(e) => handleBarKey(e, label)}
         />
         {#if style.showLabels}
           <text
@@ -136,3 +187,21 @@
     <line x1={0} y1={0} x2={0} y2={plotH} stroke="var(--text-muted)" />
   </g>
 </svg>
+
+<style>
+  /*
+   * #044.2: bars are clickable drivers for cross-widget selection. The
+   * cursor + focus ring make the affordance discoverable; the dim
+   * (`opacity`) and accent stroke are driven from the script.
+   */
+  .ppp-chart-bar__rect {
+    cursor: pointer;
+    transition: opacity 120ms ease-out;
+  }
+
+  .ppp-chart-bar__rect:focus-visible {
+    outline: none;
+    stroke: var(--interactive-accent);
+    stroke-width: 2;
+  }
+</style>

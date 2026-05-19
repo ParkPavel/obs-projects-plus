@@ -493,7 +493,7 @@
           on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
         />
       {:else if widget.type === "chart" && chartConfig}
-        <ChartWidget config={chartConfig} source={transformedFrame} rightFrame={chartRightFrame} />
+        <ChartWidget config={chartConfig} source={transformedFrame} rightFrame={chartRightFrame} widgetId={widget.id} />
       {:else if widget.type === "chart" && !chartConfig}
         <div class="ppp-widget-setup-wizard">
           <span class="ppp-widget-setup-icon">📊</span>
