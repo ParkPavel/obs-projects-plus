@@ -64,6 +64,11 @@
     type WindowState,
   } from "./FreeCanvas/freeCanvasStore";
   import {
+    createSelectionStore,
+    SELECTION_CONTEXT_KEY,
+    type SelectionStore,
+  } from "./FreeCanvas/selectionStore";
+  import {
     migrateLayoutV1ToV2,
     type CanvasLayoutV1,
   } from "./FreeCanvas/layoutMigration";
@@ -318,6 +323,15 @@
     windows: (config?.widgets ?? []).map(widgetToWindowState),
   });
   setContext<FreeCanvasStore>("freeCanvasStore", freeCanvasStore);
+
+  // ── Cross-widget selection (#044.1) ────────────────────────
+  // Per-canvas selection store: drives interactive filtering between
+  // sibling widgets. One instance per DashboardCanvas (same pattern as
+  // freeCanvasStore above) so canvases stay isolated. Widget UI that
+  // produces/consumes selections lands in #044.2–#044.5 — this PR only
+  // wires the foundation.
+  const selectionStore: SelectionStore = createSelectionStore();
+  setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
 
   function widgetToWindowState(w: WidgetDefinition): WindowState {
     return {
