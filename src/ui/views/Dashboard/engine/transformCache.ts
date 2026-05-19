@@ -6,11 +6,21 @@
 // This means changes to records outside the sample window produce an
 // identical hash and would return a stale cache hit.
 //
-// Mitigation: `invalidateAll()` is called from App.svelte on every vault
-// event (modify/create/delete/rename) via `invalidateExternalFrameCache()`,
-// so the cache is always cleared before the next pipeline call.
-// Do NOT rely on the hash alone for correctness — it is an optimisation
-// guard only for the TTL window between vault events.
+// Mitigation (#016 Phase 1, Option A — 2026-05-19):
+// `invalidateAll()` is registered as a synchronous callback on the dataFrame
+// store via `registerDataFrameInvalidation()` (see App.svelte onMount). The
+// callback fires inside every dataFrame mutator (addRecord / updateRecord(s) /
+// deleteRecord / add|update|deleteField / merge) BEFORE its `update()` call,
+// so by the time any Svelte subscriber re-evaluates `executeTransformCached`
+// the cache is already empty.
+//
+// This replaces the previous design where invalidation was fired from
+// App.svelte vault listeners with a 300 ms debounce — which raced the
+// un-debounced `dataFrame.merge()` in events.ts and produced stale hits for
+// records outside the sampling window.
+//
+// Invariant: any new dataFrame mutator MUST call `notifyDataFrameInvalidation()`
+// at its top, otherwise this cache can return stale data on the next pipeline call.
 
 import type { DataFrame, DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { TransformPipeline, TransformResult, TransformContext } from "./transformTypes";
@@ -123,12 +133,13 @@ function hashDataFrame(df: DataFrame): string {
   //
   // ⚠️  NOT a full content hash. Records outside the sample window are invisible
   // to the hash function. Example: dataset of 100 records; record #42 changes →
-  // hash unchanged → stale cache hit. This is acceptable ONLY because
-  // `invalidateAll()` in App.svelte clears the cache on every vault event
-  // before the UI re-renders. The hash is a secondary guard for the 5-min TTL
-  // window, not the primary freshness mechanism.
+  // hash unchanged → stale cache hit. This is acceptable because
+  // `invalidateAll()` is registered on the dataFrame store (see file header)
+  // and fires atomically with every mutation, BEFORE Svelte subscribers fire.
+  // The hash is a secondary guard for the 5-min TTL window, not the primary
+  // freshness mechanism.
   //
-  // If you remove the vault-event invalidation, you MUST replace this with a
+  // If you remove the store-level invalidation, you MUST replace this with a
   // full content hash (e.g. hash all record IDs + all values) — accept the O(n) cost.
   const fieldSig = df.fields.map((f) => `${f.name}:${f.type}`).join(",");
   const count = df.records.length;
