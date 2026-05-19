@@ -242,7 +242,7 @@
     }}
     onColumnRename={readonly ? undefined : onColumnRename}
   />
-  {#each rows as { rowId, row, cellStyles }, i (rowId)}
+  {#each rows as { rowId, row, cellStyles, highlighted, dimmed }, i (rowId)}
     <GridRow
       columns={sortedColumns}
       index={i + 2}
@@ -254,6 +254,8 @@
       color={colorModel(rowId)}
       iconValue={iconField ? row[iconField] : null}
       selected={selectedRowIds.has(rowId)}
+      highlighted={highlighted ?? false}
+      dimmed={dimmed ?? false}
       onToggleSelect={onBulkDelete ? toggleRowSelect : undefined}
       onRowMenu={(rowId, row, event) => createRowMenu(rowId, row, event)}
       onRowOpen={(rowId, openMode) => {

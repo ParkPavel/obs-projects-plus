@@ -21,4 +21,16 @@ export interface GridRowProps {
   readonly row: GridRowModel;
   /** Optional per-cell inline styles (field name → CSS string). */
   readonly cellStyles?: Record<string, string>;
+  /**
+   * #044.3a cross-widget receiver flag: row matches the canvas-level selection
+   * emitted by another widget. Additive/optional so standalone Table consumers
+   * — which never set this — keep their existing un-styled appearance.
+   */
+  readonly highlighted?: boolean;
+  /**
+   * #044.3a cross-widget receiver flag: row does NOT match an active selection
+   * from another widget. Renders at reduced opacity. Additive/optional for the
+   * same backwards-compat reason as `highlighted`.
+   */
+  readonly dimmed?: boolean;
 }

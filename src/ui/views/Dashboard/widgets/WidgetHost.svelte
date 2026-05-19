@@ -489,6 +489,7 @@
           {fieldPresets}
           {activeFieldPresetId}
           {project}
+          widgetId={widget.id}
           on:configChange={handleDataTableConfigChange}
           on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
         />

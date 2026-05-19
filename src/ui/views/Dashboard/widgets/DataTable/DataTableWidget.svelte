@@ -56,6 +56,13 @@
   import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
   import { getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
 
+  import {
+    SELECTION_CONTEXT_KEY,
+    EMPTY_SELECTION,
+    type SelectionStore,
+  } from "../../FreeCanvas/selectionStore";
+  import { computeMatchingRowIds } from "./dataTableSelectionReceiver";
+
   import { createEventDispatcher, getContext, setContext, onMount, onDestroy } from "svelte";
   import { writable, type Writable } from "svelte/store";
   import { app } from "src/lib/stores/obsidian";
@@ -89,6 +96,24 @@
   export let project:
     | import("src/settings/settings").ProjectDefinition
     | undefined = undefined;
+
+  /**
+   * #044.3a — stable widget identifier from the canvas. When mounted on a
+   * `DashboardCanvas`, `WidgetHost` forwards `widget.id`; standalone Table
+   * consumers leave this undefined and the receiver wiring is a no-op.
+   */
+  export let widgetId: string | undefined = undefined;
+
+  // ── #044.3a — cross-widget selection (receiver only) ───────────
+  // The store is mounted on `DashboardCanvas` (#044.1). When this widget is
+  // hosted elsewhere (settings preview, standalone Table tests) the context
+  // is absent — the reactive block below treats that as "no selection" and
+  // skips all per-row decoration.
+  const selectionStore =
+    getContext<SelectionStore | undefined>(SELECTION_CONTEXT_KEY) ?? undefined;
+  // `derived` would also work, but a plain `$:` block keeps the dependency
+  // graph readable for the next maintainer.
+  $: selection = selectionStore ? $selectionStore : EMPTY_SELECTION;
 
   const dispatch = createEventDispatcher<{
     configChange: DataTableConfig;
@@ -710,19 +735,38 @@
 
   $: conditionalFormats = config?.conditionalFormats ?? [];
 
+  // #044.3a — receiver: compute which rows match the active canvas selection.
+  // `null` means "no decoration" (empty selection or self-emitted); a Set
+  // means: rows in the set are highlighted, others are dimmed. We feed the
+  // *searched* record list so the matching honours the user's local search
+  // narrowing as well as their persisted filters.
+  $: matchingRowIds = widgetId
+    ? computeMatchingRowIds({
+        records: searchedRecords,
+        selection,
+        myWidgetId: widgetId,
+      })
+    : null;
+
   $: rows = searchedRecords.map<GridRowProps>(({ id, values }) => {
     const row: GridRowProps = { rowId: id, row: values };
-    if (conditionalFormats.length === 0) return row;
-    const record = { id, values };
-    const styleMap = computeRowStyles(conditionalFormats, record);
-    const cssMap: Record<string, string> = {};
-    for (const [field, style] of Object.entries(styleMap)) {
-      const css = cellStyleToCSS(style);
-      if (css) cssMap[field] = css;
-    }
-    return Object.keys(cssMap).length > 0
-      ? { ...row, cellStyles: cssMap }
-      : row;
+    const styledRow = (() => {
+      if (conditionalFormats.length === 0) return row;
+      const record = { id, values };
+      const styleMap = computeRowStyles(conditionalFormats, record);
+      const cssMap: Record<string, string> = {};
+      for (const [field, style] of Object.entries(styleMap)) {
+        const css = cellStyleToCSS(style);
+        if (css) cssMap[field] = css;
+      }
+      return Object.keys(cssMap).length > 0
+        ? { ...row, cellStyles: cssMap }
+        : row;
+    })();
+    if (matchingRowIds === null) return styledRow;
+    return matchingRowIds.has(id)
+      ? { ...styledRow, highlighted: true }
+      : { ...styledRow, dimmed: true };
   });
 
   // -- Grouping -----------------------------------------------
@@ -743,10 +787,16 @@
   }
 
   function groupToRows(group: RowGroup): GridRowProps[] {
-    return group.records.map(({ id, values }) => ({
-      rowId: id,
-      row: values,
-    }));
+    // #044.3a — propagate receiver flags into grouped rows so highlight/dim
+    // applies consistently whether the table is flat or grouped.
+    const matching = matchingRowIds;
+    return group.records.map(({ id, values }) => {
+      const base: GridRowProps = { rowId: id, row: values };
+      if (matching === null) return base;
+      return matching.has(id)
+        ? { ...base, highlighted: true }
+        : { ...base, dimmed: true };
+    });
   }
 
   // -- Aggregation --------------------------------------------

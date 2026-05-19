@@ -46,6 +46,18 @@
   export let onToggleSelect: ((rowId: GridRowId) => void) | undefined = undefined;
   /** NPLAN-D2 — page icon value pulled from `iconField` (emoji or lucide name). */
   export let iconValue: unknown = null;
+  /**
+   * #044.3a — cross-widget receiver flag: this row matches the canvas selection
+   * emitted by another widget. Renders an accent tint. Defaults to `false` so
+   * standalone Table (which never passes this) stays unaffected.
+   */
+  export let highlighted: boolean = false;
+  /**
+   * #044.3a — cross-widget receiver flag: this row does not match an active
+   * external selection. Renders at reduced opacity. Default `false` keeps
+   * standalone Table behaviour intact.
+   */
+  export let dimmed: boolean = false;
 
   function handleHeaderClick(): (event: MouseEvent) => void {
     return (event: MouseEvent) => {
@@ -126,7 +138,7 @@
   }
 </script>
 
-<GridCellGroup {index} {selected}>
+<GridCellGroup {index} {selected} {highlighted} {dimmed}>
   <GridCell
     rowindex={1}
     colindex={1}
