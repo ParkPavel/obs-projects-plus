@@ -87,6 +87,11 @@
   --ppp-z-modal: 40;
   --ppp-z-popover: 50;
   --ppp-z-toast: 60;
+
+  /* Free Canvas window stacking (spec: FREE_CANVAS_SPEC.md §2, §7.x) */
+  --ppp-z-window-base: 1;
+  --ppp-z-window-pinned: 2;
+  --ppp-z-window-active: 3;
   
   /* ═══════════════════════════════════════════════════════════
      SEMANTIC TOKENS — Purpose-based aliases
