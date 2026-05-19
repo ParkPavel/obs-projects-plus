@@ -1,11 +1,19 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
+  import { createEventDispatcher } from "svelte";
 
   export let data: ChartData;
   export let width: number = 300;
   export let height: number = 300;
   export let style: ChartStyle;
   export let donut: boolean = false;
+  /**
+   * #044.2: label currently selected via the per-canvas selection store
+   * (driver-mode self-highlight). `null` ⇒ no chart-driven selection.
+   */
+  export let selectedLabel: string | null = null;
+
+  const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
   const CX = width / 2;
   const CY = height / 2;
@@ -86,8 +94,23 @@
     <path
       d={slice.path}
       fill={slice.color}
-      stroke="var(--background-primary)"
-      stroke-width="1.5"
+      stroke={selectedLabel != null && slice.label === selectedLabel
+        ? "var(--interactive-accent)"
+        : "var(--background-primary)"}
+      stroke-width={selectedLabel != null && slice.label === selectedLabel ? 2.5 : 1.5}
+      opacity={selectedLabel == null || slice.label === selectedLabel ? 1 : 0.35}
+      class="ppp-chart-pie__slice"
+      role="button"
+      tabindex="0"
+      aria-label={slice.label}
+      aria-pressed={selectedLabel != null && slice.label === selectedLabel}
+      on:click={() => dispatch("select", { label: slice.label })}
+      on:keydown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          dispatch("select", { label: slice.label });
+        }
+      }}
     >
       <title>{slice.label}: {slice.percent.toFixed(1)}%</title>
     </path>
@@ -133,6 +156,21 @@
   .ppp-chart-pie {
     width: 100%;
     height: auto;
+  }
+
+  /*
+   * #044.2: slices are clickable drivers for cross-widget selection.
+   * Visual state (opacity + accent stroke) is bound from the script.
+   */
+  .ppp-chart-pie__slice {
+    cursor: pointer;
+    transition: opacity 120ms ease-out, stroke-width 120ms ease-out;
+  }
+
+  .ppp-chart-pie__slice:focus-visible {
+    outline: none;
+    stroke: var(--interactive-accent);
+    stroke-width: 2.5;
   }
 
   .ppp-chart-legend {

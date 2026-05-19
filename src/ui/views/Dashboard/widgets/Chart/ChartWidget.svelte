@@ -9,11 +9,63 @@
   import ProgressChart from "./ProgressChart.svelte";
   import ScatterChart from "./ScatterChart.svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { getContext } from "svelte";
+  import {
+    SELECTION_CONTEXT_KEY,
+    type SelectionState,
+    type SelectionStore,
+  } from "../../FreeCanvas/selectionStore";
+  import {
+    computeChartSelectionToggle,
+    getSelectedChartLabel,
+  } from "./chartSelectionDriver";
 
   export let config: ChartConfig;
   export let source: DataFrame;
   /** Pillar 5: preloaded DataFrame for scatter correlation. */
   export let rightFrame: DataFrame | null = null;
+  /**
+   * #044.2: widget id used to discriminate this chart's selection from
+   * sibling drivers on the same canvas. Optional so tests and non-canvas
+   * mounts (config previews) keep working without a selection store.
+   */
+  export let widgetId: string = "";
+
+  // #044.2: optional per-canvas selection store. `undefined` in non-canvas
+  // mounts; the driver simply becomes inert.
+  const selectionStore = getContext<SelectionStore | undefined>(SELECTION_CONTEXT_KEY);
+  let currentSelection: SelectionState | null = null;
+  if (selectionStore) {
+    selectionStore.subscribe((v) => {
+      currentSelection = v;
+    });
+  }
+
+  // Self-highlight only — receiver-style cross-widget dimming lands in #044.4/.5.
+  $: selectedLabel = (() => {
+    if (!selectionStore || !currentSelection || widgetId === "") return null;
+    return getSelectedChartLabel(currentSelection, {
+      widgetId,
+      field: config.xAxis.property,
+    });
+  })();
+
+  function handleSegmentSelect(label: string): void {
+    if (!selectionStore || widgetId === "") return;
+    const next = computeChartSelectionToggle(
+      currentSelection ?? { source: null, field: null, value: null, op: null },
+      { widgetId, field: config.xAxis.property, value: label },
+    );
+    if (next.kind === "set") {
+      selectionStore.setSelection({
+        source: next.source,
+        field: next.field,
+        value: next.value,
+      });
+    } else if (next.kind === "clear") {
+      selectionStore.clearSelection();
+    }
+  }
 
   const EMPTY_CHART: ChartData = { labels: [], series: [] };
 
@@ -123,18 +175,24 @@
       showR2={scatterConfig?.showR2 ?? true}
     />
   {:else if config.chartType === "bar" || config.chartType === "stacked-bar"}
-    <BarChart data={chartData} width={480} height={heightPx} style={config.style} />
+    <BarChart data={chartData} width={480} height={heightPx} style={config.style}
+      {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "horizontal-bar"}
-    <BarChart data={chartData} width={480} height={heightPx} style={config.style} horizontal />
+    <BarChart data={chartData} width={480} height={heightPx} style={config.style} horizontal
+      {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "line"}
-    <LineChart data={chartData} width={480} height={heightPx} style={config.style} />
+    <LineChart data={chartData} width={480} height={heightPx} style={config.style}
+      {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "area"}
     <LineChart data={chartData} width={480} height={heightPx}
-      style={{ ...config.style, gradient: true }} />
+      style={{ ...config.style, gradient: true }}
+      {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "pie"}
-    <PieChart data={chartData} width={heightPx} height={heightPx} style={config.style} />
+    <PieChart data={chartData} width={heightPx} height={heightPx} style={config.style}
+      {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "donut"}
-    <PieChart data={chartData} width={heightPx} height={heightPx} style={config.style} donut />
+    <PieChart data={chartData} width={heightPx} height={heightPx} style={config.style} donut
+      {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "number"}
     <NumberChart data={chartData} style={config.style} />
   {:else if config.chartType === "progress"}

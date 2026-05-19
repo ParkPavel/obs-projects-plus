@@ -1,10 +1,18 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
+  import { createEventDispatcher } from "svelte";
 
   export let data: ChartData;
   export let width: number = 400;
   export let height: number = 320;
   export let style: ChartStyle;
+  /**
+   * #044.2: label currently selected via the per-canvas selection store
+   * (driver-mode self-highlight). `null` ⇒ no chart-driven selection.
+   */
+  export let selectedLabel: string | null = null;
+
+  const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
   const PADDING = { top: 20, right: 20, bottom: 55, left: 50 };
 
@@ -110,10 +118,27 @@
 
       {#each series.values as val, i}
         {#if val != null}
+          {@const label = labels[i] ?? ""}
+          {@const isSelected = selectedLabel != null && label === selectedLabel}
           <circle
             cx={xPos(i)} cy={yPos(val)}
-            r="3"
+            r={isSelected ? 5 : 3}
             fill={seriesColor(si)}
+            stroke={isSelected ? "var(--interactive-accent)" : "none"}
+            stroke-width={isSelected ? 2 : 0}
+            opacity={selectedLabel == null || isSelected ? 1 : 0.35}
+            class="ppp-chart-line__point"
+            role="button"
+            tabindex="0"
+            aria-label={label}
+            aria-pressed={isSelected}
+            on:click={() => dispatch("select", { label })}
+            on:keydown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                dispatch("select", { label });
+              }
+            }}
           />
           {#if style.showValues}
             <text
@@ -156,3 +181,21 @@
     {/each}
   </div>
 {/if}
+
+<style>
+  /*
+   * #044.2: line/area points are clickable drivers for cross-widget
+   * selection. Visual feedback (radius, accent stroke, opacity) is bound
+   * from the script.
+   */
+  .ppp-chart-line__point {
+    cursor: pointer;
+    transition: opacity 120ms ease-out, r 120ms ease-out;
+  }
+
+  .ppp-chart-line__point:focus-visible {
+    outline: none;
+    stroke: var(--interactive-accent);
+    stroke-width: 2;
+  }
+</style>
