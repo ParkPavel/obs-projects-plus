@@ -54,6 +54,18 @@
   import FilterBridge from "./FilterBridge.svelte";
   import TemplateConfirmDialog from "./TemplateConfirmDialog.svelte";
   import WidgetGrid from "./WidgetGrid.svelte";
+  import WidgetHost from "./widgets/WidgetHost.svelte";
+  import FreeCanvas from "./FreeCanvas/FreeCanvas.svelte";
+  import WindowShell from "./FreeCanvas/WindowShell.svelte";
+  import {
+    createFreeCanvasStore,
+    type FreeCanvasStore,
+    type WindowState,
+  } from "./FreeCanvas/freeCanvasStore";
+  import {
+    migrateLayoutV1ToV2,
+    type CanvasLayoutV1,
+  } from "./FreeCanvas/layoutMigration";
 
   // ── Props ──────────────────────────────────────────────────
   export let project: ProjectDefinition;
@@ -294,6 +306,189 @@
   // their own `widget.config.table` overlay (multi-DataTable support).
   $: primaryDataTableId =
     config?.widgets.find((w) => w.type === "data-table")?.id ?? "";
+
+  // ── Free Canvas integration (#032.4) ───────────────────────
+  // One store per canvas instance — never a module-level singleton —
+  // so multiple Database views in the same workspace stay isolated.
+  // Store is the source of truth for window rect/z during free-mode
+  // editing; we mirror its state back into `config.widgets[].layout`
+  // via the subscription below.
+  const freeCanvasStore: FreeCanvasStore = createFreeCanvasStore({
+    windows: (config?.widgets ?? []).map(widgetToWindowState),
+  });
+  setContext<FreeCanvasStore>("freeCanvasStore", freeCanvasStore);
+
+  function widgetToWindowState(w: WidgetDefinition): WindowState {
+    return {
+      id: w.id,
+      rect: {
+        id: w.id,
+        x: w.layout.x,
+        y: w.layout.y,
+        w: w.layout.w,
+        h: w.layout.h,
+      },
+      z: w.layout.zIndex ?? 0,
+      pinned: w.layout.locked ?? false,
+    };
+  }
+
+  // Guard against the store ↔ config write-back loop (lesson #016):
+  // while `writingBack` is true the store subscriber suppresses the
+  // saveConfig path, so a reactive widgets-prop change triggered by
+  // our own saveConfig cannot trip another store mutation.
+  let writingBack = false;
+  let lastSyncedWidgets: ReadonlyArray<WidgetDefinition> = config?.widgets ?? [];
+
+  // External widget add/remove (via widgetController) must propagate to
+  // the store so freshly added widgets show up on the canvas and removed
+  // ones disappear. We only touch ids — never rect — so user-driven
+  // moves in the store are not stomped by a config push from elsewhere.
+  $: syncStoreMembership(widgets);
+  function syncStoreMembership(ws: ReadonlyArray<WidgetDefinition>) {
+    if (writingBack) return;
+    if (ws === lastSyncedWidgets) return;
+    lastSyncedWidgets = ws;
+    freeCanvasStore.update((state) => {
+      const wantedIds = new Set(ws.map((w) => w.id));
+      const existingById = new Map(state.windows.map((win) => [win.id, win]));
+      const nextWindows: WindowState[] = [];
+      let mutated = false;
+      ws.forEach((w) => {
+        const existing = existingById.get(w.id);
+        if (existing) {
+          nextWindows.push(existing);
+        } else {
+          nextWindows.push(widgetToWindowState(w));
+          mutated = true;
+        }
+      });
+      if (state.windows.length !== nextWindows.length) mutated = true;
+      else {
+        for (let i = 0; i < state.windows.length; i++) {
+          const w = state.windows[i];
+          if (w && !wantedIds.has(w.id)) {
+            mutated = true;
+            break;
+          }
+        }
+      }
+      return mutated ? { ...state, windows: nextWindows } : state;
+    });
+  }
+
+  // One-shot v1 → v2 schema migration. Triggered whenever a free-mode
+  // config with `layoutVersion < 2` is observed. Idempotent: once we
+  // persist `layoutVersion: 2` the guard never re-fires.
+  let migratedOnce = false;
+  $: maybeMigrateLayoutToV2(config);
+  function maybeMigrateLayoutToV2(cfg: DatabaseViewConfig | undefined) {
+    if (!cfg || migratedOnce) return;
+    if (cfg.layoutMode !== "free") return;
+    if ((cfg.layoutVersion ?? 1) >= 2) {
+      migratedOnce = true;
+      return;
+    }
+    if (cfg.widgets.length === 0) {
+      // Empty canvas: still bump the version so future reactive runs
+      // skip the guard without touching the (non-existent) layouts.
+      migratedOnce = true;
+      writingBack = true;
+      try {
+        saveConfig({ ...cfg, layoutVersion: 2 });
+      } finally {
+        writingBack = false;
+      }
+      return;
+    }
+    const v1: CanvasLayoutV1 = {
+      schemaVersion: 1,
+      widgets: cfg.widgets.map((w) => ({
+        id: w.id,
+        layout: { x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h },
+      })),
+    };
+    const v2 = migrateLayoutV1ToV2(v1);
+    const layoutById = new Map(v2.widgets.map((w) => [w.id, w.layout]));
+    const nextWidgets = cfg.widgets.map((w) => {
+      const layout = layoutById.get(w.id);
+      return layout ? { ...w, layout: { ...w.layout, ...layout } } : w;
+    });
+    migratedOnce = true;
+    writingBack = true;
+    try {
+      saveConfig({ ...cfg, layoutVersion: 2, widgets: nextWidgets });
+    } finally {
+      writingBack = false;
+    }
+    // Rehydrate the store with rescaled coordinates so the very first
+    // free-mode render uses rem-space, not the stale grid-unit state.
+    freeCanvasStore.set({
+      windows: nextWidgets.map(widgetToWindowState),
+    });
+    lastSyncedWidgets = nextWidgets;
+  }
+
+  // Active window — highest-z; null when canvas is empty. Subscribers
+  // also derive write-back diffs from the same snapshot, so a single
+  // subscription is enough.
+  let activeWindowId: string | null = null;
+  const unsubFreeStore = freeCanvasStore.subscribe((state) => {
+    // activeWindowId: highest z; ties broken by later array order.
+    let topZ = -Infinity;
+    let topId: string | null = null;
+    for (const win of state.windows) {
+      if (win.z >= topZ) {
+        topZ = win.z;
+        topId = win.id;
+      }
+    }
+    activeWindowId = topId;
+
+    if (writingBack) return;
+    const cfg = config;
+    if (!cfg) return;
+    // Only write back when at least one widget's persisted layout differs
+    // from the store's current rect/z. This breaks the reactive cycle
+    // (config → widgets → syncStoreMembership → store change → here).
+    let dirty = false;
+    const stateById = new Map(state.windows.map((w) => [w.id, w]));
+    const nextWidgets = cfg.widgets.map((w) => {
+      const win = stateById.get(w.id);
+      if (!win) return w;
+      const sameRect =
+        win.rect.x === w.layout.x &&
+        win.rect.y === w.layout.y &&
+        win.rect.w === w.layout.w &&
+        win.rect.h === w.layout.h &&
+        win.z === (w.layout.zIndex ?? 0);
+      if (sameRect) return w;
+      dirty = true;
+      return {
+        ...w,
+        layout: {
+          ...w.layout,
+          x: win.rect.x,
+          y: win.rect.y,
+          w: win.rect.w,
+          h: win.rect.h,
+          zIndex: win.z,
+        },
+      };
+    });
+    if (!dirty) return;
+    writingBack = true;
+    try {
+      saveConfig({ ...cfg, widgets: nextWidgets });
+      lastSyncedWidgets = nextWidgets;
+    } finally {
+      writingBack = false;
+    }
+  });
+  onDestroy(() => {
+    unsubFreeStore();
+    freeCanvasStore.set({ windows: [] });
+  });
 </script>
 
 <ViewLayout>
@@ -375,35 +570,70 @@
       on:clear={() => (activeFilterTab = null)}
     />
 
-    <!-- Widget grid -->
-    <WidgetGrid
-      {widgets}
-      {dndWidgets}
-      {canDnd}
-      {layoutMode}
-      {frame}
-      {displayFrame}
-      {api}
-      {readonly}
-      {getRecordColor}
-      fields={frame.fields}
-      tableConfig={config?.table}
-      {primaryDataTableId}
-      fieldPresets={config?.fieldPresets ?? []}
-      activeFieldPresetId={config?.activeFieldPresetId}
-      {availableSources}
-      rightFrames={$rightFramesStore}
-      {project}
-      on:consider={handleDndConsider}
-      on:finalize={handleDndFinalize}
-      on:filter={handleFilterTab}
-      on:showToolbar={() => { if (!config) return; saveConfig({ ...config, showWidgetToolbar: true }); }}
-      on:addWidget={(e) => widgetController.addWidget(e.detail)}
-      on:configChange={widgetController.handleWidgetConfigChange}
-      on:tableConfigChange={widgetController.handleTableConfigChange}
-      on:fieldPresetsChange={handleFieldPresetsChange}
-      on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
-    />
+    <!-- Widget grid / canvas -->
+    {#if layoutMode === "free"}
+      <FreeCanvas windows={$freeCanvasStore.windows}>
+        <svelte:fragment slot="window" let:window>
+          {@const widget = widgets.find((w) => w.id === window.id)}
+          {#if widget}
+            <WindowShell
+              {window}
+              store={freeCanvasStore}
+              isActive={window.id === activeWindowId}
+            >
+              <WidgetHost
+                {widget}
+                frame={widget.type === "filter-tabs" ? frame : displayFrame}
+                {api}
+                {readonly}
+                {getRecordColor}
+                fields={frame.fields}
+                tableConfig={config?.table}
+                isPrimaryDataTable={widget.id === primaryDataTableId}
+                fieldPresets={config?.fieldPresets ?? []}
+                activeFieldPresetId={config?.activeFieldPresetId}
+                {availableSources}
+                rightFrames={$rightFramesStore}
+                {project}
+                on:filter={handleFilterTab}
+                on:configChange={widgetController.handleWidgetConfigChange}
+                on:tableConfigChange={widgetController.handleTableConfigChange}
+                on:fieldPresetsChange={handleFieldPresetsChange}
+                on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
+              />
+            </WindowShell>
+          {/if}
+        </svelte:fragment>
+      </FreeCanvas>
+    {:else}
+      <WidgetGrid
+        {widgets}
+        {dndWidgets}
+        {canDnd}
+        {frame}
+        {displayFrame}
+        {api}
+        {readonly}
+        {getRecordColor}
+        fields={frame.fields}
+        tableConfig={config?.table}
+        {primaryDataTableId}
+        fieldPresets={config?.fieldPresets ?? []}
+        activeFieldPresetId={config?.activeFieldPresetId}
+        {availableSources}
+        rightFrames={$rightFramesStore}
+        {project}
+        on:consider={handleDndConsider}
+        on:finalize={handleDndFinalize}
+        on:filter={handleFilterTab}
+        on:showToolbar={() => { if (!config) return; saveConfig({ ...config, showWidgetToolbar: true }); }}
+        on:addWidget={(e) => widgetController.addWidget(e.detail)}
+        on:configChange={widgetController.handleWidgetConfigChange}
+        on:tableConfigChange={widgetController.handleTableConfigChange}
+        on:fieldPresetsChange={handleFieldPresetsChange}
+        on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
+      />
+    {/if}
     </div>
   </ViewContent>
 </ViewLayout>

@@ -1,10 +1,11 @@
 <script lang="ts">
   /**
-   * WidgetGrid — extracted from DashboardCanvas.svelte (R5-013).
+   * WidgetGrid — stack-mode renderer for the dashboard widget list.
    *
-   * Owns the three render branches (empty state, DnD-enabled stack, plain
-   * grid) plus the duplicated WidgetHost mount sites. Events bubble up via
-   * `on:eventname` forwarding so the parent keeps a single handler set.
+   * Owns three render branches: empty state, DnD-enabled stack and read-only
+   * stack. Free-positioning is handled by `FreeCanvas` + `WindowShell` mounted
+   * directly from `DashboardCanvas`; this component is invoked only when the
+   * canvas is in stack mode.
    */
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
@@ -24,7 +25,6 @@
   export let widgets: WidgetDefinition[];
   export let dndWidgets: WidgetDefinition[];
   export let canDnd: boolean;
-  export let layoutMode: "stack" | "free";
   export let frame: DataFrame;
   export let displayFrame: DataFrame;
   export let api: ViewApi;
@@ -45,14 +45,6 @@
     <div class="ppp-database-empty-icon">⊞</div>
     <span class="ppp-database-empty-title">{$i18n.t("views.dashboard.canvas.empty-title", { defaultValue: "No widgets yet" })}</span>
     <span class="ppp-database-empty-hint">{$i18n.t("views.dashboard.canvas.empty-hint", { defaultValue: "Click \"+\" in the toolbar to add your first widget" })}</span>
-    {#if layoutMode === "free" && !readonly}
-      <div class="ppp-database-empty-palette">
-        <DashboardBlockPalette
-          currentWidgets={[]}
-          on:addWidget={(e) => dispatch("addWidget", e.detail)}
-        />
-      </div>
-    {/if}
   </div>
 {:else if canDnd}
   <div
@@ -91,11 +83,7 @@
     />
   </div>
 {:else}
-  <div
-    class="ppp-database-canvas"
-    class:ppp-database-canvas--stack={layoutMode === "stack"}
-    class:ppp-database-canvas--free={layoutMode === "free"}
-  >
+  <div class="ppp-database-canvas ppp-database-canvas--stack">
     {#each widgets as widget (widget.id)}
       <WidgetHost
         {widget}
@@ -118,22 +106,11 @@
         on:removeWidget
       />
     {/each}
-
-    {#if layoutMode === "free" && !readonly}
-      <div class="ppp-canvas-add-affordance" role="none">
-        <DashboardBlockPalette
-          currentWidgets={widgets}
-          on:addWidget={(e) => dispatch("addWidget", e.detail)}
-        />
-      </div>
-    {/if}
   </div>
 {/if}
 
 <style>
   .ppp-database-canvas {
-    container-name: canvas;
-    container-type: inline-size;
     width: 100%;
     min-height: 100%;
   }
@@ -142,24 +119,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--ppp-space-md, 0.5rem);
-  }
-
-  .ppp-database-canvas--free {
-    display: grid;
-    gap: var(--ppp-space-md, 0.5rem);
-    grid-template-columns: repeat(12, 1fr);
-  }
-
-  @container canvas (max-width: 30rem) {
-    .ppp-database-canvas--free {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @container canvas (min-width: 30rem) and (max-width: 55rem) {
-    .ppp-database-canvas--free {
-      grid-template-columns: repeat(6, 1fr);
-    }
   }
 
   .ppp-database-empty {
@@ -188,25 +147,6 @@
     font-size: var(--ppp-font-size-sm, 0.75rem);
     color: var(--text-faint);
     max-width: 20rem;
-  }
-
-  .ppp-database-empty-palette {
-    margin-top: var(--ppp-space-md, 0.5rem);
-  }
-
-  /* Free-canvas add affordance — fades in when canvas is hovered */
-  .ppp-canvas-add-affordance {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: var(--ppp-space-2, 0.25rem);
-    opacity: 0;
-    transition: opacity 180ms ease;
-  }
-
-  .ppp-database-canvas--free:hover .ppp-canvas-add-affordance {
-    opacity: 1;
   }
 
   /* Stack-canvas add row — always visible at list end */
