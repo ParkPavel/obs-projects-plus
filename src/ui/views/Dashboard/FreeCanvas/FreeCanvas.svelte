@@ -42,20 +42,7 @@
 
 <div class="ppp-free-canvas" data-testid="ppp-free-canvas">
   {#each windows as window (window.id)}
-    <div
-      class="ppp-free-canvas__window"
-      class:is-pinned={window.pinned}
-      data-window-id={window.id}
-      style="
-        left: {window.rect.x}rem;
-        top: {window.rect.y}rem;
-        width: {window.rect.w}rem;
-        height: {window.rect.h}rem;
-        z-index: {window.z};
-      "
-    >
-      <slot name="window" {window} />
-    </div>
+    <slot name="window" {window} />
   {/each}
 </div>
 
@@ -65,12 +52,8 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    /* Infinite virtual space: children are absolutely positioned in rem.
-       Pan + zoom will replace this static container in #032.5. */
-  }
-
-  .ppp-free-canvas__window {
-    position: absolute;
-    box-sizing: border-box;
+    /* Infinite virtual space: WindowShell children are absolutely positioned
+       in rem against this container. Pan + zoom will replace this static
+       container in #032.5. */
   }
 </style>

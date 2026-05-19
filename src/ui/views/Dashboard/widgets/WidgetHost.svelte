@@ -45,8 +45,6 @@
   import { enrichWithBacklinks } from "../engine/relationResolver";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
-  import { resizable } from "./resizable";
-  import { draggable } from "./draggable";
   import { getWidgetMeta } from "./widgetRegistry";
 
   // ── Props ──────────────────────────────────────────────────
@@ -116,39 +114,10 @@
     return () => obs.disconnect();
   });
 
-  // Widget meta for resize constraints
+  // Widget meta retained for default minW/minH resolution downstream
+  // (e.g., when widgets compute their initial WindowState in FreeCanvas).
   $: meta = getWidgetMeta(widget.type);
-  $: resizableParams = {
-    w: widget.layout.w,
-    h: collapsed ? 1 : widget.layout.h,
-    minW: widget.layout.minW ?? meta?.defaultLayout.minW ?? 2,
-    minH: widget.layout.minH ?? meta?.defaultLayout.minH ?? 1,
-    enabled: !collapsed && !readonly && !(widget.layout.locked ?? false),
-    onResize: (newW: number, newH: number) => {
-      dispatch("configChange", {
-        id: widget.id,
-        changes: {
-          layout: { ...widget.layout, w: newW, h: newH },
-        },
-      });
-    },
-  };
-
-  $: draggableParams = {
-    x: widget.layout.x,
-    y: widget.layout.y,
-    w: widget.layout.w,
-    h: collapsed ? 1 : widget.layout.h,
-    enabled: !readonly && !(widget.layout.locked ?? false),
-    onMove: (newX: number, newY: number) => {
-      dispatch("configChange", {
-        id: widget.id,
-        changes: {
-          layout: { ...widget.layout, x: newX, y: newY },
-        },
-      });
-    },
-  };
+  $: void meta; // referenced by future spec-driven min-size constants
 
   function toggleCollapse() {
     dispatch("configChange", {
@@ -320,13 +289,6 @@
   role={widgetAria.role}
   aria-labelledby={`ppp-widget-title-${widget.id}`}
   tabindex={widgetAria.tabindex}
-  style:grid-column={widget.layout.w === 12
-    ? "1 / -1"
-    : `${widget.layout.x} / span ${widget.layout.w}`}
-  style:grid-row={`${widget.layout.y} / span ${collapsed ? 1 : widget.layout.h}`}
-  style:z-index={widget.layout.zIndex ?? null}
-  use:resizable={resizableParams}
-  use:draggable={draggableParams}
 >
   <!-- Header -->
   <div class="ppp-widget-header">
@@ -942,106 +904,6 @@
     .ppp-widget-lock-btn,
     .ppp-widget-pipeline-btn {
       opacity: 1;
-    }
-  }
-
-  /* Resize handle (injected by use:resizable action) */
-  :global(.ppp-resize-handle) {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 1rem;
-    height: 1rem;
-    cursor: nwse-resize;
-    opacity: 0;
-    transition: opacity 120ms ease;
-    z-index: 5;
-    background: linear-gradient(
-      135deg,
-      transparent 50%,
-      var(--text-faint) 50%,
-      var(--text-faint) 60%,
-      transparent 60%,
-      transparent 70%,
-      var(--text-faint) 70%,
-      var(--text-faint) 80%,
-      transparent 80%
-    );
-  }
-
-  .ppp-widget-host:hover :global(.ppp-resize-handle) {
-    opacity: 0.6;
-  }
-
-  :global(.ppp-resize-handle:hover) {
-    opacity: 1 !important;
-  }
-
-  :global(.ppp-widget-host--resizing) {
-    outline: 0.125rem dashed var(--interactive-accent);
-    outline-offset: -0.0625rem;
-  }
-
-  @media (pointer: coarse) {
-    :global(.ppp-resize-handle) {
-      opacity: 0.5;
-      width: 1.5rem;
-      height: 1.5rem;
-    }
-  }
-
-  /* Drag handle (injected by use:draggable action) */
-  :global(.ppp-drag-handle) {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    border: none;
-    background: transparent;
-    color: var(--text-faint);
-    cursor: grab;
-    font-size: 0.875rem;
-    opacity: 0;
-    transition: opacity 120ms ease;
-    padding: 0;
-    border-radius: var(--radius-s, 0.25rem);
-  }
-
-  .ppp-widget-host:hover :global(.ppp-drag-handle) {
-    opacity: 0.6;
-  }
-
-  :global(.ppp-drag-handle:hover) {
-    opacity: 1 !important;
-    color: var(--text-muted);
-  }
-
-  :global(.ppp-drag-handle:active),
-  :global(.ppp-widget-host--dragging .ppp-drag-handle) {
-    cursor: grabbing;
-    opacity: 1 !important;
-  }
-
-  :global(.ppp-widget-host--dragging) {
-    outline: 0.125rem dashed var(--interactive-accent);
-    outline-offset: -0.0625rem;
-    opacity: 0.85;
-    transform: scale(1.01);
-    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
-    z-index: 100 !important;
-  }
-
-  :global(body.ppp-dragging) {
-    user-select: none;
-  }
-
-  @media (pointer: coarse) {
-    :global(.ppp-drag-handle) {
-      opacity: 0.5;
-      width: 1.75rem;
-      height: 1.75rem;
     }
   }
 
