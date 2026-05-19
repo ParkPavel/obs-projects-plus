@@ -15,6 +15,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import type { FieldPreset, DataTableConfig } from "../../types";
   import { snapshotFromTable, applyPresetToTable } from "./fieldPreset";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
 
   // ── Props ──────────────────────────────────────────────────
   export let presets: FieldPreset[] = [];
@@ -31,6 +32,7 @@
   }>();
 
   let open = false;
+  let triggerEl: HTMLButtonElement | null = null;
 
   function toggle() {
     if (readonly) return;
@@ -98,6 +100,7 @@
 
 <div class="ppp-fp-root">
   <button
+    bind:this={triggerEl}
     type="button"
     class="ppp-fp-trigger"
     class:ppp-fp-trigger--active={activeId !== undefined}
@@ -117,76 +120,73 @@
     </span>
   </button>
 
-  {#if open}
-    <!-- Invisible click-catcher to dismiss the popover -->
+  <FloatingPopup
+    {triggerEl}
+    bind:open
+    placement="bottom-end"
+    role="menu"
+    ariaLabel={$i18n.t("views.dashboard.field-presets.aria-label")}
+  >
     <button
       type="button"
-      class="ppp-fp-scrim"
-      aria-label={$i18n.t("common.close", { defaultValue: "Close" })}
-      on:click={close}
-    ></button>
-    <div class="ppp-fp-popover" role="menu">
-      <button
-        type="button"
-        class="ppp-fp-row ppp-fp-row--new"
-        role="menuitem"
-        on:click={handleSaveNew}
-      >
-        <span aria-hidden="true">＋</span>
-        {$i18n.t("views.dashboard.field-presets.save-current")}
-      </button>
+      class="ppp-fp-row ppp-fp-row--new"
+      role="menuitem"
+      on:click={handleSaveNew}
+    >
+      <span aria-hidden="true">＋</span>
+      {$i18n.t("views.dashboard.field-presets.save-current")}
+    </button>
 
-      {#if presets.length > 0}
-        <div class="ppp-fp-sep" role="separator"></div>
-        {#each presets as preset (preset.id)}
-          <div class="ppp-fp-row" role="menuitem">
-            <button
-              type="button"
-              class="ppp-fp-row-apply"
-              class:ppp-fp-row-apply--active={preset.id === activeId}
-              on:click={() => handleApply(preset)}
-              title={$i18n.t("views.dashboard.field-presets.apply")}
-            >
-              <span class="ppp-fp-row-dot" aria-hidden="true">
-                {preset.id === activeId ? "●" : "○"}
-              </span>
-              <span class="ppp-fp-row-label">{preset.label}</span>
-            </button>
-            <button
-              type="button"
-              class="ppp-fp-row-action"
-              on:click={() => handleRename(preset)}
-              title={$i18n.t("views.dashboard.field-presets.rename")}
-              aria-label={$i18n.t("views.dashboard.field-presets.rename")}
-            >
-              <span aria-hidden="true">✎</span>
-            </button>
-            <button
-              type="button"
-              class="ppp-fp-row-action ppp-fp-row-action--danger"
-              on:click={() => handleDelete(preset)}
-              title={$i18n.t("views.dashboard.field-presets.delete")}
-              aria-label={$i18n.t("views.dashboard.field-presets.delete")}
-            >
-              <span aria-hidden="true">✕</span>
-            </button>
-          </div>
-        {/each}
-
-        {#if activeId !== undefined}
-          <div class="ppp-fp-sep" role="separator"></div>
+    {#if presets.length > 0}
+      <div class="ppp-fp-sep" role="separator"></div>
+      {#each presets as preset (preset.id)}
+        <div class="ppp-fp-row" role="menuitem">
           <button
             type="button"
-            class="ppp-fp-row ppp-fp-row--new"
-            role="menuitem"
-            on:click={handleClearActive}
+            class="ppp-fp-row-apply"
+            class:ppp-fp-row-apply--active={preset.id === activeId}
+            on:click={() => handleApply(preset)}
+            title={$i18n.t("views.dashboard.field-presets.apply")}
           >
-            {$i18n.t("views.dashboard.field-presets.detach")}
+            <span class="ppp-fp-row-dot" aria-hidden="true">
+              {preset.id === activeId ? "●" : "○"}
+            </span>
+            <span class="ppp-fp-row-label">{preset.label}</span>
           </button>
-        {/if}
+          <button
+            type="button"
+            class="ppp-fp-row-action"
+            on:click={() => handleRename(preset)}
+            title={$i18n.t("views.dashboard.field-presets.rename")}
+            aria-label={$i18n.t("views.dashboard.field-presets.rename")}
+          >
+            <span aria-hidden="true">✎</span>
+          </button>
+          <button
+            type="button"
+            class="ppp-fp-row-action ppp-fp-row-action--danger"
+            on:click={() => handleDelete(preset)}
+            title={$i18n.t("views.dashboard.field-presets.delete")}
+            aria-label={$i18n.t("views.dashboard.field-presets.delete")}
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      {/each}
+
+      {#if activeId !== undefined}
+        <div class="ppp-fp-sep" role="separator"></div>
+        <button
+          type="button"
+          class="ppp-fp-row ppp-fp-row--new"
+          role="menuitem"
+          on:click={handleClearActive}
+        >
+          {$i18n.t("views.dashboard.field-presets.detach")}
+        </button>
       {/if}
-    </div>
-  {/if}
+    {/if}
+  </FloatingPopup>
 </div>
 
 <style>
@@ -229,32 +229,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .ppp-fp-scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 90;
-    background: transparent;
-    border: 0;
-    cursor: default;
-  }
-
-  .ppp-fp-popover {
-    position: absolute;
-    top: calc(100% + 0.25rem);
-    right: 0;
-    z-index: 100;
-    min-width: 14rem;
-    max-width: 22rem;
-    padding: var(--size-2-1, 0.25rem);
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m);
-    box-shadow: var(--shadow-s);
-    display: flex;
-    flex-direction: column;
-    gap: var(--size-2-1, 0.125rem);
   }
 
   .ppp-fp-row {
