@@ -5,18 +5,15 @@
    * Visual rule list: add/remove + drag-to-reorder (DG-3) + inline editing.
    * Each rule edits field, operator, value, background/text colors, bold/italic.
    */
-  import { createEventDispatcher, onDestroy } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { SlideInPanel } from "src/ui/components/SlideInPanel";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import type { FilterOperator } from "src/settings/base/settings";
   import type { ConditionalFormat, ConditionalFormatRule } from "src/ui/views/Dashboard/types";
   import { i18n } from "src/lib/stores/i18n";
-  import {
-    makePopover,
-    destroyPopover,
-    getPopoverEl,
-  } from "src/ui/components/popoverDropdown";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
   import {
     getFieldIcon,
     getOperatorsForField,
@@ -127,17 +124,23 @@
     return (e.target as HTMLInputElement).value;
   }
 
-  // ── Inline popovers for field / operator selection ────────────
+  // ══ Inline popovers for field / operator selection (FloatingPopup, #034.2a) ══
+  let activePopover: {
+    anchorEl: HTMLElement;
+    items: PopoverItem[];
+    searchable: boolean;
+  } | null = null;
+
   function openFieldPop(format: ConditionalFormat, anchor: HTMLElement) {
-    makePopover(
-      anchor,
-      fields.map((f) => ({
+    activePopover = {
+      anchorEl: anchor,
+      searchable: true,
+      items: fields.map((f) => ({
         label: f.name,
         icon: getFieldIcon(f.type),
         selected: f.name === format.field,
         handler: () => {
           updateFormat(format.id, { field: f.name });
-          // Reset operator to first valid for new field type
           const ops = getOperatorsForField(f.type);
           const cond = format.conditions[0];
           if (cond && !ops.includes(cond.operator)) {
@@ -145,17 +148,17 @@
           }
         },
       })),
-      true,
-    );
+    };
   }
 
   function openOpPop(format: ConditionalFormat, anchor: HTMLElement) {
     const field = fields.find((f) => f.name === format.field);
     const ops = getOperatorsForField(field?.type ?? "string");
     const cond = format.conditions[0];
-    makePopover(
-      anchor,
-      ops.map((op) => ({
+    activePopover = {
+      anchorEl: anchor,
+      searchable: false,
+      items: ops.map((op) => ({
         label: getOperatorLabel(op),
         selected: op === cond?.operator,
         handler: () => {
@@ -165,18 +168,13 @@
           });
         },
       })),
-    );
+    };
   }
 
-  function handleWindowMousedown(e: MouseEvent) {
-    const el = getPopoverEl();
-    if (el && !el.contains(e.target as Node)) destroyPopover();
+  function handlePopoverSelect(e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>): void {
+    if (!e.detail.keepOpen) activePopover = null;
   }
-
-  onDestroy(() => destroyPopover());
 </script>
-
-<svelte:window on:mousedown={handleWindowMousedown} />
 
 <SlideInPanel
   {open}
@@ -335,6 +333,22 @@
     </div>
   </div>
 </SlideInPanel>
+
+<FloatingPopup
+  triggerEl={activePopover?.anchorEl ?? null}
+  open={activePopover !== null}
+  placement="bottom-start"
+  role="menu"
+  on:close={() => (activePopover = null)}
+>
+  {#if activePopover}
+    <PopoverList
+      items={activePopover.items}
+      searchable={activePopover.searchable}
+      on:select={handlePopoverSelect}
+    />
+  {/if}
+</FloatingPopup>
 
 <style>
   .ppp-cf-builder {

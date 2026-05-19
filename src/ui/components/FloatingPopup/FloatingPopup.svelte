@@ -50,6 +50,14 @@
   /** Accessible label for the popup container. */
   export let ariaLabel: string = "";
 
+  /**
+   * Auto-focus the first interactive element when the popup opens.
+   * Set to `false` for popovers that complement an already-focused
+   * input (e.g. type-ahead suggestion dropdowns) so the input retains
+   * focus and keystrokes continue to flow into it.
+   */
+  export let autoFocus: boolean = true;
+
   // ── Internal ───────────────────────────────────────────────
   const dispatch = createEventDispatcher<{ close: void }>();
 
@@ -67,11 +75,11 @@
   // Focus management — when popup opens, focus first interactive.
   $: if (open && !wasOpen) {
     wasOpen = true;
-    void focusFirst();
+    if (autoFocus) void focusFirst();
   } else if (!open && wasOpen) {
     wasOpen = false;
     // Restore focus to trigger (it owned focus before opening).
-    if (triggerEl && typeof triggerEl.focus === "function") {
+    if (autoFocus && triggerEl && typeof triggerEl.focus === "function") {
       triggerEl.focus();
     }
   }

@@ -52,7 +52,8 @@
   import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
   import { viewShortcuts } from "src/lib/keyboard/viewShortcuts";
   import { pxToRem, resolveColumnWidthPx } from "./widthUnits";
-  import { makePopover, destroyPopover, getPopoverEl } from "src/ui/components/popoverDropdown";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
   import { getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
 
   import { createEventDispatcher, getContext, setContext, onMount, onDestroy } from "svelte";
@@ -512,25 +513,37 @@
       })
     : records;
 
+  // ══ FloatingPopup-backed dropdowns (#034.2a) ══
+  let activePopover: {
+    anchorEl: HTMLElement;
+    items: PopoverItem[];
+    searchable: boolean;
+  } | null = null;
+
+  function rebuildFieldVisibilityItems(): PopoverItem[] {
+    return fields.map((f) => ({
+      label: f.name,
+      icon: getFieldIcon(f.type),
+      selected: fieldConfig[f.name]?.hide !== true,
+      keepOpen: true,
+      handler: () => {
+        const nowHiding = fieldConfig[f.name]?.hide !== true;
+        saveConfig({
+          fieldConfig: {
+            ...fieldConfig,
+            [f.name]: { ...fieldConfig[f.name], hide: nowHiding },
+          },
+        });
+      },
+    }));
+  }
+
   function openFieldVisibilityPop(anchor: HTMLElement) {
-    makePopover(
-      anchor,
-      fields.map((f) => ({
-        label: f.name,
-        icon: getFieldIcon(f.type),
-        selected: fieldConfig[f.name]?.hide !== true,
-        keepOpen: true,
-        handler: () => {
-          const nowHiding = fieldConfig[f.name]?.hide !== true;
-          saveConfig({
-            fieldConfig: {
-              ...fieldConfig,
-              [f.name]: { ...fieldConfig[f.name], hide: nowHiding },
-            },
-          });
-        },
-      })),
-    );
+    activePopover = {
+      anchorEl: anchor,
+      searchable: false,
+      items: rebuildFieldVisibilityItems(),
+    };
   }
 
   // Quick sort indicator (shows active sort criteria count, allows clear)
@@ -539,7 +552,7 @@
   function openSortPop(anchor: HTMLElement) {
     const criteria = config?.sortCriteria ?? [];
     const legacyField = config?.sortField;
-    const items = [
+    const items: PopoverItem[] = [
       ...(legacyField ? [{
         label: `${legacyField} ${config?.sortAsc ? "↑" : "↓"}`,
         icon: config?.sortAsc ? "arrow-up" : "arrow-down",
@@ -564,14 +577,14 @@
         handler: () => { /* no-op */ },
       }]),
     ];
-    makePopover(anchor, items);
+    activePopover = { anchorEl: anchor, searchable: false, items };
   }
 
   // Quick group-by picker
   $: activeGroupField = config?.groupBy?.field ?? "";
 
   function openGroupPop(anchor: HTMLElement) {
-    const noGroupEntry = {
+    const noGroupEntry: PopoverItem = {
       label: $i18n.t("views.dashboard.table.group-none", { defaultValue: "None (clear grouping)" }),
       icon: "x",
       selected: !activeGroupField,
@@ -581,7 +594,7 @@
         saveConfig(rest as DataTableConfig);
       },
     };
-    const fieldEntries = fields.map((f) => ({
+    const fieldEntries: PopoverItem[] = fields.map((f) => ({
       label: f.name,
       icon: getFieldIcon(f.type),
       selected: f.name === activeGroupField,
@@ -597,12 +610,28 @@
         });
       },
     }));
-    makePopover(anchor, [noGroupEntry, ...fieldEntries], true);
+    activePopover = {
+      anchorEl: anchor,
+      searchable: true,
+      items: [noGroupEntry, ...fieldEntries],
+    };
   }
 
-  function handleWidgetMousedown(e: MouseEvent) {
-    const pop = getPopoverEl();
-    if (pop && !pop.contains(e.target as Node)) destroyPopover();
+  function handlePopoverSelect(
+    e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>,
+  ): void {
+    if (e.detail.keepOpen) {
+      // keepOpen items (field-visibility toggles) rebuild the list in place
+      // so the checkmark state reflects the new fieldConfig immediately.
+      if (activePopover) {
+        activePopover = {
+          ...activePopover,
+          items: rebuildFieldVisibilityItems(),
+        };
+      }
+      return;
+    }
+    activePopover = null;
   }
 
   const defaultColumnWidth: Record<string, number> = {
@@ -898,8 +927,6 @@
     });
   }
 </script>
-
-<svelte:window on:mousedown={handleWidgetMousedown} />
 
 <div
   class="ppp-datatable-widget"
@@ -1267,6 +1294,22 @@
     on:close={() => { cardViewOpen = false; cardViewRecord = null; }}
   />
 </div>
+
+<FloatingPopup
+  triggerEl={activePopover?.anchorEl ?? null}
+  open={activePopover !== null}
+  placement="bottom-start"
+  role="menu"
+  on:close={() => (activePopover = null)}
+>
+  {#if activePopover}
+    <PopoverList
+      items={activePopover.items}
+      searchable={activePopover.searchable}
+      on:select={handlePopoverSelect}
+    />
+  {/if}
+</FloatingPopup>
 
 <style>
   .ppp-datatable-widget {

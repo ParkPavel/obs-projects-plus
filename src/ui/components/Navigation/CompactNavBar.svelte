@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import type { ViewDefinition, ViewId } from "src/settings/settings";
   import type { ProjectDefinition, ProjectId } from "src/settings/settings";
   import { i18n } from "../../../lib/stores/i18n";
-  import { makePopover, destroyPopover, getPopoverEl } from "../popoverDropdown";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import PopoverList, {
+    type PopoverItem,
+  } from "src/ui/components/FloatingPopup/PopoverList.svelte";
   import AddViewButton from "./AddViewButton.svelte";
   import ViewSwitcher from "./ViewSwitcher.svelte";
   import SettingsMenuButton from "./SettingsMenuButton.svelte";
@@ -28,24 +31,31 @@
     projectChange: ProjectId;
   }>();
 
+  let activePopover: {
+    anchorEl: HTMLElement;
+    items: PopoverItem[];
+    searchable: boolean;
+  } | null = null;
+
   function openProjectSwitcher(anchor: HTMLElement) {
-    makePopover(anchor, projects.map(p => ({
-      label: p.name,
-      icon: 'layout-grid',
-      selected: p.id === projectId,
-      handler: () => dispatch('projectChange', p.id),
-    })), true);
+    activePopover = {
+      anchorEl: anchor,
+      searchable: true,
+      items: projects.map((p) => ({
+        label: p.name,
+        icon: "layout-grid",
+        selected: p.id === projectId,
+        handler: () => dispatch("projectChange", p.id),
+      })),
+    };
   }
 
-  function handleWindowMousedown(e: MouseEvent) {
-    const el = getPopoverEl();
-    if (el && !el.contains(e.target as Node)) destroyPopover();
+  function handlePopoverSelect(
+    e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>,
+  ): void {
+    if (!e.detail.keepOpen) activePopover = null;
   }
-
-  onDestroy(() => { destroyPopover(); });
 </script>
-
-<svelte:window on:mousedown={handleWindowMousedown} />
 
 <nav class="compact-navbar">
   {#if projects.length > 1 && !hideProjectName}
@@ -78,6 +88,22 @@
     />
   </div>
 </nav>
+
+<FloatingPopup
+  triggerEl={activePopover?.anchorEl ?? null}
+  open={activePopover !== null}
+  placement="bottom-start"
+  role="menu"
+  on:close={() => (activePopover = null)}
+>
+  {#if activePopover}
+    <PopoverList
+      items={activePopover.items}
+      searchable={activePopover.searchable}
+      on:select={handlePopoverSelect}
+    />
+  {/if}
+</FloatingPopup>
 
 <style>
   .compact-navbar {

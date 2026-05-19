@@ -2,7 +2,8 @@
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "../../../../../lib/stores/i18n";
-  import { makePopover, destroyPopover, getPopoverEl } from "../../../../components/popoverDropdown";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
   import type {
     FilterCondition,
     FilterDefinition,
@@ -188,33 +189,50 @@
   }
 
   // ═══════════════════════════════
-  // IMPERATIVE DOM DROPDOWNS (shared via popoverDropdown.ts)
+  // FloatingPopup-backed dropdowns (#034.2a)
   // ═══════════════════════════════
+
+  let activePopover: {
+    anchorEl: HTMLElement;
+    items: PopoverItem[];
+    searchable: boolean;
+    autoFocus: boolean;
+  } | null = null;
 
   function openFieldPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
     const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
     const cond = group.conditions[index]!;
-    makePopover(anchor, fields.map(f => ({
-      label: f.name,
-      icon: getFieldIcon(f.type),
-      selected: f.name === cond.field,
-      handler: () => {
-        const ops = getOperatorsForField(f.type);
-        const op = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
-        updateCondition(index, { field: f.name, operator: op as FilterOperator, value: '' }, groupPath);
-      },
-    })), true);
+    activePopover = {
+      anchorEl: anchor,
+      searchable: true,
+      autoFocus: true,
+      items: fields.map((f) => ({
+        label: f.name,
+        icon: getFieldIcon(f.type),
+        selected: f.name === cond.field,
+        handler: () => {
+          const ops = getOperatorsForField(f.type);
+          const op = ops.includes(cond.operator) ? cond.operator : ops[0] ?? 'is';
+          updateCondition(index, { field: f.name, operator: op as FilterOperator, value: '' }, groupPath);
+        },
+      })),
+    };
   }
 
   function openOpPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
     const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
     const cond = group.conditions[index]!;
     const ops = getOperatorsForField(getFieldType(cond.field));
-    makePopover(anchor, ops.map(op => ({
-      label: getOperatorLabel(op),
-      selected: op === cond.operator,
-      handler: () => updateCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }, groupPath),
-    })));
+    activePopover = {
+      anchorEl: anchor,
+      searchable: false,
+      autoFocus: true,
+      items: ops.map((op) => ({
+        label: getOperatorLabel(op),
+        selected: op === cond.operator,
+        handler: () => updateCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }, groupPath),
+      })),
+    };
   }
 
   function openValPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
@@ -223,23 +241,24 @@
     const all = getValueSuggestions(cond.field);
     const q = String(cond.value ?? '').toLowerCase().trim();
     const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
-    if (filtered.length === 0) return;
-    makePopover(anchor, filtered.map(v => ({
-      label: v,
-      selected: v === String(cond.value ?? ''),
-      handler: () => updateCondition(index, { value: v }, groupPath),
-    })));
+    if (filtered.length === 0) { activePopover = null; return; }
+    activePopover = {
+      anchorEl: anchor,
+      searchable: false,
+      // input retains focus so user can keep typing to narrow suggestions
+      autoFocus: false,
+      items: filtered.map((v) => ({
+        label: v,
+        selected: v === String(cond.value ?? ''),
+        handler: () => updateCondition(index, { value: v }, groupPath),
+      })),
+    };
   }
 
-  function handleWindowMousedown(e: MouseEvent) {
-    const el = getPopoverEl();
-    if (el && !el.contains(e.target as Node)) destroyPopover();
+  function handlePopoverSelect(e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>): void {
+    if (!e.detail.keepOpen) activePopover = null;
   }
-
-  onDestroy(() => { destroyPopover(); });
 </script>
-
-<svelte:window on:mousedown={handleWindowMousedown} />
 
 <div class="section">
   <!-- ═══ Conjunction header ═══ -->
@@ -324,7 +343,6 @@
                 value={condition.value ?? ''}
                 on:input={(e) => { updateCondition(index, { value: inputVal(e) }, [], true); openValPop(index, e.currentTarget); }}
                 on:focus={(e) => openValPop(index, e.currentTarget)}
-                on:blur={() => setTimeout(destroyPopover, 150)}
                 placeholder={$i18n.t('common.value-placeholder')} />
             {:else}
               <span class="no-value">—</span>
@@ -412,7 +430,6 @@
                       value={gCond.value ?? ''}
                       on:input={(e) => { updateCondition(cIdx, { value: inputVal(e) }, [gIndex], true); openValPop(cIdx, e.currentTarget, [gIndex]); }}
                       on:focus={(e) => openValPop(cIdx, e.currentTarget, [gIndex])}
-                      on:blur={() => setTimeout(destroyPopover, 150)}
                       placeholder={$i18n.t('common.value-placeholder')} />
                   {:else}
                     <span class="no-value">—</span>
@@ -497,7 +514,6 @@
                             value={nCond.value ?? ''}
                             on:input={(e) => { updateCondition(nCIdx, { value: inputVal(e) }, nPath, true); openValPop(nCIdx, e.currentTarget, nPath); }}
                             on:focus={(e) => openValPop(nCIdx, e.currentTarget, nPath)}
-                            on:blur={() => setTimeout(destroyPopover, 150)}
                             placeholder={$i18n.t('common.value-placeholder')} />
                         {:else}
                           <span class="no-value">—</span>
@@ -547,6 +563,19 @@
     </button>
   </div>
 </div>
+
+<FloatingPopup
+  triggerEl={activePopover?.anchorEl ?? null}
+  open={activePopover !== null}
+  placement="bottom-start"
+  role="menu"
+  autoFocus={activePopover?.autoFocus ?? true}
+  on:close={() => (activePopover = null)}
+>
+  {#if activePopover}
+    <PopoverList items={activePopover.items} searchable={activePopover.searchable} on:select={handlePopoverSelect} />
+  {/if}
+</FloatingPopup>
 
 <style>
   .section { display: flex; flex-direction: column; gap: 0.5rem; }
