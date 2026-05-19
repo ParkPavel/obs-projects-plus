@@ -19,6 +19,13 @@
   import ViewTabBar from "../ViewTabBar.svelte";
   import DataTableWidget from "../DataTable/DataTableWidget.svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { getContext, onMount, onDestroy } from "svelte";
+  import { writable } from "svelte/store";
+  import {
+    DATA_PROVIDER_REGISTRY_CONTEXT_KEY,
+    type DataProvider,
+    type DataProviderRegistry,
+  } from "src/lib/stores/dataProviderRegistry";
 
   export let frame: DataFrame;
   export let api: ViewApi;
@@ -29,6 +36,13 @@
   export let activeFieldPresetId: string | undefined = undefined;
   export let project: ProjectDefinition | undefined = undefined;
   export let config: Record<string, unknown>;
+  /**
+   * Widget identity from the enclosing WidgetDefinition. Required for
+   * DataProvider registration so this Database Window can be referenced
+   * from cross-widget series configs. See DATA_PROVIDER_SPEC.md §2.4.
+   */
+  export let widgetId: string = "";
+  export let widgetTitle: string = "";
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -76,6 +90,39 @@
       viewTabs: updatedTabs,
     });
   }
+
+  // ── DataProvider registration (#031.3) ──────────────────────
+  // Each Database Window registers itself as a named data source on
+  // the surrounding canvas so cross-widget consumers (Chart, Stats)
+  // can subscribe via series config. See DATA_PROVIDER_SPEC.md §2.4.
+  // Registry is optional: legacy stack-mode canvases that don't set
+  // context still work — registration is just skipped.
+  const registry = getContext<DataProviderRegistry | undefined>(
+    DATA_PROVIDER_REGISTRY_CONTEXT_KEY
+  );
+  const providerFrame = writable<DataFrame>(frame);
+  $: providerFrame.set(frame);
+
+  let registeredProvider: DataProvider | null = null;
+
+  onMount(() => {
+    if (!registry || !widgetId) return;
+    registeredProvider = {
+      id: widgetId,
+      name: widgetTitle || widgetId,
+      frame$: { subscribe: providerFrame.subscribe },
+      refresh() {
+        providerFrame.set(frame);
+      },
+    };
+    registry.register(registeredProvider);
+  });
+
+  onDestroy(() => {
+    if (registry && registeredProvider) {
+      registry.unregister(registeredProvider.id);
+    }
+  });
 </script>
 
 <div class="ppp-database-call-block">
