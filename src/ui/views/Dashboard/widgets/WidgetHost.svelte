@@ -579,6 +579,8 @@
           {activeFieldPresetId}
           {project}
           config={widget.config}
+          widgetId={widget.id}
+          widgetTitle={widget.title}
           on:configChange={(e) => handleWidgetConfigChange(e.detail)}
           on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
         />

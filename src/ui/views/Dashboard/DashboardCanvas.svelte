@@ -21,6 +21,10 @@
   import { setContext } from "svelte";
   import { writable, type Writable } from "svelte/store";
   import { SHADOW_PLACEHOLDER_ITEM_ID } from "svelte-dnd-action";
+  import {
+    createDataProviderRegistry,
+    DATA_PROVIDER_REGISTRY_CONTEXT_KEY,
+  } from "src/lib/stores/dataProviderRegistry";
 
   import FormulaBar from "./widgets/FormulaBar.svelte";
   import { applyFormulaFields } from "./engine/applyFormulaFields";
@@ -89,6 +93,15 @@
   const projectStore = writable<ProjectDefinition>(project);
   setContext<Writable<ProjectDefinition>>("project", projectStore);
   $: projectStore.set(project);
+
+  // ── DataProvider Registry (per-canvas, #031) ───────────────
+  // Each DashboardCanvas owns an isolated registry. Source widgets
+  // (Database Window, data-table in free mode) register themselves on
+  // mount; consumer widgets (Chart, Stats) pull via getContext.
+  // See DATA_PROVIDER_SPEC.md v1.1 §2.2.
+  const dataProviderRegistry = createDataProviderRegistry();
+  setContext(DATA_PROVIDER_REGISTRY_CONTEXT_KEY, dataProviderRegistry);
+  onDestroy(() => dataProviderRegistry.clear());
 
   // ── Config helpers ─────────────────────────────────────────
   function saveConfig(cfg: DatabaseViewConfig) {

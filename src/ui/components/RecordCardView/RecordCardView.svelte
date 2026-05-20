@@ -63,6 +63,13 @@
   let pickerInput = "";
   let pickerInputEl: HTMLInputElement | null = null;
 
+  // #038: when the side panel closes, clear local picker state so the next
+  // record doesn't open with a stuck-open picker or stale input value.
+  $: if (!open) {
+    pickerOpen = false;
+    pickerInput = "";
+  }
+
   function openPicker() {
     pickerInput = typeof iconValue === "string" ? iconValue : "";
     pickerOpen = true;
@@ -106,10 +113,8 @@
   width="28rem"
   on:close={() => dispatch("close")}
 >
-  <!-- Header icon slot: renders whenever the record has a recognised icon field,
-       even if the field value is currently empty (so the user can SET an icon).
-       NOTE: <svelte:fragment> must be a direct child of the component — the
-       {#if} guard goes INSIDE the fragment, not around it. -->
+  <!-- Header icon slot: svelte:fragment must be unconditional direct child (Svelte 3 constraint).
+       The {#if} lives inside the fragment so the slot is declared but empty when no icon field. -->
   <svelte:fragment slot="icon">
     {#if resolvedIconField}
       <div class="ppp-rcv-icon-wrap">
