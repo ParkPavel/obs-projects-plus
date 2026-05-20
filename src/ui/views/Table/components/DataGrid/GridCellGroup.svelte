@@ -69,7 +69,7 @@
   }
 
   div.ppp-data-table-row--dimmed:not(.header):not(.footer) {
-    opacity: 0.45;
+    opacity: 0.35;
   }
 
   div.ppp-data-table-row--dimmed:not(.header):not(.footer):hover {

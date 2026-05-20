@@ -18,12 +18,12 @@
  */
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import type { SelectionState } from "../../FreeCanvas/selectionStore";
+import { dataTableSourceId, type SelectionState } from "../../FreeCanvas/selectionStore";
 
-/** Stable source-id prefix for data-table driver selections (used by #044.3b). */
-export function dataTableSourceId(widgetId: string): string {
-	return `data-table:${widgetId}`;
-}
+// Re-export for callers (tests, future #044.3b driver) that already import it
+// from this module. Canonical definition lives in selectionStore.ts to keep
+// the self-skip check there in sync with widget-side prefix usage.
+export { dataTableSourceId };
 
 /**
  * Decide whether a single record's value at `field` matches `selection.value`.

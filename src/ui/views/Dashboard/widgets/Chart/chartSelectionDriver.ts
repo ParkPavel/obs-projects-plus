@@ -8,12 +8,11 @@
  * helpers so the toggle logic can be unit-tested without mounting a chart.
  */
 
-import type { SelectionState } from "../../FreeCanvas/selectionStore";
+import { chartSourceId, type SelectionState } from "../../FreeCanvas/selectionStore";
 
-/** Stable source-id prefix for chart driver selections. */
-export function chartSourceId(widgetId: string): string {
-	return `chart:${widgetId}`;
-}
+// Re-export so existing callers (tests, ChartWidget) that import from this
+// module keep working. Canonical definition lives in selectionStore.ts.
+export { chartSourceId };
 
 /**
  * Decide what should happen when the user clicks a chart segment.

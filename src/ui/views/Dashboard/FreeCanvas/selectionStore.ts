@@ -31,6 +31,19 @@ import type { FilterCondition, FilterOperator } from "src/settings/base/settings
 export const SELECTION_CONTEXT_KEY = "ppp-selection";
 
 /**
+ * Canonical source-id builders for driver widgets. Centralised here (rather
+ * than co-located with each widget) so the self-skip check below and the
+ * widget-level helpers cannot drift apart — adding a new driver type means
+ * adding ONE builder here and re-exporting from the widget module.
+ */
+export function dataTableSourceId(widgetId: string): string {
+	return `data-table:${widgetId}`;
+}
+export function chartSourceId(widgetId: string): string {
+	return `chart:${widgetId}`;
+}
+
+/**
  * v1 supports only equality selection. Widening to `in` / `between` / date
  * ranges is reserved for v2 (spec §9). The literal type keeps surface narrow
  * so future widening is a compile-time visible change.
@@ -172,7 +185,7 @@ export function composeEffectiveFilter(args: {
 	// the widget MUST render its full data unaffected (a driver should not
 	// re-filter itself by its own click). The spec's primary motivator is
 	// DataTableWidget which is driver+receiver hybrid.
-	if (selection.source === `data-table:${myWidgetId}` || selection.source === `chart:${myWidgetId}`) {
+	if (selection.source === dataTableSourceId(myWidgetId) || selection.source === chartSourceId(myWidgetId)) {
 		return userFilters;
 	}
 
