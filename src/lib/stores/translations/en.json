@@ -56,6 +56,11 @@
             },
             "add-sub-base": {
                 "name": "Add sub-base to current view"
+            },
+            "create-demo-project": {
+                "name": "Create demo project",
+                "duplicate-warning": "Demo project already exists — delete it first to regenerate.",
+                "created": "Demo project created."
             }
         },
         "menus": {

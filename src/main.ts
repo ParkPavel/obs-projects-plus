@@ -20,6 +20,7 @@ import { app, plugin } from "src/lib/stores/obsidian";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
+import { createDemoProject } from "src/ui/app/onboarding/demoProject";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
@@ -301,6 +302,41 @@ export default class ProjectsPlusPlugin extends Plugin {
         if (!hasProjectLeaf) return false;
         if (!checking) emitCommand("add-sub-base");
         return true;
+      },
+    });
+
+    // #043 / feedback-demo-api-bridge — programmatic demo regen so REST API
+    // automation and QA scripts can rebuild the onboarding demo without the
+    // welcome modal. The underlying `createDemoProject` is idempotent on
+    // files (vault.create catches "already exists"), but it always calls
+    // `settings.addProject`, so re-running on a vault that already has a
+    // "Демо-проект" entry will produce a second project with a fresh UUID.
+    // Caller is responsible for deleting the prior copy first if they want
+    // a clean slate; the command surfaces this as a Notice rather than
+    // silently duplicating state.
+    this.addCommand({
+      id: "create-demo-project",
+      name: t("commands.create-demo-project.name"),
+      callback: () => {
+        const existing = get(settings).projects.find((p) => p.name === "Демо-проект");
+        if (existing) {
+          new Notice(
+            t("commands.create-demo-project.duplicate-warning", {
+              defaultValue:
+                "Demo project already exists — delete it first to regenerate.",
+            }),
+            6000,
+          );
+          return;
+        }
+        void createDemoProject(this.app.vault).then(() => {
+          new Notice(
+            t("commands.create-demo-project.created", {
+              defaultValue: "Demo project created.",
+            }),
+            4000,
+          );
+        });
       },
     });
 
