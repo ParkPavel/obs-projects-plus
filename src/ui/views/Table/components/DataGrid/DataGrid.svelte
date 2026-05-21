@@ -67,6 +67,24 @@
    * `rows` updates reactively.
    */
   export let onRowAddSilent: (() => void) | undefined = undefined;
+  /**
+   * #044.3b — optional extension point for the row context menu. When provided
+   * (i.e. DataTableWidget is mounted inside a DashboardCanvas with an active
+   * selectionStore), `createRowMenu` appends one entry: either "Filter canvas
+   * by this row" (when no own selection is active or active on a different
+   * row) or "Clear canvas filter" (when this row is already the active
+   * driver). `currentlyDrivingRowId` lets the menu pick the right label
+   * without DataGrid having to know about selection-state shape.
+   */
+  export let onRowFilterCanvas: ((rowId: GridRowId, row: GridRowModel) => void) | undefined = undefined;
+  /**
+   * #044.3b — `rowId` whose context-menu should render "Clear canvas filter"
+   * instead of "Filter canvas by this row". DataTableWidget computes this
+   * from `isThisWidgetDriving(selection, widgetId)` + the driven path.
+   * `null` (default) means the toggle is in the "Filter…" direction for
+   * every row.
+   */
+  export let driverRowId: GridRowId | null = null;
 
   $: t = $i18n.t;
 
@@ -157,6 +175,26 @@
     const entries: ContextMenuEntry[] = [
       { title: t("components.data-grid.row.edit"), icon: "edit", onClick: () => onRowEdit(rowId, row) },
     ];
+
+    // #044.3b — driver entry: only when the widget is wired into a
+    // DashboardCanvas (callback supplied) and we have a non-empty row id.
+    // The label flips between "Filter by this row" and "Clear canvas filter"
+    // based on which row currently drives the selection, so the toggle
+    // direction stays visible without forcing the user to open the menu
+    // twice.
+    if (onRowFilterCanvas) {
+      const isThisRowActive = driverRowId !== null && rowId === driverRowId;
+      entries.push(
+        { separator: true },
+        {
+          title: isThisRowActive
+            ? t("components.data-grid.row.clear-canvas-filter", { defaultValue: "Clear canvas filter" })
+            : t("components.data-grid.row.filter-canvas", { defaultValue: "Filter canvas by this row" }),
+          icon: isThisRowActive ? "filter-x" : "filter",
+          onClick: () => onRowFilterCanvas?.(rowId, row),
+        },
+      );
+    }
 
     if (!readonly) {
       entries.push(

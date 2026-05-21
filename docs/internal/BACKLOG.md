@@ -353,7 +353,7 @@ overflow handling tab strip (commit `8e22ec1`).
 - **#044.2** ✅ DONE — ChartWidget driver, 7 chart types, bar/pie click → `setSelection`, active/dimmed segment styling. Merge `15910cb`.
 - **#044.3** — split into 3a (receiver) + 3b (driver).
   - **#044.3a** 🔄 READY FOR MERGE — Receiver only: `dataTableSelectionReceiver.ts` (101 LOC pure helper) + DataTableWidget receiver wiring + per-row `highlighted`/`dimmed` flags propagated through `DataGrid` → `GridRow` → `GridCellGroup`. Self-skip rule via `dataTableSourceId(myWidgetId)`. Hidden rows preserved (geometry intact, per spec §5.2). Branch: `feat/044.3a-datatable-receiver`. Audit verdict: ✅ READY (audit-manager 2026-05-19). Gates: tsc 0 errors, Jest 130 suites / 1942 tests PASS, PX-budget 191/191, build OK. **Reality vs label**: WIP commit message says "NOT FINISHED" but code is production-ready — receiver scope completed; driver scope explicitly split out as #044.3b. Awaiting user merge (agents do not merge into main).
-  - **#044.3b** 📋 BLOCKED (`analysis_required: true, analysis_done: false`) — Driver (UX design needed). Adding row-click driver semantics conflicts with inline-cell editing. Requires UX decision: (a) modifier-click (Alt/Shift), (b) gutter row-marker affordance, (c) context-menu "Filter canvas by this row". Output: spec amendment to `CROSS_WIDGET_SPEC §5.2`, then ~120 LOC driver impl.
+  - **#044.3b** 🔄 READY FOR MERGE (`analysis_required: true, analysis_done: true` — 2026-05-21) — Driver via **context-menu entry "Filter canvas by this row" / "Clear canvas filter"** (option c per the 3-way analysis). Rationale: zero conflict with inline-cell editing, touch parity via long-press, symmetric with existing Edit/Delete row entries, smallest LOC (~150). Branch `feat/044.3b-datatable-driver` (stacked on `4993681`). Files: `dataTableSelectionDriver.ts` (pure: `computeDataTableSelectionToggle`, `isThisWidgetDriving`) + `DataGrid.svelte` (optional `onRowFilterCanvas` + `driverRowId` props, dynamic menu entry with `filter`/`filter-x` icon) + `DataTableWidget.svelte` (handler + reactive `driverRowId` derivation, propagated to all 4 DataGrid mount-points: linear/grouped/sub-grouped/virtualized). Audit PASS (2026-05-21, no must-fix). Gates: tsc 0, Jest 133/1979 PASS (+1 suite, +11 tests), build OK. Driver field defaults to `"path"` (spec §5.2); per-widget field config deferred to v2.
 - **#044.4** 🔄 READY FOR MERGE — StatsWidget receiver: recompute aggregates over `effectiveFilter`-narrowed records; subtle "filtered" dot next to each card's value. Branch `feat/044.4-stats-receiver` (HEAD `99035e6`, stacked on `cf816c0`). Audit PASS (2026-05-21). Gates: tsc 0, Jest 131/1955 PASS (+1 suite, +13 tests), build OK, PX-budget 191/191. ~150 LOC across `statsSelectionReceiver.ts` (new, 105) + `StatsWidget.svelte` (mod) + `StatsCard.svelte` (mod, filtered dot indicator) + `WidgetHost.svelte` (1 line). Awaiting user merge.
 - **#044.5** 🔄 READY FOR MERGE — `SelectionBadge.svelte` (`_shared/`, pill with `field: value ✕`, `--ppp-radius-pill` 62.5rem, color-mix accent 18%) + `shouldShowSelectionBadge` pure helper (receiver-only types, self-skip rule) + DashboardCanvas integration (subscribe + conditional render in WindowShell badges slot, document-level Escape handler with onDestroy cleanup, click-outside-canvas via FreeCanvas `onBackgroundClick` callback). Branch `feat/044.5-selection-badge` (stacked on `ab89444`). Audit PASS (2026-05-21, no must-fix). Gates: tsc 0, Jest 132/1968 PASS (+1 suite, +13 tests), build OK. ~225 LOC.
 
@@ -400,9 +400,9 @@ M-FREE-CANVAS (Phase 3, Dashboard V3):
 
 M-POPUP-STANDARDISATION (Phase 4): #034 ✅ DONE, #040 ✅ DONE
 
-M-INTERACTIVE-DASHBOARD (Phase 5) — v1 substantively COMPLETE (pending user merge):
+M-INTERACTIVE-DASHBOARD (Phase 5) — v1 FULLY COMPLETE (pending user merge):
 #044.1 ✅ ──► #044.2 ✅
-         ├──► #044.3a 🔄 (audit PASS) ──► #044.3b (NEEDS-ANALYSIS, intentionally deferred)
+         ├──► #044.3a 🔄 (audit PASS) ──► #044.3b 🔄 (audit PASS, NEEDS-ANALYSIS resolved 2026-05-21)
          ├──► #044.4 🔄 (audit PASS, stacked on 044.3a)
          └──► #044.5 🔄 (audit PASS, stacked on 044.4) — Phase 5 closure
 

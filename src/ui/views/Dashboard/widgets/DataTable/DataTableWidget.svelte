@@ -62,6 +62,10 @@
     type SelectionStore,
   } from "../../FreeCanvas/selectionStore";
   import { computeMatchingRowIds } from "./dataTableSelectionReceiver";
+  import {
+    computeDataTableSelectionToggle,
+    isThisWidgetDriving,
+  } from "./dataTableSelectionDriver";
 
   import { createEventDispatcher, getContext, setContext, onMount, onDestroy } from "svelte";
   import { writable, type Writable } from "svelte/store";
@@ -748,6 +752,62 @@
       })
     : null;
 
+  // ── #044.3b — driver: context-menu entry "Filter canvas by this row" ───
+  // The driver field defaults to "path" per spec §5.2. When a future config
+  // exposes a custom primary-key field, switch this constant to read it.
+  // Toggle uses the value at `selectionDriverField` of the clicked row; the
+  // shared `computeDataTableSelectionToggle` helper centralises set/clear/
+  // noop semantics (same shape as ChartWidget driver in #044.2).
+  const selectionDriverField = "path";
+
+  function handleRowFilterCanvas(rowId: string, row: Record<string, unknown>): void {
+    if (!widgetId || !selectionStore) return;
+    const rawValue = row[selectionDriverField];
+    const value = rawValue == null ? "" : String(rawValue);
+    const decision = computeDataTableSelectionToggle($selectionStore, {
+      widgetId,
+      field: selectionDriverField,
+      value,
+    });
+    switch (decision.kind) {
+      case "set":
+        selectionStore.setSelection({
+          source: decision.source,
+          field: decision.field,
+          value: decision.value,
+        });
+        break;
+      case "clear":
+        selectionStore.clearSelection();
+        break;
+      case "noop":
+        // Empty value (e.g. row without a path) — refuse to set a selection
+        // that would either match everything or nothing.
+        break;
+    }
+    // `rowId` is currently unused; kept in the signature so DataGrid's prop
+    // contract stays generic (a future variant might key on rowId directly
+    // instead of looking values up by field name).
+    void rowId;
+  }
+
+  // Tells DataGrid which row's context-menu should flip its label to "Clear
+  // canvas filter". `null` when no own-driven selection or no matching row
+  // in the current `searchedRecords` view (e.g. user filtered the driving
+  // row out — the toggle still works, but the label stays in "Filter…"
+  // direction since the driven row is no longer visible).
+  $: driverRowId = (() => {
+    if (!widgetId) return null;
+    if (!isThisWidgetDriving(selection, widgetId)) return null;
+    if (selection.field === null || selection.value === null) return null;
+    const driverField = selection.field;
+    const driverValue = selection.value;
+    const match = searchedRecords.find(
+      (r) => String(r.values[driverField] ?? "") === driverValue,
+    );
+    return match?.id ?? null;
+  })();
+
   $: rows = searchedRecords.map<GridRowProps>(({ id, values }) => {
     const row: GridRowProps = { rowId: id, row: values };
     const styledRow = (() => {
@@ -1160,6 +1220,8 @@
                 onColumnInsert={handleColumnInsert}
                 onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
+                onRowFilterCanvas={widgetId && selectionStore ? handleRowFilterCanvas : undefined}
+                {driverRowId}
               />
             {/if}
           {/each}
@@ -1189,6 +1251,8 @@
             onColumnInsert={handleColumnInsert}
             onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
+                onRowFilterCanvas={widgetId && selectionStore ? handleRowFilterCanvas : undefined}
+                {driverRowId}
           />
         {/if}
       {/if}
@@ -1231,6 +1295,8 @@
               onColumnInsert={handleColumnInsert}
               onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
+                onRowFilterCanvas={widgetId && selectionStore ? handleRowFilterCanvas : undefined}
+                {driverRowId}
             />
           </div>
         </div>
@@ -1261,6 +1327,8 @@
         onColumnInsert={handleColumnInsert}
         onColumnRename={handleColumnRename}
                 getExtraColumnMenuEntries={buildExtraColumnMenuEntries}
+                onRowFilterCanvas={widgetId && selectionStore ? handleRowFilterCanvas : undefined}
+                {driverRowId}
       />
     {/if}
   {/if}
