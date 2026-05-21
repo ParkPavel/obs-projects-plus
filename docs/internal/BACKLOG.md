@@ -354,7 +354,7 @@ overflow handling tab strip (commit `8e22ec1`).
 - **#044.3** — split into 3a (receiver) + 3b (driver).
   - **#044.3a** 🔄 READY FOR MERGE — Receiver only: `dataTableSelectionReceiver.ts` (101 LOC pure helper) + DataTableWidget receiver wiring + per-row `highlighted`/`dimmed` flags propagated through `DataGrid` → `GridRow` → `GridCellGroup`. Self-skip rule via `dataTableSourceId(myWidgetId)`. Hidden rows preserved (geometry intact, per spec §5.2). Branch: `feat/044.3a-datatable-receiver`. Audit verdict: ✅ READY (audit-manager 2026-05-19). Gates: tsc 0 errors, Jest 130 suites / 1942 tests PASS, PX-budget 191/191, build OK. **Reality vs label**: WIP commit message says "NOT FINISHED" but code is production-ready — receiver scope completed; driver scope explicitly split out as #044.3b. Awaiting user merge (agents do not merge into main).
   - **#044.3b** 📋 BLOCKED (`analysis_required: true, analysis_done: false`) — Driver (UX design needed). Adding row-click driver semantics conflicts with inline-cell editing. Requires UX decision: (a) modifier-click (Alt/Shift), (b) gutter row-marker affordance, (c) context-menu "Filter canvas by this row". Output: spec amendment to `CROSS_WIDGET_SPEC §5.2`, then ~120 LOC driver impl.
-- **#044.4** 📋 BACKLOG — StatsWidget receiver: recompute aggregates over `effectiveFilter`; "filtered" dot. Target: ~120 LOC. **Not blocked** — can proceed.
+- **#044.4** 🔄 READY FOR MERGE — StatsWidget receiver: recompute aggregates over `effectiveFilter`-narrowed records; subtle "filtered" dot next to each card's value. Branch `feat/044.4-stats-receiver` (HEAD `99035e6`, stacked on `cf816c0`). Audit PASS (2026-05-21). Gates: tsc 0, Jest 131/1955 PASS (+1 suite, +13 tests), build OK, PX-budget 191/191. ~150 LOC across `statsSelectionReceiver.ts` (new, 105) + `StatsWidget.svelte` (mod) + `StatsCard.svelte` (mod, filtered dot indicator) + `WidgetHost.svelte` (1 line). Awaiting user merge.
 - **#044.5** 📋 BACKLOG — `SelectionBadge.svelte` (`_shared/`) + WindowShell badge wiring + Escape + click-outside-canvas → `clearSelection`. Target: ~250 LOC. **Not blocked** — depends on #034.1 (✅).
 
 #### Invariants (from #016 lesson)
@@ -402,8 +402,8 @@ M-POPUP-STANDARDISATION (Phase 4): #034 ✅ DONE, #040 ✅ DONE
 
 M-INTERACTIVE-DASHBOARD (Phase 5):
 #044.1 ✅ ──► #044.2 ✅
-         └──► #044.3a 🔄 (audit PASS, awaiting merge) ──► #044.3b (NEEDS-ANALYSIS)
-         ├──► #044.4 (BACKLOG, unblocked)
+         ├──► #044.3a 🔄 (audit PASS, awaiting merge) ──► #044.3b (NEEDS-ANALYSIS)
+         ├──► #044.4 🔄 (audit PASS, awaiting merge, stacked on 044.3a)
          └──► #044.5 (BACKLOG, unblocked, depends on #034.1 ✅)
 
 M-V35-HOTFIX-UX:
