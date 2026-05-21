@@ -1477,6 +1477,83 @@ export async function createDemoProject(vault: Vault) {
   const financeDatabaseConfig = makeVerticalConfig("finance-accounting");
   const crmDatabaseConfig = makeVerticalConfig("crm-clients");
 
+  // ── #043 / Phase 5 — Cross-widget Selection Demo ────────────────────
+  // Curated free-layout view that demonstrates the M-INTERACTIVE-DASHBOARD
+  // toolkit end-to-end: ChartWidget as a driver, DataTable+Stats as
+  // receivers, SelectionBadge / Escape / click-outside-canvas wired by the
+  // canvas. CRM clients are the data set because they have 4 clear `stage`
+  // values (active / negotiation / prospect / churned) plus a numeric
+  // `mrr` field — making the recompute behaviour visible at a glance.
+  //
+  // Layout is `free` so WindowShell renders (badge slot is part of it);
+  // widgets are positioned in `gridUnit` integers (#033 layout-rem
+  // migration pending). Widget IDs are deterministic strings so the demo
+  // is idempotent under re-runs of `createDemoProject`.
+  const crossWidgetDemoConfig: DatabaseViewConfig = {
+    widgets: [
+      {
+        id: "w-phase5-chart",
+        type: "chart",
+        title: "Pipeline by stage",
+        layout: { x: 0, y: 0, w: 6, h: 4 },
+        config: {
+          chartType: "pie",
+          xAxis: {
+            property: "stage",
+            sortBy: "value",
+            sortOrder: "desc",
+            omitZero: true,
+          },
+          yAxis: { property: "count", aggregation: "count" },
+          style: {
+            colorScheme: "categorical",
+            height: "medium",
+            showGrid: false,
+            showLabels: true,
+            showLegend: true,
+            showValues: true,
+          },
+        },
+      },
+      {
+        id: "w-phase5-stats",
+        type: "stats",
+        title: "Cohort metrics",
+        layout: { x: 6, y: 0, w: 6, h: 4 },
+        config: {
+          cards: [
+            { id: "p5s1", label: "Clients", field: "name", aggregation: "count" },
+            { id: "p5s2", label: "Active", field: "active", aggregation: "count_checked" },
+            { id: "p5s3", label: "MRR (sum)", field: "mrr", aggregation: "sum", format: "currency", currencySymbol: "$" },
+            { id: "p5s4", label: "Avg MRR", field: "mrr", aggregation: "avg", format: "currency", currencySymbol: "$" },
+          ],
+          columns: 4,
+        },
+      },
+      {
+        id: "w-phase5-table",
+        type: "data-table",
+        title: "Clients",
+        layout: { x: 0, y: 4, w: 12, h: 6 },
+        config: {},
+      },
+    ],
+    layoutMode: "free",
+    layoutVersion: 1,
+    table: commonTableConfig,
+    showWidgetToolbar: true,
+    compactMode: false,
+    quickActions: [
+      {
+        id: "qa-phase5-info",
+        label: "Cross-widget demo",
+        labelKey: "views.dashboard.quick.phase5-demo",
+        kind: "apply-template",
+        templateId: "crm-clients",
+      },
+    ],
+  };
+
   const boardConfig: BoardConfig = {
     groupByField: "status",
     orderSyncField: "startDate",
@@ -1826,6 +1903,24 @@ export async function createDemoProject(vault: Vault) {
           id: uuidv4(),
           type: "dashboard",
           config: crmDatabaseConfig,
+          filter: {
+            conjunction: "and",
+            conditions: [
+              { field: "type", operator: "is", value: "client", enabled: true },
+            ],
+          },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "stage", order: "asc", enabled: true }] },
+        }),
+
+        // #043 / Phase 5 — Cross-widget Selection demo (free layout so
+        // WindowShell renders the SelectionBadge slot; click on a Chart
+        // segment narrows DataTable rows and Stats aggregates live).
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "🔗 Cross-widget Demo",
+          id: uuidv4(),
+          type: "dashboard",
+          config: crossWidgetDemoConfig,
           filter: {
             conjunction: "and",
             conditions: [
