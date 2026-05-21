@@ -190,10 +190,22 @@ Files:
 ## Milestone M-YAML-FORMULA-UI — 📋 BACKLOG
 
 ### #003 — Merge Calendar agenda filterEngine into filterEvaluator
-- Status: 📋 BACKLOG
-- Milestone: M-YAML-FORMULA-UI | Priority: P1 | Complexity: M
+- Status: ✅ DONE (shipped in a prior session as "R5-003"; status sweep 2026-05-21)
+- Milestone: M-YAML-FORMULA-UI | Priority: P1 | Complexity: M (delivered)
 - analysis_required: false
-- Depends on: #002
+- Depends on: #002 Phase 1 (✅)
+
+Outcome: `src/ui/views/Calendar/agenda/filterEngine.ts` collapsed from ~396 LOC
+into a 121-LOC thin delegator over canonical `lib/engine/filterEvaluator`.
+Calendar-specific semantics (regex op, strict `is-upcoming`, formula
+resolution relative to agenda's `baseDate`) are now expressed via canonical
+operators + `FilterOpts.upcomingInclusive: false`. Legacy v3.0.4 operator
+names (`equals`, `not_equals`, …) are mapped to canonical ones inside
+`toCondition`. Closes the CLAUDE.md invariant "filterEvaluator.ts —
+единственный filter engine: не создавать параллельных реализаций".
+
+Test coverage: `src/ui/views/Calendar/agenda/filterEngine.test.ts` covers
+the delegation contract. Source file header documents the migration.
 
 ### #002 Phase 2 — Move `evaluateValue` to `lib/formula/index.ts`
 - Status: ⏸ DEFERRED to M-YAML-FORMULA-UI
