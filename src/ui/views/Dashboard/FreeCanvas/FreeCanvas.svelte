@@ -38,9 +38,25 @@
   // Suppress "unused prop" until WindowShell lands; keeps the public
   // surface explicit while the implementation is staged.
   $: void onLayoutChange;
+
+  /**
+   * #044.5 — invoked when the user clicks the empty canvas background
+   * (i.e. NOT on a child window). DashboardCanvas wires this to
+   * `selectionStore.clearSelection()` per spec §7. `on:click|self` ensures
+   * descendants do not trigger; widget clicks bubble normally to their own
+   * handlers without reaching here.
+   */
+  export let onBackgroundClick: () => void = () => {
+    /* no-op until DashboardCanvas wires the selection-clear behaviour */
+  };
 </script>
 
-<div class="ppp-free-canvas" data-testid="ppp-free-canvas">
+<div
+  class="ppp-free-canvas"
+  data-testid="ppp-free-canvas"
+  on:click|self={onBackgroundClick}
+  role="presentation"
+>
   {#each windows as window (window.id)}
     <slot name="window" {window} />
   {/each}

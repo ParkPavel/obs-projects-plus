@@ -58,6 +58,9 @@
   import FreeCanvas from "./FreeCanvas/FreeCanvas.svelte";
   import WindowShell from "./FreeCanvas/WindowShell.svelte";
   import WidgetInlineBadges from "./widgets/_shared/WidgetInlineBadges.svelte";
+  import SelectionBadge, {
+    shouldShowSelectionBadge,
+  } from "./widgets/_shared/SelectionBadge.svelte";
   import {
     createFreeCanvasStore,
     type FreeCanvasStore,
@@ -65,7 +68,9 @@
   } from "./FreeCanvas/freeCanvasStore";
   import {
     createSelectionStore,
+    EMPTY_SELECTION,
     SELECTION_CONTEXT_KEY,
+    type SelectionState,
     type SelectionStore,
   } from "./FreeCanvas/selectionStore";
   import {
@@ -333,6 +338,37 @@
   const selectionStore: SelectionStore = createSelectionStore();
   setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
 
+  // #044.5 — local mirror of the selection so the badges slot below can
+  // decide visibility without an `$:` chain. Subscribe once + unsubscribe in
+  // onDestroy to match the pattern used by Stats/DataTable receivers.
+  let currentSelection: SelectionState = EMPTY_SELECTION;
+  const unsubSelection = selectionStore.subscribe((v) => {
+    currentSelection = v;
+  });
+  onDestroy(unsubSelection);
+
+  // #044.5 — global Escape clears any active canvas selection (spec §7).
+  // Listener is attached at document level so the user does not need to
+  // explicitly focus the canvas first; the no-op guard for empty selection
+  // makes it cheap to leave armed for the canvas lifetime.
+  function handleSelectionEscape(e: KeyboardEvent): void {
+    if (e.key !== "Escape") return;
+    if (currentSelection.source === null) return;
+    selectionStore.clearSelection();
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("keydown", handleSelectionEscape);
+    onDestroy(() => document.removeEventListener("keydown", handleSelectionEscape));
+  }
+
+  // #044.5 — click on the canvas background (FreeCanvas root, not on any
+  // WindowShell) clears the selection. Passed as a prop into FreeCanvas
+  // where `on:click|self` ensures only background clicks reach here.
+  function handleCanvasBackgroundClick(): void {
+    if (currentSelection.source === null) return;
+    selectionStore.clearSelection();
+  }
+
   function widgetToWindowState(w: WidgetDefinition): WindowState {
     return {
       id: w.id,
@@ -587,7 +623,7 @@
 
     <!-- Widget grid / canvas -->
     {#if layoutMode === "free"}
-      <FreeCanvas windows={$freeCanvasStore.windows}>
+      <FreeCanvas windows={$freeCanvasStore.windows} onBackgroundClick={handleCanvasBackgroundClick}>
         <svelte:fragment slot="window" let:window>
           {@const widget = widgets.find((w) => w.id === window.id)}
           {#if widget}
@@ -602,6 +638,13 @@
                   frame={widget.type === "filter-tabs" ? frame : displayFrame}
                   tableConfig={config?.table}
                 />
+                {#if shouldShowSelectionBadge(widget, currentSelection) && currentSelection.field && currentSelection.value}
+                  <SelectionBadge
+                    field={currentSelection.field}
+                    value={currentSelection.value}
+                    on:clear={() => selectionStore.clearSelection()}
+                  />
+                {/if}
               </svelte:fragment>
               <WidgetHost
                 {widget}
