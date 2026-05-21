@@ -151,6 +151,11 @@
   .project-name {
     overflow: hidden;
     text-overflow: ellipsis;
+    /* #042: ensure ascenders/descenders fit. Without an explicit line-height,
+       `overflow: hidden` on an inline flex item with text-overflow ellipsis
+       can clip the top of letters under certain font metrics — the bug
+       surfaced on Cyrillic project names like «Условия». */
+    line-height: 1.4;
   }
   .project-name-static {
     font-weight: 600;
@@ -161,6 +166,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* #042: see .project-name above. */
+    line-height: 1.4;
   }
   .chevron {
     flex-shrink: 0;
