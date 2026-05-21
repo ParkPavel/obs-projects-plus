@@ -8,6 +8,12 @@
   export let config: StatsCardConfig;
   export let values: Optional<DataValue>[];
   export let fieldMissing: boolean = false;
+  /**
+   * #044.4 receiver: `true` when a canvas-level selection is actively
+   * narrowing the records this card was computed over. Renders a small
+   * accent-coloured dot next to the value (spec §5.3, §6.1).
+   */
+  export let filtered: boolean = false;
 
   $: safeColor = config.color ? sanitizeColor(config.color) : null;
   $: result = computeAggregateValue(values, config.aggregation);
@@ -65,7 +71,16 @@
   {#if fieldMissing}
     <span class="ppp-stats-value ppp-stats-value--missing" aria-label="Field not found">⚠</span>
   {:else}
-    <span class="ppp-stats-value">{formatted}</span>
+    <span class="ppp-stats-value">
+      {formatted}
+      {#if filtered}
+        <span
+          class="ppp-stats-filtered-dot"
+          title="Filtered by canvas selection"
+          aria-label="Filtered by canvas selection"
+        ></span>
+      {/if}
+    </span>
   {/if}
   {#if config.sparkline && sparklinePath && !fieldMissing}
     <svg class="ppp-stats-sparkline" viewBox="0 0 80 24" preserveAspectRatio="none">
@@ -97,5 +112,17 @@
   .ppp-stats-missing-hint {
     color: var(--text-warning, orange);
     font-style: italic;
+  }
+
+  /* #044.4 filtered-by-selection indicator. Subtle accent-coloured dot
+     positioned next to the value (spec §5.3). Uses rem to respect PX-budget. */
+  .ppp-stats-filtered-dot {
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-left: 0.375rem;
+    border-radius: 50%;
+    background: var(--interactive-accent);
+    vertical-align: middle;
   }
 </style>

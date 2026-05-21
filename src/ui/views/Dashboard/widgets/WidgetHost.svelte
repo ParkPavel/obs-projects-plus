@@ -504,7 +504,7 @@
           </button>
         </div>
       {:else if widget.type === "stats" && statsConfig}
-        <StatsWidget config={statsConfig} source={transformedFrame} />
+        <StatsWidget config={statsConfig} source={transformedFrame} widgetId={widget.id} />
       {:else if widget.type === "stats" && !statsConfig}
         <div class="ppp-widget-setup-wizard">
           <span class="ppp-widget-setup-icon">📈</span>
