@@ -99,7 +99,7 @@ Data                 →  src/lib/dataframe/, src/lib/dataApi.ts, src/lib/dataso
 ## 8. Граничные правила (V5 в целом)
 
 1. `styles.css` — hand-maintained источник; токены вмерживаются `esbuild.config.mjs::mergeCSS()` пост-сборкой.
-2. PX-budget ratchet locked at **191** ([R0_3_pxBudget.test.ts](../../src/__tests__/R0_3_pxBudget.test.ts)).
+2. PX-budget ratchet locked at **186** ([R0_3_pxBudget.test.ts](../../src/__tests__/R0_3_pxBudget.test.ts)).
 3. Все архитектурные решения, затрагивающие >2 модуля, уходят в `architect` субагента до начала кода.
 4. После любого крупного блока — `context-keeper` субагент для сохранения состояния.
 5. TypeScript strict — zero new `@ts-ignore`.

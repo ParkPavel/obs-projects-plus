@@ -286,7 +286,7 @@ function resolveCrossSubBaseTargets(
 3. **No `JSON.parse` без try/catch на user payload.** Settings, filter values, file content — обязательно guard.
 4. **No `new RegExp(userInput)` без `isUnsafePattern()` guard** + `MAX_REGEX_INPUT_LENGTH` cap.
 5. **No `new Menu()` мимо `openContextMenu` helper** — в V5.1 все 7 offenders мигрируют.
-6. **`px` budget в src/.{svelte,css} ≤ 191** — locked ratchet test `R0_3_pxBudget.test.ts`. Только JS-bound coordinate px (top/left/width/height из getBoundingClientRect) допустимы.
+6. **`px` budget в src/.{svelte,css} ≤ 186** — locked ratchet test `R0_3_pxBudget.test.ts`. Только JS-bound coordinate px (top/left/width/height из getBoundingClientRect) допустимы.
 7. **Reactive prop sync в Svelte 3**: используем `$: x = prop` для подписки, `let x = prop` только для one-shot init (с явным комментарием).
 8. **Date precision**: `dayjs().isSame(other, 'day')` в filter сравнениях, не `getTime()`.
 9. **Fire-and-forget promises**: запрещены. Любая mutating API должна обработать reject через `Notice()` + опциональный rollback оптимистичной мутации.

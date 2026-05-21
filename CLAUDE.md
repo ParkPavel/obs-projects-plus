@@ -19,7 +19,7 @@ npm run test:watch  # jest watch
 npx tsc --noEmit    # type check only
 ```
 
-**Baseline:** 116 suites / 1800 tests PASS, tsc 0 errors.
+**Baseline:** 133 suites / 1979 tests PASS, tsc 0 errors. (Updated 2026-05-21 post Phase 5 + #042/#043.)
 
 ## Architecture
 
@@ -90,7 +90,7 @@ src/ui/components/
 3. **Board columns = derived from unique values** of user-selected field; not hardcoded.
 4. **Derived fields via pipeline**: `applyFormulaFields` → `enrichFrameWithRelations` → display.
 5. **Zero `@ts-ignore`** in `src/`.
-6. **PX-budget ratchet ≤ 191** (px-count test in `__tests__/`). All new values in `rem`.
+6. **PX-budget ratchet ≤ 186** (`src/__tests__/R0_3_pxBudget.test.ts`). All new values in `rem`. To DECREASE: lower the constant after a real conversion. NEVER raise without explicit approval.
 7. **filterEvaluator.ts** is the single canonical filter engine — no parallel implementations.
 
 ## DataFieldType enum (dataframe.ts)
