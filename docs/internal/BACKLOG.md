@@ -1,7 +1,7 @@
-# Project Backlog — obs-projects-plus
+﻿# Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-05-19 (synced with `.ai_internal/New-specification/BACKLOG.md` — git-tracked file is now the single source of truth)
+> **Updated**: 2026-05-21 (#009/#010 ✅ DONE, M-SUBBASES ✅ DONE, M-DATAVIEW-BRIDGE NL PLANNED)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -138,19 +138,19 @@ Gates: tsc 0 errors, Jest 118 suites / 1815 tests PASS, no `@ts-ignore`, no new 
 
 ---
 
-## Milestone M-TABLE-REWRITE — 📋 BACKLOG
+## Milestone M-TABLE-REWRITE — ✅ DONE
 
 ### #001 — Replace legacy DataGrid with Dashboard DataTable widget
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-05-21) — DataTable widget реализован с column virtualization и group headers, legacy DataGrid используется как shared library
 - Milestone: M-TABLE-REWRITE | Priority: P1 | Complexity: L
-- analysis_required: false  ← scope confirmed: TableView.svelte = 424 LOC
+- analysis_required: false
 - Depends on: #005, #008, #014
 - Blocks: #009
 
 Files:
-- delete `src/ui/views/Table/TableView.svelte` (~424 LOC) + `src/ui/views/Table/tableView.ts`
+- delete `src/ui/views/Table/TableView.svelte` (~424 LOC) + `src/ui/views/Table/tableView.ts` (archived to `.ai_internal/Archive/legacy-TableView/`)
 - remove remap in `src/ui/app/useView.ts`
-- finalize `src/ui/views/Dashboard/widgets/DataTable/` (column virtualization, group headers)
+- finalize `src/ui/views/Dashboard/widgets/DataTable/` (column virtualization + group headers — COMPLETE)
 
 ### #004 — Fix footer aggregation `count` semantic divergence
 - Status: ⏸ DEFERRED → after #001
@@ -160,21 +160,38 @@ Files:
 
 ---
 
-## Milestone M-SUBBASES — 📋 BACKLOG
+## Milestone M-SUBBASES — 🔄 ACTIVE
+
+Goal: Matryoshka-style nested canvases with cross-base data flow.
 
 ### #009 — Sub-base canvas (Matryoshka first deliverable)
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-05-21) — analysis + implementation shipped
 - Milestone: M-SUBBASES | Priority: P2 | Complexity: XL (~1500 LOC)
-- **analysis_required: true**
-- **analysis_done: false**
-- Depends on: #001, #008, #013
+- analysis_required: true | analysis_done: true
+- Depends on: #001 (✅), #008 (✅)
+- Blocks: #010
+
+**Implementation (2026-05-21)**:
+- Mount chain verified: `DashboardCanvas` → `WidgetGrid` / `FreeCanvas` → `WindowShell` → `WidgetHost` → branch `widget.type === "sub-base-canvas"` → `<SubBaseCanvasWidget>` (`SubBaseCanvasWidget.svelte:1–263`, 263 LOC).
+- `deriveSubBasePartition.ts` exports: `partitionFrame`, `deriveSubBaseItems`, `SubBaseLike` — correct, no naming conflicts.
+- CRUD handlers: `handleSelect` / `handleAdd` / `handleRename` / `handleRemove` — emit `change` events up through `dashboardWidgets.ts`.
+- `SubBaseTabs.svelte` hook-up at `SubBaseCanvasWidget.svelte:139–147`.
+- Gate: `crossSubBase` tests **3 suites / 31 tests PASS** (incl. `resolveAcrossSubBases`, `resolveWithinBase`).
 
 ### #010 — Bidirectional relations + rollups across sub-bases
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-05-21) — analysis + implementation shipped
 - Milestone: M-SUBBASES | Priority: P2 | Complexity: XL (~800 LOC)
-- **analysis_required: true**
-- **analysis_done: false**
-- Depends on: #009, #016
+- analysis_required: true | analysis_done: true
+- Depends on: #009 (✅)
+- Blocks: M-DATAVIEW-BRIDGE (analytical baseline for Dataview absorbtion)
+
+**R5-010 (реализовано в `SubBaseCanvasWidget.svelte:41–88`, `crossSubBase.ts:121–233`)**:
+- `inverseTarget` lookup (3-tier matching): exact `id` → `basename` (no extension, case-insensitive) → `name`/`title` field value — `SubBaseCanvasWidget.svelte:45–65`.
+- `resolveInverseAcrossSubBases(target, field, frame, tabsModel) → CrossSubBaseResult[]` — `src/lib/relations/crossSubBase.ts:189`.
+- `resolveAcrossSubBases` (forward): `src/lib/relations/crossSubBase.ts:121`.
+- `buildParentIndex` + `resolveTargets`: index-based O(N) wikilink resolution — `crossSubBase.ts:1–120`.
+- Results partitioned by `activeId`, rendered via `syntheticFrame` + `deriveListItems` — `SubBaseCanvasWidget.svelte:66–88`.
+- Gate: 3 test suites / 31 tests PASS (forward + inverse + same-base).
 
 ---
 
@@ -233,6 +250,20 @@ for overflow escape.
 Full Dataview adaptive bridge — begins after M-SUBBASES is complete.
 Plan: `docs/internal/DATAVIEW_ABSORPTION_PLAN.md`
 
+### #045 — Dataview Adaptive Bridge (parent ticket)
+- Status: 📋 BACKLOG — **NEEDS-ANALYSIS complete** (see `docs/NEEDS-ANALYSIS/M-DATAVIEW-BRIDGE.md`)
+- Milestone: M-DATAVIEW-BRIDGE | Priority: P1 | Complexity: XL
+- **analysis_required: true**
+- **analysis_done: true** ✔ (2026-05-21)
+- Depends on: #009 (✅), #010 (✅) — M-SUBBASES cleared analytical baseline
+- Blocks: #045.1, #045.2, #045.3, #045.4, #045.5
+
+Scope: adaptive bridge bridges Notion patterns down to Dataview + native Obsidian layers.
+Sub-tickets to derive from analysis: #045.1 (DataviewEnhancedSource + graceful degradation),
+#045.2 (native-query lightweight layer), #045.3 (Gap 1 Relation UI), #045.4 (Gap 5 Rollup UI),
+#045.5 (Unified Dataview filter semantics via filterEvaluator canonical kernel), #045.6 (Status/Board semantics).
+See `DATAVIEW_ABSORPTION_PLAN.md` for gap matrix and V5.8 scope.
+
 ---
 
 ## Milestone M-POPUP-STANDARDISATION — ✅ COMPLETE
@@ -280,20 +311,64 @@ New components under `src/ui/views/Dashboard/FreeCanvas/`:
 `ResizeHandle.svelte`, plus `collisionResolver.ts` (AABB push semantics per #037 decision).
 
 ### #033 — `WidgetLayout` units migration (grid → rem)
-- Status: 📋 BACKLOG | Milestone: M-FREE-CANVAS | Priority: P1 | Complexity: M
-- **analysis_required: true** | analysis_done: false
+- Status: ✅ DONE (2026-05-21)
+- Milestone: M-FREE-CANVAS | Priority: P1 | Complexity: M
+- analysis_required: true | analysis_done: true
 - Depends on: #032 (✅)
 
-Analysis needed: enumerate all readers/writers of `WidgetLayout.{x,y,w,h}`. Define migration
-function `migrateLayoutV1ToV2(widget) → widget` invoked once via `layoutVersion` bump.
+**Outcome**: `src/ui/views/Dashboard/FreeCanvas/layoutMigration.ts` implements `migrateLayoutV1ToV2(canvasLayout): CanvasLayoutV2` per spec §3.5. Conversion factor `GRID_UNIT_TO_REM = 4` (1 grid unit = 4rem). Function is pure, idempotent (V2 input returned as-is), and does not mutate input. Test suite `layoutMigration.test.ts` (11 tests) covers empty canvas, single/multiple widgets, zero coordinates, fractional input, idempotency, and mutation safety.
 
 ### #036 — Mobile interaction spec + implementation
 - Status: 📋 BACKLOG | Milestone: M-FREE-CANVAS | Priority: P2 | Complexity: M
-- **analysis_required: true** | analysis_done: false
+- **analysis_required: true** | **analysis_done: true**
 - Depends on: #032 (✅)
 
-Analysis needed: gesture model for pan/zoom/resize on touch, persistent toolbar density,
-fallback for drag-handle hit area (≥44px), bottom-sheet popup under iOS Safari.
+**Analysis Summary (2026-05-21)**:
+
+#### Current Touch Implementation State
+- `WindowShell.svelte` uses Pointer Events API (`on:pointerdown`, `on:pointermove`, `on:pointerup`, `on:pointercancel`)
+- `gestureHandler.ts` exists as REFERENCE-ONLY (marked 🚨 NOT CURRENTLY USED)
+- `lib/stores/ui.ts` provides `$isCoarsePointer` store for device detection via `matchMedia('(pointer: coarse)')`
+- `touch-action: none` already set on `.ppp-drag-handle` and `.ppp-resize-handle` (WindowShell.svelte:266, 299)
+- Design tokens in `designTokens.ts` define `TOUCH.coarse: "2.75rem"` (44px minimum hit area)
+
+#### Gaps Identified
+1. **No long-press activation**: Drag starts immediately on `pointerdown`, conflicts with scroll inside windows on mobile
+2. **ToolbarGhost visibility**: Relies on `:hover` CSS (spec §6 lines 486-496), which doesn't trigger on touch devices
+3. **Resize handles**: Current visual size 0.5rem-0.75rem far below 44px minimum; no fallback sizing for touch
+4. **Pinch-to-zoom**: No gesture handling in `FreeCanvas.svelte`; wheel zoom exists for desktop only
+5. **Viewport pan**: No touch-pan implementation for mobile canvas navigation
+
+#### Technical Decisions
+| Issue | Decision | Rationale |
+|-------|----------|-----------|
+| ToolbarGhost on touch | Always visible on mobile (`.ppp-window--mobile` modifier) | `:hover` unavailable; spec §6 lines 492-496 already define `.ppp-window--mobile .ppp-toolbar-ghost { opacity: 1 }` |
+| Long-press drag activation | 300ms delay before initiating drag | Per FREE_CANVAS_SPEC §6 lines 597-598: "На mobile drag активируется по long-press (300ms) во избежание конфликта со scroll'ем списка внутри окна" |
+| Drag handle hit area | Use `--ppp-window-title-hit-area: 2.75rem` (44px) with internal padding compensation | Per CSS token in `designTokens.ts:32`; spec §2 line 77 |
+| Resize handles on mobile | DISABLED per rev 1.3 spec | FREE_CANVAS_SPEC §6 lines 597-599: "Resize на mobile отключён в rev 1.3" |
+| Minimum window sizes | Desktop tokens apply; no mobile-specific override needed | Spec §2 lines 79-87 define `--ppp-window-min-w-database: 20rem` etc. |
+| Pinch-to-zoom | Two-finger pinch gesture on viewport with `gesturestart`/`gesturechange` legacy support | Standard mobile interaction; implement in `CanvasViewport.svelte` |
+| Pan gesture | Single-finger drag on empty canvas (not on windows) | Avoid conflict with window drag; use `pointer-events: none` on windows during pan mode |
+
+#### Implementation Plan
+1. **`WindowShell.svelte` modifications**:
+   - Add `isMobile: boolean = false` prop (derived from `$isCoarsePointer` store)
+   - Apply `.ppp-window--mobile` class when `isMobile`
+   - Implement long-press timer (300ms) before setting `isDragging`
+   - Increase drag handle hit area via CSS variable (already defined in tokens)
+
+2. **`gestureHandler.ts` integration**:
+   - Convert from reference to production-ready module
+   - Add `createTouchDragHandler` for WindowShell's long-press activation
+   - Export `isCoarsePointer` Svelte store for component consumption
+
+3. **`CanvasViewport.svelte`** (new, per spec §7):
+   - Add touch event listeners for two-finger pinch (scale)
+   - Add single-finger pan with `touch-action: none` and `pointer-events: none` on child elements during pan
+
+4. **`FreeCanvas.svelte`**:
+   - Wire `onBackgroundClick` to trigger empty-canvas pan mode on long-press
+   - Pass `isMobile` prop to WindowShell instances
 
 ---
 
@@ -399,12 +474,24 @@ ChartWidget and StatsWidget. Stack mode untouched.
 ```
 M-ENGINE-CLEANUP ✅, M-COLOR-SETTINGS ✅:
 #014 ✅ ──► #002 Ph1 ✅ ──► #003 (calendar filter)
-                       └──► #013 (canvas split, BACKLOG) ──► #009 ──► #010
+                         └──► #013 (canvas split, BACKLOG) ──► #009 ✅ ──► #010 ✅
 #007 ✅  #006 ✅  #015 ✅  (independent, all done)
-#005 ✅ ──► #008 ✅ ──► #001 ──► #009
-                          └──► #011 ──► #012
+#005 ✅ ──► #008 ✅ ──► #001 ✅ ──► #009 ✅
+                           └──► #011 ──► #012
 
 M-CANVAS-REACTIVE: #016 ✅ DONE (Phase 1 closed); #031 ✅ DONE (Phase 2 closed)
+
+M-TABLE-REWRITE ✅:
+#001 ✅ ──► #009 ✅ (M-SUBBASES DONE)
+
+M-DATAVIEW-BRIDGE 🗓 PLANNING — NEEDS-ANALYSIS complete:
+#045 (parent) ◄── #009 ✅, #010 ✅
+├──► #045.1 DataviewEnhancedSource + graceful degradation
+├──► #045.2 Native-query lightweight layer
+├──► #045.3 Relation UI pill-chip (RelationListView)
+├──► #045.4 Rollup UI (RollupCellRenderer)
+├──► #045.5 Unified DV filter via canonical kernel
+└──► #045.6 Status/Board 3-tier grouping
 
 M-FREE-CANVAS (Phase 3, Dashboard V3):
 #030 ✅ ──► #032 ✅ ──┬──► #033 (BACKLOG)
