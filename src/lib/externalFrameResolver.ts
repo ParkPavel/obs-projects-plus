@@ -8,9 +8,7 @@ import type { DataviewApi } from "obsidian-dataview";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/settings";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
-import { FolderDataSource } from "src/lib/datasources/folder/datasource";
-import { TagDataSource } from "src/lib/datasources/tag/datasource";
-import { DataviewDataSource } from "src/lib/datasources/dataview/datasource";
+import { createDataSource } from "src/lib/datasources";
 
 export interface ResolverDeps {
   readonly fileSystem: IFileSystem;
@@ -51,27 +49,15 @@ export async function resolveExternalFrame(
   if (!project) return null;
 
   try {
-    switch (project.dataSource.kind) {
-      case "dataview": {
-        if (!deps.dataviewApi) return null;
-        const ds = new DataviewDataSource(
-          deps.fileSystem,
-          project,
-          deps.preferences,
-          deps.dataviewApi
-        );
-        return await ds.queryAll();
-      }
-      case "tag": {
-        const ds = new TagDataSource(deps.fileSystem, project, deps.preferences);
-        return await ds.queryAll();
-      }
-      case "folder":
-      default: {
-        const ds = new FolderDataSource(deps.fileSystem, project, deps.preferences);
-        return await ds.queryAll();
-      }
+    const resolution = createDataSource(project, {
+      fileSystem: deps.fileSystem,
+      preferences: deps.preferences,
+      dataviewApi: deps.dataviewApi,
+    });
+    if (resolution.kind === "unavailable") {
+      return null;
     }
+    return await resolution.source.queryAll();
   } catch (err) {
     warnThrottled(projectId, err);
     return null;

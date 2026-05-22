@@ -1,7 +1,6 @@
 import { get } from "svelte/store";
 import { dataFrame, dataSource } from "src/lib/stores/dataframe";
 import type { IFileSystemWatcher } from "./lib/filesystem/filesystem";
-import { DataviewDataSource } from "./lib/datasources/dataview/datasource";
 import type { DataSource } from "./lib/datasources";
 
 /**
@@ -45,7 +44,7 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
       );
 
       if (source.includes(file.path)) {
-        if (source instanceof DataviewDataSource && "refresh" in source) {
+        if (typeof source.refresh === "function") {
           dataFrame.merge(await source.refresh());
         } else {
           dataFrame.merge(await source.queryOne(file, get(dataFrame).fields));
