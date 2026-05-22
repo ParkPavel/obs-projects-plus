@@ -137,7 +137,7 @@ export class DataviewDataSource extends DataSource {
     return true;
   }
 
-   
+
   standardizeRecords(rows: Array<Record<string, any>>): DataRecord[] {
     const records: DataRecord[] = [];
 
@@ -233,4 +233,38 @@ function parseTaskResult(value: TaskResult, idColumnName: string): Array<Record<
 
   flattenItems(value.values);
   return rows;
+}
+
+/**
+ * Resolution returned by {@link createDataviewSource}. The `unavailable`
+ * variant lets callers render a graceful fallback (e.g. a Callout asking the
+ * user to enable Dataview) without catching a thrown error.
+ */
+export type DataviewSourceResolution =
+  | { readonly kind: "ok"; readonly source: DataviewDataSource }
+  | { readonly kind: "unavailable"; readonly reason: "dataview-unavailable" };
+
+/**
+ * Adaptive factory for {@link DataviewDataSource}. Returns
+ * `{ kind: "unavailable" }` when the Dataview API is absent instead of
+ * throwing — keeping the rest of the dashboard chrome usable when the
+ * Dataview plugin is disabled.
+ *
+ * Part of the M-DATAVIEW-BRIDGE absorption plan (#045.1): centralises
+ * graceful degradation for the Dataview backend so individual UI consumers
+ * no longer probe `getPlugin("dataview")` themselves.
+ */
+export function createDataviewSource(
+  fileSystem: IFileSystem,
+  project: ProjectDefinition,
+  preferences: ProjectsPluginPreferences,
+  dataviewApi: DataviewApi | undefined
+): DataviewSourceResolution {
+  if (!dataviewApi) {
+    return { kind: "unavailable", reason: "dataview-unavailable" };
+  }
+  return {
+    kind: "ok",
+    source: new DataviewDataSource(fileSystem, project, preferences, dataviewApi),
+  };
 }

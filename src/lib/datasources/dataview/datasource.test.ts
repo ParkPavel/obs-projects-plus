@@ -13,7 +13,7 @@ import type {
   ProjectDefinition,
   ProjectsPluginPreferences,
 } from "src/settings/settings";
-import { DataviewDataSource } from "./datasource";
+import { createDataviewSource, DataviewDataSource } from "./datasource";
 
 const defaultPrefs: ProjectsPluginPreferences = {
   projectSizeLimit: 1000,
@@ -122,6 +122,45 @@ describe("DataviewDataSource.sortFields", () => {
   it("returns an empty array unchanged", () => {
     const src = makeSource();
     expect(src.sortFields([], ["File"])).toEqual([]);
+  });
+});
+
+describe("createDataviewSource", () => {
+  it("returns 'ok' resolution when dataviewApi is provided", () => {
+    const result = createDataviewSource(
+      {} as any,
+      makeProject(),
+      defaultPrefs,
+      makeApi()
+    );
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.source).toBeInstanceOf(DataviewDataSource);
+    }
+  });
+
+  it("returns 'unavailable' with reason when api is undefined", () => {
+    const result = createDataviewSource(
+      {} as any,
+      makeProject(),
+      defaultPrefs,
+      undefined
+    );
+    expect(result.kind).toBe("unavailable");
+    if (result.kind === "unavailable") {
+      expect(result.reason).toBe("dataview-unavailable");
+    }
+  });
+
+  it("does not construct DataviewDataSource when api is undefined", () => {
+    const result = createDataviewSource(
+      {} as any,
+      makeProject(),
+      defaultPrefs,
+      undefined
+    );
+    // Type guard ensures we never reach `.source` access on `unavailable`.
+    expect((result as any).source).toBeUndefined();
   });
 });
 
