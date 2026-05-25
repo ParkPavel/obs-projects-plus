@@ -1,5 +1,6 @@
 import type {
   FieldConfig,
+  FilterDefinition,
   ProjectId,
   ProjectsPluginPreferences,
   ShowCommand,
@@ -273,6 +274,21 @@ export type DataviewDataSource = {
   readonly kind: "dataview";
   readonly config: {
     readonly query: string;
+    /**
+     * Optional canonical filter applied to the DataFrame returned by the
+     * Dataview query, BEFORE the frame leaves the datasource layer.
+     *
+     * Goes through {@link applyFilter} from `src/lib/engine/filterEvaluator`
+     * — the single canonical filter engine (CLAUDE.md invariant). DQL native
+     * WHERE still runs first inside the Dataview plugin; this layer adds
+     * unified semantic parity with folder/tag sources for predicates the
+     * user wants applied independently of (or in addition to) DQL.
+     *
+     * Introduced by ticket #045.5 — Unified DV filter semantics
+     * (Gap 6, M-DATAVIEW-BRIDGE). Backward-compatible: undefined or empty
+     * `conditions` is a no-op.
+     */
+    readonly filter?: FilterDefinition;
   };
 };
 

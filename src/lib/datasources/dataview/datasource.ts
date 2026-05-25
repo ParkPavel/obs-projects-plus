@@ -8,6 +8,7 @@ import {
   type DataFrame,
   type DataRecord,
 } from "src/lib/dataframe/dataframe";
+import { applyFilter } from "src/lib/engine/filterEvaluator";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { i18n } from "src/lib/stores/i18n";
 import type {
@@ -109,7 +110,25 @@ export class DataviewDataSource extends DataSource {
 
     const records = parseRecords(standardizedRecords, fields);
 
-    return { fields, records };
+    const baseFrame: DataFrame = { fields, records };
+
+    // ── #045.5 — Unified DV filter semantics ─────────────────────────────
+    // Apply optional canonical filter from `config.filter` through the
+    // single source-of-truth `filterEvaluator`. DQL native WHERE still ran
+    // inside the Dataview plugin during `api.query()`; this stage adds
+    // unified semantic parity with folder/tag sources for predicates the
+    // user wants enforced independently of (or in addition to) DQL.
+    // No-op when `filter` is undefined or has zero conditions, so existing
+    // projects without an explicit `config.filter` see no behavioural
+    // change. (M-DATAVIEW-BRIDGE Gap 6.)
+    const filterCfg = this.project.dataSource.config.filter;
+    const hasConditions =
+      !!filterCfg &&
+      ((filterCfg.conditions?.length ?? 0) > 0 ||
+        (filterCfg.groups?.length ?? 0) > 0);
+    return hasConditions && filterCfg
+      ? applyFilter(baseFrame, filterCfg)
+      : baseFrame;
   }
 
   sortFields(fields: DataField[], headers: string[]): DataField[] {
