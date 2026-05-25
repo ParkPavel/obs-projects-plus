@@ -4,7 +4,7 @@
   // fields). Sub-base CRUD is owned by this widget, decoupled from
   // DataTable.
 
-  import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
   import type { SubBaseCanvasConfig } from "../../types";
   import type { SubBaseDefinition } from "src/lib/database/subBase";
   import { createSubBase } from "src/lib/database/subBase";
@@ -14,13 +14,19 @@
   import { deriveListItems } from "../DataList/deriveListItems";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, setContext } from "svelte";
+  import RelationListView from "src/ui/views/YamlVisualizer/RelationListView.svelte";
+  import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 
   export let config: Record<string, unknown> | undefined = undefined;
   export let source: DataFrame;
   export let readonly = false;
 
   const dispatch = createEventDispatcher<{ change: SubBaseCanvasConfig }>();
+
+  // #045.3 — RelationListView reads `sourcePath` from Svelte context; we
+  // route clicks through whichever record is currently top of frame.
+  $: setContext("sourcePath", source.records[0]?.id ?? "");
 
   $: cfg = (config ?? { subBases: [], fields: [] }) as unknown as SubBaseCanvasConfig;
   $: subBases = cfg.subBases ?? [];
@@ -174,12 +180,24 @@
           {#if item.fields.length > 0}
             <span class="ppp-sbc-fields">
               {#each item.fields as f (f.name)}
-                {@const text = format(f.value)}
-                {#if text}
-                  <span class="ppp-sbc-field">
-                    <span class="ppp-sbc-field-name">{f.name}</span>
-                    <span class="ppp-sbc-field-value">{text}</span>
-                  </span>
+                {#if f.type === DataFieldType.Relation}
+                  {@const links = parseRelationLinks(f.value)}
+                  {#if links.length > 0}
+                    <span class="ppp-sbc-field">
+                      <span class="ppp-sbc-field-name">{f.name}</span>
+                      <span class="ppp-sbc-field-value ppp-sbc-field-value--relation">
+                        <RelationListView items={links} maxVisible={3} />
+                      </span>
+                    </span>
+                  {/if}
+                {:else}
+                  {@const text = format(f.value)}
+                  {#if text}
+                    <span class="ppp-sbc-field">
+                      <span class="ppp-sbc-field-name">{f.name}</span>
+                      <span class="ppp-sbc-field-value">{text}</span>
+                    </span>
+                  {/if}
                 {/if}
               {/each}
             </span>
@@ -252,6 +270,11 @@
   }
   .ppp-sbc-field-name { color: var(--text-faint); }
   .ppp-sbc-field-value { color: var(--text-normal); }
+  /* #045.3 — relation pill list inside inline field row. */
+  .ppp-sbc-field-value--relation {
+    display: inline-flex;
+    align-items: center;
+  }
   .ppp-widget-empty {
     display: flex;
     align-items: center;
