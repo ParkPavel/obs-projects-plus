@@ -5,6 +5,31 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Documentation drift recovery — 2026-05-25
+
+Retroactive entries для работ, которые были доставлены в код в предыдущих сессиях, но не отражены в CHANGELOG/BACKLOG. Аудит drift проведён 2026-05-25 (см. `docs/internal/NEEDS-ANALYSIS/022-UnifiedFormulaConstructor.md`).
+
+### R5-002 Phase 2 — `evaluateValue` → `lib/formula/index.ts`
+- `src/lib/formula/extendedEvaluator.ts` — единственная implementation (115+ functions)
+- `src/lib/formula/index.ts` — canonical re-export shell: `evaluateFormulaValue`, `evaluateFormulaWithError`, `validateFormulaExpression`, `getFormulaFunctions`, `isStyledValue`
+- `src/ui/views/Dashboard/engine/formulaEngine.ts` — 21-LOC thin re-export wrapper (header явно ссылается на R5-002 Phase 2)
+- BACKLOG переведён на ✅ DONE
+
+### R5-022 — UnifiedFormulaConstructor (core unification)
+- `src/ui/views/Dashboard/widgets/FormulaVisualEditor.svelte` — удалён; visual node-editor approach отвергнут
+- `src/ui/components/FormulaConstructor/FormulaConstructor.svelte` — создан (368 LOC) как единый формульный editor (extracted from FormulaBar.svelte)
+- `src/ui/components/FormulaEditor/FormulaEditor.svelte` — refactored в slot-wrapper над FormulaConstructor (header/footer/help slots), `enableVisualMode` prop удалён
+- `src/ui/views/Dashboard/widgets/FormulaBar.svelte` — code/visual mode toggle удалён, использует FormulaConstructor
+- Потребители unified surface: `FormulaBar` (Dashboard), `FormulaEditor` (через `YamlVisualizer`)
+- BACKLOG переведён на ✅ DONE для core unification; follow-up sub-tickets #022.2–#022.6 зарегистрированы
+
+### Identified follow-ups (открытые sub-tickets)
+- **#022.2** — archive dead code: `FormulaNode.svelte` (130 LOC) + `formulaSerializer.ts` (78 LOC) → `.ai_internal/Archive/OLD-*` (grep confirmed zero consumers)
+- **#022.3** — Ctrl+Space force-open suggestions, опционально empty-state snippet catalog
+- **#022.4** — migrate suggestion dropdown to `FloatingPopup` (canonical popup engine) для escape из narrow containers
+- **#022.5** — JSDOM unit tests для `FormulaConstructor` (suggestion filter, signature popover state, keyboard contract)
+- **#022.6** — migrate `Calendar/agenda/AdvancedFilterEditor.svelte` (773 LOC, UTF-8 mojibake) → FormulaConstructor; закрывает "eliminate four diverging formula-input surfaces" goal
+
 ## [Unreleased — V5 internal] (3.4.2)
 
 > **Status**: V5 internal development build.

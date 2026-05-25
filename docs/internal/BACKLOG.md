@@ -216,20 +216,24 @@ Test coverage: `src/ui/views/Calendar/agenda/filterEngine.test.ts` covers
 the delegation contract. Source file header documents the migration.
 
 ### #002 Phase 2 — Move `evaluateValue` to `lib/formula/index.ts`
-- Status: ⏸ DEFERRED to M-YAML-FORMULA-UI
+- Status: ✅ DONE — retroactive documentation (drift recovery 2026-05-25)
 - Milestone: M-YAML-FORMULA-UI | Priority: P2 | Complexity: M
 - analysis_required: false
 
-### #022 — UnifiedFormulaConstructor (replace AST node system in FormulaVisualEditor)
-- Status: 📋 BACKLOG
-- Milestone: M-YAML-FORMULA-UI | Priority: P2 | Complexity: XL
-- **analysis_required: true**
-- **analysis_done: false** ← FORMULA_CONSTRUCTOR_AUDIT_2026-05-08.md is a partial start, not sufficient
-- Depends on: #002 Phase 2
+`evaluateValue` уже перемещён в `src/lib/formula/extendedEvaluator.ts` и re-exported из `src/lib/formula/index.ts` как `evaluateFormulaValue` / `evaluateFormulaWithError`. `src/ui/views/Dashboard/engine/formulaEngine.ts` — 21-LOC re-export shell с явным header "R5-002 Phase 2".
 
-Analysis needed: Full deletion scope of FormulaVisualEditor.svelte, AdvancedFilterEditor.svelte
-as gold-standard baseline UX, keyboard spec (Ctrl+Space, Tab/Enter, Esc), portal pattern
-for overflow escape.
+### #022 — UnifiedFormulaConstructor (replace AST node system in FormulaVisualEditor)
+- Status: ✅ DONE (core unification) — retroactive documentation (drift recovery 2026-05-25)
+- Milestone: M-YAML-FORMULA-UI | Priority: P2 | Complexity: XL (на бумаге; фактически доставлено)
+- analysis_required: true | analysis_done: true (см. `docs/internal/NEEDS-ANALYSIS/022-UnifiedFormulaConstructor.md`)
+- Depends on: #002 Phase 2 (✅)
+- Follow-ups: #022.2 (archive dead code), #022.3 (Ctrl+Space), #022.4 (FloatingPopup portal), #022.5 (JSDOM tests), #022.6 (migrate AdvancedFilterEditor)
+
+Доставлено: `FormulaVisualEditor.svelte` удалён, `FormulaConstructor.svelte` (368 LOC) создан как unified surface, потребляется и `FormulaBar`, и `FormulaEditor` (через slot-wrapper). Code/visual mode toggle удалён.
+
+Остаток (см. NEEDS-ANALYSIS doc):
+- 208 LOC dead code (`FormulaNode.svelte` + `formulaSerializer.ts`) → archive в `.ai_internal/Archive/` (#022.2)
+- Опциональные UX-улучшения: Ctrl+Space force-open, FloatingPopup portal для suggestion dropdown, JSDOM unit tests, migration `AdvancedFilterEditor` → FormulaConstructor
 
 ### #011 — Move YAML Visualizer into Dashboard widget
 - Status: 📋 BACKLOG
