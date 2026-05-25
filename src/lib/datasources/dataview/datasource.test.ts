@@ -10,6 +10,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
 import type {
+  FilterDefinition,
   ProjectDefinition,
   ProjectsPluginPreferences,
 } from "src/settings/settings";
@@ -28,7 +29,10 @@ const defaultPrefs: ProjectsPluginPreferences = {
   replaceObsidianProperties: false,
 };
 
-function makeProject(excludedNotes: string[] = []): ProjectDefinition {
+function makeProject(
+  excludedNotes: string[] = [],
+  filter?: FilterDefinition
+): ProjectDefinition {
   return {
     name: "Test",
     id: "test-id",
@@ -39,7 +43,10 @@ function makeProject(excludedNotes: string[] = []): ProjectDefinition {
     excludedNotes,
     isDefault: false,
     newNotesFolder: "",
-    dataSource: { kind: "dataview", config: { query: "TABLE FROM #test" } },
+    dataSource: {
+      kind: "dataview",
+      config: { query: "TABLE FROM #test", ...(filter ? { filter } : {}) },
+    },
   };
 }
 
@@ -161,6 +168,138 @@ describe("createDataviewSource", () => {
     );
     // Type guard ensures we never reach `.source` access on `unavailable`.
     expect((result as any).source).toBeUndefined();
+  });
+});
+
+describe("DataviewDataSource.queryAll — unified filter semantics (#045.5)", () => {
+  // Three-row TABLE result fixture used across the unified-filter tests.
+  // Two columns: File (id) + Priority (Number-typed by detectSchema).
+  const TABLE_RESULT_3_ROWS = {
+    successful: true,
+    value: {
+      type: "table" as const,
+      headers: ["File", "Priority"],
+      values: [
+        [{ path: "alpha.md", display: "alpha" }, 1],
+        [{ path: "beta.md", display: "beta" }, 5],
+        [{ path: "gamma.md", display: "gamma" }, 10],
+      ],
+    },
+  };
+
+  function makeApiWithTable(): any {
+    return {
+      settings: { tableIdColumnName: "File" },
+      query: async () => TABLE_RESULT_3_ROWS,
+    };
+  }
+
+  function makeSourceWithFilter(filter?: FilterDefinition): DataviewDataSource {
+    return new DataviewDataSource(
+      {} as any,
+      makeProject([], filter),
+      defaultPrefs,
+      makeApiWithTable()
+    );
+  }
+
+  it("returns all rows when config.filter is undefined", async () => {
+    const src = makeSourceWithFilter(undefined);
+    const frame = await src.queryAll();
+    expect(frame.records).toHaveLength(3);
+    expect(frame.records.map((r) => r.id)).toEqual([
+      "alpha.md",
+      "beta.md",
+      "gamma.md",
+    ]);
+  });
+
+  it("returns all rows when config.filter has zero conditions (no-op)", async () => {
+    const src = makeSourceWithFilter({ conjunction: "and", conditions: [] });
+    const frame = await src.queryAll();
+    expect(frame.records).toHaveLength(3);
+  });
+
+  it("applies config.filter via canonical filterEvaluator (gt operator)", async () => {
+    const src = makeSourceWithFilter({
+      conjunction: "and",
+      conditions: [
+        { field: "Priority", operator: "gt", value: "3", enabled: true },
+      ],
+    });
+    const frame = await src.queryAll();
+    // Only beta (5) and gamma (10) match Priority > 3
+    expect(frame.records).toHaveLength(2);
+    expect(frame.records.map((r) => r.id).sort()).toEqual([
+      "beta.md",
+      "gamma.md",
+    ]);
+  });
+
+  it("preserves fields shape after filtering (no schema drift)", async () => {
+    const src = makeSourceWithFilter({
+      conjunction: "and",
+      conditions: [
+        { field: "Priority", operator: "eq", value: "5", enabled: true },
+      ],
+    });
+    const frame = await src.queryAll();
+    expect(frame.fields.map((f) => f.name).sort()).toEqual(["File", "Priority"]);
+    expect(frame.records).toHaveLength(1);
+    expect(frame.records[0]?.id).toBe("beta.md");
+  });
+
+  it("respects R2.1c negative-semantics for undefined values (parity with folder/tag)", async () => {
+    // gamma row will not have a value for "MissingField"; with a negative
+    // operator filterEvaluator keeps records whose value is undefined.
+    const src = makeSourceWithFilter({
+      conjunction: "and",
+      conditions: [
+        {
+          field: "MissingField",
+          operator: "is-not",
+          value: "x",
+          enabled: true,
+        },
+      ],
+    });
+    const frame = await src.queryAll();
+    expect(frame.records).toHaveLength(3); // all retained per R2.1c
+  });
+
+  it("supports group composition (and inside or)", async () => {
+    const src = makeSourceWithFilter({
+      conjunction: "or",
+      conditions: [
+        { field: "Priority", operator: "eq", value: "1", enabled: true },
+      ],
+      groups: [
+        {
+          conjunction: "and",
+          conditions: [
+            { field: "Priority", operator: "gt", value: "7", enabled: true },
+          ],
+        },
+      ],
+    });
+    const frame = await src.queryAll();
+    // alpha (eq 1) OR gamma (>7) — beta (5) excluded
+    expect(frame.records.map((r) => r.id).sort()).toEqual([
+      "alpha.md",
+      "gamma.md",
+    ]);
+  });
+
+  it("skips disabled conditions (enabled: false acts as if absent)", async () => {
+    const src = makeSourceWithFilter({
+      conjunction: "and",
+      conditions: [
+        { field: "Priority", operator: "eq", value: "1", enabled: false },
+      ],
+    });
+    const frame = await src.queryAll();
+    // All three records remain — the only condition is disabled.
+    expect(frame.records).toHaveLength(3);
   });
 });
 
