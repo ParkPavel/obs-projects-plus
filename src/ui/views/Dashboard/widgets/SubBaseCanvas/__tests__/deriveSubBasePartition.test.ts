@@ -69,7 +69,8 @@ describe("SubBaseCanvas — deriveSubBaseItems", () => {
     };
     const items = deriveSubBaseItems(makeFrame(), sb, { fields: ["amount"] });
     expect(items.map((i) => i.id)).toEqual(["b.md", "c.md"]);
-    expect(items[0]?.fields).toEqual([{ name: "amount", value: 25 }]);
+    // #045.3 — ListItem.fields entries now carry the frame-derived type.
+    expect(items[0]?.fields).toEqual([{ name: "amount", value: 25, type: DataFieldType.Number }]);
   });
 
   test("respects limit", () => {

@@ -1,12 +1,25 @@
 // MPLAN-008 — Pure derivation of list rows for DataListWidget.
 
 import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataListConfig } from "../../types";
 
 export interface ListItem {
   readonly id: string;
   readonly title: string;
-  readonly fields: ReadonlyArray<{ readonly name: string; readonly value: Optional<DataValue> }>;
+  readonly fields: ReadonlyArray<{
+    readonly name: string;
+    readonly value: Optional<DataValue>;
+    /**
+     * Field semantic type, projected from `frame.fields` when available.
+     * Falls back to `DataFieldType.Unknown` for fields the consumer asked
+     * for that don't appear in the frame schema (rare; treated as text).
+     *
+     * #045.3 — enables consumers (DataListWidget, SubBaseCanvasWidget) to
+     * dispatch on type when rendering (e.g. Relation → pill-chip view).
+     */
+    readonly type: DataFieldType;
+  }>;
 }
 
 function basename(id: string): string {
@@ -63,9 +76,20 @@ export function deriveListItems(frame: DataFrame, config: DataListConfig | undef
 
   const limited = cfg.limit && cfg.limit > 0 ? records.slice(0, cfg.limit) : records;
 
+  // Pre-index frame fields by name so per-record mapping is O(1) per field
+  // instead of O(F) — keeps deriveListItems linear in records × selected fields.
+  const fieldTypeByName = new Map<string, DataFieldType>();
+  for (const f of frame.fields) {
+    fieldTypeByName.set(f.name, f.type);
+  }
+
   return limited.map((record) => ({
     id: record.id,
     title: titleOf(record, cfg.titleField),
-    fields: fields.map((name) => ({ name, value: record.values[name] })),
+    fields: fields.map((name) => ({
+      name,
+      value: record.values[name],
+      type: fieldTypeByName.get(name) ?? DataFieldType.Unknown,
+    })),
   }));
 }

@@ -3,11 +3,14 @@
   // Pipeline (filter / sort / transform) is applied upstream by
   // `WidgetHost.svelte`; this widget owns rendering only.
 
-  import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
   import type { DataListConfig } from "../../types";
   import { deriveListItems } from "./deriveListItems";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { setContext } from "svelte";
+  import RelationListView from "src/ui/views/YamlVisualizer/RelationListView.svelte";
+  import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 
   export let config: Record<string, unknown> | undefined = undefined;
   export let source: DataFrame;
@@ -15,6 +18,11 @@
 
   $: listConfig = (config ?? { fields: [] }) as unknown as DataListConfig;
   $: items = deriveListItems(source, listConfig);
+
+  // #045.3 — RelationListView reads `sourcePath` from Svelte context to
+  // route clicks through `app.workspace.openLinkText(link, sourcePath)`.
+  // The first record's id is a reasonable default for the source path.
+  $: setContext("sourcePath", source.records[0]?.id ?? "");
 
   function format(value: unknown): string {
     if (value == null || value === "") return "";
@@ -52,12 +60,24 @@
           {#if item.fields.length > 0}
             <span class="ppp-list-fields">
               {#each item.fields as f (f.name)}
-                {@const text = format(f.value)}
-                {#if text}
-                  <span class="ppp-list-field">
-                    <span class="ppp-list-field-name">{f.name}</span>
-                    <span class="ppp-list-field-value">{text}</span>
-                  </span>
+                {#if f.type === DataFieldType.Relation}
+                  {@const links = parseRelationLinks(f.value)}
+                  {#if links.length > 0}
+                    <span class="ppp-list-field">
+                      <span class="ppp-list-field-name">{f.name}</span>
+                      <span class="ppp-list-field-value ppp-list-field-value--relation">
+                        <RelationListView items={links} maxVisible={3} />
+                      </span>
+                    </span>
+                  {/if}
+                {:else}
+                  {@const text = format(f.value)}
+                  {#if text}
+                    <span class="ppp-list-field">
+                      <span class="ppp-list-field-name">{f.name}</span>
+                      <span class="ppp-list-field-value">{text}</span>
+                    </span>
+                  {/if}
                 {/if}
               {/each}
             </span>
@@ -137,6 +157,13 @@
   }
   .ppp-list-field-value {
     color: var(--text-normal);
+  }
+  /* #045.3 — relation value wrapper aligns the inline pill list with
+     adjacent baseline-aligned text values; the pills themselves carry
+     their own background and chip styling from RelationListView. */
+  .ppp-list-field-value--relation {
+    display: inline-flex;
+    align-items: center;
   }
   .ppp-widget-empty {
     display: flex;

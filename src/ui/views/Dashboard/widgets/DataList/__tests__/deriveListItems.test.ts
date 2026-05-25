@@ -32,12 +32,32 @@ describe("deriveListItems", () => {
     expect(items.map((i) => i.title)).toEqual(["open", "done", "open"]);
   });
 
-  test("includes selected fields with their raw values", () => {
+  test("includes selected fields with their raw values and frame-derived types", () => {
     const items = deriveListItems(makeFrame(), { fields: ["priority", "status"] });
+    // #045.3: ListItem.fields[i].type now mirrors frame.fields entry.
     expect(items[0]?.fields).toEqual([
-      { name: "priority", value: 2 },
-      { name: "status", value: "open" },
+      { name: "priority", value: 2, type: DataFieldType.Number },
+      { name: "status", value: "open", type: DataFieldType.String },
     ]);
+  });
+
+  test("#045.3 — propagates Relation type when field is declared as Relation", () => {
+    const frame: DataFrame = {
+      fields: [
+        { name: "name", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+        { name: "deps", type: DataFieldType.Relation, repeated: true, identifier: false, derived: false },
+      ],
+      records: [{ id: "notes/a.md", values: { name: "A", deps: ["[[B]]", "[[C]]"] } }],
+    };
+    const items = deriveListItems(frame, { fields: ["deps"] });
+    expect(items[0]?.fields[0]?.type).toBe(DataFieldType.Relation);
+    expect(items[0]?.fields[0]?.value).toEqual(["[[B]]", "[[C]]"]);
+  });
+
+  test("#045.3 — falls back to DataFieldType.Unknown for fields absent from the frame schema", () => {
+    const items = deriveListItems(makeFrame(), { fields: ["ghost"] });
+    expect(items[0]?.fields[0]?.type).toBe(DataFieldType.Unknown);
+    expect(items[0]?.fields[0]?.value).toBeUndefined();
   });
 
   test("sorts ascending by sortField", () => {

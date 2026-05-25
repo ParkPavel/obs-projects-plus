@@ -4,6 +4,7 @@
   import type { GridColDef } from "../../dataGrid";
   import RelationListView from "src/ui/views/YamlVisualizer/RelationListView.svelte";
   import RelationPopover from "src/ui/components/RelationPicker/RelationPicker.svelte";
+  import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
   import { getContext } from "svelte";
   import type { Readable } from "svelte/store";
 
@@ -30,7 +31,9 @@
 
   $: options = ($relationOptionsStore ?? new Map<string, string[]>()).get(column.field) ?? [];
 
-  $: links = parseLinks(value);
+  // #045.3 — Route through the shared canonical parser so DataTable cells,
+  // DataList rows, and SubBaseCanvas rows derive identical link lists.
+  $: links = parseRelationLinks(value);
   $: items = links.map<string | { label: string; link: string }>((link) => {
     const label = resolvedLabels?.get(link);
     return label ? { label, link } : link;
@@ -58,17 +61,10 @@
     onChange(links.filter((l) => l !== name).map((l) => `[[${l}]]`));
   }
 
-  function parseLinks(val: Optional<DataValue>): string[] {
-    if (val == null) return [];
-    if (Array.isArray(val)) return val.map(String);
-    const str = String(val);
-    if (!str) return [];
-    const matches = str.match(/\[\[([^\]]+)\]\]/g);
-    if (matches) {
-      return matches.map((m) => m.slice(2, -2));
-    }
-    return str.split(",").map((s) => s.trim()).filter(Boolean);
-  }
+  // (parseLinks removed — replaced by canonical parseRelationLinks from
+  //  src/lib/relations/parseRelationLinks.ts. The new helper handles
+  //  `[[link|alias]]` aliases correctly, which the legacy implementation
+  //  did not.)
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
