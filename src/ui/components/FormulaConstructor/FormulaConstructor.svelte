@@ -30,6 +30,7 @@
     type FormulaMetadata,
   } from "src/ui/views/Dashboard/engine/formulaMetadata";
   import { i18n } from "src/lib/stores/i18n";
+  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
 
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
@@ -83,6 +84,8 @@
   let selectedSuggestionIndex = -1;
   let activeSignature: FormulaMetadata | null = null;
   let containerEl: HTMLDivElement;
+  let textareaEl: HTMLTextAreaElement;
+  let suggestionListEl: HTMLDivElement | null = null;
   /**
    * True when Ctrl+Space forced suggestions open without a cursor word.
    * Auto-resets when the user types (cursorWord appears) or cancels (Esc/insert).
@@ -154,9 +157,7 @@
   }
 
   function insertSuggestion(suggestion: string) {
-    const textarea = containerEl?.querySelector(
-      ".ppp-fc-textarea"
-    ) as HTMLTextAreaElement | null;
+    const textarea = textareaEl;
     if (!textarea) return;
 
     const pos = textarea.selectionStart ?? 0;
@@ -182,9 +183,7 @@
   }
 
   function insertSnippet(snippet: FormulaSnippet) {
-    const textarea = containerEl?.querySelector(
-      ".ppp-fc-textarea"
-    ) as HTMLTextAreaElement | null;
+    const textarea = textareaEl;
     if (!textarea) return;
 
     value = snippet.insert;
@@ -203,7 +202,8 @@
 
   function scrollSuggestionIntoView() {
     requestAnimationFrame(() => {
-      const el = containerEl?.querySelector(".ppp-fc-suggestion--selected");
+      // suggestionListEl lives inside FloatingPopup portal (outside containerEl DOM tree).
+      const el = suggestionListEl?.querySelector(".ppp-fc-suggestion--selected");
       if (el) el.scrollIntoView({ block: "nearest" });
     });
   }
@@ -279,6 +279,7 @@
 <div class="ppp-fc" bind:this={containerEl} on:keydown={handleKeydown}>
   <div class="ppp-fc-editor">
     <textarea
+      bind:this={textareaEl}
       class="ppp-fc-textarea"
       class:ppp-fc-textarea--error={errors.length > 0}
       {value}
@@ -304,42 +305,56 @@
       </div>
     {/if}
 
-    <!-- Snippet picker (Ctrl+Space on empty textarea) -->
-    {#if showSuggestions && snippetsMode}
-      <div class="ppp-fc-suggestions ppp-fc-suggestions--snippets" role="listbox">
-        {#each snippets as snippet, i}
-          <button
-            class="ppp-fc-suggestion ppp-fc-suggestion--snippet"
-            class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
-            role="option"
-            aria-selected={i === selectedSuggestionIndex}
-            on:click|stopPropagation={() => insertSnippet(snippet)}
-          >
-            <span class="ppp-fc-snippet-label">{snippet.label}</span>
-            {#if snippet.description}
-              <span class="ppp-fc-snippet-doc">{snippet.description}</span>
-            {/if}
-          </button>
-        {/each}
-      </div>
-
-    <!-- Autocomplete dropdown -->
-    {:else if showSuggestions && filteredSuggestions.length > 0}
-      <div class="ppp-fc-suggestions" role="listbox">
-        {#each filteredSuggestions as suggestion, i}
-          <button
-            class="ppp-fc-suggestion"
-            class:ppp-fc-suggestion--fn={allFunctions.includes(suggestion)}
-            class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
-            role="option"
-            aria-selected={i === selectedSuggestionIndex}
-            on:click|stopPropagation={() => insertSuggestion(suggestion)}
-          >
-            {suggestion}
-          </button>
-        {/each}
-      </div>
-    {/if}
+    <!-- Suggestion popover via FloatingPopup (canonical popup engine).
+         autoFocus=false → textarea retains focus, keystrokes flow into handleKeydown.
+         Esc / outside-mousedown в FloatingPopup → on:close → синхронизируется state. -->
+    <FloatingPopup
+      triggerEl={textareaEl}
+      open={showSuggestions && (snippetsMode || filteredSuggestions.length > 0)}
+      placement="bottom-start"
+      offsetRem={0.25}
+      role="listbox"
+      autoFocus={false}
+      ariaLabel={snippetsMode ? "Formula snippets" : "Formula suggestions"}
+      on:close={() => { showSuggestions = false; forceOpen = false; }}
+    >
+      {#if snippetsMode}
+        <div
+          class="ppp-fc-suggestions ppp-fc-suggestions--snippets"
+          bind:this={suggestionListEl}
+        >
+          {#each snippets as snippet, i}
+            <button
+              class="ppp-fc-suggestion ppp-fc-suggestion--snippet"
+              class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
+              role="option"
+              aria-selected={i === selectedSuggestionIndex}
+              on:click|stopPropagation={() => insertSnippet(snippet)}
+            >
+              <span class="ppp-fc-snippet-label">{snippet.label}</span>
+              {#if snippet.description}
+                <span class="ppp-fc-snippet-doc">{snippet.description}</span>
+              {/if}
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <div class="ppp-fc-suggestions" bind:this={suggestionListEl}>
+          {#each filteredSuggestions as suggestion, i}
+            <button
+              class="ppp-fc-suggestion"
+              class:ppp-fc-suggestion--fn={allFunctions.includes(suggestion)}
+              class:ppp-fc-suggestion--selected={i === selectedSuggestionIndex}
+              role="option"
+              aria-selected={i === selectedSuggestionIndex}
+              on:click|stopPropagation={() => insertSuggestion(suggestion)}
+            >
+              {suggestion}
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </FloatingPopup>
   </div>
 
   <!-- Validation errors -->
@@ -391,18 +406,18 @@
     cursor: not-allowed;
   }
 
+  /* Suggestion list — rendered inside FloatingPopup, so no absolute positioning.
+     FloatingPopup owns border, shadow, padding, and viewport-aware placement. */
   .ppp-fc-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
+    display: flex;
+    flex-direction: column;
+    min-width: 12rem;
     max-height: 12rem;
     overflow-y: auto;
-    box-shadow: var(--shadow-s, 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15));
+  }
+
+  .ppp-fc-suggestions--snippets {
+    min-width: 16rem;
   }
 
   .ppp-fc-suggestion {
