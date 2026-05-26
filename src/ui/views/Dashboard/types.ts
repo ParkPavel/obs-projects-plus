@@ -143,6 +143,39 @@ export interface GroupConfig {
   /** Optional second-level grouping field */
   readonly subGroupField?: string;
   readonly subGroupSortOrder?: "asc" | "desc" | "manual";
+  /**
+   * #045.6 — Group-by display strategy.
+   * - `"values"` (default): one column per unique field value (existing
+   *   behaviour, identical to Notion's default group-by).
+   * - `"semantic"`: 3-tier bucket overlay using `statusGroups` below.
+   *   Records whose value matches a bucket roll into that bucket; the
+   *   rest fall through to a transient "No Status" group. Matches the
+   *   Board view's `groupMode === "semantic"` so a Status field
+   *   behaves the same whether viewed in DataTable or Board.
+   */
+  readonly mode?: "values" | "semantic";
+  /**
+   * #045.6 — Snapshot of the field's `statusGroups` taken from
+   * `FieldConfig`. Passed in by the widget so `groupRecords` stays a
+   * pure function with no `ProjectDefinition` dependency. Ignored
+   * unless `mode === "semantic"`.
+   */
+  readonly statusGroups?: {
+    readonly todo?: ReadonlyArray<string>;
+    readonly inProgress?: ReadonlyArray<string>;
+    readonly complete?: ReadonlyArray<string>;
+  };
+  /**
+   * #045.6 — Localised semantic labels (To Do / In Progress / Done /
+   * No Status). Optional — falls back to English when omitted so the
+   * pure module can be exercised without an i18n store hookup.
+   */
+  readonly semanticLabels?: {
+    readonly todo?: string;
+    readonly inProgress?: string;
+    readonly complete?: string;
+    readonly none?: string;
+  };
 }
 
 export interface ConditionalFormatRule {
