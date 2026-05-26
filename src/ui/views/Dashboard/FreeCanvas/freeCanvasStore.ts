@@ -33,6 +33,14 @@ export interface WindowState {
 /** Aggregate store state. */
 export interface FreeCanvasState {
 	readonly windows: ReadonlyArray<WindowState>;
+	/**
+	 * #039 — id of the window currently being interactively dragged/resized,
+	 * or `null` between gestures. Subscribers (e.g. DashboardCanvas
+	 * write-back) use this flag to suppress disk persistence during the
+	 * gesture and flush exactly once on `endInteraction`. Always reflects
+	 * a single active gesture (no nested gestures by design).
+	 */
+	readonly interactingId: string | null;
 }
 
 /**
@@ -47,9 +55,29 @@ export interface FreeCanvasStore extends Writable<FreeCanvasState> {
 	moveWindow(id: string, target: { x: number; y: number }): boolean;
 	/** Attempt resize (top-left anchored). Returns true if applied. */
 	resizeWindow(id: string, target: { w: number; h: number }): boolean;
+	/**
+	 * #039 — combined atomic move + resize for top/left handles where both
+	 * the origin and the dimensions change in one gesture step. One mutate,
+	 * one subscriber notification — half the work of `moveWindow` followed
+	 * by `resizeWindow`. Returns `true` if applied.
+	 */
+	moveResizeWindow(
+		id: string,
+		target: { x: number; y: number; w: number; h: number },
+	): boolean;
 	/** Raise window above all others (no-op if already on top). */
 	bringToFront(id: string): void;
 	setPinned(id: string, pinned: boolean): void;
+	/**
+	 * #039 — mark `id` as actively dragged/resized. Subscribers that
+	 * persist state to disk are expected to skip writes while
+	 * `interactingId !== null` and flush on `endInteraction`. Idempotent
+	 * for the same id; switching to a different id replaces the flag
+	 * (defensive — no nested gestures are expected).
+	 */
+	beginInteraction(id: string): void;
+	/** #039 — clear the interacting flag; pair with `beginInteraction`. */
+	endInteraction(): void;
 }
 
 /** Sentinel returned from internal updaters to signal "no state change". */
@@ -78,11 +106,26 @@ function applyResolved(
  * the registry-style singleton pattern is intentionally avoided so that
  * multiple canvases on the same Obsidian workspace do not share state.
  */
+/**
+ * #039 — initialiser is structurally `FreeCanvasState` minus the
+ * `interactingId` requirement, so existing callers (tests, migrations)
+ * can pass `{ windows: [...] }` without flag plumbing. The factory
+ * normalises `interactingId` to `null` when omitted.
+ */
+export type FreeCanvasStateInit = Omit<FreeCanvasState, "interactingId"> & {
+	readonly interactingId?: string | null;
+};
+
 export function createFreeCanvasStore(
-	initial: FreeCanvasState = { windows: [] },
+	initial: FreeCanvasStateInit = { windows: [] },
 	resolverOptions?: ResolveOptions,
 ): FreeCanvasStore {
-	const inner = writable<FreeCanvasState>(initial);
+	// Normalise: allow callers to omit `interactingId` for back-compat.
+	const seed: FreeCanvasState = {
+		windows: initial.windows,
+		interactingId: initial.interactingId ?? null,
+	};
+	const inner = writable<FreeCanvasState>(seed);
 
 	function mutate(
 		fn: (state: FreeCanvasState) => FreeCanvasState | typeof NO_CHANGE,
@@ -176,6 +219,72 @@ export function createFreeCanvasStore(
 		});
 	}
 
+	function moveResizeWindow(
+		id: string,
+		target: { x: number; y: number; w: number; h: number },
+	): boolean {
+		return mutate((state) => {
+			const win = state.windows.find((w) => w.id === id);
+			if (!win) {
+				return NO_CHANGE;
+			}
+			const dx = target.x - win.rect.x;
+			const dy = target.y - win.rect.y;
+			const sameRect =
+				dx === 0 &&
+				dy === 0 &&
+				win.rect.w === target.w &&
+				win.rect.h === target.h;
+			if (sameRect) {
+				return NO_CHANGE;
+			}
+			// We model the combined move+resize as a resize at the new origin:
+			// callers (WindowShell N/W/NW/NE/SW handles) have already computed
+			// the destination rect from the anchor + pointer, so we apply it
+			// atomically by patching the rect directly. The resolver is run
+			// in `resize` mode so siblings are clamped consistently with the
+			// pure-resize path.
+			const rects: Rect[] = state.windows.map((w) =>
+				w.id === id ? { id, x: target.x, y: target.y, w: target.w, h: target.h } : w.rect,
+			);
+			const mode: CollisionMode = {
+				kind: "resize",
+				activeId: id,
+				newW: target.w,
+				newH: target.h,
+			};
+			const result = resolveCollision(rects, mode, resolverOptions);
+			if (!result.ok) {
+				return NO_CHANGE;
+			}
+			// Override resolver's active rect with the desired origin: the
+			// resolver only sees the new w/h, but we need x/y too. The pure
+			// `resize` mode preserves origin by design, so we patch back.
+			const patchedActive: Rect = {
+				id,
+				x: target.x,
+				y: target.y,
+				w: result.active.w,
+				h: result.active.h,
+			};
+			return applyResolved(state, { active: patchedActive, moved: result.moved });
+		});
+	}
+
+	function beginInteraction(id: string): void {
+		mutate((state) => {
+			if (state.interactingId === id) return NO_CHANGE;
+			return { ...state, interactingId: id };
+		});
+	}
+
+	function endInteraction(): void {
+		mutate((state) => {
+			if (state.interactingId === null) return NO_CHANGE;
+			return { ...state, interactingId: null };
+		});
+	}
+
 	function bringToFront(id: string): void {
 		mutate((state) => {
 			const win = state.windows.find((w) => w.id === id);
@@ -221,7 +330,10 @@ export function createFreeCanvasStore(
 		removeWindow,
 		moveWindow,
 		resizeWindow,
+		moveResizeWindow,
 		bringToFront,
 		setPinned,
+		beginInteraction,
+		endInteraction,
 	};
 }
