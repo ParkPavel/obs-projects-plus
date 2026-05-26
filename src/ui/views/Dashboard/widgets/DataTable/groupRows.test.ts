@@ -106,3 +106,183 @@ describe("groupRecords", () => {
     expect(sub.map((s) => s.key)).toEqual(["C", "B", "A"]);
   });
 });
+
+// ─── #045.6 — semantic mode (3-tier bucket overlay) ────────────────────
+
+describe("groupRecords — semantic mode (#045.6)", () => {
+  const SG = {
+    todo: ["Backlog", "Todo"],
+    inProgress: ["In Progress", "Blocked"],
+    complete: ["Done", "Cancelled"],
+  };
+  const data: DataRecord[] = [
+    { id: "r1", values: { status: "Todo" } },
+    { id: "r2", values: { status: "In Progress" } },
+    { id: "r3", values: { status: "Done" } },
+    { id: "r4", values: { status: "Blocked" } },
+    { id: "r5", values: { status: "Backlog" } },
+    { id: "r6", values: { status: null } },
+    { id: "r7", values: { status: "Unknown" } },
+  ];
+
+  test("produces 4 columns in canonical order when 'no-status' is non-empty", () => {
+    const groups = groupRecords(
+      data,
+      makeConfig({ mode: "semantic", statusGroups: SG })
+    );
+    expect(groups.map((g) => g.key)).toEqual([
+      "To Do",
+      "In Progress",
+      "Done",
+      "No Status",
+    ]);
+  });
+
+  test("routes records to the correct semantic bucket", () => {
+    const groups = groupRecords(
+      data,
+      makeConfig({ mode: "semantic", statusGroups: SG })
+    );
+    const byKey = Object.fromEntries(groups.map((g) => [g.key, g.records]));
+    expect(byKey["To Do"]?.map((r) => r.id).sort()).toEqual(["r1", "r5"]);
+    expect(byKey["In Progress"]?.map((r) => r.id).sort()).toEqual(["r2", "r4"]);
+    expect(byKey["Done"]?.map((r) => r.id)).toEqual(["r3"]);
+    expect(byKey["No Status"]?.map((r) => r.id).sort()).toEqual(["r6", "r7"]);
+  });
+
+  test("omits 'No Status' bucket when every record matches a group", () => {
+    const clean: DataRecord[] = [
+      { id: "a", values: { status: "Todo" } },
+      { id: "b", values: { status: "Done" } },
+    ];
+    const groups = groupRecords(
+      clean,
+      makeConfig({ mode: "semantic", statusGroups: SG })
+    );
+    expect(groups.map((g) => g.key)).toEqual(["To Do", "In Progress", "Done"]);
+  });
+
+  test("keeps empty top-tier buckets so users can drop into them", () => {
+    const onlyDone: DataRecord[] = [{ id: "x", values: { status: "Done" } }];
+    const groups = groupRecords(
+      onlyDone,
+      makeConfig({ mode: "semantic", statusGroups: SG })
+    );
+    const keys = groups.map((g) => g.key);
+    expect(keys).toContain("To Do");
+    expect(keys).toContain("In Progress");
+    expect(keys).toContain("Done");
+    expect(keys).not.toContain("No Status");
+  });
+
+  test("honours localised semanticLabels", () => {
+    const groups = groupRecords(
+      data,
+      makeConfig({
+        mode: "semantic",
+        statusGroups: SG,
+        semanticLabels: {
+          todo: "К выполнению",
+          inProgress: "В работе",
+          complete: "Готово",
+          none: "Без статуса",
+        },
+      })
+    );
+    expect(groups.map((g) => g.key)).toEqual([
+      "К выполнению",
+      "В работе",
+      "Готово",
+      "Без статуса",
+    ]);
+  });
+
+  test("falls back to value mode when statusGroups omitted", () => {
+    const groups = groupRecords(
+      data,
+      makeConfig({ mode: "semantic" }) // no statusGroups
+    );
+    // Value mode → one column per distinct value.
+    const keys = groups.map((g) => g.key);
+    expect(keys).toContain("Todo");
+    expect(keys).toContain("Blocked");
+    expect(keys).toContain("Backlog");
+    expect(keys.length).toBeGreaterThan(4);
+  });
+
+  test("ignores sortOrder in semantic mode (canonical order is fixed)", () => {
+    const groups = groupRecords(
+      data,
+      makeConfig({ mode: "semantic", statusGroups: SG, sortOrder: "desc" })
+    );
+    expect(groups.map((g) => g.key)).toEqual([
+      "To Do",
+      "In Progress",
+      "Done",
+      "No Status",
+    ]);
+  });
+
+  test("hidden buckets are filtered in semantic mode", () => {
+    const groups = groupRecords(
+      data,
+      makeConfig({
+        mode: "semantic",
+        statusGroups: SG,
+        hiddenGroups: ["Done"],
+      })
+    );
+    const keys = groups.map((g) => g.key);
+    expect(keys).not.toContain("Done");
+    expect(keys).toContain("To Do");
+    expect(keys).toContain("In Progress");
+  });
+
+  test("composes with sub-grouping", () => {
+    const dataWithTeam: DataRecord[] = [
+      { id: "1", values: { status: "Todo", team: "A" } },
+      { id: "2", values: { status: "Todo", team: "B" } },
+      { id: "3", values: { status: "Done", team: "A" } },
+    ];
+    const groups = groupRecords(
+      dataWithTeam,
+      makeConfig({
+        mode: "semantic",
+        statusGroups: SG,
+        subGroupField: "team",
+      })
+    );
+    const todo = groups.find((g) => g.key === "To Do")!;
+    expect(todo.subGroups).toBeDefined();
+    expect(todo.subGroups!.map((s) => s.key).sort()).toEqual(["A", "B"]);
+    const done = groups.find((g) => g.key === "Done")!;
+    expect(done.subGroups!.map((s) => s.key)).toEqual(["A"]);
+  });
+
+  test("non-string/number values fall into 'No Status'", () => {
+    // Cast through unknown — Status is normally string/number, but
+    // groupRecords must defensively bucket exotic DataValue shapes too.
+    const oddData = [
+      { id: "arr", values: { status: ["Todo"] } },
+      { id: "date", values: { status: new Date("2024-01-01") } },
+      { id: "todo", values: { status: "Todo" } },
+    ] as unknown as DataRecord[];
+    const groups = groupRecords(
+      oddData,
+      makeConfig({ mode: "semantic", statusGroups: SG })
+    );
+    const byKey = Object.fromEntries(groups.map((g) => [g.key, g.records]));
+    expect(byKey["To Do"]?.map((r) => r.id)).toEqual(["todo"]);
+    expect(byKey["No Status"]?.map((r) => r.id).sort()).toEqual(
+      ["arr", "date"].sort()
+    );
+  });
+
+  test("back-compat: mode=undefined still uses value mode (#045.6 zero-impact)", () => {
+    const groups = groupRecords(data, makeConfig());
+    // mode defaults to undefined/values — should NOT produce semantic buckets.
+    const keys = groups.map((g) => g.key);
+    expect(keys).not.toContain("To Do");
+    expect(keys).toContain("Todo");
+  });
+});
