@@ -400,9 +400,19 @@ New components under `src/ui/views/Dashboard/FreeCanvas/`:
 потомком `SlideInPanel` (commit `4934a80`).
 
 ### #039 — Window resize is jumpy/non-smooth in free-mode
-- Status: 📋 BACKLOG (вероятно частично закрыт через #032.3 WindowShell drag/resize)
+- Status: ✅ READY FOR PR — `fix/039-window-resize-smoothness` @ `1a62706` (stacked on `feat/022-6`)
 - Milestone: M-V35-HOTFIX-UX | Priority: P1 | Complexity: M
-- analysis_required: false (нужна проверка после #032)
+- analysis_required: false (analysis_done: 2026-05-26)
+- Root cause: WindowShell вызывал store на каждое pointermove → flood;
+  DashboardCanvas subscriber писал `saveConfig` на каждое изменение
+  (disk thrash); N/W/NW/NE/SW делали 2 store-вызова на pointermove.
+- Fix: RAF coalescing в WindowShell (1 mutation/frame); атомарный
+  `moveResizeWindow` для top/left handles; `beginInteraction`/
+  `endInteraction` + `interactingId` flag в store; saveConfig gating
+  в DashboardCanvas (flush один раз на gesture-end).
+- Tests: +12 (rAF coalesce, gesture lifecycle, atomic moveResize,
+  pointercancel). Existing drag/resize tests updated to drive rAF.
+- Gates: 137 / 2048 / 0 tsc / build OK / PX ≤186.
 
 ### #040 — Widget settings popup hides data access / aggregation info
 - Status: ✅ DONE — #040.1 slot API в #034.1 (`8f6b6f0`); #040.2 consumer wiring в #034.3 (`0ed8367` "Merge feat/034.3: WidgetInlineBadges + #040 close")
