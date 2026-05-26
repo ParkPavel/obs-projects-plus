@@ -35,6 +35,43 @@ beforeAll(() => {
 	}
 });
 
+// #039 — rAF coalescer. Tests drive frames manually so we can assert
+// pointermove flood → 1 store mutation/frame. Helpers stash queued
+// callbacks; `flushRaf()` runs them in FIFO order.
+type RafCb = (t: number) => void;
+const rafQueue: RafCb[] = [];
+let rafIdCounter = 0;
+const originalRaf = globalThis.requestAnimationFrame;
+const originalCancel = globalThis.cancelAnimationFrame;
+const rafByHandle = new Map<number, RafCb>();
+beforeEach(() => {
+	rafQueue.length = 0;
+	rafIdCounter = 0;
+	rafByHandle.clear();
+	globalThis.requestAnimationFrame = ((cb: RafCb): number => {
+		rafIdCounter += 1;
+		rafByHandle.set(rafIdCounter, cb);
+		rafQueue.push(cb);
+		return rafIdCounter;
+	}) as typeof requestAnimationFrame;
+	globalThis.cancelAnimationFrame = ((handle: number): void => {
+		const cb = rafByHandle.get(handle);
+		if (!cb) return;
+		const idx = rafQueue.indexOf(cb);
+		if (idx >= 0) rafQueue.splice(idx, 1);
+		rafByHandle.delete(handle);
+	}) as typeof cancelAnimationFrame;
+});
+afterEach(() => {
+	globalThis.requestAnimationFrame = originalRaf;
+	globalThis.cancelAnimationFrame = originalCancel;
+});
+function flushRaf(): void {
+	const queued = rafQueue.splice(0, rafQueue.length);
+	rafByHandle.clear();
+	queued.forEach((cb) => cb(performance.now()));
+}
+
 const ROOT_FONT_PX = 16;
 
 function makeWindow(overrides: Partial<WindowState> = {}): WindowState {
@@ -115,8 +152,10 @@ describe("WindowShell — wiring", () => {
 		void pointer("pointerdown", header, 4 * ROOT_FONT_PX, 6 * ROOT_FONT_PX);
 
 		// Move pointer to (10rem, 12rem) = (160px, 192px). dragOffset = (0,0)
-		// so target = (10, 12).
+		// so target = (10, 12). #039: pointermove is now coalesced via rAF —
+		// flush the frame to drive the store mutation.
 		void pointer("pointermove", header, 10 * ROOT_FONT_PX, 12 * ROOT_FONT_PX);
+		flushRaf();
 
 		expect(moveSpy).toHaveBeenCalled();
 		const lastCall = moveSpy.mock.calls.at(-1)!;
@@ -141,9 +180,14 @@ describe("WindowShell — wiring", () => {
 
 		void pointer("pointerdown", header, 4 * ROOT_FONT_PX, 6 * ROOT_FONT_PX);
 		void pointer("pointermove", header, 8 * ROOT_FONT_PX, 8 * ROOT_FONT_PX);
-		const callsDuring = moveSpy.mock.calls.length;
+		// #039 pointerup flushes any pending frame synchronously, so the
+		// final intra-gesture move lands before we count `callsDuring`.
 		void pointer("pointerup", header, 8 * ROOT_FONT_PX, 8 * ROOT_FONT_PX);
+		const callsDuring = moveSpy.mock.calls.length;
+		// Post-gesture pointermove must NOT trigger any store call —
+		// neither immediate nor via rAF flush.
 		void pointer("pointermove", header, 20 * ROOT_FONT_PX, 20 * ROOT_FONT_PX);
+		flushRaf();
 
 		expect(moveSpy.mock.calls.length).toBe(callsDuring);
 	});
@@ -164,8 +208,9 @@ describe("WindowShell — wiring", () => {
 
 		void pointer("pointerdown", seHandle, 14 * ROOT_FONT_PX, 14 * ROOT_FONT_PX);
 		// Pointer moves to (20rem, 18rem). SE anchor = top-left (4, 6).
-		// Target w = 20-4 = 16, h = 18-6 = 12.
+		// Target w = 20-4 = 16, h = 18-6 = 12. #039: flush rAF frame.
 		void pointer("pointermove", seHandle, 20 * ROOT_FONT_PX, 18 * ROOT_FONT_PX);
+		flushRaf();
 
 		expect(resizeSpy).toHaveBeenCalled();
 		const lastCall = resizeSpy.mock.calls.at(-1)!;
@@ -174,11 +219,12 @@ describe("WindowShell — wiring", () => {
 		expect(lastCall[1].h).toBeCloseTo(12, 5);
 	});
 
-	test("resize: NW handle moves origin AND resizes (store.moveWindow + resizeWindow)", () => {
+	test("resize: NW handle uses atomic moveResizeWindow (#039)", () => {
 		const win = makeWindow();
 		const store = createFreeCanvasStore({ windows: [win] });
 		const moveSpy = jest.spyOn(store, "moveWindow");
 		const resizeSpy = jest.spyOn(store, "resizeWindow");
+		const moveResizeSpy = jest.spyOn(store, "moveResizeWindow");
 
 		const { getByTestId } = render(WindowShell, {
 			props: { window: win, store, minSize: { w: 1, h: 1 } },
@@ -192,14 +238,150 @@ describe("WindowShell — wiring", () => {
 		void pointer("pointerdown", nwHandle, 4 * ROOT_FONT_PX, 6 * ROOT_FONT_PX);
 		// Move to (2rem, 4rem). NW anchor = (14,14). New top-left = (2,4); w=12, h=10.
 		void pointer("pointermove", nwHandle, 2 * ROOT_FONT_PX, 4 * ROOT_FONT_PX);
+		flushRaf();
 
-		expect(moveSpy).toHaveBeenCalled();
-		expect(resizeSpy).toHaveBeenCalled();
-		const lastMove = moveSpy.mock.calls.at(-1)!;
-		const lastResize = resizeSpy.mock.calls.at(-1)!;
-		expect(lastMove[1].x).toBeCloseTo(2, 5);
-		expect(lastMove[1].y).toBeCloseTo(4, 5);
-		expect(lastResize[1].w).toBeCloseTo(12, 5);
-		expect(lastResize[1].h).toBeCloseTo(10, 5);
+		// Origin-shifting handles must NOT call moveWindow+resizeWindow
+		// separately — exactly one atomic moveResizeWindow.
+		expect(moveSpy).not.toHaveBeenCalled();
+		expect(resizeSpy).not.toHaveBeenCalled();
+		expect(moveResizeSpy).toHaveBeenCalledTimes(1);
+		const last = moveResizeSpy.mock.calls.at(-1)!;
+		expect(last[1].x).toBeCloseTo(2, 5);
+		expect(last[1].y).toBeCloseTo(4, 5);
+		expect(last[1].w).toBeCloseTo(12, 5);
+		expect(last[1].h).toBeCloseTo(10, 5);
+	});
+
+	// ── #039 smoothness ──────────────────────────────────────────────
+	describe("#039 — smoothness (rAF coalescing + gesture lifecycle)", () => {
+		test("multiple pointermove events within a single frame coalesce into one moveWindow", () => {
+			const win = makeWindow();
+			const store = createFreeCanvasStore({ windows: [win] });
+			const moveSpy = jest.spyOn(store, "moveWindow");
+
+			const { getByTestId } = render(WindowShell, {
+				props: { window: win, store },
+			});
+
+			const header = getByTestId("ppp-window-header");
+			const parent = header.parentElement!.parentElement!;
+			parent.getBoundingClientRect = () =>
+				({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
+
+			void pointer("pointerdown", header, 4 * ROOT_FONT_PX, 6 * ROOT_FONT_PX);
+			// Flood 5 moves into the SAME frame (no flushRaf between them).
+			void pointer("pointermove", header, 5 * ROOT_FONT_PX, 7 * ROOT_FONT_PX);
+			void pointer("pointermove", header, 6 * ROOT_FONT_PX, 8 * ROOT_FONT_PX);
+			void pointer("pointermove", header, 7 * ROOT_FONT_PX, 9 * ROOT_FONT_PX);
+			void pointer("pointermove", header, 8 * ROOT_FONT_PX, 10 * ROOT_FONT_PX);
+			void pointer("pointermove", header, 10 * ROOT_FONT_PX, 12 * ROOT_FONT_PX);
+
+			// Before flush: zero store calls — the coalescer holds them.
+			expect(moveSpy).not.toHaveBeenCalled();
+
+			flushRaf();
+
+			// After flush: exactly one call with the latest pointer.
+			expect(moveSpy).toHaveBeenCalledTimes(1);
+			const last = moveSpy.mock.calls.at(-1)!;
+			expect(last[1].x).toBeCloseTo(10, 5);
+			expect(last[1].y).toBeCloseTo(12, 5);
+		});
+
+		test("pointerdown on header calls store.beginInteraction with window id", () => {
+			const win = makeWindow();
+			const store = createFreeCanvasStore({ windows: [win] });
+			const beginSpy = jest.spyOn(store, "beginInteraction");
+
+			const { getByTestId } = render(WindowShell, {
+				props: { window: win, store },
+			});
+
+			const header = getByTestId("ppp-window-header");
+			const parent = header.parentElement!.parentElement!;
+			parent.getBoundingClientRect = () =>
+				({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
+
+			void pointer("pointerdown", header, 4 * ROOT_FONT_PX, 6 * ROOT_FONT_PX);
+			expect(beginSpy).toHaveBeenCalledWith("W1");
+		});
+
+		test("pointerup on header calls store.endInteraction AND flushes pending move", () => {
+			const win = makeWindow();
+			const store = createFreeCanvasStore({ windows: [win] });
+			const moveSpy = jest.spyOn(store, "moveWindow");
+			const endSpy = jest.spyOn(store, "endInteraction");
+
+			const { getByTestId } = render(WindowShell, {
+				props: { window: win, store },
+			});
+
+			const header = getByTestId("ppp-window-header");
+			const parent = header.parentElement!.parentElement!;
+			parent.getBoundingClientRect = () =>
+				({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
+
+			void pointer("pointerdown", header, 4 * ROOT_FONT_PX, 6 * ROOT_FONT_PX);
+			void pointer("pointermove", header, 10 * ROOT_FONT_PX, 12 * ROOT_FONT_PX);
+			// Don't flush yet — pointerup must drain the pending frame.
+			void pointer("pointerup", header, 10 * ROOT_FONT_PX, 12 * ROOT_FONT_PX);
+
+			// Move spy must have received the final pointer position.
+			expect(moveSpy).toHaveBeenCalled();
+			const last = moveSpy.mock.calls.at(-1)!;
+			expect(last[1].x).toBeCloseTo(10, 5);
+			expect(last[1].y).toBeCloseTo(12, 5);
+			// endInteraction is called exactly once.
+			expect(endSpy).toHaveBeenCalledTimes(1);
+		});
+
+		test("resize SE: multiple pointermoves coalesce into one resizeWindow per frame", () => {
+			const win = makeWindow();
+			const store = createFreeCanvasStore({ windows: [win] });
+			const resizeSpy = jest.spyOn(store, "resizeWindow");
+
+			const { getByTestId } = render(WindowShell, {
+				props: { window: win, store, minSize: { w: 1, h: 1 } },
+			});
+
+			const seHandle = getByTestId("ppp-resize-handle-SE");
+			const parent = seHandle.parentElement!.parentElement!;
+			parent.getBoundingClientRect = () =>
+				({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
+
+			void pointer("pointerdown", seHandle, 14 * ROOT_FONT_PX, 14 * ROOT_FONT_PX);
+			void pointer("pointermove", seHandle, 16 * ROOT_FONT_PX, 16 * ROOT_FONT_PX);
+			void pointer("pointermove", seHandle, 18 * ROOT_FONT_PX, 17 * ROOT_FONT_PX);
+			void pointer("pointermove", seHandle, 20 * ROOT_FONT_PX, 18 * ROOT_FONT_PX);
+			flushRaf();
+
+			expect(resizeSpy).toHaveBeenCalledTimes(1);
+			const last = resizeSpy.mock.calls.at(-1)!;
+			expect(last[1].w).toBeCloseTo(16, 5);
+			expect(last[1].h).toBeCloseTo(12, 5);
+		});
+
+		test("pointercancel on header flushes pending + ends interaction", () => {
+			const win = makeWindow();
+			const store = createFreeCanvasStore({ windows: [win] });
+			const moveSpy = jest.spyOn(store, "moveWindow");
+			const endSpy = jest.spyOn(store, "endInteraction");
+
+			const { getByTestId } = render(WindowShell, {
+				props: { window: win, store },
+			});
+
+			const header = getByTestId("ppp-window-header");
+			const parent = header.parentElement!.parentElement!;
+			parent.getBoundingClientRect = () =>
+				({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
+
+			void pointer("pointerdown", header, 4 * ROOT_FONT_PX, 6 * ROOT_FONT_PX);
+			void pointer("pointermove", header, 10 * ROOT_FONT_PX, 12 * ROOT_FONT_PX);
+			void pointer("pointercancel", header, 10 * ROOT_FONT_PX, 12 * ROOT_FONT_PX);
+
+			expect(moveSpy).toHaveBeenCalled();
+			expect(endSpy).toHaveBeenCalledTimes(1);
+		});
 	});
 });

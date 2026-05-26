@@ -476,6 +476,7 @@
     // free-mode render uses rem-space, not the stale grid-unit state.
     freeCanvasStore.set({
       windows: nextWidgets.map(widgetToWindowState),
+      interactingId: null,
     });
     lastSyncedWidgets = nextWidgets;
   }
@@ -484,6 +485,10 @@
   // also derive write-back diffs from the same snapshot, so a single
   // subscription is enough.
   let activeWindowId: string | null = null;
+  // #039 — track gesture-end transitions: when `interactingId` flips from
+  // non-null back to null, we must flush the write-back exactly once with
+  // the final post-gesture rect/z snapshot.
+  let lastInteractingId: string | null = null;
   const unsubFreeStore = freeCanvasStore.subscribe((state) => {
     // activeWindowId: highest z; ties broken by later array order.
     let topZ = -Infinity;
@@ -495,6 +500,21 @@
       }
     }
     activeWindowId = topId;
+
+    // #039 — suppress per-event disk writes during an interactive
+    // drag/resize. The flush happens on the very next subscriber call,
+    // which fires when WindowShell calls `endInteraction()` and the
+    // `interactingId` field transitions back to `null`.
+    const wasInteracting = lastInteractingId !== null;
+    const isInteracting = state.interactingId !== null;
+    lastInteractingId = state.interactingId;
+    if (isInteracting) {
+      // Mid-gesture: still update local UI state (activeWindowId above)
+      // but skip the write-back path entirely. The gesture-end tick will
+      // persist the final snapshot.
+      void wasInteracting; // explicit no-op; transition handled below.
+      return;
+    }
 
     if (writingBack) return;
     const cfg = config;
@@ -538,7 +558,7 @@
   });
   onDestroy(() => {
     unsubFreeStore();
-    freeCanvasStore.set({ windows: [] });
+    freeCanvasStore.set({ windows: [], interactingId: null });
   });
 </script>
 

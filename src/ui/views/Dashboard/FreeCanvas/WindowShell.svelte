@@ -12,8 +12,21 @@
    *   - `pointerdown` anywhere on the shell calls `store.bringToFront(id)`
    *     (idempotent: no-op if already top per store contract).
    *
+   * Smoothness (#039):
+   *   - Pointer-move events are coalesced via `requestAnimationFrame`: at most
+   *     one store mutation per frame regardless of pointer event rate. The
+   *     latest pointer position wins; `pointerup`/`pointercancel` flush the
+   *     pending update synchronously so the gesture's final position is
+   *     never lost.
+   *   - The shell signals gesture lifecycle to the store via
+   *     `beginInteraction(id)` / `endInteraction()` so downstream
+   *     persistence (DashboardCanvas write-back to disk) can skip per-event
+   *     writes and flush once on `pointerup`.
+   *   - Top/left handles (N, W, NW, NE, SW) drive both origin and dimensions
+   *     in one gesture step; we apply them atomically via
+   *     `store.moveResizeWindow` (one subscriber notification, one frame).
+   *
    * Out of scope (deferred):
-   *   - rAF throttle / overlay state during drag (#032.4 lives in FreeCanvas).
    *   - Snap-to-grid (caller pre-snaps; or #032.4 handles it).
    *   - Mobile long-press activation, touch-action policy beyond `touch-action:none`
    *     on handles (#036).
@@ -24,7 +37,7 @@
    * mount via `readRootFontSizePx()` (jsdom-safe fallback).
    */
 
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
   import type { FreeCanvasStore, WindowState } from "./freeCanvasStore";
   import {
@@ -70,8 +83,97 @@
   let resizeAnchorRem: Point = { x: 0, y: 0 };
   let resizeRectAtStart = window.rect;
 
+  // #039 — rAF coalescer state. We never dispatch the store mutation from
+  // a `pointermove` handler directly; instead the latest pointer position
+  // is stashed in `pendingPointer` and a single `requestAnimationFrame`
+  // tick flushes it. The `kind` tag tells the flush which store action to
+  // call. `pointerup`/`pointercancel` cancel any pending frame and flush
+  // synchronously so the gesture's final position is never dropped.
+  type PendingKind = "drag" | "resize";
+  let pendingKind: PendingKind | null = null;
+  let pendingPointer: Point | null = null;
+  let rafHandle: number | null = null;
+
+  // rAF wrapper that degrades gracefully in environments without
+  // `requestAnimationFrame` (older jsdom paths, SSR). Tests can monkey-patch
+  // the globals; this just routes through whatever is currently installed.
+  function scheduleFrame(cb: () => void): number {
+    if (typeof requestAnimationFrame === "function") {
+      return requestAnimationFrame(cb);
+    }
+    return (setTimeout(cb, 16) as unknown) as number;
+  }
+
+  function cancelFrame(handle: number): void {
+    if (typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(handle);
+      return;
+    }
+    clearTimeout(handle as unknown as ReturnType<typeof setTimeout>);
+  }
+
+  function flushPending(): void {
+    rafHandle = null;
+    const kind = pendingKind;
+    const pointer = pendingPointer;
+    pendingKind = null;
+    pendingPointer = null;
+    if (!pointer) return;
+    if (kind === "drag") {
+      const target = computeDragTarget(pointer, dragOffsetRem, dragRectAtStart);
+      store.moveWindow(window.id, { x: target.x, y: target.y });
+      return;
+    }
+    if (kind === "resize" && resizeHandle) {
+      const target = computeResizeTarget(
+        pointer,
+        resizeAnchorRem,
+        resizeRectAtStart,
+        resizeHandle,
+        minSize,
+      );
+      const originChanged =
+        target.x !== window.rect.x || target.y !== window.rect.y;
+      // Atomic move+resize for top/left handles: one store mutation per
+      // frame, one subscriber notification, one disk write at pointerup.
+      if (originChanged) {
+        store.moveResizeWindow(window.id, target);
+      } else {
+        store.resizeWindow(window.id, { w: target.w, h: target.h });
+      }
+    }
+  }
+
+  function schedulePointer(kind: PendingKind, pointer: Point): void {
+    pendingKind = kind;
+    pendingPointer = pointer;
+    if (rafHandle !== null) return;
+    rafHandle = scheduleFrame(flushPending);
+  }
+
+  function cancelPendingFrame(): void {
+    if (rafHandle !== null) {
+      cancelFrame(rafHandle);
+      rafHandle = null;
+    }
+  }
+
+  function flushSyncIfPending(): void {
+    if (rafHandle === null && !pendingPointer) return;
+    cancelPendingFrame();
+    flushPending();
+  }
+
   onMount(() => {
     rootFontSizePx = readRootFontSizePx();
+  });
+
+  // Defensive: if the shell is unmounted mid-gesture (window removed, view
+  // switched), cancel the pending frame so we don't fire into a dead store.
+  onDestroy(() => {
+    cancelPendingFrame();
+    pendingKind = null;
+    pendingPointer = null;
   });
 
   // The shell renders absolute-positioned in rem; FreeCanvas owns the
@@ -114,13 +216,15 @@
       x: pointer.x - window.rect.x,
       y: pointer.y - window.rect.y,
     };
+    // #039 — gesture lifecycle: tell the store we're interacting so
+    // DashboardCanvas can gate its disk write-back until pointerup.
+    store.beginInteraction(window.id);
   }
 
   function onHeaderPointerMove(e: PointerEvent): void {
     if (!isDragging) return;
-    const pointer = pointerToCanvasRem(e);
-    const target = computeDragTarget(pointer, dragOffsetRem, dragRectAtStart);
-    store.moveWindow(window.id, { x: target.x, y: target.y });
+    // #039 — coalesce: stash latest pointer; rAF flushes once per frame.
+    schedulePointer("drag", pointerToCanvasRem(e));
   }
 
   function onHeaderPointerUp(e: PointerEvent): void {
@@ -129,7 +233,11 @@
     if (target.hasPointerCapture(e.pointerId)) {
       target.releasePointerCapture(e.pointerId);
     }
+    // #039 — drain any frame still pending so the final position lands
+    // before we end the gesture (write-back flushes on endInteraction).
+    flushSyncIfPending();
     isDragging = false;
+    store.endInteraction();
   }
 
   function makeResizeDown(handle: ResizeHandle) {
@@ -143,28 +251,17 @@
       resizeHandle = handle;
       resizeRectAtStart = window.rect;
       resizeAnchorRem = computeAnchor(window.rect, handle);
+      // #039 — same gesture lifecycle as drag.
+      store.beginInteraction(window.id);
     };
   }
 
   function onResizePointerMove(e: PointerEvent): void {
     if (!isResizing || !resizeHandle) return;
-    const pointer = pointerToCanvasRem(e);
-    const target = computeResizeTarget(
-      pointer,
-      resizeAnchorRem,
-      resizeRectAtStart,
-      resizeHandle,
-      minSize,
-    );
-    // Drag-from-top-or-left handles also move the top-left corner — those
-    // changes must be applied via moveWindow first so the resolver sees a
-    // consistent origin, then resize the dimensions.
-    const originChanged =
-      target.x !== window.rect.x || target.y !== window.rect.y;
-    if (originChanged) {
-      store.moveWindow(window.id, { x: target.x, y: target.y });
-    }
-    store.resizeWindow(window.id, { w: target.w, h: target.h });
+    // #039 — coalesce: stash latest pointer; rAF flushes once per frame.
+    // Origin-shifting handles (N/W/NW/NE/SW) atomically `moveResizeWindow`
+    // in flushPending.
+    schedulePointer("resize", pointerToCanvasRem(e));
   }
 
   function onResizePointerUp(e: PointerEvent): void {
@@ -173,8 +270,11 @@
     if (target.hasPointerCapture(e.pointerId)) {
       target.releasePointerCapture(e.pointerId);
     }
+    // #039 — drain pending frame; end gesture so write-back can flush.
+    flushSyncIfPending();
     isResizing = false;
     resizeHandle = null;
+    store.endInteraction();
   }
 
   const HANDLES: ReadonlyArray<ResizeHandle> = [

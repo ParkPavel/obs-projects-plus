@@ -32,7 +32,7 @@ describe("freeCanvasStore", () => {
 	});
 
 	test("initial state is honoured if provided", () => {
-		const seed: FreeCanvasState = { windows: [win("a", 0, 0)] };
+		const seed: FreeCanvasState = { windows: [win("a", 0, 0)], interactingId: null };
 		const store = createFreeCanvasStore(seed);
 		expect(get(store).windows).toHaveLength(1);
 		expect(get(store).windows[0]!.id).toBe("a");
@@ -176,5 +176,83 @@ describe("freeCanvasStore", () => {
 		unsub();
 		// initial + 3 changes = 4 snapshots
 		expect(seen).toEqual([0, 1, 2, 1]);
+	});
+
+	// ── #039 — interaction lifecycle + atomic moveResize ─────────────
+	describe("#039 — interaction lifecycle", () => {
+		test("initial interactingId is null", () => {
+			const store = createFreeCanvasStore();
+			expect(get(store).interactingId).toBeNull();
+		});
+
+		test("beginInteraction sets interactingId; endInteraction clears it", () => {
+			const store = createFreeCanvasStore({ windows: [win("a", 0, 0)] });
+			store.beginInteraction("a");
+			expect(get(store).interactingId).toBe("a");
+			store.endInteraction();
+			expect(get(store).interactingId).toBeNull();
+		});
+
+		test("beginInteraction is idempotent for the same id (state stays stable)", () => {
+			const store = createFreeCanvasStore({ windows: [win("a", 0, 0)] });
+			store.beginInteraction("a");
+			const firstSnapshot = get(store);
+			store.beginInteraction("a");
+			const secondSnapshot = get(store);
+			// Same id begin must not change the snapshot — referentially
+			// stable so writers like DashboardCanvas write-back guard can
+			// short-circuit cheaply.
+			expect(firstSnapshot).toBe(secondSnapshot);
+			expect(secondSnapshot.interactingId).toBe("a");
+		});
+
+		test("endInteraction on idle state keeps state referentially stable", () => {
+			const store = createFreeCanvasStore({ windows: [win("a", 0, 0)] });
+			const initial = get(store);
+			store.endInteraction();
+			expect(get(store)).toBe(initial);
+		});
+
+		test("moveResizeWindow updates both origin and dimensions atomically (one subscriber tick per gesture step)", () => {
+			const store = createFreeCanvasStore({
+				windows: [win("a", 4, 6, { rect: rect("a", 4, 6, 10, 8) })],
+			});
+			const seen: Array<{ x: number; y: number; w: number; h: number }> = [];
+			const unsub = store.subscribe((s) => {
+				const r = s.windows[0]?.rect;
+				if (r) seen.push({ x: r.x, y: r.y, w: r.w, h: r.h });
+			});
+			store.moveResizeWindow("a", { x: 2, y: 4, w: 12, h: 10 });
+			unsub();
+			// initial(4,6) + one combined update(2,4) = 2 snapshots.
+			// A naive move() + resize() would emit 3 snapshots (initial +
+			// intermediate origin + final rect); the atomic action collapses
+			// them into one mutation per gesture step.
+			expect(seen).toHaveLength(2);
+			expect(seen[1]).toEqual({ x: 2, y: 4, w: 12, h: 10 });
+		});
+
+		test("moveResizeWindow no-op when identical rect (stable snapshot)", () => {
+			const store = createFreeCanvasStore({
+				windows: [win("a", 4, 6, { rect: rect("a", 4, 6, 10, 8) })],
+			});
+			const before = get(store);
+			const applied = store.moveResizeWindow("a", {
+				x: 4,
+				y: 6,
+				w: 10,
+				h: 8,
+			});
+			expect(applied).toBe(false);
+			// NO_CHANGE path: factory returns the same state reference.
+			expect(get(store)).toBe(before);
+		});
+
+		test("moveResizeWindow on unknown id returns false", () => {
+			const store = createFreeCanvasStore({ windows: [win("a", 0, 0)] });
+			expect(
+				store.moveResizeWindow("ghost", { x: 0, y: 0, w: 1, h: 1 }),
+			).toBe(false);
+		});
 	});
 });
