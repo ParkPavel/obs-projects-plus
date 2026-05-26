@@ -675,6 +675,28 @@
                             "and-prefix": "та",
                             "no-value": "Немає значення"
                         },
+                        "advanced-filter": {
+                            "toolbar-help": "Довідка",
+                            "hint-valid": "✓ Формула коректна",
+                            "hint-error": "⚠ {{count}} помилок",
+                            "hint-ctrl-space": "Ctrl+Space — підказки",
+                            "textarea-placeholder": "Почніть вводити формулу або натисніть Ctrl+Space...",
+                            "help-title-logical": "🔗 Логічні",
+                            "help-title-strings": "📝 Рядки",
+                            "help-title-checks": "🔍 Перевірки",
+                            "help-title-dates": "📅 Дати",
+                            "help-title-arrays": "📋 Масиви / Теги",
+                            "help-title-operators": "⚙ Оператори",
+                            "help-examples-title": "Приклади:",
+                            "snippet-active-tasks": "📌 Активні завдання",
+                            "snippet-active-tasks-desc": "Активні з датою",
+                            "snippet-urgent-overdue": "🔥 Термінові прострочені",
+                            "snippet-urgent-overdue-desc": "Прострочені + urgent",
+                            "snippet-this-week": "📅 Завдання на цей тиждень",
+                            "snippet-this-week-desc": "Все на цьому тижні",
+                            "snippet-undated-overdue": "🗓 Без дати або прострочені",
+                            "snippet-undated-overdue-desc": "Порожня дата АБО прострочено"
+                        },
                         "icon-picker": {
                             "lucide-tab": "Іконки",
                             "emoji-tab": "Емодзі",

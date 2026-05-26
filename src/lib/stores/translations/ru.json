@@ -896,6 +896,28 @@
                             "no-value": "Нет значения",
                             "date-formula-hint": "Формула: today, sow, eom, today+1w, som-1m"
                         },
+                        "advanced-filter": {
+                            "toolbar-help": "Справка",
+                            "hint-valid": "✓ Формула валидна",
+                            "hint-error": "⚠ {{count}} ошиб.",
+                            "hint-ctrl-space": "Ctrl+Space — подсказки",
+                            "textarea-placeholder": "Начните вводить формулу или нажмите Ctrl+Space...",
+                            "help-title-logical": "🔗 Логические",
+                            "help-title-strings": "📝 Строки",
+                            "help-title-checks": "🔍 Проверки",
+                            "help-title-dates": "📅 Даты",
+                            "help-title-arrays": "📋 Массивы / Теги",
+                            "help-title-operators": "⚙ Операторы",
+                            "help-examples-title": "Примеры:",
+                            "snippet-active-tasks": "📌 Активные задачи",
+                            "snippet-active-tasks-desc": "Активные с датой",
+                            "snippet-urgent-overdue": "🔥 Срочные просроченные",
+                            "snippet-urgent-overdue-desc": "Просроченные + urgent",
+                            "snippet-this-week": "📅 Задачи на эту неделю",
+                            "snippet-this-week-desc": "Все на этой неделе",
+                            "snippet-undated-overdue": "🗓 Без даты или просроченные",
+                            "snippet-undated-overdue-desc": "Пустая дата ИЛИ просрочено"
+                        },
                         "icon-picker": {
                             "lucide-tab": "Иконки",
                             "emoji-tab": "Эмодзи",

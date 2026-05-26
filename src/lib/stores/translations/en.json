@@ -680,6 +680,28 @@
                             "and-prefix": "and",
                             "no-value": "No value"
                         },
+                        "advanced-filter": {
+                            "toolbar-help": "Help",
+                            "hint-valid": "✓ Formula is valid",
+                            "hint-error": "⚠ {{count}} error(s)",
+                            "hint-ctrl-space": "Ctrl+Space — suggestions",
+                            "textarea-placeholder": "Start typing a formula or press Ctrl+Space...",
+                            "help-title-logical": "🔗 Logical",
+                            "help-title-strings": "📝 Strings",
+                            "help-title-checks": "🔍 Checks",
+                            "help-title-dates": "📅 Dates",
+                            "help-title-arrays": "📋 Arrays / Tags",
+                            "help-title-operators": "⚙ Operators",
+                            "help-examples-title": "Examples:",
+                            "snippet-active-tasks": "📌 Active tasks",
+                            "snippet-active-tasks-desc": "Active with date",
+                            "snippet-urgent-overdue": "🔥 Urgent overdue",
+                            "snippet-urgent-overdue-desc": "Overdue + urgent",
+                            "snippet-this-week": "📅 Tasks this week",
+                            "snippet-this-week-desc": "Everything this week",
+                            "snippet-undated-overdue": "🗓 Undated or overdue",
+                            "snippet-undated-overdue-desc": "Empty date OR overdue"
+                        },
                         "icon-picker": {
                             "lucide-tab": "Icons",
                             "emoji-tab": "Emoji",

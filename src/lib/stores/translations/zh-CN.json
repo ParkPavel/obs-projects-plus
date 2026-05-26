@@ -675,6 +675,28 @@
                             "and-prefix": "且",
                             "no-value": "无值"
                         },
+                        "advanced-filter": {
+                            "toolbar-help": "帮助",
+                            "hint-valid": "✓ 公式有效",
+                            "hint-error": "⚠ {{count}} 个错误",
+                            "hint-ctrl-space": "Ctrl+Space — 提示",
+                            "textarea-placeholder": "开始输入公式或按 Ctrl+Space...",
+                            "help-title-logical": "🔗 逻辑",
+                            "help-title-strings": "📝 字符串",
+                            "help-title-checks": "🔍 检查",
+                            "help-title-dates": "📅 日期",
+                            "help-title-arrays": "📋 数组 / 标签",
+                            "help-title-operators": "⚙ 运算符",
+                            "help-examples-title": "示例:",
+                            "snippet-active-tasks": "📌 活动任务",
+                            "snippet-active-tasks-desc": "带日期的活动任务",
+                            "snippet-urgent-overdue": "🔥 紧急过期",
+                            "snippet-urgent-overdue-desc": "过期 + urgent",
+                            "snippet-this-week": "📅 本周任务",
+                            "snippet-this-week-desc": "本周全部",
+                            "snippet-undated-overdue": "🗓 无日期或过期",
+                            "snippet-undated-overdue-desc": "空日期 或 过期"
+                        },
                         "icon-picker": {
                             "lucide-tab": "图标",
                             "emoji-tab": "表情",
