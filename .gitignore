@@ -49,7 +49,9 @@ lint_output*.txt
 # Recovery bundles
 *.bundle
 
-# AI Agent configuration (local only)
-.github/agents/
-.github/hooks/
+# Local-only Claude Code legacy (no longer used; safety guard if it returns)
 .claude/
+
+# .vscode/mcp.json contains personal absolute paths and env-var refs — local only.
+# .vscode itself is already gitignored above; no extra rule needed here.
+# Copilot agents/hooks/instructions/prompts in .github/ ARE committed (team-shared).

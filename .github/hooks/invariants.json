@@ -1,0 +1,40 @@
+{
+  "$schema": "https://aka.ms/copilot/hooks.schema.json",
+  "_comment": "Deterministic invariant gates for obs-projects-plus. Blocks @ts-ignore additions and direct commits to main/master. Reminds on test runs.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "execute",
+        "type": "command",
+        "command": "powershell -NoProfile -Command \"$line = [Console]::In.ReadToEnd(); if ($line -match 'git\\s+commit') { $b = git -C 'c:/Users/Park/OBSv1.0/obs-projects-plus' rev-parse --abbrev-ref HEAD 2>$null; if ($LASTEXITCODE -eq 0 -and ($b -eq 'main' -or $b -eq 'master')) { Write-Output '{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"BLOCKED: Direct commits to main/master are forbidden. Create a feature branch first: git checkout -b feat/<name>\\\"}}'; exit 2 } } exit 0\"",
+        "timeout": 10
+      },
+      {
+        "matcher": "execute",
+        "type": "command",
+        "command": "powershell -NoProfile -Command \"$line = [Console]::In.ReadToEnd(); if ($line -match 'git\\s+push.*\\b(main|master)\\b') { Write-Output '{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"BLOCKED: Push to main/master is reserved for the user.\\\"}}'; exit 2 } exit 0\"",
+        "timeout": 10
+      },
+      {
+        "matcher": "execute",
+        "type": "command",
+        "command": "powershell -NoProfile -Command \"$line = [Console]::In.ReadToEnd(); if ($line -match 'git\\s+(reset\\s+--hard|push\\s+(--force|-f)|clean\\s+-(d|f))') { Write-Output '{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"BLOCKED: Destructive git operations require explicit user execution.\\\"}}'; exit 2 } exit 0\"",
+        "timeout": 10
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "execute",
+        "type": "command",
+        "command": "powershell -NoProfile -Command \"$line = [Console]::In.ReadToEnd(); if ($line -match 'npm\\s+test\\b' -or $line -match 'npm\\s+run\\s+test') { Write-Output '{\\\"systemMessage\\\":\\\"Baseline reminder: 139 suites / 2099 tests must PASS. Any deviation requires CONTEXT.md update via context-manager.\\\"}' } exit 0\"",
+        "timeout": 5
+      },
+      {
+        "matcher": "edit",
+        "type": "command",
+        "command": "powershell -NoProfile -Command \"$line = [Console]::In.ReadToEnd(); if ($line -match '@ts-ignore' -and $line -match 'src[\\\\\\\\/]') { Write-Output '{\\\"decision\\\":\\\"block\\\",\\\"systemMessage\\\":\\\"INVARIANT VIOLATED: @ts-ignore is forbidden in src/. Fix the types properly. Revert this edit.\\\"}'; exit 2 } exit 0\"",
+        "timeout": 10
+      }
+    ]
+  }
+}
