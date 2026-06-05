@@ -497,6 +497,24 @@ Acceptance:
 
 Gates: tsc 0 errors ✅ / 139 suites / 2099 tests PASS ✅ / build 0 errors (4 pre-existing warnings) ✅
 
+### #048 — Add native-query datasource UI entry point in CreateProject
+- Status: 📋 BACKLOG
+- Milestone: M-UX | Priority: P1 | Complexity: S
+- analysis_required: false
+- Depends on: #045.2 (✅ engine implemented)
+- Blocks: none
+
+**Context**: `src/lib/datasources/native-query/nativeQuery.ts` is fully implemented (#045.2), but
+`CreateProject.svelte` only offers `folder`, `tag`, and `dataview` as datasource types.
+Users have no way to create filter-based ("virtual") databases from the UI.
+
+**Scope**:
+- `src/ui/modals/components/CreateProject.svelte`: add `native-query` as 4th option
+- Show `FilterPanelVisual` or inline filter builder when selected
+- Wire to `nativeQuery.ts` on save
+- Add/update translations in `en.json` + `ru.json`
+- Write test covering the new option renders correctly
+
 ---
 
 ## Milestone M-INTERACTIVE-DASHBOARD — ✅ COMPLETE (Phase 5, 2026-05-27)
@@ -563,31 +581,28 @@ M-CANVAS-REACTIVE: #016 ✅ DONE (Phase 1 closed); #031 ✅ DONE (Phase 2 closed
 M-TABLE-REWRITE ✅:
 #001 ✅ ──► #009 ✅ (M-SUBBASES DONE)
 
-M-DATAVIEW-BRIDGE 🗓 PLANNING — NEEDS-ANALYSIS complete:
+M-DATAVIEW-BRIDGE ✅ COMPLETE (2026-05-27):
 #045 (parent) ◄── #009 ✅, #010 ✅
-├──► #045.1 DataviewEnhancedSource + graceful degradation
-├──► #045.2 Native-query lightweight layer
-├──► #045.3 Relation UI pill-chip (RelationListView)
-├──► #045.4 Rollup UI (RollupCellRenderer)
-├──► #045.5 Unified DV filter via canonical kernel
-└──► #045.6 Status/Board 3-tier grouping
+├──► #045.1 ✅, #045.2 ✅, #045.3 ✅, #045.4 ✅, #045.5 ✅, #045.6 ✅
+All sub-tickets merged via 7756cd6.
 
-M-FREE-CANVAS (Phase 3, Dashboard V3):
+M-FREE-CANVAS ✅ COMPLETE (Phase 3, Dashboard V3):
 #030 ✅ ──► #032 ✅ ──┬──► #033 (BACKLOG)
-                    └──► #036 (BACKLOG, NEEDS-ANALYSIS)
+                    └──► #036 (BACKLOG, NEEDS-ANALYSIS done)
 
-M-POPUP-STANDARDISATION (Phase 4): #034 ✅ DONE, #040 ✅ DONE
+M-POPUP-STANDARDISATION ✅: #034 ✅ DONE, #040 ✅ DONE
 
-M-INTERACTIVE-DASHBOARD (Phase 5) — v1 FULLY COMPLETE (pending user merge):
-#044.1 ✅ ──► #044.2 ✅
-         ├──► #044.3a 🔄 (audit PASS) ──► #044.3b 🔄 (audit PASS, NEEDS-ANALYSIS resolved 2026-05-21)
-         ├──► #044.4 🔄 (audit PASS, stacked on 044.3a)
-         └──► #044.5 🔄 (audit PASS, stacked on 044.4) — Phase 5 closure
+M-INTERACTIVE-DASHBOARD ✅ COMPLETE (Phase 5, 2026-05-27):
+#044.1 ✅ ──► #044.2 ✅ ──► #044.3a ✅ ──► #044.3b ✅
+                        ├──► #044.4 ✅
+                        └──► #044.5 ✅
+All sub-PRs merged into main.
 
-M-V35-HOTFIX-UX:
-#037 ✅ DECIDED ──► unblocked #032 ✅
-#038 ✅, #041 ✅ — merged locally
-#039 (BACKLOG, может быть закрыт через #032.3), #042 (BACKLOG), #043 (REGEN, blocks #016 repro)
+M-V35-HOTFIX-UX ✅ COMPLETE:
+#037 ✅, #038 ✅, #039 ✅, #040 ✅, #041 ✅, #042 ✅, #043 ✅
 
-Unrelated to git push: 34 commits ahead of origin/main not yet pushed (user-driven action).
+M-UX 🔄 ACTIVE:
+#046 ✅ (awaiting user merge → main)
+#047 ✅ (awaiting user merge → main)
+Next: #011 (YamlVisualizer widget test), #048 (native-query UI, to be created)
 ```
