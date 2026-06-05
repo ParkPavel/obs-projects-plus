@@ -1,7 +1,7 @@
 ﻿# Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-05 (#046 ✅ DONE, #044 ✅ DONE, #045 ✅ DONE, M-DATAVIEW-BRIDGE ✅ DONE, baseline 139/2099)
+> **Updated**: 2026-06-05 (#047 audit/icon-sweep ✅ DONE awaiting merge, #046 ✅ DONE awaiting merge, #044 ✅ DONE, #045 ✅ DONE, M-DATAVIEW-BRIDGE ✅ DONE, baseline 139/2099)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -437,7 +437,7 @@ overflow handling tab strip (commit `8e22ec1`).
 ## Milestone M-UX — 🔄 ACTIVE
 
 ### #046 — Demo project full refactor (single coherent domain, 5 views, <700 LOC)
-- Status: 🔄 IN-PROGRESS (2026-06-05) — commit `6336165` on branch `feat/046-demo-project-refactor`, **awaiting user merge into main**
+- Status: ✅ DONE (2026-06-05) — commit `6336165` on branch `feat/046-demo-project-refactor`, **awaiting user merge into main**
 - Milestone: M-UX | Priority: P2 | Complexity: M
 - analysis_required: false
 - Depends on: #043 (✅) — supersedes initial demo content/structure
@@ -460,6 +460,42 @@ Views:
 
 Acceptance:
 - `demoProject.ts` <700 LOC; total demo files 25-32; views exactly 5; every project file has valid relation to a client; tests updated; baseline +delta; tsc 0; build OK; PX ≤186.
+
+### #047 — UX audit: emoji→Lucide icon sweep + i18n gaps + P0/P1 bug fixes
+- Status: ✅ DONE (2026-06-05) — branch `fix/audit-ux-critical-bugs` (commits `008ba39`, `555e8f4`), **awaiting user merge into main**
+- Milestone: M-UX | Priority: P0 (contains P0 fix) | Complexity: M
+- analysis_required: false
+- Depends on: none
+- Blocks: none
+
+**P0 fix — Duplicate "Dashboard" in AddView dialog:**
+- `src/ui/modals/components/AddView.svelte`: deduplicate `Object.values($customViews)` by viewType; normalize "database"→"dashboard"; default type changed to "dashboard".
+- Root cause: `view.ts` registers both "dashboard" and "database" keys → same DashboardView instance → `Object.values()` returns it twice.
+
+**P1 fix — `new Menu()` invariant violation in DataTableWidget:**
+- `src/ui/views/Dashboard/widgets/DataTable/DataTableWidget.svelte`: replaced `new Menu()` with `openContextMenu()` from `src/lib/contextMenu.ts`.
+
+**P2 — emoji→Lucide `<Icon>` sweep (7 files):**
+- `WidgetHost.svelte`: ⚙🔒🔓✕⚠📊📈 → settings-2/lock/unlock/x/alert-triangle/bar-chart-2/trending-up
+- `DashboardToolbar.svelte`: −/+/⊞/≡/⚙ → minus/plus/layout-grid/layout-list/settings-2
+- `FilterBridge.svelte`: 🌐/⎘ → globe/filter
+- `ViewTabBar.svelte`: emoji string map → lucide icon names + `<Icon>`
+- `VisualizerPane.svelte`: 📌/👁/⊘ → pin/eye/eye-off
+- `ErrorBoundary.svelte`: ⚠️ → alert-triangle
+- `Schema.svelte`: 📅 → `"D"` text badge
+
+**i18n fixes:**
+- `en.json`/`ru.json`: views.dashboard.name "Database"→"Dashboard"; +8 missing widget type keys (data-list, sub-base-canvas, yaml-visualizer, database-call, timeline, cover-banner, text, divider).
+
+**Test mock fix:**
+- `src/__mocks__/obsidian-svelte.js`: noopComponent → proper Svelte-compatible constructor with `this.$$` (required by `new Icon(...)`).
+
+**Deep audit findings (open, not yet ticketed):**
+- F-02 (P1): `native-query` datasource has no UI entry point in `CreateProject.svelte`
+- F-08 (P2): filter operator labels hardcoded in Russian in `filterHelpers.ts`
+- F-13 (P3): `FieldSettingsPanel.svelte` is dead code (not imported anywhere)
+
+Gates: tsc 0 errors ✅ / 139 suites / 2099 tests PASS ✅ / build 0 errors (4 pre-existing warnings) ✅
 
 ---
 
