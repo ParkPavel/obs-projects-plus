@@ -101,7 +101,7 @@
       case DataFieldType.Boolean:
         return "✓";
       case DataFieldType.Date:
-        return "📅";
+        return "D";
       case DataFieldType.List:
         return "☰";
       case DataFieldType.Select:

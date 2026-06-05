@@ -10,6 +10,7 @@
   import type { TransformPipeline } from "../engine/transformTypes";
 
   import { createEventDispatcher, onMount } from "svelte";
+  import { Icon } from "obsidian-svelte";
   import DataTableWidget from "./DataTable/DataTableWidget.svelte";
   import ChartWidget from "./Chart/ChartWidget.svelte";
   import ChartConfigPanel from "./Chart/ChartConfig.svelte";
@@ -308,7 +309,7 @@
         on:click={toggleConfig}
         aria-label={$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure widget" })}
         title={$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure widget" })}
-      >⚙</button>
+      ><Icon name="settings-2" size={14} /></button>
     {/if}
     {#if !readonly && widget.type !== "data-table" && widget.type !== "text" && widget.type !== "divider"}
       <button
@@ -335,12 +336,12 @@
         on:click={() => dispatch("configChange", { id: widget.id, changes: { layout: { ...widget.layout, locked: !(widget.layout.locked ?? false) } } })}
         aria-label={widget.layout.locked ? $i18n.t("views.dashboard.widget.unlock", { defaultValue: "Unlock widget" }) : $i18n.t("views.dashboard.widget.lock", { defaultValue: "Lock widget position" })}
         title={widget.layout.locked ? $i18n.t("views.dashboard.widget.unlock", { defaultValue: "Unlock widget" }) : $i18n.t("views.dashboard.widget.lock", { defaultValue: "Lock widget position" })}
-      >{widget.layout.locked ? "🔒" : "🔓"}</button>
+      ><Icon name={widget.layout.locked ? "lock" : "unlock"} size={14} /></button>
       <button
         class="ppp-widget-remove-btn clickable-icon"
         on:click={() => dispatch("removeWidget", widget.id)}
         aria-label={$i18n.t("views.dashboard.widget.remove")}
-      >✕</button>
+      ><Icon name="x" size={14} /></button>
     {/if}
   </div>
 
@@ -472,7 +473,7 @@
         <div class="ppp-widget-skeleton" aria-hidden="true"></div>
       {:else if renderError}
         <div class="ppp-widget-error">
-          <span class="ppp-widget-error-icon">⚠</span>
+          <span class="ppp-widget-error-icon"><Icon name="alert-triangle" size={16} /></span>
           <span>{renderError}</span>
           <button class="ppp-widget-error-retry" on:click={() => { renderError = null; }}>
             {$i18n.t("common.retry", { defaultValue: "Retry" })}
@@ -497,7 +498,7 @@
         <ChartWidget config={chartConfig} source={transformedFrame} rightFrame={chartRightFrame} widgetId={widget.id} />
       {:else if widget.type === "chart" && !chartConfig}
         <div class="ppp-widget-setup-wizard">
-          <span class="ppp-widget-setup-icon">📊</span>
+          <span class="ppp-widget-setup-icon"><Icon name="bar-chart-2" size={32} /></span>
           <span>{$i18n.t("views.dashboard.widget.chart-not-configured", { defaultValue: "Chart is not configured" })}</span>
           <button class="ppp-widget-setup-btn" on:click={initChartConfig}>
             {$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure" })}
@@ -507,7 +508,7 @@
         <StatsWidget config={statsConfig} source={transformedFrame} widgetId={widget.id} />
       {:else if widget.type === "stats" && !statsConfig}
         <div class="ppp-widget-setup-wizard">
-          <span class="ppp-widget-setup-icon">📈</span>
+          <span class="ppp-widget-setup-icon"><Icon name="trending-up" size={32} /></span>
           <span>{$i18n.t("views.dashboard.widget.stats-not-configured", { defaultValue: "Stats widget is not configured" })}</span>
           <button class="ppp-widget-setup-btn" on:click={initStatsConfig}>
             {$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure" })}

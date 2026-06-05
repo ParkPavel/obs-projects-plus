@@ -7,7 +7,7 @@
     type DataValue,
     type Optional,
   } from "src/lib/dataframe/dataframe";
-  import { Menu, Notice } from "obsidian";
+  import { Notice } from "obsidian";
   import { exportRecords, type ExportFormat } from "src/lib/export/exportService";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, AggregationResult, AggregationConfig, ColumnAggregation, DataTableSortCriteria } from "../../types";
@@ -40,7 +40,7 @@
     type RollupModeId,
     type RollupModeGroup,
   } from "src/lib/database/rollupMode";
-  import type { ContextMenuEntry } from "src/lib/contextMenu";
+  import { openContextMenu, type ContextMenuEntry } from "src/lib/contextMenu";
   import type { FieldConfig } from "src/settings/settings";
 
   import DataGrid from "src/ui/views/Table/components/DataGrid/DataGrid.svelte";
@@ -713,16 +713,16 @@
     .filter((f): f is DataField => f != null);
 
   function handleExportClick(e: MouseEvent) {
-    const menu = new Menu();
     const formats: Array<{ label: string; format: ExportFormat }> = [
       { label: "CSV (.csv)", format: "csv" },
       { label: "TSV (.tsv)", format: "tsv" },
       { label: "JSON (.json)", format: "json" },
       { label: "Markdown table (.md)", format: "markdown" },
     ];
-    for (const { label, format } of formats) {
-      menu.addItem((item) =>
-        item.setTitle(label).onClick(() => {
+    openContextMenu(
+      formats.map(({ label, format }) => ({
+        title: label,
+        onClick: () => {
           const content = exportRecords(frame.records, exportableFields, format);
           navigator.clipboard.writeText(content).then(() => {
             new Notice(
@@ -731,10 +731,10 @@
               })
             );
           });
-        })
-      );
-    }
-    menu.showAtMouseEvent(e);
+        },
+      })),
+      e,
+    );
   }
 
   $: conditionalFormats = config?.conditionalFormats ?? [];

@@ -21,6 +21,7 @@
 <script lang="ts">
   import { createEventDispatcher, setContext } from 'svelte';
   import { i18n } from '../../../lib/stores/i18n';
+  import { Icon } from 'obsidian-svelte';
   
   /** Optional error handler callback */
   export let onError: ((error: Error, errorInfo?: string) => void) | undefined = undefined;
@@ -102,7 +103,7 @@
   <slot name="fallback" {error} {reset}>
     <div class="error-boundary" role="alert" aria-live="assertive">
       <div class="error-boundary-content">
-        <div class="error-icon" aria-hidden="true">⚠️</div>
+        <div class="error-icon" aria-hidden="true"><Icon name="alert-triangle" size={24} /></div>
         <h3 class="error-title">{fallbackTitle}</h3>
         <p class="error-message">{fallbackMessage}</p>
         

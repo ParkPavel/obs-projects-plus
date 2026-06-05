@@ -816,7 +816,15 @@
                     "checklist": "Checklist",
                     "view-port": "View Port",
                     "filter-tabs": "Filter Tabs",
-                    "summary-row": "Summary Row"
+                    "summary-row": "Summary Row",
+                    "data-list": "List",
+                    "sub-base-canvas": "Sub-base Canvas",
+                    "yaml-visualizer": "Properties",
+                    "database-call": "Database",
+                    "timeline": "Timeline",
+                    "cover-banner": "Cover Banner",
+                    "text": "Text",
+                    "divider": "Divider"
                 },
                 "formula": {
                     "title": "Formula Editor",

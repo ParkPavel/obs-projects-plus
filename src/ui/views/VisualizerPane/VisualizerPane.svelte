@@ -15,6 +15,7 @@
    */
   import { onMount, onDestroy } from "svelte";
   import { TFile, type App } from "obsidian";
+  import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import {
     applyOverlay,
@@ -500,7 +501,7 @@
                 aria-label={entry.pinned
                   ? t("views.visualizer.pane.actions.unpin")
                   : t("views.visualizer.pane.actions.pin")}
-              >📌</button>
+              ><Icon name="pin" size={14} /></button>
               <button
                 type="button"
                 class="ppp-vis-pane-action"
@@ -513,7 +514,7 @@
                 aria-label={entry.hidden
                   ? t("views.visualizer.pane.actions.unhide")
                   : t("views.visualizer.pane.actions.hide")}
-              >{entry.hidden ? "👁" : "⊘"}</button>
+              ><Icon name={entry.hidden ? "eye" : "eye-off"} size={14} /></button>
             </span>
           </li>
         {/each}

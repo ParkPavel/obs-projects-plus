@@ -3,6 +3,7 @@
   import WidgetToolbar from "./widgets/WidgetToolbar.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { isMobile } from "src/lib/stores/ui";
+  import { Icon } from "obsidian-svelte";
   import { createEventDispatcher } from "svelte";
 
   export let showToolbar: boolean;
@@ -28,7 +29,7 @@
     aria-pressed={showToolbar}
     aria-label={showToolbar ? $i18n.t("views.dashboard.canvas.hide-toolbar") : $i18n.t("views.dashboard.canvas.show-toolbar")}
   >
-    {showToolbar ? "−" : "+"} {$i18n.t("views.dashboard.canvas.widgets")}
+    <Icon name={showToolbar ? "minus" : "plus"} size={14} /> {$i18n.t("views.dashboard.canvas.widgets")}
   </button>
   <button
     class="ppp-toolbar-btn clickable-icon"
@@ -36,7 +37,8 @@
     aria-label={$i18n.t("views.dashboard.canvas.toggle-layout")}
     disabled={$isMobile}
   >
-    {layoutMode === "stack" ? `⊞ ${$i18n.t("views.dashboard.canvas.layout-grid")}` : `≡ ${$i18n.t("views.dashboard.canvas.layout-stack")}`}
+    <Icon name={layoutMode === "stack" ? "layout-grid" : "layout-list"} size={14} />
+    {layoutMode === "stack" ? $i18n.t("views.dashboard.canvas.layout-grid") : $i18n.t("views.dashboard.canvas.layout-stack")}
   </button>
   {#if !readonly}
     <button
@@ -47,7 +49,7 @@
         defaultValue: "Manage project fields — types, relations, rollups",
       })}
     >
-      ⚙ {$i18n.t("views.dashboard.canvas.schema")}
+      <Icon name="settings-2" size={14} /> {$i18n.t("views.dashboard.canvas.schema")}
     </button>
     <button
       class="ppp-toolbar-btn clickable-icon"

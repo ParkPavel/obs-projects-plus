@@ -1012,7 +1012,15 @@
                     "checklist": "Чеклист",
                     "view-port": "Окно просмотра",
                     "filter-tabs": "Вкладки фильтров",
-                    "summary-row": "Итоговая строка"
+                    "summary-row": "Итоговая строка",
+                    "data-list": "Список",
+                    "sub-base-canvas": "Канвас подбаз",
+                    "yaml-visualizer": "Свойства",
+                    "database-call": "База данных",
+                    "timeline": "Таймлайн",
+                    "cover-banner": "Обложка",
+                    "text": "Текст",
+                    "divider": "Разделитель"
                 },
                 "formula": {
                     "title": "Редактор формул",
