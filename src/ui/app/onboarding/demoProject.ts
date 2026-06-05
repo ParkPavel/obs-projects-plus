@@ -1,4 +1,20 @@
-﻿import dayjs from "dayjs";
+// ============================================================
+// Demo project — Projects Plus
+//
+// Single coherent B2B Studio (digital agency) domain.
+// Replaces the legacy 1937-LOC mishmash (fitness + finance + CRM + tasks)
+// archived under .ai_internal/Archive/OLD-demoProject-2026-05-27.ts.
+//
+// Story: a digital studio with 6 clients, 8 projects, 10 tasks and
+// 5 meetings — naturally exercises relations (Project.client → Client),
+// filters (active vs done), board grouping by status, calendar timed
+// events, gallery covers and rollup aggregates (MRR sum, project value).
+//
+// Idempotency: createDemoProject is safe to re-run. Folder / file
+// creation calls are wrapped in try/catch — duplicates are skipped.
+// ============================================================
+
+import dayjs from "dayjs";
 import { normalizePath, stringifyYaml, type Vault } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
@@ -6,1565 +22,422 @@ import { settings } from "src/lib/stores/settings";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
-import type { DatabaseViewConfig } from "src/ui/views/Dashboard/types";
-import { applyWidgetTemplate } from "src/ui/views/Dashboard/widgetTemplates";
+import type {
+  DatabaseViewConfig,
+  WidgetDefinition,
+} from "src/ui/views/Dashboard/types";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
-import type { ColorRule, FilterCondition } from "src/settings/base/settings";
-import type { AgendaConfig, AgendaCustomList } from "src/settings/v3/settings";
-import {
-  buildFitnessFiles,
-  buildFinanceFiles,
-  buildCrmFiles,
-  writeDemoFiles,
-} from "./demoVerticals";
+import type { ColorRule, FieldConfig } from "src/settings/base/settings";
+
+const DEMO_FOLDER = "Projects Plus - Демо";
+
+type FrontMatter = Record<string, unknown>;
+interface DemoFile {
+  readonly frontmatter: FrontMatter;
+  readonly content: string;
+}
+
+// ── helpers ─────────────────────────────────────────────────────────
+const today = () => dayjs();
+const wikilink = (name: string) => `[[${name}]]`;
+const widgetId = (() => {
+  let n = Date.now();
+  return () => `w-${n++}`;
+})();
+
+// ── content templates ───────────────────────────────────────────────
+const clientBody = (industry: string, tagline: string) =>
+  `## Клиент\n\n**Индустрия:** ${industry}\n**Описание:** ${tagline}\n\n### История\n*Заметки по аккаунту.*\n`;
+
+const projectBody = (goal: string, scope: string[]) =>
+  `## Проект\n\n**Цель:** ${goal}\n\n### Скоуп\n${scope.map((s) => `- ${s}`).join("\n")}\n\n### Заметки\n*Решения, ссылки, артефакты.*\n`;
+
+const taskBody = (description: string, checklist: string[]) =>
+  `## Задача\n\n${description}\n\n### Чеклист\n${checklist.map((c) => `- [ ] ${c}`).join("\n")}\n`;
+
+const meetingBody = (agenda: string[]) =>
+  `## Встреча\n\n### Повестка\n${agenda.map((a, i) => `${i + 1}. ${a}`).join("\n")}\n\n### Решения\n*Заполните во время встречи.*\n`;
 
 // ============================================================
-// 🎯 PROJECTS PLUS - ДЕМОНСТРАЦИОННЫЙ ПРОЕКТ v3.0
-// 
-// Цели демо-проекта:
-// 1. Показать ВСЕ возможности плагина
-// 2. Продемонстрировать различные сценарии использования
-// 3. Обучить пользователя работе с разными типами данных
-// 4. Показать работу всех 4 представлений (Table, Board, Calendar, Gallery)
-// 5. Продемонстрировать фильтры, сортировку и цветовые правила
+// SEED DATA — agency domain (compact tuple format)
 // ============================================================
+//
+// Each entity row is a flat tuple converted to DemoFile by the
+// build* function. This keeps the seed data dense and grep-friendly:
+// names align as columns, no per-record `frontmatter:/content:` boilerplate.
 
-// ============================================================
-// ШАБЛОНЫ КОНТЕНТА ЗАМЕТОК
-// Богатый контент для реалистичного опыта
-// ============================================================
+interface ClientSeed {
+  name: string;
+  industry: string;
+  stage: "lead" | "active" | "churn";
+  mrr: number;
+  daysAgo: number;   // signup offset
+  cover: string;
+  tagline: string;
+}
 
-const taskContent = (title: string, description: string, checklist: string[]) => `
-## 📋 ${title}
+interface ProjectSeed {
+  name: string;
+  client: string;
+  value: number;
+  startOffset: number; // days from today (negative = past)
+  deadlineOffset: number;
+  status: "planning" | "inProgress" | "review" | "done";
+  progress: number;
+  cover: string;
+  goal: string;
+  scope: string[];
+  tags: string[];
+}
 
-### Описание
-${description}
+interface TaskSeed {
+  name: string;
+  project: string;
+  assignee: string;
+  dueOffset: number;
+  priority: "high" | "medium" | "low";
+  status: "todo" | "doing" | "review" | "done";
+  estimate: number;
+  completed: boolean;
+  description: string;
+  checklist: string[];
+  tags?: string[];
+}
 
-### Чеклист
-${checklist.map(item => `- [ ] ${item}`).join('\n')}
+interface MeetingSeed {
+  name: string;
+  client: string;
+  dayOffset: number;
+  startTime: string;
+  endTime: string;
+  participants: string[];
+  agenda: string[];
+}
 
-### Заметки
-*Добавьте свои заметки здесь...*
+const CLIENT_SEEDS: ClientSeed[] = [
+  { name: "Acme Studio",   industry: "SaaS",       stage: "active", mrr: 12000, daysAgo: 180, cover: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800", tagline: "Платформа для управления подписками." },
+  { name: "Helix Labs",    industry: "FinTech",    stage: "active", mrr: 18000, daysAgo: 240, cover: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800", tagline: "Платежный процессинг для маркетплейсов." },
+  { name: "Nimbus Retail", industry: "E-commerce", stage: "active", mrr: 7500,  daysAgo: 90,  cover: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800", tagline: "Сеть бутиков, омниканальная розница." },
+  { name: "Lumen Academy", industry: "EdTech",     stage: "lead",   mrr: 0,     daysAgo: 14,  cover: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800", tagline: "Онлайн-курсы по data science." },
+  { name: "Orbit Media",   industry: "Media",      stage: "active", mrr: 4500,  daysAgo: 45,  cover: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800", tagline: "Подкаст-сеть и видеопродакшен." },
+  { name: "Vertex Health", industry: "HealthTech", stage: "churn",  mrr: 0,     daysAgo: 420, cover: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800", tagline: "Телемедицина, ушли по бюджету Q4." },
+];
 
----
-*Создано с Projects Plus*
-`;
+const PROJECT_SEEDS: ProjectSeed[] = [
+  { name: "Redesign — Acme Studio",        client: "Acme Studio",   value: 48000, startOffset: -20, deadlineOffset: 15,  status: "inProgress", progress: 55,  cover: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800", goal: "Обновить дашборд и онбординг для повышения retention.", scope: ["UX-аудит", "Новая палитра", "Прототип Figma", "Внедрение"], tags: ["project", "design"] },
+  { name: "Mobile App — Helix Labs",       client: "Helix Labs",    value: 85000, startOffset: -60, deadlineOffset: 45,  status: "inProgress", progress: 40,  cover: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800", goal: "Нативное iOS/Android приложение для платежей.",         scope: ["Архитектура", "iOS MVP", "Android MVP", "QA", "Релиз"], tags: ["project", "mobile"] },
+  { name: "Storefront — Nimbus Retail",    client: "Nimbus Retail", value: 32000, startOffset: -5,  deadlineOffset: 40,  status: "planning",   progress: 10,  cover: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800", goal: "Новый Shopify storefront с кастомным чекаутом.",          scope: ["Discovery", "Каталог", "Чекаут", "Тестирование"],       tags: ["project", "ecommerce"] },
+  { name: "Brand Refresh — Orbit Media",   client: "Orbit Media",   value: 18000, startOffset: -30, deadlineOffset: 5,   status: "review",     progress: 85,  cover: "https://images.unsplash.com/photo-1561070791-2526d30994b8?w=800", goal: "Ребрендинг подкаст-сети: лого, гайдлайн, обложки.",       scope: ["Концепт", "Лого", "Гайдлайн", "Применение"],            tags: ["project", "branding"] },
+  { name: "Pitch Deck — Lumen Academy",    client: "Lumen Academy", value: 6000,  startOffset: -7,  deadlineOffset: 10,  status: "inProgress", progress: 30,  cover: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800", goal: "Инвестиционный pitch deck для seed-раунда.",              scope: ["Storyline", "Финансы", "Дизайн слайдов"],               tags: ["project", "presentation"] },
+  { name: "Site Audit — Vertex Health",    client: "Vertex Health", value: 8500,  startOffset: -120,deadlineOffset: -60, status: "done",       progress: 100, cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800", goal: "Технический и UX-аудит лендинга (закрыт).",               scope: ["Lighthouse", "UX-ревью", "Отчет"],                       tags: ["project", "audit"] },
+  { name: "Onboarding Flow — Acme Studio", client: "Acme Studio",   value: 14000, startOffset: 7,   deadlineOffset: 50,  status: "planning",   progress: 0,   cover: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800", goal: "Переработка флоу регистрации и активации.",               scope: ["Research", "Wireframes", "A/B-эксперимент"],            tags: ["project", "ux"] },
+  { name: "Content Hub — Orbit Media",     client: "Orbit Media",   value: 22000, startOffset: -90, deadlineOffset: -10, status: "done",       progress: 100, cover: "https://images.unsplash.com/photo-1542435503-956c469947f6?w=800", goal: "CMS для подкастов с публикацией по расписанию.",          scope: ["Архитектура", "CMS", "Интеграции", "Запуск"],           tags: ["project", "content"] },
+];
 
-const eventContent = (title: string, details: string) => `
-## 📅 ${title}
+const TASK_SEEDS: TaskSeed[] = [
+  { name: "Audit performance — Redesign Acme",          project: "Redesign — Acme Studio",        assignee: "Алексей", dueOffset: 2,   priority: "high",   status: "doing",  estimate: 4,  completed: false, description: "Профилирование загрузки дашборда: цель TTI < 1.5s.",           checklist: ["Lighthouse", "Bundle analyzer", "Оптимизация изображений"], tags: ["task", "performance"] },
+  { name: "Color palette draft — Redesign Acme",        project: "Redesign — Acme Studio",        assignee: "Ольга",   dueOffset: 5,   priority: "medium", status: "todo",   estimate: 6,  completed: false, description: "Подобрать акцентные и нейтральные оттенки под новый brand.",   checklist: ["Mood-board", "3 варианта", "Контраст AA"],                  tags: ["task", "design"] },
+  { name: "iOS auth flow — Mobile App Helix",           project: "Mobile App — Helix Labs",       assignee: "Мария",   dueOffset: 7,   priority: "high",   status: "doing",  estimate: 16, completed: false, description: "FaceID + biometric storage для авторизации.",                  checklist: ["KeychainSwift", "FaceID", "Тесты"],                          tags: ["task", "ios"] },
+  { name: "Android push — Mobile App Helix",            project: "Mobile App — Helix Labs",       assignee: "Дмитрий", dueOffset: 12,  priority: "medium", status: "todo",   estimate: 10, completed: false, description: "FCM-интеграция и обработка deep-links.",                       checklist: ["FCM setup", "Deep links", "QA на 3 устройствах"],          tags: ["task", "android"] },
+  { name: "Catalog import — Storefront Nimbus",         project: "Storefront — Nimbus Retail",    assignee: "Сергей",  dueOffset: 9,   priority: "high",   status: "todo",   estimate: 8,  completed: false, description: "CSV → Shopify импорт 12 000 SKU с медиа.",                     checklist: ["Маппинг", "Импорт", "Валидация"],                          tags: ["task", "etl"] },
+  { name: "Logo final variants — Brand Orbit",          project: "Brand Refresh — Orbit Media",   assignee: "Ольга",   dueOffset: 1,   priority: "high",   status: "review", estimate: 3,  completed: false, description: "Финальные lockup-варианты лого: horizontal/stacked/mark.",     checklist: ["3 варианта", "SVG/PNG", "Презентация"],                    tags: ["task", "branding"] },
+  { name: "Pitch deck visuals — Lumen",                 project: "Pitch Deck — Lumen Academy",    assignee: "Ольга",   dueOffset: 8,   priority: "medium", status: "doing",  estimate: 5,  completed: false, description: "Слайды traction и market sizing.",                              checklist: ["Traction chart", "TAM/SAM/SOM", "Команда"],                tags: ["task", "presentation"] },
+  { name: "Overdue: budget review — Storefront Nimbus", project: "Storefront — Nimbus Retail",    assignee: "Алексей", dueOffset: -3,  priority: "high",   status: "doing",  estimate: 2,  completed: false, description: "Просрочено: пересогласовать бюджет фазы 2.",                    checklist: ["Финансовый прогноз", "Звонок клиенту"],                    tags: ["task", "overdue"] },
+  { name: "QA pass — Site Audit Vertex",                project: "Site Audit — Vertex Health",    assignee: "Мария",   dueOffset: -65, priority: "low",    status: "done",   estimate: 4,  completed: true,  description: "Финальный прогон чек-листа аудита.",                            checklist: ["Lighthouse", "axe-core", "Cross-browser"],                  tags: ["task", "qa"] },
+  { name: "Sitemap — Onboarding Flow",                  project: "Onboarding Flow — Acme Studio", assignee: "Дмитрий", dueOffset: 14,  priority: "medium", status: "todo",   estimate: 4,  completed: false, description: "Информационная архитектура нового онбординга.",                 checklist: ["User flow", "Sitemap", "Wireframes"],                       tags: ["task", "ux"] },
+];
 
-### Детали события
-${details}
+const MEETING_SEEDS: MeetingSeed[] = [
+  { name: "Kickoff — Acme Studio",       client: "Acme Studio",   dayOffset: 1, startTime: "10:00", endTime: "11:00", participants: ["PM", "Алексей", "Клиент"],        agenda: ["Цели нового онбординга", "Сроки и риски", "Следующие шаги"] },
+  { name: "Weekly sync — Helix Labs",    client: "Helix Labs",    dayOffset: 2, startTime: "14:00", endTime: "14:45", participants: ["PM", "Мария", "Дмитрий", "CTO"],  agenda: ["Статус iOS auth", "Блокеры на Android", "План на следующую неделю"] },
+  { name: "Discovery — Nimbus Retail",   client: "Nimbus Retail", dayOffset: 3, startTime: "11:00", endTime: "12:30", participants: ["PM", "Сергей", "Магазин"],        agenda: ["Болевые точки", "Объем каталога", "Интеграции с ERP"] },
+  { name: "Brand review — Orbit Media",  client: "Orbit Media",   dayOffset: 4, startTime: "15:00", endTime: "16:00", participants: ["PM", "Ольга", "Креативный директор"], agenda: ["Презентация лого", "Применение", "Финальные правки"] },
+  { name: "Pitch rehearsal — Lumen",     client: "Lumen Academy", dayOffset: 6, startTime: "09:30", endTime: "10:15", participants: ["PM", "Ольга", "CEO"],             agenda: ["Прогон слайдов", "Q&A репетиция", "Правки"] },
+];
 
-### Подготовка
-- [ ] Проверить оборудование
-- [ ] Подготовить материалы
-- [ ] Отправить напоминание участникам
+// ── seed → DemoFile builders ────────────────────────────────────────
 
-### Заметки после события
-*Заполните после завершения...*
-
----
-`;
-
-const meetingContent = (title: string, attendees: string[], agenda: string[]) => `
-## 🤝 ${title}
-
-### 👥 Участники
-${attendees.map(a => `- ${a}`).join('\n')}
-
-### 📌 Повестка
-${agenda.map((item, i) => `${i + 1}. ${item}`).join('\n')}
-
-### 🎯 Решения
-*Заполните во время встречи...*
-
-### 📝 Следующие шаги
-| Задача | Ответственный | Срок |
-|--------|---------------|------|
-| | | |
-
----
-`;
-
-const projectContent = (title: string, goals: string[], milestones: string[]) => `
-## 🎯 ${title}
-
-### Цели проекта
-${goals.map(g => `- ${g}`).join('\n')}
-
-### Этапы
-${milestones.map((m, i) => `${i + 1}. ${m}`).join('\n')}
-
-### Прогресс
-\`\`\`
-[████████░░░░░░░░░░░░] 40%
-\`\`\`
-
-### Риски
-| Риск | Вероятность | Влияние | Митигация |
-|------|-------------|---------|-----------|
-| | | | |
-
----
-`;
-
-const ideaContent = (title: string) => `
-## 💡 ${title}
-
-### Суть идеи
-*Опишите идею подробнее...*
-
-### Преимущества
-- 🚀 Быстро и эффективно
-- 🔒 Безопасно
-- 🎨 Красивый интерфейс
-
-### Ресурсы
-- [[Связанные заметки]]
-- [Внешние ссылки](https://example.com)
-
-### Следующие шаги
-1. Исследование
-2. Прототип
-3. Тестирование
-
----
-`;
-
-const dailyContent = (date: string, mood: string) => `
-## 📔 Дневник: ${date}
-
-### Настроение: ${mood}
-
-### 🌟 Главное за день
-*Что важного произошло?*
-
-### ✅ Выполнено
-- [ ] Задача 1
-- [ ] Задача 2
-
-### 💭 Мысли
-*Записи и размышления...*
-
-### 🙏 Благодарности
-1. 
-2. 
-3. 
-
----
-`;
-
-const galleryContent = (title: string, description: string) => `
-## 🖼️ ${title}
-
-### Описание
-${description}
-
-### Детали
-- **Дата создания**: 
-- **Категория**: 
-- **Теги**: 
-
-### Заметки
-*Дополнительная информация...*
-
----
-`;
-
-export async function createDemoProject(vault: Vault) {
-  const demoFolder = "Projects Plus - Демо";
-
-  await vault.createFolder(demoFolder);
-
-  const today = dayjs();
-
-  // ============================================================
-  // 🎯 КОМПЛЕКСНЫЙ ДЕМОНСТРАЦИОННЫЙ НАБОР ДАННЫХ
-  // 
-  // Категории заметок:
-  // 1. 📅 КАЛЕНДАРЬ - события с датами и временем
-  // 2. 📋 ЗАДАЧИ - с приоритетами и статусами  
-  // 3. 🎯 ПРОЕКТЫ - многодневные с прогрессом
-  // 4. 💡 ИДЕИ - без дат, для inbox
-  // 5. 📔 ДНЕВНИК - ежедневные заметки
-  // 6. 🖼️ ГАЛЕРЕЯ - с обложками
-  // 7. 🤝 ВСТРЕЧИ - с участниками
-  // ============================================================
-
-  interface DemoFile {
-    frontmatter: Record<string, unknown>;
-    content: string;
+function buildClients(): Record<string, DemoFile> {
+  const t = today();
+  const out: Record<string, DemoFile> = {};
+  for (const s of CLIENT_SEEDS) {
+    out[s.name] = {
+      frontmatter: {
+        type: "client",
+        industry: s.industry,
+        stage: s.stage,
+        mrr: s.mrr,
+        signupDate: t.subtract(s.daysAgo, "day").format("YYYY-MM-DD"),
+        cover: s.cover,
+        tags: s.stage === "lead" ? ["client", "lead"] : s.stage === "churn" ? ["client", "churn"] : ["client"],
+      },
+      content: clientBody(s.industry, s.tagline),
+    };
   }
+  return out;
+}
 
-  const demoFiles: Record<string, DemoFile> = {
-    
-    // =============================================
-    // 📅 КАТЕГОРИЯ: КАЛЕНДАРНЫЕ СОБЫТИЯ
-    // Демонстрация: Timeline view, timed events
-    // =============================================
-    
-    "Утренний стендап": {
+function buildProjects(): Record<string, DemoFile> {
+  const t = today();
+  const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
+  const out: Record<string, DemoFile> = {};
+  for (const s of PROJECT_SEEDS) {
+    out[s.name] = {
       frontmatter: {
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        startTime: "09:00",
-        endTime: "09:15",
-        status: "done",
-        completed: true,
-        priority: "medium",
-        color: "#4CAF50",
-        type: "встреча",
-        category: "работа",
-        estimate: 0.25,
-        tags: ["ежедневно", "команда"],
+        type: "project",
+        client: wikilink(s.client),
+        value: s.value,
+        startDate: fmt(s.startOffset),
+        deadline: fmt(s.deadlineOffset),
+        status: s.status,
+        progress: s.progress,
+        cover: s.cover,
+        tags: s.tags,
       },
-      content: meetingContent(
-        "Утренний стендап",
-        ["Руководитель", "Разработчик 1", "Разработчик 2", "QA"],
-        ["Что сделано вчера", "Планы на сегодня", "Блокеры"]
-      ),
-    },
-    
-    "Созвон с клиентом": {
-      frontmatter: {
-        startDate: today.add(1, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        startTime: "14:00",
-        endTime: "15:00",
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#FF9800",
-        type: "встреча",
-        category: "клиенты",
-        estimate: 1,
-        tags: ["клиент", "важно"],
-      },
-      content: meetingContent(
-        "Созвон с клиентом",
-        ["Менеджер проекта", "Технический лид", "Представитель клиента"],
-        ["Демонстрация прогресса", "Обсуждение требований", "Следующие шаги"]
-      ),
-    },
-    
-    "Обед с командой": {
-      frontmatter: {
-        startDate: today.add(2, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        startTime: "12:30",
-        endTime: "13:30",
-        status: "scheduled",
-        completed: false,
-        priority: "low",
-        color: "#8BC34A",
-        type: "событие",
-        category: "личное",
-        estimate: 1,
-        tags: ["команда", "социальное"],
-      },
-      content: eventContent(
-        "Обед с командой",
-        "Неформальная встреча команды в кафе напротив офиса. Отличная возможность пообщаться в неформальной обстановке."
-      ),
-    },
-    
-    "Презентация проекта": {
-      frontmatter: {
-        startDate: today.add(3, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        startTime: "10:00",
-        endTime: "12:00",
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#9C27B0",
-        type: "презентация",
-        category: "работа",
-        estimate: 2,
-        tags: ["презентация", "важно"],
-      },
-      content: eventContent(
-        "Презентация проекта руководству",
-        "Демонстрация результатов квартальной работы. Необходимо подготовить слайды и демо-версию продукта."
-      ),
-    },
-    
-    "Вечерняя тренировка": {
-      frontmatter: {
-        startDate: today.add(1, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        startTime: "19:00",
-        endTime: "20:30",
-        status: "scheduled",
-        completed: false,
-        priority: "medium",
-        color: "#00BCD4",
-        type: "спорт",
-        category: "здоровье",
-        estimate: 1.5,
-        tags: ["спорт", "здоровье"],
-      },
-      content: eventContent(
-        "Тренировка в зале",
-        "Кардио + силовые упражнения. Не забыть взять форму и воду!"
-      ),
-    },
-
-    // =============================================
-    // 📋 КАТЕГОРИЯ: ЗАДАЧИ
-    // Демонстрация: Board view, статусы, приоритеты
-    // =============================================
-    
-    "Обновить документацию API": {
-      frontmatter: {
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        dueDate: today.add(3, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#2196F3",
-        type: "задача",
-        category: "разработка",
-        estimate: 4,
-        progress: 30,
-        assignee: "Алексей",
-        tags: ["документация", "api", "срочно"],
-      },
-      content: taskContent(
-        "Обновить документацию API",
-        "Необходимо обновить документацию после релиза версии 2.0. Добавить описание новых эндпоинтов.",
-        ["Проверить текущую документацию", "Добавить новые эндпоинты", "Обновить примеры кода", "Ревью от команды"]
-      ),
-    },
-    
-    "Исправить баг авторизации": {
-      frontmatter: {
-        startDate: today.subtract(1, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        dueDate: today.format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#F44336",
-        type: "баг",
-        category: "разработка",
-        estimate: 2,
-        progress: 60,
-        assignee: "Мария",
-        tags: ["баг", "критично", "безопасность"],
-      },
-      content: taskContent(
-        "Исправить баг авторизации",
-        "При определённых условиях токен не обновляется. Критично для безопасности!",
-        ["Воспроизвести баг", "Найти причину", "Написать исправление", "Протестировать", "Деплой на прод"]
-      ),
-    },
-    
-    "Дизайн новой страницы": {
-      frontmatter: {
-        startDate: today.add(2, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        dueDate: today.add(7, "day").format("YYYY-MM-DD"),
-        status: "todo",
-        completed: false,
-        priority: "medium",
-        color: "#E91E63",
-        type: "задача",
-        category: "дизайн",
-        estimate: 8,
-        progress: 0,
-        assignee: "Ольга",
-        tags: ["дизайн", "ui", "ux"],
-      },
-      content: taskContent(
-        "Дизайн новой посадочной страницы",
-        "Создать макеты для новой лендинг-страницы продукта. Мобильная и десктопная версии.",
-        ["Анализ конкурентов", "Wireframes", "Визуальный дизайн", "Прототип в Figma", "Согласование с маркетингом"]
-      ),
-    },
-    
-    "Написать тесты для модуля оплаты": {
-      frontmatter: {
-        startDate: today.add(1, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        dueDate: today.add(5, "day").format("YYYY-MM-DD"),
-        status: "todo",
-        completed: false,
-        priority: "high",
-        color: "#673AB7",
-        type: "задача",
-        category: "тестирование",
-        estimate: 6,
-        progress: 0,
-        assignee: "Дмитрий",
-        tags: ["тесты", "qa", "оплата"],
-      },
-      content: taskContent(
-        "Unit-тесты модуля оплаты",
-        "Покрыть тестами критический функционал обработки платежей. Цель - 80% coverage.",
-        ["Определить тест-кейсы", "Написать unit-тесты", "Написать интеграционные тесты", "Проверить coverage"]
-      ),
-    },
-    
-    "Оптимизировать производительность": {
-      frontmatter: {
-        startDate: today.add(5, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        dueDate: today.add(12, "day").format("YYYY-MM-DD"),
-        status: "inbox",
-        completed: false,
-        priority: "medium",
-        color: "#FF5722",
-        type: "задача",
-        category: "разработка",
-        estimate: 16,
-        progress: 0,
-        assignee: "Алексей",
-        tags: ["перформанс", "оптимизация"],
-      },
-      content: taskContent(
-        "Оптимизация производительности",
-        "Ускорить загрузку главной страницы. Текущий показатель: 3.2s, цель: <1.5s",
-        ["Профилирование", "Оптимизация изображений", "Code splitting", "Кэширование", "CDN настройка"]
-      ),
-    },
-
-    // =============================================
-    // ✅ ЗАВЕРШЁННЫЕ ЗАДАЧИ  
-    // Демонстрация: completed состояние, checkField
-    // =============================================
-    
-    "Настроить CI CD": {
-      frontmatter: {
-        startDate: today.subtract(5, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        dueDate: today.subtract(2, "day").format("YYYY-MM-DD"),
-        status: "done",
-        completed: true,
-        priority: "high",
-        color: "#4CAF50",
-        type: "задача",
-        category: "devops",
-        estimate: 8,
-        progress: 100,
-        assignee: "Сергей",
-        tags: ["devops", "ci", "cd", "завершено"],
-      },
-      content: taskContent(
-        "Настроить CI/CD пайплайн",
-        "Автоматизация сборки и деплоя через GitHub Actions. Задача выполнена успешно!",
-        ["Создать workflow файл", "Настроить тесты", "Настроить деплой", "Документация"]
-      ),
-    },
-    
-    "Ревью кода коллеги": {
-      frontmatter: {
-        startDate: today.subtract(1, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        status: "done",
-        completed: true,
-        priority: "medium",
-        color: "#8BC34A",
-        type: "задача",
-        category: "работа",
-        estimate: 1,
-        progress: 100,
-        assignee: "Мария",
-        tags: ["ревью", "код", "завершено"],
-      },
-      content: taskContent(
-        "Code review PR #142",
-        "Проверить pull request с новым функционалом уведомлений.",
-        ["Проверить код", "Оставить комментарии", "Approve"]
-      ),
-    },
-
-    // =============================================
-    // ⚠️ ПРОСРОЧЕННЫЕ ЗАДАЧИ
-    // Демонстрация: overdue в Agenda, красная подсветка
-    // =============================================
-    
-    "Обновить зависимости": {
-      frontmatter: {
-        startDate: today.subtract(4, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        dueDate: today.subtract(2, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "medium",
-        color: "#F44336",
-        type: "задача",
-        category: "разработка",
-        estimate: 3,
-        progress: 20,
-        assignee: "Алексей",
-        tags: ["зависимости", "просрочено"],
-      },
-      content: taskContent(
-        "Обновить npm зависимости",
-        "⚠️ ПРОСРОЧЕНО! Обновить устаревшие пакеты для устранения уязвимостей.",
-        ["Проверить npm audit", "Обновить критичные пакеты", "Протестировать совместимость", "Деплой"]
-      ),
-    },
-
-    // =============================================
-    // 🎯 КАТЕГОРИЯ: ПРОЕКТЫ (Multi-day)
-    // Демонстрация: startDate + endDate spans
-    // =============================================
-    
-    "Редизайн личного кабинета": {
-      frontmatter: {
-        startDate: today.subtract(5, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(10, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#3F51B5",
-        type: "проект",
-        category: "разработка",
-        estimate: 80,
-        progress: 35,
-        team: ["Ольга", "Алексей", "Дмитрий"],
-        budget: 150000,
-        tags: ["проект", "редизайн", "важно"],
-      },
-      content: projectContent(
-        "Редизайн личного кабинета",
-        ["Улучшить UX на 40%", "Увеличить конверсию", "Модернизировать визуал"],
-        ["Исследование (неделя 1)", "Дизайн (неделя 2)", "Разработка (неделя 3-4)", "Тестирование (неделя 5)"]
-      ),
-    },
-    
-    "Конференция TechFest 2026": {
-      frontmatter: {
-        startDate: today.add(14, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(16, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "medium",
-        color: "#9C27B0",
-        type: "конференция",
-        category: "обучение",
-        location: "Москва, Экспоцентр",
-        budget: 25000,
-        tags: ["конференция", "обучение", "нетворкинг"],
-      },
-      content: eventContent(
-        "TechFest 2026 - Ежегодная конференция",
-        `**3 дня докладов и мастер-классов**
-
-**День 1**: Открытие, keynote, нетворкинг
-**День 2**: Технические доклады, воркшопы
-**День 3**: Панельные дискуссии, закрытие
-
-**Мои сессии:**
-- [ ] "Будущее веб-разработки"
-- [ ] "AI в продакшене"
-- [ ] "Масштабирование стартапа"`
-      ),
-    },
-    
-    "Спринт 14": {
-      frontmatter: {
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(13, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#00BCD4",
-        type: "спринт",
-        category: "agile",
-        velocity: 34,
-        sprintGoal: "Запуск MVP модуля аналитики",
-        tags: ["спринт", "agile", "scrum"],
-      },
-      content: projectContent(
-        "Спринт №14",
-        ["Завершить MVP аналитики", "Покрыть тестами 70%+", "Документировать API"],
-        ["Планирование", "Разработка фич", "Тестирование", "Демо и ретро"]
-      ),
-    },
-    
-    "Отпуск": {
-      frontmatter: {
-        startDate: today.add(30, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(44, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "low",
-        color: "#FFEB3B",
-        type: "отпуск",
-        category: "личное",
-        location: "Сочи",
-        tags: ["отпуск", "отдых", "личное"],
-      },
-      content: eventContent(
-        "Долгожданный отпуск! 🏖️",
-        `**2 недели у моря**
-
-**Локация**: Сочи, отель у моря
-**Планы**: 
-- Полный детокс от работы
-- Горы и море
-- Чтение книг
-
-**Не забыть**:
-- [ ] Передать дела
-- [ ] Настроить автоответчик
-- [ ] Забронировать отель`
-      ),
-    },
-
-    // =============================================
-    // � КАТЕГОРИЯ: ДЛИННЫЕ ОБЗОРНЫЕ СОБЫТИЯ
-    // Демонстрация: Multi-week spans, bars в календаре
-    // =============================================
-    
-    "Квартальный аудит безопасности": {
-      frontmatter: {
-        startDate: today.add(7, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(28, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#D32F2F",
-        type: "аудит",
-        category: "безопасность",
-        auditor: "SecureIT Ltd",
-        scope: ["инфраструктура", "код", "процессы"],
-        tags: ["аудит", "безопасность", "compliance"],
-      },
-      content: projectContent(
-        "Квартальный аудит безопасности Q1 2026",
-        ["Проверка инфраструктуры", "Аудит кода", "Пентест", "Документирование"],
-        ["Неделя 1: Сбор данных", "Неделя 2: Анализ инфраструктуры", "Неделя 3: Код-ревью", "Неделя 4: Отчёт и рекомендации"]
-      ),
-    },
-    
-    "Бета-тестирование v3.0": {
-      frontmatter: {
-        startDate: today.add(5, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(19, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#7B1FA2",
-        type: "тестирование",
-        category: "qa",
-        testers: 50,
-        features: ["новый интерфейс", "API v2", "мобильная версия"],
-        tags: ["бета", "тестирование", "релиз"],
-      },
-      content: projectContent(
-        "Бета-тестирование версии 3.0",
-        ["Собрать отзывы от 50+ пользователей", "Исправить критичные баги", "Валидировать UX"],
-        ["Дни 1-3: Онбординг тестеров", "Дни 4-10: Активное тестирование", "Дни 11-14: Сбор фидбека и исправления"]
-      ),
-    },
-    
-    "Миграция на новый сервер": {
-      frontmatter: {
-        startDate: today.add(21, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(25, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#1976D2",
-        type: "инфраструктура",
-        category: "devops",
-        downtime: "4 часа",
-        rollbackPlan: true,
-        tags: ["миграция", "сервер", "devops"],
-      },
-      content: eventContent(
-        "Миграция на новый сервер",
-        `**Критическое окно миграции**
-
-**День 1-2**: Подготовка и тестовая миграция
-**День 3**: Финальная синхронизация данных  
-**День 4**: Переключение DNS и проверка
-**День 5**: Мониторинг и стабилизация
-
-**Технические детали:**
-- Новый сервер: AWS eu-central-1
-- Ожидаемый downtime: 4 часа
-- План отката: готов`
-      ),
-    },
-    
-    "Ревью архитектуры системы": {
-      frontmatter: {
-        startDate: today.subtract(3, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(4, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "medium",
-        color: "#00897B",
-        type: "ревью",
-        category: "архитектура",
-        participants: ["CTO", "Tech Lead", "Senior Dev"],
-        tags: ["архитектура", "ревью", "техдолг"],
-      },
-      content: projectContent(
-        "Архитектурное ревью Q1",
-        ["Оценить текущую архитектуру", "Выявить узкие места", "Спланировать улучшения"],
-        ["Анализ текущего состояния", "Сессии с командой", "Документирование решений"]
-      ),
-    },
-    
-    "Обучение команды React 19": {
-      frontmatter: {
-        startDate: today.add(10, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(24, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "medium",
-        color: "#5C6BC0",
-        type: "обучение",
-        category: "развитие",
-        instructor: "Внешний тренер",
-        participants: 8,
-        hours: 24,
-        tags: ["обучение", "react", "развитие"],
-      },
-      content: eventContent(
-        "Корпоративное обучение: React 19",
-        `**2 недели интенсивного обучения**
-
-**Программа:**
-- Server Components
-- Suspense & Streaming
-- Actions и form handling
-- Новые хуки
-
-**Формат:**
-- 3 сессии в неделю по 4 часа
-- Практические задания
-- Финальный проект
-
-**Участники:** 8 разработчиков`
-      ),
-    },
-    
-    "Маркетинговая кампания Q1": {
-      frontmatter: {
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(45, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#F57C00",
-        type: "маркетинг",
-        category: "бизнес",
-        budget: 500000,
-        channels: ["email", "social", "ppc", "content"],
-        kpi: "500 лидов",
-        tags: ["маркетинг", "кампания", "лиды"],
-      },
-      content: projectContent(
-        "Маркетинговая кампания Q1 2026",
-        ["500+ качественных лидов", "ROI > 300%", "Узнаваемость бренда +20%"],
-        ["Неделя 1-2: Запуск email", "Неделя 3-4: Social media", "Неделя 5-6: PPC и контент"]
-      ),
-    },
-    
-    "Хакатон внутренний": {
-      frontmatter: {
-        startDate: today.add(35, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(37, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "medium",
-        color: "#8E24AA",
-        type: "событие",
-        category: "команда",
-        theme: "AI инструменты",
-        prizes: ["MacBook Pro", "iPhone", "AirPods"],
-        teams: 6,
-        tags: ["хакатон", "команда", "инновации"],
-      },
-      content: eventContent(
-        "Внутренний хакатон: AI Tools",
-        `**48 часов кодинга и креатива! 🚀**
-
-**Тема:** AI-инструменты для повышения продуктивности
-
-**Расписание:**
-- Пятница 18:00: Старт, формирование команд
-- Суббота: Разработка
-- Воскресенье 18:00: Презентации и награждение
-
-**Призы:**
-🥇 MacBook Pro 14"
-🥈 iPhone 15 Pro  
-🥉 AirPods Pro
-
-**6 команд по 4 человека**`
-      ),
-    },
-
-    // =============================================
-    // �️ КАТЕГОРИЯ: ПЕРИОДЫ РАЗРАБОТКИ
-    // Демонстрация: Недельные спринты, фазы проектов
-    // =============================================
-    
-    "Разработка модуля аналитики": {
-      frontmatter: {
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(6, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#1565C0",
-        type: "разработка",
-        category: "backend",
-        estimate: 40,
-        progress: 45,
-        assignee: "Алексей",
-        team: ["Алексей", "Дмитрий"],
-        tags: ["разработка", "аналитика", "backend", "неделя"],
-      },
-      content: projectContent(
-        "Разработка модуля аналитики (1 неделя)",
-        ["Создать API для дашбордов", "Интеграция с BI", "Unit-тесты"],
-        ["Пн-Вт: Проектирование API", "Ср-Чт: Реализация endpoints", "Пт: Тесты и документация", "Сб-Вс: Буфер"]
-      ),
-    },
-    
-    "Рефакторинг авторизации": {
-      frontmatter: {
-        startDate: today.add(7, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(11, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#C62828",
-        type: "разработка",
-        category: "безопасность",
-        estimate: 32,
-        progress: 0,
-        assignee: "Мария",
-        securityReview: true,
-        tags: ["рефакторинг", "auth", "безопасность", "5дней"],
-      },
-      content: projectContent(
-        "Рефакторинг модуля авторизации (5 дней)",
-        ["Переход на OAuth 2.0", "Обновление токенов", "Аудит безопасности"],
-        ["День 1: Анализ текущей системы", "День 2-3: Реализация OAuth", "День 4: Миграция данных", "День 5: Тестирование"]
-      ),
-    },
-    
-    "Вёрстка нового интерфейса": {
-      frontmatter: {
-        startDate: today.subtract(2, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(5, "day").format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        priority: "medium",
-        color: "#6A1B9A",
-        type: "разработка",
-        category: "frontend",
-        estimate: 48,
-        progress: 30,
-        assignee: "Ольга",
-        figmaLink: "https://figma.com/...",
-        tags: ["вёрстка", "ui", "frontend", "неделя"],
-      },
-      content: projectContent(
-        "Вёрстка нового дизайна (1 неделя)",
-        ["Главная страница", "Профиль пользователя", "Настройки", "Адаптив"],
-        ["Пн-Вт: Главная страница", "Ср: Профиль", "Чт: Настройки", "Пт-Вс: Адаптив и polish"]
-      ),
-    },
-    
-    "Интеграция платёжной системы": {
-      frontmatter: {
-        startDate: today.add(14, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(20, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#2E7D32",
-        type: "разработка",
-        category: "платежи",
-        estimate: 40,
-        progress: 0,
-        assignee: "Сергей",
-        paymentProvider: "Stripe",
-        pciCompliance: true,
-        tags: ["интеграция", "платежи", "stripe", "неделя"],
-      },
-      content: projectContent(
-        "Интеграция Stripe (1 неделя)",
-        ["Подключить Stripe API", "Webhooks", "Тестовые транзакции", "PCI DSS"],
-        ["Пн: Настройка аккаунта", "Вт-Ср: API интеграция", "Чт: Webhooks", "Пт-Вс: Тестирование и сертификация"]
-      ),
-    },
-
-    // =============================================
-    // �💡 КАТЕГОРИЯ: ИДЕИ (Без дат)
-    // Демонстрация: inbox/backlog в Board
-    // =============================================
-    
-    "Идея - Тёмная тема": {
-      frontmatter: {
-        status: "inbox",
-        completed: false,
-        priority: "medium",
-        color: "#607D8B",
-        type: "идея",
-        category: "продукт",
-        effort: "medium",
-        impact: "high",
-        tags: ["идея", "ui", "тема"],
-      },
-      content: ideaContent("Тёмная тема для приложения"),
-    },
-    
-    "Идея - Мобильное приложение": {
-      frontmatter: {
-        status: "inbox",
-        completed: false,
-        priority: "high",
-        color: "#795548",
-        type: "идея",
-        category: "продукт",
-        effort: "high",
-        impact: "high",
-        tags: ["идея", "мобайл", "react-native"],
-      },
-      content: ideaContent("Нативное мобильное приложение"),
-    },
-    
-    "Идея - AI ассистент": {
-      frontmatter: {
-        status: "inbox",
-        completed: false,
-        priority: "low",
-        color: "#9E9E9E",
-        type: "идея",
-        category: "инновации",
-        effort: "high",
-        impact: "medium",
-        tags: ["идея", "ai", "будущее"],
-      },
-      content: ideaContent("Интеграция AI-ассистента в интерфейс"),
-    },
-
-    // =============================================
-    // 📔 КАТЕГОРИЯ: ДНЕВНИК
-    // Демонстрация: Daily notes без времени
-    // =============================================
-    
-    "Дневник - Понедельник": {
-      frontmatter: {
-        startDate: today.subtract(2, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        status: "done",
-        completed: true,
-        type: "дневник",
-        category: "личное",
-        mood: "продуктивно",
-        energy: 8,
-        tags: ["дневник", "личное"],
-      },
-      content: dailyContent(today.subtract(2, "day").format("DD MMMM YYYY"), "😊 Продуктивно"),
-    },
-    
-    "Дневник - Вторник": {
-      frontmatter: {
-        startDate: today.subtract(1, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        status: "done",
-        completed: true,
-        type: "дневник",
-        category: "личное",
-        mood: "спокойно",
-        energy: 6,
-        tags: ["дневник", "личное"],
-      },
-      content: dailyContent(today.subtract(1, "day").format("DD MMMM YYYY"), "😌 Спокойно"),
-    },
-    
-    "Дневник - Сегодня": {
-      frontmatter: {
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        status: "doing",
-        completed: false,
-        type: "дневник",
-        category: "личное",
-        mood: "энергично",
-        energy: 9,
-        tags: ["дневник", "сегодня"],
-      },
-      content: dailyContent(today.format("DD MMMM YYYY"), "⚡ Энергично"),
-    },
-
-    // =============================================
-    // 🖼️ КАТЕГОРИЯ: ГАЛЕРЕЯ
-    // Демонстрация: coverField, карточки
-    // =============================================
-    
-    "Дизайн-система компании": {
-      frontmatter: {
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#E91E63",
-        type: "документация",
-        category: "дизайн",
-        cover: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=400",
-        tags: ["дизайн", "система", "ui-kit"],
-      },
-      content: galleryContent(
-        "Дизайн-система компании",
-        "Унифицированная система компонентов и стилей для всех продуктов компании."
-      ),
-    },
-    
-    "Дорожная карта 2026": {
-      frontmatter: {
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(365, "day").format("YYYY-MM-DD"),
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#3F51B5",
-        type: "roadmap",
-        category: "стратегия",
-        cover: "https://images.unsplash.com/photo-1512758017271-d7b84c2113f1?w=400",
-        tags: ["roadmap", "планирование", "стратегия"],
-      },
-      content: galleryContent(
-        "Product Roadmap 2026",
-        "Стратегический план развития продукта на год. Включает все ключевые релизы и инициативы."
-      ),
-    },
-    
-    "Результаты исследования UX": {
-      frontmatter: {
-        status: "done",
-        completed: true,
-        priority: "medium",
-        color: "#009688",
-        type: "исследование",
-        category: "ux",
-        cover: "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=400",
-        respondents: 45,
-        nps: 72,
-        tags: ["ux", "исследование", "аналитика"],
-      },
-      content: galleryContent(
-        "UX Research Q4 2025",
-        "Результаты качественного и количественного исследования пользовательского опыта."
-      ),
-    },
-    
-    "Брендбук": {
-      frontmatter: {
-        status: "done",
-        completed: true,
-        priority: "low",
-        color: "#FF5722",
-        type: "документация",
-        category: "маркетинг",
-        cover: "https://images.unsplash.com/photo-1542744094-24638eff58bb?w=400",
-        version: "2.0",
-        tags: ["бренд", "гайдлайны", "маркетинг"],
-      },
-      content: galleryContent(
-        "Брендбук v2.0",
-        "Обновлённые гайдлайны по использованию фирменного стиля компании."
-      ),
-    },
-    
-    "Архитектура системы": {
-      frontmatter: {
-        status: "doing",
-        completed: false,
-        priority: "high",
-        color: "#607D8B",
-        type: "техническое",
-        category: "архитектура",
-        cover: "https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=400",
-        tags: ["архитектура", "система", "техническое"],
-      },
-      content: galleryContent(
-        "System Architecture Diagram",
-        "Актуальная схема микросервисной архитектуры с описанием взаимодействий."
-      ),
-    },
-
-    // =============================================
-    // 🔀 ПАРАЛЛЕЛЬНЫЕ СОБЫТИЯ
-    // Демонстрация: overlapping в Calendar timeline
-    // =============================================
-    
-    "Собеседование кандидата": {
-      frontmatter: {
-        startDate: today.add(4, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        startTime: "11:00",
-        endTime: "12:00",
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#E91E63",
-        type: "встреча",
-        category: "hr",
-        candidate: "Иванов И.И.",
-        position: "Senior Developer",
-        tags: ["hr", "собеседование"],
-      },
-      content: meetingContent(
-        "Техническое собеседование",
-        ["HR менеджер", "Технический лид", "Кандидат"],
-        ["Знакомство", "Технические вопросы", "Live coding", "Вопросы кандидата"]
-      ),
-    },
-    
-    "Планирование квартала": {
-      frontmatter: {
-        startDate: today.add(4, "day").format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        startTime: "11:30",
-        endTime: "13:00",
-        status: "scheduled",
-        completed: false,
-        priority: "high",
-        color: "#00BCD4",
-        type: "встреча",
-        category: "управление",
-        tags: ["планирование", "стратегия", "q2"],
-      },
-      content: meetingContent(
-        "Q2 Planning Session",
-        ["CEO", "CTO", "Product Manager", "Tech Lead"],
-        ["Итоги Q1", "Цели Q2", "Распределение ресурсов", "Риски"]
-      ),
-    },
-
-    // =============================================
-    // 📊 ДЕМОНСТРАЦИЯ ТИПОВ ДАННЫХ
-    // Все DataFieldType в одной заметке
-    // =============================================
-    
-    "Демо всех типов полей": {
-      frontmatter: {
-        // STRING
-        title: "Демонстрация типов",
-        description: "Эта заметка показывает все типы полей",
-        // NUMBER
-        priority: 5,
-        progress: 50,
-        estimate: 4.5,
-        budget: 10000,
-        // BOOLEAN
-        completed: false,
-        important: true,
-        archived: false,
-        // DATE
-        startDate: today.format("YYYY-MM-DD"),
-        date: today.format("YYYY-MM-DD"),
-        endDate: today.add(7, "day").format("YYYY-MM-DD"),
-        dueDate: today.add(3, "day").format("YYYY-MM-DD"),
-        // LIST (multitext)
-        tags: ["демо", "типы", "данные", "тест"],
-        assignees: ["Алексей", "Мария", "Дмитрий"],
-        // STRING (but rendered as color)
-        color: "#9C27B0",
-        status: "doing",
-        type: "демо",
-        category: "обучение",
-      },
-      content: `## 📊 Демонстрация всех типов полей
-
-Эта заметка содержит примеры ВСЕХ типов данных, которые поддерживает Projects Plus:
-
-### Строки (String)
-- \`title\`: "Демонстрация типов"
-- \`description\`: Текстовое описание
-- \`status\`: "doing"
-
-### Числа (Number)
-- \`priority\`: 5
-- \`progress\`: 50
-- \`estimate\`: 4.5
-- \`budget\`: 10000
-
-### Логические (Boolean)
-- \`completed\`: false ❌
-- \`important\`: true ✅
-- \`archived\`: false ❌
-
-### Даты (Date)
-- \`startDate\`: ${today.format("YYYY-MM-DD")}
-- \`endDate\`: ${today.add(7, "day").format("YYYY-MM-DD")}
-- \`dueDate\`: ${today.add(3, "day").format("YYYY-MM-DD")}
-
-### Списки (List/Multitext)
-- \`tags\`: ["демо", "типы", "данные", "тест"]
-- \`assignees\`: ["Алексей", "Мария", "Дмитрий"]
-
-### Специальные
-- \`color\`: #9C27B0 (для цветной индикации)
-
----
-*Используйте Database view для редактирования всех полей*
-`,
-    },
-  };
-
-  // ============================================================
-  // СОЗДАНИЕ ФАЙЛОВ
-  // ============================================================
-
-  for (const [linkText, fileData] of Object.entries(demoFiles)) {
-    const yaml = stringifyYaml(fileData.frontmatter);
-    const fullContent = "---\n" + yaml + "---\n\n# " + linkText + "\n" + fileData.content;
-
-    await vault.create(
-      normalizePath(demoFolder + "/" + linkText + ".md"),
-      fullContent
-    );
+      content: projectBody(s.goal, s.scope),
+    };
   }
+  return out;
+}
 
-  // ============================================================
-  // СОЗДАНИЕ ФАЙЛОВ ВЕРТИКАЛЕЙ (Fitness / Finance / CRM)
-  //
-  // DATA FLOW OVER FOLDERS — все записи вертикалей пишутся в корневую
-  // папку демо-проекта вместе с generic-записями (задачи, встречи и т.д.).
-  // Сегрегация осуществляется исключительно через YAML-поле `type`
-  // (`workout` | `transaction` | `client`) и per-view фильтры, НЕ через
-  // физическое дробление папок. Это соответствует принципу "Проекты —
-  // это Запросы": один единый поток данных, много отфильтрованных срезов.
-  // writeDemoFiles идемпотентен: повторный запуск не падает.
-  // ============================================================
+function buildTasks(): Record<string, DemoFile> {
+  const t = today();
+  const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
+  const out: Record<string, DemoFile> = {};
+  for (const s of TASK_SEEDS) {
+    out[s.name] = {
+      frontmatter: {
+        type: "task",
+        project: wikilink(s.project),
+        assignee: s.assignee,
+        dueDate: fmt(s.dueOffset),
+        priority: s.priority,
+        status: s.status,
+        estimate: s.estimate,
+        completed: s.completed,
+        tags: s.tags ?? ["task"],
+      },
+      content: taskBody(s.description, s.checklist),
+    };
+  }
+  return out;
+}
 
+function buildMeetings(): Record<string, DemoFile> {
+  const t = today();
+  const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
+  const out: Record<string, DemoFile> = {};
+  for (const s of MEETING_SEEDS) {
+    out[s.name] = {
+      frontmatter: {
+        type: "meeting",
+        client: wikilink(s.client),
+        startDate: fmt(s.dayOffset),
+        startTime: s.startTime,
+        endTime: s.endTime,
+        participants: s.participants,
+        tags: ["meeting"],
+      },
+      content: meetingBody(s.agenda),
+    };
+  }
+  return out;
+}
+
+// ============================================================
+// VIEW CONFIGS — inline widget layouts
+// ============================================================
+
+function overviewWidgets(): WidgetDefinition[] {
+  return [
+    {
+      id: widgetId(),
+      type: "stats",
+      title: "Студия в цифрах",
+      layout: { x: 0, y: 0, w: 12, h: 2 },
+      config: {
+        cards: [
+          { id: "k1", label: "Клиентов",           field: "name",      aggregation: "count" },
+          { id: "k2", label: "Проектов",           field: "status",    aggregation: "count" },
+          { id: "k3", label: "Открытых задач",     field: "completed", aggregation: "count_unchecked" },
+          { id: "k4", label: "MRR (sum)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
+        ],
+        columns: 4,
+      },
+    },
+    {
+      id: widgetId(),
+      type: "chart",
+      title: "Проекты по статусу",
+      layout: { x: 0, y: 2, w: 6, h: 4 },
+      transform: {
+        steps: [
+          { type: "filter", conditions: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "project", enabled: true }] } },
+        ],
+      },
+      config: {
+        chartType: "donut",
+        xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
+        yAxis: { property: "count", aggregation: "count" },
+        style: { colorScheme: "categorical", height: "medium", showGrid: false, showLabels: true, showLegend: true, showValues: true },
+      },
+    },
+    {
+      id: widgetId(),
+      type: "data-table",
+      title: "Приоритетные задачи",
+      layout: { x: 6, y: 2, w: 6, h: 4 },
+      transform: {
+        steps: [
+          {
+            type: "filter",
+            conditions: {
+              conjunction: "and",
+              conditions: [
+                { field: "type", operator: "is", value: "task", enabled: true },
+                { field: "completed", operator: "is-not-checked", enabled: true },
+              ],
+            },
+          },
+        ],
+      },
+      config: {},
+    },
+    {
+      id: widgetId(),
+      type: "summary-row",
+      title: "Итоги",
+      layout: { x: 0, y: 6, w: 12, h: 1 },
+      config: {
+        columns: [
+          { field: "value",    aggregation: "sum", format: "currency", currencySymbol: "$" },
+          { field: "progress", aggregation: "avg", format: "percent" },
+          { field: "estimate", aggregation: "sum", format: "number" },
+        ],
+      },
+    },
+  ];
+}
+
+function clientsWidgets(): WidgetDefinition[] {
+  return [
+    {
+      id: widgetId(),
+      type: "stats",
+      title: "Клиентская база",
+      layout: { x: 0, y: 0, w: 12, h: 2 },
+      config: {
+        cards: [
+          { id: "c1", label: "Всего",        field: "name",  aggregation: "count" },
+          { id: "c2", label: "Активных",     field: "stage", aggregation: "count" },
+          { id: "c3", label: "MRR (sum)",    field: "mrr",   aggregation: "sum", format: "currency", currencySymbol: "$" },
+          { id: "c4", label: "Средний MRR", field: "mrr",   aggregation: "avg", format: "currency", currencySymbol: "$" },
+        ],
+        columns: 4,
+      },
+    },
+    {
+      id: widgetId(),
+      type: "data-table",
+      title: "Список клиентов",
+      layout: { x: 0, y: 2, w: 12, h: 8 },
+      config: {},
+    },
+  ];
+}
+
+const commonTableConfig: DatabaseViewConfig["table"] = {
+  fieldConfig: {
+    name: { width: 280 },
+    path: { hide: true },
+    status: { width: 110 },
+    priority: { width: 90 },
+    progress: { width: 80 },
+    value: { width: 100 },
+    mrr: { width: 100 },
+    startDate: { width: 110 },
+    deadline: { width: 110 },
+    dueDate: { width: 110 },
+    signupDate: { width: 110 },
+    industry: { width: 110 },
+    stage: { width: 90 },
+    assignee: { width: 110 },
+    estimate: { width: 80 },
+    completed: { width: 80 },
+    cover: { hide: true },
+    client: { width: 180 },
+    project: { width: 200 },
+  },
+  orderFields: ["name", "status", "stage", "priority", "client", "project", "value", "mrr", "progress", "deadline", "dueDate", "assignee"],
+  aggregations: { progress: "avg", value: "sum", mrr: "sum", name: "count_total" },
+  showAggregationRow: true,
+  rowHeight: "default",
+  wrapText: false,
+};
+
+// ============================================================
+// FILE WRITING (idempotent)
+// ============================================================
+
+async function writeFiles(vault: Vault, folder: string, files: Record<string, DemoFile>): Promise<void> {
+  for (const [name, file] of Object.entries(files)) {
+    const path = normalizePath(`${folder}/${name}.md`);
+    const body = `---\n${stringifyYaml(file.frontmatter)}---\n\n${file.content}`;
+    try {
+      await vault.create(path, body);
+    } catch {
+      // Already exists — idempotent re-run. Skip silently.
+    }
+  }
+}
+
+// ============================================================
+// MAIN ENTRY POINT
+// ============================================================
+
+export async function createDemoProject(vault: Vault): Promise<void> {
+  // 1. Ensure root demo folder exists (idempotent).
   try {
-    await writeDemoFiles(vault, demoFolder, buildFitnessFiles());
-  } catch (err) {
-    console.warn("[Projects Plus] Failed to seed Fitness vertical:", err);
-  }
-  try {
-    await writeDemoFiles(vault, demoFolder, buildFinanceFiles());
-  } catch (err) {
-    console.warn("[Projects Plus] Failed to seed Finance vertical:", err);
-  }
-  try {
-    await writeDemoFiles(vault, demoFolder, buildCrmFiles());
-  } catch (err) {
-    console.warn("[Projects Plus] Failed to seed CRM vertical:", err);
+    await vault.createFolder(DEMO_FOLDER);
+  } catch {
+    // Folder may already exist — that's fine.
   }
 
-  // ============================================================
-  // КОНФИГУРАЦИЯ ПРЕДСТАВЛЕНИЙ (VIEWS)
-  // ============================================================
+  // 2. Write all seed files.
+  await writeFiles(vault, DEMO_FOLDER, buildClients());
+  await writeFiles(vault, DEMO_FOLDER, buildProjects());
+  await writeFiles(vault, DEMO_FOLDER, buildTasks());
+  await writeFiles(vault, DEMO_FOLDER, buildMeetings());
 
-  const commonTableConfig: DatabaseViewConfig["table"] = {
-    fieldConfig: {
-      name: { width: 280 },
-      path: { hide: true },
-      startDate: { width: 110 },
-      date: { width: 110 },
-      endDate: { width: 110 },
-      dueDate: { width: 110 },
-      status: { width: 100 },
-      type: { width: 100 },
-      category: { width: 100 },
-      priority: { width: 90 },
-      progress: { width: 80 },
-      estimate: { width: 80 },
-      completed: { width: 80 },
-      assignee: { width: 100 },
-      cover: { hide: true },
-    },
-    orderFields: [
-      "name",
-      "status",
-      "priority",
-      "type",
-      "category",
-      "startDate",
-      "date",
-      "endDate",
-      "progress",
-      "assignee",
-      "tags",
-    ],
-    aggregations: { progress: "avg", estimate: "sum", name: "count_total" },
-    showAggregationRow: true,
-    rowHeight: "default",
-    wrapText: false,
-  };
-
-  const cloneTemplate = (templateId: string) => applyWidgetTemplate(templateId) ?? [];
-
-  const overviewDatabaseConfig: DatabaseViewConfig = {
-    widgets: cloneTemplate("overview-finance").map((widget) => {
-      if (widget.type === "chart") {
-        return {
-          ...widget,
-          transform: {
-            steps: [
-              {
-                type: "filter",
-                conditions: {
-                  conjunction: "and",
-                  conditions: [
-                    { field: "status", operator: "is-not", value: "inbox", enabled: true },
-                  ],
-                },
-              },
-            ],
-          },
-        };
-      }
-      return widget;
-    }),
+  // 3. View configs.
+  const overviewConfig: DatabaseViewConfig = {
+    widgets: overviewWidgets(),
     layoutMode: "stack",
     layoutVersion: 1,
     table: commonTableConfig,
     showWidgetToolbar: true,
     compactMode: false,
-    quickActions: [
-      {
-        id: "qa-overview",
-        label: "Overview Preset",
-        labelKey: "views.dashboard.quick.overview",
-        kind: "apply-template",
-        templateId: "overview-finance",
-      },
-      {
-        id: "qa-formula",
-        label: "Formula Builder",
-        labelKey: "views.dashboard.quick.formula",
-        kind: "toggle-formula-bar",
-      },
-    ],
   };
 
-  const kanbanDatabaseConfig: DatabaseViewConfig = {
-    widgets: cloneTemplate("kanban-plus").map((widget) => {
-      if (widget.type === "data-table") {
-        return {
-          ...widget,
-          transform: {
-            steps: [
-              {
-                type: "filter",
-                conditions: {
-                  conjunction: "and",
-                  conditions: [
-                    { field: "type", operator: "is", value: "задача", enabled: true },
-                    { field: "completed", operator: "is-not-checked", enabled: true },
-                  ],
-                },
-              },
-            ],
-          },
-        };
-      }
-      if (widget.type === "checklist") {
-        return {
-          ...widget,
-          config: { field: "completed" },
-        };
-      }
-      return widget;
-    }),
+  const clientsConfig: DatabaseViewConfig = {
+    widgets: clientsWidgets(),
     layoutMode: "stack",
     layoutVersion: 1,
     table: commonTableConfig,
     showWidgetToolbar: true,
     compactMode: false,
-    quickActions: [
-      {
-        id: "qa-kanban",
-        label: "Kanban+ Preset",
-        labelKey: "views.dashboard.templates.kanban-plus",
-        kind: "apply-template",
-        templateId: "kanban-plus",
-      },
-      {
-        id: "qa-formula",
-        label: "Formula Builder",
-        labelKey: "views.dashboard.quick.formula",
-        kind: "toggle-formula-bar",
-      },
-    ],
-  };
-
-  const analyticsDatabaseConfig: DatabaseViewConfig = {
-    widgets: cloneTemplate("analytics").map((widget) => {
-      if (widget.type === "chart" && widget.title === "Trend") {
-        return {
-          ...widget,
-          transform: {
-            steps: [
-              {
-                type: "filter",
-                conditions: {
-                  conjunction: "and",
-                  conditions: [
-                    { field: "archived", operator: "is-not-checked", enabled: true },
-                  ],
-                },
-              },
-            ],
-          },
-        };
-      }
-      return widget;
-    }),
-    layoutMode: "stack",
-    layoutVersion: 1,
-    table: commonTableConfig,
-    showWidgetToolbar: true,
-    compactMode: false,
-    quickActions: [
-      {
-        id: "qa-analytics",
-        label: "Analytics Preset",
-        labelKey: "views.dashboard.templates.analytics",
-        kind: "apply-template",
-        templateId: "analytics",
-      },
-      {
-        id: "qa-formula",
-        label: "Formula Builder",
-        labelKey: "views.dashboard.quick.formula",
-        kind: "toggle-formula-bar",
-      },
-    ],
-  };
-
-  // ── Industry-vertical database views (3 parallel views) ──────────────
-  // Each vertical is its OWN Database view with a view-level filter on
-  // frontmatter `type`. Records live flat in `demoFolder` — the per-view
-  // filter is the only mechanism isolating workouts from transactions
-  // from clients (DATA FLOW OVER FOLDERS). Widget layouts come from
-  // WIDGET_TEMPLATES (fitness-workout / finance-accounting / crm-clients).
-  const makeVerticalConfig = (templateId: string): DatabaseViewConfig => ({
-    widgets: cloneTemplate(templateId),
-    layoutMode: "stack",
-    layoutVersion: 1,
-    table: commonTableConfig,
-    showWidgetToolbar: true,
-    compactMode: false,
-  });
-
-  const fitnessDatabaseConfig = makeVerticalConfig("fitness-workout");
-  const financeDatabaseConfig = makeVerticalConfig("finance-accounting");
-  const crmDatabaseConfig = makeVerticalConfig("crm-clients");
-
-  // ── #043 / Phase 5 — Cross-widget Selection Demo ────────────────────
-  // Curated free-layout view that demonstrates the M-INTERACTIVE-DASHBOARD
-  // toolkit end-to-end: ChartWidget as a driver, DataTable+Stats as
-  // receivers, SelectionBadge / Escape / click-outside-canvas wired by the
-  // canvas. CRM clients are the data set because they have 4 clear `stage`
-  // values (active / negotiation / prospect / churned) plus a numeric
-  // `mrr` field — making the recompute behaviour visible at a glance.
-  //
-  // Layout is `free` so WindowShell renders (badge slot is part of it);
-  // widgets are positioned in `gridUnit` integers (#033 layout-rem
-  // migration pending). Widget IDs are deterministic strings so the demo
-  // is idempotent under re-runs of `createDemoProject`.
-  const crossWidgetDemoConfig: DatabaseViewConfig = {
-    widgets: [
-      {
-        id: "w-phase5-chart",
-        type: "chart",
-        title: "Pipeline by stage",
-        layout: { x: 0, y: 0, w: 6, h: 4 },
-        config: {
-          chartType: "pie",
-          xAxis: {
-            property: "stage",
-            sortBy: "value",
-            sortOrder: "desc",
-            omitZero: true,
-          },
-          yAxis: { property: "count", aggregation: "count" },
-          style: {
-            colorScheme: "categorical",
-            height: "medium",
-            showGrid: false,
-            showLabels: true,
-            showLegend: true,
-            showValues: true,
-          },
-        },
-      },
-      {
-        id: "w-phase5-stats",
-        type: "stats",
-        title: "Cohort metrics",
-        layout: { x: 6, y: 0, w: 6, h: 4 },
-        config: {
-          cards: [
-            { id: "p5s1", label: "Clients", field: "name", aggregation: "count" },
-            { id: "p5s2", label: "Active", field: "active", aggregation: "count_checked" },
-            { id: "p5s3", label: "MRR (sum)", field: "mrr", aggregation: "sum", format: "currency", currencySymbol: "$" },
-            { id: "p5s4", label: "Avg MRR", field: "mrr", aggregation: "avg", format: "currency", currencySymbol: "$" },
-          ],
-          columns: 4,
-        },
-      },
-      {
-        id: "w-phase5-table",
-        type: "data-table",
-        title: "Clients",
-        layout: { x: 0, y: 4, w: 12, h: 6 },
-        config: {},
-      },
-    ],
-    layoutMode: "free",
-    layoutVersion: 1,
-    table: commonTableConfig,
-    showWidgetToolbar: true,
-    compactMode: false,
-    quickActions: [
-      {
-        id: "qa-phase5-info",
-        label: "Cross-widget demo",
-        labelKey: "views.dashboard.quick.phase5-demo",
-        kind: "apply-template",
-        templateId: "crm-clients",
-      },
-    ],
   };
 
   const boardConfig: BoardConfig = {
     groupByField: "status",
-    orderSyncField: "startDate",
-    headerField: "priority",
-    includeFields: ["type", "priority", "startDate", "dueDate", "assignee", "progress", "tags"],
+    orderSyncField: "deadline",
+    headerField: "client",
+    includeFields: ["client", "value", "deadline", "progress", "tags"],
     columns: {
-      "inbox": { weight: 1 },
-      "todo": { weight: 1 },
-      "doing": { weight: 1.5 },
-      "scheduled": { weight: 1 },
-      "done": { weight: 1, collapse: false },
+      planning:   { weight: 1 },
+      inProgress: { weight: 1.5 },
+      review:     { weight: 1 },
+      done:       { weight: 1, collapse: false },
     },
   };
 
@@ -1572,14 +445,14 @@ export async function createDemoProject(vault: Vault) {
     interval: "week",
     displayMode: "bars",
     startDateField: "startDate",
-    dateField: "date",
-    endDateField: "endDate",
+    dateField: "dueDate",
+    endDateField: "deadline",
     startTimeField: "startTime",
     endTimeField: "endTime",
-    eventColorField: "color",
+    eventColorField: "priority",
     checkField: "completed",
-    startHour: 7,
-    endHour: 22,
+    startHour: 8,
+    endHour: 20,
     timezone: "local",
     timeFormat: "24h",
     agendaOpen: true,
@@ -1589,349 +462,103 @@ export async function createDemoProject(vault: Vault) {
     coverField: "cover",
     fitStyle: "cover",
     cardWidth: 280,
-    includeFields: ["type", "category", "status", "tags"],
+    includeFields: ["client", "status", "value", "deadline"],
   };
 
-  // ============================================================
-  // ПОЛЬЗОВАТЕЛЬСКИЕ СПИСКИ (Custom Agenda Lists)
-  // ============================================================
-
-  const demoAgendaLists: AgendaCustomList[] = [
-    {
-      id: `list-demo-today-${uuidv4().slice(0, 8)}`,
-      name: "🔥 Сегодня",
-      icon: { value: "flame", type: "lucide" },
-      filterMode: "visual",
-      filterGroup: {
-        id: `fg-today-${uuidv4().slice(0, 8)}`,
-        conjunction: "AND",
-        filters: [
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "startDate", operator: "is-today", value: null, enabled: true },
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "completed", operator: "is-not-checked", value: null, enabled: true },
-        ],
-        groups: [],
-      },
-      filterFormula: "",
-      color: "",
-      order: 0,
-    },
-    {
-      id: `list-demo-urgent-${uuidv4().slice(0, 8)}`,
-      name: "⚡ Срочные задачи",
-      icon: { value: "zap", type: "lucide" },
-      filterMode: "visual",
-      filterGroup: {
-        id: `fg-urgent-${uuidv4().slice(0, 8)}`,
-        conjunction: "AND",
-        filters: [
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "priority", operator: "is", value: "high", enabled: true },
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "completed", operator: "is-not-checked", value: null, enabled: true },
-        ],
-        groups: [],
-      },
-      filterFormula: "",
-      color: "#F44336",
-      order: 1,
-    },
-    {
-      id: `list-demo-overdue-${uuidv4().slice(0, 8)}`,
-      name: "⏰ Просроченные",
-      icon: { value: "alarm-clock", type: "lucide" },
-      filterMode: "visual",
-      filterGroup: {
-        id: `fg-overdue-${uuidv4().slice(0, 8)}`,
-        conjunction: "AND",
-        filters: [
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "dueDate", operator: "is-overdue", value: null, enabled: true },
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "completed", operator: "is-not-checked", value: null, enabled: true },
-        ],
-        groups: [],
-      },
-      filterFormula: "",
-      color: "#FF5722",
-      order: 2,
-    },
-    {
-      id: `list-demo-meetings-${uuidv4().slice(0, 8)}`,
-      name: "🤝 Встречи на неделе",
-      icon: { value: "users", type: "lucide" },
-      filterMode: "visual",
-      filterGroup: {
-        id: `fg-meetings-${uuidv4().slice(0, 8)}`,
-        conjunction: "AND",
-        filters: [
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "type", operator: "is", value: "встреча", enabled: true },
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "startDate", operator: "is-this-week", value: null, enabled: true },
-        ],
-        groups: [],
-      },
-      filterFormula: "",
-      color: "#2196F3",
-      order: 3,
-    },
-    {
-      id: `list-demo-inprogress-${uuidv4().slice(0, 8)}`,
-      name: "🚀 В работе",
-      icon: { value: "rocket", type: "lucide" },
-      filterMode: "visual",
-      filterGroup: {
-        id: `fg-inprogress-${uuidv4().slice(0, 8)}`,
-        conjunction: "AND",
-        filters: [
-          { id: `f-${uuidv4().slice(0, 8)}`, field: "status", operator: "is", value: "doing", enabled: true },
-        ],
-        groups: [],
-      },
-      filterFormula: "",
-      color: "#4CAF50",
-      order: 4,
-    },
+  const priorityColors: ColorRule[] = [
+    { color: "#F44336", condition: { field: "priority", operator: "is", value: "high",   enabled: true } },
+    { color: "#FF9800", condition: { field: "priority", operator: "is", value: "medium", enabled: true } },
+    { color: "#4CAF50", condition: { field: "priority", operator: "is", value: "low",    enabled: true } },
   ];
 
-  const agendaConfig: AgendaConfig = {
-    mode: "custom",
-    standard: { inheritCalendarFilters: true },
-    custom: { lists: demoAgendaLists },
+  const fieldConfig: { [field: string]: FieldConfig } = {
+    startDate:  { time: false },
+    deadline:   { time: false },
+    dueDate:    { time: false },
+    signupDate: { time: false },
+    startTime:  { time: true },
+    endTime:    { time: true },
+    status: {
+      statusGroups: {
+        todo:       ["planning", "todo"],
+        inProgress: ["inProgress", "doing", "review"],
+        complete:   ["done"],
+      },
+    },
   };
 
-  // ============================================================
-  // ФИЛЬТРЫ И ЦВЕТОВЫЕ ПРАВИЛА
-  // ============================================================
-
-  // Цветовые правила для Board/Table по приоритету
-  const priorityColorRules: ColorRule[] = [
-    {
-      color: "#F44336",
-      condition: { field: "priority", operator: "is", value: "high", enabled: true },
-    },
-    {
-      color: "#FF9800",
-      condition: { field: "priority", operator: "is", value: "medium", enabled: true },
-    },
-    {
-      color: "#4CAF50",
-      condition: { field: "priority", operator: "is", value: "low", enabled: true },
-    },
-  ];
-
-  const activeTasksFilter: FilterCondition[] = [
-    { field: "completed", operator: "is-not-checked", enabled: true },
-  ];
-
-  // ============================================================
-  // СОЗДАНИЕ ПРОЕКТА
-  // ============================================================
-
+  // 4. Register project with exactly 5 views.
   settings.addProject(
     Object.assign({}, DEFAULT_PROJECT, {
       name: "Демо-проект",
       id: uuidv4(),
-      path: demoFolder,
-      dataSource: {
-        kind: "folder",
-        config: {
-          path: demoFolder,
-          // Flat data stream — all records (generic tasks, workouts,
-          // transactions, clients) live in the same folder. Per-view filters
-          // on `type` field segregate them. Recursive kept for future
-          // user-added subfolders; demo itself does not create any.
-          recursive: true,
-        },
-      },
-      fieldConfig: {
-        startDate: { time: false },
-        date: { time: false },
-        endDate: { time: false },
-        dueDate: { time: false },
-        startTime: { time: true },
-        endTime: { time: true },
-      },
-      agenda: agendaConfig,
+      path: DEMO_FOLDER,
+      dataSource: { kind: "folder", config: { path: DEMO_FOLDER, recursive: false } },
+      fieldConfig,
       views: [
-        // 📋 БАЗА 1 — Операционный обзор (overview-finance template)
+        // 1. Обзор
         Object.assign({}, DEFAULT_VIEW, {
-          name: "📋 База: Обзор",
+          name: "Обзор",
           id: uuidv4(),
           type: "dashboard",
-          config: overviewDatabaseConfig,
+          config: overviewConfig,
           filter: { conjunction: "and", conditions: [] },
-          colors: { conditions: priorityColorRules },
-          sort: { criteria: [{ field: "startDate", order: "asc", enabled: true }] },
+          colors: { conditions: priorityColors },
+          sort: { criteria: [{ field: "deadline", order: "asc", enabled: true }] },
         }),
-
-        // 📋 БАЗА 2 — Kanban+ flow (checklist + task pipeline)
+        // 2. Pipeline
         Object.assign({}, DEFAULT_VIEW, {
-          name: "📋 База: Kanban+",
-          id: uuidv4(),
-          type: "dashboard",
-          config: kanbanDatabaseConfig,
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "type", operator: "is", value: "задача", enabled: true },
-            ],
-          },
-          colors: { conditions: priorityColorRules },
-          sort: { criteria: [{ field: "priority", order: "desc", enabled: true }] },
-        }),
-
-        // 📋 БАЗА 3 — Аналитика и срезы (analytics template)
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "📋 База: Аналитика",
-          id: uuidv4(),
-          type: "dashboard",
-          config: analyticsDatabaseConfig,
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "archived", operator: "is-not-checked", enabled: true },
-            ],
-          },
-          colors: { conditions: priorityColorRules },
-          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
-        }),
-
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "📌 Доска",
+          name: "Pipeline",
           id: uuidv4(),
           type: "board",
           config: boardConfig,
-          filter: { conjunction: "and", conditions: activeTasksFilter },
-          colors: { conditions: priorityColorRules },
-          sort: { criteria: [{ field: "priority", order: "desc", enabled: true }] },
+          filter: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "project", enabled: true }] },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "deadline", order: "asc", enabled: true }] },
         }),
-
+        // 3. График
         Object.assign({}, DEFAULT_VIEW, {
-          name: "📅 Календарь",
+          name: "График",
           id: uuidv4(),
           type: "calendar",
           config: calendarConfig,
-          filter: { conjunction: "and", conditions: [] },
-          colors: { conditions: [] },
+          filter: {
+            conjunction: "or",
+            conditions: [
+              { field: "type", operator: "is", value: "meeting", enabled: true },
+              { field: "type", operator: "is", value: "task", enabled: true },
+            ],
+          },
+          colors: { conditions: priorityColors },
           sort: { criteria: [] },
         }),
-
+        // 4. Клиенты
         Object.assign({}, DEFAULT_VIEW, {
-          name: "🖼️ Галерея",
+          name: "Клиенты",
+          id: uuidv4(),
+          type: "dashboard",
+          config: clientsConfig,
+          filter: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "client", enabled: true }] },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "mrr", order: "desc", enabled: true }] },
+        }),
+        // 5. Портфолио
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "Портфолио",
           id: uuidv4(),
           type: "gallery",
           config: galleryConfig,
           filter: {
             conjunction: "and",
             conditions: [
+              { field: "type", operator: "is", value: "project", enabled: true },
               { field: "cover", operator: "is-not-empty", enabled: true },
             ],
           },
-          colors: { conditions: priorityColorRules },
-          sort: { criteria: [{ field: "status", order: "asc", enabled: true }] },
-        }),
-
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "🎯 Задачи",
-          id: uuidv4(),
-          type: "board",
-          config: {
-            ...boardConfig,
-            groupByField: "priority",
-          },
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "type", operator: "is", value: "задача", enabled: true },
-              { field: "completed", operator: "is-not-checked", enabled: true },
-            ],
-          },
           colors: { conditions: [] },
-          sort: { criteria: [{ field: "dueDate", order: "asc", enabled: true }] },
-        }),
-
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "🤝 Встречи",
-          id: uuidv4(),
-          type: "calendar",
-          config: {
-            ...calendarConfig,
-            interval: "week",
-          },
-          filter: {
-            conjunction: "or",
-            conditions: [
-              { field: "type", operator: "is", value: "встреча", enabled: true },
-              { field: "type", operator: "is", value: "презентация", enabled: true },
-            ],
-          },
-          colors: { conditions: [] },
-          sort: { criteria: [] },
-        }),
-
-        // ── Industry verticals (3 parallel database views) ────────────
-        // Each vertical is a database view filtered by the `type` frontmatter
-        // field. Records live flat in demoFolder — view.filter is the ONLY
-        // segregation mechanism (DATA FLOW OVER FOLDERS).
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "🏋️ Фитнес",
-          id: uuidv4(),
-          type: "dashboard",
-          config: fitnessDatabaseConfig,
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "type", operator: "is", value: "workout", enabled: true },
-            ],
-          },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
-        }),
-
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "💰 Финансы",
-          id: uuidv4(),
-          type: "dashboard",
-          config: financeDatabaseConfig,
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "type", operator: "is", value: "transaction", enabled: true },
-            ],
-          },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
-        }),
-
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "👥 CRM",
-          id: uuidv4(),
-          type: "dashboard",
-          config: crmDatabaseConfig,
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "type", operator: "is", value: "client", enabled: true },
-            ],
-          },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "stage", order: "asc", enabled: true }] },
-        }),
-
-        // #043 / Phase 5 — Cross-widget Selection demo (free layout so
-        // WindowShell renders the SelectionBadge slot; click on a Chart
-        // segment narrows DataTable rows and Stats aggregates live).
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "🔗 Cross-widget Demo",
-          id: uuidv4(),
-          type: "dashboard",
-          config: crossWidgetDemoConfig,
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "type", operator: "is", value: "client", enabled: true },
-            ],
-          },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "stage", order: "asc", enabled: true }] },
+          sort: { criteria: [{ field: "deadline", order: "desc", enabled: true }] },
         }),
       ],
     })
   );
 }
-

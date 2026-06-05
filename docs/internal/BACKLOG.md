@@ -429,8 +429,37 @@ overflow handling tab strip (commit `8e22ec1`).
 - Status: 📋 BACKLOG | Milestone: M-V35-HOTFIX-UX | Priority: P2 | Complexity: XS
 
 ### #043 — Demo project uses outdated/irrelevant configs
-- Status: 📋 BACKLOG (Strategy: REGEN vault data, не код) — блокирует Phase 1 #016 repro
+- Status: ✅ DONE (2026-05-21) — initial demo regen shipped as `feat/043-*` (см. Завершённые milestones, CONTEXT.md)
 - Milestone: M-V35-HOTFIX-UX | Priority: P1 | Complexity: M
+
+---
+
+## Milestone M-UX — 🔄 ACTIVE
+
+### #046 — Demo project full refactor (single coherent domain, 5 views, <700 LOC)
+- Status: 🔄 IN-PROGRESS (2026-05-27) — branch `feat/046-demo-project-refactor`
+- Milestone: M-UX | Priority: P2 | Complexity: M
+- analysis_required: false
+- Depends on: #043 (✅) — supersedes initial demo content/structure
+- Blocks: none
+
+Goal: collapse current 67-file / 12-view mishmash demo (fitness + finance + CRM + RU tasks) into a single coherent **B2B agency / studio** domain with ~28-30 files and exactly **5 views** (Обзор / Pipeline / График / Клиенты / Портфолио). `demoProject.ts` must drop from 1937 LOC → <700 LOC; `demoVerticals.ts` removed or compressed to <100 LOC.
+
+Entities (canonical schema):
+- **Client** (~6 files): name, industry, stage, mrr, signupDate
+- **Project** (~8 files): name, client (→Client), value, startDate, deadline, status, progress
+- **Task** (~10 files): title, project (→Project), assignee, dueDate, priority, status, estimate
+- **Meeting** (~4-6 files): title, client (→Client), startDate, startTime, endTime, participants
+
+Views:
+1. Обзор — Stats + Chart + DataTable + SummaryRow (dashboard)
+2. Pipeline — board grouped by Project.status
+3. График — calendar (meetings + task deadlines)
+4. Клиенты — dashboard with DataTable, rollup MRR sum
+5. Портфолио — gallery (projects with covers)
+
+Acceptance:
+- `demoProject.ts` <700 LOC; total demo files 25-32; views exactly 5; every project file has valid relation to a client; tests updated; baseline +delta; tsc 0; build OK; PX ≤186.
 
 ---
 
