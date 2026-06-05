@@ -7,6 +7,7 @@
    * Each tab stores its own config so switching preserves state.
    */
   import { createEventDispatcher } from "svelte";
+  import { Icon } from "obsidian-svelte";
   import type { ViewTab } from "../../types";
 
   export let tabs: ViewTab[];
@@ -20,14 +21,14 @@
   }>();
 
   const VIEW_ICONS: Record<ViewTab["viewType"], string> = {
-    table: "⊞",
-    board: "⬜",
-    calendar: "📅",
-    gallery: "🖼",
-    list: "☰",
-    timeline: "━",
-    chart: "📊",
-    stats: "📈",
+    table: "table",
+    board: "columns",
+    calendar: "calendar",
+    gallery: "layout-grid",
+    list: "list",
+    timeline: "gantt-chart",
+    chart: "bar-chart-2",
+    stats: "trending-up",
   };
 
   function handleTabClick(id: string) {
@@ -47,7 +48,9 @@
       aria-controls="ppp-tab-panel-{tab.id}"
       on:click={() => handleTabClick(tab.id)}
     >
-      <span class="ppp-view-tab-icon" aria-hidden="true">{VIEW_ICONS[tab.viewType]}</span>
+      <span class="ppp-view-tab-icon" aria-hidden="true">
+        <Icon name={VIEW_ICONS[tab.viewType] ?? "layout-grid"} size={14} />
+      </span>
       <span class="ppp-view-tab-label">{tab.label}</span>
     </button>
   {/each}
@@ -99,8 +102,9 @@
   }
 
   .ppp-view-tab-icon {
-    font-size: 0.875rem;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   .ppp-view-tab-label {

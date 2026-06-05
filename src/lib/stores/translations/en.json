@@ -743,7 +743,7 @@
                 "empty": "This view is empty."
             },
             "dashboard": {
-                "name": "Database",
+                "name": "Dashboard",
                 "add-row": "New note",
                 "sub-bases": {
                     "tablist": "Sub-bases",

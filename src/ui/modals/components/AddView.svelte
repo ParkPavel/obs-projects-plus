@@ -26,23 +26,37 @@
   export let project: ProjectDefinition;
 
   let name: string = "";
-  let type: ViewType = "database";
+  let type: ViewType = "dashboard";
 
-  const options = Object.values($customViews).map((view) => {
-    if (
-      ["table", "board", "calendar", "gallery", "database"].includes(view.getViewType()) // Maybe we need a enum of integrated view types here
-    ) {
-      return {
-        label: $i18n.t(["views", view.getViewType(), "name"].join(".")),
-        value: view.getViewType(),
-      };
-    } else {
-      return {
-        label: view.getDisplayName(),
-        value: view.getViewType(),
-      };
-    }
-  });
+  // Deduplicate by viewType: view.ts registers both "dashboard" and "database"
+  // keys pointing at the same DashboardView instance for v3-save compat.
+  // Object.values() returns the same instance twice → two "Dashboard" entries.
+  // Fix: collect unique viewTypes first, then map to options.
+  const BUILT_IN_VIEW_TYPES = ["table", "board", "calendar", "gallery", "database", "dashboard"];
+  const seenTypes = new Set<string>();
+  const options = Object.values($customViews)
+    .filter((view) => {
+      const t = view.getViewType();
+      if (seenTypes.has(t)) return false;
+      seenTypes.add(t);
+      return true;
+    })
+    .map((view) => {
+      const t = view.getViewType();
+      // Normalize legacy "database" key to canonical "dashboard"
+      const canonical = t === "database" ? "dashboard" : t;
+      if (BUILT_IN_VIEW_TYPES.includes(t)) {
+        return {
+          label: $i18n.t(["views", canonical, "name"].join(".")),
+          value: canonical,
+        };
+      } else {
+        return {
+          label: view.getDisplayName(),
+          value: canonical,
+        };
+      }
+    });
 
   $: selectedOption = options.find((option) => option.value === type);
 
