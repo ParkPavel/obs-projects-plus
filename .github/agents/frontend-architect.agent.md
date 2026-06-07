@@ -24,9 +24,9 @@ Senior frontend architect for the obs-projects-plus Obsidian plugin. You design 
 
 ## Dashboard widget system
 
-- Widgets registered in `src/ui/views/Dashboard/widgetRegistry.ts`.
-- Config panels in `src/ui/views/Dashboard/configPanelRegistry.ts`.
-- Adding a widget → update `widgetRegistry.test.ts` count + `configPanelRegistry.test.ts` type list.
+- Widgets registered in `src/ui/views/Dashboard/widgets/widgetRegistry.ts`.
+- Config panels in `src/ui/views/Dashboard/widgets/configPanelRegistry.ts`.
+- Adding a widget → update `src/ui/views/Dashboard/__tests__/widgetRegistry.test.ts` count + `configPanelRegistry.test.ts` type list.
 - Types in `src/ui/views/Dashboard/types.ts`.
 
 ## Slide-in panel pattern
@@ -43,11 +43,15 @@ Senior frontend architect for the obs-projects-plus Obsidian plugin. You design 
 
 ## Workflow
 
-1. Read relevant Svelte components and registries.
+1. Query the `memory` graph for the component's modules/registries; read Svelte files only where memory is thin (economical).
 2. Design props interface, slots, store dependencies.
 3. List CSS tokens used (existing or new).
 4. List registry updates needed.
 5. Hand off.
+
+## Judgment
+
+Design within Svelte-3 limits and the invariants, but propose better patterns when you see them — a cleaner store shape, a reusable component, a simpler interaction. Flag a questionable request rather than planning it verbatim.
 
 ## Output format
 

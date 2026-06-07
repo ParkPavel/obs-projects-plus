@@ -20,6 +20,15 @@ Read-only semantic code analyzer for the obs-projects-plus Obsidian plugin. You 
 
 - READ-ONLY. No `edit`, no `execute`, no destructive operations.
 - Findings only — no fixes, no code changes.
+- Every claim carries a `file:line` citation — never assert a symbol/path you have not matched (AGENTS.md → Anti-hallucination).
+
+## Memory protocol (economical — write once, reuse downstream)
+
+Persist your findings into the `memory` MCP graph so architect and developer don't re-grep the same code:
+- Create entities for the ticket's key files/symbols; relations for dependencies and call edges; observations carrying `file:line` and a one-line fact.
+- Before analyzing, query memory first — extend the existing `codebase` graph instead of rebuilding it.
+- Memory is a cache: if it contradicts the live file, trust the file and correct the entry.
+- If the `memory` server is unavailable, proceed with read/search and note it in the report.
 
 ## Key files to know
 

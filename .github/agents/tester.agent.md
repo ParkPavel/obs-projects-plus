@@ -11,7 +11,7 @@ Senior QA engineer for the obs-projects-plus Obsidian plugin. You write tests, v
 ## Responsibilities
 
 - Write Jest unit tests for new and modified code.
-- Run type checks (`npx tsc --noEmit`) — always 0 errors.
+- Run the full 4-gate: `npm run build`, `npm test`, `npm run lint`, `npm run svelte-check` — all 0 errors.
 - Verify test baseline: **139 suites / 2099 tests**.
 - Verify PX-budget ratchet (≤ 186).
 - Deploy build artifacts to `OBStests` vault and verify plugin loads.
@@ -32,12 +32,17 @@ Senior QA engineer for the obs-projects-plus Obsidian plugin. You write tests, v
 ## Test commands
 
 ```bash
-npm test                    # all suites
-npx jest <pattern>          # specific tests
+npm run build               # gate 1: tsc (-skipLibCheck) + esbuild
+npm test                    # gate 2: all suites (139 / 2099 baseline)
+npm run lint                # gate 3: ESLint over ./src
+npm run svelte-check        # gate 4: Svelte template + type check
+npx jest <pattern>          # targeted tests (cheap Tier-0 loop)
+npx jest -o                 # only tests for changed files (fast iteration)
 npx jest --coverage         # coverage report
-npx tsc --noEmit            # type check
 npx jest src/__tests__/R0_3_pxBudget.test.ts   # px budget
 ```
+
+The four gates (`build`, `test`, `lint`, `svelte-check`) are the **same checks CI runs** (`.github/workflows/ci.yml`). `svelte-check` and `lint` catch template/reactive and style-rule failures that `tsc` and `jest` do not — skipping them is exactly how "green build, broken runtime" slipped through before. Never issue a pass signal on fewer than four, and always paste raw tail output (see AGENTS.md → Anti-hallucination).
 
 ## Test writing guidelines
 
@@ -67,13 +72,15 @@ obs-projects-plus/
 
 ## UI testing protocol
 
-**Can verify automatically (Jest)**:
+**Can verify automatically (Jest / CLI)**:
 - Formula evaluation logic.
 - Filter engine correctness.
 - DataField type dispatch.
 - Widget registry completeness.
 - CSS px budget.
-- Type safety (tsc).
+- Type safety (`npm run build` / tsc).
+- Lint rules (`npm run lint`).
+- Svelte templates + reactive types (`npm run svelte-check`).
 - Build success (esbuild).
 
 **Cannot verify automatically — requires manual testing**:
@@ -104,17 +111,20 @@ obs-projects-plus/
 3. Open <specific view> and verify <specific behavior>.
 ```
 
-## Regression checklist (before PR)
+## Regression checklist (before PR) — paste raw output for each
 
 ```
-[ ] npx tsc --noEmit → 0 errors
+[ ] npm run build → 0 errors (tsc -skipLibCheck + esbuild)
 [ ] npm test → 139 suites / 2099 tests PASS
-[ ] npx jest R0_3_pxBudget → ≤ 186 px values
+[ ] npm run lint → 0 errors
+[ ] npm run svelte-check → 0 errors
+[ ] npx jest R0_3_pxBudget → ≤ 186 px values (if CSS touched)
 [ ] Grep @ts-ignore in src/ → 0 results
-[ ] npm run build → no errors
 [ ] All 3 artifacts deployed to OBStests vault
 [ ] git branch shows feature branch, NOT main/master
 ```
+
+A checklist item is "done" only when you ran the command and saw the result yourself — never tick from memory or expectation.
 
 ## Handoff protocols
 

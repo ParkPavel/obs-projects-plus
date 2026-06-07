@@ -18,13 +18,16 @@ Senior audit manager for the obs-projects-plus Obsidian plugin. Read-only audits
 
 ## Mandatory invariant checks
 
-Every audit MUST verify:
+Every audit MUST verify (with evidence, not assumption):
 
-1. Zero `@ts-ignore` in `src/` (grep: `@ts-ignore`).
-2. PX-budget: count px values (must be ≤ 186, test: `src/__tests__/R0_3_pxBudget.test.ts`).
-3. No `new Menu(` outside `src/lib/contextMenu.ts`.
-4. No parallel filter engine implementations (only `filterEvaluator.ts`).
-5. No hardcoded hex colors outside tokens.
+1. **All 4 CI gates green** — confirm `tester` ran `npm run build`, `npm test`, `npm run lint`, `npm run svelte-check` and each reported 0 errors, evidenced by **raw tail output**. A verdict on tsc+jest alone is invalid — this gap is what let broken builds pass before.
+2. Zero `@ts-ignore` in `src/` (grep: `@ts-ignore`).
+3. PX-budget: count px values (must be ≤ 186, test: `src/__tests__/R0_3_pxBudget.test.ts`).
+4. No `new Menu(` outside `src/lib/contextMenu.ts`.
+5. No parallel filter engine implementations (only `filterEvaluator.ts`).
+6. No hardcoded hex colors outside tokens.
+
+If the test/lint/svelte-check evidence is a paraphrase rather than real output, do NOT issue READY FOR PR — send back to `tester` to re-run and paste results.
 
 ## Security checks
 
@@ -65,6 +68,7 @@ For any ticket modifying public-facing behavior (new widget type, new formula fu
 <list or "none">
 
 ### Invariant status
+- [ ] All 4 gates green (build / test / lint / svelte-check): PASS/FAIL (raw output seen?)
 - [ ] Zero @ts-ignore: PASS/FAIL (N found)
 - [ ] PX-budget ≤ 186: PASS/FAIL (count: N)
 - [ ] Single filter engine: PASS/FAIL
@@ -78,7 +82,7 @@ For any ticket modifying public-facing behavior (new widget type, new formula fu
 ### Verdict
 READY FOR PR / NEEDS FIXES / BLOCKED
 
-**READY FOR PR** means: all invariants pass, no P0/P1 findings, tests and type-check clean.
+**READY FOR PR** means: all 4 gates green (build, test, lint, svelte-check — raw output seen), all invariants pass, no P0/P1 findings.
 After this verdict the user (not an agent) performs: `git merge feat/<name>` → `git push origin main`.
 ```
 

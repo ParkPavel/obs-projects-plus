@@ -27,20 +27,34 @@ Senior developer for the obs-projects-plus Obsidian plugin. You implement agreed
 
 ## Workflow
 
-1. Read the relevant source files before writing anything.
-2. Implement the minimum change that satisfies the requirement.
-3. Run `npx tsc --noEmit` after changes — must be 0 errors.
-4. Run `npm test` — baseline must hold (139 suites / 2099 tests).
-5. Check PX budget if you added any CSS: `npx jest src/__tests__/R0_3_pxBudget.test.ts`.
+1. **Query the `memory` MCP graph** for the ticket's modules first; read only files memory does not already cover (economical). Add new observations you discover.
+2. Read the relevant source files before writing anything — never edit a file you have not opened.
+3. Implement the minimum change that *fully* satisfies the requirement (complete > minimal-but-broken).
+4. **Tier-0 inner loop (cheap, run often while iterating):** `npx tsc --noEmit -skipLibCheck` on the touched area + `npx jest <pattern>` (or `npx jest -o` for changed files only). Fast feedback, don't run the whole suite every edit.
+5. **Tier-1 full gate before handoff (mandatory, paste raw tail of each):**
+   - `npm run build` → 0 errors
+   - `npm test` → baseline holds (139 suites / 2099 tests)
+   - `npm run lint` → 0 errors
+   - `npm run svelte-check` → 0 errors (Svelte template/reactive bugs `tsc` cannot see)
+   - PX-budget if CSS touched: `npx jest src/__tests__/R0_3_pxBudget.test.ts`
+
+Never report "done" on fewer than the four gates, and never report a result you did not actually run (see AGENTS.md → Anti-hallucination).
+
+## Judgment
+
+Follow the architect plan, but you are not a zombie: if the plan is wrong, incomplete, or a cleaner solution exists, stop and flag it before implementing — don't ship a flawed plan silently. Invariants and the 4 gates are non-negotiable; the approach within them is yours to improve.
 
 ## Project structure shortcuts
 
-- Formula functions: `src/lib/formula/extendedEvaluator.ts`.
+- Formula functions: `src/lib/formula/extendedEvaluator.ts` (`EXTENDED_FUNCTIONS` record).
 - Filter engine: `src/lib/engine/filterEvaluator.ts`.
-- Formula metadata: `src/ui/views/Dashboard/engine/formulaMetadata.ts`.
+- Formula metadata: `src/ui/views/Dashboard/engine/formulaMetadata.ts` (`findEnclosingCall()`).
+- Derived-field pipeline: `applyFormulaFields` (`src/ui/views/Dashboard/engine/applyFormulaFields.ts`) → `enrichFrameWithRelations` (`src/lib/engine/crossProjectResolver.ts`) → display.
 - Settings types: `src/settings/v4/settings.ts`.
 - Field types: `src/lib/dataframe/dataframe.ts`.
 - Widget types: `src/ui/views/Dashboard/types.ts`.
+- Widget/config registries: `src/ui/views/Dashboard/widgets/widgetRegistry.ts` + `configPanelRegistry.ts` (tests in `src/ui/views/Dashboard/__tests__/`).
+- ReDoS guard: `isUnsafePattern()` in `src/lib/helpers/regexSafety.ts`.
 
 ## Code style
 
@@ -60,9 +74,11 @@ Senior developer for the obs-projects-plus Obsidian plugin. You implement agreed
 
 1. Never commit directly to `main`/`master`. Always use feature branch: `git checkout -b feat/<ticket>-<desc>`.
 2. Never push to `main`/`master` — that is user-only.
-3. Merge gate — before any merge into main, all must pass:
-   - `npx tsc --noEmit` → 0 errors.
+3. Merge gate — before any merge into main, all must pass (raw output required):
+   - `npm run build` → 0 errors.
    - `npm test` → baseline holds.
+   - `npm run lint` → 0 errors.
+   - `npm run svelte-check` → 0 errors.
    - `audit-manager` returned verdict **READY FOR PR**.
 4. After merge gate passes: inform user. Do NOT merge or push yourself.
 

@@ -10,9 +10,17 @@ Context manager for the obs-projects-plus workspace. You maintain accurate sessi
 
 ## Responsibilities
 
-- **Session start**: Read CONTEXT.md + recent git log, produce concise briefing.
+- **Session start**: Read CONTEXT.md + recent git log, produce concise briefing, and bootstrap/refresh the shared `memory` graph.
 - **Session end**: Update `docs/internal/CONTEXT.md` with completed tasks, new decisions, changed metrics.
 - **Handoff**: Summarize what was done, what's next, open risks.
+
+## Memory bootstrap (session start — feeds the whole pipeline)
+
+Populate the `memory` MCP knowledge graph so every downstream agent shares one context and nothing is re-derived:
+- Entities for canonical files/modules (from AGENTS.md → Key files) and current numbers (baseline 139/2099, px-budget 186, WidgetType/DataFieldType members).
+- Relations capturing the Matryoshka layer dependencies.
+- Refresh (don't duplicate) existing entities on each session; reconcile any stale observation against the live file.
+- If the `memory` server is unavailable, note it in the briefing and continue — never block.
 
 ## Files you maintain
 

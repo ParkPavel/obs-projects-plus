@@ -1,7 +1,7 @@
 ﻿# Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-05 (#047 audit/icon-sweep ✅ DONE awaiting merge, #046 ✅ DONE awaiting merge, #044 ✅ DONE, #045 ✅ DONE, M-DATAVIEW-BRIDGE ✅ DONE, baseline 139/2099)
+> **Updated**: 2026-06-07 (#049 added P0 — fix lint+svelte-check baseline; #047/#046 ✅ DONE merged, #044 ✅ DONE, #045 ✅ DONE, M-DATAVIEW-BRIDGE ✅ DONE, baseline 139/2099 jest — but lint/svelte-check RED, see #049)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -514,6 +514,34 @@ Users have no way to create filter-based ("virtual") databases from the UI.
 - Wire to `nativeQuery.ts` on save
 - Add/update translations in `en.json` + `ru.json`
 - Write test covering the new option renders correctly
+
+### #049 — Restore green CI baseline: fix ESLint + svelte-check errors
+- Status: 📋 BACKLOG
+- Milestone: M-UX | Priority: P0 | Complexity: M
+- analysis_required: true
+- analysis_done: false
+- Depends on: none
+- Blocks: clean PRs for all subsequent tickets
+
+**Context**: Discovered during agent-system semantic audit (2026-06-07). CI (`.github/workflows/ci.yml`) gates merge on FOUR checks — `build`, `test`, `lint`, `svelte-check` — but two were red while `tsc`+`jest` were green:
+- `npm run lint` → **55 errors, 130 warnings** (e.g. `obsidianmd/no-tfile-tfolder-cast`, tsdoc tags)
+- `npm run svelte-check` → **72 errors, 4 warnings in 26 files** (e.g. `Unexpected token (ts)` in `FieldSettingsPanel.svelte:174`, inline `as`-casts in markup)
+
+This is the root cause of prior "build looked green but runtime broke" hallucinations: agents only gated on `tsc`+`jest`. Agent configs are now fixed to run all 4 gates; this ticket fixes the actual code so the baseline is green.
+
+**Scope**:
+- Triage: categorize the 55 ESLint + 72 svelte-check errors by rule/file (analysis phase).
+- Fix `as`-cast-in-template errors (move casts into `<script>` or use type guards).
+- Apply `instanceof TFile`/`TFolder` narrowing instead of casts (lint rule `obsidianmd/no-tfile-tfolder-cast`).
+- Resolve or correctly suppress tsdoc warnings (`@since` tag config).
+- Do NOT introduce `@ts-ignore`. Fix types properly.
+
+**Acceptance**:
+- `npm run lint` → 0 errors (warnings ideally 0, document any deferred).
+- `npm run svelte-check` → 0 errors.
+- `npm test` → baseline holds (139/2099).
+- `npm run build` → 0 errors.
+- No new `@ts-ignore`; PX-budget ≤ 186.
 
 ---
 

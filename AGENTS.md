@@ -17,13 +17,65 @@ Obsidian plugin: project management with Database (12 widget types, 115+ formula
 ## Commands
 
 ```bash
-npm run build       # tsc check + esbuild bundle (production)
-npm test            # full jest suite
-npm run test:watch  # jest watch mode
-npx tsc --noEmit    # type check only
+npm run build         # tsc -noEmit -skipLibCheck + esbuild bundle (production)
+npm test              # full jest suite (139 suites / 2099 tests)
+npm run lint          # ESLint over ./src
+npm run svelte-check  # Svelte template + type check
+npm run test:watch    # jest watch mode
+npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
 Test baseline: **139 suites / 2099 tests PASS**, tsc 0 errors. (Updated 2026-06-05.) Any deviation must be acknowledged before merge.
+
+## Verification protocol — the 4 gates (canonical)
+
+CI (`.github/workflows/ci.yml`) gates merge into `main` on **four** checks. An agent that runs fewer than four and reports "ready" is producing a false signal — this was the root cause of past "build looked green but runtime broke" failures. The full gate is exactly:
+
+```bash
+npm run build         # 1. tsc (-skipLibCheck) + esbuild — 0 errors
+npm test              # 2. jest — baseline holds (≥ 139 suites / 2099 tests)
+npm run lint          # 3. ESLint — 0 errors
+npm run svelte-check  # 4. svelte-check — 0 errors  ← catches template/reactive bugs tsc cannot
+```
+
+`svelte-check` and `lint` are NOT optional. `tsc` alone never validates `.svelte` templates. No "READY FOR PR" verdict is valid unless all four are green, evidenced by **pasted raw tail output**, not a paraphrase.
+
+## Economical verification (tiered — fast loop, full gate)
+
+Running all four gates after every micro-edit is wasteful (full suite ≈ 20s). Use tiers:
+
+- **Tier 0 — inner loop (cheap, run often):** `npx tsc --noEmit -skipLibCheck` on the touched area + `npx jest <pattern>` for only the affected test files (or `npx jest -o` for changed-since-commit). Use while iterating.
+- **Tier 1 — full gate (run once before any handoff / PR):** the complete 4-gate block above. Mandatory before `tester → audit-manager` handoff and before any "ready" claim.
+
+Spend cycles where they catch bugs: type-check the file you changed every edit; run the whole suite only at the gate.
+
+## MCP memory — shared code context (avoid re-analysis, avoid missed detail)
+
+The `memory` MCP server (knowledge graph: entities, relations, observations) is the pipeline's shared brain. Use it so context survives agent handoffs and nothing gets re-derived from scratch:
+
+- **context-manager** (session start): bootstrap/refresh a `codebase` graph — key modules, canonical files, the DataFieldType/WidgetType unions, current baseline numbers — as memory entities.
+- **semantic-analyzer**: write findings (file→symbol→dependency edges, anti-pattern hits) into memory as entities/relations with `file:line` observations. Downstream agents read these instead of re-grepping — this is the main economy win.
+- **architects / senior-developer**: **query memory first** for the ticket's modules before reading files; only open files memory does not already cover. Add new observations you discover.
+- Memory is a cache, not truth: if an observation contradicts the live file, trust the file and correct the memory entry.
+
+If the `memory` server is unavailable, agents fall back to direct read/search and say so — never block on it.
+
+## Anti-hallucination rules (all agents)
+
+1. **Read before you assert.** Never claim a file, function, type, or path exists without having opened it or matched it via search. Cite `file:line`.
+2. **Run before you report.** Never state a command's result (test count, "0 errors", "passes") you did not actually execute. Paste the raw tail, not a summary you expect.
+3. **Verify paths.** Before referencing a path, confirm it resolves. Registry files live under `src/ui/views/Dashboard/widgets/`, tests under `src/ui/views/Dashboard/__tests__/`.
+4. **No invented numbers.** Baseline, px-budget, function counts come from running the tool, not memory.
+5. **Surface uncertainty.** "I could not verify X" beats a confident wrong answer. Escalate instead of guessing.
+
+## Creative judgment (don't be a rule-following zombie)
+
+The gates and invariants are hard constraints. Everything else is yours to reason about:
+
+- If the approved plan is wrong, or a simpler/cleaner solution exists, **say so and propose the alternative** before implementing — don't silently follow a flawed plan.
+- Question tickets that conflict with the architecture; suggest better decompositions.
+- Prefer the smallest change that fully solves the problem, but a *complete correct* solution beats a *minimal incomplete* one.
+- Invariants and the 4 gates are non-negotiable; approach, structure, and design within them are open to better ideas.
 
 ## Architecture overview
 
@@ -89,6 +141,7 @@ yaml-visualizer | database-call
 
 - Config: `jest.config.js`.
 - Mocks: `src/__mocks__/`, `src/ui/views/Dashboard/widgets/__tests__/mocks/`.
+- Registry files: `src/ui/views/Dashboard/widgets/widgetRegistry.ts` + `configPanelRegistry.ts`; their tests: `src/ui/views/Dashboard/__tests__/widgetRegistry.test.ts` + `configPanelRegistry.test.ts`.
 - Adding a widget → update `widgetRegistry.test.ts` count AND `configPanelRegistry.test.ts` type list.
 - Adding a `DataFieldType` value → check exhaustive switch branches.
 - Adding CSS px values → run `npx jest src/__tests__/R0_3_pxBudget.test.ts` (must stay ≤ 186).
@@ -98,9 +151,11 @@ yaml-visualizer | database-call
 - Never commit directly to `main`/`master` — feature branches only (`feat/<desc>` or `fix/<desc>`).
 - Never `git push` from an agent — user controls remote.
 - Never `--force` push, `git reset --hard`, or destructive rm — move to archive instead.
-- Merge gate (before user-performed merge):
-  - `npx tsc --noEmit` → 0 errors
+- Merge gate (before user-performed merge) — all 4 gates green + verdict:
+  - `npm run build` → 0 errors
   - `npm test` → baseline holds
+  - `npm run lint` → 0 errors
+  - `npm run svelte-check` → 0 errors
   - audit-manager subagent verdict `READY FOR PR`
 
 ## Code style
