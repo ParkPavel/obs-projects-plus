@@ -51,13 +51,16 @@ npx jest src/__tests__/R0_3_pxBudget.test.ts   # px budget
 
 ## Deployment protocol (mandatory after any build)
 
-After `npm run build` succeeds, copy ALL THREE artifacts to the OBStests vault:
+After `npm run build` succeeds, copy ALL THREE artifacts to the OBStests vault.
+The vault lives alongside the repo at `../OBStests/` (sibling of the repo root).
+Resolve `$VAULT = ../OBStests/.obsidian/plugins/obs-projects-plus/` relative to
+the repo; override via the `OBSTESTS_VAULT` env var if your layout differs.
 
 ```
-obs-projects-plus\
-  main.js       → C:\Users\Park\OBSv1.0\OBStests\.obsidian\plugins\obs-projects-plus\main.js
-  styles.css    → C:\Users\Park\OBSv1.0\OBStests\.obsidian\plugins\obs-projects-plus\styles.css
-  manifest.json → C:\Users\Park\OBSv1.0\OBStests\.obsidian\plugins\obs-projects-plus\manifest.json
+obs-projects-plus/
+  main.js       → $VAULT/main.js
+  styles.css    → $VAULT/styles.css
+  manifest.json → $VAULT/manifest.json
 ```
 
 **Never copy only main.js** — `styles.css` carries CSS tokens and UI layout; `manifest.json` declares version and capabilities. Missing either causes broken UI.

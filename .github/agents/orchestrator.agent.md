@@ -35,7 +35,7 @@ If no open tickets exist: report "No open tickets — pipeline complete" and sto
 
 Check existing feature branch for `SELECTED_TICKET`:
 ```
-git -C c:\Users\Park\OBSv1.0\obs-projects-plus branch --list "feat/<TICKET>*" "fix/<TICKET>*"
+git branch --list "feat/<TICKET>*" "fix/<TICKET>*"
 ```
 - Exists → checkout it.
 - Does not exist → `git checkout -b feat/<TICKET>-<short-desc>`.
