@@ -22,7 +22,7 @@ Execute steps in order. Do not skip. Do not pass a failed gate.
 
 ### STEP 1 — Briefing (delegate: `context-manager`)
 
-Spawn `context-manager` with: "Produce a session briefing. Read `.ai_internal/CONTEXT.md`, run `git log -5` and `git status`, report active phase, current branch, top 3 tickets by priority, open risks, Jest baseline."
+Spawn `context-manager` with: "Produce a session briefing. Read `docs/internal/CONTEXT.md`, run `git log -5` and `git status`, report active phase, current branch, top 3 tickets by priority, open risks, Jest baseline."
 
 Extract:
 - `SELECTED_TICKET` — highest-priority open ticket (P0 → P1 → P2).
@@ -126,7 +126,7 @@ Do not proceed without explicit user confirmation that merge and push are comple
 
 ### STEP 9 — Context update (delegate: `context-manager`)
 
-After user confirms: spawn `context-manager` with: "Update `.ai_internal/CONTEXT.md`: move ticket <TICKET> to completed table with today's date. Update active tickets list. Update timestamp."
+After user confirms: spawn `context-manager` with: "Update `docs/internal/CONTEXT.md`: move ticket <TICKET> to completed table with today's date. Update active tickets list. Update timestamp."
 
 ## Error handling
 

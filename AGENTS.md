@@ -122,13 +122,18 @@ This repo defines a 9-agent Copilot system in `.github/agents/`. Only `orchestra
 - `senior-designer` — UX/CSS tokens.
 - `tester` — Jest + tsc + deployment to `OBStests` vault.
 - `audit-manager` — pre-PR invariant and security audit.
-- `context-manager` — maintains session state and CONTEXT.md.
+- `context-manager` — maintains session state and `docs/internal/CONTEXT.md`.
 
 Invoke pipeline with `/run-pipeline` or by saying "start work" / "take the next ticket".
+
+## Project state files
+
+- `docs/internal/CONTEXT.md` — canonical session/project state (version-controlled, team-shared). Maintained by `context-manager`. Path is relative to repo root — no machine-specific absolute paths.
+- `docs/internal/BACKLOG.md` — ticket backlog (`#NNN`, P0–P3, XS–XL). Source of truth for what to work on next.
 
 ## Additional configuration files
 
 - `.github/instructions/` — file-scoped instructions auto-loaded by `applyTo` glob.
-- `.github/prompts/` — slash-command shortcuts (`/run-pipeline`, `/pre-pr-audit`).
+- `.github/prompts/` — slash-command shortcuts (`/run-pipeline`, `/pre-pr-audit`, `/spec-new-feature`, `/backlog-to-issues`).
 - `.github/hooks/invariants.json` — deterministic gates blocking `@ts-ignore` and direct main commits.
 - `.vscode/mcp.json` — MCP server registrations (github, fetch, obsidian, memory, filesystem). Requires env vars `GITHUB_PERSONAL_ACCESS_TOKEN` and `OBSIDIAN_API_KEY`.

@@ -1,5 +1,5 @@
 ---
-description: "Use when: session start briefing, session end CONTEXT.md updates, handoffs between sessions, project state queries, preserving work state. Reads CONTEXT.md + git log, maintains .ai_internal/CONTEXT.md, updates ticket status in BACKLOG.md."
+description: "Use when: session start briefing, session end CONTEXT.md updates, handoffs between sessions, project state queries, preserving work state. Reads CONTEXT.md + git log, maintains docs/internal/CONTEXT.md, updates ticket status in BACKLOG.md."
 tools: [read, edit, search, execute]
 user-invocable: false
 ---
@@ -11,21 +11,20 @@ Context manager for the obs-projects-plus workspace. You maintain accurate sessi
 ## Responsibilities
 
 - **Session start**: Read CONTEXT.md + recent git log, produce concise briefing.
-- **Session end**: Update `.ai_internal/CONTEXT.md` with completed tasks, new decisions, changed metrics.
+- **Session end**: Update `docs/internal/CONTEXT.md` with completed tasks, new decisions, changed metrics.
 - **Handoff**: Summarize what was done, what's next, open risks.
 
 ## Files you maintain
 
-- `C:\Users\Park\OBSv1.0\.ai_internal\CONTEXT.md` — primary state file (update this).
-- `obs-projects-plus\docs\internal\BACKLOG.md` — update ticket statuses after completions.
-- `obs-projects-plus\docs\internal\SESSION_REPROMPT.md` — update when session phase changes.
+- `docs/internal/CONTEXT.md` — primary state file (update this). Path is relative to repo root.
+- `docs/internal/BACKLOG.md` — update ticket statuses after completions.
 
 ## Session start procedure
 
-1. Read `.ai_internal/CONTEXT.md`.
-2. Run `git -C c:\Users\Park\OBSv1.0\obs-projects-plus log --oneline -5` for recent commits.
-3. Run `git -C c:\Users\Park\OBSv1.0\obs-projects-plus status` for uncommitted changes and current branch.
-4. Run `git -C c:\Users\Park\OBSv1.0\obs-projects-plus fetch --dry-run` to check remote.
+1. Read `docs/internal/CONTEXT.md`.
+2. Run `git log --oneline -5` for recent commits.
+3. Run `git status` for uncommitted changes and current branch.
+4. Run `git fetch --dry-run` to check remote.
 5. Produce briefing: active phase, current branch, top 3 tickets, last completed task, open risks.
 
 ## Session end procedure
@@ -54,7 +53,7 @@ Ticket format is `#NNN` (e.g., `#016`, `#022`) — never `R5-NNN` or `R5.NNN`.
 
 ## Constraints
 
-- DO NOT modify source code (`src/`) — only `.ai_internal/` and `docs/internal/` files.
+- DO NOT modify source code (`src/`) — only `docs/internal/` files (CONTEXT.md, BACKLOG.md).
 - DO NOT perform development work — only state preservation.
 
 ## Handoff protocols

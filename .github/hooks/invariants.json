@@ -6,7 +6,7 @@
       {
         "matcher": "execute",
         "type": "command",
-        "command": "powershell -NoProfile -Command \"$line = [Console]::In.ReadToEnd(); if ($line -match 'git\\s+commit') { $b = git -C 'c:/Users/Park/OBSv1.0/obs-projects-plus' rev-parse --abbrev-ref HEAD 2>$null; if ($LASTEXITCODE -eq 0 -and ($b -eq 'main' -or $b -eq 'master')) { Write-Output '{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"BLOCKED: Direct commits to main/master are forbidden. Create a feature branch first: git checkout -b feat/<name>\\\"}}'; exit 2 } } exit 0\"",
+        "command": "powershell -NoProfile -Command \"$line = [Console]::In.ReadToEnd(); if ($line -match 'git\\s+commit') { $b = git rev-parse --abbrev-ref HEAD 2>$null; if ($LASTEXITCODE -eq 0 -and ($b -eq 'main' -or $b -eq 'master')) { Write-Output '{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"BLOCKED: Direct commits to main/master are forbidden. Create a feature branch first: git checkout -b feat/<name>\\\"}}'; exit 2 } } exit 0\"",
         "timeout": 10
       },
       {
