@@ -1,26 +1,24 @@
 ﻿# Текущий контекст — для агентов
 
-> Обновлено: **2026-06-09 (Dashboard V2 новый цикл разработки)**
-> Предыдущий снимок: `docs/internal/archive/` (исторические документы V1-цикла)
+> Обновлено: **2026-06-09 (Phase 0 complete — все 4 CI ворот GREEN на feat/dashboard-v2)**
 
-## Состояние main
+## Состояние веток
 
-- HEAD: **`f23efdb`** — `feat(agents): harden 4-gate verification cycle`
-- `origin/main` = `main` (синхронизирован).
+- HEAD `main`: **`f23efdb`** — `feat(agents): harden 4-gate verification cycle`
+- HEAD `feat/dashboard-v2`: **`c60c75a`** — `fix(ci): fix all ESLint and svelte-check errors (Phase 0)`
 - Active branch: `feat/dashboard-v2` — новый цикл разработки Dashboard V2.
 - Archive branch: `archive/dashboard-v1` — снимок V1 на момент запуска V2.
 - Working tree: clean.
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (baseline on main @ f23efdb)
+## Гейты (feat/dashboard-v2 @ c60c75a)
 
 | Гейт | Результат |
 |---|---|
-| `npm run build` | OK ✅ |
-| `npm test` | **139 suites / 2099 tests PASS** ✅ |
-| `npx tsc --noEmit` | 0 errors ✅ |
-| `npm run lint` | 🔴 55 errors (issue #049) |
-| `npm run svelte-check` | 🔴 72 errors in 26 files (issue #049) |
+| `npm run build` | ✅ 0 errors |
+| `npm test` | ✅ **139 suites / 2099 tests PASS** |
+| `npm run lint` | ✅ 0 errors |
+| `npm run svelte-check` | ✅ 0 errors |
 | `@ts-ignore` в src | 0 ✅ |
 | PX-budget (`R0_3_pxBudget.test.ts`) | ≤186, locked ✅ |
 
@@ -32,7 +30,8 @@
 - `docs/internal/DASHBOARD_V2_SPEC.md` — спецификация (rev.3, согласована)
 - `docs/internal/DASHBOARD_V2_VISION.md` — пользовательское видение (источник правды для UX)
 
-**Следующий шаг**: Фаза 0 — исправить #049 (55 ESLint + 72 svelte-check ошибки) на `feat/dashboard-v2`.
+**✅ Фаза 0 ЗАВЕРШЕНА** — все 4 CI ворот зелёные на `feat/dashboard-v2`.  
+**Следующий шаг**: Фаза 1 — перенос движка в `src/lib/dashboard-engine/` и декомпозиция `DashboardCanvas`.
 
 ## Завершённые milestones
 
@@ -49,14 +48,14 @@
 | #022 Formula Constructor series | ✅ DONE |
 | #046 Demo project refactor | ✅ DONE (merged) |
 | #047 UX audit / emoji→lucide sweep | ✅ DONE (merged) |
+| **#049 Phase 0 — CI baseline fix** | ✅ DONE (feat/dashboard-v2) |
 
 ## Открытые тикеты
 
 | Тикет | Приоритет | Статус |
 |---|---|---|
-| **#049** | P0 | 🔴 BACKLOG — исправить lint + svelte-check (Фаза 0 Dashboard V2) |
+| **Dashboard V2 Phase 1** | P0 | 📋 NEXT — перенос движка + декомпозиция Canvas |
 | **#048** | P1 | 📋 BACKLOG — UI точка входа native-query в CreateProject.svelte |
-| **#013** | P2 | 📋 BACKLOG — декомпозиция DashboardCanvas (заменяется V2) |
 
 ## Запреты
 
