@@ -1,4 +1,4 @@
-import type { TransformPipeline } from "./engine/transformTypes";
+import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 import type { FilterOperator, FilterDefinition } from "src/settings/base/settings";
 import type { DataSource } from "src/settings/v3/settings";
 

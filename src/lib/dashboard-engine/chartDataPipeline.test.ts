@@ -3,7 +3,7 @@
 import { buildChartPipeline, computeChartData, computeScatterData, chartHeightPx } from "./chartDataPipeline";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { ChartConfig, ScatterChartConfig } from "../types";
+import type { ChartConfig, ScatterChartConfig } from "src/ui/views/Dashboard/types";
 
 // ── Helpers ──────────────────────────────────────────────────
 

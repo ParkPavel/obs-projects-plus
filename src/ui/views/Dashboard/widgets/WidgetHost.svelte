@@ -7,7 +7,7 @@
   import type { DataField } from "src/lib/dataframe/dataframe";
   import type { WidgetDefinition, ChartConfig, StatsConfig, WidgetSourceConfig, SubBaseCanvasConfig } from "../types";
   import type { DataTableConfig, FieldPreset } from "../types";
-  import type { TransformPipeline } from "../engine/transformTypes";
+  import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 
   import { createEventDispatcher, onMount } from "svelte";
   import { Icon } from "obsidian-svelte";
@@ -41,9 +41,9 @@
   import TextWidget from "./TextWidget/TextWidget.svelte";
   import DividerWidget from "./DividerWidget/DividerWidget.svelte";
   import { getConfigPanel } from "./configPanelRegistry";
-  import { ariaWidget } from "../engine/accessibility";
-  import { executeTransform } from "../engine/transformExecutor";
-  import { enrichWithBacklinks } from "../engine/relationResolver";
+  import { ariaWidget } from "src/lib/dashboard-engine/accessibility";
+  import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+  import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import { getWidgetMeta } from "./widgetRegistry";

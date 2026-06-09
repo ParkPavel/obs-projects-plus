@@ -11,17 +11,17 @@
   import { exportRecords, type ExportFormat } from "src/lib/export/exportService";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, AggregationResult, AggregationConfig, ColumnAggregation, DataTableSortCriteria } from "../../types";
-  import { computeAggregations } from "../../engine/aggregation";
+  import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
   import {
     computeVirtualScroll,
     shouldVirtualize,
     getRowHeight,
     type VirtualScrollState,
-  } from "../../engine/virtualScroll";
+  } from "src/lib/dashboard-engine/virtualScroll";
   import {
     computeRowStyles,
     cellStyleToCSS,
-  } from "../../engine/conditionalFormat";
+  } from "src/lib/dashboard-engine/conditionalFormat";
   import { groupRecords, type RowGroup } from "./groupRows";
   import { sortRecords } from "src/ui/app/viewSort";
   import {

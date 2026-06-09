@@ -4,17 +4,17 @@
 
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataFrame, DataField, DataRecord } from "src/lib/dataframe/dataframe";
-import { executeTransform } from "../engine/transformExecutor";
-import { computeAggregations } from "../engine/aggregation";
-import { computeChartData } from "../engine/chartDataPipeline";
-import { computeRowStyles, cellStyleToCSS } from "../engine/conditionalFormat";
+import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
+import { computeChartData } from "src/lib/dashboard-engine/chartDataPipeline";
+import { computeRowStyles, cellStyleToCSS } from "src/lib/dashboard-engine/conditionalFormat";
 import {
   computeBacklinks,
   enrichWithBacklinks,
   extractWikiLinks,
   resolveRelations,
-} from "../engine/relationResolver";
-import { computeRollup } from "../engine/rollup";
+} from "src/lib/dashboard-engine/relationResolver";
+import { computeRollup } from "src/lib/dashboard-engine/rollup";
 import { migrateTableConfig, isLegacyTableConfig } from "../migration";
 import { WIDGET_TEMPLATES } from "../widgetTemplates";
 import type {
@@ -24,7 +24,7 @@ import type {
   ConditionalFormat,
   WidgetType,
 } from "../types";
-import type { TransformPipeline } from "../engine/transformTypes";
+import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 
 // ── Test Data ────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 ﻿<script lang="ts">
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ComparisonMetric } from "../../types";
-  import { sanitizeColor } from "../../engine/conditionalFormat";
+  import { sanitizeColor } from "src/lib/dashboard-engine/conditionalFormat";
 
   export let config: Record<string, unknown>;
   export let source: DataFrame;

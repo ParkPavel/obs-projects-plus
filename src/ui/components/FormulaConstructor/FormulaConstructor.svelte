@@ -34,7 +34,7 @@
     getFormulaMetadata,
     findEnclosingCall,
     type FormulaMetadata,
-  } from "src/ui/views/Dashboard/engine/formulaMetadata";
+  } from "src/lib/dashboard-engine/formulaMetadata";
   import { i18n } from "src/lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
 

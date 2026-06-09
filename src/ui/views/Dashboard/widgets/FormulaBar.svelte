@@ -12,7 +12,7 @@
   import {
     evaluateFormulaWithError,
     validateFormulaExpression,
-  } from "../engine/formulaEngine";
+  } from "src/lib/dashboard-engine/formulaEngine";
   import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import FormulaConstructor from "src/ui/components/FormulaConstructor/FormulaConstructor.svelte";

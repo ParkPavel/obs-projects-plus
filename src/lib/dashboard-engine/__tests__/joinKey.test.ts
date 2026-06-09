@@ -7,7 +7,7 @@
  * JSON for arrays, typed `typeof:value` fallback otherwise.
  */
 
-import { joinKey } from "src/ui/views/Dashboard/engine/joinKey";
+import { joinKey } from "src/lib/dashboard-engine/joinKey";
 
 describe("joinKey", () => {
   describe("nullish", () => {

@@ -27,9 +27,9 @@
   } from "src/lib/stores/dataProviderRegistry";
 
   import FormulaBar from "./widgets/FormulaBar.svelte";
-  import { applyFormulaFields } from "./engine/applyFormulaFields";
-  import { applyAutoFields } from "./engine/applyAutoFields";
-  import type { GetFileStat } from "./engine/applyAutoFields";
+  import { applyFormulaFields } from "src/lib/dashboard-engine/applyFormulaFields";
+  import { applyAutoFields } from "src/lib/dashboard-engine/applyAutoFields";
+  import type { GetFileStat } from "src/lib/dashboard-engine/applyAutoFields";
   import { createWidgetController } from "./dashboardWidgets";
   import { getDesignTokenCSS } from "./designTokens";
   import { isMobile } from "src/lib/stores/ui";

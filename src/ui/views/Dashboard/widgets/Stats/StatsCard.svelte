@@ -2,8 +2,8 @@
   import type { StatsCardConfig } from "../../types";
   import type { DataValue } from "src/lib/dataframe/dataframe";
   import type { Optional } from "src/lib/dataframe/dataframe";
-  import { sanitizeColor } from "../../engine/conditionalFormat";
-  import { computeAggregateValue } from "../../engine/aggregation";
+  import { sanitizeColor } from "src/lib/dashboard-engine/conditionalFormat";
+  import { computeAggregateValue } from "src/lib/dashboard-engine/aggregation";
 
   export let config: StatsCardConfig;
   export let values: Optional<DataValue>[];

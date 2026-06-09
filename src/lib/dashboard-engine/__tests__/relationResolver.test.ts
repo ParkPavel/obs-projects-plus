@@ -16,7 +16,7 @@ import {
   resolveRelations,
   getRelationTargetsWithIndex,
   computeBacklinks,
-} from "src/ui/views/Dashboard/engine/relationResolver";
+} from "src/lib/dashboard-engine/relationResolver";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 

@@ -4,7 +4,7 @@ import {
   DataFieldType,
   type DataFrame,
 } from "src/lib/dataframe/dataframe";
-import { applyFormulaFields } from "../engine/applyFormulaFields";
+import { applyFormulaFields } from "src/lib/dashboard-engine/applyFormulaFields";
 
 function makeFrame(): DataFrame {
   return {

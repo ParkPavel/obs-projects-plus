@@ -4,7 +4,7 @@ import {
   ariaWidget,
   navigateGrid,
   navigateList,
-} from "../engine/accessibility";
+} from "src/lib/dashboard-engine/accessibility";
 
 describe("accessibility", () => {
   describe("ariaGrid", () => {

@@ -3,7 +3,7 @@
 // in FormulaBar.svelte are exercised through integration/manual QA; the
 // enclosing-call lookup below backs the live signature popover and is the
 // only non-trivial pure unit to unit-test.
-import { findEnclosingCall } from "src/ui/views/Dashboard/engine/formulaMetadata";
+import { findEnclosingCall } from "src/lib/dashboard-engine/formulaMetadata";
 
 describe("findEnclosingCall", () => {
   it("returns null when cursor is not inside any call", () => {

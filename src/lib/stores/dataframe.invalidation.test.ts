@@ -31,8 +31,8 @@ import {
   invalidateAll,
   invalidateTransformCache,
   getTransformCacheSize,
-} from "src/ui/views/Dashboard/engine/transformCache";
-import type { TransformPipeline } from "src/ui/views/Dashboard/engine/transformTypes";
+} from "src/lib/dashboard-engine/transformCache";
+import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 
 function makeRecord(id: string, progress: number): DataRecord {
   return {

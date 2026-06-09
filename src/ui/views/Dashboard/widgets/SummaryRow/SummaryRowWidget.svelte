@@ -1,7 +1,7 @@
 ﻿<script lang="ts">
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { SummaryColumnConfig, ColumnAggregation } from "../../types";
-  import { computeAggregateValue } from "../../engine/aggregation";
+  import { computeAggregateValue } from "src/lib/dashboard-engine/aggregation";
   import { i18n } from "src/lib/stores/i18n";
 
   export let config: Record<string, unknown>;

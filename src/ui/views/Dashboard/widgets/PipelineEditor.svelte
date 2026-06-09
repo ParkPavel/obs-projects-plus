@@ -9,7 +9,7 @@
     ComputeStep,
     UnpivotStep,
     JoinStep,
-  } from "../engine/transformTypes";
+  } from "src/lib/dashboard-engine/transformTypes";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import type { FilterCondition } from "src/settings/base/settings";
   import { i18n } from "src/lib/stores/i18n";
@@ -90,7 +90,7 @@
     { value: "group-by", labelKey: "views.dashboard.pipeline.group-by", icon: "??" },
     { value: "aggregate", labelKey: "views.dashboard.pipeline.aggregate", icon: "?" },
     { value: "compute", labelKey: "views.dashboard.pipeline.compute", icon: "?" },
-    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "¦" },
+    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "ï¿½" },
     { value: "pivot", labelKey: "views.dashboard.pipeline.pivot", icon: "-" },
     { value: "unnest", labelKey: "views.dashboard.pipeline.unnest", icon: "?" },
     { value: "join", labelKey: "views.dashboard.pipeline.join", icon: "?" },
@@ -168,15 +168,15 @@
         const n = step.conditions.conditions.length + (step.conditions.groups?.length ?? 0);
         return n > 0 ? `${t("views.dashboard.pipeline.filter")} (${n})` : t("views.dashboard.pipeline.filter");
       }
-      case "group-by": return `${t("views.dashboard.pipeline.group-by")}: ${step.fields.join(", ") || "—"}`;
+      case "group-by": return `${t("views.dashboard.pipeline.group-by")}: ${step.fields.join(", ") || "ï¿½"}`;
       case "aggregate": return `${t("views.dashboard.pipeline.aggregate")}: ${step.columns.length}`;
       case "compute": return `${t("views.dashboard.pipeline.compute")}: ${step.columns.length}`;
       case "unpivot": return `${t("views.dashboard.pipeline.unpivot")}: ${step.fieldGroups.length}`;
-      case "pivot": return `${t("views.dashboard.pipeline.pivot")}: ${step.categoryField || "—"}`;
-      case "unnest": return `${t("views.dashboard.pipeline.unnest", { defaultValue: "Unnest" })}: ${step.field || "—"}`;
+      case "pivot": return `${t("views.dashboard.pipeline.pivot")}: ${step.categoryField || "ï¿½"}`;
+      case "unnest": return `${t("views.dashboard.pipeline.unnest", { defaultValue: "Unnest" })}: ${step.field || "ï¿½"}`;
       case "join": {
         const label = t("views.dashboard.pipeline.join", { defaultValue: "Join" });
-        const srcName = availableSources.find((s) => s.id === step.rightSourceId)?.name ?? step.rightSourceId ?? "—";
+        const srcName = availableSources.find((s) => s.id === step.rightSourceId)?.name ?? step.rightSourceId ?? "ï¿½";
         return `${label}: ${step.on.leftKey || "?"} = ${srcName}.${step.on.rightKey || "?"}`;
       }
       default: return "?";
@@ -184,7 +184,7 @@
   }
 
   function stepIcon(type: string): string {
-    return STEP_TYPES.find(s => s.value === type)?.icon ?? "•";
+    return STEP_TYPES.find(s => s.value === type)?.icon ?? "ï¿½";
   }
 
   // -- Filter step helpers ----------------------------------
@@ -515,7 +515,7 @@
                     type="text"
                     list="ppp-pipeline-fields"
                     value={cond.field}
-                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "— Field —" })}
+                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "ï¿½ Field ï¿½" })}
                     on:input={(e) => updateFilterField(i, ci, inputVal(e))}
                   />
                   <select
@@ -552,7 +552,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.fields[0] ?? ""}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "ï¿½ Select field ï¿½" })}
                   on:input={(e) => {
                     const val = inputVal(e);
                     updateStep(i, { ...step, fields: val ? [val] : [] });
@@ -569,7 +569,7 @@
                     type="text"
                     list="ppp-pipeline-fields"
                     value={col.sourceField}
-                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "— Field —" })}
+                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "ï¿½ Field ï¿½" })}
                     on:input={(e) => updateAggColumn(i, ci, inputVal(e), col.function)}
                   />
                   <input
@@ -621,7 +621,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.categoryField}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "ï¿½ Select field ï¿½" })}
                   on:input={(e) => updateStep(i, { ...step, categoryField: inputVal(e) })}
                 />
               </label>
@@ -631,7 +631,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.valueField}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "ï¿½ Select field ï¿½" })}
                   on:input={(e) => updateStep(i, { ...step, valueField: inputVal(e) })}
                 />
               </label>
@@ -693,7 +693,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.field}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "— Select field —" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "ï¿½ Select field ï¿½" })}
                   on:input={(e) => updateStep(i, { ...step, field: inputVal(e) })}
                 />
               </label>
