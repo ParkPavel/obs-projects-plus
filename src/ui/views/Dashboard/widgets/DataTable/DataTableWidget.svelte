@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import {
     DataFieldType,
     type DataFrame,
@@ -60,6 +60,7 @@
     SELECTION_CONTEXT_KEY,
     EMPTY_SELECTION,
     type SelectionStore,
+    type SelectionState,
   } from "../../FreeCanvas/selectionStore";
   import { computeMatchingRowIds } from "./dataTableSelectionReceiver";
   import {
@@ -117,7 +118,7 @@
     getContext<SelectionStore | undefined>(SELECTION_CONTEXT_KEY) ?? undefined;
   // `derived` would also work, but a plain `$:` block keeps the dependency
   // graph readable for the next maintainer.
-  $: selection = selectionStore ? $selectionStore : EMPTY_SELECTION;
+  $: selection = (selectionStore ? ($selectionStore as SelectionState) : undefined) ?? EMPTY_SELECTION;
 
   const dispatch = createEventDispatcher<{
     configChange: DataTableConfig;
@@ -586,7 +587,7 @@
         label: `${legacyField} ${config?.sortAsc ? "↑" : "↓"}`,
         icon: config?.sortAsc ? "arrow-up" : "arrow-down",
         selected: true,
-        handler: () => saveConfig({ sortField: undefined, sortAsc: undefined }),
+        handler: () => { const { sortField: _f, sortAsc: _a, ...rest } = config ?? {}; void _f; void _a; dispatch("configChange", { ...rest } as DataTableConfig); },
       }] : []),
       ...criteria.map((c) => ({
         label: `${c.field} ${c.order === "asc" ? "↑" : "↓"}`,
@@ -598,7 +599,7 @@
         label: $i18n.t("views.dashboard.table.sort-clear-all", { defaultValue: "Clear all sorting" }),
         icon: "x",
         selected: false,
-        handler: () => saveConfig({ sortCriteria: [], sortField: undefined, sortAsc: undefined }),
+        handler: () => { const { sortField: _f, sortAsc: _a, ...rest } = config ?? {}; void _f; void _a; dispatch("configChange", { ...rest, sortCriteria: [] } as DataTableConfig); },
       }] : [{
         label: $i18n.t("views.dashboard.table.sort-hint", { defaultValue: "Right-click a column header to sort" }),
         icon: "info",
@@ -677,36 +678,32 @@
     [DataFieldType.Unknown]: 150,
   };
 
-  $: columns = sortedFields
-    .filter((field) => {
-      if (field.repeated) {
-        return field.type === DataFieldType.String;
-      }
-      return true;
-    })
-    .map<GridColDef>((field) => {
-      const sc = sortCriteria.find(c => c.field === field.name);
-      // Stage A.9 fix: hide derived `path` column by default � it duplicates
-      // the `name` field's link target and used to render as a raw vault
-      // path when the field config did not set an explicit hide flag. Users
-      // can still re-enable it through the column configuration.
-      const userHide = fieldConfig[field.name]?.hide;
-      const defaultHide = field.derived && field.name === "path";
-      return {
-        ...field,
-        field: field.name,
-        width: resolveColumnWidthPx(fieldConfig[field.name], defaultColumnWidth[field.type] ?? 180),
-        hide: userHide ?? defaultHide,
-        pinned: fieldConfig[field.name]?.pinned ?? false,
-        editable: !field.derived,
-        ...(sc ? { sort: { direction: sc.order } } : {}),
-      };
-    });
-
-  $: columns = config?.hideEmptyFields
-    ? columns.filter((col) => records.some((r) => r.values[col.field] != null && r.values[col.field] !== ""))
-    : columns;
-
+  $: columns = (() => {
+    const base = sortedFields
+      .filter((field) => {
+        if (field.repeated) {
+          return field.type === DataFieldType.String;
+        }
+        return true;
+      })
+      .map<GridColDef>((field) => {
+        const sc = sortCriteria.find(c => c.field === field.name);
+        const userHide = fieldConfig[field.name]?.hide;
+        const defaultHide = field.derived && field.name === "path";
+        return {
+          ...field,
+          field: field.name,
+          width: resolveColumnWidthPx(fieldConfig[field.name], defaultColumnWidth[field.type] ?? 180),
+          hide: userHide ?? defaultHide,
+          pinned: fieldConfig[field.name]?.pinned ?? false,
+          editable: !field.derived,
+          ...(sc ? { sort: { direction: sc.order } } : {}),
+        };
+      });
+    return config?.hideEmptyFields
+      ? base.filter((col) => records.some((r) => r.values[col.field] != null && r.values[col.field] !== ""))
+      : base;
+  })();
   $: exportableFields = columns
     .filter((c) => !c.hide)
     .map((c) => fields.find((f) => f.name === c.field))
@@ -761,7 +758,7 @@
   const selectionDriverField = "path";
 
   function handleRowFilterCanvas(rowId: string, row: Record<string, unknown>): void {
-    if (!widgetId || !selectionStore) return;
+    if (!widgetId || !selectionStore || !$selectionStore) return;
     const rawValue = row[selectionDriverField];
     const value = rawValue == null ? "" : String(rawValue);
     const decision = computeDataTableSelectionToggle($selectionStore, {
@@ -1041,7 +1038,7 @@
 <div
   class="ppp-datatable-widget"
   use:viewShortcuts={{
-    "new-record": !isReadonly ? () => handleAddRow() : undefined,
+    ...(!isReadonly ? { "new-record": () => handleAddRow() } : {}),
     "focus-filter": (e) => { e.preventDefault(); openSearchBar(); },
     "export": (e) => { e.preventDefault(); const content = exportRecords(frame.records, exportableFields, "csv"); navigator.clipboard.writeText(content).then(() => new Notice($i18n.t("views.dashboard.table.export-copied", { defaultValue: "Copied to clipboard" }))); },
   }}

@@ -7,7 +7,7 @@
  * logic and encoding are consistent.
  */
 
-import type { App, TFile } from "obsidian";
+import { TFile, type App } from "obsidian";
 import type { RelationFieldConfig } from "src/settings/base/settings";
 
 export interface RelationWriteContext {
@@ -97,8 +97,8 @@ function stripWikiLink(s: string): string {
 function resolveFile(app: App, nameOrLink: string): TFile | null {
   const bare = stripWikiLink(nameOrLink);
   const byPath = app.vault.getAbstractFileByPath(bare);
-  if (byPath && "stat" in byPath) {
-    return byPath as TFile;
+  if (byPath instanceof TFile) {
+    return byPath;
   }
   const meta = (app as unknown as { metadataCache?: { getFirstLinkpathDest?(p: string, src: string): TFile | null } }).metadataCache;
   return meta?.getFirstLinkpathDest?.(bare, "") ?? null;

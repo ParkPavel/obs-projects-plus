@@ -107,6 +107,7 @@ export function createDataSource(
       if (!deps.dataviewApi) {
         return { kind: "unavailable", reason: "dataview-unavailable" };
       }
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { DataviewDataSource } = require("./dataview/datasource");
       return {
         kind: "ok",
@@ -119,6 +120,7 @@ export function createDataSource(
       };
     }
     case "tag": {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { TagDataSource } = require("./tag/datasource");
       return {
         kind: "ok",
@@ -127,6 +129,7 @@ export function createDataSource(
     }
     case "folder":
     default: {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { FolderDataSource } = require("./folder/datasource");
       return {
         kind: "ok",

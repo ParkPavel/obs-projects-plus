@@ -20,7 +20,7 @@
   <div class="ppp-filter-bridge" role="status" aria-live="polite">
     {#if activeGlobalFilters.length > 0}
       <span class="ppp-filter-bridge-chip ppp-filter-bridge-chip--global" title={globalFilterTooltip}>
-        <span class="ppp-filter-bridge-icon" aria-hidden="true"><Icon name="globe" size={12} /></span>
+        <span class="ppp-filter-bridge-icon" aria-hidden="true"><Icon name="globe" size="xs" /></span>
         <span class="ppp-filter-bridge-label">
           {$i18n.t("views.dashboard.canvas.filter-bridge-global", {
             defaultValue: "Global filter: {{count}} condition(s)",
@@ -31,7 +31,7 @@
     {/if}
     {#if activeFilterTab}
       <span class="ppp-filter-bridge-chip ppp-filter-bridge-chip--local">
-        <span class="ppp-filter-bridge-icon" aria-hidden="true"><Icon name="filter" size={12} /></span>
+        <span class="ppp-filter-bridge-icon" aria-hidden="true"><Icon name="filter" size="xs" /></span>
         <span class="ppp-filter-bridge-label">
           {$i18n.t("views.dashboard.canvas.filter-bridge-local", {
             defaultValue: "Local: {{field}} = {{value}}",

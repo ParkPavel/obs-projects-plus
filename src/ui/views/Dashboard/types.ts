@@ -239,6 +239,7 @@ export interface DataTableSortCriteria {
 
 export type ColumnAggregation =
   | "none"
+  | "count"
   | "count_total"
   | "count_values"
   | "count_unique"

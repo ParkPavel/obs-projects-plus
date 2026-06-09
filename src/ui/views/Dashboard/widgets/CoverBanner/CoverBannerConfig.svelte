@@ -13,15 +13,25 @@
   }
 
   function handleWidthModeChange(e: Event) {
-    update({ widthMode: (e.currentTarget as HTMLSelectElement).value as CoverBannerConfig["widthMode"] });
+    update({ widthMode: (e.currentTarget as HTMLSelectElement).value as "full" | "half" | "custom" });
   }
 
   function handleFitStyleChange(e: Event) {
-    update({ fitStyle: (e.currentTarget as HTMLSelectElement).value as CoverBannerConfig["fitStyle"] });
+    update({ fitStyle: (e.currentTarget as HTMLSelectElement).value as "cover" | "contain" });
   }
 
   function handlePositionChange(e: Event) {
-    update({ position: (e.currentTarget as HTMLSelectElement).value as CoverBannerConfig["position"] });
+    update({ position: (e.currentTarget as HTMLSelectElement).value as "top" | "center" | "bottom" });
+  }
+
+  function handleOverlayChange(e: Event) {
+    const v = (e.currentTarget as HTMLInputElement).value;
+    if (v) {
+      update({ overlay: v });
+    } else {
+      const { overlay: _o, ...rest } = cfg;
+      dispatch("change", rest as unknown as Record<string, unknown>);
+    }
   }
 </script>
 
@@ -96,7 +106,7 @@
       type="text"
       placeholder="optional"
       value={cfg.overlay ?? ""}
-      on:change={(e) => update({ overlay: e.currentTarget.value || undefined })}
+      on:change={handleOverlayChange}
     />
   </div>
 

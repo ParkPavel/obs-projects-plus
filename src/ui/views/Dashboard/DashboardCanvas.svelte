@@ -20,7 +20,7 @@
   import ViewLayout from "src/ui/components/Layout/ViewLayout.svelte";
   import { setContext } from "svelte";
   import { writable, type Writable } from "svelte/store";
-  import { SHADOW_PLACEHOLDER_ITEM_ID } from "svelte-dnd-action";
+  import { SHADOW_PLACEHOLDER_ITEM_ID, type DndEvent } from "svelte-dnd-action";
   import {
     createDataProviderRegistry,
     DATA_PROVIDER_REGISTRY_CONTEXT_KEY,
@@ -36,7 +36,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { settings } from "src/lib/stores/settings";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
-  import type { WidgetType, WidgetDefinition } from "./types";
+  import type { WidgetDefinition } from "./types";
   import { app } from "src/lib/stores/obsidian";
   import { onDestroy } from "svelte";
   import { Notice } from "obsidian";
@@ -180,7 +180,7 @@
     projectId: project.id,
     getFields: () => frame.fields,
     getProjects: () => $settings.projects,
-    t: (key, opts) => $i18n.t(key, opts),
+    t: (key, opts) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key),
   });
   const openSchema = () => schemaController.openSchema();
 
@@ -197,7 +197,7 @@
     getWidgets: () => widgets,
     saveConfig,
     toggleFormulaBar: () => (showFormulaBar = !showFormulaBar),
-    t: (key, opts) => $i18n.t(key, opts),
+    t: (key, opts) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key),
   });
   const showTemplateReplaceConfirm = templatesController.showConfirm;
 
@@ -268,7 +268,9 @@
   const rightFramesStore = writable<ReadonlyMap<string, DataFrame>>(new Map());
   const syncPreload = createPreloadSync(
     createPreloadRunner(
-      api.resolveExternalFrame?.bind(api),
+      api.resolveExternalFrame
+        ? (id: string) => api.resolveExternalFrame!(id).then((f) => f ?? undefined)
+        : undefined,
       (frames) => rightFramesStore.set(frames)
     )
   );
@@ -298,11 +300,11 @@
   $: dndWidgets = widgets.map((w) => ({ ...w }));
   $: canDnd = layoutMode === "stack" && !readonly;
 
-  function handleDndConsider(e: CustomEvent) {
+  function handleDndConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) {
     dndWidgets = e.detail.items;
   }
 
-  function handleDndFinalize(e: CustomEvent) {
+  function handleDndFinalize(e: CustomEvent<DndEvent<WidgetDefinition>>) {
     dndWidgets = e.detail.items;
     if (!config) return;
     // Persist new order (filter out DnD shadow placeholders)

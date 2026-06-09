@@ -11,7 +11,7 @@
   $: cfg = config as unknown as TimelineConfig;
 
   // ── Date helpers ─────────────────────────────────────────────
-  function parseVal(v: DataValue | undefined): dayjs.Dayjs | null {
+  function parseVal(v: DataValue | null | undefined): dayjs.Dayjs | null {
     if (!v) return null;
     if (typeof v === "string" || v instanceof Date) {
       const d = dayjs(v as string);
@@ -39,7 +39,7 @@
         return stringToColor(v);
       }
     }
-    return PALETTE[index % PALETTE.length];
+    return PALETTE[index % PALETTE.length] ?? "#888";
   }
 
   // ── Zoom → visible window span in days ──────────────────────

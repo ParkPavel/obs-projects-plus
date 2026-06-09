@@ -69,6 +69,11 @@
     return AGG_LABEL[agg as keyof typeof AGG_LABEL] ?? agg.toUpperCase();
   }
 
+  function firstCardAgg(cfg: StatsConfig): string {
+    const card = cfg.cards[0];
+    return card ? card.aggregation : "count";
+  }
+
   $: chartCfg =
     widget.type === "chart" && isChartConfig(widget.config)
       ? widget.config
@@ -107,7 +112,7 @@
       data-testid="widget-badge-stats-agg"
       title="Aggregation"
     >
-      {aggLabel(statsCfg.cards[0].aggregation)}
+      {aggLabel(firstCardAgg(statsCfg))}
     </span>
   {:else if statsCfg.cards.length > 1}
     <span

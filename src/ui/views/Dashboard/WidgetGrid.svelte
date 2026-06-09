@@ -15,12 +15,17 @@
 
   import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher } from "svelte";
-  import { dndzone } from "svelte-dnd-action";
+  import { dndzone, type DndEvent } from "svelte-dnd-action";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
 
-  const dispatch = createEventDispatcher<{ showToolbar: void; addWidget: WidgetType }>();
+  const dispatch = createEventDispatcher<{
+    showToolbar: void;
+    addWidget: WidgetType;
+    consider: DndEvent<WidgetDefinition>;
+    finalize: DndEvent<WidgetDefinition>;
+  }>();
 
   export let widgets: WidgetDefinition[];
   export let dndWidgets: WidgetDefinition[];
@@ -50,8 +55,8 @@
   <div
     class="ppp-database-canvas ppp-database-canvas--stack"
     use:dndzone={{ items: dndWidgets, flipDurationMs: 200, type: "widgets" }}
-    on:consider
-    on:finalize
+    on:consider={(e) => dispatch("consider", e.detail)}
+    on:finalize={(e) => dispatch("finalize", e.detail)}
   >
     {#each dndWidgets as widget (widget.id)}
       <WidgetHost

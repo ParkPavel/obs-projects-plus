@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { WidgetDefinition } from "./types";
+  import type { WidgetDefinition, WidgetType } from "./types";
   import WidgetToolbar from "./widgets/WidgetToolbar.svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { isMobile } from "src/lib/stores/ui";
@@ -17,7 +17,7 @@
     toggleLayout: void;
     openSchema: void;
     toggleFormulaBar: void;
-    addWidget: string;
+    addWidget: WidgetType;
     applyTemplate: WidgetDefinition[];
   }>();
 </script>
@@ -29,7 +29,7 @@
     aria-pressed={showToolbar}
     aria-label={showToolbar ? $i18n.t("views.dashboard.canvas.hide-toolbar") : $i18n.t("views.dashboard.canvas.show-toolbar")}
   >
-    <Icon name={showToolbar ? "minus" : "plus"} size={14} /> {$i18n.t("views.dashboard.canvas.widgets")}
+    <Icon name={showToolbar ? "minus" : "plus"} size="sm" /> {$i18n.t("views.dashboard.canvas.widgets")}
   </button>
   <button
     class="ppp-toolbar-btn clickable-icon"
@@ -37,7 +37,7 @@
     aria-label={$i18n.t("views.dashboard.canvas.toggle-layout")}
     disabled={$isMobile}
   >
-    <Icon name={layoutMode === "stack" ? "layout-grid" : "layout-list"} size={14} />
+    <Icon name={layoutMode === "stack" ? "layout-grid" : "layout-list"} size="sm" />
     {layoutMode === "stack" ? $i18n.t("views.dashboard.canvas.layout-grid") : $i18n.t("views.dashboard.canvas.layout-stack")}
   </button>
   {#if !readonly}
@@ -49,7 +49,7 @@
         defaultValue: "Manage project fields — types, relations, rollups",
       })}
     >
-      <Icon name="settings-2" size={14} /> {$i18n.t("views.dashboard.canvas.schema")}
+      <Icon name="settings-2" size="sm" /> {$i18n.t("views.dashboard.canvas.schema")}
     </button>
     <button
       class="ppp-toolbar-btn clickable-icon"

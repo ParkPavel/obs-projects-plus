@@ -1,3 +1,11 @@
+<script lang="ts" context="module">
+  export type FormulaSnippet = {
+    label: string;
+    insert: string;
+    description?: string;
+  };
+</script>
+
 <script lang="ts">
   // FormulaConstructor — unified formula text editor with autocomplete and
   // signature popover. Extracted from FormulaBar.svelte (R5-022) to eliminate
@@ -6,8 +14,6 @@
   // Design principles:
   //   • Owns ONLY the textarea + dropdown + signature. Actions (Apply/Cancel),
   //     preview, and field-name input stay in the parent (FormulaBar).
-  //   • Uses `document.querySelector` relative to `containerEl` so it works
-  //     inside Obsidian popout windows without an explicit activeDocument prop.
   //   • No visual/node mode — FormulaVisualEditor was deleted (R5-022).
   //     Code mode is the only mode. The toggle was removed from FormulaBar too.
   //
@@ -19,7 +25,7 @@
   //     on:commit={() => handleApply()}
   //   />
 
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import {
     validateFormulaExpression,
     getFormulaFunctions,
@@ -35,15 +41,6 @@
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
   // (FormulaBar / YamlVisualizer / custom) can override via `snippets` prop.
-  export type FormulaSnippet = {
-    /** Display label in dropdown (e.g. "SUM(field)") */
-    label: string;
-    /** Text to insert into the textarea (cursor lands at the end) */
-    insert: string;
-    /** Optional one-line hint shown next to label */
-    description?: string;
-  };
-
   const DEFAULT_SNIPPETS: FormulaSnippet[] = [
     { label: "SUM(field)", insert: "SUM(", description: "Сумма значений поля" },
     { label: "AVG(field)", insert: "AVG(", description: "Среднее значение" },
@@ -83,7 +80,6 @@
   let filteredSuggestions: string[] = [];
   let selectedSuggestionIndex = -1;
   let activeSignature: FormulaMetadata | null = null;
-  let containerEl: HTMLDivElement;
   let textareaEl: HTMLTextAreaElement;
   let suggestionListEl: HTMLDivElement | null = null;
   /**
@@ -276,7 +272,7 @@
   }
 </script>
 
-<div class="ppp-fc" bind:this={containerEl} on:keydown={handleKeydown}>
+<div class="ppp-fc" on:keydown={handleKeydown}>
   <div class="ppp-fc-editor">
     <textarea
       bind:this={textareaEl}

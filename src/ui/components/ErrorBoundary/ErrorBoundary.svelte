@@ -103,7 +103,7 @@
   <slot name="fallback" {error} {reset}>
     <div class="error-boundary" role="alert" aria-live="assertive">
       <div class="error-boundary-content">
-        <div class="error-icon" aria-hidden="true"><Icon name="alert-triangle" size={24} /></div>
+        <div class="error-icon" aria-hidden="true"><Icon name="alert-triangle" size="md" /></div>
         <h3 class="error-title">{fallbackTitle}</h3>
         <p class="error-message">{fallbackMessage}</p>
         

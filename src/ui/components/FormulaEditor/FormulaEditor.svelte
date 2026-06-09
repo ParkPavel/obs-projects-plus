@@ -52,7 +52,7 @@
     {placeholder}
     {rows}
     {disabled}
-    validate={constructorValidate}
+    {...(constructorValidate ? { validate: constructorValidate } : {})}
     on:change={(e) => { inputValue = e.detail; dispatch("change", e.detail); }}
     on:commit={() => dispatch("commit", inputValue)}
   />

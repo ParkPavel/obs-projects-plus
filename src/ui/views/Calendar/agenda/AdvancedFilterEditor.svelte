@@ -33,7 +33,9 @@
 
   // i18n helper rooted at the Calendar agenda advanced-filter namespace.
   $: t = (key: string, params?: Record<string, unknown>) =>
-    $i18n.t(`views.calendar.agenda.custom.advanced-filter.${key}`, params);
+    params !== undefined
+      ? $i18n.t(`views.calendar.agenda.custom.advanced-filter.${key}`, params)
+      : $i18n.t(`views.calendar.agenda.custom.advanced-filter.${key}`);
 
   // Field-name list for FormulaConstructor (it expects string[], not DataField[]).
   $: fieldNames = fields.map((f) => f.name);

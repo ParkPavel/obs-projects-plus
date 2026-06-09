@@ -61,7 +61,6 @@
   // ── Icon picker ────────────────────────────────────────────
   let pickerOpen = false;
   let pickerInput = "";
-  let pickerInputEl: HTMLInputElement | null = null;
 
   // #038: when the side panel closes, clear local picker state so the next
   // record doesn't open with a stuck-open picker or stale input value.
@@ -136,7 +135,6 @@
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div class="ppp-rcv-icon-picker" on:keydown={handlePickerKeydown}>
             <input
-              bind:this={pickerInputEl}
               bind:value={pickerInput}
               class="ppp-rcv-icon-input"
               use:focusInput

@@ -70,4 +70,15 @@ export default [{
         "obsidianmd/settings-tab/no-problematic-settings-headings": "error",
         "obsidianmd/prefer-abstract-input-suggest": "error",
     },
+}, {
+    files: ["**/__mocks__/**", "**/__tests__/**", "**/*.test.ts", "**/*.spec.ts"],
+    languageOptions: {
+        globals: {
+            ...globals.jest,
+        },
+    },
+    rules: {
+        "@typescript-eslint/no-require-imports": "off",
+        "obsidianmd/no-tfile-tfolder-cast": "off",
+    },
 }];

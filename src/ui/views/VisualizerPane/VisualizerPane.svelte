@@ -501,7 +501,7 @@
                 aria-label={entry.pinned
                   ? t("views.visualizer.pane.actions.unpin")
                   : t("views.visualizer.pane.actions.pin")}
-              ><Icon name="pin" size={14} /></button>
+              ><Icon name="pin" size="sm" /></button>
               <button
                 type="button"
                 class="ppp-vis-pane-action"
@@ -514,7 +514,7 @@
                 aria-label={entry.hidden
                   ? t("views.visualizer.pane.actions.unhide")
                   : t("views.visualizer.pane.actions.hide")}
-              ><Icon name={entry.hidden ? "eye" : "eye-off"} size={14} /></button>
+              ><Icon name={entry.hidden ? "eye" : "eye-off"} size="sm" /></button>
             </span>
           </li>
         {/each}
