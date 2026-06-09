@@ -1,22 +1,23 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Icon } from "obsidian-svelte";
-  import { i18n } from "../../../../../lib/stores/i18n";
+  import { i18n } from "../../../lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
   import PopoverList, { type PopoverItem } from "src/ui/components/FloatingPopup/PopoverList.svelte";
   import type {
     FilterCondition,
     FilterDefinition,
     FilterOperator,
-  } from "../../../../../settings/base/settings";
+  } from "../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
-  import { getOperatorsForField, operatorNeedsValue, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+  import { getOperatorsForField, operatorNeedsValue, getOperatorLabel, getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
 
   function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }
 
   export let value: FilterDefinition | undefined;
   export let fields: Array<{ name: string; type: string }> = [];
   export let records: DataRecord[] = [];
+  export let scopeLabel: string | undefined = undefined;
 
   const dispatch = createEventDispatcher<{ update: FilterDefinition }>();
 
@@ -261,6 +262,10 @@
 </script>
 
 <div class="section">
+  {#if scopeLabel}
+    <span class="ppp-filter-scope-label">{scopeLabel}</span>
+  {/if}
+
   <!-- ═══ Conjunction header ═══ -->
   <div class="section-header">
     <span class="section-title">{$i18n.t('components.filter.label')}</span>
@@ -578,6 +583,13 @@
 </FloatingPopup>
 
 <style>
+  .ppp-filter-scope-label {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
   .section { display: flex; flex-direction: column; gap: 0.5rem; }
   .section-header { display: flex; align-items: center; justify-content: space-between; }
   .section-title { font-weight: 600; font-size: 0.875rem; }

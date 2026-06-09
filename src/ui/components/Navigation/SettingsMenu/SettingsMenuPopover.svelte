@@ -10,7 +10,7 @@
   import SettingsMenuTabs, { type SettingsTabId } from "./SettingsMenuTabs.svelte";
   import ProjectTab from "./tabs/ProjectTab.svelte";
   import ViewsTab from "./tabs/ViewsTab.svelte";
-  import FiltersTab from "./tabs/FiltersTab.svelte";
+  import FilterPanel from "src/ui/components/FilterPanel/FilterPanel.svelte";
   import ColorFiltersTab from "./tabs/ColorFiltersTab.svelte";
   import SortTab from "./tabs/SortTab.svelte";
   import ViewConfigTab from "./tabs/ViewConfigTab.svelte";
@@ -168,10 +168,11 @@
             on:toggleShowTitles={(event) => dispatch("toggleShowViewTitles", event.detail)}
           />
         {:else if activeTab === "filters"}
-          <FiltersTab
+          <FilterPanel
             value={currentFilter}
             fields={resolvedFields}
             records={resolvedRecords}
+            scopeLabel={$i18n.t('settings.filters.scope-view', { defaultValue: 'View filter' })}
             on:update={(event) => dispatch("updateViewConfig", { filter: event.detail })}
           />
         {:else if activeTab === "colors"}
