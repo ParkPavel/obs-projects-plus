@@ -297,18 +297,15 @@ describe("DatabaseViewCanvas", () => {
     }
   });
 
-  test("disables layout toggle on mobile", async () => {
-    isMobile.set(true);
-    await flush();
-
+  test("layout toggle button is absent in V2 grid-only mode", async () => {
     const view = mountCanvas();
 
     try {
       const layoutButton = Array.from(view.target.querySelectorAll(".ppp-toolbar-btn")).find(
         (button) => button.getAttribute("aria-label")?.includes("toggle-layout")
-      ) as HTMLButtonElement | undefined;
+      );
 
-      expect(layoutButton?.disabled).toBe(true);
+      expect(layoutButton).toBeUndefined();
     } finally {
       view.destroy();
     }

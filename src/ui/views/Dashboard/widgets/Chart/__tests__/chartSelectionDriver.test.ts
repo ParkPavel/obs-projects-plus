@@ -15,7 +15,7 @@ import {
 import {
 	EMPTY_SELECTION,
 	type SelectionState,
-} from "../../../FreeCanvas/selectionStore";
+} from "../../../canvasSelectionStore";
 
 const otherChart = (): SelectionState => ({
 	source: "chart:other-widget",

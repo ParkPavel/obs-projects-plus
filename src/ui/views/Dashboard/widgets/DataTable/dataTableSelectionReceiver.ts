@@ -18,7 +18,7 @@
  */
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import { dataTableSourceId, type SelectionState } from "../../FreeCanvas/selectionStore";
+import { dataTableSourceId, type SelectionState } from "../../canvasSelectionStore";
 
 // Re-export for callers (tests, future #044.3b driver) that already import it
 // from this module. Canonical definition lives in selectionStore.ts to keep

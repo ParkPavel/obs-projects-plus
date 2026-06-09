@@ -10,7 +10,7 @@ import {
 	composeEffectiveFilter,
 	createSelectionStore,
 	type SelectionState,
-} from "../selectionStore";
+} from "../canvasSelectionStore";
 
 function cond(field: string, value: string): FilterCondition {
 	return { field, operator: "is", value, enabled: true };

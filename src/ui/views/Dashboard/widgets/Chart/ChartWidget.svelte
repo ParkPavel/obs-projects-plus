@@ -14,7 +14,7 @@
     SELECTION_CONTEXT_KEY,
     type SelectionState,
     type SelectionStore,
-  } from "../../FreeCanvas/selectionStore";
+  } from "../../canvasSelectionStore";
   import {
     computeChartSelectionToggle,
     getSelectedChartLabel,

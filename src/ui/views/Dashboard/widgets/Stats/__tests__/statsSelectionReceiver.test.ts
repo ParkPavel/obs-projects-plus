@@ -14,7 +14,7 @@ import {
 import {
 	EMPTY_SELECTION,
 	type SelectionState,
-} from "../../../FreeCanvas/selectionStore";
+} from "../../../canvasSelectionStore";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 
 function rec(id: string, values: Record<string, unknown>): DataRecord {

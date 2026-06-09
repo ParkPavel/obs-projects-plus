@@ -8,7 +8,7 @@
  * helpers so the toggle logic can be unit-tested without mounting a chart.
  */
 
-import { chartSourceId, type SelectionState } from "../../FreeCanvas/selectionStore";
+import { chartSourceId, type SelectionState } from "../../canvasSelectionStore";
 
 // Re-export so existing callers (tests, ChartWidget) that import from this
 // module keep working. Canonical definition lives in selectionStore.ts.

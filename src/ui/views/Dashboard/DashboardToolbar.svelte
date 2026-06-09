@@ -2,19 +2,16 @@
   import type { WidgetDefinition, WidgetType } from "./types";
   import WidgetToolbar from "./widgets/WidgetToolbar.svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import { isMobile } from "src/lib/stores/ui";
   import { Icon } from "obsidian-svelte";
   import { createEventDispatcher } from "svelte";
 
   export let showToolbar: boolean;
-  export let layoutMode: "stack" | "free";
   export let readonly: boolean;
   export let showFormulaBar: boolean;
   export let currentWidgets: WidgetDefinition[];
 
   const dispatch = createEventDispatcher<{
     toggleToolbar: void;
-    toggleLayout: void;
     openSchema: void;
     toggleFormulaBar: void;
     addWidget: WidgetType;
@@ -30,15 +27,6 @@
     aria-label={showToolbar ? $i18n.t("views.dashboard.canvas.hide-toolbar") : $i18n.t("views.dashboard.canvas.show-toolbar")}
   >
     <Icon name={showToolbar ? "minus" : "plus"} size="sm" /> {$i18n.t("views.dashboard.canvas.widgets")}
-  </button>
-  <button
-    class="ppp-toolbar-btn clickable-icon"
-    on:click={() => dispatch("toggleLayout")}
-    aria-label={$i18n.t("views.dashboard.canvas.toggle-layout")}
-    disabled={$isMobile}
-  >
-    <Icon name={layoutMode === "stack" ? "layout-grid" : "layout-list"} size="sm" />
-    {layoutMode === "stack" ? $i18n.t("views.dashboard.canvas.layout-grid") : $i18n.t("views.dashboard.canvas.layout-stack")}
   </button>
   {#if !readonly}
     <button

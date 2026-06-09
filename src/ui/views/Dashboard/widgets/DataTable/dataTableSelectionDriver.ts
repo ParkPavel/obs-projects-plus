@@ -21,7 +21,7 @@
  * mirrors the pattern of `chartSelectionDriver.ts` (#044.2).
  */
 
-import { dataTableSourceId, type SelectionState } from "../../FreeCanvas/selectionStore";
+import { dataTableSourceId, type SelectionState } from "../../canvasSelectionStore";
 
 // Re-export the canonical source-id builder so component code has a single
 // import surface and never reaches into selectionStore for the prefix

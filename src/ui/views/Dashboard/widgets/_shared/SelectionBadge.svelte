@@ -17,7 +17,7 @@
    * (see spec §6.2 + the canonical `dataTableSourceId` / `statsSourceId`).
    */
 
-  import type { SelectionState } from "../../FreeCanvas/selectionStore";
+  import type { SelectionState } from "../../canvasSelectionStore";
 
   /**
    * Widget types that receive a SelectionBadge in v1.

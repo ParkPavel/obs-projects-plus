@@ -61,7 +61,7 @@
     EMPTY_SELECTION,
     type SelectionStore,
     type SelectionState,
-  } from "../../FreeCanvas/selectionStore";
+  } from "../../canvasSelectionStore";
   import { computeMatchingRowIds } from "./dataTableSelectionReceiver";
   import {
     computeDataTableSelectionToggle,
