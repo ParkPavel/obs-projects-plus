@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { DataFrame, DataRecord, DataValue } from "src/lib/dataframe/dataframe";
   import { isString, isNumber } from "src/lib/dataframe/dataframe";
-  import type { TimelineConfig } from "../../types";
+  import type { TimelineConfig } from "src/ui/views/Dashboard/types";
   import dayjs from "dayjs";
 
   export let source: DataFrame;

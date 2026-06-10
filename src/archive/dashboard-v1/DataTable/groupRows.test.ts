@@ -2,7 +2,7 @@
 
 import { groupRecords } from "./groupRows";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import type { GroupConfig } from "../../types";
+import type { GroupConfig } from "src/ui/views/Dashboard/types";
 
 const records: DataRecord[] = [
   { id: "1", values: { status: "active", priority: 5 } },

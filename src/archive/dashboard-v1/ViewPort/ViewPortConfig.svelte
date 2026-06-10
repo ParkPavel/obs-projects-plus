@@ -7,7 +7,7 @@
    */
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
+  import WidgetConfigShell from "src/ui/views/Dashboard/widgets/_shared/WidgetConfigShell.svelte";
   import ViewPortSelector from "./ViewPortSelector.svelte";
 
   export let config: Record<string, unknown> = {};

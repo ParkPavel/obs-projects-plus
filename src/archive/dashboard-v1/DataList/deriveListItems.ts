@@ -2,7 +2,7 @@
 
 import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { DataListConfig } from "../../types";
+import type { DataListConfig } from "src/ui/views/Dashboard/types";
 
 export interface ListItem {
   readonly id: string;

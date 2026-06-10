@@ -11,7 +11,7 @@ import {
   pxToRem,
   remToPx,
   resolveColumnWidthPx,
-} from "../widgets/DataTable/widthUnits";
+} from "src/archive/dashboard-v1/DataTable/widthUnits";
 
 describe("widthUnits", () => {
   beforeAll(() => {

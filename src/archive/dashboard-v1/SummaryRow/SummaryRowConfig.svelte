@@ -5,10 +5,10 @@
    * Aggregation choices mirror ColumnAggregation union in types.ts.
    */
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import type { SummaryColumnConfig, ColumnAggregation } from "../../types";
+  import type { SummaryColumnConfig, ColumnAggregation } from "src/ui/views/Dashboard/types";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
+  import WidgetConfigShell from "src/ui/views/Dashboard/widgets/_shared/WidgetConfigShell.svelte";
 
   export let config: Record<string, unknown> = {};
   export let fields: DataField[] = [];

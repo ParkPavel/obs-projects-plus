@@ -2,7 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
-  import type { TimelineConfig } from "../../types";
+  import type { TimelineConfig } from "src/ui/views/Dashboard/types";
 
   export let config: Record<string, unknown>;
   export let fields: DataField[];

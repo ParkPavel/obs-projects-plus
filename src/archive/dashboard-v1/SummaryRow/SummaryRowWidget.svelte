@@ -1,6 +1,6 @@
 ﻿<script lang="ts">
   import type { DataFrame } from "src/lib/dataframe/dataframe";
-  import type { SummaryColumnConfig, ColumnAggregation } from "../../types";
+  import type { SummaryColumnConfig, ColumnAggregation } from "src/ui/views/Dashboard/types";
   import { computeAggregateValue } from "src/lib/dashboard-engine/aggregation";
   import { i18n } from "src/lib/stores/i18n";
 

@@ -4,7 +4,7 @@
   // `WidgetHost.svelte`; this widget owns rendering only.
 
   import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
-  import type { DataListConfig } from "../../types";
+  import type { DataListConfig } from "src/ui/views/Dashboard/types";
   import { deriveListItems } from "./deriveListItems";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";

@@ -13,7 +13,7 @@ import type {
   DataTableSortCriteria,
   FieldPreset,
   GroupConfig,
-} from "../../types";
+} from "src/ui/views/Dashboard/types";
 
 /** Fields snapshotted from `DataTableConfig` into a `FieldPreset`. */
 export const PRESETTABLE_KEYS = [

@@ -8,7 +8,7 @@
 // Dataview — closing M-DATAVIEW-BRIDGE Gap on cross-view consistency.
 
 import type { DataRecord, Optional, DataValue } from "src/lib/dataframe/dataframe";
-import type { GroupConfig } from "../../types";
+import type { GroupConfig } from "src/ui/views/Dashboard/types";
 
 export interface RowGroup {
   readonly key: string;

@@ -16,7 +16,7 @@
   import { Notice } from "obsidian";
   import { exportRecords, type ExportFormat } from "src/lib/export/exportService";
   import type { ViewApi } from "src/lib/viewApi";
-  import type { DataTableConfig, AggregationResult, AggregationConfig, ColumnAggregation, DataTableSortCriteria } from "../../types";
+  import type { DataTableConfig, AggregationResult, AggregationConfig, ColumnAggregation, DataTableSortCriteria } from "src/ui/views/Dashboard/types";
   import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
   import {
     computeVirtualScroll,
@@ -67,7 +67,7 @@
     EMPTY_SELECTION,
     type SelectionStore,
     type SelectionState,
-  } from "../../canvasSelectionStore";
+  } from "src/ui/views/Dashboard/canvasSelectionStore";
   import { computeMatchingRowIds } from "./dataTableSelectionReceiver";
   import {
     computeDataTableSelectionToggle,
@@ -95,7 +95,7 @@
   export let config: DataTableConfig | undefined;
   export let fields: import("src/lib/dataframe/dataframe").DataField[] = [];
   /** View-scoped column-layout snapshots (Phase 2b). */
-  export let fieldPresets: import("../../types").FieldPreset[] = [];
+  export let fieldPresets: import("src/ui/views/Dashboard/types").FieldPreset[] = [];
   export let activeFieldPresetId: string | undefined = undefined;
   /**
    * Stage A.9: current project, forwarded by `WidgetHost` from
@@ -129,7 +129,7 @@
   const dispatch = createEventDispatcher<{
     configChange: DataTableConfig;
     fieldPresetsChange: {
-      fieldPresets: import("../../types").FieldPreset[];
+      fieldPresets: import("src/ui/views/Dashboard/types").FieldPreset[];
       activeFieldPresetId: string | undefined;
     };
   }>();
@@ -1030,7 +1030,7 @@
 
   function handleFieldPresetSave(
     e: CustomEvent<{
-      presets: import("../../types").FieldPreset[];
+      presets: import("src/ui/views/Dashboard/types").FieldPreset[];
       activeId: string | undefined;
     }>,
   ) {

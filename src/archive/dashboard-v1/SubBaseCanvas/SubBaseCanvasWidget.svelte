@@ -5,7 +5,7 @@
   // DataTable.
 
   import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
-  import type { SubBaseCanvasConfig } from "../../types";
+  import type { SubBaseCanvasConfig } from "src/ui/views/Dashboard/types";
   import type { SubBaseDefinition } from "src/lib/database/subBase";
   import { createSubBase } from "src/lib/database/subBase";
   import SubBaseTabs from "../DataTable/SubBaseTabs.svelte";

@@ -11,7 +11,7 @@
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, FieldPreset } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
-  import DataTableWidget from "../DataTable/DataTableWidget.svelte";
+  import DataTableWidget from "src/archive/dashboard-v1/DataTable/DataTableWidget.svelte";
   import { createEventDispatcher } from "svelte";
 
   export let frame: DataFrame;
@@ -26,7 +26,7 @@
 
   const dispatch = createEventDispatcher<{
     configChange: DataTableConfig;
-    fieldPresetsChange: FieldPreset[];
+    fieldPresetsChange: { fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined };
   }>();
 </script>
 

@@ -4,10 +4,10 @@
    * Supports migration from legacy metricA/metricB to metrics[] on first save.
    */
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import type { ComparisonConfig, ComparisonMetric } from "../../types";
+  import type { ComparisonConfig, ComparisonMetric } from "src/ui/views/Dashboard/types";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
+  import WidgetConfigShell from "src/ui/views/Dashboard/widgets/_shared/WidgetConfigShell.svelte";
 
   export let config: Record<string, unknown> = {};
   export let fields: DataField[] = [];

@@ -57,7 +57,6 @@
   }
 
   $: cards = config.cards?.length ? config.cards : buildDefaultCards(source);
-  $: columns = config.columns ?? 3;
   $: availableFieldNames = new Set(source.fields.map((f) => f.name));
 
   // Receiver core: narrow source.records by the active selection (no-op when

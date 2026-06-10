@@ -15,7 +15,7 @@ import {
   snapshotFromTable,
   applyPresetToTable,
   PRESETTABLE_KEYS,
-} from "../widgets/DataTable/fieldPreset";
+} from "src/archive/dashboard-v1/DataTable/fieldPreset";
 import type {
   DataTableConfig,
   FieldPreset,

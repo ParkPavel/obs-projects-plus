@@ -14,7 +14,7 @@ import {
 import {
 	EMPTY_SELECTION,
 	type SelectionState,
-} from "../../../canvasSelectionStore";
+} from "src/ui/views/Dashboard/canvasSelectionStore";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 
 function rec(id: string, values: Record<string, unknown>): DataRecord {

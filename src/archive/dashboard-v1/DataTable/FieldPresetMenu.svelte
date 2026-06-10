@@ -13,7 +13,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import type { FieldPreset, DataTableConfig } from "../../types";
+  import type { FieldPreset, DataTableConfig } from "src/ui/views/Dashboard/types";
   import { snapshotFromTable, applyPresetToTable } from "./fieldPreset";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
 

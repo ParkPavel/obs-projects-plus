@@ -13,7 +13,7 @@ import {
 import {
 	EMPTY_SELECTION,
 	type SelectionState,
-} from "../../../canvasSelectionStore";
+} from "src/ui/views/Dashboard/canvasSelectionStore";
 
 const ownSource = dataTableSourceId("table-1");
 
