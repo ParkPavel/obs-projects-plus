@@ -16,12 +16,13 @@
 
 :root {
   /* ── Z-index scale (Dashboard context) ──────────────────────────
-     Fallback values match the current hardcoded usage so existing
-     stacking is preserved until the global z-scale conflict between
-     design-tokens.css and tokens.css is resolved in #058.         */
+     Aliases tokens.css --ppp-z-* scale (raised=1, sticky=20, overlay=30).
+     design-tokens.css is dead code (never imported); tokens.css is
+     the effective scale. Dashboard dropdowns sit at 100 so they float
+     above sticky headers (20) but stay below Obsidian's own modals.  */
   --ppp-db-z-raised:   var(--ppp-z-raised, 1);
   --ppp-db-z-bar:      2;          /* timeline bars over grid lines */
-  --ppp-db-z-sticky:   var(--ppp-z-sticky, 10);   /* sticky header/footer */
+  --ppp-db-z-sticky:   var(--ppp-z-sticky, 20);   /* sticky header/footer */
   --ppp-db-z-dropdown: 100;        /* floating pickers inside widgets */
   --ppp-db-z-overlay:  200;        /* fixed confirm/backdrop overlay */
 
