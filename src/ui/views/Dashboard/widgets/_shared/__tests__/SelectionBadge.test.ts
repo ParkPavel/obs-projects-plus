@@ -37,7 +37,7 @@ const externalSelection = (
 ): SelectionState => ({
 	source: "chart:other-widget",
 	field,
-	value,
+	values: [value],
 	op: "is",
 });
 
@@ -93,7 +93,7 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 		const ownSelection: SelectionState = {
 			source: "data-table:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		expect(
@@ -108,7 +108,7 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 		const ownSelection: SelectionState = {
 			source: "stats:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		expect(
@@ -123,7 +123,7 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 		const otherSelection: SelectionState = {
 			source: "data-table:other",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		expect(
@@ -137,7 +137,7 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 
 describe("SelectionBadge.svelte — component (#044.5)", () => {
 	it("renders the field label and value text", () => {
-		const m = mount({ field: "status", value: "Done" });
+		const m = mount({ field: "status", values: ["Done"] });
 		try {
 			const badge = m.target.querySelector('[data-testid="ppp-selection-badge"]');
 			expect(badge).not.toBeNull();
@@ -149,7 +149,7 @@ describe("SelectionBadge.svelte — component (#044.5)", () => {
 	});
 
 	it("sets the title attribute to 'field: value' for hover tooltip (spec §6.2)", () => {
-		const m = mount({ field: "tags", value: "Some long category label" });
+		const m = mount({ field: "tags", values: ["Some long category label"] });
 		try {
 			const badge = m.target.querySelector<HTMLSpanElement>('[data-testid="ppp-selection-badge"]');
 			expect(badge?.getAttribute("title")).toBe("tags: Some long category label");
@@ -159,7 +159,7 @@ describe("SelectionBadge.svelte — component (#044.5)", () => {
 	});
 
 	it("dispatches a 'clear' event when the ✕ button is clicked", () => {
-		const m = mount({ field: "status", value: "Done" });
+		const m = mount({ field: "status", values: ["Done"] });
 		try {
 			let cleared = false;
 			m.component.$on("clear", () => {
@@ -175,7 +175,7 @@ describe("SelectionBadge.svelte — component (#044.5)", () => {
 	});
 
 	it("clear button stops propagation so background-click handlers do not double-fire", () => {
-		const m = mount({ field: "status", value: "Done" });
+		const m = mount({ field: "status", values: ["Done"] });
 		try {
 			let bubbled = false;
 			m.target.addEventListener("click", () => {
@@ -193,7 +193,7 @@ describe("SelectionBadge.svelte — component (#044.5)", () => {
 	});
 
 	it("clear button is keyboard-reachable (button element, not div)", () => {
-		const m = mount({ field: "status", value: "Done" });
+		const m = mount({ field: "status", values: ["Done"] });
 		try {
 			const clearBtn = m.target.querySelector(".ppp-selection-badge__clear");
 			expect(clearBtn?.tagName).toBe("BUTTON");

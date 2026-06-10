@@ -44,22 +44,21 @@ export function chartSourceId(widgetId: string): string {
 }
 
 /**
- * v1 supports only equality selection. Widening to `in` / `between` / date
- * ranges is reserved for v2 (spec §9). The literal type keeps surface narrow
- * so future widening is a compile-time visible change.
+ * v1: single equality. v2 (Phase 4.5+): `is-any-of` for multi-value selections.
  */
-export type SelectionOp = "is";
+export type SelectionOp = "is" | "is-any-of";
 
 /**
  * Shape of an active selection, or the "empty" sentinel.
  *
  * `source === null` is the canonical "no selection" state. All other fields
- * are also null in that state — never inspect them when `source` is null.
+ * are also null/empty in that state — never inspect them when `source` is null.
+ * `values` is an empty array when there is no selection.
  */
 export interface SelectionState {
 	readonly source: string | null;
 	readonly field: string | null;
-	readonly value: string | null;
+	readonly values: ReadonlyArray<string>;
 	readonly op: SelectionOp | null;
 }
 
@@ -67,15 +66,15 @@ export interface SelectionState {
 export const EMPTY_SELECTION: SelectionState = Object.freeze({
 	source: null,
 	field: null,
-	value: null,
+	values: Object.freeze([]) as ReadonlyArray<string>,
 	op: null,
 }) as SelectionState;
 
-/** Payload accepted by `setSelection`. Op defaults to `"is"`. */
+/** Payload accepted by `setSelection`. Op defaults to `"is"` for single value, `"is-any-of"` for multiple. */
 export interface SetSelectionInput {
 	readonly source: string;
 	readonly field: string;
-	readonly value: string;
+	readonly values: ReadonlyArray<string>;
 	readonly op?: SelectionOp;
 }
 
@@ -105,20 +104,21 @@ export function createSelectionStore(
 	});
 
 	function setSelection(next: SetSelectionInput): void {
-		const op: SelectionOp = next.op ?? "is";
+		const op: SelectionOp = next.op ?? (next.values.length > 1 ? "is-any-of" : "is");
 		// Idempotence guard (#016 invariant 2): shallow-equal payload → no write.
 		if (
 			current.source === next.source &&
 			current.field === next.field &&
-			current.value === next.value &&
-			current.op === op
+			current.op === op &&
+			current.values.length === next.values.length &&
+			current.values.every((v, i) => v === next.values[i])
 		) {
 			return;
 		}
 		store.set({
 			source: next.source,
 			field: next.field,
-			value: next.value,
+			values: next.values,
 			op,
 		});
 	}
@@ -147,9 +147,9 @@ function selectionOpToFilterOperator(op: SelectionOp): FilterOperator {
 	switch (op) {
 		case "is":
 			return "is";
+		case "is-any-of":
+			return "is-any-of";
 		default: {
-			// Exhaustiveness guard — narrow type ensures `op` is never anything
-			// else at compile time; runtime fallback keeps the function total.
 			const _exhaustive: never = op;
 			void _exhaustive;
 			return "is";
@@ -174,7 +174,7 @@ export function composeLinkedSelectionFilter(args: {
 }): FilterCondition | null {
 	const { linkedSelection, canvasSelection } = args;
 	if (!linkedSelection) return null;
-	if (canvasSelection.source === null || canvasSelection.value === null) return null;
+	if (canvasSelection.source === null || canvasSelection.values.length === 0) return null;
 
 	const isMasterSource =
 		canvasSelection.source === dataTableSourceId(linkedSelection.sourceWidgetId) ||
@@ -182,10 +182,19 @@ export function composeLinkedSelectionFilter(args: {
 
 	if (!isMasterSource) return null;
 
+	const { values } = canvasSelection;
+	if (values.length === 1) {
+		return {
+			field: linkedSelection.relationField,
+			operator: "is",
+			value: values[0] as string,
+			enabled: true,
+		};
+	}
 	return {
 		field: linkedSelection.relationField,
-		operator: "is",
-		value: canvasSelection.value,
+		operator: "is-any-of",
+		value: JSON.stringify(values),
 		enabled: true,
 	};
 }
@@ -210,7 +219,7 @@ export function composeEffectiveFilter(args: {
 	const { userFilters, selection, myWidgetId } = args;
 
 	// Empty selection → no narrowing.
-	if (selection.source === null || selection.field === null || selection.value === null || selection.op === null) {
+	if (selection.source === null || selection.field === null || selection.values.length === 0 || selection.op === null) {
 		return userFilters;
 	}
 
@@ -222,10 +231,11 @@ export function composeEffectiveFilter(args: {
 		return userFilters;
 	}
 
+	const { values } = selection;
 	const selectionCondition: FilterCondition = {
 		field: selection.field,
 		operator: selectionOpToFilterOperator(selection.op),
-		value: selection.value,
+		value: values.length === 1 ? (values[0] as string) : JSON.stringify(values),
 		enabled: true,
 	};
 

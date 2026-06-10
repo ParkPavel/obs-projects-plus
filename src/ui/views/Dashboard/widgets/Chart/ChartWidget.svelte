@@ -53,14 +53,14 @@
   function handleSegmentSelect(label: string): void {
     if (!selectionStore || widgetId === "") return;
     const next = computeChartSelectionToggle(
-      currentSelection ?? { source: null, field: null, value: null, op: null },
+      currentSelection ?? { source: null, field: null, values: [], op: null },
       { widgetId, field: config.xAxis.property, value: label },
     );
     if (next.kind === "set") {
       selectionStore.setSelection({
         source: next.source,
         field: next.field,
-        value: next.value,
+        values: next.values,
       });
     } else if (next.kind === "clear") {
       selectionStore.clearSelection();

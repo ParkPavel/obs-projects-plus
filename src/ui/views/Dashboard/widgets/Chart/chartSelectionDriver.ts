@@ -25,7 +25,7 @@ export function computeChartSelectionToggle(
 	current: SelectionState,
 	args: { readonly widgetId: string; readonly field: string; readonly value: string },
 ):
-	| { readonly kind: "set"; readonly source: string; readonly field: string; readonly value: string }
+	| { readonly kind: "set"; readonly source: string; readonly field: string; readonly values: ReadonlyArray<string> }
 	| { readonly kind: "clear" }
 	| { readonly kind: "noop" } {
 	if (args.value === "") return { kind: "noop" };
@@ -35,11 +35,12 @@ export function computeChartSelectionToggle(
 	const isOwnActive =
 		current.source === source &&
 		current.field === args.field &&
-		current.value === args.value;
+		current.values.length === 1 &&
+		current.values[0] === args.value;
 
 	if (isOwnActive) return { kind: "clear" };
 
-	return { kind: "set", source, field: args.field, value: args.value };
+	return { kind: "set", source, field: args.field, values: [args.value] };
 }
 
 /**
@@ -55,5 +56,5 @@ export function getSelectedChartLabel(
 ): string | null {
 	if (current.source !== chartSourceId(args.widgetId)) return null;
 	if (current.field !== args.field) return null;
-	return current.value;
+	return current.values[0] ?? null;
 }

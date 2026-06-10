@@ -50,6 +50,7 @@ export type BaseFilterOperator = "is-empty" | "is-not-empty";
 
 export type StringFilterOperator =
   | "is"
+  | "is-any-of"
   | "is-not"
   | "contains"
   | "not-contains"
@@ -60,7 +61,7 @@ export type StringFilterOperator =
 export function isStringFilterOperator(
   op: FilterOperator
 ): op is StringFilterOperator {
-  return ["is", "is-not", "contains", "not-contains", "starts-with", "ends-with", "regex"].includes(op);
+  return ["is", "is-any-of", "is-not", "contains", "not-contains", "starts-with", "ends-with", "regex"].includes(op);
 }
 
 export type NumberFilterOperator = "eq" | "neq" | "lt" | "gt" | "lte" | "gte";
@@ -163,6 +164,7 @@ export const filterOperatorTypes: Record<FilterOperator, FilterOperatorType> = {
   "is-empty": "unary",
   "is-not-empty": "unary",
   is: "binary-text",
+  "is-any-of": "binary-multitext",
   "is-not": "binary-text",
   contains: "binary-text",
   "not-contains": "binary-text",

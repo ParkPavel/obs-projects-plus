@@ -83,6 +83,25 @@ export function matchesCondition(
     }
   }
 
+  // ── Stage A.9 — is-any-of: field value must be one of a JSON-encoded list ──
+  // cond.value = JSON.stringify(string[]) e.g. '["Done","In progress"]'.
+  // For array fields (Relation), matches if any element is in the candidate list.
+  if (operator === "is-any-of") {
+    let candidates: string[];
+    try {
+      candidates = cond.value ? (JSON.parse(cond.value) as string[]) : [];
+    } catch {
+      candidates = [];
+    }
+    if (candidates.length === 0) return false;
+    if (Array.isArray(value)) {
+      const items = (value as unknown[]).map((v) => (v == null ? "" : String(v)));
+      return candidates.some((c) => items.includes(c));
+    }
+    const strVal = value == null ? "" : String(value);
+    return candidates.includes(strVal);
+  }
+
   // ── Stage A.10 — string operators against array values ─────────────
   // Relation/Repeated-String fields are stored as string[]. When the user
   // picks a string-style operator (`is`, `is-not`, `contains`,
@@ -239,6 +258,8 @@ export const stringFns: Record<
   (left: Optional<string>, right?: string) => boolean
 > = {
   is: (left, right) => (left ? left == right : false),
+  // is-any-of is handled by a dedicated branch in matchesCondition before stringFns dispatch.
+  "is-any-of": () => false,
   "is-not": (left, right) => (left ? left != right : true),
   contains: (left, right) => (left ? left.toLowerCase().includes((right ?? "").toLowerCase()) : false),
   "not-contains": (left, right) => (left ? !left.toLowerCase().includes((right ?? "").toLowerCase()) : true),

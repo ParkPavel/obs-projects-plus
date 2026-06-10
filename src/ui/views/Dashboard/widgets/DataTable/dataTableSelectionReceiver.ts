@@ -41,14 +41,14 @@ export { dataTableSourceId };
 function recordMatchesSelection(
 	record: DataRecord,
 	field: string,
-	value: string,
+	values: ReadonlyArray<string>,
 ): boolean {
 	const cell = record.values[field];
 	if (cell === null || cell === undefined) return false;
 	if (Array.isArray(cell)) {
-		return cell.some((item) => item != null && String(item) === value);
+		return cell.some((item) => item != null && values.includes(String(item)));
 	}
-	return String(cell) === value;
+	return values.includes(String(cell));
 }
 
 /**
@@ -81,7 +81,7 @@ export function computeMatchingRowIds(args: {
 	if (
 		selection.source === null ||
 		selection.field === null ||
-		selection.value === null
+		selection.values.length === 0
 	) {
 		return null;
 	}
@@ -93,7 +93,7 @@ export function computeMatchingRowIds(args: {
 
 	const matching = new Set<string>();
 	for (const record of records) {
-		if (recordMatchesSelection(record, selection.field, selection.value)) {
+		if (recordMatchesSelection(record, selection.field, selection.values)) {
 			matching.add(record.id);
 		}
 	}

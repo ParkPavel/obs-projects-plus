@@ -28,7 +28,7 @@ describe("selectionStore — state", () => {
 		const seed: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Active",
+			values: ["Active"],
 			op: "is",
 		};
 		const store = createSelectionStore(seed);
@@ -37,41 +37,41 @@ describe("selectionStore — state", () => {
 
 	test("setSelection writes the new state and defaults op to 'is'", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		const next = get(store);
-		expect(next).toEqual({ source: "chart:w1", field: "status", value: "Done", op: "is" });
+		expect(next).toEqual({ source: "chart:w1", field: "status", values: ["Done"], op: "is" });
 	});
 
 	test("setSelection with identical payload is a no-op (no notification)", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		let calls = 0;
 		const unsub = store.subscribe(() => {
 			calls++;
 		});
 		// subscribe fires once synchronously with the current value
 		expect(calls).toBe(1);
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done", op: "is" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		expect(calls).toBe(1); // no extra notification
 		unsub();
 	});
 
 	test("setSelection with different value fires a notification", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		let calls = 0;
 		const unsub = store.subscribe(() => {
 			calls++;
 		});
 		expect(calls).toBe(1);
-		store.setSelection({ source: "chart:w1", field: "status", value: "Active" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Active"] });
 		expect(calls).toBe(2);
 		unsub();
 	});
 
 	test("clearSelection returns to EMPTY_SELECTION", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		store.clearSelection();
 		expect(get(store)).toBe(EMPTY_SELECTION);
 	});
@@ -105,7 +105,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -122,7 +122,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -137,7 +137,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "data-table:w3",
 			field: "path",
-			value: "Projects/Alpha.md",
+			values: ["Projects/Alpha.md"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -152,7 +152,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -198,7 +198,7 @@ describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
 			canvasSelection: {
 				source: "data-table:block-a",
 				field: "name",
-				value: "ivan-petrov",
+				values: ["ivan-petrov"],
 				op: "is",
 			},
 		});
@@ -216,7 +216,7 @@ describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
 			canvasSelection: {
 				source: "chart:block-a",
 				field: "status",
-				value: "active",
+				values: ["active"],
 				op: "is",
 			},
 		});
@@ -234,7 +234,7 @@ describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
 			canvasSelection: {
 				source: "data-table:block-b",
 				field: "name",
-				value: "some-value",
+				values: ["some-value"],
 				op: "is",
 			},
 		});
@@ -247,7 +247,7 @@ describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
 			canvasSelection: {
 				source: "data-table:block-a",
 				field: "id",
-				value: "42",
+				values: ["42"],
 				op: "is",
 			},
 		});

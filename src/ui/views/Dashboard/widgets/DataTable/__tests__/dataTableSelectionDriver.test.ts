@@ -20,7 +20,7 @@ const ownSource = dataTableSourceId("table-1");
 const ownActive: SelectionState = {
 	source: ownSource,
 	field: "path",
-	value: "a.md",
+	values: ["a.md"],
 	op: "is",
 };
 
@@ -35,7 +35,7 @@ describe("computeDataTableSelectionToggle — #044.3b", () => {
 			kind: "set",
 			source: ownSource,
 			field: "path",
-			value: "a.md",
+			values: ["a.md"],
 		});
 	});
 
@@ -58,7 +58,7 @@ describe("computeDataTableSelectionToggle — #044.3b", () => {
 			kind: "set",
 			source: ownSource,
 			field: "path",
-			value: "b.md",
+			values: ["b.md"],
 		});
 	});
 
@@ -66,7 +66,7 @@ describe("computeDataTableSelectionToggle — #044.3b", () => {
 		const otherActive: SelectionState = {
 			source: "chart:other-widget",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = computeDataTableSelectionToggle(otherActive, {
@@ -78,7 +78,7 @@ describe("computeDataTableSelectionToggle — #044.3b", () => {
 			kind: "set",
 			source: ownSource,
 			field: "path",
-			value: "a.md",
+			values: ["a.md"],
 		});
 	});
 
@@ -132,7 +132,7 @@ describe("isThisWidgetDriving — context-menu label switch", () => {
 		const otherActive: SelectionState = {
 			source: "chart:other",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		expect(isThisWidgetDriving(otherActive, "table-1")).toBe(false);
@@ -142,7 +142,7 @@ describe("isThisWidgetDriving — context-menu label switch", () => {
 		const otherTableActive: SelectionState = {
 			source: dataTableSourceId("table-2"),
 			field: "path",
-			value: "a.md",
+			values: ["a.md"],
 			op: "is",
 		};
 		expect(isThisWidgetDriving(otherTableActive, "table-1")).toBe(false);

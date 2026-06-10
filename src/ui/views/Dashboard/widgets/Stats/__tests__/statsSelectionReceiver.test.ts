@@ -34,7 +34,7 @@ const externalSelection = (
 ): SelectionState => ({
 	source: "chart:other-widget",
 	field,
-	value,
+	values: [value],
 	op: "is",
 });
 
@@ -90,7 +90,7 @@ describe("filterRecordsBySelection — #044.4 receiver", () => {
 		const selfSelection: SelectionState = {
 			source: statsSourceId("stats-1"),
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = filterRecordsBySelection({
@@ -105,7 +105,7 @@ describe("filterRecordsBySelection — #044.4 receiver", () => {
 		const otherStatsSelection: SelectionState = {
 			source: statsSourceId("stats-other"),
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = filterRecordsBySelection({
@@ -150,7 +150,7 @@ describe("isSelectionActive — #044.4 indicator predicate", () => {
 		const selfSelection: SelectionState = {
 			source: statsSourceId("stats-1"),
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		expect(isSelectionActive(selfSelection, "stats-1")).toBe(false);

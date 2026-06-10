@@ -20,14 +20,14 @@ import {
 const otherChart = (): SelectionState => ({
 	source: "chart:other-widget",
 	field: "status",
-	value: "Done",
+	values: ["Done"],
 	op: "is",
 });
 
 const ownChart = (label: string, field = "status"): SelectionState => ({
 	source: "chart:w1",
 	field,
-	value: label,
+	values: [label],
 	op: "is",
 });
 
@@ -48,7 +48,7 @@ describe("chartSelectionDriver — computeChartSelectionToggle", () => {
 			kind: "set",
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 		});
 	});
 
@@ -71,7 +71,7 @@ describe("chartSelectionDriver — computeChartSelectionToggle", () => {
 			kind: "set",
 			source: "chart:w1",
 			field: "status",
-			value: "In Progress",
+			values: ["In Progress"],
 		});
 	});
 
@@ -86,7 +86,7 @@ describe("chartSelectionDriver — computeChartSelectionToggle", () => {
 			kind: "set",
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 		});
 	});
 

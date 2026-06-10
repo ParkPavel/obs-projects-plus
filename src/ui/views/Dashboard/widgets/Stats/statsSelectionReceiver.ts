@@ -71,7 +71,7 @@ export function filterRecordsBySelection(args: {
 	if (
 		selection.source === null ||
 		selection.field === null ||
-		selection.value === null
+		selection.values.length === 0
 	) {
 		return records;
 	}
@@ -86,14 +86,14 @@ export function filterRecordsBySelection(args: {
 	// equals the selection value, scalars match on string equality, null/undef
 	// never match. If a third receiver adds a different rule, extract then.
 	const field = selection.field;
-	const value = selection.value;
+	const values = selection.values;
 	return records.filter((record) => {
 		const cell = record.values[field];
 		if (cell === null || cell === undefined) return false;
 		if (Array.isArray(cell)) {
-			return cell.some((item) => item != null && String(item) === value);
+			return cell.some((item) => item != null && values.includes(String(item)));
 		}
-		return String(cell) === value;
+		return values.includes(String(cell));
 	});
 }
 
