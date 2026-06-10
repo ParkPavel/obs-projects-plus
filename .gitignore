@@ -54,4 +54,13 @@ lint_output*.txt
 
 # .vscode/mcp.json contains personal absolute paths and env-var refs — local only.
 # .vscode itself is already gitignored above; no extra rule needed here.
-# Copilot agents/hooks/instructions/prompts in .github/ ARE committed (team-shared).
+
+# Internal AI agent configuration — local only, not for public repos.
+# These contain internal tooling details and workflow prompts.
+.github/agents/
+.github/prompts/
+.github/instructions/
+.github/README.md
+
+# Internal session state — changes every session, not for public tracking.
+docs/internal/CONTEXT.md
