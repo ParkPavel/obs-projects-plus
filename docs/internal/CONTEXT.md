@@ -1,28 +1,28 @@
 ﻿# Текущий контекст — для агентов
 
-> Обновлено: **2026-06-09 (Phase 3 complete — DashboardCanvas 200 LOC, FreeCanvas deleted)**
+> Обновлено: **2026-06-10 (Phase 4 complete — DatabaseCallWidget + Selection Bus + Board/Calendar/Gallery tabs)**
 
 ## Состояние веток
 
 - HEAD `main`: **`f23efdb`** — `feat(agents): harden 4-gate verification cycle`
-- HEAD `feat/dashboard-v2`: **`a25d744`** — `refactor(dashboard): delete FreeCanvas, slim DashboardCanvas to 200 LOC (Phase 3)`
+- HEAD `feat/dashboard-v2`: **`902302b`** — `feat(dashboard): Phase 4 — DatabaseCallWidget + Canvas Selection Bus + Board/Calendar/Gallery tabs`
 - Active branch: `feat/dashboard-v2` — новый цикл разработки Dashboard V2.
 - Archive branch: `archive/dashboard-v1` — снимок V1 на момент запуска V2.
 - Working tree: clean.
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (feat/dashboard-v2 @ a25d744)
+## Гейты (feat/dashboard-v2 @ 902302b)
 
 | Гейт | Результат |
 |---|---|
 | `npm run build` | ✅ 0 errors |
-| `npm test` | ✅ **134 suites / 2014 tests PASS** |
+| `npm test` | ✅ **134 suites / 2020 tests PASS** |
 | `npm run lint` | ✅ 0 errors |
 | `npm run svelte-check` | ✅ 0 errors |
 | `@ts-ignore` в src | 0 ✅ |
 | PX-budget (`R0_3_pxBudget.test.ts`) | ≤186, locked ✅ |
 
-> Baseline изменён: 85 тестов удалено вместе с FreeCanvas (5 suite) — по спецификации V2 (Grid-only, FreeCanvas удалён).
+> Baseline обновлён: +6 тестов (dataProviderRegistration.test.ts Phase 4).
 
 ## Активная работа
 
@@ -36,7 +36,8 @@
 **✅ Фаза 1 ЗАВЕРШЕНА** — Engine перенесён в `src/lib/dashboard-engine/`.  
 **✅ Фаза 2 ЗАВЕРШЕНА** — `FilterPanel.svelte` — единый компонент фильтрации.  
 **✅ Фаза 3 ЗАВЕРШЕНА** — `DashboardCanvas.svelte` = 200 LOC, FreeCanvas удалён.  
-**Следующий шаг**: Фаза 4 — `DatabaseCallWidget` + Матрёшка + Canvas Selection Bus.
+**✅ Фаза 4 ЗАВЕРШЕНА** — DatabaseCallBlock (Board/Calendar/Gallery вкладки), Canvas Selection Bus, LinkedSelection настройки.  
+**Следующий шаг**: Фаза 4.5 — Multi-select (`is-any-of` оператор + Selection Bus), затем Фаза 5 — Utility виджеты.
 
 ## Завершённые milestones
 
@@ -57,13 +58,15 @@
 | **Dashboard V2 Phase 1 — Engine move** | ✅ DONE (feat/dashboard-v2) |
 | **Dashboard V2 Phase 2 — Unified Filter** | ✅ DONE (feat/dashboard-v2) |
 | **Dashboard V2 Phase 3 — Canvas decompose** | ✅ DONE (feat/dashboard-v2) |
+| **Dashboard V2 Phase 4 — DatabaseCallWidget + Selection Bus** | ✅ DONE (feat/dashboard-v2) |
 
 ## Открытые тикеты
 
 | Тикет | Приоритет | Статус |
 |---|---|---|
-| **Dashboard V2 Phase 4** | P0 | 📋 NEXT — DatabaseCallWidget + Матрёшка + Canvas Selection Bus |
-| **#048** | P1 | 📋 BACKLOG — UI точка входа native-query в CreateProject.svelte |
+| **Dashboard V2 Phase 4.5** | P1 | 📋 NEXT — Multi-select: `is-any-of` фильтр-оператор + Selection Bus multi-value |
+| **Dashboard V2 Phase 5** | P1 | 📋 BACKLOG — Utility виджеты: Chart, Stats, FilterTabs, Checklist, Text, Divider |
+| **#048** | P2 | 📋 BACKLOG — UI точка входа native-query в CreateProject.svelte |
 
 ## Запреты
 
