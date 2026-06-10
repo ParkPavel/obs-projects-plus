@@ -39,6 +39,10 @@
     type SelectionStore,
   } from "../../canvasSelectionStore";
   import { matchesCondition } from "src/lib/engine/filterEvaluator";
+  import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
+  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
+  import { createDataRecord } from "src/lib/dataApi";
+  import { app } from "src/lib/stores/obsidian";
 
   export let frame: DataFrame;
   export let api: ViewApi;
@@ -104,6 +108,24 @@
       viewTabs: [...tabs, newTab],
       activeTabId: newTab.id,
     });
+  }
+
+  // ── #065 empty states ───────────────────────────────────────
+  // "No matches" (auto-filter narrowed everything away) vs "no records
+  // at all" — only the former offers a clear-filter action.
+  $: isFilterEmpty =
+    effectiveFrame.records.length === 0 && frame.records.length > 0;
+
+  function handleAddFirstRecord() {
+    const p = project;
+    if (!p) return;
+    new CreateNoteModal($app, p, (name, templatePath) => {
+      api.addRecord(createDataRecord(name, p), fields, templatePath);
+    }).open();
+  }
+
+  function handleClearCanvasFilter() {
+    _ctx?.clearSelection();
   }
 
   function handleDataTableConfigChange(e: CustomEvent<DataTableConfig>) {
@@ -205,20 +227,22 @@
 
 <div class="ppp-database-call-block">
   {#if tabs.length === 0}
-    <div class="ppp-database-call-empty">
-      <span class="ppp-database-call-empty-icon">📊</span>
-      <span>{$i18n.t("views.dashboard.database-call.empty", {
+    <EmptyState
+      icon="database"
+      title={$i18n.t("views.dashboard.database-call.empty", {
         defaultValue: "No views configured"
-      })}</span>
-      <button
-        class="ppp-database-call-empty-btn"
-        on:click={handleTabAdd}
-      >
-        {$i18n.t("views.dashboard.database-call.add-first", {
-          defaultValue: "Add first view"
-        })}
-      </button>
-    </div>
+      })}
+    >
+      <svelte:fragment slot="actions">
+        {#if !readonly}
+          <button on:click={handleTabAdd}>
+            {$i18n.t("views.dashboard.database-call.add-first", {
+              defaultValue: "Add first view"
+            })}
+          </button>
+        {/if}
+      </svelte:fragment>
+    </EmptyState>
   {:else}
     <ViewTabBar
       {tabs}
@@ -236,19 +260,53 @@
     >
       {#if activeTab}
         {#if activeTab.viewType === "table"}
-          <DataTableContent
-            frame={effectiveFrame}
-            {api}
-            {readonly}
-            {getRecordColor}
-            {fields}
-            config={activeTabTableConfig}
-            {fieldPresets}
-            {activeFieldPresetId}
-            {project}
-            on:configChange={handleDataTableConfigChange}
-            on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
-          />
+          {#if isFilterEmpty}
+            <EmptyState
+              icon="filter-x"
+              title={$i18n.t("views.dashboard.database-call.no-matches", {
+                defaultValue: "No matches"
+              })}
+            >
+              <svelte:fragment slot="actions">
+                <button on:click={handleClearCanvasFilter}>
+                  {$i18n.t("views.dashboard.database-call.clear-filter", {
+                    defaultValue: "Clear filter"
+                  })}
+                </button>
+              </svelte:fragment>
+            </EmptyState>
+          {:else if effectiveFrame.records.length === 0}
+            <EmptyState
+              icon="database"
+              title={$i18n.t("views.dashboard.database-call.no-records", {
+                defaultValue: "No records yet"
+              })}
+            >
+              <svelte:fragment slot="actions">
+                {#if !readonly && project}
+                  <button on:click={handleAddFirstRecord}>
+                    {$i18n.t("views.dashboard.database-call.add-first-record", {
+                      defaultValue: "Add first record"
+                    })}
+                  </button>
+                {/if}
+              </svelte:fragment>
+            </EmptyState>
+          {:else}
+            <DataTableContent
+              frame={effectiveFrame}
+              {api}
+              {readonly}
+              {getRecordColor}
+              {fields}
+              config={activeTabTableConfig}
+              {fieldPresets}
+              {activeFieldPresetId}
+              {project}
+              on:configChange={handleDataTableConfigChange}
+              on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
+            />
+          {/if}
         {:else if activeTab.viewType === "board" && project}
           <BoardView
             {project}
@@ -301,37 +359,6 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-  }
-
-  .ppp-database-call-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 2rem;
-    color: var(--text-muted);
-  }
-
-  .ppp-database-call-empty-icon {
-    font-size: 2rem;
-  }
-
-  .ppp-database-call-empty-btn {
-    margin-top: 0.5rem;
-    padding: 0.5rem 1rem;
-    border: 0.0625rem solid var(--interactive-accent);
-    border-radius: var(--radius-s, 0.25rem);
-    background: transparent;
-    color: var(--interactive-accent);
-    cursor: pointer;
-    font-size: var(--font-ui-small, 0.875rem);
-    transition: background 120ms ease, color 120ms ease;
-  }
-
-  .ppp-database-call-empty-btn:hover {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
   }
 
   .ppp-database-call-content {

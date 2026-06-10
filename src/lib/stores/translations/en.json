@@ -813,7 +813,18 @@
                     "filter-bridge-global": "Global filter: {{count}} condition(s)",
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
-                    "filter-bridge-promote": "Save as global filter"
+                    "filter-bridge-promote": "Save as global filter",
+                    "empty-title": "Empty canvas",
+                    "empty-hint": "Start with a data block, or pick a ready-made template",
+                    "empty-add-block": "Add data block"
+                },
+                "database-call": {
+                    "empty": "No views configured",
+                    "add-first": "Add first view",
+                    "no-records": "No records yet",
+                    "add-first-record": "Add first record",
+                    "no-matches": "No matches",
+                    "clear-filter": "Clear filter"
                 },
                 "field-presets": {
                     "label": "Layout",

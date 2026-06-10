@@ -1009,7 +1009,18 @@
                     "filter-bridge-global": "Глобальный фильтр: {{count}} условий",
                     "filter-bridge-local": "Локальный: {{field}} = {{value}}",
                     "filter-bridge-clear": "Сбросить локальный фильтр",
-                    "filter-bridge-promote": "Сохранить как глобальный фильтр"
+                    "filter-bridge-promote": "Сохранить как глобальный фильтр",
+                    "empty-title": "Пустой холст",
+                    "empty-hint": "Начните с блока данных или выберите готовый шаблон",
+                    "empty-add-block": "Добавить блок данных"
+                },
+                "database-call": {
+                    "empty": "Представления не настроены",
+                    "add-first": "Добавить первое представление",
+                    "no-records": "Нет записей",
+                    "add-first-record": "Добавить первую запись",
+                    "no-matches": "Нет совпадений",
+                    "clear-filter": "Очистить фильтр"
                 },
                 "field-presets": {
                     "label": "Макет",

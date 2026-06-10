@@ -804,6 +804,8 @@ Scope:
 - Profile 2: **Fitness** (Workouts + Exercises + Nutrition cross-stats)
 - Profile 3: **Project journal** (Projects + Tasks + Meetings timeline)
 - Каждый профиль генерирует папки + demo records + pre-configured Dashboard
+- (из #065, re-scoped 2026-06-11) Первый экран модалки = три primary actions
+  ("Создать базу" / "Открыть пример" / "Импортировать папку"), не длинный список настроек
 
 ### #062 — Drag-to-link: drag card to express relation between blocks (V3)
 - Status: ⏸ DEFERRED — V3 roadmap item
@@ -837,19 +839,30 @@ V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/
 Деферировано: визуализация графа (force-directed layout, d3.js или vis.js) — отдельный большой milestone. Технический фундамент (#010) готов.
 
 ### #065 — Canvas zero-state + onboarding progressive disclosure
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-11) — on `feat/dashboard-v2`
 - Milestone: M-VISION-PARITY | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #050 (tokens — для стилизации empty state)
 
 **Vision §7**: "Первый экран — три кнопки: 'Создать базу', 'Открыть пример', 'Импортировать папку'."
 
-Scope:
-- Empty canvas state: `EmptyState.svelte` с CTA "Добавить блок данных" + "Выбрать шаблон"
-- Empty table state: "Нет записей. + Добавить первую"
-- Empty filter result state: "Нет совпадений. Очистить фильтр"
-- Empty board column state: "+ Новая запись" in-column button
-- `CreateProject.svelte` первый экран: три primary actions (не длинный список настроек)
+**Delivered**:
+- Shared `src/ui/components/EmptyState/EmptyState.svelte` — icon/title/hint + `actions` slot
+  with unified CTA button styling (`:global` within actions container). 5-test suite.
+- Empty canvas (`WidgetGrid.svelte`): EmptyState + CTA "Добавить блок данных" (adds
+  `database-call`) + per-template CTAs (`WIDGET_TEMPLATES`, new `applyTemplate` event wired
+  через DashboardCanvas без роста LOC — остаётся 200). Killed "⊞" glyph.
+- Empty table (`DatabaseCallBlock` table tab): "Нет записей" + "Добавить первую запись"
+  (CreateNoteModal → api.addRecord). Hidden when readonly/no project.
+- Empty filter result (`DatabaseCallBlock`): `effectiveFrame` пуст при непустом `frame`
+  (selection-bus auto-filter) → "Нет совпадений" + "Очистить фильтр" (clearSelection).
+- Zero-tabs state в DatabaseCallBlock переведён на EmptyState (killed 📊 emoji, survivor #047).
+- Board column "+ Новая запись" — уже существовал (`BoardColumn.svelte:143`), без изменений.
+- i18n: en+ru (`views.dashboard.canvas.empty-*`, `views.dashboard.database-call.*`).
+
+**Re-scoped**: `CreateProject.svelte` "три primary actions" first screen → перенесён в #061
+(Template Library): первый экран выбора профиля и есть это three-action surface; делать
+редизайн модалки дважды (до и после профилей) — двойная работа.
 
 ### #066 — Dashboard config: YAML-readable format strategy (V3 decision required)
 - Status: 📋 BACKLOG (требует решения)

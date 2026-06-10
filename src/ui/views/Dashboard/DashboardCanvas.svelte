@@ -179,7 +179,7 @@
         {availableSources} {availableWidgets} rightFrames={$rightFramesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
         on:showToolbar={() => { if (!config) return; saveConfig({ ...config, showWidgetToolbar: true }); }}
-        on:addWidget={(e) => widgetController.addWidget(e.detail)}
+        on:addWidget={(e) => widgetController.addWidget(e.detail)} on:applyTemplate={handleApplyTemplate}
         on:configChange={widgetController.handleWidgetConfigChange}
         on:tableConfigChange={widgetController.handleTableConfigChange}
         on:fieldPresetsChange={handleFieldPresetsChange}
