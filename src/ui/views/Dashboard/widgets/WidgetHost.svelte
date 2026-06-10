@@ -262,6 +262,16 @@
     dispatch("configChange", { id: widget.id, changes: { sourceConfig: e.detail } });
   }
 
+  function handleLinkedSelectionChange(e: CustomEvent<import("../types").LinkedSelectionConfig | undefined>) {
+    const cfg = { ...widget.config };
+    if (e.detail !== undefined) {
+      cfg["linkedSelection"] = e.detail;
+    } else {
+      delete cfg["linkedSelection"];
+    }
+    handleWidgetConfigChange(cfg);
+  }
+
   /** Capture unhandled errors scoped to this widget's DOM subtree */
   function captureErrors(node: HTMLElement) {
     function handleResourceError(e: Event) {
@@ -435,7 +445,7 @@
       linkedSelection={dbCallLinkedSelection}
       fields={dbCallFields}
       on:change={handleDbCallSourceChange}
-      on:linkedSelectionChange={(e) => handleWidgetConfigChange({ ...widget.config, linkedSelection: e.detail })}
+      on:linkedSelectionChange={handleLinkedSelectionChange}
       on:close={() => (showConfig = false)}
     />
   {/if}

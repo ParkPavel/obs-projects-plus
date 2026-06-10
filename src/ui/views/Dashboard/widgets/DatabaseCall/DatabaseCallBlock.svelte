@@ -190,7 +190,7 @@
       name: widgetTitle || widgetId,
       frame$: { subscribe: providerFrame.subscribe },
       refresh() {
-        providerFrame.set(frame);
+        providerFrame.set(effectiveFrame);
       },
     };
     registry.register(registeredProvider);

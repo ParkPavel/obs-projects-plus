@@ -36,7 +36,7 @@
   function handleLinkedBlockChange(e: Event) {
     const id = (e.currentTarget as HTMLSelectElement).value;
     if (!id) { dispatch("linkedSelectionChange", undefined); return; }
-    dispatch("linkedSelectionChange", { sourceWidgetId: id, relationField: currentRelationField });
+    dispatch("linkedSelectionChange", { sourceWidgetId: id, relationField: "" });
   }
 
   function handleRelationFieldChange(e: Event) {
