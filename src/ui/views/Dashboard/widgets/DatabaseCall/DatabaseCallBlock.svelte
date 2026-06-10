@@ -13,11 +13,17 @@
     DataField,
   } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
-  import type { ViewTab, DataTableConfig, FieldPreset } from "../../types";
+  import type { ViewTab, DataTableConfig, FieldPreset, LinkedSelectionConfig } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
 
   import ViewTabBar from "../ViewTabBar.svelte";
   import DataTableWidget from "../DataTable/DataTableWidget.svelte";
+  import BoardView from "src/ui/views/Board/BoardView.svelte";
+  import CalendarView from "src/ui/views/Calendar/CalendarView.svelte";
+  import GalleryView from "src/ui/views/Gallery/GalleryView.svelte";
+  import type { BoardConfig } from "src/ui/views/Board/types";
+  import type { CalendarConfig } from "src/ui/views/Calendar/types";
+  import type { GalleryConfig } from "src/ui/views/Gallery/types";
   import { i18n } from "src/lib/stores/i18n";
   import { getContext, onMount, onDestroy } from "svelte";
   import { writable } from "svelte/store";
@@ -26,6 +32,13 @@
     type DataProvider,
     type DataProviderRegistry,
   } from "src/lib/stores/dataProviderRegistry";
+  import {
+    SELECTION_CONTEXT_KEY,
+    EMPTY_SELECTION,
+    composeLinkedSelectionFilter,
+    type SelectionStore,
+  } from "../../canvasSelectionStore";
+  import { matchesCondition } from "src/lib/engine/filterEvaluator";
 
   export let frame: DataFrame;
   export let api: ViewApi;
@@ -36,6 +49,8 @@
   export let activeFieldPresetId: string | undefined = undefined;
   export let project: ProjectDefinition | undefined = undefined;
   export let config: Record<string, unknown>;
+  /** Canvas Selection Bus: drives auto-filter when a master block has a selection. */
+  export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
   /**
    * Widget identity from the enclosing WidgetDefinition. Required for
    * DataProvider registration so this Database Window can be referenced
@@ -51,6 +66,19 @@
       activeFieldPresetId: string | undefined;
     };
   }>();
+
+  // ── Canvas Selection Bus (#Phase4) ─────────────────────────
+  const _ctx = getContext<SelectionStore | undefined>(SELECTION_CONTEXT_KEY);
+  const canvasStore = _ctx ?? writable(EMPTY_SELECTION);
+
+  $: autoFilter = composeLinkedSelectionFilter({
+    linkedSelection,
+    canvasSelection: $canvasStore,
+  });
+
+  $: effectiveFrame = autoFilter
+    ? { ...frame, records: frame.records.filter((r) => matchesCondition(autoFilter!, r)) }
+    : frame;
 
   $: tabs = (config["viewTabs"] as ViewTab[]) ?? [];
   $: activeTabId = String(config["activeTabId"] ?? tabs[0]?.id ?? "");
@@ -91,6 +119,56 @@
     });
   }
 
+  function handleViewConfigChange(cfg: Record<string, unknown>) {
+    if (!activeTab) return;
+    dispatch("configChange", {
+      ...config,
+      viewTabs: tabs.map((t) =>
+        t.id === activeTab.id ? { ...t, config: cfg } : t
+      ),
+    });
+  }
+
+  function handleTabRemove(e: CustomEvent<string>) {
+    const id = e.detail;
+    const updated = tabs.filter((t) => t.id !== id);
+    const newActiveId =
+      activeTabId === id ? (updated[0]?.id ?? "") : activeTabId;
+    dispatch("configChange", {
+      ...config,
+      viewTabs: updated,
+      activeTabId: newActiveId,
+    });
+  }
+
+  function handleTabRename(e: CustomEvent<{ id: string; label: string }>) {
+    const { id, label } = e.detail;
+    dispatch("configChange", {
+      ...config,
+      viewTabs: tabs.map((t) => (t.id === id ? { ...t, label } : t)),
+    });
+  }
+
+  // Derived helpers for embedded Board/Calendar/Gallery
+  $: getRecord = (id: string) =>
+    effectiveFrame.records.find((r) => r.id === id);
+  const sortRecords = (records: ReadonlyArray<DataRecord>) => [...records];
+  $: boardConfig = (activeTab?.config ?? {}) as BoardConfig;
+  $: calendarConfig = (activeTab?.config ?? undefined) as CalendarConfig | undefined;
+  $: galleryConfig = (activeTab?.config ?? undefined) as GalleryConfig | undefined;
+  let dataVersion = 0;
+  $: { void effectiveFrame; dataVersion++; }
+
+  function handleBoardConfigChange(cfg: BoardConfig) {
+    handleViewConfigChange(cfg as unknown as Record<string, unknown>);
+  }
+  function handleCalendarConfigChange(cfg: CalendarConfig) {
+    handleViewConfigChange(cfg as unknown as Record<string, unknown>);
+  }
+  function handleGalleryConfigChange(cfg: GalleryConfig) {
+    handleViewConfigChange(cfg as unknown as Record<string, unknown>);
+  }
+
   // ── DataProvider registration (#031.3) ──────────────────────
   // Each Database Window registers itself as a named data source on
   // the surrounding canvas so cross-widget consumers (Chart, Stats)
@@ -101,7 +179,7 @@
     DATA_PROVIDER_REGISTRY_CONTEXT_KEY
   );
   const providerFrame = writable<DataFrame>(frame);
-  $: providerFrame.set(frame);
+  $: providerFrame.set(effectiveFrame);
 
   let registeredProvider: DataProvider | null = null;
 
@@ -147,6 +225,8 @@
       {activeTabId}
       on:tabSwitch={handleTabSwitch}
       on:tabAdd={handleTabAdd}
+      on:tabRemove={handleTabRemove}
+      on:tabRename={handleTabRename}
     />
     <div
       class="ppp-database-call-content"
@@ -157,7 +237,7 @@
       {#if activeTab}
         {#if activeTab.viewType === "table"}
           <DataTableWidget
-            {frame}
+            frame={effectiveFrame}
             {api}
             {readonly}
             {getRecordColor}
@@ -168,6 +248,40 @@
             {project}
             on:configChange={handleDataTableConfigChange}
             on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
+          />
+        {:else if activeTab.viewType === "board" && project}
+          <BoardView
+            {project}
+            frame={effectiveFrame}
+            {api}
+            {readonly}
+            {getRecordColor}
+            {sortRecords}
+            {getRecord}
+            config={boardConfig}
+            onConfigChange={handleBoardConfigChange}
+            hasSort={false}
+            hasFilter={false}
+          />
+        {:else if activeTab.viewType === "calendar" && project}
+          <CalendarView
+            {project}
+            frame={effectiveFrame}
+            {api}
+            {readonly}
+            {getRecordColor}
+            config={calendarConfig}
+            onConfigChange={handleCalendarConfigChange}
+            {dataVersion}
+          />
+        {:else if activeTab.viewType === "gallery" && project}
+          <GalleryView
+            {project}
+            frame={effectiveFrame}
+            {api}
+            {getRecordColor}
+            config={galleryConfig}
+            onConfigChange={handleGalleryConfigChange}
           />
         {:else}
           <div class="ppp-database-call-placeholder">

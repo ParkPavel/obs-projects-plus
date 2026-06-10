@@ -94,6 +94,7 @@
   $: displayFrame = buildDisplayFrame(filteredFrame, config, getFileStat);
 
   $: availableSources = ($settings.projects ?? []).filter((p) => p.id !== project.id).map((p) => ({ id: p.id, name: p.name }));
+  $: availableWidgets = widgets.map((w) => ({ id: w.id, title: w.title }));
   const rightFramesStore = writable<ReadonlyMap<string, DataFrame>>(new Map());
   const syncPreload = createPreloadSync(createPreloadRunner(
     api.resolveExternalFrame ? (id: string) => api.resolveExternalFrame!(id).then((f) => f ?? undefined) : undefined,
@@ -176,7 +177,7 @@
         {widgets} {dndWidgets} {canDnd} {frame} {displayFrame} {api} {readonly} {getRecordColor}
         fields={frame.fields} tableConfig={config?.table} {primaryDataTableId}
         fieldPresets={config?.fieldPresets ?? []} activeFieldPresetId={config?.activeFieldPresetId}
-        {availableSources} rightFrames={$rightFramesStore} {project}
+        {availableSources} {availableWidgets} rightFrames={$rightFramesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
         on:showToolbar={() => { if (!config) return; saveConfig({ ...config, showWidgetToolbar: true }); }}
         on:addWidget={(e) => widgetController.addWidget(e.detail)}

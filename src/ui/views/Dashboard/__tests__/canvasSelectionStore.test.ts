@@ -8,6 +8,7 @@ import type { FilterCondition } from "src/settings/base/settings";
 import {
 	EMPTY_SELECTION,
 	composeEffectiveFilter,
+	composeLinkedSelectionFilter,
 	createSelectionStore,
 	type SelectionState,
 } from "../canvasSelectionStore";
@@ -171,5 +172,86 @@ describe("composeEffectiveFilter — pure derivation", () => {
 			myWidgetId: "w1",
 		});
 		expect(out).toBe(empty);
+	});
+});
+
+describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
+	it("returns null when linkedSelection is undefined", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: undefined,
+			canvasSelection: EMPTY_SELECTION,
+		});
+		expect(result).toBeNull();
+	});
+
+	it("returns null when no selection is active (EMPTY_SELECTION)", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: EMPTY_SELECTION,
+		});
+		expect(result).toBeNull();
+	});
+
+	it("returns a FilterCondition when master data-table block has an active selection", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: {
+				source: "data-table:block-a",
+				field: "name",
+				value: "ivan-petrov",
+				op: "is",
+			},
+		});
+		expect(result).toEqual({
+			field: "client",
+			operator: "is",
+			value: "ivan-petrov",
+			enabled: true,
+		});
+	});
+
+	it("returns a FilterCondition when master chart block has an active selection", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: {
+				source: "chart:block-a",
+				field: "status",
+				value: "active",
+				op: "is",
+			},
+		});
+		expect(result).toEqual({
+			field: "client",
+			operator: "is",
+			value: "active",
+			enabled: true,
+		});
+	});
+
+	it("returns null when the active selection is from a different master block", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: {
+				source: "data-table:block-b",
+				field: "name",
+				value: "some-value",
+				op: "is",
+			},
+		});
+		expect(result).toBeNull();
+	});
+
+	it("uses relationField (not selection field) as the filter field", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "clientRef" },
+			canvasSelection: {
+				source: "data-table:block-a",
+				field: "id",
+				value: "42",
+				op: "is",
+			},
+		});
+		expect(result?.field).toBe("clientRef");
+		expect(result?.value).toBe("42");
 	});
 });

@@ -158,6 +158,39 @@ function selectionOpToFilterOperator(op: SelectionOp): FilterOperator {
 }
 
 /**
+ * Pure: compose an auto-filter condition for a linked (receiver) block.
+ *
+ * Returns null when:
+ * - linkedSelection is not configured, OR
+ * - canvas has no active selection, OR
+ * - the active selection's source does not match the configured master block.
+ *
+ * Returns a FilterCondition when the master block has an active selection:
+ *   { field: linkedSelection.relationField, operator: "is", value: selectionValue }
+ */
+export function composeLinkedSelectionFilter(args: {
+	readonly linkedSelection: import("./types").LinkedSelectionConfig | undefined;
+	readonly canvasSelection: SelectionState;
+}): FilterCondition | null {
+	const { linkedSelection, canvasSelection } = args;
+	if (!linkedSelection) return null;
+	if (canvasSelection.source === null || canvasSelection.value === null) return null;
+
+	const isMasterSource =
+		canvasSelection.source === dataTableSourceId(linkedSelection.sourceWidgetId) ||
+		canvasSelection.source === chartSourceId(linkedSelection.sourceWidgetId);
+
+	if (!isMasterSource) return null;
+
+	return {
+		field: linkedSelection.relationField,
+		operator: "is",
+		value: canvasSelection.value,
+		enabled: true,
+	};
+}
+
+/**
  * Pure: compose the effective filter for a receiver widget.
  *
  * Returns `userFilters` unchanged (reference-equal) when:

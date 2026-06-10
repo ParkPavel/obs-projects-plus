@@ -5,7 +5,7 @@
   } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import type { WidgetDefinition, ChartConfig, StatsConfig, WidgetSourceConfig, SubBaseCanvasConfig } from "../types";
+  import type { WidgetDefinition, ChartConfig, StatsConfig, WidgetSourceConfig, SubBaseCanvasConfig, WidgetDataContext } from "../types";
   import type { DataTableConfig, FieldPreset } from "../types";
   import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 
@@ -61,6 +61,8 @@
   export let activeFieldPresetId: string | undefined = undefined;
   /** Pillar 5 UI: sibling projects picker list (forwarded to editors). */
   export let availableSources: Array<{ id: string; name: string }> = [];
+  /** Canvas Selection Bus: sibling widget list for "Link to block" picker. */
+  export let availableWidgets: Array<{ id: string; title: string }> = [];
   /** Pillar 5 UI: preloaded frames for JoinStep + scatter correlation. */
   export let rightFrames: ReadonlyMap<string, DataFrame> = new Map();
   /**
@@ -251,20 +253,13 @@
   // The projectId is resolved via the canvas-level right-frame preload channel
   // (collectReferencedSourceIds → dashboardPreload), so vault-change
   // invalidation is handled automatically without extra stores here.
-  $: dbCallSourceConfig = widget.type === "database-call"
-    ? widget.sourceConfig
-    : undefined;
-  $: dbCallSourceId = dbCallSourceConfig?.projectId ?? "";
-  $: dbCallFrame = dbCallSourceId
-    ? (rightFrames.get(dbCallSourceId) ?? frame)
-    : transformedFrame;
+  $: dbCallSourceConfig = widget.type === "database-call" ? widget.sourceConfig : undefined;
+  $: dbCallFrame = dbCallSourceConfig?.projectId ? (rightFrames.get(dbCallSourceConfig.projectId) ?? frame) : transformedFrame;
   $: dbCallFields = dbCallFrame.fields;
+  $: dbCallLinkedSelection = widget.type === "database-call" ? (widget.config as unknown as WidgetDataContext).linkedSelection : undefined;
 
   function handleDbCallSourceChange(e: CustomEvent<WidgetSourceConfig>) {
-    dispatch("configChange", {
-      id: widget.id,
-      changes: { sourceConfig: e.detail },
-    });
+    dispatch("configChange", { id: widget.id, changes: { sourceConfig: e.detail } });
   }
 
   /** Capture unhandled errors scoped to this widget's DOM subtree */
@@ -436,7 +431,11 @@
     <DatabaseCallSettings
       sourceConfig={dbCallSourceConfig}
       {availableSources}
+      availableWidgets={availableWidgets.filter(w => w.id !== widget.id)}
+      linkedSelection={dbCallLinkedSelection}
+      fields={dbCallFields}
       on:change={handleDbCallSourceChange}
+      on:linkedSelectionChange={(e) => handleWidgetConfigChange({ ...widget.config, linkedSelection: e.detail })}
       on:close={() => (showConfig = false)}
     />
   {/if}
@@ -586,6 +585,7 @@
           config={widget.config}
           widgetId={widget.id}
           widgetTitle={widget.title}
+          linkedSelection={dbCallLinkedSelection}
           on:configChange={(e) => handleWidgetConfigChange(e.detail)}
           on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
         />
