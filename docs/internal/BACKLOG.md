@@ -516,10 +516,10 @@ Users have no way to create filter-based ("virtual") databases from the UI.
 - Write test covering the new option renders correctly
 
 ### #049 — Restore green CI baseline: fix ESLint + svelte-check errors
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — all 4 CI gates green at baseline 134/2020
 - Milestone: M-UX | Priority: P0 | Complexity: M
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: none
 - Blocks: clean PRs for all subsequent tickets
 
@@ -575,9 +575,22 @@ This is the root cause of prior "build looked green but runtime broke" hallucina
 - `composeEffectiveFilter()` is pure; receivers never write to the store from a reactive block.
 - No new code path inside `filterEvaluator.ts` — selection is an extra layer that appends a `FilterCondition` through the canonical engine. **Exception**: DataTable receiver (#044.3a) intentionally bypasses filterEvaluator and uses `computeMatchingRowIds` to decorate rows (geometry preservation per spec §5.2).
 
-#### Out of scope (v2 — see spec §9)
-- Multi-select (Cmd-click, range select), brush-range on line/area charts
+#### Out of scope (v1 — see spec §9); delivered in Phase 4.5 (#044.6)
+- Multi-select (Cmd-click, range select) → **delivered** via `is-any-of` + `values[]` (#044.6 / Phase 4.5)
 - Cross-provider selection broadcast, StatsCard as driver, persistence across tab switches
+
+### #044.6 — Phase 4.5: Multi-select Selection Bus (is-any-of + values[])
+- Status: ✅ DONE (2026-06-10) — commit `92f5073` on `feat/dashboard-v2`
+- Milestone: M-INTERACTIVE-DASHBOARD | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #044.5 (✅)
+
+`SelectionState.value: string|null` → `SelectionState.values: ReadonlyArray<string>`.
+`SelectionOp` adds `"is-any-of"`. `SetSelectionInput.values[]` for multi-write.
+All receivers migrated: `dataTableSelectionReceiver.ts`, `statsSelectionReceiver.ts`, `SelectionBadge.svelte`, `ChartWidget.svelte`.
+Driver function args still take `{ value: string }` (single click = single value input).
+FilterCondition type unchanged (`value?: string` singular).
+Gates: 134 suites / 2020 tests PASS, tsc 0, build 0, lint 0, svelte-check 0.
 
 ---
 
@@ -612,16 +625,21 @@ Remove all 40+ hardcoded px/hex/hsl values from widget files.
 Unify z-index under `--ppp-z-*` scale (kill z-index:100, z-index:200 magic numbers).
 Add `--ppp-border-thin`, `--ppp-shadow-sm/md/lg`, `--ppp-db-row-compact/default/expanded` tokens.
 
-### #051 — DataTable Widget Full Rebuild
-- Status: BACKLOG
+### #051 — DatabaseCall Table View Mode (DataTable absorbed)
+- Status: 📋 BACKLOG
 - Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: XL
 - analysis_required: true | analysis_done: false
 - Depends on: #050
+- Blocks: #056 (archive standalone DataTableWidget only after this done)
 
-Full decomposition: DataTableWidget (1843 LOC) → DataGrid + DataGridHeader + DataGridBody + DataGridRow + DataGridCell + DataGridAggRow + DataTableToolbar.
-Fix column alignment root cause: header and cells must share a single CSS Grid context via `--ppp-dt-columns` custom property.
-Fix virtual scroll + sticky aggregation row conflict.
-Target: DataTableWidget.svelte ≤ 600 LOC total across all sub-files.
+**SCOPE (V2-aligned)**: NOT standalone DataTable rebuild. Data-table functionality is absorbed into `DatabaseCallBlock.svelte` as its Table view tab per DASHBOARD_V2_SPEC.md §4.
+
+Implement Table view inside `database-call`:
+- CSS Grid via `--ppp-dt-columns` custom property (single context for header + rows = fixes column alignment)
+- Sticky header + aggregation row without z-index conflicts
+- Virtual scroll without global overflow
+- Decompose: DataTableContent component inside database-call ≤ 400 LOC
+- Standalone `DataTableWidget.svelte` → prepare for archive in #056 (add alias for compatibility)
 
 ### #052 — WidgetShell: Replace WidgetHost (947 LOC)
 - Status: BACKLOG
@@ -643,15 +661,18 @@ Container: `aspect-ratio: var(--ppp-chart-aspect, 16/9)` instead of hardcoded he
 Legend: token-based design. Empty state: shared `EmptyState.svelte` component.
 Scatter: CSS Grid for axis labels.
 
-### #054 — Stats, Comparison, SummaryRow Redesign
-- Status: BACKLOG
-- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+### #054 — Stats Widget Modernization
+- Status: 📋 BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: S
 - analysis_required: false
 - Depends on: #050
 
-Stats: CSS Grid `repeat(auto-fill, minmax(10rem, 1fr))`. Typography hierarchy via tokens.
-Comparison: remove `color ?? "#6a6a8f"` → `var(--ppp-db-text-secondary)`. Delta arrows via CSS.
-SummaryRow: sticky via CSS Grid row, not position:absolute.
+**SCOPE (V2-aligned)**: Stats widget only. Comparison + SummaryRow → archive (#056) per DASHBOARD_V2_SPEC.md §4.
+
+Stats: CSS Grid `repeat(auto-fill, minmax(10rem, 1fr))`.
+Typography: value = `--ppp-font-size-2xl bold`, label = `--ppp-font-size-xs muted`.
+"Filtered" dot via CSS `::before` with `var(--ppp-color-accent)`.
+Remove `color ?? "#6a6a8f"` hardcoded fallback → `var(--ppp-db-text-secondary)`.
 
 ### #055 — FilterTabs, Checklist, DatabaseCallBlock Modernization
 - Status: BACKLOG
@@ -663,16 +684,26 @@ FilterTabs: `overflow-x: auto; scroll-snap-type: x`. Overflow → "..." dropdown
 Checklist: CSS `appearance:none` checkbox + `:checked` + `var(--ppp-color-success)`.
 DatabaseCallBlock: status dot via `var(--ppp-color-success/warning/error)`. Query font: `var(--font-monospace)`.
 
-### #056 — Timeline, ViewPort, DataList Modernization
-- Status: BACKLOG
+### #056 — V2 Widget Archive: Delete V1-only widgets from active code
+- Status: 📋 BACKLOG
 - Milestone: M-UI-MODERNIZATION | Priority: P2 | Complexity: L
 - analysis_required: false
-- Depends on: #050
+- Depends on: #051 (DatabaseCall Table View must cover data-table functionality first)
 
-Timeline: убрать все 6× position:absolute → CSS Grid для bars. Today marker через `::after` pseudoelement.
-Box-shadow → `var(--ppp-shadow-sm)`. Opacity magic numbers → tokens.
-ViewPort: убрать position:absolute dropdown → CSS Popover API.
-DataList: card stack via `gap: var(--ppp-space-sm)`.
+**SCOPE (V2-aligned)**: NOT modernization — ARCHIVATION. Per DASHBOARD_V2_SPEC.md §4, these widget types are deleted from Dashboard V2. Move to `archive/dashboard-v1/` (do NOT delete from git).
+
+**Move to `archive/dashboard-v1/`:**
+- `TimelineWidget.svelte` + `TimelineWidgetConfig.svelte`
+- `ComparisonWidget.svelte` + config
+- `SummaryRowWidget.svelte` + config
+- `YamlVisualizerWidget.svelte` + config (→ будет отдельным View в будущем)
+- `ViewPortWidget.svelte` + config (функционал покрыт database-call general wrapper)
+- `DataListWidget.svelte` + config (функционал покрыт database-call List tab)
+- `SubBaseCanvasWidget.svelte` (функционал → SubBasePanel внутри database-call)
+- Standalone `DataTableWidget.svelte` (функционал переехал в database-call Table tab via #051)
+
+**Prerequisite**: database-call covers Table/List/SubBase functionality (verified via #051 completion).
+**WidgetType union** post-archive: `database-call | chart | stats | checklist | filter-tabs | text | divider | cover-banner` (8 types).
 
 ### #057 — Legacy Type Cleanup: Remove Orphan Types
 - Status: BACKLOG
@@ -736,9 +767,12 @@ M-UX 🔄 ACTIVE:
 #047 ✅ (awaiting user merge → main)
 Next: #011 (YamlVisualizer widget test), #048 (native-query UI, to be created)
 
-M-UI-MODERNIZATION 🔄 PLANNED:
-UI-0: #050 (tokens) → UI-7: #057 (type cleanup) [parallel]
-UI-1: #051 (DataTable) → UI-2: #052 (WidgetShell) [after UI-0]
-UI-3..6: #053–#056 (Chart/Stats/FilterTabs/Timeline) [parallel after UI-0]
-UI-8: #058 (integration) [last]
+M-UI-MODERNIZATION 🔄 PLANNED (адаптирован 2026-06-10 — V2-aligned):
+#057 (type cleanup, P0) ──────────────────────────── [параллельно с #050]
+#050 (tokens, P0) ──► #051 (DB Table View, XL) ──► #056 (V2 archive, depends on #051)
+                  ──► #052 (WidgetShell, L)
+                  ──► #053 (Chart, M)
+                  ──► #054 (Stats только, S) [Comparison/SummaryRow → #056]
+                  ──► #055 (FilterTabs/Checklist/DB UI, M)
+All → #058 (integration, M) [last]
 ```

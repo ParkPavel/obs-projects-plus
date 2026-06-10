@@ -1,238 +1,229 @@
 # Dashboard UI Modernization Plan — M-UI-MODERNIZATION
 
-> **Status**: PLANNING  
+> **Status**: PLANNING (адаптирован 2026-06-10 — выровнен с DASHBOARD_V2_SPEC.md)  
 > **Created**: 2026-06-10  
 > **Milestone**: M-UI-MODERNIZATION  
-> **Triggered by**: Real Obsidian API testing + Phase 4/4.5 pipeline revealing legacy UI debt  
+> **Spec cross-ref**: `docs/internal/DASHBOARD_V2_SPEC.md` (источник правды по судьбе виджетов)
 
 ---
 
-## Почему сейчас
+## Зачем
 
-Реальное тестирование через Obsidian API (2026-06-10) выявило, что текущий Dashboard UI наследует несколько слоёв технического долга:
+Реальное тестирование через Obsidian API (2026-06-10) + code audit выявили:
 
-1. **DataTable** унаследовал кривые столбцы и сломанные выравнивания из M-TABLE-REWRITE (2025), которые никогда не были переработаны визуально.
-2. **Позиционирование** — 6 виджетов используют `position: absolute` + ручные z-index вместо CSS Grid.
-3. **Старые типы** — ряд TypeScript-интерфейсов виджетов не был обновлён после перехода на Dashboard V3 (Phase 3).
-4. **Токены** — 40+ захардкоженных px-значений, hex-цветов, hsл-fallback'ов вместо `--ppp-*` токенов.
-5. **WidgetHost** — монолит 947 LOC со смешанными обязанностями (layout, toolbar, drag, resize, config).
-
-**Принцип**: старые интерфейсные решения несут с собой множественные структурные проблемы. Точечные патчи не решат проблему — нужен полный снос и пересборка с чистого листа.
+1. **DataTable** — кривые столбцы, сломанные выравнивания (header и cells в разных flex-контекстах).
+2. **Позиционирование** — 6 виджетов с `position:absolute` + ручными z-index.
+3. **40+ hardcoded** px/hex/hsl значений вместо `--ppp-*` токенов.
+4. **WidgetHost 947 LOC** — монолит.
+5. **Устаревшие TypeScript-типы** — orphan-типы после Phase 3 (FreeCanvas deletion) и V2 архивирования.
 
 ---
 
-## Архитектура новой системы
+## КРИТИЧЕСКИ ВАЖНО: Выравнивание с DASHBOARD_V2_SPEC
 
-### Принципы новой UI
+**DASHBOARD_V2_SPEC.md §4 определяет окончательную судьбу каждого виджета V1.**  
+M-UI-MODERNIZATION НЕ ДОЛЖЕН заниматься rebuild виджетов, которые V2 удаляет.
 
-| Принцип | Было | Станет |
+### Виджеты по категориям (V2 решение)
+
+| Виджет | V2 судьба | Действие в M-UI-MODERNIZATION |
 |---|---|---|
-| Layout | position:absolute + manual top/left | CSS Grid / Flexbox, 0 position:absolute в widget-content |
-| Токены | Hardcoded px, hex, hsl | Строгая иерархия `--ppp-*` → `--ppp-db-*` → component |
-| Inline styles | `style="width: {w}px"` | CSS custom properties через `--widget-col-width` |
-| Z-index | Magic numbers (10, 100, 200) | Token-scale `--ppp-z-*` (10/20/30/40/50/60) |
-| Typography | Mixed font-size | `--ppp-font-size-xs/sm/base/md/lg` scale |
-| Component anatomy | Ad-hoc per widget | Surface → Header → Content → Footer (shared shell) |
-| Types | Mixed legacy + new | Строгий WidgetConfig union, нет OrphanTypes |
+| `database-call` | ✅ ОСТАЁТСЯ — центральный атом V2 | Modernize: Table/Board/Calendar/Gallery вкладки |
+| `chart` | ✅ ОСТАЁТСЯ | Modernize (#053) |
+| `stats` | ✅ ОСТАЁТСЯ | Modernize (#054) |
+| `checklist` | ✅ ОСТАЁТСЯ | Modernize (#055) |
+| `filter-tabs` | ✅ ОСТАЁТСЯ | Modernize (#055) |
+| `text` | ✅ ОСТАЁТСЯ | Modernize (входит в #055) |
+| `divider` | ✅ ОСТАЁТСЯ | Modernize (входит в #055) |
+| `cover-banner` | ✅ ОСТАЁТСЯ (P3) | Modernize (входит в #055 или standalone) |
+| `data-table` | → ПОГЛОЩЁН database-call (Table вкладка) | Функционал переходит в database-call; standalone widget → archive (#056) |
+| `view-port` | → ПОГЛОЩЁН database-call | Standalone widget → archive (#056) |
+| `data-list` | → ПОГЛОЩЁН database-call (List вкладка) | Standalone widget → archive (#056) |
+| `sub-base-canvas` | → Заменён SubBasePanel в database-call | Standalone widget → archive (#056) |
+| `comparison` | ❌ УДАЛИТЬ | Archive в `archive/dashboard-v1` (#056) |
+| `summary-row` | ❌ УДАЛИТЬ (заменяет stats) | Archive (#056) |
+| `yaml-visualizer` | ❌ УДАЛИТЬ из Dashboard → отдельный View | Archive (#056) |
+| `timeline` | ❌ УДАЛИТЬ (P3, зависит от calendar engine) | Archive (#056) |
+| `FreeCanvas` | ❌ Уже удалён (Phase 3) | Orphan types cleanup (#057) |
 
-### Иерархия токенов (новая)
+> **Правило**: Не вкладывать работу в UI виджета, который идёт в archive. Исключение: если виджет нужен для совместимости до завершения миграции в database-call.
+
+---
+
+## Архитектура новой UI системы
+
+### Иерархия токенов
 
 ```
 Obsidian system vars (--background-*, --text-*, --interactive-*)
     └── Global ppp tokens (--ppp-space-*, --ppp-font-*, --ppp-z-*, --ppp-radius-*)
             └── Dashboard semantic tokens (--ppp-db-surface, --ppp-db-border, --ppp-db-row-height)
-                    └── Widget component tokens (--ppp-dt-col-width, --ppp-chart-legend-height)
+                    └── Widget component tokens (--ppp-chart-aspect, --ppp-dt-columns)
 ```
 
 ### Компонентная анатомия (унифицированная)
 
 ```
-WidgetShell.svelte  ← НОВЫЙ единый контейнер вместо WidgetHost
+WidgetShell.svelte  ← НОВЫЙ единый контейнер (замена WidgetHost)
 ├── .ppp-widget-surface          (CSS Grid: header + content)
 │   ├── .ppp-widget-header       (flex: icon + title + badges + toolbar)
 │   │   ├── SelectionBadge slot
 │   │   └── WidgetToolbar slot
 │   └── .ppp-widget-content      (overflow:auto, flex:1 1 auto)
-│       └── <slot />             (widget renders here)
+│       └── <slot />
 └── .ppp-widget-resize-handle    (4 edges via CSS Grid areas)
+```
+
+### Ключевой fix DataTable (внутри database-call)
+
+Проблема: header и body — два отдельных flex-контейнера, не разделяющих CSS Grid контекст → колонки разъезжаются.
+
+```css
+/* Решение: единый grid context */
+.ppp-db-table {
+  display: grid;
+  grid-template-columns: var(--ppp-dt-columns);  /* одна переменная для header + rows */
+  grid-template-rows: auto 1fr auto;
+}
 ```
 
 ---
 
 ## Фазы реализации
 
-### Фаза UI-0: Фундамент токенов (#050) — ОБЯЗАТЕЛЬНА ПЕРВОЙ
+### Фаза UI-0: Фундамент токенов (#050) — БЛОКИРУЕТ ВСЁ
 
 **Что делаем:**
-- Создаём `src/ui/views/Dashboard/tokens/dashboardTokens.css` — исчерпывающий набор `--ppp-db-*` токенов
-- Удаляем все hardcoded px/hex из 18 widget-файлов (40+ мест, см. аудит)
-- Унифицируем z-index под token-scale (убиваем `z-index: 100`, `z-index: 200`)
-- Объявляем `--ppp-border-thin` (0.0625rem), `--ppp-shadow-sm/md/lg` токены
-- Создаём `--ppp-db-row-compact/default/expanded` (заменяет hardcoded row heights)
+- `src/ui/views/Dashboard/tokens/dashboardTokens.css` — `--ppp-db-*` токены
+- Удалить 40+ hardcoded px/hex из **выживающих** виджетов (database-call, chart, stats, checklist, filter-tabs, text, divider, cover-banner, WidgetHost/Shell)
+- Унифицировать z-index под token-scale
+- `--ppp-border-thin`, `--ppp-shadow-sm/md/lg`, `--ppp-db-row-*` токены
 
 **Файлы:** `designTokens.ts`, `tokens/dashboardTokens.css`, `styles.css`  
-**Сложность:** L | **Приоритет:** P0 | **Блокирует:** все остальные фазы
+**Сложность:** L | **Приоритет:** P0
 
 ---
 
-### Фаза UI-1: DataTable полный rebuild (#051) — P0
+### Фаза UI-7: Удаление легаси-типов (#057) — ПАРАЛЛЕЛЬНО с UI-0
 
-**Проблемы к решению:**
-- Кривые столбцы: header и cells не шарят CSS Grid context → разъезжаются
-- Сломанные выравнивания при изменении размера окна
-- `position:sticky` aggregation row конфликтует с virtual scroll
-- `z-index: 100` на agg-picker — вне token-scale
-- 1843 LOC — монолит, нужна декомпозиция
+**Что сносим (TypeScript):**
+- `WidgetConfigV1/V2` orphans (post-Phase 3)
+- `FreeCanvasLayout` + связанные типы (Phase 3 deletion осиротила их)
+- Standalone типы виджетов, уходящих в archive: `TimelineWidgetConfig`, `ComparisonWidgetConfig`, `SummaryRowWidgetConfig`, `ViewPortWidgetConfig`, `DataListWidgetConfig`, `YamlVisualizerWidgetConfig`
+- Дублирующие union types в `types.ts`
+- `GridColumnDef` старый формат
 
-**Новая архитектура DataTable:**
+**Цель:** 0 TypeScript `@deprecated` в src/, 0 orphan exports  
+**Сложность:** L | **Приоритет:** P0 | **analysis_required: true**
 
-```
-DataTableWidget.svelte (~400 LOC)       ← оркестратор
-├── DataGrid.svelte (~300 LOC)          ← CSS Grid таблица
-│   ├── DataGridHeader.svelte           ← НОВЫЙ: отдельный header
-│   │   └── DataGridHeaderCell.svelte   ← НОВЫЙ: ячейка заголовка
-│   ├── DataGridBody.svelte             ← virtual scroll container
-│   │   └── DataGridRow.svelte          ← строка (highlight/dim aware)
-│   │       └── DataGridCell.svelte     ← НОВЫЙ: унифицированная ячейка
-│   └── DataGridAggRow.svelte           ← НОВЫЙ: aggregation строка
-└── DataTableToolbar.svelte             ← поиск, фильтр, сортировка
-```
+---
 
-**CSS Grid layout решение:**
+### Фаза UI-1: DatabaseCall Table View (#051) — после UI-0
 
-```css
-.ppp-data-grid {
-  display: grid;
-  /* Колонки задаются через CSS custom property — единый контекст для header и body */
-  grid-template-columns: var(--ppp-dt-columns);
-  grid-template-rows: auto 1fr auto;
-  /* header / body / agg-row в одном grid */
-}
-```
+**ПЕРЕФОРМУЛИРОВАНО**: не standalone DataTable rebuild, а модернизация Table-вкладки внутри `database-call` + финальная миграция standalone `data-table` → archive.
 
-**Ключевой fix:** Header и body cells — в одном `display:grid` контексте. Не два отдельных flex-контейнера.
+**Что делаем:**
+- Внутри `DatabaseCallBlock.svelte`: Table view через CSS Grid с `--ppp-dt-columns`
+- Декомпозиция: DataTableContent (внутри database-call) ≤ 400 LOC
+- Sticky header + aggregation row без z-index конфликтов
+- Виртуальный скролл без глобального overflow
+- Standalone `DataTableWidget.svelte` → move to `archive/dashboard-v1` + alias для совместимости
 
 **Сложность:** XL | **Зависит от:** #050
 
 ---
 
-### Фаза UI-2: WidgetShell (#052) — P1
+### Фаза UI-2: WidgetShell (#052) — после UI-0
 
 **Заменяем WidgetHost.svelte (947 LOC) на WidgetShell.svelte:**
-- Чистый CSS Grid: `grid-template-areas: "header" "content" "footer"`
-- Resize через ResizeObserver + CSS variables, не Svelte stores
-- Toolbar — отдельный `WidgetToolbar.svelte` с token-based hover states
-- SelectionBadge переносится в header slot
-- DnD handles остаются но через dedicated `.ppp-widget-drag-handle`
+- CSS Grid: `grid-template-areas: "header" "content"`
+- Resize через ResizeObserver + CSS variables
+- Toolbar — отдельный `WidgetToolbar.svelte`
+- SelectionBadge в header slot
+- DnD через `.ppp-widget-drag-handle`
+- Цель: ≤ 350 LOC
 
 **Сложность:** L | **Зависит от:** #050
 
 ---
 
-### Фаза UI-3: Chart Widget (#053) — P1
+### Фаза UI-3: Chart Widget (#053) — после UI-0
 
-**Что меняем:**
-- Container: убираем hardcoded heights → `aspect-ratio: var(--ppp-chart-aspect, 16/9)` 
-- Legend: новый token-based дизайн вместо внешней SVG-библиотеки overlay
-- Empty state: унифицированный `EmptyState.svelte` (шарится со Stats, DataList)
-- Scatter: переходим на строгий CSS Grid для axis labels
-
-**Сложность:** M | **Зависит от:** #050
-
----
-
-### Фаза UI-4: Stats, Comparison, SummaryRow (#054) — P1
-
-**Stats Widget:**
-- Карточки на CSS Grid: `grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr))`
-- Новая типографика: value = `--ppp-font-size-2xl bold`, label = `--ppp-font-size-xs muted`
-- "Filtered" dot — через CSS `::before` с `--ppp-color-accent`, не JS-вставка
-
-**Comparison Widget:**
-- Удаляем `color ?? "#6a6a8f"` (hardcoded hex) → `var(--ppp-db-text-secondary)`
-- Delta arrows через CSS transforms, не emoji
-
-**SummaryRow:**
-- Sticky bottom через CSS Grid row, не position:absolute
+- Container: `aspect-ratio: var(--ppp-chart-aspect, 16/9)`
+- Legend: token-based дизайн
+- Empty state: shared `EmptyState.svelte`
+- Убрать hardcoded heights и inline shadow
 
 **Сложность:** M | **Зависит от:** #050
 
 ---
 
-### Фаза UI-5: FilterTabs, Checklist, DatabaseCallBlock (#055) — P1
+### Фаза UI-4: Stats (#054) — после UI-0
 
-**FilterTabs:**
-- Новый tab strip через CSS `overflow-x: auto; scroll-snap-type: x`
-- Active tab: `border-bottom: 2px solid var(--interactive-accent)` (Obsidian token)
-- Overflow → hidden tabs с "..." dropdown
+**SCOPE СУЖЕН**: только Stats. Comparison и SummaryRow → archive (#056), не rebuild.
 
-**Checklist:**
-- Checkbox через CSS `appearance: none` + `:checked` + `var(--ppp-color-success)`
-- Progress bar токенизирована: `--ppp-db-progress-height: 0.25rem`
+- Stats: CSS Grid `repeat(auto-fill, minmax(10rem, 1fr))`
+- Value = `--ppp-font-size-2xl bold`, label = `--ppp-font-size-xs muted`
+- "Filtered" dot через CSS `::before` с `var(--ppp-color-accent)`
+- Убрать `color ?? "#6a6a8f"` hardcode
 
-**DatabaseCallBlock:**
-- Status indicator: `var(--ppp-color-success/warning/error)` dot
-- Query display: `font-family: var(--font-monospace)` + token padding
+**Сложность:** S | **Зависит от:** #050
+
+---
+
+### Фаза UI-5: FilterTabs, Checklist, DatabaseCallBlock UI, Text, Divider, CoverBanner (#055) — после UI-0
+
+**FilterTabs:** `overflow-x: auto; scroll-snap-type: x`. Overflow → "..." dropdown.  
+**Checklist:** CSS `appearance:none` checkbox + `var(--ppp-color-success)`.  
+**DatabaseCallBlock** (query config panel): status dot `var(--ppp-color-success/warning/error)`, query font `var(--font-monospace)`.  
+**TextWidget / DividerWidget / CoverBanner:** токенизация remaining hardcoded values.
 
 **Сложность:** M | **Зависит от:** #050
 
 ---
 
-### Фаза UI-6: Timeline, ViewPort, DataList (#056) — P2
+### Фаза UI-6: Archive V1 widgets (#056) — ПЕРЕФОРМУЛИРОВАНО
 
-**Timeline Widget — самый сложный рефакторинг:**
-- Убираем все 6× `position:absolute` → CSS Grid для row bars
-- Today marker: `::after` pseudoelement через CSS Grid column placement
-- Bar heights: `--ppp-timeline-bar-height` токен (1.25rem → token)
-- Box-shadow → `var(--ppp-shadow-sm)` токен
+**НЕ МОДЕРНИЗАЦИЯ — АРХИВАЦИЯ.** Цель: удалить V1-виджеты из активного кода согласно DASHBOARD_V2_SPEC.md §4.
 
-**ViewPort:**
-- Убираем `position:absolute` dropdown → CSS Popover API или портал
+**Что переносим в `archive/dashboard-v1`:**
+- `TimelineWidget.svelte` + `TimelineWidgetConfig.svelte` + `TimelineWidgetConfig` type
+- `ComparisonWidget.svelte` + config
+- `SummaryRowWidget.svelte` + config
+- `YamlVisualizerWidget.svelte` + config (→ станет отдельным View позже)
+- `ViewPortWidget.svelte` + config (функционал → database-call general wrapper)
+- `DataListWidget.svelte` + config (функционал → database-call List tab)
+- `SubBaseCanvasWidget.svelte` (функционал → SubBasePanel в database-call)
+- Standalone `DataTableWidget.svelte` (функционал уже в #051)
 
-**DataList:**
-- Card stack на CSS Grid: `gap: var(--ppp-space-sm)`
-
-**Сложность:** L | **Зависит от:** #050
-
----
-
-### Фаза UI-7: Удаление легаси-типов (#057) — P0
-
-**Что сносим:**
-- `WidgetConfigV1` / `WidgetConfigV2` — старые версии конфигов виджетов
-- `FreeCanvasLayout` orphan types (после Phase 3 deletion ряд типов осиротел)
-- `GridColumnDef` старый формат (конфликтует с новым CSS Grid подходом)
-- Дублирующие union types в `types.ts` / `settings.ts`
-- Устаревшие `FilterConditionV1` / `SortConditionV1` (replaced by v2)
-
-**Цель:** 0 TypeScript `@deprecated` комментариев в src/, 0 неиспользуемых exports
-
-**Сложность:** L | **Зависит от:** ничего (можно параллельно с UI-0)
+**Порядок:** сначала убедиться, что database-call покрывает функциональность (Table, List, SubBase) — тогда archive безопасен.  
+**Сложность:** L | **Зависит от:** #051 (DataTable migration done)
 
 ---
 
-### Фаза UI-8: Финальная интеграция и тестирование (#058) — P1
+### Фаза UI-8: Интеграция и финальный тест (#058) — ПОСЛЕДНИЙ
 
-- PX-budget ratchet пересчёт (цель: ≤ 50 вместо текущих 186)
+- PX-budget ratchet пересчёт (цель: ≤ 60 из текущих 186)
+- `svelte-check` 0 warnings
 - Full Obsidian API тест всех 5 views демо-проекта
-- svelte-check 0 warnings (сейчас 4)
-- Визуальный аудит в OBStests vault: все 18 типов виджетов
+- WidgetType union обновлён до V2 состава (8 типов)
+- Визуальный аудит в OBStests vault
+
+**Сложность:** M | **Зависит от:** все предыдущие фазы
 
 ---
 
-## Порядок реализации
+## Правильный порядок
 
 ```
-UI-7 (типы) ─────────────────────────────────────────────┐
-                                                          │
-UI-0 (токены) → UI-1 (DataTable) → UI-2 (WidgetShell) → UI-8 (интеграция)
-             └─ UI-3 (Chart)     ─┘
-             └─ UI-4 (Stats)     ─┘
-             └─ UI-5 (FilterTabs)─┘
-             └─ UI-6 (Timeline)  ─┘
+#057 (Type cleanup, P0) ──────────────────────────────────────────────┐
+                                                                       │
+#050 (Tokens, P0) → #051 (DB Table) → #052 (WidgetShell) → #058 (integration)
+                  → #053 (Chart)    ─┘
+                  → #054 (Stats)
+                  → #055 (FilterTabs/Checklist/Text/Divider)
+                  → #056 (Archive V1 widgets) — зависит от #051
 ```
-
-UI-7 и UI-0 запускаются параллельно. UI-1 через UI-6 — параллельно после UI-0.
 
 ---
 
@@ -240,24 +231,23 @@ UI-7 и UI-0 запускаются параллельно. UI-1 через UI-6
 
 | Метрика | Сейчас | Цель |
 |---|---|---|
-| Hardcoded px в widget files | 40+ | 0 |
-| Hardcoded hex/hsl colors | 8+ | 0 |
-| `position:absolute` в widget content | 6 виджетов | 0 (только overlay/dropdowns) |
-| z-index вне token-scale | 3 места | 0 |
+| Hardcoded px в **выживающих** виджетах | 40+ | 0 |
+| `position:absolute` в widget content | 6 виджетов | 0 |
 | WidgetHost LOC | 947 | ≤ 350 (WidgetShell) |
-| DataTableWidget LOC | 1843 | ≤ 600 (декомпозиция) |
+| DatabaseCall Table view column alignment | ❌ broken | ✅ единый CSS Grid context |
 | PX-budget ratchet | 186 | ≤ 60 |
+| V1 виджеты в активном коде | 8 standalone | 0 (все в archive) |
 | svelte-check warnings | 4 | 0 |
-| Legacy orphan types | TBD | 0 |
+| Orphan TypeScript types | TBD | 0 |
 
 ---
 
 ## Инварианты (нельзя нарушать)
 
-1. **Ни одна Jest-проверка не должна упасть** — все 134+ суитов зелёные после каждой фазы.
-2. **4-gate CI** после каждого PR.
-3. **DashboardCanvas ≤ 200 LOC** — неизменно.
-4. **Нет `@ts-ignore`** в src/.
-5. **Нет `new Menu(`** вне contextMenu.ts.
-6. **Selection Bus API не меняется** — `SelectionState`, `setSelection()`, `composeEffectiveFilter()` остаются как есть (фаза 4.5 завершена).
-7. **DataProvider Registry** (#044.1 contract) сохраняется полностью.
+1. **4-gate CI** после каждой фазы — 134+ суитов зелёные.
+2. **DashboardCanvas ≤ 200 LOC**.
+3. **Нет `@ts-ignore`** в src/.
+4. **Selection Bus API не меняется** (#044.x contracts frozen).
+5. **filterEvaluator.ts** — единственный filter engine, не дублировать.
+6. **Архивируемые виджеты идут в `archive/dashboard-v1`**, не удаляются из git-истории.
+7. **database-call покрывает функционал** архивируемого виджета ДО его архивации.
