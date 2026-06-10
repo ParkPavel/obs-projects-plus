@@ -71,16 +71,12 @@
   {#if fieldMissing}
     <span class="ppp-stats-value ppp-stats-value--missing" aria-label="Field not found">⚠</span>
   {:else}
-    <span class="ppp-stats-value">
-      {formatted}
-      {#if filtered}
-        <span
-          class="ppp-stats-filtered-dot"
-          title="Filtered by canvas selection"
-          aria-label="Filtered by canvas selection"
-        ></span>
-      {/if}
-    </span>
+    <span
+      class="ppp-stats-value"
+      class:ppp-stats-value--filtered={filtered}
+      title={filtered ? "Filtered by canvas selection" : undefined}
+      aria-label={filtered ? `${formatted} — filtered by canvas selection` : undefined}
+    >{formatted}</span>
   {/if}
   {#if config.sparkline && sparklinePath && !fieldMissing}
     <svg class="ppp-stats-sparkline" viewBox="0 0 80 24" preserveAspectRatio="none">
@@ -100,6 +96,29 @@
     margin: 0.125rem 0;
   }
 
+  .ppp-stats-value {
+    font-size: var(--ppp-font-size-2xl, 1.5rem);
+    font-weight: var(--ppp-font-weight-bold, 700);
+    line-height: var(--ppp-line-height-tight, 1.25);
+  }
+
+  .ppp-stats-label {
+    font-size: var(--ppp-font-size-sm, 0.75rem);
+    color: var(--ppp-db-text-secondary, var(--text-muted));
+  }
+
+  /* #044.4 filtered-by-selection indicator — CSS ::after avoids extra DOM node */
+  .ppp-stats-value--filtered::after {
+    content: '';
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-left: 0.375rem;
+    border-radius: 50%;
+    background: var(--interactive-accent);
+    vertical-align: middle;
+  }
+
   .ppp-stats-card--missing {
     opacity: 0.7;
     border-left: 0.1875rem solid var(--text-warning, orange) !important;
@@ -112,17 +131,5 @@
   .ppp-stats-missing-hint {
     color: var(--text-warning, orange);
     font-style: italic;
-  }
-
-  /* #044.4 filtered-by-selection indicator. Subtle accent-coloured dot
-     positioned next to the value (spec §5.3). Uses rem to respect PX-budget. */
-  .ppp-stats-filtered-dot {
-    display: inline-block;
-    width: 0.4rem;
-    height: 0.4rem;
-    margin-left: 0.375rem;
-    border-radius: 50%;
-    background: var(--interactive-accent);
-    vertical-align: middle;
   }
 </style>

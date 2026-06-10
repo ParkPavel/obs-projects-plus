@@ -1,171 +1,85 @@
-﻿<script lang="ts">
-  import type { WidgetType, WidgetDefinition } from "../types";
-  import { WIDGET_REGISTRY, canAddWidget } from "./widgetRegistry";
-  import { WIDGET_TEMPLATES, type WidgetTemplate } from "../widgetTemplates";
+<script lang="ts">
+  /**
+   * #052 — WidgetToolbar: action buttons for widget header.
+   * Designed to be placed in WidgetShell's "actions" slot.
+   */
   import { createEventDispatcher } from "svelte";
-  import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
-  import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import { i18n } from "src/lib/stores/i18n";
 
-  export let currentWidgets: { type: WidgetType }[];
-
-  let open = false;
-  let showTemplates = false;
-  let triggerEl: HTMLButtonElement | null = null;
+  export let collapsed: boolean = false;
+  export let hasCog: boolean = false;
+  export let hasPipeline: boolean = false;
+  export let pipelineSteps: number = 0;
+  export let locked: boolean = false;
+  export let readonly: boolean = false;
 
   const dispatch = createEventDispatcher<{
-    addWidget: WidgetType;
-    applyTemplate: WidgetDefinition[];
+    toggleCollapse: void;
+    toggleConfig: void;
+    togglePipeline: void;
+    toggleLock: void;
+    remove: void;
   }>();
-
-  function handleAdd(type: WidgetType) {
-    dispatch("addWidget", type);
-    open = false;
-  }
-
-  function handleTemplate(template: WidgetTemplate) {
-    dispatch("applyTemplate", template.widgets);
-    showTemplates = false;
-    open = false;
-  }
-
-  // Reset nested templates submenu whenever the popup closes.
-  $: if (!open) showTemplates = false;
 </script>
 
-<div class="ppp-widget-toolbar">
-  <button
-    bind:this={triggerEl}
-    class="ppp-toolbar-add clickable-icon"
-    on:click={() => (open = !open)}
-    aria-label={$i18n.t("views.dashboard.widget.add-aria")}
-    aria-expanded={open}
-    aria-haspopup="menu"
-  >
-    + {$i18n.t("views.dashboard.widget.add")}
-  </button>
+<button
+  class="ppp-toolbar-btn"
+  class:ppp-toolbar-btn--rotated={collapsed}
+  on:click={() => dispatch("toggleCollapse")}
+  aria-label={collapsed ? $i18n.t("views.dashboard.widget.expand") : $i18n.t("views.dashboard.widget.collapse")}
+  aria-expanded={!collapsed}
+>‹</button>
 
-  <FloatingPopup
-    {triggerEl}
-    bind:open
-    placement="bottom-start"
-    role="menu"
-    ariaLabel={$i18n.t("views.dashboard.widget.add-aria")}
-  >
-    {#each WIDGET_REGISTRY as meta}
-      {@const allowed = canAddWidget(meta.type, currentWidgets)}
-      <button
-        class="ppp-toolbar-option"
-        class:ppp-toolbar-option--disabled={!allowed}
-        disabled={!allowed}
-        on:click={() => handleAdd(meta.type)}
-        role="menuitem"
-      >
-        <span class="ppp-toolbar-icon"><Icon name={meta.icon} /></span>
-        <span>{$i18n.t(meta.labelKey)}</span>
-      </button>
-    {/each}
-
-    {#if WIDGET_TEMPLATES.length > 0}
-      <div class="ppp-toolbar-separator"></div>
-      <button
-        class="ppp-toolbar-option ppp-toolbar-option--section"
-        on:click|stopPropagation={() => (showTemplates = !showTemplates)}
-        role="menuitem"
-      >
-        <span class="ppp-toolbar-icon"><Icon name="layout-template" /></span>
-        <span>{$i18n.t("views.dashboard.widget.templates")} {showTemplates ? "▾" : "▸"}</span>
-      </button>
-      {#if showTemplates}
-        {#each WIDGET_TEMPLATES as tpl}
-          <button
-            class="ppp-toolbar-option ppp-toolbar-option--template"
-            on:click={() => handleTemplate(tpl)}
-            role="menuitem"
-            title={$i18n.t(tpl.descriptionKey)}
-          >
-            <span class="ppp-toolbar-tpl-label">{$i18n.t(tpl.labelKey)}</span>
-            <span class="ppp-toolbar-tpl-desc">{$i18n.t(tpl.descriptionKey)}</span>
-          </button>
-        {/each}
-      {/if}
-    {/if}
-  </FloatingPopup>
-</div>
+{#if !readonly}
+  {#if hasCog}
+    <button class="ppp-toolbar-btn" on:click={() => dispatch("toggleConfig")}
+      aria-label={$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure widget" })}
+      title={$i18n.t("views.dashboard.widget.configure", { defaultValue: "Configure widget" })}
+    ><Icon name="settings-2" size="sm" /></button>
+  {/if}
+  {#if hasPipeline}
+    <button class="ppp-toolbar-btn" class:ppp-toolbar-btn--active={pipelineSteps > 0}
+      on:click={() => dispatch("togglePipeline")}
+      aria-label={$i18n.t("views.dashboard.widget.pipeline", { defaultValue: "Data transform pipeline" })}
+    ><span class="ppp-toolbar-glyph">∑</span>{#if pipelineSteps > 0}<span class="ppp-toolbar-count">{pipelineSteps}</span>{/if}</button>
+  {/if}
+  <button class="ppp-toolbar-btn" class:ppp-toolbar-btn--locked={locked}
+    on:click={() => dispatch("toggleLock")}
+    aria-label={locked ? $i18n.t("views.dashboard.widget.unlock", { defaultValue: "Unlock widget" }) : $i18n.t("views.dashboard.widget.lock", { defaultValue: "Lock widget position" })}
+  ><Icon name={locked ? "lock" : "unlock"} size="sm" /></button>
+  <button class="ppp-toolbar-btn ppp-toolbar-btn--danger" on:click={() => dispatch("remove")}
+    aria-label={$i18n.t("views.dashboard.widget.remove")}
+  ><Icon name="x" size="sm" /></button>
+{/if}
 
 <style>
-  .ppp-widget-toolbar {
-    position: relative;
-    display: inline-flex;
-  }
-
-  .ppp-toolbar-add {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.75rem;
-    font-size: var(--font-ui-small);
-    color: var(--text-muted);
-    background: var(--background-secondary);
-    border: 1px dashed var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-  }
-
-  .ppp-toolbar-add:hover {
-    color: var(--text-normal);
-    border-color: var(--interactive-accent);
-  }
-
-  .ppp-toolbar-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.375rem 0.5rem;
-    font-size: var(--font-ui-small);
-    color: var(--text-normal);
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .ppp-toolbar-option:hover:not(:disabled) {
-    background: var(--background-modifier-hover);
-  }
-
-  .ppp-toolbar-option--disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .ppp-toolbar-icon {
+  .ppp-toolbar-btn {
     flex-shrink: 0;
-    color: var(--text-muted);
-    font-size: 0.875rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--ppp-db-text-faint, var(--text-faint));
+    border-radius: var(--radius-s, 0.25rem);
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: color 120ms ease, background 120ms ease, transform 120ms ease;
   }
-
-  .ppp-toolbar-separator {
-    height: 1px;
-    background: var(--background-modifier-border);
-    margin: 0.25rem 0;
-  }
-
-  .ppp-toolbar-option--template {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.125rem;
-    padding-left: 1.5rem;
-  }
-
-  .ppp-toolbar-tpl-label {
-    font-weight: 500;
-  }
-
-  .ppp-toolbar-tpl-desc {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-faint);
+  .ppp-toolbar-btn:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+  .ppp-toolbar-btn--rotated { transform: rotate(-90deg); }
+  .ppp-toolbar-btn--active { color: var(--text-accent); }
+  .ppp-toolbar-btn--locked { color: var(--text-accent); }
+  .ppp-toolbar-btn--danger:hover { color: var(--text-error); }
+  .ppp-toolbar-glyph { font-size: 0.9rem; font-weight: 700; line-height: 1; }
+  .ppp-toolbar-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 0.875rem; height: 0.875rem; padding: 0 0.1875rem; margin-left: 0.1875rem;
+    font-size: 0.625rem; font-weight: 700;
+    color: var(--text-on-accent, var(--background-primary));
+    background: var(--interactive-accent); border-radius: 0.4375rem;
   }
 </style>

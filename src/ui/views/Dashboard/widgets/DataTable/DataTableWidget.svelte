@@ -1,4 +1,10 @@
 ﻿<script lang="ts">
+  /**
+   * @deprecated Standalone DataTableWidget is scheduled for archive in #056.
+   * Table functionality is now provided via DatabaseCall Table view tab
+   * (DataTableContent.svelte). This file remains as the rendering engine
+   * until the CSS Grid migration is complete.
+   */
   import {
     DataFieldType,
     type DataFrame,

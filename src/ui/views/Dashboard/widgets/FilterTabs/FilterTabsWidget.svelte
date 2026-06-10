@@ -111,10 +111,22 @@
 <style>
   .ppp-filter-tabs {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
     gap: 0.25rem;
     padding: 0.25rem 0.5rem;
     border-bottom: 1px solid var(--background-modifier-border);
+    scrollbar-width: none;
+  }
+
+  .ppp-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ppp-filter-tab {
+    scroll-snap-align: start;
+    flex-shrink: 0;
   }
 
   .ppp-filter-tabs-empty {

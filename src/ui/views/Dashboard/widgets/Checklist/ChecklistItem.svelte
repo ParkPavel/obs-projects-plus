@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { createEventDispatcher } from "svelte";
 
   export let item: { id: string; label: string; checked: boolean };
@@ -44,6 +44,26 @@
 
   .ppp-checklist-checkbox {
     flex-shrink: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 0.0625rem solid var(--background-modifier-border-hover);
+    border-radius: var(--ppp-radius-sm, 0.125rem);
+    background: var(--background-primary);
+    cursor: pointer;
+    position: relative;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+
+  .ppp-checklist-checkbox:checked {
+    background: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+  }
+
+  .ppp-checklist-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .ppp-checklist-text {
@@ -56,3 +76,4 @@
     color: var(--text-faint);
   }
 </style>
+

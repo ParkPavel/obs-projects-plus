@@ -17,7 +17,7 @@
   import type { ProjectDefinition } from "src/settings/settings";
 
   import ViewTabBar from "../ViewTabBar.svelte";
-  import DataTableWidget from "../DataTable/DataTableWidget.svelte";
+  import DataTableContent from "./DataTableContent.svelte";
   import BoardView from "src/ui/views/Board/BoardView.svelte";
   import CalendarView from "src/ui/views/Calendar/CalendarView.svelte";
   import GalleryView from "src/ui/views/Gallery/GalleryView.svelte";
@@ -236,7 +236,7 @@
     >
       {#if activeTab}
         {#if activeTab.viewType === "table"}
-          <DataTableWidget
+          <DataTableContent
             frame={effectiveFrame}
             {api}
             {readonly}
@@ -336,7 +336,9 @@
 
   .ppp-database-call-content {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .ppp-database-call-placeholder {
@@ -346,5 +348,7 @@
     padding: 2rem;
     color: var(--text-faint);
     font-style: italic;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
   }
 </style>
