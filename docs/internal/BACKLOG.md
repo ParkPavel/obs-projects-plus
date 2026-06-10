@@ -716,7 +716,7 @@ duplicated union types in types.ts/settings.ts, FilterConditionV1/SortConditionV
 Goal: 0 `@deprecated` in src/, 0 unused exports from widget type files.
 
 ### #058 — UI Modernization Integration & Full Test
-- Status: BACKLOG
+- Status: 📋 BACKLOG
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #051, #052, #053, #054, #055, #056, #057
@@ -724,6 +724,119 @@ Goal: 0 `@deprecated` in src/, 0 unused exports from widget type files.
 PX-budget ratchet recount (target ≤ 60 from current 186).
 Full Obsidian API test: all 5 demo-project views, all 18 widget types.
 svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
+
+---
+
+## Milestone M-VISION-PARITY — Продуктовый слой (Vision Scenes 2, 5, 6, 7, 8)
+
+> Triggered: 2026-06-10 — Vision alignment audit обнаружил 5 сцен Vision без технических тикетов.
+> Source: `docs/internal/AUDIT_VISION_ALIGNMENT.md`
+> Spec: `docs/internal/DASHBOARD_V2_VISION.md`
+
+### #059 — SmartSuggest: проактивные подсказки по типам данных
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P1 | Complexity: L
+- analysis_required: true | analysis_done: false
+- Depends on: #051 (Table View ready — подсказки показываются в контексте блока данных)
+
+**Vision §6 — «центральная инновация»**: "Видишь числовое поле? Покажу сумму. Видишь связи? Покажу частоту визитов."
+
+MVP scope:
+- При добавлении первого числового поля в блок → suggestion strip "Хотите Stats-виджет с суммой/средним?"
+- При обнаружении Relation-поля → suggestion "Показать связанные записи как sub-base?"
+- Suggestion dismissable (× закрыть, "не предлагать снова")
+- Реализовать через `SmartSuggestionBus.svelte` — singleton на канвасе, реагирует на изменения DataFrame schema
+
+### #060 — Field transparency: column header → frontmatter key tooltip
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P2 | Complexity: S
+- analysis_required: false
+- Depends on: #051
+
+**Vision §3**: "Курсор по колонке — подсветка frontmatter ключа. Двойной клик по ячейке — открытие файла на нужной строке."
+
+Scope:
+- Column header hover tooltip: показывает frontmatter key name (напр. `client:`, `pain_level:`)
+- Double-click on row expander icon → `app.workspace.openLinkText(file.path, '', false)` + scroll to frontmatter field via Obsidian API
+- Визуальная «подсветка» в split-view (если открыт) — scope отдельного subticket
+
+### #061 — Template Library: 3 starter profiles (clients / fitness / journal)
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P2 | Complexity: L
+- analysis_required: true | analysis_done: false
+- Depends on: #046 (demo project pattern established)
+
+**Vision §7**: "'Я веду клиентов' — готовый набор баз, представлений и связей. Начать за 5 минут."
+
+Scope:
+- `CreateProject.svelte`: добавить step "Choose profile" перед folder selection
+- Profile 1: **Clients** (Clients + Sessions + Tasks + Calendar view)
+- Profile 2: **Fitness** (Workouts + Exercises + Nutrition cross-stats)
+- Profile 3: **Project journal** (Projects + Tasks + Meetings timeline)
+- Каждый профиль генерирует папки + demo records + pre-configured Dashboard
+
+### #062 — Drag-to-link: drag card to express relation between blocks (V3)
+- Status: ⏸ DEFERRED — V3 roadmap item
+- Milestone: M-VISION-PARITY | Priority: P3 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: complete V2 block system stable
+
+**Vision §7**: "Тащу карточку на карточку — связь создаётся. Тащу поле из бокового списка в заголовок таблицы — колонка добавляется."
+
+Deferred because: requires cross-block DnD with drop-zone detection between database-call instances. Technical complexity would block V2 milestone entirely. V2 uses "Link to..." context menu as stepping stone.
+
+### #063 — Timeline View (V3 roadmap — deferred from V2)
+- Status: ⏸ DEFERRED — V3 roadmap item
+- Milestone: M-VISION-PARITY | Priority: P3 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: calendar engine maturity (TBD)
+
+**Vision §1**: "Временная шкала" — описана как стандартная зона рабочей поверхности.
+
+Deferred from V2: depends on calendar rendering engine. Code archived in `archive/dashboard-v1`.
+V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/Calendar/Gallery).
+
+### #064 — Graph View: relation graph between records (V3 roadmap)
+- Status: ⏸ DEFERRED — V3 roadmap item
+- Milestone: M-VISION-PARITY | Priority: P3 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: #010 (bidirectional relations — ✅ done)
+
+**Vision §1**: "Граф связей" — описан наряду с Calendar/Board/Table как стандартное представление.
+
+Деферировано: визуализация графа (force-directed layout, d3.js или vis.js) — отдельный большой milestone. Технический фундамент (#010) готов.
+
+### #065 — Canvas zero-state + onboarding progressive disclosure
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #050 (tokens — для стилизации empty state)
+
+**Vision §7**: "Первый экран — три кнопки: 'Создать базу', 'Открыть пример', 'Импортировать папку'."
+
+Scope:
+- Empty canvas state: `EmptyState.svelte` с CTA "Добавить блок данных" + "Выбрать шаблон"
+- Empty table state: "Нет записей. + Добавить первую"
+- Empty filter result state: "Нет совпадений. Очистить фильтр"
+- Empty board column state: "+ Новая запись" in-column button
+- `CreateProject.svelte` первый экран: три primary actions (не длинный список настроек)
+
+### #066 — Dashboard config: YAML-readable format strategy (V3 decision required)
+- Status: 📋 BACKLOG (требует решения)
+- Milestone: M-VISION-PARITY | Priority: P2 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: none
+
+**Vision §8**: "Сам дашборд — тоже markdown-файл. Не закрытая конфигурация в JSON, а читаемая, версионируемая, синхронизируемая через git заметка."
+
+**Текущая реальность**: Dashboard конфигурация живёт в `data.json` (ProjectDefinition schema v4) — непрозрачный JSON, не открывается в Vim с понятной структурой.
+
+Требует принятия решения:
+- Option A: Миграция ProjectDefinition → YAML frontmatter в специальном `.md` файле проекта
+- Option B: Zафиксировать осознанный компромисс: data.json остаётся до V3, с обоснованием (backward compat, performance, complexity)
+- Option C: Human-readable JSON с комментариями + schema documentation
+
+Это архитектурное решение, влияющее на всю систему. Требует dedicated analysis session.
 
 ---
 
@@ -775,4 +888,14 @@ M-UI-MODERNIZATION 🔄 PLANNED (адаптирован 2026-06-10 — V2-aligne
                   ──► #054 (Stats только, S) [Comparison/SummaryRow → #056]
                   ──► #055 (FilterTabs/Checklist/DB UI, M)
 All → #058 (integration, M) [last]
+
+M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
+#059 (SmartSuggest, P1) ──► depends on #051
+#060 (Field transparency, P2) ──► depends on #051
+#061 (Template Library, P2) ──► depends on #046 ✅
+#065 (Canvas zero-state, P1) ──► depends on #050
+#062 (Drag-to-link, P3) ──► DEFERRED V3
+#063 (Timeline, P3) ──► DEFERRED V3
+#064 (Graph View, P3) ──► DEFERRED V3
+#066 (Dashboard as YAML, P2) ──► requires decision session
 ```

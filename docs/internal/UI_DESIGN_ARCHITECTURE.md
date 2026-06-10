@@ -245,8 +245,8 @@ text.primary              --text-normal                 auto
 text.secondary            --text-muted                  auto
 text.placeholder          --text-faint                  auto
 accent.primary            --interactive-accent          auto
-state.success             hsl(122, 40%, 45%)            hsl(122, 40%, 55%)
-state.warning             hsl(38, 90%, 50%)             hsl(38, 90%, 60%)
+state.success             var(--color-green) [Obsidian native]   auto (dark: Obsidian handles)
+state.warning             var(--color-orange) [Obsidian native]  auto
 state.error               --text-error                  auto
 state.filtered-dot        accent.primary @ 85%          auto
 
@@ -872,7 +872,7 @@ Gap analysis: что осталось до полного Notion-parity.
 
 | Gap | Notion Has | We Have | Priority | Ticket |
 |---|---|---|---|---|
-| **Inline cell editing** | Click cell → edit in place | Click → SlideIn modal | P0 | Новый тикет нужен |
+| **Inline cell editing** | Click cell → edit in place | Click → SlideIn modal | P0 | **#051 scope** (включён в DataTable rebuild) |
 | **Row action bar on hover** | ⊕ ↗ ⋯ on row hover | Nothing | P0 | #051 scope |
 | **+ New row (inline at bottom)** | Always visible at table bottom | Only in toolbar | P1 | #051 scope |
 | **Column header context menu** | Full property edit/sort/filter menu | Partial | P1 | #051 scope |
