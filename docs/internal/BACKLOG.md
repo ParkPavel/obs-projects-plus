@@ -498,8 +498,8 @@ Acceptance:
 Gates: tsc 0 errors ✅ / 139 suites / 2099 tests PASS ✅ / build 0 errors (4 pre-existing warnings) ✅
 
 ### #048 — Add native-query datasource UI entry point in CreateProject
-- Status: 📋 BACKLOG
-- Milestone: M-UX | Priority: P1 | Complexity: S
+- Status: ✅ DONE (2026-06-11) — on `feat/dashboard-v2`
+- Milestone: M-UX | Priority: P1 | Complexity: S→M (persisted kind required)
 - analysis_required: false
 - Depends on: #045.2 (✅ engine implemented)
 - Blocks: none
@@ -508,12 +508,22 @@ Gates: tsc 0 errors ✅ / 139 suites / 2099 tests PASS ✅ / build 0 errors (4 p
 `CreateProject.svelte` only offers `folder`, `tag`, and `dataview` as datasource types.
 Users have no way to create filter-based ("virtual") databases from the UI.
 
-**Scope**:
-- `src/ui/modals/components/CreateProject.svelte`: add `native-query` as 4th option
-- Show `FilterPanelVisual` or inline filter builder when selected
-- Wire to `nativeQuery.ts` on save
-- Add/update translations in `en.json` + `ru.json`
-- Write test covering the new option renders correctly
+**Delivered** (scope grew: #045.2 deliberately did not register a persisted kind, so the UI
+entry point required one):
+- Settings: `NativeQueryDataSource` type added to v3 `DataSource` union (`from: folder|tag`,
+  `where?: FilterDefinition`, `limit?: number`), re-exported in v4. Optional/additive — no migration.
+- `src/lib/datasources/native-query/datasource.ts` — thin adapter over `executeNativeQuery`:
+  `queryAll` = FROM→WHERE→LIMIT via canonical filterEvaluator; `includes` delegates to inner
+  folder/tag source; `queryOne` re-runs full query (mirrors DataviewDataSource — single-record
+  merge can't express records entering/leaving the WHERE set).
+- Factory case in `createDataSource` (works without Dataview).
+- `dataApi.createDataRecord` + `createNoteModal`/`CreateNote` honour native-query `from`
+  (default folder / tag stamping).
+- `CreateProject.svelte`: 4th option + from-kind sub-select + inline WHERE builder
+  (field/operator/value rows, unary ops hide value, AND) + limit input. No `as`-casts in markup.
+- `Archives.svelte` label; i18n keys en+ru (`modals.project.native-query.*`, `datasources.native-query`).
+- Tests: `datasource.test.ts` (8 tests — WHERE/LIMIT/tag/excludedNotes/includes/queryOne/factory).
+- Gates: build ✅ | 135/2028 ✅ | lint 0 errors ✅ | svelte-check 0 ✅
 
 ### #049 — Restore green CI baseline: fix ESLint + svelte-check errors
 - Status: ✅ DONE (2026-06-10) — all 4 CI gates green at baseline 134/2020
@@ -727,13 +737,14 @@ svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
 
 ---
 
-### #060 — WidgetHost Decomposition: Replace 947 LOC Monolith
+### #067 — WidgetHost Decomposition: Replace 947 LOC Monolith
 - Status: 📋 BACKLOG
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: XL
 - analysis_required: true | analysis_done: false
 - Depends on: (none — new clean implementation, no dead code risk)
 
 **Context**: #052 was PARTIAL — WidgetShell.svelte (161 LOC) and WidgetHeaderActions.svelte (80 LOC) were created but never integrated. Both deleted 2026-06-11 as dead code. WidgetHost.svelte remains at 947 LOC with 34 type-dispatch branches and 44 imports.
+> Renumbered from #060 (commit `d4b7f4a` opened it as #060 — collision with M-VISION-PARITY #060 Field transparency).
 
 **Goal**: Replace WidgetHost.svelte with a proper decomposition:
 - New `WidgetShell.svelte` ≤ 350 LOC — CSS Grid frame, header/content/footer slots, ResizeObserver, drag handle
