@@ -727,6 +727,25 @@ svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
 
 ---
 
+### #060 — WidgetHost Decomposition: Replace 947 LOC Monolith
+- Status: 📋 BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: (none — new clean implementation, no dead code risk)
+
+**Context**: #052 was PARTIAL — WidgetShell.svelte (161 LOC) and WidgetHeaderActions.svelte (80 LOC) were created but never integrated. Both deleted 2026-06-11 as dead code. WidgetHost.svelte remains at 947 LOC with 34 type-dispatch branches and 44 imports.
+
+**Goal**: Replace WidgetHost.svelte with a proper decomposition:
+- New `WidgetShell.svelte` ≤ 350 LOC — CSS Grid frame, header/content/footer slots, ResizeObserver, drag handle
+- New `WidgetHeaderActions.svelte` ≤ 150 LOC — collapse, config, pipeline, lock, remove buttons
+- `WidgetHost.svelte` becomes thin router (type → component) ≤ 200 LOC
+- SelectionBadge wired into WidgetShell header slot
+- All 16 active widget types route through new shell
+
+**Approach**: Architect plan required before any code. Read DASHBOARD_V2_SPEC.md §6 (widget contract) first.
+
+---
+
 ## Milestone M-VISION-PARITY — Продуктовый слой (Vision Scenes 2, 5, 6, 7, 8)
 
 > Triggered: 2026-06-10 — Vision alignment audit обнаружил 5 сцен Vision без технических тикетов.
