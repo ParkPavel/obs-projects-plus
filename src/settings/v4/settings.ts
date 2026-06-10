@@ -25,6 +25,7 @@ export type {
   FolderDataSource,
   TagDataSource,
   DataviewDataSource,
+  NativeQueryDataSource,
 } from "../v3/settings";
 
 export {

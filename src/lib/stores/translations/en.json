@@ -24,7 +24,8 @@
         "datasources": {
             "folder": "Folder",
             "tag": "Tag",
-            "dataview": "Dataview"
+            "dataview": "Dataview",
+            "native-query": "Query (filter)"
         },
         "commands": {
             "show-projects": {
@@ -152,6 +153,41 @@
                 "query": {
                     "name": "Query",
                     "description": "Supports TABLE, LIST and TASK queries."
+                },
+                "native-query": {
+                    "from": {
+                        "name": "Source",
+                        "description": "Where to read notes from before filtering."
+                    },
+                    "where": {
+                        "name": "Filter conditions",
+                        "description": "Only notes matching all conditions are included.",
+                        "add": "Add condition",
+                        "field-placeholder": "Field name",
+                        "value-placeholder": "Value"
+                    },
+                    "limit": {
+                        "name": "Limit",
+                        "description": "Maximum number of records. Leave empty for no limit."
+                    },
+                    "operators": {
+                        "is": "Is",
+                        "is-not": "Is not",
+                        "contains": "Contains",
+                        "not-contains": "Does not contain",
+                        "starts-with": "Starts with",
+                        "ends-with": "Ends with",
+                        "is-empty": "Is empty",
+                        "is-not-empty": "Is not empty",
+                        "eq": "=",
+                        "neq": "≠",
+                        "lt": "<",
+                        "gt": ">",
+                        "lte": "≤",
+                        "gte": "≥",
+                        "is-checked": "Is checked",
+                        "is-not-checked": "Is not checked"
+                    }
                 },
                 "recursive": {
                     "name": "Include subfolders",

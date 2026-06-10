@@ -53,6 +53,13 @@
       return project.dataSource.config.path;
     }
 
+    if (
+      project.dataSource.kind === "native-query" &&
+      project.dataSource.config.from.kind === "folder"
+    ) {
+      return project.dataSource.config.from.path;
+    }
+
     return "";
   }
 

@@ -25,6 +25,14 @@
         return `${$i18n.t("datasources.dataview")} query: ${
           archive.dataSource.config.query
         }`;
+      case "native-query": {
+        const from = archive.dataSource.config.from;
+        const fromDetail =
+          from.kind === "folder"
+            ? `${$i18n.t("datasources.folder")}: "${normalizePath(from.path)}"`
+            : `${$i18n.t("datasources.tag")}: ${from.tag}`;
+        return `${$i18n.t("datasources.native-query")}: ${fromDetail}`;
+      }
     }
   };
 

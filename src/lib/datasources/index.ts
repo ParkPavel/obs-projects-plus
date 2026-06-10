@@ -119,6 +119,18 @@ export function createDataSource(
         ),
       };
     }
+    case "native-query": {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { NativeQueryDataSource } = require("./native-query/datasource");
+      return {
+        kind: "ok",
+        source: new NativeQueryDataSource(
+          deps.fileSystem,
+          project,
+          deps.preferences
+        ),
+      };
+    }
     case "tag": {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { TagDataSource } = require("./tag/datasource");

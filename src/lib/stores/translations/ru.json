@@ -24,7 +24,8 @@
         "datasources": {
             "folder": "Папка",
             "tag": "Тег",
-            "dataview": "Dataview"
+            "dataview": "Dataview",
+            "native-query": "Запрос (фильтр)"
         },
         "commands": {
             "show-projects": {
@@ -130,6 +131,41 @@
                 "query": {
                     "name": "Запрос",
                     "description": "Поддерживаются запросы TABLE, LIST и TASK."
+                },
+                "native-query": {
+                    "from": {
+                        "name": "Источник",
+                        "description": "Откуда читать заметки до применения фильтра."
+                    },
+                    "where": {
+                        "name": "Условия фильтра",
+                        "description": "Включаются только заметки, удовлетворяющие всем условиям.",
+                        "add": "Добавить условие",
+                        "field-placeholder": "Имя поля",
+                        "value-placeholder": "Значение"
+                    },
+                    "limit": {
+                        "name": "Лимит",
+                        "description": "Максимальное число записей. Пусто — без ограничения."
+                    },
+                    "operators": {
+                        "is": "Равно",
+                        "is-not": "Не равно",
+                        "contains": "Содержит",
+                        "not-contains": "Не содержит",
+                        "starts-with": "Начинается с",
+                        "ends-with": "Заканчивается на",
+                        "is-empty": "Пусто",
+                        "is-not-empty": "Не пусто",
+                        "eq": "=",
+                        "neq": "≠",
+                        "lt": "<",
+                        "gt": ">",
+                        "lte": "≤",
+                        "gte": "≥",
+                        "is-checked": "Отмечено",
+                        "is-not-checked": "Не отмечено"
+                    }
                 },
                 "recursive": {
                     "name": "Включить подпапки",
