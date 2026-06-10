@@ -39,7 +39,7 @@
     if (
       selection.source === null ||
       selection.field === null ||
-      selection.value === null
+      selection.values.length === 0
     ) {
       return false;
     }
@@ -70,7 +70,7 @@
   import { createEventDispatcher } from "svelte";
 
   export let field: string;
-  export let value: string;
+  export let values: ReadonlyArray<string>;
 
   const dispatch = createEventDispatcher<{ clear: void }>();
 
@@ -78,9 +78,8 @@
     dispatch("clear");
   }
 
-  // Render the full text in the title attribute so the tooltip survives
-  // ellipsis truncation (spec §6.2 requirement).
-  $: tooltip = `${field}: ${value}`;
+  $: displayValue = values.length === 1 ? (values[0] ?? "") : values.join(", ");
+  $: tooltip = `${field}: ${displayValue}`;
 </script>
 
 <span
@@ -90,7 +89,7 @@
 >
   <span class="ppp-selection-badge__label">
     <span class="ppp-selection-badge__field">{field}:</span>
-    <span class="ppp-selection-badge__value">{value}</span>
+    <span class="ppp-selection-badge__value">{displayValue}</span>
   </span>
   <button
     type="button"

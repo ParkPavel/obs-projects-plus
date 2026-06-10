@@ -84,6 +84,20 @@ export interface WidgetDefinition {
  * render multiple view tabs inside one block. Each tab persists its
  * own config (sort/filter/group/etc.) without leaking into siblings.
  */
+/**
+ * Dashboard V2 — Canvas Selection Bus link configuration.
+ * Stored in WidgetDataContext.linkedSelection (widget.config).
+ */
+export interface LinkedSelectionConfig {
+  /** ID of the master widget whose selection drives this block's auto-filter. */
+  readonly sourceWidgetId: string;
+  /**
+   * Field name in THIS block's data source that contains the relation to the master.
+   * When master selects record X, this block adds filter: { field: relationField, is: X.id }
+   */
+  readonly relationField: string;
+}
+
 export interface WidgetDataContext {
   /** Independent data source — folder, tag, or Dataview query. */
   readonly sourceConfig: DataSource;
@@ -94,6 +108,8 @@ export interface WidgetDataContext {
   readonly subFilter?: FilterDefinition;
   /** View tabs (Table/Board/Calendar/...) rendered inside this block. */
   readonly viewTabs: ViewTab[];
+  /** Canvas Selection Bus: when set, auto-filters this block by the master block's selection. */
+  readonly linkedSelection?: LinkedSelectionConfig;
 }
 
 /**

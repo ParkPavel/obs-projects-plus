@@ -41,6 +41,7 @@
   export let fieldPresets: NonNullable<DatabaseViewConfig["fieldPresets"]>;
   export let activeFieldPresetId: string | undefined;
   export let availableSources: { id: string; name: string }[];
+  export let availableWidgets: Array<{ id: string; title: string }> = [];
   export let rightFrames: ReadonlyMap<string, DataFrame>;
   export let project: ProjectDefinition;
 </script>
@@ -71,6 +72,7 @@
         {fieldPresets}
         {activeFieldPresetId}
         {availableSources}
+        {availableWidgets}
         {rightFrames}
         {project}
         on:filter
@@ -102,6 +104,7 @@
         {fieldPresets}
         {activeFieldPresetId}
         {availableSources}
+        {availableWidgets}
         {rightFrames}
         {project}
         on:filter

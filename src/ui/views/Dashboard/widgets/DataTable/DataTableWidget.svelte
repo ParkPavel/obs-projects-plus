@@ -771,7 +771,7 @@
         selectionStore.setSelection({
           source: decision.source,
           field: decision.field,
-          value: decision.value,
+          values: decision.values,
         });
         break;
       case "clear":
@@ -796,9 +796,9 @@
   $: driverRowId = (() => {
     if (!widgetId) return null;
     if (!isThisWidgetDriving(selection, widgetId)) return null;
-    if (selection.field === null || selection.value === null) return null;
+    if (selection.field === null || selection.values.length === 0) return null;
     const driverField = selection.field;
-    const driverValue = selection.value;
+    const driverValue = selection.values[0] ?? "";
     const match = searchedRecords.find(
       (r) => String(r.values[driverField] ?? "") === driverValue,
     );

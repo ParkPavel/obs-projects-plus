@@ -45,6 +45,19 @@ jest.mock("../../ViewTabBar.svelte", () => ({
   },
 }));
 
+const stubSvelteComponent = {
+  default: class {
+    $$prop_def: Record<string, unknown> = {};
+    $set(): void {}
+    $on(): () => void { return () => {}; }
+    $destroy(): void {}
+  },
+};
+
+jest.mock("src/ui/views/Board/BoardView.svelte", () => stubSvelteComponent);
+jest.mock("src/ui/views/Calendar/CalendarView.svelte", () => stubSvelteComponent);
+jest.mock("src/ui/views/Gallery/GalleryView.svelte", () => stubSvelteComponent);
+
 const DatabaseCallBlock = require("../DatabaseCallBlock.svelte").default;
 
 function makeFrame(label: string = "A") {

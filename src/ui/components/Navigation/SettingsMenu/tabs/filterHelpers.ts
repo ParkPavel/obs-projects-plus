@@ -60,6 +60,7 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
   'is-empty': 'Пусто',
   'is-not-empty': 'Не пусто',
   'is': 'Равно',
+  'is-any-of': 'Одно из',
   'is-not': 'Не равно',
   'contains': 'Содержит',
   'not-contains': 'Не содержит',

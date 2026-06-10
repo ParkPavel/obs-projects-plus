@@ -9,21 +9,40 @@
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
-  import type { WidgetSourceConfig } from "../../types";
+  import type { DataField } from "src/lib/dataframe/dataframe";
+  import type { WidgetSourceConfig, LinkedSelectionConfig } from "../../types";
 
   export let sourceConfig: WidgetSourceConfig | undefined = undefined;
   export let availableSources: Array<{ id: string; name: string }> = [];
+  export let availableWidgets: Array<{ id: string; title: string }> = [];
+  export let fields: DataField[] = [];
+  export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     change: WidgetSourceConfig;
     close: void;
+    linkedSelectionChange: LinkedSelectionConfig | undefined;
   }>();
 
   $: currentProjectId = sourceConfig?.projectId ?? "";
+  $: currentLinkedId = linkedSelection?.sourceWidgetId ?? "";
+  $: currentRelationField = linkedSelection?.relationField ?? "";
 
   function handleSourceChange(e: Event) {
     const projectId = (e.currentTarget as HTMLSelectElement).value;
     dispatch("change", { projectId });
+  }
+
+  function handleLinkedBlockChange(e: Event) {
+    const id = (e.currentTarget as HTMLSelectElement).value;
+    if (!id) { dispatch("linkedSelectionChange", undefined); return; }
+    dispatch("linkedSelectionChange", { sourceWidgetId: id, relationField: "" });
+  }
+
+  function handleRelationFieldChange(e: Event) {
+    const field = (e.currentTarget as HTMLSelectElement).value;
+    if (!currentLinkedId) return;
+    dispatch("linkedSelectionChange", { sourceWidgetId: currentLinkedId, relationField: field });
   }
 </script>
 
@@ -54,6 +73,30 @@
         </select>
       </label>
     </div>
+    <div class="ppp-cfg-item">
+      <label class="ppp-dbc-settings__field">
+        {$i18n.t("views.dashboard.database-call.settings.link-to", { defaultValue: "Link to block" })}
+        <select value={currentLinkedId} on:change={handleLinkedBlockChange}>
+          <option value="">— {$i18n.t("views.dashboard.database-call.settings.standalone", { defaultValue: "standalone" })} —</option>
+          {#each availableWidgets as w (w.id)}
+            <option value={w.id}>{w.title || w.id}</option>
+          {/each}
+        </select>
+      </label>
+    </div>
+    {#if currentLinkedId}
+    <div class="ppp-cfg-item">
+      <label class="ppp-dbc-settings__field">
+        {$i18n.t("views.dashboard.database-call.settings.relation-field", { defaultValue: "Filter by field" })}
+        <select value={currentRelationField} on:change={handleRelationFieldChange}>
+          <option value="">— {$i18n.t("views.dashboard.database-call.settings.select-field", { defaultValue: "select field" })} —</option>
+          {#each fields as f (f.name)}
+            <option value={f.name}>{f.name}</option>
+          {/each}
+        </select>
+      </label>
+    </div>
+    {/if}
   </div>
 </WidgetConfigShell>
 

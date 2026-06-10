@@ -8,6 +8,7 @@ import type { FilterCondition } from "src/settings/base/settings";
 import {
 	EMPTY_SELECTION,
 	composeEffectiveFilter,
+	composeLinkedSelectionFilter,
 	createSelectionStore,
 	type SelectionState,
 } from "../canvasSelectionStore";
@@ -27,7 +28,7 @@ describe("selectionStore — state", () => {
 		const seed: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Active",
+			values: ["Active"],
 			op: "is",
 		};
 		const store = createSelectionStore(seed);
@@ -36,41 +37,41 @@ describe("selectionStore — state", () => {
 
 	test("setSelection writes the new state and defaults op to 'is'", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		const next = get(store);
-		expect(next).toEqual({ source: "chart:w1", field: "status", value: "Done", op: "is" });
+		expect(next).toEqual({ source: "chart:w1", field: "status", values: ["Done"], op: "is" });
 	});
 
 	test("setSelection with identical payload is a no-op (no notification)", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		let calls = 0;
 		const unsub = store.subscribe(() => {
 			calls++;
 		});
 		// subscribe fires once synchronously with the current value
 		expect(calls).toBe(1);
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done", op: "is" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		expect(calls).toBe(1); // no extra notification
 		unsub();
 	});
 
 	test("setSelection with different value fires a notification", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		let calls = 0;
 		const unsub = store.subscribe(() => {
 			calls++;
 		});
 		expect(calls).toBe(1);
-		store.setSelection({ source: "chart:w1", field: "status", value: "Active" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Active"] });
 		expect(calls).toBe(2);
 		unsub();
 	});
 
 	test("clearSelection returns to EMPTY_SELECTION", () => {
 		const store = createSelectionStore();
-		store.setSelection({ source: "chart:w1", field: "status", value: "Done" });
+		store.setSelection({ source: "chart:w1", field: "status", values: ["Done"] });
 		store.clearSelection();
 		expect(get(store)).toBe(EMPTY_SELECTION);
 	});
@@ -104,7 +105,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -121,7 +122,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -136,7 +137,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "data-table:w3",
 			field: "path",
-			value: "Projects/Alpha.md",
+			values: ["Projects/Alpha.md"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -151,7 +152,7 @@ describe("composeEffectiveFilter — pure derivation", () => {
 		const sel: SelectionState = {
 			source: "chart:w1",
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = composeEffectiveFilter({
@@ -171,5 +172,86 @@ describe("composeEffectiveFilter — pure derivation", () => {
 			myWidgetId: "w1",
 		});
 		expect(out).toBe(empty);
+	});
+});
+
+describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
+	it("returns null when linkedSelection is undefined", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: undefined,
+			canvasSelection: EMPTY_SELECTION,
+		});
+		expect(result).toBeNull();
+	});
+
+	it("returns null when no selection is active (EMPTY_SELECTION)", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: EMPTY_SELECTION,
+		});
+		expect(result).toBeNull();
+	});
+
+	it("returns a FilterCondition when master data-table block has an active selection", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: {
+				source: "data-table:block-a",
+				field: "name",
+				values: ["ivan-petrov"],
+				op: "is",
+			},
+		});
+		expect(result).toEqual({
+			field: "client",
+			operator: "is",
+			value: "ivan-petrov",
+			enabled: true,
+		});
+	});
+
+	it("returns a FilterCondition when master chart block has an active selection", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: {
+				source: "chart:block-a",
+				field: "status",
+				values: ["active"],
+				op: "is",
+			},
+		});
+		expect(result).toEqual({
+			field: "client",
+			operator: "is",
+			value: "active",
+			enabled: true,
+		});
+	});
+
+	it("returns null when the active selection is from a different master block", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
+			canvasSelection: {
+				source: "data-table:block-b",
+				field: "name",
+				values: ["some-value"],
+				op: "is",
+			},
+		});
+		expect(result).toBeNull();
+	});
+
+	it("uses relationField (not selection field) as the filter field", () => {
+		const result = composeLinkedSelectionFilter({
+			linkedSelection: { sourceWidgetId: "block-a", relationField: "clientRef" },
+			canvasSelection: {
+				source: "data-table:block-a",
+				field: "id",
+				values: ["42"],
+				op: "is",
+			},
+		});
+		expect(result?.field).toBe("clientRef");
+		expect(result?.value).toBe("42");
 	});
 });

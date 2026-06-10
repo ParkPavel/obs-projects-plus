@@ -36,7 +36,7 @@ const externalSelection = (
 ): SelectionState => ({
 	source: "chart:other-widget",
 	field,
-	value,
+	values: [value],
 	op: "is",
 });
 
@@ -93,7 +93,7 @@ describe("computeMatchingRowIds — #044.3a receiver", () => {
 		const own: SelectionState = {
 			source: dataTableSourceId("table-1"),
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		const out = computeMatchingRowIds({
@@ -122,7 +122,7 @@ describe("computeMatchingRowIds — #044.3a receiver", () => {
 		const fromA: SelectionState = {
 			source: dataTableSourceId("table-a"),
 			field: "status",
-			value: "Done",
+			values: ["Done"],
 			op: "is",
 		};
 		expect(

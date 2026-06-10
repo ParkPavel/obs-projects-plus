@@ -1,7 +1,7 @@
 ﻿# Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-07 (#049 added P0 — fix lint+svelte-check baseline; #047/#046 ✅ DONE merged, #044 ✅ DONE, #045 ✅ DONE, M-DATAVIEW-BRIDGE ✅ DONE, baseline 139/2099 jest — but lint/svelte-check RED, see #049)
+> **Updated**: 2026-06-10 (#050–#058 added — M-UI-MODERNIZATION: полный рефакторинг Dashboard UI; Phase 4.5 ✅ DONE multi-select Selection Bus; baseline 134/2020)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -516,10 +516,10 @@ Users have no way to create filter-based ("virtual") databases from the UI.
 - Write test covering the new option renders correctly
 
 ### #049 — Restore green CI baseline: fix ESLint + svelte-check errors
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — all 4 CI gates green at baseline 134/2020
 - Milestone: M-UX | Priority: P0 | Complexity: M
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: none
 - Blocks: clean PRs for all subsequent tickets
 
@@ -575,9 +575,22 @@ This is the root cause of prior "build looked green but runtime broke" hallucina
 - `composeEffectiveFilter()` is pure; receivers never write to the store from a reactive block.
 - No new code path inside `filterEvaluator.ts` — selection is an extra layer that appends a `FilterCondition` through the canonical engine. **Exception**: DataTable receiver (#044.3a) intentionally bypasses filterEvaluator and uses `computeMatchingRowIds` to decorate rows (geometry preservation per spec §5.2).
 
-#### Out of scope (v2 — see spec §9)
-- Multi-select (Cmd-click, range select), brush-range on line/area charts
+#### Out of scope (v1 — see spec §9); delivered in Phase 4.5 (#044.6)
+- Multi-select (Cmd-click, range select) → **delivered** via `is-any-of` + `values[]` (#044.6 / Phase 4.5)
 - Cross-provider selection broadcast, StatsCard as driver, persistence across tab switches
+
+### #044.6 — Phase 4.5: Multi-select Selection Bus (is-any-of + values[])
+- Status: ✅ DONE (2026-06-10) — commit `92f5073` on `feat/dashboard-v2`
+- Milestone: M-INTERACTIVE-DASHBOARD | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #044.5 (✅)
+
+`SelectionState.value: string|null` → `SelectionState.values: ReadonlyArray<string>`.
+`SelectionOp` adds `"is-any-of"`. `SetSelectionInput.values[]` for multi-write.
+All receivers migrated: `dataTableSelectionReceiver.ts`, `statsSelectionReceiver.ts`, `SelectionBadge.svelte`, `ChartWidget.svelte`.
+Driver function args still take `{ value: string }` (single click = single value input).
+FilterCondition type unchanged (`value?: string` singular).
+Gates: 134 suites / 2020 tests PASS, tsc 0, build 0, lint 0, svelte-check 0.
 
 ---
 
@@ -591,6 +604,239 @@ This is the root cause of prior "build looked green but runtime broke" hallucina
 
 Adds `ProviderPicker.svelte`, `ChartSeriesConfig[]` / `MultiSourceChartConfig` support to
 ChartWidget and StatsWidget. Stack mode untouched.
+
+---
+
+---
+
+## Milestone M-UI-MODERNIZATION — ПОЛНЫЙ РЕФАКТОРИНГ DASHBOARD UI
+
+> Triggered: 2026-06-10 — real Obsidian API testing revealed legacy UI patterns across all 18 widget types.
+> Spec: `docs/internal/UI_MODERNIZATION_PLAN.md`
+
+### #050 — Design System Foundation: Dashboard Token Layer
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
+- analysis_required: false
+- Blocks: #051, #052, #053, #054, #055, #056
+
+Create `src/ui/views/Dashboard/tokens/dashboardTokens.css` with full `--ppp-db-*` semantic token set.
+Remove all 40+ hardcoded px/hex/hsl values from widget files.
+Unify z-index under `--ppp-z-*` scale (kill z-index:100, z-index:200 magic numbers).
+Add `--ppp-border-thin`, `--ppp-shadow-sm/md/lg`, `--ppp-db-row-compact/default/expanded` tokens.
+
+### #051 — DatabaseCall Table View Mode (DataTable absorbed)
+- Status: 📋 BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: #050
+- Blocks: #056 (archive standalone DataTableWidget only after this done)
+
+**SCOPE (V2-aligned)**: NOT standalone DataTable rebuild. Data-table functionality is absorbed into `DatabaseCallBlock.svelte` as its Table view tab per DASHBOARD_V2_SPEC.md §4.
+
+Implement Table view inside `database-call`:
+- CSS Grid via `--ppp-dt-columns` custom property (single context for header + rows = fixes column alignment)
+- Sticky header + aggregation row without z-index conflicts
+- Virtual scroll without global overflow
+- Decompose: DataTableContent component inside database-call ≤ 400 LOC
+- Standalone `DataTableWidget.svelte` → prepare for archive in #056 (add alias for compatibility)
+
+### #052 — WidgetShell: Replace WidgetHost (947 LOC)
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: L
+- analysis_required: false
+- Depends on: #050
+
+New `WidgetShell.svelte` ≤ 350 LOC. CSS Grid: `grid-template-areas: "header" "content"`.
+Dedicated `WidgetToolbar.svelte`. Resize via ResizeObserver + CSS variables.
+SelectionBadge in header slot. DnD handles via `.ppp-widget-drag-handle`.
+
+### #053 — Chart Widget Modernization
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #050
+
+Container: `aspect-ratio: var(--ppp-chart-aspect, 16/9)` instead of hardcoded heights.
+Legend: token-based design. Empty state: shared `EmptyState.svelte` component.
+Scatter: CSS Grid for axis labels.
+
+### #054 — Stats Widget Modernization
+- Status: 📋 BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: S
+- analysis_required: false
+- Depends on: #050
+
+**SCOPE (V2-aligned)**: Stats widget only. Comparison + SummaryRow → archive (#056) per DASHBOARD_V2_SPEC.md §4.
+
+Stats: CSS Grid `repeat(auto-fill, minmax(10rem, 1fr))`.
+Typography: value = `--ppp-font-size-2xl bold`, label = `--ppp-font-size-xs muted`.
+"Filtered" dot via CSS `::before` with `var(--ppp-color-accent)`.
+Remove `color ?? "#6a6a8f"` hardcoded fallback → `var(--ppp-db-text-secondary)`.
+
+### #055 — FilterTabs, Checklist, DatabaseCallBlock Modernization
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #050
+
+FilterTabs: `overflow-x: auto; scroll-snap-type: x`. Overflow → "..." dropdown.
+Checklist: CSS `appearance:none` checkbox + `:checked` + `var(--ppp-color-success)`.
+DatabaseCallBlock: status dot via `var(--ppp-color-success/warning/error)`. Query font: `var(--font-monospace)`.
+
+### #056 — V2 Widget Archive: Delete V1-only widgets from active code
+- Status: 📋 BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P2 | Complexity: L
+- analysis_required: false
+- Depends on: #051 (DatabaseCall Table View must cover data-table functionality first)
+
+**SCOPE (V2-aligned)**: NOT modernization — ARCHIVATION. Per DASHBOARD_V2_SPEC.md §4, these widget types are deleted from Dashboard V2. Move to `archive/dashboard-v1/` (do NOT delete from git).
+
+**Move to `archive/dashboard-v1/`:**
+- `TimelineWidget.svelte` + `TimelineWidgetConfig.svelte`
+- `ComparisonWidget.svelte` + config
+- `SummaryRowWidget.svelte` + config
+- `YamlVisualizerWidget.svelte` + config (→ будет отдельным View в будущем)
+- `ViewPortWidget.svelte` + config (функционал покрыт database-call general wrapper)
+- `DataListWidget.svelte` + config (функционал покрыт database-call List tab)
+- `SubBaseCanvasWidget.svelte` (функционал → SubBasePanel внутри database-call)
+- Standalone `DataTableWidget.svelte` (функционал переехал в database-call Table tab via #051)
+
+**Prerequisite**: database-call covers Table/List/SubBase functionality (verified via #051 completion).
+**WidgetType union** post-archive: `database-call | chart | stats | checklist | filter-tabs | text | divider | cover-banner` (8 types).
+
+### #057 — Legacy Type Cleanup: Remove Orphan Types
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
+- analysis_required: true | analysis_done: false
+- Depends on: (none — can run parallel with #050)
+
+Audit and remove: WidgetConfigV1/V2, FreeCanvasLayout orphans (post Phase-3), old GridColumnDef format,
+duplicated union types in types.ts/settings.ts, FilterConditionV1/SortConditionV1.
+Goal: 0 `@deprecated` in src/, 0 unused exports from widget type files.
+
+### #058 — UI Modernization Integration & Full Test
+- Status: 📋 BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #051, #052, #053, #054, #055, #056, #057
+
+PX-budget ratchet recount (target ≤ 60 from current 186).
+Full Obsidian API test: all 5 demo-project views, all 18 widget types.
+svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
+
+---
+
+## Milestone M-VISION-PARITY — Продуктовый слой (Vision Scenes 2, 5, 6, 7, 8)
+
+> Triggered: 2026-06-10 — Vision alignment audit обнаружил 5 сцен Vision без технических тикетов.
+> Source: `docs/internal/AUDIT_VISION_ALIGNMENT.md`
+> Spec: `docs/internal/DASHBOARD_V2_VISION.md`
+
+### #059 — SmartSuggest: проактивные подсказки по типам данных
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P1 | Complexity: L
+- analysis_required: true | analysis_done: false
+- Depends on: #051 (Table View ready — подсказки показываются в контексте блока данных)
+
+**Vision §6 — «центральная инновация»**: "Видишь числовое поле? Покажу сумму. Видишь связи? Покажу частоту визитов."
+
+MVP scope:
+- При добавлении первого числового поля в блок → suggestion strip "Хотите Stats-виджет с суммой/средним?"
+- При обнаружении Relation-поля → suggestion "Показать связанные записи как sub-base?"
+- Suggestion dismissable (× закрыть, "не предлагать снова")
+- Реализовать через `SmartSuggestionBus.svelte` — singleton на канвасе, реагирует на изменения DataFrame schema
+
+### #060 — Field transparency: column header → frontmatter key tooltip
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P2 | Complexity: S
+- analysis_required: false
+- Depends on: #051
+
+**Vision §3**: "Курсор по колонке — подсветка frontmatter ключа. Двойной клик по ячейке — открытие файла на нужной строке."
+
+Scope:
+- Column header hover tooltip: показывает frontmatter key name (напр. `client:`, `pain_level:`)
+- Double-click on row expander icon → `app.workspace.openLinkText(file.path, '', false)` + scroll to frontmatter field via Obsidian API
+- Визуальная «подсветка» в split-view (если открыт) — scope отдельного subticket
+
+### #061 — Template Library: 3 starter profiles (clients / fitness / journal)
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P2 | Complexity: L
+- analysis_required: true | analysis_done: false
+- Depends on: #046 (demo project pattern established)
+
+**Vision §7**: "'Я веду клиентов' — готовый набор баз, представлений и связей. Начать за 5 минут."
+
+Scope:
+- `CreateProject.svelte`: добавить step "Choose profile" перед folder selection
+- Profile 1: **Clients** (Clients + Sessions + Tasks + Calendar view)
+- Profile 2: **Fitness** (Workouts + Exercises + Nutrition cross-stats)
+- Profile 3: **Project journal** (Projects + Tasks + Meetings timeline)
+- Каждый профиль генерирует папки + demo records + pre-configured Dashboard
+
+### #062 — Drag-to-link: drag card to express relation between blocks (V3)
+- Status: ⏸ DEFERRED — V3 roadmap item
+- Milestone: M-VISION-PARITY | Priority: P3 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: complete V2 block system stable
+
+**Vision §7**: "Тащу карточку на карточку — связь создаётся. Тащу поле из бокового списка в заголовок таблицы — колонка добавляется."
+
+Deferred because: requires cross-block DnD with drop-zone detection between database-call instances. Technical complexity would block V2 milestone entirely. V2 uses "Link to..." context menu as stepping stone.
+
+### #063 — Timeline View (V3 roadmap — deferred from V2)
+- Status: ⏸ DEFERRED — V3 roadmap item
+- Milestone: M-VISION-PARITY | Priority: P3 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: calendar engine maturity (TBD)
+
+**Vision §1**: "Временная шкала" — описана как стандартная зона рабочей поверхности.
+
+Deferred from V2: depends on calendar rendering engine. Code archived in `archive/dashboard-v1`.
+V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/Calendar/Gallery).
+
+### #064 — Graph View: relation graph between records (V3 roadmap)
+- Status: ⏸ DEFERRED — V3 roadmap item
+- Milestone: M-VISION-PARITY | Priority: P3 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: #010 (bidirectional relations — ✅ done)
+
+**Vision §1**: "Граф связей" — описан наряду с Calendar/Board/Table как стандартное представление.
+
+Деферировано: визуализация графа (force-directed layout, d3.js или vis.js) — отдельный большой milestone. Технический фундамент (#010) готов.
+
+### #065 — Canvas zero-state + onboarding progressive disclosure
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #050 (tokens — для стилизации empty state)
+
+**Vision §7**: "Первый экран — три кнопки: 'Создать базу', 'Открыть пример', 'Импортировать папку'."
+
+Scope:
+- Empty canvas state: `EmptyState.svelte` с CTA "Добавить блок данных" + "Выбрать шаблон"
+- Empty table state: "Нет записей. + Добавить первую"
+- Empty filter result state: "Нет совпадений. Очистить фильтр"
+- Empty board column state: "+ Новая запись" in-column button
+- `CreateProject.svelte` первый экран: три primary actions (не длинный список настроек)
+
+### #066 — Dashboard config: YAML-readable format strategy (V3 decision required)
+- Status: 📋 BACKLOG (требует решения)
+- Milestone: M-VISION-PARITY | Priority: P2 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: none
+
+**Vision §8**: "Сам дашборд — тоже markdown-файл. Не закрытая конфигурация в JSON, а читаемая, версионируемая, синхронизируемая через git заметка."
+
+**Текущая реальность**: Dashboard конфигурация живёт в `data.json` (ProjectDefinition schema v4) — непрозрачный JSON, не открывается в Vim с понятной структурой.
+
+Требует принятия решения:
+- Option A: Миграция ProjectDefinition → YAML frontmatter в специальном `.md` файле проекта
+- Option B: Zафиксировать осознанный компромисс: data.json остаётся до V3, с обоснованием (backward compat, performance, complexity)
+- Option C: Human-readable JSON с комментариями + schema documentation
+
+Это архитектурное решение, влияющее на всю систему. Требует dedicated analysis session.
 
 ---
 
@@ -633,4 +879,23 @@ M-UX 🔄 ACTIVE:
 #046 ✅ (awaiting user merge → main)
 #047 ✅ (awaiting user merge → main)
 Next: #011 (YamlVisualizer widget test), #048 (native-query UI, to be created)
+
+M-UI-MODERNIZATION 🔄 PLANNED (адаптирован 2026-06-10 — V2-aligned):
+#057 (type cleanup, P0) ──────────────────────────── [параллельно с #050]
+#050 (tokens, P0) ──► #051 (DB Table View, XL) ──► #056 (V2 archive, depends on #051)
+                  ──► #052 (WidgetShell, L)
+                  ──► #053 (Chart, M)
+                  ──► #054 (Stats только, S) [Comparison/SummaryRow → #056]
+                  ──► #055 (FilterTabs/Checklist/DB UI, M)
+All → #058 (integration, M) [last]
+
+M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
+#059 (SmartSuggest, P1) ──► depends on #051
+#060 (Field transparency, P2) ──► depends on #051
+#061 (Template Library, P2) ──► depends on #046 ✅
+#065 (Canvas zero-state, P1) ──► depends on #050
+#062 (Drag-to-link, P3) ──► DEFERRED V3
+#063 (Timeline, P3) ──► DEFERRED V3
+#064 (Graph View, P3) ──► DEFERRED V3
+#066 (Dashboard as YAML, P2) ──► requires decision session
 ```

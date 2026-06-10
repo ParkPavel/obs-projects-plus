@@ -49,8 +49,9 @@ lint_output*.txt
 # Recovery bundles
 *.bundle
 
-# Local-only Claude Code legacy (no longer used; safety guard if it returns)
-.claude/
+# Claude Code config: agents/commands/hooks/settings.json are committed (team-shared).
+# Only local overrides are excluded.
+.claude/settings.local.json
 
 # .vscode/mcp.json contains personal absolute paths and env-var refs — local only.
 # .vscode itself is already gitignored above; no extra rule needed here.

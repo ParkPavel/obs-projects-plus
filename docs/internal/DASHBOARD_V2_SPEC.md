@@ -365,7 +365,7 @@ filterEvaluator применяет к своему DataFrame
 | `comparison` | ❌ Удалить | в `archive/dashboard-v1` |
 | `summary-row` | ❌ Удалить → заменяет `stats` | в `archive/dashboard-v1` |
 | `yaml-visualizer` | ❌ Удалить из Dashboard → отдельный View | в `archive/dashboard-v1` |
-| `timeline` | ❌ Удалить (P3, зависит от calendar engine) | в `archive/dashboard-v1` |
+| `timeline` | ❌ Deferred → V3 (#063). В V2 зависит от calendar engine, которого нет. VISION §1 упоминает timeline как часть рабочей поверхности — признаём компромисс. | в `archive/dashboard-v1` |
 | `FreeCanvas` | ❌ Удалить полностью | в `archive/dashboard-v1` |
 
 > **Все удалённые виджеты живут в `archive/dashboard-v1`. Ни один не стирается с git-истории.**
@@ -429,6 +429,8 @@ filterEvaluator применяет к своему DataFrame
 ### 5.3 Как настраивается связь
 
 В UI — через контекстное меню блока "Link to..." → выбор блока-мастера → выбор поля связи.
+
+> **V2 vs Vision tradeoff**: VISION §7 описывает drag-card-to-card как основной способ выражения связей. В V2 используется context menu как stepping stone — drag-to-link требует сложного cross-block DnD, который блокировал бы весь milestone. Drag-to-link запланирован в V3 (#062).
 
 ```typescript
 // Сохраняется в DatabaseCallConfig.linkedSelection:
@@ -677,7 +679,7 @@ interface GridLayout {
 
 ```bash
 npm run build          # 0 ошибок
-npm test               # baseline ≥ 139 suites / 2099 tests
+npm test               # baseline ≥ 134 suites / 2020 tests
 npm run lint           # 0 ошибок
 npm run svelte-check   # 0 ошибок
 ```
