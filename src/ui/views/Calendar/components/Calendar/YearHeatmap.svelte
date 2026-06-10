@@ -612,19 +612,19 @@
 
   /* Dark theme adjustments - use :global for body theme class */
   :global(.theme-dark) .heat-1 {
-    background-color: #0e4429;
+    background-color: var(--ppp-heatmap-dark-1, #0e4429);
   }
 
   :global(.theme-dark) .heat-2 {
-    background-color: #006d32;
+    background-color: var(--ppp-heatmap-dark-2, #006d32);
   }
 
   :global(.theme-dark) .heat-3 {
-    background-color: #26a641;
+    background-color: var(--ppp-heatmap-dark-3, #26a641);
   }
 
   :global(.theme-dark) .heat-4 {
-    background-color: #39d353;
+    background-color: var(--ppp-heatmap-dark-4, #39d353);
   }
 
   .month-summary {

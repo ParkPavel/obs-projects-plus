@@ -1,4 +1,4 @@
-﻿// src/ui/views/Dashboard/widgets/widgetRegistry.ts
+// src/ui/views/Dashboard/widgets/widgetRegistry.ts
 // Central registry mapping WidgetType → metadata (component routing done in WidgetHost.svelte)
 
 import type { WidgetType, WidgetLayout } from "../types";
@@ -15,23 +15,15 @@ export interface WidgetMeta {
 }
 
 export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
+  // ── V2 (current) ────────────────────────────────────────────
   {
-    type: "data-table",
-    label: "Data Table",
-    labelKey: "views.dashboard.types.data-table",
-    icon: "table",
+    type: "database-call",
+    label: "Database",
+    labelKey: "views.dashboard.types.database-call",
+    icon: "database",
     defaultLayout: { x: 0, y: 0, w: 12, h: 6 },
-    minW: 4,
-    minH: 3,
-  },
-  {
-    type: "chart",
-    label: "Chart",
-    labelKey: "views.dashboard.types.chart",
-    icon: "bar-chart-2",
-    defaultLayout: { x: 0, y: 0, w: 6, h: 4 },
-    minW: 3,
-    minH: 3,
+    minW: 6,
+    minH: 4,
   },
   {
     type: "stats",
@@ -43,13 +35,13 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
     minH: 2,
   },
   {
-    type: "comparison",
-    label: "Comparison",
-    labelKey: "views.dashboard.types.comparison",
-    icon: "git-compare",
-    defaultLayout: { x: 0, y: 0, w: 6, h: 3 },
+    type: "chart",
+    label: "Chart",
+    labelKey: "views.dashboard.types.chart",
+    icon: "bar-chart-2",
+    defaultLayout: { x: 0, y: 0, w: 6, h: 4 },
     minW: 3,
-    minH: 2,
+    minH: 3,
   },
   {
     type: "checklist",
@@ -61,16 +53,6 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
     minH: 2,
   },
   {
-    type: "view-port",
-    label: "View Port",
-    labelKey: "views.dashboard.types.view-port",
-    icon: "layout",
-    defaultLayout: { x: 0, y: 0, w: 6, h: 4 },
-    minW: 3,
-    minH: 3,
-    maxCount: 4,
-  },
-  {
     type: "filter-tabs",
     label: "Filter Tabs",
     labelKey: "views.dashboard.types.filter-tabs",
@@ -79,6 +61,43 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
     minW: 6,
     minH: 1,
     maxCount: 1,
+  },
+  {
+    type: "text",
+    label: "Text",
+    labelKey: "views.dashboard.types.text",
+    icon: "type",
+    defaultLayout: { x: 0, y: 0, w: 6, h: 3 },
+    minW: 2,
+    minH: 1,
+  },
+  {
+    type: "divider",
+    label: "Divider",
+    labelKey: "views.dashboard.types.divider",
+    icon: "minus",
+    defaultLayout: { x: 0, y: 0, w: 12, h: 1 },
+    minW: 2,
+    minH: 1,
+  },
+  {
+    type: "cover-banner",
+    label: "Cover Banner",
+    labelKey: "views.dashboard.types.cover-banner",
+    icon: "image",
+    defaultLayout: { x: 0, y: 0, w: 12, h: 2 },
+    minW: 3,
+    minH: 1,
+  },
+  // ── Legacy (scheduled for archive in future milestone) ───────
+  {
+    type: "data-table",
+    label: "Data Table",
+    labelKey: "views.dashboard.types.data-table",
+    icon: "table",
+    defaultLayout: { x: 0, y: 0, w: 12, h: 6 },
+    minW: 4,
+    minH: 3,
   },
   {
     type: "summary-row",
@@ -100,6 +119,25 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
     minH: 2,
   },
   {
+    type: "comparison",
+    label: "Comparison",
+    labelKey: "views.dashboard.types.comparison",
+    icon: "git-compare",
+    defaultLayout: { x: 0, y: 0, w: 6, h: 3 },
+    minW: 3,
+    minH: 2,
+  },
+  {
+    type: "view-port",
+    label: "View Port",
+    labelKey: "views.dashboard.types.view-port",
+    icon: "layout",
+    defaultLayout: { x: 0, y: 0, w: 6, h: 4 },
+    minW: 3,
+    minH: 3,
+    maxCount: 4,
+  },
+  {
     type: "sub-base-canvas",
     label: "Sub-base Canvas",
     labelKey: "views.dashboard.types.sub-base-canvas",
@@ -118,15 +156,6 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
     minH: 3,
   },
   {
-    type: "database-call",
-    label: "Database",
-    labelKey: "views.dashboard.types.database-call",
-    icon: "database",
-    defaultLayout: { x: 0, y: 0, w: 12, h: 6 },
-    minW: 6,
-    minH: 4,
-  },
-  {
     type: "timeline",
     label: "Timeline",
     labelKey: "views.dashboard.types.timeline",
@@ -134,33 +163,6 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
     defaultLayout: { x: 0, y: 0, w: 12, h: 5 },
     minW: 6,
     minH: 3,
-  },
-  {
-    type: "cover-banner",
-    label: "Cover Banner",
-    labelKey: "views.dashboard.types.cover-banner",
-    icon: "image",
-    defaultLayout: { x: 0, y: 0, w: 12, h: 2 },
-    minW: 3,
-    minH: 1,
-  },
-  {
-    type: "text",
-    label: "Text",
-    labelKey: "views.dashboard.types.text",
-    icon: "type",
-    defaultLayout: { x: 0, y: 0, w: 6, h: 3 },
-    minW: 2,
-    minH: 1,
-  },
-  {
-    type: "divider",
-    label: "Divider",
-    labelKey: "views.dashboard.types.divider",
-    icon: "minus",
-    defaultLayout: { x: 0, y: 0, w: 12, h: 1 },
-    minW: 2,
-    minH: 1,
   },
 ] as const;
 

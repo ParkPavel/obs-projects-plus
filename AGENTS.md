@@ -18,14 +18,14 @@ Obsidian plugin: project management with Database (12 widget types, 115+ formula
 
 ```bash
 npm run build         # tsc -noEmit -skipLibCheck + esbuild bundle (production)
-npm test              # full jest suite (139 suites / 2099 tests)
+npm test              # full jest suite (134 suites / 2020 tests)
 npm run lint          # ESLint over ./src
 npm run svelte-check  # Svelte template + type check
 npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Test baseline: **139 suites / 2099 tests PASS**, tsc 0 errors. (Updated 2026-06-05.) Any deviation must be acknowledged before merge.
+Test baseline: **134 suites / 2020 tests PASS**, tsc 0 errors. (Updated 2026-06-10.) Any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
 
@@ -33,7 +33,7 @@ CI (`.github/workflows/ci.yml`) gates merge into `main` on **four** checks. An a
 
 ```bash
 npm run build         # 1. tsc (-skipLibCheck) + esbuild — 0 errors
-npm test              # 2. jest — baseline holds (≥ 139 suites / 2099 tests)
+npm test              # 2. jest — baseline holds (≥ 134 suites / 2020 tests)
 npm run lint          # 3. ESLint — 0 errors
 npm run svelte-check  # 4. svelte-check — 0 errors  ← catches template/reactive bugs tsc cannot
 ```

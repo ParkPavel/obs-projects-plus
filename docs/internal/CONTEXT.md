@@ -1,17 +1,17 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-10 (Phase 4.5 complete — Multi-select Selection Bus; M-UI-MODERNIZATION зафиксирован)**
+> Обновлено: **2026-06-10 (M-UI-MODERNIZATION DONE — #050–#058 закрыты; #052 PARTIAL — WidgetShell dead code)**
 
 ## Состояние веток
 
 - HEAD `main`: **`f23efdb`** — `feat(agents): harden 4-gate verification cycle`
-- HEAD `feat/dashboard-v2`: **`054ca22`** — `docs(plan): M-UI-MODERNIZATION — полный рефакторинг Dashboard UI (#050–#058)`
+- HEAD `feat/dashboard-v2`: **`53ed8a8`** — `fix(tokens): #058 resolve z-index scale`
 - Active branch: `feat/dashboard-v2` — новый цикл разработки Dashboard V2.
 - Archive branch: `archive/dashboard-v1` — снимок V1 на момент запуска V2.
 - Working tree: clean.
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (feat/dashboard-v2 @ 054ca22)
+## Гейты (feat/dashboard-v2 @ 53ed8a8)
 
 | Гейт | Результат |
 |---|---|
@@ -38,7 +38,8 @@
 **✅ Фаза 3 ЗАВЕРШЕНА** — `DashboardCanvas.svelte` = 200 LOC, FreeCanvas удалён.  
 **✅ Фаза 4 ЗАВЕРШЕНА** — DatabaseCallBlock (Board/Calendar/Gallery вкладки), Canvas Selection Bus, LinkedSelection настройки.  
 **✅ Фаза 4.5 ЗАВЕРШЕНА** — Multi-select: `is-any-of` оператор + `SelectionState.values[]` + все receiver/driver мигрированы. Commit `92f5073`.  
-**Следующий шаг**: M-UI-MODERNIZATION Phase UI-0 (#050 токены) + Phase UI-7 (#057 типы) — параллельно.
+**✅ M-UI-MODERNIZATION ЗАВЕРШЁН**: #050–#058 выполнены (5 коммитов, 2026-06-10). Исключение: #052 PARTIAL (WidgetShell dead code — интеграция в WidgetHost не выполнена).  
+**Следующий шаг**: Блок B — first-glance UX fixes (demoProject + widgetRegistry + templates) + #052 integration decision.
 
 ## Завершённые milestones
 
@@ -61,21 +62,15 @@
 | **Dashboard V2 Phase 3 — Canvas decompose** | ✅ DONE |
 | **Dashboard V2 Phase 4 — DatabaseCallWidget + Selection Bus** | ✅ DONE |
 | **Dashboard V2 Phase 4.5 — Multi-select (is-any-of + values[])** | ✅ DONE (2026-06-10, `92f5073`) |
+| **M-UI-MODERNIZATION (#050–#058)** | ✅ DONE (2026-06-10, HEAD `53ed8a8`) — #052 PARTIAL |
 
 ## Открытые тикеты
 
 | Тикет | Приоритет | Статус | Описание |
 |---|---|---|---|
-| **#050** | P0 | 📋 NEXT | UI-0: Dashboard Token Layer — удалить 40+ hardcoded px/hex/hsl |
-| **#057** | P0 | 📋 NEXT (параллельно с #050) | UI-7: Legacy Type Cleanup + V2 widget type removal |
-| **#051** | P0 | 📋 BACKLOG | UI-1: DatabaseCall Table View (после #050) |
-| **#052** | P1 | 📋 BACKLOG | UI-2: WidgetShell replacing WidgetHost |
-| **#053** | P1 | 📋 BACKLOG | UI-3: Chart modernization |
-| **#054** | P1 | 📋 BACKLOG | UI-4: Stats modernization (Comparison/SummaryRow → archive) |
-| **#055** | P1 | 📋 BACKLOG | UI-5: FilterTabs/Checklist/DatabaseCallBlock |
-| **#056** | P2 | 📋 BACKLOG | UI-6: V2 widget archive (Timeline/ViewPort/DataList DELETE) |
-| **#058** | P1 | 📋 BACKLOG | UI-8: Integration + Full Test (последний) |
+| **#052** | P1 | ⚠️ PARTIAL | WidgetShell создан (161 LOC) но не подключён к WidgetHost — dead code. Нужно: wire или перенести в #059 |
 | **#048** | P2 | 📋 BACKLOG | UI точка входа native-query в CreateProject.svelte |
+| **#059** | P0 | 📋 NEW | First-glance UX: demoProject→database-call, widgetRegistry order, legacy widget hiding, templates |
 
 ## Ключевые решения (зафиксированные)
 

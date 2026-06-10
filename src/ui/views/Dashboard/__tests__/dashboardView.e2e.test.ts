@@ -509,6 +509,7 @@ describe("E2E: Config migration → template application", () => {
     expect(WIDGET_TEMPLATES.length).toBeGreaterThanOrEqual(3);
 
     const allowedTypes: WidgetType[] = [
+      "database-call",
       "data-table",
       "chart",
       "stats",
@@ -517,6 +518,9 @@ describe("E2E: Config migration → template application", () => {
       "view-port",
       "filter-tabs",
       "summary-row",
+      "text",
+      "divider",
+      "cover-banner",
     ];
 
     for (const template of WIDGET_TEMPLATES) {

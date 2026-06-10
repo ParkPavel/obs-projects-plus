@@ -145,7 +145,6 @@
     });
   }
 </script>
-
 <ViewLayout>
   <ViewContent>
     <div class="ppp-database-root" style={tokenCSS} role="region" aria-label={$i18n.t("views.dashboard.name")}>

@@ -36,6 +36,36 @@ function wid(): string {
 
 export const WIDGET_TEMPLATES: WidgetTemplate[] = [
   {
+    id: "database-v2-starter",
+    label: "Database V2",
+    labelKey: "views.dashboard.templates.database-v2-starter",
+    description: "V2 dashboard: KPI stats + multi-view database block (Table / Board / Calendar / Gallery)",
+    descriptionKey: "views.dashboard.templates.database-v2-starter-desc",
+    widgets: [
+      {
+        id: wid(),
+        type: "stats",
+        title: "KPI",
+        layout: { x: 0, y: 0, w: 12, h: 2 },
+        config: {
+          cards: [
+            { id: "s1", label: "Records",      field: "name",      aggregation: "count" },
+            { id: "s2", label: "Open",         field: "completed", aggregation: "count_unchecked", format: "number" },
+            { id: "s3", label: "Avg Progress", field: "progress",  aggregation: "avg", format: "percent" },
+          ],
+          columns: 3,
+        },
+      },
+      {
+        id: wid(),
+        type: "database-call",
+        title: "Records",
+        layout: { x: 0, y: 2, w: 12, h: 8 },
+        config: { activeTab: "table" },
+      },
+    ],
+  },
+  {
     id: "overview-finance",
     label: "Overview Finance",
     labelKey: "views.dashboard.templates.overview-finance",

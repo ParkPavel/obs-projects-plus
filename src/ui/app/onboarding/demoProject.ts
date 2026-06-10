@@ -284,7 +284,7 @@ function overviewWidgets(): WidgetDefinition[] {
     },
     {
       id: widgetId(),
-      type: "data-table",
+      type: "database-call",
       title: "Приоритетные задачи",
       layout: { x: 6, y: 2, w: 6, h: 4 },
       transform: {
@@ -301,20 +301,27 @@ function overviewWidgets(): WidgetDefinition[] {
           },
         ],
       },
-      config: {},
+      config: { activeTab: "table" },
     },
     {
       id: widgetId(),
-      type: "summary-row",
-      title: "Итоги",
-      layout: { x: 0, y: 6, w: 12, h: 1 },
-      config: {
-        columns: [
-          { field: "value",    aggregation: "sum", format: "currency", currencySymbol: "$" },
-          { field: "progress", aggregation: "avg", format: "percent" },
-          { field: "estimate", aggregation: "sum", format: "number" },
+      type: "database-call",
+      title: "Встречи",
+      layout: { x: 0, y: 6, w: 12, h: 4 },
+      transform: {
+        steps: [
+          {
+            type: "filter",
+            conditions: {
+              conjunction: "and",
+              conditions: [
+                { field: "type", operator: "is", value: "meeting", enabled: true },
+              ],
+            },
+          },
         ],
       },
+      config: { activeTab: "table" },
     },
   ];
 }

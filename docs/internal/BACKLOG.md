@@ -615,7 +615,7 @@ ChartWidget and StatsWidget. Stack mode untouched.
 > Spec: `docs/internal/UI_MODERNIZATION_PLAN.md`
 
 ### #050 — Design System Foundation: Dashboard Token Layer
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит d82315f
 - Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
 - analysis_required: false
 - Blocks: #051, #052, #053, #054, #055, #056
@@ -626,9 +626,9 @@ Unify z-index under `--ppp-z-*` scale (kill z-index:100, z-index:200 magic numbe
 Add `--ppp-border-thin`, `--ppp-shadow-sm/md/lg`, `--ppp-db-row-compact/default/expanded` tokens.
 
 ### #051 — DatabaseCall Table View Mode (DataTable absorbed)
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: XL
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: true
 - Depends on: #050
 - Blocks: #056 (archive standalone DataTableWidget only after this done)
 
@@ -642,7 +642,7 @@ Implement Table view inside `database-call`:
 - Standalone `DataTableWidget.svelte` → prepare for archive in #056 (add alias for compatibility)
 
 ### #052 — WidgetShell: Replace WidgetHost (947 LOC)
-- Status: BACKLOG
+- Status: ⚠️ PARTIAL (2026-06-10) — WidgetShell.svelte (161 LOC) + WidgetHeaderActions.svelte (80 LOC) созданы; интеграция в WidgetHost не выполнена (dead code); WidgetHost остаётся 947 LOC
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: L
 - analysis_required: false
 - Depends on: #050
@@ -652,7 +652,7 @@ Dedicated `WidgetToolbar.svelte`. Resize via ResizeObserver + CSS variables.
 SelectionBadge in header slot. DnD handles via `.ppp-widget-drag-handle`.
 
 ### #053 — Chart Widget Modernization
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #050
@@ -662,7 +662,7 @@ Legend: token-based design. Empty state: shared `EmptyState.svelte` component.
 Scatter: CSS Grid for axis labels.
 
 ### #054 — Stats Widget Modernization
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: S
 - analysis_required: false
 - Depends on: #050
@@ -675,7 +675,7 @@ Typography: value = `--ppp-font-size-2xl bold`, label = `--ppp-font-size-xs mute
 Remove `color ?? "#6a6a8f"` hardcoded fallback → `var(--ppp-db-text-secondary)`.
 
 ### #055 — FilterTabs, Checklist, DatabaseCallBlock Modernization
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #050
@@ -685,7 +685,7 @@ Checklist: CSS `appearance:none` checkbox + `:checked` + `var(--ppp-color-succes
 DatabaseCallBlock: status dot via `var(--ppp-color-success/warning/error)`. Query font: `var(--font-monospace)`.
 
 ### #056 — V2 Widget Archive: Delete V1-only widgets from active code
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 4ac7cac (git mv; V1 виджеты перемещены в src/archive/dashboard-v1/)
 - Milestone: M-UI-MODERNIZATION | Priority: P2 | Complexity: L
 - analysis_required: false
 - Depends on: #051 (DatabaseCall Table View must cover data-table functionality first)
@@ -706,9 +706,9 @@ DatabaseCallBlock: status dot via `var(--ppp-color-success/warning/error)`. Quer
 **WidgetType union** post-archive: `database-call | chart | stats | checklist | filter-tabs | text | divider | cover-banner` (8 types).
 
 ### #057 — Legacy Type Cleanup: Remove Orphan Types
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит d82315f (legacy aliases removed)
 - Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: true
 - Depends on: (none — can run parallel with #050)
 
 Audit and remove: WidgetConfigV1/V2, FreeCanvasLayout orphans (post Phase-3), old GridColumnDef format,
@@ -716,7 +716,7 @@ duplicated union types in types.ts/settings.ts, FilterConditionV1/SortConditionV
 Goal: 0 `@deprecated` in src/, 0 unused exports from widget type files.
 
 ### #058 — UI Modernization Integration & Full Test
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммиты 66386bc, 53ed8a8 (a11y fixes, z-index scale)
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #051, #052, #053, #054, #055, #056, #057
