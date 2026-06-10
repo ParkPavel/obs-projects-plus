@@ -1,7 +1,7 @@
 ﻿# Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-07 (#049 added P0 — fix lint+svelte-check baseline; #047/#046 ✅ DONE merged, #044 ✅ DONE, #045 ✅ DONE, M-DATAVIEW-BRIDGE ✅ DONE, baseline 139/2099 jest — but lint/svelte-check RED, see #049)
+> **Updated**: 2026-06-10 (#050–#058 added — M-UI-MODERNIZATION: полный рефакторинг Dashboard UI; Phase 4.5 ✅ DONE multi-select Selection Bus; baseline 134/2020)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -594,6 +594,108 @@ ChartWidget and StatsWidget. Stack mode untouched.
 
 ---
 
+---
+
+## Milestone M-UI-MODERNIZATION — ПОЛНЫЙ РЕФАКТОРИНГ DASHBOARD UI
+
+> Triggered: 2026-06-10 — real Obsidian API testing revealed legacy UI patterns across all 18 widget types.
+> Spec: `docs/internal/UI_MODERNIZATION_PLAN.md`
+
+### #050 — Design System Foundation: Dashboard Token Layer
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
+- analysis_required: false
+- Blocks: #051, #052, #053, #054, #055, #056
+
+Create `src/ui/views/Dashboard/tokens/dashboardTokens.css` with full `--ppp-db-*` semantic token set.
+Remove all 40+ hardcoded px/hex/hsl values from widget files.
+Unify z-index under `--ppp-z-*` scale (kill z-index:100, z-index:200 magic numbers).
+Add `--ppp-border-thin`, `--ppp-shadow-sm/md/lg`, `--ppp-db-row-compact/default/expanded` tokens.
+
+### #051 — DataTable Widget Full Rebuild
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: #050
+
+Full decomposition: DataTableWidget (1843 LOC) → DataGrid + DataGridHeader + DataGridBody + DataGridRow + DataGridCell + DataGridAggRow + DataTableToolbar.
+Fix column alignment root cause: header and cells must share a single CSS Grid context via `--ppp-dt-columns` custom property.
+Fix virtual scroll + sticky aggregation row conflict.
+Target: DataTableWidget.svelte ≤ 600 LOC total across all sub-files.
+
+### #052 — WidgetShell: Replace WidgetHost (947 LOC)
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: L
+- analysis_required: false
+- Depends on: #050
+
+New `WidgetShell.svelte` ≤ 350 LOC. CSS Grid: `grid-template-areas: "header" "content"`.
+Dedicated `WidgetToolbar.svelte`. Resize via ResizeObserver + CSS variables.
+SelectionBadge in header slot. DnD handles via `.ppp-widget-drag-handle`.
+
+### #053 — Chart Widget Modernization
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #050
+
+Container: `aspect-ratio: var(--ppp-chart-aspect, 16/9)` instead of hardcoded heights.
+Legend: token-based design. Empty state: shared `EmptyState.svelte` component.
+Scatter: CSS Grid for axis labels.
+
+### #054 — Stats, Comparison, SummaryRow Redesign
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #050
+
+Stats: CSS Grid `repeat(auto-fill, minmax(10rem, 1fr))`. Typography hierarchy via tokens.
+Comparison: remove `color ?? "#6a6a8f"` → `var(--ppp-db-text-secondary)`. Delta arrows via CSS.
+SummaryRow: sticky via CSS Grid row, not position:absolute.
+
+### #055 — FilterTabs, Checklist, DatabaseCallBlock Modernization
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #050
+
+FilterTabs: `overflow-x: auto; scroll-snap-type: x`. Overflow → "..." dropdown.
+Checklist: CSS `appearance:none` checkbox + `:checked` + `var(--ppp-color-success)`.
+DatabaseCallBlock: status dot via `var(--ppp-color-success/warning/error)`. Query font: `var(--font-monospace)`.
+
+### #056 — Timeline, ViewPort, DataList Modernization
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P2 | Complexity: L
+- analysis_required: false
+- Depends on: #050
+
+Timeline: убрать все 6× position:absolute → CSS Grid для bars. Today marker через `::after` pseudoelement.
+Box-shadow → `var(--ppp-shadow-sm)`. Opacity magic numbers → tokens.
+ViewPort: убрать position:absolute dropdown → CSS Popover API.
+DataList: card stack via `gap: var(--ppp-space-sm)`.
+
+### #057 — Legacy Type Cleanup: Remove Orphan Types
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
+- analysis_required: true | analysis_done: false
+- Depends on: (none — can run parallel with #050)
+
+Audit and remove: WidgetConfigV1/V2, FreeCanvasLayout orphans (post Phase-3), old GridColumnDef format,
+duplicated union types in types.ts/settings.ts, FilterConditionV1/SortConditionV1.
+Goal: 0 `@deprecated` in src/, 0 unused exports from widget type files.
+
+### #058 — UI Modernization Integration & Full Test
+- Status: BACKLOG
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
+- analysis_required: false
+- Depends on: #051, #052, #053, #054, #055, #056, #057
+
+PX-budget ratchet recount (target ≤ 60 from current 186).
+Full Obsidian API test: all 5 demo-project views, all 18 widget types.
+svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
+
+---
+
 ## Dependency graph
 
 ```
@@ -633,4 +735,10 @@ M-UX 🔄 ACTIVE:
 #046 ✅ (awaiting user merge → main)
 #047 ✅ (awaiting user merge → main)
 Next: #011 (YamlVisualizer widget test), #048 (native-query UI, to be created)
+
+M-UI-MODERNIZATION 🔄 PLANNED:
+UI-0: #050 (tokens) → UI-7: #057 (type cleanup) [parallel]
+UI-1: #051 (DataTable) → UI-2: #052 (WidgetShell) [after UI-0]
+UI-3..6: #053–#056 (Chart/Stats/FilterTabs/Timeline) [parallel after UI-0]
+UI-8: #058 (integration) [last]
 ```
