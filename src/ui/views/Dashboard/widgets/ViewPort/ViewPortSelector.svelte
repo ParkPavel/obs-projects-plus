@@ -40,7 +40,7 @@
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 10;
+    z-index: var(--ppp-db-z-sticky, 10);
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);

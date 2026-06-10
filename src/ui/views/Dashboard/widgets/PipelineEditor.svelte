@@ -1368,7 +1368,7 @@
   .ppp-pipeline-confirm-overlay {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    z-index: var(--ppp-db-z-overlay, 200);
     background: rgba(0, 0, 0, 0.3);
     display: flex;
     align-items: center;

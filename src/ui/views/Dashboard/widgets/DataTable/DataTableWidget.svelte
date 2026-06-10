@@ -1737,7 +1737,7 @@
     align-items: center;
     position: sticky;
     bottom: 0;
-    z-index: 10;
+    z-index: var(--ppp-db-z-sticky, 10);
   }
 
   .ppp-aggregation-cell {
@@ -1799,7 +1799,7 @@
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m, 0.5rem);
     box-shadow: var(--shadow-s, 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15));
-    z-index: 100;
+    z-index: var(--ppp-db-z-dropdown, 100);
     padding: 0.25rem 0;
   }
 

@@ -226,7 +226,7 @@
     display: flex;
     position: sticky;
     top: 0;
-    z-index: 2;
+    z-index: var(--ppp-db-z-bar, 2);
     background: var(--background-secondary);
     border-bottom: 0.0625rem solid var(--background-modifier-border);
     min-height: 1.5rem;
@@ -310,7 +310,7 @@
     background: var(--color-red, hsl(0,70%,55%));
     opacity: 0.4;
     pointer-events: none;
-    z-index: 1;
+    z-index: var(--ppp-db-z-raised, 1);
   }
 
   .ppp-tl-bar {
@@ -328,7 +328,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: default;
-    z-index: 2;
+    z-index: var(--ppp-db-z-bar, 2);
     min-width: 0.25rem;
     box-shadow: 0 0.0625rem 0.1875rem rgba(0,0,0,0.2);
     transition: filter 100ms ease;
