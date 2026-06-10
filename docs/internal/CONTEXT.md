@@ -29,7 +29,8 @@
 Полный перезапуск Dashboard. Документы:
 - `docs/internal/DASHBOARD_V2_SPEC.md` — спецификация (rev.3, согласована)
 - `docs/internal/DASHBOARD_V2_VISION.md` — пользовательское видение (источник правды для UX)
-- `docs/internal/UI_MODERNIZATION_PLAN.md` — M-UI-MODERNIZATION (новый, 2026-06-10)
+- `docs/internal/UI_MODERNIZATION_PLAN.md` — M-UI-MODERNIZATION (V2-aligned, 2026-06-10)
+- `docs/internal/UI_DESIGN_ARCHITECTURE.md` — Notion-parity mapping + полная архитектурная схема (2026-06-10)
 
 **✅ Фаза 0 ЗАВЕРШЕНА** — все 4 CI ворот зелёные на `feat/dashboard-v2`.  
 **✅ Фаза 1 ЗАВЕРШЕНА** — Engine перенесён в `src/lib/dashboard-engine/`.  
