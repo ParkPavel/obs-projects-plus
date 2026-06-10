@@ -1,7 +1,7 @@
 ﻿<script lang="ts">
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartData, ScatterChartConfig } from "../../types";
-  import { computeChartData, computeScatterData, chartHeightPx } from "../../engine/chartDataPipeline";
+  import { computeChartData, computeScatterData, chartHeightPx } from "src/lib/dashboard-engine/chartDataPipeline";
   import BarChart from "./BarChart.svelte";
   import LineChart from "./LineChart.svelte";
   import PieChart from "./PieChart.svelte";
@@ -14,7 +14,7 @@
     SELECTION_CONTEXT_KEY,
     type SelectionState,
     type SelectionStore,
-  } from "../../FreeCanvas/selectionStore";
+  } from "../../canvasSelectionStore";
   import {
     computeChartSelectionToggle,
     getSelectedChartLabel,

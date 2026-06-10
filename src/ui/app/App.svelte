@@ -19,7 +19,7 @@
   // Layering: App.svelte (UI layer) owns the wiring; it cannot live in
   // events.ts (Shell layer) because that would break the
   // Shell → UI → Engine → Data dependency direction.
-  import { invalidateAll as invalidateTransformAll } from "src/ui/views/Dashboard/engine/transformCache";
+  import { invalidateAll as invalidateTransformAll } from "src/lib/dashboard-engine/transformCache";
   import { registerDataFrameInvalidation } from "src/lib/stores/dataframe";
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { DataFrame } from "src/lib/dataframe/dataframe";

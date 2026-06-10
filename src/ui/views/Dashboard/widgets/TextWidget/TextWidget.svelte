@@ -8,7 +8,7 @@
 
   const dispatch = createEventDispatcher<{ change: Record<string, unknown> }>();
 
-  $: content = typeof config?.content === "string" ? config.content : "";
+  $: content = typeof config?.["content"] === "string" ? config["content"] : "";
   let editing = false;
   let editValue = "";
   let textareaEl: HTMLTextAreaElement;

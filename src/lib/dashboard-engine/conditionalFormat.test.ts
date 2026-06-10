@@ -6,7 +6,7 @@ import {
   cellStyleToCSS,
 } from "./conditionalFormat";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import type { ConditionalFormat } from "../types";
+import type { ConditionalFormat } from "src/ui/views/Dashboard/types";
 
 function makeRecord(values: Record<string, unknown>): DataRecord {
   return { id: "test", values: values as DataRecord["values"] };

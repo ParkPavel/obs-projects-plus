@@ -10,7 +10,7 @@
     EMPTY_SELECTION,
     type SelectionStore,
     type SelectionState,
-  } from "../../FreeCanvas/selectionStore";
+  } from "../../canvasSelectionStore";
   import { filterRecordsBySelection, isSelectionActive } from "./statsSelectionReceiver";
 
   export let config: StatsConfig;

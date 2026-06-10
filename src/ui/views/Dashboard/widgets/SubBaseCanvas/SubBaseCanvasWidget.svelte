@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   // R5-009 — Sub-base canvas widget. Displays a tab strip; the active
   // sub-base's filtered records render below as a list (title + inline
   // fields). Sub-base CRUD is owned by this widget, decoupled from
@@ -125,7 +125,7 @@
     emit({
       ...cfg,
       subBases: next,
-      ...(nextActive !== undefined ? { activeSubBaseId: nextActive } : { activeSubBaseId: undefined as unknown as string }),
+      ...(nextActive != null ? { activeSubBaseId: nextActive } : {}),
     });
   }
 

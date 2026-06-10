@@ -10,7 +10,7 @@ import type {
   AggregationConfig,
   AggregationResult,
   ColumnAggregation,
-} from "../types";
+} from "src/ui/views/Dashboard/types";
 
 /**
  * ColumnAggregationEngine — computes per-column summaries for DataTable footer.

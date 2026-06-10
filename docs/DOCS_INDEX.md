@@ -1,6 +1,6 @@
 # Docs Index
 
-> Single navigation point for all documentation. Last updated: 2026-05-15.
+> Единая точка навигации по документации. Обновлено: 2026-06-09.
 
 ---
 
@@ -13,7 +13,7 @@
 | [api.md](api.md) / [api-ru.md](api-ru.md) | Custom View API reference |
 | [user-guide.md](user-guide.md) / [user-guide-EN.md](user-guide-EN.md) | End-user guide (RU / EN) |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor onboarding |
-| [../CLAUDE.md](../CLAUDE.md) | Stack, architecture map, key invariants — read first |
+| [../AGENTS.md](../AGENTS.md) | Stack, architecture map, key invariants, agent system — read first |
 
 ## Engineering Standards
 
@@ -27,5 +27,13 @@
 
 | Document | Purpose |
 |---|---|
-| [internal/MASTER_MAP_V5.md](internal/MASTER_MAP_V5.md) | Refactor session navigation: code layers, debt table, milestone phases |
-| [internal/BACKLOG.md](internal/BACKLOG.md) | Active backlog — tickets #NNN organized by milestones (M-ENGINE-CLEANUP, M-CANVAS-REACTIVE, etc.) |
+| [internal/BACKLOG.md](internal/BACKLOG.md) | Active backlog — tickets #NNN organized by milestones |
+| [internal/CONTEXT.md](internal/CONTEXT.md) | Current session state — updated by context-manager agent |
+| [internal/DASHBOARD_V2_SPEC.md](internal/DASHBOARD_V2_SPEC.md) | Dashboard V2 specification and development plan |
+| [internal/DASHBOARD_V2_VISION.md](internal/DASHBOARD_V2_VISION.md) | User vision essay — source of truth for all UX decisions |
+
+## Archive
+
+| Document | Purpose |
+|---|---|
+| [internal/archive/](internal/archive/) | Completed milestone docs (M-DATAVIEW-BRIDGE, #022, QA audit, MASTER_MAP_V5) |

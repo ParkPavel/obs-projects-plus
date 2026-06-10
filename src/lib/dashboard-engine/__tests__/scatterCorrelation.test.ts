@@ -1,6 +1,6 @@
 ﻿// Scatter correlation (Pillar 5) — computeScatterData with right frame.
 import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
-import { computeScatterData } from "src/ui/views/Dashboard/engine/chartDataPipeline";
+import { computeScatterData } from "src/lib/dashboard-engine/chartDataPipeline";
 import type { ScatterChartConfig } from "src/ui/views/Dashboard/types";
 
 function mkFrame(

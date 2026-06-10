@@ -2,7 +2,7 @@
 // Converts ChartConfig → TransformPipeline → ChartData
 
 import type { DataFrame } from "src/lib/dataframe/dataframe";
-import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "../types";
+import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
 import type { TransformPipeline, TransformStep, AggregationFunction } from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
 import { joinKey as scatterJoinKey } from "./joinKey";

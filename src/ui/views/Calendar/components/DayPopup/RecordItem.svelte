@@ -4,7 +4,6 @@
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
   import { getScrollBehavior } from 'src/lib/helpers/animation';
-  import { calendarLogger } from '../../logger';
   import { hexToHsv, hsvToHex } from "src/lib/colors/math";
   import { favoritesStore } from "src/lib/stores/palettes";
 

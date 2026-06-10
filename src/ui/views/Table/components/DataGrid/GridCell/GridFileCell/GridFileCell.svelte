@@ -26,7 +26,7 @@
     const out: WikiLink[] = [];
     let m: RegExpExecArray | null;
     while ((m = re.exec(str)) !== null) {
-      out.push({ target: m[1].trim(), display: (m[2] ?? m[1]).trim(), raw: m[0] });
+      out.push({ target: m[1]!.trim(), display: (m[2] ?? m[1]!).trim(), raw: m[0]! });
     }
     return out;
   }

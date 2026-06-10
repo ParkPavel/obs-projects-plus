@@ -1,7 +1,7 @@
 ﻿<script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import { sanitizeColor } from "../../engine/conditionalFormat";
+  import { sanitizeColor } from "src/lib/dashboard-engine/conditionalFormat";
 
   export let groupKey: string;
   export let count: number;

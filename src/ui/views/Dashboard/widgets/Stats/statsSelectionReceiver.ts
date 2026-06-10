@@ -17,7 +17,7 @@
  */
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import { dataTableSourceId, chartSourceId, type SelectionState } from "../../FreeCanvas/selectionStore";
+import { dataTableSourceId, chartSourceId, type SelectionState } from "../../canvasSelectionStore";
 
 /**
  * Stable source-id prefix reserved for a future Stats driver (v2 drill-down).

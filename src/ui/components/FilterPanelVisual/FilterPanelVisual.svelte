@@ -8,7 +8,7 @@
    */
   import { createEventDispatcher } from "svelte";
   import { SlideInPanel } from "src/ui/components/SlideInPanel";
-  import FiltersTab from "src/ui/components/Navigation/SettingsMenu/tabs/FiltersTab.svelte";
+  import FilterPanel from "src/ui/components/FilterPanel/FilterPanel.svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import type { FilterDefinition } from "src/settings/base/settings";
   import { i18n } from "src/lib/stores/i18n";
@@ -16,6 +16,7 @@
   export let open: boolean;
   export let filter: FilterDefinition | undefined;
   export let fields: DataField[];
+  export let scopeLabel: string | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     save: FilterDefinition | undefined;
@@ -128,10 +129,11 @@
       </div>
     {/if}
 
-    <!-- Reuse existing FiltersTab logic (value / update API) -->
-    <FiltersTab
+    <!-- Reuse existing FilterPanel logic (value / update API) -->
+    <FilterPanel
       value={editedFilter}
       {fields}
+      {scopeLabel}
       on:update={handleFilterChange}
     />
 

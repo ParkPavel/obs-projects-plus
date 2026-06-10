@@ -2,8 +2,8 @@
 import {
   getFormulaMetadata,
   getAllFormulaMetadata,
-} from "src/ui/views/Dashboard/engine/formulaMetadata";
-import { getFormulaFunctions } from "src/ui/views/Dashboard/engine/formulaEngine";
+} from "src/lib/dashboard-engine/formulaMetadata";
+import { getFormulaFunctions } from "src/lib/dashboard-engine/formulaEngine";
 
 describe("formulaMetadata", () => {
   it("covers every registered formula function", () => {

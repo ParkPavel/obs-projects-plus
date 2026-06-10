@@ -38,7 +38,7 @@
 
   <div class="ppp-tl-cfg-row">
     <label for="tl-end">End field</label>
-    <select id="tl-end" value={cfg.endField ?? ""} on:change={(e) => update({ endField: e.currentTarget.value || undefined })}>
+    <select id="tl-end" value={cfg.endField ?? ""} on:change={(e) => { const v = e.currentTarget.value; update(v ? { endField: v } : {}); }}>
       <option value="">— same as start —</option>
       {#each dateFields as f}
         <option value={f.name}>{f.name}</option>
@@ -48,7 +48,7 @@
 
   <div class="ppp-tl-cfg-row">
     <label for="tl-label">Label field</label>
-    <select id="tl-label" value={cfg.labelField ?? ""} on:change={(e) => update({ labelField: e.currentTarget.value || undefined })}>
+    <select id="tl-label" value={cfg.labelField ?? ""} on:change={(e) => { const v = e.currentTarget.value; update(v ? { labelField: v } : {}); }}>
       <option value="">— record name —</option>
       {#each allFields as f}
         <option value={f.name}>{f.name}</option>
@@ -58,7 +58,7 @@
 
   <div class="ppp-tl-cfg-row">
     <label for="tl-color">Color by field</label>
-    <select id="tl-color" value={cfg.colorField ?? ""} on:change={(e) => update({ colorField: e.currentTarget.value || undefined })}>
+    <select id="tl-color" value={cfg.colorField ?? ""} on:change={(e) => { const v = e.currentTarget.value; update(v ? { colorField: v } : {}); }}>
       <option value="">— none —</option>
       {#each allFields as f}
         <option value={f.name}>{f.name}</option>

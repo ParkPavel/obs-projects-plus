@@ -1,11 +1,11 @@
 ﻿// JoinStep executor tests — Pillar 5 (cross-type correlation).
 import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
-import { executeTransform } from "src/ui/views/Dashboard/engine/transformExecutor";
+import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
 import type {
   JoinStep,
   TransformContext,
   TransformPipeline,
-} from "src/ui/views/Dashboard/engine/transformTypes";
+} from "src/lib/dashboard-engine/transformTypes";
 
 function mkFrame(
   fields: Array<[string, DataFieldType]>,

@@ -35,6 +35,11 @@
         return value ? { ...rest, [key]: value } : rest;
       })
     );
+
+  function handleGroupModeChange(event: CustomEvent<string>) {
+    groupMode = event.detail as "values" | "semantic";
+    updateConfig("groupMode", groupMode === "values" ? null : groupMode);
+  }
 </script>
 
 <ModalLayout title={$i18n.t("views.board.settings.name")}>
@@ -89,10 +94,7 @@
           { label: $i18n.t("views.board.settings.group-mode.values", { defaultValue: "Values" }), value: "values" },
           { label: $i18n.t("views.board.settings.group-mode.semantic", { defaultValue: "Semantic groups" }), value: "semantic" },
         ]}
-        on:change={(event) => {
-          groupMode = event.detail;
-          updateConfig("groupMode", groupMode === "values" ? null : groupMode);
-        }}
+        on:change={handleGroupModeChange}
       />
     </SettingItem>
   </ModalContent>

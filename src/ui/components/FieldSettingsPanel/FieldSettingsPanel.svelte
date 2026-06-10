@@ -93,10 +93,13 @@
       default:
         break;
     }
+    const hasTypeConfig = Object.keys(next).length > 0;
+    const { typeConfig: _old, ...fieldBase } = editedField;
+    void _old;
     editedField = {
-      ...editedField,
+      ...fieldBase,
       type: nextType,
-      typeConfig: Object.keys(next).length > 0 ? next : undefined,
+      ...(hasTypeConfig ? { typeConfig: next } : {}),
     };
   }
 
@@ -110,9 +113,44 @@
     dispatch("close");
   }
 
+  $: fieldTypeOptions = dataFieldTypeOptions($i18n.t);
   $: typeLabel =
-    dataFieldTypeOptions.find((opt) => opt.value === editedField.type)?.label ??
+    fieldTypeOptions.find((opt) => opt.value === editedField.type)?.label ??
     editedField.type;
+
+  $: richTextChecked = !!(editedField.typeConfig as { richText?: boolean } | undefined)?.richText;
+  $: fileLinksChecked = !!(editedField.typeConfig as { fileLinks?: boolean } | undefined)?.fileLinks;
+  $: timeChecked = !!(editedField.typeConfig as { time?: boolean } | undefined)?.time;
+
+  function handleRichTextChange(e: Event) {
+    editedField = {
+      ...editedField,
+      typeConfig: {
+        ...(editedField.typeConfig ?? {}),
+        richText: checkboxChecked(e),
+      },
+    };
+  }
+
+  function handleFileLinksChange(e: Event) {
+    editedField = {
+      ...editedField,
+      typeConfig: {
+        ...(editedField.typeConfig ?? {}),
+        fileLinks: checkboxChecked(e),
+      },
+    };
+  }
+
+  function handleTimeChange(e: Event) {
+    editedField = {
+      ...editedField,
+      typeConfig: {
+        ...(editedField.typeConfig ?? {}),
+        time: checkboxChecked(e),
+      },
+    };
+  }
 </script>
 
 <SlideInPanel
@@ -154,7 +192,7 @@
         on:change={handleTypeChange}
         disabled={!field.derived && field.name !== editedField.name}
       >
-        {#each dataFieldTypeOptions as opt (opt.value)}
+        {#each fieldTypeOptions as opt (opt.value)}
           <option value={opt.value}>{opt.label}</option>
         {/each}
       </select>
@@ -171,16 +209,8 @@
         <label class="ppp-field-settings-checkbox">
           <input
             type="checkbox"
-            checked={!!(editedField.typeConfig as { richText?: boolean })?.richText}
-            on:change={(e) => {
-              editedField = {
-                ...editedField,
-                typeConfig: {
-                  ...(editedField.typeConfig ?? {}),
-                  richText: checkboxChecked(e),
-                },
-              };
-            }}
+            checked={richTextChecked}
+            on:change={handleRichTextChange}
           />
           <span>{$i18n.t("modals.field.configure.rich-text.name", {
             defaultValue: "Rich text"
@@ -194,16 +224,8 @@
         <label class="ppp-field-settings-checkbox">
           <input
             type="checkbox"
-            checked={!!(editedField.typeConfig as { fileLinks?: boolean })?.fileLinks}
-            on:change={(e) => {
-              editedField = {
-                ...editedField,
-                typeConfig: {
-                  ...(editedField.typeConfig ?? {}),
-                  fileLinks: checkboxChecked(e),
-                },
-              };
-            }}
+            checked={fileLinksChecked}
+            on:change={handleFileLinksChange}
           />
           <span>{$i18n.t("modals.field.configure.file-links.name", {
             defaultValue: "File links"
@@ -219,16 +241,8 @@
         <label class="ppp-field-settings-checkbox">
           <input
             type="checkbox"
-            checked={!!(editedField.typeConfig as { time?: boolean })?.time}
-            on:change={(e) => {
-              editedField = {
-                ...editedField,
-                typeConfig: {
-                  ...(editedField.typeConfig ?? {}),
-                  time: checkboxChecked(e),
-                },
-              };
-            }}
+            checked={timeChecked}
+            on:change={handleTimeChange}
           />
           <span>{$i18n.t("modals.field.configure.date-include-time", {
             defaultValue: "Include time"

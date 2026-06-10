@@ -6,7 +6,7 @@
 
   const dispatch = createEventDispatcher<{ change: Record<string, unknown> }>();
 
-  $: label = typeof config?.label === "string" ? config.label : "";
+  $: label = typeof config?.["label"] === "string" ? config["label"] : "";
   let editing = false;
   let editValue = "";
   let inputEl: HTMLInputElement;

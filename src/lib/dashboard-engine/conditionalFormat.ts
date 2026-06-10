@@ -2,7 +2,7 @@
 // Evaluates conditional formatting rules against records.
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import type { ConditionalFormat, ConditionalFormatRule, CellStyle } from "../types";
+import type { ConditionalFormat, ConditionalFormatRule, CellStyle } from "src/ui/views/Dashboard/types";
 import type { FilterCondition, FilterOperator } from "src/settings/base/settings";
 import { matchesCondition } from "src/ui/app/filterFunctions";
 

@@ -10,7 +10,7 @@ import "@testing-library/jest-dom";
 import {
 	EMPTY_SELECTION,
 	type SelectionState,
-} from "src/ui/views/Dashboard/FreeCanvas/selectionStore";
+} from "src/ui/views/Dashboard/canvasSelectionStore";
 
 const SelectionBadge =
 	require("../SelectionBadge.svelte").default;

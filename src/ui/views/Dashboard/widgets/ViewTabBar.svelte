@@ -8,7 +8,7 @@
    */
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
-  import type { ViewTab } from "../../types";
+  import type { ViewTab } from "../types";
 
   export let tabs: ViewTab[];
   export let activeTabId: string;
@@ -49,7 +49,7 @@
       on:click={() => handleTabClick(tab.id)}
     >
       <span class="ppp-view-tab-icon" aria-hidden="true">
-        <Icon name={VIEW_ICONS[tab.viewType] ?? "layout-grid"} size={14} />
+        <Icon name={VIEW_ICONS[tab.viewType] ?? "layout-grid"} size="sm" />
       </span>
       <span class="ppp-view-tab-label">{tab.label}</span>
     </button>
