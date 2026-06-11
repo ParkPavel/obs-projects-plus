@@ -894,6 +894,148 @@ V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/
 
 ---
 
+## Milestone M-UT-FIXES — Дефекты пользовательского тестирования 2026-06-11
+
+> Источник: пользовательское тестирование на OBStests (стек `2b9d1fd` + docs), скриншоты
+> `C:\Users\Park\OBSv1.0\screanshots\` (9 PNG; точечный анализ выполнен 2026-06-11).
+> Сквозная первопричина большинства дефектов: legacy V1-код (`src/archive/dashboard-v1/`)
+> всё ещё маршрутизируется живым через WidgetHost и палитру виджетов.
+
+### #068 — P0: fields/groups поповер в data-table рушит весь вью
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P0 | Complexity: M
+- analysis_required: false (анализ 2026-06-11 в этом тикете)
+- Repro: дашборд «Клиенты» демо → таблица «Список клиентов» → кнопка Fields (или Group)
+
+Скриншот `19-53-50.png`: открытие поповера разваливает layout вью; всплывает пустой
+`RecordCardView` («No record selected», `RecordCardView.svelte:170`), контент дашборда исчезает.
+Код: `src/archive/dashboard-v1/DataTable/DataTableWidget.svelte` — `openFieldVisibilityPop`
+(:577) / `openGroupPop` (:622) → `FloatingPopup` (:1419). **Архивный V1-код живой в проде**:
+`WidgetHost.svelte:14` импортирует `DataTableWidget` из `src/archive/dashboard-v1/`.
+Вероятная причина — uncaught exception в reactive-обновлении рвёт DOM-дерево (нужна консоль).
+Interim-фикс ИЛИ закрытие через #074 (deprecate data-table). Решить вместе с #074.
+
+### #069 — P0: порча кодировки в исходниках — 25 битых литералов (`??`, `�`)
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P0 | Complexity: S
+- analysis_required: false
+
+Скриншот `19-55-08.png`: конвейер трансформаций показывает «?? Фильтр», «? Агрегация»,
+сырой ключ `views.dashboard.pipeline.unnest`. Грep `�` по src: **PipelineEditor.svelte (12)**,
+archive/DataTable/DataTableWidget.svelte (7), modals/components/CreateField.svelte (4),
+__mocks__/obsidian.ts (2). Это испорченные эмодзи из какого-то коммита с битой кодировкой.
+Фикс: заменить на Lucide-иконки (инвариант #047 — эмодзи в UI запрещены; заодно 🔍 и ⬇
+в DataTableWidget:1128,1135); добавить отсутствующие ключи `views.dashboard.pipeline.*`
+в ru.json (минимум `unnest`). Добавить jest-инвариант: грep `�` по src = 0.
+
+### #070 — P1: унификация системы цвета записей (3 параллельных механизма)
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: L
+- analysis_required: true | analysis_done: partial (2026-06-11)
+- Repro: календарь → popup дня → «Цвет» работает; «Редактировать заметку» → Colors → не работает корректно
+
+Сейчас три механизма цвета:
+1. `getRecordColor` — цветовые правила проекта (color rules), приоритет в рендере;
+2. `config.eventColorField` — hex в frontmatter, пишется popup'ом календаря
+   (`CalendarView.svelte:1094` `handleDayPopupRecordColorChange` → `api.updateRecord`);
+3. эвристика «поле цвета по имени» `COLOR_FIELDS = ['color','eventColor',...]` —
+   **продублирована** в `EditNote.svelte:214` и `FieldControl.svelte:89`.
+Календарь читает И правила, И eventColorField (`CalendarView.svelte:1166,1977,2058`) — порядок
+приоритета нигде не зафиксирован. EditNote пишет то же поле через FieldControl (debounce 500ms,
+:111), но результат в календаре некорректен (расхождение кэша `lastProcessedVersion`?).
+Фикс: единый контракт resolve-цвета (документированный приоритет), одна точка детекции
+color-поля, инвалидация календарного кэша после внешнего обновления записи.
+
+### #071 — P1: CoverBanner config — выбор не применяется + хардкод-английский
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: S
+- analysis_required: false
+- Repro: виджет «Обложка» → настройки → смена Width/Fit/Position не меняется
+
+Проводка по коду корректна (`CoverBannerConfig.svelte` dispatch change →
+`WidgetHost.svelte:463-467` → `handleWidgetConfigChange:132` → canvas saveConfig) —
+нужна репродукция с консолью; подозрение на ре-биндинг `<select value=>` при
+несинхронном обновлении `widget.config`. Отдельный подтверждённый дефект: все строки
+панели хардкод-английские (Image source / Width / Fit / Position / Done) — нет i18n.
+
+### #072 — P1: stats-карточки демо показывают «—» (aggregation: "count")
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: XS
+- analysis_required: false (root cause найден)
+
+Скриншот `19-37-22.png`: «Клиентов» и «Проектов» = «—», при этом count_unchecked и sum работают.
+Причина: `demoProject.ts:260-261` генерирует `aggregation: "count"` — литерал, который R5-004
+переименовал в `"count_total"`. Миграция `migrateAggregationCount` чинит сохранённые конфиги,
+но генератор демо порождает новые со старым значением. Фикс: `"count"` → `"count_total"`
+в demoProject.ts (2 строки) + jest-тест на демо-конфиг; решить, поддерживает ли stats-ядро
+kernel-`count` вообще (если нет — убрать из ColumnAggregation или замапить).
+
+### #073 — P2: палитра виджетов показывает legacy/archived типы + переполнение
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
+- analysis_required: false
+
+Скриншот `19-45-16.png`: «+ Добавить виджет» предлагает Таблицу данных, Итоговую строку,
+Список, Сравнение, Окно просмотра, Канвас подбаз, Свойства, Таймлайн — всё это V2 spec §4
+отправляет в archive/replace. `DashboardBlockPalette.svelte:39` рендерит весь WIDGET_REGISTRY
+без фильтра (скрытие legacy из #059-аудита палитру не покрыло). Плюс список выходит за нижний
+край экрана (нет max-height/scroll у FloatingPopup-контента). Фикс: флаг `legacy: true`
+в WidgetMeta + фильтр в палитре (legacy показывать только если виджет такого типа уже есть
+на канвасе), max-height + overflow-y.
+
+### #074 — EPIC P1: Table view — полная перестройка с нуля (мандат пользователя)
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: XL
+- analysis_required: true | analysis_done: false
+- Depends on: #067 (WidgetHost decomposition — делать согласованно)
+
+**Мандат пользователя (2026-06-11)**: «Сам вид Таблиц требует полной перестройки с нуля
+без оглядки на прошлый экземпляр». Скриншот `19-53-17.png`: старые артефакты — emoji-кнопки,
+перегруженный тулбар (Макет/Hidden/Group/Sort/Σ/🔍/⬇), обрезанные дубли колонок, баннер-хинт.
+Скоуп:
+- Новый Table view ВНУТРИ `database-call` (развитие DataTableContent), не правка архивного кода
+- Interaction parity (gap-матрица UI_DESIGN_ARCHITECTURE §6): inline cell edit (P0),
+  row hover actions, inline «+ New row», column header menu
+- `data-table` widget type → deprecate: миграция существующих конфигов в `database-call`
+  Table tab; demoProject больше не генерирует `data-table` (сейчас «Клиенты» = data-table!)
+- Закрывает #068 архитектурно (архивный DataTableWidget перестаёт маршрутизироваться)
+Architect-план обязателен ДО кода (как #067).
+
+### #075 — P1 UX: конвейер трансформаций — дискаверабилити и язык
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: M
+- analysis_required: false | design_required: true (senior-designer)
+- Depends on: #069 (сначала починить битые строки)
+
+Пользователь: «не понятно как пользоваться конвейером трансформаций и что это такое».
+После #069 нужен UX-слой: человеческое объяснение (Vision §7 «объяснения на месте» —
+не «Unnest», а «развернуть список в строки — например, по одному участнику на строку»),
+пустое состояние конвейера с примером, tooltip на кнопке пайплайна в WidgetHost.
+
+### #076 — P2 UX: пользовательский путь «создать базу/суб-базу вытягиванием»
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M
+- analysis_required: false | design_required: true (senior-designer)
+
+Пользователь: «остаётся неясным путь для создания баз и суб-баз по вытягиваниям».
+Механика есть (Матрёшка, SubBasePanel, linkedSelection), входных точек в UI нет. Дизайн:
+entry points из Relation-поля («показать связанные как суб-базу» — пересекается с #059
+SmartSuggest relation-CTA), из database-call (кнопка «+ суб-база»), документированный
+happy-path в демо.
+
+### #077 — P2 UX: видимость фильтров + «машина функций» (мат-движок) как popup
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M
+- analysis_required: false | design_required: true (senior-designer)
+
+Пользователь: «не видно параметров управления фильтрами, нет машины функций и отдельного
+общего мат-движка в виде попап-окна». FilterPanel и FormulaConstructor существуют, но
+скрыты (fx-кнопка без подписи, фильтры за иконками). Дизайн: явные filter-pills в тулбаре
+(Notion-parity gap «View filter pills» P0), FormulaConstructor как вызываемый popup
+с человеческим названием, связка с #075.
+
+---
+
 ## Dependency graph
 
 ```

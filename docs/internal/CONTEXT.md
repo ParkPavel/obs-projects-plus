@@ -71,14 +71,26 @@
 
 ## Открытые тикеты
 
+> ⚠ 2026-06-11: пользовательское тестирование выявило блок дефектов → **M-UT-FIXES #068–#077**
+> (BACKLOG.md). Сквозная первопричина: архивный V1-код (`src/archive/dashboard-v1/`) всё ещё
+> живой в WidgetHost и палитре. Очерёдность пересмотрена: P0-дефекты раньше #067.
+
 | Тикет | Приоритет | Статус | Описание |
 |---|---|---|---|
-| **#067** | P1 / XL | 📋 BACKLOG | WidgetHost decomposition: 947 LOC → WidgetShell ≤350 + thin router ≤200. Architect-план обязателен (SPEC §6) |
-| **#036** | P2 / M | 📋 READY | Mobile gestures — анализ DONE 2026-05-21, можно брать без новой аналитики |
-| **#060** | P2 / S | 📋 BACKLOG | Field transparency: tooltip с frontmatter-ключом + double-click → файл |
-| **#061** | P2 / L | 📋 BACKLOG | Template Library: 3 стартовых профиля + три primary actions в CreateProject (re-scope из #065) |
+| **#068** | P0 / M | 📋 NEW | Краш вью при открытии fields/groups в data-table (архивный V1-код живой в проде) |
+| **#069** | P0 / S | 📋 NEW | Порча кодировки: 25 литералов `??`/`�` в 4 файлах (PipelineEditor, CreateField, archive, mocks) + missing ru-ключи pipeline |
+| **#072** | P1 / XS | 📋 NEW | Stats демо «—»: demoProject генерирует `aggregation:"count"` вместо `count_total` (R5-004) |
+| **#070** | P1 / L | 📋 NEW | Унификация 3 систем цвета (color rules / eventColorField / name-эвристика ×2) |
+| **#071** | P1 / S | 📋 NEW | CoverBanner config не применяется (нужна репродукция) + хардкод-английский |
+| **#074** | P1 / XL | 📋 EPIC | Table view: полная перестройка с нуля (мандат пользователя); deprecate data-table; закрывает #068 архитектурно |
+| **#075** | P1 / M | 📋 NEW | UX конвейера трансформаций (после #069), design_required |
+| **#067** | P1 / XL | 📋 BACKLOG | WidgetHost decomposition — делать согласованно с #074 |
+| **#073** | P2 / S | 📋 NEW | Палитра виджетов: скрыть legacy-типы + max-height |
+| **#076/#077** | P2 / M | 📋 NEW | UX: путь баз/суб-баз «вытягиванием»; видимость фильтров + мат-движок popup (design_required) |
+| **#036** | P2 / M | 📋 READY | Mobile gestures — анализ DONE 2026-05-21 |
+| **#060/#061** | P2 | 📋 BACKLOG | Field transparency / Template Library |
 | #062–#064 | P3 | ⏸ DEFERRED | Drag-to-link / Timeline / Graph — V3 roadmap |
-| #011/#012 | — | ⚠️ STALE? | YamlVisualizer — #056 заархивировал виджет; перепроверить актуальность перед стартом |
+| #011/#012 | — | ⚠️ STALE? | YamlVisualizer — #056 заархивировал виджет; перепроверить перед стартом |
 
 ## Ключевые решения (зафиксированные)
 
