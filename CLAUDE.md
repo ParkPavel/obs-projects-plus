@@ -142,6 +142,12 @@ yaml-visualizer | database-call
 - Never `git push` from an agent — user controls remote.
 - Never `--force` push, `git reset --hard`, or destructive rm.
 
+## Schema evolution rule (UT2026-D P3)
+
+Renaming/removing a config schema value = a triple in ONE commit: new value + migration +
+grep all generators (demoProject, widgetTemplates, quick-actions) so they emit the current
+schema. Generators must pass migrations as no-op (`configProvenance.test.ts`).
+
 ## Code style
 
 - No comments unless WHY is non-obvious.
