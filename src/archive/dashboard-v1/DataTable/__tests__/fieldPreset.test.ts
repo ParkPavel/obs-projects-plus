@@ -19,7 +19,7 @@ import {
 import type {
   DataTableConfig,
   FieldPreset,
-} from "../types";
+} from "src/ui/views/Dashboard/types";
 
 const fullTable = {
   fieldConfig: {

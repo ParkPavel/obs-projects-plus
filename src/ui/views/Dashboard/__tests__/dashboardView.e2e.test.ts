@@ -508,16 +508,13 @@ describe("E2E: Config migration → template application", () => {
   test("widget templates produce valid WidgetDefinitions", () => {
     expect(WIDGET_TEMPLATES.length).toBeGreaterThanOrEqual(3);
 
+    // F3 (UT2026-A L3): generators emit ONLY active V2 types.
     const allowedTypes: WidgetType[] = [
       "database-call",
-      "data-table",
       "chart",
       "stats",
-      "comparison",
       "checklist",
-      "view-port",
       "filter-tabs",
-      "summary-row",
       "text",
       "divider",
       "cover-banner",
@@ -536,15 +533,18 @@ describe("E2E: Config migration → template application", () => {
     }
   });
 
+  // F3 (#074): templates emit V2 types — table = database-call Table tab,
+  // summary-row/comparison collapsed into stats.
   test("overview-finance template includes quick overview widget set", () => {
     const overview = WIDGET_TEMPLATES.find((t) => t.id === "overview-finance");
     expect(overview).toBeDefined();
 
     const types = overview!.widgets.map((w) => w.type);
     expect(types).toContain("stats");
-    expect(types).toContain("summary-row");
     expect(types).toContain("chart");
-    expect(types).toContain("data-table");
+    expect(types).toContain("database-call");
+    expect(types).not.toContain("data-table");
+    expect(types).not.toContain("summary-row");
   });
 
   test("dashboard template includes stats + chart + table", () => {
@@ -554,7 +554,7 @@ describe("E2E: Config migration → template application", () => {
     const types = dashboard!.widgets.map((w) => w.type);
     expect(types).toContain("stats");
     expect(types).toContain("chart");
-    expect(types).toContain("data-table");
+    expect(types).toContain("database-call");
   });
 });
 

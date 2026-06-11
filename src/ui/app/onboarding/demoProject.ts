@@ -26,6 +26,7 @@ import type {
   DatabaseViewConfig,
   WidgetDefinition,
 } from "src/ui/views/Dashboard/types";
+import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
 import type { ColorRule, FieldConfig } from "src/settings/base/settings";
 
@@ -299,6 +300,9 @@ function overviewWidgets(): WidgetDefinition[] {
       id: widgetId(),
       type: "database-call",
       title: "Приоритетные задачи",
+      // (config below) UT2026-G finding: `{ activeTab }` was a pre-viewTabs
+      // shape — the block rendered "No views configured". Generators emit
+      // the current schema (P1).
       layout: { x: 6, y: 2, w: 6, h: 4 },
       transform: {
         steps: [
@@ -314,7 +318,7 @@ function overviewWidgets(): WidgetDefinition[] {
           },
         ],
       },
-      config: { activeTab: "table" },
+      config: tableTabConfig(),
     },
     {
       id: widgetId(),
@@ -334,7 +338,7 @@ function overviewWidgets(): WidgetDefinition[] {
           },
         ],
       },
-      config: { activeTab: "table" },
+      config: tableTabConfig(),
     },
   ];
 }
@@ -360,11 +364,13 @@ function clientsWidgets(): WidgetDefinition[] {
       },
     },
     {
+      // F3 (UT2026-A L3): generators emit V2 types — data-table is retired,
+      // the clients roster is a database-call with a single Table tab.
       id: widgetId(),
-      type: "data-table",
+      type: "database-call",
       title: "Список клиентов",
       layout: { x: 0, y: 2, w: 12, h: 8 },
-      config: {},
+      config: tableTabConfig(commonTableConfig as unknown as Record<string, unknown>),
     },
   ];
 }

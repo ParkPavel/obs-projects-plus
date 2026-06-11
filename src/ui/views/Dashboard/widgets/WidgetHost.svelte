@@ -20,9 +20,11 @@
   import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
   import { getConfigPanel } from "./configPanelRegistry";
   import { WIDGET_CONTENT, WIDGET_PANELS, hasPipelineButton, type WidgetRenderContext } from "./widgetComponentRegistry";
+  import { convertLegacyWidget, isRetiredLegacyType, unwrapDataTableConfigChange } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
   import WidgetHeaderActions from "./WidgetHeaderActions.svelte";
   import WidgetSetupWizard from "./WidgetSetupWizard.svelte";
+  import LegacyWidgetPlaceholder from "./LegacyWidgetPlaceholder.svelte";
   import PipelineEditor from "./PipelineEditor.svelte";
   import DatabaseCallSettings from "./DatabaseCall/DatabaseCallSettings.svelte";
 
@@ -49,8 +51,7 @@
     removeWidget: string;
   }>();
 
-  let showConfig = false;
-  let showPipeline = false;
+  let showConfig = false, showPipeline = false;
 
   $: collapsed = widget.collapsed ?? false;
   $: currentPipeline = widget.transform ?? ({ steps: [] } as TransformPipeline);
@@ -65,12 +66,10 @@
     ? executeTransform(enrichedFrame, currentPipeline, { rightFrames }).data
     : enrichedFrame;
 
-  function asChartConfig(cfg: Record<string, unknown>): ChartConfig | null {
-    return cfg && typeof cfg === "object" && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
-  }
-  function asStatsConfig(cfg: Record<string, unknown>): StatsConfig | null {
-    return cfg && typeof cfg === "object" && "cards" in cfg ? (cfg as unknown as StatsConfig) : null;
-  }
+  const asChartConfig = (cfg: Record<string, unknown>): ChartConfig | null =>
+    cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
+  const asStatsConfig = (cfg: Record<string, unknown>): StatsConfig | null =>
+    cfg && "cards" in cfg ? (cfg as unknown as StatsConfig) : null;
   $: chartConfig = widget.type === "chart" ? asChartConfig(widget.config) : null;
   $: statsConfig = widget.type === "stats" ? asStatsConfig(widget.config) : null;
   $: chartRightFrame = (() => {
@@ -99,10 +98,7 @@
   $: contentEntry = WIDGET_CONTENT[widget.type];
   $: panelEntry = WIDGET_PANELS[widget.type];
   $: contentRenderable = contentEntry ? (contentEntry.canRender?.(ctx) ?? true) : false;
-  // chart/stats panels require a parsed config object (original branch guards)
-  $: panelRenderable = widget.type === "chart" ? chartConfig !== null
-    : widget.type === "stats" ? statsConfig !== null
-    : true;
+  $: panelRenderable = (widget.type !== "chart" || chartConfig !== null) && (widget.type !== "stats" || statsConfig !== null);
 
   // ── Event plumbing ─────────────────────────────────────────
   function patchWidget(changes: Partial<WidgetDefinition>) {
@@ -111,17 +107,20 @@
   function handleWidgetConfigChange(newConfig: Record<string, unknown>) {
     patchWidget({ config: newConfig });
   }
-  /** data-table routes through the multi-table overlay; others replace config. */
+  /** data-table renders through DatabaseCallBlock (F3) — unwrap or convert. */
   function handleContentConfigChange(e: CustomEvent<unknown>) {
     if (widget.type !== "data-table") {
       handleWidgetConfigChange(e.detail as Record<string, unknown>);
       return;
     }
-    if (isPrimaryDataTable) {
-      dispatch("tableConfigChange", e.detail as DataTableConfig);
-      return;
+    const result = unwrapDataTableConfigChange(e.detail as Record<string, unknown>);
+    if (result.kind === "convert") {
+      patchWidget({ type: "database-call", config: result.config });
+    } else if (isPrimaryDataTable) {
+      dispatch("tableConfigChange", result.tableConfig as DataTableConfig);
+    } else {
+      handleWidgetConfigChange({ ...(widget.config ?? {}), table: result.tableConfig });
     }
-    handleWidgetConfigChange({ ...(widget.config ?? {}), table: e.detail as DataTableConfig });
   }
   /** Toggle panel, seeding type defaults on first configure. */
   function toggleConfig() {
@@ -157,7 +156,7 @@
   <svelte:fragment slot="actions">
     <WidgetHeaderActions
       {readonly}
-      hasCog={panelDescriptor.hasCog}
+      hasCog={panelDescriptor.hasCog && (panelEntry !== undefined || widget.type === "database-call")}
       hasPipeline={hasPipelineButton(widget.type)}
       pipelineStepCount={currentPipeline.steps.length}
       locked={widget.layout.locked ?? false}
@@ -214,6 +213,13 @@
       icon={contentEntry.wizard.icon}
       message={$i18n.t(contentEntry.wizard.messageKey, { defaultValue: contentEntry.wizard.messageDefault })}
       on:configure={toggleConfig}
+    />
+  {:else if isRetiredLegacyType(widget.type)}
+    <LegacyWidgetPlaceholder
+      widgetType={widget.type}
+      convertible={convertLegacyWidget(widget) !== null}
+      {readonly}
+      on:convert={() => { const patch = convertLegacyWidget(widget); if (patch) patchWidget(patch); }}
     />
   {:else}
     <div class="ppp-widget-placeholder">

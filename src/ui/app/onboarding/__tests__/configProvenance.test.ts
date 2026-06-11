@@ -9,8 +9,14 @@
  */
 
 import { demoGeneratedWidgets } from "../demoProject";
+import { WIDGET_TEMPLATES } from "src/ui/views/Dashboard/widgetTemplates";
 import { migrateAggregationCount } from "src/ui/views/Dashboard/migration";
-import type { StatsCardConfig } from "src/ui/views/Dashboard/types";
+import type { StatsCardConfig, WidgetDefinition } from "src/ui/views/Dashboard/types";
+
+const LEGACY_TYPES: ReadonlyArray<string> = [
+  "data-table", "summary-row", "comparison", "view-port",
+  "data-list", "sub-base-canvas", "yaml-visualizer", "timeline",
+];
 
 describe("config provenance (UT2026-D, #072)", () => {
   it("demo widget generator output passes migrateAggregationCount as a no-op", () => {
@@ -37,6 +43,34 @@ describe("config provenance (UT2026-D, #072)", () => {
     for (const chart of charts) {
       const yAxis = (chart.config as { yAxis?: { aggregation?: string } }).yAxis;
       expect(yAxis?.aggregation).not.toBe("count");
+    }
+  });
+
+  // ── F3 (UT2026-A L3): templates are generators too ─────────────────
+
+  function allTemplateWidgets(): WidgetDefinition[] {
+    return WIDGET_TEMPLATES.flatMap((t) => t.widgets);
+  }
+
+  it("widget templates pass migrateAggregationCount as a no-op", () => {
+    const widgets = allTemplateWidgets();
+    expect(migrateAggregationCount(widgets)).toBe(widgets);
+  });
+
+  it("no generator emits retired legacy widget types", () => {
+    const offenders = [...demoGeneratedWidgets(), ...allTemplateWidgets()]
+      .filter((w) => LEGACY_TYPES.includes(w.type))
+      .map((w) => `${w.type}:${w.title}`);
+    expect(offenders).toEqual([]);
+  });
+
+  it("every generated database-call carries viewTabs (UT2026-G finding)", () => {
+    const blocks = [...demoGeneratedWidgets(), ...allTemplateWidgets()]
+      .filter((w) => w.type === "database-call");
+    expect(blocks.length).toBeGreaterThan(0);
+    for (const block of blocks) {
+      const tabs = (block.config as { viewTabs?: unknown[] }).viewTabs;
+      expect(Array.isArray(tabs) && tabs.length > 0).toBe(true);
     }
   });
 });

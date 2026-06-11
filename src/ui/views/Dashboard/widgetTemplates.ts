@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Widget Templates — pre-configured widget layouts for common use cases.
  *
  * Each template provides a set of WidgetDefinitions that can be applied
@@ -6,6 +6,7 @@
  */
 
 import type { WidgetDefinition } from "./types";
+import { tableTabConfig } from "./widgets/legacyMigration";
 
 export interface WidgetTemplate {
   readonly id: string;
@@ -49,7 +50,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         layout: { x: 0, y: 0, w: 12, h: 2 },
         config: {
           cards: [
-            { id: "s1", label: "Records",      field: "name",      aggregation: "count" },
+            { id: "s1", label: "Records",      field: "name",      aggregation: "count_total" },
             { id: "s2", label: "Open",         field: "completed", aggregation: "count_unchecked", format: "number" },
             { id: "s3", label: "Avg Progress", field: "progress",  aggregation: "avg", format: "percent" },
           ],
@@ -61,7 +62,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         type: "database-call",
         title: "Records",
         layout: { x: 0, y: 2, w: 12, h: 8 },
-        config: { activeTab: "table" },
+        config: tableTabConfig(),
       },
     ],
   },
@@ -79,7 +80,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         layout: { x: 0, y: 0, w: 12, h: 2 },
         config: {
           cards: [
-            { id: "f1", label: "Records", field: "name", aggregation: "count" },
+            { id: "f1", label: "Records", field: "name", aggregation: "count_total" },
             { id: "f2", label: "Open", field: "completed", aggregation: "count_unchecked", format: "number" },
             { id: "f3", label: "Avg Progress", field: "progress", aggregation: "avg", format: "percent" },
           ],
@@ -87,16 +88,18 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         },
       },
       {
+        // F3: summary-row retired (fate table) — totals are a stats strip.
         id: wid(),
-        type: "summary-row",
+        type: "stats",
         title: "Summary",
         layout: { x: 0, y: 2, w: 12, h: 1 },
         config: {
-          columns: [
-            { field: "estimate", aggregation: "sum", format: "number" },
-            { field: "progress", aggregation: "avg", format: "percent" },
-            { field: "name", aggregation: "count", format: "number" },
+          cards: [
+            { id: "sm1", label: "Estimate (sum)", field: "estimate", aggregation: "sum", format: "number" },
+            { id: "sm2", label: "Progress (avg)", field: "progress", aggregation: "avg", format: "percent" },
+            { id: "sm3", label: "Records", field: "name", aggregation: "count_total", format: "number" },
           ],
+          columns: 3,
         },
       },
       {
@@ -107,7 +110,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         config: {
           chartType: "bar",
           xAxis: { property: "category", sortBy: "value", sortOrder: "desc", omitZero: true },
-          yAxis: { property: "count", aggregation: "count" },
+          yAxis: { property: "count", aggregation: "count_total" },
           style: {
             colorScheme: "categorical",
             height: "medium",
@@ -120,10 +123,10 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
       },
       {
         id: wid(),
-        type: "data-table",
+        type: "database-call",
         title: "Journal",
         layout: { x: 6, y: 3, w: 6, h: 4 },
-        config: {},
+        config: tableTabConfig(),
       },
     ],
   },
@@ -141,7 +144,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         layout: { x: 0, y: 0, w: 12, h: 2 },
         config: {
           cards: [
-            { id: "c1", label: "Total", field: "name", aggregation: "count" },
+            { id: "c1", label: "Total", field: "name", aggregation: "count_total" },
             { id: "c2", label: "Open", field: "completed", aggregation: "count_unchecked" },
             { id: "c3", label: "Average", field: "progress", aggregation: "avg", format: "percent" },
           ],
@@ -156,7 +159,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         config: {
           chartType: "bar",
           xAxis: { property: "status", sortBy: "label", sortOrder: "asc", omitZero: false },
-          yAxis: { property: "count", aggregation: "count" },
+          yAxis: { property: "count", aggregation: "count_total" },
           style: {
             colorScheme: "auto",
             height: "medium",
@@ -169,10 +172,10 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
       },
       {
         id: wid(),
-        type: "data-table",
+        type: "database-call",
         title: "Data",
         layout: { x: 6, y: 2, w: 6, h: 4 },
-        config: {},
+        config: tableTabConfig(),
       },
     ],
   },
@@ -191,7 +194,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         config: {
           chartType: "pie",
           xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
-          yAxis: { property: "count", aggregation: "count" },
+          yAxis: { property: "count", aggregation: "count_total" },
           style: {
             colorScheme: "categorical",
             height: "medium",
@@ -210,7 +213,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         config: {
           chartType: "line",
           xAxis: { property: "date", sortBy: "label", sortOrder: "asc", omitZero: false },
-          yAxis: { property: "count", aggregation: "count" },
+          yAxis: { property: "count", aggregation: "count_total" },
           style: {
             colorScheme: "auto",
             height: "medium",
@@ -223,11 +226,18 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         },
       },
       {
+        // F3: comparison retired (fate table) — side-by-side metrics are stats.
         id: wid(),
-        type: "comparison",
+        type: "stats",
         title: "Comparison",
         layout: { x: 0, y: 4, w: 6, h: 3 },
-        config: {},
+        config: {
+          cards: [
+            { id: "cp1", label: "Estimate (sum)", field: "estimate", aggregation: "sum", format: "number" },
+            { id: "cp2", label: "Progress (avg)", field: "progress", aggregation: "avg", format: "percent" },
+          ],
+          columns: 2,
+        },
       },
       {
         id: wid(),
@@ -236,7 +246,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         layout: { x: 6, y: 4, w: 6, h: 3 },
         config: {
           cards: [
-            { id: "c1", label: "Total", field: "name", aggregation: "count" },
+            { id: "c1", label: "Total", field: "name", aggregation: "count_total" },
             { id: "c2", label: "Completed", field: "completed", aggregation: "count_checked" },
           ],
           columns: 2,
@@ -253,10 +263,10 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
     widgets: [
       {
         id: wid(),
-        type: "data-table",
+        type: "database-call",
         title: "Tasks",
         layout: { x: 0, y: 0, w: 8, h: 6 },
-        config: {},
+        config: tableTabConfig(),
       },
       {
         id: wid(),
@@ -273,7 +283,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         config: {
           chartType: "donut",
           xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
-          yAxis: { property: "count", aggregation: "count" },
+          yAxis: { property: "count", aggregation: "count_total" },
           style: {
             colorScheme: "categorical",
             height: "small",
@@ -307,7 +317,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         transform: { steps: [{ type: "unnest", field: "sets" }] },
         config: {
           cards: [
-            { id: "g1", label: "Total sets", field: "reps", aggregation: "count" },
+            { id: "g1", label: "Total sets", field: "reps", aggregation: "count_total" },
             { id: "g2", label: "Total reps", field: "reps", aggregation: "sum", format: "number" },
             { id: "g3", label: "Avg weight", field: "weight", aggregation: "avg", format: "number" },
             { id: "g4", label: "Max weight", field: "weight", aggregation: "max", format: "number" },
@@ -344,7 +354,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         config: {
           chartType: "donut",
           xAxis: { property: "exercise", sortBy: "value", sortOrder: "desc", omitZero: true },
-          yAxis: { property: "count", aggregation: "count" },
+          yAxis: { property: "count", aggregation: "count_total" },
           style: {
             colorScheme: "categorical",
             height: "small",
@@ -357,10 +367,10 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
       },
       {
         id: wid(),
-        type: "data-table",
+        type: "database-call",
         title: "Workouts",
         layout: { x: 0, y: 6, w: 12, h: 6 },
-        config: {},
+        config: tableTabConfig(),
       },
     ],
   },
@@ -391,17 +401,16 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
       },
       {
         id: wid(),
-        type: "comparison",
+        // F3: comparison retired — Gross vs Net as two stats cards.
+        type: "stats",
         title: "Gross vs Net",
         layout: { x: 0, y: 2, w: 6, h: 3 },
         config: {
-          metrics: [
-            { field: "amount", label: "Gross" },
-            { field: "net", label: "Net" },
+          cards: [
+            { id: "gn1", label: "Gross", field: "amount", aggregation: "sum", format: "currency", currencySymbol: "$" },
+            { id: "gn2", label: "Net", field: "net", aggregation: "sum", format: "currency", currencySymbol: "$" },
           ],
-          mode: "absolute",
-          orientation: "horizontal",
-          showDelta: true,
+          columns: 2,
         },
       },
       {
@@ -425,24 +434,26 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
       },
       {
         id: wid(),
-        type: "summary-row",
+        // F3: summary-row retired — totals strip as stats cards.
+        type: "stats",
         title: "Totals",
         layout: { x: 0, y: 5, w: 12, h: 1 },
         config: {
-          columns: [
-            { field: "amount", aggregation: "sum", format: "currency", currencySymbol: "$" },
-            { field: "tax", aggregation: "sum", format: "currency", currencySymbol: "$" },
-            { field: "net", aggregation: "sum", format: "currency", currencySymbol: "$" },
-            { field: "rate", aggregation: "avg", format: "number" },
+          cards: [
+            { id: "tt1", label: "Gross", field: "amount", aggregation: "sum", format: "currency", currencySymbol: "$" },
+            { id: "tt2", label: "Tax", field: "tax", aggregation: "sum", format: "currency", currencySymbol: "$" },
+            { id: "tt3", label: "Net", field: "net", aggregation: "sum", format: "currency", currencySymbol: "$" },
+            { id: "tt4", label: "Rate (avg)", field: "rate", aggregation: "avg", format: "number" },
           ],
+          columns: 4,
         },
       },
       {
         id: wid(),
-        type: "data-table",
+        type: "database-call",
         title: "Transactions",
         layout: { x: 0, y: 6, w: 12, h: 6 },
-        config: {},
+        config: tableTabConfig(),
       },
     ],
   },
@@ -474,7 +485,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         layout: { x: 0, y: 1, w: 12, h: 2 },
         config: {
           cards: [
-            { id: "c1", label: "Clients", field: "name", aggregation: "count" },
+            { id: "c1", label: "Clients", field: "name", aggregation: "count_total" },
             { id: "c2", label: "Active", field: "active", aggregation: "count_checked" },
             { id: "c3", label: "Avg sessions", field: "sessionsCount", aggregation: "avg", format: "number" },
             { id: "c4", label: "MRR", field: "mrr", aggregation: "sum", format: "currency", currencySymbol: "$" },
@@ -490,7 +501,7 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
         config: {
           chartType: "horizontal-bar",
           xAxis: { property: "stage", sortBy: "value", sortOrder: "desc", omitZero: true },
-          yAxis: { property: "count", aggregation: "count" },
+          yAxis: { property: "count", aggregation: "count_total" },
           style: {
             colorScheme: "categorical",
             height: "medium",
@@ -524,10 +535,10 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
       },
       {
         id: wid(),
-        type: "data-table",
+        type: "database-call",
         title: "Clients",
         layout: { x: 0, y: 7, w: 12, h: 6 },
-        config: {},
+        config: tableTabConfig(),
       },
     ],
   },
