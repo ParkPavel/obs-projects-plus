@@ -87,15 +87,34 @@
   }
 
   // UT2026-B T3: icons are Lucide names rendered via <Icon>, never glyph strings.
-  const STEP_TYPES: { value: TransformStep["type"]; labelKey: string; icon: string }[] = [
-    { value: "filter", labelKey: "views.dashboard.pipeline.filter", icon: "filter" },
-    { value: "group-by", labelKey: "views.dashboard.pipeline.group-by", icon: "layers" },
-    { value: "aggregate", labelKey: "views.dashboard.pipeline.aggregate", icon: "sigma" },
-    { value: "compute", labelKey: "views.dashboard.pipeline.compute", icon: "calculator" },
-    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "unfold-vertical" },
-    { value: "pivot", labelKey: "views.dashboard.pipeline.pivot", icon: "table-2" },
-    { value: "unnest", labelKey: "views.dashboard.pipeline.unnest", icon: "list-tree" },
-    { value: "join", labelKey: "views.dashboard.pipeline.join", icon: "git-merge" },
+  // UT2026-E D1 (#075): every step type carries a task-language description with
+  // an example — tooltips explain WHAT the step does for the user's data, not
+  // what it is called in relational algebra.
+  const STEP_TYPES: { value: TransformStep["type"]; labelKey: string; icon: string; descKey: string; descDefault: string }[] = [
+    { value: "filter", labelKey: "views.dashboard.pipeline.filter", icon: "filter",
+      descKey: "views.dashboard.pipeline.filter-desc",
+      descDefault: "Keep only matching records — e.g. status = active" },
+    { value: "group-by", labelKey: "views.dashboard.pipeline.group-by", icon: "layers",
+      descKey: "views.dashboard.pipeline.group-by-desc",
+      descDefault: "Group rows by a field — e.g. one group per client" },
+    { value: "aggregate", labelKey: "views.dashboard.pipeline.aggregate", icon: "sigma",
+      descKey: "views.dashboard.pipeline.aggregate-desc",
+      descDefault: "Collapse groups into numbers — sum, average, count" },
+    { value: "compute", labelKey: "views.dashboard.pipeline.compute", icon: "calculator",
+      descKey: "views.dashboard.pipeline.compute-desc",
+      descDefault: "Add a calculated column — e.g. price * quantity" },
+    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "unfold-vertical",
+      descKey: "views.dashboard.pipeline.unpivot-desc",
+      descDefault: "Turn columns into rows — wide table becomes long" },
+    { value: "pivot", labelKey: "views.dashboard.pipeline.pivot", icon: "table-2",
+      descKey: "views.dashboard.pipeline.pivot-desc",
+      descDefault: "Turn category values into columns — a summary table" },
+    { value: "unnest", labelKey: "views.dashboard.pipeline.unnest", icon: "list-tree",
+      descKey: "views.dashboard.pipeline.unnest-desc",
+      descDefault: "Split a list into rows — one row per participant" },
+    { value: "join", labelKey: "views.dashboard.pipeline.join", icon: "git-merge",
+      descKey: "views.dashboard.pipeline.join-desc",
+      descDefault: "Pull in data from another project by a shared key" },
   ];
 
   function addStep(type: TransformStep["type"]) {
@@ -809,7 +828,7 @@
       <button
         class="ppp-pipeline-add-btn"
         on:click={() => addStep(st.value)}
-        title={$i18n.t(st.labelKey)}
+        title={$i18n.t(st.descKey, { defaultValue: st.descDefault })}
       >
         <span class="ppp-pipeline-add-icon"><Icon name={st.icon} /></span>
         {$i18n.t(st.labelKey)}

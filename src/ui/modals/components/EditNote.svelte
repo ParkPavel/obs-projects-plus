@@ -12,6 +12,7 @@
   } from "obsidian-svelte";
 
   import { FieldControl } from "src/ui/components/FieldControl";
+  import { isColorFieldName } from "src/lib/colors/recordColor";
   import type { DataField, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { DataFieldType, isString } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
@@ -211,7 +212,6 @@
   }
 
   const DATE_TIME_FIELDS = ['date', 'start', 'end', 'due', 'created', 'modified', 'time', 'startTime', 'endTime', 'datetime', 'timestamp'];
-  const COLOR_FIELDS = ['color', 'eventColor', 'tagColor', 'backgroundColor'];
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
 
   function categorizeField(field: DataField): 'datetime' | 'color' | 'image' | 'basic' | 'other_note' | 'other_project' {
@@ -221,7 +221,7 @@
       return 'datetime';
     }
     
-    if (COLOR_FIELDS.some(cf => nameLower.includes(cf))) {
+    if (isColorFieldName(field.name)) {
       return 'color';
     }
     
