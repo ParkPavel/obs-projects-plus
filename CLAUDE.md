@@ -18,20 +18,20 @@ Obsidian plugin: project management with Database (12 widget types, 115+ formula
 
 ```bash
 npm run build         # tsc -noEmit -skipLibCheck + esbuild bundle (production)
-npm test              # full jest suite (134 suites / 2020 tests)
+npm test              # full jest suite (baseline: see CONTEXT.md)
 npm run lint          # ESLint over ./src
 npm run svelte-check  # Svelte template + type check
 npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Test baseline: **134 suites / 2020 tests PASS**, tsc 0 errors. (Updated 2026-06-10.) Any deviation must be acknowledged before merge.
+Test baseline: **138 suites / 2051 tests PASS**, tsc 0 errors. (Updated 2026-06-11; canonical number maintained in `docs/internal/CONTEXT.md` → «Гейты».) Any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
 
 ```bash
 npm run build         # 1. tsc (-skipLibCheck) + esbuild — 0 errors
-npm test              # 2. jest — baseline holds (≥ 134 suites / 2020 tests)
+npm test              # 2. jest — baseline holds (canonical number in CONTEXT.md)
 npm run lint          # 3. ESLint — 0 errors
 npm run svelte-check  # 4. svelte-check — 0 errors
 ```
@@ -132,6 +132,9 @@ yaml-visualizer | database-call
 - Mocks: `src/__mocks__/`, `src/ui/views/Dashboard/widgets/__tests__/mocks/`.
 - Adding a widget → update `widgetRegistry.test.ts` count AND `configPanelRegistry.test.ts` type list.
 - Adding CSS px values → run `npx jest src/__tests__/R0_3_pxBudget.test.ts`.
+- Manual testing in the OBStests vault is API-driven: `docs/internal/MANUAL_TESTING_PIPELINE.md`
+  (deploy → `app:reload` → assert plugin commands registered → demo-project smoke → roundtrip).
+  Deploy without REST verification does not count as deployed.
 
 ## Git workflow
 
