@@ -18,6 +18,13 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/WidgetSetupWizard.svelte", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/widgetComponentRegistry.ts", maxLines: 260 },
   { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 230 },
+  // F2 (#074) — TABLE_V2_CANON §5 budgets
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 250 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte", maxLines: 200 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableHeader.svelte", maxLines: 200 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte", maxLines: 200 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableFooter.svelte", maxLines: 120 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCanon.ts", maxLines: 260 },
 ];
 
 describe("R0.6 component LOC budgets (#067)", () => {
