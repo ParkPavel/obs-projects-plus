@@ -764,18 +764,29 @@ svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
 > Spec: `docs/internal/DASHBOARD_V2_VISION.md`
 
 ### #059 — SmartSuggest: проактивные подсказки по типам данных
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-11) — on `feat/dashboard-v2`
 - Milestone: M-VISION-PARITY | Priority: P1 | Complexity: L
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: true (inline, 2026-06-11)
 - Depends on: #051 (Table View ready — подсказки показываются в контексте блока данных)
 
 **Vision §6 — «центральная инновация»**: "Видишь числовое поле? Покажу сумму. Видишь связи? Покажу частоту визитов."
 
-MVP scope:
-- При добавлении первого числового поля в блок → suggestion strip "Хотите Stats-виджет с суммой/средним?"
-- При обнаружении Relation-поля → suggestion "Показать связанные записи как sub-base?"
-- Suggestion dismissable (× закрыть, "не предлагать снова")
-- Реализовать через `SmartSuggestionBus.svelte` — singleton на канвасе, реагирует на изменения DataFrame schema
+**Delivered (MVP)**:
+- `smartSuggest.ts` — чистый rule engine: `computeSuggestions(fields, widgets, dismissed)`;
+  правила `numeric-stats` (Number-поле + нет stats-виджета → добавить `stats`; StatsWidget сам
+  строит sum/avg карточки по первому числовому полю) и `relation-block` (Relation-поле + нет
+  database-call с `linkedSelection` → добавить `database-call`)
+- `SmartSuggestionBus.svelte` — singleton-строка на канвасе (между FilterBridge и WidgetGrid),
+  одна подсказка за раз; × = session dismiss, «Не предлагать снова» = persisted
+- `DatabaseViewConfig.dismissedSuggestions?: string[]` — аддитивно, без миграции;
+  accept тоже персистит dismissal (гейт relation-правила не закрывается простым добавлением блока)
+- Не рендерится на пустом канвасе (zero-state #065 владеет этим моментом) и в readonly
+- i18n: `views.dashboard.smart-suggest.*` в en/ru (uk/zh — defaultValue fallback, как в #065)
+- Тесты: `smartSuggest.test.ts` (11) + `SmartSuggestionBus.test.ts` (7)
+
+**Отклонение от тикета**: CTA Relation-подсказки добавляет `database-call`, а НЕ legacy
+`sub-base-canvas` — по DASHBOARD_V2_SPEC §4 sub-base-canvas подлежит удалению (sub-base
+живёт внутри database-call). Метрики «частота визитов / прогноз» — вне MVP, V3.
 
 ### #060 — Field transparency: column header → frontmatter key tooltip
 - Status: 📋 BACKLOG

@@ -818,6 +818,14 @@
                     "empty-hint": "Start with a data block, or pick a ready-made template",
                     "empty-add-block": "Add data block"
                 },
+                "smart-suggest": {
+                    "numeric-message": "Numeric field \"{{field}}\" detected — want a Stats block with sum and average?",
+                    "numeric-action": "Add Stats",
+                    "relation-message": "Relation field \"{{field}}\" detected — show related records in a linked data block?",
+                    "relation-action": "Add data block",
+                    "never": "Don't suggest again",
+                    "close": "Hide suggestion"
+                },
                 "database-call": {
                     "empty": "No views configured",
                     "add-first": "Add first view",

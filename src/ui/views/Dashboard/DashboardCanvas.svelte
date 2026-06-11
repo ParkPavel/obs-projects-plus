@@ -29,6 +29,8 @@
   import FilterBridge from "./FilterBridge.svelte";
   import TemplateConfirmDialog from "./TemplateConfirmDialog.svelte";
   import WidgetGrid from "./WidgetGrid.svelte";
+  import SmartSuggestionBus from "./SmartSuggestionBus.svelte";
+  import type { SmartSuggestion, SuggestionKind } from "./smartSuggest";
   import { createSelectionStore, SELECTION_CONTEXT_KEY, type SelectionStore } from "./canvasSelectionStore";
 
   export let project: ProjectDefinition;
@@ -137,6 +139,19 @@
     saveConfig({ ...config, formulaFields: updated });
     showFormulaBar = false;
   }
+  // #059 SmartSuggest — accepting a suggestion also persists its dismissal:
+  // the relation suggestion's gate (a linked database-call) is not satisfied
+  // by merely adding the block, so without this the strip would reappear.
+  function persistSuggestionDismiss(kind: SuggestionKind) {
+    if (!config) return;
+    const prev = config.dismissedSuggestions ?? [];
+    if (prev.includes(kind)) return;
+    saveConfig({ ...config, dismissedSuggestions: [...prev, kind] });
+  }
+  function handleSuggestionAccept(e: CustomEvent<SmartSuggestion>) {
+    widgetController.addWidget(e.detail.widgetType);
+    persistSuggestionDismiss(e.detail.kind);
+  }
   function handleApplyTemplate(e: CustomEvent<WidgetDefinition[]>) {
     templatesController.requestReplace(e.detail).catch((err: unknown) => {
       // eslint-disable-next-line no-console
@@ -172,6 +187,10 @@
       {/if}
       <FilterBridge {activeGlobalFilters} {activeFilterTab} {globalFilterTooltip} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
+      {#if !readonly && widgets.length > 0}
+        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={config?.dismissedSuggestions ?? []}
+          on:accept={handleSuggestionAccept} on:dismissForever={(e) => persistSuggestionDismiss(e.detail)} />
+      {/if}
       <WidgetGrid
         {widgets} {dndWidgets} {canDnd} {frame} {displayFrame} {api} {readonly} {getRecordColor}
         fields={frame.fields} tableConfig={config?.table} {primaryDataTableId}

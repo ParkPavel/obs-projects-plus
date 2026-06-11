@@ -331,6 +331,12 @@ export interface DatabaseViewConfig {
    */
   readonly fieldPresets?: FieldPreset[];
   readonly activeFieldPresetId?: string;
+  /**
+   * #059 SmartSuggest — suggestion kinds the user opted out of ("don't
+   * suggest again") or already accepted. Additive: absent means all
+   * suggestions are eligible. Values are `SuggestionKind` strings.
+   */
+  readonly dismissedSuggestions?: string[];
 }
 
 // ── Field Preset ─────────────────────────────────────────────
