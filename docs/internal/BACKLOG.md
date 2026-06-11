@@ -737,9 +737,12 @@ svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
 ---
 
 ### #067 — WidgetHost Decomposition: Replace 947 LOC Monolith
-- Status: 📋 PLAN READY — фаза F1 общего architect-плана `specs/UT2026-F_ARCH_TABLE_AND_HOST.md`
-  (2026-06-11): WidgetShell ≤350 + WidgetHeaderActions ≤150 + widgetComponentRegistry +
-  WidgetHost ≤200 (роутер) + LOC-budget тест R0_6. Исполнять ПЕРЕД #074 F2/F3.
+- Status: ✅ DONE (2026-06-11, `931d42a`) — F1 исполнена: WidgetHost 947 → **208 LOC**
+  (роутер + реактивный WidgetRenderContext), WidgetShell 263, WidgetHeaderActions 168,
+  WidgetSetupWizard 58, widgetComponentRegistry (34 ветки → таблица). Поведение 1:1,
+  DatabaseCallSettings — явная ветка (особый event-контракт). R0_6_locBudget.test.ts
+  делает потолки §7 исполняемыми. 144 suites / 2090 tests. Визуальный чек
+  (DnD/resize/collapse) — в чек-листе pipeline §5.
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: XL
 - analysis_required: true | analysis_done: true (UT2026-F)
 - Depends on: (none — new clean implementation, no dead code risk)
