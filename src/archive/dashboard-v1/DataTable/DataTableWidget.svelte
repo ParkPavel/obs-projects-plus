@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
   /**
    * @deprecated Standalone DataTableWidget is scheduled for archive in #056.
    * Table functionality is now provided via DatabaseCall Table view tab
@@ -367,7 +367,7 @@
     api.updateField({ ...field, name: newName }, oldName);
   }
 
-  // -- R2.1b: Column-header context menu � property-type override + rollup-mode picker
+  // -- R2.1b: Column-header context menu — property-type override + rollup-mode picker
 
   /**
    * Persist a partial patch on `project.fieldConfig[fieldName]`.
@@ -463,7 +463,7 @@
       },
     ];
 
-    // Rollup mode picker � only when the field is configured as a rollup.
+    // Rollup mode picker — only when the field is configured as a rollup.
     const rollupCfg = field.typeConfig?.rollup;
     if (rollupCfg) {
       const targetKind = resolveRollupTargetKind(rollupCfg);
@@ -506,7 +506,7 @@
   // -- Derived state ------------------------------------------
   $: ({ fields, records: rawRecords } = frame);
 
-  // R2.2 � sub-base partitioning (applied before sort/group)
+  // R2.2 — sub-base partitioning (applied before sort/group)
   $: subBases = config?.subBases ?? [];
   $: activeSubBaseId =
     config?.activeSubBaseId && subBases.some((s) => s.id === config.activeSubBaseId)
@@ -916,7 +916,7 @@
   onMount(() => document.addEventListener("click", handleDocClick));
   onDestroy(() => document.removeEventListener("click", handleDocClick));
 
-  // R2.2 � subscribe to global `add-sub-base` command. Each DataTable
+  // R2.2 — subscribe to global `add-sub-base` command. Each DataTable
   // widget on the canvas reacts independently; in practice canvases have
   // a single table so this gives the user a one-click discoverability path.
   let lastSubBaseBusTs = 0;
@@ -1338,8 +1338,8 @@
 
   {#if showAggregation}
     <div class="ppp-aggregation-row">
-      <div class="ppp-aggregation-cell ppp-aggregation-cell--row-header" role="rowheader" aria-label={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row � click a cell to pick a function" })} title={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row � click a cell to pick a function" })}>
-        <span class="ppp-aggregation-sigma" aria-hidden="true">?</span>
+      <div class="ppp-aggregation-cell ppp-aggregation-cell--row-header" role="rowheader" aria-label={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row — click a cell to pick a function" })} title={$i18n.t("views.dashboard.aggregation.row-label", { defaultValue: "Aggregation row — click a cell to pick a function" })}>
+        <span class="ppp-aggregation-sigma" aria-hidden="true">Σ</span>
       </div>
       {#each columns.filter((c) => !c.hide) as col}
         <div
@@ -1396,8 +1396,8 @@
     <!--
       Single add-row affordance: DataGrid already renders its own footer
       "+ New note" button via onRowAdd. Rendering a second button here
-      produced visible duplicate ("+ �������� �������" from DataGrid,
-      then "+ ����� �������" from this wrapper). DataGrid is the single
+      produced visible duplicate ("+ Добавить заметку" from DataGrid,
+      then "+ Новая заметка" from this wrapper). DataGrid is the single
       source of truth.
     -->
   {/if}

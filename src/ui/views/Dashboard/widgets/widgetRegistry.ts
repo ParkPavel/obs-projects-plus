@@ -12,6 +12,13 @@ export interface WidgetMeta {
   readonly minW: number;
   readonly minH: number;
   readonly maxCount?: number;
+  /**
+   * UT2026-A L2 (#073) — V2 fate table (DASHBOARD_V2_SPEC §4) sends this
+   * type to archive/replace. Legacy types keep rendering for existing
+   * configs but are hidden from creation surfaces (palette) unless an
+   * instance already exists on the canvas.
+   */
+  readonly legacy?: boolean;
 }
 
 export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
@@ -92,6 +99,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   // ── Legacy (scheduled for archive in future milestone) ───────
   {
     type: "data-table",
+    legacy: true,
     label: "Data Table",
     labelKey: "views.dashboard.types.data-table",
     icon: "table",
@@ -101,6 +109,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   },
   {
     type: "summary-row",
+    legacy: true,
     label: "Summary Row",
     labelKey: "views.dashboard.types.summary-row",
     icon: "sigma",
@@ -111,6 +120,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   },
   {
     type: "data-list",
+    legacy: true,
     label: "List",
     labelKey: "views.dashboard.types.data-list",
     icon: "list",
@@ -120,6 +130,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   },
   {
     type: "comparison",
+    legacy: true,
     label: "Comparison",
     labelKey: "views.dashboard.types.comparison",
     icon: "git-compare",
@@ -129,6 +140,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   },
   {
     type: "view-port",
+    legacy: true,
     label: "View Port",
     labelKey: "views.dashboard.types.view-port",
     icon: "layout",
@@ -139,6 +151,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   },
   {
     type: "sub-base-canvas",
+    legacy: true,
     label: "Sub-base Canvas",
     labelKey: "views.dashboard.types.sub-base-canvas",
     icon: "layers",
@@ -148,6 +161,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   },
   {
     type: "yaml-visualizer",
+    legacy: true,
     label: "Properties",
     labelKey: "views.dashboard.types.yaml-visualizer",
     icon: "settings",
@@ -157,6 +171,7 @@ export const WIDGET_REGISTRY: readonly WidgetMeta[] = [
   },
   {
     type: "timeline",
+    legacy: true,
     label: "Timeline",
     labelKey: "views.dashboard.types.timeline",
     icon: "git-commit",

@@ -248,6 +248,16 @@ function buildMeetings(): Record<string, DemoFile> {
 // VIEW CONFIGS — inline widget layouts
 // ============================================================
 
+/**
+ * Exported for `configProvenance.test.ts` (UT2026-D P1): generated widget
+ * configs must pass all migrations as a no-op — a generator emitting a
+ * pre-migration schema value is how the demo shipped broken stats cards
+ * (#072, aggregation "count" pre-R5-004).
+ */
+export function demoGeneratedWidgets(): WidgetDefinition[] {
+  return [...overviewWidgets(), ...clientsWidgets()];
+}
+
 function overviewWidgets(): WidgetDefinition[] {
   return [
     {
@@ -257,8 +267,11 @@ function overviewWidgets(): WidgetDefinition[] {
       layout: { x: 0, y: 0, w: 12, h: 2 },
       config: {
         cards: [
-          { id: "k1", label: "Клиентов",           field: "name",      aggregation: "count" },
-          { id: "k2", label: "Проектов",           field: "status",    aggregation: "count" },
+          // UT2026-D P1: kernel "count" was renamed to count_total/count_values (R5-004);
+          // generators must emit the current schema. count_values on a segment-specific
+          // field (industry → clients only, status → projects only) keeps the labels honest.
+          { id: "k1", label: "Клиентов",           field: "industry",  aggregation: "count_values" },
+          { id: "k2", label: "Проектов",           field: "status",    aggregation: "count_values" },
           { id: "k3", label: "Открытых задач",     field: "completed", aggregation: "count_unchecked" },
           { id: "k4", label: "MRR (sum)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
         ],
@@ -278,7 +291,7 @@ function overviewWidgets(): WidgetDefinition[] {
       config: {
         chartType: "donut",
         xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
-        yAxis: { property: "count", aggregation: "count" },
+        yAxis: { property: "count", aggregation: "count_total" },
         style: { colorScheme: "categorical", height: "medium", showGrid: false, showLabels: true, showLegend: true, showValues: true },
       },
     },
@@ -335,10 +348,13 @@ function clientsWidgets(): WidgetDefinition[] {
       layout: { x: 0, y: 0, w: 12, h: 2 },
       config: {
         cards: [
-          { id: "c1", label: "Всего",        field: "name",  aggregation: "count" },
-          { id: "c2", label: "Активных",     field: "stage", aggregation: "count" },
-          { id: "c3", label: "MRR (sum)",    field: "mrr",   aggregation: "sum", format: "currency", currencySymbol: "$" },
-          { id: "c4", label: "Средний MRR", field: "mrr",   aggregation: "avg", format: "currency", currencySymbol: "$" },
+          // UT2026-D P1: count → count_total (view is globally filtered to clients).
+          // "Активных" needed a per-card filter stats cards don't have — replaced with
+          // an honest metric (earliest signup) instead of a mislabeled count.
+          { id: "c1", label: "Всего",         field: "name",       aggregation: "count_total" },
+          { id: "c2", label: "Первый клиент", field: "signupDate", aggregation: "earliest" },
+          { id: "c3", label: "MRR (sum)",     field: "mrr",        aggregation: "sum", format: "currency", currencySymbol: "$" },
+          { id: "c4", label: "Средний MRR",  field: "mrr",        aggregation: "avg", format: "currency", currencySymbol: "$" },
         ],
         columns: 4,
       },

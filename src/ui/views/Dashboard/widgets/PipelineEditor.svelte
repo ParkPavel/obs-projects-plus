@@ -14,6 +14,7 @@
   import type { FilterCondition } from "src/settings/base/settings";
   import { i18n } from "src/lib/stores/i18n";
   import { get } from "svelte/store";
+  import { Icon } from "obsidian-svelte";
   import { getOperatorsForField, operatorNeedsValue, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
 
   export let pipeline: TransformPipeline;
@@ -85,15 +86,16 @@
     return AGG_FUNCTIONS.includes(normalized) ? normalized : fallback;
   }
 
+  // UT2026-B T3: icons are Lucide names rendered via <Icon>, never glyph strings.
   const STEP_TYPES: { value: TransformStep["type"]; labelKey: string; icon: string }[] = [
-    { value: "filter", labelKey: "views.dashboard.pipeline.filter", icon: "??" },
-    { value: "group-by", labelKey: "views.dashboard.pipeline.group-by", icon: "??" },
-    { value: "aggregate", labelKey: "views.dashboard.pipeline.aggregate", icon: "?" },
-    { value: "compute", labelKey: "views.dashboard.pipeline.compute", icon: "?" },
-    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "�" },
-    { value: "pivot", labelKey: "views.dashboard.pipeline.pivot", icon: "-" },
-    { value: "unnest", labelKey: "views.dashboard.pipeline.unnest", icon: "?" },
-    { value: "join", labelKey: "views.dashboard.pipeline.join", icon: "?" },
+    { value: "filter", labelKey: "views.dashboard.pipeline.filter", icon: "filter" },
+    { value: "group-by", labelKey: "views.dashboard.pipeline.group-by", icon: "layers" },
+    { value: "aggregate", labelKey: "views.dashboard.pipeline.aggregate", icon: "sigma" },
+    { value: "compute", labelKey: "views.dashboard.pipeline.compute", icon: "calculator" },
+    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "unfold-vertical" },
+    { value: "pivot", labelKey: "views.dashboard.pipeline.pivot", icon: "table-2" },
+    { value: "unnest", labelKey: "views.dashboard.pipeline.unnest", icon: "list-tree" },
+    { value: "join", labelKey: "views.dashboard.pipeline.join", icon: "git-merge" },
   ];
 
   function addStep(type: TransformStep["type"]) {
@@ -163,28 +165,29 @@
 
   function stepLabel(step: TransformStep): string {
     const t = get(i18n).t.bind(get(i18n));
+    const unset = t("views.dashboard.pipeline.unset", { defaultValue: "(unset)" });
     switch (step.type) {
       case "filter": {
         const n = step.conditions.conditions.length + (step.conditions.groups?.length ?? 0);
         return n > 0 ? `${t("views.dashboard.pipeline.filter")} (${n})` : t("views.dashboard.pipeline.filter");
       }
-      case "group-by": return `${t("views.dashboard.pipeline.group-by")}: ${step.fields.join(", ") || "�"}`;
+      case "group-by": return `${t("views.dashboard.pipeline.group-by")}: ${step.fields.join(", ") || unset}`;
       case "aggregate": return `${t("views.dashboard.pipeline.aggregate")}: ${step.columns.length}`;
       case "compute": return `${t("views.dashboard.pipeline.compute")}: ${step.columns.length}`;
       case "unpivot": return `${t("views.dashboard.pipeline.unpivot")}: ${step.fieldGroups.length}`;
-      case "pivot": return `${t("views.dashboard.pipeline.pivot")}: ${step.categoryField || "�"}`;
-      case "unnest": return `${t("views.dashboard.pipeline.unnest", { defaultValue: "Unnest" })}: ${step.field || "�"}`;
+      case "pivot": return `${t("views.dashboard.pipeline.pivot")}: ${step.categoryField || unset}`;
+      case "unnest": return `${t("views.dashboard.pipeline.unnest", { defaultValue: "Unnest" })}: ${step.field || unset}`;
       case "join": {
         const label = t("views.dashboard.pipeline.join", { defaultValue: "Join" });
-        const srcName = availableSources.find((s) => s.id === step.rightSourceId)?.name ?? step.rightSourceId ?? "�";
-        return `${label}: ${step.on.leftKey || "?"} = ${srcName}.${step.on.rightKey || "?"}`;
+        const srcName = availableSources.find((s) => s.id === step.rightSourceId)?.name ?? step.rightSourceId ?? unset;
+        return `${label}: ${step.on.leftKey || unset} = ${srcName}.${step.on.rightKey || unset}`;
       }
-      default: return "?";
+      default: return t("views.dashboard.pipeline.unknown", { defaultValue: "Unknown" });
     }
   }
 
   function stepIcon(type: string): string {
-    return STEP_TYPES.find(s => s.value === type)?.icon ?? "�";
+    return STEP_TYPES.find(s => s.value === type)?.icon ?? "circle-help";
   }
 
   // -- Filter step helpers ----------------------------------
@@ -464,7 +467,7 @@
           on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedStep = expandedStep === i ? null : i; } }}
         >
           <span class="ppp-step-number">{i + 1}</span>
-          <span class="ppp-step-icon">{stepIcon(step.type)}</span>
+          <span class="ppp-step-icon"><Icon name={stepIcon(step.type)} /></span>
           <span class="ppp-step-label">{stepLabel(step)}</span>
           <div class="ppp-step-actions">
             <button
@@ -515,7 +518,7 @@
                     type="text"
                     list="ppp-pipeline-fields"
                     value={cond.field}
-                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Field �" })}
+                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
                     on:input={(e) => updateFilterField(i, ci, inputVal(e))}
                   />
                   <select
@@ -552,7 +555,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.fields[0] ?? ""}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => {
                     const val = inputVal(e);
                     updateStep(i, { ...step, fields: val ? [val] : [] });
@@ -569,7 +572,7 @@
                     type="text"
                     list="ppp-pipeline-fields"
                     value={col.sourceField}
-                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Field �" })}
+                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
                     on:input={(e) => updateAggColumn(i, ci, inputVal(e), col.function)}
                   />
                   <input
@@ -621,7 +624,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.categoryField}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => updateStep(i, { ...step, categoryField: inputVal(e) })}
                 />
               </label>
@@ -631,7 +634,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.valueField}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => updateStep(i, { ...step, valueField: inputVal(e) })}
                 />
               </label>
@@ -693,7 +696,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.field}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => updateStep(i, { ...step, field: inputVal(e) })}
                 />
               </label>
@@ -808,7 +811,7 @@
         on:click={() => addStep(st.value)}
         title={$i18n.t(st.labelKey)}
       >
-        <span class="ppp-pipeline-add-icon">{st.icon}</span>
+        <span class="ppp-pipeline-add-icon"><Icon name={st.icon} /></span>
         {$i18n.t(st.labelKey)}
       </button>
     {/each}
