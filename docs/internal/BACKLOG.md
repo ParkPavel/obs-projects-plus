@@ -912,10 +912,12 @@ V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/
 > всё ещё маршрутизируется живым через WidgetHost и палитру виджетов.
 
 ### #068 — P0: fields/groups поповер в data-table рушит весь вью
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-11, `e105aef`) — закрыт архитектурно фазой F3: архивный
+  DataTableWidget больше нигде не исполняется (R0_4 archive-containment ratchet = 0 импортов
+  из src/archive), data-table рендерится через DatabaseCallBlock/Table V2. Краш-поверхность
+  недостижима.
 - Milestone: M-UT-FIXES | Priority: P0 | Complexity: M
-- analysis_required: false (анализ 2026-06-11 в этом тикете)
-- Repro: дашборд «Клиенты» демо → таблица «Список клиентов» → кнопка Fields (или Group)
+- Repro (исторический): дашборд «Клиенты» демо → таблица → Fields/Group
 
 Скриншот `19-53-50.png`: открытие поповера разваливает layout вью; всплывает пустой
 `RecordCardView` («No record selected», `RecordCardView.svelte:170`), контент дашборда исчезает.
@@ -1010,9 +1012,12 @@ kernel-`count` вообще (если нет — убрать из ColumnAggrega
 на канвасе), max-height + overflow-y.
 
 ### #074 — EPIC P1: Table view — полная перестройка с нуля (мандат пользователя)
-- Status: 📋 PLAN READY — architect-план `specs/UT2026-F_ARCH_TABLE_AND_HOST.md`
-  (2026-06-11): фазы F1 (#067 Shell+Router) → F2 (Table V2 в database-call) → F3
-  (миграция data-table + Legacy Containment L1 + закрытие #068). Можно стартовать F1.
+- Status: ⚙ IN PROGRESS — выполнено 2026-06-11: **F1** (`931d42a` Shell+Router), **F2.1**
+  (`c507954` скелет по TABLE_V2_CANON), **F2.2+F2.3+F3** (`e105aef` — in-place редакторы по
+  DataFieldType, row ops, + New row, legacy containment, генераторы только V2-типы).
+  ОСТАЛОСЬ: **F2.4** (меню заголовка колонки через contextMenu: sort/filter/hide/freeze/
+  Calculate/Edit property; resize/drag; `[+]` add property) и **F2.5** (группировка
+  TableGroupSection + sub-base как вкладка ViewTabBar). Канон: specs/TABLE_V2_CANON.md.
 - **F2 canon (2026-06-11, финальный)**: **`specs/TABLE_V2_CANON.md`** — концептуальная
   перестройка с нуля по образцу Notion-таблиц (вердикт пользователя; PNG-канон из visual
   stack отменён как наследующий V1). Концептуальные сдвиги: строка = страница (Name —

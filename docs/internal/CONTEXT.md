@@ -80,9 +80,9 @@
 
 | Очередь | Тикет | Статус |
 |---|---|---|
-| 1 | **F1** #067 Shell+Router (≤200/≤350/≤150 + R0_6 LOC-budget) | PLAN READY (UT2026-F) |
-| 2 | **F2** #074 Table V2 — канон **`specs/TABLE_V2_CANON.md`**: перестройка с нуля по Notion (строка=страница, edit-на-месте, вид=линза, sub-base=вкладка ViewTabBar, стилистическая матрица), подэтапы F2.1–F2.5 | CANON READY |
-| 3 | **F3** миграция data-table + L1 containment → закрывает #068 | PLAN READY |
+| 1 | ~~F1 #067~~ | ✅ DONE `931d42a` (WidgetHost 947→230-, Shell/Actions/Registry, R0_6) |
+| 2 | **F2** #074 Table V2 по `specs/TABLE_V2_CANON.md` — F2.1 ✅ `c507954`, F2.2+F2.3 ✅ `e105aef`; **осталось F2.4 (меню колонок/resize/[+] property) + F2.5 (группировка + sub-base вкладка)** | IN PROGRESS |
+| 3 | ~~F3 миграция + L1~~ | ✅ DONE `e105aef` — **#068 закрыт**, 0 импортов из archive (R0_4), генераторы только V2 |
 | 4 | **#077** единый FormulaConstructor (5 точек входа) + filter-pills | P1, DESIGN READY (anatomy-схема) |
 | 5 | **#061** Template Library: 4 канвас-пресета (visual stack) + 3 профиля (Vision §7) | рескоуплен |
 | 6 | #081 RelationPickerPopover; #082 typed-карточка записи | новые (дизайн-стек) |
