@@ -1010,11 +1010,13 @@ kernel-`count` вообще (если нет — убрать из ColumnAggrega
 - Status: 📋 PLAN READY — architect-план `specs/UT2026-F_ARCH_TABLE_AND_HOST.md`
   (2026-06-11): фазы F1 (#067 Shell+Router) → F2 (Table V2 в database-call) → F3
   (миграция data-table + Legacy Containment L1 + закрытие #068). Можно стартовать F1.
-- **F2 scope extension (2026-06-11, UT2026-G)**: визуальный канон — схема
-  «DataTable Widget анатомия компонента.png» (visual stack). Добавлено к F2: bulk select
-  (checkbox-колонка, RS-020), hover drag-handle строк, Relation pill-chips c overflow
-  (`+3`), политика пустых ячеек, SubBase-вкладки внизу Table tab, сохранение
-  footer-агрегаций/виртуализации/multi-sort при перестройке.
+- **F2 canon (2026-06-11, финальный)**: **`specs/TABLE_V2_CANON.md`** — концептуальная
+  перестройка с нуля по образцу Notion-таблиц (вердикт пользователя; PNG-канон из visual
+  stack отменён как наследующий V1). Концептуальные сдвиги: строка = страница (Name —
+  первичная колонка с ↗ OPEN), ячейка = свойство с редактором на месте по `DataFieldType`,
+  вид = линза (Filter/Sort pills в ControlBar), sub-base = вкладка ViewTabBar (НЕ нижние
+  табы), `[+]` add property в header (закрывает Vision §2), bulk-бар, полная стилистическая
+  матрица на Notion Visual DNA токенах. Подэтапы F2.1–F2.5 и бюджеты 7 компонентов — в каноне.
 - Milestone: M-UT-FIXES | Priority: P1 | Complexity: XL
 - analysis_required: true | analysis_done: true (UT2026-F)
 - Depends on: #067 (WidgetHost decomposition — общий план UT2026-F, фаза F1)

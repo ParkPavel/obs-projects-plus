@@ -19,14 +19,12 @@
 
 ## B. Дизайн уточняет открытые тикеты (готовые спеки — принять)
 
-1. **«DataTable Widget анатомия» = визуальный канон для F2 (#074)**. Скоуп F2 расширен
-   элементами анатомии, отсутствовавшими в плане:
-   - bulk select: checkbox-колонка + множественные операции (в дизайне «RS-020 planned»)
-   - hover drag-handle строки (⋮⋮)
-   - Relation-ячейки как pill-chips с overflow-счётчиком (`[Task1][Task2] +3`)
-   - политика пустой ячейки (без плейсхолдера — осознанно, фикс «obvious gap»)
-   - sub-base вкладки внизу таблицы (SubBaseTabs переезжает в database-call Table tab)
-   - footer-агрегации с per-column статистикой — уже есть, сохранить при перестройке
+1. ~~«DataTable Widget анатомия» = визуальный канон для F2~~ **ОТМЕНЕНО 2026-06-11**
+   (вердикт пользователя: схема нарисована вокруг V1-виджета и не является перестройкой
+   с нуля). Канон F2 = **`specs/TABLE_V2_CANON.md`** — концептуальная модель Notion-таблицы
+   (строка=страница, ячейка=свойство, вид=линза) + стилистическая матрица. Из PNG-схемы
+   в канон перенесены переосмысленными только: bulk select, relation pill-chips «+N»,
+   footer-агрегации, hover drag-handle (TABLE_V2_CANON §6).
 2. **«Formula builder — Anatomy» = готовая спека #077**. Ключевое требование дизайна:
    FormulaConstructor — **единый компонент для всех точек ввода формул** (TableProperty,
    AdvancedFilterEditor, FormulaBar, ConfigureField, FilterEditor + Dashboard). Слои:

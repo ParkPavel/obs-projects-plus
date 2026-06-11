@@ -81,7 +81,7 @@
 | Очередь | Тикет | Статус |
 |---|---|---|
 | 1 | **F1** #067 Shell+Router (≤200/≤350/≤150 + R0_6 LOC-budget) | PLAN READY (UT2026-F) |
-| 2 | **F2** #074 Table V2 — канон «DataTable анатомия»: inline edit, row actions, header menu, bulk select, relation chips, sub-base tabs | PLAN READY + design canon |
+| 2 | **F2** #074 Table V2 — канон **`specs/TABLE_V2_CANON.md`**: перестройка с нуля по Notion (строка=страница, edit-на-месте, вид=линза, sub-base=вкладка ViewTabBar, стилистическая матрица), подэтапы F2.1–F2.5 | CANON READY |
 | 3 | **F3** миграция data-table + L1 containment → закрывает #068 | PLAN READY |
 | 4 | **#077** единый FormulaConstructor (5 точек входа) + filter-pills | P1, DESIGN READY (anatomy-схема) |
 | 5 | **#061** Template Library: 4 канвас-пресета (visual stack) + 3 профиля (Vision §7) | рескоуплен |

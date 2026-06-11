@@ -48,13 +48,14 @@ widgets/
 MANUAL_TESTING_PIPELINE §5; событийный re-dispatch (15+ on:*) — самая вероятная точка потери.
 
 ### F2 (#074) — Table V2 внутри database-call
-1. Развитие `DatabaseCall/DataTableContent.svelte` (НЕ архивного кода): inline cell edit
-   (двунаправленность через `viewApi.updateRecord` — §6.3), row hover actions (⊕ открыть/
-   развернуть), inline «+ New row» внизу, column header menu ЧЕРЕЗ `src/lib/contextMenu.ts`
-   (инвариант #8), resize в rem. Notion-parity gaps P0 из UI_DESIGN_ARCHITECTURE §6.
-2. Декомпозиция: DataTableContent ≤400 + TableHeaderMenu + TableRowActions + EditableCell
-   (каждый ≤200, в реестр LOC-теста).
-3. Виртуализация — переносим существующий механизм; НЕ пишем новый.
+**КАНОН: `specs/TABLE_V2_CANON.md`** (2026-06-11, по мандату пользователя — концептуальная
+перестройка с нуля по образцу Notion-таблиц, включая стилистику; замещает PNG-канон из
+visual stack). Там же: анатомия зон, стилистическая матрица на токенах §9, полная матрица
+взаимодействий, декомпозиция с бюджетами (7 компонентов, все в R0_6) и порядок подэтапов
+F2.1–F2.5. Ключевые концептуальные сдвиги: строка = страница; редактирование на месте по
+`DataFieldType`; вид-линза (pills в ControlBar, не чипы в теле); sub-base = вкладка
+ViewTabBar (не нижние табы V1); footer-агрегации из меню колонки. Виртуализация —
+перенос существующего механизма; НЕ пишем новый.
 
 ### F3 — Миграция data-table → database-call + Containment
 1. `migrateDataTableWidget(widget, parentSource)` → database-call c
