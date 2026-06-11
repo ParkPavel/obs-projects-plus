@@ -652,7 +652,7 @@ Implement Table view inside `database-call`:
 - Standalone `DataTableWidget.svelte` → prepare for archive in #056 (add alias for compatibility)
 
 ### #052 — WidgetShell: Replace WidgetHost (947 LOC)
-- Status: ⚠️ PARTIAL (2026-06-10) — WidgetShell.svelte (161 LOC) + WidgetHeaderActions.svelte (80 LOC) созданы; интеграция в WidgetHost не выполнена (dead code); WidgetHost остаётся 947 LOC
+- Status: ✅ CLOSED (2026-06-11, `d4b7f4a`) — dead code (WidgetShell 161 LOC + WidgetHeaderActions 80 LOC) удалён; декомпозиция WidgetHost (947 LOC) вынесена в #067 как clean re-implementation
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: L
 - analysis_required: false
 - Depends on: #050
