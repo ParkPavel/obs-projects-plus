@@ -71,26 +71,25 @@
 
 ## Открытые тикеты
 
-> ⚠ 2026-06-11: пользовательское тестирование выявило блок дефектов → **M-UT-FIXES #068–#077**
-> (BACKLOG.md). Сквозная первопричина: архивный V1-код (`src/archive/dashboard-v1/`) всё ещё
-> живой в WidgetHost и палитре. Очерёдность пересмотрена: P0-дефекты раньше #067.
+> План скорректирован 2026-06-11 дважды: (1) UT-блок M-UT-FIXES #068–#077 + спеки UT2026-A..F;
+> (2) аудит дизайн-пайплайнов `visual stack` (15 схем) → **UT2026-G**: рескоупы #074-F2/#077/#061,
+> новые #078–#082, #011/#012 SUPERSEDED. Закрыто в UT-блоке: #069, #070, #072, #073 ✅;
+> #071/#075 PARTIAL.
 
-| Тикет | Приоритет | Статус | Описание |
-|---|---|---|---|
-| **#068** | P0 / M | 📋 NEW | Краш вью при открытии fields/groups в data-table (архивный V1-код живой в проде) |
-| **#069** | P0 / S | 📋 NEW | Порча кодировки: 25 литералов `??`/`�` в 4 файлах (PipelineEditor, CreateField, archive, mocks) + missing ru-ключи pipeline |
-| **#072** | P1 / XS | 📋 NEW | Stats демо «—»: demoProject генерирует `aggregation:"count"` вместо `count_total` (R5-004) |
-| **#070** | P1 / L | 📋 NEW | Унификация 3 систем цвета (color rules / eventColorField / name-эвристика ×2) |
-| **#071** | P1 / S | 📋 NEW | CoverBanner config не применяется (нужна репродукция) + хардкод-английский |
-| **#074** | P1 / XL | 📋 EPIC | Table view: полная перестройка с нуля (мандат пользователя); deprecate data-table; закрывает #068 архитектурно |
-| **#075** | P1 / M | 📋 NEW | UX конвейера трансформаций (после #069), design_required |
-| **#067** | P1 / XL | 📋 BACKLOG | WidgetHost decomposition — делать согласованно с #074 |
-| **#073** | P2 / S | 📋 NEW | Палитра виджетов: скрыть legacy-типы + max-height |
-| **#076/#077** | P2 / M | 📋 NEW | UX: путь баз/суб-баз «вытягиванием»; видимость фильтров + мат-движок popup (design_required) |
-| **#036** | P2 / M | 📋 READY | Mobile gestures — анализ DONE 2026-05-21 |
-| **#060/#061** | P2 | 📋 BACKLOG | Field transparency / Template Library |
-| #062–#064 | P3 | ⏸ DEFERRED | Drag-to-link / Timeline / Graph — V3 roadmap |
-| #011/#012 | — | ⚠️ STALE? | YamlVisualizer — #056 заархивировал виджет; перепроверить перед стартом |
+**Очередь исполнения (UT2026-G, согласована с дизайн-стеком):**
+
+| Очередь | Тикет | Статус |
+|---|---|---|
+| 1 | **F1** #067 Shell+Router (≤200/≤350/≤150 + R0_6 LOC-budget) | PLAN READY (UT2026-F) |
+| 2 | **F2** #074 Table V2 — канон «DataTable анатомия»: inline edit, row actions, header menu, bulk select, relation chips, sub-base tabs | PLAN READY + design canon |
+| 3 | **F3** миграция data-table + L1 containment → закрывает #068 | PLAN READY |
+| 4 | **#077** единый FormulaConstructor (5 точек входа) + filter-pills | P1, DESIGN READY (anatomy-схема) |
+| 5 | **#061** Template Library: 4 канвас-пресета (visual stack) + 3 профиля (Vision §7) | рескоуплен |
+| 6 | #081 RelationPickerPopover; #082 typed-карточка записи | новые (дизайн-стек) |
+| 7 | #078 CalendarView decomposition (2328 LOC); #079 hex-ratchet (32 вхождения) | новые (аудит) |
+| 8 | #075-остаток, #076 (дизайн-сессия UT2026-E), #060, #036 | прежний план |
+| — | Решения пользователя: #066 (YAML-конфиг), #080 (Formula Node widget), #071 (репро консоли) | ГЕЙТЫ |
+| V3 | #062–#064, free canvas, SmartSuggest-аналитика | DEFERRED |
 
 ## Ключевые решения (зафиксированные)
 
