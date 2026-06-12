@@ -818,6 +818,24 @@
                     "empty-hint": "Start with a data block, or pick a ready-made template",
                     "empty-add-block": "Add data block"
                 },
+                "templates": {
+                    "database-v2-starter": "Database V2 starter",
+                    "database-v2-starter-desc": "KPI stats + a multi-view database block (Table / Board / Calendar / Gallery)",
+                    "overview-finance": "Finance overview",
+                    "overview-finance-desc": "KPI, totals strip, category chart and a journal table",
+                    "dashboard": "Dashboard",
+                    "dashboard-desc": "Key metrics + overview chart + data table",
+                    "analytics": "Analytics",
+                    "analytics-desc": "Distribution and trend charts with summary metrics",
+                    "kanban-plus": "Kanban+",
+                    "kanban-plus-desc": "Task table + checklist + status donut",
+                    "fitness-workout": "Fitness — workout log",
+                    "fitness-workout-desc": "Nested sets[] unnested into volume stats and weight progression",
+                    "finance-accounting": "Finance — accounting",
+                    "finance-accounting-desc": "Gross / tax / net with FX rates and credit line tracking",
+                    "crm-clients": "CRM — clients",
+                    "crm-clients-desc": "Client roster, stage filter tabs and conversion funnel"
+                },
                 "cover-banner-config": {
                     "src": "Image source",
                     "src-placeholder": "vault path or URL",

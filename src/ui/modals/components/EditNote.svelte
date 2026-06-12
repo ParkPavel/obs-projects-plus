@@ -265,6 +265,18 @@
 
   $: readonlyFields = fields.filter((field) => field.derived);
 
+  // R3 (UT-R3): the Colors section must exist even when the note has no
+  // color field yet — picking a color CREATES the `color` frontmatter key.
+  // Without this, color was only editable on notes that already had one.
+  $: hasColorField = editableFields.some((f) => isColorFieldName(f.name));
+  const virtualColorField: DataField = {
+    name: "color",
+    type: DataFieldType.String,
+    repeated: false,
+    identifier: false,
+    derived: false,
+  };
+
   // Состояние сворачивания групп - сохраняется в localStorage
   let collapsedState: Record<string, boolean> = {};
   
@@ -489,6 +501,28 @@
       </div>
     {/each}
     
+    <!-- R3: standalone Colors section when the note has no color field yet -->
+    {#if !hasColorField}
+      <div class="field-group">
+        <div class="group-header-static">
+          <Icon name="palette" size="sm" />
+          <span class="group-title">{$i18n.t("modals.note.edit.color-title", { defaultValue: "Color" })}</span>
+        </div>
+        <div class="group-description">
+          {$i18n.t("modals.note.edit.color-hint", { defaultValue: "Pick a color — a `color` property will be added to this note. Calendar and boards use it." })}
+        </div>
+        <div class="group-content">
+          <SettingItem name="color">
+            <FieldControl
+              field={virtualColorField}
+              value={valuesSnapshot["color"]}
+              onChange={(value) => setValueWithAutosave("color", value, virtualColorField)}
+            />
+          </SettingItem>
+        </div>
+      </div>
+    {/if}
+
     <!-- Readonly Fields (if any) -->
     {#if readonlyFields.length > 0}
       <div class="field-group readonly-group">

@@ -10,7 +10,7 @@
    * only behavior it requests (via `toggleCollapse`), everything else is
    * slotted in by the host router.
    */
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher, onMount, tick } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { ariaWidget } from "src/lib/dashboard-engine/accessibility";
@@ -19,8 +19,37 @@
   export let title: string;
   export let widgetType: string;
   export let collapsed = false;
+  export let readonly = false;
+  /** R3 P0 — increment to enter title-edit mode (menu «Rename»). */
+  export let renameSignal = 0;
 
-  const dispatch = createEventDispatcher<{ toggleCollapse: void }>();
+  const dispatch = createEventDispatcher<{ toggleCollapse: void; titleChange: string }>();
+
+  // ── Inline title rename (dblclick or menu signal) ──
+  let editingTitle = false;
+  let titleDraft = "";
+  let titleEl: HTMLInputElement | null = null;
+  let lastRenameSignal = 0;
+
+  $: if (renameSignal !== lastRenameSignal) {
+    lastRenameSignal = renameSignal;
+    if (renameSignal > 0 && !readonly) void startTitleEdit();
+  }
+
+  async function startTitleEdit() {
+    editingTitle = true;
+    titleDraft = title;
+    await tick();
+    titleEl?.focus();
+    titleEl?.select();
+  }
+
+  function commitTitle() {
+    if (titleDraft.trim() && titleDraft.trim() !== title) {
+      dispatch("titleChange", titleDraft.trim());
+    }
+    editingTitle = false;
+  }
 
   $: widgetAria = ariaWidget(title);
 
@@ -79,7 +108,25 @@
     >
       {collapsed ? "›" : "‹"}
     </button>
-    <span id={`ppp-widget-title-${widgetId}`} class="ppp-widget-title">{title}</span>
+    {#if editingTitle}
+      <input
+        bind:this={titleEl}
+        class="ppp-widget-title-input"
+        type="text"
+        bind:value={titleDraft}
+        on:keydown={(e) => {
+          if (e.key === "Enter") commitTitle();
+          else if (e.key === "Escape") editingTitle = false;
+        }}
+        on:blur={commitTitle}
+      />
+    {:else}
+      <span
+        id={`ppp-widget-title-${widgetId}`}
+        class="ppp-widget-title"
+        on:dblclick={() => { if (!readonly) void startTitleEdit(); }}
+      >{title}</span>
+    {/if}
     <span class="ppp-widget-type-badge" aria-hidden="true">({widgetType})</span>
     <slot name="actions" />
   </div>
@@ -167,6 +214,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .ppp-widget-title-input {
+    flex: 1;
+    min-width: 0;
+    height: 1.5rem;
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-semibold, 600);
   }
 
   .ppp-widget-type-badge {

@@ -224,10 +224,15 @@ function buildTasks(): Record<string, DemoFile> {
   return out;
 }
 
+// R3: meetings carry an explicit per-record color so the calendar showcases
+// the record-color contract (explicit hex beats project rules — UT2026-C).
+const MEETING_COLORS = ["#7c6ce8", "#2e9e5b", "#d98324", "#3498db", "#c0566f"];
+
 function buildMeetings(): Record<string, DemoFile> {
   const t = today();
   const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
   const out: Record<string, DemoFile> = {};
+  let i = 0;
   for (const s of MEETING_SEEDS) {
     out[s.name] = {
       frontmatter: {
@@ -237,6 +242,7 @@ function buildMeetings(): Record<string, DemoFile> {
         startTime: s.startTime,
         endTime: s.endTime,
         participants: s.participants,
+        color: MEETING_COLORS[i++ % MEETING_COLORS.length],
         tags: ["meeting"],
       },
       content: meetingBody(s.agenda),
@@ -341,6 +347,45 @@ function overviewWidgets(): WidgetDefinition[] {
         ],
       },
       config: tableTabConfig(),
+    },
+    // R3: living showcase of the Canvas Selection Bus — pick a client row
+    // (row menu → «Фильтровать связанные блоки»), the projects block narrows.
+    ...linkedClientProjectsPair(),
+  ];
+}
+
+function linkedClientProjectsPair(): WidgetDefinition[] {
+  const rosterId = widgetId();
+  const typeFilter = (value: string) => ({
+    steps: [
+      {
+        type: "filter" as const,
+        conditions: {
+          conjunction: "and" as const,
+          conditions: [{ field: "type", operator: "is" as const, value, enabled: true }],
+        },
+      },
+    ],
+  });
+  return [
+    {
+      id: rosterId,
+      type: "database-call",
+      title: "Клиенты (мастер связи)",
+      layout: { x: 0, y: 10, w: 6, h: 4 },
+      transform: typeFilter("client"),
+      config: tableTabConfig(),
+    },
+    {
+      id: widgetId(),
+      type: "database-call",
+      title: "Проекты клиента (связанный блок)",
+      layout: { x: 6, y: 10, w: 6, h: 4 },
+      transform: typeFilter("project"),
+      config: {
+        ...tableTabConfig(),
+        linkedSelection: { sourceWidgetId: rosterId, relationField: "client" },
+      },
     },
   ];
 }
@@ -480,7 +525,8 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     endDateField: "deadline",
     startTimeField: "startTime",
     endTimeField: "endTime",
-    eventColorField: "priority",
+    // R3: per-record hex color (explicit beats rules); meetings ship colored.
+    eventColorField: "color",
     checkField: "completed",
     startHour: 8,
     endHour: 20,

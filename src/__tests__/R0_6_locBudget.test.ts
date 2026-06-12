@@ -12,14 +12,17 @@ import * as path from "path";
 const SRC = path.resolve(__dirname, "..");
 
 const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
-  { file: "ui/views/Dashboard/widgets/WidgetHost.svelte", maxLines: 230 },
+  // 240/280: raised in R3 — router gained rename/selection wiring (W2 scope);
+  // revisit downward at W5 cleanup.
+  { file: "ui/views/Dashboard/widgets/WidgetHost.svelte", maxLines: 240 },
   { file: "ui/views/Dashboard/widgets/WidgetShell.svelte", maxLines: 350 },
-  { file: "ui/views/Dashboard/widgets/WidgetHeaderActions.svelte", maxLines: 175 },
+  { file: "ui/views/Dashboard/widgets/WidgetHeaderActions.svelte", maxLines: 220 },
+  { file: "ui/views/Dashboard/widgets/widgetMenu.ts", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/WidgetSetupWizard.svelte", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/widgetComponentRegistry.ts", maxLines: 260 },
   { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 230 },
   // F2 (#074) — TABLE_V2_CANON §5 budgets
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 250 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 280 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableHeader.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte", maxLines: 200 },
@@ -28,7 +31,7 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte", maxLines: 250 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/CellChoiceDropdown.svelte", maxLines: 130 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte", maxLines: 100 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 120 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 170 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts", maxLines: 230 },
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte", maxLines: 100 },

@@ -51,7 +51,7 @@
     removeWidget: string;
   }>();
 
-  let showConfig = false, showPipeline = false;
+  let showConfig = false, showPipeline = false, renameSignal = 0;
 
   $: collapsed = widget.collapsed ?? false;
   $: currentPipeline = widget.transform ?? ({ steps: [] } as TransformPipeline);
@@ -151,7 +151,10 @@
   title={widget.title}
   widgetType={widget.type}
   {collapsed}
+  {readonly}
+  {renameSignal}
   on:toggleCollapse={() => patchWidget({ collapsed: !collapsed })}
+  on:titleChange={(e) => patchWidget({ title: e.detail })}
 >
   <svelte:fragment slot="actions">
     <WidgetHeaderActions
@@ -164,6 +167,7 @@
       on:togglePipeline={() => (showPipeline = !showPipeline)}
       on:toggleLock={() => patchWidget({ layout: { ...widget.layout, locked: !(widget.layout.locked ?? false) } })}
       on:remove={() => dispatch("removeWidget", widget.id)}
+      on:rename={() => (renameSignal += 1)}
     />
   </svelte:fragment>
 

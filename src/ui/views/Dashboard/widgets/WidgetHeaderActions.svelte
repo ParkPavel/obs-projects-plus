@@ -11,6 +11,8 @@
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { openContextMenu } from "src/lib/contextMenu";
+  import { buildWidgetMenuEntries } from "./widgetMenu";
 
   export let readonly: boolean;
   /** Widget type has a config panel (configPanelRegistry hasCog). */
@@ -25,7 +27,26 @@
     togglePipeline: void;
     toggleLock: void;
     remove: void;
+    rename: void;
   }>();
+
+  // R3 P0 (NOTION_GRADE_PIPELINE W2): the ALWAYS-visible «⋯» menu is the
+  // discoverable entry to every widget action — labeled, through the
+  // canonical contextMenu. Hover icons stay as expert shortcuts.
+  function openWidgetMenu(e: MouseEvent) {
+    openContextMenu(
+      buildWidgetMenuEntries({
+        hasCog, hasPipeline, pipelineStepCount, locked,
+        t: (k, d) => $i18n.t(k, { defaultValue: d }),
+        onConfigure: () => dispatch("toggleConfig"),
+        onPipeline: () => dispatch("togglePipeline"),
+        onRename: () => dispatch("rename"),
+        onToggleLock: () => dispatch("toggleLock"),
+        onRemove: () => dispatch("remove"),
+      }),
+      e
+    );
+  }
 </script>
 
 {#if hasCog && !readonly}
@@ -56,6 +77,13 @@
 {/if}
 {#if !readonly}
   <button
+    class="ppp-widget-menu-btn clickable-icon"
+    on:click={openWidgetMenu}
+    aria-label={$i18n.t("views.dashboard.widget.menu", { defaultValue: "Widget menu" })}
+    title={$i18n.t("views.dashboard.widget.menu", { defaultValue: "Widget menu — configure, pipeline, rename, remove" })}
+    aria-haspopup="menu"
+  ><Icon name="more-horizontal" size="sm" /></button>
+  <button
     class="ppp-widget-lock-btn clickable-icon"
     class:ppp-widget-lock-btn--locked={locked}
     on:click={() => dispatch("toggleLock")}
@@ -70,6 +98,26 @@
 {/if}
 
 <style>
+  /* R3 P0: the menu button is ALWAYS visible — the one discoverable entry. */
+  .ppp-widget-menu-btn {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: var(--radius-s, 0.25rem);
+    cursor: pointer;
+  }
+
+  .ppp-widget-menu-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
   .ppp-widget-settings-btn,
   .ppp-widget-pipeline-btn,
   .ppp-widget-lock-btn,

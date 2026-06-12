@@ -18,6 +18,8 @@
   export let readonly: boolean;
   export let api: ViewApi;
   export let frame: DataFrame;
+  /** R3 — this row currently drives the canvas Selection Bus. */
+  export let driving = false;
   /** Field name currently edited in THIS record (single editor per table). */
   export let editingField: string | null = null;
   /** Unique value lists for Select/Status dropdowns, keyed by field name. */
@@ -31,15 +33,23 @@
     cancelEdit: void;
   }>();
 
+  // R3: never surface the full vault path — identity falls back to the
+  // note's basename, like Notion shows the page title.
+  function baseName(id: string): string {
+    return (id.split("/").pop() ?? id).replace(/\.md$/, "");
+  }
+
   function nameText(): string {
     const col = columns.find((c) => c.isPrimary);
-    if (!col) return record.id;
+    if (!col) return baseName(record.id);
     const cell = cellDisplay(col.field, record.values[col.field.name]);
-    return cell.kind === "text" ? cell.text : record.id;
+    if (cell.kind !== "text") return baseName(record.id);
+    // Identifier fields often store the full path/wikilink — normalize.
+    return baseName(cell.text.replace(/^\[\[|\]\]$/g, ""));
   }
 </script>
 
-<div class="ppp-t2-row" role="row">
+<div class="ppp-t2-row" class:ppp-t2-row--driving={driving} role="row">
   {#each columns as col (col.field.name)}
     {#if col.isPrimary}
       <div class="ppp-t2-cell ppp-t2-cell--primary" role="gridcell">
@@ -86,6 +96,12 @@
 
   .ppp-t2-row:hover {
     background: var(--ppp-db-surface-hover, var(--background-modifier-hover));
+  }
+
+  /* Selection Bus driver row — the source of the canvas-wide filter */
+  .ppp-t2-row--driving {
+    background: var(--ppp-db-surface-selected, var(--background-modifier-hover));
+    box-shadow: inset 0.1875rem 0 0 var(--interactive-accent);
   }
 
   .ppp-t2-cell {

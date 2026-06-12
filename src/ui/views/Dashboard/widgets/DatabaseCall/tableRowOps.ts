@@ -8,6 +8,11 @@ import type { ViewApi } from "src/lib/viewApi";
 import type { ProjectDefinition } from "src/settings/settings";
 import { createDataRecord } from "src/lib/dataApi";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
+import {
+  dataTableSourceId,
+  type SelectionState,
+  type SelectionStore,
+} from "../../canvasSelectionStore";
 
 export function recordBaseName(record: DataRecord): string {
   const file = record.id.split("/").pop() ?? record.id;
@@ -33,6 +38,46 @@ export function createNamedRecord(
   api.addRecord(createDataRecord(name, project), fields, "");
 }
 
+// ── Selection Bus driver (R3 — Table V2 finally drives linked blocks) ──
+// V1 resolution kept: the driver is a labeled row-menu entry (toggle), so
+// click-to-edit stays untouched. Publishes the row's identity value under
+// the primary field — linked blocks filter their relationField by it.
+
+export function rowSelectionValue(record: DataRecord): string {
+  return recordBaseName(record);
+}
+
+export function isRowDriving(
+  selection: SelectionState,
+  widgetId: string,
+  record: DataRecord
+): boolean {
+  return (
+    selection.source === dataTableSourceId(widgetId) &&
+    selection.values.length === 1 &&
+    selection.values[0] === rowSelectionValue(record)
+  );
+}
+
+export function toggleRowSelection(opts: {
+  store: SelectionStore;
+  selection: SelectionState;
+  widgetId: string;
+  primaryField: string;
+  record: DataRecord;
+}): void {
+  const { store, selection, widgetId, primaryField, record } = opts;
+  if (isRowDriving(selection, widgetId, record)) {
+    store.clearSelection();
+    return;
+  }
+  store.setSelection({
+    source: dataTableSourceId(widgetId),
+    field: primaryField,
+    values: [rowSelectionValue(record)],
+  });
+}
+
 export function buildRowMenuEntries(opts: {
   record: DataRecord;
   project: ProjectDefinition | undefined;
@@ -40,9 +85,24 @@ export function buildRowMenuEntries(opts: {
   api: ViewApi;
   app: App | undefined;
   t: (key: string, defaultValue: string) => string;
+  /** Selection Bus driver entry (omitted when the canvas has no store). */
+  selectionEntry?: { driving: boolean; onToggle: () => void } | undefined;
 }): ContextMenuEntry[] {
-  const { record, project, fields, api, app, t } = opts;
+  const { record, project, fields, api, app, t, selectionEntry } = opts;
+  const selectionEntries: ContextMenuEntry[] = selectionEntry
+    ? [
+        {
+          title: selectionEntry.driving
+            ? t("views.dashboard.table-v2.unfilter-canvas", "Stop filtering canvas by this row")
+            : t("views.dashboard.table-v2.filter-canvas", "Filter linked blocks by this row"),
+          icon: selectionEntry.driving ? "filter-x" : "filter",
+          onClick: selectionEntry.onToggle,
+        },
+        { separator: true },
+      ]
+    : [];
   return [
+    ...selectionEntries,
     {
       title: t("views.dashboard.table-v2.open", "Open note"),
       icon: "arrow-up-right",

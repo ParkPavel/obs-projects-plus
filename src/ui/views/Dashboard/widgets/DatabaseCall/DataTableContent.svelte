@@ -15,14 +15,20 @@
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, FieldPreset } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, getContext, onDestroy } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import {
+    SELECTION_CONTEXT_KEY,
+    EMPTY_SELECTION,
+    type SelectionStore,
+    type SelectionState,
+  } from "../../canvasSelectionStore";
   import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
   import { updateRecordValues } from "src/lib/datasources/helpers";
   import { openContextMenu } from "src/lib/contextMenu";
   import { emitCommand } from "src/lib/stores/commandBus";
-  import { buildRowMenuEntries, createNamedRecord } from "./tableRowOps";
+  import { buildRowMenuEntries, createNamedRecord, isRowDriving, toggleRowSelection } from "./tableRowOps";
   import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed } from "./tableHeaderOps";
   import {
     buildColumns,
@@ -48,9 +54,17 @@
   export let fieldPresets: FieldPreset[] = [];
   export let activeFieldPresetId: string | undefined = undefined;
   export let project: ProjectDefinition | undefined = undefined;
+  /** R3 — Selection Bus driver identity (canvas widget id). */
+  export let widgetId: string | undefined = undefined;
 
   // F2.4+ consumers; accepted so the DatabaseCallBlock bridge stays stable.
   $: void getRecordColor; $: void fieldPresets; $: void activeFieldPresetId;
+
+  // ── Selection Bus (driver) ───────────────────────────────────
+  const selectionStore: SelectionStore | undefined = getContext(SELECTION_CONTEXT_KEY);
+  let selection: SelectionState = EMPTY_SELECTION;
+  const unsubSelection = selectionStore ? selectionStore.subscribe((v) => (selection = v)) : () => {};
+  onDestroy(unsubSelection);
 
   const dispatch = createEventDispatcher<{
     configChange: DataTableConfig;
@@ -120,9 +134,17 @@
   }
 
   function handleRowMenu(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
+    const record = e.detail.record;
+    const primaryField = columns.find((c) => c.isPrimary)?.field.name ?? "name";
     const entries = buildRowMenuEntries({
-      record: e.detail.record, project, fields, api, app: $app ?? undefined,
+      record, project, fields, api, app: $app ?? undefined,
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
+      selectionEntry: selectionStore && widgetId
+        ? {
+            driving: isRowDriving(selection, widgetId, record),
+            onToggle: () => toggleRowSelection({ store: selectionStore, selection, widgetId: widgetId!, primaryField, record }),
+          }
+        : undefined,
     });
     openContextMenu(entries, e.detail.event);
   }
@@ -189,6 +211,7 @@
             {readonly}
             {api}
             {frame}
+            driving={widgetId ? isRowDriving(selection, widgetId, row.record) : false}
             editingField={editingCell?.recordId === row.record.id ? editingCell.field : null}
             {optionsByField}
             on:openRecord={handleOpenRecord}
