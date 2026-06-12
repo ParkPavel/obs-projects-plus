@@ -679,7 +679,7 @@ interface GridLayout {
 
 ```bash
 npm run build          # 0 ошибок
-npm test               # baseline ≥ 134 suites / 2020 tests
+npm test               # baseline holds — канон числа в CONTEXT.md (2026-06-12: 147/2137)
 npm run lint           # 0 ошибок
 npm run svelte-check   # 0 ошибок
 ```

@@ -30,8 +30,8 @@
   import TemplateConfirmDialog from "./TemplateConfirmDialog.svelte";
   import WidgetGrid from "./WidgetGrid.svelte";
   import SmartSuggestionBus from "./SmartSuggestionBus.svelte";
-  import type { SmartSuggestion, SuggestionKind } from "./smartSuggest";
-  import { createSelectionStore, SELECTION_CONTEXT_KEY, type SelectionStore } from "./canvasSelectionStore";
+  import { createSuggestionController } from "./dashboardSuggest";
+  import { createSelectionStore, bindEscapeClear, SELECTION_CONTEXT_KEY, type SelectionStore } from "./canvasSelectionStore";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -77,9 +77,8 @@
     t: (key, opts) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key),
   });
   const showTemplateReplaceConfirm = templatesController.showConfirm;
-  let isRecalculating = false;
+  let isRecalculating = false, showFormulaBar = false;
   $: { void frame; isRecalculating = true; Promise.resolve().then(() => { isRecalculating = false; }); }
-  let showFormulaBar = false;
   $: fieldNames = frame.fields.map((f) => f.name);
   $: previewRecord = frame.records[0];
   let activeFilterTab: ActiveFilterTab | null = null;
@@ -90,8 +89,7 @@
   $: filteredFrame = applyFilterTab(frame, activeFilterTab);
   $: getFileStat = ((a) => (path: string) => {
     const f = a?.vault.getAbstractFileByPath(path);
-    if (!f || !("stat" in f)) return null;
-    return (f as { stat: { ctime: number; mtime: number } }).stat;
+    return f && "stat" in f ? (f as { stat: { ctime: number; mtime: number } }).stat : null;
   })($app) satisfies GetFileStat;
   $: displayFrame = buildDisplayFrame(filteredFrame, config, getFileStat);
 
@@ -123,35 +121,17 @@
   $: primaryDataTableId = config?.widgets.find((w) => w.type === "data-table")?.id ?? "";
   const selectionStore: SelectionStore = createSelectionStore();
   setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
-  if (typeof document !== "undefined") {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") selectionStore.clearSelection(); };
-    document.addEventListener("keydown", onKey);
-    onDestroy(() => document.removeEventListener("keydown", onKey));
-  }
+  onDestroy(bindEscapeClear(selectionStore));
 
   function handleFormulaApply(e: CustomEvent<{ name: string; expression: string }>) {
-    if (!config) return;
-    const { name, expression } = e.detail;
-    const existing = config.formulaFields ?? [];
-    const updated = existing.some((f) => f.name === name)
-      ? existing.map((f) => f.name === name ? { ...f, expression } : f)
-      : [...existing, { name, expression }];
-    saveConfig({ ...config, formulaFields: updated });
+    widgetController.applyFormulaField(e.detail.name, e.detail.expression);
     showFormulaBar = false;
   }
-  // #059 SmartSuggest — accepting a suggestion also persists its dismissal:
-  // the relation suggestion's gate (a linked database-call) is not satisfied
-  // by merely adding the block, so without this the strip would reappear.
-  function persistSuggestionDismiss(kind: SuggestionKind) {
-    if (!config) return;
-    const prev = config.dismissedSuggestions ?? [];
-    if (prev.includes(kind)) return;
-    saveConfig({ ...config, dismissedSuggestions: [...prev, kind] });
-  }
-  function handleSuggestionAccept(e: CustomEvent<SmartSuggestion>) {
-    widgetController.addWidget(e.detail.widgetType);
-    persistSuggestionDismiss(e.detail.kind);
-  }
+  const suggest = createSuggestionController({
+    getConfig: () => config,
+    saveConfig,
+    addWidget: (t) => widgetController.addWidget(t),
+  });
   function handleApplyTemplate(e: CustomEvent<WidgetDefinition[]>) {
     templatesController.requestReplace(e.detail).catch((err: unknown) => {
       // eslint-disable-next-line no-console
@@ -189,7 +169,7 @@
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
       {#if !readonly && widgets.length > 0}
         <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={config?.dismissedSuggestions ?? []}
-          on:accept={handleSuggestionAccept} on:dismissForever={(e) => persistSuggestionDismiss(e.detail)} />
+          on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />
       {/if}
       <WidgetGrid
         {widgets} {dndWidgets} {canDnd} {frame} {displayFrame} {api} {readonly} {getRecordColor}

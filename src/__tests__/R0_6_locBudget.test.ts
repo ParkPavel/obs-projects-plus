@@ -20,7 +20,9 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/widgetMenu.ts", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/WidgetSetupWizard.svelte", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/widgetComponentRegistry.ts", maxLines: 260 },
-  { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 230 },
+  // Master-prompt invariant 1: canvas ≤200 (restored in compliance audit).
+  { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 200 },
+  { file: "ui/views/Dashboard/dashboardSuggest.ts", maxLines: 60 },
   // F2 (#074) — TABLE_V2_CANON §5 budgets
   { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 280 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte", maxLines: 200 },

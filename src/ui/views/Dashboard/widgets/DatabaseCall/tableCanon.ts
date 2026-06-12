@@ -15,6 +15,7 @@ import {
 import type { DataTableConfig, DataTableSortCriteria } from "../../types";
 import { getOptionColor, type ExtendedFieldTypeConfig } from "../../fieldTypes";
 import { groupRecords } from "./groupRows";
+import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 
 // ── Columns ──────────────────────────────────────────────────
 
@@ -196,14 +197,9 @@ export type CellDisplay =
   | { readonly kind: "check"; readonly checked: boolean }
   | { readonly kind: "pills"; readonly pills: CellPill[]; readonly overflow: number; readonly status: boolean };
 
-const WIKILINK = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-
-/** Exported for RelationPickerPopover (#081) — parse current selection. */
-export function wikilinkLabels(raw: string): string[] {
-  const labels: string[] = [];
-  for (const m of raw.matchAll(WIKILINK)) labels.push((m[2] ?? m[1] ?? "").trim());
-  return labels.length > 0 ? labels : [raw];
-}
+// Закон 4 (compliance-аудит): wikilink-парсинг — ТОЛЬКО канонический
+// parseRelationLinks из src/lib/relations. Локальный дубль-парсер удалён.
+const HAS_WIKILINK = /\[\[/;
 
 function toPills(labels: string[], color: (label: string) => string | null, status: boolean): CellDisplay {
   const visible = labels.slice(0, MAX_VISIBLE_PILLS);
@@ -239,7 +235,7 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
     case DataFieldType.Status:
       return toPills([String(value)], optionColor, true);
     case DataFieldType.Relation:
-      return toPills(wikilinkLabels(String(value)), () => null, false);
+      return toPills(parseRelationLinks(value), () => null, false);
     case DataFieldType.Formula:
     case DataFieldType.Rollup:
       return typeof value === "number"
@@ -249,9 +245,8 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
       // UT-R2 #085: wikilinks in plain String fields read as link chips,
       // not raw "[[...]]" markup — the cell honors what the user wrote.
       const text = String(value);
-      if (WIKILINK.test(text)) {
-        WIKILINK.lastIndex = 0;
-        return toPills(wikilinkLabels(text), () => null, false);
+      if (HAS_WIKILINK.test(text)) {
+        return toPills(parseRelationLinks(text), () => null, false);
       }
       return { kind: "text", text };
     }

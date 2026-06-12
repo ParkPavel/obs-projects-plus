@@ -32,6 +32,8 @@ export interface WidgetController {
   handleWidgetConfigChange(e: CustomEvent<{ id: string; changes: Partial<WidgetDefinition> }>): void;
   /** CustomEvent handler: primary DataTable config changed. */
   handleTableConfigChange(e: CustomEvent<unknown>): void;
+  /** FormulaBar apply: upsert a view-level formula field by name. */
+  applyFormulaField(name: string, expression: string): void;
 }
 
 export function createWidgetController({
@@ -87,5 +89,15 @@ export function createWidgetController({
     saveConfig({ ...config, table: e.detail as DatabaseViewConfig["table"] });
   }
 
-  return { addWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange };
+  function applyFormulaField(name: string, expression: string): void {
+    const config = cfg();
+    if (!config) return;
+    const existing = config.formulaFields ?? [];
+    const updated = existing.some((f) => f.name === name)
+      ? existing.map((f) => (f.name === name ? { ...f, expression } : f))
+      : [...existing, { name, expression }];
+    saveConfig({ ...config, formulaFields: updated });
+  }
+
+  return { addWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField };
 }

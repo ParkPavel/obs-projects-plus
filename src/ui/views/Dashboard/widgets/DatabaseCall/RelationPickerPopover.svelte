@@ -12,7 +12,7 @@
   import type { DataField, DataFrame, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { RelationFieldConfig } from "src/settings/base/settings";
-  import { wikilinkLabels } from "./tableCanon";
+  import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 
   export let field: DataField;
   export let value: Optional<DataValue>;
@@ -36,9 +36,7 @@
   }
 
   function currentLabels(): string[] {
-    if (Array.isArray(value)) return value.flatMap((v) => wikilinkLabels(String(v)));
-    if (typeof value === "string" && value) return wikilinkLabels(value);
-    return [];
+    return parseRelationLinks(value);
   }
 
   let selected = new Set(currentLabels());
@@ -53,10 +51,7 @@
       // Fallback: every wikilink target already used in this column.
       const seen = new Set<string>();
       for (const r of frame.records) {
-        const v = r.values[field.name];
-        for (const raw of Array.isArray(v) ? v : v != null ? [v] : []) {
-          for (const label of wikilinkLabels(String(raw))) seen.add(label);
-        }
+        for (const label of parseRelationLinks(r.values[field.name])) seen.add(label);
       }
       candidates = [...seen];
     }
