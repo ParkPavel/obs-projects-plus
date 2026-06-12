@@ -53,6 +53,31 @@ export function applyWidthPatch(
   } as DataTableConfig;
 }
 
+export function applyGroupPatch(
+  config: DataTableConfig | undefined,
+  field: string | null
+): DataTableConfig {
+  const { groupBy: _omit, ...rest } = config ?? {};
+  void _omit;
+  if (field === null) return rest as DataTableConfig;
+  return {
+    ...rest,
+    groupBy: { field, sortOrder: "asc", hiddenGroups: [], collapsedGroups: [], showEmptyGroups: false },
+  } as DataTableConfig;
+}
+
+export function toggleGroupCollapsed(
+  config: DataTableConfig | undefined,
+  key: string
+): DataTableConfig {
+  const groupBy = config?.groupBy;
+  if (!groupBy) return (config ?? {}) as DataTableConfig;
+  const collapsed = new Set(groupBy.collapsedGroups ?? []);
+  if (collapsed.has(key)) collapsed.delete(key);
+  else collapsed.add(key);
+  return { ...config, groupBy: { ...groupBy, collapsedGroups: [...collapsed] } } as DataTableConfig;
+}
+
 export function applyCalculatePatch(
   config: DataTableConfig | undefined,
   field: string,
@@ -99,12 +124,14 @@ export function buildHeaderMenuEntries(opts: {
   isPrimary: boolean;
   currentSort: SortOrder | null;
   currentCalc: ColumnAggregation | undefined;
+  groupedBy: boolean;
   t: (key: string, defaultValue: string) => string;
   onSort: (order: SortOrder | null) => void;
   onHide: () => void;
   onCalculate: (fn: ColumnAggregation | null) => void;
+  onGroup: (group: boolean) => void;
 }): ContextMenuEntry[] {
-  const { field, isPrimary, currentSort, currentCalc, t, onSort, onHide, onCalculate } = opts;
+  const { field, isPrimary, currentSort, currentCalc, groupedBy, t, onSort, onHide, onCalculate, onGroup } = opts;
   const entries: ContextMenuEntry[] = [
     { title: t("views.dashboard.table-v2.sort-asc", "Sort ascending"), icon: "arrow-up", onClick: () => onSort("asc"), disabled: currentSort === "asc" },
     { title: t("views.dashboard.table-v2.sort-desc", "Sort descending"), icon: "arrow-down", onClick: () => onSort("desc"), disabled: currentSort === "desc" },
@@ -113,6 +140,11 @@ export function buildHeaderMenuEntries(opts: {
     entries.push({ title: t("views.dashboard.table-v2.sort-clear", "Clear sort"), icon: "x", onClick: () => onSort(null) });
   }
   entries.push({ separator: true });
+  entries.push(
+    groupedBy
+      ? { title: t("views.dashboard.table-v2.ungroup", "Ungroup"), icon: "x", onClick: () => onGroup(false) }
+      : { title: t("views.dashboard.table-v2.group-by", "Group by this field"), icon: "layers", onClick: () => onGroup(true) }
+  );
   entries.push({
     title: t("views.dashboard.table-v2.calculate", "Calculate"),
     icon: "sigma",

@@ -23,14 +23,16 @@
   import { openContextMenu } from "src/lib/contextMenu";
   import { emitCommand } from "src/lib/stores/commandBus";
   import { buildRowMenuEntries, createNamedRecord } from "./tableRowOps";
-  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch } from "./tableHeaderOps";
+  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed } from "./tableHeaderOps";
   import {
     buildColumns,
     gridTemplate,
     applySort,
     applySearch,
     activeSortCriteria,
+    buildRenderRows,
   } from "./tableCanon";
+  import TableGroupSection from "./TableGroupSection.svelte";
   import TableControlBar from "./TableControlBar.svelte";
   import TableHeader from "./TableHeader.svelte";
   import TableRow from "./TableRow.svelte";
@@ -66,6 +68,8 @@
   $: sortCriteria = activeSortCriteria(config);
   $: sorted = applySort(frame.records, config);
   $: visibleRecords = applySearch(sorted, searchQuery);
+  // F2.5: grouping flattens into the render list (group headers + records).
+  $: renderRows = buildRenderRows(visibleRecords, config);
 
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
 
@@ -91,8 +95,8 @@
   let viewportPx = 600;
   $: rowPx = rowHeightRem * 16;
   $: start = Math.max(0, Math.floor(scrollTop / rowPx) - OVERSCAN);
-  $: end = Math.min(visibleRecords.length, Math.ceil((scrollTop + viewportPx) / rowPx) + OVERSCAN);
-  $: windowed = visibleRecords.slice(start, end);
+  $: end = Math.min(renderRows.length, Math.ceil((scrollTop + viewportPx) / rowPx) + OVERSCAN);
+  $: windowed = renderRows.slice(start, end);
 
   function onScroll() {
     if (!bodyEl) return;
@@ -159,30 +163,43 @@
         {columns}
         {sortCriteria}
         aggregations={config?.aggregations ?? {}}
+        groupByField={config?.groupBy?.field}
         {readonly}
         on:sort={(e) => dispatch("configChange", applySortPatch(config, e.detail.field, e.detail.order))}
         on:hide={(e) => dispatch("configChange", applyHidePatch(config, e.detail))}
         on:calculate={(e) => dispatch("configChange", applyCalculatePatch(config, e.detail.field, e.detail.fn))}
+        on:group={(e) => dispatch("configChange", applyGroupPatch(config, e.detail.group ? e.detail.field : null))}
         on:resizeLive={(e) => (liveWidth = { field: e.detail.field, rem: e.detail.widthRem })}
         on:resizeCommit={handleResizeCommit}
         on:addProperty={() => emitCommand("add-field")}
       />
       {#if start > 0}<div style:height={`${start * rowPx}px`} aria-hidden="true" />{/if}
-      {#each windowed as record (record.id)}
-        <TableRow
-          {columns}
-          {record}
-          {readonly}
-          editingField={editingCell?.recordId === record.id ? editingCell.field : null}
-          {optionsByField}
-          on:openRecord={handleOpenRecord}
-          on:rowMenu={handleRowMenu}
-          on:startEdit={(e) => (editingCell = e.detail)}
-          on:commitEdit={handleCommitEdit}
-          on:cancelEdit={() => (editingCell = null)}
-        />
+      {#each windowed as row (row.kind === "record" ? row.record.id : `g:${row.key}`)}
+        {#if row.kind === "group"}
+          <TableGroupSection
+            groupKey={row.key}
+            count={row.count}
+            collapsed={row.collapsed}
+            on:toggle={(e) => dispatch("configChange", toggleGroupCollapsed(config, e.detail))}
+          />
+        {:else}
+          <TableRow
+            {columns}
+            record={row.record}
+            {readonly}
+            {api}
+            {frame}
+            editingField={editingCell?.recordId === row.record.id ? editingCell.field : null}
+            {optionsByField}
+            on:openRecord={handleOpenRecord}
+            on:rowMenu={handleRowMenu}
+            on:startEdit={(e) => (editingCell = e.detail)}
+            on:commitEdit={handleCommitEdit}
+            on:cancelEdit={() => (editingCell = null)}
+          />
+        {/if}
       {/each}
-      {#if end < visibleRecords.length}<div style:height={`${(visibleRecords.length - end) * rowPx}px`} aria-hidden="true" />{/if}
+      {#if end < renderRows.length}<div style:height={`${(renderRows.length - end) * rowPx}px`} aria-hidden="true" />{/if}
       {#if !readonly && project}
         <TableNewRow on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
       {/if}

@@ -8,13 +8,16 @@
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay, type TableColumn } from "./tableCanon";
   import EditableCell from "./EditableCell.svelte";
 
   export let columns: TableColumn[];
   export let record: DataRecord;
   export let readonly: boolean;
+  export let api: ViewApi;
+  export let frame: DataFrame;
   /** Field name currently edited in THIS record (single editor per table). */
   export let editingField: string | null = null;
   /** Unique value lists for Select/Status dropdowns, keyed by field name. */
@@ -61,6 +64,8 @@
         field={col.field}
         value={record.values[col.field.name]}
         {readonly}
+        {api}
+        {frame}
         editing={editingField === col.field.name}
         options={optionsByField.get(col.field.name) ?? []}
         on:startEdit={() => dispatch("startEdit", { recordId: record.id, field: col.field.name })}

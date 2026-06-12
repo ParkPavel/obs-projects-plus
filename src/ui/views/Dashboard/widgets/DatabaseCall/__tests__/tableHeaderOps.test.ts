@@ -56,10 +56,12 @@ describe("tableHeaderOps (F2.4)", () => {
         isPrimary,
         currentSort: null,
         currentCalc: undefined,
+        groupedBy: false,
         t: (_k, d) => d,
         onSort: () => {},
         onHide: () => {},
         onCalculate: () => {},
+        onGroup: () => {},
       });
     const titles = (entries: ReturnType<typeof make>) =>
       entries.filter((e) => !("separator" in e)).map((e) => (e as { title: string }).title);

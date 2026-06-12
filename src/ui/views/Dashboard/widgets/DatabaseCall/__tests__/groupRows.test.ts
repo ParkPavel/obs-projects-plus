@@ -1,6 +1,6 @@
-﻿// src/ui/views/Dashboard/widgets/DataTable/groupRows.test.ts
+// src/ui/views/Dashboard/widgets/DataTable/groupRows.test.ts
 
-import { groupRecords } from "./groupRows";
+import { groupRecords } from "../groupRows";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import type { GroupConfig } from "src/ui/views/Dashboard/types";
 

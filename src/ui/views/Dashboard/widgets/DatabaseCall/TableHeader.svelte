@@ -18,12 +18,14 @@
   export let columns: TableColumn[];
   export let sortCriteria: DataTableSortCriteria[] = [];
   export let aggregations: AggregationConfig = {};
+  export let groupByField: string | undefined = undefined;
   export let readonly = false;
 
   const dispatch = createEventDispatcher<{
     sort: { field: string; order: SortOrder | null };
     hide: string;
     calculate: { field: string; fn: ColumnAggregation | null };
+    group: { field: string; group: boolean };
     resizeLive: { field: string; widthRem: number };
     resizeCommit: { field: string; widthRem: number };
     addProperty: void;
@@ -42,10 +44,12 @@
         isPrimary: col.isPrimary,
         currentSort: sortOf(col.field.name),
         currentCalc: aggregations[col.field.name],
+        groupedBy: groupByField === col.field.name,
         t,
         onSort: (order) => dispatch("sort", { field: col.field.name, order }),
         onHide: () => dispatch("hide", col.field.name),
         onCalculate: (fn) => dispatch("calculate", { field: col.field.name, fn }),
+        onGroup: (group) => dispatch("group", { field: col.field.name, group }),
       }),
       e
     );

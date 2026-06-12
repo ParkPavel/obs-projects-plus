@@ -14,6 +14,7 @@ import {
 } from "src/lib/dataframe/dataframe";
 import type { DataTableConfig, DataTableSortCriteria } from "../../types";
 import { getOptionColor, type ExtendedFieldTypeConfig } from "../../fieldTypes";
+import { groupRecords } from "./groupRows";
 
 // ── Columns ──────────────────────────────────────────────────
 
@@ -153,6 +154,32 @@ export function applySearch(
   );
 }
 
+// ── Grouping render model (F2.5, canon §1) ───────────────────
+
+export type RenderRow =
+  | { readonly kind: "record"; readonly record: DataRecord }
+  | { readonly kind: "group"; readonly key: string; readonly count: number; readonly collapsed: boolean };
+
+/**
+ * Flatten records into the body render list. With groupBy the canonical
+ * `groupRecords` engine partitions; collapsed sections emit only a header.
+ */
+export function buildRenderRows(
+  records: readonly DataRecord[],
+  config: DataTableConfig | undefined
+): RenderRow[] {
+  const groupBy = config?.groupBy;
+  if (!groupBy?.field) return records.map((record) => ({ kind: "record", record }));
+  const collapsed = new Set(groupBy.collapsedGroups ?? []);
+  const out: RenderRow[] = [];
+  for (const group of groupRecords([...records], groupBy)) {
+    const isCollapsed = collapsed.has(group.key);
+    out.push({ kind: "group", key: group.key, count: group.records.length, collapsed: isCollapsed });
+    if (!isCollapsed) for (const record of group.records) out.push({ kind: "record", record });
+  }
+  return out;
+}
+
 // ── Cell display (canon §2) ──────────────────────────────────
 
 export const MAX_VISIBLE_PILLS = 3;
@@ -171,7 +198,8 @@ export type CellDisplay =
 
 const WIKILINK = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
-function wikilinkLabels(raw: string): string[] {
+/** Exported for RelationPickerPopover (#081) — parse current selection. */
+export function wikilinkLabels(raw: string): string[] {
   const labels: string[] = [];
   for (const m of raw.matchAll(WIKILINK)) labels.push((m[2] ?? m[1] ?? "").trim());
   return labels.length > 0 ? labels : [raw];

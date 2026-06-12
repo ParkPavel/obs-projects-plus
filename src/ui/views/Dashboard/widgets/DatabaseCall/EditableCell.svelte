@@ -14,8 +14,11 @@
     type DataValue,
     type Optional,
   } from "src/lib/dataframe/dataframe";
+  import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay } from "./tableCanon";
   import CellChoiceDropdown from "./CellChoiceDropdown.svelte";
+  import RelationPickerPopover from "./RelationPickerPopover.svelte";
 
   export let field: DataField;
   export let value: Optional<DataValue>;
@@ -23,6 +26,9 @@
   export let editing: boolean;
   /** Unique existing values for Select/Status dropdowns (parent-computed). */
   export let options: string[] = [];
+  /** #081 — the Relation picker resolves the target project's records. */
+  export let api: ViewApi;
+  export let frame: DataFrame;
 
   const dispatch = createEventDispatcher<{
     startEdit: void;
@@ -32,7 +38,6 @@
 
   $: cell = cellDisplay(field, value);
   $: editable = !readonly && !field.derived &&
-    field.type !== DataFieldType.Relation &&
     field.type !== DataFieldType.Formula &&
     field.type !== DataFieldType.Rollup;
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
@@ -96,6 +101,11 @@
   {:else if editing && field.type === DataFieldType.Number}
     <input bind:this={inputEl} class="ppp-t2-editor ppp-t2-editor--number" type="text" inputmode="decimal"
       bind:value={draft} on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
+  {:else if editing && field.type === DataFieldType.Relation}
+    <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
+    <RelationPickerPopover {field} {value} {api} {frame}
+      on:commit={(e) => { committed = true; dispatch("commit", e.detail); }}
+      on:cancel={() => { committed = true; dispatch("cancel"); }} />
   {:else if editing && isChoice}
     <CellChoiceDropdown bind:draft {options}
       on:commit={(e) => commitDraft(e.detail)}

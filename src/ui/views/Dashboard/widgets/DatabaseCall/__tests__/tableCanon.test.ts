@@ -10,6 +10,7 @@ import {
   applySort,
   applySearch,
   cellDisplay,
+  buildRenderRows,
   MAX_VISIBLE_PILLS,
 } from "../tableCanon";
 
@@ -158,5 +159,33 @@ describe("cellDisplay (canon §2)", () => {
 
   it("keeps plain text without wikilinks as text", () => {
     expect(cellDisplay(field("note", DataFieldType.String), "plain")).toEqual({ kind: "text", text: "plain" });
+  });
+});
+
+describe("buildRenderRows (F2.5 grouping)", () => {
+  const records = [
+    record("a", { status: "doing" }),
+    record("b", { status: "done" }),
+    record("c", { status: "doing" }),
+  ];
+
+  it("passes records through without groupBy", () => {
+    expect(buildRenderRows(records, undefined).map((r) => r.kind)).toEqual(["record", "record", "record"]);
+  });
+
+  it("emits group headers with counts and nests records under them", () => {
+    const rows = buildRenderRows(records, {
+      groupBy: { field: "status", sortOrder: "asc", hiddenGroups: [], collapsedGroups: [], showEmptyGroups: false },
+    } as never);
+    expect(rows[0]).toMatchObject({ kind: "group", key: "doing", count: 2, collapsed: false });
+    expect(rows.filter((r) => r.kind === "record")).toHaveLength(3);
+  });
+
+  it("collapsed groups contribute only their header", () => {
+    const rows = buildRenderRows(records, {
+      groupBy: { field: "status", sortOrder: "asc", hiddenGroups: [], collapsedGroups: ["doing"], showEmptyGroups: false },
+    } as never);
+    expect(rows.filter((r) => r.kind === "record")).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ kind: "group", key: "doing", collapsed: true });
   });
 });

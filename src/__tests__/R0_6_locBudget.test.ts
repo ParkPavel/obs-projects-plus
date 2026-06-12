@@ -29,8 +29,10 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/DatabaseCall/CellChoiceDropdown.svelte", maxLines: 130 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte", maxLines: 100 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 120 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts", maxLines: 180 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts", maxLines: 230 },
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte", maxLines: 100 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerPopover.svelte", maxLines: 240 },
 ];
 
 describe("R0.6 component LOC budgets (#067)", () => {
