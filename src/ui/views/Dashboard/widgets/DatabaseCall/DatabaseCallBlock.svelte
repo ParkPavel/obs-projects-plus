@@ -96,11 +96,26 @@
     });
   }
 
-  function handleTabAdd() {
+  // #088: tabs are created WITH a type and named by it («Board», «Table 2»).
+  const VIEW_TYPE_LABELS: Record<string, { key: string; def: string }> = {
+    table: { key: "views.dashboard.database-call.view-type.table", def: "Table" },
+    board: { key: "views.dashboard.database-call.view-type.board", def: "Board" },
+    calendar: { key: "views.dashboard.database-call.view-type.calendar", def: "Calendar" },
+    gallery: { key: "views.dashboard.database-call.view-type.gallery", def: "Gallery" },
+  };
+
+  function handleTabAdd(e: CustomEvent<ViewTab["viewType"]>) {
+    addTab(typeof e.detail === "string" ? e.detail : "table");
+  }
+
+  function addTab(viewType: ViewTab["viewType"]) {
+    const meta = VIEW_TYPE_LABELS[viewType] ?? VIEW_TYPE_LABELS["table"]!;
+    const base = $i18n.t(meta.key, { defaultValue: meta.def });
+    const sameType = tabs.filter((t) => t.viewType === viewType).length;
     const newTab: ViewTab = {
       id: `tab-${Date.now()}`,
-      label: "New View",
-      viewType: "table",
+      label: sameType > 0 ? `${base} ${sameType + 1}` : base,
+      viewType,
       config: {},
     };
     dispatch("configChange", {
@@ -235,7 +250,7 @@
     >
       <svelte:fragment slot="actions">
         {#if !readonly}
-          <button on:click={handleTabAdd}>
+          <button on:click={() => addTab("table")}>
             {$i18n.t("views.dashboard.database-call.add-first", {
               defaultValue: "Add first view"
             })}
@@ -247,6 +262,7 @@
     <ViewTabBar
       {tabs}
       {activeTabId}
+      {readonly}
       on:tabSwitch={handleTabSwitch}
       on:tabAdd={handleTabAdd}
       on:tabRemove={handleTabRemove}

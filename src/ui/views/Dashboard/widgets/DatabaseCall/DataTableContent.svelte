@@ -21,7 +21,9 @@
   import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
   import { updateRecordValues } from "src/lib/datasources/helpers";
   import { openContextMenu } from "src/lib/contextMenu";
+  import { emitCommand } from "src/lib/stores/commandBus";
   import { buildRowMenuEntries, createNamedRecord } from "./tableRowOps";
+  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch } from "./tableHeaderOps";
   import {
     buildColumns,
     gridTemplate,
@@ -56,7 +58,11 @@
   let searchQuery = "";
 
   $: columns = buildColumns(fields, config);
-  $: template = gridTemplate(columns);
+  // F2.4: live resize preview overrides one column width until commit.
+  let liveWidth: { field: string; rem: number } | null = null;
+  $: template = gridTemplate(
+    columns.map((c) => (liveWidth && c.field.name === liveWidth.field ? { ...c, widthRem: liveWidth.rem } : c))
+  );
   $: sortCriteria = activeSortCriteria(config);
   $: sorted = applySort(frame.records, config);
   $: visibleRecords = applySearch(sorted, searchQuery);
@@ -129,6 +135,12 @@
     void _f; void _a;
     dispatch("configChange", { ...rest, sortCriteria: next } as DataTableConfig);
   }
+
+  // ── F2.4: column header menu actions (patches from tableHeaderOps) ──
+  function handleResizeCommit(e: CustomEvent<{ field: string; widthRem: number }>) {
+    liveWidth = null;
+    dispatch("configChange", applyWidthPatch(config, e.detail.field, e.detail.widthRem));
+  }
 </script>
 
 <div class="ppp-dt-content" style:--ppp-dt-columns={template} style:--ppp-t2-row-height={`${rowHeightRem}rem`}>
@@ -143,7 +155,18 @@
        scroll moves them as a unit; header/footer stay sticky vertically. -->
   <div class="ppp-t2-scroll" bind:this={bodyEl} on:scroll={onScroll} role="rowgroup">
     <div class="ppp-t2-table">
-      <TableHeader {columns} {sortCriteria} />
+      <TableHeader
+        {columns}
+        {sortCriteria}
+        aggregations={config?.aggregations ?? {}}
+        {readonly}
+        on:sort={(e) => dispatch("configChange", applySortPatch(config, e.detail.field, e.detail.order))}
+        on:hide={(e) => dispatch("configChange", applyHidePatch(config, e.detail))}
+        on:calculate={(e) => dispatch("configChange", applyCalculatePatch(config, e.detail.field, e.detail.fn))}
+        on:resizeLive={(e) => (liveWidth = { field: e.detail.field, rem: e.detail.widthRem })}
+        on:resizeCommit={handleResizeCommit}
+        on:addProperty={() => emitCommand("add-field")}
+      />
       {#if start > 0}<div style:height={`${start * rowPx}px`} aria-hidden="true" />{/if}
       {#each windowed as record (record.id)}
         <TableRow
