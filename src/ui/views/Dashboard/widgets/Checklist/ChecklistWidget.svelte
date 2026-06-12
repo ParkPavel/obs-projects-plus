@@ -9,7 +9,9 @@
   export let api: ViewApi;
   export let readonly: boolean;
   export let fields: DataField[] = [];
-  export let pipelineSteps: number = 0;
+  // Kept in the registry props contract; the meta line that displayed it
+  // was debug output removed in R4 (#097).
+  export const pipelineSteps: number = 0;
 
   $: fieldName = String(config["field"] ?? "");
   $: labelField = String(config["labelField"] ?? "name");
@@ -110,13 +112,9 @@
 </script>
 
 <div class="ppp-checklist-widget">
-  <div class="ppp-checklist-rules">
-    {$i18n.t("views.dashboard.checklist.rules", { defaultValue: "Source" })}: {source.records.length}
-    · {$i18n.t("views.dashboard.checklist.rules-field", { defaultValue: "check" })}={fieldName || "—"}
-    · {$i18n.t("views.dashboard.checklist.rules-mode", { defaultValue: "mode" })}={showMode}
-    · {$i18n.t("views.dashboard.checklist.rules-sort", { defaultValue: "sort" })}={sortField || "name"} {sortOrder}
-    · {$i18n.t("views.dashboard.checklist.rules-pipeline", { defaultValue: "pipeline steps" })}={pipelineSteps}
-  </div>
+  <!-- R4 (#097): the engineering meta line («Source: 28 · check=— · mode=all…»)
+       was debug output shipped to users — removed. State speaks through the
+       list itself and the human empty-states below. -->
   {#if !fieldName}
     <div class="ppp-widget-empty">{$i18n.t("views.dashboard.checklist.select-field")}</div>
   {:else if items.length === 0}
@@ -154,17 +152,6 @@
     gap: 0.125rem;
     max-height: 20rem;
     overflow-y: auto;
-  }
-
-  .ppp-checklist-rules {
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-s, 0.25rem);
-    background: var(--background-secondary);
-    color: var(--text-faint);
-    font-size: var(--font-ui-smaller);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .ppp-checklist-footer {
