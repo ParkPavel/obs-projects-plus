@@ -45,6 +45,23 @@ function primaryFieldName(fields: readonly DataField[]): string {
   );
 }
 
+/**
+ * Housekeeping fields hidden unless the user explicitly sets hide:false —
+ * `path` is plugin bookkeeping, not user data (UT-R2 #084).
+ */
+const DEFAULT_HIDDEN = new Set(["path"]);
+
+function isVisible(
+  name: string,
+  primary: string,
+  cfg: { hide?: boolean } | undefined
+): boolean {
+  if (name === primary) return true;
+  if (cfg?.hide === true) return false;
+  if (DEFAULT_HIDDEN.has(name)) return cfg?.hide === false;
+  return true;
+}
+
 export function buildColumns(
   fields: readonly DataField[],
   config: DataTableConfig | undefined
@@ -60,7 +77,7 @@ export function buildColumns(
   ];
 
   return ordered
-    .filter((f) => f.name === primary || fieldCfg[f.name]?.hide !== true)
+    .filter((f) => isVisible(f.name, primary, fieldCfg[f.name]))
     .map((f) => {
       const cfg = fieldCfg[f.name];
       // legacy px width migrates lazily on read (types.ts deprecation note)
@@ -72,9 +89,14 @@ export function buildColumns(
     .sort((a, b) => (a.isPrimary === b.isPrimary ? 0 : a.isPrimary ? -1 : 1));
 }
 
-/** Shared grid-template-columns for header/body/footer (one grid context). */
+/**
+ * Shared grid-template-columns for header/body/footer (one grid context).
+ * Tracks are FIXED widths: the table overflows horizontally as one unit
+ * inside the shared scroll container (UT-R2 #083 — flexible tracks made
+ * header and body disagree about column positions).
+ */
 export function gridTemplate(columns: readonly TableColumn[]): string {
-  return columns.map((c) => `minmax(4rem, ${c.widthRem}rem)`).join(" ");
+  return columns.map((c) => `${c.widthRem}rem`).join(" ");
 }
 
 // ── Sorting ──────────────────────────────────────────────────
@@ -195,7 +217,15 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
       return typeof value === "number"
         ? { kind: "number", text: value.toLocaleString() }
         : { kind: "text", text: String(value) };
-    default:
-      return { kind: "text", text: String(value) };
+    default: {
+      // UT-R2 #085: wikilinks in plain String fields read as link chips,
+      // not raw "[[...]]" markup — the cell honors what the user wrote.
+      const text = String(value);
+      if (WIKILINK.test(text)) {
+        WIKILINK.lastIndex = 0;
+        return toPills(wikilinkLabels(text), () => null, false);
+      }
+      return { kind: "text", text };
+    }
   }
 }

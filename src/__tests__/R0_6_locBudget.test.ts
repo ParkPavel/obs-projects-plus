@@ -27,6 +27,7 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCanon.ts", maxLines: 260 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte", maxLines: 250 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/CellChoiceDropdown.svelte", maxLines: 130 },
+  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte", maxLines: 100 },
   { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 120 },
 ];
 

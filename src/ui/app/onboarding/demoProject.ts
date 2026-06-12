@@ -272,7 +272,9 @@ function overviewWidgets(): WidgetDefinition[] {
           // generators must emit the current schema. count_values on a segment-specific
           // field (industry → clients only, status → projects only) keeps the labels honest.
           { id: "k1", label: "Клиентов",           field: "industry",  aggregation: "count_values" },
-          { id: "k2", label: "Проектов",           field: "status",    aggregation: "count_values" },
+          // UT-R2 #087: `status` exists on tasks too (showed 17) — `progress`
+          // is project-only, so the card counts what its label promises.
+          { id: "k2", label: "Проектов",           field: "progress",  aggregation: "count_values" },
           { id: "k3", label: "Открытых задач",     field: "completed", aggregation: "count_unchecked" },
           { id: "k4", label: "MRR (sum)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
         ],

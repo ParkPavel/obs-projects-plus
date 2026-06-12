@@ -50,9 +50,18 @@ describe("buildColumns (canon §0/§1)", () => {
     expect(cols.find((c) => c.field.name === "mrr")?.widthRem).toBe(10);
   });
 
-  it("produces one shared grid template", () => {
+  it("produces one shared grid template with FIXED tracks (#083)", () => {
     const cols = buildColumns(FIELDS, undefined);
-    expect(gridTemplate(cols).split(" ").filter((s) => s.startsWith("minmax"))).toHaveLength(3);
+    const tracks = gridTemplate(cols).split(" ");
+    expect(tracks).toHaveLength(3);
+    for (const track of tracks) expect(track).toMatch(/^[\d.]+rem$/);
+  });
+
+  it("hides housekeeping fields (path) by default, unhides on explicit hide:false (#084)", () => {
+    const withPath = [...FIELDS, field("path", DataFieldType.String)];
+    expect(buildColumns(withPath, undefined).map((c) => c.field.name)).not.toContain("path");
+    const cols = buildColumns(withPath, { fieldConfig: { path: { hide: false } } } as never);
+    expect(cols.map((c) => c.field.name)).toContain("path");
   });
 });
 
@@ -139,5 +148,15 @@ describe("cellDisplay (canon §2)", () => {
   it("formats Date instances as ISO dates", () => {
     const cell = cellDisplay(field("d", DataFieldType.Date), new Date("2026-06-11T10:00:00Z"));
     expect(cell).toEqual({ kind: "text", text: "2026-06-11" });
+  });
+
+  it("renders wikilinks inside plain String fields as link chips (#085)", () => {
+    const cell = cellDisplay(field("project", DataFieldType.String), "[[Onboarding Flow — Acme Studio]]");
+    expect(cell.kind).toBe("pills");
+    expect((cell as { pills: { label: string }[] }).pills[0]?.label).toBe("Onboarding Flow — Acme Studio");
+  });
+
+  it("keeps plain text without wikilinks as text", () => {
+    expect(cellDisplay(field("note", DataFieldType.String), "plain")).toEqual({ kind: "text", text: "plain" });
   });
 });

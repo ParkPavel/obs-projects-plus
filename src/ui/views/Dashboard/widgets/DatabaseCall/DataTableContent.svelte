@@ -15,7 +15,7 @@
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, FieldPreset } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
-  import { createEventDispatcher, tick } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
@@ -32,6 +32,7 @@
   import TableControlBar from "./TableControlBar.svelte";
   import TableHeader from "./TableHeader.svelte";
   import TableRow from "./TableRow.svelte";
+  import TableNewRow from "./TableNewRow.svelte";
   import TableFooter from "./TableFooter.svelte";
 
   export let frame: DataFrame;
@@ -116,25 +117,6 @@
     openContextMenu(entries, e.detail.event);
   }
 
-  // «+ New row» — inline name input at the body end (canon §1/§3).
-  let newRowActive = false;
-  let newRowName = "";
-  let newRowEl: HTMLInputElement | null = null;
-
-  async function openNewRow() {
-    newRowActive = true;
-    await tick();
-    newRowEl?.focus();
-  }
-
-  function commitNewRow(keepOpen: boolean) {
-    const name = newRowName.trim();
-    if (name && project) createNamedRecord(name, project, fields, api);
-    newRowName = "";
-    newRowActive = keepOpen && !!name;
-    if (newRowActive) void tick().then(() => newRowEl?.focus());
-  }
-
   // ── Aggregation footer ───────────────────────────────────────
   $: aggregations = config?.showAggregationRow && config.aggregations
     ? computeAggregations({ fields, records: visibleRecords } as DataFrame, config.aggregations)
@@ -157,50 +139,36 @@
     on:search={(e) => (searchQuery = e.detail)}
     on:removeSort={handleRemoveSort}
   />
-  <TableHeader {columns} {sortCriteria} />
-  <div class="ppp-t2-body" bind:this={bodyEl} on:scroll={onScroll} role="rowgroup">
-    {#if start > 0}<div style:height={`${start * rowPx}px`} aria-hidden="true" />{/if}
-    {#each windowed as record (record.id)}
-      <TableRow
-        {columns}
-        {record}
-        {readonly}
-        editingField={editingCell?.recordId === record.id ? editingCell.field : null}
-        {optionsByField}
-        on:openRecord={handleOpenRecord}
-        on:rowMenu={handleRowMenu}
-        on:startEdit={(e) => (editingCell = e.detail)}
-        on:commitEdit={handleCommitEdit}
-        on:cancelEdit={() => (editingCell = null)}
-      />
-    {/each}
-    {#if end < visibleRecords.length}<div style:height={`${(visibleRecords.length - end) * rowPx}px`} aria-hidden="true" />{/if}
-    {#if !readonly && project}
-      <div class="ppp-t2-newrow">
-        {#if newRowActive}
-          <input
-            bind:this={newRowEl}
-            class="ppp-t2-newrow-input"
-            type="text"
-            bind:value={newRowName}
-            placeholder={$i18n.t("views.dashboard.table-v2.new-name", { defaultValue: "Note name…" })}
-            on:keydown={(e) => {
-              if (e.key === "Enter") commitNewRow(true);
-              else if (e.key === "Escape") { newRowName = ""; newRowActive = false; }
-            }}
-            on:blur={() => commitNewRow(false)}
-          />
-        {:else}
-          <button class="ppp-t2-newrow-btn" on:click={openNewRow}>
-            + {$i18n.t("views.dashboard.table-v2.new", { defaultValue: "New" })}
-          </button>
-        {/if}
-      </div>
-    {/if}
+  <!-- UT-R2 #083: ONE scroll container for header+rows+footer — horizontal
+       scroll moves them as a unit; header/footer stay sticky vertically. -->
+  <div class="ppp-t2-scroll" bind:this={bodyEl} on:scroll={onScroll} role="rowgroup">
+    <div class="ppp-t2-table">
+      <TableHeader {columns} {sortCriteria} />
+      {#if start > 0}<div style:height={`${start * rowPx}px`} aria-hidden="true" />{/if}
+      {#each windowed as record (record.id)}
+        <TableRow
+          {columns}
+          {record}
+          {readonly}
+          editingField={editingCell?.recordId === record.id ? editingCell.field : null}
+          {optionsByField}
+          on:openRecord={handleOpenRecord}
+          on:rowMenu={handleRowMenu}
+          on:startEdit={(e) => (editingCell = e.detail)}
+          on:commitEdit={handleCommitEdit}
+          on:cancelEdit={() => (editingCell = null)}
+        />
+      {/each}
+      {#if end < visibleRecords.length}<div style:height={`${(visibleRecords.length - end) * rowPx}px`} aria-hidden="true" />{/if}
+      {#if !readonly && project}
+        <TableNewRow on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
+      {/if}
+      {#if showFooter}
+        <span class="ppp-t2-footer-spacer" />
+        <TableFooter {columns} {aggregations} />
+      {/if}
+    </div>
   </div>
-  {#if showFooter}
-    <TableFooter {columns} {aggregations} />
-  {/if}
 </div>
 
 <style>
@@ -214,35 +182,21 @@
     container-name: db-table;
   }
 
-  .ppp-t2-body {
+  .ppp-t2-scroll {
     flex: 1;
     overflow: auto;
   }
 
-  .ppp-t2-newrow {
+  /* Width = widest grid row (fixed tracks), so sticky header/footer and
+     rows share one horizontal coordinate system. */
+  .ppp-t2-table {
     display: flex;
-    align-items: center;
-    min-height: 2.25rem;
-    padding: 0 0.5rem;
+    flex-direction: column;
+    min-width: max-content;
+    min-height: 100%;
   }
 
-  .ppp-t2-newrow-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-faint);
-    font-size: var(--font-ui-small);
-    cursor: pointer;
-    padding: 0.25rem 0;
-  }
-
-  .ppp-t2-newrow-btn:hover {
-    color: var(--text-muted);
-  }
-
-  .ppp-t2-newrow-input {
-    width: 100%;
-    max-width: 20rem;
-    height: 1.75rem;
-    font-size: var(--font-ui-small);
+  .ppp-t2-footer-spacer {
+    flex: 1;
   }
 </style>
