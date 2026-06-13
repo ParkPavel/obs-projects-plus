@@ -168,6 +168,14 @@
     else if (expandedStep !== null && expandedStep > index) expandedStep--;
   }
 
+  // #099 — non-destructive toggle: disabled steps stay in the pipeline but are
+  // skipped by the executor, so data flows again through a 0-row step.
+  function toggleDisableStep(index: number) {
+    const step = steps[index];
+    if (!step) return;
+    updateStep(index, { ...step, disabled: !step.disabled });
+  }
+
   function moveStep(index: number, direction: -1 | 1) {
     const target = index + direction;
     if (target < 0 || target >= steps.length) return;
@@ -488,7 +496,11 @@
     {/if}
 
     {#each steps as step, i (i)}
-      <div class="ppp-pipeline-step" class:ppp-pipeline-step--expanded={expandedStep === i}>
+      <div
+        class="ppp-pipeline-step"
+        class:ppp-pipeline-step--expanded={expandedStep === i}
+        class:ppp-pipeline-step--disabled={step.disabled}
+      >
         <div
           class="ppp-step-summary"
           role="button"
@@ -520,6 +532,14 @@
               title={$i18n.t("views.dashboard.pipeline.move-down")}
               on:click|stopPropagation={() => moveStep(i, 1)}
             >v</button>
+            <button
+              class="ppp-step-btn ppp-step-btn--toggle"
+              class:ppp-step-btn--emphasis={!step.disabled && stepCounts[i] && stepCounts[i].rowsOut === 0 && stepCounts[i].rowsIn > 0}
+              title={step.disabled
+                ? $i18n.t("views.dashboard.pipeline.enable-step", { defaultValue: "Enable step" })
+                : $i18n.t("views.dashboard.pipeline.disable-step", { defaultValue: "Disable step" })}
+              on:click|stopPropagation={() => toggleDisableStep(i)}
+            ><Icon name={step.disabled ? "eye-off" : "eye"} size="sm" /></button>
             <button
               class="ppp-step-btn ppp-step-btn--danger"
               title={$i18n.t("views.dashboard.pipeline.remove")}
@@ -1010,6 +1030,17 @@
     border-color: var(--interactive-accent);
   }
 
+  /* #099 — disabled step: present but skipped by the executor. */
+  .ppp-pipeline-step--disabled {
+    opacity: 0.55;
+    border-style: dashed;
+  }
+
+  .ppp-pipeline-step--disabled .ppp-step-label {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+
   .ppp-step-summary {
     display: flex;
     align-items: center;
@@ -1115,6 +1146,19 @@
 
   .ppp-step-btn--danger:hover:not(:disabled) {
     color: var(--text-error);
+  }
+
+  .ppp-step-btn--toggle:hover:not(:disabled) {
+    color: var(--text-accent);
+  }
+
+  /* Draw attention to disabling when this step zeroes out the data flow. */
+  .ppp-step-btn--emphasis {
+    color: var(--text-error);
+  }
+  .ppp-step-btn--emphasis:hover:not(:disabled) {
+    color: var(--text-error);
+    background: var(--background-modifier-error-hover, rgba(255, 59, 48, 0.1));
   }
 
   /* -- Filter rows -- */

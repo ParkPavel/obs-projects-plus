@@ -990,7 +990,9 @@
                     "unknown": "Unknown",
                     "unnest-suggestion-title": "Array fields detected",
                     "unnest-suggestion-body": "Fields {{fields}} contain arrays. Use Unnest to split each item into its own row.",
-                    "unnest-suggestion-button": "Unnest \"{{field}}\""
+                    "unnest-suggestion-button": "Unnest \"{{field}}\"",
+                    "disable-step": "Disable step",
+                    "enable-step": "Enable step"
                 },
                 "group": {
                     "empty": "(empty)"

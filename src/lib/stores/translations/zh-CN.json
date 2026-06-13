@@ -875,7 +875,9 @@
                     "unknown": "未知",
                     "unnest-suggestion-title": "检测到数组字段",
                     "unnest-suggestion-body": "字段 {{fields}} 包含数组。使用 Unnest 将每个元素拆分为独立的行。",
-                    "unnest-suggestion-button": "展开 \"{{field}}\""
+                    "unnest-suggestion-button": "展开 \"{{field}}\"",
+                    "disable-step": "禁用步骤",
+                    "enable-step": "启用步骤"
                 },
                 "group": {
                     "empty": "（空）"

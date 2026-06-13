@@ -1232,7 +1232,9 @@
                     "unknown": "Неизвестно",
                     "unnest-suggestion-title": "Обнаружены поля-массивы",
                     "unnest-suggestion-body": "Поля {{fields}} содержат массивы. Используйте Unnest, чтобы развернуть каждый элемент в отдельную строку.",
-                    "unnest-suggestion-button": "Развернуть «{{field}}»"
+                    "unnest-suggestion-button": "Развернуть «{{field}}»",
+                    "disable-step": "Отключить шаг",
+                    "enable-step": "Включить шаг"
                 },
                 "group": {
                     "empty": "(пусто)"

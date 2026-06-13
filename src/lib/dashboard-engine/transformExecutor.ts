@@ -72,13 +72,18 @@ export function executeTransform(
   const startTime = performance.now();
   const warnings: string[] = [];
 
+  // #099 — disabled steps are skipped non-destructively (they remain in the
+  // pipeline so the user can re-enable). Filter once; validation and execution
+  // both operate on the active steps so counts/meta stay consistent.
+  const activeSteps = pipeline.steps.filter((s) => !s.disabled);
+
   // Validate step order
-  warnings.push(...validatePipelineOrder(pipeline.steps));
+  warnings.push(...validatePipelineOrder(activeSteps));
 
   let current = source;
   let stepsExecuted = 0;
 
-  for (const step of pipeline.steps) {
+  for (const step of activeSteps) {
     // Failsafe timeout
     if (performance.now() - startTime > PIPELINE_TIMEOUT_MS) {
       warnings.push(

@@ -20,7 +20,16 @@ export type TransformStep =
 
 // ── Steps ────────────────────────────────────────────────────
 
-export interface UnnestStep {
+/**
+ * Shared mixin for every transform step. `disabled` is additive and optional:
+ * absent means enabled. Disabled steps are skipped by the executor
+ * (non-destructive — they stay in the pipeline so the user can re-enable).
+ */
+export interface TransformStepBase {
+  readonly disabled?: boolean;
+}
+
+export interface UnnestStep extends TransformStepBase {
   readonly type: "unnest";
   /** Field containing an array of objects to expand into rows */
   readonly field: string;
@@ -32,7 +41,7 @@ export interface UnnestStep {
   readonly keepOriginal?: boolean;
 }
 
-export interface UnpivotStep {
+export interface UnpivotStep extends TransformStepBase {
   readonly type: "unpivot";
   readonly fieldGroups: readonly FieldGroup[];
   readonly keepFields: readonly string[];
@@ -43,7 +52,7 @@ export interface FieldGroup {
   readonly outputName: string;
 }
 
-export interface ComputeStep {
+export interface ComputeStep extends TransformStepBase {
   readonly type: "compute";
   readonly columns: readonly ComputedColumn[];
 }
@@ -53,12 +62,12 @@ export interface ComputedColumn {
   readonly expression: string;
 }
 
-export interface FilterStep {
+export interface FilterStep extends TransformStepBase {
   readonly type: "filter";
   readonly conditions: FilterDefinition;
 }
 
-export interface GroupByStep {
+export interface GroupByStep extends TransformStepBase {
   readonly type: "group-by";
   readonly fields: readonly string[];
   readonly dateGrouping?: DateGrouping;
@@ -70,7 +79,7 @@ export interface DateGrouping {
   readonly outputField?: string;
 }
 
-export interface AggregateStep {
+export interface AggregateStep extends TransformStepBase {
   readonly type: "aggregate";
   readonly columns: readonly AggregateColumn[];
 }
@@ -81,7 +90,7 @@ export interface AggregateColumn {
   readonly function: AggregationFunction;
 }
 
-export interface PivotStep {
+export interface PivotStep extends TransformStepBase {
   readonly type: "pivot";
   readonly categoryField: string;
   readonly valueField: string;
@@ -104,7 +113,7 @@ export interface PivotStep {
  * merge. Non-numeric columns take the first match. When omitted, the join
  * degenerates to a cartesian expansion (one output row per match pair).
  */
-export interface JoinStep {
+export interface JoinStep extends TransformStepBase {
   readonly type: "join";
   /** Opaque identifier of the right-hand DataSource; resolved via TransformContext. */
   readonly rightSourceId: string;

@@ -875,7 +875,9 @@
                     "unknown": "Невідомо",
                     "unnest-suggestion-title": "Виявлено поля-масиви",
                     "unnest-suggestion-body": "Поля {{fields}} містять масиви. Використайте Unnest, щоб розгорнути кожен елемент в окремий рядок.",
-                    "unnest-suggestion-button": "Розгорнути «{{field}}»"
+                    "unnest-suggestion-button": "Розгорнути «{{field}}»",
+                    "disable-step": "Вимкнути крок",
+                    "enable-step": "Увімкнути крок"
                 },
                 "group": {
                     "empty": "(порожньо)"

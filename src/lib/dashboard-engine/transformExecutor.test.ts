@@ -883,6 +883,44 @@ describe("transformExecutor — unnest", () => {
     expect(result.data.records[0]!.values["id"]).toBe("a");
   });
 
+  test("disabled step is skipped → output equals pipeline without it", () => {
+    const frame = makeNestedFrame();
+    const withDisabled = executeTransform(frame, {
+      steps: [{ type: "unnest", field: "exercises", disabled: true }],
+    });
+    const withoutStep = executeTransform(frame, { steps: [] });
+
+    expect(withDisabled.data.records).toHaveLength(withoutStep.data.records.length);
+    expect(withDisabled.data.records).toHaveLength(frame.records.length);
+    expect(withDisabled.data.fields.map((f) => f.name)).toContain("exercises");
+    expect(withDisabled.meta.stepsExecuted).toBe(0);
+  });
+
+  test("enabled equivalent step still transforms", () => {
+    const frame = makeNestedFrame();
+    const enabled = executeTransform(frame, {
+      steps: [{ type: "unnest", field: "exercises" }],
+    });
+    expect(enabled.data.records).toHaveLength(3);
+    expect(enabled.meta.stepsExecuted).toBe(1);
+  });
+
+  test("disabled step does not block surrounding steps", () => {
+    const frame = makeNestedFrame();
+    const result = executeTransform(frame, {
+      steps: [
+        { type: "unnest", field: "exercises" },
+        { type: "filter", disabled: true, conditions: { conjunction: "and", conditions: [{ field: "name", operator: "is", value: "__none__", enabled: true }] } },
+        { type: "compute", columns: [{ name: "volume", expression: "sets * reps * weight" }] },
+      ],
+    });
+
+    // Filter would drop all rows if active; disabled → unnest + compute flow through.
+    expect(result.data.records).toHaveLength(3);
+    expect(result.data.records[0]!.values["volume"]).toBe(2400);
+    expect(result.meta.stepsExecuted).toBe(2);
+  });
+
   test("unnest + compute pipeline", () => {
     const frame = makeNestedFrame();
     const result = executeTransform(frame, {
