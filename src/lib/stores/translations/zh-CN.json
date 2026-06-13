@@ -834,6 +834,12 @@
                     "debug-dismiss": "关闭",
                     "runtime-error": "运行时错误"
                 },
+                "block-filter": {
+                    "aria": "区块筛选",
+                    "add": "筛选",
+                    "remove": "移除条件",
+                    "scope": "此区块 — 其所有视图"
+                },
                 "pipeline": {
                     "title": "数据管道",
                     "steps": "个步骤",
@@ -842,8 +848,6 @@
                     "move-down": "下移",
                     "remove": "删除",
                     "add-step": "添加步骤：",
-                    "cancel": "取消",
-                    "save": "保存管道",
                     "filter": "筛选",
                     "group-by": "分组",
                     "aggregate": "汇总",
@@ -865,13 +869,10 @@
                     "columns": "列",
                     "groups": "组",
                     "unset": "（未设置）",
+                    "live": "更改即时生效",
+                    "done": "完成",
+                    "flow-tip": "此步骤的输入记录数 → 输出记录数",
                     "unknown": "未知",
-                    "unsaved-changes": "未保存的更改",
-                    "discard-confirm": "您有未保存的管道更改。放弃？",
-                    "keep-editing": "继续编辑",
-                    "discard": "放弃",
-                    "how-to": "使用方法",
-                    "how-to-steps": "1) 添加步骤  2) 选择字段（可按名称搜索）  3) 保存管道",
                     "unnest-suggestion-title": "检测到数组字段",
                     "unnest-suggestion-body": "字段 {{fields}} 包含数组。使用 Unnest 将每个元素拆分为独立的行。",
                     "unnest-suggestion-button": "展开 \"{{field}}\""

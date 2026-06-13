@@ -855,6 +855,12 @@
                     "overlay-placeholder": "optional",
                     "done": "Done"
                 },
+                "block-filter": {
+                    "aria": "Block filter",
+                    "add": "Filter",
+                    "remove": "Remove condition",
+                    "scope": "This block — all its views"
+                },
                 "smart-suggest": {
                     "numeric-message": "Numeric field \"{{field}}\" detected — want a Stats block with sum and average?",
                     "numeric-action": "Add Stats",
@@ -947,8 +953,6 @@
                     "move-down": "Move down",
                     "remove": "Remove",
                     "add-step": "Add step:",
-                    "cancel": "Cancel",
-                    "save": "Save Pipeline",
                     "filter": "Filter",
                     "group-by": "Group By",
                     "aggregate": "Aggregate",
@@ -972,6 +976,9 @@
                     "unset": "(unset)",
                     "unnest": "Unnest",
                     "select-field": "Select field…",
+                    "live": "Changes apply instantly",
+                    "done": "Done",
+                    "flow-tip": "Records in → out after this step",
                     "filter-desc": "Keep only matching records — e.g. status = active",
                     "group-by-desc": "Group rows by a field — e.g. one group per client",
                     "aggregate-desc": "Collapse groups into numbers — sum, average, count",
@@ -981,12 +988,6 @@
                     "unnest-desc": "Split a list into rows — one row per participant",
                     "join-desc": "Pull in data from another project by a shared key",
                     "unknown": "Unknown",
-                    "unsaved-changes": "Unsaved changes",
-                    "discard-confirm": "You have unsaved pipeline changes. Discard?",
-                    "keep-editing": "Keep editing",
-                    "discard": "Discard",
-                    "how-to": "How to use",
-                    "how-to-steps": "1) Add a step  2) Pick a field (searchable by name)  3) Save the pipeline",
                     "unnest-suggestion-title": "Array fields detected",
                     "unnest-suggestion-body": "Fields {{fields}} contain arrays. Use Unnest to split each item into its own row.",
                     "unnest-suggestion-button": "Unnest \"{{field}}\""

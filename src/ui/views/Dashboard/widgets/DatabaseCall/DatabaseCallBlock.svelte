@@ -38,7 +38,9 @@
     composeLinkedSelectionFilter,
     type SelectionStore,
   } from "../../canvasSelectionStore";
-  import { matchesCondition } from "src/lib/engine/filterEvaluator";
+  import { matchesCondition, applyFilter } from "src/lib/engine/filterEvaluator";
+  import type { FilterDefinition } from "src/settings/base/settings";
+  import BlockFilterBar from "./BlockFilterBar.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { createDataRecord } from "src/lib/dataApi";
@@ -80,9 +82,22 @@
     canvasSelection: $canvasStore,
   });
 
+  // #099.1 — block-level filter (WidgetDataContext.subFilter, SPEC §3.4):
+  // applied through the canonical filterEvaluator BEFORE the linked-selection
+  // auto-filter, instantly on every pill/builder change.
+  $: subFilter = config["subFilter"] as FilterDefinition | undefined;
+  $: subFiltered = subFilter && subFilter.conditions.length > 0 ? applyFilter(frame, subFilter) : frame;
+
   $: effectiveFrame = autoFilter
-    ? { ...frame, records: frame.records.filter((r) => matchesCondition(autoFilter!, r)) }
-    : frame;
+    ? { ...subFiltered, records: subFiltered.records.filter((r) => matchesCondition(autoFilter!, r)) }
+    : subFiltered;
+
+  function handleSubFilterChange(e: CustomEvent<FilterDefinition | undefined>) {
+    const next = { ...config };
+    if (e.detail) next["subFilter"] = e.detail;
+    else delete next["subFilter"];
+    dispatch("configChange", next);
+  }
 
   $: tabs = (config["viewTabs"] as ViewTab[]) ?? [];
   $: activeTabId = String(config["activeTabId"] ?? tabs[0]?.id ?? "");
@@ -140,7 +155,14 @@
   }
 
   function handleClearCanvasFilter() {
+    // «Clear filter» honors EVERY source of narrowing: the canvas selection
+    // and the block's own subFilter (#099.1).
     _ctx?.clearSelection();
+    if (subFilter) {
+      const next = { ...config };
+      delete next["subFilter"];
+      dispatch("configChange", next);
+    }
   }
 
   function handleDataTableConfigChange(e: CustomEvent<DataTableConfig>) {
@@ -267,6 +289,13 @@
       on:tabAdd={handleTabAdd}
       on:tabRemove={handleTabRemove}
       on:tabRename={handleTabRename}
+    />
+    <BlockFilterBar
+      filter={subFilter}
+      fields={frame.fields}
+      records={frame.records}
+      {readonly}
+      on:change={handleSubFilterChange}
     />
     <div
       class="ppp-database-call-content"

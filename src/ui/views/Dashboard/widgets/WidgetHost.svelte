@@ -197,8 +197,8 @@
         fields={frame.fields}
         source={frame}
         {availableSources}
+        on:apply={(e) => patchWidget({ transform: e.detail })}
         on:save={handlePipelineSave}
-        on:cancel={() => (showPipeline = false)}
       />
     {/if}
   </svelte:fragment>
