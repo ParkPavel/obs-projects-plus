@@ -14,6 +14,12 @@
 //   an echo and discarded. Structural equality is a secondary signal only — used
 //   to recognize a clean echo early and to detect a genuinely divergent external
 //   change during reconciliation.
+//
+//   receiveProp is called from a Svelte reactive block that ALSO re-runs after a
+//   local commit (before the prop has updated). So it must not mistake the
+//   unchanged, pre-commit prop for a new external change: only a prop value that
+//   actually changed since the previous observation is a reconciliation
+//   candidate (tracked via lastProp).
 
 export interface ConfigEcho<T> {
   /** The effective config the canvas should render and read from. */
@@ -24,7 +30,7 @@ export interface ConfigEcho<T> {
   receiveProp(cfg: T): void;
   /**
    * Post-commit settle (run on a microtask after commit). If a write is still
-   * pending and an unrecognized prop was seen, force-adopt it and clear pending
+   * pending and a genuinely new prop was seen, force-adopt it and clear pending
    * so an external change is never lost.
    */
   reconcile(): void;
@@ -41,9 +47,10 @@ function structurallyEqual(a: unknown, b: unknown): boolean {
 
 export function createConfigEcho<T>(initial: T): ConfigEcho<T> {
   let current: T = initial;
+  let lastProp: T = initial;
   let pendingWrites = 0;
-  let sawUnrecognized = false;
-  let lastUnrecognized: T = initial;
+  let sawNewProp = false;
+  let lastNewProp: T = initial;
 
   return {
     get current(): T {
@@ -53,34 +60,42 @@ export function createConfigEcho<T>(initial: T): ConfigEcho<T> {
     commit(cfg: T): void {
       current = cfg;
       pendingWrites += 1;
-      sawUnrecognized = false;
+      sawNewProp = false;
     },
 
     receiveProp(cfg: T): void {
+      // Did the prop actually change since we last observed it? A reactive
+      // re-run triggered by our own commit replays the SAME (stale) prop — that
+      // is not an external change and must be ignored entirely.
+      const propChanged = !structurallyEqual(cfg, lastProp);
+      lastProp = cfg;
+
       if (pendingWrites > 0) {
+        if (!propChanged) return; // replayed stale prop — ignore
         if (structurallyEqual(cfg, current)) {
-          // Clean echo of our own optimistic value — recognized, clear one write.
+          // Clean echo of our own optimistic value — recognized, clear pending.
           pendingWrites = 0;
-          sawUnrecognized = false;
+          sawNewProp = false;
           return;
         }
-        // Differs while a write is in flight: optimistic value wins for now.
-        // Remember it in case reconciliation must force-adopt (external change).
-        sawUnrecognized = true;
-        lastUnrecognized = cfg;
+        // A genuinely new prop differing from our optimistic value arrived while
+        // a write was in flight: optimistic value wins for now; remember it so
+        // reconciliation can force-adopt it (external change wins eventually).
+        sawNewProp = true;
+        lastNewProp = cfg;
         return;
       }
       // Nothing pending: authoritative external change — adopt it.
-      current = cfg;
+      if (propChanged) current = cfg;
     },
 
     reconcile(): void {
       if (pendingWrites === 0) return;
-      if (sawUnrecognized) {
-        current = lastUnrecognized;
+      if (sawNewProp) {
+        current = lastNewProp;
       }
       pendingWrites = 0;
-      sawUnrecognized = false;
+      sawNewProp = false;
     },
   };
 }
