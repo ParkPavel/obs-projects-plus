@@ -1109,6 +1109,12 @@
                         "board": "Доска",
                         "calendar": "Календарь",
                         "gallery": "Галерея"
+                    },
+                    "settings": {
+                        "unnest-label": "Развернуть список",
+                        "unnest-field": "Поле-список",
+                        "unnest-none": "нет",
+                        "unnest-hint": "Разбить поле-список на отдельные строки по элементам."
                     }
                 },
                 "field-presets": {

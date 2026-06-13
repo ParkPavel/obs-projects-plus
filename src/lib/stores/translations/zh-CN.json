@@ -879,6 +879,14 @@
                     "disable-step": "禁用步骤",
                     "enable-step": "启用步骤"
                 },
+                "database-call": {
+                    "settings": {
+                        "unnest-label": "展开列表",
+                        "unnest-field": "列表字段",
+                        "unnest-none": "无",
+                        "unnest-hint": "将列表字段拆分为每项一行。"
+                    }
+                },
                 "group": {
                     "empty": "（空）"
                 },

@@ -879,6 +879,14 @@
                     "disable-step": "Вимкнути крок",
                     "enable-step": "Увімкнути крок"
                 },
+                "database-call": {
+                    "settings": {
+                        "unnest-label": "Розгорнути список",
+                        "unnest-field": "Поле-список",
+                        "unnest-none": "немає",
+                        "unnest-hint": "Розбити поле-список на окремі рядки за елементами."
+                    }
+                },
                 "group": {
                     "empty": "(порожньо)"
                 },

@@ -875,7 +875,13 @@
                     "no-records": "No records yet",
                     "add-first-record": "Add first record",
                     "no-matches": "No matches",
-                    "clear-filter": "Clear filter"
+                    "clear-filter": "Clear filter",
+                    "settings": {
+                        "unnest-label": "Expand list",
+                        "unnest-field": "List field",
+                        "unnest-none": "none",
+                        "unnest-hint": "Split a list field into one row per item."
+                    }
                 },
                 "field-presets": {
                     "label": "Layout",

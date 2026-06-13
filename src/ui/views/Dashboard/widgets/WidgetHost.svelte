@@ -179,8 +179,11 @@
         availableWidgets={availableWidgets.filter((w) => w.id !== widget.id)}
         linkedSelection={dbCallLinkedSelection}
         fields={dbCallFrame.fields}
+        transform={currentPipeline}
+        source={dbCallFrame}
         on:change={handleDbCallSourceChange}
         on:linkedSelectionChange={handleLinkedSelectionChange}
+        on:transformChange={(e) => patchWidget({ transform: e.detail })}
         on:close={() => (showConfig = false)}
       />
     {:else if showConfig && panelEntry && panelRenderable}

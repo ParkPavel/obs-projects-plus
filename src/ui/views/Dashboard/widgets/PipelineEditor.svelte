@@ -18,6 +18,7 @@
   import { getOperatorsForField, operatorNeedsValue, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import { detectArrayFields } from "./_shared/arrayFieldDetection";
 
   export let pipeline: TransformPipeline;
   export let fields: DataField[] = [];
@@ -67,39 +68,10 @@
     return out;
   })();
 
-  /*
-   * Detect array-valued fields in the source data to suggest Unnest.
-   * We scan the first few records looking for any field whose value is
-   * an array. This powers a discoverability banner pointing users at the
-   * Unnest transform when their YAML frontmatter contains nested lists
-   * (e.g. `sets: [{reps, weight}]` in the fitness vertical).
-   */
+  // Detect array-valued fields in the source data to suggest Unnest. Powers a
+  // discoverability banner pointing users at the Unnest transform when their
+  // YAML frontmatter contains nested lists (e.g. `sets: [{reps, weight}]`).
   $: arrayFields = detectArrayFields(source, fields, steps);
-
-  function detectArrayFields(
-    src: { records: Array<{ values: Record<string, unknown> }> } | null,
-    flds: DataField[],
-    currentSteps: TransformStep[],
-  ): string[] {
-    if (!src || src.records.length === 0) return [];
-    const alreadyUnnested = new Set(
-      currentSteps.filter((s) => s.type === "unnest").map((s) => (s as { field: string }).field),
-    );
-    const candidates = new Set<string>();
-    const sampleSize = Math.min(src.records.length, 50);
-    for (let i = 0; i < sampleSize; i++) {
-      const rec = src.records[i];
-      if (!rec) continue;
-      for (const f of flds) {
-        if (alreadyUnnested.has(f.name)) continue;
-        const v = rec.values[f.name];
-        if (Array.isArray(v) && v.length > 0) {
-          candidates.add(f.name);
-        }
-      }
-    }
-    return [...candidates];
-  }
 
   const AGG_FUNCTIONS: AggregationFunction[] = [
     "SUM", "AVG", "MEDIAN", "MIN", "MAX", "RANGE",
