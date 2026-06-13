@@ -88,12 +88,22 @@
   onMount(() => {
     document.addEventListener("keydown", handleKeydown, true);
     document.addEventListener("mousedown", handleOutsideMouseDown, true);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
   });
 
   onDestroy(() => {
     document.removeEventListener("keydown", handleKeydown, true);
     document.removeEventListener("mousedown", handleOutsideMouseDown, true);
+    window.removeEventListener("resize", handleReposition);
+    window.removeEventListener("scroll", handleReposition, true);
   });
+
+  // Reposition on viewport changes (resize / scroll) while open so a popup
+  // whose content reflowed after the first measure cannot stay overflowing.
+  function handleReposition(): void {
+    if (open && popupEl && triggerEl) void recompute();
+  }
 
   // ── Positioning ────────────────────────────────────────────
   async function recompute(): Promise<void> {
@@ -151,7 +161,18 @@
       Math.max(marginPx, vh - pRect.height - marginPx)
     );
 
-    style = `top: ${clampedTop}px; left: ${clampedLeft}px;`;
+    // Constrain WIDTH to the space from the clamped origin to the right
+    // margin so a wide child cannot overflow the viewport (clamp only moves
+    // a fixed-width box; it cannot shrink it). Never widen past the CSS cap —
+    // take the MIN of the viewport-derived cap and the resolved CSS max-width.
+    const viewportWidthCap = vw - clampedLeft - marginPx;
+    const cssMaxWidth = parseFloat(getComputedStyle(popupEl).maxWidth);
+    const widthCap =
+      Number.isFinite(cssMaxWidth) && cssMaxWidth > 0
+        ? Math.min(viewportWidthCap, cssMaxWidth)
+        : viewportWidthCap;
+
+    style = `top: ${clampedTop}px; left: ${clampedLeft}px; max-width: ${Math.max(0, widthCap)}px;`;
   }
 
   async function focusFirst(): Promise<void> {
