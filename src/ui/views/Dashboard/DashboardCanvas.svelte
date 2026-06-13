@@ -32,6 +32,7 @@
   import SmartSuggestionBus from "./SmartSuggestionBus.svelte";
   import { createSuggestionController } from "./dashboardSuggest";
   import { createSelectionStore, bindEscapeClear, SELECTION_CONTEXT_KEY, type SelectionStore } from "./canvasSelectionStore";
+  import { createConfigEcho } from "./dashboardConfigEcho";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -48,40 +49,43 @@
   const dataProviderRegistry = createDataProviderRegistry();
   setContext(DATA_PROVIDER_REGISTRY_CONTEXT_KEY, dataProviderRegistry);
   onDestroy(() => dataProviderRegistry.clear());
-  function saveConfig(cfg: DatabaseViewConfig) { config = cfg; onConfigChange(cfg); }
-  $: widgets = config?.widgets ?? [];
-  $: showToolbar = config?.showWidgetToolbar ?? false;
-  $: quickActions = config?.quickActions ?? [];
-  const tokenCSS = getDesignTokenCSS();
-  const widgetController = createWidgetController({ getConfig: () => config, saveConfig, i18nStore: i18n });
-
+  // #100 optimistic-echo guard (#071): raw `config` is read ONLY by the receiver
+  // `$:` below — all other reads go through effectiveConfig. See dashboardConfigEcho.ts.
+  const configEcho = createConfigEcho<DatabaseViewConfig | undefined>(config);
+  let commitTick = 0, effectiveConfig: DatabaseViewConfig | undefined = configEcho.current;
+  function saveConfig(cfg: DatabaseViewConfig) {
+    configEcho.commit(cfg); onConfigChange(cfg); commitTick += 1;
+    void Promise.resolve().then(() => { configEcho.reconcile(); commitTick += 1; });
+  }
+  $: effectiveConfig = (commitTick, configEcho.receiveProp(config), configEcho.current);
+  $: widgets = effectiveConfig?.widgets ?? [];
+  $: showToolbar = effectiveConfig?.showWidgetToolbar ?? false;
+  $: quickActions = effectiveConfig?.quickActions ?? [];
+  const tokenCSS = getDesignTokenCSS(), widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
-    if (!config) return;
+    if (!effectiveConfig) return;
     const { fieldPresets, activeFieldPresetId } = e.detail;
-    const base: DatabaseViewConfig = { ...config, fieldPresets };
+    const base: DatabaseViewConfig = { ...effectiveConfig, fieldPresets };
     if (activeFieldPresetId !== undefined) saveConfig({ ...base, activeFieldPresetId });
     else { const { activeFieldPresetId: _omit, ...rest } = base; void _omit; saveConfig(rest); }
   }
-  function toggleToolbar() { if (!config) return; saveConfig({ ...config, showWidgetToolbar: !showToolbar }); }
+  function toggleToolbar() { if (effectiveConfig) saveConfig({ ...effectiveConfig, showWidgetToolbar: !showToolbar }); }
+  const t = (key: string, opts?: Record<string, unknown>) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key);
   const schemaController = createSchemaController({
-    app: $app, api, projectId: project.id,
+    app: $app, api, projectId: project.id, t,
     getFields: () => frame.fields, getProjects: () => $settings.projects,
-    t: (key, opts) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key),
   });
   const openSchema = () => schemaController.openSchema();
-  onDestroy(subscribeCanvasCommands(() => schemaController.openSchema(), () => schemaController.openCreateField()));
-
+  onDestroy(subscribeCanvasCommands(openSchema, () => schemaController.openCreateField()));
   const templatesController = createTemplatesController({
-    getConfig: () => config, getWidgets: () => widgets, saveConfig,
+    getConfig: () => effectiveConfig, getWidgets: () => widgets, saveConfig, t,
     toggleFormulaBar: () => (showFormulaBar = !showFormulaBar),
-    t: (key, opts) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key),
   });
   const showTemplateReplaceConfirm = templatesController.showConfirm;
-  let isRecalculating = false, showFormulaBar = false;
-  $: { void frame; isRecalculating = true; Promise.resolve().then(() => { isRecalculating = false; }); }
+  let isRecalculating = false, showFormulaBar = false, activeFilterTab: ActiveFilterTab | null = null;
+  $: { void frame; isRecalculating = true; void Promise.resolve().then(() => { isRecalculating = false; }); }
   $: fieldNames = frame.fields.map((f) => f.name);
   $: previewRecord = frame.records[0];
-  let activeFilterTab: ActiveFilterTab | null = null;
   function handleFilterTab(e: CustomEvent<{ field: string; value: string | null }>) {
     const { field, value } = e.detail;
     activeFilterTab = value === null ? null : { field, value };
@@ -91,8 +95,7 @@
     const f = a?.vault.getAbstractFileByPath(path);
     return f && "stat" in f ? (f as { stat: { ctime: number; mtime: number } }).stat : null;
   })($app) satisfies GetFileStat;
-  $: displayFrame = buildDisplayFrame(filteredFrame, config, getFileStat);
-
+  $: displayFrame = buildDisplayFrame(filteredFrame, effectiveConfig, getFileStat);
   $: availableSources = ($settings.projects ?? []).filter((p) => p.id !== project.id).map((p) => ({ id: p.id, name: p.name }));
   $: availableWidgets = widgets.map((w) => ({ id: w.id, title: w.title }));
   const rightFramesStore = writable<ReadonlyMap<string, DataFrame>>(new Map());
@@ -109,26 +112,23 @@
     onViewFilterChange({ conjunction: "and", conditions: promoteFilterTabToGlobal(activeFilterTab, globalFilters) });
     activeFilterTab = null;
   }
-
   $: dndWidgets = widgets.map((w) => ({ ...w }));
-  $: canDnd = !readonly;
   function handleDndConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) { dndWidgets = e.detail.items; }
   function handleDndFinalize(e: CustomEvent<DndEvent<WidgetDefinition>>) {
     dndWidgets = e.detail.items;
-    if (!config) return;
-    saveConfig({ ...config, widgets: dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString()) });
+    if (!effectiveConfig) return;
+    saveConfig({ ...effectiveConfig, widgets: dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString()) });
   }
-  $: primaryDataTableId = config?.widgets.find((w) => w.type === "data-table")?.id ?? "";
+  $: primaryDataTableId = effectiveConfig?.widgets.find((w) => w.type === "data-table")?.id ?? "";
   const selectionStore: SelectionStore = createSelectionStore();
   setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
   onDestroy(bindEscapeClear(selectionStore));
-
   function handleFormulaApply(e: CustomEvent<{ name: string; expression: string }>) {
     widgetController.applyFormulaField(e.detail.name, e.detail.expression);
     showFormulaBar = false;
   }
   const suggest = createSuggestionController({
-    getConfig: () => config,
+    getConfig: () => effectiveConfig,
     saveConfig,
     addWidget: (t) => widgetController.addWidget(t),
   });
@@ -168,16 +168,16 @@
       <FilterBridge {activeGlobalFilters} {activeFilterTab} {globalFilterTooltip} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
       {#if !readonly && widgets.length > 0}
-        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={config?.dismissedSuggestions ?? []}
+        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []}
           on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />
       {/if}
       <WidgetGrid
-        {widgets} {dndWidgets} {canDnd} {frame} {displayFrame} {api} {readonly} {getRecordColor}
-        fields={frame.fields} tableConfig={config?.table} {primaryDataTableId}
-        fieldPresets={config?.fieldPresets ?? []} activeFieldPresetId={config?.activeFieldPresetId}
+        {widgets} {dndWidgets} canDnd={!readonly} {frame} {displayFrame} {api} {readonly} {getRecordColor}
+        fields={frame.fields} tableConfig={effectiveConfig?.table} {primaryDataTableId}
+        fieldPresets={effectiveConfig?.fieldPresets ?? []} activeFieldPresetId={effectiveConfig?.activeFieldPresetId}
         {availableSources} {availableWidgets} rightFrames={$rightFramesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
-        on:showToolbar={() => { if (!config) return; saveConfig({ ...config, showWidgetToolbar: true }); }}
+        on:showToolbar={() => { if (!effectiveConfig) return; saveConfig({ ...effectiveConfig, showWidgetToolbar: true }); }}
         on:addWidget={(e) => widgetController.addWidget(e.detail)} on:applyTemplate={handleApplyTemplate}
         on:configChange={widgetController.handleWidgetConfigChange}
         on:tableConfigChange={widgetController.handleTableConfigChange}
