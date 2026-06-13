@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-10 (#050–#058 added — M-UI-MODERNIZATION: полный рефакторинг Dashboard UI; Phase 4.5 ✅ DONE multi-select Selection Bus; baseline 134/2020)
+> **Updated**: 2026-06-13 (#100 P1 reactivity-hardening + #098 P2 FloatingPopup закрыты, READY FOR PR; follow-up #102 заведён; baseline ratchet 150 suites / 2165 tests; next open: #096 charts axis P2)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -1281,8 +1281,16 @@ Acceptance criteria:
 6. Новый CSS только в rem (px-budget headroom = 2); 4 гейта зелёные.
 
 ### #100 — P1: Reactivity hardening — панельный round-trip на все конфиг-панели
-- Status: 📋 BACKLOG | W2
-- Контракт UT2026-D P2 + optimistic-эхо; закрывает класс «#071 select не применяется».
+- Status: ✅ DONE (2026-06-13) — READY FOR PR (не слит/запушен — гейт пользователя)
+- Milestone: W2 | Priority: P1 | Complexity: M
+- Контракт UT2026-D P2 + optimistic-эхо; закрывает класс багов «#071 select не применяется».
+- Доставлено в 4 коммита: `cf87da6` (slice 1 — pure config-echo guard helper + unit-тесты),
+  `b4bd4ea` (slice 2 — wire guard в DashboardCanvas), `65165ad` (slice 3 — config panel
+  round-trip harness + #071 regression), `a4019ed` (fix — echo guard игнорирует
+  replayed stale prop / `lastProp`).
+- Новые файлы: `src/ui/views/Dashboard/dashboardConfigEcho.ts` (pure optimistic-echo guard),
+  `dashboardCanvasEcho.test.ts` (6), `configPanelRoundTrip.test.ts` (6).
+- Закрывает класс багов #071. Audit READY FOR PR. Follow-up: **#102** (P2, rapid double-commit edge).
 
 ### #101 — P2: EditNote — живая модалка (подписка на обновления записи)
 - Status: 📋 BACKLOG | W2/W3
@@ -1294,7 +1302,18 @@ Acceptance criteria:
 ### #097 — ✅ DONE (2026-06-12) — debug-строка чеклиста («Source: 28 · check=—…») удалена.
 
 ### #098 — P2: FloatingPopup — коллизия с краем окна
-- Status: 📋 BACKLOG | W2 — скриншот 22-18-21: палитра у правого края обрезана.
+- Status: ✅ DONE (2026-06-13) — READY FOR PR (не слит/запушен — гейт пользователя)
+- Milestone: W2 | Priority: P2 | Complexity: S — скриншот 22-18-21: палитра у правого края обрезана.
+- Доставлено в коммит `7fe7756`: viewport width-clamp = MIN(viewport-cap, CSS max-width) +
+  слушатели reposition на window resize / capturing-scroll.
+- Файлы: `src/ui/components/FloatingPopup/FloatingPopup.svelte` + его тест (+3 теста).
+- Deferred (P3, awareness only): un-throttled scroll reposition (нет rAF-коалесинга);
+  width-only scope (нет max-height cap — вертикальный overflow только top-clamp). При
+  необходимости — отдельный тикет на vertical-overflow gap.
+
+### #102 — P2: config-echo guard — rapid double-commit edge (follow-up #100)
+- Status: 📋 BACKLOG | W2 — audit-manager finding (#100 audit, 2026-06-13).
+- dashboardConfigEcho.reconcile() сбрасывает pendingWrites=0 абсолютно, а не декрементом. При двух commit подряд в одном microtask-окне с interleaved echo первого write reconcile может force-adopt-нуть устаревшее значение, затирая более новый optimistic. Single-commit путь (доминирующий, все панели) корректен. Не регрессия vs pre-#100. Фикс: pendingWrites -= 1 в reconcile + clear-pending при eq(cfg, current).
 
 ---
 

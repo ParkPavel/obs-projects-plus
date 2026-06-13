@@ -1,27 +1,35 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-13 (EPIC #099 закрыт целиком — pipeline split: filter pills + live-apply editor + disable-step + unnest как свойство блока; W1/W2 волны, #074 F2/F3 + #067 + #097 закрыты)**
+> Обновлено: **2026-06-13 (#100 P1 reactivity-hardening + #098 P2 FloatingPopup закрыты, READY FOR PR; follow-up #102 заведён; baseline ratchet 150 suites / 2165 tests; next open: #096 charts axis P2)**
 
 ## Состояние веток
 
 - HEAD `main`: **`f23efdb`** — `feat(agents): harden 4-gate verification cycle`
-- HEAD `feat/dashboard-v2`: **`2209a8a`** — `feat(dashboard): #099.3 — unnest as DatabaseCall block property (Развернуть список)`
-- Active branch: `feat/dashboard-v2` — **23 коммита впереди origin** (push контролирует пользователь).
+- HEAD `feat/dashboard-v2`: **`7fe7756`** — `fix(dashboard): #098 — FloatingPopup viewport width-clamp + resize reposition`
+- Active branch: `feat/dashboard-v2` — **29 коммитов впереди origin** (push контролирует пользователь). НЕ запушено.
 - Archive branch: `archive/dashboard-v1` — снимок V1 на момент запуска V2.
 - Working tree: clean.
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (feat/dashboard-v2 @ 2209a8a)
+## Гейты (feat/dashboard-v2 @ 7fe7756)
 
 | Гейт | Результат |
 |---|---|
 | `npm run build` | ✅ 0 errors |
-| `npm test` | ✅ **148 suites / 2150 tests PASS** |
+| `npm test` | ✅ **150 suites / 2165 tests PASS** |
 | `npm run lint` | ✅ 0 errors (130 pre-existing tsdoc warnings) |
 | `npm run svelte-check` | ✅ 0 errors / 0 warnings |
 | `@ts-ignore` в src | 0 ✅ |
 | PX-budget (`R0_3_pxBudget.test.ts`) | ≤186, locked ✅ |
 | Manual API-тест в OBStests (`MANUAL_TESTING_PIPELINE.md`) | ✅ 2026-06-11: deploy + reload + 11 команд + demo smoke A1–A7 + roundtrip. Визуальный чек-лист (#059/#065/#048 strip/zero-state/темы) — ожидает человека, см. pipeline §5 |
+
+> **Канон baseline = 150 / 2165** (этот файл, «Гейты»). Ratchet 2026-06-13:
+> +2 suites из #100 (`dashboardCanvasEcho` 6 + `configPanelRoundTrip` 6 = 12 тестов),
+> +3 теста из #098 (FloatingPopup). Было 148 / 2150.
+> ⚠ `CLAUDE.md` всё ещё читает **148 / 2150** — рекомендуется синхронизировать
+> (ratchet CLAUDE.md → 150 / 2165) в следующей сессии / пользователем. CONTEXT.md —
+> единственный канонический источник числа (так гласит сам CLAUDE.md), поэтому я
+> CLAUDE.md не правлю.
 
 ## Активная работа
 
@@ -43,7 +51,8 @@
 **✅ Сессия 2026-06-11** (5 коммитов): #048 native-query как персистентный datasource + UI в CreateProject (`ae1e167`); #065 canvas zero-state + общий EmptyState (`35a1d49`); #059 SmartSuggest — rule engine + suggestion strip (`2b9d1fd`).  
 **✅ NOTION_GRADE_PIPELINE — волны W1/W2** (2026-06-12 → 2026-06-13): глобальный рефакторинг интерфейса в 5 волн (`specs/NOTION_GRADE_PIPELINE.md`). W1 закрыта (`a640180`): #067 F1 (WidgetHost 947→Shell/Actions/Registry, `931d42a`), #074 Table V2 F2.1–F2.5 + #068 F3-миграция (`c507954`, `e105aef`), #088 column-header menu/resize/add-property, #081 RelationPickerPopover. Аудиты UT-R2/UT-R3 (`b0c82cf`, `4ca84a8`), #097 чеклист-debug удалён (`d2ec20e`).  
 **✅ EPIC #099 ЗАКРЫТ ЦЕЛИКОМ** (2026-06-13, W2-ядро): Notion-расщепление конвейера трансформаций. #099.1 filter pills bar + #099.2 live-apply pipeline editor (`2db4124`), #099 disable-step — non-destructive skip для шагов с 0 записей (`97b7079`), #099.3 unnest как свойство блока database-call «Развернуть список» (`2209a8a`). Поглощает #092, #095. Audit READY FOR PR, все гейты зелёные. НЕ слит/запушен — гейт пользователя.  
-**Следующий шаг**: W2 — **#100** Reactivity hardening (P1, панельный round-trip на все конфиг-панели, контракт UT2026-D P2 + optimistic-эхо). Затем P2: #096 (чарты — менеджмент осей), #098 (FloatingPopup — коллизия с краем окна).
+**✅ Сессия 2026-06-13 (W2-продолжение, 5 коммитов)**: #100 Reactivity hardening (P1) закрыт — pure optimistic-echo guard (`dashboardConfigEcho.ts`), wire в DashboardCanvas, config-panel round-trip harness + #071 regression, fix replayed-stale-prop; закрывает класс багов #071, follow-up #102 заведён (`cf87da6`/`b4bd4ea`/`65165ad`/`a4019ed`). #098 FloatingPopup edge-collision (P2) закрыт — viewport width-clamp + resize/scroll reposition (`7fe7756`). Оба READY FOR PR, все 4 гейта зелёные. НЕ слиты/запушены — гейт пользователя.
+**Следующий шаг**: W2 — **#096** Charts axis management (P2, auto-skip/rotate дат, date-bucketing) — следующий открытый тикет в стеке, не начат. Затем #098-deferred (vertical-overflow gap, при необходимости), #101 EditNote live-modal.
 
 ## Завершённые milestones
 
@@ -74,6 +83,8 @@
 | **#074 F2 — Table V2 (F2.1–F2.5) + #068 F3-миграция + #088 column ops** | ✅ CLOSED (W1, `c507954`/`e105aef`/`a640180`) |
 | **#097 — debug-строка чеклиста удалена** | ✅ CLOSED (2026-06-12, `d2ec20e`) |
 | **EPIC #099 — Notion pipeline split** | ✅ CLOSED (2026-06-13) — filter pills bar, live-apply pipeline editor, disable-step (non-destructive), unnest как свойство блока DatabaseCall. Поглощает #092, #095. (`2db4124`/`97b7079`/`2209a8a`) |
+| **#100 — Reactivity hardening (панельный round-trip)** | ✅ DONE (2026-06-13, READY FOR PR) — optimistic-echo guard `dashboardConfigEcho.ts` + wire + round-trip harness + #071 regression. Закрывает класс багов #071. Follow-up #102. (`cf87da6`/`b4bd4ea`/`65165ad`/`a4019ed`) |
+| **#098 — FloatingPopup edge-collision** | ✅ DONE (2026-06-13, READY FOR PR) — viewport width-clamp + resize/scroll reposition. Deferred P3: scroll-throttle, max-height vertical cap. (`7fe7756`) |
 
 ## Открытые тикеты
 
@@ -87,7 +98,8 @@
 > инвентарь поверхностей, W1–W5). Таблица ниже — историческая, актуален пайплайн.
 
 > ⚠ 2026-06-13: W1 закрыта (`a640180`), EPIC #099 (W2-ядро) закрыт целиком (`2209a8a`).
-> Следующая работа — остаток W2 во главе с #100 (P1).
+> #100 (P1 reactivity-hardening) и #098 (P2 FloatingPopup) закрыты (`a4019ed`/`7fe7756`),
+> READY FOR PR. Следующий открытый тикет — **#096** (P2, charts axis), не начат.
 
 **Очередь исполнения (W2 → далее):**
 
@@ -99,10 +111,11 @@
 | — | ~~#088 column-header menu/resize/add-property; #081 RelationPickerPopover~~ | ✅ DONE (W1) |
 | — | ~~#097 debug-строка чеклиста~~ | ✅ DONE `d2ec20e` |
 | — | ~~EPIC #099 pipeline split (#099.1/.2/.3 + disable-step), поглотил #092/#095~~ | ✅ CLOSED `2db4124`/`97b7079`/`2209a8a` (2026-06-13) |
-| **1** | **#100** Reactivity hardening — панельный round-trip на все конфиг-панели (контракт UT2026-D P2 + optimistic-эхо; закрывает класс «#071 select не применяется») | **P1, W2 — NEXT** |
-| 2 | #096 чарты — менеджмент осей (auto-skip/rotate дат, date-bucketing) | P2, W2 |
-| 3 | #098 FloatingPopup — коллизия с краем окна | P2, W2 |
-| 4 | #101 EditNote — живая модалка (подписка на обновления записи) | P2, W2/W3 |
+| — | ~~#100 Reactivity hardening — панельный round-trip (закрывает класс «#071 select не применяется»)~~ | ✅ DONE `cf87da6`/`b4bd4ea`/`65165ad`/`a4019ed` (2026-06-13, READY FOR PR) |
+| — | ~~#098 FloatingPopup — коллизия с краем окна~~ | ✅ DONE `7fe7756` (2026-06-13, READY FOR PR) |
+| **1** | **#096** чарты — менеджмент осей (auto-skip/rotate дат, date-bucketing) | **P2, W2 — NEXT** (не начат) |
+| 2 | #102 config-echo guard — rapid double-commit edge (follow-up #100) | P2, W2 |
+| 3 | #101 EditNote — живая модалка (подписка на обновления записи) | P2, W2/W3 |
 | 5 | **#077** единый FormulaConstructor (5 точек входа); **#061** Template Library; #082 typed-карточка записи | прежний план |
 | 6 | #078 CalendarView decomposition (2328 LOC); #079 hex-ratchet | аудит |
 | 7 | #075-остаток, #076, #060, #036 | прежний план |
