@@ -898,6 +898,14 @@
                     "aggregation": "Агрегація",
                     "sort-by": "Сортування",
                     "height": "Висота",
+                    "granularity": "Групувати дати за",
+                    "granularities": {
+                        "day": "Днем",
+                        "week": "Тижнем",
+                        "month": "Місяцем",
+                        "quarter": "Кварталом",
+                        "year": "Роком"
+                    },
                     "types": {
                         "bar": "Стовпці",
                         "horizontal-bar": "Горизонтальні стовпці",

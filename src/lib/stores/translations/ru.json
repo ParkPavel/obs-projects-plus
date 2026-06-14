@@ -1253,6 +1253,14 @@
                     "aggregation": "Агрегация",
                     "sort-by": "Сортировка",
                     "height": "Высота",
+                    "granularity": "Группировать даты по",
+                    "granularities": {
+                        "day": "Дню",
+                        "week": "Неделе",
+                        "month": "Месяцу",
+                        "quarter": "Кварталу",
+                        "year": "Году"
+                    },
                     "types": {
                         "bar": "Столбцы",
                         "horizontal-bar": "Горизонтальные столбцы",

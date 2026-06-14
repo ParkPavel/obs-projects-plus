@@ -65,6 +65,27 @@ const CASES: PanelCase[] = [
     read: (el) => (el as HTMLSelectElement).value,
   },
   {
+    // #096.3 — granularity select round-trips and is gated on a Date X field.
+    name: "Chart / ChartConfig — date granularity select",
+    Component: ChartConfig,
+    props: {
+      config: {
+        chartType: "bar",
+        xAxis: { property: "due", sortBy: "label", sortOrder: "asc", omitZero: false },
+        yAxis: { property: "count", aggregation: "count_total" },
+        style: { colorScheme: "auto", height: "medium", showGrid: true, showLabels: true, showLegend: true, showValues: false },
+      },
+      fields: [
+        { name: "due", type: "date", repeated: false, identifier: false, derived: false },
+        { name: "amount", type: "number", repeated: false, identifier: false, derived: false },
+      ],
+      availableSources: [],
+    },
+    locate: (root) => findSelectWithOptions(root, "day", "week", "month", "quarter", "year"),
+    mutate: (el) => { (el as HTMLSelectElement).value = "quarter"; return "quarter"; },
+    read: (el) => (el as HTMLSelectElement).value,
+  },
+  {
     name: "Checklist / ChecklistConfig — showMode select",
     Component: ChecklistConfig,
     props: { config: { field: "done", showMode: "all" }, fields: fieldsOf("done", "name") },
@@ -130,6 +151,53 @@ describe("#100 — config panel round-trip (UT2026-D P2 + optimistic-echo)", () 
       expect(read(after)).toBe(expected);
     } finally {
       m.destroy();
+    }
+  });
+
+  test("#096.3 — granularity select is gated on a Date X field (dispatch by type)", async () => {
+    const baseStyle = { colorScheme: "auto", height: "medium", showGrid: true, showLabels: true, showLegend: true, showValues: false };
+
+    // Non-Date X field → no granularity select.
+    const nonDate = mount(ChartConfig, {
+      config: {
+        chartType: "bar",
+        xAxis: { property: "status", sortBy: "label", sortOrder: "asc", omitZero: false },
+        yAxis: { property: "count", aggregation: "count_total" },
+        style: baseStyle,
+      },
+      fields: [{ name: "status", type: "string", repeated: false, identifier: false, derived: false }],
+      availableSources: [],
+    });
+    try {
+      const selects = Array.from(nonDate.target.querySelectorAll("select")) as HTMLSelectElement[];
+      const hasGranularity = selects.some((s) =>
+        ["day", "week", "month", "quarter", "year"].every((v) => Array.from(s.options).some((o) => o.value === v))
+      );
+      expect(hasGranularity).toBe(false);
+    } finally {
+      nonDate.destroy();
+    }
+
+    // Date X field → granularity select present, defaults to "month", emits dateGranularity.
+    const dated = mount(ChartConfig, {
+      config: {
+        chartType: "bar",
+        xAxis: { property: "due", sortBy: "label", sortOrder: "asc", omitZero: false },
+        yAxis: { property: "count", aggregation: "count_total" },
+        style: baseStyle,
+      },
+      fields: [{ name: "due", type: "date", repeated: false, identifier: false, derived: false }],
+      availableSources: [],
+    });
+    try {
+      const sel = findSelectWithOptions(dated.target, "day", "week", "month", "quarter", "year");
+      expect(sel.value).toBe("month");
+      sel.value = "year";
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+      expect(dated.emitted).toHaveLength(1);
+      expect((dated.emitted[0] as { xAxis?: { dateGranularity?: string } }).xAxis?.dateGranularity).toBe("year");
+    } finally {
+      dated.destroy();
     }
   });
 

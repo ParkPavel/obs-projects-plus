@@ -1011,6 +1011,14 @@
                     "aggregation": "Aggregation",
                     "sort-by": "Sort By",
                     "height": "Height",
+                    "granularity": "Group dates by",
+                    "granularities": {
+                        "day": "Day",
+                        "week": "Week",
+                        "month": "Month",
+                        "quarter": "Quarter",
+                        "year": "Year"
+                    },
                     "types": {
                         "bar": "Bar",
                         "horizontal-bar": "Horizontal Bar",

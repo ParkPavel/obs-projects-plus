@@ -898,6 +898,14 @@
                     "aggregation": "汇总方式",
                     "sort-by": "排序方式",
                     "height": "高度",
+                    "granularity": "日期分组方式",
+                    "granularities": {
+                        "day": "日",
+                        "week": "周",
+                        "month": "月",
+                        "quarter": "季度",
+                        "year": "年"
+                    },
                     "types": {
                         "bar": "柱状图",
                         "horizontal-bar": "条形图",
