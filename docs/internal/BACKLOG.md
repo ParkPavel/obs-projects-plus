@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-14 (#096 charts axis management закрыт, READY FOR PR — 3 среза #096.1/.2/.3; #096.4 dayjs-reconcile остаётся открыт P3; baseline ratchet 151 suites / 2192 tests; next open: #102 config-echo guard P2)
+> **Updated**: 2026-06-14 (#102 config-echo guard rapid double-commit edge CLOSED, READY FOR PR — `57ae744`; baseline ratchet 151 suites / 2195 tests +3 state-machine; next open: #101 EditNote live-modal P2, #096.4 dayjs-reconcile P3)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -1339,8 +1339,9 @@ Acceptance criteria:
   необходимости — отдельный тикет на vertical-overflow gap.
 
 ### #102 — P2: config-echo guard — rapid double-commit edge (follow-up #100)
-- Status: 📋 BACKLOG | W2 — audit-manager finding (#100 audit, 2026-06-13).
-- dashboardConfigEcho.reconcile() сбрасывает pendingWrites=0 абсолютно, а не декрементом. При двух commit подряд в одном microtask-окне с interleaved echo первого write reconcile может force-adopt-нуть устаревшее значение, затирая более новый optimistic. Single-commit путь (доминирующий, все панели) корректен. Не регрессия vs pre-#100. Фикс: pendingWrites -= 1 в reconcile + clear-pending при eq(cfg, current).
+- Status: ✅ CLOSED (2026-06-14, `57ae744`, READY FOR PR) | W2 — audit-manager finding (#100 audit, 2026-06-13).
+- dashboardConfigEcho.reconcile() сбрасывал pendingWrites=0 абсолютно, а не декрементом. При двух commit подряд в одном microtask-окне с interleaved echo первого write reconcile мог force-adopt-нуть устаревшее значение, затирая более новый optimistic. Single-commit путь (доминирующий, все панели) корректен. Не регрессия vs pre-#100.
+- Fix: `reconcile()` теперь декрементит `pendingWrites -= 1` симметрично с `commit()` + clear-pending при `eq(cfg, current)`. +3 state-machine теста. Все 4 гейта зелёные.
 
 ---
 
