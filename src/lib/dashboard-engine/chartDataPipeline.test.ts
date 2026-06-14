@@ -198,6 +198,112 @@ describe("computeChartData", () => {
   });
 });
 
+// ── Date-bucketing Tests (#096.1) ────────────────────────────
+
+function makeDateFrame(): DataFrame {
+  return {
+    fields: [
+      { name: "due", type: DataFieldType.Date, repeated: false, identifier: true, derived: false },
+      { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+    ],
+    records: [
+      { id: "1", values: { due: "2024-01-15", value: 10 } },
+      { id: "2", values: { due: "2024-01-28", value: 20 } },
+      { id: "3", values: { due: "2024-02-10", value: 30 } },
+      { id: "4", values: { due: "2024-03-05", value: 40 } },
+    ],
+  };
+}
+
+function makeDateConfig(overrides: Partial<ChartConfig["xAxis"]> = {}, yOverride?: Partial<ChartConfig["yAxis"]>): ChartConfig {
+  return makeConfig({
+    xAxis: {
+      property: "due",
+      sortBy: "label",
+      sortOrder: "asc",
+      omitZero: false,
+      ...overrides,
+    },
+    yAxis: { property: "count", aggregation: "count_total", ...yOverride },
+  });
+}
+
+describe("buildChartPipeline — date bucketing", () => {
+  test("auto-buckets by month when X field is a Date (fields supplied)", () => {
+    const config = makeDateConfig();
+    const pipeline = buildChartPipeline(config, makeDateFrame().fields);
+    const groupStep = pipeline.steps[0];
+
+    expect(groupStep?.type).toBe("group-by");
+    if (groupStep?.type === "group-by") {
+      expect(groupStep.dateGrouping).toEqual({ field: "due", granularity: "month" });
+    }
+  });
+
+  test("explicit dateGranularity overrides the month default", () => {
+    const config = makeDateConfig({ dateGranularity: "quarter" });
+    const pipeline = buildChartPipeline(config, makeDateFrame().fields);
+    const groupStep = pipeline.steps[0];
+
+    if (groupStep?.type === "group-by") {
+      expect(groupStep.dateGrouping).toEqual({ field: "due", granularity: "quarter" });
+    }
+  });
+
+  test("explicit dateGranularity buckets even without fields metadata", () => {
+    const config = makeDateConfig({ dateGranularity: "year" });
+    const pipeline = buildChartPipeline(config);
+    const groupStep = pipeline.steps[0];
+
+    if (groupStep?.type === "group-by") {
+      expect(groupStep.dateGrouping).toEqual({ field: "due", granularity: "year" });
+    }
+  });
+
+  test("non-Date field does not bucket (regression — string X unchanged)", () => {
+    const pipeline = buildChartPipeline(makeConfig(), makeStatusFrame().fields);
+    const groupStep = pipeline.steps[0];
+
+    expect(groupStep?.type).toBe("group-by");
+    if (groupStep?.type === "group-by") {
+      expect(groupStep.dateGrouping).toBeUndefined();
+    }
+  });
+});
+
+describe("computeChartData — date bucketing", () => {
+  test("auto-month buckets dates and labels by derived field", () => {
+    const data = computeChartData(makeDateFrame(), makeDateConfig());
+
+    // Jan(2), Feb(1), Mar(1) — labels are month buckets, sorted asc.
+    expect(data.labels).toEqual(["2024-01", "2024-02", "2024-03"]);
+    expect(data.series[0]?.values).toEqual([2, 1, 1]);
+  });
+
+  test("explicit quarter granularity collapses to one bucket", () => {
+    const data = computeChartData(makeDateFrame(), makeDateConfig({ dateGranularity: "quarter" }));
+
+    // All four dates fall in Q1 2024.
+    expect(data.labels).toEqual(["2024-Q1"]);
+    expect(data.series[0]?.values).toEqual([4]);
+  });
+
+  test("sort by bucket label descending reverses month order", () => {
+    const data = computeChartData(
+      makeDateFrame(),
+      makeDateConfig({ sortOrder: "desc" })
+    );
+
+    expect(data.labels).toEqual(["2024-03", "2024-02", "2024-01"]);
+  });
+
+  test("non-Date X field keeps raw values as labels (regression)", () => {
+    const data = computeChartData(makeStatusFrame(), makeConfig());
+    expect(data.labels).toEqual(["Active", "Done", "Todo"]);
+    expect(data.series[0]?.values).toEqual([2, 2, 1]);
+  });
+});
+
 // ── chartHeightPx Tests ──────────────────────────────────────
 
 describe("chartHeightPx", () => {

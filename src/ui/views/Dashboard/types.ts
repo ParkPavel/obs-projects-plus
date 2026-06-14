@@ -392,6 +392,7 @@ export interface ChartAxisX {
   readonly sortOrder: "asc" | "desc";
   readonly omitZero: boolean;
   readonly hiddenGroups?: string[];
+  readonly dateGranularity?: "day" | "week" | "month" | "quarter" | "year";
 }
 
 export interface ChartAxisY {

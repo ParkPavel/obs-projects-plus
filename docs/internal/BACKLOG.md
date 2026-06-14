@@ -1297,7 +1297,33 @@ Acceptance criteria:
 - valuesSnapshot не обновляется при внешних изменениях открытой записи.
 
 ### #096 — P2: Чарты — менеджмент осей (auto-skip/rotate дат, date-bucketing)
-- Status: 📋 BACKLOG | W2 — скриншот 22-16-35: подписи дат слипаются в кашу.
+- Status: 🚧 IN PROGRESS | W2 — скриншот 22-16-35: подписи дат слипаются в кашу.
+- Complexity: M | architect-signed 2026-06-13 (backend-architect, ≥2 модуля + engine).
+- Подход: переиспользовать существующий engine `DateGrouping` (transformExecutor.ts) — НЕ
+  строить параллель; auto-default `month` для Date X-полей + явный override `dateGranularity?`
+  в `ChartAxisX` (additive optional → миграция НЕ нужна). Унификация skip/rotate в один pure
+  helper `axisLabels.ts` (density-based, Chart-local, не в engine).
+- Под-тикеты (срезы, каждый зелёный на 4 гейтах):
+  - #096.1 (S) — Engine: wire date-bucketing в chart pipeline. `chartDataPipeline.ts`
+    (buildChartPipeline emit dateGrouping когда X=Date + computeChartData читает derived
+    `${xField}_${gran}`), optional `fields` param от source.fields. Type `ChartAxisX.dateGranularity`.
+    Тесты: chartDataPipeline.test.ts (auto-month, explicit gran, non-Date regression, sort);
+    transformExecutor.test.ts +week(ISO-Thursday)/quarter/year/__empty__/__invalid__.
+  - #096.2 (M) — Render: shared density-based label helper `axisLabels.ts` + `axisLabels.test.ts`;
+    адаптировать LineChart.svelte (заменить /8 magic) + BarChart.svelte (skip отсутствует → overlap),
+    reconcile bottom-padding под rotation.
+  - #096.3 (S) — Config UI: granularity `<select>` в ChartConfig.svelte, gated на
+    DataFieldType.Date (dispatch by type, инвариант #1) + i18n en/ru/uk/zh-CN + round-trip тест.
+- Behavior change (PR-note): существующие date-чарты (templates `property:"date"`) начнут
+  bucket-иться по месяцу автоматически. Намеренный фикс. Inherit default — без миграции.
+- PX-budget impact: ~0 (label-геометрия = unitless SVG-атрибуты, не CSS px).
+
+### #096.4 — P3: Чарты — reconcile dayjs vs raw Date в truncateDate (follow-up #096)
+- Status: 📋 BACKLOG | W2 — architect DEFER из #096 (backend-architect, 2026-06-13).
+- `transformExecutor.ts:625` truncateDate использует `new Date(String(dateVal))`, остальной
+  date-слой — dayjs (`dateFormatting.ts:1`). Возможный TZ/parse drift на не-ISO строках.
+  Orthogonal к #096 wiring/labels; reconcile рискует регрессией работающего month-теста.
+  В #096 добавлены week/quarter/year/invalid тесты, документирующие текущее `new Date` поведение.
 
 ### #097 — ✅ DONE (2026-06-12) — debug-строка чеклиста («Source: 28 · check=—…») удалена.
 
