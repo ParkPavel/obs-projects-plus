@@ -1294,7 +1294,39 @@ Acceptance criteria:
 
 ### #101 — P2: EditNote — живая модалка (подписка на обновления записи)
 - Status: 📋 BACKLOG | W2/W3
-- valuesSnapshot не обновляется при внешних изменениях открытой записи.
+- Complexity: **S–M** | architect-signed 2026-06-14 (backend-architect, ровно 2 модуля: EditNote.svelte + editNoteModal.ts; store/API/types переиспользуются БЕЗ изменений).
+- **Баг**: EditNote.svelte:109 `$: valuesSnapshot = { ...record.values }` реагирует только на локальный prop `record`. Этот prop захватывается one-shot в editNoteModal.ts:30 (`record: this.defaults`) и больше никогда не связан с живым стором. Внешние изменения записи (vault/metadataCache → `dataFrame.merge()`; api.updateRecord → `dataFrame.updateRecord()`) не перерисовывают модалку. Модалка — ЕДИНСТВЕННЫЙ consumer, отстёгивающий одну запись от потока `$dataFrame` (views читают `$: ({fields,records}=frame)` из DataFrameProvider.svelte:153).
+
+#### Ратифицированная dirty-merge политика (load-bearing решение)
+- **Scope dirty = per-field**, НЕ per-record. Вводится `let dirty = new Set<string>()` (имена тронутых полей). `setValue` (EditNote.svelte:173) добавляет `fieldName` в `dirty`. `dirty` чистится после успешного `performSave` (поле улетело в стор → больше не «грязное»).
+- **Last-writer-wins per UNTOUCHED поле** — согласовано с инвариантом всего приложения (`updateRecord` = wholesale replace, dataframe.ts:95). При внешнем изменении записи:
+  - (a) **untouched поле** → перезаписывается значением из стора (внешний писатель победил; пользователь его не трогал).
+  - (b) **поле, которое пользователь редактирует прямо сейчас (в `dirty`)** → НЕ трогаем; локальный pending-edit сохраняется (autosave ~300ms сам отправит его в стор, окно конфликта мало).
+  - (c) **поле, тронутое пользователем (в `dirty`) И изменённое внешним писателем** → локальное значение побеждает (last-writer-wins на уровне модалки; пользователь = последний писатель в этом UI). Никакого conflict-resolution UI — out of scope, не «trivially free».
+- **Merge-функция** (чистая, тестируемая, вне Svelte): `mergeExternal(localRecord, storeRecord, dirty) → DataRecord`. Берёт `storeRecord.values` как базу, накладывает поверх `localRecord.values` для каждого ключа из `dirty`. Поля метаданных (`id`) берутся из `storeRecord` (id стабилен — ключ идентичности и в updateRecord, и в merge). Это вычистит и переименования полей, прилетевшие через стор, для нетронутых ключей.
+
+#### Механизм подписки
+- **`$dataFrame` auto-subscribe** (предпочтительно) — НЕ `metadataCache.on`. Обоснование: внешние изменения (vault, metadata, api) уже воронятся через `dataFrame` (единый источник истины, dataframe.ts:68). Подписка на `metadataCache` дала бы ПАРАЛЛЕЛЬНЫЙ канал, читающий сырые frontmatter мимо formula/relations-пайплайна → нарушение инварианта #4 и дубль источника. `$dataFrame` отдаёт уже обогащённую запись тем же путём, что и views.
+- **Props contract**: EditNote.svelte импортирует стор напрямую — `import { dataFrame } from "src/lib/stores/dataframe"` (тот же импорт-паттерн, что DataFrameProvider). editNoteModal.ts НЕ меняет сигнатуру конструктора и НЕ передаёт живую ссылку — он по-прежнему передаёт `record: this.defaults` (initial seed). Идентичность — `record.id`; модалка реактивно находит свежую запись: `$: live = $dataFrame.records.find(r => r.id === record.id)`.
+- **Реактивная склейка**: `$: if (live) record = mergeExternal(record, live, dirty)`. valuesSnapshot (line 109) остаётся как есть — он уже реагирует на `record`. Никакой второй snapshot-логики.
+
+#### Инвариант единственного источника
+- Фикс НЕ вводит параллельную подписку/фильтр-движок: единственный новый канал — auto-subscribe `$dataFrame` (канонический паттерн a из DataFrameProvider.svelte:153 / GalleryView.svelte:43). `filterEvaluator.ts` не трогается.
+- **Teardown**: Svelte auto-subscription (`$store`) сам отписывается при `$destroy` компонента — отдельный `onDestroy`-unsubscribe НЕ нужен (в отличие от ручного `metadataCache.on`, который потребовал бы offref). Существующий `onDestroy` (EditNote.svelte:123, clearTimeout) не трогаем.
+
+#### Под-тикеты (срезы, каждый зелёный на 4 гейтах; baseline 151/2195 не регрессирует; PX≤186; zero @ts-ignore)
+- **#101.1 (XS)** — Чистая merge-функция `mergeExternal(local, store, dirty)` в новом модуле `src/ui/modals/components/editNoteMerge.ts` (или co-located helper). Без Svelte, без стора — чистый ТС. AC: «untouched ключи берутся из store, dirty ключи — из local, id из store». Тесты: **новый** `editNoteMerge.test.ts` (untouched-wins, dirty-wins, mixed, удалённый-в-store ключ, пустой dirty == полная замена).
+- **#101.2 (S)** — Dirty-tracking: `dirty: Set<string>` + регистрация в `setValue` (EditNote.svelte:173) + очистка после успешного `performSave` (после line 147). AC: «после ввода в поле X имя X ∈ dirty; после успешного автосейва dirty пуст». Тест: расширить/создать `EditNote.dirty.test.ts` (unit на хелперах dirty add/clear; UI-часть → untestable-features note если Svelte-mount недоступен в jest).
+- **#101.3 (S)** — Подписка: `$dataFrame` auto-subscribe + `$: live = ...find(id)` + `$: if (live) record = mergeExternal(...)`. AC: «при `dataFrame.updateRecord(внешняя версия)` нетронутые поля открытой модалки обновляются, dirty-поля сохраняются». Тест: интеграционный на mergeExternal + store-mutation (через стор-мок), переиспользовать паттерн стор-тестов.
+
+#### Риски
+- **Subscription leak** — снят выбором `$store` auto-subscribe (Svelte отписывает сам при $destroy). Если разработчик соскользнёт на ручной `subscribe()` — обязан unsubscribe в onDestroy:123.
+- **Infinite loop** (store write → reactive → store write): реальный риск. `$: record = mergeExternal(...)` НЕ должен триггерить save. setValue (user-инициированный) — единственный путь к autosave; реактивная склейка от стора пишет только `record`, не вызывает performSave. Тест должен подтвердить, что внешний апдейт НЕ вызывает onSave.
+- **Запись удалена внешне** (record.id больше нет во фрейме): `live` станет `undefined` → guard `if (live)` оставляет последнее `record` на экране. Out-of-scope для #101 авто-закрытие модалки; задокументировать как follow-up если потребуется UX.
+- **id stability**: `record.id` (путь .md) — ключ и в updateRecord (dataframe.ts:95), и в merge (dataframe.ts:164). Rename меняет id и уже закрывает модалку (editNoteModal.ts:43) — конфликта нет.
+- **dirty не чистится при manual-save режиме** (handleManualSave, line 199): убедиться, что очистка dirty висит на общем save-success, а не только на autosave-ветке.
+
+
 
 ### #096 — P2: Чарты — менеджмент осей (auto-skip/rotate дат, date-bucketing)
 - Status: ✅ DONE (2026-06-14) — READY FOR PR (не слит/запушен — гейт пользователя). Скриншот 22-16-35: подписи дат слипаются в кашу.
