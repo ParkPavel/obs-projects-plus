@@ -25,7 +25,7 @@ npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Test baseline: **150 suites / 2165 tests PASS**, tsc 0 errors. (Updated 2026-06-13; canonical number maintained in `docs/internal/CONTEXT.md` → «Гейты».) Any deviation must be acknowledged before merge.
+Test baseline: **151 suites / 2192 tests PASS**, tsc 0 errors. (Updated 2026-06-14; canonical number maintained in `docs/internal/CONTEXT.md` → «Гейты».) Any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
 

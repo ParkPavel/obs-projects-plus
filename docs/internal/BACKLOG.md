@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-13 (#100 P1 reactivity-hardening + #098 P2 FloatingPopup закрыты, READY FOR PR; follow-up #102 заведён; baseline ratchet 150 suites / 2165 tests; next open: #096 charts axis P2)
+> **Updated**: 2026-06-14 (#096 charts axis management закрыт, READY FOR PR — 3 среза #096.1/.2/.3; #096.4 dayjs-reconcile остаётся открыт P3; baseline ratchet 151 suites / 2192 tests; next open: #102 config-echo guard P2)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -1297,8 +1297,9 @@ Acceptance criteria:
 - valuesSnapshot не обновляется при внешних изменениях открытой записи.
 
 ### #096 — P2: Чарты — менеджмент осей (auto-skip/rotate дат, date-bucketing)
-- Status: 🚧 IN PROGRESS | W2 — скриншот 22-16-35: подписи дат слипаются в кашу.
+- Status: ✅ DONE (2026-06-14) — READY FOR PR (не слит/запушен — гейт пользователя). Скриншот 22-16-35: подписи дат слипаются в кашу.
 - Complexity: M | architect-signed 2026-06-13 (backend-architect, ≥2 модуля + engine).
+- Доставлено в трёх срезах: #096.1 (`b2947c1`) engine date-bucketing, #096.2 (`7e4e4d7`) density-based `axisLabels.ts`, #096.3 (`e23abbc`) granularity config UI. #096.4 остаётся открыт P3.
 - Подход: переиспользовать существующий engine `DateGrouping` (transformExecutor.ts) — НЕ
   строить параллель; auto-default `month` для Date X-полей + явный override `dateGranularity?`
   в `ChartAxisX` (additive optional → миграция НЕ нужна). Унификация skip/rotate в один pure
