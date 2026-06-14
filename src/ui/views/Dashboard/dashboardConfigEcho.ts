@@ -91,11 +91,23 @@ export function createConfigEcho<T>(initial: T): ConfigEcho<T> {
 
     reconcile(): void {
       if (pendingWrites === 0) return;
-      if (sawNewProp) {
-        current = lastNewProp;
+      // #102: decrement symmetrically with commit() instead of an absolute reset.
+      // A rapid double-commit makes pendingWrites=2; the first reconcile must NOT
+      // zero it or the second in-flight write loses its guard and a later echo is
+      // mistaken for an authoritative external change (lost-update clobber).
+      pendingWrites -= 1;
+      // The #100/#071 force-adopt of an external change settles only when the LAST
+      // pending write does. While writes remain in flight the optimistic value must
+      // keep winning, and sawNewProp/lastNewProp must survive so the external change
+      // is still adopted (never lost) once the final write settles. Consuming or
+      // clearing them on an earlier reconcile would either clobber a newer
+      // optimistic value or drop a real external change.
+      if (pendingWrites === 0) {
+        if (sawNewProp) {
+          current = lastNewProp;
+        }
+        sawNewProp = false;
       }
-      pendingWrites = 0;
-      sawNewProp = false;
     },
   };
 }
