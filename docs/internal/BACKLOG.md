@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-14 (#102 config-echo guard rapid double-commit edge CLOSED, READY FOR PR — `57ae744`; baseline ratchet 151 suites / 2195 tests +3 state-machine; next open: #101 EditNote live-modal P2, #096.4 dayjs-reconcile P3)
+> **Updated**: 2026-06-14 (#101 EditNote live-modal CLOSED, READY FOR PR — `c1becb4`; baseline ratchet 152 suites / 2203 tests +1 suite `editNoteMerge.test.ts` +8 tests; next open: #096.4 dayjs-reconcile P3)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -1293,7 +1293,8 @@ Acceptance criteria:
 - Закрывает класс багов #071. Audit READY FOR PR. Follow-up: **#102** (P2, rapid double-commit edge).
 
 ### #101 — P2: EditNote — живая модалка (подписка на обновления записи)
-- Status: 📋 BACKLOG | W2/W3
+- Status: ✅ DONE (2026-06-14) — READY FOR PR (не слит/запушен — гейт пользователя)
+- **Delivered** (`c1becb4`): все три среза доставлены одним коммитом — #101.1 чистый `mergeExternal(local, store, dirty)` helper в `src/ui/modals/components/editNoteMerge.ts` (untouched-ключи из store, dirty-ключи из local, id из store) + 8 unit-тестов в новом `editNoteMerge.test.ts`; #101.2 dirty `Set<string>` заполняется в `setValue`, чистится на обоих save-success путях (autosave + handleManualSave); #101.3 `$dataFrame` auto-subscribe + live-lookup по захваченному `recordId` (фикс Svelte cyclical-dep `record→live→record`) + реактивная склейка. Без `metadataCache.on`, без ручного unsubscribe (`$store` auto-teardown). Гейты: build 0, jest 152/2203 (+1 suite/+8), lint 0, svelte-check 0/0. Авто-закрытие модалки при удалении записи извне — явный out-of-scope follow-up (см. «Запись удалена внешне» ниже).
 - Complexity: **S–M** | architect-signed 2026-06-14 (backend-architect, ровно 2 модуля: EditNote.svelte + editNoteModal.ts; store/API/types переиспользуются БЕЗ изменений).
 - **Баг**: EditNote.svelte:109 `$: valuesSnapshot = { ...record.values }` реагирует только на локальный prop `record`. Этот prop захватывается one-shot в editNoteModal.ts:30 (`record: this.defaults`) и больше никогда не связан с живым стором. Внешние изменения записи (vault/metadataCache → `dataFrame.merge()`; api.updateRecord → `dataFrame.updateRecord()`) не перерисовывают модалку. Модалка — ЕДИНСТВЕННЫЙ consumer, отстёгивающий одну запись от потока `$dataFrame` (views читают `$: ({fields,records}=frame)` из DataFrameProvider.svelte:153).
 

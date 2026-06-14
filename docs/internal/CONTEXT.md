@@ -1,33 +1,34 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-14 (#102 config-echo guard rapid double-commit edge закрыт, READY FOR PR — `57ae744`; baseline ratchet 151 suites / 2195 tests +3 state-machine; next open: #101 EditNote live-modal P2, #096.4 dayjs-reconcile P3)**
+> Обновлено: **2026-06-14 (#101 EditNote live-modal закрыт, READY FOR PR — `c1becb4`; baseline ratchet 152 suites / 2203 tests +1 suite `editNoteMerge.test.ts` +8 tests; next open: #096.4 dayjs-reconcile P3)**
 
 ## Состояние веток
 
 - HEAD `main`: **`f23efdb`** — `feat(agents): harden 4-gate verification cycle`
-- HEAD `feat/dashboard-v2`: **`57ae744`** — `fix(dashboard): #102 — reconcile() симметричный декремент pendingWrites`
-- Active branch: `feat/dashboard-v2` — **33 коммита впереди origin** (push контролирует пользователь). НЕ запушено.
+- HEAD `feat/dashboard-v2`: **`c1becb4`** — `fix(modals): #101 — EditNote live modal reacts to external record changes`
+- Active branch: `feat/dashboard-v2` — **35 коммитов впереди origin** (push контролирует пользователь). НЕ запушено.
 - Archive branch: `archive/dashboard-v1` — снимок V1 на момент запуска V2.
 - Working tree: clean.
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (feat/dashboard-v2 @ 57ae744)
+## Гейты (feat/dashboard-v2 @ c1becb4)
 
 | Гейт | Результат |
 |---|---|
 | `npm run build` | ✅ 0 errors (3 pre-existing unrelated warnings) |
-| `npm test` | ✅ **151 suites / 2195 tests PASS** |
+| `npm test` | ✅ **152 suites / 2203 tests PASS** |
 | `npm run lint` | ✅ 0 errors (130 pre-existing tsdoc warnings) |
 | `npm run svelte-check` | ✅ 0 errors / 0 warnings |
 | `@ts-ignore` в src | 0 ✅ |
 | PX-budget (`R0_3_pxBudget.test.ts`) | ≤186, locked ✅ |
 | Manual API-тест в OBStests (`MANUAL_TESTING_PIPELINE.md`) | ✅ 2026-06-11: deploy + reload + 11 команд + demo smoke A1–A7 + roundtrip. Визуальный чек-лист (#059/#065/#048 strip/zero-state/темы) — ожидает человека, см. pipeline §5 |
 
-> **Канон baseline = 151 / 2195** (этот файл, «Гейты»). Ratchet 2026-06-14:
-> +3 state-machine теста из #102 (`reconcile()` симметричный декремент `pendingWrites`).
-> Было 151 / 2192 (#096: +1 suite `axisLabels.test.ts` + тесты в `transformExecutor.test.ts`,
-> `chartDataPipeline.test.ts`, `configPanelRoundTrip.test.ts`).
-> `CLAUDE.md` синхронизирован → **151 / 2195** (2026-06-14). CONTEXT.md —
+> **Канон baseline = 152 / 2203** (этот файл, «Гейты»). Ratchet 2026-06-14:
+> +1 suite `editNoteMerge.test.ts` + 8 тестов из #101 (чистый `mergeExternal` helper).
+> Было 151 / 2195 (#102: +3 state-machine теста, `reconcile()` симметричный декремент
+> `pendingWrites`). Перед этим 151 / 2192 (#096: +1 suite `axisLabels.test.ts` + тесты в
+> `transformExecutor.test.ts`, `chartDataPipeline.test.ts`, `configPanelRoundTrip.test.ts`).
+> `CLAUDE.md` синхронизирован → **152 / 2203** (2026-06-14). CONTEXT.md —
 > единственный канонический источник числа (так гласит сам CLAUDE.md).
 
 ## Активная работа
@@ -53,7 +54,8 @@
 **✅ Сессия 2026-06-13 (W2-продолжение, 5 коммитов)**: #100 Reactivity hardening (P1) закрыт — pure optimistic-echo guard (`dashboardConfigEcho.ts`), wire в DashboardCanvas, config-panel round-trip harness + #071 regression, fix replayed-stale-prop; закрывает класс багов #071, follow-up #102 заведён (`cf87da6`/`b4bd4ea`/`65165ad`/`a4019ed`). #098 FloatingPopup edge-collision (P2) закрыт — viewport width-clamp + resize/scroll reposition (`7fe7756`). Оба READY FOR PR, все 4 гейта зелёные. НЕ слиты/запушены — гейт пользователя.
 **✅ Сессия 2026-06-14 (W2, 3 коммита)**: #096 Charts axis management (P2) закрыт целиком — три среза: #096.1 (`b2947c1`) engine date-bucketing в chart pipeline (buildChartPipeline optional `fields`, auto-month для Date X, explicit `dateGranularity` override; computeChartData читает derived `${field}_${gran}`); #096.2 (`7e4e4d7`) новый pure helper `axisLabels.ts` (density-based skip/rotate/truncate/padding) + `axisLabels.test.ts`, LineChart убрал `/8` magic skip, BarChart получил skip+rotate; #096.3 (`e23abbc`) granularity `<select>` в ChartConfig.svelte gated на DataFieldType.Date + i18n en/ru/uk/zh-CN + round-trip тесты. READY FOR PR, все 4 гейта зелёные. #096.4 (dayjs-vs-raw-Date в truncateDate) остаётся открыт P3 (DEFERRED). НЕ слит/запушен — гейт пользователя.
 **✅ Сессия 2026-06-14 (W2, #102)**: #102 config-echo guard rapid double-commit edge (P2, follow-up #100) закрыт — `reconcile()` в `dashboardConfigEcho.ts` декрементит `pendingWrites` симметрично с `commit()` (был абсолютный сброс к 0) + clear-pending при `eq(cfg, current)`; фиксит lost-update edge при двух commit подряд в одном microtask-окне с interleaved echo; +3 state-machine теста. READY FOR PR (`57ae744`), все 4 гейта зелёные. НЕ слит/запушен — гейт пользователя.
-**Следующий шаг**: W2 — **#101** EditNote live-modal (P2), затем #096.4 dayjs-reconcile (P3, DEFERRED), #098-deferred (vertical-overflow gap, при необходимости).
+**✅ Сессия 2026-06-14 (W2, #101)**: #101 EditNote — живая модалка (P2) закрыт. Architect-signed план (`fcc5a69`), реализация тремя срезами в одном коммите (`c1becb4`): #101.1 чистый `mergeExternal(local, store, dirty)` helper в `editNoteMerge.ts` (untouched-ключи из store, dirty-ключи из local, id из store) + 8 unit-тестов; #101.2 dirty `Set<string>` заполняется в `setValue`, чистится на обоих save-success путях (autosave + handleManualSave); #101.3 `$dataFrame` auto-subscribe + live-lookup по захваченному `recordId` (фикс Svelte cyclical-dep `record→live→record`) + реактивная склейка. Без `metadataCache.on` (инвариант единственного источника), без ручного unsubscribe (`$store` auto-teardown), реактивная склейка пишет только `record`, не вызывает `onSave`. +1 suite `editNoteMerge.test.ts` (+8 тестов). READY FOR PR (`c1becb4`), все 4 гейта зелёные. НЕ слит/запушен — гейт пользователя. Auto-close при удалении записи извне — явный out-of-scope follow-up.
+**Следующий шаг**: W2 — **#096.4** dayjs-reconcile (P3, DEFERRED), #098-deferred (vertical-overflow gap, при необходимости).
 
 ## Завершённые milestones
 
@@ -88,6 +90,7 @@
 | **#098 — FloatingPopup edge-collision** | ✅ DONE (2026-06-13, READY FOR PR) — viewport width-clamp + resize/scroll reposition. Deferred P3: scroll-throttle, max-height vertical cap. (`7fe7756`) |
 | **#096 — Charts axis management** | ✅ DONE (2026-06-14, READY FOR PR) — date-bucketing engine wiring + density-based `axisLabels.ts` + granularity config UI. 3 среза. Deferred P3: #096.4 dayjs-vs-raw-Date reconcile. (`b2947c1`/`7e4e4d7`/`e23abbc`) |
 | **#102 — config-echo guard rapid double-commit edge** | ✅ DONE (2026-06-14, READY FOR PR) — `reconcile()` теперь декрементит `pendingWrites` симметрично с `commit()` (был абсолютный сброс) — фиксит lost-update edge при rapid double-commit; +3 state-machine теста. Follow-up #100. (`57ae744`) |
+| **#101 — EditNote живая модалка** | ✅ DONE (2026-06-14, READY FOR PR) — три среза одним коммитом: чистый `mergeExternal` helper (#101.1) + dirty `Set<string>` (#101.2) + `$dataFrame` auto-subscribe + реактивная склейка с фиксом cyclical-dep (#101.3); +1 suite `editNoteMerge.test.ts` (+8). Auto-close при внешнем удалении записи — out-of-scope follow-up. (`c1becb4`) |
 
 ## Открытые тикеты
 
@@ -106,7 +109,8 @@
 > ⚠ 2026-06-14: #096 (P2, charts axis) закрыт целиком тремя срезами (`b2947c1`/`7e4e4d7`/`e23abbc`),
 > READY FOR PR. #096.4 (dayjs-reconcile) остаётся открыт P3.
 > ⚠ 2026-06-14: #102 (P2, config-echo guard rapid double-commit edge) закрыт (`57ae744`), READY FOR PR.
-> Следующий открытый тикет — **#101** (P2, EditNote live-modal).
+> ⚠ 2026-06-14: #101 (P2, EditNote live-modal) закрыт (`c1becb4`), READY FOR PR — стекается на
+> `feat/dashboard-v2` рядом с #102 и #096. Следующий открытый тикет — **#096.4** (P3, dayjs-reconcile, DEFERRED).
 
 **Очередь исполнения (W2 → далее):**
 
@@ -122,8 +126,8 @@
 | — | ~~#098 FloatingPopup — коллизия с краем окна~~ | ✅ DONE `7fe7756` (2026-06-13, READY FOR PR) |
 | — | ~~#096 чарты — менеджмент осей (auto-skip/rotate дат, date-bucketing)~~ | ✅ DONE `b2947c1`/`7e4e4d7`/`e23abbc` (2026-06-14, READY FOR PR; #096.4 → P3) |
 | — | ~~#102 config-echo guard — rapid double-commit edge (follow-up #100)~~ | ✅ DONE `57ae744` (2026-06-14, READY FOR PR) |
-| 1b | #096.4 чарты — reconcile dayjs vs raw Date в truncateDate | P3, DEFERRED |
-| **1** | **#101 EditNote — живая модалка (подписка на обновления записи)** | **P2, W2/W3 — NEXT** |
+| — | ~~#101 EditNote — живая модалка (подписка на обновления записи)~~ | ✅ DONE `c1becb4` (2026-06-14, READY FOR PR) |
+| **1** | **#096.4 чарты — reconcile dayjs vs raw Date в truncateDate** | **P3, DEFERRED — NEXT** |
 | 5 | **#077** единый FormulaConstructor (5 точек входа); **#061** Template Library; #082 typed-карточка записи | прежний план |
 | 6 | #078 CalendarView decomposition (2328 LOC); #079 hex-ratchet | аудит |
 | 7 | #075-остаток, #076, #060, #036 | прежний план |
