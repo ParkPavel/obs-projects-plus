@@ -636,6 +636,18 @@ describe("executeTransform — GROUP BY", () => {
   test("date grouping — unparseable string buckets to __invalid__", () => {
     expect(bucketLabel("not-a-date", "month")).toBe("__invalid__");
   });
+
+  // #096.4 — bare-ISO strings must bucket on the LOCAL calendar. The old
+  // `new Date(String(...))` parsed at UTC-midnight but read local accessors,
+  // drifting one bucket back in negative-offset (Americas) timezones. dayjs
+  // parses bare-ISO at local midnight, matching the local accessors.
+  test("date grouping — bare-ISO day boundary stays on local calendar day", () => {
+    expect(bucketLabel("2024-01-01", "day")).toBe("2024-01-01");
+  });
+
+  test("date grouping — bare-ISO year-end stays in local calendar year", () => {
+    expect(bucketLabel("2024-12-31", "year")).toBe("2024");
+  });
 });
 
 // ── AGGREGATE Tests ──────────────────────────────────────────

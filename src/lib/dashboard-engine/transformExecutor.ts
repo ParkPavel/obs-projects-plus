@@ -26,6 +26,7 @@ import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
 import { evaluateFormulaValue } from "./formulaEngine";
 import { isUnsafePattern } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
+import dayjs from "dayjs";
 
 /** Canonical step order for validation */
 const STEP_ORDER: Record<TransformStep["type"], number> = {
@@ -622,7 +623,7 @@ function executeFilter(
 function truncateDate(dateVal: DataValue | undefined | null, granularity: string): string {
   if (dateVal == null) return "__empty__";
 
-  const d = dateVal instanceof Date ? dateVal : new Date(String(dateVal));
+  const d = dateVal instanceof Date ? dateVal : dayjs(String(dateVal)).toDate();
   if (isNaN(d.getTime())) return "__invalid__";
 
   const year = d.getFullYear();
