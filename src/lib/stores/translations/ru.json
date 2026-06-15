@@ -1010,6 +1010,7 @@
                     "layout-stack": "Список",
                     "hide-formula-bar": "Скрыть редактор формул",
                     "show-formula-bar": "Показать редактор формул",
+                    "formula-builder": "Конструктор формул",
                     "schema": "Схема",
                     "schema-tip": "Управление полями проекта — типы, связи, сводки",
                     "template-replace-title": "Заменить текущий макет?",

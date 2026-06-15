@@ -50,7 +50,7 @@
             defaultValue: "Show formula bar — IntelliSense, live preview, syntax check",
           })}
     >
-      ƒx
+      <Icon name="function-square" size="sm" /> {$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formula builder" })}
     </button>
   {/if}
   {#if showToolbar && !readonly}

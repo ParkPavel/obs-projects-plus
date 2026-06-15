@@ -22,6 +22,7 @@
   import type { ProjectDefinition } from "src/settings/settings";
   import type { ViewApi } from "src/lib/viewApi";
   import { app } from "src/lib/stores/obsidian";
+  import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { fieldDisplayText, fieldIcon } from "src/ui/views/helpers";
   import { TFile, Notice } from "obsidian";
@@ -269,7 +270,12 @@
               <span class="ppp-property-readonly">{asString(fieldValue(activeRecord, field.name))}</span>
             {:else if field.type === DataFieldType.Formula}
               <span class="ppp-property-readonly">{asString(fieldValue(activeRecord, field.name))}</span>
-              <button class="clickable-icon" on:click={() => openFormulaModal(field.name)} title="Open editor">ƒ</button>
+              <button
+                class="clickable-icon"
+                on:click={() => openFormulaModal(field.name)}
+                title={$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formula builder" })}
+                aria-label={$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formula builder" })}
+              ><Icon name="function-square" size="sm" /></button>
             {:else}
               <span class="ppp-property-readonly">{asString(fieldValue(activeRecord, field.name))}</span>
             {/if}

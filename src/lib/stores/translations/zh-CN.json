@@ -768,6 +768,7 @@
                     "layout-stack": "列表",
                     "hide-formula-bar": "隐藏公式栏",
                     "show-formula-bar": "显示公式栏",
+                    "formula-builder": "公式构造器",
                     "schema": "模式",
                     "schema-tip": "管理项目字段 — 类型、关系、汇总",
                     "template-replace-title": "替换当前布局？",
