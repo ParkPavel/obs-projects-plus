@@ -272,6 +272,18 @@
   /* --ppp-breakpoint-md: 768; */
   /* --ppp-breakpoint-lg: 1024; */
   /* --ppp-breakpoint-xl: 1280; */
+
+  /* ═══════════════════════════════════════════════════════════
+     FORMULA SYNTAX HIGHLIGHT (#077)
+     Maps token classes onto Obsidian code-* theme vars with
+     plugin-palette fallbacks. No literal colors.
+     ═══════════════════════════════════════════════════════════ */
+  --ppp-fc-token-fn:       var(--code-function, var(--text-accent));
+  --ppp-fc-token-field:    var(--code-property, var(--text-normal));
+  --ppp-fc-token-string:   var(--code-string,   var(--text-success));
+  --ppp-fc-token-number:   var(--code-value,    var(--text-accent-hover));
+  --ppp-fc-token-operator: var(--code-operator, var(--text-muted));
+  --ppp-fc-token-keyword:  var(--code-keyword,  var(--text-accent));
 }
 
 /* ═══════════════════════════════════════════════════════════

@@ -37,6 +37,7 @@
   } from "src/lib/dashboard-engine/formulaMetadata";
   import { i18n } from "src/lib/stores/i18n";
   import FloatingPopup from "src/ui/components/FloatingPopup/FloatingPopup.svelte";
+  import { tokenize, type Token } from "src/lib/helpers/formulaParser";
 
   // ── Snippets catalog (default) ──────────────────────────────
   // Small built-in catalog for empty-state Ctrl+Space discovery. Each surface
@@ -60,6 +61,12 @@
   export let rows: number = 3;
   export let disabled: boolean = false;
   /**
+   * Opt-in syntax highlighting via an aria-hidden overlay underlay. Off by
+   * default so existing surfaces are visually unchanged. Caret + editing stay
+   * on the native textarea; the underlay only colorizes tokens.
+   */
+  export let highlight: boolean = false;
+  /**
    * Catalog shown on Ctrl+Space when textarea is empty. Pass `[]` to disable
    * the snippet picker (Ctrl+Space then falls back to "all functions").
    */
@@ -81,7 +88,66 @@
   let selectedSuggestionIndex = -1;
   let activeSignature: FormulaMetadata | null = null;
   let textareaEl: HTMLTextAreaElement;
+  let highlightEl: HTMLDivElement | null = null;
   let suggestionListEl: HTMLDivElement | null = null;
+
+  // ── Syntax highlight (#077) ─────────────────────────────────
+  type HighlightSegment = { text: string; cls: string };
+
+  function tokenClass(type: Token["type"]): string {
+    switch (type) {
+      case "FUNCTION": return "ppp-fc-tok-fn";
+      case "FIELD": return "ppp-fc-tok-field";
+      case "STRING": return "ppp-fc-tok-string";
+      case "NUMBER": return "ppp-fc-tok-number";
+      case "BOOLEAN":
+      case "NULL": return "ppp-fc-tok-keyword";
+      case "OPERATOR":
+      case "LPAREN":
+      case "RPAREN":
+      case "LBRACKET":
+      case "RBRACKET":
+      case "COMMA": return "ppp-fc-tok-operator";
+      default: return "";
+    }
+  }
+
+  // Split `expr` into colored token segments + uncolored gaps (whitespace,
+  // comments). Falls back to a single plain segment if the tokenizer throws.
+  function buildHighlightSegments(expr: string): HighlightSegment[] {
+    if (expr === "") return [];
+    try {
+      const tokens = tokenize(expr);
+      const segments: HighlightSegment[] = [];
+      let pos = 0;
+      for (const tok of tokens) {
+        if (tok.type === "EOF") break;
+        if (typeof tok.start !== "number" || typeof tok.end !== "number") {
+          return [{ text: expr, cls: "" }];
+        }
+        if (tok.start > pos) {
+          segments.push({ text: expr.slice(pos, tok.start), cls: "" });
+        }
+        segments.push({ text: expr.slice(tok.start, tok.end), cls: tokenClass(tok.type) });
+        pos = tok.end;
+      }
+      if (pos < expr.length) {
+        segments.push({ text: expr.slice(pos), cls: "" });
+      }
+      return segments;
+    } catch {
+      return [{ text: expr, cls: "" }];
+    }
+  }
+
+  $: highlightSegments = highlight ? buildHighlightSegments(value) : [];
+
+  function syncScroll() {
+    if (highlightEl && textareaEl) {
+      highlightEl.scrollTop = textareaEl.scrollTop;
+      highlightEl.scrollLeft = textareaEl.scrollLeft;
+    }
+  }
   /**
    * True when Ctrl+Space forced suggestions open without a cursor word.
    * Auto-resets when the user types (cursorWord appears) or cancels (Esc/insert).
@@ -274,20 +340,29 @@
 
 <div class="ppp-fc" on:keydown={handleKeydown}>
   <div class="ppp-fc-editor">
-    <textarea
-      bind:this={textareaEl}
-      class="ppp-fc-textarea"
-      class:ppp-fc-textarea--error={errors.length > 0}
-      {value}
-      {rows}
-      {disabled}
-      {placeholder}
-      on:input={handleInput}
-      on:click={handleCursorMove}
-      on:keyup={handleCursorMove}
-      on:focus={handleCursorMove}
-      spellcheck="false"
-    ></textarea>
+    <div class="ppp-fc-input-stack" class:ppp-fc-input-stack--disabled={disabled}>
+      {#if highlight}
+        <div class="ppp-fc-highlight" bind:this={highlightEl} aria-hidden="true">
+          {#each highlightSegments as seg}<span class={seg.cls}>{seg.text}</span>{/each}
+        </div>
+      {/if}
+      <textarea
+        bind:this={textareaEl}
+        class="ppp-fc-textarea"
+        class:ppp-fc-textarea--error={errors.length > 0}
+        class:ppp-fc-textarea--highlight={highlight}
+        {value}
+        {rows}
+        {disabled}
+        {placeholder}
+        on:input={(e) => { handleInput(e); syncScroll(); }}
+        on:click={handleCursorMove}
+        on:keyup={handleCursorMove}
+        on:focus={handleCursorMove}
+        on:scroll={syncScroll}
+        spellcheck="false"
+      ></textarea>
+    </div>
 
     <!-- Signature popover: appears below textarea, shows function metadata -->
     {#if activeSignature}
@@ -374,6 +449,10 @@
     position: relative;
   }
 
+  .ppp-fc-input-stack {
+    position: relative;
+  }
+
   .ppp-fc-textarea {
     width: 100%;
     padding: 0.5rem;
@@ -383,9 +462,57 @@
     color: var(--text-normal);
     font-family: var(--font-monospace);
     font-size: var(--font-ui-small);
+    line-height: 1.4;
+    letter-spacing: normal;
     resize: vertical;
     min-height: 4rem;
     box-sizing: border-box;
+  }
+
+  /* Highlight overlay (#077). The underlay paints colored tokens; the
+     textarea sits on top with transparent text but a visible caret.
+     Typography MUST match the textarea exactly so glyphs align 1:1. */
+  .ppp-fc-highlight {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0.5rem;
+    border: 0.0625rem solid transparent;
+    border-radius: var(--radius-s, 0.25rem);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    line-height: 1.4;
+    letter-spacing: normal;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+    pointer-events: none;
+    box-sizing: border-box;
+    color: var(--text-normal);
+  }
+
+  .ppp-fc-textarea--highlight {
+    position: relative;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--text-normal);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .ppp-fc-input-stack--disabled .ppp-fc-highlight {
+    color: var(--text-muted);
+  }
+
+  .ppp-fc-highlight :global(.ppp-fc-tok-fn) { color: var(--ppp-fc-token-fn); }
+  .ppp-fc-highlight :global(.ppp-fc-tok-field) { color: var(--ppp-fc-token-field); }
+  .ppp-fc-highlight :global(.ppp-fc-tok-string) { color: var(--ppp-fc-token-string); }
+  .ppp-fc-highlight :global(.ppp-fc-tok-number) { color: var(--ppp-fc-token-number); }
+  .ppp-fc-highlight :global(.ppp-fc-tok-operator) { color: var(--ppp-fc-token-operator); }
+  .ppp-fc-highlight :global(.ppp-fc-tok-keyword) { color: var(--ppp-fc-token-keyword); }
+
+  .ppp-fc-input-stack--disabled .ppp-fc-highlight :global(span) {
+    color: var(--text-muted);
   }
 
   .ppp-fc-textarea:focus {

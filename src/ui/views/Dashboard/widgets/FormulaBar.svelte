@@ -103,6 +103,7 @@
   <FormulaConstructor
     bind:value={inputValue}
     {fields}
+    highlight
     placeholder={$i18n.t("views.dashboard.formula.expression-placeholder")}
     rows={3}
     on:change={(e) => { inputValue = e.detail; }}

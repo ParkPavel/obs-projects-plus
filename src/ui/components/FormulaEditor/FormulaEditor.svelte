@@ -16,6 +16,8 @@
   export let placeholder: string = "";
   export let rows: number = 6;
   export let disabled: boolean = false;
+  /** Opt-in syntax highlighting; on by default for embedded editors (#077). */
+  export let highlight: boolean = true;
   /** Optional validator returning string[] error messages. */
   export let validate: ((expr: string) => string[]) | undefined = undefined;
   export const ariaLabel: string = "";
@@ -49,6 +51,7 @@
   <FormulaConstructor
     bind:value={inputValue}
     {fields}
+    {highlight}
     {placeholder}
     {rows}
     {disabled}

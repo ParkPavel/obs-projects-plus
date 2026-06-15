@@ -167,6 +167,55 @@ describe("FormulaConstructor", () => {
 		});
 	});
 
+	describe("syntax highlight overlay (#077)", () => {
+		test("highlight off (default): no underlay rendered", () => {
+			const { container } = render(FormulaConstructor, {
+				props: { value: "SUM(amount)", fields: ["amount"] },
+			});
+			expect(container.querySelector(".ppp-fc-highlight")).toBeNull();
+		});
+
+		test("highlight on: underlay paints function and field token classes", () => {
+			const { container } = render(FormulaConstructor, {
+				props: { value: "SUM(amount)", fields: ["amount"], highlight: true },
+			});
+			const underlay = container.querySelector(".ppp-fc-highlight");
+			expect(underlay).not.toBeNull();
+			expect(underlay?.querySelector(".ppp-fc-tok-fn")?.textContent).toBe("SUM");
+			expect(underlay?.querySelector(".ppp-fc-tok-field")?.textContent).toBe("amount");
+			expect(underlay?.querySelector(".ppp-fc-tok-operator")).not.toBeNull();
+		});
+
+		test("highlight on: string and number tokens get their classes", () => {
+			const { container } = render(FormulaConstructor, {
+				props: { value: 'CONCAT("hi", 42)', fields: [], highlight: true },
+			});
+			const underlay = container.querySelector(".ppp-fc-highlight");
+			expect(underlay?.querySelector(".ppp-fc-tok-string")?.textContent).toBe('"hi"');
+			expect(underlay?.querySelector(".ppp-fc-tok-number")?.textContent).toBe("42");
+		});
+
+		test("highlight on: tokenizer throw falls back to a single plain segment", () => {
+			const { container } = render(FormulaConstructor, {
+				props: { value: "valid §§ bad", fields: [], highlight: true },
+			});
+			const underlay = container.querySelector(".ppp-fc-highlight");
+			expect(underlay).not.toBeNull();
+			// No colored token classes; full text preserved as plain.
+			expect(underlay?.querySelector(".ppp-fc-tok-fn")).toBeNull();
+			expect(underlay?.textContent).toBe("valid §§ bad");
+		});
+
+		test("highlight on: reconstructed underlay text equals the source value", () => {
+			const expr = 'AND(status = "Active", priority >= 5)';
+			const { container } = render(FormulaConstructor, {
+				props: { value: expr, fields: ["status", "priority"], highlight: true },
+			});
+			const underlay = container.querySelector(".ppp-fc-highlight");
+			expect(underlay?.textContent).toBe(expr);
+		});
+	});
+
 	describe("keyboard contract", () => {
 		test("Escape closes the suggestion popover", async () => {
 			const { container } = render(FormulaConstructor, {
