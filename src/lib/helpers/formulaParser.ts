@@ -30,20 +30,27 @@ export type FormulaNode =
   | { type: 'literal'; value: string | number | boolean | null }
   | { type: 'array'; items: FormulaNode[] };
 
-export type Token = 
-  | { type: 'FUNCTION'; value: string }
-  | { type: 'FIELD'; value: string }
-  | { type: 'STRING'; value: string }
-  | { type: 'NUMBER'; value: number }
-  | { type: 'BOOLEAN'; value: boolean }
-  | { type: 'NULL'; value: null }
-  | { type: 'OPERATOR'; value: string }
-  | { type: 'LPAREN'; value: '(' }
-  | { type: 'RPAREN'; value: ')'}
-  | { type: 'LBRACKET'; value: '[' }
-  | { type: 'RBRACKET'; value: ']' }
-  | { type: 'COMMA'; value: ',' }
-  | { type: 'EOF'; value: '' };
+/**
+ * Optional source-position offsets into the ORIGINAL formula string
+ * (before escape processing). `formula.slice(start, end)` recovers the
+ * raw fragment. Optional → backward compatible with all consumers.
+ */
+type Span = { start?: number; end?: number };
+
+export type Token =
+  | ({ type: 'FUNCTION'; value: string } & Span)
+  | ({ type: 'FIELD'; value: string } & Span)
+  | ({ type: 'STRING'; value: string } & Span)
+  | ({ type: 'NUMBER'; value: number } & Span)
+  | ({ type: 'BOOLEAN'; value: boolean } & Span)
+  | ({ type: 'NULL'; value: null } & Span)
+  | ({ type: 'OPERATOR'; value: string } & Span)
+  | ({ type: 'LPAREN'; value: '(' } & Span)
+  | ({ type: 'RPAREN'; value: ')' } & Span)
+  | ({ type: 'LBRACKET'; value: '[' } & Span)
+  | ({ type: 'RBRACKET'; value: ']' } & Span)
+  | ({ type: 'COMMA'; value: ',' } & Span)
+  | ({ type: 'EOF'; value: '' } & Span);
 
 // ============================================
 // Tokenizer
@@ -118,6 +125,8 @@ export function tokenize(formula: string): Token[] {
       continue;
     }
 
+    const tokenStart = i;
+
     // String literals (double or single quotes)
     if (char === '"' || char === "'") {
       const quote = char;
@@ -143,7 +152,7 @@ export function tokenize(formula: string): Token[] {
       }
       
       i++; // Skip closing quote
-      tokens.push({ type: 'STRING', value });
+      tokens.push({ type: 'STRING', value, start: tokenStart, end: i });
       continue;
     }
 
@@ -163,7 +172,7 @@ export function tokenize(formula: string): Token[] {
         i++;
       }
       
-      tokens.push({ type: 'NUMBER', value: parseFloat(value) });
+      tokens.push({ type: 'NUMBER', value: parseFloat(value), start: tokenStart, end: i });
       continue;
     }
 
@@ -171,8 +180,8 @@ export function tokenize(formula: string): Token[] {
     let foundOperator = false;
     for (const op of OPERATORS) {
       if (formula.substring(i, i + op.length) === op) {
-        tokens.push({ type: 'OPERATOR', value: op });
         i += op.length;
+        tokens.push({ type: 'OPERATOR', value: op, start: tokenStart, end: i });
         foundOperator = true;
         break;
       }
@@ -181,28 +190,28 @@ export function tokenize(formula: string): Token[] {
 
     // Parentheses and brackets
     if (char === '(') {
-      tokens.push({ type: 'LPAREN', value: '(' });
       i++;
+      tokens.push({ type: 'LPAREN', value: '(', start: tokenStart, end: i });
       continue;
     }
     if (char === ')') {
-      tokens.push({ type: 'RPAREN', value: ')' });
       i++;
+      tokens.push({ type: 'RPAREN', value: ')', start: tokenStart, end: i });
       continue;
     }
     if (char === '[') {
-      tokens.push({ type: 'LBRACKET', value: '[' });
       i++;
+      tokens.push({ type: 'LBRACKET', value: '[', start: tokenStart, end: i });
       continue;
     }
     if (char === ']') {
-      tokens.push({ type: 'RBRACKET', value: ']' });
       i++;
+      tokens.push({ type: 'RBRACKET', value: ']', start: tokenStart, end: i });
       continue;
     }
     if (char === ',') {
-      tokens.push({ type: 'COMMA', value: ',' });
       i++;
+      tokens.push({ type: 'COMMA', value: ',', start: tokenStart, end: i });
       continue;
     }
 
@@ -217,7 +226,7 @@ export function tokenize(formula: string): Token[] {
         i++;
       }
       if (value) {
-        tokens.push({ type: 'FIELD', value: `@${value}` });
+        tokens.push({ type: 'FIELD', value: `@${value}`, start: tokenStart, end: i });
       }
       continue;
     }
@@ -236,16 +245,16 @@ export function tokenize(formula: string): Token[] {
 
       // Keywords
       if (upperValue === 'TRUE') {
-        tokens.push({ type: 'BOOLEAN', value: true });
+        tokens.push({ type: 'BOOLEAN', value: true, start: tokenStart, end: i });
       } else if (upperValue === 'FALSE') {
-        tokens.push({ type: 'BOOLEAN', value: false });
+        tokens.push({ type: 'BOOLEAN', value: false, start: tokenStart, end: i });
       } else if (upperValue === 'NULL') {
-        tokens.push({ type: 'NULL', value: null });
+        tokens.push({ type: 'NULL', value: null, start: tokenStart, end: i });
       } else if (FUNCTIONS.includes(upperValue)) {
-        tokens.push({ type: 'FUNCTION', value: upperValue });
+        tokens.push({ type: 'FUNCTION', value: upperValue, start: tokenStart, end: i });
       } else {
         // Field reference
-        tokens.push({ type: 'FIELD', value });
+        tokens.push({ type: 'FIELD', value, start: tokenStart, end: i });
       }
       continue;
     }
@@ -253,7 +262,7 @@ export function tokenize(formula: string): Token[] {
     throw new Error(`Unexpected character at position ${i}: ${char}`);
   }
 
-  tokens.push({ type: 'EOF', value: '' });
+  tokens.push({ type: 'EOF', value: '', start: i, end: i });
   return tokens;
 }
 

@@ -44,6 +44,57 @@ describe("formulaParser", () => {
     });
   });
 
+  describe("tokenize — source offsets (slice 0)", () => {
+    const sliceOf = (formula: string, type: string): string => {
+      const t = tokenize(formula);
+      const tk = t.find((x) => x.type === type);
+      expect(tk).toBeDefined();
+      return formula.slice(tk!.start, tk!.end);
+    };
+
+    test("function offsets recover raw name", () => {
+      expect(sliceOf("AND(a,b)", "FUNCTION")).toBe("AND");
+    });
+    test("field offsets recover raw name", () => {
+      expect(sliceOf("status = 1", "FIELD")).toBe("status");
+    });
+    test("@column field offsets include the @", () => {
+      expect(sliceOf("@Tasks", "FIELD")).toBe("@Tasks");
+    });
+    test("string offsets recover raw quoted fragment incl. quotes", () => {
+      const formula = 'CONTAINS(t, "hi")';
+      const t = tokenize(formula);
+      const tk = t.find((x) => x.type === "STRING")!;
+      expect(formula.slice(tk.start, tk.end)).toBe('"hi"');
+    });
+    test("string with escape: raw slice keeps backslash, value unescaped", () => {
+      const formula = '"a\\nb"';
+      const t = tokenize(formula);
+      const tk = t.find((x) => x.type === "STRING")!;
+      expect(formula.slice(tk.start, tk.end)).toBe('"a\\nb"');
+      expect((tk as { value: string }).value).toBe("a\nb");
+    });
+    test("number offsets recover raw fragment", () => {
+      expect(sliceOf("x + 42", "NUMBER")).toBe("42");
+    });
+    test("negative number offsets include the sign", () => {
+      expect(sliceOf("-3", "NUMBER")).toBe("-3");
+    });
+    test("multi-char operator offsets", () => {
+      expect(sliceOf("a >= 5", "OPERATOR")).toBe(">=");
+    });
+    test("every non-EOF token slice equals its raw source fragment", () => {
+      const formula = 'AND(status = "Active", priority >= 5)';
+      const t = tokenize(formula);
+      for (const tk of t) {
+        if (tk.type === "EOF") continue;
+        expect(typeof tk.start).toBe("number");
+        expect(typeof tk.end).toBe("number");
+        expect((tk.end as number) > (tk.start as number)).toBe(true);
+      }
+    });
+  });
+
   describe("parseFormula", () => {
     test("AND function with two operator subtrees", () => {
       const ast = parseFormula('AND(status = "Active", priority > 5)');
