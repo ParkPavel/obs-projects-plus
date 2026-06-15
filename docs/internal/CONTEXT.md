@@ -1,6 +1,6 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-15 (#096.4 truncateDate dayjs-reconcile закрыт, READY FOR PR — `065331e`; baseline ratchet 152 suites / 2203 -> 2205 tests +2 TZ-boundary regression-теста; V2-стек СЛИТ в main `1677310`, #096.4 стекается на feat/dashboard-v2 поверх merge; W2 prioritized queue ИСЧЕРПАНА — открытых P1/P2/P3 нет)**
+> Обновлено: **2026-06-15 (продуктовые решения: #080 CLOSED/DECLINED Option B → #077, #066 RESOLVED Option B defer-to-V3; ранее #096.4 truncateDate dayjs-reconcile закрыт, READY FOR PR — `065331e`; baseline ratchet 152 suites / 2203 -> 2205 tests +2 TZ-boundary regression-теста; V2-стек СЛИТ в main `1677310`, #096.4 стекается на feat/dashboard-v2 поверх merge; W2 prioritized queue ИСЧЕРПАНА — открытых P1/P2/P3 нет)**
 
 ## Состояние веток
 
@@ -60,7 +60,7 @@
 **✅ Сессия 2026-06-14 (W2, #101)**: #101 EditNote — живая модалка (P2) закрыт. Architect-signed план (`fcc5a69`), реализация тремя срезами в одном коммите (`c1becb4`): #101.1 чистый `mergeExternal(local, store, dirty)` helper в `editNoteMerge.ts` (untouched-ключи из store, dirty-ключи из local, id из store) + 8 unit-тестов; #101.2 dirty `Set<string>` заполняется в `setValue`, чистится на обоих save-success путях (autosave + handleManualSave); #101.3 `$dataFrame` auto-subscribe + live-lookup по захваченному `recordId` (фикс Svelte cyclical-dep `record→live→record`) + реактивная склейка. Без `metadataCache.on` (инвариант единственного источника), без ручного unsubscribe (`$store` auto-teardown), реактивная склейка пишет только `record`, не вызывает `onSave`. +1 suite `editNoteMerge.test.ts` (+8 тестов). READY FOR PR (`c1becb4`), все 4 гейта зелёные. Auto-close при удалении записи извне — явный out-of-scope follow-up.
 **✅ V2-стек СЛИТ в main** (`1677310` — `Merge feat/dashboard-v2: close #099 epic + #100/#098/#096/#102/#101`): волна W2 (минус #096.4) свёрнута в main, origin/main продвинут. `feat/dashboard-v2` остаётся живой веткой для добивки follow-up-ов поверх merge.
 **✅ Сессия 2026-06-15 (W2, #096.4)**: #096.4 truncateDate dayjs-reconcile (P3, был DEFERRED) закрыт. `transformExecutor.ts` truncateDate string-fallback заменён с `new Date(String(dateVal))` на `dayjs(String(dateVal)).toDate()` — унификация на канонический dayjs date-слой (`src/lib/helpers/dateFormatting.ts`), фиксит off-by-one date-bucket drift в negative-offset таймзонах. Fast-path `instanceof Date` сохранён, `isNaN` invalid-guard сохранён. +2 TZ-boundary regression-теста в `transformExecutor.test.ts`. Architect DEFER-опасение (регрессия month/week/quarter/year тестов) проверено semantic-analyzer и НЕ подтвердилось: 6 существующих assertion'ов boundary-safe, фикс behavior-preserving. READY FOR PR (`065331e`), все 4 гейта зелёные (build 0, jest 152/2205, lint 0, svelte-check 0); audit zero P0/P1/P2/P3 findings. Стекается на `feat/dashboard-v2` поверх merge `1677310` — НЕ слит/запушен, гейт пользователя.
-**Следующий шаг**: prioritized queue ИСЧЕРПАНА (открытых P1/P2/P3 нет). Остаются design-required P1 (#075-остаток, #077, #090, #091, #093) и P2/P3 backlog (#060/#061/#066/#076/#078/#079/#082/#089/#094/#095/#080) + user-gated решения (#066/#080/#071-репро) и V3-DEFERRED (#062/#063/#064/#035). Следующий шаг — выбор пользователя/дизайн-сессия, не автономный pick.
+**Следующий шаг**: prioritized queue ИСЧЕРПАНА (открытых P1/P2/P3 нет). Остаются design-required P1 (#075-остаток, #077, #090, #091, #093) и P2/P3 backlog (#060/#061/#076/#078/#079/#082/#089/#094/#095) + user-gated #071-репро и V3-DEFERRED (#062/#063/#064/#035). Продуктовые решения 2026-06-15: #080 ❌ CLOSED/DECLINED (Option B, Notion-parity → покрыт #077), #066 ✅ RESOLVED (Option B, decided-defer-to-V3). Следующий шаг — выбор пользователя/дизайн-сессия, не автономный pick.
 
 ## Завершённые milestones
 
@@ -141,7 +141,7 @@
 | — | **Prioritized queue ИСЧЕРПАНА** — открытых P1/P2/P3 в автономной очереди нет | — |
 | design | **#077** FormulaConstructor (DESIGN READY); **#090** панели настроек; **#091** Link-флоу; **#093** SettingsMenu; #075-остаток | design_required — нужна дизайн-сессия |
 | backlog | #060 field transparency; #061 Template Library; #076 база-вытягиванием; #078 CalendarView decomp; #079 hex-ratchet; #082 typed-карточка; #089 галерея cover; #094 словарь значений; #095 PipelineEditor operator-select | P2/P3 backlog (analysis/design по тикетам) |
-| — | Решения пользователя: #066 (YAML-конфиг P2), #080 (Formula Node widget P3), #071 (репро консоли P1) | ГЕЙТЫ |
+| — | Решения пользователя: ~~#066 (YAML-конфиг P2)~~ ✅ RESOLVED Option B defer-to-V3, ~~#080 (Formula Node widget P3)~~ ❌ CLOSED/DECLINED Option B (→#077); остаётся #071 (репро консоли P1) | ГЕЙТЫ |
 | V3 | #062–#064 (P3), #035 parked, free canvas, SmartSuggest-аналитика | DEFERRED |
 
 ## Ключевые решения (зафиксированные)

@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-15 (#096.4 truncateDate dayjs-reconcile CLOSED, READY FOR PR — `065331e`; baseline ratchet 152 suites / 2203 -> 2205 tests +2 TZ-boundary regression tests; W2 prioritized queue exhausted — no open P1/P2/P3 left, see «Открытые тикеты» / CONTEXT.md)
+> **Updated**: 2026-06-15 (product decisions: #080 CLOSED/DECLINED Option B Notion-parity → replaced by #077; #066 RESOLVED Option B decided-defer-to-V3. Ранее: #096.4 truncateDate dayjs-reconcile CLOSED, READY FOR PR — `065331e`; baseline 152 suites / 2205 tests; W2 prioritized queue exhausted — no open P1/P2/P3 left, see «Открытые тикеты» / CONTEXT.md)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -886,9 +886,9 @@ V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/
 редизайн модалки дважды (до и после профилей) — двойная работа.
 
 ### #066 — Dashboard config: YAML-readable format strategy (V3 decision required)
-- Status: 📋 BACKLOG (требует решения)
+- Status: ✅ RESOLVED (2026-06-15, решение пользователя — Option B); decided-defer-to-V3
 - Milestone: M-VISION-PARITY | Priority: P2 | Complexity: XL
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: false (решение принято без analysis session)
 - Depends on: none
 
 **Vision §8**: "Сам дашборд — тоже markdown-файл. Не закрытая конфигурация в JSON, а читаемая, версионируемая, синхронизируемая через git заметка."
@@ -901,6 +901,13 @@ V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/
 - Option C: Human-readable JSON с комментариями + schema documentation
 
 Это архитектурное решение, влияющее на всю систему. Требует dedicated analysis session.
+
+**РЕШЕНИЕ (2026-06-15) — Option B (осознанный компромисс, defer-to-V3):**
+`data.json` (ProjectDefinition schema v4) остаётся каноническим хранилищем конфигурации
+вплоть до V3. Обоснование: Notion сам хранит конфиг непрозрачно — читаемый markdown-конфиг
+не является Notion-parity-целью, это Obsidian-native цель, лежащая за пределами текущего
+parity-скоупа и относящаяся к V3. Флаг «требует решения / requires decision» снят. Тикет
+RESOLVED, помечен decided-defer-to-V3 (backward compat + performance + complexity сохранены).
 
 ---
 
@@ -1101,14 +1108,22 @@ YearHeatmap 9, ConditionalFormatBuilder 3, …); pre-PR аудит ловит т
 (palettes.ts, ColorPicker, colors/math) + ratchet на остальное; снижение долга → palette store.
 
 ### #080 — DECISION: Formula Node widget (fx-блок на канвасе)
-- Status: 📋 BACKLOG (требует решения пользователя)
+- Status: ❌ CLOSED / DECLINED (2026-06-15, решение пользователя — Option B)
 - Milestone: M-VISION-PARITY | Priority: P3 | Complexity: L
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: false (закрыт без реализации)
+- Replaced by: #077 (FormulaConstructor) + stats/compute-шаг пайплайна
 
 Дизайн-стек (Таксономия №11): fx-виджет `=sum(@budget) + progress` — формула как
 самостоятельный блок канваса. В WidgetType отсутствует, тикета не было (потерян план).
 Варианты: (A) V2.5 — новый виджет поверх FormulaConstructor/#077; (B) отказ — покрывается
 stats+compute-шагом пайплайна (зафиксировать компромисс). См. UT2026-G §C.
+
+**РЕШЕНИЕ (2026-06-15) — Option B (отказ), зафиксированный компромисс:**
+В Notion нет плавающего fx-блока на странице; формула там = свойство базы (колонка/rollup)
+либо compute-шаг пайплайна. Самостоятельный fx-виджет на канвасе — НЕ Notion-parity-паттерн.
+Функциональность полностью покрывается FormulaConstructor (#077) как единой точкой ввода
+формул + stats/compute-шагом конвейера трансформаций. Причина закрытия — Notion-parity;
+замена — #077. Тикет CLOSED как DECLINED, без добавления нового WidgetType.
 
 ### #081 — P2: RelationPickerPopover — поиск + multiselect для связей
 - Status: ✅ DONE (2026-06-12, `edee977`) — редактор Relation-ячейки: поиск по записям целевого проекта (targetProjectId → resolveExternalFrame, fallback на wikilink-цели колонки), multi по Done, single по клику; запись через viewApi.updateRecord
