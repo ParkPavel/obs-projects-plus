@@ -32,6 +32,7 @@
   import { OnboardingModal } from "./onboarding/onboardingModal";
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
+  import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
   import type {
     ProjectId,
     ProjectDefinition,
@@ -75,6 +76,19 @@
     }
     return found;
   })();
+
+  // #077 — quick view-filter pills. Writes the edited FilterDefinition back to
+  // the active view; empty clears to a no-condition filter. Engine evaluation
+  // stays in View.svelte via the canonical applyFilter pipeline.
+  function handleViewFilterPillsChange(
+    next: import("src/settings/base/settings").FilterDefinition | undefined
+  ) {
+    if (!project || !view) return;
+    settings.updateView(project.id, {
+      ...view,
+      filter: next ?? { conjunction: "and", conditions: [] },
+    });
+  }
 
   // Pillar 5 (Phase 5 UI): closure capturing current stores for sibling-project
   // frame resolution. An in-memory cache prevents re-querying the same source
@@ -283,6 +297,13 @@
     {#if project}
       <DataFrameProvider {project} let:frame let:source>
         {#if project && view && source}
+          <ViewFilterBar
+            filter={view.filter}
+            fields={frame.fields}
+            records={frame.records}
+            readonly={source.readonly()}
+            on:change={(e) => handleViewFilterPillsChange(e.detail)}
+          />
           <View
             {project}
             {view}

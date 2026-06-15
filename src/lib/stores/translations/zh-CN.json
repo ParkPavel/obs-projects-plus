@@ -422,6 +422,13 @@
             }
         },
         "views": {
+            "filter": {
+                "bar": {
+                    "aria": "视图筛选",
+                    "add": "筛选",
+                    "scope": "此视图"
+                }
+            },
             "visualizer": {
                 "pane": {
                     "title": "YAML 可视化器",

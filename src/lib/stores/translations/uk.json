@@ -422,6 +422,13 @@
             }
         },
         "views": {
+            "filter": {
+                "bar": {
+                    "aria": "Фільтр подання",
+                    "add": "Фільтр",
+                    "scope": "Це подання"
+                }
+            },
             "visualizer": {
                 "pane": {
                     "title": "YAML візуалізатор",

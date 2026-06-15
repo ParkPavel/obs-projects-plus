@@ -463,6 +463,13 @@
             }
         },
         "views": {
+            "filter": {
+                "bar": {
+                    "aria": "View filter",
+                    "add": "Filter",
+                    "scope": "This view"
+                }
+            },
             "visualizer": {
                 "pane": {
                     "title": "YAML Visualizer",
