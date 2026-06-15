@@ -17,8 +17,8 @@ import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import {
   parseDateInTimezone,
   extractTimeWithPriority,
-  extractEventColor,
 } from "./calendar";
+import { resolveRecordColor } from "src/lib/colors/recordColor";
 import {
   EventRenderType,
   type CalendarConfig,
@@ -378,28 +378,15 @@ export class CalendarDataProcessor {
   }
 
   /**
-   * Extract color from eventColorField or getRecordColor callback
+   * Extract color via the single record-color contract (UT2026-C, #070):
+   * explicit per-record hex (eventColorField, then any color-named field,
+   * case-tolerant, #RGB/#RRGGBB normalized) → project color rule → null.
    */
   private extractColor(record: DataRecord): string | null {
-    // Priority 1: eventColorField from frontmatter
-    const colorFieldName = this.config.eventColorField || "eventColor";
-    const frontmatterColor = extractEventColor(record, colorFieldName);
-    if (frontmatterColor) {
-      return frontmatterColor;
-    }
-
-    // Priority 2: Also check "color" field as fallback
-    const fallbackColor = extractEventColor(record, "color");
-    if (fallbackColor) {
-      return fallbackColor;
-    }
-
-    // Priority 3: getRecordColor callback (from Board integration)
-    if (this.getRecordColor) {
-      return this.getRecordColor(record);
-    }
-
-    return null;
+    return resolveRecordColor(record, {
+      eventColorField: this.config.eventColorField,
+      getRecordColor: this.getRecordColor ?? undefined,
+    });
   }
 
   /**

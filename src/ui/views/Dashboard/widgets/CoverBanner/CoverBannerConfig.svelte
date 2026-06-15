@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import { i18n } from "src/lib/stores/i18n";
   import type { CoverBannerConfig } from "../../types";
 
   export let config: Record<string, unknown>;
@@ -37,32 +38,32 @@
 
 <div class="ppp-cb-cfg">
   <div class="ppp-cb-cfg-row">
-    <label for="cb-src">Image source</label>
+    <label for="cb-src">{$i18n.t("views.dashboard.cover-banner-config.src", { defaultValue: "Image source" })}</label>
     <input
       id="cb-src"
       type="text"
-      placeholder="vault path or URL"
+      placeholder={$i18n.t("views.dashboard.cover-banner-config.src-placeholder", { defaultValue: "vault path or URL" })}
       value={cfg.src ?? ""}
       on:change={(e) => update({ src: e.currentTarget.value })}
     />
   </div>
 
   <div class="ppp-cb-cfg-row">
-    <label for="cb-width">Width</label>
+    <label for="cb-width">{$i18n.t("views.dashboard.cover-banner-config.width", { defaultValue: "Width" })}</label>
     <select
       id="cb-width"
       value={cfg.widthMode ?? "full"}
       on:change={handleWidthModeChange}
     >
-      <option value="full">Full</option>
-      <option value="half">Half</option>
-      <option value="custom">Custom</option>
+      <option value="full">{$i18n.t("views.dashboard.cover-banner-config.width-full", { defaultValue: "Full" })}</option>
+      <option value="half">{$i18n.t("views.dashboard.cover-banner-config.width-half", { defaultValue: "Half" })}</option>
+      <option value="custom">{$i18n.t("views.dashboard.cover-banner-config.width-custom", { defaultValue: "Custom" })}</option>
     </select>
   </div>
 
   {#if cfg.widthMode === "custom"}
     <div class="ppp-cb-cfg-row">
-      <label for="cb-widthrem">Width (rem)</label>
+      <label for="cb-widthrem">{$i18n.t("views.dashboard.cover-banner-config.width-rem", { defaultValue: "Width (rem)" })}</label>
       <input
         id="cb-widthrem"
         type="number"
@@ -75,43 +76,45 @@
   {/if}
 
   <div class="ppp-cb-cfg-row">
-    <label for="cb-fit">Fit</label>
+    <label for="cb-fit">{$i18n.t("views.dashboard.cover-banner-config.fit", { defaultValue: "Fit" })}</label>
     <select
       id="cb-fit"
       value={cfg.fitStyle ?? "cover"}
       on:change={handleFitStyleChange}
     >
-      <option value="cover">Cover</option>
-      <option value="contain">Contain</option>
+      <option value="cover">{$i18n.t("views.dashboard.cover-banner-config.fit-cover", { defaultValue: "Cover" })}</option>
+      <option value="contain">{$i18n.t("views.dashboard.cover-banner-config.fit-contain", { defaultValue: "Contain" })}</option>
     </select>
   </div>
 
   <div class="ppp-cb-cfg-row">
-    <label for="cb-pos">Position</label>
+    <label for="cb-pos">{$i18n.t("views.dashboard.cover-banner-config.position", { defaultValue: "Position" })}</label>
     <select
       id="cb-pos"
       value={cfg.position ?? "center"}
       on:change={handlePositionChange}
     >
-      <option value="top">Top</option>
-      <option value="center">Center</option>
-      <option value="bottom">Bottom</option>
+      <option value="top">{$i18n.t("views.dashboard.cover-banner-config.position-top", { defaultValue: "Top" })}</option>
+      <option value="center">{$i18n.t("views.dashboard.cover-banner-config.position-center", { defaultValue: "Center" })}</option>
+      <option value="bottom">{$i18n.t("views.dashboard.cover-banner-config.position-bottom", { defaultValue: "Bottom" })}</option>
     </select>
   </div>
 
   <div class="ppp-cb-cfg-row">
-    <label for="cb-overlay">Overlay caption</label>
+    <label for="cb-overlay">{$i18n.t("views.dashboard.cover-banner-config.overlay", { defaultValue: "Overlay caption" })}</label>
     <input
       id="cb-overlay"
       type="text"
-      placeholder="optional"
+      placeholder={$i18n.t("views.dashboard.cover-banner-config.overlay-placeholder", { defaultValue: "optional" })}
       value={cfg.overlay ?? ""}
       on:change={handleOverlayChange}
     />
   </div>
 
   <div class="ppp-cb-cfg-actions">
-    <button class="mod-cta" on:click={() => dispatch("close")}>Done</button>
+    <button class="mod-cta" on:click={() => dispatch("close")}>
+      {$i18n.t("views.dashboard.cover-banner-config.done", { defaultValue: "Done" })}
+    </button>
   </div>
 </div>
 

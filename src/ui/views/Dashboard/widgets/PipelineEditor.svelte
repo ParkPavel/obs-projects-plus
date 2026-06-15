@@ -14,7 +14,11 @@
   import type { FilterCondition } from "src/settings/base/settings";
   import { i18n } from "src/lib/stores/i18n";
   import { get } from "svelte/store";
+  import { Icon } from "obsidian-svelte";
   import { getOperatorsForField, operatorNeedsValue, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
+  import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+  import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import { detectArrayFields } from "./_shared/arrayFieldDetection";
 
   export let pipeline: TransformPipeline;
   export let fields: DataField[] = [];
@@ -24,50 +28,50 @@
 
   const dispatch = createEventDispatcher<{
     save: TransformPipeline;
-    cancel: void;
+    apply: TransformPipeline;
   }>();
 
   let steps: TransformStep[] = [...pipeline.steps];
   let expandedStep: number | null = null;
-  let showDiscardConfirm = false;
 
-  $: isDirty = JSON.stringify(steps) !== JSON.stringify(pipeline.steps);
-  $: fieldNames = fields.map(f => f.name);
+  // #099.2 (NOTION_DM_RESEARCH §2): no Save mode. Every edit applies to the
+  // widget behind the editor after a short debounce — the data IS the
+  // preview. «Готово» just closes.
+  let applyTimer: ReturnType<typeof setTimeout> | undefined;
+  let initialized = false;
+  $: {
+    void steps;
+    if (initialized) {
+      clearTimeout(applyTimer);
+      applyTimer = setTimeout(() => dispatch("apply", { steps }), 400);
+    } else {
+      initialized = true;
+    }
+  }
+
+  // Housekeeping fields are not analysis material (UT-R4 screenshot).
+  const HOUSEKEEPING = new Set(["path", "pp_created_time", "pp_last_edited_time"]);
+  $: fieldNames = fields.filter((f) => !HOUSEKEEPING.has(f.name)).map((f) => f.name);
   $: fieldMap = new Map(fields.map(f => [f.name, f]));
 
-  /*
-   * Detect array-valued fields in the source data to suggest Unnest.
-   * We scan the first few records looking for any field whose value is
-   * an array. This powers a discoverability banner pointing users at the
-   * Unnest transform when their YAML frontmatter contains nested lists
-   * (e.g. `sets: [{reps, weight}]` in the fitness vertical).
-   */
-  $: arrayFields = detectArrayFields(source, fields, steps);
-
-  function detectArrayFields(
-    src: { records: Array<{ values: Record<string, unknown> }> } | null,
-    flds: DataField[],
-    currentSteps: TransformStep[],
-  ): string[] {
-    if (!src || src.records.length === 0) return [];
-    const alreadyUnnested = new Set(
-      currentSteps.filter((s) => s.type === "unnest").map((s) => (s as { field: string }).field),
-    );
-    const candidates = new Set<string>();
-    const sampleSize = Math.min(src.records.length, 50);
-    for (let i = 0; i < sampleSize; i++) {
-      const rec = src.records[i];
-      if (!rec) continue;
-      for (const f of flds) {
-        if (alreadyUnnested.has(f.name)) continue;
-        const v = rec.values[f.name];
-        if (Array.isArray(v) && v.length > 0) {
-          candidates.add(f.name);
-        }
-      }
+  // Live per-step counters: N → M records (executor meta).
+  $: stepCounts = (() => {
+    const frame = source as DataFrame | null;
+    if (!frame || steps.length === 0) return [] as Array<{ rowsIn: number; rowsOut: number }>;
+    const out: Array<{ rowsIn: number; rowsOut: number }> = [];
+    let prev = frame.records.length;
+    for (let i = 0; i < steps.length; i++) {
+      const result = executeTransform(frame, { steps: steps.slice(0, i + 1) });
+      out.push({ rowsIn: prev, rowsOut: result.meta.outputRowCount });
+      prev = result.meta.outputRowCount;
     }
-    return [...candidates];
-  }
+    return out;
+  })();
+
+  // Detect array-valued fields in the source data to suggest Unnest. Powers a
+  // discoverability banner pointing users at the Unnest transform when their
+  // YAML frontmatter contains nested lists (e.g. `sets: [{reps, weight}]`).
+  $: arrayFields = detectArrayFields(source, fields, steps);
 
   const AGG_FUNCTIONS: AggregationFunction[] = [
     "SUM", "AVG", "MEDIAN", "MIN", "MAX", "RANGE",
@@ -85,15 +89,35 @@
     return AGG_FUNCTIONS.includes(normalized) ? normalized : fallback;
   }
 
-  const STEP_TYPES: { value: TransformStep["type"]; labelKey: string; icon: string }[] = [
-    { value: "filter", labelKey: "views.dashboard.pipeline.filter", icon: "??" },
-    { value: "group-by", labelKey: "views.dashboard.pipeline.group-by", icon: "??" },
-    { value: "aggregate", labelKey: "views.dashboard.pipeline.aggregate", icon: "?" },
-    { value: "compute", labelKey: "views.dashboard.pipeline.compute", icon: "?" },
-    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "�" },
-    { value: "pivot", labelKey: "views.dashboard.pipeline.pivot", icon: "-" },
-    { value: "unnest", labelKey: "views.dashboard.pipeline.unnest", icon: "?" },
-    { value: "join", labelKey: "views.dashboard.pipeline.join", icon: "?" },
+  // UT2026-B T3: icons are Lucide names rendered via <Icon>, never glyph strings.
+  // UT2026-E D1 (#075): every step type carries a task-language description with
+  // an example — tooltips explain WHAT the step does for the user's data, not
+  // what it is called in relational algebra.
+  const STEP_TYPES: { value: TransformStep["type"]; labelKey: string; icon: string; descKey: string; descDefault: string }[] = [
+    { value: "filter", labelKey: "views.dashboard.pipeline.filter", icon: "filter",
+      descKey: "views.dashboard.pipeline.filter-desc",
+      descDefault: "Keep only matching records — e.g. status = active" },
+    { value: "group-by", labelKey: "views.dashboard.pipeline.group-by", icon: "layers",
+      descKey: "views.dashboard.pipeline.group-by-desc",
+      descDefault: "Group rows by a field — e.g. one group per client" },
+    { value: "aggregate", labelKey: "views.dashboard.pipeline.aggregate", icon: "sigma",
+      descKey: "views.dashboard.pipeline.aggregate-desc",
+      descDefault: "Collapse groups into numbers — sum, average, count" },
+    { value: "compute", labelKey: "views.dashboard.pipeline.compute", icon: "calculator",
+      descKey: "views.dashboard.pipeline.compute-desc",
+      descDefault: "Add a calculated column — e.g. price * quantity" },
+    { value: "unpivot", labelKey: "views.dashboard.pipeline.unpivot", icon: "unfold-vertical",
+      descKey: "views.dashboard.pipeline.unpivot-desc",
+      descDefault: "Turn columns into rows — wide table becomes long" },
+    { value: "pivot", labelKey: "views.dashboard.pipeline.pivot", icon: "table-2",
+      descKey: "views.dashboard.pipeline.pivot-desc",
+      descDefault: "Turn category values into columns — a summary table" },
+    { value: "unnest", labelKey: "views.dashboard.pipeline.unnest", icon: "list-tree",
+      descKey: "views.dashboard.pipeline.unnest-desc",
+      descDefault: "Split a list into rows — one row per participant" },
+    { value: "join", labelKey: "views.dashboard.pipeline.join", icon: "git-merge",
+      descKey: "views.dashboard.pipeline.join-desc",
+      descDefault: "Pull in data from another project by a shared key" },
   ];
 
   function addStep(type: TransformStep["type"]) {
@@ -114,6 +138,14 @@
     steps = steps.filter((_, i) => i !== index);
     if (expandedStep === index) expandedStep = null;
     else if (expandedStep !== null && expandedStep > index) expandedStep--;
+  }
+
+  // #099 — non-destructive toggle: disabled steps stay in the pipeline but are
+  // skipped by the executor, so data flows again through a 0-row step.
+  function toggleDisableStep(index: number) {
+    const step = steps[index];
+    if (!step) return;
+    updateStep(index, { ...step, disabled: !step.disabled });
   }
 
   function moveStep(index: number, direction: -1 | 1) {
@@ -163,28 +195,29 @@
 
   function stepLabel(step: TransformStep): string {
     const t = get(i18n).t.bind(get(i18n));
+    const unset = t("views.dashboard.pipeline.unset", { defaultValue: "(unset)" });
     switch (step.type) {
       case "filter": {
         const n = step.conditions.conditions.length + (step.conditions.groups?.length ?? 0);
         return n > 0 ? `${t("views.dashboard.pipeline.filter")} (${n})` : t("views.dashboard.pipeline.filter");
       }
-      case "group-by": return `${t("views.dashboard.pipeline.group-by")}: ${step.fields.join(", ") || "�"}`;
+      case "group-by": return `${t("views.dashboard.pipeline.group-by")}: ${step.fields.join(", ") || unset}`;
       case "aggregate": return `${t("views.dashboard.pipeline.aggregate")}: ${step.columns.length}`;
       case "compute": return `${t("views.dashboard.pipeline.compute")}: ${step.columns.length}`;
       case "unpivot": return `${t("views.dashboard.pipeline.unpivot")}: ${step.fieldGroups.length}`;
-      case "pivot": return `${t("views.dashboard.pipeline.pivot")}: ${step.categoryField || "�"}`;
-      case "unnest": return `${t("views.dashboard.pipeline.unnest", { defaultValue: "Unnest" })}: ${step.field || "�"}`;
+      case "pivot": return `${t("views.dashboard.pipeline.pivot")}: ${step.categoryField || unset}`;
+      case "unnest": return `${t("views.dashboard.pipeline.unnest", { defaultValue: "Unnest" })}: ${step.field || unset}`;
       case "join": {
         const label = t("views.dashboard.pipeline.join", { defaultValue: "Join" });
-        const srcName = availableSources.find((s) => s.id === step.rightSourceId)?.name ?? step.rightSourceId ?? "�";
-        return `${label}: ${step.on.leftKey || "?"} = ${srcName}.${step.on.rightKey || "?"}`;
+        const srcName = availableSources.find((s) => s.id === step.rightSourceId)?.name ?? step.rightSourceId ?? unset;
+        return `${label}: ${step.on.leftKey || unset} = ${srcName}.${step.on.rightKey || unset}`;
       }
-      default: return "?";
+      default: return t("views.dashboard.pipeline.unknown", { defaultValue: "Unknown" });
     }
   }
 
   function stepIcon(type: string): string {
-    return STEP_TYPES.find(s => s.value === type)?.icon ?? "�";
+    return STEP_TYPES.find(s => s.value === type)?.icon ?? "circle-help";
   }
 
   // -- Filter step helpers ----------------------------------
@@ -381,45 +414,26 @@
     return (e.currentTarget as HTMLInputElement).checked;
   }
 
-  function handleSave() {
+  function handleDone() {
+    clearTimeout(applyTimer);
     dispatch("save", { steps });
-  }
-
-  function handleCancel() {
-    if (isDirty) {
-      showDiscardConfirm = true;
-    } else {
-      dispatch("cancel");
-    }
-  }
-
-  function confirmDiscard() {
-    showDiscardConfirm = false;
-    dispatch("cancel");
   }
 </script>
 
 <div class="ppp-pipeline-editor">
-  {#if isDirty}
-    <div class="ppp-pipeline-dirty-banner">
-      <span>? {$i18n.t("views.dashboard.pipeline.unsaved-changes")}</span>
-    </div>
-  {/if}
-
   <div class="ppp-pipeline-header">
     <span class="ppp-pipeline-title">{$i18n.t("views.dashboard.pipeline.title")}</span>
     <span class="ppp-pipeline-count">{steps.length} {$i18n.t("views.dashboard.pipeline.steps")}</span>
-  </div>
-
-  <div class="ppp-pipeline-help">
-    <strong>{$i18n.t("views.dashboard.pipeline.how-to", { defaultValue: "How to use" })}:</strong>
-    <span>{$i18n.t("views.dashboard.pipeline.how-to-steps", { defaultValue: "1) Add step 2) Type field name to search 3) Save pipeline" })}</span>
+    <span class="ppp-pipeline-live" role="status">
+      <Icon name="zap" size="sm" />
+      {$i18n.t("views.dashboard.pipeline.live", { defaultValue: "Changes apply instantly" })}
+    </span>
   </div>
 
   <div class="ppp-pipeline-steps">
     {#if arrayFields.length > 0}
       <div class="ppp-pipeline-unnest-hint" role="note">
-        <span class="ppp-pipeline-unnest-hint-icon" aria-hidden="true">?</span>
+        <span class="ppp-pipeline-unnest-hint-icon" aria-hidden="true"><Icon name="lightbulb" size="sm" /></span>
         <div class="ppp-pipeline-unnest-hint-body">
           <strong>{$i18n.t("views.dashboard.pipeline.unnest-suggestion-title", { defaultValue: "Array fields detected" })}</strong>
           <span>
@@ -454,7 +468,11 @@
     {/if}
 
     {#each steps as step, i (i)}
-      <div class="ppp-pipeline-step" class:ppp-pipeline-step--expanded={expandedStep === i}>
+      <div
+        class="ppp-pipeline-step"
+        class:ppp-pipeline-step--expanded={expandedStep === i}
+        class:ppp-pipeline-step--disabled={step.disabled}
+      >
         <div
           class="ppp-step-summary"
           role="button"
@@ -464,8 +482,15 @@
           on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandedStep = expandedStep === i ? null : i; } }}
         >
           <span class="ppp-step-number">{i + 1}</span>
-          <span class="ppp-step-icon">{stepIcon(step.type)}</span>
+          <span class="ppp-step-icon"><Icon name={stepIcon(step.type)} /></span>
           <span class="ppp-step-label">{stepLabel(step)}</span>
+          {#if stepCounts[i]}
+            <span
+              class="ppp-step-flow"
+              class:ppp-step-flow--zero={stepCounts[i].rowsOut === 0 && stepCounts[i].rowsIn > 0}
+              title={$i18n.t("views.dashboard.pipeline.flow-tip", { defaultValue: "Records in → out after this step" })}
+            >{stepCounts[i].rowsIn} → {stepCounts[i].rowsOut}</span>
+          {/if}
           <div class="ppp-step-actions">
             <button
               class="ppp-step-btn"
@@ -479,6 +504,14 @@
               title={$i18n.t("views.dashboard.pipeline.move-down")}
               on:click|stopPropagation={() => moveStep(i, 1)}
             >v</button>
+            <button
+              class="ppp-step-btn ppp-step-btn--toggle"
+              class:ppp-step-btn--emphasis={!step.disabled && stepCounts[i] && stepCounts[i].rowsOut === 0 && stepCounts[i].rowsIn > 0}
+              title={step.disabled
+                ? $i18n.t("views.dashboard.pipeline.enable-step", { defaultValue: "Enable step" })
+                : $i18n.t("views.dashboard.pipeline.disable-step", { defaultValue: "Disable step" })}
+              on:click|stopPropagation={() => toggleDisableStep(i)}
+            ><Icon name={step.disabled ? "eye-off" : "eye"} size="sm" /></button>
             <button
               class="ppp-step-btn ppp-step-btn--danger"
               title={$i18n.t("views.dashboard.pipeline.remove")}
@@ -515,7 +548,7 @@
                     type="text"
                     list="ppp-pipeline-fields"
                     value={cond.field}
-                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Field �" })}
+                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
                     on:input={(e) => updateFilterField(i, ci, inputVal(e))}
                   />
                   <select
@@ -552,7 +585,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.fields[0] ?? ""}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => {
                     const val = inputVal(e);
                     updateStep(i, { ...step, fields: val ? [val] : [] });
@@ -569,7 +602,7 @@
                     type="text"
                     list="ppp-pipeline-fields"
                     value={col.sourceField}
-                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Field �" })}
+                    placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Field…" })}
                     on:input={(e) => updateAggColumn(i, ci, inputVal(e), col.function)}
                   />
                   <input
@@ -621,7 +654,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.categoryField}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => updateStep(i, { ...step, categoryField: inputVal(e) })}
                 />
               </label>
@@ -631,7 +664,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.valueField}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => updateStep(i, { ...step, valueField: inputVal(e) })}
                 />
               </label>
@@ -693,7 +726,7 @@
                   type="text"
                   list="ppp-pipeline-fields"
                   value={step.field}
-                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "� Select field �" })}
+                  placeholder={$i18n.t("views.dashboard.pipeline.select-field", { defaultValue: "Select field…" })}
                   on:input={(e) => updateStep(i, { ...step, field: inputVal(e) })}
                 />
               </label>
@@ -806,9 +839,9 @@
       <button
         class="ppp-pipeline-add-btn"
         on:click={() => addStep(st.value)}
-        title={$i18n.t(st.labelKey)}
+        title={$i18n.t(st.descKey, { defaultValue: st.descDefault })}
       >
-        <span class="ppp-pipeline-add-icon">{st.icon}</span>
+        <span class="ppp-pipeline-add-icon"><Icon name={st.icon} /></span>
         {$i18n.t(st.labelKey)}
       </button>
     {/each}
@@ -833,36 +866,10 @@
   </datalist>
 
   <div class="ppp-pipeline-footer">
-    <button class="ppp-btn ppp-btn--secondary" on:click={handleCancel}>
-      {$i18n.t("views.dashboard.pipeline.cancel")}
-    </button>
-    <button class="ppp-btn ppp-btn--primary" on:click={handleSave}>
-      {$i18n.t("views.dashboard.pipeline.save")}
+    <button class="ppp-btn ppp-btn--primary" on:click={handleDone}>
+      {$i18n.t("views.dashboard.pipeline.done", { defaultValue: "Done" })}
     </button>
   </div>
-
-  {#if showDiscardConfirm}
-    <div
-      class="ppp-pipeline-confirm-overlay"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      on:click|self={() => showDiscardConfirm = false}
-      on:keydown={(e) => { if (e.key === 'Escape') showDiscardConfirm = false; }}
-    >
-      <div class="ppp-pipeline-confirm">
-        <p>{$i18n.t("views.dashboard.pipeline.discard-confirm")}</p>
-        <div class="ppp-pipeline-confirm-actions">
-          <button class="ppp-btn ppp-btn--secondary" on:click={() => showDiscardConfirm = false}>
-            {$i18n.t("views.dashboard.pipeline.keep-editing")}
-          </button>
-          <button class="ppp-btn ppp-btn--danger" on:click={confirmDiscard}>
-            {$i18n.t("views.dashboard.pipeline.discard")}
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -893,15 +900,29 @@
     font-size: var(--font-ui-smaller);
   }
 
-  .ppp-pipeline-help {
-    display: flex;
-    flex-wrap: wrap;
+  /* #099.2 — live mode indicator + per-step record flow */
+  .ppp-pipeline-live {
+    display: inline-flex;
+    align-items: center;
     gap: 0.25rem;
-    padding: 0.5rem;
-    border-radius: var(--radius-s, 0.25rem);
-    background: var(--background-secondary-alt, var(--background-secondary));
+    color: var(--text-accent);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-step-flow {
+    flex-shrink: 0;
+    padding: 0 0.375rem;
+    border-radius: 0.625rem;
+    background: var(--background-secondary);
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .ppp-step-flow--zero {
+    background: var(--background-modifier-error-hover, rgba(255, 59, 48, 0.1));
+    color: var(--text-error);
   }
 
   .ppp-pipeline-steps {
@@ -979,6 +1000,17 @@
 
   .ppp-pipeline-step--expanded {
     border-color: var(--interactive-accent);
+  }
+
+  /* #099 — disabled step: present but skipped by the executor. */
+  .ppp-pipeline-step--disabled {
+    opacity: 0.55;
+    border-style: dashed;
+  }
+
+  .ppp-pipeline-step--disabled .ppp-step-label {
+    text-decoration: line-through;
+    color: var(--text-muted);
   }
 
   .ppp-step-summary {
@@ -1086,6 +1118,19 @@
 
   .ppp-step-btn--danger:hover:not(:disabled) {
     color: var(--text-error);
+  }
+
+  .ppp-step-btn--toggle:hover:not(:disabled) {
+    color: var(--text-accent);
+  }
+
+  /* Draw attention to disabling when this step zeroes out the data flow. */
+  .ppp-step-btn--emphasis {
+    color: var(--text-error);
+  }
+  .ppp-step-btn--emphasis:hover:not(:disabled) {
+    color: var(--text-error);
+    background: var(--background-modifier-error-hover, rgba(255, 59, 48, 0.1));
   }
 
   /* -- Filter rows -- */
@@ -1331,67 +1376,4 @@
     background: var(--interactive-accent-hover);
   }
 
-  .ppp-btn--secondary {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-
-  .ppp-btn--secondary:hover {
-    background: var(--background-modifier-border);
-  }
-
-  .ppp-btn--danger {
-    background: var(--background-modifier-error);
-    color: var(--text-on-accent);
-    border: none;
-    padding: 0.375rem 0.75rem;
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-  }
-
-  .ppp-btn--danger:hover {
-    filter: brightness(0.9);
-  }
-
-  .ppp-pipeline-dirty-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.625rem;
-    background: var(--background-modifier-error-hover, rgba(255, 59, 48, 0.1));
-    border-radius: var(--radius-s, 0.25rem);
-    color: var(--text-error);
-    font-size: var(--font-ui-smaller);
-    font-weight: 500;
-  }
-
-  .ppp-pipeline-confirm-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 200;
-    background: rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .ppp-pipeline-confirm {
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m, 0.375rem);
-    padding: 1.25rem;
-    max-width: 24rem;
-    box-shadow: var(--shadow-s);
-  }
-
-  .ppp-pipeline-confirm p {
-    margin: 0 0 1rem;
-    color: var(--text-normal);
-  }
-
-  .ppp-pipeline-confirm-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
 </style>

@@ -70,7 +70,7 @@
       }}
       on:blur={() => { edit = false; }}
     >
-      <option value="">—</option>
+      <option value="">â€”</option>
       {#each options as opt}
         <option value={opt.name}>
           {opt.name}

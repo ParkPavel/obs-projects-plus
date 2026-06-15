@@ -332,6 +332,13 @@ export function createDataRecord(
     path = project.dataSource.config.path;
   }
 
+  if (
+    project.dataSource.kind === "native-query" &&
+    project.dataSource.config.from.kind === "folder"
+  ) {
+    path = project.dataSource.config.from.path;
+  }
+
   if (project.newNotesFolder) {
     path = project.newNotesFolder;
   }
@@ -340,6 +347,16 @@ export function createDataRecord(
     values = {
       ...values,
       tags: [stripTagHash(project.dataSource.config.tag)],
+    };
+  }
+
+  if (
+    project.dataSource.kind === "native-query" &&
+    project.dataSource.config.from.kind === "tag"
+  ) {
+    values = {
+      ...values,
+      tags: [stripTagHash(project.dataSource.config.from.tag)],
     };
   }
 

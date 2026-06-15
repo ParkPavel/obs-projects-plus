@@ -1,6 +1,7 @@
 ﻿<script lang="ts">
   import type { DataField } from "src/lib/dataframe/dataframe";
-  import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig } from "../../types";
+  import { DataFieldType } from "src/lib/dataframe/dataframe";
+  import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig, ChartAxisX } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
 
@@ -26,6 +27,24 @@
 
   $: fieldNames = fields.map((f) => f.name);
   $: isScatter = config.chartType === "scatter";
+
+  // #096.3 — granularity <select> is gated on the X-axis field being a Date.
+  // Dispatch by DataFieldType (invariant #1), never by field name.
+  $: xFieldIsDate =
+    fields.find((f) => f.name === config.xAxis.property)?.type === DataFieldType.Date;
+
+  const GRANULARITIES: NonNullable<ChartAxisX["dateGranularity"]>[] = [
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "year",
+  ];
+
+  function onGranularityChange(e: Event) {
+    const val = (e.target as HTMLSelectElement).value as NonNullable<ChartAxisX["dateGranularity"]>;
+    emit({ xAxis: { ...config.xAxis, dateGranularity: val } });
+  }
 
   // Access extra scatter props from the config object
   $: raw = config as unknown as Record<string, unknown>;
@@ -121,6 +140,20 @@
       {/each}
     </select>
   </label>
+
+  {#if xFieldIsDate}
+    <label class="ppp-config-row">
+      <span>{$i18n.t("views.dashboard.chart.granularity")}</span>
+      <select
+        value={config.xAxis.dateGranularity ?? "month"}
+        on:change={onGranularityChange}
+      >
+        {#each GRANULARITIES as g}
+          <option value={g}>{$i18n.t(`views.dashboard.chart.granularities.${g}`)}</option>
+        {/each}
+      </select>
+    </label>
+  {/if}
 
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.y-axis")}</span>

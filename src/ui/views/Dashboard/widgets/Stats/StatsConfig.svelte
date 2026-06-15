@@ -18,17 +18,27 @@
     close: void;
   }>();
 
+  // R3 (#093): the FULL ColumnAggregation set — a stored aggregation the
+  // select doesn't know rendered as an EMPTY dropdown (demo card
+  // count_unchecked). Every kernel/footer aggregation is listed.
   const AGGREGATIONS: { value: ColumnAggregation; defaultLabel: string }[] = [
     { value: "count_total", defaultLabel: "Count" },
+    { value: "count_values", defaultLabel: "Count filled" },
     { value: "count_unique", defaultLabel: "Unique" },
     { value: "sum", defaultLabel: "Sum" },
     { value: "avg", defaultLabel: "Average" },
     { value: "median", defaultLabel: "Median" },
     { value: "min", defaultLabel: "Min" },
     { value: "max", defaultLabel: "Max" },
-    { value: "count_checked", defaultLabel: "✓ Count" },
-    { value: "percent_checked", defaultLabel: "% ✓" },
+    { value: "range", defaultLabel: "Range" },
+    { value: "count_checked", defaultLabel: "Checked" },
+    { value: "count_unchecked", defaultLabel: "Unchecked" },
+    { value: "percent_checked", defaultLabel: "% checked" },
+    { value: "percent_unchecked", defaultLabel: "% unchecked" },
+    { value: "percent_empty", defaultLabel: "% empty" },
     { value: "percent_not_empty", defaultLabel: "% filled" },
+    { value: "earliest", defaultLabel: "Earliest date" },
+    { value: "latest", defaultLabel: "Latest date" },
   ];
 
   const FORMATS = ["number", "percent", "currency", "duration"] as const;

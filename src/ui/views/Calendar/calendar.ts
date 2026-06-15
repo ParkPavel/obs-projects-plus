@@ -626,18 +626,6 @@ export function extractTimeWithPriority(
   return null;
 }
 
-/**
- * Extract event color from record (v3.0.0).
- * Returns hex color string (e.g., "#FF5733") or null.
- */
-export function extractEventColor(
-  record: DataRecord,
-  colorField?: string
-): string | null {
-  const fieldName = colorField || "eventColor";
-  const value = record.values[fieldName];
-  if (typeof value === "string" && /^#[0-9A-Fa-f]{6}$/.test(value)) {
-    return value;
-  }
-  return null;
-}
+// extractEventColor was removed in UT2026-C (#070): color extraction lives in
+// src/lib/colors/recordColor.ts (single contract — case-tolerant lookup,
+// #RGB/#RRGGBB normalization, explicit-beats-rule priority).

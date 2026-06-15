@@ -26,6 +26,7 @@ import type {
   DatabaseViewConfig,
   WidgetDefinition,
 } from "src/ui/views/Dashboard/types";
+import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
 import type { ColorRule, FieldConfig } from "src/settings/base/settings";
 
@@ -223,10 +224,15 @@ function buildTasks(): Record<string, DemoFile> {
   return out;
 }
 
+// R3: meetings carry an explicit per-record color so the calendar showcases
+// the record-color contract (explicit hex beats project rules — UT2026-C).
+const MEETING_COLORS = ["#7c6ce8", "#2e9e5b", "#d98324", "#3498db", "#c0566f"];
+
 function buildMeetings(): Record<string, DemoFile> {
   const t = today();
   const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
   const out: Record<string, DemoFile> = {};
+  let i = 0;
   for (const s of MEETING_SEEDS) {
     out[s.name] = {
       frontmatter: {
@@ -236,6 +242,7 @@ function buildMeetings(): Record<string, DemoFile> {
         startTime: s.startTime,
         endTime: s.endTime,
         participants: s.participants,
+        color: MEETING_COLORS[i++ % MEETING_COLORS.length],
         tags: ["meeting"],
       },
       content: meetingBody(s.agenda),
@@ -248,6 +255,16 @@ function buildMeetings(): Record<string, DemoFile> {
 // VIEW CONFIGS — inline widget layouts
 // ============================================================
 
+/**
+ * Exported for `configProvenance.test.ts` (UT2026-D P1): generated widget
+ * configs must pass all migrations as a no-op — a generator emitting a
+ * pre-migration schema value is how the demo shipped broken stats cards
+ * (#072, aggregation "count" pre-R5-004).
+ */
+export function demoGeneratedWidgets(): WidgetDefinition[] {
+  return [...overviewWidgets(), ...clientsWidgets()];
+}
+
 function overviewWidgets(): WidgetDefinition[] {
   return [
     {
@@ -257,8 +274,13 @@ function overviewWidgets(): WidgetDefinition[] {
       layout: { x: 0, y: 0, w: 12, h: 2 },
       config: {
         cards: [
-          { id: "k1", label: "Клиентов",           field: "name",      aggregation: "count" },
-          { id: "k2", label: "Проектов",           field: "status",    aggregation: "count" },
+          // UT2026-D P1: kernel "count" was renamed to count_total/count_values (R5-004);
+          // generators must emit the current schema. count_values on a segment-specific
+          // field (industry → clients only, status → projects only) keeps the labels honest.
+          { id: "k1", label: "Клиентов",           field: "industry",  aggregation: "count_values" },
+          // UT-R2 #087: `status` exists on tasks too (showed 17) — `progress`
+          // is project-only, so the card counts what its label promises.
+          { id: "k2", label: "Проектов",           field: "progress",  aggregation: "count_values" },
           { id: "k3", label: "Открытых задач",     field: "completed", aggregation: "count_unchecked" },
           { id: "k4", label: "MRR (sum)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
         ],
@@ -278,14 +300,17 @@ function overviewWidgets(): WidgetDefinition[] {
       config: {
         chartType: "donut",
         xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
-        yAxis: { property: "count", aggregation: "count" },
+        yAxis: { property: "count", aggregation: "count_total" },
         style: { colorScheme: "categorical", height: "medium", showGrid: false, showLabels: true, showLegend: true, showValues: true },
       },
     },
     {
       id: widgetId(),
-      type: "data-table",
+      type: "database-call",
       title: "Приоритетные задачи",
+      // (config below) UT2026-G finding: `{ activeTab }` was a pre-viewTabs
+      // shape — the block rendered "No views configured". Generators emit
+      // the current schema (P1).
       layout: { x: 6, y: 2, w: 6, h: 4 },
       transform: {
         steps: [
@@ -301,19 +326,65 @@ function overviewWidgets(): WidgetDefinition[] {
           },
         ],
       },
-      config: {},
+      config: tableTabConfig(),
     },
     {
       id: widgetId(),
-      type: "summary-row",
-      title: "Итоги",
-      layout: { x: 0, y: 6, w: 12, h: 1 },
-      config: {
-        columns: [
-          { field: "value",    aggregation: "sum", format: "currency", currencySymbol: "$" },
-          { field: "progress", aggregation: "avg", format: "percent" },
-          { field: "estimate", aggregation: "sum", format: "number" },
+      type: "database-call",
+      title: "Встречи",
+      layout: { x: 0, y: 6, w: 12, h: 4 },
+      transform: {
+        steps: [
+          {
+            type: "filter",
+            conditions: {
+              conjunction: "and",
+              conditions: [
+                { field: "type", operator: "is", value: "meeting", enabled: true },
+              ],
+            },
+          },
         ],
+      },
+      config: tableTabConfig(),
+    },
+    // R3: living showcase of the Canvas Selection Bus — pick a client row
+    // (row menu → «Фильтровать связанные блоки»), the projects block narrows.
+    ...linkedClientProjectsPair(),
+  ];
+}
+
+function linkedClientProjectsPair(): WidgetDefinition[] {
+  const rosterId = widgetId();
+  const typeFilter = (value: string) => ({
+    steps: [
+      {
+        type: "filter" as const,
+        conditions: {
+          conjunction: "and" as const,
+          conditions: [{ field: "type", operator: "is" as const, value, enabled: true }],
+        },
+      },
+    ],
+  });
+  return [
+    {
+      id: rosterId,
+      type: "database-call",
+      title: "Клиенты (мастер связи)",
+      layout: { x: 0, y: 10, w: 6, h: 4 },
+      transform: typeFilter("client"),
+      config: tableTabConfig(),
+    },
+    {
+      id: widgetId(),
+      type: "database-call",
+      title: "Проекты клиента (связанный блок)",
+      layout: { x: 6, y: 10, w: 6, h: 4 },
+      transform: typeFilter("project"),
+      config: {
+        ...tableTabConfig(),
+        linkedSelection: { sourceWidgetId: rosterId, relationField: "client" },
       },
     },
   ];
@@ -328,20 +399,25 @@ function clientsWidgets(): WidgetDefinition[] {
       layout: { x: 0, y: 0, w: 12, h: 2 },
       config: {
         cards: [
-          { id: "c1", label: "Всего",        field: "name",  aggregation: "count" },
-          { id: "c2", label: "Активных",     field: "stage", aggregation: "count" },
-          { id: "c3", label: "MRR (sum)",    field: "mrr",   aggregation: "sum", format: "currency", currencySymbol: "$" },
-          { id: "c4", label: "Средний MRR", field: "mrr",   aggregation: "avg", format: "currency", currencySymbol: "$" },
+          // UT2026-D P1: count → count_total (view is globally filtered to clients).
+          // "Активных" needed a per-card filter stats cards don't have — replaced with
+          // an honest metric (earliest signup) instead of a mislabeled count.
+          { id: "c1", label: "Всего",         field: "name",       aggregation: "count_total" },
+          { id: "c2", label: "Первый клиент", field: "signupDate", aggregation: "earliest" },
+          { id: "c3", label: "MRR (sum)",     field: "mrr",        aggregation: "sum", format: "currency", currencySymbol: "$" },
+          { id: "c4", label: "Средний MRR",  field: "mrr",        aggregation: "avg", format: "currency", currencySymbol: "$" },
         ],
         columns: 4,
       },
     },
     {
+      // F3 (UT2026-A L3): generators emit V2 types — data-table is retired,
+      // the clients roster is a database-call with a single Table tab.
       id: widgetId(),
-      type: "data-table",
+      type: "database-call",
       title: "Список клиентов",
       layout: { x: 0, y: 2, w: 12, h: 8 },
-      config: {},
+      config: tableTabConfig(commonTableConfig as unknown as Record<string, unknown>),
     },
   ];
 }
@@ -449,7 +525,8 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     endDateField: "deadline",
     startTimeField: "startTime",
     endTimeField: "endTime",
-    eventColorField: "priority",
+    // R3: per-record hex color (explicit beats rules); meetings ship colored.
+    eventColorField: "color",
     checkField: "completed",
     startHour: 8,
     endHour: 20,

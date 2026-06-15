@@ -18,7 +18,7 @@
   export let disabled: boolean = false;
   /** Optional validator returning string[] error messages. */
   export let validate: ((expr: string) => string[]) | undefined = undefined;
-  export let ariaLabel: string = "";
+  export const ariaLabel: string = "";
   /** Field names forwarded to FormulaConstructor for autocomplete. */
   export let fields: string[] = [];
 

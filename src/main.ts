@@ -9,6 +9,7 @@ import "dayjs/locale/zh-cn";
 
 // Design tokens CSS
 import "./ui/tokens/tokens.css";
+import "./ui/views/Dashboard/tokens/dashboardTokens.css";
 
 import { either } from "fp-ts";
 import { Plugin, TFile, TFolder, WorkspaceLeaf, addIcon, Notice } from "obsidian";

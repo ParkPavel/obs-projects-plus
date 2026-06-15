@@ -15,6 +15,7 @@
   import { TagList } from "src/ui/components/TagList";
   import { i18n } from "src/lib/stores/i18n";
   import { DEFAULT_COLOR } from "src/lib/stores/palettes";
+  import { isColorFieldName, normalizeHexColor } from "src/lib/colors/recordColor";
   import {
     DataFieldType,
     isBoolean,
@@ -85,12 +86,11 @@
     return [];
   })();
     
-  // Field type detection
-  const COLOR_FIELDS = ['color', 'eventcolor', 'tagcolor', 'backgroundcolor'];
+  // Field type detection (color heuristic shared via UT2026-C contract)
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
   const TIME_FIELDS = ['time', 'starttime', 'endtime'];
-  
-  $: isColorField = COLOR_FIELDS.some(cf => field.name.toLowerCase().includes(cf));
+
+  $: isColorField = isColorFieldName(field.name);
   $: isImageField = IMAGE_FIELDS.some(img => field.name.toLowerCase().includes(img));
   $: isTimeField = TIME_FIELDS.some(tf => field.name.toLowerCase().includes(tf));
   
@@ -102,23 +102,31 @@
     textInputBuffer = localDisplayValue;
   }
   
+  // UT2026-C (#070): hand-typed colors are canonicalized (#RGB / case /
+  // whitespace → #rrggbb) so the stored frontmatter matches what readers
+  // resolve. Invalid text is stored as-is — the user sees their typo
+  // instead of a silently dropped color.
+  function commitTextBuffer(raw: string) {
+    onChange(isColorField ? normalizeHexColor(raw) ?? raw : raw);
+  }
+
   function onTextInput(e: Event) {
     const target = e.target as HTMLInputElement;
     textInputBuffer = target.value;
-    
+
     // Debounce: save after 500ms of no typing
     if (typingTimer) clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
-      onChange(textInputBuffer);
+      commitTextBuffer(textInputBuffer);
     }, 500);
   }
-  
+
   function onTextBlur() {
     textInputActive = false;
     if (typingTimer) clearTimeout(typingTimer);
     // Save final value on blur
     if (textInputBuffer !== localDisplayValue) {
-      onChange(textInputBuffer);
+      commitTextBuffer(textInputBuffer);
     }
   }
   

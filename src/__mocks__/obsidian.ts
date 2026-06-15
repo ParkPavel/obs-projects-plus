@@ -151,7 +151,7 @@ class MockTFile {
 }
 
 
-// Mock Menu (R0.2 � needed by contextMenu helper and downstream callers)
+// Mock Menu (R0.2 — needed by contextMenu helper and downstream callers)
 export class Menu {
   items: any[] = [];
   addItem(cb: (item: any) => any) {
@@ -194,7 +194,7 @@ export class TFolder extends TAbstractFile {
 export const App = MockApp;
 
 
-// Mock ItemView (R1.1 � used by VisualizerPaneView and ProjectsView tests)
+// Mock ItemView (R1.1 — used by VisualizerPaneView and ProjectsView tests)
 export class ItemView {
   contentEl: HTMLElement;
   app: any;
@@ -230,6 +230,11 @@ export class Notice {
 // Mock addIcon / setIcon (no-op)
 export const addIcon = jest.fn();
 export const setIcon = jest.fn();
+
+// Minimal stringifyYaml — enough for demo-generator tests (UT2026-D)
+export function stringifyYaml(obj: unknown): string {
+  return JSON.stringify(obj) + "\n";
+}
 
 // Minimal normalizePath: forward slashes, collapse doubles, strip trailing slash
 export function normalizePath(path: string): string {

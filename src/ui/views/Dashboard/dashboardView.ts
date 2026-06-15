@@ -81,6 +81,3 @@ export class DashboardView extends ProjectView {
     this.view = null;
   }
 }
-
-/** @deprecated Use {@link DashboardView}. Kept for back-compat with external imports. */
-export { DashboardView as DatabaseView };

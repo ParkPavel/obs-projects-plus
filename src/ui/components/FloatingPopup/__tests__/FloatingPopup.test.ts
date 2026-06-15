@@ -137,6 +137,65 @@ describe("FloatingPopup", () => {
     view.destroy();
   });
 
+  test("clamps a wide popup inside the right viewport edge (#098)", async () => {
+    // Trigger sits near the right edge; popup is wider than the available
+    // viewport space (vw - 2*margin), so the clamp must pin left AND emit a
+    // max-width cap that prevents right overflow.
+    const trigger = createTrigger({ top: 100, left: 980, bottom: 120, right: 1020, width: 40, height: 20 });
+    const view = mount({ open: true, triggerEl: trigger, placement: "bottom-start" });
+
+    await flush(10);
+    // vw = 1024, margin ≈ 8px → available ≈ 1008px. Popup wants 1200px.
+    stubPopupRect(view.target, 1200, 200);
+    view.component.$set({ placement: "bottom-start" });
+    await flush(20);
+
+    const popup = view.target.querySelector(".ppp-popup--floating") as HTMLElement;
+    const styleAttr = popup?.getAttribute("style") ?? "";
+
+    const leftMatch = styleAttr.match(/left:\s*([\d.]+)px/);
+    const capMatch = styleAttr.match(/max-width:\s*([\d.]+)px/);
+    expect(leftMatch).not.toBeNull();
+    expect(capMatch).not.toBeNull();
+
+    const left = parseFloat(leftMatch![1]!);
+    const cap = parseFloat(capMatch![1]!);
+    const margin = 8; // 0.5rem at 16px root font
+    // Left pinned at margin, and origin + cap stays inside the right margin.
+    expect(left).toBeGreaterThanOrEqual(margin - 0.5);
+    expect(left + cap).toBeLessThanOrEqual(1024 - margin + 0.5);
+
+    view.destroy();
+  });
+
+  test("repositions on window resize while open (#098)", async () => {
+    const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });
+    const view = mount({ open: true, triggerEl: trigger, placement: "bottom-start" });
+
+    await flush(10);
+    const popup = stubPopupRect(view.target, 160, 80) as HTMLElement;
+    const spy = jest.spyOn(popup, "getBoundingClientRect");
+
+    window.dispatchEvent(new Event("resize"));
+    await flush(20);
+
+    // recompute() re-measured the popup in response to the resize event.
+    expect(spy).toHaveBeenCalled();
+    view.destroy();
+  });
+
+  test("removes the resize listener on destroy (#098)", async () => {
+    const removeSpy = jest.spyOn(window, "removeEventListener");
+    const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });
+    const view = mount({ open: true, triggerEl: trigger });
+
+    await flush(10);
+    view.destroy();
+
+    expect(removeSpy).toHaveBeenCalledWith("resize", expect.any(Function));
+    removeSpy.mockRestore();
+  });
+
   test("dismisses on Escape key", async () => {
     const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
     const onClose = jest.fn();

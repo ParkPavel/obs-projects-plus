@@ -37,7 +37,7 @@
   export let existingFields: DataField[];
   export let defaultName: string;
   /**
-   * Stage A.10 � sibling projects forwarded so the new-field modal can
+   * Stage A.10 — sibling projects forwarded so the new-field modal can
    * resolve a Relation target inline without forcing the user into a
    * second Configure round-trip. Empty array silently disables the
    * inline picker (degraded but functional).
@@ -219,11 +219,11 @@
     };
   }
 
-  // -- Stage A.10 � inline Relation / Rollup config -------------
+  // -- Stage A.10 — inline Relation / Rollup config -------------
   // Without these branches a freshly-created Relation/Rollup field is
   // persisted with an empty `typeConfig`, forcing the user into a second
   // Configure round-trip and (for Rollup) writing `""` into every record's
-  // frontmatter. Schema-modal already exposes the same primitives � here
+  // frontmatter. Schema-modal already exposes the same primitives — here
   // we mirror the minimum so the new-field flow is one-stop-shop.
   $: relationCfg = (field.typeConfig as { relation?: RelationFieldConfig })
     ?.relation;
@@ -594,7 +594,7 @@
             safeParseList(listValue)
           );
         } else if (isStageANoDefault(field.type)) {
-          // Stage A.10 � derived / pickable types do not own a literal
+          // Stage A.10 — derived / pickable types do not own a literal
           // default. Passing null prevents `dataApi.addField` from writing
           // an empty string into every record's frontmatter on creation.
           onCreate(field, null);

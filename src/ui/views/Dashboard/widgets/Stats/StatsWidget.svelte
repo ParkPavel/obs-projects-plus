@@ -57,7 +57,6 @@
   }
 
   $: cards = config.cards?.length ? config.cards : buildDefaultCards(source);
-  $: columns = config.columns ?? 3;
   $: availableFieldNames = new Set(source.fields.map((f) => f.name));
 
   // Receiver core: narrow source.records by the active selection (no-op when
@@ -84,7 +83,7 @@
   }
 </script>
 
-<div class="ppp-stats-widget" style="--stats-columns: {columns}">
+<div class="ppp-stats-widget">
   {#each cards as card (card.id)}
     <StatsCard
       config={card}
@@ -98,20 +97,8 @@
 <style>
   .ppp-stats-widget {
     display: grid;
-    grid-template-columns: repeat(var(--stats-columns, 3), 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(var(--ppp-db-stats-card-min, 10rem), 1fr));
     gap: var(--ppp-space-md, 0.5rem);
     padding: var(--ppp-space-md, 0.5rem);
-  }
-
-  /* Matryoshka: adapt to widget container width */
-  @container widget (max-width: 20rem) {
-    .ppp-stats-widget {
-      grid-template-columns: 1fr;
-    }
-  }
-  @container widget (min-width: 20rem) and (max-width: 35rem) {
-    .ppp-stats-widget {
-      grid-template-columns: repeat(2, 1fr);
-    }
   }
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
+  import { computeAxisLabelLayout, shouldRenderLabel, truncateLabel } from "./axisLabels";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -16,14 +17,30 @@
 
   const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
-  const PADDING = { top: 20, right: 20, bottom: 40, left: 50 };
+  const PADDING_TOP = 20;
+  const PADDING_RIGHT = 20;
+  const PADDING_LEFT = 50;
+  const LABEL_FONT = 11;
 
   $: labels = data.labels;
   $: values = data.series[0]?.values ?? [];
   $: maxVal = Math.max(...values.map((v) => v ?? 0), 1);
 
-  $: plotW = width - PADDING.left - PADDING.right;
-  $: plotH = height - PADDING.top - PADDING.bottom;
+  // #096.2 — vertical bars previously had no skip/rotate, so dense category
+  // axes overlapped. Reuse the shared density helper (horizontal bars label
+  // in the left gutter, so they keep a fixed bottom padding).
+  $: maxLabelChars = labels.reduce((m, l) => Math.max(m, l.length), 0);
+  $: axisLabels = computeAxisLabelLayout({
+    count: labels.length,
+    plotWidth: width - PADDING_LEFT - PADDING_RIGHT,
+    fontSize: LABEL_FONT,
+    maxLabelChars,
+  });
+  $: paddingBottom =
+    horizontal || !style.showLabels ? 40 : Math.max(40, axisLabels.bottomPadding);
+
+  $: plotW = width - PADDING_LEFT - PADDING_RIGHT;
+  $: plotH = height - PADDING_TOP - paddingBottom;
   $: barCount = labels.length || 1;
   $: barGap = Math.max(2, plotW * 0.1 / barCount);
   $: barWidth = horizontal
@@ -93,7 +110,7 @@
   role="img"
   aria-label="Bar chart"
 >
-  <g transform="translate({PADDING.left}, {PADDING.top})">
+  <g transform="translate({PADDING_LEFT}, {PADDING_TOP})">
     {#if style.showGrid}
       {#each gridLines as gl}
         {#if horizontal}
@@ -165,12 +182,13 @@
           on:click={() => handleBarClick(label)}
           on:keydown={(e) => handleBarKey(e, label)}
         />
-        {#if style.showLabels}
+        {#if style.showLabels && shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
           <text
             x={bX + barWidth / 2} y={plotH + 14}
             text-anchor="middle"
-            fill="var(--text-normal)" font-size="11"
-          >{label.length > 10 ? label.slice(0, 9) + "…" : label}</text>
+            fill="var(--text-normal)" font-size={LABEL_FONT}
+            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${bX + barWidth / 2} ${plotH + 14})` : ""}
+          >{truncateLabel(label, axisLabels.truncateAt)}</text>
         {/if}
         {#if style.showValues}
           <text

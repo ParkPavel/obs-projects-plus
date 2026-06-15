@@ -252,7 +252,11 @@ export type ProjectDefinition<ViewDef> = {
   readonly agenda?: AgendaConfig;
 };
 
-export type DataSource = FolderDataSource | TagDataSource | DataviewDataSource;
+export type DataSource =
+  | FolderDataSource
+  | TagDataSource
+  | DataviewDataSource
+  | NativeQueryDataSource;
 
 export type FolderDataSource = {
   readonly kind: "folder";
@@ -289,6 +293,33 @@ export type DataviewDataSource = {
      * `conditions` is a no-op.
      */
     readonly filter?: FilterDefinition;
+  };
+};
+
+/**
+ * Filter-based ("virtual") database persisted as a project datasource.
+ *
+ * Introduced by ticket #048 (M-UX). Executes through the pure
+ * `executeNativeQuery` layer (#045.2): records are acquired from a
+ * folder/tag source, then narrowed via the canonical `filterEvaluator`
+ * (`where`) and optionally truncated (`limit`). Works without Dataview.
+ */
+export type NativeQueryDataSource = {
+  readonly kind: "native-query";
+  readonly config: {
+    readonly from:
+      | {
+          readonly kind: "folder";
+          readonly path: string;
+          readonly recursive: boolean;
+        }
+      | {
+          readonly kind: "tag";
+          readonly tag: string;
+          readonly hierarchy: boolean;
+        };
+    readonly where?: FilterDefinition;
+    readonly limit?: number;
   };
 };
 

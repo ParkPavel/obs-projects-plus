@@ -1,0 +1,51 @@
+/*
+ * Dashboard V2 — Semantic Token Layer
+ *
+ * Layer 2 of the 4-layer cascade:
+ *   Layer 0: Obsidian system vars (--background-*, --text-*, --interactive-*)
+ *   Layer 1: Global PPP (--ppp-space-*, --ppp-font-*, --ppp-z-*)  ← tokens.css
+ *   Layer 2: Dashboard Semantic (--ppp-db-*)                       ← THIS FILE
+ *   Layer 3: Widget Component (--ppp-dt-columns, --ppp-chart-*)
+ *
+ * Rules:
+ *   - All new Dashboard layout values go here, not inline in components.
+ *   - Alias global --ppp-z-* into --ppp-db-z-* with correct fallbacks.
+ *   - Row heights are the canonical source for DataTable + DatabaseCall.
+ *   - No hardcoded hex. Colors defer to Obsidian vars or tokens.css palette.
+ */
+
+:root {
+  /* ── Z-index scale (Dashboard context) ──────────────────────────
+     Aliases tokens.css --ppp-z-* scale (raised=1, sticky=20, overlay=30).
+     design-tokens.css is dead code (never imported); tokens.css is
+     the effective scale. Dashboard dropdowns sit at 100 so they float
+     above sticky headers (20) but stay below Obsidian's own modals.  */
+  --ppp-db-z-raised:   var(--ppp-z-raised, 1);
+  --ppp-db-z-bar:      2;          /* timeline bars over grid lines */
+  --ppp-db-z-sticky:   var(--ppp-z-sticky, 20);   /* sticky header/footer */
+  --ppp-db-z-dropdown: 100;        /* floating pickers inside widgets */
+  --ppp-db-z-overlay:  200;        /* fixed confirm/backdrop overlay */
+
+  /* ── Row heights ─────────────────────────────────────────────── */
+  --ppp-db-row-compact:   1.75rem;  /* 28 — dense mode */
+  --ppp-db-row-default:   2.25rem;  /* 36 — standard */
+  --ppp-db-row-expanded:  3rem;     /* 48 — comfortable */
+
+  /* ── Toolbar ─────────────────────────────────────────────────── */
+  --ppp-db-toolbar-height: 2rem;    /* 32 — widget header bar */
+
+  /* ── Column widths ───────────────────────────────────────────── */
+  --ppp-db-col-width-default: 10rem;   /* fallback when no saved width */
+  --ppp-db-col-width-min:      4rem;   /* minimum resizable width */
+  --ppp-dt-columns: auto;              /* overridden per widget via style attr */
+
+  /* ── Surface (alias Obsidian vars for one-stop token usage) ─── */
+  --ppp-db-surface:          var(--background-primary);
+  --ppp-db-surface-raised:   var(--background-secondary);
+  --ppp-db-border:           var(--background-modifier-border);
+  --ppp-db-border-strong:    var(--background-modifier-border-hover);
+  --ppp-db-text-primary:     var(--text-normal);
+  --ppp-db-text-secondary:   var(--text-muted);
+  --ppp-db-text-faint:       var(--text-faint);
+  --ppp-db-row-hover:        var(--background-modifier-hover);
+}

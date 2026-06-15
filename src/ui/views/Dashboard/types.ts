@@ -331,6 +331,12 @@ export interface DatabaseViewConfig {
    */
   readonly fieldPresets?: FieldPreset[];
   readonly activeFieldPresetId?: string;
+  /**
+   * #059 SmartSuggest — suggestion kinds the user opted out of ("don't
+   * suggest again") or already accepted. Additive: absent means all
+   * suggestions are eligible. Values are `SuggestionKind` strings.
+   */
+  readonly dismissedSuggestions?: string[];
 }
 
 // ── Field Preset ─────────────────────────────────────────────
@@ -386,6 +392,7 @@ export interface ChartAxisX {
   readonly sortOrder: "asc" | "desc";
   readonly omitZero: boolean;
   readonly hiddenGroups?: string[];
+  readonly dateGranularity?: "day" | "week" | "month" | "quarter" | "year";
 }
 
 export interface ChartAxisY {

@@ -28,7 +28,15 @@
   import { interpolateTemplate } from "src/lib/templates/interpolate";
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { ProjectDefinition } from "src/settings/settings";
-  import type { AgendaCustomList } from "src/settings/v3/settings";
+  import type {
+    AgendaCustomList,
+    NativeQueryDataSource,
+  } from "src/settings/v3/settings";
+  import {
+    getFilterOperatorType,
+    type FilterCondition,
+    type FilterOperator,
+  } from "src/settings/base/settings";
 
   export let title: string;
   export let cta: string;
@@ -59,6 +67,14 @@
     });
   }
 
+  // Primary datasource select also offers native-query (#048). Additional
+  // sources keep the folder/tag/dataview trio — the merge path doesn't
+  // support nested query sources.
+  const primaryDataSourceOptions = [
+    ...dataSourceOptions,
+    { label: $i18n.t("datasources.native-query"), value: "native-query" },
+  ];
+
   function handleDataSourceChange({ detail: value }: CustomEvent<string>) {
     switch (value) {
       case "folder":
@@ -82,6 +98,136 @@
           dataSource: { kind: "dataview", config: { query: "" } },
         };
         break;
+      case "native-query":
+        project = {
+          ...project,
+          dataSource: {
+            kind: "native-query",
+            config: {
+              from: { kind: "folder", path: "", recursive: false },
+              where: { conjunction: "and", conditions: [] },
+            },
+          },
+        };
+        break;
+    }
+  }
+
+  // ── native-query config helpers (#048) ─────────────────────
+  type NativeQueryConfig = NativeQueryDataSource["config"];
+
+  const NQ_OPERATORS: FilterOperator[] = [
+    "is",
+    "is-not",
+    "contains",
+    "not-contains",
+    "starts-with",
+    "ends-with",
+    "is-empty",
+    "is-not-empty",
+    "eq",
+    "neq",
+    "lt",
+    "gt",
+    "lte",
+    "gte",
+    "is-checked",
+    "is-not-checked",
+  ];
+
+  $: nqOperatorOptions = NQ_OPERATORS.map((op) => ({
+    label: $i18n.t(`modals.project.native-query.operators.${op}`),
+    value: op,
+  }));
+
+  function nqSetConfig(config: NativeQueryConfig) {
+    project = {
+      ...project,
+      dataSource: { kind: "native-query", config },
+    };
+  }
+
+  function nqSetFromKind(kind: string) {
+    if (project.dataSource.kind !== "native-query") return;
+    const config = project.dataSource.config;
+    nqSetConfig({
+      ...config,
+      from:
+        kind === "tag"
+          ? { kind: "tag", tag: "", hierarchy: false }
+          : { kind: "folder", path: "", recursive: false },
+    });
+  }
+
+  function nqUpdateFrom(patch: Record<string, unknown>) {
+    if (project.dataSource.kind !== "native-query") return;
+    const config = project.dataSource.config;
+    nqSetConfig({
+      ...config,
+      from: { ...config.from, ...patch } as NativeQueryConfig["from"],
+    });
+  }
+
+  function nqSetConditions(conditions: FilterCondition[]) {
+    if (project.dataSource.kind !== "native-query") return;
+    const config = project.dataSource.config;
+    nqSetConfig({
+      ...config,
+      where: {
+        conjunction: config.where?.conjunction ?? "and",
+        conditions,
+      },
+    });
+  }
+
+  function nqAddCondition() {
+    if (project.dataSource.kind !== "native-query") return;
+    const conditions = project.dataSource.config.where?.conditions ?? [];
+    nqSetConditions([
+      ...conditions,
+      { field: "", operator: "is", enabled: true },
+    ]);
+  }
+
+  function nqUpdateCondition(index: number, patch: Partial<FilterCondition>) {
+    if (project.dataSource.kind !== "native-query") return;
+    const conditions = [
+      ...(project.dataSource.config.where?.conditions ?? []),
+    ];
+    const current = conditions[index];
+    if (!current) return;
+    const next = { ...current, ...patch };
+    if (getFilterOperatorType(next.operator) === "unary") {
+      delete next.value;
+    }
+    conditions[index] = next;
+    nqSetConditions(conditions);
+  }
+
+  function nqSetConditionOperator(index: number, op: string) {
+    if ((NQ_OPERATORS as string[]).includes(op)) {
+      nqUpdateCondition(index, { operator: op as FilterOperator });
+    }
+  }
+
+  function nqRemoveCondition(index: number) {
+    if (project.dataSource.kind !== "native-query") return;
+    const conditions = [
+      ...(project.dataSource.config.where?.conditions ?? []),
+    ];
+    conditions.splice(index, 1);
+    nqSetConditions(conditions);
+  }
+
+  function nqSetLimit(raw: string) {
+    if (project.dataSource.kind !== "native-query") return;
+    const config = project.dataSource.config;
+    const parsed = parseInt(raw, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      nqSetConfig({ ...config, limit: parsed });
+    } else {
+      const { limit, ...rest } = config;
+      nqSetConfig(rest);
     }
   }
 
@@ -348,7 +494,7 @@
     >
       <Select
         value={project.dataSource.kind}
-        options={dataSourceOptions}
+        options={primaryDataSourceOptions}
         on:change={handleDataSourceChange}
       />
     </SettingItem>
@@ -503,6 +649,136 @@
           </Typography>
         </Callout>
       {/if}
+    {/if}
+
+    {#if project.dataSource.kind === "native-query"}
+      <SettingItem
+        name={$i18n.t("modals.project.native-query.from.name")}
+        description={$i18n.t("modals.project.native-query.from.description") ??
+          ""}
+      >
+        <Select
+          value={project.dataSource.config.from.kind}
+          options={[
+            { label: $i18n.t("datasources.folder"), value: "folder" },
+            { label: $i18n.t("datasources.tag"), value: "tag" },
+          ]}
+          on:change={({ detail: kind }) => nqSetFromKind(kind)}
+        />
+      </SettingItem>
+
+      {#if project.dataSource.config.from.kind === "folder"}
+        <SettingItem
+          name={$i18n.t("modals.project.path.name")}
+          description={$i18n.t("modals.project.path.description") ?? ""}
+          vertical
+        >
+          <FileAutocomplete
+            files={getFoldersInFolder($app.vault.getRoot())}
+            value={project.dataSource.config.from.path}
+            on:change={({ detail: path }) => nqUpdateFrom({ path })}
+            getLabel={(file) => file.path}
+            placeholder={"/"}
+            width="100%"
+          />
+        </SettingItem>
+        <SettingItem
+          name={$i18n.t("modals.project.recursive.name")}
+          description={$i18n.t("modals.project.recursive.description") ?? ""}
+        >
+          <Switch
+            checked={project.dataSource.config.from.recursive}
+            on:check={({ detail: recursive }) => nqUpdateFrom({ recursive })}
+          />
+        </SettingItem>
+      {:else}
+        <SettingItem
+          name={$i18n.t("modals.project.tag.name")}
+          description={$i18n.t("modals.project.tag.description") ?? ""}
+          vertical
+        >
+          <TextInput
+            placeholder="#tag"
+            value={project.dataSource.config.from.tag ?? ""}
+            on:input={({ detail: rawTag }) => {
+              const tag = rawTag.trim()
+                ? rawTag.trim().startsWith("#")
+                  ? rawTag.trim()
+                  : "#" + rawTag.trim()
+                : "";
+              nqUpdateFrom({ tag });
+            }}
+            width="100%"
+          />
+        </SettingItem>
+        <SettingItem
+          name={$i18n.t("modals.project.hierarchy.name")}
+          description={$i18n.t("modals.project.hierarchy.description")}
+        >
+          <Switch
+            checked={project.dataSource.config.from.hierarchy}
+            on:check={({ detail: hierarchy }) => nqUpdateFrom({ hierarchy })}
+          />
+        </SettingItem>
+      {/if}
+
+      <SettingItem
+        name={$i18n.t("modals.project.native-query.where.name")}
+        description={$i18n.t(
+          "modals.project.native-query.where.description"
+        ) ?? ""}
+        vertical
+      >
+        <div class="ppp-nq-conditions">
+          {#each project.dataSource.config.where?.conditions ?? [] as condition, i}
+            <div class="ppp-nq-condition-row">
+              <TextInput
+                value={condition.field}
+                placeholder={$i18n.t(
+                  "modals.project.native-query.where.field-placeholder"
+                )}
+                on:input={({ detail: field }) =>
+                  nqUpdateCondition(i, { field })}
+              />
+              <Select
+                value={condition.operator}
+                options={nqOperatorOptions}
+                on:change={({ detail: operator }) =>
+                  nqSetConditionOperator(i, operator)}
+              />
+              {#if getFilterOperatorType(condition.operator) !== "unary"}
+                <TextInput
+                  value={condition.value ?? ""}
+                  placeholder={$i18n.t(
+                    "modals.project.native-query.where.value-placeholder"
+                  )}
+                  on:input={({ detail: value }) =>
+                    nqUpdateCondition(i, { value })}
+                />
+              {/if}
+              <Button variant="plain" on:click={() => nqRemoveCondition(i)}>
+                <Icon name="x" />
+              </Button>
+            </div>
+          {/each}
+          <Button variant="plain" on:click={nqAddCondition}>
+            <Icon name="plus" />
+            {$i18n.t("modals.project.native-query.where.add")}
+          </Button>
+        </div>
+      </SettingItem>
+
+      <SettingItem
+        name={$i18n.t("modals.project.native-query.limit.name")}
+        description={$i18n.t("modals.project.native-query.limit.description") ??
+          ""}
+      >
+        <TextInput
+          value={project.dataSource.config.limit?.toString() ?? ""}
+          placeholder="∞"
+          on:input={({ detail: raw }) => nqSetLimit(raw)}
+        />
+      </SettingItem>
     {/if}
 
     <Accordion>
@@ -909,5 +1185,27 @@
 
   .ppp-additional-source-row :global(input) {
     flex: 1;
+  }
+
+  .ppp-nq-conditions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .ppp-nq-condition-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ppp-nq-condition-row :global(select) {
+    min-width: 7rem;
+  }
+
+  .ppp-nq-condition-row :global(input) {
+    flex: 1;
+    min-width: 0;
   }
 </style>

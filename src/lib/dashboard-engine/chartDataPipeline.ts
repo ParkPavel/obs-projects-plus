@@ -1,9 +1,10 @@
 ﻿// src/ui/views/Dashboard/engine/chartDataPipeline.ts
 // Converts ChartConfig → TransformPipeline → ChartData
 
-import type { DataFrame } from "src/lib/dataframe/dataframe";
+import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
-import type { TransformPipeline, TransformStep, AggregationFunction } from "./transformTypes";
+import type { TransformPipeline, TransformStep, GroupByStep, AggregationFunction } from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
 import { joinKey as scatterJoinKey } from "./joinKey";
 
@@ -31,14 +32,34 @@ function toAggFn(agg: ColumnAggregation): AggregationFunction {
  * ChartConfig describes what the user wants to see.
  * The pipeline describes how to compute it from raw data.
  */
-export function buildChartPipeline(config: ChartConfig): TransformPipeline {
+export function buildChartPipeline(
+  config: ChartConfig,
+  fields?: readonly DataField[]
+): TransformPipeline {
   const steps: TransformStep[] = [];
 
-  // 1. GROUP BY x-axis property
-  steps.push({
-    type: "group-by",
-    fields: [config.xAxis.property],
-  });
+  // 1. GROUP BY x-axis property — bucket by date granularity when the X
+  // field is a Date. When `fields` is absent (legacy test call-sites), only
+  // bucket if dateGranularity is explicitly set.
+  const xField = config.xAxis.property;
+  const xIsDate = fields
+    ? fields.find((f) => f.name === xField)?.type === DataFieldType.Date
+    : false;
+  const shouldBucket = xIsDate || config.xAxis.dateGranularity != null;
+  const groupStep: GroupByStep = shouldBucket
+    ? {
+        type: "group-by",
+        fields: [xField],
+        dateGrouping: {
+          field: xField,
+          granularity: config.xAxis.dateGranularity ?? "month",
+        },
+      }
+    : {
+        type: "group-by",
+        fields: [xField],
+      };
+  steps.push(groupStep);
 
   // 2. AGGREGATE y-axis (skip for "count" — use _group_size from GROUP BY)
   if (config.yAxis.property !== "count") {
@@ -67,18 +88,25 @@ export function computeChartData(
     return { labels: [], series: [{ name: "", values: [] }] };
   }
 
-  const pipeline = buildChartPipeline(config);
+  const pipeline = buildChartPipeline(config, source.fields);
   const result = executeTransformCached(source, pipeline);
 
   const df = result.data;
 
-  // Extract labels and values
-  const xField = config.xAxis.property;
+  // Extract labels and values. When date-bucketing is active, the group-by
+  // emits a derived `${field}_${granularity}` field — that is the effective
+  // label field (see transformExecutor executeGroupBy).
+  const groupStep = pipeline.steps[0];
+  const dateGrouping =
+    groupStep?.type === "group-by" ? groupStep.dateGrouping : undefined;
+  const labelField = dateGrouping
+    ? `${dateGrouping.field}_${dateGrouping.granularity}`
+    : config.xAxis.property;
   const valueField = config.yAxis.property === "count" ? "_group_size" : "__chart_value__";
   let entries: { label: string; value: number | null }[] = [];
 
   for (const record of df.records) {
-    const label = String(record.values[xField] ?? "");
+    const label = String(record.values[labelField] ?? "");
     const rawVal = record.values[valueField];
     const value = rawVal != null ? Number(rawVal) : null;
 

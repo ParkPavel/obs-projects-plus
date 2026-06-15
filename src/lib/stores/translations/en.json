@@ -24,7 +24,8 @@
         "datasources": {
             "folder": "Folder",
             "tag": "Tag",
-            "dataview": "Dataview"
+            "dataview": "Dataview",
+            "native-query": "Query (filter)"
         },
         "commands": {
             "show-projects": {
@@ -152,6 +153,41 @@
                 "query": {
                     "name": "Query",
                     "description": "Supports TABLE, LIST and TASK queries."
+                },
+                "native-query": {
+                    "from": {
+                        "name": "Source",
+                        "description": "Where to read notes from before filtering."
+                    },
+                    "where": {
+                        "name": "Filter conditions",
+                        "description": "Only notes matching all conditions are included.",
+                        "add": "Add condition",
+                        "field-placeholder": "Field name",
+                        "value-placeholder": "Value"
+                    },
+                    "limit": {
+                        "name": "Limit",
+                        "description": "Maximum number of records. Leave empty for no limit."
+                    },
+                    "operators": {
+                        "is": "Is",
+                        "is-not": "Is not",
+                        "contains": "Contains",
+                        "not-contains": "Does not contain",
+                        "starts-with": "Starts with",
+                        "ends-with": "Ends with",
+                        "is-empty": "Is empty",
+                        "is-not-empty": "Is not empty",
+                        "eq": "=",
+                        "neq": "≠",
+                        "lt": "<",
+                        "gt": ">",
+                        "lte": "≤",
+                        "gte": "≥",
+                        "is-checked": "Is checked",
+                        "is-not-checked": "Is not checked"
+                    }
                 },
                 "recursive": {
                     "name": "Include subfolders",
@@ -777,7 +813,75 @@
                     "filter-bridge-global": "Global filter: {{count}} condition(s)",
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
-                    "filter-bridge-promote": "Save as global filter"
+                    "filter-bridge-promote": "Save as global filter",
+                    "empty-title": "Empty canvas",
+                    "empty-hint": "Start with a data block, or pick a ready-made template",
+                    "empty-add-block": "Add data block"
+                },
+                "templates": {
+                    "database-v2-starter": "Database V2 starter",
+                    "database-v2-starter-desc": "KPI stats + a multi-view database block (Table / Board / Calendar / Gallery)",
+                    "overview-finance": "Finance overview",
+                    "overview-finance-desc": "KPI, totals strip, category chart and a journal table",
+                    "dashboard": "Dashboard",
+                    "dashboard-desc": "Key metrics + overview chart + data table",
+                    "analytics": "Analytics",
+                    "analytics-desc": "Distribution and trend charts with summary metrics",
+                    "kanban-plus": "Kanban+",
+                    "kanban-plus-desc": "Task table + checklist + status donut",
+                    "fitness-workout": "Fitness — workout log",
+                    "fitness-workout-desc": "Nested sets[] unnested into volume stats and weight progression",
+                    "finance-accounting": "Finance — accounting",
+                    "finance-accounting-desc": "Gross / tax / net with FX rates and credit line tracking",
+                    "crm-clients": "CRM — clients",
+                    "crm-clients-desc": "Client roster, stage filter tabs and conversion funnel"
+                },
+                "cover-banner-config": {
+                    "src": "Image source",
+                    "src-placeholder": "vault path or URL",
+                    "width": "Width",
+                    "width-full": "Full",
+                    "width-half": "Half",
+                    "width-custom": "Custom",
+                    "width-rem": "Width (rem)",
+                    "fit": "Fit",
+                    "fit-cover": "Cover",
+                    "fit-contain": "Contain",
+                    "position": "Position",
+                    "position-top": "Top",
+                    "position-center": "Center",
+                    "position-bottom": "Bottom",
+                    "overlay": "Overlay caption",
+                    "overlay-placeholder": "optional",
+                    "done": "Done"
+                },
+                "block-filter": {
+                    "aria": "Block filter",
+                    "add": "Filter",
+                    "remove": "Remove condition",
+                    "scope": "This block — all its views"
+                },
+                "smart-suggest": {
+                    "numeric-message": "Numeric field \"{{field}}\" detected — want a Stats block with sum and average?",
+                    "numeric-action": "Add Stats",
+                    "relation-message": "Relation field \"{{field}}\" detected — show related records in a linked data block?",
+                    "relation-action": "Add data block",
+                    "never": "Don't suggest again",
+                    "close": "Hide suggestion"
+                },
+                "database-call": {
+                    "empty": "No views configured",
+                    "add-first": "Add first view",
+                    "no-records": "No records yet",
+                    "add-first-record": "Add first record",
+                    "no-matches": "No matches",
+                    "clear-filter": "Clear filter",
+                    "settings": {
+                        "unnest-label": "Expand list",
+                        "unnest-field": "List field",
+                        "unnest-none": "none",
+                        "unnest-hint": "Split a list field into one row per item."
+                    }
                 },
                 "field-presets": {
                     "label": "Layout",
@@ -855,8 +959,6 @@
                     "move-down": "Move down",
                     "remove": "Remove",
                     "add-step": "Add step:",
-                    "cancel": "Cancel",
-                    "save": "Save Pipeline",
                     "filter": "Filter",
                     "group-by": "Group By",
                     "aggregate": "Aggregate",
@@ -878,16 +980,25 @@
                     "columns": "column(s)",
                     "groups": "group(s)",
                     "unset": "(unset)",
+                    "unnest": "Unnest",
+                    "select-field": "Select field…",
+                    "live": "Changes apply instantly",
+                    "done": "Done",
+                    "flow-tip": "Records in → out after this step",
+                    "filter-desc": "Keep only matching records — e.g. status = active",
+                    "group-by-desc": "Group rows by a field — e.g. one group per client",
+                    "aggregate-desc": "Collapse groups into numbers — sum, average, count",
+                    "compute-desc": "Add a calculated column — e.g. price * quantity",
+                    "unpivot-desc": "Turn columns into rows — wide table becomes long",
+                    "pivot-desc": "Turn category values into columns — a summary table",
+                    "unnest-desc": "Split a list into rows — one row per participant",
+                    "join-desc": "Pull in data from another project by a shared key",
                     "unknown": "Unknown",
-                    "unsaved-changes": "Unsaved changes",
-                    "discard-confirm": "You have unsaved pipeline changes. Discard?",
-                    "keep-editing": "Keep editing",
-                    "discard": "Discard",
-                    "how-to": "How to use",
-                    "how-to-steps": "1) Add a step  2) Pick a field (searchable by name)  3) Save the pipeline",
                     "unnest-suggestion-title": "Array fields detected",
                     "unnest-suggestion-body": "Fields {{fields}} contain arrays. Use Unnest to split each item into its own row.",
-                    "unnest-suggestion-button": "Unnest \"{{field}}\""
+                    "unnest-suggestion-button": "Unnest \"{{field}}\"",
+                    "disable-step": "Disable step",
+                    "enable-step": "Enable step"
                 },
                 "group": {
                     "empty": "(empty)"
@@ -900,6 +1011,14 @@
                     "aggregation": "Aggregation",
                     "sort-by": "Sort By",
                     "height": "Height",
+                    "granularity": "Group dates by",
+                    "granularities": {
+                        "day": "Day",
+                        "week": "Week",
+                        "month": "Month",
+                        "quarter": "Quarter",
+                        "year": "Year"
+                    },
                     "types": {
                         "bar": "Bar",
                         "horizontal-bar": "Horizontal Bar",

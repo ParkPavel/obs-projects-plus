@@ -22,6 +22,7 @@ function normalizeImportLine(line) {
     .replace(/\{\s*,/g, "{")
     .replace(/,\s*\}/g, " }")
     .replace(/import\s+,/g, "import ")
+    .replace(/,\s*from\b/g, " from")
     .replace(/\s+from/g, " from")
     .trim();
 

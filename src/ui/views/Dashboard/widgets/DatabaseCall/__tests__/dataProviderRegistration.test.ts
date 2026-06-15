@@ -16,7 +16,7 @@ jest.mock("src/lib/stores/i18n", () => {
   };
 });
 
-jest.mock("../../DataTable/DataTableWidget.svelte", () => {
+jest.mock("src/archive/dashboard-v1/DataTable/DataTableWidget.svelte", () => {
   const Svelte = require("svelte/internal");
   // Stub the heavy child to keep the test focused on registration.
   return {

@@ -12,10 +12,13 @@
   } from "obsidian-svelte";
 
   import { FieldControl } from "src/ui/components/FieldControl";
+  import { isColorFieldName } from "src/lib/colors/recordColor";
   import type { DataField, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { DataFieldType, isString } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import { isTouchDevice } from "src/lib/stores/ui";
+  import { dataFrame } from "src/lib/stores/dataframe";
+  import { mergeExternal } from "./editNoteMerge";
   import { onMount, onDestroy } from "svelte";
   import { Notice } from "obsidian";
   import { openContextMenu } from "src/lib/contextMenu";
@@ -103,9 +106,30 @@
   // We create a reactive copy of values that Svelte will track
   // Using proper type from DataRecord
   let valuesSnapshot: Record<string, Optional<DataValue>> = {};
-  
+
   // Update snapshot whenever record changes
   $: valuesSnapshot = { ...record.values };
+
+  // #101: per-field dirty set — names of fields the user has touched but not
+  // yet successfully saved. Used by the live-merge to keep pending edits
+  // while accepting external store updates for untouched fields.
+  let dirty = new Set<string>();
+
+  // #101: live-modal subscription. The modal is seeded one-shot with
+  // `record` but external writers (vault/metadata → dataFrame.merge,
+  // api → dataFrame.updateRecord) mutate the canonical store. We track the
+  // matching store record by its stable id and merge it in, keeping the
+  // user's pending (dirty) edits. `$dataFrame` auto-subscribes and
+  // auto-unsubscribes on $destroy — no manual subscribe()/onDestroy needed.
+  // The merge only writes `record`; it never calls performSave, so there is
+  // no store→reactive→store loop.
+  //
+  // `recordId` is captured once (identity is stable — a rename closes the
+  // modal at editNoteModal.ts) so the lookup does not read `record` and
+  // Svelte does not see a `record → live → record` cyclical dependency.
+  const recordId = record.id;
+  $: live = $dataFrame.records.find((r) => r.id === recordId);
+  $: if (live) record = mergeExternal(record, live, dirty);
   
   // ========================================
   // AUTOSAVE SYSTEM v3.0.4
@@ -144,6 +168,8 @@
       // callers. `onSave` is typed `Promise<void> | void` — awaiting a
       // synchronous return is a no-op.
       await onSave(record);
+      // #101: fields are now in the store — no longer pending-dirty.
+      dirty = new Set<string>();
       // Brief visual feedback handled by CSS animation
     } catch (error) {
       console.error('[EditNote] Failed to save:', error);
@@ -172,6 +198,8 @@
   function setValue(fieldName: string, newValue: Optional<DataValue>) {
     record = { ...record, values: { ...record.values, [fieldName]: newValue } };
     valuesSnapshot = { ...valuesSnapshot, [fieldName]: newValue };
+    // #101: mark field as locally edited so the live-merge preserves it.
+    dirty.add(fieldName);
   }
   
   // Set value and trigger autosave based on field type (only if autosave is enabled)
@@ -197,6 +225,8 @@
   // await it to avoid close-during-save races.
   async function handleManualSave(): Promise<void> {
     await onSave(record);
+    // #101: clear dirty on the manual save-success path too (not only autosave).
+    dirty = new Set<string>();
   }
 
   // Группировка и сортировка полей
@@ -211,7 +241,6 @@
   }
 
   const DATE_TIME_FIELDS = ['date', 'start', 'end', 'due', 'created', 'modified', 'time', 'startTime', 'endTime', 'datetime', 'timestamp'];
-  const COLOR_FIELDS = ['color', 'eventColor', 'tagColor', 'backgroundColor'];
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
 
   function categorizeField(field: DataField): 'datetime' | 'color' | 'image' | 'basic' | 'other_note' | 'other_project' {
@@ -221,7 +250,7 @@
       return 'datetime';
     }
     
-    if (COLOR_FIELDS.some(cf => nameLower.includes(cf))) {
+    if (isColorFieldName(field.name)) {
       return 'color';
     }
     
@@ -264,6 +293,18 @@
     });
 
   $: readonlyFields = fields.filter((field) => field.derived);
+
+  // R3 (UT-R3): the Colors section must exist even when the note has no
+  // color field yet — picking a color CREATES the `color` frontmatter key.
+  // Without this, color was only editable on notes that already had one.
+  $: hasColorField = editableFields.some((f) => isColorFieldName(f.name));
+  const virtualColorField: DataField = {
+    name: "color",
+    type: DataFieldType.String,
+    repeated: false,
+    identifier: false,
+    derived: false,
+  };
 
   // Состояние сворачивания групп - сохраняется в localStorage
   let collapsedState: Record<string, boolean> = {};
@@ -489,6 +530,28 @@
       </div>
     {/each}
     
+    <!-- R3: standalone Colors section when the note has no color field yet -->
+    {#if !hasColorField}
+      <div class="field-group">
+        <div class="group-header-static">
+          <Icon name="palette" size="sm" />
+          <span class="group-title">{$i18n.t("modals.note.edit.color-title", { defaultValue: "Color" })}</span>
+        </div>
+        <div class="group-description">
+          {$i18n.t("modals.note.edit.color-hint", { defaultValue: "Pick a color — a `color` property will be added to this note. Calendar and boards use it." })}
+        </div>
+        <div class="group-content">
+          <SettingItem name="color">
+            <FieldControl
+              field={virtualColorField}
+              value={valuesSnapshot["color"]}
+              onChange={(value) => setValueWithAutosave("color", value, virtualColorField)}
+            />
+          </SettingItem>
+        </div>
+      </div>
+    {/if}
+
     <!-- Readonly Fields (if any) -->
     {#if readonlyFields.length > 0}
       <div class="field-group readonly-group">

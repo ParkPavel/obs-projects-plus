@@ -124,15 +124,22 @@ export function getSortOrderLabel(order: string): string {
   return SORT_ORDER_LABELS[order] ?? order;
 }
 
-/** Field type icon name (Lucide) */
+/** Field type icon name (Lucide) — full DataFieldType mapping (CLAUDE.md
+ * property table; extended for TABLE_V2_CANON §1 header icons). */
 export function getFieldIcon(fieldType: string): string {
   switch (fieldType) {
     case 'string': return 'type';
     case 'number': return 'hash';
     case 'boolean': return 'check-square';
-    case 'date':
-    case 'autotime': return 'calendar';
-    case 'multitext': return 'list';
+    case 'date': return 'calendar';
+    case 'autotime': return 'clock';
+    case 'multitext': return 'layers';
+    case 'select': return 'list';
+    case 'status': return 'circle-dot';
+    case 'relation': return 'link';
+    case 'rollup': return 'sigma';
+    case 'formula': return 'function-square';
+    case 'uniqueid': return 'fingerprint';
     default: return 'file-text';
   }
 }

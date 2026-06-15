@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
   import type { WidgetType, WidgetDefinition } from "../types";
   import { WIDGET_REGISTRY, canAddWidget } from "./widgetRegistry";
   import { WIDGET_TEMPLATES, type WidgetTemplate } from "../widgetTemplates";
@@ -31,6 +31,12 @@
 
   // Reset nested templates submenu whenever the popup closes.
   $: if (!open) showTemplates = false;
+
+  // UT2026-A L2 (#086): same legacy filter as DashboardBlockPalette —
+  // retired types are not creation candidates unless already on canvas.
+  $: visibleMetas = WIDGET_REGISTRY.filter(
+    (meta) => !meta.legacy || currentWidgets.some((w) => w.type === meta.type)
+  );
 </script>
 
 <div class="ppp-widget-toolbar">
@@ -52,7 +58,7 @@
     role="menu"
     ariaLabel={$i18n.t("views.dashboard.widget.add-aria")}
   >
-    {#each WIDGET_REGISTRY as meta}
+    {#each visibleMetas as meta}
       {@const allowed = canAddWidget(meta.type, currentWidgets)}
       <button
         class="ppp-toolbar-option"

@@ -50,7 +50,7 @@
     >
       <span class="ppp-formula-debug-caret" class:ppp-formula-debug-caret--open={expanded}>?</span>
       <span class="ppp-formula-debug-title">
-        {$i18n.t("views.dashboard.formula.debug-title")} — {$i18n.t("views.dashboard.formula.runtime-error")}
+        {$i18n.t("views.dashboard.formula.debug-title")} â€” {$i18n.t("views.dashboard.formula.runtime-error")}
       </span>
     </button>
     <div class="ppp-formula-debug-actions">

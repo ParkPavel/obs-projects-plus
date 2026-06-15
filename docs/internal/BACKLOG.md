@@ -1,7 +1,7 @@
-﻿# Project Backlog — obs-projects-plus
+# Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-10 (#050–#058 added — M-UI-MODERNIZATION: полный рефакторинг Dashboard UI; Phase 4.5 ✅ DONE multi-select Selection Bus; baseline 134/2020)
+> **Updated**: 2026-06-14 (#101 EditNote live-modal CLOSED, READY FOR PR — `c1becb4`; baseline ratchet 152 suites / 2203 tests +1 suite `editNoteMerge.test.ts` +8 tests; next open: #096.4 dayjs-reconcile P3)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -236,16 +236,15 @@ the delegation contract. Source file header documents the migration.
 - Опциональные UX-улучшения: Ctrl+Space force-open, FloatingPopup portal для suggestion dropdown, JSDOM unit tests, migration `AdvancedFilterEditor` → FormulaConstructor
 
 ### #011 — Move YAML Visualizer into Dashboard widget
-- Status: 📋 BACKLOG
+- Status: ❌ SUPERSEDED (2026-06-11) — YamlVisualizerWidget заархивирован в #056 (V2 fate
+  table); продуктовая цель («заметка как типизированная карточка», R5-012 в дизайн-стеке)
+  переоформлена в **#082**. См. specs/UT2026-G §C.
 - Milestone: M-YAML-FORMULA-UI | Priority: P2 | Complexity: S
-- analysis_required: false
-- Depends on: #001
 
 ### #012 — Replace Obsidian Properties pane with YAML Visualizer
-- Status: 📋 BACKLOG
+- Status: ❌ SUPERSEDED (2026-06-11) — см. #011; цель переехала в **#082** (typed-карточка
+  записи через RecordCardView/SlideInPanel, не через архивный виджет).
 - Milestone: M-YAML-FORMULA-UI | Priority: P2 | Complexity: M
-- analysis_required: false
-- Depends on: #011
 
 ---
 
@@ -498,8 +497,8 @@ Acceptance:
 Gates: tsc 0 errors ✅ / 139 suites / 2099 tests PASS ✅ / build 0 errors (4 pre-existing warnings) ✅
 
 ### #048 — Add native-query datasource UI entry point in CreateProject
-- Status: 📋 BACKLOG
-- Milestone: M-UX | Priority: P1 | Complexity: S
+- Status: ✅ DONE (2026-06-11) — on `feat/dashboard-v2`
+- Milestone: M-UX | Priority: P1 | Complexity: S→M (persisted kind required)
 - analysis_required: false
 - Depends on: #045.2 (✅ engine implemented)
 - Blocks: none
@@ -508,12 +507,22 @@ Gates: tsc 0 errors ✅ / 139 suites / 2099 tests PASS ✅ / build 0 errors (4 p
 `CreateProject.svelte` only offers `folder`, `tag`, and `dataview` as datasource types.
 Users have no way to create filter-based ("virtual") databases from the UI.
 
-**Scope**:
-- `src/ui/modals/components/CreateProject.svelte`: add `native-query` as 4th option
-- Show `FilterPanelVisual` or inline filter builder when selected
-- Wire to `nativeQuery.ts` on save
-- Add/update translations in `en.json` + `ru.json`
-- Write test covering the new option renders correctly
+**Delivered** (scope grew: #045.2 deliberately did not register a persisted kind, so the UI
+entry point required one):
+- Settings: `NativeQueryDataSource` type added to v3 `DataSource` union (`from: folder|tag`,
+  `where?: FilterDefinition`, `limit?: number`), re-exported in v4. Optional/additive — no migration.
+- `src/lib/datasources/native-query/datasource.ts` — thin adapter over `executeNativeQuery`:
+  `queryAll` = FROM→WHERE→LIMIT via canonical filterEvaluator; `includes` delegates to inner
+  folder/tag source; `queryOne` re-runs full query (mirrors DataviewDataSource — single-record
+  merge can't express records entering/leaving the WHERE set).
+- Factory case in `createDataSource` (works without Dataview).
+- `dataApi.createDataRecord` + `createNoteModal`/`CreateNote` honour native-query `from`
+  (default folder / tag stamping).
+- `CreateProject.svelte`: 4th option + from-kind sub-select + inline WHERE builder
+  (field/operator/value rows, unary ops hide value, AND) + limit input. No `as`-casts in markup.
+- `Archives.svelte` label; i18n keys en+ru (`modals.project.native-query.*`, `datasources.native-query`).
+- Tests: `datasource.test.ts` (8 tests — WHERE/LIMIT/tag/excludedNotes/includes/queryOne/factory).
+- Gates: build ✅ | 135/2028 ✅ | lint 0 errors ✅ | svelte-check 0 ✅
 
 ### #049 — Restore green CI baseline: fix ESLint + svelte-check errors
 - Status: ✅ DONE (2026-06-10) — all 4 CI gates green at baseline 134/2020
@@ -615,7 +624,7 @@ ChartWidget and StatsWidget. Stack mode untouched.
 > Spec: `docs/internal/UI_MODERNIZATION_PLAN.md`
 
 ### #050 — Design System Foundation: Dashboard Token Layer
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит d82315f
 - Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
 - analysis_required: false
 - Blocks: #051, #052, #053, #054, #055, #056
@@ -626,9 +635,9 @@ Unify z-index under `--ppp-z-*` scale (kill z-index:100, z-index:200 magic numbe
 Add `--ppp-border-thin`, `--ppp-shadow-sm/md/lg`, `--ppp-db-row-compact/default/expanded` tokens.
 
 ### #051 — DatabaseCall Table View Mode (DataTable absorbed)
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: XL
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: true
 - Depends on: #050
 - Blocks: #056 (archive standalone DataTableWidget only after this done)
 
@@ -642,7 +651,7 @@ Implement Table view inside `database-call`:
 - Standalone `DataTableWidget.svelte` → prepare for archive in #056 (add alias for compatibility)
 
 ### #052 — WidgetShell: Replace WidgetHost (947 LOC)
-- Status: BACKLOG
+- Status: ✅ CLOSED (2026-06-11, `d4b7f4a`) — dead code (WidgetShell 161 LOC + WidgetHeaderActions 80 LOC) удалён; декомпозиция WidgetHost (947 LOC) вынесена в #067 как clean re-implementation
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: L
 - analysis_required: false
 - Depends on: #050
@@ -652,7 +661,7 @@ Dedicated `WidgetToolbar.svelte`. Resize via ResizeObserver + CSS variables.
 SelectionBadge in header slot. DnD handles via `.ppp-widget-drag-handle`.
 
 ### #053 — Chart Widget Modernization
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #050
@@ -662,7 +671,7 @@ Legend: token-based design. Empty state: shared `EmptyState.svelte` component.
 Scatter: CSS Grid for axis labels.
 
 ### #054 — Stats Widget Modernization
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: S
 - analysis_required: false
 - Depends on: #050
@@ -675,7 +684,7 @@ Typography: value = `--ppp-font-size-2xl bold`, label = `--ppp-font-size-xs mute
 Remove `color ?? "#6a6a8f"` hardcoded fallback → `var(--ppp-db-text-secondary)`.
 
 ### #055 — FilterTabs, Checklist, DatabaseCallBlock Modernization
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 76fd1b2
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #050
@@ -685,7 +694,7 @@ Checklist: CSS `appearance:none` checkbox + `:checked` + `var(--ppp-color-succes
 DatabaseCallBlock: status dot via `var(--ppp-color-success/warning/error)`. Query font: `var(--font-monospace)`.
 
 ### #056 — V2 Widget Archive: Delete V1-only widgets from active code
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит 4ac7cac (git mv; V1 виджеты перемещены в src/archive/dashboard-v1/)
 - Milestone: M-UI-MODERNIZATION | Priority: P2 | Complexity: L
 - analysis_required: false
 - Depends on: #051 (DatabaseCall Table View must cover data-table functionality first)
@@ -706,9 +715,9 @@ DatabaseCallBlock: status dot via `var(--ppp-color-success/warning/error)`. Quer
 **WidgetType union** post-archive: `database-call | chart | stats | checklist | filter-tabs | text | divider | cover-banner` (8 types).
 
 ### #057 — Legacy Type Cleanup: Remove Orphan Types
-- Status: BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммит d82315f (legacy aliases removed)
 - Milestone: M-UI-MODERNIZATION | Priority: P0 | Complexity: L
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: true
 - Depends on: (none — can run parallel with #050)
 
 Audit and remove: WidgetConfigV1/V2, FreeCanvasLayout orphans (post Phase-3), old GridColumnDef format,
@@ -716,7 +725,7 @@ duplicated union types in types.ts/settings.ts, FilterConditionV1/SortConditionV
 Goal: 0 `@deprecated` in src/, 0 unused exports from widget type files.
 
 ### #058 — UI Modernization Integration & Full Test
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-10) — коммиты 66386bc, 53ed8a8 (a11y fixes, z-index scale)
 - Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #051, #052, #053, #054, #055, #056, #057
@@ -727,6 +736,31 @@ svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
 
 ---
 
+### #067 — WidgetHost Decomposition: Replace 947 LOC Monolith
+- Status: ✅ DONE (2026-06-11, `931d42a`) — F1 исполнена: WidgetHost 947 → **208 LOC**
+  (роутер + реактивный WidgetRenderContext), WidgetShell 263, WidgetHeaderActions 168,
+  WidgetSetupWizard 58, widgetComponentRegistry (34 ветки → таблица). Поведение 1:1,
+  DatabaseCallSettings — явная ветка (особый event-контракт). R0_6_locBudget.test.ts
+  делает потолки §7 исполняемыми. 144 suites / 2090 tests. Визуальный чек
+  (DnD/resize/collapse) — в чек-листе pipeline §5.
+- Milestone: M-UI-MODERNIZATION | Priority: P1 | Complexity: XL
+- analysis_required: true | analysis_done: true (UT2026-F)
+- Depends on: (none — new clean implementation, no dead code risk)
+
+**Context**: #052 was PARTIAL — WidgetShell.svelte (161 LOC) and WidgetHeaderActions.svelte (80 LOC) were created but never integrated. Both deleted 2026-06-11 as dead code. WidgetHost.svelte remains at 947 LOC with 34 type-dispatch branches and 44 imports.
+> Renumbered from #060 (commit `d4b7f4a` opened it as #060 — collision with M-VISION-PARITY #060 Field transparency).
+
+**Goal**: Replace WidgetHost.svelte with a proper decomposition:
+- New `WidgetShell.svelte` ≤ 350 LOC — CSS Grid frame, header/content/footer slots, ResizeObserver, drag handle
+- New `WidgetHeaderActions.svelte` ≤ 150 LOC — collapse, config, pipeline, lock, remove buttons
+- `WidgetHost.svelte` becomes thin router (type → component) ≤ 200 LOC
+- SelectionBadge wired into WidgetShell header slot
+- All 16 active widget types route through new shell
+
+**Approach**: Architect plan required before any code. Read DASHBOARD_V2_SPEC.md §6 (widget contract) first.
+
+---
+
 ## Milestone M-VISION-PARITY — Продуктовый слой (Vision Scenes 2, 5, 6, 7, 8)
 
 > Triggered: 2026-06-10 — Vision alignment audit обнаружил 5 сцен Vision без технических тикетов.
@@ -734,18 +768,29 @@ svelte-check 0 warnings (currently 4). Visual audit in OBStests vault.
 > Spec: `docs/internal/DASHBOARD_V2_VISION.md`
 
 ### #059 — SmartSuggest: проактивные подсказки по типам данных
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-11) — on `feat/dashboard-v2`
 - Milestone: M-VISION-PARITY | Priority: P1 | Complexity: L
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: true (inline, 2026-06-11)
 - Depends on: #051 (Table View ready — подсказки показываются в контексте блока данных)
 
 **Vision §6 — «центральная инновация»**: "Видишь числовое поле? Покажу сумму. Видишь связи? Покажу частоту визитов."
 
-MVP scope:
-- При добавлении первого числового поля в блок → suggestion strip "Хотите Stats-виджет с суммой/средним?"
-- При обнаружении Relation-поля → suggestion "Показать связанные записи как sub-base?"
-- Suggestion dismissable (× закрыть, "не предлагать снова")
-- Реализовать через `SmartSuggestionBus.svelte` — singleton на канвасе, реагирует на изменения DataFrame schema
+**Delivered (MVP)**:
+- `smartSuggest.ts` — чистый rule engine: `computeSuggestions(fields, widgets, dismissed)`;
+  правила `numeric-stats` (Number-поле + нет stats-виджета → добавить `stats`; StatsWidget сам
+  строит sum/avg карточки по первому числовому полю) и `relation-block` (Relation-поле + нет
+  database-call с `linkedSelection` → добавить `database-call`)
+- `SmartSuggestionBus.svelte` — singleton-строка на канвасе (между FilterBridge и WidgetGrid),
+  одна подсказка за раз; × = session dismiss, «Не предлагать снова» = persisted
+- `DatabaseViewConfig.dismissedSuggestions?: string[]` — аддитивно, без миграции;
+  accept тоже персистит dismissal (гейт relation-правила не закрывается простым добавлением блока)
+- Не рендерится на пустом канвасе (zero-state #065 владеет этим моментом) и в readonly
+- i18n: `views.dashboard.smart-suggest.*` в en/ru (uk/zh — defaultValue fallback, как в #065)
+- Тесты: `smartSuggest.test.ts` (11) + `SmartSuggestionBus.test.ts` (7)
+
+**Отклонение от тикета**: CTA Relation-подсказки добавляет `database-call`, а НЕ legacy
+`sub-base-canvas` — по DASHBOARD_V2_SPEC §4 sub-base-canvas подлежит удалению (sub-base
+живёт внутри database-call). Метрики «частота визитов / прогноз» — вне MVP, V3.
 
 ### #060 — Field transparency: column header → frontmatter key tooltip
 - Status: 📋 BACKLOG
@@ -760,10 +805,16 @@ Scope:
 - Double-click on row expander icon → `app.workspace.openLinkText(file.path, '', false)` + scroll to frontmatter field via Obsidian API
 - Визуальная «подсветка» в split-view (если открыт) — scope отдельного subticket
 
-### #061 — Template Library: 3 starter profiles (clients / fitness / journal)
-- Status: 📋 BACKLOG
+### #061 — Template Library: канвас-пресеты + onboarding-профили
+- Status: 📋 BACKLOG — **рескоуп 2026-06-11 (UT2026-G §B3)**: два слоя вместо одного.
+  (1) **4 канвас-пресета** из visual stack как WIDGET_TEMPLATES: Project Tracker
+  (kanban+timeline+sub-base tasks), Finance KPI (stats×3+revenue chart+comparison→stats+journal),
+  Analytics Lab (pipeline compute/filter/group/aggregate + scatter + donut), Content Library
+  (filter-tabs+gallery+tag-consistency table). Составы повиджетно — в схемах «Пресет *.png».
+  (2) **3 onboarding-профиля** Vision §7 (clients/fitness/journal) — генерируют папки+данные
+  и ссылаются на пресеты. Первый экран CreateProject = три primary actions (из #065).
 - Milestone: M-VISION-PARITY | Priority: P2 | Complexity: L
-- analysis_required: true | analysis_done: false
+- analysis_required: true | analysis_done: partial (состав пресетов задан дизайном)
 - Depends on: #046 (demo project pattern established)
 
 **Vision §7**: "'Я веду клиентов' — готовый набор баз, представлений и связей. Начать за 5 минут."
@@ -774,6 +825,8 @@ Scope:
 - Profile 2: **Fitness** (Workouts + Exercises + Nutrition cross-stats)
 - Profile 3: **Project journal** (Projects + Tasks + Meetings timeline)
 - Каждый профиль генерирует папки + demo records + pre-configured Dashboard
+- (из #065, re-scoped 2026-06-11) Первый экран модалки = три primary actions
+  ("Создать базу" / "Открыть пример" / "Импортировать папку"), не длинный список настроек
 
 ### #062 — Drag-to-link: drag card to express relation between blocks (V3)
 - Status: ⏸ DEFERRED — V3 roadmap item
@@ -807,19 +860,30 @@ V3 target: Timeline as a view tab inside `database-call` (alongside Table/Board/
 Деферировано: визуализация графа (force-directed layout, d3.js или vis.js) — отдельный большой milestone. Технический фундамент (#010) готов.
 
 ### #065 — Canvas zero-state + onboarding progressive disclosure
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-06-11) — on `feat/dashboard-v2`
 - Milestone: M-VISION-PARITY | Priority: P1 | Complexity: M
 - analysis_required: false
 - Depends on: #050 (tokens — для стилизации empty state)
 
 **Vision §7**: "Первый экран — три кнопки: 'Создать базу', 'Открыть пример', 'Импортировать папку'."
 
-Scope:
-- Empty canvas state: `EmptyState.svelte` с CTA "Добавить блок данных" + "Выбрать шаблон"
-- Empty table state: "Нет записей. + Добавить первую"
-- Empty filter result state: "Нет совпадений. Очистить фильтр"
-- Empty board column state: "+ Новая запись" in-column button
-- `CreateProject.svelte` первый экран: три primary actions (не длинный список настроек)
+**Delivered**:
+- Shared `src/ui/components/EmptyState/EmptyState.svelte` — icon/title/hint + `actions` slot
+  with unified CTA button styling (`:global` within actions container). 5-test suite.
+- Empty canvas (`WidgetGrid.svelte`): EmptyState + CTA "Добавить блок данных" (adds
+  `database-call`) + per-template CTAs (`WIDGET_TEMPLATES`, new `applyTemplate` event wired
+  через DashboardCanvas без роста LOC — остаётся 200). Killed "⊞" glyph.
+- Empty table (`DatabaseCallBlock` table tab): "Нет записей" + "Добавить первую запись"
+  (CreateNoteModal → api.addRecord). Hidden when readonly/no project.
+- Empty filter result (`DatabaseCallBlock`): `effectiveFrame` пуст при непустом `frame`
+  (selection-bus auto-filter) → "Нет совпадений" + "Очистить фильтр" (clearSelection).
+- Zero-tabs state в DatabaseCallBlock переведён на EmptyState (killed 📊 emoji, survivor #047).
+- Board column "+ Новая запись" — уже существовал (`BoardColumn.svelte:143`), без изменений.
+- i18n: en+ru (`views.dashboard.canvas.empty-*`, `views.dashboard.database-call.*`).
+
+**Re-scoped**: `CreateProject.svelte` "три primary actions" first screen → перенесён в #061
+(Template Library): первый экран выбора профиля и есть это three-action surface; делать
+редизайн модалки дважды (до и после профилей) — двойная работа.
 
 ### #066 — Dashboard config: YAML-readable format strategy (V3 decision required)
 - Status: 📋 BACKLOG (требует решения)
@@ -837,6 +901,480 @@ Scope:
 - Option C: Human-readable JSON с комментариями + schema documentation
 
 Это архитектурное решение, влияющее на всю систему. Требует dedicated analysis session.
+
+---
+
+## Milestone M-UT-FIXES — Дефекты пользовательского тестирования 2026-06-11
+
+> Источник: пользовательское тестирование на OBStests (стек `2b9d1fd` + docs), скриншоты
+> `C:\Users\Park\OBSv1.0\screanshots\` (9 PNG; точечный анализ выполнен 2026-06-11).
+> Сквозная первопричина большинства дефектов: legacy V1-код (`src/archive/dashboard-v1/`)
+> всё ещё маршрутизируется живым через WidgetHost и палитру виджетов.
+
+### #068 — P0: fields/groups поповер в data-table рушит весь вью
+- Status: ✅ DONE (2026-06-11, `e105aef`) — закрыт архитектурно фазой F3: архивный
+  DataTableWidget больше нигде не исполняется (R0_4 archive-containment ratchet = 0 импортов
+  из src/archive), data-table рендерится через DatabaseCallBlock/Table V2. Краш-поверхность
+  недостижима.
+- Milestone: M-UT-FIXES | Priority: P0 | Complexity: M
+- Repro (исторический): дашборд «Клиенты» демо → таблица → Fields/Group
+
+Скриншот `19-53-50.png`: открытие поповера разваливает layout вью; всплывает пустой
+`RecordCardView` («No record selected», `RecordCardView.svelte:170`), контент дашборда исчезает.
+Код: `src/archive/dashboard-v1/DataTable/DataTableWidget.svelte` — `openFieldVisibilityPop`
+(:577) / `openGroupPop` (:622) → `FloatingPopup` (:1419). **Архивный V1-код живой в проде**:
+`WidgetHost.svelte:14` импортирует `DataTableWidget` из `src/archive/dashboard-v1/`.
+Вероятная причина — uncaught exception в reactive-обновлении рвёт DOM-дерево (нужна консоль).
+Interim-фикс ИЛИ закрытие через #074 (deprecate data-table). Решить вместе с #074.
+
+### #069 — P0: порча кодировки в исходниках — 25 битых литералов (`??`, `�`)
+- Status: ✅ DONE (2026-06-11) — spec UT2026-B. PipelineEditor: Lucide-иконки через `<Icon>`,
+  unset-фоллбеки, ключи `unnest`/`select-field` en+ru; em-dash восстановлены в CreateField,
+  mocks, archive DataTable (+Σ, +русские строки коммента). Инвариант `R0_5_textIntegrity.test.ts`
+  нашёл сверх анализа ещё 2 файла с invalid-UTF8 байтами (FormulaDebugPanel, GridSelectCell) —
+  исправлены. Итог: 0 U+FFFD в src, ratchet включён.
+- analysis_required: false
+
+Скриншот `19-55-08.png`: конвейер трансформаций показывает «?? Фильтр», «? Агрегация»,
+сырой ключ `views.dashboard.pipeline.unnest`. Грep `�` по src: **PipelineEditor.svelte (12)**,
+archive/DataTable/DataTableWidget.svelte (7), modals/components/CreateField.svelte (4),
+__mocks__/obsidian.ts (2). Это испорченные эмодзи из какого-то коммита с битой кодировкой.
+Фикс: заменить на Lucide-иконки (инвариант #047 — эмодзи в UI запрещены; заодно 🔍 и ⬇
+в DataTableWidget:1128,1135); добавить отсутствующие ключи `views.dashboard.pipeline.*`
+в ru.json (минимум `unnest`). Добавить jest-инвариант: грep `�` по src = 0.
+
+### #070 — P1: унификация системы цвета записей (3 параллельных механизма)
+- Status: ✅ DONE (2026-06-11) — spec UT2026-C. Новый `src/lib/colors/recordColor.ts`:
+  `resolveRecordColor` (explicit → rule → null), `normalizeHexColor` (#RGB/#RRGGBB/регистр/
+  пробелы), case-tolerant lookup поля. **Root cause найден**: старый `extractEventColor`
+  принимал ТОЛЬКО строгий `#RRGGBB` — ручной ввод из EditNote (`#0fb`, пробелы) молча
+  отбрасывался, попап же всегда давал канонический hex. Процессор календаря переведён на
+  контракт; дубль COLOR_FIELDS в EditNote/FieldControl устранён; FieldControl канонизирует
+  ручной hex при сохранении. Инвалидация кэша проверена: dataVersion бампится на каждом
+  внешнем обновлении (calendarView.ts:39). 19 тестов `recordColor.test.ts`.
+  Визуальная верификация в OBStests — в чек-листе pipeline §5.
+- analysis_required: true | analysis_done: true (2026-06-11)
+- Repro: календарь → popup дня → «Цвет» работает; «Редактировать заметку» → Colors → не работает корректно
+
+Сейчас три механизма цвета:
+1. `getRecordColor` — цветовые правила проекта (color rules), приоритет в рендере;
+2. `config.eventColorField` — hex в frontmatter, пишется popup'ом календаря
+   (`CalendarView.svelte:1094` `handleDayPopupRecordColorChange` → `api.updateRecord`);
+3. эвристика «поле цвета по имени» `COLOR_FIELDS = ['color','eventColor',...]` —
+   **продублирована** в `EditNote.svelte:214` и `FieldControl.svelte:89`.
+Календарь читает И правила, И eventColorField (`CalendarView.svelte:1166,1977,2058`) — порядок
+приоритета нигде не зафиксирован. EditNote пишет то же поле через FieldControl (debounce 500ms,
+:111), но результат в календаре некорректен (расхождение кэша `lastProcessedVersion`?).
+Фикс: единый контракт resolve-цвета (документированный приоритет), одна точка детекции
+color-поля, инвалидация календарного кэша после внешнего обновления записи.
+
+### #071 — P1: CoverBanner config — выбор не применяется + хардкод-английский
+- Status: ⚠️ PARTIAL (2026-06-11) — i18n-часть DONE: панель переведена
+  (`views.dashboard.cover-banner-config.*`, en+ru). Дефект «select не применяется» ОТКРЫТ —
+  ждёт репродукции пользователя с консолью (Ctrl+Shift+I), затем фикс по UT2026-D P2
+  + компонент-тест на round-trip.
+- analysis_required: false
+- Repro: виджет «Обложка» → настройки → смена Width/Fit/Position не меняется
+
+Проводка по коду корректна (`CoverBannerConfig.svelte` dispatch change →
+`WidgetHost.svelte:463-467` → `handleWidgetConfigChange:132` → canvas saveConfig) —
+нужна репродукция с консолью; подозрение на ре-биндинг `<select value=>` при
+несинхронном обновлении `widget.config`. Отдельный подтверждённый дефект: все строки
+панели хардкод-английские (Image source / Width / Fit / Position / Done) — нет i18n.
+
+### #072 — P1: stats-карточки демо показывают «—» (aggregation: "count")
+- Status: ✅ DONE (2026-06-11) — spec UT2026-D. demoProject: k1→industry/count_values (честный
+  сегмент «только клиенты»), k2→status/count_values, c1→count_total, c2→«Первый клиент»
+  earliest(signupDate) (для «Активных» нужен per-card фильтр, которого нет), chart yAxis→count_total.
+  `configProvenance.test.ts`: migrate(generate()) — reference-equal no-op. Существующий демо в
+  vault'ах чинит migrateAggregationCount при загрузке.
+- analysis_required: false (root cause найден)
+
+Скриншот `19-37-22.png`: «Клиентов» и «Проектов» = «—», при этом count_unchecked и sum работают.
+Причина: `demoProject.ts:260-261` генерирует `aggregation: "count"` — литерал, который R5-004
+переименовал в `"count_total"`. Миграция `migrateAggregationCount` чинит сохранённые конфиги,
+но генератор демо порождает новые со старым значением. Фикс: `"count"` → `"count_total"`
+в demoProject.ts (2 строки) + jest-тест на демо-конфиг; решить, поддерживает ли stats-ядро
+kernel-`count` вообще (если нет — убрать из ColumnAggregation или замапить).
+
+### #073 — P2: палитра виджетов показывает legacy/archived типы + переполнение
+- Status: ✅ DONE (2026-06-11) — spec UT2026-A L2. `WidgetMeta.legacy` на 8 типах; палитра
+  показывает legacy-тип только при существующем экземпляре на канвасе; список ограничен
+  max-height 60vh + scroll.
+- analysis_required: false
+
+Скриншот `19-45-16.png`: «+ Добавить виджет» предлагает Таблицу данных, Итоговую строку,
+Список, Сравнение, Окно просмотра, Канвас подбаз, Свойства, Таймлайн — всё это V2 spec §4
+отправляет в archive/replace. `DashboardBlockPalette.svelte:39` рендерит весь WIDGET_REGISTRY
+без фильтра (скрытие legacy из #059-аудита палитру не покрыло). Плюс список выходит за нижний
+край экрана (нет max-height/scroll у FloatingPopup-контента). Фикс: флаг `legacy: true`
+в WidgetMeta + фильтр в палитре (legacy показывать только если виджет такого типа уже есть
+на канвасе), max-height + overflow-y.
+
+### #074 — EPIC P1: Table view — полная перестройка с нуля (мандат пользователя)
+- Status: ✅ DONE (2026-06-12, эпик закрыт коммитами `931d42a`→`edee977`) — все фазы:
+  F1 Shell+Router; F2.1 скелет по канону; F2.2 in-place редакторы по DataFieldType;
+  F2.3 row ops + New row; F2.4 меню колонки (sort/Calculate▸/hide/group) + resize +
+  `[+]` add property; F2.5 группировка (groupRows un-archived, TableGroupSection,
+  collapse персистится); F3 legacy containment + миграция. R2-фиксы (#083–#087) влиты.
+  **Остаточные мелочи** (вне эпика, в W2): Edit property из меню колонки (нужна обвязка
+  ConfigureFieldModal), freeze-up-to, drag-перестановка колонок, wrap-toggle.
+  Канон: specs/TABLE_V2_CANON.md.
+- **F2 canon (2026-06-11, финальный)**: **`specs/TABLE_V2_CANON.md`** — концептуальная
+  перестройка с нуля по образцу Notion-таблиц (вердикт пользователя; PNG-канон из visual
+  stack отменён как наследующий V1). Концептуальные сдвиги: строка = страница (Name —
+  первичная колонка с ↗ OPEN), ячейка = свойство с редактором на месте по `DataFieldType`,
+  вид = линза (Filter/Sort pills в ControlBar), sub-base = вкладка ViewTabBar (НЕ нижние
+  табы), `[+]` add property в header (закрывает Vision §2), bulk-бар, полная стилистическая
+  матрица на Notion Visual DNA токенах. Подэтапы F2.1–F2.5 и бюджеты 7 компонентов — в каноне.
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: XL
+- analysis_required: true | analysis_done: true (UT2026-F)
+- Depends on: #067 (WidgetHost decomposition — общий план UT2026-F, фаза F1)
+
+**Мандат пользователя (2026-06-11)**: «Сам вид Таблиц требует полной перестройки с нуля
+без оглядки на прошлый экземпляр». Скриншот `19-53-17.png`: старые артефакты — emoji-кнопки,
+перегруженный тулбар (Макет/Hidden/Group/Sort/Σ/🔍/⬇), обрезанные дубли колонок, баннер-хинт.
+Скоуп:
+- Новый Table view ВНУТРИ `database-call` (развитие DataTableContent), не правка архивного кода
+- Interaction parity (gap-матрица UI_DESIGN_ARCHITECTURE §6): inline cell edit (P0),
+  row hover actions, inline «+ New row», column header menu
+- `data-table` widget type → deprecate: миграция существующих конфигов в `database-call`
+  Table tab; demoProject больше не генерирует `data-table` (сейчас «Клиенты» = data-table!)
+- Закрывает #068 архитектурно (архивный DataTableWidget перестаёт маршрутизироваться)
+Architect-план обязателен ДО кода (как #067).
+
+### #075 — P1 UX: конвейер трансформаций — дискаверабилити и язык
+- Status: ⚠️ PARTIAL (2026-06-11) — минимальный слой D1 реализован: каждый тип шага несёт
+  описание на языке задач с примером (`*-desc` ключи en+ru, tooltip на кнопках добавления
+  шага). Остаток (empty-state «было → стало», именованный вход в WidgetHost) — после
+  дизайн-сессии по UT2026-E и согласованно с #067 (кнопка живёт в WidgetHost).
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: M
+- analysis_required: false | design_required: true (senior-designer)
+- Depends on: #069 ✅
+
+Пользователь: «не понятно как пользоваться конвейером трансформаций и что это такое».
+После #069 нужен UX-слой: человеческое объяснение (Vision §7 «объяснения на месте» —
+не «Unnest», а «развернуть список в строки — например, по одному участнику на строку»),
+пустое состояние конвейера с примером, tooltip на кнопке пайплайна в WidgetHost.
+
+### #076 — P2 UX: пользовательский путь «создать базу/суб-базу вытягиванием»
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M
+- analysis_required: false | design_required: true (senior-designer)
+
+Пользователь: «остаётся неясным путь для создания баз и суб-баз по вытягиваниям».
+Механика есть (Матрёшка, SubBasePanel, linkedSelection), входных точек в UI нет. Дизайн:
+entry points из Relation-поля («показать связанные как суб-базу» — пересекается с #059
+SmartSuggest relation-CTA), из database-call (кнопка «+ суб-база»), документированный
+happy-path в демо.
+
+### #077 — P1 UX: «машина функций» — единый FormulaConstructor во всех точках + filter-pills
+- Status: 📋 DESIGN READY (2026-06-11) — спека = схема «Formula builder — Anatomy.png»
+  (visual stack): слои toolbar → input (подсветка + автокомплит сигнатур) → live preview →
+  help-панель категорий. Приоритет поднят P2→P1 (готовый дизайн снимает гейт).
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: L
+- analysis_required: false | design_required: ✅ закрыт дизайн-стеком
+
+Скоуп по дизайну: FormulaConstructor — единый компонент для ВСЕХ точек ввода формул
+(TableProperty, AdvancedFilterEditor, FormulaBar, ConfigureField, FilterEditor + Dashboard);
+именованный popup-вход «Формулы» вместо безымянной fx; filter-pills в тулбаре вью
+(Notion-parity P0). Связка с #075.
+
+### #078 — P2: CalendarView decomposition (2328 LOC — крупнейший монолит без потолка)
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: XL
+- analysis_required: true | analysis_done: false
+
+Аудит 2026-06-11: CalendarView.svelte = 2328 LOC, не покрыт ни одним планом декомпозиции.
+#070 показал симптом монолита: цветовая логика была рассинхронизирована с системой.
+Скоуп: architect-план по образцу UT2026-F (контроллеры/чистые модули + LOC-потолок в R0_6).
+Делать ПОСЛЕ F1–F3 (паттерн Shell/Router будет отработан).
+
+### #079 — P2: hex-ratchet — машинный инвариант на hardcoded-цвета
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
+- analysis_required: false
+
+Аудит 2026-06-11: 32 hex-вхождения в 15 файлах вне архива/тестов (fieldTypes 5,
+YearHeatmap 9, ConditionalFormatBuilder 3, …); pre-PR аудит ловит только изменённые файлы.
+Скоуп: `R0_7_hexRatchet.test.ts` по образцу px-budget — список легитимных исключений
+(palettes.ts, ColorPicker, colors/math) + ratchet на остальное; снижение долга → palette store.
+
+### #080 — DECISION: Formula Node widget (fx-блок на канвасе)
+- Status: 📋 BACKLOG (требует решения пользователя)
+- Milestone: M-VISION-PARITY | Priority: P3 | Complexity: L
+- analysis_required: true | analysis_done: false
+
+Дизайн-стек (Таксономия №11): fx-виджет `=sum(@budget) + progress` — формула как
+самостоятельный блок канваса. В WidgetType отсутствует, тикета не было (потерян план).
+Варианты: (A) V2.5 — новый виджет поверх FormulaConstructor/#077; (B) отказ — покрывается
+stats+compute-шагом пайплайна (зафиксировать компромисс). См. UT2026-G §C.
+
+### #081 — P2: RelationPickerPopover — поиск + multiselect для связей
+- Status: ✅ DONE (2026-06-12, `edee977`) — редактор Relation-ячейки: поиск по записям целевого проекта (targetProjectId → resolveExternalFrame, fallback на wikilink-цели колонки), multi по Done, single по клику; запись через viewApi.updateRecord
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M
+- analysis_required: false (дизайн: схема «Система связей», RS-019)
+- Depends on: #074 F2 (точка вызова — Relation-ячейка Table V2)
+
+Дизайн: попап с поиском по записям, чекбоксы, «3 selected · Done». Закрывает
+Notion-parity gap «Relation picker popup — Partial». Единый компонент для Table-ячейки,
+EditNote и FormulaConstructor (@-mention).
+
+### #082 — P2: Запись как типизированная карточка (наследник R5-012, ex-#011/#012)
+- Status: 📋 BACKLOG
+- Milestone: M-VISION-PARITY | Priority: P2 | Complexity: M
+- analysis_required: false (дизайн: схема «YAML Visualizer → typed card»)
+
+Цель R5-012 без архивного виджета: RecordCardView/SlideInPanel выравниваются с дизайном
+typed-карточки — status pills, цветные chips, типизированные поля, expandable details.
+Заменяет YamlVisualizer-путь (#011/#012 SUPERSEDED).
+
+## UT-R2 — Ручное тестирование, раунд 2 (2026-06-12)
+
+> Скриншоты 2026-06-12 в `screanshots/`. Таблица «гораздо лучше, но не идеал».
+> Исправлено немедленно (один коммит с аудитом):
+> **#083 ✅ P0** — h-scroll рассинхрон header/body: единый scroll-контейнер
+> (header/footer sticky внутри), грид-треки фиксированные (minmax давал расхождение).
+> **#084 ✅** — `path` скрыт по умолчанию (housekeeping; unhide через hide:false).
+> **#085 ✅** — wikilinks в String-ячейках рендерятся чипами, не сырым `[[…]]`.
+> **#086 ✅** — WidgetToolbar «+ Добавить виджет» показывал все legacy-типы
+> (вторая поверхность создания, не покрытая #073) — фильтр L2 применён; закрывает carried B3.
+> **#087 ✅** — демо «Проектов»=17: status есть и у задач → счёт по project-only `progress`.
+
+### #088 — P1: Управление представлениями блока (вкладки вида)
+- Status: ✅ DONE (2026-06-12, `7a258f0`) — + с выбором типа, имена по типу с счётчиком, dblclick-rename, ⋯/ПКМ меню Rename/Delete (последняя вкладка защищена)
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: M
+
+Скриншот 10-15-10: «New View | New View | New View» — `+` плодит безымянные вкладки.
+Скоуп: дефолтное имя по типу вида («Table 2», «Board»), выбор типа вида ПРИ создании
+(popover: Table/Board/Calendar/Gallery), rename по двойному клику, удаление с подтверждением,
+меню вкладки (rename/duplicate/delete/change type). Это и есть «управление представлениями».
+
+### #089 — P2: Галерея — «Поле обложки» (выбор/применение)
+- Status: 📋 BACKLOG (нужна репродукция: применяется ли выбор)
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
+
+Скриншот 10-10-31: dropdown «Поле обложки» в настройках галереи. Проверить: фильтрацию
+списка до полей с изображениями/URL, применение выбора, превью. Связано с #071-паттерном
+(round-trip конфига вью).
+
+### #090 — P1 DESIGN: Панели настроек виджетов — единый Notion-стиль
+- Status: 📋 BACKLOG | design_required (общая дизайн-сессия с #075/#076/#077)
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: L
+
+Скриншоты 10-16-23 (chart: «простыня» из 15 контролов, слайдеры без значений) и
+10-15-10 (DatabaseCallSettings: «— inherit from view — / — standalone —» без объяснения).
+Скоуп: единая анатомия панели (секции-аккордеоны, человеческие подписи с примерами — D1),
+значения у слайдеров, прогрессивное раскрытие (базовое/продвинутое). «Сырой дизайн
+управления параметрами/фильтрами/преобразованиями/расчётами» — сюда.
+
+### #091 — P1 UX: Связи — управляемый флоу «Link to block»
+- Status: 📋 BACKLOG | design_required
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: M
+- Depends on: #081 (RelationPickerPopover), #076
+
+«Всё ещё непонятно как делать связи». Скоуп: мастер в DatabaseCallSettings
+(шаг 1: выбрать блок-мастер из списка С ИМЕНАМИ и превью; шаг 2: поле связи с
+подсказкой-примером; пустые состояния объясняют, ЧТО даст связь), + вход из
+SmartSuggest relation-CTA (#059) сразу в мастер.
+
+### #092 — P1: Восстановление из пустого конвейера («Нет данных»)
+- Status: 📋 BACKLOG
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: S
+
+Скриншот 10-17-34: «Проекты по статусу» = «Нет данных», бейдж Σ4 — шаги конвейера
+опустошили данные, пути назад не видно. Скоуп: empty-state виджета с данными-узлом
+«Конвейер скрыл все записи (N шагов): [Открыть конвейер] [Очистить конвейер]»;
+кнопка «Очистить» и в самом PipelineEditor. Расширяет #075.
+
+## UT-R3 — Ручное тестирование, раунд 3 (2026-06-12, вечер)
+
+> Скриншоты 21-18…21-25. Вердикт пользователя: «тестировщики из-за кривости дизайна не могут
+> протестировать функции» — W2 исполняется жёстко. Исправлено в коммите аудита:
+> **✅ P0 управление виджетами** — всегда видимое «⋯»-меню виджета с подписями (canonical
+> contextMenu: Настроить/Конвейер/Переименовать/Закрепить/Удалить; чистый builder
+> `widgetMenu.ts`), переименование по dblclick заголовка.
+> **✅ Шаблоны** — показывали СЫРЫЕ i18n-ключи (переводов не существовало) — добавлены en+ru
+> для всех 8 шаблонов.
+> **✅ Primary-колонка** — показывала полный vault-путь — теперь basename (как заголовок
+> страницы в Notion).
+> **✅ StatsConfig** — селект агрегации был ПУСТЫМ для сохранённых значений вне списка
+> (демо count_unchecked) — полный набор ColumnAggregation.
+> **✅ EditNote Цвет** — секция Colors исчезала без существующего поля — теперь постоянная
+> секция «Цвет», выбор создаёт `color`-frontmatter.
+> **✅ Selection Bus driver в Table V2** — отсутствовал (динамические связи нечем включить
+> из таблицы): пункт меню строки «Фильтровать связанные блоки», driving-подсветка строки.
+> **✅ Демо-модернизация** — связанная пара «Клиенты (мастер) → Проекты клиента» в Обзоре,
+> hex-цвета встреч + `eventColorField: "color"` (был "priority" — нечисловой, цвет не
+> резолвился).
+
+### #093 — P1: SettingsMenu (настройки вью/проекта) — рециклинг по канону §3
+- Status: 📋 BACKLOG | W2
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: L
+
+Скриншоты 21-19-36/21-21-45: смесь языков (Wrap text in cells / Скрыть поля), текст-инпуты
+«Введите или выберите поле» вместо пикеров полей, англ. подсказки. Скоуп: все вкладки
+SettingsMenu (Вид/Проекты/Виды/Фильтры/Цвета/Сортировка) → анатомия §3, field-селекты
+вместо инпутов, полная i18n; сюда же выбор поля-обложки галереи (#089) и поля-цвета
+календаря как явные пикеры с превью.
+
+### #094 — P2: Словарь значений в визуализациях (легенды/группы)
+- Status: 📋 BACKLOG | W2
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
+
+Скриншот 21-25-49: легенда «inProgress/done/planning/review» — сырые ключи статусов.
+Маппинг отображения через statusGroups/semanticLabels там, где он уже есть у Board/Table.
+
+### #095 — P2: PipelineEditor — operator-select и значения по канону
+- Status: 📋 BACKLOG | W2 (вместе с #075-остатком и #092)
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
+
+Скриншот 21-19-21: нативный select операторов, value-инпут без подсказки примера.
+
+## UT-R4 — Раунд 4 + ресерч Notion (2026-06-12, поздний вечер)
+
+> Скриншоты 22-15…22-18 + ресерч `specs/NOTION_DM_RESEARCH.md` (КОНЕЧНЫЙ ПЛАН-ЭТАЛОН
+> управления данными). Ключ: в Notion НЕТ конвейера — операции живут у объектов и
+> применяются мгновенно. Реактивный фундамент у нас здоров (vault→cache→frame подтверждено
+> кодом); болевые точки: конвейер-Save, панельный round-trip, модалка-снапшот.
+
+### #099 — EPIC P1: Расщепление конвейера трансформаций (Notion-модель данных)
+- Status: ✅ CLOSED 2026-06-13 — filter pills bar + live-apply pipeline editor (`2db4124`), disable-step non-destructive (`97b7079`), #099.3 unnest как свойство блока (`2209a8a`). Поглотил #092, #095. Спека `specs/NOTION_DM_RESEARCH.md` §2
+- Milestone: M-UT-FIXES | Priority: P1 | Complexity: XL | Волна: W2-ядро
+- Поглощает: #075-остаток, #092, #095
+
+filter → pills ControlBar (живые, FilterPanel-builder); unnest/join → свойства блока;
+compute → formula-поле (#077); остаток конвейера = «Расширенные преобразования»:
+БЕЗ Save/Отмена, живые счётчики N→M на шаг (executeTransform.meta готов), шаг с 0 записей
+подсвечен с «Отключить шаг», типизированный пикер полей без housekeeping.
+
+#### #099.3 — P1: unnest как свойство блока в DatabaseCallSettings
+- Status: ✅ CLOSED 2026-06-13 — `2209a8a` (DatabaseCallSettings проп + пикер + dispatch, общий `arrayFieldDetection.ts`, round-trip тест)
+- Milestone: M-UT-FIXES | Priority: P1 (наследует epic #099) | Complexity: S
+- Спека: `specs/NOTION_DM_RESEARCH.md` §2 (~стр.52, тумблер «Развернуть список: <field>»)
+
+Scope: вынести unnest из конвейера в настройки блока database-call как
+свойство «Развернуть список» — типизированный пикер array-полей + тумблер on/off.
+Движок unnest уже готов (UnnestStep / executeUnnest), новый engine-код НЕ нужен.
+
+Routing decision: **Option A** — DatabaseCallSettings получает `transform`
+пропом и диспатчит новый `transformChange: TransformPipeline`; WidgetHost
+обрабатывает через `patchWidget({ transform })`. Запись хранится в
+`widget.transform` (тот же канал, что и PipelineEditor) → две UI правят один
+источник, double-unnest невозможен. Toggle переписывает существующий unnest-шаг
+для выбранного поля (prepend, как `addUnnestForField`), а не добавляет второй.
+
+Affected files:
+- `src/ui/views/Dashboard/widgets/DatabaseCall/DatabaseCallSettings.svelte` (новый проп + пикер + dispatch)
+- `src/ui/views/Dashboard/widgets/WidgetHost.svelte` (передать `transform={currentPipeline}`, повесить `on:transformChange`)
+- `src/ui/views/Dashboard/widgets/_shared/arrayFieldDetection.ts` (НОВЫЙ — извлечь detectArrayFields из PipelineEditor.svelte:79-102)
+- `src/ui/views/Dashboard/widgets/PipelineEditor.svelte` (импортировать общий detectArrayFields вместо локального)
+- `src/lib/stores/translations/{en,ru,uk,zh-CN}.json` (ключи database-call.settings.unnest-*)
+- `src/ui/views/Dashboard/__tests__/databaseCallSettings.test.ts` (round-trip + helper-тест)
+
+Acceptance criteria:
+1. В DatabaseCallSettings есть секция «Развернуть список»: пикер array-полей (по `arrayFieldDetection`, без housekeeping) + тумблер on/off.
+2. Включение тумблера для поля F → `widget.transform.steps` содержит `{ type: "unnest", field: F }` (prepend); выключение удаляет именно этот шаг.
+3. Round-trip (#100-инвариант): toggle on → закрыть/переоткрыть панель → состояние тумблера и выбранное поле отражают `widget.transform`.
+4. Нет параллельной реализации детекции массивов: PipelineEditor и Settings используют один `arrayFieldDetection.ts` (инвариант single-impl).
+5. Toggle в Settings + ручной unnest-шаг в PipelineEditor для того же поля не создают двух unnest-шагов.
+6. Новый CSS только в rem (px-budget headroom = 2); 4 гейта зелёные.
+
+### #100 — P1: Reactivity hardening — панельный round-trip на все конфиг-панели
+- Status: ✅ DONE (2026-06-13) — READY FOR PR (не слит/запушен — гейт пользователя)
+- Milestone: W2 | Priority: P1 | Complexity: M
+- Контракт UT2026-D P2 + optimistic-эхо; закрывает класс багов «#071 select не применяется».
+- Доставлено в 4 коммита: `cf87da6` (slice 1 — pure config-echo guard helper + unit-тесты),
+  `b4bd4ea` (slice 2 — wire guard в DashboardCanvas), `65165ad` (slice 3 — config panel
+  round-trip harness + #071 regression), `a4019ed` (fix — echo guard игнорирует
+  replayed stale prop / `lastProp`).
+- Новые файлы: `src/ui/views/Dashboard/dashboardConfigEcho.ts` (pure optimistic-echo guard),
+  `dashboardCanvasEcho.test.ts` (6), `configPanelRoundTrip.test.ts` (6).
+- Закрывает класс багов #071. Audit READY FOR PR. Follow-up: **#102** (P2, rapid double-commit edge).
+
+### #101 — P2: EditNote — живая модалка (подписка на обновления записи)
+- Status: ✅ DONE (2026-06-14) — READY FOR PR (не слит/запушен — гейт пользователя)
+- **Delivered** (`c1becb4`): все три среза доставлены одним коммитом — #101.1 чистый `mergeExternal(local, store, dirty)` helper в `src/ui/modals/components/editNoteMerge.ts` (untouched-ключи из store, dirty-ключи из local, id из store) + 8 unit-тестов в новом `editNoteMerge.test.ts`; #101.2 dirty `Set<string>` заполняется в `setValue`, чистится на обоих save-success путях (autosave + handleManualSave); #101.3 `$dataFrame` auto-subscribe + live-lookup по захваченному `recordId` (фикс Svelte cyclical-dep `record→live→record`) + реактивная склейка. Без `metadataCache.on`, без ручного unsubscribe (`$store` auto-teardown). Гейты: build 0, jest 152/2203 (+1 suite/+8), lint 0, svelte-check 0/0. Авто-закрытие модалки при удалении записи извне — явный out-of-scope follow-up (см. «Запись удалена внешне» ниже).
+- Complexity: **S–M** | architect-signed 2026-06-14 (backend-architect, ровно 2 модуля: EditNote.svelte + editNoteModal.ts; store/API/types переиспользуются БЕЗ изменений).
+- **Баг**: EditNote.svelte:109 `$: valuesSnapshot = { ...record.values }` реагирует только на локальный prop `record`. Этот prop захватывается one-shot в editNoteModal.ts:30 (`record: this.defaults`) и больше никогда не связан с живым стором. Внешние изменения записи (vault/metadataCache → `dataFrame.merge()`; api.updateRecord → `dataFrame.updateRecord()`) не перерисовывают модалку. Модалка — ЕДИНСТВЕННЫЙ consumer, отстёгивающий одну запись от потока `$dataFrame` (views читают `$: ({fields,records}=frame)` из DataFrameProvider.svelte:153).
+
+#### Ратифицированная dirty-merge политика (load-bearing решение)
+- **Scope dirty = per-field**, НЕ per-record. Вводится `let dirty = new Set<string>()` (имена тронутых полей). `setValue` (EditNote.svelte:173) добавляет `fieldName` в `dirty`. `dirty` чистится после успешного `performSave` (поле улетело в стор → больше не «грязное»).
+- **Last-writer-wins per UNTOUCHED поле** — согласовано с инвариантом всего приложения (`updateRecord` = wholesale replace, dataframe.ts:95). При внешнем изменении записи:
+  - (a) **untouched поле** → перезаписывается значением из стора (внешний писатель победил; пользователь его не трогал).
+  - (b) **поле, которое пользователь редактирует прямо сейчас (в `dirty`)** → НЕ трогаем; локальный pending-edit сохраняется (autosave ~300ms сам отправит его в стор, окно конфликта мало).
+  - (c) **поле, тронутое пользователем (в `dirty`) И изменённое внешним писателем** → локальное значение побеждает (last-writer-wins на уровне модалки; пользователь = последний писатель в этом UI). Никакого conflict-resolution UI — out of scope, не «trivially free».
+- **Merge-функция** (чистая, тестируемая, вне Svelte): `mergeExternal(localRecord, storeRecord, dirty) → DataRecord`. Берёт `storeRecord.values` как базу, накладывает поверх `localRecord.values` для каждого ключа из `dirty`. Поля метаданных (`id`) берутся из `storeRecord` (id стабилен — ключ идентичности и в updateRecord, и в merge). Это вычистит и переименования полей, прилетевшие через стор, для нетронутых ключей.
+
+#### Механизм подписки
+- **`$dataFrame` auto-subscribe** (предпочтительно) — НЕ `metadataCache.on`. Обоснование: внешние изменения (vault, metadata, api) уже воронятся через `dataFrame` (единый источник истины, dataframe.ts:68). Подписка на `metadataCache` дала бы ПАРАЛЛЕЛЬНЫЙ канал, читающий сырые frontmatter мимо formula/relations-пайплайна → нарушение инварианта #4 и дубль источника. `$dataFrame` отдаёт уже обогащённую запись тем же путём, что и views.
+- **Props contract**: EditNote.svelte импортирует стор напрямую — `import { dataFrame } from "src/lib/stores/dataframe"` (тот же импорт-паттерн, что DataFrameProvider). editNoteModal.ts НЕ меняет сигнатуру конструктора и НЕ передаёт живую ссылку — он по-прежнему передаёт `record: this.defaults` (initial seed). Идентичность — `record.id`; модалка реактивно находит свежую запись: `$: live = $dataFrame.records.find(r => r.id === record.id)`.
+- **Реактивная склейка**: `$: if (live) record = mergeExternal(record, live, dirty)`. valuesSnapshot (line 109) остаётся как есть — он уже реагирует на `record`. Никакой второй snapshot-логики.
+
+#### Инвариант единственного источника
+- Фикс НЕ вводит параллельную подписку/фильтр-движок: единственный новый канал — auto-subscribe `$dataFrame` (канонический паттерн a из DataFrameProvider.svelte:153 / GalleryView.svelte:43). `filterEvaluator.ts` не трогается.
+- **Teardown**: Svelte auto-subscription (`$store`) сам отписывается при `$destroy` компонента — отдельный `onDestroy`-unsubscribe НЕ нужен (в отличие от ручного `metadataCache.on`, который потребовал бы offref). Существующий `onDestroy` (EditNote.svelte:123, clearTimeout) не трогаем.
+
+#### Под-тикеты (срезы, каждый зелёный на 4 гейтах; baseline 151/2195 не регрессирует; PX≤186; zero @ts-ignore)
+- **#101.1 (XS)** — Чистая merge-функция `mergeExternal(local, store, dirty)` в новом модуле `src/ui/modals/components/editNoteMerge.ts` (или co-located helper). Без Svelte, без стора — чистый ТС. AC: «untouched ключи берутся из store, dirty ключи — из local, id из store». Тесты: **новый** `editNoteMerge.test.ts` (untouched-wins, dirty-wins, mixed, удалённый-в-store ключ, пустой dirty == полная замена).
+- **#101.2 (S)** — Dirty-tracking: `dirty: Set<string>` + регистрация в `setValue` (EditNote.svelte:173) + очистка после успешного `performSave` (после line 147). AC: «после ввода в поле X имя X ∈ dirty; после успешного автосейва dirty пуст». Тест: расширить/создать `EditNote.dirty.test.ts` (unit на хелперах dirty add/clear; UI-часть → untestable-features note если Svelte-mount недоступен в jest).
+- **#101.3 (S)** — Подписка: `$dataFrame` auto-subscribe + `$: live = ...find(id)` + `$: if (live) record = mergeExternal(...)`. AC: «при `dataFrame.updateRecord(внешняя версия)` нетронутые поля открытой модалки обновляются, dirty-поля сохраняются». Тест: интеграционный на mergeExternal + store-mutation (через стор-мок), переиспользовать паттерн стор-тестов.
+
+#### Риски
+- **Subscription leak** — снят выбором `$store` auto-subscribe (Svelte отписывает сам при $destroy). Если разработчик соскользнёт на ручной `subscribe()` — обязан unsubscribe в onDestroy:123.
+- **Infinite loop** (store write → reactive → store write): реальный риск. `$: record = mergeExternal(...)` НЕ должен триггерить save. setValue (user-инициированный) — единственный путь к autosave; реактивная склейка от стора пишет только `record`, не вызывает performSave. Тест должен подтвердить, что внешний апдейт НЕ вызывает onSave.
+- **Запись удалена внешне** (record.id больше нет во фрейме): `live` станет `undefined` → guard `if (live)` оставляет последнее `record` на экране. Out-of-scope для #101 авто-закрытие модалки; задокументировать как follow-up если потребуется UX.
+- **id stability**: `record.id` (путь .md) — ключ и в updateRecord (dataframe.ts:95), и в merge (dataframe.ts:164). Rename меняет id и уже закрывает модалку (editNoteModal.ts:43) — конфликта нет.
+- **dirty не чистится при manual-save режиме** (handleManualSave, line 199): убедиться, что очистка dirty висит на общем save-success, а не только на autosave-ветке.
+
+
+
+### #096 — P2: Чарты — менеджмент осей (auto-skip/rotate дат, date-bucketing)
+- Status: ✅ DONE (2026-06-14) — READY FOR PR (не слит/запушен — гейт пользователя). Скриншот 22-16-35: подписи дат слипаются в кашу.
+- Complexity: M | architect-signed 2026-06-13 (backend-architect, ≥2 модуля + engine).
+- Доставлено в трёх срезах: #096.1 (`b2947c1`) engine date-bucketing, #096.2 (`7e4e4d7`) density-based `axisLabels.ts`, #096.3 (`e23abbc`) granularity config UI. #096.4 остаётся открыт P3.
+- Подход: переиспользовать существующий engine `DateGrouping` (transformExecutor.ts) — НЕ
+  строить параллель; auto-default `month` для Date X-полей + явный override `dateGranularity?`
+  в `ChartAxisX` (additive optional → миграция НЕ нужна). Унификация skip/rotate в один pure
+  helper `axisLabels.ts` (density-based, Chart-local, не в engine).
+- Под-тикеты (срезы, каждый зелёный на 4 гейтах):
+  - #096.1 (S) — Engine: wire date-bucketing в chart pipeline. `chartDataPipeline.ts`
+    (buildChartPipeline emit dateGrouping когда X=Date + computeChartData читает derived
+    `${xField}_${gran}`), optional `fields` param от source.fields. Type `ChartAxisX.dateGranularity`.
+    Тесты: chartDataPipeline.test.ts (auto-month, explicit gran, non-Date regression, sort);
+    transformExecutor.test.ts +week(ISO-Thursday)/quarter/year/__empty__/__invalid__.
+  - #096.2 (M) — Render: shared density-based label helper `axisLabels.ts` + `axisLabels.test.ts`;
+    адаптировать LineChart.svelte (заменить /8 magic) + BarChart.svelte (skip отсутствует → overlap),
+    reconcile bottom-padding под rotation.
+  - #096.3 (S) — Config UI: granularity `<select>` в ChartConfig.svelte, gated на
+    DataFieldType.Date (dispatch by type, инвариант #1) + i18n en/ru/uk/zh-CN + round-trip тест.
+- Behavior change (PR-note): существующие date-чарты (templates `property:"date"`) начнут
+  bucket-иться по месяцу автоматически. Намеренный фикс. Inherit default — без миграции.
+- PX-budget impact: ~0 (label-геометрия = unitless SVG-атрибуты, не CSS px).
+
+### #096.4 — P3: Чарты — reconcile dayjs vs raw Date в truncateDate (follow-up #096)
+- Status: 📋 BACKLOG | W2 — architect DEFER из #096 (backend-architect, 2026-06-13).
+- `transformExecutor.ts:625` truncateDate использует `new Date(String(dateVal))`, остальной
+  date-слой — dayjs (`dateFormatting.ts:1`). Возможный TZ/parse drift на не-ISO строках.
+  Orthogonal к #096 wiring/labels; reconcile рискует регрессией работающего month-теста.
+  В #096 добавлены week/quarter/year/invalid тесты, документирующие текущее `new Date` поведение.
+
+### #097 — ✅ DONE (2026-06-12) — debug-строка чеклиста («Source: 28 · check=—…») удалена.
+
+### #098 — P2: FloatingPopup — коллизия с краем окна
+- Status: ✅ DONE (2026-06-13) — READY FOR PR (не слит/запушен — гейт пользователя)
+- Milestone: W2 | Priority: P2 | Complexity: S — скриншот 22-18-21: палитра у правого края обрезана.
+- Доставлено в коммит `7fe7756`: viewport width-clamp = MIN(viewport-cap, CSS max-width) +
+  слушатели reposition на window resize / capturing-scroll.
+- Файлы: `src/ui/components/FloatingPopup/FloatingPopup.svelte` + его тест (+3 теста).
+- Deferred (P3, awareness only): un-throttled scroll reposition (нет rAF-коалесинга);
+  width-only scope (нет max-height cap — вертикальный overflow только top-clamp). При
+  необходимости — отдельный тикет на vertical-overflow gap.
+
+### #102 — P2: config-echo guard — rapid double-commit edge (follow-up #100)
+- Status: ✅ CLOSED (2026-06-14, `57ae744`, READY FOR PR) | W2 — audit-manager finding (#100 audit, 2026-06-13).
+- dashboardConfigEcho.reconcile() сбрасывал pendingWrites=0 абсолютно, а не декрементом. При двух commit подряд в одном microtask-окне с interleaved echo первого write reconcile мог force-adopt-нуть устаревшее значение, затирая более новый optimistic. Single-commit путь (доминирующий, все панели) корректен. Не регрессия vs pre-#100.
+- Fix: `reconcile()` теперь декрементит `pendingWrites -= 1` симметрично с `commit()` + clear-pending при `eq(cfg, current)`. +3 state-machine теста. Все 4 гейта зелёные.
 
 ---
 

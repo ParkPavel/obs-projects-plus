@@ -139,6 +139,19 @@ export function createSelectionStore(
 }
 
 /**
+ * Bind the canvas-wide Escape→clear gesture. Returns an unsubscribe for
+ * `onDestroy`. No-op outside a DOM (jest node contexts).
+ */
+export function bindEscapeClear(store: SelectionStore): () => void {
+	if (typeof document === "undefined") return () => {};
+	const onKey = (e: KeyboardEvent) => {
+		if (e.key === "Escape") store.clearSelection();
+	};
+	document.addEventListener("keydown", onKey);
+	return () => document.removeEventListener("keydown", onKey);
+}
+
+/**
  * Map a selection's `op` to the canonical `FilterOperator` used by
  * `filterEvaluator.ts`. Centralised so adding v2 operators only touches
  * this table.

@@ -586,6 +586,56 @@ describe("executeTransform — GROUP BY", () => {
     expect(jan).toBeDefined();
     expect(jan!.values["_group_size"]).toBe(2);
   });
+
+  // #096.1 — granularity coverage. Each makes a 1-record frame so the derived
+  // `date_<gran>` bucket label is asserted directly. ISO-week uses the
+  // Thursday rule; 2024-01-15 is a Monday in ISO week 3.
+  function makeSingleDateFrame(date: unknown): DataFrame {
+    return {
+      fields: [
+        { name: "date", type: DataFieldType.Date, repeated: false, identifier: true, derived: false },
+        { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      ],
+      records: [{ id: "1", values: { date: date as never, value: 10 } }],
+    };
+  }
+
+  function bucketLabel(date: unknown, granularity: "day" | "week" | "month" | "quarter" | "year"): unknown {
+    const result = executeTransform(makeSingleDateFrame(date), {
+      steps: [
+        {
+          type: "group-by",
+          fields: ["date"],
+          dateGrouping: { field: "date", granularity },
+        },
+      ],
+    });
+    return result.data.records[0]?.values[`date_${granularity}`];
+  }
+
+  test("date grouping by week (ISO Thursday rule)", () => {
+    expect(bucketLabel("2024-01-15", "week")).toBe("2024-W03");
+  });
+
+  test("date grouping by week — ISO year boundary (2024-12-30 → 2025-W01)", () => {
+    expect(bucketLabel("2024-12-30", "week")).toBe("2025-W01");
+  });
+
+  test("date grouping by quarter", () => {
+    expect(bucketLabel("2024-08-20", "quarter")).toBe("2024-Q3");
+  });
+
+  test("date grouping by year", () => {
+    expect(bucketLabel("2024-08-20", "year")).toBe("2024");
+  });
+
+  test("date grouping — null value buckets to __empty__", () => {
+    expect(bucketLabel(null, "month")).toBe("__empty__");
+  });
+
+  test("date grouping — unparseable string buckets to __invalid__", () => {
+    expect(bucketLabel("not-a-date", "month")).toBe("__invalid__");
+  });
 });
 
 // ── AGGREGATE Tests ──────────────────────────────────────────
@@ -881,6 +931,44 @@ describe("transformExecutor — unnest", () => {
     // Non-array → 1 row with null nested fields (no expansion)
     expect(result.data.records).toHaveLength(1);
     expect(result.data.records[0]!.values["id"]).toBe("a");
+  });
+
+  test("disabled step is skipped → output equals pipeline without it", () => {
+    const frame = makeNestedFrame();
+    const withDisabled = executeTransform(frame, {
+      steps: [{ type: "unnest", field: "exercises", disabled: true }],
+    });
+    const withoutStep = executeTransform(frame, { steps: [] });
+
+    expect(withDisabled.data.records).toHaveLength(withoutStep.data.records.length);
+    expect(withDisabled.data.records).toHaveLength(frame.records.length);
+    expect(withDisabled.data.fields.map((f) => f.name)).toContain("exercises");
+    expect(withDisabled.meta.stepsExecuted).toBe(0);
+  });
+
+  test("enabled equivalent step still transforms", () => {
+    const frame = makeNestedFrame();
+    const enabled = executeTransform(frame, {
+      steps: [{ type: "unnest", field: "exercises" }],
+    });
+    expect(enabled.data.records).toHaveLength(3);
+    expect(enabled.meta.stepsExecuted).toBe(1);
+  });
+
+  test("disabled step does not block surrounding steps", () => {
+    const frame = makeNestedFrame();
+    const result = executeTransform(frame, {
+      steps: [
+        { type: "unnest", field: "exercises" },
+        { type: "filter", disabled: true, conditions: { conjunction: "and", conditions: [{ field: "name", operator: "is", value: "__none__", enabled: true }] } },
+        { type: "compute", columns: [{ name: "volume", expression: "sets * reps * weight" }] },
+      ],
+    });
+
+    // Filter would drop all rows if active; disabled → unnest + compute flow through.
+    expect(result.data.records).toHaveLength(3);
+    expect(result.data.records[0]!.values["volume"]).toBe(2400);
+    expect(result.meta.stepsExecuted).toBe(2);
   });
 
   test("unnest + compute pipeline", () => {

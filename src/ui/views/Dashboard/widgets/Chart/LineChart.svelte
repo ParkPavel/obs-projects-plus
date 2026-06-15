@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
+  import { computeAxisLabelLayout, shouldRenderLabel, truncateLabel } from "./axisLabels";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -14,14 +15,28 @@
 
   const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
-  const PADDING = { top: 20, right: 20, bottom: 55, left: 50 };
+  const PADDING_TOP = 20;
+  const PADDING_RIGHT = 20;
+  const PADDING_LEFT = 50;
+  const LABEL_FONT = 10;
 
   $: labels = data.labels;
   $: allValues = data.series.flatMap((s) => s.values).filter((v): v is number => v != null);
   $: maxVal = Math.max(...allValues, 1);
 
-  $: plotW = width - PADDING.left - PADDING.right;
-  $: plotH = height - PADDING.top - PADDING.bottom;
+  // #096.2 — density-based label layout replaces the old `/8` magic skip.
+  $: maxLabelChars = labels.reduce((m, l) => Math.max(m, l.length), 0);
+  $: axisLabels = computeAxisLabelLayout({
+    count: labels.length,
+    plotWidth: width - PADDING_LEFT - PADDING_RIGHT,
+    fontSize: LABEL_FONT,
+    maxLabelChars,
+  });
+  // Bottom padding reconciles with the (possibly rotated) label height.
+  $: paddingBottom = style.showLabels ? axisLabels.bottomPadding : 16;
+
+  $: plotW = width - PADDING_LEFT - PADDING_RIGHT;
+  $: plotH = height - PADDING_TOP - paddingBottom;
   $: pointCount = labels.length || 1;
   $: stepX = plotW / Math.max(pointCount - 1, 1);
 
@@ -84,7 +99,7 @@
   role="img"
   aria-label="Line chart"
 >
-  <g transform="translate({PADDING.left}, {PADDING.top})">
+  <g transform="translate({PADDING_LEFT}, {PADDING_TOP})">
     {#if style.showGrid}
       {#each labels as _, i}
         <line
@@ -153,14 +168,13 @@
 
     {#if style.showLabels}
       {#each labels as label, i}
-        {@const skipInterval = labels.length > 10 ? Math.ceil(labels.length / 8) : 1}
-        {#if i % skipInterval === 0 || i === labels.length - 1}
+        {#if shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
           <text
             x={xPos(i)} y={plotH + 16}
             text-anchor="middle"
-            fill="var(--text-normal)" font-size="10"
-            transform="rotate(-30 {xPos(i)} {plotH + 16})"
-          >{label.length > 12 ? label.slice(0, 11) + "…" : label}</text>
+            fill="var(--text-normal)" font-size={LABEL_FONT}
+            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${xPos(i)} ${plotH + 16})` : ""}
+          >{truncateLabel(label, axisLabels.truncateAt)}</text>
         {/if}
       {/each}
     {/if}

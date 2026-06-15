@@ -40,13 +40,13 @@ describe("widgetTemplates", () => {
     expect(new Set(allIds).size).toBe(allIds.length);
   });
 
-  test("Dashboard template has stats, chart, and data-table", () => {
+  test("Dashboard template has stats, chart, and a database-call table", () => {
     const dashboard = WIDGET_TEMPLATES.find((t) => t.id === "dashboard");
     expect(dashboard).toBeDefined();
     const types = dashboard!.widgets.map((w) => w.type);
     expect(types).toContain("stats");
     expect(types).toContain("chart");
-    expect(types).toContain("data-table");
+    expect(types).toContain("database-call");
   });
 
   test("Analytics template has multiple charts", () => {
@@ -58,11 +58,11 @@ describe("widgetTemplates", () => {
     expect(chartCount).toBeGreaterThanOrEqual(2);
   });
 
-  test("Kanban+ template has data-table and checklist", () => {
+  test("Kanban+ template has a database-call table and checklist", () => {
     const kanban = WIDGET_TEMPLATES.find((t) => t.id === "kanban-plus");
     expect(kanban).toBeDefined();
     const types = kanban!.widgets.map((w) => w.type);
-    expect(types).toContain("data-table");
+    expect(types).toContain("database-call");
     expect(types).toContain("checklist");
     const checklist = kanban!.widgets.find((w) => w.type === "checklist");
     expect((checklist?.config as { field?: string }).field).toBe("completed");

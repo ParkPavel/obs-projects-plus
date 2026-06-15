@@ -12,3 +12,4 @@ export type {
   NativeQuerySource,
   NativeQueryDeps,
 } from "./nativeQuery";
+export { NativeQueryDataSource } from "./datasource";

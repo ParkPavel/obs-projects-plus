@@ -211,12 +211,16 @@
     min-height: 0;
   }
 
+  .ppp-chart-widget {
+    aspect-ratio: var(--ppp-chart-aspect, auto);
+  }
+
   .ppp-chart-empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 6rem;
-    color: var(--text-muted);
+    min-height: var(--ppp-db-chart-empty-height, 6rem);
+    color: var(--ppp-db-text-secondary, var(--text-muted));
     font-size: var(--font-ui-small);
   }
 

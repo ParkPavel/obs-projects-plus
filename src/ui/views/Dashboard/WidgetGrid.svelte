@@ -16,13 +16,17 @@
   import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher } from "svelte";
   import { dndzone, type DndEvent } from "svelte-dnd-action";
+  import { Icon } from "obsidian-svelte";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
+  import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
+  import { WIDGET_TEMPLATES } from "./widgetTemplates";
 
   const dispatch = createEventDispatcher<{
     showToolbar: void;
     addWidget: WidgetType;
+    applyTemplate: WidgetDefinition[];
     consider: DndEvent<WidgetDefinition>;
     finalize: DndEvent<WidgetDefinition>;
   }>();
@@ -47,11 +51,28 @@
 </script>
 
 {#if widgets.length === 0}
-  <div class="ppp-database-empty">
-    <div class="ppp-database-empty-icon">⊞</div>
-    <span class="ppp-database-empty-title">{$i18n.t("views.dashboard.canvas.empty-title", { defaultValue: "No widgets yet" })}</span>
-    <span class="ppp-database-empty-hint">{$i18n.t("views.dashboard.canvas.empty-hint", { defaultValue: "Click \"+\" in the toolbar to add your first widget" })}</span>
-  </div>
+  <EmptyState
+    icon="layout-grid"
+    title={$i18n.t("views.dashboard.canvas.empty-title", { defaultValue: "Empty canvas" })}
+    hint={readonly
+      ? ""
+      : $i18n.t("views.dashboard.canvas.empty-hint", { defaultValue: "Start with a data block, or pick a ready-made template" })}
+  >
+    <svelte:fragment slot="actions">
+      {#if !readonly}
+        <button on:click={() => dispatch("addWidget", "database-call")}>
+          <Icon name="database" />
+          {$i18n.t("views.dashboard.canvas.empty-add-block", { defaultValue: "Add data block" })}
+        </button>
+        {#each WIDGET_TEMPLATES as tpl}
+          <button on:click={() => dispatch("applyTemplate", tpl.widgets)} title={$i18n.t(tpl.descriptionKey)}>
+            <Icon name="layout-template" />
+            {$i18n.t(tpl.labelKey)}
+          </button>
+        {/each}
+      {/if}
+    </svelte:fragment>
+  </EmptyState>
 {:else if canDnd}
   <div
     class="ppp-database-canvas ppp-database-canvas--stack"
@@ -127,34 +148,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--ppp-space-md, 0.5rem);
-  }
-
-  .ppp-database-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--ppp-space-3, 0.375rem);
-    padding: var(--ppp-space-8, 2rem) var(--ppp-space-4, 0.5rem);
-    color: var(--text-faint);
-    text-align: center;
-  }
-
-  .ppp-database-empty-icon {
-    font-size: 2rem;
-    opacity: 0.4;
-  }
-
-  .ppp-database-empty-title {
-    font-size: var(--ppp-font-size-base, 0.875rem);
-    font-weight: var(--ppp-font-weight-medium, 500);
-    color: var(--text-muted);
-  }
-
-  .ppp-database-empty-hint {
-    font-size: var(--ppp-font-size-sm, 0.75rem);
-    color: var(--text-faint);
-    max-width: 20rem;
   }
 
   /* Stack-canvas add row — always visible at list end */

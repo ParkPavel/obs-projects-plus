@@ -13,6 +13,12 @@
 
   const dispatch = createEventDispatcher<{ addWidget: WidgetType }>();
 
+  // UT2026-A L2 (#073): legacy types are not creation candidates — show them
+  // only when the canvas already holds an instance (existing-config support).
+  $: visibleMetas = WIDGET_REGISTRY.filter(
+    (meta) => !meta.legacy || currentWidgets.some((w) => w.type === meta.type)
+  );
+
   function handleAdd(type: WidgetType) {
     dispatch("addWidget", type);
     open = false;
@@ -36,19 +42,21 @@
     role="menu"
     ariaLabel={$i18n.t("views.dashboard.canvas.add-widget", { defaultValue: "Add widget" })}
   >
-    {#each WIDGET_REGISTRY as meta}
-      {@const allowed = canAddWidget(meta.type, currentWidgets)}
-      <button
-        class="ppp-block-palette__item"
-        class:ppp-block-palette__item--disabled={!allowed}
-        disabled={!allowed}
-        on:click={() => handleAdd(meta.type)}
-        role="menuitem"
-      >
-        <span class="ppp-block-palette__icon"><Icon name={meta.icon} /></span>
-        <span>{$i18n.t(meta.labelKey)}</span>
-      </button>
-    {/each}
+    <div class="ppp-block-palette__list">
+      {#each visibleMetas as meta}
+        {@const allowed = canAddWidget(meta.type, currentWidgets)}
+        <button
+          class="ppp-block-palette__item"
+          class:ppp-block-palette__item--disabled={!allowed}
+          disabled={!allowed}
+          on:click={() => handleAdd(meta.type)}
+          role="menuitem"
+        >
+          <span class="ppp-block-palette__icon"><Icon name={meta.icon} /></span>
+          <span>{$i18n.t(meta.labelKey)}</span>
+        </button>
+      {/each}
+    </div>
   </FloatingPopup>
 </div>
 
@@ -56,6 +64,12 @@
   .ppp-block-palette {
     position: relative;
     display: inline-flex;
+  }
+
+  /* #073: cap palette height so the menu never runs off-screen */
+  .ppp-block-palette__list {
+    max-height: 60vh;
+    overflow-y: auto;
   }
 
   .ppp-block-palette__trigger {
