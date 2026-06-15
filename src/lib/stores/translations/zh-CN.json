@@ -1010,6 +1010,11 @@
             }
         },
         "components": {
+            "filter-pills": {
+                "aria": "筛选",
+                "add": "筛选",
+                "remove": "移除条件"
+            },
             "data-grid": {
                 "grid-label": "数据表",
                 "column": {

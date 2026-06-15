@@ -1123,6 +1123,11 @@
             }
         },
         "components": {
+            "filter-pills": {
+                "aria": "Filter",
+                "add": "Filter",
+                "remove": "Remove condition"
+            },
             "data-grid": {
                 "grid-label": "Data table",
                 "column": {

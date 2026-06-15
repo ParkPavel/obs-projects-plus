@@ -458,6 +458,11 @@
             }
         },
         "components": {
+            "filter-pills": {
+                "aria": "Фильтр",
+                "add": "Фильтр",
+                "remove": "Удалить условие"
+            },
             "data-grid": {
                 "grid-label": "Таблица данных",
                 "column": {

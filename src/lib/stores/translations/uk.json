@@ -1010,6 +1010,11 @@
             }
         },
         "components": {
+            "filter-pills": {
+                "aria": "Фільтр",
+                "add": "Фільтр",
+                "remove": "Видалити умову"
+            },
             "data-grid": {
                 "grid-label": "Таблиця даних",
                 "column": {
