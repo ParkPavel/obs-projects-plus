@@ -355,6 +355,11 @@
                             "description": "Використовується при об'єднанні значень."
                         }
                     },
+                    "formula": {
+                        "name": "Формула",
+                        "description": "Обчислює значення поля з інших полів і функцій.",
+                        "placeholder": "напр. ROUND(price * quantity, 2)"
+                    },
                     "save": "Зберегти"
                 },
                 "create": {

@@ -10,6 +10,7 @@
     TextInput,
   } from "obsidian-svelte";
   import MultiTextInput from "src/ui/components/MultiTextInput/MultiTextInput.svelte";
+  import FormulaEditor from "src/ui/components/FormulaEditor/FormulaEditor.svelte";
   import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
   import type {
     RelationFieldConfig,
@@ -148,6 +149,30 @@
       }
     } else {
       field = { ...field, typeConfig: { ...(field.typeConfig ?? {}), uniqueIdPrefix: val } };
+    }
+  }
+
+  // ── Formula sub-panel (#077) ─────────────────────────────
+  $: formulaExpression = (field.typeConfig?.formula ?? "") as string;
+  $: formulaFieldNames = existingFields.map((f) => f.name);
+
+  function handleFormulaChange(ev: CustomEvent<string>) {
+    const expr = ev.detail;
+    if (expr === "") {
+      const { formula: _d, ...restCfg } = (field.typeConfig ?? {}) as {
+        formula?: string;
+      } & Record<string, unknown>;
+      void _d;
+      const restTyped = restCfg as NonNullable<typeof field.typeConfig>;
+      if (Object.keys(restTyped).length > 0) {
+        field = { ...field, typeConfig: restTyped };
+      } else {
+        const { typeConfig: _tc, ...fieldRest } = field;
+        void _tc;
+        field = fieldRest as typeof field;
+      }
+    } else {
+      field = { ...field, typeConfig: { ...(field.typeConfig ?? {}), formula: expr } };
     }
   }
 
@@ -790,6 +815,26 @@
           </SettingItem>
         {/if}
       {/if}
+    {/if}
+
+    <!-- #077 — Formula sub-panel -->
+    {#if field.type === DataFieldType.Formula && !field.identifier}
+      <SettingItem
+        name={$i18n.t("modals.field.configure.formula.name", { defaultValue: "Formula" })}
+        description={$i18n.t("modals.field.configure.formula.description", {
+          defaultValue: "Compute this field's value from other fields and functions.",
+        })}
+        vertical
+      >
+        <FormulaEditor
+          expression={formulaExpression}
+          fields={formulaFieldNames}
+          placeholder={$i18n.t("modals.field.configure.formula.placeholder", {
+            defaultValue: 'e.g. ROUND(price * quantity, 2)',
+          })}
+          on:change={handleFormulaChange}
+        />
+      </SettingItem>
     {/if}
 
     <!-- NPLAN-A2 — UniqueId sub-panel -->

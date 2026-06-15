@@ -396,6 +396,11 @@
                             "description": "Used to join values when the function is Concatenate."
                         }
                     },
+                    "formula": {
+                        "name": "Formula",
+                        "description": "Compute this field's value from other fields and functions.",
+                        "placeholder": "e.g. ROUND(price * quantity, 2)"
+                    },
                     "save": "Save"
                 },
                 "create": {

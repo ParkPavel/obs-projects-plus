@@ -334,6 +334,12 @@ export type FieldConfig = StringFieldConfig &
      * on `ProjectDefinition.uniqueIdCounter`.
      */
     readonly uniqueIdPrefix?: string;
+    /**
+     * #077 — Formula expression for a Formula-typed field. Edited via the
+     * ConfigureField formula sub-panel; consumed by the formula evaluator.
+     * Absent/empty means the field has no expression yet.
+     */
+    readonly formula?: string;
   };
 
 export type ShowCommand = {

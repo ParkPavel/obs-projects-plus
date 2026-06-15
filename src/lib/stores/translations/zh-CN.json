@@ -355,6 +355,11 @@
                             "description": "用于连接值时的分隔符。"
                         }
                     },
+                    "formula": {
+                        "name": "公式",
+                        "description": "根据其他字段和函数计算此字段的值。",
+                        "placeholder": "例如 ROUND(price * quantity, 2)"
+                    },
                     "save": "保存修改"
                 },
                 "create": {
