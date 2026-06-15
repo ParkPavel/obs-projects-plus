@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-14 (#101 EditNote live-modal CLOSED, READY FOR PR — `c1becb4`; baseline ratchet 152 suites / 2203 tests +1 suite `editNoteMerge.test.ts` +8 tests; next open: #096.4 dayjs-reconcile P3)
+> **Updated**: 2026-06-15 (#096.4 truncateDate dayjs-reconcile CLOSED, READY FOR PR — `065331e`; baseline ratchet 152 suites / 2203 -> 2205 tests +2 TZ-boundary regression tests; W2 prioritized queue exhausted — no open P1/P2/P3 left, see «Открытые тикеты» / CONTEXT.md)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 ## Ticket format
@@ -1353,11 +1353,18 @@ Acceptance criteria:
 - PX-budget impact: ~0 (label-геометрия = unitless SVG-атрибуты, не CSS px).
 
 ### #096.4 — P3: Чарты — reconcile dayjs vs raw Date в truncateDate (follow-up #096)
-- Status: 📋 BACKLOG | W2 — architect DEFER из #096 (backend-architect, 2026-06-13).
-- `transformExecutor.ts:625` truncateDate использует `new Date(String(dateVal))`, остальной
-  date-слой — dayjs (`dateFormatting.ts:1`). Возможный TZ/parse drift на не-ISO строках.
-  Orthogonal к #096 wiring/labels; reconcile рискует регрессией работающего month-теста.
-  В #096 добавлены week/quarter/year/invalid тесты, документирующие текущее `new Date` поведение.
+- Status: ✅ DONE (2026-06-15, `065331e`) — READY FOR PR (не слит/запушен — гейт пользователя).
+- **Delivered** (`065331e`): `src/lib/dashboard-engine/transformExecutor.ts` truncateDate
+  string-fallback заменён с `new Date(String(dateVal))` на `dayjs(String(dateVal)).toDate()` —
+  унификация на канонический dayjs date-слой (`src/lib/helpers/dateFormatting.ts`); фиксит
+  off-by-one date-bucket drift в negative-offset таймзонах. Fast-path `instanceof Date`
+  сохранён, `isNaN` invalid-guard сохранён. +2 TZ-boundary regression-теста в
+  `transformExecutor.test.ts`.
+- **Resolution note**: architect DEFER-опасение (регрессия существующих month/week/quarter/year
+  тестов) проверено semantic-analyzer и НЕ подтвердилось — 6 существующих assertion'ов
+  boundary-safe; фикс behavior-preserving для них и добавляет non-ISO/TZ-покрытие.
+- Гейты: build 0 err, jest 152/2205 (+2), lint 0 err, svelte-check 0 err. Audit verdict:
+  zero P0/P1/P2/P3 findings.
 
 ### #097 — ✅ DONE (2026-06-12) — debug-строка чеклиста («Source: 28 · check=—…») удалена.
 
