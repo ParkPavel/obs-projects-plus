@@ -1374,22 +1374,6 @@
                     "board": "Доска",
                     "calendar": "Календарь",
                     "gallery": "Галерея"
-                },
-                "templates": {
-                    "overview-finance": "Финансовый обзор",
-                    "overview-finance-desc": "Быстрый финансовый обзор: KPI, итоги, график и таблица",
-                    "dashboard": "Дашборд",
-                    "dashboard-desc": "Статистика + графики + таблица",
-                    "analytics": "Аналитика",
-                    "analytics-desc": "Несколько графиков для анализа данных",
-                    "kanban-plus": "Kanban+",
-                    "kanban-plus-desc": "Таблица + чеклист + прогресс",
-                    "fitness-workout": "Фитнес — Журнал тренировок",
-                    "fitness-workout-desc": "Тренировки с вложенными sets[]: повторы, вес, отдых. Unnest + статистика объёма.",
-                    "finance-accounting": "Финансы — Учёт",
-                    "finance-accounting-desc": "Мультивалютный дашборд: брутто, налог, нетто, курсы, кредитная линия.",
-                    "crm-clients": "CRM — Клиенты",
-                    "crm-clients-desc": "Клиенты с историей сессий, вкладки по этапам и воронка конверсии."
                 }
             }
         },

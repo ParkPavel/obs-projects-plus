@@ -1016,6 +1016,8 @@
                     "gallery": "Галерея"
                 },
                 "templates": {
+                    "database-v2-starter": "База даних V2 — старт",
+                    "database-v2-starter-desc": "KPI-картки + мульти-в'ю блок бази (Таблиця / Дошка / Календар / Галерея)",
                     "overview-finance": "Фінансовий огляд",
                     "overview-finance-desc": "Швидкий фінансовий огляд: KPI, підсумки, графік і таблиця",
                     "dashboard": "Дашборд",

@@ -1127,22 +1127,6 @@
                     "board": "Board View",
                     "calendar": "Calendar View",
                     "gallery": "Gallery View"
-                },
-                "templates": {
-                    "overview-finance": "Overview Finance",
-                    "overview-finance-desc": "Quick finance overview with KPI, summary, chart and table",
-                    "dashboard": "Dashboard",
-                    "dashboard-desc": "Stats overview + chart + data table",
-                    "analytics": "Analytics",
-                    "analytics-desc": "Multiple charts for data analysis",
-                    "kanban-plus": "Kanban+",
-                    "kanban-plus-desc": "Data table + checklist + progress tracker",
-                    "fitness-workout": "Fitness — Workout Log",
-                    "fitness-workout-desc": "Workout notes with nested sets[]: reps, weight, rest. Uses Unnest pipeline + volume stats.",
-                    "finance-accounting": "Finance — Accounting",
-                    "finance-accounting-desc": "Multi-currency dashboard: gross, tax, net with FX rates and credit line tracking.",
-                    "crm-clients": "CRM — Clients",
-                    "crm-clients-desc": "Clients roster with session history, filter tabs by stage, and conversion funnel."
                 }
             }
         },

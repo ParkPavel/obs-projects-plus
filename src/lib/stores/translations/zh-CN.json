@@ -1016,6 +1016,8 @@
                     "gallery": "画廊视图"
                 },
                 "templates": {
+                    "database-v2-starter": "数据库 V2 — 起步",
+                    "database-v2-starter-desc": "KPI 卡片 + 多视图数据库块（表格 / 看板 / 日历 / 画廊）",
                     "overview-finance": "财务概览",
                     "overview-finance-desc": "快速财务概览：KPI、汇总、图表和表格",
                     "dashboard": "仪表盘",
