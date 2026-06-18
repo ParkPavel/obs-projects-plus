@@ -54,8 +54,8 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 			expect(errors.length).toBe(0);
 
 			// Toolbar hint should be the "valid" variant.
-			expect(container.querySelector(".hint-valid")).not.toBeNull();
-			expect(container.querySelector(".hint-error")).toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-valid")).not.toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-error")).toBeNull();
 		});
 
 		test("invalid syntax produces error count in toolbar badge", async () => {
@@ -68,8 +68,8 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 			await tick();
 			await tick();
 
-			expect(container.querySelector(".hint-error")).not.toBeNull();
-			expect(container.querySelector(".hint-valid")).toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
 		});
 
 		test("empty formula shows info hint (Ctrl+Space prompt)", () => {
@@ -77,9 +77,9 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 				props: { formula: "", fields: [] },
 			});
 
-			expect(container.querySelector(".hint-info")).not.toBeNull();
-			expect(container.querySelector(".hint-valid")).toBeNull();
-			expect(container.querySelector(".hint-error")).toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-info")).not.toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-valid")).toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-error")).toBeNull();
 		});
 	});
 
@@ -96,7 +96,7 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 			});
 			await tick();
 			await tick();
-			expect(container.querySelector(".hint-error")).not.toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-error")).not.toBeNull();
 
 			await rerender({
 				formula: "IS_EMPTY(dueDate)",
@@ -104,8 +104,8 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 			});
 			await tick();
 			await tick();
-			expect(container.querySelector(".hint-error")).toBeNull();
-			expect(container.querySelector(".hint-valid")).not.toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-error")).toBeNull();
+			expect(container.querySelector(".ppp-fcf-hint-valid")).not.toBeNull();
 		});
 	});
 
@@ -116,23 +116,23 @@ describe("AdvancedFilterEditor (Calendar agenda)", () => {
 			});
 
 			// Hidden initially
-			expect(container.querySelector(".help-panel")).toBeNull();
+			expect(container.querySelector(".ppp-fcf-help")).toBeNull();
 
 			// Click toolbar Help button
 			const helpBtn = container.querySelector(
-				".toolbar-btn",
+				".ppp-fcf-btn",
 			) as HTMLButtonElement;
 			expect(helpBtn).not.toBeNull();
 			await fireEvent.click(helpBtn);
 			await tick();
 
-			expect(container.querySelector(".help-panel")).not.toBeNull();
+			expect(container.querySelector(".ppp-fcf-help")).not.toBeNull();
 			expect(helpBtn.classList.contains("active")).toBe(true);
 
 			// Click again → hidden
 			await fireEvent.click(helpBtn);
 			await tick();
-			expect(container.querySelector(".help-panel")).toBeNull();
+			expect(container.querySelector(".ppp-fcf-help")).toBeNull();
 		});
 	});
 
