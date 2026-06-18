@@ -1,37 +1,37 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-15 (продуктовые решения: #080 CLOSED/DECLINED Option B → #077, #066 RESOLVED Option B defer-to-V3; ранее #096.4 truncateDate dayjs-reconcile закрыт, READY FOR PR — `065331e`; baseline ratchet 152 suites / 2203 -> 2205 tests +2 TZ-boundary regression-теста; V2-стек СЛИТ в main `1677310`, #096.4 стекается на feat/dashboard-v2 поверх merge; W2 prioritized queue ИСЧЕРПАНА — открытых P1/P2/P3 нет)**
+> Обновлено: **2026-06-18 (ГЛОБАЛЬНЫЙ АУДИТ UT-R5 + дорожная карта → `AUDIT_ROADMAP_2026-06-18.md`: декомпозиция всех проблем, скорректированная последовательность W2–W5, процессные гейты. Следующий шаг = W2.0 эпик #103 Filter UX unification. Ранее: ЭПИК #077 FormulaConstructor unification ✅ COMPLETED, отгружен в origin/main `7cc3d66`; baseline 155/2232; px-budget 177; #080 CLOSED/DECLINED → #077, #066 RESOLVED defer-to-V3)**
 
 ## Состояние веток
 
-- HEAD `main`: **`1677310`** — `Merge feat/dashboard-v2: close #099 epic + #100/#098/#096/#102/#101`
-  — V2-стек СЛИТ в main (свернул #099/#100/#098/#096/#102/#101); origin/main продвинут.
-- HEAD `feat/dashboard-v2`: **`065331e`** — `fix(engine): #096.4 — reconcile truncateDate string-fallback onto dayjs`
-  — ровно 1 коммит впереди merge `1677310`.
-- Active branch: `feat/dashboard-v2` — **впереди `origin/feat/dashboard-v2` на 49 коммитов** (push контролирует пользователь). #096.4 (`065331e`) ждёт merge/push-гейта пользователя.
+- HEAD `main`: **`7cc3d66`** — `feat(#077): rename formula popup label to «Формулы»`
+  — **HEAD == origin/main == `7cc3d66`**, всё синхронизировано с remote, ничего не ждёт push-гейта.
+- Эпик #077 (FormulaConstructor unification) полностью отгружен: slice 1 `08398a2`/`a78fe9c`,
+  slice 2 `dd90c92`, slice 4 `5cbb97f`, финальный XS `7cc3d66`.
 - Archive branch: `archive/dashboard-v1` — снимок V1 на момент запуска V2.
 - Working tree: `main.js` + `styles.css` модифицированы (build-артефакты, не трекаются для docs-коммита).
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (feat/dashboard-v2 @ 065331e)
+## Гейты (main @ 7cc3d66)
 
 | Гейт | Результат |
 |---|---|
 | `npm run build` | ✅ 0 errors (3 pre-existing unrelated warnings) |
-| `npm test` | ✅ **152 suites / 2205 tests PASS** |
+| `npm test` | ✅ **155 suites / 2232 tests PASS** |
 | `npm run lint` | ✅ 0 errors (130 pre-existing tsdoc warnings) |
 | `npm run svelte-check` | ✅ 0 errors / 0 warnings |
 | `@ts-ignore` в src | 0 ✅ |
-| PX-budget (`R0_3_pxBudget.test.ts`) | ≤186, locked ✅ |
+| PX-budget (`R0_3_pxBudget.test.ts`) | **≤177**, locked ✅ (отжат 186→177 в #077 slice 4) |
 | Manual API-тест в OBStests (`MANUAL_TESTING_PIPELINE.md`) | ✅ 2026-06-11: deploy + reload + 11 команд + demo smoke A1–A7 + roundtrip. Визуальный чек-лист (#059/#065/#048 strip/zero-state/темы) — ожидает человека, см. pipeline §5 |
 
-> **Канон baseline = 152 / 2205** (этот файл, «Гейты»). Ratchet 2026-06-15:
-> +2 TZ-boundary regression-теста в `transformExecutor.test.ts` из #096.4 (dayjs string-fallback).
-> Было 152 / 2203 (#101: +1 suite `editNoteMerge.test.ts` + 8 тестов, чистый `mergeExternal` helper).
-> Перед этим 151 / 2195 (#102: +3 state-machine теста, `reconcile()` симметричный декремент
-> `pendingWrites`); 151 / 2192 (#096: +1 suite `axisLabels.test.ts` + тесты в
-> `transformExecutor.test.ts`, `chartDataPipeline.test.ts`, `configPanelRoundTrip.test.ts`).
-> `CLAUDE.md` синхронизирован → **152 / 2205** (2026-06-15). CONTEXT.md —
+> **Канон baseline = 155 / 2232** (этот файл, «Гейты»). Ratchet 2026-06-18 (#077):
+> рост 152/2205 → 155/2232 (+3 suites / +27 tests) — новые тест-файлы FilterPills,
+> FormulaConstructor, formulaHelpGroups. Это ожидаемый рост от unification-эпика, не регрессия.
+> PX-budget отжат 186 → **177** (`R0_3_pxBudget.test.ts`, `PX_BUDGET=177`): DateFormulaInput
+> ретайрнул imperative inline-style портал → thin FC-wrapper с rem-only overrides.
+> Предыстория: 152 / 2205 (2026-06-15, #096.4 +2 TZ-boundary теста); 152 / 2203 (#101);
+> 151 / 2195 (#102); 151 / 2192 (#096).
+> `CLAUDE.md` синхронизирован → **155 / 2232** (2026-06-18). CONTEXT.md —
 > единственный канонический источник числа (так гласит сам CLAUDE.md).
 
 ## Активная работа
@@ -43,6 +43,7 @@
 - `docs/internal/DASHBOARD_V2_VISION.md` — пользовательское видение (источник правды для UX)
 - `docs/internal/UI_MODERNIZATION_PLAN.md` — M-UI-MODERNIZATION (V2-aligned, 2026-06-10)
 - `docs/internal/UI_DESIGN_ARCHITECTURE.md` — Notion-parity mapping + полная архитектурная схема (2026-06-10)
+- `docs/internal/AUDIT_ROADMAP_2026-06-18.md` — **глобальный аудит UT-R5 + скорректированная дорожная карта W2–W5** (канон последовательности, декомпозиция всех проблем, процессные гейты)
 
 **✅ Фаза 0 ЗАВЕРШЕНА** — все 4 CI ворот зелёные на `feat/dashboard-v2`.  
 **✅ Фаза 1 ЗАВЕРШЕНА** — Engine перенесён в `src/lib/dashboard-engine/`.  
@@ -59,8 +60,9 @@
 **✅ Сессия 2026-06-14 (W2, #102)**: #102 config-echo guard rapid double-commit edge (P2, follow-up #100) закрыт — `reconcile()` в `dashboardConfigEcho.ts` декрементит `pendingWrites` симметрично с `commit()` (был абсолютный сброс к 0) + clear-pending при `eq(cfg, current)`; фиксит lost-update edge при двух commit подряд в одном microtask-окне с interleaved echo; +3 state-machine теста. READY FOR PR (`57ae744`), все 4 гейта зелёные. НЕ слит/запушен — гейт пользователя.
 **✅ Сессия 2026-06-14 (W2, #101)**: #101 EditNote — живая модалка (P2) закрыт. Architect-signed план (`fcc5a69`), реализация тремя срезами в одном коммите (`c1becb4`): #101.1 чистый `mergeExternal(local, store, dirty)` helper в `editNoteMerge.ts` (untouched-ключи из store, dirty-ключи из local, id из store) + 8 unit-тестов; #101.2 dirty `Set<string>` заполняется в `setValue`, чистится на обоих save-success путях (autosave + handleManualSave); #101.3 `$dataFrame` auto-subscribe + live-lookup по захваченному `recordId` (фикс Svelte cyclical-dep `record→live→record`) + реактивная склейка. Без `metadataCache.on` (инвариант единственного источника), без ручного unsubscribe (`$store` auto-teardown), реактивная склейка пишет только `record`, не вызывает `onSave`. +1 suite `editNoteMerge.test.ts` (+8 тестов). READY FOR PR (`c1becb4`), все 4 гейта зелёные. Auto-close при удалении записи извне — явный out-of-scope follow-up.
 **✅ V2-стек СЛИТ в main** (`1677310` — `Merge feat/dashboard-v2: close #099 epic + #100/#098/#096/#102/#101`): волна W2 (минус #096.4) свёрнута в main, origin/main продвинут. `feat/dashboard-v2` остаётся живой веткой для добивки follow-up-ов поверх merge.
-**✅ Сессия 2026-06-15 (W2, #096.4)**: #096.4 truncateDate dayjs-reconcile (P3, был DEFERRED) закрыт. `transformExecutor.ts` truncateDate string-fallback заменён с `new Date(String(dateVal))` на `dayjs(String(dateVal)).toDate()` — унификация на канонический dayjs date-слой (`src/lib/helpers/dateFormatting.ts`), фиксит off-by-one date-bucket drift в negative-offset таймзонах. Fast-path `instanceof Date` сохранён, `isNaN` invalid-guard сохранён. +2 TZ-boundary regression-теста в `transformExecutor.test.ts`. Architect DEFER-опасение (регрессия month/week/quarter/year тестов) проверено semantic-analyzer и НЕ подтвердилось: 6 существующих assertion'ов boundary-safe, фикс behavior-preserving. READY FOR PR (`065331e`), все 4 гейта зелёные (build 0, jest 152/2205, lint 0, svelte-check 0); audit zero P0/P1/P2/P3 findings. Стекается на `feat/dashboard-v2` поверх merge `1677310` — НЕ слит/запушен, гейт пользователя.
-**Следующий шаг**: prioritized queue ИСЧЕРПАНА (открытых P1/P2/P3 нет). Остаются design-required P1 (#075-остаток, #077, #090, #091, #093) и P2/P3 backlog (#060/#061/#076/#078/#079/#082/#089/#094/#095) + user-gated #071-репро и V3-DEFERRED (#062/#063/#064/#035). Продуктовые решения 2026-06-15: #080 ❌ CLOSED/DECLINED (Option B, Notion-parity → покрыт #077), #066 ✅ RESOLVED (Option B, decided-defer-to-V3). Следующий шаг — выбор пользователя/дизайн-сессия, не автономный pick.
+**✅ Сессия 2026-06-15 (W2, #096.4)**: #096.4 truncateDate dayjs-reconcile (P3, был DEFERRED) закрыт. `transformExecutor.ts` truncateDate string-fallback заменён с `new Date(String(dateVal))` на `dayjs(String(dateVal)).toDate()` — унификация на канонический dayjs date-слой (`src/lib/helpers/dateFormatting.ts`), фиксит off-by-one date-bucket drift в negative-offset таймзонах. Fast-path `instanceof Date` сохранён, `isNaN` invalid-guard сохранён. +2 TZ-boundary regression-теста в `transformExecutor.test.ts`. Architect DEFER-опасение проверено semantic-analyzer и НЕ подтвердилось. (`065331e`)
+**✅ ЭПИК #077 ЗАКРЫТ ЦЕЛИКОМ** (2026-06-18, отгружен в origin/main `7cc3d66`): «машина функций» — единый FormulaConstructor во всех точках ввода формул. Слайсы: slice 1 (`08398a2`/`a78fe9c`) — formula syntax-highlight overlay + metadata-driven FormulaHelpPanel; slice 2 (`dd90c92`) — composition-wrapper FormulaConstructorFull (toolbar + lean FC + preview-slot + help-panel) + ретайр hand-rolled chrome в AdvancedFilterEditor; slice 4 (`5cbb97f`) — ретайр imperative-портала DateFormulaInput → thin FC-wrapper, px-budget 186→177; финальный XS (`7cc3d66`) — i18n-ключ `views.dashboard.canvas.formula-builder` → «Формулы» (ru) / «Formulas» (en) / «Формули» (uk) / «公式» (zh-CN) + defaultValue-fallback в DashboardToolbar.svelte / YamlVisualizer.svelte (user-decision: «Формулы»). slice 3 (FormulaBar) НАМЕРЕННО отложен архитектором (FormulaBar уже корректен, миграция косметическая). **Архитектурное решение**: lean FormulaConstructor НЕ поглощает все 4 слоя дизайна — добавлен composition-wrapper FormulaConstructorFull; параллельная реализация DateFormulaInput (свой портал/клавиатура/preview/suggestion-движок) полностью ретайрнута — третьего пути ввода формул нет. Все 4 гейта зелёные на merge (build 0, jest 155/2232, lint 0, svelte-check 0). НОВЫЙ baseline 155/2232 (+3 suites: FilterPills, FormulaConstructor, formulaHelpGroups — не регрессия).
+**Следующий шаг**: 🔥 **W2.0 эпик #103 — Filter UX unification** (P1, S–M, без зависимостей). Это emergent-долг, вскрытый глобальным аудитом 2026-06-18 (UT-R5): #099+#077 добавили filter-pills и FilterBridge-бейдж поверх SettingsMenu-фильтра → тройное дублирование `view.filter`. Скорректированная дорожная карта на все волны W2–W5 (чёткая последовательность + зависимости + DoD связности + процессные гейты) — **`docs/internal/AUDIT_ROADMAP_2026-06-18.md`** (канон). Последовательность: W2.0 #103 → W2.1 #093 → W2.2 #090 → W2.3 (#071/#089/#094/#095) → W2.4 (#075-rem/#092) → W3 (#091/#076) → W4 (#061/#082/#060) → W5 (#078/#079/#036). Продуктовые решения 2026-06-15: #080 ❌ CLOSED/DECLINED (→#077), #066 ✅ RESOLVED (defer-to-V3). Критично: ручной тест UT-R5 снят с устаревшего билда (20:26) — deploy-гейт перед тестом теперь обязателен (AUDIT_ROADMAP §4А).
 
 ## Завершённые milestones
 
@@ -98,6 +100,7 @@
 | **#101 — EditNote живая модалка** | ✅ DONE (2026-06-14, READY FOR PR) — три среза одним коммитом: чистый `mergeExternal` helper (#101.1) + dirty `Set<string>` (#101.2) + `$dataFrame` auto-subscribe + реактивная склейка с фиксом cyclical-dep (#101.3); +1 suite `editNoteMerge.test.ts` (+8). Auto-close при внешнем удалении записи — out-of-scope follow-up. (`c1becb4`) |
 | **V2-стек → main** | ✅ MERGED (`1677310`) — `Merge feat/dashboard-v2`: свернул #099/#100/#098/#096/#102/#101; origin/main продвинут. feat/dashboard-v2 продолжается для follow-up-ов поверх merge. |
 | **#096.4 — truncateDate dayjs-reconcile** | ✅ DONE (2026-06-15, READY FOR PR) — string-fallback `new Date(String())` → `dayjs(String()).toDate()`, унификация на канонический dayjs-слой; фиксит off-by-one bucket-drift в negative-offset TZ. instanceof Date / isNaN guards сохранены. +2 TZ-boundary теста. DEFER-опасение регрессии опровергнуто semantic-analyzer (6 assertion'ов boundary-safe). Стекается поверх `1677310`. (`065331e`) |
+| **EPIC #077 — FormulaConstructor unification + filter-pills** | ✅ COMPLETED (2026-06-18, в origin/main `7cc3d66`) — единый FormulaConstructor во всех точках ввода формул. slice 1 syntax-highlight overlay + metadata FormulaHelpPanel (`08398a2`/`a78fe9c`), slice 2 composition-wrapper FormulaConstructorFull + ретайр AFE chrome (`dd90c92`), slice 4 ретайр DateFormulaInput portal → thin FC-wrapper, px-budget 186→177 (`5cbb97f`), финал i18n «Формулы»/Formulas/Формули/公式 (`7cc3d66`). slice 3 (FormulaBar) намеренно отложен. DateFormulaInput-параллель полностью ретайрнута. Baseline 152/2205 → 155/2232. |
 
 ## Открытые тикеты
 
@@ -107,8 +110,10 @@
 > #071/#075 PARTIAL.
 
 > ⚠ 2026-06-12: очередь пересобрана в **ВОЛНЫ** глобального дизайн-пайплайна —
-> канон: `specs/NOTION_GRADE_PIPELINE.md` (грамматика 5 примитивов, анатомия панелей,
-> инвентарь поверхностей, W1–W5). Таблица ниже — историческая, актуален пайплайн.
+> `specs/NOTION_GRADE_PIPELINE.md` (грамматика 5 примитивов, анатомия панелей, W1–W5).
+> ⚠ 2026-06-18: **канон последовательности волн W2–W5 теперь — `AUDIT_ROADMAP_2026-06-18.md`**
+> (он корректирует и пересеквенирует NOTION_GRADE_PIPELINE по итогам UT-R5). Таблица ниже
+> отражает скорректированную очередь.
 
 > ⚠ 2026-06-13: W1 закрыта (`a640180`), EPIC #099 (W2-ядро) закрыт целиком (`2209a8a`).
 > #100 (P1 reactivity-hardening) и #098 (P2 FloatingPopup) закрыты (`a4019ed`/`7fe7756`),
@@ -119,8 +124,13 @@
 > ⚠ 2026-06-14: #101 (P2, EditNote live-modal) закрыт (`c1becb4`), READY FOR PR.
 > ⚠ 2026-06-15: V2-стек СЛИТ в main (`1677310`, свернул #099/#100/#098/#096/#102/#101).
 > #096.4 (P3, truncateDate dayjs-reconcile) закрыт (`065331e`), READY FOR PR — стекается на
-> `feat/dashboard-v2` поверх merge. **Prioritized queue ИСЧЕРПАНА** — открытых P1/P2/P3 в
-> исполняемой очереди нет; остаток — design-required / user-gated / V3-DEFERRED (см. таблицу ниже).
+> `feat/dashboard-v2` поверх merge.
+> ⚠ 2026-06-18: ЭПИК #077 (P1, FormulaConstructor unification) ✅ COMPLETED, отгружен в
+> origin/main (`7cc3d66`). HEAD == origin/main. Baseline 155/2232, px-budget 177.
+> ⚠ 2026-06-18: ГЛОБАЛЬНЫЙ АУДИТ UT-R5 → `AUDIT_ROADMAP_2026-06-18.md`. Очередь НЕ исчерпана:
+> вскрыт emergent-долг **#103 Filter UX unification** (= СЛЕДУЮЩИЙ, W2.0) + пересеквенированы
+> W2–W5. Прежняя пометка «queue исчерпана» снята — она относилась к старой автономной очереди
+> до аудита.
 
 **Очередь исполнения (W2 → далее):**
 
@@ -138,9 +148,16 @@
 | — | ~~#102 config-echo guard — rapid double-commit edge (follow-up #100)~~ | ✅ DONE `57ae744` (2026-06-14, READY FOR PR) |
 | — | ~~#101 EditNote — живая модалка (подписка на обновления записи)~~ | ✅ DONE `c1becb4` (2026-06-14, READY FOR PR) |
 | — | ~~#096.4 чарты — reconcile dayjs vs raw Date в truncateDate~~ | ✅ DONE `065331e` (2026-06-15, READY FOR PR) |
-| — | **Prioritized queue ИСЧЕРПАНА** — открытых P1/P2/P3 в автономной очереди нет | — |
-| design | **#077** FormulaConstructor (DESIGN READY); **#090** панели настроек; **#091** Link-флоу; **#093** SettingsMenu; #075-остаток | design_required — нужна дизайн-сессия |
-| backlog | #060 field transparency; #061 Template Library; #076 база-вытягиванием; #078 CalendarView decomp; #079 hex-ratchet; #082 typed-карточка; #089 галерея cover; #094 словарь значений; #095 PipelineEditor operator-select | P2/P3 backlog (analysis/design по тикетам) |
+| — | ~~EPIC #077 FormulaConstructor unification + filter-pills~~ | ✅ COMPLETED `7cc3d66` (2026-06-18, в origin/main) |
+| **W2.0** | **#103 Filter UX unification** (emergent-долг #099+#077: тройное дублирование `view.filter`) | 🔥 **СЛЕДУЮЩИЙ** (P1, S–M, без зависимостей) |
+| W2.1 | **#093** SettingsMenu рециклинг | P1, зависит от #103 |
+| W2.2 | **#090** панели виджетов (анатомия §3) | P1 design, зависит от #093 |
+| W2.3 | #071 cover-реактивность; #089 галерея cover; #094 словарь значений; #095 operator-select | P1/P2, поверх #090/#093 |
+| W2.4 | #075-остаток + #092 ясность/recovery конвейера | P1, DoD W2 |
+| W3 | **#091** Link-флоу связей; #076 sub-base входы (формулы #077 ✅) | P1/P2, DoD W3 |
+| W4 | #061 Template Library; #082 typed-карточка; #060 field transparency; SmartSuggest-discovery | P2, DoD W4 |
+| W5 | #078 CalendarView decomp; #079 hex-ratchet; #036 mobile | P2 фундамент |
+| — | Канон последовательности/зависимостей/DoD → `AUDIT_ROADMAP_2026-06-18.md` | — |
 | — | Решения пользователя: ~~#066 (YAML-конфиг P2)~~ ✅ RESOLVED Option B defer-to-V3, ~~#080 (Formula Node widget P3)~~ ❌ CLOSED/DECLINED Option B (→#077); остаётся #071 (репро консоли P1) | ГЕЙТЫ |
 | V3 | #062–#064 (P3), #035 parked, free canvas, SmartSuggest-аналитика | DEFERRED |
 
@@ -156,6 +173,13 @@
 | #059: relation-CTA добавляет `database-call`, не legacy `sub-base-canvas`; accept персистит dismissal | BACKLOG #059, smartSuggest.ts | 2026-06-11 |
 | `DatabaseViewConfig.dismissedSuggestions?: string[]` — аддитивное поле, persisted opt-out подсказок | types.ts | 2026-06-11 |
 | Jest gotcha: TS barrel re-export `.svelte` default ломает esbuild-jest — импортировать `.svelte` напрямую | session-state | ПРАВИЛО |
+
+## Остаточный технический долг (не блокирует, для будущих сессий)
+
+| Источник | Описание | Приоритет |
+|---|---|---|
+| `FilterRow.svelte:24–137` | Pre-existing mojibake в комментариях dropdown-региона (вне touched-строк #077). | P3 cleanup |
+| `DateFormulaInput.svelte:59` | Hardcoded английский `title` (косметика). | P3 |
 
 ## Запреты
 

@@ -25,7 +25,7 @@ npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Test baseline: **152 suites / 2205 tests PASS**, tsc 0 errors. (Updated 2026-06-15; canonical number maintained in `docs/internal/CONTEXT.md` → «Гейты».) Any deviation must be acknowledged before merge.
+Test baseline: **155 suites / 2232 tests PASS**, tsc 0 errors. (Updated 2026-06-18; canonical number maintained in `docs/internal/CONTEXT.md` → «Гейты».) Any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
 
@@ -99,7 +99,7 @@ Dependencies point inward. UI never imports from Shell directly (use ViewApi).
 3. **Board columns** derived from unique values of selected field. Never hardcoded.
 4. **Derived field pipeline**: `applyFormulaFields` → `enrichFrameWithRelations` → display.
 5. **Zero `@ts-ignore`** anywhere in `src/`.
-6. **PX-budget ratchet ≤ 186** (`src/__tests__/R0_3_pxBudget.test.ts`). All new spacing/typography in `rem`.
+6. **PX-budget ratchet ≤ 177** (`src/__tests__/R0_3_pxBudget.test.ts`). All new spacing/typography in `rem`.
 7. **`filterEvaluator.ts`** is the single filter engine.
 8. **No `new Menu(`** outside `src/lib/contextMenu.ts`.
 9. **No hardcoded hex colors** in `src/`. Use design tokens or palette store.
