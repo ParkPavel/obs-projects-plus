@@ -71,7 +71,8 @@ describe("R0.3 — CSS px-budget ratchet", () => {
   //   301 → 191 (REFACTOR-403b — DateFormulaInput/FilterRow/AdvancedFilterEditor: bulk px→rem conversion of inline JS-built style strings + CSS style blocks; 1px hairlines preserved; UTF-8 BOM + Cyrillic comments verified intact).
   //   191 → 187 (TDT-12 — WidgetHost.svelte: 4 × border/border-bottom 1px solid → 0.0625rem solid).
   //   187 → 186 (#034.2a — net px reduction during popoverDropdown→FloatingPopup migration: archived popoverDropdown.ts (legacy .ts file did not count); new PopoverList.svelte uses 0.0625rem hairlines).
-  const PX_BUDGET = 186;
+  //   186 → 177 (#077 slice 4 — DateFormulaInput retired its imperative inline-style portal (px borders/box-shadow/badge radii); now a thin FormulaConstructor wrapper with rem-only cell overrides).
+  const PX_BUDGET = 177;
 
   it("does not exceed the agreed px-budget", () => {
     const { total, perFile } = countPxAcrossSrc();

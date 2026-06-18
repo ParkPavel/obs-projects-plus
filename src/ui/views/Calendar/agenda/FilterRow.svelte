@@ -715,12 +715,12 @@
 <svelte:window on:mousedown={handleWindowMousedown} on:keydown={handleKeydown} />
 
 <div class="filter-row" class:filter-row--disabled={filter.enabled === false}>
-  <!-- Row prefix: Р“РґРµ / Рё -->
+  <!-- Row prefix: Where / and -->
   {#if prefix}
     <span class="row-prefix">{prefix}</span>
   {/if}
   
-  <!-- в•ђв•ђв•ђ Enable/Disable toggle в•ђв•ђв•ђ -->
+  <!-- Enable/Disable toggle -->
   <button
     class="row-toggle clickable-icon"
     class:row-toggle--off={filter.enabled === false}
@@ -733,7 +733,7 @@
     <Icon name={filter.enabled === false ? 'eye-off' : 'eye'} size="sm" />
   </button>
 
-  <!-- в•ђв•ђв•ђ Field chip в•ђв•ђв•ђ -->
+  <!-- Field chip -->
   <div class="chip-wrapper" bind:this={fieldWrapperEl}>
     <button class="chip chip--field" type="button" aria-haspopup="listbox" aria-expanded={showFieldDropdown} on:click={openFieldDropdown} title={filter.field || ''}>
       <span class="chip-icon">
@@ -746,7 +746,7 @@
     </button>
   </div>
   
-  <!-- в•ђв•ђв•ђ Operator chip в•ђв•ђв•ђ -->
+  <!-- Operator chip -->
   <div class="chip-wrapper" bind:this={operatorWrapperEl}>
     <button class="chip chip--operator" type="button" aria-haspopup="listbox" aria-expanded={showOperatorDropdown} on:click={openOperatorDropdown}>
       <span class="chip-label">{getOperatorLabel(filter.operator)}</span>
@@ -756,7 +756,7 @@
     </button>
   </div>
   
-  <!-- в•ђв•ђв•ђ Value area в•ђв•ђв•ђ -->
+  <!-- Value area -->
   <div class="value-area">
     {#if needsValue}
       {#if isDateField}
@@ -779,11 +779,11 @@
         />
       {/if}
     {:else}
-      <span class="no-value">{t('no-value') || 'вЂ”'}</span>
+      <span class="no-value">{t('no-value') || '—'}</span>
     {/if}
   </div>
   
-  <!-- в•ђв•ђв•ђ Delete button в•ђв•ђв•ђ -->
+  <!-- Delete button -->
   <button
     class="row-delete clickable-icon"
     type="button"
@@ -796,9 +796,7 @@
 </div>
 
 <style>
-  /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
-     ROW вЂ” single inline horizontal row
-     в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ */
+  /* ROW — single inline horizontal row */
   .filter-row {
     display: flex;
     align-items: center;
