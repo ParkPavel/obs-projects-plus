@@ -1205,6 +1205,17 @@
                     "visual-parse-error": "Невозможно отобразить в визуальном режиме — переключитесь на Код",
                     "signature-returns": "возвращает",
                     "signature-category": "категория",
+                    "help-category": {
+                        "logical": "Логические",
+                        "math": "Математика",
+                        "string": "Строки",
+                        "date": "Даты",
+                        "financial": "Финансы",
+                        "statistical": "Статистика",
+                        "array": "Массивы",
+                        "conversion": "Преобразование",
+                        "utility": "Утилиты"
+                    },
                     "debug-title": "Отладка",
                     "debug-cursor": "Позиция курсора",
                     "debug-copy": "Скопировать ошибку",

@@ -958,6 +958,17 @@
                     "visual-parse-error": "Cannot display in visual mode — switch to Code to edit",
                     "signature-returns": "returns",
                     "signature-category": "category",
+                    "help-category": {
+                        "logical": "Logical",
+                        "math": "Math",
+                        "string": "String",
+                        "date": "Date",
+                        "financial": "Financial",
+                        "statistical": "Statistical",
+                        "array": "Array",
+                        "conversion": "Conversion",
+                        "utility": "Utility"
+                    },
                     "debug-title": "Debug",
                     "debug-cursor": "Cursor position",
                     "debug-copy": "Copy error",

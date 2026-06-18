@@ -841,6 +841,17 @@
                     "visual-parse-error": "Неможливо відобразити у візуальному режимі — перейдіть на Код",
                     "signature-returns": "повертає",
                     "signature-category": "категорія",
+                    "help-category": {
+                        "logical": "Логічні",
+                        "math": "Математика",
+                        "string": "Рядки",
+                        "date": "Дати",
+                        "financial": "Фінанси",
+                        "statistical": "Статистика",
+                        "array": "Масиви",
+                        "conversion": "Перетворення",
+                        "utility": "Утиліти"
+                    },
                     "debug-title": "Діагностика",
                     "debug-cursor": "Позиція курсора",
                     "debug-copy": "Копіювати помилку",

@@ -841,6 +841,17 @@
                     "visual-parse-error": "无法在可视化模式下显示 — 请切换到代码模式编辑",
                     "signature-returns": "返回",
                     "signature-category": "类别",
+                    "help-category": {
+                        "logical": "逻辑",
+                        "math": "数学",
+                        "string": "字符串",
+                        "date": "日期",
+                        "financial": "财务",
+                        "statistical": "统计",
+                        "array": "数组",
+                        "conversion": "转换",
+                        "utility": "实用工具"
+                    },
                     "debug-title": "调试",
                     "debug-cursor": "光标位置",
                     "debug-copy": "复制错误",
