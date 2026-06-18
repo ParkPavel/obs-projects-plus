@@ -801,6 +801,13 @@
                 },
                 "table": {
                     "header-hint": "Right-click a column header to rename, change type, hide, pin or reorder. Drag the edge to resize.",
+                    "row-height": "Row height",
+                    "row-height-compact": "Compact",
+                    "row-height-default": "Default",
+                    "row-height-expanded": "Expanded",
+                    "wrap-text": "Wrap text in cells",
+                    "show-aggregation": "Show aggregation row",
+                    "freeze-up-to": "Freeze columns up to field",
                     "column-menu": {
                         "property-type": "Property type",
                         "property-type-auto": "Auto",
@@ -1501,6 +1508,14 @@
                     "hide-fields": "Hide fields",
                     "hints": {
                         "hide-fields": "Select which fields to hide in the table"
+                    },
+                    "hidden-fields": "Hidden fields",
+                    "show-all": "Show all fields"
+                },
+                "shared": {
+                    "icon-field": "Icon field",
+                    "hints": {
+                        "icon-field": "Field with an emoji or lucide icon name. Shown as a per-record icon."
                     }
                 },
                 "none": "— None —"

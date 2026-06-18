@@ -760,6 +760,13 @@
                 },
                 "table": {
                     "header-hint": "右击列标题可重命名、更改类型、隐藏、固定或重新排序。拖动边缘可调整宽度。",
+                    "row-height": "行高",
+                    "row-height-compact": "紧凑",
+                    "row-height-default": "默认",
+                    "row-height-expanded": "宽松",
+                    "wrap-text": "单元格内文本换行",
+                    "show-aggregation": "显示汇总行",
+                    "freeze-up-to": "冻结列至字段",
                     "column-menu": {
                         "property-type": "属性类型",
                         "property-type-auto": "自动",
@@ -1406,6 +1413,14 @@
                     "hide-fields": "隐藏字段",
                     "hints": {
                         "hide-fields": "选择要在表格中隐藏的字段"
+                    },
+                    "hidden-fields": "隐藏的字段",
+                    "show-all": "显示所有字段"
+                },
+                "shared": {
+                    "icon-field": "图标字段",
+                    "hints": {
+                        "icon-field": "包含 emoji 或 lucide 图标名称的字段。作为每条记录的图标显示。"
                     }
                 },
                 "none": "— 无 —"
