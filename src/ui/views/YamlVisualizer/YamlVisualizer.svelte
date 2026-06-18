@@ -273,8 +273,8 @@
               <button
                 class="clickable-icon"
                 on:click={() => openFormulaModal(field.name)}
-                title={$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formula builder" })}
-                aria-label={$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formula builder" })}
+                title={$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formulas" })}
+                aria-label={$i18n.t("views.dashboard.canvas.formula-builder", { defaultValue: "Formulas" })}
               ><Icon name="function-square" size="sm" /></button>
             {:else}
               <span class="ppp-property-readonly">{asString(fieldValue(activeRecord, field.name))}</span>

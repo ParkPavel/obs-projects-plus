@@ -816,7 +816,7 @@
                     "layout-stack": "Stack",
                     "hide-formula-bar": "Hide formula bar",
                     "show-formula-bar": "Show formula bar",
-                    "formula-builder": "Formula builder",
+                    "formula-builder": "Formulas",
                     "schema": "Schema",
                     "schema-tip": "Manage project fields — types, relations, rollups",
                     "template-replace-title": "Replace current layout?",
