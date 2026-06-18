@@ -24,7 +24,7 @@
   import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync } from "./dashboardPreload";
   import { createSchemaController } from "./dashboardSchema";
   import { createTemplatesController } from "./dashboardTemplates";
-  import { applyFilterTab, formatFilterTooltip, promoteFilterTabToGlobal, type ActiveFilterTab } from "./dashboardFilters";
+  import { applyFilterTab, promoteFilterTabToGlobal, type ActiveFilterTab } from "./dashboardFilters";
   import DashboardToolbar from "./DashboardToolbar.svelte";
   import FilterBridge from "./FilterBridge.svelte";
   import TemplateConfirmDialog from "./TemplateConfirmDialog.svelte";
@@ -105,8 +105,6 @@
   ));
   $: referencedIds = collectReferencedSourceIds(widgets, project);
   $: syncPreload(referencedIds, $externalFrameInvalidation);
-  $: activeGlobalFilters = globalFilters.filter((c) => c.enabled !== false);
-  $: globalFilterTooltip = formatFilterTooltip(activeGlobalFilters);
   function promoteLocalToGlobal() {
     if (!activeFilterTab || !onViewFilterChange) return;
     onViewFilterChange({ conjunction: "and", conditions: promoteFilterTabToGlobal(activeFilterTab, globalFilters) });
@@ -165,7 +163,7 @@
       {#if showFormulaBar && !readonly}
         <FormulaBar fields={fieldNames} {previewRecord} on:apply={handleFormulaApply} on:cancel={() => (showFormulaBar = false)} />
       {/if}
-      <FilterBridge {activeGlobalFilters} {activeFilterTab} {globalFilterTooltip} {readonly}
+      <FilterBridge {activeFilterTab} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
       {#if !readonly && widgets.length > 0}
         <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []}

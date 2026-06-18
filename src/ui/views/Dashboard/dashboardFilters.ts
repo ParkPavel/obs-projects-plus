@@ -25,13 +25,6 @@ export function applyFilterTab(
   };
 }
 
-/** Render a one-line tooltip describing the active global filter conditions. */
-export function formatFilterTooltip(filters: FilterCondition[]): string {
-  return filters
-    .map((c) => `${c.field} ${c.operator}${c.value ? ` ${c.value}` : ""}`)
-    .join(" · ");
-}
-
 /**
  * Append a local FilterTabs selection to the existing global filter list as
  * an `is` condition. Suppresses duplicates (same field+value+is). Returns

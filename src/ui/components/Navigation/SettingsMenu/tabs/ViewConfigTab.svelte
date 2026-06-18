@@ -610,13 +610,13 @@
       <div class="group">
         <div class="quick-links">
           <button class="quick-link-btn" on:click={() => dispatch("navigateTab", "filters")}>
-            {$i18n.t("settings-menu.tabs.filters")}
+            {$i18n.t("settings-menu.tabs.filters")} →
           </button>
           <button class="quick-link-btn" on:click={() => dispatch("navigateTab", "colors")}>
-            {$i18n.t("settings-menu.tabs.colors")}
+            {$i18n.t("settings-menu.tabs.colors")} →
           </button>
           <button class="quick-link-btn" on:click={() => dispatch("navigateTab", "sort")}>
-            {$i18n.t("settings-menu.tabs.sort")}
+            {$i18n.t("settings-menu.tabs.sort")} →
           </button>
         </div>
 
@@ -754,19 +754,20 @@
     flex-wrap: wrap;
     margin-bottom: 0.25rem;
   }
+  /* #103: rendered as secondary navigation links, NOT a second tab row —
+     the top SettingsMenuTabs is the only tablist. */
   .quick-link-btn {
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-secondary-alt);
-    color: var(--text-normal);
-    border-radius: 0.375rem;
-    padding: 0.25rem 0.5rem;
-    min-height: 2rem;
+    border: none;
+    background: transparent;
+    color: var(--text-accent);
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.25rem;
     cursor: pointer;
     font-size: 0.75rem;
   }
   .quick-link-btn:hover {
-    border-color: var(--interactive-accent);
-    color: var(--text-accent);
+    text-decoration: underline;
+    color: var(--text-accent-hover, var(--text-accent));
   }
   .subgroup {
     display: flex;
