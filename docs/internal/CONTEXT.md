@@ -1,37 +1,36 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-18 (ГЛОБАЛЬНЫЙ АУДИТ UT-R5 + дорожная карта → `AUDIT_ROADMAP_2026-06-18.md`: декомпозиция всех проблем, скорректированная последовательность W2–W5, процессные гейты. Следующий шаг = W2.0 эпик #103 Filter UX unification. Ранее: ЭПИК #077 FormulaConstructor unification ✅ COMPLETED, отгружен в origin/main `7cc3d66`; baseline 155/2232; px-budget 177; #080 CLOSED/DECLINED → #077, #066 RESOLVED defer-to-V3)**
+> Обновлено: **2026-06-18 (ЭПИК #103 Filter UX unification ✅ DONE + i18n templates-dedup fix, СЛИТЫ и ЗАПУШЕНЫ в origin/main `590ae06`; HEAD == origin/main; НОВЫЙ baseline 156/2237; px-budget 177. Ранее в этот день: глобальный аудит UT-R5 → `AUDIT_ROADMAP_2026-06-18.md`; ЭПИК #077 FormulaConstructor unification ✅ COMPLETED. Следующий шаг = W2.1 эпик #093 SettingsMenu рециклинг)**
 
 ## Состояние веток
 
-- HEAD `main`: **`7cc3d66`** — `feat(#077): rename formula popup label to «Формулы»`
-  — **HEAD == origin/main == `7cc3d66`**, всё синхронизировано с remote, ничего не ждёт push-гейта.
-- Эпик #077 (FormulaConstructor unification) полностью отгружен: slice 1 `08398a2`/`a78fe9c`,
-  slice 2 `dd90c92`, slice 4 `5cbb97f`, финальный XS `7cc3d66`.
+- HEAD `main`: **`590ae06`** (`Bump beta version [skip ci]` — CI поверх стека #103)
+  — **HEAD == origin/main == `590ae06`**, всё синхронизировано, ничего не ждёт push-гейта.
+- Стек #103 (3 коммита) слит и запушен: `6e6930e` docs (UT-R5 audit+roadmap), `7e0ac3a` feat(#103) filter unification, `28d24a9` fix(i18n) templates-dedup. Ребейзнут поверх CI-бампов `1b399f3`/`590ae06`.
+- Эпик #077 (FormulaConstructor unification) отгружен ранее (`7cc3d66`).
 - Archive branch: `archive/dashboard-v1` — снимок V1 на момент запуска V2.
-- Working tree: `main.js` + `styles.css` модифицированы (build-артефакты, не трекаются для docs-коммита).
+- Working tree: `main.js` + `styles.css` модифицированы (build-артефакты, не трекаются для docs-коммита). Свежий билд задеплоен в OBStests 2026-06-18 22:59.
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (main @ 7cc3d66)
+## Гейты (main @ 590ae06)
 
 | Гейт | Результат |
 |---|---|
-| `npm run build` | ✅ 0 errors (3 pre-existing unrelated warnings) |
-| `npm test` | ✅ **155 suites / 2232 tests PASS** |
+| `npm run build` | ✅ 0 errors (1 pre-existing A11y warning; дубль-templates warning'и устранены в #103) |
+| `npm test` | ✅ **156 suites / 2237 tests PASS** |
 | `npm run lint` | ✅ 0 errors (130 pre-existing tsdoc warnings) |
 | `npm run svelte-check` | ✅ 0 errors / 0 warnings |
 | `@ts-ignore` в src | 0 ✅ |
-| PX-budget (`R0_3_pxBudget.test.ts`) | **≤177**, locked ✅ (отжат 186→177 в #077 slice 4) |
-| Manual API-тест в OBStests (`MANUAL_TESTING_PIPELINE.md`) | ✅ 2026-06-11: deploy + reload + 11 команд + demo smoke A1–A7 + roundtrip. Визуальный чек-лист (#059/#065/#048 strip/zero-state/темы) — ожидает человека, см. pipeline §5 |
+| PX-budget (`R0_3_pxBudget.test.ts`) | **≤177**, locked ✅ |
+| Manual API-тест в OBStests (`MANUAL_TESTING_PIPELINE.md`) | ✅ 2026-06-11 baseline; свежий #103-билд задеплоен 2026-06-18, ждёт `app:reload` + визуальную проверку фильтров |
 
-> **Канон baseline = 155 / 2232** (этот файл, «Гейты»). Ratchet 2026-06-18 (#077):
-> рост 152/2205 → 155/2232 (+3 suites / +27 tests) — новые тест-файлы FilterPills,
-> FormulaConstructor, formulaHelpGroups. Это ожидаемый рост от unification-эпика, не регрессия.
-> PX-budget отжат 186 → **177** (`R0_3_pxBudget.test.ts`, `PX_BUDGET=177`): DateFormulaInput
-> ретайрнул imperative inline-style портал → thin FC-wrapper с rem-only overrides.
-> Предыстория: 152 / 2205 (2026-06-15, #096.4 +2 TZ-boundary теста); 152 / 2203 (#101);
+> **Канон baseline = 156 / 2237** (этот файл, «Гейты»). Ratchet 2026-06-18 (#103):
+> рост 155/2232 → 156/2237 (+1 suite / +5 tests) — новый `filterBridge.test.ts` (инвариант
+> «нет дублирующего global-filter chip»). Не регрессия.
+> PX-budget ≤ **177** (`R0_3_pxBudget.test.ts`, `PX_BUDGET=177`), отжат в #077 slice 4.
+> Предыстория: 155 / 2232 (2026-06-18, #077 +3 suites); 152 / 2205 (#096.4); 152 / 2203 (#101);
 > 151 / 2195 (#102); 151 / 2192 (#096).
-> `CLAUDE.md` синхронизирован → **155 / 2232** (2026-06-18). CONTEXT.md —
+> `CLAUDE.md` синхронизирован → **156 / 2237** (2026-06-18). CONTEXT.md —
 > единственный канонический источник числа (так гласит сам CLAUDE.md).
 
 ## Активная работа
@@ -62,7 +61,7 @@
 **✅ V2-стек СЛИТ в main** (`1677310` — `Merge feat/dashboard-v2: close #099 epic + #100/#098/#096/#102/#101`): волна W2 (минус #096.4) свёрнута в main, origin/main продвинут. `feat/dashboard-v2` остаётся живой веткой для добивки follow-up-ов поверх merge.
 **✅ Сессия 2026-06-15 (W2, #096.4)**: #096.4 truncateDate dayjs-reconcile (P3, был DEFERRED) закрыт. `transformExecutor.ts` truncateDate string-fallback заменён с `new Date(String(dateVal))` на `dayjs(String(dateVal)).toDate()` — унификация на канонический dayjs date-слой (`src/lib/helpers/dateFormatting.ts`), фиксит off-by-one date-bucket drift в negative-offset таймзонах. Fast-path `instanceof Date` сохранён, `isNaN` invalid-guard сохранён. +2 TZ-boundary regression-теста в `transformExecutor.test.ts`. Architect DEFER-опасение проверено semantic-analyzer и НЕ подтвердилось. (`065331e`)
 **✅ ЭПИК #077 ЗАКРЫТ ЦЕЛИКОМ** (2026-06-18, отгружен в origin/main `7cc3d66`): «машина функций» — единый FormulaConstructor во всех точках ввода формул. Слайсы: slice 1 (`08398a2`/`a78fe9c`) — formula syntax-highlight overlay + metadata-driven FormulaHelpPanel; slice 2 (`dd90c92`) — composition-wrapper FormulaConstructorFull (toolbar + lean FC + preview-slot + help-panel) + ретайр hand-rolled chrome в AdvancedFilterEditor; slice 4 (`5cbb97f`) — ретайр imperative-портала DateFormulaInput → thin FC-wrapper, px-budget 186→177; финальный XS (`7cc3d66`) — i18n-ключ `views.dashboard.canvas.formula-builder` → «Формулы» (ru) / «Formulas» (en) / «Формули» (uk) / «公式» (zh-CN) + defaultValue-fallback в DashboardToolbar.svelte / YamlVisualizer.svelte (user-decision: «Формулы»). slice 3 (FormulaBar) НАМЕРЕННО отложен архитектором (FormulaBar уже корректен, миграция косметическая). **Архитектурное решение**: lean FormulaConstructor НЕ поглощает все 4 слоя дизайна — добавлен composition-wrapper FormulaConstructorFull; параллельная реализация DateFormulaInput (свой портал/клавиатура/preview/suggestion-движок) полностью ретайрнута — третьего пути ввода формул нет. Все 4 гейта зелёные на merge (build 0, jest 155/2232, lint 0, svelte-check 0). НОВЫЙ baseline 155/2232 (+3 suites: FilterPills, FormulaConstructor, formulaHelpGroups — не регрессия).
-**Следующий шаг**: 🔥 **W2.0 эпик #103 — Filter UX unification** (P1, S–M, без зависимостей). Это emergent-долг, вскрытый глобальным аудитом 2026-06-18 (UT-R5): #099+#077 добавили filter-pills и FilterBridge-бейдж поверх SettingsMenu-фильтра → тройное дублирование `view.filter`. Скорректированная дорожная карта на все волны W2–W5 (чёткая последовательность + зависимости + DoD связности + процессные гейты) — **`docs/internal/AUDIT_ROADMAP_2026-06-18.md`** (канон). Последовательность: W2.0 #103 → W2.1 #093 → W2.2 #090 → W2.3 (#071/#089/#094/#095) → W2.4 (#075-rem/#092) → W3 (#091/#076) → W4 (#061/#082/#060) → W5 (#078/#079/#036). Продуктовые решения 2026-06-15: #080 ❌ CLOSED/DECLINED (→#077), #066 ✅ RESOLVED (defer-to-V3). Примечание: ранний вывод аудита «тест на stale build» ОШИБОЧЕН (невалидный grep кириллицы) — реальная причина сырого ключа шаблона = дубликат ключа `views.dashboard.templates` в en/ru, исправлен в #103-стеке; deploy-гейт оставлен как общая гигиена (AUDIT_ROADMAP §4А).
+**Следующий шаг**: 🔥 **W2.1 эпик #093 — SettingsMenu рециклинг** (P1, L; зависит от #103 ✅). Все вкладки SettingsMenu → анатомия §3, field-селекты вместо текст-инпутов, полная i18n. ~~W2.0 #103 Filter UX unification~~ ✅ DONE (`590ae06`): убран дублирующий global-filter chip, ViewFilterBar pills — единственная поверхность; quick-links ViewConfigTab переоформлены как навигация; +попутно исправлен дубликат i18n-ключа templates (сырой ключ из UT-R5). Скорректированная дорожная карта на все волны W2–W5 (чёткая последовательность + зависимости + DoD связности + процессные гейты) — **`docs/internal/AUDIT_ROADMAP_2026-06-18.md`** (канон). Последовательность: W2.0 #103 → W2.1 #093 → W2.2 #090 → W2.3 (#071/#089/#094/#095) → W2.4 (#075-rem/#092) → W3 (#091/#076) → W4 (#061/#082/#060) → W5 (#078/#079/#036). Продуктовые решения 2026-06-15: #080 ❌ CLOSED/DECLINED (→#077), #066 ✅ RESOLVED (defer-to-V3). Примечание: ранний вывод аудита «тест на stale build» ОШИБОЧЕН (невалидный grep кириллицы) — реальная причина сырого ключа шаблона = дубликат ключа `views.dashboard.templates` в en/ru, исправлен в #103-стеке; deploy-гейт оставлен как общая гигиена (AUDIT_ROADMAP §4А).
 
 ## Завершённые milestones
 
@@ -149,8 +148,8 @@
 | — | ~~#101 EditNote — живая модалка (подписка на обновления записи)~~ | ✅ DONE `c1becb4` (2026-06-14, READY FOR PR) |
 | — | ~~#096.4 чарты — reconcile dayjs vs raw Date в truncateDate~~ | ✅ DONE `065331e` (2026-06-15, READY FOR PR) |
 | — | ~~EPIC #077 FormulaConstructor unification + filter-pills~~ | ✅ COMPLETED `7cc3d66` (2026-06-18, в origin/main) |
-| **W2.0** | **#103 Filter UX unification** (emergent-долг #099+#077: тройное дублирование `view.filter`) | 🔥 **СЛЕДУЮЩИЙ** (P1, S–M, без зависимостей) |
-| W2.1 | **#093** SettingsMenu рециклинг | P1, зависит от #103 |
+| — | ~~**#103 Filter UX unification**~~ | ✅ DONE `590ae06` (2026-06-18, в origin/main; +i18n templates-dedup fix) |
+| **W2.1** | **#093** SettingsMenu рециклинг | 🔥 **СЛЕДУЮЩИЙ** (P1, L; зависит от #103 ✅) |
 | W2.2 | **#090** панели виджетов (анатомия §3) | P1 design, зависит от #093 |
 | W2.3 | #071 cover-реактивность; #089 галерея cover; #094 словарь значений; #095 operator-select | P1/P2, поверх #090/#093 |
 | W2.4 | #075-остаток + #092 ясность/recovery конвейера | P1, DoD W2 |
