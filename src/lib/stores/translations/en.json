@@ -1128,7 +1128,56 @@
                     "metric-b": "Metric B"
                 },
                 "filter-tabs": {
-                    "all": "All"
+                    "all": "All",
+                    "config": {
+                        "title": "Filter tabs",
+                        "subtitle": "Pick a field — the widget auto-builds tabs from unique values. Or define tabs manually for a fixed set.",
+                        "field": "Filter field",
+                        "auto": "Auto-detected values",
+                        "seed": "Use as tabs",
+                        "seed-tip": "Copy values into editable tabs",
+                        "add": "Add tab",
+                        "tab-label": "Label",
+                        "tab-value": "Value"
+                    }
+                },
+                "stats": {
+                    "config": {
+                        "title": "Stats cards",
+                        "subtitle": "Each card shows one aggregation from the (post-pipeline) data. Use * as field for Count of records.",
+                        "empty": "No cards yet. Add one to show a KPI tile.",
+                        "add": "Add card",
+                        "columns": "Grid columns",
+                        "label": "Label",
+                        "field": "Field",
+                        "aggregation": "Aggregation",
+                        "format": "Format",
+                        "currency": "Symbol",
+                        "sparkline": "Sparkline",
+                        "fmt-number": "Number",
+                        "fmt-percent": "Percent",
+                        "fmt-currency": "Currency",
+                        "fmt-duration": "Duration"
+                    }
+                },
+                "agg": {
+                    "count_total": "Count",
+                    "count_values": "Count filled",
+                    "count_unique": "Unique",
+                    "sum": "Sum",
+                    "avg": "Average",
+                    "median": "Median",
+                    "min": "Min",
+                    "max": "Max",
+                    "range": "Range",
+                    "count_checked": "Checked",
+                    "count_unchecked": "Unchecked",
+                    "percent_checked": "% checked",
+                    "percent_unchecked": "% unchecked",
+                    "percent_empty": "% empty",
+                    "percent_not_empty": "% filled",
+                    "earliest": "Earliest date",
+                    "latest": "Latest date"
                 },
                 "checklist": {
                     "select-field": "Select a boolean field to bind",

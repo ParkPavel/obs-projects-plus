@@ -1015,7 +1015,56 @@
                     "metric-b": "指标 B"
                 },
                 "filter-tabs": {
-                    "all": "全部"
+                    "all": "全部",
+                    "config": {
+                        "title": "筛选标签",
+                        "subtitle": "选择一个字段 — 控件会根据唯一值自动生成标签。或手动定义固定的标签集。",
+                        "field": "筛选字段",
+                        "auto": "自动检测的值",
+                        "seed": "用作标签",
+                        "seed-tip": "将值复制到可编辑标签",
+                        "add": "添加标签",
+                        "tab-label": "标签",
+                        "tab-value": "值"
+                    }
+                },
+                "stats": {
+                    "config": {
+                        "title": "统计卡片",
+                        "subtitle": "每张卡片显示一项（管道处理后）数据聚合。字段填 * 表示记录计数。",
+                        "empty": "暂无卡片。添加一张以显示 KPI 磁贴。",
+                        "add": "添加卡片",
+                        "columns": "网格列数",
+                        "label": "标签",
+                        "field": "字段",
+                        "aggregation": "聚合",
+                        "format": "格式",
+                        "currency": "符号",
+                        "sparkline": "迷你图",
+                        "fmt-number": "数字",
+                        "fmt-percent": "百分比",
+                        "fmt-currency": "货币",
+                        "fmt-duration": "时长"
+                    }
+                },
+                "agg": {
+                    "count_total": "计数",
+                    "count_values": "已填写数",
+                    "count_unique": "唯一值",
+                    "sum": "求和",
+                    "avg": "平均值",
+                    "median": "中位数",
+                    "min": "最小值",
+                    "max": "最大值",
+                    "range": "极差",
+                    "count_checked": "已勾选",
+                    "count_unchecked": "未勾选",
+                    "percent_checked": "勾选百分比",
+                    "percent_unchecked": "未勾选百分比",
+                    "percent_empty": "空值百分比",
+                    "percent_not_empty": "已填写百分比",
+                    "earliest": "最早日期",
+                    "latest": "最晚日期"
                 },
                 "checklist": {
                     "select-field": "选择布尔字段",
