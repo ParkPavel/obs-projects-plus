@@ -565,7 +565,7 @@
                       class="ppp-filter-value-input"
                       type="text"
                       value={cond.value ?? ""}
-                      placeholder={$i18n.t("views.dashboard.pipeline.value", { defaultValue: "Value" })}
+                      placeholder={$i18n.t("common.value-placeholder")}
                       on:input={(e) => updateFilterValue(i, ci, inputVal(e))}
                     />
                   {/if}
