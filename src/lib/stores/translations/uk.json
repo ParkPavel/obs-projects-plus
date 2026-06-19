@@ -1020,7 +1020,22 @@
                 "checklist": {
                     "select-field": "Оберіть булеве поле",
                     "no-items": "Немає записів",
-                    "done": "виконано"
+                    "done": "виконано",
+                    "config": {
+                        "check-field": "Поле-прапорець",
+                        "check-field-placeholder": "напр. completed",
+                        "label-field": "Поле підпису",
+                        "label-field-placeholder": "name",
+                        "limit": "Ліміт",
+                        "limit-placeholder": "0 = без ліміту",
+                        "show": "Показувати",
+                        "show-all": "Усі нотатки",
+                        "show-done": "Лише виконані",
+                        "show-open": "Лише відкриті",
+                        "sort-field": "Поле сортування",
+                        "sort-field-placeholder": "name",
+                        "sort-order": "Порядок"
+                    }
                 },
                 "viewport": {
                     "select": "Оберіть подання для вбудовування",

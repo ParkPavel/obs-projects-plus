@@ -1133,7 +1133,22 @@
                 "checklist": {
                     "select-field": "Select a boolean field to bind",
                     "no-items": "No items",
-                    "done": "done"
+                    "done": "done",
+                    "config": {
+                        "check-field": "Checkbox field",
+                        "check-field-placeholder": "e.g. completed",
+                        "label-field": "Label field",
+                        "label-field-placeholder": "name",
+                        "limit": "Limit",
+                        "limit-placeholder": "0 = no limit",
+                        "show": "Show",
+                        "show-all": "All notes",
+                        "show-done": "Only done",
+                        "show-open": "Only open",
+                        "sort-field": "Sort field",
+                        "sort-field-placeholder": "name",
+                        "sort-order": "Order"
+                    }
                 },
                 "viewport": {
                     "select": "Select a view to embed",

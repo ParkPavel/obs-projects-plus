@@ -1380,7 +1380,22 @@
                 "checklist": {
                     "select-field": "Выберите булево поле",
                     "no-items": "Нет записей",
-                    "done": "выполнено"
+                    "done": "выполнено",
+                    "config": {
+                        "check-field": "Поле-чекбокс",
+                        "check-field-placeholder": "напр. completed",
+                        "label-field": "Поле подписи",
+                        "label-field-placeholder": "name",
+                        "limit": "Лимит",
+                        "limit-placeholder": "0 = без лимита",
+                        "show": "Показывать",
+                        "show-all": "Все заметки",
+                        "show-done": "Только выполненные",
+                        "show-open": "Только открытые",
+                        "sort-field": "Поле сортировки",
+                        "sort-field-placeholder": "name",
+                        "sort-order": "Порядок"
+                    }
                 },
                 "viewport": {
                     "select": "Выберите представление для вставки",

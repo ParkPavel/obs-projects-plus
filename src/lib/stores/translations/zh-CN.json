@@ -1020,7 +1020,22 @@
                 "checklist": {
                     "select-field": "选择布尔字段",
                     "no-items": "暂无项目",
-                    "done": "已完成"
+                    "done": "已完成",
+                    "config": {
+                        "check-field": "复选框字段",
+                        "check-field-placeholder": "例如 completed",
+                        "label-field": "标签字段",
+                        "label-field-placeholder": "name",
+                        "limit": "上限",
+                        "limit-placeholder": "0 = 无限制",
+                        "show": "显示",
+                        "show-all": "所有笔记",
+                        "show-done": "仅已完成",
+                        "show-open": "仅未完成",
+                        "sort-field": "排序字段",
+                        "sort-field-placeholder": "name",
+                        "sort-order": "排序"
+                    }
                 },
                 "viewport": {
                     "select": "选择要嵌入的视图",
