@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import type { ViewDefinition } from "../../../../../settings/settings";
   import { i18n } from "src/lib/stores/i18n";
+  import FieldComboInput from "./FieldComboInput.svelte";
 
   type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
 
@@ -264,135 +265,75 @@
           <div class="subheader">{$i18n.t('settings-menu.view-config.calendar.field-mapping.title')}</div>
           <span class="hint" style="margin-bottom: 0.5rem; display: block;">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hint')}</span>
           
-          <label>
+          <label for="fieldlist-date-input">
             {$i18n.t('settings-menu.view-config.calendar.field-mapping.date')}
-            <div class="field-combo">
-              <input
-                type="text"
-                list="fieldlist-date"
-                bind:value={dateField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ dateField })}
-              />
-              <datalist id="fieldlist-date">
-                {#each fields as f}
-                  <option value={f.name} />
-                {/each}
-              </datalist>
-              {#if dateField && !fields.some(f => f.name === dateField)}
-                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-              {/if}
-            </div>
+            <FieldComboInput
+              {fields}
+              id="fieldlist-date"
+              bind:value={dateField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ dateField: e.detail })}
+            />
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.date')}</span>
           </label>
           
-          <label>
+          <label for="fieldlist-startDate-input">
             {$i18n.t('settings-menu.view-config.calendar.field-mapping.start-date')}
-            <div class="field-combo">
-              <input
-                type="text"
-                list="fieldlist-startDate"
-                bind:value={startDateField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ startDateField })}
-              />
-              <datalist id="fieldlist-startDate">
-                {#each fields as f}
-                  <option value={f.name} />
-                {/each}
-              </datalist>
-              {#if startDateField && !fields.some(f => f.name === startDateField)}
-                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-              {/if}
-            </div>
+            <FieldComboInput
+              {fields}
+              id="fieldlist-startDate"
+              bind:value={startDateField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ startDateField: e.detail })}
+            />
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.start-date')}</span>
           </label>
           
-          <label>
+          <label for="fieldlist-endDate-input">
             {$i18n.t('settings-menu.view-config.calendar.field-mapping.end-date')}
-            <div class="field-combo">
-              <input
-                type="text"
-                list="fieldlist-endDate"
-                bind:value={endDateField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ endDateField })}
-              />
-              <datalist id="fieldlist-endDate">
-                {#each fields as f}
-                  <option value={f.name} />
-                {/each}
-              </datalist>
-              {#if endDateField && !fields.some(f => f.name === endDateField)}
-                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-              {/if}
-            </div>
+            <FieldComboInput
+              {fields}
+              id="fieldlist-endDate"
+              bind:value={endDateField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ endDateField: e.detail })}
+            />
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.end-date')}</span>
           </label>
           
-          <label>
+          <label for="fieldlist-startTime-input">
             {$i18n.t('settings-menu.view-config.calendar.field-mapping.start-time')}
-            <div class="field-combo">
-              <input
-                type="text"
-                list="fieldlist-startTime"
-                bind:value={startTimeField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ startTimeField })}
-              />
-              <datalist id="fieldlist-startTime">
-                {#each fields as f}
-                  <option value={f.name} />
-                {/each}
-              </datalist>
-              {#if startTimeField && !fields.some(f => f.name === startTimeField)}
-                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-              {/if}
-            </div>
+            <FieldComboInput
+              {fields}
+              id="fieldlist-startTime"
+              bind:value={startTimeField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ startTimeField: e.detail })}
+            />
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.start-time')}</span>
           </label>
           
-          <label>
+          <label for="fieldlist-endTime-input">
             {$i18n.t('settings-menu.view-config.calendar.field-mapping.end-time')}
-            <div class="field-combo">
-              <input
-                type="text"
-                list="fieldlist-endTime"
-                bind:value={endTimeField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ endTimeField })}
-              />
-              <datalist id="fieldlist-endTime">
-                {#each fields as f}
-                  <option value={f.name} />
-                {/each}
-              </datalist>
-              {#if endTimeField && !fields.some(f => f.name === endTimeField)}
-                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-              {/if}
-            </div>
+            <FieldComboInput
+              {fields}
+              id="fieldlist-endTime"
+              bind:value={endTimeField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ endTimeField: e.detail })}
+            />
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.end-time')}</span>
           </label>
           
-          <label>
+          <label for="fieldlist-check-input">
             {$i18n.t('settings-menu.view-config.calendar.field-mapping.check')}
-            <div class="field-combo">
-              <input
-                type="text"
-                list="fieldlist-check"
-                bind:value={checkField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ checkField })}
-              />
-              <datalist id="fieldlist-check">
-                {#each fields as f}
-                  <option value={f.name} />
-                {/each}
-              </datalist>
-              {#if checkField && !fields.some(f => f.name === checkField)}
-                <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-              {/if}
-            </div>
+            <FieldComboInput
+              {fields}
+              id="fieldlist-check"
+              bind:value={checkField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ checkField: e.detail })}
+            />
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.check')}</span>
           </label>
 
@@ -871,29 +812,6 @@
     gap: 0.5rem;
     flex: 1;
     cursor: pointer;
-  }
-  .field-combo {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-  .field-combo input[type="text"] {
-    flex: 1;
-  }
-  .new-field-badge {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.625rem;
-    font-weight: 600;
-    color: var(--interactive-accent);
-    background: var(--background-secondary-alt);
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    pointer-events: none;
-    white-space: nowrap;
   }
   .field-list--hidden {
     margin-top: 0.5rem;
