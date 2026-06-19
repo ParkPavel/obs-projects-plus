@@ -900,7 +900,15 @@
                         "unnest-label": "Expand list",
                         "unnest-field": "List field",
                         "unnest-none": "none",
-                        "unnest-hint": "Split a list field into one row per item."
+                        "unnest-hint": "Split a list field into one row per item.",
+                        "source": "Source project",
+                        "source-inherit": "This view's data (default)",
+                        "source-hint": "By default the block shows this view's records. Pick another project to show its data instead.",
+                        "link-to": "Link to block",
+                        "standalone": "No link — show all records",
+                        "link-hint": "Without a link the block shows all records. With a link it shows only records related to the chosen block.",
+                        "relation-field": "Filter by field",
+                        "select-field": "Select a field"
                     }
                 },
                 "field-presets": {

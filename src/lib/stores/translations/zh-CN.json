@@ -915,7 +915,15 @@
                         "unnest-label": "展开列表",
                         "unnest-field": "列表字段",
                         "unnest-none": "无",
-                        "unnest-hint": "将列表字段拆分为每项一行。"
+                        "unnest-hint": "将列表字段拆分为每项一行。",
+                        "source": "数据来源",
+                        "source-inherit": "本视图数据（默认）",
+                        "source-hint": "默认情况下，块显示本视图的记录。选择其他项目以显示其数据。",
+                        "link-to": "关联到块",
+                        "standalone": "无关联 — 显示所有记录",
+                        "link-hint": "无关联时块显示所有记录。关联后仅显示与所选块相关的记录。",
+                        "relation-field": "按字段筛选",
+                        "select-field": "选择字段"
                     }
                 },
                 "group": {

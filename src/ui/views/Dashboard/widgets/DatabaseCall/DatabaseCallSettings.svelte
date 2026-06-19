@@ -115,25 +115,27 @@
         })}
         <select value={currentProjectId} on:change={handleSourceChange}>
           <option value="">
-            — {$i18n.t("views.dashboard.database-call.settings.source-inherit", {
-              defaultValue: "inherit from view",
-            })} —
+            {$i18n.t("views.dashboard.database-call.settings.source-inherit", {
+              defaultValue: "This view's data (default)",
+            })}
           </option>
           {#each availableSources as src (src.id)}
             <option value={src.id}>{src.name}</option>
           {/each}
         </select>
+        <span class="ppp-dbc-settings__hint">{$i18n.t("views.dashboard.database-call.settings.source-hint", { defaultValue: "By default the block shows this view's records. Pick another project to show its data instead." })}</span>
       </label>
     </div>
     <div class="ppp-cfg-item">
       <label class="ppp-dbc-settings__field">
         {$i18n.t("views.dashboard.database-call.settings.link-to", { defaultValue: "Link to block" })}
         <select value={currentLinkedId} on:change={handleLinkedBlockChange}>
-          <option value="">— {$i18n.t("views.dashboard.database-call.settings.standalone", { defaultValue: "standalone" })} —</option>
+          <option value="">{$i18n.t("views.dashboard.database-call.settings.standalone", { defaultValue: "No link — show all records" })}</option>
           {#each availableWidgets as w (w.id)}
             <option value={w.id}>{w.title || w.id}</option>
           {/each}
         </select>
+        <span class="ppp-dbc-settings__hint">{$i18n.t("views.dashboard.database-call.settings.link-hint", { defaultValue: "Without a link the block shows all records. With a link it shows only records related to the chosen block." })}</span>
       </label>
     </div>
     {#if currentLinkedId}
