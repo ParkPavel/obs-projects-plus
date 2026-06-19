@@ -335,22 +335,15 @@
             <span class="hint">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hints.check')}</span>
           </label>
 
-          <label>
+          <label for="fieldlist-icon-calendar-input">
             {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
-            <div class="field-combo">
-              <input
-                type="text"
-                list="fieldlist-icon-calendar"
-                bind:value={iconField}
-                placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ iconField: iconField || undefined })}
-              />
-              <datalist id="fieldlist-icon-calendar">
-                {#each stringFields as f}
-                  <option value={f.name} />
-                {/each}
-              </datalist>
-            </div>
+            <FieldComboInput
+              fields={stringFields}
+              id="fieldlist-icon-calendar"
+              bind:value={iconField}
+              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+              on:change={(e) => emitUpdate({ iconField: e.detail || undefined })}
+            />
             <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
           </label>
         </SettingsSection>
@@ -370,88 +363,51 @@
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.column-width')}</span>
         </label>
 
-        <label>
+        <label for="fieldlist-groupBy-input">
           {$i18n.t('settings-menu.view-config.board.group-by-field')}
-          <div class="field-combo">
-            <input
-              type="text"
-              list="fieldlist-groupBy"
-              bind:value={groupByField}
-              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ groupByField: groupByField || undefined })}
-            />
-            <datalist id="fieldlist-groupBy">
-              {#each stringFields as field}
-                <option value={field.name} />
-              {/each}
-            </datalist>
-            {#if groupByField && !stringFields.some(f => f.name === groupByField)}
-              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-            {/if}
-          </div>
+          <FieldComboInput
+            fields={stringFields}
+            id="fieldlist-groupBy"
+            bind:value={groupByField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={(e) => emitUpdate({ groupByField: e.detail || undefined })}
+          />
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.group-by-field')}</span>
         </label>
 
-        <label>
+        <label for="fieldlist-header-input">
           {$i18n.t('settings-menu.view-config.board.header-field')}
-          <div class="field-combo">
-            <input
-              type="text"
-              list="fieldlist-header"
-              bind:value={headerField}
-              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ headerField: headerField || undefined })}
-            />
-            <datalist id="fieldlist-header">
-              {#each fields as field}
-                <option value={field.name} />
-              {/each}
-            </datalist>
-            {#if headerField && !fields.some(f => f.name === headerField)}
-              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-            {/if}
-          </div>
+          <FieldComboInput
+            {fields}
+            id="fieldlist-header"
+            bind:value={headerField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={(e) => emitUpdate({ headerField: e.detail || undefined })}
+          />
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.header-field')}</span>
         </label>
 
-        <label>
+        <label for="fieldlist-icon-board-input">
           {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
-          <div class="field-combo">
-            <input
-              type="text"
-              list="fieldlist-icon-board"
-              bind:value={iconField}
-              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-              on:change={() => emitUpdate({ iconField: iconField || undefined })}
-            />
-            <datalist id="fieldlist-icon-board">
-              {#each stringFields as field}
-                <option value={field.name} />
-              {/each}
-            </datalist>
-          </div>
+          <FieldComboInput
+            fields={stringFields}
+            id="fieldlist-icon-board"
+            bind:value={iconField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={(e) => emitUpdate({ iconField: e.detail || undefined })}
+          />
           <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
         </label>
 
-        <label>
+        <label for="fieldlist-orderSync-input">
           {$i18n.t('settings-menu.view-config.board.order-sync-field')}
-          <div class="field-combo">
-            <input
-              type="text"
-              list="fieldlist-orderSync"
-              bind:value={orderSyncField}
-              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-                on:change={() => emitUpdate({ orderSyncField: orderSyncField || undefined })}
-            />
-            <datalist id="fieldlist-orderSync">
-              {#each numberFields as field}
-                <option value={field.name} />
-              {/each}
-            </datalist>
-            {#if orderSyncField && !numberFields.some(f => f.name === orderSyncField)}
-              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-            {/if}
-          </div>
+          <FieldComboInput
+            fields={numberFields}
+            id="fieldlist-orderSync"
+            bind:value={orderSyncField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={(e) => emitUpdate({ orderSyncField: e.detail || undefined })}
+          />
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.order-sync-field')}</span>
         </label>
 
@@ -479,44 +435,27 @@
           <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.card-width")}</span>
         </label>
 
-        <label>
+        <label for="fieldlist-cover-input">
           {$i18n.t("settings-menu.view-config.gallery.cover-field")}
-          <div class="field-combo">
-            <input
-              type="text"
-              list="fieldlist-cover"
-              bind:value={coverField}
-              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-              on:change={() => emitUpdate({ coverField: coverField || undefined })}
-            />
-            <datalist id="fieldlist-cover">
-              {#each stringFields as field}
-                <option value={field.name} />
-              {/each}
-            </datalist>
-            {#if coverField && !stringFields.some(f => f.name === coverField)}
-              <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
-            {/if}
-          </div>
+          <FieldComboInput
+            fields={stringFields}
+            id="fieldlist-cover"
+            bind:value={coverField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={(e) => emitUpdate({ coverField: e.detail || undefined })}
+          />
           <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.cover-field")}</span>
         </label>
 
-        <label>
+        <label for="fieldlist-icon-gallery-input">
           {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
-          <div class="field-combo">
-            <input
-              type="text"
-              list="fieldlist-icon-gallery"
-              bind:value={iconField}
-              placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-              on:change={() => emitUpdate({ iconField: iconField || undefined })}
-            />
-            <datalist id="fieldlist-icon-gallery">
-              {#each stringFields as field}
-                <option value={field.name} />
-              {/each}
-            </datalist>
-          </div>
+          <FieldComboInput
+            fields={stringFields}
+            id="fieldlist-icon-gallery"
+            bind:value={iconField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={(e) => emitUpdate({ iconField: e.detail || undefined })}
+          />
           <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
         </label>
 
@@ -586,36 +525,26 @@
           <span>{$i18n.t("views.dashboard.table.show-aggregation", { defaultValue: "Show aggregation row" })}</span>
         </label>
 
-        <label>
+        <label for="fieldlist-freezeUpTo-input">
           {$i18n.t("views.dashboard.table.freeze-up-to", { defaultValue: "Freeze columns up to field" })}
-          <input
-            type="text"
-            list="fieldlist-freezeUpTo"
+          <FieldComboInput
+            {fields}
+            id="fieldlist-freezeUpTo"
             bind:value={freezeUpTo}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-            on:change={() => emitTableUpdate({ freezeUpTo: freezeUpTo || undefined })}
+            on:change={(e) => emitTableUpdate({ freezeUpTo: e.detail || undefined })}
           />
-          <datalist id="fieldlist-freezeUpTo">
-            {#each fields as field}
-              <option value={field.name} />
-            {/each}
-          </datalist>
         </label>
 
-        <label>
+        <label for="fieldlist-icon-database-input">
           {$i18n.t("settings-menu.view-config.shared.icon-field", { defaultValue: "Icon field" })}
-          <input
-            type="text"
-            list="fieldlist-icon-database"
+          <FieldComboInput
+            fields={stringFields}
+            id="fieldlist-icon-database"
             bind:value={tableConfigIconField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
-            on:change={() => emitTableUpdate({ iconField: tableConfigIconField || undefined })}
+            on:change={(e) => emitTableUpdate({ iconField: e.detail || undefined })}
           />
-          <datalist id="fieldlist-icon-database">
-            {#each stringFields as field}
-              <option value={field.name} />
-            {/each}
-          </datalist>
           <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
         </label>
 
@@ -793,31 +722,6 @@
     gap: 0.5rem;
     flex: 1;
     cursor: pointer;
-  }
-  /* Used by the remaining inline field combos (board/gallery/icon/table).
-     The calendar field mapping uses FieldComboInput, which carries its own copy. */
-  .field-combo {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-  .field-combo input[type="text"] {
-    flex: 1;
-  }
-  .new-field-badge {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.625rem;
-    font-weight: 600;
-    color: var(--interactive-accent);
-    background: var(--background-secondary-alt);
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    pointer-events: none;
-    white-space: nowrap;
   }
   .field-list--hidden {
     margin-top: 0.5rem;
