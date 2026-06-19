@@ -1004,7 +1004,9 @@
                         "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。"
                     },
                     "section": {
-                        "display": "显示设置"
+                        "display": "显示设置",
+                        "data": "数据",
+                        "scatter": "散点图"
                     }
                 },
                 "comparison": {

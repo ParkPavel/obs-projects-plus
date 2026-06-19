@@ -117,6 +117,8 @@
 </script>
 
 <div class="ppp-chart-config">
+  <details class="ppp-config-section" open>
+    <summary class="ppp-config-section-header">{$i18n.t("views.dashboard.chart.section.data")}</summary>
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.type")}</span>
     <select
@@ -210,6 +212,8 @@
     </select>
   </label>
 
+  </details>
+
   <!-- Display options (collapsible) -->
   <details class="ppp-config-section" open>
     <summary class="ppp-config-section-header">{$i18n.t("views.dashboard.chart.section.display")}</summary>
@@ -253,6 +257,8 @@
 
   <!-- Scatter-specific options -->
   {#if isScatter}
+    <details class="ppp-config-section">
+      <summary class="ppp-config-section-header">{$i18n.t("views.dashboard.chart.section.scatter")}</summary>
     <div class="ppp-config-divider"></div>
 
     <label class="ppp-config-row">
@@ -375,6 +381,7 @@
         </label>
       {/if}
     {/if}
+    </details>
   {/if}
 </div>
 

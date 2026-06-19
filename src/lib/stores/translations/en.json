@@ -1117,7 +1117,9 @@
                         "warn-mostly-unmatched": "Only {{matched}} of {{total}} records matched — results may be skewed."
                     },
                     "section": {
-                        "display": "Display Options"
+                        "display": "Display Options",
+                        "data": "Data",
+                        "scatter": "Scatter plot"
                     }
                 },
                 "comparison": {
