@@ -1242,7 +1242,7 @@ SmartSuggest relation-CTA (#059) сразу в мастер.
 > резолвился).
 
 ### #093 — P1: SettingsMenu (настройки вью/проекта) — рециклинг по канону §3
-- Status: 📋 BACKLOG | W2
+- Status: ✅ DONE (2026-06-19, стек `feat/093`, 6 коммитов) — slice 1 i18n ViewConfigTab (смесь языков устранена, en/ru/uk/zh); slice 2 verified-clean (Project/Views/ColorFilters/Sort уже переведены); slice 3 `FieldComboInput.svelte` — field-пикеры с affordance (иконка типа + caret + «новое поле», без потери create-new); slice 4 `SettingsSection.svelte` §3-аккордеоны на calendar (timeline свёрнут) + фикс хардкод-заголовка; slice 4b rollout пикера на все 9 инлайн-полей board/gallery/table. +9 тестов. Остаток: D1-подписи примерами (опц.), §3 на других вкладках (board/gallery плоские — accordion не нужен). Baseline 156/2237 → 158/2246.
 - Milestone: M-UT-FIXES | Priority: P1 | Complexity: L
 
 Скриншоты 21-19-36/21-21-45: смесь языков (Wrap text in cells / Скрыть поля), текст-инпуты
