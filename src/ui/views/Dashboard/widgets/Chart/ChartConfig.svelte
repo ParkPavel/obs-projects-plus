@@ -300,6 +300,7 @@
         value={scatterPointRadius}
         on:input={(e) => emitRaw({ pointRadius: parseInt(e.currentTarget.value) })}
       />
+      <output class="ppp-range-value">{scatterPointRadius}</output>
     </label>
 
     <label class="ppp-config-row">
@@ -309,6 +310,7 @@
         value={scatterOpacity}
         on:input={(e) => emitRaw({ opacity: parseFloat(e.currentTarget.value) })}
       />
+      <output class="ppp-range-value">{scatterOpacity.toFixed(1)}</output>
     </label>
 
     <!-- Pillar 5: cross-source correlation (Phase 5 UI) -->
@@ -398,9 +400,18 @@
     min-width: 5rem;
   }
 
-  .ppp-config-row select {
+  .ppp-config-row select,
+  .ppp-config-row input[type="range"] {
     flex: 1;
     min-width: 0;
+  }
+
+  .ppp-range-value {
+    flex-shrink: 0;
+    min-width: 2rem;
+    text-align: right;
+    color: var(--text-normal);
+    font-variant-numeric: tabular-nums;
   }
 
   .ppp-config-check {
