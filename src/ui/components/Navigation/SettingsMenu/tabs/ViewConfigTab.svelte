@@ -3,6 +3,7 @@
   import type { ViewDefinition } from "../../../../../settings/settings";
   import { i18n } from "src/lib/stores/i18n";
   import FieldComboInput from "./FieldComboInput.svelte";
+  import SettingsSection from "./SettingsSection.svelte";
 
   type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
 
@@ -154,7 +155,7 @@
 </script>
 
 <div class="section">
-  <div class="header">View Config</div>
+  <div class="header">{$i18n.t('settings-menu.view-config.title')}</div>
   {#if view}
     <p class="muted">{$i18n.t('settings-menu.view-config.current-view')}: {view.name} ({view.type})</p>
 
@@ -197,9 +198,7 @@
         </label>
         
         {#if isTimeline}
-          <div class="subgroup">
-            <div class="subheader">{$i18n.t('settings-menu.view-config.calendar.timeline.title')}</div>
-            
+          <SettingsSection title={$i18n.t('settings-menu.view-config.calendar.timeline.title')} collapsed>
             <div class="row">
               <label class="half">
                 {$i18n.t('settings-menu.view-config.calendar.timeline.start-hour')}
@@ -248,7 +247,7 @@
               />
               <span>{$i18n.t('settings-menu.view-config.calendar.timeline.show-all-day')}</span>
             </label>
-          </div>
+          </SettingsSection>
         {/if}
 
         <label class="checkbox">
@@ -261,8 +260,7 @@
         </label>
         
         <!-- Field Mapping Section -->
-        <div class="subgroup">
-          <div class="subheader">{$i18n.t('settings-menu.view-config.calendar.field-mapping.title')}</div>
+        <SettingsSection title={$i18n.t('settings-menu.view-config.calendar.field-mapping.title')}>
           <span class="hint" style="margin-bottom: 0.5rem; display: block;">{$i18n.t('settings-menu.view-config.calendar.field-mapping.hint')}</span>
           
           <label for="fieldlist-date-input">
@@ -355,7 +353,7 @@
             </div>
             <span class="hint">{$i18n.t("settings-menu.view-config.shared.hints.icon-field", { defaultValue: "Field with an emoji or lucide icon name. Shown as a per-record icon." })}</span>
           </label>
-        </div>
+        </SettingsSection>
       </div>
     {/if}
 
@@ -710,23 +708,6 @@
     text-decoration: underline;
     color: var(--text-accent-hover, var(--text-accent));
   }
-  .subgroup {
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
-    padding: 0.75rem;
-    background: var(--background-secondary-alt);
-    border-radius: 0.5rem;
-    border: 0.0625rem solid var(--background-modifier-border);
-  }
-  .subheader {
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    opacity: 0.6;
-    margin-bottom: 0.25rem;
-  }
   .row {
     display: flex;
     flex-wrap: wrap;
@@ -812,6 +793,31 @@
     gap: 0.5rem;
     flex: 1;
     cursor: pointer;
+  }
+  /* Used by the remaining inline field combos (board/gallery/icon/table).
+     The calendar field mapping uses FieldComboInput, which carries its own copy. */
+  .field-combo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .field-combo input[type="text"] {
+    flex: 1;
+  }
+  .new-field-badge {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--interactive-accent);
+    background: var(--background-secondary-alt);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    pointer-events: none;
+    white-space: nowrap;
   }
   .field-list--hidden {
     margin-top: 0.5rem;
