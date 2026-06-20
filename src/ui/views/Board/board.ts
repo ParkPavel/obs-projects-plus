@@ -9,6 +9,7 @@ import {
 } from "src/lib/dataframe/dataframe";
 import { notEmpty } from "src/lib/helpers";
 import { i18n } from "src/lib/stores/i18n";
+import { bucketLabelForRaw } from "src/ui/views/Dashboard/widgets/DatabaseCall/groupRows";
 import type { ColumnSettings } from "./types";
 
 export function getFieldByName(
@@ -202,9 +203,6 @@ function getSemanticColumns(
   sortByCustomOrder?: boolean
 ) {
   const groups = field.typeConfig?.statusGroups ?? {};
-  const todoValues = new Set(groups.todo ?? []);
-  const inProgressValues = new Set(groups.inProgress ?? []);
-  const completeValues = new Set(groups.complete ?? []);
 
   const t = get(i18n).t.bind(get(i18n));
   const LABELS = {
@@ -224,10 +222,8 @@ function getSemanticColumns(
   for (const record of records) {
     const val = record.values[field.name];
     const str = val && (isString(val) || isNumber(val)) ? String(val) : null;
-    if (str && todoValues.has(str)) buckets[LABELS.todo]!.push(record);
-    else if (str && inProgressValues.has(str)) buckets[LABELS.inProgress]!.push(record);
-    else if (str && completeValues.has(str)) buckets[LABELS.complete]!.push(record);
-    else buckets[LABELS.none]!.push(record);
+    const bucket = bucketLabelForRaw(str, groups, LABELS);
+    buckets[bucket]!.push(record);
   }
 
   return [LABELS.todo, LABELS.inProgress, LABELS.complete, LABELS.none]
