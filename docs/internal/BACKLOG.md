@@ -1252,14 +1252,29 @@ SettingsMenu (Вид/Проекты/Виды/Фильтры/Цвета/Сорт�
 календаря как явные пикеры с превью.
 
 ### #094 — P2: Словарь значений в визуализациях (легенды/группы)
-- Status: 📋 BACKLOG | W2
-- Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
+- Status: ⛔ BLOCKED — RE-SCOPE (2026-06-20, semantic-analyzer): премиса тикета ЛОЖНА.
+  Per-value словаря «сырой ключ → человеческая метка», который якобы переиспользуют
+  Board/Table, НЕ существует. Board/Table показывают сырые значения в value-режиме и
+  переименовывают лишь в 3 фиксированных семантических бакета (To Do/In Progress/Done)
+  через `statusGroups`/`semanticLabels` в semantic-режиме. Чарт-легенда формируется
+  сырой строкой в `chartDataPipeline.ts:109` (`computeChartData`), series-name на `:150`.
+  Две развилки, обе = продуктовое решение + ≥2 модуля (требуют backend-architect):
+  • Option A (per-value метки): новое поле `optionLabels?: Record<string,string>` на
+    FieldConfig/StringFieldConfig (`settings/base/settings.ts:222`) + миграция + UI в
+    ConfigureField + резолв в движке. Notion-parity, но НЕ complexity S, ≥4 модуля.
+  • Option B (чарт honor statusGroups/semanticLabels как Board/Table): переиспользует
+    реальный код, но меняет семантику чарта (per-value bars → 3-bucket bars).
+  Единая точка вставки для обеих: `chartDataPipeline.ts:109` + `:150`, кормить typeConfig
+  X-поля из `source.fields`. НЕ реализуем автономно — нужно продуктовое решение A/B
+  + architect-план. Пере-оценка complexity: S→M/L. Скриншот 21-25-49.
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M (re-scoped с S)
 
 Скриншот 21-25-49: легенда «inProgress/done/planning/review» — сырые ключи статусов.
-Маппинг отображения через statusGroups/semanticLabels там, где он уже есть у Board/Table.
+~~Маппинг отображения через statusGroups/semanticLabels там, где он уже есть у Board/Table.~~
+(↑ премиса опровергнута 2026-06-20 — такого маппинга нет, см. Status.)
 
 ### #095 — P2: PipelineEditor — operator-select и значения по канону
-- Status: 📋 BACKLOG | W2 (вместе с #075-остатком и #092)
+- Status: ✅ READY FOR PR (2026-06-20, ветка `feat/095-pipeline-value-placeholder`, коммит `1660e59`) — operator-select уже был каноничен (getOperatorLabel + operatorNeedsValue из #099); оставалась единственная дивергенция — value-инпут использовал приватный ключ `views.dashboard.pipeline.value` (defaultValue "Value"). Переведён на канонический `common.value-placeholder` («Значение…»), подтверждён во всех 4 локалях (en/ru/uk/zh-CN). Audit READY FOR PR, все 4 гейта зелёные (build 0 / jest 158-2246 / lint 0 / svelte-check 0). НЕ слит/запушен — гейт пользователя. P3-остаток: orphaned-ключ `views.dashboard.pipeline.value` (cleanup).
 - Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
 
 Скриншот 21-19-21: нативный select операторов, value-инпут без подсказки примера.
