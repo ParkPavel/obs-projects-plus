@@ -69,8 +69,17 @@
 
   const EMPTY_CHART: ChartData = { labels: [], series: [] };
 
+  // #094 — semantic status-group labels, mirroring Board's keys so a Status
+  // chart shows the same To Do / In Progress / Done / No Status as the Board.
+  $: semanticLabels = {
+    todo: $i18n.t("views.board.status-groups.todo", { defaultValue: "To Do" }),
+    inProgress: $i18n.t("views.board.status-groups.in-progress", { defaultValue: "In Progress" }),
+    complete: $i18n.t("views.board.status-groups.complete", { defaultValue: "Done" }),
+    none: $i18n.t("views.board.no-status", { defaultValue: "No Status" }),
+  };
+
   $: isScatter = config.chartType === "scatter";
-  $: chartData = isScatter ? EMPTY_CHART : computeChartData(source, config);
+  $: chartData = isScatter ? EMPTY_CHART : computeChartData(source, config, semanticLabels);
   $: scatterConfig = isScatter ? extractScatterConfig(config) : null;
   $: scatterData = isScatter && scatterConfig ? computeScatterData(source, scatterConfig, rightFrame ?? undefined) : null;
   $: heightPx = chartHeightPx(config.style.height);

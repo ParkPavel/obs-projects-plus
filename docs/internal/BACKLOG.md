@@ -1252,26 +1252,27 @@ SettingsMenu (Вид/Проекты/Виды/Фильтры/Цвета/Сорт�
 календаря как явные пикеры с превью.
 
 ### #094 — P2: Словарь значений в визуализациях (легенды/группы)
-- Status: ⛔ BLOCKED — RE-SCOPE (2026-06-20, semantic-analyzer): премиса тикета ЛОЖНА.
-  Per-value словаря «сырой ключ → человеческая метка», который якобы переиспользуют
-  Board/Table, НЕ существует. Board/Table показывают сырые значения в value-режиме и
-  переименовывают лишь в 3 фиксированных семантических бакета (To Do/In Progress/Done)
-  через `statusGroups`/`semanticLabels` в semantic-режиме. Чарт-легенда формируется
-  сырой строкой в `chartDataPipeline.ts:109` (`computeChartData`), series-name на `:150`.
-  Две развилки, обе = продуктовое решение + ≥2 модуля (требуют backend-architect):
-  • Option A (per-value метки): новое поле `optionLabels?: Record<string,string>` на
-    FieldConfig/StringFieldConfig (`settings/base/settings.ts:222`) + миграция + UI в
-    ConfigureField + резолв в движке. Notion-parity, но НЕ complexity S, ≥4 модуля.
-  • Option B (чарт honor statusGroups/semanticLabels как Board/Table): переиспользует
-    реальный код, но меняет семантику чарта (per-value bars → 3-bucket bars).
-  Единая точка вставки для обеих: `chartDataPipeline.ts:109` + `:150`, кормить typeConfig
-  X-поля из `source.fields`. НЕ реализуем автономно — нужно продуктовое решение A/B
-  + architect-план. Пере-оценка complexity: S→M/L. Скриншот 21-25-49.
-- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M (re-scoped с S)
+- Status: ✅ READY FOR PR (2026-06-20, Option B реализован на ветке `feat/095-pipeline-value-placeholder`,
+  стек поверх #095, НЕ слит/не запушен — гейт пользователя). Чарт-легенда дашборда теперь
+  показывает семантические бакеты (To Do / In Progress / Done / No Status) вместо сырых ключей
+  статусов (inProgress/done/planning/review) — чарт honor `statusGroups` так же, как Board/DataTable.
+  БЕЗ миграции схемы: `statusGroups` читаются из `source.fields[].typeConfig` (тот же путь, что Board:
+  `board.ts:55,204`). Реализация: `chartDataPipeline.ts` (`computeChartData` — гард `semanticActive` по
+  `DataFieldType.Status` + бакетизация ПОСЛЕ агрегации со слиянием value аддитивно); чистая функция
+  `bucketLabelForRaw` вынесена в `src/ui/views/Dashboard/widgets/DatabaseCall/groupRows.ts` (единый
+  источник 3-bucket логики, переиспользуется чартом и DataTable; `buildSemanticGroups` отрефакторен
+  на её вызов); `ChartWidget.svelte` прокидывает i18n-метки. Ограничение задокументировано в коде:
+  не-аддитивные Y-агрегаты (avg/min/max) по Status-оси out-of-scope для #094.
+  Гейты все зелёные: build 0 / jest **158 suites / 2260 tests** PASS / lint 0 / svelte-check 0;
+  `@ts-ignore`=0; baseline 2246→2260 (+14); px-budget ≤177 не изменён (`styles.css` не тронут).
+  Follow-up: #104 (унификация Board getSemanticColumns на `bucketLabelForRaw`).
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M (re-scoped с S; реализован Option B)
 
 Скриншот 21-25-49: легенда «inProgress/done/planning/review» — сырые ключи статусов.
-~~Маппинг отображения через statusGroups/semanticLabels там, где он уже есть у Board/Table.~~
-(↑ премиса опровергнута 2026-06-20 — такого маппинга нет, см. Status.)
+Премиса для Option B оказалась ВАЛИДНОЙ: `statusGroups` достижимы через `typeConfig` X-поля
+(`source.fields[].typeConfig`, тот же путь, что Board) — маппинг 3-bucket переиспользован из общей
+функции `bucketLabelForRaw`. (Ранний вывод 2026-06-20 «премиса ложна» относился к Option A —
+per-value словарю «сырой ключ → метка»; он по-прежнему отсутствует и out-of-scope.)
 
 ### #095 — P2: PipelineEditor — operator-select и значения по канону
 - Status: ✅ READY FOR PR (2026-06-20, ветка `feat/095-pipeline-value-placeholder`, коммит `1660e59`) — operator-select уже был каноничен (getOperatorLabel + operatorNeedsValue из #099); оставалась единственная дивергенция — value-инпут использовал приватный ключ `views.dashboard.pipeline.value` (defaultValue "Value"). Переведён на канонический `common.value-placeholder` («Значение…»), подтверждён во всех 4 локалях (en/ru/uk/zh-CN). Audit READY FOR PR, все 4 гейта зелёные (build 0 / jest 158-2246 / lint 0 / svelte-check 0). НЕ слит/запушен — гейт пользователя. P3-остаток: orphaned-ключ `views.dashboard.pipeline.value` (cleanup).
@@ -1279,7 +1280,19 @@ SettingsMenu (Вид/Проекты/Виды/Фильтры/Цвета/Сорт�
 
 Скриншот 21-19-21: нативный select операторов, value-инпут без подсказки примера.
 
-## UT-R5 — Ручное тестирование, раунд 5 (2026-06-18) + глобальный аудит
+### #104 — P3: Унифицировать Board getSemanticColumns на `bucketLabelForRaw` (последняя копия 3-bucket логики)
+- Status: 📋 BACKLOG (рекомендация аудита #094, 2026-06-20)
+- Milestone: M-UT-FIXES | Priority: P3 | Complexity: XS
+- analysis_required: false
+- Depends on: #094 (✅ READY FOR PR — вынес `bucketLabelForRaw`)
+
+После #094 единый источник 3-bucket логики (To Do / In Progress / Done / No Status) — чистая функция
+`bucketLabelForRaw` в `src/ui/views/Dashboard/widgets/DatabaseCall/groupRows.ts`; её переиспользуют
+чарт (`chartDataPipeline.ts`) и DataTable (`buildSemanticGroups`). Осталась 2-я (последняя) копия той
+же логики — inline в `src/ui/views/Board/board.ts` `getSemanticColumns` (~:197–233). Скоуп:
+отрефакторить `getSemanticColumns` на вызов `bucketLabelForRaw`, закрыв последнюю дубль-реализацию
+3-bucket маппинга. Поведенческих изменений быть не должно — только дедупликация. Acceptance: 0
+дублей 3-bucket логики; baseline держится; tsc/lint/svelte-check 0.
 
 > Скриншоты `C:\Users\Park\OBSv1.0\screanshots` (12 шт, 21:46–21:59). Полная сверка
 > «отчёт ↔ код» + декомпозиция + скорректированная дорожная карта:

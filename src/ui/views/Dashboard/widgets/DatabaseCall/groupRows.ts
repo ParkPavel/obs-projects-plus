@@ -16,12 +16,41 @@ export interface RowGroup {
   readonly subGroups?: RowGroup[];
 }
 
-const DEFAULT_SEMANTIC_LABELS = {
+export interface SemanticLabels {
+  readonly todo: string;
+  readonly inProgress: string;
+  readonly complete: string;
+  readonly none: string;
+}
+
+export type StatusGroups = {
+  readonly todo?: ReadonlyArray<string>;
+  readonly inProgress?: ReadonlyArray<string>;
+  readonly complete?: ReadonlyArray<string>;
+};
+
+export const DEFAULT_SEMANTIC_LABELS: SemanticLabels = {
   todo: "To Do",
   inProgress: "In Progress",
   complete: "Done",
   none: "No Status",
-} as const;
+};
+
+/**
+ * #045.6 / #094 — Map one raw status value into its semantic bucket label.
+ * Single source of truth for 3-bucket dispatch shared by DataTable, Board
+ * and the Dashboard chart pipeline.
+ */
+export function bucketLabelForRaw(
+  raw: string | null,
+  statusGroups: StatusGroups,
+  labels: SemanticLabels
+): string {
+  if (raw !== null && (statusGroups.todo ?? []).includes(raw)) return labels.todo;
+  if (raw !== null && (statusGroups.inProgress ?? []).includes(raw)) return labels.inProgress;
+  if (raw !== null && (statusGroups.complete ?? []).includes(raw)) return labels.complete;
+  return labels.none;
+}
 
 /**
  * Group records by the specified field.
@@ -104,11 +133,8 @@ function buildSemanticGroups(
   config: GroupConfig
 ): { key: string; records: DataRecord[] }[] {
   const sg = config.statusGroups ?? {};
-  const todoSet = new Set(sg.todo ?? []);
-  const inProgressSet = new Set(sg.inProgress ?? []);
-  const completeSet = new Set(sg.complete ?? []);
 
-  const labels = {
+  const labels: SemanticLabels = {
     todo: config.semanticLabels?.todo ?? DEFAULT_SEMANTIC_LABELS.todo,
     inProgress: config.semanticLabels?.inProgress ?? DEFAULT_SEMANTIC_LABELS.inProgress,
     complete: config.semanticLabels?.complete ?? DEFAULT_SEMANTIC_LABELS.complete,
@@ -123,17 +149,9 @@ function buildSemanticGroups(
   };
 
   for (const record of records) {
-    const v = record.values[config.field];
-    const str = stringifyForBucket(v);
-    if (str !== null && todoSet.has(str)) {
-      buckets[labels.todo]!.push(record);
-    } else if (str !== null && inProgressSet.has(str)) {
-      buckets[labels.inProgress]!.push(record);
-    } else if (str !== null && completeSet.has(str)) {
-      buckets[labels.complete]!.push(record);
-    } else {
-      buckets[labels.none]!.push(record);
-    }
+    const str = stringifyForBucket(record.values[config.field]);
+    const bucket = bucketLabelForRaw(str, sg, labels);
+    buckets[bucket]!.push(record);
   }
 
   const ordered: { key: string; records: DataRecord[] }[] = [
@@ -149,7 +167,7 @@ function buildSemanticGroups(
   return ordered;
 }
 
-function stringifyForBucket(value: Optional<DataValue>): string | null {
+export function stringifyForBucket(value: Optional<DataValue>): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);

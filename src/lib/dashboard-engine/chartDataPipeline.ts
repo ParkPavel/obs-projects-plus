@@ -7,6 +7,11 @@ import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterCha
 import type { TransformPipeline, TransformStep, GroupByStep, AggregationFunction } from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
 import { joinKey as scatterJoinKey } from "./joinKey";
+import {
+  bucketLabelForRaw,
+  DEFAULT_SEMANTIC_LABELS,
+  type SemanticLabels,
+} from "src/ui/views/Dashboard/widgets/DatabaseCall/groupRows";
 
 
 /**
@@ -81,7 +86,8 @@ export function buildChartPipeline(
  */
 export function computeChartData(
   source: DataFrame,
-  config: ChartConfig
+  config: ChartConfig,
+  semanticLabels: SemanticLabels = DEFAULT_SEMANTIC_LABELS
 ): ChartData {
   // Guard: no x-axis field selected → empty chart (not "__empty__" bar)
   if (!config.xAxis.property) {
@@ -103,6 +109,21 @@ export function computeChartData(
     ? `${dateGrouping.field}_${dateGrouping.granularity}`
     : config.xAxis.property;
   const valueField = config.yAxis.property === "count" ? "_group_size" : "__chart_value__";
+
+  // #094 — Honor Status semantic groups: when the X field is a Status field
+  // with a non-empty statusGroups overlay (and no date-bucketing is active),
+  // collapse raw status keys into the same 3-bucket display (To Do / In
+  // Progress / Done / No Status) that Board and DataTable already use.
+  // Dispatch by DataFieldType.Status — never by field.name (invariant).
+  const xFieldDef = source.fields.find((f) => f.name === config.xAxis.property);
+  const sg = xFieldDef?.typeConfig?.statusGroups;
+  const hasAnyBucket = !!(
+    sg &&
+    (sg.todo?.length ?? 0) + (sg.inProgress?.length ?? 0) + (sg.complete?.length ?? 0) > 0
+  );
+  const semanticActive =
+    xFieldDef?.type === DataFieldType.Status && hasAnyBucket && dateGrouping == null;
+
   let entries: { label: string; value: number | null }[] = [];
 
   for (const record of df.records) {
@@ -110,28 +131,61 @@ export function computeChartData(
     const rawVal = record.values[valueField];
     const value = rawVal != null ? Number(rawVal) : null;
 
-    // Skip zero values if configured
+    // Skip zero values if configured (raw level — mirrors groupRows omitZero).
     if (config.xAxis.omitZero && (value === 0 || value === null)) continue;
 
-    // Skip hidden groups
-    if (config.xAxis.hiddenGroups?.includes(label)) continue;
+    // Skip hidden groups (raw level only when NOT semantic — semantic applies
+    // hiddenGroups to bucket labels after the merge below).
+    if (!semanticActive && config.xAxis.hiddenGroups?.includes(label)) continue;
 
     entries.push({ label, value });
   }
 
-  // Sort entries
-  if (config.xAxis.sortBy === "value") {
-    entries.sort((a, b) => {
-      const av = a.value ?? 0;
-      const bv = b.value ?? 0;
-      return config.xAxis.sortOrder === "asc" ? av - bv : bv - av;
-    });
-  } else if (config.xAxis.sortBy === "label") {
-    entries.sort((a, b) =>
-      config.xAxis.sortOrder === "asc"
-        ? a.label.localeCompare(b.label, undefined, { numeric: true })
-        : b.label.localeCompare(a.label, undefined, { numeric: true })
-    );
+  if (semanticActive && sg) {
+    // WHY: semantic buckets merge additively (count/sum); non-additive Y-agg
+    // out of scope for #094.
+    const bucketOrder = [semanticLabels.todo, semanticLabels.inProgress, semanticLabels.complete];
+    const merged = new Map<string, number | null>();
+    for (const e of entries) {
+      const raw = e.label === "" ? null : e.label;
+      const bucket = bucketLabelForRaw(raw, sg, semanticLabels);
+      const prev = merged.has(bucket) ? merged.get(bucket)! : null;
+      if (e.value === null) {
+        // null stays null only if nothing else contributed a number.
+        merged.set(bucket, prev);
+      } else {
+        merged.set(bucket, (prev ?? 0) + e.value);
+      }
+    }
+
+    const hidden = new Set(config.xAxis.hiddenGroups ?? []);
+    const ordered: { label: string; value: number | null }[] = [];
+    for (const bucket of bucketOrder) {
+      if (hidden.has(bucket)) continue;
+      ordered.push({ label: bucket, value: merged.get(bucket) ?? null });
+    }
+    // "No Status" surfaces only when something actually landed there.
+    if (merged.has(semanticLabels.none) && !hidden.has(semanticLabels.none)) {
+      ordered.push({ label: semanticLabels.none, value: merged.get(semanticLabels.none) ?? null });
+    }
+    entries = ordered;
+  }
+
+  // Sort entries (value mode only — semantic order is fixed To Do→…→Done).
+  if (!semanticActive) {
+    if (config.xAxis.sortBy === "value") {
+      entries.sort((a, b) => {
+        const av = a.value ?? 0;
+        const bv = b.value ?? 0;
+        return config.xAxis.sortOrder === "asc" ? av - bv : bv - av;
+      });
+    } else if (config.xAxis.sortBy === "label") {
+      entries.sort((a, b) =>
+        config.xAxis.sortOrder === "asc"
+          ? a.label.localeCompare(b.label, undefined, { numeric: true })
+          : b.label.localeCompare(a.label, undefined, { numeric: true })
+      );
+    }
   }
 
   // Apply cumulative if configured
