@@ -1281,7 +1281,7 @@ per-value словарю «сырой ключ → метка»; он по-пр�
 Скриншот 21-19-21: нативный select операторов, value-инпут без подсказки примера.
 
 ### #104 — P3: Унифицировать Board getSemanticColumns на `bucketLabelForRaw` (последняя копия 3-bucket логики)
-- Status: 📋 BACKLOG (рекомендация аудита #094, 2026-06-20)
+- Status: ✅ READY FOR PR (2026-06-21, ветка `feat/095-pipeline-value-placeholder`, коммит `9cb69ec`, стек поверх #094, НЕ слит/не запушен — гейт пользователя). `getSemanticColumns` (`board.ts:~203`) переведён с локальных `Set` + if/else-цепочки на вызов канонической `bucketLabelForRaw(str, groups, LABELS)` — последняя 2-я копия 3-bucket логики устранена (0 дублей). Чистый рефактор, поведение идентично построчно (null→none, порядок todo→inProgress→complete→none, `Set.has`↔`Array.includes`). Гейты: tsc 0 / jest по затронутым модулям 58 suites / 811 tests PASS / baseline 158/2260 держится. P3-остаток отсутствует.
 - Milestone: M-UT-FIXES | Priority: P3 | Complexity: XS
 - analysis_required: false
 - Depends on: #094 (✅ READY FOR PR — вынес `bucketLabelForRaw`)

@@ -1,15 +1,18 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-20 (W2.3: #095 + #094 ✅ READY FOR PR — стек на ветке `feat/095-pipeline-value-placeholder`, 2 коммита, НЕ слит/не запушен — гейт пользователя. #095 value-placeholder → канонический `common.value-placeholder`; #094 Option B — чарт honor `statusGroups` (семантические бакеты в легенде вместо сырых ключей), `bucketLabelForRaw` вынесена как единый источник 3-bucket логики. Baseline 2246→2260 (+14 тестов, #094), px-budget ≤177 не тронут. Заведён follow-up #104 (унификация Board getSemanticColumns, P3/XS). Ранее: #090 DONE, #093 DONE, #103 DONE, UT-R5 audit. Следующий шаг по канону = остаток W2.3 (#071/#089 ждут user-репро), затем W2.4 (#075-rem/#092))**
+> Обновлено: **2026-06-21 (W2.3: #095 + #094 + #104 ✅ READY FOR PR — стек на ветке `feat/095-pipeline-value-placeholder`, 3 коммита, НЕ слит/не запушен — гейт пользователя. #095 value-placeholder → канонический `common.value-placeholder`; #094 Option B — чарт honor `statusGroups` (семантические бакеты в легенде вместо сырых ключей), `bucketLabelForRaw` вынесена как единый источник 3-bucket логики; #104 — Board getSemanticColumns переведён на `bucketLabelForRaw` (0 дублей 3-bucket логики, чистый рефактор). Baseline 2246→2260 (+14 тестов, #094), px-budget ≤177 не тронут. Ранее: #090 DONE, #093 DONE, #103 DONE, UT-R5 audit. Следующий шаг по канону = остаток W2.3 (#071/#089 ждут user-репро), затем W2.4 (#075-rem/#092 — ВНИМАНИЕ: проверить премису, эпик #099 частично «поглотил» эти тикеты, см. BACKLOG:1338))**
 
 ## Состояние веток
 
-- **Активный стек `feat/095-pipeline-value-placeholder`** (поверх V2-merge): 2 коммита, оба
+- **Активный стек `feat/095-pipeline-value-placeholder`** (поверх V2-merge): 3 коммита, все
   READY FOR PR, **НЕ слиты / НЕ запушены — гейт пользователя** (политика «stack pipeline без пауз»):
   - #095 (`1660e59`) — PipelineEditor value-placeholder → канонический `common.value-placeholder`.
-  - #094 (Option B) — чарт honor `statusGroups`: семантические бакеты в легенде вместо сырых ключей
-    статусов; `bucketLabelForRaw` вынесена в `groupRows.ts` как единый источник 3-bucket логики.
+  - #094 (`bb123bb`, Option B) — чарт honor `statusGroups`: семантические бакеты в легенде вместо сырых
+    ключей статусов; `bucketLabelForRaw` вынесена в `groupRows.ts` как единый источник 3-bucket логики.
     Baseline 2246→2260 (+14), px-budget ≤177 не тронут.
+  - #104 (`9cb69ec`) — Board `getSemanticColumns` переведён на `bucketLabelForRaw` (последняя 2-я копия
+    3-bucket логики устранена, 0 дублей). Чистый рефактор, поведение идентично; tsc 0, затронутые тесты
+    58 suites / 811 PASS, baseline 158/2260 держится.
 - HEAD `main`: **`590ae06`** (`Bump beta version [skip ci]` — CI поверх стека #103)
   — origin/main синхронизирован на `590ae06`; стек #095/#094 ждёт push-гейта поверх него.
 - Стек #103 (3 коммита) слит и запушен: `6e6930e` docs (UT-R5 audit+roadmap), `7e0ac3a` feat(#103) filter unification, `28d24a9` fix(i18n) templates-dedup. Ребейзнут поверх CI-бампов `1b399f3`/`590ae06`.
