@@ -896,6 +896,9 @@
                     "add-first-record": "Add first record",
                     "no-matches": "No matches",
                     "clear-filter": "Clear filter",
+                    "pipeline-hid-all": "The pipeline returned no rows ({{count}} step(s))",
+                    "open-pipeline": "Open pipeline",
+                    "clear-pipeline": "Clear pipeline",
                     "settings": {
                         "unnest-label": "Expand list",
                         "unnest-field": "List field",
@@ -928,7 +931,7 @@
                     "expand": "Expand widget",
                     "collapse": "Collapse widget",
                     "chart-settings": "Chart settings",
-                    "pipeline": "Transform pipeline",
+                    "pipeline": "Pipeline: reshape data before showing — group, count, sort",
                     "remove": "Remove widget",
                     "not-configured": "Widget type \"{{type}}\" — not configured",
                     "add": "Add Widget",
@@ -993,11 +996,29 @@
                 "pipeline": {
                     "title": "Transform Pipeline",
                     "steps": "step(s)",
-                    "empty": "No transform steps. Add a step below.",
+                    "clear": "Clear",
+                    "empty": {
+                        "title": "Reshape your data before it is shown",
+                        "beforeLabel": "Raw data",
+                        "afterLabel": "Result",
+                        "caption": "Pick a step below — group, count, filter or sort.",
+                        "sampleBefore": [
+                            "Push-ups — 30",
+                            "Push-ups — 25",
+                            "Squats — 50",
+                            "Squats — 40",
+                            "Plank — 60"
+                        ],
+                        "sampleAfter": [
+                            "Push-ups — 55 total",
+                            "Squats — 90 total",
+                            "Plank — 60 total"
+                        ]
+                    },
                     "move-up": "Move up",
                     "move-down": "Move down",
                     "remove": "Remove",
-                    "add-step": "Add step:",
+                    "add-step": "Add a data step",
                     "filter": "Filter",
                     "group-by": "Group By",
                     "aggregate": "Aggregate",

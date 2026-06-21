@@ -811,7 +811,7 @@
                     "expand": "展开组件",
                     "collapse": "折叠组件",
                     "chart-settings": "图表设置",
-                    "pipeline": "数据管道",
+                    "pipeline": "管道：显示前重塑数据 — 分组、计数、排序",
                     "remove": "删除组件",
                     "not-configured": "组件类型 \"{{type}}\" — 未配置",
                     "add": "添加组件",
@@ -874,11 +874,29 @@
                 "pipeline": {
                     "title": "数据管道",
                     "steps": "个步骤",
-                    "empty": "没有步骤。请在下方添加。",
+                    "clear": "清空",
+                    "empty": {
+                        "title": "在显示前重塑数据",
+                        "beforeLabel": "原始数据",
+                        "afterLabel": "结果",
+                        "caption": "在下方选择一个步骤 — 分组、计数、筛选或排序。",
+                        "sampleBefore": [
+                            "俯卧撑 — 30",
+                            "俯卧撑 — 25",
+                            "深蹲 — 50",
+                            "深蹲 — 40",
+                            "平板支撑 — 60"
+                        ],
+                        "sampleAfter": [
+                            "俯卧撑 — 共 55",
+                            "深蹲 — 共 90",
+                            "平板支撑 — 共 60"
+                        ]
+                    },
                     "move-up": "上移",
                     "move-down": "下移",
                     "remove": "删除",
-                    "add-step": "添加步骤：",
+                    "add-step": "添加数据步骤",
                     "filter": "筛选",
                     "group-by": "分组",
                     "aggregate": "汇总",
@@ -911,6 +929,15 @@
                     "enable-step": "启用步骤"
                 },
                 "database-call": {
+                    "empty": "尚未配置视图",
+                    "add-first": "添加第一个视图",
+                    "no-records": "还没有记录",
+                    "add-first-record": "添加第一条记录",
+                    "no-matches": "无匹配项",
+                    "clear-filter": "清除筛选",
+                    "pipeline-hid-all": "管道未返回任何行（{{count}} 个步骤）",
+                    "open-pipeline": "打开管道",
+                    "clear-pipeline": "清空管道",
                     "settings": {
                         "unnest-label": "展开列表",
                         "unnest-field": "列表字段",
