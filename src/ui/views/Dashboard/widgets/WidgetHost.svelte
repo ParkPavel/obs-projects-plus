@@ -82,7 +82,8 @@
   $: dbCallSourceConfig = widget.type === "database-call" ? widget.sourceConfig : undefined;
   $: dbCallFrame = dbCallSourceConfig?.projectId ? rightFrames.get(dbCallSourceConfig.projectId) ?? frame : transformedFrame;
   $: dbCallLinkedSelection = widget.type === "database-call" ? (widget.config as unknown as WidgetDataContext).linkedSelection : undefined;
-
+  // #092: a linked source bypasses the host pipeline, so its counters must not arm the recovery node.
+  $: dbCallUsesLinkedSource = !!dbCallSourceConfig?.projectId;
   // Multi-DataTable per-widget config overlay (primary keeps root config).
   $: widgetTableConfig = (widget.config as { table?: DataTableConfig })?.table;
   $: effectiveTableConfig = isPrimaryDataTable ? tableConfig : widgetTableConfig ?? tableConfig;
@@ -90,8 +91,8 @@
   $: ctx = {
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields,
     fieldPresets, activeFieldPresetId, availableSources, project,
-    effectiveTableConfig, pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount,
-    chartConfig, statsConfig, chartRightFrame,
+    effectiveTableConfig,
+    pipelineStepCount: dbCallUsesLinkedSource ? 0 : currentPipeline.steps.length, pipelineInputRowCount: dbCallUsesLinkedSource ? 0 : pipelineInputRowCount, chartConfig, statsConfig, chartRightFrame,
     dbCallFrame, dbCallFields: dbCallFrame.fields, dbCallSourceConfig, dbCallLinkedSelection,
   } satisfies WidgetRenderContext;
 

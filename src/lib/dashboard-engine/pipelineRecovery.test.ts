@@ -92,6 +92,15 @@ describe("#092 pipeline empty-output recovery", () => {
     ).toBe(false);
   });
 
+  it("suppresses the dead-end when a linked source zeroes the host pipeline counters", () => {
+    // #092: with a database-call linked source the host pipeline never touched the
+    // displayed frame, so WidgetHost forwards zeroed counters. The predicate must
+    // then read false even though the external source is empty and steps exist.
+    expect(
+      pipelineHidAll({ stepCount: 0, inputRowCount: 0, outputRowCount: 0, isFilterEmpty: false })
+    ).toBe(false);
+  });
+
   it("restores every row once the pipeline is cleared", () => {
     const frame = makeFrame();
     const cleared = executeTransform(frame, { steps: [] });
