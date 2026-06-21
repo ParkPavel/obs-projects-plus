@@ -1051,10 +1051,15 @@ kernel-`count` вообще (если нет — убрать из ColumnAggrega
 Architect-план обязателен ДО кода (как #067).
 
 ### #075 — P1 UX: конвейер трансформаций — дискаверабилити и язык
-- Status: ⚠️ PARTIAL (2026-06-11) — минимальный слой D1 реализован: каждый тип шага несёт
-  описание на языке задач с примером (`*-desc` ключи en+ru, tooltip на кнопках добавления
-  шага). Остаток (empty-state «было → стало», именованный вход в WidgetHost) — после
-  дизайн-сессии по UT2026-E и согласованно с #067 (кнопка живёт в WidgetHost).
+- Status: ✅ READY FOR PR (2026-06-21) — остаток закрыт на ветке
+  `feat/095-pipeline-value-placeholder` (коммит `15eafca`): обучающий empty-state конвейера
+  «было→стало» (заголовок `wand-2` + grid колонок + `arrow-right`, все размеры в rem на
+  существующих `--ppp-*` токенах, новых токенов не потребовалось), кнопка «Очистить конвейер»
+  (`trash-2`, один клик, Решение 1C) в футере PipelineEditor. Копирайт 2A («на языке задач»):
+  tooltip ∑ и пункт меню переформулированы во всех 4 локалях (только значения, ключи не тронуты).
+  Попутно закрыт i18n-пробел `database-call.*` в uk/zh-CN (коммит `ed37238`). px-budget ≤177
+  держится. 4 гейта зелёные. Ранний слой D1 (`*-desc` ключи) учтён. Остатка нет.
+- Прежний статус: ⚠️ PARTIAL (2026-06-11) — слой D1 (описания шагов на языке задач, tooltip).
 - Milestone: M-UT-FIXES | Priority: P1 | Complexity: M
 - analysis_required: false | design_required: true (senior-designer)
 - Depends on: #069 ✅
@@ -1212,7 +1217,15 @@ typed-карточки — status pills, цветные chips, типизиро�
 SmartSuggest relation-CTA (#059) сразу в мастер.
 
 ### #092 — P1: Восстановление из пустого конвейера («Нет данных»)
-- Status: 📋 BACKLOG
+- Status: ✅ READY FOR PR (2026-06-21) — recovery-узел реализован на ветке
+  `feat/095-pipeline-value-placeholder`: при непустом конвейере, скрывшем все строки
+  (`pipelineStepCount>0 && inputRowCount>0 && records===0 && !isFilterEmpty`), показывается
+  EmptyState `filter-x` «Конвейер скрыл все записи (N шагов)» с [Открыть конвейер] [Очистить
+  конвейер] (один клик, Решение 1C). Проброс `inputRowCount` WidgetHost→ctx→DatabaseCallBlock
+  (коммит `ccf051b`); фикс ложного срабатывания при linked source (`1224481`). Round-trip Jest
+  (`pipelineRecovery.test.ts`). 4 гейта зелёные: build 0 / 159 suites · 2264 tests / lint 0 /
+  svelte-check 0. Аудит READY FOR PR. NB: #099 ранее помечал #092 как поглощённый — фактически
+  закрыт этим тонким UX-слоем поверх существующего движка, без дубля filter engine.
 - Milestone: M-UT-FIXES | Priority: P1 | Complexity: S
 
 Скриншот 10-17-34: «Проекты по статусу» = «Нет данных», бейдж Σ4 — шаги конвейера

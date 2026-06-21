@@ -1,18 +1,27 @@
 # Текущий контекст — для агентов
 
-> Обновлено: **2026-06-21 (W2.3: #095 + #094 + #104 ✅ READY FOR PR — стек на ветке `feat/095-pipeline-value-placeholder`, 3 коммита, НЕ слит/не запушен — гейт пользователя. #095 value-placeholder → канонический `common.value-placeholder`; #094 Option B — чарт honor `statusGroups` (семантические бакеты в легенде вместо сырых ключей), `bucketLabelForRaw` вынесена как единый источник 3-bucket логики; #104 — Board getSemanticColumns переведён на `bucketLabelForRaw` (0 дублей 3-bucket логики, чистый рефактор). Baseline 2246→2260 (+14 тестов, #094), px-budget ≤177 не тронут. Ранее: #090 DONE, #093 DONE, #103 DONE, UT-R5 audit. Следующий шаг по канону = остаток W2.3 (#071/#089 ждут user-репро), затем W2.4 (#075-rem/#092 — ВНИМАНИЕ: проверить премису, эпик #099 частично «поглотил» эти тикеты, см. BACKLOG:1338))**
+> Обновлено: **2026-06-21 (W2.4: #092 + #075-остаток ✅ READY FOR PR — поверх стека `feat/095-pipeline-value-placeholder` (теперь 5+ коммитов), НЕ слит/не запушен — гейт пользователя. #092 recovery-узел пустого конвейера: EmptyState `filter-x` «Конвейер скрыл все записи (N шагов)» + [Открыть/Очистить конвейер], проброс `inputRowCount` WidgetHost→ctx→DatabaseCallBlock, фикс ложного срабатывания при linked source. #075-остаток дискаверабилити: обучающий empty-state «было→стало» (wand-2+arrow-right) + кнопка «Очистить конвейер» (trash-2) в PipelineEditor + копирайт 2A «на языке задач» 4 локали + закрыт i18n-пробел database-call.* в uk/zh-CN. Остатка нет. Baseline 158/2260 → **159/2264** (+1 suite `pipelineRecovery.test.ts`, +4 теста), px-budget ≤177. Ранее на стеке: #095 value-placeholder, #094 Option B (чарт honor `statusGroups`), #104 (Board getSemanticColumns на `bucketLabelForRaw`) — все READY FOR PR. Следующий шаг = W2.3 #071/#089 (ждут user-репро), затем DoD-связность волны W2 (кросс-поверхностное ревью))**
 
 ## Состояние веток
 
-- **Активный стек `feat/095-pipeline-value-placeholder`** (поверх V2-merge): 3 коммита, все
-  READY FOR PR, **НЕ слиты / НЕ запушены — гейт пользователя** (политика «stack pipeline без пауз»):
+- **Активный стек `feat/095-pipeline-value-placeholder`** (поверх V2-merge): теперь 7 коммитов
+  (+ chore-rebuild), все READY FOR PR, **НЕ слиты / НЕ запушены — гейт пользователя**
+  (политика «stack pipeline без пауз»):
   - #095 (`1660e59`) — PipelineEditor value-placeholder → канонический `common.value-placeholder`.
   - #094 (`bb123bb`, Option B) — чарт honor `statusGroups`: семантические бакеты в легенде вместо сырых
     ключей статусов; `bucketLabelForRaw` вынесена в `groupRows.ts` как единый источник 3-bucket логики.
     Baseline 2246→2260 (+14), px-budget ≤177 не тронут.
-  - #104 (`9cb69ec`) — Board `getSemanticColumns` переведён на `bucketLabelForRaw` (последняя 2-я копия
-    3-bucket логики устранена, 0 дублей). Чистый рефактор, поведение идентично; tsc 0, затронутые тесты
-    58 suites / 811 PASS, baseline 158/2260 держится.
+  - #104 (`9cb69ec` / docs `9cea902`) — Board `getSemanticColumns` переведён на `bucketLabelForRaw`
+    (последняя 2-я копия 3-bucket логики устранена, 0 дублей). Чистый рефактор, поведение идентично.
+  - **#092** (`ccf051b` + i18n `ed37238` + fix `1224481`, 2026-06-21) — recovery-узел пустого конвейера:
+    EmptyState `filter-x` «Конвейер скрыл все записи (N шагов)» с [Открыть конвейер]/[Очистить конвейер];
+    проброс `inputRowCount` WidgetHost→ctx→DatabaseCallBlock; фикс ложного срабатывания при linked source.
+    +1 suite `pipelineRecovery.test.ts` (+4 теста) → baseline 158/2260 → **159/2264**.
+  - **#075-остаток** (`15eafca` + i18n `ed37238`, 2026-06-21) — дискаверабилити конвейера: обучающий
+    empty-state «было→стало» (wand-2 + arrow-right, rem-токены), кнопка «Очистить конвейер» (trash-2,
+    один клик) в PipelineEditor, копирайт 2A «на языке задач» в 4 локалях, закрыт i18n-пробел
+    `database-call.*` в uk/zh-CN. Остатка нет.
+  - chore `e68e761` — rebuild bundle после #092 linked-source fix.
 - HEAD `main`: **`590ae06`** (`Bump beta version [skip ci]` — CI поверх стека #103)
   — origin/main синхронизирован на `590ae06`; стек #095/#094 ждёт push-гейта поверх него.
 - Стек #103 (3 коммита) слит и запушен: `6e6930e` docs (UT-R5 audit+roadmap), `7e0ac3a` feat(#103) filter unification, `28d24a9` fix(i18n) templates-dedup. Ребейзнут поверх CI-бампов `1b399f3`/`590ae06`.
@@ -21,19 +30,22 @@
 - Working tree: `main.js` + `styles.css` модифицированы (build-артефакты, не трекаются для docs-коммита). Свежий билд задеплоен в OBStests 2026-06-18 22:59.
 - Plugin version: `3.5.1-alpha`.
 
-## Гейты (стек #095 + #094 @ `feat/095-pipeline-value-placeholder`, поверх V2-merge)
+## Гейты (стек #095 + #094 + #104 + #092 + #075 @ `feat/095-pipeline-value-placeholder`, поверх V2-merge)
 
 | Гейт | Результат |
 |---|---|
 | `npm run build` | ✅ 0 errors (1 pre-existing A11y warning) |
-| `npm test` | ✅ **158 suites / 2260 tests PASS** |
+| `npm test` | ✅ **159 suites / 2264 tests PASS** |
 | `npm run lint` | ✅ 0 errors (130 pre-existing tsdoc warnings) |
 | `npm run svelte-check` | ✅ 0 errors / 0 warnings |
 | `@ts-ignore` в src | 0 ✅ |
-| PX-budget (`R0_3_pxBudget.test.ts`) | **≤177**, locked ✅ (`styles.css` не тронут #094) |
+| PX-budget (`R0_3_pxBudget.test.ts`) | **≤177**, locked ✅ |
 | Manual API-тест в OBStests (`MANUAL_TESTING_PIPELINE.md`) | ✅ 2026-06-11 baseline; свежий #103-билд задеплоен 2026-06-18, ждёт `app:reload` + визуальную проверку фильтров |
 
-> **Канон baseline = 158 / 2260** (этот файл, «Гейты»). Ratchet 2026-06-20 (#094):
+> **Канон baseline = 159 / 2264** (этот файл, «Гейты»). Ratchet 2026-06-21 (#092):
+> рост 158/2260 → 159/2264 (+1 suite `pipelineRecovery.test.ts`, +4 tests) — recovery-узел
+> пустого конвейера. Не регрессия. #075-остаток (стек ниже #092) baseline не двигал
+> (empty-state + i18n). Предыдущий ratchet 2026-06-20 (#094):
 > рост 158/2246 → 158/2260 (+14 tests, 0 suites) — Option B чарт honor `statusGroups`
 > (`chartDataPipeline` бакетизация + `bucketLabelForRaw`). Не регрессия. #095 (стек ниже #094)
 > baseline не двигал (i18n-ключ value-placeholder). Предыдущий ratchet 2026-06-19 (#093):
@@ -43,8 +55,8 @@
 > PX-budget ≤ **177** (`R0_3_pxBudget.test.ts`, `PX_BUDGET=177`), отжат в #077 slice 4.
 > Предыстория: 155 / 2232 (2026-06-18, #077 +3 suites); 152 / 2205 (#096.4); 152 / 2203 (#101);
 > 151 / 2195 (#102); 151 / 2192 (#096).
-> `CLAUDE.md` синхронизирован → **158 / 2246** (2026-06-19); фактический канон на ветке
-> `feat/095-pipeline-value-placeholder` = **158 / 2260** (#094). CONTEXT.md —
+> `CLAUDE.md` синхронизирован → **159 / 2264** (2026-06-21, #092/#075); фактический канон на ветке
+> `feat/095-pipeline-value-placeholder` = **159 / 2264**. CONTEXT.md —
 > единственный канонический источник числа (так гласит сам CLAUDE.md).
 
 ## Активная работа
@@ -76,7 +88,8 @@
 **✅ Сессия 2026-06-15 (W2, #096.4)**: #096.4 truncateDate dayjs-reconcile (P3, был DEFERRED) закрыт. `transformExecutor.ts` truncateDate string-fallback заменён с `new Date(String(dateVal))` на `dayjs(String(dateVal)).toDate()` — унификация на канонический dayjs date-слой (`src/lib/helpers/dateFormatting.ts`), фиксит off-by-one date-bucket drift в negative-offset таймзонах. Fast-path `instanceof Date` сохранён, `isNaN` invalid-guard сохранён. +2 TZ-boundary regression-теста в `transformExecutor.test.ts`. Architect DEFER-опасение проверено semantic-analyzer и НЕ подтвердилось. (`065331e`)
 **✅ ЭПИК #077 ЗАКРЫТ ЦЕЛИКОМ** (2026-06-18, отгружен в origin/main `7cc3d66`): «машина функций» — единый FormulaConstructor во всех точках ввода формул. Слайсы: slice 1 (`08398a2`/`a78fe9c`) — formula syntax-highlight overlay + metadata-driven FormulaHelpPanel; slice 2 (`dd90c92`) — composition-wrapper FormulaConstructorFull (toolbar + lean FC + preview-slot + help-panel) + ретайр hand-rolled chrome в AdvancedFilterEditor; slice 4 (`5cbb97f`) — ретайр imperative-портала DateFormulaInput → thin FC-wrapper, px-budget 186→177; финальный XS (`7cc3d66`) — i18n-ключ `views.dashboard.canvas.formula-builder` → «Формулы» (ru) / «Formulas» (en) / «Формули» (uk) / «公式» (zh-CN) + defaultValue-fallback в DashboardToolbar.svelte / YamlVisualizer.svelte (user-decision: «Формулы»). slice 3 (FormulaBar) НАМЕРЕННО отложен архитектором (FormulaBar уже корректен, миграция косметическая). **Архитектурное решение**: lean FormulaConstructor НЕ поглощает все 4 слоя дизайна — добавлен composition-wrapper FormulaConstructorFull; параллельная реализация DateFormulaInput (свой портал/клавиатура/preview/suggestion-движок) полностью ретайрнута — третьего пути ввода формул нет. Все 4 гейта зелёные на merge (build 0, jest 155/2232, lint 0, svelte-check 0). НОВЫЙ baseline 155/2232 (+3 suites: FilterPills, FormulaConstructor, formulaHelpGroups — не регрессия).
 **✅ Сессия 2026-06-20 (W2.3, стек `feat/095-pipeline-value-placeholder`, 2 коммита)**: #095 PipelineEditor value-placeholder (`1660e59`) — operator-select уже был каноничен (#099), оставалась дивергенция value-инпута на приватном ключе `views.dashboard.pipeline.value` → переведён на канонический `common.value-placeholder` («Значение…»), 4 локали. #094 Словарь значений (Option B) — чарт honor `statusGroups` как Board/DataTable: легенда показывает семантические бакеты (To Do / In Progress / Done / No Status) вместо сырых ключей; БЕЗ миграции схемы (`statusGroups` из `source.fields[].typeConfig`, путь Board `board.ts:55,204`); `computeChartData` гард `semanticActive` по `DataFieldType.Status` + бакетизация после агрегации (value аддитивно); чистая `bucketLabelForRaw` вынесена в `groupRows.ts` (единый источник, переиспользуют чарт+DataTable, `buildSemanticGroups` отрефакторен на неё). Не-аддитивные Y-агрегаты (avg/min/max) по Status-оси — out-of-scope. Оба READY FOR PR, все 4 гейта зелёные (build 0 / jest 158-2260 / lint 0 / svelte-check 0). Baseline 2246→2260 (+14, #094), px-budget ≤177. Заведён follow-up **#104** (P3/XS) — унифицировать Board `getSemanticColumns` (~board.ts:197-233) на `bucketLabelForRaw`, закрыв последнюю 2-ю копию 3-bucket логики. НЕ слиты/запушены — гейт пользователя.
-**Следующий шаг**: 🔥 **остаток W2.3** — #071 cover-реактивность; #089 галерея cover (~~#094 словарь значений~~ ✅ READY FOR PR; ~~#095 PipelineEditor~~ ✅ READY FOR PR). #071/#089 ждут user-репро. Затем **W2.4** (#075-остаток + #092). ~~W2.2 #090 панели виджетов §3~~ ✅ DONE (стеки `feat/090`+`feat/090b`, 6 коммитов): ChartConfig слайдеры-значения + §3-секции; DatabaseCallSettings человеческие подписи + D1; i18n ChecklistConfig/StatsConfig/FilterTabsConfig + новый блок `views.dashboard.agg` (17 меток агрегаций). Config-panel i18n-дыра закрыта во всех панелях. Опц. остаток (slice 4c): промоут `SettingsSection` в shared — низкий приоритет, не блокер. ~~W2.1 #093 SettingsMenu рециклинг~~ ✅ DONE (`feat/093` смержен). ~~W2.0 #103 Filter UX unification~~ ✅ DONE (`590ae06`). Скорректированная дорожная карта на все волны W2–W5 (чёткая последовательность + зависимости + DoD связности + процессные гейты) — **`docs/internal/AUDIT_ROADMAP_2026-06-18.md`** (канон). Последовательность: W2.0 #103 → W2.1 #093 → W2.2 #090 → W2.3 (#071/#089/#094/#095) → W2.4 (#075-rem/#092) → W3 (#091/#076) → W4 (#061/#082/#060) → W5 (#078/#079/#036). Продуктовые решения 2026-06-15: #080 ❌ CLOSED/DECLINED (→#077), #066 ✅ RESOLVED (defer-to-V3). Примечание: ранний вывод аудита «тест на stale build» ОШИБОЧЕН (невалидный grep кириллицы) — реальная причина сырого ключа шаблона = дубликат ключа `views.dashboard.templates` в en/ru, исправлен в #103-стеке; deploy-гейт оставлен как общая гигиена (AUDIT_ROADMAP §4А).
+**✅ Сессия 2026-06-21 (W2.4, стек `feat/095-pipeline-value-placeholder`, +2 тикета, верифицировано независимым прогоном оркестратора)**: #092 recovery-узел пустого конвейера (`ccf051b` + i18n `ed37238` + fix `1224481`) — когда трансформ-конвейер скрыл все записи, DatabaseCallBlock рисует EmptyState `filter-x` «Конвейер скрыл все записи (N шагов)» с действиями [Открыть конвейер]/[Очистить конвейер]; `inputRowCount` пробрасывается WidgetHost→ctx→DatabaseCallBlock для отличия «исходно пусто» от «конвейер всё скрыл»; фикс ложного recovery при linked source (когда блок берёт записи из linked-selection, не из своего конвейера). +1 suite `pipelineRecovery.test.ts` (+4 теста). #075-остаток дискаверабилити конвейера (`15eafca` + i18n `ed37238`) — обучающий empty-state «было→стало» (иконки wand-2 + arrow-right, все размеры rem-токены), кнопка «Очистить конвейер» (trash-2, один клик) в PipelineEditor, копирайт 2A «на языке задач» в 4 локалях, закрыт i18n-пробел `database-call.*` в uk/zh-CN. Остатка по #075 нет. Оба READY FOR PR, все 4 гейта зелёные (build 0 / jest **159/2264** / lint 0 / svelte-check 0), px-budget ≤177, дерево чистое. chore-rebuild `e68e761`. НЕ слиты/запушены — гейт пользователя.
+**Следующий шаг**: 🔥 **W2.3** — #071 cover-реактивность; #089 галерея cover (~~#094 словарь значений~~ ✅; ~~#095 PipelineEditor~~ ✅; ~~#075-остаток + #092~~ ✅ READY FOR PR). #071/#089 ждут user-репро. Затем **DoD-связность волны W2** (кросс-поверхностное ревью). ~~W2.2 #090 панели виджетов §3~~ ✅ DONE (стеки `feat/090`+`feat/090b`, 6 коммитов): ChartConfig слайдеры-значения + §3-секции; DatabaseCallSettings человеческие подписи + D1; i18n ChecklistConfig/StatsConfig/FilterTabsConfig + новый блок `views.dashboard.agg` (17 меток агрегаций). Config-panel i18n-дыра закрыта во всех панелях. Опц. остаток (slice 4c): промоут `SettingsSection` в shared — низкий приоритет, не блокер. ~~W2.1 #093 SettingsMenu рециклинг~~ ✅ DONE (`feat/093` смержен). ~~W2.0 #103 Filter UX unification~~ ✅ DONE (`590ae06`). Скорректированная дорожная карта на все волны W2–W5 (чёткая последовательность + зависимости + DoD связности + процессные гейты) — **`docs/internal/AUDIT_ROADMAP_2026-06-18.md`** (канон). Последовательность: W2.0 #103 → W2.1 #093 → W2.2 #090 → W2.3 (#071/#089/#094/#095) → W2.4 (#075-rem/#092) → W3 (#091/#076) → W4 (#061/#082/#060) → W5 (#078/#079/#036). Продуктовые решения 2026-06-15: #080 ❌ CLOSED/DECLINED (→#077), #066 ✅ RESOLVED (defer-to-V3). Примечание: ранний вывод аудита «тест на stale build» ОШИБОЧЕН (невалидный grep кириллицы) — реальная причина сырого ключа шаблона = дубликат ключа `views.dashboard.templates` в en/ru, исправлен в #103-стеке; deploy-гейт оставлен как общая гигиена (AUDIT_ROADMAP §4А).
 
 ## Завершённые milestones
 
@@ -117,6 +130,8 @@
 | **EPIC #077 — FormulaConstructor unification + filter-pills** | ✅ COMPLETED (2026-06-18, в origin/main `7cc3d66`) — единый FormulaConstructor во всех точках ввода формул. slice 1 syntax-highlight overlay + metadata FormulaHelpPanel (`08398a2`/`a78fe9c`), slice 2 composition-wrapper FormulaConstructorFull + ретайр AFE chrome (`dd90c92`), slice 4 ретайр DateFormulaInput portal → thin FC-wrapper, px-budget 186→177 (`5cbb97f`), финал i18n «Формулы»/Formulas/Формули/公式 (`7cc3d66`). slice 3 (FormulaBar) намеренно отложен. DateFormulaInput-параллель полностью ретайрнута. Baseline 152/2205 → 155/2232. |
 | **#095 — PipelineEditor value-placeholder** | ✅ READY FOR PR (2026-06-20, `1660e59`, стек `feat/095-pipeline-value-placeholder`, не слит — гейт пользователя) — operator-select уже каноничен (#099); value-инпут переведён с приватного `views.dashboard.pipeline.value` на канонический `common.value-placeholder` («Значение…»), 4 локали. Все 4 гейта зелёные. P3-остаток: orphaned-ключ cleanup. |
 | **#094 — Словарь значений в визуализациях (Option B)** | ✅ READY FOR PR (2026-06-20, стек `feat/095-pipeline-value-placeholder` поверх #095, не слит — гейт пользователя) — чарт honor `statusGroups` как Board/DataTable: семантические бакеты в легенде (To Do / In Progress / Done / No Status) вместо сырых ключей. БЕЗ миграции (`source.fields[].typeConfig`). `computeChartData` бакетизация после агрегации + чистая `bucketLabelForRaw` (единый источник, переиспользуют чарт+DataTable). Baseline 2246→2260 (+14), px ≤177. Follow-up #104. |
+| **#092 — Recovery-узел пустого конвейера** | ✅ READY FOR PR (2026-06-21, стек `feat/095-pipeline-value-placeholder`, не слит — гейт пользователя) — EmptyState `filter-x` «Конвейер скрыл все записи (N шагов)» + [Открыть/Очистить конвейер]; проброс `inputRowCount` WidgetHost→ctx→DatabaseCallBlock; фикс ложного срабатывания при linked source. +1 suite `pipelineRecovery.test.ts`, baseline 158/2260 → 159/2264. (`ccf051b`/`ed37238`/`1224481`) |
+| **#075 — Дискаверабилити конвейера (остаток)** | ✅ READY FOR PR (2026-06-21, стек `feat/095-pipeline-value-placeholder`, не слит — гейт пользователя) — обучающий empty-state «было→стало» (wand-2 + arrow-right, rem) + кнопка «Очистить конвейер» (trash-2) в PipelineEditor + копирайт 2A «на языке задач» 4 локали + закрыт i18n-пробел `database-call.*` в uk/zh-CN. Остатка нет. (`15eafca`/`ed37238`) |
 
 ## Открытые тикеты
 
@@ -151,6 +166,11 @@
 > закрыты, оба READY FOR PR на стеке `feat/095-pipeline-value-placeholder` (не слит/не запушен —
 > гейт пользователя). Baseline 2246→2260 (#094). Заведён follow-up **#104** (P3/XS) — последняя
 > копия 3-bucket логики в Board `getSemanticColumns` на унификацию через `bucketLabelForRaw`.
+> ⚠ 2026-06-21: **W2.4 закрыта** — #092 (recovery-узел пустого конвейера) и #075-остаток
+> (дискаверабилити конвейера) закрыты, оба READY FOR PR на стеке `feat/095-pipeline-value-placeholder`
+> (не слит/не запушен — гейт пользователя). Baseline 158/2260 → **159/2264** (+1 suite
+> `pipelineRecovery.test.ts`, #092). Остатка по #075 нет. Следующий — W2.3 #071/#089 (ждут user-репро),
+> затем DoD-связность волны W2.
 
 **Очередь исполнения (W2 → далее):**
 
@@ -174,8 +194,10 @@
 | — | ~~**#090** панели виджетов (анатомия §3)~~ | ✅ DONE (`feat/090`+`feat/090b`, 6 коммитов; слайдеры/§3-секции/человеческие подписи/config-panel i18n + agg-блок) |
 | — | ~~**#095** PipelineEditor — value-placeholder по канону~~ | ✅ READY FOR PR `1660e59` (2026-06-20, стек `feat/095-pipeline-value-placeholder`, не слит — гейт пользователя) |
 | — | ~~**#094** словарь значений (Option B — чарт honor `statusGroups`)~~ | ✅ READY FOR PR (2026-06-20, стек поверх #095, не слит — гейт пользователя; baseline 2246→2260) |
+| — | ~~**#092** recovery-узел пустого конвейера~~ | ✅ READY FOR PR `ccf051b`/`ed37238`/`1224481` (2026-06-21, стек `feat/095-pipeline-value-placeholder`, не слит — гейт пользователя; baseline 158/2260 → 159/2264) |
+| — | ~~**#075-остаток** дискаверабилити конвейера (clear-кнопка + before/after empty-state)~~ | ✅ READY FOR PR `15eafca`/`ed37238` (2026-06-21, стек `feat/095-pipeline-value-placeholder`, не слит — гейт пользователя; остатка нет) |
 | **W2.3** | #071 cover-реактивность; #089 галерея cover | 🔥 **СЛЕДУЮЩИЙ** (P1/P2) — ждут user-репро |
-| W2.4 | #075-остаток + #092 ясность/recovery конвейера | P1, DoD W2 |
+| DoD W2 | Кросс-поверхностное ревью связности волны W2 (после W2.3) | — |
 | тех-долг | **#104** унифицировать Board `getSemanticColumns` на `bucketLabelForRaw` (follow-up #094) | P3/XS, M-UT-FIXES |
 | W3 | **#091** Link-флоу связей; #076 sub-base входы (формулы #077 ✅) | P1/P2, DoD W3 |
 | W4 | #061 Template Library; #082 typed-карточка; #060 field transparency; SmartSuggest-discovery | P2, DoD W4 |
