@@ -62,9 +62,9 @@
     .filter((f) => f.type === DataFieldType.Relation && !f.derived)
     .map((f) => f.name);
   $: enrichedFrame = relationFieldNames.length > 0 ? enrichWithBacklinks(frame, relationFieldNames) : frame;
-  $: transformedFrame = currentPipeline.steps.length > 0
-    ? executeTransform(enrichedFrame, currentPipeline, { rightFrames }).data
-    : enrichedFrame;
+  $: transformResult = currentPipeline.steps.length > 0 ? executeTransform(enrichedFrame, currentPipeline, { rightFrames }) : null;
+  $: transformedFrame = transformResult ? transformResult.data : enrichedFrame;
+  $: pipelineInputRowCount = transformResult ? transformResult.meta.inputRowCount : enrichedFrame.records.length;
 
   const asChartConfig = (cfg: Record<string, unknown>): ChartConfig | null =>
     cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
@@ -90,7 +90,7 @@
   $: ctx = {
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields,
     fieldPresets, activeFieldPresetId, availableSources, project,
-    effectiveTableConfig, pipelineStepCount: currentPipeline.steps.length,
+    effectiveTableConfig, pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount,
     chartConfig, statsConfig, chartRightFrame,
     dbCallFrame, dbCallFields: dbCallFrame.fields, dbCallSourceConfig, dbCallLinkedSelection,
   } satisfies WidgetRenderContext;
@@ -214,6 +214,8 @@
       on:change={(e) => handleWidgetConfigChange(e.detail)}
       on:filter
       on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
+      on:openPipeline={() => (showPipeline = true)}
+      on:clearPipeline={() => patchWidget({ transform: { steps: [] } })}
     />
   {:else if contentEntry?.wizard}
     <WidgetSetupWizard
