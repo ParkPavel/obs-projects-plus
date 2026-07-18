@@ -147,8 +147,12 @@ export function bindEscapeClear(store: SelectionStore): () => void {
 	const onKey = (e: KeyboardEvent) => {
 		if (e.key === "Escape") store.clearSelection();
 	};
-	document.addEventListener("keydown", onKey);
-	return () => document.removeEventListener("keydown", onKey);
+	// #106 — capture phase so the canvas-wide Escape→clear fires before a
+	// focused child (input, popover) can swallow the event on the bubbling
+	// phase. No preventDefault/stopPropagation: Escape stays available to
+	// other handlers (e.g. closing an open menu).
+	document.addEventListener("keydown", onKey, true);
+	return () => document.removeEventListener("keydown", onKey, true);
 }
 
 /**

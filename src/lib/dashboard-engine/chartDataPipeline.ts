@@ -110,11 +110,12 @@ export function computeChartData(
     : config.xAxis.property;
   const valueField = config.yAxis.property === "count" ? "_group_size" : "__chart_value__";
 
-  // #094 — Honor Status semantic groups: when the X field is a Status field
-  // with a non-empty statusGroups overlay (and no date-bucketing is active),
-  // collapse raw status keys into the same 3-bucket display (To Do / In
-  // Progress / Done / No Status) that Board and DataTable already use.
-  // Dispatch by DataFieldType.Status — never by field.name (invariant).
+  // #094/#107 — Honor Status semantic groups: when the X field carries a
+  // non-empty statusGroups overlay (and no date-bucketing is active), collapse
+  // raw status keys into the same 3-bucket display (To Do / In Progress / Done
+  // / No Status) that Board and DataTable already use. Activation is now
+  // OPT-IN via config.groupMode === "semantic" (#107) — default "values" keeps
+  // raw status keys — rather than being type-gated on DataFieldType.Status.
   const xFieldDef = source.fields.find((f) => f.name === config.xAxis.property);
   const sg = xFieldDef?.typeConfig?.statusGroups;
   const hasAnyBucket = !!(
@@ -122,7 +123,7 @@ export function computeChartData(
     (sg.todo?.length ?? 0) + (sg.inProgress?.length ?? 0) + (sg.complete?.length ?? 0) > 0
   );
   const semanticActive =
-    xFieldDef?.type === DataFieldType.Status && hasAnyBucket && dateGrouping == null;
+    config.groupMode === "semantic" && hasAnyBucket && dateGrouping == null;
 
   let entries: { label: string; value: number | null }[] = [];
 

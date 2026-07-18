@@ -66,3 +66,18 @@ function stripWikilink(s: string): string {
   const m = s.match(/^\[\[(.+?)(?:\|.+?)?\]\]$/);
   return m && m[1] !== undefined ? m[1] : s;
 }
+
+/**
+ * #106 — canonical comparison key for a single relation link token.
+ *
+ * Mirrors the normalisation `relationResolver` uses internally: strip the
+ * `[[ ]]` wrapping (alias-aware), trim, and lowercase. Lowercase is the
+ * canon key so that a selection value ("Acme Studio") and a frontmatter
+ * wikilink ("[[Acme Studio]]") collapse to the same key regardless of case.
+ *
+ * Pure, single-token: unlike `parseRelationLinks` it does NOT split on
+ * commas — the caller already holds an individual selection value.
+ */
+export function canonicalLinkKey(s: string): string {
+  return stripWikilink(s).trim().toLowerCase();
+}

@@ -7,6 +7,7 @@ import type { FilterCondition } from "src/settings/base/settings";
 
 import {
 	EMPTY_SELECTION,
+	bindEscapeClear,
 	composeEffectiveFilter,
 	composeLinkedSelectionFilter,
 	createSelectionStore,
@@ -253,5 +254,51 @@ describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
 		});
 		expect(result?.field).toBe("clientRef");
 		expect(result?.value).toBe("42");
+	});
+});
+
+describe("bindEscapeClear — #106 Escape clears the canvas selection", () => {
+	function activeStore() {
+		const store = createSelectionStore();
+		store.setSelection({ source: "data-table:block-a", field: "name", values: ["Acme"] });
+		return store;
+	}
+
+	it("clears the active selection on Escape keydown (capture phase)", () => {
+		const store = activeStore();
+		const unbind = bindEscapeClear(store);
+		document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+		expect(get(store)).toBe(EMPTY_SELECTION);
+		unbind();
+	});
+
+	it("ignores non-Escape keys", () => {
+		const store = activeStore();
+		const unbind = bindEscapeClear(store);
+		document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+		expect(get(store).source).toBe("data-table:block-a");
+		unbind();
+	});
+
+	it("unbind removes the listener (Escape no longer clears)", () => {
+		const store = activeStore();
+		const unbind = bindEscapeClear(store);
+		unbind();
+		document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+		expect(get(store).source).toBe("data-table:block-a");
+	});
+
+	it("clears even when a focused child stops propagation on the bubbling phase", () => {
+		const store = activeStore();
+		const unbind = bindEscapeClear(store);
+		const child = document.createElement("input");
+		document.body.appendChild(child);
+		child.addEventListener("keydown", (e) => e.stopPropagation());
+		child.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+		);
+		expect(get(store)).toBe(EMPTY_SELECTION);
+		child.remove();
+		unbind();
 	});
 });

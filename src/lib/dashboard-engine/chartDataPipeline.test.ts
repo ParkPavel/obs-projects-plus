@@ -340,7 +340,7 @@ const STATUS_GROUPS = {
 
 describe("computeChartData — semantic status groups (#094)", () => {
   test("raw status keys collapse into To Do / In Progress / Done buckets", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig());
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
 
     // planning→To Do(1); inProgress+review→In Progress(2); done→Done(2)
     expect(data.labels).toEqual(["To Do", "In Progress", "Done"]);
@@ -348,7 +348,7 @@ describe("computeChartData — semantic status groups (#094)", () => {
   });
 
   test("values of the same bucket merge additively (count summed)", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig());
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
     // In Progress = inProgress(1) + review(1) = 2
     const idx = data.labels.indexOf("In Progress");
     expect(data.series[0]?.values[idx]).toBe(2);
@@ -357,42 +357,49 @@ describe("computeChartData — semantic status groups (#094)", () => {
   test("No Status appears only for unmapped values", () => {
     const frame = makeSemanticStatusFrame(STATUS_GROUPS);
     frame.records.push({ id: "6", values: { status: "blocked", priority: 9 } });
-    const data = computeChartData(frame, makeConfig());
+    const data = computeChartData(frame, makeConfig({ groupMode: "semantic" }));
 
     expect(data.labels).toContain("No Status");
     expect(data.series[0]?.values[data.labels.indexOf("No Status")]).toBe(1);
   });
 
   test("No Status absent when every value is mapped", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig());
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
     expect(data.labels).not.toContain("No Status");
   });
 
   test("canonical order To Do→In Progress→Done regardless of sortBy/sortOrder", () => {
     const config = makeConfig({
+      groupMode: "semantic",
       xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: false },
     });
     const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), config);
     expect(data.labels).toEqual(["To Do", "In Progress", "Done"]);
   });
 
-  test("fallback to raw value mode when statusGroups empty/absent", () => {
-    const data = computeChartData(makeSemanticStatusFrame(undefined), makeConfig());
-    // No statusGroups → raw keys, sorted by label asc.
+  test("semantic mode with no statusGroups falls back to raw keys", () => {
+    const data = computeChartData(makeSemanticStatusFrame(undefined), makeConfig({ groupMode: "semantic" }));
+    // groupMode semantic but hasAnyBucket=false → raw keys, sorted by label asc.
     expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
     expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
   });
 
-  test("fallback when X field is not Status (String with same values → raw labels)", () => {
-    const data = computeChartData(
-      makeSemanticStatusFrame(STATUS_GROUPS, DataFieldType.String),
-      makeConfig()
-    );
+  test("default (no groupMode) keeps raw status keys even with statusGroups", () => {
+    // Regression guard for #107: semantic must be opt-in, default == values.
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig());
     expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
+    expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
+  });
+
+  test("explicit groupMode 'values' keeps raw status keys with statusGroups", () => {
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "values" }));
+    expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
+    expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
   });
 
   test("hiddenGroups hides a bucket by semantic label", () => {
     const config = makeConfig({
+      groupMode: "semantic",
       xAxis: { property: "status", sortBy: "label", sortOrder: "asc", omitZero: false, hiddenGroups: ["In Progress"] },
     });
     const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), config);
@@ -418,6 +425,7 @@ describe("computeChartData — semantic status groups (#094)", () => {
       ],
     };
     const config = makeConfig({
+      groupMode: "semantic",
       xAxis: { property: "due", sortBy: "label", sortOrder: "asc", omitZero: false, dateGranularity: "month" },
     });
     const data = computeChartData(frame, config);
@@ -426,7 +434,7 @@ describe("computeChartData — semantic status groups (#094)", () => {
   });
 
   test("custom semantic labels passed via 3rd arg", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig(), {
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }), {
       todo: "К выполнению",
       inProgress: "В работе",
       complete: "Готово",

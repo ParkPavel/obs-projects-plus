@@ -19,6 +19,11 @@
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";
+  import {
+    updateStep as applyStepUpdate,
+    toggleDisableStep as toggleStepDisabled,
+    addFilterCondition as appendFilterCondition,
+  } from "./pipelineSteps";
 
   export let pipeline: TransformPipeline;
   export let fields: DataField[] = [];
@@ -143,9 +148,7 @@
   // #099 — non-destructive toggle: disabled steps stay in the pipeline but are
   // skipped by the executor, so data flows again through a 0-row step.
   function toggleDisableStep(index: number) {
-    const step = steps[index];
-    if (!step) return;
-    updateStep(index, { ...step, disabled: !step.disabled });
+    steps = toggleStepDisabled(steps, index);
   }
 
   function moveStep(index: number, direction: -1 | 1) {
@@ -161,8 +164,7 @@
   }
 
   function updateStep(index: number, step: TransformStep) {
-    steps[index] = step;
-    steps = [...steps];
+    steps = applyStepUpdate(steps, index, step);
   }
 
   function createDefaultStep(type: TransformStep["type"]): TransformStep | null {
@@ -223,7 +225,6 @@
   // -- Filter step helpers ----------------------------------
 
   function addFilterCondition(stepIndex: number) {
-    const step = steps[stepIndex] as FilterStep;
     const firstField = fieldNames[0] ?? "";
     const fieldType = fieldMap.get(firstField)?.type ?? "string";
     const ops = getOperatorsForField(fieldType as string);
@@ -233,13 +234,7 @@
       value: "",
       enabled: true,
     };
-    updateStep(stepIndex, {
-      ...step,
-      conditions: {
-        ...step.conditions,
-        conditions: [...step.conditions.conditions, newCond],
-      },
-    });
+    steps = appendFilterCondition(steps, stepIndex, newCond);
   }
 
   function updateFilterField(stepIndex: number, condIndex: number, newField: string) {

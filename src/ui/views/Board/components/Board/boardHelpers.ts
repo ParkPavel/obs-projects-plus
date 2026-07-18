@@ -1,3 +1,17 @@
+import type { DataField } from "src/lib/dataframe/dataframe";
+
+/**
+ * #109 — Drop the custom-header field from the card body field list so it is
+ * not rendered twice (once in the header, once in the body).
+ */
+export function excludeHeaderField(
+  includeFields: DataField[],
+  customHeader: DataField | undefined
+): DataField[] {
+  if (!customHeader) return includeFields;
+  return includeFields.filter((f) => f.name !== customHeader.name);
+}
+
 export function getDisplayName(recordId: string): string {
   const basename = getBasename(recordId);
   return basename.slice(0, basename.lastIndexOf("."));

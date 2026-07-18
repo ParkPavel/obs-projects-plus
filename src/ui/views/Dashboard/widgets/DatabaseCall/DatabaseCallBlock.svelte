@@ -38,7 +38,8 @@
     composeLinkedSelectionFilter,
     type SelectionStore,
   } from "../../canvasSelectionStore";
-  import { matchesCondition, applyFilter } from "src/lib/engine/filterEvaluator";
+  import { applyFilter } from "src/lib/engine/filterEvaluator";
+  import { filterByLinkedSelection } from "./relationFilterAdapter";
   import type { FilterDefinition } from "src/settings/base/settings";
   import BlockFilterBar from "./BlockFilterBar.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
@@ -94,7 +95,7 @@
   $: subFiltered = subFilter && subFilter.conditions.length > 0 ? applyFilter(frame, subFilter) : frame;
 
   $: effectiveFrame = autoFilter
-    ? { ...subFiltered, records: subFiltered.records.filter((r) => matchesCondition(autoFilter!, r)) }
+    ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
     : subFiltered;
 
   function handleSubFilterChange(e: CustomEvent<FilterDefinition | undefined>) {
