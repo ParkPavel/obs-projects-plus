@@ -27,8 +27,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 `M-RELATION-FIRST` is the active queue.
 
 1. **#110 P0 — Relation-first design brief and baseline audit.** It has
-   `analysis_required: true` and `analysis_done: false`; the orchestrator must stop at this
-   gate until the analysis/design brief is approved.
+   `analysis_required: true` and `analysis_done: true`; its approved design brief is
+   `RELATION_FIRST_DESIGN_BRIEF_110.md`.
 2. **#111 P0 — Canonical Relation contract.** One model for WikiLink relation, inverse,
    resolution and unmatched records.
 3. **#112/#113/#114 — Guided setup, related records/rollup, and relation-aware Dashboard.**

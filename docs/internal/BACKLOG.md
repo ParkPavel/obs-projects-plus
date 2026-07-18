@@ -36,11 +36,14 @@
 > product work. Existing crash/security/regression fixes may continue independently.
 
 ### #110 — Relation-first design brief and baseline audit
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-07-18)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: M
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Blocks: #111, #112, #113, #114
+
+Implementation decision: approved design brief is
+`RELATION_FIRST_DESIGN_BRIEF_110.md` (2026-07-18).
 
 Deliverable: one approved design brief for `Clients → Sessions`: canonical Relation contract,
 entry points, current-state screenshots/steps, data migration, terminology, accessibility and
