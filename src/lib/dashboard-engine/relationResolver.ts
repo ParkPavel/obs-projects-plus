@@ -6,6 +6,12 @@
 import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { extractWikilinks } from "src/lib/engine/wikilink";
+import {
+  buildRelationTargetIndex,
+  resolveRelationValue,
+  resolvedRecords,
+  type RelationTargetIndex,
+} from "src/lib/relations/relationContract";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -15,7 +21,6 @@ export interface ResolvedRelation {
   /** Matched record from the DataFrame, or undefined if unresolved */
   readonly target: DataRecord | undefined;
 }
-
 export interface RelationResult {
   /** Source record ID */
   readonly sourceId: string;
@@ -34,14 +39,16 @@ export function extractWikiLinks(raw: string): string[] {
 
 // ── Record look-up index ────────────────────────────────
 
-export type RecordIndex = Map<string, DataRecord>;
+export type RecordIndex = Map<string, DataRecord> & RelationTargetIndex;
 
 /**
  * Build an index mapping lowercase note names to records.
  * Uses the record id (path) basename and optionally an explicit "name" field.
  */
 export function buildRecordIndex(df: DataFrame): RecordIndex {
-  const idx: RecordIndex = new Map();
+  const targetIndex = buildRelationTargetIndex(df, ["name", "title", "Name", "Title"]);
+  const idx = new Map<string, DataRecord>() as RecordIndex;
+  Object.assign(idx, targetIndex);
   for (const r of df.records) {
     // id is typically a file path — use the basename without extension
     const baseName = extractBaseName(r.id);
@@ -75,13 +82,12 @@ export function resolveRelationsForValue(
   value: Optional<DataValue>,
   index: RecordIndex
 ): ResolvedRelation[] {
-  const raw = normalizeToString(value);
-  if (!raw) return [];
-
-  const links = extractWikiLinks(raw);
-  return links.map((linkText) => ({
-    linkText,
-    target: index.get(linkText.toLowerCase()),
+  const resolutions = resolveRelationValue(value, index);
+  return resolutions.map((resolution) => ({
+    linkText: resolution.canonicalPath,
+    target: resolution.status === "resolved" && resolution.targetRecordId
+      ? index.recordsById.get(resolution.targetRecordId)
+      : undefined,
   }));
 }
 
@@ -128,10 +134,7 @@ export function getRelationTargetsWithIndex(
   index: RecordIndex
 ): DataRecord[] {
   const value = record.values[fieldName];
-  const relations = resolveRelationsForValue(value, index);
-  return relations
-    .map((r) => r.target)
-    .filter((t): t is DataRecord => t !== undefined);
+  return resolvedRecords(resolveRelationValue(value, index), index);
 }
 
 // ── Backlinks (bi-directional relations) ─────────────────
@@ -225,13 +228,4 @@ export function enrichWithBacklinks(
     fields: [...df.fields, ...newFields],
     records: enrichedRecords,
   };
-}
-
-// ── Helpers ─────────────────────────────────────────────
-
-function normalizeToString(value: Optional<DataValue>): string {
-  if (value === undefined || value === null) return "";
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(normalizeToString).join(" ");
-  return String(value);
 }

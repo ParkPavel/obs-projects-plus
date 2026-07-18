@@ -37,7 +37,7 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
     const cfg: RelationFieldConfig = { targetProjectId: "p" };
     const files: Record<string, Record<string, unknown>> = { "A.md": {} };
     const app = makeApp(files);
-    await writeInverseRelations({
+    const outcome = await writeInverseRelations({
       sourceRecordId: "Source",
       fieldName: "f",
       fieldConfig: cfg,
@@ -46,12 +46,13 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
       app,
     });
     expect(app.fileManager.processFrontMatter).not.toHaveBeenCalled();
+    expect(outcome).toEqual({ added: [], removed: [], issues: [] });
   });
 
-  test("appends source link when target added", async () => {
+  test("reports a missing inverse field for legacy configuration without creating it", async () => {
     const files: Record<string, Record<string, unknown>> = { "Target.md": {} };
     const app = makeApp(files);
-    await writeInverseRelations({
+    const outcome = await writeInverseRelations({
       sourceRecordId: "Source",
       fieldName: "f",
       fieldConfig: { targetProjectId: "p", inverseFieldName: "backlinks" },
@@ -59,7 +60,28 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
       oldValue: null,
       app,
     });
+    expect(files["Target.md"]!["backlinks"]).toBeUndefined();
+    expect(outcome).toEqual({
+      added: [],
+      removed: [],
+      issues: [{ operation: "add", targetLink: "Target", code: "inverse-field-missing" }],
+    });
+  });
+
+  test("creates a missing inverse field only with explicit authority", async () => {
+    const files: Record<string, Record<string, unknown>> = { "Target.md": {} };
+    const app = makeApp(files);
+    const outcome = await writeInverseRelations({
+      sourceRecordId: "Source",
+      fieldName: "f",
+      fieldConfig: { targetProjectId: "p", inverseFieldName: "backlinks" },
+      createIfMissing: true,
+      newValue: "[[Target]]",
+      oldValue: null,
+      app,
+    });
     expect(files["Target.md"]!["backlinks"]).toEqual(["[[Source]]"]);
+    expect(outcome).toEqual({ added: ["Target"], removed: [], issues: [] });
   });
 
   test("removes source link when target removed", async () => {
@@ -121,6 +143,7 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
       sourceRecordId: "Source",
       fieldName: "f",
       fieldConfig: { targetProjectId: "p", inverseFieldName: "backlinks" },
+      createIfMissing: true,
       newValue: ["[[A]]", "[[B]]"],
       oldValue: null,
       app,
@@ -129,10 +152,10 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
     expect(files["B.md"]!["backlinks"]).toEqual(["[[Source]]"]);
   });
 
-  test("skips missing target file silently", async () => {
+  test("reports a missing target instead of silently skipping it", async () => {
     const files: Record<string, Record<string, unknown>> = {};
     const app = makeApp(files);
-    await writeInverseRelations({
+    const outcome = await writeInverseRelations({
       sourceRecordId: "Source",
       fieldName: "f",
       fieldConfig: { targetProjectId: "p", inverseFieldName: "backlinks" },
@@ -141,6 +164,29 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
       app,
     });
     expect(app.fileManager.processFrontMatter).not.toHaveBeenCalled();
+    expect(outcome).toEqual({
+      added: [],
+      removed: [],
+      issues: [{ operation: "add", targetLink: "Ghost", code: "target-not-found" }],
+    });
+  });
+
+  test("returns a write failure and passes the source path to canonical resolution", async () => {
+    const files: Record<string, Record<string, unknown>> = { "Folder/Target.md": {} };
+    const app = makeApp(files);
+    const resolve = app.metadataCache.getFirstLinkpathDest as jest.Mock;
+    (app.fileManager.processFrontMatter as jest.Mock).mockRejectedValueOnce(new Error("read-only"));
+    const outcome = await writeInverseRelations({
+      sourceRecordId: "Sessions/Source.md",
+      fieldName: "client",
+      fieldConfig: { targetProjectId: "p", inverseFieldName: "backlinks" },
+      newValue: "[[Folder/Target]]",
+      oldValue: null,
+      app,
+    });
+    expect(resolve).toHaveBeenCalledWith("Folder/Target", "Sessions/Source.md");
+    expect(outcome.added).toEqual([]);
+    expect(outcome.issues[0]).toMatchObject({ operation: "add", targetLink: "Folder/Target", code: "write-failed" });
   });
 
   test("no-op when both oldValue and newValue null", async () => {

@@ -13,6 +13,7 @@ import { dataFrame } from "./stores/dataframe";
 import type { DataSource } from "./datasources";
 import { app } from "./stores/obsidian";
 import { writeInverseRelations } from "./relations/relationsWriter";
+import { adaptRelationFieldConfig } from "./relations/relationContract";
 import type { RelationFieldConfig } from "src/settings/base/settings";
 
 /**
@@ -37,21 +38,17 @@ export class ViewApi {
     void this.dataApi.createNote(record, fields ?? [], templatePath);
   }
 
-  updateRecord(record: DataRecord, fields: DataField[]) {
-    // NPLAN-C2: fire inverse relation write-back before frame update
-    const obsApp = get(app);
-    if (obsApp) {
-      const oldRecords = get(dataFrame).records;
-      const oldRecord = oldRecords.find((r) => r.id === record.id);
-      if (oldRecord) {
-        void fireInverseRelations(oldRecord, record, fields, obsApp);
-      }
-    }
-
+  async updateRecord(record: DataRecord, fields: DataField[]): Promise<void> {
+    const oldRecord = get(dataFrame).records.find((candidate) => candidate.id === record.id);
     if (this.dataSource.includes(record.id)) {
       dataFrame.updateRecord(record);
     }
-    void this.dataApi.updateRecord(fields, record);
+    await this.dataApi.updateRecord(fields, record);
+
+    const obsApp = get(app);
+    if (obsApp && oldRecord) {
+      await fireInverseRelations(oldRecord, record, fields, obsApp);
+    }
   }
 
   async updateRecords(records: DataRecord[], fields: DataField[]) {
@@ -122,6 +119,7 @@ async function fireInverseRelations(
         fieldConfig: cfg,
         newValue: newRecord.values[f.name] as string | string[] | null | undefined,
         oldValue: oldRecord.values[f.name] as string | string[] | null | undefined,
+        createIfMissing: adaptRelationFieldConfig("", f.name, cfg).inverse?.createIfMissing ?? false,
         app: obsApp,
       });
     })

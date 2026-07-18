@@ -33,7 +33,7 @@ The primary user flow is deliberately simple:
 | Field settings | `ConfigureField.svelte:645` renders target project, display field, inverse name and an advanced JSON scope independently. | No guided action, preview, terminology at the user level, inverse-field creation choice, or safe unmatched-state review. |
 | Cell editing | Existing Relation picker can select WikiLink targets. | It edits values but does not explain the target contract or show inverse/related outcomes. |
 | Resolution | `crossProjectResolver.ts:147` and `dashboard-engine/relationResolver.ts:74` resolve WikiLinks. | Two resolver paths expose differing shapes and unresolved links can be silently dropped. |
-| Inverse write | `viewApi.ts:41` calls `relationsWriter.ts:37` after UI record edits. | Write-back is fire-and-forget, does not create an opted-in inverse field, and external Markdown edits only derive index state. |
+| Inverse write | `ViewApi` awaits `relationsWriter` after the forward record write. | Legacy config has no authority to create an inverse field; a missing field is reported as a structured issue. Explicit `createIfMissing` is required for creation, and external Markdown edits only derive index state. |
 | Rollups | `RollupFieldConfig` references `relationField`; multiple rollup engines exist. | User must manually configure a technical rollup rather than start with Count from the relation. |
 | Dashboard | `canvasSelectionStore.ts:188` converts `linkedSelection` into a field filter. | It is an independent widget configuration and is not labelled with, validated against, or derived from the relation contract. |
 
