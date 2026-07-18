@@ -63,14 +63,14 @@ records and relation metadata. `linkedSelection` may consume this contract but m
 an alternate relation model. Include migration/compatibility tests for existing frontmatter.
 
 ### #112 — Guided Relation setup and record editing flow
-- Status: 📋 BACKLOG
+- Status: 🚧 IN-PROGRESS (2026-07-19)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: XL
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #110, #111
 - Blocks: #115
 
-User flow: select field/record → “Link to database” → choose target → preview matches and
+Architecture: `GUIDED_RELATION_SETUP_ARCHITECTURE_112.md` (2026-07-19). User flow: select field/record → “Link to database” → choose target → preview matches and
 unmatched records → optionally create inverse field → save. The same flow is reachable from
 schema editor, record/cell editing and Dashboard. Keyboard path, empty states and plain-language
 examples are acceptance criteria.
