@@ -51,14 +51,14 @@ end-to-end acceptance. It must explicitly distinguish Relation, `linkedSelection
 correlation; no implementation begins before the distinction is approved.
 
 ### #111 — Canonical Relation contract and compatibility boundary
-- Status: 📋 BACKLOG
+- Status: 🚧 IN-PROGRESS (2026-07-18)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: L
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #110
 - Blocks: #112, #113, #114
 
-One domain contract for WikiLink relations, inverse relations, target resolution, unmatched
+Analysis record: `RELATION_CONTRACT_ANALYSIS_111.md` (2026-07-18). One domain contract for WikiLink relations, inverse relations, target resolution, unmatched
 records and relation metadata. `linkedSelection` may consume this contract but must not become
 an alternate relation model. Include migration/compatibility tests for existing frontmatter.
 
