@@ -26,7 +26,7 @@
     dragHandle,
   } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
-  import { getDisplayName } from "./boardHelpers";
+  import { excludeHeaderField, getDisplayName } from "./boardHelpers";
   import type {
     DropTrigger,
     OnRecordClick,
@@ -71,6 +71,8 @@
 
   const isPlaceholder = (item: DataRecord) =>
     !!(item as any)[SHADOW_ITEM_MARKER_PROPERTY_NAME];
+
+  $: bodyFields = excludeHeaderField(includeFields, customHeader);
 </script>
 
   <div
@@ -155,7 +157,7 @@
             <CardMetadata fields={[customHeader]} record={item} />
           {/if}
         </div>
-        <CardMetadata fields={includeFields} record={item} />
+        <CardMetadata fields={bodyFields} record={item} />
       </ColorItem>
     </article>
   {/each}

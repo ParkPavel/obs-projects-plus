@@ -1,8 +1,44 @@
 // src/ui/views/Dashboard/widgets/DataTable/groupRows.test.ts
 
-import { groupRecords } from "../groupRows";
+import {
+  groupRecords,
+  bucketLabelForRaw,
+  stringifyForBucket,
+  DEFAULT_SEMANTIC_LABELS,
+} from "../groupRows";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import type { GroupConfig } from "src/ui/views/Dashboard/types";
+
+describe("bucketLabelForRaw (#094 extracted pure fn)", () => {
+  const sg = {
+    todo: ["planning"],
+    inProgress: ["inProgress", "review"],
+    complete: ["done"],
+  };
+
+  test("maps raw value into the matching bucket label", () => {
+    expect(bucketLabelForRaw("planning", sg, DEFAULT_SEMANTIC_LABELS)).toBe("To Do");
+    expect(bucketLabelForRaw("review", sg, DEFAULT_SEMANTIC_LABELS)).toBe("In Progress");
+    expect(bucketLabelForRaw("done", sg, DEFAULT_SEMANTIC_LABELS)).toBe("Done");
+  });
+
+  test("unmapped and null values fall into none", () => {
+    expect(bucketLabelForRaw("blocked", sg, DEFAULT_SEMANTIC_LABELS)).toBe("No Status");
+    expect(bucketLabelForRaw(null, sg, DEFAULT_SEMANTIC_LABELS)).toBe("No Status");
+  });
+
+  test("empty statusGroups → everything is none", () => {
+    expect(bucketLabelForRaw("planning", {}, DEFAULT_SEMANTIC_LABELS)).toBe("No Status");
+  });
+
+  test("stringifyForBucket normalises scalars, rejects compound values", () => {
+    expect(stringifyForBucket("a")).toBe("a");
+    expect(stringifyForBucket(3)).toBe("3");
+    expect(stringifyForBucket(true)).toBe("true");
+    expect(stringifyForBucket(null)).toBeNull();
+    expect(stringifyForBucket(["a", "b"])).toBeNull();
+  });
+});
 
 const records: DataRecord[] = [
   { id: "1", values: { status: "active", priority: 5 } },

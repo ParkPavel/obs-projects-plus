@@ -1,6 +1,7 @@
 # Dashboard V2 — Спецификация и план разработки
 
-> **Статус**: СОГЛАСОВАНО — ответы получены 2026-06-09, спек обновлён
+> **Статус**: technical architecture reference. Product priority and future delivery order are
+> defined by `PRODUCT_RESET_2026-07-18.md` and `BACKLOG.md` (2026-07-18).
 > **Ветка**: `feat/dashboard-v2`
 > **Архивная ветка**: `archive/dashboard-v1` — весь V1-код сохранён, не удаляется
 > **Дата**: 2026-06-09 (rev.2)

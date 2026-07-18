@@ -5,6 +5,8 @@
  * and unary operator detection for the general project filter system.
  */
 
+import { get } from 'svelte/store';
+import { i18n } from 'src/lib/stores/i18n';
 import type { FilterOperator } from '../../../../../settings/base/settings';
 
 /** Field type strings as used by DataField.type */
@@ -106,7 +108,7 @@ export const OPERATOR_LABELS: Record<FilterOperator, string> = {
  * Get display label for operator
  */
 export function getOperatorLabel(op: FilterOperator): string {
-  return OPERATOR_LABELS[op] ?? op;
+  return get(i18n).t(`components.filter.operators.${op}`, { defaultValue: OPERATOR_LABELS[op] ?? op });
 }
 
 /**

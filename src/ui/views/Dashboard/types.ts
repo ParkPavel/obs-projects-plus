@@ -384,6 +384,7 @@ export interface ChartConfig {
   readonly xAxis: ChartAxisX;
   readonly yAxis: ChartAxisY;
   readonly style: ChartStyle;
+  readonly groupMode?: "values" | "semantic";
 }
 
 export interface ChartAxisX {

@@ -33,6 +33,13 @@
   $: xFieldIsDate =
     fields.find((f) => f.name === config.xAxis.property)?.type === DataFieldType.Date;
 
+  // #107 — Status-grouping toggle is gated on the X field carrying non-empty
+  // statusGroups so UI visibility mirrors the engine's hasAnyBucket activation.
+  $: xFieldHasStatusGroups = (() => {
+    const sg = fields.find((f) => f.name === config.xAxis.property)?.typeConfig?.statusGroups;
+    return !!(sg && ((sg.todo?.length ?? 0) + (sg.inProgress?.length ?? 0) + (sg.complete?.length ?? 0)) > 0);
+  })();
+
   const GRANULARITIES: NonNullable<ChartAxisX["dateGranularity"]>[] = [
     "day",
     "week",
@@ -108,6 +115,11 @@
   function onSortChange(e: Event) {
     const val = (e.target as HTMLSelectElement).value;
     emit({ xAxis: { ...config.xAxis, sortBy: val as "value" | "label" | "manual" } });
+  }
+
+  function onGroupModeChange(e: Event) {
+    const val = (e.target as HTMLSelectElement).value as "values" | "semantic";
+    emit({ groupMode: val });
   }
 
   function onHeightChange(e: Event) {
@@ -199,6 +211,16 @@
       <option value="manual">{$i18n.t("views.dashboard.chart.sort.manual")}</option>
     </select>
   </label>
+
+  {#if xFieldHasStatusGroups}
+    <label class="ppp-config-row">
+      <span>{$i18n.t("views.dashboard.chart.group-mode.label", { defaultValue: "Status grouping" })}</span>
+      <select value={config.groupMode ?? "values"} on:change={onGroupModeChange}>
+        <option value="values">{$i18n.t("views.dashboard.chart.group-mode.values", { defaultValue: "Values" })}</option>
+        <option value="semantic">{$i18n.t("views.dashboard.chart.group-mode.semantic", { defaultValue: "Semantic groups" })}</option>
+      </select>
+    </label>
+  {/if}
 
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.height")}</span>

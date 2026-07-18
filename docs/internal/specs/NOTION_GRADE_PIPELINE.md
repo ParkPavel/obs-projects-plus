@@ -1,9 +1,10 @@
 # NOTION-GRADE PIPELINE — глобальный дизайн-пайплайн интерфейса
 
-> ⚠ **2026-06-18: последовательность волн W2–W5 скорректирована** глобальным аудитом UT-R5.
-> Актуальный порядок исполнения, зависимости и DoD — **`docs/internal/AUDIT_ROADMAP_2026-06-18.md`**.
-> Этот документ остаётся каноном *грамматики* (5 примитивов, анатомия §3, инвентарь
-> поверхностей); при конфликте о *порядке* тикетов — главный AUDIT_ROADMAP.
+> **Active priority, dependencies and Definition of Done:**
+> `docs/internal/PRODUCT_RESET_2026-07-18.md` and `docs/internal/BACKLOG.md`.
+> This document remains the grammar inventory (five primitives, panel anatomy and surface
+> inventory). The former W2–W5 roadmap is historical:
+> `docs/internal/archive/AUDIT_ROADMAP_2026-06-18.md`.
 
 
 > Создан 2026-06-12 по мандату пользователя: «профессиональный рециклинг всего интерфейса,

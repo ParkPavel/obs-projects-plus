@@ -38,7 +38,8 @@
     composeLinkedSelectionFilter,
     type SelectionStore,
   } from "../../canvasSelectionStore";
-  import { matchesCondition, applyFilter } from "src/lib/engine/filterEvaluator";
+  import { applyFilter } from "src/lib/engine/filterEvaluator";
+  import { filterByLinkedSelection } from "./relationFilterAdapter";
   import type { FilterDefinition } from "src/settings/base/settings";
   import BlockFilterBar from "./BlockFilterBar.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
@@ -64,6 +65,9 @@
    */
   export let widgetId: string = "";
   export let widgetTitle: string = "";
+  /** #092: pipeline reach so the block can offer recovery when steps hid every row. */
+  export let pipelineStepCount: number = 0;
+  export let pipelineInputRowCount: number = 0;
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -71,6 +75,8 @@
       fieldPresets: FieldPreset[];
       activeFieldPresetId: string | undefined;
     };
+    openPipeline: void;
+    clearPipeline: void;
   }>();
 
   // ── Canvas Selection Bus (#Phase4) ─────────────────────────
@@ -89,7 +95,7 @@
   $: subFiltered = subFilter && subFilter.conditions.length > 0 ? applyFilter(frame, subFilter) : frame;
 
   $: effectiveFrame = autoFilter
-    ? { ...subFiltered, records: subFiltered.records.filter((r) => matchesCondition(autoFilter!, r)) }
+    ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
     : subFiltered;
 
   function handleSubFilterChange(e: CustomEvent<FilterDefinition | undefined>) {
@@ -145,6 +151,14 @@
   // at all" — only the former offers a clear-filter action.
   $: isFilterEmpty =
     effectiveFrame.records.length === 0 && frame.records.length > 0;
+
+  // #092: the transform pipeline consumed input rows yet emitted nothing — a
+  // recoverable dead-end distinct from filter/empty-source states.
+  $: pipelineHidAll =
+    pipelineStepCount > 0 &&
+    pipelineInputRowCount > 0 &&
+    effectiveFrame.records.length === 0 &&
+    !isFilterEmpty;
 
   function handleAddFirstRecord() {
     const p = project;
@@ -305,7 +319,30 @@
     >
       {#if activeTab}
         {#if activeTab.viewType === "table"}
-          {#if isFilterEmpty}
+          {#if pipelineHidAll}
+            <EmptyState
+              icon="filter-x"
+              title={$i18n.t("views.dashboard.database-call.pipeline-hid-all", {
+                defaultValue: "The pipeline removed every row",
+                count: pipelineStepCount,
+              })}
+            >
+              <svelte:fragment slot="actions">
+                {#if !readonly}
+                  <button on:click={() => dispatch("openPipeline")}>
+                    {$i18n.t("views.dashboard.database-call.open-pipeline", {
+                      defaultValue: "Open pipeline"
+                    })}
+                  </button>
+                  <button on:click={() => dispatch("clearPipeline")}>
+                    {$i18n.t("views.dashboard.database-call.clear-pipeline", {
+                      defaultValue: "Clear pipeline"
+                    })}
+                  </button>
+                {/if}
+              </svelte:fragment>
+            </EmptyState>
+          {:else if isFilterEmpty}
             <EmptyState
               icon="filter-x"
               title={$i18n.t("views.dashboard.database-call.no-matches", {

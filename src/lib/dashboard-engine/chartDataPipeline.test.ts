@@ -304,6 +304,146 @@ describe("computeChartData — date bucketing", () => {
   });
 });
 
+// ── Semantic status-group buckets (#094) ─────────────────────
+
+function makeSemanticStatusFrame(
+  statusGroups?: { todo?: string[]; inProgress?: string[]; complete?: string[] },
+  fieldType: DataFieldType = DataFieldType.Status
+): DataFrame {
+  return {
+    fields: [
+      {
+        name: "status",
+        type: fieldType,
+        repeated: false,
+        identifier: false,
+        derived: false,
+        ...(statusGroups ? { typeConfig: { statusGroups } } : {}),
+      },
+      { name: "priority", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+    ],
+    records: [
+      { id: "1", values: { status: "planning", priority: 1 } },
+      { id: "2", values: { status: "inProgress", priority: 2 } },
+      { id: "3", values: { status: "review", priority: 3 } },
+      { id: "4", values: { status: "done", priority: 4 } },
+      { id: "5", values: { status: "done", priority: 5 } },
+    ],
+  };
+}
+
+const STATUS_GROUPS = {
+  todo: ["planning"],
+  inProgress: ["inProgress", "review"],
+  complete: ["done"],
+};
+
+describe("computeChartData — semantic status groups (#094)", () => {
+  test("raw status keys collapse into To Do / In Progress / Done buckets", () => {
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
+
+    // planning→To Do(1); inProgress+review→In Progress(2); done→Done(2)
+    expect(data.labels).toEqual(["To Do", "In Progress", "Done"]);
+    expect(data.series[0]?.values).toEqual([1, 2, 2]);
+  });
+
+  test("values of the same bucket merge additively (count summed)", () => {
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
+    // In Progress = inProgress(1) + review(1) = 2
+    const idx = data.labels.indexOf("In Progress");
+    expect(data.series[0]?.values[idx]).toBe(2);
+  });
+
+  test("No Status appears only for unmapped values", () => {
+    const frame = makeSemanticStatusFrame(STATUS_GROUPS);
+    frame.records.push({ id: "6", values: { status: "blocked", priority: 9 } });
+    const data = computeChartData(frame, makeConfig({ groupMode: "semantic" }));
+
+    expect(data.labels).toContain("No Status");
+    expect(data.series[0]?.values[data.labels.indexOf("No Status")]).toBe(1);
+  });
+
+  test("No Status absent when every value is mapped", () => {
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
+    expect(data.labels).not.toContain("No Status");
+  });
+
+  test("canonical order To Do→In Progress→Done regardless of sortBy/sortOrder", () => {
+    const config = makeConfig({
+      groupMode: "semantic",
+      xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: false },
+    });
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), config);
+    expect(data.labels).toEqual(["To Do", "In Progress", "Done"]);
+  });
+
+  test("semantic mode with no statusGroups falls back to raw keys", () => {
+    const data = computeChartData(makeSemanticStatusFrame(undefined), makeConfig({ groupMode: "semantic" }));
+    // groupMode semantic but hasAnyBucket=false → raw keys, sorted by label asc.
+    expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
+    expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
+  });
+
+  test("default (no groupMode) keeps raw status keys even with statusGroups", () => {
+    // Regression guard for #107: semantic must be opt-in, default == values.
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig());
+    expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
+    expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
+  });
+
+  test("explicit groupMode 'values' keeps raw status keys with statusGroups", () => {
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "values" }));
+    expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
+    expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
+  });
+
+  test("hiddenGroups hides a bucket by semantic label", () => {
+    const config = makeConfig({
+      groupMode: "semantic",
+      xAxis: { property: "status", sortBy: "label", sortOrder: "asc", omitZero: false, hiddenGroups: ["In Progress"] },
+    });
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), config);
+    expect(data.labels).toEqual(["To Do", "Done"]);
+  });
+
+  test("date-bucketing does not activate semantics (dateGrouping != null)", () => {
+    const frame: DataFrame = {
+      fields: [
+        {
+          name: "due",
+          type: DataFieldType.Status,
+          repeated: false,
+          identifier: false,
+          derived: false,
+          typeConfig: { statusGroups: STATUS_GROUPS },
+        },
+        { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      ],
+      records: [
+        { id: "1", values: { due: "2024-01-15", value: 10 } },
+        { id: "2", values: { due: "2024-02-10", value: 20 } },
+      ],
+    };
+    const config = makeConfig({
+      groupMode: "semantic",
+      xAxis: { property: "due", sortBy: "label", sortOrder: "asc", omitZero: false, dateGranularity: "month" },
+    });
+    const data = computeChartData(frame, config);
+    // dateGrouping active → semantic suppressed; labels are month buckets.
+    expect(data.labels).toEqual(["2024-01", "2024-02"]);
+  });
+
+  test("custom semantic labels passed via 3rd arg", () => {
+    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }), {
+      todo: "К выполнению",
+      inProgress: "В работе",
+      complete: "Готово",
+      none: "Без статуса",
+    });
+    expect(data.labels).toEqual(["К выполнению", "В работе", "Готово"]);
+  });
+});
+
 // ── chartHeightPx Tests ──────────────────────────────────────
 
 describe("chartHeightPx", () => {

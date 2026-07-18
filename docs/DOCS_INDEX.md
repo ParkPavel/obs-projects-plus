@@ -1,6 +1,6 @@
 # Docs Index
 
-> Единая точка навигации по документации. Обновлено: 2026-06-09.
+> Единая точка навигации по документации. Обновлено: 2026-07-18.
 
 ---
 
@@ -31,9 +31,11 @@
 | [internal/CONTEXT.md](internal/CONTEXT.md) | Current session state — updated by context-manager agent |
 | [internal/DASHBOARD_V2_SPEC.md](internal/DASHBOARD_V2_SPEC.md) | Dashboard V2 specification and development plan |
 | [internal/DASHBOARD_V2_VISION.md](internal/DASHBOARD_V2_VISION.md) | User vision essay — source of truth for all UX decisions |
+| [internal/PRODUCT_RESET_2026-07-18.md](internal/PRODUCT_RESET_2026-07-18.md) | Active product contract: Vision scenes, Relation-first reset, delivery order and acceptance rules |
 
 ## Archive
 
 | Document | Purpose |
 |---|---|
 | [internal/archive/](internal/archive/) | Completed milestone docs (M-DATAVIEW-BRIDGE, #022, QA audit, MASTER_MAP_V5) |
+| [internal/archive/README.md](internal/archive/README.md) | Archive policy and replacements for superseded planning documents |

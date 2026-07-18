@@ -62,6 +62,7 @@ export interface WidgetRenderContext {
   readonly project: ProjectDefinition | undefined;
   readonly effectiveTableConfig: DataTableConfig | undefined;
   readonly pipelineStepCount: number;
+  readonly pipelineInputRowCount: number;
   readonly chartConfig: ChartConfig | null;
   readonly statsConfig: StatsConfig | null;
   readonly chartRightFrame: DataFrame | null;
@@ -129,6 +130,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project, config: c.widget.config, widgetId: c.widget.id,
       widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection,
+      pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
     }),
   },
   "cover-banner": {

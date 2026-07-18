@@ -1,6 +1,7 @@
 # Dashboard UI Modernization Plan — M-UI-MODERNIZATION
 
-> **Status**: PLANNING (адаптирован 2026-06-10 — выровнен с DASHBOARD_V2_SPEC.md)  
+> **Status**: historical implementation plan and visual reference; it does not set product
+> priority after 2026-07-18. See `PRODUCT_RESET_2026-07-18.md` and `BACKLOG.md`.
 > **Created**: 2026-06-10  
 > **Milestone**: M-UI-MODERNIZATION  
 > **Spec cross-ref**: `docs/internal/DASHBOARD_V2_SPEC.md` (источник правды по судьбе виджетов)

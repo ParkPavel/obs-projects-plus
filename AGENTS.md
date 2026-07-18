@@ -4,7 +4,10 @@ Project-wide instructions for AI coding agents working in this repository. Open 
 
 ## What this project is
 
-Obsidian plugin: project management with Database (12 widget types, 115+ formula functions), Calendar, Board, Gallery views. Notion-parity UX target.
+Obsidian plugin: local Markdown-first project management with Database, Calendar, Board,
+Gallery and Dashboard views. The product target is not a Notion clone: it is a transparent,
+bidirectional layer over user-owned Markdown data. Before new product work, read
+`docs/internal/PRODUCT_RESET_2026-07-18.md` and map the change to a Vision scene.
 
 ## Stack
 
@@ -18,14 +21,15 @@ Obsidian plugin: project management with Database (12 widget types, 115+ formula
 
 ```bash
 npm run build         # tsc -noEmit -skipLibCheck + esbuild bundle (production)
-npm test              # full jest suite (134 suites / 2020 tests)
+npm test              # full Jest suite (documented baseline: 162 suites / 2287 tests)
 npm run lint          # ESLint over ./src
 npm run svelte-check  # Svelte template + type check
 npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Test baseline: **134 suites / 2020 tests PASS**, tsc 0 errors. (Updated 2026-06-10.) Any deviation must be acknowledged before merge.
+Documented baseline: **162 suites / 2287 tests PASS** (2026-06-26 working-tree validation).
+Always run the suite and report its actual count; any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
 
@@ -33,7 +37,7 @@ CI (`.github/workflows/ci.yml`) gates merge into `main` on **four** checks. An a
 
 ```bash
 npm run build         # 1. tsc (-skipLibCheck) + esbuild — 0 errors
-npm test              # 2. jest — baseline holds (≥ 134 suites / 2020 tests)
+npm test              # 2. Jest — documented baseline holds (162 suites / 2287 tests)
 npm run lint          # 3. ESLint — 0 errors
 npm run svelte-check  # 4. svelte-check — 0 errors  ← catches template/reactive bugs tsc cannot
 ```

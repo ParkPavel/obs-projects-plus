@@ -4,6 +4,12 @@
 > **Updated**: 2026-06-18 (epic #077 FormulaConstructor unification → ✅ COMPLETED, отгружен в origin/main `7cc3d66`; baseline 152/2205 → **155 suites / 2232 tests**; px-budget 186 → **177**. Ранее: #080 CLOSED/DECLINED Option B → replaced by #077; #066 RESOLVED Option B defer-to-V3; #096.4 CLOSED `065331e`. W2 prioritized queue exhausted — see «Открытые тикеты» / CONTEXT.md)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
+> **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
+> product contract. New user-facing work must map to a Vision scene and acceptance outcome.
+> The next product milestone is **R1 Relation-first vertical slice**; existing W2/W3 entries
+> are not deleted, but must not supersede R1. Technical bugfixes and the #105–#109 validation
+> stack may proceed independently.
+
 ## Ticket format
 
 ```
@@ -20,6 +26,86 @@
 
 > **NEEDS-ANALYSIS gate**: if `analysis_required: true` and `analysis_done: false`,
 > the orchestrator must run a dedicated analytics session before any dev work starts.
+
+---
+
+## Milestone M-RELATION-FIRST — 🔥 NEXT PRODUCT MILESTONE
+
+> Product contract: `PRODUCT_RESET_2026-07-18.md` §3–§6. This milestone is a vertical
+> user outcome, not a collection of dashboard controls. It takes precedence over new W2/W3
+> product work. Existing crash/security/regression fixes may continue independently.
+
+### #110 — Relation-first design brief and baseline audit
+- Status: 📋 BACKLOG
+- Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: M
+- analysis_required: true
+- analysis_done: false
+- Blocks: #111, #112, #113, #114
+
+Deliverable: one approved design brief for `Clients → Sessions`: canonical Relation contract,
+entry points, current-state screenshots/steps, data migration, terminology, accessibility and
+end-to-end acceptance. It must explicitly distinguish Relation, `linkedSelection` and chart
+correlation; no implementation begins before the distinction is approved.
+
+### #111 — Canonical Relation contract and compatibility boundary
+- Status: 📋 BACKLOG
+- Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: L
+- analysis_required: true
+- analysis_done: false
+- Depends on: #110
+- Blocks: #112, #113, #114
+
+One domain contract for WikiLink relations, inverse relations, target resolution, unmatched
+records and relation metadata. `linkedSelection` may consume this contract but must not become
+an alternate relation model. Include migration/compatibility tests for existing frontmatter.
+
+### #112 — Guided Relation setup and record editing flow
+- Status: 📋 BACKLOG
+- Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: XL
+- analysis_required: true
+- analysis_done: false
+- Depends on: #110, #111
+- Blocks: #115
+
+User flow: select field/record → “Link to database” → choose target → preview matches and
+unmatched records → optionally create inverse field → save. The same flow is reachable from
+schema editor, record/cell editing and Dashboard. Keyboard path, empty states and plain-language
+examples are acceptance criteria.
+
+### #113 — Related records and rollup starter surface
+- Status: 📋 BACKLOG
+- Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: L
+- analysis_required: true
+- analysis_done: false
+- Depends on: #111
+- Blocks: #115
+
+After a Relation exists, expose related records and a `count` rollup without configuring a
+pipeline. Offer a clear next action to create a linked Database Call or a chart from the same
+relation; verify reactive Markdown updates.
+
+### #114 — Relation-aware Dashboard interactions
+- Status: 📋 BACKLOG
+- Milestone: M-RELATION-FIRST | Priority: P1 | Complexity: L
+- analysis_required: true
+- analysis_done: false
+- Depends on: #111, #112
+- Blocks: #115
+
+Make Selection Bus and linked blocks explain and reuse the configured Relation. When no Relation
+exists, distinguish a temporary filter from a persistent relationship. Do not add another
+dashboard-only linking configuration.
+
+### #115 — Clients → Sessions end-to-end acceptance vault
+- Status: 📋 BACKLOG
+- Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: M
+- analysis_required: false
+- Depends on: #112, #113, #114
+
+Acceptance in a clean `OBStests` scenario: create/link a session to a client, observe inverse
+related records and session count, edit Markdown externally, see every relevant view update,
+and open a date/pain chart. Evidence: automated tests, four technical gates, manual screenshots
+and an accessible keyboard path.
 
 ---
 
@@ -1051,10 +1137,15 @@ kernel-`count` вообще (если нет — убрать из ColumnAggrega
 Architect-план обязателен ДО кода (как #067).
 
 ### #075 — P1 UX: конвейер трансформаций — дискаверабилити и язык
-- Status: ⚠️ PARTIAL (2026-06-11) — минимальный слой D1 реализован: каждый тип шага несёт
-  описание на языке задач с примером (`*-desc` ключи en+ru, tooltip на кнопках добавления
-  шага). Остаток (empty-state «было → стало», именованный вход в WidgetHost) — после
-  дизайн-сессии по UT2026-E и согласованно с #067 (кнопка живёт в WidgetHost).
+- Status: ✅ READY FOR PR (2026-06-21) — остаток закрыт на ветке
+  `feat/095-pipeline-value-placeholder` (коммит `15eafca`): обучающий empty-state конвейера
+  «было→стало» (заголовок `wand-2` + grid колонок + `arrow-right`, все размеры в rem на
+  существующих `--ppp-*` токенах, новых токенов не потребовалось), кнопка «Очистить конвейер»
+  (`trash-2`, один клик, Решение 1C) в футере PipelineEditor. Копирайт 2A («на языке задач»):
+  tooltip ∑ и пункт меню переформулированы во всех 4 локалях (только значения, ключи не тронуты).
+  Попутно закрыт i18n-пробел `database-call.*` в uk/zh-CN (коммит `ed37238`). px-budget ≤177
+  держится. 4 гейта зелёные. Ранний слой D1 (`*-desc` ключи) учтён. Остатка нет.
+- Прежний статус: ⚠️ PARTIAL (2026-06-11) — слой D1 (описания шагов на языке задач, tooltip).
 - Milestone: M-UT-FIXES | Priority: P1 | Complexity: M
 - analysis_required: false | design_required: true (senior-designer)
 - Depends on: #069 ✅
@@ -1212,7 +1303,15 @@ typed-карточки — status pills, цветные chips, типизиро�
 SmartSuggest relation-CTA (#059) сразу в мастер.
 
 ### #092 — P1: Восстановление из пустого конвейера («Нет данных»)
-- Status: 📋 BACKLOG
+- Status: ✅ READY FOR PR (2026-06-21) — recovery-узел реализован на ветке
+  `feat/095-pipeline-value-placeholder`: при непустом конвейере, скрывшем все строки
+  (`pipelineStepCount>0 && inputRowCount>0 && records===0 && !isFilterEmpty`), показывается
+  EmptyState `filter-x` «Конвейер скрыл все записи (N шагов)» с [Открыть конвейер] [Очистить
+  конвейер] (один клик, Решение 1C). Проброс `inputRowCount` WidgetHost→ctx→DatabaseCallBlock
+  (коммит `ccf051b`); фикс ложного срабатывания при linked source (`1224481`). Round-trip Jest
+  (`pipelineRecovery.test.ts`). 4 гейта зелёные: build 0 / 159 suites · 2264 tests / lint 0 /
+  svelte-check 0. Аудит READY FOR PR. NB: #099 ранее помечал #092 как поглощённый — фактически
+  закрыт этим тонким UX-слоем поверх существующего движка, без дубля filter engine.
 - Milestone: M-UT-FIXES | Priority: P1 | Complexity: S
 
 Скриншот 10-17-34: «Проекты по статусу» = «Нет данных», бейдж Σ4 — шаги конвейера
@@ -1252,19 +1351,323 @@ SettingsMenu (Вид/Проекты/Виды/Фильтры/Цвета/Сорт�
 календаря как явные пикеры с превью.
 
 ### #094 — P2: Словарь значений в визуализациях (легенды/группы)
-- Status: 📋 BACKLOG | W2
-- Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
+- Status: ✅ READY FOR PR (2026-06-20, Option B реализован на ветке `feat/095-pipeline-value-placeholder`,
+  стек поверх #095, НЕ слит/не запушен — гейт пользователя). Чарт-легенда дашборда теперь
+  показывает семантические бакеты (To Do / In Progress / Done / No Status) вместо сырых ключей
+  статусов (inProgress/done/planning/review) — чарт honor `statusGroups` так же, как Board/DataTable.
+  БЕЗ миграции схемы: `statusGroups` читаются из `source.fields[].typeConfig` (тот же путь, что Board:
+  `board.ts:55,204`). Реализация: `chartDataPipeline.ts` (`computeChartData` — гард `semanticActive` по
+  `DataFieldType.Status` + бакетизация ПОСЛЕ агрегации со слиянием value аддитивно); чистая функция
+  `bucketLabelForRaw` вынесена в `src/ui/views/Dashboard/widgets/DatabaseCall/groupRows.ts` (единый
+  источник 3-bucket логики, переиспользуется чартом и DataTable; `buildSemanticGroups` отрефакторен
+  на её вызов); `ChartWidget.svelte` прокидывает i18n-метки. Ограничение задокументировано в коде:
+  не-аддитивные Y-агрегаты (avg/min/max) по Status-оси out-of-scope для #094.
+  Гейты все зелёные: build 0 / jest **158 suites / 2260 tests** PASS / lint 0 / svelte-check 0;
+  `@ts-ignore`=0; baseline 2246→2260 (+14); px-budget ≤177 не изменён (`styles.css` не тронут).
+  Follow-up: #104 (унификация Board getSemanticColumns на `bucketLabelForRaw`).
+- **✅ ЗАКРЫТ через #107 (2026-06-26, в рабочем дереве, ожидает merge пользователя)**: визуальный
+  прогон 2026-06-26 показал, что семантическая легенда чарта была недостижима на дефолтных
+  настройках (гейт по `DataFieldType.Status`). #107 ввёл явный UI-toggle режима группировки
+  (`config.groupMode === "semantic"`), дефолт `"values"` НЕ менялся — семантические бакеты в
+  легенде теперь достижимы по переключателю. Обещание #094 («легенда показывает бакеты»)
+  выполнимо через toggle.
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: M (re-scoped с S; реализован Option B)
 
 Скриншот 21-25-49: легенда «inProgress/done/planning/review» — сырые ключи статусов.
-Маппинг отображения через statusGroups/semanticLabels там, где он уже есть у Board/Table.
+Премиса для Option B оказалась ВАЛИДНОЙ: `statusGroups` достижимы через `typeConfig` X-поля
+(`source.fields[].typeConfig`, тот же путь, что Board) — маппинг 3-bucket переиспользован из общей
+функции `bucketLabelForRaw`. (Ранний вывод 2026-06-20 «премиса ложна» относился к Option A —
+per-value словарю «сырой ключ → метка»; он по-прежнему отсутствует и out-of-scope.)
 
 ### #095 — P2: PipelineEditor — operator-select и значения по канону
-- Status: 📋 BACKLOG | W2 (вместе с #075-остатком и #092)
+- Status: ✅ READY FOR PR (2026-06-20, ветка `feat/095-pipeline-value-placeholder`, коммит `1660e59`) — operator-select уже был каноничен (getOperatorLabel + operatorNeedsValue из #099); оставалась единственная дивергенция — value-инпут использовал приватный ключ `views.dashboard.pipeline.value` (defaultValue "Value"). Переведён на канонический `common.value-placeholder` («Значение…»), подтверждён во всех 4 локалях (en/ru/uk/zh-CN). Audit READY FOR PR, все 4 гейта зелёные (build 0 / jest 158-2246 / lint 0 / svelte-check 0). НЕ слит/запушен — гейт пользователя. P3-остаток: orphaned-ключ `views.dashboard.pipeline.value` (cleanup).
 - Milestone: M-UT-FIXES | Priority: P2 | Complexity: S
 
 Скриншот 21-19-21: нативный select операторов, value-инпут без подсказки примера.
 
-## UT-R5 — Ручное тестирование, раунд 5 (2026-06-18) + глобальный аудит
+### #105 — P0: PipelineEditor — краш «read only property» при правке существующего шага конвейера
+
+- Status: 📋 BACKLOG (заведён 2026-06-26 по итогам визуального прогона, computer-use +
+  REST API, ветка `feat/095-pipeline-value-placeholder`, коммит `f558b48`)
+- Milestone: M-UT-FIXES | Priority: P0 | Complexity: S–M (неизвестно до анализа)
+- analysis_required: true
+- analysis_done: false
+- Источник репро: `docs/internal/TEST_REPORT_2026-06-26.md`, «Дефект 1»
+
+**Симптом**: любое мутирующее действие в открытом редакторе конвейера («⋯ → Конвейер
+данных») на УЖЕ СУЩЕСТВУЮЩЕМ шаге выбрасывает необработанное исключение и не применяется:
+
+```
+Uncaught TypeError: Cannot assign to read only property '0'/'1' of object '[object Array]'
+    at V (plugin:obs-projects-plus:304:81544)
+    at Y/O (plugin:obs-projects-plus:304:8377x)
+    at Array.Le/ce (plugin:obs-projects-plus:304:8x)
+    at HTMLButtonElement/HTMLInputElement (plugin:obs-projects-plus:304:5x)
+```
+
+Индекс в сообщении (`'0'`, `'1'`) совпадает с индексом редактируемого шага — указывает на
+мутацию `steps[i]`/`conditions[i]` напрямую без клонирования. Sourcemap для `main.js`
+отсутствует, поэтому привязка к `src/` не сделана — первая задача анализа: воспроизвести в
+dev-режиме (`npm run dev`/несжатая сборка) или забить breakpoint по паттерну ошибки, чтобы
+получить реальный `file:line` в `src/ui/views/Dashboard/...` (предположительно компонент
+шага конвейера / PipelineEditor, см. `NOTION_DM_RESEARCH.md` §2–§4 про устройство шага).
+
+**Воспроизведено на 3 независимых действиях** (т.е. не специфично для group-by):
+1. Выбор поля в селекте «Group by field» (шаг «Группировка») — конфиг шага не обновляется,
+   счётчик остаётся `N→N`, заголовок шага — «(не задано)».
+2. Клик по иконке 👁 («Отключить шаг», non-destructive disable) — на шаге 1 (Фильтр) И на
+   шаге 2 (Группировка).
+3. Клик «+ Add condition» внутри шага «Фильтр» — и на свежесозданном шаге, и на
+   существовавшем изначально.
+
+**НЕ крашится** (контрольная группа, для сужения локализации):
+- добавление НОВОГО шага в конвейер (кнопки «Фильтр / Группировка / Агрегация…» в футере);
+- кнопка «Очистить» (footer, trash-2, #075) — мгновенно удаляет все шаги.
+
+Гипотеза: разница между «не крашится» и «крашится» — создание нового шага кладёт новый
+объект в массив (immutable push/spread), а редактирование существующего шага мутирует
+элемент массива на месте. Если массив шагов приходит в дочерний компонент как `readonly
+Step[]` (TypeScript) без фактического клонирования при передаче через Svelte props/store,
+любая попытка `steps[i].field = x` или `steps[i] = {...}` упадёт именно так.
+
+**Связь с историей проекта**: это НЕ повторение уже закрытой проблемы #099/#100
+(«PipelineEditor: draft применяется только по Сохранить» — тот класс проблем закрыт
+2026-06-13, `2db4124`/`97b7079`/`2209a8a`, READY FOR PR). Это новая, более тяжёлая
+регрессия для другого пути (правка существующего шага), которую #099/#100 не покрывали
+тестами. Нужен новый regression-тест на именно «открыть существующий шаг → изменить
+параметр → проверить, что конфиг применился без исключения», иначе фикс рискует не
+закрыть класс целиком (как уже случилось один раз с #099/#100).
+
+**Acceptance**:
+- [ ] Воспроизведено в dev-режиме с точным `file:line`.
+- [ ] Все 3 действия из репро работают без исключений: выбор group-by применяется и
+      отражается в заголовке/счётчике шага; disable-step (👁) переключает шаг
+      non-destructively; add condition добавляет строку без падения.
+- [ ] Новый regression-тест на мутацию существующего шага (не только создание нового).
+- [ ] 4 гейта зелёные, передеплой в OBStests + REST API верификация + повторный визуальный
+      прогон по `docs/internal/DASHBOARD_GUIDE_AND_TESTING.md` §4.3 (Jest здесь
+      недостаточен — см. вывод `TEST_REPORT_2026-06-26.md`).
+
+---
+
+### #106 — P0: Регрессия замороженного контракта Selection Bus — Сценарий A связей (`linkedSelection`) не фильтрует приёмника, Escape не снимает выбор
+
+- Status: 📋 BACKLOG (заведён 2026-06-26)
+- Milestone: M-UT-FIXES | Priority: P0 | Complexity: S–M
+- analysis_required: true
+- analysis_done: false
+- **Требует backend-architect-план перед фиксом** — затронут архитектурный инвариант
+  («Selection Bus API контракт заморожен — не меняется», `CONTEXT.md` →
+  «Ключевые решения»; «Selection Bus заморожен», `TABLE_V2_CANON.md`,
+  `VISION_COMPLIANCE.md` line 29).
+- Источник репро: `docs/internal/TEST_REPORT_2026-06-26.md`, «Дефект 2»
+
+**Шаги** (демо «Обзор», мастер `database-call` «Клиенты» → приёмник `database-call`
+«Проекты клиента», `linkedSelection.sourceWidgetId` указывает на мастера,
+`relationField="client"`):
+1. На строке «Acme Studio» в мастере → «⋯» → «Фильтровать связанные блоки по этой строке».
+2. Строка корректно подсвечивается как driving (фиолетовая полоса слева).
+3. **Ожидание**: приёмник показывает 2 записи (`Redesign — Acme Studio`,
+   `Onboarding Flow — Acme Studio`, у которых `client: [[Acme Studio]]` в frontmatter).
+4. **Факт**: приёмник показывает «Нет совпадений» (0 записей).
+
+Воспроизведено стабильно 2 раза подряд, включая прогон с очищенной DevTools-консолью без
+сопутствующих исключений — это логическая ошибка сравнения значений, не падение. Гипотеза
+для анализа: значение выбора (строка `"Acme Studio"`, имя заметки) должно сравниваться с
+полем `client` в данных приёмника, которое хранится как **wikilink**
+(`client: "[[Acme Studio]]"`, после парсинга `DataFieldType.Relation` → массив
+`["Acme Studio"]` через `stripWikiLink`, см. `src/lib/datasources/helpers.ts:74-83`).
+Нужно сверить, как `canvasSelectionStore.ts` формирует условие
+`{ field: relationField, operator: "is"/"is-any-of", value: <выбор> }` и какое именно
+значение оно туда кладёт (raw note name vs `[[wikilink]]` vs уже распарсенное) — вероятный
+mismatch именно на этом стыке (Selection Bus отдаёт один формат, `filterEvaluator.ts`
+ожидает другой).
+
+**Снятие выбора — раздельные результаты**:
+- повторный клик по тому же пункту меню (теперь «Перестать фильтровать по этой строке») —
+  **работает**, приёмник возвращается к полным 8 записям;
+- клавиша **Escape** — **не работает**, выбор и подсветка остаются активными (нарушает
+  §3.4 шаг 5 `DASHBOARD_GUIDE_AND_TESTING.md`: «Escape очищает выбор по всему канвасу»).
+
+**Контрольная проверка (Сценарий B — chart-мастер → stats, БЕЗ `linkedSelection`)**: клик
+по сектору donut-чарта корректно фильтрует stats-виджет (6/8/8/$42000 → 0/3/0/$0), сектор
+подсвечивается, повторный клик снимает выбор и восстанавливает значения. **Вывод**:
+Selection Bus как механизм публикации/подписки жив; баг локализован в (a) пути
+`linkedSelection.relationField` специфично для `database-call`-приёмника и/или (b)
+Escape-обработчике (возможно, общем — не проверено отдельно для Сценария B).
+
+**Контекст серьёзности**: `NOTION_DM_RESEARCH.md` (2026-06-12, аудит реактивности, §3)
+аттестовал Selection Bus как «✅ идемпотентный store, мгновенный» на момент исследования —
+то есть механизм на тот момент работал по этому самому пути (Сценарий A — единственный
+полностью настроенный пример связи в демо с момента её создания). Это регрессия в
+контракте, который другие тикеты (#091 Link-флоу связей, волна W3) собираются расширять,
+предполагая стабильность — фиксить нужно ДО начала #091.
+
+**Acceptance**:
+- [ ] backend-architect-план: точная диагностика mismatch (значение выбора vs формат
+      `client`-поля) + минимальный фикс без изменения публичного контракта Selection Bus.
+- [ ] Сценарий A полностью проходит §3.4 гайда: выбор фильтрует, повторный клик снимает,
+      **Escape снимает**.
+- [ ] Новый regression-тест именно на «таблица-мастер → таблица-приёмник через
+      relationField + wikilink-значение» — этот путь был непокрыт, раз регрессия не
+      была замечена.
+- [ ] 4 гейта зелёные + REST API верификация + повторный визуальный прогон §3.4/§4.4.
+
+---
+
+### #107 — P1: Семантические бакеты статусов (#094/#104) не активны по умолчанию — `groupMode` Board и type-guard чарта
+
+- Status: ✅ **FIXED (2026-06-26, в рабочем дереве ветки `feat/095-pipeline-value-placeholder`,
+  НЕ закоммичено/слито/запушено — ожидает merge пользователя)**
+- **РЕШЕНИЕ (продуктовое)**: выбран вариант «явный UI-toggle», НЕ смена дефолта. Режим
+  группировки переключается пользователем (`values | semantic`); дефолт `"values"` сохранён
+  (обратная совместимость, авто-включения нет). Семантические бакеты статусов теперь ДОСТУПНЫ
+  по переключателю в чарте и Board, а не недостижимы из-за дефолтных настроек.
+  - **Чарт**: гейт `src/lib/dashboard-engine/chartDataPipeline.ts:124-125` перевёрнут с
+    `xFieldDef?.type === DataFieldType.Status` на `config.groupMode === "semantic"` — бакетизация
+    активируется по режиму группировки, не по выведенному типу X-поля.
+  - **Board**: toggle уже существовал (`BoardSettings` → `config.groupMode`, путь
+    `BoardOptionsProvider.svelte:20` → `board.ts:51-58` → `BoardView.svelte:524`); дополнительной
+    логики не потребовалось.
+  - Закрывает визуальный FAIL #094 и #104 (см. их записи). Изменённые файлы:
+    `src/lib/dashboard-engine/chartDataPipeline.ts` (gate flip) + связанные тесты чарт-пайплайна.
+  - Гейты (независимо подтверждены tester И audit-manager): build 0 / jest **162 suites /
+    2287 tests PASS** / lint 0 / svelte-check 0 / PX-ratchet 177; деплой OBStests + REST OK;
+    аудит READY FOR PR. Визуальный реконфирм §4.2 (toggle/легенда/колонки) — Untestable (UI-only),
+    ожидает ручной проверки пользователя.
+- Milestone: M-UT-FIXES | Priority: P1 (повышен с предполагаемого P3 — см. ниже) |
+  Complexity: XS–S (если гипотеза верна — это смена дефолта/генератора, не новая логика)
+- analysis_required: false (root cause найден ниже с точными `file:line`)
+- Depends on: #094 (✅ READY FOR PR), #104 (✅ READY FOR PR `9cb69ec`)
+- Источник репро: `docs/internal/TEST_REPORT_2026-06-26.md`, «Дефект 3»
+
+**Факт визуальной проверки** (2026-06-26): легенда donut-чарта «Проекты по статусу»
+(демо, вид «Обзор») показывает сырые ключи `inProgress`/`done`/`planning`/`review`, НЕ
+семантические метки «To Do / In Progress / Done». Колонки Board-вида «Pipeline» показывают
+те же сырые ключи в произвольном порядке. Это закрывает (с результатом FAIL) пп. 1–2
+`UNTESTABLE_FEATURES_W2_2026-06-22.md`, которые были явно отложены на «визуальный прогон
+человеком» с момента закрытия #094/#104.
+
+**Это НЕ означает, что #094/#104 реализованы неверно** — `data.json` демо подтверждает:
+`fieldConfig.status.statusGroups` присутствует и корректен
+(`todo:[planning,todo]`, `inProgress:[inProgress,doing,review]`, `complete:[done]`), а
+код (`bucketLabelForRaw` в `groupRows.ts`, переиспользуется чартом и Board) — на месте.
+**Найденная точная причина — два РАЗНЫХ гейта активации, оба отдельно от `statusGroups`,
+и ни один из них демо-проект не включает:**
+
+1. **Чарт** (`src/lib/dashboard-engine/chartDataPipeline.ts:124-125`):
+   ```ts
+   const semanticActive =
+     xFieldDef?.type === DataFieldType.Status && hasAnyBucket && dateGrouping == null;
+   ```
+   Бакетизация активируется ТОЛЬКО если ось X имеет `DataFieldType.Status`. Демо-генератор
+   (`src/ui/app/onboarding/demoProject.ts`) НЕ присваивает полю `status` явный тип
+   `DataFieldType.Status` — поле определяется через `fieldConfig.status.statusGroups`
+   (другое пространство конфига), без отдельного объявления `type`. Если тип поля
+   `status` в проекте инферится автоматически (а не явно как `Status`), `semanticActive`
+   всегда `false`. **Нужно проверить**, как вообще присваивается `DataFieldType.Status`
+   полю в folder-datasource проекте без явной схемы (`fields[]`) — через
+   `ConfigureField`/`Schema.svelte` (см. `dataFieldTypeOptions.ts`) пользователь может
+   назначить тип Status вручную, но демо-генератор не делает этого программно.
+
+2. **Board** (`src/ui/views/Board/BoardOptionsProvider.svelte:20`):
+   ```ts
+   $: groupMode = config?.groupMode ?? "values";
+   ```
+   и (`src/ui/views/Board/board.ts:51-58`, `getColumns`):
+   ```ts
+   if (semanticGroupMode && grouByField && grouByField.typeConfig?.statusGroups) {
+     return getSemanticColumns(...);
+   }
+   ```
+   `groupMode` по умолчанию `"values"` (= raw), а не `"semantic"` — переключение в
+   `BoardView.svelte:524` передаётся как `groupMode === "semantic"`. Демо-генератор не
+   устанавливает `config.groupMode = "semantic"` для вида «Pipeline», поэтому семантическая
+   ветка `getSemanticColumns` никогда не вызывается, несмотря на корректные
+   `statusGroups`. **Это объясняет, почему #104 — чистый рефакторинг «поведение
+   идентично построчно» (как и заявлено в его описании) — ничего не изменил визуально:
+   #104 рефакторил `getSemanticColumns` (когда она вызывается), но не трогал условие
+   ЕЁ ВЫЗОВА, которое зависит от `groupMode`, остающегося `"values"` по умолчанию.**
+
+**Открытый вопрос для анализа** (помечен как `analysis_required: false`, т.к. гипотеза
+конкретна, но решение зависит от продуктового выбора): существует ли в UI Board-вида
+переключатель «сырые значения / семантические бакеты» для `groupMode`, который пользователь
+может включить вручную? Если да — баг в том, что демо не включает его по умолчанию
+(легкий фикс генератора). Если нет — это пробел дискаверабилити (#104 предполагал, что
+существующий путь активации работает, но пользователю/демо неоткуда узнать о
+`groupMode: "semantic"`, если нет UI-входа).
+
+**Severity**: P1 (повышен с тех-долгового P3 у #104) — потому что #094 был READY FOR PR
+именно с обещанием «легенда показывает семантические бакеты», и реальный рендер (на
+дефолтных настройках, как видит обычный пользователь/демо) этого не делает. Расхождение
+между Jest (зелёный, юнит-тесты вызывают функции напрямую с явными аргументами) и
+интеграционным поведением (дефолты не совпадают) — см. вывод `TEST_REPORT_2026-06-26.md`
+о том, что Jest здесь недостаточен как единственный гейт.
+
+**Acceptance**:
+- [ ] Решить (продуктово): семантический режим — это новый ДЕФОЛТ при наличии
+      `statusGroups`, или явный UI-toggle? Зафиксировать решение в `CONTEXT.md`.
+- [ ] Если дефолт: изменить `groupMode` default-логику (`BoardOptionsProvider.svelte:20`)
+      на авто-включение semantic при `typeConfig.statusGroups` присутствует и явно не
+      выключен пользователем; присвоить `DataFieldType.Status` полю `status` в
+      демо-генераторе (или общем авто-определении типа для select-like строковых полей).
+- [ ] Если toggle: обеспечить видимый UI-вход + обновить демо-генератор, чтобы включать
+      его в демо (по правилу schema evolution из `CLAUDE.md`: «grep all generators»).
+- [ ] Повторный визуальный прогон §4.2 гайда после фикса — обязателен, Jest не
+      эквивалентен.
+
+---
+
+### #108 — P2: Утечка русских меток операторов фильтра под uk/zh-CN (i18n)
+
+- Status: 📋 BACKLOG (заведён 2026-06-26)
+- Milestone: M-UT-FIXES | Priority: P2 | Complexity: XS
+- analysis_required: false
+- Источник репро: `docs/internal/TEST_REPORT_2026-06-26.md`, «Дефект 4»
+
+`src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers.ts:59-103` — `OPERATOR_LABELS`
+это хардкод-`Record` русских строк, а `getOperatorLabel` (`:108-110`) возвращает его напрямую,
+поэтому пилюли фильтра показывают «Равно»/«Содержит» и т.п. под локалями uk/zh-CN. Скоуп:
+маршрутизировать `getOperatorLabel` через i18n (`components.filter.operators.<op>`, паттерн
+`get(i18n)` как в `board.ts`), оставив `OPERATOR_LABELS` как `defaultValue`-fallback; добавить
+ключи операторов во все 4 локали (en/ru/uk/zh-CN), символьные операторы (`=`,`≠`,`<`,`>`,`≤`,`≥`)
+языконезависимы. Acceptance: пилюли локализуются; ru без регрессии; baseline держится; 4 гейта 0.
+
+### #109 — P3: Дублирование поля-заголовка на карточках Board (custom header)
+
+- Status: 📋 BACKLOG (заведён 2026-06-26)
+- Milestone: M-UT-FIXES | Priority: P3 | Complexity: XS
+- analysis_required: false
+- Источник репро: `docs/internal/TEST_REPORT_2026-06-26.md`, «Дефект 5»
+
+`src/ui/views/Board/components/Board/CardList.svelte:158` рендерит
+`<CardMetadata fields={includeFields} />` для тела карточки, а заголовок (при заданном
+`customHeader`, `:155`) ТАКЖЕ рендерит это поле — когда `customHeader` входит в `includeFields`,
+оно показывается дважды. Скоуп: вынести чистый хелпер `excludeHeaderField(includeFields,
+customHeader)` в `boardHelpers.ts` (Jest-тестируемый), использовать `bodyFields` в теле карточки;
+поведение заголовка без изменений. Acceptance: дубль убран при наличии header в списке; no-op
+когда `customHeader` undefined/не в списке; baseline держится; 4 гейта 0.
+
+---
+
+### #104 — P3: Унифицировать Board getSemanticColumns на `bucketLabelForRaw` (последняя копия 3-bucket логики)
+- Status: ✅ READY FOR PR (2026-06-21, ветка `feat/095-pipeline-value-placeholder`, коммит `9cb69ec`, стек поверх #094, НЕ слит/не запушен — гейт пользователя). `getSemanticColumns` (`board.ts:~203`) переведён с локальных `Set` + if/else-цепочки на вызов канонической `bucketLabelForRaw(str, groups, LABELS)` — последняя 2-я копия 3-bucket логики устранена (0 дублей). Чистый рефактор, поведение идентично построчно (null→none, порядок todo→inProgress→complete→none, `Set.has`↔`Array.includes`). Гейты: tsc 0 / jest по затронутым модулям 58 suites / 811 tests PASS / baseline 158/2260 держится. P3-остаток отсутствует.
+- **✅ ЗАКРЫТ через #107 (2026-06-26, в рабочем дереве, ожидает merge пользователя)**:
+  `getSemanticColumns` → `bucketLabelForRaw` уже был в коде (этот рефактор), но не активировался
+  визуально — вызов гейтился `groupMode==="values"` по умолчанию. #107 обеспечил активацию через
+  Board `groupMode` toggle (`config.groupMode === "semantic"`). Дедупликация 3-bucket логики этого
+  тикета остаётся в силе; визуальный фейл закрыт #107.
+- Milestone: M-UT-FIXES | Priority: P3 | Complexity: XS
+- analysis_required: false
+- Depends on: #094 (✅ READY FOR PR — вынес `bucketLabelForRaw`)
+
+После #094 единый источник 3-bucket логики (To Do / In Progress / Done / No Status) — чистая функция
+`bucketLabelForRaw` в `src/ui/views/Dashboard/widgets/DatabaseCall/groupRows.ts`; её переиспользуют
+чарт (`chartDataPipeline.ts`) и DataTable (`buildSemanticGroups`). Осталась 2-я (последняя) копия той
+же логики — inline в `src/ui/views/Board/board.ts` `getSemanticColumns` (~:197–233). Скоуп:
+отрефакторить `getSemanticColumns` на вызов `bucketLabelForRaw`, закрыв последнюю дубль-реализацию
+3-bucket маппинга. Поведенческих изменений быть не должно — только дедупликация. Acceptance: 0
+дублей 3-bucket логики; baseline держится; tsc/lint/svelte-check 0.
 
 > Скриншоты `C:\Users\Park\OBSv1.0\screanshots` (12 шт, 21:46–21:59). Полная сверка
 > «отчёт ↔ код» + декомпозиция + скорректированная дорожная карта:

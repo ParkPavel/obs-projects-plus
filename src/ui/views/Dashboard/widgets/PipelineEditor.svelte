@@ -19,6 +19,11 @@
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";
+  import {
+    updateStep as applyStepUpdate,
+    toggleDisableStep as toggleStepDisabled,
+    addFilterCondition as appendFilterCondition,
+  } from "./pipelineSteps";
 
   export let pipeline: TransformPipeline;
   export let fields: DataField[] = [];
@@ -143,9 +148,7 @@
   // #099 — non-destructive toggle: disabled steps stay in the pipeline but are
   // skipped by the executor, so data flows again through a 0-row step.
   function toggleDisableStep(index: number) {
-    const step = steps[index];
-    if (!step) return;
-    updateStep(index, { ...step, disabled: !step.disabled });
+    steps = toggleStepDisabled(steps, index);
   }
 
   function moveStep(index: number, direction: -1 | 1) {
@@ -161,8 +164,7 @@
   }
 
   function updateStep(index: number, step: TransformStep) {
-    steps[index] = step;
-    steps = [...steps];
+    steps = applyStepUpdate(steps, index, step);
   }
 
   function createDefaultStep(type: TransformStep["type"]): TransformStep | null {
@@ -223,7 +225,6 @@
   // -- Filter step helpers ----------------------------------
 
   function addFilterCondition(stepIndex: number) {
-    const step = steps[stepIndex] as FilterStep;
     const firstField = fieldNames[0] ?? "";
     const fieldType = fieldMap.get(firstField)?.type ?? "string";
     const ops = getOperatorsForField(fieldType as string);
@@ -233,13 +234,7 @@
       value: "",
       enabled: true,
     };
-    updateStep(stepIndex, {
-      ...step,
-      conditions: {
-        ...step.conditions,
-        conditions: [...step.conditions.conditions, newCond],
-      },
-    });
+    steps = appendFilterCondition(steps, stepIndex, newCond);
   }
 
   function updateFilterField(stepIndex: number, condIndex: number, newField: string) {
@@ -414,9 +409,26 @@
     return (e.currentTarget as HTMLInputElement).checked;
   }
 
+  // #075: i18n arrays come back as `unknown` from t(); narrow once here so the
+  // template `{#each}` stays cast-free (the Svelte compiler rejects inline casts).
+  function i18nList(t: typeof $i18n, key: string): string[] {
+    const raw = t.t(key, { returnObjects: true, defaultValue: [] });
+    return Array.isArray(raw) ? (raw as string[]) : [];
+  }
+  $: sampleBefore = i18nList($i18n, "views.dashboard.pipeline.empty.sampleBefore");
+  $: sampleAfter = i18nList($i18n, "views.dashboard.pipeline.empty.sampleAfter");
+
   function handleDone() {
     clearTimeout(applyTimer);
     dispatch("save", { steps });
+  }
+
+  // #075 (Decision 1C): one-click clear of the steps only — source untouched,
+  // no confirm, no toast. Cancels any pending debounce so it applies at once.
+  function handleClearPipeline() {
+    clearTimeout(applyTimer);
+    steps = [];
+    dispatch("apply", { steps: [] });
   }
 </script>
 
@@ -463,7 +475,30 @@
 
     {#if steps.length === 0}
       <div class="ppp-pipeline-empty">
-        {$i18n.t("views.dashboard.pipeline.empty")}
+        <div class="ppp-pipeline-empty-head">
+          <span class="ppp-pipeline-empty-head-icon" aria-hidden="true"><Icon name="wand-2" size="sm" /></span>
+          <strong>{$i18n.t("views.dashboard.pipeline.empty.title", { defaultValue: "Transform data before it is shown" })}</strong>
+        </div>
+        <div class="ppp-pipeline-empty-demo">
+          <div class="ppp-pipeline-empty-col">
+            <span class="ppp-pipeline-empty-col-label">{$i18n.t("views.dashboard.pipeline.empty.beforeLabel", { defaultValue: "Before" })}</span>
+            <div class="ppp-pipeline-empty-rows">
+              {#each sampleBefore as row}
+                <span class="ppp-pipeline-empty-row">{row}</span>
+              {/each}
+            </div>
+          </div>
+          <span class="ppp-pipeline-empty-arrow" aria-hidden="true"><Icon name="arrow-right" size="sm" /></span>
+          <div class="ppp-pipeline-empty-col">
+            <span class="ppp-pipeline-empty-col-label">{$i18n.t("views.dashboard.pipeline.empty.afterLabel", { defaultValue: "After" })}</span>
+            <div class="ppp-pipeline-empty-rows">
+              {#each sampleAfter as row}
+                <span class="ppp-pipeline-empty-row">{row}</span>
+              {/each}
+            </div>
+          </div>
+        </div>
+        <span class="ppp-pipeline-empty-caption">{$i18n.t("views.dashboard.pipeline.empty.caption", { defaultValue: "Pick a step below to start." })}</span>
       </div>
     {/if}
 
@@ -565,7 +600,7 @@
                       class="ppp-filter-value-input"
                       type="text"
                       value={cond.value ?? ""}
-                      placeholder={$i18n.t("views.dashboard.pipeline.value", { defaultValue: "Value" })}
+                      placeholder={$i18n.t("common.value-placeholder")}
                       on:input={(e) => updateFilterValue(i, ci, inputVal(e))}
                     />
                   {/if}
@@ -866,6 +901,12 @@
   </datalist>
 
   <div class="ppp-pipeline-footer">
+    {#if steps.length > 0}
+      <button class="ppp-btn ppp-btn--ghost" on:click={handleClearPipeline}>
+        <Icon name="trash-2" size="sm" />
+        {$i18n.t("views.dashboard.pipeline.clear", { defaultValue: "Clear" })}
+      </button>
+    {/if}
     <button class="ppp-btn ppp-btn--primary" on:click={handleDone}>
       {$i18n.t("views.dashboard.pipeline.done", { defaultValue: "Done" })}
     </button>
@@ -932,10 +973,92 @@
   }
 
   .ppp-pipeline-empty {
-    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ppp-space-5);
+    padding: var(--ppp-space-6);
+    text-align: left;
+    color: var(--ppp-db-text-secondary);
+    font-size: var(--ppp-font-size-sm);
+  }
+
+  .ppp-pipeline-empty-head {
+    display: flex;
+    align-items: center;
+    gap: var(--ppp-space-3);
+  }
+
+  .ppp-pipeline-empty-head-icon {
+    display: inline-flex;
+    font-size: var(--ppp-icon-size-md);
+    color: var(--interactive-accent);
+  }
+
+  .ppp-pipeline-empty-head strong {
+    font-size: var(--ppp-font-size-base);
+    font-weight: var(--ppp-font-weight-semibold);
+    color: var(--ppp-db-text-primary);
+  }
+
+  .ppp-pipeline-empty-demo {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--ppp-space-4);
+  }
+
+  .ppp-pipeline-empty-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ppp-space-3);
+    padding: var(--ppp-space-4);
+    background: var(--ppp-db-surface-raised);
+    border: var(--ppp-border-width) solid var(--ppp-db-border);
+    border-radius: var(--ppp-radius-lg);
+  }
+
+  .ppp-pipeline-empty-col-label {
+    font-size: var(--ppp-font-size-xs);
+    font-weight: var(--ppp-font-weight-medium);
+    color: var(--ppp-db-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .ppp-pipeline-empty-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ppp-space-1);
+  }
+
+  .ppp-pipeline-empty-row {
+    font-size: var(--ppp-font-size-sm);
+    color: var(--ppp-db-text-secondary);
+    line-height: var(--ppp-line-height-tight);
+  }
+
+  .ppp-pipeline-empty-arrow {
+    display: inline-flex;
+    align-self: center;
+    font-size: var(--ppp-icon-size-md);
+    color: var(--ppp-db-text-faint);
+  }
+
+  .ppp-pipeline-empty-caption {
+    font-size: var(--ppp-font-size-xs);
+    color: var(--ppp-db-text-faint);
     text-align: center;
-    color: var(--text-faint);
-    font-size: var(--font-ui-small);
+  }
+
+  @media (max-width: 22rem) {
+    .ppp-pipeline-empty-demo {
+      grid-template-columns: 1fr;
+    }
+
+    .ppp-pipeline-empty-arrow {
+      transform: rotate(90deg);
+      justify-self: center;
+    }
   }
 
   .ppp-pipeline-unnest-hint {
@@ -1374,6 +1497,20 @@
 
   .ppp-btn--primary:hover {
     background: var(--interactive-accent-hover);
+  }
+
+  .ppp-btn--ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 0.0625rem solid var(--background-modifier-border);
+  }
+
+  .ppp-btn--ghost:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
   }
 
 </style>
