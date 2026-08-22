@@ -16,24 +16,6 @@ jest.mock("src/lib/stores/i18n", () => {
   };
 });
 
-jest.mock("src/archive/dashboard-v1/DataTable/DataTableWidget.svelte", () => {
-  const Svelte = require("svelte/internal");
-  // Stub the heavy child to keep the test focused on registration.
-  return {
-    default: class {
-      $$prop_def: Record<string, unknown> = {};
-      $set(): void {}
-      $on(): () => void {
-        return () => {};
-      }
-      $destroy(): void {}
-      constructor(_opts: Record<string, unknown>) {
-        void Svelte;
-      }
-    },
-  };
-});
-
 jest.mock("../../ViewTabBar.svelte", () => ({
   default: class {
     $$prop_def: Record<string, unknown> = {};
