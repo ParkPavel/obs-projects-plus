@@ -117,7 +117,7 @@
     if (!effectiveConfig) return;
     saveConfig({ ...effectiveConfig, widgets: dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString()) });
   }
-  $: primaryDataTableId = effectiveConfig?.widgets.find((w) => w.type === "data-table")?.id ?? "";
+  $: primaryDataTableId = effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id ?? "";
   const selectionStore: SelectionStore = createSelectionStore();
   setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
   onDestroy(bindEscapeClear(selectionStore));
@@ -128,7 +128,8 @@
   const suggest = createSuggestionController({
     getConfig: () => effectiveConfig,
     saveConfig,
-    addWidget: (t) => widgetController.addWidget(t),
+    addWidget: (t, init) => widgetController.addWidget(t, init),
+    getPrimaryWidgetId: () => effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id,
   });
   function handleApplyTemplate(e: CustomEvent<WidgetDefinition[]>) {
     templatesController.requestReplace(e.detail).catch((err: unknown) => {

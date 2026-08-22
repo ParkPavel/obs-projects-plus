@@ -10,15 +10,17 @@
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
   import { detectArrayFields } from "../_shared/arrayFieldDetection";
-  import type { DataField } from "src/lib/dataframe/dataframe";
+  import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
   import type { WidgetSourceConfig, LinkedSelectionConfig } from "../../types";
   import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
+  import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
 
   export let sourceConfig: WidgetSourceConfig | undefined = undefined;
   export let availableSources: Array<{ id: string; name: string }> = [];
   export let availableWidgets: Array<{ id: string; title: string }> = [];
   export let fields: DataField[] = [];
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
+  export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
   export let transform: TransformPipeline = { steps: [] };
   export let source: { records: Array<{ values: Record<string, unknown> }> } | null = null;
 
@@ -32,6 +34,10 @@
   $: currentProjectId = sourceConfig?.projectId ?? "";
   $: currentLinkedId = linkedSelection?.sourceWidgetId ?? "";
   $: currentRelationField = linkedSelection?.relationField ?? "";
+  // E2: only Relation-type fields are valid for the linked-selection filter.
+  $: relationFields = fields.filter((f) => f.type === DataFieldType.Relation);
+  // E8: show inline hint when validation indicates a problem.
+  $: showRelationHint = linkedSelectionValidation === "missing-relation" || linkedSelectionValidation === "wrong-target-project";
 
   // #099.3 — "Развернуть список": unnest exposed as a block property. Single
   // source of truth is widget.transform; we only surface the first array field
@@ -144,11 +150,18 @@
         {$i18n.t("views.dashboard.database-call.settings.relation-field", { defaultValue: "Filter by field" })}
         <select value={currentRelationField} on:change={handleRelationFieldChange}>
           <option value="">— {$i18n.t("views.dashboard.database-call.settings.select-field", { defaultValue: "select field" })} —</option>
-          {#each fields as f (f.name)}
+          {#each relationFields as f (f.name)}
             <option value={f.name}>{f.name}</option>
           {/each}
         </select>
       </label>
+      {#if showRelationHint}
+        <span class="ppp-dbc-settings__hint ppp-dbc-settings__hint--warn">
+          {$i18n.t("views.dashboard.database-call.settings.relation-missing-hint", {
+            defaultValue: "No Relation field points at the linked block's project. Add a Relation field in the schema editor first.",
+          })}
+        </span>
+      {/if}
     </div>
     {/if}
     {#if arrayFields.length > 0}
@@ -219,5 +232,9 @@
   .ppp-dbc-settings__hint {
     font-size: var(--font-ui-smaller);
     color: var(--text-faint);
+  }
+
+  .ppp-dbc-settings__hint--warn {
+    color: var(--text-warning, var(--text-muted));
   }
 </style>

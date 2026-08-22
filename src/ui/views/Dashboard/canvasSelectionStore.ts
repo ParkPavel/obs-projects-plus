@@ -185,7 +185,7 @@ function selectionOpToFilterOperator(op: SelectionOp): FilterOperator {
  * Returns a FilterCondition when the master block has an active selection:
  *   { field: linkedSelection.relationField, operator: "is", value: selectionValue }
  */
-export function composeLinkedSelectionFilter(args: {
+function composeLinkedSelectionFilter(args: {
 	readonly linkedSelection: import("./types").LinkedSelectionConfig | undefined;
 	readonly canvasSelection: SelectionState;
 }): FilterCondition | null {
@@ -223,38 +223,55 @@ export function composeLinkedSelectionFilter(args: {
  *   - the selection is empty, OR
  *   - the selection originated from `myWidgetId` (self-skip rule, spec §5.2).
  *
- * Otherwise appends a single equality condition derived from the selection.
+ * Otherwise appends one or two equality conditions:
+ *   1. A linked-selection condition when `linkedSelection` is configured AND
+ *      `validationResult === "valid"`. Uses `composeLinkedSelectionFilter`
+ *      internally. When `validationResult` is absent/not-valid, the linked
+ *      condition is skipped so a broken relation does not silently narrow data.
+ *   2. A canvas-selection condition derived from `selection.field` when a
+ *      sibling driver widget has emitted a selection.
+ *
  * The selection condition is logically AND-ed with `userFilters` by virtue of
- * `FilterDefinition.conjunction === "and"` at the call site (the canonical
- * filter engine evaluates the resulting condition list under that conjunction).
+ * `FilterDefinition.conjunction === "and"` at the call site.
  */
 export function composeEffectiveFilter(args: {
 	readonly userFilters: readonly FilterCondition[];
 	readonly selection: SelectionState;
 	readonly myWidgetId: string;
+	/** When set, also applies the linked-selection condition (gated by validationResult). */
+	readonly linkedSelection?: import("./types").LinkedSelectionConfig | undefined;
+	/** When present and not "valid", the linked-selection condition is skipped. */
+	readonly validationResult?: "valid" | "missing-relation" | "invalid-field" | "wrong-target-project" | undefined;
 }): readonly FilterCondition[] {
-	const { userFilters, selection, myWidgetId } = args;
+	const { userFilters, selection, myWidgetId, linkedSelection, validationResult } = args;
 
-	// Empty selection → no narrowing.
-	if (selection.source === null || selection.field === null || selection.values.length === 0 || selection.op === null) {
-		return userFilters;
+	const conditions: FilterCondition[] = [...userFilters];
+
+	// Linked-selection condition: only when validation confirms the relation
+	// is intact. When the linked condition fires, it maps the selection through
+	// the configured relationField so the canvas-condition step is skipped.
+	let linkedFired = false;
+	if (linkedSelection && validationResult === "valid") {
+		const linked = composeLinkedSelectionFilter({ linkedSelection, canvasSelection: selection });
+		if (linked) {
+			conditions.push(linked);
+			linkedFired = true;
+		}
 	}
 
-	// Self-skip: if the active selection was emitted by this very widget,
-	// the widget MUST render its full data unaffected (a driver should not
-	// re-filter itself by its own click). The spec's primary motivator is
-	// DataTableWidget which is driver+receiver hybrid.
-	if (selection.source === dataTableSourceId(myWidgetId) || selection.source === chartSourceId(myWidgetId)) {
-		return userFilters;
+	// Canvas-selection condition (self-skip applies). Skip when the linked
+	// condition already captured this selection via the relation field.
+	if (!linkedFired && selection.source !== null && selection.field !== null && selection.values.length > 0 && selection.op !== null) {
+		if (selection.source !== dataTableSourceId(myWidgetId) && selection.source !== chartSourceId(myWidgetId)) {
+			const { values } = selection;
+			conditions.push({
+				field: selection.field,
+				operator: selectionOpToFilterOperator(selection.op),
+				value: values.length === 1 ? (values[0] as string) : JSON.stringify(values),
+				enabled: true,
+			});
+		}
 	}
 
-	const { values } = selection;
-	const selectionCondition: FilterCondition = {
-		field: selection.field,
-		operator: selectionOpToFilterOperator(selection.op),
-		value: values.length === 1 ? (values[0] as string) : JSON.stringify(values),
-		enabled: true,
-	};
-
-	return [...userFilters, selectionCondition];
+	return conditions.length === userFilters.length ? userFilters : conditions;
 }

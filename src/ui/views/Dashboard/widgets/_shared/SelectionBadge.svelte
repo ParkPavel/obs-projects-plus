@@ -29,6 +29,7 @@
   const SELECTION_RECEIVER_TYPES: ReadonlySet<string> = new Set([
     "stats",
     "data-table",
+    "database-call",
   ]);
 
   export function shouldShowSelectionBadge(

@@ -35,12 +35,13 @@
   import {
     SELECTION_CONTEXT_KEY,
     EMPTY_SELECTION,
-    composeLinkedSelectionFilter,
+    composeEffectiveFilter,
     type SelectionStore,
   } from "../../canvasSelectionStore";
   import { applyFilter } from "src/lib/engine/filterEvaluator";
   import { filterByLinkedSelection } from "./relationFilterAdapter";
   import type { FilterDefinition } from "src/settings/base/settings";
+  import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
   import BlockFilterBar from "./BlockFilterBar.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
@@ -58,6 +59,8 @@
   export let config: Record<string, unknown>;
   /** Canvas Selection Bus: drives auto-filter when a master block has a selection. */
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
+  /** #114 (E1/E4): runtime validation result from WidgetHost — drives label rendering. */
+  export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
   /**
    * Widget identity from the enclosing WidgetDefinition. Required for
    * DataProvider registration so this Database Window can be referenced
@@ -83,10 +86,25 @@
   const _ctx = getContext<SelectionStore | undefined>(SELECTION_CONTEXT_KEY);
   const canvasStore = _ctx ?? writable(EMPTY_SELECTION);
 
-  $: autoFilter = composeLinkedSelectionFilter({
+  // #114 (E7): composeEffectiveFilter consolidates linked + canvas selection.
+  // When linkedSelection is configured and valid, it maps the selection through
+  // the relationField. When validation fails, falls back to canvas condition.
+  $: effectiveConditions = composeEffectiveFilter({
+    userFilters: [],
+    selection: $canvasStore,
+    myWidgetId: widgetId,
     linkedSelection,
-    canvasSelection: $canvasStore,
+    validationResult: linkedSelectionValidation,
   });
+  $: autoFilter = effectiveConditions.length > 0 ? effectiveConditions[0] : null;
+
+  // #114 (E4): three-state label derived from validation + canvas activity.
+  $: filterLabel = (() => {
+    if (linkedSelection && linkedSelectionValidation === "valid") return "relation" as const;
+    if (linkedSelection && linkedSelectionValidation !== undefined && linkedSelectionValidation !== "valid") return "broken" as const;
+    if ($canvasStore.source !== null && $canvasStore.values.length > 0) return "canvas" as const;
+    return null;
+  })();
 
   // #099.1 — block-level filter (WidgetDataContext.subFilter, SPEC §3.4):
   // applied through the canonical filterEvaluator BEFORE the linked-selection
@@ -311,6 +329,22 @@
       {readonly}
       on:change={handleSubFilterChange}
     />
+    {#if filterLabel === "relation"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Filtered by relation">
+        {$i18n.t("views.dashboard.database-call.filter-label.relation", { defaultValue: "Filtered by relation" })}
+      </span>
+    {:else if filterLabel === "canvas"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label="Filtered by canvas selection">
+        {$i18n.t("views.dashboard.database-call.filter-label.canvas", { defaultValue: "Filtered by canvas selection" })}
+      </span>
+    {:else if filterLabel === "broken"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation broken">
+        {$i18n.t("views.dashboard.database-call.filter-label.broken", {
+          defaultValue: "Relation broken: {{reason}}",
+          reason: linkedSelectionValidation ?? "",
+        })}
+      </span>
+    {/if}
     <div
       class="ppp-database-call-content"
       role="tabpanel"
@@ -460,5 +494,28 @@
     font-style: italic;
     font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-dbc-filter-label {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: var(--font-ui-smaller);
+    border-radius: var(--radius-s, 0.25rem);
+    line-height: 1.4;
+  }
+
+  .ppp-dbc-filter-label--relation {
+    color: var(--color-green, var(--text-success));
+    background: color-mix(in srgb, var(--color-green, var(--text-success)) 12%, var(--background-secondary));
+  }
+
+  .ppp-dbc-filter-label--canvas {
+    color: var(--interactive-accent);
+    background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary));
+  }
+
+  .ppp-dbc-filter-label--broken {
+    color: var(--text-warning, var(--text-muted));
+    background: color-mix(in srgb, var(--text-warning, orange) 12%, var(--background-secondary));
   }
 </style>
