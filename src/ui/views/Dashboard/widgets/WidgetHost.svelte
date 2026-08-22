@@ -18,9 +18,10 @@
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
+  import { validateLegacyLinkedSelection } from "src/lib/relations/relationContract";
   import { getConfigPanel } from "./configPanelRegistry";
   import { WIDGET_CONTENT, WIDGET_PANELS, hasPipelineButton, type WidgetRenderContext } from "./widgetComponentRegistry";
-  import { convertLegacyWidget, isRetiredLegacyType, unwrapDataTableConfigChange } from "./legacyMigration";
+  import { convertLegacyWidget, isRetiredLegacyType, unwrapDataTableConfigChange, persistDataTableSubFilter } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
   import WidgetHeaderActions from "./WidgetHeaderActions.svelte";
   import WidgetSetupWizard from "./WidgetSetupWizard.svelte";
@@ -82,18 +83,15 @@
   $: dbCallSourceConfig = widget.type === "database-call" ? widget.sourceConfig : undefined;
   $: dbCallFrame = dbCallSourceConfig?.projectId ? rightFrames.get(dbCallSourceConfig.projectId) ?? frame : transformedFrame;
   $: dbCallLinkedSelection = widget.type === "database-call" ? (widget.config as unknown as WidgetDataContext).linkedSelection : undefined;
-  // #092: a linked source bypasses the host pipeline, so its counters must not arm the recovery node.
-  $: dbCallUsesLinkedSource = !!dbCallSourceConfig?.projectId;
-  // Multi-DataTable per-widget config overlay (primary keeps root config).
-  $: widgetTableConfig = (widget.config as { table?: DataTableConfig })?.table;
-  $: effectiveTableConfig = isPrimaryDataTable ? tableConfig : widgetTableConfig ?? tableConfig;
+  $: dbCallUsesLinkedSource = !!dbCallSourceConfig?.projectId; // #092: linked source bypasses pipeline counters
 
   $: ctx = {
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields,
     fieldPresets, activeFieldPresetId, availableSources, project,
-    effectiveTableConfig,
+    effectiveTableConfig: isPrimaryDataTable ? tableConfig : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
     pipelineStepCount: dbCallUsesLinkedSource ? 0 : currentPipeline.steps.length, pipelineInputRowCount: dbCallUsesLinkedSource ? 0 : pipelineInputRowCount, chartConfig, statsConfig, chartRightFrame,
     dbCallFrame, dbCallFields: dbCallFrame.fields, dbCallSourceConfig, dbCallLinkedSelection,
+    dbCallLinkedSelectionValidation: dbCallLinkedSelection ? validateLegacyLinkedSelection({ relationField: dbCallLinkedSelection.relationField }, dbCallSourceConfig?.projectId ?? project?.id ?? "", project?.id, dbCallFrame.fields).status : undefined,
   } satisfies WidgetRenderContext;
 
   $: contentEntry = WIDGET_CONTENT[widget.type];
@@ -101,26 +99,27 @@
   $: contentRenderable = contentEntry ? (contentEntry.canRender?.(ctx) ?? true) : false;
   $: panelRenderable = (widget.type !== "chart" || chartConfig !== null) && (widget.type !== "stats" || statsConfig !== null);
 
-  // ── Event plumbing ─────────────────────────────────────────
   function patchWidget(changes: Partial<WidgetDefinition>) {
     dispatch("configChange", { id: widget.id, changes });
   }
   function handleWidgetConfigChange(newConfig: Record<string, unknown>) {
     patchWidget({ config: newConfig });
   }
-  /** data-table renders through DatabaseCallBlock (F3) — unwrap or convert. */
   function handleContentConfigChange(e: CustomEvent<unknown>) {
     if (widget.type !== "data-table") {
       handleWidgetConfigChange(e.detail as Record<string, unknown>);
       return;
     }
-    const result = unwrapDataTableConfigChange(e.detail as Record<string, unknown>);
+    const detail = e.detail as Record<string, unknown>;
+    const result = unwrapDataTableConfigChange(detail);
     if (result.kind === "convert") {
       patchWidget({ type: "database-call", config: result.config });
     } else if (isPrimaryDataTable) {
+      // #112 F1: subFilter is dropped by the unwrap; persist it on widget.config.
       dispatch("tableConfigChange", result.tableConfig as DataTableConfig);
+      patchWidget({ config: persistDataTableSubFilter(detail, widget.config) });
     } else {
-      handleWidgetConfigChange({ ...(widget.config ?? {}), table: result.tableConfig });
+      handleWidgetConfigChange(persistDataTableSubFilter(detail, widget.config, { table: result.tableConfig }));
     }
   }
   /** Toggle panel, seeding type defaults on first configure. */
@@ -179,6 +178,7 @@
         {availableSources}
         availableWidgets={availableWidgets.filter((w) => w.id !== widget.id)}
         linkedSelection={dbCallLinkedSelection}
+        linkedSelectionValidation={ctx.dbCallLinkedSelectionValidation}
         fields={dbCallFrame.fields}
         transform={currentPipeline}
         source={dbCallFrame}

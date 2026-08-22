@@ -245,6 +245,21 @@
     open = false;
     dispatch("close");
   }
+
+  // #112 F2: portal the desktop popup to <body> so its `position: fixed` is
+  // relative to the viewport, not a WidgetShell ancestor that establishes a
+  // containing block via `container-type: inline-size` (also transform/contain).
+  // Fixes an empty overflow column + plugin shift. Positioning, outside-click,
+  // Escape and focus-trap all work on the moved node (document listeners +
+  // direct popupEl references survive the reparent).
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node);
+    return {
+      destroy() {
+        node.remove();
+      },
+    };
+  }
 </script>
 
 {#if open}
@@ -271,6 +286,7 @@
     <!-- ── DESKTOP: Floating popup ───────────────────────── -->
     <div
       bind:this={popupEl}
+      use:portal
       class="ppp-popup ppp-popup--floating"
       {style}
       {role}

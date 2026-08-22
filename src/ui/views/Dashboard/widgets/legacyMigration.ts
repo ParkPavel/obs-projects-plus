@@ -19,6 +19,23 @@ export function tableTabConfig(
   };
 }
 
+/**
+ * #112 F1: build the on-the-fly single-Table-tab config for a data-table
+ * widget rendered through DatabaseCallBlock, re-merging the block-level
+ * `subFilter` that lives on `widget.config` (NOT inside the table overlay) so
+ * the block can apply it through the canonical filterEvaluator. Restore-side
+ * mirror of `persistDataTableSubFilter`.
+ */
+export function restoreDataTableConfig(
+  tableConfig: Record<string, unknown> = {},
+  widgetConfig: Record<string, unknown> | undefined = {}
+): Record<string, unknown> {
+  const config = tableTabConfig(tableConfig);
+  const subFilter = widgetConfig?.["subFilter"];
+  if (subFilter !== undefined) config["subFilter"] = subFilter;
+  return config;
+}
+
 /** summary-row → stats: each footer column becomes a stats card. */
 export function summaryRowToStatsConfig(config: Record<string, unknown>): StatsConfig {
   const columns = (config["columns"] as SummaryColumnConfig[] | undefined) ?? [];
@@ -79,6 +96,24 @@ export function unwrapDataTableConfigChange(
     return { kind: "table", tableConfig: tabs[0].config };
   }
   return { kind: "convert", config: detail };
+}
+
+/**
+ * #112 F1: fold a block-level `subFilter` from a data-table configChange
+ * detail back onto `widget.config` (the unwrap keeps only the single table
+ * tab's config, so the subFilter would otherwise be lost). Returns the next
+ * `widget.config` with subFilter added or removed. Pure — no dispatch.
+ */
+export function persistDataTableSubFilter(
+  detail: Record<string, unknown>,
+  currentConfig: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> = {}
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...(currentConfig ?? {}), ...extra };
+  const subFilter = detail["subFilter"];
+  if (subFilter !== undefined) next["subFilter"] = subFilter;
+  else delete next["subFilter"];
+  return next;
 }
 
 /** True when the type renders a retirement placeholder instead of content. */

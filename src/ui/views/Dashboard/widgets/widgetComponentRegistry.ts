@@ -31,7 +31,8 @@ import type {
   FieldPreset,
   LinkedSelectionConfig,
 } from "../types";
-import { tableTabConfig } from "./legacyMigration";
+import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
+import { restoreDataTableConfig } from "./legacyMigration";
 
 import ChartWidget from "./Chart/ChartWidget.svelte";
 import ChartConfigPanel from "./Chart/ChartConfig.svelte";
@@ -70,6 +71,7 @@ export interface WidgetRenderContext {
   readonly dbCallFields: DataField[];
   readonly dbCallSourceConfig: WidgetSourceConfig | undefined;
   readonly dbCallLinkedSelection: LinkedSelectionConfig | undefined;
+  readonly dbCallLinkedSelectionValidation: LegacyLinkedSelectionStatus | undefined;
 }
 
 type Props = Record<string, unknown>;
@@ -94,7 +96,11 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       getRecordColor: c.getRecordColor, fields: c.transformedFrame.fields,
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project,
-      config: tableTabConfig((c.effectiveTableConfig ?? {}) as Record<string, unknown>),
+      // #112 F1 restore: re-merge block-level subFilter from widget.config.
+      config: restoreDataTableConfig(
+        (c.effectiveTableConfig ?? {}) as Record<string, unknown>,
+        c.widget.config as Record<string, unknown> | undefined
+      ),
       widgetId: c.widget.id, widgetTitle: c.widget.title,
     }),
   },
@@ -130,6 +136,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project, config: c.widget.config, widgetId: c.widget.id,
       widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection,
+      linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
     }),
   },
