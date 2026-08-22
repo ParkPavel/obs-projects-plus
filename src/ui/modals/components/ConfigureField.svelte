@@ -39,6 +39,7 @@
    * be resolved against an *external* frame (Stage A engine contract).
    */
   export let currentProjectId: string = "";
+  export let onSetupRelation: ((field: DataField) => void) | undefined = undefined;
 
   $: fieldNameError = validateFieldName(field.name);
 
@@ -737,6 +738,13 @@
           </div>
         </SettingItem>
       {/if}
+      {#if onSetupRelation}
+        <div class="ppp-setup-relation-cta">
+          <button type="button" class="mod-cta" on:click={() => onSetupRelation?.(field)}>
+            {$i18n.t("relation-setup.open", { defaultValue: "Link database…" })}
+          </button>
+        </div>
+      {/if}
     {/if}
 
     <!-- Stage A.9 — Rollup sub-panel -->
@@ -921,5 +929,9 @@
     margin: 0;
     color: var(--text-error);
     font-size: var(--font-ui-smaller, 0.75rem);
+  }
+  .ppp-setup-relation-cta {
+    display: flex;
+    justify-content: flex-end;
   }
 </style>

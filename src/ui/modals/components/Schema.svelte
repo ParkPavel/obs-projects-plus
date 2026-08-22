@@ -42,6 +42,7 @@
   export let currentProjectId: string = "";
   /** Invoked when user clicks Configure on a row. */
   export let onConfigure: (field: DataField) => void;
+  export let onSetupRelation: (field: DataField) => void;
   /** Invoked when user clicks Add field. */
   export let onAdd: () => void;
   /** Invoked when user clicks Delete on a row (caller confirms). */
@@ -199,6 +200,11 @@
               >
                 {$i18n.t("modals.schema.configure")}
               </Button>
+              {#if field.type === DataFieldType.Relation}
+                <Button variant="default" on:click={() => onSetupRelation(field)}>
+                  {$i18n.t("relation-setup.open", { defaultValue: "Link database…" })}
+                </Button>
+              {/if}
               {#if !field.identifier && !field.derived}
                 <Button
                   variant="default"

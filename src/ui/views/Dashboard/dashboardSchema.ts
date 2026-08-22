@@ -25,6 +25,7 @@ import { CreateFieldModal } from "src/ui/modals/createFieldModal";
 import { ConfigureFieldModal } from "src/ui/modals/configureField";
 import { SchemaModal } from "src/ui/modals/schemaModal";
 import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
+import { createRelationSetupController } from "./relationSetupController";
 
 export interface SchemaControllerDeps {
   readonly app: App;
@@ -45,6 +46,10 @@ export interface SchemaController {
 
 export function createSchemaController(deps: SchemaControllerDeps): SchemaController {
   let schemaModal: SchemaModal | null = null;
+  const relationSetup = createRelationSetupController({
+    app: deps.app, api: deps.api, projectId: deps.projectId, getFrame: () => ({ fields: deps.getFields(), records: [] }),
+    getProjects: deps.getProjects, t: deps.t,
+  });
 
   function persistFieldTypeConfig(field: DataField) {
     if (!field.typeConfig) return;
@@ -57,7 +62,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
   }
 
   function openCreateField() {
-    new CreateFieldModal(
+    const createModal = new CreateFieldModal(
       deps.app,
       deps.getFields(),
       async (field, value) => {
@@ -76,12 +81,23 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         }
       },
       deps.getProjects(),
-      deps.projectId
-    ).open();
+      deps.projectId,
+      (f) => {
+        createModal.close();
+        const displayField = f.typeConfig?.relation?.displayField;
+        void relationSetup.open({
+          fieldName: f.name,
+          targetProjectId: (f.typeConfig?.relation?.targetProjectId ?? ""),
+          createSourceField: true,
+          ...(displayField !== undefined ? { displayField } : {}),
+        });
+      }
+    );
+    createModal.open();
   }
 
   function openConfigureField(field: DataField) {
-    new ConfigureFieldModal(
+    const configModal = new ConfigureFieldModal(
       deps.app,
       deps.t("modals.field.configure.title"),
       field,
@@ -100,8 +116,19 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         reopenSchema();
       },
       deps.getProjects(),
-      deps.projectId
-    ).open();
+      deps.projectId,
+      (f) => {
+        configModal.close();
+        const displayField = f.typeConfig?.relation?.displayField;
+        void relationSetup.open({
+          fieldName: f.name,
+          targetProjectId: (f.typeConfig?.relation?.targetProjectId ?? ""),
+          createSourceField: false,
+          ...(displayField !== undefined ? { displayField } : {}),
+        });
+      }
+    );
+    configModal.open();
   }
 
   function openDeleteField(field: DataField) {
@@ -128,6 +155,10 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       (field) => {
         schemaModal?.close();
         openConfigureField(field);
+      },
+      (field) => {
+        schemaModal?.close();
+        void relationSetup.open({ fieldName: field.name, targetProjectId: (field.typeConfig?.relation?.targetProjectId ?? ""), createSourceField: false });
       },
       () => {
         schemaModal?.close();
