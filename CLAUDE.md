@@ -25,7 +25,7 @@ npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Test baseline: **159 suites / 2264 tests PASS**, tsc 0 errors. (Updated 2026-06-21 #092/#075; canonical number maintained in `docs/internal/CONTEXT.md` → «Гейты».) Any deviation must be acknowledged before merge.
+Test baseline: **168 suites / 2336 tests PASS**, tsc 0 errors. (Verified 2026-08-22 on `feat/112-guided-relation-setup` post UX bug-fixes (data-table subFilter round-trip + FloatingPopup portal); includes #111–#115 + fix regression tests; canonical number maintained in `docs/internal/CONTEXT.md`.) Any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
 

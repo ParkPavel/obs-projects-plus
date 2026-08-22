@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-18 (epic #077 FormulaConstructor unification → ✅ COMPLETED, отгружен в origin/main `7cc3d66`; baseline 152/2205 → **155 suites / 2232 tests**; px-budget 186 → **177**. Ранее: #080 CLOSED/DECLINED Option B → replaced by #077; #066 RESOLVED Option B defer-to-V3; #096.4 CLOSED `065331e`. W2 prioritized queue exhausted — see «Открытые тикеты» / CONTEXT.md)
+> **Updated**: 2026-08-22 (active milestone **M-RELATION-FIRST** on branch `feat/112-guided-relation-setup`; #110 ✅ DONE, #111 impl committed `2ed9903` (tests green), #112 ✅ DONE (2026-08-22), #113 ✅ DONE (2026-08-22), #114 ✅ DONE (2026-08-22), #115 ✅ DONE (2026-08-22). Verified baseline **167 suites / 2329 tests**, tsc 0, `@ts-ignore` 0. Prior header (2026-06-18: #077 done, 155/2232) is historical — the W2/W3 queue is superseded by the product reset below.)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 > **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
@@ -62,24 +62,32 @@ Analysis record: `RELATION_CONTRACT_ANALYSIS_111.md` (2026-07-18). One domain co
 records and relation metadata. `linkedSelection` may consume this contract but must not become
 an alternate relation model. Include migration/compatibility tests for existing frontmatter.
 
+Progress (verified 2026-08-22): implementation committed `2ed9903` — `src/lib/relations/relationContract.ts`
+delivers resolution (resolved/unmatched/ambiguous), `validateLegacyLinkedSelection` (legacy
+`linkedSelection` consumes the contract, no parallel model), and `adaptRelationFieldConfig` migration.
+Unit tests green (`relationContract.test.ts`). Not merged/pushed. Candidate for DONE review at the merge gate.
+
 ### #112 — Guided Relation setup and record editing flow
-- Status: 🚧 IN-PROGRESS (2026-07-19)
+- Status: ✅ DONE (2026-08-22)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: XL
 - analysis_required: true
 - analysis_done: true
 - Depends on: #110, #111
 - Blocks: #115
 
-Architecture: `GUIDED_RELATION_SETUP_ARCHITECTURE_112.md` (2026-07-19). User flow: select field/record → “Link to database” → choose target → preview matches and
-unmatched records → optionally create inverse field → save. The same flow is reachable from
-schema editor, record/cell editing and Dashboard. Keyboard path, empty states and plain-language
-examples are acceptance criteria.
+Architecture: `GUIDED_RELATION_SETUP_ARCHITECTURE_112.md` (2026-07-19). Delivered: pure layer
+(`relationSetup.ts` — validate/preview/summary/config), wizard UI (`RelationSetup.svelte` — full
+i18n 4 locales, displayField picker), modal wrapper (`relationSetupModal.ts`), controller
+(`relationSetupController.ts`). Entry points: schema editor, Configure field form, Create field
+form, empty Relation cell (event chain RelationPickerPopover → EditableCell → TableRow →
+DataTableContent). Controller unit tests (7 tests). All 4 gates PASS: 165 suites / 2305 tests,
+build 0, lint 0, svelte-check 0, px ≤177. Audit: READY FOR PR (no P0/P1 findings).
 
 ### #113 — Related records and rollup starter surface
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-08-22)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: L
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #111
 - Blocks: #115
 
@@ -88,10 +96,10 @@ pipeline. Offer a clear next action to create a linked Database Call or a chart 
 relation; verify reactive Markdown updates.
 
 ### #114 — Relation-aware Dashboard interactions
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-08-22)
 - Milestone: M-RELATION-FIRST | Priority: P1 | Complexity: L
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #111, #112
 - Blocks: #115
 
@@ -100,7 +108,7 @@ exists, distinguish a temporary filter from a persistent relationship. Do not ad
 dashboard-only linking configuration.
 
 ### #115 — Clients → Sessions end-to-end acceptance vault
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-08-22, manual acceptance pending)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: M
 - analysis_required: false
 - Depends on: #112, #113, #114

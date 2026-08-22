@@ -1,6 +1,6 @@
 # Current project context
 
-> **Updated:** 2026-07-18
+> **Updated:** 2026-08-22 (post-#114 DONE)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
 
@@ -12,27 +12,48 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
-- Branch: `feat/095-pipeline-value-placeholder`.
-- Existing working-tree stack: #105–#109, uncommitted and not pushed. It is technical
-  stabilization, not product readiness.
-- Documented validation of that stack (2026-06-26): build 0 errors; Jest 162 suites / 2287
-  tests; lint 0; svelte-check 0; PX budget 177. These are historical results and must be
-  rerun before any PR claim.
-- User-owned remaining check: manual visual confirmation described in
-  `DASHBOARD_GUIDE_AND_TESTING.md`, `TEST_REPORT_2026-06-26.md` and
-  `UNTESTABLE_FEATURES_2026-06-26.md`; then merge/push remain user actions.
+- Branch: `feat/112-guided-relation-setup` (accumulating #110+#111+#112+#113+#114; merge/push = user gate).
+- Committed on this branch (not merged/pushed): `54217c1` (#105–#109 stabilization); `2785a4d`
+  (#110 brief); `373a07e`+`2ed9903` (#111 canonical relation contract); `1c7df97` (#112 arch doc).
+- Uncommitted WIP = complete #112+#113+#114 implementation: `relationSetup.ts`(+test),
+  `RelationSetup.svelte` (full i18n 4 locales + displayField picker), `relationSetupModal.ts`,
+  `relationSetupController.ts` (+7 controller unit tests), all entry points wired (schema editor /
+  ConfigureField / CreateField / empty Relation cell event chain), `RelationPickerPopover.svelte`
+  (setup-link + count badge), `EditableCell.svelte`/`TableRow.svelte`/`DataTableContent.svelte`
+  (setupRelation event chain), `RelationCountBadge.svelte` (NEW), `smartSuggest.ts`+
+  `dashboardSuggest.ts` (relation-block), `dashboardWidgets.ts` (initialConfig factory),
+  `DashboardCanvas.svelte` (suggest + getPrimaryWidgetId extended), `canvasSelectionStore.ts`
+  (composeEffectiveFilter extended, composeLinkedSelectionFilter unexported), `WidgetHost.svelte`
+  (validateLegacyLinkedSelection wired), `DatabaseCallSettings.svelte` (relation-only picker),
+  `DatabaseCallBlock.svelte` (3-state filter label), `SelectionBadge.svelte` (database-call added),
+  widgetComponentRegistry.ts (LegacyLinkedSelectionStatus prop), canvasSelectionStore.test.ts
+  (parity tests), relationFilterAdapter.test.ts (malformed-link edge cases). All 4 gates PASS.
+- **Canonical baseline (2026-08-22 post UX bug-fixes): 168 suites / 2336 tests PASS, tsc 0,
+  lint 0 (129 pre-existing tsdoc warnings), svelte-check 0/0, @ts-ignore 0, px ≤177.**
+  Supersedes 167/2329 (post-#115). Do not roll back.
+- UX bug-fixes (2026-08-22, uncommitted): (1) legacy `data-table` lost `subFilter` on
+  save+restore → fixed via `restoreDataTableConfig`/`persistDataTableSubFilter` in
+  `legacyMigration.ts`, wired in `widgetComponentRegistry.ts` + `WidgetHost.svelte`
+  (+`dataTableSubFilterRoundTrip.test.ts`). (2) `FloatingPopup` fixed-popup was contained by
+  `WidgetShell` `container-type: inline-size` → empty scrollbar column + layout shift; fixed by
+  `use:portal` to `document.body` (systemic, all popups). (3) `Inspector.svelte` overflow
+  scroll→auto. Reported from user screenshot; needs vault visual smoke.
+- User-owned: merge/push of this branch; manual visual smoke in OBStests vault (portal popup +
+  live subFilter across reload).
 
 ## Next product milestone
 
 `M-RELATION-FIRST` is the active queue.
 
-1. **#110 P0 — Relation-first design brief and baseline audit.** It has
-   `analysis_required: true` and `analysis_done: true`; its approved design brief is
-   `RELATION_FIRST_DESIGN_BRIEF_110.md`.
-2. **#111 P0 — Canonical Relation contract.** One model for WikiLink relation, inverse,
-   resolution and unmatched records.
-3. **#112/#113/#114 — Guided setup, related records/rollup, and relation-aware Dashboard.**
-4. **#115 P0 — End-to-end Clients → Sessions acceptance vault.**
+1. **#110 P0 — ✅ DONE.** Approved design brief `RELATION_FIRST_DESIGN_BRIEF_110.md`.
+2. **#111 P0 — ✅ DONE (impl, pending merge).** `relationContract.ts`: WikiLink resolution
+   (resolved/unmatched/ambiguous), inverse, legacy `linkedSelection` validation + migration.
+3. **#112 P0 — ✅ DONE (2026-08-22, pending merge).** Full wizard + all 4 entry points + i18n
+   + displayField picker + controller unit tests. 165 suites / 2305 PASS. Audit: READY FOR PR.
+4. **#113 P0 — ✅ DONE (2026-08-22, pending merge).** Related records surface + count badge +
+   setupRelation event chain + dashboardSuggest relation-block + initialConfig factory. 166/2312 PASS.
+5. **#114 P1 — ✅ DONE (2026-08-22, pending merge).** validateLegacyLinkedSelection wired; composeEffectiveFilter unified; relation-only picker; 3-state filter label; SelectionBadge extended. 166/2319 PASS.
+6. **#115 P0 — ✅ DONE (2026-08-22, manual acceptance pending).** R1 integration tests (10 cases) + MANUAL_TESTING_PIPELINE.md section 8. 167/2329 PASS. Manual screenshots + keyboard path = user gate.
 
 ## Active sources of truth
 
