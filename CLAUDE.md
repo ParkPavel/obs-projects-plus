@@ -25,7 +25,7 @@ npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Test baseline: **168 suites / 2336 tests PASS**, tsc 0 errors. (Verified 2026-08-22 on `feat/112-guided-relation-setup` post UX bug-fixes (data-table subFilter round-trip + FloatingPopup portal); includes #111–#115 + fix regression tests; canonical number maintained in `docs/internal/CONTEXT.md`.) Any deviation must be acknowledged before merge.
+Test baseline: **162 suites / 2288 tests PASS**, tsc 0 errors. (Branch `feat/122-filter-consolidation`, 2026-08-22, after #119 deleted the dead dashboard-v1 archive: 168/2336 → 162/2288, the 6 dropped suites tested archived code. Relation-first branch `feat/112` sits at 168/2336. Canonical number maintained in `docs/internal/CONTEXT.md`.) Any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
 

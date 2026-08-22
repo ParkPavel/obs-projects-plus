@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-08-22 (active milestone **M-RELATION-FIRST** on branch `feat/112-guided-relation-setup`; #110 ✅ DONE, #111 impl committed `2ed9903` (tests green), #112 ✅ DONE (2026-08-22), #113 ✅ DONE (2026-08-22), #114 ✅ DONE (2026-08-22), #115 ✅ DONE (2026-08-22). Verified baseline **167 suites / 2329 tests**, tsc 0, `@ts-ignore` 0. Prior header (2026-06-18: #077 done, 155/2232) is historical — the W2/W3 queue is superseded by the product reset below.)
+> **Updated**: 2026-08-22 (active milestone **M-FILTER-CONSOLIDATION** on branch `feat/122-filter-consolidation`; #119 ✅ DONE, #116/#117/#121/#118/#120/#122 📋. M-RELATION-FIRST #110–#115 ✅ DONE on `feat/112` pending merge+smoke. Baseline **162 suites / 2288 tests** (post #119 archive deletion; feat/112 = 168/2336), tsc 0, `@ts-ignore` 0. Prior W2/W3 queue is historical — superseded by the product reset + this consolidation.)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 > **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
@@ -29,11 +29,66 @@
 
 ---
 
-## Milestone M-RELATION-FIRST — 🔥 NEXT PRODUCT MILESTONE
+## Milestone M-FILTER-CONSOLIDATION — 🔥 ACTIVE (consolidation before R3/R4)
+
+> Basis: `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md` + design `FILTER_CONSOLIDATION_DESIGN.md`.
+> A user manual-test session surfaced 6 overlapping filter layers + an un-split transform
+> pipeline + dead code — architecture tangled to critical mass. Approved by user 2026-08-22 to
+> run BEFORE relation-first R3/R4. Goal (PRODUCT_RESET §R2): collapse 6 layers into 3 axes
+> (A Scope / B Reactive / C Advanced), one engine, one documented order. Branch:
+> `feat/122-filter-consolidation`. Implementation order: #119 → #116 → #117 → #121 → #118 → #120 → #122.
+
+### #119 — Delete dead src/archive/dashboard-v1
+- Status: ✅ DONE (2026-08-22, commit `2e886a7`)
+- Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- 5401 LOC / 25 prod files + 6 archived test suites, 0 prod imports (R0_4). Baseline 168/2336 → 162/2288.
+
+### #116 — Filter-order ADR + order-invariant test
+- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: S
+- analysis_required: false | Blocks: #117, #118
+- `docs/internal/FILTER_ORDER_ADR.md` documenting the canonical A→C→B order; a red-first
+  order-invariant test that pins it. Foundation for the rest.
+
+### #117 — Route filter-tabs through the canonical engine
+- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: XS
+- Depends on: #116
+- Kill the parallel comparator `applyFilterTab`/`dashboardFilters.ts:21-24` (`String(raw)===value`);
+  normalize filter-tab selection to `FilterCondition` via `matchesCondition`. Risk: changes visible
+  filter-tab results for Relation/Select/Status → condition-parity golden test before merge.
+
+### #121 — Unify the two Pipeline config entry points
+- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- Depends on: #116 | `WidgetHost.svelte:183` + `:199` → single entry.
+
+### #118 — Split the transform pipeline (advanced mode) + migration
+- Status: 📋 BACKLOG (⚠ needs user decision — see below) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: L
+- analysis_required: true | analysis_done: true (design done) | Depends on: #116, #121
+- Terminal `filter` step → migrates to `subFilter`; terminal `group-by` → view-level group;
+  `pivot/join/unnest/unpivot/aggregate/compute` stay as explicit Advanced mode (closes R2 decl).
+  Union `TransformStepType` NOT trimmed immediately (schema-evolution); idempotent migration, never
+  loses data. **User decision required first:** the A→C→B order makes pipeline-filter apply AFTER
+  subFilter (an inversion of current behavior — data safe, behavior changes).
+
+### #120 — Remove retired WidgetTypes + orphaned config panels
+- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- Depends on: #118 | 7 retired types (of 16, ~8 live) + `configPanelRegistry.ts:70-186`. Migration in
+  the same commit (old data.json compatibility).
+
+### #122 — Unified filter mental model (umbrella)
+- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: M (umbrella)
+- Depends on: #116, #117, #118, #120, #121 | Closes the 6→3-axis consolidation; single documented
+  model where user understands "what affects what". Also clear stale `DataTableContent.svelte:6`
+  doc-comment pointing at the deleted archive.
+
+---
+
+## Milestone M-RELATION-FIRST — ✅ DONE (pending merge + manual acceptance)
 
 > Product contract: `PRODUCT_RESET_2026-07-18.md` §3–§6. This milestone is a vertical
 > user outcome, not a collection of dashboard controls. It takes precedence over new W2/W3
 > product work. Existing crash/security/regression fixes may continue independently.
+> All tickets #110–#115 ✅ implemented on `feat/112-guided-relation-setup` (pushed); user
+> gates remaining: OBStests visual smoke + merge. Follow-on debt is M-FILTER-CONSOLIDATION above.
 
 ### #110 — Relation-first design brief and baseline audit
 - Status: ✅ DONE (2026-07-18)
