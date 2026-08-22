@@ -1720,6 +1720,30 @@
             "apply": "Apply",
             "field-placeholder": "Field",
             "add-criterion": "Add criterion"
+        },
+        "relation-setup": {
+            "open": "Link database…",
+            "saved": "Relation saved.",
+            "target-unavailable": "The selected database could not be loaded.",
+            "title": "Link property to database",
+            "description": "Values stay as WikiLinks in Markdown. Preview makes no changes.",
+            "property-label": "Property",
+            "database-label": "Database",
+            "database-placeholder": "Choose a database…",
+            "display-field-label": "Display field",
+            "display-field-placeholder": "e.g. title",
+            "inverse-enable-label": "Create inverse property in schema",
+            "inverse-field-label": "Inverse property name",
+            "inverse-warning": "The inverse property will only be declared after saving. Existing notes are not rewritten.",
+            "preview-resolved": "Matched: {{count}}",
+            "preview-unmatched": "Not found: {{count}}",
+            "preview-ambiguous": "Ambiguous: {{count}}",
+            "cancel": "Cancel",
+            "save": "Save relation"
+        },
+        "relation-count": {
+            "linked": "{{count}} linked",
+            "empty": "No linked records yet"
         }
     }
 }

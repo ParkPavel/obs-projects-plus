@@ -1631,6 +1631,30 @@
             "apply": "Застосувати",
             "field-placeholder": "Поле",
             "add-criterion": "Додати критерій"
+        },
+        "relation-setup": {
+            "open": "Зв’язати з базою…",
+            "saved": "Зв’язок збережено.",
+            "target-unavailable": "Не вдалося завантажити вибрану базу.",
+            "title": "Зв’язати з базою",
+            "description": "Значення залишаються WikiLinks у Markdown. Попередній перегляд нічого не змінює.",
+            "property-label": "Властивість",
+            "database-label": "База даних",
+            "database-placeholder": "Оберіть базу…",
+            "display-field-label": "Поле відображення",
+            "display-field-placeholder": "наприклад, title",
+            "inverse-enable-label": "Створити зворотну властивість у схемі",
+            "inverse-field-label": "Ім’я зворотної властивості",
+            "inverse-warning": "Зворотня властивість буде оголошена лише після збереження. Наявні нотатки не перезаписуються.",
+            "preview-resolved": "Збіги: {{count}}",
+            "preview-unmatched": "Не знайдено: {{count}}",
+            "preview-ambiguous": "Неоднозначно: {{count}}",
+            "cancel": "Скасувати",
+            "save": "Зберегти зв’язок"
+        },
+        "relation-count": {
+            "linked": "Пов’язано: {{count}}",
+            "empty": "Пов’язаних записів немає"
         }
     }
 }

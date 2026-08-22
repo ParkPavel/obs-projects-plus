@@ -1631,6 +1631,30 @@
             "apply": "应用",
             "field-placeholder": "字段",
             "add-criterion": "添加条件"
+        },
+        "relation-setup": {
+            "open": "关联数据库…",
+            "saved": "关联已保存。",
+            "target-unavailable": "无法加载所选数据库。",
+            "title": "关联属性到数据库",
+            "description": "值保持为 Markdown 中的 WikiLinks。预览不做任何更改。",
+            "property-label": "属性",
+            "database-label": "数据库",
+            "database-placeholder": "选择数据库…",
+            "display-field-label": "显示字段",
+            "display-field-placeholder": "例如 title",
+            "inverse-enable-label": "在 Schema 中创建反向属性",
+            "inverse-field-label": "反向属性名称",
+            "inverse-warning": "反向属性仅在保存后声明。现有笔记不会被改写。",
+            "preview-resolved": "已匹配：{{count}}",
+            "preview-unmatched": "未找到：{{count}}",
+            "preview-ambiguous": "模糊匹配：{{count}}",
+            "cancel": "取消",
+            "save": "保存关联"
+        },
+        "relation-count": {
+            "linked": "已关联 {{count}} 条",
+            "empty": "暂无关联记录"
         }
     }
 }

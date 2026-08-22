@@ -1766,6 +1766,30 @@
             "apply": "Применить",
             "field-placeholder": "Поле",
             "add-criterion": "Добавить критерий"
+        },
+        "relation-setup": {
+            "open": "Связать с базой…",
+            "saved": "Связь сохранена.",
+            "target-unavailable": "Не удалось загрузить выбранную базу.",
+            "title": "Связать с базой",
+            "description": "Значения остаются WikiLinks в Markdown. Предпросмотр ничего не изменяет.",
+            "property-label": "Свойство",
+            "database-label": "База данных",
+            "database-placeholder": "Выберите базу…",
+            "display-field-label": "Поле отображения",
+            "display-field-placeholder": "например, title",
+            "inverse-enable-label": "Создать обратное свойство в схеме",
+            "inverse-field-label": "Имя обратного свойства",
+            "inverse-warning": "Обратное свойство будет объявлено только после сохранения. Существующие заметки не переписываются.",
+            "preview-resolved": "Совпадения: {{count}}",
+            "preview-unmatched": "Не найдены: {{count}}",
+            "preview-ambiguous": "Неоднозначны: {{count}}",
+            "cancel": "Отмена",
+            "save": "Сохранить связь"
+        },
+        "relation-count": {
+            "linked": "Связано: {{count}}",
+            "empty": "Связанных записей нет"
         }
     }
 }
