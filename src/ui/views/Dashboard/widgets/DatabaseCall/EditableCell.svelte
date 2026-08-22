@@ -34,6 +34,7 @@
     startEdit: void;
     commit: Optional<DataValue>;
     cancel: void;
+    setupRelation: DataField;
   }>();
 
   $: cell = cellDisplay(field, value);
@@ -105,7 +106,8 @@
     <span class="ppp-t2-text">{cell.kind === "text" ? cell.text : ""}</span>
     <RelationPickerPopover {field} {value} {api} {frame}
       on:commit={(e) => { committed = true; dispatch("commit", e.detail); }}
-      on:cancel={() => { committed = true; dispatch("cancel"); }} />
+      on:cancel={() => { committed = true; dispatch("cancel"); }}
+      on:setupRelation={() => { committed = true; dispatch("setupRelation", field); }} />
   {:else if editing && isChoice}
     <CellChoiceDropdown bind:draft {options}
       on:commit={(e) => commitDraft(e.detail)}

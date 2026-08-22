@@ -8,7 +8,7 @@
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+  import type { DataFrame, DataRecord, DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay, type TableColumn } from "./tableCanon";
   import EditableCell from "./EditableCell.svelte";
@@ -31,6 +31,7 @@
     startEdit: { recordId: string; field: string };
     commitEdit: { record: DataRecord; field: string; value: Optional<DataValue> };
     cancelEdit: void;
+    setupRelation: DataField;
   }>();
 
   // R3: never surface the full vault path — identity falls back to the
@@ -81,6 +82,7 @@
         on:startEdit={() => dispatch("startEdit", { recordId: record.id, field: col.field.name })}
         on:commit={(e) => dispatch("commitEdit", { record, field: col.field.name, value: e.detail })}
         on:cancel={() => dispatch("cancelEdit")}
+        on:setupRelation={(e) => dispatch("setupRelation", e.detail)}
       />
     {/if}
   {/each}

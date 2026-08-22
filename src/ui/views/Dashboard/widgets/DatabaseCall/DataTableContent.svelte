@@ -16,8 +16,11 @@
   import type { DataTableConfig, FieldPreset } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
   import { createEventDispatcher, getContext, onDestroy } from "svelte";
+  import { get } from "svelte/store";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { settings as settingsStore } from "src/lib/stores/settings";
+  import { createRelationSetupController } from "src/ui/views/Dashboard/relationSetupController";
   import {
     SELECTION_CONTEXT_KEY,
     EMPTY_SELECTION,
@@ -167,6 +170,14 @@
     liveWidth = null;
     dispatch("configChange", applyWidthPatch(config, e.detail.field, e.detail.widthRem));
   }
+
+  function handleSetupRelation(field: DataField): void {
+    if (!project?.id) return;
+    const rel = (field.typeConfig as { relation?: { targetProjectId?: string; displayField?: string } } | undefined)?.relation;
+    const displayField = rel?.displayField;
+    void createRelationSetupController({ app: $app, api, projectId: project.id, getFrame: () => frame, getProjects: () => get(settingsStore).projects, t: (k, o) => o ? $i18n.t(k, o) : $i18n.t(k) })
+      .open({ fieldName: field.name, targetProjectId: rel?.targetProjectId ?? "", createSourceField: false, ...(displayField !== undefined ? { displayField } : {}) });
+  }
 </script>
 
 <div class="ppp-dt-content" style:--ppp-dt-columns={template} style:--ppp-t2-row-height={`${rowHeightRem}rem`}>
@@ -219,6 +230,7 @@
             on:startEdit={(e) => (editingCell = e.detail)}
             on:commitEdit={handleCommitEdit}
             on:cancelEdit={() => (editingCell = null)}
+            on:setupRelation={(e) => handleSetupRelation(e.detail)}
           />
         {/if}
       {/each}
