@@ -51,11 +51,14 @@
   Foundation for the rest.
 
 ### #117 — Route filter-tabs through the canonical engine
-- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: XS
+- Status: ✅ DONE (2026-08-24, commit `a3d9d77`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: XS
 - Depends on: #116
-- Kill the parallel comparator `applyFilterTab`/`dashboardFilters.ts:21-24` (`String(raw)===value`);
-  normalize filter-tab selection to `FilterCondition` via `matchesCondition`. Risk: changes visible
-  filter-tab results for Relation/Select/Status → condition-parity golden test before merge.
+- Killed the parallel comparator `applyFilterTab`/`dashboardFilters.ts` (`String(raw)===value`);
+  added `deriveTabCondition(field, active)`, dispatched by `DataFieldType`, and delegated to
+  `filterByLinkedSelection` → `matchesCondition`. Condition-parity golden test
+  (`dashboardFilters.test.ts`, 24 cases) covers String/Select/Status/Relation/Number/Boolean/
+  Date/List, including the Relation bare-name-vs-wikilink regression and a Select
+  case-sensitivity guard. `applyFilterTab` public signature unchanged.
 
 ### #121 — Unify the two Pipeline config entry points
 - Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
