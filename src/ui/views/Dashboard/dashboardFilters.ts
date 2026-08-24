@@ -2,12 +2,46 @@
 //
 // R5-013 — Pure filter helpers extracted from DashboardCanvas.svelte.
 
-import type { DataFrame } from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
 import type { FilterCondition } from "src/settings/base/settings";
+import { filterByLinkedSelection } from "./widgets/DatabaseCall/relationFilterAdapter";
 
 export interface ActiveFilterTab {
   field: string;
   value: string;
+}
+
+/**
+ * Derive the canonical `FilterCondition` for an active filter-tab
+ * selection, dispatched by `DataFieldType` (never by field name) so the
+ * comparison always matches the semantics `matchesCondition` applies
+ * elsewhere for the same field type. #117.
+ */
+export function deriveTabCondition(
+  field: DataField | undefined,
+  active: ActiveFilterTab
+): FilterCondition {
+  switch (field?.type) {
+    case DataFieldType.Number:
+      return { field: active.field, operator: "eq", value: active.value, enabled: true };
+    case DataFieldType.Boolean:
+      return {
+        field: active.field,
+        operator: active.value === "true" ? "is-checked" : "is-not-checked",
+        enabled: true,
+      };
+    case DataFieldType.Date:
+      return { field: active.field, operator: "is-on", value: active.value, enabled: true };
+    case DataFieldType.List:
+      return {
+        field: active.field,
+        operator: "has-any-of",
+        value: JSON.stringify([active.value]),
+        enabled: true,
+      };
+    default:
+      return { field: active.field, operator: "is", value: active.value, enabled: true };
+  }
 }
 
 /** Narrow a frame by an active FilterTabs selection. Pure. */
@@ -16,12 +50,11 @@ export function applyFilterTab(
   active: ActiveFilterTab | null
 ): DataFrame {
   if (!active) return frame;
+  const field = frame.fields.find((f) => f.name === active.field);
+  const cond = deriveTabCondition(field, active);
   return {
     ...frame,
-    records: frame.records.filter((r) => {
-      const raw = r.values[active.field];
-      return raw != null && String(raw) === active.value;
-    }),
+    records: filterByLinkedSelection(frame.records, cond, frame.fields),
   };
 }
 
