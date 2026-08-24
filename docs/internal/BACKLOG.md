@@ -90,6 +90,33 @@
   model where user understands "what affects what". Also clear stale `DataTableContent.svelte:6`
   doc-comment pointing at the deleted archive.
 
+### #123 — promoteFilterTabToGlobal drops records for non-String filter-tab fields
+- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: XS
+- Found by audit-manager during #117 review (2026-08-24), out of #117's scope (function untouched
+  by that diff). `promoteFilterTabToGlobal` (`src/ui/views/Dashboard/dashboardFilters.ts:66-81`)
+  always emits `{ field, operator: "is", value, enabled: true }` regardless of the field's
+  `DataFieldType`. `"is"` is a `StringFilterOperator` only (`src/settings/base/settings.ts:67,75,
+  83,134`) — not a member of `NumberFilterOperator`/`BooleanFilterOperator`/`DateFilterOperator`/
+  `ListFilterOperator`. Traced through `matchesCondition` (`src/lib/engine/filterEvaluator.ts:
+  130-152,172-175`): for a Number/Boolean/Date/List field, no typed branch fires on operator `"is"`,
+  so it falls through to `console.warn("[FilterEngine] Unhandled filter…")` / `return false` —
+  every record is silently dropped. Confirmed reachable: `FilterTabsConfig.svelte`/
+  `FilterTabsWidget.svelte` place no `DataFieldType` restriction on which field can back a
+  filter-tab, and `DashboardCanvas.svelte:108-111` (`promoteLocalToGlobal`) calls
+  `promoteFilterTabToGlobal` unconditionally. Fix: dispatch by `DataFieldType` the same way
+  `deriveTabCondition` (added in #117, same file) already does — `frame.fields` is already
+  available at the `DashboardCanvas.svelte:110` call site. Needs a regression test for each
+  affected `DataFieldType` (Number/Boolean/Date/List) promoted to global filter.
+
+### #124 — Orphaned unnest-* i18n keys left after #121
+- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P3 | Complexity: XS
+- Found by audit-manager during #121 review (2026-08-24). #121 deleted the "Expand list" unnest
+  checkbox markup from `DatabaseCallSettings.svelte` but left the 4 i18n keys it used —
+  `views.dashboard.database-call.settings.unnest-label` / `-field` / `-none` / `-hint` — in all
+  4 locale files (`src/lib/stores/translations/{en,ru,uk,zh-CN}.json`), 16 dead string entries
+  total. Harmless (i18next silently ignores unused keys) but should be cleaned up. Confirmed via
+  grep: no remaining code reference to any of the 4 keys.
+
 ---
 
 ## Milestone M-RELATION-FIRST — ✅ DONE (pending merge + manual acceptance)
