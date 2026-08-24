@@ -28,16 +28,22 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `DatabaseCallBlock.svelte` (3-state filter label), `SelectionBadge.svelte` (database-call added),
   widgetComponentRegistry.ts (LegacyLinkedSelectionStatus prop), canvasSelectionStore.test.ts
   (parity tests), relationFilterAdapter.test.ts (malformed-link edge cases). All 4 gates PASS.
-- **Canonical baseline — branch `feat/122-filter-consolidation` (2026-08-22 post #119):
-  162 suites / 2288 tests PASS, tsc 0, lint 0 (125 pre-existing tsdoc warnings),
-  svelte-check 0/0, @ts-ignore 0, px ≤177.** #119 deleted dead dashboard-v1 archive →
-  168/2336 dropped to 162/2288 (6 archived-code suites removed). Relation-first branch
-  `feat/112` remains at 168/2336. Do not roll back.
+- **Canonical baseline — branch `feat/116-filter-order-adr` (2026-08-24 post #118):
+  166 suites / 2349 tests PASS, tsc 0, lint 0 (125 pre-existing tsdoc warnings),
+  svelte-check 0/0, @ts-ignore 0, px ≤177.** Grew from 162/2288 via #117 (+24 filter-tab
+  parity cases), #118 (+36: transform migration, widget scope, dashboard migration).
+  Earlier history: #119 deleted dead dashboard-v1 archive → 168/2336 dropped to 162/2288
+  (6 archived-code suites removed). Relation-first branch `feat/112` remains at 168/2336.
+  Do not roll back.
 - **Active milestone: M-FILTER-CONSOLIDATION** (audit `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md`
   + design `FILTER_CONSOLIDATION_DESIGN.md`). Collapse 6 filter layers → 3 axes (A Scope /
-  B Reactive / C Advanced), one engine, one documented order. Order: #119 ✅ → #116 → #117
-  → #121 → #118 (⚠ needs user decision on A→C→B order change) → #120 → #122. Runs BEFORE
-  relation-first R3/R4 (user-approved 2026-08-22).
+  B Reactive / C Advanced), one engine, one documented order. Order: #119 ✅ → #116 ✅ → #117 ✅
+  → #121 ✅ → #118 ✅ → #120 → #122. Runs BEFORE relation-first R3/R4 (user-approved 2026-08-22).
+- **#118 landed the A→C→B behavioral inversion** (user confirmed 2026-08-24): the widget
+  `subFilter` now narrows the frame BEFORE the transform pipeline, not after. Stored pipelines
+  are split at load by `migrateDashboardTransforms` (idempotent, never drops a step it cannot
+  prove equivalent). Not yet smoke-tested in the OBStests vault — a dashboard mixing a pipeline
+  `filter` with a block `subFilter` is the case to look at.
 - UX bug-fixes (2026-08-22, uncommitted): (1) legacy `data-table` lost `subFilter` on
   save+restore → fixed via `restoreDataTableConfig`/`persistDataTableSubFilter` in
   `legacyMigration.ts`, wired in `widgetComponentRegistry.ts` + `WidgetHost.svelte`

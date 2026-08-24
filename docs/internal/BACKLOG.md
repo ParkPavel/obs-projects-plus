@@ -71,14 +71,22 @@
   `PipelineEditor.mutation.test.ts`. Net test count unchanged (164/2313).
 
 ### #118 — Split the transform pipeline (advanced mode) + migration
-- Status: 🚧 IN PROGRESS | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: L
+- Status: ✅ DONE (2026-08-24, commit `f66a9a6`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: L
 - analysis_required: true | analysis_done: true (design done) | Depends on: #116, #121
 - Terminal `filter` step → migrates to `subFilter`; terminal `group-by` → view-level group;
   `pivot/join/unnest/unpivot/aggregate/compute` stay as explicit Advanced mode (closes R2 decl).
   Union `TransformStepType` NOT trimmed immediately (schema-evolution); idempotent migration, never
   loses data. **User decision: RESOLVED 2026-08-24** — the user explicitly confirmed the A→C→B order.
-  Pipeline-filter now applies AFTER subFilter (an inversion of current behavior — data safe,
-  behavior changes). This gate is closed; no further confirmation is required to implement #118.
+  Pipeline-filter now applies AFTER subFilter (an inversion of previous behavior — data safe,
+  behavior changes).
+- Delivered: `widgetScope.ts` (axis A, pure) applied in `WidgetHost` before `executeTransform`;
+  `DatabaseCallBlock.scopeApplied` stops the double-filter (re-applying after a reshape could drop
+  every row); `migrateTransformToViewLevel` in `legacyMigration.ts` wired at load via
+  `migrateDashboardTransforms` → `dashboardView.onOpen`. Migration lifts a leading `filter` run to
+  `subFilter` and a lone terminal `group-by` to view level; everything unprovable stays in the
+  pipeline. Idempotent. `PipelineEditor` retitled "Advanced transforms" + hint (4 locales).
+- Found while wiring: AND-merges are flattened (a groups-only shape reads as "empty" to UI guards)
+  and `DatabaseCallBlock`'s own guard now counts `groups`, not just `conditions`.
 
 ### #120 — Remove retired WidgetTypes + orphaned config panels
 - Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
