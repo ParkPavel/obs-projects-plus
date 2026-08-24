@@ -2,10 +2,17 @@
 
 > **Тип:** design brief (read-only architecture). НЕ содержит кода.
 > **Автор:** backend-architect.
-> **Основа:** `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md` + `PRODUCT_RESET_2026-07-18.md` §R2.
+> **Версия:** **2 (revision 2026-08-22)** — пере-заземлено на `specs/NOTION_DM_RESEARCH.md`. См. §7 «Revision 2».
+> **Основа:** `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md` + `PRODUCT_RESET_2026-07-18.md` §R2 + **`specs/NOTION_DM_RESEARCH.md` §1–3 (эталон)** + `FILTER_CONSOLIDATION_REVIEW_2026-08-22.md`.
 > **Milestone:** M-FILTER-CONSOLIDATION (выше R3/R4).
 > **Инварианты:** единый `filterEvaluator` (устранить обход, не плодить движки), dispatch by `DataFieldType`, no new Menu, PX-budget ≤ 177, storage-совместимость (миграции, не потеря данных).
 > **Верификация якорей:** каждый `file:line` ниже открыт и подтверждён в источнике (не из аудита).
+
+> ⚠️ **ЧИТАТЬ §7 ПЕРВЫМ.** Секции 0–6 — версия 1 (сохранены как история). Версия 2 (§7) их
+> корректирует после сверки с Notion-эталоном и **с реальным кодом**: ключевой факт — эпик #099
+> (расщепление конвейера по `NOTION_DM_RESEARCH §2`) **уже CLOSED 2026-06-13** (BACKLOG:1779), а «живой
+> редактор без Save» (мнимый #123) **уже отгружен** в `PipelineEditor.svelte:42-74`. Где §7 расходится
+> с §0–6 — приоритет у §7.
 
 ---
 
