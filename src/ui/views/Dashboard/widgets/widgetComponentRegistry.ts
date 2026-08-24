@@ -72,6 +72,12 @@ export interface WidgetRenderContext {
   readonly dbCallSourceConfig: WidgetSourceConfig | undefined;
   readonly dbCallLinkedSelection: LinkedSelectionConfig | undefined;
   readonly dbCallLinkedSelectionValidation: LegacyLinkedSelectionStatus | undefined;
+  /**
+   * #118: true when the host already narrowed the frame by `config.subFilter`
+   * ahead of the transform pipeline (axis A of the canonical A→C→B order), so
+   * the block must not apply it a second time.
+   */
+  readonly dbCallScopeApplied: boolean;
 }
 
 type Props = Record<string, unknown>;
@@ -102,6 +108,8 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
         c.widget.config as Record<string, unknown> | undefined
       ),
       widgetId: c.widget.id, widgetTitle: c.widget.title,
+      // #118: data-table always renders the host's scoped+transformed frame.
+      scopeApplied: true,
     }),
   },
   chart: {
@@ -138,6 +146,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection,
       linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
+      scopeApplied: c.dbCallScopeApplied,
     }),
   },
   "cover-banner": {

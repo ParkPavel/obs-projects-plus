@@ -71,13 +71,14 @@
   `PipelineEditor.mutation.test.ts`. Net test count unchanged (164/2313).
 
 ### #118 — Split the transform pipeline (advanced mode) + migration
-- Status: 📋 BACKLOG (⚠ needs user decision — see below) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: L
+- Status: 🚧 IN PROGRESS | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: L
 - analysis_required: true | analysis_done: true (design done) | Depends on: #116, #121
 - Terminal `filter` step → migrates to `subFilter`; terminal `group-by` → view-level group;
   `pivot/join/unnest/unpivot/aggregate/compute` stay as explicit Advanced mode (closes R2 decl).
   Union `TransformStepType` NOT trimmed immediately (schema-evolution); idempotent migration, never
-  loses data. **User decision required first:** the A→C→B order makes pipeline-filter apply AFTER
-  subFilter (an inversion of current behavior — data safe, behavior changes).
+  loses data. **User decision: RESOLVED 2026-08-24** — the user explicitly confirmed the A→C→B order.
+  Pipeline-filter now applies AFTER subFilter (an inversion of current behavior — data safe,
+  behavior changes). This gate is closed; no further confirmation is required to implement #118.
 
 ### #120 — Remove retired WidgetTypes + orphaned config panels
 - Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S

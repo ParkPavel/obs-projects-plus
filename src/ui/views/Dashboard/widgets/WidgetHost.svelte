@@ -17,6 +17,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
+  import { applyWidgetScope } from "./widgetScope";
   import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
   import { validateLegacyLinkedSelection } from "src/lib/relations/relationContract";
   import { getConfigPanel } from "./configPanelRegistry";
@@ -63,9 +64,10 @@
     .filter((f) => f.type === DataFieldType.Relation && !f.derived)
     .map((f) => f.name);
   $: enrichedFrame = relationFieldNames.length > 0 ? enrichWithBacklinks(frame, relationFieldNames) : frame;
-  $: transformResult = currentPipeline.steps.length > 0 ? executeTransform(enrichedFrame, currentPipeline, { rightFrames }) : null;
-  $: transformedFrame = transformResult ? transformResult.data : enrichedFrame;
-  $: pipelineInputRowCount = transformResult ? transformResult.meta.inputRowCount : enrichedFrame.records.length;
+  $: scopedFrame = applyWidgetScope(enrichedFrame, widget.config); // #118: A before C
+  $: transformResult = currentPipeline.steps.length > 0 ? executeTransform(scopedFrame, currentPipeline, { rightFrames }) : null;
+  $: transformedFrame = transformResult ? transformResult.data : scopedFrame;
+  $: pipelineInputRowCount = transformResult ? transformResult.meta.inputRowCount : scopedFrame.records.length;
 
   const asChartConfig = (cfg: Record<string, unknown>): ChartConfig | null =>
     cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
@@ -91,6 +93,7 @@
     effectiveTableConfig: isPrimaryDataTable ? tableConfig : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
     pipelineStepCount: dbCallUsesLinkedSource ? 0 : currentPipeline.steps.length, pipelineInputRowCount: dbCallUsesLinkedSource ? 0 : pipelineInputRowCount, chartConfig, statsConfig, chartRightFrame,
     dbCallFrame, dbCallFields: dbCallFrame.fields, dbCallSourceConfig, dbCallLinkedSelection,
+    dbCallScopeApplied: !dbCallUsesLinkedSource, // #118: linked source skips A
     dbCallLinkedSelectionValidation: dbCallLinkedSelection ? validateLegacyLinkedSelection({ relationField: dbCallLinkedSelection.relationField }, dbCallSourceConfig?.projectId ?? project?.id ?? "", project?.id, dbCallFrame.fields).status : undefined,
   } satisfies WidgetRenderContext;
 

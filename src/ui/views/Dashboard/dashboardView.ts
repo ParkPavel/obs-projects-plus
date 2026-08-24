@@ -8,7 +8,7 @@ import {
 
 import DashboardCanvasSvelte from "./DashboardCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
-import { isLegacyTableConfig, migrateTableConfig } from "./migration";
+import { isLegacyTableConfig, migrateTableConfig, migrateDashboardTransforms } from "./migration";
 
 /**
  * Stable runtime view-type id.
@@ -58,6 +58,15 @@ export class DashboardView extends ProjectView {
         props.config as Record<string, unknown>
       );
       props.saveConfig(config);
+    }
+
+    // #118: split ordinary scope/grouping out of stored transform pipelines.
+    if (config?.widgets) {
+      const split = migrateDashboardTransforms(config);
+      if (split.migrated) {
+        config = split.config;
+        props.saveConfig(config);
+      }
     }
 
     this.view = new DashboardCanvasSvelte({

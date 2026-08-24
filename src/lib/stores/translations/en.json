@@ -994,7 +994,8 @@
                     "runtime-error": "Runtime error"
                 },
                 "pipeline": {
-                    "title": "Transform Pipeline",
+                    "title": "Advanced transforms",
+                    "advanced-hint": "Ordinary filtering and grouping now live on the view itself — these steps reshape the data.",
                     "steps": "step(s)",
                     "clear": "Clear",
                     "empty": {

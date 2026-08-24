@@ -1,6 +1,7 @@
 ﻿// src/ui/views/Dashboard/migration.ts
 
-import type { DatabaseViewConfig, DataTableConfig } from "./types";
+import type { DatabaseViewConfig, DataTableConfig, WidgetDefinition } from "./types";
+import { migrateTransformToViewLevel } from "./widgets/legacyMigration";
 
 interface LegacyTableConfig {
   readonly fieldConfig?: Record<
@@ -140,4 +141,36 @@ export function migrateAggregationCount<T>(value: T): T {
     return (changed ? (next as unknown as T) : value);
   }
   return value;
+}
+
+/**
+ * #118 — lift ordinary scope/grouping out of every widget's transform pipeline
+ * so the canonical A→C→B order (FILTER_ORDER_ADR.md) applies to stored
+ * dashboards, not just new ones.
+ *
+ * Idempotent: once every widget is split it reports `migrated: false`, so
+ * reopening a dashboard writes nothing.
+ */
+export function migrateDashboardTransforms(config: DatabaseViewConfig): {
+  readonly config: DatabaseViewConfig;
+  readonly migrated: boolean;
+} {
+  let migrated = false;
+
+  const widgets: WidgetDefinition[] = config.widgets.map((widget) => {
+    const result = migrateTransformToViewLevel(widget);
+    if (!result.migrated) return widget;
+    migrated = true;
+
+    // Spreading the original would carry the consumed pipeline back in.
+    const { transform: _consumed, ...rest } = widget;
+    void _consumed;
+    return {
+      ...rest,
+      config: result.config,
+      ...(result.transform !== undefined && { transform: result.transform }),
+    };
+  });
+
+  return migrated ? { config: { ...config, widgets }, migrated } : { config, migrated };
 }

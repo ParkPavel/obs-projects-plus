@@ -71,6 +71,12 @@
   /** #092: pipeline reach so the block can offer recovery when steps hid every row. */
   export let pipelineStepCount: number = 0;
   export let pipelineInputRowCount: number = 0;
+  /**
+   * #118: the host already applied `config.subFilter` upstream of the transform
+   * pipeline (canonical order A→C→B). The block still owns the filter UI, it
+   * just must not filter the frame a second time.
+   */
+  export let scopeApplied: boolean = false;
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -109,8 +115,16 @@
   // #099.1 — block-level filter (WidgetDataContext.subFilter, SPEC §3.4):
   // applied through the canonical filterEvaluator BEFORE the linked-selection
   // auto-filter, instantly on every pill/builder change.
+  //
+  // #118 (ADR A→C→B): when the host already narrowed the frame by this same
+  // subFilter ahead of the transform pipeline, `scopeApplied` is set and
+  // re-applying here is skipped — a reshape step may have renamed or dropped
+  // the fields the conditions name, which would drop every row.
   $: subFilter = config["subFilter"] as FilterDefinition | undefined;
-  $: subFiltered = subFilter && subFilter.conditions.length > 0 ? applyFilter(frame, subFilter) : frame;
+  $: hasSubFilter =
+    !!subFilter && (subFilter.conditions.length > 0 || (subFilter.groups?.length ?? 0) > 0);
+  $: subFiltered =
+    hasSubFilter && !scopeApplied ? applyFilter(frame, subFilter as FilterDefinition) : frame;
 
   $: effectiveFrame = autoFilter
     ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }

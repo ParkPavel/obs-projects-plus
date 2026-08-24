@@ -441,6 +441,10 @@
       {$i18n.t("views.dashboard.pipeline.live", { defaultValue: "Changes apply instantly" })}
     </span>
   </div>
+  <!-- #118: pipeline is the advanced surface; ordinary scope/grouping is view-level. -->
+  <p class="ppp-pipeline-advanced-hint">
+    {$i18n.t("views.dashboard.pipeline.advanced-hint")}
+  </p>
 
   <div class="ppp-pipeline-steps">
     {#if arrayFields.length > 0}
@@ -938,6 +942,12 @@
 
   .ppp-pipeline-count {
     color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-pipeline-advanced-hint {
+    margin: 0.25rem 0 0;
+    color: var(--text-muted);
     font-size: var(--font-ui-smaller);
   }
 
