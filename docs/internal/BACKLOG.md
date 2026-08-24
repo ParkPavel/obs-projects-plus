@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-08-22 (active milestone **M-FILTER-CONSOLIDATION** on branch `feat/122-filter-consolidation`; #119 ✅ DONE, #116/#117/#121/#118/#120/#122 📋. M-RELATION-FIRST #110–#115 ✅ DONE on `feat/112` pending merge+smoke. Baseline **162 suites / 2288 tests** (post #119 archive deletion; feat/112 = 168/2336), tsc 0, `@ts-ignore` 0. Prior W2/W3 queue is historical — superseded by the product reset + this consolidation.)
+> **Updated**: 2026-08-24 (active milestone **M-FILTER-CONSOLIDATION** on branch `feat/116-filter-order-adr`; #119/#116/#117/#121 ✅ DONE, #118/#120/#122 📋. M-RELATION-FIRST #110–#115 ✅ DONE on `feat/112` pending merge+smoke. Baseline **164 suites / 2313 tests**, tsc 0, `@ts-ignore` 0. Prior W2/W3 queue is historical — superseded by the product reset + this consolidation.)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 > **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
@@ -61,8 +61,14 @@
   case-sensitivity guard. `applyFilterTab` public signature unchanged.
 
 ### #121 — Unify the two Pipeline config entry points
-- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- Status: ✅ DONE (2026-08-24, commits `7084897` + `4eb3458`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
 - Depends on: #116 | `WidgetHost.svelte:183` + `:199` → single entry.
+- Removed the "Expand list" unnest quick-toggle from `DatabaseCallSettings` (Option a).
+  Database-call unnest now goes exclusively through the Σ `PipelineEditor`'s "Array fields
+  detected" banner (`addUnnestForField`). Deleted the 5 unnest-as-block-property tests in
+  `databaseCallSettings.test.ts`, added a no-affordance regression guard there, and added
+  banner coverage (detection, exclusion of already-unnested fields, debounced apply) to
+  `PipelineEditor.mutation.test.ts`. Net test count unchanged (164/2313).
 
 ### #118 — Split the transform pipeline (advanced mode) + migration
 - Status: 📋 BACKLOG (⚠ needs user decision — see below) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: L
