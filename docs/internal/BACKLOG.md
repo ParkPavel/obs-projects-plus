@@ -44,10 +44,11 @@
 - 5401 LOC / 25 prod files + 6 archived test suites, 0 prod imports (R0_4). Baseline 168/2336 → 162/2288.
 
 ### #116 — Filter-order ADR + order-invariant test
-- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: S
+- Status: ✅ DONE (2026-08-24, commits `0c70f7a` + `9b1aaad`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: S
 - analysis_required: false | Blocks: #117, #118
 - `docs/internal/FILTER_ORDER_ADR.md` documenting the canonical A→C→B order; a red-first
-  order-invariant test that pins it. Foundation for the rest.
+  order-invariant test that pins it (`src/__tests__/R_filterOrder.invariant.test.ts`, PASS).
+  Foundation for the rest.
 
 ### #117 — Route filter-tabs through the canonical engine
 - Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: XS
