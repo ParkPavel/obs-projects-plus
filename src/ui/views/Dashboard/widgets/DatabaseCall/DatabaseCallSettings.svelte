@@ -9,10 +9,8 @@
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
-  import { detectArrayFields } from "../_shared/arrayFieldDetection";
   import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
   import type { WidgetSourceConfig, LinkedSelectionConfig } from "../../types";
-  import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
   import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
 
   export let sourceConfig: WidgetSourceConfig | undefined = undefined;
@@ -21,14 +19,11 @@
   export let fields: DataField[] = [];
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
   export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
-  export let transform: TransformPipeline = { steps: [] };
-  export let source: { records: Array<{ values: Record<string, unknown> }> } | null = null;
 
   const dispatch = createEventDispatcher<{
     change: WidgetSourceConfig;
     close: void;
     linkedSelectionChange: LinkedSelectionConfig | undefined;
-    transformChange: TransformPipeline;
   }>();
 
   $: currentProjectId = sourceConfig?.projectId ?? "";
@@ -38,53 +33,6 @@
   $: relationFields = fields.filter((f) => f.type === DataFieldType.Relation);
   // E8: show inline hint when validation indicates a problem.
   $: showRelationHint = linkedSelectionValidation === "missing-relation" || linkedSelectionValidation === "wrong-target-project";
-
-  // #099.3 — "Развернуть список": unnest exposed as a block property. Single
-  // source of truth is widget.transform; we only surface the first array field
-  // already targeted by an unnest step as active.
-  $: arrayFields = detectArrayFieldsForPicker(source, fields, transform.steps);
-  $: activeUnnestField = transform.steps.find((s) => s.type === "unnest")?.field ?? "";
-
-  function detectArrayFieldsForPicker(
-    src: { records: Array<{ values: Record<string, unknown> }> } | null,
-    flds: DataField[],
-    steps: TransformPipeline["steps"],
-  ): string[] {
-    // Include the already-unnested field so the picker can show the active choice.
-    const detected = detectArrayFields(src, flds, []);
-    const active = steps.find((s) => s.type === "unnest")?.field;
-    if (active && !detected.includes(active)) detected.push(active);
-    return detected;
-  }
-
-  function setUnnestField(field: string) {
-    if (!field) {
-      dispatch("transformChange", {
-        steps: transform.steps.filter((s) => !(s.type === "unnest" && s.field === activeUnnestField)),
-      });
-      return;
-    }
-    const rest = transform.steps.filter((s) => !(s.type === "unnest" && s.field === field));
-    dispatch("transformChange", { steps: [{ type: "unnest", field }, ...rest] });
-  }
-
-  function toggleUnnest(field: string, on: boolean) {
-    if (on) setUnnestField(field);
-    else {
-      dispatch("transformChange", {
-        steps: transform.steps.filter((s) => !(s.type === "unnest" && s.field === field)),
-      });
-    }
-  }
-
-  function handleUnnestToggle(e: Event) {
-    const on = (e.currentTarget as HTMLInputElement).checked;
-    toggleUnnest(on ? (activeUnnestField || arrayFields[0] || "") : activeUnnestField, on);
-  }
-
-  function handleUnnestFieldChange(e: Event) {
-    setUnnestField((e.currentTarget as HTMLSelectElement).value);
-  }
 
   function handleSourceChange(e: Event) {
     const projectId = (e.currentTarget as HTMLSelectElement).value;
@@ -164,37 +112,6 @@
       {/if}
     </div>
     {/if}
-    {#if arrayFields.length > 0}
-    <div class="ppp-cfg-item">
-      <label class="ppp-dbc-settings__field ppp-dbc-settings__field--row">
-        <input
-          type="checkbox"
-          checked={activeUnnestField !== ""}
-          on:change={handleUnnestToggle}
-        />
-        <span>{$i18n.t("views.dashboard.database-call.settings.unnest-label", { defaultValue: "Expand list" })}</span>
-      </label>
-      <label class="ppp-dbc-settings__field">
-        <span class="ppp-dbc-settings__sublabel">
-          {$i18n.t("views.dashboard.database-call.settings.unnest-field", { defaultValue: "List field" })}
-        </span>
-        <select
-          value={activeUnnestField}
-          on:change={handleUnnestFieldChange}
-        >
-          <option value="">— {$i18n.t("views.dashboard.database-call.settings.unnest-none", { defaultValue: "none" })} —</option>
-          {#each arrayFields as f (f)}
-            <option value={f}>{f}</option>
-          {/each}
-        </select>
-      </label>
-      <span class="ppp-dbc-settings__hint">
-        {$i18n.t("views.dashboard.database-call.settings.unnest-hint", {
-          defaultValue: "Split a list field into one row per item.",
-        })}
-      </span>
-    </div>
-    {/if}
   </div>
 </WidgetConfigShell>
 
@@ -216,17 +133,6 @@
     border: 0.0625rem solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
-  }
-
-  .ppp-dbc-settings__field--row {
-    flex-direction: row;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  .ppp-dbc-settings__sublabel {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-muted);
   }
 
   .ppp-dbc-settings__hint {

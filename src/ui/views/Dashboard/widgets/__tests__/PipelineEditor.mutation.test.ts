@@ -1,10 +1,15 @@
 import { updateStep, toggleDisableStep, addFilterCondition } from "../pipelineSteps";
 import type {
   TransformStep,
+  TransformPipeline,
   FilterStep,
   GroupByStep,
 } from "src/lib/dashboard-engine/transformTypes";
 import type { FilterCondition } from "src/settings/base/settings";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
+import type { DataField } from "src/lib/dataframe/dataframe";
+
+const PipelineEditor = require("../PipelineEditor.svelte").default;
 
 // #105 — PipelineEditor crashed in `updateStep` doing `steps[index] = step` on
 // an immer-frozen array (TypeError: Cannot assign to read only property). These
@@ -89,5 +94,107 @@ describe("pipelineSteps reducers on frozen input (#105)", () => {
     expect(filter.conditions.conditions[0]).toBe(cond);
     // original frozen filter step is untouched
     expect((frozen[1] as FilterStep).conditions.conditions).toHaveLength(0);
+  });
+});
+
+// #121 — after removing the duplicate unnest quick-toggle from
+// DatabaseCallSettings, this "Array fields detected" banner is the one and
+// only entry point for database-call unnest, so it needs its own coverage.
+describe("PipelineEditor — #121 unnest banner", () => {
+  function field(name: string): DataField {
+    return { name, type: DataFieldType.Unknown, repeated: false, identifier: false, derived: false };
+  }
+
+  const fields = [field("title"), field("exercises"), field("tags")];
+
+  function source() {
+    return {
+      fields,
+      records: [
+        { id: "r1", values: { title: "Mon", exercises: [{ name: "Bench" }], tags: ["a", "b"] } },
+      ],
+    };
+  }
+
+  function mount(pipeline: TransformPipeline) {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const applied: TransformPipeline[] = [];
+    const component = new PipelineEditor({
+      target,
+      props: { pipeline, fields, source: source(), availableSources: [] },
+    });
+    component.$on("apply", (e: CustomEvent<TransformPipeline>) => applied.push(e.detail));
+    const bannerButtons = () =>
+      Array.from(target.querySelectorAll(".ppp-pipeline-unnest-hint-btn")) as HTMLButtonElement[];
+    return {
+      component,
+      applied,
+      bannerButtons,
+      destroy() {
+        component.$destroy();
+        target.remove();
+      },
+    };
+  }
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test("renders one button per detected array field when no unnest step exists", () => {
+    const m = mount({ steps: [] });
+    const labels = m.bannerButtons().map((b) => b.textContent?.trim());
+    expect(labels.some((t) => t?.includes("exercises"))).toBe(true);
+    expect(labels.some((t) => t?.includes("tags"))).toBe(true);
+    expect(m.bannerButtons()).toHaveLength(2);
+    m.destroy();
+  });
+
+  test("excludes fields already targeted by an existing unnest step", () => {
+    const m = mount({ steps: [{ type: "unnest", field: "tags" }] });
+    const labels = m.bannerButtons().map((b) => b.textContent?.trim());
+    expect(labels.some((t) => t?.includes("exercises"))).toBe(true);
+    expect(labels.some((t) => t?.includes("tags"))).toBe(false);
+    expect(m.bannerButtons()).toHaveLength(1);
+    m.destroy();
+  });
+
+  test("clicking a banner button prepends an unnest step and applies after the debounce", async () => {
+    const m = mount({ steps: [{ type: "filter", conditions: { conjunction: "and", conditions: [] } }] });
+    const btn = m.bannerButtons().find((b) => b.textContent?.includes("exercises"));
+    expect(btn).toBeDefined();
+
+    btn!.click();
+    // Svelte flushes the `steps` update (and starts the debounce timer) on a
+    // microtask, which fake timers don't advance — let it settle first.
+    await Promise.resolve();
+    // Not yet applied — still within the 400ms debounce window.
+    jest.advanceTimersByTime(399);
+    expect(m.applied).toHaveLength(0);
+
+    jest.advanceTimersByTime(1);
+    expect(m.applied).toHaveLength(1);
+    const steps = m.applied[0]!.steps;
+    expect(steps[0]).toEqual({ type: "unnest", field: "exercises" });
+    expect(steps.some((s) => s.type === "filter")).toBe(true);
+    m.destroy();
+  });
+
+  test("a field already unnested does not reappear in the banner after clicking another field", async () => {
+    const m = mount({ steps: [{ type: "unnest", field: "tags" }] });
+    expect(m.bannerButtons().some((b) => b.textContent?.includes("tags"))).toBe(false);
+    const btn = m.bannerButtons().find((b) => b.textContent?.includes("exercises"));
+    btn!.click();
+    await Promise.resolve();
+    jest.advanceTimersByTime(400);
+    await Promise.resolve();
+    expect(m.bannerButtons().some((b) => b.textContent?.includes("exercises"))).toBe(false);
+    expect(m.bannerButtons().some((b) => b.textContent?.includes("tags"))).toBe(false);
+    m.destroy();
   });
 });
