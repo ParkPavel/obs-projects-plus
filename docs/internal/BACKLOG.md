@@ -89,9 +89,21 @@
   and `DatabaseCallBlock`'s own guard now counts `groups`, not just `conditions`.
 
 ### #120 — Remove retired WidgetTypes + orphaned config panels
-- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
-- Depends on: #118 | 7 retired types (of 16, ~8 live) + `configPanelRegistry.ts:70-186`. Migration in
-  the same commit (old data.json compatibility).
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- Depends on: #118 | 7 retired types (of 16, ~8 live) + `configPanelRegistry.ts:70-186`.
+- **Scope corrected during implementation — the `WidgetType` union was NOT trimmed.** The ticket
+  title asked to remove the retired types, but four of the seven (`comparison`, `timeline`,
+  `yaml-visualizer`, `sub-base-canvas`) have no successor: the documented fate table keeps their
+  stored configs and renders `LegacyWidgetPlaceholder`. Dropping them from the union would leave a
+  stored `data.json` widget unmodellable and unrenderable — data loss, and a direct violation of the
+  schema-evolution rule in CLAUDE.md. They also stay in `WIDGET_REGISTRY`, which supplies the
+  placeholder's label/icon, and are already excluded from creation by the `legacy` palette filter.
+- Delivered: the seven orphaned `configPanelRegistry` entries are gone. They were provably dead —
+  the cog is gated on `WIDGET_PANELS[type]` existing (`WidgetHost.svelte:165`) and no retired type
+  has a panel component, so `hasCog`/`isConfigured`/`initDefaults` were unreachable maintenance
+  weight. `PANELS` is now `Partial<Record<WidgetType, …>>`; `getConfigPanel` stays **total** via a
+  shared `NO_PANEL` fallback, because `WidgetHost` dereferences `.hasCog` unconditionally and an
+  undefined lookup would crash the widget. `configPanelRegistry.ts` 217 → 155 lines.
 
 ### #122 — Unified filter mental model (umbrella)
 - Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: M (umbrella)

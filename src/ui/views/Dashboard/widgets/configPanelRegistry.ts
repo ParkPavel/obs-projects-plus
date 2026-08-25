@@ -1,11 +1,6 @@
 import type { DataField } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type {
-  WidgetType,
-  ChartConfig,
-  StatsConfig,
-  SummaryColumnConfig,
-} from "../types";
+import type { WidgetType, ChartConfig, StatsConfig } from "../types";
 
 /**
  * Phase 2a — INTERFACE RECLAMATION.
@@ -67,22 +62,6 @@ const PANELS = {
     isConfigured: (c) => !!c && typeof c === "object" && "cards" in c,
     initDefaults: () => ({ ...DEFAULT_STATS_CONFIG }),
   },
-  comparison: {
-    hasCog: true,
-    isConfigured: (c) => Object.keys(c ?? {}).length > 0,
-    initDefaults: (fields) => {
-      const numericField =
-        fields.find((f) => f.type === DataFieldType.Number)?.name ??
-        fields[0]?.name ??
-        "";
-      return {
-        metrics: numericField ? [{ field: numericField }] : [],
-        mode: "absolute",
-        orientation: "horizontal",
-        showDelta: false,
-      };
-    },
-  },
   checklist: {
     hasCog: true,
     isConfigured: (c) => Object.keys(c ?? {}).length > 0,
@@ -100,12 +79,6 @@ const PANELS = {
       };
     },
   },
-  "view-port": {
-    // Phase 2a: the view-port widget finally gets a cog panel.
-    hasCog: true,
-    isConfigured: (c) => !!c && typeof c === "object" && !!c["viewId"],
-    initDefaults: () => ({ viewId: "", viewLabel: "", headerVisible: true }),
-  },
   "filter-tabs": {
     hasCog: true,
     isConfigured: (c) => Object.keys(c ?? {}).length > 0,
@@ -114,47 +87,6 @@ const PANELS = {
       tabs: [] as unknown[],
       showAll: true,
     }),
-  },
-  "summary-row": {
-    hasCog: true,
-    isConfigured: (c) => Object.keys(c ?? {}).length > 0,
-    initDefaults: (fields) => ({
-      columns: [
-        {
-          field: fields[0]?.name ?? "*",
-          aggregation: "count_total",
-          format: "number",
-        } satisfies SummaryColumnConfig,
-      ],
-    }),
-  },
-  "data-list": {
-    hasCog: true,
-    isConfigured: (c) => !!c && typeof c === "object" && Array.isArray((c as { fields?: unknown }).fields),
-    initDefaults: (fields) => ({
-      titleField: "",
-      fields: fields.slice(0, 3).map((f) => f.name),
-      sortField: "",
-      sortOrder: "asc",
-      limit: 0,
-    }),
-  },
-  "sub-base-canvas": {
-    hasCog: true,
-    isConfigured: (c) =>
-      !!c && typeof c === "object" && Array.isArray((c as { subBases?: unknown }).subBases),
-    initDefaults: (fields) => ({
-      subBases: [],
-      titleField: "",
-      fields: fields.slice(0, 2).map((f) => f.name),
-      limit: 0,
-    }),
-  },
-  "yaml-visualizer": {
-    // Properties widget owns its own toolbar (sort/show/hide/layout); no host cog.
-    hasCog: false,
-    isConfigured: () => true,
-    initDefaults: () => ({}),
   },
   "database-call": {
     // NPLAN-V7.1: cog opens DatabaseCallSettings (source picker).
@@ -171,18 +103,6 @@ const PANELS = {
       ],
       activeTabId: `tab-${Date.now()}`,
     }),
-  },
-  timeline: {
-    hasCog: true,
-    isConfigured: (c) =>
-      !!c && typeof c === "object" && "startField" in c && !!(c as { startField?: string }).startField,
-    initDefaults: (fields) => {
-      const dateField =
-        fields.find((f) => f.type === DataFieldType.Date)?.name ??
-        fields[0]?.name ??
-        "";
-      return { startField: dateField, endField: dateField, labelField: "", zoom: "month" };
-    },
   },
   "cover-banner": {
     hasCog: true,
@@ -207,11 +127,28 @@ const PANELS = {
     isConfigured: () => true,
     initDefaults: () => ({ label: "" }),
   },
-} as const satisfies Record<WidgetType, ConfigPanelDescriptor>;
+} as const satisfies Partial<Record<WidgetType, ConfigPanelDescriptor>>;
 
-export const configPanelRegistry: Record<WidgetType, ConfigPanelDescriptor> =
+/**
+ * #120 — descriptor for a type that owns no config panel: the retired legacy
+ * types, which render `LegacyWidgetPlaceholder` instead of content.
+ *
+ * They used to carry full entries above, but those were unreachable: the cog is
+ * gated on `WIDGET_PANELS[type]` existing (WidgetHost), and no retired type has
+ * a panel component — so `hasCog`, `isConfigured` and `initDefaults` were dead
+ * weight that still had to be maintained. Keeping the *lookup* total, rather
+ * than the table, is what actually protects the caller.
+ */
+const NO_PANEL: ConfigPanelDescriptor = {
+  hasCog: false,
+  isConfigured: () => true,
+  initDefaults: () => ({}),
+};
+
+export const configPanelRegistry: Partial<Record<WidgetType, ConfigPanelDescriptor>> =
   PANELS;
 
+/** Total over `WidgetType`: a type without an entry gets {@link NO_PANEL}. */
 export function getConfigPanel(type: WidgetType): ConfigPanelDescriptor {
-  return configPanelRegistry[type];
+  return configPanelRegistry[type] ?? NO_PANEL;
 }
