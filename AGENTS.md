@@ -21,14 +21,14 @@ bidirectional layer over user-owned Markdown data. Before new product work, read
 
 ```bash
 npm run build         # tsc -noEmit -skipLibCheck + esbuild bundle (production)
-npm test              # full Jest suite (documented baseline: 162 suites / 2287 tests)
+npm test              # full Jest suite (baseline: see docs/internal/CONTEXT.md)
 npm run lint          # ESLint over ./src
 npm run svelte-check  # Svelte template + type check
 npm run test:watch    # jest watch mode
 npx tsc --noEmit -skipLibCheck   # type check only (matches build flags)
 ```
 
-Documented baseline: **162 suites / 2287 tests PASS** (2026-06-26 working-tree validation).
+Baseline: the **"Canonical baseline" line in `docs/internal/CONTEXT.md`** — read it there, never from memory and never copied into another file.
 Always run the suite and report its actual count; any deviation must be acknowledged before merge.
 
 ## Verification protocol — the 4 gates (canonical)
@@ -37,7 +37,7 @@ CI (`.github/workflows/ci.yml`) gates merge into `main` on **four** checks. An a
 
 ```bash
 npm run build         # 1. tsc (-skipLibCheck) + esbuild — 0 errors
-npm test              # 2. Jest — documented baseline holds (162 suites / 2287 tests)
+npm test              # 2. Jest — baseline holds (canonical number in CONTEXT.md)
 npm run lint          # 3. ESLint — 0 errors
 npm run svelte-check  # 4. svelte-check — 0 errors  ← catches template/reactive bugs tsc cannot
 ```
@@ -114,7 +114,7 @@ Full architecture details in `docs/internal/NOTION_PARITY.md` and `docs/internal
 3. **Board columns** derived from unique values of selected field. Never hardcoded.
 4. **Derived field pipeline**: `applyFormulaFields` → `enrichFrameWithRelations` → display.
 5. **Zero `@ts-ignore`** anywhere in `src/`. If types resist, fix the types.
-6. **PX-budget ratchet ≤ 186** (`src/__tests__/R0_3_pxBudget.test.ts`). All new spacing/typography in `rem`. May DECREASE only after real conversion. NEVER increase without explicit approval.
+6. **PX-budget ratchet** — the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts`. All new spacing/typography in `rem`. Budgets are fixed by extracting or converting code, never by raising the constant.
 7. **`filterEvaluator.ts`** is the single filter engine. Do not create parallel implementations.
 8. **No `new Menu(`** outside `src/lib/contextMenu.ts`.
 9. **No hardcoded hex colors** in `src/`. Use design tokens or palette store.
@@ -148,7 +148,7 @@ yaml-visualizer | database-call
 - Registry files: `src/ui/views/Dashboard/widgets/widgetRegistry.ts` + `configPanelRegistry.ts`; their tests: `src/ui/views/Dashboard/__tests__/widgetRegistry.test.ts` + `configPanelRegistry.test.ts`.
 - Adding a widget → update `widgetRegistry.test.ts` count AND `configPanelRegistry.test.ts` type list.
 - Adding a `DataFieldType` value → check exhaustive switch branches.
-- Adding CSS px values → run `npx jest src/__tests__/R0_3_pxBudget.test.ts` (must stay ≤ 186).
+- Adding CSS px values → run `npx jest src/__tests__/R0_3_pxBudget.test.ts` (must stay within its `PX_BUDGET`).
 
 ## Git workflow
 

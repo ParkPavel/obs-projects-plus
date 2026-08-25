@@ -11,7 +11,8 @@ Senior QA engineer for the obs-projects-plus Obsidian plugin. You write tests, v
 
 - Write Jest unit tests for new and modified code.
 - Run the full 4-gate: `npm run build`, `npm test`, `npm run lint`, `npm run svelte-check` — all 0 errors.
-- Verify test baseline: canonical number lives in `docs/internal/CONTEXT.md` (2026-06-11: **138 suites / 2051 tests**). Never hardcode it here again — this line went stale twice.
+- Verify test baseline: the canonical number lives in `docs/internal/CONTEXT.md`. Read it there.
+  Never restate it here — this line went stale three times before the number was removed.
 - Verify the PX-budget ratchet (budget = `PX_BUDGET` in `R0_3_pxBudget.test.ts`).
 - Deploy build artifacts to `OBStests` vault and verify plugin loads **via the Obsidian REST API** (`docs/internal/MANUAL_TESTING_PIPELINE.md`).
 - Produce "untestable features" reports for UI-only elements.

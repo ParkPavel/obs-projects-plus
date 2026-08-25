@@ -44,8 +44,8 @@ const groupStep = (...fields: string[]): TransformStep => ({
   fields,
 });
 
-const tabsConfig = (tabConfig: Record<string, unknown> = {}) => ({
-  viewTabs: [{ id: "t1", label: "Table", viewType: "table", config: tabConfig }],
+const tabsConfig = (tabConfig: Record<string, unknown> = {}, viewType = "table") => ({
+  viewTabs: [{ id: "t1", label: "Tab", viewType, config: tabConfig }],
   activeTabId: "t1",
 });
 
@@ -142,14 +142,6 @@ describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
     expect(result.transform).toBeUndefined();
     const tabs = result.config["viewTabs"] as Array<{ config: { groupBy?: { field: string } } }>;
     expect(tabs[0]?.config.groupBy?.field).toBe("status");
-  });
-
-  it("moves a lone group-by into the data-table overlay", () => {
-    const result = migrateTransformToViewLevel(widget([groupStep("status")], { table: {} }));
-
-    const table = result.config["table"] as { groupBy?: { field: string } };
-    expect(table.groupBy?.field).toBe("status");
-    expect(result.transform).toBeUndefined();
   });
 
   it("keeps a group-by that feeds an aggregate — that is an advanced chain", () => {
@@ -269,5 +261,78 @@ describe("#118 migrateTransformToViewLevel — idempotence and no-op", () => {
 
     expect(result.migrated).toBe(false);
     expect(result.transform?.steps).toEqual(steps);
+  });
+});
+
+// Audit 2026-08-25 (P1) — applyViewLevelGroup wrote a DataTableConfig.groupBy
+// into whatever single tab it found. Only the table view reads that shape:
+// BoardConfig groups by a plain `groupByField` string and GalleryConfig cannot
+// group at all, so a board/gallery tab swallowed the step and lost the setting.
+describe("#118 group-by migration — only a table tab is a valid target", () => {
+  it.each(["board", "gallery", "calendar"])(
+    "keeps the step when the single tab is a %s tab",
+    (viewType) => {
+      const result = migrateTransformToViewLevel(
+        widget([groupStep("status")], tabsConfig({}, viewType))
+      );
+
+      expect(result.migrated).toBe(false);
+      expect(result.transform?.steps).toEqual([groupStep("status")]);
+      const tabs = result.config["viewTabs"] as Array<{ config: Record<string, unknown> }>;
+      expect(tabs[0]?.config["groupBy"]).toBeUndefined();
+    }
+  );
+
+  it("still migrates into a table tab", () => {
+    const result = migrateTransformToViewLevel(
+      widget([groupStep("status")], tabsConfig({}, "table"))
+    );
+
+    expect(result.migrated).toBe(true);
+    const tabs = result.config["viewTabs"] as Array<{ config: { groupBy?: { field: string } } }>;
+    expect(tabs[0]?.config.groupBy?.field).toBe("status");
+  });
+
+  it("never writes a group into the data-table overlay — a primary table reads the view-level config", () => {
+    const result = migrateTransformToViewLevel(widget([groupStep("status")], { table: {} }));
+
+    expect(result.migrated).toBe(false);
+    expect(result.transform?.steps).toEqual([groupStep("status")]);
+    expect((result.config["table"] as Record<string, unknown>)["groupBy"]).toBeUndefined();
+  });
+});
+
+// Audit 2026-08-25 (P2) — an unfinished filter step carries no conditions, so
+// migrating it deleted it from the pipeline and wrote nothing back.
+describe("#118 filter migration — an empty step is not migratable", () => {
+  const emptyFilter: TransformStep = {
+    type: "filter",
+    conditions: { conjunction: "and", conditions: [] },
+  };
+
+  it("leaves a half-built filter step in the pipeline", () => {
+    const result = migrateTransformToViewLevel(widget([emptyFilter]));
+
+    expect(result.migrated).toBe(false);
+    expect(result.transform?.steps).toEqual([emptyFilter]);
+    expect(result.config["subFilter"]).toBeUndefined();
+  });
+
+  it("stops the scan at the empty step, keeping what follows", () => {
+    const result = migrateTransformToViewLevel(
+      widget([emptyFilter, filterStep("status", "done")])
+    );
+
+    expect(result.migrated).toBe(false);
+    expect(result.transform?.steps).toEqual([emptyFilter, filterStep("status", "done")]);
+  });
+
+  it("still migrates a filled step that precedes an empty one", () => {
+    const result = migrateTransformToViewLevel(
+      widget([filterStep("status", "done"), emptyFilter])
+    );
+
+    expect(result.config["subFilter"]).toEqual(filterDef("status", "done"));
+    expect(result.transform?.steps).toEqual([emptyFilter]);
   });
 });

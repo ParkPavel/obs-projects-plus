@@ -18,8 +18,10 @@ export function widgetScopeFilter(
 ): FilterDefinition | undefined {
   const subFilter = config?.["subFilter"] as FilterDefinition | undefined;
   if (!subFilter) return undefined;
+  // `conditions` is required by the type but this value comes from persisted
+  // JSON, where an older or hand-edited config may simply not have it.
   const hasEffect =
-    subFilter.conditions.length > 0 || (subFilter.groups?.length ?? 0) > 0;
+    (subFilter.conditions?.length ?? 0) > 0 || (subFilter.groups?.length ?? 0) > 0;
   return hasEffect ? subFilter : undefined;
 }
 

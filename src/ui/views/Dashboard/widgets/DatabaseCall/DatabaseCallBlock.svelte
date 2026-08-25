@@ -122,7 +122,8 @@
   // the fields the conditions name, which would drop every row.
   $: subFilter = config["subFilter"] as FilterDefinition | undefined;
   $: hasSubFilter =
-    !!subFilter && (subFilter.conditions.length > 0 || (subFilter.groups?.length ?? 0) > 0);
+    !!subFilter &&
+    ((subFilter.conditions?.length ?? 0) > 0 || (subFilter.groups?.length ?? 0) > 0);
   $: subFiltered =
     hasSubFilter && !scopeApplied ? applyFilter(frame, subFilter as FilterDefinition) : frame;
 

@@ -2048,3 +2048,65 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 #064 (Graph View, P3) ──► DEFERRED V3
 #066 (Dashboard as YAML, P2) ──► requires decision session
 ```
+
+### #125 — promoteLocalToGlobal destroys groups, `or` conjunction and disabled conditions
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P1 | Complexity: S
+- Found by audit-manager 2026-08-25. Pre-existing, NOT introduced by #123.
+  `DashboardCanvas.svelte:108-113` overwrites `view.filter` with a flat
+  `{ conjunction: "and", conditions: [...] }`. Three losses in one click on a FilterBridge chip:
+  (a) `view.filter.groups` are erased; (b) an `or` conjunction is forced to `and`, inverting the
+  filter's meaning; (c) `globalFilters` arrives already filtered by `enabled` (`View.svelte:251`),
+  so every disabled condition is dropped from the saved filter. `handleViewFilterChange`
+  (`View.svelte:233-235`) persists it without merging. Fix: merge into the existing definition
+  instead of replacing it. Also add this promotion path to `FILTER_MODEL.md`, which does not
+  describe it.
+
+### #126 — ReDoS policy duplicated three times
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: XS
+- `filterEvaluator.ts:239-253` carries byte-copies of the guard regexes and its own
+  `MAX_REGEX_LENGTH`/`MAX_REGEX_INPUT` instead of using `lib/helpers/regexSafety.ts:7-15`;
+  `extendedEvaluator.ts:712,721` hardcodes `pattern.length > 200` next to an import of
+  `MAX_REGEX_INPUT_LENGTH`. Tightening `isUnsafePattern` would not reach the filter engine.
+  Separately, the guard misses alternation-based ReDoS (`^(a|a)+$`) — low risk (the pattern is the
+  user's own) but the guard is incomplete.
+
+### #127 — FieldControl dispatches by field.name instead of DataFieldType
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: XS
+- `FieldControl.svelte:90-95` substring-matches names against `IMAGE_FIELDS`/`TIME_FIELDS`, so a
+  Number field called "Estimated time" gets a time input and a String field called "Icon type"
+  gets an image control. Direct violation of invariant 1 in CLAUDE.md. (`isColorFieldName`
+  alongside it is a legitimate UT2026-C contract — leave it.)
+
+### #128 — R_filterOrder.invariant.test.ts freezes the ADR in its pre-#118 wording
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: S
+- The test asserts substrings in a markdown file, not a runtime invariant. It requires
+  `FILTER_ORDER_ADR.md` to keep saying it "does not describe the current runtime wiring" — but
+  #118 landed, so the ADR now cannot be brought in line with the code without breaking the test.
+  `FILTER_MODEL.md` already states the order as fact, contradicting the ADR. Rewrite the test to
+  assert the order in **code** (`widgetScope` → `executeTransform` → selection) and unfreeze the ADR.
+
+### #129 — Dead files with no importers (~1940 LOC)
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S
+- Found by audit-manager 2026-08-25 via a full import scan: `lib/helpers/gestureHandler.ts` (465,
+  superseded by `gestures/GestureCoordinator`), `ConditionalFormatBuilder.svelte` (624),
+  `FieldSettingsPanel.svelte` (374), `FilterPanelVisual.svelte` (341 — another filter surface
+  outside the model), `RecordCardView.svelte` (311), `keyboard/viewShortcuts.ts` (58),
+  `modals/inspector.ts` (35), `Board/settings/settingsModal.ts` (38),
+  `Gallery/settings/settingsModal.ts` (35), `Calendar/agenda/suggestionCollector.ts` (142),
+  `Calendar/components/Calendar/Calendar.svelte` (29), `MonthHeader.svelte` (38). Also
+  `YamlVisualizer.svelte`, retained per `view.ts:18-20` "for the upcoming widget" — that rationale
+  expired when #120 confirmed `yaml-visualizer` as retired.
+
+### #130 — i18n key sets diverge across locales
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S
+- `en` 1224 / `ru` 1266 / `uk` 1151 / `zh-CN` 1151. `ru` holds 42 `views.dashboard.table-v2.*` keys
+  missing from `en` although the code uses them; `uk`/`zh-CN` lack 73 keys relative to `en`
+  (`native-query.*`, `create-demo-project.*`). Nothing breaks — every call site passes
+  `defaultValue` — but the canonical key set de facto lives in `ru.json`, not `en.json`.
+
+### #131 — Docs drift: CLAUDE.md WidgetType block, table search surface, CHANGELOG
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: XS
+- `CLAUDE.md:120-125` lists 12 WidgetTypes; the union has 16 (`types.ts:7-32` — missing `timeline`,
+  `cover-banner`, `text`, `divider`). `tableCanon.ts:151-155` free-text table search is a filtering
+  surface absent from `FILTER_MODEL.md` and the ADR. The #118 behavioral inversion is not in
+  `CHANGELOG.md` / user-facing docs, though it changes a visible result for installed plugins.

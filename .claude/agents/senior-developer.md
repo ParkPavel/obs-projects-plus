@@ -33,7 +33,7 @@ Senior developer for the obs-projects-plus Obsidian plugin. You implement agreed
 4. **Tier-0 inner loop (cheap, run often while iterating):** `npx tsc --noEmit -skipLibCheck` on touched area + `npx jest <pattern>` for affected files.
 5. **Tier-1 full gate before handoff (mandatory, paste raw tail of each):**
    - `npm run build` → 0 errors
-   - `npm test` → baseline holds (139 suites / 2099 tests)
+   - `npm test` → at or above the baseline read from `docs/internal/CONTEXT.md`
    - `npm run lint` → 0 errors
    - `npm run svelte-check` → 0 errors
    - PX-budget if CSS touched: `npx jest src/__tests__/R0_3_pxBudget.test.ts`

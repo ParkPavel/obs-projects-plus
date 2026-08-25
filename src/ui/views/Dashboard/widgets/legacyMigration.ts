@@ -154,6 +154,10 @@ function countLeadingMigratableFilters(steps: readonly TransformStep[]): number 
   let count = 0;
   for (const step of steps) {
     if (step.type !== "filter" || step.disabled === true) break;
+    // An empty filter step is a step the user started and has not finished.
+    // It contributes no conditions, so migrating it would delete it from the
+    // pipeline and write nothing — their half-built step would just vanish.
+    if ((step.conditions?.conditions?.length ?? 0) === 0) break;
     count++;
   }
   return count;
@@ -204,35 +208,40 @@ function terminalGroupField(steps: readonly TransformStep[]): string | null {
 }
 
 /**
- * Write a view-level group into the single unambiguous slot this widget owns:
- * a lone `viewTabs` entry (database-call) or the `table` overlay (data-table).
- * Returns false when there is no such slot or it already groups by something —
- * the caller then leaves the step in the pipeline rather than guessing.
+ * Write a view-level group into the one slot that is certain to be read back:
+ * a lone `table` view tab. Returns false for anything else, and the caller then
+ * leaves the step in the pipeline rather than guessing.
+ *
+ * The `viewType` check is the whole point. `applyGroupPatch` produces a
+ * `DataTableConfig.groupBy`, which only the table view reads — `BoardConfig`
+ * groups by a plain `groupByField` string and `GalleryConfig` cannot group at
+ * all. Writing the patch into a board or gallery tab would delete the step from
+ * the pipeline and store it where nothing looks, losing the setting silently.
+ *
+ * The data-table `config.table` overlay is deliberately not a target: a primary
+ * data-table renders the *view-level* table config, not `widget.config.table`
+ * (`WidgetHost.svelte`), and the migration cannot tell primary from non-primary.
+ * A group written there would vanish for exactly half the cases, so it is not
+ * written at all.
  */
 function applyViewLevelGroup(
   config: Record<string, unknown>,
   field: string
 ): boolean {
   const tabs = config["viewTabs"];
-  if (Array.isArray(tabs)) {
-    if (tabs.length !== 1) return false;
-    const tab = tabs[0] as { config?: Record<string, unknown> } | undefined;
-    if (!tab || typeof tab !== "object") return false;
-    const tabConfig = (tab.config ?? {}) as DataTableConfig;
-    if (tabConfig.groupBy !== undefined) return false;
-    config["viewTabs"] = [{ ...tab, config: applyGroupPatch(tabConfig, field) }];
-    return true;
-  }
+  if (!Array.isArray(tabs) || tabs.length !== 1) return false;
 
-  const table = config["table"];
-  if (table !== undefined && typeof table === "object" && table !== null) {
-    const tableConfig = table as DataTableConfig;
-    if (tableConfig.groupBy !== undefined) return false;
-    config["table"] = applyGroupPatch(tableConfig, field);
-    return true;
-  }
+  const tab = tabs[0] as
+    | { viewType?: string; config?: Record<string, unknown> }
+    | undefined;
+  if (!tab || typeof tab !== "object") return false;
+  if (tab.viewType !== "table") return false;
 
-  return false;
+  const tabConfig = (tab.config ?? {}) as DataTableConfig;
+  if (tabConfig.groupBy !== undefined) return false;
+
+  config["viewTabs"] = [{ ...tab, config: applyGroupPatch(tabConfig, field) }];
+  return true;
 }
 
 /** Outcome of {@link migrateTransformToViewLevel}. */
