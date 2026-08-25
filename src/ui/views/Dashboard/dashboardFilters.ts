@@ -59,23 +59,35 @@ export function applyFilterTab(
 }
 
 /**
- * Append a local FilterTabs selection to the existing global filter list as
- * an `is` condition. Suppresses duplicates (same field+value+is). Returns
- * the next condition list to persist via `onViewFilterChange`.
+ * Append a local FilterTabs selection to the existing global filter list.
+ *
+ * #123: the condition is built by {@link deriveTabCondition}, so promoting a
+ * tab keeps the exact semantics the tab itself applied. Emitting a bare `"is"`
+ * here — as this did before — was silent data loss: `"is"` is a
+ * `StringFilterOperator` only, so for a Number/Boolean/Date/List field no typed
+ * branch in `matchesCondition` fires and every record is dropped.
+ *
+ * Duplicates are suppressed on the derived condition (field + operator +
+ * value), not on the raw tab value: a Boolean tab carries no `value` at all.
+ *
+ * Resolves the field itself from `fields`, mirroring `applyFilterTab`, so the
+ * caller cannot promote a tab with the wrong field descriptor.
  */
 export function promoteFilterTabToGlobal(
   active: ActiveFilterTab,
-  globalFilters: FilterCondition[]
+  globalFilters: FilterCondition[],
+  fields: readonly DataField[]
 ): FilterCondition[] {
+  const promoted = deriveTabCondition(
+    fields.find((f) => f.name === active.field),
+    active
+  );
   const exists = globalFilters.some(
     (c) =>
-      c.field === active.field &&
-      c.operator === "is" &&
-      String(c.value ?? "") === active.value
+      c.field === promoted.field &&
+      c.operator === promoted.operator &&
+      String(c.value ?? "") === String(promoted.value ?? "")
   );
   if (exists) return [...globalFilters];
-  return [
-    ...globalFilters,
-    { field: active.field, operator: "is", value: active.value, enabled: true },
-  ];
+  return [...globalFilters, promoted];
 }

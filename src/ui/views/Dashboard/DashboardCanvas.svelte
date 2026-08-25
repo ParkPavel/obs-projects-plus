@@ -107,7 +107,7 @@
   $: syncPreload(referencedIds, $externalFrameInvalidation);
   function promoteLocalToGlobal() {
     if (!activeFilterTab || !onViewFilterChange) return;
-    onViewFilterChange({ conjunction: "and", conditions: promoteFilterTabToGlobal(activeFilterTab, globalFilters) });
+    onViewFilterChange({ conjunction: "and", conditions: promoteFilterTabToGlobal(activeFilterTab, globalFilters, frame.fields) });
     activeFilterTab = null;
   }
   $: dndWidgets = widgets.map((w) => ({ ...w }));

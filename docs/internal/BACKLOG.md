@@ -121,7 +121,7 @@
   grouping had all landed. No other source reference to the deleted archive remains.
 
 ### #123 — promoteFilterTabToGlobal drops records for non-String filter-tab fields
-- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: XS
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: XS
 - Found by audit-manager during #117 review (2026-08-24), out of #117's scope (function untouched
   by that diff). `promoteFilterTabToGlobal` (`src/ui/views/Dashboard/dashboardFilters.ts:66-81`)
   always emits `{ field, operator: "is", value, enabled: true }` regardless of the field's
@@ -139,7 +139,7 @@
   affected `DataFieldType` (Number/Boolean/Date/List) promoted to global filter.
 
 ### #124 — Orphaned unnest-* i18n keys left after #121
-- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P3 | Complexity: XS
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P3 | Complexity: XS
 - Found by audit-manager during #121 review (2026-08-24). #121 deleted the "Expand list" unnest
   checkbox markup from `DatabaseCallSettings.svelte` but left the 4 i18n keys it used —
   `views.dashboard.database-call.settings.unnest-label` / `-field` / `-none` / `-hint` — in all
