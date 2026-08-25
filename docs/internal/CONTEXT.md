@@ -28,8 +28,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `DatabaseCallBlock.svelte` (3-state filter label), `SelectionBadge.svelte` (database-call added),
   widgetComponentRegistry.ts (LegacyLinkedSelectionStatus prop), canvasSelectionStore.test.ts
   (parity tests), relationFilterAdapter.test.ts (malformed-link edge cases). All 4 gates PASS.
-- **Canonical baseline — branch `feat/116-filter-order-adr` (2026-08-24 post #118):
-  166 suites / 2349 tests PASS, tsc 0, lint 0 (125 pre-existing tsdoc warnings),
+- **Canonical baseline — branch `feat/116-filter-order-adr` (2026-08-25 post #124):
+  166 suites / 2358 tests PASS, tsc 0, lint 0 (125 pre-existing tsdoc warnings),
   svelte-check 0/0, @ts-ignore 0, px ≤177.** Grew from 162/2288 via #117 (+24 filter-tab
   parity cases), #118 (+36: transform migration, widget scope, dashboard migration).
   Earlier history: #119 deleted dead dashboard-v1 archive → 168/2336 dropped to 162/2288
@@ -46,9 +46,10 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   widgets unmodellable — data loss, and a schema-evolution violation. Only the provably dead
   `configPanelRegistry` entries went; `getConfigPanel` stays total via a `NO_PANEL` fallback because
   `WidgetHost` dereferences `.hasCog` unconditionally.
-- **Open follow-ups filed during the milestone:** #123 (P2 — `promoteFilterTabToGlobal` sends `"is"`
-  regardless of `DataFieldType`, silently dropping every record for Number/Boolean/Date/List
-  filter-tab fields) and #124 (P3 — 16 orphaned `unnest-*` i18n keys in 4 locales after #121).
+- **Follow-ups filed and closed 2026-08-25:** #123 ✅ (`promoteFilterTabToGlobal` now builds its
+  condition via `deriveTabCondition`; it emitted a bare `"is"` for every field type, which silently
+  dropped every record for Number/Boolean/Date/List) and #124 ✅ (16 orphaned `unnest-*` i18n keys
+  removed across 4 locales).
 - **Not yet done for this stack:** the Codex cross-model review (`/codex:review --base main`) and a
   visual smoke of the A→C→B inversion in the OBStests vault — a dashboard that mixes a pipeline
   `filter` with a block `subFilter` is the case to look at.
