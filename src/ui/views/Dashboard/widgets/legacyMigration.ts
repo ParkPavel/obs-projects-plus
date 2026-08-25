@@ -7,10 +7,9 @@
 // one-click conversion patch; where it doesn't, the placeholder explains the
 // archival and the stored config is left untouched.
 
-import type { WidgetDefinition, WidgetType, StatsConfig, SummaryColumnConfig, DataTableConfig } from "../types";
-import type { TransformPipeline, TransformStep, FilterStep, GroupByStep } from "src/lib/dashboard-engine/transformTypes";
+import type { WidgetDefinition, WidgetType, StatsConfig, SummaryColumnConfig } from "../types";
+import type { TransformPipeline, TransformStep, FilterStep } from "src/lib/dashboard-engine/transformTypes";
 import type { FilterDefinition } from "src/settings/settings";
-import { applyGroupPatch } from "./DatabaseCall/tableHeaderOps";
 import { andComposeFilters } from "src/lib/engine/filterCompose";
 
 /** Build a single-Table-tab database-call config (the data-table successor). */
@@ -141,6 +140,16 @@ export function isRetiredLegacyType(type: WidgetType): boolean {
 // This migration lifts the ones that provably mean the same thing on axis A
 // out of the pipeline; everything else stays put, because a step that cannot
 // be moved safely is a step that must not move at all.
+//
+// `group-by` is NOT migrated, and the design brief that asked for it was wrong.
+// A pipeline `group-by` is an AGGREGATION: `executeGroupBy` collapses the frame
+// to one record per group and adds `_group_size`. A view-level
+// `DataTableConfig.groupBy` is presentation only — it sections the original
+// records and changes no row count. Three records in two groups render as two
+// aggregated rows before the migration and three rows in two sections after,
+// persisted to disk on open. No target slot preserves the meaning, so the step
+// stays on axis C. Found by cross-model review (Codex, 2026-08-25) after this
+// migration had shipped behind four green gates.
 
 /**
  * A leading `filter` step reads exactly the frame `subFilter` reads, so moving
@@ -165,60 +174,6 @@ function countLeadingMigratableFilters(steps: readonly TransformStep[]): number 
 }
 
 
-/**
- * A `group-by` is ordinary view-level grouping only when it is the entire
- * remaining pipeline: one enabled step, one field, no date bucketing. With an
- * `aggregate` or `pivot` behind it, it is the input of an advanced chain and
- * moving it would break that chain.
- */
-function terminalGroupField(steps: readonly TransformStep[]): string | null {
-  if (steps.length !== 1) return null;
-  const step = steps[0];
-  if (!step || step.type !== "group-by" || step.disabled === true) return null;
-  const groupStep = step as GroupByStep;
-  if (groupStep.dateGrouping !== undefined) return null;
-  if (groupStep.fields.length !== 1) return null;
-  return groupStep.fields[0] ?? null;
-}
-
-/**
- * Write a view-level group into the one slot that is certain to be read back:
- * a lone `table` view tab. Returns false for anything else, and the caller then
- * leaves the step in the pipeline rather than guessing.
- *
- * The `viewType` check is the whole point. `applyGroupPatch` produces a
- * `DataTableConfig.groupBy`, which only the table view reads — `BoardConfig`
- * groups by a plain `groupByField` string and `GalleryConfig` cannot group at
- * all. Writing the patch into a board or gallery tab would delete the step from
- * the pipeline and store it where nothing looks, losing the setting silently.
- *
- * The data-table `config.table` overlay is deliberately not a target: a primary
- * data-table renders the *view-level* table config, not `widget.config.table`
- * (`WidgetHost.svelte`), and the migration cannot tell primary from non-primary.
- * A group written there would vanish for exactly half the cases, so it is not
- * written at all.
- */
-function applyViewLevelGroup(
-  config: Record<string, unknown>,
-  field: string
-): boolean {
-  const tabs = config["viewTabs"];
-  if (!Array.isArray(tabs) || tabs.length !== 1) return false;
-
-  const tab = tabs[0] as
-    | { viewType?: string; config?: Record<string, unknown> }
-    | undefined;
-  if (!tab || typeof tab !== "object") return false;
-  if (tab.viewType !== "table") return false;
-
-  const tabConfig = (tab.config ?? {}) as DataTableConfig;
-  if (tabConfig.groupBy !== undefined) return false;
-
-  config["viewTabs"] = [{ ...tab, config: applyGroupPatch(tabConfig, field) }];
-  return true;
-}
-
-/** Outcome of {@link migrateTransformToViewLevel}. */
 export interface TransformMigrationResult {
   /** Pipeline with the remaining advanced steps; absent when nothing is left. */
   readonly transform?: TransformPipeline;
@@ -229,11 +184,11 @@ export interface TransformMigrationResult {
 }
 
 /**
- * #118 — split ordinary scope/grouping out of the transform pipeline.
+ * #118 — split ordinary scope out of the transform pipeline.
  *
  * Never loses data: a step that cannot be proven equivalent on axis A stays in
  * the pipeline. Idempotent by construction — a migrated widget has no leading
- * `filter` and no lone `group-by`, so a second pass finds nothing to move.
+ * `filter` left to move, so a second pass finds nothing.
  */
 export function migrateTransformToViewLevel(
   widget: WidgetDefinition
@@ -250,7 +205,7 @@ export function migrateTransformToViewLevel(
   }
 
   const filterCount = countLeadingMigratableFilters(steps);
-  let remaining = steps.slice(filterCount);
+  const remaining = steps.slice(filterCount);
   let migrated = false;
 
   if (filterCount > 0) {
@@ -264,12 +219,6 @@ export function migrateTransformToViewLevel(
       ...moved,
     ]);
     if (merged !== undefined) config["subFilter"] = merged;
-    migrated = true;
-  }
-
-  const groupField = terminalGroupField(remaining);
-  if (groupField !== null && applyViewLevelGroup(config, groupField)) {
-    remaining = [];
     migrated = true;
   }
 

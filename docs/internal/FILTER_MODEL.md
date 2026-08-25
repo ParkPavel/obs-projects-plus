@@ -73,6 +73,18 @@ them from.
 
 It also makes the pipeline cheaper — it reshapes a frame that is already narrowed.
 
+**A before C, *where A can be evaluated there*.** The unconditional form of this rule was wrong for
+dashboards saved before #118, and a cross-model review caught it after the code had shipped behind
+four green gates. A block's `subFilter` used to be applied to the *transformed* frame, and the
+filter UI offered that frame's fields — so a stored filter may legitimately name a column only the
+pipeline creates (`_value` from `unnest`, `_group_size`, a computed column). Running it ahead of
+the pipeline matches nothing and empties the block.
+
+So `applyWidgetScope` checks first: if every field the conditions name already exists, axis A runs
+early as designed. If not, the filter is left for the block to apply after the transform, exactly
+as it did before, and `scopeApplied` is false so the block knows to do it. The invariant is the
+order, not the position of the code that enforces it.
+
 **B last** is what keeps selection reversible. If a selection were applied before the transform, its
 effect would be baked into aggregates and could not be undone by deselecting.
 
@@ -129,3 +141,14 @@ Ask which of the three questions it answers. If the answer is "a bit of two", it
 | #120 | Dropped the orphaned config panels of retired widget types |
 | #122 | This document |
 | #125 | Promotion preserves the stored filter: groups, `or`, and disabled conditions |
+
+## Known gaps
+
+- **The linked-source path skips axis C entirely.** When a `database-call` widget has its own
+  `sourceConfig.projectId`, `WidgetHost` feeds the block the external frame directly, so the
+  transform pipeline never runs — while the pipeline button stays available. This predates #118
+  (`#092`) but now contradicts the ADR. Tracked as #132.
+- **A pipeline `group-by` is an aggregation, not grouping.** `executeGroupBy` collapses the frame
+  to one record per group with `_group_size`; the view-level `groupBy` only sections records. They
+  are different operations with confusingly similar names, and #118 briefly migrated one into the
+  other. Tracked as #133.

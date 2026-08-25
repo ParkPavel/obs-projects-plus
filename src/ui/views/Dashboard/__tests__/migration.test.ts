@@ -214,3 +214,28 @@ describe("migrateDashboardTransforms (#118)", () => {
     expect(result.config.widgets[1]).toBe(untouched);
   });
 });
+
+describe("migrateDashboardTransforms — malformed persisted config (Codex review)", () => {
+  const malformed = (widgets: unknown) =>
+    ({ widgets }) as unknown as Parameters<typeof migrateDashboardTransforms>[0];
+
+  it.each([
+    ["an object", {}],
+    ["a string", "widgets"],
+    ["a number", 7],
+    ["null", null],
+    ["undefined", undefined],
+  ])("returns the config untouched when widgets is %s", (_name, value) => {
+    const input = malformed(value);
+    const result = migrateDashboardTransforms(input);
+
+    expect(result.migrated).toBe(false);
+    expect(result.config).toBe(input);
+  });
+
+  it("does not throw for a config with no widgets key at all", () => {
+    expect(() =>
+      migrateDashboardTransforms({} as unknown as Parameters<typeof migrateDashboardTransforms>[0])
+    ).not.toThrow();
+  });
+});

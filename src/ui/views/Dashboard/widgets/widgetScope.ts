@@ -7,6 +7,7 @@
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { FilterDefinition } from "src/settings/settings";
 import { applyFilter } from "src/lib/engine/filterEvaluator";
+import { hasFilterEffect } from "src/lib/engine/filterCompose";
 
 /**
  * The widget's scope filter, or undefined when it would not remove anything.
@@ -17,19 +18,58 @@ export function widgetScopeFilter(
   config: Record<string, unknown> | undefined
 ): FilterDefinition | undefined {
   const subFilter = config?.["subFilter"] as FilterDefinition | undefined;
-  if (!subFilter) return undefined;
-  // `conditions` is required by the type but this value comes from persisted
-  // JSON, where an older or hand-edited config may simply not have it.
-  const hasEffect =
-    (subFilter.conditions?.length ?? 0) > 0 || (subFilter.groups?.length ?? 0) > 0;
-  return hasEffect ? subFilter : undefined;
+  return hasFilterEffect(subFilter) ? subFilter : undefined;
 }
 
-/** Apply axis A to `frame`; returns the frame unchanged when there is no scope. */
+/** Every field name the definition references, groups included. */
+function referencedFields(filter: FilterDefinition, out: Set<string> = new Set()): Set<string> {
+  for (const condition of filter.conditions ?? []) {
+    if (condition?.field) out.add(condition.field);
+  }
+  for (const group of filter.groups ?? []) referencedFields(group, out);
+  return out;
+}
+
+/**
+ * Whether the scope can be evaluated on this frame at all.
+ *
+ * Before #118 a block's `subFilter` was applied to the *transformed* frame, and
+ * the filter UI offered that frame's fields — so a stored filter may legitimately
+ * name a column the pipeline creates (`_value` from unnest, `_group_size`, a
+ * computed column). Running such a filter ahead of the pipeline matches nothing
+ * and empties the block.
+ *
+ * So axis A moves ahead of axis C only where that is provably equivalent: when
+ * every field the conditions name already exists. Otherwise the filter is left
+ * for the block to apply after the transform, exactly as it did before. Found by
+ * cross-model review (Codex, 2026-08-25).
+ */
+export function scopeIsEvaluableOn(filter: FilterDefinition, frame: DataFrame): boolean {
+  const available = new Set(frame.fields.map((f) => f.name));
+  for (const name of referencedFields(filter)) {
+    if (!available.has(name)) return false;
+  }
+  return true;
+}
+
+/** Outcome of {@link applyWidgetScope}. */
+export interface WidgetScopeResult {
+  readonly frame: DataFrame;
+  /**
+   * True when axis A ran here. False means the block must still apply the
+   * filter itself, after the transform — it references fields that only exist
+   * downstream.
+   */
+  readonly applied: boolean;
+}
+
+/** Apply axis A to `frame` when it is evaluable there. */
 export function applyWidgetScope(
   frame: DataFrame,
   config: Record<string, unknown> | undefined
-): DataFrame {
+): WidgetScopeResult {
   const scope = widgetScopeFilter(config);
-  return scope ? applyFilter(frame, scope) : frame;
+  if (!scope) return { frame, applied: true };
+  if (!scopeIsEvaluableOn(scope, frame)) return { frame, applied: false };
+  return { frame: applyFilter(frame, scope), applied: true };
 }

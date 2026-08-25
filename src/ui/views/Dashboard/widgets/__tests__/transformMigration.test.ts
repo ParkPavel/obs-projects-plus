@@ -135,13 +135,16 @@ describe("#118 migrateTransformToViewLevel — filter to axis A", () => {
 });
 
 describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
-  it("moves a lone group-by into the single view tab config", () => {
+  it("never moves a lone group-by, not even into a table tab", () => {
+    // A pipeline group-by AGGREGATES (executeGroupBy collapses to one record
+    // per group with _group_size); a view-level groupBy only sections the
+    // original records. The two are not the same operation.
     const result = migrateTransformToViewLevel(widget([groupStep("status")], tabsConfig()));
 
-    expect(result.migrated).toBe(true);
-    expect(result.transform).toBeUndefined();
-    const tabs = result.config["viewTabs"] as Array<{ config: { groupBy?: { field: string } } }>;
-    expect(tabs[0]?.config.groupBy?.field).toBe("status");
+    expect(result.migrated).toBe(false);
+    expect(result.transform?.steps).toEqual([groupStep("status")]);
+    const tabs = result.config["viewTabs"] as Array<{ config: Record<string, unknown> }>;
+    expect(tabs[0]?.config["groupBy"]).toBeUndefined();
   });
 
   it("keeps a group-by that feeds an aggregate — that is an advanced chain", () => {
@@ -199,15 +202,13 @@ describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
     expect(result.transform?.steps).toEqual([groupStep("status")]);
   });
 
-  it("migrates a leading filter and a trailing group-by together", () => {
+  it("migrates the leading filter but leaves the trailing group-by behind", () => {
     const result = migrateTransformToViewLevel(
       widget([filterStep("status", "done"), groupStep("owner")], tabsConfig())
     );
 
-    expect(result.transform).toBeUndefined();
     expect(result.config["subFilter"]).toEqual(filterDef("status", "done"));
-    const tabs = result.config["viewTabs"] as Array<{ config: { groupBy?: { field: string } } }>;
-    expect(tabs[0]?.config.groupBy?.field).toBe("owner");
+    expect(result.transform?.steps).toEqual([groupStep("owner")]);
   });
 });
 
@@ -264,11 +265,13 @@ describe("#118 migrateTransformToViewLevel — idempotence and no-op", () => {
   });
 });
 
-// Audit 2026-08-25 (P1) — applyViewLevelGroup wrote a DataTableConfig.groupBy
-// into whatever single tab it found. Only the table view reads that shape:
-// BoardConfig groups by a plain `groupByField` string and GalleryConfig cannot
-// group at all, so a board/gallery tab swallowed the step and lost the setting.
-describe("#118 group-by migration — only a table tab is a valid target", () => {
+// Cross-model review (Codex, 2026-08-25) established that migrating a pipeline
+// group-by is wrong for EVERY tab type, not just board/gallery. executeGroupBy
+// collapses the frame to one record per group with _group_size; a view-level
+// groupBy sections the original records and changes no row count. Three records
+// in two groups: two aggregated rows before, three rows in two sections after —
+// and the migration persisted that on open. The whole branch is gone.
+describe("#118 group-by is never migrated (Codex review, 2026-08-25)", () => {
   it.each(["board", "gallery", "calendar"])(
     "keeps the step when the single tab is a %s tab",
     (viewType) => {
@@ -283,14 +286,13 @@ describe("#118 group-by migration — only a table tab is a valid target", () =>
     }
   );
 
-  it("still migrates into a table tab", () => {
+  it("keeps the step for a table tab too — the operations differ, not just the slot", () => {
     const result = migrateTransformToViewLevel(
       widget([groupStep("status")], tabsConfig({}, "table"))
     );
 
-    expect(result.migrated).toBe(true);
-    const tabs = result.config["viewTabs"] as Array<{ config: { groupBy?: { field: string } } }>;
-    expect(tabs[0]?.config.groupBy?.field).toBe("status");
+    expect(result.migrated).toBe(false);
+    expect(result.transform?.steps).toEqual([groupStep("status")]);
   });
 
   it("never writes a group into the data-table overlay — a primary table reads the view-level config", () => {

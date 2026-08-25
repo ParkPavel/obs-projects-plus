@@ -155,6 +155,12 @@ export function migrateDashboardTransforms(config: DatabaseViewConfig): {
   readonly config: DatabaseViewConfig;
   readonly migrated: boolean;
 } {
+  // Persisted JSON, not a typed value: an older or hand-edited config can carry
+  // a non-array `widgets` (or none), and `.map` on it takes the dashboard down
+  // on open — in a code path that then writes to disk. Found by cross-model
+  // review (Codex, 2026-08-25).
+  if (!Array.isArray(config?.widgets)) return { config, migrated: false };
+
   let migrated = false;
 
   const widgets: WidgetDefinition[] = config.widgets.map((widget) => {

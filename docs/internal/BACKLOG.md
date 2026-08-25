@@ -2118,3 +2118,26 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   `cover-banner`, `text`, `divider`). `tableCanon.ts:151-155` free-text table search is a filtering
   surface absent from `FILTER_MODEL.md` and the ADR. The #118 behavioral inversion is not in
   `CHANGELOG.md` / user-facing docs, though it changes a visible result for installed plugins.
+
+### #132 — linked-source database-call skips the transform pipeline entirely
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P1 | Complexity: M
+- Found by Codex cross-model review 2026-08-25. `WidgetHost.svelte:86` —
+  `dbCallFrame = sourceConfig?.projectId ? rightFrames.get(...) ?? frame : transformedFrame`.
+  A `database-call` widget with its own `sourceConfig.projectId` therefore renders the external
+  frame with axis A and B applied but **axis C never runs**: `unnest`/`compute`/`filter` steps are
+  silently inert, while the pipeline button stays available and the editor accepts steps. Predates
+  #118 (`#092` bypassed pipeline counters for this path) but now directly contradicts
+  `FILTER_ORDER_ADR.md` and the description of database-call as a self-contained query→display
+  pipeline. Decide: run the pipeline on the external frame, or hide the pipeline entry for
+  linked-source blocks. Silently accepting steps that never execute is the one option to rule out.
+
+### #133 — pipeline `group-by` and view-level `groupBy` are different operations with the same name
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- `executeGroupBy` (`transformExecutor.ts:682`) collapses the frame to one record per group and
+  adds `_group_size` — an aggregation. `DataTableConfig.groupBy` sections the original records and
+  changes no row count — presentation. The names invite exactly the mistake #118 made: its
+  migration moved one into the other, turning two aggregated rows into three rows in two sections
+  and persisting that on open. Removed in the same milestone once Codex identified it.
+- Two things worth doing: rename one of them so the distinction is visible at the call site, and
+  consider offering a real presentation-only "group rows" operation so the pipeline `group-by` is
+  not what users reach for when they want sections.
