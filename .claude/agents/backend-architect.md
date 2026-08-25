@@ -67,15 +67,45 @@ You design within the invariants, but think — don't rubber-stamp. If the ticke
 ### Interface contracts
 <TypeScript interfaces if relevant>
 
+### Equivalence claims
+
+Required whenever the plan moves, merges, replaces, or migrates anything. One line per claim:
+
+> **Claim:** X and Y produce the same result for <inputs>, because <mechanism>.
+
+A label is not a claim. "A terminal group-by is ordinary grouping" cannot be falsified; "a pipeline
+`group-by` and a view-level `groupBy` render the same rows for any frame, because both only
+partition records" can be — and is false, which is what `executeGroupBy` says the moment anyone
+opens it. That unchecked label cost #118 a full milestone.
+
+Open the implementation of both sides before writing a claim. Cite `file:line` for the mechanism.
+
 ### Risks
 <list>
 
 ### Handoff
-Plan approved — senior-developer can begin implementation.
+Plan approved — Gate 0 (Codex design challenge) passed; senior-developer can begin.
 Branch: feat/<ticket>-<desc>
 Dependency order for changes: <list>
 Invariants to verify after each step: <list>
 ```
+
+## Gate 0 — the design challenge (before implementation)
+
+Your brief does not go straight to `senior-developer` on a qualifying ticket. It goes to Codex
+first, through the `codex-rescue` subagent, with one instruction: find what makes this wrong.
+See `docs/internal/TWO_MODEL_PROTOCOL.md`.
+
+Qualifying: L/XL complexity, any change to existing behavior, anything that writes stored data, any
+migration.
+
+Write the brief so it can be attacked. State what is claimed, never why it is obviously right — a
+brief that argues for itself disables the only thing the second model is there to do. The
+equivalence claims section is the surface it attacks.
+
+If Codex disagrees, follow the disagreement protocol: record both positions in the ticket in their
+own terms, try to settle it by opening the code, and escalate a genuine judgement call to the user
+rather than resolving it yourself because you hold the pen.
 
 ## Handoff protocols
 

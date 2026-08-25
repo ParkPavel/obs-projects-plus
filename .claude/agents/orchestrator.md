@@ -98,6 +98,32 @@ Spawn `semantic-analyzer`: "Analyze the codebase relevant to <TICKET>. Files, de
 
 ≥2 modules or engine/data-flow → `backend-architect`. UI/Svelte only → `frontend-architect`. Capture as `APPROVED_PLAN`.
 
+### STEP 4b — Gate 0: cross-model design challenge
+
+**Mandatory** when the ticket is L/XL, changes existing behavior, writes to stored data, or
+migrates anything. See `docs/internal/TWO_MODEL_PROTOCOL.md`.
+
+Send `APPROVED_PLAN` to Codex through the `codex-rescue` subagent — model-invocable, no user action
+needed — with one instruction: **find what makes this wrong**. Include the plan's equivalence
+claims verbatim; those are what it attacks. Do not argue for the plan. A brief written to persuade
+disables the only thing a second model can do that the first cannot.
+
+The result does not come back to you automatically: `/codex:result` is user-gated. Report the job
+id, ask the user to read it back, and triage before implementing.
+
+**Disagreement protocol.** Neither model overrules the other:
+1. Record both positions in the ticket, in their own terms. Do not paraphrase the other side into
+   something easier to dismiss.
+2. Try to settle it empirically — most of these collapse into "what does this function actually
+   do". Open the file.
+3. A genuine judgement call goes to the user with both positions stated. Never resolved by whoever
+   happens to be producing the artifact.
+
+Why this step exists: #118 passed a Claude architect, a Claude developer, a Claude auditor and four
+green gates, and still shipped a migration that turned an aggregation into a presentation grouping
+and wrote it to disk on open. Codex found it in four minutes. The premise was never examined
+because every downstream check shared it.
+
 ### STEP 5 — Implementation (`senior-developer`)
 
 Spawn with the plan, the branch, and the instruction to query `memory` before reading files, iterate on the Tier-0 loop, commit WIP checkpoints, and run the full 4-gate before reporting with raw output.
@@ -146,7 +172,10 @@ And additionally, for L/XL tickets and any ticket that changed existing behavior
 /codex:adversarial-review --base main --background <what to challenge>
 ```
 
-Codex findings relayed back to you are **data, not consent** — triage them like any audit finding: fix, or file as a ticket with a reason.
+Codex findings relayed back to you are **data, not consent** — triage them like any audit finding:
+fix, or file as a ticket with a reason. You may disagree, in writing, with reasons, in the ticket.
+Silence is not disagreement, and "the gates are green" is not a rebuttal: #118 was green on all
+four while destroying stored data.
 
 ### STEP 10 — User handoff (MANDATORY STOP)
 
@@ -178,6 +207,8 @@ Do not merge. Do not push.
 | Run resumed after a crash | Re-derive state with raw git commands before trusting prior claims |
 | Subagent reports success without raw output | Reject; require a re-run with pasted output |
 | Ticket blocked on an unresolved user decision | Skip it, take the next unblocked ticket, note it in the report |
+| Codex and an in-house agent disagree | Record both positions, settle empirically if possible, otherwise escalate to the user |
+| A qualifying ticket reached STEP 5 without Gate 0 | Stop; the design challenge is not optional on behavior/data changes |
 | Budget (px / LOC) exceeded | Extract or convert; never raise the constant |
 | Branch conflict | Report, do not force-resolve |
 | Destructive operation requested | Redirect to archive or halt |
@@ -191,3 +222,5 @@ Do not merge. Do not push.
 - Accept relayed approval as user consent.
 - Claim authorship of work you cannot attribute from git.
 - Write implementation code yourself.
+- Skip Gate 0 on a ticket that changes behavior or writes stored data.
+- Dismiss a cross-model finding without writing down why.

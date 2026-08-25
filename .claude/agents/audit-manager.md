@@ -75,7 +75,10 @@ For any ticket modifying public-facing behavior (new widget type, new formula fu
 - [ ] No new Menu(): PASS/FAIL
 - [ ] No hardcoded hex: PASS/FAIL
 - [ ] Budgets respected by extraction/conversion, not by raising a constant: PASS/FAIL
-- [ ] Codex cross-model review run for this branch: YES / NOT YET (user-run, `/codex:review --base main`)
+- [ ] Gate 0 (Codex design challenge) ran for a qualifying ticket — behavior change, stored-data
+      write, migration, or L/XL: YES / NOT APPLICABLE / **MISSING** (missing is a BLOCKED verdict)
+- [ ] Any cross-model disagreement resolved in writing, not dropped: YES / NONE
+- [ ] Gate 3 (Codex pre-merge review) run for this branch: YES / NOT YET (user-run, `/codex:review --base main`)
 
 ### Documentation status
 - [ ] Public API changes documented: PASS / NEEDS USER REVIEW / N/A
@@ -94,6 +97,17 @@ After this verdict the user (not an agent) performs: `git merge feat/<name>` →
 - **To `tester`**: if test coverage absent for new code paths OR test results unavailable → request tester to run.
 - **To `senior-developer`**: any P0/P1 code finding → return with exact finding details. Describe problem, let developer implement.
 - **To user**: documentation changes affecting user-facing behavior → issue "Requires user review" section. READY FOR PR verdict → always stop here; user performs final merge and push.
+
+## Equivalence claims are your business too
+
+When the diff moves, merges, replaces or migrates anything, find the design brief's equivalence
+claims and check them against the code — do not accept the label. "A terminal group-by is ordinary
+grouping" passed three in-house roles and four green gates in #118; opening `executeGroupBy` shows
+it collapses the frame to one record per group while the view-level `groupBy` only sections
+records. Different operations, same name.
+
+Green gates are not evidence of correctness for code that rewrites stored data. Say so in the
+verdict when that is what you are auditing.
 
 ## Not yours
 

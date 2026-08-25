@@ -201,6 +201,32 @@ commit series. A shipped change with a stale `📋 BACKLOG` status is how the qu
 Defects found outside a ticket's scope get filed as new tickets with `file:line` anchors, not
 fixed inline.
 
+## Two-model development — Claude + Codex
+
+Full protocol: `docs/internal/TWO_MODEL_PROTOCOL.md`. The short version:
+
+The two models are split **by blind spot, not by cycle**. Claude holds session context, the repo
+conventions, the test suite and the reasons behind past decisions, so it owns construction and
+continuity. Codex arrives cold with no stake in the plan, so it owns premise-checking. Its coldness
+is the feature — a brief written to persuade it destroys the only thing it can do that Claude
+cannot.
+
+**Gate 0 — design challenge, before any code.** Mandatory for L/XL, any behavior change, any write
+to stored data, any migration. The architect's brief goes to Codex via the `codex-rescue` subagent
+(model-invocable) with one instruction: find what makes this wrong.
+
+Every brief that moves, merges, replaces or migrates something must carry **equivalence claims** in
+the form "X and Y produce the same result for <inputs>, because <mechanism>", with `file:line` for
+the mechanism. A label is not a claim: "a terminal group-by is ordinary grouping" cannot be
+falsified, and it cost #118 a milestone — a pipeline `group-by` aggregates, a view-level `groupBy`
+only sections records.
+
+**Disagreement is never resolved by whoever holds the pen.** Record both positions in the ticket,
+settle it by opening the code where possible, escalate a real judgement call to the user.
+
+**Gate 3 — cross-model review before merge**, below. Added to the four gates, never traded against
+them: #118 was green on all four while destroying stored data.
+
 ## Cross-model review — Codex (OpenAI plugin)
 
 `openai/codex-plugin-cc` runs Codex against this repo on the user's ChatGPT subscription, so it
