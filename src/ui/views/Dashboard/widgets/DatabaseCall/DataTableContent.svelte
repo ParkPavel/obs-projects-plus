@@ -1,14 +1,13 @@
 <script lang="ts">
   /**
-   * DataTableContent — F2.1–F2.3 (#074, TABLE_V2_CANON): Table V2 orchestrator.
+   * DataTableContent — #074 (TABLE_V2_CANON): Table V2 orchestrator.
    *
-   * Built from scratch on the canon — zero markup or code inherited from
-   * src/archive/dashboard-v1/DataTable. Zones: ControlBar → sticky Header →
-   * windowed Body (rows) → inline «+ New» → sticky aggregation Footer, one
-   * CSS grid context via --ppp-dt-columns. Editing: single in-place editor
-   * at a time, persistence через viewApi.updateRecord (§6.3
-   * bidirectionality). Row menu — through the canonical contextMenu.
-   * Header menu / resize land in F2.4, grouping + sub-base tab in F2.5.
+   * Zones: ControlBar → sticky Header → windowed Body (rows) → inline «+ New»
+   * → sticky aggregation Footer, sharing one CSS grid context through
+   * --ppp-dt-columns. Editing: a single in-place editor at a time, persisted
+   * through viewApi.updateRecord (§6.3 bidirectionality). Row menu and header
+   * menu both go through the canonical contextMenu; column sort/hide/calculate/
+   * width/group patches come from tableHeaderOps.
    */
   import type { DataFrame, DataRecord, DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { DataFieldType } from "src/lib/dataframe/dataframe";

@@ -106,10 +106,19 @@
   undefined lookup would crash the widget. `configPanelRegistry.ts` 217 → 155 lines.
 
 ### #122 — Unified filter mental model (umbrella)
-- Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: M (umbrella)
-- Depends on: #116, #117, #118, #120, #121 | Closes the 6→3-axis consolidation; single documented
-  model where user understands "what affects what". Also clear stale `DataTableContent.svelte:6`
-  doc-comment pointing at the deleted archive.
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: M
+- Depends on: #116, #117, #118, #120, #121 | Closes the 6→3-axis consolidation.
+- Delivered `docs/internal/FILTER_MODEL.md`: the user-facing counterpart to `FILTER_ORDER_ADR.md`
+  (which states the engine invariant). Names the one question each axis answers, maps every
+  configuration surface to its application point with `file:line`, gives the "what affects what"
+  table that answers "why is this row missing?", explains *why* A precedes C (a reshape step can
+  rename away the fields a scope condition names), lists what sits outside the model (Calendar
+  formula filter, datasource-level filters, cross-project resolution), and states the rule for
+  adding a new filter surface — including the two traps this milestone actually hit: writing a
+  private comparator (#117) and a `conditions.length` emptiness guard that ignores `groups` (#118).
+- Cleared the stale `DataTableContent.svelte` doc-comment: it pointed at `src/archive/dashboard-v1`
+  (deleted in #119) and described F2.4/F2.5 work as still upcoming, though header menu, resize and
+  grouping had all landed. No other source reference to the deleted archive remains.
 
 ### #123 — promoteFilterTabToGlobal drops records for non-String filter-tab fields
 - Status: 📋 BACKLOG | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: XS
