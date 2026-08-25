@@ -59,7 +59,9 @@ motivated this protocol were all green on all four.
 
 ## Other agent systems in this repo
 
-`.claude/agents/` (Claude Code) and `.github/agents/` (Copilot) hold parallel definitions of the
-same nine roles, and `.codex/agents/` in the parent directory holds a third. They are hand-copied
-mirrors and they drift. `.claude/agents/` is the maintained set; treat the others as derived, and
-never edit one without porting the change.
+`.claude/agents/` is the maintained set of nine role definitions. `.codex/agents/` in the parent
+directory is a derived mirror — never edit it without porting the change from `.claude/agents/`.
+
+The Copilot system that used to live in `.github/` was archived on 2026-08-25 to
+`../.ai_internal/archive/copilot-2026-08-25/`. It was a third hand-copied mirror of the same roles
+and it drifted; retiring it was cheaper than keeping three copies in sync.

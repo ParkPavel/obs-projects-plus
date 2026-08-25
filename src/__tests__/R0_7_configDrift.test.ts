@@ -31,8 +31,8 @@ const CANONICAL_SOURCES = [
 ];
 
 /** Config surfaces that agents and instructions are read from. */
-const SCANNED_ROOTS = [".claude", ".github/agents", ".github/instructions", ".github/hooks"];
-const SCANNED_FILES = ["CLAUDE.md", "AGENTS.md", ".github/COPILOT_SETUP.md"];
+const SCANNED_ROOTS = [".claude", ".github"];
+const SCANNED_FILES = ["CLAUDE.md", "AGENTS.md"];
 
 /**
  * A suite/test baseline or a px budget written out as a literal. Deliberately
