@@ -11,6 +11,7 @@ import type { WidgetDefinition, WidgetType, StatsConfig, SummaryColumnConfig, Da
 import type { TransformPipeline, TransformStep, FilterStep, GroupByStep } from "src/lib/dashboard-engine/transformTypes";
 import type { FilterDefinition } from "src/settings/settings";
 import { applyGroupPatch } from "./DatabaseCall/tableHeaderOps";
+import { andComposeFilters } from "src/lib/engine/filterCompose";
 
 /** Build a single-Table-tab database-call config (the data-table successor). */
 export function tableTabConfig(
@@ -163,33 +164,6 @@ function countLeadingMigratableFilters(steps: readonly TransformStep[]): number 
   return count;
 }
 
-/**
- * AND-compose filter definitions. Plain AND definitions are flattened into one
- * condition list — nesting them as groups would be equivalent for the engine
- * but produces a `conditions: []` shape that every "is this filter empty?"
- * guard in the UI reads as no filter at all. Only an `or` definition (whose
- * semantics nesting must preserve) becomes a group.
- */
-function andComposeFilters(
-  defs: readonly FilterDefinition[]
-): FilterDefinition | undefined {
-  const meaningful = defs.filter(
-    (d) => d.conditions.length > 0 || (d.groups?.length ?? 0) > 0
-  );
-  if (meaningful.length === 0) return undefined;
-  if (meaningful.length === 1) return meaningful[0] as FilterDefinition;
-
-  const flattenable = meaningful.every(
-    (d) => d.conjunction !== "or" && (d.groups?.length ?? 0) === 0
-  );
-  if (flattenable) {
-    return {
-      conjunction: "and",
-      conditions: meaningful.flatMap((d) => [...d.conditions]),
-    };
-  }
-  return { conjunction: "and", conditions: [], groups: [...meaningful] };
-}
 
 /**
  * A `group-by` is ordinary view-level grouping only when it is the entire

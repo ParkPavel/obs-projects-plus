@@ -3,7 +3,8 @@
 // R5-013 — Pure filter helpers extracted from DashboardCanvas.svelte.
 
 import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
-import type { FilterCondition } from "src/settings/base/settings";
+import type { FilterCondition, FilterDefinition } from "src/settings/base/settings";
+import { andComposeFilters } from "src/lib/engine/filterCompose";
 import { filterByLinkedSelection } from "./widgets/DatabaseCall/relationFilterAdapter";
 
 export interface ActiveFilterTab {
@@ -59,13 +60,21 @@ export function applyFilterTab(
 }
 
 /**
- * Append a local FilterTabs selection to the existing global filter list.
+ * Narrow the stored view filter by a local FilterTabs selection.
  *
  * #123: the condition is built by {@link deriveTabCondition}, so promoting a
  * tab keeps the exact semantics the tab itself applied. Emitting a bare `"is"`
  * here — as this did before — was silent data loss: `"is"` is a
  * `StringFilterOperator` only, so for a Number/Boolean/Date/List field no typed
  * branch in `matchesCondition` fires and every record is dropped.
+ *
+ * #125: takes and returns the whole {@link FilterDefinition} rather than a
+ * condition array. Rebuilding a flat `{ conjunction: "and", conditions }` threw
+ * away three things at once — nested `groups`, an `or` conjunction (which
+ * inverts what the filter means, not merely how it is shaped), and every
+ * disabled condition, because the caller only ever received the enabled ones.
+ * Composition goes through {@link andComposeFilters}, so an `or` filter is
+ * nested rather than appended to, and promoting always narrows.
  *
  * Duplicates are suppressed on the derived condition (field + operator +
  * value), not on the raw tab value: a Boolean tab carries no `value` at all.
@@ -75,19 +84,28 @@ export function applyFilterTab(
  */
 export function promoteFilterTabToGlobal(
   active: ActiveFilterTab,
-  globalFilters: FilterCondition[],
+  current: FilterDefinition | undefined,
   fields: readonly DataField[]
-): FilterCondition[] {
+): FilterDefinition {
   const promoted = deriveTabCondition(
     fields.find((f) => f.name === active.field),
     active
   );
-  const exists = globalFilters.some(
+
+  // Dedup against every stored condition, including disabled ones. Matching
+  // only the enabled set would append a second copy of a condition the user
+  // had deliberately switched off.
+  const stored = current?.conditions ?? [];
+  const exists = stored.some(
     (c) =>
       c.field === promoted.field &&
       c.operator === promoted.operator &&
       String(c.value ?? "") === String(promoted.value ?? "")
   );
-  if (exists) return [...globalFilters];
-  return [...globalFilters, promoted];
+  if (exists) return current as FilterDefinition;
+
+  return andComposeFilters([
+    current,
+    { conjunction: "and", conditions: [promoted] },
+  ]) as FilterDefinition;
 }

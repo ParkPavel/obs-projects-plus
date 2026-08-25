@@ -10,6 +10,13 @@ export interface DataQueryResult {
   hasFilter: boolean;
   /** Active (enabled) filter conditions for the current view */
   filterConditions?: FilterCondition[];
+  /**
+   * The complete stored filter, including disabled conditions, nested groups
+   * and the conjunction. `filterConditions` is the enabled subset and is what
+   * views render; a view that SAVES a filter back needs this, or it will
+   * persist only what it could see (#125).
+   */
+  filter?: FilterDefinition;
 }
 
 /**

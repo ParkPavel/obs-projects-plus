@@ -32,6 +32,12 @@ The view filter is the outermost scope: it narrows the frame every widget receiv
 `subFilter` narrows only that block. They compose — a block can only ever narrow what the view
 already handed it, never widen it back.
 
+**Promoting a filter-tab to the view filter.** The FilterBridge chip lifts an active filter-tab
+selection onto the view filter — moving a constraint from a widget up to the whole view, within
+axis A. It composes: the promoted condition narrows the stored filter through the same
+`andComposeFilters` the #118 migration uses, so an `or` filter is nested rather than appended to
+(appending would widen it). `dashboardFilters.ts` — `promoteFilterTabToGlobal`.
+
 ### C — Advanced transform: "how is the data reshaped"
 
 Structural or computational change: `pivot`, `join`, `unnest`, `unpivot`, `aggregate`, `compute`.
@@ -122,3 +128,4 @@ Ask which of the three questions it answers. If the answer is "a bit of two", it
 | #118 | Split the pipeline into axes A and C; migrated stored pipelines; A now runs before C |
 | #120 | Dropped the orphaned config panels of retired widget types |
 | #122 | This document |
+| #125 | Promotion preserves the stored filter: groups, `or`, and disabled conditions |

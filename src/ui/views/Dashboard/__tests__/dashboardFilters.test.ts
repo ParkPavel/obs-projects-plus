@@ -12,6 +12,10 @@ import {
   type ActiveFilterTab,
 } from "../dashboardFilters";
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
+import type { FilterCondition, FilterDefinition } from "src/settings/base/settings";
+
+const cond = (f: string, value: string): FilterCondition =>
+  ({ field: f, operator: "is", value, enabled: true } as unknown as FilterCondition);
 
 function field(name: string, type: DataFieldType): DataField {
   return { name, type, repeated: false, identifier: false, derived: false };
@@ -271,7 +275,7 @@ describe("promoteFilterTabToGlobal (#123)", () => {
     active: ActiveFilterTab,
     values: DataRecord["values"]
   ) => {
-    const [condition] = promoteFilterTabToGlobal(active, [], [f]);
+    const { conditions: [condition] } = promoteFilterTabToGlobal(active, undefined, [f]);
     expect(condition).toBeDefined();
     return matchesFilterConditions(
       { conjunction: "and", conditions: [condition as never] },
@@ -281,7 +285,7 @@ describe("promoteFilterTabToGlobal (#123)", () => {
 
   it("keeps the record for a Number field (regression: was operator 'is')", () => {
     const f = field("estimate", DataFieldType.Number);
-    const [condition] = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, [], [f]);
+    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, undefined, [f]);
 
     expect(condition?.operator).toBe("eq");
     expect(promoteAndMatch(f, { field: "estimate", value: "3" }, { estimate: 3 })).toBe(true);
@@ -289,7 +293,7 @@ describe("promoteFilterTabToGlobal (#123)", () => {
 
   it("keeps the record for a Boolean field", () => {
     const f = field("done", DataFieldType.Boolean);
-    const [condition] = promoteFilterTabToGlobal({ field: "done", value: "true" }, [], [f]);
+    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "done", value: "true" }, undefined, [f]);
 
     expect(condition?.operator).toBe("is-checked");
     expect(promoteAndMatch(f, { field: "done", value: "true" }, { done: true })).toBe(true);
@@ -297,7 +301,7 @@ describe("promoteFilterTabToGlobal (#123)", () => {
 
   it("keeps the record for a Date field", () => {
     const f = field("due", DataFieldType.Date);
-    const [condition] = promoteFilterTabToGlobal({ field: "due", value: "2026-08-25" }, [], [f]);
+    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "due", value: "2026-08-25" }, undefined, [f]);
 
     expect(condition?.operator).toBe("is-on");
     expect(
@@ -307,7 +311,7 @@ describe("promoteFilterTabToGlobal (#123)", () => {
 
   it("keeps the record for a List field", () => {
     const f = field("tags", DataFieldType.List);
-    const [condition] = promoteFilterTabToGlobal({ field: "tags", value: "alpha" }, [], [f]);
+    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "tags", value: "alpha" }, undefined, [f]);
 
     expect(condition?.operator).toBe("has-any-of");
     expect(promoteAndMatch(f, { field: "tags", value: "alpha" }, { tags: ["alpha", "beta"] })).toBe(
@@ -317,44 +321,112 @@ describe("promoteFilterTabToGlobal (#123)", () => {
 
   it("still emits 'is' for a String field", () => {
     const f = field("status", DataFieldType.String);
-    const [condition] = promoteFilterTabToGlobal({ field: "status", value: "done" }, [], [f]);
+    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "status", value: "done" }, undefined, [f]);
 
     expect(condition?.operator).toBe("is");
     expect(condition?.value).toBe("done");
   });
 
-  it("appends to the existing global filters instead of replacing them", () => {
-    const existing = [{ field: "owner", operator: "is", value: "ann", enabled: true }];
+  it("appends to the existing conditions instead of replacing them", () => {
+    const existing: FilterDefinition = {
+      conjunction: "and",
+      conditions: [cond("owner", "ann")],
+    };
     const next = promoteFilterTabToGlobal(
       { field: "status", value: "done" },
-      existing as never,
+      existing,
       [field("status", DataFieldType.String)]
     );
 
-    expect(next).toHaveLength(2);
-    expect(next[0]).toBe(existing[0]);
+    expect(next.conditions).toHaveLength(2);
+    expect(next.conditions[0]).toEqual(cond("owner", "ann"));
   });
 
   it("suppresses a duplicate of the derived condition", () => {
     const f = field("estimate", DataFieldType.Number);
-    const once = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, [], [f]);
+    const once = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, undefined, [f]);
     const twice = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, once, [f]);
 
-    expect(twice).toHaveLength(1);
+    expect(twice.conditions).toHaveLength(1);
   });
 
   it("does not confuse a Boolean true tab with a false one (neither carries a value)", () => {
     const f = field("done", DataFieldType.Boolean);
-    const afterTrue = promoteFilterTabToGlobal({ field: "done", value: "true" }, [], [f]);
+    const afterTrue = promoteFilterTabToGlobal({ field: "done", value: "true" }, undefined, [f]);
     const afterBoth = promoteFilterTabToGlobal({ field: "done", value: "false" }, afterTrue, [f]);
 
-    expect(afterBoth).toHaveLength(2);
-    expect(afterBoth.map((c) => c.operator)).toEqual(["is-checked", "is-not-checked"]);
+    expect(afterBoth.conditions).toHaveLength(2);
+    expect(afterBoth.conditions.map((c) => c.operator)).toEqual([
+      "is-checked",
+      "is-not-checked",
+    ]);
   });
 
   it("falls back to 'is' when the field is not in the frame", () => {
-    const next = promoteFilterTabToGlobal({ field: "ghost", value: "x" }, [], []);
+    const next = promoteFilterTabToGlobal({ field: "ghost", value: "x" }, undefined, []);
 
-    expect(next[0]?.operator).toBe("is");
+    expect(next.conditions[0]?.operator).toBe("is");
+  });
+});
+
+// #125 — promoting a tab used to rebuild view.filter as a flat
+// { conjunction: "and", conditions } from the ENABLED conditions only. Three
+// separate losses in one click, one test each.
+describe("promoteFilterTabToGlobal (#125) — preserves the stored filter", () => {
+  const statusField = [field("status", DataFieldType.String)];
+  const tab: ActiveFilterTab = { field: "status", value: "done" };
+
+  it("keeps nested groups instead of erasing them", () => {
+    const current: FilterDefinition = {
+      conjunction: "and",
+      conditions: [cond("owner", "ann")],
+      groups: [{ conjunction: "or", conditions: [cond("tier", "a"), cond("tier", "b")] }],
+    };
+    const next = promoteFilterTabToGlobal(tab, current, statusField);
+
+    const preserved = JSON.stringify(next).includes('"tier"');
+    expect(preserved).toBe(true);
+  });
+
+  it("does not force an 'or' filter into 'and' — that inverts what it means", () => {
+    const current: FilterDefinition = {
+      conjunction: "or",
+      conditions: [cond("owner", "ann"), cond("owner", "bob")],
+    };
+    const next = promoteFilterTabToGlobal(tab, current, statusField);
+
+    // The or-set must survive as a nested group, narrowed by the promoted
+    // condition — never flattened into one and-list.
+    expect(next.conjunction).toBe("and");
+    expect(next.groups?.[0]).toEqual(current);
+  });
+
+  it("keeps disabled conditions that the caller never rendered", () => {
+    const disabled = { ...cond("archived", "true"), enabled: false } as typeof current.conditions[number];
+    const current: FilterDefinition = {
+      conjunction: "and",
+      conditions: [cond("owner", "ann"), disabled],
+    };
+    const next = promoteFilterTabToGlobal(tab, current, statusField);
+
+    expect(next.conditions).toContainEqual(disabled);
+  });
+
+  it("dedups against a disabled condition too, instead of adding a second copy", () => {
+    const current: FilterDefinition = {
+      conjunction: "and",
+      conditions: [{ ...cond("status", "done"), enabled: false } as typeof current.conditions[number]],
+    };
+    const next = promoteFilterTabToGlobal(tab, current, statusField);
+
+    expect(next.conditions).toHaveLength(1);
+  });
+
+  it("returns a usable definition when there was no stored filter at all", () => {
+    const next = promoteFilterTabToGlobal(tab, undefined, statusField);
+
+    expect(next.conjunction).toBe("and");
+    expect(next.conditions).toHaveLength(1);
+    expect(next.groups).toBeUndefined();
   });
 });

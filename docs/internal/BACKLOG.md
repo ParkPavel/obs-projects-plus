@@ -2050,16 +2050,24 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 ```
 
 ### #125 — promoteLocalToGlobal destroys groups, `or` conjunction and disabled conditions
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P1 | Complexity: S
+- Status: ✅ DONE (2026-08-25) | Milestone: (next) | Priority: P1 | Complexity: S
 - Found by audit-manager 2026-08-25. Pre-existing, NOT introduced by #123.
   `DashboardCanvas.svelte:108-113` overwrites `view.filter` with a flat
   `{ conjunction: "and", conditions: [...] }`. Three losses in one click on a FilterBridge chip:
   (a) `view.filter.groups` are erased; (b) an `or` conjunction is forced to `and`, inverting the
   filter's meaning; (c) `globalFilters` arrives already filtered by `enabled` (`View.svelte:251`),
   so every disabled condition is dropped from the saved filter. `handleViewFilterChange`
-  (`View.svelte:233-235`) persists it without merging. Fix: merge into the existing definition
-  instead of replacing it. Also add this promotion path to `FILTER_MODEL.md`, which does not
-  describe it.
+  (`View.svelte:233-235`) persists it without merging.
+- Fixed by giving the canvas the whole definition instead of the enabled subset: `DataQueryResult`
+  gained an additive optional `filter`, plumbed `View.svelte` → `dashboardView.onData` →
+  `DashboardCanvas.globalFilter`. `promoteFilterTabToGlobal` now takes and returns a
+  `FilterDefinition` and composes through the new shared `lib/engine/filterCompose.ts`, so an `or`
+  filter is nested rather than appended to. Dedup runs against every stored condition, disabled
+  ones included. The public `saveViewFilter` signature is unchanged — its "replace the filter"
+  contract is correct; the bug was that the caller could not see what it was replacing.
+- `andComposeFilters` moved out of `legacyMigration.ts` into `lib/engine/filterCompose.ts` rather
+  than being copied: the #118 migration and this promotion now share one implementation of the
+  or-nesting rule.
 
 ### #126 — ReDoS policy duplicated three times
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: XS

@@ -249,6 +249,9 @@
       hasSort: view.sort.criteria.filter((c) => c.enabled).length > 0,
       hasFilter: view.filter.conditions.filter((c) => c.enabled).length > 0,
       filterConditions: view.filter.conditions.filter((c) => c.enabled),
+      // #125: the complete definition, so a view that saves a filter back can
+      // preserve groups, the conjunction and disabled conditions.
+      filter: view.filter,
     },
     viewApi: api,
     project,

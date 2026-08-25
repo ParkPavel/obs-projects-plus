@@ -44,8 +44,10 @@ export class DashboardView extends ProjectView {
     this.view?.$set(updates);
   }
 
-  onData({ data, filterConditions }: DataQueryResult) {
-    this.view?.$set({ frame: data, globalFilters: filterConditions ?? [] });
+  onData({ data, filter }: DataQueryResult) {
+    // #125: the canvas needs the COMPLETE filter, not the enabled subset —
+    // promoting a filter-tab writes the definition back whole.
+    this.view?.$set({ frame: data, globalFilter: filter });
   }
 
   onOpen(props: ProjectViewProps) {
@@ -73,7 +75,6 @@ export class DashboardView extends ProjectView {
       target: props.contentEl,
       props: {
         frame: { fields: [], records: [] },
-        globalFilters: [],
         api: props.viewApi,
         project: props.project,
         readonly: props.readonly,

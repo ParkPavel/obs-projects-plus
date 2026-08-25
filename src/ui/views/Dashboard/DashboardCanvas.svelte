@@ -2,7 +2,7 @@
   import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
-  import type { FilterCondition } from "src/settings/base/settings";
+  import type { FilterDefinition } from "src/settings/base/settings";
   import type { DatabaseViewConfig, WidgetDefinition, FieldPreset } from "./types";
   import ViewContent from "src/ui/components/Layout/ViewContent.svelte";
   import ViewLayout from "src/ui/components/Layout/ViewLayout.svelte";
@@ -41,8 +41,9 @@
   export let getRecordColor: (record: DataRecord) => string | null;
   export let config: DatabaseViewConfig | undefined;
   export let onConfigChange: (cfg: DatabaseViewConfig) => void;
-  export let globalFilters: FilterCondition[] = [];
-  export let onViewFilterChange: ((filter: { conjunction: "and" | "or"; conditions: FilterCondition[] }) => void) | undefined = undefined;
+  /** #125: the COMPLETE stored filter, not just the enabled subset. */
+  export let globalFilter: FilterDefinition | undefined = undefined;
+  export let onViewFilterChange: ((filter: FilterDefinition) => void) | undefined = undefined;
   const projectStore = writable<ProjectDefinition>(project);
   setContext<Writable<ProjectDefinition>>("project", projectStore);
   $: projectStore.set(project);
@@ -107,7 +108,7 @@
   $: syncPreload(referencedIds, $externalFrameInvalidation);
   function promoteLocalToGlobal() {
     if (!activeFilterTab || !onViewFilterChange) return;
-    onViewFilterChange({ conjunction: "and", conditions: promoteFilterTabToGlobal(activeFilterTab, globalFilters, frame.fields) });
+    onViewFilterChange(promoteFilterTabToGlobal(activeFilterTab, globalFilter, frame.fields));
     activeFilterTab = null;
   }
   $: dndWidgets = widgets.map((w) => ({ ...w }));
