@@ -30,7 +30,7 @@ Senior UI/UX designer for the obs-projects-plus Obsidian plugin. You make design
 - Dark/light theme compatibility.
 
 **Technical constraints**:
-- PX-budget ≤ 186 total px values in codebase.
+- PX-budget within the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts` total px values in codebase.
 - All new values in `rem`.
 - CSS tokens file: `styles.css` (hand-maintained, merged by `esbuild.config.mjs::mergeCSS()`).
 - Palette store: `src/lib/stores/palettes.ts`.

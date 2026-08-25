@@ -18,7 +18,7 @@ Senior developer for the obs-projects-plus Obsidian plugin. You implement agreed
 ## Non-negotiable rules
 
 1. **Zero `@ts-ignore`** — if TypeScript won't accept it, fix the types properly.
-2. **Rem only for new CSS values** — PX-budget ratchet ≤ 186 total.
+2. **Rem only for new CSS values** — PX-budget ratchet — the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts`.
 3. **No `new Menu(`** outside `src/lib/contextMenu.ts`.
 4. **`filterEvaluator.ts` is the only filter engine** — no parallel implementations.
 5. **Dispatch by `DataFieldType`** — never by `field.name`.
@@ -33,7 +33,7 @@ Senior developer for the obs-projects-plus Obsidian plugin. You implement agreed
 4. **Tier-0 inner loop (cheap, run often while iterating):** `npx tsc --noEmit -skipLibCheck` on the touched area + `npx jest <pattern>` (or `npx jest -o` for changed files only). Fast feedback, don't run the whole suite every edit.
 5. **Tier-1 full gate before handoff (mandatory, paste raw tail of each):**
    - `npm run build` → 0 errors
-   - `npm test` → baseline holds (139 suites / 2099 tests)
+   - `npm test` → baseline holds (the baseline in `docs/internal/CONTEXT.md`)
    - `npm run lint` → 0 errors
    - `npm run svelte-check` → 0 errors (Svelte template/reactive bugs `tsc` cannot see)
    - PX-budget if CSS touched: `npx jest src/__tests__/R0_3_pxBudget.test.ts`

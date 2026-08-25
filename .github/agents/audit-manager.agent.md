@@ -22,7 +22,7 @@ Every audit MUST verify (with evidence, not assumption):
 
 1. **All 4 CI gates green** — confirm `tester` ran `npm run build`, `npm test`, `npm run lint`, `npm run svelte-check` and each reported 0 errors, evidenced by **raw tail output**. A verdict on tsc+jest alone is invalid — this gap is what let broken builds pass before.
 2. Zero `@ts-ignore` in `src/` (grep: `@ts-ignore`).
-3. PX-budget: count px values (must be ≤ 186, test: `src/__tests__/R0_3_pxBudget.test.ts`).
+3. PX-budget: count px values (read the constant, test: `src/__tests__/R0_3_pxBudget.test.ts`).
 4. No `new Menu(` outside `src/lib/contextMenu.ts`.
 5. No parallel filter engine implementations (only `filterEvaluator.ts`).
 6. No hardcoded hex colors outside tokens.
@@ -70,7 +70,7 @@ For any ticket modifying public-facing behavior (new widget type, new formula fu
 ### Invariant status
 - [ ] All 4 gates green (build / test / lint / svelte-check): PASS/FAIL (raw output seen?)
 - [ ] Zero @ts-ignore: PASS/FAIL (N found)
-- [ ] PX-budget ≤ 186: PASS/FAIL (count: N)
+- [ ] PX-budget within the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts`: PASS/FAIL (count: N)
 - [ ] Single filter engine: PASS/FAIL
 - [ ] No new Menu(): PASS/FAIL
 - [ ] No hardcoded hex: PASS/FAIL

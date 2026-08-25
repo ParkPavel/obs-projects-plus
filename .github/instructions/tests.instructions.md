@@ -1,5 +1,5 @@
 ---
-description: "Use when writing or modifying Jest tests in obs-projects-plus. Covers baseline (139 suites / 2099 tests), required updates when extending widget/field types, mock locations, and writing patterns."
+description: "Use when writing or modifying Jest tests in obs-projects-plus. Covers baseline (the baseline in `docs/internal/CONTEXT.md`), required updates when extending widget/field types, mock locations, and writing patterns."
 applyTo: "src/**/*.{test,spec}.ts"
 ---
 
@@ -7,7 +7,7 @@ applyTo: "src/**/*.{test,spec}.ts"
 
 ## Baseline (must hold)
 
-**139 suites / 2099 tests PASS**, `tsc --noEmit` 0 errors. Any deviation requires acknowledgement.
+the baseline in `docs/internal/CONTEXT.md`, `tsc --noEmit` 0 errors. Any deviation requires acknowledgement.
 
 ## Required updates when extending
 
@@ -15,7 +15,7 @@ applyTo: "src/**/*.{test,spec}.ts"
 |---|---|
 | Add a new widget | `widgetRegistry.test.ts` (count) + `configPanelRegistry.test.ts` (type list) |
 | Add a `DataFieldType` value | Check exhaustive switch branches in dispatchers |
-| Add CSS px values | `src/__tests__/R0_3_pxBudget.test.ts` (must stay ≤ 186) |
+| Add CSS px values | `src/__tests__/R0_3_pxBudget.test.ts` (must stay within the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts`) |
 | New formula function | `formulaMetadata.test.ts` and `extendedEvaluator.test.ts` |
 
 ## Mock locations

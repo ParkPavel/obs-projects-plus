@@ -36,7 +36,7 @@ Senior frontend architect for the obs-projects-plus Obsidian plugin. You design 
 
 ## CSS rules
 
-- PX-budget ≤ 186 (`src/__tests__/R0_3_pxBudget.test.ts`).
+- PX-budget within the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts` (`src/__tests__/R0_3_pxBudget.test.ts`).
 - All new spacing/typography in `rem`.
 - Tokens prefix: `--ppp-*` (general), `--ppp-db-*` (Dashboard V2 palette).
 - No hardcoded hex colors in `src/` — use palettes store.

@@ -25,7 +25,7 @@ These rules apply to all TypeScript and Svelte files in `src/`. They are enforce
 
 ## CSS rules
 
-- **PX-budget ratchet ≤ 186** total px values across the codebase (`src/__tests__/R0_3_pxBudget.test.ts`).
+- **PX-budget ratchet** total px values across the codebase (`src/__tests__/R0_3_pxBudget.test.ts`).
 - All NEW spacing, sizing, and typography in `rem`.
 - May DECREASE the budget only after a real px→rem conversion. NEVER increase without explicit user approval.
 

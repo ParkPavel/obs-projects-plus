@@ -83,7 +83,7 @@ Spawn `senior-developer` with: "Implement ticket <TICKET> per plan: <APPROVED_PL
 
 **Gate 5 — full 4-gate (AGENTS.md), evidenced by raw output:**
 - 5a — `npm run build` → tsc (-skipLibCheck) + esbuild, 0 errors.
-- 5b — `npm test` → ≥ 139 suites / 2099 tests PASS (or current baseline).
+- 5b — `npm test` → at or above the baseline in `docs/internal/CONTEXT.md`.
 - 5c — `npm run lint` → 0 errors.
 - 5d — `npm run svelte-check` → 0 errors (catches Svelte template/reactive bugs tsc misses).
 
@@ -98,7 +98,7 @@ Spawn `tester` with: "For ticket <TICKET>: run the full 4-gate (`npm run build`,
 - `npm test` → baseline holds.
 - `npm run lint` → 0 errors.
 - `npm run svelte-check` → 0 errors.
-- PX-budget → ≤ 186 (if CSS touched).
+- PX-budget → within the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts` (if CSS touched).
 
 On failure → return to STEP 5 with failure details. Max 2 fix iterations, then halt.
 

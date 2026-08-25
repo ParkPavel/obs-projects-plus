@@ -63,7 +63,7 @@ Never hardcode secrets in `mcp.json`. The schema uses `${env:VAR}` interpolation
 | PreToolUse | `execute` with `git commit` on main/master | **Block** вЂ” must use feature branch |
 | PreToolUse | `execute` with `git push` to main/master | **Block** вЂ” push reserved for user |
 | PreToolUse | `execute` with destructive git (`reset --hard`, `--force`, `clean -fd`) | **Block** вЂ” user-only |
-| PostToolUse | `execute` with `npm test` | Remind: 134 suites / 2020 tests baseline |
+| PostToolUse | `execute` with `npm test` | Remind: the baseline in `docs/internal/CONTEXT.md` baseline |
 | PostToolUse | `edit` adding `@ts-ignore` in `src/` | **Block + revert** вЂ” invariant violated |
 
 Hooks are scripts вЂ” they execute deterministically before/after tool use and cannot be argued with by the agent.
