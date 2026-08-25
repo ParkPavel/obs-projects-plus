@@ -21,7 +21,8 @@ Every audit MUST verify (with evidence, not assumption):
 
 1. **All 4 CI gates green** — confirm `tester` ran `npm run build`, `npm test`, `npm run lint`, `npm run svelte-check` and each reported 0 errors, evidenced by **raw tail output**. A verdict on tsc+jest alone is invalid.
 2. Zero `@ts-ignore` in `src/` (grep: `@ts-ignore`).
-3. PX-budget: count px values (must be ≤ 186, test: `src/__tests__/R0_3_pxBudget.test.ts`).
+3. PX-budget: run `npx jest src/__tests__/R0_3_pxBudget.test.ts`. The ratchet is the
+   `PX_BUDGET` constant inside that test — read it, never carry a number in this file.
 4. No `new Menu(` outside `src/lib/contextMenu.ts`.
 5. No parallel filter engine implementations (only `filterEvaluator.ts`).
 6. No hardcoded hex colors outside tokens.
@@ -69,14 +70,17 @@ For any ticket modifying public-facing behavior (new widget type, new formula fu
 ### Invariant status
 - [ ] All 4 gates green (build / test / lint / svelte-check): PASS/FAIL (raw output seen?)
 - [ ] Zero @ts-ignore: PASS/FAIL (N found)
-- [ ] PX-budget ≤ 186: PASS/FAIL (count: N)
+- [ ] PX-budget (ratchet from `R0_3_pxBudget.test.ts`): PASS/FAIL (count: N / budget: N)
 - [ ] Single filter engine: PASS/FAIL
 - [ ] No new Menu(): PASS/FAIL
 - [ ] No hardcoded hex: PASS/FAIL
+- [ ] Budgets respected by extraction/conversion, not by raising a constant: PASS/FAIL
+- [ ] Codex cross-model review run for this branch: YES / NOT YET (user-run, `/codex:review --base main`)
 
 ### Documentation status
 - [ ] Public API changes documented: PASS / NEEDS USER REVIEW / N/A
-- [ ] BACKLOG.md ticket status updated: PASS/FAIL
+- [ ] BACKLOG.md ticket status updated **in the same commit series as the change**: PASS/FAIL
+- [ ] CONTEXT.md canonical baseline updated if the test count moved: PASS/FAIL/N/A
 
 ### Verdict
 READY FOR PR / NEEDS FIXES / BLOCKED

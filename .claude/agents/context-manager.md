@@ -16,7 +16,9 @@ Context manager for the obs-projects-plus workspace. You maintain accurate sessi
 ## Memory bootstrap (session start — feeds the whole pipeline)
 
 Populate the `memory` MCP knowledge graph so every downstream agent shares one context:
-- Entities for canonical files/modules (from CLAUDE.md → Key files) and current numbers (baseline 134/2020, px-budget 186, WidgetType/DataFieldType members).
+- Entities for canonical files/modules (from CLAUDE.md → Key files) and current numbers.
+  Read the numbers, never recall them: Jest baseline from `docs/internal/CONTEXT.md`,
+  px-budget from the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts`.
 - Relations capturing the Matryoshka layer dependencies.
 - Refresh (don't duplicate) existing entities on each session; reconcile any stale observation against the live file.
 - If the `memory` server is unavailable, note it in the briefing and continue — never block.

@@ -46,7 +46,7 @@ Persist your findings into the `memory` MCP graph so architect and developer don
 - `JSON.parse` without `try/catch`.
 - `@ts-ignore` anywhere in `src/`.
 - Hardcoded hex colors (`#[0-9a-f]{3,6}`) in `.svelte`/`.ts` files outside tokens.
-- `px` values in CSS (budget: ≤ 186).
+- `px` values in CSS (budget: the `PX_BUDGET` constant in `R0_3_pxBudget.test.ts`).
 - Parallel filter engine implementations.
 
 ## Output format

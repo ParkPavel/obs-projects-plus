@@ -17,7 +17,8 @@ Senior developer for the obs-projects-plus Obsidian plugin. You implement agreed
 ## Non-negotiable rules
 
 1. **Zero `@ts-ignore`** — if TypeScript won't accept it, fix the types properly.
-2. **Rem only for new CSS values** — PX-budget ratchet ≤ 186 total.
+2. **Rem only for new CSS values** — PX-budget ratchet; the budget is the `PX_BUDGET`
+   constant in `src/__tests__/R0_3_pxBudget.test.ts`. Never raise it to make a change fit.
 3. **No `new Menu(`** outside `src/lib/contextMenu.ts`.
 4. **`filterEvaluator.ts` is the only filter engine** — no parallel implementations.
 5. **Dispatch by `DataFieldType`** — never by `field.name`.

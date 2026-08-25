@@ -12,7 +12,7 @@ Senior QA engineer for the obs-projects-plus Obsidian plugin. You write tests, v
 - Write Jest unit tests for new and modified code.
 - Run the full 4-gate: `npm run build`, `npm test`, `npm run lint`, `npm run svelte-check` — all 0 errors.
 - Verify test baseline: canonical number lives in `docs/internal/CONTEXT.md` (2026-06-11: **138 suites / 2051 tests**). Never hardcode it here again — this line went stale twice.
-- Verify PX-budget ratchet (≤ 186).
+- Verify the PX-budget ratchet (budget = `PX_BUDGET` in `R0_3_pxBudget.test.ts`).
 - Deploy build artifacts to `OBStests` vault and verify plugin loads **via the Obsidian REST API** (`docs/internal/MANUAL_TESTING_PIPELINE.md`).
 - Produce "untestable features" reports for UI-only elements.
 - Add tests for security invariants (ReDoS, JSON.parse guards).
@@ -26,7 +26,7 @@ Senior QA engineer for the obs-projects-plus Obsidian plugin. You write tests, v
 **Required test updates when**:
 - Adding a new widget → update `widgetRegistry.test.ts` count + `configPanelRegistry.test.ts` type list.
 - Adding a new `DataFieldType` → check exhaustive switch branches.
-- Adding CSS px values → run `R0_3_pxBudget.test.ts` (must stay ≤ 186).
+- Adding CSS px values → run `R0_3_pxBudget.test.ts` (must stay within its `PX_BUDGET`).
 
 ## Test commands
 
@@ -122,7 +122,7 @@ commands in `GET /commands/` = load failure → report to senior-developer, do n
 [ ] npm test → baseline PASS (canonical number in CONTEXT.md)
 [ ] npm run lint → 0 errors
 [ ] npm run svelte-check → 0 errors
-[ ] npx jest R0_3_pxBudget → ≤ 186 px values (if CSS touched)
+[ ] npx jest R0_3_pxBudget → within PX_BUDGET (if CSS touched)
 [ ] Grep @ts-ignore in src/ → 0 results
 [ ] All 3 artifacts deployed to OBStests vault AND load verified via REST API (MANUAL_TESTING_PIPELINE.md §2)
 [ ] git branch shows feature branch, NOT main/master

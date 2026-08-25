@@ -51,7 +51,7 @@ body:
   ## Invariants to preserve
   - Test baseline: 139 suites / 2099 tests
   - tsc: 0 errors
-  - PX-budget ≤ 186
+  - PX-budget within the `PX_BUDGET` constant in `src/__tests__/R0_3_pxBudget.test.ts`
 labels: from-backlog, <P0|P1|P2 if known>, <area if known>
 milestone: <user-provided or none>
 ```
