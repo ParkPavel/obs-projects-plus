@@ -37,8 +37,21 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   Do not roll back.
 - **Active milestone: M-FILTER-CONSOLIDATION** (audit `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md`
   + design `FILTER_CONSOLIDATION_DESIGN.md`). Collapse 6 filter layers → 3 axes (A Scope /
-  B Reactive / C Advanced), one engine, one documented order. Order: #119 ✅ → #116 ✅ → #117 ✅
-  → #121 ✅ → #118 ✅ → #120 → #122. Runs BEFORE relation-first R3/R4 (user-approved 2026-08-22).
+  B Reactive / C Advanced), one engine, one documented order. **MILESTONE COMPLETE 2026-08-25:**
+  #119 ✅ → #116 ✅ → #117 ✅ → #121 ✅ → #118 ✅ → #120 ✅ → #122 ✅. The model is documented in
+  `FILTER_MODEL.md` (user-facing) + `FILTER_ORDER_ADR.md` (engine invariant). Ran BEFORE
+  relation-first R3/R4 (user-approved 2026-08-22), which is now the next milestone.
+- **#120 scope was corrected during implementation:** the `WidgetType` union was NOT trimmed. Four
+  of the seven retired types have no successor, so dropping them would make stored `data.json`
+  widgets unmodellable — data loss, and a schema-evolution violation. Only the provably dead
+  `configPanelRegistry` entries went; `getConfigPanel` stays total via a `NO_PANEL` fallback because
+  `WidgetHost` dereferences `.hasCog` unconditionally.
+- **Open follow-ups filed during the milestone:** #123 (P2 — `promoteFilterTabToGlobal` sends `"is"`
+  regardless of `DataFieldType`, silently dropping every record for Number/Boolean/Date/List
+  filter-tab fields) and #124 (P3 — 16 orphaned `unnest-*` i18n keys in 4 locales after #121).
+- **Not yet done for this stack:** the Codex cross-model review (`/codex:review --base main`) and a
+  visual smoke of the A→C→B inversion in the OBStests vault — a dashboard that mixes a pipeline
+  `filter` with a block `subFilter` is the case to look at.
 - **#118 landed the A→C→B behavioral inversion** (user confirmed 2026-08-24): the widget
   `subFilter` now narrows the frame BEFORE the transform pipeline, not after. Stored pipelines
   are split at load by `migrateDashboardTransforms` (idempotent, never drops a step it cannot
