@@ -2160,6 +2160,8 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 
 ### #132 — linked-source database-call skips the transform pipeline entirely
 - Status: 📋 BACKLOG (Gate 0 done — plan refuted, redesign needed) | Milestone: (next) | Priority: P1 | Complexity: L
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex cross-model review 2026-08-25. `WidgetHost.svelte:86` —
   `dbCallFrame = sourceConfig?.projectId ? rightFrames.get(...) ?? frame : transformedFrame`.
   A `database-call` widget with its own `sourceConfig.projectId` therefore renders the external
@@ -2247,6 +2249,8 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 
 ### #136 — linked-source block silently renders the WRONG project's records
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: **P1** | Complexity: M
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex during Gate 0 on #132, 2026-08-27. `WidgetHost.svelte:86`:
   `rightFrames.get(projectId) ?? frame` — when the external frame has not resolved (still loading,
   project renamed, deleted, permission), the block falls back to the **parent project's frame** and
@@ -2259,6 +2263,8 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 
 ### #137 — PipelineEditor is configured against the parent frame, not the block's own source
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex during Gate 0 on #132. `WidgetHost.svelte:200-201` passes `fields={frame.fields}`
   and `source={frame}` unconditionally. For a `database-call` with its own `sourceConfig.projectId`
   the editor therefore offers the **parent project's** fields and sample data — a user can build a
@@ -2270,6 +2276,8 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 
 ### #138 — external frames never get backlink enrichment
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex during Gate 0 on #132. Two paths, both missing it:
   - Fallback path: `WidgetHost.svelte:86` selects the raw `frame`, not `enrichedFrame`, so
     `enrichWithBacklinks` (`relationResolver.ts:191,227` — adds the derived `*_backlinks` field) is
