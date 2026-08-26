@@ -113,6 +113,11 @@ missing?" — by naming the outermost thing that could have removed it.
 - **Sub-base partition and cross-project rollup filters** (`subBasePartition.ts`,
   `crossProjectResolver.ts`, `crossProjectRollup.ts`) filter a *foreign* frame to resolve a
   relation. They are part of data resolution, not of what the viewer is looking at.
+- **The table's free-text search** (`tableCanon.ts` — `filterRecordsByQuery`) narrows by substring
+  across `id` and every value, ignoring field types entirely. It is a view-local find, not a filter:
+  it stores nothing, survives no reload, and composes with nothing. It sits outside the axes on
+  purpose — but it *does* remove rows, so when someone asks why a row is missing, this is the one
+  surface the "what affects what" table above will not account for. Check the search box first.
 
 ## Adding a new filter surface
 

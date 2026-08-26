@@ -2152,11 +2152,20 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   `defaultValue` — but the canonical key set de facto lives in `ru.json`, not `en.json`.
 
 ### #131 — Docs drift: CLAUDE.md WidgetType block, table search surface, CHANGELOG
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: XS
-- `CLAUDE.md:120-125` lists 12 WidgetTypes; the union has 16 (`types.ts:7-32` — missing `timeline`,
-  `cover-banner`, `text`, `divider`). `tableCanon.ts:151-155` free-text table search is a filtering
-  surface absent from `FILTER_MODEL.md` and the ADR. The #118 behavioral inversion is not in
-  `CHANGELOG.md` / user-facing docs, though it changes a visible result for installed plugins.
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P3 | Complexity: XS
+- `CLAUDE.md:120-125` listed 12 WidgetTypes; the union has 16. Rewritten to split live from retired
+  and to say *why* the retired seven stay — the union describes the STORED format, so dropping one
+  makes a saved widget unmodellable (#120). Points at `isRetiredLegacyType` as the authority rather
+  than being a list that can drift again. Verified both directions: nothing in the doc that is not
+  in the code, nothing in the code that is not in the doc.
+- `tableCanon.ts` free-text search added to `FILTER_MODEL.md` under "Outside this model", with the
+  point that matters in practice: it is the one row-removing surface the "what affects what" table
+  does not account for, so it is the first thing to check when someone asks why a row is missing.
+- `CHANGELOG.md` gained the #118 behavior-change notice under Unreleased → Changed: filtering order
+  inverted, stored data unaffected, migration described, docs linked.
+- **Noted, not changed:** the CHANGELOG's `Test gate: 102 suites / 1650 tests` line is a fifth
+  generation of stale baseline, but a changelog recording the gate at a point in time is history
+  rather than drift. R0.7 deliberately does not scan it.
 
 ### #132 — linked-source database-call skips the transform pipeline entirely
 - Status: 📋 BACKLOG (Gate 0 done — plan refuted, redesign needed) | Milestone: (next) | Priority: P1 | Complexity: L

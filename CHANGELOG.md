@@ -52,6 +52,21 @@ Retroactive entries для работ, которые были доставле�
 - _Tests_: `crossProjectResolver`, `crossProjectRollup`, `twoProjects.integration`, `dataTypesI18nParity`, `operatorHelpers.stageA`, `yamlVisualizerView.smoke`, `relationListView.overflow` — +29 tests over 3.4.1 baseline (957 → 986).
 
 ### Changed
+
+> **⚠ Behavior change — dashboard filtering order (M-FILTER-CONSOLIDATION, #118).**
+> A block-level filter (`subFilter`) now narrows the data **before** the advanced transform
+> pipeline runs, where it previously ran after. A dashboard that combines a pipeline `filter` step
+> with a block filter can therefore show a different result after updating. No stored data is
+> changed by this and nothing is lost — but what you see may differ, so it is called out here
+> rather than left to be discovered.
+>
+> Stored pipelines are migrated on first open: a leading `filter` step moves onto the block filter.
+> Anything that cannot be proven equivalent stays in the pipeline untouched. A filter that names a
+> column the pipeline itself creates keeps running after the transform, as before.
+>
+> The model is documented in `docs/internal/FILTER_MODEL.md`; the engine invariant in
+> `FILTER_ORDER_ADR.md`.
+
 - `manifest.json` / `package.json` → `3.4.2`.
 - `parseRecords` (datasource helpers) extends type detection for wikilinks → relation, plus Select/Status/Formula/Rollup parsing.
 - `fieldIcon` / `fieldDisplayText` extended for the 5 new data types.
