@@ -1,3 +1,10 @@
+// RESERVED, NOT DEAD — do not delete on an "unused imports" sweep.
+//
+// Nothing imports this yet by design. #036 (Mobile interaction spec, open)
+// plans to convert it from reference to production: `createTouchDragHandler`
+// for WindowShell's long-press activation, plus an `isCoarsePointer` store.
+// A 2026-08-25 audit listed it as dead on import count alone; import count is
+// not the same question as whether anything is planned.
 /**
  * 🚨 REFERENCE IMPLEMENTATION - NOT CURRENTLY USED
  * =================================================

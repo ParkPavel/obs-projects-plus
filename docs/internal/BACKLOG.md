@@ -2121,7 +2121,7 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   not evidence.
 
 ### #129 — Dead files with no importers (~1940 LOC)
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P3 | Complexity: S
 - Found by audit-manager 2026-08-25 via a full import scan: `lib/helpers/gestureHandler.ts` (465,
   superseded by `gestures/GestureCoordinator`), `ConditionalFormatBuilder.svelte` (624),
   `FieldSettingsPanel.svelte` (374), `FilterPanelVisual.svelte` (341 — another filter surface
@@ -2129,8 +2129,20 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   `modals/inspector.ts` (35), `Board/settings/settingsModal.ts` (38),
   `Gallery/settings/settingsModal.ts` (35), `Calendar/agenda/suggestionCollector.ts` (142),
   `Calendar/components/Calendar/Calendar.svelte` (29), `MonthHeader.svelte` (38). Also
-  `YamlVisualizer.svelte`, retained per `view.ts:18-20` "for the upcoming widget" — that rationale
-  expired when #120 confirmed `yaml-visualizer` as retired.
+  `YamlVisualizer.svelte`, retained per `view.ts:18-20` "for the upcoming widget".
+- **Two of the thirteen were kept — the audit checked imports, not plans.** "No importer" answers a
+  different question from "nothing depends on this":
+  - `lib/helpers/gestureHandler.ts` — **#036** (Mobile interaction spec, open) plans to convert it
+    from reference to production (`createTouchDragHandler`, `isCoarsePointer` store).
+  - `RecordCardView.svelte` — **#082** (typed record card, open) names it as the foundation of the
+    design that superseded #011/#012.
+  Both now carry a `RESERVED, NOT DEAD` header so a fourth sweep does not re-file them.
+- **A third near-miss:** the whole `YamlVisualizer/` directory looked deletable, but
+  `RelationListView.svelte` inside it is imported by `GridRelationCell.svelte`. Only
+  `YamlVisualizer.svelte` and its private `types.ts` went; the directory stays.
+- Deleted 12 files. `view.ts`'s retention comment for YamlVisualizer is now stale and should be
+  cleaned when that file is next touched — #011/#012 are SUPERSEDED and #082 explicitly takes the
+  non-widget route.
 
 ### #130 — i18n key sets diverge across locales
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S
