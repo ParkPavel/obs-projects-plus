@@ -2070,13 +2070,20 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   or-nesting rule.
 
 ### #126 — ReDoS policy duplicated three times
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: XS
+- Status: ✅ DONE (2026-08-26) | Milestone: (next) | Priority: P2 | Complexity: XS
 - `filterEvaluator.ts:239-253` carries byte-copies of the guard regexes and its own
   `MAX_REGEX_LENGTH`/`MAX_REGEX_INPUT` instead of using `lib/helpers/regexSafety.ts:7-15`;
   `extendedEvaluator.ts:712,721` hardcodes `pattern.length > 200` next to an import of
   `MAX_REGEX_INPUT_LENGTH`. Tightening `isUnsafePattern` would not reach the filter engine.
-  Separately, the guard misses alternation-based ReDoS (`^(a|a)+$`) — low risk (the pattern is the
-  user's own) but the guard is incomplete.
+- Fixed: `regexSafety.ts` gained `MAX_REGEX_PATTERN_LENGTH`, and all four consumers
+  (`filterEvaluator`, `extendedEvaluator`, `transformExecutor`, and the helper itself) now go
+  through it. The guard regexes exist in exactly one file.
+- The alternation gap (`^(a|a)+$` passes) is left open **deliberately** and documented at the
+  constant: closing it naively would also reject `(cat|dog)+`, which users legitimately write in
+  their own formulas. It needs a real analyser, not another regex — and it is now a one-file change.
+- A test pins the single-implementation property. Note: its first version compared against an
+  unescaped literal, so the three "no copy here" assertions passed against any file at all. The
+  positive assertion caught it. A guard test that cannot fail is worse than none.
 
 ### #127 — FieldControl name heuristics: substring match inside the String branch
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: **P3** (downgraded from P2) | Complexity: XS
@@ -2099,12 +2106,19 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   filed.
 
 ### #128 — R_filterOrder.invariant.test.ts freezes the ADR in its pre-#118 wording
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: S
+- Status: ✅ DONE (2026-08-26) | Milestone: (next) | Priority: P2 | Complexity: S
 - The test asserts substrings in a markdown file, not a runtime invariant. It requires
   `FILTER_ORDER_ADR.md` to keep saying it "does not describe the current runtime wiring" — but
   #118 landed, so the ADR now cannot be brought in line with the code without breaking the test.
-  `FILTER_MODEL.md` already states the order as fact, contradicting the ADR. Rewrite the test to
-  assert the order in **code** (`widgetScope` → `executeTransform` → selection) and unfreeze the ADR.
+  `FILTER_MODEL.md` already states the order as fact, contradicting the ADR.
+- Fixed: the ADR gained an "Implementation status" section describing the wired order, the
+  conditional-scope nuance and the #132 gap, and the test now pins two separate things — that the
+  ADR still STATES the contract, and that the code still WIRES it. The wiring assertions target the
+  single line whose change silently undoes #118 (`executeTransform(scope.frame` vs `enrichedFrame`),
+  plus `scopeApplied` and the block's selection-after-transform ordering.
+- Verified the guard can actually fail: reverting the inversion in a scratch edit turned exactly
+  that assertion red, then it was restored. A green guard that has never been shown to redden is
+  not evidence.
 
 ### #129 — Dead files with no importers (~1940 LOC)
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S

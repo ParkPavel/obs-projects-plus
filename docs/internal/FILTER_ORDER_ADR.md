@@ -1,6 +1,6 @@
 # ADR: Canonical dashboard filter order
 
-- Status: Accepted — target architecture
+- Status: Accepted — implemented (see Implementation status)
 - Ticket: #116
 - Decision date: 2026-08-24
 
@@ -25,23 +25,47 @@ effects are composed.
 `sort` runs after all A, C, and B effects. Rendering consumes the resulting
 sorted frame.
 
-## Current state and migration boundary
+## Implementation status
 
-This ADR specifies the target architecture; it does not describe the current
-runtime wiring. The current runtime remains scattered across view filtering and
-sorting, filter-tabs, widget transforms, block `subFilter`, linked selection,
-and per-tab behavior. In particular, existing runtime order must not be inferred
-from the target sequence above.
+**Implemented** as of 2026-08-25. This section replaces the migration boundary
+that stood here while the order was still aspirational; the invariant test that
+pinned that wording was rewritten at the same time, because it had started to
+protect a statement that was no longer true.
 
-This document is a documentation contract. Its invariant test verifies the ADR's
-claims only; it does not prove that existing runtime wiring implements this order.
+- **A → C** is wired in `WidgetHost.svelte`: `applyWidgetScope` narrows the
+  enriched frame, and `executeTransform` receives the scoped frame (#118).
+- **C → B** is wired in `DatabaseCallBlock.svelte`: the block applies the
+  linked/canvas selection to the frame the host already scoped and transformed.
+- **filter-tabs** compile to canonical `FilterCondition`s through
+  `deriveTabCondition` and run on the single engine (#117).
 
-## Ownership
+### One conditional, and why it is not an exception
 
-- #117 owns routing filter-tabs through the canonical filter engine so that the
-  scope boundary has consistent condition semantics.
-- #118 owns splitting and migrating the transform pipeline into the target
-  architecture, including the required behavior review for the changed order.
+`applyWidgetScope` moves axis A ahead of axis C **only when the scope can be
+evaluated there** — when every field its conditions name already exists on the
+incoming frame.
+
+Before #118 a block's `subFilter` was applied to the *transformed* frame, and
+the filter UI offered that frame's fields, so a stored filter may legitimately
+name a column the pipeline creates (`_value` from `unnest`, `_group_size`, a
+computed column). Running such a filter ahead of the pipeline matches nothing
+and empties the block. In that case the filter is left for the block to apply
+after the transform, exactly as before, and `scopeApplied` is false so the block
+knows to do it.
+
+The invariant is the order in which the axes compose, not the position of the
+code that enforces it. A scope that cannot be evaluated early is still axis A;
+it is simply applied at the only point where it means what the user wrote.
+
+This case was found by cross-model review after the unconditional form had
+already shipped behind four green gates — see `TWO_MODEL_PROTOCOL.md`.
+
+### Known gap
+
+The linked-source path (`database-call` with its own `sourceConfig.projectId`)
+renders the external frame with axes A and B applied but **never runs axis C**,
+while still offering the pipeline editor. It predates this ADR and contradicts
+it. Tracked as #132.
 
 ## Non-goals
 
