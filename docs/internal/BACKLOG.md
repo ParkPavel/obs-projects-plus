@@ -2078,12 +2078,25 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   Separately, the guard misses alternation-based ReDoS (`^(a|a)+$`) — low risk (the pattern is the
   user's own) but the guard is incomplete.
 
-### #127 — FieldControl dispatches by field.name instead of DataFieldType
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: XS
-- `FieldControl.svelte:90-95` substring-matches names against `IMAGE_FIELDS`/`TIME_FIELDS`, so a
-  Number field called "Estimated time" gets a time input and a String field called "Icon type"
-  gets an image control. Direct violation of invariant 1 in CLAUDE.md. (`isColorFieldName`
-  alongside it is a legitimate UT2026-C contract — leave it.)
+### #127 — FieldControl name heuristics: substring match inside the String branch
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: **P3** (downgraded from P2) | Complexity: XS
+- **The original report was wrong and is corrected here.** audit-manager filed this as a direct
+  violation of invariant 1, claiming a Number field named "Estimated time" would get a time input.
+  It would not. Verified by walking the template's block nesting: `{:else if isImageField}` (:237)
+  and `{:else if isTimeField}` (:257) sit at indent 4 **inside**
+  `{:else if field.type === DataFieldType.String}` (:183, indent 2). A Number field reaches its own
+  branch at :286. The heuristics are already gated by `DataFieldType`; dispatch is by type, and the
+  name only refines within the correct type — which is exactly what the sanctioned
+  `isColorFieldName` (UT2026-C) does two lines above, and which the same audit called legitimate.
+- **What is actually true**, and all that is left: within the String branch the match is a
+  substring, so a String field named "Icon type" gets the image control because "icon" appears in
+  it. Cosmetic, same class as the accepted colour heuristic, no cross-type leakage.
+- If it is worth fixing at all, the real mechanism already exists elsewhere: `field.typeConfig`
+  (see `:294`, `field.typeConfig?.time` on Date fields). An explicit `typeConfig.format` for
+  image/time strings would remove the guesswork — but that is schema evolution, needs a migration,
+  and is disproportionate to a cosmetic mismatch.
+- Lesson worth keeping: an audit finding is a lead, not a fact. This one was nearly implemented as
+  filed.
 
 ### #128 — R_filterOrder.invariant.test.ts freezes the ADR in its pre-#118 wording
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: S
