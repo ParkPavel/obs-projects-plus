@@ -2147,7 +2147,7 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   `CHANGELOG.md` / user-facing docs, though it changes a visible result for installed plugins.
 
 ### #132 — linked-source database-call skips the transform pipeline entirely
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P1 | Complexity: M
+- Status: 📋 BACKLOG (Gate 0 done — plan refuted, redesign needed) | Milestone: (next) | Priority: P1 | Complexity: L
 - Found by Codex cross-model review 2026-08-25. `WidgetHost.svelte:86` —
   `dbCallFrame = sourceConfig?.projectId ? rightFrames.get(...) ?? frame : transformedFrame`.
   A `database-call` widget with its own `sourceConfig.projectId` therefore renders the external
@@ -2157,6 +2157,29 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   `FILTER_ORDER_ADR.md` and the description of database-call as a self-contained query→display
   pipeline. Decide: run the pipeline on the external frame, or hide the pipeline entry for
   linked-source blocks. Silently accepting steps that never execute is the one option to rule out.
+- **Gate 0, 2026-08-27 — the proposed fix was refuted before implementation.** Plan was Option A
+  (run the pipeline on the external frame). Codex challenged the brief's equivalence claims:
+  - *Claim "the axes depend only on the frame's fields, not its origin"* — **REFUTED**, and by our
+    own code: `applyWidgetScope` moves axis A ahead of C only when every field the conditions name
+    exists on that frame (`widgetScope.ts`). That conditional is precisely why two different
+    sources are not interchangeable. The fix from the previous round is the counter-evidence to
+    the new claim.
+  - *Claim "an empty pipeline makes A a no-op"* — **partially true**; necessary, not sufficient.
+    Axis A currently runs inside `DatabaseCallBlock` for this path, so moving it to the host is
+    equivalent only if the host reproduces `applyWidgetScope` semantics including
+    `scopeApplied=false`.
+  - *Claim "no config combines linked-source with pipeline steps"* — **confirmed for the tracked
+    repo** by full static search, and explicitly proves nothing about user vaults. Unconditional A
+    would retroactively activate stored steps for an unknown number of users: the exact silent
+    behavior change this milestone spent seven tickets removing.
+- **Revised approach — versioned opt-in, not automatic migration.** A persisted marker
+  (`transformExecution: "linked-source-v1"`); legacy `projectId + steps` without the marker keeps
+  today's rendering, shows the stored steps as inert with an explicit "enable pipeline for the
+  external source" action; only that action writes the marker. New linked-source blocks get it on
+  first pipeline save. This is schema evolution — needs a migration and `configProvenance` no-op
+  coverage — so complexity rises from M to **L**, and it needs its own design brief.
+- Also required for any version of the fix: `PipelineEditor` must receive the resolved external
+  frame, and `scopeApplied` must come from that frame's scope rather than `!dbCallUsesLinkedSource`.
 
 ### #133 — pipeline `group-by` and view-level `groupBy` are different operations with the same name
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
@@ -2209,3 +2232,40 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   surfaces (`customViewApi.ts`, settings schema, plugin manifest).
 - Sequencing note: worth doing before #134 ships publicly, since a demo aimed at investors makes
   the codebase's public surfaces visible in a way they are not today.
+
+### #136 — linked-source block silently renders the WRONG project's records
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: **P1** | Complexity: M
+- Found by Codex during Gate 0 on #132, 2026-08-27. `WidgetHost.svelte:86`:
+  `rightFrames.get(projectId) ?? frame` — when the external frame has not resolved (still loading,
+  project renamed, deleted, permission), the block falls back to the **parent project's frame** and
+  renders it with no indication. The user sees plausible records from a different project and has
+  no way to tell.
+- A fallback is not a loading state. This needs an explicit loading/error state, or a strictly
+  defined and tested fallback semantic — not a silent substitution.
+- Compounds #132: if the pipeline is ever enabled for this path, it would also run the transform
+  over the foreign data.
+
+### #137 — PipelineEditor is configured against the parent frame, not the block's own source
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- Found by Codex during Gate 0 on #132. `WidgetHost.svelte:200-201` passes `fields={frame.fields}`
+  and `source={frame}` unconditionally. For a `database-call` with its own `sourceConfig.projectId`
+  the editor therefore offers the **parent project's** fields and sample data — a user can build a
+  step referencing a field that does not exist in the source the block actually reads.
+- Separately, the editor's live counters run steps without `rightFrames`
+  (`PipelineEditor.svelte:62,69`), so a `join` preview does not match runtime even today.
+- Blocks #132: enabling axis C on this path while the editor lies about the fields would let users
+  build pipelines that cannot work.
+
+### #138 — external frames never get backlink enrichment
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- Found by Codex during Gate 0 on #132. Two paths, both missing it:
+  - Fallback path: `WidgetHost.svelte:86` selects the raw `frame`, not `enrichedFrame`, so
+    `enrichWithBacklinks` (`relationResolver.ts:191,227` — adds the derived `*_backlinks` field) is
+    skipped.
+  - Normal external path: the preloader stores what `api.resolveExternalFrame` returns
+    (`DashboardCanvas.svelte:102-104`), and the resolver returns a raw `queryAll()`
+    (`externalFrameResolver.ts:52,60`). `View.svelte:141` enriches the parent's cross-project
+    relations, but that is `enrichFrameWithAllRelations` producing `__resolved__…` — a different
+    mechanism, not backlinks.
+- Consequence: a relation-driven view over an external source is missing derived backlink fields
+  that the same view would have over the parent project.
