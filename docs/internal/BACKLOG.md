@@ -2298,3 +2298,17 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
     mechanism, not backlinks.
 - Consequence: a relation-driven view over an external source is missing derived backlink fields
   that the same view would have over the parent project.
+
+### #139 — external-source block writes to the PARENT project
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: **P1** | Complexity: M
+- Found by Codex at Gate 0 on the linked-source brief, 2026-08-27. Verified against the code.
+- A `database-call` block with its own `sourceConfig.projectId` reads the external project but
+  receives the **parent** dashboard's `api` and `project` (`widgetComponentRegistry.ts:145`).
+  Consequences: "Add first record" on an empty external source creates the note in the parent
+  project (`DatabaseCallBlock.svelte:196`), and row edits go through the parent's api
+  (`DataTableContent.svelte:126`).
+- Worse than the display defects #136-#138 because it **writes**. A user looking at project B's
+  records adds a record and it lands in project A, with no indication.
+- Until a source-specific write API exists, external blocks must be read-only for creation, editing
+  and schema changes. That guard is independent of #132/#136/#137/#138 and can ship first.
+- Design: `docs/internal/LINKED_SOURCE_DESIGN.md` (revision 2).
