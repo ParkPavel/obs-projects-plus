@@ -78,6 +78,8 @@ export interface WidgetRenderContext {
    * the block must not apply it a second time.
    */
   readonly dbCallScopeApplied: boolean;
+  /** #139: true when the block reads an external source it cannot safely write to. */
+  readonly dbCallUsesLinkedSource: boolean;
 }
 
 type Props = Record<string, unknown>;
@@ -147,6 +149,9 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
       scopeApplied: c.dbCallScopeApplied,
+      // #139: an external source is read through the parent's api and project,
+      // so a data write would land in the wrong project. Config writes stay.
+      sourceReadOnly: c.dbCallUsesLinkedSource,
     }),
   },
   "cover-banner": {

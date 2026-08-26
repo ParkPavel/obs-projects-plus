@@ -77,6 +77,18 @@
    * just must not filter the frame a second time.
    */
   export let scopeApplied: boolean = false;
+  /**
+   * #139: this block reads a source it cannot safely write to.
+   *
+   * A linked-source block renders another project's records but is handed the
+   * PARENT dashboard's `api` and `project`, so creating a record lands it in the
+   * wrong project and row edits go through the wrong api. Until a
+   * source-specific write API exists, data writes are disabled here.
+   *
+   * Config writes are NOT affected: a view tab or a block filter belongs to the
+   * widget in the parent dashboard, which is exactly where they are stored.
+   */
+  export let sourceReadOnly: boolean = false;
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -414,7 +426,7 @@
               })}
             >
               <svelte:fragment slot="actions">
-                {#if !readonly && project}
+                {#if !readonly && !sourceReadOnly && project}
                   <button on:click={handleAddFirstRecord}>
                     {$i18n.t("views.dashboard.database-call.add-first-record", {
                       defaultValue: "Add first record"
@@ -427,7 +439,7 @@
             <DataTableContent
               frame={effectiveFrame}
               {api}
-              {readonly}
+              readonly={readonly || sourceReadOnly}
               {getRecordColor}
               {fields}
               config={activeTabTableConfig}
@@ -444,7 +456,7 @@
             {project}
             frame={effectiveFrame}
             {api}
-            {readonly}
+            readonly={readonly || sourceReadOnly}
             {getRecordColor}
             {sortRecords}
             {getRecord}
@@ -458,7 +470,7 @@
             {project}
             frame={effectiveFrame}
             {api}
-            {readonly}
+            readonly={readonly || sourceReadOnly}
             {getRecordColor}
             config={calendarConfig}
             onConfigChange={handleCalendarConfigChange}

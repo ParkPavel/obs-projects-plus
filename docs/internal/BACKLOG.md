@@ -2300,7 +2300,7 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   that the same view would have over the parent project.
 
 ### #139 — external-source block writes to the PARENT project
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: **P1** | Complexity: M
+- Status: ✅ DONE (2026-08-27) — read-only guard shipped; source-specific write API still open | Milestone: (next) | Priority: **P1** | Complexity: M
 - Found by Codex at Gate 0 on the linked-source brief, 2026-08-27. Verified against the code.
 - A `database-call` block with its own `sourceConfig.projectId` reads the external project but
   receives the **parent** dashboard's `api` and `project` (`widgetComponentRegistry.ts:145`).
@@ -2309,6 +2309,14 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   (`DataTableContent.svelte:126`).
 - Worse than the display defects #136-#138 because it **writes**. A user looking at project B's
   records adds a record and it lands in project A, with no indication.
-- Until a source-specific write API exists, external blocks must be read-only for creation, editing
-  and schema changes. That guard is independent of #132/#136/#137/#138 and can ship first.
+- **Guard shipped 2026-08-27.** New `sourceReadOnly` prop on `DatabaseCallBlock`, fed from
+  `dbCallUsesLinkedSource` through the registry. Record creation is gated on it, and all three view
+  components (`DataTableContent`, `BoardView`, `CalendarView`) receive `readonly || sourceReadOnly`
+  so row edits are disabled.
+- **Deliberately NOT reusing the dashboard-level `readonly` flag.** That one also gates CONFIG
+  edits — adding a view tab, editing the block filter — and those legitimately belong to the parent
+  dashboard, which is where they are stored. Forcing `readonly` on would have broken configuring a
+  linked block to fix a data problem that has nothing to do with configuration.
+- Still open: a source-specific write API, so an external block can write where it reads instead of
+  being read-only. Tracked in `LINKED_SOURCE_DESIGN.md` under what the brief does not decide.
 - Design: `docs/internal/LINKED_SOURCE_DESIGN.md` (revision 2).

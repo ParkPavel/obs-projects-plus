@@ -93,7 +93,7 @@
     effectiveTableConfig: isPrimaryDataTable ? tableConfig : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
     pipelineStepCount: dbCallUsesLinkedSource ? 0 : currentPipeline.steps.length, pipelineInputRowCount: dbCallUsesLinkedSource ? 0 : pipelineInputRowCount, chartConfig, statsConfig, chartRightFrame,
     dbCallFrame, dbCallFields: dbCallFrame.fields, dbCallSourceConfig, dbCallLinkedSelection,
-    dbCallScopeApplied: !dbCallUsesLinkedSource && scope.applied, // #118: linked source skips A
+    dbCallScopeApplied: !dbCallUsesLinkedSource && scope.applied, dbCallUsesLinkedSource, // #118 / #139
     dbCallLinkedSelectionValidation: dbCallLinkedSelection ? validateLegacyLinkedSelection({ relationField: dbCallLinkedSelection.relationField }, dbCallSourceConfig?.projectId ?? project?.id ?? "", project?.id, dbCallFrame.fields).status : undefined,
   } satisfies WidgetRenderContext;
 
