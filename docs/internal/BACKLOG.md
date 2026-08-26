@@ -2141,3 +2141,44 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 - Two things worth doing: rename one of them so the distinction is visible at the call site, and
   consider offering a real presentation-only "group rows" operation so the pipeline `group-by` is
   not what users reach for when they want sections.
+
+### #134 — Rebuild the demo project as an investor-grade product tour
+- Status: 📋 BACKLOG | Milestone: (after the current cycle) | Priority: P1 | Complexity: XL
+- Requested 2026-08-26. The demo project auto-created on first open must become a **complete,
+  presentable tour of the product** — something an investor or a first-time user can open and see
+  what the plugin actually does, covering the whole feature surface rather than a slice of it.
+- **Where it lives:** `src/ui/app/onboarding/demoProject.ts` (641 LOC). This is generated in CODE
+  at onboarding time. It is NOT the user's `OBStests/Projects Plus - Демо/` vault folder — edits
+  belong in the generator, never in a stored `data.json`.
+- **Current coverage is narrow.** Four entities (Clients / Projects / Tasks / Meetings) and only
+  three widget types out of the sixteen in the union: `chart`, `stats`, `database-call`. Nothing
+  exercises relations end-to-end, rollups, the formula stack (115+ functions), filter-tabs, the
+  advanced transform pipeline, Board/Calendar/Gallery views, conditional formatting, grouping, or
+  the cover banner. A tour that shows a fifth of the product undersells it.
+- **Requirements to design against:**
+  - Every shipped capability appears at least once, in a place where it reads as useful rather
+    than as a demo of itself.
+  - The narrative works top to bottom: someone opening it for the first time should understand
+    the product without a guide.
+  - It must survive the invariants the rest of the codebase is held to — in particular the
+    schema-evolution rule: the generator emits the CURRENT schema and its output must pass
+    migrations as a no-op (`configProvenance.test.ts`).
+  - It must not depend on the network. 14 cover images are currently fetched from Unsplash by URL;
+    an investor demo that renders broken images offline is worse than one with no images.
+- **Blocked on:** the current cycle finishing, so the feature surface it advertises is the one that
+  actually exists (the A→C→B order, the filter model, the relation contract).
+- Needs a design brief with equivalence claims and Gate 0 before implementation — XL, user-facing,
+  and it generates stored data.
+
+### #135 — External review of the codebase
+- Status: 📋 BACKLOG | Milestone: (after the current cycle) | Priority: P2 | Complexity: M
+- Requested 2026-08-26. Bring in review from outside the two-model loop.
+- Rationale: Claude and Codex now cross-check each other (`TWO_MODEL_PROTOCOL.md`), and that
+  already caught defects four green gates and two in-house audits had missed. But both are models
+  reading the same repository under similar framings. An outside reviewer — human, or a different
+  toolchain — sees a third class of problem: whether the product makes sense at all, whether the
+  architecture would be legible to a new maintainer, whether the invariants are the right ones.
+- Scope to decide when it is scheduled: whole codebase, or the engine layer plus the public
+  surfaces (`customViewApi.ts`, settings schema, plugin manifest).
+- Sequencing note: worth doing before #134 ships publicly, since a demo aimed at investors makes
+  the codebase's public surfaces visible in a way they are not today.
