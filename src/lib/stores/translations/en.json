@@ -1077,7 +1077,8 @@
                     "unnest-suggestion-body": "Fields {{fields}} contain arrays. Use Unnest to split each item into its own row.",
                     "unnest-suggestion-button": "Unnest \"{{field}}\"",
                     "disable-step": "Disable step",
-                    "enable-step": "Enable step"
+                    "enable-step": "Enable step",
+                    "source-not-ready": "The linked project is not loaded, so its fields are unavailable here."
                 },
                 "group": {
                     "empty": "(empty)"

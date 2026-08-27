@@ -10,7 +10,7 @@
    */
   import type { DataFrame, DataRecord, DataField } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
-  import type { WidgetDefinition, ChartConfig, StatsConfig, WidgetSourceConfig, LinkedSelectionConfig, DataTableConfig, FieldPreset } from "../types";
+  import type { WidgetDefinition, WidgetSourceConfig, LinkedSelectionConfig, DataTableConfig, FieldPreset } from "../types";
   import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 
   import { createEventDispatcher } from "svelte";
@@ -18,7 +18,7 @@
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import { applyWidgetScope } from "./widgetScope";
-  import { resolveDbCallView } from "./linkedSourceState";
+  import { resolveDbCallView, asChartConfig, asStatsConfig } from "./linkedSourceState";
   import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
   import { validateLegacyLinkedSelection } from "src/lib/relations/relationContract";
   import { getConfigPanel } from "./configPanelRegistry";
@@ -71,10 +71,6 @@
   $: transformedFrame = transformResult ? transformResult.data : scope.frame;
   $: pipelineInputRowCount = transformResult ? transformResult.meta.inputRowCount : scope.frame.records.length;
 
-  const asChartConfig = (cfg: Record<string, unknown>): ChartConfig | null =>
-    cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
-  const asStatsConfig = (cfg: Record<string, unknown>): StatsConfig | null =>
-    cfg && "cards" in cfg ? (cfg as unknown as StatsConfig) : null;
   $: chartConfig = widget.type === "chart" ? asChartConfig(widget.config) : null;
   $: statsConfig = widget.type === "stats" ? asStatsConfig(widget.config) : null;
   $: chartRightFrame = (() => {
@@ -85,6 +81,8 @@
 
   // NPLAN-V7.1 / #136: per-widget independent source, resolved as one value.
   $: dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);
+  // #137: the editor is configured against what the pipeline actually receives.
+  $: pipelineSource = dbCall.isExternal ? dbCall.frame : scope.frame;
 
   $: ctx = {
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields,
@@ -197,8 +195,10 @@
     {#if showPipeline}
       <PipelineEditor
         pipeline={currentPipeline}
-        fields={frame.fields}
-        source={frame}
+        fields={pipelineSource.fields}
+        source={pipelineSource}
+        {rightFrames}
+        sourceState={dbCall.source}
         {availableSources}
         on:apply={(e) => patchWidget({ transform: e.detail })}
         on:save={handlePipelineSave}

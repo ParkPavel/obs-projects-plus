@@ -2280,7 +2280,7 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   over the foreign data.
 
 ### #137 — PipelineEditor is configured against the parent frame, not the block's own source
-- Status: 🚧 PARTIAL (2026-08-27) — source state wired; editor still gets the parent frame | Milestone: (next) | Priority: P2 | Complexity: M
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P2 | Complexity: M
 - **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
   `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex during Gate 0 on #132. `WidgetHost.svelte:200-201` passes `fields={frame.fields}`
@@ -2291,6 +2291,15 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   (`PipelineEditor.svelte:62,69`), so a `join` preview does not match runtime even today.
 - Blocks #132: enabling axis C on this path while the editor lies about the fields would let users
   build pipelines that cannot work.
+- **Fixed.** The host derives `pipelineSource` — the external frame for a linked block, otherwise
+  `scope.frame`, which is what `executeTransform` actually receives — and hands it to the editor as
+  both `fields` and `source`. The editor also receives `rightFrames`, so a `join` step's live
+  counter executes the same way the runtime does; without it the preview resolved no right frame
+  and quietly reported different numbers than the widget behind the popup.
+- When the source is not ready there is no schema to configure against, so the editor says so
+  instead of falling back to the parent's fields.
+- Two pure narrowing helpers (`asChartConfig`, `asStatsConfig`) moved out of `WidgetHost` into
+  `linkedSourceState.ts` to make room inside the 240-line budget. The budget was not raised.
 
 ### #138 — external frames never get backlink enrichment
 - Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M

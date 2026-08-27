@@ -79,3 +79,37 @@ describe("#139 the data-table successor path stays writable", () => {
     expect(dataTableEntry).not.toContain("sourceReadOnly");
   });
 });
+
+// #137 — the editor is configured against the block's own source.
+//
+// It used to receive fields={frame.fields} and source={frame} unconditionally:
+// the PARENT project's schema and sample data, even for a block reading a
+// different project. A user could build a step on a field the block's own
+// source does not have.
+describe("#137 the pipeline editor reads the block's own source", () => {
+  const editor = read("PipelineEditor.svelte");
+
+  it("the host derives the pipeline's real input rather than passing the raw frame", () => {
+    expect(host).toMatch(
+      /\$:\s*pipelineSource = dbCall\.isExternal \? dbCall\.frame : scope\.frame/
+    );
+  });
+
+  it("the editor is handed that input, not the parent frame", () => {
+    expect(host).toMatch(/fields=\{pipelineSource\.fields\}/);
+    expect(host).toMatch(/source=\{pipelineSource\}/);
+    expect(host).not.toMatch(/source=\{frame\}/);
+  });
+
+  it("live counters execute with the same right-frames the runtime uses", () => {
+    // Without them a `join` preview resolves no right frame and reports
+    // different numbers than the widget behind the popup.
+    expect(host).toMatch(/<PipelineEditor[\s\S]*?\{rightFrames\}/);
+    expect(editor).toMatch(/executeTransform\(frame, \{ steps: steps\.slice\(0, i \+ 1\) \}, \{ rightFrames \}\)/);
+  });
+
+  it("the editor says so when there is no schema to configure against", () => {
+    expect(editor).toMatch(/sourceState\.kind !== "parent" && sourceState\.kind !== "ready"/);
+    expect(editor).toContain("views.dashboard.pipeline.source-not-ready");
+  });
+});

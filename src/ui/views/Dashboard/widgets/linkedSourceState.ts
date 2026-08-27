@@ -11,7 +11,7 @@
 // instead of receiving a frame that might be someone else's.
 
 import type { DataFrame } from "src/lib/dataframe/dataframe";
-import type { WidgetDefinition, WidgetDataContext, WidgetSourceConfig, LinkedSelectionConfig } from "../types";
+import type { WidgetDefinition, WidgetDataContext, WidgetSourceConfig, LinkedSelectionConfig, ChartConfig, StatsConfig } from "../types";
 import type { ExternalSourceState } from "../dashboardPreload";
 
 export type BlockSource =
@@ -115,4 +115,19 @@ export function resolveDbCallView(
       : undefined,
     isExternal: isExternalSource(source),
   };
+}
+
+// ── Config narrowing ─────────────────────────────────────────
+//
+// `widget.config` is a bag of unknowns; these say what shape it has to be for a
+// typed panel to render. Kept beside the other per-widget derivations rather
+// than inline in the host, which has a LOC budget it earns by not accumulating
+// helpers like these.
+
+export function asChartConfig(cfg: Record<string, unknown>): ChartConfig | null {
+  return cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
+}
+
+export function asStatsConfig(cfg: Record<string, unknown>): StatsConfig | null {
+  return cfg && "cards" in cfg ? (cfg as unknown as StatsConfig) : null;
 }

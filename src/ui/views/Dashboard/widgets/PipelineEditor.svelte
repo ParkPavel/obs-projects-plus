@@ -11,6 +11,7 @@
     JoinStep,
   } from "src/lib/dashboard-engine/transformTypes";
   import type { DataField } from "src/lib/dataframe/dataframe";
+  import type { BlockSource } from "./linkedSourceState";
   import type { FilterCondition } from "src/settings/base/settings";
   import { i18n } from "src/lib/stores/i18n";
   import { get } from "svelte/store";
@@ -30,6 +31,18 @@
   export let source: { records: Array<{ values: Record<string, unknown> }> } | null = null;
   /** Sibling projects that can be used as JoinStep right sources (Phase 5 UI). */
   export let availableSources: Array<{ id: string; name: string }> = [];
+  /**
+   * #137: right-hand frames, so a `join` step's live counter executes the same
+   * way the runtime does. Without them the preview resolved no right frame and
+   * quietly reported different numbers than the widget behind the popup.
+   */
+  export let rightFrames: ReadonlyMap<string, DataFrame> = new Map();
+  /**
+   * #136/#137: the state of the source this pipeline runs on. When it is not
+   * ready there is no schema to configure against, so the editor says so rather
+   * than offering the parent project's fields — which is what it used to do.
+   */
+  export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
 
   const dispatch = createEventDispatcher<{
     save: TransformPipeline;
@@ -66,7 +79,7 @@
     const out: Array<{ rowsIn: number; rowsOut: number }> = [];
     let prev = frame.records.length;
     for (let i = 0; i < steps.length; i++) {
-      const result = executeTransform(frame, { steps: steps.slice(0, i + 1) });
+      const result = executeTransform(frame, { steps: steps.slice(0, i + 1) }, { rightFrames });
       out.push({ rowsIn: prev, rowsOut: result.meta.outputRowCount });
       prev = result.meta.outputRowCount;
     }
@@ -445,6 +458,21 @@
   <p class="ppp-pipeline-advanced-hint">
     {$i18n.t("views.dashboard.pipeline.advanced-hint")}
   </p>
+
+  <!--
+    #137: with no resolved source there is no schema to configure against. The
+    editor says so instead of offering the parent project's fields, which is
+    what it did before — letting a user build a step on a field the block's own
+    source does not have.
+  -->
+  {#if sourceState.kind !== "parent" && sourceState.kind !== "ready"}
+    <p class="ppp-pipeline-source-warning" role="status">
+      <Icon name="alert-triangle" size="sm" />
+      {$i18n.t("views.dashboard.pipeline.source-not-ready", {
+        defaultValue: "The linked project is not loaded, so its fields are unavailable here."
+      })}
+    </p>
+  {/if}
 
   <div class="ppp-pipeline-steps">
     {#if arrayFields.length > 0}
@@ -948,6 +976,15 @@
   .ppp-pipeline-advanced-hint {
     margin: 0.25rem 0 0;
     color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-pipeline-source-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0.375rem 0 0;
+    color: var(--text-warning, var(--text-muted));
     font-size: var(--font-ui-smaller);
   }
 
