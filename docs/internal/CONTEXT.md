@@ -28,8 +28,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `DatabaseCallBlock.svelte` (3-state filter label), `SelectionBadge.svelte` (database-call added),
   widgetComponentRegistry.ts (LegacyLinkedSelectionStatus prop), canvasSelectionStore.test.ts
   (parity tests), relationFilterAdapter.test.ts (malformed-link edge cases). All 4 gates PASS.
-- **Canonical baseline — branch `feat/116-filter-order-adr` (2026-08-27 post #139):
-  170 suites / 2427 tests PASS, tsc 0, lint 0 (125 pre-existing tsdoc warnings),
+- **Canonical baseline — branch `feat/116-filter-order-adr` (2026-08-27 post #136):
+  172 suites / 2453 tests PASS, tsc 0, lint 0 (125 pre-existing tsdoc warnings),
   svelte-check 0/0, @ts-ignore 0, px ≤177.** Grew from 162/2288 via #117 (+24 filter-tab
   parity cases), #118 (+36: transform migration, widget scope, dashboard migration).
   Earlier history: #119 deleted dead dashboard-v1 archive → 168/2336 dropped to 162/2288

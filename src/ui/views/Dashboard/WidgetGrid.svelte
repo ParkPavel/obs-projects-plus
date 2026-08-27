@@ -8,6 +8,7 @@
    * canvas is in stack mode.
    */
   import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import type { ExternalSourceState } from "./dashboardPreload";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
@@ -47,6 +48,8 @@
   export let availableSources: { id: string; name: string }[];
   export let availableWidgets: Array<{ id: string; title: string }> = [];
   export let rightFrames: ReadonlyMap<string, DataFrame>;
+  /** #136: per-source state, so a block can tell "loading" from "gone". */
+  export let sourceStates: ReadonlyMap<string, ExternalSourceState> = new Map();
   export let project: ProjectDefinition;
 </script>
 
@@ -95,6 +98,7 @@
         {availableSources}
         {availableWidgets}
         {rightFrames}
+        {sourceStates}
         {project}
         on:filter
         on:configChange
@@ -127,6 +131,7 @@
         {availableSources}
         {availableWidgets}
         {rightFrames}
+        {sourceStates}
         {project}
         on:filter
         on:configChange

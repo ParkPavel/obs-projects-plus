@@ -24,8 +24,10 @@ const host = read("WidgetHost.svelte");
 
 describe("#139 the guard is wired from host to block", () => {
   it("the host publishes whether the block reads a foreign source", () => {
-    expect(host).toMatch(/dbCallUsesLinkedSource\s*=\s*!!dbCallSourceConfig\?\.projectId/);
-    expect(host).toContain("dbCallUsesLinkedSource,");
+    // #136 folded the five dbCall reactive statements into one derived view, so
+    // isExternal and frame cannot be updated out of step with each other.
+    expect(host).toMatch(/\$:\s*dbCall = resolveDbCallView\(/);
+    expect(host).toMatch(/dbCallUsesLinkedSource:\s*dbCall\.isExternal/);
   });
 
   it("the registry hands that signal to the block as sourceReadOnly", () => {

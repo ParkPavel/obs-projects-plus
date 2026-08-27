@@ -62,44 +62,89 @@ export function collectReferencedSourceIds(
 }
 
 /**
+ * #136 — what is known about one external source right now.
+ *
+ * Before this existed the preloader published `Map<string, DataFrame>` and
+ * simply omitted anything it could not resolve. A consumer could therefore not
+ * tell "still loading" from "this project is gone", and `WidgetHost` bridged
+ * that gap by rendering the PARENT project's records instead — plausible data
+ * from the wrong project, with no signal. A missing key is not a state.
+ */
+export type ExternalSourceState =
+  | { readonly status: "loading" }
+  | { readonly status: "ready"; readonly frame: DataFrame }
+  | { readonly status: "unavailable" }
+  | { readonly status: "error"; readonly message: string };
+
+/**
+ * The ready frames, for consumers that legitimately only care about those:
+ * `join` and chart correlation both treat an unresolved right-hand source as
+ * absent, which is correct for them — a join against nothing yields nothing.
+ *
+ * Derived rather than published separately, so the two views cannot drift.
+ */
+export function readyFrames(
+  states: ReadonlyMap<string, ExternalSourceState>
+): ReadonlyMap<string, DataFrame> {
+  const frames = new Map<string, DataFrame>();
+  for (const [id, state] of states) {
+    if (state.status === "ready") frames.set(id, state.frame);
+  }
+  return frames;
+}
+
+/**
  * Build a stateful preload runner. Each `run(ids)` invocation increments an
  * internal generation token; late-resolving older batches are discarded so
  * a stale resolution can never overwrite a newer one.
+ *
+ * Publishes `loading` for every referenced id before awaiting, so a consumer
+ * can distinguish "not yet" from "not there" during the first render — which is
+ * exactly the window in which the old code showed the wrong project's data.
  *
  * Extracted from DashboardCanvas.svelte (R5-013) — keeps the canvas free of
  * the async/generation bookkeeping.
  */
 export function createPreloadRunner(
   resolveExternalFrame: ((id: string) => Promise<DataFrame | undefined>) | undefined,
-  setFrames: (frames: ReadonlyMap<string, DataFrame>) => void
+  setStates: (states: ReadonlyMap<string, ExternalSourceState>) => void
 ): (referencedIds: readonly string[]) => void {
   let generation = 0;
 
   return function run(referencedIds) {
     const token = ++generation;
+
+    if (!resolveExternalFrame || referencedIds.length === 0) {
+      setStates(new Map());
+      return;
+    }
+
+    const loading = new Map<string, ExternalSourceState>();
+    for (const id of referencedIds) loading.set(id, { status: "loading" });
+    setStates(loading);
+
     void (async () => {
-      try {
-        if (!resolveExternalFrame || referencedIds.length === 0) {
-          if (token === generation) setFrames(new Map());
-          return;
-        }
-        const entries = await Promise.all(
-          referencedIds.map(async (id) => {
+      const entries = await Promise.all(
+        referencedIds.map(async (id): Promise<readonly [string, ExternalSourceState]> => {
+          try {
             const df = await resolveExternalFrame(id);
-            return [id, df] as const;
-          })
-        );
-        if (token !== generation) return;
-        const next = new Map<string, DataFrame>();
-        for (const [id, df] of entries) {
-          if (df) next.set(id, df);
-        }
-        setFrames(next);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("[obs-projects-plus] right-frame preload failed", err);
-        if (token === generation) setFrames(new Map());
-      }
+            const state: ExternalSourceState = df
+              ? { status: "ready", frame: df }
+              : { status: "unavailable" };
+            return [id, state] as const;
+          } catch (err) {
+            // Per-source, so one broken project cannot blank the others — the
+            // previous version caught at the batch level and published an empty
+            // map, taking every sibling source down with it.
+            // eslint-disable-next-line no-console
+            console.warn("[obs-projects-plus] right-frame preload failed", id, err);
+            const message = err instanceof Error ? err.message : String(err);
+            return [id, { status: "error", message }] as const;
+          }
+        })
+      );
+      if (token !== generation) return;
+      setStates(new Map(entries));
     })();
   };
 }

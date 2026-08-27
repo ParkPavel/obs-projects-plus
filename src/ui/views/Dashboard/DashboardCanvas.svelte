@@ -21,7 +21,7 @@
   import { createWidgetController } from "./dashboardWidgets";
   import { getDesignTokenCSS } from "./designTokens";
   import { subscribeCanvasCommands } from "./dashboardCommands";
-  import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync } from "./dashboardPreload";
+  import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync, readyFrames, type ExternalSourceState } from "./dashboardPreload";
   import { createSchemaController } from "./dashboardSchema";
   import { createTemplatesController } from "./dashboardTemplates";
   import { applyFilterTab, promoteFilterTabToGlobal, type ActiveFilterTab } from "./dashboardFilters";
@@ -99,13 +99,13 @@
   $: displayFrame = buildDisplayFrame(filteredFrame, effectiveConfig, getFileStat);
   $: availableSources = ($settings.projects ?? []).filter((p) => p.id !== project.id).map((p) => ({ id: p.id, name: p.name }));
   $: availableWidgets = widgets.map((w) => ({ id: w.id, title: w.title }));
-  const rightFramesStore = writable<ReadonlyMap<string, DataFrame>>(new Map());
+  const sourceStatesStore = writable<ReadonlyMap<string, ExternalSourceState>>(new Map());
+  $: rightFrames = readyFrames($sourceStatesStore); // #136 derived — cannot drift
   const syncPreload = createPreloadSync(createPreloadRunner(
     api.resolveExternalFrame ? (id: string) => api.resolveExternalFrame!(id).then((f) => f ?? undefined) : undefined,
-    (frames) => rightFramesStore.set(frames)
+    (states) => sourceStatesStore.set(states)
   ));
-  $: referencedIds = collectReferencedSourceIds(widgets, project);
-  $: syncPreload(referencedIds, $externalFrameInvalidation);
+  $: syncPreload(collectReferencedSourceIds(widgets, project), $externalFrameInvalidation);
   function promoteLocalToGlobal() {
     if (!activeFilterTab || !onViewFilterChange) return;
     onViewFilterChange(promoteFilterTabToGlobal(activeFilterTab, globalFilter, frame.fields));
@@ -175,7 +175,7 @@
         {widgets} {dndWidgets} canDnd={!readonly} {frame} {displayFrame} {api} {readonly} {getRecordColor}
         fields={frame.fields} tableConfig={effectiveConfig?.table} {primaryDataTableId}
         fieldPresets={effectiveConfig?.fieldPresets ?? []} activeFieldPresetId={effectiveConfig?.activeFieldPresetId}
-        {availableSources} {availableWidgets} rightFrames={$rightFramesStore} {project}
+        {availableSources} {availableWidgets} {rightFrames} sourceStates={$sourceStatesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
         on:showToolbar={() => { if (!effectiveConfig) return; saveConfig({ ...effectiveConfig, showWidgetToolbar: true }); }}
         on:addWidget={(e) => widgetController.addWidget(e.detail)} on:applyTemplate={handleApplyTemplate}

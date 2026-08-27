@@ -10,7 +10,7 @@
    */
   import type { DataFrame, DataRecord, DataField } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
-  import type { WidgetDefinition, ChartConfig, StatsConfig, WidgetSourceConfig, WidgetDataContext, LinkedSelectionConfig, DataTableConfig, FieldPreset } from "../types";
+  import type { WidgetDefinition, ChartConfig, StatsConfig, WidgetSourceConfig, LinkedSelectionConfig, DataTableConfig, FieldPreset } from "../types";
   import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 
   import { createEventDispatcher } from "svelte";
@@ -18,6 +18,7 @@
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import { applyWidgetScope } from "./widgetScope";
+  import { resolveDbCallView } from "./linkedSourceState";
   import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
   import { validateLegacyLinkedSelection } from "src/lib/relations/relationContract";
   import { getConfigPanel } from "./configPanelRegistry";
@@ -42,6 +43,7 @@
   export let availableSources: Array<{ id: string; name: string }> = [];
   export let availableWidgets: Array<{ id: string; title: string }> = [];
   export let rightFrames: ReadonlyMap<string, DataFrame> = new Map();
+  export let sourceStates: ReadonlyMap<string, import("../dashboardPreload").ExternalSourceState> = new Map();
   export let project: import("src/settings/settings").ProjectDefinition | undefined = undefined;
   /** Multi-DataTable: primary widget round-trips the root `config.table`. */
   export let isPrimaryDataTable: boolean = true;
@@ -81,20 +83,17 @@
     return id ? rightFrames.get(id) ?? null : null;
   })();
 
-  // NPLAN-V7.1: per-widget independent source for `database-call`.
-  $: dbCallSourceConfig = widget.type === "database-call" ? widget.sourceConfig : undefined;
-  $: dbCallFrame = dbCallSourceConfig?.projectId ? rightFrames.get(dbCallSourceConfig.projectId) ?? frame : transformedFrame;
-  $: dbCallLinkedSelection = widget.type === "database-call" ? (widget.config as unknown as WidgetDataContext).linkedSelection : undefined;
-  $: dbCallUsesLinkedSource = !!dbCallSourceConfig?.projectId; // #092: linked source bypasses pipeline counters
+  // NPLAN-V7.1 / #136: per-widget independent source, resolved as one value.
+  $: dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);
 
   $: ctx = {
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields,
     fieldPresets, activeFieldPresetId, availableSources, project,
     effectiveTableConfig: isPrimaryDataTable ? tableConfig : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
-    pipelineStepCount: dbCallUsesLinkedSource ? 0 : currentPipeline.steps.length, pipelineInputRowCount: dbCallUsesLinkedSource ? 0 : pipelineInputRowCount, chartConfig, statsConfig, chartRightFrame,
-    dbCallFrame, dbCallFields: dbCallFrame.fields, dbCallSourceConfig, dbCallLinkedSelection,
-    dbCallScopeApplied: !dbCallUsesLinkedSource && scope.applied, dbCallUsesLinkedSource, // #118 / #139
-    dbCallLinkedSelectionValidation: dbCallLinkedSelection ? validateLegacyLinkedSelection({ relationField: dbCallLinkedSelection.relationField }, dbCallSourceConfig?.projectId ?? project?.id ?? "", project?.id, dbCallFrame.fields).status : undefined,
+    pipelineStepCount: dbCall.isExternal ? 0 : currentPipeline.steps.length, pipelineInputRowCount: dbCall.isExternal ? 0 : pipelineInputRowCount, chartConfig, statsConfig, chartRightFrame,
+    dbCallFrame: dbCall.frame, dbCallFields: dbCall.frame.fields, dbCallSourceConfig: dbCall.sourceConfig, dbCallLinkedSelection: dbCall.linkedSelection, dbCallSource: dbCall.source,
+    dbCallScopeApplied: !dbCall.isExternal && scope.applied, dbCallUsesLinkedSource: dbCall.isExternal, // #118 / #139
+    dbCallLinkedSelectionValidation: dbCall.linkedSelection ? validateLegacyLinkedSelection({ relationField: dbCall.linkedSelection.relationField }, dbCall.sourceConfig?.projectId ?? project?.id ?? "", project?.id, dbCall.frame.fields).status : undefined,
   } satisfies WidgetRenderContext;
 
   $: contentEntry = WIDGET_CONTENT[widget.type];
@@ -177,12 +176,12 @@
   <svelte:fragment slot="panels">
     {#if showConfig && widget.type === "database-call"}
       <DatabaseCallSettings
-        sourceConfig={dbCallSourceConfig}
+        sourceConfig={dbCall.sourceConfig}
         {availableSources}
         availableWidgets={availableWidgets.filter((w) => w.id !== widget.id)}
-        linkedSelection={dbCallLinkedSelection}
+        linkedSelection={dbCall.linkedSelection}
         linkedSelectionValidation={ctx.dbCallLinkedSelectionValidation}
-        fields={dbCallFrame.fields}
+        fields={dbCall.frame.fields}
         on:change={handleDbCallSourceChange}
         on:linkedSelectionChange={handleLinkedSelectionChange}
         on:close={() => (showConfig = false)}

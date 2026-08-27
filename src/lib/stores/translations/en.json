@@ -918,7 +918,11 @@
                         "calendar": "Calendar",
                         "gallery": "Gallery",
                         "table": "Table"
-                    }
+                    },
+                    "source-loading": "Loading the linked project…",
+                    "source-unavailable": "Linked project unavailable",
+                    "source-unavailable-hint": "The project this block reads was not found: {{id}}",
+                    "source-error": "Could not load the linked project"
                 },
                 "field-presets": {
                     "label": "Layout",

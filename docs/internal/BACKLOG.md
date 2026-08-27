@@ -2266,7 +2266,7 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   the codebase's public surfaces visible in a way they are not today.
 
 ### #136 — linked-source block silently renders the WRONG project's records
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: **P1** | Complexity: M
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: **P1** | Complexity: M
 - **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
   `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex during Gate 0 on #132, 2026-08-27. `WidgetHost.svelte:86`:
@@ -2280,7 +2280,7 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   over the foreign data.
 
 ### #137 — PipelineEditor is configured against the parent frame, not the block's own source
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- Status: 🚧 PARTIAL (2026-08-27) — source state wired; editor still gets the parent frame | Milestone: (next) | Priority: P2 | Complexity: M
 - **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
   `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex during Gate 0 on #132. `WidgetHost.svelte:200-201` passes `fields={frame.fields}`

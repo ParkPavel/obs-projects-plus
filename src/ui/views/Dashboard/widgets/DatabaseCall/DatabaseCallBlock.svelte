@@ -43,6 +43,7 @@
   import type { FilterDefinition } from "src/settings/base/settings";
   import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
   import BlockFilterBar from "./BlockFilterBar.svelte";
+  import type { BlockSource } from "../linkedSourceState";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { createDataRecord } from "src/lib/dataApi";
@@ -89,6 +90,13 @@
    * widget in the parent dashboard, which is exactly where they are stored.
    */
   export let sourceReadOnly: boolean = false;
+  /**
+   * #136: what this block is actually reading. When the source is not `ready`
+   * the block renders a state instead of records — it used to render the parent
+   * project's records instead, which is data from somewhere the user did not ask
+   * for, presented as if it were theirs.
+   */
+  export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -322,7 +330,38 @@
 </script>
 
 <div class="ppp-database-call-block">
-  {#if tabs.length === 0}
+  <!--
+    #136: an external source that is not ready gets a state, never a substitute.
+    This branch comes FIRST, ahead of the tabs check: a block whose source is
+    gone should say so rather than offering to configure views over nothing.
+  -->
+  {#if sourceState.kind === "loading"}
+    <EmptyState
+      icon="loader"
+      title={$i18n.t("views.dashboard.database-call.source-loading", {
+        defaultValue: "Loading the linked project…"
+      })}
+    />
+  {:else if sourceState.kind === "unavailable"}
+    <EmptyState
+      icon="unlink"
+      title={$i18n.t("views.dashboard.database-call.source-unavailable", {
+        defaultValue: "Linked project unavailable"
+      })}
+      hint={$i18n.t("views.dashboard.database-call.source-unavailable-hint", {
+        defaultValue: "The project this block reads was not found: {{id}}",
+        id: sourceState.projectId
+      })}
+    />
+  {:else if sourceState.kind === "error"}
+    <EmptyState
+      icon="alert-triangle"
+      title={$i18n.t("views.dashboard.database-call.source-error", {
+        defaultValue: "Could not load the linked project"
+      })}
+      hint={sourceState.message}
+    />
+  {:else if tabs.length === 0}
     <EmptyState
       icon="database"
       title={$i18n.t("views.dashboard.database-call.empty", {

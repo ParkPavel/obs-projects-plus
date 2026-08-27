@@ -80,6 +80,8 @@ export interface WidgetRenderContext {
   readonly dbCallScopeApplied: boolean;
   /** #139: true when the block reads an external source it cannot safely write to. */
   readonly dbCallUsesLinkedSource: boolean;
+  /** #136: what the block is actually reading — loading, ready, unavailable, error. */
+  readonly dbCallSource: import("./linkedSourceState").BlockSource;
 }
 
 type Props = Record<string, unknown>;
@@ -152,6 +154,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       // #139: an external source is read through the parent's api and project,
       // so a data write would land in the wrong project. Config writes stay.
       sourceReadOnly: c.dbCallUsesLinkedSource,
+      sourceState: c.dbCallSource,
     }),
   },
   "cover-banner": {

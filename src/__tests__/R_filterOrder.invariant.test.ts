@@ -74,7 +74,9 @@ describe("#128 filter-order — the wiring the ADR describes", () => {
 
   it("tells the block whether axis A already ran, so it is not applied twice", () => {
     expect(host).toContain("dbCallScopeApplied");
-    expect(host).toMatch(/dbCallScopeApplied:\s*!dbCallUsesLinkedSource\s*&&\s*scope\.applied/);
+    // #136 renamed the reactive var to a derived view; the composition is the
+    // invariant, not the identifier — scope counts only for a non-external block.
+    expect(host).toMatch(/dbCallScopeApplied:\s*!dbCall\.isExternal\s*&&\s*scope\.applied/);
   });
 
   it("keeps the selection (axis B) downstream of the transform in the block", () => {
