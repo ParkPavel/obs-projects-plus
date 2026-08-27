@@ -2145,11 +2145,20 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   non-widget route.
 
 ### #130 — i18n key sets diverge across locales
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S
-- `en` 1224 / `ru` 1266 / `uk` 1151 / `zh-CN` 1151. `ru` holds 42 `views.dashboard.table-v2.*` keys
-  missing from `en` although the code uses them; `uk`/`zh-CN` lack 73 keys relative to `en`
-  (`native-query.*`, `create-demo-project.*`). Nothing breaks — every call site passes
-  `defaultValue` — but the canonical key set de facto lives in `ru.json`, not `en.json`.
+- Status: ✅ DONE (2026-08-27) — en/ru aligned; uk/zh-CN deliberately left to fall back | Milestone: (next) | Priority: P3 | Complexity: S
+- `en` 1224 / `ru` 1266 / `uk` 1151 / `zh-CN` 1151. Two different problems were filed as one.
+- **Fixed — `en` was missing 42 keys that `ru` had.** English text was not lost: every call site
+  passes it positionally as `t("key", "English")`, or as `def:` in `VIEW_TYPE_LABELS`. But that put
+  the canonical English in *component code* while `ru.json` held the canonical key set — backwards.
+  All 42 extracted from their call sites into `en.json`; `en` and `ru` now have identical key sets
+  (1266 each, zero divergence either way).
+- **Not fixed, deliberately — `uk`/`zh-CN` lack 115 keys.** The i18n config falls back to `en`
+  (`i18n.ts:104-109`, `default: ["en"]`), so those keys render correct English today. Filling them
+  with machine translation would replace correct English with unreviewed Ukrainian and Chinese —
+  strictly worse for a user of those locales. Proper translation needs a speaker; filed as **#140**.
+- Note on the diff: `en.json` gained 48 lines and lost 2. One deleted line is a trailing-comma
+  change; the other re-writes `⭐` as a literal `⭐`, which is the same JSON. The file's own
+  escaping convention was already inconsistent.
 
 ### #131 — Docs drift: CLAUDE.md WidgetType block, table search surface, CHANGELOG
 - Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P3 | Complexity: XS
@@ -2320,3 +2329,14 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 - Still open: a source-specific write API, so an external block can write where it reads instead of
   being read-only. Tracked in `LINKED_SOURCE_DESIGN.md` under what the brief does not decide.
 - Design: `docs/internal/LINKED_SOURCE_DESIGN.md` (revision 2).
+
+### #140 — uk / zh-CN locales lack 115 keys
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S
+- Split out of #130 on 2026-08-27. `uk` and `zh-CN` hold 1151 keys against `en`'s 1266.
+- **Not a functional defect.** `i18n.ts:104-109` sets `default: ["en"]`, so a missing key renders
+  correct English rather than a raw key.
+- **Deliberately not machine-translated.** Replacing correct English with unreviewed Ukrainian or
+  Chinese is worse for a speaker of those languages than the fallback is. This needs a translator,
+  not a sweep — which is why it is a separate ticket rather than a loose end in #130.
+- The missing sets are dominated by `native-query.*`, `create-demo-project.*`, and the 42
+  `table-v2.*` / `database-call.*` keys that #130 added to `en`.
