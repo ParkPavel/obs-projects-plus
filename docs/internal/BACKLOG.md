@@ -2302,7 +2302,7 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   `linkedSourceState.ts` to make room inside the 240-line budget. The budget was not raised.
 
 ### #138 — external frames never get backlink enrichment
-- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P2 | Complexity: M
 - **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
   `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
 - Found by Codex during Gate 0 on #132. Two paths, both missing it:
@@ -2316,6 +2316,17 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
     mechanism, not backlinks.
 - Consequence: a relation-driven view over an external source is missing derived backlink fields
   that the same view would have over the parent project.
+- **Fixed at `externalFrameResolver`**, not the canvas preloader or the host: `App` already caches
+  the resolver's promise per project id, so enrichment costs once per source rather than once per
+  canvas or once per widget.
+- **Collision guard added to `enrichWithBacklinks` — a separate data-safety fix.** The function
+  appended `<relation>_backlinks` without checking and clobbered any same-named stored value through
+  the `...extraValues` spread. A vault is free to have a real frontmatter property with that name,
+  and it was being destroyed. Colliding relations are now skipped with a warning; the rest still
+  enrich. Flagged by Codex at Gate 0 as claim 3, which said enrichment was additive — it was not.
+- **`join` output schema widens, deliberately.** `join` copies every right-frame field except the
+  key into its output, so enriching right frames adds the derived backlink fields there too.
+  Recorded with a regression test rather than left to be discovered.
 
 ### #139 — external-source block writes to the PARENT project
 - Status: ✅ DONE (2026-08-27) — read-only guard shipped; source-specific write API still open | Milestone: (next) | Priority: **P1** | Complexity: M

@@ -194,7 +194,22 @@ export function enrichWithBacklinks(
 ): DataFrame {
   if (relationFields.length === 0) return df;
 
-  const backlinkResults = relationFields.map((f) => computeBacklinks(df, f));
+  // #138: never overwrite a field the frame already has. The derived name is
+  // `<relation>_backlinks`, which a vault is free to use as a real frontmatter
+  // property — and the enrichment below both appends a duplicate field entry
+  // and clobbers the stored value through the spread. Skipping the collision
+  // loses a derived convenience; not skipping loses the user's data.
+  const existing = new Set(df.fields.map((f) => f.name));
+  const safeFields = relationFields.filter((f) => {
+    if (!existing.has(`${f}_backlinks`)) return true;
+    console.warn(
+      `[obs-projects-plus] backlinks for "${f}" skipped: the frame already has a field named "${f}_backlinks"`
+    );
+    return false;
+  });
+  if (safeFields.length === 0) return df;
+
+  const backlinkResults = safeFields.map((f) => computeBacklinks(df, f));
 
   // Add new fields
   const newFields = backlinkResults.map((br) => ({

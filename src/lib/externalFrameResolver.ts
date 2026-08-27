@@ -5,7 +5,8 @@
 
 import type { App } from "obsidian";
 import type { DataviewApi } from "obsidian-dataview";
-import type { DataFrame } from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
+import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
 import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/settings";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { createDataSource } from "src/lib/datasources";
@@ -35,6 +36,13 @@ function warnThrottled(projectId: string, err: unknown): void {
   console.warn(`[obs-projects-plus] resolveExternalFrame(${projectId}) failed`, err);
 }
 
+/** Non-derived Relation fields, the ones backlink enrichment is defined over. */
+function relationFieldNames(frame: DataFrame): string[] {
+  return frame.fields
+    .filter((f) => f.type === DataFieldType.Relation && !f.derived)
+    .map((f) => f.name);
+}
+
 /**
  * Resolve a DataFrame for the given project id. Returns `null` when the
  * project is not found or when its DataSource cannot be constructed (e.g.
@@ -57,7 +65,19 @@ export async function resolveExternalFrame(
     if (resolution.kind === "unavailable") {
       return null;
     }
-    return await resolution.source.queryAll();
+    const frame = await resolution.source.queryAll();
+
+    // #138: enrich here, so every frame reaching a widget has the same shape
+    // regardless of origin. Previously only the parent frame got backlinks
+    // (WidgetHost did it per widget), so a relation view over an external
+    // source was missing derived fields the identical view over the parent
+    // project had — and a block could tell where its records came from by
+    // which fields existed.
+    //
+    // This point rather than the canvas preloader or the widget host: App
+    // already caches this promise per project id, so the work happens once per
+    // source instead of once per canvas or once per widget.
+    return enrichWithBacklinks(frame, relationFieldNames(frame));
   } catch (err) {
     warnThrottled(projectId, err);
     return null;

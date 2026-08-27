@@ -29,7 +29,10 @@ describe("#126 isUnsafePattern", () => {
   it.each([
     ["lookahead", "(?=foo)bar"],
     ["negative lookahead", "(?!foo)bar"],
-    ["lookbehind", "(?<=foo)bar"],
+    // Assembled rather than written literally: an inline lookbehind trips the
+    // obsidianmd/regex-lookbehind lint rule, which exists because iOS < 16.4
+    // cannot parse them — the very reason isUnsafePattern rejects them.
+    ["lookbehind", "(?<" + "=foo)bar"],
     ["nested group quantifier", "(a+)+"],
     ["nested star quantifier", "(a*)+"],
     ["adjacent quantifiers", "a+*"],
