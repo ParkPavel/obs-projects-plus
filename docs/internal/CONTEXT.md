@@ -1,6 +1,6 @@
 # Current project context
 
-> **Updated:** 2026-08-22 (post-#114 DONE)
+> **Updated:** 2026-08-27 (post-#138; session report: `SESSION_REPORT_2026-08-27.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
 
@@ -11,6 +11,13 @@ Relation-first vertical slice in `BACKLOG.md` and must map to a scene in the Pro
 The old W2–W5 sequence is historical; it does not select the next product ticket.
 
 ## Working tree and release state
+
+- **Branch `feat/116-filter-order-adr` — 54 commits, PUSHED to origin 2026-08-27, `main` untouched.**
+  Working tree clean. Full account of the session in `SESSION_REPORT_2026-08-27.md`.
+- **Open, user-owned:** Gate 3 (`/codex:review --base main`) has never run on this branch; merge to
+  `main`; visual smoke of the A→C→B inversion in the OBStests vault.
+- **Next ticket:** #132 (visible opt-in marker for linked-source pipelines) — the last of the
+  linked-source stack, design in `LINKED_SOURCE_DESIGN.md` rev 2.
 
 - Branch: `feat/112-guided-relation-setup` (accumulating #110+#111+#112+#113+#114; merge/push = user gate).
 - Committed on this branch (not merged/pushed): `54217c1` (#105–#109 stabilization); `2785a4d`
