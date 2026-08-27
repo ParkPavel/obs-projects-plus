@@ -113,3 +113,28 @@ describe("filterByLinkedSelection — non-Relation passthrough", () => {
     expect(out.map((r) => r.id)).toEqual(["r1"]);
   });
 });
+
+describe("filterByLinkedSelection — malformed wikilink edge cases", () => {
+  test("malformed link without closing brackets does not match and does not throw", () => {
+    const records = [rec("r1", { client: "[[Acme Studio" })];
+    expect(() => {
+      const out = filterByLinkedSelection(records, isCond("client", "Acme Studio"), [clientField]);
+      expect(out).toEqual([]);
+    }).not.toThrow();
+  });
+
+  test("bare path without wikilink syntax still matches by canonicalised path", () => {
+    const records = [rec("r1", { client: "Projects/Acme Studio" })];
+    const out = filterByLinkedSelection(records, isCond("client", "Projects/Acme Studio"), [clientField]);
+    expect(out.map((r) => r.id)).toEqual(["r1"]);
+  });
+
+  test("empty string selection value matches empty/missing cell but not a wikilink", () => {
+    const records = [
+      rec("r1", { client: "" }),
+      rec("r2", { client: "[[Acme Studio]]" }),
+    ];
+    const out = filterByLinkedSelection(records, isCond("client", ""), [clientField]);
+    expect(out.map((r) => r.id)).toEqual([]);
+  });
+});

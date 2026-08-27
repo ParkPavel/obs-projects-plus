@@ -2,7 +2,7 @@
   import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
-  import type { FilterCondition } from "src/settings/base/settings";
+  import type { FilterDefinition } from "src/settings/base/settings";
   import type { DatabaseViewConfig, WidgetDefinition, FieldPreset } from "./types";
   import ViewContent from "src/ui/components/Layout/ViewContent.svelte";
   import ViewLayout from "src/ui/components/Layout/ViewLayout.svelte";
@@ -21,7 +21,7 @@
   import { createWidgetController } from "./dashboardWidgets";
   import { getDesignTokenCSS } from "./designTokens";
   import { subscribeCanvasCommands } from "./dashboardCommands";
-  import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync } from "./dashboardPreload";
+  import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync, readyFrames, type ExternalSourceState } from "./dashboardPreload";
   import { createSchemaController } from "./dashboardSchema";
   import { createTemplatesController } from "./dashboardTemplates";
   import { applyFilterTab, promoteFilterTabToGlobal, type ActiveFilterTab } from "./dashboardFilters";
@@ -41,8 +41,9 @@
   export let getRecordColor: (record: DataRecord) => string | null;
   export let config: DatabaseViewConfig | undefined;
   export let onConfigChange: (cfg: DatabaseViewConfig) => void;
-  export let globalFilters: FilterCondition[] = [];
-  export let onViewFilterChange: ((filter: { conjunction: "and" | "or"; conditions: FilterCondition[] }) => void) | undefined = undefined;
+  /** #125: the COMPLETE stored filter, not just the enabled subset. */
+  export let globalFilter: FilterDefinition | undefined = undefined;
+  export let onViewFilterChange: ((filter: FilterDefinition) => void) | undefined = undefined;
   const projectStore = writable<ProjectDefinition>(project);
   setContext<Writable<ProjectDefinition>>("project", projectStore);
   $: projectStore.set(project);
@@ -98,16 +99,16 @@
   $: displayFrame = buildDisplayFrame(filteredFrame, effectiveConfig, getFileStat);
   $: availableSources = ($settings.projects ?? []).filter((p) => p.id !== project.id).map((p) => ({ id: p.id, name: p.name }));
   $: availableWidgets = widgets.map((w) => ({ id: w.id, title: w.title }));
-  const rightFramesStore = writable<ReadonlyMap<string, DataFrame>>(new Map());
+  const sourceStatesStore = writable<ReadonlyMap<string, ExternalSourceState>>(new Map());
+  $: rightFrames = readyFrames($sourceStatesStore); // #136 derived — cannot drift
   const syncPreload = createPreloadSync(createPreloadRunner(
     api.resolveExternalFrame ? (id: string) => api.resolveExternalFrame!(id).then((f) => f ?? undefined) : undefined,
-    (frames) => rightFramesStore.set(frames)
+    (states) => sourceStatesStore.set(states)
   ));
-  $: referencedIds = collectReferencedSourceIds(widgets, project);
-  $: syncPreload(referencedIds, $externalFrameInvalidation);
+  $: syncPreload(collectReferencedSourceIds(widgets, project), $externalFrameInvalidation);
   function promoteLocalToGlobal() {
     if (!activeFilterTab || !onViewFilterChange) return;
-    onViewFilterChange({ conjunction: "and", conditions: promoteFilterTabToGlobal(activeFilterTab, globalFilters) });
+    onViewFilterChange(promoteFilterTabToGlobal(activeFilterTab, globalFilter, frame.fields));
     activeFilterTab = null;
   }
   $: dndWidgets = widgets.map((w) => ({ ...w }));
@@ -117,7 +118,7 @@
     if (!effectiveConfig) return;
     saveConfig({ ...effectiveConfig, widgets: dndWidgets.filter((w) => w.id !== SHADOW_PLACEHOLDER_ITEM_ID.toString()) });
   }
-  $: primaryDataTableId = effectiveConfig?.widgets.find((w) => w.type === "data-table")?.id ?? "";
+  $: primaryDataTableId = effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id ?? "";
   const selectionStore: SelectionStore = createSelectionStore();
   setContext<SelectionStore>(SELECTION_CONTEXT_KEY, selectionStore);
   onDestroy(bindEscapeClear(selectionStore));
@@ -128,7 +129,8 @@
   const suggest = createSuggestionController({
     getConfig: () => effectiveConfig,
     saveConfig,
-    addWidget: (t) => widgetController.addWidget(t),
+    addWidget: (t, init) => widgetController.addWidget(t, init),
+    getPrimaryWidgetId: () => effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id,
   });
   function handleApplyTemplate(e: CustomEvent<WidgetDefinition[]>) {
     templatesController.requestReplace(e.detail).catch((err: unknown) => {
@@ -173,7 +175,7 @@
         {widgets} {dndWidgets} canDnd={!readonly} {frame} {displayFrame} {api} {readonly} {getRecordColor}
         fields={frame.fields} tableConfig={effectiveConfig?.table} {primaryDataTableId}
         fieldPresets={effectiveConfig?.fieldPresets ?? []} activeFieldPresetId={effectiveConfig?.activeFieldPresetId}
-        {availableSources} {availableWidgets} rightFrames={$rightFramesStore} {project}
+        {availableSources} {availableWidgets} {rightFrames} sourceStates={$sourceStatesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
         on:showToolbar={() => { if (!effectiveConfig) return; saveConfig({ ...effectiveConfig, showWidgetToolbar: true }); }}
         on:addWidget={(e) => widgetController.addWidget(e.detail)} on:applyTemplate={handleApplyTemplate}

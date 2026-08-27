@@ -9,10 +9,10 @@ import {
 	EMPTY_SELECTION,
 	bindEscapeClear,
 	composeEffectiveFilter,
-	composeLinkedSelectionFilter,
 	createSelectionStore,
 	type SelectionState,
 } from "../canvasSelectionStore";
+import type { LinkedSelectionConfig } from "../types";
 
 function cond(field: string, value: string): FilterCondition {
 	return { field, operator: "is", value, enabled: true };
@@ -176,34 +176,53 @@ describe("composeEffectiveFilter — pure derivation", () => {
 	});
 });
 
-describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
-	it("returns null when linkedSelection is undefined", () => {
-		const result = composeLinkedSelectionFilter({
-			linkedSelection: undefined,
-			canvasSelection: EMPTY_SELECTION,
+describe("composeEffectiveFilter — linked selection (E7 parity tests)", () => {
+	const ls: LinkedSelectionConfig = { sourceWidgetId: "block-a", relationField: "client" };
+
+	it("no linked condition when linkedSelection is undefined regardless of canvas selection", () => {
+		const sel: SelectionState = {
+			source: "data-table:block-a",
+			field: "name",
+			values: ["ivan-petrov"],
+			op: "is",
+		};
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "block-b",
 		});
-		expect(result).toBeNull();
+		// Without linkedSelection, the canvas condition uses selection.field ("name")
+		expect(out).toHaveLength(1);
+		expect(out[0]?.field).toBe("name");
 	});
 
-	it("returns null when no selection is active (EMPTY_SELECTION)", () => {
-		const result = composeLinkedSelectionFilter({
-			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
-			canvasSelection: EMPTY_SELECTION,
+	it("no linked condition when selection is empty (EMPTY_SELECTION)", () => {
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: EMPTY_SELECTION,
+			myWidgetId: "block-b",
+			linkedSelection: ls,
+			validationResult: "valid",
 		});
-		expect(result).toBeNull();
+		expect(out).toHaveLength(0);
 	});
 
-	it("returns a FilterCondition when master data-table block has an active selection", () => {
-		const result = composeLinkedSelectionFilter({
-			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
-			canvasSelection: {
-				source: "data-table:block-a",
-				field: "name",
-				values: ["ivan-petrov"],
-				op: "is",
-			},
+	it("linked condition on master data-table selection when validationResult is valid", () => {
+		const sel: SelectionState = {
+			source: "data-table:block-a",
+			field: "name",
+			values: ["ivan-petrov"],
+			op: "is",
+		};
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "block-b",
+			linkedSelection: ls,
+			validationResult: "valid",
 		});
-		expect(result).toEqual({
+		expect(out).toHaveLength(1);
+		expect(out[0]).toEqual({
 			field: "client",
 			operator: "is",
 			value: "ivan-petrov",
@@ -211,17 +230,22 @@ describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
 		});
 	});
 
-	it("returns a FilterCondition when master chart block has an active selection", () => {
-		const result = composeLinkedSelectionFilter({
-			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
-			canvasSelection: {
-				source: "chart:block-a",
-				field: "status",
-				values: ["active"],
-				op: "is",
-			},
+	it("linked condition on master chart selection when validationResult is valid", () => {
+		const sel: SelectionState = {
+			source: "chart:block-a",
+			field: "status",
+			values: ["active"],
+			op: "is",
+		};
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "block-b",
+			linkedSelection: ls,
+			validationResult: "valid",
 		});
-		expect(result).toEqual({
+		expect(out).toHaveLength(1);
+		expect(out[0]).toEqual({
 			field: "client",
 			operator: "is",
 			value: "active",
@@ -229,31 +253,113 @@ describe("composeLinkedSelectionFilter — Canvas Selection Bus", () => {
 		});
 	});
 
-	it("returns null when the active selection is from a different master block", () => {
-		const result = composeLinkedSelectionFilter({
-			linkedSelection: { sourceWidgetId: "block-a", relationField: "client" },
-			canvasSelection: {
-				source: "data-table:block-b",
-				field: "name",
-				values: ["some-value"],
-				op: "is",
-			},
+	it("no linked condition when selection is from a different master block", () => {
+		const sel: SelectionState = {
+			source: "data-table:block-b",
+			field: "name",
+			values: ["some-value"],
+			op: "is",
+		};
+		// block-a is the master but block-b is driving — linked condition absent;
+		// canvas condition uses selection.field since myWidgetId != "block-b" would skip
+		// but here myWidgetId is "receiver" so canvas condition is added
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "receiver",
+			linkedSelection: ls,
+			validationResult: "valid",
 		});
-		expect(result).toBeNull();
+		// linked condition skipped (different source); canvas condition added
+		expect(out).toHaveLength(1);
+		expect(out[0]?.field).toBe("name");
 	});
 
-	it("uses relationField (not selection field) as the filter field", () => {
-		const result = composeLinkedSelectionFilter({
-			linkedSelection: { sourceWidgetId: "block-a", relationField: "clientRef" },
-			canvasSelection: {
-				source: "data-table:block-a",
-				field: "id",
-				values: ["42"],
-				op: "is",
-			},
+	it("uses relationField (not selection field) as the filter field when valid", () => {
+		const lsRef: LinkedSelectionConfig = { sourceWidgetId: "block-a", relationField: "clientRef" };
+		const sel: SelectionState = {
+			source: "data-table:block-a",
+			field: "id",
+			values: ["42"],
+			op: "is",
+		};
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "block-b",
+			linkedSelection: lsRef,
+			validationResult: "valid",
 		});
-		expect(result?.field).toBe("clientRef");
-		expect(result?.value).toBe("42");
+		expect(out).toHaveLength(1);
+		expect(out[0]?.field).toBe("clientRef");
+		expect(out[0]?.value).toBe("42");
+	});
+
+	it("skips linked condition when validationResult is missing-relation", () => {
+		const sel: SelectionState = {
+			source: "data-table:block-a",
+			field: "name",
+			values: ["ivan-petrov"],
+			op: "is",
+		};
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "block-b",
+			linkedSelection: ls,
+			validationResult: "missing-relation",
+		});
+		// Linked skipped; canvas condition falls through with selection.field
+		expect(out).toHaveLength(1);
+		expect(out[0]?.field).toBe("name");
+	});
+
+	it("skips linked condition when validationResult is wrong-target-project", () => {
+		const sel: SelectionState = {
+			source: "data-table:block-a",
+			field: "name",
+			values: ["ivan-petrov"],
+			op: "is",
+		};
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "block-b",
+			linkedSelection: ls,
+			validationResult: "wrong-target-project",
+		});
+		expect(out).toHaveLength(1);
+		expect(out[0]?.field).toBe("name");
+	});
+
+	it("skips linked condition when validationResult is invalid-field", () => {
+		const sel: SelectionState = {
+			source: "data-table:block-a",
+			field: "name",
+			values: ["ivan-petrov"],
+			op: "is",
+		};
+		const out = composeEffectiveFilter({
+			userFilters: [],
+			selection: sel,
+			myWidgetId: "block-b",
+			linkedSelection: ls,
+			validationResult: "invalid-field",
+		});
+		expect(out).toHaveLength(1);
+		expect(out[0]?.field).toBe("name");
+	});
+
+	it("userFilters unchanged (reference-equal) when nothing narrows", () => {
+		const base: readonly import("src/settings/base/settings").FilterCondition[] = [cond("priority", "high")];
+		const out = composeEffectiveFilter({
+			userFilters: base,
+			selection: EMPTY_SELECTION,
+			myWidgetId: "block-b",
+			linkedSelection: ls,
+			validationResult: "valid",
+		});
+		expect(out).toBe(base);
 	});
 });
 

@@ -47,6 +47,11 @@ import {
 } from "src/settings/settings";
 
 import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/lib/engine/emptiness";
+import {
+  isUnsafePattern,
+  MAX_REGEX_INPUT_LENGTH,
+  MAX_REGEX_PATTERN_LENGTH,
+} from "src/lib/helpers/regexSafety";
 
 // dayjs isoWeek + quarterOfYear plugins are extended globally in main.ts
 
@@ -236,18 +241,17 @@ export const baseFns: Record<
   "is-not-empty": (value) => kernelIsNotEmpty(value),
 };
 
-const MAX_REGEX_LENGTH = 200;
-const MAX_REGEX_INPUT = 10000;
-
+/**
+ * #126: the guards live in `lib/helpers/regexSafety.ts`, not here. This file
+ * used to carry byte-copies of the three checks plus its own length constants,
+ * so tightening the shared policy would silently not reach the filter engine —
+ * the one place a pattern meets every record in the vault.
+ */
 function safeRegexTest(pattern: string, input: string): boolean {
-  if (pattern.length > MAX_REGEX_LENGTH) return false;
-  // Reject lookbehind / lookahead constructs that can amplify catastrophic backtracking.
-  if (/\(\?[<!=]/.test(pattern)) return false;
-  // Reject nested quantifiers like (a+)+ or a*{,5}*
-  if (/(\+|\*|\{[^}]*\})\s*(\+|\*|\{)/.test(pattern)) return false;
-  if (/\([^)]*(\+|\*|\{[^}]*\})\)\s*(\+|\*|\{)/.test(pattern)) return false;
+  if (pattern.length > MAX_REGEX_PATTERN_LENGTH) return false;
+  if (isUnsafePattern(pattern)) return false;
   try {
-    return new RegExp(pattern, "i").test(input.slice(0, MAX_REGEX_INPUT));
+    return new RegExp(pattern, "i").test(input.slice(0, MAX_REGEX_INPUT_LENGTH));
   } catch {
     return false;
   }

@@ -109,6 +109,26 @@ describe("computeSuggestions (#059)", () => {
       );
       expect(result.find((s) => s.kind === "relation-block")).toBeUndefined();
     });
+
+    it("includes relationTargetProjectId when relation field has targetProjectId configured", () => {
+      const relField: DataField = {
+        name: "client",
+        type: DataFieldType.Relation,
+        repeated: false,
+        identifier: false,
+        derived: false,
+        typeConfig: { relation: { targetProjectId: "proj-sessions" } } as never,
+      };
+      const result = computeSuggestions([relField], [], []);
+      const suggestion = result.find((s) => s.kind === "relation-block");
+      expect(suggestion?.relationTargetProjectId).toBe("proj-sessions");
+    });
+
+    it("omits relationTargetProjectId when relation field has no typeConfig", () => {
+      const result = computeSuggestions([field("client", DataFieldType.Relation)], [], []);
+      const suggestion = result.find((s) => s.kind === "relation-block");
+      expect(suggestion?.relationTargetProjectId).toBeUndefined();
+    });
   });
 
   it("returns both suggestions ordered numeric-first when both rules fire", () => {

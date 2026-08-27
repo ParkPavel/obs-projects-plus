@@ -900,10 +900,6 @@
                     "open-pipeline": "Open pipeline",
                     "clear-pipeline": "Clear pipeline",
                     "settings": {
-                        "unnest-label": "Expand list",
-                        "unnest-field": "List field",
-                        "unnest-none": "none",
-                        "unnest-hint": "Split a list field into one row per item.",
                         "source": "Source project",
                         "source-inherit": "This view's data (default)",
                         "source-hint": "By default the block shows this view's records. Pick another project to show its data instead.",
@@ -912,7 +908,21 @@
                         "link-hint": "Without a link the block shows all records. With a link it shows only records related to the chosen block.",
                         "relation-field": "Filter by field",
                         "select-field": "Select a field"
-                    }
+                    },
+                    "tab-add": "Add view",
+                    "tab-delete": "Delete view",
+                    "tab-menu": "View options",
+                    "tab-rename": "Rename",
+                    "view-type": {
+                        "board": "Board",
+                        "calendar": "Calendar",
+                        "gallery": "Gallery",
+                        "table": "Table"
+                    },
+                    "source-loading": "Loading the linked project…",
+                    "source-unavailable": "Linked project unavailable",
+                    "source-unavailable-hint": "The project this block reads was not found: {{id}}",
+                    "source-error": "Could not load the linked project"
                 },
                 "field-presets": {
                     "label": "Layout",
@@ -936,7 +946,15 @@
                     "not-configured": "Widget type \"{{type}}\" — not configured",
                     "add": "Add Widget",
                     "add-aria": "Add widget",
-                    "templates": "Templates"
+                    "templates": "Templates",
+                    "lock": "Lock widget position",
+                    "menu": "Widget menu",
+                    "menu-configure": "Configure widget…",
+                    "menu-pipeline": "Data pipeline — filter, group, compute…",
+                    "menu-pipeline-active": "Data pipeline ({{count}})",
+                    "menu-remove": "Remove widget",
+                    "menu-rename": "Rename",
+                    "unlock": "Unlock widget"
                 },
                 "quick": {
                     "group": "Quick actions",
@@ -994,7 +1012,8 @@
                     "runtime-error": "Runtime error"
                 },
                 "pipeline": {
-                    "title": "Transform Pipeline",
+                    "title": "Advanced transforms",
+                    "advanced-hint": "Ordinary filtering and grouping now live on the view itself — these steps reshape the data.",
                     "steps": "step(s)",
                     "clear": "Clear",
                     "empty": {
@@ -1058,7 +1077,8 @@
                     "unnest-suggestion-body": "Fields {{fields}} contain arrays. Use Unnest to split each item into its own row.",
                     "unnest-suggestion-button": "Unnest \"{{field}}\"",
                     "disable-step": "Disable step",
-                    "enable-step": "Enable step"
+                    "enable-step": "Enable step",
+                    "source-not-ready": "The linked project is not loaded, so its fields are unavailable here."
                 },
                 "group": {
                     "empty": "(empty)"
@@ -1234,6 +1254,34 @@
                     "board": "Board View",
                     "calendar": "Calendar View",
                     "gallery": "Gallery View"
+                },
+                "table-v2": {
+                    "add-property": "Add property",
+                    "calc-none": "None",
+                    "calculate": "Calculate",
+                    "controls": "Table controls",
+                    "delete": "Delete note",
+                    "duplicate": "Duplicate",
+                    "filter-canvas": "Filter linked blocks by this row",
+                    "group-by": "Group by this field",
+                    "hide-field": "Hide in view",
+                    "new": "New",
+                    "new-name": "Note name…",
+                    "open": "Open note",
+                    "open-new-tab": "Open in new tab",
+                    "relation-cancel": "Cancel",
+                    "relation-done": "Done",
+                    "relation-empty": "No records to link",
+                    "relation-search": "Search records…",
+                    "remove-sort": "Remove sort",
+                    "row-menu": "Row actions",
+                    "search": "Search records",
+                    "search-placeholder": "Search…",
+                    "sort-asc": "Sort ascending",
+                    "sort-clear": "Clear sort",
+                    "sort-desc": "Sort descending",
+                    "unfilter-canvas": "Stop filtering canvas by this row",
+                    "ungroup": "Ungroup"
                 }
             }
         },
@@ -1303,7 +1351,7 @@
                 "empty-hint": "No rules",
                 "pick-color": "Pick color",
                 "favorites": "Favorites",
-                "favorites-empty-hint": "Press \u2b50 to add",
+                "favorites-empty-hint": "Press ⭐ to add",
                 "hex-code": "HEX code",
                 "invalid-format": "Invalid format",
                 "expand-palette": "Expand palette",
@@ -1720,6 +1768,30 @@
             "apply": "Apply",
             "field-placeholder": "Field",
             "add-criterion": "Add criterion"
+        },
+        "relation-setup": {
+            "open": "Link database…",
+            "saved": "Relation saved.",
+            "target-unavailable": "The selected database could not be loaded.",
+            "title": "Link property to database",
+            "description": "Values stay as WikiLinks in Markdown. Preview makes no changes.",
+            "property-label": "Property",
+            "database-label": "Database",
+            "database-placeholder": "Choose a database…",
+            "display-field-label": "Display field",
+            "display-field-placeholder": "e.g. title",
+            "inverse-enable-label": "Create inverse property in schema",
+            "inverse-field-label": "Inverse property name",
+            "inverse-warning": "The inverse property will only be declared after saving. Existing notes are not rewritten.",
+            "preview-resolved": "Matched: {{count}}",
+            "preview-unmatched": "Not found: {{count}}",
+            "preview-ambiguous": "Ambiguous: {{count}}",
+            "cancel": "Cancel",
+            "save": "Save relation"
+        },
+        "relation-count": {
+            "linked": "{{count}} linked",
+            "empty": "No linked records yet"
         }
     }
 }

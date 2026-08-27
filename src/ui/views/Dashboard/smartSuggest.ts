@@ -21,6 +21,8 @@ export interface SmartSuggestion {
   readonly fieldName: string;
   /** Widget type added when the user accepts the suggestion. */
   readonly widgetType: WidgetType;
+  /** Defined for kind === "relation-block" when the field has a configured targetProjectId. */
+  readonly relationTargetProjectId?: string;
 }
 
 type WidgetLike = Pick<WidgetDefinition, "type" | "config">;
@@ -56,10 +58,12 @@ export function computeSuggestions(
     (w) => w.type === "database-call" && w.config["linkedSelection"] != null
   );
   if (relationField && !hasLinkedBlock && !dismissed.includes("relation-block")) {
+    const relConfig = (relationField.typeConfig as { relation?: { targetProjectId?: string } } | undefined)?.relation;
     suggestions.push({
       kind: "relation-block",
       fieldName: relationField.name,
       widgetType: "database-call",
+      ...(relConfig?.targetProjectId ? { relationTargetProjectId: relConfig.targetProjectId } : {}),
     });
   }
 

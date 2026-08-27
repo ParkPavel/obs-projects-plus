@@ -31,7 +31,8 @@ import type {
   FieldPreset,
   LinkedSelectionConfig,
 } from "../types";
-import { tableTabConfig } from "./legacyMigration";
+import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
+import { restoreDataTableConfig } from "./legacyMigration";
 
 import ChartWidget from "./Chart/ChartWidget.svelte";
 import ChartConfigPanel from "./Chart/ChartConfig.svelte";
@@ -70,6 +71,17 @@ export interface WidgetRenderContext {
   readonly dbCallFields: DataField[];
   readonly dbCallSourceConfig: WidgetSourceConfig | undefined;
   readonly dbCallLinkedSelection: LinkedSelectionConfig | undefined;
+  readonly dbCallLinkedSelectionValidation: LegacyLinkedSelectionStatus | undefined;
+  /**
+   * #118: true when the host already narrowed the frame by `config.subFilter`
+   * ahead of the transform pipeline (axis A of the canonical A→C→B order), so
+   * the block must not apply it a second time.
+   */
+  readonly dbCallScopeApplied: boolean;
+  /** #139: true when the block reads an external source it cannot safely write to. */
+  readonly dbCallUsesLinkedSource: boolean;
+  /** #136: what the block is actually reading — loading, ready, unavailable, error. */
+  readonly dbCallSource: import("./linkedSourceState").BlockSource;
 }
 
 type Props = Record<string, unknown>;
@@ -94,8 +106,14 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       getRecordColor: c.getRecordColor, fields: c.transformedFrame.fields,
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project,
-      config: tableTabConfig((c.effectiveTableConfig ?? {}) as Record<string, unknown>),
+      // #112 F1 restore: re-merge block-level subFilter from widget.config.
+      config: restoreDataTableConfig(
+        (c.effectiveTableConfig ?? {}) as Record<string, unknown>,
+        c.widget.config as Record<string, unknown> | undefined
+      ),
       widgetId: c.widget.id, widgetTitle: c.widget.title,
+      // #118: data-table always renders the host's scoped+transformed frame.
+      scopeApplied: true,
     }),
   },
   chart: {
@@ -130,7 +148,13 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project, config: c.widget.config, widgetId: c.widget.id,
       widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection,
+      linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
+      scopeApplied: c.dbCallScopeApplied,
+      // #139: an external source is read through the parent's api and project,
+      // so a data write would land in the wrong project. Config writes stay.
+      sourceReadOnly: c.dbCallUsesLinkedSource,
+      sourceState: c.dbCallSource,
     }),
   },
   "cover-banner": {

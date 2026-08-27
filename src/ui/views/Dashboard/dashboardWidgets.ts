@@ -26,7 +26,7 @@ interface WidgetControllerOptions {
 }
 
 export interface WidgetController {
-  addWidget(type: WidgetType): void;
+  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): void;
   removeWidget(id: string): void;
   /** CustomEvent handler: widget's own config changed (title, layout, type-specific options). */
   handleWidgetConfigChange(e: CustomEvent<{ id: string; changes: Partial<WidgetDefinition> }>): void;
@@ -45,7 +45,7 @@ export function createWidgetController({
     return getConfig();
   }
 
-  function addWidget(type: WidgetType): void {
+  function addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): void {
     const config = cfg();
     if (!config) return;
     const meta = getWidgetMeta(type);
@@ -59,6 +59,7 @@ export function createWidgetController({
       title,
       layout: { ...meta.defaultLayout },
       config: {},
+      ...initialConfig,
     };
     saveConfig({ ...config, widgets: [...config.widgets, newWidget] });
   }

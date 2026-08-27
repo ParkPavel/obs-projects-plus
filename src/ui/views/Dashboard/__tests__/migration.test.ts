@@ -1,6 +1,6 @@
 ﻿// src/ui/views/Dashboard/__tests__/migration.test.ts
 
-import { migrateTableConfig, isLegacyTableConfig, migrateAggregationCount } from "../migration";
+import { migrateTableConfig, isLegacyTableConfig, migrateAggregationCount, migrateDashboardTransforms } from "../migration";
 
 describe("isLegacyTableConfig", () => {
   test("identifies empty config as legacy", () => {
@@ -144,5 +144,98 @@ describe("migrateAggregationCount (R5-004)", () => {
   test("returns same reference when nothing to migrate", () => {
     const input = { table: { aggregations: { name: "sum" } } };
     expect(migrateAggregationCount(input)).toBe(input);
+  });
+});
+
+describe("migrateDashboardTransforms (#118)", () => {
+  const widget = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    type: "database-call" as const,
+    title: id,
+    layout: { x: 0, y: 0, w: 4, h: 4 },
+    config: {},
+    ...extra,
+  });
+
+  const filterStep = {
+    type: "filter" as const,
+    conditions: {
+      conjunction: "and" as const,
+      conditions: [{ field: "status", operator: "is", value: "done" }],
+    },
+  };
+
+  const pivotStep = {
+    type: "pivot" as const,
+    categoryField: "cat",
+    valueField: "val",
+    aggregation: "SUM" as const,
+  };
+
+  const dashboard = (widgets: unknown[]) =>
+    ({ widgets }) as unknown as Parameters<typeof migrateDashboardTransforms>[0];
+
+  it("lifts a leading pipeline filter onto the widget subFilter", () => {
+    const result = migrateDashboardTransforms(
+      dashboard([widget("w1", { transform: { steps: [filterStep] } })])
+    );
+
+    expect(result.migrated).toBe(true);
+    const migrated = result.config.widgets[0];
+    expect(migrated?.transform).toBeUndefined();
+    expect(migrated?.config["subFilter"]).toEqual(filterStep.conditions);
+  });
+
+  it("leaves a dashboard with nothing to split untouched", () => {
+    const input = dashboard([widget("w1", { transform: { steps: [pivotStep] } })]);
+    const result = migrateDashboardTransforms(input);
+
+    expect(result.migrated).toBe(false);
+    expect(result.config).toBe(input);
+  });
+
+  it("is idempotent — a second pass writes nothing", () => {
+    const once = migrateDashboardTransforms(
+      dashboard([widget("w1", { transform: { steps: [filterStep] } })])
+    );
+    const twice = migrateDashboardTransforms(once.config);
+
+    expect(twice.migrated).toBe(false);
+    expect(twice.config).toBe(once.config);
+  });
+
+  it("migrates only the widgets that need it, preserving the rest by identity", () => {
+    const untouched = widget("keep", { transform: { steps: [pivotStep] } });
+    const result = migrateDashboardTransforms(
+      dashboard([widget("move", { transform: { steps: [filterStep] } }), untouched])
+    );
+
+    expect(result.migrated).toBe(true);
+    expect(result.config.widgets[1]).toBe(untouched);
+  });
+});
+
+describe("migrateDashboardTransforms — malformed persisted config (Codex review)", () => {
+  const malformed = (widgets: unknown) =>
+    ({ widgets }) as unknown as Parameters<typeof migrateDashboardTransforms>[0];
+
+  it.each([
+    ["an object", {}],
+    ["a string", "widgets"],
+    ["a number", 7],
+    ["null", null],
+    ["undefined", undefined],
+  ])("returns the config untouched when widgets is %s", (_name, value) => {
+    const input = malformed(value);
+    const result = migrateDashboardTransforms(input);
+
+    expect(result.migrated).toBe(false);
+    expect(result.config).toBe(input);
+  });
+
+  it("does not throw for a config with no widgets key at all", () => {
+    expect(() =>
+      migrateDashboardTransforms({} as unknown as Parameters<typeof migrateDashboardTransforms>[0])
+    ).not.toThrow();
   });
 });

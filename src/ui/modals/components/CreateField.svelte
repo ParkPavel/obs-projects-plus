@@ -45,6 +45,7 @@
   export let availableProjects: ProjectDefinition[] = [];
   /** Identifier of the project the new field belongs to. */
   export let currentProjectId: string = "";
+  export let onSetupRelation: ((field: DataField) => void) | undefined = undefined;
   let inputRef: HTMLInputElement;
 
   export let field: DataField = {
@@ -520,6 +521,13 @@
           />
         </SettingItem>
       {/if}
+      {#if onSetupRelation}
+        <div class="ppp-setup-relation-cta">
+          <button type="button" class="mod-cta" on:click={() => onSetupRelation?.(field)}>
+            {$i18n.t("relation-setup.open", { defaultValue: "Link database…" })}
+          </button>
+        </div>
+      {/if}
     {/if}
     {#if field.type === DataFieldType.Rollup}
       {#if relationFieldsOnThisProject.length === 0}
@@ -638,5 +646,9 @@
     color: var(--text-muted);
     font-size: var(--font-ui-smaller, 0.75rem);
     line-height: 1.4;
+  }
+  .ppp-setup-relation-cta {
+    display: flex;
+    justify-content: flex-end;
   }
 </style>

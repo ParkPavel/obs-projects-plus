@@ -13,6 +13,7 @@
   import type { ViewApi } from "src/lib/viewApi";
   import type { RelationFieldConfig } from "src/settings/base/settings";
   import { parseRelationLinks } from "src/lib/relations/parseRelationLinks";
+  import RelationCountBadge from "./RelationCountBadge.svelte";
 
   export let field: DataField;
   export let value: Optional<DataValue>;
@@ -22,24 +23,23 @@
   const dispatch = createEventDispatcher<{
     commit: Optional<DataValue>;
     cancel: void;
+    setupRelation: void;
   }>();
 
   $: multi = field.repeated === true;
+  $: hasTargetProject = !!((field.typeConfig as { relation?: { targetProjectId?: string } } | undefined)?.relation?.targetProjectId);
 
   let query = "";
   let inputEl: HTMLInputElement | null = null;
   let candidates: string[] = [];
   let loading = true;
+  let resolvedCount = 0;
 
   function baseName(id: string): string {
     return (id.split("/").pop() ?? id).replace(/\.md$/, "");
   }
 
-  function currentLabels(): string[] {
-    return parseRelationLinks(value);
-  }
-
-  let selected = new Set(currentLabels());
+  let selected = new Set(parseRelationLinks(value));
 
   onMount(async () => {
     const rel = (field.typeConfig as { relation?: RelationFieldConfig } | undefined)?.relation;
@@ -57,6 +57,7 @@
     }
     candidates.sort((a, b) => a.localeCompare(b));
     loading = false;
+    resolvedCount = parseRelationLinks(value).filter((label) => candidates.includes(label)).length;
     await tick();
     inputEl?.focus();
   });
@@ -100,13 +101,16 @@
     placeholder={$i18n.t("views.dashboard.table-v2.relation-search", { defaultValue: "Search records…" })}
     on:keydown={handleKeydown}
   />
+  <RelationCountBadge count={resolvedCount} {loading} />
   <div class="ppp-rel-picker-list" role="listbox" aria-multiselectable={multi}>
     {#if loading}
       <span class="ppp-rel-picker-hint">…</span>
     {:else if filtered.length === 0}
-      <span class="ppp-rel-picker-hint">
-        {$i18n.t("views.dashboard.table-v2.relation-empty", { defaultValue: "No records to link" })}
-      </span>
+      {#if !hasTargetProject && candidates.length === 0}
+        <button class="ppp-rel-picker-setup" on:mousedown|preventDefault={() => dispatch("setupRelation")}>{$i18n.t("relation-setup.open", { defaultValue: "Link database…" })}</button>
+      {:else}
+        <span class="ppp-rel-picker-hint">{$i18n.t("views.dashboard.table-v2.relation-empty", { defaultValue: "No records to link" })}</span>
+      {/if}
     {:else}
       {#each filtered as label (label)}
         <button
@@ -194,6 +198,16 @@
     padding: 0.375rem;
     color: var(--text-faint);
     font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-rel-picker-setup {
+    padding: 0.25rem 0.375rem;
+    font-size: var(--font-ui-small);
+    color: var(--interactive-accent);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
   }
 
   .ppp-rel-picker-actions {

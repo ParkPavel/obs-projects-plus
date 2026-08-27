@@ -16,3 +16,18 @@ export function isUnsafePattern(pattern: string): boolean {
 
 /** Maximum input string length for regex operations */
 export const MAX_REGEX_INPUT_LENGTH = 10_000;
+
+/**
+ * Maximum length of a user-supplied pattern.
+ *
+ * A long pattern is not unsafe by itself, but every extra construct multiplies
+ * the backtracking `isUnsafePattern` cannot see — most notably alternation
+ * (`^(a|a)+$` passes the checks above). This bound is the blunt second line of
+ * defence for exactly that.
+ *
+ * Known gap, deliberately left open: alternation inside a quantified group is
+ * not detected. Closing it naively would also reject legitimate patterns like
+ * `(cat|dog)+` that users write in their own formulas, so it needs a real
+ * analyser rather than another regex. It is now a one-file change (#126).
+ */
+export const MAX_REGEX_PATTERN_LENGTH = 200;

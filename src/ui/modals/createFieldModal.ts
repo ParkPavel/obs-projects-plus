@@ -20,7 +20,8 @@ export class CreateFieldModal extends Modal {
     readonly fields: DataField[],
     readonly onCreate: (field: DataField, value: Optional<DataValue>) => void,
     readonly availableProjects: ProjectDefinition[] = [],
-    readonly currentProjectId: string = ""
+    readonly currentProjectId: string = "",
+    readonly onSetupRelation?: (field: DataField) => void
   ) {
     super(app);
   }
@@ -36,6 +37,7 @@ export class CreateFieldModal extends Modal {
         ),
         availableProjects: this.availableProjects,
         currentProjectId: this.currentProjectId,
+        onSetupRelation: this.onSetupRelation,
         onCreate: (field: DataField, value: Optional<DataValue>) => {
           this.onCreate(field, value);
           this.close();

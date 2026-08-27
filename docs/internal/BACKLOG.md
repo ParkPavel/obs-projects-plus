@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-06-18 (epic #077 FormulaConstructor unification → ✅ COMPLETED, отгружен в origin/main `7cc3d66`; baseline 152/2205 → **155 suites / 2232 tests**; px-budget 186 → **177**. Ранее: #080 CLOSED/DECLINED Option B → replaced by #077; #066 RESOLVED Option B defer-to-V3; #096.4 CLOSED `065331e`. W2 prioritized queue exhausted — see «Открытые тикеты» / CONTEXT.md)
+> **Updated**: 2026-08-24 (active milestone **M-FILTER-CONSOLIDATION** on branch `feat/116-filter-order-adr`; #119/#116/#117/#121 ✅ DONE, #118/#120/#122 📋. M-RELATION-FIRST #110–#115 ✅ DONE on `feat/112` pending merge+smoke. Baseline **164 suites / 2313 tests**, tsc 0, `@ts-ignore` 0. Prior W2/W3 queue is historical — superseded by the product reset + this consolidation.)
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 > **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
@@ -29,18 +29,143 @@
 
 ---
 
-## Milestone M-RELATION-FIRST — 🔥 NEXT PRODUCT MILESTONE
+## Milestone M-FILTER-CONSOLIDATION — 🔥 ACTIVE (consolidation before R3/R4)
+
+> Basis: `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md` + design `FILTER_CONSOLIDATION_DESIGN.md`.
+> A user manual-test session surfaced 6 overlapping filter layers + an un-split transform
+> pipeline + dead code — architecture tangled to critical mass. Approved by user 2026-08-22 to
+> run BEFORE relation-first R3/R4. Goal (PRODUCT_RESET §R2): collapse 6 layers into 3 axes
+> (A Scope / B Reactive / C Advanced), one engine, one documented order. Branch:
+> `feat/122-filter-consolidation`. Implementation order: #119 → #116 → #117 → #121 → #118 → #120 → #122.
+
+### #119 — Delete dead src/archive/dashboard-v1
+- Status: ✅ DONE (2026-08-22, commit `2e886a7`)
+- Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- 5401 LOC / 25 prod files + 6 archived test suites, 0 prod imports (R0_4). Baseline 168/2336 → 162/2288.
+
+### #116 — Filter-order ADR + order-invariant test
+- Status: ✅ DONE (2026-08-24, commits `0c70f7a` + `9b1aaad`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: S
+- analysis_required: false | Blocks: #117, #118
+- `docs/internal/FILTER_ORDER_ADR.md` documenting the canonical A→C→B order; a red-first
+  order-invariant test that pins it (`src/__tests__/R_filterOrder.invariant.test.ts`, PASS).
+  Foundation for the rest.
+
+### #117 — Route filter-tabs through the canonical engine
+- Status: ✅ DONE (2026-08-24, commit `a3d9d77`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: XS
+- Depends on: #116
+- Killed the parallel comparator `applyFilterTab`/`dashboardFilters.ts` (`String(raw)===value`);
+  added `deriveTabCondition(field, active)`, dispatched by `DataFieldType`, and delegated to
+  `filterByLinkedSelection` → `matchesCondition`. Condition-parity golden test
+  (`dashboardFilters.test.ts`, 24 cases) covers String/Select/Status/Relation/Number/Boolean/
+  Date/List, including the Relation bare-name-vs-wikilink regression and a Select
+  case-sensitivity guard. `applyFilterTab` public signature unchanged.
+
+### #121 — Unify the two Pipeline config entry points
+- Status: ✅ DONE (2026-08-24, commits `7084897` + `4eb3458`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- Depends on: #116 | `WidgetHost.svelte:183` + `:199` → single entry.
+- Removed the "Expand list" unnest quick-toggle from `DatabaseCallSettings` (Option a).
+  Database-call unnest now goes exclusively through the Σ `PipelineEditor`'s "Array fields
+  detected" banner (`addUnnestForField`). Deleted the 5 unnest-as-block-property tests in
+  `databaseCallSettings.test.ts`, added a no-affordance regression guard there, and added
+  banner coverage (detection, exclusion of already-unnested fields, debounced apply) to
+  `PipelineEditor.mutation.test.ts`. Net test count unchanged (164/2313).
+
+### #118 — Split the transform pipeline (advanced mode) + migration
+- Status: ✅ DONE (2026-08-24, commit `f66a9a6`) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: L
+- analysis_required: true | analysis_done: true (design done) | Depends on: #116, #121
+- Terminal `filter` step → migrates to `subFilter`; terminal `group-by` → view-level group;
+  `pivot/join/unnest/unpivot/aggregate/compute` stay as explicit Advanced mode (closes R2 decl).
+  Union `TransformStepType` NOT trimmed immediately (schema-evolution); idempotent migration, never
+  loses data. **User decision: RESOLVED 2026-08-24** — the user explicitly confirmed the A→C→B order.
+  Pipeline-filter now applies AFTER subFilter (an inversion of previous behavior — data safe,
+  behavior changes).
+- Delivered: `widgetScope.ts` (axis A, pure) applied in `WidgetHost` before `executeTransform`;
+  `DatabaseCallBlock.scopeApplied` stops the double-filter (re-applying after a reshape could drop
+  every row); `migrateTransformToViewLevel` in `legacyMigration.ts` wired at load via
+  `migrateDashboardTransforms` → `dashboardView.onOpen`. Migration lifts a leading `filter` run to
+  `subFilter` and a lone terminal `group-by` to view level; everything unprovable stays in the
+  pipeline. Idempotent. `PipelineEditor` retitled "Advanced transforms" + hint (4 locales).
+- Found while wiring: AND-merges are flattened (a groups-only shape reads as "empty" to UI guards)
+  and `DatabaseCallBlock`'s own guard now counts `groups`, not just `conditions`.
+
+### #120 — Remove retired WidgetTypes + orphaned config panels
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: S
+- Depends on: #118 | 7 retired types (of 16, ~8 live) + `configPanelRegistry.ts:70-186`.
+- **Scope corrected during implementation — the `WidgetType` union was NOT trimmed.** The ticket
+  title asked to remove the retired types, but four of the seven (`comparison`, `timeline`,
+  `yaml-visualizer`, `sub-base-canvas`) have no successor: the documented fate table keeps their
+  stored configs and renders `LegacyWidgetPlaceholder`. Dropping them from the union would leave a
+  stored `data.json` widget unmodellable and unrenderable — data loss, and a direct violation of the
+  schema-evolution rule in CLAUDE.md. They also stay in `WIDGET_REGISTRY`, which supplies the
+  placeholder's label/icon, and are already excluded from creation by the `legacy` palette filter.
+- Delivered: the seven orphaned `configPanelRegistry` entries are gone. They were provably dead —
+  the cog is gated on `WIDGET_PANELS[type]` existing (`WidgetHost.svelte:165`) and no retired type
+  has a panel component, so `hasCog`/`isConfigured`/`initDefaults` were unreachable maintenance
+  weight. `PANELS` is now `Partial<Record<WidgetType, …>>`; `getConfigPanel` stays **total** via a
+  shared `NO_PANEL` fallback, because `WidgetHost` dereferences `.hasCog` unconditionally and an
+  undefined lookup would crash the widget. `configPanelRegistry.ts` 217 → 155 lines.
+
+### #122 — Unified filter mental model (umbrella)
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P1 | Complexity: M
+- Depends on: #116, #117, #118, #120, #121 | Closes the 6→3-axis consolidation.
+- Delivered `docs/internal/FILTER_MODEL.md`: the user-facing counterpart to `FILTER_ORDER_ADR.md`
+  (which states the engine invariant). Names the one question each axis answers, maps every
+  configuration surface to its application point with `file:line`, gives the "what affects what"
+  table that answers "why is this row missing?", explains *why* A precedes C (a reshape step can
+  rename away the fields a scope condition names), lists what sits outside the model (Calendar
+  formula filter, datasource-level filters, cross-project resolution), and states the rule for
+  adding a new filter surface — including the two traps this milestone actually hit: writing a
+  private comparator (#117) and a `conditions.length` emptiness guard that ignores `groups` (#118).
+- Cleared the stale `DataTableContent.svelte` doc-comment: it pointed at `src/archive/dashboard-v1`
+  (deleted in #119) and described F2.4/F2.5 work as still upcoming, though header menu, resize and
+  grouping had all landed. No other source reference to the deleted archive remains.
+
+### #123 — promoteFilterTabToGlobal drops records for non-String filter-tab fields
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P2 | Complexity: XS
+- Found by audit-manager during #117 review (2026-08-24), out of #117's scope (function untouched
+  by that diff). `promoteFilterTabToGlobal` (`src/ui/views/Dashboard/dashboardFilters.ts:66-81`)
+  always emits `{ field, operator: "is", value, enabled: true }` regardless of the field's
+  `DataFieldType`. `"is"` is a `StringFilterOperator` only (`src/settings/base/settings.ts:67,75,
+  83,134`) — not a member of `NumberFilterOperator`/`BooleanFilterOperator`/`DateFilterOperator`/
+  `ListFilterOperator`. Traced through `matchesCondition` (`src/lib/engine/filterEvaluator.ts:
+  130-152,172-175`): for a Number/Boolean/Date/List field, no typed branch fires on operator `"is"`,
+  so it falls through to `console.warn("[FilterEngine] Unhandled filter…")` / `return false` —
+  every record is silently dropped. Confirmed reachable: `FilterTabsConfig.svelte`/
+  `FilterTabsWidget.svelte` place no `DataFieldType` restriction on which field can back a
+  filter-tab, and `DashboardCanvas.svelte:108-111` (`promoteLocalToGlobal`) calls
+  `promoteFilterTabToGlobal` unconditionally. Fix: dispatch by `DataFieldType` the same way
+  `deriveTabCondition` (added in #117, same file) already does — `frame.fields` is already
+  available at the `DashboardCanvas.svelte:110` call site. Needs a regression test for each
+  affected `DataFieldType` (Number/Boolean/Date/List) promoted to global filter.
+
+### #124 — Orphaned unnest-* i18n keys left after #121
+- Status: ✅ DONE (2026-08-25) | Milestone: M-FILTER-CONSOLIDATION | Priority: P3 | Complexity: XS
+- Found by audit-manager during #121 review (2026-08-24). #121 deleted the "Expand list" unnest
+  checkbox markup from `DatabaseCallSettings.svelte` but left the 4 i18n keys it used —
+  `views.dashboard.database-call.settings.unnest-label` / `-field` / `-none` / `-hint` — in all
+  4 locale files (`src/lib/stores/translations/{en,ru,uk,zh-CN}.json`), 16 dead string entries
+  total. Harmless (i18next silently ignores unused keys) but should be cleaned up. Confirmed via
+  grep: no remaining code reference to any of the 4 keys.
+
+---
+
+## Milestone M-RELATION-FIRST — ✅ DONE (pending merge + manual acceptance)
 
 > Product contract: `PRODUCT_RESET_2026-07-18.md` §3–§6. This milestone is a vertical
 > user outcome, not a collection of dashboard controls. It takes precedence over new W2/W3
 > product work. Existing crash/security/regression fixes may continue independently.
+> All tickets #110–#115 ✅ implemented on `feat/112-guided-relation-setup` (pushed); user
+> gates remaining: OBStests visual smoke + merge. Follow-on debt is M-FILTER-CONSOLIDATION above.
 
 ### #110 — Relation-first design brief and baseline audit
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-07-18)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: M
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Blocks: #111, #112, #113, #114
+
+Implementation decision: approved design brief is
+`RELATION_FIRST_DESIGN_BRIEF_110.md` (2026-07-18).
 
 Deliverable: one approved design brief for `Clients → Sessions`: canonical Relation contract,
 entry points, current-state screenshots/steps, data migration, terminology, accessibility and
@@ -48,35 +173,43 @@ end-to-end acceptance. It must explicitly distinguish Relation, `linkedSelection
 correlation; no implementation begins before the distinction is approved.
 
 ### #111 — Canonical Relation contract and compatibility boundary
-- Status: 📋 BACKLOG
+- Status: 🚧 IN-PROGRESS (2026-07-18)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: L
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #110
 - Blocks: #112, #113, #114
 
-One domain contract for WikiLink relations, inverse relations, target resolution, unmatched
+Analysis record: `RELATION_CONTRACT_ANALYSIS_111.md` (2026-07-18). One domain contract for WikiLink relations, inverse relations, target resolution, unmatched
 records and relation metadata. `linkedSelection` may consume this contract but must not become
 an alternate relation model. Include migration/compatibility tests for existing frontmatter.
 
+Progress (verified 2026-08-22): implementation committed `2ed9903` — `src/lib/relations/relationContract.ts`
+delivers resolution (resolved/unmatched/ambiguous), `validateLegacyLinkedSelection` (legacy
+`linkedSelection` consumes the contract, no parallel model), and `adaptRelationFieldConfig` migration.
+Unit tests green (`relationContract.test.ts`). Not merged/pushed. Candidate for DONE review at the merge gate.
+
 ### #112 — Guided Relation setup and record editing flow
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-08-22)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: XL
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #110, #111
 - Blocks: #115
 
-User flow: select field/record → “Link to database” → choose target → preview matches and
-unmatched records → optionally create inverse field → save. The same flow is reachable from
-schema editor, record/cell editing and Dashboard. Keyboard path, empty states and plain-language
-examples are acceptance criteria.
+Architecture: `GUIDED_RELATION_SETUP_ARCHITECTURE_112.md` (2026-07-19). Delivered: pure layer
+(`relationSetup.ts` — validate/preview/summary/config), wizard UI (`RelationSetup.svelte` — full
+i18n 4 locales, displayField picker), modal wrapper (`relationSetupModal.ts`), controller
+(`relationSetupController.ts`). Entry points: schema editor, Configure field form, Create field
+form, empty Relation cell (event chain RelationPickerPopover → EditableCell → TableRow →
+DataTableContent). Controller unit tests (7 tests). All 4 gates PASS: 165 suites / 2305 tests,
+build 0, lint 0, svelte-check 0, px ≤177. Audit: READY FOR PR (no P0/P1 findings).
 
 ### #113 — Related records and rollup starter surface
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-08-22)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: L
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #111
 - Blocks: #115
 
@@ -85,10 +218,10 @@ pipeline. Offer a clear next action to create a linked Database Call or a chart 
 relation; verify reactive Markdown updates.
 
 ### #114 — Relation-aware Dashboard interactions
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-08-22)
 - Milestone: M-RELATION-FIRST | Priority: P1 | Complexity: L
 - analysis_required: true
-- analysis_done: false
+- analysis_done: true
 - Depends on: #111, #112
 - Blocks: #115
 
@@ -97,7 +230,7 @@ exists, distinguish a temporary filter from a persistent relationship. Do not ad
 dashboard-only linking configuration.
 
 ### #115 — Clients → Sessions end-to-end acceptance vault
-- Status: 📋 BACKLOG
+- Status: ✅ DONE (2026-08-22, manual acceptance pending)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: M
 - analysis_required: false
 - Depends on: #112, #113, #114
@@ -1915,3 +2048,315 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
 #064 (Graph View, P3) ──► DEFERRED V3
 #066 (Dashboard as YAML, P2) ──► requires decision session
 ```
+
+### #125 — promoteLocalToGlobal destroys groups, `or` conjunction and disabled conditions
+- Status: ✅ DONE (2026-08-25) | Milestone: (next) | Priority: P1 | Complexity: S
+- Found by audit-manager 2026-08-25. Pre-existing, NOT introduced by #123.
+  `DashboardCanvas.svelte:108-113` overwrites `view.filter` with a flat
+  `{ conjunction: "and", conditions: [...] }`. Three losses in one click on a FilterBridge chip:
+  (a) `view.filter.groups` are erased; (b) an `or` conjunction is forced to `and`, inverting the
+  filter's meaning; (c) `globalFilters` arrives already filtered by `enabled` (`View.svelte:251`),
+  so every disabled condition is dropped from the saved filter. `handleViewFilterChange`
+  (`View.svelte:233-235`) persists it without merging.
+- Fixed by giving the canvas the whole definition instead of the enabled subset: `DataQueryResult`
+  gained an additive optional `filter`, plumbed `View.svelte` → `dashboardView.onData` →
+  `DashboardCanvas.globalFilter`. `promoteFilterTabToGlobal` now takes and returns a
+  `FilterDefinition` and composes through the new shared `lib/engine/filterCompose.ts`, so an `or`
+  filter is nested rather than appended to. Dedup runs against every stored condition, disabled
+  ones included. The public `saveViewFilter` signature is unchanged — its "replace the filter"
+  contract is correct; the bug was that the caller could not see what it was replacing.
+- `andComposeFilters` moved out of `legacyMigration.ts` into `lib/engine/filterCompose.ts` rather
+  than being copied: the #118 migration and this promotion now share one implementation of the
+  or-nesting rule.
+
+### #126 — ReDoS policy duplicated three times
+- Status: ✅ DONE (2026-08-26) | Milestone: (next) | Priority: P2 | Complexity: XS
+- `filterEvaluator.ts:239-253` carries byte-copies of the guard regexes and its own
+  `MAX_REGEX_LENGTH`/`MAX_REGEX_INPUT` instead of using `lib/helpers/regexSafety.ts:7-15`;
+  `extendedEvaluator.ts:712,721` hardcodes `pattern.length > 200` next to an import of
+  `MAX_REGEX_INPUT_LENGTH`. Tightening `isUnsafePattern` would not reach the filter engine.
+- Fixed: `regexSafety.ts` gained `MAX_REGEX_PATTERN_LENGTH`, and all four consumers
+  (`filterEvaluator`, `extendedEvaluator`, `transformExecutor`, and the helper itself) now go
+  through it. The guard regexes exist in exactly one file.
+- The alternation gap (`^(a|a)+$` passes) is left open **deliberately** and documented at the
+  constant: closing it naively would also reject `(cat|dog)+`, which users legitimately write in
+  their own formulas. It needs a real analyser, not another regex — and it is now a one-file change.
+- A test pins the single-implementation property. Note: its first version compared against an
+  unescaped literal, so the three "no copy here" assertions passed against any file at all. The
+  positive assertion caught it. A guard test that cannot fail is worse than none.
+
+### #127 — FieldControl name heuristics: substring match inside the String branch
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: **P3** (downgraded from P2) | Complexity: XS
+- **The original report was wrong and is corrected here.** audit-manager filed this as a direct
+  violation of invariant 1, claiming a Number field named "Estimated time" would get a time input.
+  It would not. Verified by walking the template's block nesting: `{:else if isImageField}` (:237)
+  and `{:else if isTimeField}` (:257) sit at indent 4 **inside**
+  `{:else if field.type === DataFieldType.String}` (:183, indent 2). A Number field reaches its own
+  branch at :286. The heuristics are already gated by `DataFieldType`; dispatch is by type, and the
+  name only refines within the correct type — which is exactly what the sanctioned
+  `isColorFieldName` (UT2026-C) does two lines above, and which the same audit called legitimate.
+- **What is actually true**, and all that is left: within the String branch the match is a
+  substring, so a String field named "Icon type" gets the image control because "icon" appears in
+  it. Cosmetic, same class as the accepted colour heuristic, no cross-type leakage.
+- If it is worth fixing at all, the real mechanism already exists elsewhere: `field.typeConfig`
+  (see `:294`, `field.typeConfig?.time` on Date fields). An explicit `typeConfig.format` for
+  image/time strings would remove the guesswork — but that is schema evolution, needs a migration,
+  and is disproportionate to a cosmetic mismatch.
+- Lesson worth keeping: an audit finding is a lead, not a fact. This one was nearly implemented as
+  filed.
+
+### #128 — R_filterOrder.invariant.test.ts freezes the ADR in its pre-#118 wording
+- Status: ✅ DONE (2026-08-26) | Milestone: (next) | Priority: P2 | Complexity: S
+- The test asserts substrings in a markdown file, not a runtime invariant. It requires
+  `FILTER_ORDER_ADR.md` to keep saying it "does not describe the current runtime wiring" — but
+  #118 landed, so the ADR now cannot be brought in line with the code without breaking the test.
+  `FILTER_MODEL.md` already states the order as fact, contradicting the ADR.
+- Fixed: the ADR gained an "Implementation status" section describing the wired order, the
+  conditional-scope nuance and the #132 gap, and the test now pins two separate things — that the
+  ADR still STATES the contract, and that the code still WIRES it. The wiring assertions target the
+  single line whose change silently undoes #118 (`executeTransform(scope.frame` vs `enrichedFrame`),
+  plus `scopeApplied` and the block's selection-after-transform ordering.
+- Verified the guard can actually fail: reverting the inversion in a scratch edit turned exactly
+  that assertion red, then it was restored. A green guard that has never been shown to redden is
+  not evidence.
+
+### #129 — Dead files with no importers (~1940 LOC)
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P3 | Complexity: S
+- Found by audit-manager 2026-08-25 via a full import scan: `lib/helpers/gestureHandler.ts` (465,
+  superseded by `gestures/GestureCoordinator`), `ConditionalFormatBuilder.svelte` (624),
+  `FieldSettingsPanel.svelte` (374), `FilterPanelVisual.svelte` (341 — another filter surface
+  outside the model), `RecordCardView.svelte` (311), `keyboard/viewShortcuts.ts` (58),
+  `modals/inspector.ts` (35), `Board/settings/settingsModal.ts` (38),
+  `Gallery/settings/settingsModal.ts` (35), `Calendar/agenda/suggestionCollector.ts` (142),
+  `Calendar/components/Calendar/Calendar.svelte` (29), `MonthHeader.svelte` (38). Also
+  `YamlVisualizer.svelte`, retained per `view.ts:18-20` "for the upcoming widget".
+- **Two of the thirteen were kept — the audit checked imports, not plans.** "No importer" answers a
+  different question from "nothing depends on this":
+  - `lib/helpers/gestureHandler.ts` — **#036** (Mobile interaction spec, open) plans to convert it
+    from reference to production (`createTouchDragHandler`, `isCoarsePointer` store).
+  - `RecordCardView.svelte` — **#082** (typed record card, open) names it as the foundation of the
+    design that superseded #011/#012.
+  Both now carry a `RESERVED, NOT DEAD` header so a fourth sweep does not re-file them.
+- **A third near-miss:** the whole `YamlVisualizer/` directory looked deletable, but
+  `RelationListView.svelte` inside it is imported by `GridRelationCell.svelte`. Only
+  `YamlVisualizer.svelte` and its private `types.ts` went; the directory stays.
+- Deleted 12 files. `view.ts`'s retention comment for YamlVisualizer is now stale and should be
+  cleaned when that file is next touched — #011/#012 are SUPERSEDED and #082 explicitly takes the
+  non-widget route.
+
+### #130 — i18n key sets diverge across locales
+- Status: ✅ DONE (2026-08-27) — en/ru aligned; uk/zh-CN deliberately left to fall back | Milestone: (next) | Priority: P3 | Complexity: S
+- `en` 1224 / `ru` 1266 / `uk` 1151 / `zh-CN` 1151. Two different problems were filed as one.
+- **Fixed — `en` was missing 42 keys that `ru` had.** English text was not lost: every call site
+  passes it positionally as `t("key", "English")`, or as `def:` in `VIEW_TYPE_LABELS`. But that put
+  the canonical English in *component code* while `ru.json` held the canonical key set — backwards.
+  All 42 extracted from their call sites into `en.json`; `en` and `ru` now have identical key sets
+  (1266 each, zero divergence either way).
+- **Not fixed, deliberately — `uk`/`zh-CN` lack 115 keys.** The i18n config falls back to `en`
+  (`i18n.ts:104-109`, `default: ["en"]`), so those keys render correct English today. Filling them
+  with machine translation would replace correct English with unreviewed Ukrainian and Chinese —
+  strictly worse for a user of those locales. Proper translation needs a speaker; filed as **#140**.
+- Note on the diff: `en.json` gained 48 lines and lost 2. One deleted line is a trailing-comma
+  change; the other re-writes `⭐` as a literal `⭐`, which is the same JSON. The file's own
+  escaping convention was already inconsistent.
+
+### #131 — Docs drift: CLAUDE.md WidgetType block, table search surface, CHANGELOG
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P3 | Complexity: XS
+- `CLAUDE.md:120-125` listed 12 WidgetTypes; the union has 16. Rewritten to split live from retired
+  and to say *why* the retired seven stay — the union describes the STORED format, so dropping one
+  makes a saved widget unmodellable (#120). Points at `isRetiredLegacyType` as the authority rather
+  than being a list that can drift again. Verified both directions: nothing in the doc that is not
+  in the code, nothing in the code that is not in the doc.
+- `tableCanon.ts` free-text search added to `FILTER_MODEL.md` under "Outside this model", with the
+  point that matters in practice: it is the one row-removing surface the "what affects what" table
+  does not account for, so it is the first thing to check when someone asks why a row is missing.
+- `CHANGELOG.md` gained the #118 behavior-change notice under Unreleased → Changed: filtering order
+  inverted, stored data unaffected, migration described, docs linked.
+- **Noted, not changed:** the CHANGELOG's `Test gate: 102 suites / 1650 tests` line is a fifth
+  generation of stale baseline, but a changelog recording the gate at a point in time is history
+  rather than drift. R0.7 deliberately does not scan it.
+
+### #132 — linked-source database-call skips the transform pipeline entirely
+- Status: 📋 BACKLOG (Gate 0 done — plan refuted, redesign needed) | Milestone: (next) | Priority: P1 | Complexity: L
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
+- Found by Codex cross-model review 2026-08-25. `WidgetHost.svelte:86` —
+  `dbCallFrame = sourceConfig?.projectId ? rightFrames.get(...) ?? frame : transformedFrame`.
+  A `database-call` widget with its own `sourceConfig.projectId` therefore renders the external
+  frame with axis A and B applied but **axis C never runs**: `unnest`/`compute`/`filter` steps are
+  silently inert, while the pipeline button stays available and the editor accepts steps. Predates
+  #118 (`#092` bypassed pipeline counters for this path) but now directly contradicts
+  `FILTER_ORDER_ADR.md` and the description of database-call as a self-contained query→display
+  pipeline. Decide: run the pipeline on the external frame, or hide the pipeline entry for
+  linked-source blocks. Silently accepting steps that never execute is the one option to rule out.
+- **Gate 0, 2026-08-27 — the proposed fix was refuted before implementation.** Plan was Option A
+  (run the pipeline on the external frame). Codex challenged the brief's equivalence claims:
+  - *Claim "the axes depend only on the frame's fields, not its origin"* — **REFUTED**, and by our
+    own code: `applyWidgetScope` moves axis A ahead of C only when every field the conditions name
+    exists on that frame (`widgetScope.ts`). That conditional is precisely why two different
+    sources are not interchangeable. The fix from the previous round is the counter-evidence to
+    the new claim.
+  - *Claim "an empty pipeline makes A a no-op"* — **partially true**; necessary, not sufficient.
+    Axis A currently runs inside `DatabaseCallBlock` for this path, so moving it to the host is
+    equivalent only if the host reproduces `applyWidgetScope` semantics including
+    `scopeApplied=false`.
+  - *Claim "no config combines linked-source with pipeline steps"* — **confirmed for the tracked
+    repo** by full static search, and explicitly proves nothing about user vaults. Unconditional A
+    would retroactively activate stored steps for an unknown number of users: the exact silent
+    behavior change this milestone spent seven tickets removing.
+- **Revised approach — versioned opt-in, not automatic migration.** A persisted marker
+  (`transformExecution: "linked-source-v1"`); legacy `projectId + steps` without the marker keeps
+  today's rendering, shows the stored steps as inert with an explicit "enable pipeline for the
+  external source" action; only that action writes the marker. New linked-source blocks get it on
+  first pipeline save. This is schema evolution — needs a migration and `configProvenance` no-op
+  coverage — so complexity rises from M to **L**, and it needs its own design brief.
+- Also required for any version of the fix: `PipelineEditor` must receive the resolved external
+  frame, and `scopeApplied` must come from that frame's scope rather than `!dbCallUsesLinkedSource`.
+
+### #133 — pipeline `group-by` and view-level `groupBy` are different operations with the same name
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- `executeGroupBy` (`transformExecutor.ts:682`) collapses the frame to one record per group and
+  adds `_group_size` — an aggregation. `DataTableConfig.groupBy` sections the original records and
+  changes no row count — presentation. The names invite exactly the mistake #118 made: its
+  migration moved one into the other, turning two aggregated rows into three rows in two sections
+  and persisting that on open. Removed in the same milestone once Codex identified it.
+- Two things worth doing: rename one of them so the distinction is visible at the call site, and
+  consider offering a real presentation-only "group rows" operation so the pipeline `group-by` is
+  not what users reach for when they want sections.
+
+### #134 — Rebuild the demo project as an investor-grade product tour
+- Status: 📋 BACKLOG | Milestone: (after the current cycle) | Priority: P1 | Complexity: XL
+- Requested 2026-08-26. The demo project auto-created on first open must become a **complete,
+  presentable tour of the product** — something an investor or a first-time user can open and see
+  what the plugin actually does, covering the whole feature surface rather than a slice of it.
+- **Where it lives:** `src/ui/app/onboarding/demoProject.ts` (641 LOC). This is generated in CODE
+  at onboarding time. It is NOT the user's `OBStests/Projects Plus - Демо/` vault folder — edits
+  belong in the generator, never in a stored `data.json`.
+- **Current coverage is narrow.** Four entities (Clients / Projects / Tasks / Meetings) and only
+  three widget types out of the sixteen in the union: `chart`, `stats`, `database-call`. Nothing
+  exercises relations end-to-end, rollups, the formula stack (115+ functions), filter-tabs, the
+  advanced transform pipeline, Board/Calendar/Gallery views, conditional formatting, grouping, or
+  the cover banner. A tour that shows a fifth of the product undersells it.
+- **Requirements to design against:**
+  - Every shipped capability appears at least once, in a place where it reads as useful rather
+    than as a demo of itself.
+  - The narrative works top to bottom: someone opening it for the first time should understand
+    the product without a guide.
+  - It must survive the invariants the rest of the codebase is held to — in particular the
+    schema-evolution rule: the generator emits the CURRENT schema and its output must pass
+    migrations as a no-op (`configProvenance.test.ts`).
+  - It must not depend on the network. 14 cover images are currently fetched from Unsplash by URL;
+    an investor demo that renders broken images offline is worse than one with no images.
+- **Blocked on:** the current cycle finishing, so the feature surface it advertises is the one that
+  actually exists (the A→C→B order, the filter model, the relation contract).
+- Needs a design brief with equivalence claims and Gate 0 before implementation — XL, user-facing,
+  and it generates stored data.
+
+### #135 — External review of the codebase
+- Status: 📋 BACKLOG | Milestone: (after the current cycle) | Priority: P2 | Complexity: M
+- Requested 2026-08-26. Bring in review from outside the two-model loop.
+- Rationale: Claude and Codex now cross-check each other (`TWO_MODEL_PROTOCOL.md`), and that
+  already caught defects four green gates and two in-house audits had missed. But both are models
+  reading the same repository under similar framings. An outside reviewer — human, or a different
+  toolchain — sees a third class of problem: whether the product makes sense at all, whether the
+  architecture would be legible to a new maintainer, whether the invariants are the right ones.
+- Scope to decide when it is scheduled: whole codebase, or the engine layer plus the public
+  surfaces (`customViewApi.ts`, settings schema, plugin manifest).
+- Sequencing note: worth doing before #134 ships publicly, since a demo aimed at investors makes
+  the codebase's public surfaces visible in a way they are not today.
+
+### #136 — linked-source block silently renders the WRONG project's records
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: **P1** | Complexity: M
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
+- Found by Codex during Gate 0 on #132, 2026-08-27. `WidgetHost.svelte:86`:
+  `rightFrames.get(projectId) ?? frame` — when the external frame has not resolved (still loading,
+  project renamed, deleted, permission), the block falls back to the **parent project's frame** and
+  renders it with no indication. The user sees plausible records from a different project and has
+  no way to tell.
+- A fallback is not a loading state. This needs an explicit loading/error state, or a strictly
+  defined and tested fallback semantic — not a silent substitution.
+- Compounds #132: if the pipeline is ever enabled for this path, it would also run the transform
+  over the foreign data.
+
+### #137 — PipelineEditor is configured against the parent frame, not the block's own source
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P2 | Complexity: M
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
+- Found by Codex during Gate 0 on #132. `WidgetHost.svelte:200-201` passes `fields={frame.fields}`
+  and `source={frame}` unconditionally. For a `database-call` with its own `sourceConfig.projectId`
+  the editor therefore offers the **parent project's** fields and sample data — a user can build a
+  step referencing a field that does not exist in the source the block actually reads.
+- Separately, the editor's live counters run steps without `rightFrames`
+  (`PipelineEditor.svelte:62,69`), so a `join` preview does not match runtime even today.
+- Blocks #132: enabling axis C on this path while the editor lies about the fields would let users
+  build pipelines that cannot work.
+- **Fixed.** The host derives `pipelineSource` — the external frame for a linked block, otherwise
+  `scope.frame`, which is what `executeTransform` actually receives — and hands it to the editor as
+  both `fields` and `source`. The editor also receives `rightFrames`, so a `join` step's live
+  counter executes the same way the runtime does; without it the preview resolved no right frame
+  and quietly reported different numbers than the widget behind the popup.
+- When the source is not ready there is no schema to configure against, so the editor says so
+  instead of falling back to the parent's fields.
+- Two pure narrowing helpers (`asChartConfig`, `asStatsConfig`) moved out of `WidgetHost` into
+  `linkedSourceState.ts` to make room inside the 240-line budget. The budget was not raised.
+
+### #138 — external frames never get backlink enrichment
+- Status: ✅ DONE (2026-08-27) | Milestone: (next) | Priority: P2 | Complexity: M
+- **Design:** `docs/internal/LINKED_SOURCE_DESIGN.md` — one decision for all four, grounded in
+  `specs/NOTION_DM_RESEARCH.md`. Order: #138 → #136 → #137 → #132.
+- Found by Codex during Gate 0 on #132. Two paths, both missing it:
+  - Fallback path: `WidgetHost.svelte:86` selects the raw `frame`, not `enrichedFrame`, so
+    `enrichWithBacklinks` (`relationResolver.ts:191,227` — adds the derived `*_backlinks` field) is
+    skipped.
+  - Normal external path: the preloader stores what `api.resolveExternalFrame` returns
+    (`DashboardCanvas.svelte:102-104`), and the resolver returns a raw `queryAll()`
+    (`externalFrameResolver.ts:52,60`). `View.svelte:141` enriches the parent's cross-project
+    relations, but that is `enrichFrameWithAllRelations` producing `__resolved__…` — a different
+    mechanism, not backlinks.
+- Consequence: a relation-driven view over an external source is missing derived backlink fields
+  that the same view would have over the parent project.
+- **Fixed at `externalFrameResolver`**, not the canvas preloader or the host: `App` already caches
+  the resolver's promise per project id, so enrichment costs once per source rather than once per
+  canvas or once per widget.
+- **Collision guard added to `enrichWithBacklinks` — a separate data-safety fix.** The function
+  appended `<relation>_backlinks` without checking and clobbered any same-named stored value through
+  the `...extraValues` spread. A vault is free to have a real frontmatter property with that name,
+  and it was being destroyed. Colliding relations are now skipped with a warning; the rest still
+  enrich. Flagged by Codex at Gate 0 as claim 3, which said enrichment was additive — it was not.
+- **`join` output schema widens, deliberately.** `join` copies every right-frame field except the
+  key into its output, so enriching right frames adds the derived backlink fields there too.
+  Recorded with a regression test rather than left to be discovered.
+
+### #139 — external-source block writes to the PARENT project
+- Status: ✅ DONE (2026-08-27) — read-only guard shipped; source-specific write API still open | Milestone: (next) | Priority: **P1** | Complexity: M
+- Found by Codex at Gate 0 on the linked-source brief, 2026-08-27. Verified against the code.
+- A `database-call` block with its own `sourceConfig.projectId` reads the external project but
+  receives the **parent** dashboard's `api` and `project` (`widgetComponentRegistry.ts:145`).
+  Consequences: "Add first record" on an empty external source creates the note in the parent
+  project (`DatabaseCallBlock.svelte:196`), and row edits go through the parent's api
+  (`DataTableContent.svelte:126`).
+- Worse than the display defects #136-#138 because it **writes**. A user looking at project B's
+  records adds a record and it lands in project A, with no indication.
+- **Guard shipped 2026-08-27.** New `sourceReadOnly` prop on `DatabaseCallBlock`, fed from
+  `dbCallUsesLinkedSource` through the registry. Record creation is gated on it, and all three view
+  components (`DataTableContent`, `BoardView`, `CalendarView`) receive `readonly || sourceReadOnly`
+  so row edits are disabled.
+- **Deliberately NOT reusing the dashboard-level `readonly` flag.** That one also gates CONFIG
+  edits — adding a view tab, editing the block filter — and those legitimately belong to the parent
+  dashboard, which is where they are stored. Forcing `readonly` on would have broken configuring a
+  linked block to fix a data problem that has nothing to do with configuration.
+- Still open: a source-specific write API, so an external block can write where it reads instead of
+  being read-only. Tracked in `LINKED_SOURCE_DESIGN.md` under what the brief does not decide.
+- Design: `docs/internal/LINKED_SOURCE_DESIGN.md` (revision 2).
+
+### #140 — uk / zh-CN locales lack 115 keys
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: S
+- Split out of #130 on 2026-08-27. `uk` and `zh-CN` hold 1151 keys against `en`'s 1266.
+- **Not a functional defect.** `i18n.ts:104-109` sets `default: ["en"]`, so a missing key renders
+  correct English rather than a raw key.
+- **Deliberately not machine-translated.** Replacing correct English with unreviewed Ukrainian or
+  Chinese is worse for a speaker of those languages than the fallback is. This needs a translator,
+  not a sweep — which is why it is a separate ticket rather than a loose end in #130.
+- The missing sets are dominated by `native-query.*`, `create-demo-project.*`, and the 42
+  `table-v2.*` / `database-call.*` keys that #130 added to `en`.

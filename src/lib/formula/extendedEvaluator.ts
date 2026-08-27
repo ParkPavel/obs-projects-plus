@@ -5,7 +5,7 @@
 import type { DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import { type FormulaNode, parseFormula, tokenize } from "src/lib/helpers/formulaParser";
-import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH } from "src/lib/helpers/regexSafety";
+import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import dayjs from "dayjs";
 
@@ -709,7 +709,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   REGEX_MATCH: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
     const pattern = String(evaluate(args[1] as FormulaNode) ?? "");
-    if (!pattern || pattern.length > 200 || isUnsafePattern(pattern)) return false;
+    if (!pattern || pattern.length > MAX_REGEX_PATTERN_LENGTH || isUnsafePattern(pattern)) return false;
     if (str.length > MAX_REGEX_INPUT_LENGTH) return false;
     try { return new RegExp(pattern).test(str); } catch { return false; }
   },
@@ -718,7 +718,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
     const pattern = String(evaluate(args[1] as FormulaNode) ?? "");
     const replacement = String(evaluate(args[2] as FormulaNode) ?? "");
-    if (!pattern || pattern.length > 200 || isUnsafePattern(pattern)) return str;
+    if (!pattern || pattern.length > MAX_REGEX_PATTERN_LENGTH || isUnsafePattern(pattern)) return str;
     if (str.length > MAX_REGEX_INPUT_LENGTH) return str;
     try { return str.replace(new RegExp(pattern, "g"), replacement); } catch { return str; }
   },

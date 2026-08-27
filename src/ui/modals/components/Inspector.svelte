@@ -75,7 +75,7 @@
 
 <style>
   pre {
-    overflow: scroll;
+    overflow: auto;
   }
   span {
     display: flex;

@@ -49,10 +49,28 @@ lint_output*.txt
 # Recovery bundles
 *.bundle
 
-# Claude Code config: agents/commands/hooks/settings.json are committed (team-shared).
-# Only local overrides are excluded.
-.claude/settings.local.json
+# AI agent configuration is NOT public (policy change 2026-08-25).
+#
+# This repository is public. Agent definitions, prompts, hooks and the project
+# instruction files describe how the work is actually done and are not intended
+# for outside review, so they live on the maintainer's machine and are excluded
+# here. They were tracked before this date and remain in git history; this rule
+# stops anything further being published, it does not retroactively unpublish.
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# The Copilot agent system was archived out of the repo entirely on 2026-08-25
+# (see ../.ai_internal/archive/copilot-2026-08-25/). Guard against it returning.
+.github/agents/
+.github/instructions/
+.github/prompts/
+.github/hooks/
+.github/COPILOT_SETUP.md
+
+# Still tracked on purpose: docs/internal/ is engineering documentation —
+# BACKLOG, CONTEXT, ADRs, design briefs — not agent configuration, and
+# docs/internal/CONTEXT.md is the canonical baseline the test ratchet reads.
 
 # .vscode/mcp.json contains personal absolute paths and env-var refs — local only.
 # .vscode itself is already gitignored above; no extra rule needed here.
-# Copilot agents/hooks/instructions/prompts in .github/ ARE committed (team-shared).

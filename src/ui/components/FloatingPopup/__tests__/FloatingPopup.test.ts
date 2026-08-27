@@ -63,9 +63,9 @@ function createTrigger(rect: Partial<DOMRect>): HTMLElement {
   return btn;
 }
 
-function stubPopupRect(target: HTMLElement, width = 200, height = 100) {
-  // The .ppp-popup--floating div is the popup. Stub its rect.
-  const popup = target.querySelector(".ppp-popup--floating") as HTMLElement | null;
+function stubPopupRect(width = 200, height = 100) {
+  // The desktop popup is portaled to <body> (#112 F2), so query the document.
+  const popup = document.querySelector(".ppp-popup--floating") as HTMLElement | null;
   if (!popup) return null;
   popup.getBoundingClientRect = () =>
     ({
@@ -95,7 +95,7 @@ describe("FloatingPopup", () => {
     const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
     const view = mount({ open: false, triggerEl: trigger, ariaLabel: "test" });
 
-    expect(view.target.querySelector(".ppp-popup--floating")).toBeNull();
+    expect(document.querySelector(".ppp-popup--floating")).toBeNull();
     view.destroy();
   });
 
@@ -110,7 +110,7 @@ describe("FloatingPopup", () => {
 
     await flush(10);
 
-    const popup = view.target.querySelector(".ppp-popup--floating");
+    const popup = document.querySelector(".ppp-popup--floating");
     expect(popup).not.toBeNull();
     expect(popup?.getAttribute("role")).toBe("menu");
     expect(popup?.getAttribute("aria-label")).toBe("Test menu");
@@ -123,12 +123,12 @@ describe("FloatingPopup", () => {
     const view = mount({ open: true, triggerEl: trigger, placement: "bottom-start" });
 
     await flush(10);
-    stubPopupRect(view.target, 160, 80);
+    stubPopupRect(160, 80);
     // Force one recompute by toggling open via prop assignment (Svelte 3 reactivity).
     view.component.$set({ placement: "bottom-start" });
     await flush(20);
 
-    const popup = view.target.querySelector(".ppp-popup--floating") as HTMLElement;
+    const popup = document.querySelector(".ppp-popup--floating") as HTMLElement;
     const styleAttr = popup?.getAttribute("style") ?? "";
     // top should be near trigger.bottom (120) + offset (~4px at 16px root font).
     expect(styleAttr).toMatch(/top:\s*\d+px/);
@@ -146,11 +146,11 @@ describe("FloatingPopup", () => {
 
     await flush(10);
     // vw = 1024, margin ≈ 8px → available ≈ 1008px. Popup wants 1200px.
-    stubPopupRect(view.target, 1200, 200);
+    stubPopupRect(1200, 200);
     view.component.$set({ placement: "bottom-start" });
     await flush(20);
 
-    const popup = view.target.querySelector(".ppp-popup--floating") as HTMLElement;
+    const popup = document.querySelector(".ppp-popup--floating") as HTMLElement;
     const styleAttr = popup?.getAttribute("style") ?? "";
 
     const leftMatch = styleAttr.match(/left:\s*([\d.]+)px/);
@@ -173,7 +173,7 @@ describe("FloatingPopup", () => {
     const view = mount({ open: true, triggerEl: trigger, placement: "bottom-start" });
 
     await flush(10);
-    const popup = stubPopupRect(view.target, 160, 80) as HTMLElement;
+    const popup = stubPopupRect(160, 80) as HTMLElement;
     const spy = jest.spyOn(popup, "getBoundingClientRect");
 
     window.dispatchEvent(new Event("resize"));
@@ -203,7 +203,7 @@ describe("FloatingPopup", () => {
     view.component.$on("close", onClose);
 
     await flush(10);
-    expect(view.target.querySelector(".ppp-popup--floating")).not.toBeNull();
+    expect(document.querySelector(".ppp-popup--floating")).not.toBeNull();
 
     const evt = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
     document.dispatchEvent(evt);
@@ -249,7 +249,7 @@ describe("FloatingPopup", () => {
     view.component.$on("close", onClose);
 
     await flush(10);
-    const popup = view.target.querySelector(".ppp-popup--floating") as HTMLElement;
+    const popup = document.querySelector(".ppp-popup--floating") as HTMLElement;
     expect(popup).not.toBeNull();
 
     popup.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -268,7 +268,7 @@ describe("FloatingPopup", () => {
 
     expect(view.target.querySelector(".ppp-popup-backdrop")).not.toBeNull();
     expect(view.target.querySelector(".ppp-popup--bottom-sheet")).not.toBeNull();
-    expect(view.target.querySelector(".ppp-popup--floating")).toBeNull();
+    expect(document.querySelector(".ppp-popup--floating")).toBeNull();
 
     view.destroy();
     isMobile.set(false);

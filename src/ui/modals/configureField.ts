@@ -26,7 +26,8 @@ export class ConfigureFieldModal extends Modal {
      * Identifier of the project the edited field belongs to. Used to
      * filter the project's own id out of Relation target candidates.
      */
-    readonly currentProjectId: string = ""
+    readonly currentProjectId: string = "",
+    readonly onSetupRelation?: (field: DataField) => void
   ) {
     super(app);
   }
@@ -41,6 +42,7 @@ export class ConfigureFieldModal extends Modal {
         editable: this.editable,
         availableProjects: this.availableProjects,
         currentProjectId: this.currentProjectId,
+        onSetupRelation: this.onSetupRelation,
         onSave: (field: DataField) => {
           this.onSave(field);
           this.close();

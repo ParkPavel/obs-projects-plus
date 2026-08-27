@@ -25,6 +25,7 @@ export class SchemaModal extends Modal {
     readonly availableProjects: ProjectDefinition[],
     readonly currentProjectId: string,
     readonly onConfigure: (field: DataField) => void,
+    readonly onSetupRelation: (field: DataField) => void,
     readonly onAdd: () => void,
     readonly onDelete: (field: DataField) => void
   ) {
@@ -42,6 +43,7 @@ export class SchemaModal extends Modal {
         onConfigure: (field: DataField) => {
           this.onConfigure(field);
         },
+        onSetupRelation: (field: DataField) => this.onSetupRelation(field),
         onAdd: () => {
           this.onAdd();
         },

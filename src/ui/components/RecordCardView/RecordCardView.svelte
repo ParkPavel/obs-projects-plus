@@ -1,3 +1,11 @@
+<!--
+  RESERVED, NOT DEAD — do not delete on an "unused imports" sweep.
+
+  Nothing imports this yet by design. #082 (typed record card, open) names
+  RecordCardView/SlideInPanel as the foundation for the typed-card design that
+  superseded #011/#012. A 2026-08-25 audit listed it as dead on import count
+  alone; import count is not the same question as whether anything is planned.
+-->
 <script lang="ts">
   /**
    * NPLAN-V7.3 — RecordCardView (full implementation)

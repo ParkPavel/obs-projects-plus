@@ -35,13 +35,15 @@
   import {
     SELECTION_CONTEXT_KEY,
     EMPTY_SELECTION,
-    composeLinkedSelectionFilter,
+    composeEffectiveFilter,
     type SelectionStore,
   } from "../../canvasSelectionStore";
   import { applyFilter } from "src/lib/engine/filterEvaluator";
   import { filterByLinkedSelection } from "./relationFilterAdapter";
   import type { FilterDefinition } from "src/settings/base/settings";
+  import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
   import BlockFilterBar from "./BlockFilterBar.svelte";
+  import type { BlockSource } from "../linkedSourceState";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { createDataRecord } from "src/lib/dataApi";
@@ -58,6 +60,8 @@
   export let config: Record<string, unknown>;
   /** Canvas Selection Bus: drives auto-filter when a master block has a selection. */
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
+  /** #114 (E1/E4): runtime validation result from WidgetHost — drives label rendering. */
+  export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
   /**
    * Widget identity from the enclosing WidgetDefinition. Required for
    * DataProvider registration so this Database Window can be referenced
@@ -68,6 +72,31 @@
   /** #092: pipeline reach so the block can offer recovery when steps hid every row. */
   export let pipelineStepCount: number = 0;
   export let pipelineInputRowCount: number = 0;
+  /**
+   * #118: the host already applied `config.subFilter` upstream of the transform
+   * pipeline (canonical order A→C→B). The block still owns the filter UI, it
+   * just must not filter the frame a second time.
+   */
+  export let scopeApplied: boolean = false;
+  /**
+   * #139: this block reads a source it cannot safely write to.
+   *
+   * A linked-source block renders another project's records but is handed the
+   * PARENT dashboard's `api` and `project`, so creating a record lands it in the
+   * wrong project and row edits go through the wrong api. Until a
+   * source-specific write API exists, data writes are disabled here.
+   *
+   * Config writes are NOT affected: a view tab or a block filter belongs to the
+   * widget in the parent dashboard, which is exactly where they are stored.
+   */
+  export let sourceReadOnly: boolean = false;
+  /**
+   * #136: what this block is actually reading. When the source is not `ready`
+   * the block renders a state instead of records — it used to render the parent
+   * project's records instead, which is data from somewhere the user did not ask
+   * for, presented as if it were theirs.
+   */
+  export let sourceState: BlockSource = { kind: "parent", frame: { fields: [], records: [] } as unknown as DataFrame };
 
   const dispatch = createEventDispatcher<{
     configChange: Record<string, unknown>;
@@ -83,16 +112,40 @@
   const _ctx = getContext<SelectionStore | undefined>(SELECTION_CONTEXT_KEY);
   const canvasStore = _ctx ?? writable(EMPTY_SELECTION);
 
-  $: autoFilter = composeLinkedSelectionFilter({
+  // #114 (E7): composeEffectiveFilter consolidates linked + canvas selection.
+  // When linkedSelection is configured and valid, it maps the selection through
+  // the relationField. When validation fails, falls back to canvas condition.
+  $: effectiveConditions = composeEffectiveFilter({
+    userFilters: [],
+    selection: $canvasStore,
+    myWidgetId: widgetId,
     linkedSelection,
-    canvasSelection: $canvasStore,
+    validationResult: linkedSelectionValidation,
   });
+  $: autoFilter = effectiveConditions.length > 0 ? effectiveConditions[0] : null;
+
+  // #114 (E4): three-state label derived from validation + canvas activity.
+  $: filterLabel = (() => {
+    if (linkedSelection && linkedSelectionValidation === "valid") return "relation" as const;
+    if (linkedSelection && linkedSelectionValidation !== undefined && linkedSelectionValidation !== "valid") return "broken" as const;
+    if ($canvasStore.source !== null && $canvasStore.values.length > 0) return "canvas" as const;
+    return null;
+  })();
 
   // #099.1 — block-level filter (WidgetDataContext.subFilter, SPEC §3.4):
   // applied through the canonical filterEvaluator BEFORE the linked-selection
   // auto-filter, instantly on every pill/builder change.
+  //
+  // #118 (ADR A→C→B): when the host already narrowed the frame by this same
+  // subFilter ahead of the transform pipeline, `scopeApplied` is set and
+  // re-applying here is skipped — a reshape step may have renamed or dropped
+  // the fields the conditions name, which would drop every row.
   $: subFilter = config["subFilter"] as FilterDefinition | undefined;
-  $: subFiltered = subFilter && subFilter.conditions.length > 0 ? applyFilter(frame, subFilter) : frame;
+  $: hasSubFilter =
+    !!subFilter &&
+    ((subFilter.conditions?.length ?? 0) > 0 || (subFilter.groups?.length ?? 0) > 0);
+  $: subFiltered =
+    hasSubFilter && !scopeApplied ? applyFilter(frame, subFilter as FilterDefinition) : frame;
 
   $: effectiveFrame = autoFilter
     ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
@@ -277,7 +330,38 @@
 </script>
 
 <div class="ppp-database-call-block">
-  {#if tabs.length === 0}
+  <!--
+    #136: an external source that is not ready gets a state, never a substitute.
+    This branch comes FIRST, ahead of the tabs check: a block whose source is
+    gone should say so rather than offering to configure views over nothing.
+  -->
+  {#if sourceState.kind === "loading"}
+    <EmptyState
+      icon="loader"
+      title={$i18n.t("views.dashboard.database-call.source-loading", {
+        defaultValue: "Loading the linked project…"
+      })}
+    />
+  {:else if sourceState.kind === "unavailable"}
+    <EmptyState
+      icon="unlink"
+      title={$i18n.t("views.dashboard.database-call.source-unavailable", {
+        defaultValue: "Linked project unavailable"
+      })}
+      hint={$i18n.t("views.dashboard.database-call.source-unavailable-hint", {
+        defaultValue: "The project this block reads was not found: {{id}}",
+        id: sourceState.projectId
+      })}
+    />
+  {:else if sourceState.kind === "error"}
+    <EmptyState
+      icon="alert-triangle"
+      title={$i18n.t("views.dashboard.database-call.source-error", {
+        defaultValue: "Could not load the linked project"
+      })}
+      hint={sourceState.message}
+    />
+  {:else if tabs.length === 0}
     <EmptyState
       icon="database"
       title={$i18n.t("views.dashboard.database-call.empty", {
@@ -311,6 +395,22 @@
       {readonly}
       on:change={handleSubFilterChange}
     />
+    {#if filterLabel === "relation"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Filtered by relation">
+        {$i18n.t("views.dashboard.database-call.filter-label.relation", { defaultValue: "Filtered by relation" })}
+      </span>
+    {:else if filterLabel === "canvas"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label="Filtered by canvas selection">
+        {$i18n.t("views.dashboard.database-call.filter-label.canvas", { defaultValue: "Filtered by canvas selection" })}
+      </span>
+    {:else if filterLabel === "broken"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation broken">
+        {$i18n.t("views.dashboard.database-call.filter-label.broken", {
+          defaultValue: "Relation broken: {{reason}}",
+          reason: linkedSelectionValidation ?? "",
+        })}
+      </span>
+    {/if}
     <div
       class="ppp-database-call-content"
       role="tabpanel"
@@ -365,7 +465,7 @@
               })}
             >
               <svelte:fragment slot="actions">
-                {#if !readonly && project}
+                {#if !readonly && !sourceReadOnly && project}
                   <button on:click={handleAddFirstRecord}>
                     {$i18n.t("views.dashboard.database-call.add-first-record", {
                       defaultValue: "Add first record"
@@ -378,7 +478,7 @@
             <DataTableContent
               frame={effectiveFrame}
               {api}
-              {readonly}
+              readonly={readonly || sourceReadOnly}
               {getRecordColor}
               {fields}
               config={activeTabTableConfig}
@@ -395,7 +495,7 @@
             {project}
             frame={effectiveFrame}
             {api}
-            {readonly}
+            readonly={readonly || sourceReadOnly}
             {getRecordColor}
             {sortRecords}
             {getRecord}
@@ -409,7 +509,7 @@
             {project}
             frame={effectiveFrame}
             {api}
-            {readonly}
+            readonly={readonly || sourceReadOnly}
             {getRecordColor}
             config={calendarConfig}
             onConfigChange={handleCalendarConfigChange}
@@ -460,5 +560,28 @@
     font-style: italic;
     font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-dbc-filter-label {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    font-size: var(--font-ui-smaller);
+    border-radius: var(--radius-s, 0.25rem);
+    line-height: 1.4;
+  }
+
+  .ppp-dbc-filter-label--relation {
+    color: var(--color-green, var(--text-success));
+    background: color-mix(in srgb, var(--color-green, var(--text-success)) 12%, var(--background-secondary));
+  }
+
+  .ppp-dbc-filter-label--canvas {
+    color: var(--interactive-accent);
+    background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary));
+  }
+
+  .ppp-dbc-filter-label--broken {
+    color: var(--text-warning, var(--text-muted));
+    background: color-mix(in srgb, var(--text-warning, orange) 12%, var(--background-secondary));
   }
 </style>

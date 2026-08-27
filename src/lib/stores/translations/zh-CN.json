@@ -872,7 +872,8 @@
                     "scope": "此区块 — 其所有视图"
                 },
                 "pipeline": {
-                    "title": "数据管道",
+                    "title": "高级转换",
+                    "advanced-hint": "普通的筛选和分组现在位于视图本身——这些步骤用于重塑数据。",
                     "steps": "个步骤",
                     "clear": "清空",
                     "empty": {
@@ -939,10 +940,6 @@
                     "open-pipeline": "打开管道",
                     "clear-pipeline": "清空管道",
                     "settings": {
-                        "unnest-label": "展开列表",
-                        "unnest-field": "列表字段",
-                        "unnest-none": "无",
-                        "unnest-hint": "将列表字段拆分为每项一行。",
                         "source": "数据来源",
                         "source-inherit": "本视图数据（默认）",
                         "source-hint": "默认情况下，块显示本视图的记录。选择其他项目以显示其数据。",
@@ -1631,6 +1628,30 @@
             "apply": "应用",
             "field-placeholder": "字段",
             "add-criterion": "添加条件"
+        },
+        "relation-setup": {
+            "open": "关联数据库…",
+            "saved": "关联已保存。",
+            "target-unavailable": "无法加载所选数据库。",
+            "title": "关联属性到数据库",
+            "description": "值保持为 Markdown 中的 WikiLinks。预览不做任何更改。",
+            "property-label": "属性",
+            "database-label": "数据库",
+            "database-placeholder": "选择数据库…",
+            "display-field-label": "显示字段",
+            "display-field-placeholder": "例如 title",
+            "inverse-enable-label": "在 Schema 中创建反向属性",
+            "inverse-field-label": "反向属性名称",
+            "inverse-warning": "反向属性仅在保存后声明。现有笔记不会被改写。",
+            "preview-resolved": "已匹配：{{count}}",
+            "preview-unmatched": "未找到：{{count}}",
+            "preview-ambiguous": "模糊匹配：{{count}}",
+            "cancel": "取消",
+            "save": "保存关联"
+        },
+        "relation-count": {
+            "linked": "已关联 {{count}} 条",
+            "empty": "暂无关联记录"
         }
     }
 }
