@@ -1,6 +1,6 @@
 # Current project context
 
-> **Updated:** 2026-08-29 (meta-audit stack #141–#164 + live API run + Notion reference analysis;
+> **Updated:** 2026-08-30 (meta-audit stack merged and pushed; #164 fixed and verified live;
 > session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
@@ -19,13 +19,16 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `check-destructive-git` and `check-ts-ignore` all stay. The disabled script is still on disk;
   re-registering it restores the old gate.
 
-- **`main` is at `64863ed`** — the merge of `feat/116-filter-order-adr` (M-FILTER-CONSOLIDATION)
-  and the linked-source stack. Both `feat/116` and the relation-first work `feat/112` are IN `main`;
+- **`main` carries everything below and is pushed.** `64863ed` (M-FILTER-CONSOLIDATION + the
+  linked-source stack) is its ancestor, the meta-audit stack and the #164 work sit on top, and
+  `origin/main` matches. Both `feat/116` and the relation-first work `feat/112` are IN `main`;
   every "pending merge" statement in older documents is historical (#146).
-- **Never run on that merge:** Gate 3 (`/codex:review --base main`) and the visual smoke of the
-  A→C→B inversion in the OBStests vault. Merged is not the same as accepted.
-- **The meta-audit stack is committed on `feat/meta-audit-141-164`** (branched from `64863ed`,
-  2026-08-30, five commits `3423aad → 02d7427`, working tree clean). It touches **82 paths**
+- **Never run on any of it:** Gate 3 (`/codex:review --base main`) and the visual smoke of the
+  A→C→B inversion in the OBStests vault. Merged is not the same as accepted, and pushed is not
+  the same as reviewed.
+- **The meta-audit stack** was built on `feat/meta-audit-141-164` (branched from `64863ed`,
+  2026-08-30, five commits `3423aad → 02d7427`) and is now merged into `main`. It touches
+  **82 paths**
   against `64863ed` — 43 modified, 32 added, 7 deleted; 47 under `src/`, 32 under `docs/`.
   The "64 changed paths" of the 2026-08-28 report counted `codex-reports/` as one entry and
   predates the last two days of the stack; 82 is the measured number. It closes the whole
@@ -46,8 +49,7 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   relation commit and `GalleryView.svelte` + `linkedSourceWrites.test.ts` in the honesty commit;
   the #142 guard test reads BOTH sources in one assertion, so two intermediate commits were red
   while the tip was green. The branch was unpushed, so it was rebuilt with #142 travelling whole.
-  The pre-rewrite history is kept at `backup/meta-audit-141-164-presplit` (`33eef1e`) and can be
-  deleted once the branch is merged. **The lesson is the general one:** a green tip says nothing
+  The pre-rewrite backup branch was deleted after the push. **The lesson is the general one:** a green tip says nothing
   about the commits under it, and a test that reads two sources pins them to one commit.
   **#148 is closed by documentation, not code** — the boundary is stated in `FILTER_MODEL.md`
   (§"Analytical joins are not relations"), which rides in the documents commit; no source file
