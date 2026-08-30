@@ -15,9 +15,11 @@
 // ============================================================
 
 import dayjs from "dayjs";
-import { normalizePath, stringifyYaml, type Vault } from "obsidian";
+import { Notice, normalizePath, stringifyYaml, type Vault } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
@@ -455,16 +457,27 @@ const commonTableConfig: DatabaseViewConfig["table"] = {
 // FILE WRITING (idempotent)
 // ============================================================
 
-async function writeFiles(vault: Vault, folder: string, files: Record<string, DemoFile>): Promise<void> {
+/**
+ * #156 — the demo used to swallow every failure here. "Already exists" (an
+ * idempotent re-run) and "could not be written" (permissions, disk, an illegal
+ * name) landed in the same empty catch, and the project was registered either
+ * way — so a demo missing half its notes looked exactly like a healthy one.
+ * Only the first case is silent now; the second is reported back.
+ */
+async function writeFiles(vault: Vault, folder: string, files: Record<string, DemoFile>): Promise<string[]> {
+  const failed: string[] = [];
   for (const [name, file] of Object.entries(files)) {
     const path = normalizePath(`${folder}/${name}.md`);
     const body = `---\n${stringifyYaml(file.frontmatter)}---\n\n${file.content}`;
+    if (vault.getAbstractFileByPath(path)) continue; // idempotent re-run
     try {
       await vault.create(path, body);
-    } catch {
-      // Already exists — idempotent re-run. Skip silently.
+    } catch (error) {
+      failed.push(path);
+      console.error("[obs-projects-plus] demo note could not be created", path, error);
     }
   }
+  return failed;
 }
 
 // ============================================================
@@ -473,17 +486,43 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
 
 export async function createDemoProject(vault: Vault): Promise<void> {
   // 1. Ensure root demo folder exists (idempotent).
-  try {
-    await vault.createFolder(DEMO_FOLDER);
-  } catch {
-    // Folder may already exist — that's fine.
+  if (!vault.getAbstractFileByPath(DEMO_FOLDER)) {
+    try {
+      await vault.createFolder(DEMO_FOLDER);
+    } catch (error) {
+      // #156 — without the folder nothing below can land. Say so rather than
+      // registering a project that points at nowhere.
+      console.error("[obs-projects-plus] demo folder could not be created", error);
+      new Notice(
+        get(i18n).t("onboarding.demo.folder-failed", {
+          defaultValue:
+            "Could not create the demo folder '{{folder}}'. The demo project was not created.",
+          folder: DEMO_FOLDER,
+        })
+      );
+      return;
+    }
   }
 
   // 2. Write all seed files.
-  await writeFiles(vault, DEMO_FOLDER, buildClients());
-  await writeFiles(vault, DEMO_FOLDER, buildProjects());
-  await writeFiles(vault, DEMO_FOLDER, buildTasks());
-  await writeFiles(vault, DEMO_FOLDER, buildMeetings());
+  const failed = [
+    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
+  ];
+  if (failed.length > 0) {
+    // The project is still registered: a partial demo is more useful than none,
+    // and the notes that did land are correct. But the user is told, because
+    // otherwise the gaps read as a broken plugin.
+    new Notice(
+      get(i18n).t("onboarding.demo.partial", {
+        defaultValue:
+          "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
+        count: failed.length,
+      })
+    );
+  }
 
   // 3. View configs.
   const overviewConfig: DatabaseViewConfig = {
