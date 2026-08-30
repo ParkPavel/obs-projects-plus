@@ -13,6 +13,12 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
+- **The push gate was removed on 2026-08-30 at the user's decision.** `check-push-branch.ps1` is
+  deregistered from `.claude/settings.json` and no longer fires, so pushing `main` is an ordinary
+  agent operation now. `check-commit-branch` (invariant 12 — no direct commits to `main`),
+  `check-destructive-git` and `check-ts-ignore` all stay. The disabled script is still on disk;
+  re-registering it restores the old gate.
+
 - **`main` is at `64863ed`** — the merge of `feat/116-filter-order-adr` (M-FILTER-CONSOLIDATION)
   and the linked-source stack. Both `feat/116` and the relation-first work `feat/112` are IN `main`;
   every "pending merge" statement in older documents is historical (#146).
@@ -46,8 +52,10 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   **#148 is closed by documentation, not code** — the boundary is stated in `FILTER_MODEL.md`
   (§"Analytical joins are not relations"), which rides in the documents commit; no source file
   carries a `#148` marker, and that is expected.
-  **Not merged, not pushed** — both are user-reserved gates, and `/codex:review --base main` has
-  not run on this branch.
+  **Merged and pushed 2026-08-30** — `main` is at `1cbcf89` and `origin/main` matches it; the
+  stack, the merge `3f9251b`, the upstream `Bump beta version`, and the #164 correction went up in
+  one push of 12 commits. `/codex:review --base main` has still NOT run on any of it.
+  The branch and the pre-rewrite backup were deleted after the push; their content is in `main`.
 - **CORRECTION 2026-08-30 — #164 was claimed as done and is not.** Commit `0d24c03` names #164 in
   its subject and states that the demo generator "now emits the current shape, so a first run is
   not a migration"; the merge commit `3f9251b` repeats it. Both are false. The stack's only change
