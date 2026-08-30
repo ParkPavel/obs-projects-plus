@@ -294,18 +294,6 @@ export default class ProjectsPlusPlugin extends Plugin {
       },
     });
 
-    this.addCommand({
-      id: "add-sub-base",
-      name: t("commands.add-sub-base.name"),
-      checkCallback: (checking) => {
-        const hasProjectLeaf =
-          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
-        if (!hasProjectLeaf) return false;
-        if (!checking) emitCommand("add-sub-base");
-        return true;
-      },
-    });
-
     // #043 / feedback-demo-api-bridge — programmatic demo regen so REST API
     // automation and QA scripts can rebuild the onboarding demo without the
     // welcome modal. The underlying `createDemoProject` is idempotent on

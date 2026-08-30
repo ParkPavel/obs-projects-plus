@@ -123,6 +123,9 @@ describe("SmartSuggestionBus (#059)", () => {
       repeated: false,
       identifier: false,
       derived: false,
+      // #155 — the relation rule now requires a target: a relation that names
+      // no project cannot produce a linked block, so it produces no suggestion.
+      typeConfig: { relation: { targetProjectId: "p-clients" } },
     };
     const { target, destroy } = mount({ fields: [numericField(), relationField] });
     expect(target.querySelector(".ppp-smart-suggest__message")).toHaveTextContent(

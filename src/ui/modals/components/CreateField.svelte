@@ -61,6 +61,17 @@
   let dateValue: Optional<Date> = new Date();
 
   export let onCreate: (field: DataField, value: Optional<DataValue>) => void;
+  /**
+   * #144 — number of notes this create will write to. The modal closed on click
+   * without ever stating that the write touches every note in the project;
+   * Vision scene 2 asks for that sentence, with the count, before the write.
+   */
+  export let recordCount = 0;
+
+  // Derived / linked types write nothing into frontmatter on creation
+  // (`isStageANoDefault` passes null), so the consequence line would be a lie
+  // for them.
+  $: writesToNotes = recordCount > 0 && !isStageANoDefault(field.type);
 
   $: fieldNameError = validateFieldName(field.name);
 
@@ -592,6 +603,16 @@
     {/if}
   </ModalContent>
   <ModalButtonGroup>
+    {#if writesToNotes}
+      <p class="ppp-create-field-consequence" role="status">
+        {$i18n.t("modals.field.create.bulk-write-notice", {
+          defaultValue:
+            "Adds '{{field}}' to {{count}} notes. Empty values are written; existing values are not changed.",
+          field: field.name,
+          count: recordCount,
+        })}
+      </p>
+    {/if}
     <Button
       variant={"primary"}
       disabled={!!fieldNameError}
@@ -642,6 +663,14 @@
 </ModalLayout>
 
 <style>
+  .ppp-create-field-consequence {
+    margin: 0 var(--size-4-2) 0 0;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: var(--line-height-tight);
+    flex: 1;
+  }
+
   .ppp-create-field-stagea-note {
     color: var(--text-muted);
     font-size: var(--font-ui-smaller, 0.75rem);

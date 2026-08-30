@@ -32,7 +32,13 @@
   // E2: only Relation-type fields are valid for the linked-selection filter.
   $: relationFields = fields.filter((f) => f.type === DataFieldType.Relation);
   // E8: show inline hint when validation indicates a problem.
-  $: showRelationHint = linkedSelectionValidation === "missing-relation" || linkedSelectionValidation === "wrong-target-project";
+  // #151 — `invalid-field` was missing from this list, so deleting the Relation
+  // property a block filters through left the panel looking correctly
+  // configured while the block silently fell back to the plain selection.
+  $: showRelationHint =
+    linkedSelectionValidation === "missing-relation" ||
+    linkedSelectionValidation === "wrong-target-project" ||
+    linkedSelectionValidation === "invalid-field";
 
   function handleSourceChange(e: Event) {
     const projectId = (e.currentTarget as HTMLSelectElement).value;

@@ -1,6 +1,7 @@
 # Current project context
 
-> **Updated:** 2026-08-27 (post-#138; session report: `SESSION_REPORT_2026-08-27.md`)
+> **Updated:** 2026-08-29 (meta-audit stack #141–#164 + live API run + Notion reference analysis;
+> session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
 
@@ -12,92 +13,117 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
-- **Branch `feat/116-filter-order-adr` — 54 commits, PUSHED to origin 2026-08-27, `main` untouched.**
-  Working tree clean. Full account of the session in `SESSION_REPORT_2026-08-27.md`.
-- **Open, user-owned:** Gate 3 (`/codex:review --base main`) has never run on this branch; merge to
-  `main`; visual smoke of the A→C→B inversion in the OBStests vault.
-- **Next ticket:** #132 (visible opt-in marker for linked-source pipelines) — the last of the
-  linked-source stack, design in `LINKED_SOURCE_DESIGN.md` rev 2.
-
-- Branch: `feat/112-guided-relation-setup` (accumulating #110+#111+#112+#113+#114; merge/push = user gate).
-- Committed on this branch (not merged/pushed): `54217c1` (#105–#109 stabilization); `2785a4d`
-  (#110 brief); `373a07e`+`2ed9903` (#111 canonical relation contract); `1c7df97` (#112 arch doc).
-- Uncommitted WIP = complete #112+#113+#114 implementation: `relationSetup.ts`(+test),
-  `RelationSetup.svelte` (full i18n 4 locales + displayField picker), `relationSetupModal.ts`,
-  `relationSetupController.ts` (+7 controller unit tests), all entry points wired (schema editor /
-  ConfigureField / CreateField / empty Relation cell event chain), `RelationPickerPopover.svelte`
-  (setup-link + count badge), `EditableCell.svelte`/`TableRow.svelte`/`DataTableContent.svelte`
-  (setupRelation event chain), `RelationCountBadge.svelte` (NEW), `smartSuggest.ts`+
-  `dashboardSuggest.ts` (relation-block), `dashboardWidgets.ts` (initialConfig factory),
-  `DashboardCanvas.svelte` (suggest + getPrimaryWidgetId extended), `canvasSelectionStore.ts`
-  (composeEffectiveFilter extended, composeLinkedSelectionFilter unexported), `WidgetHost.svelte`
-  (validateLegacyLinkedSelection wired), `DatabaseCallSettings.svelte` (relation-only picker),
-  `DatabaseCallBlock.svelte` (3-state filter label), `SelectionBadge.svelte` (database-call added),
-  widgetComponentRegistry.ts (LegacyLinkedSelectionStatus prop), canvasSelectionStore.test.ts
-  (parity tests), relationFilterAdapter.test.ts (malformed-link edge cases). All 4 gates PASS.
-- **Canonical baseline — branch `feat/116-filter-order-adr` (2026-08-27 post #138):
-  173 suites / 2464 tests PASS, tsc 0, lint 0 (124 pre-existing tsdoc warnings),
-  svelte-check 0/0, @ts-ignore 0, px ≤177.** Grew from 162/2288 via #117 (+24 filter-tab
-  parity cases), #118 (+36: transform migration, widget scope, dashboard migration).
-  Earlier history: #119 deleted dead dashboard-v1 archive → 168/2336 dropped to 162/2288
-  (6 archived-code suites removed). Relation-first branch `feat/112` remains at 168/2336.
+- **`main` is at `64863ed`** — the merge of `feat/116-filter-order-adr` (M-FILTER-CONSOLIDATION)
+  and the linked-source stack. Both `feat/116` and the relation-first work `feat/112` are IN `main`;
+  every "pending merge" statement in older documents is historical (#146).
+- **Never run on that merge:** Gate 3 (`/codex:review --base main`) and the visual smoke of the
+  A→C→B inversion in the OBStests vault. Merged is not the same as accepted.
+- **The meta-audit stack is committed on `feat/meta-audit-141-164`** (branched from `64863ed`,
+  2026-08-30, five commits `3423aad → 02d7427`, working tree clean). It touches **82 paths**
+  against `64863ed` — 43 modified, 32 added, 7 deleted; 47 under `src/`, 32 under `docs/`.
+  The "64 changed paths" of the 2026-08-28 report counted `codex-reports/` as one entry and
+  predates the last two days of the stack; 82 is the measured number. It closes the whole
+  Codex meta-audit queue: #141 rollup resolution, #142 gallery read-only, #143 derived inverse
+  (decision, user-approved), #144 write outcomes, #145 migration restore point, #146 documentation
+  sync, #149 relation label, #150 wizard, #151 (partial), #152 sort ADR, #153 stats canonical key,
+  #154 ticket template, #155 suggestion honesty, #156 first-run honesty, #157 deviations register,
+  #160 sub-base removal, #161 caller outcomes, #162 stale enrichment on target change,
+  #163 batch write compensation, #164 demo generator.
+  The split is by ticket group: write boundary → relation surface → migration/demo/sub-base →
+  interface honesty → documents and audit trail.
+- **Every commit in the stack was verified individually**, not only the tip: `tsc -noEmit` 0 errors
+  and the full Jest run green at each of `3423aad`, `e78c88e`, `0d24c03`, `2597c9f`, `02d7427`
+  (176/2482 → 177/2493 → 174/2450 → 174/2451 → 174/2451; the count falls at the third because
+  #160 deletes the sub-base suites). `lint` and `svelte-check` ran on the tip only.
+  **This cost a rewrite of the branch.** The first split put `DatabaseCallBlock.svelte` in the
+  relation commit and `GalleryView.svelte` + `linkedSourceWrites.test.ts` in the honesty commit;
+  the #142 guard test reads BOTH sources in one assertion, so two intermediate commits were red
+  while the tip was green. The branch was unpushed, so it was rebuilt with #142 travelling whole.
+  The pre-rewrite history is kept at `backup/meta-audit-141-164-presplit` (`33eef1e`) and can be
+  deleted once the branch is merged. **The lesson is the general one:** a green tip says nothing
+  about the commits under it, and a test that reads two sources pins them to one commit.
+  **#148 is closed by documentation, not code** — the boundary is stated in `FILTER_MODEL.md`
+  (§"Analytical joins are not relations"), which rides in the documents commit; no source file
+  carries a `#148` marker, and that is expected.
+  **Not merged, not pushed** — both are user-reserved gates, and `/codex:review --base main` has
+  not run on this branch.
+- **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
+  six of eight claims false — fixes are in this tree) and on the #159 brief
+  (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
+- **Canonical baseline — `main` + the uncommitted stack: 174 suites / 2451 tests PASS, tsc 0,
+  svelte-check 0/0, lint 0 errors (124 pre-existing tsdoc warnings).** From 173/2464 at `64863ed`:
+  +36 regression tests across the tickets above, −49 with the sub-base model #160 deleted.
   Do not roll back.
-- **Active milestone: M-FILTER-CONSOLIDATION** (audit `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md`
-  + design `FILTER_CONSOLIDATION_DESIGN.md`). Collapse 6 filter layers → 3 axes (A Scope /
-  B Reactive / C Advanced), one engine, one documented order. **MILESTONE COMPLETE 2026-08-25:**
-  #119 ✅ → #116 ✅ → #117 ✅ → #121 ✅ → #118 ✅ → #120 ✅ → #122 ✅. The model is documented in
-  `FILTER_MODEL.md` (user-facing) + `FILTER_ORDER_ADR.md` (engine invariant). Ran BEFORE
-  relation-first R3/R4 (user-approved 2026-08-22), which is now the next milestone.
-- **#120 scope was corrected during implementation:** the `WidgetType` union was NOT trimmed. Four
-  of the seven retired types have no successor, so dropping them would make stored `data.json`
-  widgets unmodellable — data loss, and a schema-evolution violation. Only the provably dead
-  `configPanelRegistry` entries went; `getConfigPanel` stays total via a `NO_PANEL` fallback because
-  `WidgetHost` dereferences `.hasCog` unconditionally.
-- **Follow-ups filed and closed 2026-08-25:** #123 ✅ (`promoteFilterTabToGlobal` now builds its
-  condition via `deriveTabCondition`; it emitted a bare `"is"` for every field type, which silently
-  dropped every record for Number/Boolean/Date/List) and #124 ✅ (16 orphaned `unnest-*` i18n keys
-  removed across 4 locales).
-- **Not yet done for this stack:** the Codex cross-model review (`/codex:review --base main`) and a
-  visual smoke of the A→C→B inversion in the OBStests vault — a dashboard that mixes a pipeline
-  `filter` with a block `subFilter` is the case to look at.
-- **#118 landed the A→C→B behavioral inversion** (user confirmed 2026-08-24): the widget
-  `subFilter` now narrows the frame BEFORE the transform pipeline, not after. Stored pipelines
-  are split at load by `migrateDashboardTransforms` (idempotent, never drops a step it cannot
-  prove equivalent). Not yet smoke-tested in the OBStests vault — a dashboard mixing a pipeline
-  `filter` with a block `subFilter` is the case to look at.
-- UX bug-fixes (2026-08-22, uncommitted): (1) legacy `data-table` lost `subFilter` on
-  save+restore → fixed via `restoreDataTableConfig`/`persistDataTableSubFilter` in
-  `legacyMigration.ts`, wired in `widgetComponentRegistry.ts` + `WidgetHost.svelte`
-  (+`dataTableSubFilterRoundTrip.test.ts`). (2) `FloatingPopup` fixed-popup was contained by
-  `WidgetShell` `container-type: inline-size` → empty scrollbar column + layout shift; fixed by
-  `use:portal` to `document.body` (systemic, all popups). (3) `Inspector.svelte` overflow
-  scroll→auto. Reported from user screenshot; needs vault visual smoke.
-- User-owned: merge/push of this branch; manual visual smoke in OBStests vault (portal popup +
-  live subFilter across reload).
+- **`manifest.json` must exist in the repo root.** It went missing in the working tree on 2026-08-28
+  and `eslint` failed before analysing a single file — the config reads the manifest. Restored;
+  the build does not remove it. If lint dies with `ENOENT … manifest.json`, this is why.
+- **Full cross-model re-verification ran 2026-08-28** (`codex-reports/CV-1…CV-3`): 18 ticket claims
+  checked against the code, project invariants, and the eight Vision scenes re-scored against the
+  first audit. It produced #162 and #163 and corrected seven ticket statements. Scene 2 moved
+  PARTIAL → MET; nothing else changed status, and interface honesty was deliberately not counted
+  as progress.
+- **Manual API run against the OBStests vault, 2026-08-28.** The plugin was built from this tree,
+  deployed, and driven through the Obsidian Local REST API: 10 commands registered (11 minus the
+  `add-sub-base` removed in #160), demo smoke A1–A7, write/read/delete roundtrip, and the new
+  migration + restore-point checks M1–M5. It found two defects — the "one backup per view" rule in
+  #145 lost the pre-state of a second migration event, and the demo generator ships legacy
+  pipelines that migrate on first open (#164). Both verified fixed in the running app.
+  What REST cannot see is listed in `UNTESTABLE_FEATURES_2026-08-28.md`.
+- **Notion reference analysis, 2026-08-29** (`REFERENCE_NOTION_UI_2026.md` + cold adaptivity audit
+  `codex-reports/CX-MATRYOSHKA-audit.md`). Two findings drive the new milestone: the matryoshka
+  principle is measurably absent (3378 `rem` vs 31 `em`, **zero** container units, 5 executable
+  `container-type`, one of them queried by nobody), and the file that declares it —
+  `lib/tokens/design-tokens.css` — is dead code that is never imported. Reference conclusion that
+  touches an open decision: in Notion a **view is never a source**; the source is always a data
+  source, and a container level (`database`) holds several of them. We have no container level, and
+  its absence is what pushes us toward a fourth entity in #159 → recorded as #170.
+- **Open, and each says why in its ticket:** #151 (per-link unmatched marker needs the target frame
+  inside the cell), #158 (partially closed — API-observable part passed 2026-08-28, visual part
+  outstanding), #159 (brief revision 2 rejected at Gate 0; revision 3 owes an answer to #170),
+  #164 (demo ships legacy pipelines), #140 (uk/zh-CN translations — needs a translator, deliberately
+  not machine-translated).
 
 ## Next product milestone
 
-`M-RELATION-FIRST` is the active queue.
+**Two milestones are open, and they do not compete:**
+
+- **`M-MATRYOSHKA`** (#165–#170) — adaptivity, attention and focus, from the Notion reference.
+  Order: #165 (put the principle back into the build) → #166 (kinship: container decides size) →
+  #167 (invariant: no `rem` inside a container); in parallel #168 (peek instead of leaving) →
+  #169 (focus priority). #170 re-opens the scene-5 decision with the reference on the table.
+  **#165 goes first on purpose:** until the token file is in the build, work "by the principle"
+  edits a document rather than a pixel.
+- **`M-SAVED-SELECTION`** — #160 done, #159 brief rejected twice at Gate 0. Revision 3 must compare
+  three options (Notion's compromise / selection as an entity / project as a container of sources)
+  and say why the chosen one is chosen. No implementation tickets until it passes.
+
+`M-RELATION-FIRST` shipped its code and is IN `main` (`64863ed`); the "pending merge" notes below
+are historical. What is NOT closed is its user acceptance — #158, deferred until the visual-test
+tickets exist, with the code-derived render (`codex-reports/CX-R1…R4.md`) standing in until then.
+The next executable queue is #141-#158 in `BACKLOG.md`.
 
 1. **#110 P0 — ✅ DONE.** Approved design brief `RELATION_FIRST_DESIGN_BRIEF_110.md`.
-2. **#111 P0 — ✅ DONE (impl, pending merge).** `relationContract.ts`: WikiLink resolution
+2. **#111 P0 — ✅ DONE (merged in `64863ed`).** `relationContract.ts`: WikiLink resolution
    (resolved/unmatched/ambiguous), inverse, legacy `linkedSelection` validation + migration.
-3. **#112 P0 — ✅ DONE (2026-08-22, pending merge).** Full wizard + all 4 entry points + i18n
+3. **#112 P0 — ✅ DONE (2026-08-22, merged).** Full wizard + all 4 entry points + i18n
    + displayField picker + controller unit tests. 165 suites / 2305 PASS. Audit: READY FOR PR.
-4. **#113 P0 — ✅ DONE (2026-08-22, pending merge).** Related records surface + count badge +
+4. **#113 P0 — ✅ DONE (2026-08-22, merged).** Related records surface + count badge +
    setupRelation event chain + dashboardSuggest relation-block + initialConfig factory. 166/2312 PASS.
-5. **#114 P1 — ✅ DONE (2026-08-22, pending merge).** validateLegacyLinkedSelection wired; composeEffectiveFilter unified; relation-only picker; 3-state filter label; SelectionBadge extended. 166/2319 PASS.
-6. **#115 P0 — ✅ DONE (2026-08-22, manual acceptance pending).** R1 integration tests (10 cases) + MANUAL_TESTING_PIPELINE.md section 8. 167/2329 PASS. Manual screenshots + keyboard path = user gate.
+5. **#114 P1 — ✅ DONE (2026-08-22, merged).** validateLegacyLinkedSelection wired; composeEffectiveFilter unified; relation-only picker; 3-state filter label; SelectionBadge extended. 166/2319 PASS.
+6. **#115 P0 — ⚠ code merged, acceptance NOT done (#158).** R1 integration tests (10 cases) + MANUAL_TESTING_PIPELINE.md section 8. 167/2329 PASS. Manual screenshots + keyboard path = user gate.
 
 ## Active sources of truth
 
 | Question | Source |
 |---|---|
 | Product intent and delivery order | `PRODUCT_RESET_2026-07-18.md` |
+| Knowingly unmet Vision promises | `VISION_DEVIATIONS.md` |
 | Original user experience | `DASHBOARD_V2_VISION.md` |
 | Current executable ticket queue | `BACKLOG.md` |
-| Technical architecture and invariants | `DASHBOARD_V2_SPEC.md`, `ARCHITECTURE_V5.md`, `AGENTS.md` |
+| Technical architecture and invariants | `DASHBOARD_V2_SPEC.md`, `ARCHITECTURE_V5.md` |
 | UI grammar reference | `specs/NOTION_GRADE_PIPELINE.md`, `UI_DESIGN_ARCHITECTURE.md` |
+| Reference app analysis (Notion, Aug 2026) | `REFERENCE_NOTION_UI_2026.md` |
+| What manual/API testing proved and did not | `MANUAL_TESTING_PIPELINE.md`, `UNTESTABLE_FEATURES_2026-08-28.md` |
 | Current manual validation | `DASHBOARD_GUIDE_AND_TESTING.md`, `TEST_REPORT_2026-06-26.md` |
 
 ## Documentation rules
@@ -108,3 +134,5 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   rollup, unmatched state, keyboard path and reactive Markdown update coverage.
 - Do not begin implementation for #110 or its dependents before the required analysis gate is
   explicitly closed.
+- "Merged" is not "accepted". #115 and the filter stack are in `main` with their user acceptance
+  still open (#158); do not cite the merge as evidence of a user-flow result.

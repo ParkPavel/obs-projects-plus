@@ -17,6 +17,7 @@
  */
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
+import { canonicalLinkKey, parseRelationLinks } from "src/lib/relations/parseRelationLinks";
 import { dataTableSourceId, chartSourceId, type SelectionState } from "../../canvasSelectionStore";
 
 /**
@@ -85,16 +86,56 @@ export function filterRecordsBySelection(args: {
 	// receivers MUST agree on semantics: array-typed cells match if any element
 	// equals the selection value, scalars match on string equality, null/undef
 	// never match. If a third receiver adds a different rule, extract then.
+	//
+	// #153 — relation cells are compared by canonical link key, not by raw
+	// string. `[[Ivan Petrov]]`, `[[Clients/Ivan Petrov|Ivan]]` and
+	// `Clients/Ivan Petrov.md` are the same target; `String(cell)` said they
+	// were three different ones, so a Stats card could aggregate a different
+	// cohort than the table it sits next to was highlighting. The relation
+	// filter path (`relationFilterAdapter`) already canonicalises both sides.
 	const field = selection.field;
 	const values = selection.values;
+	// #153 — the SELECTION side is always canonicalised, because the table
+	// driver publishes a bare basename (`rowSelectionValue` → `recordBaseName`),
+	// never a wikilink. Gating this on "the selection looks like a link" is what
+	// made the first version of this fix inert in the real path: cell
+	// `[[Ivan Petrov]]` never met selection `Ivan Petrov`.
+	//
+	// The CELL side stays gated on link shape, and that asymmetry is deliberate:
+	// `parseRelationLinks` splits plain strings on commas, so running every cell
+	// through it would silently widen matching for ordinary String fields —
+	// "Ivan, Petrov" would start matching a selection of "Ivan".
+	const linkKeys = values.map((value) => canonicalLinkKey(String(value)));
+
 	return records.filter((record) => {
 		const cell = record.values[field];
 		if (cell === null || cell === undefined) return false;
 		if (Array.isArray(cell)) {
-			return cell.some((item) => item != null && values.includes(String(item)));
+			if (cell.some((item) => item != null && values.includes(String(item)))) return true;
+		} else if (values.includes(String(cell))) {
+			return true;
 		}
-		return values.includes(String(cell));
+		if (linkKeys.length === 0) return false;
+		return toLinkKeys(cell).some((key) => linkKeys.includes(key));
 	});
+}
+
+/**
+ * #153 — canonical keys for a relation cell, so `[[Ivan Petrov]]`,
+ * `[[Clients/Ivan Petrov|Ivan]]` and `Clients/Ivan Petrov.md` compare equal.
+ * The relation filter path (`relationFilterAdapter`) canonicalises both sides
+ * the same way; before this, a Stats card could aggregate a different cohort
+ * than the table beside it was highlighting.
+ */
+function toLinkKeys(cell: unknown): string[] {
+	if (Array.isArray(cell)) {
+		return cell
+			.filter((item) => item != null)
+			.flatMap((item) => parseRelationLinks(String(item)))
+			.map((key) => canonicalLinkKey(key));
+	}
+	if (typeof cell !== "string" || !cell.includes("[[")) return [];
+	return parseRelationLinks(cell).map((key) => canonicalLinkKey(key));
 }
 
 // Re-exports so consumers that already touch this file have one import surface

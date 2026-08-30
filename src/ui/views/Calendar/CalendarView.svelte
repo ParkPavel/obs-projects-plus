@@ -923,12 +923,18 @@
       fields, 
       async (updatedRecord) => {
         try {
-          await api.updateRecord(updatedRecord, fields);
-          // Force local update to trigger calendar re-render
-          frame = {
-            ...frame,
-            records: frame.records.map(r => r.id === updatedRecord.id ? updatedRecord : r)
-          };
+          // #161 — mirror the change locally only if it actually reached the
+          // file. `updateRecord` rolls its own store back and tells the user on
+          // failure; copying the value in here anyway would put it straight
+          // back on screen.
+          const saved = await api.updateRecord(updatedRecord, fields);
+          if (saved) {
+            // Force local update to trigger calendar re-render
+            frame = {
+              ...frame,
+              records: frame.records.map(r => r.id === updatedRecord.id ? updatedRecord : r)
+            };
+          }
         } catch (e) {
           calendarLogger.error('Failed to update record from modal', e);
           new Notice('Failed to update record');
@@ -1062,12 +1068,14 @@
     if (!booleanField) return;
     
     try {
-      await api.updateRecord(
+      // #161 — a failed write must not leave the checkbox ticked.
+      const saved = await api.updateRecord(
         updateRecordValues(record, {
           [booleanField.name]: checked,
         }),
         fields
       );
+      if (!saved) return;
       // Update local state
       const index = dayPopupRecords.findIndex(r => r.id === record.id);
       if (index !== -1 && dayPopupRecords[index]) {
@@ -1110,7 +1118,9 @@
         [colorFieldName]: color,
       });
       
-      await api.updateRecord(updatedRecord, fields);
+      // #161 — only mirror what actually reached the file.
+      const saved = await api.updateRecord(updatedRecord, fields);
+      if (!saved) return;
       
       // After successful save, update local state for immediate UI feedback
       // Use .map() to create new arrays (records are readonly)

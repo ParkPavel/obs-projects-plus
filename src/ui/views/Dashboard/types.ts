@@ -235,13 +235,21 @@ export interface DataTableConfig {
   /** User dismissed the "right-click header" discoverability hint */
   readonly hintDismissed?: boolean;
   /**
-   * R2.2 — sub-bases of this Database view. Each entry partitions the
-   * widget's frame by its own filter/sort, rendered as a tabbed
-   * multi-table when length > 0. Stored as plain JSON-friendly objects
-   * so settings round-trip via `processFrontMatter` / settings.json.
+   * #160 — carried, not interpreted.
+   *
+   * The R2.2 sub-base model was deleted: nothing reads or writes these keys any
+   * more, and the replacement is being designed from scratch as an addressable
+   * entity (#147 decision → M-SAVED-SELECTION).
+   *
+   * The keys stay in the type because 3.5.0-alpha SHIPPED a `SubBaseCanvas`
+   * widget that wrote them (`2af8a50`, removed by #119), so a real vault can
+   * hold them today. Dropping the fields would make that stored widget config
+   * unmodellable — the same data-loss rule that kept the retired `WidgetType`
+   * members in #120. Typed as opaque so no code can start depending on their
+   * shape while the successor is undecided.
    */
-  readonly subBases?: import("src/lib/database/subBase").SubBaseDefinition[];
-  /** Currently active sub-base id; missing → first one. */
+  readonly subBases?: readonly unknown[];
+  /** Companion to `subBases`; carried for the same reason. */
   readonly activeSubBaseId?: string;
 }
 

@@ -13,7 +13,7 @@ import {
   type DataValue,
   type Optional,
 } from "./dataframe/dataframe";
-import { nextUniqueProjectName, notEmpty, getNameFromPath, stripTagHash } from "./helpers";
+import { nextUniqueProjectName, getNameFromPath, stripTagHash } from "./helpers";
 import { decodeFrontMatter, encodeFrontMatter } from "./metadata";
 import { i18n } from "./stores/i18n";
 import { settings } from "./stores/settings";
@@ -29,23 +29,41 @@ import type { IFile, IFileSystem } from "./filesystem/filesystem";
 import { normalizePath } from "obsidian";
 
 /**
+ * Result of a schema write that spans every note in a project (#144).
+ * `written` counts notes actually rewritten; `failed` names the ones whose
+ * write threw, with the error; `missing` names paths the file system could not
+ * resolve at all.
+ */
+export type BulkFieldWriteOutcome = {
+  readonly written: number;
+  readonly failed: ReadonlyArray<{ readonly path: string; readonly error: Error }>;
+  readonly missing: ReadonlyArray<string>;
+};
+
+/**
  * DataApi writes records to file.
  */
 export class DataApi {
   constructor(readonly fileSystem: IFileSystem) {}
 
-  async updateRecord(fields: DataField[], record: DataRecord): Promise<void> {
+  /**
+   * Returns false when the note the record points at no longer exists. #144
+   * originally treated that as success — the caller kept an optimistic value in
+   * the store for a file that could not receive it. Found by cross-model review.
+   */
+  async updateRecord(fields: DataField[], record: DataRecord): Promise<boolean> {
     const file = this.fileSystem.getFile(record.id);
-    if (!file) return;
+    if (!file) return false;
     // Phase 3 / F6: prefer Obsidian's processFrontMatter (body-safe,
     // lock-protected) over the legacy read-modify-write path.
     const processed = await file.processFrontMatter((fm) =>
       applyRecordToFrontmatter(fm, fields, record),
     );
-    if (processed) return;
+    if (processed) return true;
     await this.updateFile(file, (data) =>
       doUpdateRecord(data, fields, record),
     )();
+    return true;
   }
 
   async updateRecords(
@@ -67,41 +85,61 @@ export class DataApi {
     );
   }
 
+  /**
+   * #144 — a schema write touches every note in the project, and `Promise.all`
+   * rejects on the first failure while the rest keep running. The caller could
+   * neither tell how many notes were changed nor which ones were not, so a
+   * partial write was indistinguishable from a complete one. Every file is now
+   * settled independently and the outcome is returned.
+   */
+  private async writeAcrossFiles(
+    paths: string[],
+    mutate: (data: string) => E.Either<Error, string>
+  ): Promise<BulkFieldWriteOutcome> {
+    const targets: IFile[] = [];
+    const missing: string[] = [];
+    for (const path of paths) {
+      const file = this.fileSystem.getFile(path);
+      if (file) targets.push(file);
+      else missing.push(path);
+    }
+
+    const settled = await Promise.allSettled(
+      targets.map((file) => this.updateFile(file, mutate)())
+    );
+
+    const failed = settled.flatMap((result, index) =>
+      result.status === "rejected"
+        ? [
+            {
+              path: targets[index]!.path,
+              error: E.toError(result.reason),
+            },
+          ]
+        : []
+    );
+
+    return { written: settled.length - failed.length, failed, missing };
+  }
+
   async addField(
     paths: string[],
     field: DataField,
     value: Optional<DataValue>
-  ): Promise<void> {
-    await Promise.all(
-      paths
-        .map((path) => this.fileSystem.getFile(path))
-        .filter(notEmpty)
-        .map((file) =>
-          this.updateFile(file, (data) => doAddField(data, field, value))()
-        )
-    );
+  ): Promise<BulkFieldWriteOutcome> {
+    return this.writeAcrossFiles(paths, (data) => doAddField(data, field, value));
   }
 
-  async renameField(paths: string[], from: string, to: string): Promise<void> {
-    await Promise.all(
-      paths
-        .map((path) => this.fileSystem.getFile(path))
-        .filter(notEmpty)
-        .map((file) =>
-          this.updateFile(file, (data) => doRenameField(data, from, to))()
-        )
-    );
+  async renameField(
+    paths: string[],
+    from: string,
+    to: string
+  ): Promise<BulkFieldWriteOutcome> {
+    return this.writeAcrossFiles(paths, (data) => doRenameField(data, from, to));
   }
 
-  async deleteField(paths: string[], name: string): Promise<void> {
-    await Promise.all(
-      paths
-        .map((path) => this.fileSystem.getFile(path))
-        .filter(notEmpty)
-        .map((file) =>
-          this.updateFile(file, (data) => doDeleteField(data, name))()
-        )
-    );
+  async deleteField(paths: string[], name: string): Promise<BulkFieldWriteOutcome> {
+    return this.writeAcrossFiles(paths, (data) => doDeleteField(data, name));
   }
 
   async createNote(

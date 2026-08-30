@@ -55,9 +55,6 @@
             "open-formula-editor": {
                 "name": "Open formula editor"
             },
-            "add-sub-base": {
-                "name": "Add sub-base to current view"
-            },
             "create-demo-project": {
                 "name": "Create demo project",
                 "duplicate-warning": "Demo project already exists — delete it first to regenerate.",
@@ -130,7 +127,9 @@
                 },
                 "path": {
                     "name": "Path",
-                    "description": "Path to the folder you want to manage. Leave empty to use root folder."
+                    "description": "Path to the folder you want to manage. Leave empty to use root folder.",
+                    "consequence": "Reads the notes already in '{{path}}'. The folder is not created and no notes are written — the project is a view over files that exist.",
+                    "consequence-root": "An empty path means the whole vault: every note becomes a record of this project."
                 },
                 "tag": {
                     "name": "Tag",
@@ -430,7 +429,8 @@
                         "name": "Enable rich text formatting",
                         "description": "For fields with Markdown content."
                     },
-                    "create": "Create field"
+                    "create": "Create field",
+                    "bulk-write-notice": "Adds '{{field}}' to {{count}} notes. Empty values are written; existing values are not changed."
                 }
             },
             "schema": {
@@ -793,12 +793,6 @@
             "dashboard": {
                 "name": "Dashboard",
                 "add-row": "New note",
-                "sub-bases": {
-                    "tablist": "Sub-bases",
-                    "add": "Add sub-base",
-                    "remove": "Remove sub-base",
-                    "default-name": "New view"
-                },
                 "table": {
                     "header-hint": "Right-click a column header to rename, change type, hide, pin or reorder. Drag the edge to resize.",
                     "row-height": "Row height",
@@ -922,7 +916,12 @@
                     "source-loading": "Loading the linked project…",
                     "source-unavailable": "Linked project unavailable",
                     "source-unavailable-hint": "The project this block reads was not found: {{id}}",
-                    "source-error": "Could not load the linked project"
+                    "source-error": "Could not load the linked project",
+                    "filter-label": {
+                        "relation-named": "Showing records where {{field}} is {{value}}",
+                        "relation-idle": "Linked through {{field}} — select a row to narrow this block",
+                        "broken-v2": "Relation '{{field}}' is broken ({{reason}}) — this block is filtered by the plain selection instead"
+                    }
                 },
                 "field-presets": {
                     "label": "Layout",
@@ -1541,7 +1540,11 @@
                 "message": "An error occurred while rendering this component.",
                 "retry": "Try again",
                 "details": "Error details"
-            }
+            },
+            "recordWriteFailed": "Could not save changes to {{path}}; the previous value was restored.",
+            "recordFileMissing": "{{path}} no longer exists; the change was not saved.",
+            "fieldWritePartial": "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
+            "inverseWriteFailed": "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console."
         },
         "database": {
             "cell-editor": {
@@ -1732,7 +1735,11 @@
             "command-palette-step2": "Search for <strong>Create new project</strong>",
             "command-palette-step3": "Press <strong>Enter</strong>.",
             "projects-view-step1": "In the top-right corner of the <strong>Projects Plus</strong> view, click <strong>New</strong>.",
-            "projects-view-step2": "Click <strong>New project</strong>."
+            "projects-view-step2": "Click <strong>New project</strong>.",
+            "demo": {
+                "partial": "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
+                "folder-failed": "Could not create the demo folder '{{folder}}'. The demo project was not created."
+            }
         },
         "common": {
             "yesterday": "Yesterday",
@@ -1787,7 +1794,9 @@
             "preview-unmatched": "Not found: {{count}}",
             "preview-ambiguous": "Ambiguous: {{count}}",
             "cancel": "Cancel",
-            "save": "Save relation"
+            "save": "Save relation",
+            "saving": "Saving…",
+            "inverse-warning-v2": "The name is recorded on this relation. The property is not created in the other database, and existing notes are not rewritten — related records are resolved from the links you already have."
         },
         "relation-count": {
             "linked": "{{count}} linked",

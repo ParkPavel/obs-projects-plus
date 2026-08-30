@@ -110,9 +110,19 @@ missing?" — by naming the outermost thing that could have removed it.
   explicitly out of scope for the A→C→B order — see `FILTER_ORDER_ADR.md` § Non-goals.
 - **Datasource-level filters** (`datasources/dataview`, `native-query`) run at acquisition, before
   a frame exists. They decide what is fetched, not what is displayed.
-- **Sub-base partition and cross-project rollup filters** (`subBasePartition.ts`,
-  `crossProjectResolver.ts`, `crossProjectRollup.ts`) filter a *foreign* frame to resolve a
-  relation. They are part of data resolution, not of what the viewer is looking at.
+- **Cross-project relation and rollup filters** (`crossProjectResolver.ts`,
+  `crossProjectRollup.ts`) filter a *foreign* frame to resolve a relation. They are part of data
+  resolution, not of what the viewer is looking at. (`subBasePartition.ts` was here too; the
+  abandoned sub-base model was deleted in #160.)
+- **Analytical joins are not relations** (#148). `executeJoin` (`transformExecutor.ts`) and the
+  scatter chart's `correlation` (`chartDataPipeline.ts`) pair records by *any two fields* the user
+  picks. They do not read `RelationFieldConfig`, they do not use `relationContract`, and they do
+  not distinguish `resolved` / `unmatched` / `ambiguous`: an inner join drops unmatched rows, a
+  left join keeps them with `null`, and scatter silently takes the **first** of several matches.
+  That is legitimate analysis, and it is deliberately not the relation model — a relation is a
+  declared property of the data, a join is a question asked of it. Two consequences worth stating
+  where a user can see them: a join can pair records the relation model would call ambiguous, and
+  the numbers it produces are not comparable with a rollup over the same field.
 - **The table's free-text search** (`tableCanon.ts` — `filterRecordsByQuery`) narrows by substring
   across `id` and every value, ignoring field types entirely. It is a view-local find, not a filter:
   it stores nothing, survives no reload, and composes with nothing. It sits outside the axes on

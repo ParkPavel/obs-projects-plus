@@ -22,8 +22,7 @@ export type CommandBusAction =
   | "toggle-visualizer-pane"
   | "open-visualizer-for-file"
   | "add-relation"
-  | "open-formula-editor"
-  | "add-sub-base";
+  | "open-formula-editor";
 
 export interface CommandBusMessage {
   action: CommandBusAction;

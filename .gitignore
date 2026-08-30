@@ -57,6 +57,7 @@ lint_output*.txt
 # here. They were tracked before this date and remain in git history; this rule
 # stops anything further being published, it does not retroactively unpublish.
 .claude/
+.codex/
 CLAUDE.md
 AGENTS.md
 

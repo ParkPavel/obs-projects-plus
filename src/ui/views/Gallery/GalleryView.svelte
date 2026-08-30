@@ -36,6 +36,14 @@
   export let api: ViewApi;
   export let getRecordColor: (record: DataRecord) => string | null;
   export let filterConditions: FilterCondition[] = [];
+  /**
+   * #142 — a gallery tab reading an external source must not write through the
+   * parent project's api. #139 gave Table/Board/Calendar `readonly ||
+   * sourceReadOnly`; the gallery branch was missed and had no prop at all, so
+   * its `+` created the note in the project the block is *placed* in, not the
+   * one it reads. Defaults to false so every existing caller is unchanged.
+   */
+  export let readonly = false;
 
   // Use onConfigChange to avoid unused warning
   $: void onConfigChange;
@@ -43,6 +51,12 @@
   $: ({ fields, records } = frame);
 
   function handleRecordClick(record: DataRecord) {
+    // #142 — read-only gallery still opens the note; it just does not offer an
+    // editor whose writes would land in the wrong project.
+    if (readonly) {
+      $app.workspace.openLinkText(record.id, record.id, false);
+      return;
+    }
     new EditNoteModal(
       $app,
       fields,
@@ -206,6 +220,7 @@
           </CardContent>
         </Card>
       {/each}
+      {#if !readonly}
       <IconButton
         icon="plus"
         size="lg"
@@ -220,6 +235,7 @@
           }).open();
         }}
       />
+      {/if}
     </Grid>
   {:else}
     <CenterBox>

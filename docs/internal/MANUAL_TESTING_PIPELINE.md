@@ -40,10 +40,14 @@ $c = Invoke-RestMethod -Uri "http://127.0.0.1:27123/commands/" -Headers $h
 $c.commands | Where-Object { $_.id -like "obs-projects-plus*" }
 ```
 
-**Assertion**: ≥ 11 команд `obs-projects-plus:*` (show-projects, create-project, create-note,
-open-schema, add-field, toggle-visualizer-pane, open-visualizer-for-file, add-relation,
-open-formula-editor, add-sub-base, create-demo-project). **0 команд = плагин не загрузился**
+**Assertion**: **ровно 10** команд `obs-projects-plus:*` (show-projects, create-project,
+create-note, open-schema, add-field, toggle-visualizer-pane, open-visualizer-for-file,
+add-relation, open-formula-editor, create-demo-project). **0 команд = плагин не загрузился**
 (пустая папка плагина, ошибка в main.js при load, или плагин выключен) — STOP, отчёт разработчику.
+
+> Было 11 до 2026-08-28: `add-sub-base` удалена в #160 вместе с брошенной моделью sub-base —
+> команда была видна пользователю и не делала ничего. Прогон 2026-08-28 подтвердил 10 вживую.
+> Число здесь точное, а не «≥»: молча исчезнувшая команда — такой же дефект, как лишняя.
 
 ## 3. Smoke-сценарий: демо-проект
 
@@ -63,7 +67,7 @@ Start-Sleep -Seconds 4
 | A2 | Записи сгенерированы | `GET /vault/Projects%20Plus%20-%20Демо/` | 28 `.md` файлов |
 | A3 | Проект в настройках | `data.json` → `projects[]` | 1 проект, `dataSource.kind = folder`, `version: 4` |
 | A4 | Вью демо | `projects[0].views` | 5 вью: Обзор(dashboard), Pipeline(board), График(calendar), Клиенты(dashboard), Портфолио(gallery) |
-| A5 | Композиция дашбордов | `views[].config.widgets` | Обзор: stats + chart + 2×database-call; Клиенты: stats + data-table |
+| A5 | Композиция дашбордов | `views[].config.widgets` | Обзор: stats + chart + 4×database-call; Клиенты: stats + database-call. *(Прогон 2026-08-28: демо выросло с 2 до 4 блоков — дрейф демо-данных, не регресс; строка обновлена по факту.)* |
 | A6 | Frontmatter записи | `GET /vault/...note.md` c `Accept: application/vnd.olrapi.note+json` | 4-param даты (`startDate`/`startTime`/`endTime`), Relation как wikilink (`client: [[Acme Studio]]`) |
 | A7 | Активация вью | `POST /commands/obs-projects-plus:show-projects/` | HTTP 2xx, без зависания |
 
@@ -79,6 +83,30 @@ DELETE /vault/QA-API-roundtrip.md
 
 Проверяет канал, через который пайплайн (и пользовательские интеграции) пишут frontmatter,
 читаемый плагином как DataFrame.
+
+## 4a. Миграция конфигурации и точка восстановления (#118 + #145)
+
+Проверяется через файловую систему, а не через UI — поэтому наблюдаемо из CLI.
+
+```powershell
+# 1. посеять legacy-пайплайн В САМ ВИДЖЕТ (не в widget.config!)
+#    widget.transform = { steps: [ {id, type:"filter", conditions:{...}}, {id, type:"sort", ...} ] }
+# 2. app:reload → obs-projects-plus:show-projects (открывает dashboard-вью)
+# 3. смотреть папку плагина
+```
+
+| # | Проверка | Ожидание |
+|---|---|---|
+| M1 | Ведущий `filter` ушёл из пайплайна | `widget.transform.steps` = только хвост (`sort`) |
+| M2 | Условия перенесены в scope | `widget.config.subFilter.conditions` содержит поле из шага |
+| M3 | Создан файл восстановления | `migration-backup-<projectId>-<viewId>-<ISO>.json` в папке плагина |
+| M4 | В файле именно ДО-состояние | `config.widgets[].transform.steps` содержит `filter`, которого в `data.json` уже нет |
+| M5 | Второе событие миграции даёт второй файл | первый файл не перезаписан, оба читаемы |
+
+**Две ловушки тестовых данных, на которых прогон 2026-08-28 дважды ложно «прошёл»:**
+шаг с `kind` вместо `type` и пайплайн в `widget.config.transform` вместо `widget.transform`
+мигратором игнорируются **молча**. Если миграция «не сработала» — сначала проверить форму
+посева, а не код. Вопрос «должен ли продукт сообщать о нераспознанном шаге» вынесен в аудит.
 
 ## 5. Untestable Features — границы API-наблюдаемости
 
@@ -111,12 +139,14 @@ REST API **не видит**: рендеринг Svelte-компонентов, 
 
 ## 7. Definition of Done ручного прогона
 
-- [ ] 3 артефакта задеплоены, `LastWriteTime` свежий
-- [ ] `app:reload` выполнен, команды плагина зарегистрированы (≥11)
-- [ ] Smoke-сценарий A1–A7 зелёный
-- [ ] Roundtrip (шаг 4) зелёный
-- [ ] Untestable Features Report составлен и передан пользователю
-- [ ] Результат зафиксирован в CONTEXT.md (раздел открытых пунктов)
+- [x] 3 артефакта задеплоены, `LastWriteTime` свежий — **2026-08-28**
+- [x] `app:reload` выполнен, команды плагина зарегистрированы (ровно 10) — **2026-08-28**
+- [x] Smoke-сценарий A1–A7 зелёный — **2026-08-28**
+- [x] Roundtrip (шаг 4) зелёный — **2026-08-28**
+- [x] Миграция + точка восстановления M1–M5 зелёные — **2026-08-28** (M5 нашла дефект в #145,
+      исправлен и перепроверен вживую)
+- [x] Untestable Features Report составлен — `UNTESTABLE_FEATURES_2026-08-28.md` — **2026-08-28**
+- [x] Результат зафиксирован в CONTEXT.md — **2026-08-28**
 
 ## 8. Сценарий R1: Clients → Sessions (M-RELATION-FIRST)
 
