@@ -104,7 +104,8 @@ Edit a field in the table — it writes back to the frontmatter. Edit the frontm
 - **Linked blocks** — select a client in block A → blocks B, C, D automatically show only their data
 - **Unified FilterPanel** — identical filter UI at all levels (project / view / widget)
 - **115+ formula functions** with a visual constructor
-- **Matryoshka** (sub-bases) — database inside a database via wikilink relations
+- **Relations between projects** — a relation field over wikilinks, with link status
+  (resolved / unmatched / ambiguous), an inverse relation and rollup over related records
 - **Dataview bridge** — Dataview query as a data source for any block
 
 > For shortcuts, gestures, templates, and settings — see the **[User Guide](docs/user-guide-EN.md)**.
@@ -158,7 +159,9 @@ client: "[[Client]]"
 | M-COLOR-SETTINGS | Color palette unification, settings v4 migration | Done |
 | M-CANVAS-REACTIVE | Dashboard reactive loop, DataProvider Registry | Done |
 | M-TABLE-REWRITE | Dashboard DataTable with virtualization and group headers | Done |
-| M-SUBBASES | Sub-base canvas (Matryoshka), bidirectional relations | Done |
+| M-SUBBASES | Sub-base canvas — **withdrawn**: widget and model deleted (#119, #160) | Withdrawn |
+| M-RELATION-FIRST | Relation contract, setup wizard, related records, rollup | Done |
+| M-FILTER-CONSOLIDATION | One filter engine, canonical A→C→B order, ADR | Done |
 | M-FREE-CANVAS | FreeCanvas shell, WindowShell drag/resize, layout migration | Done |
 | M-POPUP-STANDARDISATION | FloatingPopup engine, unified popups, inline badges | Done |
 | M-INTERACTIVE-DASHBOARD | Canvas Selection Bus, cross-widget filtering, multi-select | Done |

@@ -40,7 +40,8 @@ ParkPavel/obs-projects-plus
 | ✅ | **Security & Code Quality** | v3.2.2 | Выпущено | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Database View** | v3.3.0 | Выпущено | [Архив](docs/archive/architecture-database-view.md) |
 | ✅ | **Dashboard View** — Database View → Dashboard canvas migration | v3.4.0 | Выпущено | [Архив](docs/archive/architecture-database-view.md) |
-| 🚧 | **Dashboard Engine** — relations, rollup, sub-bases, Dataview bridge | v3.5.X | В разработке | — |
+| 🚧 | **Dashboard Engine** — связи, rollup, Dataview-мост | v3.5.X | В разработке | — |
+| ⛔ | **Sub-bases** — отозвано: виджет удалён (#119), модель удалена (#160); замена проектируется как адресуемая сущность | — | Отозвано | — |
 
 ## 📋 Заметки о релизах
 

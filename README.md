@@ -104,7 +104,8 @@ Obsidian хранит всё в обычных Markdown-файлах. **Projects
 - **Связанные блоки** — выбрал клиента в блоке A → блоки B, C, D автоматически показывают его данные
 - **Единый FilterPanel** — одинаковое UI фильтрации на всех уровнях (проект / вью / виджет)
 - **115+ формульных функций** с визуальным конструктором
-- **Матрёшка** (sub-bases) — база данных внутри базы данных через wikilink-связи
+- **Связи между проектами** — поле-связь через wikilink, разбор статусов ссылки
+  (найдена / не найдена / неоднозначна), обратная связь и rollup по связанным записям
 - **Dataview-мост** — Dataview-запрос как источник данных для любого блока
 
 > Горячие клавиши, жесты, шаблоны и настройки — в **[Руководстве пользователя](docs/user-guide.md)**.
@@ -158,7 +159,9 @@ client: "[[Клиент]]"
 | M-COLOR-SETTINGS | Цветовые палитры, миграция settings v4 | ✅ Готово |
 | M-CANVAS-REACTIVE | Реактивный loop Dashboard, DataProvider Registry | ✅ Готово |
 | M-TABLE-REWRITE | Dashboard DataTable с виртуализацией и group headers | ✅ Готово |
-| M-SUBBASES | Sub-base canvas (Матрёшка), двунаправленные связи | ✅ Готово |
+| M-SUBBASES | Sub-base canvas — **отозвано**: виджет удалён, модель удалена (#119, #160) | ⛔ Отозвано |
+| M-RELATION-FIRST | Контракт связей, мастер настройки, связанные записи, rollup | ✅ Готово |
+| M-FILTER-CONSOLIDATION | Один движок фильтрации, канонический порядок A→C→B, ADR | ✅ Готово |
 | M-FREE-CANVAS | FreeCanvas shell, WindowShell drag/resize, layout migration | ✅ Готово |
 | M-POPUP-STANDARDISATION | FloatingPopup engine, единые попапы, inline badges | ✅ Готово |
 | M-INTERACTIVE-DASHBOARD | Canvas Selection Bus, cross-widget фильтрация, multi-select | ✅ Готово |
