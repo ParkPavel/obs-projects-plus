@@ -30,9 +30,30 @@ import type {
 } from "src/ui/views/Dashboard/types";
 import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
-import type { ColorRule, FieldConfig } from "src/settings/base/settings";
+import type { ColorRule, FieldConfig, FilterDefinition } from "src/settings/base/settings";
 
 const DEMO_FOLDER = "Projects Plus - Демо";
+
+/**
+ * #164 — narrowing a demo block to one record type is axis A (scope), so it
+ * belongs in `config.subFilter`, NOT in a leading `filter` step of
+ * `widget.transform`.
+ *
+ * The generator used to emit the pipeline form, which is exactly what
+ * `migrateDashboardTransforms` hoists into `subFilter`. A freshly created demo
+ * therefore migrated itself the first time the user opened «Обзор»: it rewrote
+ * `data.json` and dropped a `migration-backup-*.json` on the first screen, for
+ * a config the product had generated seconds earlier. The demo is supposed to
+ * be the reference for the CURRENT shape — see the no-op rule stated above
+ * `demoGeneratedWidgets` — and it was shipping the legacy one instead.
+ *
+ * `transform` stays reserved for what is genuinely a pipeline (unnest, compute,
+ * aggregate, join). None of the demo blocks need one.
+ */
+const typeScope = (value: string): FilterDefinition => ({
+  conjunction: "and",
+  conditions: [{ field: "type", operator: "is", value, enabled: true }],
+});
 
 type FrontMatter = Record<string, unknown>;
 interface DemoFile {
@@ -294,12 +315,8 @@ function overviewWidgets(): WidgetDefinition[] {
       type: "chart",
       title: "Проекты по статусу",
       layout: { x: 0, y: 2, w: 6, h: 4 },
-      transform: {
-        steps: [
-          { type: "filter", conditions: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "project", enabled: true }] } },
-        ],
-      },
       config: {
+        subFilter: typeScope("project"),
         chartType: "donut",
         xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
         yAxis: { property: "count", aggregation: "count_total" },
@@ -314,41 +331,23 @@ function overviewWidgets(): WidgetDefinition[] {
       // shape — the block rendered "No views configured". Generators emit
       // the current schema (P1).
       layout: { x: 6, y: 2, w: 6, h: 4 },
-      transform: {
-        steps: [
-          {
-            type: "filter",
-            conditions: {
-              conjunction: "and",
-              conditions: [
-                { field: "type", operator: "is", value: "task", enabled: true },
-                { field: "completed", operator: "is-not-checked", enabled: true },
-              ],
-            },
-          },
-        ],
+      config: {
+        ...tableTabConfig(),
+        subFilter: {
+          conjunction: "and",
+          conditions: [
+            { field: "type", operator: "is", value: "task", enabled: true },
+            { field: "completed", operator: "is-not-checked", enabled: true },
+          ],
+        },
       },
-      config: tableTabConfig(),
     },
     {
       id: widgetId(),
       type: "database-call",
       title: "Встречи",
       layout: { x: 0, y: 6, w: 12, h: 4 },
-      transform: {
-        steps: [
-          {
-            type: "filter",
-            conditions: {
-              conjunction: "and",
-              conditions: [
-                { field: "type", operator: "is", value: "meeting", enabled: true },
-              ],
-            },
-          },
-        ],
-      },
-      config: tableTabConfig(),
+      config: { ...tableTabConfig(), subFilter: typeScope("meeting") },
     },
     // R3: living showcase of the Canvas Selection Bus — pick a client row
     // (row menu → «Фильтровать связанные блоки»), the projects block narrows.
@@ -358,34 +357,22 @@ function overviewWidgets(): WidgetDefinition[] {
 
 function linkedClientProjectsPair(): WidgetDefinition[] {
   const rosterId = widgetId();
-  const typeFilter = (value: string) => ({
-    steps: [
-      {
-        type: "filter" as const,
-        conditions: {
-          conjunction: "and" as const,
-          conditions: [{ field: "type", operator: "is" as const, value, enabled: true }],
-        },
-      },
-    ],
-  });
   return [
     {
       id: rosterId,
       type: "database-call",
       title: "Клиенты (мастер связи)",
       layout: { x: 0, y: 10, w: 6, h: 4 },
-      transform: typeFilter("client"),
-      config: tableTabConfig(),
+      config: { ...tableTabConfig(), subFilter: typeScope("client") },
     },
     {
       id: widgetId(),
       type: "database-call",
       title: "Проекты клиента (связанный блок)",
       layout: { x: 6, y: 10, w: 6, h: 4 },
-      transform: typeFilter("project"),
       config: {
         ...tableTabConfig(),
+        subFilter: typeScope("project"),
         linkedSelection: { sourceWidgetId: rosterId, relationField: "client" },
       },
     },
