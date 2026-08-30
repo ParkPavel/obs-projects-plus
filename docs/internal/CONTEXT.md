@@ -74,10 +74,10 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main` + the uncommitted stack: 174 suites / 2451 tests PASS, tsc 0,
-  svelte-check 0/0, lint 0 errors (124 pre-existing tsdoc warnings).** From 173/2464 at `64863ed`:
-  +36 regression tests across the tickets above, −49 with the sub-base model #160 deleted.
-  Do not roll back.
+- **Canonical baseline — `main`: 174 suites / 2455 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (122 pre-existing tsdoc warnings).** The stack took it from 173/2464 at `64863ed`
+  to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added the
+  four provenance tests that make it 2455. Do not roll back.
 - **`manifest.json` must exist in the repo root.** It went missing in the working tree on 2026-08-28
   and `eslint` failed before analysing a single file — the config reads the manifest. Restored;
   the build does not remove it. If lint dies with `ENOENT … manifest.json`, this is why.
