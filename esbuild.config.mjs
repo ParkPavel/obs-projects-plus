@@ -105,17 +105,52 @@ const buildOptions = {
  */
 function mergeCSS() {
   const mainCSS = fs.existsSync("main.css") ? fs.readFileSync("main.css", "utf-8") : "";
-  const stylesCSS = fs.existsSync("styles.css") ? fs.readFileSync("styles.css", "utf-8") : "";
-  
+  const stylesExists = fs.existsSync("styles.css");
+  const stylesCSS = stylesExists ? fs.readFileSync("styles.css", "utf-8") : "";
+
   // Check if styles.css already contains the merged tokens (idempotent)
   const MARKER = "/* === GENERATED: Design Tokens (do not edit below) === */";
   const hasMarker = stylesCSS.includes(MARKER);
-  
+
   // Remove previously merged section if present
   const cleanStyles = hasMarker
     ? stylesCSS.substring(0, stylesCSS.indexOf(MARKER)).trimEnd()
     : stylesCSS.trimEnd();
-  
+
+  // A missing or emptied styles.css used to be indistinguishable from a normal
+  // build here: the read returned "", so the merge wrote `"\n\n" + MARKER +
+  // tokens` and reported success. That is exactly what happened on 2026-08-28
+  // — the file went missing alongside manifest.json, the next build recreated
+  // it as tokens-only, and 685 lines of the plugin's layout CSS shipped as a
+  // deletion nobody saw. Obsidian loads ONLY this file, so the generated half
+  // cannot stand in for the hand-written one. Refuse instead of regenerating.
+  if (mainCSS.trim() && cleanStyles.length === 0) {
+    throw new Error(
+      stylesExists
+        ? "styles.css has no hand-written CSS before the generated marker. Refusing to " +
+          "write a tokens-only stylesheet — restore the file (git checkout -- styles.css) " +
+          "and build again."
+        : "styles.css is missing from the repo root. Refusing to create a tokens-only " +
+          "stylesheet in its place — restore it (git checkout -- styles.css) and build again."
+    );
+  }
+
+  // Content appended AFTER the generated block is silently dropped by the
+  // substring above. Say so rather than deleting someone's rule in silence.
+  if (hasMarker && mainCSS.trim()) {
+    const tail = stylesCSS.slice(stylesCSS.indexOf(MARKER) + MARKER.length);
+    const stray = tail.split("\n").filter((line) => {
+      const t = line.trim();
+      return t.length > 0 && !t.startsWith(":root") && !t.startsWith("/*") && !t.startsWith("@");
+    });
+    if (stray.length > 0 && !stray.some((l) => l.includes("--ppp-"))) {
+      console.warn(
+        "  [warn] styles.css: content after the generated marker is replaced on every build. " +
+          "Hand-written rules belong ABOVE the marker."
+      );
+    }
+  }
+
   if (mainCSS.trim()) {
     const merged = cleanStyles + "\n\n" + MARKER + "\n" + mainCSS.trim() + "\n";
     fs.writeFileSync("styles.css", merged, "utf-8");
@@ -127,7 +162,14 @@ function mergeCSS() {
 if (prod) {
   esbuild.build(buildOptions).then(() => {
     mergeCSS();
-  }).catch(() => process.exit(1));
+  }).catch((error) => {
+    // The bare `catch(() => exit(1))` this replaces discarded the reason: a
+    // failing production build printed nothing at all beyond the exit code,
+    // including the stylesheet guard above. esbuild reports its own errors
+    // before rejecting, so this mostly surfaces mergeCSS failures.
+    console.error(`\n[FAIL] ${error?.message ?? error}\n`);
+    process.exit(1);
+  });
 } else {
   esbuild.context(buildOptions).then(ctx => {
     ctx.watch();
