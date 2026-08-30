@@ -1,5 +1,10 @@
 # Session report — 2026-08-22 … 2026-08-27
 
+> **Postscript (#146, same day).** This report describes the state *before* the merge: it says
+> `main` is untouched and the branch is pushed. `main` is now at `64863ed`, which contains this
+> work. The report is kept as written — it is evidence of a point in time, not a status board.
+> Current state lives in `CONTEXT.md`.
+
 > **Branch:** `feat/116-filter-order-adr` — 54 commits, pushed to `origin`, `main` untouched.
 > **Baseline:** 173 suites / 2464 tests PASS, tsc 0, lint 0 errors / 124 warnings, svelte-check 0/0.
 > **Scope:** 186 files, +7 687 / −12 513 lines, of which 3 155 lines are new tests.

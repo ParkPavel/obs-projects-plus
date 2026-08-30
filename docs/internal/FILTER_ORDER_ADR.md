@@ -22,8 +22,29 @@ effects are composed.
 | C — advanced transform | Explicit structural or computational transformation | `executeTransform` / advanced transform |
 | B — reactive selection | Transient, interaction-driven constraints | `composeEffectiveFilter` → `filterByLinkedSelection` |
 
-`sort` runs after all A, C, and B effects. Rendering consumes the resulting
-sorted frame.
+### Where `sort` actually runs (#152, corrected 2026-08-27)
+
+There are **two** sorts, and only the second one matches the line above.
+
+1. **View-level sort** (`View.svelte` — `applySort(filteredFrame, viewSort)`) runs immediately
+   after A, *before* the dashboard applies C and B. Every widget on the canvas receives an
+   already-ordered frame.
+2. **Widget-level sort** — the dashboard table sorts again from its own config
+   (`DataTableContent.svelte` → `tableCanon.applySort`), after everything. This is the sort a
+   person sees in a table.
+
+The invariant as originally written — "sort runs after all A, C and B" — is therefore true of the
+widget sort and false of the view sort.
+
+**Decision: document it, do not move it.** `View.svelte` is shared by table, board, calendar,
+gallery and dashboard; moving its sort behind the dashboard pipeline would change row order for
+every non-dashboard view to fix an ordering nobody has reported, and the surface that matters —
+the table — re-sorts last anyway. What the view sort does affect is the *input* order of the
+pipeline (relevant to steps that depend on row order) and the series order of chart/stats widgets,
+which have no second sort of their own. If that becomes a real complaint, the fix is a
+dashboard-specific sort stage, not a change to the shared view.
+
+Rendering consumes the resulting sorted frame.
 
 ## Implementation status
 

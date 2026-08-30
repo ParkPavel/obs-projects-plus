@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-08-24 (active milestone **M-FILTER-CONSOLIDATION** on branch `feat/116-filter-order-adr`; #119/#116/#117/#121 ✅ DONE, #118/#120/#122 📋. M-RELATION-FIRST #110–#115 ✅ DONE on `feat/112` pending merge+smoke. Baseline **164 suites / 2313 tests**, tsc 0, `@ts-ignore` 0. Prior W2/W3 queue is historical — superseded by the product reset + this consolidation.)
+> **Updated**: 2026-08-29 — filed #141–#170: Codex meta-audit + render pass (see the section at the end of this file; findings in `CODEX_META_AUDIT_FINDINGS_2026-08-27.md`). live API run against the OBStests vault (#162–#164), and the Notion reference analysis (`M-MATRYOSHKA`, #165–#170). Baseline numbers live in `CONTEXT.md`, not here. ⚠ The milestone/branch statuses further down this file describe `main` as untouched, which stopped being true at merge `64863ed` — that drift is #146, not a fact. Prior W2/W3 queue is historical, superseded by the product reset.
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 > **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
@@ -22,14 +22,29 @@
 - analysis_done:      true | false   ← only when analysis_required: true
 - Depends on:         #NNN
 - Blocks:             #NNN
+- Vision scene:       1–8, or "none — maintenance"   ← required for product tickets
+- User outcome:       what the person can do afterwards that they could not before
 ```
+
+**Why the last two fields exist (#154).** `PRODUCT_RESET` §6 has required a scene reference and a
+checkable user outcome since 2026-07-18, but the template carried neither, so the rule was
+unenforceable: of 128 ticket sections written under it, 8 mentioned a scene at all. A rule that
+lives only in prose is a rule nobody can follow by filling in the form.
+
+`Vision scene: none — maintenance` is a legitimate answer — a crash fix owes no scene. What is not
+legitimate is leaving the field out: that is how "fixed a crash" and "the user understood the flow"
+got recorded as the same kind of progress.
+
+**Not enforced by a test, deliberately.** A ratchet over the whole file would fail on 120 historical
+tickets, and rewriting their scene references after the fact would invent intent nobody had. The
+fields are enforced going forward by being in the template, the same way the four gates are.
 
 > **NEEDS-ANALYSIS gate**: if `analysis_required: true` and `analysis_done: false`,
 > the orchestrator must run a dedicated analytics session before any dev work starts.
 
 ---
 
-## Milestone M-FILTER-CONSOLIDATION — 🔥 ACTIVE (consolidation before R3/R4)
+## Milestone M-FILTER-CONSOLIDATION — ✅ COMPLETE, merged in `64863ed` (2026-08-27)
 
 > Basis: `ARCHITECTURE_DEBT_AUDIT_2026-08-22.md` + design `FILTER_CONSOLIDATION_DESIGN.md`.
 > A user manual-test session surfaced 6 overlapping filter layers + an un-split transform
@@ -149,7 +164,7 @@
 
 ---
 
-## Milestone M-RELATION-FIRST — ✅ DONE (pending merge + manual acceptance)
+## Milestone M-RELATION-FIRST — ✅ code merged in `64863ed`; user acceptance OPEN (#158)
 
 > Product contract: `PRODUCT_RESET_2026-07-18.md` §3–§6. This milestone is a vertical
 > user outcome, not a collection of dashboard controls. It takes precedence over new W2/W3
@@ -173,7 +188,7 @@ end-to-end acceptance. It must explicitly distinguish Relation, `linkedSelection
 correlation; no implementation begins before the distinction is approved.
 
 ### #111 — Canonical Relation contract and compatibility boundary
-- Status: 🚧 IN-PROGRESS (2026-07-18)
+- Status: ✅ DONE — `relationContract.ts` shipped and merged in `64863ed` (status corrected 2026-08-27 by #146)
 - Milestone: M-RELATION-FIRST | Priority: P0 | Complexity: L
 - analysis_required: true
 - analysis_done: true
@@ -2360,3 +2375,915 @@ M-VISION-PARITY 📋 PLANNED (2026-06-10 — Vision alignment audit):
   not a sweep — which is why it is a separate ticket rather than a loose end in #130.
 - The missing sets are dominated by `native-query.*`, `create-demo-project.*`, and the 42
   `table-v2.*` / `database-call.*` keys that #130 added to `en`.
+
+---
+
+## Codex meta-audit + render pass 2026-08-27 — #141–#158
+
+> **Basis:** `CODEX_META_AUDIT_2026-08-27.md` (5 брифов) + `CODEX_RENDER_TASKS_2026-08-27.md`
+> (4 брифа), отчёты в `codex-reports/CX-A…E.md` и `CX-R1…R4.md`, сведение и перепроверка в
+> `CODEX_META_AUDIT_FINDINGS_2026-08-27.md`.
+> **Что это было:** проверка всех текущих решений на соответствие исходному эссе
+> `DASHBOARD_V2_VISION.md`, затем реконструкция экранов из кода вместо ручной приёмки —
+> тикеты на визуальный тест ещё не написаны, поэтому #158 отложен, а его роль временно
+> исполняет рендер-проход.
+> **Каждая находка ниже перепроверена по коду** отдельно от отчёта Codex. Находки, которые
+> не подтвердились или оказались слабее заявленного, в тикеты не попали и записаны в findings
+> как смягчения.
+
+### Порядок разработки (2026-08-27)
+
+Очередь построена по одному правилу: **сначала то, без чего следующее решение принимается вслепую.**
+
+1. **#141 ✅, #142 ✅, #144 ✅, #145 ✅, #146 ✅** — сделано. Это фундамент: считающийся rollup,
+   запись, которая не врёт об успехе, обратимая миграция и документы, совпадающие с кодом.
+2. **#143 — inverse relation (решение пользователя).** Стоит первым из открытого, потому что от
+   него зависит #159 (может ли relation указывать на выборку) и правдивость текста в мастере. Пока
+   не решено, любая работа над связями и над выборками строится на догадке.
+3. **#160 — удалить брошенную модель sub-base.** Дешёвый P1, идёт до проектирования: убирает
+   мёртвую команду из палитры и вторую модель выборки, чтобы бриф не рассуждал о коде, которого не
+   будет.
+4. **#159 — бриф выборки-как-сущности + Gate 0.** Implementation-тикеты появляются после него.
+5. **P2-хвост** — #148–#157. Не блокирует ничего из верхних пунктов; берётся в паузах или после
+   утверждения брифа. Внутри хвоста первым разумно взять #157 (реестр отклонений): он дешёвый и
+   удерживает документы честными, пока идёт крупная работа.
+6. **#158 — ручная приёмка R0/R1.** Отложена до появления тикетов на визуальный тест; до тех пор
+   роль доказательства исполняет рендер из кода (`codex-reports/CX-R1…R4.md`).
+
+Не в очереди, потому что не тикеты: конструктор формул (code-only — отменённое обещание, попадает
+в #157) и сцена 8 (dashboard-as-file — там же).
+
+### #141 — Rollup, настроенный через UI, не вычисляется никогда
+- Status: ✅ DONE (2026-08-27, рабочее дерево, без коммита)
+- **Как решено:** вариант (b) — цель резолвится на чтении, из relation-поля, которое rollup уже
+  называет. Логика вынесена в `src/ui/app/rollupColumns.ts` (чистая функция, тестируемая без
+  Svelte), `View.svelte` вызывает `applyRollupColumns`. **Явный `targetProjectId` игнорируется.**
+  Первая версия его уважала (ни одна версия кода его не писала, значит появиться он мог только
+  ручной правкой). Кросс-модельное ревью показало цену: id, не совпадающий с целью relation,
+  резолвит ссылки в чужом проекте, где совпадение по basename даёт правдоподобное и неверное число
+  без единой ошибки. Одна истина о том, «какой это проект»; тест закрепляет именно это.
+  *Формулировка исправлена 2026-08-28 после CV-1: текст описывал поведение до ревью.*
+- **Второй разрыв, найденный на Gate 0, закрыт вместе с первым:** ранний выход
+  `externalFramesMap.size === 0` отбрасывал rollup по self-relation целиком; теперь такой rollup
+  считается против текущего frame.
+- **Детерминизм:** все rollup считаются от снимка frame, снятого до цикла, поэтому результат не
+  зависит от порядка ключей `fieldConfig` в сохранённом JSON.
+- Тесты: `src/ui/app/rollupColumns.test.ts` — 8 случаев | Milestone: (next) | Priority: **P0** | Complexity: S
+- analysis_required: false
+- Vision scene: 4 (Клиенты → Сеансы). User outcome: поле «Количество сеансов», созданное через
+  Create field → Rollup, показывает число, а не пустую колонку.
+- **Цепочка (проверена):** `patchRollup` (`ConfigureField.svelte:481-484`) намеренно удаляет
+  `targetProjectId`, когда он пуст, «чтобы конфиг оставался минимальным». Ни один контрол его не
+  заполняет: `rollupResolvedTargetProjectId` (`:416-427`) выводит цель из relation-поля **только
+  для отрисовки** списка полей и обратно в конфиг не пишет. Дальше
+  `collectExternalTargetIds` (`viewHelpers.ts:26`) добавляет внешний проект в загрузку только при
+  наличии `cfg.rollup.targetProjectId` — внешний frame даже не запрашивается. И наконец
+  `View.svelte:156-158` делает `if (!ext) continue` — rollup пропускается молча.
+- **Экран выглядит настроенным:** `Through relation` / `Aggregate field` / `Function` заполнены,
+  ошибки нет, колонка пустая. Это не деградация UX, это неработающая фича на центральном
+  обещании эссе.
+- **Развилка реализации (решить в тикете, не после):** (a) писать `targetProjectId` в конфиг при
+  сохранении — минимальная правка, но конфиг дублирует то, что уже знает relation-поле, и
+  расходится при смене цели relation; (b) резолвить цель на чтении, из relation-поля, и тогда
+  `viewHelpers` и `View.svelte` должны спрашивать relation, а не rollup. (b) устраняет класс
+  ошибки целиком; (a) чинит быстрее.
+- Регресс-тест обязателен на оба пути: rollup без `targetProjectId` в конфиге должен вычисляться.
+- Найдено рендер-проходом CX-R2; аудиты CX-A и CX-B оба назвали rollup «PARTIAL, работает по явной
+  настройке» — то есть архитектурный проход эту поломку пропустил.
+- **Gate 0, роли переставлены (2026-08-27).** Эксперимент по решению пользователя: Codex ведёт
+  строительство, Claude проверяет посылки. Codex выбрал вариант (b) — резолвинг цели на чтении.
+  Кода пока нет: обе попытки оборвались на лимите ChatGPT (`usage limit`, сброс в 20:02),
+  `src/` не тронут. Разбор его claims второй моделью:
+  - **Claim «отсутствующий и явный `targetProjectId` эквивалентны» — ложен для self-relation.**
+    `extractRelationTargetIds` (`viewHelpers.ts:24-28`) исключает self-reference намеренно, а
+    `View.svelte:156-158` трактует отсутствие внешнего frame как отсутствие rollup. Вариант (b)
+    сам по себе этот класс не чинит.
+  - **Claim «устаревший явный id не должен побеждать» — не эквивалентность, а смена семантики.**
+    В типе (`settings.ts:280`) поле объявлено просто как optional; слово «override» живёт только
+    в inline-комментарии `ConfigureField`. Должно быть заявлено решением, а не равенством.
+  - **Claim о наборе загружаемых frame называет не тот риск.** Для межпроектного rollup цель
+    **уже** загружена по relation-ветке (`viewHelpers.ts:20-22`), потому что rollup всегда
+    ссылается на relation-поле. Менять набор не нужно; если менять — это заход на #138, где
+    аддитивность обогащения уже была опровергнута коллизией имён производных полей.
+  - **Обоснование Codex оказалось сильнее, чем его формулировка.** Он списал отказ от явного
+    `targetProjectId` на «необнаруживаемость в сохранённых данных», опираясь на выборку из двух
+    vault. Проверка истории (`git log -S`, `2af8a50` и раньше) показывает больше: поле **никогда
+    не записывалось ни одной версией кода** — только читалось (`rollupResolvedTargetProjectId`).
+    Значит стороннее значение может появиться лишь ручной правкой `data.json`. Это структурный
+    аргумент, а не статистический.
+  - **Новый риск в его же плане: порядок вычисления.** Для self-relation план предлагает подать
+    текущий frame как целевой. Но `View.svelte:159-176` наращивает `out` внутри цикла по
+    `Object.entries(fieldConfig)`, а `computeCrossProjectRollup` читает значения цели из
+    переданного frame (`crossProjectRollup.ts:107-110`). Rollup, чей `targetField` — результат
+    другого rollup, начнёт зависеть от порядка ключей в сохранённом JSON. Дешёвая защита:
+    подавать снимок frame, сделанный **до** цикла rollup, а не растущий `out`.
+- **Критерии приёмки (заданы до кода):** два регресс-теста — межпроектный rollup без явного
+  `targetProjectId` и rollup по self-relation; правка не расширяет набор загружаемых внешних
+  frame; порядок ключей `fieldConfig` не влияет на результат.
+
+### #142 — Внешний источник в Gallery: нет read-only, `+` пишет в родительский проект
+- Status: ✅ DONE (2026-08-27, рабочее дерево, без коммита)
+- `GalleryView` получил проп `readonly` (по умолчанию `false`, поэтому standalone-галерея не
+  изменилась), `DatabaseCallBlock` передаёт `readonly || sourceReadOnly` — теперь во все четыре
+  вида, а не в три. Кнопка `+` скрыта; клик по карточке в read-only открывает заметку вместо
+  модалки редактирования: смотреть можно, писать в чужой проект нельзя.
+- Тесты: `linkedSourceWrites.test.ts`, блок #142 (4 случая); счётчик видов поднят с 3 до 4,
+  чтобы пятый вид нельзя было добавить молча | Milestone: (next) | Priority: **P1** | Complexity: XS
+- analysis_required: false | Depends on: #139
+- Vision scene: 4. User outcome: в блоке, читающем чужой проект, нельзя создать запись в текущем.
+- #139 закрыл ровно этот класс дефекта, но одну вкладку пропустил. `DatabaseCallBlock.svelte:498`
+  и `:511` передают `readonly={readonly || sourceReadOnly}` в Board и Calendar; `:518-524`
+  передаёт в `GalleryView` только `project`, `frame`, `api`, `getRecordColor`, `config`.
+- У `GalleryView` вообще нет пропа `readonly` (`GalleryView.svelte:32-38`), а кнопка `+`
+  вызывает `api.addRecord` с **родительским** `project` (`:209-214`). Заметка создаётся не в том
+  проекте, из которого блок читает, без единого предупреждения.
+- Работа: добавить `readonly` в `GalleryView` (как в остальных трёх видах), пробросить
+  `readonly || sourceReadOnly`, закрыть `+` и inline-правки. Регресс-тест на внешнюю gallery.
+- Проверять при этом остальные виды на тот же пропуск — #139 показал, что список видов
+  расширяется быстрее, чем правится.
+
+### #143 — Inverse relation: обещание в UI не соответствует ничему в коде
+- Status: ✅ DONE (2026-08-28, рабочее дерево, без коммита) | Milestone: (next) | Priority: **P1** | Complexity: M
+- analysis_required: true | analysis_done: true
+- **Принят вариант (A): обратная связь выводится, а не записывается.** Решение предложено мной
+  2026-08-28 под указанием «закрыть все задачи» и **явно одобрено пользователем в тот же день**.
+  Остаётся обратимым: путь записи в коде цел, меняется только смысл по умолчанию.
+  Обоснование: WikiLink остаётся единственным внешним ключом (принцип 3 контракта). Записываемая
+  копия в карточке цели создаёт вторую истину, которую надо согласовывать при переименовании и
+  удалении — а этого согласования нет (CX-B §6), то есть вариант (B) закрывал бы обещание, открывая
+  долг. Зафиксировано в `VISION_DEVIATIONS.md` D-6.
+- **Что сделано:** (1) мастер больше не обещает создание свойства в схеме цели — исправлены и
+  пояснение, и **сам заголовок чекбокса**: было «Create inverse property in schema», стало «Name the
+  back-reference property on the other side». Первая правка тронула только пояснение под ним, и
+  CV-1 это поймал: чекбокс продолжал обещать ровно то, что решение отменило; (2) `fireInverseRelations` перестал выбрасывать
+  `RelationWriteOutcome`: `target-not-found` и `write-failed` теперь видны пользователю и в
+  консоли, а `inverse-field-missing` молчит намеренно — при выводимой связи это норма, а не сбой.
+- **Что НЕ сделано и почему:** межпроектный выводимый inverse как отдельное поле
+  (`enrichWithBacklinks` работает внутри одного frame) не добавлен — это не honesty-fix, а фича
+  уровня #113/#159, и делать её до брифа выборки значит проектировать вслепую.
+- Vision scene: 4. User outcome: включив «Create inverse property in schema», пользователь либо
+  получает работающую обратную связь, либо честный текст о том, что связь односторонняя.
+- **Разрыв (проверен, два места):** `RelationSetup.svelte:43` обещает создание inverse-свойства;
+  `relationSetupController.ts:20-32` пишет только `fieldConfig` **исходного** проекта; в схеме
+  цели не появляется ничего. Затем `adaptRelationFieldConfig` (`relationContract.ts:71`) жёстко
+  задаёт `createIfMissing: false`, `writeOne` возвращает `inverse-field-missing`
+  (`relationsWriter.ts:96-120`), а `fireInverseRelations` (`viewApi.ts:113-126`) выбрасывает весь
+  `RelationWriteOutcome` — ни Notice, ни бейджа, ни лога.
+- **Почему analysis_required:** в репозитории уже две реализации обратной связи, и решение — какая
+  из них каноническая — продуктовое, а не техническое:
+  - **(A) Выводимый inverse.** `enrichWithBacklinks` (`relationResolver.ts:191`) уже считает
+    `<relation>_backlinks` и вызывается для каждого виджета (`WidgetHost.svelte:68`) и для внешнего
+    frame (`externalFrameResolver.ts:80`). Ничего не пишет, WikiLink остаётся единственным внешним
+    ключом — принцип 3 `PRODUCT_RESET`. **Но:** `computeBacklinks` строит индекс из одного frame,
+    поэтому межпроектный случай эссе «Клиент → все его сеансы» этим путём НЕ покрыт; добирать надо
+    на стороне `crossProjectResolver`, где межпроектное разрешение уже есть.
+  - **(B) Записываемый inverse.** Тогда обязательны создание поля в цели, чтение
+    `RelationWriteOutcome.issues` в UI и согласование двух копий при rename/delete цели —
+    последнее сейчас не сделано вообще (см. #144 по исходам и CX-B §6).
+- **Мина под обоими вариантами:** `settings.updateFieldConfig(projectId, fieldName, fields, config)`
+  удаляет из `fieldConfig` все ключи, которых нет в аргументе `fields` (`settings.ts:163-167`).
+  Любая запись конфига в **целевой** проект обязана передавать полный список его полей, иначе молча
+  сотрёт остальные конфиги цели. Отдельный регресс-тест, независимо от выбранного варианта.
+- До решения текст в UI не должен обещать того, чего нет: это часть тикета, а не отдельный.
+
+### #144 — Исходы записи на границе ViewApi: три дефекта одной формы
+- Status: ✅ DONE (2026-08-27, рабочее дерево, без коммита)
+- **(1)** `ViewApi.updateRecord` ловит отказ записи, возвращает в store прежнюю запись и показывает
+  Notice. Исключение дальше намеренно не пробрасывается: часть вызовов не ждёт промис, и unhandled
+  rejection заменил бы видимое сообщение записью в консоли.
+- **(2)** `DataApi.writeAcrossFiles` (`allSettled`) возвращает `BulkFieldWriteOutcome`: сколько
+  заметок записано, какие упали и с какой ошибкой, какие пути не нашлись. Применено к `addField`,
+  `renameField`, `deleteField` — дыра была одинаковая во всех трёх. `ViewApi` ждёт исход и
+  сообщает о неполной записи.
+- **(3)** Форма создания поля показывает строку последствий с фактическим числом заметок (сцена 2
+  эссе). Для типов, которые ничего не пишут во frontmatter, строка не показывается.
+- Побочно закрыта часть #150: `relationSetupController` теперь ждёт реальную запись, поэтому
+  `Relation saved.` больше её не опережает.
+- Тесты: `src/lib/__tests__/bulkFieldWrite.test.ts` — 4 случая | Milestone: (next) | Priority: **P1** | Complexity: M
+- analysis_required: false
+- Vision scenes: 2 и 3. User outcome: если запись в Markdown не удалась, пользователь это видит,
+  а интерфейс не показывает несуществующее состояние.
+- **(1) `updateRecord` без компенсации** (`viewApi.ts:41-51`): store обновляется до
+  `await this.dataApi.updateRecord`, исключение не ловится. `oldRecord` уже лежит в локальной
+  переменной строкой выше — компенсация это `try/catch` с возвратом `dataFrame.updateRecord(oldRecord)`
+  и Notice, ничего нового вычислять не нужно.
+- **(2) `addField` без пофайлового результата** (`viewApi.ts:67-75`, `dataApi.ts:70-83`): Promise
+  отбрасывается через `void`, внутри один `Promise.all`. При отказе части файлов vault остаётся в
+  смешанном состоянии молча. Минимальная правка: `allSettled` + возврат исходов + сводка по отказам.
+- **(3) `CreateFieldModal` без подтверждения объёма** (`createFieldModal.ts:41-44`): закрывается
+  сразу. Сцена 2 эссе диктует текст дословно — «Создать поле `problem_type` во всех заметках?
+  Будут добавлены пустые значения, существующие данные не пострадают» — с фактическим числом
+  заметок. Это же требует `PRODUCT_RESET` §4 (Create field показывает последствия bulk-write).
+- **Инвариант, который нельзя сломать:** UI не блокируется на всю массовую запись — сводка
+  приходит после, а не вместо реактивности.
+- Побочный эффект (2): мастер Relation перестанет показывать `Relation saved.` до завершения
+  фоновой записи — см. #150.
+
+### #145 — Одноразовая точка восстановления перед мигрирующей записью на onOpen
+- Status: ✅ DONE (2026-08-27, рабочее дерево, без коммита)
+- `src/lib/settingsBackup.ts`: копия `data.json` соседним файлом `data.backup-<ts>.json`.
+  Идемпотентность даёт файловая система, а не флаг в settings — если копия уже есть, это не первая
+  мигрирующая запись. Схема settings не тронута, миграциям settings знать об этом не нужно.
+- **Копия берётся из памяти, а не с диска, и поэтому порядок записи не важен.** Первая версия
+  читала `data.json` обратно и ради этого откладывала сохранение мигрированного конфига — кросс-
+  модельное ревью показало гонку: между отложенной записью и чтением пользователь или другая
+  вкладка могли сохранить более новый дашборд, и поздняя запись затирала его устаревшим конфигом
+  (идемпотентность миграции от lost update не защищает). Сейчас `saveConfig` снова синхронный, а
+  бэкап пишет **до-миграционный конфиг, который у вызывающего уже на руках**.
+- Файл называется `migration-backup-<projectId>-<viewId>-<ts>.json`, и копия одна **на вид**, а не
+  одна на vault: вторая миграция того же вида сохранила бы уже мигрированную форму.
+  *Формулировка исправлена 2026-08-28 после CV-1: текст описывал первую версию.*
+- Провал копирования никогда не блокирует миграцию: логируется и проглатывается.
+- Тесты: `src/lib/__tests__/settingsBackup.test.ts` — 6 случаев, включая уважение к `configDir`
+- **Исправлено ручным прогоном через Obsidian API 2026-08-28.** Правило «одна копия на вид»
+  оказалось неверным: я посеял второй legacy-пайплайн в тот же вид, миграция отработала, а копия
+  не появилась — до-состояние второго события потерялось молча. Обоснование правила («вторая копия
+  захватит уже мигрированную форму») ложно: payload берётся из памяти и всегда является
+  до-состоянием ИМЕННО этого события. Стало: копия на каждое событие миграции, имя устойчиво к
+  коллизии в одну миллисекунду. Перепроверено вживую — два файла, у каждого своё корректное
+  до-состояние, verified `projectId`/`viewId` и отсутствие `subFilter` в payload.
+- **Ужесточено после кросс-модельного аудита улик (2026-08-28):** до-состояние копируется
+  структурно, а не по ссылке; бросающий `exists` больше не отменяет запись (имя уступает, а не
+  файл); отсутствие `app` и неудачная запись больше не молчат — консоль и Notice, потому что
+  «точки восстановления нет» это то, о чём пользователь должен узнать сразу, а не при откате. | Milestone: (next) | Priority: **P1** | Complexity: S
+- analysis_required: false
+- User outcome: после первого открытия дашборда пользователь может вернуться к прежней
+  конфигурации, если миграция сделала не то.
+- `DashboardView.onOpen` (`dashboardView.ts:53-72`) выполняет две миграции подряд —
+  `migrateTableConfig` и `migrateDashboardTransforms` — и каждая немедленно вызывает
+  `props.saveConfig`. Ни подтверждения, ни undo, ни снимка.
+- Существующий бэкап (`main.ts:531-540`, `__broken_backup`) покрывает только неразбираемые
+  settings, не успешную миграцию.
+- **Предлагаемая форма:** соседний файл через adapter (`data.backup-<timestamp>.json`), а не ключ
+  внутри живого `data.json` — иначе копию затрёт следующая же запись. Срабатывание однократное,
+  по флагу в settings, а не при каждом открытии.
+- Открытый вопрос из `QUALITY_DEBT_2026-08-25.md`, оставленный второй модели; Codex (CX-C) ответил
+  «нужен», с разбором сценария потери: старый `transform.steps = [filter, pivot]` превращается в
+  `subFilter + [pivot]`, после чего исходный порядок из сохранённого конфига невосстановим.
+
+### #146 — Документы описывают уже слитый код как pending
+- Status: ✅ DONE (2026-08-27)
+- `CONTEXT.md`: раздел состояния переписан на факт (`main` = `64863ed`, обе ветки внутри), добавлено
+  правило «merged ≠ accepted», `AGENTS.md`/`CLAUDE.md` убраны из активных источников (сняты с
+  трекинга намеренно в `4e094ef`), базовые числа обновлены.
+- `BACKLOG.md`: заголовки M-FILTER-CONSOLIDATION и M-RELATION-FIRST приведены к факту, #111
+  переведён из IN-PROGRESS в DONE.
+- `SESSION_REPORT_2026-08-27.md`: постскриптум вместо переписывания — отчёт остаётся свидетельством
+  момента, статус живёт в `CONTEXT.md`. | Milestone: (next) | Priority: **P1** | Complexity: XS
+- analysis_required: false
+- User outcome (внутренний): следующая сессия стартует с верной картиной состояния.
+- `CONTEXT.md:15-18` и `SESSION_REPORT_2026-08-27.md:3` утверждают, что `feat/116-filter-order-adr`
+  не слита и `main` не тронут. Фактически `64863ed` — merge-коммит, и код relation-first и
+  filter-стека в `main`.
+- `BACKLOG.md:32` держит M-FILTER-CONSOLIDATION активным, `CONTEXT.md:45-50` называет его
+  COMPLETE; `BACKLOG.md:152-190` помечает M-RELATION-FIRST «pending merge», а #111 IN-PROGRESS.
+- `CONTEXT.md:99-100` перечисляет `AGENTS.md` и `CLAUDE.md` среди активных источников истины,
+  хотя `4e094ef` снял их с трекинга намеренно (репозиторий публичный). Правится строкой в
+  `CONTEXT.md`, **не** возвратом файлов.
+- Шапка `BACKLOG.md` (`Updated:`) — та же проблема: обновлена на 2026-08-24 и описывает состояние
+  до merge.
+
+### #147 — Решение: сохранённая выборка как адресуемый источник (Vision scene 5)
+- Status: ✅ РЕШЕНО 2026-08-27 (решение пользователя) → исполняется в **M-SAVED-SELECTION**, #159–#160
+- Milestone: (next) | Priority: **P1** | Complexity: L
+- analysis_required: true | analysis_done: true (решение принято пользователем, не аналитикой)
+- **Принят вариант 2 из трёх: выборка становится настоящей сущностью.** Не «именованный дашборд
+  как официальный ответ» и не достройка брошенной заготовки. Выборка получает собственное имя и
+  идентификатор, появляется в списке источников наравне с проектом, на неё можно сослаться из
+  другого блока, состав пересобирается реактивно.
+- **Брошенная заготовка удаляется, а не достраивается** — по решению пользователя: доверия к её
+  соответствию текущему состоянию проекта нет. Удаление вынесено в #160 и идёт ДО проектирования,
+  чтобы бриф не рассуждал о коде, которого не будет.
+- Vision scene: 5 — «фильтр сам становится базой». User outcome: пользователь создаёт именованную
+  выборку и открывает её как источник другого представления.
+- **Это упирается в модель данных, не в UI.** `view.filter` не имеет ни `id`, ни имени, ни
+  собственных представлений (`settings.ts:11-38`); `DatabaseViewConfig` не содержит списка
+  сохранённых выборок (`types.ts:315-349`); `WidgetSourceConfig` знает только `projectId`
+  (`types.ts:54-63`), поэтому выбрать выборку источником нельзя в принципе.
+- В коде уже есть неподключённая модель именованной sub-base (`subBase.ts:24-55`), а тип виджета
+  `sub-base-canvas` отсутствует в `WIDGET_CONTENT` (`widgetComponentRegistry.ts:37-49`) — то есть
+  однажды это начинали и не довели.
+- Ближайший работающий эквивалент — именованный Dashboard view с фильтром. Решение тикета: либо
+  признать его официальным ответом на сцену 5 и описать в `FILTER_MODEL.md`, либо ввести сущность
+  выборки. Промежуточное состояние — худший вариант: оно выглядит как обещание.
+- Три отчёта (CX-A §5, CX-C §2, CX-E) пришли к этому независимо.
+
+### #148 — Граница Relation и field-join: join/scatter связывают в обход контракта
+- Status: ✅ DONE (2026-08-28, документация)
+- Границу зафиксировали, а не стёрли: `FILTER_MODEL.md` §Outside this model получил раздел
+  «Analytical joins are not relations» — join и scatter-correlation парят произвольные поля, не
+  читают `RelationFieldConfig`, не различают resolved/unmatched/ambiguous, inner отбрасывает
+  несовпавшие, scatter берёт первое из нескольких. Связь — объявленное свойство данных, join —
+  заданный им вопрос. Два следствия названы явно: join может спарить то, что контракт назвал бы
+  ambiguous, и его числа несопоставимы с rollup по тому же полю. | Milestone: (next) | Priority: P2 | Complexity: M
+- analysis_required: false
+- Vision scene: 4. User outcome: одинаково выглядящие связи ведут себя одинаково, а аналитический
+  join честно назван join.
+- `computeScatterData` (`chartDataPipeline.ts:247-290`) строит индекс по `joinKey(rightKey)` и
+  ищет совпадение по `joinKey(leftKey)`; `RelationFieldConfig` и `relationContract` не участвуют.
+  При нескольких совпадениях берётся первое, при отсутствии — левая запись молча пропускается.
+- `executeJoin` (`transformExecutor.ts:1077-1156`) соединяет произвольные поля: inner отбрасывает
+  unmatched, left оставляет с `null`, множественные совпадения разворачивают строки.
+- Контракт различает `resolved` / `unmatched` / `ambiguous` (`relationContract.ts:98-125`) —
+  join не использует ни один из статусов.
+- Работа: не объединять механизмы, а зафиксировать границу — join остаётся аналитическим и
+  маркируется как advanced, unmatched/ambiguous получают единый словарь и видимость.
+
+### #149 — linkedSelection: не видно, какая связь применена, и поломка маскируется
+- Status: ✅ DONE (2026-08-28, рабочее дерево)
+- **Правка после CV-1 (2026-08-28):** сообщение о поломке утверждало «блок фильтруется обычным
+  выделением» даже когда выделения нет — состояние `broken` не зависело от активности выделения.
+  Теперь при отсутствии выделения оно честно говорит, что блок показывает все записи.
+- Ярлык перестал описывать проводку и начал описывать данные. Было «Filtered by relation» при
+  валидном, но простаивающем связывании — то есть при показе всех записей. Стало три состояния:
+  «Showing records where <поле> is <запись>» когда связь реально сужает; «Linked through <поле> —
+  select a row to narrow this block» когда связь настроена и ждёт выбора; при поломке —
+  «Relation '<поле>' is broken (<причина>) — this block is filtered by the plain selection
+  instead», потому что fallback на canvas-фильтр действительно продолжает сужать данные, и раньше
+  об этом не сообщалось. | Milestone: (next) | Priority: P2 | Complexity: S
+- analysis_required: false
+- Vision scene: 4. User outcome: по экрану понятно, какая relation сузила данные и какая запись
+  сейчас выбрана.
+- `DatabaseCallBlock.svelte:127-133` показывает обобщённое `Filtered by relation` — без имени
+  relation, без цели, без имени выбранной записи; при поломке — `Relation broken: <status>`.
+- Само сопоставление не вызывает `resolveRelationValue`: `filterByLinkedSelection`
+  (`relationFilterAdapter.ts:68-90`) нормализует строку через `parseRelationLinks` и
+  `canonicalLinkKey`.
+- При невалидной relation `composeEffectiveFilter` (`canvasSelectionStore.ts:250-274`) пропускает
+  relation-условие, но всё ещё добавляет обычное canvas-условие по имени поля — данные сужаются
+  другим способом, а бейдж сообщает только о поломке.
+- Рендер CX-R4 добавил: `Filtered by relation` показывается при валидном конфиге даже без
+  активного выделения, то есть когда фильтрации нет вообще.
+
+### #150 — Мастер Relation: успех до записи, потерянный displayField, недостижимый алерт
+- Status: ✅ DONE (2026-08-28, рабочее дерево)
+- Мастер закрывается после успешного сохранения. Раньше оставался открытым с Notice «Relation
+  saved.», и единственным признаком успеха было сообщение рядом с формой, выглядящей неотправленной.
+- Ошибка сохранения рендерится внутри мастера через уже существовавший `role="alert"`, который был
+  недостижим: контроллер никогда не передавал `error`.
+- Кнопки блокируются на время записи, поэтому двойное сохранение невозможно.
+- Вход из редактора схемы больше не теряет `displayField` и имя обратного поля — раньше сохранение
+  из этой точки молча стирало и то, и другое.
+- «Успех до записи» закрыт в #144: `addField` стал awaitable, и контроллер ждёт реальную запись.
+- **Правка после CV-1 (2026-08-28):** ждать оказалось мало. `addField` сообщает о частичной записи
+  исходом, а не исключением, и мастер отвечал на это «Relation saved.» — связь действительно
+  сохранена, но часть заметок свойства не получила, и сказать только первую половину значит
+  показать здоровым наполовину записанный vault. Теперь конфиг сохраняется, а мастер остаётся
+  открытым с сообщением, в скольких заметках свойство не появилось. | Milestone: (next) | Priority: P2 | Complexity: S
+- analysis_required: false | Depends on: #144
+- Vision scene: 4. User outcome: после Save пользователь понимает, что именно сохранилось.
+- Модалка **не закрывается** после Save, но показывает `Relation saved.`
+  (`relationSetupController.ts:43`).
+- `Relation saved.` появляется **до** завершения фоновой записи frontmatter, потому что
+  `ViewApi.addField` не возвращает promise (`viewApi.ts:67`) — общая причина с #144.
+- Вход из schema editor теряет уже настроенный `displayField` и строит preview на frame с
+  `records: []` (`dashboardSchema.ts:49,159`): счётчики совпадений всегда `0`, а повторное
+  сохранение из этого входа затирает прежний `displayField`.
+- `Save relation` никогда не disabled; ошибки валидации уходят в Notice, а предусмотренный в
+  разметке `role="alert"` недостижим, потому что контроллер не передаёт `error`
+  (`RelationSetup.svelte:52`).
+- Нет состояния загрузки и ошибки для внешнего frame: при `null` мастер просто не рисует счётчик,
+  хотя перевод строки «The selected database could not be loaded.» уже существует.
+
+### #151 — Статусы ссылки известны контракту и не доходят до экрана
+- Status: 🔶 ЧАСТИЧНО (2026-08-28) — закрыт `invalid-field`, остальное открыто
+- Панель настроек предупреждала при `missing-relation` и `wrong-target-project`, но молчала при
+  `invalid-field`: удалённое Relation-поле оставляло панель выглядящей настроенной, пока блок тихо
+  фильтровался обычным выделением. Теперь предупреждает.
+- **Не сделано и почему:** пометка конкретной неразрешённой ссылки в ячейке требует целевого frame
+  в самой ячейке, которого там нет. Тянуть его ради индикатора значит менять контракт рендера
+  таблицы — это отдельная работа, она остаётся открытой частью этого тикета. | Milestone: (next) | Priority: P2 | Complexity: M
+- analysis_required: false
+- Vision scene: 4. User outcome: пользователь видит, какая именно ссылка не нашлась и почему.
+- Unmatched-ссылка в ячейке выглядит обычной пилюлей — статуса нет
+  (`relationContract.ts:98-125` против рендера `tableCanon.ts:237`).
+- Preview мастера показывает три числа (`Matched / Not found / Ambiguous`) без строк и причин
+  (`relationSetup.ts:64`).
+- `DatabaseCallSettings.svelte:35` предупреждает при `missing-relation` и `wrong-target-project`,
+  но не при `invalid-field` — после удаления выбранного Relation-поля предупреждения нет.
+- При пустом результате (`Нет совпадений`) нельзя понять, какая ось убрала строки: scope,
+  transform или selection; для Board/Calendar/Gallery специальных состояний нет вовсе.
+
+### #152 — Порядок sort противоречит FILTER_ORDER_ADR
+- Status: ✅ DONE (2026-08-28, документация — решение «описать, не двигать»)
+- `FILTER_ORDER_ADR.md` получил раздел «Where `sort` actually runs»: сортировок две. Вид сортирует
+  сразу после A, до C и B; таблица дашборда сортирует ещё раз после всего. Инвариант в исходной
+  формулировке верен для второй и ложен для первой.
+- **Решение: документировать, а не переносить.** `View.svelte` общий для table/board/calendar/
+  gallery/dashboard; перенос его сортировки за пайплайн изменил бы порядок строк во всех
+  представлениях ради упорядочивания, на которое никто не жаловался, а поверхность, где это видно —
+  таблица — пересортировывает последней. Реально затронуты порядок входа в пайплайн и порядок
+  серий chart/stats, у которых своей сортировки нет. Если это станет жалобой, лечится отдельной
+  стадией сортировки для дашборда, а не правкой общего вида. | Milestone: (next) | Priority: P2 | Complexity: S
+- analysis_required: false
+- `FILTER_ORDER_ADR.md:12` и `FILTER_MODEL.md:65` фиксируют `A → C → B → sort` и обосновывают:
+  «сортировать вывод pivot — это то, что человек реально видит».
+- Фактически `View.svelte:184-188` сортирует сразу после A, до C и B
+  (`dashboardView.ts:47-50` → `DashboardCanvas` → `WidgetHost:69-71`).
+- Смягчение: таблица дашборда сортирует ещё раз своим `applySort` после всего
+  (`DataTableContent.svelte:85`), поэтому видимый эффект ограничен порядком строк, входящих в
+  pipeline, и сериями chart/stats.
+- Решение любое из двух — перенести sort или уточнить ADR, — но текущее состояние делает
+  order-invariant тест защитой неверного утверждения (родственно #128).
+
+### #153 — Stats receiver сравнивает Relation-поля не каноническим ключом
+- Status: ✅ DONE (2026-08-28, рабочее дерево)
+- Stats сравнивал `String(cell)`, relation-путь — канонический ключ, поэтому карточка могла
+  агрегировать не ту когорту, которую подсвечивала таблица рядом.
+- **Правка после CV-1 (2026-08-28): первая версия была инертна в боевом пути.** Канонизация
+  включалась, только если *выбранное значение* выглядело как ссылка, а драйвер таблицы публикует
+  голый basename (`rowSelectionValue` → `recordBaseName`) — то есть ячейка `[[Ivan Petrov]]` так и
+  не встречалась с выбором `Ivan Petrov`. Теперь сторона выбора канонизируется всегда.
+- Асимметрия осталась намеренной: сторона **ячейки** идёт по ссылочному пути только если в ней есть
+  wikilink. `parseRelationLinks` дробит обычные строки по запятой, и пропустить через него все поля
+  значило бы молча изменить поведение String-полей — «Ivan, Petrov» начал бы совпадать с «Ivan».
+- Граница честно названа в тесте: канонический ключ уравнивает скобки, алиас и регистр, но **не**
+  путь с basename — ровно как relation-путь, совпадение с которым и есть цель тикета.
+- Тесты: `statsSelectionRelation.test.ts` — 4 случая. | Milestone: (next) | Priority: P2 | Complexity: XS
+- analysis_required: false
+- `filterRecordsBySelection` (`statsSelectionReceiver.ts:88-97`) сравнивает `String(cell)`, тогда
+  как relation-путь использует `canonicalLinkKey` (`relationFilterAdapter.ts:68-90`). Для Relation
+  и типизированных полей Stats и таблица могут описывать разные наборы записей.
+- **Дублирование comparator'а здесь осознанное и задокументировано в самом файле** («оба receiver'а
+  обязаны совпадать»), поэтому тикет не про «убрать дубль», а про совпадение семантики на
+  Relation-полях. Если появится третий receiver — извлекать общий, как и написано в комментарии.
+
+### #154 — Vision scene и user outcome как обязательные поля шаблона тикета
+- Status: ✅ DONE (2026-08-28)
+- В шаблон добавлены `Vision scene:` и `User outcome:`. `Vision scene: none — maintenance` —
+  легитимный ответ; отсутствие поля — нет. Именно так «починен crash» и «пользователь понял флоу»
+  оказывались одинаковым прогрессом.
+- **Тестом не проверяется намеренно:** ратчет по всему файлу упал бы на 120 исторических тикетах, а
+  дописывать им ссылки на сцены задним числом значит выдумывать намерение, которого не было. | Milestone: (next) | Priority: P2 | Complexity: XS
+- analysis_required: false
+- `PRODUCT_RESET` §6 требует, чтобы каждый product-тикет ссылался на сцену и имел проверяемый
+  user outcome. Шаблон в `BACKLOG.md:13-25` таких полей не содержит, поэтому правило неисполнимо
+  механически: в файле 128 тикет-секций и 8 строк, где сцена вообще упоминается.
+- Работа: добавить в шаблон `Vision scene:` и `User outcome:`, отметить их обязательными для
+  product-тикетов (не для технических), и проверить их наличие тем же тестом, что уже сторожит
+  дрейф конфигов (`R0_7_configDrift.test.ts`).
+
+### #155 — Проактивные подсказки: расширить или честно назвать MVP
+- Status: ✅ DONE (2026-08-28) — честность, не расширение
+- Дефект: подсказка relation-block предлагалась для Relation-поля без цели, и её принятие добавляло
+  **пустой** `database-call` — обещание «связанные записи» превращалось в пустой блок, что читается
+  как сломанная фича, а не как ненастроенное поле. Теперь правило требует цели.
+- Объём подсказок зафиксирован как MVP в `VISION_DEVIATIONS.md` D-4: две подсказки против списка
+  сцены 6 (рост к периоду, тренд, аномалии, частота, пауза, прогноз). Расширение — отдельная
+  продуктовая работа, а не долг этого тикета. | Milestone: (next) | Priority: P2 | Complexity: M
+- analysis_required: false
+- Vision scene: 6. User outcome: пользователь получает подсказки по своим типам данных, а не
+  считает вручную.
+- `smartSuggest.ts:16-26` содержит ровно два правила: `numeric-stats` и `relation-block`. Эссе
+  перечисляет: сумма/среднее/рост к периоду, динамика/тренд/аномалии, частота визитов/средняя
+  пауза/прогноз следующего обращения. Нет правил для Date вообще.
+- `dashboardSuggest.ts:35-47`: при relation без `targetProjectId` принятие подсказки добавляет
+  обычный пустой `database-call`, а не связанный блок — подсказка обещает больше, чем делает.
+- Strip показывается только на непустом редактируемом canvas (`DashboardCanvas.svelte:170-173`),
+  то есть ровно там, где пользователь уже разобрался; на zero state его нет.
+- Минимум по этому тикету — честность: #059 помечен DONE без пометки MVP, из-за чего покрытие
+  сцены 6 выглядит полным.
+
+### #156 — Первый запуск умалчивает о том, что делает
+- Status: ✅ DONE (2026-08-28, рабочее дерево)
+- Форма создания проекта говорит, что делает: при пустом пути — «весь vault: каждая заметка
+  становится записью», при заданном — «читает заметки, уже лежащие в <папке>; папка не создаётся и
+  заметки не пишутся — проект это вид поверх существующих файлов».
+- Демо перестало глотать отказы: «уже существует» проверяется до записи, идемпотентность сохранена,
+  а настоящий отказ записи собирается и показывается — «создан, но N заметок записать не удалось».
+  Отказ создания самой папки больше не приводит к регистрации проекта, указывающего в никуда.
+- **Не сделано:** третье действие «Импортировать папку» на первом экране — это новый флоу, а не
+  честность формулировок; остаётся продуктовой работой по сцене 7. | Milestone: (next) | Priority: P2 | Complexity: S
+- analysis_required: false
+- Vision scenes: 2 и 7. User outcome: пользователь понимает, что создалось на диске, а что только
+  в настройках.
+- `Create project` создаёт запись в plugin settings и один view; папку и заметки не создаёт
+  (`dataApi.ts:307`, `settings.ts:33`), и нигде этого не говорит.
+- Пустой `Path` молча означает весь vault — из UI это не следует.
+- `createDemoProject` глотает ошибки `createFolder` и `vault.create` и регистрирует проект всё
+  равно (`demoProject.ts:462,475`); пользователь не узнает, что часть заметок не создалась.
+- Onboarding предлагает два действия вместо трёх из эссе; пути «превратить существующую папку в
+  базу» на главном экране нет, он есть только как вторичная инструкция на вкладке
+  (`Onboarding.svelte:39-50`).
+
+### #157 — Реестр отклонений от Vision: свести три статуса в один
+- Status: ✅ DONE (2026-08-28)
+- Создан `VISION_DEVIATIONS.md`: шесть строк D-1…D-6 с реальностью и статусом каждого осознанного
+  отклонения — dashboard-as-file, конструктор формул, внешний источник только на чтение, объём
+  подсказок, выборка-как-база, выводимый inverse. `PRODUCT_RESET` §4 и `CONTEXT.md` ссылаются на
+  него вместо того, чтобы повторять статусы по-разному.
+- Правило записано в самом файле: отклонение — это **решение**. Не решённое — пробел в бэклоге, а
+  не строка в реестре. | Milestone: (next) | Priority: P2 | Complexity: S (decision)
+- analysis_required: false
+- Три отклонения приняты в коде, но их статус в документах разный, и из-за этого продукт выглядит
+  ближе к эссе, чем он есть:
+  - **Сцена 8, дашборд-как-markdown.** Конфиг живёт в общем `data.json` (`main.ts:356-360`).
+    `BACKLOG.md:1107-1129` фиксирует Option B (defer до V3), `PRODUCT_RESET` §4 держит «decision gap».
+  - **Конструктор формул.** `FormulaConstructor.svelte:10-18` прямо фиксирует code-only, «no
+    visual/node mode», тогда как эссе (сцена 6) требует «жесты и слова». Это отменённое обещание,
+    а не долг реализации.
+  - **Внешний источник read-only.** #139 закрыл запись сознательно; как это соотносится с
+    принципом «одна сущность в двух интерфейсах», нигде не записано.
+- Работа: один раздел с решением по каждому — принято / отложено до версии X / отменено — и
+  ссылка из `PRODUCT_RESET` §4, чтобы матрица сцен перестала расходиться с кодом.
+
+### Кросс-модельное ревью стека #141–#145 (Codex, 2026-08-27)
+
+Отчёт: `codex-reports/CX-REVIEW-stack-141-145.md`. Восемь утверждений ушли на проверку, шесть
+объявлены ложными. Разбор — что принято, что отклонено:
+
+- **Принято, исправлено: явный `targetProjectId` небезопасен** (#141). Приоритет ручного значения
+  убран: id, не совпадающий с целью relation, резолвит ссылки в чужом проекте, где совпадение по
+  basename даёт правдоподобное и неверное число без единой ошибки. Осталась одна истина о том,
+  «какой это проект». Тест переписан на противоположное ожидание.
+- **Принято, переформулировано: эквивалентности с прежним кодом нет** (#141). `FieldConfig`
+  допускает relation и rollup на одном поле, поэтому прежний цикл мог резолвить ссылку, которую
+  предыдущий rollup уже затёр своим результатом. Новое поведение лучше, но это **решение, а не
+  равенство**, и записано так. Слабый тест порядка заменён: теперь он строит именно этот случай.
+- **Принято, исправлено: исчезнувший файл выглядел успехом** (#144). `DataApi.updateRecord`
+  возвращал `void` и просто выходил, если заметки нет; теперь возвращает `boolean`, а `ViewApi`
+  откатывает store и сообщает. Плюс сам откат защищён: он не сработает, если в store уже легло
+  что-то новее — иначе компенсация затирала бы чужую правку.
+- **Принято, исправлено: гонка на потерю правок** (#145). Отложенный `saveConfig` мог перезаписать
+  дашборд, сохранённый пользователем или другой вкладкой, пока шло чтение `data.json`.
+  Идемпотентность миграции от lost update не защищает. Переделано: снимок берётся из памяти
+  (конфиг уже на руках), сохранение снова синхронное, бэкап — один на вид, а не один на vault.
+- **Принято, исправлено: standalone-галерея игнорировала read-only** (#142). Пре-существующий
+  пробел, не мой: `galleryView.ts` не передавал `props.readonly`. Теперь передаёт, как Board.
+- **Принято, исправлено: rename/delete не ждали исход** (#144). `dashboardSchema` не ждал
+  `updateField`/`deleteField`, поэтому схема перерисовывалась раньше, чем становилось известно о
+  неполной записи.
+- **Принято как есть: контракт `addField` изменился** (#144). Да, метод стал awaitable, и создание
+  поля теперь ждёт запись. Это намеренно: «поле создано» перестаёт означать «UI успел
+  нарисовать». Зафиксировано, не откачено.
+- **Отклонено: `ViewTabBar` / `BlockFilterBar` получают только `readonly`.** Это не дефект, а
+  решение #139: правки *конфигурации* принадлежат родительскому дашборду, где и хранятся. Иначе
+  нельзя было бы настроить связанный блок, чтобы починить проблему с данными. Тест #139 это
+  прямо сторожит.
+- **Вынесено в #161:** вызывающие, которые после `await api.updateRecord()` кладут запись в свой
+  локальный стейт независимо от исхода.
+
+Замечание Codex, что он не смог запустить jest в своей read-only песочнице, верно: гейты
+прогонялись здесь — 173 сьюта / 2440 тестов PASS, tsc 0, svelte-check 0/0, lint 0 ошибок.
+
+### Сквозная перепроверка проекта с Codex (2026-08-28)
+
+Три параллельных read-only среза по всему проекту после закрытия очереди. Отчёты:
+`codex-reports/CV-1-ticket-claims.md`, `CV-2-invariants.md`, `CV-3-vision-movement.md`.
+Плюс два прохода Gate 0 по брифу #159 (`CX-GATE0-159.md`, `CX-GATE0-159-rev2.md`).
+
+**Главный результат: расхождения нашлись не в коде, а между кодом и тем, что я о нём написал.**
+CV-1 сверил 18 тикетов с фактическим кодом и пометил семь формулировок; из них две были устаревшим
+текстом (#141, #145 описывали поведение до правок по ревью), три — реальными недоделками (#143
+чекбокс, #149 безусловное сообщение, #150 «сохранено» при частичной записи), одна — инертной
+правкой (#153), одна — следствием (#157 повторял формулировку #143). Все исправлены.
+
+- **#153 был инертен в боевом пути.** Канонизация включалась, только если выбранное значение
+  выглядело как ссылка, а драйвер таблицы публикует голый basename (`rowSelectionValue` →
+  `recordBaseName`). То есть ячейка `[[Ivan Petrov]]` так и не встречалась с выбором `Ivan Petrov` —
+  ровно то расхождение, ради которого тикет и заводился. Сторона выбора теперь канонизируется
+  всегда; асимметрия со стороной ячейки осталась намеренной. Добавлены три теста на реальную форму
+  драйвера.
+- **#143: чекбокс продолжал обещать отменённое.** Первая правка тронула пояснение под ним, но не
+  заголовок «Create inverse property in schema». Заголовок заменён; D-6 в реестре уточнён.
+- **#150: ждать записи оказалось мало.** `addField` сообщает о частичной записи исходом, а не
+  исключением, и мастер отвечал «Relation saved.». Теперь конфиг сохраняется, а мастер остаётся
+  открытым с числом заметок, куда свойство не попало.
+- **CV-2 нашёл регресс, который внёс я:** `await` в контроллере схемы (#144) позволял модалке
+  открыться после закрытия вида. Добавлен `dispose()`, канвас вызывает его на destroy. Ратчет
+  R0.6 при этом поймал выход за бюджет строк — уложился, инлайнив `openSchema`.
+- **CV-2, безопасность:** `safeRegexCompile` в unpivot не применял ограничение длины паттерна,
+  которое применяют два других regex-пути. Применяет. Оставшийся разрыв — alternation внутри
+  квантифицированной группы — прежний и известный (#126), закрывается анализатором, а не ещё одним
+  regex.
+- **CV-3:** единственная сцена, сменившая статус, — сцена 2 (`PARTIAL → MET`), и сменила её реальная
+  работа: предупреждение об объёме записи, пофайловый исход, обработка частичного отказа. Остальные
+  улучшения — честность интерфейса, и они намеренно НЕ засчитаны как прогресс. Отдельно CV-3 нашёл
+  брата #144, которого я пропустил: `updateRecords` (путь Board) без компенсации → #163.
+- **Gate 0 по #159 отклонил обе ревизии.** Ревизия 1 — три ложных claim'а; ревизия 2 — доказала, что
+  `pending` не отличим от пустоты на уровне вида, и что таблица инвалидации неполна. Из этого
+  разбора вышел #162 — дефект не в дизайне, а в выпущенном коде.
+
+Гейты после всех правок: **174 сьюта / 2450 тестов PASS, tsc 0, svelte-check 0/0, lint 0 ошибок.**
+
+### #164 — Демо-генератор поставляет конфиги, которые сам же продукт мигрирует при открытии
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: S
+- analysis_required: false
+- Vision scene: 7 | User outcome: первый открытый дашборд не переписывает сам себя на диске
+- **Найдено ручным прогоном через Obsidian API 2026-08-28** и подтверждено кросс-моделью:
+  `demoProject.ts:299,320,341,364` создаёт виджеты с ведущим шагом `type: "filter"` в
+  `widget.transform`. Это ровно та форма, которую #118 переносит в `config.subFilter`. Значит
+  свежесозданное демо при первом же открытии «Обзора» мигрирует само себя, пишет `data.json` и
+  создаёт файл восстановления (#145).
+- Наблюдалось вживую: первый `migration-backup-*.json` в тестовом хранилище появился не от моего
+  посева, а от штатного открытия только что созданного демо. Его до-состояние —
+  `[('filter','type')]`.
+- **Почему это не безобидно:** демо задумано как эталон «актуальной конфигурации» (об этом прямо
+  говорит комментарий генератора), а фактически оно эталон legacy-формы. Пользователь на первом
+  экране получает запись на диск, которой не просил, и любой, кто копирует демо-конфиг как
+  образец, копирует форму, помеченную к миграции.
+- **Работа:** переписать генератор так, чтобы фильтры сразу лежали в `config.subFilter`, а
+  `transform` оставался только для того, что действительно является пайплайном. Плюс расширить
+  `configProvenance.test.ts`: он проверяет no-op для `migrateAggregationCount`, но не для
+  `migrateDashboardTransforms` — то есть ровно этот класс дрейфа тест не ловит.
+
+### #163 — Пакетная запись (Board) не компенсируется при отказе
+- Status: ✅ DONE (2026-08-28, рабочее дерево)
+- Milestone: (next) | Priority: P1 | Complexity: XS
+- analysis_required: false
+- Vision scene: 1 | User outcome: карточка не остаётся в новой колонке, если запись не удалась
+- Найдено CV-3 при сквозной перепроверке. `updateRecords` — пакетный брат `updateRecord`, и дыра
+  была та же: store обновлялся первым, запись ждали без `catch`. Перетаскивание карточки на Board
+  пишет несколько записей разом, поэтому отказ оставлял карточку в новой колонке, за которой в
+  Markdown ничего нет — сцена 1 эссе показывала сторону, которой не существует.
+- Возвращает `boolean`, откатывает только те записи, что писал сам, и только если в store всё ещё
+  лежит положенное им значение — то же правило, что в `revertOptimistic`.
+- Тесты: `recordWriteCompensation.test.ts`, блок #163.
+
+### #162 — Вид не обновляет rollup и relation, когда меняется целевой проект
+- Status: ✅ DONE (2026-08-28, рабочее дерево)
+- Milestone: (next) | Priority: **P1** | Complexity: XS
+- analysis_required: false
+- Vision scene: 4 | User outcome: добавил сеанс — счётчик сеансов у клиента изменился, без
+  переоткрытия вида
+- **Найдено Gate 0 ревизии 2 по брифу #159** (`codex-reports/CX-GATE0-159-rev2.md`), то есть
+  ревью дизайна нашло дефект не в дизайне, а в выпущенном коде. Проверено отдельно.
+- `View.svelte` перезагружал внешние фреймы только при смене набора целевых id или собственного
+  кадра (`dataGeneration`). Изменение заметки в **целевом** проекте ни то, ни другое не двигает,
+  поэтому rollup и relation-производные колонки оставались с прежними числами до тех пор, пока не
+  изменится сам проект-источник или вид не откроют заново.
+- Это ровно сценарий эссе: «в дашборде клиентов появляется колонка "Количество сеансов" — она
+  вычисляется автоматически». Автоматичность ломалась молча, и #141 без этой правки чинил только
+  половину пути: значение считалось верно один раз.
+- Механизм уже существовал и использовался: `externalFrameInvalidation` бампится в `App.svelte` на
+  каждое vault-событие create/modify/delete/rename, и `DashboardCanvas` слушает его с самого
+  начала. Вид просто не был подписан — правка в одну зависимость реактивного блока.
+- **Не закрыто этим тикетом (осталось в #159 как вход для дизайна):** ключ кэша внешних фреймов в
+  `App.svelte` состоит из `id|name`, поэтому смена `fieldConfig`, native-query или Dataview-запроса
+  целевого проекта кэш не инвалидирует; и пока внешние фреймы грузятся, вид считает по сырому
+  кадру, не отличая «ещё не готово» от «пусто».
+
+### #161 — Вызывающие считают неудачную запись успешной
+- Status: ✅ DONE (2026-08-28, рабочее дерево)
+- `ViewApi.updateRecord` возвращает `boolean`: дошло ли изменение до файла.
+- `CalendarView` перестал зеркалить неудачу в трёх местах — редактирование заметки, смена цвета,
+  чекбокс в поповере дня. Раньше после отката в store календарь клал значение обратно на экран.
+- Notice о неполной массовой записи по-прежнему без контекста вида — известное ограничение,
+  отмечено здесь; контекст появится вместе с привязкой уведомлений к виду. | Milestone: (next) | Priority: P2 | Complexity: S
+- analysis_required: false | Depends on: #144
+- Vision scene: 3. User outcome: если запись не удалась, ни одно представление не показывает
+  значение, которого нет в файле.
+- После #144 `ViewApi.updateRecord` откатывает свой store и показывает Notice, но вызывающие,
+  которые ведут собственную копию, об этом не знают: `CalendarView.svelte:926` после `await`
+  кладёт запись в локальный frame безусловно. Найдено кросс-модельным ревью 2026-08-27.
+- Работа: пройти вызовы `api.updateRecord` и либо перевести их на исход (сделать его
+  возвращаемым значением), либо убрать локальное дублирование стейта там, где оно не нужно.
+- Заодно: Notice о неполной массовой записи не несёт контекста проекта/вида и может всплыть уже
+  после переключения — стоит либо добавить контекст, либо привязать к виду.
+
+### #158 — R0/R1 user acceptance в чистом OBStests vault
+- Status: 🔶 ЧАСТИЧНО (2026-08-28) — API-наблюдаемая часть пройдена, визуальная остаётся
+- Milestone: (next) | Priority: P0 | Complexity: M
+- **Пройдено 2026-08-28 через Obsidian Local REST API** (`MANUAL_TESTING_PIPELINE.md` §1–§4a):
+  деплой трёх артефактов, reload, ровно 10 команд, смоук демо A1–A7, roundtrip PUT/GET/DELETE,
+  и новый раздел 4a — миграция конфигурации M1–M5 с проверкой содержимого файлов восстановления.
+- **Прогон нашёл два дефекта, оба исправлены и перепроверены вживую:** правило «одна копия на вид»
+  в #145 теряло до-состояние второго события миграции; демо-генератор поставляет legacy-пайплайны
+  и мигрирует сам себя при первом открытии (#164).
+- **Остаётся человеку:** всё, что REST не видит — рендер, консольные ошибки, DnD, hover.
+  Чек-лист по тикетам этого стека: `UNTESTABLE_FEATURES_2026-08-28.md`.
+- **Честная граница (из кросс-модельного аудита улик):** 10 зарегистрированных команд не
+  доказывают работоспособность ни одного callback; успешное создание демо не доказывает, что
+  дашборд отрисовался; наличие файлов восстановления не доказывает возможность восстановления.
+  Поэтому статус «частично», а не DONE.
+- analysis_required: false
+- Vision scene: 4. User outcome: сценарий «Клиенты → Сеансы» проходится в реальном Obsidian со
+  скриншотами, клавиатурным путём и внешней правкой Markdown.
+- **Почему отложен:** тикеты на визуальный тест ещё не написаны. До их появления роль
+  доказательства исполняет рендер-проход из кода (`CODEX_RENDER_TASKS_2026-08-27.md`,
+  отчёты `CX-R1…R4`), который уже нашёл #141 и #142.
+- **Чем рендер не является:** это гипотеза из кода, а не наблюдение. Он не закрывает
+  `MANUAL_TESTING_PIPELINE.md:130-161` (четыре пустых чекбокса) и не отменяет того, что #115
+  помечен DONE с непройденной ручной приёмкой.
+- Разблокировать вместе с тикетами на визуальный тест и вернуть в P0.
+
+
+---
+
+## Milestone M-MATRYOSHKA — 📋 PLANNED (референс-анализ Notion, 2026-08-28)
+
+> **Основание:** `REFERENCE_NOTION_UI_2026.md` (свежий анализ Notion по совпадающим элементам +
+> цепочки «внимание → действие») и холодный аудит адаптивности
+> `codex-reports/CX-MATRYOSHKA-audit.md`.
+> **Принцип вехи:** *контейнер определяет размер, вид определяет вопрос, источник определяет ответ.*
+> **Порядок:** #165 → #166 → #167 (адаптивность), параллельно #168 → #169 (внимание и фокус).
+> #170 — ревизия решения по сцене 5 с учётом референса.
+
+### #165 — Принцип матрёшки не участвует в сборке
+- Status: 📋 BACKLOG | Milestone: M-MATRYOSHKA | Priority: **P1** | Complexity: S
+- analysis_required: false | Blocks: #166, #167
+- Vision scene: none — техническая база | User outcome: правки «по матрёшке» начинают влиять на пиксели
+- `src/lib/tokens/design-tokens.css` — файл, который декларирует шкалу и принцип, — **мёртвый код**:
+  он никогда не импортируется, действующие токены приходят из `ui/tokens/tokens.css`. Это записано
+  в самом репозитории (`dashboardTokens.css:20`) и подтверждено аудитом. Пока это так, любая работа
+  «по принципу» правит документ, а не интерфейс.
+- **Работа:** свести к одному живому источнику токенов и удалить мёртвый; ввести **два уровня**
+  шкалы — `:root` (абсолютная, как сейчас) и контейнерная (производная: отступы в `em`, типографика
+  через `clamp()` от `cqi`).
+- Регресс: тест, который падает, если файл токенов перестаёт быть импортирован.
+
+### #166 — Родственность: размер вложенного определяется контейнером
+- Status: 📋 BACKLOG | Milestone: M-MATRYOSHKA | Priority: **P1** | Complexity: L
+- analysis_required: false | Depends on: #165
+- Vision scene: 7 | User outcome: один и тот же блок в узкой колонке и во всю ширину выглядит
+  соразмерно, а не одинаково
+- Измерено: 3378 `rem` против 31 `em`, **ноль** контейнерных единиц, 5 исполняемых `container-type`,
+  из них один (`DataTableContent.svelte:255`) объявлен и никем не запрошен.
+- **P0 внутри тикета — два места, где ломается содержимое:**
+  - график получает фиксированный `width={480}` и реагирует на узкий контейнер только скрытием
+    легенды (`ChartWidget.svelte:137,176`);
+  - колонки таблицы фиксированы в `rem` при `min-width: max-content`, то есть горизонтальный скролл
+    закреплён как контракт (`tableCanon.ts:29,95`).
+- P1: `BlockFilterBar { min-width: 22rem }` в блоке, который может быть уже; `PipelineEditor`
+  переключает раскладку по `@media`, то есть по окну, а не по виджету; попапы уходят в `body` и
+  клампятся по viewport (`FloatingPopup.svelte:114,249,302`).
+- **Работа:** каждый уровень цепочки (`ViewContent` → `DashboardCanvas` → `WidgetGrid` →
+  `WidgetShell` → содержимое → попап) объявляет себя контейнером и задаёт детям локальную базу;
+  фиксированные минимумы заменяются на `min(…, 100cqi)`; график и таблица получают ширину от
+  контейнера.
+- **Граница:** попапы и модалки верхнего уровня остаются привязанными к окну намеренно — это
+  осознанный разрыв родственности, а не забытый; он должен быть записан, а не разрешаться молча.
+
+### #167 — Инвариант: внутри контейнера нет `rem`
+- Status: 📋 BACKLOG | Milestone: M-MATRYOSHKA | Priority: P2 | Complexity: S
+- analysis_required: false | Depends on: #166
+- Vision scene: none — инвариант | User outcome: принцип перестаёт зависеть от дисциплины
+- `PX_BUDGET = 177` сторожит букву («мало px») и пропускает смысл: `rem` — это привязка к корню, то
+  есть все матрёшки одного размера независимо от вложенности. Тест не заметил, что принцип потерян.
+- **Работа:** заменить/дополнить бюджет проверкой родственности — внутри компонентов, лежащих в
+  объявленном контейнере, размеры задаются `em`/`%`/`cq*`, а `rem` допустим только в списке
+  верхнеуровневых поверхностей. Список — часть теста, а не соглашение.
+
+### #168 — Пик вместо ухода: открытие записи не должно терять контекст
+- Status: 📋 BACKLOG | Milestone: M-MATRYOSHKA | Priority: **P1** | Complexity: M
+- analysis_required: false
+- Vision scene: 3 | User outcome: клик по строке показывает запись, не уводя из представления
+- Референс: у Notion три способа открыть запись — full page, **center peek**, **side peek**; во всех
+  случаях, кроме первого, контекст остаётся `[док]`. У нас 32 места вызывают
+  `workspace.openLinkText(...)` — то есть уход в редактор, и 4 места открывают модалку.
+- **Работа:** контракт «открытие из представления по умолчанию — side peek» поверх существующего
+  `VisualizerPane`; полноэкранный переход по модификатору. В пике показывать соответствие
+  «поле ↔ ключ frontmatter» — этим закрывается сцена 3, которую сейчас не закрывает ничего.
+- Побочно снимает часть #151: статус ссылки удобнее показывать в пике, чем в ячейке.
+
+### #169 — Приоритет фокуса: визуальный вес и клавиатурный путь должны совпадать
+- Status: 📋 BACKLOG | Milestone: M-MATRYOSHKA | Priority: P2 | Complexity: M
+- analysis_required: false
+- Vision scene: 7 | User outcome: клавиатурой доходишь до действия так же коротко, как мышью
+- Аудит нашёл четыре расхождения: `SettingsMenuPopover` и `SlideInPanel` объявлены модальными, но не
+  берут фокус, не держат Tab и не возвращают его (`SettingsMenuPopover.svelte:107,135`,
+  `SlideInPanel.svelte:29,51`); скрытые hover-действия остаются в табуляции — `opacity: 0` без
+  `inert` (`WidgetHeaderActions.svelte:121,145`); каждый `WidgetShell` добавляет лишнюю остановку
+  Tab (`accessibility.ts:56`); слои используют разные шкалы `z-index`.
+- **Работа:** focus-trap и возврат фокуса для модальных поверхностей, `inert` для скрытых действий,
+  снятие лишней остановки, одна шкала слоёв. Плюс визуальный вес: первичное действие блока весомее
+  cog, фильтр вида поднимается в постоянно видимую полосу — как у референса.
+
+### #170 — Сцена 5 после референса: третий вариант, которого не было в брифе
+- Status: 📋 BACKLOG | Milestone: M-MATRYOSHKA | Priority: **P1** | Complexity: M (решение)
+- analysis_required: **true** | analysis_done: false | Depends on: #159
+- Vision scene: 5 | User outcome: решение принимается со знанием того, как ту же задачу решил референс
+- **Что показал референс `[док]`:** у Notion вид **никогда не бывает источником** — источником всегда
+  является data source; фильтры живут на виде и не переиспользуются, связанный блок ссылается на
+  источник и настраивает фильтры заново. То есть Notion **не выполняет** сцену 5 нашего эссе, он её
+  обходит: делает виды дешёвыми и связываемыми и платит дублированием фильтров. Зато он ввёл
+  уровень **контейнера** (`database`), который может держать несколько источников.
+- **Следствие для нас:** у нас нет уровня контейнера, и именно его отсутствие толкает к введению
+  четвёртой сущности «сохранённая выборка». Появляется третий вариант, которого не было в брифе
+  #159: **проект как контейнер нескольких источников**, где именованная выборка — это источник, а не
+  новая сущность рядом с видом.
+- **Это не отменяет решение пользователя от 2026-08-27** (вариант 2). Тикет заводит сравнение трёх
+  вариантов на одном столе: (A) компромисс Notion, (B) выборка как сущность (принято), (C) контейнер
+  источников. Ревизия 3 брифа #159 обязана явно сказать, почему выбран тот, что выбран.
+
+
+---
+
+## Milestone M-SAVED-SELECTION — 📋 PLANNED (решение по #147, 2026-08-27)
+
+> **Основание:** сцена 5 `DASHBOARD_V2_VISION.md` — «фильтр сам становится базой»; решение
+> пользователя по #147 от 2026-08-27.
+> **Порядок:** #160 (удалить заготовку) → #159 (бриф + Gate 0) → implementation-тикеты, которые
+> заводятся ПОСЛЕ утверждения брифа, а не сейчас.
+> **Не начинать реализацию до закрытия #143** — см. блок «Порядок разработки» ниже.
+
+### #160 — Удалить брошенную модель sub-base, не задев живой `targetSubBaseFilter`
+- Status: ✅ DONE (2026-08-27, рабочее дерево, без коммита) | Milestone: M-SAVED-SELECTION | Priority: P1 | Complexity: S
+- **Удалено:** `subBase.ts`, `subBasePartition.ts`, `crossSubBase.ts` и четыре их тест-файла;
+  команда палитры `add-sub-base` вместе с членом юниона `CommandBusAction` и записью в тесте;
+  ключи i18n `add-sub-base` и `sub-bases` во всех четырёх локалях (валидность JSON проверена).
+  Базовая линия: 176/2485 → 172/2436 — минус четыре сьюта мёртвого кода.
+- **Найдено при удалении и потому НЕ удалено:** `DataTableConfig.subBases` /
+  `activeSubBaseId`. `git log -S` показал, что 3.5.0-alpha (`2af8a50`) **выпускала** виджет
+  `SubBaseCanvas`, который эти ключи писал (удалён позже в #119). Значит они могут лежать в
+  реальном `data.json`, и удаление полей сделало бы сохранённый виджет немоделируемым — то же
+  правило, что удержало отставленные `WidgetType` в #120. Поля оставлены, но отвязаны от
+  удалённого модуля и типизированы как `readonly unknown[]`: переносятся, не интерпретируются.
+- **Вход для #159 (что старая модель успела описать).** Sub-base был *именованным срезом внутри
+  одного представления*: `id`, `name`, собственный `filter` поверх фильтра вида, необязательный
+  `sort`, флаг `inheritColumns` и опциональный список колонок; партиционирование фрейма на срезы;
+  резолвер связей «родительский индекс + предикат среза», чтобы не плодить по индексу на срез.
+  Остановились строго перед UI («UI wiring lands in R2.2» — не случилось).
+  **Почему это не заготовка для #159, а другой ответ:** старая модель по построению живёт внутри
+  вида и не может быть выбрана источником где-то ещё — ровно то свойство, ради которого принят
+  вариант 2. Ценен только резолвер «индекс + предикат»: он показывает, как считать связи в срез,
+  не копируя записи.
+- analysis_required: false | Blocks: #159
+- Vision scene: 5. User outcome: в палитре команд нет пункта, который ничего не делает; в коде нет
+  второй модели выборки, конкурирующей с будущей настоящей.
+- **Что удаляется (проверено: production-импортов нет, только тесты друг друга):**
+  - `src/lib/database/subBase.ts`, `src/lib/database/subBasePartition.ts` и их тесты;
+  - `src/lib/relations/crossSubBase.ts` и его тесты (их два — `crossSubBase.test.ts` лежит и рядом
+    с модулем, и в `__tests__/`);
+  - команда палитры `add-sub-base` (`main.ts:298`) — **она живая и видна пользователю**, при этом
+    `emitCommand("add-sub-base")` не обрабатывает никто: пункт есть, эффекта нет;
+  - осиротевшие ключи i18n `commands.add-sub-base.*` и `views.dashboard…sub-bases.*` во всех
+    четырёх локалях (правило #130: ключи убираются синхронно, не только в `en`).
+- **Что НЕ удаляется, и это главный риск тикета:**
+  - `RelationFieldConfig.targetSubBaseFilter` (`settings.ts:253`) — живой механизм: сужает цель
+    связи, читается в `crossProjectResolver.ts:42` и `crossProjectRollup.ts:102`, редактируется в
+    `ConfigureField.svelte:345-347`. После #141 этот путь стал реально достижимым, так что его
+    поломка сразу видна пользователю. Одно слово, два разных механизма — ровно ловушка §3
+    `PRODUCT_RESET`; в тикете это разводится явно.
+  - Всё, что нужно уже сохранённому виджету `sub-base-canvas`, чтобы честно отрисоваться: член
+    юниона `WidgetType` (решение #120 — иначе виджет в `data.json` перестаёт моделироваться),
+    запись в `isRetiredLegacyType` и метаданные в `widgetRegistry`.
+    **Правка тикета 2026-08-27:** сначала здесь было написано, что запись в `widgetRegistry`
+    удаляется. Это неверно, проверено перед удалением: `DashboardBlockPalette.svelte:19` и
+    `WidgetToolbar.svelte:38` скрывают legacy-типы, пока такого виджета нет на канве, — то есть
+    запись ничего не рекламирует новому пользователю, а старому даёт лейбл и путь
+    «Convert to V2 block». Убрав её, я ухудшил бы отображение чужих сохранённых дашбордов ради
+    чистоты списка.
+- **Побочный результат, который нужен #159:** при удалении зафиксировать в двух-трёх абзацах, что
+  старая модель успела описать (id, имя, фильтр, настройки колонок; партиционирование фрейма) и на
+  чём остановилась. Это вход для брифа, а не оправдание достройки.
+
+### #159 — Бриф: выборка как адресуемый источник (design + Gate 0)
+- Status: 🚧 IN-PROGRESS (2026-08-28) — ревизия 2 написана, ждёт повторного Gate 0
+- Milestone: M-SAVED-SELECTION | Priority: P1 | Complexity: M (документ)
+- analysis_required: true | analysis_done: false | Depends on: #160 ✅, #143 ✅
+- Vision scene: 5 | User outcome: человек называет выборку и открывает её источником другого вида
+- Документ: `SAVED_SELECTION_BRIEF_159.md`. **Ревизия 1 не прошла Gate 0** (2026-08-28,
+  `codex-reports/CX-GATE0-159.md`): из трёх equivalence claims не выжил ни один, и два опровержения
+  изменили дизайн, а не формулировки.
+  - **«Выборка = блок с subFilter» — ложно.** `applyWidgetScope` откладывает `subFilter` за
+    пайплайн, если он называет поле, которого нет в сыром frame (`widgetScope.ts:36`). Фильтр по
+    `_group_size` или вычисленной колонке работает ПОСЛЕ C, а выборка, определённая как
+    `applyFilter(raw, F)`, вернула бы пусто. → Ревизия 2 определяет выборку над **обогащённым**
+    frame (после relation/rollup, до C) — иначе пример самого эссе («последний сеанс больше двух
+    недель назад» — это rollup) невыразим.
+  - **«Пересчитывается ровно при изменении frame» — ложно уже сегодня.** Членство движется вместе
+    с часами (`is-today`, `is-overdue`, скользящие диапазоны) и с приходом внешних frame, при
+    неизменном источнике; внешние frame к тому же кэшируются (`externalFrameCache`,
+    `dashboardPreload`). → Ревизия 2 заменяет claim таблицей инвалидации; строка «часы» — с честной
+    пометкой, что механизма нет, и выбором: либо запретить относительные даты в выборках, либо
+    вводить тик.
+  - **«Ничего не мигрирует» — ложно.** Смена `WidgetSourceConfig` на размеченное объединение ломает
+    сохранённые внешние `database-call`: читатели спрашивают `sourceConfig.projectId`, и старый
+    конфиг проваливается в parent-frame fallback, то есть молча показывает чужой проект — дефект
+    #136, воспроизведённый сменой типа. → Нормализатор на чтении входит в v1.
+  - **Q4 переписан.** Правило «все условия выразимы значением» не выживает: строгое сравнение пишет
+    значение, не проходящее собственное условие; у отрицаний и унарных операторов нет
+    удовлетворяющего значения; `OR` не требует всех условий, противоречивый `AND` не имеет решения;
+    derived-поля вообще не пишутся во frontmatter (`dataApi.ts:233`); предикат самого источника
+    (folder/tag/native-query) — вторые ворота. → Стало: создавать, только если систему может
+    **построить кандидата и проверить его после записи**, иначе честное «Create in base».
+- Дальше: ревизия 2 уходит на повторный Gate 0 (Q3 таблица инвалидации, Q4 verify-after-write,
+  claim 3), и только после него бриф разбивается на implementation-тикеты.
+- Vision scene: 5. User outcome брифа: описан путь, в котором человек называет выборку и открывает
+  её как источник другого представления, и описано, что происходит во всех неудобных случаях.
+- **Бриф обязан ответить, а не упомянуть:**
+  1. **Хранение.** Где живёт выборка: рядом с проектами, внутри проекта, отдельным списком.
+     Что является её идентичностью и что происходит при переименовании.
+  2. **Область.** Выборка над одной базой или над несколькими; допускается ли выборка над выборкой.
+  3. **Выбор источником.** `WidgetSourceConfig` сейчас знает только `projectId`
+     (`types.ts:54-63`) — как он начинает различать проект и выборку, и что видит пользователь в
+     списке источников.
+  4. **Запись.** Добавление записи «в выборку»: в какую папку ложится файл, дописываются ли во
+     frontmatter значения условий фильтра, и что делать, когда условие невыразимо значением
+     (например `дата < сегодня - 14 дней`). Это главный вопрос: он отделяет живую базу от
+     сохранённого запроса.
+  5. **Поломка и пустота.** Удалено поле, по которому фильтрует выборка; выборка стала пустой;
+     базы-источника больше нет. Для каждого — что видно на экране.
+  6. **Отношение к трём осям фильтрации.** Выборка — это ось A (scope) с именем, или отдельный
+     уровень над ней. Ответ обязан быть совместим с `FILTER_ORDER_ADR.md`, иначе ADR правится тем
+     же брифом.
+  7. **Отношение к Relation.** Может ли relation указывать на выборку, а не на проект. Ответ
+     зависит от #143, поэтому #143 закрывается раньше.
+  8. **Миграция.** Что происходит с существующими именованными представлениями-с-фильтром: они
+     превращаются в выборки, сосуществуют или остаются как есть.
+- **Обязательная секция equivalence claims** (`TWO_MODEL_PROTOCOL.md`): бриф переносит и заменяет
+  существующие сущности, значит каждое «X и Y дают одинаковый результат» пишется отдельной строкой
+  и уходит на Gate 0 в Codex до первой строки кода.
+- Implementation-тикеты заводятся после утверждения брифа. Заранее их не плодим — размер и границы
+  до ответов на пункты 1–8 неизвестны.
