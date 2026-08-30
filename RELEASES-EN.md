@@ -52,7 +52,8 @@ Projects Plus automatically detects and migrates settings from the original Obsi
 | ✅ | **Security & Code Quality** | v3.2.2 | Released | [CHANGELOG](CHANGELOG.md) |
 | ✅ | **Database View** | v3.3.0 | Released | [Archive](docs/archive/architecture-database-view.md) |
 | ✅ | **Dashboard View** — Database View → Dashboard canvas migration | v3.4.0 | Released | [Archive](docs/archive/architecture-database-view.md) |
-| 🚧 | **Dashboard Engine** — relations, rollup, sub-bases, Dataview bridge | v3.5.X | In progress | — |
+| 🚧 | **Dashboard Engine** — relations, rollup, Dataview bridge | v3.5.X | In progress | — |
+| ⛔ | **Sub-bases** — withdrawn: widget deleted (#119), model deleted (#160); the replacement is being designed as an addressable entity | — | Withdrawn | — |
 
 ## 📋 Release Notes
 

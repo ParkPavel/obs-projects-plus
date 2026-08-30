@@ -1,3 +1,26 @@
+/**
+ * dataframe.ts — the shape every view, filter and widget agrees on.
+ *
+ * A `DataFrame` is what a data source produces and what everything downstream
+ * consumes: `fields` describe the schema, `records` carry the values, and one
+ * record is one Markdown note — `record.id` IS its vault path, which is why
+ * relations can resolve a wikilink straight to a record.
+ *
+ * Two conventions that are easy to get wrong:
+ *
+ * - **`Optional<T>` means `T | null`, and `null` is not "absent".** It means
+ *   the field exists on the note and has no value yet. A field that is truly
+ *   absent is simply missing from `record.values`. Filters distinguish the two
+ *   (see `emptiness.ts`), so collapsing them here breaks "is empty".
+ * - **A `derived` field is computed, not stored.** Relation enrichment, rollup
+ *   and formula columns are added to `fields` with `derived: true` and are
+ *   never written back to frontmatter. `dataApi` writes stored fields only.
+ *
+ * `DataFieldType` is the closed set of types the product understands; adding a
+ * member obliges the filter operators, the field-control UI and the i18n key
+ * sets to grow with it.
+ */
+
 import type { FieldConfig } from "src/settings/settings";
 import type { RecordError } from "../datasources/frontmatter/datasource";
 
@@ -85,11 +108,19 @@ export enum DataFieldType {
   Unknown = "unknown",
 }
 
+/**
+ * One note. `id` is the vault path — relations, the Selection Bus and every
+ * write path key on it, so it must stay stable for the lifetime of the note.
+ */
 export type DataRecord = {
   readonly id: string;
   readonly values: Record<string, Optional<DataValue>>;
 };
 
+/**
+ * Every value a frontmatter field can hold, including a list of them. `Date`
+ * appears here already parsed — the datasource does that, not the consumers.
+ */
 export type DataValue =
   | string
   | number
@@ -128,6 +159,7 @@ export type Optional<T> =
   // null means that while the field exists, it doesn't yet have a value.
   | null;
 
+/** The empty frame. Shared constant so "no data" is one identity, not many. */
 export const emptyDataFrame: DataFrame = {
   records: [],
   fields: [],
