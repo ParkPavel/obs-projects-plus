@@ -18,15 +18,32 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   every "pending merge" statement in older documents is historical (#146).
 - **Never run on that merge:** Gate 3 (`/codex:review --base main`) and the visual smoke of the
   A→C→B inversion in the OBStests vault. Merged is not the same as accepted.
-- **Uncommitted stack (2026-08-27…29), on `main`, no commits made — 64 changed paths.** It closes
-  the whole Codex meta-audit queue: #141 rollup resolution, #142 gallery read-only, #143 derived
-  inverse (decision, user-approved), #144 write outcomes, #145 migration restore point,
-  #146 documentation sync, #148 join boundary, #149 relation label, #150 wizard, #151 (partial),
-  #152 sort ADR, #153 stats canonical key, #154 ticket template, #155 suggestion honesty,
-  #156 first-run honesty, #157 deviations register, #160 sub-base removal, #161 caller outcomes,
-  #162 stale enrichment on target change, #163 batch write compensation.
-  **Nothing here is committed.** The natural split is five commits by ticket group, on a branch —
-  `main` is the default branch and carries the merge, so branch before the first commit.
+- **The meta-audit stack is committed on `feat/meta-audit-141-164`** (branched from `64863ed`,
+  2026-08-30, five commits `3423aad → 02d7427`, 64 paths, working tree clean). It closes the whole
+  Codex meta-audit queue: #141 rollup resolution, #142 gallery read-only, #143 derived inverse
+  (decision, user-approved), #144 write outcomes, #145 migration restore point, #146 documentation
+  sync, #149 relation label, #150 wizard, #151 (partial), #152 sort ADR, #153 stats canonical key,
+  #154 ticket template, #155 suggestion honesty, #156 first-run honesty, #157 deviations register,
+  #160 sub-base removal, #161 caller outcomes, #162 stale enrichment on target change,
+  #163 batch write compensation, #164 demo generator.
+  The split is by ticket group: write boundary → relation surface → migration/demo/sub-base →
+  interface honesty → documents and audit trail.
+- **Every commit in the stack was verified individually**, not only the tip: `tsc -noEmit` 0 errors
+  and the full Jest run green at each of `3423aad`, `e78c88e`, `0d24c03`, `2597c9f`, `02d7427`
+  (176/2482 → 177/2493 → 174/2450 → 174/2451 → 174/2451; the count falls at the third because
+  #160 deletes the sub-base suites). `lint` and `svelte-check` ran on the tip only.
+  **This cost a rewrite of the branch.** The first split put `DatabaseCallBlock.svelte` in the
+  relation commit and `GalleryView.svelte` + `linkedSourceWrites.test.ts` in the honesty commit;
+  the #142 guard test reads BOTH sources in one assertion, so two intermediate commits were red
+  while the tip was green. The branch was unpushed, so it was rebuilt with #142 travelling whole.
+  The pre-rewrite history is kept at `backup/meta-audit-141-164-presplit` (`33eef1e`) and can be
+  deleted once the branch is merged. **The lesson is the general one:** a green tip says nothing
+  about the commits under it, and a test that reads two sources pins them to one commit.
+  **#148 is closed by documentation, not code** — the boundary is stated in `FILTER_MODEL.md`
+  (§"Analytical joins are not relations"), which rides in the documents commit; no source file
+  carries a `#148` marker, and that is expected.
+  **Not merged, not pushed** — both are user-reserved gates, and `/codex:review --base main` has
+  not run on this branch.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
