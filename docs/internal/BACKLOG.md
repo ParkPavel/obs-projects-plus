@@ -1,7 +1,7 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-08-29 — filed #141–#170: Codex meta-audit + render pass (see the section at the end of this file; findings in `CODEX_META_AUDIT_FINDINGS_2026-08-27.md`). live API run against the OBStests vault (#162–#164), and the Notion reference analysis (`M-MATRYOSHKA`, #165–#170). Baseline numbers live in `CONTEXT.md`, not here. ⚠ The milestone/branch statuses further down this file describe `main` as untouched, which stopped being true at merge `64863ed` — that drift is #146, not a fact. Prior W2/W3 queue is historical, superseded by the product reset.
+> **Updated**: 2026-08-30 (#164 closed on a live run; the stack is merged and pushed) — filed #141–#170: Codex meta-audit + render pass (see the section at the end of this file; findings in `CODEX_META_AUDIT_FINDINGS_2026-08-27.md`). live API run against the OBStests vault (#162–#164), and the Notion reference analysis (`M-MATRYOSHKA`, #165–#170). Baseline numbers live in `CONTEXT.md`, not here. ⚠ The milestone/branch statuses further down this file describe `main` as untouched, which stopped being true at merge `64863ed` — that drift is #146, not a fact. Prior W2/W3 queue is historical, superseded by the product reset.
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 > **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
@@ -2984,12 +2984,12 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
   `type is client`, `type is project`). 28 заметок на месте, не задублированы; команд 10.
 - **Чего REST не видит:** что блоки на экране действительно сузились до своего типа. Отсутствие
   миграции доказано, визуальный результат фильтрации — нет.
-- **Перепроверено вживую 2026-08-30 — по-прежнему воспроизводится.** Стек #141–#164 тронул
-  `demoProject.ts` только по #156 (отчёт о неудачной записи заметок); ведущие шаги `filter` на
-  месте (`typeFilter`, чарт «Проекты по статусу», «Приоритетные задачи», «Встречи»). В хранилище
-  OBStests все виджеты демо сейчас несут `config.subFilter` и не несут `transform` — продукт
-  мигрировал собственный демо-конфиг. Коммит `0d24c03` и merge `3f9251b` ошибочно называют тикет
-  закрытым; исправление записано в `CONTEXT.md`, история не переписывалась.
+- **ИСТОРИЯ (утро 2026-08-30, до фикса выше) — тикет был ложно закрыт.** Стек #141–#164 тронул
+  `demoProject.ts` только по #156 (отчёт о неудачной записи заметок), ведущие шаги `filter`
+  оставались на месте (тогдашний хелпер `typeFilter`), и продукт мигрировал собственный
+  демо-конфиг при открытии. Коммит `0d24c03` и merge `3f9251b` называют тикет закрытым ошибочно;
+  исправление записано в `CONTEXT.md` (`87a6f88`), история не переписывалась. Этот пункт оставлен
+  как след, а не как текущее состояние: `typeFilter` больше не существует.
 - analysis_required: false
 - Vision scene: 7 | User outcome: первый открытый дашборд не переписывает сам себя на диске
 - **Найдено ручным прогоном через Obsidian API 2026-08-28** и подтверждено кросс-моделью:

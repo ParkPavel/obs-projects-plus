@@ -77,13 +77,31 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   (including the `migrateDashboardTransforms` no-op it never had), and a demo regenerated in the
   OBStests vault opened without producing a migration or a restore-point file. The ticket is closed
   on a live run, not on a green suite.
+- **A shipped regression, found by review on 2026-08-30 and fixed the same day.** Root
+  `styles.css` — the only stylesheet Obsidian loads — was down to 7,645 bytes from 34,964: the
+  hand-written half (685 lines of layout) was gone and only the generated token block remained.
+  Mechanism: the file went missing from the working tree on 2026-08-28, in the same event that
+  removed `manifest.json`; `mergeCSS()` reads a missing file as `""`, so the next production build
+  recreated it as `"
+
+" + marker + tokens` and reported success. It was committed in `2597c9f`
+  (staged without reading the diff, and the commit message described it as *carrying* styles),
+  merged, and pushed — `ci.yml` uploads `styles.css` with every push-to-main prerelease, so it
+  shipped. Cost on screen: `Grid.svelte` has no `<style>` block at all, `BoardColumn.svelte` styles
+  only its `-footer` variants, `PopoverList.svelte` only `:hover` — those render unstyled.
+  **Why no gate saw it:** all four gates and every ratchet look at `src/`; nothing looks at the
+  repo root, and the loss is invisible in a build log. Fixed by restoring the hand-written half
+  byte-for-byte from `64863ed`, adding **R0.8** (`src/__tests__/R0_8_stylesheetIntegrity.test.ts` —
+  verified to fail on the shipped-broken file), making `mergeCSS` refuse to write a tokens-only
+  stylesheet instead of doing it silently, and giving the production build's `catch` a message —
+  it was `catch(() => process.exit(1))`, so a failing build printed nothing at all.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 174 suites / 2455 tests PASS, tsc 0, svelte-check 0/0,
+- **Canonical baseline — `main`: 175 suites / 2460 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (122 pre-existing tsdoc warnings).** The stack took it from 173/2464 at `64863ed`
-  to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added the
-  four provenance tests that make it 2455. Do not roll back.
+  to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four
+  provenance tests, and R0.8 (stylesheet integrity) added a suite of five. Do not roll back.
 - **`manifest.json` must exist in the repo root.** It went missing in the working tree on 2026-08-28
   and `eslint` failed before analysing a single file — the config reads the manifest. Restored;
   the build does not remove it. If lint dies with `ENOENT … manifest.json`, this is why.
