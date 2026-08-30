@@ -3092,6 +3092,88 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
 
 ---
 
+## Пред-релизный аудит 2026-08-31 — #171–#177
+
+Заведены по `PRE_RELEASE_AUDIT_2026-08-31.md`. #172, #173, #175 — блокеры объявления пре-альфы.
+
+### #171 — `main.js` и `releases/`: 15 МБ собранных бандлов в дереве вопреки собственной политике
+- Status: 📋 BACKLOG (→ аудит Codex, решение пользователя) | Milestone: (next) | Priority: P2 | Complexity: M
+- analysis_required: **true — разбор поручен Codex**
+- Vision scene: none — инфраструктура | User outcome: публикация бандла уходит отдельным релизом, а не коммитом
+- `.gitignore:8-10` объявляет «Don't include the compiled main.js file in the repo. They should be
+  uploaded to GitHub releases instead» и тут же отменяет это строкой `!releases/*/main.js`.
+- Замерено: `releases/` — 32 файла / **12,3 МБ**, из них 7 бандлов; корневой `main.js` — 2,78 МБ;
+  `.git` — 61 МБ. Корневой файл отслеживается только потому, что правило появилось позже него.
+- Ни `ci.yml`, ни `release.yml` закоммиченный бандл не читают — оба собирают свой.
+- Цена: неразрешимый конфликт в минифицированном файле между любыми двумя собиравшимися ветками
+  (наблюдалось 2026-08-30), грязное дерево у CI-раннера, вес клона.
+- **Почему не правится напрямую:** снятие с учёта ломает установку плагина прямо из репозитория.
+  Пользователь решил отдать вопрос аудиту Codex — суть ограничения в том, чтобы публикации бандла
+  шли отдельным релизом.
+
+### #172 — CHANGELOG не знает о четырёх месяцах работы — БЛОКЕР РЕЛИЗА
+- Status: 📋 BACKLOG | Milestone: pre-alpha | Priority: **P0** | Complexity: M
+- analysis_required: false
+- Vision scene: none — релизная гигиена | User outcome: пользователь понимает, что изменилось
+- Последняя версионная запись — `[3.4.1] - 2026-04-21`, дальше только «Unreleased — V5 internal
+  (3.4.2)» и «Documentation drift recovery — 2026-05-25». Текущая версия — `3.5.1-alpha`.
+- В файле нет ни одного упоминания #115, #141, #160, #164; `#118` встречается один раз.
+- Не описаны: M-RELATION-FIRST, M-FILTER-CONSOLIDATION, весь стек мета-аудита #141–#164, удаление
+  модели sub-base, восстановление `styles.css`.
+
+### #173 — README обещает удалённую функцию — БЛОКЕР РЕЛИЗА
+- Status: 📋 BACKLOG | Milestone: pre-alpha | Priority: **P0** | Complexity: S
+- analysis_required: false
+- Vision scene: 7 | User outcome: обещанное на витрине существует в продукте
+- `README.md:107` — «**Матрёшка** (sub-bases) — база данных внутри базы данных через wikilink-связи»;
+  `README.md:161` — «`M-SUBBASES` … ✅ Готово». То же в `README-EN.md`, `RELEASES.md`, `RELEASES-EN.md`.
+- Факт: `SubBaseCanvas` удалён в #119, модель — в #160, команда `add-sub-base` снята (живой прогон:
+  10 команд). Остались только ключи `DataTableConfig.subBases` как несовместимые-к-удалению данные.
+- Тот же класс, что #155/#156: интерфейс обещает то, чего нет.
+
+### #174 — Канонические контракты не имеют заголовков и TSDoc
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P1 | Complexity: M
+- analysis_required: false
+- Vision scene: none — сопровождаемость | User outcome: мейнтейнер, идущий по `CLAUDE.md`, попадает в объяснённый код
+- Замерено по 263 не-тестовым `.ts`: **53 %** модулей без заголовочного комментария,
+  **628 из 1037 (61 %)** экспортов без документации.
+- Хуже всего — ровно те файлы, что `CLAUDE.md` называет «Key files»: `lib/dataframe/dataframe.ts`
+  (нет заголовка, 18 недокументированных экспортов), `lib/relations/relationContract.ts` (нет
+  заголовка, 12), `lib/relations/relationSetup.ts` (нет, 8), `lib/engine/crossProjectResolver.ts`
+  (нет, 5). Далее `transformTypes.ts` (16), `filterEvaluator.ts` (12), `contracts.ts` (11).
+- Плюс 122 tsdoc-warning в 47 файлах — там, где комментарии есть, они не парсятся как TSDoc.
+- **Работа:** начать с четырёх «Key files», а не с общего долга. Метрика `.svelte` не покрывает —
+  реальная доля выше.
+
+### #175 — Идентичность релиза: три разных числа для одной сборки — БЛОКЕР РЕЛИЗА
+- Status: 📋 BACKLOG | Milestone: pre-alpha | Priority: **P0** | Complexity: S
+- analysis_required: false
+- Vision scene: none — релизная гигиена | User outcome: версия в релизе означает что-то определённое
+- `ci.yml` на каждый пуш в `main` делает `cp manifest-beta.json manifest.json` и публикует пререлиз
+  с тегом `0.0.0-${{ github.run_number }}`. Отсюда: тег `0.0.0-58`, `manifest.json` в артефакте
+  `3.5.1-beta.58`, репозиторий `3.5.1-alpha`.
+- `versions.json` не содержит `3.5.0` (идёт `3.4.2-alpha.1 → 3.5.1-alpha`), при том что
+  `types.ts` обосновывает сохранение ключей `subBases` тем, что «3.5.0-alpha **SHIPPED**» виджет.
+  От ответа зависит, обязаны ли мы дальше тащить `DataTableConfig.subBases`.
+
+### #176 — Инвариант 7 стережёт несуществующий каталог
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P3 | Complexity: XS
+- analysis_required: false
+- Vision scene: none | User outcome: список инвариантов не содержит мёртвых
+- `CLAUDE.md` инвариант 7 и ратчет `R0_4_archiveContainment.test.ts` защищают `src/archive`.
+  Каталога в дереве нет — ратчет проходит вакуумно.
+- **Работа:** либо пометить инвариант как исторический, либо вернуть каталог. Сейчас читатель не
+  может отличить живое правило от мёртвого.
+
+### #177 — Хук `check-commit-branch` даёт ложные срабатывания
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: S
+- analysis_required: false
+- Vision scene: none — инструментарий | User outcome: защита ловит нарушения, а не упоминания
+- Хук ищет подстроку в тексте команды и читает ветку **до** выполнения. Наблюдено 2026-08-30/31:
+  (1) `grep` по `ci.yml` с искомой строкой в шаблоне блокируется — workflow нельзя прочитать на
+  `main`; (2) «создать ветку и закоммитить» одной командой блокируется, потому что HEAD ещё на `main`.
+- Инвариант 12 правильный и остаётся — чинить реализацию, а не правило.
+
 ## Milestone M-MATRYOSHKA — 📋 PLANNED (референс-анализ Notion, 2026-08-28)
 
 > **Основание:** `REFERENCE_NOTION_UI_2026.md` (свежий анализ Notion по совпадающим элементам +

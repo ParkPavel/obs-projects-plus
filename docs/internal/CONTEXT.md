@@ -95,6 +95,19 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   verified to fail on the shipped-broken file), making `mergeCSS` refuse to write a tokens-only
   stylesheet instead of doing it silently, and giving the production build's `catch` a message —
   it was `catch(() => process.exit(1))`, so a failing build printed nothing at all.
+- **Pre-release audit, 2026-08-31** (`PRE_RELEASE_AUDIT_2026-08-31.md`), ordered before declaring
+  the version a pre-alpha. Verdict: the code is fine — four gates green, invariants hold, the live
+  API run passes — and the documentation is not. **Three release blockers:** CHANGELOG stops at
+  `[3.4.1] - 2026-04-21` while the version is `3.5.1-alpha` (#172); README and RELEASES advertise
+  «Матрёшка (sub-bases)» and mark `M-SUBBASES ✅ Готово` for a model deleted in #160 (#173); and one
+  build carries three different version numbers — tag `0.0.0-58`, artifact manifest `3.5.1-beta.58`,
+  repository `3.5.1-alpha`, with `3.5.0` missing from `versions.json` entirely (#175).
+  On the question actually asked — are the descriptions sufficient for a maintainer — the measured
+  answer is no: 53% of the 263 non-test `.ts` modules carry no header comment and 628 of 1037
+  exports (61%) are undocumented, and the worst-documented files are exactly the ones `CLAUDE.md`
+  lists as "Key files" (#174). Filed #171–#177; `main.js`/`releases/` (15 MB of built bundles in
+  the tree, against the repo's own `.gitignore` policy) goes to a Codex audit by the user's
+  decision, not to a direct fix.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
