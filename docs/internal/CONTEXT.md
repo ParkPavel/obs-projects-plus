@@ -70,7 +70,11 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   taken at face value and copied into a commit message without checking either the ticket status or
   the diff. The commits are already merged into `main` and are not being rewritten — the record is
   corrected here and in the ticket instead, which is why this bullet exists.
-  #164 stays OPEN.
+  **#164 was then fixed and verified live on 2026-08-30** (commit `57e2618`): the generator emits
+  `config.subFilter` and no `transform` at all, `configProvenance.test.ts` gained four tests
+  (including the `migrateDashboardTransforms` no-op it never had), and a demo regenerated in the
+  OBStests vault opened without producing a migration or a restore-point file. The ticket is closed
+  on a live run, not on a green suite.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
