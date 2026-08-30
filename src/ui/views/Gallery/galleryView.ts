@@ -39,6 +39,10 @@ export class GalleryView extends ProjectView<GalleryConfig> {
         config: props.config,
         onConfigChange: props.saveConfig,
         getRecordColor: props.getRecordColor,
+        // #142 — the gallery ignored the view-level read-only flag entirely,
+        // because it had no prop to receive it. Board and Calendar already
+        // passed theirs; this closes the same gap for the standalone view.
+        readonly: props.readonly,
         filterConditions: [],
       },
     });

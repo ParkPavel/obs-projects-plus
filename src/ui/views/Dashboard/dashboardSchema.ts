@@ -33,6 +33,12 @@ export interface SchemaControllerDeps {
   readonly projectId: ProjectId;
   /** Live projection — read on every modal open so newly-added fields surface. */
   readonly getFields: () => DataField[];
+  /**
+   * Live projection of the records the schema write would touch. Used for the
+   * bulk-write consequence line (#144) and for the relation preview, which
+   * counted matches against an empty record list before (#150).
+   */
+  readonly getRecords: () => ReadonlyArray<{ readonly id: string }>;
   /** Live projection of all projects (for cross-project relation pickers). */
   readonly getProjects: () => ProjectDefinition[];
   /** Translator. Receives optional fallback via `defaultValue` opts. */
@@ -42,12 +48,22 @@ export interface SchemaControllerDeps {
 export interface SchemaController {
   openSchema(): void;
   openCreateField(): void;
+  /**
+   * CV-2 (2026-08-28) — the schema writes became awaited in #144, which
+   * introduced a gap the synchronous version could not have: the user closes
+   * the dashboard while a bulk field write is in flight, the write finishes,
+   * and the callback reopens a modal belonging to a view that no longer exists.
+   * The canvas calls this on destroy.
+   */
+  dispose(): void;
 }
 
 export function createSchemaController(deps: SchemaControllerDeps): SchemaController {
   let schemaModal: SchemaModal | null = null;
+  /** False once the owning view is gone; nothing may open after that. */
+  let alive = true;
   const relationSetup = createRelationSetupController({
-    app: deps.app, api: deps.api, projectId: deps.projectId, getFrame: () => ({ fields: deps.getFields(), records: [] }),
+    app: deps.app, api: deps.api, projectId: deps.projectId, getFrame: () => ({ fields: deps.getFields(), records: deps.getRecords() as never }),
     getProjects: deps.getProjects, t: deps.t,
   });
 
@@ -91,7 +107,8 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           createSourceField: true,
           ...(displayField !== undefined ? { displayField } : {}),
         });
-      }
+      },
+      deps.getRecords().length
     );
     createModal.open();
   }
@@ -103,13 +120,16 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       field,
       deps.getFields().filter((f) => f.name !== field.name),
       !field.derived && !field.identifier,
-      (next) => {
+      async (next) => {
+        // #144 — these writes touch every note in the project. Awaiting them
+        // means a partial failure is reported by `ViewApi` before the schema
+        // modal reopens claiming the rename went through.
         if (!field.derived && !field.identifier) {
           if (next.name !== field.name) {
-            deps.api.updateField(next, field.name);
+            await deps.api.updateField(next, field.name);
             settings.deleteFieldConfig(deps.projectId, field.name);
           } else {
-            deps.api.updateField(next);
+            await deps.api.updateField(next);
           }
         }
         persistFieldTypeConfig(next);
@@ -137,8 +157,10 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       deps.t("modals.schema.delete-confirm.title"),
       deps.t("modals.schema.delete-confirm.message", { name: field.name }),
       deps.t("modals.schema.delete-confirm.cta"),
-      () => {
-        deps.api.deleteField(field.name);
+      async () => {
+        // #144 — same reason as the rename path: the outcome of a write across
+        // every note is reported before the schema claims the field is gone.
+        await deps.api.deleteField(field.name);
         settings.deleteFieldConfig(deps.projectId, field.name);
         reopenSchema();
       }
@@ -146,6 +168,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
   }
 
   function openSchema() {
+    if (!alive) return;
     schemaModal = new SchemaModal(
       deps.app,
       deps.t("modals.schema.title"),
@@ -158,7 +181,20 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       },
       (field) => {
         schemaModal?.close();
-        void relationSetup.open({ fieldName: field.name, targetProjectId: (field.typeConfig?.relation?.targetProjectId ?? ""), createSourceField: false });
+        // #150 — this entry point used to drop `displayField` and the inverse
+        // name: the wizard opened without them, and saving from here wrote a
+        // config that had silently lost both. The other two entry points
+        // already carried `displayField`; this one is now level with them.
+        const relation = field.typeConfig?.relation;
+        void relationSetup.open({
+          fieldName: field.name,
+          targetProjectId: relation?.targetProjectId ?? "",
+          createSourceField: false,
+          ...(relation?.displayField !== undefined ? { displayField: relation.displayField } : {}),
+          ...(relation?.inverseFieldName
+            ? { inverse: { enabled: true, fieldName: relation.inverseFieldName } }
+            : {}),
+        });
       },
       () => {
         schemaModal?.close();
@@ -176,6 +212,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
     // Re-open on the next tick so the user remains anchored in the schema
     // flow after editing or adding a field — keeps task continuity (no
     // jarring jump back to an empty canvas).
+    if (!alive) return;
     tick()
       .then(() => openSchema())
       .catch((err) => {
@@ -189,5 +226,13 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       });
   }
 
-  return { openSchema, openCreateField };
+  return {
+    openSchema,
+    openCreateField,
+    dispose() {
+      alive = false;
+      schemaModal?.close();
+      schemaModal = null;
+    },
+  };
 }

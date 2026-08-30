@@ -8,6 +8,8 @@
   export let draft: RelationSetupDraft;
   export let summary: RelationPreviewSummary | undefined = undefined;
   export let error = "";
+  /** #150 — set while the save is in flight, so the button cannot be pressed twice. */
+  export let busy = false;
   const dispatch = createEventDispatcher<{ save: RelationSetupDraft; cancel: void; preview: RelationSetupDraft }>();
   let firstInput: HTMLInputElement;
   onMount(() => firstInput?.focus());
@@ -40,12 +42,12 @@
       />
     </label>
   {/if}
-  <label><input type="checkbox" checked={draft.inverse?.enabled ?? false} on:change={(event) => update({ inverse: { enabled: event.currentTarget.checked, fieldName: draft.inverse?.fieldName ?? "" } })} /> {$i18n.t("relation-setup.inverse-enable-label", { defaultValue: "Create inverse property in schema" })}</label>
+  <label><input type="checkbox" checked={draft.inverse?.enabled ?? false} on:change={(event) => update({ inverse: { enabled: event.currentTarget.checked, fieldName: draft.inverse?.fieldName ?? "" } })} /> {$i18n.t("relation-setup.inverse-enable-label-v2", { defaultValue: "Name the back-reference property on the other side" })}</label>
   {#if draft.inverse?.enabled}
     <label>{$i18n.t("relation-setup.inverse-field-label", { defaultValue: "Inverse property name" })}
       <input value={draft.inverse.fieldName} on:input={(event) => update({ inverse: { enabled: true, fieldName: event.currentTarget.value } })} />
     </label>
-    <p role="status">{$i18n.t("relation-setup.inverse-warning", { defaultValue: "The inverse property will only be declared after saving. Existing notes are not rewritten." })}</p>
+    <p role="status">{$i18n.t("relation-setup.inverse-warning-v2", { defaultValue: "The name is recorded on this relation. The property is not created in the other database, and existing notes are not rewritten — related records are resolved from the links you already have." })}</p>
   {/if}
   {#if summary}
     <p aria-live="polite">
@@ -54,8 +56,12 @@
   {/if}
   {#if error}<p role="alert">{error}</p>{/if}
   <footer>
-    <button type="button" on:click={cancel}>{$i18n.t("relation-setup.cancel", { defaultValue: "Cancel" })}</button>
-    <button type="button" on:click={() => dispatch("save", draft)}>{$i18n.t("relation-setup.save", { defaultValue: "Save relation" })}</button>
+    <button type="button" on:click={cancel} disabled={busy}>{$i18n.t("relation-setup.cancel", { defaultValue: "Cancel" })}</button>
+    <button type="button" on:click={() => dispatch("save", draft)} disabled={busy}>
+      {busy
+        ? $i18n.t("relation-setup.saving", { defaultValue: "Saving…" })
+        : $i18n.t("relation-setup.save", { defaultValue: "Save relation" })}
+    </button>
   </footer>
 </section>
 

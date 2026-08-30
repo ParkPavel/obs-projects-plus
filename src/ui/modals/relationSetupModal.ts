@@ -12,4 +12,11 @@ export class RelationSetupModal extends Modal {
   onOpen() { this.component = new RelationSetup({ target: this.contentEl, props: { projects: this.projects, draft: this.draft, summary: this.summary, error: this.error } }); this.component.$on("save", (event: CustomEvent<RelationSetupDraft>) => this.onSave(event.detail)); this.component.$on("preview", (event: CustomEvent<RelationSetupDraft>) => this.onPreview(event.detail)); this.component.$on("cancel", () => this.close()); }
   onClose() { this.component?.$destroy(); this.restoreFocus?.focus(); }
   setSummary(summary: RelationPreviewSummary | undefined) { this.component?.$set({ summary }); }
+  /**
+   * #150 — the component always rendered `role="alert"` with an empty string,
+   * because nothing ever set it: every validation failure went to a Notice
+   * that appears in the corner, away from the field that caused it.
+   */
+  setError(error: string) { this.component?.$set({ error }); }
+  setBusy(busy: boolean) { this.component?.$set({ busy }); }
 }

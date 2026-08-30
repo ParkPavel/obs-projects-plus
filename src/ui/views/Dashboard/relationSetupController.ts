@@ -25,8 +25,21 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
     let fields = source.fields;
     if (draft.createSourceField) {
       const field: DataField = { name: draft.fieldName.trim(), type: DataFieldType.Relation, repeated: true, identifier: false, derived: false, typeConfig: { relation: config } };
-      await deps.api.addField(field, []);
+      // #150 — `addField` reports a partial write instead of throwing (#144), and
+      // the wizard used to answer "Relation saved." to it regardless. The
+      // relation IS saved in that case, but some notes did not get the property,
+      // and saying only the first half is how a half-written vault looks healthy.
+      const outcome = await deps.api.addField(field, []);
       fields = [...fields, field];
+      const unwritten = outcome.failed.length + outcome.missing.length;
+      if (unwritten > 0) {
+        settings.updateFieldConfig(deps.projectId, draft.fieldName.trim(), fields.map((f) => f.name), { relation: config });
+        throw new Error(
+          deps.t("relation-setup.saved-partial", {
+            defaultValue: `Relation saved, but the property could not be added to ${unwritten} note(s). See the console.`,
+          })
+        );
+      }
     }
     settings.updateFieldConfig(deps.projectId, draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });
   }
@@ -40,7 +53,25 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
     const source = deps.getFrame();
     const modal = new RelationSetupModal(
       deps.app, deps.getProjects(), initial, undefined,
-      (draft) => { void save(draft).then(() => new Notice(deps.t("relation-setup.saved", { defaultValue: "Relation saved." }))).catch((error: unknown) => new Notice(error instanceof Error ? error.message : "Relation could not be saved.")); },
+      (draft) => {
+        // #150 — the wizard used to stay open after a successful save while a
+        // Notice said "Relation saved.", so the only signal that anything had
+        // happened was a message next to a form that still looked unsubmitted.
+        // It now closes on success and reports failure inside itself.
+        modal.setError("");
+        modal.setBusy(true);
+        void save(draft)
+          .then(() => {
+            modal.close();
+            new Notice(deps.t("relation-setup.saved", { defaultValue: "Relation saved." }));
+          })
+          .catch((error: unknown) => {
+            modal.setBusy(false);
+            modal.setError(
+              error instanceof Error ? error.message : "Relation could not be saved."
+            );
+          });
+      },
       (draft) => { void refreshPreview(source, draft, modal); }
     );
     modal.open();

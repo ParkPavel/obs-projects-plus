@@ -74,10 +74,10 @@
   const t = (key: string, opts?: Record<string, unknown>) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key);
   const schemaController = createSchemaController({
     app: $app, api, projectId: project.id, t,
-    getFields: () => frame.fields, getProjects: () => $settings.projects,
+    getFields: () => frame.fields, getRecords: () => frame.records, getProjects: () => $settings.projects,
   });
-  const openSchema = () => schemaController.openSchema();
-  onDestroy(subscribeCanvasCommands(openSchema, () => schemaController.openCreateField()));
+  const unsubCommands = subscribeCanvasCommands(() => schemaController.openSchema(), () => schemaController.openCreateField());
+  onDestroy(() => { unsubCommands(); schemaController.dispose(); }); // CV-2: nothing opens after the view is gone
   const templatesController = createTemplatesController({
     getConfig: () => effectiveConfig, getWidgets: () => widgets, saveConfig, t,
     toggleFormulaBar: () => (showFormulaBar = !showFormulaBar),
@@ -145,7 +145,7 @@
     <div class="ppp-database-root" style={tokenCSS} role="region" aria-label={$i18n.t("views.dashboard.name")}>
       <div class="ppp-toolbar-row">
         <DashboardToolbar {showToolbar} {readonly} {showFormulaBar} currentWidgets={widgets}
-          on:toggleToolbar={toggleToolbar} on:openSchema={openSchema}
+          on:toggleToolbar={toggleToolbar} on:openSchema={() => schemaController.openSchema()}
           on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)}
           on:addWidget={(e) => widgetController.addWidget(e.detail)}
           on:applyTemplate={handleApplyTemplate} />

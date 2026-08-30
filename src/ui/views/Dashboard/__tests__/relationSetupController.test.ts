@@ -15,7 +15,10 @@ jest.mock("src/lib/stores/settings", () => ({
 import { RelationSetupModal } from "src/ui/modals/relationSetupModal";
 
 const mockApi = {
-  addField: jest.fn().mockResolvedValue(undefined),
+  // #144/#150 — addField reports a per-note outcome; the controller reads it to
+  // decide whether the wizard may claim success. A stub returning undefined was
+  // describing an API that no longer exists.
+  addField: jest.fn().mockResolvedValue({ written: 1, failed: [], missing: [] }),
   resolveExternalFrame: jest.fn(),
 };
 

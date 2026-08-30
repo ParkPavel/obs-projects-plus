@@ -21,7 +21,13 @@ export class CreateFieldModal extends Modal {
     readonly onCreate: (field: DataField, value: Optional<DataValue>) => void,
     readonly availableProjects: ProjectDefinition[] = [],
     readonly currentProjectId: string = "",
-    readonly onSetupRelation?: (field: DataField) => void
+    readonly onSetupRelation?: (field: DataField) => void,
+    /**
+     * #144 — how many notes the create will write to. The modal used to close
+     * on click with no statement of the consequence; Vision scene 2 asks for
+     * exactly this sentence before the write.
+     */
+    readonly recordCount: number = 0
   ) {
     super(app);
   }
@@ -38,6 +44,7 @@ export class CreateFieldModal extends Modal {
         availableProjects: this.availableProjects,
         currentProjectId: this.currentProjectId,
         onSetupRelation: this.onSetupRelation,
+        recordCount: this.recordCount,
         onCreate: (field: DataField, value: Optional<DataValue>) => {
           this.onCreate(field, value);
           this.close();

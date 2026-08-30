@@ -48,8 +48,10 @@ describe("#139 data writes are guarded, config writes are not", () => {
   it("every view component receives the combined write permission", () => {
     const combined = block.match(/readonly=\{readonly \|\| sourceReadOnly\}/g) ?? [];
 
-    // DataTableContent, BoardView, CalendarView — each routes edits through `api`.
-    expect(combined).toHaveLength(3);
+    // DataTableContent, BoardView, CalendarView, GalleryView — each routes
+    // edits through `api`. Gallery was missed by #139 and added by #142; the
+    // count is asserted so a fifth view type cannot be added silently.
+    expect(combined).toHaveLength(4);
   });
 
   it("does not force the dashboard-level readonly flag on", () => {
@@ -64,6 +66,39 @@ describe("#139 data writes are guarded, config writes are not", () => {
   it("keeps adding a view tab available on a linked-source block", () => {
     // The config affordance is gated on `readonly` alone, deliberately.
     expect(block).toMatch(/\{#if !readonly\}\s*\n\s*<button on:click=\{\(\) => addTab\("table"\)\}/);
+  });
+});
+
+// #142 — #139 guarded three of the four view branches. The gallery branch had
+// no `readonly` prop at all, so an external-source gallery kept its `+`, and
+// that button builds the note from the PARENT `project`. Same defect as #139,
+// one component further down the same `{#if}` chain.
+describe("#142 the gallery branch is guarded too", () => {
+  const gallery = readFileSync(
+    resolve(WIDGETS, "../../Gallery/GalleryView.svelte"),
+    "utf8"
+  );
+
+  it("the gallery declares the prop, defaulting to writable", () => {
+    // Default false: the standalone gallery view passes nothing and must keep
+    // behaving exactly as before.
+    expect(gallery).toMatch(/export let readonly = false;/);
+  });
+
+  it("record creation is gated", () => {
+    expect(gallery).toMatch(/\{#if !readonly\}\s*\n\s*<IconButton\s*\n\s*icon="plus"/);
+  });
+
+  it("the edit modal is not opened read-only — the note is opened instead", () => {
+    // Viewing stays available; only the editor whose writes would land in the
+    // wrong project is withheld.
+    expect(gallery).toMatch(
+      /if \(readonly\) \{[\s\S]*?openLinkText\(record\.id, record\.id, false\)[\s\S]*?return;/
+    );
+  });
+
+  it("the block hands the gallery the same combined permission as the others", () => {
+    expect(block).toMatch(/<GalleryView[\s\S]*?readonly=\{readonly \|\| sourceReadOnly\}/);
   });
 });
 

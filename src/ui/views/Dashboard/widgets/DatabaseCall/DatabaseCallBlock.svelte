@@ -125,12 +125,23 @@
   $: autoFilter = effectiveConditions.length > 0 ? effectiveConditions[0] : null;
 
   // #114 (E4): three-state label derived from validation + canvas activity.
+  // #149: "relation" now means the relation is actually narrowing this block,
+  // not merely that it is configured. A valid but idle link said
+  // "Filtered by relation" while showing every record — the label described the
+  // wiring, and the user read it as a description of the data.
+  $: selectionActive = $canvasStore.source !== null && $canvasStore.values.length > 0;
   $: filterLabel = (() => {
-    if (linkedSelection && linkedSelectionValidation === "valid") return "relation" as const;
+    if (linkedSelection && linkedSelectionValidation === "valid") {
+      return selectionActive ? ("relation" as const) : ("relation-idle" as const);
+    }
     if (linkedSelection && linkedSelectionValidation !== undefined && linkedSelectionValidation !== "valid") return "broken" as const;
-    if ($canvasStore.source !== null && $canvasStore.values.length > 0) return "canvas" as const;
+    if (selectionActive) return "canvas" as const;
     return null;
   })();
+  // #149: which record the relation is pointing at, so the label can say it.
+  $: selectedLabel = $canvasStore.values.length === 1
+    ? String($canvasStore.values[0]).replace(/^\[\[|\]\]$/g, "")
+    : `${$canvasStore.values.length}`;
 
   // #099.1 — block-level filter (WidgetDataContext.subFilter, SPEC §3.4):
   // applied through the canonical filterEvaluator BEFORE the linked-selection
@@ -397,7 +408,18 @@
     />
     {#if filterLabel === "relation"}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Filtered by relation">
-        {$i18n.t("views.dashboard.database-call.filter-label.relation", { defaultValue: "Filtered by relation" })}
+        {$i18n.t("views.dashboard.database-call.filter-label.relation-named", {
+          defaultValue: "Showing records where {{field}} is {{value}}",
+          field: linkedSelection?.relationField ?? "",
+          value: selectedLabel,
+        })}
+      </span>
+    {:else if filterLabel === "relation-idle"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Linked by relation">
+        {$i18n.t("views.dashboard.database-call.filter-label.relation-idle", {
+          defaultValue: "Linked through {{field}} — select a row to narrow this block",
+          field: linkedSelection?.relationField ?? "",
+        })}
       </span>
     {:else if filterLabel === "canvas"}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label="Filtered by canvas selection">
@@ -405,10 +427,19 @@
       </span>
     {:else if filterLabel === "broken"}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation broken">
-        {$i18n.t("views.dashboard.database-call.filter-label.broken", {
-          defaultValue: "Relation broken: {{reason}}",
-          reason: linkedSelectionValidation ?? "",
-        })}
+        {selectionActive
+          ? $i18n.t("views.dashboard.database-call.filter-label.broken-v2", {
+              defaultValue:
+                "Relation '{{field}}' is broken ({{reason}}) — this block is filtered by the plain selection instead",
+              field: linkedSelection?.relationField ?? "",
+              reason: linkedSelectionValidation ?? "",
+            })
+          : $i18n.t("views.dashboard.database-call.filter-label.broken-idle", {
+              defaultValue:
+                "Relation '{{field}}' is broken ({{reason}}) — this block shows every record",
+              field: linkedSelection?.relationField ?? "",
+              reason: linkedSelectionValidation ?? "",
+            })}
       </span>
     {/if}
     <div
@@ -520,6 +551,7 @@
             {project}
             frame={effectiveFrame}
             {api}
+            readonly={readonly || sourceReadOnly}
             {getRecordColor}
             config={galleryConfig}
             onConfigChange={handleGalleryConfigChange}
