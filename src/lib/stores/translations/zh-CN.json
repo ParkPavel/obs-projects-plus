@@ -1,4 +1,4 @@
-{
+﻿{
     "translation": {
         "data-types": {
             "string": "文本",
@@ -53,10 +53,8 @@
             },
             "open-formula-editor": {
                 "name": "打开公式编辑器"
-            },
-            "add-sub-base": {
-                "name": "为当前视图添加子库"
             }
+
         },
         "menus": {
             "project": {
@@ -752,12 +750,7 @@
             "dashboard": {
                 "name": "数据库",
                 "add-row": "新建笔记",
-                "sub-bases": {
-                    "tablist": "子库",
-                    "add": "添加子库",
-                    "remove": "删除子库",
-                    "default-name": "新视图"
-                },
+
                 "table": {
                     "header-hint": "右击列标题可重命名、更改类型、隐藏、固定或重新排序。拖动边缘可调整宽度。",
                     "row-height": "行高",

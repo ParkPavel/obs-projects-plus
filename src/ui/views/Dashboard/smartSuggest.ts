@@ -51,7 +51,16 @@ export function computeSuggestions(
     });
   }
 
-  const relationField = fields.find((f) => f.type === DataFieldType.Relation);
+  // #155 — only a relation that actually names a target can produce a linked
+  // block. Suggesting one for an unconfigured Relation field used to add an
+  // empty `database-call`: the strip promised related records and delivered a
+  // blank block, which reads as a broken feature rather than an unset field.
+  const relationField = fields.find(
+    (f) =>
+      f.type === DataFieldType.Relation &&
+      !!(f.typeConfig as { relation?: { targetProjectId?: string } } | undefined)?.relation
+        ?.targetProjectId
+  );
   // A database-call block with linkedSelection means the user already wired
   // related records to a master block — nothing left to suggest.
   const hasLinkedBlock = widgets.some(

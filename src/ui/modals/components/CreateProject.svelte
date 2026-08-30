@@ -523,6 +523,20 @@
           placeholder={"/"}
           width="100%"
         />
+        <p class="ppp-create-project-consequence" role="status">
+          {#if !project.dataSource.config.path}
+            {$i18n.t("modals.project.path.consequence-root", {
+              defaultValue:
+                "An empty path means the whole vault: every note becomes a record of this project.",
+            })}
+          {:else}
+            {$i18n.t("modals.project.path.consequence", {
+              defaultValue:
+                "Reads the notes already in '{{path}}'. The folder is not created and no notes are written — the project is a view over files that exist.",
+              path: project.dataSource.config.path,
+            })}
+          {/if}
+        </p>
       </SettingItem>
 
       <SettingItem
@@ -1027,6 +1041,13 @@
 </ModalLayout>
 
 <style>
+  .ppp-create-project-consequence {
+    margin: var(--size-2-2) 0 0 0;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: var(--line-height-tight);
+  }
+
   small {
     font-size: var(--font-ui-smaller);
     color: var(--text-accent);
