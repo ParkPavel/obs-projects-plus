@@ -28,7 +28,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   sync, #149 relation label, #150 wizard, #151 (partial), #152 sort ADR, #153 stats canonical key,
   #154 ticket template, #155 suggestion honesty, #156 first-run honesty, #157 deviations register,
   #160 sub-base removal, #161 caller outcomes, #162 stale enrichment on target change,
-  #163 batch write compensation, #164 demo generator.
+  #163 batch write compensation.
+  **#164 is NOT in the stack** — see the correction below.
   The split is by ticket group: write boundary → relation surface → migration/demo/sub-base →
   interface honesty → documents and audit trail.
 - **Every commit in the stack was verified individually**, not only the tip: `tsc -noEmit` 0 errors
@@ -47,6 +48,21 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   carries a `#148` marker, and that is expected.
   **Not merged, not pushed** — both are user-reserved gates, and `/codex:review --base main` has
   not run on this branch.
+- **CORRECTION 2026-08-30 — #164 was claimed as done and is not.** Commit `0d24c03` names #164 in
+  its subject and states that the demo generator "now emits the current shape, so a first run is
+  not a migration"; the merge commit `3f9251b` repeats it. Both are false. The stack's only change
+  to `demoProject.ts` is #156 (failed note writes are reported instead of swallowed) — check with
+  `git diff 64863ed..HEAD -- src/ui/app/onboarding/demoProject.ts`.
+  `demoProject.ts` still emits a leading `type: "filter"` step in `widget.transform` at the chart
+  and at every database-call (`typeFilter`), which is exactly the shape `countLeadingMigratableFilters`
+  hoists into `config.subFilter`. Confirmed live on 2026-08-30: in the OBStests vault every demo
+  widget now carries a `subFilter` and no `transform`, i.e. the product migrated the demo's own
+  config, and `BACKLOG.md` has always had #164 at `Status: 📋 BACKLOG`.
+  **How the error was made:** the "Both verified fixed in the running app" sentence in this file was
+  taken at face value and copied into a commit message without checking either the ticket status or
+  the diff. The commits are already merged into `main` and are not being rewritten — the record is
+  corrected here and in the ticket instead, which is why this bullet exists.
+  #164 stays OPEN.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
@@ -67,7 +83,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `add-sub-base` removed in #160), demo smoke A1–A7, write/read/delete roundtrip, and the new
   migration + restore-point checks M1–M5. It found two defects — the "one backup per view" rule in
   #145 lost the pre-state of a second migration event, and the demo generator ships legacy
-  pipelines that migrate on first open (#164). Both verified fixed in the running app.
+  pipelines that migrate on first open (#164). #145 was fixed and re-verified live; **#164 was
+  not** — the "both verified fixed" wording here was wrong and is corrected below.
   What REST cannot see is listed in `UNTESTABLE_FEATURES_2026-08-28.md`.
 - **Notion reference analysis, 2026-08-29** (`REFERENCE_NOTION_UI_2026.md` + cold adaptivity audit
   `codex-reports/CX-MATRYOSHKA-audit.md`). Two findings drive the new milestone: the matryoshka
