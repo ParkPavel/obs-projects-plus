@@ -9,13 +9,10 @@
     ViewDefinition,
     ViewId,
   } from "src/settings/settings";
-  import type {
-    RelationFieldConfig,
-    RollupFieldConfig,
-  } from "src/settings/base/settings";
   import { applyFilter, matchesCondition } from "./filterFunctions";
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
-  import { computeCrossProjectRollupColumn } from "src/lib/engine/crossProjectRollup";
+  import { applyRollupColumns } from "./rollupColumns";
+  import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
   import { extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
   import { useView } from "./useView";
@@ -91,6 +88,8 @@
   let externalFramesMap: ReadonlyMap<string, DataFrame> = new Map();
   let lastTargetSet = "";
   let lastDataGenerationForLoad = -1;
+  // #162 — the last invalidation tick this view refetched for.
+  let lastInvalidationForLoad = -1;
   // Stage A.9 fix: monotonically-incrementing fetch token guards against
   // out-of-order async resolution when relationTargetIds or `frame` change
   // faster than `resolveExternalFrame` can settle. Only the most-recent
@@ -104,13 +103,29 @@
 
   $: {
     const key = relationTargetIds.join("|");
+    // #162 — a change in the TARGET project must refresh this view.
+    //
+    // The load used to fire only when the target-id set changed or this view's
+    // own frame did. Adding a session therefore left the client's rollup — and
+    // every relation-derived column — showing the number from before, until the
+    // client project happened to change or the view was reopened. That is the
+    // essay's own scenario ("Number of sessions is computed automatically")
+    // silently going stale, and it undercuts #141 rather than complementing it.
+    //
+    // `externalFrameInvalidation` is the tick `App.svelte` already bumps on
+    // every vault create/modify/delete/rename, and it is what `DashboardCanvas`
+    // has always listened to. The view simply was not subscribed.
+    const invalidation = $externalFrameInvalidation;
     const needsLoad =
       key !== "" &&
       api.resolveExternalFrame !== undefined &&
-      (key !== lastTargetSet || dataGeneration !== lastDataGenerationForLoad);
+      (key !== lastTargetSet ||
+        dataGeneration !== lastDataGenerationForLoad ||
+        invalidation !== lastInvalidationForLoad);
     if (needsLoad) {
       lastTargetSet = key;
       lastDataGenerationForLoad = dataGeneration;
+      lastInvalidationForLoad = invalidation;
       const myToken = ++externalFetchToken;
       void (async () => {
         const next = new Map<string, DataFrame>();
@@ -139,41 +154,19 @@
   }
 
   $: enrichedFrame = (() => {
-    if (relationTargetIds.length === 0 || externalFramesMap.size === 0) {
-      return frame;
-    }
-    let out = enrichFrameWithAllRelations(frame, externalFramesMap);
-    // Inject computed rollup values directly into each record's values map
-    // under the original field name, so that filter, sort, and cell renderers
-    // all see the computed aggregate without a separate __rollup__ column.
     const fc = project.fieldConfig as
-      | Record<string, { relation?: RelationFieldConfig; rollup?: RollupFieldConfig }>
+      | import("./viewHelpers").FieldConfigRelationMap
       | undefined;
-    if (fc) {
-      for (const [fieldName, cfg] of Object.entries(fc)) {
-        const rollupCfg = cfg?.rollup;
-        if (!rollupCfg) continue;
-        const targetId = rollupCfg.targetProjectId;
-        const ext = targetId ? externalFramesMap.get(targetId) : undefined;
-        if (!ext) continue;
-        const column = computeCrossProjectRollupColumn(out, rollupCfg, ext);
-        out = {
-          ...out,
-          records: out.records.map((r) => {
-            const result = column.get(r.id);
-            if (!result) return r;
-            return {
-              ...r,
-              values: {
-                ...r.values,
-                [fieldName]: result.value as unknown as DataRecord["values"][string],
-              },
-            };
-          }),
-        };
-      }
-    }
-    return out;
+    // Relation enrichment needs the external frames; rollups do not — a rollup
+    // over a self-relation resolves against this very frame (#141), so the old
+    // `externalFramesMap.size === 0` early return dropped a whole class of them.
+    const enriched =
+      externalFramesMap.size > 0
+        ? enrichFrameWithAllRelations(frame, externalFramesMap)
+        : frame;
+    // Rollup values are folded in under the field's own name, so filter, sort
+    // and cell renderers all see the aggregate without a separate column.
+    return applyRollupColumns(enriched, fc, project.id, externalFramesMap);
   })();
 
   $: filteredFrame = applyFilter(enrichedFrame, viewFilter);

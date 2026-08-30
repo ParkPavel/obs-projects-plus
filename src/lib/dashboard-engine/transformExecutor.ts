@@ -24,7 +24,7 @@ import type {
 } from "./transformTypes";
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
 import { evaluateFormulaValue } from "./formulaEngine";
-import { isUnsafePattern } from "src/lib/helpers/regexSafety";
+import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
 import dayjs from "dayjs";
 
@@ -395,6 +395,11 @@ function executeUnpivot(
 
 function safeRegexCompile(pattern: string): RegExp | null {
   try {
+    // CV-2 — this call site skipped the length bound that the other two regex
+    // sites apply. The bound is the blunt second line of defence against the
+    // alternation backtracking `isUnsafePattern` cannot see (#126), so leaving
+    // it out here made unpivot the softest of the three surfaces.
+    if (pattern.length > MAX_REGEX_PATTERN_LENGTH) return null;
     if (isUnsafePattern(pattern)) return null;
     return new RegExp(`^${pattern}$`);
   } catch {
