@@ -19,7 +19,10 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 - **Never run on that merge:** Gate 3 (`/codex:review --base main`) and the visual smoke of the
   A→C→B inversion in the OBStests vault. Merged is not the same as accepted.
 - **The meta-audit stack is committed on `feat/meta-audit-141-164`** (branched from `64863ed`,
-  2026-08-30, five commits `3423aad → 02d7427`, 64 paths, working tree clean). It closes the whole
+  2026-08-30, five commits `3423aad → 02d7427`, working tree clean). It touches **82 paths**
+  against `64863ed` — 43 modified, 32 added, 7 deleted; 47 under `src/`, 32 under `docs/`.
+  The "64 changed paths" of the 2026-08-28 report counted `codex-reports/` as one entry and
+  predates the last two days of the stack; 82 is the measured number. It closes the whole
   Codex meta-audit queue: #141 rollup resolution, #142 gallery read-only, #143 derived inverse
   (decision, user-approved), #144 write outcomes, #145 migration restore point, #146 documentation
   sync, #149 relation label, #150 wizard, #151 (partial), #152 sort ADR, #153 stats canonical key,
