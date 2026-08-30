@@ -90,7 +90,12 @@ DELETE /vault/QA-API-roundtrip.md
 
 ```powershell
 # 1. посеять legacy-пайплайн В САМ ВИДЖЕТ (не в widget.config!)
-#    widget.transform = { steps: [ {id, type:"filter", conditions:{...}}, {id, type:"sort", ...} ] }
+#    widget.transform = { steps: [ {type:"filter", conditions:{conjunction, conditions:[...]}},
+#                                   {type:"group-by", fields:[...]} ] }
+#    ВНИМАНИЕ (2026-08-30): шага `sort` в TransformStep НЕТ — типы это unnest | unpivot |
+#    compute | filter | group-by | aggregate | pivot | join. Прежняя редакция этой строки
+#    предлагала посеять несуществующий шаг как хвост. Шаги также НЕ имеют поля `id`.
+#    Условия должны быть непустыми: countLeadingMigratableFilters пропускает пустой шаг.
 # 2. app:reload → obs-projects-plus:show-projects (открывает dashboard-вью)
 # 3. смотреть папку плагина
 ```
@@ -147,6 +152,21 @@ REST API **не видит**: рендеринг Svelte-компонентов, 
       исправлен и перепроверен вживую)
 - [x] Untestable Features Report составлен — `UNTESTABLE_FEATURES_2026-08-28.md` — **2026-08-28**
 - [x] Результат зафиксирован в CONTEXT.md — **2026-08-28**
+
+### Прогон 2026-08-30 (после мержа стека #141–#164 в `main`)
+
+- [x] 3 артефакта задеплоены из свежего `npm run build`
+- [x] `app:reload` → **ровно 10** команд, `add-sub-base` отсутствует (#160 подтверждён вживую)
+- [x] A1–A7 зелёные: 28 `.md`, 5 вью, `Обзор` = stats+chart+4×database-call, `Клиенты` =
+      stats+database-call, 5 записей с `startTime`/`endTime`, 13 связей-wikilink, `show-projects` 2xx
+- [x] Roundtrip PUT/GET/DELETE зелёный (frontmatter `status`/`amount` вернулся точно, DELETE → 404)
+- [x] M1–M5 зелёные: ведущий `filter` ушёл, условия в `config.subFilter`, точка восстановления
+      создана, в ней именно до-состояние, **второе событие миграции в той же вью дало второй файл**
+      (регрессия #145, найденная 2026-08-28, не вернулась)
+- [x] Посев из хранилища снят, демо-конфиг возвращён в исходное состояние
+- [ ] **Новое: #164 не закрыт** — генератор по-прежнему поставляет ведущие `filter`; см. CONTEXT.md
+      «CORRECTION 2026-08-30»
+- [ ] Визуальный чек-лист §5 — по-прежнему за человеком
 
 ## 8. Сценарий R1: Clients → Sessions (M-RELATION-FIRST)
 
