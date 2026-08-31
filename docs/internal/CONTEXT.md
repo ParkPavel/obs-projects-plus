@@ -122,6 +122,28 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   lists as "Key files" (#174). Filed #171–#177; `main.js`/`releases/` (15 MB of built bundles in
   the tree, against the repo's own `.gitignore` policy) goes to a Codex audit by the user's
   decision, not to a direct fix.
+- **The pre-release audit queue is closed (2026-08-31).** #172, #173, #174, #175, #176, #177 done;
+  the version shipped as `3.6.0-alpha` with the tag pushed, and `release.yml` now marks any
+  prerelease tag as one — without that fix an alpha would have become GitHub's "Latest release".
+  #171 (`main.js` / `releases/`) is held for a Codex audit by the user's decision.
+  Audit §2.2 and §2.4 are fixed and were not covered by any ticket: the `CLAUDE.md` token list
+  named `styles.css` (a build output, not a source) and missed the live TypeScript source
+  `designTokens.ts` — there are **four** token sources, not two, and that reopened #165's scope
+  from S to M with `analysis_required: true`. `BACKLOG.md`'s header now states the rule instead of
+  warning about the drift, and `M-SUBBASES` is marked withdrawn rather than complete.
+  Filed from the orchestrator's findings: #178 (`contracts.ts` calls itself normative and has no
+  consumers beyond two id types), #179 (`TransformStep` is the name of two exported types, keyed on
+  `type` and on `kind` — the same trap §4a of the manual pipeline warns about twice), #180 (a third
+  aggregation vocabulary: `computeAggFn` reimplements SUM/AVG instead of calling the kernel).
+  **The matryoshka picture is more precise than either document said:** `@container` queries ARE
+  live in 6 components and `container-type` in 2, so the container already decides breakpoints;
+  what is missing is container-relative length units, of which there are zero. Half implemented,
+  not absent.
+  **Two corrections to the audit itself:** its 61% undocumented-exports figure was inflated by a
+  defect in the measuring script (verified: 47%), and "zero container units" is literally true but
+  misleading if read as "no container queries".
+  **Local-only, not in the repository:** the `#177` hook fix and these `CLAUDE.md` edits — `.claude/`
+  and `CLAUDE.md` are gitignored. R0.9 ships and `describe.skip`s where the hook is absent.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).

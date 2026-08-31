@@ -1,7 +1,19 @@
 # Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
-> **Updated**: 2026-08-30 (#164 closed on a live run; the stack is merged and pushed) — filed #141–#170: Codex meta-audit + render pass (see the section at the end of this file; findings in `CODEX_META_AUDIT_FINDINGS_2026-08-27.md`). live API run against the OBStests vault (#162–#164), and the Notion reference analysis (`M-MATRYOSHKA`, #165–#170). Baseline numbers live in `CONTEXT.md`, not here. ⚠ The milestone/branch statuses further down this file describe `main` as untouched, which stopped being true at merge `64863ed` — that drift is #146, not a fact. Prior W2/W3 queue is historical, superseded by the product reset.
+> **Updated**: 2026-08-30 (#164 closed on a live run; the stack is merged and pushed) — filed #141–#170: Codex meta-audit + render pass (see the section at the end of this file; findings in `CODEX_META_AUDIT_FINDINGS_2026-08-27.md`). live API run against the OBStests vault (#162–#164), and the Notion reference analysis (`M-MATRYOSHKA`, #165–#170). Baseline numbers live in `CONTEXT.md`, not here.
+
+> **О статусах ниже по файлу (§2.4 пред-релизного аудита, исправлено 2026-08-31).**
+> Десяток тикетов лета несёт пометки вида «НЕ слит/запушен — гейт пользователя». **Все они
+> историчны.** `main` содержит всё: M-RELATION-FIRST, M-FILTER-CONSOLIDATION, стек мета-аудита
+> #141–#164 и работы #171–#177, и с 2026-08-30 репозиторий запушен, а версия выпущена как
+> `3.6.0-alpha`. Проверять «слито ли» надо через `git merge-base --is-ancestor <sha> main`, а не
+> по этим строкам.
+> Выборочная проверка: `9cb69ec` (#095) — в `main`; `065331e`, на который ссылается #096, **в
+> репозитории не существует вовсе** — ветка удалена либо хеш записан с ошибкой, установить это
+> уже нельзя. Ссылки на коммиты в старых записях следует считать непроверенными, пока не проверены.
+> Прежняя редакция этой шапки называла дрейф «не фактом» и отсылала к #146; #146 закрыт, а тело
+> файла осталось прежним — поэтому здесь теперь правило, а не предупреждение. Prior W2/W3 queue is historical, superseded by the product reset.
 > **Supersedes**: `REFACTOR_BACKLOG_V5.md` (legacy, archived); `.ai_internal/New-specification/BACKLOG.md` (working copy, archived)
 
 > **Product priority reset (2026-07-18):** `PRODUCT_RESET_2026-07-18.md` is the active
@@ -394,9 +406,18 @@ Files:
 
 ---
 
-## Milestone M-SUBBASES — ✅ COMPLETE
+## Milestone M-SUBBASES — ⛔ ОТОЗВАНА (2026-08-31)
 
-Goal: Matryoshka-style nested canvases with cross-base data flow.
+Goal (историческая формулировка): Matryoshka-style nested canvases with cross-base data flow.
+
+> **Веха отозвана, а не выполнена.** Виджет `SubBaseCanvas` удалён в #119, модель целиком —
+> в #160 (`subBase.ts`, `subBasePartition.ts`, `crossSubBase.ts` и их сюиты), команда
+> `add-sub-base` снята и подтверждена отсутствующей живым прогоном (10 команд вместо 11).
+> В типе намеренно оставлены ключи `DataTableConfig.subBases`: 3.5.0-alpha (`2af8a50`)
+> **поставляла** виджет, который их писал, и удаление полей сделало бы существующие данные
+> немоделируемыми. Они переносятся, но не интерпретируются.
+> Замена проектируется с нуля как адресуемая сущность — `M-SAVED-SELECTION`, решение #147, бриф
+> #159 (дважды отклонён на Gate 0). Записи ниже сохранены как история поставки, не как статус.
 
 ### #009 — Sub-base canvas (Matryoshka first deliverable)
 - Status: ✅ DONE (2026-05-21) — analysis + implementation shipped
@@ -3331,6 +3352,48 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
   `main`; (2) «создать ветку и закоммитить» одной командой блокируется, потому что HEAD ещё на `main`.
 - Инвариант 12 правильный и остаётся — чинить реализацию, а не правило.
 
+## Находки оркестратора 2026-08-31 — #178–#180
+
+Найдены при документировании #174, намеренно **не** починены: каждая меняет либо хранимые данные,
+либо состав слоёв, то есть требует решения, а не уборки. Все три перепроверены в основной сессии.
+
+### #178 — `lib/engine/contracts.ts` описывает движок, который не построили
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- analysis_required: **true** — это решение об архитектуре, а не правка
+- Vision scene: none — сопровождаемость | User outcome: «нормативный» документ не расходится с кодом
+- Заголовок файла называет себя «NORMATIVE source of truth», при этом наружу используются только
+  `RecordId` (1 файл) и `ProjectId` (22 файла). Проверено 2026-08-31: `FilterIR`, `RollupIR`,
+  `AggregateFn` — **ноль** потребителей вне самого файла; то же у конвертов DataEngine.
+- Оркестратор уже вписал в шапку файла предупреждение «UNCONSUMED. Read this paragraph before
+  believing the rest of the header», так что читатель больше не введён в заблуждение. Открытым
+  остаётся вопрос: достроить слой, вынести два живых типа и удалить остальное, или оставить как
+  проектный документ — но тогда не в `src/`.
+
+### #179 — `TransformStep` — имя двух разных экспортируемых типов
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: **P1** | Complexity: S
+- analysis_required: false
+- Vision scene: none | User outcome: невозможно импортировать не тот тип и не заметить
+- `src/lib/dashboard-engine/transformTypes.ts:62` — живой хранимый тип, различитель `type`.
+  `src/lib/engine/contracts.ts:282` — мёртвый IR, различитель `kind`.
+- Обе строки проверены 2026-08-31. Импорт не того типа проходит проверку типов там, где поля
+  пересекаются, — а `kind` вместо `type` это ровно та ловушка посева, о которой дважды
+  предупреждает `MANUAL_TESTING_PIPELINE.md` §4a: мигратор молча игнорирует шаг с `kind`.
+- P1 не по объёму, а по цене ошибки: она молчаливая.
+
+### #180 — Третий словарь агрегаций: `computeAggFn` не зовёт ядро
+- Status: 📋 BACKLOG | Milestone: (next) | Priority: P2 | Complexity: M
+- analysis_required: **true** — унификация словарей меняет хранимые конфиги
+- Vision scene: none | User outcome: исправление в ядре агрегации доходит до конвейера
+- `transformExecutor.ts:804` — `computeAggFn` реализует `SUM`, `AVG`, `MEDIAN`, `COUNT`,
+  `COUNT_DISTINCT` собственным `switch`, не обращаясь к `lib/engine/aggregate.ts`. Проверено
+  2026-08-31: в `transformExecutor.ts` импорта ядра нет.
+- Следствие: правка в ядре (например, обращение с `null` или пустым списком) до конвейера не
+  доходит. Это тот же класс, что #104 и #126 — параллельная копия логики, которую гейты не видят,
+  потому что обе копии зелены по отдельности.
+- Словарей три: `AggregationFunction` (конвейер, ВЕРХНИЙ регистр), агрегации Stats-карточек
+  (`count_total` / `count_values` / …) и ядро `aggregate.ts`. Свести — значит тронуть хранимые
+  конфиги, поэтому нужен план.
+
 ## Milestone M-MATRYOSHKA — 📋 PLANNED (референс-анализ Notion, 2026-08-28)
 
 > **Основание:** `REFERENCE_NOTION_UI_2026.md` (свежий анализ Notion по совпадающим элементам +
@@ -3341,8 +3404,33 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
 > #170 — ревизия решения по сцене 5 с учётом референса.
 
 ### #165 — Принцип матрёшки не участвует в сборке
-- Status: 📋 BACKLOG | Milestone: M-MATRYOSHKA | Priority: **P1** | Complexity: S
-- analysis_required: false | Blocks: #166, #167
+- Status: 📋 BACKLOG — **ОБЪЁМ ПЕРЕСМОТРЕН 2026-08-31** | Milestone: M-MATRYOSHKA | Priority: **P1** | Complexity: M (было S)
+- analysis_required: **true** (было false) | Blocks: #166, #167
+- **Тикет был написан против трёх CSS-файлов. Источников четыре, и один из них — TypeScript.**
+  Замерено 2026-08-31:
+
+| Источник | Кто импортирует | Состояние |
+|---|---|---|
+| `src/ui/tokens/tokens.css` (353 стр.) | `src/main.ts:11` | живой, **главный** |
+| `src/ui/views/Dashboard/tokens/dashboardTokens.css` (51) | `src/main.ts:12` | живой |
+| `src/ui/views/Dashboard/designTokens.ts` | `DashboardCanvas.svelte` → `getDesignTokenCSS` | **живой, TS, а не CSS** — вкладывает переменные в контейнер канвы |
+| `src/lib/tokens/design-tokens.css` (314) | никто | мёртвый |
+
+- **`styles.css` источником не является** — это результат пост-сборочного слияния (`mergeCSS`).
+  Формулировка «действующие токены приходят из `ui/tokens/tokens.css`» была верна, а список в
+  `CLAUDE.md` — нет; оба документа исправлены.
+- **Принцип реализован наполовину, а не отсутствует.** `@container`-запросы живы в 6 компонентах
+  (Календарь `Day` / `AllDayEventStrip` / `HeaderStripsSection`, Дашборд `ChartWidget` /
+  `FilterTabsWidget` / `WidgetConfigShell`), `container-type: inline-size` объявлен в
+  `ViewContent.svelte` и `Day.svelte`. То есть контейнер уже решает **точки перелома**. Чего он не
+  решает — **размер**: контейнерных единиц (`cqi`/`cqw`/`cqh`/`cqb`/`cqmin`/`cqmax`) в `src/`
+  **ноль**. Формулировка аудита «zero container units» верна буквально и вводит в заблуждение по
+  смыслу, если читать её как «контейнерных запросов нет».
+- `designTokens.ts` в собственной шапке заявляет «Container Queries (Матрёшка pattern)», поставляя
+  при этом `rem`-шкалу — шапка обещает больше, чем модуль даёт.
+- **Почему теперь нужен архитектор:** свести четыре источника к одному — значит тронуть путь,
+  которым переменные попадают на канву (`getDesignTokenCSS`), а не просто удалить мёртвый файл.
+  По правилам маршрутизации CLAUDE.md это эскалация, а не прямая правка.
 - Vision scene: none — техническая база | User outcome: правки «по матрёшке» начинают влиять на пиксели
 - `src/lib/tokens/design-tokens.css` — файл, который декларирует шкалу и принцип, — **мёртвый код**:
   он никогда не импортируется, действующие токены приходят из `ui/tokens/tokens.css`. Это записано
