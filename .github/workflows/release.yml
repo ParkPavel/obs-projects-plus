@@ -31,6 +31,15 @@ jobs:
         run: |
           tag="${GITHUB_REF#refs/tags/}"
 
+          # A semver prerelease tag (3.6.0-alpha, 3.6.0-beta.2, …) must be
+          # published as a prerelease. GitHub shows the newest NON-prerelease as
+          # "Latest release", so without this an alpha becomes the shop window
+          # and anyone landing on the repo is offered it as the stable build.
+          prerelease=""
+          case "$tag" in
+            *-*) prerelease="--prerelease" ;;
+          esac
+
           if gh release view "$tag" &>/dev/null; then
             gh release upload "$tag" \
               main.js manifest.json styles.css --clobber
@@ -38,5 +47,6 @@ jobs:
             gh release create "$tag" \
               --title="$tag" \
               --generate-notes \
+              $prerelease \
               main.js manifest.json styles.css
           fi
