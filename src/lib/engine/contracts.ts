@@ -1,5 +1,35 @@
 /**
- * Canonical type contracts for the Unified DataEngine (v4.0 / Layer 0).
+ * contracts.ts — the v4 "Unified DataEngine" type layer, ALMOST ALL OF IT
+ * UNCONSUMED. Read this paragraph before believing the rest of the header.
+ *
+ * The design below was written as the normative Layer 0 for a unified engine.
+ * That engine was not built. Verified against the tree on 2026-08-31: outside
+ * this file, the only symbols anyone imports are `RecordId` and `ProjectId`
+ * (`lib/relations/contracts.ts`, `lib/colors/contracts.ts`), and `ProjectId`
+ * is itself only re-exported from `settings/base/settings`. `FilterIR`,
+ * `RollupIR`, `FormulaIR`, `AggregateFn`, `SortIR`, `GroupIR`, `ComputeIR`,
+ * `AggregateIR`, `TransformStep`, `EngineDiagnostic`, `DataEngineRequest` and
+ * `DataEngineResult` have zero consumers.
+ *
+ * So the words "NORMATIVE" and "single source of truth" below describe an
+ * intent, not the code. What is actually canonical today:
+ *
+ * | This file says | What the product runs |
+ * |---|---|
+ * | `AggregateFn` is the kernel alphabet | `RollupFunction` in `lib/engine/aggregate.ts` |
+ * | `FilterIR` / `FilterCondition` with `op` | `FilterDefinition` in `settings/base/settings.ts`, evaluated by `filterEvaluator.ts` |
+ * | `TransformStep` with `kind` + `payload` | `TransformStep` with `type` in `lib/dashboard-engine/transformTypes.ts` |
+ *
+ * That last row is a live hazard rather than a curiosity: two exported types
+ * share the name `TransformStep`, and importing this one compiles in places
+ * where it is simply wrong. The stored, executed pipeline step is the one in
+ * `transformTypes.ts`.
+ *
+ * The file is kept, not deleted, because `RecordId` genuinely lives here (see
+ * its own note) and because the design is the record of a decision. Anything
+ * planned in terms of these types should first check whether the type still
+ * describes the product - most of the REFACTOR-1xx tickets referenced below
+ * did not land.
  *
  * NORMATIVE source of truth for cross-cutting engine types: filter IR,
  * aggregation kernel, rollup IR, formula IR, transform pipeline and the
@@ -49,6 +79,11 @@ import type { FormulaNode } from "src/lib/formula";
 // Re-exports for ergonomics (consumers import a single barrel).
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Pass-through re-exports so a consumer can take engine types from one barrel.
+ * These add no meaning of their own - each is defined in the module it is
+ * imported from above, and that module stays the place to change it.
+ */
 export type { DataFieldType, DataFrame, DataValue, ProjectId, RollupModeId, FormulaNode };
 
 /**
@@ -200,25 +235,33 @@ export interface FormulaIR {
 // Sort / Group / Compute / Aggregate step payloads
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** One level of an ordering. Unconsumed - see the module header. */
 export interface SortKey {
   readonly field: string;
   readonly direction: "asc" | "desc";
 }
 
+/**
+ * Multi-key ordering, most significant key first. Unconsumed: sorting in the
+ * product is carried on the view's own settings, not as an engine step.
+ */
 export interface SortIR {
   readonly keys: readonly SortKey[];
 }
 
+/** Grouping by one field, optionally ordering the groups. Unconsumed. */
 export interface GroupIR {
   readonly field: string;
   readonly direction?: "asc" | "desc";
 }
 
+/** A formula-derived column: where the result lands, and the AST behind it. Unconsumed. */
 export interface ComputeIR {
   readonly outputField: string;
   readonly formula: FormulaIR;
 }
 
+/** A rollup written into a named column. Unconsumed. */
 export interface AggregateIR {
   readonly outputField: string;
   readonly rollup: RollupIR;
@@ -228,6 +271,14 @@ export interface AggregateIR {
 // Transform pipeline
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * NOT the pipeline step the product runs. The executed and stored step type is
+ * `TransformStep` in `src/lib/dashboard-engine/transformTypes.ts`, which is
+ * discriminated by `type` and carries its payload flat rather than nested. Two
+ * exported types with one name: check the import path before using either.
+ *
+ * This version is the v4 IR and has no consumers.
+ */
 export type TransformStep =
   | { readonly kind: "filter"; readonly payload: FilterIR }
   | { readonly kind: "sort"; readonly payload: SortIR }
@@ -239,8 +290,15 @@ export type TransformStep =
 // Diagnostics
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Severity of an engine diagnostic. Unconsumed. */
 export type EngineDiagnosticSeverity = "info" | "warning" | "error";
 
+/**
+ * A structured, machine-codeable engine message. Unconsumed: the pipeline that
+ * exists reports through `TransformMeta.warnings`, a flat `string[]` with no
+ * code and no severity. If diagnostics are ever built for real, this is the
+ * shape that was intended - and `warnings` is what would have to migrate.
+ */
 export interface EngineDiagnostic {
   readonly severity: EngineDiagnosticSeverity;
   /** Stable machine code, e.g. `E_REGEX_UNSAFE`, `W_FIELD_MISSING`. */
@@ -255,6 +313,12 @@ export interface EngineDiagnostic {
 // Engine envelope
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * The envelope a single engine call was to take: a source, the schema to read
+ * it with, and the steps to run. Unconsumed - there is no `DataEngine` entry
+ * point in the tree; callers assemble frames and call `executeTransform`
+ * directly.
+ */
 export interface DataEngineRequest {
   readonly source: DataSource;
   readonly schema: ProjectSchema;
@@ -267,11 +331,13 @@ export interface DataEngineRequest {
   readonly cacheKey?: string;
 }
 
+/** Execution telemetry for one engine call. Unconsumed. */
 export interface DataEngineResultMeta {
   readonly fromCache: boolean;
   readonly durationMs: number;
 }
 
+/** Result envelope: the frame, its diagnostics, and how it was produced. Unconsumed. */
 export interface DataEngineResult {
   readonly frame: DataFrame;
   readonly diagnostics: readonly EngineDiagnostic[];

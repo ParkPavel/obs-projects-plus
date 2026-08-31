@@ -1,13 +1,64 @@
-﻿// src/ui/views/Dashboard/engine/transformTypes.ts
+﻿/**
+ * transformTypes.ts — the shape of a dashboard pipeline, as it is STORED.
+ *
+ * These types are not internal to the executor: a pipeline is written into the
+ * widget's saved settings and read back on every load, so this file is a
+ * persistence format. Renaming a property here does not refactor a program, it
+ * invalidates every dashboard a user has already built. Add optional
+ * properties; treat the required ones as fixed.
+ *
+ * Four things that have already cost time:
+ *
+ * - **The discriminator is `type`, and a pipeline lives in `widget.transform`,
+ *   not `widget.config`.** Both are easy to get wrong when seeding a vault by
+ *   hand or through the REST API, and both fail the same silent way: the
+ *   migrator does not recognise the step, drops it, and the run "passes" while
+ *   testing nothing. `MANUAL_TESTING_PIPELINE.md` records this as a seeding
+ *   trap; it is a trap for code that constructs steps too.
+ * - **There is a second exported type called `TransformStep`,** in
+ *   `src/lib/engine/contracts.ts`, keyed on `kind` with a nested `payload`.
+ *   That one is the unbuilt v4 engine IR and has no consumers. This one is
+ *   what the executor runs and what is on disk. Importing the wrong
+ *   `TransformStep` type-checks in places and is a real hazard.
+ * - **`AggregationFunction` is UPPERCASE on purpose,** and it is a THIRD
+ *   aggregation vocabulary, not an alias. `lib/engine/aggregate.ts` has
+ *   lowercase `RollupFunction` and dashboard footers have `ColumnAggregation`.
+ *   The pipeline does not delegate to the kernel: `computeAggFn` in
+ *   `transformExecutor.ts` implements this set itself. So a fix to SUM or AVG
+ *   in the kernel does not reach a pipeline, and vice versa.
+ * - **Every step is deeply `readonly`,** which is what lets the executor pass
+ *   pipelines around and cache on them without defensive copies. Producing a
+ *   new pipeline means building a new object, never mutating one.
+ *
+ * `disabled` is on the shared base rather than on each step so that turning a
+ * step off is non-destructive: it stays in the stored pipeline, in place, and
+ * the user can turn it back on.
+ */
 
 import type { FilterDefinition } from "src/settings/settings";
 
 // ── Pipeline ─────────────────────────────────────────────────
 
+/**
+ * An ordered pipeline. Order is meaningful and is the order stored: each step
+ * receives the frame the previous one produced, so a filter before a group-by
+ * and the same filter after it are different programs.
+ */
 export interface TransformPipeline {
   readonly steps: readonly TransformStep[];
 }
 
+/**
+ * One step, discriminated by `type`. Adding a member here means teaching
+ * `executeStep` in `transformExecutor.ts` to run it, in the same change: that
+ * switch is exhaustive with no `default`, so the compiler is the only thing
+ * enforcing the match. A step carrying a `type` outside this union - from an
+ * older or hand-edited save - makes `executeStep` return `undefined`, and the
+ * loop assigns it to the frame it will read next.
+ *
+ * Not the same type as `TransformStep` in `lib/engine/contracts.ts` - see the
+ * module header.
+ */
 export type TransformStep =
   | UnnestStep
   | UnpivotStep
@@ -29,6 +80,11 @@ export interface TransformStepBase {
   readonly disabled?: boolean;
 }
 
+/**
+ * Expand a field holding an array of objects into one row per element, the
+ * parent's other fields copied onto each. The row count grows, so an unnest
+ * before an aggregate and after it give different totals.
+ */
 export interface UnnestStep extends TransformStepBase {
   readonly type: "unnest";
   /** Field containing an array of objects to expand into rows */
@@ -41,55 +97,90 @@ export interface UnnestStep extends TransformStepBase {
   readonly keepOriginal?: boolean;
 }
 
+/**
+ * Turn repeated columns into rows - the wide-to-long reshape for frontmatter
+ * that numbers its fields (`set_1_reps`, `set_2_reps`, ...).
+ *
+ * Each group's `pattern` must contain one capture group, and what it captures
+ * is the INDEX that ties columns together: every field sharing an index
+ * becomes one output row. A pattern with no capture group matches nothing, and
+ * an unpivot that matches nothing warns and passes the frame through
+ * unchanged - so a typo shows up as "no rows appeared", not as an error.
+ */
 export interface UnpivotStep extends TransformStepBase {
   readonly type: "unpivot";
   readonly fieldGroups: readonly FieldGroup[];
+  /** Fields copied unchanged onto every output row (the record's identity). */
   readonly keepFields: readonly string[];
 }
 
+/** One family of indexed columns and the single column they collapse into. */
 export interface FieldGroup {
+  /** Regex over field names with ONE capture group for the index. */
   readonly pattern: string;
+  /** Name of the column the group's values land in. */
   readonly outputName: string;
 }
 
+/** Add columns computed by formula. Runs before `filter`, so its outputs are filterable. */
 export interface ComputeStep extends TransformStepBase {
   readonly type: "compute";
   readonly columns: readonly ComputedColumn[];
 }
 
+/** A derived column: the name it takes, and the formula expression behind it. */
 export interface ComputedColumn {
   readonly name: string;
   readonly expression: string;
 }
 
+/**
+ * Drop rows. `conditions` is the ordinary `FilterDefinition` - this step is
+ * evaluated by the one filter engine (`filterEvaluator`), not by a private
+ * copy, which is invariant 2 in CLAUDE.md.
+ */
 export interface FilterStep extends TransformStepBase {
   readonly type: "filter";
   readonly conditions: FilterDefinition;
 }
 
+/**
+ * Partition rows by field values. On its own it only establishes the grouping;
+ * an `aggregate` step after it is what collapses each group to one row.
+ */
 export interface GroupByStep extends TransformStepBase {
   readonly type: "group-by";
   readonly fields: readonly string[];
   readonly dateGrouping?: DateGrouping;
 }
 
+/** Bucket a date field by calendar period instead of by exact value. */
 export interface DateGrouping {
   readonly field: string;
   readonly granularity: "day" | "week" | "month" | "quarter" | "year";
+  /** Column the bucket label is written to; defaults to overwriting `field`. */
   readonly outputField?: string;
 }
 
+/** Collapse each group to one row, one output column per `AggregateColumn`. */
 export interface AggregateStep extends TransformStepBase {
   readonly type: "aggregate";
   readonly columns: readonly AggregateColumn[];
 }
 
+/** Which field to summarise, under what name, with which function. */
 export interface AggregateColumn {
   readonly sourceField: string;
   readonly outputName: string;
   readonly function: AggregationFunction;
 }
 
+/**
+ * Long-to-wide: the distinct values of `categoryField` become columns, each
+ * holding `valueField` reduced by `aggregation`. Last in the canonical order -
+ * the output column names depend on the data, so steps after a pivot cannot
+ * name the columns they would act on.
+ */
 export interface PivotStep extends TransformStepBase {
   readonly type: "pivot";
   readonly categoryField: string;
@@ -130,6 +221,17 @@ export interface JoinStep extends TransformStepBase {
 
 // ── Pipeline Aggregation (UPPERCASE, for TransformPipeline) ──
 
+/**
+ * The pipeline's aggregation alphabet. UPPERCASE is what distinguishes it on
+ * sight from `RollupFunction` (kernel, lowercase) and `ColumnAggregation`
+ * (table footers) - three vocabularies that overlap in meaning and share no
+ * code. `computeAggFn` in `transformExecutor.ts` implements this one; adding a
+ * member here means implementing it there, and does NOT inherit anything from
+ * `lib/engine/aggregate.ts`.
+ *
+ * These names are stored in saved pipelines, so they cannot be renamed to
+ * match the other two vocabularies without a migration.
+ */
 export type AggregationFunction =
   | "SUM"
   | "AVG"
@@ -147,13 +249,30 @@ export type AggregationFunction =
 
 // ── Result ───────────────────────────────────────────────────
 
+/**
+ * What `executeTransform` returns. Unlike the step types this is runtime-only:
+ * it is never stored, so it can change shape freely.
+ */
 export interface TransformResult {
   readonly data: DataFrame;
+  /**
+   * Fields present in the output that were not in the input, computed by
+   * difference. This is how a config panel offers the columns a pipeline
+   * invented (`compute` outputs, pivot categories) without re-deriving them.
+   */
   readonly derivedFields: readonly DataField[];
   readonly meta: TransformMeta;
 }
 
+/**
+ * Execution telemetry. `warnings` is the pipeline's only diagnostic channel -
+ * steps report a bad pattern, an unresolved join or an out-of-order sequence
+ * here and then carry on, so an empty result with warnings is the normal shape
+ * of a misconfigured pipeline. Surface them; do not treat a returned frame as
+ * proof the pipeline did what the user asked.
+ */
 export interface TransformMeta {
+  /** Steps actually run: disabled steps are excluded before counting. */
   readonly stepsExecuted: number;
   readonly executionTimeMs: number;
   readonly inputRowCount: number;

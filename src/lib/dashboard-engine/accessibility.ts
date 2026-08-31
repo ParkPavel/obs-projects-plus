@@ -1,12 +1,40 @@
 /**
- * Accessibility utilities for Database View widgets.
+ * accessibility.ts — ARIA prop builders and keyboard navigation for widgets.
  *
- * Provides ARIA attribute helpers and keyboard navigation handlers
- * for grid-like widget layouts, lists, and interactive elements.
+ * The builders exist so that the ARIA contract of a grid is written once and
+ * spread onto an element, instead of each widget hand-rolling `role` /
+ * `aria-*` attributes that then drift apart. Every function is pure and
+ * DOM-free except `focusGridCell` and `announceChange`, which is what makes
+ * the navigation logic testable without a renderer.
+ *
+ * **Know this before extending it: most of this module has no caller.** Only
+ * `ariaWidget` is used in the product (`WidgetShell.svelte`, which spreads it
+ * onto every widget frame). `ariaGrid`, `ariaGridCell`, `navigateGrid`,
+ * `navigateList`, `focusGridCell` and `announceChange` are reached only from
+ * `ui/views/Dashboard/__tests__/accessibility.test.ts`. Calendar's `Day.svelte`
+ * has a local function that is also called `navigateGrid`; it is a different
+ * implementation and does not import this one. So the grid half is a designed
+ * and tested surface waiting for a consumer, not a description of how the
+ * dashboard currently behaves - do not read a passing suite here as evidence
+ * that a widget is keyboard-navigable.
+ *
+ * Two couplings a maintainer must not break:
+ *
+ * - **`ariaGridCell` and `focusGridCell` share one addressing scheme.** The
+ *   first writes `aria-rowindex` / `aria-colindex`; the second finds the cell
+ *   by a selector built from exactly those attributes. Renaming or reindexing
+ *   in one place silently makes the other find nothing - `focus()` is called
+ *   through an optional chain, so the failure is a no-op, not an error.
+ * - **Roving tabindex.** `ariaGridCell` gives the active cell `tabindex 0` and
+ *   every other cell `-1`, so Tab enters the grid once and the arrow keys move
+ *   within it. Exactly one cell per grid may be passed `active: true`; marking
+ *   several puts every one of them back in the tab order and defeats the
+ *   pattern.
  */
 
 // ── ARIA helpers ────────────────────────────────────────
 
+/** Attributes for the grid container itself; spread onto the element. */
 export interface AriaGridProps {
   role: "grid";
   "aria-rowcount": number;
@@ -14,6 +42,12 @@ export interface AriaGridProps {
   "aria-label": string;
 }
 
+/**
+ * Container attributes for a grid of `rowCount` x `colCount`, labelled for
+ * screen readers. The counts are the FULL dimensions, which is the point of
+ * `aria-rowcount`: with virtualised rendering they stay the totals, not the
+ * number of elements currently in the DOM.
+ */
 export function ariaGrid(
   label: string,
   rowCount: number,
@@ -27,6 +61,10 @@ export function ariaGrid(
   };
 }
 
+/**
+ * Attributes for one cell. `aria-rowindex` / `aria-colindex` double as the
+ * address `focusGridCell` looks a cell up by.
+ */
 export interface AriaGridCellProps {
   role: "gridcell";
   "aria-rowindex": number;
@@ -34,6 +72,11 @@ export interface AriaGridCellProps {
   tabindex: number;
 }
 
+/**
+ * Cell attributes, with the roving tabindex: `active` gives this cell
+ * `tabindex 0`, everything else gets `-1`. Exactly one cell in a grid may be
+ * active - see the module header.
+ */
 export function ariaGridCell(
   rowIndex: number,
   colIndex: number,
@@ -47,12 +90,20 @@ export function ariaGridCell(
   };
 }
 
+/** Attributes for a widget frame: a labelled, focusable landmark region. */
 export interface AriaWidgetProps {
   role: "region";
   "aria-label": string;
   tabindex: number;
 }
 
+/**
+ * The one builder with a production caller: `WidgetShell.svelte` spreads this
+ * onto every widget frame. `role="region"` makes each widget a landmark a
+ * screen reader can jump between, and `tabindex 0` makes the frame itself
+ * reachable - so the label must be the widget's user-visible title, or the
+ * landmark list becomes a row of identical entries.
+ */
 export function ariaWidget(label: string): AriaWidgetProps {
   return {
     role: "region",
@@ -63,14 +114,20 @@ export function ariaWidget(label: string): AriaWidgetProps {
 
 // ── Keyboard navigation ─────────────────────────────────
 
+/** A cell address in the same row/column space `navigateGrid` moves through. */
 export interface GridPosition {
   row: number;
   col: number;
 }
 
 /**
- * Handle arrow-key navigation within a grid.
- * Returns new position or null if navigation is out of bounds.
+ * Arrow-key navigation within a grid. Returns the new position, or `null` for
+ * both "this key means nothing here" and "that move leaves the grid".
+ *
+ * `null` rather than a clamped position is deliberate: the caller keeps the
+ * current cell and, because the key was not consumed, can let the event bubble
+ * so the surrounding view still handles it. Home and End move within the
+ * current row only - they do not jump to the first or last cell of the grid.
  */
 export function navigateGrid(
   current: GridPosition,
@@ -111,7 +168,10 @@ export function navigateGrid(
 }
 
 /**
- * Handle list navigation (up/down only).
+ * Up/down navigation for a flat list. Returns the new index, or `null` when
+ * the move would leave the list - the same "not consumed" signal
+ * `navigateGrid` uses. Unlike the arrows, Home and End always return an index,
+ * so they are consumed even when the list is already at that end.
  */
 export function navigateList(
   currentIndex: number,
@@ -133,7 +193,10 @@ export function navigateList(
 }
 
 /**
- * Focus a cell element within a grid container.
+ * Move focus to a cell, addressed by the `aria-rowindex` / `aria-colindex`
+ * that `ariaGridCell` wrote. If no cell matches, this is a silent no-op: the
+ * lookup can fail and the optional call swallows it, so a mismatch between the
+ * two functions produces dead arrow keys rather than an error.
  */
 export function focusGridCell(
   container: HTMLElement,
@@ -146,7 +209,19 @@ export function focusGridCell(
 }
 
 /**
- * Get live region announcement text for screen readers.
+ * Announce `message` to screen readers. (It writes; it does not return the
+ * text - the previous comment said "get", which it never did.)
+ *
+ * There is one shared `#ppp-sr-announce` live region per document, created on
+ * first use and reused after: `aria-live="polite"` announces on text change,
+ * so a second region would compete with the first and a fresh region per call
+ * would often be announced before it is even in the tree. The region is
+ * visually hidden by inline styles rather than a class, so it works even where
+ * the plugin stylesheet has not loaded.
+ *
+ * `activeDocument` is Obsidian's global for the document of the focused
+ * window. Using plain `document` here would put the region in the main window
+ * while the user is in a popped-out leaf, where it announces to nobody.
  */
 export function announceChange(message: string): void {
   const doc = activeDocument ?? document;
