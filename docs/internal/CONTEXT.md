@@ -1,6 +1,6 @@
 # Current project context
 
-> **Updated:** 2026-08-30 (meta-audit stack merged and pushed; #164 fixed and verified live;
+> **Updated:** 2026-08-31 (pre-release audit follow-ups #176, #177, #174 closed, merged and pushed;
 > session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
@@ -19,6 +19,20 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `check-destructive-git` and `check-ts-ignore` all stay. The disabled script is still on disk;
   re-registering it restores the old gate.
 
+- **Pre-release audit follow-ups closed 2026-08-31 — #176, #177, #174** (`PRE_RELEASE_AUDIT_2026-08-31.md`
+  §5 items 4 and 6). #176: invariant 7 is HISTORICAL — `src/archive` was deleted in #119 and is not
+  coming back; R0.4 now declares its regime and fails if an archive root reappears, instead of
+  passing by matching nothing. #177: `check-commit-branch` judges the branch the command would
+  land on rather than a substring and a stale HEAD snapshot; two bypasses it had (stepping onto
+  `main` mid-command, and `git -C . commit`) are closed, and R0.9 pins the behaviour. #174: the
+  remaining four engine modules are documented. **Still open from that audit: #171** (bundles in
+  the tree — user assigned it to a Codex audit) and the §2.2/§2.4 documentation drift, which no
+  ticket covers yet.
+- **Two facts that follow-up work uncovered and did NOT fix.** `lib/engine/contracts.ts` describes
+  a "Unified DataEngine" that was never built — outside the file only `RecordId` and `ProjectId`
+  are imported anywhere. And `TransformStep` is the name of TWO exported types (the dead IR in
+  `contracts.ts`, keyed on `kind`; the live stored one in `dashboard-engine/transformTypes.ts`,
+  keyed on `type`). Both are now documented in the files; neither is resolved.
 - **`main` carries everything below and is pushed.** `64863ed` (M-FILTER-CONSOLIDATION + the
   linked-source stack) is its ancestor, the meta-audit stack and the #164 work sit on top, and
   `origin/main` matches. Both `feat/116` and the relation-first work `feat/112` are IN `main`;
@@ -111,10 +125,12 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 175 suites / 2460 tests PASS, tsc 0, svelte-check 0/0,
+- **Canonical baseline — `main`: 176 suites / 2473 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (122 pre-existing tsdoc warnings).** The stack took it from 173/2464 at `64863ed`
   to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four
-  provenance tests, and R0.8 (stylesheet integrity) added a suite of five. Do not roll back.
+  provenance tests, and R0.8 (stylesheet integrity) added a suite of five. On 2026-08-31 #176
+  re-armed R0.4 (+5 cases in the existing suite) and #177 added R0.9, the commit-hook ratchet
+  (+1 suite, +8). Do not roll back.
 - **`manifest.json` must exist in the repo root.** It went missing in the working tree on 2026-08-28
   and `eslint` failed before analysing a single file — the config reads the manifest. Restored;
   the build does not remove it. If lint dies with `ENOENT … manifest.json`, this is why.

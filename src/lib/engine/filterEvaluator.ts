@@ -1,18 +1,42 @@
 /**
- * filterEvaluator — canonical filter evaluation kernel (REFACTOR-104).
+ * filterEvaluator — the filter evaluation kernel (REFACTOR-104).
  *
- * Single source of truth for evaluating `FilterDefinition` against
- * `DataRecord`. Used by:
- *   - `src/ui/app/filterFunctions.ts` (back-compat re-export facade)
- *   - `src/ui/views/Dashboard/engine/transformExecutor.ts::executeFilter`
+ * The single place a `FilterDefinition` is evaluated against a `DataRecord`.
+ * "One filter engine" is invariant 2 in CLAUDE.md, and it is an invariant
+ * because a second copy does not announce itself: it diverges on one operator,
+ * for one field type, and the symptom is records quietly missing from a view.
+ * Every filtering surface routes here - project filters, dashboard widget
+ * scope, the pipeline's `filter` step, the Calendar agenda, cross-project
+ * resolution and rollup, the Dataview and native-query datasources. Roughly a
+ * dozen modules import this file; do not add a thirteenth implementation.
  *
- * AC (per docs/PHASE_3_TICKETS.md REFACTOR-104):
- *   - R2.1c semantics preserved: negative-semantics operators on
- *     undefined fields return TRUE so that records without the field
- *     populated are not silently dropped.
- *   - `transformExecutor.executeFilter` is ≤30 LOC — already enforced
- *     by delegation to `matchesFilterConditions`.
- *   - ≥60 cases in `__tests__/filterEvaluator.test.ts`.
+ * `filterCompose.ts` decides WHICH conditions apply; this file decides whether
+ * a record satisfies them.
+ *
+ * The rules that make the behaviour what it is, all of them load-bearing:
+ *
+ * - **Dispatch order in `matchesCondition` is the specification.** Emptiness
+ *   first, then list-typed values, then `is-any-of`, then string operators
+ *   against array values, then the by-type branches, and only then the
+ *   absent-value rule. Each branch exists because the one after it gives the
+ *   wrong answer for that case - most sharply, the array/string branch must
+ *   precede the scalar string branch, or every Relation field silently matches
+ *   nothing. Reordering this function is a behaviour change, not a cleanup.
+ * - **R2.1c: a negative operator on an absent field returns TRUE.** Absence is
+ *   not equality, so `is-not "x"` holds for a record that has no value at all.
+ *   Inverting this drops every record whose field is not yet populated, which
+ *   is exactly the bug the rule was introduced for.
+ * - **Regex safety lives in `lib/helpers/regexSafety.ts` (#126),** never
+ *   inline here. This is the one place a user pattern meets every record in
+ *   the vault, so a ReDoS guard that does not reach it does not exist.
+ * - **`stringFns["is-any-of"]` is an unreachable placeholder.** The operator is
+ *   handled by a dedicated branch above the dispatch table, because its
+ *   argument is a JSON-encoded array rather than a string. Implementing the
+ *   table entry does nothing; the branch is what runs.
+ * - **Unknown operator/type combinations return `false`** after a dev-only
+ *   warning. A filter that cannot be understood hides records rather than
+ *   showing all of them, so a new operator must be added to a dispatch branch
+ *   here, not only to the settings union.
  */
 
 import { produce } from "immer";
@@ -55,11 +79,26 @@ import {
 
 // dayjs isoWeek + quarterOfYear plugins are extended globally in main.ts
 
+/**
+ * Per-call semantic overrides. Kept as options rather than separate operators
+ * so that one saved filter means the same thing everywhere except where a view
+ * deliberately reads it differently.
+ */
 export interface FilterOpts {
   /** When false, `is-upcoming` excludes the baseDate day (strictly future). Default true (Notion-style). */
   upcomingInclusive?: boolean;
 }
 
+/**
+ * Evaluate ONE condition against one record. The dispatch order inside this
+ * function is the specification of the filter language - see the module
+ * header before rearranging it.
+ *
+ * `baseDateCtx` is the "today" that relative date operators and date formulas
+ * resolve against. Passing it explicitly, instead of reading the clock here,
+ * is what makes the date operators testable and keeps every condition in one
+ * evaluation anchored to the same instant.
+ */
 export function matchesCondition(
   cond: FilterCondition,
   record: DataRecord,
@@ -180,6 +219,23 @@ export function matchesCondition(
   return false;
 }
 
+/**
+ * Evaluate a whole filter - conditions plus nested groups - against a record.
+ *
+ * Three behaviours that are decisions, not accidents:
+ *
+ * - **An empty filter matches everything.** No conditions and no groups is the
+ *   identity, so "no filter configured" shows all records rather than none.
+ * - **Disabled conditions are dropped before evaluation,** so a condition the
+ *   user switched off cannot influence the conjunction - and `enabled` absent
+ *   counts as enabled, which is what keeps filters saved before the flag
+ *   existed working.
+ * - **Runaway nesting resolves to `true`,** not `false`. Past 20 levels the
+ *   group is treated as matching, because the fail-safe for a malformed filter
+ *   is to show the records, not to hide the user's data behind a depth limit.
+ *
+ * `_depth` is internal recursion bookkeeping; callers pass nothing.
+ */
 export function matchesFilterConditions(
   filter: FilterDefinition,
   record: DataRecord,
@@ -221,6 +277,21 @@ export function evaluateFilter(
   return matchesFilterConditions(filter, record, baseDateCtx, opts);
 }
 
+/**
+ * Filter a whole frame, returning a new one - `produce` keeps the input
+ * untouched, which is what lets callers hold the unfiltered frame and
+ * re-filter cheaply.
+ *
+ * Only fields already on the record are visible here. Relation columns are
+ * resolved by the enrichment stage that runs BEFORE any filter in the
+ * canonical order `enrich -> A -> C -> B -> sort -> render`
+ * (FILTER_ORDER_ADR.md); calling this on an unenriched frame silently sees no
+ * `__resolved__*` values rather than failing.
+ *
+ * Note it takes no `baseDateCtx`, so relative date operators resolve against
+ * the current clock. Where "today" must be pinned, call
+ * `matchesFilterConditions` per record instead.
+ */
 export function applyFilter(
   frame: DataFrame,
   filter: FilterDefinition
@@ -232,6 +303,15 @@ export function applyFilter(
   });
 }
 
+/**
+ * Emptiness, for any field type. Delegated to `lib/engine/emptiness.ts`
+ * (REFACTOR-106) because "empty" has to mean the same thing to a filter, a
+ * rollup and a `percent_empty` aggregate - an empty string, an empty list and
+ * an absent key are all empty, and `0` and `false` are not.
+ *
+ * These two are checked before any type dispatch, so they work on a field
+ * whose type the record does not determine.
+ */
 export const baseFns: Record<
   BaseFilterOperator,
   (value: Optional<DataValue>) => boolean
@@ -257,6 +337,20 @@ function safeRegexTest(pattern: string, input: string): boolean {
   }
 }
 
+/**
+ * String operators. Matching is case-INSENSITIVE for `contains`,
+ * `starts-with`, `ends-with` and `regex`, and case-SENSITIVE for `is` and
+ * `is-not`, which compare the raw values. That asymmetry is deliberate -
+ * equality on a Select or Status value must distinguish two options that
+ * differ only in case - and it is the kind of thing a "consistency" refactor
+ * quietly breaks.
+ *
+ * Every entry also decides what an absent value means, and the affirmative and
+ * negative operators answer differently: `is`/`contains` are false, while
+ * `is-not`/`not-contains` are true, which is R2.1c applied at the leaf.
+ *
+ * `is-any-of` is a placeholder that never runs; see the module header.
+ */
 export const stringFns: Record<
   StringFilterOperator,
   (left: Optional<string>, right?: string) => boolean
@@ -274,6 +368,15 @@ export const stringFns: Record<
   regex: (left, right) => (left && right ? safeRegexTest(right, left) : false),
 };
 
+/**
+ * Numeric comparison. The ordering operators demand that BOTH sides really are
+ * numbers, so a missing or non-numeric side is false rather than coerced -
+ * without that, `undefined < 5` would be a silent `true` for every record with
+ * no value. `eq` / `neq` compare directly, so a record with no value is `neq`
+ * to any number the user typed - R2.1c again, and `neq` is additionally listed
+ * in the absent-value branch of `matchesCondition` so the answer is the same
+ * whichever path a record takes.
+ */
 export const numberFns: Record<
   NumberFilterOperator,
   (left: Optional<number>, right?: number) => boolean
@@ -286,6 +389,13 @@ export const numberFns: Record<
   gte: (left, right) => isNumber(left) && isNumber(right) && left >= right,
 };
 
+/**
+ * Checkbox operators. Both test identity against a literal, so an ABSENT
+ * checkbox satisfies neither: a record whose frontmatter has no such key is
+ * not "unchecked", it is unanswered. Use `is-empty` to find those. Changing
+ * `is-not-checked` to `!== true` would fold the two states together and is the
+ * obvious-looking edit to resist.
+ */
 export const booleanFns: Record<
   BooleanFilterOperator,
   (value: Optional<boolean>) => boolean
@@ -294,6 +404,28 @@ export const booleanFns: Record<
   "is-not-checked": (value) => value === false,
 };
 
+/**
+ * Date operators. Four conventions hold across the whole table:
+ *
+ * - **Every comparison is at day granularity.** `dayjs(...).isSame(x, "day")`
+ *   throughout, so a time component never makes two dates on the same calendar
+ *   day differ.
+ * - **`baseDate` is "today", supplied by the caller** and defaulting to the
+ *   clock only when absent. Relative operators must never read the clock
+ *   themselves, or two conditions in one filter can straddle midnight.
+ * - **Rolling windows include today** at the near end: `is-past-*` runs
+ *   backwards from today inclusive, `is-next-*` forwards from today inclusive.
+ *   That is the Notion reading, and it is why the bounds are written with an
+ *   extra day rather than as a plain `isBefore`.
+ * - **`is-not-on` is true for an absent date**, alone among these, because it
+ *   is the one negative operator here (R2.1c). Everything else is false when
+ *   there is no date to compare.
+ *
+ * `is-upcoming` includes today by default. Setting `upcomingInclusive` to
+ * false in `FilterOpts` makes it strictly future, which is what the Calendar
+ * uses; that override is applied in `matchesCondition`, before this table is
+ * reached.
+ */
 export const dateFns: Record<
   DateFilterOperator,
   (left: Optional<Date>, rawValue?: string, baseDate?: Dayjs) => boolean
@@ -408,6 +540,17 @@ export const dateFns: Record<
   },
 };
 
+/**
+ * Set operators over a list field. The right-hand side is an ARRAY, which the
+ * caller obtains by `JSON.parse`-ing the stored condition value - list
+ * conditions are persisted as a JSON string, and a value that fails to parse
+ * arrives here as `undefined`.
+ *
+ * With no right-hand side, `has-any-of` and `has-all-of` are false and
+ * `has-none-of` is true: each is the honest answer for "compared against
+ * nothing", and it keeps `has-none-of` the exact complement of `has-any-of`.
+ * Membership is by strict equality, so `"1"` and `1` are different elements.
+ */
 export const listFns_multitext: Record<
   Exclude<ListFilterOperator, "has-keyword">,
   (left: Optional<DataValue>[], right?: Optional<DataValue>[]) => boolean
@@ -423,6 +566,15 @@ export const listFns_multitext: Record<
   },
 };
 
+/**
+ * Substring search across a list's elements: true when ANY element contains
+ * the keyword, case-insensitively.
+ *
+ * Split from `listFns_multitext` because its right-hand side is a bare string,
+ * not a JSON array - which is exactly why `matchesCondition` special-cases
+ * `has-keyword` and skips the `JSON.parse` it applies to the other list
+ * operators.
+ */
 export const listFns_text: Record<
   "has-keyword",
   (left: Optional<DataValue>[], right?: string) => boolean
@@ -434,6 +586,11 @@ export const listFns_text: Record<
   },
 };
 
+/**
+ * The two halves merged, so `matchesCondition` can index one table by
+ * operator. The halves stay separate above because their right-hand types
+ * differ; this union is the lookup, not a third vocabulary.
+ */
 export const listFns = {
   ...listFns_multitext,
   ...listFns_text,
