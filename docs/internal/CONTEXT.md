@@ -204,10 +204,43 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   under `UNKNOWN`.
   R0.10's roster check moved from `MIRRORED` to `DISJOINT` in the same change, and was verified to
   fail when a mirrored name is re-introduced.
+- **Co-configuration round with Codex, 2026-09-01.** Codex reviewed the roster written *for* it and
+  the automations. Confirmed: the project IS marked trusted in `~/.codex/config.toml`, so
+  `.codex/hooks.json` is eligible to load — that had been recorded as unverified. Its four roles,
+  sandboxes and effort levels it accepts as executable.
+  **It found two real split violations I had introduced or carried:** `architect` was told to write
+  its plan into a ticket while its tool allowlist has no write tool — an instruction it could not
+  execute; the plan is now returned in shape and `lead` persists it. And `implementer` and `tester`
+  both claimed authorship of Jest tests; the boundary is now drawn — tests that ship with a change
+  belong to its author, `tester` owns execution and regression tests for reproduced defects.
+  **One of its claims was false and was checked rather than applied:** it reported the `ts-ignore`
+  hook as `PostToolUse` in both layers; it is `PreToolUse` in both. Also flagged and NOT acted on:
+  hook registrations use relative paths, which could fail from a subdirectory — changing working
+  hook registration late in a session with no way to verify the change would be the wrong trade, so
+  it is recorded instead.
+  `task --resume` is unsafe as the sole resume mechanism: it selects the newest resumable task by
+  session and repository rather than by ticket or base, re-sends a default continuation prompt, and
+  never checks the original base against current `HEAD`.
+- **Delegation became automatic (2026-09-01).** The standing conflict — harness says do not spawn
+  subagents unless asked, `CLAUDE.md` routes by size — was resolved by the user in favour of the
+  routing. `.claude/hooks/session-routing.ps1` fires at `SessionStart`, reads the live roster off
+  disk (rather than restating it, which is what rotted the old stack) and puts the routing contract
+  and the standing authorisation into context once per session. Mirrored into `.codex/hooks/`.
+- **R0.11 (`R0_11_prePublishSafety.test.ts`)** draws the publish line before it is needed: no
+  credential in any publishable config file, `settings.local.json` quarantined and provably
+  gitignored, all three layers refused by git. It reports **kind and location, never the value** —
+  a failure message goes to logs, and printing the secret would publish the thing it protects.
+  Verified to fail on a planted credential without leaking it.
+- **`check-destructive-git` had the #177 defect too, and was never in that ticket's scope.** It ran
+  one `-match` over the whole command text, so it blocked any command that merely *mentioned* a
+  destructive operation — it fired on a diagnostic holding the patterns in a test-data array, which
+  is how it was found. Rewritten with the same masking-and-segments approach as the commit hook;
+  8/8 cases pass, blocking real invocations (including `git -C . reset --hard`) and allowing
+  mentions in strings and greps.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 177 suites / 2479 tests PASS, tsc 0, svelte-check 0/0,
+- **Canonical baseline — `main`: 178 suites / 2482 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (122 pre-existing tsdoc warnings).** The stack took it from 173/2464 at `64863ed`
   to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four
   provenance tests, and R0.8 (stylesheet integrity) added a suite of five. On 2026-08-31 #176
