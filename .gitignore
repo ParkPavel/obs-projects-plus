@@ -58,6 +58,7 @@ lint_output*.txt
 # stops anything further being published, it does not retroactively unpublish.
 .claude/
 .codex/
+.agents/
 CLAUDE.md
 AGENTS.md
 
