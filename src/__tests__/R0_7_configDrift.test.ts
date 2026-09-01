@@ -30,8 +30,15 @@ const CANONICAL_SOURCES = [
   "src/__tests__/R0_7_configDrift.test.ts",
 ];
 
-/** Config surfaces that agents and instructions are read from. */
-const SCANNED_ROOTS = [".claude", ".github"];
+/**
+ * Config surfaces that agents and instructions are read from.
+ *
+ * `.codex` was named in this file's own header from the beginning and was never
+ * in this list, so the Codex half of the paired setup drifted unscanned for
+ * months (found 2026-09-01). Adding it is the fix; the header was not lying
+ * about intent, only about reach.
+ */
+const SCANNED_ROOTS = [".claude", ".codex", ".github"];
 const SCANNED_FILES = ["CLAUDE.md", "AGENTS.md"];
 
 /**
