@@ -159,10 +159,34 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   (three `exit 2` calls, runner survived and emitted JSON) and by the suite itself on Windows with
   the hook present, where five cases run after the one named. Nothing was changed. Prior stack
   review was six-of-eight false; this one is one-of-one.
+- **Working-stack audit, 2026-09-01** — the paired Claude+Codex configuration, not the product.
+  Prompted by the user noticing two things: no delegation was happening, and brakes had appeared
+  that were never designed in. Both were real, and four defects were found underneath:
+  **(1)** all nine `.codex/agents/*.toml` were cp1251 mojibake — proven at the byte level
+  (`D0 B2 E2 80 B0 D2 90` = three characters where `E2 89 A5` = `>=` belonged), repaired, line
+  counts and TOML structure unchanged; **(2)** the push gate the user lifted on 2026-08-30 stayed
+  registered on the Codex side, so half the pair was still gated; **(3)** the #177 hook fix reached
+  `.claude/hooks/` only — the Codex copy kept the old 18-line version that both blocked innocent
+  commands and let "checkout main, then commit" through; **(4)** `R0_7_configDrift` named `.codex`
+  in its own header and never scanned it.
+  **On the brakes:** there are no Stop hooks anywhere and the review gate is off. What reads as
+  friction is `PreToolUse` hooks plus the harness auto-mode classifier plus asking for approval —
+  three different things, only the first of which is project configuration.
+  **On delegation:** the harness instructs an agent not to spawn subagents unless asked, while
+  `CLAUDE.md` routing says to delegate by ticket size. The harness wins by default, which is why
+  the roster sat unused. Named here because it is a standing conflict, not a one-off.
+- **R0.10 (`R0_10_workingStackIntegrity.test.ts`) closes the hole that let all of that rot.**
+  Checks both layers for cp1251 damage and U+FFFD, roster parity under a declared regime, JSON
+  validity, hook implementation parity, and hook registration parity. Verified to fail on each of
+  the four real defects, one failing assertion apiece — restored from backup, run, restored again.
+  Its first version used a regex literal containing the corrupted characters, which made the test's
+  own encoding part of the assertion and produced two phantom offenders; it is code points now,
+  ASCII-only in source. **A detector for encoding damage must not itself be encodable wrong.**
+  `R0.7` now scans `.codex` as its header always claimed.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 176 suites / 2473 tests PASS, tsc 0, svelte-check 0/0,
+- **Canonical baseline — `main`: 177 suites / 2479 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (122 pre-existing tsdoc warnings).** The stack took it from 173/2464 at `64863ed`
   to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four
   provenance tests, and R0.8 (stylesheet integrity) added a suite of five. On 2026-08-31 #176
