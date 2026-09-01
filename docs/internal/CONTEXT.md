@@ -144,6 +144,21 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   misleading if read as "no container queries".
   **Local-only, not in the repository:** the `#177` hook fix and these `CLAUDE.md` edits — `.claude/`
   and `CLAUDE.md` are gitignored. R0.9 ships and `describe.skip`s where the hook is absent.
+- **Codex review is no longer a user gate (2026-09-01).** The user removed the checkpoint: a review
+  is a verification step, not a decision, and it spends no Anthropic tokens. The plugin's
+  `/codex:*` commands are still `disable-model-invocation: true` and stay user-only; the engine is
+  invoked directly instead — `node .../codex-companion.mjs review [--base <ref>] [--scope branch]`,
+  backgrounded. `CLAUDE.md` carries the recipe and the base-selection rule.
+  **Pick the base or waste the run:** with no `--base` the reviewer compares the working tree, and
+  on a clean tree that returns "No changes exist relative to the specified merge-base commit" —
+  *nothing was compared*, not *no findings*. That burned the first run of the day.
+- **First self-run review: `CX-REVIEW-3.6.0-alpha.md`, one P1, and it is FALSE.** Codex claimed the
+  new R0.9 suite aborts after its first blocking case because the hook's `exit 2` kills the shared
+  PowerShell runner. It does not: `&` runs a script in its own scope and returns, setting
+  `$LASTEXITCODE` — only dot-sourcing would take the parent down. Disproven by a probe
+  (three `exit 2` calls, runner survived and emitted JSON) and by the suite itself on Windows with
+  the hook present, where five cases run after the one named. Nothing was changed. Prior stack
+  review was six-of-eight false; this one is one-of-one.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
