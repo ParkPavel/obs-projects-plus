@@ -118,18 +118,25 @@ whenRunnable("R0.10 - paired working stack integrity", () => {
   });
 
   /**
-   * Which regime the pair is in. `true` today: the Codex roster was migrated
-   * one-for-one from the Claude one, so any divergence is drift rather than
-   * design, and drift is what this ratchet is for.
+   * Which regime the pair is in.
    *
-   * Codex's own audit (2026-09-01) argues the mirror is the wrong target — that
-   * it should keep a small set of roles it is genuinely better at (flow audit,
-   * adversarial review, code mapping) rather than shadow all nine. That is a
-   * live proposal, not the current state. When it is adopted, flip this constant
-   * and assert the new contract in the SAME change, the way R0.4 declares
-   * `ARCHIVE_PRESENT` — so the ratchet never sits in a regime it does not name.
+   * `MIRRORED` until 2026-09-01: the Codex roster was migrated one-for-one from
+   * the Claude one. That was the source of the rot this ratchet was built for —
+   * nine jobs described in eighteen files, so a fix could land in one copy and
+   * not the other, and did (the #177 hook, the lifted push gate, the cp1251
+   * damage on one side only).
+   *
+   * `DISJOINT` since 2026-09-01, per WORKING_STACK_DESIGN_2026-09-01.md: one
+   * job, one owner, one model. Claude keeps authorship and decisions (lead,
+   * architect, designer, implementer, tester); Codex keeps execution and
+   * adversarial verification (code-mapper, flow-auditor, adversarial-reviewer,
+   * auditor). A name appearing in BOTH layers now means someone re-introduced a
+   * mirror, which is the defect this regime exists to prevent.
    */
-  const MIRRORED_ROSTER = true;
+  // Widened deliberately: a plain annotated const narrows to its literal, and
+  // TypeScript then rejects the other branch as unreachable — which would make
+  // flipping the regime a compile error instead of a one-line edit.
+  const ROSTER_REGIME = "DISJOINT" as "MIRRORED" | "DISJOINT";
 
   it("the roster relationship matches the declared regime", () => {
     const claude = agentNames(path.join(CLAUDE, "agents"), ".md");
@@ -137,14 +144,14 @@ whenRunnable("R0.10 - paired working stack integrity", () => {
     expect(claude.length).toBeGreaterThan(0);
     expect(codex.length).toBeGreaterThan(0);
 
-    if (MIRRORED_ROSTER) {
-      // A role that exists for one model and not the other is a hole in the
-      // pair: work routed to it stops at the layer that lacks it.
+    if (ROSTER_REGIME === "MIRRORED") {
+      // A role on one side only is a hole in the pair: work routed to it stops
+      // at the layer that lacks it.
       expect(codex).toEqual(claude);
     } else {
-      // Divergent by design — then every Codex role must still be a real file
-      // with a name, and the constant above must explain the split.
-      expect(codex.length).toBeGreaterThan(0);
+      // One job, one owner. Any shared name is a mirror creeping back.
+      const shared = codex.filter((name) => claude.includes(name));
+      expect(shared).toEqual([]);
     }
   });
 
