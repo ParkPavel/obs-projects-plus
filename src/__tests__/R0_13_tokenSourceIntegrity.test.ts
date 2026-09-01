@@ -38,34 +38,41 @@ const LIVE_TOKEN_SOURCES = ["ui/tokens/tokens.css"] as const;
 
 /**
  * The `--ppp-db-*` layer that `Dashboard/tokens/dashboardTokens.css` carried
- * before #165 merged it. This list IS the contract: `--ppp-db-z-dropdown`
+ * before #165 merged it. This map IS the contract: `--ppp-db-z-dropdown`
  * going missing means floating pickers render under sticky headers, which no
  * gate can see and no type can catch. `--ppp-db-row-hover` is in the older
  * palette section of tokens.css at the same value, so the merge dropped the
  * duplicate rather than the key.
+ *
+ * **Values, not just names** (Codex audit of #165, 2026-09-01). A key-presence
+ * check passes while a key carries the wrong value, and a wrong value is
+ * exactly what a merge gets wrong — the names are copied mechanically, the
+ * values by hand. Every value below was read from the deleted file at its last
+ * commit on `main` (`git show main:src/ui/views/Dashboard/tokens/dashboardTokens.css`),
+ * not from the merged file, so this asserts the merge rather than describing it.
  */
-const MERGED_DASHBOARD_KEYS = [
-  "--ppp-db-z-raised",
-  "--ppp-db-z-bar",
-  "--ppp-db-z-sticky",
-  "--ppp-db-z-dropdown",
-  "--ppp-db-z-overlay",
-  "--ppp-db-row-compact",
-  "--ppp-db-row-default",
-  "--ppp-db-row-expanded",
-  "--ppp-db-toolbar-height",
-  "--ppp-db-col-width-default",
-  "--ppp-db-col-width-min",
-  "--ppp-dt-columns",
-  "--ppp-db-surface",
-  "--ppp-db-surface-raised",
-  "--ppp-db-border",
-  "--ppp-db-border-strong",
-  "--ppp-db-text-primary",
-  "--ppp-db-text-secondary",
-  "--ppp-db-text-faint",
-  "--ppp-db-row-hover",
-] as const;
+const MERGED_DASHBOARD_TOKENS: ReadonlyArray<readonly [string, string]> = [
+  ["--ppp-db-z-raised", "var(--ppp-z-raised, 1)"],
+  ["--ppp-db-z-bar", "2"],
+  ["--ppp-db-z-sticky", "var(--ppp-z-sticky, 20)"],
+  ["--ppp-db-z-dropdown", "100"],
+  ["--ppp-db-z-overlay", "200"],
+  ["--ppp-db-row-compact", "1.75rem"],
+  ["--ppp-db-row-default", "2.25rem"],
+  ["--ppp-db-row-expanded", "3rem"],
+  ["--ppp-db-toolbar-height", "2rem"],
+  ["--ppp-db-col-width-default", "10rem"],
+  ["--ppp-db-col-width-min", "4rem"],
+  ["--ppp-dt-columns", "auto"],
+  ["--ppp-db-surface", "var(--background-primary)"],
+  ["--ppp-db-surface-raised", "var(--background-secondary)"],
+  ["--ppp-db-border", "var(--background-modifier-border)"],
+  ["--ppp-db-border-strong", "var(--background-modifier-border-hover)"],
+  ["--ppp-db-text-primary", "var(--text-normal)"],
+  ["--ppp-db-text-secondary", "var(--text-muted)"],
+  ["--ppp-db-text-faint", "var(--text-faint)"],
+  ["--ppp-db-row-hover", "var(--background-modifier-hover)"],
+];
 
 /** Module-specifier sites, borrowed verbatim from `R0_4:53-54`. */
 const SPECIFIER_SITE =
@@ -154,6 +161,43 @@ function collectStyled(dir: string, out: { file: string; css: string }[] = []) {
   return out;
 }
 
+/**
+ * `--ppp-*` custom properties DECLARED in `css`, name → value. Line-anchored,
+ * which is safe for the token stylesheet: every declaration there sits on its
+ * own line, and a `var(--ppp-x, 1)` READ inside a value never starts one.
+ */
+function declaredTokens(css: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const m of css.matchAll(/^[ \t]*(--ppp-[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/gm)) {
+    out.set(m[1] as string, (m[2] as string).trim());
+  }
+  return out;
+}
+
+/**
+ * `--ppp-*` names declared anywhere in `text`, including inside a generated
+ * string — a declaration is `name:`, a read is `var(name`. The lookbehind is
+ * what separates the two, and it is why this is a pure function with a
+ * synthetic proof rather than a grep.
+ */
+function declaredTokenNames(text: string): string[] {
+  return [...text.matchAll(/(?<!var\(\s*)(--ppp-[a-zA-Z0-9_-]+)\s*:/g)].map((m) => m[1] as string);
+}
+
+/** Every `.ts` / `.svelte` module under `src/`, excluding tests, as `[path, text]`. */
+function collectModules(dir: string, out: { file: string; text: string }[] = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "__tests__" || entry.name === "__mocks__") continue;
+      collectModules(full, out);
+    } else if (entry.name.endsWith(".ts") || entry.name.endsWith(".svelte")) {
+      out.push({ file: path.relative(SRC_ROOT, full).replace(/\\/g, "/"), text: content(full) });
+    }
+  }
+  return out;
+}
+
 describe("R0.13 token source integrity (#165)", () => {
   it("the declared token sources are exactly the stylesheets in the tree", () => {
     // The assertion that makes a fifth token source impossible to add quietly,
@@ -202,13 +246,13 @@ describe("R0.13 token source integrity (#165)", () => {
     expect(selfQueryOffenders(".w { container-type: inline-size; } .w { gap: 1cqi; }")).toEqual([".w"]);
   });
 
-  it("every merged Dashboard key survived the merge", () => {
+  it("every merged Dashboard key survived the merge at its own value", () => {
     const css = content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"));
-    const declared = new Set(
-      [...css.matchAll(/(--[a-zA-Z0-9_-]+)\s*:/g)].map((m) => m[1] as string)
-    );
-    const missing = MERGED_DASHBOARD_KEYS.filter((k) => !declared.has(k));
-    expect(missing).toEqual([]);
+    const declared = declaredTokens(css);
+    const wrong = MERGED_DASHBOARD_TOKENS
+      .filter(([key, value]) => declared.get(key) !== value)
+      .map(([key, value]) => `${key}: expected ${value}, found ${declared.get(key) ?? "nothing"}`);
+    expect(wrong).toEqual([]);
   });
 
   it("declares both levels of the scale", () => {
@@ -233,6 +277,45 @@ describe("R0.13 token source integrity (#165)", () => {
   it("no element in the tree sizes itself in its own container units", () => {
     const offenders = collectStyled(SRC_ROOT)
       .flatMap(({ file, css }) => selfQueryOffenders(css).map((s) => `${file} → ${s}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it("tells a token declaration from a token read", () => {
+    // Synthetic, because both scans below are expected to find nothing and an
+    // all-clear is otherwise indistinguishable from a broken matcher.
+    expect(declaredTokenNames("--ppp-radius-md: 0.375rem;")).toEqual(["--ppp-radius-md"]);
+    expect(declaredTokenNames("border-radius: var(--ppp-radius-md);")).toEqual([]);
+    expect(declaredTokenNames("z-index: var( --ppp-db-z-dropdown , 100);")).toEqual([]);
+    // The shape the deleted designTokens.ts had: a scale assembled in a string.
+    expect(declaredTokenNames('const css = `--ppp-radius-md: ${R.md}; --ppp-space-lg: ${S.lg};`'))
+      .toEqual(["--ppp-radius-md", "--ppp-space-lg"]);
+  });
+
+  it("no TypeScript module declares a design token", () => {
+    // The mechanism #165 removed, closed rather than merely undone. The fourth
+    // source was not a stylesheet — it was `designTokens.ts` building a string
+    // that redefined `:root` names on the canvas, so nothing in the CSS
+    // appeared to conflict with anything and `--ppp-radius-md` quietly meant
+    // two different sizes. An inventory of `.css` files cannot see that
+    // coming back (Codex audit of #165, 2026-09-01).
+    const offenders = collectModules(SRC_ROOT)
+      .filter(({ file }) => file.endsWith(".ts"))
+      .flatMap(({ file, text }) => declaredTokenNames(text).map((n) => `${file} → ${n}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it("nothing outside the token stylesheet redeclares a name from the scale", () => {
+    // A component may invent its own per-instance variable — PageIcon's
+    // `--ppp-icon-size` is a size passed down a prop, not a scale. What it may
+    // not do is REDECLARE a name the scale already owns: that is the radius
+    // shadow, and it is invisible in review because both declarations look
+    // local and correct where they stand.
+    const scale = new Set(declaredTokens(content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"))).keys());
+    expect(scale.size).toBeGreaterThan(0); // a vacuous scan would otherwise pass
+    const offenders = collectModules(SRC_ROOT)
+      .flatMap(({ file, text }) =>
+        declaredTokenNames(text).filter((n) => scale.has(n)).map((n) => `${file} → ${n}`)
+      );
     expect(offenders).toEqual([]);
   });
 });
