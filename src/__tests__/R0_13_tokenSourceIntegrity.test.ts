@@ -30,12 +30,41 @@ const ENTRY_POINT = path.join(SRC_ROOT, "main.ts");
 
 /**
  * Every token stylesheet that is expected to exist under `src/`, relative to
- * `src/` and slash-separated. #165 collapses this to a single entry; until
- * step 2 merges it, the Dashboard layer is still its own file and is declared.
+ * `src/` and slash-separated. #165 collapsed four sources into this one. Adding
+ * an entry here is allowed — it just has to be deliberate, and it has to be
+ * imported by the entry point on the same commit.
  */
-const LIVE_TOKEN_SOURCES = [
-  "ui/tokens/tokens.css",
-  "ui/views/Dashboard/tokens/dashboardTokens.css",
+const LIVE_TOKEN_SOURCES = ["ui/tokens/tokens.css"] as const;
+
+/**
+ * The `--ppp-db-*` layer that `Dashboard/tokens/dashboardTokens.css` carried
+ * before #165 merged it. This list IS the contract: `--ppp-db-z-dropdown`
+ * going missing means floating pickers render under sticky headers, which no
+ * gate can see and no type can catch. `--ppp-db-row-hover` is in the older
+ * palette section of tokens.css at the same value, so the merge dropped the
+ * duplicate rather than the key.
+ */
+const MERGED_DASHBOARD_KEYS = [
+  "--ppp-db-z-raised",
+  "--ppp-db-z-bar",
+  "--ppp-db-z-sticky",
+  "--ppp-db-z-dropdown",
+  "--ppp-db-z-overlay",
+  "--ppp-db-row-compact",
+  "--ppp-db-row-default",
+  "--ppp-db-row-expanded",
+  "--ppp-db-toolbar-height",
+  "--ppp-db-col-width-default",
+  "--ppp-db-col-width-min",
+  "--ppp-dt-columns",
+  "--ppp-db-surface",
+  "--ppp-db-surface-raised",
+  "--ppp-db-border",
+  "--ppp-db-border-strong",
+  "--ppp-db-text-primary",
+  "--ppp-db-text-secondary",
+  "--ppp-db-text-faint",
+  "--ppp-db-row-hover",
 ] as const;
 
 /** Module-specifier sites, borrowed verbatim from `R0_4:53-54`. */
@@ -171,6 +200,15 @@ describe("R0.13 token source integrity (#165)", () => {
     expect(selfQueryOffenders(safe)).toEqual([]);
     // Split across rules for the same selector — still the same element.
     expect(selfQueryOffenders(".w { container-type: inline-size; } .w { gap: 1cqi; }")).toEqual([".w"]);
+  });
+
+  it("every merged Dashboard key survived the merge", () => {
+    const css = content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"));
+    const declared = new Set(
+      [...css.matchAll(/(--[a-zA-Z0-9_-]+)\s*:/g)].map((m) => m[1] as string)
+    );
+    const missing = MERGED_DASHBOARD_KEYS.filter((k) => !declared.has(k));
+    expect(missing).toEqual([]);
   });
 
   it("no element in the tree sizes itself in its own container units", () => {

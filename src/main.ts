@@ -7,9 +7,8 @@ import "dayjs/locale/ru";
 import "dayjs/locale/uk";
 import "dayjs/locale/zh-cn";
 
-// Design tokens CSS
+// Design tokens CSS — the single source (#165). R0.13 asserts this import.
 import "./ui/tokens/tokens.css";
-import "./ui/views/Dashboard/tokens/dashboardTokens.css";
 
 import { either } from "fp-ts";
 import { Plugin, TFile, TFolder, WorkspaceLeaf, addIcon, Notice } from "obsidian";
