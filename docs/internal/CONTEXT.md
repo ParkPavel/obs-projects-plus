@@ -237,10 +237,21 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   is how it was found. Rewritten with the same masking-and-segments approach as the commit hook;
   8/8 cases pass, blocking real invocations (including `git -C . reset --hard`) and allowing
   mentions in strings and greps.
+- **R0.12 (`R0_12_hookPrecision.test.ts`) pins the hooks nothing was holding.** After
+  `check-destructive-git` turned out to carry the same defect #177 had fixed elsewhere, a coverage
+  check showed why it could: `check-commit-branch` had two ratchets, and **every other hook had
+  none**. A hand-checked fix is how the first one passed too.
+  It compile-checks every `.ps1` in the hook directory — the failure that matters most, because a
+  PowerShell parse error exits 1, which reads as ALLOW: a hook that fails to compile does not fail
+  closed, it stops guarding silently (an em dash did exactly that during the #177 work). Plus nine
+  precision cases for the destructive guard.
+  Verified against the pre-fix naive matcher, where it fails on **both** halves of the defect: the
+  old version let a real `git -C . reset --hard` through AND blocked commands that merely mentioned
+  the operation.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 178 suites / 2482 tests PASS, tsc 0, svelte-check 0/0,
+- **Canonical baseline — `main`: 179 suites / 2491 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (122 pre-existing tsdoc warnings).** The stack took it from 173/2464 at `64863ed`
   to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four
   provenance tests, and R0.8 (stylesheet integrity) added a suite of five. On 2026-08-31 #176
