@@ -19,7 +19,6 @@
   import { buildDisplayFrame } from "./dashboardFramePipeline";
   import type { GetFileStat } from "src/lib/dashboard-engine/applyAutoFields";
   import { createWidgetController } from "./dashboardWidgets";
-  import { getDesignTokenCSS } from "./designTokens";
   import { subscribeCanvasCommands } from "./dashboardCommands";
   import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync, readyFrames, type ExternalSourceState } from "./dashboardPreload";
   import { createSchemaController } from "./dashboardSchema";
@@ -62,7 +61,7 @@
   $: widgets = effectiveConfig?.widgets ?? [];
   $: showToolbar = effectiveConfig?.showWidgetToolbar ?? false;
   $: quickActions = effectiveConfig?.quickActions ?? [];
-  const tokenCSS = getDesignTokenCSS(), widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
+  const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
     if (!effectiveConfig) return;
     const { fieldPresets, activeFieldPresetId } = e.detail;
@@ -142,7 +141,7 @@
 </script>
 <ViewLayout>
   <ViewContent>
-    <div class="ppp-database-root" style={tokenCSS} role="region" aria-label={$i18n.t("views.dashboard.name")}>
+    <div class="ppp-database-root" role="region" aria-label={$i18n.t("views.dashboard.name")}>
       <div class="ppp-toolbar-row">
         <DashboardToolbar {showToolbar} {readonly} {showFormulaBar} currentWidgets={widgets}
           on:toggleToolbar={toggleToolbar} on:openSchema={() => schemaController.openSchema()}
