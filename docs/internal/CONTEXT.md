@@ -183,6 +183,27 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   own encoding part of the assertion and produced two phantom offenders; it is code points now,
   ASCII-only in source. **A detector for encoding damage must not itself be encodable wrong.**
   `R0.7` now scans `.codex` as its header always claimed.
+- **The role stack was rebuilt on 2026-09-01** — `WORKING_STACK_DESIGN_2026-09-01.md` carries the
+  reasoning and the sources; the role files themselves are local (`.claude/agents/`,
+  `.codex/agents/`, both gitignored).
+  **Nine jobs, nine files, none mirrored.** The old roster described the same nine jobs in eighteen
+  files across both layers, which is precisely how a fix landed on one side and not the other three
+  separate times. Claude keeps authorship and decisions (`lead`, `architect`, `designer`,
+  `implementer`, `tester`); Codex keeps execution and adversarial verification (`code-mapper`,
+  `flow-auditor`, `adversarial-reviewer`, `auditor`). The split follows measured strengths — blind
+  comparisons rate Claude's code cleaner, while Codex is faster, cheaper per token and better at
+  autonomous review — not preference.
+  **`orchestrator` and `context-manager` are gone.** The second existed to carry state between hops
+  of the first. Research on 1600+ multi-agent traces names context degradation across handoffs as
+  the most common root cause of failure, ahead of model error, and this project has already paid it:
+  #164 was closed because the sentence "verified in the running app" survived a handoff while the
+  evidence did not. A resident `lead` removes the hops rather than staffing them, and the cycle is
+  now capped at three handoffs per ticket.
+  Three handoff rules, one per measured failure mechanism: a packet rather than a summary; decisions
+  written to a file before work moves on; a fixed output shape per role, with free prose allowed only
+  under `UNKNOWN`.
+  R0.10's roster check moved from `MIRRORED` to `DISJOINT` in the same change, and was verified to
+  fail when a mirrored name is re-introduced.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
