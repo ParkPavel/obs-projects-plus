@@ -210,8 +210,15 @@
 </div>
 
 <style>
+  /* #165 pilot for the container-derived scale. This element is a DESCENDANT
+     of WidgetShell's `widget` container (`container-type: inline-size`), so
+     `cqi` inside these tokens measures the widget's own width — a chart in a
+     wide widget gets larger labels and proportionally more padding than the
+     same chart in a narrow one. The padding is in `em` and therefore follows
+     the font-size, which is where the container decides. */
   .ppp-chart-widget {
-    padding: var(--ppp-space-sm, 0.25rem);
+    font-size: var(--ppp-local-text-sm);
+    padding: var(--ppp-local-pad-sm);
     overflow: hidden;
   }
 

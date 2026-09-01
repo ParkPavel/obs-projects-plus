@@ -211,6 +211,25 @@ describe("R0.13 token source integrity (#165)", () => {
     expect(missing).toEqual([]);
   });
 
+  it("declares both levels of the scale", () => {
+    const tokens = content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"));
+    expect(tokens).toMatch(/:root\s*\{/);
+    // Level 2 needs both of its mechanisms present: `em` spacing that follows
+    // the element's own font-size, and a clamp whose middle term is in `cqi`.
+    expect(tokens).toMatch(/--ppp-local-[a-z-]*pad[a-z-]*\s*:\s*[\d.]+em\s*;/);
+    expect(tokens).toMatch(/--ppp-local-[a-z-]+\s*:\s*clamp\([^;]*cqi[^;]*\)\s*;/);
+  });
+
+  it("the container-derived scale has at least one shipped consumer", () => {
+    // The assertion that stops #165 from recreating its own subject. A level-2
+    // section nothing reads is a document, not a scale — see the ADR's rejected
+    // option (D). One pilot rule is the difference between the two.
+    const consumers = collectStyled(SRC_ROOT)
+      .filter(({ file, css }) => file.endsWith(".svelte") && /var\(\s*--ppp-local-/.test(css))
+      .map(({ file }) => file);
+    expect(consumers.length).toBeGreaterThan(0);
+  });
+
   it("no element in the tree sizes itself in its own container units", () => {
     const offenders = collectStyled(SRC_ROOT)
       .flatMap(({ file, css }) => selfQueryOffenders(css).map((s) => `${file} → ${s}`));

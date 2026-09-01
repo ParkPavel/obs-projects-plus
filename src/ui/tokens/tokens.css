@@ -333,6 +333,55 @@
   --ppp-db-text-faint:       var(--text-faint);
 
   /* ═══════════════════════════════════════════════════════════
+     LEVEL 2 — CONTAINER-DERIVED SCALE (#165, matryoshka)
+     ───────────────────────────────────────────────────────────
+     Everything above is level 1: `rem`, anchored to the document
+     root. It is the fallback layer and the right layer for surfaces
+     that legitimately do not belong to a container — modals, and
+     popups portaled to `<body>`.
+
+     These are level 2. They are declared at `:root` so the NAMES
+     exist everywhere, but their VALUES resolve per use site: an
+     unregistered custom property is substituted as an unresolved
+     token stream, so `cqi` is evaluated against the using element's
+     nearest ancestor query container, not against `:root`. Where no
+     ancestor declares `container-type`, `cqi` falls back to the small
+     viewport — the value degrades to viewport-derived, it never
+     becomes invalid.
+
+     Two mechanisms, deliberately different:
+
+       - Spacing in `em` derives from the element's own font-size, so
+         it inherits kinship for free once that font-size is itself
+         container-derived. It needs no container and cannot fail.
+       - Typography via `clamp()` over `cqi` is where the container
+         actually decides size. The lower bound is what the element
+         renders today, so a converted rule can only grow in a wide
+         container — never shrink below the current appearance.
+
+     THE SELF-QUERY TRAP, written down because it is invisible: an
+     element that declares `container-type` is NOT its own query
+     container. `cqi` in its own rules measures its ANCESTOR. These
+     tokens are for DESCENDANTS of a container, never for the
+     container's own box. R0.13 asserts this against the whole tree.
+
+     They live here and not in a component `<style>` block because
+     Svelte prunes selectors it considers unused and `svelte-check`
+     warns on them. Hard constraint, not preference.
+
+     Only what a shipped rule consumes is declared. A level-2 section
+     with no consumer is `design-tokens.css` reborn one level down,
+     which is the failure this ticket exists to fix; #166 adds rungs
+     as it converts rules that need them. ═══════════════════════ */
+
+  /* Growth-only: floors at the element's inherited size, whatever the
+     host's root font is, so no conversion can shrink existing text. */
+  --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em);
+
+  /* Follows the font-size above, so it is container-derived through it. */
+  --ppp-local-pad-sm: 0.375em;
+
+  /* ═══════════════════════════════════════════════════════════
      RESPONSIVE BREAKPOINTS
      ═══════════════════════════════════════════════════════════ */
   
