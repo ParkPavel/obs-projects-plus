@@ -248,6 +248,26 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   Verified against the pre-fix naive matcher, where it fails on **both** halves of the defect: the
   old version let a real `git -C . reset --hard` through AND blocked commands that merely mentioned
   the operation.
+- **The Codex handoff became a mechanism (2026-09-01):** `.codex/run-role.mjs`. It reads the role's
+  own `developer_instructions` out of `.codex/agents/<role>.toml` and heads the prompt with them, so
+  role selection is enforced rather than hoped for — until now every call was a generic
+  `task --fresh` that selected nothing. It **refuses** an unknown role, a missing or bogus `--base`,
+  an empty `base...HEAD` range, and a missing `--expect`; each refusal was verified. `task --resume`
+  is banned outright: it picks the newest resumable task by session and repository rather than by
+  ticket or base, re-sends a default prompt, and never checks the base against `HEAD`.
+  Verified live — a run launched through it arrived at Codex with the Code Mapper instructions at
+  the head of the prompt.
+- **Codex's relative-hook-path concern is REFUTED, empirically rather than by argument.** It warned
+  that `.claude/hooks/...` registrations could fail when a command runs from a subdirectory. Probed
+  by attempting a commit on `main` from the repo root and again from `src/`: blocked both times, so
+  the harness resolves the hook path against the project root, not the tool's cwd. No change made —
+  the earlier deferral is now a finding. (Verified for the Claude harness only; the Codex host's
+  behaviour here is still unverified.)
+- **Two operational traps found while wiring this up.** Cancelling a Codex job under Git Bash fails:
+  MSYS rewrites `/PID` into a path (`C:/Program Files/Git/PID`) and `taskkill` refuses — stop a
+  stray run from PowerShell. And a "dry" invocation of `run-role.mjs` is not dry: it launches a real
+  run, because the companion lookup falls back to the plugin cache when `CODEX_COMPANION` points
+  nowhere. One run was started and cancelled that way.
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
