@@ -3777,7 +3777,7 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
 
 ### #167 — Инвариант: внутри контейнера нет `rem`
 - Status: ✅ DONE — `R0.16` реализован, ветка `fix/167-rem-in-container-ratchet` от `09fef14`,
-  коммиты `eef8c92` test / `49026c4` fix (первый аудит) / `9fcac65` docs / `<fix2>` fix
+  коммиты `eef8c92` test / `49026c4` fix (первый аудит) / `9fcac65` docs / `55fa68f` fix
   (второй аудит). Ждёт мёржа.
   | Milestone: M-MATRYOSHKA | Priority: P2 | Complexity: S
 - analysis_required: false | Depends on: #166 (все три шага слиты: `010a59d`, `42e897d`, `7fcaa2d`)
