@@ -51,6 +51,12 @@ export function parseRecords(
             // NaN was a number-typed value that every numeric path had to
             // remember to special-case, and none of them did.
             record.values[field.name] = toNumber(value);
+          } else if (typeof value === "number" && !Number.isFinite(value)) {
+            // YAML spells these: `hours: .nan`, `hours: .inf`. They arrive as
+            // real JS numbers, so the string branch above never sees them and
+            // a NaN would reach SUM and poison the whole reduction. Same
+            // answer as the string branch, for the same reason.
+            record.values[field.name] = null;
           }
           break;
         case DataFieldType.Boolean:
