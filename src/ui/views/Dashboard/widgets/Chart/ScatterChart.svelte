@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tickCountFor } from "./chartWidth";
   import type { ScatterData, ChartStyle } from "../../types";
 
   export let data: ScatterData;
@@ -31,7 +32,8 @@
   $: yLo = yMin - yRange * 0.05;
   $: yHi = yMax + yRange * 0.05;
 
-  $: gridLinesX = computeGrid(xLo, xHi, 5);
+  // #166 step 2: labels no longer shrink with the widget, so their number must.
+  $: gridLinesX = computeGrid(xLo, xHi, tickCountFor(plotW));
   $: gridLinesY = computeGrid(yLo, yHi, 5);
 
   function computeGrid(lo: number, hi: number, ticks: number): number[] {

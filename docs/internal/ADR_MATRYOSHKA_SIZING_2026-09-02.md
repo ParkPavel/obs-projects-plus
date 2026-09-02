@@ -280,6 +280,45 @@ that jsdom cannot lay out. R0.3 read as well: the file's inline `min-height: ${h
 untouched and no px was added — the first draft of the rewritten pilot comment contained the string
 `11px` in prose and R0.3 caught it at 152 > 151, which is the ratchet working exactly as intended.
 
+### Step 2 — the two reviews, and what they changed (2026-09-02)
+
+`codex-reports/CX-AUDIT-166-step2.md` (auditor, BLOCKED) and `CX-ADV-166-step2.md` (adversarial,
+hold). Every finding was checked against the code before acting; all four were true.
+
+- **Auditor P1 — the pie was still stretched.** Its viewBox is `min(width, height)`, a square, but
+  `.ppp-chart-pie { width: 100% }` filled the wide widget anyway, so every pie label scaled back up —
+  the exact effect step 2 exists to remove. Fixed: the `<svg>` carries `width`/`height` attributes
+  (its intrinsic size) and the rule is `max-width: 100%; height: auto; margin: 0 auto`. A test in
+  `chartWidth.test.ts` fails if the stylesheet stretches it again.
+- **Auditor P3 — trailing whitespace in `main.js`.** Generated; #171 owns the bundle question.
+- **Adversarial P1 — Scatter and Progress kept a fixed label count.** Once one unit is one pixel a
+  label no longer shrinks with the widget, so its *number* must: `tickCountFor(plotW)` in
+  `chartWidth.ts` (a 60-unit slot, clamped 2..8, the same width model as `axisLabels.ts`) now
+  decides Scatter's X ticks — 2 at 160px, 6 at 480px, 8 at 1600px — and Progress truncates its
+  label to `width / 7` characters through the existing `truncateLabel`. Both wired and pinned in
+  `chartWidth.test.ts`.
+- **Adversarial P1 — the first probe did not carry the real root rules.** A second probe,
+  `docs/internal/probes/166-chart-root-sizing.html`, applies each chart's actual root rule (Bar/Line
+  and Progress: none; Pie: the fixed rule; Scatter: `width: 100%; height: 100%`) at 160 / 480 /
+  1600px and records the SVG box and the rendered text scale. Measured 2026-09-02, HeadlessChrome/151:
+
+| root | 160px | 480px | 1600px |
+|---|---|---|---|
+| bar / line (no rule) | 160×240, scale 1 | 480×240, scale 1 | 1600×240, scale 1 |
+| pie (capped square) | 160×240, scale 1 | **240×240**, scale 1 | **240×240**, scale 1 |
+| scatter (`100%/100%`) | 160×240, scale 1 | 480×240, scale 1 | 1600×240, scale 1 |
+| progress (no rule) | 160×52, scale 1 | 480×52, scale 1 | 1600×52, scale 1 |
+
+  So every root fills its container's inline size, the pie is capped and centred, and one user unit
+  is one CSS pixel at every width. (The first run of this probe read scale 0.803 everywhere — the
+  probe's own flex row had shrunk the cells; `flex: none` fixed the probe, not the charts. Recorded
+  because a probe that lies in the same direction for every cell is easy to believe.)
+
+**Still open, and said so:** the vault run. Both reviews ask for a real Obsidian render at 160 /
+480 / 1600px; the headless probes settle the cascade and the sizing contract, not the appearance of
+a real chart with real data. Progress renders 52 CSS px tall at any width now, where it used to
+scale with `container/480` — correct by the same argument as the labels, and unseen on screen.
+
 ## Step 3 — Fixed minimums become container-relative
 **Size S/M. `lead` inline, after Step 1's guard exists. Waits on USER DECISIONS 1 and 3.**
 

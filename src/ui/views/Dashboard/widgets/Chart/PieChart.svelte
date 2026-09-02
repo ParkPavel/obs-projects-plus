@@ -103,6 +103,8 @@
 
 <svg
   viewBox="0 0 {width} {height}"
+  width={width}
+  height={height}
   class="ppp-chart-pie"
   role="img"
   aria-label="{donut ? 'Donut' : 'Pie'} chart"
@@ -170,9 +172,16 @@
 {/if}
 
 <style>
+  /* #166 step 2: the viewBox is a square capped at the widget height, so the SVG
+     must not be stretched to the container width — `width: 100%` would scale
+     every label back up in a wide widget (Codex audit). The width/height
+     attributes give it its intrinsic size; max-width keeps it inside a narrow
+     container. Centred, so a capped pie sits in the middle of a wide widget. */
   .ppp-chart-pie {
-    width: 100%;
+    display: block;
+    max-width: 100%;
     height: auto;
+    margin: 0 auto;
   }
 
   /*
