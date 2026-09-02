@@ -35,6 +35,7 @@ import {
   type DataValue,
 } from "src/lib/dataframe/dataframe";
 import { applyFilter } from "src/lib/engine/filterEvaluator";
+import { toNumber } from "src/lib/engine/numeric";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import type {
   FilterDefinition,
@@ -258,11 +259,14 @@ function compareValues(
 ): number {
   switch (type) {
     case DataFieldType.Number: {
-      const an = typeof a === "number" ? a : Number(a);
-      const bn = typeof b === "number" ? b : Number(b);
-      if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
-      if (Number.isNaN(an)) return 1;
-      if (Number.isNaN(bn)) return -1;
+      // #180a: sorting must agree with aggregation about what a number is, or
+      // a column can sort `"12abc"` between 12 and 13 while the footer ignores
+      // it. Non-numbers sort last in both directions, as before.
+      const an = toNumber(a);
+      const bn = toNumber(b);
+      if (an === null && bn === null) return 0;
+      if (an === null) return 1;
+      if (bn === null) return -1;
       return an - bn;
     }
     case DataFieldType.Boolean: {

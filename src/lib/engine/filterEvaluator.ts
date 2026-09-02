@@ -71,6 +71,7 @@ import {
 } from "src/settings/settings";
 
 import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/lib/engine/emptiness";
+import { toNumber } from "src/lib/engine/numeric";
 import {
   isUnsafePattern,
   MAX_REGEX_INPUT_LENGTH,
@@ -172,10 +173,13 @@ export function matchesCondition(
   if (isOptionalString(value) && isStringFilterOperator(operator)) {
     return stringFns[operator](value, cond.value);
   } else if (isOptionalNumber(value) && isNumberFilterOperator(operator)) {
-    return numberFns[operator](
-      value,
-      cond.value ? Number(cond.value) : undefined
-    );
+    // #180a: `Number(cond.value)` read the operand the user typed into the
+    // filter by a rule the aggregate no longer uses. A filter comparing
+    // "12abc" has to agree with an aggregate ignoring it, or axis A and axis C
+    // disagree about the same row (FILTER_ORDER_ADR). `?? undefined` keeps the
+    // existing "no operand" path for a non-numeric one, which is what the
+    // falsy `cond.value` check already did for "".
+    return numberFns[operator](value, toNumber(cond.value) ?? undefined);
   } else if (isOptionalBoolean(value) && isBooleanFilterOperator(operator)) {
     return booleanFns[operator](value);
   } else if (isOptionalDate(value) && isDateFilterOperator(operator)) {
