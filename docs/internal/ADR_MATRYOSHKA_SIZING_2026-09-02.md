@@ -261,6 +261,17 @@ includes padding and would have made 11 units render a few percent short. Confir
 bundle: `ResizeObserver` present, zero occurrences of `iframe`. `svelte-check` accepts the
 binding (0/0).
 
+**One file the plan marked read-only had to change: `PieChart.svelte`.** It computed
+`CX = width / 2`, `CY`, `R` and `INNER_R` as `const` — once, at mount — and `computeSlices` read
+them from the closure, so `$: slices` would not re-run on a geometry change either. Nothing
+exposed that while `ChartWidget` passed the configured height for *both* axes (a constant per
+mount), though editing a chart's height in the config already reached it. Step 2 makes `width`
+change on every resize, so a stale centre would be drawn against a live viewBox: the pie off its
+own middle, in exactly the narrow widgets the ticket is for. The four declarations became `$:` and
+the geometry is now passed into `computeSlices` as arguments — Svelte tracks only the identifiers a
+reactive statement names, so leaving them in the closure would have fixed the viewBox and not the
+slices. Asserted the same way as the ChartWidget wiring, over the source text.
+
 R0.6 read, as instructed: **`ChartWidget.svelte` is not in `BUDGETS`** (`R0_6_locBudget.test.ts:14-41`)
 — it carries no ceiling, so the file could have absorbed the change. The measurement was extracted
 to `Chart/chartWidth.ts` anyway, for a reason R0.6 does not cover: the zero-width guard is the part
