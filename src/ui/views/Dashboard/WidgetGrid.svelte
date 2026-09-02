@@ -144,9 +144,14 @@
 {/if}
 
 <style>
+  /* Matryoshka rung (#166): the canvas is a query container between the
+     dashboard root and the widgets. `width: 100%` here too, so inline-size
+     containment removes nothing this box depended on. */
   .ppp-database-canvas {
     width: 100%;
     min-height: 100%;
+    container-type: inline-size;
+    container-name: dashboard-canvas;
   }
 
   .ppp-database-canvas--stack {

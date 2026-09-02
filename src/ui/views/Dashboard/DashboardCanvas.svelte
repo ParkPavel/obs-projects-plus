@@ -187,7 +187,8 @@
   </ViewContent>
 </ViewLayout>
 <style>
-  .ppp-database-root { display: flex; flex-direction: column; width: 100%; min-height: 100%; gap: var(--ppp-space-sm, 0.375rem); }
+  /* Matryoshka rung (#166). Contained safely because this box is `width: 100%`: it never relied on intrinsic width. */
+  .ppp-database-root { display: flex; flex-direction: column; width: 100%; min-height: 100%; gap: var(--ppp-space-sm, 0.375rem); container-type: inline-size; container-name: dashboard-root; }
   .ppp-toolbar-row { display: flex; align-items: center; gap: 0.375rem; }
   .ppp-recalc-dot { display: inline-block; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--interactive-accent); opacity: 0.7; animation: ppp-pulse 0.8s ease-in-out infinite alternate; flex-shrink: 0; }
   @keyframes ppp-pulse { from { opacity: 0.3; } to { opacity: 0.9; } }
