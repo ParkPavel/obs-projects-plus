@@ -1,6 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 
+// Shared with R0.7 and R0.11. It was a private copy in each of the three until
+// #181: an agent worktree inside `.claude/` broke all three at once, and the
+// hole then had to be fixed three times or once. Once.
+import { walkConfigTree as walk } from "./support/configScan";
+
 /**
  * R0.10 — the paired Claude + Codex working stack stays whole
  *
@@ -72,16 +77,6 @@ function hasMojibake(text: string): boolean {
     if (MOJIBAKE_LEAD.has(cps[i] as number) && isMojibakeTail(cps[i + 1] as number)) return true;
   }
   return false;
-}
-
-function walk(dir: string, out: string[] = []): string[] {
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir)) {
-    const full = path.join(dir, entry);
-    if (fs.statSync(full).isDirectory()) walk(full, out);
-    else out.push(full);
-  }
-  return out;
 }
 
 const TEXT = /\.(md|json|ps1|toml|ya?ml|mjs|js)$/i;
