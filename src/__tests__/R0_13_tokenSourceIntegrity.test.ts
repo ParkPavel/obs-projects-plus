@@ -424,9 +424,13 @@ describe("R0.13 token source integrity (#165)", () => {
     const declared = new Set(collectStyled(SRC_ROOT).flatMap(({ css }) => containerTypeSelectors(css)));
     const planted = [...CONTAINER_ROOTS, ".ppp-not-a-container"];
     expect(planted.filter((root) => !declared.has(root))).toEqual([".ppp-not-a-container"]);
-    // And `.ppp-dt-content` is a real container, just deliberately unlisted —
-    // proof the scan reads the tree rather than the list.
-    expect(declared.has(".ppp-dt-content")).toBe(true);
+    // And `.ppp-widget-config` is a real container, just deliberately unlisted —
+    // proof the scan reads the tree rather than the list. (`.ppp-dt-content`
+    // was this witness until #166 Step 3 deleted a container nobody queried;
+    // the witness has to be a container that is actually still declared, or
+    // this direction of the proof goes vacuous without failing.)
+    expect(declared.has(".ppp-widget-config")).toBe(true);
+    expect(CONTAINER_ROOTS).not.toContain(".ppp-widget-config");
   });
 
   it("the :root fallback for the level-2 scale is the clamp floor, with no cq unit", () => {

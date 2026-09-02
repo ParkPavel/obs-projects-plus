@@ -2,6 +2,8 @@
  * tableCanon.test.ts — F2.1 (#074, TABLE_V2_CANON) pure table model.
  */
 
+import fs from "fs";
+import path from "path";
 import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
 import {
   buildColumns,
@@ -51,11 +53,20 @@ describe("buildColumns (canon §0/§1)", () => {
     expect(cols.find((c) => c.field.name === "mrr")?.widthRem).toBe(10);
   });
 
-  it("produces one shared grid template with FIXED tracks (#083)", () => {
+  it("produces one shared grid template whose COLUMN tracks are fixed (#083)", () => {
     const cols = buildColumns(FIELDS, undefined);
     const tracks = gridTemplate(cols).split(" ");
-    expect(tracks).toHaveLength(3);
-    for (const track of tracks) expect(track).toMatch(/^[\d.]+rem$/);
+    // 3 columns + the #166 filler.
+    expect(tracks).toHaveLength(4);
+    for (const track of tracks.slice(0, -1)) expect(track).toMatch(/^[\d.]+rem$/);
+  });
+
+  it("ends in exactly one `1fr` filler track, whatever the column count (#166)", () => {
+    for (const n of [0, 1, 3]) {
+      const tracks = gridTemplate(buildColumns(FIELDS.slice(0, n), undefined)).split(" ");
+      expect(tracks[tracks.length - 1]).toBe("1fr");
+      expect(tracks.filter((t) => t.endsWith("fr"))).toHaveLength(1);
+    }
   });
 
   it("hides housekeeping fields (path) by default, unhides on explicit hide:false (#084)", () => {
@@ -187,5 +198,32 @@ describe("buildRenderRows (F2.5 grouping)", () => {
     } as never);
     expect(rows.filter((r) => r.kind === "record")).toHaveLength(1);
     expect(rows[0]).toMatchObject({ kind: "group", key: "doing", collapsed: true });
+  });
+});
+
+/**
+ * #166 — the three grids that must stay in one coordinate system.
+ *
+ * `gridTemplate` is the single source of the track list; header, row and
+ * footer each read it through `--ppp-dt-columns`. UT-R2 #083 was caused by
+ * the three disagreeing, so the invariant is checked against the shipped
+ * source text rather than trusted: any consumer that appends or drops a
+ * track of its own reintroduces the divergence, and the header did exactly
+ * that (a trailing `2rem` action column) until the filler track replaced it.
+ */
+describe("one grid template, three consumers (#083/#166)", () => {
+  const dir = path.join(__dirname, "..");
+  const consumers = ["TableHeader.svelte", "TableRow.svelte", "TableFooter.svelte"];
+
+  it.each(consumers)("%s consumes --ppp-dt-columns and appends no track of its own", (file) => {
+    const css = fs.readFileSync(path.join(dir, file), "utf8");
+    const rules = [...css.matchAll(/grid-template-columns:([^;]*);/g)].map((m) => m[1]!.trim());
+    expect(rules).toEqual(["var(--ppp-dt-columns)"]);
+  });
+
+  it("DataTableContent is the only writer of --ppp-dt-columns, from gridTemplate", () => {
+    const src = fs.readFileSync(path.join(dir, "DataTableContent.svelte"), "utf8");
+    expect(src).toContain("style:--ppp-dt-columns={template}");
+    expect(src).toMatch(/template = gridTemplate\(/);
   });
 });

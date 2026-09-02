@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>fixed minimums vs container (#166 Step 3)</title>
+<style>
+  /* Step 3 asks two separate questions and this probe keeps them separate.
+     A) What does `min-width: min(22rem, 100cqi)` resolve to inside a query
+        container, and what does it resolve to with NO container ancestor —
+        the case that decides whether the portaled filter popover may use it.
+     B) Does a trailing `1fr` filler absorb slack at a wide container width
+        WITHOUT shrinking the fixed column tracks at a narrow one, which is
+        the UT-R2 #083 regression the filler must not reintroduce. */
+  body { margin: 1rem; font-family: system-ui, sans-serif; }
+  .row { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+  /* flex: none — the declared width IS the container width. The Step 2 probe
+     lied in exactly this way once (every cell shrank), so it is pinned here. */
+  .cell { border: 1px dashed #999; flex: none; }
+
+  /* ── A. container-relative minimum ─────────────────────────── */
+  .qc { container-type: inline-size; }
+  .w16 { width: 16rem; } .w40 { width: 40rem; }
+  /* the rule under test, as it would read on .ppp-blockfilter-popover */
+  .popover { min-width: min(22rem, 100cqi); background: #eef; height: 2rem; }
+  /* the literal rule that actually ships */
+  .popover-literal { min-width: 22rem; background: #efe; height: 2rem; }
+  /* A block div fills its parent, so its used width hides what the minimum
+     resolved to. `width: fit-content` makes the used width EQUAL the resolved
+     minimum, which is the number the decision actually turns on. */
+  .minprobe { width: fit-content; min-width: min(22rem, 100cqi); background: #ffe; height: 2rem; }
+
+  /* ── B. the table grid ─────────────────────────────────────── */
+  /* DataTableContent.svelte: .ppp-t2-scroll / .ppp-t2-table */
+  .scroll { overflow: auto; }
+  .table { display: flex; flex-direction: column; min-width: max-content; }
+  /* buildColumns defaults for [primary String, Select, Number] = 17/11/11rem */
+  .hdr, .rowline { display: grid; }
+  .filler   { grid-template-columns: 17rem 11rem 11rem 1fr; }  /* after #166 */
+  .nofiller { grid-template-columns: 17rem 11rem 11rem; }      /* before */
+  .hdr > div, .rowline > div { height: 2rem; border-right: 1px solid #bbb; background: #f6f6f6; }
+  /* TableHeader.svelte after #166: the [+] sits in the filler track. It is
+     width:2rem and therefore NOT stretched by justify-self:stretch, which
+     only stretches auto-sized items — that is the whole reason one added
+     line was enough to keep the button next to the last column. */
+  .addbtn { display: flex; align-items: center; justify-content: center;
+            width: 2rem; height: 2rem; border: none; background: #ddf; }
+  .w800 { width: 800px; } .w300 { width: 300px; }
+  pre { background: #eee; padding: 0.5rem; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>#166 Step 3 — minimums and the filler track</h1>
+<div class="row">
+  <div class="cell qc w16"><div class="popover" id="p-16">min() in a 16rem container</div></div>
+  <div class="cell qc w40"><div class="popover" id="p-40">min() in a 40rem container</div></div>
+</div>
+<div class="row">
+  <div class="cell" style="width:40rem"><div class="popover" id="p-none">min() with NO container ancestor</div></div>
+  <div class="cell qc w16"><div class="popover-literal" id="p-lit">literal 22rem in a 16rem container</div></div>
+</div>
+<div class="row">
+  <div class="cell qc w16"><div class="minprobe" id="m-16">m</div></div>
+  <div class="cell qc w40"><div class="minprobe" id="m-40">m</div></div>
+  <div class="cell" style="width:40rem"><div class="minprobe" id="m-none">m</div></div>
+</div>
+<div class="row">
+  <div class="cell w800"><div class="scroll"><div class="table">
+    <div class="hdr filler" id="h-800"><div>name</div><div>status</div><div>mrr</div><button class="addbtn">+</button></div>
+    <div class="rowline filler" id="r-800"><div></div><div></div><div></div></div>
+    <div class="rowline nofiller" id="n-800"><div></div><div></div><div></div></div>
+  </div></div></div>
+  <div class="cell w300"><div class="scroll"><div class="table">
+    <div class="hdr filler" id="h-300"><div>name</div><div>status</div><div>mrr</div><button class="addbtn">+</button></div>
+    <div class="rowline filler" id="r-300"><div></div><div></div><div></div></div>
+    <div class="rowline nofiller" id="n-300"><div></div><div></div><div></div></div>
+  </div></div></div>
+</div>
+<pre id="out"></pre>
+<script>
+  const out = {};
+  const px = (n) => Math.round(n * 10) / 10;
+  out.rootFontSizePx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+  for (const [k, id] of [["container16rem", "p-16"], ["container40rem", "p-40"],
+                         ["noContainerAncestor", "p-none"], ["literal22remIn16rem", "p-lit"]]) {
+    const el = document.getElementById(id);
+    out[k] = {
+      widthPx: px(el.getBoundingClientRect().width),
+      overflowsParent: el.getBoundingClientRect().width > el.parentElement.getBoundingClientRect().width + 0.5,
+    };
+  }
+  for (const [k, id] of [["resolvedMin.container16rem", "m-16"], ["resolvedMin.container40rem", "m-40"],
+                         ["resolvedMin.noContainerAncestor", "m-none"]]) {
+    out[k] = px(document.getElementById(id).getBoundingClientRect().width);
+  }
+  out.viewportWidthPx = document.documentElement.clientWidth;
+
+  for (const w of [800, 300]) {
+    for (const [k, id] of [["header", "h-" + w], ["rowWithFiller", "r-" + w], ["rowBefore166", "n-" + w]]) {
+      const el = document.getElementById(id);
+      out[`grid@${w}.${k}`] = {
+        tracks: getComputedStyle(el).gridTemplateColumns,
+        boxWidthPx: px(el.getBoundingClientRect().width),
+      };
+    }
+    // the [+] must stay adjacent to the last column, not fly to the right edge
+    const btn = document.querySelector(`#h-${w} .addbtn`).getBoundingClientRect();
+    const lastCol = document.querySelector(`#h-${w} div:nth-child(3)`).getBoundingClientRect();
+    const grid = document.getElementById("h-" + w).getBoundingClientRect();
+    out[`addButton@${w}`] = {
+      widthPx: px(btn.width),
+      gapAfterLastColumnPx: px(btn.left - lastCol.right),
+      gapToRightEdgePx: px(grid.right - btn.right),
+    };
+  }
+  document.getElementById("out").textContent = JSON.stringify(out, null, 1);
+  console.log("[166-minimums]", JSON.stringify(out));
+</script>
+</body>
+</html>
