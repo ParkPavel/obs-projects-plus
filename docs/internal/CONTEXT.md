@@ -1,9 +1,9 @@
 # Current project context
 
-> **Updated:** 2026-09-02 (#165 mechanism measured in headless Chrome, revert condition gone,
-> awaiting adversarial review + merge; #181 in progress on `fix/181-ratchet-worktree-exclusion`.
-> Earlier 2026-09-01: #165 implemented, #181 filed. Earlier: pre-release audit follow-ups #176, #177, #174 closed,
-> merged and pushed; session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
+> **Updated:** 2026-09-02 (#165 and #181 merged into `main`: the cqi mechanism measured in headless
+> Chrome, the adversarial review's two findings fixed, the ratchets survive a worktree.
+> Earlier: pre-release audit follow-ups #176, #177, #174 closed, merged and pushed;
+> session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
 
@@ -15,11 +15,10 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
-- **#165 is implemented and NOT merged (2026-09-01).** `feat/165-token-consolidation`, tip
-  `e3f949c`: the ADR (`ADR_TOKENS_MATRYOSHKA_2026-09-01.md`), four implementation commits, and one
-  ratchet-strengthening commit from the Codex audit. On the branch the four gates are green and the
-  baseline **rises to 180 suites / 2506 tests** — `main`'s canonical baseline below is unchanged
-  until this merges. The token system is one file: `designTokens.ts`, `dashboardTokens.css` and the
+- **#165 is MERGED into `main` (2026-09-02, merge `9377a3d`).** `feat/165-token-consolidation`, tip
+  `28aa27d`: the ADR (`ADR_TOKENS_MATRYOSHKA_2026-09-01.md`), four implementation commits, and one
+  ratchet-strengthening commit from the Codex audit. The four gates were green on the branch
+  (180 suites / 2508 tests before #181 joined; the canonical figure below is the measured merge). The token system is one file: `designTokens.ts`, `dashboardTokens.css` and the
   dead `design-tokens.css` are gone, and the live run confirms `getDesignTokenCSS` is absent from
   the shipped bundle.
   **Why it was held, and what settled it (2026-09-02):** step 4 deliberately changes rendering (a
@@ -45,13 +44,25 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   left to a follow-up. And R0.13 as first written inventoried only `.css` files, so the exact
   mechanism it exists to prevent — a scale assembled in a TypeScript string — would have passed it;
   Codex caught that, and it is now closed by rule rather than by instance.
-- **#181 — the working-stack ratchets do not survive their own worktree.** R0.7, R0.10 and R0.11
-  walk `.claude/` with no exclusions, and `isolation: worktree` puts a full repository copy at
-  `.claude/worktrees/`. After the `implementer` run three suites went red on 156 findings that were
-  all the copy's own CHANGELOG. Inside the worktree the same suites *skip* — no `.claude/` there —
-  so the main tree sees false failures and the agent false silence. Filed P1/XS; until it lands,
-  remove a finished worktree before running the gates, and unlink the `node_modules` junction first
-  (`git worktree remove --force` follows it and empties the real one).
+- **#181 is fixed and MERGED (2026-09-02).** `fix/181-ratchet-worktree-exclusion`, off `main`
+  at `d2d7de4`, tip `fbcd0c9`. R0.7, R0.10 and R0.11 each walked `.claude/` with a private copy of
+  the same recursive traversal and no exclusions, so `isolation: worktree` — which puts a full
+  repository checkout at `.claude/worktrees/<agent-id>/` — reddened all three on files belonging to
+  the copy. Inside the worktree the same suites *skip*, there being no `.claude/` of their own: the
+  main tree saw false failures and the agent false silence. One walk now serves all three
+  (`src/__tests__/support/configScan.ts`), and its exclusion is pinned in both directions by
+  `configScanBoundary.test.ts` against a temp fixture.
+  **Two wrong versions preceded the right one, and the Codex audit caught both — the four gates
+  were green for all three.** First, matching `worktrees` by name at any depth would have hidden an
+  ordinary `.claude/agents/worktrees/` from all three ratchets at once; the scope is now the place
+  the checkout actually goes, a direct child of the scanned layer, while `node_modules` and `.git`
+  stay excluded at any depth because they are machinery that legitimately nests. Second, skipping
+  every directory junction — meant to stop the walk following an agent's `node_modules` link — also
+  blinded the ratchets to a linked config directory, which the old per-suite walks did read. Links
+  are followed again, and termination comes from entering each directory once by real path.
+  Both corrections are pinned by fixtures, so neither can come back quietly.
+  **The deliberate merge conflict fired and was resolved** in favour of the completed-work text,
+  on an integration branch; `main` moved by fast-forward.
 
 - **The push gate was removed on 2026-08-30 at the user's decision.** `check-push-branch.ps1` is
   deregistered from `.claude/settings.json` and no longer fires, so pushing `main` is an ordinary

@@ -2,6 +2,8 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
+import { walkConfigTree } from "./support/configScan";
+
 /**
  * R0.11 — nothing publishable carries a secret
  *
@@ -55,14 +57,14 @@ const CREDENTIAL_RULES: ReadonlyArray<{ kind: string; re: RegExp }> = [
 
 const TEXT = /\.(md|json|ps1|toml|ya?ml|mjs|js|sh)$/i;
 
-function walk(dir: string, out: string[] = []): string[] {
-  if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir)) {
-    const full = path.join(dir, entry);
-    if (fs.statSync(full).isDirectory()) walk(full, out);
-    else if (TEXT.test(full)) out.push(full);
-  }
-  return out;
+/**
+ * The traversal is shared with R0.7 and R0.10 (`support/configScan.ts`); only
+ * the extension filter is this ratchet's own. Three private copies of the walk
+ * meant one worktree dropped inside `.claude/` reddened all three suites at
+ * once — #181.
+ */
+function walk(dir: string): string[] {
+  return walkConfigTree(dir).filter((f) => TEXT.test(f));
 }
 
 function isQuarantined(file: string): boolean {

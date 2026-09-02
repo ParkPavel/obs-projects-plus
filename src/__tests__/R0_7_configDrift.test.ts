@@ -18,8 +18,10 @@
  *   - PX budget      → the PX_BUDGET constant in R0_3_pxBudget.test.ts
  */
 
-import { readFileSync, readdirSync, statSync, existsSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join, relative } from "path";
+
+import { STALE_NUMBER_PATTERNS, walkConfigTree } from "./support/configScan";
 
 const ROOT = join(__dirname, "..", "..");
 
@@ -42,31 +44,17 @@ const SCANNED_ROOTS = [".claude", ".codex", ".github"];
 const SCANNED_FILES = ["CLAUDE.md", "AGENTS.md"];
 
 /**
- * A suite/test baseline or a px budget written out as a literal. Deliberately
- * pattern-based rather than a list of known-bad numbers: the previous sweeps
- * failed precisely because they searched for the generations someone
- * remembered.
+ * The stale-number rule and the traversal both live in `support/configScan.ts`.
+ *
+ * The rule moved there so the boundary test can assert against it directly —
+ * importing a `.test.ts` file would re-register its suite. The walk moved there
+ * because R0.7, R0.10 and R0.11 each carried an identical private copy, so an
+ * agent worktree dropped inside `.claude/` broke all three at once (#181); the
+ * shared walk now skips nested checkouts and dependency trees.
  */
-const STALE_NUMBER_PATTERNS: ReadonlyArray<{ label: string; re: RegExp }> = [
-  { label: "hardcoded suite count", re: /\b\d{2,4}\s+suites\b/i },
-  { label: "hardcoded test count", re: /\b\d{3,5}\s+tests\b/i },
-  { label: "hardcoded suites/tests pair", re: /\b\d{2,4}\s*\/\s*\d{3,5}\b(?=[^\n]*\b(?:suite|test)s?\b)/i },
-  { label: "hardcoded px budget", re: /px[- ]budget[^\n]{0,40}?[≤<]=?\s*\d+/i },
-];
-
-function walk(dir: string, out: string[] = []): string[] {
-  if (!existsSync(dir)) return out;
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) walk(full, out);
-    else out.push(full);
-  }
-  return out;
-}
-
 function collectConfigFiles(): string[] {
   const files: string[] = [];
-  for (const root of SCANNED_ROOTS) files.push(...walk(join(ROOT, root)));
+  for (const root of SCANNED_ROOTS) files.push(...walkConfigTree(join(ROOT, root)));
   for (const file of SCANNED_FILES) {
     const full = join(ROOT, file);
     if (existsSync(full)) files.push(full);
