@@ -98,3 +98,35 @@ never applies because `ChartWidget` always passes the measured width. The other 
 
 Deployed before step 3 merged (`main` = `d2f2bbd`); step 3 (`1fr` filler track, `db-table` removed)
 is NOT in the vault yet and needs the same deploy before its on-screen checks.
+
+## Vault smoke test — #180a ingest coercion, 2026-09-03
+
+The implementer skipped the vault run and said so. It was run from the main session instead, because
+the riskiest line in the change is on the load path: `datasources/helpers.ts:38-42` now stores `null`
+where `parseFloat` used to store a number or `NaN`, and that runs for every Number field of every
+record on every project load.
+
+**Method.** The branch build (`feat/180a-numeric-coercion`, `c07bc4f`) was deployed into the OBStests
+vault over the `main` build, two records were seeded into the demo project through the REST API —
+`mrr: 12abc` and `mrr: ""`, against a `mrr` field the demo's client records use as a Number — the
+plugin was reloaded, and the dashboard view was opened.
+
+| Check | Result |
+|---|---|
+| Plugin registers its commands after reload with the garbage records present | **10**, the expected set |
+| `show-projects` (opens the Dashboard view over those records) | 204, no error |
+| Commands still registered afterwards | 10 |
+
+Both probe records were deleted and the `main` build restored afterwards; the deployed `main.js` md5
+matches `git show main:main.js` again.
+
+**What this does and does not establish.** It establishes that ingest no longer throws and the view
+still constructs when a Number field holds a non-number — which is the failure the change could
+plausibly have introduced, since `null` now travels where a number always used to. It does **not**
+establish what any aggregate displays: REST returns commands and file contents, never computed
+values or rendered text. `hours: 12abc` → `null` is proven by unit test at `parseRecords`, not on
+screen.
+
+**The on-screen check that would close it:** a Stats card summing a Number field over a set that
+includes one `12abc` and one empty value must show the sum of the real numbers only, and a count of
+values that excludes both.
