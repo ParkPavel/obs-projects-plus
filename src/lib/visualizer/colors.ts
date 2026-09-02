@@ -80,10 +80,12 @@ export function hexLuminance(raw: string): number {
   let g = 0;
   let b = 0;
   if (hex.length === 3 || hex.length === 4) {
+    // coercion-exempt: Class C - hex colour channel parsed radix 16, not record data
     r = parseInt(hex[0]! + hex[0]!, 16);
     g = parseInt(hex[1]! + hex[1]!, 16);
     b = parseInt(hex[2]! + hex[2]!, 16);
   } else if (hex.length === 6 || hex.length === 8) {
+    // coercion-exempt: Class C - hex colour channel parsed radix 16, not record data
     r = parseInt(hex.slice(0, 2), 16);
     g = parseInt(hex.slice(2, 4), 16);
     b = parseInt(hex.slice(4, 6), 16);

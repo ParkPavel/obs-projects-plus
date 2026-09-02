@@ -144,6 +144,7 @@ export function parseDateFormula(formula: string, baseDate?: Dayjs): DateFormula
     return { success: false, error: `Unknown keyword: "${rawKeyword}". Supported: ${supported}` };
   }
   
+  // coercion-exempt: Class B - the date-offset token, already matched by the keyword regex above; a source-text lexer, not user data
   const amount = amountStr ? parseInt(amountStr, 10) * (sign === '-' ? -1 : 1) : 0;
   const unit = parseDurationUnit(unitSuffix);
   

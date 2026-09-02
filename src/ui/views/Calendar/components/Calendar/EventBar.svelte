@@ -137,6 +137,7 @@
     const barH = rect.height;
     // v4.0.2: Resize zone: 1rem (desktop) / 1.25rem (touch) or 35% of bar height.
     // Larger zones make it easier to "catch" the resize edge on mobile.
+    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const remPx = parseFloat(getComputedStyle(barElement).fontSize) || 16;
     const isTouchDevice = 'ontouchstart' in window;
     const zoneRem = isTouchDevice ? 1.25 : 1;

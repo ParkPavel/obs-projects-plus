@@ -10,6 +10,8 @@
  */
 
 import { aggregate, type RollupConfig } from "../aggregate";
+import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
+import { NUMERIC_COERCION_CASES } from "./numericContract.test";
 
 const cfg = (function_: RollupConfig["function"], separator?: string): RollupConfig => {
   const base = { relationField: "rel", targetField: "target", function: function_ };
@@ -79,11 +81,25 @@ describe("aggregate() — kernel", () => {
     test("float sum", () => {
       expect(aggregate([1.5, 2.5], cfg("sum")).value).toBe(4);
     });
-    test("parses numeric strings", () => {
+    test("adds numeric strings", () => {
       expect(aggregate(["1", "2", 3], cfg("sum")).value).toBe(6);
     });
     test("drops non-numeric strings", () => {
       expect(aggregate(["abc", 5], cfg("sum")).value).toBe(5);
+    });
+
+    // #180a: the kernel does not own the coercion rule, so it does not get to
+    // restate it. Driving `sum` off the one fixture table is what makes this a
+    // CONSUMER of the contract instead of a second copy of it — a copied table
+    // is the class of defect the whole ticket is about (spec §2.2).
+    describe("agrees with NUMERIC_COERCION_CASES, value by value", () => {
+      test.each(NUMERIC_COERCION_CASES)(
+        "sum of [$label] is the coerced value, or 0 when it is not a number",
+        ({ input, expected }) => {
+          const sum = aggregate([input as Optional<DataValue>], cfg("sum"));
+          expect(sum.value).toBe(expected ?? 0);
+        }
+      );
     });
     test("empty input → 0", () => {
       expect(aggregate([], cfg("sum")).value).toBe(0);

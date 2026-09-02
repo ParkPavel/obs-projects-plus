@@ -613,6 +613,7 @@ export function extractTimeWithPriority(
     // Additional validation: hours 00-23, minutes 00-59
     const parts = value.split(':');
     if (parts.length === 2) {
+      // coercion-exempt: Class B - lexing an HH:MM token a split has already shaped
       const hours = Number(parts[0]);
       const minutes = Number(parts[1]);
       if (!isNaN(hours) && !isNaN(minutes) && 

@@ -62,6 +62,7 @@
     
     const rect = columnElement.getBoundingClientRect();
     const relativeY = clientY - rect.top + columnElement.scrollTop;
+    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const totalHeight = (endHour - startHour) * hourHeightRem * remPx;
     

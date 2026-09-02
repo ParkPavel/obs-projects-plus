@@ -222,6 +222,7 @@
   function nqSetLimit(raw: string) {
     if (project.dataSource.kind !== "native-query") return;
     const config = project.dataSource.config;
+    // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
     const parsed = parseInt(raw, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
       nqSetConfig({ ...config, limit: parsed });

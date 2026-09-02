@@ -86,6 +86,7 @@
     updateCard(idx, { format: fmt });
   }
   function onColumnsChange(e: Event) {
+    // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
     const v = Number(selectVal(e));
     const cols = v === 2 || v === 3 || v === 4 ? v : 3;
     emit({ columns: cols });

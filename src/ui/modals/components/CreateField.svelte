@@ -15,6 +15,7 @@
   import { TagsInput } from "src/ui/components/TagsInput";
   import MultiTextInput from "src/ui/components/MultiTextInput/MultiTextInput.svelte";
   import dayjs from "dayjs";
+  import { toNumber } from "src/lib/engine/numeric";
   import {
     DataFieldType,
     type Optional,
@@ -107,11 +108,15 @@
       [DataFieldType.Unknown]: () => null,
     },
     [DataFieldType.Number]: {
-      [DataFieldType.String]: (v: string) => parseInt(v),
+      // #180a — Class A, and the most destructive one: this table CONVERTS
+      // stored values when the user retypes a field, so `parseInt` wrote 12
+      // back to disk for "12abc" and truncated "1.5" to 1. `toNumber` returns
+      // null, which is the same "cannot convert" answer Unknown already gives.
+      [DataFieldType.String]: (v: string) => toNumber(v),
       [DataFieldType.Number]: (v: number) => v,
       [DataFieldType.Boolean]: (v: boolean) => (v ? 1 : 0),
       [DataFieldType.Date]: (v: string) => dayjs(v).toDate().getTime(),
-      [DataFieldType.List]: (v: Array<string>) => parseInt(v.toString()),
+      [DataFieldType.List]: (v: Array<string>) => toNumber(v.toString()),
       [DataFieldType.Unknown]: () => null,
     },
     [DataFieldType.Boolean]: {

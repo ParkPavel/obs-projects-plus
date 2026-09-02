@@ -375,6 +375,7 @@ function executeUnpivot(
 
       // Metadata fields
       newValues["_source_record"] = record.id;
+      // coercion-exempt: Class C - `idx` is this loop's own counter, already a number
       newValues["_group_index"] = Number(idx);
 
       newRecords.push({

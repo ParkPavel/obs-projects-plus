@@ -20,6 +20,7 @@
   $: showMode = ["all", "open", "done"].includes(String(config["showMode"] ?? ""))
     ? String(config["showMode"])
     : "all";
+  // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
   $: limit = Math.max(0, Number(config["limit"] ?? 0) || 0);
   $: items = deriveItems(source, {
     checkField: fieldName,

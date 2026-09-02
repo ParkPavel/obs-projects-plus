@@ -50,6 +50,7 @@ export function hexToHsv(input: string): HSV | null {
     return null;
   }
 
+  // coercion-exempt: Class C - hex colour channel parsed radix 16, not record data
   const r = parseInt(normalised.slice(0, 2), 16) / 255;
   const g = parseInt(normalised.slice(2, 4), 16) / 255;
   const b = parseInt(normalised.slice(4, 6), 16) / 255;

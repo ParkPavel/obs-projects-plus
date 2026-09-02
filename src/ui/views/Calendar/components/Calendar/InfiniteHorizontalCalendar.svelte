@@ -890,6 +890,7 @@
    */
   /** Cached root font size — computed once, used in scroll calculations */
   const rootFontSize = typeof document !== 'undefined'
+    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     ? (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
     : 16;
 

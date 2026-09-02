@@ -104,6 +104,7 @@ const DEFAULT_CONFIG: GestureConfig = {
  */
 function remToPx(rem: number): number {
   if (typeof activeDocument === 'undefined') return rem * 16;
+  // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
   const rootFontSize = parseFloat(getComputedStyle(activeDocument.documentElement).fontSize);
   return rem * rootFontSize;
 }

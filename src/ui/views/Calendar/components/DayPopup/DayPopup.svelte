@@ -315,6 +315,7 @@
     isDragging = false;
     
     // Close if dragged up more than 6.25rem equivalent
+    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     if (dragOffset < -6.25 * remPx) {
       closePopup();

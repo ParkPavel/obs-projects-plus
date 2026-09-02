@@ -521,13 +521,16 @@ export const dateFns: Record<
       && d.isBefore(today.add(1, "year").add(1, "day"), "day");
   },
   "is-last-n-days": (left, rv, baseDate) => {
-    const n = rv ? parseInt(rv, 10) : 0;
+    // #180a: `parseInt(rv, 10)` read "7 days" as 7. The operand is user-typed
+    // data like every other filter operand; `|| n <= 0` below already rejects
+    // a non-number, so `?? 0` keeps that path.
+    const n = toNumber(rv) ?? 0;
     if (!left || !n || n <= 0) return false;
     const d = dayjs(left), today = baseDate ?? dayjs();
     return d.isAfter(today.subtract(n, "day"), "day") && (d.isBefore(today, "day") || d.isSame(today, "day"));
   },
   "is-next-n-days": (left, rv, baseDate) => {
-    const n = rv ? parseInt(rv, 10) : 0;
+    const n = toNumber(rv) ?? 0;
     if (!left || !n || n <= 0) return false;
     const d = dayjs(left), today = baseDate ?? dayjs();
     return (d.isAfter(today, "day") || d.isSame(today, "day")) && d.isBefore(today.add(n, "day"), "day");

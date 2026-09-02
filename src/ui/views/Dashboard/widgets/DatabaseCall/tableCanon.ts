@@ -126,7 +126,7 @@ function compareValues(a: Optional<DataValue>, b: Optional<DataValue>): number {
   const emptiness = rank(a) - rank(b);
   if (emptiness !== 0 || rank(a) === 1) return emptiness;
   if (typeof a === "number" && typeof b === "number") return a - b;
-  if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
+  if (typeof a === "boolean" && typeof b === "boolean") return (a ? 1 : 0) - (b ? 1 : 0);
   if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
   return String(a).localeCompare(String(b), undefined, { numeric: true });
 }
