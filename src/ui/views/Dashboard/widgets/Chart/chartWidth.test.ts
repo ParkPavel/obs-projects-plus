@@ -80,3 +80,32 @@ describe("#166 — ChartWidget passes the measured width, not a constant", () =>
     ).toHaveLength(2);
   });
 });
+
+/*
+ * PieChart computed CX/CY/R as `const` — once, at mount. Nothing exposed it
+ * while ChartWidget passed the configured height for both axes, but #166 makes
+ * `width` change on every resize, and a stale centre against a live viewBox
+ * draws the pie off its own middle. Same source-shape assertion, same reason:
+ * the arithmetic is inside a .svelte file that jsdom cannot lay out.
+ */
+describe("#166 — PieChart's geometry follows a changing width", () => {
+  const SOURCE = fs.readFileSync(
+    path.join(__dirname, "PieChart.svelte"),
+    "utf8"
+  );
+
+  test("the centre and radius are reactive, not computed once", () => {
+    for (const name of ["CX", "CY", "R", "INNER_R"]) {
+      expect(SOURCE).toContain(`$: ${name} =`);
+      expect(SOURCE).not.toContain(`const ${name} =`);
+    }
+  });
+
+  test("the slice path takes the geometry as arguments", () => {
+    // Svelte tracks only the identifiers a reactive statement names, so
+    // geometry read from the closure would leave `slices` stale.
+    expect(SOURCE).toContain(
+      "computeSlices(values, labels, CX, CY, R, INNER_R)"
+    );
+  });
+});

@@ -15,10 +15,17 @@
 
   const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
-  const CX = width / 2;
-  const CY = height / 2;
-  const R = Math.min(CX, CY) - 30;
-  const INNER_R = donut ? R * 0.55 : 0;
+  /*
+   * #166: these were `const`, computed once at mount. `width` was a constant in
+   * practice (ChartWidget passed the configured height for both axes), so the
+   * staleness never showed — but it was already reachable by editing the chart's
+   * height in the config, and Step 2 makes `width` change on every resize. A
+   * stale CX/CY/R against a live viewBox draws the pie off its own centre.
+   */
+  $: CX = width / 2;
+  $: CY = height / 2;
+  $: R = Math.min(CX, CY) - 30;
+  $: INNER_R = donut ? R * 0.55 : 0;
 
   $: labels = data.labels;
   $: values = (data.series[0]?.values ?? []).map((v) => Math.max(v ?? 0, 0));
@@ -42,9 +49,19 @@
     label: string;
   }
 
-  $: slices = computeSlices(values, labels);
+  // The geometry is passed in rather than closed over: Svelte tracks only the
+  // identifiers this statement names, so a `$:` CX read inside the function
+  // would not re-run it.
+  $: slices = computeSlices(values, labels, CX, CY, R, INNER_R);
 
-  function computeSlices(vals: number[], lbls: string[]): SliceArc[] {
+  function computeSlices(
+    vals: number[],
+    lbls: string[],
+    cx: number,
+    cy: number,
+    r: number,
+    innerR: number,
+  ): SliceArc[] {
     const result: SliceArc[] = [];
     let angle = -Math.PI / 2;
 
@@ -53,21 +70,21 @@
       const sweep = pct * 2 * Math.PI;
       const midAngle = angle + sweep / 2;
 
-      const x1 = CX + R * Math.cos(angle);
-      const y1 = CY + R * Math.sin(angle);
-      const x2 = CX + R * Math.cos(angle + sweep);
-      const y2 = CY + R * Math.sin(angle + sweep);
+      const x1 = cx + r * Math.cos(angle);
+      const y1 = cy + r * Math.sin(angle);
+      const x2 = cx + r * Math.cos(angle + sweep);
+      const y2 = cy + r * Math.sin(angle + sweep);
       const largeArc = sweep > Math.PI ? 1 : 0;
 
       let path: string;
       if (donut) {
-        const ix1 = CX + INNER_R * Math.cos(angle);
-        const iy1 = CY + INNER_R * Math.sin(angle);
-        const ix2 = CX + INNER_R * Math.cos(angle + sweep);
-        const iy2 = CY + INNER_R * Math.sin(angle + sweep);
-        path = `M ${ix1},${iy1} L ${x1},${y1} A ${R},${R} 0 ${largeArc},1 ${x2},${y2} L ${ix2},${iy2} A ${INNER_R},${INNER_R} 0 ${largeArc},0 ${ix1},${iy1} Z`;
+        const ix1 = cx + innerR * Math.cos(angle);
+        const iy1 = cy + innerR * Math.sin(angle);
+        const ix2 = cx + innerR * Math.cos(angle + sweep);
+        const iy2 = cy + innerR * Math.sin(angle + sweep);
+        path = `M ${ix1},${iy1} L ${x1},${y1} A ${r},${r} 0 ${largeArc},1 ${x2},${y2} L ${ix2},${iy2} A ${innerR},${innerR} 0 ${largeArc},0 ${ix1},${iy1} Z`;
       } else {
-        path = `M ${CX},${CY} L ${x1},${y1} A ${R},${R} 0 ${largeArc},1 ${x2},${y2} Z`;
+        path = `M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 ${largeArc},1 ${x2},${y2} Z`;
       }
 
       result.push({
