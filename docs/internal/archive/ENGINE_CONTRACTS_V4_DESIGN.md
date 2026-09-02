@@ -1,3 +1,88 @@
+# The v4 "Unified DataEngine" type layer — the design, and why it was never built
+
+> Archived 2026-09-02 by ticket **#178**. This document is a record, not an instruction. Nothing
+> here describes code that runs; every type below was erased at compile time and had zero live
+> consumers on the day it was deleted.
+
+## What these files were
+
+Three type-only modules, 515 lines, written as the normative "Layer 0" of a v4 architecture:
+
+| Original path | Lines | Declared role |
+|---|---|---|
+| `src/lib/engine/contracts.ts` | 351 | filter IR, aggregation alphabet, rollup/formula IR, transform pipeline, DataEngine request/result envelopes |
+| `src/lib/relations/contracts.ts` | 83 | relation edges and the vault-scoped relation index |
+| `src/lib/colors/contracts.ts` | 81 | colour tokens, palettes, palette persistence |
+
+They formed a closed set: `relations/contracts.ts` and `colors/contracts.ts` had **zero** importers,
+and `engine/contracts.ts` was imported by exactly those two, type-only, for `ProjectId` and
+`RecordId`. Deleting any one alone would have broken the other two; deleting all three broke
+nothing.
+
+## Why it was never built, and why finishing it was rejected
+
+Three reasons, each checked against the tree rather than assumed:
+
+1. **Building the filter half violates invariant 2 (one filter engine).** `FilterCondition` /
+   `FilterIR` below key on `op` with a `DataValue` payload. The shape the product actually stores is
+   `FilterDefinition` in `src/settings/base/settings.ts`, evaluated by
+   `src/lib/engine/filterEvaluator.ts`. Implementing the IR would have created a second filter
+   representation — precisely the thing the invariant forbids.
+
+2. **`AggregateFn` is not a superset of the live alphabet — it is a different one.** The persisted
+   vocabulary is `RollupFunction` (`src/lib/engine/aggregate.ts`), reached through
+   `RollupConfig.function`. `RollupFunction` carries `count_total`, `count_values`,
+   `percent_empty` / `percent_not_empty`, `percent_true`, `concat`, `concat_unique`,
+   `show_original`, `show_unique` — none of which appear in `AggregateFn`; `AggregateFn` carries
+   `count_not_empty`, `first`, `last`, `list`, `list_unique`, `earliest`, `latest` — none of which
+   exist live. Adopting `AggregateFn` would have renamed values already written into users' vaults.
+
+3. **No scene in the product contract asks for a DataEngine.**
+   `docs/internal/PRODUCT_RESET_2026-07-18.md` is the active contract, and none of its scenes needs
+   a unified engine entry point. Callers assemble frames and call `executeTransform` directly.
+
+Two further facts closed the question rather than leaving it open:
+
+- The live relation index is nothing like the contract below. `RelationIndex` here is a class-shaped
+  `forward` / `inverse` / `rebuild` / `invalidate` interface; `src/lib/relations/inverseIndex.ts` is
+  pure functions over a `Map`. Nothing live implemented the dead contract, and nothing was moving
+  toward it.
+- The future `colors/contracts.ts` was kept for arrived, and went around it.
+  `docs/ARCHITECTURE_V5.md` §3.6 (R5-005) planned to revive it as the single palette source; the
+  ticket shipped as `src/lib/stores/palettes.ts`, which declares its own shape and never touches
+  the contract.
+
+## The decision
+
+- **Who:** the user, 2026-09-02, recorded in `docs/internal/BACKLOG.md` under `### #178` as
+  `RESOLVED 2026-09-02 (пользователь)`.
+- **What:** delete the three files; preserve their text here.
+- **Condition set with the decision:** verify usage leaks by *calls in code*, not only by exports —
+  dynamic imports, string references to paths and names, `typeof` / `keyof`, tests, mocks, docs,
+  build configs. That map was produced by the Codex `code-mapper` role and is kept verbatim at
+  `docs/internal/codex-reports/CX-MAP-178.md`. Its verdict: all three deletable as one set.
+- **Plan it followed:** `docs/internal/PLAN_178_ENGINE_CONTRACTS_2026-09-02.md` (option B with C's
+  archival half).
+
+Nothing migrates: none of these symbols was ever a persisted value, so no vault key changes. The
+`DataTableConfig.subBases` precedent — keys kept because a shipped alpha wrote them — does not apply
+here, because none of these keys ever reached a vault.
+
+## A note on the headers below
+
+Read the `@see` lines with that in mind: `docs/ARCHITECTURE_V4.md` and `docs/PHASE_3_TICKETS.md`
+**do not exist anywhere in the repository** and did not exist before this deletion either (checked
+2026-09-02). The REFACTOR-1xx / 2xx / 4xx tickets those headers promise as the migration path have
+no surviving record. The files' own references were already dangling — which is part of why the
+design below is a record and not a roadmap.
+
+The bodies that follow are verbatim, under their original paths.
+
+---
+
+## `src/lib/engine/contracts.ts`
+
+```ts
 /**
  * contracts.ts — the v4 "Unified DataEngine" type layer, ALMOST ALL OF IT
  * UNCONSUMED. Read this paragraph before believing the rest of the header.
@@ -349,3 +434,178 @@ export interface DataEngineResult {
   readonly diagnostics: readonly EngineDiagnostic[];
   readonly meta: DataEngineResultMeta;
 }
+```
+
+## `src/lib/relations/contracts.ts`
+
+```ts
+/**
+ * Canonical type contracts for the relations layer (v4.0 / Layer 0).
+ *
+ * NORMATIVE source of truth for cross-record / cross-SubBase relation
+ * resolution and inverse indexing.
+ *
+ * Per ARCHITECTURE_V4 §3.2 and PHASE_3_TICKETS REFACTOR-006:
+ *   - Types ONLY. Zero runtime code. Zero side effects.
+ *   - No circular imports.
+ *   - Consumer migrations land in REFACTOR-204 (cross-SubBase resolver),
+ *     REFACTOR-105 (wiki-link unify), REFACTOR-107 (coverage gap fill).
+ *
+ * @since 4.0
+ * @see docs/ARCHITECTURE_V4.md §3
+ * @see docs/PHASE_3_TICKETS.md REFACTOR-006
+ */
+
+import type { ProjectId, RecordId } from "src/lib/engine/contracts";
+
+export type { ProjectId, RecordId };
+
+/**
+ * Discriminator for the kind of relation being expressed.
+ *
+ * `"row"` is the only kind in v4.0; `"property"` is reserved for a future
+ * property↔property relation (e.g. computed-from-formula references).
+ */
+export type RelationKind = "row" | "property";
+
+/**
+ * One directed edge in the relation graph.
+ *
+ * The semantics of a `RelationRef` are:
+ *   "the field `sourceField` on record (`sourceProjectId`,
+ *    `sourceRecordId`) points at record (`target.projectId`,
+ *    `target.recordId`)."
+ *
+ * The relation index keyed on `target.recordId` yields the **inverse**
+ * (back-reference) view: every place a given record is referenced from.
+ */
+export interface RelationRef {
+  readonly type: RelationKind;
+  readonly sourceProjectId: ProjectId;
+  readonly sourceRecordId: RecordId;
+  readonly sourceField: string;
+  readonly target: {
+    readonly projectId: ProjectId;
+    readonly recordId: RecordId;
+  };
+}
+
+/**
+ * Minimal record shape consumed by the index for `rebuild()`.
+ * Concrete records (`DataRecord`) satisfy this shape structurally.
+ */
+export interface RelationIndexableRecord {
+  readonly id: RecordId;
+  readonly values: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Vault-scoped relation index.
+ *
+ * Implementations must guarantee:
+ *   - `forward(id, field)` is O(1) average lookup.
+ *   - `inverse(id)` is O(1) average lookup over the back-reference set.
+ *   - `rebuild(records)` is at most O(n × avg-relation-fields-per-record).
+ *   - `invalidate(id)` removes both forward and inverse entries for the
+ *     given source record id (NOT the target side).
+ */
+export interface RelationIndex {
+  /** Outgoing relations from a single source record/field. */
+  forward(sourceRecordId: RecordId, field: string): readonly RelationRef[];
+
+  /** All incoming relations pointing AT a target record. */
+  inverse(targetRecordId: RecordId): readonly RelationRef[];
+
+  /** Full rebuild from scratch; idempotent. */
+  rebuild(records: readonly RelationIndexableRecord[]): void;
+
+  /** Drop forward entries originating from this record id. */
+  invalidate(recordId: RecordId): void;
+}
+```
+
+## `src/lib/colors/contracts.ts`
+
+```ts
+/**
+ * Canonical type contracts for the unified color system (v4.0 / Layer 0).
+ *
+ * NORMATIVE source of truth for color tokens, palettes and palette
+ * persistence. After REFACTOR-401, all color math and allowlists move
+ * into `lib/colors/` and consume this contract.
+ *
+ * Per ARCHITECTURE_V4 §5 and PHASE_3_TICKETS REFACTOR-006:
+ *   - Types ONLY. Zero runtime code. Zero side effects.
+ *   - No circular imports.
+ *
+ * @since 4.0
+ * @see docs/ARCHITECTURE_V4.md §5
+ * @see docs/PHASE_3_TICKETS.md REFACTOR-006
+ */
+
+import type { ProjectId } from "src/lib/engine/contracts";
+
+export type { ProjectId };
+
+/**
+ * Stable identifier for a built-in preset color (e.g. "red", "blue-2").
+ *
+ * The exact alphabet of preset ids is defined by the persistence layer
+ * (REFACTOR-401). Treated here as an opaque branded string so callers
+ * cannot accidentally pass arbitrary text where a preset is required.
+ */
+export type PresetColorId = string & { readonly __brand: "PresetColorId" };
+
+/**
+ * Single color expressed as one of three tagged shapes.
+ *
+ *   - `css-var`: late-bound to whatever the active Obsidian theme
+ *     resolves the variable to. Recommended for theme-aware UI.
+ *   - `hex`:    literal `#rrggbb` / `#rrggbbaa` for user-picked colors.
+ *   - `preset`: one of the bundled palette ids (resolved by the
+ *     persistence layer at render time).
+ *
+ * The shape is the discriminator; `kind` is the field tag.
+ */
+export type ColorToken =
+  | { readonly kind: "css-var"; readonly name: `--${string}` }
+  | { readonly kind: "hex"; readonly value: `#${string}` }
+  | { readonly kind: "preset"; readonly id: PresetColorId };
+
+/**
+ * Named, ordered collection of color tokens.
+ */
+export interface ColorPalette {
+  readonly id: string;
+  readonly name: string;
+  readonly swatches: readonly ColorToken[];
+}
+
+/**
+ * Persistence scope for palettes / favorites.
+ *
+ * `"global"` palettes live in plugin settings; per-project palettes
+ * live in the project definition and override globals when present.
+ */
+export type PaletteScope = "global" | ProjectId;
+
+/**
+ * Snapshot returned by `PaletteStore.load`.
+ */
+export interface PaletteSnapshot {
+  readonly palettes: readonly ColorPalette[];
+  readonly favorites: readonly ColorToken[];
+}
+
+/**
+ * Persistence interface for palettes and favorites.
+ *
+ * REFACTOR-401 lands the concrete `lib/colors/persistence.ts`
+ * implementation; this contract is what `ColorPicker.svelte` and
+ * `RecordItem.svelte` will consume.
+ */
+export interface PaletteStore {
+  load(scope: PaletteScope): Promise<PaletteSnapshot>;
+  save(scope: PaletteScope, snapshot: PaletteSnapshot): Promise<void>;
+}
+```
