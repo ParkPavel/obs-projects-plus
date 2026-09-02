@@ -81,6 +81,12 @@
   }
 
   .ppp-blockfilter-popover {
+    /* #166 leaves this literal: FloatingPopup portals the DESKTOP popup to
+       <body> (FloatingPopup.svelte:255), so there is no container ancestor to
+       be relative to — the window-anchored side of the boundary, where
+       `min(22rem, 100cqi)` measures out to exactly this value. The mobile
+       bottom sheet is NOT portaled and can overflow a narrow widget; that is
+       pre-existing (#112's fix was desktop-only) and is tracked as #182. */
     min-width: 22rem;
     max-width: 28rem;
     max-height: 24rem;

@@ -476,11 +476,11 @@
    own ancestor. They are values handed DOWN, resolved at each
    descendant's use site against the nearest of these roots.
 
-   `.ppp-dt-content` (`DatabaseCall/DataTableContent.svelte:255`) also
-   declares `container-type` and is deliberately NOT in this list: it
-   is a container nobody queries, and the ADR's Step 3 default is to
-   delete that declaration. Adding it here would give a dead container
-   a live consumer and make the deletion harder.
+   `.ppp-widget-config` (`widgets/_shared/WidgetConfigShell.svelte:65`)
+   also declares `container-type` and is deliberately NOT in this list:
+   the list is the set of roots that hand the scale DOWN, not the set of
+   containers. (`.ppp-dt-content` held this role until #166 Step 3
+   deleted its declaration — a container nobody queried.)
    ═══════════════════════════════════════════════════════════ */
 
 .ppp-widget-host,

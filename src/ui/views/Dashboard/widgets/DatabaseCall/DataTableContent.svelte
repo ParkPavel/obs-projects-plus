@@ -252,8 +252,10 @@
     flex-direction: column;
     flex: 1;
     overflow: hidden;
-    container-type: inline-size;
-    container-name: db-table;
+    /* #166: no `container-type` here. `db-table` was declared and never
+       queried, and the containment still cost a `position: fixed` containing
+       block and a nearest-ancestor shift. The queried rungs are R0.13's
+       CONTAINER_ROOTS, which excludes `.ppp-dt-content` by design. */
   }
 
   .ppp-t2-scroll {

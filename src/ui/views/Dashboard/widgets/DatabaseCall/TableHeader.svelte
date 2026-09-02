@@ -3,7 +3,7 @@
    * TableHeader — F2.1/F2.4 (TABLE_V2_CANON §1/§3). Sticky header row:
    * type icon + name + sort indicator; click opens the column menu
    * (canonical contextMenu: sort / calculate / hide), right edge drags to
-   * resize, trailing `[+]` adds a property (existing CreateField flow).
+   * resize, `[+]` adds a property (CreateField) from #166's `1fr` filler track.
    * The tooltip carries the frontmatter key (#060 field transparency).
    */
   import { createEventDispatcher } from "svelte";
@@ -106,7 +106,7 @@
 <style>
   .ppp-t2-header {
     display: grid;
-    grid-template-columns: var(--ppp-dt-columns) 2rem;
+    grid-template-columns: var(--ppp-dt-columns);
     position: sticky;
     top: 0;
     z-index: var(--ppp-z-float, 10);
@@ -181,9 +181,9 @@
   }
 
   .ppp-t2-header-add {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
+    width: 2rem;
     height: 2rem;
     border: none;
     background: transparent;
