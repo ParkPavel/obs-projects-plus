@@ -381,6 +381,33 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   claim is headless Chrome, not Obsidian.** The mobile half of that popover is a real pre-existing
   overflow, now filed as **#182**. Reviews: `codex-reports/CX-AUDIT-166-step3.md`,
   `CX-ADV-166-step3.md`.
+- **#167 — R0.16 counts the root-anchoring the principle is supposed to remove.** R0.3 guards the
+  letter of matryoshka (few raw px) and is blind to its meaning: `rem` is anchored to the document
+  root, so a component sized in it renders the same in a narrow widget and across the full canvas.
+  R0.16 is a ratchet in R0.3's shape over the components that live inside a declared container —
+  everything under `ui/views/Dashboard/`, plus any component writing its own `@container` — minus a
+  declared list of window-anchored surfaces (`TemplateConfirmDialog`, `FloatingPopup`). Comments do
+  not count; `var()` fallbacks do.
+  **Two Codex audits each found a route the reader of the day did not model** — first `style={…}`
+  and `style:` directives (two live components were shipping sizes through them), then the
+  shorthands `{style}` / `style:width` and literals hoisted into the script, which carry no value at
+  the element at all. Each fix had been narrower than the hole, so the counter stopped enumerating
+  routes: it now reads the **whole component text**, exactly as R0.3 has always counted `px`.
+  Relocation is defeated by construction rather than by keeping up with Svelte's syntax.
+  Re-measured across that change: 807 → 807 — a closed hole that moved no number, logged anyway,
+  because a re-measurement returning the same value is evidence and an unlogged one looks like
+  nothing happened.
+  The starting number is the **measurement** on `09fef14`, and a plant test asserts one added
+  declaration breaks it — pinning the ceiling to the tree instead of letting it drift, the defect
+  R0.3 has (23 above its own tree, with a dead token file inside the gap until #165). An exemption
+  must exhibit its mechanism — `use:portal` outside comments, or `position: fixed` in a real rule —
+  after the second audit found the check accepting the bare string `FloatingPopup`, which appears in
+  that component's own header. `svelteStyles` / `stripCssComments` / `collectStyled` moved to
+  `src/__tests__/support/cssScan.ts`; R0.13 is otherwise unchanged.
+  **It is a unit count, not a render:** it says how much root-anchoring is left and where, never
+  that removing it looks right. Containment is inferred from a directory and a declared
+  `@container`, not from runtime ancestry — statically unprovable, which is why #166 put the
+  guarantee in the cascade. **Merged into `main` 2026-09-03** (merge `895aab2`); reviews in `codex-reports/CX-AUDIT-167.md`.
 - **#180a (T1 of `SPEC_MATH_SPREADSHEET_2026-09-02`) — the project has one numeric-coercion rule.**
   `src/lib/engine/numeric.ts` (`toNumber` / `toNumbers` / `isNumeric`) replaced five disagreeing
   implementations: `"12abc"` was 12 in the kernel and NaN in the footer, `"0x10"` was 0 in one and
@@ -391,7 +418,9 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   The empty-input policy — `avg([])`, `min([])`, string-valued percents — is deliberately untouched
   and is T2 (`#180b`). Branch `feat/180a-numeric-coercion`; not merged, adversarial review pending.
 - **Canonical baseline — `main`: 183 suites / 2549 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (109 pre-existing tsdoc warnings — 112 until #178 deleted three `@since` tags).** `feat/166-step3-minimums` stands at
+  lint 0 errors (109 pre-existing tsdoc warnings — 112 until #178 deleted three `@since` tags).**
+  `fix/167-rem-in-container-ratchet` stands at **184 / 2559** (+1 suite / +10: R0.16).
+  `feat/166-step3-minimums` stands at
   **183 / 2549** (+5: the filler, the three consumer-source checks and the template-writer check).
   Measured 2026-09-02 on `feat/166-step2` after
   its review fixes (`chartWidth` suite +1, +18 tests over the #178 merge, which kept 182/2526); Measured 2026-09-02 on `feat/166-step1` (R0.13 +5 tests) after `fix/179`
