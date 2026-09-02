@@ -304,11 +304,14 @@ step.
    `align-items: center` centres the dialog in that content box rather than on screen — it can
    land below the fold.
 
-   Not fixed here: this Step 1 run was scoped to report it, not to change it, and the fix is a
-   decision (portal the dialog to `<body>` as `FloatingPopup` does, or hoist it out of
-   `.ppp-database-root`, or drop `align-items: center` for a top offset). **It is a merge blocker
-   for the branch, not a follow-up ticket** — the step's contract is "nothing moves", and this is
-   the one thing that would.
+   **Resolved the same day, before merge, by hoisting.** The dialog is now rendered as a sibling of
+   `.ppp-database-root`, directly under `ViewContent` (`DashboardCanvas.svelte`, last child of the
+   view), so its containing block is ViewContent again — byte-for-byte the pre-Step-1 geometry.
+   Hoisting beat portaling because the dialog reads only Obsidian variables (`--radius-m`,
+   `--layer-popover`), so leaving the root's cascade costs nothing, while a `<body>` portal would
+   have changed the scrim from view-sized to window-sized — a move, not a no-op. The reason is
+   written next to the `position: fixed` rule in `TemplateConfirmDialog.svelte`; it could not go
+   into `DashboardCanvas.svelte`, which sits exactly at its R0.6 ceiling.
 5. **Cascade priority against user CSS snippets.** #165 already recorded this for the radius
    shim; moving level-2 declarations from `:root` to class selectors raises their specificity, so
    a user snippet that overrode `:root` may stop winning. Conditional, not a regress — record it,

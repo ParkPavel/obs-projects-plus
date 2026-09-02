@@ -17,15 +17,15 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
-- **#166 Step 1 is DONE and NOT MERGED (2026-09-02).** `feat/166-step1-container-roots` off `main`
+- **#166 Step 1 is MERGED into `main` (2026-09-02).** `feat/166-step1-container-roots` off `main`
   = `f425812`: `08ede44` (the container rungs + the `:root`/roots split of the level-2 scale),
   `dbe51c0` (R0.13 `CONTAINER_ROOTS`, +5 tests, both plants proven), `a31423f` (bundles). Four
   gates green, jest 182/2526. `docs/internal/probes/166-no-container-fallback.html` measures the
   point of the step: a consumer with no container ancestor reads 16px where the #165 probe read
-  20px, and both in-container cells are unchanged. **Merge is blocked on one decision, not on
-  work:** `TemplateConfirmDialog`'s unportaled `position: fixed` overlay lives inside
-  `.ppp-database-root`, which Step 1 turns into its containing block — recorded in `BACKLOG.md`
-  #166 and under RISKS 4 of `ADR_MATRYOSHKA_SIZING_2026-09-02.md`. Steps 2 and 3 wait on the three
+  20px, and both in-container cells are unchanged. The one thing that moved —
+  `TemplateConfirmDialog`'s unportaled `position: fixed` overlay, whose containing block Step 1
+  would have changed to `.ppp-database-root` — was hoisted to `ViewContent` level before merge, so
+  its geometry is the pre-Step-1 one (RISKS 4 of `ADR_MATRYOSHKA_SIZING_2026-09-02.md`). Steps 2 and 3 wait on the three
   user decisions at the end of that ADR.
 - **#165 is MERGED into `main` (2026-09-02, merge `9377a3d`).** `feat/165-token-consolidation`, tip
   `28aa27d`: the ADR (`ADR_TOKENS_MATRYOSHKA_2026-09-01.md`), four implementation commits, and one
@@ -343,9 +343,9 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 182 suites / 2521 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (112 pre-existing tsdoc warnings).** Measured 2026-09-02 on `fix/179` before its
-  fast-forward-equivalent merge (`5a99f8e`, R0.14 +1 suite / +5 tests); earlier the same day
+- **Canonical baseline — `main`: 182 suites / 2526 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (112 pre-existing tsdoc warnings).** Measured 2026-09-02 on `feat/166-step1` (R0.13 +5 tests) after `fix/179`
+  (`5a99f8e`, R0.14 +1 suite / +5 tests); earlier the same day
   #165 (R0.13, +1 suite) and #181 (`configScanBoundary`, +1 suite) merged; before them
   `main` stood at 179/2491 with 122 warnings. The stack took it from 173/2464 at `64863ed`
   to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four

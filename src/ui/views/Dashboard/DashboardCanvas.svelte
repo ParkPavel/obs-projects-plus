@@ -160,7 +160,6 @@
           {/each}
         </div>
       {/if}
-      <TemplateConfirmDialog show={$showTemplateReplaceConfirm} on:confirm={templatesController.confirmReplace} on:cancel={templatesController.cancelReplace} />
       {#if showFormulaBar && !readonly}
         <FormulaBar fields={fieldNames} {previewRecord} on:apply={handleFormulaApply} on:cancel={() => (showFormulaBar = false)} />
       {/if}
@@ -184,6 +183,7 @@
         on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
       />
     </div>
+    <TemplateConfirmDialog show={$showTemplateReplaceConfirm} on:confirm={templatesController.confirmReplace} on:cancel={templatesController.cancelReplace} />
   </ViewContent>
 </ViewLayout>
 <style>
