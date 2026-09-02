@@ -3370,7 +3370,7 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
   проектный документ — но тогда не в `src/`.
 
 ### #179 — `TransformStep` — имя двух разных экспортируемых типов
-- Status: ✅ DONE 2026-09-02 (ветка `fix/179-transformstep-name`, `SHA_PLACEHOLDER`; НЕ слито в `main`)
+- Status: ✅ DONE 2026-09-02 (ветка `fix/179-transformstep-name`, `c861cd8`; НЕ слито в `main`)
   | Milestone: (next) | Priority: **P1** | Complexity: S
 - analysis_required: false
 - Vision scene: none | User outcome: невозможно импортировать не тот тип и не заметить
