@@ -15,11 +15,14 @@
  *   migrator does not recognise the step, drops it, and the run "passes" while
  *   testing nothing. `MANUAL_TESTING_PIPELINE.md` records this as a seeding
  *   trap; it is a trap for code that constructs steps too.
- * - **There is a second exported type called `TransformStep`,** in
+ * - **There used to be a second exported type called `TransformStep`,** in
  *   `src/lib/engine/contracts.ts`, keyed on `kind` with a nested `payload`.
- *   That one is the unbuilt v4 engine IR and has no consumers. This one is
- *   what the executor runs and what is on disk. Importing the wrong
- *   `TransformStep` type-checks in places and is a real hazard.
+ *   Because the two shapes partly overlap, importing the wrong one
+ *   type-checked. #179 (2026-09-02) renamed that one to `TransformStepIR` and
+ *   left this one alone: this is the stored shape, so its name is part of the
+ *   persistence format, not a local choice. That file is still the unbuilt v4
+ *   engine IR with no consumers — see #178, which is about whether it should
+ *   exist at all.
  * - **`AggregationFunction` is UPPERCASE on purpose,** and it is a THIRD
  *   aggregation vocabulary, not an alias. `lib/engine/aggregate.ts` has
  *   lowercase `RollupFunction` and dashboard footers have `ColumnAggregation`.
@@ -56,8 +59,8 @@ export interface TransformPipeline {
  * older or hand-edited save - makes `executeStep` return `undefined`, and the
  * loop assigns it to the frame it will read next.
  *
- * Not the same type as `TransformStep` in `lib/engine/contracts.ts` - see the
- * module header.
+ * Not the same type as `TransformStepIR` in `lib/engine/contracts.ts` - that
+ * one is the unbuilt v4 IR, keyed on `kind`. See the module header.
  */
 export type TransformStep =
   | UnnestStep
