@@ -19,7 +19,7 @@
  * Neither side saw the truth, which is the definition of a hole in a gate.
  *
  * Scanning `.claude/` is right. What is wrong is that a checkout lives inside
- * it. So the walk stops at the boundary of a nested checkout and at dependency
+ * it. So the walk stops at the boundary of that checkout and at dependency
  * trees, and nowhere else — see `configScanBoundary.test.ts`, which proves the
  * exclusion in both directions so it can never quietly grow to swallow a real
  * finding.
@@ -29,13 +29,11 @@ import { existsSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 
 /**
- * Directory (or file) names the config walk never descends into.
+ * Names skipped wherever they appear, at any depth.
  *
- * Matched by name at any depth, because a nested checkout may itself contain
- * one. Keep this set minimal: every name added here is a place a real finding
- * could hide.
+ * Both are machinery rather than configuration, and both legitimately occur
+ * nested — a dependency tree has dependency trees inside it.
  *
- * - `worktrees` — where `isolation: worktree` places a full repository copy.
  * - `node_modules` — a dependency tree, and inside a worktree it is a junction
  *   pointing back at the real one, so following it rescans the whole project.
  * - `.git` — repository internals. Excluded by plain name rather than by type
@@ -43,16 +41,27 @@ import { join } from "path";
  *   directory, so a type-conditional check would miss exactly the case #181 is
  *   about.
  */
-export const EXCLUDED_DIR_NAMES: ReadonlySet<string> = new Set([
-  "worktrees",
-  "node_modules",
-  ".git",
-]);
+export const EXCLUDED_ANYWHERE: ReadonlySet<string> = new Set(["node_modules", ".git"]);
 
 /**
- * Every file under `dir`, recursively, skipping `EXCLUDED_DIR_NAMES`.
+ * Names skipped **only as a direct child of the scanned root**.
  *
- * Returns absolute paths and an empty list for a directory that does not exist
+ * `isolation: worktree` places its checkout at exactly `<layer>/worktrees/`, so
+ * that is where the exclusion belongs. Matching the name at any depth instead
+ * was the first version of this fix, and the Codex audit of #181 rejected it:
+ * a perfectly ordinary config directory — `.claude/agents/worktrees/` holding a
+ * role's notes, say — would then have been invisible to all three ratchets at
+ * once, with a stale baseline or a credential inside it and nothing to say so.
+ *
+ * An exclusion written one character wider than its subject is how a gate stops
+ * being a gate. Scope it to the place the problem actually lives.
+ */
+export const EXCLUDED_AT_ROOT: ReadonlySet<string> = new Set(["worktrees"]);
+
+/**
+ * Every file under `dir`, recursively, minus the exclusions above.
+ *
+ * Returns absolute paths, and an empty list for a directory that does not exist
  * — a fresh clone has no config layers at all, and that is not a failure.
  *
  * Symlinked directories (Windows junctions included) are listed but never
@@ -61,29 +70,35 @@ export const EXCLUDED_DIR_NAMES: ReadonlySet<string> = new Set([
  * cycle. Symlinked *files* are still returned — a config file is a config file
  * however it got there.
  */
-export function walkConfigTree(dir: string, out: string[] = []): string[] {
-  if (!existsSync(dir)) return out;
+export function walkConfigTree(dir: string): string[] {
+  const out: string[] = [];
 
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (EXCLUDED_DIR_NAMES.has(entry.name)) continue;
+  const descend = (current: string, isRoot: boolean): void => {
+    if (!existsSync(current)) return;
 
-    const full = join(dir, entry.name);
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      if (EXCLUDED_ANYWHERE.has(entry.name)) continue;
+      if (isRoot && EXCLUDED_AT_ROOT.has(entry.name)) continue;
 
-    if (entry.isSymbolicLink()) {
-      let target;
-      try {
-        target = statSync(full);
-      } catch {
-        continue; // broken link: nothing to read, and throwing here would take the gate down
+      const full = join(current, entry.name);
+
+      if (entry.isSymbolicLink()) {
+        let target;
+        try {
+          target = statSync(full);
+        } catch {
+          continue; // broken link: nothing to read, and throwing takes the gate down
+        }
+        if (!target.isDirectory()) out.push(full);
+        continue;
       }
-      if (!target.isDirectory()) out.push(full);
-      continue;
+
+      if (entry.isDirectory()) descend(full, false);
+      else out.push(full);
     }
+  };
 
-    if (entry.isDirectory()) walkConfigTree(full, out);
-    else out.push(full);
-  }
-
+  descend(dir, true);
   return out;
 }
 

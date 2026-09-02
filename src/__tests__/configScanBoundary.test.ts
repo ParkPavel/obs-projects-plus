@@ -28,7 +28,8 @@ import { tmpdir } from "os";
 import { join, relative, sep } from "path";
 
 import {
-  EXCLUDED_DIR_NAMES,
+  EXCLUDED_ANYWHERE,
+  EXCLUDED_AT_ROOT,
   STALE_NUMBER_PATTERNS,
   walkConfigTree,
 } from "./support/configScan";
@@ -79,6 +80,12 @@ beforeAll(() => {
   plant("agents/nested/role.md", "no numbers here");
   plant("settings.json", "{}");
 
+  // Visible, and the case the Codex audit of #181 caught: `worktrees` is
+  // excluded because of WHERE the checkout goes, not because the word is
+  // forbidden. A config directory that happens to carry the name, anywhere
+  // below the root, is ordinary config and a gate must still read it.
+  plant("agents/worktrees/notes.md", TRIPWIRE);
+
   // Excluded: what `isolation: worktree` leaves behind. A full repository copy,
   // its own dependency tree, and — the shape that made #181 easy to miss — a
   // linked worktree's `.git`, which is a FILE, not a directory.
@@ -89,8 +96,10 @@ beforeAll(() => {
     "gitdir: ../../../.git/worktrees/agent-abc"
   );
 
-  // Excluded: dependency trees and repository internals under the root itself.
+  // Excluded: dependency trees and repository internals, at the root and — the
+  // difference from `worktrees` — at any depth below it too.
   plant("node_modules/pkg/README.md", TRIPWIRE);
+  plant("agents/node_modules/pkg/README.md", TRIPWIRE);
   plant("nested/.git/config", TRIPWIRE);
   plant(".git", "gitdir: elsewhere");
 });
@@ -104,23 +113,38 @@ describe("config walk exclusion is bounded (#181)", () => {
     expect(asRelative(walkConfigTree(fixture))).toEqual([
       "agents/nested/role.md",
       "agents/probe.md",
+      "agents/worktrees/notes.md",
       "settings.json",
     ]);
   });
 
-  it("excludes only the three names it declares", () => {
-    // Pinned as a list, not a count: this set decides what a gate can no longer
-    // see, so growing it has to be a deliberate edit in two places.
-    expect([...EXCLUDED_DIR_NAMES].sort()).toEqual([
-      ".git",
-      "node_modules",
-      "worktrees",
-    ]);
+  it("excludes only the names it declares, each at its declared scope", () => {
+    // Pinned as lists, not counts: these sets decide what a gate can no longer
+    // see, so growing either has to be a deliberate edit in two places. The
+    // split is the point — `worktrees` is a location, `node_modules` and `.git`
+    // are machinery.
+    expect([...EXCLUDED_AT_ROOT].sort()).toEqual(["worktrees"]);
+    expect([...EXCLUDED_ANYWHERE].sort()).toEqual([".git", "node_modules"]);
+  });
+
+  it("`worktrees` is excluded at the root only, never as a nested config directory", () => {
+    const walked = asRelative(walkConfigTree(fixture));
+    expect(walked).toContain("agents/worktrees/notes.md");
+    expect(walked.filter((f) => f.startsWith("worktrees/"))).toEqual([]);
+  });
+
+  it("`node_modules` and `.git` are excluded at every depth", () => {
+    const walked = asRelative(walkConfigTree(fixture));
+    expect(walked.filter((f) => f.includes("node_modules"))).toEqual([]);
+    expect(walked.filter((f) => f.includes(".git"))).toEqual([]);
   });
 
   it("the tripwire inside worktrees/ yields no finding; the same line in agents/ does", () => {
+    // Both visible copies must be reported, and only those two: the byte for
+    // byte identical file in the root checkout must not appear.
     expect(findings(fixture)).toEqual([
       "agents/probe.md — hardcoded px budget",
+      "agents/worktrees/notes.md — hardcoded px budget",
     ]);
   });
 
