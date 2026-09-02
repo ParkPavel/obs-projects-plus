@@ -15,14 +15,16 @@
  *   migrator does not recognise the step, drops it, and the run "passes" while
  *   testing nothing. `MANUAL_TESTING_PIPELINE.md` records this as a seeding
  *   trap; it is a trap for code that constructs steps too.
- * - **There used to be a second exported type called `TransformStep`,** in
- *   `src/lib/engine/contracts.ts`, keyed on `kind` with a nested `payload`.
- *   Because the two shapes partly overlap, importing the wrong one
- *   type-checked. #179 (2026-09-02) renamed that one to `TransformStepIR` and
- *   left this one alone: this is the stored shape, so its name is part of the
- *   persistence format, not a local choice. That file is still the unbuilt v4
- *   engine IR with no consumers — see #178, which is about whether it should
- *   exist at all.
+ * - **There used to be a second exported type called `TransformStep`,** the
+ *   unbuilt v4 engine IR, keyed on `kind` with a nested `payload`. Because the
+ *   two shapes partly overlap, importing the wrong one type-checked. #179
+ *   (2026-09-02) renamed that one to `TransformStepIR` and left this one alone:
+ *   this is the stored shape, so its name is part of the persistence format,
+ *   not a local choice. #178 (2026-09-02) then deleted the IR outright — it had
+ *   no consumers and described an engine that was never built; its text is kept
+ *   at `docs/internal/archive/ENGINE_CONTRACTS_V4_DESIGN.md`. The collision is
+ *   gone, but `src/__tests__/R0_14_duplicateExportedTypeNames.test.ts` still
+ *   forbids a new one, which is what keeps this name safe to rely on.
  * - **`AggregationFunction` is UPPERCASE on purpose,** and it is a THIRD
  *   aggregation vocabulary, not an alias. `lib/engine/aggregate.ts` has
  *   lowercase `RollupFunction` and dashboard footers have `ColumnAggregation`.
@@ -59,8 +61,9 @@ export interface TransformPipeline {
  * older or hand-edited save - makes `executeStep` return `undefined`, and the
  * loop assigns it to the frame it will read next.
  *
- * Not the same type as `TransformStepIR` in `lib/engine/contracts.ts` - that
- * one is the unbuilt v4 IR, keyed on `kind`. See the module header.
+ * There is no second `TransformStep` to confuse this with any more: the v4 IR
+ * that used to carry the name, later `TransformStepIR` and keyed on `kind`, was
+ * deleted by #178. See the module header.
  */
 export type TransformStep =
   | UnnestStep

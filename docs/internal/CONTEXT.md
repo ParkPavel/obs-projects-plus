@@ -17,6 +17,17 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
+- **#178 is IMPLEMENTED on `fix/178-delete-engine-contracts` (off `main` = `6c6a82f`, 2026-09-02),
+  not merged.** The three type-only contract modules (`lib/engine/contracts.ts`,
+  `lib/relations/contracts.ts`, `lib/colors/contracts.ts` — 515 lines, zero live consumers) are
+  deleted; their text is preserved verbatim in
+  `docs/internal/archive/ENGINE_CONTRACTS_V4_DESIGN.md`, and the usage map that the user made a
+  precondition is at `docs/internal/codex-reports/CX-MAP-178.md`. No test file was added or
+  removed, so the jest baseline holds exactly rather than moving: four gates green on the branch,
+  182 suites / 2526 tests, `tsc` 0, svelte-check 0/0, lint 0 errors. The one number that DID move is
+  the tsdoc warning count — 109 on the branch against the 112 recorded below, because each deleted
+  file carried an `@since 4.0` tag that tsdoc does not know. **The canonical baseline moves only on
+  merge to `main`,** so the figure below is left alone.
 - **#166 Step 1 is MERGED into `main` (2026-09-02).** `feat/166-step1-container-roots` off `main`
   = `f425812`: `08ede44` (the container rungs + the `:root`/roots split of the level-2 scale),
   `dbe51c0` (R0.13 `CONTAINER_ROOTS`, +5 tests, both plants proven), `a31423f` (bundles). Four
@@ -91,7 +102,7 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   remaining four engine modules are documented. **Still open from that audit: #171** (bundles in
   the tree — user assigned it to a Codex audit) and the §2.2/§2.4 documentation drift, which no
   ticket covers yet.
-- **Two facts that follow-up work uncovered — one is now fixed, one is not.** The name collision is
+- **Two facts that follow-up work uncovered — both are now resolved (#179 and #178).** The name collision is
   **resolved (#179, 2026-09-02):** the dead IR in `contracts.ts` is `TransformStepIR`, matching its
   `FilterIR` / `RollupIR` / `AggregateIR` siblings, and the live stored `TransformStep` in
   `dashboard-engine/transformTypes.ts` is untouched — it is a persistence format, so its name is not
@@ -100,11 +111,17 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `src/lib` it DECLARES the one collision that remains (`ValidationError`, in
   `helpers/formulaParser.ts` and `types/validation.ts`) so a third one fails the suite. That
   collision is filed as a note under #179 and was deliberately not swept into a P1/S rename.
-  **Still open: #178** — whether `lib/engine/contracts.ts` should exist at all. It still describes a
-  "Unified DataEngine" that was never built; outside the file only `RecordId` and `ProjectId` are
-  imported anywhere. #179 renamed a type inside it and deliberately did not prejudge that question.
-  Jest rose by one suite / five tests on the #179 branch; **the canonical baseline below moves only
-  on merge to `main`.**
+  **The second fact is settled too (#178, 2026-09-02, implemented on a branch — see the top of this
+  section).** The question #179 deliberately did not prejudge — whether `lib/engine/contracts.ts`
+  should exist at all — was put to the user, who chose deletion on the condition that usage be
+  checked by calls in code and not only by exports. It was: the Codex `code-mapper` map
+  (`codex-reports/CX-MAP-178.md`) found no dynamic import, `require`, `jest.mock`, re-export,
+  `typeof`/`keyof` or declaration-merging reference to any of the three modules, and no value
+  declaration in any of them, so `tsc` passing after the deletion is the proof that nothing consumed
+  them. The design itself is not lost — it moved out of `src/` into
+  `archive/ENGINE_CONTRACTS_V4_DESIGN.md`, with the reasons it was never built stated next to it.
+  Jest rose by one suite / five tests on the #179 branch and #178 moves it by nothing at all;
+  **the canonical baseline below moves only on merge to `main`.**
 - **`main` carries everything below and is pushed.** `64863ed` (M-FILTER-CONSOLIDATION + the
   linked-source stack) is its ancestor, the meta-audit stack and the #164 work sit on top, and
   `origin/main` matches. Both `feat/116` and the relation-first work `feat/112` are IN `main`;

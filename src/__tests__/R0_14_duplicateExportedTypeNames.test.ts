@@ -3,12 +3,21 @@
  *
  * `TransformStep` was exported twice: the stored, executed pipeline step in
  * `lib/dashboard-engine/transformTypes.ts` (discriminated by `type`) and the
- * unbuilt v4 engine IR in `lib/engine/contracts.ts` (discriminated by `kind`).
- * The two shapes overlap enough that importing the wrong one COMPILED. That is
- * the class of defect this repo keeps paying for: silent, and green on all four
- * gates, because each file is individually correct. `MANUAL_TESTING_PIPELINE.md`
- * §4a records the runtime half of the same trap — a step carrying `kind` is
- * dropped by the migrator without a word, and the run "passes" testing nothing.
+ * unbuilt v4 engine IR (discriminated by `kind`). The two shapes overlap enough
+ * that importing the wrong one COMPILED. That is the class of defect this repo
+ * keeps paying for: silent, and green on all four gates, because each file is
+ * individually correct. `MANUAL_TESTING_PIPELINE.md` §4a records the runtime
+ * half of the same trap — a step carrying `kind` is dropped by the migrator
+ * without a word, and the run "passes" testing nothing.
+ *
+ * **The original subject no longer exists.** #179 renamed the IR to
+ * `TransformStepIR`; #178 (2026-09-02) then deleted the module that declared it,
+ * along with the two dead modules that were its only importers, and preserved
+ * their text at `docs/internal/archive/ENGINE_CONTRACTS_V4_DESIGN.md`. Like R0.4,
+ * this ratchet now outlives its subject: it guards the NEXT collision rather
+ * than the one it was written for, and nothing about that changes its logic. The
+ * synthetic case below still names the pre-#179 file — that is a record of what
+ * the tree was, not a reference to a file anyone can open.
  *
  * Built on the R0.4 / R0.13 shape, for the reason those two state:
  *
@@ -17,8 +26,9 @@
  *     without a duplicate ever existing in the tree — the ratchet is shown to
  *     fail, not assumed to.
  *   - `KNOWN_COLLISIONS_OUTSIDE_ENGINES` DECLARES the regime the tree is in
- *     rather than pretending it is clean. #179 fixed the engine collision; a
- *     second one (`ValidationError`) exists elsewhere and was left alone on
+ *     rather than pretending it is clean. #179 fixed the engine collision and
+ *     #178 removed the file that held one side of it; a second one
+ *     (`ValidationError`) exists elsewhere and was left alone on
  *     purpose, because widening a P1/S rename into `helpers/` and `types/` is
  *     how a small ticket becomes an unreviewable one. Declaring it means a
  *     THIRD collision fails this suite, and means fixing the declared one is a
