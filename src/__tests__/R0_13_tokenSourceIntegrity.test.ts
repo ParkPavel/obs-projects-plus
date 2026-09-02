@@ -184,14 +184,37 @@ function declaredTokenNames(text: string): string[] {
   return [...text.matchAll(/(?<!var\(\s*)(--ppp-[a-zA-Z0-9_-]+)\s*:/g)].map((m) => m[1] as string);
 }
 
-/** Every `.ts` / `.svelte` module under `src/`, excluding tests, as `[path, text]`. */
+/**
+ * `--ppp-*` names a module ASSIGNS at runtime through the CSSOM. A template
+ * string was the first form of a second scale (`designTokens.ts`); a
+ * `setProperty` call is the second, and a declaration scan cannot see it
+ * because nothing in the text reads `name:`. Only a literal name is visible
+ * here — a name assembled at runtime, or split across strings, is the stated
+ * boundary of this ratchet (Codex adversarial review of #165, 2026-09-02).
+ */
+function assignedTokenNames(text: string): string[] {
+  return [...text.matchAll(/setProperty\(\s*["'`](--ppp-[a-zA-Z0-9_-]+)["'`]/g)].map(
+    (m) => m[1] as string
+  );
+}
+
+/** The names `tokens.css` owns — the scale a component may read but not redeclare. */
+function ownedScale(): Set<string> {
+  return new Set(declaredTokens(content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"))).keys());
+}
+
+/**
+ * Every `.ts` / `.js` / `.svelte` module under `src/`, excluding tests and
+ * mocks, as `[path, text]`. `.js` is in the set because esbuild bundles it
+ * exactly like `.ts`, so a scale hidden there would ship the same way.
+ */
 function collectModules(dir: string, out: { file: string; text: string }[] = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name === "__tests__" || entry.name === "__mocks__") continue;
       collectModules(full, out);
-    } else if (entry.name.endsWith(".ts") || entry.name.endsWith(".svelte")) {
+    } else if (/\.(ts|js|svelte)$/.test(entry.name)) {
       out.push({ file: path.relative(SRC_ROOT, full).replace(/\\/g, "/"), text: content(full) });
     }
   }
@@ -291,7 +314,7 @@ describe("R0.13 token source integrity (#165)", () => {
       .toEqual(["--ppp-radius-md", "--ppp-space-lg"]);
   });
 
-  it("no TypeScript module declares a design token", () => {
+  it("no script module declares a design token", () => {
     // The mechanism #165 removed, closed rather than merely undone. The fourth
     // source was not a stylesheet — it was `designTokens.ts` building a string
     // that redefined `:root` names on the canvas, so nothing in the CSS
@@ -299,8 +322,37 @@ describe("R0.13 token source integrity (#165)", () => {
     // two different sizes. An inventory of `.css` files cannot see that
     // coming back (Codex audit of #165, 2026-09-01).
     const offenders = collectModules(SRC_ROOT)
-      .filter(({ file }) => file.endsWith(".ts"))
+      .filter(({ file }) => /\.(ts|js)$/.test(file))
       .flatMap(({ file, text }) => declaredTokenNames(text).map((n) => `${file} → ${n}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it("tells a runtime token assignment from a runtime read", () => {
+    expect(assignedTokenNames('el.style.setProperty("--ppp-radius-md", value);')).toEqual([
+      "--ppp-radius-md",
+    ]);
+    expect(assignedTokenNames("root.style.setProperty( '--ppp-space-lg' , s )")).toEqual([
+      "--ppp-space-lg",
+    ]);
+    expect(assignedTokenNames('el.style.getPropertyValue("--ppp-radius-md")')).toEqual([]);
+    // A per-instance variable is reported too; ownership is the rule's job, not the matcher's.
+    expect(assignedTokenNames("node.style.setProperty(`--ppp-icon-size`, size)")).toEqual([
+      "--ppp-icon-size",
+    ]);
+  });
+
+  it("no module assigns a name from the scale through the CSSOM", () => {
+    // The second way to build `designTokens.ts` again without writing a
+    // stylesheet: `setProperty` on the canvas element. The redeclaration rule
+    // below cannot see it — there is no `name:` in the text — and the
+    // adversarial review named it as the form R0.13 would let through.
+    const scale = ownedScale();
+    expect(scale.size).toBeGreaterThan(0);
+    const offenders = collectModules(SRC_ROOT).flatMap(({ file, text }) =>
+      assignedTokenNames(text)
+        .filter((n) => scale.has(n))
+        .map((n) => `${file} → ${n}`)
+    );
     expect(offenders).toEqual([]);
   });
 
@@ -310,7 +362,7 @@ describe("R0.13 token source integrity (#165)", () => {
     // not do is REDECLARE a name the scale already owns: that is the radius
     // shadow, and it is invisible in review because both declarations look
     // local and correct where they stand.
-    const scale = new Set(declaredTokens(content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"))).keys());
+    const scale = ownedScale();
     expect(scale.size).toBeGreaterThan(0); // a vacuous scan would otherwise pass
     const offenders = collectModules(SRC_ROOT)
       .flatMap(({ file, text }) =>

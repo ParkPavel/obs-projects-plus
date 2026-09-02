@@ -102,3 +102,15 @@ Two things the probe shows beyond the question it was asked:
   comparison and the Codex audit; whether the growth *looks* right in a wide chart is a judgement
   about appearance that belongs to the user on screen. The floor is the inherited size, so the
   worst case of that judgement is today's rendering, which is why it does not hold the merge.
+
+**Corrected the same day by the adversarial review (`codex-reports/CX-ADV-165.md`).** The check
+above says "label text"; for the SVG charts that is the wrong thing to look at. `BarChart`,
+`LineChart`, `ScatterChart`, `PieChart` and `ProgressChart` set their labels as `font-size="11"`
+presentation attributes in viewBox user units — those ignore the inherited font-size entirely, and
+they already grow with the widget because the SVG has a `viewBox` and no fixed width. So two SVG
+charts of different widths will show different label sizes **with or without #165**, and that
+observation would prove nothing about the token. What the pilot's font-size actually reaches is
+the HTML text under the wrapper: `NumberChart` (which declares no font-size of its own) and the
+empty/degenerate banners. The on-screen check that means something is therefore **two Number
+(KPI) charts of different widths**, or the wrapper padding of any chart. Routing the SVG labels
+through the scale is recorded against #166.

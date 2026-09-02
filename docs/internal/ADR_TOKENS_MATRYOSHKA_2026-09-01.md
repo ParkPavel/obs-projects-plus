@@ -147,6 +147,15 @@ proven rather than assumed.
 padding and label size. If they do not, the mechanism assumption is wrong and **step 4 reverts
 alone**, leaving 1–3 intact.
 
+> **Post-implementation note, 2026-09-02.** The mechanism was measured in headless Chrome
+> (`UNTESTABLE_FEATURES_2026-09-01.md` §"Resolved 2026-09-02") and holds. The "label size" half of
+> the verification line above was wrong as written, and the adversarial review (`CX-ADV-165`) caught
+> it: the SVG charts size their labels with `font-size="11"`-style presentation attributes in
+> viewBox user units, which ignore inherited font-size and scale geometrically with the SVG. The
+> pilot's font-size reaches the HTML text under the wrapper — `NumberChart` and the banners — and
+> its padding; the SVG labels were never routed and belong to #166. Step 4 stands on the measured
+> mechanism and the real consumer, not on the sentence.
+
 **Why a pilot is not optional.** A level-2 section with zero consumers is `design-tokens.css` reborn
 one level down — a file declaring a principle that nothing executes. That is exactly the failure
 #165 exists to fix. R0.13 therefore asserts at least one shipped rule consumes the level-2 scale.

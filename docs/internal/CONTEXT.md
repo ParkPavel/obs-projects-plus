@@ -34,6 +34,11 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   The probe also showed the failure mode fails *large*: a level-2 consumer with no query container
   above it lands on the clamp ceiling. Details and the remaining judgement about appearance in
   `UNTESTABLE_FEATURES_2026-09-01.md` §"Resolved 2026-09-02".
+  **The adversarial review then returned BLOCK on two true findings** (`codex-reports/CX-ADV-165.md`):
+  the SVG charts' labels are presentation attributes in viewBox units and never receive the
+  wrapper's font-size — the pilot reaches `NumberChart` and the banners, so the claim was corrected
+  and the labels handed to #166 — and R0.13 could not see a scale rebuilt through `setProperty`,
+  now closed by rule with a planted-file proof. Both fixed on the branch before merge.
   **Two findings came out of the work rather than the ticket.** `--ppp-radius-*` was declared twice
   at values shifted one step (`:root` vs the canvas injection), so `--ppp-radius-md` meant two
   different sizes and no file appeared to conflict — held behind a scoped shim, the scale itself
