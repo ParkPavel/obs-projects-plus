@@ -230,6 +230,45 @@ Watch: `ChartWidget.svelte` is 296 lines. **R0.6 was not read in the architect p
 implementer must read `src/__tests__/R0_6_*` before adding lines and, if this file is capped,
 extract the measurement into a small module rather than raising the ceiling.
 
+### Measured 2026-09-02 — Step 2 implemented, `feat/166-step2-chart-width`
+
+`docs/internal/probes/166-chart-viewbox-scale.html`, same headless Chrome as Step 1
+(HeadlessChrome/151, `--window-size=1400,900`). Four cells, the two container widths the ticket
+names crossed with the two viewBox regimes, so today and after are read in the same run rather
+than one being recalled. Each cell reports two independent numbers — `getBoundingClientRect()` on
+the `<text>` (rendered, CSS px) and `getBBox()` on the same node (SVG user units) — and their
+ratio is the scale the viewBox imposes on an `11`-unit presentation attribute.
+
+| Container | TODAY (`viewBox="0 0 480 320"`) | AFTER (viewBox width = container) |
+|---|---|---|
+| 240px | scale 0.5 → **5.5 CSS px** | scale 1 → **11 CSS px** |
+| 960px | scale 2 → **22 CSS px** | scale 1 → **11 CSS px** |
+| narrow→wide swing | **4×** | **1×** |
+
+So the predicted ≈5.5 / ≈22 and ≈11 / ≈11 are measured, not reasoned. This is a *rendering*
+measurement and the only one in Step 2: `npm test` proves the arithmetic (the cull follows the
+container) and nothing about layout, per RISKS 1.
+
+**One deviation from Q2, deliberate: `bind:contentRect`, not `bind:clientWidth`.** Q2 chose
+`clientWidth` on the grounds that it is "ResizeObserver-backed" with "no CSSOM writes". That is
+true of `contentRect` and **false of `clientWidth`**: in Svelte 3.59.2 the `clientWidth` binding
+compiles to `add_iframe_resize_listener` (`node_modules/svelte/compiler.mjs:34473`,
+`internal/index.js:837-845`) — an injected `<iframe>` child plus a `node.style.position =
+'relative'` write — while `contentRect` compiles to `resize_observer_content_box.observe`
+(`:34477`). `contentRect` also reports the **content** box, which is the box the `<svg>` fills,
+so the wrapper's `var(--ppp-local-pad-sm)` padding is not counted into the scale; `clientWidth`
+includes padding and would have made 11 units render a few percent short. Confirmed in the built
+bundle: `ResizeObserver` present, zero occurrences of `iframe`. `svelte-check` accepts the
+binding (0/0).
+
+R0.6 read, as instructed: **`ChartWidget.svelte` is not in `BUDGETS`** (`R0_6_locBudget.test.ts:14-41`)
+— it carries no ceiling, so the file could have absorbed the change. The measurement was extracted
+to `Chart/chartWidth.ts` anyway, for a reason R0.6 does not cover: the zero-width guard is the part
+that can silently break, and in a `.svelte` file jest cannot reach it without mounting a component
+that jsdom cannot lay out. R0.3 read as well: the file's inline `min-height: ${heightPx}px` is
+untouched and no px was added — the first draft of the rewritten pilot comment contained the string
+`11px` in prose and R0.3 caught it at 152 > 151, which is the ratchet working exactly as intended.
+
 ## Step 3 — Fixed minimums become container-relative
 **Size S/M. `lead` inline, after Step 1's guard exists. Waits on USER DECISIONS 1 and 3.**
 

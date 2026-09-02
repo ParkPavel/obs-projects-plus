@@ -17,6 +17,14 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
+- **#166 Step 2 is IMPLEMENTED and NOT merged (2026-09-02).** `feat/166-step2-chart-width` off `main`
+  = `6c6a82f`: the chart's viewBox is pinned to the measured container width (`bind:contentRect`,
+  not the ADR's `bind:clientWidth` — see the deviation recorded in the ADR and `BACKLOG.md`), so an
+  11-unit label renders at 11 CSS px at every widget width instead of 5.5 at 240px and 22 at 960px
+  (measured in `docs/internal/probes/166-chart-viewbox-scale.html`). Four gates green in the agent
+  worktree, jest **183/2537**; `npm test` there needs `--testMatch "**/src/**/*.(test|spec).(ts|js)"`
+  because the config's absolute pattern cannot match a path through the `.claude` dot-segment.
+  Not reviewed, not run in the vault.
 - **#166 Step 1 is MERGED into `main` (2026-09-02).** `feat/166-step1-container-roots` off `main`
   = `f425812`: `08ede44` (the container rungs + the `:root`/roots split of the level-2 scale),
   `dbe51c0` (R0.13 `CONTAINER_ROOTS`, +5 tests, both plants proven), `a31423f` (bundles). Four
