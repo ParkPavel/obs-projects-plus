@@ -45,6 +45,17 @@ function operandNumber(value: unknown): number | null {
   return toNumber(value);
 }
 
+/**
+ * An operand that carries no value: absent, or a string with nothing in it.
+ * `lib/engine/emptiness.ts` is deliberately not reused — its `isEmpty` keeps a
+ * whitespace-only string NON-empty to preserve the filter `is-empty` contract,
+ * while `toNumber` drops `"  "` like any other non-number. Arithmetic follows
+ * the coercion rule, not the filter one (#180a).
+ */
+function isAbsentOperand(value: unknown): boolean {
+  return value == null || (typeof value === "string" && value.trim() === "");
+}
+
 // ── Styled value support ─────────────────────────────────────
 
 export interface StyledValue {
@@ -1068,14 +1079,24 @@ function evaluateNode(
           case ">=": return toNum(left) >= toNum(right);
           case "<=": return toNum(left) <= toNum(right);
           case "+": {
-            // Numeric when BOTH sides are numbers, otherwise concatenation —
-            // unchanged in shape. #180a changes which values reach the numeric
-            // branch: `null` used to arrive as 0 via `Number(null)` while
-            // `undefined` arrived as NaN and concatenated, so `+` disagreed
-            // with itself about an absent field depending on how it was
-            // absent. Both now concatenate.
+            // `+` is numeric as soon as ONE side is a number; an absent operand
+            // contributes 0. Only when neither side is a number does it
+            // concatenate, so two absent fields give "" rather than a silent 0.
+            //
+            // Before #180a this operator disagreed with itself about an absent
+            // field: `null` arrived as 0 through `Number(null)` while
+            // `undefined` arrived as NaN and concatenated. Making both
+            // concatenate would have removed that disagreement and created a
+            // larger one — `-`, `*` and `/` read an absent operand as 0 through
+            // `toNum`, so `a - 1` would be -1 while `a + 1` was the string "1".
+            // Excel and Airtable read a blank cell as 0 in arithmetic while
+            // ignoring it inside AVERAGE; those are different questions and
+            // SPEC_MATH_SPREADSHEET_2026-09-02 §2.2 answers the second one.
+            // A PRESENT non-numeric value ("abc") still concatenates.
             const ln = operandNumber(left), rn = operandNumber(right);
             if (ln !== null && rn !== null) return ln + rn;
+            if (ln !== null && isAbsentOperand(right)) return ln;
+            if (rn !== null && isAbsentOperand(left)) return rn;
             return String(left ?? "") + String(right ?? "");
           }
           case "-": return toNum(left) - toNum(right);

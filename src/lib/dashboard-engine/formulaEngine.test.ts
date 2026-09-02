@@ -178,6 +178,34 @@ describe("formulaEngine — Fields", () => {
     const record = makeRecord({ a: null });
     expect(evaluateFormulaValue("ABS(a)", record)).toBeNull();
   });
+
+  // #180a, main-session correction. The first pass made `+` concatenate
+  // whenever either side was absent, which fixed one disagreement and opened a
+  // bigger one: `-`, `*` and `/` read an absent operand as 0, so `a - 1` was -1
+  // while `a + 1` was the string "1". Excel and Airtable read a blank cell as 0
+  // in arithmetic; the "empty is not a zero" rule of the spec is about what
+  // AVERAGE counts, which is a different question.
+  describe("an absent operand in arithmetic", () => {
+    test("adds as zero when the other side is a number", () => {
+      expect(evaluateFormulaValue("a + 1", makeRecord({ a: null }))).toBe(1);
+      expect(evaluateFormulaValue("1 + a", makeRecord({ a: null }))).toBe(1);
+      expect(evaluateFormulaValue("a + 1", makeRecord({ a: "" }))).toBe(1);
+      expect(evaluateFormulaValue("a + 1", makeRecord({ a: "   " }))).toBe(1);
+    });
+
+    test("agrees with the operators that already read it as zero", () => {
+      expect(evaluateFormulaValue("a - 1", makeRecord({ a: null }))).toBe(-1);
+      expect(evaluateFormulaValue("a * 2", makeRecord({ a: null }))).toBe(0);
+    });
+
+    test("a present non-number still concatenates", () => {
+      expect(evaluateFormulaValue("a + 1", makeRecord({ a: "abc" }))).toBe("abc1");
+    });
+
+    test("two absent operands give nothing, not a zero", () => {
+      expect(evaluateFormulaValue("a + b", makeRecord({ a: null, b: null }))).toBe("");
+    });
+  });
 });
 
 // ── Validation ───────────────────────────────────────────────
