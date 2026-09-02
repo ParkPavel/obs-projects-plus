@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>cqi-in-custom-property probe (#165)</title>
+<style>
+  /* Exactly the shipped declarations from src/ui/tokens/tokens.css:379-382 on feat/165 */
+  :root {
+    --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em);
+    --ppp-local-pad-sm: 0.375em;
+    font-size: 16px;
+  }
+  body { margin: 1rem; font-family: system-ui, sans-serif; }
+  .row { display: flex; gap: 1rem; align-items: flex-start; }
+  /* Mirrors WidgetShell.svelte:164 — the widget is the query container */
+  .widget { container-type: inline-size; border: 1px solid #888; }
+  .narrow { width: 200px; }
+  .wide { width: 800px; }
+  /* Mirrors ChartWidget.svelte:219-223 — the pilot consumer */
+  .chart { font-size: var(--ppp-local-text-sm); padding: var(--ppp-local-pad-sm); }
+  /* Control: same formula inline, no custom property in between */
+  .chart-direct { font-size: clamp(1em, 0.85em + 0.6cqi, 1.25em); padding: 0.375em; }
+  /* Control: no container ancestor at all */
+  .nocontainer { border: 1px dashed #888; width: 800px; }
+  pre { background: #eee; padding: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>Probe: does <code>cqi</code> inside an inherited custom property resolve at the use site?</h1>
+<div class="row">
+  <div class="widget narrow"><div class="chart" id="var-narrow">var, narrow (200px)</div></div>
+  <div class="widget wide"><div class="chart" id="var-wide">var, wide (800px)</div></div>
+</div>
+<div class="row" style="margin-top:1rem">
+  <div class="widget narrow"><div class="chart-direct" id="direct-narrow">direct, narrow (200px)</div></div>
+  <div class="widget wide"><div class="chart-direct" id="direct-wide">direct, wide (800px)</div></div>
+</div>
+<div class="nocontainer" style="margin-top:1rem"><div class="chart" id="var-nocontainer">var, no container ancestor (800px)</div></div>
+<pre id="out"></pre>
+<script>
+  const ids = ["var-narrow","var-wide","direct-narrow","direct-wide","var-nocontainer"];
+  const r = {};
+  for (const id of ids) {
+    const cs = getComputedStyle(document.getElementById(id));
+    r[id] = { fontSize: cs.fontSize, padding: cs.paddingTop };
+  }
+  r.supportsContainerUnits = CSS.supports("width", "1cqi");
+  r.ua = navigator.userAgent;
+  // Expected if the mechanism works: var-wide fontSize = 16*min(1.25, 0.85+0.6*8) = 20px, var-narrow = 16*(0.85+0.6*2)=... 0.85+1.2=2.05 -> clamped 20px? no:
+  // 0.6cqi of 200px = 1.2px; 0.85em = 13.6px → 14.8px < 16px floor → 16px. 0.6cqi of 800px = 4.8px → 18.4px → 18.4px (under 20px ceiling).
+  r.expected = { narrow: "16px", wide: "18.4px", nocontainer: "viewport-derived (small viewport width)" };
+  document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+  console.log("[cqi-probe]", JSON.stringify(r));
+</script>
+</body>
+</html>

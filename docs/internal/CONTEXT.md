@@ -1,7 +1,8 @@
 # Current project context
 
-> **Updated:** 2026-09-01 (#165 implemented on `feat/165-token-consolidation`, NOT merged —
-> visual acceptance open; #181 filed. Earlier: pre-release audit follow-ups #176, #177, #174 closed,
+> **Updated:** 2026-09-02 (#165 mechanism measured in headless Chrome, revert condition gone,
+> awaiting adversarial review + merge; #181 in progress on `fix/181-ratchet-worktree-exclusion`.
+> Earlier 2026-09-01: #165 implemented, #181 filed. Earlier: pre-release audit follow-ups #176, #177, #174 closed,
 > merged and pushed; session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
@@ -21,11 +22,18 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   until this merges. The token system is one file: `designTokens.ts`, `dashboardTokens.css` and the
   dead `design-tokens.css` are gone, and the live run confirms `getDesignTokenCSS` is absent from
   the shipped bundle.
-  **Why it is not merged:** step 4 deliberately changes rendering (a chart's label size and padding
-  now follow its widget's width), and whether the mechanism works at all is unmeasured — jsdom has
-  no container queries and the browser probe could not run here. One check settles it, and it is on
-  screen: two chart widgets of different widths, side by side. If they render identically, `9e870e4`
-  reverts alone and steps 1–3 stand. Boundary written up in `UNTESTABLE_FEATURES_2026-09-01.md`.
+  **Why it was held, and what settled it (2026-09-02):** step 4 deliberately changes rendering (a
+  chart's label size and padding now follow its widget's width), and whether the mechanism works at
+  all was unmeasured — jsdom has no container queries and the browser extension never connected.
+  The probe then ran in **headless Chrome** instead: `docs/internal/probes/165-cqi-in-custom-property.html`
+  carries the shipped declarations and the same container/consumer structure, and computed
+  font-size came out 16px in a 200px container against 18.4px in an 800px one, identical to the
+  formula written inline. So `cqi` inside an inherited custom property resolves at the use site;
+  `9e870e4` has no revert condition left. Obsidian here is Electron 34.3 / Chromium 132, which has
+  container units, but that is a version argument — no computed style was read inside Obsidian.
+  The probe also showed the failure mode fails *large*: a level-2 consumer with no query container
+  above it lands on the clamp ceiling. Details and the remaining judgement about appearance in
+  `UNTESTABLE_FEATURES_2026-09-01.md` §"Resolved 2026-09-02".
   **Two findings came out of the work rather than the ticket.** `--ppp-radius-*` was declared twice
   at values shifted one step (`:root` vs the canvas injection), so `--ppp-radius-md` meant two
   different sizes and no file appeared to conflict — held behind a scoped shim, the scale itself
