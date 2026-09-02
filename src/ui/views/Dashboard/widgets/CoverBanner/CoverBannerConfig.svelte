@@ -70,7 +70,7 @@
         min="4"
         step="1"
         value={cfg.widthRem ?? 32}
-        on:change={(e) => update({ widthRem: Number(e.currentTarget.value) || 32 })}
+        on:change={(e) => update({ widthRem: /* coercion-exempt: a number input's own value, min=4 step=1 above — a widget setting, not record data */ Number(e.currentTarget.value) || 32 })}
       />
     </div>
   {/if}

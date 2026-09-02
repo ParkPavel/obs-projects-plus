@@ -126,14 +126,23 @@ describe("aggregate() — kernel", () => {
     test("ignores non-numeric for mean", () => {
       expect(aggregate(["x", 4, 6], cfg("avg")).value).toBe(5);
     });
-    test("empty input → 0", () => {
-      expect(aggregate([], cfg("avg")).value).toBe(0);
+    // FLIPPED by #180a. Empty is not a zero once #180a made "empty" reachable:
+    // a Number field holding `abc` used to become NaN at ingest and survive
+    // into the reduction, so this returned the visible nonsense NaN. With the
+    // value dropped the list is genuinely empty, and 0 would print a number
+    // that reads like an answer. `sum` keeps 0 — the additive identity is a
+    // real total of nothing (BACKLOG #180, RESOLVED 2026-09-02). Found by the
+    // Codex adversarial review, which traced it to the footer.
+    test("empty input → null, printed as the empty placeholder", () => {
+      const r = aggregate([], cfg("avg"));
+      expect(r.value).toBeNull();
+      expect(r.formattedValue).toBe("—");
     });
-    test("all-null → 0", () => {
-      expect(aggregate([null, undefined], cfg("avg")).value).toBe(0);
+    test("all-null → null", () => {
+      expect(aggregate([null, undefined], cfg("avg")).value).toBeNull();
     });
-    test("non-numeric only → 0", () => {
-      expect(aggregate(["a", "b"], cfg("avg")).value).toBe(0);
+    test("non-numeric only → null", () => {
+      expect(aggregate(["a", "b"], cfg("avg")).value).toBeNull();
     });
   });
 
@@ -145,8 +154,8 @@ describe("aggregate() — kernel", () => {
     test("works with negatives", () => {
       expect(aggregate([-5, 0, 5], cfg("min")).value).toBe(-5);
     });
-    test("empty → 0", () => {
-      expect(aggregate([], cfg("min")).value).toBe(0);
+    test("empty → null, not a zero that reads like an answer (#180a)", () => {
+      expect(aggregate([], cfg("min")).value).toBeNull();
     });
   });
 
@@ -157,8 +166,8 @@ describe("aggregate() — kernel", () => {
     test("works with negatives", () => {
       expect(aggregate([-5, -10, -1], cfg("max")).value).toBe(-1);
     });
-    test("empty → 0", () => {
-      expect(aggregate([], cfg("max")).value).toBe(0);
+    test("empty → null, not a zero that reads like an answer (#180a)", () => {
+      expect(aggregate([], cfg("max")).value).toBeNull();
     });
   });
 
@@ -169,8 +178,8 @@ describe("aggregate() — kernel", () => {
     test("single value → 0", () => {
       expect(aggregate([5], cfg("range")).value).toBe(0);
     });
-    test("empty → 0", () => {
-      expect(aggregate([], cfg("range")).value).toBe(0);
+    test("empty → null, not a zero that reads like an answer (#180a)", () => {
+      expect(aggregate([], cfg("range")).value).toBeNull();
     });
   });
 

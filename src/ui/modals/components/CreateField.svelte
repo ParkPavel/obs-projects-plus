@@ -431,7 +431,7 @@
       {:else if field.type === DataFieldType.Number}
         <NumberInput
           bind:ref={inputRef}
-          value={parseInt((value ?? "").toString())}
+          value={toNumber(value)}
           on:input={(event) => (value = event.detail)}
           on:keydown={(ev) => {
             if (ev.key === "Enter" && !fieldNameError) {

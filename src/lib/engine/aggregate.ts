@@ -129,18 +129,18 @@ export function aggregate(
 
     case "avg": {
       const nums = toNumbers(nonNull);
-      if (nums.length === 0) return fmtNum(0);
+      if (nums.length === 0) return fmtEmpty();
       return fmtNum(nums.reduce((a, b) => a + b, 0) / nums.length);
     }
 
     case "min": {
       const nums = toNumbers(nonNull);
-      return nums.length > 0 ? fmtNum(Math.min(...nums)) : fmtNum(0);
+      return nums.length > 0 ? fmtNum(Math.min(...nums)) : fmtEmpty();
     }
 
     case "max": {
       const nums = toNumbers(nonNull);
-      return nums.length > 0 ? fmtNum(Math.max(...nums)) : fmtNum(0);
+      return nums.length > 0 ? fmtNum(Math.max(...nums)) : fmtEmpty();
     }
 
     case "median": {
@@ -156,7 +156,7 @@ export function aggregate(
 
     case "range": {
       const nums = toNumbers(nonNull);
-      if (nums.length === 0) return fmtNum(0);
+      if (nums.length === 0) return fmtEmpty();
       return fmtNum(Math.max(...nums) - Math.min(...nums));
     }
 
@@ -195,6 +195,25 @@ export function aggregate(
 
 function sumNumbers(values: DataValue[]): number {
   return toNumbers(values).reduce((a, b) => a + b, 0);
+}
+
+/**
+ * No numeric input at all. Distinct from a numeric zero, and printed as the
+ * placeholder the footer has always used for "nothing here" (`aggregation.ts`
+ * has surfaced `null` + "—" for min/max/range since before this rule existed).
+ *
+ * #180a made this reachable where it was not. Before it, a Number field
+ * holding `abc` became `NaN` at ingest and `NaN` survived `toNumbers`, so an
+ * average of nothing rendered the visible nonsense `NaN`. Now the value is
+ * dropped, the list is genuinely empty, and returning 0 would print a number
+ * that looks like an answer. `sum` keeps 0 deliberately — the additive
+ * identity is a real total of nothing (BACKLOG #180, RESOLVED 2026-09-02).
+ * Found by the Codex adversarial review of #180a, which named the footer path
+ * `computeAggregations` where the guard `computeAggregateValue` already had
+ * was missing.
+ */
+function fmtEmpty(): RollupResult {
+  return { value: null, formattedValue: "—" };
 }
 
 function fmtNum(n: number): RollupResult {

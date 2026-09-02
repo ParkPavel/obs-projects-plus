@@ -326,7 +326,7 @@
       <input
         type="range" min="2" max="10" step="1"
         value={scatterPointRadius}
-        on:input={(e) => emitRaw({ pointRadius: parseInt(e.currentTarget.value) })}
+        on:input={(e) => emitRaw({ pointRadius: /* coercion-exempt: a range control's own value, bounded by min/max/step above — a widget setting, not record data */ parseInt(e.currentTarget.value) })}
       />
       <output class="ppp-range-value">{scatterPointRadius}</output>
     </label>
@@ -336,7 +336,7 @@
       <input
         type="range" min="0.2" max="1.0" step="0.1"
         value={scatterOpacity}
-        on:input={(e) => emitRaw({ opacity: parseFloat(e.currentTarget.value) })}
+        on:input={(e) => emitRaw({ opacity: /* coercion-exempt: a range control's own value, bounded by min/max/step above — a widget setting, not record data */ parseFloat(e.currentTarget.value) })}
       />
       <output class="ppp-range-value">{scatterOpacity.toFixed(1)}</output>
     </label>

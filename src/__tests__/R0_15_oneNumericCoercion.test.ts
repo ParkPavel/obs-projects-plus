@@ -27,11 +27,18 @@
  *     coerced from another module;
  *   - `value - 0` written any way the regex does not spell — `value - (0)`,
  *     `value -= 0`, a unary `+` split across a line break;
- *   - anything in `.svelte` MARKUP. Only the `<script>` block is scanned,
- *     because a `//` marker cannot be written inside a template expression;
- *     `ChartConfig.svelte`'s `on:input={… parseInt(…) …}` handlers are real
- *     and invisible here. They read a form control rather than record data,
- *     which is why that is a tolerable hole and not an urgent one.
+ *   - CSS. A `<style>` block is skipped, so a size written as
+ *     `calc(var(--x) * 1)` is not a coercion and a class named `.heat-0` is
+ *     not arithmetic. Three such lines exist in this tree.
+ *
+ * Markup WAS on this list for one day. It was written down as a tolerable hole
+ * because those handlers read form controls rather than record data — and the
+ * Codex audit of #180a then found `CreateField.svelte` truncating a displayed
+ * value with `parseInt` inside it, which is record data. Markup is scanned now,
+ * and a template expression carries its marker as `/* coercion-exempt: … *\/`,
+ * since an HTML comment cannot be placed between an element's attributes.
+ * The lesson is the one R0.13 and R0.16 each paid for separately: a hole
+ * described in a header is still a hole.
  *   - whether a routed call is CORRECT. Routing `toNumber` somewhere it should
  *     not be is invisible to a scan.
  *
@@ -59,8 +66,17 @@ const SCANNED_ROOTS = ["lib", "ui"] as const;
  */
 const COERCION_HOME = "lib/engine/numeric.ts";
 
-/** A marker line, and the reason must be non-empty. */
-const MARKER = /\/\/\s*coercion-exempt:\s*\S/;
+/**
+ * A marker line, and the reason must be non-empty. Three spellings, because a
+ * marker has to be writable where the coercion is: `//` in a `<script>` block,
+ * `<!-- … -->` on a markup line of its own, and `/* … *\/` INSIDE a template
+ * expression — an HTML comment cannot be placed between an element's
+ * attributes, so a handler like `on:input={…}` has nowhere else to carry one.
+ */
+const MARKER = /(?:\/\/|\/\*|<!--)\s*coercion-exempt:\s*(?!\*\/|-->)\S/;
+
+/** A line that is nothing but an HTML comment — markup's transparent line. */
+const HTML_COMMENT_ONLY = /^\s*<!--[\s\S]*?-->\s*$/;
 
 /**
  * The coercion spellings this scan can see. Each is a way the project has
@@ -128,36 +144,53 @@ export interface CoercionHit {
 /**
  * Unmarked coercion sites in `text`.
  *
- * A `// coercion-exempt: <reason>` marker exempts the line it sits on and every
+ * A `coercion-exempt: <reason>` marker exempts the line it sits on and every
  * following line that is itself a coercion, stopping at the first line that is
- * not one. `scriptOnly` restricts the scan to `<script>…</script>`, which is
- * how `.svelte` files are read.
+ * not one.
+ *
+ * `isSvelte` says the file has both a script block and markup. **Markup is
+ * scanned.** It was exempt for one day: the hole was written down as tolerable
+ * because those handlers read form controls rather than record data, and the
+ * Codex audit of #180a then found `CreateField.svelte` truncating a displayed
+ * value with `parseInt` inside it. Only comment handling differs by region —
+ * in a script `//` starts a comment, in markup it does not (a URL is not a
+ * comment), so a markup line is only stripped when it is wholly an HTML
+ * comment.
  */
 export function findUnmarkedCoercions(
   text: string,
-  scriptOnly = false
+  isSvelte = false
 ): CoercionHit[] {
   const lines = text.split(/\r?\n/);
   const hits: CoercionHit[] = [];
   let inBlock = false;
-  let inScript = !scriptOnly;
+  let inScript = !isSvelte;
   let exemptRun = false;
 
+  let inStyle = false;
+
   lines.forEach((raw, idx) => {
-    if (scriptOnly) {
+    if (isSvelte) {
       if (/<script[\s>]/.test(raw)) inScript = true;
       else if (/<\/script>/.test(raw)) inScript = false;
+      // A `<style>` block is CSS, not code. Without this, `calc(var(--x) * 1)`
+      // and a class named `.heat-0` read as arithmetic coercions — three false
+      // positives in this tree the moment markup came into scope.
+      if (/<style[\s>]/.test(raw)) inStyle = true;
+      else if (/<\/style>/.test(raw)) inStyle = false;
+      else if (inStyle) return;
     }
 
     const marked = MARKER.test(raw);
-    const { code, inBlock: next } = stripComments(raw, inBlock);
+    const { code, inBlock: next } = inScript
+      ? stripComments(raw, inBlock)
+      : { code: HTML_COMMENT_ONLY.test(raw) ? "" : raw, inBlock };
     inBlock = next;
 
     if (marked) {
       exemptRun = true;
       return;
     }
-    if (!inScript) return;
 
     // A comment-only line is transparent: a marker whose reason runs to several
     // `//` lines still covers the code beneath it. A line with actual code that
@@ -289,14 +322,40 @@ describe("R0.15 — the scan itself (synthetic, proves BOTH states)", () => {
     expect(findUnmarkedCoercions(text)).toEqual([]);
   });
 
-  it("scriptOnly ignores markup, which is the stated blind spot", () => {
+  it("scans markup as well as script", () => {
     const text = [
       '<script lang="ts">',
       "  const n = Number(v);",
       "</script>",
       "<input on:input={(e) => emit(parseInt(e.currentTarget.value))} />",
     ].join("\n");
-    expect(findUnmarkedCoercions(text, true).map((h) => h.line)).toEqual([2]);
+    expect(findUnmarkedCoercions(text, true).map((h) => h.line)).toEqual([2, 4]);
+  });
+
+  it("a block-comment marker exempts the expression it sits in", () => {
+    const text = [
+      "<input on:input={(e) => emit(/* coercion-exempt: a range control */ parseInt(e.currentTarget.value))} />",
+    ].join("\n");
+    expect(findUnmarkedCoercions(text, true)).toEqual([]);
+  });
+
+  it("a block-comment marker with an empty reason does not exempt", () => {
+    const text = ["<input on:input={(e) => emit(/* coercion-exempt: */ parseInt(e.currentTarget.value))} />"].join("\n");
+    expect(findUnmarkedCoercions(text, true).map((h) => h.line)).toEqual([1]);
+  });
+
+  it("a style block is CSS, not arithmetic", () => {
+    // `calc(var(--x) * 1)` and a class named `.heat-0` read as coercions to a
+    // text scan. Three such lines existed in this tree the moment markup came
+    // into scope, and none of them was code.
+    const text = [
+      "<div />",
+      "<style>",
+      "  .a { --h: calc(var(--b) * 1); }",
+      "  .heat-0 { opacity: 1; }",
+      "</style>",
+    ].join("\n");
+    expect(findUnmarkedCoercions(text, true)).toEqual([]);
   });
 });
 
