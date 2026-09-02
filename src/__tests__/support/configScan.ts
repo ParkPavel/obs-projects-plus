@@ -25,7 +25,7 @@
  * finding.
  */
 
-import { existsSync, readdirSync, statSync } from "fs";
+import { readdirSync, realpathSync, statSync } from "fs";
 import { join } from "path";
 
 /**
@@ -64,17 +64,33 @@ export const EXCLUDED_AT_ROOT: ReadonlySet<string> = new Set(["worktrees"]);
  * Returns absolute paths, and an empty list for a directory that does not exist
  * — a fresh clone has no config layers at all, and that is not a failure.
  *
- * Symlinked directories (Windows junctions included) are listed but never
- * descended into: the junction an agent leaves behind points back into the real
- * tree, so following it both rescans the project under a second path and can
- * cycle. Symlinked *files* are still returned — a config file is a config file
- * however it got there.
+ * Links are **followed**, exactly as the three private walks did before #181.
+ * An interim version of this fix skipped every directory symlink instead, on
+ * the theory that the junction an agent leaves behind is the only one that
+ * matters; the second Codex audit of #181 refuted it. A linked config directory
+ * — `.claude/agents/shared` pointing somewhere real — is ordinary configuration,
+ * and skipping it would have blinded all three ratchets to whatever it holds.
+ * The junction that motivated the theory is called `node_modules` and is already
+ * excluded by name.
+ *
+ * What following links needs instead is termination, so each directory is
+ * entered once by real path. A link back into an already-walked tree is not
+ * followed a second time: no infinite recursion, and no file reported twice
+ * under two names.
  */
 export function walkConfigTree(dir: string): string[] {
   const out: string[] = [];
+  const entered = new Set<string>();
 
   const descend = (current: string, isRoot: boolean): void => {
-    if (!existsSync(current)) return;
+    let real: string;
+    try {
+      real = realpathSync(current);
+    } catch {
+      return; // missing directory or broken link: nothing to walk, and throwing takes the gate down
+    }
+    if (entered.has(real)) return;
+    entered.add(real);
 
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       if (EXCLUDED_ANYWHERE.has(entry.name)) continue;
@@ -82,18 +98,15 @@ export function walkConfigTree(dir: string): string[] {
 
       const full = join(current, entry.name);
 
-      if (entry.isSymbolicLink()) {
-        let target;
-        try {
-          target = statSync(full);
-        } catch {
-          continue; // broken link: nothing to read, and throwing takes the gate down
-        }
-        if (!target.isDirectory()) out.push(full);
-        continue;
+      // statSync, not the Dirent: it resolves the link, which is the point.
+      let target;
+      try {
+        target = statSync(full);
+      } catch {
+        continue; // broken link
       }
 
-      if (entry.isDirectory()) descend(full, false);
+      if (target.isDirectory()) descend(full, false);
       else out.push(full);
     }
   };

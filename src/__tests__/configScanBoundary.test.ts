@@ -21,7 +21,10 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  rmdirSync,
   rmSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "fs";
 import { tmpdir } from "os";
@@ -45,6 +48,23 @@ import {
 const TRIPWIRE = "px-budget <= 4242";
 
 let fixture: string;
+/** Real directory that the fixture's `agents/shared` junction points at. */
+let linkTarget: string;
+
+/**
+ * Remove a link without touching what it points at.
+ *
+ * Windows refuses `unlink` on a directory junction and wants `rmdir`; POSIX is
+ * the other way round. Neither ever deletes the target — which is the whole
+ * point, and the same distinction the worktree protocol turns on.
+ */
+function unlink(linkPath: string): void {
+  try {
+    unlinkSync(linkPath);
+  } catch {
+    rmdirSync(linkPath);
+  }
+}
 
 /** Write `body` to `relPath` under the fixture, creating parents. */
 function plant(relPath: string, body: string): void {
@@ -102,10 +122,29 @@ beforeAll(() => {
   plant("agents/node_modules/pkg/README.md", TRIPWIRE);
   plant("nested/.git/config", TRIPWIRE);
   plant(".git", "gitdir: elsewhere");
+
+  // Visible: a linked config directory. The second Codex audit of #181 found
+  // that an interim version skipped every directory link, which would have
+  // hidden real configuration reached this way from all three ratchets.
+  linkTarget = mkdtempSync(join(tmpdir(), "ppp-configscan-linked-"));
+  writeFileSync(join(linkTarget, "shared-role.md"), TRIPWIRE, "utf8");
+  // "junction" is the type that needs no elevation on Windows; on other
+  // platforms Node ignores the argument and makes an ordinary symlink.
+  symlinkSync(linkTarget, join(fixture, "agents", "shared"), "junction");
+
+  // A link back to an already-walked tree: following it must terminate, and
+  // must not report the same file twice under a second name.
+  symlinkSync(fixture, join(fixture, "agents", "loop"), "junction");
 });
 
 afterAll(() => {
+  // Unlink the junctions BEFORE removing the tree that holds them — the same
+  // order #181's operational note prescribes for a real worktree, and for the
+  // same reason: a recursive delete can follow a link and empty its target.
+  unlink(join(fixture, "agents", "loop"));
+  unlink(join(fixture, "agents", "shared"));
   rmSync(fixture, { recursive: true, force: true });
+  rmSync(linkTarget, { recursive: true, force: true });
 });
 
 describe("config walk exclusion is bounded (#181)", () => {
@@ -113,9 +152,20 @@ describe("config walk exclusion is bounded (#181)", () => {
     expect(asRelative(walkConfigTree(fixture))).toEqual([
       "agents/nested/role.md",
       "agents/probe.md",
+      "agents/shared/shared-role.md",
       "agents/worktrees/notes.md",
       "settings.json",
     ]);
+  });
+
+  it("follows a linked config directory, and terminates on a link back", () => {
+    const walked = asRelative(walkConfigTree(fixture));
+    // The link is followed: config reached only through it is still read.
+    expect(walked).toContain("agents/shared/shared-role.md");
+    // The loop is entered once, so nothing is reported twice under a second
+    // name — reaching this assertion at all is the termination proof.
+    expect(walked.filter((f) => f.startsWith("agents/loop"))).toEqual([]);
+    expect(new Set(walked).size).toBe(walked.length);
   });
 
   it("excludes only the names it declares, each at its declared scope", () => {
@@ -144,6 +194,7 @@ describe("config walk exclusion is bounded (#181)", () => {
     // byte identical file in the root checkout must not appear.
     expect(findings(fixture)).toEqual([
       "agents/probe.md — hardcoded px budget",
+      "agents/shared/shared-role.md — hardcoded px budget",
       "agents/worktrees/notes.md — hardcoded px budget",
     ]);
   });
