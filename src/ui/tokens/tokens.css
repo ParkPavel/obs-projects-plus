@@ -28,7 +28,26 @@
   --ppp-space-8: 2rem;       /* 32 */
   --ppp-space-9: 3rem;       /* 48 */
   --ppp-space-10: 4rem;      /* 64 */
-  
+
+  /* Named spacing scale (#165). Until this commit these were injected onto
+     `.ppp-database-root` by `Dashboard/designTokens.ts`, so they existed for
+     the canvas subtree and nowhere else — a modal resolved its inline
+     fallback instead, and the two disagreed. Values are the injected ones,
+     unchanged; the numeric equivalent is named in each comment because the
+     two scales are the same ladder under two vocabularies (#166's to merge).
+
+     Only the four rungs that a component actually reads are promoted. The
+     injection also carried `xxs`, `xs`, `2xl` and `3xl` — plus `--ppp-bp-*`,
+     `--ppp-touch-coarse/fine` and `--ppp-row-*` — with no consumer anywhere in
+     `src/`. Re-declaring those here would rebuild, one level down, exactly the
+     file this ticket deleted: a scale that states a principle nothing executes.
+     They are recoverable from git the moment something needs them. */
+  --ppp-space-sm: 0.375rem;   /* = --ppp-space-3 */
+  --ppp-space-md: 0.5rem;     /* = --ppp-space-4 */
+  --ppp-space-lg: 0.75rem;    /* = --ppp-space-5 */
+  --ppp-space-xl: 1rem;       /* = --ppp-space-6 */
+
+
   /* Typography scale */
   --ppp-font-size-xs: 0.6875rem;   /* 11 */
   --ppp-font-size-sm: 0.75rem;     /* 12 */
@@ -49,12 +68,14 @@
   
   /* Border radius scale */
   --ppp-radius-none: 0;
+  --ppp-radius-xs: 0.125rem;   /* 2 — arrived with #165; no consumer yet */
   --ppp-radius-sm: 0.125rem;   /* 2 */
   --ppp-radius-md: 0.25rem;    /* 4 */
   --ppp-radius-lg: 0.375rem;   /* 6 */
   --ppp-radius-xl: 0.5rem;     /* 8 */
   --ppp-radius-2xl: 0.75rem;   /* 12 */
   --ppp-radius-full: 9999px;
+  --ppp-radius-pill: 62.5rem;  /* 1000 — SelectionBadge, WidgetInlineBadges */
   
   /* Shadow scale */
   --ppp-shadow-none: none;
@@ -263,6 +284,104 @@
   --ppp-db-row-selected-border: hsl(210, 80%, 60%);
 
   /* ═══════════════════════════════════════════════════════════
+     COMPONENT TOKENS — Dashboard V2 semantic layer (#165)
+     ───────────────────────────────────────────────────────────
+     Merged here from `Dashboard/tokens/dashboardTokens.css`, which
+     was the second of four token sources. The cascade it described
+     is unchanged — only the number of files it lives in:
+
+       Layer 0: Obsidian system vars (--background-*, --text-*)
+       Layer 1: Global PPP (--ppp-space-*, --ppp-font-*, --ppp-z-*)
+       Layer 2: Dashboard semantic (--ppp-db-*)              ← here
+       Layer 3: Widget component (--ppp-dt-columns, --ppp-chart-*)
+
+     Rules: Dashboard layout values go here, not inline in
+     components; --ppp-db-z-* alias the global --ppp-z-* scale;
+     row heights are canonical for DataTable + DatabaseCall.
+     `--ppp-db-row-hover` is declared once, above, at the same
+     value both files carried.
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Z-index (Dashboard context). Dropdowns sit at 100 so they float
+     above sticky headers (20) but stay below Obsidian's own modals. */
+  --ppp-db-z-raised:   var(--ppp-z-raised, 1);
+  --ppp-db-z-bar:      2;          /* timeline bars over grid lines */
+  --ppp-db-z-sticky:   var(--ppp-z-sticky, 20);   /* sticky header/footer */
+  --ppp-db-z-dropdown: 100;        /* floating pickers inside widgets */
+  --ppp-db-z-overlay:  200;        /* fixed confirm/backdrop overlay */
+
+  /* Row heights */
+  --ppp-db-row-compact:   1.75rem;  /* 28 — dense mode */
+  --ppp-db-row-default:   2.25rem;  /* 36 — standard */
+  --ppp-db-row-expanded:  3rem;     /* 48 — comfortable */
+
+  /* Toolbar */
+  --ppp-db-toolbar-height: 2rem;    /* 32 — widget header bar */
+
+  /* Column widths */
+  --ppp-db-col-width-default: 10rem;   /* fallback when no saved width */
+  --ppp-db-col-width-min:      4rem;   /* minimum resizable width */
+  --ppp-dt-columns: auto;              /* overridden per widget via style attr */
+
+  /* Surface (alias Obsidian vars for one-stop token usage) */
+  --ppp-db-surface:          var(--background-primary);
+  --ppp-db-surface-raised:   var(--background-secondary);
+  --ppp-db-border:           var(--background-modifier-border);
+  --ppp-db-border-strong:    var(--background-modifier-border-hover);
+  --ppp-db-text-primary:     var(--text-normal);
+  --ppp-db-text-secondary:   var(--text-muted);
+  --ppp-db-text-faint:       var(--text-faint);
+
+  /* ═══════════════════════════════════════════════════════════
+     LEVEL 2 — CONTAINER-DERIVED SCALE (#165, matryoshka)
+     ───────────────────────────────────────────────────────────
+     Everything above is level 1: `rem`, anchored to the document
+     root. It is the fallback layer and the right layer for surfaces
+     that legitimately do not belong to a container — modals, and
+     popups portaled to `<body>`.
+
+     These are level 2. They are declared at `:root` so the NAMES
+     exist everywhere, but their VALUES resolve per use site: an
+     unregistered custom property is substituted as an unresolved
+     token stream, so `cqi` is evaluated against the using element's
+     nearest ancestor query container, not against `:root`. Where no
+     ancestor declares `container-type`, `cqi` falls back to the small
+     viewport — the value degrades to viewport-derived, it never
+     becomes invalid.
+
+     Two mechanisms, deliberately different:
+
+       - Spacing in `em` derives from the element's own font-size, so
+         it inherits kinship for free once that font-size is itself
+         container-derived. It needs no container and cannot fail.
+       - Typography via `clamp()` over `cqi` is where the container
+         actually decides size. The lower bound is what the element
+         renders today, so a converted rule can only grow in a wide
+         container — never shrink below the current appearance.
+
+     THE SELF-QUERY TRAP, written down because it is invisible: an
+     element that declares `container-type` is NOT its own query
+     container. `cqi` in its own rules measures its ANCESTOR. These
+     tokens are for DESCENDANTS of a container, never for the
+     container's own box. R0.13 asserts this against the whole tree.
+
+     They live here and not in a component `<style>` block because
+     Svelte prunes selectors it considers unused and `svelte-check`
+     warns on them. Hard constraint, not preference.
+
+     Only what a shipped rule consumes is declared. A level-2 section
+     with no consumer is `design-tokens.css` reborn one level down,
+     which is the failure this ticket exists to fix; #166 adds rungs
+     as it converts rules that need them. ═══════════════════════ */
+
+  /* Growth-only: floors at the element's inherited size, whatever the
+     host's root font is, so no conversion can shrink existing text. */
+  --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em);
+
+  /* Follows the font-size above, so it is container-derived through it. */
+  --ppp-local-pad-sm: 0.375em;
+
+  /* ═══════════════════════════════════════════════════════════
      RESPONSIVE BREAKPOINTS
      ═══════════════════════════════════════════════════════════ */
   
@@ -284,6 +403,34 @@
   --ppp-fc-token-number:   var(--code-value,    var(--text-accent-hover));
   --ppp-fc-token-operator: var(--code-operator, var(--text-muted));
   --ppp-fc-token-keyword:  var(--code-keyword,  var(--text-accent));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CANVAS RADIUS COMPATIBILITY SHIM (#165)
+   ───────────────────────────────────────────────────────────
+   `--ppp-radius-*` used to be declared twice at values shifted one
+   step apart: this file's scale at `:root`, and a second scale that
+   `Dashboard/designTokens.ts` injected onto `.ppp-database-root` as a
+   `style=` attribute. So `--ppp-radius-md` meant 0.25rem outside the
+   dashboard and 0.375rem inside it, and no file appeared to conflict
+   with any other — a TypeScript string can redefine a `:root` name
+   invisibly. That is the mechanism #165 removes.
+
+   The divergence itself was accidental, but resolving it is a visual
+   change no ticket owns, and #165's contract is that nothing moves.
+   So the dashboard values are reproduced here verbatim. Deciding the
+   radius scale on its merits — most likely deleting this block and
+   adopting the global scale — is the follow-up.
+
+   One source means one FILE to edit, not one selector: scoping stays
+   available, it just stops happening somewhere a reader cannot see.
+   ═══════════════════════════════════════════════════════════ */
+
+.ppp-database-root {
+  --ppp-radius-sm: 0.25rem;
+  --ppp-radius-md: 0.375rem;
+  --ppp-radius-lg: 0.5rem;
+  --ppp-radius-xl: 0.75rem;
 }
 
 /* ═══════════════════════════════════════════════════════════

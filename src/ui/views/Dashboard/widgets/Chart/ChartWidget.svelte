@@ -210,8 +210,19 @@
 </div>
 
 <style>
+  /* #165 pilot for the container-derived scale. This element is a DESCENDANT
+     of WidgetShell's `widget` container (`container-type: inline-size`), so
+     `cqi` inside these tokens measures the widget's own width. The padding is
+     in `em` and therefore follows the font-size, which is where the container
+     decides. What the font-size reaches is the HTML text below it — NumberChart
+     (no font-size of its own) and the empty/degenerate banners. It does NOT
+     reach the SVG charts: their labels are `font-size="11"`-style presentation
+     attributes in viewBox user units, which ignore inheritance and scale
+     geometrically with the SVG instead. Routing those through the scale is
+     #166's work, not this pilot's. */
   .ppp-chart-widget {
-    padding: var(--ppp-space-sm, 0.25rem);
+    font-size: var(--ppp-local-text-sm);
+    padding: var(--ppp-local-pad-sm);
     overflow: hidden;
   }
 

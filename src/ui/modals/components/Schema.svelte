@@ -238,23 +238,23 @@
 
 <style>
   .ppp-schema-empty {
-    margin: 0 0 var(--ppp-space-md, 0.75rem);
+    margin: 0 0 var(--ppp-space-5);
     color: var(--text-muted);
   }
   .ppp-schema-list {
     list-style: none;
-    margin: 0 0 var(--ppp-space-md, 0.75rem);
+    margin: 0 0 var(--ppp-space-5);
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--ppp-space-xs, 0.25rem);
+    gap: var(--ppp-space-2);
   }
   .ppp-schema-row {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: var(--ppp-space-md, 0.75rem);
-    padding: var(--ppp-space-sm, 0.375rem) var(--ppp-space-md, 0.75rem);
+    gap: var(--ppp-space-5);
+    padding: var(--ppp-space-3) var(--ppp-space-5);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-secondary);
@@ -307,7 +307,7 @@
   }
   .ppp-schema-actions {
     display: inline-flex;
-    gap: var(--ppp-space-xs, 0.25rem);
+    gap: var(--ppp-space-2);
   }
   @media (max-width: 30rem) {
     .ppp-schema-row {

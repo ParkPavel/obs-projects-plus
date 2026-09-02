@@ -15,7 +15,12 @@ import { writable, derived } from "svelte/store";
  * ✅ Правильные breakpoints для планшетов
  */
 
-/** Breakpoints в пикселях (синхронизованы с design-tokens.css) */
+/**
+ * Breakpoints в пикселях. Раньше комментарий обещал синхронизацию с
+ * `design-tokens.css` — файл был мёртвым кодом и удалён в #165, так что
+ * синхронизировать было не с чем. Эти значения ни с чем не связаны: они
+ * читаются из JS для media-запросов, CSS-токен на них не смотрит.
+ */
 export const BREAKPOINTS = {
 	xs: 480,  // 30rem - phone
 	sm: 768,  // 48rem - tablet portrait

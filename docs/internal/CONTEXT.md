@@ -1,7 +1,9 @@
 # Current project context
 
-> **Updated:** 2026-08-31 (pre-release audit follow-ups #176, #177, #174 closed, merged and pushed;
-> session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
+> **Updated:** 2026-09-02 (#165 mechanism measured in headless Chrome, revert condition gone,
+> awaiting adversarial review + merge; #181 in progress on `fix/181-ratchet-worktree-exclusion`.
+> Earlier 2026-09-01: #165 implemented, #181 filed. Earlier: pre-release audit follow-ups #176, #177, #174 closed,
+> merged and pushed; session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
 
@@ -12,6 +14,44 @@ Relation-first vertical slice in `BACKLOG.md` and must map to a scene in the Pro
 The old W2–W5 sequence is historical; it does not select the next product ticket.
 
 ## Working tree and release state
+
+- **#165 is implemented and NOT merged (2026-09-01).** `feat/165-token-consolidation`, tip
+  `e3f949c`: the ADR (`ADR_TOKENS_MATRYOSHKA_2026-09-01.md`), four implementation commits, and one
+  ratchet-strengthening commit from the Codex audit. On the branch the four gates are green and the
+  baseline **rises to 180 suites / 2506 tests** — `main`'s canonical baseline below is unchanged
+  until this merges. The token system is one file: `designTokens.ts`, `dashboardTokens.css` and the
+  dead `design-tokens.css` are gone, and the live run confirms `getDesignTokenCSS` is absent from
+  the shipped bundle.
+  **Why it was held, and what settled it (2026-09-02):** step 4 deliberately changes rendering (a
+  chart's label size and padding now follow its widget's width), and whether the mechanism works at
+  all was unmeasured — jsdom has no container queries and the browser extension never connected.
+  The probe then ran in **headless Chrome** instead: `docs/internal/probes/165-cqi-in-custom-property.html`
+  carries the shipped declarations and the same container/consumer structure, and computed
+  font-size came out 16px in a 200px container against 18.4px in an 800px one, identical to the
+  formula written inline. So `cqi` inside an inherited custom property resolves at the use site;
+  `9e870e4` has no revert condition left. Obsidian here is Electron 34.3 / Chromium 132, which has
+  container units, but that is a version argument — no computed style was read inside Obsidian.
+  The probe also showed the failure mode fails *large*: a level-2 consumer with no query container
+  above it lands on the clamp ceiling. Details and the remaining judgement about appearance in
+  `UNTESTABLE_FEATURES_2026-09-01.md` §"Resolved 2026-09-02".
+  **The adversarial review then returned BLOCK on two true findings** (`codex-reports/CX-ADV-165.md`):
+  the SVG charts' labels are presentation attributes in viewBox units and never receive the
+  wrapper's font-size — the pilot reaches `NumberChart` and the banners, so the claim was corrected
+  and the labels handed to #166 — and R0.13 could not see a scale rebuilt through `setProperty`,
+  now closed by rule with a planted-file proof. Both fixed on the branch before merge.
+  **Two findings came out of the work rather than the ticket.** `--ppp-radius-*` was declared twice
+  at values shifted one step (`:root` vs the canvas injection), so `--ppp-radius-md` meant two
+  different sizes and no file appeared to conflict — held behind a scoped shim, the scale itself
+  left to a follow-up. And R0.13 as first written inventoried only `.css` files, so the exact
+  mechanism it exists to prevent — a scale assembled in a TypeScript string — would have passed it;
+  Codex caught that, and it is now closed by rule rather than by instance.
+- **#181 — the working-stack ratchets do not survive their own worktree.** R0.7, R0.10 and R0.11
+  walk `.claude/` with no exclusions, and `isolation: worktree` puts a full repository copy at
+  `.claude/worktrees/`. After the `implementer` run three suites went red on 156 findings that were
+  all the copy's own CHANGELOG. Inside the worktree the same suites *skip* — no `.claude/` there —
+  so the main tree sees false failures and the agent false silence. Filed P1/XS; until it lands,
+  remove a finished worktree before running the gates, and unlink the `node_modules` junction first
+  (`git worktree remove --force` follows it and empties the real one).
 
 - **The push gate was removed on 2026-08-30 at the user's decision.** `check-push-branch.ps1` is
   deregistered from `.claude/settings.json` and no longer fires, so pushing `main` is an ordinary
