@@ -370,8 +370,21 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
+- **#166 step 3 implemented on `feat/166-step3-minimums`** (`1ac1f96`, `f81a7d5`), awaiting merge:
+  `gridTemplate` gained one trailing `1fr` filler and the fixed column tracks provably do not move
+  (`272 176 176` at both 800px and 300px in `probes/166-minimums.html`); `TableHeader` stopped
+  appending an action track of its own, so all three grid consumers resolve the identical string
+  for the first time, with the `[+]` still 0px after the last column; the unqueried `db-table`
+  container is gone and R0.13's tree-reading witness moved to `.ppp-widget-config`. The filter
+  popover keeps its literal `22rem` — the desktop popup is portaled, where `min(22rem, 100cqi)`
+  measures the same 352px. **All three steps are implemented and none is accepted: every sizing
+  claim is headless Chrome, not Obsidian.** The mobile half of that popover is a real pre-existing
+  overflow, now filed as **#182**. Reviews: `codex-reports/CX-AUDIT-166-step3.md`,
+  `CX-ADV-166-step3.md`.
 - **Canonical baseline — `main`: 183 suites / 2544 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (112 pre-existing tsdoc warnings).** Measured 2026-09-02 on `feat/166-step2` after
+  lint 0 errors (112 pre-existing tsdoc warnings).** `feat/166-step3-minimums` stands at
+  **183 / 2549** (+5: the filler, the three consumer-source checks and the template-writer check).
+  Measured 2026-09-02 on `feat/166-step2` after
   its review fixes (`chartWidth` suite +1, +18 tests over the #178 merge, which kept 182/2526); Measured 2026-09-02 on `feat/166-step1` (R0.13 +5 tests) after `fix/179`
   (`5a99f8e`, R0.14 +1 suite / +5 tests); earlier the same day
   #165 (R0.13, +1 suite) and #181 (`configScanBoundary`, +1 suite) merged; before them

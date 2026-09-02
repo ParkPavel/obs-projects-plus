@@ -344,6 +344,94 @@ Files:
 Contract: `min()` can only shrink a minimum, never grow it — a widget wider than 22rem sees no
 change; a narrower one stops overflowing. Checked in the vault at two widget widths.
 
+### Measured 2026-09-02 — Step 3 implemented, `feat/166-step3-minimums` (`1ac1f96`, `f81a7d5`)
+
+Probe `docs/internal/probes/166-minimums.html`, headless Chrome, `--window-size=1400,900`, root
+font-size **16px** (read, not assumed). Two things are measured separately because the step asks
+two different questions.
+
+**A. What a container-relative minimum resolves to.** A block `div` fills its parent whatever its
+`min-width` is, so the used width hides the resolved minimum; the probe therefore also measures a
+`width: fit-content` element, whose used width *is* the minimum. Both are recorded, because the
+overflow column is the user-visible half and the resolved column is the decision-relevant half.
+
+| ancestor | `min(22rem, 100cqi)` resolved | block used width | overflows parent |
+|---|---|---|---|
+| 16rem query container | **256px** (= 16rem) | 256px | no |
+| 40rem query container | **352px** (= 22rem) | 640px | no |
+| **no container ancestor** | **352px** (= 22rem) | 640px | no |
+| literal `22rem` in a 16rem container | 352px | 352px | **yes** |
+
+The last two rows settle the popover. `100cqi` with no container ancestor falls back to the small
+viewport (1384px here), so `min(22rem, 100cqi)` resolves to exactly the literal 352px: on the
+portaled desktop popup the "fix" is a **provable no-op**, not a conservative choice. And the third
+row against the fourth is the mechanism the ticket is about — the same rule shrinks to 256px when
+something above it is a container and stops overflowing.
+
+**Portal determination (the step's precondition), and it has two answers, not one.**
+`FloatingPopup` branches on `$isMobile`. The **desktop** branch (`:285-289`) carries `use:portal`
+→ `document.body.appendChild(node)` (`:255-256`): portaled, no container ancestor, window-anchored
+side of the boundary → value left literal, reason written next to the rule. The **mobile** branch
+(`:265-283`) is a bottom sheet rendered **in place**, so it *does* sit under `.ppp-widget-host`,
+and there `min-width: 22rem` can overflow a narrow widget's sheet. The step's precondition was
+written expecting one answer; the honest answer is that the component straddles the boundary.
+
+Left as-is deliberately, and filed as **#182** rather than fixed here. The reasons are that the
+mobile overflow is *pre-existing* — the #112 portal fix was desktop-only, and #166 neither caused
+nor worsened it — and that `100cqi` would not actually close it: `cqi` measures
+`.ppp-widget-host`'s content box, while the space available inside the sheet is that width minus
+the sheet's own `0.5rem` padding, so the minimum would still exceed the box by ~1rem. A correct
+fix is `min(22rem, 100%)` or a containing-block fix in `FloatingPopup` itself, and either belongs
+with a mobile render to check it against, not bundled into a step whose acceptance is a desktop
+vault run. Found independently by `CX-ADV-166-step3` at P1; recorded, not silently carried.
+
+**B. The filler track.** Tracks `17rem 11rem 11rem` (the `buildColumns` defaults for a primary
+String, a Select and a Number) inside `.ppp-t2-scroll` / `.ppp-t2-table { min-width: max-content }`.
+Computed `grid-template-columns`:
+
+| container | header (after) | row (after) | row (before #166) |
+|---|---|---|---|
+| 800px | `272px 176px 176px **176px**` | `272px 176px 176px **176px**` | `272px 176px 176px` |
+| 300px | `272px 176px 176px **32px**` | `272px 176px 176px **32px**` | `272px 176px 176px` |
+
+The fixed tracks read `272 176 176` in every cell of that table — the filler absorbs slack at
+800px and is squeezed at 300px, and **no column track moves either way**. That is the #083
+guarantee, measured rather than argued. At 300px the grid box is 656px and overflows into the
+scroll container exactly as before; the filler floors at 32px rather than 0 because the header's
+`[+]` lives in it and an `fr` track's base size is its content.
+
+**The `[+]` button, at both widths:** width 32px (2rem), gap after the last column **0px**. At
+800px there are 144px of slack *behind* it. So it stays welded to the last column header and the
+slack opens up to its right — Notion's placement, unchanged from before the step.
+
+**One design decision the plan did not anticipate, and why.** `TableHeader.svelte:109` read
+`var(--ppp-dt-columns) 2rem` — it appended an action track of its own, so the "one shared template"
+was already a half-truth and appending the filler inside `gridTemplate` would have pushed `[+]`
+to the far right edge of a wide table. Instead the header now reads plain
+`var(--ppp-dt-columns)` and the `[+]` sits in the filler track at `width: 2rem`; `justify-self`'s
+`stretch` leaves a definite-width item alone, so it renders at the track's start. All three
+consumers now resolve the identical string for the first time, and a new source-reading test in
+`tableCanon.test.ts` fails if any of them appends a track again.
+
+**Gates, run in the foreground on `f81a7d5`:** build 0 errors (the single a11y warning is
+pre-existing, from `node_modules/obsidian-svelte`); jest **183 suites / 2549 tests**, baseline
+183/2544 **+5**; lint 0 errors / 109 warnings (pre-existing tsdoc); svelte-check 0/0.
+
+**R0.6 shaped the implementation and is worth recording.** `TableHeader.svelte` sat at 199/200 and
+`tableCanon.ts` at 254/260, so the ceilings — which may only be lowered — left one line and five.
+The `[+]` rule was rewritten `display: grid; place-items: center` (2 lines for 3) to pay for
+`width: 2rem`, and the header's own docstring line was rewritten in place rather than added to.
+The consequence is honest and stated here rather than hidden: `TableHeader.svelte` carries **no
+comment** explaining the filler-track arrangement, because there is no line to put one on; the
+reasoning lives in `gridTemplate`'s docstring, in the test, and here. Same situation the Step 1
+dialog hoist hit with `DashboardCanvas.svelte`.
+
+**Still open, and said so:** the vault run. Every number above is headless Chrome on a
+reconstruction of the rules, not Obsidian rendering a real table — jsdom cannot see any of it and
+`npm test` is not evidence for a sizing claim (RISKS 1). Unverified until a real run: the `[+]`
+button's appearance and hit target after the `flex`→`grid` centring change, the filler under a
+grouped table and under the footer aggregation row, and column resize-drag with the filler present.
+
 # STORED DATA
 
 **None is migrated, and none is reinterpreted, in any of the three steps.**
