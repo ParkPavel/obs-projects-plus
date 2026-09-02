@@ -25,7 +25,20 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const SRC_ROOT = path.resolve(__dirname, "..");
+/**
+ * `stripComments` matters here for a reason specific to this file:
+ * `RULE_BLOCK`'s selector group is "everything since the last brace", so a
+ * comment standing above a rule is captured as part of its selector. Every
+ * documented rule in this tree has one, which silently made those selectors
+ * unmatchable — the shape of a ratchet that passes by matching nothing, which
+ * is the failure R0.4 records and this file was built to avoid.
+ *
+ * The three helpers moved to `support/cssScan.ts` when R0.16 (#167) needed the
+ * same reading of "the CSS of this component"; two definitions of that would
+ * have let the two ratchets disagree about what they guard.
+ */
+import { SRC_ROOT, collectStyled, stripCssComments as stripComments } from "./support/cssScan";
+
 const ENTRY_POINT = path.join(SRC_ROOT, "main.ts");
 
 /**
@@ -113,19 +126,6 @@ const CQ_UNIT = /\b\d*\.?\d+cq(?:i|b|w|h|min|max)\b/;
 
 /** `selector { body }` pairs. Good enough for component style blocks; no nesting in this tree. */
 const RULE_BLOCK = /([^{}]+)\{([^{}]*)\}/g;
-
-/**
- * CSS text with comments removed and whitespace collapsed inside selectors.
- *
- * `RULE_BLOCK`'s selector group is "everything since the last brace", so a
- * comment standing above a rule is captured as part of its selector. Every
- * documented rule in this tree has one, which silently made those selectors
- * unmatchable — the shape of a ratchet that passes by matching nothing, which
- * is the failure R0.4 records and this file was built to avoid.
- */
-function stripComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, " ");
-}
 
 /** A selector as written, with runs of whitespace collapsed to one space. */
 function normalizeSelector(selector: string): string {
@@ -231,26 +231,6 @@ function cqScaleDeclarationSites(css: string): { selector: string; name: string;
 function isContainerRootSelector(selector: string, roots: readonly string[]): boolean {
   const parts = selector.split(",").map((p) => p.trim()).filter((p) => p !== "");
   return parts.length > 0 && parts.every((p) => roots.includes(p));
-}
-
-/** Every `<style>` block's contents, concatenated. */
-function svelteStyles(content: string): string {
-  return [...content.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1] ?? "").join("\n");
-}
-
-function collectStyled(dir: string, out: { file: string; css: string }[] = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "__tests__" || entry.name === "__mocks__") continue;
-      collectStyled(full, out);
-    } else if (entry.name.endsWith(".svelte")) {
-      out.push({ file: path.relative(SRC_ROOT, full).replace(/\\/g, "/"), css: svelteStyles(content(full)) });
-    } else if (entry.name.endsWith(".css")) {
-      out.push({ file: path.relative(SRC_ROOT, full).replace(/\\/g, "/"), css: content(full) });
-    }
-  }
-  return out;
 }
 
 /**
