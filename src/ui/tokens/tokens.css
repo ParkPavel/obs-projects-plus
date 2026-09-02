@@ -340,14 +340,41 @@
      that legitimately do not belong to a container — modals, and
      popups portaled to `<body>`.
 
-     These are level 2. They are declared at `:root` so the NAMES
-     exist everywhere, but their VALUES resolve per use site: an
+     These are level 2. Their VALUES resolve per use site: an
      unregistered custom property is substituted as an unresolved
      token stream, so `cqi` is evaluated against the using element's
-     nearest ancestor query container, not against `:root`. Where no
-     ancestor declares `container-type`, `cqi` falls back to the small
-     viewport — the value degrades to viewport-derived, it never
-     becomes invalid.
+     nearest ancestor query container, not against the element that
+     declared the property.
+
+     THE DECLARATION IS SPLIT IN TWO, and #166 split it (see
+     `docs/internal/ADR_MATRYOSHKA_SIZING_2026-09-02.md` Q4):
+
+       - here at `:root`, every level-2 name is declared CQI-FREE, at
+         the clamp FLOOR. This is what a consumer with no query
+         container ancestor gets, and the floor is by construction
+         what that consumer renders today.
+       - the `cqi` form is declared ONLY in the container-roots rule
+         at the end of this file, whose selector list is exactly the
+         elements that declare `container-type`. Custom properties
+         inherit, this stylesheet is global (`src/main.ts:11`) and
+         `.ppp-*` class names survive Svelte scoping, so every
+         descendant of a container gets the container form and
+         everyone else keeps the floor.
+
+     WHY THE FALLBACK DIRECTION CHANGED. #165 declared the `cqi` form
+     at `:root` and reasoned that a consumer with no container would
+     "degrade to viewport-derived". The probes measured what that
+     actually means: with no container ancestor `cqi` resolves against
+     the SMALL VIEWPORT, which on any real window is large, so the
+     clamp lands on its CEILING — the text jumps a full step up,
+     silently, in exactly the place where the principle does not
+     apply. The split inverts that: no container now means the floor,
+     which is today's render. Same silence, opposite and harmless
+     direction — and unlike a convention it is statically checkable,
+     which is the `CONTAINER_ROOTS` rule in
+     `src/__tests__/R0_13_tokenSourceIntegrity.test.ts`. Measured both
+     ways: `docs/internal/probes/165-cqi-in-custom-property.html` and
+     `docs/internal/probes/166-no-container-fallback.html`.
 
      Two mechanisms, deliberately different:
 
@@ -374,9 +401,10 @@
      which is the failure this ticket exists to fix; #166 adds rungs
      as it converts rules that need them. ═══════════════════════ */
 
-  /* Growth-only: floors at the element's inherited size, whatever the
-     host's root font is, so no conversion can shrink existing text. */
-  --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em);
+  /* Level-1 fallback: the clamp floor, with no `cqi` in it. A consumer
+     that is not inside a declared container renders exactly as it does
+     today. The growing form lives in the container-roots rule below. */
+  --ppp-local-text-sm: 1em;
 
   /* Follows the font-size above, so it is container-derived through it. */
   --ppp-local-pad-sm: 0.375em;
@@ -431,6 +459,34 @@
   --ppp-radius-md: 0.375rem;
   --ppp-radius-lg: 0.5rem;
   --ppp-radius-xl: 0.75rem;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONTAINER ROOTS — where the level-2 scale acquires its `cqi` (#166)
+   ───────────────────────────────────────────────────────────
+   Every selector below declares `container-type: inline-size` in its
+   own component, and this list is mirrored as `CONTAINER_ROOTS` in
+   `src/__tests__/R0_13_tokenSourceIntegrity.test.ts`, which asserts
+   both directions: no owned `--ppp-local-*` name may carry a `cq`
+   unit outside this rule, and every selector named here must declare
+   `container-type` somewhere in `src/`.
+
+   These declarations size NOTHING on the root itself — a container is
+   not its own query container, so `cqi` here would measure the root's
+   own ancestor. They are values handed DOWN, resolved at each
+   descendant's use site against the nearest of these roots.
+
+   `.ppp-dt-content` (`DatabaseCall/DataTableContent.svelte:255`) also
+   declares `container-type` and is deliberately NOT in this list: it
+   is a container nobody queries, and the ADR's Step 3 default is to
+   delete that declaration. Adding it here would give a dead container
+   a live consumer and make the deletion harder.
+   ═══════════════════════════════════════════════════════════ */
+
+.ppp-widget-host,
+.ppp-database-root,
+.ppp-database-canvas {
+  --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em);
 }
 
 /* ═══════════════════════════════════════════════════════════

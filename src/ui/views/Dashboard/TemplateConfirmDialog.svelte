@@ -47,6 +47,10 @@
 {/if}
 
 <style>
+  /* `position: fixed` under a `container-type` ancestor is positioned against that ancestor,
+     not the viewport. DashboardCanvas therefore renders this dialog OUTSIDE `.ppp-database-root`
+     (a container since #166) so the scrim keeps covering ViewContent's box — the visible area —
+     instead of the whole scrollable dashboard, where the centring would land below the fold. */
   .ppp-template-confirm-overlay {
     position: fixed;
     inset: 0;

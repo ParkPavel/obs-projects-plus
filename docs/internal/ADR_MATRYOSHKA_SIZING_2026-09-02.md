@@ -181,6 +181,27 @@ at `:root` → R0.13 fails naming `:root`; move it under `.ppp-widget-host` → 
 Observable: the probe's third cell changes value between `main` and the branch; the vault shows
 no visible change.
 
+### Measured 2026-09-02 — Step 1 implemented, `feat/166-step1-container-roots`
+
+Both probes run back to back in the same headless Chrome (HeadlessChrome/151, `--window-size=1400,900`),
+so the delta is measured rather than recalled. Consumer is `.chart { font-size:
+var(--ppp-local-text-sm) }`, root font-size 16px, exactly the pilot's rule.
+
+| Cell | `165-cqi-in-custom-property.html` (`:root` carries the cqi form) | `166-no-container-fallback.html` (split) |
+|---|---|---|
+| inside a 200px container | 16px | **16px** |
+| inside an 800px container | 18.4px | **18.4px** |
+| **no container ancestor** | **20px** — the clamp ceiling | **16px** — the clamp floor |
+
+So the two container cells are byte-identical and the pilot keeps its computed value, which is the
+"nothing moves" half of the contract; the no-container cell drops from the ceiling to the floor,
+which is the whole point of the step. `CSS.supports("width","1cqi")` is `true` in both runs, so
+neither number is an unsupported-unit artefact.
+
+Contract note, recorded rather than fixed: Step 1 makes `.ppp-database-root` a containing block for
+`position: fixed` descendants, and `TemplateConfirmDialog`'s overlay is one. See RISKS 4 below —
+that risk is no longer hypothetical.
+
 ## Step 2 — The chart takes its width from the container
 **Size M. Implementer, with the probe written first. Waits on USER DECISION 2.**
 
@@ -267,6 +288,30 @@ step.
    fixed descendants. Any popup rendered inside the dashboard root that is *not* portaled will
    start positioning against the canvas. Grep for `position: fixed` under the dashboard subtree
    during Step 1 review.
+
+   **Grep run 2026-09-02. One hit, and it is affected.**
+   `src/ui/views/Dashboard/TemplateConfirmDialog.svelte:51` — `.ppp-template-confirm-overlay
+   { position: fixed; inset: 0; … }`, a centred modal scrim. It is rendered at
+   `DashboardCanvas.svelte:163`, i.e. **inside** `.ppp-database-root`, and it is **not** portaled
+   (`FloatingPopup` is the only thing in this tree that portals).
+
+   Its containing block was already not the viewport: `ViewContent.svelte:16` has declared
+   `container-type: inline-size` since before #166, so today `inset: 0` resolves against
+   ViewContent's padding box — the visible, scrolled-to area, because ViewContent is the
+   `overflow: auto` box. After Step 1 the nearest such ancestor becomes `.ppp-database-root`,
+   whose height is `min-height: 100%` plus content, i.e. the **whole scrollable dashboard**. On a
+   dashboard taller than the viewport the scrim then covers the full content height and
+   `align-items: center` centres the dialog in that content box rather than on screen — it can
+   land below the fold.
+
+   **Resolved the same day, before merge, by hoisting.** The dialog is now rendered as a sibling of
+   `.ppp-database-root`, directly under `ViewContent` (`DashboardCanvas.svelte`, last child of the
+   view), so its containing block is ViewContent again — byte-for-byte the pre-Step-1 geometry.
+   Hoisting beat portaling because the dialog reads only Obsidian variables (`--radius-m`,
+   `--layer-popover`), so leaving the root's cascade costs nothing, while a `<body>` portal would
+   have changed the scrim from view-sized to window-sized — a move, not a no-op. The reason is
+   written next to the `position: fixed` rule in `TemplateConfirmDialog.svelte`; it could not go
+   into `DashboardCanvas.svelte`, which sits exactly at its R0.6 ceiling.
 5. **Cascade priority against user CSS snippets.** #165 already recorded this for the radius
    shim; moving level-2 declarations from `:root` to class selectors raises their specificity, so
    a user snippet that overrode `:root` may stop winning. Conditional, not a regress — record it,

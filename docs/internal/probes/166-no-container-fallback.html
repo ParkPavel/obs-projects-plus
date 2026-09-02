@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>no-container fallback probe (#166)</title>
+<style>
+  /* ── Verbatim from src/ui/tokens/tokens.css on feat/166-step1-container-roots ──
+     The split #166 introduces: the NAME at :root carries the cqi-free floor,
+     the cqi form is declared only on the container roots. */
+  :root {
+    --ppp-local-text-sm: 1em;
+    --ppp-local-pad-sm: 0.375em;
+    font-size: 16px;
+  }
+  .ppp-widget-host,
+  .ppp-database-root,
+  .ppp-database-canvas {
+    --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em);
+  }
+  /* ── end verbatim ── */
+
+  body { margin: 1rem; font-family: system-ui, sans-serif; }
+  .row { display: flex; gap: 1rem; align-items: flex-start; }
+  /* Mirrors WidgetShell.svelte:164-165 — the widget is the query container. The
+     class is what the tokens.css rule keys on, the container-type is what makes
+     cqi resolvable; both have to be present for the mechanism to run. */
+  .ppp-widget-host { container-type: inline-size; container-name: widget; border: 1px solid #888; }
+  .narrow { width: 200px; }
+  .wide { width: 800px; }
+  /* Mirrors ChartWidget.svelte:223-227 — the pilot consumer. */
+  .chart { font-size: var(--ppp-local-text-sm); padding: var(--ppp-local-pad-sm); }
+  /* No container ancestor at all, and no container-root class either: this is the
+     cell the whole ticket is about. Under #165 it read 20px (the clamp CEILING,
+     because cqi with no container ancestor resolves against the small viewport).
+     Under #166 it must read 16px — the floor, i.e. today's render. */
+  .nocontainer { border: 1px dashed #888; width: 800px; }
+  pre { background: #eee; padding: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>Probe: with no container ancestor, does the level-2 scale fall to the FLOOR?</h1>
+<div class="row">
+  <div class="ppp-widget-host narrow"><div class="chart" id="var-narrow">var, narrow (200px)</div></div>
+  <div class="ppp-widget-host wide"><div class="chart" id="var-wide">var, wide (800px)</div></div>
+</div>
+<div class="nocontainer" style="margin-top:1rem"><div class="chart" id="var-nocontainer">var, no container ancestor (800px)</div></div>
+<pre id="out"></pre>
+<script>
+  const ids = ["var-narrow", "var-wide", "var-nocontainer"];
+  const r = {};
+  for (const id of ids) {
+    const cs = getComputedStyle(document.getElementById(id));
+    r[id] = { fontSize: cs.fontSize, padding: cs.paddingTop };
+  }
+  r.supportsContainerUnits = CSS.supports("width", "1cqi");
+  r.ua = navigator.userAgent;
+  // narrow: 0.6cqi of 200px = 1.2px; 0.85em = 13.6px → 14.8px, below the 16px floor → 16px.
+  // wide:   0.6cqi of 800px = 4.8px; 0.85em = 13.6px → 18.4px, below the 20px ceiling → 18.4px.
+  // none:   the :root declaration wins — 1em, no cqi in it at all → 16px.
+  //         The #165 probe read 20px here.
+  r.expected = { narrow: "16px", wide: "18.4px", nocontainer: "16px (was 20px under #165)" };
+  document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+  console.log("[166-probe]", JSON.stringify(r));
+</script>
+</body>
+</html>

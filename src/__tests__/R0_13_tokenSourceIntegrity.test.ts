@@ -115,14 +115,65 @@ const CQ_UNIT = /\b\d*\.?\d+cq(?:i|b|w|h|min|max)\b/;
 const RULE_BLOCK = /([^{}]+)\{([^{}]*)\}/g;
 
 /**
+ * CSS text with comments removed and whitespace collapsed inside selectors.
+ *
+ * `RULE_BLOCK`'s selector group is "everything since the last brace", so a
+ * comment standing above a rule is captured as part of its selector. Every
+ * documented rule in this tree has one, which silently made those selectors
+ * unmatchable — the shape of a ratchet that passes by matching nothing, which
+ * is the failure R0.4 records and this file was built to avoid.
+ */
+function stripComments(css: string): string {
+  return css.replace(/\/\*[\s\S]*?\*\//g, " ");
+}
+
+/** A selector as written, with runs of whitespace collapsed to one space. */
+function normalizeSelector(selector: string): string {
+  return selector.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * The selectors allowed to carry the `cqi` form of the level-2 scale (#166,
+ * ADR_MATRYOSHKA_SIZING_2026-09-02 Q4). Each one declares `container-type`
+ * in its own component; the rule below asserts that in both directions, so
+ * this list cannot drift from the tree in either direction.
+ *
+ * `.ppp-dt-content` declares `container-type` and is deliberately absent: it
+ * is a container nothing queries, and the ADR's Step 3 default is to delete
+ * the declaration rather than give it a consumer. Absence from this list is
+ * allowed; presence without a `container-type` in the tree is not.
+ */
+const CONTAINER_ROOTS = [
+  ".ppp-widget-host",
+  ".ppp-database-root",
+  ".ppp-database-canvas",
+] as const;
+
+/**
+ * A declaration body with its custom-property declarations removed, leaving
+ * only what actually sizes the element.
+ *
+ * A `cq` unit inside `--ppp-local-*: …` is a value handed DOWN: custom
+ * properties are substituted at the use site, so it measures each
+ * descendant's nearest container, not this element's own ancestor. A `cq`
+ * unit in `padding`/`width`/`font-size` on a container's own rule is the
+ * self-query trap. Without this split the #166 container-roots rule would
+ * read as an offender the moment the token and the `container-type` shared
+ * a file, and the honest fix would look like weakening the rule.
+ */
+function sizingDeclarations(body: string): string {
+  return body.replace(/(^|;)\s*--[a-zA-Z0-9_-]+\s*:[^;]*/g, "$1");
+}
+
+/**
  * Selectors that both declare `container-type` and size themselves in `cq`
  * units — the self-query trap. Reported as the offending selector text.
  */
 function selfQueryOffenders(css: string): string[] {
   const containerSelectors = new Set<string>();
   const bodies = new Map<string, string[]>();
-  for (const match of css.matchAll(RULE_BLOCK)) {
-    const selector = (match[1] ?? "").trim();
+  for (const match of stripComments(css).matchAll(RULE_BLOCK)) {
+    const selector = normalizeSelector(match[1] ?? "");
     const body = match[2] ?? "";
     if (selector === "" || selector.startsWith("@")) continue;
     if (/\bcontainer-type\s*:/.test(body) || /\bcontainer\s*:/.test(body)) {
@@ -135,10 +186,51 @@ function selfQueryOffenders(css: string): string[] {
   const offenders: string[] = [];
   for (const selector of containerSelectors) {
     for (const body of bodies.get(selector) ?? []) {
-      if (CQ_UNIT.test(body)) offenders.push(selector);
+      if (CQ_UNIT.test(sizingDeclarations(body))) offenders.push(selector);
     }
   }
   return offenders;
+}
+
+/** Individual (comma-split) selectors of every rule declaring `container-type`. */
+function containerTypeSelectors(css: string): string[] {
+  const out: string[] = [];
+  for (const match of stripComments(css).matchAll(RULE_BLOCK)) {
+    const selector = normalizeSelector(match[1] ?? "");
+    const body = match[2] ?? "";
+    if (selector === "" || selector.startsWith("@")) continue;
+    if (!/\bcontainer-type\s*:/.test(body) && !/\bcontainer\s*:/.test(body)) continue;
+    for (const part of selector.split(",")) {
+      const trimmed = part.trim();
+      if (trimmed !== "") out.push(trimmed);
+    }
+  }
+  return out;
+}
+
+/**
+ * Every site where a `--ppp-local-*` name is declared with a `cq` unit in its
+ * value, as `selector → name`. The selector is reported verbatim so a failure
+ * names the place to look.
+ */
+function cqScaleDeclarationSites(css: string): { selector: string; name: string; value: string }[] {
+  const sites: { selector: string; name: string; value: string }[] = [];
+  for (const match of stripComments(css).matchAll(RULE_BLOCK)) {
+    const selector = normalizeSelector(match[1] ?? "");
+    const body = match[2] ?? "";
+    if (selector === "" || selector.startsWith("@")) continue;
+    for (const decl of body.matchAll(/(--ppp-local-[a-zA-Z0-9_-]*)\s*:\s*([^;]+)/g)) {
+      const value = (decl[2] as string).trim();
+      if (CQ_UNIT.test(value)) sites.push({ selector, name: decl[1] as string, value });
+    }
+  }
+  return sites;
+}
+
+/** Whether every comma-separated part of `selector` is a declared container root. */
+function isContainerRootSelector(selector: string, roots: readonly string[]): boolean {
+  const parts = selector.split(",").map((p) => p.trim()).filter((p) => p !== "");
+  return parts.length > 0 && parts.every((p) => roots.includes(p));
 }
 
 /** Every `<style>` block's contents, concatenated. */
@@ -267,6 +359,90 @@ describe("R0.13 token source integrity (#165)", () => {
     expect(selfQueryOffenders(safe)).toEqual([]);
     // Split across rules for the same selector — still the same element.
     expect(selfQueryOffenders(".w { container-type: inline-size; } .w { gap: 1cqi; }")).toEqual([".w"]);
+    // #166: a `cq` unit inside a custom property is handed DOWN and resolves at
+    // each descendant's use site. That is the container-roots mechanism, not the
+    // trap, and the rule has to tell them apart rather than be relaxed.
+    expect(
+      selfQueryOffenders(".w { container-type: inline-size; --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em); }")
+    ).toEqual([]);
+    // …and it must still catch real sizing standing next to one.
+    expect(selfQueryOffenders(".w { container-type: inline-size; --ppp-local-text-sm: 1cqi; padding: 2cqi; }")).toEqual([
+      ".w",
+    ]);
+  });
+
+  it("the cqi form of the scale is declared only in container-root rules", () => {
+    // #166 Q4. The hazard #165 measured and could not check: a level-2 token
+    // declared at `:root` resolves `cqi` against the small viewport wherever no
+    // container ancestor exists, landing on the clamp CEILING — a silent size
+    // jump exactly where the principle does not apply. Confining the `cqi` form
+    // to container roots makes the no-container case the clamp FLOOR, which is
+    // today's render, and makes the whole thing statically checkable.
+    const offenders = collectStyled(SRC_ROOT)
+      .flatMap(({ file, css }) =>
+        cqScaleDeclarationSites(css)
+          .filter(({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS))
+          .map(({ selector, name }) => `${file} → ${selector} → ${name}`)
+      );
+    expect(offenders).toEqual([]);
+    // A vacuous pass would otherwise be indistinguishable: the mechanism has to
+    // exist somewhere, or there is nothing being confined.
+    const sites = collectStyled(SRC_ROOT).flatMap(({ css }) => cqScaleDeclarationSites(css));
+    expect(sites.length).toBeGreaterThan(0);
+  });
+
+  it("fails when the cqi form is planted at :root on the real tree", () => {
+    // Tree-based regression proof, run against the shipped stylesheet text with
+    // the #165 form appended, so it proves the rule on the file it guards
+    // without breaking the file.
+    const tokens = content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"));
+    const planted = `${tokens}\n:root { --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em); }\n`;
+    const offenders = cqScaleDeclarationSites(planted)
+      .filter(({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS))
+      .map(({ selector }) => selector);
+    expect(offenders).toEqual([":root"]);
+    // The same declaration moved under a container root is clean.
+    const moved = `${tokens}\n.ppp-widget-host { --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em); }\n`;
+    expect(
+      cqScaleDeclarationSites(moved).filter(({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS))
+    ).toEqual([]);
+  });
+
+  it("every declared container root is made a container somewhere in src", () => {
+    // The other direction. A root listed here but never given `container-type`
+    // hands the `cqi` form to descendants of a plain box, where it resolves
+    // against whatever ancestor happens to be a container — the nearest-ancestor
+    // re-pointing risk, arriving through the guard itself.
+    const declared = new Set(collectStyled(SRC_ROOT).flatMap(({ css }) => containerTypeSelectors(css)));
+    expect(declared.size).toBeGreaterThan(0);
+    const missing = CONTAINER_ROOTS.filter((root) => !declared.has(root));
+    expect(missing).toEqual([]);
+  });
+
+  it("fails when a declared root is a container nowhere on the real tree", () => {
+    // Planted regression for the direction above, against the real tree.
+    const declared = new Set(collectStyled(SRC_ROOT).flatMap(({ css }) => containerTypeSelectors(css)));
+    const planted = [...CONTAINER_ROOTS, ".ppp-not-a-container"];
+    expect(planted.filter((root) => !declared.has(root))).toEqual([".ppp-not-a-container"]);
+    // And `.ppp-dt-content` is a real container, just deliberately unlisted —
+    // proof the scan reads the tree rather than the list.
+    expect(declared.has(".ppp-dt-content")).toBe(true);
+  });
+
+  it("the :root fallback for the level-2 scale is the clamp floor, with no cq unit", () => {
+    // The contract of the split: no container ancestor must mean TODAY'S render.
+    // If the `:root` value ever drifted away from the clamp's first argument,
+    // the fallback would move something on screen and nothing else would notice.
+    const tokens = content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"));
+    const rootBlock = /:root\s*\{([\s\S]*?)\n\}/.exec(tokens)?.[1] ?? "";
+    expect(rootBlock.length).toBeGreaterThan(1000);
+    const fallback = declaredTokens(rootBlock).get("--ppp-local-text-sm");
+    expect(fallback).toBe("1em");
+    expect(CQ_UNIT.test(fallback ?? "")).toBe(false);
+    const containerForm = cqScaleDeclarationSites(tokens).find((s) => s.name === "--ppp-local-text-sm");
+    expect(containerForm).toBeDefined();
+    const clampFloor = /^clamp\(\s*([^,]+),/.exec(containerForm?.value ?? "")?.[1];
+    expect(clampFloor?.trim()).toBe(fallback);
   });
 
   it("every merged Dashboard key survived the merge at its own value", () => {
