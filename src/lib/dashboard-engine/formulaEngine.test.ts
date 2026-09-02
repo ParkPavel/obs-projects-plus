@@ -169,9 +169,14 @@ describe("formulaEngine — Fields", () => {
     expect(evaluateFormulaValue("a / b", record)).toBeNull();
   });
 
-  test("null field results in 0 (Number(null) = 0)", () => {
+  // FLIPPED by #180a. The old name stated the mechanism as the contract:
+  // "null field results in 0 (Number(null) = 0)". That is the silent zero
+  // SPEC_MATH_SPREADSHEET_2026-09-02 §2.2 removes — an absent field is not a
+  // zero, so |absent| is not 0, it is nothing. `NUMERIC_COERCION_CASES` pins
+  // the coercion itself; this pins what one function does with the result.
+  test("an absent field is not a number, so ABS of it is null", () => {
     const record = makeRecord({ a: null });
-    expect(evaluateFormulaValue("ABS(a)", record)).toBe(0);
+    expect(evaluateFormulaValue("ABS(a)", record)).toBeNull();
   });
 });
 

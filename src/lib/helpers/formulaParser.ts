@@ -11,6 +11,7 @@
  */
 
 import type { DataRecord } from 'src/lib/dataframe/dataframe';
+import { toNumber } from 'src/lib/engine/numeric';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -172,6 +173,12 @@ export function tokenize(formula: string): Token[] {
         i++;
       }
       
+      // coercion-exempt: Class B — lexing source text, not interpreting user
+      // data. The scanner above has already consumed exactly the `[\d.]` run
+      // that makes up this token, so the whole-string question `toNumber` asks
+      // has been answered by the scan itself. This is also what lets the
+      // evaluator route its argument coercion wholesale: a numeric literal is
+      // a JS number before evaluation, so `toNumber` is a no-op on it (#180a).
       tokens.push({ type: 'NUMBER', value: parseFloat(value), start: tokenStart, end: i });
       continue;
     }
@@ -479,16 +486,15 @@ export function evaluateFormula(
       return false;
     }
 
-    // Number ↔ String coercion
+    // Number ↔ String coercion (#180a: one rule — `"12abc" = 12` is false,
+    // and `"" = 0` is false rather than true via `Number("") === 0`).
     if (typeof left === 'number' && typeof right === 'string') {
-      const num = Number(right);
-      if (!isNaN(num)) return left === num;
-      return false;
+      const num = toNumber(right);
+      return num !== null && left === num;
     }
     if (typeof left === 'string' && typeof right === 'number') {
-      const num = Number(left);
-      if (!isNaN(num)) return num === right;
-      return false;
+      const num = toNumber(left);
+      return num !== null && num === right;
     }
 
     // Boolean ↔ String coercion
@@ -524,14 +530,15 @@ export function evaluateFormula(
       return left - right;
     }
 
-    // Number ↔ String coercion
+    // Number ↔ String coercion (#180a). When the string is not a number the
+    // comparison falls through to the string/date branches below, as before.
     if (typeof left === 'number' && typeof right === 'string') {
-      const num = Number(right);
-      if (!isNaN(num)) return left - num;
+      const num = toNumber(right);
+      if (num !== null) return left - num;
     }
     if (typeof left === 'string' && typeof right === 'number') {
-      const num = Number(left);
-      if (!isNaN(num)) return num - right;
+      const num = toNumber(left);
+      if (num !== null) return num - right;
     }
 
     // Date strings
@@ -739,14 +746,17 @@ export function evaluateFormula(
         if (funcName === 'DATE_ADD') {
           if (args.length !== 3) throw new Error('DATE_ADD expects 3 arguments (date, amount, unit)');
           const date = dayjs(evaluate(getArg(args, 0)));
-          const amount = Number(evaluate(getArg(args, 1)));
+          // #180a: `?? NaN` keeps the existing shape — a non-numeric amount
+          // already produced an Invalid Date here. What changes is that `""`
+          // and a missing field no longer count as "add zero days".
+          const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
           const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.add(amount, unit).format('YYYY-MM-DD');
         }
         if (funcName === 'DATE_SUB') {
           if (args.length !== 3) throw new Error('DATE_SUB expects 3 arguments (date, amount, unit)');
           const date = dayjs(evaluate(getArg(args, 0)));
-          const amount = Number(evaluate(getArg(args, 1)));
+          const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
           const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.subtract(amount, unit).format('YYYY-MM-DD');
         }
