@@ -17,6 +17,16 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
+- **#166 Step 1 is DONE and NOT MERGED (2026-09-02).** `feat/166-step1-container-roots` off `main`
+  = `f425812`: `08ede44` (the container rungs + the `:root`/roots split of the level-2 scale),
+  `dbe51c0` (R0.13 `CONTAINER_ROOTS`, +5 tests, both plants proven), `a31423f` (bundles). Four
+  gates green, jest 182/2526. `docs/internal/probes/166-no-container-fallback.html` measures the
+  point of the step: a consumer with no container ancestor reads 16px where the #165 probe read
+  20px, and both in-container cells are unchanged. **Merge is blocked on one decision, not on
+  work:** `TemplateConfirmDialog`'s unportaled `position: fixed` overlay lives inside
+  `.ppp-database-root`, which Step 1 turns into its containing block — recorded in `BACKLOG.md`
+  #166 and under RISKS 4 of `ADR_MATRYOSHKA_SIZING_2026-09-02.md`. Steps 2 and 3 wait on the three
+  user decisions at the end of that ADR.
 - **#165 is MERGED into `main` (2026-09-02, merge `9377a3d`).** `feat/165-token-consolidation`, tip
   `28aa27d`: the ADR (`ADR_TOKENS_MATRYOSHKA_2026-09-01.md`), four implementation commits, and one
   ratchet-strengthening commit from the Codex audit. The four gates were green on the branch
