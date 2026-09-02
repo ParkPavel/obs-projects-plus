@@ -431,20 +431,21 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`: 183 suites / 2549 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (109 pre-existing tsdoc warnings — 112 until #178 deleted three `@since` tags).**
-  `fix/167-rem-in-container-ratchet` stands at **184 / 2559** (+1 suite / +10: R0.16).
-  `feat/166-step3-minimums` stands at
-  **183 / 2549** (+5: the filler, the three consumer-source checks and the template-writer check).
-  Measured 2026-09-02 on `feat/166-step2` after
-  its review fixes (`chartWidth` suite +1, +18 tests over the #178 merge, which kept 182/2526); Measured 2026-09-02 on `feat/166-step1` (R0.13 +5 tests) after `fix/179`
-  (`5a99f8e`, R0.14 +1 suite / +5 tests); earlier the same day
-  #165 (R0.13, +1 suite) and #181 (`configScanBoundary`, +1 suite) merged; before them
-  `main` stood at 179/2491 with 122 warnings. The stack took it from 173/2464 at `64863ed`
-  to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four
-  provenance tests, and R0.8 (stylesheet integrity) added a suite of five. On 2026-08-31 #176
-  re-armed R0.4 (+5 cases in the existing suite) and #177 added R0.9, the commit-hook ratchet
-  (+1 suite, +8). Do not roll back.
+- **Canonical baseline — `main`: 186 suites / 3007 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (109 pre-existing tsdoc warnings).** Measured 2026-09-03 on `main` after #180a
+  merged, and this line is a measurement of `main` — branch figures belong in the branch's own
+  bullet, not here, which is what let this paragraph accumulate three stale ones.
+  The day's arithmetic, so a future reader can check rather than trust: 179/2491 at the start of
+  2026-09-02 → #165 and #181 (+2 suites) → #179 (+1 suite, R0.14) → #166 steps 1-3 (+1 suite,
+  `chartWidth`, and +15 tests across R0.13 and `tableCanon`) → #178 (no test moved: three
+  type-only files, which is why the count holding exactly was the evidence) → #167 (+1 suite,
+  R0.16) → #180a (+2 suites — the coercion contract and R0.15 — and ~440 tests, because the
+  contract table runs case by case against every implementation that used to disagree).
+  The warning count fell 112 → 109 when #178 deleted three `@since` tags tsdoc does not know.
+  Older history: the meta-audit stack took `main` from 173/2464 at `64863ed` to 174/2451 (+36
+  regression tests, −49 with the sub-base model #160 deleted); #164 added four provenance tests,
+  R0.8 added five, #176 re-armed R0.4 (+5 cases) and #177 added R0.9 (+1 suite, +8). Do not roll
+  back.
 - **`manifest.json` must exist in the repo root.** It went missing in the working tree on 2026-08-28
   and `eslint` failed before analysing a single file — the config reads the manifest. Restored;
   the build does not remove it. If lint dies with `ENOENT … manifest.json`, this is why.
