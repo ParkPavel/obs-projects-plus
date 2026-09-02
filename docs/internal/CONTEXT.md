@@ -1,6 +1,8 @@
 # Current project context
 
-> **Updated:** 2026-09-02 (#165 and #181 merged into `main`: the cqi mechanism measured in headless
+> **Updated:** 2026-09-02 (#165, #181 and #179 merged into `main`; #178 and #180 have architect plans
+> (`PLAN_178_…`, `PLAN_180_…`) and WAIT ON USER DECISIONS recorded in `BACKLOG.md` — do not implement
+> before the answers are written there. Earlier the same day: the cqi mechanism measured in headless
 > Chrome, the adversarial review's two findings fixed, the ratchets survive a worktree.
 > Earlier: pre-release audit follow-ups #176, #177, #174 closed, merged and pushed;
 > session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
@@ -331,9 +333,10 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 181 suites / 2516 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (112 pre-existing tsdoc warnings).** Measured 2026-09-02 on the integrated tree
-  after #165 (R0.13, +1 suite) and #181 (`configScanBoundary`, +1 suite) merged; before them
+- **Canonical baseline — `main`: 182 suites / 2521 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (112 pre-existing tsdoc warnings).** Measured 2026-09-02 on `fix/179` before its
+  fast-forward-equivalent merge (`5a99f8e`, R0.14 +1 suite / +5 tests); earlier the same day
+  #165 (R0.13, +1 suite) and #181 (`configScanBoundary`, +1 suite) merged; before them
   `main` stood at 179/2491 with 122 warnings. The stack took it from 173/2464 at `64863ed`
   to 174/2451 (+36 regression tests, −49 with the sub-base model #160 deleted); #164 added four
   provenance tests, and R0.8 (stylesheet integrity) added a suite of five. On 2026-08-31 #176
