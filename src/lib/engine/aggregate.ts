@@ -15,12 +15,23 @@
  * Semantic invariants (do NOT change without bumping aggregate semver):
  *   - `nonNull` filters strictly `undefined`/`null`; empty strings and
  *     `false` ARE counted by `count` (only `count_values` excludes them).
- *   - Numeric coercion (`toNumbers`) accepts JS numbers and parseable
- *     strings; non-numeric values are dropped silently.
+ *   - Numeric coercion is NOT this module's decision. It belongs to
+ *     `engine/numeric.ts`, which is the project's only definition of a
+ *     number (#180a). Until 2026-09-02 this header said coercion "accepts
+ *     JS numbers and parseable strings" — it was documenting the defect as
+ *     the contract, because the private `toNumbers` here used `parseFloat`
+ *     and so read `"12abc"` as 12, `"2026-01-01"` as 2026 and `"1_000"` as
+ *     1. Text is now ignored rather than parsed, as Excel and Sheets both
+ *     specify (SPEC_MATH_SPREADSHEET_2026-09-02 §1).
  *   - All numeric outputs format integers as-is and floats to 2 decimals.
+ *   - The EMPTY-input policy (what `avg`/`min`/`max` return for no numeric
+ *     input, and the string-valued percent operators) is untouched by #180a
+ *     and belongs to #180b. Dropping a `NaN` that used to be kept can make
+ *     that existing policy fire where it previously did not.
  */
 
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
+import { toNumbers } from "src/lib/engine/numeric";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -181,19 +192,6 @@ export function aggregate(
 }
 
 // ── Helpers ─────────────────────────────────────────────
-
-function toNumbers(values: DataValue[]): number[] {
-  const result: number[] = [];
-  for (const v of values) {
-    if (typeof v === "number") {
-      result.push(v);
-    } else if (typeof v === "string") {
-      const n = parseFloat(v);
-      if (!isNaN(n)) result.push(n);
-    }
-  }
-  return result;
-}
 
 function sumNumbers(values: DataValue[]): number {
   return toNumbers(values).reduce((a, b) => a + b, 0);
