@@ -19,6 +19,7 @@
     computeChartSelectionToggle,
     getSelectedChartLabel,
   } from "./chartSelectionDriver";
+  import { CHART_WIDTH_FALLBACK, resolveChartWidth } from "./chartWidth";
 
   export let config: ChartConfig;
   export let source: DataFrame;
@@ -66,6 +67,18 @@
       selectionStore.clearSelection();
     }
   }
+
+  /*
+   * #166 Step 2 — the container decides the chart's scale. `bind:contentRect`
+   * is the ResizeObserver-backed binding in Svelte 3.59 and reports the CONTENT
+   * box, which is the box the `<svg>` fills; feeding that width into the viewBox
+   * makes one user unit one CSS pixel at every widget width. `bind:clientWidth`
+   * would have measured this element's padding as well and, in this Svelte
+   * version, compiles to an injected `<iframe>` plus a `style.position` write.
+   */
+  let contentRect: DOMRectReadOnly | undefined = undefined;
+  let chartWidth: number = CHART_WIDTH_FALLBACK;
+  $: chartWidth = resolveChartWidth(contentRect?.width, chartWidth);
 
   const EMPTY_CHART: ChartData = { labels: [], series: [] };
 
@@ -134,7 +147,7 @@
   }
 </script>
 
-<div class="ppp-chart-widget" class:ppp-chart-widget--degenerate={isDegenerate} style={isDegenerate ? "" : `min-height: ${heightPx}px`}>
+<div class="ppp-chart-widget" class:ppp-chart-widget--degenerate={isDegenerate} style={isDegenerate ? "" : `min-height: ${heightPx}px`} bind:contentRect>
   {#if isDegenerate}
     <div class="ppp-chart-degenerate-hint" role="note">
       <span class="ppp-chart-degenerate-hint__icon" aria-hidden="true">⚠</span>
@@ -175,7 +188,7 @@
     {/if}
     <ScatterChart
       data={scatterData}
-      width={480}
+      width={chartWidth}
       height={heightPx}
       style={config.style}
       pointRadius={scatterConfig?.pointRadius ?? 5}
@@ -184,28 +197,28 @@
       showR2={scatterConfig?.showR2 ?? true}
     />
   {:else if config.chartType === "bar" || config.chartType === "stacked-bar"}
-    <BarChart data={chartData} width={480} height={heightPx} style={config.style}
+    <BarChart data={chartData} width={chartWidth} height={heightPx} style={config.style}
       {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "horizontal-bar"}
-    <BarChart data={chartData} width={480} height={heightPx} style={config.style} horizontal
+    <BarChart data={chartData} width={chartWidth} height={heightPx} style={config.style} horizontal
       {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "line"}
-    <LineChart data={chartData} width={480} height={heightPx} style={config.style}
+    <LineChart data={chartData} width={chartWidth} height={heightPx} style={config.style}
       {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "area"}
-    <LineChart data={chartData} width={480} height={heightPx}
+    <LineChart data={chartData} width={chartWidth} height={heightPx}
       style={{ ...config.style, gradient: true }}
       {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "pie"}
-    <PieChart data={chartData} width={heightPx} height={heightPx} style={config.style}
+    <PieChart data={chartData} width={Math.min(chartWidth, heightPx)} height={heightPx} style={config.style}
       {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "donut"}
-    <PieChart data={chartData} width={heightPx} height={heightPx} style={config.style} donut
+    <PieChart data={chartData} width={Math.min(chartWidth, heightPx)} height={heightPx} style={config.style} donut
       {selectedLabel} on:select={(e) => handleSegmentSelect(e.detail.label)} />
   {:else if config.chartType === "number"}
     <NumberChart data={chartData} style={config.style} />
   {:else if config.chartType === "progress"}
-    <ProgressChart data={chartData} width={480} style={config.style} />
+    <ProgressChart data={chartData} width={chartWidth} style={config.style} />
   {/if}
 </div>
 
@@ -214,12 +227,26 @@
      of WidgetShell's `widget` container (`container-type: inline-size`), so
      `cqi` inside these tokens measures the widget's own width. The padding is
      in `em` and therefore follows the font-size, which is where the container
-     decides. What the font-size reaches is the HTML text below it — NumberChart
-     (no font-size of its own) and the empty/degenerate banners. It does NOT
-     reach the SVG charts: their labels are `font-size="11"`-style presentation
-     attributes in viewBox user units, which ignore inheritance and scale
-     geometrically with the SVG instead. Routing those through the scale is
-     #166's work, not this pilot's. */
+     decides.
+
+     What this font-size reaches is the HTML text inside the wrapper, and only
+     that: NumberChart (which declares no font-size of its own) and the
+     empty / degenerate / correlation banners.
+
+     It does NOT reach the SVG charts, and #166 deliberately did not make it.
+     Their labels are `font-size="11"`-style presentation attributes in viewBox
+     user units; a CSS font-size would override the attribute while staying
+     invisible to `axisLabels.ts`, which sizes the label box, the bottom padding,
+     the rotation threshold and the cull step from that same number. Renderer and
+     geometry would then disagree — overlapping ticks — and no gate can see it,
+     because jsdom does not lay out SVG text. So #166 pins the viewBox width to
+     the MEASURED container width instead (`bind:contentRect` above): one user
+     unit becomes one CSS pixel, so 11 units render at 11 CSS pixels at any width,
+     and `axisLabels.ts` receives the true available width and culls honestly.
+     Measured both ways in `docs/internal/probes/166-chart-viewbox-scale.html`;
+     the decision is ADR_MATRYOSHKA_SIZING_2026-09-02 Q1. Making the labels GROW
+     with the container is still possible, but only as a number threaded into the
+     layout model — never as CSS. */
   .ppp-chart-widget {
     font-size: var(--ppp-local-text-sm);
     padding: var(--ppp-local-pad-sm);

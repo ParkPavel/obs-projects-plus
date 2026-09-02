@@ -17,8 +17,7 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
-- **#178 is IMPLEMENTED on `fix/178-delete-engine-contracts` (off `main` = `6c6a82f`, 2026-09-02),
-  not merged.** The three type-only contract modules (`lib/engine/contracts.ts`,
+- **#178 is MERGED into `main` (2026-09-02, merge `448847d`).** The three type-only contract modules (`lib/engine/contracts.ts`,
   `lib/relations/contracts.ts`, `lib/colors/contracts.ts` — 515 lines, zero live consumers) are
   deleted; their text is preserved verbatim in
   `docs/internal/archive/ENGINE_CONTRACTS_V4_DESIGN.md`, and the usage map that the user made a
@@ -26,8 +25,19 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   removed, so the jest baseline holds exactly rather than moving: four gates green on the branch,
   182 suites / 2526 tests, `tsc` 0, svelte-check 0/0, lint 0 errors. The one number that DID move is
   the tsdoc warning count — 109 on the branch against the 112 recorded below, because each deleted
-  file carried an `@since 4.0` tag that tsdoc does not know. **The canonical baseline moves only on
-  merge to `main`,** so the figure below is left alone.
+  file carried an `@since 4.0` tag that tsdoc does not know. The canonical figure below is the measured merge.
+- **#166 Step 2 is MERGED into `main` (2026-09-02).** `feat/166-step2-chart-width` off `main`
+  = `6c6a82f`: the chart's viewBox is pinned to the measured container width (`bind:contentRect`,
+  not the ADR's `bind:clientWidth` — see the deviation recorded in the ADR and `BACKLOG.md`), so an
+  11-unit label renders at 11 CSS px at every widget width instead of 5.5 at 240px and 22 at 960px
+  (measured in `docs/internal/probes/166-chart-viewbox-scale.html`). It also fixed a latent
+  `PieChart` defect the change would have exposed: `CX/CY/R` were `const`, computed once at mount.
+  Four gates green in the agent worktree, jest **183/2539**; `npm test` there needs `--testMatch "**/src/**/*.(test|spec).(ts|js)"`
+  because the config's absolute pattern cannot match a path through the `.claude` dot-segment.
+  Reviewed by the Codex auditor and adversarial reviewer before merge — four true findings
+  (stretched pie, fixed label counts in Scatter/Progress, a probe without the real root rules), all
+  fixed on the branch (`ffcf991`, `CX-AUDIT-166-step2.md`, `CX-ADV-166-step2.md`). Canonical jest
+  re-run in the main checkout: 183/2544. Not run in the vault — the one open acceptance item.
 - **#166 Step 1 is MERGED into `main` (2026-09-02).** `feat/166-step1-container-roots` off `main`
   = `f425812`: `08ede44` (the container rungs + the `:root`/roots split of the level-2 scale),
   `dbe51c0` (R0.13 `CONTAINER_ROOTS`, +5 tests, both plants proven), `a31423f` (bundles). Four
@@ -360,8 +370,9 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 - **Cross-model review ran twice.** On the #141–#145 stack (`codex-reports/CX-REVIEW-stack-141-145.md`,
   six of eight claims false — fixes are in this tree) and on the #159 brief
   (`codex-reports/CX-GATE0-159.md`, Gate 0 not passed — brief rewritten as revision 2).
-- **Canonical baseline — `main`: 182 suites / 2526 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (112 pre-existing tsdoc warnings).** Measured 2026-09-02 on `feat/166-step1` (R0.13 +5 tests) after `fix/179`
+- **Canonical baseline — `main`: 183 suites / 2544 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (112 pre-existing tsdoc warnings).** Measured 2026-09-02 on `feat/166-step2` after
+  its review fixes (`chartWidth` suite +1, +18 tests over the #178 merge, which kept 182/2526); Measured 2026-09-02 on `feat/166-step1` (R0.13 +5 tests) after `fix/179`
   (`5a99f8e`, R0.14 +1 suite / +5 tests); earlier the same day
   #165 (R0.13, +1 suite) and #181 (`configScanBoundary`, +1 suite) merged; before them
   `main` stood at 179/2491 with 122 warnings. The stack took it from 173/2464 at `64863ed`

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
+  import { truncateLabel } from "./axisLabels";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -7,6 +8,9 @@
 
   $: value = data.series[0]?.values[0] ?? 0;
   $: label = data.series[0]?.name ?? "";
+  // #166 step 2: at one unit per pixel a long label would clip at the widget
+  // edge instead of shrinking with it; ~7 units per character at the 12-unit font.
+  $: shownLabel = truncateLabel(label, Math.max(4, Math.floor(width / 7)));
   $: percent = Math.min(Math.max(value ?? 0, 0), 100);
 
   const BAR_H = 28;
@@ -23,7 +27,7 @@
 <div class="ppp-chart-progress" role="img" aria-label="Progress: {label} {percent}%">
   <svg viewBox="0 0 {width} {BAR_H + 24}" class="ppp-progress-svg">
     {#if style.showLabels}
-      <text x={0} y={12} fill="var(--text-normal)" font-size="12">{label}</text>
+      <text x={0} y={12} fill="var(--text-normal)" font-size="12">{shownLabel}</text>
     {/if}
     <rect
       x={0} y={18} rx={RADIUS} ry={RADIUS}

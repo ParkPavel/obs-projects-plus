@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>chart root sizing probe (#166 Step 2, adversarial review)</title>
+<style>
+  /* The adversarial review's point: the first probe gave every SVG root the
+     same (absent) sizing rule, while the real components differ. This probe
+     applies each chart's ACTUAL root rule from its <style> block, at the three
+     widths the review named, and records the SVG box and the rendered text
+     size — the numbers the first probe left out. */
+  body { margin: 1rem; font-family: system-ui, sans-serif; }
+  .row { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+  .cell { border: 1px dashed #999; flex: none; } /* no flex shrink: the declared width IS the container width */
+  .w160 { width: 160px; } .w480 { width: 480px; } .w1600 { width: 1600px; }
+  /* ChartWidget.svelte wrapper: a block with min-height, nothing that sizes the SVG */
+  .chart { overflow: hidden; min-height: 240px; }
+  /* BarChart / LineChart: no root rule at all */
+  /* PieChart.svelte after the audit fix */
+  .ppp-chart-pie { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  /* ScatterChart.svelte:212 */
+  .ppp-chart-scatter { width: 100%; height: 100%; }
+  /* ProgressChart.svelte: no root rule */
+  pre { background: #eee; padding: 0.5rem; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Real root rules, three widths, one unit = one pixel</h1>
+<div id="mount"></div>
+<pre id="out"></pre>
+<script>
+  const H = 240; // chartHeightPx("medium")-like height for the viewBox
+  const widths = [160, 480, 1600];
+  const kinds = [
+    { kind: "bar",      cls: "",                   vb: (w) => [w, H],               attrs: (w) => "" },
+    { kind: "pie",      cls: "ppp-chart-pie",      vb: (w) => [Math.min(w, H), H],  attrs: (w) => `width="${Math.min(w, H)}" height="${H}"` },
+    { kind: "scatter",  cls: "ppp-chart-scatter",  vb: (w) => [w, H],               attrs: (w) => "" },
+    { kind: "progress", cls: "",                   vb: (w) => [w, 52],              attrs: (w) => "" },
+  ];
+  const mount = document.getElementById("mount");
+  const out = {};
+  for (const k of kinds) {
+    const row = document.createElement("div"); row.className = "row";
+    for (const w of widths) {
+      const [vw, vh] = k.vb(w);
+      const cell = document.createElement("div"); cell.className = "cell w" + w;
+      cell.innerHTML = `<div class="chart"><svg viewBox="0 0 ${vw} ${vh}" ${k.attrs(w)} class="${k.cls}" id="${k.kind}-${w}"><text x="4" y="16" font-size="11" id="t-${k.kind}-${w}">Label 12345</text></svg></div>`;
+      row.appendChild(cell);
+    }
+    mount.appendChild(row);
+  }
+  for (const k of kinds) for (const w of widths) {
+    const svg = document.getElementById(`${k.kind}-${w}`);
+    const t = document.getElementById(`t-${k.kind}-${w}`);
+    const sr = svg.getBoundingClientRect(), tr = t.getBoundingClientRect(), bb = t.getBBox();
+    out[`${k.kind}@${w}`] = {
+      svgBox: [Math.round(sr.width * 10) / 10, Math.round(sr.height * 10) / 10],
+      viewBox: svg.getAttribute("viewBox"),
+      textRenderedPx: Math.round(tr.height * 100) / 100,
+      textUserUnits: Math.round(bb.height * 100) / 100,
+      scale: Math.round((tr.height / bb.height) * 1000) / 1000,
+    };
+  }
+  document.getElementById("out").textContent = JSON.stringify(out, null, 1);
+  console.log("[166-root-sizing]", JSON.stringify(out));
+</script>
+</body>
+</html>

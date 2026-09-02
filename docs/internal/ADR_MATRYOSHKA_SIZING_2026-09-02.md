@@ -230,6 +230,95 @@ Watch: `ChartWidget.svelte` is 296 lines. **R0.6 was not read in the architect p
 implementer must read `src/__tests__/R0_6_*` before adding lines and, if this file is capped,
 extract the measurement into a small module rather than raising the ceiling.
 
+### Measured 2026-09-02 — Step 2 implemented, `feat/166-step2-chart-width`
+
+`docs/internal/probes/166-chart-viewbox-scale.html`, same headless Chrome as Step 1
+(HeadlessChrome/151, `--window-size=1400,900`). Four cells, the two container widths the ticket
+names crossed with the two viewBox regimes, so today and after are read in the same run rather
+than one being recalled. Each cell reports two independent numbers — `getBoundingClientRect()` on
+the `<text>` (rendered, CSS px) and `getBBox()` on the same node (SVG user units) — and their
+ratio is the scale the viewBox imposes on an `11`-unit presentation attribute.
+
+| Container | TODAY (`viewBox="0 0 480 320"`) | AFTER (viewBox width = container) |
+|---|---|---|
+| 240px | scale 0.5 → **5.5 CSS px** | scale 1 → **11 CSS px** |
+| 960px | scale 2 → **22 CSS px** | scale 1 → **11 CSS px** |
+| narrow→wide swing | **4×** | **1×** |
+
+So the predicted ≈5.5 / ≈22 and ≈11 / ≈11 are measured, not reasoned. This is a *rendering*
+measurement and the only one in Step 2: `npm test` proves the arithmetic (the cull follows the
+container) and nothing about layout, per RISKS 1.
+
+**One deviation from Q2, deliberate: `bind:contentRect`, not `bind:clientWidth`.** Q2 chose
+`clientWidth` on the grounds that it is "ResizeObserver-backed" with "no CSSOM writes". That is
+true of `contentRect` and **false of `clientWidth`**: in Svelte 3.59.2 the `clientWidth` binding
+compiles to `add_iframe_resize_listener` (`node_modules/svelte/compiler.mjs:34473`,
+`internal/index.js:837-845`) — an injected `<iframe>` child plus a `node.style.position =
+'relative'` write — while `contentRect` compiles to `resize_observer_content_box.observe`
+(`:34477`). `contentRect` also reports the **content** box, which is the box the `<svg>` fills,
+so the wrapper's `var(--ppp-local-pad-sm)` padding is not counted into the scale; `clientWidth`
+includes padding and would have made 11 units render a few percent short. Confirmed in the built
+bundle: `ResizeObserver` present, zero occurrences of `iframe`. `svelte-check` accepts the
+binding (0/0).
+
+**One file the plan marked read-only had to change: `PieChart.svelte`.** It computed
+`CX = width / 2`, `CY`, `R` and `INNER_R` as `const` — once, at mount — and `computeSlices` read
+them from the closure, so `$: slices` would not re-run on a geometry change either. Nothing
+exposed that while `ChartWidget` passed the configured height for *both* axes (a constant per
+mount), though editing a chart's height in the config already reached it. Step 2 makes `width`
+change on every resize, so a stale centre would be drawn against a live viewBox: the pie off its
+own middle, in exactly the narrow widgets the ticket is for. The four declarations became `$:` and
+the geometry is now passed into `computeSlices` as arguments — Svelte tracks only the identifiers a
+reactive statement names, so leaving them in the closure would have fixed the viewBox and not the
+slices. Asserted the same way as the ChartWidget wiring, over the source text.
+
+R0.6 read, as instructed: **`ChartWidget.svelte` is not in `BUDGETS`** (`R0_6_locBudget.test.ts:14-41`)
+— it carries no ceiling, so the file could have absorbed the change. The measurement was extracted
+to `Chart/chartWidth.ts` anyway, for a reason R0.6 does not cover: the zero-width guard is the part
+that can silently break, and in a `.svelte` file jest cannot reach it without mounting a component
+that jsdom cannot lay out. R0.3 read as well: the file's inline `min-height: ${heightPx}px` is
+untouched and no px was added — the first draft of the rewritten pilot comment contained the string
+`11px` in prose and R0.3 caught it at 152 > 151, which is the ratchet working exactly as intended.
+
+### Step 2 — the two reviews, and what they changed (2026-09-02)
+
+`codex-reports/CX-AUDIT-166-step2.md` (auditor, BLOCKED) and `CX-ADV-166-step2.md` (adversarial,
+hold). Every finding was checked against the code before acting; all four were true.
+
+- **Auditor P1 — the pie was still stretched.** Its viewBox is `min(width, height)`, a square, but
+  `.ppp-chart-pie { width: 100% }` filled the wide widget anyway, so every pie label scaled back up —
+  the exact effect step 2 exists to remove. Fixed: the `<svg>` carries `width`/`height` attributes
+  (its intrinsic size) and the rule is `max-width: 100%; height: auto; margin: 0 auto`. A test in
+  `chartWidth.test.ts` fails if the stylesheet stretches it again.
+- **Auditor P3 — trailing whitespace in `main.js`.** Generated; #171 owns the bundle question.
+- **Adversarial P1 — Scatter and Progress kept a fixed label count.** Once one unit is one pixel a
+  label no longer shrinks with the widget, so its *number* must: `tickCountFor(plotW)` in
+  `chartWidth.ts` (a 60-unit slot, clamped 2..8, the same width model as `axisLabels.ts`) now
+  decides Scatter's X ticks — 2 at 160px, 6 at 480px, 8 at 1600px — and Progress truncates its
+  label to `width / 7` characters through the existing `truncateLabel`. Both wired and pinned in
+  `chartWidth.test.ts`.
+- **Adversarial P1 — the first probe did not carry the real root rules.** A second probe,
+  `docs/internal/probes/166-chart-root-sizing.html`, applies each chart's actual root rule (Bar/Line
+  and Progress: none; Pie: the fixed rule; Scatter: `width: 100%; height: 100%`) at 160 / 480 /
+  1600px and records the SVG box and the rendered text scale. Measured 2026-09-02, HeadlessChrome/151:
+
+| root | 160px | 480px | 1600px |
+|---|---|---|---|
+| bar / line (no rule) | 160×240, scale 1 | 480×240, scale 1 | 1600×240, scale 1 |
+| pie (capped square) | 160×240, scale 1 | **240×240**, scale 1 | **240×240**, scale 1 |
+| scatter (`100%/100%`) | 160×240, scale 1 | 480×240, scale 1 | 1600×240, scale 1 |
+| progress (no rule) | 160×52, scale 1 | 480×52, scale 1 | 1600×52, scale 1 |
+
+  So every root fills its container's inline size, the pie is capped and centred, and one user unit
+  is one CSS pixel at every width. (The first run of this probe read scale 0.803 everywhere — the
+  probe's own flex row had shrunk the cells; `flex: none` fixed the probe, not the charts. Recorded
+  because a probe that lies in the same direction for every cell is easy to believe.)
+
+**Still open, and said so:** the vault run. Both reviews ask for a real Obsidian render at 160 /
+480 / 1600px; the headless probes settle the cascade and the sizing contract, not the appearance of
+a real chart with real data. Progress renders 52 CSS px tall at any width now, where it used to
+scale with `container/480` — correct by the same argument as the labels, and unseen on screen.
+
 ## Step 3 — Fixed minimums become container-relative
 **Size S/M. `lead` inline, after Step 1's guard exists. Waits on USER DECISIONS 1 and 3.**
 

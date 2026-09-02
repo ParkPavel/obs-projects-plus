@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>chart viewBox scale probe (#166 Step 2)</title>
+<style>
+  :root { font-size: 16px; }
+  body { margin: 1rem; font-family: system-ui, sans-serif; }
+  h2 { font-size: 1rem; margin: 1rem 0 0.25rem; }
+  .row { display: flex; gap: 1rem; align-items: flex-start; }
+  /* The two container widths the ticket names. A chart widget in a narrow
+     dashboard column vs. one at full width. */
+  .c240 { width: 240px; }
+  .c960 { width: 960px; }
+  .cell { border: 1px solid #888; }
+  /* Mirrors ChartWidget.svelte's wrapper: the SVG's containing block. The SVG
+     below carries a viewBox and NO width/height attributes, so it fills this
+     box's inline size — exactly BarChart:107-112, LineChart:96-97,
+     PieChart:87-88, ScatterChart:111-112, ProgressChart:24. */
+  .chart { overflow: hidden; }
+  pre { background: #eee; padding: 0.5rem; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Probe: does the chart's label size follow the container, or the container/480 ratio?</h1>
+
+<h2>TODAY — viewBox width pinned to the constant 480 (ChartWidget.svelte:178,187,190,193,196,208)</h2>
+<div class="row">
+  <div class="cell c240"><div class="chart">
+    <svg viewBox="0 0 480 320" id="svg-today-240">
+      <text x="10" y="40" font-size="11" fill="#000" id="t-today-240">Hyphen jpg 2026</text>
+    </svg>
+  </div></div>
+  <div class="cell c960"><div class="chart">
+    <svg viewBox="0 0 480 320" id="svg-today-960">
+      <text x="10" y="40" font-size="11" fill="#000" id="t-today-960">Hyphen jpg 2026</text>
+    </svg>
+  </div></div>
+</div>
+
+<h2>AFTER — viewBox width pinned to the measured container width</h2>
+<div class="row">
+  <div class="cell c240"><div class="chart">
+    <svg viewBox="0 0 240 320" id="svg-after-240">
+      <text x="10" y="40" font-size="11" fill="#000" id="t-after-240">Hyphen jpg 2026</text>
+    </svg>
+  </div></div>
+  <div class="cell c960"><div class="chart">
+    <svg viewBox="0 0 960 320" id="svg-after-960">
+      <text x="10" y="40" font-size="11" fill="#000" id="t-after-960">Hyphen jpg 2026</text>
+    </svg>
+  </div></div>
+</div>
+
+<pre id="out"></pre>
+<script>
+  // Two independent readings per cell, so neither number stands alone:
+  //   * `rect`  — getBoundingClientRect() on the <text>: the RENDERED box, in CSS px.
+  //   * `bbox`  — getBBox() on the same node: the same box in SVG user units.
+  // Their ratio is the viewport scale the viewBox imposes, and `renderedFontPx`
+  // is the presentation attribute (11 user units) carried through it. That is
+  // the number the ticket is about: it is not a font-size anyone declared, it is
+  // 11 multiplied by an accident of the container width.
+  function read(svgId, textId, viewBoxWidth) {
+    const svg = document.getElementById(svgId);
+    const text = document.getElementById(textId);
+    const rect = text.getBoundingClientRect();
+    const bbox = text.getBBox();
+    const scale = rect.height / bbox.height;
+    return {
+      svgClientWidth: Math.round(svg.getBoundingClientRect().width * 100) / 100,
+      viewBoxWidth,
+      bboxHeightUserUnits: Math.round(bbox.height * 100) / 100,
+      renderedTextHeightPx: Math.round(rect.height * 100) / 100,
+      scale: Math.round(scale * 1000) / 1000,
+      renderedFontPx: Math.round(11 * scale * 100) / 100,
+    };
+  }
+
+  const r = {
+    today: {
+      container240: read("svg-today-240", "t-today-240", 480),
+      container960: read("svg-today-960", "t-today-960", 480),
+    },
+    after: {
+      container240: read("svg-after-240", "t-after-240", 240),
+      container960: read("svg-after-960", "t-after-960", 960),
+    },
+  };
+  r.todayNarrowToWideRatio =
+    Math.round((r.today.container960.renderedFontPx / r.today.container240.renderedFontPx) * 1000) / 1000;
+  r.afterNarrowToWideRatio =
+    Math.round((r.after.container960.renderedFontPx / r.after.container240.renderedFontPx) * 1000) / 1000;
+  r.expected = {
+    today: "renderedFontPx ≈ 5.5 at 240px and ≈ 22 at 960px — a 4× swing, unbounded in both directions",
+    after: "renderedFontPx ≈ 11 at both widths — 1 user unit = 1 CSS px, so 11 units render at 11px",
+  };
+  r.ua = navigator.userAgent;
+  document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+  console.log("[166-chart-probe]", JSON.stringify(r));
+</script>
+</body>
+</html>
