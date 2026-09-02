@@ -15,19 +15,23 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 ## Working tree and release state
 
 - **#181 is fixed and NOT merged (2026-09-02).** `fix/181-ratchet-worktree-exclusion`, off `main`
-  at `d2d7de4`, tip `f30f8f7`. R0.7, R0.10 and R0.11 each walked `.claude/` with a private copy of
+  at `d2d7de4`, tip `fbcd0c9`. R0.7, R0.10 and R0.11 each walked `.claude/` with a private copy of
   the same recursive traversal and no exclusions, so `isolation: worktree` — which puts a full
   repository checkout at `.claude/worktrees/<agent-id>/` — reddened all three on files belonging to
   the copy. Inside the worktree the same suites *skip*, there being no `.claude/` of their own: the
   main tree saw false failures and the agent false silence. One walk now serves all three
   (`src/__tests__/support/configScan.ts`), and its exclusion is pinned in both directions by
   `configScanBoundary.test.ts` against a temp fixture.
-  **The first version of the fix was wrong and the Codex audit caught it, not the gates.** Matching
-  `worktrees` by name at any depth would have hidden an ordinary `.claude/agents/worktrees/` from
-  all three ratchets at once. The scope is now the location the checkout actually goes to — a
-  direct child of the scanned layer — while `node_modules` and `.git` stay excluded at any depth
-  because they are machinery that legitimately nests.
-  **On this branch the baseline rises to 180 suites / 2498 tests**; the canonical `main` figure
+  **Two wrong versions preceded the right one, and the Codex audit caught both — the four gates
+  were green for all three.** First, matching `worktrees` by name at any depth would have hidden an
+  ordinary `.claude/agents/worktrees/` from all three ratchets at once; the scope is now the place
+  the checkout actually goes, a direct child of the scanned layer, while `node_modules` and `.git`
+  stay excluded at any depth because they are machinery that legitimately nests. Second, skipping
+  every directory junction — meant to stop the walk following an agent's `node_modules` link — also
+  blinded the ratchets to a linked config directory, which the old per-suite walks did read. Links
+  are followed again, and termination comes from entering each directory once by real path.
+  Both corrections are pinned by fixtures, so neither can come back quietly.
+  **On this branch the baseline rises to 180 suites / 2499 tests**; the canonical `main` figure
   below is unchanged until this merges.
   **Merge hazard, deliberate:** the #181 ticket text exists only on `feat/165-token-consolidation`
   (`7178122`) and never reached `main`. The DONE entry written here sits at the same place in
