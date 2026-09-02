@@ -381,6 +381,15 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   claim is headless Chrome, not Obsidian.** The mobile half of that popover is a real pre-existing
   overflow, now filed as **#182**. Reviews: `codex-reports/CX-AUDIT-166-step3.md`,
   `CX-ADV-166-step3.md`.
+- **#180a (T1 of `SPEC_MATH_SPREADSHEET_2026-09-02`) — the project has one numeric-coercion rule.**
+  `src/lib/engine/numeric.ts` (`toNumber` / `toNumbers` / `isNumeric`) replaced five disagreeing
+  implementations: `"12abc"` was 12 in the kernel and NaN in the footer, `"0x10"` was 0 in one and
+  16 in two others, `""` summed as 0 in the pipeline and was dropped in the footer, and all of them
+  pushed a literal `NaN` into `SUM`. Ingest now stores `null` rather than `NaN` for a Number field
+  whose value is not a number, which is the fix that reaches every other surface. Pinned by
+  `NUMERIC_COERCION_CASES` (imported by consumers, never restated) and ratcheted by **R0.15**.
+  The empty-input policy — `avg([])`, `min([])`, string-valued percents — is deliberately untouched
+  and is T2 (`#180b`). Branch `feat/180a-numeric-coercion`; not merged, adversarial review pending.
 - **Canonical baseline — `main`: 183 suites / 2549 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (109 pre-existing tsdoc warnings — 112 until #178 deleted three `@since` tags).** `feat/166-step3-minimums` stands at
   **183 / 2549** (+5: the filler, the three consumer-source checks and the template-writer check).

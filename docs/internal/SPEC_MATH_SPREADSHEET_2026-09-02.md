@@ -161,6 +161,42 @@ validity).
 (computed font size), `src/lib/dataframe/dataframe.ts:184, :217` (`isNumber`/`isOptionalNumber`
 type guards — no coercion, but they must be defined as `isNumeric`'s siblings or they will drift).
 
+### 2.3a Status after T1 (`#180a`, implemented 2026-09-03)
+
+**Every Class-A row above is routed**, plus sites this inventory did not have because it grepped
+`src/lib` only. Recorded here rather than as a "done" column, because the delta is the useful part:
+
+- **Class A, as listed:** ingest (`datasources/helpers.ts` — stores `null`, never `NaN`), the
+  kernel `toNumbers`, the footer `extractNumbers`, the pipeline `extractNumericValues` (whose
+  scalar-vs-array disagreement about `"5"` is gone with it), `evaluateExpression`'s two branches
+  and its `isNaN(result)` guard (now `Number.isFinite`, so an overflow is rejected too), the join's
+  numeric-ness test, the chart value and all three scatter-axis pairs, `crossProjectRollup`'s
+  type-mismatch warning, the native-query sort comparator, `cellEditor`, and `filterEvaluator`'s
+  number operand.
+- **`extendedEvaluator.ts` is fully classified — §9's UNKNOWN is closed.** All 111 sites are
+  argument coercion and all are routed, and the classification is derived rather than assumed: the
+  lexer (`formulaParser.ts`, now Class B) turns a numeric literal into a JS number *before*
+  evaluation, so `toNumber` is the identity on a literal and re-judges only field values. Nothing
+  was left `UNCLASSIFIED`. One deliberate divergence is named in the code (`operandNumber`): to an
+  operator a boolean is 0/1, because Excel ignoring logical values inside AVERAGE is a statement
+  about aggregating a column, not about `done > 0` in a hand-written formula.
+- **Found outside the inventory** (the grep was `src/lib`-only): `filterEvaluator.ts`'s
+  `is-last-n-days` / `is-next-n-days` operands (`parseInt`, so `"7 days"` was 7);
+  `StatsCard.svelte`'s sparkline, which plotted a point for a value the card's own number ignored;
+  `EditableCell.svelte`; `RollupCellRenderer.svelte` and `GridRollupCell.svelte`; and
+  `CreateField.svelte`'s field-type conversion table — the most destructive of them, since it
+  writes converted values back to disk and `parseInt` turned `"12abc"` into 12 and `"1.5"` into 1.
+- **Class B/C** carry `// coercion-exempt: <reason>` markers and no code change, except
+  `tableCanon.ts`'s boolean ordering, which was rewritten as `(a ? 1 : 0)` — R0.6's LOC ceiling for
+  that file may only be lowered, so removing the coercion was cheaper than excusing it.
+- **`dataframe.ts:184, :217`** (`isNumber` / `isOptionalNumber`) are unchanged, deliberately. They
+  are TypeScript type guards (`value is number`) whose job is narrowing for dispatch, not deciding
+  whether a value is usable arithmetic. Making `isNumber` reject `NaN` would not change the static
+  type it narrows to, and it would reroute a NaN-valued Number field into `filterEvaluator`'s
+  string branch. After T1 a stored `NaN` no longer arrives from ingest anyway, so the divergence
+  has no live subject. Stated here so it is a decision on the record and not an oversight.
+- **Ratchet:** `R0_15_oneNumericCoercion.test.ts` (I-2). R0.16 was taken by another ticket.
+
 **Docs:** the only doc that states a coercion rule today is `src/lib/engine/aggregate.ts:18-19` in
 its own header — "Numeric coercion (`toNumbers`) accepts JS numbers and **parseable** strings" —
 which documents the defect as the contract. Grep over `docs/` found no numeric-coercion rule

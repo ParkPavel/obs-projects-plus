@@ -129,6 +129,15 @@ missing?" — by naming the outermost thing that could have removed it.
   purpose — but it *does* remove rows, so when someone asks why a row is missing, this is the one
   surface the "what affects what" table above will not account for. Check the search box first.
 
+- **Numeric coercion is not the filter model's decision** (#180a, 2026-09-03). Every numeric
+  comparison in `filterEvaluator.ts` — the operand of `>`/`<`/`=` and the `n` of
+  `is-last-n-days` / `is-next-n-days` — resolves through `lib/engine/numeric.ts`, the project's one
+  rule. This matters to the axes rather than being a detail of them: a filter on axis A and an
+  aggregate on axis C look at the same row, so if the filter read `"12abc"` as 12 while the
+  aggregate ignored it, the two axes would disagree about a record that the order in this document
+  says passes cleanly from one to the other. `"12abc"`, `""` and `"0x10"` are not numbers on
+  either axis.
+
 ## Adding a new filter surface
 
 Ask which of the three questions it answers. If the answer is "a bit of two", it is two surfaces.

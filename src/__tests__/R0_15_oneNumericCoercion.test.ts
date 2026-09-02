@@ -291,7 +291,7 @@ describe("R0.15 — the scan itself (synthetic, proves BOTH states)", () => {
 
   it("scriptOnly ignores markup, which is the stated blind spot", () => {
     const text = [
-      "<script lang=\"ts\">",
+      '<script lang="ts">',
       "  const n = Number(v);",
       "</script>",
       "<input on:input={(e) => emit(parseInt(e.currentTarget.value))} />",
