@@ -1,6 +1,7 @@
 # Current project context
 
-> **Updated:** 2026-08-31 (pre-release audit follow-ups #176, #177, #174 closed, merged and pushed;
+> **Updated:** 2026-09-02 (#181 fixed on `fix/181-ratchet-worktree-exclusion`, NOT merged. Earlier:
+> pre-release audit follow-ups #176, #177, #174 closed, merged and pushed;
 > session reports: `SESSION_REPORT_2026-08-27.md`, `SESSION_REPORT_2026-08-28.md`)
 > **Historical log:** `archive/CONTEXT_2026-06-26.md`
 > **Active product contract:** `PRODUCT_RESET_2026-07-18.md`
@@ -12,6 +13,26 @@ Relation-first vertical slice in `BACKLOG.md` and must map to a scene in the Pro
 The old W2–W5 sequence is historical; it does not select the next product ticket.
 
 ## Working tree and release state
+
+- **#181 is fixed and NOT merged (2026-09-02).** `fix/181-ratchet-worktree-exclusion`, off `main`
+  at `d2d7de4`, tip `f30f8f7`. R0.7, R0.10 and R0.11 each walked `.claude/` with a private copy of
+  the same recursive traversal and no exclusions, so `isolation: worktree` — which puts a full
+  repository checkout at `.claude/worktrees/<agent-id>/` — reddened all three on files belonging to
+  the copy. Inside the worktree the same suites *skip*, there being no `.claude/` of their own: the
+  main tree saw false failures and the agent false silence. One walk now serves all three
+  (`src/__tests__/support/configScan.ts`), and its exclusion is pinned in both directions by
+  `configScanBoundary.test.ts` against a temp fixture.
+  **The first version of the fix was wrong and the Codex audit caught it, not the gates.** Matching
+  `worktrees` by name at any depth would have hidden an ordinary `.claude/agents/worktrees/` from
+  all three ratchets at once. The scope is now the location the checkout actually goes to — a
+  direct child of the scanned layer — while `node_modules` and `.git` stay excluded at any depth
+  because they are machinery that legitimately nests.
+  **On this branch the baseline rises to 180 suites / 2498 tests**; the canonical `main` figure
+  below is unchanged until this merges.
+  **Merge hazard, deliberate:** the #181 ticket text exists only on `feat/165-token-consolidation`
+  (`7178122`) and never reached `main`. The DONE entry written here sits at the same place in
+  `BACKLOG.md`, so merging both branches raises a conflict instead of silently producing two #181
+  sections. Resolve in favour of the branch that describes the completed work.
 
 - **The push gate was removed on 2026-08-30 at the user's decision.** `check-push-branch.ps1` is
   deregistered from `.claude/settings.json` and no longer fires, so pushing `main` is an ordinary
