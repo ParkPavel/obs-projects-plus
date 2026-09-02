@@ -132,7 +132,7 @@
 | `src/lib/engine/filterEvaluator.ts` | filterEvaluator.test (60+ кейсов) |
 | `src/lib/engine/crossProjectResolver.ts` | crossProjectResolver.test + integration |
 | `src/lib/engine/crossProjectRollup.ts` | crossProjectRollup.test |
-| `src/lib/engine/wikilink.ts`, `emptiness.ts`, `contracts.ts` | unit tests |
+| `src/lib/engine/wikilink.ts`, `emptiness.ts` | unit tests |
 | `src/lib/database/{subBase, cellEditor, rollupMode, partition}` | 6 тестов |
 | `src/lib/relations/{inverseIndex, crossSubBase}` | 3 теста |
 | `src/lib/visualizer/{property-types, relations, overlay}` | 7 тестов |
@@ -164,7 +164,7 @@
 | `frontmatter/{reader,writer,codec}` | A |
 | `metadata/{encode,decode}` | A |
 | `stores/*` | B |
-| `colors/{math,contracts}` | C — `contracts.ts` мёртв (R5-005) |
+| `colors/math` | C — `contracts.ts` был мёртв и удалён (#178, 2026-09-02) |
 | `templates/interpolate.ts` | A |
 | `settings/{v1,v2,v3,migrate}` | B |
 
@@ -245,7 +245,9 @@ type FooterOp =
 
 Инвариант V5: `count` имеет одинаковую семантику (non-null) во всех слоях.
 
-### 3.6 ColorPalette contract (V5: оживить контракт)
+### 3.6 ColorPalette contract — НЕ РЕАЛИЗОВАНО В ЭТОЙ ФОРМЕ (историческое)
+
+План был «оживить» мёртвый `src/lib/colors/contracts.ts` и сделать его единственным источником:
 
 ```ts
 // src/lib/colors/contracts.ts (был мёртв; V5 — единственный источник)
@@ -253,7 +255,14 @@ interface ColorToken { id: string; hex: string; name?: string; }
 interface ColorPalette { id: string; name: string; tokens: ColorToken[]; }
 ```
 
-Единственный store: `src/lib/stores/palettes.ts` (создаётся в R5-005). Потребители: ColorPicker, RecordItem, ColorFiltersTab, FieldControl, любой Dashboard widget.
+**Что произошло на самом деле (проверено 2026-09-02).** R5-005 сдан как
+`src/lib/stores/palettes.ts` — store объявляет собственную форму (`Favorite { color, name }`) и
+контракта не касается. Контракт не ожил: будущее, ради которого файл держали, наступило и обошло
+его стороной. #178 удалил `colors/contracts.ts` вместе с `engine/contracts.ts` и
+`relations/contracts.ts`; их текст сохранён в
+`docs/internal/archive/ENGINE_CONTRACTS_V4_DESIGN.md`.
+
+Единственный store: `src/lib/stores/palettes.ts`. Потребители: ColorPicker, RecordItem, ColorFiltersTab, FieldControl, любой Dashboard widget.
 
 ### 3.7 Sub-base contract (V5 — Matryoshka)
 

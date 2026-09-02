@@ -90,4 +90,3 @@ Run 2026-09-02 through `.codex/run-role.mjs --role code-mapper`, Codex session 0
 - `src/lib/engine/contracts.ts` — **DELETABLE as the three-file deletion set**; **NOT DELETABLE alone** while `relations/contracts.ts:18` and `colors/contracts.ts:17` remain.
 
 Falsifier: any newly found executable module specifier or runtime side effect targeting one of these files.
-
