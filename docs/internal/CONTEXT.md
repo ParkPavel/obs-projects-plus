@@ -381,8 +381,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   claim is headless Chrome, not Obsidian.** The mobile half of that popover is a real pre-existing
   overflow, now filed as **#182**. Reviews: `codex-reports/CX-AUDIT-166-step3.md`,
   `CX-ADV-166-step3.md`.
-- **Canonical baseline — `main`: 183 suites / 2544 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (112 pre-existing tsdoc warnings).** `feat/166-step3-minimums` stands at
+- **Canonical baseline — `main`: 183 suites / 2549 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (109 pre-existing tsdoc warnings — 112 until #178 deleted three `@since` tags).** `feat/166-step3-minimums` stands at
   **183 / 2549** (+5: the filler, the three consumer-source checks and the template-writer check).
   Measured 2026-09-02 on `feat/166-step2` after
   its review fixes (`chartWidth` suite +1, +18 tests over the #178 merge, which kept 182/2526); Measured 2026-09-02 on `feat/166-step1` (R0.13 +5 tests) after `fix/179`
