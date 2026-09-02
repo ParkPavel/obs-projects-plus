@@ -8,7 +8,7 @@
  * (`lib/relations/contracts.ts`, `lib/colors/contracts.ts`), and `ProjectId`
  * is itself only re-exported from `settings/base/settings`. `FilterIR`,
  * `RollupIR`, `FormulaIR`, `AggregateFn`, `SortIR`, `GroupIR`, `ComputeIR`,
- * `AggregateIR`, `TransformStep`, `EngineDiagnostic`, `DataEngineRequest` and
+ * `AggregateIR`, `TransformStepIR`, `EngineDiagnostic`, `DataEngineRequest` and
  * `DataEngineResult` have zero consumers.
  *
  * So the words "NORMATIVE" and "single source of truth" below describe an
@@ -18,12 +18,15 @@
  * |---|---|
  * | `AggregateFn` is the kernel alphabet | `RollupFunction` in `lib/engine/aggregate.ts` |
  * | `FilterIR` / `FilterCondition` with `op` | `FilterDefinition` in `settings/base/settings.ts`, evaluated by `filterEvaluator.ts` |
- * | `TransformStep` with `kind` + `payload` | `TransformStep` with `type` in `lib/dashboard-engine/transformTypes.ts` |
+ * | `TransformStepIR` with `kind` + `payload` | `TransformStep` with `type` in `lib/dashboard-engine/transformTypes.ts` |
  *
- * That last row is a live hazard rather than a curiosity: two exported types
- * share the name `TransformStep`, and importing this one compiles in places
- * where it is simply wrong. The stored, executed pipeline step is the one in
- * `transformTypes.ts`.
+ * That last row used to be a live hazard rather than a curiosity: both types
+ * were exported under the name `TransformStep`, so importing this one
+ * type-checked in places where it was simply wrong. #179 (2026-09-02) renamed
+ * this one to `TransformStepIR`, matching its `FilterIR` / `RollupIR` /
+ * `AggregateIR` siblings, so the wrong import no longer resolves silently.
+ * `src/__tests__/R0_14_duplicateExportedTypeNames.test.ts` keeps it that way.
+ * The stored, executed pipeline step is still the one in `transformTypes.ts`.
  *
  * The file is kept, not deleted, because `RecordId` genuinely lives here (see
  * its own note) and because the design is the record of a decision. Anything
@@ -274,12 +277,15 @@ export interface AggregateIR {
 /**
  * NOT the pipeline step the product runs. The executed and stored step type is
  * `TransformStep` in `src/lib/dashboard-engine/transformTypes.ts`, which is
- * discriminated by `type` and carries its payload flat rather than nested. Two
- * exported types with one name: check the import path before using either.
+ * discriminated by `type` and carries its payload flat rather than nested.
  *
- * This version is the v4 IR and has no consumers.
+ * This version is the v4 IR and has no consumers. The `IR` suffix is not
+ * decoration: until #179 both types were exported as `TransformStep`, and
+ * because their fields partly overlap, importing the wrong one compiled. The
+ * suffix also matches the siblings this type actually belongs with —
+ * `FilterIR`, `SortIR`, `GroupIR`, `ComputeIR`, `AggregateIR`.
  */
-export type TransformStep =
+export type TransformStepIR =
   | { readonly kind: "filter"; readonly payload: FilterIR }
   | { readonly kind: "sort"; readonly payload: SortIR }
   | { readonly kind: "group"; readonly payload: GroupIR }
@@ -322,7 +328,7 @@ export interface EngineDiagnostic {
 export interface DataEngineRequest {
   readonly source: DataSource;
   readonly schema: ProjectSchema;
-  readonly steps: readonly TransformStep[];
+  readonly steps: readonly TransformStepIR[];
   /**
    * Optional cache key. When provided, the engine may return a cached
    * `DataEngineResult` whose `meta.fromCache` is `true`. Keys must be

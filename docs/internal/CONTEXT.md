@@ -79,11 +79,20 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   remaining four engine modules are documented. **Still open from that audit: #171** (bundles in
   the tree — user assigned it to a Codex audit) and the §2.2/§2.4 documentation drift, which no
   ticket covers yet.
-- **Two facts that follow-up work uncovered and did NOT fix.** `lib/engine/contracts.ts` describes
-  a "Unified DataEngine" that was never built — outside the file only `RecordId` and `ProjectId`
-  are imported anywhere. And `TransformStep` is the name of TWO exported types (the dead IR in
-  `contracts.ts`, keyed on `kind`; the live stored one in `dashboard-engine/transformTypes.ts`,
-  keyed on `type`). Both are now documented in the files; neither is resolved.
+- **Two facts that follow-up work uncovered — one is now fixed, one is not.** The name collision is
+  **resolved (#179, 2026-09-02):** the dead IR in `contracts.ts` is `TransformStepIR`, matching its
+  `FilterIR` / `RollupIR` / `AggregateIR` siblings, and the live stored `TransformStep` in
+  `dashboard-engine/transformTypes.ts` is untouched — it is a persistence format, so its name is not
+  a local choice. `src/__tests__/R0_14_duplicateExportedTypeNames.test.ts` holds the line: zero
+  duplicate exported type names across `engine/` + `dashboard-engine/`, and for the rest of
+  `src/lib` it DECLARES the one collision that remains (`ValidationError`, in
+  `helpers/formulaParser.ts` and `types/validation.ts`) so a third one fails the suite. That
+  collision is filed as a note under #179 and was deliberately not swept into a P1/S rename.
+  **Still open: #178** — whether `lib/engine/contracts.ts` should exist at all. It still describes a
+  "Unified DataEngine" that was never built; outside the file only `RecordId` and `ProjectId` are
+  imported anywhere. #179 renamed a type inside it and deliberately did not prejudge that question.
+  Jest rose by one suite / five tests on the #179 branch; **the canonical baseline below moves only
+  on merge to `main`.**
 - **`main` carries everything below and is pushed.** `64863ed` (M-FILTER-CONSOLIDATION + the
   linked-source stack) is its ancestor, the meta-audit stack and the #164 work sit on top, and
   `origin/main` matches. Both `feat/116` and the relation-first work `feat/112` are IN `main`;
