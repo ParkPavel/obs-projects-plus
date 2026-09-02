@@ -48,6 +48,7 @@
   function handleTimePickerChange(event: CustomEvent<string>) {
     if (value) {
       const parts = event.detail.split(':');
+      // coercion-exempt: Class B - lexing an HH:MM token a split has already shaped
       const hours = parseInt(parts[0] || '0', 10);
       const minutes = parseInt(parts[1] || '0', 10);
       

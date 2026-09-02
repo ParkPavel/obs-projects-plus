@@ -4,6 +4,7 @@
   import type { Optional } from "src/lib/dataframe/dataframe";
   import { sanitizeColor } from "src/lib/dashboard-engine/conditionalFormat";
   import { computeAggregateValue } from "src/lib/dashboard-engine/aggregation";
+  import { toNumbers } from "src/lib/engine/numeric";
 
   export let config: StatsCardConfig;
   export let values: Optional<DataValue>[];
@@ -43,10 +44,9 @@
   }
 
   function buildSparkline(vals: Optional<DataValue>[]): string {
-    const nums = vals
-      .filter((v): v is DataValue => v !== undefined && v !== null)
-      .map((v) => (typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN))
-      .filter((n) => !isNaN(n));
+    // #180a: the sparkline drew a point for "12abc" at 12 while the card's own
+    // number ignored it. One rule, so the shape agrees with the value above it.
+    const nums = toNumbers(vals);
     if (nums.length < 2) return "";
     const min = Math.min(...nums);
     const max = Math.max(...nums);

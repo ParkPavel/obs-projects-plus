@@ -5,6 +5,7 @@ import {
   type DataRecord,
 } from "../dataframe/dataframe";
 import { detectCellType, detectFields, parseRecords } from "./helpers";
+import { NUMERIC_COERCION_CASES } from "src/lib/engine/__tests__/numericContract.test";
 
 describe("parseRecords", () => {
   it("parses", () => {
@@ -201,6 +202,38 @@ describe("parseRecords (Stage A field types)", () => {
     derived: false,
     repeated,
     typeConfig: {},
+  });
+
+  // #180a — ingest is the FIRST coercion site and the one that made the rest
+  // moot: `parseFloat` ran here before any aggregate, filter or chart saw the
+  // record, so `hours: 12abc` was already 12 and `hours: abc` was already a
+  // literal NaN on the way in. Driven off the one fixture table (spec §2.2);
+  // a value that is not a number is stored as `null` — absent, not NaN, which
+  // is what every downstream numeric path already knows how to skip.
+  describe("Number: a string value is coerced by the project's one rule", () => {
+    const stringCases = NUMERIC_COERCION_CASES.filter(
+      (c): c is typeof c & { input: string } => typeof c.input === "string"
+    );
+
+    it.each(stringCases)("hours: $label", ({ input, expected }) => {
+      const records: DataRecord[] = [{ id: "j.md", values: { hours: input } }];
+      parseRecords(records, [buildField("hours", DataFieldType.Number)]);
+      expect(records[0]?.values["hours"]).toBe(expected);
+    });
+
+    // The headline promise of #180a, checked over every shape a value can
+    // have and not only the strings: a NaN in a Number field poisons whatever
+    // reduction it reaches, and YAML can spell one directly as `hours: .nan`.
+    it("never stores NaN, for any case in the table", () => {
+      for (const c of NUMERIC_COERCION_CASES) {
+        const records: DataRecord[] = [
+          { id: "j.md", values: { hours: c.input as never } },
+        ];
+        parseRecords(records, [buildField("hours", DataFieldType.Number)]);
+        const stored = records[0]?.values["hours"];
+        expect([c.label, Number.isNaN(stored)]).toEqual([c.label, false]);
+      }
+    });
   });
 
   it("Relation: single wiki-link string → string[]", () => {

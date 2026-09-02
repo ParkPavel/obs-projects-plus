@@ -17,6 +17,7 @@
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay } from "./tableCanon";
+  import { toNumber } from "src/lib/engine/numeric";
   import CellChoiceDropdown from "./CellChoiceDropdown.svelte";
   import RelationPickerPopover from "./RelationPickerPopover.svelte";
 
@@ -66,8 +67,9 @@
     if (committed) return;
     committed = true;
     if (field.type === DataFieldType.Number) {
-      const n = Number(raw);
-      dispatch("commit", raw.trim() === "" || Number.isNaN(n) ? null : n);
+      // #180a: was `Number(raw)` plus a hand-rolled empty/NaN guard — the rule
+      // restated in miniature. `toNumber` already returns null for both.
+      dispatch("commit", toNumber(raw));
       return;
     }
     dispatch("commit", raw);

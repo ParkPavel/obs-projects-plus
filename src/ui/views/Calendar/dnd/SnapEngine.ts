@@ -36,6 +36,7 @@ export function snapTime(
   interval: number = DND_CONSTANTS.SNAP_INTERVAL_DEFAULT
 ): string {
   const [hourStr, minStr] = time.split(':');
+  // coercion-exempt: Class B - lexing an HH:MM token a split has already shaped
   const hours = parseInt(hourStr ?? '0', 10);
   const mins = parseInt(minStr ?? '0', 10);
   const totalMinutes = hours * 60 + mins;

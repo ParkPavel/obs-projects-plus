@@ -10,6 +10,8 @@
  */
 
 import { aggregate, type RollupConfig } from "../aggregate";
+import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
+import { NUMERIC_COERCION_CASES } from "./numericContract.test";
 
 const cfg = (function_: RollupConfig["function"], separator?: string): RollupConfig => {
   const base = { relationField: "rel", targetField: "target", function: function_ };
@@ -79,11 +81,25 @@ describe("aggregate() — kernel", () => {
     test("float sum", () => {
       expect(aggregate([1.5, 2.5], cfg("sum")).value).toBe(4);
     });
-    test("parses numeric strings", () => {
+    test("adds numeric strings", () => {
       expect(aggregate(["1", "2", 3], cfg("sum")).value).toBe(6);
     });
     test("drops non-numeric strings", () => {
       expect(aggregate(["abc", 5], cfg("sum")).value).toBe(5);
+    });
+
+    // #180a: the kernel does not own the coercion rule, so it does not get to
+    // restate it. Driving `sum` off the one fixture table is what makes this a
+    // CONSUMER of the contract instead of a second copy of it — a copied table
+    // is the class of defect the whole ticket is about (spec §2.2).
+    describe("agrees with NUMERIC_COERCION_CASES, value by value", () => {
+      test.each(NUMERIC_COERCION_CASES)(
+        "sum of [$label] is the coerced value, or 0 when it is not a number",
+        ({ input, expected }) => {
+          const sum = aggregate([input as Optional<DataValue>], cfg("sum"));
+          expect(sum.value).toBe(expected ?? 0);
+        }
+      );
     });
     test("empty input → 0", () => {
       expect(aggregate([], cfg("sum")).value).toBe(0);
@@ -110,14 +126,23 @@ describe("aggregate() — kernel", () => {
     test("ignores non-numeric for mean", () => {
       expect(aggregate(["x", 4, 6], cfg("avg")).value).toBe(5);
     });
-    test("empty input → 0", () => {
-      expect(aggregate([], cfg("avg")).value).toBe(0);
+    // FLIPPED by #180a. Empty is not a zero once #180a made "empty" reachable:
+    // a Number field holding `abc` used to become NaN at ingest and survive
+    // into the reduction, so this returned the visible nonsense NaN. With the
+    // value dropped the list is genuinely empty, and 0 would print a number
+    // that reads like an answer. `sum` keeps 0 — the additive identity is a
+    // real total of nothing (BACKLOG #180, RESOLVED 2026-09-02). Found by the
+    // Codex adversarial review, which traced it to the footer.
+    test("empty input → null, printed as the empty placeholder", () => {
+      const r = aggregate([], cfg("avg"));
+      expect(r.value).toBeNull();
+      expect(r.formattedValue).toBe("—");
     });
-    test("all-null → 0", () => {
-      expect(aggregate([null, undefined], cfg("avg")).value).toBe(0);
+    test("all-null → null", () => {
+      expect(aggregate([null, undefined], cfg("avg")).value).toBeNull();
     });
-    test("non-numeric only → 0", () => {
-      expect(aggregate(["a", "b"], cfg("avg")).value).toBe(0);
+    test("non-numeric only → null", () => {
+      expect(aggregate(["a", "b"], cfg("avg")).value).toBeNull();
     });
   });
 
@@ -129,8 +154,8 @@ describe("aggregate() — kernel", () => {
     test("works with negatives", () => {
       expect(aggregate([-5, 0, 5], cfg("min")).value).toBe(-5);
     });
-    test("empty → 0", () => {
-      expect(aggregate([], cfg("min")).value).toBe(0);
+    test("empty → null, not a zero that reads like an answer (#180a)", () => {
+      expect(aggregate([], cfg("min")).value).toBeNull();
     });
   });
 
@@ -141,8 +166,8 @@ describe("aggregate() — kernel", () => {
     test("works with negatives", () => {
       expect(aggregate([-5, -10, -1], cfg("max")).value).toBe(-1);
     });
-    test("empty → 0", () => {
-      expect(aggregate([], cfg("max")).value).toBe(0);
+    test("empty → null, not a zero that reads like an answer (#180a)", () => {
+      expect(aggregate([], cfg("max")).value).toBeNull();
     });
   });
 
@@ -153,8 +178,8 @@ describe("aggregate() — kernel", () => {
     test("single value → 0", () => {
       expect(aggregate([5], cfg("range")).value).toBe(0);
     });
-    test("empty → 0", () => {
-      expect(aggregate([], cfg("range")).value).toBe(0);
+    test("empty → null, not a zero that reads like an answer (#180a)", () => {
+      expect(aggregate([], cfg("range")).value).toBeNull();
     });
   });
 

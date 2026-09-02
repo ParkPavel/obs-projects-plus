@@ -8,6 +8,7 @@ import {
   type Optional,
 } from "../dataframe/dataframe";
 import { stripToPath as stripWikiLink } from "src/lib/engine/wikilink";
+import { toNumber } from "src/lib/engine/numeric";
 
 /**
  * Parses the values for each record based on the detected field types.
@@ -38,7 +39,24 @@ export function parseRecords(
           break;
         case DataFieldType.Number:
           if (typeof value === "string") {
-            record.values[field.name] = parseFloat(value);
+            // #180a — the FIRST site, and the one that made the rest moot:
+            // `parseFloat(value)` ran on every string in a Number field at
+            // ingest, so `hours: 12abc` was already 12 and `hours: abc` was
+            // already a literal NaN before any aggregate, filter or chart saw
+            // the record. A NaN then poisons whichever reduction it reaches.
+            //
+            // A value that is not a number is stored as `null` — ABSENT, not
+            // NaN and not 0. `null` is what a missing key already yields, so
+            // downstream emptiness, filters and aggregates need no new case;
+            // NaN was a number-typed value that every numeric path had to
+            // remember to special-case, and none of them did.
+            record.values[field.name] = toNumber(value);
+          } else if (typeof value === "number" && !Number.isFinite(value)) {
+            // YAML spells these: `hours: .nan`, `hours: .inf`. They arrive as
+            // real JS numbers, so the string branch above never sees them and
+            // a NaN would reach SUM and poison the whole reduction. Same
+            // answer as the string branch, for the same reason.
+            record.values[field.name] = null;
           }
           break;
         case DataFieldType.Boolean:

@@ -107,6 +107,7 @@ export class ProjectsSettingTab extends PluginSettingTab {
           .onChange((value) => {
             save({
               ...preferences,
+              // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
               projectSizeLimit: parseInt(value) || 1000,
             });
           })

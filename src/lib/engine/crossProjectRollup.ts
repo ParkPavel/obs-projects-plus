@@ -29,6 +29,7 @@ import {
 } from "src/lib/engine/aggregate";
 import { resolveCrossProjectRelations } from "./crossProjectResolver";
 import { applyFilter } from "src/lib/engine/filterEvaluator";
+import { isNumeric } from "src/lib/engine/numeric";
 
 // ── Public types ─────────────────────────────────────────
 
@@ -71,8 +72,11 @@ function detectTypeMismatch(
   const errs: string[] = [];
   for (const v of values) {
     if (v === null || v === undefined) continue;
-    if (typeof v === "number") continue;
-    if (typeof v === "string" && !isNaN(parseFloat(v))) continue;
+    // #180a: `!isNaN(parseFloat(v))` accepted `"12abc"` as numeric here while
+    // the kernel it warns for has stopped doing so. A mismatch WARNING that
+    // disagrees with the aggregate is worse than none — it says the data is
+    // fine and then the aggregate ignores the value.
+    if (isNumeric(v)) continue;
     errs.push(`Type mismatch: ${fn} expects numeric, got ${typeof v}`);
     break; // single error sufficient (R-6 contract: never throws)
   }

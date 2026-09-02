@@ -6,6 +6,7 @@ import type {
   DataValue,
 } from "src/lib/dataframe/dataframe";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
+import { toNumbers } from "src/lib/engine/numeric";
 import type {
   AggregationConfig,
   AggregationResult,
@@ -217,17 +218,13 @@ export function computeAggregateValue(
   }
 }
 
+/**
+ * #180a: was a third coercion rule — `Number(v)` with a `v !== ""` guard, so
+ * `"0x10"` was 16 here and 0 in the kernel, and `"  "` was 0 because the guard
+ * only caught the exactly-empty string. It now asks `engine/numeric.ts`.
+ */
 function extractNumbers(values: (DataValue | undefined | null)[]): number[] {
-  const result: number[] = [];
-  for (const v of values) {
-    if (typeof v === "number") {
-      result.push(v);
-    } else if (typeof v === "string") {
-      const n = Number(v);
-      if (!isNaN(n) && v !== "") result.push(n);
-    }
-  }
-  return result;
+  return toNumbers(values);
 }
 
 function extractDates(values: (DataValue | undefined | null)[]): Date[] {

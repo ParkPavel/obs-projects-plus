@@ -7,7 +7,54 @@ import type { DataFrame } from "src/lib/dataframe/dataframe";
 import { type FormulaNode, parseFormula, tokenize } from "src/lib/helpers/formulaParser";
 import { isUnsafePattern, MAX_REGEX_INPUT_LENGTH, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
+import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import dayjs from "dayjs";
+
+// ── Numeric coercion (#180a) ─────────────────────────────────
+
+/**
+ * Argument coercion for the functions in `EXTENDED_FUNCTIONS`.
+ *
+ * `toNumber` is the project's rule; `?? NaN` preserves the shape every function
+ * here already had — coerce, then guard with `isNaN(...)` and return null.
+ *
+ * Routing every argument wholesale is correct rather than approximate, and the
+ * reason is in the lexer: `formulaParser.ts` turns a numeric LITERAL into a JS
+ * number before evaluation, so `toNumber` is the identity on it. Only values
+ * that came from a field are actually re-judged. What changes is that `""`, a
+ * missing field, `true` and a Date stop being silently 0 or 1, and `"0x10"`
+ * stops being 16.
+ */
+function argNumber(value: Optional<DataValue>): number {
+  return toNumber(value) ?? NaN;
+}
+
+/**
+ * Coercion for the comparison and arithmetic OPERATORS (`>`, `<`, `-`, `*`,
+ * `/`, and the numeric half of `+`).
+ *
+ * The project's rule plus exactly one deliberate divergence: to an operator, a
+ * boolean is 0/1. `toNumber` says a boolean is not a number because Excel
+ * ignores logical values inside AVERAGE — that is a statement about
+ * aggregating a column, not about `done > 0` in a formula someone wrote by
+ * hand. This is the only place the divergence lives; data questions call
+ * `toNumber` directly (#180a).
+ */
+function operandNumber(value: unknown): number | null {
+  if (typeof value === "boolean") return value ? 1 : 0;
+  return toNumber(value);
+}
+
+/**
+ * An operand that carries no value: absent, or a string with nothing in it.
+ * `lib/engine/emptiness.ts` is deliberately not reused — its `isEmpty` keeps a
+ * whitespace-only string NON-empty to preserve the filter `is-empty` contract,
+ * while `toNumber` drops `"  "` like any other non-number. Arithmetic follows
+ * the coercion rule, not the filter one (#180a).
+ */
+function isAbsentOperand(value: unknown): boolean {
+  return value == null || (typeof value === "string" && value.trim() === "");
+}
 
 // ── Styled value support ─────────────────────────────────────
 
@@ -107,11 +154,7 @@ function kernelAggregate(
   }
   if (flat.length === 0 && fn !== "sum") return null;
   if (fn !== "sum") {
-    const anyNumeric = flat.some(v => {
-      const n = Number(v);
-      return !isNaN(n);
-    });
-    if (!anyNumeric) return null;
+    if (!flat.some(isNumeric)) return null;
   }
   const result = aggregate(flat, { relationField: "", targetField: "", function: fn });
   return typeof result.value === "number" ? result.value : null;
@@ -158,51 +201,51 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   // ── Math ───────────────────────────────────────────────────
   ROUND: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
-    const decimals = args[1] ? Number(evaluate(args[1] as FormulaNode)) : 0;
+    const val = argNumber(evaluate(args[0] as FormulaNode));
+    const decimals = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : 0;
     if (isNaN(val)) return null;
     const factor = Math.pow(10, decimals);
     return Math.round(val * factor) / factor;
   },
 
   CEIL: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(val) ? null : Math.ceil(val);
   },
 
   FLOOR: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(val) ? null : Math.floor(val);
   },
 
   ABS: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(val) ? null : Math.abs(val);
   },
 
   SQRT: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(val) || val < 0 ? null : Math.sqrt(val);
   },
 
   POWER: (args, evaluate) => {
-    const base = Number(evaluate(args[0] as FormulaNode));
-    const exp = Number(evaluate(args[1] as FormulaNode));
+    const base = argNumber(evaluate(args[0] as FormulaNode));
+    const exp = argNumber(evaluate(args[1] as FormulaNode));
     if (isNaN(base) || isNaN(exp)) return null;
     const result = Math.pow(base, exp);
     return isFinite(result) ? result : null;
   },
 
   LOG: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(val) || val <= 0) return null;
-    const base = args[1] ? Number(evaluate(args[1] as FormulaNode)) : Math.E;
+    const base = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : Math.E;
     if (base <= 0 || base === 1) return null;
     return base === Math.E ? Math.log(val) : Math.log(val) / Math.log(base);
   },
 
   SIGN: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(val) ? null : Math.sign(val);
   },
 
@@ -229,8 +272,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   SUBSTRING: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
-    const start = Number(evaluate(args[1] as FormulaNode));
-    const end = args[2] ? Number(evaluate(args[2] as FormulaNode)) : undefined;
+    const start = argNumber(evaluate(args[1] as FormulaNode));
+    const end = args[2] ? argNumber(evaluate(args[2] as FormulaNode)) : undefined;
     return str.substring(start, end);
   },
 
@@ -277,7 +320,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   DATE_ADD: (args, evaluate) => {
     const date = dayjs(String(evaluate(args[0] as FormulaNode)));
-    const amount = Number(evaluate(args[1] as FormulaNode));
+    const amount = argNumber(evaluate(args[1] as FormulaNode));
     const unit = String(evaluate(args[2] as FormulaNode)) as dayjs.ManipulateType;
     if (!date.isValid() || isNaN(amount)) return null;
     return date.add(amount, unit).format("YYYY-MM-DD");
@@ -285,7 +328,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   DATE_SUB: (args, evaluate) => {
     const date = dayjs(String(evaluate(args[0] as FormulaNode)));
-    const amount = Number(evaluate(args[1] as FormulaNode));
+    const amount = argNumber(evaluate(args[1] as FormulaNode));
     const unit = String(evaluate(args[2] as FormulaNode)) as dayjs.ManipulateType;
     if (!date.isValid() || isNaN(amount)) return null;
     return date.subtract(amount, unit).format("YYYY-MM-DD");
@@ -348,10 +391,9 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   // ── Type conversion ────────────────────────────────────────
   TO_NUMBER: (args, evaluate) => {
-    const val = evaluate(args[0] as FormulaNode);
-    if (val == null) return null;
-    const num = Number(val);
-    return isNaN(num) ? null : num;
+    // The rule, named. TO_NUMBER is the user asking the question this module
+    // answers, so it must give the same answer as everything else (#180a).
+    return toNumber(evaluate(args[0] as FormulaNode));
   },
 
   TO_TEXT: (args, evaluate) => {
@@ -368,21 +410,21 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   // ── Financial ──────────────────────────────────────────────
   PMT: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const nper = Number(evaluate(args[1] as FormulaNode));
-    const pv = Number(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? Number(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? Number(evaluate(args[4] as FormulaNode)) : 0;
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || nper === 0) return null;
     return pmtCore(rate, nper, pv, fv, type);
   },
 
   FV: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const nper = Number(evaluate(args[1] as FormulaNode));
-    const pmt = Number(evaluate(args[2] as FormulaNode));
-    const pv = args[3] ? Number(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? Number(evaluate(args[4] as FormulaNode)) : 0;
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pmt = argNumber(evaluate(args[2] as FormulaNode));
+    const pv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
     if (isNaN(rate) || isNaN(nper) || isNaN(pmt)) return null;
     if (rate === 0) return -(pv + pmt * nper);
     const pvif = Math.pow(1 + rate, nper);
@@ -390,11 +432,11 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   PV: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const nper = Number(evaluate(args[1] as FormulaNode));
-    const pmt = Number(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? Number(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? Number(evaluate(args[4] as FormulaNode)) : 0;
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pmt = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
     if (isNaN(rate) || isNaN(nper) || isNaN(pmt)) return null;
     if (rate === 0) return -(fv + pmt * nper);
     const pvif = Math.pow(1 + rate, nper);
@@ -402,11 +444,11 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   NPV: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(rate) || rate === -1) return null;
     let npv = 0;
     for (let i = 1; i < args.length; i++) {
-      const cf = Number(evaluate(args[i] as FormulaNode));
+      const cf = argNumber(evaluate(args[i] as FormulaNode));
       if (isNaN(cf)) return null;
       npv += cf / Math.pow(1 + rate, i);
     }
@@ -417,7 +459,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const cfs: number[] = [];
     let guess = 0.1;
     for (let i = 0; i < args.length; i++) {
-      const val = Number(evaluate(args[i] as FormulaNode));
+      const val = argNumber(evaluate(args[i] as FormulaNode));
       if (isNaN(val)) return null;
       cfs.push(val);
     }
@@ -451,12 +493,12 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   RATE: (args, evaluate) => {
-    const nper = Number(evaluate(args[0] as FormulaNode));
-    const pmt = Number(evaluate(args[1] as FormulaNode));
-    const pv = Number(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? Number(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? Number(evaluate(args[4] as FormulaNode)) : 0;
-    let rate = args[5] ? Number(evaluate(args[5] as FormulaNode)) : 0.1;
+    const nper = argNumber(evaluate(args[0] as FormulaNode));
+    const pmt = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
+    let rate = args[5] ? argNumber(evaluate(args[5] as FormulaNode)) : 0.1;
     if (isNaN(nper) || isNaN(pmt) || isNaN(pv) || nper <= 0) return null;
 
     for (let iter = 0; iter < 100; iter++) {
@@ -480,35 +522,35 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   IPMT: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const per = Number(evaluate(args[1] as FormulaNode));
-    const nper = Number(evaluate(args[2] as FormulaNode));
-    const pv = Number(evaluate(args[3] as FormulaNode));
-    const fv = args[4] ? Number(evaluate(args[4] as FormulaNode)) : 0;
-    const type = args[5] ? Number(evaluate(args[5] as FormulaNode)) : 0;
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const per = argNumber(evaluate(args[1] as FormulaNode));
+    const nper = argNumber(evaluate(args[2] as FormulaNode));
+    const pv = argNumber(evaluate(args[3] as FormulaNode));
+    const fv = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
+    const type = args[5] ? argNumber(evaluate(args[5] as FormulaNode)) : 0;
     if (isNaN(rate) || isNaN(per) || isNaN(nper) || per < 1 || per > nper) return null;
     const pmt = pmtCore(rate, nper, pv, fv, type);
     return ipmtForPeriod(rate, per, pv, pmt, type);
   },
 
   PPMT: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const per = Number(evaluate(args[1] as FormulaNode));
-    const nper = Number(evaluate(args[2] as FormulaNode));
-    const pv = Number(evaluate(args[3] as FormulaNode));
-    const fv = args[4] ? Number(evaluate(args[4] as FormulaNode)) : 0;
-    const type = args[5] ? Number(evaluate(args[5] as FormulaNode)) : 0;
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const per = argNumber(evaluate(args[1] as FormulaNode));
+    const nper = argNumber(evaluate(args[2] as FormulaNode));
+    const pv = argNumber(evaluate(args[3] as FormulaNode));
+    const fv = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
+    const type = args[5] ? argNumber(evaluate(args[5] as FormulaNode)) : 0;
     if (isNaN(rate) || isNaN(per) || isNaN(nper) || per < 1 || per > nper) return null;
     const pmt = pmtCore(rate, nper, pv, fv, type);
     return pmt - ipmtForPeriod(rate, per, pv, pmt, type);
   },
 
   NPER: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const pmt = Number(evaluate(args[1] as FormulaNode));
-    const pv = Number(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? Number(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? Number(evaluate(args[4] as FormulaNode)) : 0;
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const pmt = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
     if (isNaN(rate) || isNaN(pmt) || isNaN(pv)) return null;
     if (rate === 0) {
       if (pmt === 0) return null;
@@ -522,12 +564,12 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   CUMPRINC: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const nper = Number(evaluate(args[1] as FormulaNode));
-    const pv = Number(evaluate(args[2] as FormulaNode));
-    const start = Number(evaluate(args[3] as FormulaNode));
-    const end = Number(evaluate(args[4] as FormulaNode));
-    const type = Number(evaluate(args[5] as FormulaNode));
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const start = argNumber(evaluate(args[3] as FormulaNode));
+    const end = argNumber(evaluate(args[4] as FormulaNode));
+    const type = argNumber(evaluate(args[5] as FormulaNode));
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
     if (start < 1 || end < start || end > nper) return null;
     const pmt = pmtCore(rate, nper, pv, 0, type);
@@ -539,12 +581,12 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   CUMIPMT: (args, evaluate) => {
-    const rate = Number(evaluate(args[0] as FormulaNode));
-    const nper = Number(evaluate(args[1] as FormulaNode));
-    const pv = Number(evaluate(args[2] as FormulaNode));
-    const start = Number(evaluate(args[3] as FormulaNode));
-    const end = Number(evaluate(args[4] as FormulaNode));
-    const type = Number(evaluate(args[5] as FormulaNode));
+    const rate = argNumber(evaluate(args[0] as FormulaNode));
+    const nper = argNumber(evaluate(args[1] as FormulaNode));
+    const pv = argNumber(evaluate(args[2] as FormulaNode));
+    const start = argNumber(evaluate(args[3] as FormulaNode));
+    const end = argNumber(evaluate(args[4] as FormulaNode));
+    const type = argNumber(evaluate(args[5] as FormulaNode));
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || rate <= 0 || nper <= 0 || pv <= 0) return null;
     if (start < 1 || end < start || end > nper) return null;
     const pmt = pmtCore(rate, nper, pv, 0, type);
@@ -557,14 +599,14 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   // ── Statistical ────────────────────────────────────────────
   VARIANCE: (args, evaluate) => {
-    const nums = args.map(a => Number(evaluate(a))).filter(n => !isNaN(n));
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
     if (nums.length === 0) return null;
     const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
     return nums.reduce((s, v) => s + (v - mean) ** 2, 0) / nums.length;
   },
 
   VARIANCE_S: (args, evaluate) => {
-    const nums = args.map(a => Number(evaluate(a))).filter(n => !isNaN(n));
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
     if (nums.length < 2) return null;
     const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
     return nums.reduce((s, v) => s + (v - mean) ** 2, 0) / (nums.length - 1);
@@ -572,8 +614,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   PERCENTILE: (args, evaluate) => {
     if (args.length < 2) return null;
-    const arr = args.slice(0, -1).map(a => Number(evaluate(a))).filter(n => !isNaN(n)).sort((a, b) => a - b);
-    const k = Number(evaluate(args[args.length - 1] as FormulaNode));
+    const arr = args.slice(0, -1).map(a => argNumber(evaluate(a))).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    const k = argNumber(evaluate(args[args.length - 1] as FormulaNode));
     if (arr.length === 0 || isNaN(k) || k < 0 || k > 1) return null;
     if (arr.length === 1) return arr[0]!;
     const idx = k * (arr.length - 1);
@@ -583,8 +625,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   QUARTILE: (args, evaluate) => {
     if (args.length < 2) return null;
-    const arr = args.slice(0, -1).map(a => Number(evaluate(a))).filter(n => !isNaN(n)).sort((a, b) => a - b);
-    const q = Number(evaluate(args[args.length - 1] as FormulaNode));
+    const arr = args.slice(0, -1).map(a => argNumber(evaluate(a))).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    const q = argNumber(evaluate(args[args.length - 1] as FormulaNode));
     if (arr.length === 0 || isNaN(q) || q < 0 || q > 4) return null;
     const k = q / 4;
     if (arr.length === 1) return arr[0]!;
@@ -597,8 +639,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     if (args.length < 4 || args.length % 2 !== 0) return null;
     const xs: number[] = [], ys: number[] = [];
     for (let i = 0; i < args.length; i += 2) {
-      const x = Number(evaluate(args[i] as FormulaNode));
-      const y = Number(evaluate(args[i + 1] as FormulaNode));
+      const x = argNumber(evaluate(args[i] as FormulaNode));
+      const y = argNumber(evaluate(args[i + 1] as FormulaNode));
       if (!isNaN(x) && !isNaN(y)) { xs.push(x); ys.push(y); }
     }
     if (xs.length < 2) return null;
@@ -615,7 +657,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   MODE: (args, evaluate) => {
-    const nums = args.map(a => Number(evaluate(a))).filter(n => !isNaN(n));
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
     if (nums.length === 0) return null;
     const freq = new Map<number, number>();
     for (const n of nums) freq.set(n, (freq.get(n) ?? 0) + 1);
@@ -628,16 +670,16 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   RANK: (args, evaluate) => {
     if (args.length < 2) return null;
-    const value = Number(evaluate(args[0] as FormulaNode));
+    const value = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(value)) return null;
-    const allVals = args.slice(1).map(a => Number(evaluate(a))).filter(n => !isNaN(n));
+    const allVals = args.slice(1).map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
     const sorted = [...allVals].sort((a, b) => b - a);
     const idx = sorted.indexOf(value);
     return idx === -1 ? null : idx + 1;
   },
 
   STD_DEV_S: (args, evaluate) => {
-    const nums = args.map(a => Number(evaluate(a))).filter(n => !isNaN(n));
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
     if (nums.length < 2) return null;
     const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
     return Math.sqrt(nums.reduce((s, v) => s + (v - mean) ** 2, 0) / (nums.length - 1));
@@ -648,20 +690,20 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   MEDIAN: (args, evaluate) => kernelAggregate(args, evaluate, "median"),
 
   PRODUCT: (args, evaluate) => {
-    const nums = args.map(a => Number(evaluate(a))).filter(n => !isNaN(n));
+    const nums = args.map(a => argNumber(evaluate(a))).filter(n => !isNaN(n));
     if (nums.length === 0) return null;
     return nums.reduce((p, v) => p * v, 1);
   },
 
   MOD: (args, evaluate) => {
-    const a = Number(evaluate(args[0] as FormulaNode));
-    const b = Number(evaluate(args[1] as FormulaNode));
+    const a = argNumber(evaluate(args[0] as FormulaNode));
+    const b = argNumber(evaluate(args[1] as FormulaNode));
     if (isNaN(a) || isNaN(b) || b === 0) return null;
     return a % b;
   },
 
   EVEN: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(val)) return null;
     const c = Math.ceil(Math.abs(val));
     const even = c % 2 === 0 ? c : c + 1;
@@ -669,7 +711,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   ODD: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(val)) return null;
     const c = Math.ceil(Math.abs(val));
     const odd = c % 2 === 1 ? c : c + 1;
@@ -679,8 +721,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   PI: () => Math.PI,
 
   RANDOM_INT: (args, evaluate) => {
-    const min = Number(evaluate(args[0] as FormulaNode));
-    const max = Number(evaluate(args[1] as FormulaNode));
+    const min = argNumber(evaluate(args[0] as FormulaNode));
+    const max = argNumber(evaluate(args[1] as FormulaNode));
     if (isNaN(min) || isNaN(max)) return null;
     return Math.floor(Math.random() * (max - min + 1)) + min;
   },
@@ -688,20 +730,20 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   // ── Enhanced String ────────────────────────────────────────
   LEFT: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
-    const n = args[1] ? Number(evaluate(args[1] as FormulaNode)) : 1;
+    const n = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : 1;
     return str.substring(0, n);
   },
 
   RIGHT: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
-    const n = args[1] ? Number(evaluate(args[1] as FormulaNode)) : 1;
+    const n = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : 1;
     return str.substring(Math.max(0, str.length - n));
   },
 
   MID: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
-    const start = Number(evaluate(args[1] as FormulaNode));
-    const len = Number(evaluate(args[2] as FormulaNode));
+    const start = argNumber(evaluate(args[1] as FormulaNode));
+    const len = argNumber(evaluate(args[2] as FormulaNode));
     if (isNaN(start) || isNaN(len)) return null;
     return str.substring(start, start + len);
   },
@@ -732,7 +774,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   REPEAT: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
-    const n = Number(evaluate(args[1] as FormulaNode));
+    const n = argNumber(evaluate(args[1] as FormulaNode));
     if (isNaN(n) || n < 0 || n > 1000) return null;
     return str.repeat(n);
   },
@@ -744,7 +786,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   // ── Conversion (enhanced) ──────────────────────────────────
   TO_CURRENCY: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     const code = args[1] ? String(evaluate(args[1] as FormulaNode)) : "USD";
     if (isNaN(val)) return null;
     try {
@@ -753,7 +795,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   },
 
   TO_PERCENT: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(val)) return null;
     return `${(val * 100).toFixed(2)}%`;
   },
@@ -786,7 +828,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     if (args.length < 2) return null;
     const listVal = evaluate(args[0] as FormulaNode);
     const list = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
-    const idx = Number(evaluate(args[1] as FormulaNode));
+    const idx = argNumber(evaluate(args[1] as FormulaNode));
     if (isNaN(idx)) return null;
     const i = idx < 0 ? list.length + Math.trunc(idx) : Math.trunc(idx);
     return (list[i] ?? null) as DataValue;
@@ -821,27 +863,27 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   // ── Duration ───────────────────────────────────────────────
   DAYS: (args, evaluate) => {
-    const n = Number(evaluate(args[0] as FormulaNode));
+    const n = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(n) ? null : n;
   },
 
   HOURS: (args, evaluate) => {
-    const n = Number(evaluate(args[0] as FormulaNode));
+    const n = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(n) ? null : n / 24;
   },
 
   MINUTES: (args, evaluate) => {
-    const n = Number(evaluate(args[0] as FormulaNode));
+    const n = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(n) ? null : n / 1440;
   },
 
   TO_DAYS: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(val) ? null : val;
   },
 
   TO_HOURS: (args, evaluate) => {
-    const val = Number(evaluate(args[0] as FormulaNode));
+    const val = argNumber(evaluate(args[0] as FormulaNode));
     return isNaN(val) ? null : val * 24;
   },
 
@@ -865,10 +907,10 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   // ── Conditional Aggregation ────────────────────────────────
   SUMIF: (args, evaluate) => {
     if (args.length < 2) return null;
-    const criteria = Number(evaluate(args[args.length - 1] as FormulaNode));
+    const criteria = argNumber(evaluate(args[args.length - 1] as FormulaNode));
     let sum = 0;
     for (let i = 0; i < args.length - 1; i++) {
-      const val = Number(evaluate(args[i] as FormulaNode));
+      const val = argNumber(evaluate(args[i] as FormulaNode));
       if (!isNaN(val) && val === criteria) sum += val;
     }
     return sum;
@@ -887,10 +929,10 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   AVERAGEIF: (args, evaluate) => {
     if (args.length < 2) return null;
-    const criteria = Number(evaluate(args[args.length - 1] as FormulaNode));
+    const criteria = argNumber(evaluate(args[args.length - 1] as FormulaNode));
     let sum = 0, count = 0;
     for (let i = 0; i < args.length - 1; i++) {
-      const val = Number(evaluate(args[i] as FormulaNode));
+      const val = argNumber(evaluate(args[i] as FormulaNode));
       if (!isNaN(val) && val === criteria) { sum += val; count++; }
     }
     return count > 0 ? sum / count : null;
@@ -917,11 +959,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const nums: number[] = [];
     for (const a of args) {
       const val = evaluate(a);
-      if (Array.isArray(val)) {
-        for (const v of val) { const n = Number(v); if (!isNaN(n)) nums.push(n); }
-      } else {
-        const n = Number(val); if (!isNaN(n)) nums.push(n);
-      }
+      nums.push(...toNumbers(Array.isArray(val) ? val : [val]));
     }
     if (nums.length === 0) return null;
     const mean = nums.reduce((s, v) => s + v, 0) / nums.length;
@@ -998,10 +1036,8 @@ function evaluateNode(
   function resolveColumn(name: string): number[] {
     if (columnCache.has(name)) return columnCache.get(name)!;
     if (!dataFrame) return [];
-    const vals = dataFrame.records.map(r => {
-      const v = r.values[name];
-      return typeof v === "number" ? v : Number(v);
-    }).filter(n => !isNaN(n));
+    // A whole column of user data — the plainest Class-A site in the file.
+    const vals = toNumbers(dataFrame.records.map(r => r.values[name]));
     columnCache.set(name, vals);
     return vals;
   }
@@ -1043,8 +1079,24 @@ function evaluateNode(
           case ">=": return toNum(left) >= toNum(right);
           case "<=": return toNum(left) <= toNum(right);
           case "+": {
-            const ln = Number(left), rn = Number(right);
-            if (!isNaN(ln) && !isNaN(rn)) return ln + rn;
+            // `+` is numeric as soon as ONE side is a number; an absent operand
+            // contributes 0. Only when neither side is a number does it
+            // concatenate, so two absent fields give "" rather than a silent 0.
+            //
+            // Before #180a this operator disagreed with itself about an absent
+            // field: `null` arrived as 0 through `Number(null)` while
+            // `undefined` arrived as NaN and concatenated. Making both
+            // concatenate would have removed that disagreement and created a
+            // larger one — `-`, `*` and `/` read an absent operand as 0 through
+            // `toNum`, so `a - 1` would be -1 while `a + 1` was the string "1".
+            // Excel and Airtable read a blank cell as 0 in arithmetic while
+            // ignoring it inside AVERAGE; those are different questions and
+            // SPEC_MATH_SPREADSHEET_2026-09-02 §2.2 answers the second one.
+            // A PRESENT non-numeric value ("abc") still concatenates.
+            const ln = operandNumber(left), rn = operandNumber(right);
+            if (ln !== null && rn !== null) return ln + rn;
+            if (ln !== null && isAbsentOperand(right)) return ln;
+            if (rn !== null && isAbsentOperand(left)) return rn;
             return String(left ?? "") + String(right ?? "");
           }
           case "-": return toNum(left) - toNum(right);
@@ -1194,11 +1246,13 @@ function smartEq(a: any, b: any): boolean {
   return a === b;
 }
 
-function toNum(val: any): number {
-  if (typeof val === "number") return val;
-  if (typeof val === "boolean") return val ? 1 : 0;
-  const n = Number(val);
-  return isNaN(n) ? 0 : n;
+/**
+ * Operand for `>`, `<`, `>=`, `<=`, `-`, `*`, `/`. A non-number is 0 here, as
+ * it always has been — #180a routes the coercion without touching that
+ * fallback, which is the empty-input policy and belongs to #180b.
+ */
+function toNum(val: unknown): number {
+  return operandNumber(val) ?? 0;
 }
 
 function checkFieldRefs(

@@ -90,6 +90,7 @@
    * Desktop вЂ” standard dropdown below or above.
    */
   function positionContainer(el: HTMLDivElement, trigger: HTMLElement, _minWRem: number) {
+    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const fs = parseFloat(getComputedStyle(document.documentElement).fontSize);
     const toRem = (v: number) => `${(v / fs).toFixed(2)}rem`;
     const isTouch = window.matchMedia('(pointer: coarse)').matches;

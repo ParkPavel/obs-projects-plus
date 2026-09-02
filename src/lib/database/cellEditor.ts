@@ -13,7 +13,11 @@
  *    coerce malformed input.
  *  - List-style types (list/tags/relation) accept either a raw array
  *    or a comma-separated string (Notion-style entry shorthand).
+ *
+ * The module stays pure: `engine/numeric.ts` has no dependencies of its own.
  */
+
+import { toNumber } from "src/lib/engine/numeric";
 
 export type CellEditType =
   | "string"
@@ -124,11 +128,12 @@ export function parseCellInput(
     case "number": {
       // Reject space-or-dash-separated values to avoid silently
       // truncating "12 34" to 12.
-      if (!/^-?\d+(?:\.\d+)?$/.test(text)) {
-        return invalid("database.cell-editor.errors.number");
-      }
-      const n = Number(text);
-      if (!Number.isFinite(n)) {
+      // #180a: the write side of the same contract. This had its own, stricter
+      // regex — no exponent and no leading `+` — so a value the user could not
+      // TYPE was one the reader accepted from frontmatter. One rule now, and
+      // it still rejects "12 34" and "12abc" rather than truncating them.
+      const n = toNumber(text);
+      if (n === null) {
         return invalid("database.cell-editor.errors.number");
       }
       return ok(n);

@@ -23,6 +23,7 @@
 
   import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
   import type { RollupFunction } from "src/lib/engine/aggregate";
+  import { toNumber } from "src/lib/engine/numeric";
   import {
     getRollupMode,
     type RollupModeGroup,
@@ -74,9 +75,10 @@
 
   function parsePercent(val: Optional<DataValue>): number {
     if (val == null) return 0;
-    const str = String(val).replace("%", "").trim();
-    const n = parseFloat(str);
-    if (Number.isNaN(n)) return 0;
+    // The engine emits "57%" or a bare number; strip the sign the engine added,
+    // then ask the one rule instead of prefix-parsing what is left (#180a).
+    const n = toNumber(String(val).replace("%", ""));
+    if (n === null) return 0;
     // Clamp; the engine may emit 0–1 (Notion-style) or 0–100 — accept both.
     const scaled = n <= 1 && n >= 0 ? n * 100 : n;
     return Math.min(100, Math.max(0, scaled));

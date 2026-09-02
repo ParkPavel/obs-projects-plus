@@ -15,6 +15,7 @@
   $: showMode = ["all", "open", "done"].includes(String(config["showMode"] ?? ""))
     ? String(config["showMode"])
     : "all";
+  // coercion-exempt: Class C - plugin/widget configuration from a form control, not record data
   $: limit = Number(config["limit"] ?? 0) || 0;
 
   $: fieldNames = fields.map((f) => f.name);
@@ -92,7 +93,7 @@
       min="0"
       value={limit}
       placeholder={$i18n.t("views.dashboard.checklist.config.limit-placeholder", { defaultValue: "0 = no limit" })}
-      on:input={(e) => emit({ limit: Math.max(0, Number(inputVal(e)) || 0) })}
+      on:input={(e) => emit({ limit: Math.max(0, /* coercion-exempt: a number input's own value, min=0 above — a widget setting, not record data */ Number(inputVal(e)) || 0) })}
     />
   </label>
 

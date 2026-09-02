@@ -6,6 +6,7 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
 import type { TransformPipeline, TransformStep, GroupByStep, AggregationFunction } from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
+import { toNumber } from "src/lib/engine/numeric";
 import { joinKey as scatterJoinKey } from "./joinKey";
 import {
   bucketLabelForRaw,
@@ -130,7 +131,9 @@ export function computeChartData(
   for (const record of df.records) {
     const label = String(record.values[labelField] ?? "");
     const rawVal = record.values[valueField];
-    const value = rawVal != null ? Number(rawVal) : null;
+    // #180a: `Number(rawVal)` plotted `""` as 0 and `"abc"` as NaN. A point
+    // that is not a number is absent, not zero.
+    const value = toNumber(rawVal);
 
     // Skip zero values if configured (raw level — mirrors groupRows omitZero).
     if (config.xAxis.omitZero && (value === 0 || value === null)) continue;
@@ -258,8 +261,8 @@ export function computeScatterData(
     let matched = 0;
     for (const record of source.records) {
       const xRaw = record.values[xField];
-      const x = typeof xRaw === "number" ? xRaw : parseFloat(String(xRaw ?? ""));
-      if (isNaN(x)) continue;
+      const x = toNumber(xRaw);
+      if (x === null) continue;
 
       const k = scatterJoinKey(record.values[leftKey]);
       const matches = idx.get(k);
@@ -269,8 +272,8 @@ export function computeScatterData(
       const m = matches[0];
       if (!m) continue;
       const yRaw = m.values[yField];
-      const y = typeof yRaw === "number" ? yRaw : parseFloat(String(yRaw ?? ""));
-      if (isNaN(y)) continue;
+      const y = toNumber(yRaw);
+      if (y === null) continue;
 
       matched += 1;
 
@@ -296,11 +299,9 @@ export function computeScatterData(
     };
   } else {
     for (const record of source.records) {
-      const xRaw = record.values[xField];
-      const yRaw = record.values[yField];
-      const x = typeof xRaw === "number" ? xRaw : parseFloat(String(xRaw ?? ""));
-      const y = typeof yRaw === "number" ? yRaw : parseFloat(String(yRaw ?? ""));
-      if (isNaN(x) || isNaN(y)) continue;
+      const x = toNumber(record.values[xField]);
+      const y = toNumber(record.values[yField]);
+      if (x === null || y === null) continue;
 
       const label = record.id ?? undefined;
       const group = config.colorBy ? String(record.values[config.colorBy] ?? "") : undefined;

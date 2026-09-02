@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
   import { GridCell } from "..";
+  import { toNumber } from "src/lib/engine/numeric";
   import type { GridColDef } from "../../dataGrid";
 
   export let value: Optional<DataValue>;
@@ -19,9 +20,9 @@
 
   function parsePercent(val: Optional<DataValue>): number {
     if (val == null) return 0;
-    const str = String(val).replace("%", "");
-    const n = parseFloat(str);
-    return isNaN(n) ? 0 : Math.min(100, Math.max(0, n));
+    // Same contract as RollupCellRenderer's parsePercent (#180a).
+    const n = toNumber(String(val).replace("%", ""));
+    return n === null ? 0 : Math.min(100, Math.max(0, n));
   }
 
   function splitChips(val: Optional<DataValue>): string[] {

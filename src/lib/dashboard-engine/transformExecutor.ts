@@ -23,6 +23,7 @@ import type {
   AggregationFunction,
 } from "./transformTypes";
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
+import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { evaluateFormulaValue } from "./formulaEngine";
 import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
@@ -374,6 +375,7 @@ function executeUnpivot(
 
       // Metadata fields
       newValues["_source_record"] = record.id;
+      // coercion-exempt: Class C - `idx` is this loop's own counter, already a number
       newValues["_group_index"] = Number(idx);
 
       newRecords.push({
@@ -532,20 +534,20 @@ export function evaluateExpression(
 
   // Simple two-pass evaluator (no parentheses for Phase 1)
   const resolvedTokens: (number | string)[] = tokens.map((token) => {
-    // Numeric literal
-    const num = Number(token);
-    if (!isNaN(num) && token !== "") return num;
+    // Numeric literal. The token comes from the user's expression text, but the
+    // grammar it must satisfy is the same one their data satisfies, so there is
+    // no reason for this to be a second rule — and it was: this branch carried
+    // a `token !== ""` guard that the field-reference branch ten lines below
+    // did not (#180a).
+    const literal = toNumber(token);
+    if (literal !== null) return literal;
 
     // Operator
     if (["+", "-", "*", "/"].includes(token)) return token;
 
     // Field reference
-    const val = values[token];
-    if (typeof val === "number") return val;
-    if (typeof val === "string") {
-      const parsed = Number(val);
-      if (!isNaN(parsed)) return parsed;
-    }
+    const fieldValue = toNumber(values[token]);
+    if (fieldValue !== null) return fieldValue;
 
     return NaN;
   });
@@ -594,7 +596,10 @@ function evaluateTokens(tokens: (number | string)[]): number | null {
     result = ops[j] === "+" ? result + right : result - right;
   }
 
-  return isNaN(result) ? null : result;
+  // `result` is already a number; this asks whether the arithmetic produced a
+  // real one. `Number.isFinite` rather than `!isNaN` so an overflow to
+  // ±Infinity is rejected too, matching `toNumber`'s finiteness rule (#180a).
+  return Number.isFinite(result) ? result : null;
 }
 
 // ── FILTER ───────────────────────────────────────────────────
@@ -780,22 +785,18 @@ function executeGroupBy(
 // ── AGGREGATE ────────────────────────────────────────────────
 
 /**
- * Extract numeric values from an array (grouped field values).
+ * Extract numeric values from a grouped field value, which may be a scalar or
+ * an array.
+ *
+ * #180a fixed two things here. The coercion was a fourth rule — `Number(v)`
+ * with no empty-string guard at all, so `""` summed as 0 while the footer
+ * dropped it. And the scalar branch accepted only `typeof val === "number"`,
+ * so `"5"` yielded `[]` and summed to 0 while `["5"]` summed to 5: the same
+ * value disagreed with itself depending on whether a group had been built.
+ * Both now go through the same call.
  */
 function extractNumericValues(val: DataValue | undefined | null): number[] {
-  if (!Array.isArray(val)) {
-    if (typeof val === "number") return [val];
-    return [];
-  }
-  const nums: number[] = [];
-  for (const v of val) {
-    if (typeof v === "number") nums.push(v);
-    else if (typeof v === "string") {
-      const n = Number(v);
-      if (!isNaN(n)) nums.push(n);
-    }
-  }
-  return nums;
+  return toNumbers(Array.isArray(val) ? val : [val]);
 }
 
 /**
@@ -1171,9 +1172,10 @@ function executeJoin(
           values[outName] = null;
           continue;
         }
-        const allNumeric = gathered.every(
-          (g) => typeof g === "number" || (typeof g === "string" && !isNaN(Number(g)))
-        );
+        // #180a: was its own numeric-ness expression, which is how a fifth
+        // implementation appears. A join that aggregates must agree with the
+        // aggregate about what a number is.
+        const allNumeric = gathered.every(isNumeric);
         values[outName] = allNumeric
           ? computeAggFn(step.aggregation, gathered as unknown as DataValue, warnings)
           : (gathered[0] ?? null);

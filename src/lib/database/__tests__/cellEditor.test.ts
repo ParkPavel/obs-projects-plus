@@ -3,6 +3,7 @@ import {
   parseCellInput,
   type CellEditType,
 } from "../cellEditor";
+import { NUMERIC_COERCION_CASES } from "src/lib/engine/__tests__/numericContract.test";
 
 function expectOk<T extends ReturnType<typeof parseCellInput>>(
   result: T,
@@ -56,6 +57,34 @@ describe("parseCellInput — number", () => {
   it("rejects non-numeric and embedded spaces", () => {
     expect(parseCellInput("12 34", "number").ok).toBe(false);
     expect(parseCellInput("abc", "number").ok).toBe(false);
+  });
+
+  // #180a: the write side reads by the same rule as the read side. Driven off
+  // the one fixture table rather than restating cases (spec §2.2) — what a
+  // user can TYPE into a numeric cell and what the pipeline will accept back
+  // out of frontmatter had drifted apart, and this is what keeps them joined.
+  describe("accepts exactly the strings NUMERIC_COERCION_CASES calls numbers", () => {
+    // Blank input is excluded because it does not reach the number parser at
+    // all: `parseCellInput` treats an empty string as CLEARING the cell for
+    // every scalar type, and returns ok/null rather than a rejection (pinned
+    // by "treats empty-string input as null for every scalar type" above).
+    // That agrees with the rule — "" is not a number — but it is a different
+    // outcome from a rejection, so folding the two together here would assert
+    // less than it appears to.
+    const stringCases = NUMERIC_COERCION_CASES.filter(
+      (c): c is typeof c & { input: string } =>
+        typeof c.input === "string" && c.input.trim() !== ""
+    );
+
+    it("covers a meaningful number of string cases", () => {
+      expect(stringCases.length).toBeGreaterThan(15);
+    });
+
+    it.each(stringCases)("$label", ({ input, expected }) => {
+      const result = parseCellInput(input, "number");
+      expect(result.ok).toBe(expected !== null);
+      if (result.ok) expect(result.value).toBe(expected);
+    });
   });
 });
 

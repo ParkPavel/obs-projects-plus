@@ -407,8 +407,30 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   **It is a unit count, not a render:** it says how much root-anchoring is left and where, never
   that removing it looks right. Containment is inferred from a directory and a declared
   `@container`, not from runtime ancestry — statically unprovable, which is why #166 put the
-  guarantee in the cascade. Branch `fix/167-rem-in-container-ratchet`, not merged; reviews in
-  `codex-reports/CX-AUDIT-167.md`.
+  guarantee in the cascade. **Merged into `main` 2026-09-03** (merge `895aab2`); reviews in `codex-reports/CX-AUDIT-167.md`.
+- **#180a (T1 of `SPEC_MATH_SPREADSHEET_2026-09-02`) — the project has one numeric-coercion rule.**
+  `src/lib/engine/numeric.ts` (`toNumber` / `toNumbers` / `isNumeric`) replaced five disagreeing
+  implementations: `"12abc"` was 12 in the kernel and NaN in the footer, `"0x10"` was 0 in one and
+  16 in two others, `""` summed as 0 in the pipeline and was dropped in the footer, and all of them
+  pushed a literal `NaN` into `SUM`. Ingest now stores `null` rather than `NaN` for a Number field
+  whose value is not a number, which is the fix that reaches every other surface. Pinned by
+  `NUMERIC_COERCION_CASES` (imported by consumers, never restated) and ratcheted by **R0.15**.
+  **The two reviews then moved the boundary, on a mechanism rather than a preference.** T1 was
+  supposed to leave the empty-input policy to T2, but T1 is what *creates* empty lists: a Number
+  field holding `abc` used to become `NaN` and survive into the reduction, so an average of nothing
+  printed the visible nonsense `NaN`. With the value dropped the list is genuinely empty, and the
+  kernel's `0` would print a number that reads like an answer — the adversarial review traced that
+  to the table footer, where `computeAggregations` lacked the guard its neighbour
+  `computeAggregateValue` already had. So `avg`/`min`/`max`/`range` return `null` and the footer's
+  "—" from the kernel now; `sum` keeps `0`, the additive identity being a real total of nothing.
+  Six assertions that pinned the old policy were flipped with the reason written beside them.
+  The audit found the second defect in R0.15's declared blind spot — markup — one day after the
+  blind spot was written down as tolerable: `CreateField.svelte` displayed a Number field's default
+  through `parseInt`, so `1.5` showed as `1` while `1.5` was written. **R0.15 now scans markup**,
+  with `/* coercion-exempt: … */` as the spelling a template expression can carry, `<style>` blocks
+  excluded as CSS, and four widget-setting handlers marked. Reports:
+  `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
+  half of T2 (`#180b`) is untouched.
 - **Canonical baseline — `main`: 183 suites / 2549 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (109 pre-existing tsdoc warnings — 112 until #178 deleted three `@since` tags).**
   `fix/167-rem-in-container-ratchet` stands at **184 / 2559** (+1 suite / +10: R0.16).
