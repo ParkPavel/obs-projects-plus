@@ -93,12 +93,17 @@ export function buildColumns(
 
 /**
  * Shared grid-template-columns for header/body/footer (one grid context).
- * Tracks are FIXED widths: the table overflows horizontally as one unit
- * inside the shared scroll container (UT-R2 #083 — flexible tracks made
- * header and body disagree about column positions).
+ * Column tracks are FIXED widths: the table overflows horizontally as one unit
+ * inside the shared scroll container (UT-R2 #083 — flexible tracks made header
+ * and body disagree about column positions).
+ *
+ * #166: a trailing `1fr` filler absorbs slack when the container is wider than
+ * the columns. Safe where #083's flexible tracks were not: every track before
+ * it is still a fixed length, and leading fixed tracks hold the same positions
+ * whatever follows. Narrower container → the filler shrinks, the columns don't.
  */
 export function gridTemplate(columns: readonly TableColumn[]): string {
-  return columns.map((c) => `${c.widthRem}rem`).join(" ");
+  return [...columns.map((c) => `${c.widthRem}rem`), "1fr"].join(" ");
 }
 
 // ── Sorting ──────────────────────────────────────────────────

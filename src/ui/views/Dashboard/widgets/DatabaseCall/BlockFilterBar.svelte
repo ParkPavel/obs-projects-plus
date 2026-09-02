@@ -81,6 +81,9 @@
   }
 
   .ppp-blockfilter-popover {
+    /* #166 leaves this literal: FloatingPopup portals the desktop popup to
+       <body> (FloatingPopup.svelte:255), so there is no container ancestor
+       to be relative to — this is the window-anchored side of the boundary. */
     min-width: 22rem;
     max-width: 28rem;
     max-height: 24rem;
