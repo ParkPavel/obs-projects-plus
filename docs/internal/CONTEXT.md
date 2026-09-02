@@ -386,22 +386,29 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   root, so a component sized in it renders the same in a narrow widget and across the full canvas.
   R0.16 is a ratchet in R0.3's shape over the components that live inside a declared container —
   everything under `ui/views/Dashboard/`, plus any component writing its own `@container` — minus a
-  declared list of window-anchored surfaces (`TemplateConfirmDialog`, `FloatingPopup`), each of
-  which the test proves is a real file and would otherwise be counted. Comments do not count and
-  `var()` fallbacks do; inline `style="…"` counts, so the budget cannot be paid down by moving a
-  unit into the markup — in all four inline forms, after the Codex audit found `StatsCard` shipping
-  a `rem` through `style={…}` and `AllDayEventStrip` sizing through `style:` directives, both
-  invisible to the first reader (budget re-measured 806 → 807, not incremented). The starting
-  number is the **measurement** on `09fef14`, and a plant test
-  asserts one added declaration breaks it — which pins the ceiling to the tree instead of letting
-  it drift, the defect R0.3 has (23 above its own tree, with a dead token file inside the gap until
-  #165). `svelteStyles` / `stripCssComments` / `collectStyled` moved to
-  `src/__tests__/support/cssScan.ts`; R0.13 is otherwise unchanged. **It is a unit count, not a
-  render:** it says how much root-anchoring is left and where, never that removing it looks right.
-  Its containment is inferred from a directory and a declared `@container`, not from runtime
-  ancestry — statically unprovable, which is why #166 put the guarantee in the cascade. Each
-  exemption must exhibit its mechanism (own `position: fixed`, or a portal), not merely exist.
-  Branch `fix/167-rem-in-container-ratchet` (`eef8c92`), not merged.
+  declared list of window-anchored surfaces (`TemplateConfirmDialog`, `FloatingPopup`). Comments do
+  not count; `var()` fallbacks do.
+  **Two Codex audits each found a route the reader of the day did not model** — first `style={…}`
+  and `style:` directives (two live components were shipping sizes through them), then the
+  shorthands `{style}` / `style:width` and literals hoisted into the script, which carry no value at
+  the element at all. Each fix had been narrower than the hole, so the counter stopped enumerating
+  routes: it now reads the **whole component text**, exactly as R0.3 has always counted `px`.
+  Relocation is defeated by construction rather than by keeping up with Svelte's syntax.
+  Re-measured across that change: 807 → 807 — a closed hole that moved no number, logged anyway,
+  because a re-measurement returning the same value is evidence and an unlogged one looks like
+  nothing happened.
+  The starting number is the **measurement** on `09fef14`, and a plant test asserts one added
+  declaration breaks it — pinning the ceiling to the tree instead of letting it drift, the defect
+  R0.3 has (23 above its own tree, with a dead token file inside the gap until #165). An exemption
+  must exhibit its mechanism — `use:portal` outside comments, or `position: fixed` in a real rule —
+  after the second audit found the check accepting the bare string `FloatingPopup`, which appears in
+  that component's own header. `svelteStyles` / `stripCssComments` / `collectStyled` moved to
+  `src/__tests__/support/cssScan.ts`; R0.13 is otherwise unchanged.
+  **It is a unit count, not a render:** it says how much root-anchoring is left and where, never
+  that removing it looks right. Containment is inferred from a directory and a declared
+  `@container`, not from runtime ancestry — statically unprovable, which is why #166 put the
+  guarantee in the cascade. Branch `fix/167-rem-in-container-ratchet`, not merged; reviews in
+  `codex-reports/CX-AUDIT-167.md`.
 - **Canonical baseline — `main`: 183 suites / 2549 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (109 pre-existing tsdoc warnings — 112 until #178 deleted three `@since` tags).**
   `fix/167-rem-in-container-ratchet` stands at **184 / 2559** (+1 suite / +10: R0.16).

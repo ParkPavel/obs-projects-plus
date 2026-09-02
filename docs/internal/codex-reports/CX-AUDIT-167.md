@@ -84,3 +84,82 @@ rather than claimed as closed.
 
 **"Tests UNKNOWN" is a sandbox artefact, not a result.** The auditor's read-only sandbox cannot
 start Node; the four gates were run in the main checkout and are recorded on the ticket.
+
+---
+
+# Second pass — confirmation run on `49026c4`
+
+Same role, same base `09fef14`, run 2026-09-02 after the first pass's fixes.
+Expected result asked for: whether the two findings are closed, and whether any NEW way exists to
+satisfy the budget without removing `rem`.
+
+Verdict returned: **BLOCKED** — two HIGH. Both true.
+
+## Verbatim findings
+
+> - **HIGH** — `src/__tests__/support/cssScan.ts:50`: the reader only recognizes `style…=`. It
+>   misses valid Svelte shorthand such as `{style}` and `style:width`; both forms already exist at
+>   `src/ui/components/FloatingPopup/FloatingPopup.svelte:291` and
+>   `src/ui/components/SlideInPanel/SlideInPanel.svelte:54`.
+>
+>   Failure scenario: move an in-scope literal from `style="gap: 0.75rem"` to a script variable,
+>   then render it as `{style}` or `style:gap`. The shipped root-anchored size remains, but R0.16's
+>   count falls.
+>
+>   This also applies to `style={gapStyle}` where the `rem` string is hoisted into the component
+>   script: the reader extracts only `gapStyle`, while `shippedCss` discards script content.
+>
+>   Would falsify: a regression test relocating a real in-scope `rem` through each shorthand/hoisted
+>   form causes the count to remain unchanged (or the budget to fail).
+>
+> - **HIGH** — `src/__tests__/R0_16_remInContainer.test.ts:367`: the portal mechanism check accepts
+>   any occurrence of `FloatingPopup`, not specifically a portal. The component's own header
+>   contains that word at `src/ui/components/FloatingPopup/FloatingPopup.svelte:2`, so removing
+>   `use:portal` would still satisfy the exemption check.
+>
+>   Failure scenario: `FloatingPopup` is changed to remain inside a container while retaining its
+>   name; its exemption and all of its `rem` values continue to pass despite no portal.
+>
+>   Would falsify: a fixture/text mutation that removes `use:portal` while retaining the word
+>   `FloatingPopup` makes the allowlist-mechanism assertion fail.
+
+## Disposition
+
+**HIGH 1 — TRUE, and the third time the same shape.** Verified at both named sites: `{style}`
+shorthand at `FloatingPopup.svelte:291`, `style:width` shorthand at `SlideInPanel.svelte:54`.
+
+The important thing is not the two syntaxes. It is that this was the second audit in a row to find
+a route the reader did not model, and each of my fixes had been narrower than the hole: `<style>`
+only, then `<style>` plus four binding forms. A shorthand carries **no value at the element at
+all** — the value lives in the script — so no reader built around style bindings could ever have
+counted it.
+
+So the reader stopped enumerating routes. The counter now reads the whole component text with
+comments stripped, which is how R0.3 has always counted `px`. Relocation is defeated by
+construction rather than by keeping up with Svelte's syntax.
+
+**Re-measured across the rule change: 807 → 807, unchanged.** The routes the audit named were real
+but carried nothing today, so this closed a hole without moving a number — recorded in the bumps
+log, because a re-measurement returning the same value is evidence and an unlogged one looks like
+nothing happened.
+
+Falsifier run as the audit specified: `const style = "gap: 0.75rem"` hoisted into
+`StatsCard.svelte`'s script and rendered as `{style}` — the exact relocation described — breaks the
+budget at 808 > 807. Reverted.
+
+**HIGH 2 — TRUE.** `FloatingPopup.svelte:2` does contain its own name, and the check accepted the
+bare string, so the exemption would have survived deletion of `use:portal`. A test a component
+satisfies by being *named after* the thing it claims to do is not a test. The name alternative is
+gone: an entry must carry `use:portal` outside comments, or `position: fixed` in a real style rule.
+Both current entries still qualify — `FloatingPopup.svelte:289` and `:303`,
+`TemplateConfirmDialog.svelte:55` — and the predicate is now proven both ways on synthetic text,
+including the three near-misses (a comment mentioning `use:portal`, a commented-out
+`position: fixed`, and an import naming `FloatingPopup`).
+
+**Not closed, and not claimed:** containment is still inferred from a directory and a declared
+`@container`, never from runtime ancestry. The remedy the first pass asked for — derive containment
+from rendered structure — is what the ADR states static analysis cannot do, and is why #166 put the
+guarantee in the CSS cascade. Recorded in the test's docstring and on the ticket.
+
+**"No test pass claimed" is again the sandbox**, this time `EPERM` on `C:\Users\Park`. The four
+gates were run in the main checkout.

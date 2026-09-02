@@ -45,7 +45,7 @@ import {
   readText,
   relToSrc,
   stripCssComments,
-  svelteStyleBindings,
+  stripComponentComments,
   svelteStyles,
 } from "./support/cssScan";
 
@@ -115,6 +115,11 @@ const WINDOW_ANCHORED = [
  *     the whole time. Re-measured with the reader fixed rather than
  *     incremented, for the same reason #165 re-measured R0.3: a ceiling that
  *     is not the measurement cannot see what it never read.
+ *   807 — unchanged when the counter went whole-file (#167, second Codex
+ *     audit, 2026-09-02). The shorthand and hoisted-literal routes that audit
+ *     named were real routes with nothing travelling on them today, so closing
+ *     them moved no number. Recorded anyway: a re-measurement that returns the
+ *     same value is evidence, and an unlogged one looks like nothing happened.
  */
 const REM_IN_CONTAINER_BUDGET = 807;
 
@@ -125,22 +130,32 @@ const REM_LENGTH = /\b\d*\.?\d+rem\b/g;
 const LOCAL_SCALE_READ = /var\(\s*--ppp-local-[a-zA-Z0-9_-]*/g;
 
 /**
- * The CSS a component ships: its `<style>` blocks with comments removed, plus
- * every inline style binding in all four of its forms.
+ * Everything a component ships, comments removed.
  *
- * Comments are stripped because this repo documents sizes in prose beside the
- * rules that use them ("was 4px, now 0.25rem"), and a note about a size is not
- * a size. R0.3 counts them and pays for it — four separate "comment scrub"
- * entries in its bumps log are conversions that moved no pixel on screen.
+ * **Two audits argued this down to one rule.** The counter first read `<style>`
+ * blocks; the first Codex audit of #167 found `style={…}` and `style:`
+ * directives shipping sizes it never saw. It then read `<style>` plus four
+ * binding forms; the second audit found the shorthands `{style}` and
+ * `style:width`, and the case where the literal is hoisted into the script and
+ * the binding carries only a variable name.
  *
- * Inline styles are included because they are CSS that ships. Counting only
- * `<style>` would let a unit be relocated into the markup, dropping the budget
- * while changing nothing — a ratchet defeated by moving code rather than by
- * removing it. Reading only ONE of the four inline forms was the same hole one
- * layer down, and the Codex audit of #167 found two live components in it.
+ * Both fixes were narrower than the hole. The hole is not a syntax: it is that a
+ * size can be written anywhere in a component and reach an element by a route
+ * the reader does not model. So the reader stops modelling routes and counts
+ * every `rem` in the file — which is how R0.3 has always counted `px`, and
+ * makes relocation useless by construction rather than by enumeration.
+ *
+ * Re-measured when the rule changed: the total did not move. Nothing in the
+ * tree was relying on a route the narrower readers missed, so this is strictly
+ * a closed hole and not a re-baselining.
+ *
+ * Comments still do not count. This repo documents sizes in prose beside the
+ * rules that use them, and "was 4px, now 0.25rem" is a note about a size rather
+ * than a size — R0.3 counts those and pays for it in four "comment scrub"
+ * entries in its own bumps log.
  */
-function shippedCss(componentText: string): string {
-  return `${stripCssComments(svelteStyles(componentText))}\n${svelteStyleBindings(componentText)}`;
+function shippedText(componentText: string): string {
+  return stripComponentComments(componentText);
 }
 
 /**
@@ -179,7 +194,7 @@ function containerScopedComponents(): ScopedComponent[] {
     .filter(
       ({ file }) => !(WINDOW_ANCHORED as readonly string[]).includes(file)
     )
-    .map(({ file, text }) => ({ file, css: shippedCss(text) }));
+    .map(({ file, text }) => ({ file, css: shippedText(text) }));
 }
 
 /** `[file, count]` for every component carrying at least one `rem`, worst first. */
@@ -218,59 +233,75 @@ describe("R0.16 — rem inside a container (#167)", () => {
     // can be paid down by editing prose is measuring the prose.
     const documented =
       "<style>/* was 4px, i.e. 0.25rem */\n.x { padding: 0.5em; }</style>";
-    expect(remOccurrences(shippedCss(documented))).toBe(0);
+    expect(remOccurrences(shippedText(documented))).toBe(0);
     const real =
       "<style>/* was 4px, i.e. 0.25rem */\n.x { padding: 0.25rem; }</style>";
-    expect(remOccurrences(shippedCss(real))).toBe(1);
+    expect(remOccurrences(shippedText(real))).toBe(1);
   });
 
-  it("counts all four inline style forms as shipped CSS", () => {
-    // Otherwise the budget falls by relocation. `HeaderStripsSection.svelte`
-    // sizes a drag preview entirely in a quoted attribute — and the first
-    // version of this reader saw ONLY that one form, which is how two live
-    // components sat outside the count (Codex audit of #167).
-    const inline =
-      '<div style="top: 1rem; border-radius: 0.25rem;"></div><style>.x { gap: 0; }</style>';
-    expect(remOccurrences(shippedCss(inline))).toBe(2);
+  it("counts a size by every route it can reach an element", () => {
+    // The budget must not be payable by relocation. Two Codex audits of #167
+    // each found a route the reader of the day did not model, so the reader
+    // stopped modelling routes: every `rem` in the component counts, wherever
+    // it stands. These cases are the routes that were actually missed, kept as
+    // the record of what "wherever it stands" had to cover.
+    const styleBlock =
+      "<style>.x { top: 1rem; border-radius: 0.25rem; }</style>";
+    expect(remOccurrences(shippedText(styleBlock))).toBe(2);
     expect(
-      remOccurrences(shippedCss("<div style='padding: 0.5em'></div>"))
+      remOccurrences(shippedText("<div style='padding: 0.5em'></div>"))
     ).toBe(0);
-    // Braced expression, including a template literal carrying its own `{}`.
+    // Quoted attribute — HeaderStripsSection sizes a drag preview in one.
+    expect(remOccurrences(shippedText('<div style="top: 1rem"></div>'))).toBe(
+      1
+    );
+    // Braced expression, including a template literal with its own `{}`.
     expect(
-      remOccurrences(shippedCss('<div style={ok ? "gap: 0.75rem" : ""}></div>'))
+      remOccurrences(
+        shippedText('<div style={ok ? "gap: 0.75rem" : ""}></div>')
+      )
     ).toBe(1);
     expect(
       remOccurrences(
-        shippedCss("<div style={`border-left: 0.1875rem solid ${c}`}></div>")
+        shippedText("<div style={`border-left: 0.1875rem solid ${c}`}></div>")
       )
     ).toBe(1);
-    // Directive form, quoted and braced.
-    expect(remOccurrences(shippedCss('<div style:top="1.5rem"></div>'))).toBe(
+    // Directive, quoted and braced — audit 1.
+    expect(remOccurrences(shippedText('<div style:top="1.5rem"></div>'))).toBe(
       1
     );
-    expect(remOccurrences(shippedCss("<div style:gap={'2rem'}></div>"))).toBe(
+    expect(remOccurrences(shippedText("<div style:gap={'2rem'}></div>"))).toBe(
       1
     );
-    // The stated boundary: an interpolated NUMBER carries no literal digits, so
-    // the counter cannot see it. It IS read — the limit belongs to the regex,
-    // not to the reader's coverage — and this records which of the two it is.
+    // Shorthand `{style}` and `style:width`, with the literal hoisted into the
+    // script — audit 2. Both shorthands carry no value at the element at all,
+    // which is why no binding reader could ever have counted them.
+    const hoisted =
+      "<script>const style = 'gap: 0.75rem';</script><div {style}></div>";
+    expect(remOccurrences(shippedText(hoisted))).toBe(1);
+    const shorthandDirective =
+      "<script>let width = '22rem';</script><div style:width></div>";
+    expect(remOccurrences(shippedText(shorthandDirective))).toBe(1);
+    // …and a size that never touches a style binding at all.
     expect(
-      svelteStyleBindings('<div style:top="{topPosition}rem"></div>')
-    ).toContain("{topPosition}rem");
+      remOccurrences(shippedText("<script>const GAP = '0.5rem';</script>"))
+    ).toBe(1);
+    // The stated boundary, unchanged by any of this: an interpolated NUMBER
+    // carries no literal digits, so no unit scan can see it. The limit belongs
+    // to the regex, and this records that rather than implying coverage.
     expect(
-      remOccurrences(shippedCss('<div style:top="{topPosition}rem"></div>'))
+      remOccurrences(shippedText('<div style:top="{topPosition}rem"></div>'))
     ).toBe(0);
   });
 
-  it("reads the two components the first version of this reader missed", () => {
-    // Tree-based regression for the audit finding, not a synthetic restatement.
-    // If either shipped form stops being read these go to zero and say so,
-    // which is what "the budget cannot be paid by relocation" means in practice
-    // rather than in a docstring.
+  it("counts the two components the first reader missed, from the real tree", () => {
+    // Tree-based regression for audit 1, not a synthetic restatement. If either
+    // component's shipped form stops being counted these go to zero and say so.
     const braced = readText(
       join(SRC_ROOT, "ui/views/Dashboard/widgets/Stats/StatsCard.svelte")
     );
-    expect(remOccurrences(svelteStyleBindings(braced))).toBeGreaterThan(0);
+    expect(braced).toMatch(/style=\{/);
+    expect(remOccurrences(shippedText(braced))).toBeGreaterThan(0);
 
     const directives = readText(
       join(
@@ -278,11 +309,12 @@ describe("R0.16 — rem inside a container (#167)", () => {
         "ui/views/Calendar/components/Calendar/AllDayEventStrip.svelte"
       )
     );
-    expect(svelteStyleBindings(directives)).toMatch(/\{STRIP_HEIGHT_REM\}rem/);
+    expect(directives).toMatch(/style:[a-z-]/);
+    expect(remOccurrences(shippedText(directives))).toBeGreaterThan(0);
   });
 
   it("no stylesheet or script module hides a size inside the container scope", () => {
-    // The other half of the audit's coverage question. `shippedCss` reads
+    // The other half of the audit's coverage question. The counter reads
     // `.svelte` only, which is sound just while nothing else under the scope
     // can carry a size — so assert that instead of assuming it.
     const stylesheets = collectSourceFiles(SRC_ROOT, [".css"])
@@ -359,15 +391,40 @@ describe("R0.16 — rem inside a container (#167)", () => {
     // prove a Svelte component's runtime ancestry, which is exactly why #166
     // put the guarantee in the cascade instead. This narrows the hole; it does
     // not close it, and the honest place to say so is here.
-    const unproven = WINDOW_ANCHORED.filter((file) => {
-      const text = readText(join(SRC_ROOT, file));
+    //
+    // The mechanism must be the MECHANISM, not a word. The first version of
+    // this check also accepted the string `FloatingPopup` anywhere in the file,
+    // and the second Codex audit pointed out that `FloatingPopup`'s own header
+    // comment contains its own name — so it would have kept its exemption after
+    // `use:portal` was deleted from it. A test that a component satisfies by
+    // being named after the thing it claims to do is not a test.
+    const proves = (text: string): boolean => {
+      const live = stripComponentComments(text);
       const detached = /position:\s*fixed/.test(
         stripCssComments(svelteStyles(text))
       );
-      const portalled = /\buse:portal\b|FloatingPopup/.test(text);
-      return !detached && !portalled;
-    });
+      return detached || /\buse:portal\b/.test(live);
+    };
+    const unproven = WINDOW_ANCHORED.filter(
+      (file) => !proves(readText(join(SRC_ROOT, file)))
+    );
     expect(unproven).toEqual([]);
+
+    // Proven both ways on synthetic text, because an all-clear is otherwise
+    // indistinguishable from a matcher that accepts anything.
+    expect(proves("<div use:portal></div><style>.x{gap:0}</style>")).toBe(true);
+    expect(proves("<style>.x { position: fixed; }</style>")).toBe(true);
+    expect(
+      proves("<!-- portals via use:portal --><style>.x{gap:0}</style>")
+    ).toBe(false);
+    expect(proves("<style>/* position: fixed once */ .x{gap:0}</style>")).toBe(
+      false
+    );
+    expect(
+      proves(
+        "<script>import FloatingPopup from './FloatingPopup.svelte';</script>"
+      )
+    ).toBe(false);
 
     // And it stays short. A list that grows is the shape this failure takes.
     expect(WINDOW_ANCHORED.length).toBeLessThanOrEqual(2);
@@ -383,7 +440,7 @@ describe("R0.16 — rem inside a container (#167)", () => {
     );
     // …and it really does carry the units this exempts, so the entry is not free.
     expect(
-      remOccurrences(shippedCss(readText(join(SRC_ROOT, dialog))))
+      remOccurrences(shippedText(readText(join(SRC_ROOT, dialog))))
     ).toBeGreaterThan(0);
   });
 

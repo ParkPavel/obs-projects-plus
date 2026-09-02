@@ -46,69 +46,38 @@ export function svelteStyles(content: string): string {
     .join("\n");
 }
 
-/** The four ways a Svelte component attaches a style value to an element. */
-const STYLE_BINDING_SITE = /\bstyle(?::[A-Za-z-][A-Za-z0-9_-]*)?\s*=\s*/g;
-
 /**
- * Every inline style value a Svelte component ships, concatenated — the value
- * of `style="…"`, `style={…}`, `style:name="…"` and `style:name={…}`.
+ * A Svelte component's whole text with every comment form removed — CSS
+ * `/* … *\/`, markup `<!-- … -->`, and `//` to end of line.
  *
- * An inline style attribute is CSS that ships, and it is where this tree keeps
- * its imperative geometry (`HeaderStripsSection.svelte:414-424` sizes a drag
- * preview entirely in one). Counting only `<style>` blocks would mean a unit
- * could be moved into the markup and the budget would fall while nothing on
- * screen changed — a ratchet defeated by relocation rather than by work.
+ * **Why the whole text and not just the styles.** R0.16 first counted `<style>`
+ * blocks, then `<style>` plus the four inline binding forms. Two Codex audits
+ * of #167 walked through both: the first found `style={…}` and `style:` shipping
+ * sizes that were never read, the second found the shorthand forms `{style}`
+ * (`FloatingPopup.svelte:291`) and `style:width` (`SlideInPanel.svelte:54`), and
+ * the case where the literal is hoisted into the script and the binding carries
+ * only a variable name.
  *
- * **All four forms, because three of them were the hole.** The first version of
- * this read only the quoted attribute; the Codex audit of #167 found
- * `StatsCard.svelte:68` shipping a `rem` through `style={…}` and
- * `AllDayEventStrip.svelte:122-125` sizing through `style:` directives, both
- * inside the container scope and both invisible. A reader that misses a shipped
- * form does not merely undercount — it hands out a way to lower a budget by
- * relocating a declaration, which is the one thing the budget exists to refuse.
+ * Each fix was narrower than the hole, because the hole is not any particular
+ * syntax: it is that a size can be written anywhere in a component and reach an
+ * element by some route the reader does not model. So the reader stops modelling
+ * routes. Every `rem` written in an in-scope component counts, wherever it
+ * stands — which is also how R0.3 has always counted `px`, and is why a
+ * relocation cannot lower the budget. Measured when the rule changed: the total
+ * did not move, so nothing in the tree relies on a route the narrower readers
+ * missed.
  *
- * Values are read verbatim, interpolation and all: `top:{vr.top}rem` keeps its
- * literal text. A unit whose NUMBER is interpolated (`"{STRIP_HEIGHT_REM}rem"`)
- * carries no literal digits, so a unit scan cannot count it; it is read here so
- * that the boundary belongs to the counter's regex and not to the reader's
- * coverage.
- *
- * The braced form is scanned with balanced braces rather than by regex, because
- * the expression inside legitimately contains `{}` (a template literal with
- * `${…}`) and quotes containing either.
+ * Comments still do not count. This repo documents sizes in prose beside the
+ * rules that use them, and a note reading "was 4px, now 0.25rem" is a note about
+ * a size rather than a size — R0.3 counts those and pays for it in four
+ * "comment scrub" entries in its own bumps log. The `//` rule ignores a `//`
+ * preceded by `:`, so a `https://` URL is not read as the start of a comment.
  */
-export function svelteStyleBindings(content: string): string {
-  const values: string[] = [];
-
-  for (const match of content.matchAll(STYLE_BINDING_SITE)) {
-    const start = (match.index ?? 0) + match[0].length;
-    const opener = content[start];
-
-    if (opener === '"' || opener === "'") {
-      const end = content.indexOf(opener, start + 1);
-      if (end > start) values.push(content.slice(start + 1, end));
-      continue;
-    }
-    if (opener !== "{") continue;
-
-    let depth = 0;
-    let quote: string | null = null;
-    let cursor = start;
-    for (; cursor < content.length; cursor++) {
-      const char = content[cursor];
-      if (quote !== null) {
-        if (char === "\\") cursor++;
-        else if (char === quote) quote = null;
-        continue;
-      }
-      if (char === '"' || char === "'" || char === "`") quote = char;
-      else if (char === "{") depth++;
-      else if (char === "}" && --depth === 0) break;
-    }
-    values.push(content.slice(start + 1, cursor));
-  }
-
-  return values.join("\n");
+export function stripComponentComments(text: string): string {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
 /** Files under `dir` whose name ends with one of `extensions`, as absolute paths. */
