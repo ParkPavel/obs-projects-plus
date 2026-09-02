@@ -46,8 +46,12 @@ export function svelteStyles(content: string): string {
     .join("\n");
 }
 
+/** The four ways a Svelte component attaches a style value to an element. */
+const STYLE_BINDING_SITE = /\bstyle(?::[A-Za-z-][A-Za-z0-9_-]*)?\s*=\s*/g;
+
 /**
- * Every `style="…"` attribute value in a Svelte component, concatenated.
+ * Every inline style value a Svelte component ships, concatenated — the value
+ * of `style="…"`, `style={…}`, `style:name="…"` and `style:name={…}`.
  *
  * An inline style attribute is CSS that ships, and it is where this tree keeps
  * its imperative geometry (`HeaderStripsSection.svelte:414-424` sizes a drag
@@ -55,13 +59,56 @@ export function svelteStyles(content: string): string {
  * could be moved into the markup and the budget would fall while nothing on
  * screen changed — a ratchet defeated by relocation rather than by work.
  *
- * Values are read verbatim, interpolation and all: `top:{vr.top}px` keeps its
- * literal text, which is what a unit scan wants.
+ * **All four forms, because three of them were the hole.** The first version of
+ * this read only the quoted attribute; the Codex audit of #167 found
+ * `StatsCard.svelte:68` shipping a `rem` through `style={…}` and
+ * `AllDayEventStrip.svelte:122-125` sizing through `style:` directives, both
+ * inside the container scope and both invisible. A reader that misses a shipped
+ * form does not merely undercount — it hands out a way to lower a budget by
+ * relocating a declaration, which is the one thing the budget exists to refuse.
+ *
+ * Values are read verbatim, interpolation and all: `top:{vr.top}rem` keeps its
+ * literal text. A unit whose NUMBER is interpolated (`"{STRIP_HEIGHT_REM}rem"`)
+ * carries no literal digits, so a unit scan cannot count it; it is read here so
+ * that the boundary belongs to the counter's regex and not to the reader's
+ * coverage.
+ *
+ * The braced form is scanned with balanced braces rather than by regex, because
+ * the expression inside legitimately contains `{}` (a template literal with
+ * `${…}`) and quotes containing either.
  */
-export function svelteStyleAttributes(content: string): string {
-  return [...content.matchAll(/\bstyle\s*=\s*(["'])([\s\S]*?)\1/g)]
-    .map((m) => m[2] ?? "")
-    .join("\n");
+export function svelteStyleBindings(content: string): string {
+  const values: string[] = [];
+
+  for (const match of content.matchAll(STYLE_BINDING_SITE)) {
+    const start = (match.index ?? 0) + match[0].length;
+    const opener = content[start];
+
+    if (opener === '"' || opener === "'") {
+      const end = content.indexOf(opener, start + 1);
+      if (end > start) values.push(content.slice(start + 1, end));
+      continue;
+    }
+    if (opener !== "{") continue;
+
+    let depth = 0;
+    let quote: string | null = null;
+    let cursor = start;
+    for (; cursor < content.length; cursor++) {
+      const char = content[cursor];
+      if (quote !== null) {
+        if (char === "\\") cursor++;
+        else if (char === quote) quote = null;
+        continue;
+      }
+      if (char === '"' || char === "'" || char === "`") quote = char;
+      else if (char === "{") depth++;
+      else if (char === "}" && --depth === 0) break;
+    }
+    values.push(content.slice(start + 1, cursor));
+  }
+
+  return values.join("\n");
 }
 
 /** Files under `dir` whose name ends with one of `extensions`, as absolute paths. */

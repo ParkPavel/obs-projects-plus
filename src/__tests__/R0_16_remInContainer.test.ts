@@ -24,9 +24,16 @@
  *     cannot be quietly narrowed to make a failure go away.
  *   - **The allowlist is part of the test.** The ADR records that top-level
  *     popups and modals stay window-anchored on purpose; `rem` is correct
- *     there. That exemption is a declared list with an existence check, not a
- *     convention nobody can audit.
+ *     there. Each exemption must be a real file AND exhibit the mechanism it
+ *     claims — its own `position: fixed`, or a portal out of the tree — so it
+ *     is an argument on the record rather than a convention nobody can audit.
  *   - **Comments do not count, fallbacks do.** See `remOccurrences`.
+ *
+ * **What it still cannot do**, stated rather than implied: containment here is
+ * inferred from a directory and a declared query, not from runtime ancestry.
+ * No static analysis can prove a Svelte component's ancestor chain — the ADR
+ * says so, and that is precisely why #166 put the guarantee in the CASCADE and
+ * left this file to measure the direction of travel.
  */
 
 import { existsSync } from "fs";
@@ -38,7 +45,7 @@ import {
   readText,
   relToSrc,
   stripCssComments,
-  svelteStyleAttributes,
+  svelteStyleBindings,
   svelteStyles,
 } from "./support/cssScan";
 
@@ -102,8 +109,14 @@ const WINDOW_ANCHORED = [
  *
  * Bumps log:
  *   806 — initial measurement, #167, 2026-09-02 (56 files in scope).
+ *   806 → 807 (#167, Codex audit, 2026-09-02) — NOT new code and NOT a
+ *     relaxation: the first reader saw only quoted `style="…"`, so
+ *     `StatsCard.svelte:68` had been shipping `0.1875rem` through `style={…}`
+ *     the whole time. Re-measured with the reader fixed rather than
+ *     incremented, for the same reason #165 re-measured R0.3: a ceiling that
+ *     is not the measurement cannot see what it never read.
  */
-const REM_IN_CONTAINER_BUDGET = 806;
+const REM_IN_CONTAINER_BUDGET = 807;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;
@@ -113,20 +126,21 @@ const LOCAL_SCALE_READ = /var\(\s*--ppp-local-[a-zA-Z0-9_-]*/g;
 
 /**
  * The CSS a component ships: its `<style>` blocks with comments removed, plus
- * every inline `style="…"` attribute.
+ * every inline style binding in all four of its forms.
  *
  * Comments are stripped because this repo documents sizes in prose beside the
  * rules that use them ("was 4px, now 0.25rem"), and a note about a size is not
  * a size. R0.3 counts them and pays for it — four separate "comment scrub"
  * entries in its bumps log are conversions that moved no pixel on screen.
  *
- * Attributes are included because an inline style is CSS that ships. Counting
- * only `<style>` would let a unit be relocated into the markup, dropping the
- * budget while changing nothing — a ratchet defeated by moving code rather
- * than by removing it.
+ * Inline styles are included because they are CSS that ships. Counting only
+ * `<style>` would let a unit be relocated into the markup, dropping the budget
+ * while changing nothing — a ratchet defeated by moving code rather than by
+ * removing it. Reading only ONE of the four inline forms was the same hole one
+ * layer down, and the Codex audit of #167 found two live components in it.
  */
 function shippedCss(componentText: string): string {
-  return `${stripCssComments(svelteStyles(componentText))}\n${svelteStyleAttributes(componentText)}`;
+  return `${stripCssComments(svelteStyles(componentText))}\n${svelteStyleBindings(componentText)}`;
 }
 
 /**
@@ -210,15 +224,88 @@ describe("R0.16 — rem inside a container (#167)", () => {
     expect(remOccurrences(shippedCss(real))).toBe(1);
   });
 
-  it("counts an inline style attribute as shipped CSS", () => {
+  it("counts all four inline style forms as shipped CSS", () => {
     // Otherwise the budget falls by relocation. `HeaderStripsSection.svelte`
-    // sizes a drag preview entirely in one of these.
+    // sizes a drag preview entirely in a quoted attribute — and the first
+    // version of this reader saw ONLY that one form, which is how two live
+    // components sat outside the count (Codex audit of #167).
     const inline =
       '<div style="top: 1rem; border-radius: 0.25rem;"></div><style>.x { gap: 0; }</style>';
     expect(remOccurrences(shippedCss(inline))).toBe(2);
     expect(
       remOccurrences(shippedCss("<div style='padding: 0.5em'></div>"))
     ).toBe(0);
+    // Braced expression, including a template literal carrying its own `{}`.
+    expect(
+      remOccurrences(shippedCss('<div style={ok ? "gap: 0.75rem" : ""}></div>'))
+    ).toBe(1);
+    expect(
+      remOccurrences(
+        shippedCss("<div style={`border-left: 0.1875rem solid ${c}`}></div>")
+      )
+    ).toBe(1);
+    // Directive form, quoted and braced.
+    expect(remOccurrences(shippedCss('<div style:top="1.5rem"></div>'))).toBe(
+      1
+    );
+    expect(remOccurrences(shippedCss("<div style:gap={'2rem'}></div>"))).toBe(
+      1
+    );
+    // The stated boundary: an interpolated NUMBER carries no literal digits, so
+    // the counter cannot see it. It IS read — the limit belongs to the regex,
+    // not to the reader's coverage — and this records which of the two it is.
+    expect(
+      svelteStyleBindings('<div style:top="{topPosition}rem"></div>')
+    ).toContain("{topPosition}rem");
+    expect(
+      remOccurrences(shippedCss('<div style:top="{topPosition}rem"></div>'))
+    ).toBe(0);
+  });
+
+  it("reads the two components the first version of this reader missed", () => {
+    // Tree-based regression for the audit finding, not a synthetic restatement.
+    // If either shipped form stops being read these go to zero and say so,
+    // which is what "the budget cannot be paid by relocation" means in practice
+    // rather than in a docstring.
+    const braced = readText(
+      join(SRC_ROOT, "ui/views/Dashboard/widgets/Stats/StatsCard.svelte")
+    );
+    expect(remOccurrences(svelteStyleBindings(braced))).toBeGreaterThan(0);
+
+    const directives = readText(
+      join(
+        SRC_ROOT,
+        "ui/views/Calendar/components/Calendar/AllDayEventStrip.svelte"
+      )
+    );
+    expect(svelteStyleBindings(directives)).toMatch(/\{STRIP_HEIGHT_REM\}rem/);
+  });
+
+  it("no stylesheet or script module hides a size inside the container scope", () => {
+    // The other half of the audit's coverage question. `shippedCss` reads
+    // `.svelte` only, which is sound just while nothing else under the scope
+    // can carry a size — so assert that instead of assuming it.
+    const stylesheets = collectSourceFiles(SRC_ROOT, [".css"])
+      .map(relToSrc)
+      .filter((file) => file.startsWith(CONTAINER_SCOPE_PREFIX));
+    expect(stylesheets).toEqual([]);
+
+    // `ui/tokens/tokens.css` is the one stylesheet in the tree (R0.13 asserts
+    // exactly that) and it carries the LEVEL-1 scale at `:root` — root-anchored
+    // on purpose, and correctly outside this scope.
+    expect(collectSourceFiles(SRC_ROOT, [".css"]).map(relToSrc)).toEqual([
+      "ui/tokens/tokens.css",
+    ]);
+
+    const scripted = collectSourceFiles(SRC_ROOT, [".ts"])
+      .map((full) => ({ file: relToSrc(full), text: readText(full) }))
+      .filter(({ file }) => file.startsWith(CONTAINER_SCOPE_PREFIX))
+      .map(
+        ({ file, text }) =>
+          `${file} → ${remOccurrences(stripCssComments(text))}`
+      )
+      .filter((entry) => !entry.endsWith(" → 0"));
+    expect(scripted).toEqual([]);
   });
 
   it("scopes itself by a rule over the tree, in both directions", () => {
@@ -262,6 +349,28 @@ describe("R0.16 — rem inside a container (#167)", () => {
       (file) => !existsSync(join(SRC_ROOT, file))
     );
     expect(missing).toEqual([]);
+
+    // Existence alone is a weak bar, and the Codex audit of #167 said so: a
+    // busy in-container component could be parked here and the budget
+    // rebaselined lower with nothing to object. So an exemption must EXHIBIT
+    // the mechanism it claims — its own styles detach it from the flow
+    // (`position: fixed`), or it portals itself out of the tree. That is as far
+    // as a static check can go: the ADR is explicit that no static analysis can
+    // prove a Svelte component's runtime ancestry, which is exactly why #166
+    // put the guarantee in the cascade instead. This narrows the hole; it does
+    // not close it, and the honest place to say so is here.
+    const unproven = WINDOW_ANCHORED.filter((file) => {
+      const text = readText(join(SRC_ROOT, file));
+      const detached = /position:\s*fixed/.test(
+        stripCssComments(svelteStyles(text))
+      );
+      const portalled = /\buse:portal\b|FloatingPopup/.test(text);
+      return !detached && !portalled;
+    });
+    expect(unproven).toEqual([]);
+
+    // And it stays short. A list that grows is the shape this failure takes.
+    expect(WINDOW_ANCHORED.length).toBeLessThanOrEqual(2);
 
     // `TemplateConfirmDialog` is inside the prefix, so the allowlist is what
     // keeps it out. If it ever stopped being window-anchored, this assertion
