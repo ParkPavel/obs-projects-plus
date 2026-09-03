@@ -13,8 +13,10 @@
  * lets the engine layer ship without pulling Svelte/Obsidian glue.
  *
  * Semantic invariants (do NOT change without bumping aggregate semver):
- *   - `nonNull` filters strictly `undefined`/`null`; empty strings and
- *     `false` ARE counted by `count` (only `count_values` excludes them).
+ *   - `nonNull` filters strictly `undefined`/`null`. An empty string does not
+ *     fill a cell; `false` does — an unchecked box is an answer (#180c, the
+ *     user's D4). `isFilled` is that rule, shared by the four operators that
+ *     ask it, and `count` counts everything non-null regardless.
  *   - Numeric coercion is NOT this module's decision. It belongs to
  *     `engine/numeric.ts`, which is the project's only definition of a
  *     number (#180a). Until 2026-09-02 this header said coercion "accepts
@@ -34,12 +36,8 @@
  *     since #180b the percent operators over no population (§3.2 item 3).
  *     `sum` keeps `0` deliberately — the additive identity is a real total of
  *     nothing (BACKLOG #180, RESOLVED 2026-09-02).
- *   - KNOWN GAP, not a decision: `median` of an empty list still returns `0`
- *     here, though §3.1 of the spec puts it in the `null` column with
- *     `avg`/`min`/`max`/`range`. #180a converted those four and did not reach
- *     median; #180b is scoped to the percent family and did not widen to it.
- *     Recorded in BACKLOG #180 rather than fixed in passing, because it
- *     changes a shipped operator's answer and deserves its own review.
+ *     `median` joined them in #180c, which closed the three gaps #180a and
+ *     #180b had recorded rather than hidden.
  */
 
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
@@ -112,22 +110,22 @@ export function aggregate(
       return fmtNum(values.length);
 
     case "count_values":
-      return fmtNum(nonNull.filter((v) => v !== "" && v !== false).length);
+      return fmtNum(nonNull.filter(isFilled).length);
 
     case "count_empty": {
-      const filled = nonNull.filter((v) => v !== "" && v !== false).length;
+      const filled = nonNull.filter(isFilled).length;
       return fmtNum(values.length - filled);
     }
 
     case "percent_empty": {
       if (values.length === 0) return fmtEmpty();
-      const filled = nonNull.filter((v) => v !== "" && v !== false).length;
+      const filled = nonNull.filter(isFilled).length;
       return fmtPct(((values.length - filled) / values.length) * 100);
     }
 
     case "percent_not_empty": {
       if (values.length === 0) return fmtEmpty();
-      const filled = nonNull.filter((v) => v !== "" && v !== false).length;
+      const filled = nonNull.filter(isFilled).length;
       return fmtPct((filled / values.length) * 100);
     }
 
@@ -157,7 +155,7 @@ export function aggregate(
 
     case "median": {
       const nums = toNumbers(nonNull).sort((a, b) => a - b);
-      if (nums.length === 0) return fmtNum(0);
+      if (nums.length === 0) return fmtEmpty();
       const mid = Math.floor(nums.length / 2);
       const val =
         nums.length % 2 === 0
@@ -205,6 +203,22 @@ export function aggregate(
 
 function sumNumbers(values: DataValue[]): number {
   return toNumbers(values).reduce((a, b) => a + b, 0);
+}
+
+/**
+ * Does this value fill its cell? One predicate for the four operators that ask
+ * — `count_values`, `count_empty`, `percent_empty`, `percent_not_empty` — so
+ * they cannot drift apart, which is the whole shape of #180.
+ *
+ * **An unchecked box is an answer, not a blank** (BACKLOG #180, RESOLVED
+ * 2026-09-02, D4). Until #180c the four read `v !== "" && v !== false`, so over
+ * `[false]` this kernel reported 100% empty while the footer, which never
+ * excluded `false`, reported 0% — the same question, two answers, visible in
+ * the product. `count_checked` / `percent_true` exist for the other question,
+ * "how many are true", and are unaffected.
+ */
+function isFilled(v: DataValue): boolean {
+  return v !== "";
 }
 
 /**

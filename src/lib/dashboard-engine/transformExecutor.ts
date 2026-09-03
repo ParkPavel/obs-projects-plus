@@ -864,9 +864,17 @@ function computeAggFn(
       return Math.sqrt(variance);
     }
 
+    // #180c: an empty population is not zero percent. Zero percent is a claim
+    // about a population and there is none, and on screen it is
+    // indistinguishable from a real 0% — the one reading a user would act on.
+    // `MIN`/`MAX` above have answered `null` for the same shape all along, so
+    // this makes the pipeline agree with itself as well as with the kernel
+    // (SPEC_MATH_SPREADSHEET_2026-09-02 §3.2 item 3). The rest of the
+    // pipeline's empty answers (`AVG`, `STD_DEV` still return 0) belong to the
+    // adapter, T3 — this closes only what #180b claimed and did not deliver.
     case "PCT_EMPTY": {
       const total = arr.length;
-      if (total === 0) return 0;
+      if (total === 0) return null;
       const empty = arr.filter(
         (v) => v == null || v === "" || (Array.isArray(v) && v.length === 0)
       ).length;
@@ -875,7 +883,7 @@ function computeAggFn(
 
     case "PCT_NOT_EMPTY": {
       const total = arr.length;
-      if (total === 0) return 0;
+      if (total === 0) return null;
       const nonEmpty = arr.filter(
         (v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)
       ).length;
