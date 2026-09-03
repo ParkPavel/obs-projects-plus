@@ -20,6 +20,12 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/widgetMenu.ts", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/WidgetSetupWizard.svelte", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/widgetComponentRegistry.ts", maxLines: 260 },
+  // #169. Entered at their measured size, which is not a raise: the header's
+  // primary action shipped as its own component precisely BECAUSE the three
+  // files the ticket named were each within a line of their ceiling, and
+  // context assembly moved out of the host for the same reason.
+  { file: "ui/views/Dashboard/widgets/WidgetPrimaryAction.svelte", maxLines: 90 },
+  { file: "ui/views/Dashboard/widgets/renderContext.ts", maxLines: 90 },
   // Master-prompt invariant 1: canvas ≤200 (restored in compliance audit).
   { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 200 },
   { file: "ui/views/Dashboard/dashboardSuggest.ts", maxLines: 60 },

@@ -56,6 +56,13 @@ describe("#116 filter-order ADR — the stated contract", () => {
 
 describe("#128 filter-order — the wiring the ADR describes", () => {
   const host = read(resolve(SRC, "ui/views/Dashboard/widgets/WidgetHost.svelte"));
+  // #169 moved the assembly of the render context out of the host and into
+  // `renderContext.ts` — the host was one line from its LOC ceiling and the
+  // context's shape belongs beside its type. The invariant did not move: axis A
+  // is still measured in the host and still declared to the block. It is simply
+  // declared in the file that now builds the declaration, and reading both here
+  // is what keeps this test pinned to the wiring rather than to a filename.
+  const context = read(resolve(SRC, "ui/views/Dashboard/widgets/renderContext.ts"));
 
   it("scopes the frame before the transform, not after", () => {
     const scopeAt = host.indexOf("applyWidgetScope(enrichedFrame");
@@ -73,10 +80,16 @@ describe("#128 filter-order — the wiring the ADR describes", () => {
   });
 
   it("tells the block whether axis A already ran, so it is not applied twice", () => {
-    expect(host).toContain("dbCallScopeApplied");
-    // #136 renamed the reactive var to a derived view; the composition is the
-    // invariant, not the identifier — scope counts only for a non-external block.
-    expect(host).toMatch(/dbCallScopeApplied:\s*!dbCall\.isExternal\s*&&\s*scope\.applied/);
+    // The host measures it…
+    expect(host).toMatch(/scopeApplied:\s*scope\.applied/);
+    // …and the context declares it. #136 renamed the reactive var to a derived
+    // view and #169 moved the literal; the composition is the invariant, not
+    // the identifier or its address — scope counts only for a non-external
+    // block, and that conjunction is the thing that must never be dropped.
+    expect(context).toContain("dbCallScopeApplied");
+    expect(context).toMatch(
+      /dbCallScopeApplied:\s*!dbCall\.isExternal\s*&&\s*(?:input\.)?scopeApplied/
+    );
   });
 
   it("keeps the selection (axis B) downstream of the transform in the block", () => {

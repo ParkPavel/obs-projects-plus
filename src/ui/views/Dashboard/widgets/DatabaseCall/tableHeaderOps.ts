@@ -1,8 +1,10 @@
-// tableHeaderOps.ts — F2.4 (#074, TABLE_V2_CANON §3): the column header menu
-// and its config patches. Pure functions — the menu is data, patches are
-// (config, action) → config; the Svelte layer only dispatches.
+// tableHeaderOps.ts — F2.4 (#074, TABLE_V2_CANON §3): column-level derivations
+// — the header menu, its config patches, and the option pools a column offers.
+// Pure functions — the menu is data, patches are (config, action) → config; the
+// Svelte layer only dispatches.
 
-import type { DataField } from "src/lib/dataframe/dataframe";
+import { DataFieldType } from "src/lib/dataframe/dataframe";
+import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
 import { aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
 import type { ColumnAggregation, DataTableConfig, DataTableSortCriteria } from "../../types";
@@ -19,6 +21,31 @@ export type SortOrder = "asc" | "desc";
  */
 export function calculateOptions(field: DataField): ColumnAggregation[] {
   return aggregationOptionsFor(field);
+}
+
+/**
+ * Dropdown option pools for Select/Status columns: the values those columns
+ * already hold, deduplicated and sorted.
+ *
+ * Derived from the data rather than declared, which is why an option a user
+ * typed into one note shows up as a choice in the next — the field's own
+ * `typeConfig` is not the only source of truth for what a column contains.
+ */
+export function optionPools(
+  fields: readonly DataField[],
+  records: readonly DataRecord[]
+): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const f of fields) {
+    if (f.type !== DataFieldType.Select && f.type !== DataFieldType.Status) continue;
+    const seen = new Set<string>();
+    for (const r of records) {
+      const v = r.values[f.name];
+      if (typeof v === "string" && v !== "") seen.add(v);
+    }
+    map.set(f.name, [...seen].sort((a, b) => a.localeCompare(b)));
+  }
+  return map;
 }
 
 // ── Config patches (single-sort Notion semantics from the column menu) ──

@@ -119,6 +119,43 @@ export function persistDataTableSubFilter(
   return next;
 }
 
+/**
+ * What a `data-table` configChange means, decided in one place.
+ *
+ * #169: the host used to branch on `unwrapDataTableConfigChange` and then call
+ * `persistDataTableSubFilter` differently in each arm, which put half of one
+ * rule in a router that is meant to hold none of it. Both halves live here
+ * now, next to each other, so the subFilter cannot be folded back in one arm
+ * and forgotten in the next. Pure — the caller still owns every dispatch.
+ */
+export type DataTableChange =
+  /** The block grew past one table tab: it becomes a real database-call. */
+  | { kind: "convert"; config: Record<string, unknown> }
+  /** Still one table tab, and this widget owns the root `config.table`. */
+  | { kind: "table"; tableConfig: Record<string, unknown>; widgetConfig: Record<string, unknown> }
+  /** Still one table tab, nested — the table config rides `widget.config`. */
+  | { kind: "nested"; widgetConfig: Record<string, unknown> };
+
+export function dataTableConfigChange(
+  detail: Record<string, unknown>,
+  currentConfig: Record<string, unknown> | undefined,
+  isPrimary: boolean
+): DataTableChange {
+  const result = unwrapDataTableConfigChange(detail);
+  if (result.kind === "convert") return { kind: "convert", config: result.config };
+  if (isPrimary) {
+    return {
+      kind: "table",
+      tableConfig: result.tableConfig,
+      widgetConfig: persistDataTableSubFilter(detail, currentConfig),
+    };
+  }
+  return {
+    kind: "nested",
+    widgetConfig: persistDataTableSubFilter(detail, currentConfig, { table: result.tableConfig }),
+  };
+}
+
 /** True when the type renders a retirement placeholder instead of content. */
 export function isRetiredLegacyType(type: WidgetType): boolean {
   return [

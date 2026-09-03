@@ -21,13 +21,17 @@ const read = (rel: string) => readFileSync(resolve(WIDGETS, rel), "utf8");
 const registry = read("widgetComponentRegistry.ts");
 const block = read("DatabaseCall/DatabaseCallBlock.svelte");
 const host = read("WidgetHost.svelte");
+// #169: the context literal moved out of the host into `renderContext.ts`.
+// The guard is unchanged — the host still resolves the source, the context
+// still publishes the flag — so the test follows the wiring to where it lives.
+const context = read("renderContext.ts");
 
 describe("#139 the guard is wired from host to block", () => {
   it("the host publishes whether the block reads a foreign source", () => {
     // #136 folded the five dbCall reactive statements into one derived view, so
     // isExternal and frame cannot be updated out of step with each other.
     expect(host).toMatch(/\$:\s*dbCall = resolveDbCallView\(/);
-    expect(host).toMatch(/dbCallUsesLinkedSource:\s*dbCall\.isExternal/);
+    expect(context).toMatch(/dbCallUsesLinkedSource:\s*dbCall\.isExternal/);
   });
 
   it("the registry hands that signal to the block as sourceReadOnly", () => {
