@@ -4,6 +4,7 @@
   import { EventRenderType, type ProcessedRecord } from "../../types";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord } from "src/lib/record/openRecord";
   import { createEventDispatcher, onMount } from "svelte";
   import DateDisplay from "./Date.svelte";
   import EventList from "./EventList.svelte";
@@ -405,10 +406,10 @@
     
     if (event.shiftKey) {
       // Shift+click: open in new window
-      $app.workspace.openLinkText(record.id, record.id, 'window');
+      void openRecord({ id: record.id }, "window", { app: $app });
     } else if (event.ctrlKey || event.metaKey) {
       // Ctrl+click: open in new tab
-      $app.workspace.openLinkText(record.id, record.id, 'tab');
+      void openRecord({ id: record.id }, "tab", { app: $app });
     } else {
       // Normal click → modal
       onRecordClick?.(record);

@@ -5,6 +5,7 @@
   import { EventRenderType, type ProcessedRecord } from '../../types';
   import { getDisplayName, cleanWikiLink } from "src/ui/views/Board/components/Board/boardHelpers";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
   import EventTimeline from './EventTimeline.svelte';
   import CurrentTimeLine from './CurrentTimeLine.svelte';
   import DayColumn from './DayColumn.svelte';
@@ -230,7 +231,7 @@
       if (found) {
         if (openMode) {
           // Ctrl/Shift+click: open in tab or window
-          $app.workspace.openLinkText(found.record.id, found.record.id, openMode);
+          void openRecord({ id: found.record.id }, modeFromNewLeaf(openMode), { app: $app });
         } else if (onRecordClick) {
           // Normal click → modal
           onRecordClick(found.record);

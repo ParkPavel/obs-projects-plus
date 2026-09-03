@@ -10,6 +10,7 @@
   import { notUndefined } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
@@ -87,7 +88,7 @@
       records,
       // v3.0.8: Unified note open with modifier-based navigation
       (openMode) => {
-        $app.workspace.openLinkText(record.id, record.id, openMode);
+        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: $app });
       },
       // v3.0.1: Rename note callback
       async (newName: string) => {

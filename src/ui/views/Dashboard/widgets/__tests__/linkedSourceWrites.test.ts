@@ -92,8 +92,14 @@ describe("#142 the gallery branch is guarded too", () => {
   it("the edit modal is not opened read-only — the note is opened instead", () => {
     // Viewing stays available; only the editor whose writes would land in the
     // wrong project is withheld.
+    //
+    // #168 step (a) changed the spelling, not the guarantee: the branch now
+    // calls the record-open contract instead of the workspace directly, and
+    // `PLAIN_MODE` is what `false` meant. The assertion follows the contract so
+    // that step (b) — where a plain open becomes a peek — changes this branch
+    // with every other one, instead of leaving it behind on the old behaviour.
     expect(gallery).toMatch(
-      /if \(readonly\) \{[\s\S]*?openLinkText\(record\.id, record\.id, false\)[\s\S]*?return;/
+      /if \(readonly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE[\s\S]*?return;/
     );
   });
 

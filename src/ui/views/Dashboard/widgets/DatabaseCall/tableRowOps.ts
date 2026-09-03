@@ -7,6 +7,7 @@ import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ViewApi } from "src/lib/viewApi";
 import type { ProjectDefinition } from "src/settings/settings";
 import { createDataRecord } from "src/lib/dataApi";
+import { openRecord, PLAIN_MODE } from "src/lib/record/openRecord";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
 import {
   dataTableSourceId,
@@ -106,12 +107,12 @@ export function buildRowMenuEntries(opts: {
     {
       title: t("views.dashboard.table-v2.open", "Open note"),
       icon: "arrow-up-right",
-      onClick: () => app?.workspace.openLinkText(record.id, record.id, false),
+      onClick: () => { if (app) void openRecord({ id: record.id }, PLAIN_MODE, { app }); },
     },
     {
       title: t("views.dashboard.table-v2.open-new-tab", "Open in new tab"),
       icon: "external-link",
-      onClick: () => app?.workspace.openLinkText(record.id, record.id, true),
+      onClick: () => { if (app) void openRecord({ id: record.id }, "tab", { app }); },
     },
     { separator: true },
     {
