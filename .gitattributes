@@ -1,0 +1,27 @@
+# The built plugin is tracked on purpose, and merging it is not.
+#
+# #171 measured the cost of keeping `main.js` in the tree: an unresolvable
+# conflict in a minified file between any two branches that both built, seen on
+# 2026-08-30 and repeatedly since. Git was trying to merge 2.8 MB of generated
+# output line by line, and every such merge is meaningless — the file is not
+# authored, it is produced.
+#
+# `-merge` stops git attempting that. A conflicting bundle is reported and left
+# alone rather than turned into spliced garbage, and the resolution is always
+# the same one command:
+#
+#     npm run build
+#
+# `-diff` keeps `git diff` and `git log -p` from printing megabytes of minified
+# JavaScript that nobody reads.
+#
+# What this does NOT do is untrack them. The root bundle is what lets a user
+# install the plugin straight from the repository, and `releases/*/main.js` is
+# the same capability for older versions — the `.gitignore` rule that excludes
+# `main.js` and then re-includes `releases/*/main.js` is deliberate, not an
+# oversight. Neither CI workflow reads the committed file; both build their own
+# and attach the result to a release.
+main.js -diff -merge
+styles.css -diff -merge
+releases/*/main.js -diff -merge
+releases/*/styles.css -diff -merge
