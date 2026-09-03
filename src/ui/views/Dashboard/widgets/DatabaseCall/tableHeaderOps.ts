@@ -2,23 +2,23 @@
 // and its config patches. Pure functions — the menu is data, patches are
 // (config, action) → config; the Svelte layer only dispatches.
 
-import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
+import type { DataField } from "src/lib/dataframe/dataframe";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
+import { aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
 import type { ColumnAggregation, DataTableConfig, DataTableSortCriteria } from "../../types";
 
 export type SortOrder = "asc" | "desc";
 
-const NUMERIC_TYPES = new Set<DataFieldType>([
-  DataFieldType.Number,
-  DataFieldType.Formula,
-  DataFieldType.Rollup,
-]);
 
-const BASE_CALCS: ReadonlyArray<ColumnAggregation> = ["count_total", "count_values", "percent_not_empty"];
-const NUMERIC_CALCS: ReadonlyArray<ColumnAggregation> = ["sum", "avg", "median", "min", "max"];
-
+/**
+ * #180d: this file had the project's one good habit — options gated by field
+ * type, so you cannot mis-select what is not shown — and five other surfaces
+ * did not. The habit moved to `dashboard-engine/aggregationOptions.ts` and
+ * this delegates, so the header menu and the Stats card can no longer drift
+ * apart about what a Text column may be asked.
+ */
 export function calculateOptions(field: DataField): ColumnAggregation[] {
-  return NUMERIC_TYPES.has(field.type) ? [...BASE_CALCS, ...NUMERIC_CALCS] : [...BASE_CALCS];
+  return aggregationOptionsFor(field);
 }
 
 // ── Config patches (single-sort Notion semantics from the column menu) ──

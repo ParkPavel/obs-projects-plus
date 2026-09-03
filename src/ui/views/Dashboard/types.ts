@@ -266,7 +266,11 @@ export type ColumnAggregation =
   | "count"
   | "count_total"
   | "count_values"
+  /** #180d — values this field can do arithmetic on (Excel COUNT, Airtable COUNT). */
+  | "count_numeric"
   | "count_unique"
+  /** #180d — records where this field is blank (Excel COUNTBLANK, Notion "Count empty"). */
+  | "count_empty"
   | "sum"
   | "avg"
   | "median"
