@@ -39,7 +39,11 @@
   $: selectedField = (name: string) => fields.find((f) => f.name === name);
   $: optionsFor = (fieldName: string): AggregationOption[] => {
     const field = selectedField(fieldName);
-    const allowed = field ? new Set(aggregationOptionsFor(field)) : null;
+    // The set is of `ColumnAggregation`; the table also carries the
+    // rollup-only names, which a Stats card never stores. Comparing as strings
+    // keeps the two vocabularies from having to become one type — they are
+    // stored separately and must stay so.
+    const allowed = field ? new Set<string>(aggregationOptionsFor(field)) : null;
     return AGGREGATIONS.filter(
       (o) => o.value !== "none" && (allowed === null || allowed.has(o.value))
     );

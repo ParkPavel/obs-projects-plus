@@ -18,6 +18,10 @@
   } from "src/settings/base/settings";
   import type { ProjectDefinition } from "src/settings/settings";
   import { i18n } from "src/lib/stores/i18n";
+  import {
+    aggregationOption,
+    ROLLUP_PICKER_ORDER,
+  } from "src/lib/dashboard-engine/aggregationOptions";
   import { settings as settingsStore } from "src/lib/stores/settings";
   import { dataFieldTypeOptions } from "./dataFieldTypeOptions";
 
@@ -440,35 +444,17 @@
     ];
   })();
 
-  // NPLAN-C3 — full function set matching aggregate.ts + rollupMode taxonomy
-  const ROLLUP_FUNCTIONS: Array<{ fn: import("src/lib/engine/aggregate").RollupFunction; label: string }> = [
-    // Show
-    { fn: "show_original", label: "Show original" },
-    { fn: "show_unique",   label: "Show unique values" },
-    // Count
-    { fn: "count_total",   label: "Count all" },
-    { fn: "count_values",  label: "Count values" },
-    { fn: "count_unique",  label: "Count unique" },
-    { fn: "count_empty",   label: "Count empty" },
-    { fn: "count",         label: "Count non-empty" },
-    // Percent
-    { fn: "percent_empty",     label: "Percent empty" },
-    { fn: "percent_not_empty", label: "Percent not empty" },
-    { fn: "percent_true",      label: "Percent checked" },
-    // Numeric
-    { fn: "sum",    label: "Sum" },
-    { fn: "avg",    label: "Average" },
-    { fn: "min",    label: "Min" },
-    { fn: "max",    label: "Max" },
-    { fn: "median", label: "Median" },
-    { fn: "range",  label: "Range" },
-    // Text concat
-    { fn: "concat",        label: "Concatenate" },
-    { fn: "concat_unique", label: "Concatenate unique" },
-  ];
+  /**
+   * #180d/T5: this list, and CreateField's, were two more of the six. The order
+   * is kept here because a picker's order is a design decision; the LABELS and
+   * the consequence come from the one table, so "Count all" cannot mean one
+   * thing here and another in a Stats card.
+   */
 
-  $: rollupFunctionOptions = ROLLUP_FUNCTIONS.map(({ fn, label }) => ({
-    label: $i18n.t(`modals.field.configure.rollup.functions.${fn}`, { defaultValue: label }),
+  $: rollupFunctionOptions = ROLLUP_PICKER_ORDER.map((fn) => ({
+    label: $i18n.t(`modals.field.configure.rollup.functions.${fn}`, {
+      defaultValue: aggregationOption(fn)?.label ?? fn,
+    }),
     value: fn,
   }));
 
