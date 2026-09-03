@@ -4,6 +4,11 @@
 > step (a) is a pure refactor with no behaviour change and starts without further decisions; steps
 > (b) and (c) wait on the USER DECISIONS in §11, recorded in `BACKLOG.md` #168. Line numbers were
 > read on 2026-09-02.
+>
+> **Note, 2026-09-03:** every `src/ui/views/Table/**` path below is HISTORICAL. That tree was
+> deleted by #183 on the strength of the reasoning in §0b; its text is in
+> `docs/internal/archive/LEGACY_TABLE_DATAGRID.md`. The paths are kept because they are the
+> evidence that made step (a) start without a prerequisite, not because the files exist.
 
 ## 0. The ticket's letter diverges from the code — read this first
 
@@ -40,9 +45,11 @@ right pane"), not the default.
 and each was re-verified in the main session rather than taken on the trace's word.
 
 **1. There is no Table view.** `src/view.ts:14-17` registers exactly four view components — Board,
-Calendar, Dashboard, Gallery. `src/ui/views/Table/` holds only `helpers.ts` and
-`components/DataGrid/`, and no file outside that folder imports `DataGrid` (the three grep hits are
-comments in `contextMenu.ts:10,170` and `RollupCellRenderer.svelte:10`). So the "Table gap" §2 named
+Calendar, Dashboard, Gallery. `src/ui/views/Table/` held only `helpers.ts` and `components/DataGrid/`,
+and no file outside that folder imported `DataGrid` (the three grep hits were comments in
+`contextMenu.ts:10,170` and `RollupCellRenderer.svelte:10`). **That tree was deleted on 2026-09-03
+by #183**; its text is in `docs/internal/archive/LEGACY_TABLE_DATAGRID.md`, and the paragraph is kept
+in the past tense because it is the reasoning that made step (a) start without a prerequisite. So the "Table gap" §2 named
 as a blocker for step (a) does not exist, and neither does the path through
 `GridRow.svelte:91` → `DataGrid.svelte:299-305` → `onRowEdit` that the trace mapped: it is
 unreachable. **The ticket's headline "клик по строке" is the Dashboard's Table V2**
@@ -50,10 +57,10 @@ unreachable. **The ticket's headline "клик по строке" is the Dashboa
 `openLinkText(record.id, record.id, false)`), which was already class A.
 
 *Consequence for the plan:* step (a) starts immediately, with no code-mapper prerequisite.
-*Consequence beyond it:* the whole `src/ui/views/Table/components/DataGrid/**` tree is dead code of
-the kind #178 removed. It is NOT in #168's scope — file it separately, and note that unlike #178's
-type-only files this one is runtime code, so its deletion needs the same usage trace and a bundle
-comparison, not just `tsc`.
+*Consequence beyond it:* the whole `src/ui/views/Table/components/DataGrid/**` tree was dead code of
+the kind #178 removed. It was filed separately as **#183 and deleted on 2026-09-03** — with the
+usage trace and the bundle comparison this paragraph asked for, since unlike #178's type-only files
+it was runtime code. The bundle turned out byte-identical: it had never been in the build.
 
 **2. Class A is 24 sites, not 18; class B is 6, not 14.** Six sites §2 listed as class B pass a
 record id, not an arbitrary wikilink: `CardList.svelte:132,134` (fed `item.id, item.id` at `:126`),

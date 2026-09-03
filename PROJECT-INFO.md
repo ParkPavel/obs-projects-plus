@@ -40,7 +40,6 @@ Projects Plus is an actively maintained fork of the original Obsidian Projects p
   - Board: `src/ui/views/Board/`
   - Calendar: `src/ui/views/Calendar/`
   - Gallery: `src/ui/views/Gallery/`
-  - Table (legacy, scheduled for removal): `src/ui/views/Table/`
   - YAML Visualizer: `src/ui/views/YamlVisualizer/`
 
 ## Documentation Structure

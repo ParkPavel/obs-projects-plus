@@ -106,7 +106,7 @@
 |---|---|---|
 | `src/ui/views/Dashboard/` | ~800 + widgets | B |
 | `src/ui/views/Dashboard/DashboardCanvas.svelte` | ~700 | B (too big — split в R5-013) |
-| `src/ui/views/Table/` (legacy DataGrid) | ~1800 | **D** — под удаление в R5-001 |
+| ~~`src/ui/views/Table/` (legacy DataGrid)~~ | — | **УДАЛЕНО** 2026-09-03 (#183): вид не был зарегистрирован, дерево не импортировалось ниоткуда, бандл побайтно тот же. Текст: `docs/internal/archive/LEGACY_TABLE_DATAGRID.md` |
 | `src/ui/views/Board/` | ~600 | C |
 | `src/ui/views/Calendar/` | ~5000+ | C (свой filterEngine — R5-003) |
 | `src/ui/views/Calendar/agenda/filterEngine.ts` | ~520 | C — параллельный engine |

@@ -431,8 +431,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`: 186 suites / 3007 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (109 pre-existing tsdoc warnings).** Measured 2026-09-03 on `main` after #180a
+- **Canonical baseline — `main`: 186 suites / 3020 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (109 pre-existing tsdoc warnings).** Measured 2026-09-03 on `main` after #168a
   merged, and this line is a measurement of `main` — branch figures belong in the branch's own
   bullet, not here, which is what let this paragraph accumulate three stale ones.
   The day's arithmetic, so a future reader can check rather than trust: 179/2491 at the start of
@@ -442,6 +442,12 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   R0.16) → #180a (+2 suites — the coercion contract and R0.15 — and ~440 tests, because the
   contract table runs case by case against every implementation that used to disagree).
   The warning count fell 112 → 109 when #178 deleted three `@since` tags tsdoc does not know.
+  **The baseline FELL once on 2026-09-03 and the exception is recorded here rather than implied:**
+  #183 deleted the legacy Table tree and with it `helpers.test.ts`, the tree's own suite —
+  −1 suite, −4 tests. The rule is that coverage may not be dropped, not that a number may never
+  move: a test whose subject no longer exists is not coverage. Same shape as #160, where the
+  sub-base suites went with the model, 177 → 174. The day then read 186/3007 → 186/3013 (#180b)
+  → 185/3009 (#183) → 185/3012 (#180c) → 186/3020 (#168a, R0.17).
   Older history: the meta-audit stack took `main` from 173/2464 at `64863ed` to 174/2451 (+36
   regression tests, −49 with the sub-base model #160 deleted); #164 added four provenance tests,
   R0.8 added five, #176 re-armed R0.4 (+5 cases) and #177 added R0.9 (+1 suite, +8). Do not roll
