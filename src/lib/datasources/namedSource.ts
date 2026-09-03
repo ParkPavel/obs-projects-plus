@@ -221,3 +221,25 @@ export function projectSourceOptions(
     .map((s) => ({ id: s.id, label: sourceLabel(s) }));
   return { sources, pickable, hasUnaddressable: pickable.length < sources.length };
 }
+
+/**
+ * Whether a source of this project is already called `name` (#184).
+ *
+ * Compared against `sourceLabel`, not against stored names, because the label
+ * is what the picker shows: a saved selection called "Archive" would be
+ * indistinguishable from a folder source whose path renders as "Archive", and
+ * the user picks from labels. Case- and whitespace-insensitive for the same
+ * reason — "Active" and "active " are one name to a reader.
+ *
+ * This exists because the naming UI tells the user the name is what identifies
+ * the selection later. That is only true if names are unique, and adversarial
+ * review pointed out it was not enforced anywhere.
+ */
+export function sourceNameTaken(
+  sources: readonly StoredDataSource[],
+  name: string
+): boolean {
+  const wanted = name.trim().toLocaleLowerCase();
+  if (!wanted) return false;
+  return sources.some((s) => sourceLabel(s).trim().toLocaleLowerCase() === wanted);
+}

@@ -20,7 +20,7 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { FilterDefinition } from "src/settings/base/settings";
 import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
 
-import { buildDerivedSource, projectSourceOptions, resolveNamedSource } from "../namedSource";
+import { buildDerivedSource, projectSourceOptions, resolveNamedSource, sourceNameTaken } from "../namedSource";
 import type { IdentifiedFrame } from "../sourceSelection";
 
 const field = (name: string, type: DataFieldType = DataFieldType.String, derived = false) => ({
@@ -321,5 +321,62 @@ describe("#184 — what a picker may offer, and what it must explain", () => {
     // the whole canvas down.
     const opts = projectSourceOptions(undefined);
     expect(opts).toEqual({ sources: [], pickable: [], hasUnaddressable: false });
+  });
+});
+
+describe("#184 — a name has to be unique to identify anything", () => {
+  it("sees a name already used by a saved selection", () => {
+    expect(sourceNameTaken(SOURCES, "Active")).toBe(true);
+  });
+
+  it("sees one used by an ordinary named source too", () => {
+    // The picker shows labels, so a selection called "Clients" would be
+    // indistinguishable from the folder source labelled "Clients".
+    expect(sourceNameTaken(SOURCES, "Clients")).toBe(true);
+  });
+
+  it("and one that only matches the FALLBACK label of an unnamed source", () => {
+    // `src-archive` has no name; its label is the folder it reads. That label
+    // is what the user sees, so it is what a new name would collide with.
+    expect(sourceNameTaken(SOURCES, "Archive")).toBe(true);
+  });
+
+  it("ignores case and surrounding space, because a reader does", () => {
+    expect(sourceNameTaken(SOURCES, "  aCtIvE ")).toBe(true);
+  });
+
+  it("lets a genuinely new name through", () => {
+    expect(sourceNameTaken(SOURCES, "Dormant")).toBe(false);
+  });
+
+  it("does not treat an empty name as taken", () => {
+    // Blank is a cancel upstream; reporting it as a collision would show the
+    // user the wrong message for the wrong reason.
+    expect(sourceNameTaken(SOURCES, "   ")).toBe(false);
+  });
+});
+
+describe("#184 — a saved selection composes with the view it is opened in", () => {
+  it("resolves over the frame the VIEW shows, not over the whole project", () => {
+    // Raised by adversarial review as a possible contradiction: a selection
+    // saved as A, opened from a view filtered to B, yields A ∩ B rather than A.
+    //
+    // Confirmed and kept. Both are axis A, and a dashboard is itself a view:
+    // every widget on that canvas already renders the view's frame, so a
+    // source that ignored the view's filter would be the one thing on the
+    // canvas showing records the view has hidden. The composition is the
+    // consistent behaviour, and this pins it so it reads as a decision.
+    const viewNarrowed: DataFrame = {
+      fields: ENRICHED.fields,
+      records: ENRICHED.records.filter((r) => r.id !== "Clients/Acme.md"),
+    };
+    const r = resolveNamedSource({
+      enriched: viewNarrowed,
+      parts: PARTS,
+      sources: SOURCES,
+      sourceId: "sel-active",
+    });
+    // "Active" would match Acme over the whole project; the view hid it.
+    expect(r.kind).toBe("empty");
   });
 });
