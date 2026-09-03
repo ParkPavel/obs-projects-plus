@@ -2,7 +2,10 @@
   import { onMount, createEventDispatcher } from "svelte";
   import { get } from "svelte/store";
 
+  import { Notice } from "obsidian";
+  import { v4 as uuidv4 } from "uuid";
   import { createProject } from "src/lib/dataApi";
+  import { buildDerivedSource, projectSourceOptions, sourceNameTaken } from "src/lib/datasources/namedSource";
   import { api } from "src/lib/stores/api";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
@@ -88,6 +91,60 @@
       ...view,
       filter: next ?? { conjunction: "and", conditions: [] },
     });
+  }
+
+  /**
+   * #184 — keep the view's current filter as a source of the project.
+   *
+   * The project editor was the obvious home and is the wrong one: it holds a
+   * definition, not a frame, so it has no fields to build a condition against
+   * and a selection saved there with an empty filter equals its own base. Here
+   * the filter is already visible and has already narrowed what is on screen,
+   * which is the brief's verify-after-write answer — you name something you
+   * have watched work.
+   *
+   * The write goes through `settings.updateProject`, the same path the project
+   * editor uses, so nothing about how a project is stored is new.
+   */
+  function handleSaveFilterAsSource(name: string) {
+    if (!project || !view) return;
+    const filter = view.filter;
+    // Guarded here as well as in the bar: the bar hides the action without
+    // conditions, and a selection equal to its own base would still be
+    // useless if some other caller reached this.
+    if (!filter || filter.conditions.length === 0) return;
+    // A name already in use is refused rather than silently accepted. The bar
+    // tells the user the name is what will identify this selection later, and
+    // two sources sharing a label are indistinguishable in the only picker
+    // that exists — so the promise has to be enforced where it is made.
+    if (sourceNameTaken(projectSourceOptions(project).sources, name)) {
+      new Notice(
+        $i18n.t("views.filter.bar.save-name-taken", {
+          defaultValue: 'This project already has a source called "{{name}}"',
+          name,
+        })
+      );
+      return;
+    }
+    settings.updateProject({
+      ...project,
+      additionalSources: [
+        ...(project.additionalSources ?? []),
+        buildDerivedSource(name, filter, uuidv4()),
+      ],
+    });
+    // Deliberately describes what is now TRUE and observable — the source is in
+    // the project and the block picker will list it — rather than claiming the
+    // write reached disk. Settings are persisted by a fire-and-forget
+    // subscription in main.ts whose failure only reaches the console, so
+    // "Saved" would be a claim this code cannot make. That gap is real and is
+    // filed as its own ticket rather than papered over here.
+    new Notice(
+      $i18n.t("views.filter.bar.saved", {
+        defaultValue: '"{{name}}" is now a source of this project — pick it in the block settings',
+        name,
+      })
+    );
   }
 
   // Pillar 5 (Phase 5 UI): closure capturing current stores for sibling-project
@@ -303,6 +360,7 @@
             records={frame.records}
             readonly={source.readonly()}
             on:change={(e) => handleViewFilterPillsChange(e.detail)}
+            on:saveAsSource={(e) => handleSaveFilterAsSource(e.detail)}
           />
           <View
             {project}
