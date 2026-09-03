@@ -174,3 +174,35 @@ describe("A168 — a target this view cannot show never becomes a click that did
     expect(s).toMatch(/openRecord\(\{ id: unresolved\.id \}, "same"/);
   });
 });
+
+describe("A168 step (c) — a link that did not resolve says so", () => {
+  const source = () =>
+    require("fs").readFileSync(
+      require("path").join(__dirname, "..", "ui/components/RecordCardView/RecordCardView.svelte"),
+      "utf8"
+    ) as string;
+
+  it("the peek compares the raw links with the resolved companion", () => {
+    // #151 stayed open because marking an unresolved link in a TABLE CELL
+    // needs the target frame in the cell, and it is not there. The peek shows
+    // the ENRICHED record, so `__resolved__<field>` is already beside the raw
+    // wikilinks — the difference between them is the answer, with no new data
+    // path and no second resolution.
+    const s = source();
+    expect(s).toMatch(/normalizeRelationValue\(record\.values\[f\.name\]\)/);
+    expect(s).toMatch(/record\.values\[`__resolved__\$\{f\.name\}`\]/);
+  });
+
+  it("only the broken links are named, not every working one", () => {
+    // A tick beside every resolved link is noise; the one line about the one
+    // that is broken is what scene 4 asks for.
+    const s = source();
+    expect(s).toMatch(/linkStates\(rf\)\.filter\(\(st\) => !st\.resolved\)/);
+    expect(s).toMatch(/\{#if broken\.length > 0\}/);
+  });
+
+  it("matching is by path and by basename, the two keys the contract indexes on", () => {
+    const s = source();
+    expect(s).toMatch(/keys\.has\(bare\.toLowerCase\(\)\) \|\| keys\.has\(base\.toLowerCase\(\)\)/);
+  });
+});

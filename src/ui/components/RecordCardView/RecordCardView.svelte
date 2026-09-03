@@ -23,7 +23,8 @@
   import SlideInPanel from "src/ui/components/SlideInPanel/SlideInPanel.svelte";
   import EditNote from "src/ui/modals/components/EditNote.svelte";
   import PageIcon from "src/ui/components/PageIcon/PageIcon.svelte";
-  import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
+  import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
+  import { normalizeRelationValue } from "src/lib/relations/relationContract";
   import { i18n } from "src/lib/stores/i18n";
 
   export let open: boolean = false;
@@ -43,13 +44,49 @@
   const dispatch = createEventDispatcher<{ close: void; save: DataRecord }>();
 
   /**
+   * #151, the half that stayed open: a link that did not resolve looked exactly
+   * like one that did.
+   *
+   * The ticket recorded why — marking it in a TABLE CELL needs the target frame
+   * in the cell, and it is not there. The peek is where it becomes possible:
+   * the record it shows is the ENRICHED one, so the resolved companion
+   * `__resolved__<field>` sits beside the raw wikilinks, and the difference
+   * between them is the answer. No new data path and no re-resolution.
+   *
+   * A link counts as unresolved when nothing in the companion matches it by
+   * path or by basename — the two keys the contract's own index matches on.
+   */
+  function linkStates(f: DataField): Array<{ link: string; resolved: boolean }> {
+    if (!record) return [];
+    const raw = normalizeRelationValue(record.values[f.name]);
+    const companion = record.values[`__resolved__${f.name}`];
+    const resolved = Array.isArray(companion) ? (companion as unknown[]) : [];
+    const keys = new Set<string>();
+    for (const r of resolved) {
+      const rec = r as { id?: string };
+      if (typeof rec?.id === "string") {
+        keys.add(rec.id.toLowerCase());
+        const base = rec.id.split("/").pop()?.replace(/\.md$/i, "");
+        if (base) keys.add(base.toLowerCase());
+      }
+    }
+    return raw.map((link) => {
+      const bare = link.replace(/^\[\[|\]\]$/g, "").split("|")[0]?.trim() ?? link;
+      const base = bare.split("/").pop()?.replace(/\.md$/i, "") ?? bare;
+      return { link: bare, resolved: keys.has(bare.toLowerCase()) || keys.has(base.toLowerCase()) };
+    });
+  }
+
+  $: relationFields = fields.filter((f) => f.type === DataFieldType.Relation && !f.derived);
+
+  /** The fields that really become frontmatter keys — see the block below. */
+  $: writtenFields = fields.filter((f) => !f.derived);
+
+  /**
    * A value as frontmatter would carry it — the point of the block is that it
    * matches the file, so a list stays a list and an absent key says so rather
    * than rendering as an empty string that looks like an empty value.
    */
-  /** The fields that really become frontmatter keys — see the block below. */
-  $: writtenFields = fields.filter((f) => !f.derived);
-
   function formatKeyValue(v: unknown): string {
     if (v === undefined || v === null) return "—";
     if (Array.isArray(v)) return v.map(String).join(", ");
@@ -214,6 +251,24 @@
         {/each}
       </dl>
     </details>
+
+    <!--
+      #151 / #168(c): which links found their target. Only the ones that did
+      not are named — a row of ticks beside every working link is noise, and a
+      single line about the broken one is what scene 4 asks for.
+    -->
+    {#each relationFields as rf (rf.name)}
+      {@const broken = linkStates(rf).filter((st) => !st.resolved)}
+      {#if broken.length > 0}
+        <p class="ppp-rcv-unresolved" role="status">
+          <strong>{rf.name}</strong>:
+          {$i18n.t("views.dashboard.record-card.unresolved", {
+            defaultValue: "no note found for",
+          })}
+          {broken.map((b) => b.link).join(", ")}
+        </p>
+      {/if}
+    {/each}
   {:else}
     <div class="ppp-rcv-empty">
       {$i18n.t("views.dashboard.record-card.empty", { defaultValue: "No record selected" })}
@@ -222,6 +277,15 @@
 </SlideInPanel>
 
 <style>
+  .ppp-rcv-unresolved {
+    margin: 0.5em 0 0;
+    padding: 0.375em 0.5em;
+    border-radius: var(--radius-s, 0.25rem);
+    background: var(--background-modifier-error-hover, rgba(255, 0, 0, 0.08));
+    color: var(--text-error, var(--text-muted));
+    font-size: 0.85em;
+  }
+
   .ppp-rcv-frontmatter {
     margin: 0.75em 0 0;
     font-size: 0.85em;
