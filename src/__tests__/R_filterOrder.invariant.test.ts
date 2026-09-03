@@ -63,10 +63,18 @@ describe("#128 filter-order — the wiring the ADR describes", () => {
   // declared in the file that now builds the declaration, and reading both here
   // is what keeps this test pinned to the wiring rather than to a filename.
   const context = read(resolve(SRC, "ui/views/Dashboard/widgets/renderContext.ts"));
+  // #184 moved the frame math itself out of the host into `hostFrames.ts`, for
+  // the same reason and with the same consequence: the wiring is read where it
+  // now lives. What changed for the better is that the order is no longer only
+  // a claim about text — `widgets/__tests__/hostFrames.test.ts` runs the
+  // composition on a frame where A-before-C and C-before-A disagree, which is
+  // the proof this file's own docstring says lives elsewhere. These two stay as
+  // the cheap guard against the single-line regression they were written for.
+  const frames = read(resolve(SRC, "ui/views/Dashboard/widgets/hostFrames.ts"));
 
   it("scopes the frame before the transform, not after", () => {
-    const scopeAt = host.indexOf("applyWidgetScope(enrichedFrame");
-    const transformAt = host.indexOf("executeTransform(");
+    const scopeAt = frames.indexOf("applyWidgetScope(enrichedFrame");
+    const transformAt = frames.indexOf("executeTransform(");
 
     expect(scopeAt).toBeGreaterThan(-1);
     expect(transformAt).toBeGreaterThan(-1);
@@ -75,12 +83,18 @@ describe("#128 filter-order — the wiring the ADR describes", () => {
 
   it("feeds the transform the scoped frame — reverting to enrichedFrame is the regression", () => {
     // This is the single line whose change would silently undo #118.
-    expect(host).toMatch(/executeTransform\(\s*scope\.frame\s*,/);
-    expect(host).not.toMatch(/executeTransform\(\s*enrichedFrame\s*,/);
+    expect(frames).toMatch(/executeTransform\(\s*scope\.frame\s*,/);
+    expect(frames).not.toMatch(/executeTransform\(\s*enrichedFrame\s*,/);
+  });
+
+  it("the host still wires it, so the move did not orphan the math", () => {
+    // Cheap, and it closes the hole the move opens: hostFrames could be perfect
+    // and unused. The host must actually call it.
+    expect(host).toMatch(/computeHostFrames\(\{/);
   });
 
   it("tells the block whether axis A already ran, so it is not applied twice", () => {
-    // The host measures it…
+    // The host declares it to the context…
     expect(host).toMatch(/scopeApplied:\s*scope\.applied/);
     // …and the context declares it. #136 renamed the reactive var to a derived
     // view and #169 moved the literal; the composition is the invariant, not

@@ -25,12 +25,19 @@ const host = read("WidgetHost.svelte");
 // The guard is unchanged — the host still resolves the source, the context
 // still publishes the flag — so the test follows the wiring to where it lives.
 const context = read("renderContext.ts");
+// #184: the frame math itself moved on to `hostFrames.ts` — the host was one
+// line from its ceiling. Same rule as above: the guard did not move, its
+// address did, so the assertions read the file that now holds the arithmetic
+// while the ones about MARKUP keep reading the host.
+const frames = read("hostFrames.ts");
 
 describe("#139 the guard is wired from host to block", () => {
   it("the host publishes whether the block reads a foreign source", () => {
     // #136 folded the five dbCall reactive statements into one derived view, so
     // isExternal and frame cannot be updated out of step with each other.
-    expect(host).toMatch(/\$:\s*dbCall = resolveDbCallView\(/);
+    expect(frames).toMatch(/const dbCall = resolveDbCallView\(/);
+    // …and the host still asks for it, so the move cannot orphan the guard.
+    expect(host).toMatch(/computeHostFrames\(\{/);
     expect(context).toMatch(/dbCallUsesLinkedSource:\s*dbCall\.isExternal/);
   });
 
@@ -135,8 +142,8 @@ describe("#137 the pipeline editor reads the block's own source", () => {
   const editor = read("PipelineEditor.svelte");
 
   it("the host derives the pipeline's real input rather than passing the raw frame", () => {
-    expect(host).toMatch(
-      /\$:\s*pipelineSource = dbCall\.isExternal \? dbCall\.frame : scope\.frame/
+    expect(frames).toMatch(
+      /pipelineSource: dbCall\.isExternal \? dbCall\.frame : scope\.frame/
     );
   });
 

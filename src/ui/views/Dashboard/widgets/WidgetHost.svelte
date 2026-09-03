@@ -4,9 +4,9 @@
    *
    * Assembles a reactive WidgetRenderContext, looks the widget type up in
    * widgetComponentRegistry, and mounts the result inside WidgetShell.
-   * All frame math (backlink enrichment, transform pipeline, right-frame
-   * resolution) lives here; all markup/chrome lives in WidgetShell /
-   * WidgetHeaderActions; all type-specific knowledge lives in the registry.
+   * Frame math (enrichment, axis A, pipeline, per-widget source) is computed
+   * by hostFrames.ts and only wired here; markup/chrome lives in WidgetShell /
+   * WidgetHeaderActions; type-specific knowledge lives in the registry.
    */
   import type { DataFrame, DataRecord, DataField } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
@@ -15,11 +15,7 @@
 
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import { DataFieldType } from "src/lib/dataframe/dataframe";
-  import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
-  import { applyWidgetScope } from "./widgetScope";
-  import { resolveDbCallView, asChartConfig, asStatsConfig, chartRightFrameOf } from "./linkedSourceState";
-  import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
+  import { computeHostFrames } from "./hostFrames";
   import { getConfigPanel } from "./configPanelRegistry";
   import { WIDGET_CONTENT, WIDGET_PANELS } from "./widgetComponentRegistry";
   import { hasPipelineButton, primaryActionFor } from "./headerChrome";
@@ -63,24 +59,10 @@
   $: currentPipeline = widget.transform ?? ({ steps: [] } as TransformPipeline);
   $: panelDescriptor = getConfigPanel(widget.type);
 
-  // ── Frame math ─────────────────────────────────────────────
-  $: relationFieldNames = fields
-    .filter((f) => f.type === DataFieldType.Relation && !f.derived)
-    .map((f) => f.name);
-  $: enrichedFrame = relationFieldNames.length > 0 ? enrichWithBacklinks(frame, relationFieldNames) : frame;
-  $: scope = applyWidgetScope(enrichedFrame, widget.config); // #118: A before C when evaluable
-  $: transformResult = currentPipeline.steps.length > 0 ? executeTransform(scope.frame, currentPipeline, { rightFrames }) : null;
-  $: transformedFrame = transformResult ? transformResult.data : scope.frame;
-  $: pipelineInputRowCount = transformResult ? transformResult.meta.inputRowCount : scope.frame.records.length;
-
-  $: chartConfig = widget.type === "chart" ? asChartConfig(widget.config) : null;
-  $: statsConfig = widget.type === "stats" ? asStatsConfig(widget.config) : null;
-  $: chartRightFrame = chartRightFrameOf(widget.type, chartConfig, rightFrames);
-
-  // NPLAN-V7.1 / #136: per-widget independent source, resolved as one value.
-  $: dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);
-  // #137: the editor is configured against what the pipeline actually receives.
-  $: pipelineSource = dbCall.isExternal ? dbCall.frame : scope.frame;
+  // ── Frame math ─ all of it, in one pure function (see hostFrames.ts) ──
+  $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames, sourceStates });
+  $: ({ scope, transformedFrame, pipelineInputRowCount, chartConfig, statsConfig,
+        chartRightFrame, dbCall, pipelineSource } = frames);
 
   $: ctx = buildRenderContext({
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields, fieldPresets,
