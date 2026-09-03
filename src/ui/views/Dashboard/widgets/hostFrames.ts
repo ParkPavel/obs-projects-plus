@@ -1,26 +1,22 @@
 // hostFrames.ts — #184.
 //
 // Every frame the host derives from the data it is handed, in one pure
-// function: enrichment, axis A, the transform pipeline, and the per-widget
-// source view. `WidgetHost` keeps the reactive plumbing and owns none of the
-// arithmetic.
+// function: enrichment, source selection, axis A, and the transform pipeline.
+// `WidgetHost` keeps the reactive plumbing and owns none of the arithmetic.
 //
-// It moved out of the host for two reasons, and the second is the one that
-// matters. The first is ordinary: the host was one line from its R0.6 ceiling
-// and #184 needs room. The second is that the canonical filter order
-// (`docs/internal/FILTER_ORDER_ADR.md`, invariant 3) was pinned by searching
-// the host's TEXT for `applyWidgetScope(enrichedFrame` and
-// `executeTransform(scope.frame`. That proves the two calls appear in that
-// order in a file; it cannot prove that running them the other way round would
-// produce a different answer. As a composition of pure functions the order is
-// testable for real — see `__tests__/hostFrames.test.ts`, which feeds it a
-// frame where A-before-C and C-before-A disagree.
-//
-// The substrings stay spelled exactly as the invariant reads them, and
-// `R_filterOrder.invariant.test.ts` now reads this file. Following the wiring
-// to where it lives is what #169 established when the render context moved.
+// It moved out of the host to make room, and paid for itself: the canonical
+// order (invariant 3) used to be pinned by searching the host's TEXT for
+// `applyWidgetScope(enrichedFrame` ahead of `executeTransform(scope.frame`,
+// which proves two calls sit in an order in a file and cannot prove that
+// swapping them changes an answer. As a composition it is provable, and
+// `__tests__/hostFrames.test.ts` proves it on a frame where the orders
+// disagree. The substrings stay spelled as the invariant reads them, and
+// `R_filterOrder` now reads this file — as #169 established for the context.
 
 import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
+import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
+import type { IdentifiedFrame } from "src/lib/datasources/sourceSelection";
+import { resolveNamedSource, type NamedSourceView } from "src/lib/datasources/namedSource";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
 import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
@@ -44,10 +40,16 @@ export interface HostFramesInput {
   readonly pipeline: TransformPipeline;
   readonly rightFrames: ReadonlyMap<string, DataFrame>;
   readonly sourceStates: ReadonlyMap<string, ExternalSourceState>;
+  /** Acquired frames with provenance (`frameParts`), for #184 source selection. */
+  readonly parts: readonly IdentifiedFrame[];
+  /** Every source declared on the project. */
+  readonly sources: readonly StoredDataSource[];
 }
 
 export interface HostFrames {
-  /** After enrichment, before axis A. */
+  /** #184: which source this block shows, and whether it resolved at all. */
+  readonly namedSource: NamedSourceView;
+  /** After enrichment and source selection, before axis A. */
   readonly enrichedFrame: DataFrame;
   readonly scope: WidgetScopeResult;
   readonly transformedFrame: DataFrame;
@@ -62,10 +64,8 @@ export interface HostFrames {
 
 /** Backlink-enrich `frame` when any field of the widget is a stored Relation. */
 export function enrichForWidget(frame: DataFrame, fields: readonly DataField[]): DataFrame {
-  const relationFieldNames = fields
-    .filter((f) => f.type === DataFieldType.Relation && !f.derived)
-    .map((f) => f.name);
-  return relationFieldNames.length > 0 ? enrichWithBacklinks(frame, relationFieldNames) : frame;
+  const names = fields.filter((f) => f.type === DataFieldType.Relation && !f.derived).map((f) => f.name);
+  return names.length > 0 ? enrichWithBacklinks(frame, names) : frame;
 }
 
 /**
@@ -77,7 +77,18 @@ export function enrichForWidget(frame: DataFrame, fields: readonly DataField[]):
 export function computeHostFrames(input: HostFramesInput): HostFrames {
   const { widget, frame, fields, pipeline, rightFrames, sourceStates } = input;
 
-  const enrichedFrame = enrichForWidget(frame, fields);
+  const projectEnriched = enrichForWidget(frame, fields);
+  // #184. Source selection heads axis A: it decides WHICH records the widget is
+  // about, before any filter narrows them. Over the ENRICHED frame, because a
+  // saved filter may name a rollup (#170's Gate 0 refutation). A block naming
+  // no source gets the same frame object back — a no-op for everything shipped.
+  const namedSource = resolveNamedSource({
+    enriched: projectEnriched,
+    parts: input.parts,
+    sources: input.sources,
+    sourceId: widget.sourceConfig?.sourceId,
+  });
+  const enrichedFrame = "frame" in namedSource ? namedSource.frame : projectEnriched;
   const scope = applyWidgetScope(enrichedFrame, widget.config); // #118: A before C when evaluable
   const transformResult =
     pipeline.steps.length > 0 ? executeTransform(scope.frame, pipeline, { rightFrames }) : null;
@@ -93,6 +104,7 @@ export function computeHostFrames(input: HostFramesInput): HostFrames {
   const dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);
 
   return {
+    namedSource,
     enrichedFrame,
     scope,
     transformedFrame,

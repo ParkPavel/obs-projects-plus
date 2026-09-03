@@ -16,6 +16,7 @@
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { computeHostFrames } from "./hostFrames";
+  import { frameParts } from "src/lib/stores/dataframe";
   import { getConfigPanel } from "./configPanelRegistry";
   import { WIDGET_CONTENT, WIDGET_PANELS } from "./widgetComponentRegistry";
   import { hasPipelineButton, primaryActionFor } from "./headerChrome";
@@ -60,8 +61,11 @@
   $: panelDescriptor = getConfigPanel(widget.type);
 
   // ── Frame math ─ all of it, in one pure function (see hostFrames.ts) ──
-  $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames, sourceStates });
-  $: ({ scope, transformedFrame, pipelineInputRowCount, chartConfig, statsConfig,
+  // #184: every source the project declares, primary first — the block may name one.
+  $: projectSources = project ? [project.dataSource, ...(project.additionalSources ?? [])] : [];
+  $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames,
+        sourceStates, parts: $frameParts, sources: projectSources });
+  $: ({ namedSource, scope, transformedFrame, pipelineInputRowCount, chartConfig, statsConfig,
         chartRightFrame, dbCall, pipelineSource } = frames);
 
   $: ctx = buildRenderContext({
@@ -69,6 +73,7 @@
     activeFieldPresetId, availableSources, project, tableConfig, isPrimaryDataTable,
     pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount, chartConfig,
     statsConfig, chartRightFrame, dbCall, scopeApplied: scope.applied, primaryActionSignal,
+    namedSource,
   });
 
   // #169: the block's own action, and NOT run here. Hidden while the block

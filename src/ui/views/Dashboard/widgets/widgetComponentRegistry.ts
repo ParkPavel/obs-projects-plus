@@ -83,6 +83,12 @@ export interface WidgetRenderContext {
   /** #136: what the block is actually reading — loading, ready, unavailable, error. */
   readonly dbCallSource: import("./linkedSourceState").BlockSource;
   /**
+   * #184: which source of the project this block shows, and whether it could be
+   * resolved. `broken` and `pending` must reach the screen as themselves — an
+   * empty table is what all three failures look like otherwise.
+   */
+  readonly namedSource: import("src/lib/datasources/namedSource").NamedSourceView;
+  /**
    * #169: a counter the header raises when the user presses the block's own
    * primary action. A counter and not a callback, because the action must run
    * in the component that already owns that interaction — see
@@ -122,6 +128,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       // #118: data-table always renders the host's scoped+transformed frame.
       scopeApplied: true,
       primaryActionSignal: c.primaryActionSignal,
+      namedSource: c.namedSource,
     }),
   },
   chart: {
@@ -160,6 +167,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
       scopeApplied: c.dbCallScopeApplied,
       primaryActionSignal: c.primaryActionSignal,
+      namedSource: c.namedSource,
       // #139: an external source is read through the parent's api and project,
       // so a data write would land in the wrong project. Config writes stay.
       sourceReadOnly: c.dbCallUsesLinkedSource,

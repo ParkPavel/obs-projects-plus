@@ -81,6 +81,11 @@ const run = (config: Record<string, unknown>, pipeline: TransformPipeline) =>
     pipeline,
     rightFrames: new Map(),
     sourceStates: new Map(),
+    // #184: a widget that names no source. `resolveNamedSource` hands the
+    // enriched frame straight back, so every assertion below is about the
+    // order and nothing else.
+    parts: [],
+    sources: [],
   });
 
 const totalFor = (f: DataFrame, bucket: string) =>
