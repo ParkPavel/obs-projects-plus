@@ -170,3 +170,49 @@ describe("#184 — enrichment happens, and only when it has to", () => {
     expect(enrichForWidget(derivedRelation, derivedRelation.fields)).toBe(derivedRelation);
   });
 });
+
+describe("#184 — sourceId reaches every widget type, projectId does not", () => {
+  // The two halves of `WidgetSourceConfig` have different reach, and that is a
+  // decision rather than an oversight (see the comment on `sourceId` in
+  // types.ts). Adversarial review flagged the asymmetry; this pins it so the
+  // next reader finds the answer instead of the question.
+  const parts = [
+    { id: "s1", frame: { fields: [], records: [{ id: "r0", values: {} }] } as unknown as DataFrame },
+  ];
+  const sources = [{ kind: "folder", id: "s1", config: { path: "X", recursive: false } }] as never[];
+
+  const narrowed = (type: string) =>
+    computeHostFrames({
+      widget: {
+        id: "w",
+        type,
+        title: "T",
+        layout: { x: 0, y: 0, w: 4, h: 4 },
+        config: {},
+        sourceConfig: { projectId: "", sourceId: "s1" },
+      } as unknown as WidgetDefinition,
+      frame: frame(SAMPLE),
+      fields: frame(SAMPLE).fields,
+      pipeline: { steps: [] } as unknown as TransformPipeline,
+      rightFrames: new Map(),
+      sourceStates: new Map(),
+      parts,
+      sources,
+    });
+
+  it("narrows a chart by a named source, the same as a table", () => {
+    // `r0` is the only id the part carries, so a widget honouring `sourceId`
+    // keeps exactly that row out of the three in the fixture.
+    for (const type of ["data-table", "chart", "checklist", "database-call"]) {
+      const out = narrowed(type);
+      expect({ type, ids: out.enrichedFrame.records.map((r) => r.id) }).toEqual({ type, ids: ["r0"] });
+    }
+  });
+
+  it("but still refuses to read another PROJECT for anything but database-call", () => {
+    // The gate that already existed and must not have moved: `isExternal` is
+    // what decides whether a block reads a foreign project's frame.
+    const chart = narrowed("chart");
+    expect(chart.dbCall.isExternal).toBe(false);
+  });
+});

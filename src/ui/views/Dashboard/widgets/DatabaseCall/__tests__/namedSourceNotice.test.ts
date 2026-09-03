@@ -18,40 +18,40 @@ import { namedSourceNotice } from "../namedSourceNotice";
 
 const FRAME = { fields: [], records: [] };
 
-const pending: NamedSourceView = { kind: "pending" };
 const broken: NamedSourceView = { kind: "broken", reason: "reads a source that no longer exists (src-x)", label: "Archive" };
 const empty: NamedSourceView = { kind: "empty", frame: FRAME, label: "Archive" };
 const ok: NamedSourceView = { kind: "ok", frame: FRAME, label: "Archive" };
 
-describe("#184 — three failures, three different things said", () => {
-  it("says something distinct for each of the three", () => {
-    const keys = [pending, broken, empty].map((v) => namedSourceNotice(v)?.key);
-    expect(new Set(keys).size).toBe(3);
+describe("#184 — two failures, two different things said", () => {
+  it("says something distinct for each", () => {
+    // `broken` and `empty` are the two that reach a user, and they look
+    // identical without copy: an empty table either way. A third case,
+    // `pending`, was cut in review because nothing could produce it.
+    const keys = [broken, empty].map((v) => namedSourceNotice(v)?.key);
+    expect(new Set(keys).size).toBe(2);
     expect(keys.every((k) => typeof k === "string" && k.length > 0)).toBe(true);
   });
 
   it("and the fallback copy is distinct too, not just the key", () => {
     // A shared default would make every locale that has not been translated
-    // yet show the same sentence for three different situations — which is the
-    // failure this whole distinction exists to prevent, arriving by the back
-    // door.
-    const copy = [pending, broken, empty].map((v) => namedSourceNotice(v)?.fallback);
-    expect(new Set(copy).size).toBe(3);
+    // yet show one sentence for two different situations — the failure this
+    // distinction exists to prevent, arriving by the back door.
+    const copy = [broken, empty].map((v) => namedSourceNotice(v)?.fallback);
+    expect(new Set(copy).size).toBe(2);
   });
 
-  it("does not reuse the linked-project loading copy for its own waiting", () => {
-    // Same picture, different cause. `database-call.source-loading` means "the
-    // other project has not answered"; this means "this project's frame has not
-    // arrived". Identical copy would hide which is happening.
-    expect(namedSourceNotice(pending)?.key).not.toBe(
-      "views.dashboard.database-call.source-loading"
+  it("does not reuse the linked-project copy for a broken local source", () => {
+    // Same picture, different cause: `source-unavailable` means "the other
+    // project was not found"; this means "the source you named in THIS project
+    // is gone". Identical copy would hide which is happening.
+    expect(namedSourceNotice(broken)?.key).not.toBe(
+      "views.dashboard.database-call.source-unavailable"
     );
   });
 });
 
 describe("#184 — where each notice belongs", () => {
   it("a block that cannot show data gets its own screen", () => {
-    expect(namedSourceNotice(pending)?.placement).toBe("screen");
     expect(namedSourceNotice(broken)?.placement).toBe("screen");
   });
 

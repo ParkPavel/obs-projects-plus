@@ -77,13 +77,22 @@ export type NamedSourceView =
   /** Resolved correctly, and nothing is in it. A real answer. */
   | { readonly kind: "empty"; readonly frame: DataFrame; readonly label: string }
   /** Cannot be resolved: what it reads from is gone. */
-  | { readonly kind: "broken"; readonly reason: string; readonly label: string }
-  /** The frame it reads from has not arrived yet. */
-  | { readonly kind: "pending" };
+  | { readonly kind: "broken"; readonly reason: string; readonly label: string };
 
 export interface NamedSourceInput {
-  /** The project frame this view sees, enriched. `undefined` while it loads. */
-  readonly enriched: DataFrame | undefined;
+  /**
+   * The project frame this view sees, enriched.
+   *
+   * Required, and that is a finding rather than a simplification. `resolveDerived`
+   * offers a `pending` case for a frame that has not arrived, and this resolver
+   * mirrored it — until adversarial review pointed out it has no producer:
+   * `DataFrameProvider` renders the widget tree only inside its `{:then}`, and
+   * writes `dataFrame` and `frameParts` in the same synchronous step, so a host
+   * never runs with a missing frame. Shipping a state nothing can reach, with a
+   * test that reached it by calling this function directly, would have been
+   * evidence weaker than the claim. The type now says what is true.
+   */
+  readonly enriched: DataFrame;
   /** Acquired frames with provenance, from `frameParts`. */
   readonly parts: readonly IdentifiedFrame[];
   /** Every source declared on the project, primary first. */
@@ -121,13 +130,8 @@ function intersect(enriched: DataFrame, subset: DataFrame): DataFrame {
 export function resolveNamedSource(input: NamedSourceInput): NamedSourceView {
   const { enriched, parts, sources, sourceId } = input;
 
-  if (!sourceId) {
-    // No source named: the merge, untouched. Not `pending` even while the frame
-    // is absent — a block with no source behaves exactly as it always has.
-    return { kind: "ok", frame: enriched ?? EMPTY, label: undefined };
-  }
-
-  if (enriched === undefined) return { kind: "pending" };
+  // No source named: the merge, untouched, by reference.
+  if (!sourceId) return { kind: "ok", frame: enriched, label: undefined };
 
   const stored = sourceById(sources, sourceId);
   const label = stored ? sourceLabel(stored) : sourceId;
@@ -141,7 +145,11 @@ export function resolveNamedSource(input: NamedSourceInput): NamedSourceView {
       case "empty":
         return { kind: "empty", frame: resolved.frame, label };
       case "pending":
-        return { kind: "pending" };
+        // Unreachable by construction: `resolveDerived` answers `pending` only
+        // for an absent frame, and `enriched` above is required. Kept as a
+        // total branch rather than a cast, so that if the precondition ever
+        // changes this is where it surfaces instead of silently rendering.
+        return { kind: "broken", reason: "the project frame has not resolved", label };
       case "broken":
         return { kind: "broken", reason: resolved.reason, label };
     }
@@ -165,8 +173,6 @@ export function resolveNamedSource(input: NamedSourceInput): NamedSourceView {
     ? { kind: "ok", frame, label }
     : { kind: "empty", frame, label };
 }
-
-const EMPTY: DataFrame = { fields: [], records: [] };
 
 /**
  * Build the source a saved filter is stored as (#184 step 2).

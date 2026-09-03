@@ -93,13 +93,11 @@ describe("#184 — a block that names no source is byte-for-byte unchanged", () 
     expect(r.kind === "ok" && r.frame).toBe(ENRICHED);
   });
 
-  it("is never pending, even before the frame arrives", () => {
-    // A block with no source has always rendered whatever it was given. Making
-    // it wait would be a behaviour change for every widget that ships today.
-    expect(
-      resolveNamedSource({ enriched: undefined, parts: [], sources: SOURCES, sourceId: undefined })
-        .kind
-    ).toBe("ok");
+  it("is handed the frame even when the project has no sources at all", () => {
+    // A block with no source has always rendered whatever it was given.
+    const r = resolveNamedSource({ enriched: ENRICHED, parts: [], sources: [], sourceId: undefined });
+    expect(r.kind).toBe("ok");
+    expect(r.kind === "ok" && r.frame).toBe(ENRICHED);
   });
 });
 
@@ -193,20 +191,27 @@ describe("#184 — four states, because three of them look like an empty table",
     expect(r.kind === "broken" && r.reason).toContain("src-deleted");
   });
 
-  it("a frame that has not arrived is pending, not broken", () => {
-    // The provider writes `frameParts` inside its query promise, so on a
-    // project switch a block can read the previous project's parts for an
-    // instant. Pending has to win there, or the user sees a flash of "broken".
-    // Called directly: `run`'s default parameter would swallow an explicit
-    // `undefined` and quietly test the opposite of what this says.
-    expect(
+  it("has no `pending` case, and that is a finding rather than an omission", () => {
+    // The first cut mirrored `resolveDerived`'s four states, including
+    // `pending`. Adversarial review showed it had no producer:
+    // `DataFrameProvider` renders the widget tree only inside its `{:then}`,
+    // and sets `dataFrame` and `frameParts` in one synchronous step, so a host
+    // never runs with a missing frame. The test that "covered" it reached the
+    // state by calling this function with `undefined` — proving the mapping,
+    // not the screen. `enriched` is required now, so the type says so, and
+    // this asserts the union really has three cases and not four.
+    const kinds = ["ok", "empty", "broken"];
+    const seen = [
+      run(undefined).kind,
       resolveNamedSource({
-        enriched: undefined,
-        parts: PARTS,
+        enriched: ENRICHED,
+        parts: [{ id: "src-clients", frame: { fields: [field("name")], records: [] } }],
         sources: SOURCES,
         sourceId: "src-clients",
-      }).kind
-    ).toBe("pending");
+      }).kind,
+      run("src-deleted").kind,
+    ];
+    expect(seen.sort()).toEqual([...kinds].sort());
   });
 
   it("labels a source that has no name with what it reads", () => {

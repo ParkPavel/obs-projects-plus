@@ -37,16 +37,6 @@ export interface NamedSourceNotice {
  */
 export function namedSourceNotice(view: NamedSourceView): NamedSourceNotice | null {
   switch (view.kind) {
-    case "pending":
-      // Distinct from the linked-project "Loading…" on purpose: same picture,
-      // different cause, and identical copy would hide which one is happening.
-      return {
-        placement: "screen",
-        icon: "loader",
-        key: "views.dashboard.database-call.source-resolving",
-        fallback: "Preparing this block's source…",
-        vars: {},
-      };
     case "broken":
       // Configuration the user can fix. "No records" would send them to look
       // at their data, which is the wrong place entirely.
