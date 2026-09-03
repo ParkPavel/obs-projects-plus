@@ -32,10 +32,21 @@
  */
 
 import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
+import type { RollupFunction } from "src/lib/engine/aggregate";
 import type { ColumnAggregation } from "src/ui/views/Dashboard/types";
 
+/**
+ * Every name the product shows a user for "reduce this column".
+ *
+ * Two vocabularies reach a picker: `ColumnAggregation` (stats cards, table
+ * footer) and `RollupFunction` (rollup fields). They overlap heavily and are
+ * stored separately, so they stay separate types — but a user reading a label
+ * does not care which union it came from, and neither should the table.
+ */
+export type AggregationName = ColumnAggregation | RollupFunction;
+
 export interface AggregationOption {
-  readonly value: ColumnAggregation;
+  readonly value: AggregationName;
   /** The name shown in a picker. Never bare "Count". */
   readonly label: string;
   /** One line: what this does with the rows that have nothing in them. */
@@ -82,6 +93,13 @@ export const AGGREGATIONS: ReadonlyArray<AggregationOption> = [
   { value: "max", label: "Max", consequence: "Largest number; empty when there is none", badge: "MAX" },
   { value: "range", label: "Range", consequence: "Largest minus smallest", badge: "RANGE" },
 
+  // ── rollup-only names (the kernel vocabulary a Rollup field picks from) ──
+  { value: "percent_true", label: "Percent checked", consequence: "Share of the boxes that are ticked", badge: "%✓" },
+  { value: "concat", label: "Concatenate", consequence: "Every value joined into one line", badge: "JOIN" },
+  { value: "concat_unique", label: "Concatenate unique", consequence: "Each different value once, joined into one line", badge: "JOIN∪" },
+  { value: "show_original", label: "Show original", consequence: "The values themselves, as a list", badge: "SHOW" },
+  { value: "show_unique", label: "Show unique values", consequence: "Each different value once, as a list", badge: "SHOW∪" },
+
   // ── dates ──
   { value: "earliest", label: "Earliest date", consequence: "Oldest date in the column", badge: "EARLIEST" },
   { value: "latest", label: "Latest date", consequence: "Newest date in the column", badge: "LATEST" },
@@ -91,12 +109,12 @@ export const AGGREGATIONS: ReadonlyArray<AggregationOption> = [
 const BY_VALUE = new Map(AGGREGATIONS.map((o) => [o.value, o]));
 
 /** The description of one aggregation, or `undefined` for a name nothing knows. */
-export function aggregationOption(value: ColumnAggregation): AggregationOption | undefined {
+export function aggregationOption(value: AggregationName): AggregationOption | undefined {
   return BY_VALUE.get(value);
 }
 
 /** Compact form for a badge. Falls back to the raw name rather than to silence. */
-export function aggregationBadge(value: ColumnAggregation): string {
+export function aggregationBadge(value: AggregationName): string {
   return BY_VALUE.get(value)?.badge ?? String(value).toUpperCase();
 }
 
@@ -147,3 +165,32 @@ export function aggregationOptionsFor(field: DataField): ColumnAggregation[] {
 
   return out;
 }
+
+/**
+ * The order a Rollup field's picker offers its functions in.
+ *
+ * A picker's ORDER is a design decision and belongs with the design, but the
+ * names are still names: keeping them in the component meant two dialogs each
+ * held a list, which is how six lists came about in the first place. R0.18
+ * enforces that no component holds one.
+ */
+export const ROLLUP_PICKER_ORDER: ReadonlyArray<RollupFunction> = [
+  "show_original",
+  "show_unique",
+  "count_total",
+  "count_values",
+  "count_unique",
+  "count_empty",
+  "count",
+  "percent_empty",
+  "percent_not_empty",
+  "percent_true",
+  "sum",
+  "avg",
+  "min",
+  "max",
+  "median",
+  "range",
+  "concat",
+  "concat_unique",
+];

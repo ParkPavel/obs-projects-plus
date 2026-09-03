@@ -23,6 +23,10 @@
     type DataValue,
   } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
+  import {
+    aggregationOption,
+    ROLLUP_PICKER_ORDER,
+  } from "src/lib/dashboard-engine/aggregationOptions";
   import { settings as settingsStore } from "src/lib/stores/settings";
   import { onMount } from "svelte";
   import DateInput from "src/ui/components/DateInput.svelte";
@@ -268,23 +272,11 @@
     { label: $i18n.t("modals.field.configure.rollup.no-relation"), value: "" },
     ...relationFieldsOnThisProject.map((f) => ({ label: f.name, value: f.name })),
   ];
-  const ROLLUP_FUNCTIONS: RollupFunction[] = [
-    "count",
-    "count_values",
-    "count_unique",
-    "sum",
-    "avg",
-    "min",
-    "max",
-    "median",
-    "range",
-    "percent_true",
-    "concat",
-    "concat_unique",
-  ];
-  $: rollupFunctionOptions = ROLLUP_FUNCTIONS.map((fn) => ({
+  // #180d/T5: the default label came from the raw stored name, so this picker
+  // showed `count_total` where every other surface showed "Count all".
+  $: rollupFunctionOptions = ROLLUP_PICKER_ORDER.map((fn) => ({
     label: $i18n.t(`modals.field.configure.rollup.functions.${fn}`, {
-      defaultValue: fn,
+      defaultValue: aggregationOption(fn)?.label ?? fn,
     }),
     value: fn,
   }));
