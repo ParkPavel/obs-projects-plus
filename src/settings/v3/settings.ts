@@ -258,7 +258,27 @@ export type DataSource =
   | DataviewDataSource
   | NativeQueryDataSource;
 
-export type FolderDataSource = {
+/**
+ * Identity for a source inside a project's container (#170 step 1).
+ *
+ * A project has held several sources since v3 (`additionalSources`), and
+ * `DataFrameProvider` merges them into one frame. They had no way to be named
+ * or referred to, so "one theme, several record sets" was expressible in
+ * storage and invisible everywhere else — which is what made a fourth entity
+ * look necessary (see SAVED_SELECTION_BRIEF_159.md, Revision 3).
+ *
+ * Both fields are OPTIONAL and absent means exactly today's behaviour: an
+ * unnamed source, merged. That is what makes this step migrate nothing — a
+ * new `data.json` still opens in an older build, showing the merge.
+ */
+export type DataSourceIdentity = {
+  /** Stable across renames. Absent on every source stored before #170. */
+  readonly id?: string;
+  /** What the user calls it. A label, never an identifier. */
+  readonly name?: string;
+};
+
+export type FolderDataSource = DataSourceIdentity & {
   readonly kind: "folder";
   readonly config: {
     readonly path: string;
@@ -266,7 +286,7 @@ export type FolderDataSource = {
   };
 };
 
-export type TagDataSource = {
+export type TagDataSource = DataSourceIdentity & {
   readonly kind: "tag";
   readonly config: {
     readonly tag: string;
@@ -274,7 +294,7 @@ export type TagDataSource = {
   };
 };
 
-export type DataviewDataSource = {
+export type DataviewDataSource = DataSourceIdentity & {
   readonly kind: "dataview";
   readonly config: {
     readonly query: string;
@@ -304,7 +324,7 @@ export type DataviewDataSource = {
  * folder/tag source, then narrowed via the canonical `filterEvaluator`
  * (`where`) and optionally truncated (`limit`). Works without Dataview.
  */
-export type NativeQueryDataSource = {
+export type NativeQueryDataSource = DataSourceIdentity & {
   readonly kind: "native-query";
   readonly config: {
     readonly from:

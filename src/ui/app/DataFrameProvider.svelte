@@ -6,7 +6,7 @@
     type DataSource,
     type DataSourceUnavailableReason,
   } from "../../lib/datasources";
-  import { dataFrame, dataSource } from "src/lib/stores/dataframe";
+  import { dataFrame, dataSource, frameParts } from "src/lib/stores/dataframe";
   import { fileSystem } from "src/lib/stores/fileSystem";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
@@ -75,14 +75,26 @@
         // Multi-source merge: if additionalSources configured, query and merge
         const extraSources = reassembledProject.additionalSources;
         if (extraSources && extraSources.length > 0) {
-          const resolvedSources = extraSources
-            .map((src) => resolveDataSourceFromConfig(src, reassembledProject))
-            .filter((ds): ds is DataSource => ds !== null);
-          const extraFrames = await Promise.all(
-            resolvedSources.map((ds) => ds.queryAll())
-          );
+          const pairs = extraSources
+            .map((src) => ({ src, ds: resolveDataSourceFromConfig(src, reassembledProject) }))
+            .filter((p): p is { src: typeof extraSources[number]; ds: DataSource } => p.ds !== null);
+          const extraFrames = await Promise.all(pairs.map(({ ds }) => ds.queryAll()));
+          // #170 step 1: the merge stays the project's frame, and provenance is
+          // kept beside it. A block that names one source looks the frame up
+          // here rather than querying again — acquisition happens once, and a
+          // block that names nothing is served the merge exactly as before.
+          frameParts.set([
+            { id: (reassembledProject.dataSource as { id?: string }).id, frame: primaryFrame },
+            ...pairs.map(({ src, ds: _ds }, i) => ({
+              id: (src as { id?: string }).id,
+              frame: extraFrames[i]!,
+            })),
+          ]);
           dataFrame.set(mergeDataFrames([primaryFrame, ...extraFrames]));
         } else {
+          frameParts.set([
+            { id: (reassembledProject.dataSource as { id?: string }).id, frame: primaryFrame },
+          ]);
           dataFrame.set(primaryFrame);
         }
       }
