@@ -175,3 +175,97 @@ Raised by Gate 0, ordered by cost of getting them wrong:
 Revision 2 goes back to Gate 0 — specifically Q3's invalidation table, Q4's verify-after-write rule
 and Claim 3. Implementation tickets are written only after that pass, and each will carry a
 `Vision scene` and a `User outcome` per the template (#154).
+
+---
+
+# Revision 3 — why this option (2026-09-03, closing #170)
+
+## The finding that reframes the brief
+
+Both #170 and `REFERENCE_NOTION_UI_2026.md` state that this product has no container level, and
+that its absence is what forces a fourth entity. **That is false, and it was never checked against
+the code.** Verified 2026-09-03:
+
+- `ProjectDefinition.additionalSources?: DataSource[]` — `v3/settings.ts:239`, carried into
+  `v4/settings.ts:51`.
+- Resolved and merged at runtime — `DataFrameProvider.svelte:75-85`, via `mergeDataFrames`.
+- Added, edited and removed in live UI — `CreateProject.svelte`.
+
+A project is already a container of N sources. What its sources lack is not existence but
+**identity**: every variant is `{ kind, config }` with no `id` and no `name`, and the merge
+dissolves them into one frame. And `NativeQueryDataSource` (#048) — a filter-based database
+persisted as a project datasource, narrowed through the canonical `filterEvaluator` — is a saved
+selection stored as a source. It shipped. It is simply anonymous and unaddressable.
+
+## The three options, on one table
+
+| | **A — the reference's compromise** | **B — selection as its own entity** (chosen 2026-08-27) | **C — named sources in the container** |
+|---|---|---|---|
+| Stores | nothing new | `ProjectDefinition.selections?: SavedSelection[]`, and `WidgetSourceConfig` becomes a tagged union | `id?` / `name?` on `DataSource`; one new `DerivedDataSource`; `sourceId?` on `WidgetSourceConfig` |
+| A shipped key changes meaning | no | **yes** — `WidgetSourceConfig.projectId` becomes legacy-only behind a normalizer, and can never be removed | **no** — every addition is optional, and absent means today's behaviour |
+| Filter order / one engine | untouched | untouched by design: membership at axis A over the enriched frame | untouched **only if pinned**: a derived source resolved in the datasource layer would filter at ACQUISITION, and a `where` on a rollup would then match nothing — the Gate 0 refutation that killed revision 1 |
+| What the user gains, in the vault | nothing over today | "I name the filter Overdue clients and pick it as a block's source" | the same sentence, **plus** "my two Sessions folders each have a name, and a block can point at one instead of the merge" |
+| Migration | none | **not none** — the union breaks every stored external `database-call`; a reader asking for `projectId` falls through to the parent frame and silently shows another project, which is #136 re-created by a type change | **none, truthfully** — absent `sourceId` yields the merged frame, byte-identical; a new `data.json` still opens in the old build |
+| Forecloses | scene 5, permanently; `additionalSources` stays anonymous forever | **the container level** — the project would hold two permanent lists of things that produce records, one addressable and one not, and the shipped one can never be deleted to unify them | only the v2 cases the brief already defers, which stay expressible later as `from: <sourceId>` |
+
+## Does the user's 2026-08-27 decision survive?
+
+**The outcome survives. The entity does not.**
+
+The decision was that a selection must be *addressable* — nameable, and openable as the source of
+another view. Option C delivers that sentence verbatim. What does not survive is the unstated
+premise under "therefore it must be a fourth entity": that a project has one source, so a set of
+named record-sets has nowhere to live. The code says it has N, and has since before the decision
+was taken.
+
+The reference was the trigger, not the evidence. Its own answer — "we have no container level" —
+is marked as a conclusion rather than a code reading, and the code refutes it. That inverts the
+price: B was weighed as "one new entity against no home for it", when the real weight is that **B
+adds a second list beside a shipped one and forces a tagged union with a mandatory normalizer**,
+while **C adds two optional fields and migrates nothing**. Same user sentence, strictly cheaper,
+strictly less foreclosing.
+
+**Nothing analytical is discarded.** B's answers about *when* membership is computed — the enriched
+frame at axis A, verify-after-write, the three states empty/broken/pending, deep-copy on promotion
+— are carried into C's step 2 in full. C wins on where the thing is stored and how it is addressed;
+B already won the argument about when it is computed.
+
+Two problems belong to derived membership whichever option ships, and the brief keeps saying so:
+the clock row of the invalidation table (`is-today`, `is-overdue` move with no signal), and the
+linked-source bypass of axis C (#132).
+
+## Decision
+
+**Option C, in two steps, the first introducing no new concept at all.**
+
+**Step 1 (S).** Give the sources a project already has an identity, and let a block address one:
+`id?` / `name?` on the `DataSource` variants; `sourceId?` on `WidgetSourceConfig`; the resolver
+returns one named source's frame when `sourceId` is present and the merge when it is not; the
+project editor shows a name per source. No new kind, no new semantics, nothing stored that changes
+meaning.
+
+**Step 2 (M).** Add `kind: "derived"` — the saved filter itself — resolved at **axis A over the
+enriched frame**, with verify-after-write and the three states. This is where revision 2's work
+lands.
+
+**The one product judgement, decided 2026-09-03:** a saved filter appears as a **fourth kind beside
+Folder / Tag / Query**, not in a separate "Saved filters" section. Its own section would rebuild
+the fourth-entity mental model in the interface right after the storage had avoided it. The kinds
+stay visible in one list — Folder, Tag, Query, Saved filter — because the `PRODUCT_RESET` §3 trap
+is one word covering several mechanisms, and the cure is showing the mechanism, never hiding it.
+
+**Observable acceptance result:** a project whose primary source is `Clients/` and whose
+`additionalSources[0]` is `Archive/Clients/` named "Archive"; a dashboard with two `database-call`
+blocks, one addressing the project and one addressing the archive source. The first renders both
+folders, the second only the archived records, and the same `data.json` opened in the pre-change
+build renders both blocks as the merge, with no error and no data loss.
+
+## Rejected
+
+- **A** — delivers no new capability over what ships today, and adopting it means conceding the
+  readiness criterion of scene 5 and filing it in `VISION_DEVIATIONS.md`. It is the honest fallback
+  if step 2 proves unaffordable, not the plan.
+- **B** — rejected on foreclosure rather than effort. It permanently installs a second list of
+  record-producers beside a shipped one that can never be removed, and forces a union whose
+  migration risk Gate 0 already had to catch once. Do not re-propose it as "simpler because it is a
+  fresh entity": the entity is the expensive part.
