@@ -31,6 +31,7 @@
   import type { ProjectDefinition } from "src/settings/settings";
   import type {
     AgendaCustomList,
+    DataSource,
     NativeQueryDataSource,
   } from "src/settings/v3/settings";
   import {
@@ -76,40 +77,45 @@
     { label: $i18n.t("datasources.native-query"), value: "native-query" },
   ];
 
+  /**
+   * Replace the primary source, KEEPING its identity (#184).
+   *
+   * The primary source had no `id` at all, which made it the one source of a
+   * project a block could never be pointed at: `projectSourceOptions` can only
+   * offer what a config can name. It also made every project report "some
+   * sources cannot be picked", including brand-new ones where that was untrue.
+   *
+   * The id survives a change of kind for the same reason it does for the
+   * additional sources: a block pointing here means "this project's primary
+   * source", and swapping a folder for a tag has not made it a different one.
+   */
+  function setPrimarySource(next: DataSource) {
+    const previous = project.dataSource as { id?: string } | undefined;
+    project = {
+      ...project,
+      dataSource: { ...next, id: previous?.id ?? uuidv4() } as DataSource,
+    };
+  }
+
   function handleDataSourceChange({ detail: value }: CustomEvent<string>) {
     switch (value) {
       case "folder":
-        project = {
-          ...project,
-          dataSource: {
-            kind: "folder",
-            config: { path: "", recursive: false },
-          },
-        };
+        setPrimarySource({ kind: "folder", config: { path: "", recursive: false } });
         break;
       case "tag":
-        project = {
-          ...project,
-          dataSource: { kind: "tag", config: { tag: "", hierarchy: false } },
-        };
+        setPrimarySource({ kind: "tag", config: { tag: "", hierarchy: false } });
         break;
       case "dataview":
-        project = {
-          ...project,
-          dataSource: { kind: "dataview", config: { query: "" } },
-        };
+        setPrimarySource({ kind: "dataview", config: { query: "" } });
         break;
       case "native-query":
-        project = {
-          ...project,
-          dataSource: {
-            kind: "native-query",
-            config: {
-              from: { kind: "folder", path: "", recursive: false },
-              where: { conjunction: "and", conditions: [] },
-            },
+        setPrimarySource({
+          kind: "native-query",
+          config: {
+            from: { kind: "folder", path: "", recursive: false },
+            where: { conjunction: "and", conditions: [] },
           },
-        };
+        });
         break;
     }
   }

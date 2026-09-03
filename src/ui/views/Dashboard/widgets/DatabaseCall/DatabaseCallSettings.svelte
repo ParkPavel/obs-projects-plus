@@ -15,6 +15,19 @@
 
   export let sourceConfig: WidgetSourceConfig | undefined = undefined;
   export let availableSources: Array<{ id: string; name: string }> = [];
+  /**
+   * #184: the sources of THIS project — a different dimension from
+   * `availableSources`, which lists sibling projects. Two dimensions, two
+   * selects: merging them would make "project X" and "the second source of the
+   * project I am in" indistinguishable by kind.
+   *
+   * Sources stored before #170 have no `id` and are absent here, because there
+   * is nothing to point at. The hint says so rather than leaving the user to
+   * wonder where their second folder went.
+   */
+  export let projectSources: ReadonlyArray<{ id: string; label: string }> = [];
+  /** True when the project holds a source that cannot be addressed (no id). */
+  export let hasUnaddressableSource = false;
   export let availableWidgets: Array<{ id: string; title: string }> = [];
   export let fields: DataField[] = [];
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
@@ -26,7 +39,7 @@
     linkedSelectionChange: LinkedSelectionConfig | undefined;
   }>();
 
-  $: currentProjectId = sourceConfig?.projectId ?? "";
+  $: currentProjectId = sourceConfig?.projectId ?? "";  $: currentSourceId = sourceConfig?.sourceId ?? "";
   $: currentLinkedId = linkedSelection?.sourceWidgetId ?? "";
   $: currentRelationField = linkedSelection?.relationField ?? "";
   // E2: only Relation-type fields are valid for the linked-selection filter.
@@ -42,7 +55,18 @@
 
   function handleSourceChange(e: Event) {
     const projectId = (e.currentTarget as HTMLSelectElement).value;
+    // #184: `sourceId` names a source of THIS project and means nothing in
+    // another one, so switching project drops it. That is correct, and it is
+    // why the second select only appears while this one is on "this view".
     dispatch("change", { projectId });
+  }
+
+  function handleProjectSourceChange(e: Event) {
+    const sourceId = (e.currentTarget as HTMLSelectElement).value;
+    // An empty value is "the whole project", and it removes the key rather
+    // than storing "" — an absent `sourceId` is what every config written
+    // before #184 has, and the two must stay the same thing.
+    dispatch("change", sourceId ? { projectId: "", sourceId } : { projectId: "" });
   }
 
   function handleLinkedBlockChange(e: Event) {
@@ -86,6 +110,32 @@
         <span class="ppp-dbc-settings__hint">{$i18n.t("views.dashboard.database-call.settings.source-hint", { defaultValue: "By default the block shows this view's records. Pick another project to show its data instead." })}</span>
       </label>
     </div>
+    {#if currentProjectId === "" && projectSources.length > 0}
+      <!--
+        Only while the block reads THIS view. With another project selected a
+        `sourceId` is ignored downstream by construction, and a select that
+        stores something nothing reads is a visible promise with no effect.
+      -->
+      <div class="ppp-cfg-item">
+        <label class="ppp-dbc-settings__field">
+          {$i18n.t("views.dashboard.database-call.settings.project-source", { defaultValue: "Which source" })}
+          <select value={currentSourceId} on:change={handleProjectSourceChange}>
+            <option value="">
+              {$i18n.t("views.dashboard.database-call.settings.project-source-all", { defaultValue: "All sources of this project" })}
+            </option>
+            {#each projectSources as src (src.id)}
+              <option value={src.id}>{src.label}</option>
+            {/each}
+          </select>
+          <span class="ppp-dbc-settings__hint">
+            {$i18n.t("views.dashboard.database-call.settings.project-source-hint", { defaultValue: "A project can gather records from several sources. This block can show just one of them." })}
+            {#if hasUnaddressableSource}
+              {$i18n.t("views.dashboard.database-call.settings.project-source-unnamed", { defaultValue: "Sources added before naming was introduced cannot be picked — open the project and give them a name." })}
+            {/if}
+          </span>
+        </label>
+      </div>
+    {/if}
     <div class="ppp-cfg-item">
       <label class="ppp-dbc-settings__field">
         {$i18n.t("views.dashboard.database-call.settings.link-to", { defaultValue: "Link to block" })}

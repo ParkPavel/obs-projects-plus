@@ -12,9 +12,11 @@ import * as path from "path";
 const SRC = path.resolve(__dirname, "..");
 
 const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
-  // 240/280: raised in R3 — router gained rename/selection wiring (W2 scope);
-  // revisit downward at W5 cleanup.
-  { file: "ui/views/Dashboard/widgets/WidgetHost.svelte", maxLines: 240 },
+  // 240 → 230 (#184): the frame math moved to `hostFrames.ts`, and a ceiling
+  // that keeps the room the move freed is not a ceiling. Banked in the same
+  // commit as the removal, which is the rule this ratchet exists to enforce.
+  { file: "ui/views/Dashboard/widgets/WidgetHost.svelte", maxLines: 230 },
+  { file: "ui/views/Dashboard/widgets/hostFrames.ts", maxLines: 120 },
   { file: "ui/views/Dashboard/widgets/WidgetShell.svelte", maxLines: 350 },
   { file: "ui/views/Dashboard/widgets/WidgetHeaderActions.svelte", maxLines: 220 },
   { file: "ui/views/Dashboard/widgets/widgetMenu.ts", maxLines: 80 },

@@ -18,9 +18,44 @@ effects are composed.
 
 | Axis | Boundary | Current configuration surfaces |
 | --- | --- | --- |
-| A — scope | Stable constraints that define the data scope | `view.filter`, filter-tabs, `block.subFilter`, per-tab filter |
+| A — scope | Stable constraints that define the data scope | `view.filter`, filter-tabs, `block.subFilter`, per-tab filter, and the block's named source (#184) |
 | C — advanced transform | Explicit structural or computational transformation | `executeTransform` / advanced transform |
 | B — reactive selection | Transient, interaction-driven constraints | `composeEffectiveFilter` → `filterByLinkedSelection` |
+
+### The named source stands at the HEAD of axis A (#184, 2026-09-04)
+
+A block may point at one source of its project instead of the merge of all of
+them, and a saved filter (`kind: "derived"`) is one of the things it can point
+at. Resolving that is **part of axis A, and the first part**: it decides *which
+records the widget is about* before any filter narrows them. Within the host the
+order is
+
+```
+enrich → A0 (named source, incl. a saved filter's `where`) → A1 (block.subFilter) → C → B → sort → render
+```
+
+Three things about this are load-bearing and were each established by refutation
+rather than by preference:
+
+- **It resolves over the ENRICHED frame, never at acquisition.** A saved filter
+  may name a rollup, and rollups do not exist until enrichment has run. Resolving
+  it in the datasource layer makes it an acquisition filter, and such a filter
+  would match nothing — silently, looking exactly like a filter that legitimately
+  found none. That is the Gate 0 refutation that killed revision 1 of
+  `SAVED_SELECTION_BRIEF_159.md`, pinned by `derivedSource.test.ts`.
+- **A0 does not disturb A1.** Both are axis A and axis A composes: narrowing to a
+  source and then applying the block's own filter is the same set as the reverse.
+  A block that names no source is handed the enriched frame *by reference*, so
+  every configuration stored before #184 goes through unchanged — asserted with
+  `toBe`, not `toEqual`, in `namedSource.test.ts`.
+- **The rows come from the enriched frame, not from the acquired part.** The part
+  is what the vault query returned: no backlinks, no rollups, none of the columns
+  the view added. It is used for its record ids only.
+
+Since #184 the order is also **proved by result** and not only by text position:
+`widgets/__tests__/hostFrames.test.ts` runs the composition on a frame where
+A-before-C and C-before-A produce different totals, which is what
+`R_filterOrder.invariant.test.ts` says its own substring checks cannot do.
 
 ### Where `sort` actually runs (#152, corrected 2026-08-27)
 

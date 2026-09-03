@@ -71,6 +71,17 @@ export interface WidgetSourceConfig {
    * added, and a reader that does not know it still reads correctly.
    */
   readonly sourceId?: string;
+  //
+  // #184, and this is a DELIBERATE widening of the key's reach, recorded
+  // because adversarial review was right to ask. `projectId` is honoured only
+  // for `database-call` — `resolveDbCallView` gates it by type, and
+  // `linkedSourceState.test.ts` pins that a chart ignores it. `sourceId` is
+  // honoured for EVERY widget type, because it is a different question:
+  // "which project do I read" is a capability only the multi-view block has,
+  // while "which of this project's sources am I about" is meaningful for a
+  // chart, a checklist or a table alike, and answering it costs nothing they
+  // do not already do. Only `database-call` currently offers a UI for it; the
+  // others read a stored value and would need their own picker.
 }
 
 export interface WidgetDefinition {

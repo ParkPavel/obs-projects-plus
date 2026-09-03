@@ -44,6 +44,8 @@
   import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
   import BlockFilterBar from "./BlockFilterBar.svelte";
   import type { BlockSource } from "../linkedSourceState";
+  import type { NamedSourceView } from "src/lib/datasources/namedSource";
+  import { namedSourceNotice } from "./namedSourceNotice";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { createDataRecord } from "src/lib/dataApi";
@@ -85,6 +87,17 @@
    * second, differently-behaving way to create a record.
    */
   export let primaryActionSignal: number = 0;
+  /**
+   * #184: which of the project's sources this block shows, and whether that
+   * could be resolved. Defaulted so any other mounter is unaffected.
+   *
+   * `broken` and `pending` are rendered as themselves below. That is the whole
+   * reason the resolver returns four cases instead of a frame and a boolean:
+   * "the filter matched nothing", "the source you named is gone" and "the data
+   * has not arrived" are one picture on screen — an empty table — and they need
+   * three different reactions from the user.
+   */
+  export let namedSource: NamedSourceView = { kind: "ok", frame: { fields: [], records: [] }, label: undefined };
   /**
    * #139: this block reads a source it cannot safely write to.
    *
@@ -158,6 +171,12 @@
   // subFilter ahead of the transform pipeline, `scopeApplied` is set and
   // re-applying here is skipped — a reshape step may have renamed or dropped
   // the fields the conditions name, which would drop every row.
+  // #184: what this block says about the source it was pointed at. The copy
+  // lives in a pure function so "three states say three different things" is
+  // executable — this component cannot be mounted in jest (a require cycle
+  // through BoardView), so inline markup could only ever be grep-checked.
+  $: sourceNotice = namedSourceNotice(namedSource);
+
   $: subFilter = config["subFilter"] as FilterDefinition | undefined;
   $: hasSubFilter =
     !!subFilter &&
@@ -417,6 +436,21 @@
       })}
       hint={sourceState.message}
     />
+  {:else if sourceNotice && sourceNotice.placement === "screen"}
+    <!--
+      #184. AFTER the sourceState chain: a block reading another project ignores
+      `sourceId` by construction, so the external state wins. The order WITHIN
+      the notice matters too and is decided in the resolver: `pending` beats
+      `broken`, because the provider writes `frameParts` inside its query
+      promise and a block can read the previous project's parts for an instant
+      when the user switches projects — otherwise that flashes "your source is
+      gone" on every switch.
+    -->
+    <EmptyState
+      icon={sourceNotice.icon}
+      title={$i18n.t(sourceNotice.key, { defaultValue: sourceNotice.fallback, ...sourceNotice.vars })}
+      hint={sourceNotice.hint ?? ""}
+    />
   {:else if tabs.length === 0}
     <EmptyState
       icon="database"
@@ -539,6 +573,9 @@
               title={$i18n.t("views.dashboard.database-call.no-records", {
                 defaultValue: "No records yet"
               })}
+              hint={sourceNotice && sourceNotice.placement === "hint"
+                ? $i18n.t(sourceNotice.key, { defaultValue: sourceNotice.fallback, ...sourceNotice.vars })
+                : ""}
             >
               <svelte:fragment slot="actions">
                 {#if !readonly && !sourceReadOnly && project}
