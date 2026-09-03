@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from "svelte";
+  import { focusTrap } from "src/lib/a11y/focusTrap";
   import type {
     ProjectDefinition,
     ProjectId,
@@ -135,6 +136,7 @@
     <div 
       class="settings-popover" 
       bind:this={popoverElement} 
+      use:focusTrap
       role="dialog" 
       aria-modal="true" 
       tabindex="-1"

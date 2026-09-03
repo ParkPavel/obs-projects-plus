@@ -102,6 +102,16 @@ export interface ProbeSpec {
   /** Viewport, so a viewport-derived fallback is deterministic. */
   readonly width?: number;
   readonly height?: number;
+  /**
+   * A statement run after the page settles and before anything is measured,
+   * with `probe` in scope: whatever it assigns to `probe.<key>` is returned
+   * alongside the measurements.
+   *
+   * This is how a question that is not about a computed style gets asked —
+   * which element has focus, where Tab goes next. jsdom does not move focus on
+   * Tab at all, so a keyboard claim tested there is a claim about the test.
+   */
+  readonly evaluate?: string;
 }
 
 export type ProbeResult = Record<string, Record<string, string>>;
@@ -128,6 +138,9 @@ export function renderProbe(spec: ProbeSpec): ProbeResult {
       "<script>",
       `const SPEC = ${JSON.stringify(spec.measure)};`,
       "const out = {};",
+      "const probe = {};",
+      spec.evaluate ? `try { ${spec.evaluate} } catch (e) { probe.error = String(e); }` : "",
+      "out.__probe = probe;",
       "for (const el of SPEC) {",
       "  const node = document.getElementById(el.id);",
       "  if (!node) { out[el.id] = { missing: 'true' }; continue; }",

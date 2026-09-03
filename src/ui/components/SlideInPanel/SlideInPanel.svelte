@@ -10,6 +10,7 @@
    * No bounce/spring — gentle 200ms ease-out per DG-8.
    */
   import { createEventDispatcher } from "svelte";
+  import { focusTrap } from "src/lib/a11y/focusTrap";
 
   export let open: boolean = false;
   export let title: string = "";
@@ -53,6 +54,7 @@
   class:ppp-slide-in-panel--open={open}
   style:width
   style:max-width="100vw"
+  use:focusTrap={{ active: open }}
   role="dialog"
   aria-modal="true"
   aria-hidden={!open}
