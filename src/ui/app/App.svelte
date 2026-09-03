@@ -2,7 +2,10 @@
   import { onMount, createEventDispatcher } from "svelte";
   import { get } from "svelte/store";
 
+  import { Notice } from "obsidian";
+  import { v4 as uuidv4 } from "uuid";
   import { createProject } from "src/lib/dataApi";
+  import { buildDerivedSource } from "src/lib/datasources/namedSource";
   import { api } from "src/lib/stores/api";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
@@ -88,6 +91,41 @@
       ...view,
       filter: next ?? { conjunction: "and", conditions: [] },
     });
+  }
+
+  /**
+   * #184 — keep the view's current filter as a source of the project.
+   *
+   * The project editor was the obvious home and is the wrong one: it holds a
+   * definition, not a frame, so it has no fields to build a condition against
+   * and a selection saved there with an empty filter equals its own base. Here
+   * the filter is already visible and has already narrowed what is on screen,
+   * which is the brief's verify-after-write answer — you name something you
+   * have watched work.
+   *
+   * The write goes through `settings.updateProject`, the same path the project
+   * editor uses, so nothing about how a project is stored is new.
+   */
+  function handleSaveFilterAsSource(name: string) {
+    if (!project || !view) return;
+    const filter = view.filter;
+    // Guarded here as well as in the bar: the bar hides the action without
+    // conditions, and a selection equal to its own base would still be
+    // useless if some other caller reached this.
+    if (!filter || filter.conditions.length === 0) return;
+    settings.updateProject({
+      ...project,
+      additionalSources: [
+        ...(project.additionalSources ?? []),
+        buildDerivedSource(name, filter, uuidv4()),
+      ],
+    });
+    new Notice(
+      $i18n.t("views.filter.bar.saved", {
+        defaultValue: 'Saved "{{name}}" as a source of this project',
+        name,
+      })
+    );
   }
 
   // Pillar 5 (Phase 5 UI): closure capturing current stores for sibling-project
@@ -303,6 +341,7 @@
             records={frame.records}
             readonly={source.readonly()}
             on:change={(e) => handleViewFilterPillsChange(e.detail)}
+            on:saveAsSource={(e) => handleSaveFilterAsSource(e.detail)}
           />
           <View
             {project}
