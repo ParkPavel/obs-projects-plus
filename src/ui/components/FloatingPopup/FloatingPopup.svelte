@@ -322,7 +322,7 @@
   .ppp-popup-backdrop {
     position: fixed;
     inset: 0;
-    z-index: var(--ppp-z-overlay, 49);
+    z-index: var(--ppp-z-overlay, 30);
     background: rgba(0, 0, 0, 0.3);
     animation: ppp-backdrop-in var(--ppp-duration-fast, 100ms) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1)) forwards;
   }

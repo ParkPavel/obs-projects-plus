@@ -211,7 +211,7 @@
   .settings-popover-overlay {
     position: fixed;
     inset: 0;
-    z-index: var(--ppp-z-overlay, 1200);
+    z-index: var(--ppp-z-overlay, 30);
     background: transparent;
     pointer-events: auto;
   }
@@ -231,7 +231,7 @@
     border: 1px solid var(--background-modifier-border);
     box-shadow: var(--shadow-lg, 0 0.5rem 2rem rgba(0, 0, 0, 0.25));
     pointer-events: auto;
-    z-index: var(--ppp-z-modal, 1210);
+    z-index: var(--ppp-z-modal, 40);
     animation: ppp-popover-enter var(--ppp-duration-slow, 0.25s) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1));
   }
 
