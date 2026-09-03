@@ -9,7 +9,7 @@
  * mixed types, non-numeric strings, booleans, dates) get explicit cases.
  */
 
-import { aggregate, type RollupConfig } from "../aggregate";
+import { aggregate, type RollupConfig, type RollupFunction } from "../aggregate";
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
 import { NUMERIC_COERCION_CASES } from "./numericContract.test";
 
@@ -46,8 +46,14 @@ describe("aggregate() — kernel", () => {
     test("excludes empty string", () => {
       expect(aggregate(["a", "", "b"], cfg("count_values")).value).toBe(2);
     });
-    test("excludes false", () => {
-      expect(aggregate([true, false, true], cfg("count_values")).value).toBe(2);
+    // FLIPPED by #180c, executing the user's D4 (BACKLOG #180, RESOLVED
+    // 2026-09-02): an unchecked box is an answer, not a blank. The footer never
+    // excluded `false`, so until now the same question had two answers — over
+    // `[false]` the kernel said 100% empty and the footer said 0%.
+    // `count_checked` / `percent_true` are the operators for "how many are
+    // true", and they are unaffected.
+    test("counts false — an unchecked box is a value", () => {
+      expect(aggregate([true, false, true], cfg("count_values")).value).toBe(3);
     });
     test("includes zero", () => {
       expect(aggregate([0, 1, 2], cfg("count_values")).value).toBe(3);
@@ -194,8 +200,14 @@ describe("aggregate() — kernel", () => {
     test("works with negatives", () => {
       expect(aggregate([-5, 0, 5], cfg("median")).value).toBe(0);
     });
-    test("empty → 0", () => {
-      expect(aggregate([], cfg("median")).value).toBe(0);
+    // FLIPPED by #180c. #180a converted avg/min/max/range and did not reach
+    // median; #180b was scoped to the percent family. The gap was recorded
+    // both times rather than hidden, and this closes it: spec §3.1 puts median
+    // in the null column with the rest.
+    test("empty → null, like every other numeric aggregate", () => {
+      const r = aggregate([], cfg("median"));
+      expect(r.value).toBeNull();
+      expect(r.formattedValue).toBe("—");
     });
     test("ignores non-numeric", () => {
       expect(aggregate(["x", 1, 3, 5], cfg("median")).value).toBe(3);
@@ -349,5 +361,38 @@ describe("aggregate() — kernel", () => {
     test("empty → empty string", () => {
       expect(aggregate([], cfg("show_unique")).value).toBe("");
     });
+  });
+});
+
+// #180c — the three gaps #180a and #180b recorded, closed together. Each was a
+// place where the same question had two answers in the shipped product.
+describe("#180c — kernel and footer agree", () => {
+  const cfg2 = (fn: RollupFunction): RollupConfig => ({
+    relationField: "",
+    targetField: "",
+    function: fn,
+  });
+
+  test("an unchecked box fills its cell, so it is not counted as empty", () => {
+    // The disagreement this closes: over [false] the kernel used to report
+    // 100% empty while the footer reported 0%.
+    expect(aggregate([false], cfg2("percent_empty")).value).toBe(0);
+    expect(aggregate([false], cfg2("percent_not_empty")).value).toBe(100);
+    expect(aggregate([false], cfg2("count_empty")).value).toBe(0);
+  });
+
+  test("an empty string still does not fill a cell", () => {
+    expect(aggregate([""], cfg2("percent_empty")).value).toBe(100);
+    expect(aggregate([""], cfg2("count_values")).value).toBe(0);
+  });
+
+  test("every numeric aggregate answers the same way to nothing", () => {
+    for (const fn of ["avg", "min", "max", "range", "median"] as const) {
+      const r = aggregate([], cfg2(fn));
+      expect(r.value).toBeNull();
+      expect(r.formattedValue).toBe("—");
+    }
+    // sum is the deliberate exception: the additive identity is a real total.
+    expect(aggregate([], cfg2("sum")).value).toBe(0);
   });
 });
