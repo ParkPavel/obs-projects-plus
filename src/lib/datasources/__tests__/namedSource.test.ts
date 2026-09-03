@@ -20,7 +20,7 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { FilterDefinition } from "src/settings/base/settings";
 import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
 
-import { buildDerivedSource, resolveNamedSource } from "../namedSource";
+import { buildDerivedSource, projectSourceOptions, resolveNamedSource } from "../namedSource";
 import type { IdentifiedFrame } from "../sourceSelection";
 
 const field = (name: string, type: DataFieldType = DataFieldType.String, derived = false) => ({
@@ -272,5 +272,49 @@ describe("#184 step 2 — the object a saved filter is stored as", () => {
     });
     expect(r.kind).toBe("ok");
     expect(r.kind === "ok" && r.frame.records.map((x) => x.id)).toEqual(["Clients/Acme.md"]);
+  });
+});
+
+describe("#184 — what a picker may offer, and what it must explain", () => {
+  const project = (extra: unknown[]) =>
+    ({
+      id: "p1",
+      name: "Clients",
+      dataSource: SOURCES[0],
+      additionalSources: extra,
+    }) as never;
+
+  it("offers every source that carries an id, primary included", () => {
+    const opts = projectSourceOptions(project([SOURCES[1], SOURCES[2]]));
+    expect(opts.pickable.map((p) => p.id)).toEqual(["src-clients", "src-archive", "sel-active"]);
+    expect(opts.sources).toHaveLength(3);
+  });
+
+  it("labels each one the way the block will", () => {
+    // The same `sourceLabel` the resolver uses, so the name in the picker and
+    // the name in the "nothing here" hint cannot disagree.
+    const opts = projectSourceOptions(project([SOURCES[1]]));
+    expect(opts.pickable.map((p) => p.label)).toEqual(["Clients", "Archive"]);
+  });
+
+  it("drops a source with no id — and says the project HAS one", () => {
+    // A source stored before #170 cannot be referenced, so it must not appear.
+    // Silently shorter is the version that reads as a bug, which is what
+    // `hasUnaddressable` exists to let the UI explain.
+    const legacy = { kind: "folder", config: { path: "Old", recursive: false } };
+    const opts = projectSourceOptions(project([legacy]));
+    expect(opts.pickable.map((p) => p.id)).toEqual(["src-clients"]);
+    expect(opts.hasUnaddressable).toBe(true);
+  });
+
+  it("says nothing is missing when nothing is", () => {
+    expect(projectSourceOptions(project([SOURCES[1]])).hasUnaddressable).toBe(false);
+  });
+
+  it("survives having no project at all", () => {
+    // The panel renders before a project resolves; an exception here would take
+    // the whole canvas down.
+    const opts = projectSourceOptions(undefined);
+    expect(opts).toEqual({ sources: [], pickable: [], hasUnaddressable: false });
   });
 });

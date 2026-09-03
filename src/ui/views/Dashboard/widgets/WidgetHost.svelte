@@ -17,6 +17,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import { computeHostFrames } from "./hostFrames";
   import { frameParts } from "src/lib/stores/dataframe";
+  import { projectSourceOptions } from "src/lib/datasources/namedSource";
   import { getConfigPanel } from "./configPanelRegistry";
   import { WIDGET_CONTENT, WIDGET_PANELS } from "./widgetComponentRegistry";
   import { hasPipelineButton, primaryActionFor } from "./headerChrome";
@@ -61,10 +62,10 @@
   $: panelDescriptor = getConfigPanel(widget.type);
 
   // ── Frame math ─ all of it, in one pure function (see hostFrames.ts) ──
-  // #184: every source the project declares, primary first — the block may name one.
-  $: projectSources = project ? [project.dataSource, ...(project.additionalSources ?? [])] : [];
+  // #184: the project's own sources — what a block may point at instead of the merge.
+  $: sourceOptions = projectSourceOptions(project);
   $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames,
-        sourceStates, parts: $frameParts, sources: projectSources });
+        sourceStates, parts: $frameParts, sources: sourceOptions.sources });
   $: ({ namedSource, scope, transformedFrame, pipelineInputRowCount, chartConfig, statsConfig,
         chartRightFrame, dbCall, pipelineSource } = frames);
 
@@ -166,6 +167,8 @@
         availableWidgets={availableWidgets.filter((w) => w.id !== widget.id)}
         linkedSelection={dbCall.linkedSelection}
         linkedSelectionValidation={ctx.dbCallLinkedSelectionValidation}
+        projectSources={sourceOptions.pickable}
+        hasUnaddressableSource={sourceOptions.hasUnaddressable}
         fields={dbCall.frame.fields}
         on:change={handleDbCallSourceChange}
         on:linkedSelectionChange={handleLinkedSelectionChange}

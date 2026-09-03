@@ -52,6 +52,8 @@ import type {
   DerivedDataSource,
 } from "src/settings/v3/settings";
 
+import type { ProjectDefinition } from "src/settings/settings";
+
 import { resolveDerived } from "./derivedSource";
 import {
   selectSourceFrame,
@@ -179,4 +181,37 @@ export function buildDerivedSource(
   id: string
 ): DerivedDataSource {
   return { kind: "derived", id, name: name.trim(), config: { from: "project", where } };
+}
+
+/** A source a block can actually be pointed at, with the name to show for it. */
+export interface SourceOption {
+  readonly id: string;
+  readonly label: string;
+}
+
+export interface ProjectSourceOptions {
+  /** Every source the project declares, primary first — what the resolver reads. */
+  readonly sources: readonly StoredDataSource[];
+  /** Those that can be named in a config, i.e. the ones carrying an `id`. */
+  readonly pickable: readonly SourceOption[];
+  /** True when the project holds a source no config can point at. */
+  readonly hasUnaddressable: boolean;
+}
+
+/**
+ * What a picker may offer for this project.
+ *
+ * Sources stored before #170 carry no `id`, so nothing can reference them and
+ * they are absent from `pickable`. `hasUnaddressable` exists so the UI can say
+ * WHY a source the user can see in the project editor is missing from the list
+ * — silently shorter is the version that reads as a bug.
+ */
+export function projectSourceOptions(
+  project: ProjectDefinition | undefined
+): ProjectSourceOptions {
+  const sources = project ? [project.dataSource, ...(project.additionalSources ?? [])] : [];
+  const pickable = sources
+    .filter((s): s is StoredDataSource & { id: string } => typeof (s as { id?: string }).id === "string")
+    .map((s) => ({ id: s.id, label: sourceLabel(s) }));
+  return { sources, pickable, hasUnaddressable: pickable.length < sources.length };
 }
