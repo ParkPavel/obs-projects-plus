@@ -7,6 +7,7 @@
     type DataSourceUnavailableReason,
   } from "../../lib/datasources";
   import { dataFrame, dataSource, frameParts } from "src/lib/stores/dataframe";
+  import { isAcquirable } from "src/lib/datasources/derivedSource";
   import { fileSystem } from "src/lib/stores/fileSystem";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
@@ -76,6 +77,13 @@
         const extraSources = reassembledProject.additionalSources;
         if (extraSources && extraSources.length > 0) {
           const pairs = extraSources
+            // #170 step 2: a derived source has no vault query to run — it
+            // narrows records the project already has, at axis A of the
+            // consuming view. Excluding it here is explicit rather than
+            // accidental: it would otherwise fall through `createDataSource`
+            // to "unresolvable" and be dropped, which works until someone adds
+            // a default branch.
+            .filter((src) => isAcquirable(src))
             .map((src) => ({ src, ds: resolveDataSourceFromConfig(src, reassembledProject) }))
             .filter((p): p is { src: typeof extraSources[number]; ds: DataSource } => p.ds !== null);
           const extraFrames = await Promise.all(pairs.map(({ ds }) => ds.queryAll()));

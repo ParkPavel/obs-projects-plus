@@ -33,6 +33,16 @@
             : `${$i18n.t("datasources.tag")}: ${from.tag}`;
         return `${$i18n.t("datasources.native-query")}: ${fromDetail}`;
       }
+      case "derived": {
+        // #170 step 2. A derived source reads the project's own records, so it
+        // has no folder or tag to describe — what identifies it is its name and
+        // what it narrows. Adding this case is the type system doing its job:
+        // a new stored kind has to be described everywhere sources are shown,
+        // and the switch refused to compile until it was.
+        const { from } = archive.dataSource.config;
+        const of = from === "project" ? $i18n.t("datasources.derived.project", { defaultValue: "the project" }) : from;
+        return `${$i18n.t("datasources.derived", { defaultValue: "Saved filter" })}: ${of}`;
+      }
     }
   };
 
