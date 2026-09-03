@@ -81,13 +81,15 @@
   }
 
   .ppp-blockfilter-popover {
-    /* #166 leaves this literal: FloatingPopup portals the DESKTOP popup to
-       <body> (FloatingPopup.svelte:255), so there is no container ancestor to
-       be relative to — the window-anchored side of the boundary, where
-       `min(22rem, 100cqi)` measures out to exactly this value. The mobile
-       bottom sheet is NOT portaled and can overflow a narrow widget; that is
-       pre-existing (#112's fix was desktop-only) and is tracked as #182. */
-    min-width: 22rem;
+    /* #182, and the ticket's own diagnosis was wrong — see its entry. The
+       mobile sheet is NOT sized by the widget it was opened from: measurement
+       (`A182_mobileSheet.acceptance.test.ts`) shows `container-type` and
+       `overflow: hidden` create no containing block for `position: fixed`, so
+       the sheet is the screen either way. What was real is simpler: on a phone
+       narrower than 22rem this minimum pushed the content off the edge.
+       `100%` and not `100cqi` — the popup's parent is the sheet, and a
+       container unit would measure a widget that has nothing to do with it. */
+    min-width: min(22rem, 100%);
     max-width: 28rem;
     max-height: 24rem;
     overflow-y: auto;
