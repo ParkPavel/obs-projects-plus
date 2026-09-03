@@ -1,5 +1,6 @@
 <script lang="ts">
   import dayjs from "dayjs";
+  import { v4 as uuidv4 } from "uuid";
   import {
     Button,
     Callout,
@@ -312,9 +313,27 @@
   onDestroy(() => clearTimeout(dvPreviewTimer));
 
   // ── Multi-source management ────────────────────────────────
+  /**
+   * #170 step 1 gave sources an `id` and a `name`; this is what fills them.
+   *
+   * Without an id nothing can address a source, so the whole point of the step
+   * — a block pointing at one source instead of the merge — was unreachable
+   * until here. The id is assigned once, at creation, and never shown: it is
+   * what a block stores, so renaming must not break the reference.
+   */
   function addAdditionalSource() {
     const sources = [...(project.additionalSources ?? [])];
-    sources.push({ kind: "folder", config: { path: "", recursive: false } });
+    sources.push({ id: uuidv4(), kind: "folder", config: { path: "", recursive: false } });
+    project = { ...project, additionalSources: sources };
+  }
+
+  /** The label, which is the user's and may change freely. */
+  function renameAdditionalSource(index: number, name: string) {
+    const sources = [...(project.additionalSources ?? [])];
+    const current = sources[index];
+    if (!current) return;
+    const trimmed = name.trim();
+    sources[index] = (trimmed ? { ...current, name: trimmed } : (({ name: _drop, ...rest }) => rest)(current)) as DataSourceConfig;
     project = { ...project, additionalSources: sources };
   }
 
@@ -337,7 +356,15 @@
       default:
         newSrc = { kind: "folder", config: { path: "", recursive: false } };
     }
-    sources[index] = newSrc;
+    // The identity survives a change of kind: a block pointing at this source
+    // is pointing at "the second source of this project", and the user
+    // changing a folder to a tag has not made it a different one.
+    const previous = sources[index] as { id?: string; name?: string } | undefined;
+    sources[index] = {
+      ...newSrc,
+      id: previous?.id ?? uuidv4(),
+      ...(previous?.name ? { name: previous.name } : {}),
+    } as DataSourceConfig;
     project = { ...project, additionalSources: sources };
   }
 
@@ -806,6 +833,13 @@
         <div class="ppp-additional-sources">
           {#each project.additionalSources ?? [] as src, i}
             <div class="ppp-additional-source-row">
+              <TextInput
+                value={src.name ?? ""}
+                placeholder={$i18n.t("modals.project.additional-sources.name-placeholder", {
+                  defaultValue: "Name (optional)",
+                })}
+                on:input={({ detail: name }) => renameAdditionalSource(i, name)}
+              />
               <Select
                 value={src.kind}
                 options={dataSourceOptions}
