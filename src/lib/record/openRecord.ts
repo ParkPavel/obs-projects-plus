@@ -25,6 +25,8 @@
 
 import type { App, PaneType } from "obsidian";
 
+import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
+
 import { openPeek } from "src/lib/stores/recordPeek";
 
 export type RecordOpenMode = "peek" | "same" | "tab" | "window";
@@ -78,6 +80,13 @@ export interface OpenRecordTarget {
   readonly id: string;
   /** Defaults to `id`, matching the call sites that passed it twice. */
   readonly sourcePath?: string;
+  /**
+   * The record and its fields, when the caller has them. Only the peek uses
+   * these, and only because the host view cannot resolve a record that came
+   * from an external source — see `stores/recordPeek.ts`.
+   */
+  readonly record?: DataRecord;
+  readonly fields?: DataField[];
 }
 
 export interface OpenRecordDeps {

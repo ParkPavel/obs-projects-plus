@@ -144,7 +144,17 @@
   const SAVE_DEBOUNCE_MS = 300;
   
   onDestroy(() => {
-    if (saveTimer) clearTimeout(saveTimer);
+    // #168b: a pending debounce used to be CANCELLED here, which was invisible
+    // in a modal — you dismiss a modal deliberately — and became a defect the
+    // moment this editor was reused inside a peek, a surface that looks like a
+    // preview and is closed casually. Typing and closing within 300ms lost the
+    // edit. The timer is flushed instead of dropped: the same save that was
+    // already scheduled, run now.
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      void performSave();
+    }
   });
   
   // Perform actual save

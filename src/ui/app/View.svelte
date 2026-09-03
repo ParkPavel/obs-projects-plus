@@ -19,6 +19,9 @@
   import { applySort, sortRecords } from "./viewSort";
   import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
   import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
+  import { openRecord } from "src/lib/record/openRecord";
+  import { app as obsidianApp } from "src/lib/stores/obsidian";
+  import { get } from "svelte/store";
 
   /**
    * Specify the project.
@@ -239,7 +242,25 @@
   $: peeked =
     $recordPeek === null
       ? null
-      : (sortedFrame.records.find((r) => r.id === $recordPeek?.id) ?? null);
+      : ($recordPeek.record ??
+        sortedFrame.records.find((r) => r.id === $recordPeek?.id) ??
+        null);
+
+  /** The fields that describe `peeked` — the carrier's, or this view's. */
+  $: peekFields = $recordPeek?.fields ?? sortedFrame.fields;
+
+  /**
+   * A target this view cannot show must not become a click that did nothing.
+   * It happens when the record is neither carried nor in the sorted frame —
+   * filtered out, renamed, deleted — and the honest answer is the behaviour
+   * the peek replaced: open the note. (Found by the adversarial review of step
+   * (b), which named the external-source dashboard row.)
+   */
+  $: if ($recordPeek !== null && peeked === null) {
+    const unresolved = $recordPeek;
+    closePeek();
+    void openRecord({ id: unresolved.id }, "same", { app: get(obsidianApp) });
+  }
 </script>
 
 <!--
@@ -282,7 +303,7 @@
 -->
 <RecordCardView
   open={peeked !== null}
-  fields={sortedFrame.fields}
+  fields={peekFields}
   record={peeked}
   allRecords={sortedFrame.records}
   autosave={project.autosave ?? true}

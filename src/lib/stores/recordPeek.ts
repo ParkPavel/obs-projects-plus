@@ -24,9 +24,25 @@
 
 import { writable } from "svelte/store";
 
+import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
+
 export interface PeekTarget {
   /** `record.id` — a vault path. */
   readonly id: string;
+  /**
+   * The record itself, when the caller has it.
+   *
+   * The first version resolved the id in the host view's frame and nothing
+   * else, which the adversarial review showed was a defect rather than a
+   * simplification: a dashboard table widget can read an EXTERNAL source whose
+   * records are not in that frame at all, so its rows opened nothing — a click
+   * with no result, which is worse than the navigation it replaced. A caller
+   * that has the record hands it over; a caller that does not still resolves
+   * by id.
+   */
+  readonly record?: DataRecord;
+  /** The fields that go with `record`, for the same reason. */
+  readonly fields?: DataField[];
 }
 
 /** `null` when nothing is peeked. */

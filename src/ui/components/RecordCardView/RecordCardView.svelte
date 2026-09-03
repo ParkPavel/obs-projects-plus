@@ -47,6 +47,9 @@
    * matches the file, so a list stays a list and an absent key says so rather
    * than rendering as an empty string that looks like an empty value.
    */
+  /** The fields that really become frontmatter keys — see the block below. */
+  $: writtenFields = fields.filter((f) => !f.derived);
+
   function formatKeyValue(v: unknown): string {
     if (v === undefined || v === null) return "—";
     if (Array.isArray(v)) return v.map(String).join(", ");
@@ -193,11 +196,17 @@
       `frontmatter[field.name]`, so a field's name IS its key — and this says so
       where a person is already looking at the record. It is the smallest
       honest form of the promise: the file, as it will be on disk.
+
+      DERIVED fields are excluded, and that is not a detail: `dataApi` skips
+      them when it writes (`updateFrontMatter`), so a formula column, a rollup
+      and a relation's `__resolved__…` companion have names that are NOT keys.
+      Listing them under "frontmatter" would have made the panel say something
+      false about the file — found by the adversarial review of step (b).
     -->
     <details class="ppp-rcv-frontmatter">
       <summary>{$i18n.t("views.dashboard.record-card.frontmatter", { defaultValue: "Frontmatter keys" })}</summary>
       <dl>
-        {#each fields as field (field.name)}
+        {#each writtenFields as field (field.name)}
           <div class="ppp-rcv-fm-row">
             <dt>{field.name}</dt>
             <dd>{formatKeyValue(record.values[field.name])}</dd>
