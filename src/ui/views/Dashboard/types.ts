@@ -60,6 +60,17 @@ export interface WidgetLayout {
  */
 export interface WidgetSourceConfig {
   readonly projectId: string;
+  /**
+   * One named source inside that project, instead of the merge of all of them
+   * (#170 step 1).
+   *
+   * Absent — and it is absent in every config stored before #170 — means the
+   * merged project frame, byte for byte what this block showed before. That is
+   * deliberate and is the whole reason this step needs no migration and no
+   * normalizer: nothing that ships changes meaning, one optional field is
+   * added, and a reader that does not know it still reads correctly.
+   */
+  readonly sourceId?: string;
 }
 
 export interface WidgetDefinition {

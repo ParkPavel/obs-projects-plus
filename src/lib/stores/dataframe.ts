@@ -8,6 +8,7 @@ import {
   type DataRecord,
 } from "src/lib/dataframe/dataframe";
 import type { DataSource } from "../datasources";
+import type { IdentifiedFrame } from "../datasources/sourceSelection";
 
 export const dataSource = writable<DataSource | undefined>();
 
@@ -66,6 +67,17 @@ function notifyDataFrameInvalidation(): void {
 }
 
 export const dataFrame = createDataFrame();
+
+/**
+ * The same records the merge holds, with provenance kept (#170 step 1).
+ *
+ * `dataFrame` is the project as a whole and stays the default everywhere. This
+ * is beside it so a block that names one source can look that source's frame up
+ * instead of querying again — acquisition still happens exactly once, in
+ * `DataFrameProvider`. Empty until a project resolves; a block that names
+ * nothing never reads it.
+ */
+export const frameParts = writable<IdentifiedFrame[]>([]);
 
 function createDataFrame() {
   const { update, set, subscribe } = writable<DataFrame>({
