@@ -135,7 +135,11 @@
     color: var(--text-faint);
     border-radius: var(--radius-s, 0.25rem);
     opacity: 0;
-    transition: opacity 120ms ease, transform 120ms ease, color 120ms ease, background 120ms ease;
+    /* #169: invisible must also mean unreachable — `opacity: 0` alone kept all
+       four in the tab order. Keyboard path is the menu button above.
+       Pinned by A169_focusPriority.acceptance.test.ts. */
+    visibility: hidden;
+    transition: opacity 120ms ease, visibility 0s linear 120ms, transform 120ms ease, color 120ms ease, background 120ms ease;
   }
 
   .ppp-widget-remove-btn {
@@ -147,6 +151,8 @@
   :global(.ppp-widget-host:hover) .ppp-widget-lock-btn,
   :global(.ppp-widget-host:hover) .ppp-widget-remove-btn {
     opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
   }
 
   .ppp-widget-settings-btn:hover {
