@@ -9,6 +9,7 @@
     type DataRecord,
   } from "src/lib/dataframe/dataframe";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord } from "src/lib/record/openRecord";
   import { i18n } from "src/lib/stores/i18n";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
   import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
@@ -129,9 +130,9 @@
               on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
                 // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
                 if (shiftKey) {
-                  $app.workspace.openLinkText(linkText, sourcePath, 'window');
+                  void openRecord({ id: linkText, sourcePath }, "window", { app: $app });
                 } else if (newLeaf) {
-                  $app.workspace.openLinkText(linkText, sourcePath, 'tab');
+                  void openRecord({ id: linkText, sourcePath }, "tab", { app: $app });
                 } else {
                   onRecordClick(item);
                 }

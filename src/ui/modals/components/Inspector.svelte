@@ -13,6 +13,7 @@
 
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord } from "src/lib/record/openRecord";
   import { getDisplayName } from "src/ui/views/Board/components/Board/boardHelpers";
 
   export let title: string;
@@ -44,7 +45,7 @@
               ><Flair variant="error">error</Flair><IconButton
                 icon="search"
                 onClick={(event) => {
-                  $app.workspace.openLinkText(error.recordId, "", true);
+                  void openRecord({ id: error.recordId, sourcePath: "" }, "tab", { app: $app });
                   event.stopPropagation();
                   onCancel();
                 }}

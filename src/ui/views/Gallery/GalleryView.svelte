@@ -9,6 +9,7 @@
   import { createDataRecord } from "src/lib/dataApi";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import CenterBox from "src/ui/modals/components/CenterBox.svelte";
@@ -54,7 +55,7 @@
     // #142 — read-only gallery still opens the note; it just does not offer an
     // editor whose writes would land in the wrong project.
     if (readonly) {
-      $app.workspace.openLinkText(record.id, record.id, false);
+      void openRecord({ id: record.id }, PLAIN_MODE, { app: $app });
       return;
     }
     new EditNoteModal(
@@ -65,7 +66,7 @@
       records,
       // v3.0.8: Unified note open with modifier-based navigation
       (openMode) => {
-        $app.workspace.openLinkText(record.id, record.id, openMode);
+        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: $app });
       },
       // v3.0.1: Rename note callback
       async (newName: string) => {
@@ -162,9 +163,9 @@
               if (longPressFired) { longPressFired = false; return; }
               // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
               if (event.shiftKey) {
-                $app.workspace.openLinkText(record.id, "", 'window');
+                void openRecord({ id: record.id, sourcePath: "" }, "window", { app: $app });
               } else if (event.metaKey || event.ctrlKey) {
-                $app.workspace.openLinkText(record.id, "", 'tab');
+                void openRecord({ id: record.id, sourcePath: "" }, "tab", { app: $app });
               } else {
                 handleRecordClick(record);
               }
@@ -191,9 +192,9 @@
                 on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
                   // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
                   if (shiftKey) {
-                    $app.workspace.openLinkText(linkText, sourcePath, 'window');
+                    void openRecord({ id: linkText, sourcePath }, "window", { app: $app });
                   } else if (newLeaf) {
-                    $app.workspace.openLinkText(linkText, sourcePath, 'tab');
+                    void openRecord({ id: linkText, sourcePath }, "tab", { app: $app });
                   } else {
                     handleRecordClick(record);
                   }

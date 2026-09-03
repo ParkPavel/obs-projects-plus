@@ -5,6 +5,7 @@
   import type { ProcessedRecord } from '../../types';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import { app } from 'src/lib/stores/obsidian';
+  import { openRecord } from "src/lib/record/openRecord";
   
   /**
    * EventBarContainer - Manages overlapping event bars with collision detection
@@ -169,10 +170,10 @@
     
     if (event.shiftKey) {
       // Shift+click: open in new window
-      $app.workspace.openLinkText(record.id, record.id, 'window');
+      void openRecord({ id: record.id }, "window", { app: $app });
     } else if (event.ctrlKey || event.metaKey) {
       // Ctrl+click: open in new tab
-      $app.workspace.openLinkText(record.id, record.id, 'tab');
+      void openRecord({ id: record.id }, "tab", { app: $app });
     } else {
       // Normal click → modal
       onEventClick(record);

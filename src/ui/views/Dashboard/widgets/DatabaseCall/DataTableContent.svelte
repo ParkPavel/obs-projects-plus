@@ -18,6 +18,7 @@
   import { get } from "svelte/store";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord, PLAIN_MODE } from "src/lib/record/openRecord";
   import { settings as settingsStore } from "src/lib/stores/settings";
   import { createRelationSetupController } from "src/ui/views/Dashboard/relationSetupController";
   import {
@@ -132,7 +133,7 @@
 
   // ── Row operations (F2.3) ────────────────────────────────────
   function handleOpenRecord(e: CustomEvent<DataRecord>) {
-    $app?.workspace.openLinkText(e.detail.id, e.detail.id, false);
+    if ($app) void openRecord({ id: e.detail.id }, PLAIN_MODE, { app: $app });
   }
 
   function handleRowMenu(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {

@@ -12,6 +12,7 @@
   import { formatDateForProject, getFilterValuesFromConditions } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
+  import { openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
   import { settings } from "src/lib/stores/settings";
   import { isMobileDevice } from "src/lib/stores/ui";
   import type { ViewApi } from "src/lib/viewApi";
@@ -912,7 +913,7 @@
     const app_instance = get(app);
     // On mobile use 'tab' (window not supported), on desktop use 'window'
     const openMode = isMobile ? 'tab' : 'window';
-    app_instance.workspace.openLinkText(record.id, record.id, openMode);
+    void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: app_instance });
   }
   
   function handleDayPopupRecordSettings(record: DataRecord) {
@@ -944,7 +945,7 @@
       records,
       // v3.0.8: Unified note open with modifier-based navigation
       (openMode) => {
-        app_instance.workspace.openLinkText(record.id, record.id, openMode);
+        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: app_instance });
       },
       // v3.0.1: Rename note callback
       async (newName: string) => {
@@ -1545,7 +1546,7 @@
         records,
         // v3.0.8: Unified note open with modifier-based navigation
         (openMode) => {
-          app_instance.workspace.openLinkText(entry.id, entry.id, openMode);
+          void openRecord({ id: entry.id }, modeFromNewLeaf(openMode), { app: app_instance });
         },
         // v3.0.1: Rename note callback
         async (newName: string) => {
@@ -1689,7 +1690,7 @@
     const app_instance = get(app);
     // On mobile use 'tab' (window not supported), on desktop use 'window'
     const openMode = isMobile ? 'tab' : 'window';
-    app_instance.workspace.openLinkText(id, id, openMode);
+    void openRecord({ id }, modeFromNewLeaf(openMode), { app: app_instance });
   }
   
   /**
