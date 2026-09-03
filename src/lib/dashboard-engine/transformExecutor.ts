@@ -24,6 +24,7 @@ import type {
 } from "./transformTypes";
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
+import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { evaluateFormulaValue } from "./formulaEngine";
 import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
@@ -785,22 +786,44 @@ function executeGroupBy(
 // ── AGGREGATE ────────────────────────────────────────────────
 
 /**
- * Extract numeric values from a grouped field value, which may be a scalar or
- * an array.
+ * Which kernel operator each pipeline name means.
  *
- * #180a fixed two things here. The coercion was a fourth rule — `Number(v)`
- * with no empty-string guard at all, so `""` summed as 0 while the footer
- * dropped it. And the scalar branch accepted only `typeof val === "number"`,
- * so `"5"` yielded `[]` and summed to 0 while `["5"]` summed to 5: the same
- * value disagreed with itself depending on whether a group had been built.
- * Both now go through the same call.
+ * The pipeline's vocabulary is UPPERCASE and is STORED in `widget.transform`,
+ * so it cannot be renamed without a migration over the one structure
+ * `MANUAL_TESTING_PIPELINE.md` §4a records as silently swallowing a malformed
+ * step. It is mapped instead — read-time, write-time untouched.
+ *
+ * `COUNT` → `count_total` and not `count_values`: it has always been
+ * `arr.length`, nulls included, and `chartDataPipeline.ts` maps `count_total`
+ * to it, so every chart stands on that meaning.
  */
-function extractNumericValues(val: DataValue | undefined | null): number[] {
-  return toNumbers(Array.isArray(val) ? val : [val]);
-}
+const KERNEL_FN: Partial<Record<AggregationFunction, RollupFunction>> = {
+  COUNT: "count_total",
+  COUNT_DISTINCT: "count_unique",
+  SUM: "sum",
+  AVG: "avg",
+  MEDIAN: "median",
+  MIN: "min",
+  MAX: "max",
+  RANGE: "range",
+  PCT_EMPTY: "percent_empty",
+  PCT_NOT_EMPTY: "percent_not_empty",
+};
 
 /**
  * Compute a single aggregation function on a value array.
+ *
+ * Since #180 T3 this is an ADAPTER, not a third implementation. It was the
+ * project's third answer to "reduce a list to a number" — after the kernel and
+ * the table footer — and the three disagreed in the ways #180a and #180b spent
+ * their reviews on. What is left here is only what the kernel does not have:
+ *
+ *   - `FIRST` / `LAST` — positional, not statistical.
+ *   - `STD_DEV` — no kernel equivalent. Population sigma, as before.
+ *
+ * The parity snapshot (`__tests__/aggregationParity.test.ts`) is what made the
+ * change reviewable: it recorded every answer before the delegation, so the
+ * flips are a diff rather than a claim.
  */
 function computeAggFn(
   fn: AggregationFunction,
@@ -809,47 +832,22 @@ function computeAggFn(
 ): DataValue | null {
   const arr = Array.isArray(val) ? val : (val != null ? [val] : []);
 
+  const kernelFn = KERNEL_FN[fn];
+  if (kernelFn) {
+    // An empty ARRAY is a value to the kernel and an empty CELL to this
+    // pipeline — a multi-value field with nothing in it. Normalising it to
+    // null at the boundary keeps `PCT_EMPTY` answering what it always has,
+    // which is the one place the two vocabularies genuinely differed.
+    const normalised = arr.map((v) => (Array.isArray(v) && v.length === 0 ? null : v));
+    const result = aggregate(normalised, {
+      relationField: "",
+      targetField: "",
+      function: kernelFn,
+    });
+    return result.value as DataValue | null;
+  }
+
   switch (fn) {
-    case "COUNT":
-      return arr.length;
-
-    case "COUNT_DISTINCT":
-      return new Set(arr.filter((v) => v != null).map(String)).size;
-
-    case "SUM": {
-      const nums = extractNumericValues(val);
-      return nums.reduce((a, b) => a + b, 0);
-    }
-
-    case "AVG": {
-      const nums = extractNumericValues(val);
-      return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
-    }
-
-    case "MEDIAN": {
-      const nums = extractNumericValues(val).sort((a, b) => a - b);
-      if (nums.length === 0) return 0;
-      const mid = Math.floor(nums.length / 2);
-      return nums.length % 2 === 0
-        ? ((nums[mid - 1] as number) + (nums[mid] as number)) / 2
-        : (nums[mid] as number);
-    }
-
-    case "MIN": {
-      const nums = extractNumericValues(val);
-      return nums.length > 0 ? Math.min(...nums) : null;
-    }
-
-    case "MAX": {
-      const nums = extractNumericValues(val);
-      return nums.length > 0 ? Math.max(...nums) : null;
-    }
-
-    case "RANGE": {
-      const nums = extractNumericValues(val);
-      return nums.length > 0 ? Math.max(...nums) - Math.min(...nums) : null;
-    }
-
     case "FIRST":
       return arr.length > 0 ? (arr[0] ?? null) : null;
 
@@ -857,37 +855,11 @@ function computeAggFn(
       return arr.length > 0 ? (arr[arr.length - 1] ?? null) : null;
 
     case "STD_DEV": {
-      const nums = extractNumericValues(val);
-      if (nums.length === 0) return 0;
+      const nums = toNumbers(arr);
+      if (nums.length === 0) return null;
       const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
       const variance = nums.reduce((sum, x) => sum + (x - avg) ** 2, 0) / nums.length;
       return Math.sqrt(variance);
-    }
-
-    // #180c: an empty population is not zero percent. Zero percent is a claim
-    // about a population and there is none, and on screen it is
-    // indistinguishable from a real 0% — the one reading a user would act on.
-    // `MIN`/`MAX` above have answered `null` for the same shape all along, so
-    // this makes the pipeline agree with itself as well as with the kernel
-    // (SPEC_MATH_SPREADSHEET_2026-09-02 §3.2 item 3). The rest of the
-    // pipeline's empty answers (`AVG`, `STD_DEV` still return 0) belong to the
-    // adapter, T3 — this closes only what #180b claimed and did not deliver.
-    case "PCT_EMPTY": {
-      const total = arr.length;
-      if (total === 0) return null;
-      const empty = arr.filter(
-        (v) => v == null || v === "" || (Array.isArray(v) && v.length === 0)
-      ).length;
-      return (empty / total) * 100;
-    }
-
-    case "PCT_NOT_EMPTY": {
-      const total = arr.length;
-      if (total === 0) return null;
-      const nonEmpty = arr.filter(
-        (v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)
-      ).length;
-      return (nonEmpty / total) * 100;
     }
 
     default:
