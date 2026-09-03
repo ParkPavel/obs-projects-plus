@@ -137,7 +137,7 @@
                 }
               }}
               on:longpress={({ detail: { linkText, sourcePath, event } }) => {
-                showMobileNavMenu($app, linkText, sourcePath, event, () => onRecordClick(item));
+                showMobileNavMenu($app, { id: linkText, sourcePath }, event, () => onRecordClick(item));
               }}
               on:hover={({ detail: { event, sourcePath } }) => {
                 handleHoverLink(event, sourcePath);

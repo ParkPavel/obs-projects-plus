@@ -103,7 +103,7 @@
       longPressTimer = setTimeout(() => {
         longPressFired = true;
         if (navigator.vibrate) navigator.vibrate(30);
-        showMobileNavMenu($app, record.id, record.id, e, () => handleRecordClick(record));
+        showMobileNavMenu($app, { id: record.id }, e, () => handleRecordClick(record));
       }, LONG_PRESS_MS);
     };
   }
@@ -199,7 +199,7 @@
                   }
                 }}
                 on:longpress={({ detail: { linkText, sourcePath, event } }) => {
-                  showMobileNavMenu($app, linkText, sourcePath, event, () => handleRecordClick(record));
+                  showMobileNavMenu($app, { id: linkText, sourcePath }, event, () => handleRecordClick(record));
                 }}
                 on:hover={({ detail: { event, sourcePath } }) => {
                   handleHoverLink(event, sourcePath);

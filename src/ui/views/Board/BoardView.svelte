@@ -87,7 +87,7 @@
       records,
       // v3.0.8: Unified note open with modifier-based navigation
       (openMode) => {
-        $app.workspace.openLinkText(record.id, record.id, openMode);
+        void openRecord({ id: record.id }, modeFromNewLeaf(openMode), { app: $app });
       },
       // v3.0.1: Rename note callback
       async (newName: string) => {
