@@ -1,31 +1,18 @@
 <script lang="ts" context="module">
   import type { ColumnAggregation } from "../../types";
+  import { aggregationBadge } from "src/lib/dashboard-engine/aggregationOptions";
 
   /**
    * #034.3 / #040.2 — labels used by inline header badges. Kept exported
    * (via context="module") so tests can import the same map and don't
    * have to hard-code label strings.
    */
-  export const AGG_LABEL: Partial<Record<ColumnAggregation, string>> = {
-    sum: "SUM",
-    avg: "AVG",
-    median: "MEDIAN",
-    min: "MIN",
-    max: "MAX",
-    range: "RANGE",
-    count_total: "COUNT",
-    count_values: "COUNT",
-    count_unique: "UNIQUE",
-    count_checked: "✓",
-    count_unchecked: "✗",
-    percent_checked: "%✓",
-    percent_unchecked: "%✗",
-    percent_empty: "%∅",
-    percent_not_empty: "%¬∅",
-    earliest: "EARLIEST",
-    latest: "LATEST",
-    date_range: "RANGE",
-  };
+  /**
+   * #180d: a local table used to print `COUNT` for BOTH `count_total` and
+   * `count_values`, so a badge re-introduced the ambiguity the picker had just
+   * resolved. There is one table now, and this is a view of it.
+   */
+  export { aggregationBadge as AGG_LABEL };
 </script>
 
 <script lang="ts">
@@ -66,7 +53,7 @@
   }
 
   function aggLabel(agg: string): string {
-    return AGG_LABEL[agg as keyof typeof AGG_LABEL] ?? agg.toUpperCase();
+    return aggregationBadge(agg as ColumnAggregation);
   }
 
   function firstCardAgg(cfg: StatsConfig): string {

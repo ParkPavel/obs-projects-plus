@@ -120,8 +120,22 @@ function computeColumn(
     case "count_total":
       return fmt(values.length);
 
+    // #180d: `count` is the legacy spelling R5-004 renamed to `count_total`.
+    // The migration rewrites stored configs, but the union kept the member and
+    // this switch had no branch for it — so a stored `count` that ever escaped
+    // the migrator fell to `default:` and rendered "—" with no warning. One
+    // string, three meanings, one of them silently nothing.
+    case "count":
+      return fmt(values.length);
+
     case "count_values":
       return fmt(nonEmpty.length);
+
+    case "count_numeric":
+      return fmt(toNumbers(values).length);
+
+    case "count_empty":
+      return fmt(values.length - nonEmpty.length);
 
     case "count_checked":
       return fmt(values.filter((v) => v === true).length);
@@ -217,7 +231,10 @@ export function computeAggregateValue(
 
   switch (fn) {
     case "count_total": return values.length;
+    case "count": return values.length;
     case "count_values": return nonEmpty.length;
+    case "count_numeric": return toNumbers(values).length;
+    case "count_empty": return values.length - nonEmpty.length;
     case "count_checked": return values.filter((v) => v === true).length;
     case "count_unchecked": return values.filter((v) => v === false).length;
     case "percent_empty":
