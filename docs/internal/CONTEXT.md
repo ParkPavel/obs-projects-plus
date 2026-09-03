@@ -431,8 +431,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`: 186 suites / 3020 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (109 pre-existing tsdoc warnings).** Measured 2026-09-03 on `main` after #168a
+- **Canonical baseline — `main`: 195 suites / 3195 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (109 pre-existing tsdoc warnings).** Measured 2026-09-03 on `main` after #171
   merged, and this line is a measurement of `main` — branch figures belong in the branch's own
   bullet, not here, which is what let this paragraph accumulate three stale ones.
   The day's arithmetic, so a future reader can check rather than trust: 179/2491 at the start of
@@ -447,7 +447,15 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   −1 suite, −4 tests. The rule is that coverage may not be dropped, not that a number may never
   move: a test whose subject no longer exists is not coverage. Same shape as #160, where the
   sub-base suites went with the model, 177 → 174. The day then read 186/3007 → 186/3013 (#180b)
-  → 185/3009 (#183) → 185/3012 (#180c) → 186/3020 (#168a, R0.17).
+  → 185/3009 (#183) → 185/3012 (#180c) → 186/3020 (#168a, R0.17) → 187/3027 (#166 acceptance)
+  → 188/3036 (#169) → 189/3044 (#168b) → 190/3153 (#180 T3, the parity table runs case by case)
+  → 191/3158 (#182) → 192/3172 (#180 T4) → 193/3181 (#180 T5) → 194/3190 (#169 layers)
+  → 195/3195 (#171).
+  **Roughly a third of the day's tests are acceptance rather than unit:** `A166`, `A168`, `A169`,
+  `A180d` and `A182` run the claim itself — three of them in headless Chrome, because jsdom has no
+  container queries, lays out no SVG and does not move focus on Tab. `support/renderProbe.ts`
+  builds those pages FROM the source files, which is what the adversarial review of #166 step 2
+  faulted the earlier one-off probes for not doing.
   Older history: the meta-audit stack took `main` from 173/2464 at `64863ed` to 174/2451 (+36
   regression tests, −49 with the sub-base model #160 deleted); #164 added four provenance tests,
   R0.8 added five, #176 re-armed R0.4 (+5 cases) and #177 added R0.9 (+1 suite, +8). Do not roll
