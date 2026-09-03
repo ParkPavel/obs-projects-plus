@@ -234,7 +234,13 @@ describe("A169 — the filter bar half was already shipped, and this is why", ()
   });
 });
 
-describe("A169 — a click on a collapsed widget must not do nothing", () => {
+describe("A169 — the collapsed-widget wiring, SOURCE-LEVEL by admission", () => {
+  // What a collapsed click actually DOES is exercised for real, on a mounted
+  // component, in `DatabaseCall/__tests__/tableNewRowSignal.test.ts` — the
+  // adversarial review of #169 was right that searching source text for
+  // statement order is a claim about how code is written, not about a click.
+  // What survives here is only the half that lives in a file no unit test
+  // mounts, and it says so in its own name.
   it("the host expands before it raises the signal", () => {
     // A collapsed widget still renders its header, so the button is there while
     // the content that owns the action is not mounted at all. The order matters

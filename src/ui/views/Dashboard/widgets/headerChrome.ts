@@ -33,13 +33,24 @@ export interface PrimaryAction {
  * button would promise a record they cannot hold.
  *
  * The host resolves the LABEL here and dispatches a signal; it must never run
- * the action itself. Both table-shaped types already ship a creation
- * interaction the user reaches — the inline «+ New» row, and the modal on an
- * empty block — and calling `createNamedRecord` from the header would add a
- * second one that behaves differently from the first. One block, one way in.
+ * the action itself. `data-table` already ships the creation interaction the
+ * user reaches — the inline «+ New» row, and the empty block's own modal — and
+ * calling `createNamedRecord` from the header would add a second one that
+ * behaves differently from the first. One block, one way in.
+ *
+ * `database-call` is deliberately NOT here, and the reason is the same rule
+ * read properly rather than a limitation. It hosts Board, Calendar and Gallery
+ * tabs, and each of those creates a record WITH the context of what you are
+ * looking at: a board column's value, the day you clicked, the gallery's
+ * active filter. A header button stands outside all of that and can supply
+ * none of it — on a Calendar tab it would write a record with no date, which
+ * then does not appear in the calendar that made it. The view owns creation
+ * there, and offering a shortcut that lands somewhere else is worse than
+ * offering none. `data-table` has no such question: it is always exactly one
+ * table tab (`restoreDataTableConfig`), and the inline row needs no context.
  */
 export function primaryActionFor(type: WidgetType): PrimaryAction | null {
-  if (type === "data-table" || type === "database-call") {
+  if (type === "data-table") {
     return {
       labelKey: "views.dashboard.widget.primary.add-record",
       labelDefault: "Add record",

@@ -251,12 +251,21 @@
    * empty state whose own button opens the create-note modal. Routing to the
    * mounted one is what keeps this a shortcut to an existing interaction
    * rather than a second way to make a record.
+   *
+   * A NON-TABLE tab with records is the case that must do nothing, and the
+   * adversarial review of #169 is why it is written out rather than left to
+   * fall through: Board, Calendar and Gallery each create a record with the
+   * context of what you are looking at — the column's value, the day you
+   * clicked, the active filter. The generic modal below has none of it, so on
+   * a Calendar tab it would write a record with no date, which then does not
+   * appear in the calendar that made it. The header does not offer the action
+   * for those blocks at all (`primaryActionFor`), and this guard is the second
+   * lock on the same door.
    */
   function runPrimaryAction() {
-    if (readonly || sourceReadOnly) return;
-    const inlineRowIsMounted =
-      activeTab?.viewType === "table" && effectiveFrame.records.length > 0 && !!project;
-    if (inlineRowIsMounted) newRowSignal += 1;
+    if (readonly || sourceReadOnly || !project) return;
+    if (activeTab && activeTab.viewType !== "table") return;
+    if (effectiveFrame.records.length > 0) newRowSignal += 1;
     else handleAddFirstRecord();
   }
 

@@ -13,17 +13,27 @@ import type { WidgetType } from "../../types";
 import { primaryActionFor } from "../headerChrome";
 
 describe("#169 — a type has a primary action only if it creates what it shows", () => {
-  it("both table-shaped types offer the record they exist to hold", () => {
-    for (const type of ["data-table", "database-call"] as WidgetType[]) {
-      const action = primaryActionFor(type);
-      expect(action).not.toBeNull();
-      expect(action?.labelDefault).toBe("Add record");
-      // The copy is a translation, not a code change — the key has to be real.
-      expect(action?.labelKey).toMatch(/^views\.dashboard\.widget\.primary\./);
-    }
+  it("the table offers the record it exists to hold", () => {
+    const action = primaryActionFor("data-table");
+    expect(action).not.toBeNull();
+    expect(action?.labelDefault).toBe("Add record");
+    // The copy is a translation, not a code change — the key has to be real.
+    expect(action?.labelKey).toMatch(/^views\.dashboard\.widget\.primary\./);
   });
 
-  it("a derived surface gets none, and that is the answer rather than a gap", () => {
+  it("a multi-view block gets none, because creation there needs context", () => {
+    // The finding that changed this table, from the adversarial review of
+    // #169. `database-call` hosts Board, Calendar and Gallery tabs, and each
+    // creates a record WITH the context of what you are looking at: the
+    // column's value, the day you clicked, the active filter. A header button
+    // stands outside all of it — on a Calendar tab it would write a record
+    // with no date, which then does not appear in the calendar that made it.
+    // Offering a shortcut that lands somewhere else is worse than offering
+    // none, so the rule excludes it rather than the rule being bent.
+    expect(primaryActionFor("database-call")).toBeNull();
+  });
+
+  it("a derived surface gets none either, and that is an answer not a gap", () => {
     // A chart and a stats card are computed from other records; they hold none
     // of their own. `filter-tabs` narrows, `text` and `divider` are chrome —
     // and narrowing, sorting and display config are never primary by the rule.
