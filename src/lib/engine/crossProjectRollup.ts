@@ -35,6 +35,14 @@ import { isNumeric } from "src/lib/engine/numeric";
 
 export interface CrossProjectRollupResult {
   readonly value: RollupResult["value"];
+  /**
+   * How the kernel writes that value down. Carried since #180b, because the
+   * percent operators' datum became a number and the caller that folds a
+   * rollup into a record's values has no formatter of its own — without this
+   * it would draw "57" where the cell used to read "57%". Empty on the
+   * type-mismatch path, where there is no kernel result to format.
+   */
+  readonly formattedValue: string;
   readonly sourceCount: number;
   readonly errors: readonly string[];
 }
@@ -116,11 +124,12 @@ export function computeCrossProjectRollup(
   const rawValues = targets.map((t) => t.values[config.targetField]);
   const errors = detectTypeMismatch(rawValues, config.function);
   if (errors.length > 0) {
-    return { value: null, sourceCount: targets.length, errors };
+    return { value: null, formattedValue: "", sourceCount: targets.length, errors };
   }
   const result = aggregate(rawValues, toRollupConfig(config));
   return {
     value: result.value,
+    formattedValue: result.formattedValue,
     sourceCount: targets.length,
     errors: [],
   };

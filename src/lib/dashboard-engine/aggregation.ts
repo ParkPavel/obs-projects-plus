@@ -25,6 +25,19 @@ import type {
  * they either have no kernel equivalent or carry footer-specific
  * semantics (e.g. footer `count_total` = total records incl. nulls;
  * kernel `count` = non-null count — see R5-004 for the rename).
+ *
+ * #180b made the kernel's percent operators return a number 0-100 with the
+ * `"NN%"` text beside it, which is what this file has always returned — so
+ * `percent_empty` / `percent_not_empty` now look like a deletion waiting to
+ * happen. They are NOT, and the reason is one predicate: "empty" here is
+ * `v == null || v === ""`, while the kernel additionally treats `false` as
+ * empty (`aggregate.ts`, `v !== "" && v !== false`). Over a Checkbox column
+ * `[false]` this file says 0% empty and the kernel says 100%. The user's
+ * RESOLVED 2026-09-02 answer (D4) is that `false` IS a value, so the kernel is
+ * the one that has to move — but its `count_values` and `count_empty` share
+ * that predicate, and changing it under `percent_*` alone would leave the
+ * kernel disagreeing with itself. That unification is the count family, #180d
+ * (T4). Until then this stays inline, deliberately.
  */
 
 /**
@@ -116,28 +129,33 @@ function computeColumn(
     case "count_unchecked":
       return fmt(values.filter((v) => v === false).length);
 
+    // #180b (spec §3.2 item 3): all four percent branches used to answer
+    // `0`/"0%" for an empty population. `computeAggregateValue` below already
+    // answered `null` for the same four inputs — the same file, two functions,
+    // two answers, which is the exact defect the adversarial review of #180a
+    // named in this file. The footer now agrees with it.
     case "percent_checked": {
       const bools = values.filter((v) => typeof v === "boolean");
-      if (bools.length === 0) return fmt(0, "0%");
+      if (bools.length === 0) return fmt(null);
       const pct = (bools.filter((v) => v === true).length / bools.length) * 100;
       return fmt(pct, `${Math.round(pct)}%`);
     }
 
     case "percent_unchecked": {
       const bools = values.filter((v) => typeof v === "boolean");
-      if (bools.length === 0) return fmt(0, "0%");
+      if (bools.length === 0) return fmt(null);
       const pct = (bools.filter((v) => v === false).length / bools.length) * 100;
       return fmt(pct, `${Math.round(pct)}%`);
     }
 
     case "percent_empty": {
-      if (values.length === 0) return fmt(0, "0%");
+      if (values.length === 0) return fmt(null);
       const pct = ((values.length - nonEmpty.length) / values.length) * 100;
       return fmt(pct, `${Math.round(pct)}%`);
     }
 
     case "percent_not_empty": {
-      if (values.length === 0) return fmt(0, "0%");
+      if (values.length === 0) return fmt(null);
       const pct = (nonEmpty.length / values.length) * 100;
       return fmt(pct, `${Math.round(pct)}%`);
     }

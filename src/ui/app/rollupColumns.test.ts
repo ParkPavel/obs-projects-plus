@@ -125,6 +125,47 @@ describe("applyRollupColumns", () => {
     expect(out.records[1]!.values["Total pain"]).toBe(8);
   });
 
+  // #180b turned the percent operators' datum from the string "57%" into the
+  // number 57. This is the one place a rollup result is folded into a record's
+  // values, where the table's generic cell renderer has no notion of a unit —
+  // so without the guard a cell reading "50%" would silently start reading
+  // "50". Caught by tracing the kernel's consumers, not by a gate.
+  it("keeps the percent sign in a cell, because nothing here can add it back", () => {
+    const fieldConfig: FieldConfigRelationMap = {
+      sessions: { relation: { targetProjectId: "p-sessions" } },
+      "Filled pain": {
+        rollup: {
+          relationField: "sessions",
+          targetField: "pain",
+          function: "percent_not_empty",
+        },
+      },
+    };
+    const out = applyRollupColumns(
+      clients(),
+      fieldConfig,
+      "p-clients",
+      new Map([["p-sessions", sessions()]])
+    );
+    expect(out.records[0]!.values["Filled pain"]).toBe("100%");
+  });
+
+  it("a numeric rollup is still a number, so it can be sorted and compared", () => {
+    const fieldConfig: FieldConfigRelationMap = {
+      sessions: { relation: { targetProjectId: "p-sessions" } },
+      "Total pain": {
+        rollup: { relationField: "sessions", targetField: "pain", function: "sum" },
+      },
+    };
+    const out = applyRollupColumns(
+      clients(),
+      fieldConfig,
+      "p-clients",
+      new Map([["p-sessions", sessions()]])
+    );
+    expect(typeof out.records[0]!.values["Total pain"]).toBe("number");
+  });
+
   it("computes a rollup whose relation points back at the current project", () => {
     // Self-relation: `extractRelationTargetIds` excludes it from the fetch set,
     // so the external map is empty and the current frame is the target.

@@ -35,6 +35,7 @@
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import type { RollupFieldConfig } from "src/settings/base/settings";
 import { computeCrossProjectRollupColumn } from "src/lib/engine/crossProjectRollup";
+import { PERCENT_FUNCTIONS } from "src/lib/engine/aggregate";
 
 import type { FieldConfigRelationMap } from "./viewHelpers";
 
@@ -92,11 +93,24 @@ export function applyRollupColumns(
       records: out.records.map((record) => {
         const result = column.get(record.id);
         if (!result) return record;
+        // #180b: the percent operators' datum became a number, and this is the
+        // one place a rollup result is handed to a cell renderer that has no
+        // notion of a unit — so a bare number here would turn a cell reading
+        // "57%" into "57". The rendered text is kept for that family alone, and
+        // only when there is a value at all: an empty population stays null and
+        // draws an empty cell rather than the "0%" it used to claim.
+        // `PERCENT_FUNCTIONS` is declared beside the code that formats them, so
+        // this is a question asked of the kernel, not a second list. #180d (T4)
+        // gives the display layer units and retires it.
+        const folded =
+          result.value != null && PERCENT_FUNCTIONS.has(rollup.function)
+            ? result.formattedValue
+            : result.value;
         return {
           ...record,
           values: {
             ...record.values,
-            [fieldName]: result.value as unknown as DataRecord["values"][string],
+            [fieldName]: folded as unknown as DataRecord["values"][string],
           },
         };
       }),
