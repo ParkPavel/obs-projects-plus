@@ -125,6 +125,51 @@ describe("applyRollupColumns", () => {
     expect(out.records[1]!.values["Total pain"]).toBe(8);
   });
 
+  // #180b turned the percent operators' datum from the string "57%" into the
+  // number 57, and this is the one place a rollup result is folded into a
+  // record's values. The first attempt kept the rendered text here so a cell
+  // would not lose its "%" — the adversarial review showed that was the wrong
+  // trade: the frame is filtered and sorted AFTER this fold, dispatching on
+  // the runtime type, so a string means `percent > 50` never reaches the
+  // numeric branch and a sort compares "33%" as text. The string was there
+  // before #180b too, so this pins the fix rather than the regression.
+  it("folds a number, so the column can be filtered and sorted", () => {
+    const fieldConfig: FieldConfigRelationMap = {
+      sessions: { relation: { targetProjectId: "p-sessions" } },
+      "Filled pain": {
+        rollup: {
+          relationField: "sessions",
+          targetField: "pain",
+          function: "percent_not_empty",
+        },
+      },
+    };
+    const out = applyRollupColumns(
+      clients(),
+      fieldConfig,
+      "p-clients",
+      new Map([["p-sessions", sessions()]])
+    );
+    expect(out.records[0]!.values["Filled pain"]).toBe(100);
+    expect(typeof out.records[0]!.values["Filled pain"]).toBe("number");
+  });
+
+  it("a numeric rollup is still a number, so it can be sorted and compared", () => {
+    const fieldConfig: FieldConfigRelationMap = {
+      sessions: { relation: { targetProjectId: "p-sessions" } },
+      "Total pain": {
+        rollup: { relationField: "sessions", targetField: "pain", function: "sum" },
+      },
+    };
+    const out = applyRollupColumns(
+      clients(),
+      fieldConfig,
+      "p-clients",
+      new Map([["p-sessions", sessions()]])
+    );
+    expect(typeof out.records[0]!.values["Total pain"]).toBe("number");
+  });
+
   it("computes a rollup whose relation points back at the current project", () => {
     // Self-relation: `extractRelationTargetIds` excludes it from the fetch set,
     // so the external map is empty and the current frame is the target.

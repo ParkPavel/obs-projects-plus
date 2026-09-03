@@ -216,11 +216,46 @@ describe("aggregate() — kernel", () => {
     test('"true" string counts as true', () => {
       expect(aggregate(["true", "true", false], cfg("percent_true")).formattedValue).toBe("67%");
     });
-    test("empty → 0%", () => {
-      expect(aggregate([], cfg("percent_true")).formattedValue).toBe("0%");
+    // FLIPPED by #180b (spec §3.2 item 3). Zero percent is a claim about a
+    // population, and there is none — and in a footer cell "0%" is
+    // indistinguishable from a real zero percent, which is the one reading a
+    // user would act on.
+    test("empty → the empty placeholder, not 0%", () => {
+      const r = aggregate([], cfg("percent_true"));
+      expect(r.value).toBeNull();
+      expect(r.formattedValue).toBe("—");
     });
-    test("all-null → 0%", () => {
-      expect(aggregate([null, undefined], cfg("percent_true")).formattedValue).toBe("0%");
+    test("all-null → the empty placeholder", () => {
+      expect(aggregate([null, undefined], cfg("percent_true")).value).toBeNull();
+    });
+
+    // #180b item 2: the datum is a number, the "NN%" is how it is written.
+    test("the value is a number and the text is beside it", () => {
+      const r = aggregate([true, false, false], cfg("percent_true"));
+      expect(typeof r.value).toBe("number");
+      expect(r.value).toBeCloseTo(33.333, 2);
+      expect(r.formattedValue).toBe("33%");
+    });
+  });
+
+  describe("percent_empty / percent_not_empty", () => {
+    test("the value is a number and the text is beside it", () => {
+      const r = aggregate(["a", "", null], cfg("percent_not_empty"));
+      expect(typeof r.value).toBe("number");
+      expect(r.formattedValue).toMatch(/^\d+%$/);
+    });
+    test("no population → the empty placeholder, not 0%", () => {
+      for (const fn of ["percent_empty", "percent_not_empty"] as const) {
+        const r = aggregate([], cfg(fn));
+        expect(r.value).toBeNull();
+        expect(r.formattedValue).toBe("—");
+      }
+    });
+    test("the rendered text is unchanged from before #180b", () => {
+      // The point of splitting value from formattedValue is that nothing on
+      // screen moves: only the type of the datum behind it.
+      expect(aggregate(["a", "b", "", ""], cfg("percent_empty")).formattedValue).toBe("50%");
+      expect(aggregate(["a", "b", "", ""], cfg("percent_not_empty")).formattedValue).toBe("50%");
     });
   });
 

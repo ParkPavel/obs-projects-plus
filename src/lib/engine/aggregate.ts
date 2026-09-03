@@ -24,10 +24,22 @@
  *     1. Text is now ignored rather than parsed, as Excel and Sheets both
  *     specify (SPEC_MATH_SPREADSHEET_2026-09-02 §1).
  *   - All numeric outputs format integers as-is and floats to 2 decimals.
- *   - The EMPTY-input policy (what `avg`/`min`/`max` return for no numeric
- *     input, and the string-valued percent operators) is untouched by #180a
- *     and belongs to #180b. Dropping a `NaN` that used to be kept can make
- *     that existing policy fire where it previously did not.
+ *   - `value` is the datum and `formattedValue` is how it is written down.
+ *     Since #180b no operator returns a display string as its `value`: the
+ *     percent family returns a number 0-100 with `"NN%"` beside it
+ *     (SPEC_MATH_SPREADSHEET_2026-09-02 §3.2 item 2). `concat` / `show_*` are
+ *     not an exception — their datum genuinely is text.
+ *   - EMPTY input yields `null` + "—", never a number that looks like an
+ *     answer: `avg`/`min`/`max`/`range` over no numeric value (#180a), and
+ *     since #180b the percent operators over no population (§3.2 item 3).
+ *     `sum` keeps `0` deliberately — the additive identity is a real total of
+ *     nothing (BACKLOG #180, RESOLVED 2026-09-02).
+ *   - KNOWN GAP, not a decision: `median` of an empty list still returns `0`
+ *     here, though §3.1 of the spec puts it in the `null` column with
+ *     `avg`/`min`/`max`/`range`. #180a converted those four and did not reach
+ *     median; #180b is scoped to the percent family and did not widen to it.
+ *     Recorded in BACKLOG #180 rather than fixed in passing, because it
+ *     changes a shipped operator's answer and deserves its own review.
  */
 
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
@@ -108,15 +120,15 @@ export function aggregate(
     }
 
     case "percent_empty": {
-      if (values.length === 0) return fmtStr("0%");
+      if (values.length === 0) return fmtEmpty();
       const filled = nonNull.filter((v) => v !== "" && v !== false).length;
-      return fmtStr(Math.round(((values.length - filled) / values.length) * 100) + "%");
+      return fmtPct(((values.length - filled) / values.length) * 100);
     }
 
     case "percent_not_empty": {
-      if (values.length === 0) return fmtStr("0%");
+      if (values.length === 0) return fmtEmpty();
       const filled = nonNull.filter((v) => v !== "" && v !== false).length;
-      return fmtStr(Math.round((filled / values.length) * 100) + "%");
+      return fmtPct((filled / values.length) * 100);
     }
 
     case "count_unique": {
@@ -161,13 +173,11 @@ export function aggregate(
     }
 
     case "percent_true": {
-      if (nonNull.length === 0) return fmtStr("0%");
+      if (nonNull.length === 0) return fmtEmpty();
       const trueCount = nonNull.filter(
         (v) => v === true || v === "true"
       ).length;
-      return fmtStr(
-        Math.round((trueCount / nonNull.length) * 100) + "%"
-      );
+      return fmtPct((trueCount / nonNull.length) * 100);
     }
 
     case "concat":
@@ -211,10 +221,38 @@ function sumNumbers(values: DataValue[]): number {
  * Found by the Codex adversarial review of #180a, which named the footer path
  * `computeAggregations` where the guard `computeAggregateValue` already had
  * was missing.
+ *
+ * #180b extends the same answer to the percent operators over an empty
+ * population (§3.2 item 3). `"0%"` of nothing is not a small percentage, it is
+ * a claim about a population that does not exist — and it is indistinguishable
+ * in the cell from a real 0%, which is the one thing a reader would act on.
  */
 function fmtEmpty(): RollupResult {
   return { value: null, formattedValue: "—" };
 }
+
+/**
+ * A percentage is a number, and `"NN%"` is how it is written down (#180b,
+ * SPEC_MATH_SPREADSHEET_2026-09-02 §3.2 item 2).
+ *
+ * Until now the percent operators put `"57%"` in `value` — the display string
+ * standing in for the datum — while `RollupResult` had carried a
+ * `formattedValue` field for exactly that purpose since it was written. Every
+ * consumer therefore had to parse the sign back off to get at the number
+ * (`RollupCellRenderer.parsePercent`, `GridRollupCell.parsePercent`), and the
+ * two other implementations of the same operators already returned a number
+ * (`dashboard-engine/aggregation.ts`, `transformExecutor.ts` `PCT_*`). The
+ * kernel was the odd one out.
+ *
+ * `value` keeps the unrounded percentage so it agrees digit for digit with
+ * `computeAggregateValue`; rounding is a property of the writing-down, not of
+ * the number, so it happens here and only here. The rendered string is
+ * byte-identical to what the old `Math.round(...) + "%"` produced.
+ */
+function fmtPct(pct: number): RollupResult {
+  return { value: pct, formattedValue: `${Math.round(pct)}%` };
+}
+
 
 function fmtNum(n: number): RollupResult {
   return {
