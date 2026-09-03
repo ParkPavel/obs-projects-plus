@@ -256,7 +256,41 @@ export type DataSource =
   | FolderDataSource
   | TagDataSource
   | DataviewDataSource
-  | NativeQueryDataSource;
+  | NativeQueryDataSource
+  | DerivedDataSource;
+
+/**
+ * A saved filter, stored as one of the project's sources (#170 step 2).
+ *
+ * This is scene 5's "named saved filter opened as a source", and it is a
+ * SOURCE rather than a fourth entity beside project/view/widget because the
+ * project already is a container of sources — see
+ * `SAVED_SELECTION_BRIEF_159.md`, Revision 3, for why that turned out to be
+ * true and what it cost the alternative.
+ *
+ * **It is not acquired, and that is the whole design.** Every other source
+ * reads the vault; this one reads the project's own records. `where` is
+ * evaluated at axis A of the consuming view, over the ENRICHED frame — after
+ * relations and rollups exist. Resolving it in the datasource layer instead
+ * would make it an acquisition filter, and `FILTER_MODEL.md` is explicit that
+ * those run before a frame exists: a `where` naming a rollup would then match
+ * nothing. That is the Gate 0 refutation that killed revision 1 of the brief,
+ * and `derivedSource.test.ts` pins it so it cannot come back as an
+ * optimisation.
+ */
+export type DerivedDataSource = DataSourceIdentity & {
+  readonly kind: "derived";
+  readonly config: {
+    /**
+     * What it narrows: the `id` of a sibling source, or `"project"` for the
+     * merge of them all. A name that no longer resolves makes the source
+     * BROKEN and says so, rather than quietly narrowing nothing.
+     */
+    readonly from: string;
+    /** Runs through the one filter engine, like every other filter here. */
+    readonly where: FilterDefinition;
+  };
+};
 
 /**
  * Identity for a source inside a project's container (#170 step 1).
