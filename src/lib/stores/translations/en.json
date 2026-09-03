@@ -953,7 +953,10 @@
                     "menu-pipeline-active": "Data pipeline ({{count}})",
                     "menu-remove": "Remove widget",
                     "menu-rename": "Rename",
-                    "unlock": "Unlock widget"
+                    "unlock": "Unlock widget",
+                    "primary": {
+                        "add-record": "Add record"
+                    }
                 },
                 "quick": {
                     "group": "Quick actions",
