@@ -80,6 +80,22 @@
     border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
 
+  /*
+   * The same trade as TableControlBar's, on the shared pills: below the width
+   * where the label crowds the row it is capped by a share of the widget
+   * instead of by a root-anchored length. `:global` because the element belongs
+   * to FilterPills — and the rule lives HERE and not there for a reason worth
+   * keeping: FilterPills is shared with the view-level bar outside any widget,
+   * where `container-name: widget` does not exist, and writing `@container` into
+   * it would also pull a component full of root-anchored sizes into R0.16's
+   * scope through its second clause.
+   */
+  @container widget (max-width: 24em) {
+    .ppp-blockfilter :global(.ppp-filterpills-pill-text) {
+      max-width: 40cqi;
+    }
+  }
+
   .ppp-blockfilter-popover {
     /* #182, and the ticket's own diagnosis was wrong — see its entry. The
        mobile sheet is NOT sized by the widget it was opened from: measurement

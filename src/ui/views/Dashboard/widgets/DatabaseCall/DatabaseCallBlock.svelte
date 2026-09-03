@@ -79,6 +79,13 @@
    */
   export let scopeApplied: boolean = false;
   /**
+   * #169: raised by the widget header when the user presses the block's own
+   * primary action. A counter rather than a callback, so the action runs in the
+   * component that already owns the interaction instead of the header growing a
+   * second, differently-behaving way to create a record.
+   */
+  export let primaryActionSignal: number = 0;
+  /**
    * #139: this block reads a source it cannot safely write to.
    *
    * A linked-source block renders another project's records but is handed the
@@ -223,6 +230,44 @@
     pipelineInputRowCount > 0 &&
     effectiveFrame.records.length === 0 &&
     !isFilterEmpty;
+
+  // #169. The header outlives the content: on a COLLAPSED widget this component
+  // is not mounted at all, so a signal raised while collapsed arrives as a
+  // mount-time value rather than as a change, and comparing against 0 is what
+  // makes that click work instead of doing nothing. The host resets the signal
+  // on every collapse toggle, so a later expand cannot replay a spent one.
+  let seenPrimarySignal = 0;
+  let newRowSignal = 0;
+  $: if (primaryActionSignal > seenPrimarySignal) {
+    seenPrimarySignal = primaryActionSignal;
+    runPrimaryAction();
+  }
+
+  /**
+   * Add a record through whichever creation path is actually on screen.
+   *
+   * With rows present the table shows an inline «+ New» at the body end, and
+   * that is the one the user already reaches; with none, the block shows an
+   * empty state whose own button opens the create-note modal. Routing to the
+   * mounted one is what keeps this a shortcut to an existing interaction
+   * rather than a second way to make a record.
+   *
+   * A NON-TABLE tab with records is the case that must do nothing, and the
+   * adversarial review of #169 is why it is written out rather than left to
+   * fall through: Board, Calendar and Gallery each create a record with the
+   * context of what you are looking at — the column's value, the day you
+   * clicked, the active filter. The generic modal below has none of it, so on
+   * a Calendar tab it would write a record with no date, which then does not
+   * appear in the calendar that made it. The header does not offer the action
+   * for those blocks at all (`primaryActionFor`), and this guard is the second
+   * lock on the same door.
+   */
+  function runPrimaryAction() {
+    if (readonly || sourceReadOnly || !project) return;
+    if (activeTab && activeTab.viewType !== "table") return;
+    if (effectiveFrame.records.length > 0) newRowSignal += 1;
+    else handleAddFirstRecord();
+  }
 
   function handleAddFirstRecord() {
     const p = project;
@@ -517,6 +562,7 @@
               {activeFieldPresetId}
               {project}
               {widgetId}
+              {newRowSignal}
               on:configChange={handleDataTableConfigChange}
               on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
             />

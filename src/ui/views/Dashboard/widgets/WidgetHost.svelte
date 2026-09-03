@@ -18,14 +18,16 @@
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import { applyWidgetScope } from "./widgetScope";
-  import { resolveDbCallView, asChartConfig, asStatsConfig } from "./linkedSourceState";
+  import { resolveDbCallView, asChartConfig, asStatsConfig, chartRightFrameOf } from "./linkedSourceState";
   import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
-  import { validateLegacyLinkedSelection } from "src/lib/relations/relationContract";
   import { getConfigPanel } from "./configPanelRegistry";
-  import { WIDGET_CONTENT, WIDGET_PANELS, hasPipelineButton, type WidgetRenderContext } from "./widgetComponentRegistry";
-  import { convertLegacyWidget, isRetiredLegacyType, unwrapDataTableConfigChange, persistDataTableSubFilter } from "./legacyMigration";
+  import { WIDGET_CONTENT, WIDGET_PANELS } from "./widgetComponentRegistry";
+  import { hasPipelineButton, primaryActionFor } from "./headerChrome";
+  import { buildRenderContext } from "./renderContext";
+  import { convertLegacyWidget, isRetiredLegacyType, dataTableConfigChange } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
   import WidgetHeaderActions from "./WidgetHeaderActions.svelte";
+  import WidgetPrimaryAction from "./WidgetPrimaryAction.svelte";
   import WidgetSetupWizard from "./WidgetSetupWizard.svelte";
   import LegacyWidgetPlaceholder from "./LegacyWidgetPlaceholder.svelte";
   import PipelineEditor from "./PipelineEditor.svelte";
@@ -55,7 +57,7 @@
     removeWidget: string;
   }>();
 
-  let showConfig = false, showPipeline = false, renameSignal = 0;
+  let showConfig = false, showPipeline = false, renameSignal = 0, primaryActionSignal = 0;
 
   $: collapsed = widget.collapsed ?? false;
   $: currentPipeline = widget.transform ?? ({ steps: [] } as TransformPipeline);
@@ -73,26 +75,30 @@
 
   $: chartConfig = widget.type === "chart" ? asChartConfig(widget.config) : null;
   $: statsConfig = widget.type === "stats" ? asStatsConfig(widget.config) : null;
-  $: chartRightFrame = (() => {
-    if (widget.type !== "chart" || !chartConfig) return null;
-    const id = (chartConfig as { correlation?: { rightSourceId?: string } })?.correlation?.rightSourceId;
-    return id ? rightFrames.get(id) ?? null : null;
-  })();
+  $: chartRightFrame = chartRightFrameOf(widget.type, chartConfig, rightFrames);
 
   // NPLAN-V7.1 / #136: per-widget independent source, resolved as one value.
   $: dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);
   // #137: the editor is configured against what the pipeline actually receives.
   $: pipelineSource = dbCall.isExternal ? dbCall.frame : scope.frame;
 
-  $: ctx = {
-    widget, frame, transformedFrame, api, readonly, getRecordColor, fields,
-    fieldPresets, activeFieldPresetId, availableSources, project,
-    effectiveTableConfig: isPrimaryDataTable ? tableConfig : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
-    pipelineStepCount: dbCall.isExternal ? 0 : currentPipeline.steps.length, pipelineInputRowCount: dbCall.isExternal ? 0 : pipelineInputRowCount, chartConfig, statsConfig, chartRightFrame,
-    dbCallFrame: dbCall.frame, dbCallFields: dbCall.frame.fields, dbCallSourceConfig: dbCall.sourceConfig, dbCallLinkedSelection: dbCall.linkedSelection, dbCallSource: dbCall.source,
-    dbCallScopeApplied: !dbCall.isExternal && scope.applied, dbCallUsesLinkedSource: dbCall.isExternal, // #118 / #139
-    dbCallLinkedSelectionValidation: dbCall.linkedSelection ? validateLegacyLinkedSelection({ relationField: dbCall.linkedSelection.relationField }, dbCall.sourceConfig?.projectId ?? project?.id ?? "", project?.id, dbCall.frame.fields).status : undefined,
-  } satisfies WidgetRenderContext;
+  $: ctx = buildRenderContext({
+    widget, frame, transformedFrame, api, readonly, getRecordColor, fields, fieldPresets,
+    activeFieldPresetId, availableSources, project, tableConfig, isPrimaryDataTable,
+    pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount, chartConfig,
+    statsConfig, chartRightFrame, dbCall, scopeApplied: scope.applied, primaryActionSignal,
+  });
+
+  // #169: the block's own action, and NOT run here. Hidden while the block
+  // reads a linked project, where a write would land in the wrong vault (#139).
+  $: primaryAction = readonly || dbCall.isExternal ? null : primaryActionFor(widget.type);
+
+  function handlePrimaryAction() {
+    // Expand FIRST: a collapsed widget renders its header but not the content
+    // that owns the action. Order pinned by A169_widgetWeight.
+    if (collapsed) patchWidget({ collapsed: false });
+    primaryActionSignal += 1;
+  }
 
   $: contentEntry = WIDGET_CONTENT[widget.type];
   $: panelEntry = WIDGET_PANELS[widget.type];
@@ -106,21 +112,14 @@
     patchWidget({ config: newConfig });
   }
   function handleContentConfigChange(e: CustomEvent<unknown>) {
-    if (widget.type !== "data-table") {
-      handleWidgetConfigChange(e.detail as Record<string, unknown>);
-      return;
-    }
     const detail = e.detail as Record<string, unknown>;
-    const result = unwrapDataTableConfigChange(detail);
-    if (result.kind === "convert") {
-      patchWidget({ type: "database-call", config: result.config });
-    } else if (isPrimaryDataTable) {
-      // #112 F1: subFilter is dropped by the unwrap; persist it on widget.config.
-      dispatch("tableConfigChange", result.tableConfig as DataTableConfig);
-      patchWidget({ config: persistDataTableSubFilter(detail, widget.config) });
-    } else {
-      handleWidgetConfigChange(persistDataTableSubFilter(detail, widget.config, { table: result.tableConfig }));
-    }
+    if (widget.type !== "data-table") { handleWidgetConfigChange(detail); return; }
+    const change = dataTableConfigChange(detail, widget.config, isPrimaryDataTable);
+    if (change.kind === "convert") patchWidget({ type: "database-call", config: change.config });
+    else if (change.kind === "table") {
+      dispatch("tableConfigChange", change.tableConfig as DataTableConfig);
+      patchWidget({ config: change.widgetConfig });
+    } else handleWidgetConfigChange(change.widgetConfig);
   }
   /** Toggle panel, seeding type defaults on first configure. */
   function toggleConfig() {
@@ -153,10 +152,11 @@
   {collapsed}
   {readonly}
   {renameSignal}
-  on:toggleCollapse={() => patchWidget({ collapsed: !collapsed })}
+  on:toggleCollapse={() => { primaryActionSignal = 0; patchWidget({ collapsed: !collapsed }); }}
   on:titleChange={(e) => patchWidget({ title: e.detail })}
 >
   <svelte:fragment slot="actions">
+    <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
     <WidgetHeaderActions
       {readonly}
       hasCog={panelDescriptor.hasCog && (panelEntry !== undefined || widget.type === "database-call")}

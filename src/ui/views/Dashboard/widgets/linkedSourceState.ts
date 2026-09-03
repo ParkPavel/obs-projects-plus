@@ -131,3 +131,20 @@ export function asChartConfig(cfg: Record<string, unknown>): ChartConfig | null 
 export function asStatsConfig(cfg: Record<string, unknown>): StatsConfig | null {
   return cfg && "cards" in cfg ? (cfg as unknown as StatsConfig) : null;
 }
+
+/**
+ * The right-hand frame a correlation chart reads, or `null`.
+ *
+ * Beside the other per-widget derivations for the reason stated above: the
+ * host earns its budget by not accumulating helpers, and this one is entirely
+ * knowledge about what a `chart` config means.
+ */
+export function chartRightFrameOf(
+  type: string,
+  chartConfig: ChartConfig | null,
+  rightFrames: ReadonlyMap<string, DataFrame>
+): DataFrame | null {
+  if (type !== "chart" || !chartConfig) return null;
+  const id = (chartConfig as { correlation?: { rightSourceId?: string } }).correlation?.rightSourceId;
+  return id ? rightFrames.get(id) ?? null : null;
+}

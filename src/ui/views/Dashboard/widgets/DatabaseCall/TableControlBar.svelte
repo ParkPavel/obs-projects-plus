@@ -149,6 +149,34 @@
     background: var(--background-modifier-hover);
   }
 
+  /*
+   * #169 / #166 — what a narrow widget costs the bar.
+   *
+   * The design spec asked for pills to collapse to icon-only below the label
+   * budget. Measured against what a pill IS, that is the wrong trade: a filter
+   * pill with no text says only that SOME filter exists and not which one, and
+   * an unreadable filter is worse than one that wraps — which this bar already
+   * does. So the label yields space instead of vanishing.
+   *
+   * It yields it in the container's own units, which is the point of the
+   * exercise: `8rem` above is anchored to the document root, so it caps the
+   * label identically in a widget one column wide and one spanning the canvas.
+   * `cqi` is a share of THIS widget. Named `widget` after the container
+   * `WidgetShell` declares on `.ppp-widget-host`, so the rule cannot silently
+   * re-target whichever ancestor is nearest, and the threshold is in `em` —
+   * `rem` inside the condition would be root-anchored again, and would count
+   * against R0.16 from inside a media condition where nothing renders it.
+   */
+  @container widget (max-width: 24em) {
+    .ppp-t2-cb-pill-label {
+      max-width: 40cqi;
+    }
+
+    .ppp-t2-cb-search {
+      max-width: 100%;
+    }
+  }
+
   .ppp-t2-cb-count {
     font-size: var(--font-ui-smaller);
     color: var(--text-faint);

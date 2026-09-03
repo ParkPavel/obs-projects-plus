@@ -7,15 +7,34 @@
   import { createEventDispatcher, tick } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
 
+  /**
+   * #169: raised by the widget header's primary action. Compared against a
+   * counter that starts at zero rather than against the incoming value,
+   * because this component is mounted lazily: a signal raised while the widget
+   * was collapsed arrives here as a mount-time value and would otherwise be
+   * read as "nothing happened".
+   */
+  export let openSignal = 0;
+
   const dispatch = createEventDispatcher<{ create: string }>();
 
   let active = false;
   let name = "";
   let inputEl: HTMLInputElement | null = null;
+  let seenOpenSignal = 0;
+
+  $: if (openSignal > seenOpenSignal) {
+    seenOpenSignal = openSignal;
+    void open();
+  }
 
   async function open() {
     active = true;
     await tick();
+    // This row sits after a windowed list, so opening it from the header can
+    // focus an input that is scrolled out of sight — which looks like the
+    // button having done nothing at all.
+    inputEl?.scrollIntoView({ block: "nearest" });
     inputEl?.focus();
   }
 

@@ -10,7 +10,6 @@
    * width/group patches come from tableHeaderOps.
    */
   import type { DataFrame, DataRecord, DataField, DataValue, Optional } from "src/lib/dataframe/dataframe";
-  import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type { ViewApi } from "src/lib/viewApi";
   import type { DataTableConfig, FieldPreset } from "../../types";
   import type { ProjectDefinition } from "src/settings/settings";
@@ -32,7 +31,7 @@
   import { openContextMenu } from "src/lib/contextMenu";
   import { emitCommand } from "src/lib/stores/commandBus";
   import { buildRowMenuEntries, createNamedRecord, isRowDriving, toggleRowSelection } from "./tableRowOps";
-  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed } from "./tableHeaderOps";
+  import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools } from "./tableHeaderOps";
   import {
     buildColumns,
     gridTemplate,
@@ -59,6 +58,12 @@
   export let project: ProjectDefinition | undefined = undefined;
   /** R3 — Selection Bus driver identity (canvas widget id). */
   export let widgetId: string | undefined = undefined;
+  /**
+   * #169: raised by the widget header's primary action. It opens the inline
+   * «+ New» row — the creation path this table already shows — rather than the
+   * header inventing a second one.
+   */
+  export let newRowSignal = 0;
 
   // F2.4+ consumers; accepted so the DatabaseCallBlock bridge stays stable.
   $: void getRecordColor; $: void fieldPresets; $: void activeFieldPresetId;
@@ -90,20 +95,7 @@
 
   $: rowHeightRem = config?.rowHeight === "compact" ? 1.75 : config?.rowHeight === "expanded" ? 3 : 2.25;
 
-  // Select/Status dropdown option pools = unique existing values per field.
-  $: optionsByField = (() => {
-    const map = new Map<string, string[]>();
-    for (const f of fields) {
-      if (f.type !== DataFieldType.Select && f.type !== DataFieldType.Status) continue;
-      const seen = new Set<string>();
-      for (const r of frame.records) {
-        const v = r.values[f.name];
-        if (typeof v === "string" && v !== "") seen.add(v);
-      }
-      map.set(f.name, [...seen].sort((a, b) => a.localeCompare(b)));
-    }
-    return map;
-  })();
+  $: optionsByField = optionPools(fields, frame.records);
 
   // ── Windowing (canon: simple overscan, no framework) ─────────
   const OVERSCAN = 12;
@@ -236,7 +228,7 @@
       {/each}
       {#if end < renderRows.length}<div style:height={`${(renderRows.length - end) * rowPx}px`} aria-hidden="true" />{/if}
       {#if !readonly && project}
-        <TableNewRow on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
+        <TableNewRow openSignal={newRowSignal} on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
       {/if}
       {#if showFooter}
         <span class="ppp-t2-footer-spacer" />
