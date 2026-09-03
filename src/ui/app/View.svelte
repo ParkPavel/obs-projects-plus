@@ -17,6 +17,11 @@
 
   import { useView } from "./useView";
   import { applySort, sortRecords } from "./viewSort";
+  import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
+  import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
+  import { openRecord } from "src/lib/record/openRecord";
+  import { app as obsidianApp } from "src/lib/stores/obsidian";
+  import { get } from "svelte/store";
 
   /**
    * Specify the project.
@@ -226,6 +231,36 @@
   const handleViewFilterChange = (filter: typeof view.filter) => {
     settings.updateView(project.id, { ...view, filter });
   };
+
+  /**
+   * #168 step (b) — the record held open in the peek, looked up in the frame
+   * this view already has rather than fetched. `sortedFrame` is used and not
+   * `frame`, so a record filtered out of the view cannot be shown by it: the
+   * peek is a closer look at what is on screen, not a back door around the
+   * filter.
+   */
+  $: peeked =
+    $recordPeek === null
+      ? null
+      : ($recordPeek.record ??
+        sortedFrame.records.find((r) => r.id === $recordPeek?.id) ??
+        null);
+
+  /** The fields that describe `peeked` — the carrier's, or this view's. */
+  $: peekFields = $recordPeek?.fields ?? sortedFrame.fields;
+
+  /**
+   * A target this view cannot show must not become a click that did nothing.
+   * It happens when the record is neither carried nor in the sorted frame —
+   * filtered out, renamed, deleted — and the honest answer is the behaviour
+   * the peek replaced: open the note. (Found by the adversarial review of step
+   * (b), which named the external-source dashboard row.)
+   */
+  $: if ($recordPeek !== null && peeked === null) {
+    const unresolved = $recordPeek;
+    closePeek();
+    void openRecord({ id: unresolved.id }, "same", { app: get(obsidianApp) });
+  }
 </script>
 
 <!--
@@ -256,6 +291,26 @@
     sortRecords: applyViewSortToRecords,
     getRecord,
   }}
+/>
+
+<!--
+  One peek for the whole view, not one per surface: a dashboard hosts several
+  table widgets, and a store has one value, so "two peeks at once" cannot be
+  reached rather than being forbidden by a convention. It closes itself when
+  the record it names is no longer in the sorted frame — deleted, renamed or
+  filtered away — because a panel describing a row that is gone is worse than
+  no panel.
+-->
+<RecordCardView
+  open={peeked !== null}
+  fields={peekFields}
+  record={peeked}
+  allRecords={sortedFrame.records}
+  autosave={project.autosave ?? true}
+  onSave={async (updated) => {
+    await api.updateRecord(updated, sortedFrame.fields);
+  }}
+  on:close={closePeek}
 />
 
 <style>

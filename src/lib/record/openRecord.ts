@@ -7,9 +7,10 @@
  * they stay on `workspace.openLinkText` by declaration in
  * `src/__tests__/R0_17_recordOpenContract.test.ts`.
  *
- * Step (a) changes no behaviour. Its whole purpose is that step (b) — plain
- * click stops leaving the view — becomes a change to `PLAIN_MODE` in this file
- * instead of twenty-four independent flips scattered across five views.
+ * Step (a) changed no behaviour. Its whole purpose was that step (b) — a plain
+ * click stops leaving the view — became a change to `PLAIN_MODE` in this file
+ * instead of twenty-three independent flips across five surfaces. Step (b)
+ * landed on 2026-09-03 and was exactly that one line.
  *
  * ## The modifier convention is reproduced, not redesigned
  *
@@ -24,17 +25,25 @@
 
 import type { App, PaneType } from "obsidian";
 
+import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
+
+import { openPeek } from "src/lib/stores/recordPeek";
+
 export type RecordOpenMode = "peek" | "same" | "tab" | "window";
 
 /**
  * What a plain, unmodified activation means.
  *
- * **This is the one constant step (b) flips** (to `"peek"`). It is `"same"` in
- * step (a) because that is exactly what all twenty-four migrated sites did
- * before the migration, which is what makes step (a) a pure refactor and the
- * flip revertible without re-touching a single call site.
+ * **Step (b) flipped this, on 2026-09-03, and it was the whole change.** It was
+ * `"same"` through step (a) — exactly what every migrated site did before the
+ * migration — which is what made that step a pure refactor. Reverting the
+ * behaviour is this line and nothing else; that was the point of doing the
+ * migration first.
+ *
+ * `shift` and `ctrl`/`meta` are untouched, so leaving the view is still one
+ * modifier away and nothing became unreachable.
  */
-export const PLAIN_MODE: RecordOpenMode = "same";
+export const PLAIN_MODE: RecordOpenMode = "peek";
 
 /**
  * The `false | true | "tab" | "window"` third argument of `openLinkText`, as it
@@ -71,13 +80,21 @@ export interface OpenRecordTarget {
   readonly id: string;
   /** Defaults to `id`, matching the call sites that passed it twice. */
   readonly sourcePath?: string;
+  /**
+   * The record and its fields, when the caller has them. Only the peek uses
+   * these, and only because the host view cannot resolve a record that came
+   * from an external source — see `stores/recordPeek.ts`.
+   */
+  readonly record?: DataRecord;
+  readonly fields?: DataField[];
 }
 
 export interface OpenRecordDeps {
   readonly app: App;
   /**
-   * Supplied by the hosting view in step (b). Absent → `"peek"` falls back to
-   * `"same"`, so the contract is safe to call before any view mounts a peek.
+   * A surface that owns its own panel passes one. Everything else gets the
+   * `recordPeek` store, which `View.svelte` renders — so a call site does not
+   * need a reference to a component it has never heard of.
    */
   readonly peek?: (target: OpenRecordTarget) => void;
 }
@@ -90,11 +107,15 @@ export function openRecord(
   const sourcePath = target.sourcePath ?? target.id;
 
   if (mode === "peek") {
-    if (deps.peek) {
-      deps.peek(target);
-      return Promise.resolve();
-    }
-    return deps.app.workspace.openLinkText(target.id, sourcePath, false);
+    // An explicit `peek` wins — a surface that owns its own panel says so. The
+    // store is the default, so a call site does not have to be handed a
+    // function by a component it has never heard of in order to stop
+    // navigating away. Falling through to the workspace is the last resort and
+    // is what made step (a) safe to land before any peek existed: with nothing
+    // to peek into, "peek" simply means what "same" always meant.
+    const peek = deps.peek ?? openPeek;
+    peek(target);
+    return Promise.resolve();
   }
 
   const newLeaf: PaneType | false = mode === "same" ? false : mode;

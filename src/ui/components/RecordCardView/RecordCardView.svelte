@@ -42,6 +42,20 @@
 
   const dispatch = createEventDispatcher<{ close: void; save: DataRecord }>();
 
+  /**
+   * A value as frontmatter would carry it — the point of the block is that it
+   * matches the file, so a list stays a list and an absent key says so rather
+   * than rendering as an empty string that looks like an empty value.
+   */
+  /** The fields that really become frontmatter keys — see the block below. */
+  $: writtenFields = fields.filter((f) => !f.derived);
+
+  function formatKeyValue(v: unknown): string {
+    if (v === undefined || v === null) return "—";
+    if (Array.isArray(v)) return v.map(String).join(", ");
+    return String(v);
+  }
+
   const ICON_CANDIDATES = ["icon", "cover", "thumbnail"];
   const DESC_CANDIDATES = ["description", "summary", "excerpt"];
 
@@ -173,6 +187,33 @@
       onOpenNote={onOpenNote}
       onRenameNote={onRenameNote}
     />
+
+    <!--
+      Vision scene 3. Its readiness criterion is "hover/inspect shows the
+      frontmatter key", and nothing in the product showed one: the editor
+      renders view fields and the sidebar pane renders raw keys, and neither
+      says they are the same thing. They are — `dataApi` writes
+      `frontmatter[field.name]`, so a field's name IS its key — and this says so
+      where a person is already looking at the record. It is the smallest
+      honest form of the promise: the file, as it will be on disk.
+
+      DERIVED fields are excluded, and that is not a detail: `dataApi` skips
+      them when it writes (`updateFrontMatter`), so a formula column, a rollup
+      and a relation's `__resolved__…` companion have names that are NOT keys.
+      Listing them under "frontmatter" would have made the panel say something
+      false about the file — found by the adversarial review of step (b).
+    -->
+    <details class="ppp-rcv-frontmatter">
+      <summary>{$i18n.t("views.dashboard.record-card.frontmatter", { defaultValue: "Frontmatter keys" })}</summary>
+      <dl>
+        {#each writtenFields as field (field.name)}
+          <div class="ppp-rcv-fm-row">
+            <dt>{field.name}</dt>
+            <dd>{formatKeyValue(record.values[field.name])}</dd>
+          </div>
+        {/each}
+      </dl>
+    </details>
   {:else}
     <div class="ppp-rcv-empty">
       {$i18n.t("views.dashboard.record-card.empty", { defaultValue: "No record selected" })}
@@ -181,6 +222,38 @@
 </SlideInPanel>
 
 <style>
+  .ppp-rcv-frontmatter {
+    margin: 0.75em 0 0;
+    font-size: 0.85em;
+    color: var(--text-muted);
+  }
+
+  .ppp-rcv-frontmatter summary {
+    cursor: pointer;
+    padding: 0.25em 0;
+  }
+
+  .ppp-rcv-frontmatter dl {
+    margin: 0.25em 0 0;
+    display: grid;
+    grid-template-columns: minmax(6em, auto) 1fr;
+    gap: 0.125em 0.75em;
+  }
+
+  .ppp-rcv-fm-row {
+    display: contents;
+  }
+
+  .ppp-rcv-frontmatter dt {
+    font-family: var(--font-monospace);
+    color: var(--text-normal);
+  }
+
+  .ppp-rcv-frontmatter dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
   .ppp-rcv-icon-wrap {
     position: relative;
     flex-shrink: 0;
