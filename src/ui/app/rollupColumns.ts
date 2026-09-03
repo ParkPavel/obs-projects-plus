@@ -35,7 +35,6 @@
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import type { RollupFieldConfig } from "src/settings/base/settings";
 import { computeCrossProjectRollupColumn } from "src/lib/engine/crossProjectRollup";
-import { PERCENT_FUNCTIONS } from "src/lib/engine/aggregate";
 
 import type { FieldConfigRelationMap } from "./viewHelpers";
 
@@ -93,24 +92,22 @@ export function applyRollupColumns(
       records: out.records.map((record) => {
         const result = column.get(record.id);
         if (!result) return record;
-        // #180b: the percent operators' datum became a number, and this is the
-        // one place a rollup result is handed to a cell renderer that has no
-        // notion of a unit — so a bare number here would turn a cell reading
-        // "57%" into "57". The rendered text is kept for that family alone, and
-        // only when there is a value at all: an empty population stays null and
-        // draws an empty cell rather than the "0%" it used to claim.
-        // `PERCENT_FUNCTIONS` is declared beside the code that formats them, so
-        // this is a question asked of the kernel, not a second list. #180d (T4)
-        // gives the display layer units and retires it.
-        const folded =
-          result.value != null && PERCENT_FUNCTIONS.has(rollup.function)
-            ? result.formattedValue
-            : result.value;
+        // What lands here is DATA, and the whole frame is filtered and sorted
+        // after this fold (`View.svelte`), dispatching on the runtime type of
+        // the value. Before #180b a percent rollup put the string "57%" here,
+        // so `percent > 50` could not reach the numeric branch at all and a
+        // sort compared text — 33.1 and 33.4 were both "33%". The number goes
+        // in, and the missing "%" is a gap in the DISPLAY layer, which has no
+        // notion of units for a rollup field yet. #180d (T4) is where a cell
+        // learns the unit; recorded in BACKLOG #180 rather than paid for here
+        // with a string, which is the conflation this ticket exists to remove.
+        // (Found by the Codex adversarial review of #180b, against the first
+        // version of this very line.)
         return {
           ...record,
           values: {
             ...record.values,
-            [fieldName]: folded as unknown as DataRecord["values"][string],
+            [fieldName]: result.value as unknown as DataRecord["values"][string],
           },
         };
       }),

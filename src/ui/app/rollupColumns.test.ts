@@ -126,11 +126,14 @@ describe("applyRollupColumns", () => {
   });
 
   // #180b turned the percent operators' datum from the string "57%" into the
-  // number 57. This is the one place a rollup result is folded into a record's
-  // values, where the table's generic cell renderer has no notion of a unit —
-  // so without the guard a cell reading "50%" would silently start reading
-  // "50". Caught by tracing the kernel's consumers, not by a gate.
-  it("keeps the percent sign in a cell, because nothing here can add it back", () => {
+  // number 57, and this is the one place a rollup result is folded into a
+  // record's values. The first attempt kept the rendered text here so a cell
+  // would not lose its "%" — the adversarial review showed that was the wrong
+  // trade: the frame is filtered and sorted AFTER this fold, dispatching on
+  // the runtime type, so a string means `percent > 50` never reaches the
+  // numeric branch and a sort compares "33%" as text. The string was there
+  // before #180b too, so this pins the fix rather than the regression.
+  it("folds a number, so the column can be filtered and sorted", () => {
     const fieldConfig: FieldConfigRelationMap = {
       sessions: { relation: { targetProjectId: "p-sessions" } },
       "Filled pain": {
@@ -147,7 +150,8 @@ describe("applyRollupColumns", () => {
       "p-clients",
       new Map([["p-sessions", sessions()]])
     );
-    expect(out.records[0]!.values["Filled pain"]).toBe("100%");
+    expect(out.records[0]!.values["Filled pain"]).toBe(100);
+    expect(typeof out.records[0]!.values["Filled pain"]).toBe("number");
   });
 
   it("a numeric rollup is still a number, so it can be sorted and compared", () => {

@@ -253,23 +253,6 @@ function fmtPct(pct: number): RollupResult {
   return { value: pct, formattedValue: `${Math.round(pct)}%` };
 }
 
-/**
- * The operators whose datum is a number but whose meaning is carried by the
- * `%` in `formattedValue`. Declared once, here, next to the code that produces
- * them, so a consumer that has no formatter of its own can ask rather than
- * keep a second list (#180b).
- *
- * There is exactly one such consumer today: `ui/app/rollupColumns.ts` folds a
- * rollup result into a record's values, where the table's generic cell
- * renderer draws it with no notion of a unit. Giving it the bare number there
- * would silently turn a cell reading "57%" into "57". #180d (T4) is where the
- * display layer learns about units and this set stops being needed.
- */
-export const PERCENT_FUNCTIONS: ReadonlySet<RollupFunction> = new Set([
-  "percent_empty",
-  "percent_not_empty",
-  "percent_true",
-]);
 
 function fmtNum(n: number): RollupResult {
   return {
