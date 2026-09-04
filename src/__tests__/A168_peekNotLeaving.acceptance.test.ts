@@ -1,11 +1,23 @@
 /**
- * A168 — acceptance for #168 step (b): a plain click stops leaving the view.
+ * A168 — acceptance for #168: the peek panel works.
+ *
+ * **Rescoped by #189 on 2026-09-04, and the rescope is the point.** This file
+ * was written for step (b) — "a plain click stops leaving the view" — and the
+ * user rejected that default in the visual run. What step (b) got wrong was
+ * WHICH gesture opens the peek, not the peek. So every mechanic below still
+ * holds and is still asserted; the only thing removed is the claim that the
+ * peek is what an unmodified activation does. That claim, inverted, now lives
+ * in `A189_recordOpenChoice.acceptance.test.ts` along with the two entrances
+ * the peek was given instead.
+ *
+ * The tests therefore ask for `"peek"` by name where they used to ask for it by
+ * default. That is a weaker premise and the same coverage: the store still has
+ * one value, a surface with its own panel is still preferred over it, and a row
+ * from an external source still peeks into the record it was handed.
  *
  * The claim is behavioural, not visual, so most of it is answered without a
- * browser: what does a plain activation DO. The one thing a browser is needed
- * for is whether the peek panel keeps the keyboard, and that is A169's subject
- * — the two tickets meet there deliberately, which is why (b) was blocked on
- * (a11y) rather than shipped beside it.
+ * browser. The one thing a browser is needed for is whether the peek panel
+ * keeps the keyboard, and that is A169's subject.
  */
 
 import type { App } from "obsidian";
@@ -35,16 +47,10 @@ function spyApp() {
 
 beforeEach(() => closePeek());
 
-describe("A168 — a plain activation opens the peek and does not navigate", () => {
-  it("PLAIN_MODE is the peek, which is the whole of step (b)", () => {
-    // Pinned as a value, so a revert is a visible one-line diff here too and
-    // not a silent behaviour change nobody's test noticed.
-    expect(PLAIN_MODE).toBe("peek");
-  });
-
-  it("a plain click peeks and the workspace is never asked to open anything", () => {
+describe("A168 — a peek opens the panel and does not navigate", () => {
+  it("the peek mode peeks and the workspace is never asked to open anything", () => {
     const { app, calls } = spyApp();
-    void openRecord({ id: "Projects/Acme.md" }, PLAIN_MODE, { app });
+    void openRecord({ id: "Projects/Acme.md" }, "peek", { app });
     expect(get(recordPeek)).toEqual({ id: "Projects/Acme.md" });
     expect(calls).toEqual([]);
   });
@@ -67,7 +73,7 @@ describe("A168 — a plain activation opens the peek and does not navigate", () 
   it("a surface with its own panel is asked instead of the store", () => {
     const { app, calls } = spyApp();
     const seen: string[] = [];
-    void openRecord({ id: "own.md" }, PLAIN_MODE, { app, peek: (t) => seen.push(t.id) });
+    void openRecord({ id: "own.md" }, "peek", { app, peek: (t) => seen.push(t.id) });
     expect(seen).toEqual(["own.md"]);
     expect(get(recordPeek)).toBeNull();
     expect(calls).toEqual([]);
@@ -75,8 +81,8 @@ describe("A168 — a plain activation opens the peek and does not navigate", () 
 
   it("opening a second record replaces the first — one peek, by construction", () => {
     const { app } = spyApp();
-    void openRecord({ id: "first.md" }, PLAIN_MODE, { app });
-    void openRecord({ id: "second.md" }, PLAIN_MODE, { app });
+    void openRecord({ id: "first.md" }, "peek", { app });
+    void openRecord({ id: "second.md" }, "peek", { app });
     expect(get(recordPeek)).toEqual({ id: "second.md" });
   });
 
@@ -92,7 +98,7 @@ describe("A168 — a plain activation opens the peek and does not navigate", () 
     ];
     void openRecord(
       { id: record.id, record, fields } as never,
-      PLAIN_MODE,
+      "peek",
       { app }
     );
     const target = get(recordPeek);
@@ -100,12 +106,13 @@ describe("A168 — a plain activation opens the peek and does not navigate", () 
     expect(target?.fields).toEqual(fields);
   });
 
-  it("the legacy newLeaf bridge follows PLAIN_MODE too, so no call site is left behind", () => {
+  it("the legacy newLeaf bridge follows PLAIN_MODE, so no call site is left behind", () => {
     // `false` is Obsidian's "open here". Every site that still receives the
-    // boolean form -- EditNote's onOpenNote -- must peek as well, or the flip
-    // would be partial and a row would behave differently depending on which
-    // callback happened to carry it.
-    expect(modeFromNewLeaf(false)).toBe("peek");
+    // boolean form -- EditNote's onOpenNote -- must agree with the default, or
+    // a row would behave differently depending on which callback carried it.
+    // #189 moved that default back to "same"; this assertion tracks it rather
+    // than restating it, because a bridge that DISAGREES is the actual defect.
+    expect(modeFromNewLeaf(false)).toBe(PLAIN_MODE);
     expect(modeFromNewLeaf(true)).toBe("tab");
     expect(modeFromNewLeaf("window")).toBe("window");
   });

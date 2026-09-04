@@ -26,7 +26,9 @@
   export let optionsByField: ReadonlyMap<string, string[]> = new Map();
 
   const dispatch = createEventDispatcher<{
-    openRecord: DataRecord;
+    // #189: the originating event travels with the record, or the modifier the
+    // peek now lives on cannot be read by the one place allowed to read it.
+    openRecord: { record: DataRecord; event: MouseEvent };
     rowMenu: { record: DataRecord; event: MouseEvent };
     startEdit: { recordId: string; field: string };
     commitEdit: { record: DataRecord; field: string; value: Optional<DataValue> };
@@ -57,7 +59,7 @@
         <span class="ppp-t2-name">{nameText()}</span>
         <button
           class="ppp-t2-rowbtn clickable-icon"
-          on:click|stopPropagation={() => dispatch("openRecord", record)}
+          on:click|stopPropagation={(e) => dispatch("openRecord", { record, event: e })}
           aria-label={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
           title={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
         ><Icon name="arrow-up-right" size="sm" /></button>

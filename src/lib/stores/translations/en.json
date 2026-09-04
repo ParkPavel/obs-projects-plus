@@ -1271,6 +1271,7 @@
                     "new-name": "Note name…",
                     "open": "Open note",
                     "open-new-tab": "Open in new tab",
+                    "peek": "Show fields",
                     "relation-cancel": "Cancel",
                     "relation-done": "Done",
                     "relation-empty": "No records to link",

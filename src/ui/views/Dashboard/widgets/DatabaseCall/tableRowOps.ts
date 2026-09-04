@@ -114,6 +114,16 @@ export function buildRowMenuEntries(opts: {
       icon: "external-link",
       onClick: () => { if (app) void openRecord({ id: record.id }, "tab", { app }); },
     },
+    // #189 — the peek's discoverable entrance. `alt`+activation reaches the
+    // same mode, but a modifier nobody is told about is not a feature, and the
+    // user asked for both. `record` and `fields` go with it because this table
+    // may read an EXTERNAL source whose rows the host view's frame cannot
+    // resolve — without them those rows would open a panel showing nothing.
+    {
+      title: t("views.dashboard.table-v2.peek", "Show fields"),
+      icon: "panel-right-open",
+      onClick: () => { if (app) void openRecord({ id: record.id, record, fields }, "peek", { app }); },
+    },
     { separator: true },
     {
       title: t("views.dashboard.table-v2.duplicate", "Duplicate"),
