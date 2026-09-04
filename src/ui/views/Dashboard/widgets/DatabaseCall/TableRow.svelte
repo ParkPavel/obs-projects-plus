@@ -63,14 +63,16 @@
           aria-label={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
           title={$i18n.t("views.dashboard.table-v2.open", { defaultValue: "Open note" })}
         ><Icon name="arrow-up-right" size="sm" /></button>
-        {#if !readonly}
-          <button
-            class="ppp-t2-rowbtn clickable-icon"
-            on:click|stopPropagation={(e) => dispatch("rowMenu", { record, event: e })}
-            aria-label={$i18n.t("views.dashboard.table-v2.row-menu", { defaultValue: "Row actions" })}
-            title={$i18n.t("views.dashboard.table-v2.row-menu", { defaultValue: "Row actions" })}
-          ><Icon name="more-horizontal" size="sm" /></button>
-        {/if}
+        <!-- #189 follow-up: shown on a READ-ONLY row too. The menu is where
+             "Show fields" is discoverable, and a borrowed source is exactly
+             where reading fields matters most. `buildRowMenuEntries` drops the
+             writing entries; hiding the whole button hid the reading ones. -->
+        <button
+          class="ppp-t2-rowbtn clickable-icon"
+          on:click|stopPropagation={(e) => dispatch("rowMenu", { record, event: e })}
+          aria-label={$i18n.t("views.dashboard.table-v2.row-menu", { defaultValue: "Row actions" })}
+          title={$i18n.t("views.dashboard.table-v2.row-menu", { defaultValue: "Row actions" })}
+        ><Icon name="more-horizontal" size="sm" /></button>
       </div>
     {:else}
       <EditableCell

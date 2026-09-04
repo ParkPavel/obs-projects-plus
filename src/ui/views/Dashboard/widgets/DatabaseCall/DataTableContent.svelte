@@ -136,7 +136,7 @@
     const record = e.detail.record;
     const primaryField = columns.find((c) => c.isPrimary)?.field.name ?? "name";
     const entries = buildRowMenuEntries({
-      record, project, fields, api, app: $app ?? undefined,
+      record, project, fields, api, readonly, app: $app ?? undefined,
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
       selectionEntry: selectionStore && widgetId
         ? {

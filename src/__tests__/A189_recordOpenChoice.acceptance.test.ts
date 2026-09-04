@@ -23,6 +23,7 @@ import {
   modeFromEvent,
   modeFromNewLeaf,
   openRecord,
+  type RecordOpenMode,
 } from "src/lib/record/openRecord";
 import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
 import type { ContextMenuItem } from "src/lib/contextMenu";
@@ -45,8 +46,10 @@ function spyApp() {
   return { app, calls };
 }
 
+type Mods = Partial<Record<"shiftKey" | "ctrlKey" | "metaKey" | "altKey", boolean>>;
+
 /** Only the modifier flags matter, and `modeFromEvent` reads nothing else. */
-function ev(mods: Partial<Record<"shiftKey" | "ctrlKey" | "metaKey" | "altKey", boolean>>) {
+function ev(mods: Mods) {
   return {
     shiftKey: false,
     ctrlKey: false,
@@ -82,13 +85,53 @@ describe("A189 (1) — a plain activation opens the note", () => {
   });
 });
 
+/**
+ * All sixteen states of the four modifier flags, with the mode each must give.
+ *
+ * Enumerated rather than computed: deriving the expectation from the same rule
+ * the implementation uses would assert that the code equals itself. Written out
+ * rather than sampled, because the first version of this file called five cases
+ * "every combination" and left meta+alt and ctrl+shift unmeasured — and the
+ * ordering that makes alt lose to ctrl exists precisely FOR a mixed case.
+ */
+const MODIFIER_TABLE: ReadonlyArray<readonly [string, Mods, RecordOpenMode]> = [
+  ["(none)", {}, "same"],
+  ["alt", { altKey: true }, "peek"],
+  ["ctrl", { ctrlKey: true }, "tab"],
+  ["ctrl+alt (AltGr)", { ctrlKey: true, altKey: true }, "tab"],
+  ["meta", { metaKey: true }, "tab"],
+  ["meta+alt", { metaKey: true, altKey: true }, "tab"],
+  ["ctrl+meta", { ctrlKey: true, metaKey: true }, "tab"],
+  ["ctrl+meta+alt", { ctrlKey: true, metaKey: true, altKey: true }, "tab"],
+  ["shift", { shiftKey: true }, "window"],
+  ["shift+alt", { shiftKey: true, altKey: true }, "window"],
+  ["shift+ctrl", { shiftKey: true, ctrlKey: true }, "window"],
+  ["shift+ctrl+alt", { shiftKey: true, ctrlKey: true, altKey: true }, "window"],
+  ["shift+meta", { shiftKey: true, metaKey: true }, "window"],
+  ["shift+meta+alt", { shiftKey: true, metaKey: true, altKey: true }, "window"],
+  ["shift+ctrl+meta", { shiftKey: true, ctrlKey: true, metaKey: true }, "window"],
+  [
+    "shift+ctrl+meta+alt",
+    { shiftKey: true, ctrlKey: true, metaKey: true, altKey: true },
+    "window",
+  ],
+];
+
 describe("A189 (2) — the peek is one modifier away, and the taken ones are untouched", () => {
-  it("every combination resolves to exactly one mode", () => {
-    expect(modeFromEvent(ev({}))).toBe("same");
-    expect(modeFromEvent(ev({ altKey: true }))).toBe("peek");
-    expect(modeFromEvent(ev({ shiftKey: true }))).toBe("window");
-    expect(modeFromEvent(ev({ ctrlKey: true }))).toBe("tab");
-    expect(modeFromEvent(ev({ metaKey: true }))).toBe("tab");
+  it("the table really is every combination — 2^4, all distinct", () => {
+    // Without this, a future edit can delete a row and the suite still reads
+    // as exhaustive. That is the defect this section was sent back for.
+    expect(MODIFIER_TABLE).toHaveLength(16);
+    const shapes = MODIFIER_TABLE.map(([, mods]) =>
+      ["shiftKey", "ctrlKey", "metaKey", "altKey"]
+        .map((k) => (mods[k as keyof Mods] === true ? "1" : "0"))
+        .join("")
+    );
+    expect(new Set(shapes).size).toBe(16);
+  });
+
+  it.each(MODIFIER_TABLE)("%s → %s", (_name, mods, expected) => {
+    expect(modeFromEvent(ev(mods))).toBe(expected);
   });
 
   it("alt actually reaches the panel and never the workspace", () => {
@@ -98,12 +141,12 @@ describe("A189 (2) — the peek is one modifier away, and the taken ones are unt
     expect(calls).toEqual([]);
   });
 
-  it("shift and ctrl outrank alt — AltGr reports ctrl+alt and must still mean tab", () => {
-    // The reason the alt branch is tested LAST in `modeFromEvent`. On Windows
-    // and on European layouts AltGr sets ctrlKey and altKey together; if alt
-    // were checked first, that keyboard would silently lose "open in a tab".
-    expect(modeFromEvent(ev({ ctrlKey: true, altKey: true }))).toBe("tab");
-    expect(modeFromEvent(ev({ shiftKey: true, altKey: true }))).toBe("window");
+  it("alt is the ONLY combination that peeks — it did not leak into the others", () => {
+    // The table above says what each combination gives; this says the peek is
+    // scarce. A branch placed one line too early would satisfy the first and
+    // fail here, because ctrl+alt and shift+alt would start peeking too.
+    const peeking = MODIFIER_TABLE.filter(([, mods]) => modeFromEvent(ev(mods)) === "peek");
+    expect(peeking.map(([name]) => name)).toEqual(["alt"]);
   });
 
   it("the alt modifier is read where the row is activated, not only where it is defined", () => {
@@ -129,14 +172,19 @@ describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () 
     { name: "name", type: "string", identifier: true, derived: false, repeated: false } as unknown as DataField,
   ];
 
-  function menu(app: App | undefined) {
+  function menu(app: App | undefined, readonly = false, deleted: string[] = []) {
     return buildRowMenuEntries({
       record,
       project: { id: "p1" } as ProjectDefinition,
       fields,
-      api: { addRecord: () => {}, deleteRecord: () => {} } as unknown as ViewApi,
+      api: {
+        addRecord: () => {},
+        deleteRecord: (id: string) => deleted.push(id),
+      } as unknown as ViewApi,
       app,
+      readonly,
       t: (_k, d) => d,
+      selectionEntry: { driving: false, onToggle: () => {} },
     });
   }
 
@@ -174,5 +222,102 @@ describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () 
     items(menu(app)).find((e) => e.title === "Open note")?.onClick();
     expect(calls).toEqual([["Clients/Acme.md", "Clients/Acme.md", false]]);
     expect(get(recordPeek)).toBeNull();
+  });
+});
+
+describe("A189 (4) — a READ-ONLY row keeps the reading entries and loses the writing ones", () => {
+  // The audit's P1. A read-only `database-call` table is the case the peek was
+  // written for — its rows come from a source the host frame never held — and
+  // it was the one case where the discoverable entrance did not exist, because
+  // the button that opens the menu was hidden wholesale.
+  const record: DataRecord = { id: "External/Row.md", values: { name: "Row" } } as DataRecord;
+  const fields: DataField[] = [
+    { name: "name", type: "string", identifier: true, derived: false, repeated: false } as unknown as DataField,
+  ];
+
+  function menu(readonly: boolean, deleted: string[] = []) {
+    return buildRowMenuEntries({
+      record,
+      project: { id: "p1" } as ProjectDefinition,
+      fields,
+      api: {
+        addRecord: () => {},
+        deleteRecord: (id: string) => deleted.push(id),
+      } as unknown as ViewApi,
+      app: spyApp().app,
+      readonly,
+      t: (_k, d) => d,
+      selectionEntry: { driving: false, onToggle: () => {} },
+    });
+  }
+
+  const titles = (readonly: boolean) =>
+    menu(readonly)
+      .filter((e): e is ContextMenuItem => !("separator" in e))
+      .map((e) => e.title);
+
+  it("the three reading entries survive", () => {
+    expect(titles(true)).toEqual(
+      expect.arrayContaining(["Open note", "Open in new tab", "Show fields"])
+    );
+  });
+
+  it("Delete and Duplicate are ABSENT, not merely disabled", () => {
+    // Greying them out would still tell the reader this row is deletable,
+    // which is the thing that is not true on a source they cannot write to.
+    expect(titles(true)).not.toContain("Delete note");
+    expect(titles(true)).not.toContain("Duplicate");
+    expect(titles(false)).toContain("Delete note");
+    expect(titles(false)).toContain("Duplicate");
+  });
+
+  it("no read-only entry can reach the delete API even if one were clicked", () => {
+    // The titles could be right while a handler survived behind one of them.
+    const deleted: string[] = [];
+    for (const entry of menu(true)) {
+      if (!("separator" in entry)) entry.onClick();
+    }
+    expect(deleted).toEqual([]);
+  });
+
+  it("the canvas filter stays — it writes to a store, never to the vault", () => {
+    // Kept deliberately: the Selection Bus is per-canvas in-memory view state,
+    // so filtering linked blocks by a row is a way of READING the canvas, and
+    // it is most useful on exactly the borrowed source a reader cannot edit.
+    expect(titles(true)).toContain("Filter linked blocks by this row");
+  });
+
+  it("the menu does not end on a separator with nothing under it", () => {
+    const entries = menu(true);
+    expect(entries[entries.length - 1]).not.toHaveProperty("separator");
+  });
+
+  it("the row shows the menu button when readonly — the entry is worthless unopenable", () => {
+    // The defect was here and not in the builder: `{#if !readonly}` around the
+    // ⋯ button meant a read-only row had no menu at all, so `alt` was the only
+    // way in — the hidden-feature outcome the user's decision rules out.
+    const row = require("fs").readFileSync(
+      require("path").join(__dirname, "..", "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte"),
+      "utf8"
+    ) as string;
+    expect(row).toMatch(/dispatch\("rowMenu", \{ record, event: e \}\)/);
+    expect(row).not.toMatch(/\{#if !readonly\}/);
+  });
+
+  it("the component hands the flag over instead of filtering the list itself", () => {
+    // One judgement about what is safe, in one place. If the component started
+    // filtering too, the two copies would drift and only one would be tested.
+    //
+    // Anchored to the argument LIST, not to the call plus anything after it: a
+    // lazy `[\s\S]*?` between the call and `readonly` passes on the very code
+    // this test exists to reject, because the component mentions `readonly`
+    // several more times further down the file. It did, and it passed, and the
+    // red-first run is the only reason that was caught.
+    const content = require("fs").readFileSync(
+      require("path").join(__dirname, "..", "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte"),
+      "utf8"
+    ) as string;
+    const args = /buildRowMenuEntries\(\{([^}]*)/.exec(content)?.[1] ?? "";
+    expect(args).toMatch(/\breadonly\b/);
   });
 });
