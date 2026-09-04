@@ -283,6 +283,13 @@
    */
   function runPrimaryAction() {
     if (readonly || sourceReadOnly || !project) return;
+    // A broken named source renders a notice INSTEAD of the table, so the
+    // inline row this would open does not exist. The frame behind it is the
+    // whole project, so the row-count test below would happily raise a signal
+    // nothing is listening to — the silent-nothing defect #169 closed for a
+    // collapsed widget, returning through a different door. The header does not
+    // offer the action here either; this is the second lock.
+    if (namedSource.kind === "broken") return;
     if (activeTab && activeTab.viewType !== "table") return;
     if (effectiveFrame.records.length > 0) newRowSignal += 1;
     else handleAddFirstRecord();
