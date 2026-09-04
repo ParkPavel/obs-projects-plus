@@ -90,10 +90,39 @@
    * source", and swapping a folder for a tag has not made it a different one.
    */
   function setPrimarySource(next: DataSource) {
-    const previous = project.dataSource as { id?: string } | undefined;
+    const previous = project.dataSource as { id?: string; name?: string } | undefined;
     project = {
       ...project,
-      dataSource: { ...next, id: previous?.id ?? uuidv4() } as DataSource,
+      dataSource: {
+        ...next,
+        id: previous?.id ?? uuidv4(),
+        ...(previous?.name ? { name: previous.name } : {}),
+      } as DataSource,
+    };
+  }
+
+  /**
+   * Edit the primary source's CONFIG without losing what identifies it.
+   *
+   * Every one of these used to rebuild `{ kind, config }` from scratch, so
+   * typing a path or toggling "include subfolders" silently dropped the `id`
+   * — and with it the ability of any block to point at this source. The vault
+   * run on 2026-09-04 caught it: a project created and configured through this
+   * modal reached `data.json` with no id at all, and its picker was empty.
+   *
+   * Minting an id when there is none is deliberate: a project stored before
+   * #170 becomes addressable the first time its source is touched, without a
+   * migration that rewrites vaults nobody asked us to touch.
+   */
+  function patchPrimaryConfig(config: Record<string, unknown>) {
+    const current = project.dataSource as DataSource & { id?: string };
+    project = {
+      ...project,
+      dataSource: {
+        ...current,
+        id: current.id ?? uuidv4(),
+        config: { ...current.config, ...config },
+      } as DataSource,
     };
   }
 
@@ -148,9 +177,10 @@
   }));
 
   function nqSetConfig(config: NativeQueryConfig) {
+    const current = project.dataSource as DataSource & { id?: string };
     project = {
       ...project,
-      dataSource: { kind: "native-query", config },
+      dataSource: { ...current, kind: "native-query", id: current.id ?? uuidv4(), config } as DataSource,
     };
   }
 
@@ -543,15 +573,7 @@
           files={getFoldersInFolder($app.vault.getRoot())}
           value={project.dataSource.config.path}
           on:change={({ detail: path }) => {
-            if (project.dataSource.kind === "folder") {
-              project = {
-                ...project,
-                dataSource: {
-                  kind: project.dataSource.kind,
-                  config: { ...project.dataSource.config, path },
-                },
-              };
-            }
+            if (project.dataSource.kind === "folder") patchPrimaryConfig({ path });
           }}
           getLabel={(file) => file.path}
           placeholder={"/"}
@@ -580,15 +602,7 @@
         <Switch
           checked={project.dataSource.config.recursive}
           on:check={({ detail: recursive }) => {
-            if (project.dataSource.kind === "folder") {
-              project = {
-                ...project,
-                dataSource: {
-                  kind: project.dataSource.kind,
-                  config: { ...project.dataSource.config, recursive },
-                },
-              };
-            }
+            if (project.dataSource.kind === "folder") patchPrimaryConfig({ recursive });
           }}
         />
       </SettingItem>
@@ -609,13 +623,7 @@
               const tag = rawTag.trim()
                 ? (rawTag.trim().startsWith("#") ? rawTag.trim() : "#" + rawTag.trim())
                 : "";
-              project = {
-                ...project,
-                dataSource: {
-                  kind: project.dataSource.kind,
-                  config: { ...project.dataSource.config, tag },
-                },
-              };
+              patchPrimaryConfig({ tag });
             }
           }}
           width="100%"
@@ -630,13 +638,7 @@
           checked={project.dataSource.config.hierarchy}
           on:check={({ detail: hierarchy }) => {
             if (project.dataSource.kind === "tag") {
-              project = {
-                ...project,
-                dataSource: {
-                  kind: project.dataSource.kind,
-                  config: { ...project.dataSource.config, hierarchy },
-                },
-              };
+              patchPrimaryConfig({ hierarchy });
             }
           }}
         />
@@ -655,13 +657,7 @@
             value={project.dataSource.config.query ?? ""}
             on:input={({ detail: query }) => {
               if (project.dataSource.kind === "dataview") {
-                project = {
-                  ...project,
-                  dataSource: {
-                    kind: project.dataSource.kind,
-                    config: { ...project.dataSource.config, query },
-                  },
-                };
+                patchPrimaryConfig({ query });
                 validateDataviewQuery(query);
               }
             }}
