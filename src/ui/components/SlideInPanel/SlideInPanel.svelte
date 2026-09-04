@@ -2,19 +2,27 @@
   /**
    * Dashboard V2 — DG-3.
    *
-   * Generic slide-in panel anchored to the right edge of the viewport.
-   * Replaces the Modal pattern for field/filter/conditional-format
-   * settings. Caller owns open state and slot content; this component
-   * only handles transform animation, backdrop, and Esc-to-close.
+   * Generic slide-in panel anchored to the right edge of **the view**. Its one
+   * consumer today is `RecordCardView`; the header used to advertise it as the
+   * replacement for field/filter/conditional-format modals, which never
+   * happened. Caller owns open state and slot content; this component only
+   * handles transform animation, backdrop, and Esc-to-close.
+   *
+   * #190 — it was anchored to the WINDOW (`position: fixed`), which put it over
+   * the plugin's own header, over the neighbouring leaf in a split, and over
+   * Obsidian's chrome. It is now absolute inside the view's overlay layer, into
+   * which both of its nodes portal themselves. Nothing about the behaviour
+   * changed: modality, Escape, click-outside, timings are as they were.
    *
    * No bounce/spring — gentle 200ms ease-out per DG-8.
    */
   import { createEventDispatcher } from "svelte";
   import { focusTrap } from "src/lib/a11y/focusTrap";
+  import { portalToOverlay } from "src/ui/app/overlayPortal";
 
   export let open: boolean = false;
   export let title: string = "";
-  /** Panel width in rem; honor device limits via max-width: 100vw. */
+  /** Panel width in rem; the layer caps it via max-inline-size: 100%. */
   export let width: string = "22rem";
   /** Hide the dimmed backdrop when stacking inside another panel. */
   export let backdrop: boolean = true;
@@ -41,6 +49,7 @@
   <div
     class="ppp-slide-in-backdrop"
     class:ppp-slide-in-backdrop--open={open}
+    use:portalToOverlay
     on:click={close}
     on:keydown={(e) => e.key === "Enter" && close()}
     role="button"
@@ -49,11 +58,15 @@
   ></div>
 {/if}
 
+<!-- `use:portalToOverlay` is declared BEFORE `use:focusTrap` deliberately.
+     Today the panel mounts closed and the trap is inactive, so the order is
+     inert; the moment anyone wraps this in `{#if open}`, reparenting a subtree
+     that holds focus drops the focus in Chrome. Ordering costs nothing. -->
 <aside
   class="ppp-slide-in-panel"
   class:ppp-slide-in-panel--open={open}
   style:width
-  style:max-width="100vw"
+  use:portalToOverlay
   use:focusTrap={{ active: open }}
   role="dialog"
   aria-modal="true"
@@ -78,14 +91,17 @@
 </aside>
 
 <style>
+  /* #190: `absolute`, so `inset: 0` means the view's overlay layer rather than
+     the window — which is what used to dim the neighbouring leaf and Obsidian's
+     own chrome. The dimming itself, its opacity and its timing are unchanged. */
   .ppp-slide-in-backdrop {
-    position: fixed;
+    position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.32);
     opacity: 0;
     pointer-events: none;
     transition: opacity 200ms cubic-bezier(0, 0, 0.2, 1);
-    z-index: 40;
+    z-index: var(--ppp-z-base);
   }
 
   .ppp-slide-in-backdrop--open {
@@ -93,11 +109,17 @@
     pointer-events: auto;
   }
 
+  /* #190: absolute inside the overlay layer. `max-inline-size: 100%` replaces
+     the inline `max-width: 100vw` — the cap belongs to the box that actually
+     holds the panel, not to the window. There is deliberately no minimum:
+     #182 ended by removing one, and re-introducing a floor here re-introduces
+     that bug on a narrow phone. */
   .ppp-slide-in-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    max-inline-size: 100%;
+    pointer-events: auto;
     background: var(--ppp-db-panel-bg, var(--background-primary));
     border-left: 0.0625rem solid var(--ppp-db-panel-border, var(--background-modifier-border));
     box-shadow: var(--ppp-db-panel-shadow, -0.125rem 0 0.75rem rgba(0, 0, 0, 0.08));
@@ -105,7 +127,7 @@
     transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
-    z-index: 50;
+    z-index: var(--ppp-z-raised);
   }
 
   .ppp-slide-in-panel--open {
