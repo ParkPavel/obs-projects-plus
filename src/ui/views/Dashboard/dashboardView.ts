@@ -8,7 +8,7 @@ import {
 
 import DashboardCanvasSvelte from "./DashboardCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
-import { isLegacyTableConfig, migrateTableConfig, migrateDashboardTransforms } from "./migration";
+import { isLegacyTableConfig, migrateTableConfig, migrateDashboardTransforms, dropTemplateQuickActions } from "./migration";
 import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
@@ -102,6 +102,18 @@ export class DashboardView extends ProjectView {
         migrated = true;
         props.saveConfig(config);
       }
+    }
+
+    // #191: a quick action pointing at the removed dashboard-template mechanism
+    // is dropped on the way in, so the button is gone from the first render
+    // rather than lingering as something that does nothing. The save below is
+    // the existing one — this is a fourth participant in a chain, not new
+    // machinery, and the #145 restore point above already covers it.
+    const withoutTemplates = dropTemplateQuickActions(config);
+    if (withoutTemplates.migrated) {
+      config = withoutTemplates.config;
+      migrated = true;
+      props.saveConfig(config);
     }
 
     // #145 — the restore point. Written from the in-memory pre-migration config

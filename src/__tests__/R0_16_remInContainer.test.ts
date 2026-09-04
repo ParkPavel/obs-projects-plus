@@ -96,7 +96,6 @@ const CONTAINER_QUERY = /@container\b/;
  * into its own component — which is work, which is what a ratchet is for.
  */
 const WINDOW_ANCHORED = [
-  "ui/views/Dashboard/TemplateConfirmDialog.svelte",
   "ui/components/FloatingPopup/FloatingPopup.svelte",
 ] as const;
 
@@ -115,13 +114,17 @@ const WINDOW_ANCHORED = [
  *     the whole time. Re-measured with the reader fixed rather than
  *     incremented, for the same reason #165 re-measured R0.3: a ceiling that
  *     is not the measurement cannot see what it never read.
+ *   804 — #191 deleted the dashboard-template mechanism, and with it three
+ *     `rem` in `WidgetToolbar`'s template rules. Re-measured, not decremented:
+ *     `TemplateConfirmDialog` went too but carried none of this count, being
+ *     window-anchored and therefore never scanned.
  *   807 — unchanged when the counter went whole-file (#167, second Codex
  *     audit, 2026-09-02). The shorthand and hoisted-literal routes that audit
  *     named were real routes with nothing travelling on them today, so closing
  *     them moved no number. Recorded anyway: a re-measurement that returns the
  *     same value is evidence, and an unlogged one looks like nothing happened.
  */
-const REM_IN_CONTAINER_BUDGET = 807;
+const REM_IN_CONTAINER_BUDGET = 804;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;
@@ -429,19 +432,29 @@ describe("R0.16 — rem inside a container (#167)", () => {
     // And it stays short. A list that grows is the shape this failure takes.
     expect(WINDOW_ANCHORED.length).toBeLessThanOrEqual(2);
 
-    // `TemplateConfirmDialog` is inside the prefix, so the allowlist is what
-    // keeps it out. If it ever stopped being window-anchored, this assertion
-    // is where the exemption would have to be re-argued.
-    const dialog = "ui/views/Dashboard/TemplateConfirmDialog.svelte";
-    expect(WINDOW_ANCHORED).toContain(dialog);
-    expect(dialog.startsWith(CONTAINER_SCOPE_PREFIX)).toBe(true);
-    expect(containerScopedComponents().map(({ file }) => file)).not.toContain(
-      dialog
+    // #191 — a WEAKENING, named rather than slipped through.
+    //
+    // This block used to pin `TemplateConfirmDialog`: a file inside the prefix
+    // that the allowlist was what kept out, so the list demonstrably did work.
+    // #191 deleted the dialog with the dashboard-template mechanism, and the
+    // one entry left — `FloatingPopup` — is outside the prefix by both clauses,
+    // so nothing under the prefix is exempt today and the list no longer proves
+    // itself against the tree.
+    //
+    // A replacement was looked for and rejected rather than invented: the only
+    // remaining files under the prefix carrying `position: fixed` are
+    // `BlockFilterBar` and `DataTableContent`, and this file's own docstring
+    // refuses to exempt the first. Parking something here to keep the assertion
+    // alive is exactly the abuse the entry above guards against.
+    //
+    // So the claim is narrowed to what is true: no file inside the prefix is
+    // exempt. The synthetic checks above still prove the mechanism in both
+    // directions, and if an exemption is ever needed again this is where it has
+    // to be argued.
+    const exemptInsideScope = (WINDOW_ANCHORED as readonly string[]).filter((f) =>
+      f.startsWith(CONTAINER_SCOPE_PREFIX)
     );
-    // …and it really does carry the units this exempts, so the entry is not free.
-    expect(
-      remOccurrences(shippedText(readText(join(SRC_ROOT, dialog))))
-    ).toBeGreaterThan(0);
+    expect(exemptInsideScope).toEqual([]);
   });
 
   it("the container-derived scale is read somewhere inside the scope", () => {

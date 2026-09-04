@@ -80,12 +80,6 @@ function createConfig() {
     compactMode: false,
     quickActions: [
       {
-        id: "apply-overview",
-        kind: "apply-template",
-        label: "Apply overview",
-        templateId: "overview-finance",
-      },
-      {
         id: "toggle-formula",
         kind: "toggle-formula-bar",
         label: "Toggle formula",
@@ -164,16 +158,7 @@ function getQuickAction(target: HTMLElement, label: string) {
   ) ?? null;
 }
 
-function getConfirmAction(target: HTMLElement, label: string) {
-  return Array.from(target.querySelectorAll(".ppp-template-confirm-actions button")).find(
-    (button) => button.textContent?.includes(label)
-  ) ?? null;
-}
 
-function onLatestWidgets(onConfigChange: jest.Mock) {
-  const latestConfig = onConfigChange.mock.calls.at(-1)?.[0] as { widgets?: unknown[] } | undefined;
-  return latestConfig?.widgets ?? [];
-}
 
 describe("DatabaseViewCanvas", () => {
   beforeEach(() => {
@@ -181,62 +166,22 @@ describe("DatabaseViewCanvas", () => {
     isMobile.set(false);
   });
 
-  test("asks confirmation before replacing existing widgets and keeps layout on cancel", async () => {
-    const view = mountCanvas();
+  test("#191 a stored apply-template action does not reach the screen", () => {
+    // The only test that proves the button is gone from the RENDER rather than
+    // from an object. A vault carries this exact shape today: migrateTableConfig
+    // wrote it into every dashboard it migrated before #191.
+    const view = mountCanvas({
+      quickActions: [
+        { id: "qa-overview", kind: "apply-template", label: "Overview Preset", templateId: "overview-finance" },
+        { id: "toggle-formula", kind: "toggle-formula-bar", label: "Toggle formula" },
+      ],
+    });
 
     try {
-      expect(view.target.textContent).toContain("Existing widget");
-
-      click(getQuickAction(view.target, "Apply overview"));
-      await flush();
-
-      expect(view.target.querySelector('[role="dialog"]')).not.toBeNull();
-      expect(view.target.textContent).toContain("Replace current layout?");
-
-      click(getConfirmAction(view.target, "Cancel"));
-      await flush();
-
-      expect(view.target.querySelector('[role="dialog"]')).toBeNull();
-      expect(view.target.textContent).toContain("Existing widget");
-      expect(view.target.textContent).not.toContain("Finance KPI");
-    } finally {
-      view.destroy();
-    }
-  });
-
-  test("replaces widgets after confirmation", async () => {
-    const view = mountCanvas();
-
-    try {
-      click(getQuickAction(view.target, "Apply overview"));
-      await flush();
-
-      click(getConfirmAction(view.target, "Apply template"));
-      await flush();
-
-      expect(view.target.textContent).not.toContain("Existing widget");
-      expect(view.target.textContent).toContain("Finance KPI");
-      expect(onLatestWidgets(view.onConfigChange)).toHaveLength(4);
-      expect((onLatestWidgets(view.onConfigChange) as Array<{ title?: string }>).map((widget) => widget.title)).toEqual([
-        "Finance KPI",
-        "Summary",
-        "By Category",
-        "Journal",
-      ]);
-    } finally {
-      view.destroy();
-    }
-  });
-
-  test("shows replace confirmation for toolbar template apply path", async () => {
-    const view = mountCanvas({ showWidgetToolbar: true });
-
-    try {
-      click(view.target.querySelector(".widget-toolbar-mock-apply"));
-      await flush();
-
-      expect(view.target.querySelector('[role="dialog"]')).not.toBeNull();
-      expect(view.target.textContent).toContain("Replace current layout?");
+      const actions = view.target.querySelectorAll(".ppp-quick-action");
+      expect(actions).toHaveLength(1);
+      expect(actions[0]?.textContent?.trim()).toBe("Toggle formula");
+      expect(view.target.textContent).not.toContain("Overview Preset");
     } finally {
       view.destroy();
     }

@@ -820,35 +820,13 @@
                     "formula-builder": "Formulas",
                     "schema": "Schema",
                     "schema-tip": "Manage project fields — types, relations, rollups",
-                    "template-replace-title": "Replace current layout?",
-                    "template-replace-confirm": "Applying a template will replace current widgets. Continue?",
-                    "template-replace-cancel": "Cancel",
-                    "template-replace-apply": "Apply template",
                     "filter-bridge-global": "Global filter: {{count}} condition(s)",
                     "filter-bridge-local": "Local: {{field}} = {{value}}",
                     "filter-bridge-clear": "Clear local filter",
                     "filter-bridge-promote": "Save as global filter",
                     "empty-title": "Empty canvas",
-                    "empty-hint": "Start with a data block, or pick a ready-made template",
+                    "empty-hint": "Start with a data block",
                     "empty-add-block": "Add data block"
-                },
-                "templates": {
-                    "database-v2-starter": "Database V2 starter",
-                    "database-v2-starter-desc": "KPI stats + a multi-view database block (Table / Board / Calendar / Gallery)",
-                    "overview-finance": "Finance overview",
-                    "overview-finance-desc": "KPI, totals strip, category chart and a journal table",
-                    "dashboard": "Dashboard",
-                    "dashboard-desc": "Key metrics + overview chart + data table",
-                    "analytics": "Analytics",
-                    "analytics-desc": "Distribution and trend charts with summary metrics",
-                    "kanban-plus": "Kanban+",
-                    "kanban-plus-desc": "Task table + checklist + status donut",
-                    "fitness-workout": "Fitness — workout log",
-                    "fitness-workout-desc": "Nested sets[] unnested into volume stats and weight progression",
-                    "finance-accounting": "Finance — accounting",
-                    "finance-accounting-desc": "Gross / tax / net with FX rates and credit line tracking",
-                    "crm-clients": "CRM — clients",
-                    "crm-clients-desc": "Client roster, stage filter tabs and conversion funnel"
                 },
                 "cover-banner-config": {
                     "src": "Image source",
@@ -945,7 +923,6 @@
                     "not-configured": "Widget type \"{{type}}\" — not configured",
                     "add": "Add Widget",
                     "add-aria": "Add widget",
-                    "templates": "Templates",
                     "lock": "Lock widget position",
                     "menu": "Widget menu",
                     "menu-configure": "Configure widget…",
@@ -960,7 +937,6 @@
                 },
                 "quick": {
                     "group": "Quick actions",
-                    "overview": "Overview Preset",
                     "formula": "Formula Builder"
                 },
                 "types": {

@@ -778,10 +778,6 @@
                     "formula-builder": "公式",
                     "schema": "模式",
                     "schema-tip": "管理项目字段 — 类型、关系、汇总",
-                    "template-replace-title": "替换当前布局？",
-                    "template-replace-confirm": "应用模板将替换当前组件。是否继续？",
-                    "template-replace-cancel": "取消",
-                    "template-replace-apply": "应用模板",
                     "filter-bridge-global": "全局筛选器：{{count}} 个条件",
                     "filter-bridge-local": "本地：{{field}} = {{value}}",
                     "filter-bridge-clear": "清除本地筛选器",
@@ -808,12 +804,10 @@
                     "remove": "删除组件",
                     "not-configured": "组件类型 \"{{type}}\" — 未配置",
                     "add": "添加组件",
-                    "add-aria": "添加组件",
-                    "templates": "模板"
+                    "add-aria": "添加组件"
                 },
                 "quick": {
                     "group": "快速操作",
-                    "overview": "概览预设",
                     "formula": "公式构建器"
                 },
                 "types": {
@@ -1117,24 +1111,6 @@
                     "board": "看板视图",
                     "calendar": "日历视图",
                     "gallery": "画廊视图"
-                },
-                "templates": {
-                    "database-v2-starter": "数据库 V2 — 起步",
-                    "database-v2-starter-desc": "KPI 卡片 + 多视图数据库块（表格 / 看板 / 日历 / 画廊）",
-                    "overview-finance": "财务概览",
-                    "overview-finance-desc": "快速财务概览：KPI、汇总、图表和表格",
-                    "dashboard": "仪表盘",
-                    "dashboard-desc": "统计概览 + 图表 + 数据表",
-                    "analytics": "分析",
-                    "analytics-desc": "多图表数据分析",
-                    "kanban-plus": "Kanban+",
-                    "kanban-plus-desc": "数据表 + 清单 + 进度追踪",
-                    "fitness-workout": "健身 — 训练日志",
-                    "fitness-workout-desc": "嵌套 sets[] 的训练笔记：组数、重量、休息时间。使用 Unnest 管道 + 训练量统计。",
-                    "finance-accounting": "财务 — 账务",
-                    "finance-accounting-desc": "多币种仪表盘：毛利、税额、净额、汇率与信贷额度追踪。",
-                    "crm-clients": "CRM — 客户",
-                    "crm-clients-desc": "客户名册，带会话历史、按阶段筛选标签和转化漏斗。"
                 }
             }
         },
