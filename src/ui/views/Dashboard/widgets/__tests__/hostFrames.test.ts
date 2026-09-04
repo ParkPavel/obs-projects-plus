@@ -216,3 +216,43 @@ describe("#184 — sourceId reaches every widget type, projectId does not", () =
     expect(chart.dbCall.isExternal).toBe(false);
   });
 });
+
+describe("#184 — a block whose source is gone offers no action into nothing", () => {
+  /**
+   * Found by the vault run on 2026-09-04, by looking at the screen. Neither the
+   * four gates nor two adversarial reviews caught it, and the reason is worth
+   * keeping: every part behaved correctly on its own.
+   *
+   * A broken named source renders a NOTICE instead of the table, so the inline
+   * "+ New" row does not exist. But the frame behind that notice is the whole
+   * project — `enrichedFrame` falls back to it when the resolution carries no
+   * frame — so the block's own "are there rows?" test passed, raised the signal,
+   * and nothing was listening. That is the silent-nothing defect #169 closed for
+   * a collapsed widget, returning through a different door.
+   *
+   * This asserts the condition the host now gates on. The full gate lives in
+   * `WidgetHost` and the second lock in `DatabaseCallBlock`; what is checkable
+   * here is the fact that made the defect possible.
+   */
+  it("still hands the block a full frame behind the notice", () => {
+    const out = computeHostFrames({
+      widget: {
+        id: "w", type: "data-table", title: "T",
+        layout: { x: 0, y: 0, w: 4, h: 4 }, config: {},
+        sourceConfig: { projectId: "", sourceId: "src-deleted" },
+      } as unknown as WidgetDefinition,
+      frame: frame(SAMPLE),
+      fields: frame(SAMPLE).fields,
+      pipeline: { steps: [] } as unknown as TransformPipeline,
+      rightFrames: new Map(),
+      sourceStates: new Map(),
+      parts: [],
+      sources: [{ kind: "folder", id: "s1", config: { path: "X", recursive: false } }] as never[],
+    });
+
+    expect(out.namedSource.kind).toBe("broken");
+    // The frame is NOT empty — which is exactly why a row-count test could not
+    // be trusted to decide whether the table is on screen.
+    expect(out.enrichedFrame.records).toHaveLength(3);
+  });
+});

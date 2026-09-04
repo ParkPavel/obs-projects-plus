@@ -77,9 +77,9 @@
     namedSource,
   });
 
-  // #169: the block's own action, and NOT run here. Hidden while the block
-  // reads a linked project, where a write would land in the wrong vault (#139).
-  $: primaryAction = readonly || dbCall.isExternal ? null : primaryActionFor(widget.type);
+  // #169: the block's own action, and NOT run here. Hidden for a linked project
+  // (#139: the write lands elsewhere) and for a BROKEN source (nothing to open).
+  $: primaryAction = readonly || dbCall.isExternal || namedSource.kind === "broken" ? null : primaryActionFor(widget.type);
 
   function handlePrimaryAction() {
     // Expand FIRST: a collapsed widget renders its header but not the content
