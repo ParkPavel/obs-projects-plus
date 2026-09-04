@@ -50,6 +50,21 @@ export type RecordOpenMode = "peek" | "same" | "tab" | "window";
  *
  * There is no setting. A third way to configure a two-way choice is a menu that
  * asks the user to do the deciding twice.
+ *
+ * ## Scope: the dashboard table, and that is the decision
+ *
+ * Both entrances exist on the dashboard's data table only. Gallery, Board,
+ * Calendar and the note editor open the note and offer no peek: they do not
+ * forward the raw event, so `alt` does nothing there, and they have no row menu
+ * to carry the entry.
+ *
+ * The adversarial review of 2026-09-04 was right that naming this asymmetry is
+ * not the same as deciding it, and the user decided on 2026-09-05: **the peek
+ * is a capability of the dashboard table, not a property of opening a record.**
+ * So `PLAIN_MODE` above is the contract for every surface — a click opens the
+ * note, everywhere — while `"peek"` is a mode those surfaces simply never ask
+ * for. Spreading it is a separate ticket with its own architect pass, because
+ * each surface has a different activation model.
  */
 export const PLAIN_MODE: RecordOpenMode = "same";
 

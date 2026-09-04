@@ -165,6 +165,15 @@ describe("R0.17 — the tree", () => {
  * point — if a refactor deletes an entrance, this list has to be edited on
  * purpose, the way `WIKILINK_SITES` above works.
  */
+/**
+ * #189 + the decision of 2026-09-05: the peek belongs to the DASHBOARD TABLE.
+ *
+ * Both entrances below sit on that one surface. Gallery, Board, Calendar and
+ * the note editor open the note and offer no peek — they do not forward the raw
+ * event, so `alt` does nothing there, and they have no row menu to carry the
+ * entry. The adversarial review was right that naming that asymmetry is not
+ * deciding it; the user decided, and this is where the decision is executable.
+ */
 const PEEK_ENTRANCES: ReadonlyArray<readonly [string, string, RegExp]> = [
   [CONTRACT, "the alt modifier, for someone who knows", /if \(e\.altKey\) return "peek";/],
   [
@@ -173,6 +182,20 @@ const PEEK_ENTRANCES: ReadonlyArray<readonly [string, string, RegExp]> = [
     /openRecord\(\{ id: record\.id, record, fields \}, "peek"/,
   ],
 ];
+
+describe("R0.17 — #189: the peek is the dashboard table's, by decision", () => {
+  it("has exactly two entrances, and both are on that one surface", () => {
+    // Spreading the peek to Gallery, Board or Calendar is a separate ticket
+    // with its own architect pass — each has a different activation model. A
+    // third entry appearing here without one would mean it was spread quietly.
+    expect(PEEK_ENTRANCES).toHaveLength(2);
+    const surfaces = PEEK_ENTRANCES.map(([file]) => file);
+    expect(surfaces).toContain("ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts");
+    for (const file of surfaces) {
+      expect({ file, elsewhere: /Gallery|Board|Calendar/.test(file) }).toEqual({ file, elsewhere: false });
+    }
+  });
+});
 
 describe("R0.17 — #189: the peek lost the default and kept both entrances", () => {
   const contract = () => fs.readFileSync(path.join(SRC, CONTRACT), "utf8");
