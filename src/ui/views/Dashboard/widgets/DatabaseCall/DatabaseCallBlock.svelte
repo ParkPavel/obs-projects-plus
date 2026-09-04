@@ -511,6 +511,19 @@
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label="Filtered by canvas selection">
         {$i18n.t("views.dashboard.database-call.filter-label.canvas", { defaultValue: "Filtered by canvas selection" })}
       </span>
+    {:else if filterLabel === "broken" && !linkedSelection?.relationField}
+      <!--
+        #188. "Relation '' is broken (missing-relation)" is what this said when
+        no field had been chosen yet — an empty name, a technical reason, and
+        the word "broken" for something that was never set up. Not configured
+        and configured-then-broken are different situations and now read as
+        different sentences.
+      -->
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation not configured">
+        {$i18n.t("views.dashboard.database-call.filter-label.relation-unset", {
+          defaultValue: "No field chosen to link by — this block shows every record",
+        })}
+      </span>
     {:else if filterLabel === "broken"}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation broken">
         {selectionActive
