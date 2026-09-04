@@ -17,6 +17,21 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
+- **#190 is IMPLEMENTED on `feat/190-peek-anchoring` (base `b31e4c6`), NOT merged and NOT committed
+  by the implementer.** The record peek panel stops being anchored to the window:
+  `.projects-container` becomes a two-row grid, a new `.ppp-app-overlay` layer shares row 2 with
+  `.projects-main`, and `SlideInPanel`'s two nodes portal themselves into it
+  (`src/ui/app/overlayPortal.ts`, target resolved from the node so two leaves cannot cross). No
+  length expressing the header's height is written in CSS or TypeScript — the top edge is a grid
+  row's, and the acceptance suite proves it by rendering twice at two header heights.
+  Four gates green in the agent worktree: `tsc` 0, jest **208 suites / 3356 tests** (207/3343 plus
+  A190's 13), lint 0 errors / 110 warnings, svelte-check 0/0. `RAW_Z_BUDGET` **71 → 69,
+  re-measured** by the plan's procedure (set to 0, read `Received: 69`), not by subtracting the two
+  raw values removed. `REM_IN_CONTAINER_BUDGET` 804 and `PX_BUDGET` 143 unmoved — no `@container`
+  was written, which is the only way this ticket could have moved the first. Not run in the vault:
+  the split-pane case and the Obsidian-chrome case are exactly what the probe cannot see.
+  As on #166 step 2, `npm test` in a worktree needs
+  `--testMatch "**/src/**/*.(test|spec).(ts|js)"`.
 - **#178 is MERGED into `main` (2026-09-02, merge `448847d`).** The three type-only contract modules (`lib/engine/contracts.ts`,
   `lib/relations/contracts.ts`, `lib/colors/contracts.ts` — 515 lines, zero live consumers) are
   deleted; their text is preserved verbatim in
@@ -432,7 +447,7 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
 - **Canonical baseline — `main`: 207 suites / 3343 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (108 pre-existing tsdoc warnings).** Measured 2026-09-04 on `main` after #188.
+  lint 0 errors (108 pre-existing tsdoc warnings).** Measured 2026-09-04 on `main` after #190.
   **The baseline FELL here, and that is stated rather than hidden** (precedent #160/#183): `widgetTemplates.test.ts`
   tested a subject that no longer exists, and three replace-confirmation tests went with the mechanism.
   Seven tests were added in their place. One lint warning also went, with the `eslint-disable` comment

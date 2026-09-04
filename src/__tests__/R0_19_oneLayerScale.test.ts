@@ -34,10 +34,19 @@ import { collectStyled, SRC_ROOT } from "./support/cssScan";
 /**
  * Raw `z-index` values still in the tree.
  *
- * MEASURED on 2026-09-03, not chosen. It may only fall, and it falls by moving
- * a value onto the `--ppp-z-*` scale — never by editing this number.
+ * MEASURED, not chosen. It may only fall, and it falls by moving a value onto
+ * the `--ppp-z-*` scale — never by editing this number.
+ *
+ * Bumps log:
+ *   71 — initial measurement, #169, 2026-09-03.
+ *   69 — #190 put `.ppp-slide-in-panel` (was `50`) and `.ppp-slide-in-backdrop`
+ *     (was `40`) on the scale, and added `--ppp-z-base` / `--ppp-z-overlay`
+ *     without adding a raw value. RE-MEASURED, not decremented by two: #165
+ *     merged between the two dates and 71 - 2 would have carried whatever it
+ *     did to the count into this constant disguised as a fact. The procedure
+ *     was to set the budget to 0, run this suite and read `Received: 69`.
  */
-const RAW_Z_BUDGET = 71;
+const RAW_Z_BUDGET = 69;
 
 const RAW_Z = /z-index:\s*-?\d+\s*;/g;
 const TOKEN_WITH_FALLBACK = /z-index:\s*var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)\)/gi;
