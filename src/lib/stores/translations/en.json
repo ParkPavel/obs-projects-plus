@@ -878,6 +878,8 @@
                         "link-to": "Link to block",
                         "standalone": "No link — show all records",
                         "link-hint": "Without a link the block shows all records. With a link it shows only records related to the chosen block.",
+                        "relation-missing-hint": "No Relation field points at the linked block's project - add one to filter by it.",
+                        "relation-open-schema": "Open schema editor",
                         "relation-field": "Filter by field",
                         "select-field": "Select a field"
                     },
@@ -896,6 +898,7 @@
                     "source-unavailable-hint": "The project this block reads was not found: {{id}}",
                     "source-error": "Could not load the linked project",
                     "filter-label": {
+                        "relation-unset": "No field chosen to link by - this block shows every record",
                         "relation-named": "Showing records where {{field}} is {{value}}",
                         "relation-idle": "Linked through {{field}} — select a row to narrow this block",
                         "broken-v2": "Relation '{{field}}' is broken ({{reason}}) — this block is filtered by the plain selection instead"

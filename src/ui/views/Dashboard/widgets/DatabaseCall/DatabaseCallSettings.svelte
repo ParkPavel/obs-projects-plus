@@ -7,6 +7,7 @@
    * header cog button; rendered inline (not modal) per invariant §10.
    */
   import { createEventDispatcher } from "svelte";
+  import { emitCommand } from "src/lib/stores/commandBus";
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
   import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
@@ -160,10 +161,22 @@
         </select>
       </label>
       {#if showRelationHint}
+        <!--
+          #188. The message was correct and the user still read the screen as
+          broken, so the fix is reach rather than wording: it now ends where the
+          work is done instead of naming a place the reader has to go find. The
+          button goes through the same command bus the palette uses, so there is
+          one way to open the schema editor and not two.
+        -->
         <span class="ppp-dbc-settings__hint ppp-dbc-settings__hint--warn">
           {$i18n.t("views.dashboard.database-call.settings.relation-missing-hint", {
-            defaultValue: "No Relation field points at the linked block's project. Add a Relation field in the schema editor first.",
+            defaultValue: "No Relation field points at the linked block's project — add one to filter by it.",
           })}
+          <button class="ppp-dbc-settings__hint-action" on:click={() => emitCommand("open-schema")}>
+            {$i18n.t("views.dashboard.database-call.settings.relation-open-schema", {
+              defaultValue: "Open schema editor",
+            })}
+          </button>
         </span>
       {/if}
     </div>
@@ -172,6 +185,19 @@
 </WidgetConfigShell>
 
 <style>
+  .ppp-dbc-settings__hint-action {
+    /* `em`, not `rem`: the hint sizes with the panel it lives in, and this
+       component renders inside a widget (R0.16). */
+    margin-left: 0.4em;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-accent);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
   .ppp-dbc-settings__field {
     display: flex;
     flex-direction: column;
