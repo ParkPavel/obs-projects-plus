@@ -49,14 +49,12 @@ export function migrateTableConfig(
     table: tableConfig,
     showWidgetToolbar: true,
     compactMode: false,
+    // #191: one quick action, not two. The "Overview Preset" button applied a
+    // dashboard template and went with that mechanism; `toggle-formula-bar` is
+    // a live path and the only hint a migrated user gets that quick actions
+    // exist at all, so the row keeps a member and does not become an empty
+    // stripe.
     quickActions: [
-      {
-        id: "qa-overview",
-        label: "Overview Preset",
-        labelKey: "views.dashboard.quick.overview",
-        kind: "apply-template",
-        templateId: "overview-finance",
-      },
       {
         id: "qa-formula",
         label: "Formula Builder",
@@ -179,4 +177,46 @@ export function migrateDashboardTransforms(config: DatabaseViewConfig): {
   });
 
   return migrated ? { config: { ...config, widgets }, migrated } : { config, migrated };
+}
+
+/**
+ * #191 — drop a quick action that points at a mechanism that no longer exists.
+ *
+ * Dashboard templates were removed, and `migrateTableConfig` had been *writing*
+ * an `apply-template` action into every dashboard it migrated. Those live in
+ * real vaults right now. Leaving one would leave a button that does nothing —
+ * the visible-promise-without-effect defect this project keeps catching — and
+ * disabling it is the same defect in a politer wrapper: it tells the reader
+ * something used to be there and gives them nothing to do about it.
+ *
+ * **Read-time, not a forced rewrite.** The view's existing chain saves when
+ * `migrated` is set, so a vault cleans itself the first time the dashboard is
+ * opened and saved, and the #145 restore point is taken upstream of all of it.
+ * Rewriting every stored view up front would buy nothing and would touch that
+ * path for the sake of one button.
+ *
+ * **Filtered on `kind`, never on a list of known ids.** `CX-MAP-191` recorded
+ * that quick actions hold a `templateId` as a string and static reading cannot
+ * enumerate what real vaults contain. An id nobody in this codebase has ever
+ * heard of must be dropped too, or the unknown stays a hole.
+ *
+ * Idempotent: the same config in twice returns the same reference the second
+ * time, so the view does not save on every open.
+ */
+export function dropTemplateQuickActions(config: DatabaseViewConfig): {
+  config: DatabaseViewConfig;
+  migrated: boolean;
+} {
+  const actions = (config as { quickActions?: unknown }).quickActions;
+  // Persisted JSON, so the guard is against the shape and not against the type:
+  // an older or hand-edited vault can hold anything here.
+  if (!Array.isArray(actions)) return { config, migrated: false };
+  const kept = actions.filter(
+    (action) => (action as { kind?: unknown } | null)?.kind !== "apply-template"
+  );
+  if (kept.length === actions.length) return { config, migrated: false };
+  return {
+    config: { ...config, quickActions: kept as NonNullable<DatabaseViewConfig["quickActions"]> },
+    migrated: true,
+  };
 }

@@ -14,7 +14,6 @@
   import { settings } from "src/lib/stores/settings";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
   import { app } from "src/lib/stores/obsidian";
-  import { Notice } from "obsidian";
   import FormulaBar from "./widgets/FormulaBar.svelte";
   import { buildDisplayFrame } from "./dashboardFramePipeline";
   import type { GetFileStat } from "src/lib/dashboard-engine/applyAutoFields";
@@ -22,11 +21,9 @@
   import { subscribeCanvasCommands } from "./dashboardCommands";
   import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync, readyFrames, type ExternalSourceState } from "./dashboardPreload";
   import { createSchemaController } from "./dashboardSchema";
-  import { createTemplatesController } from "./dashboardTemplates";
   import { applyFilterTab, promoteFilterTabToGlobal, type ActiveFilterTab } from "./dashboardFilters";
   import DashboardToolbar from "./DashboardToolbar.svelte";
   import FilterBridge from "./FilterBridge.svelte";
-  import TemplateConfirmDialog from "./TemplateConfirmDialog.svelte";
   import WidgetGrid from "./WidgetGrid.svelte";
   import SmartSuggestionBus from "./SmartSuggestionBus.svelte";
   import { createSuggestionController } from "./dashboardSuggest";
@@ -60,7 +57,16 @@
   $: effectiveConfig = (commitTick, configEcho.receiveProp(config), configEcho.current);
   $: widgets = effectiveConfig?.widgets ?? [];
   $: showToolbar = effectiveConfig?.showWidgetToolbar ?? false;
-  $: quickActions = effectiveConfig?.quickActions ?? [];
+  // #191. Filtered by kind HERE as well as in the migration, and the two are
+  // not redundant. The migration cleans the stored file; this decides what is
+  // drawn from whatever it is handed — and after the template dispatcher was
+  // removed every button runs the one remaining action, so an unfiltered
+  // «Обзорный пресет» left in a config would silently toggle the formula bar.
+  // Drawing only what this canvas can honour is the correctness half.
+  // Array-ness checked, not assumed: the migrator leaves a malformed value alone
+  // rather than throw, and `.filter()` on a string would down the whole canvas.
+  $: quickActions = (Array.isArray(effectiveConfig?.quickActions) ? effectiveConfig.quickActions : [])
+    .filter((action) => action?.kind === "toggle-formula-bar");
   const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
     if (!effectiveConfig) return;
@@ -77,11 +83,6 @@
   });
   const unsubCommands = subscribeCanvasCommands(() => schemaController.openSchema(), () => schemaController.openCreateField());
   onDestroy(() => { unsubCommands(); schemaController.dispose(); }); // CV-2: nothing opens after the view is gone
-  const templatesController = createTemplatesController({
-    getConfig: () => effectiveConfig, getWidgets: () => widgets, saveConfig, t,
-    toggleFormulaBar: () => (showFormulaBar = !showFormulaBar),
-  });
-  const showTemplateReplaceConfirm = templatesController.showConfirm;
   let isRecalculating = false, showFormulaBar = false, activeFilterTab: ActiveFilterTab | null = null;
   $: { void frame; isRecalculating = true; void Promise.resolve().then(() => { isRecalculating = false; }); }
   $: fieldNames = frame.fields.map((f) => f.name);
@@ -131,13 +132,6 @@
     addWidget: (t, init) => widgetController.addWidget(t, init),
     getPrimaryWidgetId: () => effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id,
   });
-  function handleApplyTemplate(e: CustomEvent<WidgetDefinition[]>) {
-    templatesController.requestReplace(e.detail).catch((err: unknown) => {
-      // eslint-disable-next-line no-console
-      console.warn("[obs-projects-plus] applyTemplate failed", err);
-      new Notice($i18n.t("views.dashboard.canvas.error-apply-template", { defaultValue: "Failed to apply template." }));
-    });
-  }
 </script>
 <ViewLayout>
   <ViewContent>
@@ -146,14 +140,16 @@
         <DashboardToolbar {showToolbar} {readonly} {showFormulaBar} currentWidgets={widgets}
           on:toggleToolbar={toggleToolbar} on:openSchema={() => schemaController.openSchema()}
           on:toggleFormulaBar={() => (showFormulaBar = !showFormulaBar)}
-          on:addWidget={(e) => widgetController.addWidget(e.detail)}
-          on:applyTemplate={handleApplyTemplate} />
+          on:addWidget={(e) => widgetController.addWidget(e.detail)} />
         {#if isRecalculating}<span class="ppp-recalc-dot" aria-label={$i18n.t("views.dashboard.canvas.recalculating", { defaultValue: "Recalculating…" })} aria-live="polite" />{/if}
       </div>
       {#if !readonly && quickActions.length > 0}
         <div class="ppp-quick-actions" role="group" aria-label={$i18n.t("views.dashboard.quick.group", { defaultValue: "Quick actions" })}>
           {#each quickActions as action (action.id)}
-            <button class="ppp-quick-action clickable-icon" on:click={() => templatesController.handleQuickAction(action)}
+            <!-- #191: `toggle-formula-bar` is the only kind left, so the call is
+                 direct. A dispatcher over a union of one would be ceremony that
+                 hides which of the two lines is the actual behaviour. -->
+            <button class="ppp-quick-action clickable-icon" on:click={() => (showFormulaBar = !showFormulaBar)}
               aria-label={action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}>
               {action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}
             </button>
@@ -176,14 +172,13 @@
         {availableSources} {availableWidgets} {rightFrames} sourceStates={$sourceStatesStore} {project}
         on:consider={handleDndConsider} on:finalize={handleDndFinalize} on:filter={handleFilterTab}
         on:showToolbar={() => { if (!effectiveConfig) return; saveConfig({ ...effectiveConfig, showWidgetToolbar: true }); }}
-        on:addWidget={(e) => widgetController.addWidget(e.detail)} on:applyTemplate={handleApplyTemplate}
+        on:addWidget={(e) => widgetController.addWidget(e.detail)}
         on:configChange={widgetController.handleWidgetConfigChange}
         on:tableConfigChange={widgetController.handleTableConfigChange}
         on:fieldPresetsChange={handleFieldPresetsChange}
         on:removeWidget={(e) => widgetController.removeWidget(e.detail)}
       />
     </div>
-    <TemplateConfirmDialog show={$showTemplateReplaceConfirm} on:confirm={templatesController.confirmReplace} on:cancel={templatesController.cancelReplace} />
   </ViewContent>
 </ViewLayout>
 <style>

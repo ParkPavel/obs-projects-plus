@@ -1,7 +1,6 @@
 <script lang="ts">
-  import type { WidgetType, WidgetDefinition } from "../types";
+  import type { WidgetType } from "../types";
   import { WIDGET_REGISTRY, canAddWidget } from "./widgetRegistry";
-  import { WIDGET_TEMPLATES, type WidgetTemplate } from "../widgetTemplates";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
@@ -10,27 +9,14 @@
   export let currentWidgets: { type: WidgetType }[];
 
   let open = false;
-  let showTemplates = false;
   let triggerEl: HTMLButtonElement | null = null;
 
-  const dispatch = createEventDispatcher<{
-    addWidget: WidgetType;
-    applyTemplate: WidgetDefinition[];
-  }>();
+  const dispatch = createEventDispatcher<{ addWidget: WidgetType }>();
 
   function handleAdd(type: WidgetType) {
     dispatch("addWidget", type);
     open = false;
   }
-
-  function handleTemplate(template: WidgetTemplate) {
-    dispatch("applyTemplate", template.widgets);
-    showTemplates = false;
-    open = false;
-  }
-
-  // Reset nested templates submenu whenever the popup closes.
-  $: if (!open) showTemplates = false;
 
   // UT2026-A L2 (#086): same legacy filter as DashboardBlockPalette —
   // retired types are not creation candidates unless already on canvas.
@@ -72,30 +58,6 @@
       </button>
     {/each}
 
-    {#if WIDGET_TEMPLATES.length > 0}
-      <div class="ppp-toolbar-separator"></div>
-      <button
-        class="ppp-toolbar-option ppp-toolbar-option--section"
-        on:click|stopPropagation={() => (showTemplates = !showTemplates)}
-        role="menuitem"
-      >
-        <span class="ppp-toolbar-icon"><Icon name="layout-template" /></span>
-        <span>{$i18n.t("views.dashboard.widget.templates")} {showTemplates ? "▾" : "▸"}</span>
-      </button>
-      {#if showTemplates}
-        {#each WIDGET_TEMPLATES as tpl}
-          <button
-            class="ppp-toolbar-option ppp-toolbar-option--template"
-            on:click={() => handleTemplate(tpl)}
-            role="menuitem"
-            title={$i18n.t(tpl.descriptionKey)}
-          >
-            <span class="ppp-toolbar-tpl-label">{$i18n.t(tpl.labelKey)}</span>
-            <span class="ppp-toolbar-tpl-desc">{$i18n.t(tpl.descriptionKey)}</span>
-          </button>
-        {/each}
-      {/if}
-    {/if}
   </FloatingPopup>
 </div>
 
@@ -153,25 +115,4 @@
     font-size: 0.875rem;
   }
 
-  .ppp-toolbar-separator {
-    height: 1px;
-    background: var(--background-modifier-border);
-    margin: 0.25rem 0;
-  }
-
-  .ppp-toolbar-option--template {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.125rem;
-    padding-left: 1.5rem;
-  }
-
-  .ppp-toolbar-tpl-label {
-    font-weight: 500;
-  }
-
-  .ppp-toolbar-tpl-desc {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-faint);
-  }
 </style>

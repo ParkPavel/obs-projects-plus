@@ -778,10 +778,6 @@
                     "formula-builder": "Формули",
                     "schema": "Схема",
                     "schema-tip": "Керування полями проекту — типи, зв'язки, зведення",
-                    "template-replace-title": "Замінити поточний макет?",
-                    "template-replace-confirm": "Застосування шаблону замінить поточні віджети. Продовжити?",
-                    "template-replace-cancel": "Скасувати",
-                    "template-replace-apply": "Застосувати шаблон",
                     "filter-bridge-global": "Глобальний фільтр: {{count}} умов",
                     "filter-bridge-local": "Локальний: {{field}} = {{value}}",
                     "filter-bridge-clear": "Скинути локальний фільтр",
@@ -808,12 +804,10 @@
                     "remove": "Видалити віджет",
                     "not-configured": "Тип віджета \"{{type}}\" — не налаштовано",
                     "add": "Додати віджет",
-                    "add-aria": "Додати віджет",
-                    "templates": "Шаблони"
+                    "add-aria": "Додати віджет"
                 },
                 "quick": {
                     "group": "Швидкі дії",
-                    "overview": "Оглядовий пресет",
                     "formula": "Конструктор формул"
                 },
                 "types": {
@@ -1117,24 +1111,6 @@
                     "board": "Дошка",
                     "calendar": "Календар",
                     "gallery": "Галерея"
-                },
-                "templates": {
-                    "database-v2-starter": "База даних V2 — старт",
-                    "database-v2-starter-desc": "KPI-картки + мульти-в'ю блок бази (Таблиця / Дошка / Календар / Галерея)",
-                    "overview-finance": "Фінансовий огляд",
-                    "overview-finance-desc": "Швидкий фінансовий огляд: KPI, підсумки, графік і таблиця",
-                    "dashboard": "Дашборд",
-                    "dashboard-desc": "Статистика + діаграми + таблиця",
-                    "analytics": "Аналітика",
-                    "analytics-desc": "Кілька діаграм для аналізу даних",
-                    "kanban-plus": "Kanban+",
-                    "kanban-plus-desc": "Таблиця + чекліст + прогрес",
-                    "fitness-workout": "Фітнес — Журнал тренувань",
-                    "fitness-workout-desc": "Тренування з вкладеними sets[]: повтори, вага, відпочинок. Unnest + статистика об'єму.",
-                    "finance-accounting": "Фінанси — Облік",
-                    "finance-accounting-desc": "Мультивалютний дашборд: брутто, податок, нетто, курси, кредитна лінія.",
-                    "crm-clients": "CRM — Клієнти",
-                    "crm-clients-desc": "Клієнти з історією сесій, вкладки за етапами та воронка конверсії."
                 }
             }
         },

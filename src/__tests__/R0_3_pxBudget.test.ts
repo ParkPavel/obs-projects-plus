@@ -72,12 +72,17 @@ describe("R0.3 — CSS px-budget ratchet", () => {
   //   191 → 187 (TDT-12 — WidgetHost.svelte: 4 × border/border-bottom 1px solid → 0.0625rem solid).
   //   187 → 186 (#034.2a — net px reduction during popoverDropdown→FloatingPopup migration: archived popoverDropdown.ts (legacy .ts file did not count); new PopoverList.svelte uses 0.0625rem hairlines).
   //   186 → 177 (#077 slice 4 — DateFormulaInput retired its imperative inline-style portal (px borders/box-shadow/badge radii); now a thin FormulaConstructor wrapper with rem-only cell overrides).
+  //   151 → 143 (#191 — the dashboard-template mechanism deleted:
+  //     widgetTemplates.ts, dashboardTemplates.ts, TemplateConfirmDialog.svelte
+  //     and the template rules in WidgetToolbar. Re-measured, not decremented —
+  //     the architect estimated 149 from a reading of the diff and the tree said
+  //     143, which is the whole reason this log says "re-measured" twice above.
   //   177 → 151 (#165 step 1 — src/lib/tokens/design-tokens.css deleted: the dead
   //     token file carried 3 px (--ppp-border-width 1px/2px, --ppp-radius-full 9999px),
   //     all of them re-declared live in tokens.css. Re-measured rather than decremented,
   //     because the ceiling had drifted 23 above the tree: a ratchet that is not the
   //     measurement cannot see a deletion, which is what let a dead file sit here.
-  const PX_BUDGET = 151;
+  const PX_BUDGET = 143;
 
   it("does not exceed the agreed px-budget", () => {
     const { total, perFile } = countPxAcrossSrc();

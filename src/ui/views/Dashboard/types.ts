@@ -329,14 +329,6 @@ export interface FormulaFieldDef {
   readonly resultType?: "string" | "number" | "date" | "boolean";
 }
 
-export interface ApplyTemplateQuickAction {
-  readonly id: string;
-  readonly label: string;
-  readonly labelKey?: string;
-  readonly kind: "apply-template";
-  readonly templateId: string;
-}
-
 export interface ToggleFormulaQuickAction {
   readonly id: string;
   readonly label: string;
@@ -344,7 +336,25 @@ export interface ToggleFormulaQuickAction {
   readonly kind: "toggle-formula-bar";
 }
 
-export type QuickActionConfig = ApplyTemplateQuickAction | ToggleFormulaQuickAction;
+/**
+ * #191 — a union of one, and deliberately still a union.
+ *
+ * `ApplyTemplateQuickAction` left when dashboard templates were removed. The
+ * alias stays because the concept is "a quick action", which is extensible;
+ * collapsing it to the interface would say the opposite.
+ *
+ * Removing the member is what makes the deletion complete rather than hopeful:
+ * `migration.ts` could not compile until it stopped generating the artefact,
+ * and nothing can reintroduce `kind: "apply-template"` without the compiler
+ * objecting. That is stronger and cheaper than any text scan.
+ *
+ * The `DataTableConfig.subBases` precedent does NOT apply here, and the
+ * difference matters: that key is carried untouched because removing it would
+ * make existing user data unmodellable. This was never user data — it was a
+ * button our own migration generated, pointing at our own mechanism. The
+ * mechanism goes, so the button goes with it.
+ */
+export type QuickActionConfig = ToggleFormulaQuickAction;
 
 export interface DatabaseViewConfig {
   readonly widgets: WidgetDefinition[];

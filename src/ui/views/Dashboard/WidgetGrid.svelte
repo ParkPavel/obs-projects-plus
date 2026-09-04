@@ -22,12 +22,10 @@
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
-  import { WIDGET_TEMPLATES } from "./widgetTemplates";
 
   const dispatch = createEventDispatcher<{
     showToolbar: void;
     addWidget: WidgetType;
-    applyTemplate: WidgetDefinition[];
     consider: DndEvent<WidgetDefinition>;
     finalize: DndEvent<WidgetDefinition>;
   }>();
@@ -59,7 +57,7 @@
     title={$i18n.t("views.dashboard.canvas.empty-title", { defaultValue: "Empty canvas" })}
     hint={readonly
       ? ""
-      : $i18n.t("views.dashboard.canvas.empty-hint", { defaultValue: "Start with a data block, or pick a ready-made template" })}
+      : $i18n.t("views.dashboard.canvas.empty-hint", { defaultValue: "Start with a data block" })}
   >
     <svelte:fragment slot="actions">
       {#if !readonly}
@@ -67,12 +65,6 @@
           <Icon name="database" />
           {$i18n.t("views.dashboard.canvas.empty-add-block", { defaultValue: "Add data block" })}
         </button>
-        {#each WIDGET_TEMPLATES as tpl}
-          <button on:click={() => dispatch("applyTemplate", tpl.widgets)} title={$i18n.t(tpl.descriptionKey)}>
-            <Icon name="layout-template" />
-            {$i18n.t(tpl.labelKey)}
-          </button>
-        {/each}
       {/if}
     </svelte:fragment>
   </EmptyState>

@@ -29,7 +29,10 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   { file: "ui/views/Dashboard/widgets/WidgetPrimaryAction.svelte", maxLines: 90 },
   { file: "ui/views/Dashboard/widgets/renderContext.ts", maxLines: 90 },
   // Master-prompt invariant 1: canvas ≤200 (restored in compliance audit).
-  { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 200 },
+  // 200 → 195 (#191): the template controller, its confirm dialog and the
+  // apply handler left with the mechanism. A ceiling that keeps the room a
+  // deletion freed is not a ceiling.
+  { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 195 },
   { file: "ui/views/Dashboard/dashboardSuggest.ts", maxLines: 60 },
   // F2 (#074) — TABLE_V2_CANON §5 budgets
   { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 280 },

@@ -9,7 +9,6 @@
  */
 
 import { demoGeneratedWidgets } from "../demoProject";
-import { WIDGET_TEMPLATES } from "src/ui/views/Dashboard/widgetTemplates";
 import {
   migrateAggregationCount,
   migrateDashboardTransforms,
@@ -50,13 +49,8 @@ describe("config provenance (UT2026-D, #072)", () => {
     expect(migrateDashboardTransforms(asDashboard(widgets)).migrated).toBe(false);
   });
 
-  it("widget templates pass migrateDashboardTransforms as a no-op", () => {
-    const widgets = allTemplateWidgets();
-    expect(migrateDashboardTransforms(asDashboard(widgets)).migrated).toBe(false);
-  });
-
   it("no generator emits a leading filter step — scope belongs in config.subFilter", () => {
-    const offenders = [...demoGeneratedWidgets(), ...allTemplateWidgets()]
+    const offenders = demoGeneratedWidgets()
       .filter((w) => w.transform?.steps?.[0]?.type === "filter")
       .map((w) => `${w.type}:${w.title}`);
     expect(offenders).toEqual([]);
@@ -91,27 +85,18 @@ describe("config provenance (UT2026-D, #072)", () => {
     }
   });
 
-  // ── F3 (UT2026-A L3): templates are generators too ─────────────────
-
-  function allTemplateWidgets(): WidgetDefinition[] {
-    return WIDGET_TEMPLATES.flatMap((t) => t.widgets);
-  }
-
-  it("widget templates pass migrateAggregationCount as a no-op", () => {
-    const widgets = allTemplateWidgets();
-    expect(migrateAggregationCount(widgets)).toBe(widgets);
-  });
-
   it("no generator emits retired legacy widget types", () => {
-    const offenders = [...demoGeneratedWidgets(), ...allTemplateWidgets()]
+    // #191: dashboard templates were the second generator this covered. They
+    // are gone; the demo project is the one that remains, and it is the one
+    // that ships to a user.
+    const offenders = demoGeneratedWidgets()
       .filter((w) => LEGACY_TYPES.includes(w.type))
       .map((w) => `${w.type}:${w.title}`);
     expect(offenders).toEqual([]);
   });
 
   it("every generated database-call carries viewTabs (UT2026-G finding)", () => {
-    const blocks = [...demoGeneratedWidgets(), ...allTemplateWidgets()]
-      .filter((w) => w.type === "database-call");
+    const blocks = demoGeneratedWidgets().filter((w) => w.type === "database-call");
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
       const tabs = (block.config as { viewTabs?: unknown[] }).viewTabs;
