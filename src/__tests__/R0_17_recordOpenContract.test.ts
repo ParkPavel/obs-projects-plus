@@ -7,11 +7,21 @@
  * rendered Markdown or a parsed wikilink, their target may not be a record at
  * all, and they are declared below rather than left to be recognised by eye.
  *
- * Why a ratchet and not a convention: step (b) makes a plain click stop leaving
- * the view, and it does that by changing ONE constant in the contract. A site
- * that calls `workspace.openLinkText` directly would silently keep the old
- * behaviour — the flip would be partial, and partial is worse than either
- * state because nothing on screen says which rule a given row follows.
+ * Why a ratchet and not a convention: what a plain activation means is ONE
+ * constant in the contract, and it has now been changed twice — to the peek by
+ * #168 step (b), back to the note by #189. A site that calls
+ * `workspace.openLinkText` directly would silently keep whichever behaviour it
+ * was written with, so the change would be partial, and partial is worse than
+ * either state because nothing on screen says which rule a given row follows.
+ *
+ * ## What #189 added, and why it belongs in a ratchet rather than a test
+ *
+ * The peek stopped being the default and kept two entrances: the `alt` branch
+ * of `modeFromEvent`, and a labelled row-menu entry. Losing either one is
+ * INVISIBLE — a plain click still opens the note, so the surface looks correct
+ * while the feature has quietly become unreachable and `recordPeek` becomes a
+ * live store nothing can fill. That is the same silent-drift shape the direct
+ * call above has, so it is guarded the same way.
  *
  * ## Where this ratchet is BLIND — stated up front, not discovered later
  *
@@ -145,5 +155,51 @@ describe("R0.17 — the tree", () => {
     // anything at all — the failure R0.4 records.
     const text = fs.readFileSync(path.join(SRC, CONTRACT), "utf8");
     expect(directOpenCalls(text).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Sites that must be able to REACH the peek, declared with what each one is.
+ *
+ * Two, deliberately: one fast and one discoverable. The declaration is the
+ * point — if a refactor deletes an entrance, this list has to be edited on
+ * purpose, the way `WIKILINK_SITES` above works.
+ */
+const PEEK_ENTRANCES: ReadonlyArray<readonly [string, string, RegExp]> = [
+  [CONTRACT, "the alt modifier, for someone who knows", /if \(e\.altKey\) return "peek";/],
+  [
+    "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts",
+    "the labelled row-menu entry, for someone who does not",
+    /openRecord\(\{ id: record\.id, record, fields \}, "peek"/,
+  ],
+];
+
+describe("R0.17 — #189: the peek lost the default and kept both entrances", () => {
+  const contract = () => fs.readFileSync(path.join(SRC, CONTRACT), "utf8");
+
+  it("a plain activation opens the note", () => {
+    // The behaviour the user asked for, read off the source rather than
+    // imported, so this ratchet keeps working if the constant is ever inlined.
+    expect(contract()).toMatch(/export const PLAIN_MODE: RecordOpenMode = "same";/);
+  });
+
+  it("the two modifiers that three shipped surfaces agree on are unchanged", () => {
+    // #189 was allowed to spend a FREE modifier and nothing else. Pinned so a
+    // later "tidy-up" of `modeFromEvent` cannot quietly re-map shift or ctrl.
+    const s = contract();
+    expect(s).toMatch(/if \(e\.shiftKey\) return "window";/);
+    expect(s).toMatch(/if \(e\.ctrlKey \|\| e\.metaKey\) return "tab";/);
+  });
+
+  it("alt is tested after ctrl, so AltGr keyboards keep 'open in a tab'", () => {
+    // Order, not presence — AltGr reports ctrlKey and altKey together. Reading
+    // the order off the file is the only way a text ratchet can see it.
+    const s = contract();
+    expect(s.indexOf('if (e.ctrlKey || e.metaKey) return "tab";'))
+      .toBeLessThan(s.indexOf('if (e.altKey) return "peek";'));
+  });
+
+  it.each(PEEK_ENTRANCES)("%s still offers the peek — %s", (file, _what, pattern) => {
+    expect(fs.readFileSync(path.join(SRC, file), "utf8")).toMatch(pattern);
   });
 });

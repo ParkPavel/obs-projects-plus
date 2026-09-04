@@ -10,7 +10,8 @@
  * Step (a) changed no behaviour. Its whole purpose was that step (b) — a plain
  * click stops leaving the view — became a change to `PLAIN_MODE` in this file
  * instead of twenty-three independent flips across five surfaces. Step (b)
- * landed on 2026-09-03 and was exactly that one line.
+ * landed on 2026-09-03 and was exactly that one line; #189 reverted it on
+ * 2026-09-04 and that was one line too. The migration paid for itself twice.
  *
  * ## The modifier convention is reproduced, not redesigned
  *
@@ -20,7 +21,8 @@
  *   - `AllDayEventStrip.svelte:68`   same expression
  *   - `MultiDayEventStrip.svelte:47` same expression
  *
- * `modeFromEvent` is that expression with `false` replaced by `PLAIN_MODE`.
+ * `modeFromEvent` is that expression with `false` replaced by `PLAIN_MODE`,
+ * plus the `alt` branch #189 added below it.
  */
 
 import type { App, PaneType } from "obsidian";
@@ -34,16 +36,22 @@ export type RecordOpenMode = "peek" | "same" | "tab" | "window";
 /**
  * What a plain, unmodified activation means.
  *
- * **Step (b) flipped this, on 2026-09-03, and it was the whole change.** It was
- * `"same"` through step (a) — exactly what every migrated site did before the
- * migration — which is what made that step a pure refactor. Reverting the
- * behaviour is this line and nothing else; that was the point of doing the
- * migration first.
+ * **`"same"` again, per #189 (user decision 2026-09-04).** Step (b) set this to
+ * `"peek"` on 2026-09-03, and the user rejected it in the visual run: opening a
+ * record means opening the NOTE, and reading its frontmatter is a different act
+ * that must not take the default. Reverting was this line and nothing else,
+ * which is exactly what doing the migration first bought.
  *
- * `shift` and `ctrl`/`meta` are untouched, so leaving the view is still one
- * modifier away and nothing became unreachable.
+ * The peek did not go away — it lost the default. It is reachable two ways, and
+ * both are deliberate: `alt` in `modeFromEvent` below (fast, for someone who
+ * already knows) and a labelled row-menu entry (discoverable, for someone who
+ * does not). The user asked for the modifier "but as its own entry", and one
+ * without the other is either a hidden feature or a slow one.
+ *
+ * There is no setting. A third way to configure a two-way choice is a menu that
+ * asks the user to do the deciding twice.
  */
-export const PLAIN_MODE: RecordOpenMode = "peek";
+export const PLAIN_MODE: RecordOpenMode = "same";
 
 /**
  * The `false | true | "tab" | "window"` third argument of `openLinkText`, as it
@@ -52,10 +60,35 @@ export const PLAIN_MODE: RecordOpenMode = "peek";
  */
 export type LegacyNewLeaf = boolean | "tab" | "window";
 
-/** `shift` → window; `ctrl`/`meta` → tab; plain → `PLAIN_MODE`. */
+/**
+ * `shift` → window; `ctrl`/`meta` → tab; `alt` → peek; plain → `PLAIN_MODE`.
+ *
+ * ## Why `alt`, and why it is tested last of the three
+ *
+ * `shift` and `ctrl`/`meta` are spoken for by three shipped surfaces that
+ * already agree (see the file header), so the peek needed a modifier that is
+ * free in this codebase AND free in the host. `alt` is the only single modifier
+ * that is both:
+ *
+ *   - `ctrl+shift` is not free — Obsidian itself opens a link in a split with
+ *     it, so taking it would fight the host on the host's own gesture.
+ *   - `alt` has exactly two uses in `src/`, and neither is a click:
+ *     `InfiniteHorizontalCalendar.svelte:617` and `TimelineView.svelte:316`
+ *     both read `altKey` off a `WheelEvent` to page between periods.
+ *
+ * It also reads correctly: in host UI convention `alt` means "the other thing
+ * this row can do", which is what looking at a record's fields instead of
+ * opening it is.
+ *
+ * The `alt` test comes AFTER the other two on purpose. Testing it first would
+ * be tidier but wrong on Windows and on European layouts, where `AltGr` reports
+ * `ctrlKey` and `altKey` together — that combination must keep meaning `tab`,
+ * the answer `ctrl` has always given, rather than silently becoming a peek.
+ */
 export function modeFromEvent(e: MouseEvent | KeyboardEvent): RecordOpenMode {
   if (e.shiftKey) return "window";
   if (e.ctrlKey || e.metaKey) return "tab";
+  if (e.altKey) return "peek";
   return PLAIN_MODE;
 }
 

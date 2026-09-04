@@ -79,17 +79,37 @@ export function toggleRowSelection(opts: {
   });
 }
 
+/**
+ * The row menu, including on a READ-ONLY table (#189 follow-up).
+ *
+ * `{#if !readonly}` used to hide the ⋯ button entirely, making "Show fields"
+ * unreachable on the very table it was written for — an external source, whose
+ * rows the host frame cannot resolve and the peek is the only way to read.
+ * `alt` still worked, so the feature was hidden rather than gone, and hidden is
+ * what the user's decision rules out. So `readonly` narrows the menu instead of
+ * removing it, and does so HERE: what is safe on a table you cannot write to is
+ * one judgement, and it gets one home.
+ *
+ *   - Read (Open, Open in new tab, Show fields) — always.
+ *   - Mutating (Duplicate, Delete) — absent when `readonly`, not disabled. A
+ *     greyed-out Delete still says the row is deletable, which is the untruth.
+ *   - Selection Bus (Filter linked blocks) — kept: it writes to a per-canvas
+ *     in-memory store, never the vault, so it READS the canvas, and it is most
+ *     useful on exactly a source the reader cannot edit.
+ */
 export function buildRowMenuEntries(opts: {
   record: DataRecord;
   project: ProjectDefinition | undefined;
   fields: DataField[];
   api: ViewApi;
   app: App | undefined;
+  /** Writes are not offered when true; reads still are. */
+  readonly: boolean;
   t: (key: string, defaultValue: string) => string;
   /** Selection Bus driver entry (omitted when the canvas has no store). */
   selectionEntry?: { driving: boolean; onToggle: () => void } | undefined;
 }): ContextMenuEntry[] {
-  const { record, project, fields, api, app, t, selectionEntry } = opts;
+  const { record, project, fields, api, app, readonly, t, selectionEntry } = opts;
   const selectionEntries: ContextMenuEntry[] = selectionEntry
     ? [
         {
@@ -114,18 +134,34 @@ export function buildRowMenuEntries(opts: {
       icon: "external-link",
       onClick: () => { if (app) void openRecord({ id: record.id }, "tab", { app }); },
     },
-    { separator: true },
+    // #189 — the peek's discoverable entrance. `alt`+activation reaches the
+    // same mode, but a modifier nobody is told about is not a feature, and the
+    // user asked for both. `record` and `fields` go with it because this table
+    // may read an EXTERNAL source whose rows the host view's frame cannot
+    // resolve — without them those rows would open a panel showing nothing.
     {
-      title: t("views.dashboard.table-v2.duplicate", "Duplicate"),
-      icon: "copy",
-      disabled: !project,
-      onClick: () => { if (project) duplicateRecord(record, project, fields, api); },
+      title: t("views.dashboard.table-v2.peek", "Show fields"),
+      icon: "panel-right-open",
+      onClick: () => { if (app) void openRecord({ id: record.id, record, fields }, "peek", { app }); },
     },
-    {
-      title: t("views.dashboard.table-v2.delete", "Delete note"),
-      icon: "trash",
-      danger: true,
-      onClick: () => api.deleteRecord(record.id),
-    },
+    // The separator belongs to the group it introduces, so a read-only menu
+    // ends on its last real entry instead of a rule with nothing under it.
+    ...(readonly
+      ? []
+      : ([
+          { separator: true },
+          {
+            title: t("views.dashboard.table-v2.duplicate", "Duplicate"),
+            icon: "copy",
+            disabled: !project,
+            onClick: () => { if (project) duplicateRecord(record, project, fields, api); },
+          },
+          {
+            title: t("views.dashboard.table-v2.delete", "Delete note"),
+            icon: "trash",
+            danger: true,
+            onClick: () => api.deleteRecord(record.id),
+          },
+        ] as ContextMenuEntry[])),
   ];
 }

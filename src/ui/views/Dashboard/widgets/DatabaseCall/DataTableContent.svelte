@@ -17,7 +17,7 @@
   import { get } from "svelte/store";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, PLAIN_MODE } from "src/lib/record/openRecord";
+  import { openRecord, modeFromEvent } from "src/lib/record/openRecord";
   import { settings as settingsStore } from "src/lib/stores/settings";
   import { createRelationSetupController } from "src/ui/views/Dashboard/relationSetupController";
   import {
@@ -124,15 +124,19 @@
   }
 
   // ── Row operations (F2.3) ────────────────────────────────────
-  function handleOpenRecord(e: CustomEvent<DataRecord>) {
-    if ($app) void openRecord({ id: e.detail.id }, PLAIN_MODE, { app: $app });
+  function handleOpenRecord(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
+    // #189: plain opens the note, `alt` peeks. `record`/`fields` ride along so
+    // an external-source row peeks into itself rather than into a frame that
+    // never held it.
+    const { record } = e.detail;
+    if ($app) void openRecord({ id: record.id, record, fields }, modeFromEvent(e.detail.event), { app: $app });
   }
 
   function handleRowMenu(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
     const record = e.detail.record;
     const primaryField = columns.find((c) => c.isPrimary)?.field.name ?? "name";
     const entries = buildRowMenuEntries({
-      record, project, fields, api, app: $app ?? undefined,
+      record, project, fields, api, readonly, app: $app ?? undefined,
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
       selectionEntry: selectionStore && widgetId
         ? {
