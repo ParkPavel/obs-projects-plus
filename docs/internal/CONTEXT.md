@@ -431,7 +431,7 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`: 206 suites / 3336 tests PASS, tsc 0, svelte-check 0/0,
+- **Canonical baseline — `main`: 206 suites / 3337 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (108 pre-existing tsdoc warnings).** Measured 2026-09-04 on `main` after #191.
   **The baseline FELL here, and that is stated rather than hidden** (precedent #160/#183): `widgetTemplates.test.ts`
   tested a subject that no longer exists, and three replace-confirmation tests went with the mechanism.

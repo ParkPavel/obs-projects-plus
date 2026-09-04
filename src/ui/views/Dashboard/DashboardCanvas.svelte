@@ -63,9 +63,10 @@
   // removed every button runs the one remaining action, so an unfiltered
   // «Обзорный пресет» left in a config would silently toggle the formula bar.
   // Drawing only what this canvas can honour is the correctness half.
-  $: quickActions = (effectiveConfig?.quickActions ?? []).filter(
-    (action) => action.kind === "toggle-formula-bar"
-  );
+  // Array-ness checked, not assumed: the migrator leaves a malformed value alone
+  // rather than throw, and `.filter()` on a string would down the whole canvas.
+  $: quickActions = (Array.isArray(effectiveConfig?.quickActions) ? effectiveConfig.quickActions : [])
+    .filter((action) => action?.kind === "toggle-formula-bar");
   const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
     if (!effectiveConfig) return;

@@ -187,6 +187,21 @@ describe("DatabaseViewCanvas", () => {
     }
   });
 
+  test("#191 a malformed quickActions value does not take the dashboard down", () => {
+    // The migrator leaves a value it does not recognise alone rather than
+    // throwing, so anything can still reach the render. Calling .filter() on a
+    // string crashes the whole canvas to remove one button — found by audit,
+    // not by the gates.
+    for (const broken of ["nope", 42, { a: 1 }, [null], [{ kind: null }]]) {
+      const view = mountCanvas({ quickActions: broken as never });
+      try {
+        expect(view.target.querySelectorAll(".ppp-quick-action")).toHaveLength(0);
+      } finally {
+        view.destroy();
+      }
+    }
+  });
+
   test("toggles formula bar from quick actions", async () => {
     const view = mountCanvas();
 
