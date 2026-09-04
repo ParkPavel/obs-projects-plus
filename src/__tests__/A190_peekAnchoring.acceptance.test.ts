@@ -227,6 +227,52 @@ describe("A190 — the panel can no longer escape its view", () => {
     expect(panelCss).not.toMatch(/position:\s*fixed/);
   });
 
+  it("the component actually ASKS to be moved — both of its boxes", () => {
+    // Found by audit, and it is the hole the geometry tests cannot see: the
+    // browser markup below is written as it stands AFTER the portal has run, so
+    // deleting `use:portalToOverlay` from the component would leave every
+    // measurement green while the live panel stayed inside `.projects-main` and
+    // scrolled with it. The panel and its backdrop are separate root nodes and
+    // both must travel; one alone leaves a scrim anchored to the old parent.
+    const panel = fs.readFileSync(
+      path.join(__dirname, "..", "ui", "components", "SlideInPanel", "SlideInPanel.svelte"),
+      "utf8"
+    );
+    // Counted as an attribute on its own line, so the sentence about it in the
+    // comment above the `<aside>` is not mistaken for a third use.
+    const uses = panel
+      .split("\n")
+      .filter((line) => line.trim().startsWith("use:portalToOverlay"));
+    expect(uses).toHaveLength(2);
+    expect(panel).toContain('from "src/ui/app/overlayPortal"');
+  });
+
+  it("and asks before it asks for the focus trap", () => {
+    // Order is free insurance rather than a live requirement: the panel mounts
+    // once per view and travels while closed, so no focus is inside it today.
+    // If anyone later wraps it in `{#if open}` the move would happen with the
+    // trap active, and moving a node with focus inside resets focus in Chrome.
+    const panel = fs.readFileSync(
+      path.join(__dirname, "..", "ui", "components", "SlideInPanel", "SlideInPanel.svelte"),
+      "utf8"
+    );
+    expect(panel.indexOf("use:portalToOverlay")).toBeLessThan(panel.indexOf("use:focusTrap"));
+  });
+
+  it("the layer is declared before the settings popover, which nothing else can catch", () => {
+    // Both sit on `--ppp-z-overlay`, so DOM order decides. Move the layer after
+    // the popover and the settings menu slides under an open panel — and the
+    // popover renders conditionally, so no probe page would ever build it.
+    const app = fs.readFileSync(
+      path.join(__dirname, "..", "ui", "app", "App.svelte"),
+      "utf8"
+    );
+    const layer = app.indexOf(`class="${OVERLAY_CLASS}"`);
+    const popover = app.indexOf("{#if settingsMenuOpen}");
+    expect(layer).toBeGreaterThan(-1);
+    expect(popover).toBeGreaterThan(layer);
+  });
+
   it("the layer's class is one string, written the same way in both places", () => {
     // Cheaper than fighting Svelte's scoped styles for a shared constant, and
     // this is the assertion that keeps the literal and the constant together.
