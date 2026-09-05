@@ -23,9 +23,10 @@ import { hasDataScope } from "./headerChrome";
  *    REFERENCE. "Never narrowed" and "narrowed and then un-narrowed" have to be
  *    the same state, in the file as well as in the resolver.
  *  - `exactOptionalPropertyTypes` refuses `{ sourceId: undefined }` outright,
- *    and `@ts-ignore` is forbidden (invariant 1). So the key is deleted off the
- *    next object rather than assigned away — the shape `DatabaseCallSettings`
- *    has used since #184.
+ *    and suppressing a type error is forbidden by invariant 1 — which the
+ *    `check-ts-ignore` hook enforces by scanning for the literal, so even this
+ *    sentence must not spell it. The key is deleted off the next object rather
+ *    than assigned away — the shape `DatabaseCallSettings` has used since #184.
  *
  * A widget that never carried a `sourceConfig` gains one, with an inert
  * `projectId: ""`. That is harmless — `resolveDbCallView` honours `projectId`
