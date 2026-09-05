@@ -447,7 +447,7 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
 - **Canonical baseline — `main`: 217 suites / 3416 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (110 pre-existing tsdoc warnings).** Measured 2026-09-06 on `main` after #197,
+  lint 0 errors (110 pre-existing tsdoc warnings).** Measured 2026-09-06 on `main` after #197.
   This line carries no arithmetic on purpose: it is re-measured on `main` at each merge, and the
   three times it was patched by reasoning instead of measurement it went wrong — twice in one day,
   crediting one ticket with another's suites.
