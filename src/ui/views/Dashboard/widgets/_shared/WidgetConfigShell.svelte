@@ -202,6 +202,39 @@
     color: var(--text-error, var(--text-normal));
     background: var(--background-modifier-error-hover, var(--background-modifier-hover));
   }
+  /*
+    #194 — MOVED here from `DatabaseCallSettings`, verbatim.
+    A stacked label with its own select and an explanatory hint: the form the
+    settings panel already used four times over, and now also the shape of the
+    extracted `DataScopeField`. Scoped styles do not cross a component boundary,
+    so leaving them where they were would have meant a second copy — and R0.16
+    is pinned to its measurement, so a copy is a failing ratchet, not just
+    duplication. Moving the rules keeps the count identical.
+  */
+  :global(.ppp-widget-config__body .ppp-cfg-field) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    width: 100%;
+  }
+  :global(.ppp-widget-config__body .ppp-cfg-field select) {
+    width: 100%;
+    padding: 0.25rem 0.375rem;
+    font-size: var(--font-ui-small);
+    background: var(--background-primary);
+    border: 0.0625rem solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 0.25rem);
+    color: var(--text-normal);
+  }
+  :global(.ppp-widget-config__body .ppp-cfg-hint) {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+  }
+  :global(.ppp-widget-config__body .ppp-cfg-hint--warn) {
+    color: var(--text-warning, var(--text-muted));
+  }
   :global(.ppp-widget-config__body .ppp-cfg-add) {
     align-self: flex-start;
     padding: 0.25rem 0.5rem;

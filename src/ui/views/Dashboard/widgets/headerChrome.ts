@@ -16,6 +16,41 @@ export function hasPipelineButton(type: WidgetType): boolean {
   return type !== "data-table" && type !== "text" && type !== "divider";
 }
 
+/**
+ * #194 — whether a type shows the «Data scope» control.
+ *
+ * The rule, in the shape #169 established for `primaryActionFor`: a widget has
+ * a data scope IF AND ONLY IF it derives what it shows from the frame it was
+ * handed. Mechanically checkable against `WIDGET_CONTENT` — the type has an
+ * entry and its props builder passes a frame — but written out by hand, for the
+ * reason this module exists at all: deriving it from the registry would import
+ * the whole widget graph to answer a question about a string.
+ *
+ * `sourceId` was already honoured for EVERY type by `hostFrames`, ahead of any
+ * gate; only `database-call` offered a way to set it. So this predicate decides
+ * where the CONTROL appears, never where the value is read, and the six answers
+ * below are the types for which the value already does something.
+ *
+ * `filter-tabs` is a yes, and saying so out loud is the point: it derives the
+ * TABS from its frame, so narrowing it decides what the rest of the canvas can
+ * then be narrowed by. The rule is mechanical and excluding it would be a
+ * special case with no argument behind it.
+ *
+ * `cover-banner`, `text` and `divider` are a no because no frame reaches them —
+ * the registry hands them `config` alone. The retired legacy types render a
+ * placeholder, and a picker on a placeholder is chrome on a headstone.
+ */
+export function hasDataScope(type: WidgetType): boolean {
+  return (
+    type === "data-table" ||
+    type === "database-call" ||
+    type === "chart" ||
+    type === "stats" ||
+    type === "checklist" ||
+    type === "filter-tabs"
+  );
+}
+
 /** The label of a widget type's own primary action, or `null` if it has none. */
 export interface PrimaryAction {
   readonly labelKey: string;

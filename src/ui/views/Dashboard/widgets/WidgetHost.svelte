@@ -14,20 +14,20 @@
   import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 
   import { createEventDispatcher } from "svelte";
-  import { i18n } from "src/lib/stores/i18n";
   import { computeHostFrames } from "./hostFrames";
   import { frameParts } from "src/lib/stores/dataframe";
   import { projectSourceOptions } from "src/lib/datasources/namedSource";
   import { getConfigPanel } from "./configPanelRegistry";
   import { WIDGET_CONTENT, WIDGET_PANELS } from "./widgetComponentRegistry";
-  import { hasPipelineButton, primaryActionFor } from "./headerChrome";
+  import { hasDataScope, hasPipelineButton, primaryActionFor } from "./headerChrome";
+  import { applyDataScope } from "./dataScope";
   import { buildRenderContext } from "./renderContext";
-  import { convertLegacyWidget, isRetiredLegacyType, dataTableConfigChange } from "./legacyMigration";
+  import { dataTableConfigChange } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
   import WidgetHeaderActions from "./WidgetHeaderActions.svelte";
   import WidgetPrimaryAction from "./WidgetPrimaryAction.svelte";
-  import WidgetSetupWizard from "./WidgetSetupWizard.svelte";
-  import LegacyWidgetPlaceholder from "./LegacyWidgetPlaceholder.svelte";
+  import WidgetContent from "./WidgetContent.svelte";
+  import DataScopePanel from "./DataScopePanel.svelte";
   import PipelineEditor from "./PipelineEditor.svelte";
   import DatabaseCallSettings from "./DatabaseCall/DatabaseCallSettings.svelte";
 
@@ -88,9 +88,7 @@
     primaryActionSignal += 1;
   }
 
-  $: contentEntry = WIDGET_CONTENT[widget.type];
   $: panelEntry = WIDGET_PANELS[widget.type];
-  $: contentRenderable = contentEntry ? (contentEntry.canRender?.(ctx) ?? true) : false;
   $: panelRenderable = (widget.type !== "chart" || chartConfig !== null) && (widget.type !== "stats" || statsConfig !== null);
 
   function patchWidget(changes: Partial<WidgetDefinition>) {
@@ -145,9 +143,11 @@
 >
   <svelte:fragment slot="actions">
     <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
+    <!-- #194 gives the cog a SECOND reason, not a registry edit: `hasCog` means
+         "this type owns a config panel" and stays false for `data-table`. -->
     <WidgetHeaderActions
       {readonly}
-      hasCog={panelDescriptor.hasCog && (panelEntry !== undefined || widget.type === "database-call")}
+      hasCog={(panelDescriptor.hasCog && (panelEntry !== undefined || widget.type === "database-call")) || hasDataScope(widget.type)}
       hasPipeline={hasPipelineButton(widget.type)}
       pipelineStepCount={currentPipeline.steps.length}
       locked={widget.layout.locked ?? false}
@@ -160,6 +160,17 @@
   </svelte:fragment>
 
   <svelte:fragment slot="panels">
+    <!-- #194. Its own `{#if}`, before the type chain and excluding
+         `database-call`, whose own panel already carries the same field. -->
+    {#if showConfig && widget.type !== "database-call" && hasDataScope(widget.type)}
+      <DataScopePanel
+        sourceId={widget.sourceConfig?.sourceId}
+        projectSources={sourceOptions.pickable}
+        hasUnaddressableSource={sourceOptions.hasUnaddressable}
+        on:change={(e) => patchWidget({ sourceConfig: applyDataScope(widget.sourceConfig, e.detail) })}
+        on:close={() => (showConfig = false)}
+      />
+    {/if}
     {#if showConfig && widget.type === "database-call"}
       <DatabaseCallSettings
         sourceConfig={dbCall.sourceConfig}
@@ -196,33 +207,18 @@
     {/if}
   </svelte:fragment>
 
-  {#if contentEntry && contentRenderable}
-    <svelte:component
-      this={contentEntry.component}
-      {...contentEntry.props(ctx)}
-      on:configChange={handleContentConfigChange}
-      on:change={(e) => handleWidgetConfigChange(e.detail)}
-      on:filter
-      on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
-      on:openPipeline={() => (showPipeline = true)}
-      on:clearPipeline={() => patchWidget({ transform: { steps: [] } })}
-    />
-  {:else if contentEntry?.wizard}
-    <WidgetSetupWizard
-      icon={contentEntry.wizard.icon}
-      message={$i18n.t(contentEntry.wizard.messageKey, { defaultValue: contentEntry.wizard.messageDefault })}
-      on:configure={toggleConfig}
-    />
-  {:else if isRetiredLegacyType(widget.type)}
-    <LegacyWidgetPlaceholder
-      widgetType={widget.type}
-      convertible={convertLegacyWidget(widget) !== null}
-      {readonly}
-      on:convert={() => { const patch = convertLegacyWidget(widget); if (patch) patchWidget(patch); }}
-    />
-  {:else}
-    <div class="ppp-widget-placeholder">
-      {$i18n.t("views.dashboard.widget.not-configured", { type: widget.type })}
-    </div>
-  {/if}
+  <WidgetContent
+    {widget}
+    {ctx}
+    {readonly}
+    entry={WIDGET_CONTENT[widget.type]}
+    on:configChange={handleContentConfigChange}
+    on:change={(e) => handleWidgetConfigChange(e.detail)}
+    on:filter
+    on:fieldPresetsChange={(e) => dispatch("fieldPresetsChange", e.detail)}
+    on:openPipeline={() => (showPipeline = true)}
+    on:clearPipeline={() => patchWidget({ transform: { steps: [] } })}
+    on:configure={toggleConfig}
+    on:patch={(e) => patchWidget(e.detail)}
+  />
 </WidgetShell>

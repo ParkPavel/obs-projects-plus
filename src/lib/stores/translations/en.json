@@ -936,6 +936,16 @@
                     "unlock": "Unlock widget",
                     "primary": {
                         "add-record": "Add record"
+                    },
+                    "data-scope": {
+                        "title": "Data scope",
+                        "subtitle": "Which records this block is about. How it displays them is set elsewhere.",
+                        "label": "Which source",
+                        "all": "All sources, within this view",
+                        "hint": "A project can gather records from several sources. This block can show just one of them, within what the view already shows.",
+                        "unnamed": "Sources added before naming was introduced cannot be picked — open the project and give them a name.",
+                        "missing": "{{id}} — no longer in this project",
+                        "single": "This project gathers records from a single source, so there is nothing to narrow to yet."
                     }
                 },
                 "quick": {
