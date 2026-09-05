@@ -448,8 +448,9 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   half of T2 (`#180b`) is untouched.
 - **Canonical baseline — `main`: 217 suites / 3416 tests PASS, tsc 0, svelte-check 0/0,
   lint 0 errors (110 pre-existing tsdoc warnings).** Measured 2026-09-06 on `main` after #197,
-  which added one suite of its own (the forensic copy) on top of the four #185 brought — the
-  writer, its version guard, the status store and the chip.
+  This line carries no arithmetic on purpose: it is re-measured on `main` at each merge, and the
+  three times it was patched by reasoning instead of measurement it went wrong — twice in one day,
+  crediting one ticket with another's suites.
   **The previous line (207/3343) did not reproduce and is corrected rather than carried forward.**
   Re-measured at `a5c1366`, the commit it claimed to describe: 211 suites / 3371 tests. The
   number it replaced was therefore wrong when written, not overtaken since — which is why this
