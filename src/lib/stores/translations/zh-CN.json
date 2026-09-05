@@ -1430,6 +1430,13 @@
                 "search-placeholder": "搜索项目..."
             }
         },
+        "save-status": {
+            "failed": {
+                "label": "未保存",
+                "tooltip": "设置未能写入 data.json。更改仅保留在本次会话中 — 点击重试。",
+                "notice": "Projects+：设置未能写入磁盘。更改仍在，但重新加载后会丢失。可在工具栏的「未保存」标记处重试。"
+            }
+        },
         "settings-menu": {
             "title": "设置",
             "tabs": {

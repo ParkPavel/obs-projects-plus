@@ -11,6 +11,7 @@
   import ViewSwitcher from "./ViewSwitcher.svelte";
   import SettingsMenuButton from "./SettingsMenuButton.svelte";
   import ViewSpecificActions from "./ViewSpecificActions.svelte";
+  import SaveStatusChip from "src/ui/components/SaveStatus/SaveStatusChip.svelte";
 
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
@@ -78,6 +79,7 @@
   />
 
   <div class="right">
+    <SaveStatusChip />
     <AddViewButton onAdd={() => dispatch("addView")}/>
     <SettingsMenuButton onOpen={(event) => dispatch("openSettings", event)}/>
     <ViewSpecificActions

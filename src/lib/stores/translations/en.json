@@ -1587,6 +1587,13 @@
                 "search-placeholder": "Search projects..."
             }
         },
+        "save-status": {
+            "failed": {
+                "label": "Not saved",
+                "tooltip": "Settings could not be written to data.json. Your change is kept for this session — click to retry.",
+                "notice": "Projects+: settings could not be written to disk. Your change is still here, but it will be lost on reload. Retry from the \"Not saved\" mark in the toolbar."
+            }
+        },
         "settings-menu": {
             "title": "Settings",
             "tabs": {
