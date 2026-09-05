@@ -339,10 +339,7 @@
     {views}
     viewId={view?.id}
     {view}
-    {projects}
-    projectId={project?.id}
     on:viewChange={(event) => (viewId = event.detail)}
-    on:projectChange={(event) => { projectId = event.detail; dispatch('projectIdChange', event.detail); }}
     on:addView={() => handleAddView(project)}
     on:openSettings={(event) => handleOpenSettings(event.detail)}
     on:centerToday={handleCenterToday}

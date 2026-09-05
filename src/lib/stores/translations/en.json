@@ -1581,12 +1581,6 @@
         "navigation": {
             "active-project": "Active project"
         },
-        "nav": {
-            "project-switcher": {
-                "tooltip": "Switch project",
-                "search-placeholder": "Search projects..."
-            }
-        },
         "save-status": {
             "failed": {
                 "label": "Not saved",

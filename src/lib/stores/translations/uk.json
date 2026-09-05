@@ -1424,12 +1424,6 @@
         "navigation": {
             "active-project": "Активний проєкт"
         },
-        "nav": {
-            "project-switcher": {
-                "tooltip": "Перемкнути проєкт",
-                "search-placeholder": "Пошук проєктів..."
-            }
-        },
         "save-status": {
             "failed": {
                 "label": "Не збережено",

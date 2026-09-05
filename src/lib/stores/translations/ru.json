@@ -1570,12 +1570,6 @@
         "navigation": {
             "active-project": "Активный проект"
         },
-        "nav": {
-            "project-switcher": {
-                "tooltip": "Переключить проект",
-                "search-placeholder": "Поиск проектов..."
-            }
-        },
         "save-status": {
             "failed": {
                 "label": "Не сохранено",

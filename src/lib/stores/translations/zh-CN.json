@@ -1424,12 +1424,6 @@
         "navigation": {
             "active-project": "当前项目"
         },
-        "nav": {
-            "project-switcher": {
-                "tooltip": "切换项目",
-                "search-placeholder": "搜索项目..."
-            }
-        },
         "save-status": {
             "failed": {
                 "label": "未保存",
