@@ -1,4 +1,4 @@
-# Current project context
+﻿# Current project context
 
 > **Updated:** 2026-09-02 (#165, #181 and #179 merged into `main`; #178 and #180 have architect plans
 > (`PLAN_178_…`, `PLAN_180_…`) and WAIT ON USER DECISIONS recorded in `BACKLOG.md` — do not implement
@@ -446,9 +446,20 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`: 207 suites / 3343 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (110 pre-existing tsdoc warnings).** Measured 2026-09-05 on `main` after #194.
-  **The baseline FELL here, and that is stated rather than hidden** (precedent #160/#183): `widgetTemplates.test.ts`
+- **Canonical baseline — `main`: 215 suites / 3403 tests PASS, tsc 0, svelte-check 0/0,
+  lint 0 errors (110 pre-existing tsdoc warnings).** Measured 2026-09-05 on `main` after #185,
+  which brought four suites of its own: the writer, its version guard, the status store and the
+  chip.
+  **The previous line (207/3343) did not reproduce and is corrected rather than carried forward.**
+  Re-measured at `a5c1366`, the commit it claimed to describe: 211 suites / 3371 tests. The
+  number it replaced was therefore wrong when written, not overtaken since — which is why this
+  bullet is re-measured on `main` at merge instead of arithmetic being added to it.
+  **A190 did not start under the full parallel run at `a5c1366` and passed on its own (16/16),
+  and passed again in the full run on `main`.** It drives headless Chrome, so the failure is a
+  resource one under load rather than anything about that commit. Recorded because an acceptance
+  suite that can fail for a reason unrelated to its subject is worth watching, not because it
+  found anything.
+  **At #194 the baseline FELL, and that stays stated rather than hidden** (precedent #160/#183): `widgetTemplates.test.ts`
   tested a subject that no longer exists, and three replace-confirmation tests went with the mechanism.
   Seven tests were added in their place. One lint warning also went, with the `eslint-disable` comment
   in the deleted apply-template handler
