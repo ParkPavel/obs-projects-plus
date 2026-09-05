@@ -47,6 +47,10 @@ import {
   setSaveRetryHandler,
 } from "src/lib/settings/saveStatus";
 import { versionOnDisk } from "src/lib/settings/settingsVersion";
+import {
+  readRawSettings,
+  writeBrokenCopy,
+} from "src/lib/settings/brokenBackup";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
@@ -584,15 +588,48 @@ export default class ProjectsPlusPlugin extends Plugin {
    * to DEFAULT_SETTINGS, surface a Notice, and persist a backup of the raw
    * payload for forensic recovery.
    */
+  /**
+   * #195 — copy the unreadable settings file next to itself, and say where.
+   *
+   * Returns the path written or `null`. The caller MUST branch on that: a notice
+   * naming a file that was never written is the same broken promise the copy
+   * exists to prevent, one level down.
+   */
+  private async copyBrokenSettings(reason: string): Promise<string | null> {
+    const adapter = this.app.vault.adapter;
+    const dir = this.manifest.dir;
+    const raw = await readRawSettings(adapter, dir);
+    if (raw === null) {
+      console.error(
+        "[Projects+] Could not read the settings file back for a forensic copy"
+      );
+      return null;
+    }
+    const path = await writeBrokenCopy(adapter, dir, raw, reason, new Date());
+    if (path === null) {
+      console.error("[Projects+] Failed to write the forensic copy of settings");
+    }
+    return path;
+  }
+
   async loadSettings(): Promise<void> {
     let raw: unknown = null;
     try {
       raw = await this.loadData();
     } catch (err) {
       console.error("[Projects+] Failed to read settings from disk:", err);
+      // #195: this is the COMMONEST corruption — a truncated write leaves JSON
+      // that Obsidian's own parse rejects, so there is no object to migrate and
+      // the previous version made no copy at all. The bytes on disk are the only
+      // evidence, and the first settings change the user makes overwrites them.
+      const copiedTo = await this.copyBrokenSettings(
+        err instanceof Error ? err.message : String(err)
+      );
       new Notice(
-        "Projects+: failed to load settings — using defaults. Check console for details.",
-        10000
+        copiedTo === null
+          ? "Projects+: failed to load settings — using defaults. The file on disk was left untouched but could NOT be copied: back it up before changing anything, or the next save overwrites it. See the console."
+          : `Projects+: failed to load settings — using defaults. The unreadable file was copied to "${copiedTo}".`,
+        15000
       );
       this.publishSettings(Object.assign({}, DEFAULT_SETTINGS));
       return;
@@ -612,22 +649,16 @@ export default class ProjectsPlusPlugin extends Plugin {
       // backup regardless — sending the user to look for keys that were never
       // written, which is the same defect this ticket exists to close, one
       // level down.
-      let backedUp = false;
-      try {
-        await this.saveData({
-          __broken_backup: raw,
-          __broken_backup_reason: result.left.message,
-          __broken_backup_at: new Date().toISOString(),
-          ...DEFAULT_SETTINGS,
-        });
-        backedUp = true;
-      } catch (saveErr) {
-        console.error("[Projects+] Failed to persist broken-payload backup:", saveErr);
-      }
+      // #195: and the copy no longer goes INSIDE data.json. That file is
+      // rewritten whole by every ordinary save, so the copy used to survive only
+      // until the next one — which a live run showed arriving immediately, since
+      // an empty project list sends the user through onboarding and creating the
+      // demo project saves settings over it.
+      const copiedTo = await this.copyBrokenSettings(result.left.message);
       new Notice(
-        backedUp
-          ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; original payload backed up inside data.json under "__broken_backup".`
-          : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be backed up — do not overwrite data.json if you want to recover it. See the console.`,
+        copiedTo !== null
+          ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; the original payload was copied to "${copiedTo}".`
+          : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be copied — do not change any setting if you want to recover it, because the next save rewrites data.json. See the console.`,
         15000
       );
       // #185: the defaults must NOT be written back here — the file on disk is
