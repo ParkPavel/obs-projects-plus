@@ -1,3 +1,5 @@
+import { get } from "svelte/store";
+
 import {
   onSaveFailureEpisode,
   requestSaveRetry,
@@ -57,5 +59,21 @@ describe("#185 — save status out of band", () => {
     setSaveRetryHandler(null);
     requestSaveRetry();
     expect(retry).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("#185 — the chip must not outlive the writer it points at", () => {
+  it("a reset returns the store to idle so a stale failure cannot survive a reload", () => {
+    // The status store is module-global and outlives a plugin instance if the
+    // host keeps the module cached across disable/enable. Left standing, the
+    // chip would show a failure belonging to a session that is gone, and its
+    // retry would reach a clean writer and do nothing — a control that lies.
+    // `onunload` resets it; this pins that the store can BE reset, which is the
+    // half a unit test can carry.
+    saveStatus.set(failed(3));
+    expect(get(saveStatus).kind).toBe("failed");
+
+    saveStatus.set({ kind: "idle" });
+    expect(get(saveStatus)).toEqual({ kind: "idle" });
   });
 });

@@ -462,6 +462,13 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.unsubscribeSaveStatus();
     }
     setSaveRetryHandler(null);
+    // #185, second pass: the status store is module-global and outlives the
+    // plugin instance if the host keeps the module cached across a
+    // disable/enable. Left standing, the chip would survive into a session
+    // whose writer knows nothing about it — its retry reaching a clean writer
+    // and doing nothing, which is a control that lies. Reset with the handler
+    // it belongs to.
+    saveStatus.set({ kind: "idle" });
     if (this.settingsWriter) {
       // Order is load-bearing: `flush` starts the pending write synchronously,
       // so the write is already in flight by the time `dispose` stops the
@@ -596,6 +603,12 @@ export default class ProjectsPlusPlugin extends Plugin {
         raw
       );
       // Persist a backup of the broken payload so the user can recover manually.
+      // #185, second pass: whether this SUCCEEDED decides what the notice may
+      // claim. The previous version swallowed the rejection and promised a
+      // backup regardless — sending the user to look for keys that were never
+      // written, which is the same defect this ticket exists to close, one
+      // level down.
+      let backedUp = false;
       try {
         await this.saveData({
           __broken_backup: raw,
@@ -603,11 +616,14 @@ export default class ProjectsPlusPlugin extends Plugin {
           __broken_backup_at: new Date().toISOString(),
           ...DEFAULT_SETTINGS,
         });
+        backedUp = true;
       } catch (saveErr) {
         console.error("[Projects+] Failed to persist broken-payload backup:", saveErr);
       }
       new Notice(
-        `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; original payload backed up inside data.json under "__broken_backup".`,
+        backedUp
+          ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; original payload backed up inside data.json under "__broken_backup".`
+          : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be backed up — do not overwrite data.json if you want to recover it. See the console.`,
         15000
       );
       // #185: the defaults must NOT be written back here — the file on disk is
