@@ -281,6 +281,89 @@ describe("#185 — settings writer", () => {
     expect(save.calls).toEqual([value]);
   });
 
+  /**
+   * The three below come from the pre-merge review of this branch. Each is the
+   * same shape of defect the ticket exists to remove — a change the user made
+   * that quietly never reaches the disk, or a control that claims a state the
+   * writer is not in.
+   */
+
+  it("flush carries the value queued behind an in-flight write across dispose", async () => {
+    const save = makeSave();
+    save.mode = "manual";
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    const first = { n: 1 };
+    const second = { n: 2 };
+    writer.push(first);
+    await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toEqual([first]);
+
+    // The user's last change lands while the first write is still in flight,
+    // and the plugin is disabled before it settles: `onunload` calls flush and
+    // dispose back to back.
+    writer.push(second);
+    const flushed = writer.flush();
+    writer.dispose();
+
+    save.pending[0]?.resolve();
+    await jest.advanceTimersByTimeAsync(0);
+    save.pending[1]?.resolve();
+    await flushed;
+
+    expect(save.calls).toEqual([first, second]);
+  });
+
+  it("a write that fails after dispose publishes no status", async () => {
+    const save = makeSave();
+    save.mode = "manual";
+    const seen: SaveStatus[] = [];
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      onStatus: (status) => seen.push(status),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.dispose();
+
+    save.pending[0]?.reject(new Error("EACCES"));
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(seen.map((status) => status.kind)).toEqual(["saving"]);
+  });
+
+  it("a change made after the retry budget is spent gets its own retries", async () => {
+    const save = makeSave();
+    save.mode = "fail";
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+      retryDelaysMs: [500],
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    await jest.advanceTimersByTimeAsync(500);
+    expect(save.calls).toHaveLength(2);
+    expect(writer.status().kind).toBe("failed");
+
+    save.calls.length = 0;
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+    await jest.advanceTimersByTimeAsync(500);
+
+    // One attempt plus the configured retry, exactly as the first episode got.
+    expect(save.calls).toHaveLength(2);
+  });
+
   it("dispose leaves no timer behind and writes nothing", async () => {
     const save = makeSave();
     const writer = createSettingsWriter<Value>({

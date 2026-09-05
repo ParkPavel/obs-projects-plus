@@ -103,8 +103,15 @@ export function createSettingsWriter<T>(
   let attempt = 0;
   let status: SaveStatus = { kind: "idle" };
   let disposed = false;
+  let flushing = false;
 
   function setStatus(next: SaveStatus): void {
+    // A write that settles after `dispose` has no audience: `onunload` has
+    // already reset the status store and dropped the retry handler. Publishing
+    // a late failure here would raise a chip in the NEXT session, whose retry
+    // reaches a writer that knows nothing about it — the lying control this
+    // ticket exists to remove, arriving by a second route.
+    if (disposed) return;
     if (sameStatus(status, next)) return;
     status = next;
     onStatus?.(next);
@@ -140,8 +147,10 @@ export function createSettingsWriter<T>(
     startWrite();
   }
 
-  function startWrite(): void {
-    if (disposed || inFlight !== null || !dirty || latest === null) return;
+  function startWrite(force = false): void {
+    if ((disposed && !force) || inFlight !== null || !dirty || latest === null) {
+      return;
+    }
     const value = latest.value;
     dirty = false;
     setStatus({ kind: "saving" });
@@ -154,8 +163,12 @@ export function createSettingsWriter<T>(
     inFlight = null;
     attempt = 0;
     if (dirty) {
-      // Exactly one follow-up write, carrying whatever arrived meanwhile.
-      startWrite();
+      // Exactly one follow-up write, carrying whatever arrived meanwhile. It
+      // keeps the flush's licence to run past `dispose`: teardown calls
+      // `flush()` and `dispose()` back to back, so without this the value
+      // queued behind an in-flight write is dropped exactly when the user can
+      // no longer notice.
+      startWrite(flushing);
       return;
     }
     setStatus({ kind: "idle" });
@@ -186,11 +199,17 @@ export function createSettingsWriter<T>(
     },
     push(value: T): void {
       if (latest !== null && Object.is(latest.value, value)) return;
+      // A change made after the budget was spent is a new episode and gets its
+      // own retries. Without this, `attempt` stays past the end of the delay
+      // list and every later change gets a single attempt — the writer quietly
+      // stops retrying for the rest of the session.
+      if (status.kind === "failed") attempt = 0;
       latest = { value };
       dirty = true;
       schedule();
     },
     pushImmediate(value: T): void {
+      if (status.kind === "failed") attempt = 0;
       latest = { value };
       dirty = true;
       cancelSchedule();
@@ -207,9 +226,14 @@ export function createSettingsWriter<T>(
     async flush(): Promise<void> {
       cancelSchedule();
       cancelRetry();
-      startWrite();
-      while (inFlight !== null) {
-        await inFlight;
+      flushing = true;
+      try {
+        startWrite(true);
+        while (inFlight !== null) {
+          await inFlight;
+        }
+      } finally {
+        flushing = false;
       }
     },
     dispose(): void {

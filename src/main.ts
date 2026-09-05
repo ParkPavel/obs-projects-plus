@@ -470,9 +470,13 @@ export default class ProjectsPlusPlugin extends Plugin {
     // it belongs to.
     saveStatus.set({ kind: "idle" });
     if (this.settingsWriter) {
-      // Order is load-bearing: `flush` starts the pending write synchronously,
-      // so the write is already in flight by the time `dispose` stops the
-      // writer from scheduling anything further.
+      // Order is load-bearing, and `flush` is deliberately allowed to outlive
+      // `dispose`: it starts the pending write synchronously and keeps its
+      // licence to run the one follow-up write queued behind an in-flight one,
+      // while `dispose` stops the writer from scheduling anything new. What it
+      // does not do is wait out a retry delay — a change made while the disk is
+      // refusing writes is still lost on quit, and #185 promises only that the
+      // user was warned by something that does not fade before they got here.
       void this.settingsWriter.flush();
       this.settingsWriter.dispose();
       delete this.settingsWriter;
