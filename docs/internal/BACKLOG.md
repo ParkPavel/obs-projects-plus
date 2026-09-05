@@ -1,4 +1,4 @@
-# Project Backlog — obs-projects-plus
+﻿# Project Backlog — obs-projects-plus
 
 > **Plugin version**: see `package.json` (currently `3.5.1-alpha`)
 > **Updated**: 2026-08-30 (#164 closed on a live run; the stack is merged and pushed) — filed #141–#170: Codex meta-audit + render pass (see the section at the end of this file; findings in `CODEX_META_AUDIT_FINDINGS_2026-08-27.md`). live API run against the OBStests vault (#162–#164), and the Notion reference analysis (`M-MATRYOSHKA`, #165–#170). Baseline numbers live in `CONTEXT.md`, not here.
@@ -4686,7 +4686,7 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
   в полосе фильтра вида, диалог имени, запись `DerivedDataSource` в `additionalSources` проекта.
 
 ### #185 — Настройки сохраняются «выстрелил и забыл»: провал записи виден только в консоли
-- Status: 📋 ПЛАН ГОТОВ 2026-09-05 — `PLAN_185_SAVE_VISIBILITY_2026-09-05.md`
+- Status: ✅ DONE 2026-09-05 — `PLAN_185_SAVE_VISIBILITY_2026-09-05.md`, аудит `CX-AUDIT-185.md`
   | Milestone: (next) | Priority: **P1** | Complexity: M
 - analysis_required: false
 - Vision scene: none — надёжность | User outcome: если изменение не сохранилось, ты узнаёшь об этом, а не теряешь его при перезагрузке
@@ -4723,6 +4723,16 @@ CV-1 сверил 18 тикетов с фактическим кодом и по
   показать пользователю ошибку записи, и решить, что делать с изменением, которое не легло на диск —
   повтор, откат или явный индикатор «не сохранено». Форма решения — вопрос к архитектору: это
   затрагивает каждый путь записи в приложении.
+
+- **Сделано 2026-09-05, ветка `feat/185-save-visibility`.** Один писатель (`settingsWriter.ts`) с двухстадийным
+  коалесингом и повторами; статус наружу отдельным store и стоящим чипом в навбаре; эхо-запись
+  снята праймингом, а не пропуском первого срабатывания, поэтому миграция v1→v4 по-прежнему
+  ложится на диск (`settingsVersion.ts` решает это одной чистой функцией), а `__broken_backup` переживает
+  загрузку. Уведомление о порче больше не обещает копию безусловно — текст ветвится по тому,
+  удалась ли запись копии.
+- **Не установлено воротами и остаётся ручным прогоном:** снять право записи с `data.json`,
+  переименовать проект, убедиться в одном уведомлении и стоящем чипе; подложить повреждённый
+  `data.json` и проверить, что `__broken_backup` жив после перезапуска.
 
 ### #186 — Шина команд переигрывает последнее сообщение каждому новому подписчику
 - Status: ✅ DONE 2026-09-04 — найдено визуальным прогоном пользователя | Milestone: (next) | Priority: **P1** | Complexity: S
