@@ -37,12 +37,23 @@ import {
   type InverseIndexStore,
 } from "src/lib/relations/inverseIndexStore";
 import { get, type Unsubscriber } from "svelte/store";
+import {
+  createSettingsWriter,
+  type SettingsWriter,
+} from "src/lib/settings/settingsWriter";
+import {
+  onSaveFailureEpisode,
+  saveStatus,
+  setSaveRetryHandler,
+} from "src/lib/settings/saveStatus";
+import { versionOnDisk } from "src/lib/settings/settingsVersion";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
 import {
   DEFAULT_SETTINGS,
   migrateSettings,
+  type LatestProjectsPluginSettings,
   type ProjectDefinition,
   type ProjectId,
   type ShowCommand,
@@ -56,11 +67,22 @@ dayjs.extend(localizedFormat);
 export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeSettings?: Unsubscriber;
   unsubscribeCommandBus?: Unsubscriber;
+  unsubscribeSaveStatus?: Unsubscriber;
   inverseIndexStore?: InverseIndexStore;
   /** REFACTOR-008: command registration is delegated to a dedicated manager. */
   private commandManager?: CommandManager;
   /** REFACTOR-205: stored so the lifecycle is explicit and reload-safe. */
   private fileSystemWatcher?: ObsidianFileSystemWatcher;
+  /** #185: the only thing in the plugin that writes `data.json`. */
+  private settingsWriter?: SettingsWriter<LatestProjectsPluginSettings>;
+  /**
+   * #185: the exact object `loadSettings` put into the store. The writer is
+   * primed with THIS reference, so the echo firing is recognised by identity
+   * rather than by assuming nothing mutates the store in between.
+   */
+  private loadedSettings?: LatestProjectsPluginSettings;
+  /** #185: version found on disk when it differed from the current one. */
+  private migratedFromVersion: number | null = null;
 
   /**
    * onload runs when the plugin is enabled.
@@ -340,11 +362,56 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.activateView(projectId, viewId);
     });
 
+    // #185 — one writer owns `data.json`. `saveData` is handed to it rather
+    // than imported, which is what makes a failing write expressible in a test
+    // at all; the outcome leaves through `saveStatus` instead of being returned,
+    // because under coalescing a per-call promise describes no single write.
+    const writer = createSettingsWriter<LatestProjectsPluginSettings>({
+      save: (value) => this.saveData(value),
+      onStatus: (status) => saveStatus.set(status),
+    });
+    this.settingsWriter = writer;
+    setSaveRetryHandler(() => writer.retry());
+
+    // The chip lives in `CompactNavBar`, which exists only inside the Projects
+    // view — settings also change from Obsidian's own settings tab. One Notice
+    // per episode covers that; the chip is what remains visible afterwards.
+    this.unsubscribeSaveStatus = onSaveFailureEpisode(() => {
+      new Notice(t("save-status.failed.notice"), 15000);
+    });
+
+    // The store fires immediately on subscribe, with the value `loadSettings`
+    // just read from disk. That echo used to be written straight back — and on
+    // the corruption path it overwrote the `__broken_backup` keys the Notice
+    // had just told the user to look for. Priming with the same object makes
+    // the first firing a no-op.
+    if (this.loadedSettings) {
+      writer.prime(this.loadedSettings);
+      if (this.migratedFromVersion !== null) {
+        // …but that echo was also the ONLY thing persisting a migration.
+        // Skipping it alone would leave a v1 file on disk indefinitely, so the
+        // migration is written here by name: because the version changed, not
+        // because the plugin was opened.
+        writer.pushImmediate(this.loadedSettings);
+      }
+    }
+
     // Save settings to disk whenever settings has been updated.
     this.unsubscribeSettings = settings.subscribe((value) => {
       this.ensureCommands(value.preferences.commands, value.projects);
-      void this.saveData(value).catch((err) => console.error('Failed to save settings:', err));
+      writer.push(value);
     });
+
+    // Best effort on shutdown: the last coalesced write is torn off the
+    // debounce. Obsidian documents this event as "not guaranteed to actually
+    // run", so it closes the common case and nothing more — a change that is
+    // still failing to write when the window closes is lost, and the standing
+    // indicator is what warns the user before that happens.
+    this.registerEvent(
+      this.app.workspace.on("quit", (tasks) => {
+        tasks.addPromise(writer.flush());
+      })
+    );
 
     // R1.1 — subscribe to global command-bus for Visualizer-pane lifecycle.
     // The bus carries actions emitted from palette / file-menu / toolbar;
@@ -390,6 +457,18 @@ export default class ProjectsPlusPlugin extends Plugin {
   onunload(): void {
     if (this.unsubscribeSettings) {
       this.unsubscribeSettings();
+    }
+    if (this.unsubscribeSaveStatus) {
+      this.unsubscribeSaveStatus();
+    }
+    setSaveRetryHandler(null);
+    if (this.settingsWriter) {
+      // Order is load-bearing: `flush` starts the pending write synchronously,
+      // so the write is already in flight by the time `dispose` stops the
+      // writer from scheduling anything further.
+      void this.settingsWriter.flush();
+      this.settingsWriter.dispose();
+      delete this.settingsWriter;
     }
     if (this.unsubscribeCommandBus) {
       this.unsubscribeCommandBus();
@@ -504,7 +583,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         "Projects+: failed to load settings — using defaults. Check console for details.",
         10000
       );
-      settings.set(Object.assign({}, DEFAULT_SETTINGS));
+      this.publishSettings(Object.assign({}, DEFAULT_SETTINGS));
       return;
     }
 
@@ -531,11 +610,24 @@ export default class ProjectsPlusPlugin extends Plugin {
         `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; original payload backed up inside data.json under "__broken_backup".`,
         15000
       );
-      settings.set(Object.assign({}, DEFAULT_SETTINGS));
+      // #185: the defaults must NOT be written back here — the file on disk is
+      // the forensic copy, and rewriting it is what used to delete the backup
+      // the Notice above points at.
+      this.publishSettings(Object.assign({}, DEFAULT_SETTINGS));
       return;
     }
 
-    settings.set(result.right);
+    this.migratedFromVersion = versionOnDisk(raw, DEFAULT_SETTINGS.version);
+    this.publishSettings(result.right);
+  }
+
+  /**
+   * #185 — put `value` into the store and remember the exact object, so the
+   * writer can be primed with the reference that is already on disk.
+   */
+  private publishSettings(value: LatestProjectsPluginSettings): void {
+    this.loadedSettings = value;
+    settings.set(value);
   }
 
   /**
