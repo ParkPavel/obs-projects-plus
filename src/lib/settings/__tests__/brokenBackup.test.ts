@@ -119,6 +119,33 @@ describe("#195 — the forensic copy of unreadable settings", () => {
     ).toBe("first");
   });
 
+  it("two copies in the same millisecond do not collide", async () => {
+    const adapter = makeAdapter();
+    const at = new Date("2026-09-05T18:44:00.000Z");
+
+    const first = await writeBrokenCopy(adapter, DIR, "first", "r", at);
+    const second = await writeBrokenCopy(adapter, DIR, "second", "r", at);
+
+    expect(first).not.toBe(second);
+    expect(
+      JSON.parse(adapter.files.get(first ?? "") ?? "{}").__broken_backup_raw
+    ).toBe("first");
+    expect(
+      JSON.parse(adapter.files.get(second ?? "") ?? "{}").__broken_backup_raw
+    ).toBe("second");
+  });
+
+  it("writes anyway when the adapter cannot answer whether the name is taken", async () => {
+    const adapter = makeAdapter();
+    adapter.exists = () => Promise.reject(new Error("EIO"));
+
+    const path = await writeBrokenCopy(adapter, DIR, "payload", "r", new Date());
+
+    // Losing the copy would be worse than overwriting a name that probably is
+    // not there.
+    expect(path).not.toBeNull();
+  });
+
   it("reports a failed write instead of assuming one", async () => {
     const adapter = makeAdapter();
     adapter.writeFails = true;

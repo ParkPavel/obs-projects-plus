@@ -71,6 +71,31 @@ export async function readRawSettings(
 }
 
 /**
+ * The first unused name at or after `base`, or `null` if the adapter cannot say.
+ *
+ * The ceiling is deliberate and low: ten collisions on one millisecond means
+ * something other than corruption is happening, and looping further would turn
+ * a recovery path into a spin.
+ */
+async function freeName(
+  adapter: BrokenCopyAdapter,
+  base: string
+): Promise<string | null> {
+  try {
+    if (!(await adapter.exists(base))) return base;
+    for (let n = 2; n <= 10; n += 1) {
+      const candidate = base.replace(/\.json$/, `-${n}.json`);
+      if (!(await adapter.exists(candidate))) return candidate;
+    }
+    return null;
+  } catch {
+    // An adapter that cannot answer `exists` is not a reason to lose the copy:
+    // writing over a name that probably does not exist beats not writing.
+    return base;
+  }
+}
+
+/**
  * Write the forensic copy. Returns the path written, or `null` on any failure —
  * including a missing plugin directory, which is why the caller must branch on
  * the result rather than on the absence of an exception.
@@ -85,7 +110,13 @@ export async function writeBrokenCopy(
   reason: string,
   at: Date
 ): Promise<string | null> {
-  const path = brokenCopyPath(dir, at);
+  const base = brokenCopyPath(dir, at);
+  if (base === null) return null;
+  // The timestamp alone is not a guarantee: two episodes can round to the same
+  // millisecond, and a file with that name may already exist for reasons this
+  // module cannot see. Since the whole point is that the FIRST copy is never
+  // touched, the name is checked rather than assumed.
+  const path = await freeName(adapter, base);
   if (path === null) return null;
   const contents = JSON.stringify(
     {
