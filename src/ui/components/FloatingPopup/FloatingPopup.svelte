@@ -97,23 +97,49 @@
   // are in the same document by construction.
   let boundDoc: Document = document;
   let boundView: Window = window;
+  let listening = false;
 
-  onMount(() => {
-    boundDoc = triggerEl?.ownerDocument ?? document;
-    boundView = boundDoc.defaultView ?? window;
+  /**
+   * Put the listeners on `doc`, taking them off whatever held them before.
+   *
+   * Binding once at mount is not enough, and that is the correction the review
+   * caught: several callers mount this component before their anchor exists
+   * (`SortTab`, `ColorFiltersTab` supply `triggerEl` only when the popover
+   * opens). Bound at mount, such a popup would listen on the main window
+   * forever — the exact defect, one level up.
+   */
+  function bindTo(doc: Document): void {
+    if (listening && doc === boundDoc) return;
+    if (listening) {
+      boundDoc.removeEventListener("keydown", handleKeydown, true);
+      boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
+      boundView.removeEventListener("resize", handleReposition);
+      boundView.removeEventListener("scroll", handleReposition, true);
+    }
+    boundDoc = doc;
+    boundView = doc.defaultView ?? window;
     boundDoc.addEventListener("keydown", handleKeydown, true);
     boundDoc.addEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.addEventListener("resize", handleReposition);
     boundView.addEventListener("scroll", handleReposition, true);
+    listening = true;
+  }
+
+  // The anchor may arrive long after mount, and the popup's own element only
+  // exists while it is open. Whichever appears first names the document.
+  $: bindTo(popupEl?.ownerDocument ?? triggerEl?.ownerDocument ?? document);
+
+  onMount(() => {
+    bindTo(triggerEl?.ownerDocument ?? document);
   });
 
   onDestroy(() => {
-    // Removed from whatever they were added to: rebinding on a later mount
-    // must not leave a listener behind on the previous document.
+    if (!listening) return;
     boundDoc.removeEventListener("keydown", handleKeydown, true);
     boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
     boundView.removeEventListener("resize", handleReposition);
     boundView.removeEventListener("scroll", handleReposition, true);
+    listening = false;
   });
 
   // Reposition on viewport changes (resize / scroll) while open so a popup
@@ -225,7 +251,7 @@
       if (focusable.length === 0) return;
       const first = focusable[0]!;
       const last = focusable[focusable.length - 1]!;
-      const activeEl = document.activeElement as HTMLElement | null;
+      const activeEl = boundDoc.activeElement as HTMLElement | null;
       if (e.shiftKey && activeEl === first) {
         e.preventDefault();
         last.focus();
@@ -241,7 +267,7 @@
       );
       if (items.length === 0) return;
       e.preventDefault();
-      const current = items.indexOf(document.activeElement as HTMLElement);
+      const current = items.indexOf(boundDoc.activeElement as HTMLElement);
       let next = current;
       if (e.key === "ArrowDown") next = current < 0 ? 0 : (current + 1) % items.length;
       if (e.key === "ArrowUp") next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length;

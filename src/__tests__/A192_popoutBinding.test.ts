@@ -61,6 +61,24 @@ describe("A192 — a portaled popup belongs to one window, wholly", () => {
     }
   });
 
+  it("reads focus from the document it is bound to", () => {
+    // A listener in the right window that then asks the WRONG document who has
+    // focus is the same defect wearing a different coat: Tab never recognises
+    // the first or last control, and arrow navigation always sees no selection.
+    const code = body(TRAVELLERS[0] as string);
+    expect(code).not.toMatch(/[^.\w]document\.activeElement/);
+  });
+
+  it("can move its binding, because the document is not known at mount", () => {
+    // Both components can be mounted before the thing that names their
+    // document exists: FloatingPopup's anchor arrives when a popover opens,
+    // DayPopup's layer is built by an action that runs on a conditional
+    // branch. A binding made once at mount would stay on the main window.
+    for (const file of TRAVELLERS) {
+      expect(body(file)).toMatch(/function bindTo\(/);
+    }
+  });
+
   it("does not bind the key handler through svelte:window", () => {
     // `<svelte:window>` is the bundle's window by definition, so a popup that
     // can be in another one cannot use it for dismissal.

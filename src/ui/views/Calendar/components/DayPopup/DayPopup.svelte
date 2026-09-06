@@ -213,39 +213,49 @@
     }, 100);
   }
   
-  /** Move the key listener to `doc`, taking it off whatever held it before. */
+  /**
+   * Move EVERY listener to `doc`'s window, taking them off whatever held them.
+   *
+   * All of them, not just the key handler — the review caught that half-move:
+   * `onMount` had already put resize and orientation on the main window, and
+   * changing `ownView` without moving them meant resizing the popout stopped
+   * re-measuring, while teardown removed them from a window that never had
+   * them, leaking the originals.
+   */
   function bindTo(doc: Document): void {
     if (doc === ownDoc && listening) return;
-    if (listening) ownDoc.removeEventListener('keydown', handleKeydown);
+    if (listening) unbind();
     ownDoc = doc;
     ownView = doc.defaultView ?? window;
     ownDoc.addEventListener('keydown', handleKeydown);
+    ownView.addEventListener('resize', detectLayout);
+    ownView.addEventListener('orientationchange', handleOrientationChange);
+    if (ownView.screen?.orientation) {
+      ownView.screen.orientation.addEventListener('change', handleOrientationChange);
+    }
     listening = true;
     detectLayout();
   }
 
-  onMount(() => {
-    bindTo(ownDoc);
-    detectLayout();
-    // #192: bound to the popup's own window. Resizing the window it is in is
-    // what should re-measure it; the main window's resize is irrelevant to it.
-    ownView.addEventListener('resize', detectLayout);
-    // v5.0.0: Listen for orientation changes on mobile
-    ownView.addEventListener('orientationchange', handleOrientationChange);
-    // Fallback for devices that don't fire orientationchange
-    if (ownView.screen?.orientation) {
-      ownView.screen.orientation.addEventListener('change', handleOrientationChange);
-    }
-  });
-  
-  onDestroy(() => {
-    if (listening) ownDoc.removeEventListener('keydown', handleKeydown);
-    listening = false;
+  function unbind(): void {
+    if (!listening) return;
+    ownDoc.removeEventListener('keydown', handleKeydown);
     ownView.removeEventListener('resize', detectLayout);
     ownView.removeEventListener('orientationchange', handleOrientationChange);
     if (ownView.screen?.orientation) {
       ownView.screen.orientation.removeEventListener('change', handleOrientationChange);
     }
+    listening = false;
+  }
+
+  onMount(() => {
+    // The portal may not have run yet, so this binds to the bundle's document
+    // and `bindTo` moves everything the moment the real one is known.
+    bindTo(ownDoc);
+  });
+  
+  onDestroy(() => {
+    unbind();
     ownDoc.body.style.overflow = '';
     // Cleanup portal if still exists
     if (portalContainer && portalContainer.parentNode) {
