@@ -58,14 +58,40 @@ function readLocale(name: string): { raw: string; json: unknown } {
   return { raw, json: JSON.parse(raw.replace(/^\uFEFF/, "")) };
 }
 
-function resolves(json: unknown, key: string): boolean {
+function lookup(json: unknown, key: string): unknown {
   let node: unknown = (json as { translation?: unknown }).translation ?? json;
   for (const part of key.split(".")) {
-    if (typeof node !== "object" || node === null) return false;
+    if (typeof node !== "object" || node === null) return undefined;
     node = (node as Record<string, unknown>)[part];
-    if (node === undefined) return false;
+    if (node === undefined) return undefined;
   }
-  return typeof node === "string" && node.length > 0;
+  return node;
+}
+
+/** The codes an area is missing to run `01..n` without a hole. */
+function gaps(codes: readonly string[]): string[] {
+  const byArea = new Map<string, Set<number>>();
+  for (const code of codes) {
+    const area = code.slice(4, 5);
+    const set = byArea.get(area) ?? new Set<number>();
+    set.add(Number(code.slice(5)));
+    byArea.set(area, set);
+  }
+  const missing: string[] = [];
+  for (const [area, ordinals] of byArea) {
+    const highest = Math.max(...ordinals);
+    for (let n = 1; n <= highest; n++) {
+      if (!ordinals.has(n)) {
+        missing.push(`PPP-${area}${String(n).padStart(2, "0")}`);
+      }
+    }
+  }
+  return missing.sort();
+}
+
+function resolves(json: unknown, key: string): boolean {
+  const value = lookup(json, key);
+  return typeof value === "string" && value.length > 0;
 }
 
 describe("R0.21 — the registry and the page stay in step", () => {
@@ -141,6 +167,36 @@ describe("R0.21 — the registry and the page stay in step", () => {
     }
   });
 
+  it("the registry is populated", () => {
+    // Step 1 shipped this list empty so the ratchet could be proven on
+    // synthetic input. Every assertion above is vacuous on an empty list, so
+    // this is the one that says the codes were actually issued.
+    expect(ERROR_CODES.length).toBeGreaterThan(0);
+  });
+
+  it("numbers run densely from 01 in every area that has any", () => {
+    // A gap is a number nobody can look up, and the numbering is assigned by
+    // hand precisely because codes are permanent. Retiring a code keeps its
+    // entry, so retirement never opens a gap either.
+    expect(gaps(ERROR_CODES.map((entry) => entry.code))).toEqual([]);
+  });
+
+  it("every caption is the English default for its key, verbatim", () => {
+    // `errorLog.ts` prints `caption` and a Notice resolves `key`. Where the
+    // Notice does resolve its key — which is all but the two settings-load
+    // messages, whose pre-registry literals #202 leaves alone — this equality
+    // is what makes the console line and the message on screen the same
+    // sentence. Where it does not, the caption is still the one English text
+    // the code is filed under, so it may not quietly become something nicer.
+    const { json } = readLocale("en");
+    for (const entry of ERROR_CODES) {
+      expect({ code: entry.code, caption: entry.caption }).toEqual({
+        code: entry.code,
+        caption: lookup(json, entry.key),
+      });
+    }
+  });
+
   describe("the ratchet itself fails on a planted mismatch", () => {
     const planted: ErrorCodeEntry = {
       code: "PPP-999",
@@ -167,6 +223,14 @@ describe("R0.21 — the registry and the page stay in step", () => {
       for (const bad of ["PPP-04", "ppp-104", "PPP-1040", "104"]) {
         expect(bad).not.toMatch(CODE_SHAPE);
       }
+    });
+
+    it("a hole in the numbering is caught", () => {
+      // The live check above is vacuous on an empty registry and silent on a
+      // correct one, so the detector is shown working on input that has a hole.
+      expect(gaps(["PPP-101", "PPP-102", "PPP-104"])).toEqual(["PPP-103"]);
+      expect(gaps(["PPP-102"])).toEqual(["PPP-101"]);
+      expect(gaps(["PPP-101", "PPP-102", "PPP-201"])).toEqual([]);
     });
   });
 });

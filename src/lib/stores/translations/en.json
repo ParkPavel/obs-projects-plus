@@ -58,7 +58,8 @@
             "create-demo-project": {
                 "name": "Create demo project",
                 "duplicate-warning": "Demo project already exists — delete it first to regenerate.",
-                "created": "Demo project created."
+                "created": "Demo project created.",
+                "repair-failed": "Demo project already exists. {{count}} missing notes could not be written — see the console."
             }
         },
         "menus": {
@@ -467,7 +468,8 @@
                 "bar": {
                     "aria": "View filter",
                     "add": "Filter",
-                    "scope": "This view"
+                    "scope": "This view",
+                    "save-name-taken": "This project already has a source called \"{{name}}\""
                 }
             },
             "visualizer": {
@@ -582,8 +584,18 @@
                     "no-events": "No events for this period"
                 },
                 "errors": {
+                    "check-failed": "The checkbox could not be changed.",
+                    "check-field-required": "Choose a field for the checkboxes first.",
+                    "color-failed": "The colour could not be changed.",
+                    "color-field-required": "No colour field is set for this project.",
                     "create-readonly": "Cannot create events in read-only projects",
-                    "date-required": "Date field is required to create events"
+                    "date-change-failed": "The event date could not be changed.",
+                    "date-invalid": "That date cannot be used for this event.",
+                    "date-required": "Date field is required to create events",
+                    "delete-failed": "The note could not be deleted.",
+                    "duplicate-failed": "The note could not be duplicated.",
+                    "navigation-failed": "The calendar could not move to that date.",
+                    "record-invalid": "This record cannot be moved."
                 },
                 "record": {
                     "open": "Open note",
@@ -826,7 +838,9 @@
                     "filter-bridge-promote": "Save as global filter",
                     "empty-title": "Empty canvas",
                     "empty-hint": "Start with a data block",
-                    "empty-add-block": "Add data block"
+                    "empty-add-block": "Add data block",
+                    "error-add-field": "Failed to add field. Please try again.",
+                    "error-reopen-schema": "Failed to reopen schema."
                 },
                 "cover-banner-config": {
                     "src": "Image source",
@@ -1537,7 +1551,44 @@
             "recordWriteFailed": "Could not save changes to {{path}}; the previous value was restored.",
             "recordFileMissing": "{{path}} no longer exists; the change was not saved.",
             "fieldWritePartial": "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
-            "inverseWriteFailed": "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console."
+            "inverseWriteFailed": "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.",
+            "recordsWriteFailed": "Could not save {{count}} record(s); the previous values were restored.",
+            "migrationBackupFailed": "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
+            "renameFailed": "The note could not be renamed.",
+            "settingsUnreadable": "The settings file could not be read; defaults are in use.",
+            "settingsCorrupted": "The settings file is corrupted; defaults were restored.",
+            "causes": {
+                "settings-write-failed": "The write was accepted but data.json still holds the old value, so the change exists only in this session.",
+                "settings-superseded": "Another window or a synchroniser replaced the file, so this window cannot tell whether its own change survived.",
+                "settings-unreadable": "data.json could not be read or parsed, so the plugin started from defaults and left the file on disk untouched.",
+                "settings-corrupted": "data.json parsed but matched no known settings version, so there was nothing that could be migrated.",
+                "record-write-failed": "Writing the note's frontmatter failed, so the value on screen was rolled back to what is on disk.",
+                "records-write-failed": "A batch write failed part way through, so every record in the batch was rolled back to what is on disk.",
+                "record-file-missing": "The note was renamed, moved or deleted after the view loaded it, so there was no file left to write to.",
+                "field-write-partial": "A new field is written into the project's notes one by one, and some of those writes did not succeed.",
+                "rename-failed": "Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.",
+                "note-save-failed": "The note editor could not write its changes back to the file, so what is on screen is ahead of what is on disk.",
+                "delete-failed": "Deleting the file failed — it may be open elsewhere, read-only, or already gone.",
+                "duplicate-failed": "One of the copies could not be created, so the set of new notes is incomplete.",
+                "check-failed": "Writing the checkbox field back to the note failed, so the tick does not reflect the file.",
+                "check-field-required": "The view has no boolean field assigned, so there is nothing for a tick to be written into.",
+                "date-change-failed": "Writing the new date back to the note failed, so the event stays where it was.",
+                "date-field-required": "The view has no date field assigned, so an event has nothing to be placed by.",
+                "date-invalid": "The target date failed validation — it is outside the supported range, or it would put the end of the event before its start.",
+                "record-invalid": "The record is missing fields the calendar needs, so its new position cannot be worked out.",
+                "color-failed": "Writing the colour field back to the note failed, so the event keeps its previous colour.",
+                "color-field-required": "The view has no field assigned to hold an event colour, so there is nothing to write the choice into.",
+                "navigation-failed": "Working out the next period failed, so the calendar stayed where it was.",
+                "create-readonly": "The project is read-only, so no note can be created from this view.",
+                "dashboard-add-field": "The field could not be written into the project's notes, so the schema is unchanged.",
+                "dashboard-reopen-schema": "The schema dialog could not be reopened after the edit; the edit itself was applied.",
+                "dashboard-migration-backup": "The pre-migration copy of the configuration could not be saved, so there is nothing to roll back to.",
+                "inverse-write-failed": "The back-link is written into the notes on the other side of the relation, and some of those writes failed.",
+                "demo-folder-failed": "The folder the demo notes live in could not be created, so none of them had anywhere to land.",
+                "demo-partial": "Some of the demo notes could not be written, so the project is registered but incomplete.",
+                "demo-repair-failed": "The demo project was re-seeded to restore the notes it was missing, and some of those writes failed.",
+                "source-name-taken": "Two sources sharing a name are indistinguishable in the only picker that lists them, so the name is refused."
+            }
         },
         "database": {
             "cell-editor": {
