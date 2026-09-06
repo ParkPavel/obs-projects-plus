@@ -638,12 +638,22 @@ export default class ProjectsPlusPlugin extends Plugin {
       }
       if (verdict === "superseded") {
         // Someone else — a second window, a synchroniser — replaced the file.
-        // That is not this write failing, and retrying would overwrite their
-        // change with a value they never asked for.
+        // Retrying would overwrite their change with a value they never asked
+        // for, so this writer stops here. It does NOT report success quietly:
+        // a silent host failure can hide inside this case (write refused, then
+        // an external write lands), and the honest thing is to say the state
+        // is unknown rather than to pick a side. #200 covers reconciling it.
         console.warn(
-          "[Projects+] data.json was changed by something else; leaving it alone"
+          "[Projects+] data.json was changed by something else; not retrying"
         );
         this.confirmedOnDisk = null;
+        new Notice(
+          get(i18n).t("save-status.superseded.notice", {
+            defaultValue:
+              "Projects+: data.json was changed outside this window. Your latest change may not be saved — reopen the vault before making more.",
+          }),
+          15000
+        );
         return true;
       }
     }

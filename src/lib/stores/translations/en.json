@@ -1586,6 +1586,9 @@
                 "label": "Not saved",
                 "tooltip": "Settings could not be written to data.json. Your change is kept for this session — click to retry.",
                 "notice": "Projects+: settings could not be written to disk. Your change is still here, but it will be lost on reload. Retry from the \"Not saved\" mark in the toolbar."
+            },
+            "superseded": {
+                "notice": "Projects+: data.json was changed outside this window. Your latest change may not be saved — reopen the vault before making more."
             }
         },
         "settings-menu": {
