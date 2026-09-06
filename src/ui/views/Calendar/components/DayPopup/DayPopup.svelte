@@ -78,6 +78,8 @@
   let ownView: Window = window;
   let ownDoc: Document = document;
   let listening = false;
+  /** Documents whose scroll this popup has locked. At most one at a time. */
+  const lockedDocs = new Set<Document>();
   
   // Layout mode
   let isMobile = false;
@@ -235,6 +237,26 @@
     }
     listening = true;
     detectLayout();
+    // The scroll lock belongs to a document too. Opening happens before the
+    // portal names the real one, so a lock taken on the bundle's document has
+    // to be released there and retaken here — otherwise a narrow popout shows
+    // the sheet with its scroll free, and the main window stays locked with
+    // nothing to unlock it.
+    syncScrollLock();
+  }
+
+  /** Hold the lock on exactly one document: the one the popup is now in. */
+  function syncScrollLock(): void {
+    for (const doc of lockedDocs) {
+      if (doc !== ownDoc) doc.body.style.overflow = '';
+    }
+    lockedDocs.clear();
+    if (visible && isMobile) {
+      ownDoc.body.style.overflow = 'hidden';
+      lockedDocs.add(ownDoc);
+    } else {
+      ownDoc.body.style.overflow = '';
+    }
   }
 
   function unbind(): void {
@@ -256,6 +278,8 @@
   
   onDestroy(() => {
     unbind();
+    for (const doc of lockedDocs) doc.body.style.overflow = '';
+    lockedDocs.clear();
     ownDoc.body.style.overflow = '';
     // Cleanup portal if still exists
     if (portalContainer && portalContainer.parentNode) {
@@ -276,10 +300,9 @@
     isClosing = false;
     dragOffset = 0;
     
-    // Lock body scroll on mobile
-    if (isMobile) {
-      ownDoc.body.style.overflow = 'hidden';
-    }
+    // Lock body scroll on mobile — through the same path as a rebind, so the
+    // lock is always recorded against the document that holds it.
+    syncScrollLock();
     
     await tick();
     
@@ -294,7 +317,10 @@
     
     isClosing = true;
     
-    // Unlock body scroll
+    // Unlock body scroll — every document this popup ever locked, not just the
+    // one it happens to be bound to now.
+    for (const doc of lockedDocs) doc.body.style.overflow = '';
+    lockedDocs.clear();
     ownDoc.body.style.overflow = '';
     
     setTimeout(() => {

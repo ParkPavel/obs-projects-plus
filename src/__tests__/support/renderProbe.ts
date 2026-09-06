@@ -240,7 +240,7 @@ function sleepSync(ms: number): void {
 }
 
 /**
- * #196 — one browser at a time, across Jest workers.
+ * #196 — at most two browsers at a time, across Jest workers.
  *
  * Five acceptance suites drive Chrome, Jest runs them in parallel, and each
  * instance wants its own several hundred megabytes. Measured on this machine
@@ -250,41 +250,54 @@ function sleepSync(ms: number): void {
  * not code — and a suite that goes red for a reason unrelated to its subject
  * teaches people to ignore red.
  *
- * A lock file in the OS temp dir serialises the launches. Workers are separate
+ * Lock files in the OS temp dir cap the launches. Workers are separate
  * processes, so this cannot be a variable.
+ *
+ * TWO slots, not one, and the number was corrected by measurement rather than
+ * chosen: each suite launches the browser several times over (A190 alone probes
+ * six times), so a strict queue pushed the full run past ten minutes — a cure
+ * that costs more than the disease, since a gate nobody can finish is a gate
+ * nobody runs. Two keeps the parallelism that matters while never putting five
+ * browsers on the machine at once, which is what actually starved them.
  *
  * Two deliberate escape hatches, because a stuck lock must never be worse than
  * the contention it prevents: a lock older than the longest possible launch is
  * treated as abandoned, and a wait that exceeds the deadline runs anyway.
  */
-function withBrowserLock<T>(run: () => T): T {
-  const lock = path.join(os.tmpdir(), "ppp-render-probe.lock");
-  const deadline = Date.now() + 240_000;
-  let fd: number | null = null;
+const BROWSER_SLOTS = 2;
 
-  while (fd === null && Date.now() < deadline) {
-    try {
-      fd = fs.openSync(lock, "wx");
-    } catch {
+function withBrowserLock<T>(run: () => T): T {
+  const slots = Array.from({ length: BROWSER_SLOTS }, (_, i) =>
+    path.join(os.tmpdir(), `ppp-render-probe-${i}.lock`)
+  );
+  const deadline = Date.now() + 90_000;
+  let held: { fd: number; file: string } | null = null;
+
+  while (held === null && Date.now() < deadline) {
+    for (const file of slots) {
       try {
-        if (Date.now() - fs.statSync(lock).mtimeMs > 300_000) {
-          fs.rmSync(lock, { force: true });
-          continue;
-        }
+        held = { fd: fs.openSync(file, "wx"), file };
+        break;
       } catch {
-        // The holder released it between our open and our stat. Try again.
+        try {
+          if (Date.now() - fs.statSync(file).mtimeMs > 300_000) {
+            fs.rmSync(file, { force: true });
+          }
+        } catch {
+          // Released between our open and our stat. The next pass sees it.
+        }
       }
-      sleepSync(200);
     }
+    if (held === null) sleepSync(150);
   }
 
   try {
     return run();
   } finally {
-    if (fd !== null) {
+    if (held !== null) {
       try {
-        fs.closeSync(fd);
-        fs.rmSync(lock, { force: true });
+        fs.closeSync(held.fd);
+        fs.rmSync(held.file, { force: true });
       } catch {
         /* a leftover lock ages out; failing here would fail a passing test */
       }
