@@ -56,6 +56,8 @@ import {
   writeBrokenCopy,
 } from "src/lib/settings/brokenBackup";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
+import { noticeFor, withCode } from "src/lib/errors/errorText";
+import { logError, logWarning } from "src/lib/errors/errorLog";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
@@ -72,6 +74,16 @@ import { ProjectsView, VIEW_TYPE_PROJECTS } from "./view";
 
 dayjs.extend(isoWeek);
 dayjs.extend(localizedFormat);
+
+/**
+ * #202 — the settings events this file can report. Written as literals so the
+ * number a user quotes from their console can be grepped straight to the line
+ * that raised it; R0.21 refuses a `PPP-nnn` that is not in the registry, so a
+ * typo fails a gate instead of reaching a screen.
+ */
+const SETTINGS_SUPERSEDED = "PPP-102";
+const SETTINGS_UNREADABLE = "PPP-103";
+const SETTINGS_CORRUPTED = "PPP-104";
 
 export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeSettings?: Unsubscriber;
@@ -408,8 +420,11 @@ export default class ProjectsPlusPlugin extends Plugin {
     // The chip lives in `CompactNavBar`, which exists only inside the Projects
     // view — settings also change from Obsidian's own settings tab. One Notice
     // per episode covers that; the chip is what remains visible afterwards.
-    this.unsubscribeSaveStatus = onSaveFailureEpisode(() => {
-      new Notice(t("save-status.failed.notice"), 15000);
+    // #202: the code the status carries, not one fixed here — so the notice,
+    // the standing mark and the console line are the same event by
+    // construction rather than by three call sites agreeing.
+    this.unsubscribeSaveStatus = onSaveFailureEpisode((status) => {
+      new Notice(noticeFor(status.code), 15000);
     });
 
     // The store fires immediately on subscribe, with the value `loadSettings`
@@ -658,17 +673,9 @@ export default class ProjectsPlusPlugin extends Plugin {
         // a silent host failure can hide inside this case (write refused, then
         // an external write lands), and the honest thing is to say the state
         // is unknown rather than to pick a side. #200 covers reconciling it.
-        console.warn(
-          "[Projects+] data.json was changed by something else; not retrying"
-        );
+        logWarning(SETTINGS_SUPERSEDED, "not retrying");
         this.confirmedOnDisk = null;
-        new Notice(
-          get(i18n).t("save-status.superseded.notice", {
-            defaultValue:
-              "Projects+: data.json was changed outside this window. Your latest change may not be saved — reopen the vault before making more.",
-          }),
-          15000
-        );
+        new Notice(noticeFor(SETTINGS_SUPERSEDED), 15000);
         return true;
       }
     }
@@ -704,7 +711,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     try {
       raw = await this.loadData();
     } catch (err) {
-      console.error("[Projects+] Failed to read settings from disk:", err);
+      logError(SETTINGS_UNREADABLE, err);
       // #195: this is the COMMONEST corruption — a truncated write leaves JSON
       // that Obsidian's own parse rejects, so there is no object to migrate and
       // the previous version made no copy at all. The bytes on disk are the only
@@ -712,10 +719,18 @@ export default class ProjectsPlusPlugin extends Plugin {
       const copiedTo = await this.copyBrokenSettings(
         err instanceof Error ? err.message : String(err)
       );
+      // #202 adds the token and leaves the sentences alone. Both branches are
+      // the same event with different outcomes for the forensic copy — one
+      // code, and which branch ran is what the words already say. The warning
+      // about the next save overwriting the evidence is load-bearing and stays
+      // in the Notice rather than moving to a tooltip nothing raises here.
       new Notice(
-        copiedTo === null
-          ? "Projects+: failed to load settings — using defaults. The file on disk was left untouched but could NOT be copied: back it up before changing anything, or the next save overwrites it. See the console."
-          : `Projects+: failed to load settings — using defaults. The unreadable file was copied to "${copiedTo}".`,
+        withCode(
+          copiedTo === null
+            ? "Projects+: failed to load settings — using defaults. The file on disk was left untouched but could NOT be copied: back it up before changing anything, or the next save overwrites it. See the console."
+            : `Projects+: failed to load settings — using defaults. The unreadable file was copied to "${copiedTo}".`,
+          SETTINGS_UNREADABLE
+        ),
         15000
       );
       this.publishSettings(Object.assign({}, DEFAULT_SETTINGS));
@@ -724,12 +739,7 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     const result = migrateSettings(raw);
     if (either.isLeft(result)) {
-      console.error(
-        "[Projects+] Settings migration failed:",
-        result.left,
-        "raw payload:",
-        raw
-      );
+      logError(SETTINGS_CORRUPTED, result.left, "raw payload:", raw);
       // Persist a backup of the broken payload so the user can recover manually.
       // #185, second pass: whether this SUCCEEDED decides what the notice may
       // claim. The previous version swallowed the rejection and promised a
@@ -743,9 +753,12 @@ export default class ProjectsPlusPlugin extends Plugin {
       // demo project saves settings over it.
       const copiedTo = await this.copyBrokenSettings(result.left.message);
       new Notice(
-        copiedTo !== null
-          ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; the original payload was copied to "${copiedTo}".`
-          : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be copied — do not change any setting if you want to recover it, because the next save rewrites data.json. See the console.`,
+        withCode(
+          copiedTo !== null
+            ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; the original payload was copied to "${copiedTo}".`
+            : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be copied — do not change any setting if you want to recover it, because the next save rewrites data.json. See the console.`,
+          SETTINGS_CORRUPTED
+        ),
         15000
       );
       // #185: the defaults must NOT be written back here — the file on disk is

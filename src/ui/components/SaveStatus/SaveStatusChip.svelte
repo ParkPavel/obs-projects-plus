@@ -1,22 +1,36 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
   import { requestSaveRetry, saveStatus } from "src/lib/settings/saveStatus";
+  import { resolveError } from "src/lib/errors/errorText";
 
   // #185 — visible only while the state it reports is real. `saving` is not
   // shown: a spinner on every keystroke is noise, and the silent retries are
   // deliberately invisible (most write failures are transient).
   $: failed = $saveStatus.kind === "failed";
+  // #202 — the code comes from the status rather than being fixed here, so the
+  // mark says whatever the writer actually reported. `$i18n` is read inside the
+  // reactive statement so the cause follows a language change.
+  $: resolved =
+    $saveStatus.kind === "failed"
+      ? resolveError($saveStatus.code)
+      : { code: "", caption: "", cause: "" };
+  // The cause is appended to the existing `title`, per SPEC 201 §4: the tooltip
+  // mechanism does not change, only what fills it.
+  $: tooltip = [$i18n.t("save-status.failed.tooltip"), resolved.cause]
+    .filter((part) => part.length > 0)
+    .join(" ");
 </script>
 
 {#if failed}
   <button
     class="save-status-chip"
     type="button"
-    title={$i18n.t("save-status.failed.tooltip")}
+    title={tooltip}
     on:click={() => requestSaveRetry()}
   >
     <span class="dot" aria-hidden="true"></span>
     <span class="label">{$i18n.t("save-status.failed.label")}</span>
+    <span class="code">{resolved.code}</span>
   </button>
 {/if}
 
@@ -61,6 +75,20 @@
   .save-status-chip:focus-visible {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.125rem;
+  }
+  /* #202 — the code slot SPEC 201 §4 reserved. Tabular figures so the mark's
+     width does not jitter as the number changes, and no colour of its own: a
+     differently coloured token inside a coloured mark would be the same
+     "colour inside a colour" mistake #201 removed, one scale down. Only the
+     separator is dimmed, which is the low-emphasis idiom already in
+     WidgetShell and AgendaSidebar. */
+  .code {
+    font-variant-numeric: tabular-nums;
+  }
+  .code::before {
+    content: "·";
+    padding-right: 0.25rem;
+    color: var(--text-faint);
   }
   .dot {
     width: 0.375rem;

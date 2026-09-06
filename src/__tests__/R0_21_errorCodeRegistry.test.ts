@@ -146,6 +146,26 @@ describe("R0.21 — the registry and the page stay in step", () => {
     }
   });
 
+  it("every code written into src/ is a code the registry issued", () => {
+    // Call sites name a code as a literal so the number a user quotes can be
+    // grepped straight to the line that raised it. That only holds if a typo
+    // fails a gate instead of reaching a screen — `resolveError` degrades to
+    // printing the bare code, which is exactly what this stops shipping.
+    const known = new Set(ERROR_CODES.map((entry) => entry.code));
+    const unknown = new Set<string>();
+    for (const file of walk(path.join(ROOT, "src"))) {
+      if (!/\.(ts|svelte)$/.test(file)) continue;
+      // Test files plant deliberately invalid codes; that is their job.
+      if (/__tests__|\.test\.|\.spec\./.test(file)) continue;
+      for (const [code] of fs
+        .readFileSync(file, "utf8")
+        .matchAll(/PPP-\d{3}/g)) {
+        if (!known.has(code)) unknown.add(`${code} in ${path.basename(file)}`);
+      }
+    }
+    expect([...unknown]).toEqual([]);
+  });
+
   it("the modules that must stay light do not import the resolver", () => {
     // The weight edge from the plan: settings and engine modules are unit
     // tested in isolation, and naming a code must not drag four locale files

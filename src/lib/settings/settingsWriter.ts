@@ -22,10 +22,24 @@
  * resurrect the value it stumbled on.
  */
 
+import { logError } from "src/lib/errors/errorLog";
+
+/**
+ * #202 — the one event this module can report to a user. The literal lives here
+ * rather than behind a constant so it is greppable from the console line the
+ * user quotes; R0.21 checks that every `PPP-nnn` in `src/` is in the registry,
+ * so a typo is caught rather than shown.
+ *
+ * `errorLog` is imported and `errorText` is not, deliberately: this module has
+ * no i18n dependency and is unit-tested in isolation, and R0.21 keeps it that
+ * way.
+ */
+const SETTINGS_WRITE_FAILED = "PPP-101";
+
 export type SaveStatus =
   | { kind: "idle" }
   | { kind: "saving" }
-  | { kind: "failed"; attempts: number; message: string };
+  | { kind: "failed"; attempts: number; message: string; code: string };
 
 /** Tail debounce: how long a burst of changes is allowed to keep growing. */
 export const SETTINGS_WRITE_DEBOUNCE_MS = 400;
@@ -82,7 +96,9 @@ export interface SettingsWriter<T> {
 function sameStatus(a: SaveStatus, b: SaveStatus): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === "failed" && b.kind === "failed") {
-    return a.attempts === b.attempts && a.message === b.message;
+    return (
+      a.attempts === b.attempts && a.message === b.message && a.code === b.code
+    );
   }
   return true;
 }
@@ -210,10 +226,10 @@ export function createSettingsWriter<T>(
     // first live run of #185 produced no chip at all, there was no way to tell
     // whether the write had failed silently, succeeded silently, or never
     // started. One line per attempt, with the attempt number, answers that.
-    console.error(
-      `[Projects+] settings write attempt ${attempt + 1} failed:`,
-      err
-    );
+    // #202: the same code the Notice and the standing mark carry, so the three
+    // can be matched to each other — which is the thing that cost a day on
+    // #199 and could not be done at all.
+    logError(SETTINGS_WRITE_FAILED, `attempt ${attempt + 1}`, err);
     // Nothing reached the disk, so the value is pending again. The state itself
     // is untouched — rolling it back would destroy the user's work on the
     // assumption that the disk is right, exactly where that is unknown.
@@ -227,7 +243,12 @@ export function createSettingsWriter<T>(
       }, delay);
       return;
     }
-    setStatus({ kind: "failed", attempts: attempt, message: messageOf(err) });
+    setStatus({
+      kind: "failed",
+      attempts: attempt,
+      message: messageOf(err),
+      code: SETTINGS_WRITE_FAILED,
+    });
   }
 
   return {

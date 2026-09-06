@@ -6,8 +6,16 @@ import "@testing-library/jest-dom";
 import { tick } from "svelte";
 
 import { saveStatus, setSaveRetryHandler } from "src/lib/settings/saveStatus";
+import { findErrorCode } from "src/lib/errors/errorCodes";
 
 const SaveStatusChip = require("../SaveStatusChip.svelte").default;
+
+const FAILED = {
+  kind: "failed",
+  attempts: 3,
+  message: "EACCES",
+  code: "PPP-101",
+} as const;
 
 function mount() {
   const target = document.createElement("div");
@@ -40,7 +48,7 @@ describe("SaveStatusChip (#185)", () => {
 
   it("stands up when the write has failed, and stays up", async () => {
     const { target, destroy } = mount();
-    saveStatus.set({ kind: "failed", attempts: 3, message: "EACCES" });
+    saveStatus.set(FAILED);
     await tick();
 
     const chip = target.querySelector(".save-status-chip");
@@ -49,11 +57,37 @@ describe("SaveStatusChip (#185)", () => {
     destroy();
   });
 
+  it("shows the code the writer reported, and its cause on hover (#202)", async () => {
+    const { target, destroy } = mount();
+    saveStatus.set(FAILED);
+    await tick();
+
+    const chip = target.querySelector(".save-status-chip");
+    expect(chip?.querySelector(".code")).toHaveTextContent("PPP-101");
+    // Compared against the registry rather than a pasted sentence: the point is
+    // that the cause travelled from the code to the tooltip, not what it says.
+    const cause = findErrorCode("PPP-101")?.cause ?? "";
+    expect(cause.length).toBeGreaterThan(0);
+    expect(chip?.getAttribute("title")).toContain(cause);
+    destroy();
+  });
+
+  it("shows whatever code the status carries, not a fixed one (#202)", async () => {
+    // The mark is not hard-wired to the settings writer's own event; it renders
+    // what it was told, so a second failing writer would not need a second chip.
+    const { target, destroy } = mount();
+    saveStatus.set({ ...FAILED, code: "PPP-104" });
+    await tick();
+
+    expect(target.querySelector(".code")).toHaveTextContent("PPP-104");
+    destroy();
+  });
+
   it("asks the writer to retry when clicked, and clears once it succeeds", async () => {
     const retry = jest.fn();
     setSaveRetryHandler(retry);
     const { target, destroy } = mount();
-    saveStatus.set({ kind: "failed", attempts: 3, message: "EACCES" });
+    saveStatus.set(FAILED);
     await tick();
 
     const chip = target.querySelector<HTMLButtonElement>(".save-status-chip");

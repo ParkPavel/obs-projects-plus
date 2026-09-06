@@ -8,7 +8,7 @@ import {
 } from "src/lib/settings/saveStatus";
 
 const failed = (attempts: number) =>
-  ({ kind: "failed", attempts, message: "EACCES" }) as const;
+  ({ kind: "failed", attempts, message: "EACCES", code: "PPP-101" }) as const;
 
 describe("#185 — save status out of band", () => {
   afterEach(() => {

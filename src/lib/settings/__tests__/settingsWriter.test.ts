@@ -150,10 +150,46 @@ describe("#185 — settings writer", () => {
       kind: "failed",
       attempts: 3,
       message: "EACCES",
+      // #202 — the mark and the Notice read this rather than each deciding for
+      // themselves, so all three surfaces name one event.
+      code: "PPP-101",
     });
 
     await jest.advanceTimersByTimeAsync(60_000);
     expect(save.calls).toHaveLength(3);
+  });
+
+  it("writes one console line per attempt, carrying the code (#202)", async () => {
+    const lines: unknown[][] = [];
+    const spy = jest
+      .spyOn(console, "error")
+      .mockImplementation((...args: unknown[]) => {
+        lines.push(args);
+      });
+    try {
+      const save = makeSave();
+      save.mode = "fail";
+      const writer = createSettingsWriter<Value>({
+        save: save.fn,
+        debounceMs: 400,
+        maxWaitMs: 2000,
+        retryDelaysMs: [500],
+      });
+
+      writer.push({ n: 1 });
+      await jest.advanceTimersByTimeAsync(400);
+      await jest.advanceTimersByTimeAsync(500);
+
+      expect(lines).toHaveLength(2);
+      for (const line of lines) {
+        expect(String(line[0])).toMatch(/^\[Projects\+\] PPP-101 /);
+      }
+      // One prefix, not two: the caption for this code carries "Projects+:"
+      // inside the sentence because it was written before the prefix existed.
+      expect(String(lines[0]?.[0]).match(/Projects\+/g)).toHaveLength(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("announces one failure per episode, not one per attempt", async () => {
