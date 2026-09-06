@@ -23,14 +23,27 @@
 <style>
   /* A standing mark, not a toast: the state it reports is standing too, and a
      Notice that has faded leaves the user in exactly today's silence. */
+  /* #201 — a mark, not a button.
+     It used to paint `--background-modifier-error-hover` (Obsidian's saturated
+     error fill) under `--text-error` (its saturated error foreground): red on
+     red, and a live run showed the result as a solid red rectangle with no
+     legible text at all. Every other `--text-error` in this tree sits on the
+     ambient surface or on a faint tint of itself; this was the one place that
+     put it on a second red.
+     So: no fill at rest, a hairline in the text's own colour, and a hover tint
+     mixed FROM that colour — derived, so it cannot drift into the same
+     lightness band as the text the way two independent error tokens can.
+     It stays a real <button>: focus, Enter and Space come free with the
+     element, and the retry it triggers is the only way back from a failed
+     write. "Not a button" is about shape, not about operability. */
   .save-status-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
     padding: 0.125rem 0.5rem;
-    border: 0.0625rem solid var(--background-modifier-error);
+    border: 0.0625rem solid var(--text-error);
     border-radius: var(--radius-s, 0.25rem);
-    background: var(--background-modifier-error-hover, var(--background-secondary-alt));
+    background: transparent;
     color: var(--text-error);
     font-size: var(--font-ui-smaller);
     font-weight: 600;
@@ -40,7 +53,10 @@
     white-space: nowrap;
   }
   .save-status-chip:hover {
-    background: var(--background-modifier-error);
+    background: color-mix(in srgb, var(--text-error) 12%, transparent);
+  }
+  .save-status-chip:active {
+    background: color-mix(in srgb, var(--text-error) 20%, transparent);
   }
   .save-status-chip:focus-visible {
     outline: 0.125rem solid var(--interactive-accent);

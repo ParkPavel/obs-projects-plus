@@ -165,22 +165,46 @@ export function renderProbe(spec: ProbeSpec): ProbeResult {
     const file = path.join(dir, "probe.html");
     fs.writeFileSync(file, page, "utf8");
 
-    const dom = execFileSync(
-      chrome,
-      [
-        "--headless=new",
-        "--disable-gpu",
-        "--no-sandbox",
-        "--no-first-run",
-        "--disable-extensions",
-        `--window-size=${spec.width ?? 1400},${spec.height ?? 900}`,
-        "--virtual-time-budget=2000",
-        `--user-data-dir=${path.join(dir, "profile")}`,
-        "--dump-dom",
-        `file:///${file.replace(/\\/g, "/")}`,
-      ],
-      { encoding: "utf8", timeout: 60_000, maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }
-    );
+    const args = [
+      "--headless=new",
+      "--disable-gpu",
+      "--no-sandbox",
+      "--no-first-run",
+      "--disable-extensions",
+      `--window-size=${spec.width ?? 1400},${spec.height ?? 900}`,
+      "--virtual-time-budget=2000",
+      `--user-data-dir=${path.join(dir, "profile")}`,
+      "--dump-dom",
+      `file:///${file.replace(/\\/g, "/")}`,
+    ];
+
+    // #196: under a full parallel run these suites were failing to START, with
+    // `spawnSync ... ETIMEDOUT` — the browser could not come up inside the
+    // window while the rest of the run competed for the machine. That is a
+    // resource failure wearing the costume of a broken acceptance test, and the
+    // habit it teaches — ignoring red — is the expensive part.
+    //
+    // So a launch timeout is retried once, with a longer window, and only then
+    // reported. A second timeout is still a failure: this hides contention, not
+    // a browser that cannot run at all.
+    const dom = withBrowserLock(() => {
+      try {
+        return execFileSync(chrome, args, {
+          encoding: "utf8",
+          timeout: 60_000,
+          maxBuffer: 32 * 1024 * 1024,
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      } catch (err) {
+        if (!isLaunchTimeout(err)) throw err;
+        return execFileSync(chrome, args, {
+          encoding: "utf8",
+          timeout: 180_000,
+          maxBuffer: 32 * 1024 * 1024,
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      }
+    });
 
     const m = /<title>PROBE([\s\S]*?)<\/title>/.exec(dom);
     if (!m || !m[1]) {
@@ -197,6 +221,77 @@ export function renderProbe(spec: ProbeSpec): ProbeResult {
 }
 
 /** `--dump-dom` escapes the title; the probe's payload is JSON, so undo it. */
+/**
+ * #196: did the browser fail to START, or did it run and fail?
+ *
+ * Only the first is retried. `execFileSync` reports a timeout as `ETIMEDOUT`
+ * with `signal: SIGTERM`; a page that ran and threw comes back as a non-zero
+ * status, and retrying that would just take twice as long to tell the truth.
+ */
+function isLaunchTimeout(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const code = (err as { code?: unknown }).code;
+  return code === "ETIMEDOUT";
+}
+
+/** A synchronous pause. `execFileSync` is synchronous; a timer cannot help here. */
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * #196 — one browser at a time, across Jest workers.
+ *
+ * Five acceptance suites drive Chrome, Jest runs them in parallel, and each
+ * instance wants its own several hundred megabytes. Measured on this machine
+ * mid-session: five suites failed to start under the full run and all three
+ * of the ones re-run with `--runInBand` passed, with ~1.5GB free and the
+ * user's own browser holding a gigabyte of it. So the failure was contention,
+ * not code — and a suite that goes red for a reason unrelated to its subject
+ * teaches people to ignore red.
+ *
+ * A lock file in the OS temp dir serialises the launches. Workers are separate
+ * processes, so this cannot be a variable.
+ *
+ * Two deliberate escape hatches, because a stuck lock must never be worse than
+ * the contention it prevents: a lock older than the longest possible launch is
+ * treated as abandoned, and a wait that exceeds the deadline runs anyway.
+ */
+function withBrowserLock<T>(run: () => T): T {
+  const lock = path.join(os.tmpdir(), "ppp-render-probe.lock");
+  const deadline = Date.now() + 240_000;
+  let fd: number | null = null;
+
+  while (fd === null && Date.now() < deadline) {
+    try {
+      fd = fs.openSync(lock, "wx");
+    } catch {
+      try {
+        if (Date.now() - fs.statSync(lock).mtimeMs > 300_000) {
+          fs.rmSync(lock, { force: true });
+          continue;
+        }
+      } catch {
+        // The holder released it between our open and our stat. Try again.
+      }
+      sleepSync(200);
+    }
+  }
+
+  try {
+    return run();
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+        fs.rmSync(lock, { force: true });
+      } catch {
+        /* a leftover lock ages out; failing here would fail a passing test */
+      }
+    }
+  }
+}
+
 function decodeEntities(s: string): string {
   return s
     .replace(/&quot;/g, '"')
