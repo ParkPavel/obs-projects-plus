@@ -364,6 +364,45 @@ describe("#185 — settings writer", () => {
     expect(save.calls).toHaveLength(2);
   });
 
+  it("a write the host calls successful but cannot confirm is a failed write", async () => {
+    const save = makeSave();
+    const seen: SaveStatus[] = [];
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      // #199: exactly what the live run produced — `save` resolves and the file
+      // does not change. Before this, every level of #185 stayed silent.
+      verify: () => Promise.resolve(false),
+      onStatus: (status) => seen.push(status),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+      retryDelaysMs: [500],
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    await jest.advanceTimersByTimeAsync(500);
+
+    expect(save.calls).toHaveLength(2);
+    const last = seen[seen.length - 1];
+    expect(last?.kind).toBe("failed");
+    expect(last?.kind === "failed" && last.message).toMatch(/does not match/);
+  });
+
+  it("a confirmed write settles to idle exactly as before", async () => {
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      verify: () => Promise.resolve(true),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(writer.status()).toEqual({ kind: "idle" });
+  });
+
   it("dispose leaves no timer behind and writes nothing", async () => {
     const save = makeSave();
     const writer = createSettingsWriter<Value>({

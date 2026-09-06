@@ -49,8 +49,10 @@ import {
 import { versionOnDisk } from "src/lib/settings/settingsVersion";
 import {
   readRawSettings,
+  settingsFilePath,
   writeBrokenCopy,
 } from "src/lib/settings/brokenBackup";
+import { payloadMatches } from "src/lib/settings/settingsVerify";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
@@ -372,6 +374,11 @@ export default class ProjectsPlusPlugin extends Plugin {
     // because under coalescing a per-call promise describes no single write.
     const writer = createSettingsWriter<LatestProjectsPluginSettings>({
       save: (value) => this.saveData(value),
+      // #199: `saveData` resolving is a claim, not a fact. A live run with
+      // `data.json` made read-only had it report success while the file did
+      // not change — and #185's whole visibility hangs off a rejection that
+      // never arrived. So the file is read back and compared.
+      verify: (value) => this.settingsAreOnDisk(value),
       onStatus: (status) => saveStatus.set(status),
     });
     this.settingsWriter = writer;
@@ -588,6 +595,39 @@ export default class ProjectsPlusPlugin extends Plugin {
    * to DEFAULT_SETTINGS, surface a Notice, and persist a backup of the raw
    * payload for forensic recovery.
    */
+  /**
+   * #199 — is `value` what `data.json` now holds?
+   *
+   * `true` when the plugin folder is unknown: without it there is nothing to
+   * read back, and a permanent false alarm would be worse than the weaker
+   * guarantee. Any other doubt — unreadable file, mismatch, unparseable text —
+   * is reported as a failed write, because a half-written file is exactly the
+   * case worth catching.
+   */
+  private async settingsAreOnDisk(
+    value: LatestProjectsPluginSettings
+  ): Promise<boolean> {
+    const path = settingsFilePath(this.manifest.dir);
+    if (path === null) return true;
+    // A mismatch is checked twice before it is believed. The host may resolve
+    // its write before the bytes land, and a check that raced it would raise
+    // the "not saved" chip on perfectly good saves — a control that cries wolf
+    // is worse than the silence this replaces, because the user learns to
+    // ignore it.
+    for (const delayMs of [0, 200]) {
+      if (delayMs > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+      }
+      try {
+        const raw = await this.app.vault.adapter.read(path);
+        if (payloadMatches(value, raw)) return true;
+      } catch (err) {
+        console.error("[Projects+] Could not read settings back to verify:", err);
+      }
+    }
+    return false;
+  }
+
   /**
    * #195 — copy the unreadable settings file next to itself, and say where.
    *

@@ -43,6 +43,14 @@ export const SETTINGS_WRITE_RETRY_DELAYS_MS: readonly number[] = [500, 2000];
 
 export interface SettingsWriterOptions<T> {
   save: (value: T) => Promise<unknown>;
+  /**
+   * #199 — confirm that `value` is what the file now holds. Resolving `false`
+   * is a failed write and takes the same path as a thrown one.
+   *
+   * Optional because a caller that cannot read the file back is better off
+   * with the old, weaker guarantee than with a permanent false alarm.
+   */
+  verify?: (value: T) => Promise<boolean>;
   onStatus?: (status: SaveStatus) => void;
   debounceMs?: number;
   maxWaitMs?: number;
@@ -87,7 +95,7 @@ function messageOf(err: unknown): string {
 export function createSettingsWriter<T>(
   options: SettingsWriterOptions<T>
 ): SettingsWriter<T> {
-  const { save, onStatus } = options;
+  const { save, verify, onStatus } = options;
   const debounceMs = options.debounceMs ?? SETTINGS_WRITE_DEBOUNCE_MS;
   const maxWaitMs = options.maxWaitMs ?? SETTINGS_WRITE_MAX_WAIT_MS;
   const retryDelays = options.retryDelaysMs ?? SETTINGS_WRITE_RETRY_DELAYS_MS;
@@ -153,10 +161,31 @@ export function createSettingsWriter<T>(
     }
     const value = latest.value;
     dirty = false;
+    // #199: paired with the failure log below. Between them, a developer can
+    // tell the three cases apart that look identical from the outside — the
+    // write never started, it started and failed, it started and reported
+    // success while the file did not change.
+    console.debug("[Projects+] settings write starting");
     setStatus({ kind: "saving" });
     inFlight = Promise.resolve()
-      .then(() => save(value))
+      .then(() => attemptWrite(value))
       .then(onWritten, onFailure);
+  }
+
+  /**
+   * #199: a resolved `save` is a claim, not a fact. The live run that produced
+   * this ticket had `saveData` report success while the file on disk did not
+   * change — so the claim is checked, and an unconfirmed write is a failed one.
+   */
+  async function attemptWrite(value: T): Promise<void> {
+    await save(value);
+    if (verify === undefined) return;
+    const confirmed = await verify(value);
+    if (!confirmed) {
+      throw new Error(
+        "the write reported success but the settings file does not match"
+      );
+    }
   }
 
   function onWritten(): void {
@@ -176,6 +205,15 @@ export function createSettingsWriter<T>(
 
   function onFailure(err: unknown): void {
     inFlight = null;
+    // #199: a failed write left no trace anywhere a developer could look. The
+    // chip and the Notice are for the user and say nothing about WHY; when the
+    // first live run of #185 produced no chip at all, there was no way to tell
+    // whether the write had failed silently, succeeded silently, or never
+    // started. One line per attempt, with the attempt number, answers that.
+    console.error(
+      `[Projects+] settings write attempt ${attempt + 1} failed:`,
+      err
+    );
     // Nothing reached the disk, so the value is pending again. The state itself
     // is untouched — rolling it back would destroy the user's work on the
     // assumption that the disk is right, exactly where that is unknown.
