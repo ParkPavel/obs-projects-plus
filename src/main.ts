@@ -20,7 +20,10 @@ import { app, plugin } from "src/lib/stores/obsidian";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-import { createDemoProject } from "src/ui/app/onboarding/demoProject";
+import {
+  createDemoProject,
+  seedDemoNotes,
+} from "src/ui/app/onboarding/demoProject";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
@@ -342,13 +345,25 @@ export default class ProjectsPlusPlugin extends Plugin {
       callback: () => {
         const existing = get(settings).projects.find((p) => p.name === "Демо-проект");
         if (existing) {
-          new Notice(
-            t("commands.create-demo-project.duplicate-warning", {
-              defaultValue:
-                "Demo project already exists — delete it first to regenerate.",
-            }),
-            6000,
-          );
+          // #198: a user who hit the illegal filename has this project already,
+          // with a note missing — and returning early here is exactly what kept
+          // them from ever getting it. Seeding is idempotent, so re-run it and
+          // say what it found rather than refusing outright.
+          void seedDemoNotes(this.app.vault).then((failed) => {
+            new Notice(
+              failed.length > 0
+                ? t("commands.create-demo-project.repair-failed", {
+                    defaultValue:
+                      "Demo project already exists. {{count}} missing notes could not be written — see the console.",
+                    count: failed.length,
+                  })
+                : t("commands.create-demo-project.repaired", {
+                    defaultValue:
+                      "Demo project already exists; any missing notes have been restored.",
+                  }),
+              6000,
+            );
+          });
           return;
         }
         void createDemoProject(this.app.vault).then(() => {

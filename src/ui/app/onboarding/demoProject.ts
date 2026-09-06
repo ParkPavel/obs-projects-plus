@@ -475,6 +475,24 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
 // MAIN ENTRY POINT
 // ============================================================
 
+/**
+ * Write every seed note that is not already there, and return the paths that
+ * could not be written.
+ *
+ * Separate from `createDemoProject` because of #198: a user who hit the illegal
+ * filename has a registered demo project with a note missing, and the command
+ * that would fix it returns early precisely because the project exists. Seeding
+ * is idempotent, so it can be re-run on its own to repair that.
+ */
+export async function seedDemoNotes(vault: Vault): Promise<string[]> {
+  return [
+    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
+  ];
+}
+
 export async function createDemoProject(vault: Vault): Promise<void> {
   // 1. Ensure root demo folder exists (idempotent).
   if (!vault.getAbstractFileByPath(DEMO_FOLDER)) {
@@ -496,12 +514,7 @@ export async function createDemoProject(vault: Vault): Promise<void> {
   }
 
   // 2. Write all seed files.
-  const failed = [
-    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
-  ];
+  const failed = await seedDemoNotes(vault);
   if (failed.length > 0) {
     // The project is still registered: a partial demo is more useful than none,
     // and the notes that did land are correct. But the user is told, because
