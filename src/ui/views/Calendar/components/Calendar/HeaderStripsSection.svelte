@@ -18,22 +18,13 @@
   
   import dayjs from "dayjs";
   import { onDestroy, tick } from "svelte";
+  import { portal } from "src/ui/portal";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { EventRenderType, type ProcessedCalendarData, type ProcessedRecord } from "../../types";
   import { getDisplayName } from "src/ui/views/Board/components/Board/boardHelpers";
   import { TimelineDragManager, type DayColumnRef, type OnDragCommit } from "../../dnd/TimelineDragManager";
   import type { DragMode, StripGhostPosition } from "../../dnd/types";
 
-  // v3.2.5: Svelte action to portal element to document.body,
-  // escaping all overflow:hidden / transform containing-block ancestors
-  function portalToBody(node: HTMLElement) {
-    activeDocument.body.appendChild(node);
-    return {
-      destroy() {
-        if (node.parentNode) node.parentNode.removeChild(node);
-      },
-    };
-  }
   
   /** Array of 7 dates for this week row */
   export let weekDates: dayjs.Dayjs[];
@@ -409,7 +400,7 @@
 {#if stripGhost?.viewportRect}
   {@const vr = stripGhost.viewportRect}
   <div
-    use:portalToBody
+    use:portal={{ to: "document-body" }}
     class="ppp-strip-ghost-portal"
     style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 30%, transparent); border:0.125rem solid var(--interactive-accent); box-shadow: 0 0.125rem 0.75rem rgba(0,0,0,0.15);"
     aria-hidden="true"

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { portal } from "src/ui/portal";
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
   import type { DataRecord } from '../../../../../lib/dataframe/dataframe';
@@ -15,16 +16,6 @@
   import DragOverlay from '../../dnd/DragOverlay.svelte';
   import { TimelineDragManager, type OnDragCommit } from '../../dnd/TimelineDragManager';
 
-  // v3.2.5: Svelte action to portal element to document.body,
-  // escaping all overflow:hidden / transform containing-block ancestors
-  function portalToBody(node: HTMLElement) {
-    activeDocument.body.appendChild(node);
-    return {
-      destroy() {
-        if (node.parentNode) node.parentNode.removeChild(node);
-      },
-    };
-  }
 
   
   /**
@@ -673,7 +664,7 @@
 {#if stripGhost?.viewportRect}
   {@const vr = stripGhost.viewportRect}
   <div
-    use:portalToBody
+    use:portal={{ to: "document-body" }}
     class="ppp-strip-ghost-portal"
     style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.12);"
     aria-hidden="true"
@@ -695,7 +686,7 @@
 {#if timedDragState === 'dragging' && timedGhost?.viewportRect}
   {@const vr = timedGhost.viewportRect}
   <div
-    use:portalToBody
+    use:portal={{ to: "document-body" }}
     class="ppp-timed-ghost-portal"
     style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-left:0.1875rem solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.15), 0 0 0 1px color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
     aria-hidden="true"
@@ -718,7 +709,7 @@
   </div>
   <!-- v3.3.4: Snap line across the viewport at ghost top -->
   <div
-    use:portalToBody
+    use:portal={{ to: "document-body" }}
     style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:1px; background:var(--text-accent); opacity:0.5; pointer-events:none; z-index:9998;"
     aria-hidden="true"
   ></div>

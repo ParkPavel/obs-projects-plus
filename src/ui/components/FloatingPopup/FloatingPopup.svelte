@@ -16,6 +16,7 @@
 -->
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
+  import { portal } from "src/ui/portal";
   import { isMobile } from "src/lib/stores/ui";
 
   // ── Public types ───────────────────────────────────────────
@@ -254,14 +255,12 @@
   // Fixes an empty overflow column + plugin shift. Positioning, outside-click,
   // Escape and focus-trap all work on the moved node (document listeners +
   // direct popupEl references survive the reparent).
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node);
-    return {
-      destroy() {
-        node.remove();
-      },
-    };
-  }
+  //
+  // #192: this used to append to `document.body` — the MAIN window's body,
+  // because the bundle is evaluated in that window's realm. A Projects leaf
+  // moved into an Obsidian popout window therefore sent its popup to the other
+  // window entirely. `portal` targets `node.ownerDocument.body` instead, which
+  // is the document the node actually lives in.
 </script>
 
 {#if open}
@@ -288,7 +287,7 @@
     <!-- ── DESKTOP: Floating popup ───────────────────────── -->
     <div
       bind:this={popupEl}
-      use:portal
+      use:portal={{ to: "document-body" }}
       class="ppp-popup ppp-popup--floating"
       {style}
       {role}
