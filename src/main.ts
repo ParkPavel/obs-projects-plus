@@ -52,7 +52,7 @@ import {
   settingsFilePath,
   writeBrokenCopy,
 } from "src/lib/settings/brokenBackup";
-import { payloadMatches } from "src/lib/settings/settingsVerify";
+import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
@@ -89,6 +89,12 @@ export default class ProjectsPlusPlugin extends Plugin {
   private loadedSettings?: LatestProjectsPluginSettings;
   /** #185: version found on disk when it differed from the current one. */
   private migratedFromVersion: number | null = null;
+  /**
+   * #199: the canonical form of what `data.json` last held, as far as this
+   * plugin knows. It is what separates "our write did not land" from "someone
+   * else wrote something else" when the read-back does not match.
+   */
+  private confirmedOnDisk: string | null = null;
 
   /**
    * onload runs when the plugin is enabled.
@@ -609,20 +615,36 @@ export default class ProjectsPlusPlugin extends Plugin {
   ): Promise<boolean> {
     const path = settingsFilePath(this.manifest.dir);
     if (path === null) return true;
-    // A mismatch is checked twice before it is believed. The host may resolve
-    // its write before the bytes land, and a check that raced it would raise
-    // the "not saved" chip on perfectly good saves — a control that cries wolf
-    // is worse than the silence this replaces, because the user learns to
-    // ignore it.
-    for (const delayMs of [0, 200]) {
+    // A mismatch is looked at more than once before it is believed. The host
+    // may resolve its write before the bytes land, and a check that raced it
+    // would raise the "not saved" chip on perfectly good saves — a control
+    // that cries wolf is worse than the silence it replaces, because the user
+    // learns to ignore it.
+    for (const delayMs of [0, 250, 750]) {
       if (delayMs > 0) {
         await new Promise((resolve) => window.setTimeout(resolve, delayMs));
       }
+      let raw: string;
       try {
-        const raw = await this.app.vault.adapter.read(path);
-        if (payloadMatches(value, raw)) return true;
+        raw = await this.app.vault.adapter.read(path);
       } catch (err) {
         console.error("[Projects+] Could not read settings back to verify:", err);
+        continue;
+      }
+      const verdict = classifyDisk(value, raw, this.confirmedOnDisk);
+      if (verdict === "confirmed") {
+        this.confirmedOnDisk = canonical(value);
+        return true;
+      }
+      if (verdict === "superseded") {
+        // Someone else — a second window, a synchroniser — replaced the file.
+        // That is not this write failing, and retrying would overwrite their
+        // change with a value they never asked for.
+        console.warn(
+          "[Projects+] data.json was changed by something else; leaving it alone"
+        );
+        this.confirmedOnDisk = null;
+        return true;
       }
     }
     return false;
@@ -709,6 +731,11 @@ export default class ProjectsPlusPlugin extends Plugin {
     }
 
     this.migratedFromVersion = versionOnDisk(raw, DEFAULT_SETTINGS.version);
+    // #199: the file's own content is the starting point for telling "our write
+    // did not land" from "someone else replaced the file". Only set on the path
+    // where `raw` really is what is on disk — the corruption paths publish
+    // defaults, which the file does NOT hold.
+    this.confirmedOnDisk = canonical(raw);
     this.publishSettings(result.right);
   }
 
