@@ -72,6 +72,12 @@
   let popupElement: HTMLDivElement | null = null;
   let contentElement: HTMLDivElement | null = null;
   let portalContainer: HTMLDivElement | null = null;
+  // #192: the window this popup actually lives in. Set when the portal builds
+  // its layer; until then the bundle's own, which is right for a leaf in the
+  // main window and is the only thing available before mount.
+  let ownView: Window = window;
+  let ownDoc: Document = document;
+  let listening = false;
   
   // Layout mode
   let isMobile = false;
@@ -119,6 +125,11 @@
   // its layer in the wrong window.
   function createPortal(node: HTMLElement) {
     const doc = node.ownerDocument;
+    // The popup renders conditionally, so this action can run AFTER onMount.
+    // Rebinding here rather than only at mount is what keeps Escape working in
+    // a popout: whichever document turns out to be the real one, the listener
+    // ends up on it and never on both.
+    bindTo(doc);
     // Find the plugin's workspace-leaf container - mount portal INSIDE it
     // This respects Obsidian's sidebar boundaries
     const workspaceLeaf = node.closest('.workspace-leaf-content') as HTMLElement || 
@@ -182,7 +193,9 @@
   // ═══════════════════════════════════════════════════════════════
   
   function detectLayout() {
-    isMobile = window.innerWidth < 768 || window.innerHeight < 600;
+    // Measured against the window the popup is in: in a popout, the main
+    // window's size says nothing about the space this popup has.
+    isMobile = ownView.innerWidth < 768 || ownView.innerHeight < 600;
   }
   
   // v5.0.0: Handle orientation changes smoothly
@@ -200,24 +213,40 @@
     }, 100);
   }
   
-  onMount(() => {
+  /** Move the key listener to `doc`, taking it off whatever held it before. */
+  function bindTo(doc: Document): void {
+    if (doc === ownDoc && listening) return;
+    if (listening) ownDoc.removeEventListener('keydown', handleKeydown);
+    ownDoc = doc;
+    ownView = doc.defaultView ?? window;
+    ownDoc.addEventListener('keydown', handleKeydown);
+    listening = true;
     detectLayout();
-    window.addEventListener('resize', detectLayout);
+  }
+
+  onMount(() => {
+    bindTo(ownDoc);
+    detectLayout();
+    // #192: bound to the popup's own window. Resizing the window it is in is
+    // what should re-measure it; the main window's resize is irrelevant to it.
+    ownView.addEventListener('resize', detectLayout);
     // v5.0.0: Listen for orientation changes on mobile
-    window.addEventListener('orientationchange', handleOrientationChange);
+    ownView.addEventListener('orientationchange', handleOrientationChange);
     // Fallback for devices that don't fire orientationchange
-    if (window.screen?.orientation) {
-      window.screen.orientation.addEventListener('change', handleOrientationChange);
+    if (ownView.screen?.orientation) {
+      ownView.screen.orientation.addEventListener('change', handleOrientationChange);
     }
   });
   
   onDestroy(() => {
-    window.removeEventListener('resize', detectLayout);
-    window.removeEventListener('orientationchange', handleOrientationChange);
-    if (window.screen?.orientation) {
-      window.screen.orientation.removeEventListener('change', handleOrientationChange);
+    if (listening) ownDoc.removeEventListener('keydown', handleKeydown);
+    listening = false;
+    ownView.removeEventListener('resize', detectLayout);
+    ownView.removeEventListener('orientationchange', handleOrientationChange);
+    if (ownView.screen?.orientation) {
+      ownView.screen.orientation.removeEventListener('change', handleOrientationChange);
     }
-    activeDocument.body.style.overflow = '';
+    ownDoc.body.style.overflow = '';
     // Cleanup portal if still exists
     if (portalContainer && portalContainer.parentNode) {
       portalContainer.parentNode.removeChild(portalContainer);
@@ -239,7 +268,7 @@
     
     // Lock body scroll on mobile
     if (isMobile) {
-      activeDocument.body.style.overflow = 'hidden';
+      ownDoc.body.style.overflow = 'hidden';
     }
     
     await tick();
@@ -256,7 +285,7 @@
     isClosing = true;
     
     // Unlock body scroll
-    activeDocument.body.style.overflow = '';
+    ownDoc.body.style.overflow = '';
     
     setTimeout(() => {
       visible = false;
@@ -328,7 +357,7 @@
     
     // Close if dragged up more than 6.25rem equivalent
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const remPx = parseFloat(ownView.getComputedStyle(ownDoc.documentElement).fontSize) || 16;
     if (dragOffset < -6.25 * remPx) {
       closePopup();
     } else {
@@ -421,7 +450,11 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<!--
+  #192: `<svelte:window>` binds to the bundle's window, so in a popout the
+  Escape key was being listened for in a window the popup is not in. The
+  listener moves to the popup's own document in `onMount` instead.
+-->
 
 {#if visible}
   <!-- iOS-style Backdrop - mounted to body via portal -->

@@ -86,18 +86,34 @@
   }
 
   // ── Lifecycle ──────────────────────────────────────────────
+  //
+  // #192: these follow the popup's own document, not the bundle's. Moving the
+  // node into a popout window and leaving the listeners on the main window
+  // would be a half fix: Escape and outside-click would be watched in a window
+  // the popup is not in, so it could not be dismissed at all.
+  //
+  // The document is resolved at mount from the trigger, because the popup's own
+  // element does not exist until it opens. Both are in the same leaf, so they
+  // are in the same document by construction.
+  let boundDoc: Document = document;
+  let boundView: Window = window;
+
   onMount(() => {
-    document.addEventListener("keydown", handleKeydown, true);
-    document.addEventListener("mousedown", handleOutsideMouseDown, true);
-    window.addEventListener("resize", handleReposition);
-    window.addEventListener("scroll", handleReposition, true);
+    boundDoc = triggerEl?.ownerDocument ?? document;
+    boundView = boundDoc.defaultView ?? window;
+    boundDoc.addEventListener("keydown", handleKeydown, true);
+    boundDoc.addEventListener("mousedown", handleOutsideMouseDown, true);
+    boundView.addEventListener("resize", handleReposition);
+    boundView.addEventListener("scroll", handleReposition, true);
   });
 
   onDestroy(() => {
-    document.removeEventListener("keydown", handleKeydown, true);
-    document.removeEventListener("mousedown", handleOutsideMouseDown, true);
-    window.removeEventListener("resize", handleReposition);
-    window.removeEventListener("scroll", handleReposition, true);
+    // Removed from whatever they were added to: rebinding on a later mount
+    // must not leave a listener behind on the previous document.
+    boundDoc.removeEventListener("keydown", handleKeydown, true);
+    boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
+    boundView.removeEventListener("resize", handleReposition);
+    boundView.removeEventListener("scroll", handleReposition, true);
   });
 
   // Reposition on viewport changes (resize / scroll) while open so a popup
@@ -114,12 +130,17 @@
 
     const tRect = triggerEl.getBoundingClientRect();
     const pRect = popupEl.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // #192: measured against the window the popup is actually in. The main
+    // window's viewport would clamp a popout's popup to coordinates from a
+    // different screen area entirely.
+    const doc = popupEl.ownerDocument;
+    const view = doc.defaultView ?? window;
+    const vw = view.innerWidth;
+    const vh = view.innerHeight;
 
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const baseFontPx = parseFloat(
-      getComputedStyle(document.documentElement).fontSize || "16"
+      view.getComputedStyle(doc.documentElement).fontSize || "16"
     );
     const offsetPx = offsetRem * baseFontPx;
     const marginPx = 0.5 * baseFontPx;
@@ -169,7 +190,7 @@
     // take the MIN of the viewport-derived cap and the resolved CSS max-width.
     const viewportWidthCap = vw - clampedLeft - marginPx;
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const cssMaxWidth = parseFloat(getComputedStyle(popupEl).maxWidth);
+    const cssMaxWidth = parseFloat(view.getComputedStyle(popupEl).maxWidth);
     const widthCap =
       Number.isFinite(cssMaxWidth) && cssMaxWidth > 0
         ? Math.min(viewportWidthCap, cssMaxWidth)
