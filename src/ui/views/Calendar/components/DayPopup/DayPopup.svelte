@@ -107,7 +107,18 @@
   // PORTAL - Mount popup inside workspace-leaf to respect plugin boundaries
   // ═══════════════════════════════════════════════════════════════
   
+  // #192: this one is NOT the shared `portal` primitive, and the difference is
+  // worth stating. The primitive moves a node into a target that already
+  // exists; this creates and owns a layer, sets pointer-events on it and
+  // promotes its host to `position: relative`. Folding that into the primitive
+  // would make it a layer manager for one caller's sake.
+  //
+  // What it DOES share is the lesson: the document comes from the node, never
+  // from the module. `activeDocument` is the FOCUSED document, so with a
+  // Projects leaf in a popout window and focus elsewhere, this used to build
+  // its layer in the wrong window.
   function createPortal(node: HTMLElement) {
+    const doc = node.ownerDocument;
     // Find the plugin's workspace-leaf container - mount portal INSIDE it
     // This respects Obsidian's sidebar boundaries
     const workspaceLeaf = node.closest('.workspace-leaf-content') as HTMLElement || 
@@ -115,13 +126,14 @@
     
     if (workspaceLeaf) {
       // Create portal container inside workspace-leaf (not body)
-      portalContainer = activeDocument.createElement('div');
+      portalContainer = doc.createElement('div');
       portalContainer.className = 'obsidian-projects-popup-portal';
       // z-index 100 is enough within workspace-leaf scope
       portalContainer.style.cssText = 'position: absolute; inset: 0; z-index: 100; pointer-events: none; overflow: hidden;';
       
       // Ensure workspace-leaf has relative positioning for absolute child
-      const computedStyle = window.getComputedStyle(workspaceLeaf);
+      const view = doc.defaultView ?? window;
+      const computedStyle = view.getComputedStyle(workspaceLeaf);
       if (computedStyle.position === 'static') {
         workspaceLeaf.style.position = 'relative';
       }
@@ -129,10 +141,10 @@
       workspaceLeaf.appendChild(portalContainer);
     } else {
       // Fallback to body if no workspace-leaf found
-      portalContainer = activeDocument.createElement('div');
+      portalContainer = doc.createElement('div');
       portalContainer.className = 'obsidian-projects-popup-portal';
       portalContainer.style.cssText = 'position: fixed; inset: 0; z-index: 100; pointer-events: none;';
-      activeDocument.body.appendChild(portalContainer);
+      doc.body.appendChild(portalContainer);
     }
     
     // Move node to portal

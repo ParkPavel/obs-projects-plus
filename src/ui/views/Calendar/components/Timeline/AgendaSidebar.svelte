@@ -16,6 +16,7 @@
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
+  import { portal } from "src/ui/portal";
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
   import type { ProjectDefinition } from '../../../../../settings/settings';
@@ -492,12 +493,12 @@
   // 3. Overlay starts BELOW navigation tabs (tabs are outside .calendar-zoom-container)
   // 4. Overlay click-to-dismiss works across the full area
   function portalOverlay(node: HTMLElement) {
-    const originalParent = node.parentElement;
-    const doc = node.ownerDocument;
-    const container = originalParent?.closest('.calendar-zoom-container') as HTMLElement | null;
+    const container = node.parentElement?.closest('.calendar-zoom-container') as HTMLElement | null;
 
-    // Move node to body — escapes all stacking/overflow contexts
-    doc.body.appendChild(node);
+    // #192: the move itself goes through the shared primitive; the bounds
+    // tracking below stays here, because it is this component's geometry and
+    // not something a portal should know about.
+    const moved = portal(node, { to: "document-body" });
 
     function update() {
       if (container) {
@@ -524,11 +525,14 @@
     return {
       destroy() {
         ro?.disconnect();
-        // Move node back to original parent before Svelte destroys it
-        // (Svelte expects the node to be in its original parent for cleanup)
-        if (node.parentElement === doc.body && originalParent) {
-          originalParent.appendChild(node);
-        }
+        // #192: the restore branch that used to live here was dead code, and
+        // that is measured rather than argued -- `A192_portalContract.test.ts`
+        // shows Svelte 3.59.2 detaching the element BEFORE running an action's
+        // destroy, so `node.parentElement === doc.body` could never hold. The
+        // comment it carried ("Svelte expects the node to be in its original
+        // parent for cleanup") described a requirement the framework does not
+        // have.
+        moved.destroy();
       }
     };
   }
