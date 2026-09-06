@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from "uuid";
 import { get } from "svelte/store";
 import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
+import { sanitizeNoteName } from "./noteName";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
@@ -454,7 +455,10 @@ const commonTableConfig: DatabaseViewConfig["table"] = {
 async function writeFiles(vault: Vault, folder: string, files: Record<string, DemoFile>): Promise<string[]> {
   const failed: string[] = [];
   for (const [name, file] of Object.entries(files)) {
-    const path = normalizePath(`${folder}/${name}.md`);
+    // #198: the host refuses `* " \ / < > : | ?` in a filename, and a demo set
+    // written as prose collects colons. Sanitising here rather than at each
+    // string keeps the next author from reintroducing it.
+    const path = normalizePath(`${folder}/${sanitizeNoteName(name)}.md`);
     const body = `---\n${stringifyYaml(file.frontmatter)}---\n\n${file.content}`;
     if (vault.getAbstractFileByPath(path)) continue; // idempotent re-run
     try {
