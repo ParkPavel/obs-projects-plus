@@ -90,8 +90,14 @@ export type ReconcileDecision<T> =
    * would redraw every view for no change.
    */
   | { readonly kind: "ignore"; readonly reason: "echo" | "same" }
-  /** Take the disk whole. The caller primes the writer BEFORE it sets the store. */
-  | { readonly kind: "adopt"; readonly settings: T }
+  /**
+   * Take the disk whole. The caller primes the writer BEFORE it sets the store.
+   *
+   * `carried` is true when the one exception below actually moved a counter,
+   * so the caller can write the corrected value back instead of leaving the
+   * higher counter alive only in memory.
+   */
+  | { readonly kind: "adopt"; readonly settings: T; readonly carried: boolean }
   /**
    * Memory wins and the disk copy is preserved beside the file. `pending` —
    * we hold unsaved work; `unknown-base` — nothing to compare against;
@@ -111,6 +117,99 @@ export type ReconcileDecision<T> =
    * write's verification is what catches it.
    */
   | { readonly kind: "keep"; readonly reason: "unparsable" };
+
+/**
+ * The one field that is merged rather than replaced — by the user's explicit
+ * decision, 2026-09-07, recorded here because it contradicts the rule above in
+ * the letter.
+ *
+ * `uniqueIdCounter` is monotonic and feeds `UniqueId` values that are written
+ * into NOTES. Taking a lower counter from the disk makes the plugin hand out
+ * identifiers that already exist in the vault — corruption outside the settings
+ * file, and unlike a settings conflict there is no copy to recover from,
+ * because the duplicates are spread across notes.
+ *
+ * `max` is the only correct operation for a counter, which is exactly why this
+ * exception does not open the door to merging anything else: every other field
+ * named in this module's header has NO correct per-field operation.
+ */
+interface CounterCarrier {
+  readonly id?: unknown;
+  readonly uniqueIdCounter?: unknown;
+}
+
+interface CounterHolder {
+  readonly projects?: unknown;
+  readonly archives?: unknown;
+}
+
+function counterOf(item: unknown): number | null {
+  if (typeof item !== "object" || item === null) return null;
+  const value = (item as CounterCarrier).uniqueIdCounter;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function idOf(item: unknown): string | null {
+  if (typeof item !== "object" || item === null) return null;
+  const value = (item as CounterCarrier).id;
+  return typeof value === "string" ? value : null;
+}
+
+/** Highest counter memory holds for each project id, across both lists. */
+function countersInMemory(memory: unknown): Map<string, number> {
+  const highest = new Map<string, number>();
+  if (typeof memory !== "object" || memory === null) return highest;
+  for (const key of ["projects", "archives"] as const) {
+    const list = (memory as CounterHolder)[key];
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const id = idOf(item);
+      const counter = counterOf(item);
+      if (id === null || counter === null) continue;
+      highest.set(id, Math.max(highest.get(id) ?? counter, counter));
+    }
+  }
+  return highest;
+}
+
+/**
+ * The adopted payload with every counter raised to the higher of the two
+ * sides. Returns the input untouched — same reference — when nothing moved, so
+ * the caller can tell a plain adoption from one that owes the disk a write.
+ */
+export function carryUniqueIdCounters<T>(
+  memory: unknown,
+  adopted: T
+): { readonly settings: T; readonly carried: boolean } {
+  const highest = countersInMemory(memory);
+  if (highest.size === 0) return { settings: adopted, carried: false };
+  if (typeof adopted !== "object" || adopted === null) {
+    return { settings: adopted, carried: false };
+  }
+
+  let carried = false;
+  const next: Record<string, unknown> = {
+    ...(adopted as unknown as Record<string, unknown>),
+  };
+  for (const key of ["projects", "archives"] as const) {
+    const list = (adopted as CounterHolder)[key];
+    if (!Array.isArray(list)) continue;
+    next[key] = list.map((item) => {
+      const id = idOf(item);
+      if (id === null) return item;
+      const mine = highest.get(id);
+      if (mine === undefined) return item;
+      const theirs = counterOf(item) ?? 0;
+      if (mine <= theirs) return item;
+      carried = true;
+      return { ...(item as object), uniqueIdCounter: mine };
+    });
+  }
+
+  return carried
+    ? { settings: next as unknown as T, carried: true }
+    : { settings: adopted, carried: false };
+}
 
 /** Is `value` a settings payload this build can adopt as it stands? */
 function versionMatches(value: unknown, expected: number): boolean {
@@ -156,5 +255,9 @@ export function reconcileSettings<T>(
     return { kind: "conflict", reason: "unknown-base" };
   }
 
-  return { kind: "adopt", settings: parsed as T };
+  const { settings, carried } = carryUniqueIdCounters(
+    input.memory,
+    parsed as T
+  );
+  return { kind: "adopt", settings, carried };
 }

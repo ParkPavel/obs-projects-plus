@@ -161,6 +161,29 @@ Another window, a synchroniser or a hand edit replaced data.json while this sess
 ### What to do
 Nothing is lost. The other version is in the file named in the notice, next to data.json; open it if you want to carry something across by hand. The plugin never reads that file, so you can delete it once you are done.
 
+## PPP-106
+
+### Что случилось
+`data.json` изменил кто-то другой, а сохранить чужую версию в соседний файл не удалось.
+
+### Почему
+Запись копии рядом с `data.json` не прошла — либо папка плагина неизвестна, либо файловая система
+отказала. Значит единственный экземпляр чужой версии — это сам `data.json`.
+
+### Что делать
+Скопируйте `data.json` руками (из папки плагина) **прежде** чем менять любую настройку: ближайшее
+сохранение перезапишет файл вашей версией, и чужая пропадёт. Причина отказа записи — в консоли
+разработчика.
+
+### What happened
+Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. Your version is kept — copy data.json by hand before you change any setting, because the next save overwrites it.
+
+### Why
+Writing the conflict copy next to data.json failed, or the plugin folder is unknown, so the only copy of the other version is data.json itself.
+
+### What to do
+Copy data.json out of the plugin folder by hand before changing any setting; the next ordinary save rewrites it with this session's version. The console line says why the copy was refused.
+
 ## PPP-201
 
 ### Что случилось

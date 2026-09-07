@@ -40,9 +40,29 @@ function stamp(at: Date): string {
  * (`manifest.dir`); it is optional in Obsidian's own typing, so callers that
  * cannot supply it get `null` rather than a path relative to the vault root.
  */
-export function brokenCopyPath(dir: string | undefined, at: Date): string | null {
+export function brokenCopyPath(
+  dir: string | undefined,
+  at: Date
+): string | null {
   if (dir === undefined || dir === "") return null;
   return `${dir}/data.broken-${stamp(at)}.json`;
+}
+
+/**
+ * #200 — where the OTHER version goes when memory and disk disagree.
+ *
+ * A sibling of `brokenCopyPath` rather than the same name: `data.broken-*`
+ * would be a lie about a file that is perfectly well formed and simply belongs
+ * to somebody else — a second window, a synchroniser, a hand edit. The name is
+ * what the user reads in the notice, so it has to say which of the two things
+ * happened.
+ */
+export function conflictCopyPath(
+  dir: string | undefined,
+  at: Date
+): string | null {
+  if (dir === undefined || dir === "") return null;
+  return `${dir}/data.conflict-${stamp(at)}.json`;
 }
 
 /** The settings file itself, for reading back a payload `loadData` could not parse. */
@@ -129,6 +149,35 @@ export async function writeBrokenCopy(
   );
   try {
     await adapter.write(path, contents);
+    return path;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * #200 — preserve the version this session refused to adopt.
+ *
+ * Written VERBATIM, unlike the broken copy: this file is valid settings that
+ * somebody meant, so the useful recovery is renaming it back over `data.json`,
+ * and a wrapper object would make that impossible. The broken copy wraps
+ * because its payload is evidence rather than settings.
+ *
+ * Returns the path written or `null`, and the caller must branch on it: a
+ * notice naming a file that was never written is the #195 defect one level up.
+ */
+export async function writeConflictCopy(
+  adapter: BrokenCopyAdapter,
+  dir: string | undefined,
+  payload: string,
+  at: Date
+): Promise<string | null> {
+  const base = conflictCopyPath(dir, at);
+  if (base === null) return null;
+  const path = await freeName(adapter, base);
+  if (path === null) return null;
+  try {
+    await adapter.write(path, payload);
     return path;
   } catch {
     return null;

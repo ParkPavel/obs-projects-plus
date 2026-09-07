@@ -100,3 +100,65 @@ describe("SaveStatusChip (#185)", () => {
     destroy();
   });
 });
+
+describe("SaveStatusChip — the diverged mark (#200)", () => {
+  const DIVERGED = { kind: "diverged", code: "PPP-102" } as const;
+
+  afterEach(() => {
+    saveStatus.set({ kind: "idle" });
+    setSaveRetryHandler(null);
+  });
+
+  it("stands up when the file was replaced by somebody else", async () => {
+    const { target, destroy } = mount();
+    saveStatus.set(DIVERGED);
+    await tick();
+
+    const chip = target.querySelector(".save-status-chip");
+    expect(chip).not.toBeNull();
+    expect(target.querySelector(".code")).toHaveTextContent("PPP-102");
+    destroy();
+  });
+
+  it("offers no retry, because the retry would be the overwrite", async () => {
+    // The property, stated as the DOM sees it: not a button, no handler, and
+    // clicking it reaches nobody. A disabled button would still say there is
+    // something to press.
+    const retry = jest.fn();
+    setSaveRetryHandler(retry);
+    const { target, destroy } = mount();
+    saveStatus.set(DIVERGED);
+    await tick();
+
+    const chip = target.querySelector<HTMLElement>(".save-status-chip");
+    expect(chip?.tagName).toBe("SPAN");
+    chip?.click();
+    expect(retry).not.toHaveBeenCalled();
+    destroy();
+  });
+
+  it("carries its own cause in the tooltip, not the failed one", async () => {
+    const { target, destroy } = mount();
+    saveStatus.set(DIVERGED);
+    await tick();
+
+    const title = target
+      .querySelector<HTMLElement>(".save-status-chip")
+      ?.getAttribute("title");
+    expect(title).toContain(findErrorCode("PPP-102")?.cause);
+    destroy();
+  });
+
+  it("gives way to a failure: one mark, and it says the more urgent thing", async () => {
+    const { target, destroy } = mount();
+    saveStatus.set(DIVERGED);
+    await tick();
+    saveStatus.set(FAILED);
+    await tick();
+
+    expect(
+      target.querySelector<HTMLElement>(".save-status-chip")?.tagName
+    ).toBe("BUTTON");
+    destroy();
+  });
+});

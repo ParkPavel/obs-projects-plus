@@ -7,16 +7,23 @@
   // shown: a spinner on every keystroke is noise, and the silent retries are
   // deliberately invisible (most write failures are transient).
   $: failed = $saveStatus.kind === "failed";
+  // #200 — the third standing state. It is NOT folded into `failed`, because
+  // the mark's only action is a retry and a retry here is the overwrite of
+  // somebody else's change: the same control would mean the opposite thing.
+  $: diverged = $saveStatus.kind === "diverged";
   // #202 — the code comes from the status rather than being fixed here, so the
   // mark says whatever the writer actually reported. `$i18n` is read inside the
   // reactive statement so the cause follows a language change.
   $: resolved =
-    $saveStatus.kind === "failed"
+    $saveStatus.kind === "failed" || $saveStatus.kind === "diverged"
       ? resolveError($saveStatus.code)
       : { code: "", caption: "", cause: "" };
   // The cause is appended to the existing `title`, per SPEC 201 §4: the tooltip
   // mechanism does not change, only what fills it.
-  $: tooltip = [$i18n.t("save-status.failed.tooltip"), resolved.cause]
+  $: tooltip = [
+    $i18n.t(failed ? "save-status.failed.tooltip" : "save-status.diverged.tooltip"),
+    resolved.cause,
+  ]
     .filter((part) => part.length > 0)
     .join(" ");
 </script>
@@ -32,6 +39,17 @@
     <span class="label">{$i18n.t("save-status.failed.label")}</span>
     <span class="code">{resolved.code}</span>
   </button>
+{:else if diverged}
+  <!-- #200 — a mark, and this one really is not a button. There is no action
+       to offer: the write already happened and the file no longer holds it, so
+       a retry would overwrite the version that replaced ours. A disabled
+       button would still say "there is something to press here"; a span says
+       what is true, and the tooltip carries the explanation. -->
+  <span class="save-status-chip is-diverged" title={tooltip}>
+    <span class="dot" aria-hidden="true"></span>
+    <span class="label">{$i18n.t("save-status.diverged.label")}</span>
+    <span class="code">{resolved.code}</span>
+  </span>
 {/if}
 
 <style>
@@ -73,10 +91,24 @@
     min-width: 0;
     flex-shrink: 1;
   }
-  .save-status-chip:hover {
+  /* #200 — the diverged mark is a caution, not a failure, and it is inert. The
+     colour follows that: the warning token instead of the error one, the
+     default cursor instead of a pointer, and no hover or active tint, because
+     there is nothing to press. Everything else — the hairline, the dot, the
+     code slot — is deliberately identical, so the two states read as one
+     family of mark rather than as two unrelated widgets. */
+  .save-status-chip.is-diverged {
+    border-color: var(--text-warning);
+    color: var(--text-warning);
+    cursor: default;
+  }
+  .save-status-chip.is-diverged .dot {
+    background: var(--text-warning);
+  }
+  .save-status-chip:not(.is-diverged):hover {
     background: color-mix(in srgb, var(--text-error) 12%, transparent);
   }
-  .save-status-chip:active {
+  .save-status-chip:not(.is-diverged):active {
     background: color-mix(in srgb, var(--text-error) 20%, transparent);
   }
   .save-status-chip:focus-visible {

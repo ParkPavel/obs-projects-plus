@@ -1,8 +1,10 @@
 import {
   brokenCopyPath,
+  conflictCopyPath,
   readRawSettings,
   settingsFilePath,
   writeBrokenCopy,
+  writeConflictCopy,
   type BrokenCopyAdapter,
 } from "src/lib/settings/brokenBackup";
 
@@ -139,7 +141,13 @@ describe("#195 — the forensic copy of unreadable settings", () => {
     const adapter = makeAdapter();
     adapter.exists = () => Promise.reject(new Error("EIO"));
 
-    const path = await writeBrokenCopy(adapter, DIR, "payload", "r", new Date());
+    const path = await writeBrokenCopy(
+      adapter,
+      DIR,
+      "payload",
+      "r",
+      new Date()
+    );
 
     // Losing the copy would be worse than overwriting a name that probably is
     // not there.
@@ -150,7 +158,13 @@ describe("#195 — the forensic copy of unreadable settings", () => {
     const adapter = makeAdapter();
     adapter.writeFails = true;
 
-    const path = await writeBrokenCopy(adapter, DIR, "payload", "r", new Date());
+    const path = await writeBrokenCopy(
+      adapter,
+      DIR,
+      "payload",
+      "r",
+      new Date()
+    );
 
     expect(path).toBeNull();
   });
@@ -181,5 +195,68 @@ describe("#195 — the forensic copy of unreadable settings", () => {
     // vault is a real directory on disk.
     expect(path).not.toContain(":");
     expect(path?.endsWith(".json")).toBe(true);
+  });
+});
+
+describe("#200 — the copy of the version this session refused", () => {
+  const OTHER = `{
+  "version": 4,
+  "projects": []
+}
+`;
+
+  it("is written verbatim, so it can be renamed back over data.json", async () => {
+    // The difference from the broken copy, and the reason for a second
+    // function rather than a flag: that payload is evidence and is wrapped in
+    // keys describing the failure. This one is valid settings somebody meant,
+    // and wrapping it would destroy the only useful recovery there is.
+    const adapter = makeAdapter();
+
+    const path = await writeConflictCopy(
+      adapter,
+      DIR,
+      OTHER,
+      new Date("2026-09-07T11:07:48.265Z")
+    );
+
+    expect(path).not.toBeNull();
+    expect(adapter.files.get(path as string)).toBe(OTHER);
+  });
+
+  it("says which of the two things happened, in the name", async () => {
+    // The name is what the user reads in the notice. `data.broken-*` would be
+    // a lie about a file that is perfectly well formed and simply belongs to
+    // somebody else.
+    const at = new Date("2026-09-07T11:07:48.265Z");
+
+    expect(conflictCopyPath(DIR, at)).toContain("data.conflict-");
+    expect(conflictCopyPath(DIR, at)).not.toContain("broken");
+    expect(conflictCopyPath(DIR, at)).not.toContain(":");
+  });
+
+  it("never overwrites an earlier copy", async () => {
+    const adapter = makeAdapter();
+    const at = new Date("2026-09-07T11:07:48.265Z");
+
+    const first = await writeConflictCopy(adapter, DIR, "first", at);
+    const second = await writeConflictCopy(adapter, DIR, "second", at);
+
+    expect(second).not.toBe(first);
+    expect(adapter.files.get(first as string)).toBe("first");
+    expect(adapter.files.get(second as string)).toBe("second");
+  });
+
+  it("reports failure instead of assuming it, both ways", async () => {
+    // The caller shows a different code depending on this answer, because a
+    // notice naming a file that was never written is the #195 defect one level
+    // up — and here the stakes are higher: with no copy, the other version
+    // exists only as data.json, which the next save overwrites.
+    const adapter = makeAdapter();
+    adapter.writeFails = true;
+
+    expect(await writeConflictCopy(adapter, DIR, OTHER, new Date())).toBeNull();
+    expect(
+      await writeConflictCopy(makeAdapter(), undefined, OTHER, new Date())
+    ).toBeNull();
   });
 });

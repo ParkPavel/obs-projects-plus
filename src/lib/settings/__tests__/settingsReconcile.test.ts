@@ -30,7 +30,9 @@ const DISK: Settings = {
   projects: [{ id: "p1", name: "Renamed elsewhere" }],
 };
 
-function decide(over: Partial<Parameters<typeof reconcileSettings<Settings>>[0]>) {
+function decide(
+  over: Partial<Parameters<typeof reconcileSettings<Settings>>[0]>
+) {
   return reconcileSettings<Settings>({
     diskRaw: JSON.stringify(DISK),
     memory: MEMORY,
@@ -115,9 +117,9 @@ describe("#200 — memory against disk", () => {
     // Adopting a v3 payload into a v4 session would put a shape in memory that
     // no consumer expects; adopting a future version would be worse.
     for (const version of [3, 5]) {
-      expect(
-        decide({ diskRaw: JSON.stringify({ ...DISK, version }) })
-      ).toEqual({ kind: "conflict", reason: "unknown-version" });
+      expect(decide({ diskRaw: JSON.stringify({ ...DISK, version }) })).toEqual(
+        { kind: "conflict", reason: "unknown-version" }
+      );
     }
   });
 
@@ -125,6 +127,159 @@ describe("#200 — memory against disk", () => {
     for (const raw of ["null", "[]", '"text"', "7"]) {
       expect(decide({ diskRaw: raw }).kind).toBe("conflict");
     }
+  });
+
+  describe("the one field that is merged, by the user's decision", () => {
+    // `uniqueIdCounter` is monotonic and feeds `UniqueId` values written into
+    // NOTES. Adopting a lower one makes the plugin reissue identifiers that
+    // already exist in the vault — and unlike a settings conflict there is no
+    // copy to recover from, because the duplicates are spread across notes.
+    const withCounter = (counter: number | undefined, name: string) => ({
+      version: 4,
+      projects: [{ id: "p1", name, uniqueIdCounter: counter }],
+    });
+
+    it("carries the higher counter forward and says that it did", () => {
+      const decision = reconcileSettings({
+        diskRaw: JSON.stringify(withCounter(3, "Theirs")),
+        memory: withCounter(11, "Mine"),
+        base: canonical(withCounter(11, "Mine")),
+        pending: false,
+        expectedVersion: 4,
+      });
+
+      expect(decision.kind).toBe("adopt");
+      if (decision.kind !== "adopt") return;
+      // Everything else is still the disk's, field for field. Only the counter
+      // moved, and only upwards.
+      expect(decision.settings).toEqual(withCounter(11, "Theirs"));
+      expect(decision.carried).toBe(true);
+    });
+
+    it("leaves a disk counter that is already higher alone", () => {
+      const decision = reconcileSettings({
+        diskRaw: JSON.stringify(withCounter(40, "Theirs")),
+        memory: withCounter(11, "Mine"),
+        base: canonical(withCounter(11, "Mine")),
+        pending: false,
+        expectedVersion: 4,
+      });
+
+      expect(decision.kind).toBe("adopt");
+      if (decision.kind !== "adopt") return;
+      expect(decision.settings).toEqual(withCounter(40, "Theirs"));
+      // Nothing moved, so the caller owes the disk no write.
+      expect(decision.carried).toBe(false);
+    });
+
+    it("matches projects by id, never by position", () => {
+      const decision = reconcileSettings({
+        diskRaw: JSON.stringify({
+          version: 4,
+          projects: [
+            { id: "b", uniqueIdCounter: 1 },
+            { id: "a", uniqueIdCounter: 1 },
+          ],
+        }),
+        memory: {
+          version: 4,
+          projects: [
+            { id: "a", uniqueIdCounter: 9 },
+            { id: "b", uniqueIdCounter: 2 },
+          ],
+        },
+        base: "{}",
+        pending: false,
+        expectedVersion: 4,
+      });
+
+      expect(decision.kind).toBe("adopt");
+      if (decision.kind !== "adopt") return;
+      expect(decision.settings).toEqual({
+        version: 4,
+        projects: [
+          { id: "b", uniqueIdCounter: 2 },
+          { id: "a", uniqueIdCounter: 9 },
+        ],
+      });
+    });
+
+    it("covers archived projects too: an archive can be restored", () => {
+      const decision = reconcileSettings({
+        diskRaw: JSON.stringify({
+          version: 4,
+          projects: [],
+          archives: [{ id: "old", uniqueIdCounter: 2 }],
+        }),
+        memory: {
+          version: 4,
+          projects: [],
+          archives: [{ id: "old", uniqueIdCounter: 30 }],
+        },
+        base: "{}",
+        pending: false,
+        expectedVersion: 4,
+      });
+
+      expect(decision.kind).toBe("adopt");
+      if (decision.kind !== "adopt") return;
+      expect(decision.settings).toEqual({
+        version: 4,
+        projects: [],
+        archives: [{ id: "old", uniqueIdCounter: 30 }],
+      });
+    });
+
+    it("adds no counter to a project that never had one", () => {
+      // The field is optional and `undefined` means "treat as 0 on first
+      // read". Writing a 0 into every project would change the stored shape
+      // for a reason no user asked for.
+      const decision = reconcileSettings({
+        diskRaw: JSON.stringify({
+          version: 4,
+          projects: [{ id: "p1", name: "Theirs" }],
+        }),
+        memory: { version: 4, projects: [{ id: "p1", name: "Mine" }] },
+        base: "{}",
+        pending: false,
+        expectedVersion: 4,
+      });
+
+      expect(decision.kind).toBe("adopt");
+      if (decision.kind !== "adopt") return;
+      expect(decision.settings).toEqual({
+        version: 4,
+        projects: [{ id: "p1", name: "Theirs" }],
+      });
+      expect(decision.carried).toBe(false);
+    });
+
+    it("does not touch anything else, however different the two sides are", () => {
+      // The exception is one field wide. If it ever grows, this fails.
+      const decision = reconcileSettings({
+        diskRaw: JSON.stringify({
+          version: 4,
+          projects: [{ id: "p1", isDefault: true, uniqueIdCounter: 1 }],
+          preferences: { commands: [] },
+        }),
+        memory: {
+          version: 4,
+          projects: [{ id: "p1", isDefault: false, uniqueIdCounter: 5 }],
+          preferences: { commands: ["stale"] },
+        },
+        base: "{}",
+        pending: false,
+        expectedVersion: 4,
+      });
+
+      expect(decision.kind).toBe("adopt");
+      if (decision.kind !== "adopt") return;
+      expect(decision.settings).toEqual({
+        version: 4,
+        projects: [{ id: "p1", isDefault: true, uniqueIdCounter: 5 }],
+        preferences: { commands: [] },
+      });
+    });
   });
 
   it("never loses a side: every branch either keeps memory or hands back disk", () => {

@@ -204,7 +204,12 @@ export function createSettingsWriter<T>(
   }
 
   function startWrite(force = false): void {
-    if ((disposed && !force) || inFlight !== null || !dirty || latest === null) {
+    if (
+      (disposed && !force) ||
+      inFlight !== null ||
+      !dirty ||
+      latest === null
+    ) {
       return;
     }
     const value = latest.value;

@@ -146,10 +146,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     /**
      * #200 — memory and disk disagreed and the plugin refused to merge them.
      *
-     * `pending` until step 3 wires the reconciliation: the number is reserved
-     * and explained here so the page and the registry move together, but
-     * nothing can display it yet, and the marker is what says so out loud.
-     *
      * Distinct from PPP-102 on purpose. That one says a write could not be
      * confirmed; this one says a conflict was decided — memory kept, the other
      * version preserved beside the file. Same file, different events, and
@@ -164,7 +160,25 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Projects+: data.json was changed outside this window and could not be adopted. Your version is kept, and the one from disk was saved as {{path}}.",
     cause:
       "Another window, a synchroniser or a hand edit replaced data.json while this session held changes of its own, so neither version could be discarded.",
-    status: "pending",
+  },
+  {
+    /**
+     * #200 — the same conflict, with the copy refused.
+     *
+     * A separate code rather than a softer wording of PPP-105, because the
+     * user's next move is different and urgent: the other version exists only
+     * as `data.json`, and this plugin's next ordinary save overwrites it. The
+     * #195 rule applies one level up — a notice must never name a file that
+     * was not written.
+     */
+    code: "PPP-106",
+    kind: "failure",
+    key: "save-status.conflict-uncopied.notice",
+    causeKey: "errors.causes.settings-conflict-uncopied",
+    caption:
+      "Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. Your version is kept — copy data.json by hand before you change any setting, because the next save overwrites it.",
+    cause:
+      "Writing the conflict copy next to data.json failed, or the plugin folder is unknown, so the only copy of the other version is data.json itself.",
   },
   {
     code: "PPP-201",

@@ -54,7 +54,9 @@ import {
   readRawSettings,
   settingsFilePath,
   writeBrokenCopy,
+  writeConflictCopy,
 } from "src/lib/settings/brokenBackup";
+import { reconcileSettings } from "src/lib/settings/settingsReconcile";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
 import type { WriteVerdict } from "src/lib/settings/settingsWriter";
 import { noticeFor, withCode } from "src/lib/errors/errorText";
@@ -85,6 +87,10 @@ dayjs.extend(localizedFormat);
 const SETTINGS_SUPERSEDED = "PPP-102";
 const SETTINGS_UNREADABLE = "PPP-103";
 const SETTINGS_CORRUPTED = "PPP-104";
+/** #200 — the file was replaced and the two versions could not be reconciled. */
+const SETTINGS_CONFLICT = "PPP-105";
+/** #200 — the same, with the copy of the other version refused. */
+const SETTINGS_CONFLICT_UNCOPIED = "PPP-106";
 /** #202 — the demo repair path; the demo itself raises 601/602 in its own module. */
 const DEMO_REPAIR_FAILED = "PPP-603";
 
@@ -619,6 +625,113 @@ export default class ProjectsPlusPlugin extends Plugin {
       { excludePath: target.path },
     );
     modal.open();
+  }
+
+  /**
+   * #200 — somebody else wrote `data.json`.
+   *
+   * Obsidian calls this when the file changes on disk from outside the app: a
+   * second window, a synchroniser, a hand edit. It exists on every host this
+   * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
+   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
+   * external write fires it with the NEW contents already readable, and that
+   * our own `saveData` does not fire it.
+   *
+   * Every judgement is in `settingsReconcile.ts`, on purpose: this method
+   * cannot be unit-tested in this tree at all, so it holds only the wiring —
+   * read, decide, apply. What it does with each decision is the thing to keep
+   * honest, and each branch is one statement.
+   */
+  async onExternalSettingsChange(): Promise<void> {
+    const path = settingsFilePath(this.manifest.dir);
+    // Same blind spot as the write verification: `manifest.dir` is optional in
+    // Obsidian's own typing, and without it there is no file to read. Recorded
+    // in the plan's risks rather than papered over.
+    if (path === null || this.settingsWriter === undefined) return;
+
+    let raw: string;
+    try {
+      raw = await this.app.vault.adapter.read(path);
+    } catch (err) {
+      console.warn("[Projects+] settings changed on disk but could not be read:", err);
+      return;
+    }
+
+    const decision = reconcileSettings<LatestProjectsPluginSettings>({
+      diskRaw: raw,
+      memory: get(settings),
+      base: this.confirmedOnDisk,
+      // Not the status: `push` schedules a write and leaves the status `idle`
+      // until it starts, so a status-based check would adopt the disk over a
+      // change made half a second ago.
+      pending: this.settingsWriter.hasPending(),
+      expectedVersion: DEFAULT_SETTINGS.version,
+    });
+
+    if (decision.kind === "ignore") {
+      console.debug(`[Projects+] settings file changed; ${decision.reason}`);
+      return;
+    }
+    if (decision.kind === "keep") {
+      // A half-written file is what a synchroniser looks like from here, and
+      // the completed write fires this again a moment later. Nothing is said
+      // to the user and nothing is copied: at load an unreadable file yields
+      // defaults, and doing that HERE would put defaults over live working
+      // state — data loss created by the mechanism meant to prevent it.
+      console.warn("[Projects+] settings file changed but does not parse; keeping memory");
+      return;
+    }
+    if (decision.kind === "conflict") {
+      const preserved = await this.preserveConflicting(raw, decision.reason);
+      // Only once the other version is safely beside the file does memory
+      // become the file. Without this the disk keeps the other version and the
+      // next ordinary save overwrites it anyway — the defect #200 opened with,
+      // minus the loss. With the copy refused, the disk is the ONLY place that
+      // version exists, so nothing is written and the user is told to copy it.
+      if (preserved) this.settingsWriter.pushImmediate(get(settings));
+      return;
+    }
+
+    // Adoption. `prime` BEFORE `set`, because the store subscription writes
+    // whatever it is handed — the same echo #185 removed at load, arriving by
+    // a second route. Primed first, the subscription's firing is a no-op.
+    this.settingsWriter.prime(decision.settings);
+    this.loadedSettings = decision.settings;
+    this.confirmedOnDisk = canonical(JSON.parse(raw));
+    settings.set(decision.settings);
+    if (decision.carried) {
+      // The one merged field (user's decision, 2026-09-07): a project's
+      // `uniqueIdCounter` was higher here than on disk. Memory now holds the
+      // higher one, and the file must too — otherwise the next window to adopt
+      // this file reissues identifiers that are already in notes.
+      this.settingsWriter.pushImmediate(decision.settings);
+    }
+    console.debug("[Projects+] settings adopted from disk");
+  }
+
+  /**
+   * #200 — keep the version this session refused, and say where it is.
+   *
+   * The copy is what makes the conflict branch non-destructive, so whether it
+   * was actually written decides which message the user gets. #195 learned that
+   * one level down: a notice naming a backup that was never written sends the
+   * user to look for a file that does not exist.
+   */
+  private async preserveConflicting(raw: string, reason: string): Promise<boolean> {
+    const copiedTo = await writeConflictCopy(
+      this.app.vault.adapter,
+      this.manifest.dir,
+      raw,
+      new Date()
+    );
+    if (copiedTo === null) {
+      logError(SETTINGS_CONFLICT_UNCOPIED, `reason: ${reason}`);
+      new Notice(noticeFor(SETTINGS_CONFLICT_UNCOPIED), 15000);
+      return false;
+    }
+    logWarning(SETTINGS_CONFLICT, `reason: ${reason}; other version kept at ${copiedTo}`);
+    new Notice(noticeFor(SETTINGS_CONFLICT, { path: copiedTo }), 15000);
+    return true;
   }
 
   /**
