@@ -63,8 +63,15 @@
     font-weight: 600;
     line-height: 1.4;
     cursor: pointer;
-    flex-shrink: 0;
     white-space: nowrap;
+    /* #202, from the audit: the mark grew a code and sat in a row that already
+       carries the view switcher and three actions. Refusing to shrink there
+       pushes the header into horizontal overflow on a narrow pane — a mark
+       that reports a problem must not create a layout one. It gives up the
+       label first (below) and never the code: the code is the part a user
+       quotes, and the dot plus the error colour still say what state it is. */
+    min-width: 0;
+    flex-shrink: 1;
   }
   .save-status-chip:hover {
     background: color-mix(in srgb, var(--text-error) 12%, transparent);
@@ -82,9 +89,23 @@
      "colour inside a colour" mistake #201 removed, one scale down. Only the
      separator is dimmed, which is the low-emphasis idiom already in
      WidgetShell and AgendaSidebar. */
+  .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
   .code {
     font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
   }
+
+  /* Why truncation and not a container query hiding the label: nothing above
+     this component declares `container-type`, so a `@container` rule here
+     would never match — a dead rule that looks like a safeguard is worse than
+     none. Making the navbar row a query container is a structural change to a
+     shared row, which SPEC 201 §5 hands to an architect rather than to this
+     fix. Truncation answers the overflow the audit actually found, with the
+     code — the part a user quotes — never the part that is cut. */
   .code::before {
     content: "·";
     padding-right: 0.25rem;

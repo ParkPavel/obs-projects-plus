@@ -57,8 +57,17 @@ export interface ErrorCodeEntry {
   readonly caption: string;
   /** English default for `causeKey`. */
   readonly cause: string;
-  /** Set when the code is no longer issued. The entry and its page section stay. */
-  readonly status?: "retired";
+  /**
+   * `retired` — no longer issued; the entry and its page section stay, so the
+   * number can never be reused and an old screenshot stays legible.
+   *
+   * `pending` — reserved and documented, but no call site shows it yet. The
+   * audit of step 3 is why this exists: a code that the page explains and
+   * nothing can ever display is a promise to the user that no code keeps, and
+   * without a marker the ratchet cannot tell that state from a wired one. The
+   * markers come off area by area as steps 4-6 wire them.
+   */
+  readonly status?: "retired" | "pending";
 }
 
 /**
@@ -142,6 +151,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Could not save changes to {{path}}; the previous value was restored.",
     cause:
       "Writing the note's frontmatter failed, so the value on screen was rolled back to what is on disk.",
+    status: "pending",
   },
   {
     code: "PPP-202",
@@ -152,6 +162,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Could not save {{count}} record(s); the previous values were restored.",
     cause:
       "A batch write failed part way through, so every record in the batch was rolled back to what is on disk.",
+    status: "pending",
   },
   {
     code: "PPP-203",
@@ -161,6 +172,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "{{path}} no longer exists; the change was not saved.",
     cause:
       "The note was renamed, moved or deleted after the view loaded it, so there was no file left to write to.",
+    status: "pending",
   },
   {
     code: "PPP-204",
@@ -171,6 +183,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
     cause:
       "A new field is written into the project's notes one by one, and some of those writes did not succeed.",
+    status: "pending",
   },
   {
     code: "PPP-301",
@@ -180,6 +193,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be renamed.",
     cause:
       "Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.",
+    status: "pending",
   },
   {
     code: "PPP-302",
@@ -189,6 +203,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to save changes",
     cause:
       "The note editor could not write its changes back to the file, so what is on screen is ahead of what is on disk.",
+    status: "pending",
   },
   {
     code: "PPP-303",
@@ -198,6 +213,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be deleted.",
     cause:
       "Deleting the file failed — it may be open elsewhere, read-only, or already gone.",
+    status: "pending",
   },
   {
     code: "PPP-304",
@@ -207,6 +223,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be duplicated.",
     cause:
       "One of the copies could not be created, so the set of new notes is incomplete.",
+    status: "pending",
   },
   {
     code: "PPP-305",
@@ -216,6 +233,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The checkbox could not be changed.",
     cause:
       "Writing the checkbox field back to the note failed, so the tick does not reflect the file.",
+    status: "pending",
   },
   {
     code: "PPP-306",
@@ -225,6 +243,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Choose a field for the checkboxes first.",
     cause:
       "The view has no boolean field assigned, so there is nothing for a tick to be written into.",
+    status: "pending",
   },
   {
     code: "PPP-307",
@@ -234,6 +253,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The event date could not be changed.",
     cause:
       "Writing the new date back to the note failed, so the event stays where it was.",
+    status: "pending",
   },
   {
     code: "PPP-308",
@@ -243,6 +263,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Date field is required to create events",
     cause:
       "The view has no date field assigned, so an event has nothing to be placed by.",
+    status: "pending",
   },
   {
     code: "PPP-309",
@@ -252,6 +273,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "That date cannot be used for this event.",
     cause:
       "The target date failed validation — it is outside the supported range, or it would put the end of the event before its start.",
+    status: "pending",
   },
   {
     code: "PPP-310",
@@ -261,6 +283,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "This record cannot be moved.",
     cause:
       "The record is missing fields the calendar needs, so its new position cannot be worked out.",
+    status: "pending",
   },
   {
     code: "PPP-311",
@@ -270,6 +293,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The colour could not be changed.",
     cause:
       "Writing the colour field back to the note failed, so the event keeps its previous colour.",
+    status: "pending",
   },
   {
     code: "PPP-312",
@@ -279,6 +303,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "No colour field is set for this project.",
     cause:
       "The view has no field assigned to hold an event colour, so there is nothing to write the choice into.",
+    status: "pending",
   },
   {
     code: "PPP-313",
@@ -288,6 +313,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The calendar could not move to that date.",
     cause:
       "Working out the next period failed, so the calendar stayed where it was.",
+    status: "pending",
   },
   {
     code: "PPP-314",
@@ -297,6 +323,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Cannot create events in read-only projects",
     cause:
       "The project is read-only, so no note can be created from this view.",
+    status: "pending",
   },
   {
     code: "PPP-401",
@@ -306,6 +333,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to add field. Please try again.",
     cause:
       "The field could not be written into the project's notes, so the schema is unchanged.",
+    status: "pending",
   },
   {
     code: "PPP-402",
@@ -315,6 +343,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to reopen schema.",
     cause:
       "The schema dialog could not be reopened after the edit; the edit itself was applied.",
+    status: "pending",
   },
   {
     code: "PPP-403",
@@ -325,6 +354,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
     cause:
       "The pre-migration copy of the configuration could not be saved, so there is nothing to roll back to.",
+    status: "pending",
   },
   {
     code: "PPP-501",
@@ -335,6 +365,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.",
     cause:
       "The back-link is written into the notes on the other side of the relation, and some of those writes failed.",
+    status: "pending",
   },
   {
     code: "PPP-601",
@@ -345,6 +376,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Could not create the demo folder '{{folder}}'. The demo project was not created.",
     cause:
       "The folder the demo notes live in could not be created, so none of them had anywhere to land.",
+    status: "pending",
   },
   {
     code: "PPP-602",
@@ -355,6 +387,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
     cause:
       "Some of the demo notes could not be written, so the project is registered but incomplete.",
+    status: "pending",
   },
   {
     code: "PPP-603",
@@ -365,6 +398,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Demo project already exists. {{count}} missing notes could not be written — see the console.",
     cause:
       "The demo project was re-seeded to restore the notes it was missing, and some of those writes failed.",
+    status: "pending",
   },
   {
     code: "PPP-701",
@@ -374,6 +408,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: 'This project already has a source called "{{name}}"',
     cause:
       "Two sources sharing a name are indistinguishable in the only picker that lists them, so the name is refused.",
+    status: "pending",
   },
 ];
 

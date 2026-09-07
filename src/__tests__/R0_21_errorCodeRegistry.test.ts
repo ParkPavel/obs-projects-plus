@@ -166,6 +166,41 @@ describe("R0.21 — the registry and the page stay in step", () => {
     expect([...unknown]).toEqual([]);
   });
 
+  it("a code that is not pending is actually issued somewhere", () => {
+    // The gap the step-3 audit found: the registry and the page could describe
+    // a code that no call site can ever show, and every existing check passed,
+    // because the registry itself satisfied the "is it registered" scan. A
+    // documented code nothing can display is a promise to the user that no code
+    // keeps.
+    //
+    // `pending` makes that state declared instead of implied — and this test is
+    // what makes the declaration cost something: the day an area is wired, its
+    // markers must come off, and until then they must be there.
+    const issuers = new Map<string, string[]>();
+    for (const file of walk(path.join(ROOT, "src"))) {
+      if (!/\.(ts|svelte)$/.test(file)) continue;
+      if (/__tests__|\.test\.|\.spec\./.test(file)) continue;
+      if (file.endsWith(path.join("errors", "errorCodes.ts"))) continue;
+      for (const [code] of fs
+        .readFileSync(file, "utf8")
+        .matchAll(/PPP-\d{3}/g)) {
+        issuers.set(code, [...(issuers.get(code) ?? []), path.basename(file)]);
+      }
+    }
+
+    const wiredButPending: string[] = [];
+    const liveButUnissued: string[] = [];
+    for (const entry of ERROR_CODES) {
+      const shown = issuers.has(entry.code);
+      if (entry.status === "retired") continue;
+      if (entry.status === "pending" && shown) wiredButPending.push(entry.code);
+      if (entry.status === undefined && !shown) liveButUnissued.push(entry.code);
+    }
+
+    expect(liveButUnissued).toEqual([]);
+    expect(wiredButPending).toEqual([]);
+  });
+
   it("the modules that must stay light do not import the resolver", () => {
     // The weight edge from the plan: settings and engine modules are unit
     // tested in isolation, and naming a code must not drag four locale files
