@@ -446,11 +446,16 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`: 227 suites / 3490 tests PASS, tsc 0, svelte-check 0/0,
-  lint 0 errors (110 pre-existing tsdoc warnings).** Measured 2026-09-07 on `main` after #187/#192/#202 — in two passes, because the
-  machine could not carry the whole set in one: 222 suites / 3439 tests without the headless
-  probes, plus the 5 probe suites / 51 tests on their own. Nothing was skipped; the split is
-  stated rather than hidden.
+- **Canonical baseline — `main`, measured in TWO passes 2026-09-07 after #187/#192/#202:
+  222 suites / 3439 tests without the headless probes, and 5 probe suites / 51 tests on their
+  own. tsc 0, svelte-check 0/0, lint 0 errors (110 pre-existing tsdoc warnings).** Both halves
+  green, nothing skipped.
+  The two numbers are deliberately NOT added together here. Their sum is arithmetic, and the
+  next paragraph says why this bullet does not carry arithmetic: every time it was patched by
+  reasoning instead of measurement it went wrong. When the machine can carry the whole set in
+  one pass again, one measured number replaces both.
+  The split exists because this machine currently cannot run five headless Chrome instances
+  alongside the rest — see #196 for the measurement behind that.
   This line carries no arithmetic on purpose: it is re-measured on `main` at each merge, and the
   three times it was patched by reasoning instead of measurement it went wrong — twice in one day,
   crediting one ticket with another's suites.
