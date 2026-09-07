@@ -151,7 +151,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Could not save changes to {{path}}; the previous value was restored.",
     cause:
       "Writing the note's frontmatter failed, so the value on screen was rolled back to what is on disk.",
-    status: "pending",
   },
   {
     code: "PPP-202",
@@ -162,7 +161,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Could not save {{count}} record(s); the previous values were restored.",
     cause:
       "A batch write failed part way through, so every record in the batch was rolled back to what is on disk.",
-    status: "pending",
   },
   {
     code: "PPP-203",
@@ -172,7 +170,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "{{path}} no longer exists; the change was not saved.",
     cause:
       "The note was renamed, moved or deleted after the view loaded it, so there was no file left to write to.",
-    status: "pending",
   },
   {
     code: "PPP-204",
@@ -183,7 +180,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
     cause:
       "A new field is written into the project's notes one by one, and some of those writes did not succeed.",
-    status: "pending",
   },
   {
     code: "PPP-301",
@@ -333,7 +329,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to add field. Please try again.",
     cause:
       "The field could not be written into the project's notes, so the schema is unchanged.",
-    status: "pending",
   },
   {
     code: "PPP-402",
@@ -343,7 +338,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to reopen schema.",
     cause:
       "The schema dialog could not be reopened after the edit; the edit itself was applied.",
-    status: "pending",
   },
   {
     code: "PPP-403",
@@ -354,7 +348,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
     cause:
       "The pre-migration copy of the configuration could not be saved, so there is nothing to roll back to.",
-    status: "pending",
   },
   {
     code: "PPP-501",
@@ -365,7 +358,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.",
     cause:
       "The back-link is written into the notes on the other side of the relation, and some of those writes failed.",
-    status: "pending",
   },
   {
     code: "PPP-601",
@@ -376,7 +368,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Could not create the demo folder '{{folder}}'. The demo project was not created.",
     cause:
       "The folder the demo notes live in could not be created, so none of them had anywhere to land.",
-    status: "pending",
   },
   {
     code: "PPP-602",
@@ -387,7 +378,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
     cause:
       "Some of the demo notes could not be written, so the project is registered but incomplete.",
-    status: "pending",
   },
   {
     code: "PPP-603",
@@ -398,7 +388,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "Demo project already exists. {{count}} missing notes could not be written — see the console.",
     cause:
       "The demo project was re-seeded to restore the notes it was missing, and some of those writes failed.",
-    status: "pending",
   },
   {
     code: "PPP-701",
@@ -408,7 +397,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: 'This project already has a source called "{{name}}"',
     cause:
       "Two sources sharing a name are indistinguishable in the only picker that lists them, so the name is refused.",
-    status: "pending",
   },
 ];
 

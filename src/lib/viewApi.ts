@@ -11,9 +11,21 @@ import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
 import type { BulkFieldWriteOutcome, DataApi } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
+import { noticeFor } from "src/lib/errors/errorText";
+
+/**
+ * #202 — the codes this module can raise, named once at the top so a number a
+ * user quotes greps straight to the line that raised it. The words live in the
+ * registry; these are only the tokens.
+ */
+const RECORD_WRITE_FAILED = "PPP-201";
+const RECORDS_WRITE_FAILED = "PPP-202";
+const RECORD_FILE_MISSING = "PPP-203";
+const FIELD_WRITE_PARTIAL = "PPP-204";
+/** Raised here, but a relations event to the user, so it lives in 5xx. */
+const INVERSE_WRITE_FAILED = "PPP-501";
 import type { DataSource } from "./datasources";
 import { app } from "./stores/obsidian";
-import { i18n } from "./stores/i18n";
 import { writeInverseRelations } from "./relations/relationsWriter";
 import { adaptRelationFieldConfig } from "./relations/relationContract";
 import type { RelationFieldConfig } from "src/settings/base/settings";
@@ -30,9 +42,7 @@ function reportBulkFieldWrite(outcome: BulkFieldWriteOutcome, fieldName: string)
   if (unwritten === 0) return;
 
   new Notice(
-    get(i18n).t("errors.fieldWritePartial", {
-      defaultValue:
-        "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
+    noticeFor(FIELD_WRITE_PARTIAL, {
       field: fieldName,
       written: outcome.written,
       unwritten,
@@ -84,12 +94,7 @@ export class ViewApi {
         // The note is gone. Silently keeping the optimistic value would show a
         // number that exists nowhere on disk.
         this.revertOptimistic(optimistic, record, oldRecord);
-        new Notice(
-          get(i18n).t("errors.recordFileMissing", {
-            defaultValue: "{{path}} no longer exists; the change was not saved.",
-            path: record.id,
-          })
-        );
+        new Notice(noticeFor(RECORD_FILE_MISSING, { path: record.id }));
         return false;
       }
     } catch (error) {
@@ -99,12 +104,7 @@ export class ViewApi {
       // sites do not await this, and an unhandled rejection would replace a
       // visible message with a console entry.
       this.revertOptimistic(optimistic, record, oldRecord);
-      new Notice(
-        get(i18n).t("errors.recordWriteFailed", {
-          defaultValue: "Could not save changes to {{path}}; the previous value was restored.",
-          path: record.id,
-        })
-      );
+      new Notice(noticeFor(RECORD_WRITE_FAILED, { path: record.id }));
       console.error("[obs-projects-plus] record write failed:", record.id, error);
       return false;
     }
@@ -165,13 +165,7 @@ export class ViewApi {
         return attempted !== undefined && current.includes(attempted);
       });
       if (untouched.length > 0) dataFrame.updateRecords(untouched);
-      new Notice(
-        get(i18n).t("errors.recordsWriteFailed", {
-          defaultValue:
-            "Could not save {{count}} record(s); the previous values were restored.",
-          count: rs.length,
-        })
-      );
+      new Notice(noticeFor(RECORDS_WRITE_FAILED, { count: rs.length }));
       console.error("[obs-projects-plus] batch record write failed", error);
       return false;
     }
@@ -272,13 +266,6 @@ async function fireInverseRelations(
     const real = outcome.issues.filter((issue) => issue.code !== "inverse-field-missing");
     if (real.length === 0) continue;
     console.error(`[obs-projects-plus] inverse write for '${field}'`, real);
-    new Notice(
-      get(i18n).t("errors.inverseWriteFailed", {
-        defaultValue:
-          "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.",
-        field,
-        count: real.length,
-      })
-    );
+    new Notice(noticeFor(INVERSE_WRITE_FAILED, { field, count: real.length }));
   }
 }

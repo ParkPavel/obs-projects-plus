@@ -14,6 +14,11 @@
 
 import type { App } from "obsidian";
 import { Notice } from "obsidian";
+import { noticeFor } from "src/lib/errors/errorText";
+
+/** #202 — the codes this module raises. Words live in the registry. */
+const ADD_FIELD_FAILED = "PPP-401";
+const REOPEN_SCHEMA_FAILED = "PPP-402";
 import { tick } from "svelte";
 
 import type { DataField } from "src/lib/dataframe/dataframe";
@@ -87,11 +92,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           persistFieldTypeConfig(field);
           reopenSchema();
         } catch (err) {
-          new Notice(
-            deps.t("views.dashboard.canvas.error-add-field", {
-              defaultValue: "Failed to add field. Please try again.",
-            })
-          );
+          new Notice(noticeFor(ADD_FIELD_FAILED));
           // eslint-disable-next-line no-console
           console.warn("[obs-projects-plus] addField failed", err);
         }
@@ -216,11 +217,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
     tick()
       .then(() => openSchema())
       .catch((err) => {
-        new Notice(
-          deps.t("views.dashboard.canvas.error-reopen-schema", {
-            defaultValue: "Failed to reopen schema.",
-          })
-        );
+        new Notice(noticeFor(REOPEN_SCHEMA_FAILED));
         // eslint-disable-next-line no-console
         console.warn("[obs-projects-plus] reopenSchema failed", err);
       });

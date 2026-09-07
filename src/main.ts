@@ -84,6 +84,8 @@ dayjs.extend(localizedFormat);
 const SETTINGS_SUPERSEDED = "PPP-102";
 const SETTINGS_UNREADABLE = "PPP-103";
 const SETTINGS_CORRUPTED = "PPP-104";
+/** #202 — the demo repair path; the demo itself raises 601/602 in its own module. */
+const DEMO_REPAIR_FAILED = "PPP-603";
 
 export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeSettings?: Unsubscriber;
@@ -364,11 +366,7 @@ export default class ProjectsPlusPlugin extends Plugin {
           void seedDemoNotes(this.app.vault).then((failed) => {
             new Notice(
               failed.length > 0
-                ? t("commands.create-demo-project.repair-failed", {
-                    defaultValue:
-                      "Demo project already exists. {{count}} missing notes could not be written — see the console.",
-                    count: failed.length,
-                  })
+                ? noticeFor(DEMO_REPAIR_FAILED, { count: failed.length })
                 : t("commands.create-demo-project.repaired", {
                     defaultValue:
                       "Demo project already exists; any missing notes have been restored.",

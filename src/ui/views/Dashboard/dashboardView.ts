@@ -13,7 +13,10 @@ import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
 import { Notice } from "obsidian";
-import { i18n } from "src/lib/stores/i18n";
+import { noticeFor } from "src/lib/errors/errorText";
+
+/** #202 — the code this module raises. */
+const MIGRATION_BACKUP_FAILED = "PPP-403";
 
 /**
  * Deep copy of a persisted config. `structuredClone` is available in Electron;
@@ -137,12 +140,7 @@ export class DashboardView extends ProjectView {
           config: preMigrationConfig,
         }).then((path) => {
           if (path !== null) return;
-          new Notice(
-            get(i18n).t("errors.migrationBackupFailed", {
-              defaultValue:
-                "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
-            })
-          );
+          new Notice(noticeFor(MIGRATION_BACKUP_FAILED));
         });
       }
     }

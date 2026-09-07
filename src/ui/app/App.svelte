@@ -36,6 +36,10 @@
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
   import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
+  import { noticeFor } from "src/lib/errors/errorText";
+
+  /** #202 — a refusal, so it carries a code; the success below does not. */
+  const SOURCE_NAME_TAKEN = "PPP-701";
   import type {
     ProjectId,
     ProjectDefinition,
@@ -118,12 +122,7 @@
     // two sources sharing a label are indistinguishable in the only picker
     // that exists — so the promise has to be enforced where it is made.
     if (sourceNameTaken(projectSourceOptions(project).sources, name)) {
-      new Notice(
-        $i18n.t("views.filter.bar.save-name-taken", {
-          defaultValue: 'This project already has a source called "{{name}}"',
-          name,
-        })
-      );
+      new Notice(noticeFor(SOURCE_NAME_TAKEN, { name }));
       return;
     }
     settings.updateProject({

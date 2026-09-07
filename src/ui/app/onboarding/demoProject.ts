@@ -18,10 +18,13 @@ import dayjs from "dayjs";
 import { Notice, normalizePath, stringifyYaml, type Vault } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
-import { get } from "svelte/store";
-import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
 import { sanitizeNoteName } from "./noteName";
+import { noticeFor } from "src/lib/errors/errorText";
+
+/** #202 — the codes the demo can raise. */
+const DEMO_FOLDER_FAILED = "PPP-601";
+const DEMO_PARTIAL = "PPP-602";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
@@ -502,13 +505,7 @@ export async function createDemoProject(vault: Vault): Promise<void> {
       // #156 — without the folder nothing below can land. Say so rather than
       // registering a project that points at nowhere.
       console.error("[obs-projects-plus] demo folder could not be created", error);
-      new Notice(
-        get(i18n).t("onboarding.demo.folder-failed", {
-          defaultValue:
-            "Could not create the demo folder '{{folder}}'. The demo project was not created.",
-          folder: DEMO_FOLDER,
-        })
-      );
+      new Notice(noticeFor(DEMO_FOLDER_FAILED, { folder: DEMO_FOLDER }));
       return;
     }
   }
@@ -519,13 +516,7 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     // The project is still registered: a partial demo is more useful than none,
     // and the notes that did land are correct. But the user is told, because
     // otherwise the gaps read as a broken plugin.
-    new Notice(
-      get(i18n).t("onboarding.demo.partial", {
-        defaultValue:
-          "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
-        count: failed.length,
-      })
-    );
+    new Notice(noticeFor(DEMO_PARTIAL, { count: failed.length }));
   }
 
   // 3. View configs.
