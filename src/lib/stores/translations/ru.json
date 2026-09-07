@@ -1119,7 +1119,8 @@
                     "relation-done": "Готово",
                     "relation-cancel": "Отмена",
                     "filter-canvas": "Фильтровать связанные блоки по этой строке",
-                    "unfilter-canvas": "Перестать фильтровать по этой строке"
+                    "unfilter-canvas": "Перестать фильтровать по этой строке",
+                    "group-empty": "Без значения"
                 },
                 "block-filter": {
                     "aria": "Фильтр блока",

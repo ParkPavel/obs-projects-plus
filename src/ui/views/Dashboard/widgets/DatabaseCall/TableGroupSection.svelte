@@ -6,10 +6,24 @@
    */
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
+  import { i18n } from "src/lib/stores/i18n";
 
   export let groupKey: string;
   export let count: number;
   export let collapsed: boolean;
+
+  // #187 — records with no value in the grouped field arrive here with an empty
+  // key (`valueToGroupKey` in groupRows.ts returns "" for null/undefined), and
+  // this rendered as chevron, nothing, count: indistinguishable from a blank
+  // separator row, which is exactly what the user reported seeing. The semantic
+  // grouping mode has always had a fallback label for the same case; the
+  // default value mode never got one.
+  $: label =
+    groupKey === ""
+      ? $i18n.t("views.dashboard.table-v2.group-empty", {
+          defaultValue: "No value",
+        })
+      : groupKey;
 
   const dispatch = createEventDispatcher<{ toggle: string }>();
 </script>
@@ -18,7 +32,7 @@
   <span class="ppp-t2-group-chevron" class:ppp-t2-group-chevron--collapsed={collapsed}>
     <Icon name="chevron-down" size="sm" />
   </span>
-  <span class="ppp-t2-group-label">{groupKey}</span>
+  <span class="ppp-t2-group-label" class:ppp-t2-group-label--empty={groupKey === ""}>{label}</span>
   <span class="ppp-t2-group-count">{count}</span>
 </button>
 
@@ -35,11 +49,18 @@
     background: var(--background-secondary);
     color: var(--text-muted);
     font-size: var(--font-ui-small);
-    font-weight: var(--font-medium, 500);
+    font-weight: var(--ppp-font-weight-medium);
     cursor: pointer;
     text-align: left;
     position: sticky;
     left: 0;
+  }
+
+  /* The fallback is a label for an absence, so it reads as one: same size and
+     weight, lower emphasis. Not italic — the grouped values themselves may be
+     italic text, and a style that collides with real data is not a signal. */
+  .ppp-t2-group-label--empty {
+    color: var(--text-faint);
   }
 
   .ppp-t2-group:hover {
