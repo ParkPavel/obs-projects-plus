@@ -42,7 +42,7 @@ export class CalendarView extends ProjectView<CalendarConfig> {
     try {
       this.view?.$set({ frame: data, dataVersion: dv, filterConditions: fc });
     } catch (e) {
-      console.error('[CalendarView] onData CRASHED:', e);
+      console.error('[Projects+] CalendarView onData CRASHED:', e);
     }
   }
 
@@ -65,7 +65,7 @@ export class CalendarView extends ProjectView<CalendarConfig> {
         },
       });
     } catch (e) {
-      console.error('[CalendarView] onOpen CRASHED:', e);
+      console.error('[Projects+] CalendarView onOpen CRASHED:', e);
     }
   }
 
@@ -74,7 +74,7 @@ export class CalendarView extends ProjectView<CalendarConfig> {
     try {
       this.view?.$destroy();
     } catch (e) {
-      console.error('[CalendarView] onClose $destroy CRASHED:', e);
+      console.error('[Projects+] CalendarView onClose $destroy CRASHED:', e);
     }
     this.view = null;
   }

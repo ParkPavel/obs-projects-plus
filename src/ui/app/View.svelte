@@ -141,7 +141,7 @@
             if (f) next.set(id, f);
           } catch (err) {
             console.warn(
-              `[obs-projects-plus] enrichment: failed to resolve project '${id}'`,
+              `[Projects+] enrichment: failed to resolve project '${id}'`,
               err
             );
           }

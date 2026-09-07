@@ -218,7 +218,7 @@ export function matchesCondition(
   }
 
   if (process.env["NODE_ENV"] !== "production") {
-    console.warn(`[FilterEngine] Unhandled filter: operator="${operator}", field="${cond.field}"`);
+    console.warn(`[Projects+] FilterEngine Unhandled filter: operator="${operator}", field="${cond.field}"`);
   }
   return false;
 }

@@ -182,7 +182,7 @@
       dirty = new Set<string>();
       // Brief visual feedback handled by CSS animation
     } catch (error) {
-      console.error('[EditNote] Failed to save:', error);
+      console.error('[Projects+] EditNote Failed to save:', error);
       new Notice($i18n.t("modals.note.edit.save-error") || 'Failed to save changes');
     } finally {
       // Small delay to show saving state

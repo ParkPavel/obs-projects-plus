@@ -203,7 +203,7 @@ export function enrichWithBacklinks(
   const safeFields = relationFields.filter((f) => {
     if (!existing.has(`${f}_backlinks`)) return true;
     console.warn(
-      `[obs-projects-plus] backlinks for "${f}" skipped: the frame already has a field named "${f}_backlinks"`
+      `[Projects+] backlinks for "${f}" skipped: the frame already has a field named "${f}_backlinks"`
     );
     return false;
   });

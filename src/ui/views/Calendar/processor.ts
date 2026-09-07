@@ -520,7 +520,7 @@ export class CalendarDataProcessor {
       
       if (guard >= maxDays) {
         calendarLogger.warn(
-          `[Calendar] Event "${pr.record?.id || 'unknown'}" spans more than ${maxDays} days and was truncated. ` +
+          `[Projects+] Calendar Event "${pr.record?.id || 'unknown'}" spans more than ${maxDays} days and was truncated. ` +
           `Start: ${startDay.format('YYYY-MM-DD')}, End: ${endDay.format('YYYY-MM-DD')}`
         );
       }

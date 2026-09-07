@@ -131,7 +131,7 @@ export function syncLocale(): void {
   const detected = getObsidianLocale();
   const current = i18next.language;
    
-  console.debug(`[PPP i18n] syncLocale: detected=${detected}, current=${current}, moment=${(window as any).moment?.locale?.()}`);
+  console.debug(`[Projects+] i18n syncLocale: detected=${detected}, current=${current}, moment=${(window as any).moment?.locale?.()}`);
   if (detected !== current) {
     void i18next.changeLanguage(detected);
   }

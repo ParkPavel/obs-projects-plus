@@ -117,7 +117,7 @@ export async function writeMigrationBackup(args: {
     await app.vault.adapter.write(target, payload);
     return target;
   } catch (error) {
-    console.error("[obs-projects-plus] migration backup failed", error);
+    console.error("[Projects+] migration backup failed", error);
     return null;
   }
 }

@@ -130,7 +130,7 @@ export class DashboardView extends ProjectView {
         // Nothing to write through. The migration is already saved, so say it
         // rather than leaving the absence of a restore point invisible.
         console.error(
-          "[obs-projects-plus] dashboard config migrated without a restore point: no app instance"
+          "[Projects+] dashboard config migrated without a restore point: no app instance"
         );
       } else {
         void writeMigrationBackup({

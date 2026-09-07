@@ -33,7 +33,7 @@ function warnThrottled(projectId: string, err: unknown): void {
   if (now - last < WARN_THROTTLE_MS) return;
   recentWarnings.set(projectId, now);
   // eslint-disable-next-line no-console
-  console.warn(`[obs-projects-plus] resolveExternalFrame(${projectId}) failed`, err);
+  console.warn(`[Projects+] resolveExternalFrame(${projectId}) failed`, err);
 }
 
 /** Non-derived Relation fields, the ones backlink enrichment is defined over. */

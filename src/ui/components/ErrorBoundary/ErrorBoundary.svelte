@@ -53,9 +53,9 @@
     
     // Log error in development
     if (process.env['NODE_ENV'] !== 'production') {
-      console.error(`[ErrorBoundary] Error in ${componentName}:`, e);
+      console.error(`[Projects+] ErrorBoundary Error in ${componentName}:`, e);
       if (info) {
-        console.error('[ErrorBoundary] Error info:', info);
+        console.error('[Projects+] ErrorBoundary Error info:', info);
       }
     }
     

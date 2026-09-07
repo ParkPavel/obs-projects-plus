@@ -94,7 +94,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         } catch (err) {
           new Notice(noticeFor(ADD_FIELD_FAILED));
           // eslint-disable-next-line no-console
-          console.warn("[obs-projects-plus] addField failed", err);
+          console.warn("[Projects+] addField failed", err);
         }
       },
       deps.getProjects(),
@@ -219,7 +219,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       .catch((err) => {
         new Notice(noticeFor(REOPEN_SCHEMA_FAILED));
         // eslint-disable-next-line no-console
-        console.warn("[obs-projects-plus] reopenSchema failed", err);
+        console.warn("[Projects+] reopenSchema failed", err);
       });
   }
 

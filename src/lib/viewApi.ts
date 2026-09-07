@@ -49,7 +49,7 @@ function reportBulkFieldWrite(outcome: BulkFieldWriteOutcome, fieldName: string)
     })
   );
   console.error(
-    `[obs-projects-plus] field '${fieldName}': ${outcome.failed.length} write(s) failed, ` +
+    `[Projects+] field '${fieldName}': ${outcome.failed.length} write(s) failed, ` +
       `${outcome.missing.length} path(s) not found`,
     { failed: outcome.failed, missing: outcome.missing }
   );
@@ -105,7 +105,7 @@ export class ViewApi {
       // visible message with a console entry.
       this.revertOptimistic(optimistic, record, oldRecord);
       new Notice(noticeFor(RECORD_WRITE_FAILED, { path: record.id }));
-      console.error("[obs-projects-plus] record write failed:", record.id, error);
+      console.error("[Projects+] record write failed:", record.id, error);
       return false;
     }
 
@@ -166,7 +166,7 @@ export class ViewApi {
       });
       if (untouched.length > 0) dataFrame.updateRecords(untouched);
       new Notice(noticeFor(RECORDS_WRITE_FAILED, { count: rs.length }));
-      console.error("[obs-projects-plus] batch record write failed", error);
+      console.error("[Projects+] batch record write failed", error);
       return false;
     }
   }
@@ -265,7 +265,7 @@ async function fireInverseRelations(
   for (const { field, outcome } of outcomes) {
     const real = outcome.issues.filter((issue) => issue.code !== "inverse-field-missing");
     if (real.length === 0) continue;
-    console.error(`[obs-projects-plus] inverse write for '${field}'`, real);
+    console.error(`[Projects+] inverse write for '${field}'`, real);
     new Notice(noticeFor(INVERSE_WRITE_FAILED, { field, count: real.length }));
   }
 }

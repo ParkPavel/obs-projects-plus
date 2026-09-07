@@ -1,9 +1,11 @@
 /**
  * #202 — the console half of a code.
  *
- * The tree writes five different prefixes today (`[obs-projects-plus]`,
- * `[Projects+]`, `[Calendar]`, `[ErrorBoundary]`, `[EditNote]`), so a user
- * cannot search their console for an event: there is no token to search for.
+ * The tree used to write five different prefixes, so a user could not search
+ * their console for an event: there was no token to search for. Step 6 brought
+ * them to one, with the area word kept after it where it carried meaning
+ * (`[Projects+] Calendar`), and R0.23 keeps it that way.
+ *
  * One prefix, one code, one English sentence — and the sentence is the same one
  * the Notice shows, because both come from the registry.
  *

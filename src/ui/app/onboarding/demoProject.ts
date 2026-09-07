@@ -468,7 +468,7 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
       await vault.create(path, body);
     } catch (error) {
       failed.push(path);
-      console.error("[obs-projects-plus] demo note could not be created", path, error);
+      console.error("[Projects+] demo note could not be created", path, error);
     }
   }
   return failed;
@@ -504,7 +504,7 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     } catch (error) {
       // #156 — without the folder nothing below can land. Say so rather than
       // registering a project that points at nowhere.
-      console.error("[obs-projects-plus] demo folder could not be created", error);
+      console.error("[Projects+] demo folder could not be created", error);
       new Notice(noticeFor(DEMO_FOLDER_FAILED, { folder: DEMO_FOLDER }));
       return;
     }
