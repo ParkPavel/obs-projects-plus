@@ -138,6 +138,23 @@ describe("R0.21 — the registry and the page stay in step", () => {
     }
   });
 
+  it("every section explains itself in both languages", () => {
+    // #203: the codes are shown to every locale, and the page was written only
+    // in Russian — so for an English, Ukrainian or Chinese user the token was a
+    // support reference rather than an answer.
+    //
+    // Structure only, as everywhere in this ratchet: it checks that the English
+    // half is THERE, never what it says. The words come from the registry, so
+    // they cannot drift from what the product actually prints.
+    const text = pageText();
+    for (const entry of ERROR_CODES) {
+      const section = sectionOf(text, entry.code);
+      expect(section).toContain("### What happened");
+      expect(section).toContain("### Why");
+      expect(section).toContain("### What to do");
+    }
+  });
+
   it("no code ships relying on an English defaultValue", () => {
     const { json } = readLocale("en");
     for (const entry of ERROR_CODES) {

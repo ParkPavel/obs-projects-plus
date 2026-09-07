@@ -1,4 +1,8 @@
-# Коды ошибок Projects+
+# Коды ошибок Projects+ · Projects+ error codes
+
+*Каждый раздел приведён на двух языках: русское описание и английское, взятое из самого реестра — те же слова, что показывает уведомление и печатает консоль.*
+
+*Every section appears twice: the Russian description, then the English one taken from the registry itself — the same words the notice shows and the console prints, so this page cannot drift from the product.*
 
 Каждое сообщение плагина, которое говорит о неудаче, отказе или предупреждении, несёт короткий код
 вида `PPP-104`. Код — это то, что можно назвать: процитировать в отчёте о проблеме, найти поиском
@@ -54,6 +58,15 @@
 проверьте, не открыт ли `data.json` в другой программе и не стоит ли на нём атрибут «только чтение».
 Не перезагружайте хранилище до успешной записи: изменение потеряется.
 
+### What happened
+Projects+: settings could not be written to disk. Your change is still here, but it will be lost on reload. Retry from the "Not saved" mark in the toolbar.
+
+### Why
+The write was accepted but data.json still holds the old value, so the change exists only in this session.
+
+### What to do
+Click the "Not saved" mark in the toolbar to retry. If it keeps coming back, check whether `data.json` is open in another program or marked read-only. Do not reload the vault until a write succeeds — the change would be lost.
+
 ## PPP-102
 
 ### Что случилось
@@ -66,6 +79,15 @@
 ### Что делать
 Не продолжайте править настройки в этом окне: повтор записи затёр бы чужое изменение. Переоткройте
 хранилище, посмотрите, каким стало нужное вам значение, и внесите правку заново.
+
+### What happened
+Projects+: data.json was changed outside this window. Your latest change may not be saved — reopen the vault before making more.
+
+### Why
+Another window or a synchroniser replaced the file, so this window cannot tell whether its own change survived.
+
+### What to do
+Reopen the vault so the plugin reads the file as it now stands. Make no further changes until you do: the next save would write over whatever arrived from outside.
 
 ## PPP-103
 
@@ -81,6 +103,15 @@
 сохранили копию, **не меняйте ни одной настройки** — первая же запись перезапишет `data.json`
 значениями по умолчанию. Подробности — в консоли разработчика.
 
+### What happened
+The settings file could not be read; defaults are in use.
+
+### Why
+data.json could not be read or parsed, so the plugin started from defaults and left the file on disk untouched.
+
+### What to do
+The file was left untouched. Copy it somewhere safe before changing any setting, then reopen the vault.
+
 ## PPP-104
 
 ### Что случилось
@@ -93,6 +124,15 @@
 ### Что делать
 То же, что и при `PPP-103`: сохраните копию, названную в уведомлении, и только потом меняйте
 настройки. Причина несовпадения — в консоли разработчика.
+
+### What happened
+The settings file is corrupted; defaults were restored.
+
+### Why
+data.json parsed but matched no known settings version, so there was nothing that could be migrated.
+
+### What to do
+A copy of the unreadable file was written beside it, named in the notice. Defaults are in use until you restore from that copy.
 
 ## PPP-201
 
@@ -107,6 +147,15 @@
 Повторите правку. Если не проходит и со второго раза — откройте заметку и проверьте её фронтматтер:
 чаще всего мешает синтаксическая ошибка в YAML, оставленная другим плагином или ручной правкой.
 
+### What happened
+Could not save changes to {{path}}; the previous value was restored.
+
+### Why
+Writing the note's frontmatter failed, so the value on screen was rolled back to what is on disk.
+
+### What to do
+The value on screen was put back to what is on disk. Check that the note still exists and is writable, then try again.
+
 ## PPP-202
 
 ### Что случилось
@@ -119,6 +168,15 @@
 ### Что делать
 Повторите действие. Если ошибка повторяется, попробуйте изменить записи по одной — так станет видно,
 какая именно заметка мешает.
+
+### What happened
+Could not save {{count}} record(s); the previous values were restored.
+
+### Why
+A batch write failed part way through, so every record in the batch was rolled back to what is on disk.
+
+### What to do
+Every record in the batch was rolled back. The console lists which ones; check them for permissions or missing files.
 
 ## PPP-203
 
@@ -133,6 +191,15 @@
 Обновите вид (переоткройте вкладку). Если заметка нужна — найдите её на новом месте или восстановите
 из корзины хранилища.
 
+### What happened
+{{path}} no longer exists; the change was not saved.
+
+### Why
+The note was renamed, moved or deleted after the view loaded it, so there was no file left to write to.
+
+### What to do
+The note is gone from the vault. Refresh the view; if it was deleted by mistake, restore it from your file history.
+
 ## PPP-204
 
 ### Что случилось
@@ -145,6 +212,15 @@
 Список незатронутых заметок выведен в консоль разработчика. Откройте их и добавьте поле вручную —
 или устраните причину (недоступный файл, ошибка во фронтматтере) и добавьте поле заново.
 
+### What happened
+'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.
+
+### Why
+A new field is written into the project's notes one by one, and some of those writes did not succeed.
+
+### What to do
+The console lists the notes that could not be written. The rest were updated.
+
 ## PPP-301
 
 ### Что случилось
@@ -156,6 +232,15 @@ Obsidian отказал в переименовании — обычно нов�
 
 ### Что делать
 Выберите другое имя. Символы `\ / : * ? " < > |` в именах файлов использовать нельзя.
+
+### What happened
+The note could not be renamed.
+
+### Why
+Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.
+
+### What to do
+The note keeps its old name. The console line says why the rename was refused — a name collision and an illegal character need different fixes.
 
 ## PPP-302
 
@@ -170,6 +255,15 @@ Obsidian отказал в переименовании — обычно нов�
 Скопируйте изменённый текст из окна редактора, прежде чем закрыть его, — иначе правка пропадёт.
 Затем повторите сохранение.
 
+### What happened
+Failed to save changes
+
+### Why
+The note editor could not write its changes back to the file, so what is on screen is ahead of what is on disk.
+
+### What to do
+Your edit is still in the editor. Check the note is writable and save again.
+
 ## PPP-303
 
 ### Что случилось
@@ -183,6 +277,15 @@ Obsidian отказал в переименовании — обычно нов�
 Закройте заметку во всех вкладках и повторите. Если файла уже нет — обновите вид, запись исчезнет
 сама.
 
+### What happened
+The note could not be deleted.
+
+### Why
+Deleting the file failed — it may be open elsewhere, read-only, or already gone.
+
+### What to do
+The note is still there. Check it is not open elsewhere or read-only.
+
 ## PPP-304
 
 ### Что случилось
@@ -193,6 +296,15 @@ Obsidian отказал в переименовании — обычно нов�
 
 ### Что делать
 Проверьте, какие даты получили копию, и повторите дублирование для оставшихся.
+
+### What happened
+The note could not be duplicated.
+
+### Why
+One of the copies could not be created, so the set of new notes is incomplete.
+
+### What to do
+Nothing was duplicated. Check there is room in the target folder and no name collision.
 
 ## PPP-305
 
@@ -206,6 +318,15 @@ Obsidian отказал в переименовании — обычно нов�
 Обновите вид, чтобы увидеть настоящее состояние, и повторите. Если не помогает — проверьте
 фронтматтер заметки.
 
+### What happened
+The checkbox could not be changed.
+
+### Why
+Writing the checkbox field back to the note failed, so the tick does not reflect the file.
+
+### What to do
+The checkbox is back to its previous state. Check the note is writable.
+
 ## PPP-306
 
 ### Что случилось
@@ -217,6 +338,15 @@ Obsidian отказал в переименовании — обычно нов�
 ### Что делать
 Откройте настройки вида и выберите поле типа «логическое» для отметок. Если такого поля в проекте
 нет — сначала добавьте его в схеме.
+
+### What happened
+Choose a field for the checkboxes first.
+
+### Why
+The view has no boolean field assigned, so there is nothing for a tick to be written into.
+
+### What to do
+Pick a field for the checkboxes in the view settings first.
 
 ## PPP-307
 
@@ -230,6 +360,15 @@ Obsidian отказал в переименовании — обычно нов�
 Повторите перенос. Если ошибка повторяется, откройте заметку и проверьте формат значения в поле
 даты.
 
+### What happened
+The event date could not be changed.
+
+### Why
+Writing the new date back to the note failed, so the event stays where it was.
+
+### What to do
+The event kept its date. Check the note is writable and the date field is the one the view expects.
+
 ## PPP-308
 
 ### Что случилось
@@ -240,6 +379,15 @@ Obsidian отказал в переименовании — обычно нов�
 
 ### Что делать
 Откройте настройки вида и выберите поле даты. Если такого поля в проекте нет — добавьте его в схеме.
+
+### What happened
+Date field is required to create events
+
+### Why
+The view has no date field assigned, so an event has nothing to be placed by.
+
+### What to do
+Choose a date field in the view settings; events cannot exist without one.
 
 ## PPP-309
 
@@ -253,6 +401,15 @@ Obsidian отказал в переименовании — обычно нов�
 ### Что делать
 Перенесите событие на другую дату. Если нужно растянуть событие назад, сначала измените дату начала.
 
+### What happened
+That date cannot be used for this event.
+
+### Why
+The target date failed validation — it is outside the supported range, or it would put the end of the event before its start.
+
+### What to do
+Pick another date. The console line says what made this one unusable.
+
 ## PPP-310
 
 ### Что случилось
@@ -264,6 +421,15 @@ Obsidian отказал в переименовании — обычно нов�
 ### Что делать
 Откройте заметку и заполните поля дат, заданные в настройках вида.
 
+### What happened
+This record cannot be moved.
+
+### Why
+The record is missing fields the calendar needs, so its new position cannot be worked out.
+
+### What to do
+This record is missing something the view needs — usually its date field. Open it and check.
+
 ## PPP-311
 
 ### Что случилось
@@ -274,6 +440,15 @@ Obsidian отказал в переименовании — обычно нов�
 
 ### Что делать
 Повторите выбор цвета. Если ошибка повторяется — проверьте фронтматтер заметки.
+
+### What happened
+The colour could not be changed.
+
+### Why
+Writing the colour field back to the note failed, so the event keeps its previous colour.
+
+### What to do
+The colour is unchanged. Check the note is writable.
 
 ## PPP-312
 
@@ -287,6 +462,15 @@ Obsidian отказал в переименовании — обычно нов�
 Откройте настройки вида и выберите поле для цвета событий. Если такого поля нет — добавьте его в
 схеме проекта.
 
+### What happened
+No colour field is set for this project.
+
+### Why
+The view has no field assigned to hold an event colour, so there is nothing to write the choice into.
+
+### What to do
+Set a colour field in the project settings first.
+
 ## PPP-313
 
 ### Что случилось
@@ -298,6 +482,15 @@ Obsidian отказал в переименовании — обычно нов�
 ### Что делать
 Выберите дату через переключатель периода. Если повторяется — сообщите об этом вместе с кодом:
 подробности перехода выведены в консоль разработчика.
+
+### What happened
+The calendar could not move to that date.
+
+### Why
+Working out the next period failed, so the calendar stayed where it was.
+
+### What to do
+The calendar stayed where it was. Try the date again; if it repeats, the console line has the reason.
 
 ## PPP-314
 
@@ -311,6 +504,15 @@ Obsidian отказал в переименовании — обычно нов�
 Снимите режим только для чтения в настройках проекта — или создайте заметку в том проекте, который
 доступен для записи.
 
+### What happened
+Cannot create events in read-only projects
+
+### Why
+The project is read-only, so no note can be created from this view.
+
+### What to do
+This project is read-only. Events can only be created in a project that can be written to.
+
 ## PPP-401
 
 ### Что случилось
@@ -323,6 +525,15 @@ Obsidian отказал в переименовании — обычно нов�
 Повторите добавление. Если не проходит — проверьте, нет ли в проекте заметок с испорченным
 фронтматтером; подробности в консоли разработчика.
 
+### What happened
+Failed to add field. Please try again.
+
+### Why
+The field could not be written into the project's notes, so the schema is unchanged.
+
+### What to do
+The field was not added. Try again; the console line says what failed.
+
 ## PPP-402
 
 ### Что случилось
@@ -333,6 +544,15 @@ Obsidian отказал в переименовании — обычно нов�
 
 ### Что делать
 Откройте схему заново из панели дашборда. Внесённое изменение уже на месте.
+
+### What happened
+Failed to reopen schema.
+
+### Why
+The schema dialog could not be reopened after the edit; the edit itself was applied.
+
+### What to do
+Open the schema again from the view menu.
 
 ## PPP-403
 
@@ -347,6 +567,15 @@ Obsidian отказал в переименовании — обычно нов�
 автоматически не получится — соберите нужные блоки заново. Причина отказа в записи — в консоли
 разработчика.
 
+### What happened
+The dashboard configuration was migrated, but its restore point could not be written. See the console.
+
+### Why
+The pre-migration copy of the configuration could not be saved, so there is nothing to roll back to.
+
+### What to do
+The migration itself succeeded — only its restore point is missing. Export the dashboard configuration if you want a copy before making changes.
+
 ## PPP-501
 
 ### Что случилось
@@ -358,6 +587,15 @@ Obsidian отказал в переименовании — обычно нов�
 ### Что делать
 Список заметок выведен в консоль разработчика. Откройте их и проверьте поле связи: связь в одну
 сторону уже записана, обратная — нет.
+
+### What happened
+The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.
+
+### Why
+The back-link is written into the notes on the other side of the relation, and some of those writes failed.
+
+### What to do
+The note itself was saved; only its back-link was not. The console lists the notes involved.
 
 ## PPP-601
 
@@ -372,6 +610,15 @@ Obsidian отказал в переименовании — обычно нов�
 Проверьте, нет ли в корне хранилища файла с таким же именем и разрешена ли запись в хранилище.
 Затем выполните команду «Создать демо-проект» ещё раз.
 
+### What happened
+Could not create the demo folder '{{folder}}'. The demo project was not created.
+
+### Why
+The folder the demo notes live in could not be created, so none of them had anywhere to land.
+
+### What to do
+No demo project was created. Check that the vault folder can be written to, then run "Create demo project" again.
+
 ## PPP-602
 
 ### Что случилось
@@ -383,6 +630,15 @@ Obsidian отказал в переименовании — обычно нов�
 ### Что делать
 Выполните команду «Создать демо-проект» ещё раз: она дописывает недостающие заметки и не создаёт
 второй проект.
+
+### What happened
+The demo project was created, but {{count}} notes could not be written. See the console for the list.
+
+### Why
+Some of the demo notes could not be written, so the project is registered but incomplete.
+
+### What to do
+The demo exists but is missing the notes the console lists. Run "Create demo project" again — it fills in what is missing without duplicating anything.
 
 ## PPP-603
 
@@ -396,6 +652,15 @@ Obsidian отказал в переименовании — обычно нов�
 Список незаписанных заметок выведен в консоль разработчика. Проверьте права на запись в папку
 демо-проекта и повторите команду.
 
+### What happened
+Demo project already exists. {{count}} missing notes could not be written — see the console.
+
+### Why
+The demo project was re-seeded to restore the notes it was missing, and some of those writes failed.
+
+### What to do
+The notes the console lists still could not be written. Check the folder's permissions.
+
 ## PPP-701
 
 ### Что случилось
@@ -407,3 +672,12 @@ Obsidian отказал в переименовании — обычно нов�
 
 ### Что делать
 Дайте выборке другое имя.
+
+### What happened
+This project already has a source called "{{name}}"
+
+### Why
+Two sources sharing a name are indistinguishable in the only picker that lists them, so the name is refused.
+
+### What to do
+Give the source a different name. Two sources with one name are indistinguishable in the picker.
