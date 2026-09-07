@@ -40,6 +40,10 @@
   import { settings } from "src/lib/stores/settings";
   import type { FilterCondition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
+  import { noticeFor } from "src/lib/errors/errorText";
+
+  /** #202 — the same event as the Calendar's rename failure, so the same code. */
+  const RENAME_FAILED = "PPP-301";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -101,7 +105,7 @@
             await $app.fileManager.renameFile(file as any, newPath);
           }
         } catch (e) {
-          new Notice(`Failed to rename note: ${e instanceof Error ? e.message : String(e)}`);
+          new Notice(noticeFor(RENAME_FAILED));
         }
       },
       // v3.0.4: Autosave setting from project

@@ -53,6 +53,27 @@
   import { ViewportStateManager } from "./viewport/ViewportStateManager";
   import { AnimationController } from "./animation/AnimationController";
   import { gestureCoordinator as gestureAction } from "./gestures/GestureCoordinator";
+  import { noticeFor } from "src/lib/errors/errorText";
+
+  /**
+   * #202 — the codes this view raises. Sixteen of the messages below were
+   * hardcoded Russian shown to every locale; the words now come from the
+   * registry and the Russian lives in ru.json where it belongs.
+   */
+  const RENAME_FAILED = "PPP-301";
+  const EDITOR_SAVE_FAILED = "PPP-302";
+  const DELETE_FAILED = "PPP-303";
+  const DUPLICATE_FAILED = "PPP-304";
+  const CHECK_FAILED = "PPP-305";
+  const CHECK_FIELD_REQUIRED = "PPP-306";
+  const DATE_CHANGE_FAILED = "PPP-307";
+  const DATE_REQUIRED = "PPP-308";
+  const DATE_INVALID = "PPP-309";
+  const RECORD_INVALID = "PPP-310";
+  const COLOR_FAILED = "PPP-311";
+  const COLOR_FIELD_REQUIRED = "PPP-312";
+  const NAVIGATION_FAILED = "PPP-313";
+  const CREATE_READONLY = "PPP-314";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -723,7 +744,7 @@
       
       anchorDate = newAnchorDate;
     } catch (error) {
-      new Notice('Ошибка при навигации по дате');
+      new Notice(noticeFor(NAVIGATION_FAILED));
     }
   }
 
@@ -938,7 +959,7 @@
           }
         } catch (e) {
           calendarLogger.error('Failed to update record from modal', e);
-          new Notice('Failed to update record');
+          new Notice(noticeFor(EDITOR_SAVE_FAILED));
         }
       },
       record,
@@ -956,11 +977,11 @@
               ? `${file.parent.path}/${newName}.md`
               : `${newName}.md`;
             await app_instance.fileManager.renameFile(file as any, newPath);
-            new Notice(`Заметка переименована: ${newName}`);
+            new Notice(get(i18n).t("views.calendar.notices.renamed", { defaultValue: "Note renamed: {{name}}", name: newName }));
           }
         } catch (e) {
           calendarLogger.error('Failed to rename note', e);
-          new Notice('Ошибка при переименовании');
+          new Notice(noticeFor(RENAME_FAILED));
         }
       },
       // v3.0.4: Autosave setting from project
@@ -978,7 +999,7 @@
       }
     } catch (error) {
       calendarLogger.error('Error deleting record', error, { component: 'CalendarView', action: 'deleteRecord' });
-      new Notice('Ошибка при удалении заметки');
+      new Notice(noticeFor(DELETE_FAILED));
     }
   }
   
@@ -1058,10 +1079,10 @@
         );
         await api.addRecord(newRecord, fields, "");
       }
-      new Notice(`Заметка продублирована на ${targetDates.length} дат`);
+      new Notice(get(i18n).t("views.calendar.notices.duplicated", { defaultValue: "Note duplicated to {{count}} date(s)", count: targetDates.length }));
     } catch (error) {
       calendarLogger.error('Error duplicating record', error, { component: 'CalendarView', action: 'duplicateRecord' });
-      new Notice('Ошибка при дублировании заметки');
+      new Notice(noticeFor(DUPLICATE_FAILED));
     }
   }
   
@@ -1092,7 +1113,7 @@
       }
     } catch (error) {
       calendarLogger.error('Error updating record check', error, { component: 'CalendarView', action: 'checkRecord' });
-      new Notice('Ошибка при изменении статуса');
+      new Notice(noticeFor(CHECK_FAILED));
     }
   }
   
@@ -1103,7 +1124,7 @@
   async function handleDayPopupRecordColorChange(record: DataRecord, color: string) {
     const colorFieldName = config?.eventColorField;
     if (!colorFieldName) {
-      new Notice('Поле цвета не настроено в конфигурации проекта');
+      new Notice(noticeFor(COLOR_FIELD_REQUIRED));
       return;
     }
     
@@ -1147,7 +1168,7 @@
       
     } catch (error) {
       calendarLogger.error('Error updating record color', error, { component: 'CalendarView', action: 'colorChange' });
-      new Notice('Ошибка при изменении цвета: ' + (error instanceof Error ? error.message : String(error)));
+      new Notice(noticeFor(COLOR_FAILED));
     }
   }
   
@@ -1273,13 +1294,13 @@
     const recordValidation = validateRecordIntegrity(record);
     if (!recordValidation.isValid) {
       calendarLogger.error('Record validation failed', undefined, { component: 'CalendarView', action: 'recordChange', data: { error: recordValidation.error } });
-      new Notice('Invalid record: ' + (recordValidation.error ?? 'Unknown error'));
+      new Notice(noticeFor(RECORD_INVALID));
       return;
     }
     
     if (!dateField) {
       calendarLogger.warn('No date field configured for record change', { component: 'CalendarView', action: 'recordChange' });
-      new Notice(get(i18n).t("views.calendar.errors.date-required"));
+      new Notice(noticeFor(DATE_REQUIRED));
       return;
     }
   
@@ -1324,7 +1345,7 @@
       const validation = validateDateUpdate(originalStart, targetDate, hasAnyTime, timezoneValue);
       if (!validation.isValid) {
         calendarLogger.error('Date validation failed', undefined, { component: 'CalendarView', action: 'recordChange', data: { error: validation.error } });
-        new Notice(validation.error ?? 'Invalid date');
+        new Notice(noticeFor(DATE_INVALID));
         return;
       }
 
@@ -1485,7 +1506,7 @@
       }
     } catch (error) {
       calendarLogger.error('Error updating record date', error, { component: 'CalendarView', action: 'updateDate' });
-      new Notice('Ошибка при обновлении даты записи');
+      new Notice(noticeFor(DATE_CHANGE_FAILED));
     }
   }
 
@@ -1496,7 +1517,7 @@
   function handleRecordCheck(record: DataRecord, checked: boolean) {
     if (!booleanField) {
       calendarLogger.warn('No boolean field configured for check operations', { component: 'CalendarView' });
-      new Notice('Необходимо выбрать поле для отметок');
+      new Notice(noticeFor(CHECK_FIELD_REQUIRED));
       return;
     }
   
@@ -1514,7 +1535,7 @@
       dataVersion++;
     } catch (error) {
       calendarLogger.error('Error updating record check state', error, { component: 'CalendarView', action: 'checkState' });
-      new Notice('Ошибка при обновлении состояния записи');
+      new Notice(noticeFor(CHECK_FAILED));
     }
   }
 
@@ -1539,7 +1560,7 @@
             };
           } catch (error) {
             calendarLogger.error('Error updating record in modal', error, { component: 'CalendarView', action: 'modalUpdate' });
-            new Notice('Ошибка при сохранении изменений');
+            new Notice(noticeFor(EDITOR_SAVE_FAILED));
           }
         },
         entry,
@@ -1557,11 +1578,11 @@
                 ? `${file.parent.path}/${newName}.md`
                 : `${newName}.md`;
               await app_instance.fileManager.renameFile(file as any, newPath);
-              new Notice(`Заметка переименована: ${newName}`);
+              new Notice(get(i18n).t("views.calendar.notices.renamed", { defaultValue: "Note renamed: {{name}}", name: newName }));
             }
           } catch (e) {
             calendarLogger.error('Failed to rename note', e);
-            new Notice('Ошибка при переименовании');
+            new Notice(noticeFor(RENAME_FAILED));
           }
         },
         // v3.0.4: Autosave setting from project
@@ -1581,12 +1602,12 @@
    */
   function handleRecordAdd(date: dayjs.Dayjs, startTime?: string) {
     if (!dateField) {
-      new Notice(get(i18n).t("views.calendar.errors.date-required"));
+      new Notice(noticeFor(DATE_REQUIRED));
       return;
     }
   
     if (readonly) {
-      new Notice(get(i18n).t("views.calendar.errors.create-readonly"));
+      new Notice(noticeFor(CREATE_READONLY));
       return;
     }
   

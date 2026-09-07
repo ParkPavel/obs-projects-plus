@@ -189,7 +189,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be renamed.",
     cause:
       "Obsidian refused the rename — usually the new name is already taken, or holds characters the file system does not allow.",
-    status: "pending",
   },
   {
     code: "PPP-302",
@@ -199,7 +198,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Failed to save changes",
     cause:
       "The note editor could not write its changes back to the file, so what is on screen is ahead of what is on disk.",
-    status: "pending",
   },
   {
     code: "PPP-303",
@@ -209,7 +207,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be deleted.",
     cause:
       "Deleting the file failed — it may be open elsewhere, read-only, or already gone.",
-    status: "pending",
   },
   {
     code: "PPP-304",
@@ -219,7 +216,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The note could not be duplicated.",
     cause:
       "One of the copies could not be created, so the set of new notes is incomplete.",
-    status: "pending",
   },
   {
     code: "PPP-305",
@@ -229,7 +225,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The checkbox could not be changed.",
     cause:
       "Writing the checkbox field back to the note failed, so the tick does not reflect the file.",
-    status: "pending",
   },
   {
     code: "PPP-306",
@@ -239,7 +234,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Choose a field for the checkboxes first.",
     cause:
       "The view has no boolean field assigned, so there is nothing for a tick to be written into.",
-    status: "pending",
   },
   {
     code: "PPP-307",
@@ -249,7 +243,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The event date could not be changed.",
     cause:
       "Writing the new date back to the note failed, so the event stays where it was.",
-    status: "pending",
   },
   {
     code: "PPP-308",
@@ -259,7 +252,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Date field is required to create events",
     cause:
       "The view has no date field assigned, so an event has nothing to be placed by.",
-    status: "pending",
   },
   {
     code: "PPP-309",
@@ -269,7 +261,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "That date cannot be used for this event.",
     cause:
       "The target date failed validation — it is outside the supported range, or it would put the end of the event before its start.",
-    status: "pending",
   },
   {
     code: "PPP-310",
@@ -279,7 +270,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "This record cannot be moved.",
     cause:
       "The record is missing fields the calendar needs, so its new position cannot be worked out.",
-    status: "pending",
   },
   {
     code: "PPP-311",
@@ -289,7 +279,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The colour could not be changed.",
     cause:
       "Writing the colour field back to the note failed, so the event keeps its previous colour.",
-    status: "pending",
   },
   {
     code: "PPP-312",
@@ -299,7 +288,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "No colour field is set for this project.",
     cause:
       "The view has no field assigned to hold an event colour, so there is nothing to write the choice into.",
-    status: "pending",
   },
   {
     code: "PPP-313",
@@ -309,7 +297,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "The calendar could not move to that date.",
     cause:
       "Working out the next period failed, so the calendar stayed where it was.",
-    status: "pending",
   },
   {
     code: "PPP-314",
@@ -319,7 +306,6 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption: "Cannot create events in read-only projects",
     cause:
       "The project is read-only, so no note can be created from this view.",
-    status: "pending",
   },
   {
     code: "PPP-401",

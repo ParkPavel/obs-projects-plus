@@ -29,6 +29,10 @@
   import { handleHoverLink, showMobileNavMenu } from "../helpers";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onDestroy } from "svelte";
+  import { noticeFor } from "src/lib/errors/errorText";
+
+  /** #202 — the same event as the Calendar's rename failure, so the same code. */
+  const RENAME_FAILED = "PPP-301";
 
   export let project: ProjectDefinition;
   export let frame: DataFrame;
@@ -79,7 +83,7 @@
             await $app.fileManager.renameFile(file as any, newPath);
           }
         } catch (e) {
-          new Notice(`Failed to rename note: ${e instanceof Error ? e.message : String(e)}`);
+          new Notice(noticeFor(RENAME_FAILED));
         }
       },
       // v3.0.4: Autosave setting from project

@@ -780,6 +780,10 @@
                     "nextYear": "Next year",
                     "loading": "Loading...",
                     "noData": "No data"
+                },
+                "notices": {
+                    "renamed": "Note renamed: {{name}}",
+                    "duplicated": "Note duplicated to {{count}} date(s)"
                 }
             },
             "gallery": {
