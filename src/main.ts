@@ -56,6 +56,7 @@ import {
   writeBrokenCopy,
 } from "src/lib/settings/brokenBackup";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
+import type { WriteVerdict } from "src/lib/settings/settingsWriter";
 import { noticeFor, withCode } from "src/lib/errors/errorText";
 import { logError, logWarning } from "src/lib/errors/errorLog";
 import { registerFileEvents } from "./events";
@@ -640,9 +641,9 @@ export default class ProjectsPlusPlugin extends Plugin {
    */
   private async settingsAreOnDisk(
     value: LatestProjectsPluginSettings
-  ): Promise<boolean> {
+  ): Promise<WriteVerdict> {
     const path = settingsFilePath(this.manifest.dir);
-    if (path === null) return true;
+    if (path === null) return "confirmed";
     // A mismatch is looked at more than once before it is believed. The host
     // may resolve its write before the bytes land, and a check that raced it
     // would raise the "not saved" chip on perfectly good saves — a control
@@ -662,7 +663,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       const verdict = classifyDisk(value, raw, this.confirmedOnDisk);
       if (verdict === "confirmed") {
         this.confirmedOnDisk = canonical(value);
-        return true;
+        return "confirmed";
       }
       if (verdict === "superseded") {
         // Someone else — a second window, a synchroniser — replaced the file.
@@ -674,10 +675,14 @@ export default class ProjectsPlusPlugin extends Plugin {
         logWarning(SETTINGS_SUPERSEDED, "not retrying");
         this.confirmedOnDisk = null;
         new Notice(noticeFor(SETTINGS_SUPERSEDED), 15000);
-        return true;
+        // #200 step 1: this used to return `true` — the writer filed a write it
+        // could not confirm as a success. Every argument about who owns the
+        // file rested on that status, so it stops saying something untrue
+        // before anything is built on top of it.
+        return "diverged";
       }
     }
-    return false;
+    return "not-written";
   }
 
   /**

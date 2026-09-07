@@ -407,7 +407,7 @@ describe("#185 — settings writer", () => {
       save: save.fn,
       // #199: exactly what the live run produced — `save` resolves and the file
       // does not change. Before this, every level of #185 stayed silent.
-      verify: () => Promise.resolve(false),
+      verify: () => Promise.resolve("not-written" as const),
       onStatus: (status) => seen.push(status),
       debounceMs: 400,
       maxWaitMs: 2000,
@@ -428,7 +428,7 @@ describe("#185 — settings writer", () => {
     const save = makeSave();
     const writer = createSettingsWriter<Value>({
       save: save.fn,
-      verify: () => Promise.resolve(true),
+      verify: () => Promise.resolve("confirmed" as const),
       debounceMs: 400,
       maxWaitMs: 2000,
     });

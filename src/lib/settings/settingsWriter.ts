@@ -35,11 +35,21 @@ import { logError } from "src/lib/errors/errorLog";
  * way.
  */
 const SETTINGS_WRITE_FAILED = "PPP-101";
+/** #200 — the file was replaced by another writer. Never retried. */
+const SETTINGS_DIVERGED = "PPP-102";
 
 export type SaveStatus =
   | { kind: "idle" }
   | { kind: "saving" }
-  | { kind: "failed"; attempts: number; message: string; code: string };
+  | { kind: "failed"; attempts: number; message: string; code: string }
+  /**
+   * #200 — the file on disk is neither what we wrote nor what was there
+   * before: something else replaced it. Distinct from `failed` because the
+   * answer is different. A failed write is retried, by the writer and by the
+   * user; a diverged one must NOT be, because retrying is precisely the act of
+   * overwriting somebody else's change.
+   */
+  | { kind: "diverged"; code: string };
 
 /** Tail debounce: how long a burst of changes is allowed to keep growing. */
 export const SETTINGS_WRITE_DEBOUNCE_MS = 400;
@@ -55,6 +65,16 @@ export const SETTINGS_WRITE_MAX_WAIT_MS = 2000;
  */
 export const SETTINGS_WRITE_RETRY_DELAYS_MS: readonly number[] = [500, 2000];
 
+/**
+ * #200 — what the file said after a write claimed to succeed.
+ *
+ * `confirmed` — the file holds what was written.
+ * `not-written` — it does not, and nothing else explains that: retry.
+ * `diverged` — it holds something neither we nor the previous state produced,
+ *   so another writer got there. Not ours to retry.
+ */
+export type WriteVerdict = "confirmed" | "not-written" | "diverged";
+
 export interface SettingsWriterOptions<T> {
   save: (value: T) => Promise<unknown>;
   /**
@@ -64,7 +84,7 @@ export interface SettingsWriterOptions<T> {
    * Optional because a caller that cannot read the file back is better off
    * with the old, weaker guarantee than with a permanent false alarm.
    */
-  verify?: (value: T) => Promise<boolean>;
+  verify?: (value: T) => Promise<WriteVerdict>;
   onStatus?: (status: SaveStatus) => void;
   debounceMs?: number;
   maxWaitMs?: number;
@@ -126,6 +146,8 @@ export function createSettingsWriter<T>(
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let attempt = 0;
   let status: SaveStatus = { kind: "idle" };
+  /** Set by `attemptWrite` when the file was replaced by somebody else. */
+  let diverged = false;
   let disposed = false;
   let flushing = false;
 
@@ -196,17 +218,31 @@ export function createSettingsWriter<T>(
   async function attemptWrite(value: T): Promise<void> {
     await save(value);
     if (verify === undefined) return;
-    const confirmed = await verify(value);
-    if (!confirmed) {
-      throw new Error(
-        "the write reported success but the settings file does not match"
-      );
+    const verdict = await verify(value);
+    if (verdict === "confirmed") return;
+    if (verdict === "diverged") {
+      // #200: not an error, and deliberately not thrown. Throwing would put it
+      // on the retry path, and a retry here IS the overwrite. The status says
+      // what happened and the writer stands down.
+      diverged = true;
+      return;
     }
+    throw new Error(
+      "the write reported success but the settings file does not match"
+    );
   }
 
   function onWritten(): void {
     inFlight = null;
     attempt = 0;
+    if (diverged) {
+      // The value stays in memory and stays dirty-free: it was written, the
+      // file simply no longer reflects it. Reconciliation is #200 step 3; what
+      // this step guarantees is only that nobody is told the write succeeded.
+      diverged = false;
+      setStatus({ kind: "diverged", code: SETTINGS_DIVERGED });
+      return;
+    }
     if (dirty) {
       // Exactly one follow-up write, carrying whatever arrived meanwhile. It
       // keeps the flush's licence to run past `dispose`: teardown calls
