@@ -1567,6 +1567,7 @@
                 "settings-superseded": "Another window or a synchroniser replaced the file, so this window cannot tell whether its own change survived.",
                 "settings-unreadable": "data.json could not be read or parsed, so the plugin started from defaults and left the file on disk untouched.",
                 "settings-corrupted": "data.json parsed but matched no known settings version, so there was nothing that could be migrated.",
+                "settings-conflict": "Another window, a synchroniser or a hand edit replaced data.json while this session held changes of its own, so neither version could be discarded.",
                 "record-write-failed": "Writing the note's frontmatter failed, so the value on screen was rolled back to what is on disk.",
                 "records-write-failed": "A batch write failed part way through, so every record in the batch was rolled back to what is on disk.",
                 "record-file-missing": "The note was renamed, moved or deleted after the view loaded it, so there was no file left to write to.",
@@ -1645,6 +1646,9 @@
             },
             "superseded": {
                 "notice": "Projects+: data.json was changed outside this window. Your latest change may not be saved — reopen the vault before making more."
+            },
+            "conflict": {
+                "notice": "Projects+: data.json was changed outside this window and could not be adopted. Your version is kept, and the one from disk was saved as {{path}}."
             }
         },
         "settings-menu": {

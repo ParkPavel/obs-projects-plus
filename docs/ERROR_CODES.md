@@ -134,6 +134,33 @@ data.json parsed but matched no known settings version, so there was nothing tha
 ### What to do
 A copy of the unreadable file was written beside it, named in the notice. Defaults are in use until you restore from that copy.
 
+## PPP-105
+
+### Что случилось
+`data.json` изменил кто-то другой, и плагин не стал принимать чужую версию: ваша осталась в силе, а
+версия с диска сохранена в соседний файл.
+
+### Почему
+Второе окно Obsidian, синхронизатор или правка руками заменили файл в тот момент, когда в этом
+сеансе были свои несохранённые изменения. Слить две версии автоматически нельзя: счётчик
+идентификаторов, признак проекта по умолчанию и раскладка виджетов ломаются каждый по-своему.
+Поэтому ни одна из сторон не выбрасывается.
+
+### Что делать
+Ничего не потеряно. Файл с чужой версией назван в уведомлении (`data.conflict-…json`) и лежит рядом
+с `data.json` — откройте его, если оттуда нужно перенести что-то руками. Плагин этот файл никогда не
+читает, его можно удалить. Если сообщение повторяется, скорее всего синхронизатор пишет в хранилище
+во время работы: дождитесь окончания синхронизации, прежде чем менять настройки.
+
+### What happened
+Projects+: data.json was changed outside this window and could not be adopted. Your version is kept, and the one from disk was saved as {{path}}.
+
+### Why
+Another window, a synchroniser or a hand edit replaced data.json while this session held changes of its own, so neither version could be discarded.
+
+### What to do
+Nothing is lost. The other version is in the file named in the notice, next to data.json; open it if you want to carry something across by hand. The plugin never reads that file, so you can delete it once you are done.
+
 ## PPP-201
 
 ### Что случилось

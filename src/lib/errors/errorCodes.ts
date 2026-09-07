@@ -143,6 +143,30 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
       "data.json parsed but matched no known settings version, so there was nothing that could be migrated.",
   },
   {
+    /**
+     * #200 — memory and disk disagreed and the plugin refused to merge them.
+     *
+     * `pending` until step 3 wires the reconciliation: the number is reserved
+     * and explained here so the page and the registry move together, but
+     * nothing can display it yet, and the marker is what says so out loud.
+     *
+     * Distinct from PPP-102 on purpose. That one says a write could not be
+     * confirmed; this one says a conflict was decided — memory kept, the other
+     * version preserved beside the file. Same file, different events, and
+     * collapsing them would leave the user unable to tell "your change may not
+     * be saved" from "somebody else's change is in a file named here".
+     */
+    code: "PPP-105",
+    kind: "warning",
+    key: "save-status.conflict.notice",
+    causeKey: "errors.causes.settings-conflict",
+    caption:
+      "Projects+: data.json was changed outside this window and could not be adopted. Your version is kept, and the one from disk was saved as {{path}}.",
+    cause:
+      "Another window, a synchroniser or a hand edit replaced data.json while this session held changes of its own, so neither version could be discarded.",
+    status: "pending",
+  },
+  {
     code: "PPP-201",
     kind: "failure",
     key: "errors.recordWriteFailed",

@@ -111,6 +111,16 @@ export interface SettingsWriter<T> {
   /** Drop every timer. Does not write. */
   dispose(): void;
   status(): SaveStatus;
+  /**
+   * #200 — does memory hold anything the disk has not confirmed?
+   *
+   * The status cannot answer this. `push` schedules a write and leaves the
+   * status at `idle` until that write STARTS, so a reconciliation reading
+   * `idle` as "nothing to lose" would adopt the disk over a change the user
+   * made a moment ago. A write in flight and a diverged one count too: in both
+   * the value is in memory and not known to be on the file.
+   */
+  hasPending(): boolean;
 }
 
 function sameStatus(a: SaveStatus, b: SaveStatus): boolean {
@@ -338,6 +348,14 @@ export function createSettingsWriter<T>(
     },
     status(): SaveStatus {
       return status;
+    },
+    hasPending(): boolean {
+      return (
+        dirty ||
+        inFlight !== null ||
+        status.kind === "failed" ||
+        status.kind === "diverged"
+      );
     },
   };
 }
