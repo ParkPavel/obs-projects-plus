@@ -446,8 +446,8 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`, measured in TWO passes 2026-09-07 after #187/#192/#202:
-  222 suites / 3439 tests without the headless probes, and 5 probe suites / 51 tests on their
+- **Canonical baseline — `main`, measured in TWO passes 2026-09-07 after #202 closed:
+  224 suites / 3448 tests without the headless probes, and 5 probe suites / 51 tests on their
   own. tsc 0, svelte-check 0/0, lint 0 errors (110 pre-existing tsdoc warnings).** Both halves
   green, nothing skipped.
   The two numbers are deliberately NOT added together here. Their sum is arithmetic, and the
