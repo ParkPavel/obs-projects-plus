@@ -2,8 +2,16 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * R0.22 — no user-facing message is written in one language inside a component
- * (#202 step 5).
+ * R0.22 — a `Notice` is not built from a string literal (#202 step 5).
+ *
+ * The name of this rule is deliberately narrower than the goal behind it, and
+ * the adversarial review is why: the matcher sees a quote immediately after
+ * `new Notice(` and nothing else. A literal reaching a notice through a
+ * variable, a concatenation or a `defaultValue` fallback passes it untouched —
+ * `EditNote.svelte` has one today. Claiming "all user-facing text goes through
+ * the locale layer" would describe a rule this test does not enforce, and a
+ * ratchet that looks broader than it is teaches people to trust it where it is
+ * blind.
  *
  * This ratchet exists because of a defect that shipped and lived for months:
  * sixteen `new Notice('…')` calls in the Calendar view carried Russian strings,
@@ -11,11 +19,15 @@ import * as path from "path";
  * it — the strings were valid code, the tests passed, and only a reader who
  * knew both the language and the file would notice.
  *
- * What is pinned is narrow on purpose: a Notice must not be constructed from a
- * bare string literal. Whether the words come from `noticeFor` (a coded
- * message) or from `t(...)` (an uncoded one, such as a success) is not this
- * ratchet's business — both go through the locale layer, which is the whole
- * point.
+ * What it does catch is the exact shape the defect had: sixteen
+ * `new Notice('…')` calls in the Calendar carrying Russian strings, shown
+ * verbatim to an English, Ukrainian or Chinese user. Nothing could have caught
+ * that — the strings were valid code and the tests passed. Whether the words
+ * then come from `noticeFor` (a coded message) or from `t(...)` (an uncoded
+ * one, such as a success) is not this ratchet's business.
+ *
+ * The wider rule needs a data-flow check, and that is filed rather than
+ * pretended to.
  *
  * The count may only fall. It is not zero yet: the remaining sites are English
  * literals in files step 6 has not reached, and each one is a message somebody
@@ -56,7 +68,7 @@ function offenders(): string[] {
   return found;
 }
 
-describe("R0.22 — user-facing text goes through the locale layer", () => {
+describe("R0.22 — a Notice is not built from a string literal", () => {
   it("the count of literal Notice strings only falls", () => {
     const found = offenders();
     expect(found.length).toBeLessThanOrEqual(BUDGET);

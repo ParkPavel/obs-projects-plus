@@ -41,6 +41,7 @@
   import type { FilterCondition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
   import { noticeFor } from "src/lib/errors/errorText";
+  import { logError } from "src/lib/errors/errorLog";
 
   /** #202 — the same event as the Calendar's rename failure, so the same code. */
   const RENAME_FAILED = "PPP-301";
@@ -105,6 +106,13 @@
             await $app.fileManager.renameFile(file as any, newPath);
           }
         } catch (e) {
+          // #202, from the adversarial review: the code names the EVENT, and it
+          // must not swallow the CAUSE. This used to show the thrown message,
+          // and a name collision, a permission error and an illegal filename
+          // ask for three different things from the user. The notice stays one
+          // sentence with one code; the reason goes to the console, which is
+          // where the code page tells people to look.
+          logError(RENAME_FAILED, record.id, e);
           new Notice(noticeFor(RENAME_FAILED));
         }
       },
