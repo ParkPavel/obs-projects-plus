@@ -99,7 +99,8 @@ export async function readRawSettings(
  */
 async function freeName(
   adapter: BrokenCopyAdapter,
-  base: string
+  base: string,
+  strict = false
 ): Promise<string | null> {
   try {
     if (!(await adapter.exists(base))) return base;
@@ -109,9 +110,18 @@ async function freeName(
     }
     return null;
   } catch {
-    // An adapter that cannot answer `exists` is not a reason to lose the copy:
-    // writing over a name that probably does not exist beats not writing.
-    return base;
+    // #195's answer for the broken copy: an adapter that cannot say is not a
+    // reason to lose the copy, and writing over a name that probably does not
+    // exist beats not writing.
+    //
+    // #200's answer for the conflict copy is the opposite, and the adversarial
+    // review is why it is stated rather than inherited. There the caller
+    // OVERWRITES `data.json` once the copy reports success — so a copy that
+    // silently replaced an earlier one would take the last remaining version
+    // of somebody's settings with it. When absence cannot be established, the
+    // honest answer is no path, and the caller tells the user to copy the file
+    // by hand.
+    return strict ? null : base;
   }
 }
 
@@ -174,7 +184,7 @@ export async function writeConflictCopy(
 ): Promise<string | null> {
   const base = conflictCopyPath(dir, at);
   if (base === null) return null;
-  const path = await freeName(adapter, base);
+  const path = await freeName(adapter, base, true);
   if (path === null) return null;
   try {
     await adapter.write(path, payload);

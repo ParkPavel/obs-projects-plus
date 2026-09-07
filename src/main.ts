@@ -91,6 +91,13 @@ const SETTINGS_CORRUPTED = "PPP-104";
 const SETTINGS_CONFLICT = "PPP-105";
 /** #200 — the same, with the copy of the other version refused. */
 const SETTINGS_CONFLICT_UNCOPIED = "PPP-106";
+/**
+ * #200 — how long a settings file is allowed to be mid-write before the bytes
+ * are treated as somebody's real version rather than as a synchroniser caught
+ * between two writes. Long enough that an ordinary write completes, short
+ * enough to beat the user's next change to the file.
+ */
+const SETTINGS_UNPARSABLE_RECHECK_MS = 2000;
 /** #202 — the demo repair path; the demo itself raises 601/602 in its own module. */
 const DEMO_REPAIR_FAILED = "PPP-603";
 
@@ -119,6 +126,12 @@ export default class ProjectsPlusPlugin extends Plugin {
    * else wrote something else" when the read-back does not match.
    */
   private confirmedOnDisk: string | null = null;
+  /**
+   * #200: the pending re-read of a settings file that did not parse. One at a
+   * time — a synchroniser writing in bursts fires the hook repeatedly, and a
+   * timer per firing would queue a crowd of them for one event.
+   */
+  private unparsableRecheck: number | null = null;
 
   /**
    * onload runs when the plugin is enabled.
@@ -514,6 +527,11 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.unsubscribeSaveStatus();
     }
     setSaveRetryHandler(null);
+    if (this.unparsableRecheck !== null) {
+      // #200: it would fire into a disposed writer and a reset status store.
+      window.clearTimeout(this.unparsableRecheck);
+      this.unparsableRecheck = null;
+    }
     // #185, second pass: the status store is module-global and outlives the
     // plugin instance if the host keeps the module cached across a
     // disable/enable. Left standing, the chip would survive into a session
@@ -674,11 +692,18 @@ export default class ProjectsPlusPlugin extends Plugin {
     }
     if (decision.kind === "keep") {
       // A half-written file is what a synchroniser looks like from here, and
-      // the completed write fires this again a moment later. Nothing is said
-      // to the user and nothing is copied: at load an unreadable file yields
-      // defaults, and doing that HERE would put defaults over live working
-      // state — data loss created by the mechanism meant to prevent it.
+      // the completed write usually fires this again a moment later. Memory
+      // stays: at load an unreadable file yields defaults, and doing that HERE
+      // would put defaults over live working state — data loss created by the
+      // mechanism meant to prevent it.
+      //
+      // But "usually" is not "always", and the adversarial review named the
+      // gap: if the file STAYS truncated, our own next ordinary write erases
+      // it, and those bytes were the only copy of what the other writer meant.
+      // So the silence is bounded — one delayed re-read, and if it still does
+      // not parse the bytes are preserved like any other conflict.
       console.warn("[Projects+] settings file changed but does not parse; keeping memory");
+      this.recheckUnparsableSettings();
       return;
     }
     if (decision.kind === "conflict") {
@@ -692,21 +717,84 @@ export default class ProjectsPlusPlugin extends Plugin {
       return;
     }
 
-    // Adoption. `prime` BEFORE `set`, because the store subscription writes
-    // whatever it is handed — the same echo #185 removed at load, arriving by
-    // a second route. Primed first, the subscription's firing is a no-op.
-    this.settingsWriter.prime(decision.settings);
-    this.loadedSettings = decision.settings;
+    // Adoption goes through the SAME resolver the load path uses. The
+    // adversarial review found the hole: a payload can carry `version: 4` and
+    // nothing else, and putting that raw object into the store hands every
+    // consumer a shape it does not expect. `reconcileSettings` now refuses a
+    // payload with no project list, and this refuses everything else the
+    // resolver refuses — one gate for the shape, one for the semantics.
+    const resolved = migrateSettings(decision.settings);
+    if (either.isLeft(resolved)) {
+      logWarning(SETTINGS_CONFLICT, "external payload did not resolve:", resolved.left);
+      const preserved = await this.preserveConflicting(raw, "unresolvable");
+      if (preserved) this.settingsWriter.pushImmediate(get(settings));
+      return;
+    }
+
+    // `prime` BEFORE `set`, because the store subscription writes whatever it
+    // is handed — the same echo #185 removed at load, arriving by a second
+    // route. Primed first, the subscription's firing is a no-op.
+    const adopted = resolved.right;
+    this.settingsWriter.prime(adopted);
+    this.loadedSettings = adopted;
+    // The FILE's canonical form, not the resolved one: this is the record of
+    // what is on disk, and normalisation happens only in memory — exactly as
+    // at load, which does not rewrite the file for filling in a default.
     this.confirmedOnDisk = canonical(JSON.parse(raw));
-    settings.set(decision.settings);
+    settings.set(adopted);
     if (decision.carried) {
       // The one merged field (user's decision, 2026-09-07): a project's
       // `uniqueIdCounter` was higher here than on disk. Memory now holds the
       // higher one, and the file must too — otherwise the next window to adopt
       // this file reissues identifiers that are already in notes.
-      this.settingsWriter.pushImmediate(decision.settings);
+      this.settingsWriter.pushImmediate(adopted);
     }
     console.debug("[Projects+] settings adopted from disk");
+  }
+
+  /**
+   * #200, from the adversarial review — the bound on the silence above.
+   *
+   * A file that does not parse is almost always a synchroniser caught between
+   * two writes, and the completed write fires the hook again. "Almost always"
+   * is the problem: if it stays truncated, nothing here ever looks at it again
+   * and this plugin's next ordinary save erases it. One delayed re-read closes
+   * that without turning every half-written moment into a notice.
+   *
+   * Writes are deliberately NOT blocked meanwhile. Blocking is what the plan
+   * rejected in model (в): it turns a rare event into a session where nothing
+   * saves and there is no way out but a restart.
+   */
+  private recheckUnparsableSettings(): void {
+    if (this.unparsableRecheck !== null) return;
+    this.unparsableRecheck = window.setTimeout(() => {
+      this.unparsableRecheck = null;
+      void this.onUnparsableSettlement();
+    }, SETTINGS_UNPARSABLE_RECHECK_MS);
+  }
+
+  private async onUnparsableSettlement(): Promise<void> {
+    const path = settingsFilePath(this.manifest.dir);
+    if (path === null) return;
+    let raw: string;
+    try {
+      raw = await this.app.vault.adapter.read(path);
+    } catch {
+      return;
+    }
+    try {
+      JSON.parse(raw);
+    } catch {
+      // Still not settings after the delay. Whatever those bytes are, they are
+      // the only copy of what somebody else wrote, and our next save will take
+      // the file. Preserve them and say so — the same two codes as any other
+      // conflict, because from the user's side it is the same event.
+      await this.preserveConflicting(raw, "unparsable");
+      return;
+    }
+    // It settled into something readable: run the ordinary decision on it,
+    // rather than adopting here by a second, less careful path.
+    await this.onExternalSettingsChange();
   }
 
   /**

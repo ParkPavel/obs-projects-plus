@@ -211,12 +211,25 @@ export function carryUniqueIdCounters<T>(
     : { settings: adopted, carried: false };
 }
 
-/** Is `value` a settings payload this build can adopt as it stands? */
-function versionMatches(value: unknown, expected: number): boolean {
+/**
+ * Is `value` a settings payload this build can adopt as it stands?
+ *
+ * The version alone is not enough, and the adversarial review of this change
+ * is what made that concrete: `{ "version": 4 }` passes a version check, and
+ * the resolver would then fill it in with an EMPTY project list — so a stub
+ * left on disk by a synchroniser would read as a legitimate adoption and empty
+ * the user's configuration. The project list is therefore part of the shape
+ * this function requires, not part of what the resolver may invent.
+ *
+ * An empty array is still legal: a vault whose projects have all been deleted
+ * is a real state, and it differs from a payload that never had the field.
+ */
+function adoptableShape(value: unknown, expected: number): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
-  return (value as { version?: unknown }).version === expected;
+  const record = value as { version?: unknown; projects?: unknown };
+  return record.version === expected && Array.isArray(record.projects);
 }
 
 /**
@@ -245,7 +258,7 @@ export function reconcileSettings<T>(
     return { kind: "ignore", reason: "same" };
   }
 
-  if (!versionMatches(parsed, input.expectedVersion)) {
+  if (!adoptableShape(parsed, input.expectedVersion)) {
     return { kind: "conflict", reason: "unknown-version" };
   }
   if (input.pending) {

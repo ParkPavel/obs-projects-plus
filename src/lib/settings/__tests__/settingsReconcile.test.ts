@@ -123,6 +123,32 @@ describe("#200 — memory against disk", () => {
     }
   });
 
+  it("refuses a payload that carries the version and nothing else", () => {
+    // Found by the adversarial review of this change. `{ "version": 4 }` passes
+    // a version check, and the resolver would then fill it in with an EMPTY
+    // project list — so a stub left by a synchroniser would read as a
+    // legitimate adoption and quietly empty the user's configuration.
+    expect(decide({ diskRaw: '{ "version": 4 }' })).toEqual({
+      kind: "conflict",
+      reason: "unknown-version",
+    });
+    expect(decide({ diskRaw: '{ "version": 4, "projects": {} }' })).toEqual({
+      kind: "conflict",
+      reason: "unknown-version",
+    });
+  });
+
+  it("still adopts a vault whose projects were all deleted", () => {
+    // The other half of the same rule: an empty list is a real state a user can
+    // reach, and refusing it would make the mechanism silently useless for
+    // exactly the person who just deleted their last project elsewhere.
+    const decision = decide({
+      diskRaw: '{ "version": 4, "projects": [] }',
+    });
+
+    expect(decision.kind).toBe("adopt");
+  });
+
   it("refuses a payload that is not an object at all", () => {
     for (const raw of ["null", "[]", '"text"', "7"]) {
       expect(decide({ diskRaw: raw }).kind).toBe("conflict");

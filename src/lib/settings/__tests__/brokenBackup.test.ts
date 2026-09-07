@@ -246,6 +246,35 @@ describe("#200 — the copy of the version this session refused", () => {
     expect(adapter.files.get(second as string)).toBe("second");
   });
 
+  it("refuses a name whose absence cannot be established", async () => {
+    // From the adversarial review. #195 answers this the other way for the
+    // broken copy — writing over a name that probably does not exist beats not
+    // writing — and that answer is wrong here, because the CALLER overwrites
+    // data.json once this reports success. A copy that silently replaced an
+    // earlier one would take the last remaining version with it.
+    const adapter = makeAdapter();
+    adapter.exists = async () => {
+      throw new Error("EIO");
+    };
+
+    expect(
+      await writeConflictCopy(adapter, DIR, "theirs", new Date())
+    ).toBeNull();
+  });
+
+  it("leaves the broken copy's opposite answer intact", async () => {
+    // The two copies differ deliberately, so this pins that the #195 behaviour
+    // was not changed underneath it while #200 was tightening its own.
+    const adapter = makeAdapter();
+    adapter.exists = async () => {
+      throw new Error("EIO");
+    };
+
+    expect(
+      await writeBrokenCopy(adapter, DIR, "payload", "reason", new Date())
+    ).not.toBeNull();
+  });
+
   it("reports failure instead of assuming it, both ways", async () => {
     // The caller shows a different code depending on this answer, because a
     // notice naming a file that was never written is the #195 defect one level
