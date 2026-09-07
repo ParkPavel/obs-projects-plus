@@ -76,6 +76,29 @@ describe("R0.23 — one console prefix", () => {
     expect(logger).toMatch(/\[Projects\+\] Calendar/);
   });
 
+  it("a logger call does not repeat the prefix its formatter adds", () => {
+    // Caught by review on the first pass: `calendarLogger` prepends
+    // `[Projects+] Calendar`, so a message that also opened with the product
+    // prefix printed it twice on one line.
+    //
+    // Component tags inside these calls — `[ViewportStateManager]`,
+    // `[NavigationController]` — are deliberately NOT forbidden. They say which
+    // part of the Calendar spoke, which the shared prefix cannot, and removing
+    // them would trade information for uniformity.
+    const doubled: string[] = [];
+    for (const file of walk(path.join(ROOT, "ui", "views", "Calendar"))) {
+      if (!/\.(ts|svelte)$/.test(file)) continue;
+      if (/__tests__|\.test\.|\.spec\./.test(file)) continue;
+      const text = fs.readFileSync(file, "utf8");
+      for (const match of text.matchAll(
+        /calendarLogger\.[a-z]+\(\s*[`'"]\s*\[Projects\+\]/g
+      )) {
+        doubled.push(`${path.relative(ROOT, file)} :: ${match[0].slice(0, 40)}`);
+      }
+    }
+    expect(doubled).toEqual([]);
+  });
+
   it("catches a tag this rule would have missed before", () => {
     // The matcher's own falsification: a planted stray must be reported.
     const planted = 'console.error("[Widget] something went wrong", err);';
