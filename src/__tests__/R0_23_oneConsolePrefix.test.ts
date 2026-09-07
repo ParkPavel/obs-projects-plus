@@ -53,9 +53,38 @@ function strayTags(): string[] {
   return stray;
 }
 
+/** A console call whose first argument is a literal that does not carry the prefix. */
+const LITERAL_HEAD =
+  /console\.(?:log|info|warn|error|debug)\(\s*[`'"]([^`'"]{0,60})/g;
+
+function unprefixed(): string[] {
+  const found: string[] = [];
+  for (const file of walk(ROOT)) {
+    if (!/\.(ts|svelte)$/.test(file)) continue;
+    if (/__tests__|\.test\.|\.spec\./.test(file)) continue;
+    const text = fs.readFileSync(file, "utf8");
+    for (const match of text.matchAll(LITERAL_HEAD)) {
+      const head = (match[1] as string).trim();
+      if (!head.startsWith(PREFIX)) {
+        found.push(`${path.relative(ROOT, file)} :: ${head.slice(0, 40)}`);
+      }
+    }
+  }
+  return found;
+}
+
 describe("R0.23 — one console prefix", () => {
   it("no console line opens with a tag of its own", () => {
     expect(strayTags()).toEqual([]);
+  });
+
+  it("no console line goes out with no prefix at all", () => {
+    // The second half of the rule, and the review was right that the first
+    // half alone did not deliver it: a line reading "Failed to save …" is just
+    // as unsearchable as one tagged `[Widget]`, and six of those were in the
+    // tree while this test passed. Lines built through a logger's formatter are
+    // not literals here and are not the target.
+    expect(unprefixed()).toEqual([]);
   });
 
   it("the shared logger writes that prefix", () => {

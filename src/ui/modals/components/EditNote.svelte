@@ -327,7 +327,7 @@
       try {
         collapsedState = JSON.parse(saved);
       } catch (e) {
-        console.warn('Failed to parse collapsed groups state:', e);
+        console.warn('[Projects+] EditNote failed to parse collapsed groups state:', e);
       }
     }
   });

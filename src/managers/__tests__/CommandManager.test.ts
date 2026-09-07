@@ -384,7 +384,7 @@ describe("CommandManager", () => {
       commandManager.finalizeRegistrations(null);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "CommandManager: Plugin reference required for command registration"
+        "[Projects+] CommandManager: plugin reference required for command registration"
       );
 
       expect(mockPlugin.addCommand).not.toHaveBeenCalled();
@@ -408,7 +408,7 @@ describe("CommandManager", () => {
       commandManager.finalizeRegistrations(invalidPlugin);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "CommandManager: Plugin reference required for command registration"
+        "[Projects+] CommandManager: plugin reference required for command registration"
       );
 
       expect((commandManager as any).commandsToRegister).toHaveLength(1);

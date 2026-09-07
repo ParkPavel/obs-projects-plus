@@ -130,7 +130,7 @@ export class CommandManager {
    */
   finalizeRegistrations(plugin: CommandHost | Partial<CommandHost> | null | undefined): void {
     if (!plugin || typeof (plugin as CommandHost).addCommand !== "function") {
-      console.warn("CommandManager: Plugin reference required for command registration");
+      console.warn("[Projects+] CommandManager: plugin reference required for command registration");
       return;
     }
 

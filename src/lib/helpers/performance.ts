@@ -15,7 +15,7 @@
  * 
  * @example
  * const handleScroll = throttle((e) => {
- *   console.log('Scrolled!', e);
+ *   console.log('[Projects+] Performance Scrolled!', e);
  * }, 100);
  * 
  * window.addEventListener('scroll', handleScroll);
@@ -65,7 +65,7 @@ export function throttle<T extends (...args: any[]) => any>(
  * 
  * @example
  * const handleResize = debounce(() => {
- *   console.log('Resized!');
+ *   console.log('[Projects+] Performance Resized!');
  * }, 200);
  * 
  * window.addEventListener('resize', handleResize);

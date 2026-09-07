@@ -45,7 +45,7 @@ function createPersistentStore<T>(key: string, initialValue: T) {
         }
       }
     } catch (e) {
-      console.warn(`Failed to load ${key} from App storage`, e);
+      console.warn(`[Projects+] Failed to load ${key} from App storage`, e);
     }
   }
   
@@ -61,7 +61,7 @@ function createPersistentStore<T>(key: string, initialValue: T) {
           app.saveLocalStorage(`obs-projects-plus-${key}`, JSON.stringify(value));
         }
       } catch (e) {
-        console.warn(`Failed to save ${key} to App storage`, e);
+        console.warn(`[Projects+] Failed to save ${key} to App storage`, e);
       }
     }
   });
