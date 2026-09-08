@@ -192,3 +192,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после ограничения ожиданий — одна P2
+
+```
+- [P2] Cancel extended reconciliation waits on disposal — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:749-753
+  If the plugin is disabled during an `extend` episode, `dispose()` clears the permit timer but not this independently-created timeout. Once it fires, `next(entry)` can read the vault and, for an unreadable external payload, write a conflict copy/note and show a notice after the plugin has been unloaded. Track and clear this continuation timer, or stop before invoking `next` when the writer is closed.
+
+[exited with code 0]
+```

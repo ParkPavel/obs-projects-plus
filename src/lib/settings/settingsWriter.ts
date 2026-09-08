@@ -425,6 +425,15 @@ export function createSettingsWriter<T>(
    * rather than on top of each other.
    */
   let episodes: Promise<void> = Promise.resolve();
+  /**
+   * The wait inside an extended episode. `dispose` has to be able to end it:
+   * its timer is not the permit's, so clearing the permit left this one running
+   * and the continuation read the vault — and could write a recovery copy and
+   * raise a notice — after the plugin had been unloaded. Waking it rather than
+   * only clearing it matters too: a cleared timer would leave the lease waiting
+   * on a promise nothing resolves.
+   */
+  let continuation: { wake: () => void } | null = null;
 
   /**
    * Returns what was ACTUALLY applied, which is not always what the body asked
@@ -749,7 +758,25 @@ export function createSettingsWriter<T>(
           // The fence's deadline is reset, so the wait cannot outlive it and a
           // decision that never returns still releases the queue.
           toFenced(code);
-          await new Promise((resolve) => setTimeout(resolve, after));
+          await new Promise<void>((resolve) => {
+            const timer = setTimeout(() => {
+              continuation = null;
+              resolve();
+            }, after);
+            continuation = {
+              wake: () => {
+                clearTimeout(timer);
+                continuation = null;
+                resolve();
+              },
+            };
+          });
+          if (permit.kind === "closed") {
+            // Unloaded while waiting. The continuation would read the vault and
+            // may write a recovery copy and raise a notice, both of which
+            // belong to a plugin that is no longer running.
+            return { kind: "release" };
+          }
           outcome = await next(entry);
         }
         return applyOutcome(outcome, epochAtEntry);
@@ -806,6 +833,8 @@ export function createSettingsWriter<T>(
       cancelRetry();
       clearPermitTimer();
       permit = { kind: "closed" };
+      // Set the permit FIRST: the woken lease checks it and stands down.
+      continuation?.wake();
     },
     status(): SaveStatus {
       return status;

@@ -418,6 +418,37 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls).toHaveLength(0);
   });
 
+  it("ends an extended wait when the plugin unloads", async () => {
+    // The wait inside an extended episode is the lease's own timer, not the
+    // permit's, so disposing used to leave it running: the continuation then
+    // read the vault and could write a recovery copy and raise a notice for a
+    // plugin that was no longer there.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    let continued = false;
+    const lease = writer.withExclusive("PPP-102", async () => ({
+      kind: "extend" as const,
+      after: 2000,
+      next: async () => {
+        continued = true;
+        return { kind: "release" as const };
+      },
+    }));
+    await jest.advanceTimersByTimeAsync(0);
+
+    writer.dispose();
+    await lease;
+    await jest.advanceTimersByTimeAsync(5000);
+
+    expect(continued).toBe(false);
+    expect(save.calls).toHaveLength(0);
+  });
+
   it("decides overlapping episodes one at a time", async () => {
     // Two external notifications can arrive while a read or a copy is being
     // awaited. Fencing is shared state, not a queue: without serialising, the
