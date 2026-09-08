@@ -1,6 +1,8 @@
 ﻿# Current project context
 
-> **Updated:** 2026-09-08 (#200 complete on its branch, acceptance 10/10 on the live host, not
+> **Updated:** 2026-09-08 (#211 complete on its branch and not merged; the review-loop lessons are
+> in `RETRO_SETTINGS_OWNERSHIP_2026-09-08.md` and now bind `TWO_MODEL_PROTOCOL.md` and
+> `MANUAL_TESTING_PIPELINE.md`. Earlier the same day: #200 complete on its branch, acceptance 10/10 on the live host, not
 > merged; #207-#209 filed from that run. Earlier: 2026-09-02 — #165, #181 and #179 merged into `main`; #178 and #180 have architect plans
 > (`PLAN_178_…`, `PLAN_180_…`) and WAIT ON USER DECISIONS recorded in `BACKLOG.md` — do not implement
 > before the answers are written there. Earlier the same day: the cqi mechanism measured in headless
@@ -17,6 +19,24 @@ Relation-first vertical slice in `BACKLOG.md` and must map to a scene in the Pro
 The old W2–W5 sequence is historical; it does not select the next product ticket.
 
 ## Working tree and release state
+
+- **#211 is COMPLETE on `fix/211-conflict-races` (base `main` = `0d23124`), NOT merged.** It closes
+  the races the reviews of #200 found after that ticket had already merged: an ordinary edit could
+  overtake the hook that was about to copy somebody else's version aside; a held write was forced
+  through by shutdown; the recovery instruction named a file this session might already have
+  overwritten; two conflict copies of the same millisecond could collide; the recovery path existed
+  only in a desktop console; and the standing mark went on contradicting its own notice. Writing is
+  now suspended by ONE state that both causes set and every exit clears, with a ten-second backstop
+  so a suspension cannot become a new way to strand a change; the restore lifts it itself rather
+  than callers remembering an order. The other version falls back to a note inside the vault when
+  nothing can be written beside `data.json`. Gates: tsc 0, jest **231 suites / 3564 tests**, lint 0
+  errors / 110 warnings, svelte-check 0/0.
+  **Twelve cross-model passes, twenty-one findings, all valid, five of them introduced by our own
+  fix for the pass before** — the whole count and what it changed in the pipeline is in
+  `RETRO_SETTINGS_OWNERSHIP_2026-09-08.md`. Both convergences came from collapsing state, not from
+  more care, which is now a rule in `TWO_MODEL_PROTOCOL.md` rather than an anecdote.
+  Open for the user: merge, and whether the coordination between `settingsWriter` and the external
+  change hook deserves an architect pass before it grows again.
 
 - **#200 is COMPLETE on `feat/200-step1-verdict` (base `main` = `0a89e33`), NOT merged.** The plugin
   no longer erases a change somebody else made to `data.json`. `Plugin#onExternalSettingsChange`

@@ -2,6 +2,9 @@
 
 > **Established:** 2026-08-25, after a cross-model review found two data-destroying defects in code
 > that had already passed four green gates and two in-house audits.
+> **Revised:** 2026-09-08 — Gate 3 gained the "covers the final state" rule and the stop rule, from
+> `RETRO_SETTINGS_OWNERSHIP_2026-09-08.md`; the mechanics table was corrected to how the channel has
+> actually worked since 2026-09-01.
 > **Models:** Claude (Claude Code, this session) and Codex (OpenAI, via `openai/codex-plugin-cc`).
 > **Companion:** `QUALITY_DEBT_2026-08-25.md` records the findings that motivated this.
 
@@ -65,14 +68,67 @@ disagreement was resolved, not dropped.
 
 ### Gate 3 — Cross-model pre-merge review
 
-**Mandatory** before merge. User-run, because the plugin gates these commands deliberately:
+**Mandatory** before merge. Since 2026-09-01 it is an ordinary agent operation — the engine is run
+directly, in the background; the plugin's `/codex:*` commands remain user-only and are not the
+channel:
 
 ```
-/codex:review --base main --background
-/codex:adversarial-review --base main --background <what to challenge>   # L/XL + behavior changes
+node <plugin>/scripts/codex-companion.mjs review --base <ref> --scope branch
+node <plugin>/scripts/codex-companion.mjs adversarial-review --base <ref> --scope branch "<focus>"
 ```
 
 Findings are data, not consent: fix, or file with a reason. Never dismiss silently.
+
+#### The gate covers the FINAL state, or it is not a gate
+
+Added 2026-09-08 after #200 was merged with a stale gate. The pre-merge review ran at one commit;
+two commits with CODE landed after it — including the implementation of that review's own findings —
+and the merge went in with the gate describing an earlier tree. A catch-up review over exactly that
+range then found three defects, two of them P1.
+
+Three rules follow, and all three are cheap:
+
+1. **Implementing findings is new code.** A review that produced fixes must be re-run over them. The
+   fixes are written by the model whose blind spot the review just demonstrated.
+2. **Merge only when the last pass covers `HEAD`.** If anything was committed after the run, the run
+   describes something else.
+3. **State the range in the report.** `--base <ref>` and the tip it was run at go into the saved
+   `CX-*` file, so a later reader can tell what was and was not looked at.
+
+#### The stop rule — when patching stops converging
+
+Added 2026-09-08, from the same episode: twelve passes, twenty-one findings, all valid, and **five of
+them introduced by our own fix for the pass before**. All five sat in one mechanism — coordination
+between the settings writer and the external-change hook.
+
+**If two consecutive passes find a defect introduced by the previous pass's fix, stop patching.**
+The next step is one of:
+
+- **collapse the state** — when two mechanisms mean the same thing (they did: a deferral and a hold,
+  two flags, separate bugs), make them one, and give the release to the operation that knows what it
+  is rather than to callers who must remember an order;
+- **move the judgement into a pure module** that can be tested on synthetic input, if the code in
+  question lives somewhere untestable (`main.ts` has no unit coverage in this tree at all);
+- **escalate to an architect pass** on the mechanism, not on the ticket.
+
+Both collapses in #211 converged in one step each, after four patches had not. The loop is worth
+running; the loop is not worth running blindly.
+
+#### What the loop is good at, and what it is not
+
+On the #141–#145 stack, six of eight cross-model claims were false. On #200/#211, twenty-one of
+twenty-one were true. The difference is the subject, not the model: a claim about intent is argued,
+a claim about a race or a broken promise is settled by opening one file. Weigh a finding by whether
+it names a mechanism you can check — not by the reviewer's confidence, and not by its severity tag.
+
+Six of the twenty-one were **a sentence the code does not keep**: a notice naming a file that may
+already be overwritten, a tooltip contradicting its own notice, a recovery note claiming nothing
+reads it, a page describing one of two recovery paths, a standing mark still saying "saved" after
+the notice said "could not be saved". In a data-safety ticket the cost of a wrong sentence equals
+the cost of a wrong branch — the user goes to the wrong place for the only copy they have. So a
+change to a path, a file or a recovery route is not done until every place that names it is changed
+with it, and where two surfaces must agree, a ratchet pins them (R0.21 checked the caption against
+the English default and not the cause; that gap is exactly how the tooltip drifted).
 
 ## Equivalence claims — the checkable artifact
 
@@ -119,15 +175,18 @@ favour because it is the one producing the artifact.
 |---|---|---|
 | Claude → Codex, design challenge | `codex-rescue` subagent → `codex-companion.mjs task` | Claude (model-invocable) |
 | Claude → Codex, follow-up on the same thread | `codex resume <thread-id>` | Claude, via the same subagent |
-| Codex → Claude, results | `/codex:result <job-id>` | **User** — the command is gated |
-| Cross-model review of a branch | `/codex:review`, `/codex:adversarial-review` | **User** — gated |
+| Codex → Claude, results | `codex-companion.mjs status` / `result` | Claude, directly |
+| Cross-model review of a branch | `codex-companion.mjs review` / `adversarial-review` | Claude (2026-09-01: no longer a user checkpoint) |
+| The plugin's `/codex:*` commands | slash commands | **User only** — `disable-model-invocation` |
 
-The gating is deliberate on the plugin's side and is respected: the reviews and the result reads
-keep a human in the loop. The design-challenge channel does not, which is what makes Gate 0
-practical to run on every qualifying ticket.
+**Corrected 2026-09-08.** This table used to say the reviews were user-run because the plugin gates
+those commands. Both halves are still true and the conclusion was not: the *commands* are gated, the
+*engine* is not, and on 2026-09-01 the user removed the checkpoint precisely because stopping to ask
+for a verification step cost a turn every time. A review costs no Anthropic tokens, so the only
+reason to skip one is that there is nothing to compare.
 
-When the user asks Claude to check a Codex job, that *is* the human in the loop, and Claude reads
-the result through the companion script directly.
+Reading a result is likewise ordinary: Claude reads it through the companion script and reports what
+it says, including the findings it disagrees with.
 
 ## Cost
 
