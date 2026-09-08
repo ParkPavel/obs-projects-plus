@@ -63,6 +63,12 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   A3's restore-after-conflict was measured at 520 ms — the queued write the fix added. One new
   defect: #210, a zero-byte conflict copy, because `preserving what it held` accepts an empty
   capture from a non-atomic writer. #209 was re-measured honestly at ~100 ms and stands.
+  **#210 was fixed in `8d13d84` and the fix confirmed live on `5568e6d`** (micro-run appended to
+  `ACCEPTANCE_200_RERUN_2026-09-08.md`): A6, A6-race and the new A11 — plus a racing A11 that
+  reproduces exactly how #210 showed itself — all pass, 4/4. Both sides of the boundary are visible
+  in one run: truncated non-empty bytes are still preserved and announced, while an empty file is
+  dropped silently (`settings file changed; empty, nothing to keep`, no notice, no copy). Two
+  conflict copies for the whole micro-run where the old code made three.
   Still open: what the spike could not settle either — whether the hook fires for another plugin
   writing in the same process (Remotely Save), which is risk 1 of the plan's §10.
 
