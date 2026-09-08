@@ -98,6 +98,33 @@ export type WriteVerdict = "confirmed" | "not-written" | "diverged";
  */
 export type Origin = "session" | "reconciler";
 
+/**
+ * #212 step B — who may write, as one value.
+ *
+ * `open` — the ordinary state: session edits, retries and `flush` all write.
+ * `fenced` — reconciliation is deciding what to do about a file somebody else
+ *   changed. ONLY its own restore may write; a session edit waits, and is not
+ *   dropped. Bounded by `SETTINGS_RECONCILE_BACKSTOP_MS`, so a decision that
+ *   never finishes cannot strand the queue.
+ * `held` — the other version could not be preserved anywhere, so the file on
+ *   disk is the only copy of it. NOBODY writes. Released by the user's next
+ *   change, which is their answer to a notice they have already been shown.
+ * `closed` — disposed; only the follow-up write of a flush already in progress
+ *   completes.
+ *
+ * The distinction between `fenced` and `held` is the one a single boolean could
+ * not carry, and it is the whole fix: **a session `push` releases `held` and
+ * does not release `fenced`.** With one flag, `push` had to either release both
+ * (letting an edit overtake a decision in progress — the defect found at HEAD
+ * in `PLAN_212` section 0) or release neither (stranding the user's change
+ * behind a hold that waits for them).
+ */
+type Permit =
+  | { kind: "open" }
+  | { kind: "fenced"; code: string; until: ReturnType<typeof setTimeout> }
+  | { kind: "held"; code: string }
+  | { kind: "closed" };
+
 export interface SettingsWriterOptions<T> {
   save: (value: T) => Promise<unknown>;
   /**
@@ -149,6 +176,16 @@ export interface SettingsWriter<T> {
    * itself or by the next thing the user does.
    */
   hold(code: string): void;
+  /**
+   * #212 step B — reconciliation takes the file while it decides.
+   *
+   * Unlike `hold`, this is NOT released by the user's next change: an edit
+   * arriving mid-decision is exactly what must not reach the disk, because the
+   * decision may be part-way through copying the other version aside. It is
+   * released by `resume`, by the restore that ends the episode, or by its own
+   * deadline if the episode never returns.
+   */
+  fence(code: string): void;
   /** Write anything pending and wait for the in-flight write to settle. */
   flush(): Promise<void>;
   /**
@@ -163,13 +200,13 @@ export interface SettingsWriter<T> {
   /**
    * #211 — lift the suspension and let the queued edit go to disk again.
    *
-   * After a divergence, a queued edit of the user's is suspended rather than
+   * After a divergence, a queued edit of the user's is fenced rather than
    * re-armed: reconciliation is on its way to read the file and copy the other
    * version aside, and 400ms is not a guarantee that it gets there first.
-   * Every branch of the hook calls this when it is done, so the suspension
-   * lasts exactly as long as the decision does — and it re-arms the debounce
-   * whatever suspended the write, which is the one thing an earlier version of
-   * this got wrong.
+   * Every branch of the hook calls this when it is done, so the fence lasts
+   * exactly as long as the decision does — and it re-arms the debounce whatever
+   * the permit was, which is the one thing an earlier version of this got
+   * wrong.
    */
   resume(): void;
   /** Drop every timer. Does not write. */
@@ -243,6 +280,7 @@ export function createSettingsWriter<T>(
   let status: SaveStatus = { kind: "idle" };
   /**
    * #211 — writing is suspended: the queued value stays, its timers do not.
+   * #212 step B: the flag this comment described is now the `Permit` value.
    *
    * ONE flag, after review passes found the same hole in three disguises. Two
    * things suspend writing and they used to be separate mechanisms with
@@ -255,9 +293,7 @@ export function createSettingsWriter<T>(
    * The backstop timer belongs to the deferral only. `hold` has none on
    * purpose: it waits for the user, who has been told.
    */
-  let suspended = false;
-  let suspendTimer: ReturnType<typeof setTimeout> | null = null;
-  let disposed = false;
+  let permit: Permit = { kind: "open" };
   let flushing = false;
 
   function setStatus(next: SaveStatus): void {
@@ -266,7 +302,7 @@ export function createSettingsWriter<T>(
     // a late failure here would raise a chip in the NEXT session, whose retry
     // reaches a writer that knows nothing about it — the lying control this
     // ticket exists to remove, arriving by a second route.
-    if (disposed) return;
+    if (permit.kind === "closed") return;
     if (sameStatus(status, next)) return;
     status = next;
     onStatus?.(next);
@@ -283,12 +319,56 @@ export function createSettingsWriter<T>(
     }
   }
 
-  function cancelSuspension(): void {
-    if (suspendTimer !== null) {
-      clearTimeout(suspendTimer);
-      suspendTimer = null;
+  /** The fence's deadline, and nothing else, since only a fence has one. */
+  function clearPermitTimer(): void {
+    if (permit.kind === "fenced") clearTimeout(permit.until);
+  }
+
+  function toOpen(): void {
+    clearPermitTimer();
+    permit = { kind: "open" };
+  }
+
+  /**
+   * Reconciliation takes the file. The deadline is what keeps this from being
+   * the "single owner blocks writes" model `PLAN_200` section 2 rejected: an
+   * episode that never returns releases the queue by itself.
+   */
+  function toFenced(code: string): void {
+    clearPermitTimer();
+    permit = {
+      kind: "fenced",
+      code,
+      until: setTimeout(() => {
+        permit = { kind: "open" };
+        if (queue !== null) schedule();
+      }, SETTINGS_RECONCILE_BACKSTOP_MS),
+    };
+  }
+
+  function toHeld(code: string): void {
+    clearPermitTimer();
+    permit = { kind: "held", code };
+  }
+
+  /**
+   * The one place that answers "may this value be written now".
+   *
+   * `force` is the flush's licence, and it is deliberately not a master key: it
+   * carries a write past `closed`, and never past a fence or a hold, because
+   * quitting must not overwrite a version nothing has preserved.
+   */
+  function mayWrite(origin: Origin, force: boolean): boolean {
+    switch (permit.kind) {
+      case "open":
+        return true;
+      case "fenced":
+        return origin === "reconciler";
+      case "held":
+        return false;
+      case "closed":
+        return force;
     }
-    suspended = false;
   }
 
   function cancelRetry(): void {
@@ -299,7 +379,7 @@ export function createSettingsWriter<T>(
   }
 
   function schedule(): void {
-    if (disposed) return;
+    if (permit.kind === "closed") return;
     if (debounceTimer !== null) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(onDue, debounceMs);
     if (ceilingTimer === null) ceilingTimer = setTimeout(onDue, maxWaitMs);
@@ -311,13 +391,11 @@ export function createSettingsWriter<T>(
   }
 
   function startWrite(force = false): void {
-    // Suspension is enforced here as well as by cancelling timers, so a path
+    if (inFlight !== null || queue === null) return;
+    // The permit is enforced here as well as by cancelling timers, so a path
     // that reaches `startWrite` another way — a retry from a stale handler, a
-    // forced flush — cannot write over the version being preserved either.
-    if (suspended) return;
-    if ((disposed && !force) || inFlight !== null || queue === null) {
-      return;
-    }
+    // forced flush — cannot write over a version being preserved either.
+    if (!mayWrite(queue.origin, force)) return;
     const { value, origin } = queue;
     queue = null;
     // #199: paired with the failure log below. Between them, a developer can
@@ -390,17 +468,12 @@ export function createSettingsWriter<T>(
       if (queue !== null) {
         if (queue.origin === "reconciler") {
           startWrite(flushing);
-        } else if (!suspended) {
+        } else if (permit.kind === "open") {
           // A debounce armed by a `push` that arrived while the write was in
           // flight is still running, and it would fire straight through the
-          // hold. Deferring means deferring, so it goes.
+          // fence. Fencing means fencing, so it goes.
           cancelSchedule();
-          suspended = true;
-          suspendTimer = setTimeout(() => {
-            suspendTimer = null;
-            suspended = false;
-            schedule();
-          }, SETTINGS_RECONCILE_BACKSTOP_MS);
+          toFenced(SETTINGS_DIVERGED);
         }
       }
       return;
@@ -436,7 +509,7 @@ export function createSettingsWriter<T>(
     if (queue === null) queue = { value, origin };
     attempt += 1;
     const delay = retryDelays[attempt - 1];
-    if (delay !== undefined && !disposed) {
+    if (delay !== undefined && permit.kind !== "closed") {
       retryTimer = setTimeout(() => {
         retryTimer = null;
         startWrite();
@@ -455,13 +528,16 @@ export function createSettingsWriter<T>(
     prime(value: T): void {
       last = { value };
       queue = null;
-      cancelSuspension();
+      toOpen();
     },
     push(value: T): void {
       if (last !== null && Object.is(last.value, value)) return;
-      // A change the user makes after all this is their answer to whatever the
-      // deferral was waiting for: it goes to disk on the ordinary schedule.
-      cancelSuspension();
+      // #212 step B, and the reason the permit is not a boolean. A change the
+      // user makes releases a HOLD — it is their answer to the notice they were
+      // shown, and holding their work hostage after that helps nobody. It does
+      // NOT release a fence: reconciliation is mid-decision, possibly mid-copy,
+      // and an edit landing there overwrites the version being preserved.
+      if (permit.kind === "held") toOpen();
       // A change made after the budget was spent is a new episode and gets its
       // own retries. Without this, `attempt` stays past the end of the delay
       // list and every later change gets a single attempt — the writer quietly
@@ -479,6 +555,7 @@ export function createSettingsWriter<T>(
       last = { value };
       queue = { value, origin: "reconciler" };
       cancelSchedule();
+      clearPermitTimer();
       // The suspension exists to stop ORDINARY writes from overtaking
       // reconciliation. This IS reconciliation's write — the restore that ends
       // the episode — so it lifts the suspension rather than being blocked by
@@ -486,7 +563,7 @@ export function createSettingsWriter<T>(
       // `hold` and then `pushImmediate` without a `resume` in between, and the
       // restore silently did nothing. Making the caller remember was the
       // version that failed; the writer knowing which write this is does not.
-      cancelSuspension();
+      permit = { kind: "open" };
       startWrite();
     },
     resume(): void {
@@ -495,7 +572,7 @@ export function createSettingsWriter<T>(
       // by a `resume` cleared the suspension and re-armed nothing — the value
       // stayed dirty with no timer until an unrelated edit or shutdown carried
       // it, which in an interrupted session means losing it.
-      cancelSuspension();
+      toOpen();
       if (queue !== null) schedule();
     },
     async settled(): Promise<void> {
@@ -503,23 +580,24 @@ export function createSettingsWriter<T>(
         await inFlight;
       }
     },
+    fence(code: string): void {
+      cancelSchedule();
+      cancelRetry();
+      toFenced(code);
+      setStatus({ kind: "diverged", code });
+    },
     hold(code: string): void {
       cancelSchedule();
       cancelRetry();
-      // The backstop belongs to the deferral, not to a hold: a hold waits for
-      // the user or for reconciliation, however long that takes, because the
-      // file it protects may be the only copy of somebody's settings.
-      if (suspendTimer !== null) {
-        clearTimeout(suspendTimer);
-        suspendTimer = null;
-      }
-      // The queue is deliberately left standing: it is not on disk, and the
-      // next `push` — or `resume` — must still write it. Only the timers stop.
-      suspended = true;
+      // No deadline: a hold waits for the user, however long that takes,
+      // because the file it protects may be the only copy of somebody's
+      // settings. The queue is deliberately left standing — it is not on disk,
+      // and the next `push` or `resume` must still write it.
+      toHeld(code);
       setStatus({ kind: "diverged", code });
     },
     retry(): void {
-      if (disposed) return;
+      if (permit.kind === "closed") return;
       if (status.kind !== "failed" && queue === null) return;
       cancelRetry();
       attempt = 0;
@@ -535,7 +613,7 @@ export function createSettingsWriter<T>(
       cancelRetry();
       flushing = true;
       try {
-        // #211: a suspended value is NOT flushed, and shutdown is exactly where
+        // #211: a fenced or held value is NOT flushed, and shutdown is where
         // that matters. `flush` runs on quit and on unload, and forcing the
         // write there would put this session's edit over a `data.json`
         // somebody else replaced, with no copy of theirs anywhere — the race
@@ -543,7 +621,7 @@ export function createSettingsWriter<T>(
         // ignores timers. The edit is lost on reload, which is what #185
         // already promises for a change that could not be written; the standing
         // mark is what warns before it happens.
-        if (suspended) {
+        if (permit.kind === "fenced" || permit.kind === "held") {
           console.warn(
             "[Projects+] not writing on shutdown: the settings file was replaced and the change is still unreconciled"
           );
@@ -558,10 +636,10 @@ export function createSettingsWriter<T>(
       }
     },
     dispose(): void {
-      disposed = true;
       cancelSchedule();
       cancelRetry();
-      cancelSuspension();
+      clearPermitTimer();
+      permit = { kind: "closed" };
     },
     status(): SaveStatus {
       return status;

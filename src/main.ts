@@ -751,7 +751,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       // flight and leaves that timer running, so it could fire while the copy
       // below is still being written. Suspend first, then wait, then preserve:
       // the value is kept, only its timers stop.
-      this.settingsWriter.hold(SETTINGS_CONFLICT);
+      this.settingsWriter.fence(SETTINGS_CONFLICT);
       await this.settingsWriter.settled();
       const preserved = await this.preserveConflicting(raw, decision.reason);
       if (!preserved) {
@@ -783,7 +783,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     const resolved = migrateSettings(decision.settings);
     if (either.isLeft(resolved)) {
       logWarning(SETTINGS_CONFLICT, "external payload did not resolve:", resolved.left);
-      this.settingsWriter.hold(SETTINGS_CONFLICT);
+      this.settingsWriter.fence(SETTINGS_CONFLICT);
       await this.settingsWriter.settled();
       const preserved = await this.preserveConflicting(raw, "unresolvable");
       if (!preserved) {
@@ -866,7 +866,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         this.settingsWriter?.resume();
         return;
       }
-      this.settingsWriter?.hold(SETTINGS_CONFLICT);
+      this.settingsWriter?.fence(SETTINGS_CONFLICT);
       await this.settingsWriter?.settled();
       if (!(await this.preserveConflicting(raw, "unparsable"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
@@ -884,7 +884,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       console.warn(
         "[Projects+] the unparsable settings file was replaced by our own write; preserving what it held"
       );
-      this.settingsWriter?.hold(SETTINGS_CONFLICT);
+      this.settingsWriter?.fence(SETTINGS_CONFLICT);
       await this.settingsWriter?.settled();
       if (!(await this.preserveConflicting(seen, "unparsable-overwritten"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);

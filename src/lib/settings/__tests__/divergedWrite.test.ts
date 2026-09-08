@@ -298,7 +298,7 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls).toHaveLength(1);
   });
 
-  it("a further change of the user's releases the hold by itself", async () => {
+  it("a further change of the user's does NOT release a fence", async () => {
     const save = makeSave();
     const { writer, settlers } = heldWriter(save.fn);
 
@@ -309,9 +309,16 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     settlers[0]?.();
     await jest.advanceTimersByTimeAsync(0);
 
+    // #212 step B — the behaviour this step deliberately changes. A fence is
+    // reconciliation mid-decision, possibly mid-copy; an edit arriving there
+    // must wait, not overtake it. (A HOLD is the opposite case and is still
+    // released by the next change — the test above.)
     writer.push({ n: 3 });
     await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toHaveLength(1);
 
+    // …and it is not lost: the fence's own deadline carries it.
+    await jest.advanceTimersByTimeAsync(SETTINGS_RECONCILE_BACKSTOP_MS + 400);
     expect(save.calls[1]).toEqual({ n: 3 });
   });
 
@@ -413,6 +420,62 @@ describe("#200 — holding the writer when the other version could not be copied
 
     expect(save.calls).toHaveLength(0);
     expect(writer.status().kind).toBe("diverged");
+  });
+
+  it("a fence is not released by the user's next change", async () => {
+    // #212 step B, stated from the other end: the defect PLAN_212 found open at
+    // HEAD was `push` clearing the one suspension flag, so an edit arriving
+    // while reconciliation was mid-copy went to disk 400ms later. The fence is
+    // released by `resume`, by the restore, or by its own deadline — never by
+    // the edit it exists to hold back.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.fence("PPP-105");
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(2000);
+    expect(save.calls).toHaveLength(0);
+
+    writer.resume();
+    await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toEqual([{ n: 1 }]);
+  });
+
+  it("a hold IS released by the user's next change", async () => {
+    // The other half of the same distinction, and why one boolean could not
+    // carry both: after a hold the user has been shown a notice, and holding
+    // their work hostage past that helps nobody.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.hold("PPP-106");
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toEqual([{ n: 1 }]);
+  });
+
+  it("a fenced restore still writes: it is what ends the episode", async () => {
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.fence("PPP-105");
+    writer.pushImmediate({ n: 9 });
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(save.calls).toEqual([{ n: 9 }]);
   });
 
   it("stops a write that is only debounced, not merely one in flight", async () => {
