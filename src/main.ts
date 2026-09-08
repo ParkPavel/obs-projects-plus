@@ -61,8 +61,16 @@ import {
   carriesAVersion,
   reconcileSettings,
 } from "src/lib/settings/settingsReconcile";
+import {
+  episodeOutcome,
+  type EpisodeReport,
+  type Preservation,
+} from "src/lib/settings/settingsEpisode";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
-import type { WriteVerdict } from "src/lib/settings/settingsWriter";
+import type {
+  WriteOutcome,
+  WriteVerdict,
+} from "src/lib/settings/settingsWriter";
 import { noticeFor, withCode } from "src/lib/errors/errorText";
 import { logError, logWarning } from "src/lib/errors/errorLog";
 import { registerFileEvents } from "./events";
@@ -131,19 +139,16 @@ export default class ProjectsPlusPlugin extends Plugin {
    */
   private confirmedOnDisk: string | null = null;
   /**
-   * #200: the pending re-read of a settings file that did not parse. One at a
-   * time — a synchroniser writing in bursts fires the hook repeatedly, and a
-   * timer per firing would queue a crowd of them for one event.
+   * #212: what an adoption decided inside the lease, to be published to the
+   * store after it. It is not a second source of truth — it is only read when
+   * the writer reports that the adoption was actually applied, and the fence
+   * guarantees one episode at a time.
    */
-  private unparsableRecheck: number | null = null;
-  /**
-   * #200, from the pre-merge review: the bytes that did not parse, captured
-   * when they were seen rather than when the delayed re-read runs. Between
-   * those two moments an ordinary settings write can land and replace them —
-   * and then the re-read finds OUR valid file and copies nothing, losing the
-   * only version the other writer had.
-   */
-  private unparsableSeen: string | null = null;
+  private pendingAdoption: {
+    settings: LatestProjectsPluginSettings;
+    base: string | null;
+    carried: boolean;
+  } | null = null;
 
   /**
    * onload runs when the plugin is enabled.
@@ -469,7 +474,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         // Skipping it alone would leave a v1 file on disk indefinitely, so the
         // migration is written here by name: because the version changed, not
         // because the plugin was opened.
-        writer.pushImmediate(this.loadedSettings);
+        writer.pushNow(this.loadedSettings);
       }
     }
 
@@ -539,11 +544,6 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.unsubscribeSaveStatus();
     }
     setSaveRetryHandler(null);
-    if (this.unparsableRecheck !== null) {
-      // #200: it would fire into a disposed writer and a reset status store.
-      window.clearTimeout(this.unparsableRecheck);
-      this.unparsableRecheck = null;
-    }
     // #185, second pass: the status store is module-global and outlives the
     // plugin instance if the host keeps the module cached across a
     // disable/enable. Left standing, the chip would survive into a session
@@ -672,20 +672,90 @@ export default class ProjectsPlusPlugin extends Plugin {
    * read, decide, apply. What it does with each decision is the thing to keep
    * honest, and each branch is one statement.
    */
+  /**
+   * #200/#212 — somebody else wrote `data.json`.
+   *
+   * Obsidian calls this when the file changes on disk from outside the app: a
+   * second window, a synchroniser, a hand edit. It exists on every host this
+   * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
+   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
+   * external write fires it with the NEW contents already readable, and that
+   * our own `saveData` does not fire it.
+   *
+   * #212: this method is wiring and nothing else. The decision lives in
+   * `settingsReconcile.ts`, how the episode ends lives in `settingsEpisode.ts`,
+   * and who may write while it is being decided lives in the writer's lease —
+   * three modules that can be tested on synthetic input, around a file that
+   * cannot be tested at all. What used to be here was eight release sites and
+   * four fence sites in that untestable file, and six of the #211 findings were
+   * one of them forgetting something.
+   */
   async onExternalSettingsChange(): Promise<void> {
-    const path = settingsFilePath(this.manifest.dir);
+    const writer = this.settingsWriter;
     // Same blind spot as the write verification: `manifest.dir` is optional in
     // Obsidian's own typing, and without it there is no file to read. Recorded
     // in the plan's risks rather than papered over.
-    if (path === null || this.settingsWriter === undefined) return;
-
-    let raw: string;
-    try {
-      raw = await this.app.vault.adapter.read(path);
-    } catch (err) {
-      console.warn("[Projects+] settings changed on disk but could not be read:", err);
+    if (writer === undefined || settingsFilePath(this.manifest.dir) === null) {
       return;
     }
+
+    this.pendingAdoption = null;
+    // The lease fences before its first await, finishes any write already in
+    // flight, and releases in a `finally` whatever the body does or throws.
+    // PPP-102 is the code it fences under: the file HAS been changed from
+    // outside, which is true from this moment; what happens about it is the
+    // outcome's business.
+    const ended = await writer.withExclusive(SETTINGS_SUPERSEDED, () =>
+      this.decideExternalChange()
+    );
+
+    const adoption = this.takeAdoption();
+    if (ended.kind !== "adopted" || adoption === null) return;
+    // Published only on the writer's own answer. An adoption refused by the
+    // epoch guard — the user changed something while we were deciding — comes
+    // back as a release, and the store must not be set behind that refusal.
+    // The writer has already taken the adopted value as its own, so the
+    // subscription's firing here is a no-op, which is what #185 needed `prime`
+    // for.
+    this.loadedSettings = adoption.settings;
+    // The FILE's canonical form, not the resolved one: this is the record of
+    // what is on disk, and normalisation happens only in memory — exactly as at
+    // load, which does not rewrite the file for filling in a default.
+    this.confirmedOnDisk = adoption.base;
+    settings.set(adoption.settings);
+    if (adoption.carried) {
+      // The one merged field (user's decision, 2026-09-07): a project's
+      // `uniqueIdCounter` was higher here than on disk. Memory now holds the
+      // higher one, and the file must too — otherwise the next window to adopt
+      // this file reissues identifiers that are already in notes.
+      writer.pushNow(adoption.settings);
+    }
+    console.debug("[Projects+] settings adopted from disk");
+  }
+
+  /** Read the adoption the lease decided on, and clear it in the same move. */
+  private takeAdoption(): {
+    settings: LatestProjectsPluginSettings;
+    base: string | null;
+    carried: boolean;
+  } | null {
+    const adoption = this.pendingAdoption;
+    this.pendingAdoption = null;
+    return adoption;
+  }
+
+  /**
+   * One decision, taken inside the lease, returning how the episode ends.
+   *
+   * Every path returns a `WriteOutcome`; there is no path that returns nothing,
+   * which is what makes "a branch forgot to release" unrepresentable rather
+   * than merely unlikely.
+   */
+  private async decideExternalChange(): Promise<
+    WriteOutcome<LatestProjectsPluginSettings>
+  > {
+    const raw = await this.readSettingsFile();
+    if (raw === null) return { kind: "release" };
 
     const decision = reconcileSettings<LatestProjectsPluginSettings>({
       diskRaw: raw,
@@ -694,208 +764,140 @@ export default class ProjectsPlusPlugin extends Plugin {
       // Not the status: `push` schedules a write and leaves the status `idle`
       // until it starts, so a status-based check would adopt the disk over a
       // change made half a second ago.
-      pending: this.settingsWriter.hasPending(),
+      pending: this.settingsWriter?.hasPending() ?? false,
       expectedVersion: DEFAULT_SETTINGS.version,
     });
 
-    // #211: whether a decision ENDS the episode is the decision's own property,
-    // not something each branch here remembers. The eleventh review pass found
-    // the cost of remembering: the empty-file branch resumed a suspended local
-    // edit, which could then overwrite the payload a slow synchroniser was
-    // still writing. `resolves` is decided in the module that can be tested.
-    if (decision.resolves) this.settingsWriter.resume();
+    const preservation: Preservation =
+      decision.kind === "conflict"
+        ? await this.preserveConflicting(raw, decision.reason)
+        : { kind: "not-needed" };
 
-    if (decision.kind === "ignore") {
-      console.debug(`[Projects+] settings file changed; ${decision.reason}`);
-      return;
-    }
-    if (decision.kind === "keep" && decision.reason === "empty") {
-      // #210, from the acceptance re-run: a writer that is not atomic leaves
-      // the file at zero length for an instant, and we can read exactly that
-      // instant. There is no version in those bytes to keep, so nothing is
-      // snapshotted and nothing is copied — the completed write brings the real
-      // one, and the hook fires again.
-      // NOT resumed: an empty file is a writer between truncate and fill, and
-      // the payload is still on its way. The writer's backstop releases the
-      // edit if it never arrives.
-      console.debug("[Projects+] settings file changed; empty, nothing to keep");
-      return;
-    }
-    if (decision.kind === "keep") {
-      // A half-written file is what a synchroniser looks like from here, and
-      // the completed write usually fires this again a moment later. Memory
-      // stays: at load an unreadable file yields defaults, and doing that HERE
-      // would put defaults over live working state — data loss created by the
-      // mechanism meant to prevent it.
-      //
-      // But "usually" is not "always", and the adversarial review named the
-      // gap: if the file STAYS truncated, our own next ordinary write erases
-      // it, and those bytes were the only copy of what the other writer meant.
-      // So the silence is bounded — one delayed re-read, and if it still does
-      // not parse the bytes are preserved like any other conflict.
-      console.warn(
-        "[Projects+] settings file changed but does not parse; keeping memory"
-      );
-      this.unparsableSeen = raw;
-      // Deliberately NOT resumed here: the bytes may still turn out to be
-      // somebody's version, and the delayed re-read is the branch that decides.
-      // It resumes on every one of its own exits, and the writer's backstop
-      // releases the value even if that method never runs.
-      this.recheckUnparsableSettings();
-      return;
-    }
-    if (decision.kind === "conflict") {
-      // Nothing of ours may land between this decision and the message the
-      // user gets about it — and "nothing" includes the write still sitting in
-      // its debounce. `settled()` alone returns at once when no write is in
-      // flight and leaves that timer running, so it could fire while the copy
-      // below is still being written. Suspend first, then wait, then preserve:
-      // the value is kept, only its timers stop.
-      this.settingsWriter.fence(SETTINGS_CONFLICT);
-      await this.settingsWriter.settled();
-      const preserved = await this.preserveConflicting(raw, decision.reason);
-      if (!preserved) {
-        // Nothing could be written anywhere, so the hold STAYS — the file on
-        // disk is the only place the other version exists. Only the code the
-        // mark carries changes, to the one the notice just used. Nothing is
-        // dropped: the value stays, and the user's next change schedules it
-        // again, by which time they have been told.
-        this.settingsWriter.hold(SETTINGS_CONFLICT_UNCOPIED);
-        return;
+    const episode = episodeOutcome(decision, preservation);
+    this.announce(episode.report);
+
+    switch (episode.outcome.kind) {
+      case "release":
+        console.debug(`[Projects+] settings file changed; ${decision.kind}`);
+        return { kind: "release" };
+
+      case "extend":
+        // A file caught between truncate and fill says nothing yet. The fence
+        // stays up for the wait — which is the eleventh finding's fix made
+        // structural: nothing of ours can land in that window, so the bytes
+        // cannot be erased by us while we wait to look again.
+        return {
+          kind: "extend",
+          after: SETTINGS_UNPARSABLE_RECHECK_MS,
+          next: () => this.settleUnreadable(),
+        };
+
+      case "hold":
+        return { kind: "hold", code: SETTINGS_CONFLICT_UNCOPIED };
+
+      case "restore":
+        return { kind: "restore", settings: get(settings) };
+
+      case "adopted": {
+        // Adoption goes through the SAME resolver the load path uses: a payload
+        // can carry `version: 4` and nothing else, and putting that raw object
+        // into the store hands every consumer a shape it does not expect.
+        const resolved = migrateSettings(episode.outcome.settings);
+        if (either.isLeft(resolved)) {
+          logWarning(
+            SETTINGS_CONFLICT,
+            "external payload did not resolve:",
+            resolved.left
+          );
+          return this.refuseAsConflict(raw, "unresolvable");
+        }
+        this.pendingAdoption = {
+          settings: resolved.right,
+          base: canonical(JSON.parse(raw)),
+          carried: episode.outcome.carried,
+        };
+        return { kind: "adopted", settings: resolved.right };
       }
-      // Only once the other version is safely beside the file does memory
-      // become the file. Without this the disk keeps the other version and the
-      // next ordinary save overwrites it anyway — the defect #200 opened with,
-      // minus the loss.
-      // `pushImmediate` lifts the suspension itself: it is the restore that
-      // ends the episode, and a caller that has to remember to release first is
-      // the shape of defect this branch has already produced once.
-      this.settingsWriter.pushImmediate(get(settings));
-      return;
     }
-
-    // Adoption goes through the SAME resolver the load path uses. The
-    // adversarial review found the hole: a payload can carry `version: 4` and
-    // nothing else, and putting that raw object into the store hands every
-    // consumer a shape it does not expect. `reconcileSettings` now refuses a
-    // payload with no project list, and this refuses everything else the
-    // resolver refuses — one gate for the shape, one for the semantics.
-    const resolved = migrateSettings(decision.settings);
-    if (either.isLeft(resolved)) {
-      logWarning(SETTINGS_CONFLICT, "external payload did not resolve:", resolved.left);
-      this.settingsWriter.fence(SETTINGS_CONFLICT);
-      await this.settingsWriter.settled();
-      const preserved = await this.preserveConflicting(raw, "unresolvable");
-      if (!preserved) {
-        this.settingsWriter.hold(SETTINGS_CONFLICT_UNCOPIED);
-        return;
-      }
-      this.settingsWriter.pushImmediate(get(settings));
-      return;
-    }
-
-    // `prime` BEFORE `set`, because the store subscription writes whatever it
-    // is handed — the same echo #185 removed at load, arriving by a second
-    // route. Primed first, the subscription's firing is a no-op.
-    const adopted = resolved.right;
-    this.settingsWriter.prime(adopted);
-    this.loadedSettings = adopted;
-    // The FILE's canonical form, not the resolved one: this is the record of
-    // what is on disk, and normalisation happens only in memory — exactly as
-    // at load, which does not rewrite the file for filling in a default.
-    this.confirmedOnDisk = canonical(JSON.parse(raw));
-    settings.set(adopted);
-    if (decision.carried) {
-      // The one merged field (user's decision, 2026-09-07): a project's
-      // `uniqueIdCounter` was higher here than on disk. Memory now holds the
-      // higher one, and the file must too — otherwise the next window to adopt
-      // this file reissues identifiers that are already in notes.
-      this.settingsWriter.pushImmediate(adopted);
-    }
-    console.debug("[Projects+] settings adopted from disk");
   }
 
   /**
-   * #200, from the adversarial review — the bound on the silence above.
-   *
-   * A file that does not parse is almost always a synchroniser caught between
-   * two writes, and the completed write fires the hook again. "Almost always"
-   * is the problem: if it stays truncated, nothing here ever looks at it again
-   * and this plugin's next ordinary save erases it. One delayed re-read closes
-   * that without turning every half-written moment into a notice.
-   *
-   * Writes are deliberately NOT blocked meanwhile. Blocking is what the plan
-   * rejected in model (в): it turns a rare event into a session where nothing
-   * saves and there is no way out but a restart.
+   * The continuation of an extended episode: the file was mid-write, and this
+   * is the look that decides whether it settled.
    */
-  private recheckUnparsableSettings(): void {
-    if (this.unparsableRecheck !== null) return;
-    this.unparsableRecheck = window.setTimeout(() => {
-      this.unparsableRecheck = null;
-      void this.onUnparsableSettlement();
-    }, SETTINGS_UNPARSABLE_RECHECK_MS);
-  }
-
-  private async onUnparsableSettlement(): Promise<void> {
-    const seen = this.unparsableSeen;
-    this.unparsableSeen = null;
-    const path = settingsFilePath(this.manifest.dir);
-    if (path === null) return;
-    let raw: string;
-    try {
-      raw = await this.app.vault.adapter.read(path);
-    } catch {
-      this.settingsWriter?.resume();
-      return;
+  private async settleUnreadable(): Promise<
+    WriteOutcome<LatestProjectsPluginSettings>
+  > {
+    const raw = await this.readSettingsFile();
+    if (raw === null) return { kind: "release" };
+    if (!carriesAVersion(raw)) {
+      // Still nothing. There is no version in those bytes to keep, and the
+      // writer's own deadline is what ends the episode if this repeats.
+      console.debug("[Projects+] the settings file is still empty; nothing to preserve");
+      return { kind: "release" };
     }
     try {
       JSON.parse(raw);
     } catch {
-      // Still not settings after the delay. Whatever those bytes are, they are
-      // the only copy of what somebody else wrote, and our next save will take
-      // the file. Preserve them and say so — the same two codes as any other
-      // conflict, because from the user's side it is the same event.
-      //
-      // #210: unless there are no bytes. An empty file two seconds later is a
-      // torn write, not a version somebody meant, and copying it aside produces
-      // a 0-byte file the notice sends the user to open.
-      if (!carriesAVersion(raw)) {
-        console.debug(
-          "[Projects+] the settings file is still empty; nothing to preserve"
-        );
-        this.settingsWriter?.resume();
-        return;
-      }
-      this.settingsWriter?.fence(SETTINGS_CONFLICT);
-      await this.settingsWriter?.settled();
-      if (!(await this.preserveConflicting(raw, "unparsable"))) {
-        this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
-        return;
-      }
-      this.settingsWriter?.resume();
-      return;
-    }
-    // It parses now — but WHOSE file is it? The pre-merge review found the gap:
-    // if the user changed a setting during the delay, our own write may have
-    // replaced the truncated bytes, and re-reading would then find a perfectly
-    // good file and conclude there was nothing to keep. The bytes were captured
-    // when they were seen, so they can still be preserved.
-    if (seen !== null && this.confirmedOnDisk === canonical(JSON.parse(raw))) {
-      console.warn(
-        "[Projects+] the unparsable settings file was replaced by our own write; preserving what it held"
-      );
-      this.settingsWriter?.fence(SETTINGS_CONFLICT);
-      await this.settingsWriter?.settled();
-      if (!(await this.preserveConflicting(seen, "unparsable-overwritten"))) {
-        this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
-        return;
-      }
-      this.settingsWriter?.resume();
-      return;
+      // Still not settings after the wait. Whatever those bytes are, they are
+      // the only copy of what somebody else wrote, and our next save would take
+      // the file — so they are preserved and memory becomes the file, which
+      // also leaves a `data.json` that parses.
+      return this.refuseAsConflict(raw, "unparsable");
     }
     // It settled into somebody's readable version: run the ordinary decision on
-    // it, rather than adopting here by a second, less careful path.
-    await this.onExternalSettingsChange();
+    // it rather than adopting here by a second, less careful path.
+    return this.decideExternalChange();
+  }
+
+  /**
+   * Keep the other version, then keep memory — the conflict ending, reached
+   * from the two places that decide they cannot take the disk.
+   */
+  private async refuseAsConflict(
+    raw: string,
+    reason: string
+  ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
+    const preservation = await this.preserveConflicting(raw, reason);
+    const episode = episodeOutcome(
+      { kind: "conflict", reason: "unknown-version", resolves: false },
+      preservation
+    );
+    this.announce(episode.report);
+    return episode.outcome.kind === "restore"
+      ? { kind: "restore", settings: get(settings) }
+      : { kind: "hold", code: SETTINGS_CONFLICT_UNCOPIED };
+  }
+
+  /** The settings file as text, or `null` when it cannot be read at all. */
+  private async readSettingsFile(): Promise<string | null> {
+    const path = settingsFilePath(this.manifest.dir);
+    if (path === null) return null;
+    try {
+      return await this.app.vault.adapter.read(path);
+    } catch (err) {
+      console.warn(
+        "[Projects+] settings changed on disk but could not be read:",
+        err
+      );
+      return null;
+    }
+  }
+
+  /**
+   * #212 — the user's half of an episode, from the same value as the writer's.
+   *
+   * One code, one set of params, one decision about whether the mark keeps it:
+   * the notice and the standing mark cannot disagree, because neither is
+   * written here.
+   */
+  private announce(report: EpisodeReport): void {
+    if (report.code === null) return;
+    // A standing report is the one nothing could be done about, so it is the
+    // one that goes to the console as an error.
+    if (report.standing) logError(report.code, "episode ended unresolved");
+    else logWarning(report.code, "episode resolved", report.params);
+    new Notice(noticeFor(report.code, report.params), 15000);
   }
 
   /**
@@ -906,7 +908,10 @@ export default class ProjectsPlusPlugin extends Plugin {
    * one level down: a notice naming a backup that was never written sends the
    * user to look for a file that does not exist.
    */
-  private async preserveConflicting(raw: string, reason: string): Promise<boolean> {
+  private async preserveConflicting(
+    raw: string,
+    reason: string
+  ): Promise<Preservation> {
     const copiedTo = await writeConflictCopy(
       this.app.vault.adapter,
       this.manifest.dir,
@@ -926,29 +931,25 @@ export default class ProjectsPlusPlugin extends Plugin {
         settingsFilePath(this.manifest.dir)
       );
       if (noteAt !== null) {
-        logWarning(
-          SETTINGS_CONFLICT,
-          `reason: ${reason}; other version kept at ${noteAt}`
+        console.debug(
+          `[Projects+] other version kept as a note at ${noteAt} (reason: ${reason})`
         );
-        new Notice(noticeFor(SETTINGS_CONFLICT, { path: noteAt }), 15000);
-        return true;
+        return { kind: "preserved", path: noteAt };
       }
-      logError(SETTINGS_CONFLICT_UNCOPIED, `reason: ${reason}`);
-      // The last channel left. The file could not be written, and pointing the
-      // user at `data.json` is a promise this branch cannot keep — by the time
-      // they read the notice, this session's own version may be what the file
-      // holds. So the bytes go where nothing else can take them from: verbatim
-      // into the console, which is where the notice now sends them.
+      // The last channel left. Nothing could be written anywhere, and pointing
+      // the user at `data.json` is a promise this branch cannot keep, so the
+      // bytes go where nothing else can take them from: verbatim into the
+      // console, which is where the notice sends them.
       console.error(
         "[Projects+] PPP-106 the version that could not be copied, verbatim below:\n" +
           raw
       );
-      new Notice(noticeFor(SETTINGS_CONFLICT_UNCOPIED), 15000);
-      return false;
+      return { kind: "unpreserved" };
     }
-    logWarning(SETTINGS_CONFLICT, `reason: ${reason}; other version kept at ${copiedTo}`);
-    new Notice(noticeFor(SETTINGS_CONFLICT, { path: copiedTo }), 15000);
-    return true;
+    console.debug(
+      `[Projects+] other version kept at ${copiedTo} (reason: ${reason})`
+    );
+    return { kind: "preserved", path: copiedTo };
   }
 
   /**

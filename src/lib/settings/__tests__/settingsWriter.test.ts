@@ -280,7 +280,7 @@ describe("#185 — settings writer", () => {
     expect(save.calls).toEqual([changed]);
   });
 
-  it("pushImmediate writes a value the reference guard would have swallowed", async () => {
+  it("pushNow writes a value the reference guard would have swallowed", async () => {
     const save = makeSave();
     const writer = createSettingsWriter<Value>({
       save: save.fn,
@@ -292,7 +292,7 @@ describe("#185 — settings writer", () => {
     writer.prime(migrated);
     // The migration result IS the primed value; it still has to reach the disk,
     // which is why skipping the echo alone would stop persisting migrations.
-    writer.pushImmediate(migrated);
+    writer.pushNow(migrated);
     await jest.advanceTimersByTimeAsync(0);
 
     expect(save.calls).toEqual([migrated]);

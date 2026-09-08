@@ -3,6 +3,7 @@ import {
   SETTINGS_RECONCILE_BACKSTOP_MS,
   type SaveStatus,
   type SettingsWriter,
+  type WriteOutcome,
 } from "src/lib/settings/settingsWriter";
 
 /**
@@ -113,51 +114,6 @@ describe("#200 — a diverged write", () => {
 
     expect(save.calls.length).toBeGreaterThan(1);
     expect(writer.status().kind).toBe("failed");
-  });
-});
-
-describe("#200 — a write queued behind one that diverges", () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it("still runs, instead of waiting for an unrelated later change", async () => {
-    // Found by the pre-merge review, and it is the promise of the whole
-    // conflict branch: reconciliation calls `pushImmediate` to put memory back
-    // on the file WHILE the write that diverged is still in flight, so
-    // `startWrite` only marks the queue dirty. Returning on `diverged` without
-    // draining that queue left the conflict copy on disk and the restore
-    // unscheduled — until something unrelated happened to carry it.
-    const save = makeSave();
-    // Collected rather than held in a variable: TypeScript narrows a variable
-    // assigned inside a promise executor to `never` at the call site.
-    const settlers: Array<() => void> = [];
-    const writer = createSettingsWriter<Value>({
-      save: save.fn,
-      verify: () =>
-        new Promise((resolve) => {
-          settlers.push(() => resolve("diverged" as const));
-        }),
-      debounceMs: 400,
-      maxWaitMs: 2000,
-    });
-
-    writer.push({ n: 1 });
-    await jest.advanceTimersByTimeAsync(400);
-    expect(save.calls).toHaveLength(1);
-
-    // The reconciliation's write, arriving while the first is unresolved.
-    writer.pushImmediate({ n: 2 });
-    expect(save.calls).toHaveLength(1);
-
-    settlers[0]?.();
-    await jest.advanceTimersByTimeAsync(0);
-
-    expect(save.calls).toHaveLength(2);
-    expect(save.calls[1]).toEqual({ n: 2 });
   });
 });
 
@@ -288,7 +244,7 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
 
     writer.push({ n: 1 });
     await jest.advanceTimersByTimeAsync(400);
-    writer.pushImmediate({ n: 2 });
+    writer.pushNow({ n: 2 });
     writer.push({ n: 3 });
     settlers[0]?.();
     await jest.advanceTimersByTimeAsync(0);
@@ -423,11 +379,10 @@ describe("#200 — holding the writer when the other version could not be copied
   });
 
   it("a fence is not released by the user's next change", async () => {
-    // #212 step B, stated from the other end: the defect PLAN_212 found open at
-    // HEAD was `push` clearing the one suspension flag, so an edit arriving
-    // while reconciliation was mid-copy went to disk 400ms later. The fence is
-    // released by `resume`, by the restore, or by its own deadline — never by
-    // the edit it exists to hold back.
+    // #212 — the defect PLAN_212 found open at HEAD, from the other end: `push`
+    // used to clear the one suspension flag, so an edit arriving while
+    // reconciliation was mid-copy went to disk 400ms later. The lease holds the
+    // fence for exactly as long as the decision runs.
     const save = makeSave();
     const writer = createSettingsWriter<Value>({
       save: save.fn,
@@ -435,13 +390,24 @@ describe("#200 — holding the writer when the other version could not be copied
       maxWaitMs: 2000,
     });
 
-    writer.fence("PPP-105");
+    let end: ((outcome: WriteOutcome<Value>) => void) | undefined;
+    const lease = writer.withExclusive(
+      "PPP-105",
+      () =>
+        new Promise<WriteOutcome<Value>>((resolve) => {
+          end = resolve;
+        })
+    );
+    await jest.advanceTimersByTimeAsync(0);
+
     writer.push({ n: 1 });
     await jest.advanceTimersByTimeAsync(2000);
     expect(save.calls).toHaveLength(0);
 
-    writer.resume();
+    end?.({ kind: "release" });
+    await lease;
     await jest.advanceTimersByTimeAsync(400);
+
     expect(save.calls).toEqual([{ n: 1 }]);
   });
 
@@ -456,14 +422,17 @@ describe("#200 — holding the writer when the other version could not be copied
       maxWaitMs: 2000,
     });
 
-    writer.hold("PPP-106");
+    await writer.withExclusive("PPP-105", async () => ({
+      kind: "hold" as const,
+      code: "PPP-106",
+    }));
     writer.push({ n: 1 });
     await jest.advanceTimersByTimeAsync(400);
 
     expect(save.calls).toEqual([{ n: 1 }]);
   });
 
-  it("a fenced restore still writes: it is what ends the episode", async () => {
+  it("the restore writes: it is the write that ends the episode", async () => {
     const save = makeSave();
     const writer = createSettingsWriter<Value>({
       save: save.fn,
@@ -471,11 +440,101 @@ describe("#200 — holding the writer when the other version could not be copied
       maxWaitMs: 2000,
     });
 
-    writer.fence("PPP-105");
-    writer.pushImmediate({ n: 9 });
+    await writer.withExclusive("PPP-105", async () => ({
+      kind: "restore" as const,
+      settings: { n: 9 },
+    }));
     await jest.advanceTimersByTimeAsync(0);
 
     expect(save.calls).toEqual([{ n: 9 }]);
+  });
+
+  it("an edit made during the episode is not clobbered by the restore", async () => {
+    // Both values come from the same store, so the later one contains the
+    // earlier; taking the newer is not a preference but the only reading that
+    // cannot lose the edit.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    await writer.withExclusive("PPP-105", async () => {
+      writer.push({ n: 2 });
+      return { kind: "restore" as const, settings: { n: 1 } };
+    });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toEqual([{ n: 2 }]);
+  });
+
+  it("an adoption is refused when the user edited during the episode", async () => {
+    // I5. Today this is safe only because no `await` separates the check from
+    // the adoption in `main.ts`; the epoch makes it safe by construction.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    const ended = await writer.withExclusive("PPP-102", async () => {
+      writer.push({ n: 5 });
+      return { kind: "adopted" as const, settings: { n: 7 } };
+    });
+
+    expect(ended.kind).toBe("release");
+    await jest.advanceTimersByTimeAsync(400);
+    // The user's value goes to disk; the disk's is not taken behind it.
+    expect(save.calls).toEqual([{ n: 5 }]);
+  });
+
+  it("a body that throws writes nothing and leaves the fence standing", async () => {
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    const ended = await writer.withExclusive("PPP-102", async () => {
+      writer.push({ n: 1 });
+      throw new Error("the decision failed");
+    });
+
+    expect(ended.kind).toBe("hold");
+    await jest.advanceTimersByTimeAsync(2000);
+    expect(save.calls).toHaveLength(0);
+    // …and the deadline still ends it, so the edit is not stranded.
+    await jest.advanceTimersByTimeAsync(SETTINGS_RECONCILE_BACKSTOP_MS + 400);
+    expect(save.calls).toEqual([{ n: 1 }]);
+  });
+
+  it("an extended episode keeps the fence across the wait", async () => {
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    const lease = writer.withExclusive("PPP-102", async () => ({
+      kind: "extend" as const,
+      after: 2000,
+      next: async () => ({ kind: "release" as const }),
+    }));
+    await jest.advanceTimersByTimeAsync(0);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(1500);
+    expect(save.calls).toHaveLength(0);
+
+    await jest.advanceTimersByTimeAsync(600);
+    await lease;
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toEqual([{ n: 1 }]);
   });
 
   it("stops a write that is only debounced, not merely one in flight", async () => {
@@ -542,11 +601,12 @@ describe("#200 — holding the writer when the other version could not be copied
     expect(save.calls).toHaveLength(0);
   });
 
-  it("does not block reconciliation's own restore", async () => {
-    // The ninth review pass. Suspension stops ORDINARY writes from overtaking
-    // reconciliation; `pushImmediate` is reconciliation's own write, so being
-    // blocked by it meant one branch held, preserved, and then restored
-    // nothing at all — the settings left dirty until an unrelated edit.
+  it("does not let an immediate session write past a hold", async () => {
+    // #212 replaced the ninth pass's fix rather than keeping it: the restore is
+    // no longer a `pushImmediate` that had to lift the suspension itself, it is
+    // an outcome of the lease. What is left of that method — `pushNow` — is an
+    // ordinary session write, and a hold exists precisely because the file is
+    // the only copy of somebody else's version.
     const save = makeSave();
     const writer = createSettingsWriter<Value>({
       save: save.fn,
@@ -554,36 +614,14 @@ describe("#200 — holding the writer when the other version could not be copied
       maxWaitMs: 2000,
     });
 
-    writer.push({ n: 1 });
-    writer.hold("PPP-105");
-    writer.pushImmediate({ n: 2 });
-    await jest.advanceTimersByTimeAsync(0);
+    await writer.withExclusive("PPP-105", async () => ({
+      kind: "hold" as const,
+      code: "PPP-106",
+    }));
+    writer.pushNow({ n: 2 });
+    await jest.advanceTimersByTimeAsync(2000);
 
-    expect(save.calls).toEqual([{ n: 2 }]);
-  });
-
-  it("republishes the mark when the second hold carries a different code", async () => {
-    // The tenth review pass. The conflict branch holds twice — once to stop
-    // writing while it decides, once more with the code the notice ended up
-    // using — and `sameStatus` treated any two `diverged` states as equal, so
-    // the mark went on claiming the other version had been preserved while the
-    // notice said nothing could be written.
-    const seen: SaveStatus[] = [];
-    const writer = createSettingsWriter<Value>({
-      save: makeSave().fn,
-      onStatus: (status) => seen.push(status),
-      debounceMs: 400,
-      maxWaitMs: 2000,
-    });
-
-    writer.push({ n: 1 });
-    writer.hold("PPP-105");
-    writer.hold("PPP-106");
-
-    expect(
-      seen.filter((s) => s.kind === "diverged").map((s) => s.code)
-    ).toEqual(["PPP-105", "PPP-106"]);
-    expect(writer.status()).toEqual({ kind: "diverged", code: "PPP-106" });
+    expect(save.calls).toHaveLength(0);
   });
 
   it("keeps the value, so the user's next change still reaches the disk", async () => {

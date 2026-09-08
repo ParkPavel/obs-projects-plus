@@ -99,6 +99,39 @@ export type WriteVerdict = "confirmed" | "not-written" | "diverged";
 export type Origin = "session" | "reconciler";
 
 /**
+ * #212 step D — how an episode ends, in the writer's own vocabulary.
+ *
+ * Returned by the body of `withExclusive`, and exhaustive on purpose: a branch
+ * that forgets to say how the episode ended is a compile error, where before it
+ * was a missing `resume()` in one of eight places and a value stranded until
+ * shutdown (findings 7, 9 and 11 of the #211 loop).
+ *
+ * `release` — nothing is owed; a queued edit returns to its ordinary schedule.
+ * `adopted` — the disk was taken whole; the queue is cleared with it.
+ * `restore` — this session's version becomes the file, at once, through the
+ *   fence, because it is the write that ends the episode.
+ * `hold`  — nothing could be preserved; nobody writes until the user acts.
+ * `extend` — the file has not settled; wait and decide again, fence intact.
+ */
+export type WriteOutcome<T> =
+  | { readonly kind: "release" }
+  | { readonly kind: "adopted"; readonly settings: T }
+  | { readonly kind: "restore"; readonly settings: T }
+  | { readonly kind: "hold"; readonly code: string }
+  | {
+      readonly kind: "extend";
+      readonly after: number;
+      /**
+       * Deliberately NOT called `then`, which is what PLAN_212 §1 named it. An
+       * object with a callable `then` is a thenable: `await body()` would try
+       * to unwrap the outcome and CALL this continuation as part of resolving
+       * the promise. Found by the compiler on the first build of this step, and
+       * it would have been a runtime hazard, not a typing one.
+       */
+      readonly next: () => Promise<WriteOutcome<T>>;
+    };
+
+/**
  * #212 step B — who may write, as one value.
  *
  * `open` — the ordinary state: session edits, retries and `flush` all write.
@@ -152,8 +185,18 @@ export interface SettingsWriter<T> {
   prime(value: T): void;
   /** Queue `value`. A value identical by reference to the last one is ignored. */
   push(value: T): void;
-  /** Write `value` now, bypassing both the debounce and the reference guard. */
-  pushImmediate(value: T): void;
+  /**
+   * #212 step D — write `value` now, bypassing the debounce and the reference
+   * guard.
+   *
+   * What is left of `pushImmediate` once reconciliation's restore became an
+   * outcome of the lease. Two callers remain and both are ordinary session
+   * writes that must not wait: the migration written at load because the
+   * version changed, and the counter carried forward after an adoption. It is
+   * NOT a way past a fence or a hold — those are answered by `mayWrite` like
+   * any other session value.
+   */
+  pushNow(value: T): void;
   /** Retry after a failure, with the latest value rather than the failed one. */
   retry(): void;
   /**
@@ -176,18 +219,27 @@ export interface SettingsWriter<T> {
    * itself or by the next thing the user does.
    */
   hold(code: string): void;
-  /**
-   * #212 step B — reconciliation takes the file while it decides.
-   *
-   * Unlike `hold`, this is NOT released by the user's next change: an edit
-   * arriving mid-decision is exactly what must not reach the disk, because the
-   * decision may be part-way through copying the other version aside. It is
-   * released by `resume`, by the restore that ends the episode, or by its own
-   * deadline if the episode never returns.
-   */
-  fence(code: string): void;
   /** Write anything pending and wait for the in-flight write to settle. */
   flush(): Promise<void>;
+  /**
+   * #212 step D — take the file for the length of one decision.
+   *
+   * Everything the reconciliation used to arrange by hand happens here in a
+   * fixed order that no caller can get wrong: the fence goes up BEFORE any
+   * awaiting (the sixth review pass), a write already in flight is awaited
+   * before the body runs (the absorbed `settled`), and the fence comes down in
+   * a `finally` (findings 7, 9, 11, which were each one branch of eight
+   * forgetting to release).
+   *
+   * The body says how the episode ended by returning a `WriteOutcome`; there is
+   * no other way to end it, and no way to end it twice. A body that throws
+   * leaves the fence standing with a fresh deadline — an unknown outcome must
+   * not become a write.
+   */
+  withExclusive(
+    code: string,
+    body: () => Promise<WriteOutcome<T>>
+  ): Promise<WriteOutcome<T>>;
   /**
    * #200 — wait for a write already running, WITHOUT starting anything new.
    *
@@ -371,6 +423,71 @@ export function createSettingsWriter<T>(
     }
   }
 
+  /**
+   * #212 step D — bumped by every `push`, and by nothing else.
+   *
+   * It is the whole of I5: adopting the disk is legal only when the user queued
+   * nothing while the decision was being made. Today that holds only because no
+   * `await` separates the check from the adoption in `main.ts`; this makes it
+   * hold by construction.
+   */
+  let epoch = 0;
+
+  /**
+   * Returns what was ACTUALLY applied, which is not always what the body asked
+   * for: an adoption refused by the epoch guard becomes a release. The caller
+   * publishes the adopted value to the store only on the strength of this
+   * answer, so the two cannot disagree about whether the disk was taken.
+   */
+  function applyOutcome(
+    outcome: WriteOutcome<T>,
+    epochAtEntry: number
+  ): WriteOutcome<T> {
+    switch (outcome.kind) {
+      case "release":
+        toOpen();
+        if (queue !== null) schedule();
+        return outcome;
+      case "adopted":
+        if (epoch !== epochAtEntry) {
+          // The user changed something while we were deciding. Their edit wins
+          // the queue; the file is left alone, and the write that follows will
+          // be verified like any other — a divergence there fences again, with
+          // the newer state in hand.
+          console.debug(
+            "[Projects+] settings changed during reconciliation; the disk is not adopted"
+          );
+          toOpen();
+          if (queue !== null) schedule();
+          return { kind: "release" };
+        }
+        last = { value: outcome.settings };
+        queue = null;
+        toOpen();
+        return outcome;
+      case "restore":
+        // The user may have edited while the decision ran. Both values come
+        // from the same store, so the newer one contains the older; taking it
+        // is not a preference but the only reading that cannot lose the edit.
+        if (queue === null) {
+          queue = { value: outcome.settings, origin: "reconciler" };
+        }
+        last = { value: queue.value };
+        toOpen();
+        startWrite();
+        return outcome;
+      case "hold":
+        toHeld(outcome.code);
+        setStatus({ kind: "diverged", code: outcome.code });
+        return outcome;
+      case "extend":
+        // Unreachable: the lease loops on `extend` and only ever applies a
+        // settled outcome. Stated rather than assumed, so the switch is total.
+        toOpen();
+        return { kind: "release" };
+    }
+  }
+
   function cancelRetry(): void {
     if (retryTimer !== null) {
       clearTimeout(retryTimer);
@@ -543,6 +660,7 @@ export function createSettingsWriter<T>(
       // list and every later change gets a single attempt — the writer quietly
       // stops retrying for the rest of the session.
       if (status.kind === "failed") attempt = 0;
+      epoch += 1;
       last = { value };
       // Replacing the queue replaces its provenance with it — which is the
       // point of keeping the two together. An ordinary edit can no longer
@@ -550,20 +668,12 @@ export function createSettingsWriter<T>(
       queue = { value, origin: "session" };
       schedule();
     },
-    pushImmediate(value: T): void {
+    pushNow(value: T): void {
       if (status.kind === "failed") attempt = 0;
+      epoch += 1;
       last = { value };
-      queue = { value, origin: "reconciler" };
+      queue = { value, origin: "session" };
       cancelSchedule();
-      clearPermitTimer();
-      // The suspension exists to stop ORDINARY writes from overtaking
-      // reconciliation. This IS reconciliation's write — the restore that ends
-      // the episode — so it lifts the suspension rather than being blocked by
-      // it. The ninth review pass found the alternative: one branch called
-      // `hold` and then `pushImmediate` without a `resume` in between, and the
-      // restore silently did nothing. Making the caller remember was the
-      // version that failed; the writer knowing which write this is does not.
-      permit = { kind: "open" };
       startWrite();
     },
     resume(): void {
@@ -580,11 +690,41 @@ export function createSettingsWriter<T>(
         await inFlight;
       }
     },
-    fence(code: string): void {
+    async withExclusive(
+      code: string,
+      body: () => Promise<WriteOutcome<T>>
+    ): Promise<WriteOutcome<T>> {
+      // Order is the whole point, and it is fixed here rather than at four call
+      // sites: fence, then wait for anything in flight, then decide.
       cancelSchedule();
       cancelRetry();
       toFenced(code);
       setStatus({ kind: "diverged", code });
+      while (inFlight !== null) {
+        await inFlight;
+      }
+      // I5 — the disk may be adopted only if nothing of the user's arrived
+      // during the episode. `push` moves this; `prime` and the restore do not.
+      const epochAtEntry = epoch;
+      try {
+        let outcome: WriteOutcome<T> = await body();
+        while (outcome.kind === "extend") {
+          const { after, next } = outcome;
+          // The fence's deadline is reset, so the wait cannot outlive it and a
+          // decision that never returns still releases the queue.
+          toFenced(code);
+          await new Promise((resolve) => setTimeout(resolve, after));
+          outcome = await next();
+        }
+        return applyOutcome(outcome, epochAtEntry);
+      } catch (err) {
+        // An unknown outcome must not become a write. The fence stands, with a
+        // fresh deadline, so the queue is released by time rather than by a
+        // guess about what the body meant to do.
+        console.error("[Projects+] settings reconciliation failed", err);
+        toFenced(code);
+        return { kind: "hold", code };
+      }
     },
     hold(code: string): void {
       cancelSchedule();
