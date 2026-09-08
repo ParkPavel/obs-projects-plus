@@ -449,6 +449,39 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls).toHaveLength(0);
   });
 
+  it("does not run a queued episode's body after the plugin unloads", async () => {
+    // The third finding of this shape, and the reason standing down became the
+    // default rather than another guard: a lease waiting its turn came back to
+    // a plugin that had been unloaded and carried on, because carrying on was
+    // what the code did when no branch said otherwise. Its body would read the
+    // vault, write a recovery copy and raise a notice for a plugin that is gone.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({ save: save.fn });
+
+    let end!: (outcome: WriteOutcome<Value>) => void;
+    const first = writer.withExclusive(
+      "PPP-102",
+      () =>
+        new Promise<WriteOutcome<Value>>((resolve) => {
+          end = resolve;
+        })
+    );
+    let secondRan = false;
+    const second = writer.withExclusive("PPP-102", async () => {
+      secondRan = true;
+      return { kind: "release" as const };
+    });
+    await jest.advanceTimersByTimeAsync(0);
+
+    writer.dispose();
+    end({ kind: "release" });
+    await Promise.all([first, second]);
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(secondRan).toBe(false);
+    expect(save.calls).toHaveLength(0);
+  });
+
   it("decides overlapping episodes one at a time", async () => {
     // Two external notifications can arrive while a read or a copy is being
     // awaited. Fencing is shared state, not a queue: without serialising, the

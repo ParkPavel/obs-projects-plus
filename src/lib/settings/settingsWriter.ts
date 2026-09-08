@@ -352,6 +352,21 @@ export function createSettingsWriter<T>(
    * called `toOpen`, and a restore wrote `data.json` after the plugin had been
    * disabled. Once closed, nothing reopens.
    */
+  /**
+   * #212 — the lease's default answer at every await boundary.
+   *
+   * Three passes found the same shape: a path that had waited for something,
+   * came back to a plugin that had been unloaded, and carried on because
+   * carrying on was what the code did when no branch said otherwise. Standing
+   * down is now the default, and every point where the lease gives up control
+   * asks this before doing anything else. "I do not know what happened while I
+   * was waiting" must mean "do not write", in a mechanism whose whole purpose
+   * is that writes happen only when they are safe.
+   */
+  function abandoned(): boolean {
+    return permit.kind === "closed";
+  }
+
   function toOpen(): void {
     if (permit.kind === "closed") return;
     clearPermitTimer();
@@ -731,6 +746,13 @@ export function createSettingsWriter<T>(
         finished = resolve;
       });
       await previous;
+      if (abandoned()) {
+        // Unloaded while queued behind another episode. The body would read the
+        // vault, and may write a recovery copy and raise a notice, on behalf of
+        // a plugin that is gone.
+        finished();
+        return { kind: "release" };
+      }
       // Taken BEFORE the fence, because the fence itself changes the answer:
       // it publishes `diverged`, and `hasPending` counts that status as unsaved
       // work. Asking mid-episode would have every decision see `pending: true`
@@ -747,6 +769,10 @@ export function createSettingsWriter<T>(
       setStatus({ kind: "diverged", code });
       while (inFlight !== null) {
         await inFlight;
+      }
+      if (abandoned()) {
+        finished();
+        return { kind: "release" };
       }
       // I5 — the disk may be adopted only if nothing of the user's arrived
       // during the episode. `push` moves this; `prime` and the restore do not.
@@ -771,7 +797,7 @@ export function createSettingsWriter<T>(
               },
             };
           });
-          if (permit.kind === "closed") {
+          if (abandoned()) {
             // Unloaded while waiting. The continuation would read the vault and
             // may write a recovery copy and raise a notice, both of which
             // belong to a plugin that is no longer running.

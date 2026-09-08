@@ -210,3 +210,13 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после «чтение не удалось» — одна P2, третья того же рода
+
+```
+
+- [P2] Stop queued leases after disposal before running their callback — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:733-733
+  When two external-settings events arrive close together, the second lease waits here while the first is deciding. If the plugin is disabled during that wait, `dispose()` sets the permit to `closed`, but this method then continues into `body(entry)` after `previous` resolves. That body can still read the vault, write a conflict backup/note, and show a Notice after the plugin has been unloaded. Return a release outcome after this wait when the permit is closed (and before invoking the body).
+
+[exited with code 0]
+```
