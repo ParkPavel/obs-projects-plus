@@ -184,6 +184,16 @@ function sameStatus(a: SaveStatus, b: SaveStatus): boolean {
       a.attempts === b.attempts && a.message === b.message && a.code === b.code
     );
   }
+  // #211: two `diverged` states are NOT interchangeable. The conflict branch
+  // holds twice — once to stop writing while it decides, once more with the
+  // code the notice ended up using — and comparing only the kind meant the
+  // second was swallowed: the standing mark went on saying the other version
+  // had been preserved (PPP-105) while the notice said nothing could be written
+  // (PPP-106). A mark that contradicts its own notice is the defect this ticket
+  // exists to remove, one surface over.
+  if (a.kind === "diverged" && b.kind === "diverged") {
+    return a.code === b.code;
+  }
   return true;
 }
 

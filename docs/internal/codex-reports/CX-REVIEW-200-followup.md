@@ -105,8 +105,27 @@ Full review comments:
 Восьмой — одна находка (P3), документация. Девятый — одна (P1), координация.
 
 ```
+- [P3] Correct PPP-105 guidance for note-based recovery — src/main.ts:922-928
+  When the sibling conflict copy fails but this new note fallback succeeds, PPP-105 names a recovery
+  note under `Projects+ recovery` (or at the vault root), while `docs/ERROR_CODES.md:161-162` still
+  tells users that the named file is next to `data.json`. Update that guidance to follow the path in
+  the notice and distinguish the Markdown-note recovery path.
+
 - [P1] Resume the writer before restoring unresolved settings — C:\Users\Park\OBSv1.0\obs-projects-plus\src\main.ts:786-786
   When an externally changed v4 settings payload has an invalid project or view so `migrateSettings` returns `Left`, this branch has already called `hold()`, leaving the writer suspended. After preserving the external payload, `pushImmediate()` cannot start because `startWrite()` returns while suspended, and unlike the normal conflict branch this path never calls `resume()`. The in-memory settings then remain dirty and are neither restored to disk nor flushed on shutdown until another settings edit occurs.
 
 [exited with code 0]
+```
+
+## Десятый проход — после правок девятого
+
+Одна находка (P2), верная.
+
+```
+- [P2] Publish the uncopied-conflict status code — src/main.ts:758
+  When preserving a conflict fails after the new initial `hold(SETTINGS_CONFLICT)`, this second hold
+  cannot update the status: `sameStatus` treats any two `diverged` states as equal, so the standing
+  chip remains `PPP-105` even though the notice and actual recovery state are `PPP-106`. This occurs
+  for a pending debounced edit plus an external change when both backup writes fail, and leaves the
+  persistent UI claiming the other version was preserved when it was not.
 ```

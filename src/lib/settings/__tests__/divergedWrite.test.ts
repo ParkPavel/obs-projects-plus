@@ -499,6 +499,30 @@ describe("#200 — holding the writer when the other version could not be copied
     expect(save.calls).toEqual([{ n: 2 }]);
   });
 
+  it("republishes the mark when the second hold carries a different code", async () => {
+    // The tenth review pass. The conflict branch holds twice — once to stop
+    // writing while it decides, once more with the code the notice ended up
+    // using — and `sameStatus` treated any two `diverged` states as equal, so
+    // the mark went on claiming the other version had been preserved while the
+    // notice said nothing could be written.
+    const seen: SaveStatus[] = [];
+    const writer = createSettingsWriter<Value>({
+      save: makeSave().fn,
+      onStatus: (status) => seen.push(status),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    writer.hold("PPP-105");
+    writer.hold("PPP-106");
+
+    expect(
+      seen.filter((s) => s.kind === "diverged").map((s) => s.code)
+    ).toEqual(["PPP-105", "PPP-106"]);
+    expect(writer.status()).toEqual({ kind: "diverged", code: "PPP-106" });
+  });
+
   it("keeps the value, so the user's next change still reaches the disk", async () => {
     // A hold that dropped the pending change would trade one loss for another.
     const save = makeSave();
