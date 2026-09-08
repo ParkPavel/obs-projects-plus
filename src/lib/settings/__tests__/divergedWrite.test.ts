@@ -415,6 +415,28 @@ describe("#200 — holding the writer when the other version could not be copied
     expect(writer.status().kind).toBe("diverged");
   });
 
+  it("stops a write that is only debounced, not merely one in flight", async () => {
+    // The sixth review pass. Reconciliation suspends BEFORE it awaits, because
+    // deciding takes several awaits — reading the file, writing the copy — and
+    // a debounce that fires in the middle of them overwrites the version being
+    // preserved. `settled()` alone returns at once when nothing is in flight
+    // and leaves that timer standing.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    writer.hold("PPP-105");
+    await writer.settled();
+    await jest.advanceTimersByTimeAsync(2000);
+
+    expect(save.calls).toHaveLength(0);
+    expect(writer.hasPending()).toBe(true);
+  });
+
   it("keeps the value, so the user's next change still reaches the disk", async () => {
     // A hold that dropped the pending change would trade one loss for another.
     const save = makeSave();

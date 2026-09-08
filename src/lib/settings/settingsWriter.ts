@@ -120,19 +120,23 @@ export interface SettingsWriter<T> {
   /** Retry after a failure, with the latest value rather than the failed one. */
   retry(): void;
   /**
-   * #200 — stop the pending write from running, keeping its value.
+   * #200/#211 — stop the pending write from running, keeping its value.
    *
-   * For the one branch where the other version could NOT be copied aside: the
-   * file on disk is then the only place it exists, the notice tells the user to
-   * copy it by hand, and a debounced write firing 400ms later would make that
-   * instruction a lie. Nothing is dropped — `latest` and `dirty` stand, so the
-   * user's next change schedules a write again, by which time they have been
-   * told.
+   * Used at both ends of the conflict branch. At the start, because deciding
+   * what to do about somebody else's file takes several awaits — reading,
+   * copying — and a write sitting in its debounce would otherwise fire in the
+   * middle of them and overwrite the very version being preserved. At the end,
+   * when nothing could be written anywhere: the file on disk is then the only
+   * place that version exists, and a write 400ms later would make the notice's
+   * instruction a lie.
+   *
+   * Nothing is dropped — `latest` and `dirty` stand, so the user's next change
+   * schedules a write again, by which time they have been told. Calling it
+   * twice only changes the code the mark carries.
    *
    * This is not the "single owner blocks writes" model the plan rejected: it is
-   * one bounded pause on a rare branch, released by the next thing the user
-   * does, and the status says memory is ahead of the file for as long as it
-   * lasts.
+   * a pause that lasts as long as one decision, released by reconciliation
+   * itself or by the next thing the user does.
    */
   hold(code: string): void;
   /** Write anything pending and wait for the in-flight write to settle. */

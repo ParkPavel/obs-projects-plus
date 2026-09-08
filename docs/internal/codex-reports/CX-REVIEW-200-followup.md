@@ -77,3 +77,14 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Шестой проход — после правок пятого
+
+Одна находка (P1), верная.
+
+```
+- [P1] Suspend queued writes before awaiting conflict preservation — C:\Users\Park\OBSv1.0\obs-projects-plus\src\main.ts:748-749
+  When an external update arrives while a normal local edit is still in its debounce window, `settled()` returns immediately because no write is in flight, but it does not cancel that queued timer. The timer can then start and overwrite `data.json` while `preserveConflicting` is still awaiting its copy/note writes; if those recovery writes fail, the later `hold()` cannot stop the already-running save, so PPP-106 falsely claims this session did not overwrite the external version (and mobile has no remaining recovery path). Suspend the queued write before awaiting/preserving, not only after preservation fails.
+
+[exited with code 0]
+```

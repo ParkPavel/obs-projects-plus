@@ -741,20 +741,20 @@ export default class ProjectsPlusPlugin extends Plugin {
     }
     if (decision.kind === "conflict") {
       // Nothing of ours may land between this decision and the message the
-      // user gets about it. The catch-up review found the window: a write
-      // already in flight completes after the branch is taken, so `PPP-106`
-      // could tell the user to copy a `data.json` this session had just
-      // replaced. Awaiting starts nothing new — the value stays queued.
+      // user gets about it — and "nothing" includes the write still sitting in
+      // its debounce. `settled()` alone returns at once when no write is in
+      // flight and leaves that timer running, so it could fire while the copy
+      // below is still being written. Suspend first, then wait, then preserve:
+      // the value is kept, only its timers stop.
+      this.settingsWriter.hold(SETTINGS_CONFLICT);
       await this.settingsWriter.settled();
       const preserved = await this.preserveConflicting(raw, decision.reason);
       if (!preserved) {
-        // From the pre-merge review. With the copy refused, the file on disk is
-        // the only place the other version exists — and the notice tells the
-        // user to copy it by hand. A write already sitting in the debounce
-        // would fire 400ms later and make that instruction a lie, so the
-        // pending write is held. Nothing is dropped: the value stays, and the
-        // user's next change schedules it again, by which time they have been
-        // told.
+        // Nothing could be written anywhere, so the hold STAYS — the file on
+        // disk is the only place the other version exists. Only the code the
+        // mark carries changes, to the one the notice just used. Nothing is
+        // dropped: the value stays, and the user's next change schedules it
+        // again, by which time they have been told.
         this.settingsWriter.hold(SETTINGS_CONFLICT_UNCOPIED);
         return;
       }
@@ -776,6 +776,8 @@ export default class ProjectsPlusPlugin extends Plugin {
     const resolved = migrateSettings(decision.settings);
     if (either.isLeft(resolved)) {
       logWarning(SETTINGS_CONFLICT, "external payload did not resolve:", resolved.left);
+      this.settingsWriter.hold(SETTINGS_CONFLICT);
+      await this.settingsWriter.settled();
       const preserved = await this.preserveConflicting(raw, "unresolvable");
       if (!preserved) {
         this.settingsWriter.hold(SETTINGS_CONFLICT_UNCOPIED);
@@ -858,6 +860,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         this.settingsWriter?.resume();
         return;
       }
+      this.settingsWriter?.hold(SETTINGS_CONFLICT);
       await this.settingsWriter?.settled();
       if (!(await this.preserveConflicting(raw, "unparsable"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
@@ -875,6 +878,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       console.warn(
         "[Projects+] the unparsable settings file was replaced by our own write; preserving what it held"
       );
+      this.settingsWriter?.hold(SETTINGS_CONFLICT);
       await this.settingsWriter?.settled();
       if (!(await this.preserveConflicting(seen, "unparsable-overwritten"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
