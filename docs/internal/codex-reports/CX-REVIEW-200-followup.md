@@ -183,3 +183,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после правки эпохи — одна P1
+
+```
+- [P1] Do not release a still-empty externally written file — C:\Users\Park\OBSv1.0\obs-projects-plus\src\main.ts:833-839
+  If a synchronizer leaves `data.json` truncated for more than the recheck interval, this releases the lease immediately rather than waiting for the file to settle or for the writer backstop. A queued local save is then scheduled and can overwrite the external payload once it arrives, despite the `keep` decision being explicitly non-resolving.
+
+[exited with code 0]
+```

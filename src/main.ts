@@ -111,6 +111,18 @@ const SETTINGS_CONFLICT_UNCOPIED = "PPP-106";
  * enough to beat the user's next change to the file.
  */
 const SETTINGS_UNPARSABLE_RECHECK_MS = 2000;
+/**
+ * #212 — how many times an episode may wait for a file that says nothing yet.
+ *
+ * A writer that truncates before filling leaves `data.json` empty for an
+ * instant, and one look is enough for that. A synchroniser that leaves it empty
+ * for longer needs more, and releasing early lets a queued edit land the moment
+ * the real payload arrives — the review found that. The count is bounded
+ * because waiting forever is the ownership model `PLAN_200` §2 rejected: the
+ * user's change must reach the disk eventually, even if the other writer never
+ * finishes.
+ */
+const SETTINGS_EMPTY_FILE_LOOKS = 3;
 /** #202 — the demo repair path; the demo itself raises 601/602 in its own module. */
 const DEMO_REPAIR_FAILED = "PPP-603";
 
@@ -828,14 +840,32 @@ export default class ProjectsPlusPlugin extends Plugin {
    * is the look that decides whether it settled.
    */
   private async settleUnreadable(
-    entry: EpisodeEntry
+    entry: EpisodeEntry,
+    look = 1
   ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
     const raw = await this.readSettingsFile();
     if (raw === null) return { kind: "release" };
     if (!carriesAVersion(raw)) {
-      // Still nothing. There is no version in those bytes to keep, and the
-      // writer's own deadline is what ends the episode if this repeats.
-      console.debug("[Projects+] the settings file is still empty; nothing to preserve");
+      // Still nothing. There is no version in these bytes to preserve — but
+      // there will be one, and releasing here schedules the queued edit to land
+      // exactly as it arrives. So the episode waits again, a bounded number of
+      // times: `keep` says the file has not settled, and the fence is what that
+      // sentence means.
+      if (look < SETTINGS_EMPTY_FILE_LOOKS) {
+        console.debug(
+          `[Projects+] the settings file is still empty; look ${look} of ${SETTINGS_EMPTY_FILE_LOOKS}`
+        );
+        return {
+          kind: "extend",
+          after: SETTINGS_UNPARSABLE_RECHECK_MS,
+          next: (again) => this.settleUnreadable(again, look + 1),
+        };
+      }
+      // Out of looks. The other writer may never finish, and the user's change
+      // must reach the disk: waiting forever is the model the plan rejected.
+      console.debug(
+        "[Projects+] the settings file stayed empty; releasing the episode"
+      );
       return { kind: "release" };
     }
     try {
