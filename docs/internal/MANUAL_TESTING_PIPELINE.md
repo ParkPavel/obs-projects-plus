@@ -30,8 +30,13 @@ Copy-Item main.js,styles.css,manifest.json ..\OBStests\.obsidian\plugins\obs-pro
 
 ## 2. Reload + verify load
 
+> **Поправка 2026-09-08, наблюдение живого прогона #200.** `app:reload` **завершает** Obsidian, а не
+> перезагружает его: процесс исчезает, REST не поднимается (ждали 30 с). Запускать приложение
+> заново вручную и снимать счёт команд на холодном старте. Строка ниже оставлена как была — она
+> описывает то, что команда делает по имени, а не по факту.
+
 ```powershell
-# перезагрузка Obsidian (подхватывает новый main.js)
+# ВНИМАНИЕ: на Obsidian 1.9.12 эта команда закрывает приложение — см. поправку выше
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:27123/commands/app:reload/" -Headers $h
 Start-Sleep -Seconds 8
 
