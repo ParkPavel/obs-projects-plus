@@ -2,6 +2,7 @@ import {
   createSettingsWriter,
   SETTINGS_RECONCILE_BACKSTOP_MS,
   type SaveStatus,
+  type SettingsWriter,
 } from "src/lib/settings/settingsWriter";
 
 /**
@@ -168,7 +169,28 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     jest.useRealTimers();
   });
 
-  /** A writer whose verification is held open, so a value can be queued mid-write. */
+  /**
+   * A writer whose verification is held open, so a value can be queued
+   * mid-write.
+   *
+   * Everything it creates is registered for teardown. A test that ends with a
+   * verification still unresolved leaves a promise chain and a live writer
+   * behind, and the next test in the file inherits them: these cases passed
+   * alone and hung together until the leak was closed rather than the symptom.
+   */
+  const open: Array<{
+    writer: SettingsWriter<Value>;
+    settlers: Array<() => void>;
+  }> = [];
+
+  afterEach(() => {
+    for (const { writer, settlers } of open) {
+      settlers.forEach((settle) => settle());
+      writer.dispose();
+    }
+    open.length = 0;
+  });
+
   function heldWriter(save: (v: Value) => Promise<unknown>) {
     const settlers: Array<() => void> = [];
     const writer = createSettingsWriter<Value>({
@@ -180,6 +202,7 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
       debounceMs: 400,
       maxWaitMs: 2000,
     });
+    open.push({ writer, settlers });
     return { writer, settlers };
   }
 
@@ -290,6 +313,54 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     await jest.advanceTimersByTimeAsync(400);
 
     expect(save.calls[1]).toEqual({ n: 3 });
+  });
+
+  it("is not forced out by shutdown either", async () => {
+    // The third review pass, and the one path that ignores every timer:
+    // `flush` runs on quit and on unload with a forced write. Forcing it here
+    // would put this session's edit over a file somebody else replaced, with no
+    // copy of theirs anywhere. The edit is lost on reload instead — which is
+    // what #185 already promises for a change that could not be written, and
+    // the standing mark is what warns before it happens.
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+
+    await writer.flush();
+
+    expect(save.calls).toHaveLength(1);
+  });
+
+  it("is flushed as usual once reconciliation has released it", async () => {
+    // The refusal is scoped to the hold, not to shutdown: a value nobody is
+    // waiting on still reaches the disk when the window closes.
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+
+    writer.resume();
+    const flushed = writer.flush();
+    // The flush starts the write; its verification is held open like the
+    // first one's, so it has to be settled or the flush waits for a promise
+    // nobody resolves.
+    await jest.advanceTimersByTimeAsync(0);
+    settlers[1]?.();
+    await flushed;
+
+    expect(save.calls).toHaveLength(2);
+    expect(save.calls[1]).toEqual({ n: 2 });
   });
 
   it("settled() waits for a write in flight and starts nothing", async () => {

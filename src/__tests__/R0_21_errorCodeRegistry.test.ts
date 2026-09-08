@@ -211,7 +211,8 @@ describe("R0.21 — the registry and the page stay in step", () => {
       const shown = issuers.has(entry.code);
       if (entry.status === "retired") continue;
       if (entry.status === "pending" && shown) wiredButPending.push(entry.code);
-      if (entry.status === undefined && !shown) liveButUnissued.push(entry.code);
+      if (entry.status === undefined && !shown)
+        liveButUnissued.push(entry.code);
     }
 
     expect(liveButUnissued).toEqual([]);
@@ -265,6 +266,21 @@ describe("R0.21 — the registry and the page stay in step", () => {
       expect({ code: entry.code, caption: entry.caption }).toEqual({
         code: entry.code,
         caption: lookup(json, entry.key),
+      });
+    }
+  });
+
+  it("every cause is the English default for its causeKey, verbatim", () => {
+    // #211: the caption had this check and the cause did not, so rewriting a
+    // code's recovery path in the registry left the tooltip saying the old
+    // thing — `resolveError` prefers the translation over the default, and the
+    // standing mark then contradicted the notice it belongs to. Same rule as
+    // the caption, same reason: one sentence, in two places by construction.
+    const { json } = readLocale("en");
+    for (const entry of ERROR_CODES) {
+      expect({ code: entry.code, cause: entry.cause }).toEqual({
+        code: entry.code,
+        cause: lookup(json, entry.causeKey),
       });
     }
   });

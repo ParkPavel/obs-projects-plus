@@ -483,7 +483,21 @@ export function createSettingsWriter<T>(
       cancelRetry();
       flushing = true;
       try {
-        startWrite(true);
+        // #211: a deferred value is NOT flushed, and shutdown is exactly where
+        // that matters. `flush` runs on quit and on unload, and forcing the
+        // write there would put this session's edit over a `data.json`
+        // somebody else replaced, with no copy of theirs anywhere — the race
+        // the deferral exists to prevent, arriving through the one path that
+        // ignores timers. The edit is lost on reload, which is what #185
+        // already promises for a change that could not be written; the standing
+        // mark is what warns before it happens.
+        if (deferred) {
+          console.warn(
+            "[Projects+] not writing on shutdown: the settings file was replaced and the change is still unreconciled"
+          );
+        } else {
+          startWrite(true);
+        }
         while (inFlight !== null) {
           await inFlight;
         }

@@ -40,3 +40,17 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Третий проход — та же ветка после правок второго
+
+Две находки, обе верные, исправлены в коммите ниже.
+
+```
+- [P1] Preserve deferred conflicts during shutdown — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:364-369
+  When a normal edit is deferred after a diverged in-flight write and the user disables or quits within the backstop window, `onunload`/the quit handler calls `flush()`, whose forced write ignores `deferred` and saves the local value immediately. If the external-change hook has not run yet, this overwrites the external `data.json` before any conflict copy exists—the race this deferral is meant to prevent. Make shutdown respect the deferred state or preserve the external payload before forcing the write.
+
+- [P2] Update the PPP-106 localized cause — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\errors\errorCodes.ts:177-181
+  For English users, `resolveError` selects the existing `errors.causes.settings-conflict-uncopied` translation, which still says `data.json` is the only copy instead of using this updated default. The persistent PPP-106 chip tooltip therefore contradicts the notice and can send users to an already-overwritten file rather than the console recovery payload. Update that localized cause to match the new recovery path.
+
+[exited with code 0]
+```
