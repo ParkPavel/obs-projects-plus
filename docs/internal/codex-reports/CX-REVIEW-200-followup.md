@@ -65,3 +65,15 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Пятый проход — после правок четвёртого
+
+Одна находка (P2), верная.
+
+```
+
+- [P2] Keep recovery notes out of project sources — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\brokenBackup.ts:220-220
+  When a project uses the vault root as its folder source, this root-level `.md` file is included by `FolderDataSource` and becomes a normal record in its views and aggregations, despite the note claiming that nothing else reads it. Store the recovery payload outside queried vault notes or ensure generated recovery paths are excluded.
+
+[exited with code 0]
+```

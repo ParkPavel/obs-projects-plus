@@ -6,6 +6,7 @@ import {
   writeBrokenCopy,
   writeConflictCopy,
   writeConflictNote,
+  CONFLICT_NOTE_FOLDER,
   type BrokenCopyAdapter,
 } from "src/lib/settings/brokenBackup";
 
@@ -21,6 +22,9 @@ interface Fake extends BrokenCopyAdapter {
   files: Map<string, string>;
   writeFails: boolean;
   readFails: boolean;
+  dirs: string[];
+  /** Paths whose write must fail, to stage a folder that cannot be used. */
+  refuse: (path: string) => boolean;
 }
 
 function makeAdapter(): Fake {
@@ -28,8 +32,13 @@ function makeAdapter(): Fake {
     files: new Map<string, string>(),
     writeFails: false,
     readFails: false,
+    dirs: [],
+    refuse: () => false,
+    async mkdir(path: string): Promise<void> {
+      fake.dirs.push(path);
+    },
     async write(path: string, data: string): Promise<void> {
-      if (fake.writeFails) throw new Error("EACCES");
+      if (fake.writeFails || fake.refuse(path)) throw new Error("EACCES");
       fake.files.set(path, data);
     },
     async read(path: string): Promise<string> {
@@ -337,6 +346,43 @@ describe("#200 — the copy of the version this session refused", () => {
     // the literal, and it is right — which is precisely what this asserts the
     // note does not do.
     expect(text).not.toContain([".", "obsidian/"].join(""));
+  });
+
+  it("goes in a folder of its own, not loose in the vault root", async () => {
+    // The fifth review pass: this is a real vault note, so a project whose
+    // source is the vault root lists it as a record — `FolderDataSource.includes`
+    // admits everything under an empty project path. A folder does not make
+    // that impossible, but it takes the common case out of the way.
+    const adapter = makeAdapter();
+
+    const path = await writeConflictNote(adapter, "theirs", new Date());
+
+    expect(adapter.dirs).toContain(CONFLICT_NOTE_FOLDER);
+    expect(path?.startsWith(`${CONFLICT_NOTE_FOLDER}/`)).toBe(true);
+  });
+
+  it("says plainly that a project may list it, instead of claiming nothing reads it", async () => {
+    // The claim was mine and it was false; the fix is the sentence as much as
+    // the folder.
+    const adapter = makeAdapter();
+    const path = await writeConflictNote(adapter, "theirs", new Date());
+
+    expect(adapter.files.get(path as string)).toContain(
+      "will list it as a record"
+    );
+  });
+
+  it("falls back to the vault root when the folder cannot be used", async () => {
+    // Worse placed, still readable on a phone — which is the entire reason this
+    // path exists.
+    const adapter = makeAdapter();
+    adapter.refuse = (path) => path.startsWith(`${CONFLICT_NOTE_FOLDER}/`);
+
+    const path = await writeConflictNote(adapter, "theirs", new Date());
+
+    expect(path).not.toBeNull();
+    expect(path?.includes("/")).toBe(false);
+    expect(adapter.files.get(path as string)).toContain("theirs");
   });
 
   it("gives two notes of the same millisecond two different names", async () => {

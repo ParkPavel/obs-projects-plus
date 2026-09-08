@@ -28,6 +28,13 @@ export interface BrokenCopyAdapter {
   write(path: string, data: string): Promise<void>;
   read(path: string): Promise<string>;
   exists(path: string): Promise<boolean>;
+  /**
+   * Optional: the recovery note goes in a folder of its own, and Obsidian's
+   * adapter does not create parents. Optional rather than required so the
+   * existing callers and their fakes are unaffected — a caller without it
+   * still gets the note, at the vault root.
+   */
+  mkdir?(path: string): Promise<void>;
 }
 
 /** Timestamp in a form that is legal in a filename on every host. */
@@ -201,7 +208,14 @@ export async function writeBrokenCopy(
  * case the plan named as a blind spot, `manifest.dir` being undefined, where
  * there is no plugin folder to write beside in the first place.
  */
+export const CONFLICT_NOTE_FOLDER = "Projects+ recovery";
+
 export function conflictNotePath(at: Date, token = randomToken()): string {
+  return `${CONFLICT_NOTE_FOLDER}/settings conflict ${stamp(at)}-${token}.md`;
+}
+
+/** The same note when the folder cannot be made: the root still exists. */
+export function conflictNoteRootPath(at: Date, token = randomToken()): string {
   return `Projects+ settings conflict ${stamp(at)}-${token}.md`;
 }
 
@@ -217,6 +231,16 @@ export async function writeConflictNote(
    */
   settingsPath?: string | null
 ): Promise<string | null> {
+  // A folder of its own, because this note is a real vault note and a project
+  // whose source is the vault root will list it as a record. A folder does not
+  // make that impossible — a recursive root source still reaches it — but it
+  // takes the common case out of the way, and the note says the rest plainly
+  // rather than claiming nothing reads it.
+  try {
+    await adapter.mkdir?.(CONFLICT_NOTE_FOLDER);
+  } catch {
+    // Already there, or not creatable. Both are answered by the write below.
+  }
   const notePath = await freeName(adapter, conflictNotePath(at));
   if (notePath === null) return null;
   const contents = [
@@ -224,8 +248,11 @@ export async function writeConflictNote(
     "",
     "This note holds the version of `data.json` that another window, a synchroniser",
     "or a hand edit put on disk, at a moment when this plugin could not write its",
-    "usual copy beside the settings file. Nothing else reads this note; delete it",
-    "once you no longer need it.",
+    "usual copy beside the settings file.",
+    "",
+    "Projects+ never reads it back. It is an ordinary note, though, so a project",
+    "whose source covers this folder will list it as a record — delete it once you",
+    "have what you need.",
     "",
     settingsPath !== undefined && settingsPath !== null
       ? `To restore: copy everything between the fences into \`${settingsPath}\` with Obsidian closed.`
@@ -240,7 +267,17 @@ export async function writeConflictNote(
     await adapter.write(notePath, contents);
     return notePath;
   } catch {
-    return null;
+    // The folder could not be written to — most likely it was never created.
+    // The root is the fallback's fallback: worse placed, still readable on a
+    // phone, which is the whole reason this path exists.
+    const rootPath = await freeName(adapter, conflictNoteRootPath(at));
+    if (rootPath === null) return null;
+    try {
+      await adapter.write(rootPath, contents);
+      return rootPath;
+    } catch {
+      return null;
+    }
   }
 }
 
