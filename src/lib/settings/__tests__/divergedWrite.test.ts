@@ -341,6 +341,57 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls[1]).toEqual({ n: 2 });
   });
 
+  it("fences on every divergence, even with nothing queued", async () => {
+    // `PLAN_212` T8 said unconditional and I implemented it conditionally; the
+    // review found the gap. With nothing queued the permit stayed open, so an
+    // edit made before the host dispatched its change event armed a debounce
+    // and overwrote the other version before anything preserved it. The fence
+    // is about the FILE having been replaced, not about what we hold.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      verify: () => Promise.resolve("diverged" as const),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toHaveLength(1);
+    expect(writer.status().kind).toBe("diverged");
+
+    // The user edits before the hook arrives.
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(2000);
+
+    expect(save.calls).toHaveLength(1);
+  });
+
+  it("decides overlapping episodes one at a time", async () => {
+    // Two external notifications can arrive while a read or a copy is being
+    // awaited. Fencing is shared state, not a queue: without serialising, the
+    // second episode saw the first one's fence, called it "pending", and the
+    // two bodies interleaved over one adoption.
+    const writer = createSettingsWriter<Value>({ save: makeSave().fn });
+    const order: string[] = [];
+
+    const first = writer.withExclusive("PPP-102", async () => {
+      order.push("first in");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      order.push("first out");
+      return { kind: "release" as const };
+    });
+    const second = writer.withExclusive("PPP-102", async () => {
+      order.push("second in");
+      return { kind: "release" as const };
+    });
+
+    await jest.advanceTimersByTimeAsync(100);
+    await Promise.all([first, second]);
+
+    expect(order).toEqual(["first in", "first out", "second in"]);
+  });
+
   it("tells the body what was pending BEFORE the fence went up", async () => {
     // The review of step F found this as a P1, and no unit test could have:
     // it is a composition between the writer and the hook, and the file that

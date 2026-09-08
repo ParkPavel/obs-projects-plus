@@ -405,6 +405,12 @@ export function createSettingsWriter<T>(
    * hold by construction.
    */
   let epoch = 0;
+  /**
+   * The tail of the episode chain: every lease waits for it and replaces it, so
+   * two external changes arriving together are decided one after the other
+   * rather than on top of each other.
+   */
+  let episodes: Promise<void> = Promise.resolve();
 
   /**
    * Returns what was ACTUALLY applied, which is not always what the body asked
@@ -577,7 +583,15 @@ export function createSettingsWriter<T>(
       // reconciliation releases it when it has preserved or explicitly handled
       // the other version. The backstop below is what makes deferring safe:
       // if the hook never comes, the value still goes to disk.
-      if (queue !== null && permit.kind === "open") {
+      if (permit.kind === "open") {
+        // Unconditional, which is what `PLAN_212` T8 asked for and what I
+        // implemented conditionally: the review found the gap. With nothing
+        // queued the permit used to stay open, so an edit made before Obsidian
+        // dispatched the change event — or while it was slow to — armed its
+        // debounce and overwrote the other version before reconciliation could
+        // preserve anything. The fence is about the FILE having been replaced,
+        // not about what we happen to be holding.
+        //
         // A debounce armed by a `push` that arrived while the write was in
         // flight is still running, and it would fire straight through the
         // fence. Fencing means fencing, so it goes.
@@ -667,6 +681,18 @@ export function createSettingsWriter<T>(
       code: string,
       body: (entry: EpisodeEntry) => Promise<WriteOutcome<T>>
     ): Promise<WriteOutcome<T>> {
+      // #212, from the review: two external notifications can arrive while a
+      // read or a copy is being awaited, and both would enter here. Fencing is
+      // shared state, not a queue — the second episode would see the first
+      // one's fence, call it "pending", and the two bodies would interleave
+      // over one `pendingAdoption`. Episodes are therefore serialised: one
+      // decision at a time, in arrival order.
+      const previous = episodes;
+      let finished!: () => void;
+      episodes = new Promise<void>((resolve) => {
+        finished = resolve;
+      });
+      await previous;
       // Taken BEFORE the fence, because the fence itself changes the answer:
       // it publishes `diverged`, and `hasPending` counts that status as unsaved
       // work. Asking mid-episode would have every decision see `pending: true`
@@ -705,6 +731,8 @@ export function createSettingsWriter<T>(
         console.error("[Projects+] settings reconciliation failed", err);
         toFenced(code);
         return { kind: "hold", code };
+      } finally {
+        finished();
       }
     },
     retry(): void {

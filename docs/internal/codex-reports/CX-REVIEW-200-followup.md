@@ -154,3 +154,14 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после шага F (повтор, ) — две P1
+
+```
+  When verification reports `diverged` with no value already queued, this branch leaves the permit open. If the user changes settings before Obsidian dispatches `onExternalSettingsChange` (or that hook is delayed), `push` schedules a write after the debounce and overwrites the external `data.json` before reconciliation can preserve it. Enter the fenced state for every divergence, not only when `queue` is non-null.
+
+- [P1] Serialize overlapping reconciliation episodes — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:666-669
+  When two external settings notifications arrive while an adapter read or conflict copy is awaiting, both calls enter `withExclusive`; fencing only changes shared state and does not wait for the preceding body. The later call therefore treats the first fence as pending, and the handlers can interleave writes to the shared `pendingAdoption`, causing an older external version to be adopted/restored while a newer one is merely copied even when this window had no edits. Queue or coalesce external-change episodes so only one body and adoption publication run at a time.
+
+[exited with code 0]
+```
