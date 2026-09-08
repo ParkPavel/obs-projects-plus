@@ -437,6 +437,48 @@ describe("#200 — holding the writer when the other version could not be copied
     expect(writer.hasPending()).toBe(true);
   });
 
+  it("is written after reconciliation lifts the hold, not left dirty forever", async () => {
+    // The seventh review pass. `hold` and the divergence deferral used to be
+    // two mechanisms with two flags, and `resume` read only one of them: a hold
+    // followed by a resume cleared the suspension and re-armed nothing, leaving
+    // the value dirty with no timer until an unrelated edit or shutdown carried
+    // it — which in an interrupted session means losing it.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    writer.hold("PPP-105");
+    await jest.advanceTimersByTimeAsync(2000);
+    expect(save.calls).toHaveLength(0);
+
+    writer.resume();
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toEqual([{ n: 1 }]);
+  });
+
+  it("is not written by a shutdown flush while the hold stands", async () => {
+    // The same unification closes this: `hold` used to clear the flag `flush`
+    // consulted, so quitting wrote the value over the file the hold existed to
+    // protect.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    writer.hold("PPP-106");
+    await writer.flush();
+
+    expect(save.calls).toHaveLength(0);
+  });
+
   it("keeps the value, so the user's next change still reaches the disk", async () => {
     // A hold that dropped the pending change would trade one loss for another.
     const save = makeSave();

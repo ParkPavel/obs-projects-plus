@@ -151,13 +151,15 @@ export interface SettingsWriter<T> {
    */
   settled(): Promise<void>;
   /**
-   * #211 — let a deferred ordinary edit go to disk again.
+   * #211 — lift the suspension and let the queued edit go to disk again.
    *
-   * After a divergence, a queued edit of the user's is held rather than
+   * After a divergence, a queued edit of the user's is suspended rather than
    * re-armed: reconciliation is on its way to read the file and copy the other
    * version aside, and 400ms is not a guarantee that it gets there first.
-   * Every branch of the hook calls this when it is done, so the hold lasts
-   * exactly as long as the decision does.
+   * Every branch of the hook calls this when it is done, so the suspension
+   * lasts exactly as long as the decision does — and it re-arms the debounce
+   * whatever suspended the write, which is the one thing an earlier version of
+   * this got wrong.
    */
   resume(): void;
   /** Drop every timer. Does not write. */
@@ -221,12 +223,21 @@ export function createSettingsWriter<T>(
    */
   let immediate = false;
   /**
-   * #211 — a queued ordinary edit, held until reconciliation has decided what
-   * to do about the file that displaced our write. Released by `resume`, or by
-   * the backstop timer, or by the user's next change.
+   * #211 — writing is suspended: the queued value stays, its timers do not.
+   *
+   * ONE flag, after review passes found the same hole in three disguises. Two
+   * things suspend writing and they used to be separate mechanisms with
+   * separate bugs: the divergence deferral (an ordinary edit must not overtake
+   * the hook that is about to copy somebody's version aside) and `hold` (that
+   * copy failed, so the file on disk is the only place the version exists).
+   * Both mean the same thing — nobody may write until this is resolved — and
+   * every path that resolves it now clears one flag rather than one of two.
+   *
+   * The backstop timer belongs to the deferral only. `hold` has none on
+   * purpose: it waits for the user, who has been told.
    */
-  let deferred = false;
-  let deferTimer: ReturnType<typeof setTimeout> | null = null;
+  let suspended = false;
+  let suspendTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
   let flushing = false;
 
@@ -253,12 +264,12 @@ export function createSettingsWriter<T>(
     }
   }
 
-  function cancelDefer(): void {
-    if (deferTimer !== null) {
-      clearTimeout(deferTimer);
-      deferTimer = null;
+  function cancelSuspension(): void {
+    if (suspendTimer !== null) {
+      clearTimeout(suspendTimer);
+      suspendTimer = null;
     }
-    deferred = false;
+    suspended = false;
   }
 
   function cancelRetry(): void {
@@ -281,6 +292,10 @@ export function createSettingsWriter<T>(
   }
 
   function startWrite(force = false): void {
+    // Suspension is enforced here as well as by cancelling timers, so a path
+    // that reaches `startWrite` another way — a retry from a stale handler, a
+    // forced flush — cannot write over the version being preserved either.
+    if (suspended) return;
     if (
       (disposed && !force) ||
       inFlight !== null ||
@@ -360,15 +375,15 @@ export function createSettingsWriter<T>(
       if (dirty) {
         if (immediate) {
           startWrite(flushing);
-        } else if (!deferred) {
+        } else if (!suspended) {
           // A debounce armed by a `push` that arrived while the write was in
           // flight is still running, and it would fire straight through the
           // hold. Deferring means deferring, so it goes.
           cancelSchedule();
-          deferred = true;
-          deferTimer = setTimeout(() => {
-            deferTimer = null;
-            deferred = false;
+          suspended = true;
+          suspendTimer = setTimeout(() => {
+            suspendTimer = null;
+            suspended = false;
             schedule();
           }, SETTINGS_RECONCILE_BACKSTOP_MS);
         }
@@ -424,7 +439,7 @@ export function createSettingsWriter<T>(
       latest = { value };
       dirty = false;
       immediate = false;
-      cancelDefer();
+      cancelSuspension();
     },
     push(value: T): void {
       if (latest !== null && Object.is(latest.value, value)) return;
@@ -435,7 +450,7 @@ export function createSettingsWriter<T>(
       immediate = false;
       // A change the user makes after all this is their answer to whatever the
       // deferral was waiting for: it goes to disk on the ordinary schedule.
-      cancelDefer();
+      cancelSuspension();
       // A change made after the budget was spent is a new episode and gets its
       // own retries. Without this, `attempt` stays past the end of the delay
       // list and every later change gets a single attempt — the writer quietly
@@ -454,8 +469,12 @@ export function createSettingsWriter<T>(
       startWrite();
     },
     resume(): void {
-      if (!deferred) return;
-      cancelDefer();
+      // Unconditional, and that is the seventh review pass's finding: the guard
+      // that used to stand here read one of the two flags, so a `hold` followed
+      // by a `resume` cleared the suspension and re-armed nothing — the value
+      // stayed dirty with no timer until an unrelated edit or shutdown carried
+      // it, which in an interrupted session means losing it.
+      cancelSuspension();
       if (dirty) schedule();
     },
     async settled(): Promise<void> {
@@ -466,12 +485,16 @@ export function createSettingsWriter<T>(
     hold(code: string): void {
       cancelSchedule();
       cancelRetry();
-      // The value stays dirty and stays unwritten: nothing may reach the file
-      // while it is the only copy of somebody else's version. The user's next
-      // change releases it, by which time they have been told.
-      cancelDefer();
+      // The backstop belongs to the deferral, not to a hold: a hold waits for
+      // the user or for reconciliation, however long that takes, because the
+      // file it protects may be the only copy of somebody's settings.
+      if (suspendTimer !== null) {
+        clearTimeout(suspendTimer);
+        suspendTimer = null;
+      }
       // The value is deliberately left dirty: it is not on disk, and the next
-      // `push` must still write it. Only the timers stop.
+      // `push` — or `resume` — must still write it. Only the timers stop.
+      suspended = true;
       setStatus({ kind: "diverged", code });
     },
     retry(): void {
@@ -487,7 +510,7 @@ export function createSettingsWriter<T>(
       cancelRetry();
       flushing = true;
       try {
-        // #211: a deferred value is NOT flushed, and shutdown is exactly where
+        // #211: a suspended value is NOT flushed, and shutdown is exactly where
         // that matters. `flush` runs on quit and on unload, and forcing the
         // write there would put this session's edit over a `data.json`
         // somebody else replaced, with no copy of theirs anywhere — the race
@@ -495,7 +518,7 @@ export function createSettingsWriter<T>(
         // ignores timers. The edit is lost on reload, which is what #185
         // already promises for a change that could not be written; the standing
         // mark is what warns before it happens.
-        if (deferred) {
+        if (suspended) {
           console.warn(
             "[Projects+] not writing on shutdown: the settings file was replaced and the change is still unreconciled"
           );
@@ -513,7 +536,7 @@ export function createSettingsWriter<T>(
       disposed = true;
       cancelSchedule();
       cancelRetry();
-      cancelDefer();
+      cancelSuspension();
     },
     status(): SaveStatus {
       return status;

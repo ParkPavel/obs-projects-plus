@@ -88,3 +88,14 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Седьмой проход — после правок шестого
+
+Одна находка (P1), верная. Исправлена сведением двух механизмов в один, а не ещё одной заплаткой.
+
+```
+- [P1] Keep deferred edits resumable when fencing unparsable conflicts — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:472-472
+  When a local write diverges with an ordinary edit queued behind it, that edit is marked `deferred`. If the external file remains nonempty but unparsable at recheck, `onUnparsableSettlement()` calls `hold()` before preserving it and `resume()` afterward; this `cancelDefer()` clears the marker, so `resume()` returns without rearming any timer. The latest local settings remain dirty but are not written until another edit or shutdown, and can therefore be lost in an interrupted session.
+
+[exited with code 0]
+```
