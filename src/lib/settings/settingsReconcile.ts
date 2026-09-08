@@ -89,7 +89,11 @@ export type ReconcileDecision<T> =
    * from the base but says exactly what memory already says, so adopting it
    * would redraw every view for no change.
    */
-  | { readonly kind: "ignore"; readonly reason: "echo" | "same" }
+  | {
+      readonly kind: "ignore";
+      readonly reason: "echo" | "same";
+      readonly resolves: true;
+    }
   /**
    * Take the disk whole. The caller primes the writer BEFORE it sets the store.
    *
@@ -97,7 +101,12 @@ export type ReconcileDecision<T> =
    * so the caller can write the corrected value back instead of leaving the
    * higher counter alive only in memory.
    */
-  | { readonly kind: "adopt"; readonly settings: T; readonly carried: boolean }
+  | {
+      readonly kind: "adopt";
+      readonly settings: T;
+      readonly carried: boolean;
+      readonly resolves: true;
+    }
   /**
    * Memory wins and the disk copy is preserved beside the file. `pending` —
    * we hold unsaved work; `unknown-base` — nothing to compare against;
@@ -107,6 +116,8 @@ export type ReconcileDecision<T> =
   | {
       readonly kind: "conflict";
       readonly reason: "pending" | "unknown-base" | "unknown-version";
+      /** Only preserving the other version resolves this one; the caller knows. */
+      readonly resolves: false;
     }
   /**
    * Keep memory and say nothing to the user. A half-written file is what a
@@ -119,7 +130,19 @@ export type ReconcileDecision<T> =
    * truncates the file before filling it, and a copy of that instant is a
    * 0-byte file the notice would then send the user to read (#210).
    */
-  | { readonly kind: "keep"; readonly reason: "unparsable" | "empty" };
+  | {
+      readonly kind: "keep";
+      readonly reason: "unparsable" | "empty";
+      /**
+       * #211, eleventh review pass: a file caught mid-write resolves NOTHING.
+       * An empty `data.json` is a synchroniser between truncate and fill, and
+       * the payload is still on its way — releasing a suspended local edit here
+       * lets it overwrite that payload before anything has preserved it. The
+       * episode ends when the file settles, or when the writer's backstop
+       * decides it never will.
+       */
+      readonly resolves: false;
+    };
 
 /**
  * The one field that is merged rather than replaced — by the user's explicit
@@ -265,37 +288,37 @@ export function reconcileSettings<T>(
   input: ReconcileInput<T>
 ): ReconcileDecision<T> {
   if (!carriesAVersion(input.diskRaw)) {
-    return { kind: "keep", reason: "empty" };
+    return { kind: "keep", reason: "empty", resolves: false };
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(input.diskRaw);
   } catch {
-    return { kind: "keep", reason: "unparsable" };
+    return { kind: "keep", reason: "unparsable", resolves: false };
   }
 
   const onDisk = canonical(parsed);
   if (onDisk !== null && input.base !== null && onDisk === input.base) {
-    return { kind: "ignore", reason: "echo" };
+    return { kind: "ignore", reason: "echo", resolves: true };
   }
   if (onDisk !== null && onDisk === canonical(input.memory)) {
-    return { kind: "ignore", reason: "same" };
+    return { kind: "ignore", reason: "same", resolves: true };
   }
 
   if (!adoptableShape(parsed, input.expectedVersion)) {
-    return { kind: "conflict", reason: "unknown-version" };
+    return { kind: "conflict", reason: "unknown-version", resolves: false };
   }
   if (input.pending) {
-    return { kind: "conflict", reason: "pending" };
+    return { kind: "conflict", reason: "pending", resolves: false };
   }
   if (input.base === null) {
-    return { kind: "conflict", reason: "unknown-base" };
+    return { kind: "conflict", reason: "unknown-base", resolves: false };
   }
 
   const { settings, carried } = carryUniqueIdCounters(
     input.memory,
     parsed as T
   );
-  return { kind: "adopt", settings, carried };
+  return { kind: "adopt", settings, carried, resolves: true };
 }

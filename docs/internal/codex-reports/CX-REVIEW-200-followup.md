@@ -129,3 +129,17 @@ Full review comments:
   for a pending debounced edit plus an external change when both backup writes fail, and leaves the
   persistent UI claiming the other version was preserved when it was not.
 ```
+
+## Одиннадцатый проход — покрывает `HEAD` (правило Gate 3)
+
+Одна находка (P1), верная. После неё цикл остановлен по стоп-правилу.
+
+```
+- [P1] Keep the divergence suspension on empty updates — src/main.ts:709-716
+  If a normal edit is suspended after a diverged write, then a non-atomic synchronizer exposes a
+  transient empty `data.json`, this `resume()` re-arms the local edit after the debounce. A slow or
+  stalled external writer can then have its eventual payload overwritten before
+  `onUnparsableSettlement` has a chance to preserve it. Leave the writer suspended through the
+  empty-file recheck (with the existing backstop), rather than treating the first empty event as
+  resolved.
+```

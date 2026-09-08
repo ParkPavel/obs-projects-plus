@@ -59,6 +59,7 @@ describe("#200 — memory against disk", () => {
     expect(decide({ pending: true })).toEqual({
       kind: "conflict",
       reason: "pending",
+      resolves: false,
     });
   });
 
@@ -69,6 +70,7 @@ describe("#200 — memory against disk", () => {
     expect(decide({ base: null })).toEqual({
       kind: "conflict",
       reason: "unknown-base",
+      resolves: false,
     });
   });
 
@@ -78,7 +80,7 @@ describe("#200 — memory against disk", () => {
     // coalesces or re-fires must not cost a redraw.
     expect(
       decide({ diskRaw: JSON.stringify(DISK), base: canonical(DISK) })
-    ).toEqual({ kind: "ignore", reason: "echo" });
+    ).toEqual({ kind: "ignore", reason: "echo", resolves: true });
   });
 
   it("ignores a file that differs from the base but says what memory says", () => {
@@ -87,7 +89,7 @@ describe("#200 — memory against disk", () => {
     // and drop the modals holding a project reference with it.
     expect(
       decide({ diskRaw: JSON.stringify(MEMORY), base: canonical(DISK) })
-    ).toEqual({ kind: "ignore", reason: "same" });
+    ).toEqual({ kind: "ignore", reason: "same", resolves: true });
   });
 
   it("compares regardless of key order and formatting", () => {
@@ -99,6 +101,7 @@ describe("#200 — memory against disk", () => {
     expect(decide({ diskRaw: reordered, base: canonical(DISK) })).toEqual({
       kind: "ignore",
       reason: "same",
+      resolves: true,
     });
   });
 
@@ -109,7 +112,11 @@ describe("#200 — memory against disk", () => {
     // synchroniser was caught halfway through a write.
     const decision = decide({ diskRaw: '{ "version": 4, "projects": [' });
 
-    expect(decision).toEqual({ kind: "keep", reason: "unparsable" });
+    expect(decision).toEqual({
+      kind: "keep",
+      reason: "unparsable",
+      resolves: false,
+    });
   });
 
   it("calls an empty file nobody's version, not somebody's", () => {
@@ -122,6 +129,7 @@ describe("#200 — memory against disk", () => {
       expect(decide({ diskRaw: raw })).toEqual({
         kind: "keep",
         reason: "empty",
+        resolves: false,
       });
     }
   });
@@ -132,6 +140,7 @@ describe("#200 — memory against disk", () => {
     expect(decide({ diskRaw: '{ "version": 4, "projects": [' })).toEqual({
       kind: "keep",
       reason: "unparsable",
+      resolves: false,
     });
   });
 
@@ -141,7 +150,7 @@ describe("#200 — memory against disk", () => {
     // no consumer expects; adopting a future version would be worse.
     for (const version of [3, 5]) {
       expect(decide({ diskRaw: JSON.stringify({ ...DISK, version }) })).toEqual(
-        { kind: "conflict", reason: "unknown-version" }
+        { kind: "conflict", reason: "unknown-version", resolves: false }
       );
     }
   });
@@ -154,10 +163,12 @@ describe("#200 — memory against disk", () => {
     expect(decide({ diskRaw: '{ "version": 4 }' })).toEqual({
       kind: "conflict",
       reason: "unknown-version",
+      resolves: false,
     });
     expect(decide({ diskRaw: '{ "version": 4, "projects": {} }' })).toEqual({
       kind: "conflict",
       reason: "unknown-version",
+      resolves: false,
     });
   });
 
@@ -176,6 +187,35 @@ describe("#200 — memory against disk", () => {
     for (const raw of ["null", "[]", '"text"', "7"]) {
       expect(decide({ diskRaw: raw }).kind).toBe("conflict");
     }
+  });
+
+  describe("which decisions end the episode", () => {
+    // #211, eleventh review pass. Whether a suspended local edit may go to disk
+    // again is a property of the decision, not something the hook remembers per
+    // branch — remembering is what let an empty file release an edit that then
+    // raced the payload a synchroniser was still writing.
+    it("a file caught mid-write resolves nothing", () => {
+      expect(decide({ diskRaw: "" }).resolves).toBe(false);
+      expect(
+        decide({ diskRaw: '{ "version": 4, "projects": [' }).resolves
+      ).toBe(false);
+    });
+
+    it("a conflict waits for the caller, which knows whether it preserved anything", () => {
+      expect(decide({ pending: true }).resolves).toBe(false);
+      expect(decide({ base: null }).resolves).toBe(false);
+      expect(
+        decide({ diskRaw: JSON.stringify({ ...DISK, version: 3 }) }).resolves
+      ).toBe(false);
+    });
+
+    it("nothing to do, and taking the disk whole, both end it", () => {
+      expect(decide({}).resolves).toBe(true);
+      expect(
+        decide({ diskRaw: JSON.stringify(DISK), base: canonical(DISK) })
+          .resolves
+      ).toBe(true);
+    });
   });
 
   describe("the one field that is merged, by the user's decision", () => {

@@ -698,12 +698,15 @@ export default class ProjectsPlusPlugin extends Plugin {
       expectedVersion: DEFAULT_SETTINGS.version,
     });
 
+    // #211: whether a decision ENDS the episode is the decision's own property,
+    // not something each branch here remembers. The eleventh review pass found
+    // the cost of remembering: the empty-file branch resumed a suspended local
+    // edit, which could then overwrite the payload a slow synchroniser was
+    // still writing. `resolves` is decided in the module that can be tested.
+    if (decision.resolves) this.settingsWriter.resume();
+
     if (decision.kind === "ignore") {
       console.debug(`[Projects+] settings file changed; ${decision.reason}`);
-      // #211: nothing to preserve, so a queued edit held by the divergence is
-      // free to go. Every branch of this method ends by saying so — the hold
-      // lasts exactly as long as the decision does.
-      this.settingsWriter.resume();
       return;
     }
     if (decision.kind === "keep" && decision.reason === "empty") {
@@ -712,8 +715,10 @@ export default class ProjectsPlusPlugin extends Plugin {
       // instant. There is no version in those bytes to keep, so nothing is
       // snapshotted and nothing is copied — the completed write brings the real
       // one, and the hook fires again.
+      // NOT resumed: an empty file is a writer between truncate and fill, and
+      // the payload is still on its way. The writer's backstop releases the
+      // edit if it never arrives.
       console.debug("[Projects+] settings file changed; empty, nothing to keep");
-      this.settingsWriter.resume();
       return;
     }
     if (decision.kind === "keep") {
@@ -807,7 +812,6 @@ export default class ProjectsPlusPlugin extends Plugin {
       // this file reissues identifiers that are already in notes.
       this.settingsWriter.pushImmediate(adopted);
     }
-    this.settingsWriter.resume();
     console.debug("[Projects+] settings adopted from disk");
   }
 
