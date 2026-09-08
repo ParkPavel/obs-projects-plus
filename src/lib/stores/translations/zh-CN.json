@@ -1430,8 +1430,18 @@
                 "tooltip": "设置未能写入 data.json。更改仅保留在本次会话中 — 点击重试。",
                 "notice": "Projects+：设置未能写入磁盘。更改仍在，但重新加载后会丢失。可在工具栏的「未保存」标记处重试。"
             },
+            "diverged": {
+                "label": "\u5916\u90e8\u5df2\u66f4\u6539",
+                "tooltip": "data.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u66ff\u6362\u3002\u60a8\u7684\u66f4\u6539\u4ecd\u5728\uff1b\u91cd\u8bd5\u5199\u5165\u4f1a\u8986\u76d6\u5bf9\u65b9\u7684\u7248\u672c\uff0c\u56e0\u6b64\u4e0d\u63d0\u4f9b\u91cd\u8bd5\u3002"
+            },
             "superseded": {
                 "notice": "Projects+：data.json 已在此窗口之外被修改。您最近的更改可能未保存 — 请先重新打开仓库再继续。"
+            },
+            "conflict": {
+                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u65e0\u6cd5\u76f4\u63a5\u91c7\u7528\u3002\u5df2\u4fdd\u7559\u60a8\u7684\u7248\u672c\uff0c\u78c1\u76d8\u4e0a\u7684\u7248\u672c\u53e6\u5b58\u4e3a {{path}}\u3002"
+            },
+            "conflict-uncopied": {
+                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u4e14\u5bf9\u65b9\u7684\u7248\u672c\u65e0\u5904\u4fdd\u5b58 \u2014 \u65e2\u65e0\u6cd5\u5b58\u653e\u5728\u8be5\u6587\u4ef6\u65c1\uff0c\u4e5f\u65e0\u6cd5\u4f5c\u4e3a\u5e93\u4e2d\u7684\u7b14\u8bb0\u3002\u5728\u684c\u9762\u7aef\uff0c\u5176\u5b8c\u6574\u5185\u5bb9\u5df2\u6253\u5370\u5230\u5f00\u53d1\u8005\u63a7\u5236\u53f0\uff1b\u672c\u6b21\u4f1a\u8bdd\u7684\u5185\u5bb9\u5c1a\u672a\u8986\u76d6\u5b83\u3002"
             }
         },
         "settings-menu": {
