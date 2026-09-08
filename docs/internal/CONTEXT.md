@@ -1,6 +1,7 @@
 ﻿# Current project context
 
-> **Updated:** 2026-09-02 (#165, #181 and #179 merged into `main`; #178 and #180 have architect plans
+> **Updated:** 2026-09-08 (#200 complete on its branch, acceptance 10/10 on the live host, not
+> merged; #207-#209 filed from that run. Earlier: 2026-09-02 — #165, #181 and #179 merged into `main`; #178 and #180 have architect plans
 > (`PLAN_178_…`, `PLAN_180_…`) and WAIT ON USER DECISIONS recorded in `BACKLOG.md` — do not implement
 > before the answers are written there. Earlier the same day: the cqi mechanism measured in headless
 > Chrome, the adversarial review's two findings fixed, the ratchets survive a worktree.
@@ -16,6 +17,36 @@ Relation-first vertical slice in `BACKLOG.md` and must map to a scene in the Pro
 The old W2–W5 sequence is historical; it does not select the next product ticket.
 
 ## Working tree and release state
+
+- **#200 is COMPLETE on `feat/200-step1-verdict` (base `main` = `0a89e33`), NOT merged.** The plugin
+  no longer erases a change somebody else made to `data.json`. `Plugin#onExternalSettingsChange`
+  (Obsidian v1.5.7, and `minAppVersion` is exactly v1.5.7) says when the file changed;
+  `src/lib/settings/settingsReconcile.ts` — a pure module with no `obsidian` and no i18n — decides
+  what to do, and `main.ts` holds only the wiring, because `main.ts` has NO unit coverage in this
+  tree at all (jsdom, and `src/__mocks__/obsidian.ts` exports no `Plugin`). Memory is adopted whole
+  or kept whole; the losing side always goes to `data.conflict-<stamp>.json`, so neither branch is
+  destructive. One field is merged and one only — `uniqueIdCounter`, as `max`, **by the user's
+  explicit decision of 2026-09-07** (`BACKLOG.md` #200), because it feeds `UniqueId` values already
+  written into notes and a rollback would spread duplicates the settings copy cannot recover.
+  New codes `PPP-105` and `PPP-106`; the `diverged` mark offers no retry, since the retry IS the
+  overwrite. Gates on the branch: tsc 0, jest **231 suites / 3537 tests**, lint 0 errors / 110
+  warnings (unmoved), svelte-check 0/0.
+  **The adversarial review returned BLOCK on three findings and all three held** (`CX-ADV-200.md`):
+  `{ "version": 4 }` was adoptable and the resolver would have filled it in with an EMPTY project
+  list; a file that STAYED unparsable was erased in silence by our own next write; and the conflict
+  copy could overwrite an earlier conflict copy when `exists` could not be answered. Fixed in
+  `a6a53b3` — two gates for the shape now (the decision table requires a project list, the hook
+  resolves through the same `migrateSettings` the load path uses), the silence is bounded by one
+  delayed re-read, and the conflict copy asks strictly.
+  **Acceptance ran on the live host 2026-09-08 and passed 10/10**
+  (`ACCEPTANCE_200_RESULTS_2026-09-08.md`): A2 inverted the step-0 spike's observation — an external
+  rename survived the plugin's next write — A3 caught the conflict on the first attempt, and A5/A6
+  proved the review's fixes on live input. It also settled trap 1.3: the hook DOES fire on an
+  unparsable file. Three defects were found in passing, none about data safety: #207 (the console
+  line prints a raw `{{path}}`), #208 (cause texts exist only in English — 32 of 32 keys), #209 (the
+  "changed elsewhere" mark lives ~200 ms though it claims to be standing).
+  Still open: what the spike could not settle either — whether the hook fires for another plugin
+  writing in the same process (Remotely Save), which is risk 1 of the plan's §10.
 
 - **#190 is IMPLEMENTED on `feat/190-peek-anchoring` (base `b31e4c6`), NOT merged and NOT committed
   by the implementer.** The record peek panel stops being anchored to the window:
