@@ -124,6 +124,15 @@ export interface SettingsWriter<T> {
   hold(code: string): void;
   /** Write anything pending and wait for the in-flight write to settle. */
   flush(): Promise<void>;
+  /**
+   * #200 — wait for a write already running, WITHOUT starting anything new.
+   *
+   * `flush` cannot serve here: it writes what is pending, and the caller is
+   * reconciliation, which must decide what to do about somebody else's file
+   * before this session adds to it. Awaiting first means no write of ours can
+   * land between the decision and the message the user is given about it.
+   */
+  settled(): Promise<void>;
   /** Drop every timer. Does not write. */
   dispose(): void;
   status(): SaveStatus;
@@ -174,6 +183,16 @@ export function createSettingsWriter<T>(
   let status: SaveStatus = { kind: "idle" };
   /** Set by `attemptWrite` when the file was replaced by somebody else. */
   let diverged = false;
+  /**
+   * Set when `pushImmediate` could not start because a write was in flight.
+   *
+   * The distinction the catch-up review asked for: only a caller that already
+   * bypassed the debounce may be drained early after a divergence. An ordinary
+   * edit still has its own debounce timer running and must keep it — writing it
+   * the instant we learn somebody else replaced the file would race the hook
+   * that is about to copy their version aside.
+   */
+  let immediate = false;
   let disposed = false;
   let flushing = false;
 
@@ -230,6 +249,7 @@ export function createSettingsWriter<T>(
     }
     const value = latest.value;
     dirty = false;
+    immediate = false;
     // #199: paired with the failure log below. Between them, a developer can
     // tell the three cases apart that look identical from the outside — the
     // write never started, it started and failed, it started and reported
@@ -272,14 +292,28 @@ export function createSettingsWriter<T>(
       // overwrite.
       diverged = false;
       setStatus({ kind: "diverged", code: SETTINGS_DIVERGED });
-      // …but a value queued MEANWHILE is a different thing, and returning here
-      // stranded it. Found by the pre-merge review: reconciliation calls
-      // `pushImmediate` to put memory back on the file, `startWrite` sees a
-      // write in flight and only marks the queue dirty, and if that in-flight
-      // write then reports `diverged` the follow-up was never scheduled. The
-      // conflict copy existed and the promised restore did not, until some
-      // unrelated later change happened to carry it.
-      if (dirty) startWrite(flushing);
+      // …but the reconciliation's own restore is a different thing, and
+      // returning here stranded it: `pushImmediate` cancels the debounce, sees
+      // a write in flight, and only marks the queue dirty — so the conflict
+      // copy existed and the promised restore did not, until some unrelated
+      // later change happened to carry it.
+      //
+      // Only THAT value is written now. The catch-up review found the overreach
+      // in the first version of this fix: an ordinary edit queued behind the
+      // same write would go to disk the instant we learned somebody else had
+      // replaced the file, racing the hook that is about to copy their version
+      // aside.
+      //
+      // It is not dropped either, and that is the second half. Its debounce is
+      // already spent — the timer fired while the write was in flight and
+      // `startWrite` returned — so without re-scheduling it would sit dirty
+      // with nothing left to carry it, which is exactly the stranding this
+      // branch was fixed for. Re-scheduled, it lands a debounce later, by
+      // which time the hook has had its turn.
+      if (dirty) {
+        if (immediate) startWrite(flushing);
+        else schedule();
+      }
       return;
     }
     if (dirty) {
@@ -346,8 +380,14 @@ export function createSettingsWriter<T>(
       if (status.kind === "failed") attempt = 0;
       latest = { value };
       dirty = true;
+      immediate = true;
       cancelSchedule();
       startWrite();
+    },
+    async settled(): Promise<void> {
+      while (inFlight !== null) {
+        await inFlight;
+      }
     },
     hold(code: string): void {
       cancelSchedule();

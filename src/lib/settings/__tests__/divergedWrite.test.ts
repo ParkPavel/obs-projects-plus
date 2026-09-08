@@ -159,6 +159,104 @@ describe("#200 — a write queued behind one that diverges", () => {
   });
 });
 
+describe("#200 — an ordinary edit queued behind a diverged write", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  /** A writer whose verification is held open, so a value can be queued mid-write. */
+  function heldWriter(save: (v: Value) => Promise<unknown>) {
+    const settlers: Array<() => void> = [];
+    const writer = createSettingsWriter<Value>({
+      save,
+      verify: () =>
+        new Promise((resolve) => {
+          settlers.push(() => resolve("diverged" as const));
+        }),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+    return { writer, settlers };
+  }
+
+  it("is not written the instant we learn the file was replaced", async () => {
+    // The catch-up review's finding, and the overreach in the first version of
+    // the drain: this value is the user's ordinary edit, not reconciliation's
+    // restore. Writing it here races the hook that is about to copy the other
+    // writer's version aside — and that copy is what makes the branch
+    // non-destructive.
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toHaveLength(1);
+
+    // Queued while the first write is still unresolved, and its own debounce
+    // is spent on a `startWrite` that finds the writer busy.
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toHaveLength(1);
+
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(save.calls).toHaveLength(1);
+    expect(writer.status().kind).toBe("diverged");
+  });
+
+  it("is not stranded either: its debounce is re-armed", async () => {
+    // …and it is not dropped. Without re-scheduling it would sit dirty with
+    // nothing left to carry it — the exact stranding this branch was fixed for,
+    // arriving through the other door.
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+    expect(save.calls).toHaveLength(1);
+
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toHaveLength(2);
+    expect(save.calls[1]).toEqual({ n: 2 });
+  });
+
+  it("settled() waits for a write in flight and starts nothing", async () => {
+    // What reconciliation awaits before deciding: `flush` cannot serve, because
+    // it WRITES what is pending, and the caller must decide what to do about
+    // somebody else's file before this session adds to it.
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.push({ n: 2 });
+
+    let done = false;
+    const waiting = writer.settled().then(() => {
+      done = true;
+    });
+    await jest.advanceTimersByTimeAsync(0);
+    expect(done).toBe(false);
+
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+    await waiting;
+
+    expect(done).toBe(true);
+    // The queued value is still queued: awaiting must not write it.
+    expect(save.calls).toHaveLength(1);
+  });
+});
+
 describe("#200 — holding the writer when the other version could not be copied", () => {
   beforeEach(() => {
     jest.useFakeTimers();

@@ -1652,7 +1652,7 @@
                 "notice": "Projects+: data.json was changed outside this window and could not be adopted. Your version is kept, and the one from disk was saved as {{path}}."
             },
             "conflict-uncopied": {
-                "notice": "Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. Your version is kept — copy data.json by hand before you change any setting, because the next save overwrites it."
+                "notice": "Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. It is written verbatim in the developer console — take it from there; this session's own version may already have replaced the file."
             },
             "diverged": {
                 "label": "Changed elsewhere",

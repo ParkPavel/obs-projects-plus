@@ -730,6 +730,12 @@ export default class ProjectsPlusPlugin extends Plugin {
       return;
     }
     if (decision.kind === "conflict") {
+      // Nothing of ours may land between this decision and the message the
+      // user gets about it. The catch-up review found the window: a write
+      // already in flight completes after the branch is taken, so `PPP-106`
+      // could tell the user to copy a `data.json` this session had just
+      // replaced. Awaiting starts nothing new — the value stays queued.
+      await this.settingsWriter.settled();
       const preserved = await this.preserveConflicting(raw, decision.reason);
       if (!preserved) {
         // From the pre-merge review. With the copy refused, the file on disk is
@@ -838,6 +844,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         );
         return;
       }
+      await this.settingsWriter?.settled();
       if (!(await this.preserveConflicting(raw, "unparsable"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
       }
@@ -852,7 +859,10 @@ export default class ProjectsPlusPlugin extends Plugin {
       console.warn(
         "[Projects+] the unparsable settings file was replaced by our own write; preserving what it held"
       );
-      await this.preserveConflicting(seen, "unparsable-overwritten");
+      await this.settingsWriter?.settled();
+      if (!(await this.preserveConflicting(seen, "unparsable-overwritten"))) {
+        this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
+      }
       return;
     }
     // It settled into somebody's readable version: run the ordinary decision on
@@ -877,6 +887,15 @@ export default class ProjectsPlusPlugin extends Plugin {
     );
     if (copiedTo === null) {
       logError(SETTINGS_CONFLICT_UNCOPIED, `reason: ${reason}`);
+      // The last channel left. The file could not be written, and pointing the
+      // user at `data.json` is a promise this branch cannot keep — by the time
+      // they read the notice, this session's own version may be what the file
+      // holds. So the bytes go where nothing else can take them from: verbatim
+      // into the console, which is where the notice now sends them.
+      console.error(
+        "[Projects+] PPP-106 the version that could not be copied, verbatim below:\n" +
+          raw
+      );
       new Notice(noticeFor(SETTINGS_CONFLICT_UNCOPIED), 15000);
       return false;
     }

@@ -171,18 +171,18 @@ Nothing is lost. The other version is in the file named in the notice, next to d
 отказала. Значит единственный экземпляр чужой версии — это сам `data.json`.
 
 ### Что делать
-Скопируйте `data.json` руками (из папки плагина) **прежде** чем менять любую настройку: ближайшее
-сохранение перезапишет файл вашей версией, и чужая пропадёт. Причина отказа записи — в консоли
-разработчика.
+Откройте консоль разработчика (Ctrl+Shift+I) и найдите строку `PPP-106` — сразу под ней чужая версия
+выведена целиком. Скопируйте её оттуда в файл, если хотите вернуть. На `data.json` полагаться нельзя:
+к моменту, когда вы читаете уведомление, файл может быть уже перезаписан версией этого сеанса.
 
 ### What happened
-Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. Your version is kept — copy data.json by hand before you change any setting, because the next save overwrites it.
+Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. It is written verbatim in the developer console — take it from there; this session's own version may already have replaced the file.
 
 ### Why
-Writing the conflict copy next to data.json failed, or the plugin folder is unknown, so the only copy of the other version is data.json itself.
+Writing the conflict copy failed, or the plugin folder is unknown, so the console line is the only remaining copy of the other version.
 
 ### What to do
-Copy data.json out of the plugin folder by hand before changing any setting; the next ordinary save rewrites it with this session's version. The console line says why the copy was refused.
+Open the developer console (Ctrl+Shift+I), find the `PPP-106` line, and copy the version printed under it into a file of your own. Do not rely on data.json: by the time you read the notice it may already hold this session's version.
 
 ## PPP-201
 
