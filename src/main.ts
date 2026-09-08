@@ -762,7 +762,9 @@ export default class ProjectsPlusPlugin extends Plugin {
       // become the file. Without this the disk keeps the other version and the
       // next ordinary save overwrites it anyway — the defect #200 opened with,
       // minus the loss.
-      this.settingsWriter.resume();
+      // `pushImmediate` lifts the suspension itself: it is the restore that
+      // ends the episode, and a caller that has to remember to release first is
+      // the shape of defect this branch has already produced once.
       this.settingsWriter.pushImmediate(get(settings));
       return;
     }

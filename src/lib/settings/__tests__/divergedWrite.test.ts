@@ -479,6 +479,26 @@ describe("#200 — holding the writer when the other version could not be copied
     expect(save.calls).toHaveLength(0);
   });
 
+  it("does not block reconciliation's own restore", async () => {
+    // The ninth review pass. Suspension stops ORDINARY writes from overtaking
+    // reconciliation; `pushImmediate` is reconciliation's own write, so being
+    // blocked by it meant one branch held, preserved, and then restored
+    // nothing at all — the settings left dirty until an unrelated edit.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    writer.hold("PPP-105");
+    writer.pushImmediate({ n: 2 });
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(save.calls).toEqual([{ n: 2 }]);
+  });
+
   it("keeps the value, so the user's next change still reaches the disk", async () => {
     // A hold that dropped the pending change would trade one loss for another.
     const save = makeSave();

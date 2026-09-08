@@ -466,6 +466,14 @@ export function createSettingsWriter<T>(
       dirty = true;
       immediate = true;
       cancelSchedule();
+      // The suspension exists to stop ORDINARY writes from overtaking
+      // reconciliation. This IS reconciliation's write — the restore that ends
+      // the episode — so it lifts the suspension rather than being blocked by
+      // it. The ninth review pass found the alternative: one branch called
+      // `hold` and then `pushImmediate` without a `resume` in between, and the
+      // restore silently did nothing. Making the caller remember was the
+      // version that failed; the writer knowing which write this is does not.
+      cancelSuspension();
       startWrite();
     },
     resume(): void {

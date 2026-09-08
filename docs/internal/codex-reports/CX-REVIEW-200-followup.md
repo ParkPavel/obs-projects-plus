@@ -99,3 +99,14 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Восьмой и девятый проходы
+
+Восьмой — одна находка (P3), документация. Девятый — одна (P1), координация.
+
+```
+- [P1] Resume the writer before restoring unresolved settings — C:\Users\Park\OBSv1.0\obs-projects-plus\src\main.ts:786-786
+  When an externally changed v4 settings payload has an invalid project or view so `migrateSettings` returns `Left`, this branch has already called `hold()`, leaving the writer suspended. After preserving the external payload, `pushImmediate()` cannot start because `startWrite()` returns while suspended, and unlike the normal conflict branch this path never calls `resume()`. The in-memory settings then remain dirty and are neither restored to disk nor flushed on shutdown until another settings edit occurs.
+
+[exited with code 0]
+```
