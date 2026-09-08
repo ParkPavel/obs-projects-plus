@@ -230,3 +230,13 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после чистки базиса — одна P2 (текст выводил лишнее)
+
+```
+
+- [P2] Do not infer a vault-wide write failure — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\errors\errorCodes.ts:180-181
+  `PPP-106` is reached when these two particular recovery writes fail, which does not establish that every vault write fails: for example, an unknown `manifest.dir` skips the sibling-copy attempt and a path-specific failure can reject the recovery note while `saveData` remains usable. Telling the user that their settings cannot be saved sends them toward unnecessary storage troubleshooting and contradicts the writer's behavior, which permits a later user edit to retry. This recovery text must describe only the failed preservation paths. `CLAUDE.md:59-62`.
+
+[exited with code 0]
+```

@@ -176,9 +176,9 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     key: "save-status.conflict-uncopied.notice",
     causeKey: "errors.causes.settings-conflict-uncopied",
     caption:
-      "Projects+: data.json was changed outside this window, and the other version could not be kept anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console; nothing of this session has been written over it.",
+      "Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself.",
     cause:
-      "Both the copy beside data.json and the note at the vault root failed to write, so the vault is refusing writes altogether — this session's own settings cannot be saved either.",
+      "Both the copy beside data.json and the note in the vault failed to write, so the console line is the only remaining copy of the other version; this session's writing is held until your next change.",
   },
   {
     code: "PPP-201",
