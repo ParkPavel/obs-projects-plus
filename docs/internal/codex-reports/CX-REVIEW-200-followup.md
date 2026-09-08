@@ -201,3 +201,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после правки таймера продолжения — одна P1
+
+```
+- [P1] Keep the fence when the settlement read fails — C:\Users\Park\OBSv1.0\obs-projects-plus\src\main.ts:846-847
+  If an external write first yields nonempty unparsable bytes and the delayed adapter read then fails transiently (for example while a synchronizer still holds the file), this returns `release`. That opens the writer and schedules any queued local edit even though the external bytes were never copied aside, so it can overwrite the only other version. Treat this as an unresolved episode (or preserve the initially captured bytes) rather than releasing it.
+
+[exited with code 0]
+```

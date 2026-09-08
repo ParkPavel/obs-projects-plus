@@ -803,7 +803,11 @@ export default class ProjectsPlusPlugin extends Plugin {
         return {
           kind: "extend",
           after: SETTINGS_UNPARSABLE_RECHECK_MS,
-          next: (again) => this.settleUnreadable(again),
+          // The bytes we saw travel with the episode. If the file becomes
+          // unreadable later, they are the only copy of the other version left
+          // in our hands, and releasing without them would let a queued edit
+          // take the file.
+          next: (again) => this.settleUnreadable(again, raw),
         };
 
       case "hold":
@@ -841,10 +845,25 @@ export default class ProjectsPlusPlugin extends Plugin {
    */
   private async settleUnreadable(
     entry: EpisodeEntry,
+    seen: string,
     look = 1
   ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
     const raw = await this.readSettingsFile();
-    if (raw === null) return { kind: "release" };
+    if (raw === null) {
+      // The file cannot be read — a synchroniser holding it, most likely. This
+      // is NOT a resolution: nothing of the other version has been preserved,
+      // and releasing here schedules the queued edit straight over it.
+      if (look < SETTINGS_EMPTY_FILE_LOOKS) {
+        return {
+          kind: "extend",
+          after: SETTINGS_UNPARSABLE_RECHECK_MS,
+          next: (again) => this.settleUnreadable(again, seen, look + 1),
+        };
+      }
+      // Out of looks and still blind. What we saw is the only copy of the other
+      // version we hold, so it is preserved and memory becomes the file.
+      return this.refuseAsConflict(seen, "unreadable-after-wait");
+    }
     if (!carriesAVersion(raw)) {
       // Still nothing. There is no version in these bytes to preserve — but
       // there will be one, and releasing here schedules the queued edit to land
@@ -858,7 +877,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         return {
           kind: "extend",
           after: SETTINGS_UNPARSABLE_RECHECK_MS,
-          next: (again) => this.settleUnreadable(again, look + 1),
+          next: (again) => this.settleUnreadable(again, seen, look + 1),
         };
       }
       // Out of looks. The other writer may never finish, and the user's change
