@@ -171,11 +171,15 @@ Nothing is lost. **Follow the path in the notice** — it is the answer, because
 ## PPP-106
 
 ### Что случилось
-`data.json` изменил кто-то другой, а сохранить чужую версию в соседний файл не удалось.
+`data.json` изменил кто-то другой, а сохранить чужую версию не удалось ни одним из способов: ни
+файлом рядом с настройками, ни заметкой в хранилище.
 
 ### Почему
-Запись копии рядом с `data.json` не прошла — либо папка плагина неизвестна, либо файловая система
-отказала. Значит единственный экземпляр чужой версии — это сам `data.json`.
+Не прошли обе записи — копия рядом с `data.json` (или папка плагина неизвестна, и писать рядом
+некуда) и заметка в хранилище. Поэтому единственная гарантированная копия чужой версии — строка в
+консоли разработчика; сам `data.json` тоже ещё держит её, и удержание записи не даёт её затереть до
+вашей следующей правки. Отказ этих двух записей **не означает**, что хранилище не принимает запись
+вообще.
 
 ### Что делать
 Чужая версия сейчас цела: пока вы сами не измените настройку, плагин ничего поверх неё не пишет.
@@ -189,10 +193,10 @@ Nothing is lost. **Follow the path in the notice** — it is the answer, because
 удалось записать копию, **не следует**, что хранилище вообще не принимает запись.
 
 ### What happened
-Projects+: data.json was changed outside this window, and the other version could not be kept anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console; nothing of this session has been written over it.
+Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself.
 
 ### Why
-Both the copy beside data.json and the note at the vault root failed to write, so the vault is refusing writes altogether — this session's own settings cannot be saved either.
+Both the copy beside data.json and the note in the vault failed to write, so the console line is the only remaining copy of the other version; this session's writing is held until your next change.
 
 ### What to do
 The other version is intact for now: nothing is written over it until you change a setting yourself. So, in order: on desktop, open the developer console (Ctrl+Shift+I) and find the `PPP-106` line — the full text of the other version is printed under it, and you can copy it from there. Or copy `data.json` itself out of the plugin folder. Only then change a setting: **your first edit lifts the hold and writes the file with your version.**

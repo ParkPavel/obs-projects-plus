@@ -138,6 +138,28 @@ describe("R0.21 — the registry and the page stay in step", () => {
     }
   });
 
+  it("the English half of a section is the registry's own words", () => {
+    // #212: the page's English half is a COPY of the caption and the cause, and
+    // a copy drifts. PPP-106's text was rewritten twice on that branch and the
+    // page kept the first version both times, so the section contradicted the
+    // notice the product actually shows — and the ratchet, which checked only
+    // that three headings existed, had nothing to say about it.
+    //
+    // Structure is still not prose: this asserts that the words under "What
+    // happened" and "Why" are the registry's, which is the one thing that
+    // cannot be a matter of taste.
+    const text = pageText();
+    const drifted: string[] = [];
+    for (const entry of ERROR_CODES) {
+      const section = sectionOf(text, entry.code);
+      if (!section.includes(entry.caption))
+        drifted.push(`${entry.code} caption`);
+      if (!section.includes(entry.cause)) drifted.push(`${entry.code} cause`);
+    }
+
+    expect(drifted).toEqual([]);
+  });
+
   it("every section explains itself in both languages", () => {
     // #203: the codes are shown to every locale, and the page was written only
     // in Russian — so for an English, Ukrainian or Chinese user the token was a

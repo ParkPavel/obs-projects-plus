@@ -240,3 +240,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после правки PPP-106 — одна P2 (страница отстала от реестра)
+
+```
+- [P2] Do not claim the vault rejects all writes — C:\Users\Park\OBSv1.0\obs-projects-plus\docs\ERROR_CODES.md:194-195
+  A failed conflict-copy and recovery-note write does not establish that the vault rejects writes altogether: the settings file can still be writable, and the surrounding instructions correctly say this failure does not imply a general vault-write failure. This contradictory recovery guidance can cause users to avoid a viable save path. [CLAUDE.md:59](C:/Users/Park/OBSv1.0/obs-projects-plus/CLAUDE.md#L59)
+
+[exited with code 0]
+```
