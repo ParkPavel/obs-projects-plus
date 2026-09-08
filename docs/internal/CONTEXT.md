@@ -52,10 +52,17 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   by hand was defeated by a write already sitting in the debounce; and two conflict copies in the
   same millisecond could collide. The writer gained `hold`, the unparsable bytes are captured when
   seen, and conflict names carry a random token.
-  **Consequence for the acceptance evidence:** the run was made on `3694a42`, before those fixes.
-  A3 and A6 touch branches that changed and need re-running on the current build; the other eight
-  items do not. Until then the live confirmation belongs to the previous build, which is stated in
-  the results file rather than left to be assumed.
+  **The acceptance was then re-run on the fixed build the same day**
+  (`ACCEPTANCE_200_RERUN_2026-09-08.md`, build `83abc43`, deployed copy verified byte-identical):
+  **11/11**, the eleventh being a new A6-race — the file is torn and the plugin is immediately given
+  something to write, so its own write lands inside the two-second delay, and the captured bytes are
+  preserved anyway. The whole run was repeated rather than A3 and A6 alone, because
+  `writeConflictCopy` was rewritten and it produces what A4 and A5 observe, and the `diverged`
+  branch in `settingsWriter` is where A9's status comes from. All 17 conflict copies carry the new
+  build's random token, so the evidence names the code that made it instead of resting on a claim.
+  A3's restore-after-conflict was measured at 520 ms — the queued write the fix added. One new
+  defect: #210, a zero-byte conflict copy, because `preserving what it held` accepts an empty
+  capture from a non-atomic writer. #209 was re-measured honestly at ~100 ms and stands.
   Still open: what the spike could not settle either — whether the hook fires for another plugin
   writing in the same process (Remotely Save), which is risk 1 of the plan's §10.
 
