@@ -165,3 +165,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после T8-правки — одна P1
+
+```
+- [P1] Keep a disposed writer closed when a lease resolves — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:426-427
+  When the plugin unloads while an external-change lease is awaiting a read/copy, `dispose()` sets the permit to `closed`, but the lease subsequently reaches this branch and calls `toOpen()` (and a `restore` then calls `startWrite()`). This can resume persistence and overwrite `data.json` after the plugin has been disabled; guard outcome application against `closed` so pending leases cannot reopen it. This contradicts the stated closed-state contract in `docs/internal/PLAN_212_WRITE_PERMIT_2026-09-08.md:67`.
+
+[exited with code 0]
+```

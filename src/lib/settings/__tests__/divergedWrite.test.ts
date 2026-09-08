@@ -367,6 +367,36 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls).toHaveLength(1);
   });
 
+  it("does not reopen a writer that was disposed mid-episode", async () => {
+    // Unloading while a lease awaits a read or a copy: the permit goes to
+    // `closed`, and the lease then resolves. Reopening there would write to a
+    // vault the plugin has already left — the review found it, and PLAN_212's
+    // own table says `closed` is terminal.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    let end!: (outcome: WriteOutcome<Value>) => void;
+    const lease = writer.withExclusive(
+      "PPP-102",
+      () =>
+        new Promise<WriteOutcome<Value>>((resolve) => {
+          end = resolve;
+        })
+    );
+    await jest.advanceTimersByTimeAsync(0);
+
+    writer.dispose();
+    end({ kind: "restore", settings: { n: 1 } });
+    await lease;
+    await jest.advanceTimersByTimeAsync(2000);
+
+    expect(save.calls).toHaveLength(0);
+  });
+
   it("decides overlapping episodes one at a time", async () => {
     // Two external notifications can arrive while a read or a copy is being
     // awaited. Fencing is shared state, not a queue: without serialising, the

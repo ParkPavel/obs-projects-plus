@@ -345,7 +345,15 @@ export function createSettingsWriter<T>(
     if (permit.kind === "fenced") clearTimeout(permit.until);
   }
 
+  /**
+   * `closed` is terminal, and these three are the only transitions that could
+   * leave it. The review found the way out: unloading while a lease was awaiting
+   * a read or a copy set the permit to `closed`, and the lease then resolved,
+   * called `toOpen`, and a restore wrote `data.json` after the plugin had been
+   * disabled. Once closed, nothing reopens.
+   */
   function toOpen(): void {
+    if (permit.kind === "closed") return;
     clearPermitTimer();
     permit = { kind: "open" };
   }
@@ -356,6 +364,7 @@ export function createSettingsWriter<T>(
    * episode that never returns releases the queue by itself.
    */
   function toFenced(code: string): void {
+    if (permit.kind === "closed") return;
     clearPermitTimer();
     permit = {
       kind: "fenced",
@@ -368,6 +377,7 @@ export function createSettingsWriter<T>(
   }
 
   function toHeld(code: string): void {
+    if (permit.kind === "closed") return;
     clearPermitTimer();
     permit = { kind: "held", code };
   }
@@ -422,6 +432,14 @@ export function createSettingsWriter<T>(
     outcome: WriteOutcome<T>,
     epochAtEntry: number
   ): WriteOutcome<T> {
+    if (permit.kind === "closed") {
+      // The plugin was unloaded while this episode was deciding. Applying its
+      // outcome now would write to a vault the plugin has left, and the value
+      // is not lost by refusing: it is lost either way, and #185 already says
+      // a change that could not be written before teardown is gone.
+      console.debug("[Projects+] episode ended after unload; nothing applied");
+      return { kind: "release" };
+    }
     switch (outcome.kind) {
       case "release":
         toOpen();
