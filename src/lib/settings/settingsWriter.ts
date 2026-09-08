@@ -18,7 +18,7 @@
  *
  * State is never rolled back on a failure: the change stays in memory and the
  * user is told it is not on disk. A retry always writes whatever the store holds
- * NOW — `startWrite` reads `latest` at call time — so a retry can never
+ * NOW — `startWrite` reads the queue at call time — so a retry can never
  * resurrect the value it stumbled on.
  */
 
@@ -88,6 +88,16 @@ export const SETTINGS_RECONCILE_BACKSTOP_MS = 10000;
  */
 export type WriteVerdict = "confirmed" | "not-written" | "diverged";
 
+/**
+ * #212 step A — whose value is queued.
+ *
+ * `session` is the user's own edit, arriving through the settings store.
+ * `reconciler` is the restore that ends an external-change episode. The two
+ * have different rights, and keeping the distinction ON THE VALUE is what stops
+ * an edit from inheriting a licence granted to the value it replaced.
+ */
+export type Origin = "session" | "reconciler";
+
 export interface SettingsWriterOptions<T> {
   save: (value: T) => Promise<unknown>;
   /**
@@ -130,7 +140,7 @@ export interface SettingsWriter<T> {
    * place that version exists, and a write 400ms later would make the notice's
    * instruction a lie.
    *
-   * Nothing is dropped — `latest` and `dirty` stand, so the user's next change
+   * Nothing is dropped — the queue stands, so the user's next change
    * schedules a write again, by which time they have been told. Calling it
    * twice only changes the code the mark carries.
    *
@@ -210,28 +220,27 @@ export function createSettingsWriter<T>(
   const maxWaitMs = options.maxWaitMs ?? SETTINGS_WRITE_MAX_WAIT_MS;
   const retryDelays = options.retryDelaysMs ?? SETTINGS_WRITE_RETRY_DELAYS_MS;
 
-  // Boxed so that `undefined` is a legal settings value and "nothing yet" is
-  // still distinguishable from it.
-  let latest: { value: T } | null = null;
-  let dirty = false;
+  /**
+   * The last value this writer was handed, boxed so that `undefined` is a legal
+   * settings value and "nothing yet" is still distinguishable from it. It is
+   * what `push` compares against; it says nothing about the disk.
+   */
+  let last: { value: T } | null = null;
+  /**
+   * #212 step A — what still has to reach the disk, and WHOSE it is.
+   *
+   * Three flat booleans used to carry three orthogonal facts, and every fix on
+   * one of them silently moved another (`PLAN_212` section 0). This is the
+   * first of them: provenance belongs to the queued VALUE, not to the writer,
+   * which is what the second review pass asked for. `null` means nothing owed.
+   */
+  let queue: { value: T; origin: Origin } | null = null;
   let inFlight: Promise<void> | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let attempt = 0;
   let status: SaveStatus = { kind: "idle" };
-  /** Set by `attemptWrite` when the file was replaced by somebody else. */
-  let diverged = false;
-  /**
-   * Set when `pushImmediate` could not start because a write was in flight.
-   *
-   * The distinction the catch-up review asked for: only a caller that already
-   * bypassed the debounce may be drained early after a divergence. An ordinary
-   * edit still has its own debounce timer running and must keep it — writing it
-   * the instant we learn somebody else replaced the file would race the hook
-   * that is about to copy their version aside.
-   */
-  let immediate = false;
   /**
    * #211 — writing is suspended: the queued value stays, its timers do not.
    *
@@ -306,17 +315,11 @@ export function createSettingsWriter<T>(
     // that reaches `startWrite` another way — a retry from a stale handler, a
     // forced flush — cannot write over the version being preserved either.
     if (suspended) return;
-    if (
-      (disposed && !force) ||
-      inFlight !== null ||
-      !dirty ||
-      latest === null
-    ) {
+    if ((disposed && !force) || inFlight !== null || queue === null) {
       return;
     }
-    const value = latest.value;
-    dirty = false;
-    immediate = false;
+    const { value, origin } = queue;
+    queue = null;
     // #199: paired with the failure log below. Between them, a developer can
     // tell the three cases apart that look identical from the outside — the
     // write never started, it started and failed, it started and reported
@@ -325,7 +328,7 @@ export function createSettingsWriter<T>(
     setStatus({ kind: "saving" });
     inFlight = Promise.resolve()
       .then(() => attemptWrite(value))
-      .then(onWritten, onFailure);
+      .then(onWritten, (err) => onFailure(err, value, origin));
   }
 
   /**
@@ -333,31 +336,33 @@ export function createSettingsWriter<T>(
    * this ticket had `saveData` report success while the file on disk did not
    * change — so the claim is checked, and an unconfirmed write is a failed one.
    */
-  async function attemptWrite(value: T): Promise<void> {
+  async function attemptWrite(value: T): Promise<"confirmed" | "diverged"> {
     await save(value);
-    if (verify === undefined) return;
+    if (verify === undefined) return "confirmed";
     const verdict = await verify(value);
-    if (verdict === "confirmed") return;
+    if (verdict === "confirmed") return "confirmed";
     if (verdict === "diverged") {
       // #200: not an error, and deliberately not thrown. Throwing would put it
       // on the retry path, and a retry here IS the overwrite. The status says
       // what happened and the writer stands down.
-      diverged = true;
-      return;
+      //
+      // #212 step A: returned rather than written to a flag the next function
+      // reads. It is produced here and consumed one call later, so a flag only
+      // added a way for the two to disagree.
+      return "diverged";
     }
     throw new Error(
       "the write reported success but the settings file does not match"
     );
   }
 
-  function onWritten(): void {
+  function onWritten(outcome: "confirmed" | "diverged"): void {
     inFlight = null;
     attempt = 0;
-    if (diverged) {
+    if (outcome === "diverged") {
       // The value stays in memory: it was written, the file simply no longer
       // reflects it, and this writer does not retry — the retry IS the
       // overwrite.
-      diverged = false;
       setStatus({ kind: "diverged", code: SETTINGS_DIVERGED });
       // …but the reconciliation's own restore is a different thing, and
       // returning here stranded it: `pushImmediate` cancels the debounce, sees
@@ -382,8 +387,8 @@ export function createSettingsWriter<T>(
       // reconciliation releases it when it has preserved or explicitly handled
       // the other version. The backstop below is what makes deferring safe:
       // if the hook never comes, the value still goes to disk.
-      if (dirty) {
-        if (immediate) {
+      if (queue !== null) {
+        if (queue.origin === "reconciler") {
           startWrite(flushing);
         } else if (!suspended) {
           // A debounce armed by a `push` that arrived while the write was in
@@ -400,7 +405,7 @@ export function createSettingsWriter<T>(
       }
       return;
     }
-    if (dirty) {
+    if (queue !== null) {
       // Exactly one follow-up write, carrying whatever arrived meanwhile. It
       // keeps the flush's licence to run past `dispose`: teardown calls
       // `flush()` and `dispose()` back to back, so without this the value
@@ -412,7 +417,7 @@ export function createSettingsWriter<T>(
     setStatus({ kind: "idle" });
   }
 
-  function onFailure(err: unknown): void {
+  function onFailure(err: unknown, value: T, origin: Origin): void {
     inFlight = null;
     // #199: a failed write left no trace anywhere a developer could look. The
     // chip and the Notice are for the user and say nothing about WHY; when the
@@ -423,10 +428,12 @@ export function createSettingsWriter<T>(
     // can be matched to each other — which is the thing that cost a day on
     // #199 and could not be done at all.
     logError(SETTINGS_WRITE_FAILED, `attempt ${attempt + 1}`, err);
-    // Nothing reached the disk, so the value is pending again. The state itself
-    // is untouched — rolling it back would destroy the user's work on the
-    // assumption that the disk is right, exactly where that is unknown.
-    dirty = true;
+    // Nothing reached the disk, so the value is pending again — with the
+    // provenance it had, so a failed restore is still the reconciler's. The
+    // state itself is untouched: rolling it back would destroy the user's work
+    // on the assumption that the disk is right, exactly where that is unknown.
+    // A value queued meanwhile is newer and is left alone.
+    if (queue === null) queue = { value, origin };
     attempt += 1;
     const delay = retryDelays[attempt - 1];
     if (delay !== undefined && !disposed) {
@@ -446,18 +453,12 @@ export function createSettingsWriter<T>(
 
   return {
     prime(value: T): void {
-      latest = { value };
-      dirty = false;
-      immediate = false;
+      last = { value };
+      queue = null;
       cancelSuspension();
     },
     push(value: T): void {
-      if (latest !== null && Object.is(latest.value, value)) return;
-      // #211: the marker belongs to the queued VALUE, and this call replaces
-      // it. Left standing, an ordinary edit made while an immediate write was
-      // still queued would inherit its licence to bypass the debounce — the
-      // race the split exists to prevent, arriving from inside.
-      immediate = false;
+      if (last !== null && Object.is(last.value, value)) return;
       // A change the user makes after all this is their answer to whatever the
       // deferral was waiting for: it goes to disk on the ordinary schedule.
       cancelSuspension();
@@ -466,15 +467,17 @@ export function createSettingsWriter<T>(
       // list and every later change gets a single attempt — the writer quietly
       // stops retrying for the rest of the session.
       if (status.kind === "failed") attempt = 0;
-      latest = { value };
-      dirty = true;
+      last = { value };
+      // Replacing the queue replaces its provenance with it — which is the
+      // point of keeping the two together. An ordinary edit can no longer
+      // inherit a licence granted to the value it displaced.
+      queue = { value, origin: "session" };
       schedule();
     },
     pushImmediate(value: T): void {
       if (status.kind === "failed") attempt = 0;
-      latest = { value };
-      dirty = true;
-      immediate = true;
+      last = { value };
+      queue = { value, origin: "reconciler" };
       cancelSchedule();
       // The suspension exists to stop ORDINARY writes from overtaking
       // reconciliation. This IS reconciliation's write — the restore that ends
@@ -493,7 +496,7 @@ export function createSettingsWriter<T>(
       // stayed dirty with no timer until an unrelated edit or shutdown carried
       // it, which in an interrupted session means losing it.
       cancelSuspension();
-      if (dirty) schedule();
+      if (queue !== null) schedule();
     },
     async settled(): Promise<void> {
       while (inFlight !== null) {
@@ -510,17 +513,21 @@ export function createSettingsWriter<T>(
         clearTimeout(suspendTimer);
         suspendTimer = null;
       }
-      // The value is deliberately left dirty: it is not on disk, and the next
-      // `push` — or `resume` — must still write it. Only the timers stop.
+      // The queue is deliberately left standing: it is not on disk, and the
+      // next `push` — or `resume` — must still write it. Only the timers stop.
       suspended = true;
       setStatus({ kind: "diverged", code });
     },
     retry(): void {
       if (disposed) return;
-      if (status.kind !== "failed" && !dirty) return;
+      if (status.kind !== "failed" && queue === null) return;
       cancelRetry();
       attempt = 0;
-      dirty = true;
+      // A retry writes whatever the store holds NOW, which after a failure is
+      // the value still on `last`.
+      if (queue === null && last !== null) {
+        queue = { value: last.value, origin: "session" };
+      }
       startWrite();
     },
     async flush(): Promise<void> {
@@ -561,7 +568,7 @@ export function createSettingsWriter<T>(
     },
     hasPending(): boolean {
       return (
-        dirty ||
+        queue !== null ||
         inFlight !== null ||
         status.kind === "failed" ||
         status.kind === "diverged"
