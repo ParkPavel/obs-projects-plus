@@ -23,6 +23,21 @@ import {
 
 type Value = { readonly n: number };
 
+/**
+ * #212 — end an episode with `outcome`, immediately.
+ *
+ * `hold`, `resume` and `settled` are gone: an episode is a lease now, and this
+ * is what "hold" or "release" looks like from a caller. Written as a helper so
+ * the cases below read as what they assert rather than as ceremony.
+ */
+async function lease(
+  writer: SettingsWriter<Value>,
+  outcome: WriteOutcome<Value>,
+  code = "PPP-105"
+): Promise<void> {
+  await writer.withExclusive(code, async () => outcome);
+}
+
 function makeSave(): {
   fn: (value: Value) => Promise<unknown>;
   calls: Value[];
@@ -207,7 +222,7 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     await jest.advanceTimersByTimeAsync(3000);
     expect(save.calls).toHaveLength(1);
 
-    writer.resume();
+    await lease(writer, { kind: "release" });
     await jest.advanceTimersByTimeAsync(400);
 
     expect(save.calls).toHaveLength(2);
@@ -313,7 +328,7 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     settlers[0]?.();
     await jest.advanceTimersByTimeAsync(0);
 
-    writer.resume();
+    await lease(writer, { kind: "release" });
     const flushed = writer.flush();
     // The flush starts the write; its verification is held open like the
     // first one's, so it has to be settled or the flush waits for a promise
@@ -326,30 +341,34 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls[1]).toEqual({ n: 2 });
   });
 
-  it("settled() waits for a write in flight and starts nothing", async () => {
-    // What reconciliation awaits before deciding: `flush` cannot serve, because
-    // it WRITES what is pending, and the caller must decide what to do about
-    // somebody else's file before this session adds to it.
+  it("the lease waits for a write in flight before its body runs", async () => {
+    // What absorbed `settled`. Reconciliation must not decide what to do about
+    // somebody else's file while a write of ours is still landing on it — and
+    // it must not WRITE anything to find that out, which is why `flush` could
+    // never have served here.
     const save = makeSave();
     const { writer, settlers } = heldWriter(save.fn);
 
     writer.push({ n: 1 });
     await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toHaveLength(1);
     writer.push({ n: 2 });
 
-    let done = false;
-    const waiting = writer.settled().then(() => {
-      done = true;
+    let bodyRan = false;
+    const running = writer.withExclusive("PPP-102", async () => {
+      bodyRan = true;
+      return { kind: "release" as const };
     });
     await jest.advanceTimersByTimeAsync(0);
-    expect(done).toBe(false);
+    // The first write has not settled, so the decision has not begun…
+    expect(bodyRan).toBe(false);
 
     settlers[0]?.();
     await jest.advanceTimersByTimeAsync(0);
-    await waiting;
+    await running;
 
-    expect(done).toBe(true);
-    // The queued value is still queued: awaiting must not write it.
+    expect(bodyRan).toBe(true);
+    // …and the queued value is still queued: waiting must not write it.
     expect(save.calls).toHaveLength(1);
   });
 });
@@ -371,7 +390,7 @@ describe("#200 — holding the writer when the other version could not be copied
     });
 
     writer.push({ n: 1 });
-    writer.hold("PPP-106");
+    await lease(writer, { kind: "hold", code: "PPP-106" });
     await jest.advanceTimersByTimeAsync(5000);
 
     expect(save.calls).toHaveLength(0);
@@ -551,8 +570,10 @@ describe("#200 — holding the writer when the other version could not be copied
     });
 
     writer.push({ n: 1 });
-    writer.hold("PPP-105");
-    await writer.settled();
+    // The lease waits for anything in flight itself, which is what `settled`
+    // used to be asked for by hand — and in the wrong order, until the sixth
+    // review pass.
+    await lease(writer, { kind: "hold", code: "PPP-105" });
     await jest.advanceTimersByTimeAsync(2000);
 
     expect(save.calls).toHaveLength(0);
@@ -573,11 +594,11 @@ describe("#200 — holding the writer when the other version could not be copied
     });
 
     writer.push({ n: 1 });
-    writer.hold("PPP-105");
+    await lease(writer, { kind: "hold", code: "PPP-105" });
     await jest.advanceTimersByTimeAsync(2000);
     expect(save.calls).toHaveLength(0);
 
-    writer.resume();
+    await lease(writer, { kind: "release" });
     await jest.advanceTimersByTimeAsync(400);
 
     expect(save.calls).toEqual([{ n: 1 }]);
@@ -595,7 +616,7 @@ describe("#200 — holding the writer when the other version could not be copied
     });
 
     writer.push({ n: 1 });
-    writer.hold("PPP-106");
+    await lease(writer, { kind: "hold", code: "PPP-106" });
     await writer.flush();
 
     expect(save.calls).toHaveLength(0);
@@ -634,7 +655,7 @@ describe("#200 — holding the writer when the other version could not be copied
     });
 
     writer.push({ n: 1 });
-    writer.hold("PPP-106");
+    await lease(writer, { kind: "hold", code: "PPP-106" });
     await jest.advanceTimersByTimeAsync(5000);
 
     writer.push({ n: 2 });

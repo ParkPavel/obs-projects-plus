@@ -189,26 +189,6 @@ export interface SettingsWriter<T> {
   pushNow(value: T): void;
   /** Retry after a failure, with the latest value rather than the failed one. */
   retry(): void;
-  /**
-   * #200/#211 — stop the pending write from running, keeping its value.
-   *
-   * Used at both ends of the conflict branch. At the start, because deciding
-   * what to do about somebody else's file takes several awaits — reading,
-   * copying — and a write sitting in its debounce would otherwise fire in the
-   * middle of them and overwrite the very version being preserved. At the end,
-   * when nothing could be written anywhere: the file on disk is then the only
-   * place that version exists, and a write 400ms later would make the notice's
-   * instruction a lie.
-   *
-   * Nothing is dropped — the queue stands, so the user's next change
-   * schedules a write again, by which time they have been told. Calling it
-   * twice only changes the code the mark carries.
-   *
-   * This is not the "single owner blocks writes" model the plan rejected: it is
-   * a pause that lasts as long as one decision, released by reconciliation
-   * itself or by the next thing the user does.
-   */
-  hold(code: string): void;
   /** Write anything pending and wait for the in-flight write to settle. */
   flush(): Promise<void>;
   /**
@@ -230,27 +210,6 @@ export interface SettingsWriter<T> {
     code: string,
     body: () => Promise<WriteOutcome<T>>
   ): Promise<WriteOutcome<T>>;
-  /**
-   * #200 — wait for a write already running, WITHOUT starting anything new.
-   *
-   * `flush` cannot serve here: it writes what is pending, and the caller is
-   * reconciliation, which must decide what to do about somebody else's file
-   * before this session adds to it. Awaiting first means no write of ours can
-   * land between the decision and the message the user is given about it.
-   */
-  settled(): Promise<void>;
-  /**
-   * #211 — lift the suspension and let the queued edit go to disk again.
-   *
-   * After a divergence, a queued edit of the user's is fenced rather than
-   * re-armed: reconciliation is on its way to read the file and copy the other
-   * version aside, and 400ms is not a guarantee that it gets there first.
-   * Every branch of the hook calls this when it is done, so the fence lasts
-   * exactly as long as the decision does — and it re-arms the debounce whatever
-   * the permit was, which is the one thing an earlier version of this got
-   * wrong.
-   */
-  resume(): void;
   /** Drop every timer. Does not write. */
   dispose(): void;
   status(): SaveStatus;
@@ -668,20 +627,6 @@ export function createSettingsWriter<T>(
       cancelSchedule();
       startWrite();
     },
-    resume(): void {
-      // Unconditional, and that is the seventh review pass's finding: the guard
-      // that used to stand here read one of the two flags, so a `hold` followed
-      // by a `resume` cleared the suspension and re-armed nothing — the value
-      // stayed dirty with no timer until an unrelated edit or shutdown carried
-      // it, which in an interrupted session means losing it.
-      toOpen();
-      if (queue !== null) schedule();
-    },
-    async settled(): Promise<void> {
-      while (inFlight !== null) {
-        await inFlight;
-      }
-    },
     async withExclusive(
       code: string,
       body: () => Promise<WriteOutcome<T>>
@@ -717,16 +662,6 @@ export function createSettingsWriter<T>(
         toFenced(code);
         return { kind: "hold", code };
       }
-    },
-    hold(code: string): void {
-      cancelSchedule();
-      cancelRetry();
-      // No deadline: a hold waits for the user, however long that takes,
-      // because the file it protects may be the only copy of somebody's
-      // settings. The queue is deliberately left standing — it is not on disk,
-      // and the next `push` or `resume` must still write it.
-      toHeld(code);
-      setStatus({ kind: "diverged", code });
     },
     retry(): void {
       if (permit.kind === "closed") return;
