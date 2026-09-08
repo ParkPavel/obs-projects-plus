@@ -25,7 +25,7 @@ Full review comments:
 
 ## Второй проход — ревью самой ветки `fix/211-conflict-races` (base `main`)
 
-Две находки, обе верные, исправлены в `c4d4c37` (см. коммит).
+Две находки, обе верные, исправлены в `6a79b94`.
 
 ```
  11 files changed, 223 insertions(+), 20 deletions(-)
