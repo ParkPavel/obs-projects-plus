@@ -45,6 +45,17 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   unparsable file. Three defects were found in passing, none about data safety: #207 (the console
   line prints a raw `{{path}}`), #208 (cause texts exist only in English — 32 of 32 keys), #209 (the
   "changed elsewhere" mark lives ~200 ms though it claims to be standing).
+  **The pre-merge review then found four more, three of them P1** (`CX-REVIEW-200.md`, fixed in
+  `83abc43`): a write queued behind one that diverged was never scheduled, so the conflict copy
+  existed and the promised restore did not; the truncated bytes could be erased by our own write
+  during the two-second delay meant to protect them; the `PPP-106` instruction to copy `data.json`
+  by hand was defeated by a write already sitting in the debounce; and two conflict copies in the
+  same millisecond could collide. The writer gained `hold`, the unparsable bytes are captured when
+  seen, and conflict names carry a random token.
+  **Consequence for the acceptance evidence:** the run was made on `3694a42`, before those fixes.
+  A3 and A6 touch branches that changed and need re-running on the current build; the other eight
+  items do not. Until then the live confirmation belongs to the previous build, which is stated in
+  the results file rather than left to be assumed.
   Still open: what the spike could not settle either — whether the hook fires for another plugin
   writing in the same process (Remotely Save), which is risk 1 of the plan's §10.
 
