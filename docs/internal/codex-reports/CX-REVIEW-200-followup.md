@@ -22,3 +22,21 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Второй проход — ревью самой ветки `fix/211-conflict-races` (base `main`)
+
+Две находки, обе верные, исправлены в `c4d4c37` (см. коммит).
+
+```
+ 11 files changed, 223 insertions(+), 20 deletions(-)
+
+Full review comments:
+
+- [P1] Fence ordinary writes until the external version is preserved — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:313-315
+  When a normal edit is queued behind a write that verifies as `diverged`, this re-arms its 400 ms timer without coordinating with `onExternalSettingsChange`. The host callback/read and `writeConflictCopy` are asynchronous, so that timer can fire before the handler has read or copied the external `data.json`, overwriting it with no recovery copy. Do not release/re-arm the ordinary write until reconciliation has preserved or explicitly handled the external payload.
+
+- [P2] Clear the immediate marker when a normal edit supersedes it — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:379-385
+  If `pushImmediate()` is called while a write is in flight and the user then makes an ordinary edit before that write resolves, `push()` replaces `latest` but leaves `immediate` true. On divergence, `onWritten()` therefore writes the user's ordinary edit immediately instead of honoring the debounce, reintroducing the race this split is intended to avoid. Reset the marker in `push()` or track the mode together with the queued value.
+
+[exited with code 0]
+```

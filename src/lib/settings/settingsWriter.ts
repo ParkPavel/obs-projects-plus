@@ -66,6 +66,19 @@ export const SETTINGS_WRITE_MAX_WAIT_MS = 2000;
 export const SETTINGS_WRITE_RETRY_DELAYS_MS: readonly number[] = [500, 2000];
 
 /**
+ * #211 — the backstop on a write deferred until reconciliation has had its turn.
+ *
+ * Deferring is what stops an ordinary edit from overwriting somebody else's
+ * file before the hook has copied it aside. `resume()` is the normal release,
+ * and this is what guarantees the value is never stranded if the hook does not
+ * come at all — a host that reports a divergence but never fires the external
+ * change event, say. Long enough that reconciliation always wins the race,
+ * short enough that a change the user made is not sitting unwritten for a time
+ * they would notice.
+ */
+export const SETTINGS_RECONCILE_BACKSTOP_MS = 10000;
+
+/**
  * #200 — what the file said after a write claimed to succeed.
  *
  * `confirmed` — the file holds what was written.
@@ -133,6 +146,16 @@ export interface SettingsWriter<T> {
    * land between the decision and the message the user is given about it.
    */
   settled(): Promise<void>;
+  /**
+   * #211 — let a deferred ordinary edit go to disk again.
+   *
+   * After a divergence, a queued edit of the user's is held rather than
+   * re-armed: reconciliation is on its way to read the file and copy the other
+   * version aside, and 400ms is not a guarantee that it gets there first.
+   * Every branch of the hook calls this when it is done, so the hold lasts
+   * exactly as long as the decision does.
+   */
+  resume(): void;
   /** Drop every timer. Does not write. */
   dispose(): void;
   status(): SaveStatus;
@@ -193,6 +216,13 @@ export function createSettingsWriter<T>(
    * that is about to copy their version aside.
    */
   let immediate = false;
+  /**
+   * #211 — a queued ordinary edit, held until reconciliation has decided what
+   * to do about the file that displaced our write. Released by `resume`, or by
+   * the backstop timer, or by the user's next change.
+   */
+  let deferred = false;
+  let deferTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
   let flushing = false;
 
@@ -217,6 +247,14 @@ export function createSettingsWriter<T>(
       clearTimeout(ceilingTimer);
       ceilingTimer = null;
     }
+  }
+
+  function cancelDefer(): void {
+    if (deferTimer !== null) {
+      clearTimeout(deferTimer);
+      deferTimer = null;
+    }
+    deferred = false;
   }
 
   function cancelRetry(): void {
@@ -306,13 +344,30 @@ export function createSettingsWriter<T>(
       //
       // It is not dropped either, and that is the second half. Its debounce is
       // already spent — the timer fired while the write was in flight and
-      // `startWrite` returned — so without re-scheduling it would sit dirty
-      // with nothing left to carry it, which is exactly the stranding this
-      // branch was fixed for. Re-scheduled, it lands a debounce later, by
-      // which time the hook has had its turn.
+      // `startWrite` returned — so left alone it would sit dirty with nothing
+      // to carry it, which is exactly the stranding this branch was fixed for.
+      //
+      // Re-arming the debounce was the first answer and it was still a race:
+      // 400ms against a host callback that has to read the file and write a
+      // copy. So the value is DEFERRED instead — no timer of its own — and
+      // reconciliation releases it when it has preserved or explicitly handled
+      // the other version. The backstop below is what makes deferring safe:
+      // if the hook never comes, the value still goes to disk.
       if (dirty) {
-        if (immediate) startWrite(flushing);
-        else schedule();
+        if (immediate) {
+          startWrite(flushing);
+        } else if (!deferred) {
+          // A debounce armed by a `push` that arrived while the write was in
+          // flight is still running, and it would fire straight through the
+          // hold. Deferring means deferring, so it goes.
+          cancelSchedule();
+          deferred = true;
+          deferTimer = setTimeout(() => {
+            deferTimer = null;
+            deferred = false;
+            schedule();
+          }, SETTINGS_RECONCILE_BACKSTOP_MS);
+        }
       }
       return;
     }
@@ -364,9 +419,19 @@ export function createSettingsWriter<T>(
     prime(value: T): void {
       latest = { value };
       dirty = false;
+      immediate = false;
+      cancelDefer();
     },
     push(value: T): void {
       if (latest !== null && Object.is(latest.value, value)) return;
+      // #211: the marker belongs to the queued VALUE, and this call replaces
+      // it. Left standing, an ordinary edit made while an immediate write was
+      // still queued would inherit its licence to bypass the debounce — the
+      // race the split exists to prevent, arriving from inside.
+      immediate = false;
+      // A change the user makes after all this is their answer to whatever the
+      // deferral was waiting for: it goes to disk on the ordinary schedule.
+      cancelDefer();
       // A change made after the budget was spent is a new episode and gets its
       // own retries. Without this, `attempt` stays past the end of the delay
       // list and every later change gets a single attempt — the writer quietly
@@ -384,6 +449,11 @@ export function createSettingsWriter<T>(
       cancelSchedule();
       startWrite();
     },
+    resume(): void {
+      if (!deferred) return;
+      cancelDefer();
+      if (dirty) schedule();
+    },
     async settled(): Promise<void> {
       while (inFlight !== null) {
         await inFlight;
@@ -392,6 +462,10 @@ export function createSettingsWriter<T>(
     hold(code: string): void {
       cancelSchedule();
       cancelRetry();
+      // The value stays dirty and stays unwritten: nothing may reach the file
+      // while it is the only copy of somebody else's version. The user's next
+      // change releases it, by which time they have been told.
+      cancelDefer();
       // The value is deliberately left dirty: it is not on disk, and the next
       // `push` must still write it. Only the timers stop.
       setStatus({ kind: "diverged", code });
@@ -421,6 +495,7 @@ export function createSettingsWriter<T>(
       disposed = true;
       cancelSchedule();
       cancelRetry();
+      cancelDefer();
     },
     status(): SaveStatus {
       return status;

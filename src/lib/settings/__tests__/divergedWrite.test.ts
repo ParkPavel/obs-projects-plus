@@ -1,5 +1,6 @@
 import {
   createSettingsWriter,
+  SETTINGS_RECONCILE_BACKSTOP_MS,
   type SaveStatus,
 } from "src/lib/settings/settingsWriter";
 
@@ -208,10 +209,11 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(writer.status().kind).toBe("diverged");
   });
 
-  it("is not stranded either: its debounce is re-armed", async () => {
-    // …and it is not dropped. Without re-scheduling it would sit dirty with
-    // nothing left to carry it — the exact stranding this branch was fixed for,
-    // arriving through the other door.
+  it("is held until reconciliation says it may go", async () => {
+    // The catch-up review's second pass. Re-arming the 400ms debounce was still
+    // a race: 400ms against a host callback that has to read the file and write
+    // a copy. The value waits for `resume`, which every branch of the hook
+    // calls when it is done deciding.
     const save = makeSave();
     const { writer, settlers } = heldWriter(save.fn);
 
@@ -221,12 +223,73 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     await jest.advanceTimersByTimeAsync(400);
     settlers[0]?.();
     await jest.advanceTimersByTimeAsync(0);
+
+    // Long past its own debounce, and still not on disk.
+    await jest.advanceTimersByTimeAsync(3000);
     expect(save.calls).toHaveLength(1);
 
+    writer.resume();
     await jest.advanceTimersByTimeAsync(400);
 
     expect(save.calls).toHaveLength(2);
     expect(save.calls[1]).toEqual({ n: 2 });
+  });
+
+  it("goes to disk anyway if reconciliation never comes", async () => {
+    // What makes deferring safe rather than a new way to strand a change: a
+    // host that reports a divergence but never fires the external-change event
+    // would otherwise hold the user's edit forever.
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+
+    await jest.advanceTimersByTimeAsync(SETTINGS_RECONCILE_BACKSTOP_MS + 400);
+
+    expect(save.calls).toHaveLength(2);
+    expect(save.calls[1]).toEqual({ n: 2 });
+  });
+
+  it("an ordinary edit does not inherit an immediate write's licence", async () => {
+    // The marker belongs to the queued VALUE. Left on the writer, an ordinary
+    // edit made while reconciliation's restore was still queued would bypass
+    // the debounce on divergence — the race the split exists to prevent,
+    // arriving from inside.
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.pushImmediate({ n: 2 });
+    writer.push({ n: 3 });
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(save.calls).toHaveLength(1);
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(save.calls).toHaveLength(1);
+  });
+
+  it("a further change of the user's releases the hold by itself", async () => {
+    const save = makeSave();
+    const { writer, settlers } = heldWriter(save.fn);
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+
+    writer.push({ n: 3 });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls[1]).toEqual({ n: 3 });
   });
 
   it("settled() waits for a write in flight and starts nothing", async () => {

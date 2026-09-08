@@ -699,6 +699,10 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     if (decision.kind === "ignore") {
       console.debug(`[Projects+] settings file changed; ${decision.reason}`);
+      // #211: nothing to preserve, so a queued edit held by the divergence is
+      // free to go. Every branch of this method ends by saying so — the hold
+      // lasts exactly as long as the decision does.
+      this.settingsWriter.resume();
       return;
     }
     if (decision.kind === "keep" && decision.reason === "empty") {
@@ -708,6 +712,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       // snapshotted and nothing is copied — the completed write brings the real
       // one, and the hook fires again.
       console.debug("[Projects+] settings file changed; empty, nothing to keep");
+      this.settingsWriter.resume();
       return;
     }
     if (decision.kind === "keep") {
@@ -726,6 +731,10 @@ export default class ProjectsPlusPlugin extends Plugin {
         "[Projects+] settings file changed but does not parse; keeping memory"
       );
       this.unparsableSeen = raw;
+      // Deliberately NOT resumed here: the bytes may still turn out to be
+      // somebody's version, and the delayed re-read is the branch that decides.
+      // It resumes on every one of its own exits, and the writer's backstop
+      // releases the value even if that method never runs.
       this.recheckUnparsableSettings();
       return;
     }
@@ -752,6 +761,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       // become the file. Without this the disk keeps the other version and the
       // next ordinary save overwrites it anyway — the defect #200 opened with,
       // minus the loss.
+      this.settingsWriter.resume();
       this.settingsWriter.pushImmediate(get(settings));
       return;
     }
@@ -792,6 +802,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       // this file reissues identifiers that are already in notes.
       this.settingsWriter.pushImmediate(adopted);
     }
+    this.settingsWriter.resume();
     console.debug("[Projects+] settings adopted from disk");
   }
 
@@ -825,6 +836,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     try {
       raw = await this.app.vault.adapter.read(path);
     } catch {
+      this.settingsWriter?.resume();
       return;
     }
     try {
@@ -842,12 +854,15 @@ export default class ProjectsPlusPlugin extends Plugin {
         console.debug(
           "[Projects+] the settings file is still empty; nothing to preserve"
         );
+        this.settingsWriter?.resume();
         return;
       }
       await this.settingsWriter?.settled();
       if (!(await this.preserveConflicting(raw, "unparsable"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
+        return;
       }
+      this.settingsWriter?.resume();
       return;
     }
     // It parses now — but WHOSE file is it? The pre-merge review found the gap:
@@ -862,7 +877,9 @@ export default class ProjectsPlusPlugin extends Plugin {
       await this.settingsWriter?.settled();
       if (!(await this.preserveConflicting(seen, "unparsable-overwritten"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
+        return;
       }
+      this.settingsWriter?.resume();
       return;
     }
     // It settled into somebody's readable version: run the ordinary decision on
