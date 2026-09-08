@@ -28,5 +28,16 @@ This one is archived design rather than a superseded document: it is the only su
 515 lines of deliberately written types, kept so the intent behind them is not re-derived from
 scratch, and kept out of `src/` so it is not mistaken for code.
 
+## Archived 2026-09-08
+
+| File | Former role | Replaced by |
+|---|---|---|
+| `HANDOVER_200_ACCEPTANCE_2026-09-08.md` | A session-to-session handover during the #200 acceptance, written to a file because no other channel between the two sessions was open | `../ACCEPTANCE_200_RERUN_2026-09-08.md` for the run itself; `../CONTEXT.md` for what came of it |
+
+Kept for the same reason as the design above: it is the only record of how one session reached
+another when the direct channels were unavailable. Its "what remains" section was already stale
+the day it was written — the merge it waits on happened — and the file carries a note saying so
+rather than being edited into agreement with the present.
+
 Historical test reports remain outside this directory while their referenced working-tree stack
 still awaits the user's manual verification and merge decision.
