@@ -68,6 +68,7 @@ import {
 } from "src/lib/settings/settingsEpisode";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
 import type {
+  EpisodeEntry,
   WriteOutcome,
   WriteVerdict,
 } from "src/lib/settings/settingsWriter";
@@ -705,8 +706,8 @@ export default class ProjectsPlusPlugin extends Plugin {
     // PPP-102 is the code it fences under: the file HAS been changed from
     // outside, which is true from this moment; what happens about it is the
     // outcome's business.
-    const ended = await writer.withExclusive(SETTINGS_SUPERSEDED, () =>
-      this.decideExternalChange()
+    const ended = await writer.withExclusive(SETTINGS_SUPERSEDED, (entry) =>
+      this.decideExternalChange(entry)
     );
 
     const adoption = this.takeAdoption();
@@ -751,9 +752,9 @@ export default class ProjectsPlusPlugin extends Plugin {
    * which is what makes "a branch forgot to release" unrepresentable rather
    * than merely unlikely.
    */
-  private async decideExternalChange(): Promise<
-    WriteOutcome<LatestProjectsPluginSettings>
-  > {
+  private async decideExternalChange(
+    entry: EpisodeEntry
+  ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
     const raw = await this.readSettingsFile();
     if (raw === null) return { kind: "release" };
 
@@ -761,10 +762,11 @@ export default class ProjectsPlusPlugin extends Plugin {
       diskRaw: raw,
       memory: get(settings),
       base: this.confirmedOnDisk,
-      // Not the status: `push` schedules a write and leaves the status `idle`
-      // until it starts, so a status-based check would adopt the disk over a
-      // change made half a second ago.
-      pending: this.settingsWriter?.hasPending() ?? false,
+      // Taken at the START of the episode, by the lease. Asking the writer
+      // here would ask about the lease itself: the fence publishes `diverged`,
+      // which counts as unsaved work, so every decision would see a conflict
+      // and adoption would never happen again.
+      pending: entry.pending,
       expectedVersion: DEFAULT_SETTINGS.version,
     });
 
@@ -789,7 +791,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         return {
           kind: "extend",
           after: SETTINGS_UNPARSABLE_RECHECK_MS,
-          next: () => this.settleUnreadable(),
+          next: (again) => this.settleUnreadable(again),
         };
 
       case "hold":
@@ -825,9 +827,9 @@ export default class ProjectsPlusPlugin extends Plugin {
    * The continuation of an extended episode: the file was mid-write, and this
    * is the look that decides whether it settled.
    */
-  private async settleUnreadable(): Promise<
-    WriteOutcome<LatestProjectsPluginSettings>
-  > {
+  private async settleUnreadable(
+    entry: EpisodeEntry
+  ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
     const raw = await this.readSettingsFile();
     if (raw === null) return { kind: "release" };
     if (!carriesAVersion(raw)) {
@@ -846,8 +848,10 @@ export default class ProjectsPlusPlugin extends Plugin {
       return this.refuseAsConflict(raw, "unparsable");
     }
     // It settled into somebody's readable version: run the ordinary decision on
-    // it rather than adopting here by a second, less careful path.
-    return this.decideExternalChange();
+    // it rather than adopting here by a second, less careful path. The entry
+    // state is the episode's, not a fresh reading of a writer the lease has
+    // since changed.
+    return this.decideExternalChange(entry);
   }
 
   /**

@@ -341,6 +341,52 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls[1]).toEqual({ n: 2 });
   });
 
+  it("tells the body what was pending BEFORE the fence went up", async () => {
+    // The review of step F found this as a P1, and no unit test could have:
+    // it is a composition between the writer and the hook, and the file that
+    // composes them has no coverage. The fence publishes `diverged`, and
+    // `hasPending` counts that status as unsaved work — so a body asking the
+    // writer mid-episode always heard "pending", every external change was read
+    // as a conflict, and adoption (the entire point of #200) would never have
+    // happened again.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+    writer.prime({ n: 0 });
+
+    let seen: boolean | null = null;
+    await writer.withExclusive("PPP-102", async (entry) => {
+      seen = entry.pending;
+      return { kind: "release" as const };
+    });
+
+    expect(seen).toBe(false);
+    // …and the writer's own answer is unchanged for everyone else.
+    expect(writer.hasPending()).toBe(false);
+  });
+
+  it("tells the body that a queued edit IS pending", async () => {
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+    writer.prime({ n: 0 });
+    writer.push({ n: 1 });
+
+    let seen: boolean | null = null;
+    await writer.withExclusive("PPP-102", async (entry) => {
+      seen = entry.pending;
+      return { kind: "release" as const };
+    });
+
+    expect(seen).toBe(true);
+  });
+
   it("the lease waits for a write in flight before its body runs", async () => {
     // What absorbed `settled`. Reconciliation must not decide what to do about
     // somebody else's file while a write of ours is still landing on it — and

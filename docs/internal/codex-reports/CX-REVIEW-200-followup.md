@@ -143,3 +143,14 @@ Full review comments:
   empty-file recheck (with the existing backstop), rather than treating the first empty event as
   resolved.
 ```
+
+## Ревью шага F — P1 в композиции, которую юнит-тесты увидеть не могли
+
+```
+ 26 files changed, 2763 insertions(+), 327 deletions(-)
+
+- [P1] Keep the fence out of pending-state accounting — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:639-639
+  Do not publish `diverged` before calling the reconciliation body: `hasPending()` treats that status as unsaved local state, so the subsequent `reconcileSettings()` call always sees `pending: true`. Consequently, a clean window receiving a valid external settings update takes the conflict/restore path and overwrites the external update instead of adopting it. Keep fencing separate from the public diverged status, or exclude the temporary fence status from `hasPending()`.
+
+[exited with code 0]
+```

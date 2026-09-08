@@ -103,6 +103,18 @@ export type WriteVerdict = "confirmed" | "not-written" | "diverged";
  * `hold`  — nothing could be preserved; nobody writes until the user acts.
  * `extend` — the file has not settled; wait and decide again, fence intact.
  */
+/**
+ * #212 — what was true when the episode began.
+ *
+ * Handed to the body rather than looked up inside it: the fence publishes a
+ * status of its own, so a body that asked the writer would be told about the
+ * lease instead of about the user.
+ */
+export interface EpisodeEntry {
+  /** Memory held something the disk had not confirmed when the fence went up. */
+  readonly pending: boolean;
+}
+
 export type WriteOutcome<T> =
   | { readonly kind: "release" }
   | { readonly kind: "adopted"; readonly settings: T }
@@ -118,7 +130,7 @@ export type WriteOutcome<T> =
        * the promise. Found by the compiler on the first build of this step, and
        * it would have been a runtime hazard, not a typing one.
        */
-      readonly next: () => Promise<WriteOutcome<T>>;
+      readonly next: (entry: EpisodeEntry) => Promise<WriteOutcome<T>>;
     };
 
 /**
@@ -208,7 +220,7 @@ export interface SettingsWriter<T> {
    */
   withExclusive(
     code: string,
-    body: () => Promise<WriteOutcome<T>>
+    body: (entry: EpisodeEntry) => Promise<WriteOutcome<T>>
   ): Promise<WriteOutcome<T>>;
   /** Drop every timer. Does not write. */
   dispose(): void;
@@ -407,7 +419,15 @@ export function createSettingsWriter<T>(
     switch (outcome.kind) {
       case "release":
         toOpen();
+        // The episode is over, so the fence's `diverged` goes with it. Leaving
+        // it standing would keep `hasPending` true, and the NEXT external
+        // change would read as a conflict on the strength of an episode that
+        // already ended — the same defect the review found at the other end.
+        // `idle` in both cases, which is what the writer publishes for any
+        // value merely waiting on its debounce: `saving` would claim a write
+        // that has not started.
         if (queue !== null) schedule();
+        setStatus({ kind: "idle" });
         return outcome;
       case "adopted":
         if (epoch !== epochAtEntry) {
@@ -425,6 +445,7 @@ export function createSettingsWriter<T>(
         last = { value: outcome.settings };
         queue = null;
         toOpen();
+        setStatus({ kind: "idle" });
         return outcome;
       case "restore":
         // The user may have edited while the decision ran. Both values come
@@ -445,6 +466,21 @@ export function createSettingsWriter<T>(
         toOpen();
         return { kind: "release" };
     }
+  }
+
+  /**
+   * Does memory hold anything the disk has not confirmed?
+   *
+   * One implementation, because the lease has to ask it at a moment when the
+   * public method would answer about the lease itself.
+   */
+  function hasPendingNow(): boolean {
+    return (
+      queue !== null ||
+      inFlight !== null ||
+      status.kind === "failed" ||
+      status.kind === "diverged"
+    );
   }
 
   function cancelRetry(): void {
@@ -629,8 +665,16 @@ export function createSettingsWriter<T>(
     },
     async withExclusive(
       code: string,
-      body: () => Promise<WriteOutcome<T>>
+      body: (entry: EpisodeEntry) => Promise<WriteOutcome<T>>
     ): Promise<WriteOutcome<T>> {
+      // Taken BEFORE the fence, because the fence itself changes the answer:
+      // it publishes `diverged`, and `hasPending` counts that status as unsaved
+      // work. Asking mid-episode would have every decision see `pending: true`
+      // and treat every external change as a conflict — adoption, the point of
+      // #200, would never happen again. Found by the review of step F; nothing
+      // in the unit tests could see it, because it is a composition between two
+      // modules and the file that composes them has no coverage.
+      const entry: EpisodeEntry = { pending: hasPendingNow() };
       // Order is the whole point, and it is fixed here rather than at four call
       // sites: fence, then wait for anything in flight, then decide.
       cancelSchedule();
@@ -644,14 +688,14 @@ export function createSettingsWriter<T>(
       // during the episode. `push` moves this; `prime` and the restore do not.
       const epochAtEntry = epoch;
       try {
-        let outcome: WriteOutcome<T> = await body();
+        let outcome: WriteOutcome<T> = await body(entry);
         while (outcome.kind === "extend") {
           const { after, next } = outcome;
           // The fence's deadline is reset, so the wait cannot outlive it and a
           // decision that never returns still releases the queue.
           toFenced(code);
           await new Promise((resolve) => setTimeout(resolve, after));
-          outcome = await next();
+          outcome = await next(entry);
         }
         return applyOutcome(outcome, epochAtEntry);
       } catch (err) {
@@ -710,12 +754,7 @@ export function createSettingsWriter<T>(
       return status;
     },
     hasPending(): boolean {
-      return (
-        queue !== null ||
-        inFlight !== null ||
-        status.kind === "failed" ||
-        status.kind === "diverged"
-      );
+      return hasPendingNow();
     },
   };
 }
