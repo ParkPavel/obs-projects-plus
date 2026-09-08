@@ -147,10 +147,17 @@ A copy of the unreadable file was written beside it, named in the notice. Defaul
 Поэтому ни одна из сторон не выбрасывается.
 
 ### Что делать
-Ничего не потеряно. Файл с чужой версией назван в уведомлении (`data.conflict-…json`) и лежит рядом
-с `data.json` — откройте его, если оттуда нужно перенести что-то руками. Плагин этот файл никогда не
-читает, его можно удалить. Если сообщение повторяется, скорее всего синхронизатор пишет в хранилище
-во время работы: дождитесь окончания синхронизации, прежде чем менять настройки.
+Ничего не потеряно. **Смотрите на путь в самом уведомлении** — он и есть ответ, потому что мест два:
+
+- `data.conflict-…json` **рядом с `data.json`**, в папке плагина. Обычный случай; файл можно
+  переименовать обратно в `data.json` при закрытом Obsidian, если нужна именно чужая версия целиком.
+- заметка `Projects+ recovery/settings conflict ….md` **внутри хранилища**. Так бывает, когда писать
+  рядом с файлом настроек не удалось; чужая версия лежит в ней блоком кода, и её видно с телефона,
+  где консоли нет. Заметка обычная, поэтому проект с источником, покрывающим эту папку, покажет её
+  записью — удалите, когда заберёте нужное.
+
+Плагин ни то, ни другое никогда не читает. Если сообщение повторяется, скорее всего синхронизатор
+пишет в хранилище во время работы: дождитесь окончания синхронизации, прежде чем менять настройки.
 
 ### What happened
 Projects+: data.json was changed outside this window and could not be adopted. Your version is kept, and the one from disk was saved as {{path}}.
@@ -159,7 +166,7 @@ Projects+: data.json was changed outside this window and could not be adopted. Y
 Another window, a synchroniser or a hand edit replaced data.json while this session held changes of its own, so neither version could be discarded.
 
 ### What to do
-Nothing is lost. The other version is in the file named in the notice, next to data.json; open it if you want to carry something across by hand. The plugin never reads that file, so you can delete it once you are done.
+Nothing is lost. **Follow the path in the notice** — it is the answer, because there are two places it can be. A `data.conflict-….json` beside `data.json` in the plugin folder is the ordinary case, and it can be renamed back over `data.json` with Obsidian closed. A note under `Projects+ recovery/` inside the vault is what you get when nothing could be written beside the settings file: the other version is in a fenced block, readable on a phone where there is no console, and — being an ordinary note — a project whose source covers that folder will list it as a record. Projects+ never reads either one, so delete it once you are done.
 
 ## PPP-106
 
