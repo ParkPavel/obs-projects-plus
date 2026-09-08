@@ -89,16 +89,6 @@ export const SETTINGS_RECONCILE_BACKSTOP_MS = 10000;
 export type WriteVerdict = "confirmed" | "not-written" | "diverged";
 
 /**
- * #212 step A — whose value is queued.
- *
- * `session` is the user's own edit, arriving through the settings store.
- * `reconciler` is the restore that ends an external-change episode. The two
- * have different rights, and keeping the distinction ON THE VALUE is what stops
- * an edit from inheriting a licence granted to the value it replaced.
- */
-export type Origin = "session" | "reconciler";
-
-/**
  * #212 step D — how an episode ends, in the writer's own vocabulary.
  *
  * Returned by the body of `withExclusive`, and exhaustive on purpose: a branch
@@ -276,22 +266,27 @@ export interface SettingsWriter<T> {
   hasPending(): boolean;
 }
 
+/**
+ * #212 step E — two statuses are the same when every field is.
+ *
+ * This used to be a hand-written comparison per kind, and it had to be TAUGHT
+ * about each field a status carried: it compared `kind` alone, so two
+ * `diverged` states with different codes counted as equal and the standing mark
+ * went on saying the other version had been preserved while the notice said
+ * nothing could be written (the tenth review pass). The lesson is not "add
+ * `code` to the comparison" — it is that a comparison which must be taught will
+ * eventually not be. Structural equality has nothing left to forget, including
+ * about fields a future status has not grown yet.
+ *
+ * `SaveStatus` is a small flat record of primitives, so this is exact rather
+ * than an approximation of deep equality.
+ */
 function sameStatus(a: SaveStatus, b: SaveStatus): boolean {
-  if (a.kind !== b.kind) return false;
-  if (a.kind === "failed" && b.kind === "failed") {
-    return (
-      a.attempts === b.attempts && a.message === b.message && a.code === b.code
-    );
-  }
-  // #211: two `diverged` states are NOT interchangeable. The conflict branch
-  // holds twice — once to stop writing while it decides, once more with the
-  // code the notice ended up using — and comparing only the kind meant the
-  // second was swallowed: the standing mark went on saying the other version
-  // had been preserved (PPP-105) while the notice said nothing could be written
-  // (PPP-106). A mark that contradicts its own notice is the defect this ticket
-  // exists to remove, one surface over.
-  if (a.kind === "diverged" && b.kind === "diverged") {
-    return a.code === b.code;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const key of keys) {
+    if (!Object.is(left[key], right[key])) return false;
   }
   return true;
 }
@@ -316,14 +311,17 @@ export function createSettingsWriter<T>(
    */
   let last: { value: T } | null = null;
   /**
-   * #212 step A — what still has to reach the disk, and WHOSE it is.
+   * #212 — what still has to reach the disk. `null` means nothing is owed.
    *
-   * Three flat booleans used to carry three orthogonal facts, and every fix on
-   * one of them silently moved another (`PLAN_212` section 0). This is the
-   * first of them: provenance belongs to the queued VALUE, not to the writer,
-   * which is what the second review pass asked for. `null` means nothing owed.
+   * Step A gave this an `origin`, because a queued restore and a queued edit
+   * had different rights and the writer had been remembering which was which in
+   * a separate boolean. Step D removed the need: the restore is an outcome of
+   * the lease, applied and written in one move, so nothing but a session edit
+   * is ever left waiting here. The field went with the need — a distinction
+   * with no reader is the kind of dead machinery that invites the next defect
+   * into exactly this mechanism.
    */
-  let queue: { value: T; origin: Origin } | null = null;
+  let queue: { value: T } | null = null;
   let inFlight: Promise<void> | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -404,18 +402,22 @@ export function createSettingsWriter<T>(
   }
 
   /**
-   * The one place that answers "may this value be written now".
+   * The one place that answers "may anything be written now".
    *
    * `force` is the flush's licence, and it is deliberately not a master key: it
    * carries a write past `closed`, and never past a fence or a hold, because
    * quitting must not overwrite a version nothing has preserved.
+   *
+   * A fence admits nobody, including reconciliation: its own restore is applied
+   * by the lease, which opens the permit in the same move. That is stricter
+   * than step B's version and it is deliberate — "everything except one
+   * privileged caller" is the shape that produced findings 1, 2 and 9.
    */
-  function mayWrite(origin: Origin, force: boolean): boolean {
+  function mayWrite(force: boolean): boolean {
     switch (permit.kind) {
       case "open":
         return true;
       case "fenced":
-        return origin === "reconciler";
       case "held":
         return false;
       case "closed":
@@ -469,9 +471,7 @@ export function createSettingsWriter<T>(
         // The user may have edited while the decision ran. Both values come
         // from the same store, so the newer one contains the older; taking it
         // is not a preference but the only reading that cannot lose the edit.
-        if (queue === null) {
-          queue = { value: outcome.settings, origin: "reconciler" };
-        }
+        if (queue === null) queue = { value: outcome.settings };
         last = { value: queue.value };
         toOpen();
         startWrite();
@@ -512,8 +512,8 @@ export function createSettingsWriter<T>(
     // The permit is enforced here as well as by cancelling timers, so a path
     // that reaches `startWrite` another way — a retry from a stale handler, a
     // forced flush — cannot write over a version being preserved either.
-    if (!mayWrite(queue.origin, force)) return;
-    const { value, origin } = queue;
+    if (!mayWrite(force)) return;
+    const { value } = queue;
     queue = null;
     // #199: paired with the failure log below. Between them, a developer can
     // tell the three cases apart that look identical from the outside — the
@@ -523,7 +523,7 @@ export function createSettingsWriter<T>(
     setStatus({ kind: "saving" });
     inFlight = Promise.resolve()
       .then(() => attemptWrite(value))
-      .then(onWritten, (err) => onFailure(err, value, origin));
+      .then(onWritten, (err) => onFailure(err, value));
   }
 
   /**
@@ -582,16 +582,12 @@ export function createSettingsWriter<T>(
       // reconciliation releases it when it has preserved or explicitly handled
       // the other version. The backstop below is what makes deferring safe:
       // if the hook never comes, the value still goes to disk.
-      if (queue !== null) {
-        if (queue.origin === "reconciler") {
-          startWrite(flushing);
-        } else if (permit.kind === "open") {
-          // A debounce armed by a `push` that arrived while the write was in
-          // flight is still running, and it would fire straight through the
-          // fence. Fencing means fencing, so it goes.
-          cancelSchedule();
-          toFenced(SETTINGS_DIVERGED);
-        }
+      if (queue !== null && permit.kind === "open") {
+        // A debounce armed by a `push` that arrived while the write was in
+        // flight is still running, and it would fire straight through the
+        // fence. Fencing means fencing, so it goes.
+        cancelSchedule();
+        toFenced(SETTINGS_DIVERGED);
       }
       return;
     }
@@ -607,7 +603,7 @@ export function createSettingsWriter<T>(
     setStatus({ kind: "idle" });
   }
 
-  function onFailure(err: unknown, value: T, origin: Origin): void {
+  function onFailure(err: unknown, value: T): void {
     inFlight = null;
     // #199: a failed write left no trace anywhere a developer could look. The
     // chip and the Notice are for the user and say nothing about WHY; when the
@@ -618,12 +614,11 @@ export function createSettingsWriter<T>(
     // can be matched to each other — which is the thing that cost a day on
     // #199 and could not be done at all.
     logError(SETTINGS_WRITE_FAILED, `attempt ${attempt + 1}`, err);
-    // Nothing reached the disk, so the value is pending again — with the
-    // provenance it had, so a failed restore is still the reconciler's. The
-    // state itself is untouched: rolling it back would destroy the user's work
-    // on the assumption that the disk is right, exactly where that is unknown.
-    // A value queued meanwhile is newer and is left alone.
-    if (queue === null) queue = { value, origin };
+    // Nothing reached the disk, so the value is pending again. The state itself
+    // is untouched: rolling it back would destroy the user's work on the
+    // assumption that the disk is right, exactly where that is unknown. A value
+    // queued meanwhile is newer and is left alone.
+    if (queue === null) queue = { value };
     attempt += 1;
     const delay = retryDelays[attempt - 1];
     if (delay !== undefined && permit.kind !== "closed") {
@@ -662,17 +657,14 @@ export function createSettingsWriter<T>(
       if (status.kind === "failed") attempt = 0;
       epoch += 1;
       last = { value };
-      // Replacing the queue replaces its provenance with it — which is the
-      // point of keeping the two together. An ordinary edit can no longer
-      // inherit a licence granted to the value it displaced.
-      queue = { value, origin: "session" };
+      queue = { value };
       schedule();
     },
     pushNow(value: T): void {
       if (status.kind === "failed") attempt = 0;
       epoch += 1;
       last = { value };
-      queue = { value, origin: "session" };
+      queue = { value };
       cancelSchedule();
       startWrite();
     },
@@ -743,9 +735,7 @@ export function createSettingsWriter<T>(
       attempt = 0;
       // A retry writes whatever the store holds NOW, which after a failure is
       // the value still on `last`.
-      if (queue === null && last !== null) {
-        queue = { value: last.value, origin: "session" };
-      }
+      if (queue === null && last !== null) queue = { value: last.value };
       startWrite();
     },
     async flush(): Promise<void> {
