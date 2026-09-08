@@ -176,9 +176,9 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     key: "save-status.conflict-uncopied.notice",
     causeKey: "errors.causes.settings-conflict-uncopied",
     caption:
-      "Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. It is written verbatim in the developer console — take it from there; this session's own version may already have replaced the file.",
+      "Projects+: data.json was changed outside this window, and the other version could not be kept anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console; nothing of this session has been written over it.",
     cause:
-      "Writing the conflict copy failed, or the plugin folder is unknown, so the console line is the only remaining copy of the other version.",
+      "Both the copy beside data.json and the note at the vault root failed to write, so the vault is refusing writes altogether — this session's own settings cannot be saved either.",
   },
   {
     code: "PPP-201",

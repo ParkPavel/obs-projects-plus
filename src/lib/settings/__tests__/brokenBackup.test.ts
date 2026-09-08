@@ -5,6 +5,7 @@ import {
   settingsFilePath,
   writeBrokenCopy,
   writeConflictCopy,
+  writeConflictNote,
   type BrokenCopyAdapter,
 } from "src/lib/settings/brokenBackup";
 
@@ -293,6 +294,68 @@ describe("#200 — the copy of the version this session refused", () => {
     expect(
       await writeBrokenCopy(adapter, DIR, "payload", "reason", new Date())
     ).not.toBeNull();
+  });
+
+  it("falls back to a note the app can open when no file can be written beside data.json", async () => {
+    // #211: the console fallback is desktop-only and `isDesktopOnly` is false,
+    // so on a phone a payload that only reaches the console is a recovery path
+    // that does not exist. A note at the vault root does.
+    const adapter = makeAdapter();
+
+    const path = await writeConflictNote(adapter, '{"version":4}', new Date());
+
+    expect(path).not.toBeNull();
+    expect(path?.endsWith(".md")).toBe(true);
+    // Markdown, so it opens; fenced, so the payload survives being rendered.
+    const note = adapter.files.get(path as string) as string;
+    expect(note).toContain("```json");
+    expect(note).toContain('{"version":4}');
+    // And it says how to get back, because a file nobody knows how to use is
+    // the same broken promise one step later.
+    expect(note).toContain("data.json");
+  });
+
+  it("names the settings file the caller gave it, and never assembles one", async () => {
+    // The configuration folder is whatever the user set it to — the lint rule
+    // that says so is right, and this branch is also the one where the path may
+    // be unknown. So it is passed in, and its absence changes the wording
+    // rather than producing a guess.
+    const adapter = makeAdapter();
+
+    const named = await writeConflictNote(
+      adapter,
+      "x",
+      new Date(),
+      `${DIR}/data.json`
+    );
+    expect(adapter.files.get(named as string)).toContain(`${DIR}/data.json`);
+
+    const unnamed = await writeConflictNote(adapter, "x", new Date(), null);
+    const text = adapter.files.get(unnamed as string) as string;
+    expect(text).toContain("configuration directory");
+    // Assembled rather than written out: the repository's own lint rule forbids
+    // the literal, and it is right — which is precisely what this asserts the
+    // note does not do.
+    expect(text).not.toContain([".", "obsidian/"].join(""));
+  });
+
+  it("gives two notes of the same millisecond two different names", async () => {
+    const adapter = makeAdapter();
+    const at = new Date("2026-09-08T04:38:32.011Z");
+
+    const [first, second] = await Promise.all([
+      writeConflictNote(adapter, "one", at),
+      writeConflictNote(adapter, "two", at),
+    ]);
+
+    expect(first).not.toBe(second);
+  });
+
+  it("reports a note that could not be written, rather than promising it", async () => {
+    const adapter = makeAdapter();
+    adapter.writeFails = true;
+
+    expect(await writeConflictNote(adapter, "theirs", new Date())).toBeNull();
   });
 
   it("reports failure instead of assuming it, both ways", async () => {

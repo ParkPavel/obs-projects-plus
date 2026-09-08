@@ -171,18 +171,20 @@ Nothing is lost. The other version is in the file named in the notice, next to d
 отказала. Значит единственный экземпляр чужой версии — это сам `data.json`.
 
 ### Что делать
-Откройте консоль разработчика (Ctrl+Shift+I) и найдите строку `PPP-106` — сразу под ней чужая версия
-выведена целиком. Скопируйте её оттуда в файл, если хотите вернуть. На `data.json` полагаться нельзя:
-к моменту, когда вы читаете уведомление, файл может быть уже перезаписан версией этого сеанса.
+Сначала о главном: если этот код появился, значит хранилище не принимает запись **вообще** — не
+сохраняются и ваши собственные настройки. Освободите место на диске, проверьте права на папку
+хранилища и синхронизатор, который мог его заблокировать. Чужая версия при этом никуда не делась:
+`data.json` не перезаписан. На компьютере её полный текст есть в консоли разработчика
+(Ctrl+Shift+I, строка `PPP-106`).
 
 ### What happened
-Projects+: data.json was changed outside this window, and the other version could NOT be copied aside. It is written verbatim in the developer console — take it from there; this session's own version may already have replaced the file.
+Projects+: data.json was changed outside this window, and the other version could not be kept anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console; nothing of this session has been written over it.
 
 ### Why
-Writing the conflict copy failed, or the plugin folder is unknown, so the console line is the only remaining copy of the other version.
+Both the copy beside data.json and the note at the vault root failed to write, so the vault is refusing writes altogether — this session's own settings cannot be saved either.
 
 ### What to do
-Open the developer console (Ctrl+Shift+I), find the `PPP-106` line, and copy the version printed under it into a file of your own. Do not rely on data.json: by the time you read the notice it may already hold this session's version.
+First the important part: if this code appeared, the vault is not accepting writes at all — your own settings are not being saved either. Free up disk space, check the permissions on the vault folder, and check whether a synchroniser has locked it. The other version is still on disk: data.json has not been overwritten. On desktop its full text is also in the developer console (Ctrl+Shift+I, the `PPP-106` line).
 
 ## PPP-201
 

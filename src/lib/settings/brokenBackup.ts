@@ -123,7 +123,10 @@ async function freeName(
   try {
     if (!(await adapter.exists(base))) return base;
     for (let n = 2; n <= 10; n += 1) {
-      const candidate = base.replace(/\.json$/, `-${n}.json`);
+      // Any extension, not just `.json`: the mobile fallback writes `.md`, and
+      // a check performed on a path that is never written is worse than no
+      // check — it reports free names for a file it did not look at.
+      const candidate = base.replace(/(\.[A-Za-z0-9]+)$/, `-${n}$1`);
       if (!(await adapter.exists(candidate))) return candidate;
     }
     return null;
@@ -175,6 +178,67 @@ export async function writeBrokenCopy(
   try {
     await adapter.write(path, contents);
     return path;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * #211 — the same version, kept where a phone can reach it.
+ *
+ * The console fallback is desktop-only, and `isDesktopOnly` is `false`: on
+ * mobile there is no Ctrl+Shift+I, so a payload that only reaches the console
+ * is a recovery path that does not exist for those users. A note at the vault
+ * root does exist everywhere — it opens in the app, and its contents can be
+ * selected and copied.
+ *
+ * It is `.md` rather than `.json` on purpose: a JSON file at the vault root is
+ * not something Obsidian mobile will open, and being able to READ the thing is
+ * the whole point of this fallback. The payload sits in a fenced block so it
+ * survives being viewed as Markdown.
+ *
+ * This runs only when the sibling copy could not be written — including the
+ * case the plan named as a blind spot, `manifest.dir` being undefined, where
+ * there is no plugin folder to write beside in the first place.
+ */
+export function conflictNotePath(at: Date, token = randomToken()): string {
+  return `Projects+ settings conflict ${stamp(at)}-${token}.md`;
+}
+
+export async function writeConflictNote(
+  adapter: BrokenCopyAdapter,
+  payload: string,
+  at: Date,
+  /**
+   * Where the settings file actually is, when that is known. Never assembled
+   * here: Obsidian's configuration folder is whatever the user set it to, and
+   * the one branch that reaches this function is also the branch where it may
+   * be unknown.
+   */
+  settingsPath?: string | null
+): Promise<string | null> {
+  const notePath = await freeName(adapter, conflictNotePath(at));
+  if (notePath === null) return null;
+  const contents = [
+    "# Projects+ — settings from another writer",
+    "",
+    "This note holds the version of `data.json` that another window, a synchroniser",
+    "or a hand edit put on disk, at a moment when this plugin could not write its",
+    "usual copy beside the settings file. Nothing else reads this note; delete it",
+    "once you no longer need it.",
+    "",
+    settingsPath !== undefined && settingsPath !== null
+      ? `To restore: copy everything between the fences into \`${settingsPath}\` with Obsidian closed.`
+      : "To restore: copy everything between the fences into the plugin's `data.json`, inside the plugin folder of your vault's Obsidian configuration directory, with Obsidian closed.",
+    "",
+    "```json",
+    payload,
+    "```",
+    "",
+  ].join("\n");
+  try {
+    await adapter.write(notePath, contents);
+    return notePath;
   } catch {
     return null;
   }

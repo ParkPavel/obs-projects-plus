@@ -54,3 +54,14 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Четвёртый проход — после правок третьего
+
+Одна находка (P2), верная.
+
+```
+- [P2] Provide a mobile recovery path for PPP-106 — C:\Users\Park\OBSv1.0\obs-projects-plus\src\main.ts:912-914
+  When conflict-copy creation fails on mobile, this makes the external settings payload recoverable only through the desktop developer console. The plugin declares `isDesktopOnly: false`, but Obsidian mobile has no Ctrl+Shift+I console, so affected users have no supported way to retrieve the raw version after the notice says `data.json` may already have been overwritten. Surface the payload through an in-app/copyable recovery path as well.
+
+[exited with code 0]
+```

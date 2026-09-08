@@ -55,6 +55,7 @@ import {
   settingsFilePath,
   writeBrokenCopy,
   writeConflictCopy,
+  writeConflictNote,
 } from "src/lib/settings/brokenBackup";
 import {
   carriesAVersion,
@@ -903,6 +904,25 @@ export default class ProjectsPlusPlugin extends Plugin {
       new Date()
     );
     if (copiedTo === null) {
+      // #211: before giving up on a file, try one a phone can open. The console
+      // fallback below is desktop-only and `isDesktopOnly` is false, so for a
+      // mobile user it is not a recovery path at all. This also covers the
+      // blind spot the plan named: with `manifest.dir` undefined there is no
+      // plugin folder to write beside, and the vault root is still there.
+      const noteAt = await writeConflictNote(
+        this.app.vault.adapter,
+        raw,
+        new Date(),
+        settingsFilePath(this.manifest.dir)
+      );
+      if (noteAt !== null) {
+        logWarning(
+          SETTINGS_CONFLICT,
+          `reason: ${reason}; other version kept at ${noteAt}`
+        );
+        new Notice(noticeFor(SETTINGS_CONFLICT, { path: noteAt }), 15000);
+        return true;
+      }
       logError(SETTINGS_CONFLICT_UNCOPIED, `reason: ${reason}`);
       // The last channel left. The file could not be written, and pointing the
       // user at `data.json` is a promise this branch cannot keep — by the time
