@@ -385,6 +385,25 @@ describe("#200 — the copy of the version this session refused", () => {
     expect(adapter.files.get(path as string)).toContain("theirs");
   });
 
+  it("fences the payload longer than anything inside it", async () => {
+    // A project name or a widget's text may contain backticks — including three
+    // of them. A fixed ```-fence closes early there, and the note's own
+    // instruction ("copy everything between the fences") then hands the reader
+    // a truncated file: the recovery path quietly stops recovering.
+    const adapter = makeAdapter();
+    const payload = '{"projects":[{"name":"``` tricky ````"}]}';
+
+    const path = await writeConflictNote(adapter, payload, new Date());
+    const note = adapter.files.get(path as string) as string;
+
+    expect(note).toContain(payload);
+    // Five backticks: one more than the longest run the payload holds.
+    expect(note).toContain("`````json");
+    // …and what closes the block is the same fence, not a shorter one.
+    const opening = note.slice(note.indexOf("`````json"));
+    expect(opening.split("`````").length - 1).toBe(2);
+  });
+
   it("gives two notes of the same millisecond two different names", async () => {
     const adapter = makeAdapter();
     const at = new Date("2026-09-08T04:38:32.011Z");

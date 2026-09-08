@@ -219,6 +219,17 @@ export function conflictNoteRootPath(at: Date, token = randomToken()): string {
   return `Projects+ settings conflict ${stamp(at)}-${token}.md`;
 }
 
+/** The longest run of consecutive backticks in `text`, 0 when there is none. */
+function longestBacktickRun(text: string): number {
+  let longest = 0;
+  let run = 0;
+  for (const char of text) {
+    run = char === "`" ? run + 1 : 0;
+    if (run > longest) longest = run;
+  }
+  return longest;
+}
+
 export async function writeConflictNote(
   adapter: BrokenCopyAdapter,
   payload: string,
@@ -243,6 +254,13 @@ export async function writeConflictNote(
   }
   const notePath = await freeName(adapter, conflictNotePath(at));
   if (notePath === null) return null;
+  // The payload is somebody's settings, and a project name or a widget's text
+  // may contain backticks — including three of them. A fixed ```-fence would
+  // then close early, and the note's own instruction ("copy everything between
+  // the fences") would hand the reader a truncated file. CommonMark allows a
+  // longer fence, and content may hold any shorter run, so the fence is chosen
+  // against the payload rather than assumed.
+  const fence = "`".repeat(Math.max(3, longestBacktickRun(payload) + 1));
   const contents = [
     "# Projects+ — settings from another writer",
     "",
@@ -258,9 +276,9 @@ export async function writeConflictNote(
       ? `To restore: copy everything between the fences into \`${settingsPath}\` with Obsidian closed.`
       : "To restore: copy everything between the fences into the plugin's `data.json`, inside the plugin folder of your vault's Obsidian configuration directory, with Obsidian closed.",
     "",
-    "```json",
+    `${fence}json`,
     payload,
-    "```",
+    fence,
     "",
   ].join("\n");
   try {
