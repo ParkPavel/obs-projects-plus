@@ -501,16 +501,15 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`, measured in TWO passes 2026-09-07 after #202 closed:
-  224 suites / 3448 tests without the headless probes, and 5 probe suites / 51 tests on their
-  own. tsc 0, svelte-check 0/0, lint 0 errors (110 pre-existing tsdoc warnings).** Both halves
-  green, nothing skipped.
-  The two numbers are deliberately NOT added together here. Their sum is arithmetic, and the
-  next paragraph says why this bullet does not carry arithmetic: every time it was patched by
-  reasoning instead of measurement it went wrong. When the machine can carry the whole set in
-  one pass again, one measured number replaces both.
-  The split exists because this machine currently cannot run five headless Chrome instances
-  alongside the rest — see #196 for the measurement behind that.
+- **Canonical baseline — `main`, measured in ONE pass 2026-09-08 after #200 merged:
+  231 suites / 3543 tests, 109 s. tsc 0, svelte-check 0/0, lint 0 errors (110 pre-existing tsdoc
+  warnings).** Nothing skipped, the five headless-Chrome suites included.
+  **The two-pass split is retired because the whole set ran together, not because it was argued
+  away.** The previous line — 224/3448 plus 5/51 on their own, 2026-09-07 — existed for a machine
+  that could not carry five headless Chrome instances alongside the rest (#196). It carried
+  them, repeatedly, on 2026-09-07 and again here; if that stops being true the split comes back
+  by measurement, the same way it left. The old numbers are NOT added to reach this one: this is
+  what a single run printed.
   This line carries no arithmetic on purpose: it is re-measured on `main` at each merge, and the
   three times it was patched by reasoning instead of measurement it went wrong — twice in one day,
   crediting one ticket with another's suites.
