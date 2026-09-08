@@ -112,6 +112,29 @@ describe("#200 — memory against disk", () => {
     expect(decision).toEqual({ kind: "keep", reason: "unparsable" });
   });
 
+  it("calls an empty file nobody's version, not somebody's", () => {
+    // #210, found on the acceptance re-run. A writer that is not atomic
+    // truncates data.json before filling it, so the file is zero bytes for an
+    // instant and the hook can catch exactly that instant. The old answer —
+    // "unparsable, keep and preserve" — produced a 0-BYTE conflict copy and a
+    // notice sending the user to read it.
+    for (const raw of ["", "   ", "\n\t "]) {
+      expect(decide({ diskRaw: raw })).toEqual({
+        kind: "keep",
+        reason: "empty",
+      });
+    }
+  });
+
+  it("still calls mangled bytes somebody's version", () => {
+    // The other side of the same line: those bytes are a version, damaged, and
+    // losing them silently is what the delayed re-read exists to prevent.
+    expect(decide({ diskRaw: '{ "version": 4, "projects": [' })).toEqual({
+      kind: "keep",
+      reason: "unparsable",
+    });
+  });
+
   it("refuses to adopt a settings version this build does not speak", () => {
     // Migration happens at load, against a file that is not also being edited.
     // Adopting a v3 payload into a v4 session would put a shape in memory that

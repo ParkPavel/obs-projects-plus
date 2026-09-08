@@ -109,14 +109,17 @@ export type ReconcileDecision<T> =
       readonly reason: "pending" | "unknown-base" | "unknown-version";
     }
   /**
-   * Keep memory and say nothing to the user. Reached only when the file does
-   * not parse: a half-written file is what a synchroniser looks like from
-   * here, and the completed write fires the hook again a moment later. A
-   * notice on the first half would be a false alarm, and a conflict copy of a
-   * truncated file would be litter; if the file really stays broken, the next
-   * write's verification is what catches it.
+   * Keep memory and say nothing to the user. A half-written file is what a
+   * synchroniser looks like from here, and the completed write fires the hook
+   * again a moment later; a notice on the first half would be a false alarm.
+   *
+   * The two reasons part company at the caller. `unparsable` bytes are somebody
+   * else's version, mangled — worth preserving if they are still there after
+   * the delay. `empty` bytes are nobody's: a writer that is not atomic
+   * truncates the file before filling it, and a copy of that instant is a
+   * 0-byte file the notice would then send the user to read (#210).
    */
-  | { readonly kind: "keep"; readonly reason: "unparsable" };
+  | { readonly kind: "keep"; readonly reason: "unparsable" | "empty" };
 
 /**
  * The one field that is merged rather than replaced — by the user's explicit
@@ -212,6 +215,24 @@ export function carryUniqueIdCounters<T>(
 }
 
 /**
+ * Does this text hold ANY version at all?
+ *
+ * Found by the acceptance re-run (#210): a writer that is not atomic truncates
+ * `data.json` before filling it, so for an instant the file is zero bytes — and
+ * the plugin can read exactly that instant. Treating those bytes as "the other
+ * version" produced a 0-byte conflict copy and a notice sending the user to a
+ * file with nothing in it: the broken promise #195 exists to prevent, arriving
+ * from the other end.
+ *
+ * The rule is length, not parsing, and deliberately so — an empty file two
+ * seconds later is still a torn write rather than somebody's settings. Nobody
+ * means to store nothing.
+ */
+export function carriesAVersion(text: string): boolean {
+  return text.trim().length > 0;
+}
+
+/**
  * Is `value` a settings payload this build can adopt as it stands?
  *
  * The version alone is not enough, and the adversarial review of this change
@@ -243,6 +264,10 @@ function adoptableShape(value: unknown, expected: number): boolean {
 export function reconcileSettings<T>(
   input: ReconcileInput<T>
 ): ReconcileDecision<T> {
+  if (!carriesAVersion(input.diskRaw)) {
+    return { kind: "keep", reason: "empty" };
+  }
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(input.diskRaw);

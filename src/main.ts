@@ -56,7 +56,10 @@ import {
   writeBrokenCopy,
   writeConflictCopy,
 } from "src/lib/settings/brokenBackup";
-import { reconcileSettings } from "src/lib/settings/settingsReconcile";
+import {
+  carriesAVersion,
+  reconcileSettings,
+} from "src/lib/settings/settingsReconcile";
 import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
 import type { WriteVerdict } from "src/lib/settings/settingsWriter";
 import { noticeFor, withCode } from "src/lib/errors/errorText";
@@ -698,6 +701,15 @@ export default class ProjectsPlusPlugin extends Plugin {
       console.debug(`[Projects+] settings file changed; ${decision.reason}`);
       return;
     }
+    if (decision.kind === "keep" && decision.reason === "empty") {
+      // #210, from the acceptance re-run: a writer that is not atomic leaves
+      // the file at zero length for an instant, and we can read exactly that
+      // instant. There is no version in those bytes to keep, so nothing is
+      // snapshotted and nothing is copied — the completed write brings the real
+      // one, and the hook fires again.
+      console.debug("[Projects+] settings file changed; empty, nothing to keep");
+      return;
+    }
     if (decision.kind === "keep") {
       // A half-written file is what a synchroniser looks like from here, and
       // the completed write usually fires this again a moment later. Memory
@@ -816,6 +828,16 @@ export default class ProjectsPlusPlugin extends Plugin {
       // the only copy of what somebody else wrote, and our next save will take
       // the file. Preserve them and say so — the same two codes as any other
       // conflict, because from the user's side it is the same event.
+      //
+      // #210: unless there are no bytes. An empty file two seconds later is a
+      // torn write, not a version somebody meant, and copying it aside produces
+      // a 0-byte file the notice sends the user to open.
+      if (!carriesAVersion(raw)) {
+        console.debug(
+          "[Projects+] the settings file is still empty; nothing to preserve"
+        );
+        return;
+      }
       if (!(await this.preserveConflicting(raw, "unparsable"))) {
         this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
       }
