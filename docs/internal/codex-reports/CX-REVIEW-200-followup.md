@@ -220,3 +220,13 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после инверсии умолчания — одна P2 (дисциплина документа)
+
+```
+
+- [P2] Remove branch Jest counts from the backlog — C:\Users\Park\OBSv1.0\obs-projects-plus\docs\internal\BACKLOG.md:5558-5558
+  The `233 suites / 3591 tests` gate result is a durable copy of the Jest baseline outside its designated canonical location; the nearby `231/3567` count has the same problem. These figures will become stale as the branch changes and violate the project rule that the baseline lives only in `CONTEXT.md`; retain the gate status without copying suite/test totals. [CLAUDE.md:82-90]
+
+[exited with code 0]
+```
