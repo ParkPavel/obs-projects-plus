@@ -367,6 +367,27 @@ describe("#200 — an ordinary edit queued behind a diverged write", () => {
     expect(save.calls).toHaveLength(1);
   });
 
+  it("our own carry write does not make the next adoption look contested", async () => {
+    // The epoch answers one question: did the USER change something while the
+    // decision ran. `pushNow` is the plugin writing — the migration at load, or
+    // the counter carried forward after an adoption — and counting it meant the
+    // carry from one episode refused the next episode's valid adoption, which
+    // then wrote the older value over a newer external file.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    const ended = await writer.withExclusive("PPP-102", async () => {
+      writer.pushNow({ n: 1 });
+      return { kind: "adopted" as const, settings: { n: 7 } };
+    });
+
+    expect(ended.kind).toBe("adopted");
+  });
+
   it("does not reopen a writer that was disposed mid-episode", async () => {
     // Unloading while a lease awaits a read or a copy: the permit goes to
     // `closed`, and the lease then resolves. Reopening there would write to a

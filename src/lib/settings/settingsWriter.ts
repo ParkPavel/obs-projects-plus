@@ -413,6 +413,10 @@ export function createSettingsWriter<T>(
    * nothing while the decision was being made. Today that holds only because no
    * `await` separates the check from the adoption in `main.ts`; this makes it
    * hold by construction.
+   *
+   * `pushNow` does not move it, and that distinction is load-bearing: our own
+   * carry and migration writes are not the user typing, and counting them made
+   * a valid adoption look contested.
    */
   let epoch = 0;
   /**
@@ -689,7 +693,14 @@ export function createSettingsWriter<T>(
     },
     pushNow(value: T): void {
       if (status.kind === "failed") attempt = 0;
-      epoch += 1;
+      // Deliberately NOT an epoch bump. The epoch answers one question — did
+      // the USER change something while a decision was being made — and this is
+      // our own write: the migration at load, or the counter carried forward
+      // after an adoption. Counting it found the review a real defect: the
+      // carry from one adoption ran while the next episode was deciding, that
+      // episode refused its own valid adoption as if the user had typed, and
+      // then wrote the older value over a newer external file without
+      // preserving it.
       last = { value };
       queue = { value };
       cancelSchedule();

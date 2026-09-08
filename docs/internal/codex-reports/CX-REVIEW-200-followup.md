@@ -174,3 +174,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после правки `closed` — одна P1
+
+```
+- [P1] Do not advance the user-edit epoch for internal pushNow writes — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:692-692
+  When two external changes arrive close together and the first adoption carries a higher `uniqueIdCounter`, the first callback's automatic `pushNow(adoption.settings)` runs while the second lease is deciding. This increments `epoch`, so the second lease rejects its otherwise valid adoption as if the user had edited, then schedules the older first-adoption value and overwrites the newer external file without preserving it. Keep the epoch for actual user edits only, or distinguish internal carry/migration writes from user-originated changes.
+
+[exited with code 0]
+```
