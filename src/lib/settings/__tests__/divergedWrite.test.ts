@@ -114,6 +114,96 @@ describe("#200 — a diverged write", () => {
   });
 });
 
+describe("#200 — a write queued behind one that diverges", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("still runs, instead of waiting for an unrelated later change", async () => {
+    // Found by the pre-merge review, and it is the promise of the whole
+    // conflict branch: reconciliation calls `pushImmediate` to put memory back
+    // on the file WHILE the write that diverged is still in flight, so
+    // `startWrite` only marks the queue dirty. Returning on `diverged` without
+    // draining that queue left the conflict copy on disk and the restore
+    // unscheduled — until something unrelated happened to carry it.
+    const save = makeSave();
+    // Collected rather than held in a variable: TypeScript narrows a variable
+    // assigned inside a promise executor to `never` at the call site.
+    const settlers: Array<() => void> = [];
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      verify: () =>
+        new Promise((resolve) => {
+          settlers.push(() => resolve("diverged" as const));
+        }),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toHaveLength(1);
+
+    // The reconciliation's write, arriving while the first is unresolved.
+    writer.pushImmediate({ n: 2 });
+    expect(save.calls).toHaveLength(1);
+
+    settlers[0]?.();
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(save.calls).toHaveLength(2);
+    expect(save.calls[1]).toEqual({ n: 2 });
+  });
+});
+
+describe("#200 — holding the writer when the other version could not be copied", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("stops the pending write, so the file the user was told to copy survives", async () => {
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    writer.hold("PPP-106");
+    await jest.advanceTimersByTimeAsync(5000);
+
+    expect(save.calls).toHaveLength(0);
+    expect(writer.status().kind).toBe("diverged");
+  });
+
+  it("keeps the value, so the user's next change still reaches the disk", async () => {
+    // A hold that dropped the pending change would trade one loss for another.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    writer.hold("PPP-106");
+    await jest.advanceTimersByTimeAsync(5000);
+
+    writer.push({ n: 2 });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toEqual([{ n: 2 }]);
+    expect(writer.hasPending()).toBe(false);
+  });
+});
+
 describe("#200 — what the writer holds that the disk does not", () => {
   beforeEach(() => {
     jest.useFakeTimers();

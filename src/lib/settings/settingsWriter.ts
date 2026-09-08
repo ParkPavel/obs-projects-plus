@@ -106,6 +106,22 @@ export interface SettingsWriter<T> {
   pushImmediate(value: T): void;
   /** Retry after a failure, with the latest value rather than the failed one. */
   retry(): void;
+  /**
+   * #200 — stop the pending write from running, keeping its value.
+   *
+   * For the one branch where the other version could NOT be copied aside: the
+   * file on disk is then the only place it exists, the notice tells the user to
+   * copy it by hand, and a debounced write firing 400ms later would make that
+   * instruction a lie. Nothing is dropped — `latest` and `dirty` stand, so the
+   * user's next change schedules a write again, by which time they have been
+   * told.
+   *
+   * This is not the "single owner blocks writes" model the plan rejected: it is
+   * one bounded pause on a rare branch, released by the next thing the user
+   * does, and the status says memory is ahead of the file for as long as it
+   * lasts.
+   */
+  hold(code: string): void;
   /** Write anything pending and wait for the in-flight write to settle. */
   flush(): Promise<void>;
   /** Drop every timer. Does not write. */
@@ -251,11 +267,19 @@ export function createSettingsWriter<T>(
     inFlight = null;
     attempt = 0;
     if (diverged) {
-      // The value stays in memory and stays dirty-free: it was written, the
-      // file simply no longer reflects it. Reconciliation is #200 step 3; what
-      // this step guarantees is only that nobody is told the write succeeded.
+      // The value stays in memory: it was written, the file simply no longer
+      // reflects it, and this writer does not retry — the retry IS the
+      // overwrite.
       diverged = false;
       setStatus({ kind: "diverged", code: SETTINGS_DIVERGED });
+      // …but a value queued MEANWHILE is a different thing, and returning here
+      // stranded it. Found by the pre-merge review: reconciliation calls
+      // `pushImmediate` to put memory back on the file, `startWrite` sees a
+      // write in flight and only marks the queue dirty, and if that in-flight
+      // write then reports `diverged` the follow-up was never scheduled. The
+      // conflict copy existed and the promised restore did not, until some
+      // unrelated later change happened to carry it.
+      if (dirty) startWrite(flushing);
       return;
     }
     if (dirty) {
@@ -324,6 +348,13 @@ export function createSettingsWriter<T>(
       dirty = true;
       cancelSchedule();
       startWrite();
+    },
+    hold(code: string): void {
+      cancelSchedule();
+      cancelRetry();
+      // The value is deliberately left dirty: it is not on disk, and the next
+      // `push` must still write it. Only the timers stop.
+      setStatus({ kind: "diverged", code });
     },
     retry(): void {
       if (disposed) return;

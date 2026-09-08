@@ -246,23 +246,43 @@ describe("#200 — the copy of the version this session refused", () => {
     expect(adapter.files.get(second as string)).toBe("second");
   });
 
-  it("refuses a name whose absence cannot be established", async () => {
-    // From the adversarial review. #195 answers this the other way for the
-    // broken copy — writing over a name that probably does not exist beats not
-    // writing — and that answer is wrong here, because the CALLER overwrites
-    // data.json once this reports success. A copy that silently replaced an
-    // earlier one would take the last remaining version with it.
+  it("does not depend on the adapter being able to answer `exists`", async () => {
+    // Two reviews met here. The first said never to write a path whose absence
+    // cannot be established; the second found that two callbacks in the same
+    // millisecond both see the timestamped name as free. Refusing to write was
+    // the wrong lever for either — the name now carries a random token, so
+    // absence follows from how it was built and the copy survives an adapter
+    // that cannot answer.
     const adapter = makeAdapter();
     adapter.exists = async () => {
       throw new Error("EIO");
     };
 
-    expect(
-      await writeConflictCopy(adapter, DIR, "theirs", new Date())
-    ).toBeNull();
+    const path = await writeConflictCopy(adapter, DIR, "theirs", new Date());
+
+    expect(path).not.toBeNull();
+    expect(adapter.files.get(path as string)).toBe("theirs");
   });
 
-  it("leaves the broken copy's opposite answer intact", async () => {
+  it("gives two copies of the same millisecond two different names", async () => {
+    // The concurrency the pre-merge review named: overlapping external-change
+    // callbacks, each preserving a different version, both reporting success.
+    // The second must not replace the first — it is the first that holds what
+    // the user is being sent to look for.
+    const adapter = makeAdapter();
+    const at = new Date("2026-09-08T04:38:32.011Z");
+
+    const [first, second] = await Promise.all([
+      writeConflictCopy(adapter, DIR, "one", at),
+      writeConflictCopy(adapter, DIR, "two", at),
+    ]);
+
+    expect(first).not.toBe(second);
+    expect(adapter.files.get(first as string)).toBe("one");
+    expect(adapter.files.get(second as string)).toBe("two");
+  });
+
+  it("leaves the broken copy's own answer intact", async () => {
     // The two copies differ deliberately, so this pins that the #195 behaviour
     // was not changed underneath it while #200 was tightening its own.
     const adapter = makeAdapter();

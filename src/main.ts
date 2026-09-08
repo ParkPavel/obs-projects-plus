@@ -132,6 +132,14 @@ export default class ProjectsPlusPlugin extends Plugin {
    * timer per firing would queue a crowd of them for one event.
    */
   private unparsableRecheck: number | null = null;
+  /**
+   * #200, from the pre-merge review: the bytes that did not parse, captured
+   * when they were seen rather than when the delayed re-read runs. Between
+   * those two moments an ordinary settings write can land and replace them —
+   * and then the re-read finds OUR valid file and copies nothing, losing the
+   * only version the other writer had.
+   */
+  private unparsableSeen: string | null = null;
 
   /**
    * onload runs when the plugin is enabled.
@@ -702,18 +710,31 @@ export default class ProjectsPlusPlugin extends Plugin {
       // it, and those bytes were the only copy of what the other writer meant.
       // So the silence is bounded — one delayed re-read, and if it still does
       // not parse the bytes are preserved like any other conflict.
-      console.warn("[Projects+] settings file changed but does not parse; keeping memory");
+      console.warn(
+        "[Projects+] settings file changed but does not parse; keeping memory"
+      );
+      this.unparsableSeen = raw;
       this.recheckUnparsableSettings();
       return;
     }
     if (decision.kind === "conflict") {
       const preserved = await this.preserveConflicting(raw, decision.reason);
+      if (!preserved) {
+        // From the pre-merge review. With the copy refused, the file on disk is
+        // the only place the other version exists — and the notice tells the
+        // user to copy it by hand. A write already sitting in the debounce
+        // would fire 400ms later and make that instruction a lie, so the
+        // pending write is held. Nothing is dropped: the value stays, and the
+        // user's next change schedules it again, by which time they have been
+        // told.
+        this.settingsWriter.hold(SETTINGS_CONFLICT_UNCOPIED);
+        return;
+      }
       // Only once the other version is safely beside the file does memory
       // become the file. Without this the disk keeps the other version and the
       // next ordinary save overwrites it anyway — the defect #200 opened with,
-      // minus the loss. With the copy refused, the disk is the ONLY place that
-      // version exists, so nothing is written and the user is told to copy it.
-      if (preserved) this.settingsWriter.pushImmediate(get(settings));
+      // minus the loss.
+      this.settingsWriter.pushImmediate(get(settings));
       return;
     }
 
@@ -727,7 +748,11 @@ export default class ProjectsPlusPlugin extends Plugin {
     if (either.isLeft(resolved)) {
       logWarning(SETTINGS_CONFLICT, "external payload did not resolve:", resolved.left);
       const preserved = await this.preserveConflicting(raw, "unresolvable");
-      if (preserved) this.settingsWriter.pushImmediate(get(settings));
+      if (!preserved) {
+        this.settingsWriter.hold(SETTINGS_CONFLICT_UNCOPIED);
+        return;
+      }
+      this.settingsWriter.pushImmediate(get(settings));
       return;
     }
 
@@ -774,6 +799,8 @@ export default class ProjectsPlusPlugin extends Plugin {
   }
 
   private async onUnparsableSettlement(): Promise<void> {
+    const seen = this.unparsableSeen;
+    this.unparsableSeen = null;
     const path = settingsFilePath(this.manifest.dir);
     if (path === null) return;
     let raw: string;
@@ -789,11 +816,25 @@ export default class ProjectsPlusPlugin extends Plugin {
       // the only copy of what somebody else wrote, and our next save will take
       // the file. Preserve them and say so — the same two codes as any other
       // conflict, because from the user's side it is the same event.
-      await this.preserveConflicting(raw, "unparsable");
+      if (!(await this.preserveConflicting(raw, "unparsable"))) {
+        this.settingsWriter?.hold(SETTINGS_CONFLICT_UNCOPIED);
+      }
       return;
     }
-    // It settled into something readable: run the ordinary decision on it,
-    // rather than adopting here by a second, less careful path.
+    // It parses now — but WHOSE file is it? The pre-merge review found the gap:
+    // if the user changed a setting during the delay, our own write may have
+    // replaced the truncated bytes, and re-reading would then find a perfectly
+    // good file and conclude there was nothing to keep. The bytes were captured
+    // when they were seen, so they can still be preserved.
+    if (seen !== null && this.confirmedOnDisk === canonical(JSON.parse(raw))) {
+      console.warn(
+        "[Projects+] the unparsable settings file was replaced by our own write; preserving what it held"
+      );
+      await this.preserveConflicting(seen, "unparsable-overwritten");
+      return;
+    }
+    // It settled into somebody's readable version: run the ordinary decision on
+    // it, rather than adopting here by a second, less careful path.
     await this.onExternalSettingsChange();
   }
 

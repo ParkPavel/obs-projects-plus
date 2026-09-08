@@ -59,10 +59,29 @@ export function brokenCopyPath(
  */
 export function conflictCopyPath(
   dir: string | undefined,
-  at: Date
+  at: Date,
+  token = randomToken()
 ): string | null {
   if (dir === undefined || dir === "") return null;
-  return `${dir}/data.conflict-${stamp(at)}.json`;
+  return `${dir}/data.conflict-${stamp(at)}-${token}.json`;
+}
+
+/**
+ * Six hex characters, appended to the timestamp.
+ *
+ * Both reviews of #200 arrived at this from opposite ends. The first said never
+ * to write a path whose absence cannot be established, and offered a
+ * high-entropy suffix as the way out; the second found that two external-change
+ * callbacks landing in the same millisecond both see the timestamped name as
+ * free and both write it, the second silently replacing the first recovery
+ * file. A name nobody else can generate answers both without asking the adapter
+ * a question it may not be able to answer.
+ *
+ * `Math.random` is right here: this is a collision-avoidance token, not a
+ * secret, and nothing about the recovery file depends on it being unguessable.
+ */
+function randomToken(): string {
+  return Math.random().toString(16).slice(2, 8).padEnd(6, "0");
 }
 
 /** The settings file itself, for reading back a payload `loadData` could not parse. */
@@ -99,8 +118,7 @@ export async function readRawSettings(
  */
 async function freeName(
   adapter: BrokenCopyAdapter,
-  base: string,
-  strict = false
+  base: string
 ): Promise<string | null> {
   try {
     if (!(await adapter.exists(base))) return base;
@@ -110,18 +128,15 @@ async function freeName(
     }
     return null;
   } catch {
-    // #195's answer for the broken copy: an adapter that cannot say is not a
-    // reason to lose the copy, and writing over a name that probably does not
-    // exist beats not writing.
+    // An adapter that cannot answer `exists` is not a reason to lose the copy:
+    // writing over a name that probably does not exist beats not writing.
     //
-    // #200's answer for the conflict copy is the opposite, and the adversarial
-    // review is why it is stated rather than inherited. There the caller
-    // OVERWRITES `data.json` once the copy reports success — so a copy that
-    // silently replaced an earlier one would take the last remaining version
-    // of somebody's settings with it. When absence cannot be established, the
-    // honest answer is no path, and the caller tells the user to copy the file
-    // by hand.
-    return strict ? null : base;
+    // #200 briefly answered the opposite for the conflict copy, because there
+    // the caller overwrites `data.json` once the copy reports success. That was
+    // the wrong lever: the danger is a name somebody else might hold, so the
+    // conflict copy stopped depending on the answer instead — its name carries
+    // a random token, and absence follows from how it was built.
+    return base;
   }
 }
 
@@ -184,7 +199,11 @@ export async function writeConflictCopy(
 ): Promise<string | null> {
   const base = conflictCopyPath(dir, at);
   if (base === null) return null;
-  const path = await freeName(adapter, base, true);
+  // `freeName` still asks, because a check that CAN be answered is worth having
+  // — but an adapter that cannot answer no longer costs the copy, since the
+  // name already carries enough entropy that absence is a property of how it
+  // was built rather than of what the file system says.
+  const path = await freeName(adapter, base);
   if (path === null) return null;
   try {
     await adapter.write(path, payload);
