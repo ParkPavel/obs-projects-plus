@@ -460,6 +460,12 @@ export default class ProjectsPlusPlugin extends Plugin {
       // not change — and #185's whole visibility hangs off a rejection that
       // never arrived. So the file is read back and compared.
       verify: (value) => this.settingsAreOnDisk(value),
+      // #212, from the live run: the file is checked BEFORE the write too. The
+      // post-write check proves our bytes landed; it cannot see what they
+      // landed on, and a version written by somebody else while our write sat
+      // in its debounce was being erased before Obsidian dispatched its change
+      // event — no copy, no notice, no trace.
+      beforeWrite: () => this.settingsAreStillOurs(),
       onStatus: (status) => saveStatus.set(status),
     });
     this.settingsWriter = writer;
@@ -685,6 +691,41 @@ export default class ProjectsPlusPlugin extends Plugin {
    * read, decide, apply. What it does with each decision is the thing to keep
    * honest, and each branch is one statement.
    */
+  /**
+   * #212 — is `data.json` still what this session last confirmed?
+   *
+   * `false` stops the write and turns it into a divergence, and reconciliation
+   * is scheduled at once rather than waited for: the host's change event is
+   * what we were racing, so depending on it here would reproduce the defect.
+   *
+   * Unknowns answer `true` deliberately. With no base, or a file that cannot be
+   * read at all, refusing every write would turn a rare event into a session
+   * where nothing saves — the model `PLAN_200` §2 rejected — and the post-write
+   * verification still stands behind it.
+   */
+  private async settingsAreStillOurs(): Promise<boolean> {
+    if (this.confirmedOnDisk === null) return true;
+    const raw = await this.readSettingsFile();
+    if (raw === null) return true;
+    let onDisk: string | null;
+    try {
+      onDisk = canonical(JSON.parse(raw));
+    } catch {
+      // Mid-write, or corrupt. Either way it is not what we confirmed, and
+      // writing over it would take whatever it holds with it.
+      onDisk = null;
+    }
+    if (onDisk === this.confirmedOnDisk) return true;
+    console.warn(
+      "[Projects+] the settings file changed before our write; reconciling instead of overwriting"
+    );
+    // Not awaited, and not called directly: this runs inside the write, and the
+    // lease waits for writes in flight — awaiting it here would wait for
+    // ourselves.
+    window.setTimeout(() => void this.onExternalSettingsChange(), 0);
+    return false;
+  }
+
   /**
    * #200/#212 — somebody else wrote `data.json`.
    *

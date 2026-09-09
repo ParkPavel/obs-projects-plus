@@ -170,6 +170,21 @@ export interface SettingsWriterOptions<T> {
    * with the old, weaker guarantee than with a permanent false alarm.
    */
   verify?: (value: T) => Promise<WriteVerdict>;
+  /**
+   * #212, from the live run — the check that was missing on the other side.
+   *
+   * #199 reads the file back AFTER writing, which proves our bytes landed and
+   * says nothing about what they landed on. A live run found the gap: an
+   * external version written while our own write sat in its debounce was
+   * overwritten before Obsidian dispatched `onExternalSettingsChange`, so
+   * nothing ever learned the file had changed — no copy, no notice, no trace.
+   *
+   * This answers "is the file still what we last confirmed?" immediately before
+   * the write. `false` means somebody else got there, and the value is NOT
+   * written: it becomes a divergence, which fences and hands the decision to
+   * reconciliation, where the other version is preserved first.
+   */
+  beforeWrite?: () => Promise<boolean>;
   onStatus?: (status: SaveStatus) => void;
   debounceMs?: number;
   maxWaitMs?: number;
@@ -270,7 +285,7 @@ function messageOf(err: unknown): string {
 export function createSettingsWriter<T>(
   options: SettingsWriterOptions<T>
 ): SettingsWriter<T> {
-  const { save, verify, onStatus } = options;
+  const { save, verify, beforeWrite, onStatus } = options;
   const debounceMs = options.debounceMs ?? SETTINGS_WRITE_DEBOUNCE_MS;
   const maxWaitMs = options.maxWaitMs ?? SETTINGS_WRITE_MAX_WAIT_MS;
   const retryDelays = options.retryDelaysMs ?? SETTINGS_WRITE_RETRY_DELAYS_MS;
@@ -579,6 +594,13 @@ export function createSettingsWriter<T>(
    * change — so the claim is checked, and an unconfirmed write is a failed one.
    */
   async function attemptWrite(value: T): Promise<"confirmed" | "diverged"> {
+    if (beforeWrite !== undefined && !(await beforeWrite())) {
+      // Somebody else's version is on disk and nothing has reconciled it yet.
+      // Writing now would erase it with no copy anywhere — which is the defect
+      // this whole ticket exists to prevent, arriving through the one door the
+      // post-write check cannot see.
+      return "diverged";
+    }
     await save(value);
     if (verify === undefined) return "confirmed";
     const verdict = await verify(value);

@@ -52,6 +52,55 @@ function makeSave(): {
   };
 }
 
+describe("#212 — the check before the write", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("does not write over a file somebody else has replaced", async () => {
+    // Found by the live run, not by review: an external version written while
+    // our own write sat in its debounce was erased before Obsidian dispatched
+    // its change event, so nothing ever learned the file had changed — no copy,
+    // no notice, no trace. The post-write check cannot see this: it compares
+    // the file to what we just wrote.
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      beforeWrite: () => Promise.resolve(false),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toHaveLength(0);
+    expect(writer.status().kind).toBe("diverged");
+    // The value is not lost: it is still owed, and reconciliation decides next.
+    expect(writer.hasPending()).toBe(true);
+  });
+
+  it("writes as usual when the file is still ours", async () => {
+    const save = makeSave();
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      beforeWrite: () => Promise.resolve(true),
+      verify: () => Promise.resolve("confirmed" as const),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toEqual([{ n: 1 }]);
+    expect(writer.status().kind).toBe("idle");
+  });
+});
+
 describe("#200 — a diverged write", () => {
   beforeEach(() => {
     jest.useFakeTimers();
