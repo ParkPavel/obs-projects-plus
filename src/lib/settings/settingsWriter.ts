@@ -594,7 +594,10 @@ export function createSettingsWriter<T>(
     setStatus({ kind: "saving" });
     inFlight = Promise.resolve()
       .then(() => attemptWrite(value))
-      .then(onWritten, (err) => onFailure(err, value));
+      .then(
+        (outcome) => onWritten(outcome, value),
+        (err) => onFailure(err, value)
+      );
   }
 
   /**
@@ -602,13 +605,22 @@ export function createSettingsWriter<T>(
    * this ticket had `saveData` report success while the file on disk did not
    * change — so the claim is checked, and an unconfirmed write is a failed one.
    */
-  async function attemptWrite(value: T): Promise<"confirmed" | "diverged"> {
+  async function attemptWrite(
+    value: T
+  ): Promise<"confirmed" | "diverged" | "rejected"> {
     if (beforeWrite !== undefined && !(await beforeWrite())) {
       // Somebody else's version is on disk and nothing has reconciled it yet.
       // Writing now would erase it with no copy anywhere — which is the defect
       // this whole ticket exists to prevent, arriving through the one door the
       // post-write check cannot see.
-      return "diverged";
+      //
+      // `rejected`, not `diverged`, and the difference is the user's work: a
+      // diverged write HAPPENED and the file no longer reflects it, while this
+      // one never started, so the value is still owed and must go back on the
+      // queue. Reported by the gate as a silent loss — reconciliation could
+      // release the episode, the status would settle to idle, and the edit
+      // would exist only in memory until the next reload took it.
+      return "rejected";
     }
     await save(value);
     if (verify === undefined) return "confirmed";
@@ -629,10 +641,20 @@ export function createSettingsWriter<T>(
     );
   }
 
-  function onWritten(outcome: "confirmed" | "diverged"): void {
+  function onWritten(
+    outcome: "confirmed" | "diverged" | "rejected",
+    value: T
+  ): void {
     inFlight = null;
     attempt = 0;
-    if (outcome === "diverged") {
+    if (outcome === "rejected") {
+      // Nothing was written, so nothing is settled: the value returns to the
+      // queue, and a value pushed meanwhile is newer and left alone. Then the
+      // ordinary divergence handling below applies — fence, and let
+      // reconciliation decide.
+      if (queue === null) queue = { value };
+    }
+    if (outcome !== "confirmed") {
       // The value stays in memory: it was written, the file simply no longer
       // reflects it, and this writer does not retry — the retry IS the
       // overwrite.

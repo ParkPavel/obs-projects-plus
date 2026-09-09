@@ -83,6 +83,35 @@ describe("#212 — the check before the write", () => {
     expect(writer.hasPending()).toBe(true);
   });
 
+  it("keeps the edit owed when the write never started", async () => {
+    // Reported by the gate as a silent loss, and it is the worst kind: the
+    // value had already been taken off the queue by `startWrite` before the
+    // guard refused, so a reconciliation that simply released the episode left
+    // the status at idle with the user's edit living only in memory — gone on
+    // the next reload, with a control saying everything was saved.
+    const save = makeSave();
+    // Refuses once — the file had been replaced — and accepts afterwards, which
+    // is what reconciliation resolving the episode looks like from here.
+    let refusals = 0;
+    const writer = createSettingsWriter<Value>({
+      save: save.fn,
+      beforeWrite: () => Promise.resolve(refusals++ > 0),
+      debounceMs: 400,
+      maxWaitMs: 2000,
+    });
+
+    writer.push({ n: 1 });
+    await jest.advanceTimersByTimeAsync(400);
+    expect(save.calls).toHaveLength(0);
+    expect(writer.hasPending()).toBe(true);
+
+    // The episode ends with nothing to do; the edit must still reach the disk.
+    await lease(writer, { kind: "release" });
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(save.calls).toEqual([{ n: 1 }]);
+  });
+
   it("writes as usual when the file is still ours", async () => {
     const save = makeSave();
     const writer = createSettingsWriter<Value>({

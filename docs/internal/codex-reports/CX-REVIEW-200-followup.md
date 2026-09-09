@@ -267,3 +267,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью перед merge — одна P1 (тихая потеря правки при отказе перед записью)
+
+```
+- [P1] Preserve the queued value when the pre-write guard rejects — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:606-611
+  When `beforeWrite` returns `false`, `startWrite` has already removed `value` from `queue`. If the scheduled reconciliation then cannot reread `data.json` (for example, a synchronizer moves/locks it after the guard's successful read), `decideExternalChange` returns `release`; `applyOutcome` clears the diverged status with no queued value to reschedule. The user's edit is therefore shown as idle but exists only in memory and is lost on reload. Keep this value pending (or distinguish a pre-write rejection from post-write divergence) until reconciliation resolves it.
+
+[exited with code 0]
+```
