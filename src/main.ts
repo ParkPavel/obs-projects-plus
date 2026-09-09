@@ -157,6 +157,8 @@ export default class ProjectsPlusPlugin extends Plugin {
    * the writer reports that the adoption was actually applied, and the fence
    * guarantees one episode at a time.
    */
+  /** #212: at most one reconciliation queued from a refused write. */
+  private reconcileScheduled = false;
   private pendingAdoption: {
     settings: LatestProjectsPluginSettings;
     base: string | null;
@@ -719,10 +721,17 @@ export default class ProjectsPlusPlugin extends Plugin {
     console.warn(
       "[Projects+] the settings file changed before our write; reconciling instead of overwriting"
     );
+    // One at a time. A refused write that scheduled another episode on every
+    // attempt would answer a single external change with a storm of them.
+    if (this.reconcileScheduled) return false;
+    this.reconcileScheduled = true;
     // Not awaited, and not called directly: this runs inside the write, and the
     // lease waits for writes in flight — awaiting it here would wait for
     // ourselves.
-    window.setTimeout(() => void this.onExternalSettingsChange(), 0);
+    window.setTimeout(() => {
+      this.reconcileScheduled = false;
+      void this.onExternalSettingsChange();
+    }, 0);
     return false;
   }
 
@@ -855,6 +864,11 @@ export default class ProjectsPlusPlugin extends Plugin {
         return { kind: "hold", code: SETTINGS_CONFLICT_UNCOPIED };
 
       case "restore":
+        // The episode has LOOKED at the file, so the pre-write check must not
+        // refuse the restore that ends it. Without this the guard added for the
+        // live-run defect turns reconciliation into a loop: refuse, reconcile,
+        // preserve, restore, refuse — 237 conflict copies in one stand run.
+        this.noteFileAsSeen(raw);
         return { kind: "restore", settings: get(settings) };
 
       case "adopted": {
@@ -958,9 +972,27 @@ export default class ProjectsPlusPlugin extends Plugin {
       preservation
     );
     this.announce(episode.report);
-    return episode.outcome.kind === "restore"
-      ? { kind: "restore", settings: get(settings) }
-      : { kind: "hold", code: SETTINGS_CONFLICT_UNCOPIED };
+    if (episode.outcome.kind === "restore") {
+      this.noteFileAsSeen(raw);
+      return { kind: "restore", settings: get(settings) };
+    }
+    return { kind: "hold", code: SETTINGS_CONFLICT_UNCOPIED };
+  }
+
+  /**
+   * Record what the file holds right now, as this session's base.
+   *
+   * Called by an episode that has read the file and decided to write over it:
+   * from that moment the pre-write check has nothing to warn about, because the
+   * change it would warn about is the one just handled. Unparsable bytes leave
+   * no base, which the check reads as "unknown" and allows.
+   */
+  private noteFileAsSeen(raw: string): void {
+    try {
+      this.confirmedOnDisk = canonical(JSON.parse(raw));
+    } catch {
+      this.confirmedOnDisk = null;
+    }
   }
 
   /** The settings file as text, or `null` when it cannot be read at all. */
