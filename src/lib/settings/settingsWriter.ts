@@ -183,6 +183,15 @@ export interface SettingsWriterOptions<T> {
    * the write. `false` means somebody else got there, and the value is NOT
    * written: it becomes a divergence, which fences and hands the decision to
    * reconciliation, where the other version is preserved first.
+   *
+   * **What it does not close, and cannot from here.** The check reads and the
+   * host writes, so a version arriving between those two moments is still
+   * overwritten silently — the post-write verification then compares the file
+   * to our own bytes and calls it confirmed. Closing that needs a compare-and-
+   * write, and `DataAdapter.process` is the closest the host offers; taking it
+   * means this plugin, not `saveData`, decides how `data.json` is serialised,
+   * which is a change of write primitive rather than a guard. Filed as #213
+   * with the measurement it needs, instead of being smuggled in here.
    */
   beforeWrite?: () => Promise<boolean>;
   onStatus?: (status: SaveStatus) => void;

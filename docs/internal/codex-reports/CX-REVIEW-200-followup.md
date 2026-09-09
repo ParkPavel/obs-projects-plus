@@ -258,3 +258,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после правки текста PPP-106 — одна P1 (окно проверка↔запись)
+
+```
+- [P1] Prevent the check–write TOCTOU race — C:\Users\Park\OBSv1.0\obs-projects-plus\src\lib\settings\settingsWriter.ts:597-604
+  An external writer can replace `data.json` after `beforeWrite()` has read and accepted the old contents but before `save(value)` starts. Because this is an asynchronous read rather than an atomic compare-and-write, the plugin then overwrites that new version; the later verification sees its own bytes and reports success, leaving no reconciliation or conflict copy. This reproduces the same silent-loss failure for writes arriving in that interval.
+
+[exited with code 0]
+```
