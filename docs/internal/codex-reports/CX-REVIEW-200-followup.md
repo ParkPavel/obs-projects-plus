@@ -276,3 +276,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью после правки rejected — одна P2 (живая блокировка при совпадении)
+
+```
+- [P2] Record matching external state as confirmed — C:\Users\Park\OBSv1.0\obs-projects-plus\src\main.ts:720-720
+  When an external write arrives with the same contents as this session's pending settings, reconciliation returns the `same`/`release` outcome without advancing `confirmedOnDisk`. The next queued write therefore reaches this check with the old base, is rejected, requeued, and reconciled to `same` again; this repeats every debounce interval even though the user's value is already on disk. Update the confirmed base for this resolved `same` case (or otherwise accept that equivalence) so the writer can settle.
+
+[exited with code 0]
+```

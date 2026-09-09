@@ -842,6 +842,15 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     switch (episode.outcome.kind) {
       case "release":
+        // The episode looked at the file and found nothing to do — an echo of
+        // our own write, or somebody arriving at the value we already hold. It
+        // still has to record what it saw: without that the pre-write check
+        // keeps comparing against a base from before this change, refuses the
+        // queued write, reconciles to the same answer, and repeats every
+        // debounce for as long as the session lasts. Found by the gate as a
+        // livelock, and it is the cost of a guard that trusts a base nobody
+        // updates.
+        this.noteFileAsSeen(raw);
         console.debug(`[Projects+] settings file changed; ${decision.kind}`);
         return { kind: "release" };
 
