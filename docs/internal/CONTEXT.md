@@ -1,6 +1,7 @@
 ﻿# Current project context
 
-> **Updated:** 2026-09-08 (#211 complete on its branch and not merged; the review-loop lessons are
+> **Updated:** 2026-09-09 (#212 complete on the same branch and not merged; the live run found the
+> defect eleven review passes had not — see below. Earlier: 2026-09-08 — #211 complete on its branch and not merged; the review-loop lessons are
 > in `RETRO_SETTINGS_OWNERSHIP_2026-09-08.md` and now bind `TWO_MODEL_PROTOCOL.md` and
 > `MANUAL_TESTING_PIPELINE.md`. Earlier the same day: #200 complete on its branch, acceptance 10/10 on the live host, not
 > merged; #207-#209 filed from that run. Earlier: 2026-09-02 — #165, #181 and #179 merged into `main`; #178 and #180 have architect plans
@@ -20,6 +21,33 @@ The old W2–W5 sequence is historical; it does not select the next product tick
 
 ## Working tree and release state
 
+- **#212 is COMPLETE on the same branch (`fix/211-conflict-races`), NOT merged.** The architect pass
+  the user chose over merging #211: permission to write `data.json` became one value with four
+  states (`open` / `fenced` / `held` / `closed`) and named transitions, an episode became a lease
+  (`withExclusive`) whose release is a `finally`, and how an episode ends became a value produced by
+  a pure module (`settingsEpisode.ts`) rather than by eight branches of `main.ts`. `hold`, `resume`,
+  `settled` and the restore's `pushImmediate` are gone: **four fence sites and eight release sites in
+  the file with no unit coverage became zero of each**, and a branch that does not say how the
+  episode ended no longer compiles. `R0_24_oneSettingsWriter.test.ts` pins the two properties a later
+  change would undo silently — one writer of the settings file, and the retired methods not coming
+  back — and it earned itself on its first run, catching three of them still declared.
+  Gates: tsc 0, jest **233 suites / 3603 tests**, lint 0 errors / 110 warnings, svelte-check 0/0.
+  **The live run is where the ticket paid for itself.** Eight of eight on the stand
+  (`ACCEPTANCE_212_RESULTS_2026-09-09.md`), and it found the defect #200 exists to prevent, still
+  present after eleven review passes: an external version written while the plugin's own write sat in
+  its debounce was overwritten with **no copy, no notice and no trace**, because the file was
+  verified after a write and never before one. Reproduced three times, then with a marker that simply
+  vanished. `beforeWrite` (`7c1d262`) closed it; the first run with that guard produced 237 conflict
+  copies, because the restore that ends an episode is itself a write — fixed by having the episode
+  remember what it saw (`cf0044b`). A3, the conflict row that "would not stage" before, now passes on
+  the first attempt: the branch had been unreachable.
+  **Known and named, not closed:** the window between the check and the write (#213) needs a
+  compare-and-write; `DataAdapter.process` is the host's, and taking it means this plugin serialises
+  `data.json` instead of `saveData` — a change of primitive, with its own plan and live run.
+  Open for the user: **merge**. Cross-model coverage of the branch is complete except the two most
+  recent commits at the time of writing; the rest carried 34 findings across the episode, all valid,
+  all closed.
+
 - **#211 is COMPLETE on `fix/211-conflict-races` (base `main` = `0d23124`), NOT merged.** It closes
   the races the reviews of #200 found after that ticket had already merged: an ordinary edit could
   overtake the hook that was about to copy somebody else's version aside; a held write was forced
@@ -35,8 +63,7 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   fix for the pass before** — the whole count and what it changed in the pipeline is in
   `RETRO_SETTINGS_OWNERSHIP_2026-09-08.md`. Both convergences came from collapsing state, not from
   more care, which is now a rule in `TWO_MODEL_PROTOCOL.md` rather than an anecdote.
-  Open for the user: merge, and whether the coordination between `settingsWriter` and the external
-  change hook deserves an architect pass before it grows again.
+  The user chose the architect pass over merging it as it stood, and #212 is what came of that.
 
 - **#200 is COMPLETE on `feat/200-step1-verdict` (base `main` = `0a89e33`), NOT merged.** The plugin
   no longer erases a change somebody else made to `data.json`. `Plugin#onExternalSettingsChange`
