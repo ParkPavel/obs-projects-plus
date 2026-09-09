@@ -548,9 +548,10 @@ The old W2–W5 sequence is historical; it does not select the next product tick
   excluded as CSS, and four widget-setting handlers marked. Reports:
   `codex-reports/CX-AUDIT-180a.md`, `CX-ADV-180a.md`. Percent operators still return strings — that
   half of T2 (`#180b`) is untouched.
-- **Canonical baseline — `main`, measured in ONE pass 2026-09-08 after #200 merged:
-  231 suites / 3543 tests, 109 s. tsc 0, svelte-check 0/0, lint 0 errors (110 pre-existing tsdoc
+- **Canonical baseline — `main`, measured in ONE pass 2026-09-09 after #211/#212/#210 merged:
+  233 suites / 3604 tests, 95 s. tsc 0, svelte-check 0/0, lint 0 errors (110 pre-existing tsdoc
   warnings).** Nothing skipped, the five headless-Chrome suites included.
+  Re-measured on `main` at the merge, as this bullet requires of itself.
   **The two-pass split is retired because the whole set ran together, not because it was argued
   away.** The previous line — 224/3448 plus 5/51 on their own, 2026-09-07 — existed for a machine
   that could not carry five headless Chrome instances alongside the rest (#196). It carried
