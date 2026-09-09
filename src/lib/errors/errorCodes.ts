@@ -178,7 +178,7 @@ export const ERROR_CODES: readonly ErrorCodeEntry[] = [
     caption:
       "Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself.",
     cause:
-      "Both the copy beside data.json and the note in the vault failed to write, so the console line is the only remaining copy of the other version; this session's writing is held until your next change.",
+      "Both the copy beside data.json and the note in the vault failed to write, so the other version survives in two places only: the console line, and data.json itself, which this session is holding unwritten until your next change.",
   },
   {
     code: "PPP-201",

@@ -249,3 +249,12 @@ Full review comments:
 
 [exited with code 0]
 ```
+
+## Ревью на восстановленном лимите (диапазон 623e600..d38acc6) — одна P2
+
+```
+- [P2] Correct the PPP-106 recovery-copy claim — C:\Users\Park\OBSv1.0\obs-projects-plus\docs\ERROR_CODES.md:199-199
+  When PPP-106 occurs, the writer deliberately holds `data.json` at the external version until the next user edit, so the console is not the only remaining copy; the following instructions themselves correctly offer copying `data.json`. This contradictory cause text can mislead users, especially outside desktop, and the shared registry cause must be corrected too because the new ratchet pins this wording. [CLAUDE.md:68-70](C:/Users/Park/OBSv1.0/obs-projects-plus/CLAUDE.md#L68-L70)
+
+[exited with code 0]
+```

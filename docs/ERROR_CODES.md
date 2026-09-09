@@ -176,10 +176,9 @@ Nothing is lost. **Follow the path in the notice** — it is the answer, because
 
 ### Почему
 Не прошли обе записи — копия рядом с `data.json` (или папка плагина неизвестна, и писать рядом
-некуда) и заметка в хранилище. Поэтому единственная гарантированная копия чужой версии — строка в
-консоли разработчика; сам `data.json` тоже ещё держит её, и удержание записи не даёт её затереть до
-вашей следующей правки. Отказ этих двух записей **не означает**, что хранилище не принимает запись
-вообще.
+некуда) и заметка в хранилище. Поэтому чужая версия сейчас существует ровно в двух местах: строкой в
+консоли разработчика и в самом `data.json`, который плагин удерживает незаписанным до вашей следующей
+правки. Отказ этих двух записей **не означает**, что хранилище не принимает запись вообще.
 
 ### Что делать
 Чужая версия сейчас цела: пока вы сами не измените настройку, плагин ничего поверх неё не пишет.
@@ -196,7 +195,7 @@ Nothing is lost. **Follow the path in the notice** — it is the answer, because
 Projects+: data.json was changed outside this window, and the other version could not be saved anywhere — not beside the file, not as a note in the vault. On desktop it is printed in the developer console. Nothing is being written over it until you change a setting yourself.
 
 ### Why
-Both the copy beside data.json and the note in the vault failed to write, so the console line is the only remaining copy of the other version; this session's writing is held until your next change.
+Both the copy beside data.json and the note in the vault failed to write, so the other version survives in two places only: the console line, and data.json itself, which this session is holding unwritten until your next change.
 
 ### What to do
 The other version is intact for now: nothing is written over it until you change a setting yourself. So, in order: on desktop, open the developer console (Ctrl+Shift+I) and find the `PPP-106` line — the full text of the other version is printed under it, and you can copy it from there. Or copy `data.json` itself out of the plugin folder. Only then change a setting: **your first edit lifts the hold and writes the file with your version.**
