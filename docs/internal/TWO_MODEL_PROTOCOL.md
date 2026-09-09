@@ -95,6 +95,39 @@ Three rules follow, and all three are cheap:
 3. **State the range in the report.** `--base <ref>` and the tip it was run at go into the saved
    `CX-*` file, so a later reader can tell what was and was not looked at.
 
+#### The plan is a checklist, and the implementation is checked against it line by line
+
+Added 2026-09-09, from #212, where two P1 findings were not defects of the plan
+but places the implementation had quietly departed from it. `PLAN_212` T8 says
+the fence goes up on EVERY divergence and names the conditional version as the
+thing being replaced — the conditional version is what got written. The same
+plan's state table says `closed` is terminal; the code let a lease reopen it.
+
+Both were found by review, several passes apart, at the cost of a full cycle
+each. Both would have been found in minutes by reading the plan's numbered rows
+against the code.
+
+**So a plan with numbered states, transitions or invariants ends with a pass
+that walks them one by one and says, for each, where it is implemented or why it
+is not.** That pass is part of the implementation, not of the review: a gate
+that must catch a departure from a document the author already had is a gate
+doing the author's work.
+
+#### The live run finds what the review cannot
+
+Added 2026-09-09. Eleven cross-model passes over #212 found eleven real defects
+and did not find the one the ticket exists to prevent: an external version
+written while the plugin's own write sat in its debounce was overwritten with no
+copy, no notice and no trace, because the file was verified after a write and
+never before one. It took a stand with a real host, a real event dispatch
+latency and a marker that could be looked for afterwards.
+
+Neither check substitutes for the other, and the asymmetry is worth naming:
+review reads the code and finds what contradicts itself; the live run exercises
+the code against a system whose timing nobody modelled, and finds what the code
+is silent about. A ticket that changes when writes happen is not finished
+without both.
+
 #### The stop rule — when patching stops converging
 
 Added 2026-09-08, from the same episode: twelve passes, twenty-one findings, all valid, and **five of
