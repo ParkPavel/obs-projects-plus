@@ -1,5 +1,9 @@
 # OBS Projects Plus
 
+> Claude/Codex workspace configuration is maintained in the separate
+> [Claudex](https://github.com/ParkPavel/claudex) project.
+> See [the workspace migration note](docs/AGENT_WORKSPACE.md).
+
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-3.5.1--alpha-orange.svg)
