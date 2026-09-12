@@ -1,239 +1,111 @@
-# Projects Plus — Custom View API Reference
+# Custom view API
 
-> **Status**: Experimental — inherited from [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) by Marcus Olsson.  
-> This API may change or be removed without notice. Use at your own risk.
+[Русская версия](api-ru.md)
 
-## Overview
+Projects Plus can discover a custom view supplied by another enabled Obsidian plugin. This extension point is experimental: check compatibility with the exact host release you support. Internal stores and modules under `src` are not a stable external API.
 
-Projects Plus lets third-party plugins register **custom views** that appear alongside the built-in Table, Board, Calendar, and Gallery. This is the **only** public API the plugin exposes.
+## Registration and lifecycle
 
-There is no `plugin.api` object, no events system, and no programmatic project management API.
+When a Projects workspace view opens, [getProjectViews()](../src/view.ts) examines enabled plugins for an `onRegisterProjectView` method. It calls that method to obtain a view instance and uses `getViewType()` as its key.
 
----
+Return a fresh instance and choose a unique, namespaced type, such as `my-plugin-summary`. Built-in types are registered afterward and override conflicting keys. Reopen the Projects pane after enabling your extension so discovery runs again.
 
-## How Registration Works
+[useView.ts](../src/ui/app/useView.ts) calls the lifecycle methods:
 
-On load, Projects Plus iterates all enabled plugins and checks for an `onRegisterProjectView` method. If found, it calls the method and registers the returned view.
+| Method | Purpose |
+| --- | --- |
+| `getViewType()` | Return the unique type key |
+| `getDisplayName()` | Return the name shown to the user |
+| `getIcon()` | Return an Obsidian icon name |
+| `onOpen(props)` | Render into `props.contentEl` |
+| `onData(result)` | Render the latest data frame |
+| `updateProps(updates)` | Handle changed project or view configuration without remounting |
+| `onClose()` | Release subscriptions, listeners and other resources |
 
-**Source**: [`src/view.ts` → `getProjectViews()`](../src/view.ts)
+The host calls `onOpen` and then `onData` without awaiting them. Keep initial setup synchronous; manage asynchronous work and cancellation within your view.
 
-```
-Enabled Plugin → has onRegisterProjectView()? → YES → call it → register ProjectView
-```
+## Minimal example
 
----
-
-## Quick Start
-
-### 1. Install Type Definitions
-
-```bash
-npm install --save-dev obsidian-projects-types@latest
-```
-
-### 2. Create a View Class
-
-```typescript
-import {
-  DataQueryResult,
-  ProjectView,
-  ProjectViewProps,
-} from "obsidian-projects-types";
-
-class MyCustomView extends ProjectView {
-  private dataEl?: HTMLElement;
-
-  getViewType(): string {
-    return "my-custom-view";
-  }
-
-  getDisplayName(): string {
-    return "My Custom View";
-  }
-
-  getIcon(): string {
-    return "layout-grid"; // any Lucide icon name
-  }
-
-  // Called when data changes — invalidate previous data and re-render
-  async onData({ data }: DataQueryResult) {
-    if (this.dataEl) {
-      this.dataEl.empty();
-      this.dataEl.createDiv({ text: JSON.stringify(data.fields) });
-      this.dataEl.createDiv({ text: JSON.stringify(data.records) });
-    }
-  }
-
-  // Called when the user switches to this view
-  async onOpen({ contentEl, config, saveConfig, readonly }: ProjectViewProps) {
-    contentEl.createEl("h1", { text: "My Custom View" });
-    this.dataEl = contentEl.createEl("div");
-  }
-
-  // Called when the user leaves or removes this view
-  async onClose() {
-    // Clean up resources
-  }
-}
-```
-
-### 3. Register in Your Plugin
+This read-only view uses types from the companion package. Install a package version you have checked against your target host; [the package source](../obsidian-projects-types/index.ts) records the declarations maintained in this repository.
 
 ```typescript
 import { Plugin } from "obsidian";
+import { ProjectView } from "obsidian-projects-types";
+import type {
+  DataQueryResult,
+  ProjectViewProps,
+} from "obsidian-projects-types";
 
-export default class MyPlugin extends Plugin {
-  // Projects Plus will call this method to create the view instance
-  onRegisterProjectView = () => new MyCustomView();
+class SummaryView extends ProjectView {
+  private content: HTMLElement | undefined;
+
+  getViewType(): string { return "my-plugin-summary"; }
+  getDisplayName(): string { return "Summary"; }
+  getIcon(): string { return "list"; }
+
+  onOpen({ contentEl }: ProjectViewProps): void {
+    this.content = contentEl;
+  }
+
+  onData({ data }: DataQueryResult): void {
+    if (!this.content) return;
+    this.content.empty();
+    this.content.createEl("p", {
+      text: `${data.records.length} records`,
+    });
+  }
+
+  // The host calls this method; the package base class does not define it.
+  updateProps(_updates: Record<string, unknown>): void {}
+
+  onClose(): void {
+    this.content = undefined;
+  }
+}
+
+export default class SummaryPlugin extends Plugin {
+  onRegisterProjectView(): SummaryView {
+    return new SummaryView();
+  }
 }
 ```
 
-That's it. When both plugins are enabled, your view will appear in the view switcher.
+Bundle the runtime `ProjectView` import with your plugin. Type-only imports disappear during compilation.
 
----
+## Data supplied to views
 
-## Type Reference
+The host contract is [src/customViewApi.ts](../src/customViewApi.ts). Use it together with the [data-frame definitions](../src/lib/dataframe/dataframe.ts), rather than copying type declarations from this page.
 
-All types are exported from the `obsidian-projects-types` package.  
-Source: [`obsidian-projects-types/index.ts`](../obsidian-projects-types/index.ts)
+`DataQueryResult` includes `data`, `hasSort`, `hasFilter`, optional `dataGeneration` and optional `filterConditions`. The host also supplies an optional complete `filter`, including disabled conditions and nested groups. When saving a filter, retaining only the visible enabled conditions would discard that configuration.
 
-### ProjectView (abstract class)
+A data frame contains `fields`, `records` and optional parsing `errors`. Each record has a vault-path `id` and a `values` object. In the host, an absent property differs from an explicit `null` value. Do not write derived fields as stored frontmatter.
 
-The base class you must extend.
+`ProjectViewProps` contains:
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `getViewType()` | `string` | Unique identifier for this view type |
-| `getDisplayName()` | `string` | Display name in the UI |
-| `getIcon()` | `string` | Lucide icon name |
-| `onOpen(props)` | `void` | Called when view is activated. Render into `props.contentEl` |
-| `onData(result)` | `void` | Called when data changes. `result.data` contains `fields` and `records` |
-| `onClose()` | `void` | Called when view is deactivated. Clean up resources |
+| Property | Use |
+| --- | --- |
+| `viewId`, `project` | Identify the view and its project |
+| `config`, `saveConfig` | Read and persist view configuration |
+| `contentEl` | Render the view's content |
+| `viewApi` | Request record and field writes |
+| `readonly` | Disable editing when the source is read-only |
+| `saveViewFilter?` | Save a filter when the callback is available |
+| `getRecordColor` | Resolve the configured color for a record |
+| `sortRecords` | Apply the host's sort to a list |
+| `getRecord` | Look up a record by ID |
 
-### ProjectViewProps
+## Write operations
 
-Passed to `onOpen()`.
+Use the host-provided `viewApi`. It supports record creation, update, batch update and deletion, plus field creation, update and deletion. In particular, `deleteField` takes a field **name**, not a field object.
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `viewId` | `string` | Unique view instance ID |
-| `project` | `ProjectDefinition` | Current project configuration |
-| `config` | `T` (generic, default `Record<string, any>`) | Persisted view-specific configuration |
-| `saveConfig` | `(config: T) => void` | Callback to persist configuration changes |
-| `contentEl` | `HTMLElement` | Container element to render into |
-| `viewApi` | `ViewApi` | API for CRUD operations on records and fields |
-| `readonly` | `boolean` | `true` for Dataview projects (computed fields can't be edited) |
+The implementation in [src/lib/viewApi.ts](../src/lib/viewApi.ts) owns persistence behavior and failure reporting. Several methods are asynchronous, and the companion package does not describe all return values accurately. For example, the host's `updateRecord` returns `Promise<boolean>`, while the package declaration returns `void`. Do not interpret a `void` call or an optimistic screen update as confirmation that a write succeeded.
 
-### DataQueryResult
+Respect `readonly` and derived field flags. Constructing the package's `ViewApi` class does not create a working writer: its methods are stubs. Nor is that class the same runtime constructor as the host's implementation.
 
-Passed to `onData()`.
+## Current compatibility limits
 
-```typescript
-type DataQueryResult = {
-  data: DataFrame;
-};
-```
+The companion [type package](../obsidian-projects-types/README.md) declares version `3.0.0`, separately from the plugin version. It currently omits the host's `updateProps`, full `filter` payload and `native-query` data-source variant. Its value and write-result types also differ from the host.
 
-### DataFrame
+Implement `updateProps` even when your view has nothing to update, as in the example. If your extension needs the other host-only details, verify and type that boundary against the release you support. A successful compile against the package alone is not a compatibility test. Exercise opening, data refresh, configuration changes and closing in Obsidian.
 
-```typescript
-type DataFrame = {
-  readonly fields: DataField[];  // schema
-  readonly records: DataRecord[]; // data rows (one per note)
-};
-```
-
-### DataField
-
-```typescript
-type DataField = {
-  readonly name: string;           // frontmatter property name
-  readonly type: DataFieldType;    // "string" | "number" | "boolean" | "date" | "unknown"
-  readonly repeated: boolean;      // can have multiple values (array)
-  readonly identifier: boolean;    // identifies a DataRecord (e.g., file path)
-  readonly derived: boolean;       // computed field (read-only)
-};
-```
-
-### DataRecord
-
-```typescript
-type DataRecord = {
-  readonly id: string;                              // note file path
-  readonly values: Record<string, Optional<DataValue>>; // field values
-};
-```
-
-### DataValue
-
-```typescript
-type DataValue = string | number | boolean | Date | Array<Optional<DataValue>>;
-type Optional<T> = T | undefined | null;
-// undefined = field removed, null = field exists but has no value
-```
-
-### ViewApi
-
-Methods for modifying data from within your view.
-
-| Method | Parameters | Description |
-|--------|-----------|-------------|
-| `addRecord` | `(record, fields, templatePath)` | Create a new note |
-| `updateRecord` | `(record, fields)` | Update frontmatter fields |
-| `deleteRecord` | `(recordId)` | Delete a note |
-| `updateField` | `(field)` | Update field metadata |
-| `deleteField` | `(field)` | Remove a frontmatter field |
-
-### ProjectDefinition
-
-```typescript
-type ProjectDefinition = {
-  readonly name: string;
-  readonly id: string;
-  readonly defaultName: string;
-  readonly templates: string[];
-  readonly excludedNotes: string[];
-  readonly isDefault: boolean;
-  readonly dataSource: DataSource;
-  readonly newNotesFolder: string;
-};
-```
-
-### DataSource
-
-```typescript
-type DataSource = FolderDataSource | TagDataSource | DataviewDataSource;
-
-type FolderDataSource = {
-  readonly kind: "folder";
-  readonly config: { readonly path: string; readonly recursive: boolean };
-};
-
-type TagDataSource = {
-  readonly kind: "tag";
-  readonly config: { readonly tag: string; readonly hierarchy: boolean };
-};
-
-type DataviewDataSource = {
-  readonly kind: "dataview";
-  readonly config: { readonly query: string };
-};
-```
-
----
-
-## Important Notes
-
-- **This API is experimental**. Breaking changes may occur in any release.
-- The `onRegisterProjectView` method may be called **multiple times** (once per view instance).
-- Always clean up resources in `onClose()` to avoid memory leaks.
-- If `readonly` is `true`, disable any UI that calls `ViewApi` write methods.
-- The `obsidian-projects-types` package is specific to this plugin family and may not be updated frequently.
-
----
-
-## Further Reading
-
-- [obsidian-projects-types README](../obsidian-projects-types/README.md) — full example from the original author
-- [README](../README-EN.md) — plugin overview
-- [User Guide](user-guide-EN.md) — end-user documentation
+See [Contributing](../CONTRIBUTING.md) for local plugin testing and the [architecture map](architecture.md) for implementation locations.

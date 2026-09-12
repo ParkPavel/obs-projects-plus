@@ -1,239 +1,63 @@
-# 🔧 Projects Plus — Справочник Custom View API
+# API пользовательских видов
 
-> **Статус**: Экспериментальный — унаследован от [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) (Marcus Olsson).  
-> Этот API может измениться или быть удалён без предупреждения. Используйте на свой риск.
+[English version](api.md)
 
-## Обзор
+Projects Plus может подключить вид, предоставленный другим включённым плагином Obsidian. API экспериментальный: совместимость нужно проверять с конкретной версией Projects Plus. Модули и хранилища состояния внутри `src` не являются стабильным публичным SDK.
 
-Projects Plus позволяет сторонним плагинам регистрировать **собственные представления (views)**, которые отображаются рядом со встроенными Table, Board, Calendar и Gallery. Это **единственный** публичный API, который предоставляет плагин.
+## Регистрация
 
-В плагине нет объекта `plugin.api`, системы событий или программного API управления проектами.
+При открытии панели Projects функция [getProjectViews()](../src/view.ts) ищет у включённых плагинов метод `onRegisterProjectView`. Возвращённый экземпляр регистрируется под ключом из `getViewType()`.
 
----
+Возвращайте новый экземпляр. Для ключа используйте уникальное имя с префиксом вашего плагина, например `my-plugin-summary`. Встроенные виды регистрируются после внешних и заменяют совпадающие ключи. После включения расширения переоткройте панель Projects, чтобы регистрация выполнилась снова.
 
-## Как работает регистрация
+## Жизненный цикл
 
-При загрузке Projects Plus перебирает все включённые плагины и проверяет наличие метода `onRegisterProjectView`. Если метод найден — плагин вызывает его и регистрирует возвращённый view.
+| Метод | Назначение |
+| --- | --- |
+| `getViewType()` | Уникальный ключ вида |
+| `getDisplayName()` | Название в интерфейсе |
+| `getIcon()` | Имя значка Obsidian |
+| `onOpen(props)` | Создание интерфейса в `props.contentEl` |
+| `onData(result)` | Отображение текущих данных |
+| `updateProps(updates)` | Обновление настроек вида или проекта без пересоздания |
+| `onClose()` | Освобождение подписок, обработчиков и других ресурсов |
 
-**Исходный код**: [`src/view.ts` → `getProjectViews()`](../src/view.ts)
+Порядок вызовов определён в [useView.ts](../src/ui/app/useView.ts). После `onOpen` сразу вызывается `onData`; завершения асинхронных методов хост не ожидает. Первичную подготовку выполняйте синхронно, а фоновую работу и её отмену организуйте внутри вида.
 
-```
-Включённый плагин → есть onRegisterProjectView()? → ДА → вызов → регистрация ProjectView
-```
+Полный минимальный пример находится в [английском справочнике](api.md#minimal-example). Он показывает регистрацию и отображение количества записей. Метод `updateProps` в примере обязателен для текущего хоста, хотя базовый класс в пакете типов его пока не содержит.
 
----
+## Данные и параметры
 
-## Быстрый старт
+Актуальный контракт хоста — [src/customViewApi.ts](../src/customViewApi.ts), структура данных — [dataframe.ts](../src/lib/dataframe/dataframe.ts).
 
-### 1. Установите определения типов
+`DataQueryResult` содержит `data`, признаки `hasSort` и `hasFilter`, необязательный счётчик `dataGeneration` и список `filterConditions`. Хост также передаёт полный `filter`: с отключёнными условиями и вложенными группами. При сохранении фильтра нельзя заменять его только видимыми включёнными условиями — часть настроек потеряется.
 
-```bash
-npm install --save-dev obsidian-projects-types@latest
-```
+В `data` находятся поля `fields`, записи `records` и необязательные ошибки разбора `errors`. Идентификатор записи `id` — путь заметки в хранилище. Значения находятся в `values`. Отсутствующее свойство и явное значение `null` имеют разный смысл. Вычисляемые поля не следует записывать в свойства заметки.
 
-### 2. Создайте класс представления
+| Параметр `ProjectViewProps` | Назначение |
+| --- | --- |
+| `viewId`, `project` | Текущий вид и проект |
+| `config`, `saveConfig` | Чтение и сохранение настроек вида |
+| `contentEl` | Контейнер интерфейса |
+| `viewApi` | Операции с записями и полями |
+| `readonly` | Признак источника только для чтения |
+| `saveViewFilter?` | Сохранение фильтра, если хост предоставил callback |
+| `getRecordColor` | Цвет записи по правилам проекта |
+| `sortRecords` | Сортировка списка по настройкам хоста |
+| `getRecord` | Поиск записи по идентификатору |
 
-```typescript
-import {
-  DataQueryResult,
-  ProjectView,
-  ProjectViewProps,
-} from "obsidian-projects-types";
+## Запись изменений
 
-class MyCustomView extends ProjectView {
-  private dataEl?: HTMLElement;
+Используйте экземпляр `viewApi`, полученный от хоста. Он поддерживает создание, изменение, пакетное изменение и удаление записей, а также создание, изменение и удаление полей. `deleteField` принимает **имя поля**, а не объект поля.
 
-  getViewType(): string {
-    return "my-custom-view";
-  }
+Поведение записи и обработка ошибок реализованы в [src/lib/viewApi.ts](../src/lib/viewApi.ts). Часть методов асинхронна, а пакет типов не описывает все возвращаемые значения точно. Например, хост возвращает из `updateRecord` значение `Promise<boolean>`, а пакет объявляет `void`. Возврат из такого вызова и изменение на экране сами по себе не подтверждают сохранение файла.
 
-  getDisplayName(): string {
-    return "My Custom View";
-  }
+Отключайте редактирование при `readonly` и учитывайте признак вычисляемого поля. Не создавайте `ViewApi` из пакета: его методы — пустые заглушки для описания типов. Этот класс также не совпадает с конструктором реализации хоста, поэтому проверка через его `instanceof` ненадёжна.
 
-  getIcon(): string {
-    return "layout-grid"; // любое имя Lucide-иконки
-  }
+## Ограничения совместимости
 
-  // Вызывается при изменении данных — очистите предыдущие данные и перерисуйте
-  async onData({ data }: DataQueryResult) {
-    if (this.dataEl) {
-      this.dataEl.empty();
-      this.dataEl.createDiv({ text: JSON.stringify(data.fields) });
-      this.dataEl.createDiv({ text: JSON.stringify(data.records) });
-    }
-  }
+[Пакет типов](../obsidian-projects-types/README.md) имеет собственную версию `3.0.0`, отдельную от версии плагина. В нём пока отсутствуют `updateProps`, полный `filter` и вариант источника `native-query`. Типы значений и результатов записи также отличаются от хоста.
 
-  // Вызывается при переключении пользователя на это представление
-  async onOpen({ contentEl, config, saveConfig, readonly }: ProjectViewProps) {
-    contentEl.createEl("h1", { text: "My Custom View" });
-    this.dataEl = contentEl.createEl("div");
-  }
+Реализуйте `updateProps`, даже если обновлять ничего не требуется. Если расширение использует остальные возможности хоста, проверяйте и описывайте этот интерфейс для поддерживаемого выпуска. Компиляции с пакетом типов недостаточно: проверьте в Obsidian открытие вида, обновление данных, изменение настроек и закрытие.
 
-  // Вызывается при уходе пользователя из представления или его удалении
-  async onClose() {
-    // Очистите ресурсы
-  }
-}
-```
-
-### 3. Зарегистрируйте в вашем плагине
-
-```typescript
-import { Plugin } from "obsidian";
-
-export default class MyPlugin extends Plugin {
-  // Projects Plus вызовет этот метод для создания экземпляра представления
-  onRegisterProjectView = () => new MyCustomView();
-}
-```
-
-Готово. Когда оба плагина включены, ваше представление появится в переключателе видов.
-
----
-
-## Справочник типов
-
-Все типы экспортируются из пакета `obsidian-projects-types`.  
-Исходный код: [`obsidian-projects-types/index.ts`](../obsidian-projects-types/index.ts)
-
-### ProjectView (абстрактный класс)
-
-Базовый класс, от которого нужно наследоваться.
-
-| Метод | Возвращает | Описание |
-|-------|-----------|----------|
-| `getViewType()` | `string` | Уникальный идентификатор типа представления |
-| `getDisplayName()` | `string` | Отображаемое имя в интерфейсе |
-| `getIcon()` | `string` | Имя Lucide-иконки |
-| `onOpen(props)` | `void` | Вызывается при активации. Рендерите в `props.contentEl` |
-| `onData(result)` | `void` | Вызывается при изменении данных. `result.data` содержит `fields` и `records` |
-| `onClose()` | `void` | Вызывается при деактивации. Очистите ресурсы |
-
-### ProjectViewProps
-
-Передаётся в `onOpen()`.
-
-| Свойство | Тип | Описание |
-|----------|-----|----------|
-| `viewId` | `string` | Уникальный ID экземпляра представления |
-| `project` | `ProjectDefinition` | Конфигурация текущего проекта |
-| `config` | `T` (generic, по умолчанию `Record<string, any>`) | Сохраняемая конфигурация представления |
-| `saveConfig` | `(config: T) => void` | Callback для сохранения изменений конфигурации |
-| `contentEl` | `HTMLElement` | Контейнер для рендеринга |
-| `viewApi` | `ViewApi` | API для CRUD-операций с записями и полями |
-| `readonly` | `boolean` | `true` для Dataview-проектов (вычисляемые поля нельзя редактировать) |
-
-### DataQueryResult
-
-Передаётся в `onData()`.
-
-```typescript
-type DataQueryResult = {
-  data: DataFrame;
-};
-```
-
-### DataFrame
-
-```typescript
-type DataFrame = {
-  readonly fields: DataField[];  // схема
-  readonly records: DataRecord[]; // строки данных (одна на заметку)
-};
-```
-
-### DataField
-
-```typescript
-type DataField = {
-  readonly name: string;           // имя свойства frontmatter
-  readonly type: DataFieldType;    // "string" | "number" | "boolean" | "date" | "unknown"
-  readonly repeated: boolean;      // может иметь несколько значений (массив)
-  readonly identifier: boolean;    // идентифицирует DataRecord (например, путь файла)
-  readonly derived: boolean;       // вычисляемое поле (только чтение)
-};
-```
-
-### DataRecord
-
-```typescript
-type DataRecord = {
-  readonly id: string;                              // путь к файлу заметки
-  readonly values: Record<string, Optional<DataValue>>; // значения полей
-};
-```
-
-### DataValue
-
-```typescript
-type DataValue = string | number | boolean | Date | Array<Optional<DataValue>>;
-type Optional<T> = T | undefined | null;
-// undefined = поле удалено, null = поле существует, но не имеет значения
-```
-
-### ViewApi
-
-Методы для изменения данных из вашего представления.
-
-| Метод | Параметры | Описание |
-|-------|----------|----------|
-| `addRecord` | `(record, fields, templatePath)` | Создать новую заметку |
-| `updateRecord` | `(record, fields)` | Обновить поля frontmatter |
-| `deleteRecord` | `(recordId)` | Удалить заметку |
-| `updateField` | `(field)` | Обновить метаданные поля |
-| `deleteField` | `(field)` | Удалить поле frontmatter |
-
-### ProjectDefinition
-
-```typescript
-type ProjectDefinition = {
-  readonly name: string;
-  readonly id: string;
-  readonly defaultName: string;
-  readonly templates: string[];
-  readonly excludedNotes: string[];
-  readonly isDefault: boolean;
-  readonly dataSource: DataSource;
-  readonly newNotesFolder: string;
-};
-```
-
-### DataSource
-
-```typescript
-type DataSource = FolderDataSource | TagDataSource | DataviewDataSource;
-
-type FolderDataSource = {
-  readonly kind: "folder";
-  readonly config: { readonly path: string; readonly recursive: boolean };
-};
-
-type TagDataSource = {
-  readonly kind: "tag";
-  readonly config: { readonly tag: string; readonly hierarchy: boolean };
-};
-
-type DataviewDataSource = {
-  readonly kind: "dataview";
-  readonly config: { readonly query: string };
-};
-```
-
----
-
-## Важные замечания
-
-- **Этот API экспериментальный**. Ломающие изменения могут произойти в любом релизе.
-- Метод `onRegisterProjectView` может быть вызван **несколько раз** (по одному на экземпляр представления).
-- Всегда очищайте ресурсы в `onClose()` для предотвращения утечек памяти.
-- Если `readonly` равен `true`, отключите любой UI, вызывающий write-методы `ViewApi`.
-- Пакет `obsidian-projects-types` специфичен для этого семейства плагинов и может обновляться нечасто.
-
----
-
-## Дополнительно
-
-- [obsidian-projects-types README](../obsidian-projects-types/README.md) — полный пример от оригинального автора
-- [README](../README.md) — обзор плагина
-- [Руководство пользователя](user-guide.md) — документация для пользователей
+Инструкции по сборке и проверке — в [Contributing](../CONTRIBUTING.md), расположение реализации — в [карте архитектуры](architecture.md).

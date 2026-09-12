@@ -1,71 +1,24 @@
-# Error-Related Parameters Types
+# Input validation types
 
-This directory contains type definitions for error handling and validation throughout the application.
+[validation.ts](validation.ts) defines the shared types used to display validation errors.
 
-## validation.ts
+| Export | Meaning |
+| --- | --- |
+| `FieldError` | An error message, or `null` when valid |
+| `ValidationError` | A field name, message and optional code |
+| `ValidationErrors` | A list of structured errors |
+| `Validator<T>` | A function from a value to `FieldError` |
+| `createFieldValidator` | Returns a supplied validator with the shared type |
 
-Contains types and utilities for validation and error handling:
+The module also exports `validateRequired`, `validateName` and `validateEmail`. They return English messages. `validateRequired` rejects falsy values, including `0` and `false`, so it is not appropriate for every numeric or boolean field. `validateName` checks a nonblank name and a minimum string length of two; `validateEmail` checks a basic address pattern.
 
-### Types
+```typescript
+import { validateEmail } from "./validation";
 
-- `FieldError` - Type for field validation errors. Can be a string message or null.
-- `ValidationError` - Structured validation error with field, message, and optional code.
-- `ValidationErrors` - Array of ValidationError objects.
-- `Validator<T>` - Type for validation functions.
-
-### Helper Functions
-
-- `createFieldValidator<T>()` - Creates a field validator function.
-- `validateRequired()` - Validates that a field is not empty.
-- `validateName()` - Validates name fields (minimum 2 characters).
-- `validateEmail()` - Validates email format using regex.
-
-## Usage Examples
-
-### Component with Field Error
-
-```svelte
-<script lang="ts">
-  import { FieldError } from "src/lib/types/validation";
-  
-  export let fieldError: FieldError = null;
-  export let value: string = "";
-  export let validate: ((value: string) => FieldError) | null = null;
-</script>
-
-<input bind:value class:error={!!fieldError} />
-{#if fieldError}
-  <div class="error-message">{fieldError}</div>
-{/if}
+const error = validateEmail("reader@example.com");
+if (error !== null) {
+  // Display the validation message near the input.
+}
 ```
 
-### Component with Validation Errors
-
-```svelte
-<script lang="ts">
-  import { ValidationError, ValidationErrors } from "src/lib/types/validation";
-  
-  export let validationErrors: ValidationErrors = [];
-</script>
-
-{#each validationErrors as error}
-  <div class="error-item">
-    <strong>{error.field}:</strong> {error.message}
-  </div>
-{/each}
-```
-
-### Using Validator Functions
-
-```svelte
-<script lang="ts">
-  import { validateRequired, validateEmail } from "src/lib/types/validation";
-  
-  let email = "";
-  $: emailError = validateEmail(email);
-</script>
-
-<input bind:value={email} />
-{#if emailError}
-  <span class="error">{emailError}</span>
-{/if}
+These helpers are for input validation. Product error codes and recovery instructions are documented separately in the [error reference](../../../docs/ERROR_CODES.md).

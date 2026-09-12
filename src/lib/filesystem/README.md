@@ -1,5 +1,9 @@
-# File system
+# Filesystem abstraction
 
-Writing unit tests for Obsidian can be tricky, since a lot of the functionality isn't available outside of the Obsidian app.
+[filesystem.ts](filesystem.ts) separates note operations from the Obsidian runtime. It defines `IFile`, `IFileSystem` and `IFileSystemWatcher`.
 
-The `filesystem` module abstracts the Obsidian vault so that unit tests can use an in-memory representation of notes.
+The [Obsidian implementation](obsidian) accesses vault files. The [in-memory implementation](inmem) lets tests exercise note behavior without starting Obsidian.
+
+`IFile` exposes file content, path, tags and timestamps. Its optional `processFrontMatter` operation returns whether the implementation supports a platform-managed frontmatter mutation. Callers need to handle the unsupported case; the default implementation returns `false`.
+
+Use the existing [data API](../dataApi.ts) for product editing flows so filesystem writes remain coordinated with records and error reporting. These abstractions are implementation details, not a public plugin API.
