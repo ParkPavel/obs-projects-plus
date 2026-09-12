@@ -46,10 +46,7 @@ export function getLogLevel(): LogLevel {
  * Format log message with context
  */
 function formatMessage(message: string, context?: LogContext): string {
-  // #202 step 6: one product prefix across the tree, so a user can search the
-  // console for an event. The area word stays after it — it carried meaning
-  // that flattening to a single token would throw away.
-  const parts = ['[Projects+] Calendar'];
+  const parts = ['[Calendar]'];
   
   if (context?.component) {
     parts.push(`[${context.component}]`);

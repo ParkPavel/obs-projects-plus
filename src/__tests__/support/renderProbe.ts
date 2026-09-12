@@ -165,46 +165,22 @@ export function renderProbe(spec: ProbeSpec): ProbeResult {
     const file = path.join(dir, "probe.html");
     fs.writeFileSync(file, page, "utf8");
 
-    const args = [
-      "--headless=new",
-      "--disable-gpu",
-      "--no-sandbox",
-      "--no-first-run",
-      "--disable-extensions",
-      `--window-size=${spec.width ?? 1400},${spec.height ?? 900}`,
-      "--virtual-time-budget=2000",
-      `--user-data-dir=${path.join(dir, "profile")}`,
-      "--dump-dom",
-      `file:///${file.replace(/\\/g, "/")}`,
-    ];
-
-    // #196: under a full parallel run these suites were failing to START, with
-    // `spawnSync ... ETIMEDOUT` — the browser could not come up inside the
-    // window while the rest of the run competed for the machine. That is a
-    // resource failure wearing the costume of a broken acceptance test, and the
-    // habit it teaches — ignoring red — is the expensive part.
-    //
-    // So a launch timeout is retried once, with a longer window, and only then
-    // reported. A second timeout is still a failure: this hides contention, not
-    // a browser that cannot run at all.
-    const dom = withBrowserLock(() => {
-      try {
-        return execFileSync(chrome, args, {
-          encoding: "utf8",
-          timeout: 60_000,
-          maxBuffer: 32 * 1024 * 1024,
-          stdio: ["ignore", "pipe", "ignore"],
-        });
-      } catch (err) {
-        if (!isLaunchTimeout(err)) throw err;
-        return execFileSync(chrome, args, {
-          encoding: "utf8",
-          timeout: 180_000,
-          maxBuffer: 32 * 1024 * 1024,
-          stdio: ["ignore", "pipe", "ignore"],
-        });
-      }
-    });
+    const dom = execFileSync(
+      chrome,
+      [
+        "--headless=new",
+        "--disable-gpu",
+        "--no-sandbox",
+        "--no-first-run",
+        "--disable-extensions",
+        `--window-size=${spec.width ?? 1400},${spec.height ?? 900}`,
+        "--virtual-time-budget=2000",
+        `--user-data-dir=${path.join(dir, "profile")}`,
+        "--dump-dom",
+        `file:///${file.replace(/\\/g, "/")}`,
+      ],
+      { encoding: "utf8", timeout: 60_000, maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }
+    );
 
     const m = /<title>PROBE([\s\S]*?)<\/title>/.exec(dom);
     if (!m || !m[1]) {
@@ -221,90 +197,6 @@ export function renderProbe(spec: ProbeSpec): ProbeResult {
 }
 
 /** `--dump-dom` escapes the title; the probe's payload is JSON, so undo it. */
-/**
- * #196: did the browser fail to START, or did it run and fail?
- *
- * Only the first is retried. `execFileSync` reports a timeout as `ETIMEDOUT`
- * with `signal: SIGTERM`; a page that ran and threw comes back as a non-zero
- * status, and retrying that would just take twice as long to tell the truth.
- */
-function isLaunchTimeout(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const code = (err as { code?: unknown }).code;
-  return code === "ETIMEDOUT";
-}
-
-/** A synchronous pause. `execFileSync` is synchronous; a timer cannot help here. */
-function sleepSync(ms: number): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
-
-/**
- * #196 — at most two browsers at a time, across Jest workers.
- *
- * Five acceptance suites drive Chrome, Jest runs them in parallel, and each
- * instance wants its own several hundred megabytes. Measured on this machine
- * mid-session: five suites failed to start under the full run and all three
- * of the ones re-run with `--runInBand` passed, with ~1.5GB free and the
- * user's own browser holding a gigabyte of it. So the failure was contention,
- * not code — and a suite that goes red for a reason unrelated to its subject
- * teaches people to ignore red.
- *
- * Lock files in the OS temp dir cap the launches. Workers are separate
- * processes, so this cannot be a variable.
- *
- * TWO slots, not one, and the number was corrected by measurement rather than
- * chosen: each suite launches the browser several times over (A190 alone probes
- * six times), so a strict queue pushed the full run past ten minutes — a cure
- * that costs more than the disease, since a gate nobody can finish is a gate
- * nobody runs. Two keeps the parallelism that matters while never putting five
- * browsers on the machine at once, which is what actually starved them.
- *
- * Two deliberate escape hatches, because a stuck lock must never be worse than
- * the contention it prevents: a lock older than the longest possible launch is
- * treated as abandoned, and a wait that exceeds the deadline runs anyway.
- */
-const BROWSER_SLOTS = 2;
-
-function withBrowserLock<T>(run: () => T): T {
-  const slots = Array.from({ length: BROWSER_SLOTS }, (_, i) =>
-    path.join(os.tmpdir(), `ppp-render-probe-${i}.lock`)
-  );
-  const deadline = Date.now() + 90_000;
-  let held: { fd: number; file: string } | null = null;
-
-  while (held === null && Date.now() < deadline) {
-    for (const file of slots) {
-      try {
-        held = { fd: fs.openSync(file, "wx"), file };
-        break;
-      } catch {
-        try {
-          if (Date.now() - fs.statSync(file).mtimeMs > 300_000) {
-            fs.rmSync(file, { force: true });
-          }
-        } catch {
-          // Released between our open and our stat. The next pass sees it.
-        }
-      }
-    }
-    if (held === null) sleepSync(150);
-  }
-
-  try {
-    return run();
-  } finally {
-    if (held !== null) {
-      try {
-        fs.closeSync(held.fd);
-        fs.rmSync(held.file, { force: true });
-      } catch {
-        /* a leftover lock ages out; failing here would fail a passing test */
-      }
-    }
-  }
-}
-
 function decodeEntities(s: string): string {
   return s
     .replace(/&quot;/g, '"')
