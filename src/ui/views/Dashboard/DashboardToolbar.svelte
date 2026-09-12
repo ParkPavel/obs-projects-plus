@@ -15,6 +15,7 @@
     openSchema: void;
     toggleFormulaBar: void;
     addWidget: WidgetType;
+    applyTemplate: WidgetDefinition[];
   }>();
 </script>
 
@@ -56,6 +57,7 @@
     <WidgetToolbar
       {currentWidgets}
       on:addWidget={(e) => dispatch("addWidget", e.detail)}
+      on:applyTemplate={(e) => dispatch("applyTemplate", e.detail)}
     />
   {/if}
 </div>

@@ -5,7 +5,8 @@
 # npm
 node_modules
 
-# Ignore new build outputs. Already tracked root and release bundles are retained.
+# Don't include the compiled main.js file in the repo.
+# They should be uploaded to GitHub releases instead.
 main.js
 !releases/*/main.js
 
@@ -43,30 +44,35 @@ _git_log.txt
 failures.txt
 ts_errors.txt
 lint_output*.txt
-test-results.json
 /RELEASE_NOTES.md
 
 # Recovery bundles
 *.bundle
 
-# Agent configuration moved to https://github.com/ParkPavel/claudex (2026-09-10).
-# Keep accidental legacy copies and machine-local settings out of this product repo.
-# Native entrypoints are generated at the workspace desktop level by Claudex.
+# AI agent configuration is NOT public (policy change 2026-08-25).
+#
+# This repository is public. Agent definitions, prompts, hooks and the project
+# instruction files describe how the work is actually done and are not intended
+# for outside review, so they live on the maintainer's machine and are excluded
+# here. They were tracked before this date and remain in git history; this rule
+# stops anything further being published, it does not retroactively unpublish.
 .claude/
 .codex/
 .agents/
 CLAUDE.md
 AGENTS.md
 
-# Keep legacy agent integrations outside the product repository.
+# The Copilot agent system was archived out of the repo entirely on 2026-08-25
+# (see ../.ai_internal/archive/copilot-2026-08-25/). Guard against it returning.
 .github/agents/
 .github/instructions/
 .github/prompts/
 .github/hooks/
 .github/COPILOT_SETUP.md
 
-# Internal planning and session records belong to the external development workspace.
-docs/internal/
+# Still tracked on purpose: docs/internal/ is engineering documentation —
+# BACKLOG, CONTEXT, ADRs, design briefs — not agent configuration, and
+# docs/internal/CONTEXT.md is the canonical baseline the test ratchet reads.
 
-# The legacy .vscode/mcp.json was retired into a private Claudex migration backup.
-# Editor preferences remain local; .vscode is already ignored above.
+# .vscode/mcp.json contains personal absolute paths and env-var refs — local only.
+# .vscode itself is already gitignored above; no extra rule needed here.

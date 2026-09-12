@@ -8,15 +8,12 @@ import {
 
 import DashboardCanvasSvelte from "./DashboardCanvas.svelte";
 import type { DatabaseViewConfig } from "./types";
-import { isLegacyTableConfig, migrateTableConfig, migrateDashboardTransforms, dropTemplateQuickActions } from "./migration";
+import { isLegacyTableConfig, migrateTableConfig, migrateDashboardTransforms } from "./migration";
 import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
 import { Notice } from "obsidian";
-import { noticeFor } from "src/lib/errors/errorText";
-
-/** #202 — the code this module raises. */
-const MIGRATION_BACKUP_FAILED = "PPP-403";
+import { i18n } from "src/lib/stores/i18n";
 
 /**
  * Deep copy of a persisted config. `structuredClone` is available in Electron;
@@ -107,18 +104,6 @@ export class DashboardView extends ProjectView {
       }
     }
 
-    // #191: a quick action pointing at the removed dashboard-template mechanism
-    // is dropped on the way in, so the button is gone from the first render
-    // rather than lingering as something that does nothing. The save below is
-    // the existing one — this is a fourth participant in a chain, not new
-    // machinery, and the #145 restore point above already covers it.
-    const withoutTemplates = dropTemplateQuickActions(config);
-    if (withoutTemplates.migrated) {
-      config = withoutTemplates.config;
-      migrated = true;
-      props.saveConfig(config);
-    }
-
     // #145 — the restore point. Written from the in-memory pre-migration config
     // rather than by reading `data.json` back, which lets the migrated save stay
     // synchronous. An earlier version deferred that save until the read finished
@@ -130,7 +115,7 @@ export class DashboardView extends ProjectView {
         // Nothing to write through. The migration is already saved, so say it
         // rather than leaving the absence of a restore point invisible.
         console.error(
-          "[Projects+] dashboard config migrated without a restore point: no app instance"
+          "[obs-projects-plus] dashboard config migrated without a restore point: no app instance"
         );
       } else {
         void writeMigrationBackup({
@@ -140,7 +125,12 @@ export class DashboardView extends ProjectView {
           config: preMigrationConfig,
         }).then((path) => {
           if (path !== null) return;
-          new Notice(noticeFor(MIGRATION_BACKUP_FAILED));
+          new Notice(
+            get(i18n).t("errors.migrationBackupFailed", {
+              defaultValue:
+                "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
+            })
+          );
         });
       }
     }

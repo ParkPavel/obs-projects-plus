@@ -2,6 +2,8 @@
 // Demo project — Projects Plus
 //
 // Single coherent B2B Studio (digital agency) domain.
+// Replaces the legacy 1937-LOC mishmash (fitness + finance + CRM + tasks)
+// archived under .ai_internal/Archive/OLD-demoProject-2026-05-27.ts.
 //
 // Story: a digital studio with 6 clients, 8 projects, 10 tasks and
 // 5 meetings — naturally exercises relations (Project.client → Client),
@@ -16,13 +18,9 @@ import dayjs from "dayjs";
 import { Notice, normalizePath, stringifyYaml, type Vault } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
-import { sanitizeNoteName } from "./noteName";
-import { noticeFor } from "src/lib/errors/errorText";
-
-/** #202 — the codes the demo can raise. */
-const DEMO_FOLDER_FAILED = "PPP-601";
-const DEMO_PARTIAL = "PPP-602";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
@@ -456,17 +454,14 @@ const commonTableConfig: DatabaseViewConfig["table"] = {
 async function writeFiles(vault: Vault, folder: string, files: Record<string, DemoFile>): Promise<string[]> {
   const failed: string[] = [];
   for (const [name, file] of Object.entries(files)) {
-    // #198: the host refuses `* " \ / < > : | ?` in a filename, and a demo set
-    // written as prose collects colons. Sanitising here rather than at each
-    // string keeps the next author from reintroducing it.
-    const path = normalizePath(`${folder}/${sanitizeNoteName(name)}.md`);
+    const path = normalizePath(`${folder}/${name}.md`);
     const body = `---\n${stringifyYaml(file.frontmatter)}---\n\n${file.content}`;
     if (vault.getAbstractFileByPath(path)) continue; // idempotent re-run
     try {
       await vault.create(path, body);
     } catch (error) {
       failed.push(path);
-      console.error("[Projects+] demo note could not be created", path, error);
+      console.error("[obs-projects-plus] demo note could not be created", path, error);
     }
   }
   return failed;
@@ -476,24 +471,6 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
 // MAIN ENTRY POINT
 // ============================================================
 
-/**
- * Write every seed note that is not already there, and return the paths that
- * could not be written.
- *
- * Separate from `createDemoProject` because of #198: a user who hit the illegal
- * filename has a registered demo project with a note missing, and the command
- * that would fix it returns early precisely because the project exists. Seeding
- * is idempotent, so it can be re-run on its own to repair that.
- */
-export async function seedDemoNotes(vault: Vault): Promise<string[]> {
-  return [
-    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
-  ];
-}
-
 export async function createDemoProject(vault: Vault): Promise<void> {
   // 1. Ensure root demo folder exists (idempotent).
   if (!vault.getAbstractFileByPath(DEMO_FOLDER)) {
@@ -502,19 +479,36 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     } catch (error) {
       // #156 — without the folder nothing below can land. Say so rather than
       // registering a project that points at nowhere.
-      console.error("[Projects+] demo folder could not be created", error);
-      new Notice(noticeFor(DEMO_FOLDER_FAILED, { folder: DEMO_FOLDER }));
+      console.error("[obs-projects-plus] demo folder could not be created", error);
+      new Notice(
+        get(i18n).t("onboarding.demo.folder-failed", {
+          defaultValue:
+            "Could not create the demo folder '{{folder}}'. The demo project was not created.",
+          folder: DEMO_FOLDER,
+        })
+      );
       return;
     }
   }
 
   // 2. Write all seed files.
-  const failed = await seedDemoNotes(vault);
+  const failed = [
+    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
+  ];
   if (failed.length > 0) {
     // The project is still registered: a partial demo is more useful than none,
     // and the notes that did land are correct. But the user is told, because
     // otherwise the gaps read as a broken plugin.
-    new Notice(noticeFor(DEMO_PARTIAL, { count: failed.length }));
+    new Notice(
+      get(i18n).t("onboarding.demo.partial", {
+        defaultValue:
+          "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
+        count: failed.length,
+      })
+    );
   }
 
   // 3. View configs.
