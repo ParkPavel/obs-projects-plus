@@ -60,7 +60,6 @@
    * SelectionBadge.svelte — pill rendered into the WindowShell `badges` slot
    * to label a cross-widget selection that is actively narrowing this widget.
    *
-   * Spec: .ai_internal/New-specification/CROSS_WIDGET_SPEC.md §6.2.
    * Ticket: #044.5 (Phase 5 sub-PR 5).
    *
    * The badge owns NO state — `field` and `value` come in as props from the

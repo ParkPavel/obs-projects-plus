@@ -1,7 +1,6 @@
 /**
  * selectionStore.ts — Per-canvas writable store for cross-widget selection.
  *
- * Spec: .ai_internal/New-specification/CROSS_WIDGET_SPEC.md §2, §3, §4, §8.
  * Ticket: #044.1 (Phase 5 sub-PR 1).
  *
  * One *selection* is a transient filter created when a user clicks a

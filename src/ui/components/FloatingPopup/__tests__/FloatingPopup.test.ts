@@ -2,7 +2,6 @@
  * FloatingPopup smoke tests — verifies the popup engine renders, positions,
  * dismisses on outside click + Escape, and supports placement flip.
  *
- * Spec: .ai_internal/New-specification/POPUP_PATTERN_GUIDE.md
  * Ticket: #034.1 (Phase 4 — Popup standardisation).
  */
 

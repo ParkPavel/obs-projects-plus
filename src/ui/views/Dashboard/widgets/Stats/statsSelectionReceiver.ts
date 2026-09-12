@@ -1,7 +1,6 @@
 /**
  * statsSelectionReceiver.ts — pure helpers for StatsWidget's receiver role.
  *
- * Spec: .ai_internal/New-specification/CROSS_WIDGET_SPEC.md §4, §5.3.
  * Ticket: #044.4 (Phase 5 sub-PR 4 — receiver only; Stats as driver is v2).
  *
  * Given the canvas-level selection and the widget's source records (already
