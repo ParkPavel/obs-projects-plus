@@ -1,264 +1,28 @@
-# Manual Testing Pipeline — OBStests vault via Obsidian REST API
+# Live acceptance through Obsidian CLI
 
-> Создано: 2026-06-11 (первый полный прогон; обнаружено, что папка плагина в vault была пустой —
-> протокол деплоя из tester.md ранее не выполнялся).
-> Канонический исполнитель: `tester` agent (см. `.claude/agents/tester.md`, секция Deployment protocol).
-> **Ревизия 2026-09-08** по итогам приёмки #200: добавлены §0a (привязка улики к сборке), §0b
-> (ловушки стенда) и §0c (чего стенд не проверяет); исправлен §2 — `app:reload` закрывает
-> приложение. Разбор — `RETRO_SETTINGS_OWNERSHIP_2026-09-08.md`.
+The current host adapter is maintained in
+[Claudex](https://github.com/ParkPavel/claudex/blob/main/docs/how-to/obsidian.md).
+It uses the native Obsidian CLI, an explicit test-vault identity and local evidence capture.
+Project-local REST MCP settings and the previous agent runner are retired.
 
-Пайплайн закрывает разрыв между Jest (134+ suites, headless) и визуальной проверкой:
-всё, что наблюдаемо через Obsidian Local REST API, проверяется автоматически из CLI;
-остаток фиксируется в Untestable Features Report для ручного визуального прогона.
+## Acceptance protocol
 
-## 0. Предусловия
+1. Read the task's observable criteria and current product contract.
+2. Run the product checks on the final source state: build, Jest, lint and svelte-check.
+3. Record source revision and bundle hashes; deploy the intended build to the designated
+   test vault and reload that plugin through the CLI.
+4. Exercise the actual user path. Capture relevant DOM, visible state and JavaScript errors.
+5. Read back the actual result. For persistence, reload and read it again. For conflicts,
+   inspect preservation/recovery of both versions, not merely the existence of a notice.
+6. Record PASS, FAIL or UNKNOWN per criterion with artifact references and source/build identity.
 
-| Что | Где |
-|---|---|
-| Vault | `../OBStests/` — сосед репозитория (`C:\Users\Park\OBSv1.0\OBStests`) |
-| Obsidian запущен с этим vault | иначе API недоступен — попросить пользователя открыть vault |
-| Плагин **Local REST API** включён в vault | `obsidian-local-rest-api`, HTTP-порт `27123` (без TLS) |
-| API-ключ | `.claude/settings.local.json` → `mcpServers.obsidian.env.OBSIDIAN_API_KEY` (gitignored — НЕ копировать ключ в коммитимые файлы) |
-| PowerShell 5.1 | `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8` перед чтением кириллицы; `data.json` читать с `-Encoding UTF8`, иначе mojibake |
+The selected vault must be verified before mutation. Screenshots prove appearance;
+successful commands prove execution; neither alone proves data durability. Code-derived
+flow review supplies hypotheses and cannot replace the live run.
 
-Все запросы: заголовок `Authorization: Bearer <ключ>`.
+## Historical REST procedure
 
-## 0a. Улика принадлежит сборке — привязка прогона (добавлено 2026-09-08)
-
-Правило родилось на приёмке #200: дважды после зелёного прогона приходили правки **в те самые
-ветки**, которые прогон проверял, и «10 из 10» продолжало стоять в отчёте, описывая уже другой код.
-Ворота этого не видят, и никакой прогон не видит — видно только по вопросу «а на чём именно».
-
-Перед прогоном фиксируются три вещи, все три дешёвые и все три артефактные:
-
-| Что | Как снять | Зачем |
-|---|---|---|
-| Сборка в дереве = сборка в хранилище | `Get-FileHash main.js`, обе копии | иначе прогон проверяет прошлую сборку, а отчёт скажет «проверено» |
-| Дерево чистое, `HEAD` записан | `git status --short`, `git rev-parse HEAD` | отчёт называет коммит, а не «текущее состояние» |
-| Процесс Obsidian стартовал ПОСЛЕ развёртывания | время старта процесса | подмена файла не значит перезагрузку кода |
-
-**После прогона:** если изменился код ветки, которую прогон затрагивал, пункты этой ветки
-перепрогоняются. До этого момента результат помечается как относящийся к прежней сборке — прямо в
-отчёте, а не в памяти. Разница между «прогон был» и «прогон был на этом коде» — это то, что трижды
-в августе оказывалось шире, чем выглядело.
-
-## 0b. Ловушки стенда — дают ложное «прошло», а не отказ
-
-Каждая проверена живьём; ни одна не выглядит как ошибка, пока не станет выводом.
-
-- **`app:reload` завершает Obsidian, а не перезагружает** (1.9.12) — см. поправку в §2.
-- **`create-demo-project` не пишет настройки, если демо-проект уже есть** (`main.ts`, намеренно с
-  #198): шаг «пусть плагин запишет» тогда не пишет ничего, файл не меняется, и уцелевшее внешнее имя
-  читается как доказательство работы. **Предусловие проверяется по файлу непосредственно перед
-  действием**, а не по памяти о предыдущем шаге.
-- **Состав хранилища плывёт между прогонами.** Адресовать проект по `id`, прочитанному прямо перед
-  пунктом; имена и позиции в массиве не годятся.
-- **Артефакты прогона уносить из хранилища** (`data.conflict-*`, `data.pretest.json`, заметки
-  `Projects+ recovery/`): они попадут под синхронизацию и размножатся по устройствам.
-- **Хук может не приходить на состояние, которое хост не разбирает.** Если пункт зависит от события
-  хоста, у него должен быть законный исход «событие не пришло» — записываемый, а не переспрашиваемый.
-
-## 0c. Что стенд не проверяет в принципе
-
-- **Ветки, требующие отказа файловой системы** (запись в папку плагина не проходит): поставить, не
-  сломав хранилище, нельзя — они закрываются юнит-тестами на отказывающем адаптере.
-- **Мобильный клиент.** `isDesktopOnly: false` означает, что путь восстановления «откройте консоль
-  разработчика» для части пользователей не существует; проверить это на стенде нечем, но **учитывать
-  обязательно** при проектировании любого пути восстановления.
-- **Запись другого плагина в том же процессе** (Remotely Save): внешний писатель на стенде — всегда
-  отдельный процесс.
-
-## 1. Deploy (после каждого `npm run build`)
-
-```powershell
-Copy-Item main.js,styles.css,manifest.json ..\OBStests\.obsidian\plugins\obs-projects-plus\ -Force
-```
-
-Всегда **все три артефакта** (см. tester.md). Проверка: `Get-ChildItem` → `LastWriteTime` свежий.
-
-## 2. Reload + verify load
-
-> **Поправка 2026-09-08, наблюдение живого прогона #200.** `app:reload` **завершает** Obsidian, а не
-> перезагружает его: процесс исчезает, REST не поднимается (ждали 30 с). Запускать приложение
-> заново вручную и снимать счёт команд на холодном старте. Строка ниже оставлена как была — она
-> описывает то, что команда делает по имени, а не по факту.
-
-```powershell
-# ВНИМАНИЕ: на Obsidian 1.9.12 эта команда закрывает приложение — см. поправку выше
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:27123/commands/app:reload/" -Headers $h
-Start-Sleep -Seconds 8
-
-# плагин загружен ⇔ его команды зарегистрированы
-$c = Invoke-RestMethod -Uri "http://127.0.0.1:27123/commands/" -Headers $h
-$c.commands | Where-Object { $_.id -like "obs-projects-plus*" }
-```
-
-**Assertion**: **ровно 10** команд `obs-projects-plus:*` (show-projects, create-project,
-create-note, open-schema, add-field, toggle-visualizer-pane, open-visualizer-for-file,
-add-relation, open-formula-editor, create-demo-project). **0 команд = плагин не загрузился**
-(пустая папка плагина, ошибка в main.js при load, или плагин выключен) — STOP, отчёт разработчику.
-
-> Было 11 до 2026-08-28: `add-sub-base` удалена в #160 вместе с брошенной моделью sub-base —
-> команда была видна пользователю и не делала ничего. Прогон 2026-08-28 подтвердил 10 вживую.
-> Число здесь точное, а не «≥»: молча исчезнувшая команда — такой же дефект, как лишняя.
-
-## 3. Smoke-сценарий: демо-проект
-
-```powershell
-# 3.1 чистое состояние: data.json не содержит проект "Демо-проект"
-#     (команда отказывается перезаписывать дубликат — удалить проект и папку перед повтором)
-# 3.2 создать демо через API-bridge
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:27123/commands/obs-projects-plus:create-demo-project/" -Headers $h
-Start-Sleep -Seconds 4
-```
-
-**Assertions** (фактические значения прогона 2026-06-11 @ `2b9d1fd`):
-
-| # | Проверка | Как | Ожидание |
-|---|---|---|---|
-| A1 | Папка демо создана | `GET /vault/` | `Projects Plus - Демо/` в списке |
-| A2 | Записи сгенерированы | `GET /vault/Projects%20Plus%20-%20Демо/` | 28 `.md` файлов |
-| A3 | Проект в настройках | `data.json` → `projects[]` | 1 проект, `dataSource.kind = folder`, `version: 4` |
-| A4 | Вью демо | `projects[0].views` | 5 вью: Обзор(dashboard), Pipeline(board), График(calendar), Клиенты(dashboard), Портфолио(gallery) |
-| A5 | Композиция дашбордов | `views[].config.widgets` | Обзор: stats + chart + 4×database-call; Клиенты: stats + database-call. *(Прогон 2026-08-28: демо выросло с 2 до 4 блоков — дрейф демо-данных, не регресс; строка обновлена по факту.)* |
-| A6 | Frontmatter записи | `GET /vault/...note.md` c `Accept: application/vnd.olrapi.note+json` | 4-param даты (`startDate`/`startTime`/`endTime`), Relation как wikilink (`client: [[Acme Studio]]`) |
-| A7 | Активация вью | `POST /commands/obs-projects-plus:show-projects/` | HTTP 2xx, без зависания |
-
-## 4. API write/read/delete roundtrip (контракт данных)
-
-На scratch-заметке, НЕ на демо-данных:
-
-```powershell
-PUT    /vault/QA-API-roundtrip.md   (markdown c frontmatter: status, amount)
-GET    /vault/QA-API-roundtrip.md   (Accept: application/vnd.olrapi.note+json) → frontmatter совпадает
-DELETE /vault/QA-API-roundtrip.md
-```
-
-Проверяет канал, через который пайплайн (и пользовательские интеграции) пишут frontmatter,
-читаемый плагином как DataFrame.
-
-## 4a. Миграция конфигурации и точка восстановления (#118 + #145)
-
-Проверяется через файловую систему, а не через UI — поэтому наблюдаемо из CLI.
-
-```powershell
-# 1. посеять legacy-пайплайн В САМ ВИДЖЕТ (не в widget.config!)
-#    widget.transform = { steps: [ {type:"filter", conditions:{conjunction, conditions:[...]}},
-#                                   {type:"group-by", fields:[...]} ] }
-#    ВНИМАНИЕ (2026-08-30): шага `sort` в TransformStep НЕТ — типы это unnest | unpivot |
-#    compute | filter | group-by | aggregate | pivot | join. Прежняя редакция этой строки
-#    предлагала посеять несуществующий шаг как хвост. Шаги также НЕ имеют поля `id`.
-#    Условия должны быть непустыми: countLeadingMigratableFilters пропускает пустой шаг.
-# 2. app:reload → obs-projects-plus:show-projects (открывает dashboard-вью)
-# 3. смотреть папку плагина
-```
-
-| # | Проверка | Ожидание |
-|---|---|---|
-| M1 | Ведущий `filter` ушёл из пайплайна | `widget.transform.steps` = только хвост (`sort`) |
-| M2 | Условия перенесены в scope | `widget.config.subFilter.conditions` содержит поле из шага |
-| M3 | Создан файл восстановления | `migration-backup-<projectId>-<viewId>-<ISO>.json` в папке плагина |
-| M4 | В файле именно ДО-состояние | `config.widgets[].transform.steps` содержит `filter`, которого в `data.json` уже нет |
-| M5 | Второе событие миграции даёт второй файл | первый файл не перезаписан, оба читаемы |
-
-**Две ловушки тестовых данных, на которых прогон 2026-08-28 дважды ложно «прошёл»:**
-шаг с `kind` вместо `type` и пайплайн в `widget.config.transform` вместо `widget.transform`
-мигратором игнорируются **молча**. Если миграция «не сработала» — сначала проверить форму
-посева, а не код. Вопрос «должен ли продукт сообщать о нераспознанном шаге» вынесен в аудит.
-
-## 5. Untestable Features — границы API-наблюдаемости
-
-REST API **не видит**: рендеринг Svelte-компонентов, ошибки консоли, CSS, DnD, hover/click.
-`POST /commands/...` возвращает 2xx даже если вью упало при рендере.
-
-Для каждого UI-тикета обязателен Untestable Features Report (формат в tester.md) — таблица
-«Feature / Steps / Expected» для визуального прогона человеком в OBStests.
-
-**Текущий висящий визуальный чек-лист (стек 2b9d1fd)**:
-
-| Feature | Шаги | Ожидание |
-|---|---|---|
-| #065 canvas zero-state | Создать пустой dashboard-вью | EmptyState: иконка + 3 CTA (блок данных / шаблоны) |
-| #059 SmartSuggest strip (relation) | Открыть демо «Клиенты» (есть Relation `client`, нет связанного database-call) | Strip «Найдено поле-связь…» с CTA + «Не предлагать снова» + × |
-| #059 numeric-подавление | Открыть демо «Обзор» (stats уже есть) | numeric-strip НЕ показывается |
-| #059 dismissal persist | «Не предлагать снова» → перезагрузка (Ctrl+R) | Strip не возвращается (`dismissedSuggestions` в data.json) |
-| #048 native-query UI | CreateProject → источник native-query, inline WHERE | Проект создаётся, фильтр применяется |
-| Темы | Переключить dark/light | Токены `--ppp-*` адаптируются, без хардкод-цветов |
-
-## 6. Troubleshooting
-
-| Симптом | Причина | Действие |
-|---|---|---|
-| 0 команд плагина при включённом плагине | Папка `plugins/obs-projects-plus/` пуста или старый main.js упал | Deploy (шаг 1) → reload (шаг 2). Именно так пайплайн впервые провалился 2026-06-11 |
-| API не отвечает | Obsidian закрыт / vault другой | Попросить пользователя открыть OBStests |
-| Кириллица как `Р”РµРјРѕ` | Кодировка консоли PS 5.1 | `[Console]::OutputEncoding = UTF8` + `Get-Content -Encoding UTF8` |
-| `create-demo-project` → Notice о дубликате | Демо уже существует | Удалить проект из data.json и папку `Projects Plus - Демо/` (решение пользователя) |
-| Connection dropped после `app:reload` | Ожидаемо — REST-сервер рестартует | `Start-Sleep 8` и повторный probe |
-
-## 7. Definition of Done ручного прогона
-
-- [x] 3 артефакта задеплоены, `LastWriteTime` свежий — **2026-08-28**
-- [x] `app:reload` выполнен, команды плагина зарегистрированы (ровно 10) — **2026-08-28**
-- [x] Smoke-сценарий A1–A7 зелёный — **2026-08-28**
-- [x] Roundtrip (шаг 4) зелёный — **2026-08-28**
-- [x] Миграция + точка восстановления M1–M5 зелёные — **2026-08-28** (M5 нашла дефект в #145,
-      исправлен и перепроверен вживую)
-- [x] Untestable Features Report составлен — `UNTESTABLE_FEATURES_2026-08-28.md` — **2026-08-28**
-- [x] Результат зафиксирован в CONTEXT.md — **2026-08-28**
-
-### Прогон 2026-08-30 (после мержа стека #141–#164 в `main`)
-
-- [x] 3 артефакта задеплоены из свежего `npm run build`
-- [x] `app:reload` → **ровно 10** команд, `add-sub-base` отсутствует (#160 подтверждён вживую)
-- [x] A1–A7 зелёные: 28 `.md`, 5 вью, `Обзор` = stats+chart+4×database-call, `Клиенты` =
-      stats+database-call, 5 записей с `startTime`/`endTime`, 13 связей-wikilink, `show-projects` 2xx
-- [x] Roundtrip PUT/GET/DELETE зелёный (frontmatter `status`/`amount` вернулся точно, DELETE → 404)
-- [x] M1–M5 зелёные: ведущий `filter` ушёл, условия в `config.subFilter`, точка восстановления
-      создана, в ней именно до-состояние, **второе событие миграции в той же вью дало второй файл**
-      (регрессия #145, найденная 2026-08-28, не вернулась)
-- [x] Посев из хранилища снят, демо-конфиг возвращён в исходное состояние
-- [ ] **Новое: #164 не закрыт** — генератор по-прежнему поставляет ведущие `filter`; см. CONTEXT.md
-      «CORRECTION 2026-08-30»
-- [ ] Визуальный чек-лист §5 — по-прежнему за человеком
-
-## 8. Сценарий R1: Clients → Sessions (M-RELATION-FIRST)
-
-> Предусловие: плагин задеплоен (шаг 1) и перезагружен (шаг 2).
-> Создайте два проекта вручную или через API: "Clients" и "Sessions".
-
-### 8.1 Создание проектов и связи
-
-| Шаг | Действие | Ожидание |
-|---|---|---|
-| 1 | В "Sessions" добавьте поле "client" типа Relation, откройте визард → выберите "Clients" как целевой проект | Визард закрывается, поле отображается как Relation |
-| 2 | В базе "Sessions" отредактируйте запись → поле "client" → введите [[Alice]] | Попап: автодополнение предлагает "Alice"; значение сохраняется |
-| 3 | В попапе поля "client" появляется badge "1 linked" | Count badge отображается корректно |
-| 4 | На Dashboard с блоком "Sessions" выберите строку "Alice" из блока "Clients" | Блок "Sessions" фильтрует: показывает только сессии Alice; label "Filtered by relation" |
-| 5 | Escape / кнопка Clear | Фильтр снимается; блок "Sessions" снова показывает все записи |
-
-### 8.2 Внешнее редактирование Markdown
-
-| Шаг | Действие | Ожидание |
-|---|---|---|
-| 6 | Откройте заметку сессии напрямую в редакторе Obsidian; измените `client: [[Alice]]` на `client: [[Bob]]` | После Save: блок "Sessions" в Dashboard обновляется (Bob теперь связан) |
-| 7 | Добавьте новую строку в YAML frontmatter сессии | Dashboard синхронизируется без перезагрузки |
-
-### 8.3 Keyboard path
-
-| Шаг | Действие | Ожидание |
-|---|---|---|
-| 8 | Tab/Shift+Tab через ячейки в базе "Sessions" | Фокус перемещается; поле "client" активируется через Enter |
-| 9 | В поле "client" ввести [[Bo] (частичное), нажать Enter выбрать Bob | Значение обновляется; без мыши |
-
-### 8.4 Автоматические критерии прохождения (Jest)
-
-Файл `src/__tests__/R1_clientsSessionsIntegration.test.ts` — все 10 тестов PASS при `npm test`.
-
-### 8.5 Скриншоты для ручной фиксации
-
-После каждого шага сделайте скриншот vault. Сохраните в `docs/internal/screenshots/R1/`.
-Минимальный набор:
-- [ ] Поле "client" с wizard после выбора "Clients"
-- [ ] Попап с badge "2 linked" (Alice имеет 2 сессии)
-- [ ] Dashboard с label "Filtered by relation" и отфильтрованными записями
-- [ ] После внешнего редактирования — корректная связь с Bob
+The [previous runbook](archive/MANUAL_TESTING_PIPELINE_REST_2026-09-10.md) is retained only
+as historical evidence. Its credentials, ports, startup assumptions and tool limitations
+are superseded. Product-specific failure cases and old acceptance reports remain useful
+when their source/build and date are stated.

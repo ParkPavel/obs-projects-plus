@@ -5,6 +5,15 @@ All notable changes to Projects Plus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Development tooling
+
+- Настройки агентов, делегирование Claude/Codex и интеграция Obsidian CLI вынесены в
+  отдельный публичный проект [Claudex / Клаудекс](https://github.com/ParkPavel/claudex).
+  Разрозненные локальные настройки проекта удалены после резервного копирования;
+  рабочие Git worktree сохранены. [Новая структура рабочего каталога](docs/AGENT_WORKSPACE.md).
+
 ## [3.6.0-alpha] - 2026-08-31
 
 > **О нумерации (#175).** `3.5.1-alpha` была проставлена 2026-05-14 (`9034cea`) и с тех пор не

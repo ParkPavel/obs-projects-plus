@@ -1,5 +1,9 @@
 # OBS Projects Plus
 
+> Настройки совместной работы Claude и Codex развиваются в отдельном проекте
+> [Клаудекс / Claudex](https://github.com/ParkPavel/claudex).
+> [Устройство рабочего каталога](docs/AGENT_WORKSPACE.md).
+
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-3.5.1--alpha-orange.svg)

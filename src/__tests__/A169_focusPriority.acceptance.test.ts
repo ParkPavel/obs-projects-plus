@@ -42,12 +42,12 @@ function trapSource(): string {
   const out = execFileSync(
     process.execPath,
     [
-      path.join(SRC_ROOT, "..", "node_modules", "esbuild", "bin", "esbuild"),
+      // The npm CLI entry may be an ELF executable on Linux. Load the JS API
+      // in the clean child process instead of passing that binary to Node.
+      "-e",
+      "process.stdout.write(require(process.argv[1]).buildSync({entryPoints:[process.argv[2]],bundle:true,format:'iife',globalName:'PPPTrap',logLevel:'error',write:false}).outputFiles[0].text)",
+      require.resolve("esbuild"),
       path.join(SRC_ROOT, "lib/a11y/focusTrap.ts"),
-      "--bundle",
-      "--format=iife",
-      "--global-name=PPPTrap",
-      "--log-level=error",
     ],
     { encoding: "utf8", timeout: 120_000, maxBuffer: 8 * 1024 * 1024 }
   );

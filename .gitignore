@@ -44,18 +44,15 @@ _git_log.txt
 failures.txt
 ts_errors.txt
 lint_output*.txt
+test-results.json
 /RELEASE_NOTES.md
 
 # Recovery bundles
 *.bundle
 
-# AI agent configuration is NOT public (policy change 2026-08-25).
-#
-# This repository is public. Agent definitions, prompts, hooks and the project
-# instruction files describe how the work is actually done and are not intended
-# for outside review, so they live on the maintainer's machine and are excluded
-# here. They were tracked before this date and remain in git history; this rule
-# stops anything further being published, it does not retroactively unpublish.
+# Agent configuration moved to https://github.com/ParkPavel/claudex (2026-09-10).
+# Keep accidental legacy copies and machine-local settings out of this product repo.
+# Native entrypoints are generated at the workspace desktop level by Claudex.
 .claude/
 .codex/
 .agents/
@@ -74,5 +71,5 @@ AGENTS.md
 # BACKLOG, CONTEXT, ADRs, design briefs — not agent configuration, and
 # docs/internal/CONTEXT.md is the canonical baseline the test ratchet reads.
 
-# .vscode/mcp.json contains personal absolute paths and env-var refs — local only.
-# .vscode itself is already gitignored above; no extra rule needed here.
+# The legacy .vscode/mcp.json was retired into a private Claudex migration backup.
+# Editor preferences remain local; .vscode is already ignored above.
