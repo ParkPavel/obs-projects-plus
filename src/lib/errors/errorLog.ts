@@ -16,6 +16,15 @@
 
 import { findErrorCode } from "src/lib/errors/errorCodes";
 
+/**
+ * #207 — values for a caption's `{{placeholders}}`.
+ *
+ * Deliberately the same shape as `errorText.ts`'s, and deliberately not
+ * imported from it: this module stays English and free of i18n, which is why it
+ * reads the registry directly.
+ */
+export type LogParams = Readonly<Record<string, string | number>>;
+
 const PREFIX = "[Projects+]";
 
 /**
@@ -23,15 +32,28 @@ const PREFIX = "[Projects+]";
  * inside the sentence, where it reads correctly in a Notice. Printing both
  * would say the product name twice on one line.
  */
-function sentence(code: string): string {
+function sentence(code: string, params?: LogParams): string {
   const entry = findErrorCode(code);
   if (entry === undefined) return code;
-  return entry.caption.replace(/^Projects\+:\s*/, "");
+  const caption = entry.caption.replace(/^Projects\+:\s*/, "");
+  // #207: the registry stores captions with `{{placeholders}}`, and this module
+  // printed them raw — a user quoting the console line sent `{{path}}` to an
+  // issue while the Notice beside it showed the real one. `resolveError` fills
+  // them, but it is i18n and this line must stay English and importless, so the
+  // substitution happens here.
+  //
+  // A placeholder with no value becomes `<path>` rather than staying `{{path}}`:
+  // the reader is told the value is unknown instead of being shown a template
+  // artifact.
+  return caption.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+    const value = params?.[key];
+    return value === undefined ? `<${key}>` : String(value);
+  });
 }
 
 /** `[Projects+] PPP-101 <caption>` — what every console line looks like. */
-export function errorLine(code: string): string {
-  return `${PREFIX} ${code} ${sentence(code)}`;
+export function errorLine(code: string, params?: LogParams): string {
+  return `${PREFIX} ${code} ${sentence(code, params)}`;
 }
 
 /** The line, plus whatever a developer needs after it (an `Error`, a path). */
@@ -42,4 +64,27 @@ export function logError(code: string, ...details: unknown[]): void {
 /** Same line at warning level, for a `kind: "warning"` code. */
 export function logWarning(code: string, ...details: unknown[]): void {
   console.warn(errorLine(code), ...details);
+}
+
+/**
+ * The same two, for the codes whose caption carries placeholders.
+ *
+ * Separate names rather than an optional second argument: every existing caller
+ * passes an `Error` or a string there, and a parameter that changes meaning
+ * with its shape is the kind of cleverness that costs a defect later.
+ */
+export function logErrorAbout(
+  code: string,
+  params: LogParams,
+  ...details: unknown[]
+): void {
+  console.error(errorLine(code, params), ...details);
+}
+
+export function logWarningAbout(
+  code: string,
+  params: LogParams,
+  ...details: unknown[]
+): void {
+  console.warn(errorLine(code, params), ...details);
 }
