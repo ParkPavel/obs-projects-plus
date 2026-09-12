@@ -295,14 +295,22 @@ The note will be copied to all selected dates with all fields preserved.
 
 ## 📊 View Types
 
-### 📋 Table View
-Perfect for data-heavy projects with lots of metadata.
+A project can use four views: **Dashboard**, **Board**, **Calendar** and **Gallery**. A table is
+no longer a separate view — it lives as a data block inside a Dashboard (see below).
+
+### 📋 Table (a Dashboard block)
+Good for projects whose notes carry many fields and are best read as rows and columns.
+
+**How to open it:** add a Dashboard view to the project, place a data block on it, then choose the
+Table mode.
 
 **Features:**
-- Sortable columns
-- Filterable data
-- Bulk operations
-- Export capabilities
+- Sorting and filtering by column
+- Editing a value straight in the cell — the plugin writes it to the note's frontmatter
+- Hiding and reordering columns
+- Column totals: sum, average, count, minimum, maximum
+- Formula columns (115 functions) with a visual builder
+- Right-click context menus for a column, a row and a cell
 
 **Best for:**
 - Research projects
@@ -367,26 +375,25 @@ Visual card-based project browsing.
 - Visual content
 - Portfolio management
 
-### 🗄️ Database View
-Advanced view combining table, formulas, aggregation, and filtering in a single interface. Recommended as a replacement for the deprecated Table view.
+### 🗄️ Dashboard
+One screen composed of blocks. Each block shows its own records and can be linked to the others.
 
 **Features:**
-- Table with sorting, filtering, and grouping
-- Aggregate functions (SUM, AVG, COUNT, MIN, MAX) in column footers
-- Formulas with visual editor (115 built-in functions)
-- Column hiding/reordering
-- Inline cell editing
-- Context menus (right-click) for columns, rows, and cells
-- Automatic config migration from Table view
+- Data block: a table, board, calendar or gallery with its own source
+- Linked blocks: pick a record in one block and the others show only what relates to it
+- Selecting several records acts as a filter
+- Charts, counters and column totals
+- Formula fields with a visual builder
+- The same filter panel as in the other views
 
 **Best for:**
 - Project management with analytics
 - Tracking metrics and KPIs
 - Complex filtering and grouping
-- Any scenario where Table view was previously used
+- Working with several related projects on one screen
 
-**Migration from Table view:**
-When switching from Table to Database, your configuration (visible columns, sorting) migrates automatically.
+**If you have a saved Database view:** it opens as a Dashboard, and the column setup and sorting
+carry over automatically.
 
 ## 🔧 Project Types
 
@@ -604,45 +611,38 @@ Projects Plus automatically adapts to your Obsidian theme:
 
 ## 📚 Advanced Features
 
-### API Integration
+### Your own view from another plugin
 
-Projects Plus provides a rich API for developers:
+The plugin does not expose an `api` object for reading or creating projects from scripts. The one
+public extension point is registering your own view: your plugin declares an
+`onRegisterProjectView` method, and Projects Plus lists your view alongside the built-in ones.
 
-```javascript
-// Get all projects
-const projects = app.plugins.plugins['obs-projects-plus'].api.getProjects();
+```typescript
+import { Plugin } from "obsidian";
+import { ProjectView } from "obsidian-projects-types";
 
-// Create new project
-app.plugins.plugins['obs-projects-plus'].api.createProject({
-  name: "My Project",
-  dataSource: { kind: "folder", config: { path: "/MyProject" } }
-});
+class MyCustomView extends ProjectView {
+  getViewType() { return "my-view"; }
+  getDisplayName() { return "My View"; }
+  getIcon() { return "layout-grid"; }
+  onOpen({ contentEl }) { contentEl.createEl("h2", { text: "My Custom View" }); }
+  onData({ data }) { /* data.fields is the schema, data.records are the notes */ }
+  onClose() { /* cleanup */ }
+}
+
+export default class MyPlugin extends Plugin {
+  onRegisterProjectView = () => new MyCustomView();
+}
 ```
 
-### Custom Views
+The full contract and types are in the [developer API guide](api.md). The API is experimental and
+may change.
 
-Create custom views for specialized needs:
+### Automating note creation
 
-```javascript
-// Register custom view
-app.plugins.plugins['obs-projects-plus'].api.registerView({
-  id: "my-custom-view",
-  name: "My Custom View",
-  component: MyCustomComponent
-});
-```
-
-### Automation
-
-Use Templater or other plugins for automation:
-
-```javascript
-// Templater script for project creation
-const project = await tp.user.createProject({
-  name: tp.file.title,
-  template: "Project Template"
-});
-```
+Notes are created from the plugin's own templates (see Templates above) or by any plugin such as
+Templater that writes frontmatter. Projects Plus picks a new note up as soon as it lands in the
+project's folder, tag or query — no separate API is needed for that.
 
 ## 🎯 Best Practices
 

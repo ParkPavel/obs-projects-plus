@@ -21,8 +21,8 @@
  * argument contains text, logical values, or empty cells, those values are
  * IGNORED". Google Sheets: "Any text encountered in the value arguments will be
  * IGNORED". Neither parses a prefix, so `parseFloat("12abc") === 12` had no
- * reference behind it — it was a defect (spec §1, rows 1-2; user's rejection in
- * `BACKLOG.md` #180, RESOLVED 2026-09-02). Excel also states that empty cells
+ * reference behind it — it was a defect (spec §1, rows 1-2; rejected by the
+ * maintainer 2026-09-02). Excel also states that empty cells
  * are ignored rather than counted as zero, which is why `""` is `null` here and
  * not `0`: an empty cell is not a zero and does not belong in a denominator.
  *
@@ -50,7 +50,7 @@
  * ends, it rejects `"12abc"` (the prefix parse this ticket removes), `"0x10"`,
  * `"1_000"`, `"NaN"` and `"Infinity"`. It rejects `"1,5"` because frontmatter
  * is YAML and a decimal comma makes `[1,5]` and `"1,5"` indistinguishable
- * (BACKLOG #180, RESOLVED 2026-09-02, decision 2); it accepts `"1e3"` as 1000
+ * (decided 2026-09-02, decision 2); it accepts `"1e3"` as 1000
  * by the same block, decision 3.
  *
  * Linear, with no nested quantifier and no alternation that can match the same

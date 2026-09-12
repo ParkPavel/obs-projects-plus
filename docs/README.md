@@ -21,7 +21,8 @@ views. Choose the guide that matches your task.
 ## Разработка / Development
 
 - [Contribution guide](../CONTRIBUTING.md): сборка, проверки и отправка изменений / build, checks and contributions.
-- [Architecture](architecture.md): устройство текущего кода / current code structure.
+- [Architecture](architecture.md): слои, правила зависимостей, куда добавлять новое / layers, dependency rules, extension points.
+- [Code standards](CODE_STANDARDS.md) / [Стандарты кода](CODE_STANDARDS-RU.md): правила и требования безопасности / rules and security baselines.
 - [Changelog](../CHANGELOG.md): изменения и совместимость / changes and compatibility.
 - [License](../LICENSE) and [attribution](../NOTICE).
 

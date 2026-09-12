@@ -19,6 +19,17 @@ mean that a new release has been published.
   tests remain in this repository; Claudex checks its own harness and publication guards.
 - CI checks pull requests without writing beta metadata or pushing changes to `main`.
   Tagged releases still use the release workflow.
+- Corrected documentation that no longer matched the plugin. A project has four views —
+  Dashboard, Board, Calendar and Gallery — and a table is a block inside a Dashboard, not a
+  view of its own. The guides no longer describe a `getProjects` / `createProject` /
+  `registerView` plugin API: the one public extension point is `onRegisterProjectView`,
+  described in the API guide.
+- The architecture document now describes the code as it stands — layers, dependency rules,
+  extension points and the invariants tests enforce — instead of a superseded target design.
+  It moved to `docs/architecture.md`.
+- The demo-vault guide lists the blocks the Dashboard actually offers.
+- The filter-order test no longer asserts sentences in a deleted design document; it pins the
+  wiring, which is the part that can silently regress.
 
 ## 3.6.0-alpha
 

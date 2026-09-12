@@ -18,7 +18,7 @@
  *     zero. An empty cell is not a zero and is not in a denominator (§1.2).
  *   - `"0x10"` → null. `Number` said 16 and `parseFloat` said 0 — two
  *     implementations, two wrong answers.
- *   - `"1,5"` → null (text). BACKLOG #180 RESOLVED 2026-09-02 (2): frontmatter
+ *   - `"1,5"` → null (text). Decided 2026-09-02 (2): frontmatter
  *     is YAML, and a comma makes `[1,5]` and `"1,5"` indistinguishable.
  *   - `"1e3"` → 1000. Same block (3): the grammar carries the exponent.
  *   - `NaN` / `Infinity` → null. Both were pushed straight into SUM, poisoning
