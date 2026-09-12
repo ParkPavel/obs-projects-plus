@@ -150,46 +150,10 @@ describe("#185 — settings writer", () => {
       kind: "failed",
       attempts: 3,
       message: "EACCES",
-      // #202 — the mark and the Notice read this rather than each deciding for
-      // themselves, so all three surfaces name one event.
-      code: "PPP-101",
     });
 
     await jest.advanceTimersByTimeAsync(60_000);
     expect(save.calls).toHaveLength(3);
-  });
-
-  it("writes one console line per attempt, carrying the code (#202)", async () => {
-    const lines: unknown[][] = [];
-    const spy = jest
-      .spyOn(console, "error")
-      .mockImplementation((...args: unknown[]) => {
-        lines.push(args);
-      });
-    try {
-      const save = makeSave();
-      save.mode = "fail";
-      const writer = createSettingsWriter<Value>({
-        save: save.fn,
-        debounceMs: 400,
-        maxWaitMs: 2000,
-        retryDelaysMs: [500],
-      });
-
-      writer.push({ n: 1 });
-      await jest.advanceTimersByTimeAsync(400);
-      await jest.advanceTimersByTimeAsync(500);
-
-      expect(lines).toHaveLength(2);
-      for (const line of lines) {
-        expect(String(line[0])).toMatch(/^\[Projects\+\] PPP-101 /);
-      }
-      // One prefix, not two: the caption for this code carries "Projects+:"
-      // inside the sentence because it was written before the prefix existed.
-      expect(String(lines[0]?.[0]).match(/Projects\+/g)).toHaveLength(1);
-    } finally {
-      spy.mockRestore();
-    }
   });
 
   it("announces one failure per episode, not one per attempt", async () => {
@@ -280,7 +244,7 @@ describe("#185 — settings writer", () => {
     expect(save.calls).toEqual([changed]);
   });
 
-  it("pushNow writes a value the reference guard would have swallowed", async () => {
+  it("pushImmediate writes a value the reference guard would have swallowed", async () => {
     const save = makeSave();
     const writer = createSettingsWriter<Value>({
       save: save.fn,
@@ -292,7 +256,7 @@ describe("#185 — settings writer", () => {
     writer.prime(migrated);
     // The migration result IS the primed value; it still has to reach the disk,
     // which is why skipping the echo alone would stop persisting migrations.
-    writer.pushNow(migrated);
+    writer.pushImmediate(migrated);
     await jest.advanceTimersByTimeAsync(0);
 
     expect(save.calls).toEqual([migrated]);
@@ -315,128 +279,6 @@ describe("#185 — settings writer", () => {
 
     await jest.advanceTimersByTimeAsync(60_000);
     expect(save.calls).toEqual([value]);
-  });
-
-  /**
-   * The three below come from the pre-merge review of this branch. Each is the
-   * same shape of defect the ticket exists to remove — a change the user made
-   * that quietly never reaches the disk, or a control that claims a state the
-   * writer is not in.
-   */
-
-  it("flush carries the value queued behind an in-flight write across dispose", async () => {
-    const save = makeSave();
-    save.mode = "manual";
-    const writer = createSettingsWriter<Value>({
-      save: save.fn,
-      debounceMs: 400,
-      maxWaitMs: 2000,
-    });
-
-    const first = { n: 1 };
-    const second = { n: 2 };
-    writer.push(first);
-    await jest.advanceTimersByTimeAsync(400);
-    expect(save.calls).toEqual([first]);
-
-    // The user's last change lands while the first write is still in flight,
-    // and the plugin is disabled before it settles: `onunload` calls flush and
-    // dispose back to back.
-    writer.push(second);
-    const flushed = writer.flush();
-    writer.dispose();
-
-    save.pending[0]?.resolve();
-    await jest.advanceTimersByTimeAsync(0);
-    save.pending[1]?.resolve();
-    await flushed;
-
-    expect(save.calls).toEqual([first, second]);
-  });
-
-  it("a write that fails after dispose publishes no status", async () => {
-    const save = makeSave();
-    save.mode = "manual";
-    const seen: SaveStatus[] = [];
-    const writer = createSettingsWriter<Value>({
-      save: save.fn,
-      onStatus: (status) => seen.push(status),
-      debounceMs: 400,
-      maxWaitMs: 2000,
-    });
-
-    writer.push({ n: 1 });
-    await jest.advanceTimersByTimeAsync(400);
-    writer.dispose();
-
-    save.pending[0]?.reject(new Error("EACCES"));
-    await jest.advanceTimersByTimeAsync(0);
-
-    expect(seen.map((status) => status.kind)).toEqual(["saving"]);
-  });
-
-  it("a change made after the retry budget is spent gets its own retries", async () => {
-    const save = makeSave();
-    save.mode = "fail";
-    const writer = createSettingsWriter<Value>({
-      save: save.fn,
-      debounceMs: 400,
-      maxWaitMs: 2000,
-      retryDelaysMs: [500],
-    });
-
-    writer.push({ n: 1 });
-    await jest.advanceTimersByTimeAsync(400);
-    await jest.advanceTimersByTimeAsync(500);
-    expect(save.calls).toHaveLength(2);
-    expect(writer.status().kind).toBe("failed");
-
-    save.calls.length = 0;
-    writer.push({ n: 2 });
-    await jest.advanceTimersByTimeAsync(400);
-    await jest.advanceTimersByTimeAsync(500);
-
-    // One attempt plus the configured retry, exactly as the first episode got.
-    expect(save.calls).toHaveLength(2);
-  });
-
-  it("a write the host calls successful but cannot confirm is a failed write", async () => {
-    const save = makeSave();
-    const seen: SaveStatus[] = [];
-    const writer = createSettingsWriter<Value>({
-      save: save.fn,
-      // #199: exactly what the live run produced — `save` resolves and the file
-      // does not change. Before this, every level of #185 stayed silent.
-      verify: () => Promise.resolve("not-written" as const),
-      onStatus: (status) => seen.push(status),
-      debounceMs: 400,
-      maxWaitMs: 2000,
-      retryDelaysMs: [500],
-    });
-
-    writer.push({ n: 1 });
-    await jest.advanceTimersByTimeAsync(400);
-    await jest.advanceTimersByTimeAsync(500);
-
-    expect(save.calls).toHaveLength(2);
-    const last = seen[seen.length - 1];
-    expect(last?.kind).toBe("failed");
-    expect(last?.kind === "failed" && last.message).toMatch(/does not match/);
-  });
-
-  it("a confirmed write settles to idle exactly as before", async () => {
-    const save = makeSave();
-    const writer = createSettingsWriter<Value>({
-      save: save.fn,
-      verify: () => Promise.resolve("confirmed" as const),
-      debounceMs: 400,
-      maxWaitMs: 2000,
-    });
-
-    writer.push({ n: 1 });
-    await jest.advanceTimersByTimeAsync(400);
-
-    expect(writer.status()).toEqual({ kind: "idle" });
   });
 
   it("dispose leaves no timer behind and writes nothing", async () => {

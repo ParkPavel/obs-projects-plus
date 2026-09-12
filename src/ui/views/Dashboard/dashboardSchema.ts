@@ -14,11 +14,6 @@
 
 import type { App } from "obsidian";
 import { Notice } from "obsidian";
-import { noticeFor } from "src/lib/errors/errorText";
-
-/** #202 — the codes this module raises. Words live in the registry. */
-const ADD_FIELD_FAILED = "PPP-401";
-const REOPEN_SCHEMA_FAILED = "PPP-402";
 import { tick } from "svelte";
 
 import type { DataField } from "src/lib/dataframe/dataframe";
@@ -92,9 +87,13 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           persistFieldTypeConfig(field);
           reopenSchema();
         } catch (err) {
-          new Notice(noticeFor(ADD_FIELD_FAILED));
+          new Notice(
+            deps.t("views.dashboard.canvas.error-add-field", {
+              defaultValue: "Failed to add field. Please try again.",
+            })
+          );
           // eslint-disable-next-line no-console
-          console.warn("[Projects+] addField failed", err);
+          console.warn("[obs-projects-plus] addField failed", err);
         }
       },
       deps.getProjects(),
@@ -217,9 +216,13 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
     tick()
       .then(() => openSchema())
       .catch((err) => {
-        new Notice(noticeFor(REOPEN_SCHEMA_FAILED));
+        new Notice(
+          deps.t("views.dashboard.canvas.error-reopen-schema", {
+            defaultValue: "Failed to reopen schema.",
+          })
+        );
         // eslint-disable-next-line no-console
-        console.warn("[Projects+] reopenSchema failed", err);
+        console.warn("[obs-projects-plus] reopenSchema failed", err);
       });
   }
 

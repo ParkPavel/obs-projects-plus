@@ -20,10 +20,7 @@ import { app, plugin } from "src/lib/stores/obsidian";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-import {
-  createDemoProject,
-  seedDemoNotes,
-} from "src/ui/app/onboarding/demoProject";
+import { createDemoProject } from "src/ui/app/onboarding/demoProject";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
@@ -50,35 +47,6 @@ import {
   setSaveRetryHandler,
 } from "src/lib/settings/saveStatus";
 import { versionOnDisk } from "src/lib/settings/settingsVersion";
-import {
-  readRawSettings,
-  settingsFilePath,
-  writeBrokenCopy,
-  writeConflictCopy,
-  writeConflictNote,
-} from "src/lib/settings/brokenBackup";
-import {
-  carriesAVersion,
-  reconcileSettings,
-} from "src/lib/settings/settingsReconcile";
-import {
-  episodeOutcome,
-  type EpisodeReport,
-  type Preservation,
-} from "src/lib/settings/settingsEpisode";
-import { canonical, classifyDisk } from "src/lib/settings/settingsVerify";
-import type {
-  EpisodeEntry,
-  WriteOutcome,
-  WriteVerdict,
-} from "src/lib/settings/settingsWriter";
-import { noticeFor, withCode } from "src/lib/errors/errorText";
-import {
-  logError,
-  logErrorAbout,
-  logWarning,
-  logWarningAbout,
-} from "src/lib/errors/errorLog";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
@@ -95,41 +63,6 @@ import { ProjectsView, VIEW_TYPE_PROJECTS } from "./view";
 
 dayjs.extend(isoWeek);
 dayjs.extend(localizedFormat);
-
-/**
- * #202 — the settings events this file can report. Written as literals so the
- * number a user quotes from their console can be grepped straight to the line
- * that raised it; R0.21 refuses a `PPP-nnn` that is not in the registry, so a
- * typo fails a gate instead of reaching a screen.
- */
-const SETTINGS_SUPERSEDED = "PPP-102";
-const SETTINGS_UNREADABLE = "PPP-103";
-const SETTINGS_CORRUPTED = "PPP-104";
-/** #200 — the file was replaced and the two versions could not be reconciled. */
-const SETTINGS_CONFLICT = "PPP-105";
-/** #200 — the same, with the copy of the other version refused. */
-const SETTINGS_CONFLICT_UNCOPIED = "PPP-106";
-/**
- * #200 — how long a settings file is allowed to be mid-write before the bytes
- * are treated as somebody's real version rather than as a synchroniser caught
- * between two writes. Long enough that an ordinary write completes, short
- * enough to beat the user's next change to the file.
- */
-const SETTINGS_UNPARSABLE_RECHECK_MS = 2000;
-/**
- * #212 — how many times an episode may wait for a file that says nothing yet.
- *
- * A writer that truncates before filling leaves `data.json` empty for an
- * instant, and one look is enough for that. A synchroniser that leaves it empty
- * for longer needs more, and releasing early lets a queued edit land the moment
- * the real payload arrives — the review found that. The count is bounded
- * because waiting forever is the ownership model `PLAN_200` §2 rejected: the
- * user's change must reach the disk eventually, even if the other writer never
- * finishes.
- */
-const SETTINGS_EMPTY_FILE_LOOKS = 3;
-/** #202 — the demo repair path; the demo itself raises 601/602 in its own module. */
-const DEMO_REPAIR_FAILED = "PPP-603";
 
 export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeSettings?: Unsubscriber;
@@ -150,25 +83,6 @@ export default class ProjectsPlusPlugin extends Plugin {
   private loadedSettings?: LatestProjectsPluginSettings;
   /** #185: version found on disk when it differed from the current one. */
   private migratedFromVersion: number | null = null;
-  /**
-   * #199: the canonical form of what `data.json` last held, as far as this
-   * plugin knows. It is what separates "our write did not land" from "someone
-   * else wrote something else" when the read-back does not match.
-   */
-  private confirmedOnDisk: string | null = null;
-  /**
-   * #212: what an adoption decided inside the lease, to be published to the
-   * store after it. It is not a second source of truth — it is only read when
-   * the writer reports that the adoption was actually applied, and the fence
-   * guarantees one episode at a time.
-   */
-  /** #212: at most one reconciliation queued from a refused write. */
-  private reconcileScheduled = false;
-  private pendingAdoption: {
-    settings: LatestProjectsPluginSettings;
-    base: string | null;
-    carried: boolean;
-  } | null = null;
 
   /**
    * onload runs when the plugin is enabled.
@@ -416,21 +330,13 @@ export default class ProjectsPlusPlugin extends Plugin {
       callback: () => {
         const existing = get(settings).projects.find((p) => p.name === "Демо-проект");
         if (existing) {
-          // #198: a user who hit the illegal filename has this project already,
-          // with a note missing — and returning early here is exactly what kept
-          // them from ever getting it. Seeding is idempotent, so re-run it and
-          // say what it found rather than refusing outright.
-          void seedDemoNotes(this.app.vault).then((failed) => {
-            new Notice(
-              failed.length > 0
-                ? noticeFor(DEMO_REPAIR_FAILED, { count: failed.length })
-                : t("commands.create-demo-project.repaired", {
-                    defaultValue:
-                      "Demo project already exists; any missing notes have been restored.",
-                  }),
-              6000,
-            );
-          });
+          new Notice(
+            t("commands.create-demo-project.duplicate-warning", {
+              defaultValue:
+                "Demo project already exists — delete it first to regenerate.",
+            }),
+            6000,
+          );
           return;
         }
         void createDemoProject(this.app.vault).then(() => {
@@ -462,17 +368,6 @@ export default class ProjectsPlusPlugin extends Plugin {
     // because under coalescing a per-call promise describes no single write.
     const writer = createSettingsWriter<LatestProjectsPluginSettings>({
       save: (value) => this.saveData(value),
-      // #199: `saveData` resolving is a claim, not a fact. A live run with
-      // `data.json` made read-only had it report success while the file did
-      // not change — and #185's whole visibility hangs off a rejection that
-      // never arrived. So the file is read back and compared.
-      verify: (value) => this.settingsAreOnDisk(value),
-      // #212, from the live run: the file is checked BEFORE the write too. The
-      // post-write check proves our bytes landed; it cannot see what they
-      // landed on, and a version written by somebody else while our write sat
-      // in its debounce was being erased before Obsidian dispatched its change
-      // event — no copy, no notice, no trace.
-      beforeWrite: () => this.settingsAreStillOurs(),
       onStatus: (status) => saveStatus.set(status),
     });
     this.settingsWriter = writer;
@@ -481,11 +376,8 @@ export default class ProjectsPlusPlugin extends Plugin {
     // The chip lives in `CompactNavBar`, which exists only inside the Projects
     // view — settings also change from Obsidian's own settings tab. One Notice
     // per episode covers that; the chip is what remains visible afterwards.
-    // #202: the code the status carries, not one fixed here — so the notice,
-    // the standing mark and the console line are the same event by
-    // construction rather than by three call sites agreeing.
-    this.unsubscribeSaveStatus = onSaveFailureEpisode((status) => {
-      new Notice(noticeFor(status.code), 15000);
+    this.unsubscribeSaveStatus = onSaveFailureEpisode(() => {
+      new Notice(t("save-status.failed.notice"), 15000);
     });
 
     // The store fires immediately on subscribe, with the value `loadSettings`
@@ -500,7 +392,7 @@ export default class ProjectsPlusPlugin extends Plugin {
         // Skipping it alone would leave a v1 file on disk indefinitely, so the
         // migration is written here by name: because the version changed, not
         // because the plugin was opened.
-        writer.pushNow(this.loadedSettings);
+        writer.pushImmediate(this.loadedSettings);
       }
     }
 
@@ -570,21 +462,10 @@ export default class ProjectsPlusPlugin extends Plugin {
       this.unsubscribeSaveStatus();
     }
     setSaveRetryHandler(null);
-    // #185, second pass: the status store is module-global and outlives the
-    // plugin instance if the host keeps the module cached across a
-    // disable/enable. Left standing, the chip would survive into a session
-    // whose writer knows nothing about it — its retry reaching a clean writer
-    // and doing nothing, which is a control that lies. Reset with the handler
-    // it belongs to.
-    saveStatus.set({ kind: "idle" });
     if (this.settingsWriter) {
-      // Order is load-bearing, and `flush` is deliberately allowed to outlive
-      // `dispose`: it starts the pending write synchronously and keeps its
-      // licence to run the one follow-up write queued behind an in-flight one,
-      // while `dispose` stops the writer from scheduling anything new. What it
-      // does not do is wait out a retry delay — a change made while the disk is
-      // refusing writes is still lost on quit, and #185 promises only that the
-      // user was warned by something that does not fade before they got here.
+      // Order is load-bearing: `flush` starts the pending write synchronously,
+      // so the write is already in flight by the time `dispose` stops the
+      // writer from scheduling anything further.
       void this.settingsWriter.flush();
       this.settingsWriter.dispose();
       delete this.settingsWriter;
@@ -684,420 +565,6 @@ export default class ProjectsPlusPlugin extends Plugin {
   }
 
   /**
-   * #200 — somebody else wrote `data.json`.
-   *
-   * Obsidian calls this when the file changes on disk from outside the app: a
-   * second window, a synchroniser, a hand edit. It exists on every host this
-   * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
-   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
-   * external write fires it with the NEW contents already readable, and that
-   * our own `saveData` does not fire it.
-   *
-   * Every judgement is in `settingsReconcile.ts`, on purpose: this method
-   * cannot be unit-tested in this tree at all, so it holds only the wiring —
-   * read, decide, apply. What it does with each decision is the thing to keep
-   * honest, and each branch is one statement.
-   */
-  /**
-   * #212 — is `data.json` still what this session last confirmed?
-   *
-   * `false` stops the write and turns it into a divergence, and reconciliation
-   * is scheduled at once rather than waited for: the host's change event is
-   * what we were racing, so depending on it here would reproduce the defect.
-   *
-   * Unknowns answer `true` deliberately. With no base, or a file that cannot be
-   * read at all, refusing every write would turn a rare event into a session
-   * where nothing saves — the model `PLAN_200` §2 rejected — and the post-write
-   * verification still stands behind it.
-   */
-  private async settingsAreStillOurs(): Promise<boolean> {
-    if (this.confirmedOnDisk === null) return true;
-    const raw = await this.readSettingsFile();
-    if (raw === null) return true;
-    let onDisk: string | null;
-    try {
-      onDisk = canonical(JSON.parse(raw));
-    } catch {
-      // Mid-write, or corrupt. Either way it is not what we confirmed, and
-      // writing over it would take whatever it holds with it.
-      onDisk = null;
-    }
-    if (onDisk === this.confirmedOnDisk) return true;
-    console.warn(
-      "[Projects+] the settings file changed before our write; reconciling instead of overwriting"
-    );
-    // One at a time. A refused write that scheduled another episode on every
-    // attempt would answer a single external change with a storm of them.
-    if (this.reconcileScheduled) return false;
-    this.reconcileScheduled = true;
-    // Not awaited, and not called directly: this runs inside the write, and the
-    // lease waits for writes in flight — awaiting it here would wait for
-    // ourselves.
-    window.setTimeout(() => {
-      this.reconcileScheduled = false;
-      void this.onExternalSettingsChange();
-    }, 0);
-    return false;
-  }
-
-  /**
-   * #200/#212 — somebody else wrote `data.json`.
-   *
-   * Obsidian calls this when the file changes on disk from outside the app: a
-   * second window, a synchroniser, a hand edit. It exists on every host this
-   * plugin claims (`Plugin#onExternalSettingsChange`, v1.5.7; `minAppVersion`
-   * is v1.5.7), and the step-0 spike confirmed in a live vault both that an
-   * external write fires it with the NEW contents already readable, and that
-   * our own `saveData` does not fire it.
-   *
-   * #212: this method is wiring and nothing else. The decision lives in
-   * `settingsReconcile.ts`, how the episode ends lives in `settingsEpisode.ts`,
-   * and who may write while it is being decided lives in the writer's lease —
-   * three modules that can be tested on synthetic input, around a file that
-   * cannot be tested at all. What used to be here was eight release sites and
-   * four fence sites in that untestable file, and six of the #211 findings were
-   * one of them forgetting something.
-   */
-  async onExternalSettingsChange(): Promise<void> {
-    const writer = this.settingsWriter;
-    // Same blind spot as the write verification: `manifest.dir` is optional in
-    // Obsidian's own typing, and without it there is no file to read. Recorded
-    // in the plan's risks rather than papered over.
-    if (writer === undefined || settingsFilePath(this.manifest.dir) === null) {
-      return;
-    }
-
-    this.pendingAdoption = null;
-    // The lease fences before its first await, finishes any write already in
-    // flight, and releases in a `finally` whatever the body does or throws.
-    // PPP-102 is the code it fences under: the file HAS been changed from
-    // outside, which is true from this moment; what happens about it is the
-    // outcome's business.
-    const ended = await writer.withExclusive(SETTINGS_SUPERSEDED, (entry) =>
-      this.decideExternalChange(entry)
-    );
-
-    const adoption = this.takeAdoption();
-    if (ended.kind !== "adopted" || adoption === null) return;
-    // Published only on the writer's own answer. An adoption refused by the
-    // epoch guard — the user changed something while we were deciding — comes
-    // back as a release, and the store must not be set behind that refusal.
-    // The writer has already taken the adopted value as its own, so the
-    // subscription's firing here is a no-op, which is what #185 needed `prime`
-    // for.
-    this.loadedSettings = adoption.settings;
-    // The FILE's canonical form, not the resolved one: this is the record of
-    // what is on disk, and normalisation happens only in memory — exactly as at
-    // load, which does not rewrite the file for filling in a default.
-    this.confirmedOnDisk = adoption.base;
-    settings.set(adoption.settings);
-    if (adoption.carried) {
-      // The one merged field (user's decision, 2026-09-07): a project's
-      // `uniqueIdCounter` was higher here than on disk. Memory now holds the
-      // higher one, and the file must too — otherwise the next window to adopt
-      // this file reissues identifiers that are already in notes.
-      writer.pushNow(adoption.settings);
-    }
-    console.debug("[Projects+] settings adopted from disk");
-  }
-
-  /** Read the adoption the lease decided on, and clear it in the same move. */
-  private takeAdoption(): {
-    settings: LatestProjectsPluginSettings;
-    base: string | null;
-    carried: boolean;
-  } | null {
-    const adoption = this.pendingAdoption;
-    this.pendingAdoption = null;
-    return adoption;
-  }
-
-  /**
-   * One decision, taken inside the lease, returning how the episode ends.
-   *
-   * Every path returns a `WriteOutcome`; there is no path that returns nothing,
-   * which is what makes "a branch forgot to release" unrepresentable rather
-   * than merely unlikely.
-   */
-  private async decideExternalChange(
-    entry: EpisodeEntry
-  ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
-    const raw = await this.readSettingsFile();
-    if (raw === null) return { kind: "release" };
-
-    const decision = reconcileSettings<LatestProjectsPluginSettings>({
-      diskRaw: raw,
-      memory: get(settings),
-      base: this.confirmedOnDisk,
-      // Taken at the START of the episode, by the lease. Asking the writer
-      // here would ask about the lease itself: the fence publishes `diverged`,
-      // which counts as unsaved work, so every decision would see a conflict
-      // and adoption would never happen again.
-      pending: entry.pending,
-      expectedVersion: DEFAULT_SETTINGS.version,
-    });
-
-    const preservation: Preservation =
-      decision.kind === "conflict"
-        ? await this.preserveConflicting(raw, decision.reason)
-        : { kind: "not-needed" };
-
-    const episode = episodeOutcome(decision, preservation);
-    this.announce(episode.report);
-
-    switch (episode.outcome.kind) {
-      case "release":
-        // The episode looked at the file and found nothing to do — an echo of
-        // our own write, or somebody arriving at the value we already hold. It
-        // still has to record what it saw: without that the pre-write check
-        // keeps comparing against a base from before this change, refuses the
-        // queued write, reconciles to the same answer, and repeats every
-        // debounce for as long as the session lasts. Found by the gate as a
-        // livelock, and it is the cost of a guard that trusts a base nobody
-        // updates.
-        this.noteFileAsSeen(raw);
-        console.debug(`[Projects+] settings file changed; ${decision.kind}`);
-        return { kind: "release" };
-
-      case "extend":
-        // A file caught between truncate and fill says nothing yet. The fence
-        // stays up for the wait — which is the eleventh finding's fix made
-        // structural: nothing of ours can land in that window, so the bytes
-        // cannot be erased by us while we wait to look again.
-        return {
-          kind: "extend",
-          after: SETTINGS_UNPARSABLE_RECHECK_MS,
-          // The bytes we saw travel with the episode. If the file becomes
-          // unreadable later, they are the only copy of the other version left
-          // in our hands, and releasing without them would let a queued edit
-          // take the file.
-          next: (again) => this.settleUnreadable(again, raw),
-        };
-
-      case "hold":
-        return { kind: "hold", code: SETTINGS_CONFLICT_UNCOPIED };
-
-      case "restore":
-        // The episode has LOOKED at the file, so the pre-write check must not
-        // refuse the restore that ends it. Without this the guard added for the
-        // live-run defect turns reconciliation into a loop: refuse, reconcile,
-        // preserve, restore, refuse — 237 conflict copies in one stand run.
-        this.noteFileAsSeen(raw);
-        return { kind: "restore", settings: get(settings) };
-
-      case "adopted": {
-        // Adoption goes through the SAME resolver the load path uses: a payload
-        // can carry `version: 4` and nothing else, and putting that raw object
-        // into the store hands every consumer a shape it does not expect.
-        const resolved = migrateSettings(episode.outcome.settings);
-        if (either.isLeft(resolved)) {
-          logWarning(
-            SETTINGS_CONFLICT,
-            "external payload did not resolve:",
-            resolved.left
-          );
-          return this.refuseAsConflict(raw, "unresolvable");
-        }
-        this.pendingAdoption = {
-          settings: resolved.right,
-          base: canonical(JSON.parse(raw)),
-          carried: episode.outcome.carried,
-        };
-        return { kind: "adopted", settings: resolved.right };
-      }
-    }
-  }
-
-  /**
-   * The continuation of an extended episode: the file was mid-write, and this
-   * is the look that decides whether it settled.
-   */
-  private async settleUnreadable(
-    entry: EpisodeEntry,
-    seen: string,
-    look = 1
-  ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
-    const raw = await this.readSettingsFile();
-    if (raw === null) {
-      // The file cannot be read — a synchroniser holding it, most likely. This
-      // is NOT a resolution: nothing of the other version has been preserved,
-      // and releasing here schedules the queued edit straight over it.
-      if (look < SETTINGS_EMPTY_FILE_LOOKS) {
-        return {
-          kind: "extend",
-          after: SETTINGS_UNPARSABLE_RECHECK_MS,
-          next: (again) => this.settleUnreadable(again, seen, look + 1),
-        };
-      }
-      // Out of looks and still blind. What we saw is the only copy of the other
-      // version we hold, so it is preserved and memory becomes the file.
-      return this.refuseAsConflict(seen, "unreadable-after-wait");
-    }
-    if (!carriesAVersion(raw)) {
-      // Still nothing. There is no version in these bytes to preserve — but
-      // there will be one, and releasing here schedules the queued edit to land
-      // exactly as it arrives. So the episode waits again, a bounded number of
-      // times: `keep` says the file has not settled, and the fence is what that
-      // sentence means.
-      if (look < SETTINGS_EMPTY_FILE_LOOKS) {
-        console.debug(
-          `[Projects+] the settings file is still empty; look ${look} of ${SETTINGS_EMPTY_FILE_LOOKS}`
-        );
-        return {
-          kind: "extend",
-          after: SETTINGS_UNPARSABLE_RECHECK_MS,
-          next: (again) => this.settleUnreadable(again, seen, look + 1),
-        };
-      }
-      // Out of looks. The other writer may never finish, and the user's change
-      // must reach the disk: waiting forever is the model the plan rejected.
-      console.debug(
-        "[Projects+] the settings file stayed empty; releasing the episode"
-      );
-      return { kind: "release" };
-    }
-    try {
-      JSON.parse(raw);
-    } catch {
-      // Still not settings after the wait. Whatever those bytes are, they are
-      // the only copy of what somebody else wrote, and our next save would take
-      // the file — so they are preserved and memory becomes the file, which
-      // also leaves a `data.json` that parses.
-      return this.refuseAsConflict(raw, "unparsable");
-    }
-    // It settled into somebody's readable version: run the ordinary decision on
-    // it rather than adopting here by a second, less careful path. The entry
-    // state is the episode's, not a fresh reading of a writer the lease has
-    // since changed.
-    return this.decideExternalChange(entry);
-  }
-
-  /**
-   * Keep the other version, then keep memory — the conflict ending, reached
-   * from the two places that decide they cannot take the disk.
-   */
-  private async refuseAsConflict(
-    raw: string,
-    reason: string
-  ): Promise<WriteOutcome<LatestProjectsPluginSettings>> {
-    const preservation = await this.preserveConflicting(raw, reason);
-    const episode = episodeOutcome(
-      { kind: "conflict", reason: "unknown-version", resolves: false },
-      preservation
-    );
-    this.announce(episode.report);
-    if (episode.outcome.kind === "restore") {
-      this.noteFileAsSeen(raw);
-      return { kind: "restore", settings: get(settings) };
-    }
-    return { kind: "hold", code: SETTINGS_CONFLICT_UNCOPIED };
-  }
-
-  /**
-   * Record what the file holds right now, as this session's base.
-   *
-   * Called by an episode that has read the file and decided to write over it:
-   * from that moment the pre-write check has nothing to warn about, because the
-   * change it would warn about is the one just handled. Unparsable bytes leave
-   * no base, which the check reads as "unknown" and allows.
-   */
-  private noteFileAsSeen(raw: string): void {
-    try {
-      this.confirmedOnDisk = canonical(JSON.parse(raw));
-    } catch {
-      this.confirmedOnDisk = null;
-    }
-  }
-
-  /** The settings file as text, or `null` when it cannot be read at all. */
-  private async readSettingsFile(): Promise<string | null> {
-    const path = settingsFilePath(this.manifest.dir);
-    if (path === null) return null;
-    try {
-      return await this.app.vault.adapter.read(path);
-    } catch (err) {
-      console.warn(
-        "[Projects+] settings changed on disk but could not be read:",
-        err
-      );
-      return null;
-    }
-  }
-
-  /**
-   * #212 — the user's half of an episode, from the same value as the writer's.
-   *
-   * One code, one set of params, one decision about whether the mark keeps it:
-   * the notice and the standing mark cannot disagree, because neither is
-   * written here.
-   */
-  private announce(report: EpisodeReport): void {
-    if (report.code === null) return;
-    // A standing report is the one nothing could be done about, so it is the
-    // one that goes to the console as an error.
-    // #207: the params fill the caption's placeholders, so the console line and
-    // the notice carry the same sentence with the same path in it.
-    if (report.standing) {
-      logErrorAbout(report.code, report.params, "episode ended unresolved");
-    } else {
-      logWarningAbout(report.code, report.params, "episode resolved");
-    }
-    new Notice(noticeFor(report.code, report.params), 15000);
-  }
-
-  /**
-   * #200 — keep the version this session refused, and say where it is.
-   *
-   * The copy is what makes the conflict branch non-destructive, so whether it
-   * was actually written decides which message the user gets. #195 learned that
-   * one level down: a notice naming a backup that was never written sends the
-   * user to look for a file that does not exist.
-   */
-  private async preserveConflicting(
-    raw: string,
-    reason: string
-  ): Promise<Preservation> {
-    const copiedTo = await writeConflictCopy(
-      this.app.vault.adapter,
-      this.manifest.dir,
-      raw,
-      new Date()
-    );
-    if (copiedTo === null) {
-      // #211: before giving up on a file, try one a phone can open. The console
-      // fallback below is desktop-only and `isDesktopOnly` is false, so for a
-      // mobile user it is not a recovery path at all. This also covers the
-      // blind spot the plan named: with `manifest.dir` undefined there is no
-      // plugin folder to write beside, and the vault root is still there.
-      const noteAt = await writeConflictNote(
-        this.app.vault.adapter,
-        raw,
-        new Date(),
-        settingsFilePath(this.manifest.dir)
-      );
-      if (noteAt !== null) {
-        console.debug(
-          `[Projects+] other version kept as a note at ${noteAt} (reason: ${reason})`
-        );
-        return { kind: "preserved", path: noteAt };
-      }
-      // The last channel left. Nothing could be written anywhere, and pointing
-      // the user at `data.json` is a promise this branch cannot keep, so the
-      // bytes go where nothing else can take them from: verbatim into the
-      // console, which is where the notice sends them.
-      console.error(
-        "[Projects+] PPP-106 the version that could not be copied, verbatim below:\n" +
-          raw
-      );
-      return { kind: "unpreserved" };
-    }
-    console.debug(
-      `[Projects+] other version kept at ${copiedTo} (reason: ${reason})`
-    );
-    return { kind: "preserved", path: copiedTo };
-  }
-
-  /**
    * loadSettings loads settings from disk, migrates it to the latest version,
    * and updates the Svelte store for settings.
    *
@@ -1106,111 +573,15 @@ export default class ProjectsPlusPlugin extends Plugin {
    * to DEFAULT_SETTINGS, surface a Notice, and persist a backup of the raw
    * payload for forensic recovery.
    */
-  /**
-   * #199 — is `value` what `data.json` now holds?
-   *
-   * `true` when the plugin folder is unknown: without it there is nothing to
-   * read back, and a permanent false alarm would be worse than the weaker
-   * guarantee. Any other doubt — unreadable file, mismatch, unparseable text —
-   * is reported as a failed write, because a half-written file is exactly the
-   * case worth catching.
-   */
-  private async settingsAreOnDisk(
-    value: LatestProjectsPluginSettings
-  ): Promise<WriteVerdict> {
-    const path = settingsFilePath(this.manifest.dir);
-    if (path === null) return "confirmed";
-    // A mismatch is looked at more than once before it is believed. The host
-    // may resolve its write before the bytes land, and a check that raced it
-    // would raise the "not saved" chip on perfectly good saves — a control
-    // that cries wolf is worse than the silence it replaces, because the user
-    // learns to ignore it.
-    for (const delayMs of [0, 250, 750]) {
-      if (delayMs > 0) {
-        await new Promise((resolve) => window.setTimeout(resolve, delayMs));
-      }
-      let raw: string;
-      try {
-        raw = await this.app.vault.adapter.read(path);
-      } catch (err) {
-        console.error("[Projects+] Could not read settings back to verify:", err);
-        continue;
-      }
-      const verdict = classifyDisk(value, raw, this.confirmedOnDisk);
-      if (verdict === "confirmed") {
-        this.confirmedOnDisk = canonical(value);
-        return "confirmed";
-      }
-      if (verdict === "superseded") {
-        // Someone else — a second window, a synchroniser — replaced the file.
-        // Retrying would overwrite their change with a value they never asked
-        // for, so this writer stops here. It does NOT report success quietly:
-        // a silent host failure can hide inside this case (write refused, then
-        // an external write lands), and the honest thing is to say the state
-        // is unknown rather than to pick a side. #200 covers reconciling it.
-        logWarning(SETTINGS_SUPERSEDED, "not retrying");
-        this.confirmedOnDisk = null;
-        new Notice(noticeFor(SETTINGS_SUPERSEDED), 15000);
-        // #200 step 1: this used to return `true` — the writer filed a write it
-        // could not confirm as a success. Every argument about who owns the
-        // file rested on that status, so it stops saying something untrue
-        // before anything is built on top of it.
-        return "diverged";
-      }
-    }
-    return "not-written";
-  }
-
-  /**
-   * #195 — copy the unreadable settings file next to itself, and say where.
-   *
-   * Returns the path written or `null`. The caller MUST branch on that: a notice
-   * naming a file that was never written is the same broken promise the copy
-   * exists to prevent, one level down.
-   */
-  private async copyBrokenSettings(reason: string): Promise<string | null> {
-    const adapter = this.app.vault.adapter;
-    const dir = this.manifest.dir;
-    const raw = await readRawSettings(adapter, dir);
-    if (raw === null) {
-      console.error(
-        "[Projects+] Could not read the settings file back for a forensic copy"
-      );
-      return null;
-    }
-    const path = await writeBrokenCopy(adapter, dir, raw, reason, new Date());
-    if (path === null) {
-      console.error("[Projects+] Failed to write the forensic copy of settings");
-    }
-    return path;
-  }
-
   async loadSettings(): Promise<void> {
     let raw: unknown = null;
     try {
       raw = await this.loadData();
     } catch (err) {
-      logError(SETTINGS_UNREADABLE, err);
-      // #195: this is the COMMONEST corruption — a truncated write leaves JSON
-      // that Obsidian's own parse rejects, so there is no object to migrate and
-      // the previous version made no copy at all. The bytes on disk are the only
-      // evidence, and the first settings change the user makes overwrites them.
-      const copiedTo = await this.copyBrokenSettings(
-        err instanceof Error ? err.message : String(err)
-      );
-      // #202 adds the token and leaves the sentences alone. Both branches are
-      // the same event with different outcomes for the forensic copy — one
-      // code, and which branch ran is what the words already say. The warning
-      // about the next save overwriting the evidence is load-bearing and stays
-      // in the Notice rather than moving to a tooltip nothing raises here.
+      console.error("[Projects+] Failed to read settings from disk:", err);
       new Notice(
-        withCode(
-          copiedTo === null
-            ? "Projects+: failed to load settings — using defaults. The file on disk was left untouched but could NOT be copied: back it up before changing anything, or the next save overwrites it. See the console."
-            : `Projects+: failed to load settings — using defaults. The unreadable file was copied to "${copiedTo}".`,
-          SETTINGS_UNREADABLE
-        ),
-        15000
+        "Projects+: failed to load settings — using defaults. Check console for details.",
+        10000
       );
       this.publishSettings(Object.assign({}, DEFAULT_SETTINGS));
       return;
@@ -1218,26 +589,25 @@ export default class ProjectsPlusPlugin extends Plugin {
 
     const result = migrateSettings(raw);
     if (either.isLeft(result)) {
-      logError(SETTINGS_CORRUPTED, result.left, "raw payload:", raw);
+      console.error(
+        "[Projects+] Settings migration failed:",
+        result.left,
+        "raw payload:",
+        raw
+      );
       // Persist a backup of the broken payload so the user can recover manually.
-      // #185, second pass: whether this SUCCEEDED decides what the notice may
-      // claim. The previous version swallowed the rejection and promised a
-      // backup regardless — sending the user to look for keys that were never
-      // written, which is the same defect this ticket exists to close, one
-      // level down.
-      // #195: and the copy no longer goes INSIDE data.json. That file is
-      // rewritten whole by every ordinary save, so the copy used to survive only
-      // until the next one — which a live run showed arriving immediately, since
-      // an empty project list sends the user through onboarding and creating the
-      // demo project saves settings over it.
-      const copiedTo = await this.copyBrokenSettings(result.left.message);
+      try {
+        await this.saveData({
+          __broken_backup: raw,
+          __broken_backup_reason: result.left.message,
+          __broken_backup_at: new Date().toISOString(),
+          ...DEFAULT_SETTINGS,
+        });
+      } catch (saveErr) {
+        console.error("[Projects+] Failed to persist broken-payload backup:", saveErr);
+      }
       new Notice(
-        withCode(
-          copiedTo !== null
-            ? `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; the original payload was copied to "${copiedTo}".`
-            : `Projects+: settings file is corrupted (${result.left.message}). Defaults restored, but the original payload could NOT be copied — do not change any setting if you want to recover it, because the next save rewrites data.json. See the console.`,
-          SETTINGS_CORRUPTED
-        ),
+        `Projects+: settings file is corrupted (${result.left.message}). Defaults restored; original payload backed up inside data.json under "__broken_backup".`,
         15000
       );
       // #185: the defaults must NOT be written back here — the file on disk is
@@ -1248,11 +618,6 @@ export default class ProjectsPlusPlugin extends Plugin {
     }
 
     this.migratedFromVersion = versionOnDisk(raw, DEFAULT_SETTINGS.version);
-    // #199: the file's own content is the starting point for telling "our write
-    // did not land" from "someone else replaced the file". Only set on the path
-    // where `raw` really is what is on disk — the corruption paths publish
-    // defaults, which the file does NOT hold.
-    this.confirmedOnDisk = canonical(raw);
     this.publishSettings(result.right);
   }
 

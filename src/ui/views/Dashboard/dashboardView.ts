@@ -13,10 +13,7 @@ import { get } from "svelte/store";
 import { app } from "src/lib/stores/obsidian";
 import { writeMigrationBackup } from "src/lib/settingsBackup";
 import { Notice } from "obsidian";
-import { noticeFor } from "src/lib/errors/errorText";
-
-/** #202 — the code this module raises. */
-const MIGRATION_BACKUP_FAILED = "PPP-403";
+import { i18n } from "src/lib/stores/i18n";
 
 /**
  * Deep copy of a persisted config. `structuredClone` is available in Electron;
@@ -130,7 +127,7 @@ export class DashboardView extends ProjectView {
         // Nothing to write through. The migration is already saved, so say it
         // rather than leaving the absence of a restore point invisible.
         console.error(
-          "[Projects+] dashboard config migrated without a restore point: no app instance"
+          "[obs-projects-plus] dashboard config migrated without a restore point: no app instance"
         );
       } else {
         void writeMigrationBackup({
@@ -140,7 +137,12 @@ export class DashboardView extends ProjectView {
           config: preMigrationConfig,
         }).then((path) => {
           if (path !== null) return;
-          new Notice(noticeFor(MIGRATION_BACKUP_FAILED));
+          new Notice(
+            get(i18n).t("errors.migrationBackupFailed", {
+              defaultValue:
+                "The dashboard configuration was migrated, but its restore point could not be written. See the console.",
+            })
+          );
         });
       }
     }
