@@ -1,6 +1,11 @@
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ViewApi } from "src/lib/viewApi";
-import type { FilterCondition, FilterDefinition, ProjectDefinition, ViewId } from "./settings/settings";
+import type {
+  FilterCondition,
+  FilterDefinition,
+  ProjectDefinition,
+  ViewId,
+} from "./settings/settings";
 
 export interface DataQueryResult {
   data: DataFrame;
@@ -22,7 +27,7 @@ export interface DataQueryResult {
 /**
  * ProjectViewProps provides various metadata for the views.
  */
- 
+
 export interface ProjectViewProps<T = Record<string, any>> {
   viewId: ViewId;
   project: ProjectDefinition;
@@ -49,7 +54,7 @@ export interface ProjectViewProps<T = Record<string, any>> {
  * that extends this one. Then you need to register it in
  * ProjectsView.getProjectViews().
  */
- 
+
 export abstract class ProjectView<T = Record<string, any>> {
   onData(result: DataQueryResult): void {}
   onOpen(props: ProjectViewProps<T>): void {}

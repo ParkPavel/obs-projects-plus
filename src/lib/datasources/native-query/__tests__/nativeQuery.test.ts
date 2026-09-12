@@ -39,9 +39,7 @@ const defaultPrefs: ProjectsPluginPreferences = {
   replaceObsidianProperties: false,
 };
 
-async function makeFs(
-  files: Record<string, string>
-): Promise<InMemFileSystem> {
+async function makeFs(files: Record<string, string>): Promise<InMemFileSystem> {
   const fs = new InMemFileSystem({});
   for (const [path, content] of Object.entries(files)) {
     await fs.create(path, content);
@@ -210,14 +208,44 @@ describe("executeNativeQuery — WHERE", () => {
 describe("applySort", () => {
   const baseFrame: DataFrame = {
     fields: [
-      { name: "name", type: DataFieldType.String, identifier: true, derived: true, repeated: false, typeConfig: {} },
-      { name: "score", type: DataFieldType.Number, identifier: false, derived: false, repeated: false, typeConfig: {} },
-      { name: "created", type: DataFieldType.Date, identifier: false, derived: false, repeated: false, typeConfig: {} },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        identifier: true,
+        derived: true,
+        repeated: false,
+        typeConfig: {},
+      },
+      {
+        name: "score",
+        type: DataFieldType.Number,
+        identifier: false,
+        derived: false,
+        repeated: false,
+        typeConfig: {},
+      },
+      {
+        name: "created",
+        type: DataFieldType.Date,
+        identifier: false,
+        derived: false,
+        repeated: false,
+        typeConfig: {},
+      },
     ],
     records: [
-      { id: "a.md", values: { name: "alpha", score: 2, created: new Date("2024-03-01") } },
-      { id: "b.md", values: { name: "beta", score: 1, created: new Date("2024-01-01") } },
-      { id: "c.md", values: { name: "gamma", score: 3, created: new Date("2024-02-01") } },
+      {
+        id: "a.md",
+        values: { name: "alpha", score: 2, created: new Date("2024-03-01") },
+      },
+      {
+        id: "b.md",
+        values: { name: "beta", score: 1, created: new Date("2024-01-01") },
+      },
+      {
+        id: "c.md",
+        values: { name: "gamma", score: 3, created: new Date("2024-02-01") },
+      },
     ],
   };
 
@@ -286,12 +314,20 @@ describe("applySort", () => {
       criteria: [{ field: "score", order: "asc", enabled: true }],
     };
     const ascSorted = applySort(sparseFrame, ascSort);
-    expect(ascSorted.records.map((r) => r.id)).toEqual(["c.md", "a.md", "b.md"]);
+    expect(ascSorted.records.map((r) => r.id)).toEqual([
+      "c.md",
+      "a.md",
+      "b.md",
+    ]);
     const descSort: SortDefinition = {
       criteria: [{ field: "score", order: "desc", enabled: true }],
     };
     const descSorted = applySort(sparseFrame, descSort);
-    expect(descSorted.records.map((r) => r.id)).toEqual(["a.md", "c.md", "b.md"]);
+    expect(descSorted.records.map((r) => r.id)).toEqual([
+      "a.md",
+      "c.md",
+      "b.md",
+    ]);
   });
 
   it("does not mutate the input frame", () => {
@@ -365,7 +401,10 @@ describe("executeNativeQuery — composition", () => {
       fileSystem: fs,
       preferences: defaultPrefs,
     });
-    expect(frame.records.map((r) => r.id)).toEqual(["Notes/a.md", "Notes/c.md"]);
+    expect(frame.records.map((r) => r.id)).toEqual([
+      "Notes/a.md",
+      "Notes/c.md",
+    ]);
   });
 
   it("treats limit=undefined as unlimited", async () => {

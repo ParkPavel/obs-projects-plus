@@ -1,4 +1,8 @@
-import { updateStep, toggleDisableStep, addFilterCondition } from "../pipelineSteps";
+import {
+  updateStep,
+  toggleDisableStep,
+  addFilterCondition,
+} from "../pipelineSteps";
 import type {
   TransformStep,
   TransformPipeline,
@@ -102,7 +106,13 @@ describe("pipelineSteps reducers on frozen input (#105)", () => {
 // only entry point for database-call unnest, so it needs its own coverage.
 describe("PipelineEditor — #121 unnest banner", () => {
   function field(name: string): DataField {
-    return { name, type: DataFieldType.Unknown, repeated: false, identifier: false, derived: false };
+    return {
+      name,
+      type: DataFieldType.Unknown,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    };
   }
 
   const fields = [field("title"), field("exercises"), field("tags")];
@@ -111,7 +121,14 @@ describe("PipelineEditor — #121 unnest banner", () => {
     return {
       fields,
       records: [
-        { id: "r1", values: { title: "Mon", exercises: [{ name: "Bench" }], tags: ["a", "b"] } },
+        {
+          id: "r1",
+          values: {
+            title: "Mon",
+            exercises: [{ name: "Bench" }],
+            tags: ["a", "b"],
+          },
+        },
       ],
     };
   }
@@ -124,9 +141,13 @@ describe("PipelineEditor — #121 unnest banner", () => {
       target,
       props: { pipeline, fields, source: source(), availableSources: [] },
     });
-    component.$on("apply", (e: CustomEvent<TransformPipeline>) => applied.push(e.detail));
+    component.$on("apply", (e: CustomEvent<TransformPipeline>) =>
+      applied.push(e.detail)
+    );
     const bannerButtons = () =>
-      Array.from(target.querySelectorAll(".ppp-pipeline-unnest-hint-btn")) as HTMLButtonElement[];
+      Array.from(
+        target.querySelectorAll(".ppp-pipeline-unnest-hint-btn")
+      ) as HTMLButtonElement[];
     return {
       component,
       applied,
@@ -165,8 +186,14 @@ describe("PipelineEditor — #121 unnest banner", () => {
   });
 
   test("clicking a banner button prepends an unnest step and applies after the debounce", async () => {
-    const m = mount({ steps: [{ type: "filter", conditions: { conjunction: "and", conditions: [] } }] });
-    const btn = m.bannerButtons().find((b) => b.textContent?.includes("exercises"));
+    const m = mount({
+      steps: [
+        { type: "filter", conditions: { conjunction: "and", conditions: [] } },
+      ],
+    });
+    const btn = m
+      .bannerButtons()
+      .find((b) => b.textContent?.includes("exercises"));
     expect(btn).toBeDefined();
 
     btn!.click();
@@ -187,14 +214,22 @@ describe("PipelineEditor — #121 unnest banner", () => {
 
   test("a field already unnested does not reappear in the banner after clicking another field", async () => {
     const m = mount({ steps: [{ type: "unnest", field: "tags" }] });
-    expect(m.bannerButtons().some((b) => b.textContent?.includes("tags"))).toBe(false);
-    const btn = m.bannerButtons().find((b) => b.textContent?.includes("exercises"));
+    expect(m.bannerButtons().some((b) => b.textContent?.includes("tags"))).toBe(
+      false
+    );
+    const btn = m
+      .bannerButtons()
+      .find((b) => b.textContent?.includes("exercises"));
     btn!.click();
     await Promise.resolve();
     jest.advanceTimersByTime(400);
     await Promise.resolve();
-    expect(m.bannerButtons().some((b) => b.textContent?.includes("exercises"))).toBe(false);
-    expect(m.bannerButtons().some((b) => b.textContent?.includes("tags"))).toBe(false);
+    expect(
+      m.bannerButtons().some((b) => b.textContent?.includes("exercises"))
+    ).toBe(false);
+    expect(m.bannerButtons().some((b) => b.textContent?.includes("tags"))).toBe(
+      false
+    );
     m.destroy();
   });
 });

@@ -30,7 +30,14 @@
  * and its numbers are not comparable with a rollup over the same field.
  */
 
-import { DataFieldType, type DataField, type DataFrame, type DataRecord, type DataValue, type Optional } from "src/lib/dataframe/dataframe";
+import {
+  DataFieldType,
+  type DataField,
+  type DataFrame,
+  type DataRecord,
+  type DataValue,
+  type Optional,
+} from "src/lib/dataframe/dataframe";
 import { extractWikilinks, stripToPath } from "src/lib/engine/wikilink";
 import type { RelationFieldConfig } from "src/settings/base/settings";
 
@@ -42,9 +49,15 @@ import type { RelationFieldConfig } from "src/settings/base/settings";
  */
 export type RelationDefinition = {
   readonly source: { readonly projectId: string; readonly fieldName: string };
-  readonly target: { readonly projectId: string; readonly displayField?: string };
+  readonly target: {
+    readonly projectId: string;
+    readonly displayField?: string;
+  };
   readonly storage: "wikilink";
-  readonly inverse?: { readonly fieldName: string; readonly createIfMissing: boolean };
+  readonly inverse?: {
+    readonly fieldName: string;
+    readonly createIfMissing: boolean;
+  };
 };
 
 /**
@@ -83,7 +96,11 @@ export type RelationTargetIndex = {
 };
 
 /** Pure diagnostic result for the legacy Dashboard Selection Bus setting. */
-export type LegacyLinkedSelectionStatus = "valid" | "missing-relation" | "invalid-field" | "wrong-target-project";
+export type LegacyLinkedSelectionStatus =
+  | "valid"
+  | "missing-relation"
+  | "invalid-field"
+  | "wrong-target-project";
 
 /** Diagnosis plus, when it could be built, the relation the setting refers to. */
 export type LegacyLinkedSelectionValidation = {
@@ -107,10 +124,15 @@ export function validateLegacyLinkedSelection(
   const fieldName = linkedSelection?.relationField?.trim();
   if (!fieldName || !masterProjectId) return { status: "missing-relation" };
   const field = fields.find((candidate) => candidate.name === fieldName);
-  if (!field || field.type !== DataFieldType.Relation) return { status: "invalid-field" };
+  if (!field || field.type !== DataFieldType.Relation)
+    return { status: "invalid-field" };
   const config = field.typeConfig?.relation as RelationFieldConfig | undefined;
   if (!config) return { status: "missing-relation" };
-  const relation = adaptRelationFieldConfig(receivingProjectId, fieldName, config);
+  const relation = adaptRelationFieldConfig(
+    receivingProjectId,
+    fieldName,
+    config
+  );
   if (relation.target.projectId !== masterProjectId) {
     return { status: "wrong-target-project", relation };
   }
@@ -134,7 +156,12 @@ export function adaptRelationFieldConfig(
       : { projectId: config.targetProjectId },
     storage: "wikilink",
     ...(config.inverseFieldName
-      ? { inverse: { fieldName: config.inverseFieldName, createIfMissing: false } }
+      ? {
+          inverse: {
+            fieldName: config.inverseFieldName,
+            createIfMissing: false,
+          },
+        }
       : {}),
   };
 }
@@ -161,7 +188,8 @@ export function buildRelationTargetIndex(
     add(basenames, basenameKey(record.id), record);
     for (const field of displayFields) {
       const value = record.values[field];
-      if (typeof value === "string" && value.trim()) add(displays, value.trim().toLowerCase(), record);
+      if (typeof value === "string" && value.trim())
+        add(displays, value.trim().toLowerCase(), record);
     }
   }
   return { recordsById, paths, basenames, displays };
@@ -182,16 +210,27 @@ export function resolveRelationValue(
 ): RelationResolution[] {
   return extractRawLinks(value).map(({ rawLink, canonicalPath }) => {
     const pathMatches = index.paths.get(pathKey(canonicalPath)) ?? [];
-    const basenameMatches = pathMatches.length > 0
-      ? pathMatches
-      : index.basenames.get(basenameKey(canonicalPath)) ?? [];
-    const matches = basenameMatches.length > 0
-      ? basenameMatches
-      : index.displays.get(canonicalPath.toLowerCase()) ?? [];
+    const basenameMatches =
+      pathMatches.length > 0
+        ? pathMatches
+        : (index.basenames.get(basenameKey(canonicalPath)) ?? []);
+    const matches =
+      basenameMatches.length > 0
+        ? basenameMatches
+        : (index.displays.get(canonicalPath.toLowerCase()) ?? []);
     if (matches.length === 1) {
-      return { rawLink, canonicalPath, status: "resolved", targetRecordId: matches[0]!.id };
+      return {
+        rawLink,
+        canonicalPath,
+        status: "resolved",
+        targetRecordId: matches[0]!.id,
+      };
     }
-    return { rawLink, canonicalPath, status: matches.length === 0 ? "unmatched" : "ambiguous" };
+    return {
+      rawLink,
+      canonicalPath,
+      status: matches.length === 0 ? "unmatched" : "ambiguous",
+    };
   });
 }
 
@@ -205,7 +244,8 @@ export function resolvedRecords(
   index: RelationTargetIndex
 ): DataRecord[] {
   return resolutions.flatMap((resolution) => {
-    if (resolution.status !== "resolved" || !resolution.targetRecordId) return [];
+    if (resolution.status !== "resolved" || !resolution.targetRecordId)
+      return [];
     const record = index.recordsById.get(resolution.targetRecordId);
     return record ? [record] : [];
   });
@@ -216,20 +256,30 @@ export function normalizeRelationValue(value: Optional<DataValue>): string[] {
   return extractRawLinks(value).map((link) => link.canonicalPath);
 }
 
-function extractRawLinks(value: Optional<DataValue>): Array<{ rawLink: string; canonicalPath: string }> {
+function extractRawLinks(
+  value: Optional<DataValue>
+): Array<{ rawLink: string; canonicalPath: string }> {
   if (value === null || value === undefined) return [];
-  if (Array.isArray(value)) return value.flatMap((item) => extractRawLinks(item));
+  if (Array.isArray(value))
+    return value.flatMap((item) => extractRawLinks(item));
   if (typeof value !== "string") return [];
   const wikilinks = extractWikilinks(value, 1000);
   if (wikilinks.length > 0) {
     const rawTokens = value.match(/\[\[[^\]]+\]\]/g) ?? [];
-    return wikilinks.map((canonicalPath, index) => ({ rawLink: rawTokens[index] ?? canonicalPath, canonicalPath }));
+    return wikilinks.map((canonicalPath, index) => ({
+      rawLink: rawTokens[index] ?? canonicalPath,
+      canonicalPath,
+    }));
   }
   const canonicalPath = stripToPath(value);
   return canonicalPath ? [{ rawLink: value, canonicalPath }] : [];
 }
 
-function add(map: Map<string, DataRecord[]>, key: string, record: DataRecord): void {
+function add(
+  map: Map<string, DataRecord[]>,
+  key: string,
+  record: DataRecord
+): void {
   if (!key) return;
   const existing = map.get(key);
   if (existing) existing.push(record);

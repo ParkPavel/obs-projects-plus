@@ -26,7 +26,9 @@ export function duplicateRecord(
   fields: DataField[],
   api: ViewApi
 ): void {
-  const copy = createDataRecord(`${recordBaseName(record)} (copy)`, project, { ...record.values });
+  const copy = createDataRecord(`${recordBaseName(record)} (copy)`, project, {
+    ...record.values,
+  });
   api.addRecord(copy, fields, "");
 }
 
@@ -109,13 +111,20 @@ export function buildRowMenuEntries(opts: {
   /** Selection Bus driver entry (omitted when the canvas has no store). */
   selectionEntry?: { driving: boolean; onToggle: () => void } | undefined;
 }): ContextMenuEntry[] {
-  const { record, project, fields, api, app, readonly, t, selectionEntry } = opts;
+  const { record, project, fields, api, app, readonly, t, selectionEntry } =
+    opts;
   const selectionEntries: ContextMenuEntry[] = selectionEntry
     ? [
         {
           title: selectionEntry.driving
-            ? t("views.dashboard.table-v2.unfilter-canvas", "Stop filtering canvas by this row")
-            : t("views.dashboard.table-v2.filter-canvas", "Filter linked blocks by this row"),
+            ? t(
+                "views.dashboard.table-v2.unfilter-canvas",
+                "Stop filtering canvas by this row"
+              )
+            : t(
+                "views.dashboard.table-v2.filter-canvas",
+                "Filter linked blocks by this row"
+              ),
           icon: selectionEntry.driving ? "filter-x" : "filter",
           onClick: selectionEntry.onToggle,
         },
@@ -127,12 +136,16 @@ export function buildRowMenuEntries(opts: {
     {
       title: t("views.dashboard.table-v2.open", "Open note"),
       icon: "arrow-up-right",
-      onClick: () => { if (app) void openRecord({ id: record.id }, PLAIN_MODE, { app }); },
+      onClick: () => {
+        if (app) void openRecord({ id: record.id }, PLAIN_MODE, { app });
+      },
     },
     {
       title: t("views.dashboard.table-v2.open-new-tab", "Open in new tab"),
       icon: "external-link",
-      onClick: () => { if (app) void openRecord({ id: record.id }, "tab", { app }); },
+      onClick: () => {
+        if (app) void openRecord({ id: record.id }, "tab", { app });
+      },
     },
     // #189 — the peek's discoverable entrance. `alt`+activation reaches the
     // same mode, but a modifier nobody is told about is not a feature, and the
@@ -142,7 +155,10 @@ export function buildRowMenuEntries(opts: {
     {
       title: t("views.dashboard.table-v2.peek", "Show fields"),
       icon: "panel-right-open",
-      onClick: () => { if (app) void openRecord({ id: record.id, record, fields }, "peek", { app }); },
+      onClick: () => {
+        if (app)
+          void openRecord({ id: record.id, record, fields }, "peek", { app });
+      },
     },
     // The separator belongs to the group it introduces, so a read-only menu
     // ends on its last real entry instead of a rule with nothing under it.
@@ -154,7 +170,9 @@ export function buildRowMenuEntries(opts: {
             title: t("views.dashboard.table-v2.duplicate", "Duplicate"),
             icon: "copy",
             disabled: !project,
-            onClick: () => { if (project) duplicateRecord(record, project, fields, api); },
+            onClick: () => {
+              if (project) duplicateRecord(record, project, fields, api);
+            },
           },
           {
             title: t("views.dashboard.table-v2.delete", "Delete note"),

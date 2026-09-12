@@ -42,12 +42,11 @@ export abstract class IFile {
    */
   async processFrontMatter(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _fn: (frontmatter: Record<string, unknown>) => void,
+    _fn: (frontmatter: Record<string, unknown>) => void
   ): Promise<boolean> {
     return false;
   }
 
-   
   async readValues(): Promise<Record<string, any>> {
     const data = await this.read();
 
@@ -56,7 +55,6 @@ export abstract class IFile {
     return either.isRight(values) ? values.right : {};
   }
 
-   
   async writeValues(values: Record<string, any>): Promise<void> {
     const data = await this.read();
 

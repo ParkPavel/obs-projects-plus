@@ -42,10 +42,19 @@ export type RenderContextInput = Omit<
 };
 
 /** Fold the host's measurements into the context the builders read. */
-export function buildRenderContext(input: RenderContextInput): WidgetRenderContext {
+export function buildRenderContext(
+  input: RenderContextInput
+): WidgetRenderContext {
   const {
-    widget, dbCall, project, tableConfig, isPrimaryDataTable,
-    pipelineStepCount, pipelineInputRowCount, scopeApplied, ...passThrough
+    widget,
+    dbCall,
+    project,
+    tableConfig,
+    isPrimaryDataTable,
+    pipelineStepCount,
+    pipelineInputRowCount,
+    scopeApplied,
+    ...passThrough
   } = input;
   return {
     ...passThrough,
@@ -53,7 +62,7 @@ export function buildRenderContext(input: RenderContextInput): WidgetRenderConte
     project,
     effectiveTableConfig: isPrimaryDataTable
       ? tableConfig
-      : (widget.config as { table?: DataTableConfig })?.table ?? tableConfig,
+      : ((widget.config as { table?: DataTableConfig })?.table ?? tableConfig),
     // An external source is read whole: the host's transform pipeline never ran
     // on it, so reporting a step count would describe work that did not happen.
     pipelineStepCount: dbCall.isExternal ? 0 : pipelineStepCount,

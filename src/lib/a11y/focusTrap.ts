@@ -43,15 +43,17 @@ const FOCUSABLE = [
 
 /** Focusable descendants, in document order, skipping anything hidden. */
 export function focusableWithin(node: HTMLElement): HTMLElement[] {
-  return Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => {
-    if (el.hasAttribute("inert")) return false;
-    if (el.closest("[inert]")) return false;
-    // `offsetParent` is null for `display: none` and for a `position: fixed`
-    // element, so it cannot be the test on its own — these panels are fixed.
-    const style = el.ownerDocument.defaultView?.getComputedStyle(el);
-    if (!style) return true;
-    return style.visibility !== "hidden" && style.display !== "none";
-  });
+  return Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (el) => {
+      if (el.hasAttribute("inert")) return false;
+      if (el.closest("[inert]")) return false;
+      // `offsetParent` is null for `display: none` and for a `position: fixed`
+      // element, so it cannot be the test on its own — these panels are fixed.
+      const style = el.ownerDocument.defaultView?.getComputedStyle(el);
+      if (!style) return true;
+      return style.visibility !== "hidden" && style.display !== "none";
+    }
+  );
 }
 
 export interface FocusTrapOptions {
@@ -116,7 +118,8 @@ export function focusTrap(node: HTMLElement, options: FocusTrapOptions = {}) {
     // Otherwise the caller has moved it somewhere on purpose and stealing it
     // would be the same rudeness in the opposite direction.
     const active = node.ownerDocument.activeElement;
-    const stillInside = active === node || (active instanceof Node && node.contains(active));
+    const stillInside =
+      active === node || (active instanceof Node && node.contains(active));
     if (stillInside && back instanceof HTMLElement && back.isConnected) {
       back.focus();
     }

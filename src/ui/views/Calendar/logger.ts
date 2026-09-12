@@ -1,6 +1,6 @@
 /**
  * Calendar Logger (v3.0.0)
- * 
+ *
  * Centralized logging for Calendar module with:
  * - Log levels (debug, info, warn, error)
  * - Production mode detection (auto-disable debug logs)
@@ -23,7 +23,7 @@ interface LogContext {
 }
 
 // Production detection - disable verbose logs in production
-const isProduction = process.env['NODE_ENV'] === 'production';
+const isProduction = process.env["NODE_ENV"] === "production";
 
 // Default log level based on environment
 let currentLogLevel: LogLevel = isProduction ? LogLevel.WARN : LogLevel.DEBUG;
@@ -46,22 +46,19 @@ export function getLogLevel(): LogLevel {
  * Format log message with context
  */
 function formatMessage(message: string, context?: LogContext): string {
-  // #202 step 6: one product prefix across the tree, so a user can search the
-  // console for an event. The area word stays after it — it carried meaning
-  // that flattening to a single token would throw away.
-  const parts = ['[Projects+] Calendar'];
-  
+  const parts = ["[Calendar]"];
+
   if (context?.component) {
     parts.push(`[${context.component}]`);
   }
-  
+
   if (context?.action) {
     parts.push(`(${context.action})`);
   }
-  
+
   parts.push(message);
-  
-  return parts.join(' ');
+
+  return parts.join(" ");
 }
 
 /**
@@ -74,7 +71,7 @@ export const calendarLogger = {
    */
   debug(message: string, context?: LogContext): void {
     if (currentLogLevel <= LogLevel.DEBUG) {
-      console.debug(formatMessage(message, context), context?.data ?? '');
+      console.debug(formatMessage(message, context), context?.data ?? "");
     }
   },
 
@@ -84,7 +81,7 @@ export const calendarLogger = {
   info(message: string, context?: LogContext): void {
     if (currentLogLevel <= LogLevel.INFO) {
       // Using console.debug for info level (console.log/info not recommended per Obsidian guidelines)
-      console.debug(formatMessage(message, context), context?.data ?? '');
+      console.debug(formatMessage(message, context), context?.data ?? "");
     }
   },
 
@@ -93,7 +90,7 @@ export const calendarLogger = {
    */
   warn(message: string, context?: LogContext): void {
     if (currentLogLevel <= LogLevel.WARN) {
-      console.warn(formatMessage(message, context), context?.data ?? '');
+      console.warn(formatMessage(message, context), context?.data ?? "");
     }
   },
 
@@ -102,7 +99,11 @@ export const calendarLogger = {
    */
   error(message: string, error?: unknown, context?: LogContext): void {
     if (currentLogLevel <= LogLevel.ERROR) {
-      console.error(formatMessage(message, context), error ?? '', context?.data ?? '');
+      console.error(
+        formatMessage(message, context),
+        error ?? "",
+        context?.data ?? ""
+      );
     }
   },
 
@@ -114,7 +115,7 @@ export const calendarLogger = {
     if (currentLogLevel > LogLevel.DEBUG) {
       return () => {}; // No-op in production
     }
-    
+
     const start = performance.now();
     return () => {
       const duration = performance.now() - start;
@@ -144,16 +145,36 @@ export const calendarLogger = {
 };
 
 // Convenience aliases for common components
-export const logCalendarView = (message: string, data?: Record<string, unknown>) =>
-  calendarLogger.debug(message, data ? { component: 'CalendarView', data } : { component: 'CalendarView' });
+export const logCalendarView = (
+  message: string,
+  data?: Record<string, unknown>
+) =>
+  calendarLogger.debug(
+    message,
+    data ? { component: "CalendarView", data } : { component: "CalendarView" }
+  );
 
 export const logProcessor = (message: string, data?: Record<string, unknown>) =>
-  calendarLogger.debug(message, data ? { component: 'Processor', data } : { component: 'Processor' });
+  calendarLogger.debug(
+    message,
+    data ? { component: "Processor", data } : { component: "Processor" }
+  );
 
 export const logTimeline = (message: string, data?: Record<string, unknown>) =>
-  calendarLogger.debug(message, data ? { component: 'Timeline', data } : { component: 'Timeline' });
+  calendarLogger.debug(
+    message,
+    data ? { component: "Timeline", data } : { component: "Timeline" }
+  );
 
-export const logInfiniteScroll = (message: string, data?: Record<string, unknown>) =>
-  calendarLogger.debug(message, data ? { component: 'InfiniteScroll', data } : { component: 'InfiniteScroll' });
+export const logInfiniteScroll = (
+  message: string,
+  data?: Record<string, unknown>
+) =>
+  calendarLogger.debug(
+    message,
+    data
+      ? { component: "InfiniteScroll", data }
+      : { component: "InfiniteScroll" }
+  );
 
 export default calendarLogger;

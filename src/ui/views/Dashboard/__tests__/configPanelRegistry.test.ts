@@ -8,9 +8,27 @@ import { isRetiredLegacyType } from "../widgets/legacyMigration";
 import type { WidgetType } from "../types";
 
 const mkFields = (): DataField[] => [
-  { name: "status", type: DataFieldType.String, repeated: false, derived: false, identifier: false },
-  { name: "estimate", type: DataFieldType.Number, repeated: false, derived: false, identifier: false },
-  { name: "completed", type: DataFieldType.Boolean, repeated: false, derived: false, identifier: false },
+  {
+    name: "status",
+    type: DataFieldType.String,
+    repeated: false,
+    derived: false,
+    identifier: false,
+  },
+  {
+    name: "estimate",
+    type: DataFieldType.Number,
+    repeated: false,
+    derived: false,
+    identifier: false,
+  },
+  {
+    name: "completed",
+    type: DataFieldType.Boolean,
+    repeated: false,
+    derived: false,
+    identifier: false,
+  },
 ];
 
 // #120: the registry is deliberately partial — retired types own no panel and

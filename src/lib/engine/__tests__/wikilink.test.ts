@@ -25,10 +25,15 @@ describe("wikilink — kernel", () => {
       expect(parseWikilink("[[Foo]]")).toEqual({ path: "Foo" });
     });
     test("with path segments", () => {
-      expect(parseWikilink("[[Projects/Acme]]")).toEqual({ path: "Projects/Acme" });
+      expect(parseWikilink("[[Projects/Acme]]")).toEqual({
+        path: "Projects/Acme",
+      });
     });
     test("with alias", () => {
-      expect(parseWikilink("[[Foo/Bar|Bar]]")).toEqual({ path: "Foo/Bar", alias: "Bar" });
+      expect(parseWikilink("[[Foo/Bar|Bar]]")).toEqual({
+        path: "Foo/Bar",
+        alias: "Bar",
+      });
     });
     test("strips outer whitespace", () => {
       expect(parseWikilink("  [[X]]  ")).toEqual({ path: "X" });
@@ -103,7 +108,11 @@ describe("wikilink — kernel", () => {
       expect(extractWikilinks("see [[Foo]]")).toEqual(["Foo"]);
     });
     test("multiple in order", () => {
-      expect(extractWikilinks("[[A]] then [[B]] and [[C]]")).toEqual(["A", "B", "C"]);
+      expect(extractWikilinks("[[A]] then [[B]] and [[C]]")).toEqual([
+        "A",
+        "B",
+        "C",
+      ]);
     });
     test("with alias drops alias", () => {
       expect(extractWikilinks("[[Foo|Display]]")).toEqual(["Foo"]);

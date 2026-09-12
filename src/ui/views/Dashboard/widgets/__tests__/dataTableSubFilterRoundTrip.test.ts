@@ -54,7 +54,11 @@ describe("#112 F1 — data-table subFilter round-trip", () => {
 
   test("persist folds subFilter AND table onto widget.config for the non-primary path", () => {
     const detail = tableChangeDetail({ properties: ["name"] }, SUB_FILTER);
-    const next = persistDataTableSubFilter(detail, { existing: 1 }, { table: { properties: ["name"] } });
+    const next = persistDataTableSubFilter(
+      detail,
+      { existing: 1 },
+      { table: { properties: ["name"] } }
+    );
     expect(next).toEqual({
       existing: 1,
       table: { properties: ["name"] },
@@ -64,16 +68,25 @@ describe("#112 F1 — data-table subFilter round-trip", () => {
 
   test("persist removes a stale subFilter when the change clears it", () => {
     const detail = tableChangeDetail({ properties: ["name"] });
-    const next = persistDataTableSubFilter(detail, { existing: 1, subFilter: SUB_FILTER });
+    const next = persistDataTableSubFilter(detail, {
+      existing: 1,
+      subFilter: SUB_FILTER,
+    });
     expect(next).toEqual({ existing: 1 });
     expect(next["subFilter"]).toBeUndefined();
   });
 
   test("restore re-injects widget.config.subFilter into the DatabaseCallBlock config", () => {
-    const config = restoreDataTableConfig({ properties: ["name"] }, { subFilter: SUB_FILTER });
+    const config = restoreDataTableConfig(
+      { properties: ["name"] },
+      { subFilter: SUB_FILTER }
+    );
     expect(config["subFilter"]).toEqual(SUB_FILTER);
     // The single table tab is still present alongside the restored subFilter.
-    const tabs = config["viewTabs"] as Array<{ viewType: string; config: unknown }>;
+    const tabs = config["viewTabs"] as Array<{
+      viewType: string;
+      config: unknown;
+    }>;
     expect(tabs).toHaveLength(1);
     expect(tabs[0]!.viewType).toBe("table");
     expect(tabs[0]!.config).toEqual({ properties: ["name"] });
@@ -93,7 +106,10 @@ describe("#112 F1 — data-table subFilter round-trip", () => {
     const unwrapped = unwrapDataTableConfigChange(detail);
     if (unwrapped.kind !== "table") throw new Error("expected table");
     // 4. Re-props through the restore helper reunites table + subFilter.
-    const restored = restoreDataTableConfig(unwrapped.tableConfig, persistedConfig);
+    const restored = restoreDataTableConfig(
+      unwrapped.tableConfig,
+      persistedConfig
+    );
     expect(restored["subFilter"]).toEqual(SUB_FILTER);
     const tabs = restored["viewTabs"] as Array<{ config: unknown }>;
     expect(tabs[0]!.config).toEqual({ properties: ["name"] });

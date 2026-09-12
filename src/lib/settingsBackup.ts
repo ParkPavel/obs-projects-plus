@@ -68,8 +68,9 @@ export async function countMigrationBackups(
   const prefix = `${BACKUP_PREFIX}${backupKey(projectId, viewId)}-`;
   try {
     const listing = await app.vault.adapter.list(dir);
-    return listing.files.filter((file) => file.slice(dir.length + 1).startsWith(prefix))
-      .length;
+    return listing.files.filter((file) =>
+      file.slice(dir.length + 1).startsWith(prefix)
+    ).length;
   } catch {
     // Unreadable directory: report nothing rather than guessing. The write below
     // is attempted regardless, and a failed write never blocks a migration.
@@ -117,7 +118,7 @@ export async function writeMigrationBackup(args: {
     await app.vault.adapter.write(target, payload);
     return target;
   } catch (error) {
-    console.error("[Projects+] migration backup failed", error);
+    console.error("[obs-projects-plus] migration backup failed", error);
     return null;
   }
 }

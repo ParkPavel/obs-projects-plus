@@ -19,7 +19,9 @@ describe("RollupCellRenderer — percent group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 42, fn: "percent_not_empty" },
     });
-    const bar = container.querySelector("[data-testid='ppp-rollup-bar']") as HTMLElement | null;
+    const bar = container.querySelector(
+      "[data-testid='ppp-rollup-bar']"
+    ) as HTMLElement | null;
     expect(bar).not.toBeNull();
     expect(bar!.getAttribute("style")).toContain("width: 42%");
     expect(container.textContent).toContain("42%");
@@ -29,7 +31,9 @@ describe("RollupCellRenderer — percent group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 150, fn: "percent_empty" },
     });
-    const bar = container.querySelector("[data-testid='ppp-rollup-bar']") as HTMLElement | null;
+    const bar = container.querySelector(
+      "[data-testid='ppp-rollup-bar']"
+    ) as HTMLElement | null;
     expect(bar!.getAttribute("style")).toContain("width: 100%");
     expect(container.textContent).toContain("100%");
   });
@@ -38,7 +42,9 @@ describe("RollupCellRenderer — percent group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 0.37, fn: "percent_true" },
     });
-    const bar = container.querySelector("[data-testid='ppp-rollup-bar']") as HTMLElement | null;
+    const bar = container.querySelector(
+      "[data-testid='ppp-rollup-bar']"
+    ) as HTMLElement | null;
     expect(bar!.getAttribute("style")).toContain("width: 37%");
   });
 
@@ -46,7 +52,9 @@ describe("RollupCellRenderer — percent group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: "25%", fn: "percent_not_empty" },
     });
-    const bar = container.querySelector("[data-testid='ppp-rollup-bar']") as HTMLElement | null;
+    const bar = container.querySelector(
+      "[data-testid='ppp-rollup-bar']"
+    ) as HTMLElement | null;
     expect(bar!.getAttribute("style")).toContain("width: 25%");
   });
 });
@@ -106,14 +114,18 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 3.14159, fn: "avg" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("3.14");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe(
+      "3.14"
+    );
   });
 
   test("respects custom precision", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 3.14159, fn: "avg", precision: 4 },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("3.1416");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe(
+      "3.1416"
+    );
   });
 
   test("renders empty placeholder for null", () => {
@@ -127,14 +139,18 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: new Date("2024-03-15T12:00:00Z"), fn: "min" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2024-03-15");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe(
+      "2024-03-15"
+    );
   });
 
   test("supports custom emptyPlaceholder", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: null, fn: "sum", emptyPlaceholder: "(none)" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("(none)");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe(
+      "(none)"
+    );
   });
 });
 
@@ -143,7 +159,9 @@ describe("RollupCellRenderer — modeId resolution", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 60, modeId: "percent_per_group", fn: "count" },
     });
-    expect(container.querySelector("[data-testid='ppp-rollup-bar']")).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='ppp-rollup-bar']")
+    ).not.toBeNull();
   });
 
   test("modeId='show_original' renders chips even with fn='count'", () => {
@@ -156,7 +174,11 @@ describe("RollupCellRenderer — modeId resolution", () => {
   test("unknown modeId falls back to fn-based resolution", () => {
     const { container } = render(RollupCellRenderer, {
       // Cast through unknown — testing the runtime fallback for corrupted saves.
-      props: { value: 5, modeId: "unknown_mode" as unknown as never, fn: "count_values" },
+      props: {
+        value: 5,
+        modeId: "unknown_mode" as unknown as never,
+        fn: "count_values",
+      },
     });
     expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("5");
   });

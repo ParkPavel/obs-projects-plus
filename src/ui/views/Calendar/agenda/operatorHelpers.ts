@@ -1,14 +1,14 @@
 /**
  * Operator Helpers (v3.1.0)
- * 
+ *
  * Helper functions for working with filter operators:
  * - Get available operators for field types
  * - Determine if operator needs a value
  * - Check if operator accepts multiple values
  */
 
-import { DataFieldType } from 'src/lib/dataframe/dataframe';
-import type { AgendaFilterOperator } from 'src/settings/v3/settings';
+import { DataFieldType } from "src/lib/dataframe/dataframe";
+import type { AgendaFilterOperator } from "src/settings/v3/settings";
 
 /**
  * Get available operators for a specific field type
@@ -16,71 +16,60 @@ import type { AgendaFilterOperator } from 'src/settings/v3/settings';
 export function getOperatorsForFieldType(
   fieldType: DataFieldType
 ): AgendaFilterOperator[] {
-  const base: AgendaFilterOperator[] = ['is-empty', 'is-not-empty'];
-  
+  const base: AgendaFilterOperator[] = ["is-empty", "is-not-empty"];
+
   switch (fieldType) {
     case DataFieldType.String:
       return [
         ...base,
-        'is',
-        'is-not',
-        'contains',
-        'not-contains',
-        'starts-with',
-        'ends-with',
-        'regex',
+        "is",
+        "is-not",
+        "contains",
+        "not-contains",
+        "starts-with",
+        "ends-with",
+        "regex",
       ];
-      
+
     case DataFieldType.Number:
-      return [
-        ...base,
-        'eq',
-        'neq',
-        'lt',
-        'gt',
-        'lte',
-        'gte',
-      ];
-      
+      return [...base, "eq", "neq", "lt", "gt", "lte", "gte"];
+
     case DataFieldType.Boolean:
-      return [
-        'is-checked',
-        'is-not-checked',
-      ];
-      
+      return ["is-checked", "is-not-checked"];
+
     case DataFieldType.Date:
       return [
         ...base,
-        'is-on',
-        'is-not-on',
-        'is-before',
-        'is-after',
-        'is-on-and-before',
-        'is-on-and-after',
-        'is-today',
-        'is-this-week',
-        'is-this-month',
-        'is-this-quarter',
-        'is-this-year',
-        'is-past-week',
-        'is-past-month',
-        'is-past-year',
-        'is-next-week',
-        'is-next-month',
-        'is-next-year',
-        'is-last-n-days',
-        'is-next-n-days',
-        'is-overdue',
-        'is-upcoming',
+        "is-on",
+        "is-not-on",
+        "is-before",
+        "is-after",
+        "is-on-and-before",
+        "is-on-and-after",
+        "is-today",
+        "is-this-week",
+        "is-this-month",
+        "is-this-quarter",
+        "is-this-year",
+        "is-past-week",
+        "is-past-month",
+        "is-past-year",
+        "is-next-week",
+        "is-next-month",
+        "is-next-year",
+        "is-last-n-days",
+        "is-next-n-days",
+        "is-overdue",
+        "is-upcoming",
       ];
-      
+
     case DataFieldType.List:
       return [
         ...base,
-        'has-any-of',
-        'has-all-of',
-        'has-none-of',
-        'has-keyword',
+        "has-any-of",
+        "has-all-of",
+        "has-none-of",
+        "has-keyword",
       ];
 
     // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.5a — Select/Status/
@@ -89,48 +78,22 @@ export function getOperatorsForFieldType(
     // Stage A (that is Stage B work — full Field-Types UI).
     case DataFieldType.Select:
     case DataFieldType.Status:
-      return [
-        ...base,
-        'is',
-        'is-not',
-      ];
+      return [...base, "is", "is-not"];
 
     case DataFieldType.Relation:
-      return [
-        ...base,
-        'is',
-        'is-not',
-        'contains',
-        'not-contains',
-      ];
+      return [...base, "is", "is-not", "contains", "not-contains"];
 
     case DataFieldType.Formula:
       // Formula values surface as their computed runtime type (string / number
       // / boolean / date). Until Stage B specialises this further, expose the
       // text-style operators that work on stringified output.
-      return [
-        ...base,
-        'is',
-        'is-not',
-        'contains',
-        'not-contains',
-      ];
+      return [...base, "is", "is-not", "contains", "not-contains"];
 
     case DataFieldType.Rollup:
       // Rollup values are most commonly numeric (sum, count, avg). Stage A
       // exposes numeric operators; non-numeric rollup output (e.g. concat)
       // can still be matched by `is`/`is-not`.
-      return [
-        ...base,
-        'is',
-        'is-not',
-        'eq',
-        'neq',
-        'lt',
-        'gt',
-        'lte',
-        'gte',
-      ];
+      return [...base, "is", "is-not", "eq", "neq", "lt", "gt", "lte", "gte"];
 
     default:
       return base;
@@ -143,23 +106,23 @@ export function getOperatorsForFieldType(
  */
 export function operatorNeedsValue(operator: AgendaFilterOperator): boolean {
   const unaryOps: AgendaFilterOperator[] = [
-    'is-empty',
-    'is-not-empty',
-    'is-checked',
-    'is-not-checked',
-    'is-today',
-    'is-this-week',
-    'is-this-month',
-    'is-this-quarter',
-    'is-this-year',
-    'is-past-week',
-    'is-past-month',
-    'is-past-year',
-    'is-next-week',
-    'is-next-month',
-    'is-next-year',
-    'is-overdue',
-    'is-upcoming',
+    "is-empty",
+    "is-not-empty",
+    "is-checked",
+    "is-not-checked",
+    "is-today",
+    "is-this-week",
+    "is-this-month",
+    "is-this-quarter",
+    "is-this-year",
+    "is-past-week",
+    "is-past-month",
+    "is-past-year",
+    "is-next-week",
+    "is-next-month",
+    "is-next-year",
+    "is-overdue",
+    "is-upcoming",
   ];
 
   return !unaryOps.includes(operator);
@@ -169,35 +132,37 @@ export function operatorNeedsValue(operator: AgendaFilterOperator): boolean {
  * Check if operator works with multiple values (for tags/lists)
  */
 export function operatorIsMultiValue(operator: AgendaFilterOperator): boolean {
-  return ['has-any-of', 'has-all-of', 'has-none-of'].includes(operator);
+  return ["has-any-of", "has-all-of", "has-none-of"].includes(operator);
 }
 
 /**
  * Check if operator is for date fields
  */
-export function operatorIsDateOperator(operator: AgendaFilterOperator): boolean {
+export function operatorIsDateOperator(
+  operator: AgendaFilterOperator
+): boolean {
   const dateOps: AgendaFilterOperator[] = [
-    'is-on',
-    'is-not-on',
-    'is-before',
-    'is-after',
-    'is-on-and-before',
-    'is-on-and-after',
-    'is-today',
-    'is-this-week',
-    'is-this-month',
-    'is-this-quarter',
-    'is-this-year',
-    'is-past-week',
-    'is-past-month',
-    'is-past-year',
-    'is-next-week',
-    'is-next-month',
-    'is-next-year',
-    'is-last-n-days',
-    'is-next-n-days',
-    'is-overdue',
-    'is-upcoming',
+    "is-on",
+    "is-not-on",
+    "is-before",
+    "is-after",
+    "is-on-and-before",
+    "is-on-and-after",
+    "is-today",
+    "is-this-week",
+    "is-this-month",
+    "is-this-quarter",
+    "is-this-year",
+    "is-past-week",
+    "is-past-month",
+    "is-past-year",
+    "is-next-week",
+    "is-next-month",
+    "is-next-year",
+    "is-last-n-days",
+    "is-next-n-days",
+    "is-overdue",
+    "is-upcoming",
   ];
 
   return dateOps.includes(operator);
@@ -215,49 +180,49 @@ export function getOperatorI18nKey(operator: AgendaFilterOperator): string {
  */
 export function getOperatorDescription(operator: AgendaFilterOperator): string {
   const descriptions: Record<AgendaFilterOperator, string> = {
-    'is-empty': 'Field has no value',
-    'is-not-empty': 'Field has a value',
-    'is': 'Exact match',
-    'is-not': 'Does not match',
-    'contains': 'Contains text',
-    'not-contains': 'Does not contain text',
-    'starts-with': 'Starts with text',
-    'ends-with': 'Ends with text',
-    'regex': 'Matches regular expression',
-    'eq': 'Equal to',
-    'neq': 'Not equal to',
-    'lt': 'Less than',
-    'gt': 'Greater than',
-    'lte': 'Less than or equal to',
-    'gte': 'Greater than or equal to',
-    'is-checked': 'Checkbox is checked',
-    'is-not-checked': 'Checkbox is not checked',
-    'is-on': 'Date is exactly',
-    'is-not-on': 'Date is not',
-    'is-before': 'Date is before',
-    'is-after': 'Date is after',
-    'is-on-and-before': 'Date is on or before',
-    'is-on-and-after': 'Date is on or after',
-    'is-today': 'Date is today (relative to selected date)',
-    'is-this-week': 'Date is this week',
-    'is-this-month': 'Date is this month',
-    'is-this-quarter': 'Date is this quarter',
-    'is-this-year': 'Date is this year',
-    'is-past-week': 'Date is in the past 7 days',
-    'is-past-month': 'Date is in the past month',
-    'is-past-year': 'Date is in the past year',
-    'is-next-week': 'Date is in the next 7 days',
-    'is-next-month': 'Date is in the next month',
-    'is-next-year': 'Date is in the next year',
-    'is-last-n-days': 'Date is in the last N days',
-    'is-next-n-days': 'Date is in the next N days',
-    'is-overdue': 'Date is in the past',
-    'is-upcoming': 'Date is in the future',
-    'has-any-of': 'Has at least one of these tags',
-    'has-all-of': 'Has all of these tags',
-    'has-none-of': 'Has none of these tags',
-    'has-keyword': 'Contains keyword in tags',
+    "is-empty": "Field has no value",
+    "is-not-empty": "Field has a value",
+    is: "Exact match",
+    "is-not": "Does not match",
+    contains: "Contains text",
+    "not-contains": "Does not contain text",
+    "starts-with": "Starts with text",
+    "ends-with": "Ends with text",
+    regex: "Matches regular expression",
+    eq: "Equal to",
+    neq: "Not equal to",
+    lt: "Less than",
+    gt: "Greater than",
+    lte: "Less than or equal to",
+    gte: "Greater than or equal to",
+    "is-checked": "Checkbox is checked",
+    "is-not-checked": "Checkbox is not checked",
+    "is-on": "Date is exactly",
+    "is-not-on": "Date is not",
+    "is-before": "Date is before",
+    "is-after": "Date is after",
+    "is-on-and-before": "Date is on or before",
+    "is-on-and-after": "Date is on or after",
+    "is-today": "Date is today (relative to selected date)",
+    "is-this-week": "Date is this week",
+    "is-this-month": "Date is this month",
+    "is-this-quarter": "Date is this quarter",
+    "is-this-year": "Date is this year",
+    "is-past-week": "Date is in the past 7 days",
+    "is-past-month": "Date is in the past month",
+    "is-past-year": "Date is in the past year",
+    "is-next-week": "Date is in the next 7 days",
+    "is-next-month": "Date is in the next month",
+    "is-next-year": "Date is in the next year",
+    "is-last-n-days": "Date is in the last N days",
+    "is-next-n-days": "Date is in the next N days",
+    "is-overdue": "Date is in the past",
+    "is-upcoming": "Date is in the future",
+    "has-any-of": "Has at least one of these tags",
+    "has-all-of": "Has all of these tags",
+    "has-none-of": "Has none of these tags",
+    "has-keyword": "Contains keyword in tags",
   };
-  
-  return descriptions[operator] || '';
+
+  return descriptions[operator] || "";
 }

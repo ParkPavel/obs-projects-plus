@@ -69,11 +69,13 @@ describe("frontmatter/codec — round-trip", () => {
 });
 
 // ── writer ─────────────────────────────────────────────────
-function makeMockApp(opts: {
-  failures?: number;
-  recordCalls?: Array<Record<string, unknown>>;
-  hostMissing?: boolean;
-} = {}): App {
+function makeMockApp(
+  opts: {
+    failures?: number;
+    recordCalls?: Array<Record<string, unknown>>;
+    hostMissing?: boolean;
+  } = {}
+): App {
   let failuresLeft = opts.failures ?? 0;
   const fileManager = opts.hostMissing
     ? {}
@@ -81,7 +83,7 @@ function makeMockApp(opts: {
         processFrontMatter: jest.fn(
           async (
             _file: TFile,
-            fn: (fm: Record<string, unknown>) => void,
+            fn: (fm: Record<string, unknown>) => void
           ): Promise<void> => {
             if (failuresLeft > 0) {
               failuresLeft--;
@@ -90,7 +92,7 @@ function makeMockApp(opts: {
             const fm: Record<string, unknown> = {};
             fn(fm);
             opts.recordCalls?.push({ ...fm });
-          },
+          }
         ),
       };
   return { fileManager } as unknown as App;
@@ -130,7 +132,7 @@ describe("frontmatter/writer", () => {
   test("retry envelope succeeds after transient failures", async () => {
     const calls: Array<Record<string, unknown>> = [];
     const w = createFrontmatterWriter(
-      makeMockApp({ failures: 2, recordCalls: calls }),
+      makeMockApp({ failures: 2, recordCalls: calls })
     );
     await w.setField(FILE, "x", 1, { retry: 3 });
     expect(calls[0]).toEqual({ x: 1 });
@@ -139,7 +141,7 @@ describe("frontmatter/writer", () => {
   test("retry envelope surfaces the last error after exhaustion", async () => {
     const w = createFrontmatterWriter(makeMockApp({ failures: 5 }));
     await expect(w.setField(FILE, "x", 1, { retry: 1 })).rejects.toThrow(
-      /ENOENT/,
+      /ENOENT/
     );
   });
 

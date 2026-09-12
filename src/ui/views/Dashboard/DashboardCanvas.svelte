@@ -3,7 +3,7 @@
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { FilterDefinition } from "src/settings/base/settings";
-  import type { DatabaseViewConfig, WidgetDefinition, FieldPreset } from "./types";
+  import type { DatabaseViewConfig, WidgetDefinition, FieldPreset, QuickActionConfig } from "./types";
   import ViewContent from "src/ui/components/Layout/ViewContent.svelte";
   import ViewLayout from "src/ui/components/Layout/ViewLayout.svelte";
   import { setContext, onDestroy } from "svelte";
@@ -57,16 +57,7 @@
   $: effectiveConfig = (commitTick, configEcho.receiveProp(config), configEcho.current);
   $: widgets = effectiveConfig?.widgets ?? [];
   $: showToolbar = effectiveConfig?.showWidgetToolbar ?? false;
-  // #191. Filtered by kind HERE as well as in the migration, and the two are
-  // not redundant. The migration cleans the stored file; this decides what is
-  // drawn from whatever it is handed — and after the template dispatcher was
-  // removed every button runs the one remaining action, so an unfiltered
-  // «Обзорный пресет» left in a config would silently toggle the formula bar.
-  // Drawing only what this canvas can honour is the correctness half.
-  // Array-ness checked, not assumed: the migrator leaves a malformed value alone
-  // rather than throw, and `.filter()` on a string would down the whole canvas.
-  $: quickActions = (Array.isArray(effectiveConfig?.quickActions) ? effectiveConfig.quickActions : [])
-    .filter((action) => action?.kind === "toggle-formula-bar");
+  $: quickActions = effectiveConfig?.quickActions ?? [];
   const widgetController = createWidgetController({ getConfig: () => effectiveConfig, saveConfig, i18nStore: i18n });
   function handleFieldPresetsChange(e: CustomEvent<{ fieldPresets: FieldPreset[]; activeFieldPresetId: string | undefined }>) {
     if (!effectiveConfig) return;
@@ -83,6 +74,13 @@
   });
   const unsubCommands = subscribeCanvasCommands(() => schemaController.openSchema(), () => schemaController.openCreateField());
   onDestroy(() => { unsubCommands(); schemaController.dispose(); }); // CV-2: nothing opens after the view is gone
+  // #191: the templates controller went with the mechanism it drove. What is
+  // left of quick actions is one live kind, dispatched here rather than through
+  // a controller. The `kind` test stays: a stored action of some other kind must
+  // keep doing nothing, not fall through to toggling the formula bar.
+  function handleQuickAction(action: QuickActionConfig) {
+    if (action.kind === "toggle-formula-bar") showFormulaBar = !showFormulaBar;
+  }
   let isRecalculating = false, showFormulaBar = false, activeFilterTab: ActiveFilterTab | null = null;
   $: { void frame; isRecalculating = true; void Promise.resolve().then(() => { isRecalculating = false; }); }
   $: fieldNames = frame.fields.map((f) => f.name);
@@ -146,10 +144,7 @@
       {#if !readonly && quickActions.length > 0}
         <div class="ppp-quick-actions" role="group" aria-label={$i18n.t("views.dashboard.quick.group", { defaultValue: "Quick actions" })}>
           {#each quickActions as action (action.id)}
-            <!-- #191: `toggle-formula-bar` is the only kind left, so the call is
-                 direct. A dispatcher over a union of one would be ceremony that
-                 hides which of the two lines is the actual behaviour. -->
-            <button class="ppp-quick-action clickable-icon" on:click={() => (showFormulaBar = !showFormulaBar)}
+            <button class="ppp-quick-action clickable-icon" on:click={() => handleQuickAction(action)}
               aria-label={action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}>
               {action.labelKey ? $i18n.t(action.labelKey, { defaultValue: action.label }) : action.label}
             </button>

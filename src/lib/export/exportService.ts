@@ -39,17 +39,26 @@ function toDelimited(
   return [header, ...rows].join("\n");
 }
 
-export function exportToCsv(records: DataRecord[], fields: DataField[]): string {
+export function exportToCsv(
+  records: DataRecord[],
+  fields: DataField[]
+): string {
   return toDelimited(records, fields, ",");
 }
 
-export function exportToTsv(records: DataRecord[], fields: DataField[]): string {
+export function exportToTsv(
+  records: DataRecord[],
+  fields: DataField[]
+): string {
   return toDelimited(records, fields, "\t");
 }
 
 // ── JSON ───────────────────────────────────────────────────────
 
-export function exportToJson(records: DataRecord[], fields: DataField[]): string {
+export function exportToJson(
+  records: DataRecord[],
+  fields: DataField[]
+): string {
   const fieldNames = fields.map((f) => f.name);
   const rows = records.map((r) => {
     const obj: Record<string, unknown> = { _id: r.id };
@@ -63,7 +72,10 @@ export function exportToJson(records: DataRecord[], fields: DataField[]): string
 
 // ── Markdown table ─────────────────────────────────────────────
 
-export function exportToMarkdown(records: DataRecord[], fields: DataField[]): string {
+export function exportToMarkdown(
+  records: DataRecord[],
+  fields: DataField[]
+): string {
   const names = fields.map((f) => f.name);
   const mdCell = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
   const header = `| ${names.map(mdCell).join(" | ")} |`;
@@ -82,27 +94,39 @@ export function exportRecords(
   format: ExportFormat
 ): string {
   switch (format) {
-    case "csv": return exportToCsv(records, fields);
-    case "tsv": return exportToTsv(records, fields);
-    case "json": return exportToJson(records, fields);
-    case "markdown": return exportToMarkdown(records, fields);
+    case "csv":
+      return exportToCsv(records, fields);
+    case "tsv":
+      return exportToTsv(records, fields);
+    case "json":
+      return exportToJson(records, fields);
+    case "markdown":
+      return exportToMarkdown(records, fields);
   }
 }
 
 export function exportMimeType(format: ExportFormat): string {
   switch (format) {
-    case "csv": return "text/csv";
-    case "tsv": return "text/tab-separated-values";
-    case "json": return "application/json";
-    case "markdown": return "text/markdown";
+    case "csv":
+      return "text/csv";
+    case "tsv":
+      return "text/tab-separated-values";
+    case "json":
+      return "application/json";
+    case "markdown":
+      return "text/markdown";
   }
 }
 
 export function exportFileExtension(format: ExportFormat): string {
   switch (format) {
-    case "csv": return ".csv";
-    case "tsv": return ".tsv";
-    case "json": return ".json";
-    case "markdown": return ".md";
+    case "csv":
+      return ".csv";
+    case "tsv":
+      return ".tsv";
+    case "json":
+      return ".json";
+    case "markdown":
+      return ".md";
   }
 }

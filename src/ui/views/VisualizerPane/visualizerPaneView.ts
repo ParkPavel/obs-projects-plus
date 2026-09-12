@@ -34,7 +34,10 @@ export class VisualizerPaneView extends ItemView {
   private component?: VisualizerPane;
   private readonly host: { inverseIndexStore?: InverseIndexStore } | undefined;
 
-  constructor(leaf: WorkspaceLeaf, host?: { inverseIndexStore?: InverseIndexStore }) {
+  constructor(
+    leaf: WorkspaceLeaf,
+    host?: { inverseIndexStore?: InverseIndexStore }
+  ) {
     super(leaf);
     this.navigation = false;
     this.host = host;
@@ -78,7 +81,9 @@ export class VisualizerPaneView extends ItemView {
  */
 export function readFrontmatter(
   file: TFile,
-  metadataCache: { getFileCache: (f: TFile) => { frontmatter?: FrontMatterCache } | null },
+  metadataCache: {
+    getFileCache: (f: TFile) => { frontmatter?: FrontMatterCache } | null;
+  }
 ): FrontMatterCache | null {
   const cache = metadataCache.getFileCache(file);
   return cache?.frontmatter ?? null;

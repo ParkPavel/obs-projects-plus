@@ -1,19 +1,17 @@
 import type { App, TFile } from "obsidian";
-import {
-  PROPERTY_TYPES,
-  TYPES_KEY,
-  type PropertyType,
-} from "./propertyTypes";
+import { PROPERTY_TYPES, TYPES_KEY, type PropertyType } from "./propertyTypes";
 
 type ProcessFn = (
   file: TFile,
-  fn: (frontmatter: Record<string, unknown>) => void,
+  fn: (frontmatter: Record<string, unknown>) => void
 ) => Promise<void>;
 
 function getProcessFrontMatter(app: App): ProcessFn | null {
-  const fm = (app.fileManager as unknown as {
-    processFrontMatter?: ProcessFn;
-  }).processFrontMatter;
+  const fm = (
+    app.fileManager as unknown as {
+      processFrontMatter?: ProcessFn;
+    }
+  ).processFrontMatter;
   return typeof fm === "function" ? fm.bind(app.fileManager) : null;
 }
 
@@ -29,7 +27,7 @@ export async function setPropertyType(
   app: App,
   file: TFile,
   propertyKey: string,
-  type: PropertyType | null,
+  type: PropertyType | null
 ): Promise<boolean> {
   const processFn = getProcessFrontMatter(app);
   if (!processFn) return false;

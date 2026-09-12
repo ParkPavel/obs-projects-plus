@@ -30,22 +30,35 @@ export class CommandManager {
 
   constructor(private app: App) {}
 
-  ensureCommands(enabledCommands: ShowCommand[], projects: ProjectDefinition[]): void {
+  ensureCommands(
+    enabledCommands: ShowCommand[],
+    projects: ProjectDefinition[]
+  ): void {
     const registeredCommandIds = this.getRegisteredCommandIds();
-    this.removeRedundantCommands(enabledCommands, projects, registeredCommandIds);
+    this.removeRedundantCommands(
+      enabledCommands,
+      projects,
+      registeredCommandIds
+    );
     this.addMissingCommands(enabledCommands, projects, registeredCommandIds);
   }
 
   private getRegisteredCommandIds(): Set<string> {
-    return new Set(Object.keys(this.app.commands.commands).filter(id =>
-      id.startsWith(SHOW_COMMAND_PREFIX)
-    ));
+    return new Set(
+      Object.keys(this.app.commands.commands).filter((id) =>
+        id.startsWith(SHOW_COMMAND_PREFIX)
+      )
+    );
   }
 
-  private removeRedundantCommands(enabledCommands: ShowCommand[], projects: ProjectDefinition[], registeredCommandIds: Set<string>): void {
-    registeredCommandIds.forEach(id => {
-      const enabledCommand = enabledCommands.find(cmd => 
-        id === this.getShowCommandId(cmd, true)
+  private removeRedundantCommands(
+    enabledCommands: ShowCommand[],
+    projects: ProjectDefinition[],
+    registeredCommandIds: Set<string>
+  ): void {
+    registeredCommandIds.forEach((id) => {
+      const enabledCommand = enabledCommands.find(
+        (cmd) => id === this.getShowCommandId(cmd, true)
       );
 
       // Unregister command if it's been disabled.
@@ -57,11 +70,11 @@ export class CommandManager {
       // Unregister command if its project — or its view, if scoped — has
       // been deleted. Both checks must be present: a project may survive
       // while one of its views is removed.
-      const project = projects.find(p => {
+      const project = projects.find((p) => {
         if (enabledCommand.view) {
           return (
             p.id === enabledCommand.project &&
-            !!p.views.find(v => v.id === enabledCommand.view)
+            !!p.views.find((v) => v.id === enabledCommand.view)
           );
         }
         return p.id === enabledCommand.project;
@@ -72,23 +85,31 @@ export class CommandManager {
     });
   }
 
-  private addMissingCommands(enabledCommands: ShowCommand[], projects: ProjectDefinition[], registeredCommandIds: Set<string>): void {
-    enabledCommands.forEach(command => {
+  private addMissingCommands(
+    enabledCommands: ShowCommand[],
+    projects: ProjectDefinition[],
+    registeredCommandIds: Set<string>
+  ): void {
+    enabledCommands.forEach((command) => {
       const globalId = this.getShowCommandId(command, true);
       const localId = this.getShowCommandId(command, false);
 
       if (registeredCommandIds.has(globalId)) return;
 
-      const project = projects.find(p => p.id === command.project);
+      const project = projects.find((p) => p.id === command.project);
       if (project) {
         this.registerProjectCommand(command, project, localId);
       }
     });
   }
 
-  private registerProjectCommand(command: ShowCommand, project: ProjectDefinition, localId: string): void {
+  private registerProjectCommand(
+    command: ShowCommand,
+    project: ProjectDefinition,
+    localId: string
+  ): void {
     if (command.view) {
-      const view = project.views.find(v => v.id === command.view);
+      const view = project.views.find((v) => v.id === command.view);
       if (view) {
         this.commandsToRegister.push({
           id: localId,
@@ -118,7 +139,9 @@ export class CommandManager {
     // This will be injected by the main plugin
   }
 
-  setActivateViewFunction(fn: (projectId?: string, viewId?: string) => void): void {
+  setActivateViewFunction(
+    fn: (projectId?: string, viewId?: string) => void
+  ): void {
     this.activateView = fn;
   }
 
@@ -128,13 +151,17 @@ export class CommandManager {
    * Safe to call repeatedly; the queue is emptied on success and preserved on a
    * missing/invalid host so the next call with a valid host can recover.
    */
-  finalizeRegistrations(plugin: CommandHost | Partial<CommandHost> | null | undefined): void {
+  finalizeRegistrations(
+    plugin: CommandHost | Partial<CommandHost> | null | undefined
+  ): void {
     if (!plugin || typeof (plugin as CommandHost).addCommand !== "function") {
-      console.warn("[Projects+] CommandManager: plugin reference required for command registration");
+      console.warn(
+        "CommandManager: Plugin reference required for command registration"
+      );
       return;
     }
 
-    this.commandsToRegister.forEach(command => {
+    this.commandsToRegister.forEach((command) => {
       (plugin as CommandHost).addCommand(command);
     });
 

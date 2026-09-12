@@ -8,7 +8,10 @@
  */
 import type { App } from "obsidian";
 
-import { countMigrationBackups, writeMigrationBackup } from "src/lib/settingsBackup";
+import {
+  countMigrationBackups,
+  writeMigrationBackup,
+} from "src/lib/settingsBackup";
 
 // Deliberately not the default config folder: the vault's config directory is
 // user-configurable, and the backup must follow `Vault#configDir`.
@@ -39,14 +42,18 @@ function fakeApp(files: Record<string, string>, failWrite = false): App {
   } as unknown as App;
 }
 
-const CONFIG = { widgets: [{ id: "w1", transform: { steps: ["filter", "pivot"] } }] };
+const CONFIG = {
+  widgets: [{ id: "w1", transform: { steps: ["filter", "pivot"] } }],
+};
 
 describe("#145 migration backup", () => {
   it("writes the pre-migration config handed to it, not the file on disk", async () => {
     // The point of taking it from memory: `data.json` may already hold the
     // migrated shape by the time this write lands, because the migrated save is
     // synchronous and this is not.
-    const files: Record<string, string> = { [`${DIR}/data.json`]: '{"already":"migrated"}' };
+    const files: Record<string, string> = {
+      [`${DIR}/data.json`]: '{"already":"migrated"}',
+    };
     const app = fakeApp(files);
 
     const path = await writeMigrationBackup({
@@ -95,7 +102,12 @@ describe("#145 migration backup", () => {
     const files: Record<string, string> = {};
     const app = fakeApp(files);
 
-    await writeMigrationBackup({ app, projectId: "p1", viewId: "v1", config: CONFIG });
+    await writeMigrationBackup({
+      app,
+      projectId: "p1",
+      viewId: "v1",
+      config: CONFIG,
+    });
     const other = await writeMigrationBackup({
       app,
       projectId: "p1",
@@ -120,7 +132,12 @@ describe("#145 migration backup", () => {
   it("swallows a failed write so it can never block a migration", async () => {
     const app = fakeApp({}, true);
     await expect(
-      writeMigrationBackup({ app, projectId: "p1", viewId: "v1", config: CONFIG })
+      writeMigrationBackup({
+        app,
+        projectId: "p1",
+        viewId: "v1",
+        config: CONFIG,
+      })
     ).resolves.toBeNull();
   });
 });

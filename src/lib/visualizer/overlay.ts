@@ -52,11 +52,12 @@ function asStringArray(v: unknown): string[] {
  * unknown shapes degrade to the empty overlay rather than throwing.
  */
 export function readOverlay(
-  frontmatter: Record<string, unknown> | null | undefined,
+  frontmatter: Record<string, unknown> | null | undefined
 ): NoteOverlay {
   if (!frontmatter) return { ...EMPTY };
   const raw = frontmatter[OVERLAY_KEY];
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ...EMPTY };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    return { ...EMPTY };
   const obj = raw as Record<string, unknown>;
   return {
     hidden: asStringArray(obj["hidden"]),
@@ -82,13 +83,13 @@ export function readOverlay(
 export function applyOverlay(
   frontmatter: Record<string, unknown> | null | undefined,
   overlay: NoteOverlay,
-  options: { showHidden?: boolean } = {},
+  options: { showHidden?: boolean } = {}
 ): OverlayedEntry[] {
   if (!frontmatter) return [];
   const showHidden = options.showHidden ?? false;
 
   const allKeys = Object.keys(frontmatter).filter(
-    (k) => k !== OVERLAY_KEY && !k.startsWith("$"),
+    (k) => k !== OVERLAY_KEY && !k.startsWith("$")
   );
   const present = new Set(allKeys);
   const hiddenSet = new Set(overlay.hidden);
@@ -193,7 +194,7 @@ export function moveKey(
   overlay: NoteOverlay,
   currentOrder: string[],
   key: string,
-  direction: -1 | 1,
+  direction: -1 | 1
 ): NoteOverlay {
   const idx = currentOrder.indexOf(key);
   if (idx < 0) return overlay;
@@ -220,9 +221,10 @@ export function moveKey(
   }
 
   // Non-pinned: ensure both keys are represented in `order`, then swap.
-  const order = overlay.order.includes(key) || overlay.order.includes(swapWith)
-    ? [...overlay.order]
-    : [...currentOrder.filter((k) => !pinnedSet.has(k))];
+  const order =
+    overlay.order.includes(key) || overlay.order.includes(swapWith)
+      ? [...overlay.order]
+      : [...currentOrder.filter((k) => !pinnedSet.has(k))];
 
   const a = order.indexOf(key);
   const b = order.indexOf(swapWith);
@@ -242,7 +244,7 @@ export function moveKey(
  * the `pp_overlay` key entirely).
  */
 export function compactOverlay(
-  overlay: NoteOverlay,
+  overlay: NoteOverlay
 ): Partial<NoteOverlay> | null {
   const out: Partial<NoteOverlay> = {};
   if (overlay.hidden.length > 0) out.hidden = overlay.hidden;

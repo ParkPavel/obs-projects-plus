@@ -67,7 +67,12 @@ export function parseRecords(
         case DataFieldType.String:
           if (value instanceof Date) {
             record.values[field.name] = dayjs(value).format("YYYY-MM-DD");
-          } else if (value !== null && value !== undefined && typeof value === "object" && !Array.isArray(value)) {
+          } else if (
+            value !== null &&
+            value !== undefined &&
+            typeof value === "object" &&
+            !Array.isArray(value)
+          ) {
             // /skip: Nested YAML objects (e.g. version: {major:1}) → JSON string so value is visible in editor
             try {
               record.values[field.name] = JSON.stringify(value);
@@ -75,7 +80,11 @@ export function parseRecords(
               // /skip catch: circular reference fallback — JSON.stringify can throw on circular objects
               record.values[field.name] = String(value);
             }
-          } else if (typeof value !== "object" && value !== null && value !== undefined) {
+          } else if (
+            typeof value !== "object" &&
+            value !== null &&
+            value !== undefined
+          ) {
             record.values[field.name] = value?.toLocaleString();
           }
           // Arrays and null/undefined are kept as-is
@@ -88,7 +97,10 @@ export function parseRecords(
           // Auto-detected Relation now requires an array of `[[…]]`; explicit
           // user choice via fieldConfig.relation still parses normally for
           // any field name.
-          if (field.derived && (field.name === "name" || field.name === "path")) {
+          if (
+            field.derived &&
+            (field.name === "name" || field.name === "path")
+          ) {
             break;
           }
           if (typeof value === "string") {
@@ -96,7 +108,9 @@ export function parseRecords(
           } else if (Array.isArray(value)) {
             record.values[field.name] = value
               .filter((v) => v !== null && v !== undefined)
-              .map((v) => (typeof v === "string" ? stripWikiLink(v) : String(v)));
+              .map((v) =>
+                typeof v === "string" ? stripWikiLink(v) : String(v)
+              );
           }
           // null/undefined kept as-is
           break;

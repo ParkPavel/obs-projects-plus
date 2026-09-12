@@ -77,16 +77,25 @@ const CONTAINER_QUERY = /@container\b/;
  * not to any container — the kinship break the ADR records as load-bearing
  * (`ADR_MATRYOSHKA_SIZING_2026-09-02.md`, "Explicitly not guaranteed").
  *
- * - `TemplateConfirmDialog` is rendered by `DashboardCanvas` OUTSIDE
- *   `.ppp-database-root` on purpose, so its `position: fixed` scrim resolves
- *   against the viewport rather than against the scrollable dashboard. Its own
- *   style block says so. It matches the prefix above, so without this entry it
- *   would be counted; the test below asserts exactly that, which is what keeps
- *   this list from being decorative.
  * - `FloatingPopup` portals its desktop branch to `<body>`, which is why it has
  *   no container ancestor at all. It is out of scope today by both clauses;
  *   naming it here means it stays exempt if it ever gains an `@container`
  *   query, instead of arriving in the budget as a mysterious jump.
+ *
+ * **#191 WEAKENED THIS LIST, and the honest place to say so is here.**
+ * `TemplateConfirmDialog` was the second entry and the only one INSIDE
+ * `CONTAINER_SCOPE_PREFIX`, so it was the entry that proved the allowlist
+ * subtracted anything: without it the dialog would have been counted. It was
+ * deleted with the dashboard template mechanism (#191), and no replacement was
+ * put in its place, because there is none to put there honestly — the only
+ * other files under the prefix with their own `position: fixed` are
+ * `BlockFilterBar` and `DataTableContent`, and the paragraph below refuses the
+ * first by name. So the assertion that used to name the dialog now states the
+ * weaker fact that is actually true of today's tree: NOTHING under the prefix
+ * is exempt. The mechanism checks stay, proven on synthetic text in both
+ * directions, so the list is still audited — it just no longer has an
+ * in-scope subject to audit. If one is ever added, the assertion below is
+ * where its argument has to be made.
  *
  * Known and deliberately NOT exempted: `DashboardBlockPalette`, `WidgetToolbar`
  * and `BlockFilterBar` each render an in-container trigger AND a portalled
@@ -114,15 +123,18 @@ const WINDOW_ANCHORED = [
  *     the whole time. Re-measured with the reader fixed rather than
  *     incremented, for the same reason #165 re-measured R0.3: a ceiling that
  *     is not the measurement cannot see what it never read.
- *   804 — #191 deleted the dashboard-template mechanism, and with it three
- *     `rem` in `WidgetToolbar`'s template rules. Re-measured, not decremented:
- *     `TemplateConfirmDialog` went too but carried none of this count, being
- *     window-anchored and therefore never scanned.
  *   807 — unchanged when the counter went whole-file (#167, second Codex
  *     audit, 2026-09-02). The shorthand and hoisted-literal routes that audit
  *     named were real routes with nothing travelling on them today, so closing
  *     them moved no number. Recorded anyway: a re-measurement that returns the
  *     same value is evidence, and an unlogged one looks like nothing happened.
+ *   807 → 804 (#191, 2026-09-04) — the dashboard template mechanism was
+ *     deleted, taking `WidgetToolbar`'s three template-submenu `rem` with it
+ *     (`.ppp-toolbar-separator` margin, `.ppp-toolbar-option--template` gap and
+ *     padding-left). `TemplateConfirmDialog` went in the same change and moved
+ *     this number by nothing, because it was on `WINDOW_ANCHORED` and never
+ *     counted — which is also why its removal weakened that list; see there.
+ *     Measured on the tree, not derived from the count of deleted lines.
  */
 const REM_IN_CONTAINER_BUDGET = 804;
 
@@ -430,31 +442,32 @@ describe("R0.16 — rem inside a container (#167)", () => {
     ).toBe(false);
 
     // And it stays short. A list that grows is the shape this failure takes.
-    expect(WINDOW_ANCHORED.length).toBeLessThanOrEqual(2);
+    // Banked down 2 → 1 by #191 in the commit that removed the second entry,
+    // for the same reason the rem budget is banked down in it: a cap left above
+    // the measurement cannot see the next addition. A genuinely window-anchored
+    // surface may still be exempted — by raising this WITH the argument, in the
+    // docstring, which is the whole point of the list.
+    expect(WINDOW_ANCHORED.length).toBeLessThanOrEqual(1);
 
-    // #191 — a WEAKENING, named rather than slipped through.
-    //
-    // This block used to pin `TemplateConfirmDialog`: a file inside the prefix
-    // that the allowlist was what kept out, so the list demonstrably did work.
-    // #191 deleted the dialog with the dashboard-template mechanism, and the
-    // one entry left — `FloatingPopup` — is outside the prefix by both clauses,
-    // so nothing under the prefix is exempt today and the list no longer proves
-    // itself against the tree.
-    //
-    // A replacement was looked for and rejected rather than invented: the only
-    // remaining files under the prefix carrying `position: fixed` are
-    // `BlockFilterBar` and `DataTableContent`, and this file's own docstring
-    // refuses to exempt the first. Parking something here to keep the assertion
-    // alive is exactly the abuse the entry above guards against.
-    //
-    // So the claim is narrowed to what is true: no file inside the prefix is
-    // exempt. The synthetic checks above still prove the mechanism in both
-    // directions, and if an exemption is ever needed again this is where it has
-    // to be argued.
-    const exemptInsideScope = (WINDOW_ANCHORED as readonly string[]).filter((f) =>
-      f.startsWith(CONTAINER_SCOPE_PREFIX)
+    // What the entry for `TemplateConfirmDialog` used to assert: that the list
+    // really subtracts something inside the scope. #191 deleted that file and
+    // left no in-scope exemption, so the true statement today is the weaker
+    // one — nothing under the prefix is exempt. Asserted rather than omitted,
+    // so that adding an exemption here has to come back and change this line
+    // instead of slipping past a list nobody checks.
+    const exemptInScope = (WINDOW_ANCHORED as readonly string[]).filter(
+      (file) => file.startsWith(CONTAINER_SCOPE_PREFIX)
     );
-    expect(exemptInsideScope).toEqual([]);
+    expect(exemptInScope).toEqual([]);
+
+    // …and every entry that IS listed carries the units it exempts, so no entry
+    // is free. This is what survives of "the list is load-bearing" while the
+    // list has no in-scope member.
+    for (const file of WINDOW_ANCHORED) {
+      expect(
+        remOccurrences(shippedText(readText(join(SRC_ROOT, file))))
+      ).toBeGreaterThan(0);
+    }
   });
 
   it("the container-derived scale is read somewhere inside the scope", () => {

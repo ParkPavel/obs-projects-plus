@@ -18,7 +18,9 @@ function makeRecord(values: Record<string, unknown>): DataRecord {
 
 describe("formulaEngine — Math", () => {
   test("ROUND with decimals", () => {
-    expect(evaluateFormulaValue("ROUND(3.14159, 2)", makeRecord({}))).toBe(3.14);
+    expect(evaluateFormulaValue("ROUND(3.14159, 2)", makeRecord({}))).toBe(
+      3.14
+    );
   });
 
   test("ROUND without decimals", () => {
@@ -65,15 +67,21 @@ describe("formulaEngine — Math", () => {
 
 describe("formulaEngine — String", () => {
   test("TRIM", () => {
-    expect(evaluateFormulaValue('TRIM("  hello  ")', makeRecord({}))).toBe("hello");
+    expect(evaluateFormulaValue('TRIM("  hello  ")', makeRecord({}))).toBe(
+      "hello"
+    );
   });
 
   test("LOWER", () => {
-    expect(evaluateFormulaValue('LOWER("Hello World")', makeRecord({}))).toBe("hello world");
+    expect(evaluateFormulaValue('LOWER("Hello World")', makeRecord({}))).toBe(
+      "hello world"
+    );
   });
 
   test("UPPER", () => {
-    expect(evaluateFormulaValue('UPPER("hello")', makeRecord({}))).toBe("HELLO");
+    expect(evaluateFormulaValue('UPPER("hello")', makeRecord({}))).toBe(
+      "HELLO"
+    );
   });
 
   test("LENGTH", () => {
@@ -81,8 +89,12 @@ describe("formulaEngine — String", () => {
   });
 
   test("CONTAINS returns boolean", () => {
-    expect(evaluateFormulaValue('CONTAINS("hello world", "world")', makeRecord({}))).toBe(true);
-    expect(evaluateFormulaValue('CONTAINS("hello", "xyz")', makeRecord({}))).toBe(false);
+    expect(
+      evaluateFormulaValue('CONTAINS("hello world", "world")', makeRecord({}))
+    ).toBe(true);
+    expect(
+      evaluateFormulaValue('CONTAINS("hello", "xyz")', makeRecord({}))
+    ).toBe(false);
   });
 });
 
@@ -106,7 +118,9 @@ describe("formulaEngine — Date", () => {
 
   test("DATE_BETWEEN in days", () => {
     const record = makeRecord({ start: "2024-01-01", end: "2024-01-10" });
-    expect(evaluateFormulaValue('DATE_BETWEEN(start, end, "day")', record)).toBe(9);
+    expect(
+      evaluateFormulaValue('DATE_BETWEEN(start, end, "day")', record)
+    ).toBe(9);
   });
 
   test("FORMAT_DATE", () => {
@@ -132,7 +146,9 @@ describe("formulaEngine — Type conversion", () => {
   });
 
   test("TO_DATE from string", () => {
-    expect(evaluateFormulaValue('TO_DATE("2024-06-15")', makeRecord({}))).toBe("2024-06-15");
+    expect(evaluateFormulaValue('TO_DATE("2024-06-15")', makeRecord({}))).toBe(
+      "2024-06-15"
+    );
   });
 });
 
@@ -141,17 +157,25 @@ describe("formulaEngine — Type conversion", () => {
 describe("formulaEngine — Conditional", () => {
   test("IF true branch", () => {
     const record = makeRecord({ x: 10 });
-    expect(evaluateFormulaValue('IF(x > 5, "big", "small")', record)).toBe("big");
+    expect(evaluateFormulaValue('IF(x > 5, "big", "small")', record)).toBe(
+      "big"
+    );
   });
 
   test("IF false branch", () => {
     const record = makeRecord({ x: 2 });
-    expect(evaluateFormulaValue('IF(x > 5, "big", "small")', record)).toBe("small");
+    expect(evaluateFormulaValue('IF(x > 5, "big", "small")', record)).toBe(
+      "small"
+    );
   });
 
   test("EMPTY", () => {
-    expect(evaluateFormulaValue("EMPTY(x)", makeRecord({ x: null }))).toBe(true);
-    expect(evaluateFormulaValue("EMPTY(x)", makeRecord({ x: "hello" }))).toBe(false);
+    expect(evaluateFormulaValue("EMPTY(x)", makeRecord({ x: null }))).toBe(
+      true
+    );
+    expect(evaluateFormulaValue("EMPTY(x)", makeRecord({ x: "hello" }))).toBe(
+      false
+    );
   });
 });
 
@@ -199,11 +223,15 @@ describe("formulaEngine — Fields", () => {
     });
 
     test("a present non-number still concatenates", () => {
-      expect(evaluateFormulaValue("a + 1", makeRecord({ a: "abc" }))).toBe("abc1");
+      expect(evaluateFormulaValue("a + 1", makeRecord({ a: "abc" }))).toBe(
+        "abc1"
+      );
     });
 
     test("two absent operands give nothing, not a zero", () => {
-      expect(evaluateFormulaValue("a + b", makeRecord({ a: null, b: null }))).toBe("");
+      expect(
+        evaluateFormulaValue("a + b", makeRecord({ a: null, b: null }))
+      ).toBe("");
     });
   });
 });
@@ -252,7 +280,10 @@ describe("formulaEngine — Error resilience", () => {
 describe("formulaEngine — Financial", () => {
   test("PMT calculates monthly payment (negative = outflow)", () => {
     // PMT(rate, nper, pv) — standard convention: payments are negative (outflows)
-    const result = evaluateFormulaValue("PMT(0.05 / 12, 360, 200000)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "PMT(0.05 / 12, 360, 200000)",
+      makeRecord({})
+    );
     expect(result).toBeCloseTo(-1073.64, 1);
   });
 
@@ -265,21 +296,30 @@ describe("formulaEngine — Financial", () => {
 
   test("PV calculates present value", () => {
     // PV(rate, nper, pmt) — 5%/12 rate, 360 periods, 1073.64 payment
-    const result = evaluateFormulaValue("PV(0.05 / 12, 360, 1073.64)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "PV(0.05 / 12, 360, 1073.64)",
+      makeRecord({})
+    );
     expect(typeof result).toBe("number");
     expect(Math.abs(result as number)).toBeCloseTo(200000, -2);
   });
 
   test("NPV calculates net present value", () => {
     // NPV(rate, cf1, cf2, cf3)
-    const result = evaluateFormulaValue("NPV(0.1, 100, 200, 300)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "NPV(0.1, 100, 200, 300)",
+      makeRecord({})
+    );
     expect(typeof result).toBe("number");
     expect(result as number).toBeGreaterThan(450);
   });
 
   test("IRR calculates internal rate of return", () => {
     // IRR(-1000, 300, 420, 680)
-    const result = evaluateFormulaValue("IRR(-1000, 300, 420, 680)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "IRR(-1000, 300, 420, 680)",
+      makeRecord({})
+    );
     expect(typeof result).toBe("number");
     // IRR should be positive since total inflows > outflow
     expect(result as number).toBeGreaterThan(0);
@@ -296,45 +336,69 @@ describe("formulaEngine — Financial", () => {
 
 describe("formulaEngine — Statistical", () => {
   test("VARIANCE (population)", () => {
-    const result = evaluateFormulaValue("VARIANCE(2, 4, 4, 4, 5, 5, 7, 9)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "VARIANCE(2, 4, 4, 4, 5, 5, 7, 9)",
+      makeRecord({})
+    );
     expect(result).toBeCloseTo(4.0, 1);
   });
 
   test("VARIANCE_S (sample)", () => {
-    const result = evaluateFormulaValue("VARIANCE_S(2, 4, 4, 4, 5, 5, 7, 9)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "VARIANCE_S(2, 4, 4, 4, 5, 5, 7, 9)",
+      makeRecord({})
+    );
     expect(typeof result).toBe("number");
     expect(result as number).toBeCloseTo(4.571, 1);
   });
 
   test("PERCENTILE", () => {
-    const result = evaluateFormulaValue("PERCENTILE(1, 2, 3, 4, 5, 0.5)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "PERCENTILE(1, 2, 3, 4, 5, 0.5)",
+      makeRecord({})
+    );
     expect(result).toBe(3);
   });
 
   test("QUARTILE", () => {
-    const result = evaluateFormulaValue("QUARTILE(1, 2, 3, 4, 5, 2)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "QUARTILE(1, 2, 3, 4, 5, 2)",
+      makeRecord({})
+    );
     // Q2 = median
     expect(result).toBe(3);
   });
 
   test("MODE returns most frequent", () => {
-    const result = evaluateFormulaValue("MODE(1, 2, 2, 3, 3, 3, 4)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "MODE(1, 2, 2, 3, 3, 3, 4)",
+      makeRecord({})
+    );
     expect(result).toBe(3);
   });
 
   test("RANK returns position", () => {
-    const result = evaluateFormulaValue("RANK(3, 1, 2, 3, 4, 5)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "RANK(3, 1, 2, 3, 4, 5)",
+      makeRecord({})
+    );
     expect(result).toBe(3);
   });
 
   test("CORREL computes correlation", () => {
     // Perfect positive correlation
-    const result = evaluateFormulaValue("CORREL(1, 2, 3, 4, 5, 6)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "CORREL(1, 2, 3, 4, 5, 6)",
+      makeRecord({})
+    );
     expect(typeof result).toBe("number");
   });
 
   test("STD_DEV_S (sample std dev)", () => {
-    const result = evaluateFormulaValue("STD_DEV_S(2, 4, 4, 4, 5, 5, 7, 9)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "STD_DEV_S(2, 4, 4, 4, 5, 5, 7, 9)",
+      makeRecord({})
+    );
     expect(typeof result).toBe("number");
     expect(result as number).toBeCloseTo(2.138, 1);
   });
@@ -348,7 +412,9 @@ describe("formulaEngine — Enhanced Math", () => {
   });
 
   test("MEDIAN of even count", () => {
-    expect(evaluateFormulaValue("MEDIAN(1, 2, 3, 4)", makeRecord({}))).toBe(2.5);
+    expect(evaluateFormulaValue("MEDIAN(1, 2, 3, 4)", makeRecord({}))).toBe(
+      2.5
+    );
   });
 
   test("PRODUCT", () => {
@@ -370,7 +436,10 @@ describe("formulaEngine — Enhanced Math", () => {
   });
 
   test("PI returns pi", () => {
-    expect(evaluateFormulaValue("PI()", makeRecord({}))).toBeCloseTo(3.14159, 4);
+    expect(evaluateFormulaValue("PI()", makeRecord({}))).toBeCloseTo(
+      3.14159,
+      4
+    );
   });
 });
 
@@ -378,32 +447,48 @@ describe("formulaEngine — Enhanced Math", () => {
 
 describe("formulaEngine — Enhanced String", () => {
   test("LEFT extracts n chars from left", () => {
-    expect(evaluateFormulaValue('LEFT("Hello World", 5)', makeRecord({}))).toBe("Hello");
+    expect(evaluateFormulaValue('LEFT("Hello World", 5)', makeRecord({}))).toBe(
+      "Hello"
+    );
   });
 
   test("RIGHT extracts n chars from right", () => {
-    expect(evaluateFormulaValue('RIGHT("Hello World", 5)', makeRecord({}))).toBe("World");
+    expect(
+      evaluateFormulaValue('RIGHT("Hello World", 5)', makeRecord({}))
+    ).toBe("World");
   });
 
   test("MID extracts substring", () => {
-    expect(evaluateFormulaValue('MID("Hello World", 6, 5)', makeRecord({}))).toBe("World");
+    expect(
+      evaluateFormulaValue('MID("Hello World", 6, 5)', makeRecord({}))
+    ).toBe("World");
   });
 
   test("REGEX_MATCH tests pattern", () => {
-    expect(evaluateFormulaValue('REGEX_MATCH("abc123", "\\\\d+")', makeRecord({}))).toBe(true);
-    expect(evaluateFormulaValue('REGEX_MATCH("abcdef", "\\\\d+")', makeRecord({}))).toBe(false);
+    expect(
+      evaluateFormulaValue('REGEX_MATCH("abc123", "\\\\d+")', makeRecord({}))
+    ).toBe(true);
+    expect(
+      evaluateFormulaValue('REGEX_MATCH("abcdef", "\\\\d+")', makeRecord({}))
+    ).toBe(false);
   });
 
   test("JOIN concatenates with separator", () => {
-    expect(evaluateFormulaValue('JOIN("-", "a", "b", "c")', makeRecord({}))).toBe("a-b-c");
+    expect(
+      evaluateFormulaValue('JOIN("-", "a", "b", "c")', makeRecord({}))
+    ).toBe("a-b-c");
   });
 
   test("REPEAT repeats string", () => {
-    expect(evaluateFormulaValue('REPEAT("ab", 3)', makeRecord({}))).toBe("ababab");
+    expect(evaluateFormulaValue('REPEAT("ab", 3)', makeRecord({}))).toBe(
+      "ababab"
+    );
   });
 
   test("ENCODE_URL encodes URI component", () => {
-    expect(evaluateFormulaValue('ENCODE_URL("hello world")', makeRecord({}))).toBe("hello%20world");
+    expect(
+      evaluateFormulaValue('ENCODE_URL("hello world")', makeRecord({}))
+    ).toBe("hello%20world");
   });
 });
 
@@ -429,13 +514,19 @@ describe("formulaEngine — Duration", () => {
 
 describe("formulaEngine — Conditional Aggregation", () => {
   test("SUMIF sums matching values", () => {
-    const result = evaluateFormulaValue("SUMIF(10, 20, 30, 20)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "SUMIF(10, 20, 30, 20)",
+      makeRecord({})
+    );
     expect(result).toBe(20);
   });
 
   test("COUNTIF counts matching values", () => {
     // Last arg is criteria: COUNTIF(values..., criteria)
-    const result = evaluateFormulaValue("COUNTIF(1, 2, 2, 3, 2)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "COUNTIF(1, 2, 2, 3, 2)",
+      makeRecord({})
+    );
     expect(result).toBe(2);
   });
 });
@@ -464,7 +555,10 @@ describe("formulaEngine — Aggregate-aware functions", () => {
   });
 
   test("STD_DEV computes population standard deviation", () => {
-    const result = evaluateFormulaValue("STD_DEV(2, 4, 4, 4, 5, 5, 7, 9)", makeRecord({}));
+    const result = evaluateFormulaValue(
+      "STD_DEV(2, 4, 4, 4, 5, 5, 7, 9)",
+      makeRecord({})
+    );
     expect(result).toBeCloseTo(2.0, 1);
   });
 });
@@ -474,7 +568,13 @@ describe("formulaEngine — Aggregate-aware functions", () => {
 describe("formulaEngine — @reference", () => {
   const df = {
     fields: [
-      { name: "score", type: DataFieldType.Number, identifier: false, derived: false, repeated: false },
+      {
+        name: "score",
+        type: DataFieldType.Number,
+        identifier: false,
+        derived: false,
+        repeated: false,
+      },
     ],
     records: [
       { id: "r1", values: { score: 10 } },
@@ -484,33 +584,56 @@ describe("formulaEngine — @reference", () => {
   };
 
   test("AVG(@col) computes column average", () => {
-    const result = evaluateFormulaValue("AVG(@score)", makeRecord({ score: 10 }), df);
+    const result = evaluateFormulaValue(
+      "AVG(@score)",
+      makeRecord({ score: 10 }),
+      df
+    );
     expect(result).toBe(20);
   });
 
   test("SUM(@col) computes column sum", () => {
-    const result = evaluateFormulaValue("SUM(@score)", makeRecord({ score: 10 }), df);
+    const result = evaluateFormulaValue(
+      "SUM(@score)",
+      makeRecord({ score: 10 }),
+      df
+    );
     expect(result).toBe(60);
   });
 
   test("MIN(@col) finds column minimum", () => {
-    const result = evaluateFormulaValue("MIN(@score)", makeRecord({ score: 10 }), df);
+    const result = evaluateFormulaValue(
+      "MIN(@score)",
+      makeRecord({ score: 10 }),
+      df
+    );
     expect(result).toBe(10);
   });
 
   test("MAX(@col) finds column maximum", () => {
-    const result = evaluateFormulaValue("MAX(@score)", makeRecord({ score: 10 }), df);
+    const result = evaluateFormulaValue(
+      "MAX(@score)",
+      makeRecord({ score: 10 }),
+      df
+    );
     expect(result).toBe(30);
   });
 
   test("COUNT(@col) counts column values", () => {
-    const result = evaluateFormulaValue("COUNT(@score)", makeRecord({ score: 10 }), df);
+    const result = evaluateFormulaValue(
+      "COUNT(@score)",
+      makeRecord({ score: 10 }),
+      df
+    );
     expect(result).toBe(3);
   });
 
   test("@reference without dataFrame returns empty", () => {
     // AVG of empty array → null
-    const result = evaluateFormulaValue("AVG(@score)", makeRecord({ score: 10 }));
+    const result = evaluateFormulaValue(
+      "AVG(@score)",
+      makeRecord({ score: 10 })
+    );
     expect(result).toBeNull();
   });
 });
@@ -521,7 +644,7 @@ describe("formulaEngine — Conversion & Logic", () => {
   test("TO_CURRENCY formats number", () => {
     const result = evaluateFormulaValue("TO_CURRENCY(1234.5)", makeRecord({}));
     expect(typeof result).toBe("string");
-    expect((result as string)).toContain("1");
+    expect(result as string).toContain("1");
   });
 
   test("TO_PERCENT formats as percentage", () => {
@@ -547,17 +670,23 @@ describe("formulaEngine — Conversion & Logic", () => {
 
 describe("formulaEngine — LET (variable binding)", () => {
   test("LET binds variable and uses it in expression", () => {
-    expect(evaluateFormulaValue('LET("x", 10, x + 5)', makeRecord({}))).toBe(15);
+    expect(evaluateFormulaValue('LET("x", 10, x + 5)', makeRecord({}))).toBe(
+      15
+    );
   });
 
   test("LET with bare identifier as variable name", () => {
     // Non-function identifiers work as variable names without quotes
-    expect(evaluateFormulaValue("LET(myvar, 10, myvar + 5)", makeRecord({}))).toBe(15);
+    expect(
+      evaluateFormulaValue("LET(myvar, 10, myvar + 5)", makeRecord({}))
+    ).toBe(15);
   });
 
   test("LET with field reference as value", () => {
     const rec = makeRecord({ price: 100, tax: 0.2 });
-    expect(evaluateFormulaValue('LET("total", price * (1 + tax), total)', rec)).toBe(120);
+    expect(
+      evaluateFormulaValue('LET("total", price * (1 + tax), total)', rec)
+    ).toBe(120);
   });
 
   test("nested LET chains", () => {
@@ -568,7 +697,6 @@ describe("formulaEngine — LET (variable binding)", () => {
       rec
     );
     if (result.error) {
-       
       console.error("Nested LET error:", result.error);
     }
     expect(result.value).toBe(61);
@@ -582,7 +710,10 @@ describe("formulaEngine — LET (variable binding)", () => {
 
   test("LET with string variable", () => {
     expect(
-      evaluateFormulaValue('LET("label", "Budget", label + ": OK")', makeRecord({}))
+      evaluateFormulaValue(
+        'LET("label", "Budget", label + ": OK")',
+        makeRecord({})
+      )
     ).toBe("Budget: OK");
   });
 
@@ -601,7 +732,10 @@ describe("formulaEngine — LET (variable binding)", () => {
 
 describe("formulaEngine — STYLE (visual formatting)", () => {
   test("STYLE returns StyledValue object", () => {
-    const result = evaluateFormulaValue('STYLE("CRITICAL", "red", "b")', makeRecord({}));
+    const result = evaluateFormulaValue(
+      'STYLE("CRITICAL", "red", "b")',
+      makeRecord({})
+    );
     expect(isStyledValue(result)).toBe(true);
     if (isStyledValue(result)) {
       expect(result.text).toBe("CRITICAL");
@@ -611,7 +745,10 @@ describe("formulaEngine — STYLE (visual formatting)", () => {
   });
 
   test("STYLE with color only", () => {
-    const result = evaluateFormulaValue('STYLE("Warning", "orange")', makeRecord({}));
+    const result = evaluateFormulaValue(
+      'STYLE("Warning", "orange")',
+      makeRecord({})
+    );
     expect(isStyledValue(result)).toBe(true);
     if (isStyledValue(result)) {
       expect(result.text).toBe("Warning");
@@ -642,7 +779,8 @@ describe("formulaEngine — STYLE (visual formatting)", () => {
 
   test("STYLE inside IF for conditional formatting", () => {
     const rec = makeRecord({ balance: -500 });
-    const formula = 'IF(balance < 0, STYLE("DEFICIT", "red", "b"), STYLE("OK", "green"))';
+    const formula =
+      'IF(balance < 0, STYLE("DEFICIT", "red", "b"), STYLE("OK", "green"))';
     const result = evaluateFormulaValue(formula, rec);
     expect(isStyledValue(result)).toBe(true);
     if (isStyledValue(result)) {
@@ -679,13 +817,19 @@ describe("formulaEngine — MAP/FILTER/REDUCE (list iteration)", () => {
 
   test("REDUCE sums array", () => {
     const rec = makeRecord({ nums: [1, 2, 3, 4, 5] });
-    const result = evaluateFormulaValue("REDUCE(nums, x, acc, 0, acc + x)", rec);
+    const result = evaluateFormulaValue(
+      "REDUCE(nums, x, acc, 0, acc + x)",
+      rec
+    );
     expect(result).toBe(15);
   });
 
   test("REDUCE concatenates strings", () => {
     const rec = makeRecord({ words: ["hello", "world"] });
-    const result = evaluateFormulaValue('REDUCE(words, w, acc, "", acc + w + " ")', rec);
+    const result = evaluateFormulaValue(
+      'REDUCE(words, w, acc, "", acc + w + " ")',
+      rec
+    );
     expect(typeof result).toBe("string");
     expect((result as string).trim()).toBe("hello world");
   });
@@ -693,7 +837,8 @@ describe("formulaEngine — MAP/FILTER/REDUCE (list iteration)", () => {
   test("MAP + FILTER chained via LET", () => {
     const rec = makeRecord({ prices: [10, 25, 50, 75, 100] });
     // Double all prices, then keep only those > 40
-    const formula = "LET(doubled, MAP(prices, p, p * 2), FILTER(doubled, d, d > 40))";
+    const formula =
+      "LET(doubled, MAP(prices, p, p * 2), FILTER(doubled, d, d > 40))";
     const result = evaluateFormulaValue(formula, rec);
     expect(result).toEqual([50, 100, 150, 200]);
   });
@@ -705,7 +850,9 @@ describe("formulaEngine — MAP/FILTER/REDUCE (list iteration)", () => {
   });
 
   test("REDUCE with too few args returns null", () => {
-    expect(evaluateFormulaValue("REDUCE(nums, x, acc)", makeRecord({ nums: [1] }))).toBeNull();
+    expect(
+      evaluateFormulaValue("REDUCE(nums, x, acc)", makeRecord({ nums: [1] }))
+    ).toBeNull();
   });
 });
 
@@ -755,19 +902,29 @@ describe("formulaEngine — ZIP / EXTRACT / LETS", () => {
   test("ZIP pairs two equal-length lists", () => {
     const rec = makeRecord({ a: [1, 2, 3], b: ["x", "y", "z"] });
     const result = evaluateFormulaValue("ZIP(a, b)", rec);
-    expect(result).toEqual([[1, "x"], [2, "y"], [3, "z"]]);
+    expect(result).toEqual([
+      [1, "x"],
+      [2, "y"],
+      [3, "z"],
+    ]);
   });
 
   test("ZIP truncates to shortest list", () => {
     const rec = makeRecord({ a: [1, 2, 3], b: ["x", "y"] });
     const result = evaluateFormulaValue("ZIP(a, b)", rec);
-    expect(result).toEqual([[1, "x"], [2, "y"]]);
+    expect(result).toEqual([
+      [1, "x"],
+      [2, "y"],
+    ]);
   });
 
   test("ZIP with three lists", () => {
     const rec = makeRecord({ a: [1, 2], b: [3, 4], c: [5, 6] });
     const result = evaluateFormulaValue("ZIP(a, b, c)", rec);
-    expect(result).toEqual([[1, 3, 5], [2, 4, 6]]);
+    expect(result).toEqual([
+      [1, 3, 5],
+      [2, 4, 6],
+    ]);
   });
 
   test("EXTRACT gets element at index", () => {
@@ -788,7 +945,8 @@ describe("formulaEngine — ZIP / EXTRACT / LETS", () => {
 
   test("LETS binds multiple variables", () => {
     const rec = makeRecord({ price: 100, qty: 3 });
-    const formula = 'LETS("total", price * qty, "fee", total * 0.1, total + fee)';
+    const formula =
+      'LETS("total", price * qty, "fee", total * 0.1, total + fee)';
     expect(evaluateFormulaValue(formula, rec)).toBe(330);
   });
 
@@ -802,7 +960,9 @@ describe("formulaEngine — ZIP / EXTRACT / LETS", () => {
   });
 
   test("LETS with even arg count returns null", () => {
-    expect(evaluateFormulaValue('LETS("x", 1, "y", 2)', makeRecord({}))).toBeNull();
+    expect(
+      evaluateFormulaValue('LETS("x", 1, "y", 2)', makeRecord({}))
+    ).toBeNull();
   });
 });
 

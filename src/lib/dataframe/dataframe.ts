@@ -191,7 +191,6 @@ export function isDate(value: Optional<DataValue> | DataValue): value is Date {
   return value instanceof Date;
 }
 
-
 export function isOptional<T>(value: unknown): value is Optional<T> {
   return value === null || value === undefined;
 }
@@ -226,7 +225,6 @@ export function isOptionalDate(
   return isDate(value) || isOptional(value);
 }
 
- 
 export function isStringLink(value: any): boolean {
   if (isString(value)) {
     return /^\[\[(.*)\]\]$/.test(value);

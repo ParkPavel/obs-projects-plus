@@ -24,7 +24,10 @@ const css = fs.readFileSync(TOKENS_CSS, "utf8");
 
 /** Declarations of the FIRST rule block whose selector is exactly `selector`. */
 function declarations(selector: string): Record<string, string> {
-  const start = new RegExp(`(?:^|\\})\\s*${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{`, "m");
+  const start = new RegExp(
+    `(?:^|\\})\\s*${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{`,
+    "m"
+  );
   const at = css.search(start);
   if (at < 0) throw new Error(`no rule block for ${selector}`);
   const open = css.indexOf("{", at);
@@ -32,20 +35,28 @@ function declarations(selector: string): Record<string, string> {
   const body = css.slice(open + 1, close);
   const out: Record<string, string> = {};
   for (const match of body.matchAll(/(--[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
-    out[match[1] as string] = (match[2] as string).replace(/\/\*[\s\S]*?\*\//g, "").trim();
+    out[match[1] as string] = (match[2] as string)
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .trim();
   }
   return out;
 }
 
 /** Every `.svelte` file's text, keyed by path relative to `src/`. */
-function components(dir: string, out: Record<string, string> = {}): Record<string, string> {
+function components(
+  dir: string,
+  out: Record<string, string> = {}
+): Record<string, string> {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name === "__tests__" || entry.name === "__mocks__") continue;
       components(full, out);
     } else if (entry.name.endsWith(".svelte")) {
-      out[path.relative(SRC_ROOT, full).replace(/\\/g, "/")] = fs.readFileSync(full, "utf8");
+      out[path.relative(SRC_ROOT, full).replace(/\\/g, "/")] = fs.readFileSync(
+        full,
+        "utf8"
+      );
     }
   }
   return out;
@@ -106,7 +117,9 @@ describe("named spacing scale, promoted from the injection (#165)", () => {
   test("every named space token has at least one component consumer", () => {
     // The failure #165 exists for, one level down: a declared scale nobody uses.
     const all = Object.values(components(SRC_ROOT)).join("\n");
-    const orphans = Object.keys(INJECTED_SPACE).filter((n) => !all.includes(`var(${n}`));
+    const orphans = Object.keys(INJECTED_SPACE).filter(
+      (n) => !all.includes(`var(${n}`)
+    );
     expect(orphans).toEqual([]);
   });
 
@@ -116,15 +129,21 @@ describe("named spacing scale, promoted from the injection (#165)", () => {
     // the dead file reborn, so they were dropped with the injection.
     const declared = Object.keys(root);
     expect(declared.filter((n) => n.startsWith("--ppp-bp-"))).toEqual([]);
-    expect(declared.filter((n) => /^--ppp-touch-(coarse|fine)$/.test(n))).toEqual([]);
-    expect(declared.filter((n) => /^--ppp-row-(compact|default|expanded)$/.test(n))).toEqual([]);
+    expect(
+      declared.filter((n) => /^--ppp-touch-(coarse|fine)$/.test(n))
+    ).toEqual([]);
+    expect(
+      declared.filter((n) => /^--ppp-row-(compact|default|expanded)$/.test(n))
+    ).toEqual([]);
   });
 });
 
 describe("radius scales, and the shadow between them (#165)", () => {
   test("the two radius keys the global scale lacked are now declared", () => {
     expect(root["--ppp-radius-xs"]).toBe(INJECTED_RADIUS["--ppp-radius-xs"]);
-    expect(root["--ppp-radius-pill"]).toBe(INJECTED_RADIUS["--ppp-radius-pill"]);
+    expect(root["--ppp-radius-pill"]).toBe(
+      INJECTED_RADIUS["--ppp-radius-pill"]
+    );
   });
 
   test("the global radius scale is untouched", () => {
@@ -147,8 +166,16 @@ describe("radius scales, and the shadow between them (#165)", () => {
   });
 
   test("the shim reproduces the dashboard's values, not the global ones", () => {
-    for (const name of ["--ppp-radius-sm", "--ppp-radius-md", "--ppp-radius-lg", "--ppp-radius-xl"]) {
-      expect([name, canvas[name]]).toEqual([name, INJECTED_RADIUS[name as keyof typeof INJECTED_RADIUS]]);
+    for (const name of [
+      "--ppp-radius-sm",
+      "--ppp-radius-md",
+      "--ppp-radius-lg",
+      "--ppp-radius-xl",
+    ]) {
+      expect([name, canvas[name]]).toEqual([
+        name,
+        INJECTED_RADIUS[name as keyof typeof INJECTED_RADIUS],
+      ]);
       expect(canvas[name]).not.toBe(root[name]);
     }
   });
@@ -157,7 +184,9 @@ describe("radius scales, and the shadow between them (#165)", () => {
     expect(canvas["--ppp-radius-xs"]).toBeUndefined();
     expect(canvas["--ppp-radius-pill"]).toBeUndefined();
     expect(root["--ppp-radius-xs"]).toBe(INJECTED_RADIUS["--ppp-radius-xs"]);
-    expect(root["--ppp-radius-pill"]).toBe(INJECTED_RADIUS["--ppp-radius-pill"]);
+    expect(root["--ppp-radius-pill"]).toBe(
+      INJECTED_RADIUS["--ppp-radius-pill"]
+    );
   });
 
   test("the shim is scoped to the canvas and not to the document root", () => {
@@ -185,7 +214,9 @@ describe("the injection is gone (#165)", () => {
       path.join(SRC_ROOT, "ui", "modals", "components", "Schema.svelte"),
       "utf8"
     );
-    expect(schema).not.toMatch(/var\(--ppp-space-(xxs|xs|sm|md|lg|xl|2xl|3xl)\b/);
+    expect(schema).not.toMatch(
+      /var\(--ppp-space-(xxs|xs|sm|md|lg|xl|2xl|3xl)\b/
+    );
     expect(root["--ppp-space-5"]).toBe("0.75rem");
     expect(root["--ppp-space-3"]).toBe("0.375rem");
     expect(root["--ppp-space-2"]).toBe("0.25rem");
@@ -196,6 +227,7 @@ describe("the injection is gone (#165)", () => {
     expect(all).not.toMatch(/var\(--ppp-bp-/);
     expect(all).not.toMatch(/var\(--ppp-touch-(coarse|fine)\b/);
     expect(all).not.toMatch(/var\(--ppp-row-(compact|default|expanded)\b/);
-    for (const name of UNCONSUMED_SPACE) expect(all).not.toContain(`var(${name}`);
+    for (const name of UNCONSUMED_SPACE)
+      expect(all).not.toContain(`var(${name}`);
   });
 });

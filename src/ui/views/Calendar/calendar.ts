@@ -72,7 +72,11 @@ export function parseDateInTimezone(
   // Numbers (0, 1, 2...) are NOT valid date inputs — dayjs(0) returns
   // 1970-01-01 which is technically "valid" but semantically wrong,
   // causing infinite-span multi-day events in the calendar.
-  if (typeof value !== "string" && !(value instanceof Date) && !dayjs.isDayjs(value)) {
+  if (
+    typeof value !== "string" &&
+    !(value instanceof Date) &&
+    !dayjs.isDayjs(value)
+  ) {
     return null;
   }
 
@@ -101,9 +105,7 @@ export function groupRecordsByRange(
     const parsedEnd = endField ? parseDateInTimezone(endValue, tz) : null;
 
     const startDay = start.startOf("day");
-    const endDay = parsedEnd?.isValid()
-      ? parsedEnd.startOf("day")
-      : startDay;
+    const endDay = parsedEnd?.isValid() ? parsedEnd.startOf("day") : startDay;
 
     const rangeEnd = endDay.isBefore(startDay) ? startDay : endDay;
 
@@ -116,7 +118,9 @@ export function groupRecordsByRange(
     }
 
     // Multi-day: use native Date arithmetic for speed
-    const cursor = new Date(Date.UTC(startDay.year(), startDay.month(), startDay.date()));
+    const cursor = new Date(
+      Date.UTC(startDay.year(), startDay.month(), startDay.date())
+    );
     const endMs = Date.UTC(rangeEnd.year(), rangeEnd.month(), rangeEnd.date());
     let guard = 0;
 
@@ -124,7 +128,7 @@ export function groupRecordsByRange(
       const y = cursor.getUTCFullYear();
       const m = cursor.getUTCMonth() + 1;
       const d = cursor.getUTCDate();
-      const dateStr = `${y}-${m < 10 ? '0' : ''}${m}-${d < 10 ? '0' : ''}${d}`;
+      const dateStr = `${y}-${m < 10 ? "0" : ""}${m}-${d < 10 ? "0" : ""}${d}`;
 
       if (!(dateStr in res)) res[dateStr] = [];
       res[dateStr]?.push(record);
@@ -154,10 +158,7 @@ export function computeDateInterval(
   const eow = endOfWeek(anchor, firstDayOfWeek);
   switch (interval) {
     case "year":
-      return [
-        anchor.startOf("year"),
-        anchor.endOf("year"),
-      ];
+      return [anchor.startOf("year"), anchor.endOf("year")];
     case "month":
       return [
         startOfWeek(anchor.startOf("month"), firstDayOfWeek),
@@ -279,7 +280,6 @@ export function getLocale(locale: LocaleOption): Intl.Locale {
   // Получаем язык через Obsidian App API
   let obsidianLanguage = dayjs().locale();
   try {
-     
     const app = (window as any).app;
     if (app?.loadLocalStorage) {
       const storedLang = app.loadLocalStorage("language");
@@ -319,14 +319,16 @@ export const ZOOM_HIERARCHY: ZoomLevel[] = [
   { interval: "month", order: 0 },
   { interval: "2weeks", order: 1 },
   { interval: "week", order: 2 },
-  { interval: "day", order: 3 }
+  { interval: "day", order: 3 },
 ];
 
 /**
  * Get the next zoom level in the hierarchy
  */
 export function getNextZoomLevel(current: CalendarInterval): CalendarInterval {
-  const currentIndex = ZOOM_HIERARCHY.findIndex(level => level.interval === current);
+  const currentIndex = ZOOM_HIERARCHY.findIndex(
+    (level) => level.interval === current
+  );
   const nextIndex = Math.min(currentIndex + 1, ZOOM_HIERARCHY.length - 1);
   const nextLevel = ZOOM_HIERARCHY[nextIndex];
   return nextLevel ? nextLevel.interval : current;
@@ -335,8 +337,12 @@ export function getNextZoomLevel(current: CalendarInterval): CalendarInterval {
 /**
  * Get the previous zoom level in the hierarchy
  */
-export function getPreviousZoomLevel(current: CalendarInterval): CalendarInterval {
-  const currentIndex = ZOOM_HIERARCHY.findIndex(level => level.interval === current);
+export function getPreviousZoomLevel(
+  current: CalendarInterval
+): CalendarInterval {
+  const currentIndex = ZOOM_HIERARCHY.findIndex(
+    (level) => level.interval === current
+  );
   const prevIndex = Math.max(currentIndex - 1, 0);
   const prevLevel = ZOOM_HIERARCHY[prevIndex];
   return prevLevel ? prevLevel.interval : current;
@@ -379,58 +385,76 @@ export function getDateFromMousePosition(
       // Year view typically shows 12 months in a 4x3 or 3x4 grid
       const monthWidth = rect.width / 4; // 4 columns
       const monthHeight = rect.height / 3; // 3 rows
-      
+
       if (monthWidth <= 0 || monthHeight <= 0) {
         return anchorDate;
       }
-      
-      const rowIndex = Math.max(0, Math.min(Math.floor(relativeY / monthHeight), 2));
-      const colIndex = Math.max(0, Math.min(Math.floor(relativeX / monthWidth), 3));
+
+      const rowIndex = Math.max(
+        0,
+        Math.min(Math.floor(relativeY / monthHeight), 2)
+      );
+      const colIndex = Math.max(
+        0,
+        Math.min(Math.floor(relativeX / monthWidth), 3)
+      );
       const monthIndex = rowIndex * 4 + colIndex;
-      
+
       return anchorDate.startOf("year").add(monthIndex, "month");
     }
-    
+
     case "month": {
       // For month view, calculate based on day cells
       const dayWidth = rect.width / 7; // 7 days per week
       const dayHeight = rect.height / 6; // 6 weeks per month grid
-      
+
       // Prevent division by zero
       if (dayWidth <= 0 || dayHeight <= 0) {
         return anchorDate;
       }
-      
-      const weekIndex = Math.max(0, Math.min(Math.floor(relativeY / dayHeight), 5));
-      const dayIndex = Math.max(0, Math.min(Math.floor(relativeX / dayWidth), 6));
-      
-      const startOfGrid = startOfWeek(anchorDate.startOf("month"), firstDayOfWeek);
+
+      const weekIndex = Math.max(
+        0,
+        Math.min(Math.floor(relativeY / dayHeight), 5)
+      );
+      const dayIndex = Math.max(
+        0,
+        Math.min(Math.floor(relativeX / dayWidth), 6)
+      );
+
+      const startOfGrid = startOfWeek(
+        anchorDate.startOf("month"),
+        firstDayOfWeek
+      );
       const targetDate = startOfGrid.add(weekIndex * 7 + dayIndex, "day");
-      
+
       return targetDate;
     }
-    
+
     case "2weeks":
     case "week": {
       // For week views, calculate based on day columns
       const dayWidth = rect.width / 7;
-      
+
       // Prevent division by zero
       if (dayWidth <= 0) {
         return anchorDate;
       }
-      
-      const dayIndex = Math.max(0, Math.min(Math.floor(relativeX / dayWidth), 6));
-      
+
+      const dayIndex = Math.max(
+        0,
+        Math.min(Math.floor(relativeX / dayWidth), 6)
+      );
+
       const startOfGrid = startOfWeek(anchorDate, firstDayOfWeek);
       return startOfGrid.add(dayIndex, "day");
     }
-    
+
     case "day": {
       // For day views, return the anchor date (no cursor-based navigation)
       return anchorDate;
     }
-    
+
     default:
       return anchorDate;
   }
@@ -445,13 +469,15 @@ export function shouldApplyZoom(
 ): boolean {
   // Only apply zoom when Ctrl is pressed and we're not over interactive elements
   const hasCtrlKey = event.ctrlKey || event.metaKey;
-  const isInteractiveElement = target?.closest?.('input, textarea, select, button, [role="button"]') !== null;
-  
+  const isInteractiveElement =
+    target?.closest?.('input, textarea, select, button, [role="button"]') !==
+    null;
+
   // Additional validation for empty or invalid targets
   if (!target) {
     return false;
   }
-  
+
   return hasCtrlKey && !isInteractiveElement;
 }
 
@@ -467,11 +493,11 @@ export function validateZoomParams(
     return { isValid: false, error: "Invalid zoom parameters" };
   }
 
-  if (!ZOOM_HIERARCHY.find(level => level.interval === current)) {
+  if (!ZOOM_HIERARCHY.find((level) => level.interval === current)) {
     return { isValid: false, error: "Current interval not in hierarchy" };
   }
 
-  if (!ZOOM_HIERARCHY.find(level => level.interval === newInterval)) {
+  if (!ZOOM_HIERARCHY.find((level) => level.interval === newInterval)) {
     return { isValid: false, error: "New interval not in hierarchy" };
   }
 
@@ -481,7 +507,10 @@ export function validateZoomParams(
 /**
  * Get zoom level display information
  */
-export function getZoomLevelInfo(interval: CalendarInterval): { name: string; description: string } {
+export function getZoomLevelInfo(interval: CalendarInterval): {
+  name: string;
+  description: string;
+} {
   switch (interval) {
     case "year":
       return { name: "Year", description: "Year heatmap overview" };
@@ -497,8 +526,6 @@ export function getZoomLevelInfo(interval: CalendarInterval): { name: string; de
       return { name: "Unknown", description: "Invalid interval" };
   }
 }
-
-
 
 export function generateMonthTitle(month: dayjs.Dayjs): string {
   return month.format("MMMM YYYY");
@@ -525,7 +552,7 @@ export function generateMonthGrid(
       const date = current.add(d, "day");
       row.push({
         date,
-        isOutsideMonth: date.month() !== mon
+        isOutsideMonth: date.month() !== mon,
       });
     }
     grid.push(row);
@@ -587,16 +614,16 @@ export function extractEndDateWithPriority(
 /**
  * Extract time value from record (v3.0.0).
  * Returns time string in "HH:mm" format (24-hour) or null.
- * 
+ *
  * Validation:
  * - Must be string format "HH:mm" (e.g., "09:30", "14:00", "23:59")
  * - Hours: 00-23, Minutes: 00-59
  * - No timezone info (timezone applied at dayjs combination stage)
- * 
+ *
  * Priority:
  * 1. Use provided timeField parameter
  * 2. Default to "startTime" if not provided
- * 
+ *
  * @example
  * extractTimeWithPriority(record, "startTime") → "09:30" | null
  * extractTimeWithPriority(record, "endTime") → "17:00" | null
@@ -607,23 +634,28 @@ export function extractTimeWithPriority(
 ): string | null {
   const fieldName = timeField || "startTime";
   const value = record.values[fieldName];
-  
+
   // Validate HH:mm format
   if (typeof value === "string" && /^\d{2}:\d{2}$/.test(value)) {
     // Additional validation: hours 00-23, minutes 00-59
-    const parts = value.split(':');
+    const parts = value.split(":");
     if (parts.length === 2) {
       // coercion-exempt: Class B - lexing an HH:MM token a split has already shaped
       const hours = Number(parts[0]);
       const minutes = Number(parts[1]);
-      if (!isNaN(hours) && !isNaN(minutes) && 
-          hours >= 0 && hours <= 23 && 
-          minutes >= 0 && minutes <= 59) {
+      if (
+        !isNaN(hours) &&
+        !isNaN(minutes) &&
+        hours >= 0 &&
+        hours <= 23 &&
+        minutes >= 0 &&
+        minutes <= 59
+      ) {
         return value;
       }
     }
   }
-  
+
   return null;
 }
 

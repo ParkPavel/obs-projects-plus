@@ -12,27 +12,27 @@ import { defaultModeForFunction } from "src/lib/database/rollupMode";
 /**
  * Date format preset types for convenient configuration
  */
-export type DateFormatPreset = 
-  | "iso"           // YYYY-MM-DD (default)
-  | "us"            // MM/DD/YYYY
-  | "eu"            // DD.MM.YYYY
-  | "uk"            // DD/MM/YYYY
-  | "japan"         // YYYY年MM月DD日
-  | "custom";       // User-defined format
+export type DateFormatPreset =
+  | "iso" // YYYY-MM-DD (default)
+  | "us" // MM/DD/YYYY
+  | "eu" // DD.MM.YYYY
+  | "uk" // DD/MM/YYYY
+  | "japan" // YYYY年MM月DD日
+  | "custom"; // User-defined format
 
 /**
  * Configuration for date formatting in a project
  */
 export type DateFormatConfig = {
   // Format used when WRITING dates to frontmatter
-  readonly writeFormat: string;              // e.g., "YYYY-MM-DD", "MM/DD/YYYY", "DD.MM.YYYY"
-  
+  readonly writeFormat: string; // e.g., "YYYY-MM-DD", "MM/DD/YYYY", "DD.MM.YYYY"
+
   // Optional: Format for DISPLAY (if different from write)
-  readonly displayFormat?: string;           // If not set, uses writeFormat
-  
+  readonly displayFormat?: string; // If not set, uses writeFormat
+
   // Optional: Include time component
-  readonly includeTime?: boolean;            // If true, appends time: "YYYY-MM-DD HH:mm"
-  
+  readonly includeTime?: boolean; // If true, appends time: "YYYY-MM-DD HH:mm"
+
   // Preset name (for UI convenience)
   readonly preset?: DateFormatPreset;
 };
@@ -54,74 +54,74 @@ export const DEFAULT_DATE_FORMAT: DateFormatConfig = {
  * - 'standard': Inherits calendar view filters
  * - 'custom': User-defined lists with custom filters (future)
  */
-export type AgendaMode = 'standard' | 'custom';
+export type AgendaMode = "standard" | "custom";
 
 /**
  * Agenda icon configuration
  */
 export type AgendaIcon = {
-  readonly type: 'lucide' | 'emoji' | 'obsidian-icon';
+  readonly type: "lucide" | "emoji" | "obsidian-icon";
   readonly value: string;
 };
 
 /**
  * Filter mode: visual (UI) or advanced (formulas)
  */
-export type AgendaFilterMode = 'visual' | 'advanced';
+export type AgendaFilterMode = "visual" | "advanced";
 
 /**
  * Filter operators for agenda custom lists
  * Comprehensive set covering all field types
  */
-export type AgendaFilterOperator = 
+export type AgendaFilterOperator =
   // Base (for all types)
-  | 'is-empty'
-  | 'is-not-empty'
+  | "is-empty"
+  | "is-not-empty"
   // String
-  | 'is'
-  | 'is-not'
-  | 'contains'
-  | 'not-contains'
-  | 'starts-with'
-  | 'ends-with'
-  | 'regex'
+  | "is"
+  | "is-not"
+  | "contains"
+  | "not-contains"
+  | "starts-with"
+  | "ends-with"
+  | "regex"
   // Number
-  | 'eq'
-  | 'neq'
-  | 'lt'
-  | 'gt'
-  | 'lte'
-  | 'gte'
+  | "eq"
+  | "neq"
+  | "lt"
+  | "gt"
+  | "lte"
+  | "gte"
   // Boolean
-  | 'is-checked'
-  | 'is-not-checked'
+  | "is-checked"
+  | "is-not-checked"
   // Date
-  | 'is-on'
-  | 'is-not-on'
-  | 'is-before'
-  | 'is-after'
-  | 'is-on-and-before'
-  | 'is-on-and-after'
-  | 'is-today'
-  | 'is-this-week'
-  | 'is-this-month'
-  | 'is-this-quarter'
-  | 'is-this-year'
-  | 'is-past-week'
-  | 'is-past-month'
-  | 'is-past-year'
-  | 'is-next-week'
-  | 'is-next-month'
-  | 'is-next-year'
-  | 'is-last-n-days'
-  | 'is-next-n-days'
-  | 'is-overdue'
-  | 'is-upcoming'
+  | "is-on"
+  | "is-not-on"
+  | "is-before"
+  | "is-after"
+  | "is-on-and-before"
+  | "is-on-and-after"
+  | "is-today"
+  | "is-this-week"
+  | "is-this-month"
+  | "is-this-quarter"
+  | "is-this-year"
+  | "is-past-week"
+  | "is-past-month"
+  | "is-past-year"
+  | "is-next-week"
+  | "is-next-month"
+  | "is-next-year"
+  | "is-last-n-days"
+  | "is-next-n-days"
+  | "is-overdue"
+  | "is-upcoming"
   // List/Tags
-  | 'has-any-of'
-  | 'has-all-of'
-  | 'has-none-of'
-  | 'has-keyword';
+  | "has-any-of"
+  | "has-all-of"
+  | "has-none-of"
+  | "has-keyword";
 
 /**
  * Single filter condition for agenda custom list
@@ -141,7 +141,7 @@ export type AgendaFilter = {
  */
 export type AgendaFilterGroup = {
   readonly id: string;
-  readonly conjunction: 'AND' | 'OR';
+  readonly conjunction: "AND" | "OR";
   readonly filters: AgendaFilter[];
   readonly groups: AgendaFilterGroup[];
 };
@@ -169,12 +169,12 @@ export type AgendaCustomList = {
  */
 export type AgendaConfig = {
   readonly mode: AgendaMode;
-  
+
   // Standard mode settings
   readonly standard?: {
     readonly inheritCalendarFilters: boolean;
   };
-  
+
   // Custom mode settings (future)
   readonly custom?: {
     readonly lists: AgendaCustomList[];
@@ -185,7 +185,7 @@ export type AgendaConfig = {
  * Default agenda configuration
  */
 export const DEFAULT_AGENDA_CONFIG: AgendaConfig = {
-  mode: 'standard',
+  mode: "standard",
   standard: {
     inheritCalendarFilters: true,
   },
@@ -238,15 +238,15 @@ export type ProjectDefinition<ViewDef> = {
   readonly dataSource: DataSource;
   readonly additionalSources?: DataSource[];
   readonly newNotesFolder: string;
-  
+
   // Date format configuration for this project
-  readonly dateFormat?: DateFormatConfig;  // Optional: defaults to ISO 8601
-  
+  readonly dateFormat?: DateFormatConfig; // Optional: defaults to ISO 8601
+
   // Autosave mode for note editing modal (v3.0.4)
   // true = automatic save on change (default)
   // false = manual save with button
   readonly autosave?: boolean;
-  
+
   // Agenda configuration (v3.1.0+)
   // Controls agenda display mode and custom lists
   readonly agenda?: AgendaConfig;
@@ -505,16 +505,14 @@ function resolveProject(
  * `RollupFieldConfig`.
  */
 function migrateFieldConfig(
-  fieldConfig: { [field: string]: FieldConfig } | undefined,
+  fieldConfig: { [field: string]: FieldConfig } | undefined
 ): { [field: string]: FieldConfig } {
   if (!fieldConfig) return {};
   const out: { [field: string]: FieldConfig } = {};
   for (const [name, fc] of Object.entries(fieldConfig)) {
     if (fc.rollup && fc.rollup.function && !fc.rollup.mode) {
       const mode = defaultModeForFunction(fc.rollup.function);
-      out[name] = mode
-        ? { ...fc, rollup: { ...fc.rollup, mode } }
-        : fc;
+      out[name] = mode ? { ...fc, rollup: { ...fc.rollup, mode } } : fc;
     } else {
       out[name] = fc;
     }
@@ -588,12 +586,15 @@ const removeDuplicateCommands = (commands: ShowCommand[]): ShowCommand[] =>
       )
   );
 
-const removeOrphanCommands = (
-  allProjects: ProjectDefinition<ViewDefinition>[]
-): ((commands: ShowCommand[]) => ShowCommand[]) =>
+const removeOrphanCommands =
+  (
+    allProjects: ProjectDefinition<ViewDefinition>[]
+  ): ((commands: ShowCommand[]) => ShowCommand[]) =>
   (commands) =>
     commands.filter((cmd) =>
-      allProjects.some((p) => p.id === cmd.project &&
-        cmd.view === undefined ? true : p.views.some((v) => v.id === cmd.view)
+      allProjects.some((p) =>
+        p.id === cmd.project && cmd.view === undefined
+          ? true
+          : p.views.some((v) => v.id === cmd.view)
       )
     );

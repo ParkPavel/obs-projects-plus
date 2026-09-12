@@ -10,16 +10,76 @@ import type { TransformPipeline } from "./transformTypes";
 function makeWideFrame(): DataFrame {
   return {
     fields: [
-      { name: "date", type: DataFieldType.Date, repeated: false, identifier: true, derived: false },
-      { name: "type", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "exercise1", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "weight1", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "sets1", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "reps1", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "exercise2", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "weight2", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "sets2", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "reps2", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "date",
+        type: DataFieldType.Date,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "type",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "exercise1",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "weight1",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "sets1",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "reps1",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "exercise2",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "weight2",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "sets2",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "reps2",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       {
@@ -151,8 +211,20 @@ describe("executeTransform — COMPUTE", () => {
   test("computes simple multiplication", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "price", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "qty", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "price",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "qty",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { price: 10, qty: 5 } },
@@ -176,8 +248,20 @@ describe("executeTransform — COMPUTE", () => {
   test("computes addition and subtraction", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "a", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "b", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "a",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "b",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { a: 10, b: 3 } }],
     };
@@ -201,9 +285,27 @@ describe("executeTransform — COMPUTE", () => {
   test("respects operator precedence (* before +)", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "a", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "b", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "c", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "a",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "b",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "c",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { a: 2, b: 3, c: 4 } }],
     };
@@ -224,8 +326,20 @@ describe("executeTransform — COMPUTE", () => {
   test("division by zero returns null", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "a", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "b", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "a",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "b",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { a: 10, b: 0 } }],
     };
@@ -245,7 +359,13 @@ describe("executeTransform — COMPUTE", () => {
   test("adds computed field to fields array", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "x",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { x: 5 } }],
     };
@@ -338,7 +458,13 @@ describe("executeTransform — step order validation", () => {
   test("warns on out-of-order steps", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "x",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { x: 1 } }],
     };
@@ -362,8 +488,20 @@ describe("executeTransform — step order validation", () => {
   test("no warning for correct order", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "a1", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "a1",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "x",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { a1: 5, x: 1 } }],
     };
@@ -392,7 +530,13 @@ describe("executeTransform — regex safety", () => {
   test("rejects lookbehind patterns", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "test1", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+        {
+          name: "test1",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { test1: "x" } }],
     };
@@ -419,9 +563,27 @@ describe("executeTransform — regex safety", () => {
 function makeFilterableFrame(): DataFrame {
   return {
     fields: [
-      { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-      { name: "status", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "priority", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "status",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "priority",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { name: "Task A", status: "active", priority: 5 } },
@@ -442,7 +604,12 @@ describe("executeTransform — FILTER", () => {
           conditions: {
             conjunction: "and",
             conditions: [
-              { field: "status", operator: "is", value: "active", enabled: true },
+              {
+                field: "status",
+                operator: "is",
+                value: "active",
+                enabled: true,
+              },
             ],
           },
         },
@@ -493,9 +660,27 @@ describe("executeTransform — FILTER", () => {
 function makeGroupableFrame(): DataFrame {
   return {
     fields: [
-      { name: "category", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "amount", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "label", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+      {
+        name: "category",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "amount",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "label",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { category: "A", amount: 10, label: "first" } },
@@ -559,8 +744,20 @@ describe("executeTransform — GROUP BY", () => {
   test("date grouping by month", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "date", type: DataFieldType.Date, repeated: false, identifier: true, derived: false },
-        { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "date",
+          type: DataFieldType.Date,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "value",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { date: "2024-01-15", value: 10 } },
@@ -593,14 +790,29 @@ describe("executeTransform — GROUP BY", () => {
   function makeSingleDateFrame(date: unknown): DataFrame {
     return {
       fields: [
-        { name: "date", type: DataFieldType.Date, repeated: false, identifier: true, derived: false },
-        { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "date",
+          type: DataFieldType.Date,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "value",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { date: date as never, value: 10 } }],
     };
   }
 
-  function bucketLabel(date: unknown, granularity: "day" | "week" | "month" | "quarter" | "year"): unknown {
+  function bucketLabel(
+    date: unknown,
+    granularity: "day" | "week" | "month" | "quarter" | "year"
+  ): unknown {
     const result = executeTransform(makeSingleDateFrame(date), {
       steps: [
         {
@@ -681,7 +893,11 @@ describe("executeTransform — AGGREGATE", () => {
         {
           type: "aggregate",
           columns: [
-            { sourceField: "amount", outputName: "avg_amount", function: "AVG" },
+            {
+              sourceField: "amount",
+              outputName: "avg_amount",
+              function: "AVG",
+            },
           ],
         },
       ],
@@ -716,8 +932,20 @@ describe("executeTransform — AGGREGATE", () => {
   test("COUNT_DISTINCT on grouped array", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "team", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-        { name: "role", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+        {
+          name: "team",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "role",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { team: "A", role: "dev" } },
@@ -732,7 +960,11 @@ describe("executeTransform — AGGREGATE", () => {
         {
           type: "aggregate",
           columns: [
-            { sourceField: "role", outputName: "unique_roles", function: "COUNT_DISTINCT" },
+            {
+              sourceField: "role",
+              outputName: "unique_roles",
+              function: "COUNT_DISTINCT",
+            },
           ],
         },
       ],
@@ -757,7 +989,9 @@ describe("executeTransform — AGGREGATE", () => {
       ],
     });
 
-    const groupA = result.data.records.find((r) => r.values["category"] === "A");
+    const groupA = result.data.records.find(
+      (r) => r.values["category"] === "A"
+    );
     expect(groupA!.values["min_a"]).toBe(10);
     expect(groupA!.values["max_a"]).toBe(50);
     expect(groupA!.values["range_a"]).toBe(40);
@@ -781,9 +1015,27 @@ describe("transformExecutor — unnest", () => {
   function makeNestedFrame(): DataFrame {
     return {
       fields: [
-        { name: "date", type: DataFieldType.Date, repeated: false, identifier: true, derived: false },
-        { name: "type", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-        { name: "exercises", type: DataFieldType.Unknown, repeated: false, identifier: false, derived: false },
+        {
+          name: "date",
+          type: DataFieldType.Date,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "type",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "exercises",
+          type: DataFieldType.Unknown,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         {
@@ -802,9 +1054,7 @@ describe("transformExecutor — unnest", () => {
           values: {
             date: "2026-04-03",
             type: "cardio",
-            exercises: [
-              { name: "Running", duration: 30 },
-            ] as any,
+            exercises: [{ name: "Running", duration: 30 }] as any,
           },
         },
       ],
@@ -871,7 +1121,9 @@ describe("transformExecutor — unnest", () => {
   test("fields filter picks only specified keys", () => {
     const frame = makeNestedFrame();
     const result = executeTransform(frame, {
-      steps: [{ type: "unnest", field: "exercises", fields: ["name", "weight"] }],
+      steps: [
+        { type: "unnest", field: "exercises", fields: ["name", "weight"] },
+      ],
     });
 
     const fieldNames = result.data.fields.map((f) => f.name);
@@ -885,8 +1137,20 @@ describe("transformExecutor — unnest", () => {
   test("empty array field → one row with null nested fields", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "id", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-        { name: "items", type: DataFieldType.Unknown, repeated: false, identifier: false, derived: false },
+        {
+          name: "id",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "items",
+          type: DataFieldType.Unknown,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "a", values: { id: "a", items: [] } },
@@ -907,8 +1171,20 @@ describe("transformExecutor — unnest", () => {
   test("flat array → _value column", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "id", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-        { name: "tags", type: DataFieldType.List, repeated: true, identifier: false, derived: false },
+        {
+          name: "id",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "tags",
+          type: DataFieldType.List,
+          repeated: true,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "a", values: { id: "a", tags: ["alpha", "beta", "gamma"] } },
@@ -928,12 +1204,22 @@ describe("transformExecutor — unnest", () => {
   test("non-array field → pass through unchanged", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "id", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-        { name: "score", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "id",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "score",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
-      records: [
-        { id: "a", values: { id: "a", score: 42 } },
-      ],
+      records: [{ id: "a", values: { id: "a", score: 42 } }],
     };
 
     const result = executeTransform(frame, {
@@ -952,7 +1238,9 @@ describe("transformExecutor — unnest", () => {
     });
     const withoutStep = executeTransform(frame, { steps: [] });
 
-    expect(withDisabled.data.records).toHaveLength(withoutStep.data.records.length);
+    expect(withDisabled.data.records).toHaveLength(
+      withoutStep.data.records.length
+    );
     expect(withDisabled.data.records).toHaveLength(frame.records.length);
     expect(withDisabled.data.fields.map((f) => f.name)).toContain("exercises");
     expect(withDisabled.meta.stepsExecuted).toBe(0);
@@ -972,8 +1260,25 @@ describe("transformExecutor — unnest", () => {
     const result = executeTransform(frame, {
       steps: [
         { type: "unnest", field: "exercises" },
-        { type: "filter", disabled: true, conditions: { conjunction: "and", conditions: [{ field: "name", operator: "is", value: "__none__", enabled: true }] } },
-        { type: "compute", columns: [{ name: "volume", expression: "sets * reps * weight" }] },
+        {
+          type: "filter",
+          disabled: true,
+          conditions: {
+            conjunction: "and",
+            conditions: [
+              {
+                field: "name",
+                operator: "is",
+                value: "__none__",
+                enabled: true,
+              },
+            ],
+          },
+        },
+        {
+          type: "compute",
+          columns: [{ name: "volume", expression: "sets * reps * weight" }],
+        },
       ],
     });
 
@@ -990,9 +1295,7 @@ describe("transformExecutor — unnest", () => {
         { type: "unnest", field: "exercises" },
         {
           type: "compute",
-          columns: [
-            { name: "volume", expression: "sets * reps * weight" },
-          ],
+          columns: [{ name: "volume", expression: "sets * reps * weight" }],
         },
       ],
     });

@@ -67,7 +67,7 @@ function fillItem(
     setWarning?: (danger: boolean) => unknown;
     onClick: (cb: () => void) => unknown;
   },
-  entry: ContextMenuItem,
+  entry: ContextMenuItem
 ): void {
   obsidianItem.setTitle(entry.title);
   if (entry.icon) {
@@ -102,9 +102,11 @@ function appendEntries(menu: Menu, entries: ContextMenuEntry[]): void {
       // we feature-detect at runtime to stay forward-compatible.
       menu.addItem((mi) => {
         fillItem(mi as never, entry);
-        const maybeSub = (mi as unknown as {
-          setSubmenu?: () => Menu;
-        }).setSubmenu;
+        const maybeSub = (
+          mi as unknown as {
+            setSubmenu?: () => Menu;
+          }
+        ).setSubmenu;
         if (typeof maybeSub === "function") {
           const sub = maybeSub.call(mi);
           appendEntries(sub, entry.submenu ?? []);
@@ -130,7 +132,7 @@ function appendEntries(menu: Menu, entries: ContextMenuEntry[]): void {
 export function openContextMenu(
   entries: ContextMenuEntry[],
   anchor: ContextMenuAnchor,
-  _app?: App,
+  _app?: App
 ): Menu {
   const menu = new Menu();
   appendEntries(menu, entries);
@@ -173,7 +175,7 @@ export function openContextMenu(
  */
 export function appendContextMenuEntries(
   menu: Menu,
-  entries: ContextMenuEntry[],
+  entries: ContextMenuEntry[]
 ): void {
   appendEntries(menu, entries);
 }
@@ -191,7 +193,7 @@ export function appendContextMenuEntries(
  */
 export function openContextMenuDeferred(
   entries: ContextMenuEntry[],
-  _triggerEvent: MouseEvent,
+  _triggerEvent: MouseEvent
 ): void {
   const menu = new Menu();
   appendEntries(menu, entries);

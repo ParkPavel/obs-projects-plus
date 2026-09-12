@@ -3,8 +3,21 @@
 
 import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
-import type { TransformPipeline, TransformStep, GroupByStep, AggregationFunction } from "./transformTypes";
+import type {
+  ChartConfig,
+  ChartData,
+  ChartSeries,
+  ColumnAggregation,
+  ScatterChartConfig,
+  ScatterData,
+  ScatterPoint,
+} from "src/ui/views/Dashboard/types";
+import type {
+  TransformPipeline,
+  TransformStep,
+  GroupByStep,
+  AggregationFunction,
+} from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
 import { toNumber } from "src/lib/engine/numeric";
 import { joinKey as scatterJoinKey } from "./joinKey";
@@ -13,7 +26,6 @@ import {
   DEFAULT_SEMANTIC_LABELS,
   type SemanticLabels,
 } from "src/ui/views/Dashboard/widgets/DatabaseCall/groupRows";
-
 
 /**
  * Map footer ColumnAggregation (lowercase) to pipeline AggregationFunction (UPPERCASE).
@@ -71,11 +83,13 @@ export function buildChartPipeline(
   if (config.yAxis.property !== "count") {
     steps.push({
       type: "aggregate",
-      columns: [{
-        sourceField: config.yAxis.property,
-        outputName: "__chart_value__",
-        function: toAggFn(config.yAxis.aggregation),
-      }],
+      columns: [
+        {
+          sourceField: config.yAxis.property,
+          outputName: "__chart_value__",
+          function: toAggFn(config.yAxis.aggregation),
+        },
+      ],
     });
   }
 
@@ -109,7 +123,8 @@ export function computeChartData(
   const labelField = dateGrouping
     ? `${dateGrouping.field}_${dateGrouping.granularity}`
     : config.xAxis.property;
-  const valueField = config.yAxis.property === "count" ? "_group_size" : "__chart_value__";
+  const valueField =
+    config.yAxis.property === "count" ? "_group_size" : "__chart_value__";
 
   // #094/#107 — Honor Status semantic groups: when the X field carries a
   // non-empty statusGroups overlay (and no date-bucketing is active), collapse
@@ -121,7 +136,10 @@ export function computeChartData(
   const sg = xFieldDef?.typeConfig?.statusGroups;
   const hasAnyBucket = !!(
     sg &&
-    (sg.todo?.length ?? 0) + (sg.inProgress?.length ?? 0) + (sg.complete?.length ?? 0) > 0
+    (sg.todo?.length ?? 0) +
+      (sg.inProgress?.length ?? 0) +
+      (sg.complete?.length ?? 0) >
+      0
   );
   const semanticActive =
     config.groupMode === "semantic" && hasAnyBucket && dateGrouping == null;
@@ -148,7 +166,11 @@ export function computeChartData(
   if (semanticActive && sg) {
     // WHY: semantic buckets merge additively (count/sum); non-additive Y-agg
     // out of scope for #094.
-    const bucketOrder = [semanticLabels.todo, semanticLabels.inProgress, semanticLabels.complete];
+    const bucketOrder = [
+      semanticLabels.todo,
+      semanticLabels.inProgress,
+      semanticLabels.complete,
+    ];
     const merged = new Map<string, number | null>();
     for (const e of entries) {
       const raw = e.label === "" ? null : e.label;
@@ -170,7 +192,10 @@ export function computeChartData(
     }
     // "No Status" surfaces only when something actually landed there.
     if (merged.has(semanticLabels.none) && !hidden.has(semanticLabels.none)) {
-      ordered.push({ label: semanticLabels.none, value: merged.get(semanticLabels.none) ?? null });
+      ordered.push({
+        label: semanticLabels.none,
+        value: merged.get(semanticLabels.none) ?? null,
+      });
     }
     entries = ordered;
   }
@@ -204,10 +229,12 @@ export function computeChartData(
   const labels = entries.map((e) => e.label);
   const values = entries.map((e) => e.value);
 
-  const series: ChartSeries[] = [{
-    name: config.yAxis.property === "count" ? "Count" : config.yAxis.property,
-    values,
-  }];
+  const series: ChartSeries[] = [
+    {
+      name: config.yAxis.property === "count" ? "Count" : config.yAxis.property,
+      values,
+    },
+  ];
 
   return { labels, series };
 }
@@ -217,10 +244,14 @@ export function computeChartData(
  */
 export function chartHeightPx(height: ChartConfig["style"]["height"]): number {
   switch (height) {
-    case "small": return 200;
-    case "medium": return 320;
-    case "large": return 480;
-    default: return 320;
+    case "small":
+      return 200;
+    case "medium":
+      return 320;
+    case "large":
+      return 480;
+    default:
+      return 320;
   }
 }
 
@@ -278,9 +309,14 @@ export function computeScatterData(
       matched += 1;
 
       const label = record.id ?? undefined;
-      const group = config.colorBy ? String(record.values[config.colorBy] ?? "") : undefined;
+      const group = config.colorBy
+        ? String(record.values[config.colorBy] ?? "")
+        : undefined;
       const sizeRaw = config.sizeBy ? record.values[config.sizeBy] : undefined;
-      const size = typeof sizeRaw === "number" ? Math.max(2, Math.min(sizeRaw, 20)) : undefined;
+      const size =
+        typeof sizeRaw === "number"
+          ? Math.max(2, Math.min(sizeRaw, 20))
+          : undefined;
 
       const point: ScatterPoint = {
         x,
@@ -304,10 +340,15 @@ export function computeScatterData(
       if (x === null || y === null) continue;
 
       const label = record.id ?? undefined;
-      const group = config.colorBy ? String(record.values[config.colorBy] ?? "") : undefined;
+      const group = config.colorBy
+        ? String(record.values[config.colorBy] ?? "")
+        : undefined;
 
       const sizeRaw = config.sizeBy ? record.values[config.sizeBy] : undefined;
-      const size = typeof sizeRaw === "number" ? Math.max(2, Math.min(sizeRaw, 20)) : undefined;
+      const size =
+        typeof sizeRaw === "number"
+          ? Math.max(2, Math.min(sizeRaw, 20))
+          : undefined;
 
       const point: ScatterPoint = {
         x,
@@ -329,7 +370,11 @@ export function computeScatterData(
 
   // Compute linear regression (least squares)
   const n = points.length;
-  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  let sumX = 0,
+    sumY = 0,
+    sumXY = 0,
+    sumX2 = 0,
+    sumY2 = 0;
   for (const p of points) {
     sumX += p.x;
     sumY += p.y;

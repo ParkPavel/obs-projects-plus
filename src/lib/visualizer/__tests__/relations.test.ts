@@ -63,20 +63,14 @@ describe("appendRelation", () => {
   });
 
   it("preserves existing relations", () => {
-    const result = appendRelation(
-      { links: ["[[A]]"] },
-      "links",
-      { path: "B" },
-    );
+    const result = appendRelation({ links: ["[[A]]"] }, "links", { path: "B" });
     expect(result).toEqual(["[[A]]", "[[B]]"]);
   });
 
   it("is idempotent — same path is not duplicated", () => {
-    const result = appendRelation(
-      { links: ["[[A]]", "[[B]]"] },
-      "links",
-      { path: "A" },
-    );
+    const result = appendRelation({ links: ["[[A]]", "[[B]]"] }, "links", {
+      path: "A",
+    });
     expect(result).toEqual(["[[A]]", "[[B]]"]);
   });
 
@@ -92,9 +86,9 @@ describe("appendRelation", () => {
 
 describe("removeRelation", () => {
   it("removes the matching path", () => {
-    expect(
-      removeRelation({ links: ["[[A]]", "[[B]]"] }, "links", "A"),
-    ).toEqual(["[[B]]"]);
+    expect(removeRelation({ links: ["[[A]]", "[[B]]"] }, "links", "A")).toEqual(
+      ["[[B]]"]
+    );
   });
 
   it("returns empty array when last entry removed", () => {
@@ -102,8 +96,8 @@ describe("removeRelation", () => {
   });
 
   it("ignores unknown paths", () => {
-    expect(
-      removeRelation({ links: ["[[A]]"] }, "links", "Ghost"),
-    ).toEqual(["[[A]]"]);
+    expect(removeRelation({ links: ["[[A]]"] }, "links", "Ghost")).toEqual([
+      "[[A]]",
+    ]);
   });
 });

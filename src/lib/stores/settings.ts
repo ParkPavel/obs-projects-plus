@@ -146,7 +146,10 @@ function createSettings() {
           // scatter correlation) that pointed at the removed project so the
           // UI doesn't keep surfacing "right source unavailable" warnings
           // indefinitely.
-          draft.projects = removeDanglingSourceReferences(draft.projects, projectId);
+          draft.projects = removeDanglingSourceReferences(
+            draft.projects,
+            projectId
+          );
         })
       );
     },
@@ -191,9 +194,8 @@ function createSettings() {
       update((state) =>
         produce(state, (draft) => {
           const idx = draft.projects.findIndex((ws) => ws.id === projectId);
-          const normalizedView = view.type === "table"
-            ? { ...view, type: "dashboard" }
-            : view;
+          const normalizedView =
+            view.type === "table" ? { ...view, type: "dashboard" } : view;
 
           if (idx >= 0) {
             const ws = draft.projects[idx];
@@ -322,7 +324,7 @@ function createSettings() {
     updateViewConfig(
       projectId: ProjectId,
       viewId: ViewId,
-       
+
       config: Record<string, any>
     ) {
       update((state) =>
@@ -350,17 +352,24 @@ function createSettings() {
     reorderViews(projectId: ProjectId, fromIndex: number, toIndex: number) {
       update((state) =>
         produce(state, (draft) => {
-          const projectIndex = draft.projects.findIndex((p) => p.id === projectId);
-          
+          const projectIndex = draft.projects.findIndex(
+            (p) => p.id === projectId
+          );
+
           if (projectIndex >= 0) {
             const project = draft.projects[projectIndex];
-            
-            if (project && fromIndex >= 0 && fromIndex < project.views.length &&
-                toIndex >= 0 && toIndex < project.views.length) {
+
+            if (
+              project &&
+              fromIndex >= 0 &&
+              fromIndex < project.views.length &&
+              toIndex >= 0 &&
+              toIndex < project.views.length
+            ) {
               const views = [...project.views];
               const [movedView] = views.splice(fromIndex, 1);
               views.splice(toIndex, 0, movedView!);
-              
+
               draft.projects[projectIndex] = {
                 ...project,
                 views,

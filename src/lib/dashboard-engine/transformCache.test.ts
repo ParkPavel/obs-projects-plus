@@ -16,8 +16,20 @@ import type { TransformPipeline } from "./transformTypes";
 function makeFrame(n: number = 3): DataFrame {
   return {
     fields: [
-      { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-      { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "value",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: Array.from({ length: n }, (_, i) => ({
       id: `r${i}`,

@@ -17,9 +17,13 @@ jest.mock("src/lib/stores/ui", () => {
 });
 
 // `setIcon` from obsidian is a no-op in tests — provide a stub.
-jest.mock("obsidian", () => ({
-  setIcon: jest.fn(),
-}), { virtual: false });
+jest.mock(
+  "obsidian",
+  () => ({
+    setIcon: jest.fn(),
+  }),
+  { virtual: false }
+);
 
 const PopoverList = require("../PopoverList.svelte").default;
 
@@ -68,18 +72,26 @@ describe("PopoverList", () => {
     try {
       await flush();
 
-      const buttons = target.querySelectorAll<HTMLButtonElement>(".ppp-pop-item");
+      const buttons =
+        target.querySelectorAll<HTMLButtonElement>(".ppp-pop-item");
       expect(buttons.length).toBe(2);
       expect(buttons[0]!.textContent).toContain("Alpha");
       expect(buttons[1]!.textContent).toContain("Beta");
-      expect(buttons[1]!.classList.contains("ppp-pop-item--selected")).toBe(true);
+      expect(buttons[1]!.classList.contains("ppp-pop-item--selected")).toBe(
+        true
+      );
 
       const events: Array<{ item: PopoverItem; keepOpen: boolean }> = [];
-      component.$on("select", (e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>) => {
-        events.push(e.detail);
-      });
+      component.$on(
+        "select",
+        (e: CustomEvent<{ item: PopoverItem; keepOpen: boolean }>) => {
+          events.push(e.detail);
+        }
+      );
 
-      buttons[0]!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+      buttons[0]!.dispatchEvent(
+        new MouseEvent("mousedown", { bubbles: true, cancelable: true })
+      );
       await flush();
 
       expect(handlerA).toHaveBeenCalledTimes(1);
@@ -87,7 +99,9 @@ describe("PopoverList", () => {
       expect(events[0]!.item.label).toBe("Alpha");
       expect(events[0]!.keepOpen).toBe(true);
 
-      buttons[1]!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+      buttons[1]!.dispatchEvent(
+        new MouseEvent("mousedown", { bubbles: true, cancelable: true })
+      );
       await flush();
 
       expect(handlerB).toHaveBeenCalledTimes(1);
@@ -111,7 +125,9 @@ describe("PopoverList", () => {
     try {
       await flush();
 
-      const search = target.querySelector<HTMLInputElement>(".ppp-pop-search-input");
+      const search = target.querySelector<HTMLInputElement>(
+        ".ppp-pop-search-input"
+      );
       expect(search).not.toBeNull();
       expect(target.querySelectorAll(".ppp-pop-item").length).toBe(3);
 
@@ -119,9 +135,9 @@ describe("PopoverList", () => {
       search!.dispatchEvent(new Event("input", { bubbles: true }));
       await flush();
 
-      const remaining = Array.from(target.querySelectorAll(".ppp-pop-item")).map((el) =>
-        (el.textContent ?? "").trim(),
-      );
+      const remaining = Array.from(
+        target.querySelectorAll(".ppp-pop-item")
+      ).map((el) => (el.textContent ?? "").trim());
       expect(remaining.length).toBe(2);
       expect(remaining.some((t) => t.includes("Apple"))).toBe(true);
       expect(remaining.some((t) => t.includes("Apricot"))).toBe(true);

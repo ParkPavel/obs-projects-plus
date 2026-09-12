@@ -28,7 +28,11 @@ const frame = (rows: Array<Record<string, unknown>>): DataFrame =>
       { name: "bucket", type: DataFieldType.String },
       { name: "amount", type: DataFieldType.Number },
     ],
-    records: rows.map((values, i) => ({ id: `r${i}`, path: `r${i}.md`, values })),
+    records: rows.map((values, i) => ({
+      id: `r${i}`,
+      path: `r${i}.md`,
+      values,
+    })),
   }) as unknown as DataFrame;
 
 const isOpen: FilterDefinition = {
@@ -44,7 +48,9 @@ const sumByBucket: TransformPipeline = {
     { type: "group-by", fields: ["bucket"] },
     {
       type: "aggregate",
-      columns: [{ sourceField: "amount", outputName: "total", function: "SUM" }],
+      columns: [
+        { sourceField: "amount", outputName: "total", function: "SUM" },
+      ],
     },
   ] as unknown as TransformPipeline["steps"],
 };
@@ -120,7 +126,9 @@ describe("#184 — the order is a result, not a position in a file", () => {
     // `pipelineInputRowCount` is what tells a block "the pipeline hid all your
     // rows" apart from "there were none". After a scope it must count the
     // SCOPED rows — reporting 3 here would blame the pipeline for the filter.
-    expect(run({ subFilter: isOpen }, sumByBucket).pipelineInputRowCount).toBe(2);
+    expect(run({ subFilter: isOpen }, sumByBucket).pipelineInputRowCount).toBe(
+      2
+    );
   });
 
   it("leaves a scope it cannot evaluate for the block, rather than emptying it", () => {
@@ -141,7 +149,9 @@ describe("#184 — the order is a result, not a position in a file", () => {
   });
 
   it("an empty pipeline is not a pipeline that ran", () => {
-    const out = run({ subFilter: isOpen }, { steps: [] } as unknown as TransformPipeline);
+    const out = run({ subFilter: isOpen }, {
+      steps: [],
+    } as unknown as TransformPipeline);
     expect(out.transformedFrame.records).toHaveLength(2);
     expect(out.pipelineInputRowCount).toBe(2);
   });
@@ -167,7 +177,9 @@ describe("#184 — enrichment happens, and only when it has to", () => {
       ],
     } as unknown as DataFrame;
 
-    expect(enrichForWidget(derivedRelation, derivedRelation.fields)).toBe(derivedRelation);
+    expect(enrichForWidget(derivedRelation, derivedRelation.fields)).toBe(
+      derivedRelation
+    );
   });
 });
 
@@ -177,9 +189,17 @@ describe("#184 — sourceId reaches every widget type, projectId does not", () =
   // types.ts). Adversarial review flagged the asymmetry; this pins it so the
   // next reader finds the answer instead of the question.
   const parts = [
-    { id: "s1", frame: { fields: [], records: [{ id: "r0", values: {} }] } as unknown as DataFrame },
+    {
+      id: "s1",
+      frame: {
+        fields: [],
+        records: [{ id: "r0", values: {} }],
+      } as unknown as DataFrame,
+    },
   ];
-  const sources = [{ kind: "folder", id: "s1", config: { path: "X", recursive: false } }] as never[];
+  const sources = [
+    { kind: "folder", id: "s1", config: { path: "X", recursive: false } },
+  ] as never[];
 
   const narrowed = (type: string) =>
     computeHostFrames({
@@ -205,7 +225,9 @@ describe("#184 — sourceId reaches every widget type, projectId does not", () =
     // keeps exactly that row out of the three in the fixture.
     for (const type of ["data-table", "chart", "checklist", "database-call"]) {
       const out = narrowed(type);
-      expect({ type, ids: out.enrichedFrame.records.map((r) => r.id) }).toEqual({ type, ids: ["r0"] });
+      expect({ type, ids: out.enrichedFrame.records.map((r) => r.id) }).toEqual(
+        { type, ids: ["r0"] }
+      );
     }
   });
 
@@ -237,8 +259,11 @@ describe("#184 — a block whose source is gone offers no action into nothing", 
   it("still hands the block a full frame behind the notice", () => {
     const out = computeHostFrames({
       widget: {
-        id: "w", type: "data-table", title: "T",
-        layout: { x: 0, y: 0, w: 4, h: 4 }, config: {},
+        id: "w",
+        type: "data-table",
+        title: "T",
+        layout: { x: 0, y: 0, w: 4, h: 4 },
+        config: {},
         sourceConfig: { projectId: "", sourceId: "src-deleted" },
       } as unknown as WidgetDefinition,
       frame: frame(SAMPLE),
@@ -247,7 +272,9 @@ describe("#184 — a block whose source is gone offers no action into nothing", 
       rightFrames: new Map(),
       sourceStates: new Map(),
       parts: [],
-      sources: [{ kind: "folder", id: "s1", config: { path: "X", recursive: false } }] as never[],
+      sources: [
+        { kind: "folder", id: "s1", config: { path: "X", recursive: false } },
+      ] as never[],
     });
 
     expect(out.namedSource.kind).toBe("broken");

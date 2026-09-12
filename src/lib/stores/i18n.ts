@@ -13,7 +13,7 @@ import ru from "src/lib/stores/translations/ru.json";
  * Supported i18next resource locale keys.
  * Must match keys in the `resources` object below.
  */
-const SUPPORTED_LOCALES = ['en', 'ru', 'uk', 'zh-CN'] as const;
+const SUPPORTED_LOCALES = ["en", "ru", "uk", "zh-CN"] as const;
 
 /**
  * Map browser / Obsidian locale codes to our i18next resource keys.
@@ -22,20 +22,20 @@ const SUPPORTED_LOCALES = ['en', 'ru', 'uk', 'zh-CN'] as const;
 function mapToResourceLocale(raw: string): string {
   const lc = raw.toLowerCase();
   const map: Record<string, string> = {
-    'zh-cn': 'zh-CN',
-    'zh-tw': 'zh-CN',
-    'zh': 'zh-CN',
-    'ru-ru': 'ru',
-    'ru': 'ru',
-    'uk-ua': 'uk',
-    'uk': 'uk',
-    'en-us': 'en',
-    'en-gb': 'en',
-    'en': 'en',
+    "zh-cn": "zh-CN",
+    "zh-tw": "zh-CN",
+    zh: "zh-CN",
+    "ru-ru": "ru",
+    ru: "ru",
+    "uk-ua": "uk",
+    uk: "uk",
+    "en-us": "en",
+    "en-gb": "en",
+    en: "en",
   };
   // Exact match first, then base language, then default
-  const base = lc.split('-')[0] ?? '';
-  return map[lc] ?? map[base] ?? 'en';
+  const base = lc.split("-")[0] ?? "";
+  return map[lc] ?? map[base] ?? "en";
 }
 
 // Функция для получения локали из различных источников
@@ -44,9 +44,8 @@ function getObsidianLocale(): string {
   //    to match its language setting (Settings → About → Language).
   //    This is the most reliable source.
   try {
-     
     const m = (window as any).moment;
-    if (m && typeof m.locale === 'function') {
+    if (m && typeof m.locale === "function") {
       const momentLang = m.locale();
       if (momentLang) {
         return mapToResourceLocale(momentLang);
@@ -58,8 +57,8 @@ function getObsidianLocale(): string {
 
   // 2. Direct localStorage key (Obsidian may store it here on some platforms)
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const obsLang = window.localStorage.getItem('language');
+    if (typeof window !== "undefined" && window.localStorage) {
+      const obsLang = window.localStorage.getItem("language");
       if (obsLang) {
         return mapToResourceLocale(obsLang);
       }
@@ -70,27 +69,27 @@ function getObsidianLocale(): string {
 
   // 3. navigator.language fallback (system language)
   try {
-    if (typeof navigator !== 'undefined' && navigator.language) {
+    if (typeof navigator !== "undefined" && navigator.language) {
       return mapToResourceLocale(navigator.language);
     }
   } catch {
     // navigator not available
   }
 
-  return 'en';
+  return "en";
 }
 
 // Функция для установки локали dayjs
 function setDayjsLocale(locale: string): void {
   const localeMap: Record<string, string> = {
-    'ru': 'ru',
-    'uk': 'uk',
-    'zh-CN': 'zh-cn',
-    'zh': 'zh-cn',
-    'en': 'en',
+    ru: "ru",
+    uk: "uk",
+    "zh-CN": "zh-cn",
+    zh: "zh-cn",
+    en: "en",
   };
 
-  const dayjsLocale = localeMap[locale] || 'en';
+  const dayjsLocale = localeMap[locale] || "en";
   dayjs.locale(dayjsLocale);
 }
 
@@ -104,7 +103,7 @@ void i18next.init({
   fallbackLng: {
     "zh-TW": ["zh-CN", "en"],
     "ru-RU": ["ru", "en"],
-    "ru": ["ru", "en"],
+    ru: ["ru", "en"],
     default: ["en"],
   },
   resources: {
@@ -119,7 +118,7 @@ void i18next.init({
 });
 
 // Следим за сменой языка и обновляем dayjs
-i18next.on('languageChanged', (lng: string) => {
+i18next.on("languageChanged", (lng: string) => {
   setDayjsLocale(lng);
 });
 
@@ -130,8 +129,10 @@ i18next.on('languageChanged', (lng: string) => {
 export function syncLocale(): void {
   const detected = getObsidianLocale();
   const current = i18next.language;
-   
-  console.debug(`[Projects+] i18n syncLocale: detected=${detected}, current=${current}, moment=${(window as any).moment?.locale?.()}`);
+
+  console.debug(
+    `[PPP i18n] syncLocale: detected=${detected}, current=${current}, moment=${(window as any).moment?.locale?.()}`
+  );
   if (detected !== current) {
     void i18next.changeLanguage(detected);
   }

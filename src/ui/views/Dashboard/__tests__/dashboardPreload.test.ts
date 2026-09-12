@@ -19,7 +19,10 @@ const frame = (name: string): DataFrame =>
 /** Collects every published snapshot so ordering can be asserted, not just the end state. */
 function collector() {
   const seen: Array<ReadonlyMap<string, ExternalSourceState>> = [];
-  return { seen, set: (s: ReadonlyMap<string, ExternalSourceState>) => void seen.push(s) };
+  return {
+    seen,
+    set: (s: ReadonlyMap<string, ExternalSourceState>) => void seen.push(s),
+  };
 }
 
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -51,7 +54,9 @@ describe("#136 createPreloadRunner publishes source state", () => {
     // The synchronous first snapshot is the whole point: it is the window in
     // which the old code rendered the parent project's data.
     expect(c.seen).toHaveLength(1);
-    expect([...c.seen[0]!.values()].every((s) => s.status === "loading")).toBe(true);
+    expect([...c.seen[0]!.values()].every((s) => s.status === "loading")).toBe(
+      true
+    );
     await flush();
   });
 
@@ -120,7 +125,8 @@ describe("#136 createPreloadRunner publishes source state", () => {
     const c = collector();
     const deferred: Array<(f: DataFrame) => void> = [];
     const run = createPreloadRunner(async (id) => {
-      if (id === "slow") return new Promise<DataFrame>((r) => void deferred.push(r));
+      if (id === "slow")
+        return new Promise<DataFrame>((r) => void deferred.push(r));
       return frame("fast");
     }, c.set);
 

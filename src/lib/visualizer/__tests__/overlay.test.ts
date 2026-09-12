@@ -41,7 +41,7 @@ describe("readOverlay", () => {
     expect(readOverlay({ [OVERLAY_KEY]: "garbage" })).toEqual(empty());
     expect(readOverlay({ [OVERLAY_KEY]: [1, 2, 3] })).toEqual(empty());
     expect(
-      readOverlay({ [OVERLAY_KEY]: { hidden: [1, "ok", null, ""] } }),
+      readOverlay({ [OVERLAY_KEY]: { hidden: [1, "ok", null, ""] } })
     ).toEqual({ hidden: ["ok"], pinned: [], order: [] });
   });
 });
@@ -58,7 +58,12 @@ describe("applyOverlay", () => {
 
   it("drops reserved keys (pp_overlay, $*)", () => {
     const out = applyOverlay(fm, empty());
-    expect(out.map((e) => e.key)).toEqual(["status", "priority", "color", "tags"]);
+    expect(out.map((e) => e.key)).toEqual([
+      "status",
+      "priority",
+      "color",
+      "tags",
+    ]);
   });
 
   it("hides keys listed in overlay.hidden by default", () => {
@@ -70,9 +75,14 @@ describe("applyOverlay", () => {
     const out = applyOverlay(
       fm,
       { hidden: ["color"], pinned: [], order: [] },
-      { showHidden: true },
+      { showHidden: true }
     );
-    expect(out.map((e) => e.key)).toEqual(["status", "priority", "tags", "color"]);
+    expect(out.map((e) => e.key)).toEqual([
+      "status",
+      "priority",
+      "tags",
+      "color",
+    ]);
     expect(out[3]!.hidden).toBe(true);
   });
 
@@ -82,7 +92,12 @@ describe("applyOverlay", () => {
       pinned: ["tags", "priority"],
       order: [],
     });
-    expect(out.map((e) => e.key)).toEqual(["tags", "priority", "status", "color"]);
+    expect(out.map((e) => e.key)).toEqual([
+      "tags",
+      "priority",
+      "status",
+      "color",
+    ]);
     expect(out[0]!.pinned).toBe(true);
     expect(out[1]!.pinned).toBe(true);
     expect(out[2]!.pinned).toBe(false);
@@ -94,7 +109,12 @@ describe("applyOverlay", () => {
       pinned: [],
       order: ["tags", "color"],
     });
-    expect(out.map((e) => e.key)).toEqual(["tags", "color", "status", "priority"]);
+    expect(out.map((e) => e.key)).toEqual([
+      "tags",
+      "color",
+      "status",
+      "priority",
+    ]);
   });
 
   it("returns empty for empty frontmatter", () => {
@@ -169,13 +189,15 @@ describe("compactOverlay / isEmptyOverlay", () => {
   });
 
   it("compactOverlay omits empty arrays", () => {
-    expect(
-      compactOverlay({ hidden: ["a"], pinned: [], order: [] }),
-    ).toEqual({ hidden: ["a"] });
+    expect(compactOverlay({ hidden: ["a"], pinned: [], order: [] })).toEqual({
+      hidden: ["a"],
+    });
   });
 
   it("isEmptyOverlay reflects emptiness", () => {
     expect(isEmptyOverlay(empty())).toBe(true);
-    expect(isEmptyOverlay({ hidden: [], pinned: ["a"], order: [] })).toBe(false);
+    expect(isEmptyOverlay({ hidden: [], pinned: ["a"], order: [] })).toBe(
+      false
+    );
   });
 });

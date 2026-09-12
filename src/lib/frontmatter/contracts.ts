@@ -43,10 +43,7 @@ export interface FrontmatterReader {
    * Subscribe to frontmatter changes for a single file.
    * Callback fires with the post-change snapshot.
    */
-  observe(
-    file: TFile,
-    cb: (fm: Record<string, unknown>) => void
-  ): Disposer;
+  observe(file: TFile, cb: (fm: Record<string, unknown>) => void): Disposer;
 }
 
 /**

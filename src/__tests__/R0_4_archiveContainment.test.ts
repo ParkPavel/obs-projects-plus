@@ -61,7 +61,8 @@ function archiveSpecifiers(content: string): string[] {
   const found: string[] = [];
   for (const match of content.matchAll(SPECIFIER_SITE)) {
     const specifier = match[2];
-    if (specifier !== undefined && ARCHIVE_SPECIFIER.test(specifier)) found.push(specifier);
+    if (specifier !== undefined && ARCHIVE_SPECIFIER.test(specifier))
+      found.push(specifier);
   }
   return found;
 }
@@ -79,7 +80,11 @@ const insideArchive = (file: string) =>
  * This file states the rule, so it necessarily quotes violations of it. Same
  * self-exclusion R0.7 makes for the numbers it defines. Nothing else is exempt.
  */
-const RULE_DEFINITION = path.join(SRC_ROOT, "__tests__", "R0_4_archiveContainment.test.ts");
+const RULE_DEFINITION = path.join(
+  SRC_ROOT,
+  "__tests__",
+  "R0_4_archiveContainment.test.ts"
+);
 
 /**
  * Files outside the archive that reference an archive module, reported as
@@ -90,7 +95,9 @@ function findOffenders(files: readonly SourceFile[]): string[] {
   for (const file of files) {
     if (insideArchive(file.path)) continue;
     for (const specifier of archiveSpecifiers(file.content)) {
-      offenders.push(`${path.relative(SRC_ROOT, file.path).replace(/\\/g, "/")} → ${specifier}`);
+      offenders.push(
+        `${path.relative(SRC_ROOT, file.path).replace(/\\/g, "/")} → ${specifier}`
+      );
     }
   }
   return offenders;
@@ -117,16 +124,18 @@ describe("R0.4 archive containment (UT2026-A L1)", () => {
   });
 
   it("recognises an archive specifier at every import site", () => {
-    expect(archiveSpecifiers('import x from "src/archive/dashboard-v1/x";')).toEqual([
-      "src/archive/dashboard-v1/x",
-    ]);
+    expect(
+      archiveSpecifiers('import x from "src/archive/dashboard-v1/x";')
+    ).toEqual(["src/archive/dashboard-v1/x"]);
     expect(archiveSpecifiers('import "../archive/side-effect";')).toEqual([
       "../archive/side-effect",
     ]);
-    expect(archiveSpecifiers('const m = require("src/archive/legacy");')).toEqual([
-      "src/archive/legacy",
+    expect(
+      archiveSpecifiers('const m = require("src/archive/legacy");')
+    ).toEqual(["src/archive/legacy"]);
+    expect(archiveSpecifiers('await import("./archive/lazy");')).toEqual([
+      "./archive/lazy",
     ]);
-    expect(archiveSpecifiers('await import("./archive/lazy");')).toEqual(["./archive/lazy"]);
     // The reference the pre-#176 matcher missed, taken from `2e886a7^`.
     expect(
       archiveSpecifiers(
@@ -138,16 +147,29 @@ describe("R0.4 archive containment (UT2026-A L1)", () => {
   it("does not mistake a quoted path for an import", () => {
     // `relationSetup.test.ts` really carries this record id; a matcher that
     // flagged it would be reverted on its first run, which is how ratchets die.
-    expect(archiveSpecifiers('{ id: "archive/Sam.md", values: { title: "Sam" } }')).toEqual([]);
-    expect(archiveSpecifiers('import { archived } from "src/lib/archiveless";')).toEqual([]);
+    expect(
+      archiveSpecifiers('{ id: "archive/Sam.md", values: { title: "Sam" } }')
+    ).toEqual([]);
+    expect(
+      archiveSpecifiers('import { archived } from "src/lib/archiveless";')
+    ).toEqual([]);
   });
 
   it("reports an outside importer and spares the archive's own files", () => {
     // Proves the containment rule works while no archive exists to prove it on.
     const offenders = findOffenders([
-      { path: path.join(SRC_ROOT, "ui", "Widget.svelte"), content: 'import a from "src/archive/a";' },
-      { path: path.join(ARCHIVE_DIR, "a.ts"), content: 'import b from "src/archive/b";' },
-      { path: path.join(SRC_ROOT, "lib", "clean.ts"), content: 'import c from "src/lib/c";' },
+      {
+        path: path.join(SRC_ROOT, "ui", "Widget.svelte"),
+        content: 'import a from "src/archive/a";',
+      },
+      {
+        path: path.join(ARCHIVE_DIR, "a.ts"),
+        content: 'import b from "src/archive/b";',
+      },
+      {
+        path: path.join(SRC_ROOT, "lib", "clean.ts"),
+        content: 'import c from "src/lib/c";',
+      },
     ]);
     expect(offenders).toEqual(["ui/Widget.svelte → src/archive/a"]);
   });

@@ -56,7 +56,10 @@ export function computeVirtualScroll(
   }
 
   const totalHeight = itemCount * rowHeight;
-  const safeScroll = Math.max(0, Math.min(scrollTop, totalHeight - containerHeight));
+  const safeScroll = Math.max(
+    0,
+    Math.min(scrollTop, totalHeight - containerHeight)
+  );
 
   const rawStart = Math.floor(safeScroll / rowHeight);
   const rawEnd = Math.ceil((safeScroll + containerHeight) / rowHeight);

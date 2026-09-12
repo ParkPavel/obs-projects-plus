@@ -13,7 +13,9 @@ import { getOperatorsForFieldType } from "../operatorHelpers";
 describe("getOperatorsForFieldType — Stage A coverage", () => {
   it("Select includes is/is-not on top of base", () => {
     const ops = getOperatorsForFieldType(DataFieldType.Select);
-    expect(ops).toEqual(expect.arrayContaining(["is-empty", "is-not-empty", "is", "is-not"]));
+    expect(ops).toEqual(
+      expect.arrayContaining(["is-empty", "is-not-empty", "is", "is-not"])
+    );
   });
 
   it("Status includes is/is-not on top of base", () => {
@@ -35,7 +37,9 @@ describe("getOperatorsForFieldType — Stage A coverage", () => {
 
   it("Rollup exposes numeric operators", () => {
     const ops = getOperatorsForFieldType(DataFieldType.Rollup);
-    expect(ops).toEqual(expect.arrayContaining(["eq", "neq", "lt", "gt", "lte", "gte"]));
+    expect(ops).toEqual(
+      expect.arrayContaining(["eq", "neq", "lt", "gt", "lte", "gte"])
+    );
   });
 
   it("Every DataFieldType literal returns a non-empty list", () => {

@@ -13,7 +13,10 @@ import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { WidgetDefinition } from "../../types";
 
 const frame = (name: string): DataFrame =>
-  ({ fields: [{ name }], records: [{ id: "r1", values: {} }] }) as unknown as DataFrame;
+  ({
+    fields: [{ name }],
+    records: [{ id: "r1", values: {} }],
+  }) as unknown as DataFrame;
 
 const parent = frame("parent");
 const external = frame("external");
@@ -30,7 +33,11 @@ describe("#136 resolveBlockSource", () => {
   });
 
   it("reports loading while the source is resolving", () => {
-    const source = resolveBlockSource("p1", states([["p1", { status: "loading" }]]), parent);
+    const source = resolveBlockSource(
+      "p1",
+      states([["p1", { status: "loading" }]]),
+      parent
+    );
 
     expect(source).toEqual({ kind: "loading", projectId: "p1" });
   });
@@ -56,7 +63,11 @@ describe("#136 resolveBlockSource", () => {
   });
 
   it("reports unavailable, carrying the id so the UI can name it", () => {
-    const source = resolveBlockSource("gone", states([["gone", { status: "unavailable" }]]), parent);
+    const source = resolveBlockSource(
+      "gone",
+      states([["gone", { status: "unavailable" }]]),
+      parent
+    );
 
     expect(source).toEqual({ kind: "unavailable", projectId: "gone" });
   });
@@ -68,15 +79,19 @@ describe("#136 resolveBlockSource", () => {
       parent
     );
 
-    expect(source).toEqual({ kind: "error", projectId: "bad", message: "unreachable" });
+    expect(source).toEqual({
+      kind: "error",
+      projectId: "bad",
+      message: "unreachable",
+    });
   });
 
   it.each(["loading", "unavailable", "error"] as const)(
     "never hands back the parent's frame when the source is %s",
     (status) => {
-      const state = (status === "error"
-        ? { status, message: "x" }
-        : { status }) as ExternalSourceState;
+      const state = (
+        status === "error" ? { status, message: "x" } : { status }
+      ) as ExternalSourceState;
       const source = resolveBlockSource("p1", states([["p1", state]]), parent);
 
       // This is the whole defect: `?? frame` used to substitute the parent's
@@ -91,7 +106,9 @@ describe("#136 resolveBlockSource", () => {
 describe("#136 blockFrame", () => {
   it("returns the frame for parent and ready", () => {
     expect(blockFrame({ kind: "parent", frame: parent })).toBe(parent);
-    expect(blockFrame({ kind: "ready", projectId: "p", frame: external })).toBe(external);
+    expect(blockFrame({ kind: "ready", projectId: "p", frame: external })).toBe(
+      external
+    );
   });
 
   it("returns null rather than an empty frame, so callers must decide", () => {
@@ -105,8 +122,12 @@ describe("#136 isExternalSource", () => {
   it("is false only for the host's own frame", () => {
     expect(isExternalSource({ kind: "parent", frame: parent })).toBe(false);
     expect(isExternalSource({ kind: "loading", projectId: "p" })).toBe(true);
-    expect(isExternalSource({ kind: "ready", projectId: "p", frame: external })).toBe(true);
-    expect(isExternalSource({ kind: "unavailable", projectId: "p" })).toBe(true);
+    expect(
+      isExternalSource({ kind: "ready", projectId: "p", frame: external })
+    ).toBe(true);
+    expect(isExternalSource({ kind: "unavailable", projectId: "p" })).toBe(
+      true
+    );
   });
 });
 

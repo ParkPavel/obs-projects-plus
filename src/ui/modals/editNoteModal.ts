@@ -14,7 +14,7 @@ export class EditNoteModal extends Modal {
     readonly defaults: DataRecord,
     readonly allRecords: DataRecord[] = [],
     // v3.0.8: Unified note open callback with open mode
-    readonly onOpenNote?: (openMode: false | 'tab' | 'window') => void,
+    readonly onOpenNote?: (openMode: false | "tab" | "window") => void,
     readonly onRenameNote?: (newName: string) => void,
     // v3.0.4: Autosave setting from project configuration
     readonly autosave: boolean = true
@@ -32,17 +32,21 @@ export class EditNoteModal extends Modal {
         allRecords: this.allRecords,
         autosave: this.autosave,
         // v3.0.8: Wrap openNote callback to close modal after opening
-        onOpenNote: this.onOpenNote ? (openMode: false | 'tab' | 'window') => {
-          this.onOpenNote?.(openMode);
-          // Close modal after opening note
-          this.close();
-        } : undefined,
+        onOpenNote: this.onOpenNote
+          ? (openMode: false | "tab" | "window") => {
+              this.onOpenNote?.(openMode);
+              // Close modal after opening note
+              this.close();
+            }
+          : undefined,
         // v3.0.1: Wrap rename callback to close modal after rename
-        onRenameNote: this.onRenameNote ? (newName: string) => {
-          this.onRenameNote?.(newName);
-          // Close modal after rename - data needs to reload with new ID
-          this.close();
-        } : undefined,
+        onRenameNote: this.onRenameNote
+          ? (newName: string) => {
+              this.onRenameNote?.(newName);
+              // Close modal after rename - data needs to reload with new ID
+              this.close();
+            }
+          : undefined,
         // v3.0.4: Save callback - behavior depends on autosave setting
         onSave: (record: DataRecord) => {
           this.onSave(record);

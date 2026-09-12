@@ -26,13 +26,18 @@ describe("parseRelationLinks", () => {
       expect(parseRelationLinks(["[[A]]", "[[B]]"])).toEqual(["A", "B"]);
     });
     it("strips alias suffix in array items", () => {
-      expect(parseRelationLinks(["[[A|Alpha]]", "[[B|Beta]]"])).toEqual(["A", "B"]);
+      expect(parseRelationLinks(["[[A|Alpha]]", "[[B|Beta]]"])).toEqual([
+        "A",
+        "B",
+      ]);
     });
     it("coerces non-string array items", () => {
       expect(parseRelationLinks([1, 2, 3])).toEqual(["1", "2", "3"]);
     });
     it("drops null/empty items inside arrays", () => {
-      expect(parseRelationLinks(["A", "", null as unknown as string, "B"])).toEqual(["A", "B"]);
+      expect(
+        parseRelationLinks(["A", "", null as unknown as string, "B"])
+      ).toEqual(["A", "B"]);
     });
     it("trims whitespace in array items", () => {
       expect(parseRelationLinks(["  A  ", " B"])).toEqual(["A", "B"]);
@@ -47,13 +52,20 @@ describe("parseRelationLinks", () => {
       expect(parseRelationLinks("[[A]] [[B]]")).toEqual(["A", "B"]);
     });
     it("extracts multiple wikilinks separated by commas", () => {
-      expect(parseRelationLinks("[[A]], [[B]], [[C]]")).toEqual(["A", "B", "C"]);
+      expect(parseRelationLinks("[[A]], [[B]], [[C]]")).toEqual([
+        "A",
+        "B",
+        "C",
+      ]);
     });
     it("strips alias suffix in wikilink strings", () => {
       expect(parseRelationLinks("[[A|Alpha]] [[B|Beta]]")).toEqual(["A", "B"]);
     });
     it("ignores text outside wikilinks when at least one is present", () => {
-      expect(parseRelationLinks("prefix [[A]] middle [[B]] suffix")).toEqual(["A", "B"]);
+      expect(parseRelationLinks("prefix [[A]] middle [[B]] suffix")).toEqual([
+        "A",
+        "B",
+      ]);
     });
   });
 

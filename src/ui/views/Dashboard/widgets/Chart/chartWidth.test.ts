@@ -3,7 +3,11 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { CHART_WIDTH_FALLBACK, resolveChartWidth, tickCountFor } from "./chartWidth";
+import {
+  CHART_WIDTH_FALLBACK,
+  resolveChartWidth,
+  tickCountFor,
+} from "./chartWidth";
 
 describe("resolveChartWidth", () => {
   test("an unmeasured first frame renders at the pre-#166 constant", () => {
@@ -64,13 +68,19 @@ describe("tickCountFor", () => {
 
 describe("#166 — the charts that render every label now size their label count", () => {
   test("Scatter asks tickCountFor for its X ticks instead of a constant", () => {
-    const src = fs.readFileSync(path.join(__dirname, "ScatterChart.svelte"), "utf8");
+    const src = fs.readFileSync(
+      path.join(__dirname, "ScatterChart.svelte"),
+      "utf8"
+    );
     expect(src).toContain("computeGrid(xLo, xHi, tickCountFor(plotW))");
     expect(src).not.toContain("computeGrid(xLo, xHi, 5)");
   });
 
   test("Progress truncates its label to the width it has", () => {
-    const src = fs.readFileSync(path.join(__dirname, "ProgressChart.svelte"), "utf8");
+    const src = fs.readFileSync(
+      path.join(__dirname, "ProgressChart.svelte"),
+      "utf8"
+    );
     expect(src).toContain("truncateLabel(label, ");
     expect(src).toContain(">{shownLabel}</text>");
   });
@@ -139,7 +149,9 @@ describe("#166 — PieChart's geometry follows a changing width", () => {
     // `width: 100%` the SVG filled a wide widget anyway and every label scaled
     // back up — the exact effect step 2 exists to remove. The attributes give
     // the intrinsic size; the stylesheet may only cap it, never stretch it.
-    expect(SOURCE).toMatch(/<svg[^>]*\swidth=\{width\}[^>]*\sheight=\{height\}/s);
+    expect(SOURCE).toMatch(
+      /<svg[^>]*\swidth=\{width\}[^>]*\sheight=\{height\}/s
+    );
     const style = SOURCE.slice(SOURCE.indexOf("<style>"));
     const pieRule = /\.ppp-chart-pie\s*\{([^}]*)\}/.exec(style)?.[1] ?? "";
     expect(pieRule).toMatch(/max-width:\s*100%/);

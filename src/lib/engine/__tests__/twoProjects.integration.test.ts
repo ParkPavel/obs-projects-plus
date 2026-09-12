@@ -14,10 +14,7 @@
  */
 import { describe, expect, it } from "@jest/globals";
 
-import {
-  DataFieldType,
-  type DataFrame,
-} from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 import {
   derivedFieldName,
   enrichFrameWithAllRelations,
@@ -27,7 +24,14 @@ import { computeCrossProjectRollupColumn } from "src/lib/engine/crossProjectRoll
 describe("twoProjects integration — Accounts ↔ Journal", () => {
   const accounts: DataFrame = {
     fields: [
-      { name: "name", type: DataFieldType.String, identifier: true, derived: false, repeated: false, typeConfig: {} },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        identifier: true,
+        derived: false,
+        repeated: false,
+        typeConfig: {},
+      },
     ],
     records: [
       { id: "Acc/A1.md", values: { name: "A1" } },
@@ -37,7 +41,14 @@ describe("twoProjects integration — Accounts ↔ Journal", () => {
 
   const journal: DataFrame = {
     fields: [
-      { name: "name", type: DataFieldType.String, identifier: true, derived: false, repeated: false, typeConfig: {} },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        identifier: true,
+        derived: false,
+        repeated: false,
+        typeConfig: {},
+      },
       {
         name: "account",
         type: DataFieldType.Relation,
@@ -46,7 +57,14 @@ describe("twoProjects integration — Accounts ↔ Journal", () => {
         repeated: false,
         typeConfig: { relation: { targetProjectId: "accounts" } },
       },
-      { name: "amount", type: DataFieldType.Number, identifier: false, derived: false, repeated: false, typeConfig: {} },
+      {
+        name: "amount",
+        type: DataFieldType.Number,
+        identifier: false,
+        derived: false,
+        repeated: false,
+        typeConfig: {},
+      },
     ],
     records: [
       { id: "J/1.md", values: { name: "J1", account: "[[A1]]", amount: 30 } },

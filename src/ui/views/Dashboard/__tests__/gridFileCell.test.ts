@@ -7,14 +7,22 @@
  * These tests verify its CONTRACT so any refactor stays correct.
  */
 
-interface WikiLink { target: string; display: string; raw: string }
+interface WikiLink {
+  target: string;
+  display: string;
+  raw: string;
+}
 
 function parseWikiLinks(str: string): WikiLink[] {
   const re = /\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]/g;
   const out: WikiLink[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(str)) !== null) {
-    out.push({ target: m[1]!.trim(), display: (m[2] ?? m[1]!).trim(), raw: m[0] });
+    out.push({
+      target: m[1]!.trim(),
+      display: (m[2] ?? m[1]!).trim(),
+      raw: m[0],
+    });
   }
   return out;
 }
@@ -79,7 +87,9 @@ describe("GridFileCell — handleDrop formatting (TDT-07)", () => {
   });
 
   test("preserves path separators", () => {
-    expect(formatDropLink("folder/subfolder/Note.md")).toBe("[[folder/subfolder/Note]]");
+    expect(formatDropLink("folder/subfolder/Note.md")).toBe(
+      "[[folder/subfolder/Note]]"
+    );
   });
 
   test("trims whitespace from input", () => {

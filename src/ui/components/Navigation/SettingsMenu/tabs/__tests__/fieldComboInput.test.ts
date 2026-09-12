@@ -16,7 +16,10 @@ function mount(props: Record<string, unknown>) {
   const target = document.createElement("div");
   document.body.appendChild(target);
   const changes: string[] = [];
-  const component = new FieldComboInput({ target, props: { id: "fl-test", fields: FIELDS, ...props } });
+  const component = new FieldComboInput({
+    target,
+    props: { id: "fl-test", fields: FIELDS, ...props },
+  });
   component.$on("change", (e: CustomEvent<string>) => changes.push(e.detail));
   return {
     target,
@@ -53,7 +56,9 @@ describe("FieldComboInput (#093 picker affordance)", () => {
 
   test("datalist lists every field; input is associated for label `for`", () => {
     const m = mount({ value: "" });
-    expect(m.target.querySelectorAll("datalist option")).toHaveLength(FIELDS.length);
+    expect(m.target.querySelectorAll("datalist option")).toHaveLength(
+      FIELDS.length
+    );
     expect(m.input?.id).toBe("fl-test-input");
     m.destroy();
   });

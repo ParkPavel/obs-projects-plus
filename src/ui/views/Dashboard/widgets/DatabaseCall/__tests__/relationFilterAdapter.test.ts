@@ -21,7 +21,10 @@ function field(name: string, type: DataFieldType): DataField {
   return { name, type, repeated: false, identifier: false, derived: false };
 }
 
-function rec(id: string, values: Record<string, Optional<DataValue>>): DataRecord {
+function rec(
+  id: string,
+  values: Record<string, Optional<DataValue>>
+): DataRecord {
   return { id, values };
 }
 
@@ -33,7 +36,12 @@ function isCond(fieldName: string, value: string): FilterCondition {
 }
 
 function isAnyOfCond(fieldName: string, values: string[]): FilterCondition {
-  return { field: fieldName, operator: "is-any-of", value: JSON.stringify(values), enabled: true };
+  return {
+    field: fieldName,
+    operator: "is-any-of",
+    value: JSON.stringify(values),
+    enabled: true,
+  };
 }
 
 describe("filterByLinkedSelection — Relation field", () => {
@@ -42,7 +50,11 @@ describe("filterByLinkedSelection — Relation field", () => {
       rec("r1", { client: "[[Acme Studio]]" }),
       rec("r2", { client: "[[Beta Co]]" }),
     ];
-    const out = filterByLinkedSelection(records, isCond("client", "Acme Studio"), [clientField]);
+    const out = filterByLinkedSelection(
+      records,
+      isCond("client", "Acme Studio"),
+      [clientField]
+    );
     expect(out.map((r) => r.id)).toEqual(["r1"]);
   });
 
@@ -51,19 +63,31 @@ describe("filterByLinkedSelection — Relation field", () => {
       rec("r1", { client: ["[[Acme Studio]]", "[[Other]]"] }),
       rec("r2", { client: ["[[Beta Co]]"] }),
     ];
-    const out = filterByLinkedSelection(records, isCond("client", "Acme Studio"), [clientField]);
+    const out = filterByLinkedSelection(
+      records,
+      isCond("client", "Acme Studio"),
+      [clientField]
+    );
     expect(out.map((r) => r.id)).toEqual(["r1"]);
   });
 
   test("is alias-aware: [[Acme Studio|Acme]] matches selection 'Acme Studio'", () => {
     const records = [rec("r1", { client: "[[Acme Studio|Acme]]" })];
-    const out = filterByLinkedSelection(records, isCond("client", "Acme Studio"), [clientField]);
+    const out = filterByLinkedSelection(
+      records,
+      isCond("client", "Acme Studio"),
+      [clientField]
+    );
     expect(out.map((r) => r.id)).toEqual(["r1"]);
   });
 
   test("is case-insensitive on the relation key", () => {
     const records = [rec("r1", { client: "[[acme studio]]" })];
-    const out = filterByLinkedSelection(records, isCond("client", "ACME STUDIO"), [clientField]);
+    const out = filterByLinkedSelection(
+      records,
+      isCond("client", "ACME STUDIO"),
+      [clientField]
+    );
     expect(out.map((r) => r.id)).toEqual(["r1"]);
   });
 
@@ -84,13 +108,19 @@ describe("filterByLinkedSelection — Relation field", () => {
       rec("r2", { client: "" }),
       rec("r3", {}),
     ];
-    const out = filterByLinkedSelection(records, isCond("client", "Acme Studio"), [clientField]);
+    const out = filterByLinkedSelection(
+      records,
+      isCond("client", "Acme Studio"),
+      [clientField]
+    );
     expect(out).toEqual([]);
   });
 
   test("does not mutate the original record values", () => {
     const original = rec("r1", { client: "[[Acme Studio]]" });
-    filterByLinkedSelection([original], isCond("client", "Acme Studio"), [clientField]);
+    filterByLinkedSelection([original], isCond("client", "Acme Studio"), [
+      clientField,
+    ]);
     expect(original.values["client"]).toBe("[[Acme Studio]]");
   });
 });
@@ -103,7 +133,9 @@ describe("filterByLinkedSelection — non-Relation passthrough", () => {
     ];
     // Exact-case match → only the exact "Done" record (passthrough preserves
     // matchesCondition's case-sensitive string equality).
-    const out = filterByLinkedSelection(records, isCond("status", "Done"), [statusField]);
+    const out = filterByLinkedSelection(records, isCond("status", "Done"), [
+      statusField,
+    ]);
     expect(out.map((r) => r.id)).toEqual(["r1"]);
   });
 
@@ -118,14 +150,22 @@ describe("filterByLinkedSelection — malformed wikilink edge cases", () => {
   test("malformed link without closing brackets does not match and does not throw", () => {
     const records = [rec("r1", { client: "[[Acme Studio" })];
     expect(() => {
-      const out = filterByLinkedSelection(records, isCond("client", "Acme Studio"), [clientField]);
+      const out = filterByLinkedSelection(
+        records,
+        isCond("client", "Acme Studio"),
+        [clientField]
+      );
       expect(out).toEqual([]);
     }).not.toThrow();
   });
 
   test("bare path without wikilink syntax still matches by canonicalised path", () => {
     const records = [rec("r1", { client: "Projects/Acme Studio" })];
-    const out = filterByLinkedSelection(records, isCond("client", "Projects/Acme Studio"), [clientField]);
+    const out = filterByLinkedSelection(
+      records,
+      isCond("client", "Projects/Acme Studio"),
+      [clientField]
+    );
     expect(out.map((r) => r.id)).toEqual(["r1"]);
   });
 
@@ -134,7 +174,9 @@ describe("filterByLinkedSelection — malformed wikilink edge cases", () => {
       rec("r1", { client: "" }),
       rec("r2", { client: "[[Acme Studio]]" }),
     ];
-    const out = filterByLinkedSelection(records, isCond("client", ""), [clientField]);
+    const out = filterByLinkedSelection(records, isCond("client", ""), [
+      clientField,
+    ]);
     expect(out.map((r) => r.id)).toEqual([]);
   });
 });

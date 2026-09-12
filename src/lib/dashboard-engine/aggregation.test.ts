@@ -7,23 +7,62 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 function makeFrame(overrides?: Partial<DataFrame>): DataFrame {
   return {
     fields: [
-      { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-      { name: "budget", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "done", type: DataFieldType.Boolean, repeated: false, identifier: false, derived: false },
-      { name: "due", type: DataFieldType.Date, repeated: false, identifier: false, derived: false },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "budget",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "done",
+        type: DataFieldType.Boolean,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "due",
+        type: DataFieldType.Date,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       {
         id: "a.md",
-        values: { name: "Alpha", budget: 5000, done: true, due: new Date("2026-04-01") },
+        values: {
+          name: "Alpha",
+          budget: 5000,
+          done: true,
+          due: new Date("2026-04-01"),
+        },
       },
       {
         id: "b.md",
-        values: { name: "Beta", budget: 3000, done: false, due: new Date("2026-05-15") },
+        values: {
+          name: "Beta",
+          budget: 3000,
+          done: false,
+          due: new Date("2026-05-15"),
+        },
       },
       {
         id: "c.md",
-        values: { name: "Gamma", budget: 8000, done: true, due: new Date("2026-06-01") },
+        values: {
+          name: "Gamma",
+          budget: 8000,
+          done: true,
+          due: new Date("2026-06-01"),
+        },
       },
     ],
     ...overrides,
@@ -126,7 +165,10 @@ describe("ColumnAggregationEngine", () => {
 
   test("handles empty records gracefully", () => {
     const empty = makeFrame({ records: [] });
-    const result = computeAggregations(empty, { budget: "sum", name: "count_total" });
+    const result = computeAggregations(empty, {
+      budget: "sum",
+      name: "count_total",
+    });
     expect(result["budget"]?.value).toBe(0);
     expect(result["name"]?.value).toBe(0);
   });
@@ -134,9 +176,18 @@ describe("ColumnAggregationEngine", () => {
   test("handles null/undefined values in number aggregation", () => {
     const withNulls = makeFrame({
       records: [
-        { id: "a.md", values: { name: "A", budget: 100, done: true, due: null } },
-        { id: "b.md", values: { name: "B", budget: undefined, done: false, due: null } },
-        { id: "c.md", values: { name: "C", budget: 300, done: true, due: null } },
+        {
+          id: "a.md",
+          values: { name: "A", budget: 100, done: true, due: null },
+        },
+        {
+          id: "b.md",
+          values: { name: "B", budget: undefined, done: false, due: null },
+        },
+        {
+          id: "c.md",
+          values: { name: "C", budget: 300, done: true, due: null },
+        },
       ],
     });
     const result = computeAggregations(withNulls, { budget: "sum" });

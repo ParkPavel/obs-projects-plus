@@ -48,7 +48,13 @@ describe("DatabaseCallSettings — WidgetSourceConfig", () => {
 // regression guard against the duplicate affordance reappearing here.
 describe("DatabaseCallSettings — #121 no unnest affordance", () => {
   function field(name: string): DataField {
-    return { name, type: DataFieldType.Unknown, repeated: false, identifier: false, derived: false };
+    return {
+      name,
+      type: DataFieldType.Unknown,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    };
   }
 
   test("renders no checkbox and no 'Expand list' text", () => {

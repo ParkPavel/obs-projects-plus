@@ -88,7 +88,9 @@ export function resolveDerived(
   }
 
   const frame = applyFilter(base, where);
-  return frame.records.length > 0 ? { kind: "ok", frame } : { kind: "empty", frame };
+  return frame.records.length > 0
+    ? { kind: "ok", frame }
+    : { kind: "empty", frame };
 }
 
 /** Every derived source declared on a project, in stored order. */

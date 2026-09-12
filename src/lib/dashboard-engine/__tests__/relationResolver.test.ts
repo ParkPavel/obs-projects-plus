@@ -21,8 +21,20 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 
 const fields = [
-  { name: "title", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-  { name: "rel", type: DataFieldType.Relation, repeated: true, identifier: false, derived: false },
+  {
+    name: "title",
+    type: DataFieldType.String,
+    repeated: false,
+    identifier: false,
+    derived: false,
+  },
+  {
+    name: "rel",
+    type: DataFieldType.Relation,
+    repeated: true,
+    identifier: false,
+    derived: false,
+  },
 ];
 
 function rec(id: string, values: Record<string, unknown>): DataRecord {

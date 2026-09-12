@@ -26,7 +26,12 @@ export class BoardView extends ProjectView<BoardConfig> {
   }
 
   onData({ data, hasSort, hasFilter, filterConditions }: DataQueryResult) {
-    this.view?.$set({ frame: data, hasSort, hasFilter, filterConditions: filterConditions ?? [] });
+    this.view?.$set({
+      frame: data,
+      hasSort,
+      hasFilter,
+      filterConditions: filterConditions ?? [],
+    });
   }
 
   onOpen(props: ProjectViewProps<BoardConfig>) {

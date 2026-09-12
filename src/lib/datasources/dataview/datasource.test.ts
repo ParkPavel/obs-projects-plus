@@ -244,7 +244,10 @@ describe("DataviewDataSource.queryAll — unified filter semantics (#045.5)", ()
       ],
     });
     const frame = await src.queryAll();
-    expect(frame.fields.map((f) => f.name).sort()).toEqual(["File", "Priority"]);
+    expect(frame.fields.map((f) => f.name).sort()).toEqual([
+      "File",
+      "Priority",
+    ]);
     expect(frame.records).toHaveLength(1);
     expect(frame.records[0]?.id).toBe("beta.md");
   });

@@ -4,7 +4,8 @@ jest.mock("src/lib/stores/i18n", () => {
   const { writable } = require("svelte/store");
   return {
     i18n: writable({
-      t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+      t: (key: string, options?: { defaultValue?: string }) =>
+        options?.defaultValue ?? key,
     }),
   };
 });
@@ -16,9 +17,15 @@ jest.mock("src/lib/stores/ui", () => {
   };
 });
 
-jest.mock("../widgets/WidgetHost.svelte", () => require("./mocks/WidgetHost.mock.svelte"));
-jest.mock("../widgets/WidgetToolbar.svelte", () => require("./mocks/WidgetToolbar.mock.svelte"));
-jest.mock("../widgets/FormulaBar.svelte", () => require("./mocks/FormulaBar.mock.svelte"));
+jest.mock("../widgets/WidgetHost.svelte", () =>
+  require("./mocks/WidgetHost.mock.svelte")
+);
+jest.mock("../widgets/WidgetToolbar.svelte", () =>
+  require("./mocks/WidgetToolbar.mock.svelte")
+);
+jest.mock("../widgets/FormulaBar.svelte", () =>
+  require("./mocks/FormulaBar.mock.svelte")
+);
 
 // Stage A.9 — DatabaseViewCanvas now wires Schema-panel modals (Schema /
 // CreateField / ConfigureField / Confirm). They are static imports, so Jest
@@ -26,16 +33,28 @@ jest.mock("../widgets/FormulaBar.svelte", () => require("./mocks/FormulaBar.mock
 // We stub them with plain classes to keep this canvas test focused on layout
 // behaviour; modal interactions are covered by their own unit tests.
 jest.mock("src/ui/modals/createFieldModal", () => ({
-  CreateFieldModal: class { open() {} close() {} },
+  CreateFieldModal: class {
+    open() {}
+    close() {}
+  },
 }));
 jest.mock("src/ui/modals/configureField", () => ({
-  ConfigureFieldModal: class { open() {} close() {} },
+  ConfigureFieldModal: class {
+    open() {}
+    close() {}
+  },
 }));
 jest.mock("src/ui/modals/schemaModal", () => ({
-  SchemaModal: class { open() {} close() {} },
+  SchemaModal: class {
+    open() {}
+    close() {}
+  },
 }));
 jest.mock("src/ui/modals/confirmDialog", () => ({
-  ConfirmDialogModal: class { open() {} close() {} },
+  ConfirmDialogModal: class {
+    open() {}
+    close() {}
+  },
 }));
 jest.mock("src/lib/stores/obsidian", () => {
   const { writable } = require("svelte/store");
@@ -58,6 +77,11 @@ jest.mock("src/lib/stores/externalFrameInvalidation", () => {
 
 const DatabaseViewCanvas = require("../DashboardCanvas.svelte").default;
 const { isMobile } = require("src/lib/stores/ui");
+// `require`, like everything else here: this file carries `jest.mock` calls, so
+// babel-plugin-jest-hoist processes it and a type annotation on an imported
+// binding fails to transform. That is why nothing in this file is imported by
+// name with a type attached.
+const { dropTemplateQuickActions } = require("../migration");
 
 function createConfig() {
   return {
@@ -68,7 +92,14 @@ function createConfig() {
         title: "Existing widget",
         layout: { x: 0, y: 0, w: 12, h: 2 },
         config: {
-          cards: [{ id: "records", label: "Records", field: "name", aggregation: "count" }],
+          cards: [
+            {
+              id: "records",
+              label: "Records",
+              field: "name",
+              aggregation: "count",
+            },
+          ],
           columns: 1,
         },
       },
@@ -78,7 +109,17 @@ function createConfig() {
     table: {},
     showWidgetToolbar: false,
     compactMode: false,
+    // #191 — deliberately the STORED shape a real vault carries, not the shape
+    // the type union now allows: `migrateTableConfig` generated an
+    // `apply-template` action for every dashboard it migrated, and the point of
+    // the assertions below is what such a config renders today.
     quickActions: [
+      {
+        id: "apply-overview",
+        kind: "apply-template",
+        label: "Apply overview",
+        templateId: "overview-finance",
+      },
       {
         id: "toggle-formula",
         kind: "toggle-formula-bar",
@@ -91,9 +132,27 @@ function createConfig() {
 function createFrame() {
   return {
     fields: [
-      { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-      { name: "amount", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "category", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "amount",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "category",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       {
@@ -153,12 +212,12 @@ function mountCanvas(configOverrides?: Record<string, unknown>) {
 }
 
 function getQuickAction(target: HTMLElement, label: string) {
-  return Array.from(target.querySelectorAll(".ppp-quick-action")).find(
-    (button) => button.textContent?.includes(label)
-  ) ?? null;
+  return (
+    Array.from(target.querySelectorAll(".ppp-quick-action")).find((button) =>
+      button.textContent?.includes(label)
+    ) ?? null
+  );
 }
-
-
 
 describe("DatabaseViewCanvas", () => {
   beforeEach(() => {
@@ -166,39 +225,47 @@ describe("DatabaseViewCanvas", () => {
     isMobile.set(false);
   });
 
-  test("#191 a stored apply-template action does not reach the screen", () => {
-    // The only test that proves the button is gone from the RENDER rather than
-    // from an object. A vault carries this exact shape today: migrateTableConfig
-    // wrote it into every dashboard it migrated before #191.
-    const view = mountCanvas({
-      quickActions: [
-        { id: "qa-overview", kind: "apply-template", label: "Overview Preset", templateId: "overview-finance" },
-        { id: "toggle-formula", kind: "toggle-formula-bar", label: "Toggle formula" },
-      ],
-    });
+  // ── #191: the button is gone from the SCREEN, not just from an object ──
+  //
+  // Everything else about this removal can be proved against a plain value.
+  // This is the one assertion that mounts the component a user actually looks
+  // at, with the config a real vault actually holds, and counts the buttons in
+  // the DOM. Without it "the template quick action is removed" rests on
+  // reasoning about a data structure — the exact gap this repo has been caught
+  // by before.
+  //
+  // The config is passed through the real `dropTemplateQuickActions` first
+  // because that is the production composition: `dashboardView.onOpen` runs the
+  // migration chain and hands the RESULT to the canvas. The canvas renders what
+  // it is given; the guarantee that it is never given an `apply-template`
+  // action belongs to the migration, and is pinned in `migration.test.ts`.
+  test("a vault carrying the retired button renders exactly one quick action", async () => {
+    const stored = createConfig();
+    expect(stored.quickActions).toHaveLength(2);
+
+    const { config, migrated } = dropTemplateQuickActions(stored);
+    expect(migrated).toBe(true);
+
+    const view = mountCanvas(config);
 
     try {
-      const actions = view.target.querySelectorAll(".ppp-quick-action");
-      expect(actions).toHaveLength(1);
-      expect(actions[0]?.textContent?.trim()).toBe("Toggle formula");
-      expect(view.target.textContent).not.toContain("Overview Preset");
+      const buttons = view.target.querySelectorAll(".ppp-quick-action");
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0]?.textContent?.trim()).toBe("Toggle formula");
+      expect(view.target.textContent).not.toContain("Apply overview");
+
+      // And nothing is left behind that used to explain the button: the
+      // replace-confirmation dialog went with the mechanism.
+      expect(view.target.querySelector('[role="dialog"]')).toBeNull();
+      expect(view.target.textContent).not.toContain("Replace current layout?");
+
+      // The surviving button still does its job — a removal that quietly broke
+      // the neighbour would pass every assertion above.
+      click(buttons[0] ?? null);
+      await flush();
+      expect(view.target.querySelector(".ppp-formula-bar")).not.toBeNull();
     } finally {
       view.destroy();
-    }
-  });
-
-  test("#191 a malformed quickActions value does not take the dashboard down", () => {
-    // The migrator leaves a value it does not recognise alone rather than
-    // throwing, so anything can still reach the render. Calling .filter() on a
-    // string crashes the whole canvas to remove one button — found by audit,
-    // not by the gates.
-    for (const broken of ["nope", 42, { a: 1 }, [null], [{ kind: null }]]) {
-      const view = mountCanvas({ quickActions: broken as never });
-      try {
-        expect(view.target.querySelectorAll(".ppp-quick-action")).toHaveLength(0);
-      } finally {
-        view.destroy();
-      }
     }
   });
 
@@ -234,7 +301,9 @@ describe("DatabaseViewCanvas", () => {
         formulaFields?: Array<{ name: string; expression: string }>;
       };
 
-      expect(latestConfig.formulaFields).toEqual([{ name: "Profit", expression: "amount" }]);
+      expect(latestConfig.formulaFields).toEqual([
+        { name: "Profit", expression: "amount" },
+      ]);
       expect(view.target.querySelector(".ppp-formula-bar")).toBeNull();
     } finally {
       view.destroy();
@@ -261,8 +330,10 @@ describe("DatabaseViewCanvas", () => {
     const view = mountCanvas();
 
     try {
-      const layoutButton = Array.from(view.target.querySelectorAll(".ppp-toolbar-btn")).find(
-        (button) => button.getAttribute("aria-label")?.includes("toggle-layout")
+      const layoutButton = Array.from(
+        view.target.querySelectorAll(".ppp-toolbar-btn")
+      ).find((button) =>
+        button.getAttribute("aria-label")?.includes("toggle-layout")
       );
 
       expect(layoutButton).toBeUndefined();

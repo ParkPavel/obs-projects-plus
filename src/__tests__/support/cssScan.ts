@@ -4,7 +4,8 @@
  * R0.13 grew `svelteStyles` / `stripComments` / `collectStyled` as private
  * helpers; R0.16 (#167) needs the same three over a narrower file set. Copying
  * them would put two definitions of "the CSS of this component" in the tree,
- * and the two ratchets would then disagree about what they are guarding.
+ * and the two ratchets would then disagree about what they are guarding — the
+ * defect class `configScan.ts` was extracted for (#181), one layer up.
  *
  * One thing this module deliberately does NOT decide is which files are in
  * scope. R0.13 scans everything; R0.16 scans only what lives inside a declared
@@ -53,9 +54,7 @@ export function svelteStyles(content: string): string {
  * blocks, then `<style>` plus the four inline binding forms. Two Codex audits
  * of #167 walked through both: the first found `style={…}` and `style:` shipping
  * sizes that were never read, the second found the shorthand forms `{style}`
- * (`FloatingPopup.svelte`'s floating popup) and `style:width` (`SlideInPanel`'s
- * `<aside>`) — named rather than numbered, because both numbers had already
- * drifted by the time #190 moved those lines again — and
+ * (`FloatingPopup.svelte:291`) and `style:width` (`SlideInPanel.svelte:54`), and
  * the case where the literal is hoisted into the script and the binding carries
  * only a variable name.
  *

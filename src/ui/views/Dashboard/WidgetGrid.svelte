@@ -61,6 +61,10 @@
   >
     <svelte:fragment slot="actions">
       {#if !readonly}
+        <!-- #191: the template buttons that stood beside this one are gone.
+             Not a dead end — this button runs `widgetController.addWidget`, the
+             same path the palette uses, and `DashboardBlockPalette` appears as
+             soon as the first widget exists. -->
         <button on:click={() => dispatch("addWidget", "database-call")}>
           <Icon name="database" />
           {$i18n.t("views.dashboard.canvas.empty-add-block", { defaultValue: "Add data block" })}

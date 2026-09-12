@@ -21,7 +21,7 @@ import { encodeValue } from "./codec";
 interface FileManagerWithProcessFM {
   processFrontMatter?: (
     file: TFile,
-    fn: (fm: Record<string, unknown>) => void,
+    fn: (fm: Record<string, unknown>) => void
   ) => Promise<void>;
 }
 
@@ -39,9 +39,14 @@ export function createFrontmatterWriter(app: App): FrontmatterWriter {
     setFields: (file, patch, opts) =>
       mutate(app, file, (fm) => applyPatch(fm, patch), opts),
     unsetField: (file, key, opts) =>
-      mutate(app, file, (fm) => {
-        delete fm[key];
-      }, opts),
+      mutate(
+        app,
+        file,
+        (fm) => {
+          delete fm[key];
+        },
+        opts
+      ),
   };
 }
 
@@ -52,7 +57,7 @@ export function createFrontmatterWriter(app: App): FrontmatterWriter {
  */
 function applyPatch(
   fm: Record<string, unknown>,
-  patch: Readonly<Record<string, Optional<DataValue>>>,
+  patch: Readonly<Record<string, Optional<DataValue>>>
 ): void {
   for (const [key, raw] of Object.entries(patch)) {
     const encoded = encodeValue(raw);
@@ -75,7 +80,7 @@ async function mutate(
   app: App,
   file: TFile,
   fn: (fm: Record<string, unknown>) => void,
-  opts?: WriteOpts,
+  opts?: WriteOpts
 ): Promise<void> {
   const retry = opts?.retry ?? DEFAULT_RETRY;
   const fileManager = app.fileManager as unknown as FileManagerWithProcessFM;

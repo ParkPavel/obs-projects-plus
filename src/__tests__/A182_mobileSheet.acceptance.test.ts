@@ -24,18 +24,32 @@
  * They are the reason the fourth is only one line.
  */
 
-import { findChrome, renderProbe, svelteStyle, unscope } from "./support/renderProbe";
+import {
+  findChrome,
+  renderProbe,
+  svelteStyle,
+  unscope,
+} from "./support/renderProbe";
 
 const chrome = findChrome();
 const describeIfChrome = chrome ? describe : describe.skip;
 
 if (!chrome) {
-  console.warn("A182: no Chrome found (set CHROME_PATH) — #182's acceptance did NOT run.");
+  console.warn(
+    "A182: no Chrome found (set CHROME_PATH) — #182's acceptance did NOT run."
+  );
 }
 
 describeIfChrome("A182 — what actually contains a fixed descendant", () => {
   it("neither overflow nor a container query does; transform and paint containment do", () => {
-    const kinds = ["plain", "ovh", "ctype", "ctypeSize", "tf", "cpaint"] as const;
+    const kinds = [
+      "plain",
+      "ovh",
+      "ctype",
+      "ctypeSize",
+      "tf",
+      "cpaint",
+    ] as const;
     const r = renderProbe({
       css: [
         ".plain{width:300px}",
@@ -46,7 +60,11 @@ describeIfChrome("A182 — what actually contains a fixed descendant", () => {
         ".cpaint{width:300px;contain:paint}",
         ".b{position:fixed;inset:0}",
       ],
-      html: kinds.map((c) => `<div class='${c}'><div class='b' id='in-${c}'></div></div>`).join(""),
+      html: kinds
+        .map(
+          (c) => `<div class='${c}'><div class='b' id='in-${c}'></div></div>`
+        )
+        .join(""),
       measure: kinds.map((c) => ({ id: `in-${c}`, props: ["boxWidth"] })),
       width: 900,
       height: 700,
@@ -65,8 +83,12 @@ describeIfChrome("A182 — what actually contains a fixed descendant", () => {
 
   it("the real widget shell does not contain the real backdrop either", () => {
     // Not a reconstruction: both rules come from their own components.
-    const popup = unscope(svelteStyle("ui/components/FloatingPopup/FloatingPopup.svelte"));
-    const shell = unscope(svelteStyle("ui/views/Dashboard/widgets/WidgetShell.svelte"));
+    const popup = unscope(
+      svelteStyle("ui/components/FloatingPopup/FloatingPopup.svelte")
+    );
+    const shell = unscope(
+      svelteStyle("ui/views/Dashboard/widgets/WidgetShell.svelte")
+    );
     const r = renderProbe({
       css: [popup, shell, ".ppp-widget-host{width:300px;height:100px}"],
       html: "<div class='ppp-widget-host'><div class='ppp-popup-backdrop' id='sheet'></div></div>",
@@ -78,8 +100,12 @@ describeIfChrome("A182 — what actually contains a fixed descendant", () => {
   });
 
   it("nor is it clipped by the widget — it answers a hit test far outside it", () => {
-    const popup = unscope(svelteStyle("ui/components/FloatingPopup/FloatingPopup.svelte"));
-    const shell = unscope(svelteStyle("ui/views/Dashboard/widgets/WidgetShell.svelte"));
+    const popup = unscope(
+      svelteStyle("ui/components/FloatingPopup/FloatingPopup.svelte")
+    );
+    const shell = unscope(
+      svelteStyle("ui/views/Dashboard/widgets/WidgetShell.svelte")
+    );
     const r = renderProbe({
       css: [popup, shell, ".ppp-widget-host{width:300px;height:100px}"],
       html: "<div class='ppp-widget-host'><div class='ppp-popup-backdrop' id='sheet'></div></div>",
@@ -96,7 +122,9 @@ describeIfChrome("A182 — what actually contains a fixed descendant", () => {
 });
 
 describeIfChrome("A182 — what was real: the minimum on a narrow screen", () => {
-  const bar = unscope(svelteStyle("ui/views/Dashboard/widgets/DatabaseCall/BlockFilterBar.svelte"));
+  const bar = unscope(
+    svelteStyle("ui/views/Dashboard/widgets/DatabaseCall/BlockFilterBar.svelte")
+  );
 
   it("keeps its 22rem where there is room", () => {
     const r = renderProbe({

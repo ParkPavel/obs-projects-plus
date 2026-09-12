@@ -1,1650 +1,1625 @@
 ﻿{
-    "translation": {
-        "data-types": {
-            "string": "文本",
-            "number": "数字",
-            "boolean": "复选框",
-            "date": "日期",
-            "unknown": "未知",
-            "repeated": "重复",
-            "datetime": "日期 & 时间",
-            "list": "列表",
-            "tags": "标签",
-            "aliases": "别名",
-            "select": "选择",
-            "status": "状态",
-            "formula": "公式",
-            "relation": "关联",
-            "rollup": "汇总",
-            "color": "颜色",
-            "url": "网址",
-            "email": "邮箱",
-            "phone": "电话"
+  "translation": {
+    "data-types": {
+      "string": "文本",
+      "number": "数字",
+      "boolean": "复选框",
+      "date": "日期",
+      "unknown": "未知",
+      "repeated": "重复",
+      "datetime": "日期 & 时间",
+      "list": "列表",
+      "tags": "标签",
+      "aliases": "别名",
+      "select": "选择",
+      "status": "状态",
+      "formula": "公式",
+      "relation": "关联",
+      "rollup": "汇总",
+      "color": "颜色",
+      "url": "网址",
+      "email": "邮箱",
+      "phone": "电话"
+    },
+    "datasources": {
+      "folder": "文件夹",
+      "tag": "标签",
+      "dataview": "Dataview"
+    },
+    "commands": {
+      "show-projects": {
+        "name": "打开项目"
+      },
+      "create-project": {
+        "name": "新建项目"
+      },
+      "create-note": {
+        "name": "新建笔记"
+      },
+      "open-schema": {
+        "name": "打开架构面板"
+      },
+      "add-field": {
+        "name": "添加字段"
+      },
+      "toggle-visualizer-pane": {
+        "name": "切换 YAML 可视化器面板"
+      },
+      "open-visualizer-for-file": {
+        "name": "在 YAML 可视化器中打开当前笔记"
+      },
+      "add-relation": {
+        "name": "为当前笔记添加关系"
+      },
+      "open-formula-editor": {
+        "name": "打开公式编辑器"
+      }
+    },
+    "menus": {
+      "project": {
+        "create": {
+          "title": "在文件夹中新建项目"
+        }
+      },
+      "file": {
+        "open-in-visualizer": {
+          "title": "在 YAML 可视化器中打开"
         },
-        "datasources": {
-            "folder": "文件夹",
-            "tag": "标签",
-            "dataview": "Dataview"
+        "add-relation": {
+          "title": "添加为关系…"
+        }
+      },
+      "tab-header": {
+        "new-window": {
+          "title": "在新窗口中打开"
+        }
+      }
+    },
+    "modals": {
+      "project": {
+        "create": {
+          "short-title": "新项目",
+          "untitled": "未命名项目",
+          "title": "新建项目",
+          "cta": "新建项目",
+          "existing-name-error": "项目名称重复。",
+          "empty-name-error": "项目名不能为空。"
         },
-        "commands": {
-            "show-projects": {
-                "name": "打开项目"
+        "edit": {
+          "short-title": "编辑项目",
+          "title": "编辑项目",
+          "cta": "保存"
+        },
+        "duplicate": {
+          "title": "复制项目",
+          "suffix": "副本"
+        },
+        "archive": {
+          "short-title": "存档项目",
+          "title": "存档项目",
+          "message": "确定要存档项目 \"{{project}}\" 吗？若需要，您可以在 Projects 插件设置中恢复该项目。",
+          "notice": "存档成功！若您在多个设备间同步使用 Projects，请确保将所有设备上的 Projects 都升级到 1.17.0 版本或以上，以避免存档的项目配置信息丢失。",
+          "cta": "存档"
+        },
+        "delete": {
+          "short-title": "删除项目",
+          "title": "删除项目",
+          "message": "确定要删除项目 \"{{project}}\" 吗？此操作不可撤销。",
+          "cta": "删除"
+        },
+        "name": {
+          "name": "项目名称",
+          "description": ""
+        },
+        "default": {
+          "name": "设为默认项目",
+          "description": "打开 Projects 插件窗口时，默认打开本项目。"
+        },
+        "datasource": {
+          "name": "数据源",
+          "description": "选择项目的数据来源。"
+        },
+        "path": {
+          "name": "路径",
+          "description": "目标文件夹路径。若为空值，路径将设为根目录。"
+        },
+        "tag": {
+          "name": "标签",
+          "description": "管理本仓库中所有含有该标签的笔记。"
+        },
+        "dataview": {
+          "name": "Dataview",
+          "description": "以 Dataview 查询结果创建只读项目。",
+          "error": {
+            "title": "Dataview 插件未启用。",
+            "message": "启用 Dataview 插件以使用本项目。"
+          },
+          "validating": "正在验证查询...",
+          "query-error": "查询失败，请检查语法。",
+          "preview-table": "找到 {{count}} 条记录 (TABLE)",
+          "preview-list": "找到 {{count}} 个项目 (LIST)",
+          "preview-task": "找到 {{count}} 个任务 (TASK)",
+          "unsupported-type": "不支持的查询类型：{{type}}"
+        },
+        "query": {
+          "name": "查询语句 (Query)",
+          "description": "支持 TABLE、LIST 和 TASK 查询。"
+        },
+        "recursive": {
+          "name": "管理子文件夹",
+          "description": "管理项目文件夹下的所有子文件夹。"
+        },
+        "hierarchy": {
+          "name": "嵌套标签",
+          "description": "管理所有包含项目主标签及其子标签的笔记。"
+        },
+        "more-settings": {
+          "name": "更多设置",
+          "description": ""
+        },
+        "additional-sources": {
+          "name": "附加数据源",
+          "add": "添加数据源"
+        },
+        "templates": {
+          "name": "模板",
+          "description": "新建笔记时，从下列模板中选取新笔记模板。",
+          "add": "添加模板"
+        },
+        "exclude": {
+          "name": "排除笔记",
+          "description": "下列笔记将不会被本项目追踪。",
+          "add": "添加笔记"
+        },
+        "newNotesFolder": {
+          "name": "新建笔记位置",
+          "description": "新建的笔记将存放于该文件夹。"
+        },
+        "defaultName": {
+          "name": "默认笔记名称",
+          "description": "支持 {{date:YYYY-MM-DD}} 和 {{time:HHmm}} 格式的日期、时间模板变量。",
+          "invalid": "笔记名包含非法字符。"
+        },
+        "autosave": {
+          "name": "自动保存",
+          "description": "编辑笔记时自动保存更改。关闭后将显示保存按钮。"
+        },
+        "agenda": {
+          "name": "日程模式",
+          "description": "选择日程如何显示任务和事件。",
+          "modes": {
+            "standard": "标准",
+            "standard-description": "使用日历视图筛选器",
+            "custom": "自定义",
+            "custom-description": "用户自定义列表和筛选器"
+          },
+          "inherit-filters": {
+            "name": "继承日历筛选器",
+            "description": "应用与日历视图相同的筛选器"
+          }
+        }
+      },
+      "archive": {
+        "delete": {
+          "short-title": "删除存档",
+          "title": "删除存档",
+          "message": "确定要删除存档 \"{{archive}}\" 吗？此操作不可撤销。",
+          "cta": "删除"
+        }
+      },
+      "view": {
+        "create": {
+          "short-title": "新建视图",
+          "title": "新建视图",
+          "optional": "可选",
+          "type": {
+            "name": "视图类型",
+            "description": ""
+          },
+          "name": {
+            "name": "视图名称",
+            "description": ""
+          },
+          "cta": "新建视图",
+          "existing-name-error": "视图名称重复。"
+        },
+        "duplicate": {
+          "title": "复制视图",
+          "suffix": "副本"
+        },
+        "delete": {
+          "short-title": "删除视图",
+          "title": "删除视图",
+          "message": "确定要删除视图 \"{{view}}\" 吗？",
+          "cta": "删除"
+        }
+      },
+      "note": {
+        "create": {
+          "short-title": "新建笔记",
+          "title": "新建笔记",
+          "name": {
+            "name": "笔记名称",
+            "description": ""
+          },
+          "templatePath": {
+            "name": "模板",
+            "description": "",
+            "none": "None"
+          },
+          "project": {
+            "name": "所属项目",
+            "description": ""
+          },
+          "name-taken-error": "已经存在一个同名文件。",
+          "empty-name-error": "文件名不能为空。",
+          "dot-start-error": "文件名不能以句点开头。",
+          "create": "新建笔记",
+          "readonly": {
+            "title": "只读项目",
+            "message": "{{project}} 是一个只读项目，请选择其他项目以新建笔记。"
+          },
+          "untitled": "未命名"
+        },
+        "edit": {
+          "short-title": "编辑笔记",
+          "title": "编辑笔记元数据",
+          "save": "保存",
+          "confirm": "确认",
+          "no-editable-fields": {
+            "title": "没有可编辑字段。",
+            "message": "这个笔记的元数据没有可编辑字段。"
+          },
+          "saving": "保存中...",
+          "autosave-enabled": "自动保存已启用",
+          "save-error": "保存失败"
+        }
+      },
+      "field": {
+        "configure": {
+          "short-title": "配置字段",
+          "title": "配置字段",
+          "name": {
+            "name": "字段名称",
+            "description": ""
+          },
+          "empty-name-error": "字段名不能为空。",
+          "existing-name-error": "不能重命名为已有字段。",
+          "type": {
+            "name": "字段类型",
+            "description": "转换字段为另一种类型。兼容的值将被保留。"
+          },
+          "options": {
+            "name": "选项预设",
+            "description": "在填写该字段内容时，将使用下面提供的预设值进行自动补全。"
+          },
+          "rich-text": {
+            "name": "富文本",
+            "description": "依照 Markdown 格式渲染字段内容。"
+          },
+          "time": {
+            "name": "启用时间",
+            "description": "将该字段识别为日期 & 时间格式。"
+          },
+          "relation": {
+            "target-project": {
+              "name": "目标项目",
+              "description": "通过此字段链接的记录将在该项目中解析。Wiki 链接将成为可导航引用。",
+              "placeholder": "选择项目"
             },
-            "create-project": {
-                "name": "新建项目"
+            "display-field": {
+              "name": "显示字段",
+              "description": "可选。目标项目中用作显示标签的字段。默认使用文件名。",
+              "placeholder": "例如 title"
             },
-            "create-note": {
-                "name": "新建笔记"
+            "no-project": "— 无 —",
+            "this-project-suffix": "(当前项目)"
+          },
+          "rollup": {
+            "relation-field": {
+              "name": "通过关系",
+              "description": "选择本项目中指向要汇总记录的关系列。"
             },
-            "open-schema": {
-                "name": "打开架构面板"
+            "no-relation": "— 选择关系 —",
+            "no-relations-warning": "本项目尚无关系字段。请先创建关系字段以启用汇总。",
+            "target-field": {
+              "name": "聚合字段",
+              "description": "目标项目中要聚合的字段。",
+              "description-with-project": "“{{project}}”中要聚合的字段。",
+              "placeholder": "例如 amount"
             },
-            "add-field": {
-                "name": "添加字段"
+            "no-target-field": "— 选择字段 —",
+            "function": {
+              "name": "函数",
+              "description": "如何汇总相关记录中的值。"
             },
-            "toggle-visualizer-pane": {
-                "name": "切换 YAML 可视化器面板"
+            "functions": {
+              "count": "计数",
+              "count_values": "值计数",
+              "count_unique": "唯一计数",
+              "sum": "求和",
+              "avg": "平均",
+              "min": "最小值",
+              "max": "最大值",
+              "median": "中位数",
+              "range": "范围",
+              "percent_true": "真值百分比",
+              "concat": "连接",
+              "concat_unique": "唯一连接"
             },
-            "open-visualizer-for-file": {
-                "name": "在 YAML 可视化器中打开当前笔记"
-            },
-            "add-relation": {
-                "name": "为当前笔记添加关系"
-            },
-            "open-formula-editor": {
-                "name": "打开公式编辑器"
+            "separator": {
+              "name": "分隔符",
+              "description": "用于连接值时的分隔符。"
             }
-
+          },
+          "formula": {
+            "name": "公式",
+            "description": "根据其他字段和函数计算此字段的值。",
+            "placeholder": "例如 ROUND(price * quantity, 2)"
+          },
+          "save": "保存修改"
         },
-        "menus": {
-            "project": {
-                "create": {
-                    "title": "在文件夹中新建项目"
-                }
-            },
-            "file": {
-                "open-in-visualizer": {
-                    "title": "在 YAML 可视化器中打开"
-                },
-                "add-relation": {
-                    "title": "添加为关系…"
-                }
-            },
-            "tab-header": {
-                "new-window": {
-                    "title": "在新窗口中打开"
-                }
-            }
+        "create": {
+          "short-title": "新建字段",
+          "title": "新建字段",
+          "name": {
+            "name": "字段名称",
+            "description": ""
+          },
+          "untitled": "新字段",
+          "no-default-stage-a": "该类型为计算或关联字段 — 无需设置默认值。",
+          "empty-name-error": "字段名不能为空。",
+          "existing-name-error": "字段名称重复。",
+          "type": {
+            "name": "字段类型",
+            "description": ""
+          },
+          "default": {
+            "name": "默认值",
+            "description": ""
+          },
+          "options": {
+            "name": "选项预设",
+            "description": "在填写该字段内容时，将使用下面提供的预设值进行自动补全。"
+          },
+          "rich-text": {
+            "name": "富文本",
+            "description": "依照 Markdown 格式渲染字段内容。"
+          },
+          "create": "添加字段"
+        }
+      },
+      "schema": {
+        "title": "项目模式",
+        "empty": "尚未定义字段。",
+        "configure": "配置",
+        "delete": "删除",
+        "close": "关闭",
+        "identifier": "标识符",
+        "add-field": {
+          "name": "添加新字段",
+          "description": "为该项目添加新属性。",
+          "button": "添加字段"
         },
-        "modals": {
-            "project": {
-                "create": {
-                    "short-title": "新项目",
-                    "untitled": "未命名项目",
-                    "title": "新建项目",
-                    "cta": "新建项目",
-                    "existing-name-error": "项目名称重复。",
-                    "empty-name-error": "项目名不能为空。"
-                },
-                "edit": {
-                    "short-title": "编辑项目",
-                    "title": "编辑项目",
-                    "cta": "保存"
-                },
-                "duplicate": {
-                    "title": "复制项目",
-                    "suffix": "副本"
-                },
-                "archive": {
-                    "short-title": "存档项目",
-                    "title": "存档项目",
-                    "message": "确定要存档项目 \"{{project}}\" 吗？若需要，您可以在 Projects 插件设置中恢复该项目。",
-                    "notice": "存档成功！若您在多个设备间同步使用 Projects，请确保将所有设备上的 Projects 都升级到 1.17.0 版本或以上，以避免存档的项目配置信息丢失。",
-                    "cta": "存档"
-                },
-                "delete": {
-                    "short-title": "删除项目",
-                    "title": "删除项目",
-                    "message": "确定要删除项目 \"{{project}}\" 吗？此操作不可撤销。",
-                    "cta": "删除"
-                },
-                "name": {
-                    "name": "项目名称",
-                    "description": ""
-                },
-                "default": {
-                    "name": "设为默认项目",
-                    "description": "打开 Projects 插件窗口时，默认打开本项目。"
-                },
-                "datasource": {
-                    "name": "数据源",
-                    "description": "选择项目的数据来源。"
-                },
-                "path": {
-                    "name": "路径",
-                    "description": "目标文件夹路径。若为空值，路径将设为根目录。"
-                },
-                "tag": {
-                    "name": "标签",
-                    "description": "管理本仓库中所有含有该标签的笔记。"
-                },
-                "dataview": {
-                    "name": "Dataview",
-                    "description": "以 Dataview 查询结果创建只读项目。",
-                    "error": {
-                        "title": "Dataview 插件未启用。",
-                        "message": "启用 Dataview 插件以使用本项目。"
-                    },
-                    "validating": "正在验证查询...",
-                    "query-error": "查询失败，请检查语法。",
-                    "preview-table": "找到 {{count}} 条记录 (TABLE)",
-                    "preview-list": "找到 {{count}} 个项目 (LIST)",
-                    "preview-task": "找到 {{count}} 个任务 (TASK)",
-                    "unsupported-type": "不支持的查询类型：{{type}}"
-                },
-                "query": {
-                    "name": "查询语句 (Query)",
-                    "description": "支持 TABLE、LIST 和 TASK 查询。"
-                },
-                "recursive": {
-                    "name": "管理子文件夹",
-                    "description": "管理项目文件夹下的所有子文件夹。"
-                },
-                "hierarchy": {
-                    "name": "嵌套标签",
-                    "description": "管理所有包含项目主标签及其子标签的笔记。"
-                },
-                "more-settings": {
-                    "name": "更多设置",
-                    "description": ""
-                },
-                "additional-sources": {
-                    "name": "附加数据源",
-                    "add": "添加数据源"
-                },
-                "templates": {
-                    "name": "模板",
-                    "description": "新建笔记时，从下列模板中选取新笔记模板。",
-                    "add": "添加模板"
-                },
-                "exclude": {
-                    "name": "排除笔记",
-                    "description": "下列笔记将不会被本项目追踪。",
-                    "add": "添加笔记"
-                },
-                "newNotesFolder": {
-                    "name": "新建笔记位置",
-                    "description": "新建的笔记将存放于该文件夹。"
-                },
-                "defaultName": {
-                    "name": "默认笔记名称",
-                    "description": "支持 {{date:YYYY-MM-DD}} 和 {{time:HHmm}} 格式的日期、时间模板变量。",
-                    "invalid": "笔记名包含非法字符。"
-                },
-                "autosave": {
-                    "name": "自动保存",
-                    "description": "编辑笔记时自动保存更改。关闭后将显示保存按钮。"
-                },
-                "agenda": {
-                    "name": "日程模式",
-                    "description": "选择日程如何显示任务和事件。",
-                    "modes": {
-                        "standard": "标准",
-                        "standard-description": "使用日历视图筛选器",
-                        "custom": "自定义",
-                        "custom-description": "用户自定义列表和筛选器"
-                    },
-                    "inherit-filters": {
-                        "name": "继承日历筛选器",
-                        "description": "应用与日历视图相同的筛选器"
-                    }
-                }
-            },
-            "archive": {
-                "delete": {
-                    "short-title": "删除存档",
-                    "title": "删除存档",
-                    "message": "确定要删除存档 \"{{archive}}\" 吗？此操作不可撤销。",
-                    "cta": "删除"
-                }
-            },
-            "view": {
-                "create": {
-                    "short-title": "新建视图",
-                    "title": "新建视图",
-                    "optional": "可选",
-                    "type": {
-                        "name": "视图类型",
-                        "description": ""
-                    },
-                    "name": {
-                        "name": "视图名称",
-                        "description": ""
-                    },
-                    "cta": "新建视图",
-                    "existing-name-error": "视图名称重复。"
-                },
-                "duplicate": {
-                    "title": "复制视图",
-                    "suffix": "副本"
-                },
-                "delete": {
-                    "short-title": "删除视图",
-                    "title": "删除视图",
-                    "message": "确定要删除视图 \"{{view}}\" 吗？",
-                    "cta": "删除"
-                }
-            },
-            "note": {
-                "create": {
-                    "short-title": "新建笔记",
-                    "title": "新建笔记",
-                    "name": {
-                        "name": "笔记名称",
-                        "description": ""
-                    },
-                    "templatePath": {
-                        "name": "模板",
-                        "description": "",
-                        "none": "None"
-                    },
-                    "project": {
-                        "name": "所属项目",
-                        "description": ""
-                    },
-                    "name-taken-error": "已经存在一个同名文件。",
-                    "empty-name-error": "文件名不能为空。",
-                    "dot-start-error": "文件名不能以句点开头。",
-                    "create": "新建笔记",
-                    "readonly": {
-                        "title": "只读项目",
-                        "message": "{{project}} 是一个只读项目，请选择其他项目以新建笔记。"
-                    },
-                    "untitled": "未命名"
-                },
-                "edit": {
-                    "short-title": "编辑笔记",
-                    "title": "编辑笔记元数据",
-                    "save": "保存",
-                    "confirm": "确认",
-                    "no-editable-fields": {
-                        "title": "没有可编辑字段。",
-                        "message": "这个笔记的元数据没有可编辑字段。"
-                    },
-                    "saving": "保存中...",
-                    "autosave-enabled": "自动保存已启用",
-                    "save-error": "保存失败"
-                }
-            },
-            "field": {
-                "configure": {
-                    "short-title": "配置字段",
-                    "title": "配置字段",
-                    "name": {
-                        "name": "字段名称",
-                        "description": ""
-                    },
-                    "empty-name-error": "字段名不能为空。",
-                    "existing-name-error": "不能重命名为已有字段。",
-                    "type": {
-                        "name": "字段类型",
-                        "description": "转换字段为另一种类型。兼容的值将被保留。"
-                    },
-                    "options": {
-                        "name": "选项预设",
-                        "description": "在填写该字段内容时，将使用下面提供的预设值进行自动补全。"
-                    },
-                    "rich-text": {
-                        "name": "富文本",
-                        "description": "依照 Markdown 格式渲染字段内容。"
-                    },
-                    "time": {
-                        "name": "启用时间",
-                        "description": "将该字段识别为日期 & 时间格式。"
-                    },
-                    "relation": {
-                        "target-project": {
-                            "name": "目标项目",
-                            "description": "通过此字段链接的记录将在该项目中解析。Wiki 链接将成为可导航引用。",
-                            "placeholder": "选择项目"
-                        },
-                        "display-field": {
-                            "name": "显示字段",
-                            "description": "可选。目标项目中用作显示标签的字段。默认使用文件名。",
-                            "placeholder": "例如 title"
-                        },
-                        "no-project": "— 无 —",
-                        "this-project-suffix": "(当前项目)"
-                    },
-                    "rollup": {
-                        "relation-field": {
-                            "name": "通过关系",
-                            "description": "选择本项目中指向要汇总记录的关系列。"
-                        },
-                        "no-relation": "— 选择关系 —",
-                        "no-relations-warning": "本项目尚无关系字段。请先创建关系字段以启用汇总。",
-                        "target-field": {
-                            "name": "聚合字段",
-                            "description": "目标项目中要聚合的字段。",
-                            "description-with-project": "“{{project}}”中要聚合的字段。",
-                            "placeholder": "例如 amount"
-                        },
-                        "no-target-field": "— 选择字段 —",
-                        "function": {
-                            "name": "函数",
-                            "description": "如何汇总相关记录中的值。"
-                        },
-                        "functions": {
-                            "count": "计数",
-                            "count_values": "值计数",
-                            "count_unique": "唯一计数",
-                            "sum": "求和",
-                            "avg": "平均",
-                            "min": "最小值",
-                            "max": "最大值",
-                            "median": "中位数",
-                            "range": "范围",
-                            "percent_true": "真值百分比",
-                            "concat": "连接",
-                            "concat_unique": "唯一连接"
-                        },
-                        "separator": {
-                            "name": "分隔符",
-                            "description": "用于连接值时的分隔符。"
-                        }
-                    },
-                    "formula": {
-                        "name": "公式",
-                        "description": "根据其他字段和函数计算此字段的值。",
-                        "placeholder": "例如 ROUND(price * quantity, 2)"
-                    },
-                    "save": "保存修改"
-                },
-                "create": {
-                    "short-title": "新建字段",
-                    "title": "新建字段",
-                    "name": {
-                        "name": "字段名称",
-                        "description": ""
-                    },
-                    "untitled": "新字段",
-                    "no-default-stage-a": "该类型为计算或关联字段 — 无需设置默认值。",
-                    "empty-name-error": "字段名不能为空。",
-                    "existing-name-error": "字段名称重复。",
-                    "type": {
-                        "name": "字段类型",
-                        "description": ""
-                    },
-                    "default": {
-                        "name": "默认值",
-                        "description": ""
-                    },
-                    "options": {
-                        "name": "选项预设",
-                        "description": "在填写该字段内容时，将使用下面提供的预设值进行自动补全。"
-                    },
-                    "rich-text": {
-                        "name": "富文本",
-                        "description": "依照 Markdown 格式渲染字段内容。"
-                    },
-                    "create": "添加字段"
-                }
-            },
-            "schema": {
-                "title": "项目模式",
-                "empty": "尚未定义字段。",
-                "configure": "配置",
-                "delete": "删除",
-                "close": "关闭",
-                "identifier": "标识符",
-                "add-field": {
-                    "name": "添加新字段",
-                    "description": "为该项目添加新属性。",
-                    "button": "添加字段"
-                },
-                "delete-confirm": {
-                    "title": "删除字段",
-                    "message": "从项目中删除字段“{{name}}”？现有值将保留在笔记中，但不再显示在视图中。",
-                    "cta": "删除"
-                },
-                "relation-summary": "→ {{project}}",
-                "relation-missing-target": "未选择目标项目",
-                "rollup-summary": "通过 {{via}} 的 {{function}}({{target}})"
-            },
-            "input": {
-                "cancel": "取消"
-            },
-            "confirm": {
-                "delete": "删除",
-                "cancel": "取消"
-            }
+        "delete-confirm": {
+          "title": "删除字段",
+          "message": "从项目中删除字段“{{name}}”？现有值将保留在笔记中，但不再显示在视图中。",
+          "cta": "删除"
         },
-        "views": {
-            "filter": {
-                "bar": {
-                    "aria": "视图筛选",
-                    "add": "筛选",
-                    "scope": "此视图"
-                }
-            },
-            "visualizer": {
-                "pane": {
-                    "title": "YAML 可视化器",
-                    "no-file": "打开 Markdown 笔记以查看其属性。",
-                    "no-properties": "此笔记尚无 frontmatter 属性。",
-                    "actions": {
-                        "pin": "置顶",
-                        "unpin": "取消置顶",
-                        "hide": "隐藏",
-                        "unhide": "显示",
-                        "move-up": "上移",
-                        "move-down": "下移",
-                        "show-hidden": "显示已隐藏",
-                        "hide-hidden": "隐藏已隐藏",
-                        "reset": "重置覆盖",
-                        "add-relation": "+ 添加关联",
-                        "pick-relation-placeholder": "选择一篇笔记…",
-                        "set-type": "设置属性类型"
-                    },
-                    "types": {
-                        "auto": "自动"
-                    },
-                    "linked-from": {
-                        "title": "反向链接",
-                        "empty": "还没有笔记链接到这里。",
-                        "via": "通过"
-                    }
-                }
-            },
-            "developer": {
-                "name": "开发者"
-            },
-            "table": {
-                "name": "表格",
-                "deprecation-notice": "表格视图已弃用。请切换到数据库视图以获得增强功能。",
-                "hide-fields": "隐藏字段",
-                "rename-field": "重命名字段",
-                "rename": "重命名"
-            },
-            "board": {
-                "name": "看板",
-                "no-status": "未设置状态",
-                "fields": {
-                    "status": "状态",
-                    "priority": "优先级",
-                    "check": "复选框",
-                    "none": "未选择"
-                },
-                "unprioritized": "未设置优先级",
-                "include-fields": "展示字段",
-                "settings": {
-                    "name": "看板设置",
-                    "column-width": {
-                        "name": "列宽度",
-                        "description": "调整每列的像素宽度。"
-                    },
-                    "custom-header": {
-                        "name": "自定义卡片标题",
-                        "description": "将使用所选字段值作为卡片标题。"
-                    },
-                    "order-sync-field": {
-                        "name": "卡片顺序同步字段",
-                        "description": "该字段将用于存储卡片在看板列中的位置顺序信息。"
-                    }
-                },
-                "note": {
-                    "add": "新建笔记"
-                }
-            },
-            "calendar": {
-                "name": "日历",
-                "new-note": "新建笔记",
-                "no-events": "没有事件",
-                "fields": {
-                    "date": "日期",
-                    "check": "复选框",
-                    "none": "无"
-                },
-                "today": "今天",
-                "weekday": "{{value, datetime}}",
-                "date": "{{value, datetime}}",
-                "interval": "{{custom_year, datetime}}{{from, datetime}} – {{to, datetime}}",
-                "intervals": {
-                    "month_one": "月",
-                    "month_other": "月",
-                    "monthWithCount_one": "{{count}}月",
-                    "monthWithCount_other": "{{count}}月",
-                    "week_one": "周",
-                    "week_other": "周",
-                    "weekWithCount_one": "{{count}}周",
-                    "weekWithCount_other": "{{count}}周",
-                    "day_one": "日",
-                    "day_other": "日",
-                    "dayWithCount_one": "{{count}}日",
-                    "dayWithCount_other": "{{count}}日",
-                    "year_one": "年",
-                    "year_other": "年",
-                    "yearWithCount_one": "{{count}}年",
-                    "yearWithCount_other": "{{count}}年",
-                    "2weeks": "2周"
-                },
-                "record": {
-                    "settings": "设置",
-                    "duplicate": "复制",
-                    "delete": "删除",
-                    "open": "打开笔记",
-                    "open-new-tab": "在新标签页中打开",
-                    "color": "颜色"
-                },
-                "duplicate": {
-                    "title": "选择要复制到的日期",
-                    "selected": "已选择 {{count}} 个日期",
-                    "cancel": "取消",
-                    "confirm": "复制",
-                    "time": "时间",
-                    "today": "今天"
-                },
-                "navigation": {
-                    "aria-label": "日历导航",
-                    "today-tooltip": "跳转到今天",
-                    "previous": "上一个",
-                    "next": "下一个"
-                },
-                "empty": {
-                    "no-date-field": "请选择日期字段以显示事件",
-                    "no-events": "此期间没有事件"
-                },
-                "errors": {
-                    "create-readonly": "无法在只读项目中创建事件",
-                    "date-required": "创建事件需要日期字段"
-                },
-                "colors": {
-                    "favorites": "收藏",
-                    "all": "所有颜色",
-                    "custom": "自定义颜色",
-                    "invalid": "无效的HEX格式",
-                    "picker": "颜色选择器",
-                    "quick": "快速选色",
-                    "hex": "HEX代码"
-                },
-                "popup": {
-                    "today": "今天",
-                    "empty-hint": "点击下方按钮创建"
-                },
-                "agenda": {
-                    "title": "日程",
-                    "empty": "今天没有事件",
-                    "all-day": "📅 全天",
-                    "all-day-time": "全天",
-                    "morning": "🌅 上午 (12:00前)",
-                    "afternoon": "☀️ 下午 (12:00–18:00)",
-                    "evening": "🌙 晚上 (18:00后)",
-                    "overdue": "⛔ 已逾期",
-                    "today": "📅 今天",
-                    "multiday": "📊 跨天",
-                    "upcoming": "🔮 即将到来",
-                    "undated": "📥 收件箱 (无日期)",
-                    "expand": "展开日程",
-                    "collapse": "收起日程",
-                    "add-note": "添加",
-                    "today-btn": "今天",
-                    "custom": {
-                        "add-list": "添加列表",
-                        "edit-list": "编辑列表",
-                        "delete-list": "删除列表",
-                        "move-up": "上移",
-                        "move-down": "下移",
-                        "empty-list": "没有匹配筛选条件的记录",
-                        "list-editor": {
-                            "title-new": "新建列表",
-                            "title-edit": "编辑列表",
-                            "name-label": "列表名称",
-                            "name-placeholder": "例如：紧急任务",
-                            "name-required": "名称为必填项",
-                            "name-exists": "名称已存在",
-                            "icon-label": "图标",
-                            "change-icon": "更换图标...",
-                            "color-label": "列表强调色 (可选)",
-                            "color-hint": "设置左侧边框颜色以便视觉识别",
-                            "preview": "预览",
-                            "filters-label": "筛选器",
-                            "filters-hint": "日期公式: 'today', 'today+1w', 'sow', 'eom'。DQL兼容: sow/eow/som/eom/soy/eoy。运算符: 'Is today', 'Is this week', 'Is overdue'。",
-                            "formula-hint": "使用函数 AND(), OR(), CONTAINS(), IS_TODAY()。查看帮助获取完整参考。",
-                            "save": "保存更改",
-                            "create": "创建列表",
-                            "cancel": "取消"
-                        },
-                        "filter-editor": {
-                            "add-filter": "添加筛选条件",
-                            "empty": "无筛选条件 — 将显示所有记录",
-                            "value-placeholder": "值...",
-                            "remove-filter": "移除筛选条件",
-                            "enable-filter": "启用筛选",
-                            "disable-filter": "禁用筛选",
-                            "operators": {
-                                "is-empty": "为空",
-                                "is_empty": "为空",
-                                "is-not-empty": "不为空",
-                                "is_not_empty": "不为空",
-                                "is": "等于",
-                                "is-not": "不等于",
-                                "contains": "包含",
-                                "not-contains": "不包含",
-                                "not_contains": "不包含",
-                                "starts-with": "开头为",
-                                "ends-with": "结尾为",
-                                "regex": "匹配正则",
-                                "eq": "=",
-                                "neq": "≠",
-                                "lt": "<",
-                                "gt": ">",
-                                "lte": "≤",
-                                "gte": "≥",
-                                "equals": "=",
-                                "not_equals": "≠",
-                                "greater_than": ">",
-                                "less_than": "<",
-                                "greater_or_equal": "≥",
-                                "less_or_equal": "≤",
-                                "is-checked": "已勾选",
-                                "is-not-checked": "未勾选",
-                                "is-on": "在此日期",
-                                "is-not-on": "不在此日期",
-                                "is-before": "早于",
-                                "is-after": "晚于",
-                                "is-on-and-before": "在此日期或之前",
-                                "is-on-and-after": "在此日期或之后",
-                                "is-today": "是今天",
-                                "is_today": "是今天",
-                                "is-this-week": "是本周",
-                                "is_this_week": "是本周",
-                                "is-this-month": "是本月",
-                                "is-overdue": "已逾期",
-                                "is_overdue": "已逾期",
-                                "is-upcoming": "即将到来",
-                                "is_upcoming": "即将到来",
-                                "has-any-of": "包含任一",
-                                "has-all-of": "包含全部",
-                                "has-none-of": "不包含任何",
-                                "has-keyword": "包含关键词"
-                            },
-                            "match-label": "匹配",
-                            "match-all": "满足所有条件",
-                            "match-any": "满足任一条件",
-                            "field-label": "条件",
-                            "operator-label": "运算符",
-                            "value-label": "值",
-                            "add-group": "添加筛选组",
-                            "remove-group": "移除组",
-                            "field-placeholder": "选择字段...",
-                            "operator-placeholder": "选择运算符...",
-                            "filter-group-label": "筛选组",
-                            "date-suggestions": "日期公式 (DQL)",
-                            "date-formula-hint": "公式: today, sow, eom, today+1w, som-1m",
-                            "where-prefix": "条件",
-                            "and-prefix": "且",
-                            "no-value": "无值"
-                        },
-                        "advanced-filter": {
-                            "toolbar-help": "帮助",
-                            "hint-valid": "✓ 公式有效",
-                            "hint-error": "⚠ {{count}} 个错误",
-                            "hint-ctrl-space": "Ctrl+Space — 提示",
-                            "textarea-placeholder": "开始输入公式或按 Ctrl+Space...",
-                            "help-title-logical": "🔗 逻辑",
-                            "help-title-strings": "📝 字符串",
-                            "help-title-checks": "🔍 检查",
-                            "help-title-dates": "📅 日期",
-                            "help-title-arrays": "📋 数组 / 标签",
-                            "help-title-operators": "⚙ 运算符",
-                            "help-examples-title": "示例:",
-                            "snippet-active-tasks": "📌 活动任务",
-                            "snippet-active-tasks-desc": "带日期的活动任务",
-                            "snippet-urgent-overdue": "🔥 紧急过期",
-                            "snippet-urgent-overdue-desc": "过期 + urgent",
-                            "snippet-this-week": "📅 本周任务",
-                            "snippet-this-week-desc": "本周全部",
-                            "snippet-undated-overdue": "🗓 无日期或过期",
-                            "snippet-undated-overdue-desc": "空日期 或 过期"
-                        },
-                        "icon-picker": {
-                            "lucide-tab": "图标",
-                            "emoji-tab": "表情",
-                            "search-placeholder": "搜索..."
-                        },
-                        "no-lists": "没有自定义列表",
-                        "create-list": "创建列表"
-                    }
-                },
-                "heatmap": {
-                    "less": "较少",
-                    "more": "较多",
-                    "events": "个事件",
-                    "clickToViewMonth": "点击查看月份",
-                    "previousYear": "上一年",
-                    "nextYear": "下一年",
-                    "loading": "加载中...",
-                    "noData": "暂无数据"
-                }
-            },
-            "gallery": {
-                "name": "画册",
-                "fields": {
-                    "cover": "图片源",
-                    "none": "未选择"
-                },
-                "fit-style": {
-                    "fill": "填充",
-                    "fit": "适应"
-                },
-                "include-fields": "展示字段",
-                "settings": {
-                    "name": "画册设置",
-                    "card-width": {
-                        "name": "卡片宽度",
-                        "description": "调整每张卡片的像素宽度。"
-                    }
-                },
-                "empty": "该视图还没有数据。"
-            },
-            "dashboard": {
-                "name": "数据库",
-                "add-row": "新建笔记",
-
-                "table": {
-                    "header-hint": "右击列标题可重命名、更改类型、隐藏、固定或重新排序。拖动边缘可调整宽度。",
-                    "row-height": "行高",
-                    "row-height-compact": "紧凑",
-                    "row-height-default": "默认",
-                    "row-height-expanded": "宽松",
-                    "wrap-text": "单元格内文本换行",
-                    "show-aggregation": "显示汇总行",
-                    "freeze-up-to": "冻结列至字段",
-                    "column-menu": {
-                        "property-type": "属性类型",
-                        "property-type-auto": "自动",
-                        "rollup-mode": "Rollup 模式"
-                    }
-                },
-                "canvas": {
-                    "widgets": "组件",
-                    "hide-toolbar": "隐藏组件工具栏",
-                    "show-toolbar": "显示组件工具栏",
-                    "toggle-layout": "切换布局模式",
-                    "layout-grid": "网格",
-                    "layout-stack": "列表",
-                    "hide-formula-bar": "隐藏公式栏",
-                    "show-formula-bar": "显示公式栏",
-                    "formula-builder": "公式",
-                    "schema": "模式",
-                    "schema-tip": "管理项目字段 — 类型、关系、汇总",
-                    "filter-bridge-global": "全局筛选器：{{count}} 个条件",
-                    "filter-bridge-local": "本地：{{field}} = {{value}}",
-                    "filter-bridge-clear": "清除本地筛选器",
-                    "filter-bridge-promote": "保存为全局筛选器"
-                },
-                "field-presets": {
-                    "label": "布局",
-                    "title": "列布局预设",
-                    "aria-label": "列布局预设",
-                    "save-current": "保存当前布局…",
-                    "apply": "应用",
-                    "rename": "重命名",
-                    "delete": "删除",
-                    "detach": "取消预设",
-                    "prompt-new": "布局预设名称：",
-                    "prompt-rename": "重命名预设：",
-                    "confirm-delete": "删除此布局预设？"
-                },
-                "widget": {
-                    "expand": "展开组件",
-                    "collapse": "折叠组件",
-                    "chart-settings": "图表设置",
-                    "pipeline": "管道：显示前重塑数据 — 分组、计数、排序",
-                    "remove": "删除组件",
-                    "not-configured": "组件类型 \"{{type}}\" — 未配置",
-                    "add": "添加组件",
-                    "add-aria": "添加组件",
-                    "data-scope": {
-                        "title": "数据范围",
-                        "subtitle": "此区块针对哪些记录。显示方式在别处设置。",
-                        "label": "哪个来源",
-                        "all": "全部来源（限于此视图）",
-                        "hint": "一个项目可以从多个来源收集记录。此块可以只显示其中一个，且限于该视图已显示的范围。",
-                        "unnamed": "在引入命名之前添加的来源无法选择 — 请打开项目并为它们命名。",
-                        "missing": "{{id}} — 已不在本项目中",
-                        "single": "本项目只从一个来源收集记录，因此暂时无从缩小范围。"
-                    }
-                },
-                "quick": {
-                    "group": "快速操作",
-                    "formula": "公式构建器"
-                },
-                "types": {
-                    "data-table": "数据表",
-                    "chart": "图表",
-                    "stats": "统计",
-                    "comparison": "对比",
-                    "checklist": "清单",
-                    "view-port": "视口",
-                    "filter-tabs": "筛选选项卡",
-                    "summary-row": "汇总行"
-                },
-                "formula": {
-                    "title": "公式编辑器",
-                    "hint": "Ctrl+Enter 应用，Esc 取消",
-                    "field-name": "字段名称",
-                    "field-placeholder": "例如 计算预算",
-                    "expression-placeholder": "例如 IF(Status = \"Active\", Budget * 1.2, 0)",
-                    "preview": "预览：",
-                    "cancel": "取消",
-                    "apply": "应用",
-                    "mode-code": "代码",
-                    "mode-visual": "可视化",
-                    "visual-empty": "点击添加公式块",
-                    "visual-parse-error": "无法在可视化模式下显示 — 请切换到代码模式编辑",
-                    "signature-returns": "返回",
-                    "signature-category": "类别",
-                    "help-category": {
-                        "logical": "逻辑",
-                        "math": "数学",
-                        "string": "字符串",
-                        "date": "日期",
-                        "financial": "财务",
-                        "statistical": "统计",
-                        "array": "数组",
-                        "conversion": "转换",
-                        "utility": "实用工具"
-                    },
-                    "debug-title": "调试",
-                    "debug-cursor": "光标位置",
-                    "debug-copy": "复制错误",
-                    "debug-dismiss": "关闭",
-                    "runtime-error": "运行时错误"
-                },
-                "block-filter": {
-                    "aria": "区块筛选",
-                    "add": "筛选",
-                    "remove": "移除条件",
-                    "scope": "此区块 — 其所有视图"
-                },
-                "pipeline": {
-                    "title": "高级转换",
-                    "advanced-hint": "普通的筛选和分组现在位于视图本身——这些步骤用于重塑数据。",
-                    "steps": "个步骤",
-                    "clear": "清空",
-                    "empty": {
-                        "title": "在显示前重塑数据",
-                        "beforeLabel": "原始数据",
-                        "afterLabel": "结果",
-                        "caption": "在下方选择一个步骤 — 分组、计数、筛选或排序。",
-                        "sampleBefore": [
-                            "俯卧撑 — 30",
-                            "俯卧撑 — 25",
-                            "深蹲 — 50",
-                            "深蹲 — 40",
-                            "平板支撑 — 60"
-                        ],
-                        "sampleAfter": [
-                            "俯卧撑 — 共 55",
-                            "深蹲 — 共 90",
-                            "平板支撑 — 共 60"
-                        ]
-                    },
-                    "move-up": "上移",
-                    "move-down": "下移",
-                    "remove": "删除",
-                    "add-step": "添加数据步骤",
-                    "filter": "筛选",
-                    "group-by": "分组",
-                    "aggregate": "汇总",
-                    "compute": "计算",
-                    "unpivot": "逆透视",
-                    "pivot": "透视",
-                    "join": "连接",
-                    "join-right-source": "右侧数据源",
-                    "join-left-key": "左键",
-                    "join-right-key": "右键",
-                    "join-right-key-placeholder": "右侧数据源中的字段名",
-                    "join-how": "连接类型",
-                    "join-inner": "内连接（丢弃未匹配）",
-                    "join-left": "左连接（保留未匹配，右为 null）",
-                    "join-aggregate": "聚合多个右侧匹配项",
-                    "join-no-sources": "无可用的右侧项目。",
-                    "aggregate-function": "聚合函数",
-                    "none": "（无）",
-                    "columns": "列",
-                    "groups": "组",
-                    "unset": "（未设置）",
-                    "live": "更改即时生效",
-                    "done": "完成",
-                    "flow-tip": "此步骤的输入记录数 → 输出记录数",
-                    "unknown": "未知",
-                    "unnest-suggestion-title": "检测到数组字段",
-                    "unnest-suggestion-body": "字段 {{fields}} 包含数组。使用 Unnest 将每个元素拆分为独立的行。",
-                    "unnest-suggestion-button": "展开 \"{{field}}\"",
-                    "disable-step": "禁用步骤",
-                    "enable-step": "启用步骤"
-                },
-                "database-call": {
-                    "empty": "尚未配置视图",
-                    "add-first": "添加第一个视图",
-                    "no-records": "还没有记录",
-                    "add-first-record": "添加第一条记录",
-                    "no-matches": "无匹配项",
-                    "clear-filter": "清除筛选",
-                    "pipeline-hid-all": "管道未返回任何行（{{count}} 个步骤）",
-                    "open-pipeline": "打开管道",
-                    "clear-pipeline": "清空管道",
-                    "settings": {
-                        "source": "数据来源",
-                        "source-inherit": "本视图数据（默认）",
-                        "source-hint": "默认情况下，块显示本视图的记录。选择其他项目以显示其数据。",
-                        "link-to": "关联到块",
-                        "standalone": "无关联 — 显示所有记录",
-                        "link-hint": "无关联时块显示所有记录。关联后仅显示与所选块相关的记录。",
-                        "relation-field": "按字段筛选",
-                        "select-field": "选择字段"
-                    }
-                },
-                "group": {
-                    "empty": "（空）"
-                },
-                "chart": {
-                    "no-data": "暂无数据",
-                    "type": "图表类型",
-                    "x-axis": "X 轴",
-                    "y-axis": "Y 轴",
-                    "aggregation": "汇总方式",
-                    "sort-by": "排序方式",
-                    "height": "高度",
-                    "granularity": "日期分组方式",
-                    "granularities": {
-                        "day": "日",
-                        "week": "周",
-                        "month": "月",
-                        "quarter": "季度",
-                        "year": "年"
-                    },
-                    "types": {
-                        "bar": "柱状图",
-                        "horizontal-bar": "条形图",
-                        "stacked-bar": "堆叠柱状图",
-                        "line": "折线图",
-                        "area": "面积图",
-                        "pie": "饼图",
-                        "donut": "环形图",
-                        "number": "数字 / KPI",
-                        "progress": "进度",
-                        "scatter": "散点图"
-                    },
-                    "aggregations": {
-                        "sum": "求和",
-                        "average": "平均值",
-                        "min": "最小值",
-                        "max": "最大值",
-                        "median": "中位数",
-                        "count": "计数",
-                        "unique": "唯一值"
-                    },
-                    "sort": {
-                        "label": "标签",
-                        "value": "数值",
-                        "manual": "手动"
-                    },
-                    "group-mode": {
-                        "label": "状态分组",
-                        "values": "原始值",
-                        "semantic": "语义分组"
-                    },
-                    "heights": {
-                        "small": "小",
-                        "medium": "中",
-                        "large": "大"
-                    },
-                    "options": {
-                        "grid": "网格线",
-                        "labels": "标签",
-                        "values": "数值",
-                        "legend": "图例",
-                        "hide-zero": "隐藏零值",
-                        "cumulative": "累计"
-                    },
-                    "scatter": {
-                        "color-by": "颜色按",
-                        "size-by": "大小按",
-                        "trend-line": "趋势线",
-                        "r-squared": "显示 R²",
-                        "point-size": "点大小",
-                        "opacity": "透明度",
-                        "none": "（无）",
-                        "correlate-enable": "与其他数据源关联",
-                        "correlate-hint": "X 来自当前控件的数据源；Y 来自所选右侧数据源，按连接键匹配。",
-                        "right-source": "右侧数据源（Y）",
-                        "left-key": "左连接键（当前数据源）",
-                        "right-key": "右连接键（右侧数据源）",
-                        "right-key-placeholder": "右侧数据源中的字段名",
-                        "no-sources": "此保库中没有其他项目。",
-                        "warn-missing-right": "右侧数据源未加载。请检查所选 id 并确认并列项目仍然可用。",
-                        "warn-no-matches": "没有按连接键匹配的记录。请核对左/右键的名称与值是否相交。",
-                        "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。"
-                    },
-                    "section": {
-                        "display": "显示设置",
-                        "data": "数据",
-                        "scatter": "散点图"
-                    }
-                },
-                "comparison": {
-                    "empty": "配置对比指标",
-                    "metric-a": "指标 A",
-                    "metric-b": "指标 B"
-                },
-                "filter-tabs": {
-                    "all": "全部",
-                    "config": {
-                        "title": "筛选标签",
-                        "subtitle": "选择一个字段 — 控件会根据唯一值自动生成标签。或手动定义固定的标签集。",
-                        "field": "筛选字段",
-                        "auto": "自动检测的值",
-                        "seed": "用作标签",
-                        "seed-tip": "将值复制到可编辑标签",
-                        "add": "添加标签",
-                        "tab-label": "标签",
-                        "tab-value": "值"
-                    }
-                },
-                "stats": {
-                    "config": {
-                        "title": "统计卡片",
-                        "subtitle": "每张卡片显示一项（管道处理后）数据聚合。字段填 * 表示记录计数。",
-                        "empty": "暂无卡片。添加一张以显示 KPI 磁贴。",
-                        "add": "添加卡片",
-                        "columns": "网格列数",
-                        "label": "标签",
-                        "field": "字段",
-                        "aggregation": "聚合",
-                        "format": "格式",
-                        "currency": "符号",
-                        "sparkline": "迷你图",
-                        "fmt-number": "数字",
-                        "fmt-percent": "百分比",
-                        "fmt-currency": "货币",
-                        "fmt-duration": "时长"
-                    }
-                },
-                "agg": {
-                    "count_total": "计数",
-                    "count_values": "已填写数",
-                    "count_unique": "唯一值",
-                    "sum": "求和",
-                    "avg": "平均值",
-                    "median": "中位数",
-                    "min": "最小值",
-                    "max": "最大值",
-                    "range": "极差",
-                    "count_checked": "已勾选",
-                    "count_unchecked": "未勾选",
-                    "percent_checked": "勾选百分比",
-                    "percent_unchecked": "未勾选百分比",
-                    "percent_empty": "空值百分比",
-                    "percent_not_empty": "已填写百分比",
-                    "earliest": "最早日期",
-                    "latest": "最晚日期"
-                },
-                "checklist": {
-                    "select-field": "选择布尔字段",
-                    "no-items": "暂无项目",
-                    "done": "已完成",
-                    "config": {
-                        "check-field": "复选框字段",
-                        "check-field-placeholder": "例如 completed",
-                        "label-field": "标签字段",
-                        "label-field-placeholder": "name",
-                        "limit": "上限",
-                        "limit-placeholder": "0 = 无限制",
-                        "show": "显示",
-                        "show-all": "所有笔记",
-                        "show-done": "仅已完成",
-                        "show-open": "仅未完成",
-                        "sort-field": "排序字段",
-                        "sort-field-placeholder": "name",
-                        "sort-order": "排序"
-                    }
-                },
-                "viewport": {
-                    "select": "选择要嵌入的视图",
-                    "change": "更改嵌入视图",
-                    "embedded": "嵌入视图：{{label}}",
-                    "embed-title": "嵌入视图",
-                    "table": "表格视图",
-                    "board": "看板视图",
-                    "calendar": "日历视图",
-                    "gallery": "画廊视图"
-                }
-            }
+        "relation-summary": "→ {{project}}",
+        "relation-missing-target": "未选择目标项目",
+        "rollup-summary": "通过 {{via}} 的 {{function}}({{target}})"
+      },
+      "input": {
+        "cancel": "取消"
+      },
+      "confirm": {
+        "delete": "删除",
+        "cancel": "取消"
+      }
+    },
+    "views": {
+      "filter": {
+        "bar": {
+          "aria": "视图筛选",
+          "add": "筛选",
+          "scope": "此视图"
+        }
+      },
+      "visualizer": {
+        "pane": {
+          "title": "YAML 可视化器",
+          "no-file": "打开 Markdown 笔记以查看其属性。",
+          "no-properties": "此笔记尚无 frontmatter 属性。",
+          "actions": {
+            "pin": "置顶",
+            "unpin": "取消置顶",
+            "hide": "隐藏",
+            "unhide": "显示",
+            "move-up": "上移",
+            "move-down": "下移",
+            "show-hidden": "显示已隐藏",
+            "hide-hidden": "隐藏已隐藏",
+            "reset": "重置覆盖",
+            "add-relation": "+ 添加关联",
+            "pick-relation-placeholder": "选择一篇笔记…",
+            "set-type": "设置属性类型"
+          },
+          "types": {
+            "auto": "自动"
+          },
+          "linked-from": {
+            "title": "反向链接",
+            "empty": "还没有笔记链接到这里。",
+            "via": "通过"
+          }
+        }
+      },
+      "developer": {
+        "name": "开发者"
+      },
+      "table": {
+        "name": "表格",
+        "deprecation-notice": "表格视图已弃用。请切换到数据库视图以获得增强功能。",
+        "hide-fields": "隐藏字段",
+        "rename-field": "重命名字段",
+        "rename": "重命名"
+      },
+      "board": {
+        "name": "看板",
+        "no-status": "未设置状态",
+        "fields": {
+          "status": "状态",
+          "priority": "优先级",
+          "check": "复选框",
+          "none": "未选择"
         },
-        "components": {
-            "filter-pills": {
-                "aria": "筛选",
-                "add": "筛选",
-                "remove": "移除条件"
-            },
-            "data-grid": {
-                "grid-label": "数据表",
-                "column": {
-                    "configure": "配置字段",
-                    "add": "新建字段",
-                    "insert-left": "向左插入字段",
-                    "insert-right": "向右插入字段",
-                    "rename": "重命名字段",
-                    "pin": "固定字段",
-                    "unpin": "取消固定",
-                    "hide": "隐藏字段",
-                    "delete": "删除字段"
-                },
-                "row": {
-                    "add": "新建笔记",
-                    "edit": "编辑笔记",
-                    "delete": "删除笔记"
-                },
-                "cell": {
-                    "clear": "清空单元格"
-                },
-                "sort": {
-                    "asc": "升序 A → Z",
-                    "desc": "降序 Z → A"
-                },
-                "sortDate": {
-                    "asc": "按日期升序 旧 → 新",
-                    "desc": "按日期降序 新 → 旧"
-                }
-            },
-            "board": {
-                "column": {
-                    "add": {
-                        "name": "新建列表",
-                        "placeholder": "新列表",
-                        "no-status-field": "需要设置状态字段",
-                        "derived-status-field": "该状态字段只读，无法添加列"
-                    },
-                    "rename": "重命名列表",
-                    "delete": "删除列表",
-                    "expand": "展开列表",
-                    "collapse": "折叠列表",
-                    "pin": "固定列表",
-                    "unpin": "取消固定",
-                    "persist": "为空时保留",
-                    "unpersist": "为空时移除"
-                }
-            },
-            "color": {
-                "label": "条件颜色",
-                "where": "当",
-                "add": "添加颜色",
-                "add-to-favorites": "添加到收藏",
-                "project-palette": "项目调色板",
-                "apply-color": "应用颜色",
-                "add-rule": "添加规则",
-                "title": "颜色规则",
-                "empty-hint": "没有规则",
-                "pick-color": "选择颜色",
-                "favorites": "收藏",
-                "favorites-empty-hint": "按 ⭐ 添加",
-                "hex-code": "HEX 代码",
-                "invalid-format": "格式无效",
-                "expand-palette": "展开调色板",
-                "collapse-palette": "折叠调色板"
-            },
-            "filter": {
-                "label": "筛选",
-                "where": "当",
-                "and": "与",
-                "or": "或",
-                "add": "添加筛选条件",
-                "add-condition": "添加条件",
-                "add-group": "添加分组",
-                "conjunction-or": "或",
-                "conjunction-and": "且",
-                "match-all": "满足所有条件",
-                "match-any": "满足任一条件",
-                "empty-hint": "没有过滤条件",
-                "operators": {
-                    "is-empty": "为空",
-                    "is-not-empty": "不为空",
-                    "is": "等于",
-                    "is-any-of": "是其中之一",
-                    "is-not": "不等于",
-                    "contains": "包含",
-                    "not-contains": "不包含",
-                    "starts-with": "开头为",
-                    "ends-with": "结尾为",
-                    "regex": "正则表达式",
-                    "eq": "=",
-                    "neq": "≠",
-                    "lt": "<",
-                    "gt": ">",
-                    "lte": "≤",
-                    "gte": "≥",
-                    "is-checked": "已勾选",
-                    "is-not-checked": "未勾选",
-                    "is-on": "日期 =",
-                    "is-not-on": "日期 ≠",
-                    "is-before": "早于",
-                    "is-after": "晚于",
-                    "is-on-and-before": "≤ 日期",
-                    "is-on-and-after": "≥ 日期",
-                    "is-today": "今天",
-                    "is-this-week": "本周",
-                    "is-this-month": "本月",
-                    "is-this-quarter": "本季度",
-                    "is-this-year": "今年",
-                    "is-past-week": "上周",
-                    "is-past-month": "上月",
-                    "is-past-year": "去年",
-                    "is-next-week": "下周",
-                    "is-next-month": "下月",
-                    "is-next-year": "明年",
-                    "is-last-n-days": "过去 N 天内",
-                    "is-next-n-days": "未来 N 天内",
-                    "is-overdue": "已逾期",
-                    "is-upcoming": "即将到来",
-                    "has-any-of": "包含任意",
-                    "has-all-of": "包含全部",
-                    "has-none-of": "不包含任何",
-                    "has-keyword": "包含关键词"
-                }
-            },
-            "sort": {
-                "label": "排序",
-                "add": "添加排序条件",
-                "empty-hint": "未设置排序条件"
-            },
-            "tag": {
-                "edit": "编辑",
-                "remove": "移除"
-            },
-            "multi-text": {
-                "add": "添加一项"
-            },
-            "note": {
-                "edit": "编辑笔记"
-            }
-        },
-        "toolbar": {
-            "view": {
-                "add": "新建视图"
-            },
-            "projects": {
-                "none": "尚无项目",
-                "options": "更多选项"
-            },
-            "read-only": "只读项目",
-            "read-only-desc": "不能在只读项目中新增、编辑笔记。",
-            "collapse": {
-                "show": "显示工具栏",
-                "hide": "隐藏工具栏"
-            }
-        },
+        "unprioritized": "未设置优先级",
+        "include-fields": "展示字段",
         "settings": {
-            "about": {
-                "title": "关于 Projects Plus",
-                "description": "为 Obsidian 提供增强的项目管理功能。",
-                "author": "维护者",
-                "author-name": "Park Pavel",
-                "original-author": "原作者",
-                "original-author-name": "Marcus Olsson",
-                "version": "版本",
-                "version-number": "3.0.5",
-                "credits": "致谢",
-                "credits-desc": "这是 Marcus Olsson 原始 Obsidian Projects 插件的社区维护分支。",
-                "support": "支持",
-                "support-desc": "如果您觉得这个插件有用，请考虑支持开发。",
-                "visit-website": "访问网站",
-                "github": "GitHub",
-                "star-github": "⭐ 在 GitHub 上点赞",
-                "original-repo": "原始仓库",
-                "languages": "支持的语言",
-                "languages-desc": "可用语言：English, Русский, Українська, 中文（基于系统语言的自动检测）"
-            },
-            "general": {
-                "size-limit": {
-                    "name": "最大条目数量",
-                    "desc": "防止意外加载过多条目。"
-                },
-                "link-behavior": {
-                    "name": "链接行为",
-                    "desc": "选择在 Projects 中点击链接时的行为。按下 {{modifier}} 键时点击将执行另一项。",
-                    "options": {
-                        "open-editor": "打开元数据编辑器",
-                        "open-note": "打开目标笔记"
-                    }
-                },
-                "start-of-week": {
-                    "name": "一周的第一天",
-                    "options": {
-                        "sunday": "星期日",
-                        "monday": "星期一",
-                        "default": "默认"
-                    }
-                },
-                "mobile-calendar": {
-                    "name": "移动端日历视图",
-                    "desc": "移动设备上的默认日历视图。",
-                    "options": {
-                        "month": "月",
-                        "week": "周",
-                        "day": "日"
-                    }
-                },
-                "animation-behavior": {
-                    "name": "动画效果",
-                    "desc": "控制插件中的滚动动画效果",
-                    "options": {
-                        "smooth": "平滑 (带动画)",
-                        "instant": "即时 (无动画)"
-                    }
-                },
-                "disable-haptic": {
-                    "name": "禁用触觉反馈",
-                    "desc": "在移动设备拖放操作时关闭振动反馈"
-                }
-            },
-            "front-matter": {
-                "heading": "Front matter",
-                "quote-strings": {
-                    "name": "使用引号包裹字符串",
-                    "options": {
-                        "plain": "必要时",
-                        "quote-double": "总是"
-                    }
-                }
-            },
-            "commands": {
-                "name": "命令",
-                "desc": "为你最常用的项目和视图添加命令到命令面板。"
-            },
-            "archives": {
-                "name": "存档管理",
-                "desc": "恢复或删除已存档项目。",
-                "empty": "没有已存档项目。"
-            }
+          "name": "看板设置",
+          "column-width": {
+            "name": "列宽度",
+            "description": "调整每列的像素宽度。"
+          },
+          "custom-header": {
+            "name": "自定义卡片标题",
+            "description": "将使用所选字段值作为卡片标题。"
+          },
+          "order-sync-field": {
+            "name": "卡片顺序同步字段",
+            "description": "该字段将用于存储卡片在看板列中的位置顺序信息。"
+          }
         },
-        "errors": {
-            "missingDataview": {
-                "title": "Dataview 插件未启用",
-                "message": "启用 Dataview 插件以使用本项目。"
-            },
-            "boundary": {
-                "title": "出现错误",
-                "message": "渲染此组件时发生错误。",
-                "retry": "重试",
-                "details": "错误详情"
-            }
+        "note": {
+          "add": "新建笔记"
+        }
+      },
+      "calendar": {
+        "name": "日历",
+        "new-note": "新建笔记",
+        "no-events": "没有事件",
+        "fields": {
+          "date": "日期",
+          "check": "复选框",
+          "none": "无"
         },
-        "database": {
-            "cell-editor": {
-                "errors": {
-                    "boolean": "请输入 true 或 false。",
-                    "number": "请输入有效的数字。",
-                    "date": "使用 YYYY-MM-DD 格式。",
-                    "datetime": "使用 ISO 8601 格式（例如 2026-05-01T12:30）。",
-                    "color": "使用 #hex 颜色（3、4、6 或 8 位）。",
-                    "list": "请使用逗号分隔值。",
-                    "scalar": "此字段类型的值无效。"
-                }
-            },
-            "rollup": {
-                "modes": {
-                    "show-original": "显示原始",
-                    "show-unique": "显示唯一值",
-                    "count-all": "全部计数",
-                    "count-values": "值计数",
-                    "count-unique": "唯一值计数",
-                    "count-empty": "空值计数",
-                    "count-not-empty": "非空计数",
-                    "percent-empty": "空值百分比",
-                    "percent-not-empty": "非空百分比",
-                    "percent-per-group": "分组百分比",
-                    "sum": "求和",
-                    "average": "平均值",
-                    "min": "最小值",
-                    "max": "最大值",
-                    "median": "中位数",
-                    "range": "范围",
-                    "earliest": "最早",
-                    "latest": "最晚"
-                }
-            }
+        "today": "今天",
+        "weekday": "{{value, datetime}}",
+        "date": "{{value, datetime}}",
+        "interval": "{{custom_year, datetime}}{{from, datetime}} – {{to, datetime}}",
+        "intervals": {
+          "month_one": "月",
+          "month_other": "月",
+          "monthWithCount_one": "{{count}}月",
+          "monthWithCount_other": "{{count}}月",
+          "week_one": "周",
+          "week_other": "周",
+          "weekWithCount_one": "{{count}}周",
+          "weekWithCount_other": "{{count}}周",
+          "day_one": "日",
+          "day_other": "日",
+          "dayWithCount_one": "{{count}}日",
+          "dayWithCount_other": "{{count}}日",
+          "year_one": "年",
+          "year_other": "年",
+          "yearWithCount_one": "{{count}}年",
+          "yearWithCount_other": "{{count}}年",
+          "2weeks": "2周"
         },
-        "obsidian": {
-            "ribbon-tooltip": "打开项目",
-            "hover-link-settings": "Projects"
+        "record": {
+          "settings": "设置",
+          "duplicate": "复制",
+          "delete": "删除",
+          "open": "打开笔记",
+          "open-new-tab": "在新标签页中打开",
+          "color": "颜色"
+        },
+        "duplicate": {
+          "title": "选择要复制到的日期",
+          "selected": "已选择 {{count}} 个日期",
+          "cancel": "取消",
+          "confirm": "复制",
+          "time": "时间",
+          "today": "今天"
         },
         "navigation": {
-            "active-project": "当前项目"
+          "aria-label": "日历导航",
+          "today-tooltip": "跳转到今天",
+          "previous": "上一个",
+          "next": "下一个"
         },
-        "save-status": {
-            "failed": {
-                "label": "未保存",
-                "tooltip": "设置未能写入 data.json。更改仅保留在本次会话中 — 点击重试。",
-                "notice": "Projects+：设置未能写入磁盘。更改仍在，但重新加载后会丢失。可在工具栏的「未保存」标记处重试。"
-            },
-            "diverged": {
-                "label": "\u5916\u90e8\u5df2\u66f4\u6539",
-                "tooltip": "data.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u66ff\u6362\u3002\u60a8\u7684\u66f4\u6539\u4ecd\u5728\uff1b\u91cd\u8bd5\u5199\u5165\u4f1a\u8986\u76d6\u5bf9\u65b9\u7684\u7248\u672c\uff0c\u56e0\u6b64\u4e0d\u63d0\u4f9b\u91cd\u8bd5\u3002"
-            },
-            "superseded": {
-                "notice": "Projects+：data.json 已在此窗口之外被修改。您最近的更改可能未保存 — 请先重新打开仓库再继续。"
-            },
-            "conflict": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u65e0\u6cd5\u76f4\u63a5\u91c7\u7528\u3002\u5df2\u4fdd\u7559\u60a8\u7684\u7248\u672c\uff0c\u78c1\u76d8\u4e0a\u7684\u7248\u672c\u53e6\u5b58\u4e3a {{path}}\u3002"
-            },
-            "conflict-uncopied": {
-                "notice": "Projects+\uff1adata.json \u5df2\u5728\u6b64\u7a97\u53e3\u4e4b\u5916\u88ab\u4fee\u6539\uff0c\u4e14\u5bf9\u65b9\u7684\u7248\u672c\u65e0\u5904\u4fdd\u5b58 \u2014 \u65e2\u65e0\u6cd5\u5b58\u653e\u5728\u8be5\u6587\u4ef6\u65c1\uff0c\u4e5f\u65e0\u6cd5\u4f5c\u4e3a\u5e93\u4e2d\u7684\u7b14\u8bb0\u3002\u5b83\u73b0\u5728\u53ea\u5b58\u5728\u4e8e\u4e24\u5904\uff1a\u5f00\u53d1\u8005\u63a7\u5236\u53f0\uff0c\u4ee5\u53ca data.json \u672c\u8eab\uff1b\u5728\u60a8\u81ea\u884c\u66f4\u6539\u8bbe\u7f6e\u4e4b\u524d\uff0c\u4e0d\u4f1a\u6709\u4efb\u4f55\u5185\u5bb9\u8986\u76d6\u5b83\u3002"
-            }
+        "empty": {
+          "no-date-field": "请选择日期字段以显示事件",
+          "no-events": "此期间没有事件"
         },
-        "settings-menu": {
-            "title": "设置",
-            "tabs": {
-                "projects": "项目",
-                "views": "视图",
-                "filters": "筛选",
-                "colors": "颜色",
-                "sort": "排序",
-                "view-config": "视图"
+        "errors": {
+          "create-readonly": "无法在只读项目中创建事件",
+          "date-required": "创建事件需要日期字段"
+        },
+        "colors": {
+          "favorites": "收藏",
+          "all": "所有颜色",
+          "custom": "自定义颜色",
+          "invalid": "无效的HEX格式",
+          "picker": "颜色选择器",
+          "quick": "快速选色",
+          "hex": "HEX代码"
+        },
+        "popup": {
+          "today": "今天",
+          "empty-hint": "点击下方按钮创建"
+        },
+        "agenda": {
+          "title": "日程",
+          "empty": "今天没有事件",
+          "all-day": "📅 全天",
+          "all-day-time": "全天",
+          "morning": "🌅 上午 (12:00前)",
+          "afternoon": "☀️ 下午 (12:00–18:00)",
+          "evening": "🌙 晚上 (18:00后)",
+          "overdue": "⛔ 已逾期",
+          "today": "📅 今天",
+          "multiday": "📊 跨天",
+          "upcoming": "🔮 即将到来",
+          "undated": "📥 收件箱 (无日期)",
+          "expand": "展开日程",
+          "collapse": "收起日程",
+          "add-note": "添加",
+          "today-btn": "今天",
+          "custom": {
+            "add-list": "添加列表",
+            "edit-list": "编辑列表",
+            "delete-list": "删除列表",
+            "move-up": "上移",
+            "move-down": "下移",
+            "empty-list": "没有匹配筛选条件的记录",
+            "list-editor": {
+              "title-new": "新建列表",
+              "title-edit": "编辑列表",
+              "name-label": "列表名称",
+              "name-placeholder": "例如：紧急任务",
+              "name-required": "名称为必填项",
+              "name-exists": "名称已存在",
+              "icon-label": "图标",
+              "change-icon": "更换图标...",
+              "color-label": "列表强调色 (可选)",
+              "color-hint": "设置左侧边框颜色以便视觉识别",
+              "preview": "预览",
+              "filters-label": "筛选器",
+              "filters-hint": "日期公式: 'today', 'today+1w', 'sow', 'eom'。DQL兼容: sow/eow/som/eom/soy/eoy。运算符: 'Is today', 'Is this week', 'Is overdue'。",
+              "formula-hint": "使用函数 AND(), OR(), CONTAINS(), IS_TODAY()。查看帮助获取完整参考。",
+              "save": "保存更改",
+              "create": "创建列表",
+              "cancel": "取消"
             },
-            "done": "完成",
-            "views": {
-                "title": "视图管理",
-                "show-titles": "显示视图标题",
-                "select-view": "选择视图",
-                "rename": "重命名",
-                "duplicate": "复制",
-                "delete": "删除",
-                "add-view": "添加视图",
-                "drag-to-reorder": "拖动排序"
+            "filter-editor": {
+              "add-filter": "添加筛选条件",
+              "empty": "无筛选条件 — 将显示所有记录",
+              "value-placeholder": "值...",
+              "remove-filter": "移除筛选条件",
+              "enable-filter": "启用筛选",
+              "disable-filter": "禁用筛选",
+              "operators": {
+                "is-empty": "为空",
+                "is_empty": "为空",
+                "is-not-empty": "不为空",
+                "is_not_empty": "不为空",
+                "is": "等于",
+                "is-not": "不等于",
+                "contains": "包含",
+                "not-contains": "不包含",
+                "not_contains": "不包含",
+                "starts-with": "开头为",
+                "ends-with": "结尾为",
+                "regex": "匹配正则",
+                "eq": "=",
+                "neq": "≠",
+                "lt": "<",
+                "gt": ">",
+                "lte": "≤",
+                "gte": "≥",
+                "equals": "=",
+                "not_equals": "≠",
+                "greater_than": ">",
+                "less_than": "<",
+                "greater_or_equal": "≥",
+                "less_or_equal": "≤",
+                "is-checked": "已勾选",
+                "is-not-checked": "未勾选",
+                "is-on": "在此日期",
+                "is-not-on": "不在此日期",
+                "is-before": "早于",
+                "is-after": "晚于",
+                "is-on-and-before": "在此日期或之前",
+                "is-on-and-after": "在此日期或之后",
+                "is-today": "是今天",
+                "is_today": "是今天",
+                "is-this-week": "是本周",
+                "is_this_week": "是本周",
+                "is-this-month": "是本月",
+                "is-overdue": "已逾期",
+                "is_overdue": "已逾期",
+                "is-upcoming": "即将到来",
+                "is_upcoming": "即将到来",
+                "has-any-of": "包含任一",
+                "has-all-of": "包含全部",
+                "has-none-of": "不包含任何",
+                "has-keyword": "包含关键词"
+              },
+              "match-label": "匹配",
+              "match-all": "满足所有条件",
+              "match-any": "满足任一条件",
+              "field-label": "条件",
+              "operator-label": "运算符",
+              "value-label": "值",
+              "add-group": "添加筛选组",
+              "remove-group": "移除组",
+              "field-placeholder": "选择字段...",
+              "operator-placeholder": "选择运算符...",
+              "filter-group-label": "筛选组",
+              "date-suggestions": "日期公式 (DQL)",
+              "date-formula-hint": "公式: today, sow, eom, today+1w, som-1m",
+              "where-prefix": "条件",
+              "and-prefix": "且",
+              "no-value": "无值"
             },
-            "view-config": {
-                "title": "视图设置",
-                "current-view": "当前视图",
-                "no-view": "无活动视图",
-                "calendar": {
-                    "interval": "时间间隔",
-                    "layout": "布局",
-                    "time-format": "时间格式",
-                    "timezone": "时区",
-                    "show-agenda": "显示日程",
-                    "hide-agenda": "隐藏日程",
-                    "hints": {
-                        "timezone": "例如 Asia/Shanghai 或 local"
-                    },
-                    "timeline": {
-                        "title": "时间线设置",
-                        "start-hour": "开始时间",
-                        "end-hour": "结束时间",
-                        "event-color-field": "事件颜色字段",
-                        "show-weekends": "显示周末",
-                        "show-all-day": "显示'全天'区域",
-                        "hints": {
-                            "event-color-field": "用于事件颜色的字段（可选）",
-                            "event-color-placeholder": "例如 status, priority"
-                        }
-                    },
-                    "interval-options": {
-                        "year": "年",
-                        "day": "日",
-                        "week": "周",
-                        "month": "月"
-                    },
-                    "layout-options": {
-                        "headers": "标题 (经典)",
-                        "bars": "条形 (时间线)"
-                    },
-                    "field-mapping": {
-                        "title": "字段映射",
-                        "hint": "从列表中选择现有字段或输入新字段名称",
-                        "placeholder": "输入或选择字段",
-                        "new-field": "+ 新字段",
-                        "date": "创建日期 (date)",
-                        "start-date": "开始 (startDate)",
-                        "end-date": "结束 (endDate)",
-                        "start-time": "开始时间 (startTime)",
-                        "end-time": "结束时间 (endTime)",
-                        "check": "状态字段 (check)",
-                        "hints": {
-                            "date": "创建笔记时自动填充。不参与确定事件开始时间",
-                            "start-date": "多日事件的开始日期",
-                            "end-date": "多日事件的结束日期",
-                            "start-time": "单独的开始时间字段 (HH:mm)",
-                            "end-time": "单独的结束时间字段",
-                            "check": "用于标记完成状态的字段 (completed, done 等)"
-                        }
-                    }
-                },
-                "board": {
-                    "column-width": "列宽度",
-                    "group-by-field": "分组字段 (状态)",
-                    "header-field": "卡片标题",
-                    "order-sync-field": "排序同步字段",
-                    "freeze-columns": "冻结列",
-                    "hints": {
-                        "column-width": "每列宽度（像素）",
-                        "group-by-field": "用于按列分组卡片的字符串前置元数据字段",
-                        "header-field": "用于卡片标题的字段",
-                        "order-sync-field": "用于存储卡片位置的数字字段"
-                    }
-                },
-                "gallery": {
-                    "card-width": "卡片宽度",
-                    "cover-field": "封面字段",
-                    "fit-style": "适应方式",
-                    "include-fields": "包含字段",
-                    "fit-options": {
-                        "fill": "填充",
-                        "fit": "适应"
-                    },
-                    "hints": {
-                        "card-width": "每张画册卡片宽度（像素）",
-                        "cover-field": "包含图片路径的文本字段",
-                        "include-fields": "选择要在卡片上显示的字段"
-                    }
-                },
-                "table": {
-                    "hide-fields": "隐藏字段",
-                    "hints": {
-                        "hide-fields": "选择要在表格中隐藏的字段"
-                    },
-                    "hidden-fields": "隐藏的字段",
-                    "show-all": "显示所有字段"
-                },
-                "shared": {
-                    "icon-field": "图标字段",
-                    "hints": {
-                        "icon-field": "包含 emoji 或 lucide 图标名称的字段。作为每条记录的图标显示。"
-                    }
-                },
-                "none": "— 无 —"
-            }
+            "advanced-filter": {
+              "toolbar-help": "帮助",
+              "hint-valid": "✓ 公式有效",
+              "hint-error": "⚠ {{count}} 个错误",
+              "hint-ctrl-space": "Ctrl+Space — 提示",
+              "textarea-placeholder": "开始输入公式或按 Ctrl+Space...",
+              "help-title-logical": "🔗 逻辑",
+              "help-title-strings": "📝 字符串",
+              "help-title-checks": "🔍 检查",
+              "help-title-dates": "📅 日期",
+              "help-title-arrays": "📋 数组 / 标签",
+              "help-title-operators": "⚙ 运算符",
+              "help-examples-title": "示例:",
+              "snippet-active-tasks": "📌 活动任务",
+              "snippet-active-tasks-desc": "带日期的活动任务",
+              "snippet-urgent-overdue": "🔥 紧急过期",
+              "snippet-urgent-overdue-desc": "过期 + urgent",
+              "snippet-this-week": "📅 本周任务",
+              "snippet-this-week-desc": "本周全部",
+              "snippet-undated-overdue": "🗓 无日期或过期",
+              "snippet-undated-overdue-desc": "空日期 或 过期"
+            },
+            "icon-picker": {
+              "lucide-tab": "图标",
+              "emoji-tab": "表情",
+              "search-placeholder": "搜索..."
+            },
+            "no-lists": "没有自定义列表",
+            "create-list": "创建列表"
+          }
         },
-        "onboarding": {
-            "title": "开始使用 Projects Plus",
-            "description": "Projects Plus 让您使用 <a>front matter</a> 管理相关笔记组。例如，一个包含您正在撰写的博客文章的文件夹。",
-            "front-matter-link": "front matter",
-            "explore": "从零开始，或探索演示项目 👇",
-            "create-new": "创建新项目",
-            "try-demo": "试用演示项目",
-            "try-demo-tooltip": "在仓库根目录创建一个包含示例笔记的新文件夹。",
-            "hint": "下次您可以通过以下任一方式创建项目：",
-            "tab-projects-view": "项目视图",
-            "tab-command-palette": "命令面板",
-            "tab-file-explorer": "文件管理器",
-            "file-explorer-step1": "在<strong>文件管理器</strong>中右键点击文件夹。",
-            "file-explorer-step2": "点击<strong>在文件夹中创建项目</strong>。",
-            "command-palette-step1": "打开<strong>命令面板</strong>。",
-            "command-palette-step2": "搜索<strong>创建新项目</strong>",
-            "command-palette-step3": "按<strong>Enter</strong>。",
-            "projects-view-step1": "在 <strong>Projects Plus</strong> 视图的右上角，点击<strong>新建</strong>。",
-            "projects-view-step2": "点击<strong>新建项目</strong>。"
-        },
-        "common": {
-            "yesterday": "昨天",
-            "tomorrow": "明天",
-            "close": "关闭",
-            "total": "总计",
-            "open-in-new-window": "Ctrl+点击: 在新窗口中打开",
-            "open-in-tab": "在新标签页中打开",
-            "open-in-window": "在新窗口中打开",
-            "save": "保存",
-            "cancel": "取消",
-            "delete": "删除",
-            "menu": "菜单",
-            "rename": "重命名",
-            "open-note": "打开笔记",
-            "select-color": "选择颜色",
-            "value-placeholder": "值...",
-            "select-date": "选择日期",
-            "view-switcher": "视图切换",
-            "edit-project": "编辑项目",
-            "delete-project": "删除项目",
-            "select-project": "选择项目",
-            "syntax-help": "语法帮助",
-            "date-placeholder": "YYYY-MM-DD",
-            "datetime-placeholder": "YYYY-MM-DD HH:MM",
-            "field": "字段",
-            "projects": "项目",
-            "create-project": "创建项目",
-            "select-date-time": "选择日期和时间",
-            "enable": "启用",
-            "disable": "禁用",
-            "remove": "移除",
-            "apply": "应用",
-            "field-placeholder": "字段",
-            "add-criterion": "添加条件"
-        },
-        "relation-setup": {
-            "open": "关联数据库…",
-            "saved": "关联已保存。",
-            "target-unavailable": "无法加载所选数据库。",
-            "title": "关联属性到数据库",
-            "description": "值保持为 Markdown 中的 WikiLinks。预览不做任何更改。",
-            "property-label": "属性",
-            "database-label": "数据库",
-            "database-placeholder": "选择数据库…",
-            "display-field-label": "显示字段",
-            "display-field-placeholder": "例如 title",
-            "inverse-enable-label": "在 Schema 中创建反向属性",
-            "inverse-field-label": "反向属性名称",
-            "inverse-warning": "反向属性仅在保存后声明。现有笔记不会被改写。",
-            "preview-resolved": "已匹配：{{count}}",
-            "preview-unmatched": "未找到：{{count}}",
-            "preview-ambiguous": "模糊匹配：{{count}}",
-            "cancel": "取消",
-            "save": "保存关联"
-        },
-        "relation-count": {
-            "linked": "已关联 {{count}} 条",
-            "empty": "暂无关联记录"
+        "heatmap": {
+          "less": "较少",
+          "more": "较多",
+          "events": "个事件",
+          "clickToViewMonth": "点击查看月份",
+          "previousYear": "上一年",
+          "nextYear": "下一年",
+          "loading": "加载中...",
+          "noData": "暂无数据"
         }
+      },
+      "gallery": {
+        "name": "画册",
+        "fields": {
+          "cover": "图片源",
+          "none": "未选择"
+        },
+        "fit-style": {
+          "fill": "填充",
+          "fit": "适应"
+        },
+        "include-fields": "展示字段",
+        "settings": {
+          "name": "画册设置",
+          "card-width": {
+            "name": "卡片宽度",
+            "description": "调整每张卡片的像素宽度。"
+          }
+        },
+        "empty": "该视图还没有数据。"
+      },
+      "dashboard": {
+        "name": "数据库",
+        "add-row": "新建笔记",
+
+        "table": {
+          "header-hint": "右击列标题可重命名、更改类型、隐藏、固定或重新排序。拖动边缘可调整宽度。",
+          "row-height": "行高",
+          "row-height-compact": "紧凑",
+          "row-height-default": "默认",
+          "row-height-expanded": "宽松",
+          "wrap-text": "单元格内文本换行",
+          "show-aggregation": "显示汇总行",
+          "freeze-up-to": "冻结列至字段",
+          "column-menu": {
+            "property-type": "属性类型",
+            "property-type-auto": "自动",
+            "rollup-mode": "Rollup 模式"
+          }
+        },
+        "canvas": {
+          "widgets": "组件",
+          "hide-toolbar": "隐藏组件工具栏",
+          "show-toolbar": "显示组件工具栏",
+          "toggle-layout": "切换布局模式",
+          "layout-grid": "网格",
+          "layout-stack": "列表",
+          "hide-formula-bar": "隐藏公式栏",
+          "show-formula-bar": "显示公式栏",
+          "formula-builder": "公式",
+          "schema": "模式",
+          "schema-tip": "管理项目字段 — 类型、关系、汇总",
+          "filter-bridge-global": "全局筛选器：{{count}} 个条件",
+          "filter-bridge-local": "本地：{{field}} = {{value}}",
+          "filter-bridge-clear": "清除本地筛选器",
+          "filter-bridge-promote": "保存为全局筛选器"
+        },
+        "field-presets": {
+          "label": "布局",
+          "title": "列布局预设",
+          "aria-label": "列布局预设",
+          "save-current": "保存当前布局…",
+          "apply": "应用",
+          "rename": "重命名",
+          "delete": "删除",
+          "detach": "取消预设",
+          "prompt-new": "布局预设名称：",
+          "prompt-rename": "重命名预设：",
+          "confirm-delete": "删除此布局预设？"
+        },
+        "widget": {
+          "expand": "展开组件",
+          "collapse": "折叠组件",
+          "chart-settings": "图表设置",
+          "pipeline": "管道：显示前重塑数据 — 分组、计数、排序",
+          "remove": "删除组件",
+          "not-configured": "组件类型 \"{{type}}\" — 未配置",
+          "add": "添加组件",
+          "add-aria": "添加组件"
+        },
+        "quick": {
+          "group": "快速操作",
+          "formula": "公式构建器"
+        },
+        "types": {
+          "data-table": "数据表",
+          "chart": "图表",
+          "stats": "统计",
+          "comparison": "对比",
+          "checklist": "清单",
+          "view-port": "视口",
+          "filter-tabs": "筛选选项卡",
+          "summary-row": "汇总行"
+        },
+        "formula": {
+          "title": "公式编辑器",
+          "hint": "Ctrl+Enter 应用，Esc 取消",
+          "field-name": "字段名称",
+          "field-placeholder": "例如 计算预算",
+          "expression-placeholder": "例如 IF(Status = \"Active\", Budget * 1.2, 0)",
+          "preview": "预览：",
+          "cancel": "取消",
+          "apply": "应用",
+          "mode-code": "代码",
+          "mode-visual": "可视化",
+          "visual-empty": "点击添加公式块",
+          "visual-parse-error": "无法在可视化模式下显示 — 请切换到代码模式编辑",
+          "signature-returns": "返回",
+          "signature-category": "类别",
+          "help-category": {
+            "logical": "逻辑",
+            "math": "数学",
+            "string": "字符串",
+            "date": "日期",
+            "financial": "财务",
+            "statistical": "统计",
+            "array": "数组",
+            "conversion": "转换",
+            "utility": "实用工具"
+          },
+          "debug-title": "调试",
+          "debug-cursor": "光标位置",
+          "debug-copy": "复制错误",
+          "debug-dismiss": "关闭",
+          "runtime-error": "运行时错误"
+        },
+        "block-filter": {
+          "aria": "区块筛选",
+          "add": "筛选",
+          "remove": "移除条件",
+          "scope": "此区块 — 其所有视图"
+        },
+        "pipeline": {
+          "title": "高级转换",
+          "advanced-hint": "普通的筛选和分组现在位于视图本身——这些步骤用于重塑数据。",
+          "steps": "个步骤",
+          "clear": "清空",
+          "empty": {
+            "title": "在显示前重塑数据",
+            "beforeLabel": "原始数据",
+            "afterLabel": "结果",
+            "caption": "在下方选择一个步骤 — 分组、计数、筛选或排序。",
+            "sampleBefore": [
+              "俯卧撑 — 30",
+              "俯卧撑 — 25",
+              "深蹲 — 50",
+              "深蹲 — 40",
+              "平板支撑 — 60"
+            ],
+            "sampleAfter": [
+              "俯卧撑 — 共 55",
+              "深蹲 — 共 90",
+              "平板支撑 — 共 60"
+            ]
+          },
+          "move-up": "上移",
+          "move-down": "下移",
+          "remove": "删除",
+          "add-step": "添加数据步骤",
+          "filter": "筛选",
+          "group-by": "分组",
+          "aggregate": "汇总",
+          "compute": "计算",
+          "unpivot": "逆透视",
+          "pivot": "透视",
+          "join": "连接",
+          "join-right-source": "右侧数据源",
+          "join-left-key": "左键",
+          "join-right-key": "右键",
+          "join-right-key-placeholder": "右侧数据源中的字段名",
+          "join-how": "连接类型",
+          "join-inner": "内连接（丢弃未匹配）",
+          "join-left": "左连接（保留未匹配，右为 null）",
+          "join-aggregate": "聚合多个右侧匹配项",
+          "join-no-sources": "无可用的右侧项目。",
+          "aggregate-function": "聚合函数",
+          "none": "（无）",
+          "columns": "列",
+          "groups": "组",
+          "unset": "（未设置）",
+          "live": "更改即时生效",
+          "done": "完成",
+          "flow-tip": "此步骤的输入记录数 → 输出记录数",
+          "unknown": "未知",
+          "unnest-suggestion-title": "检测到数组字段",
+          "unnest-suggestion-body": "字段 {{fields}} 包含数组。使用 Unnest 将每个元素拆分为独立的行。",
+          "unnest-suggestion-button": "展开 \"{{field}}\"",
+          "disable-step": "禁用步骤",
+          "enable-step": "启用步骤"
+        },
+        "database-call": {
+          "empty": "尚未配置视图",
+          "add-first": "添加第一个视图",
+          "no-records": "还没有记录",
+          "add-first-record": "添加第一条记录",
+          "no-matches": "无匹配项",
+          "clear-filter": "清除筛选",
+          "pipeline-hid-all": "管道未返回任何行（{{count}} 个步骤）",
+          "open-pipeline": "打开管道",
+          "clear-pipeline": "清空管道",
+          "settings": {
+            "source": "数据来源",
+            "source-inherit": "本视图数据（默认）",
+            "source-hint": "默认情况下，块显示本视图的记录。选择其他项目以显示其数据。",
+            "link-to": "关联到块",
+            "standalone": "无关联 — 显示所有记录",
+            "link-hint": "无关联时块显示所有记录。关联后仅显示与所选块相关的记录。",
+            "relation-field": "按字段筛选",
+            "select-field": "选择字段"
+          }
+        },
+        "group": {
+          "empty": "（空）"
+        },
+        "chart": {
+          "no-data": "暂无数据",
+          "type": "图表类型",
+          "x-axis": "X 轴",
+          "y-axis": "Y 轴",
+          "aggregation": "汇总方式",
+          "sort-by": "排序方式",
+          "height": "高度",
+          "granularity": "日期分组方式",
+          "granularities": {
+            "day": "日",
+            "week": "周",
+            "month": "月",
+            "quarter": "季度",
+            "year": "年"
+          },
+          "types": {
+            "bar": "柱状图",
+            "horizontal-bar": "条形图",
+            "stacked-bar": "堆叠柱状图",
+            "line": "折线图",
+            "area": "面积图",
+            "pie": "饼图",
+            "donut": "环形图",
+            "number": "数字 / KPI",
+            "progress": "进度",
+            "scatter": "散点图"
+          },
+          "aggregations": {
+            "sum": "求和",
+            "average": "平均值",
+            "min": "最小值",
+            "max": "最大值",
+            "median": "中位数",
+            "count": "计数",
+            "unique": "唯一值"
+          },
+          "sort": {
+            "label": "标签",
+            "value": "数值",
+            "manual": "手动"
+          },
+          "group-mode": {
+            "label": "状态分组",
+            "values": "原始值",
+            "semantic": "语义分组"
+          },
+          "heights": {
+            "small": "小",
+            "medium": "中",
+            "large": "大"
+          },
+          "options": {
+            "grid": "网格线",
+            "labels": "标签",
+            "values": "数值",
+            "legend": "图例",
+            "hide-zero": "隐藏零值",
+            "cumulative": "累计"
+          },
+          "scatter": {
+            "color-by": "颜色按",
+            "size-by": "大小按",
+            "trend-line": "趋势线",
+            "r-squared": "显示 R²",
+            "point-size": "点大小",
+            "opacity": "透明度",
+            "none": "（无）",
+            "correlate-enable": "与其他数据源关联",
+            "correlate-hint": "X 来自当前控件的数据源；Y 来自所选右侧数据源，按连接键匹配。",
+            "right-source": "右侧数据源（Y）",
+            "left-key": "左连接键（当前数据源）",
+            "right-key": "右连接键（右侧数据源）",
+            "right-key-placeholder": "右侧数据源中的字段名",
+            "no-sources": "此保库中没有其他项目。",
+            "warn-missing-right": "右侧数据源未加载。请检查所选 id 并确认并列项目仍然可用。",
+            "warn-no-matches": "没有按连接键匹配的记录。请核对左/右键的名称与值是否相交。",
+            "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。"
+          },
+          "section": {
+            "display": "显示设置",
+            "data": "数据",
+            "scatter": "散点图"
+          }
+        },
+        "comparison": {
+          "empty": "配置对比指标",
+          "metric-a": "指标 A",
+          "metric-b": "指标 B"
+        },
+        "filter-tabs": {
+          "all": "全部",
+          "config": {
+            "title": "筛选标签",
+            "subtitle": "选择一个字段 — 控件会根据唯一值自动生成标签。或手动定义固定的标签集。",
+            "field": "筛选字段",
+            "auto": "自动检测的值",
+            "seed": "用作标签",
+            "seed-tip": "将值复制到可编辑标签",
+            "add": "添加标签",
+            "tab-label": "标签",
+            "tab-value": "值"
+          }
+        },
+        "stats": {
+          "config": {
+            "title": "统计卡片",
+            "subtitle": "每张卡片显示一项（管道处理后）数据聚合。字段填 * 表示记录计数。",
+            "empty": "暂无卡片。添加一张以显示 KPI 磁贴。",
+            "add": "添加卡片",
+            "columns": "网格列数",
+            "label": "标签",
+            "field": "字段",
+            "aggregation": "聚合",
+            "format": "格式",
+            "currency": "符号",
+            "sparkline": "迷你图",
+            "fmt-number": "数字",
+            "fmt-percent": "百分比",
+            "fmt-currency": "货币",
+            "fmt-duration": "时长"
+          }
+        },
+        "agg": {
+          "count_total": "计数",
+          "count_values": "已填写数",
+          "count_unique": "唯一值",
+          "sum": "求和",
+          "avg": "平均值",
+          "median": "中位数",
+          "min": "最小值",
+          "max": "最大值",
+          "range": "极差",
+          "count_checked": "已勾选",
+          "count_unchecked": "未勾选",
+          "percent_checked": "勾选百分比",
+          "percent_unchecked": "未勾选百分比",
+          "percent_empty": "空值百分比",
+          "percent_not_empty": "已填写百分比",
+          "earliest": "最早日期",
+          "latest": "最晚日期"
+        },
+        "checklist": {
+          "select-field": "选择布尔字段",
+          "no-items": "暂无项目",
+          "done": "已完成",
+          "config": {
+            "check-field": "复选框字段",
+            "check-field-placeholder": "例如 completed",
+            "label-field": "标签字段",
+            "label-field-placeholder": "name",
+            "limit": "上限",
+            "limit-placeholder": "0 = 无限制",
+            "show": "显示",
+            "show-all": "所有笔记",
+            "show-done": "仅已完成",
+            "show-open": "仅未完成",
+            "sort-field": "排序字段",
+            "sort-field-placeholder": "name",
+            "sort-order": "排序"
+          }
+        },
+        "viewport": {
+          "select": "选择要嵌入的视图",
+          "change": "更改嵌入视图",
+          "embedded": "嵌入视图：{{label}}",
+          "embed-title": "嵌入视图",
+          "table": "表格视图",
+          "board": "看板视图",
+          "calendar": "日历视图",
+          "gallery": "画廊视图"
+        }
+      }
+    },
+    "components": {
+      "filter-pills": {
+        "aria": "筛选",
+        "add": "筛选",
+        "remove": "移除条件"
+      },
+      "data-grid": {
+        "grid-label": "数据表",
+        "column": {
+          "configure": "配置字段",
+          "add": "新建字段",
+          "insert-left": "向左插入字段",
+          "insert-right": "向右插入字段",
+          "rename": "重命名字段",
+          "pin": "固定字段",
+          "unpin": "取消固定",
+          "hide": "隐藏字段",
+          "delete": "删除字段"
+        },
+        "row": {
+          "add": "新建笔记",
+          "edit": "编辑笔记",
+          "delete": "删除笔记"
+        },
+        "cell": {
+          "clear": "清空单元格"
+        },
+        "sort": {
+          "asc": "升序 A → Z",
+          "desc": "降序 Z → A"
+        },
+        "sortDate": {
+          "asc": "按日期升序 旧 → 新",
+          "desc": "按日期降序 新 → 旧"
+        }
+      },
+      "board": {
+        "column": {
+          "add": {
+            "name": "新建列表",
+            "placeholder": "新列表",
+            "no-status-field": "需要设置状态字段",
+            "derived-status-field": "该状态字段只读，无法添加列"
+          },
+          "rename": "重命名列表",
+          "delete": "删除列表",
+          "expand": "展开列表",
+          "collapse": "折叠列表",
+          "pin": "固定列表",
+          "unpin": "取消固定",
+          "persist": "为空时保留",
+          "unpersist": "为空时移除"
+        }
+      },
+      "color": {
+        "label": "条件颜色",
+        "where": "当",
+        "add": "添加颜色",
+        "add-to-favorites": "添加到收藏",
+        "project-palette": "项目调色板",
+        "apply-color": "应用颜色",
+        "add-rule": "添加规则",
+        "title": "颜色规则",
+        "empty-hint": "没有规则",
+        "pick-color": "选择颜色",
+        "favorites": "收藏",
+        "favorites-empty-hint": "按 ⭐ 添加",
+        "hex-code": "HEX 代码",
+        "invalid-format": "格式无效",
+        "expand-palette": "展开调色板",
+        "collapse-palette": "折叠调色板"
+      },
+      "filter": {
+        "label": "筛选",
+        "where": "当",
+        "and": "与",
+        "or": "或",
+        "add": "添加筛选条件",
+        "add-condition": "添加条件",
+        "add-group": "添加分组",
+        "conjunction-or": "或",
+        "conjunction-and": "且",
+        "match-all": "满足所有条件",
+        "match-any": "满足任一条件",
+        "empty-hint": "没有过滤条件",
+        "operators": {
+          "is-empty": "为空",
+          "is-not-empty": "不为空",
+          "is": "等于",
+          "is-any-of": "是其中之一",
+          "is-not": "不等于",
+          "contains": "包含",
+          "not-contains": "不包含",
+          "starts-with": "开头为",
+          "ends-with": "结尾为",
+          "regex": "正则表达式",
+          "eq": "=",
+          "neq": "≠",
+          "lt": "<",
+          "gt": ">",
+          "lte": "≤",
+          "gte": "≥",
+          "is-checked": "已勾选",
+          "is-not-checked": "未勾选",
+          "is-on": "日期 =",
+          "is-not-on": "日期 ≠",
+          "is-before": "早于",
+          "is-after": "晚于",
+          "is-on-and-before": "≤ 日期",
+          "is-on-and-after": "≥ 日期",
+          "is-today": "今天",
+          "is-this-week": "本周",
+          "is-this-month": "本月",
+          "is-this-quarter": "本季度",
+          "is-this-year": "今年",
+          "is-past-week": "上周",
+          "is-past-month": "上月",
+          "is-past-year": "去年",
+          "is-next-week": "下周",
+          "is-next-month": "下月",
+          "is-next-year": "明年",
+          "is-last-n-days": "过去 N 天内",
+          "is-next-n-days": "未来 N 天内",
+          "is-overdue": "已逾期",
+          "is-upcoming": "即将到来",
+          "has-any-of": "包含任意",
+          "has-all-of": "包含全部",
+          "has-none-of": "不包含任何",
+          "has-keyword": "包含关键词"
+        }
+      },
+      "sort": {
+        "label": "排序",
+        "add": "添加排序条件",
+        "empty-hint": "未设置排序条件"
+      },
+      "tag": {
+        "edit": "编辑",
+        "remove": "移除"
+      },
+      "multi-text": {
+        "add": "添加一项"
+      },
+      "note": {
+        "edit": "编辑笔记"
+      }
+    },
+    "toolbar": {
+      "view": {
+        "add": "新建视图"
+      },
+      "projects": {
+        "none": "尚无项目",
+        "options": "更多选项"
+      },
+      "read-only": "只读项目",
+      "read-only-desc": "不能在只读项目中新增、编辑笔记。",
+      "collapse": {
+        "show": "显示工具栏",
+        "hide": "隐藏工具栏"
+      }
+    },
+    "settings": {
+      "about": {
+        "title": "关于 Projects Plus",
+        "description": "为 Obsidian 提供增强的项目管理功能。",
+        "author": "维护者",
+        "author-name": "Park Pavel",
+        "original-author": "原作者",
+        "original-author-name": "Marcus Olsson",
+        "version": "版本",
+        "version-number": "3.0.5",
+        "credits": "致谢",
+        "credits-desc": "这是 Marcus Olsson 原始 Obsidian Projects 插件的社区维护分支。",
+        "support": "支持",
+        "support-desc": "如果您觉得这个插件有用，请考虑支持开发。",
+        "visit-website": "访问网站",
+        "github": "GitHub",
+        "star-github": "⭐ 在 GitHub 上点赞",
+        "original-repo": "原始仓库",
+        "languages": "支持的语言",
+        "languages-desc": "可用语言：English, Русский, Українська, 中文（基于系统语言的自动检测）"
+      },
+      "general": {
+        "size-limit": {
+          "name": "最大条目数量",
+          "desc": "防止意外加载过多条目。"
+        },
+        "link-behavior": {
+          "name": "链接行为",
+          "desc": "选择在 Projects 中点击链接时的行为。按下 {{modifier}} 键时点击将执行另一项。",
+          "options": {
+            "open-editor": "打开元数据编辑器",
+            "open-note": "打开目标笔记"
+          }
+        },
+        "start-of-week": {
+          "name": "一周的第一天",
+          "options": {
+            "sunday": "星期日",
+            "monday": "星期一",
+            "default": "默认"
+          }
+        },
+        "mobile-calendar": {
+          "name": "移动端日历视图",
+          "desc": "移动设备上的默认日历视图。",
+          "options": {
+            "month": "月",
+            "week": "周",
+            "day": "日"
+          }
+        },
+        "animation-behavior": {
+          "name": "动画效果",
+          "desc": "控制插件中的滚动动画效果",
+          "options": {
+            "smooth": "平滑 (带动画)",
+            "instant": "即时 (无动画)"
+          }
+        },
+        "disable-haptic": {
+          "name": "禁用触觉反馈",
+          "desc": "在移动设备拖放操作时关闭振动反馈"
+        }
+      },
+      "front-matter": {
+        "heading": "Front matter",
+        "quote-strings": {
+          "name": "使用引号包裹字符串",
+          "options": {
+            "plain": "必要时",
+            "quote-double": "总是"
+          }
+        }
+      },
+      "commands": {
+        "name": "命令",
+        "desc": "为你最常用的项目和视图添加命令到命令面板。"
+      },
+      "archives": {
+        "name": "存档管理",
+        "desc": "恢复或删除已存档项目。",
+        "empty": "没有已存档项目。"
+      }
+    },
+    "errors": {
+      "missingDataview": {
+        "title": "Dataview 插件未启用",
+        "message": "启用 Dataview 插件以使用本项目。"
+      },
+      "boundary": {
+        "title": "出现错误",
+        "message": "渲染此组件时发生错误。",
+        "retry": "重试",
+        "details": "错误详情"
+      }
+    },
+    "database": {
+      "cell-editor": {
+        "errors": {
+          "boolean": "请输入 true 或 false。",
+          "number": "请输入有效的数字。",
+          "date": "使用 YYYY-MM-DD 格式。",
+          "datetime": "使用 ISO 8601 格式（例如 2026-05-01T12:30）。",
+          "color": "使用 #hex 颜色（3、4、6 或 8 位）。",
+          "list": "请使用逗号分隔值。",
+          "scalar": "此字段类型的值无效。"
+        }
+      },
+      "rollup": {
+        "modes": {
+          "show-original": "显示原始",
+          "show-unique": "显示唯一值",
+          "count-all": "全部计数",
+          "count-values": "值计数",
+          "count-unique": "唯一值计数",
+          "count-empty": "空值计数",
+          "count-not-empty": "非空计数",
+          "percent-empty": "空值百分比",
+          "percent-not-empty": "非空百分比",
+          "percent-per-group": "分组百分比",
+          "sum": "求和",
+          "average": "平均值",
+          "min": "最小值",
+          "max": "最大值",
+          "median": "中位数",
+          "range": "范围",
+          "earliest": "最早",
+          "latest": "最晚"
+        }
+      }
+    },
+    "obsidian": {
+      "ribbon-tooltip": "打开项目",
+      "hover-link-settings": "Projects"
+    },
+    "navigation": {
+      "active-project": "当前项目"
+    },
+    "nav": {
+      "project-switcher": {
+        "tooltip": "切换项目",
+        "search-placeholder": "搜索项目..."
+      }
+    },
+    "settings-menu": {
+      "title": "设置",
+      "tabs": {
+        "projects": "项目",
+        "views": "视图",
+        "filters": "筛选",
+        "colors": "颜色",
+        "sort": "排序",
+        "view-config": "视图"
+      },
+      "done": "完成",
+      "views": {
+        "title": "视图管理",
+        "show-titles": "显示视图标题",
+        "select-view": "选择视图",
+        "rename": "重命名",
+        "duplicate": "复制",
+        "delete": "删除",
+        "add-view": "添加视图",
+        "drag-to-reorder": "拖动排序"
+      },
+      "view-config": {
+        "title": "视图设置",
+        "current-view": "当前视图",
+        "no-view": "无活动视图",
+        "calendar": {
+          "interval": "时间间隔",
+          "layout": "布局",
+          "time-format": "时间格式",
+          "timezone": "时区",
+          "show-agenda": "显示日程",
+          "hide-agenda": "隐藏日程",
+          "hints": {
+            "timezone": "例如 Asia/Shanghai 或 local"
+          },
+          "timeline": {
+            "title": "时间线设置",
+            "start-hour": "开始时间",
+            "end-hour": "结束时间",
+            "event-color-field": "事件颜色字段",
+            "show-weekends": "显示周末",
+            "show-all-day": "显示'全天'区域",
+            "hints": {
+              "event-color-field": "用于事件颜色的字段（可选）",
+              "event-color-placeholder": "例如 status, priority"
+            }
+          },
+          "interval-options": {
+            "year": "年",
+            "day": "日",
+            "week": "周",
+            "month": "月"
+          },
+          "layout-options": {
+            "headers": "标题 (经典)",
+            "bars": "条形 (时间线)"
+          },
+          "field-mapping": {
+            "title": "字段映射",
+            "hint": "从列表中选择现有字段或输入新字段名称",
+            "placeholder": "输入或选择字段",
+            "new-field": "+ 新字段",
+            "date": "创建日期 (date)",
+            "start-date": "开始 (startDate)",
+            "end-date": "结束 (endDate)",
+            "start-time": "开始时间 (startTime)",
+            "end-time": "结束时间 (endTime)",
+            "check": "状态字段 (check)",
+            "hints": {
+              "date": "创建笔记时自动填充。不参与确定事件开始时间",
+              "start-date": "多日事件的开始日期",
+              "end-date": "多日事件的结束日期",
+              "start-time": "单独的开始时间字段 (HH:mm)",
+              "end-time": "单独的结束时间字段",
+              "check": "用于标记完成状态的字段 (completed, done 等)"
+            }
+          }
+        },
+        "board": {
+          "column-width": "列宽度",
+          "group-by-field": "分组字段 (状态)",
+          "header-field": "卡片标题",
+          "order-sync-field": "排序同步字段",
+          "freeze-columns": "冻结列",
+          "hints": {
+            "column-width": "每列宽度（像素）",
+            "group-by-field": "用于按列分组卡片的字符串前置元数据字段",
+            "header-field": "用于卡片标题的字段",
+            "order-sync-field": "用于存储卡片位置的数字字段"
+          }
+        },
+        "gallery": {
+          "card-width": "卡片宽度",
+          "cover-field": "封面字段",
+          "fit-style": "适应方式",
+          "include-fields": "包含字段",
+          "fit-options": {
+            "fill": "填充",
+            "fit": "适应"
+          },
+          "hints": {
+            "card-width": "每张画册卡片宽度（像素）",
+            "cover-field": "包含图片路径的文本字段",
+            "include-fields": "选择要在卡片上显示的字段"
+          }
+        },
+        "table": {
+          "hide-fields": "隐藏字段",
+          "hints": {
+            "hide-fields": "选择要在表格中隐藏的字段"
+          },
+          "hidden-fields": "隐藏的字段",
+          "show-all": "显示所有字段"
+        },
+        "shared": {
+          "icon-field": "图标字段",
+          "hints": {
+            "icon-field": "包含 emoji 或 lucide 图标名称的字段。作为每条记录的图标显示。"
+          }
+        },
+        "none": "— 无 —"
+      }
+    },
+    "onboarding": {
+      "title": "开始使用 Projects Plus",
+      "description": "Projects Plus 让您使用 <a>front matter</a> 管理相关笔记组。例如，一个包含您正在撰写的博客文章的文件夹。",
+      "front-matter-link": "front matter",
+      "explore": "从零开始，或探索演示项目 👇",
+      "create-new": "创建新项目",
+      "try-demo": "试用演示项目",
+      "try-demo-tooltip": "在仓库根目录创建一个包含示例笔记的新文件夹。",
+      "hint": "下次您可以通过以下任一方式创建项目：",
+      "tab-projects-view": "项目视图",
+      "tab-command-palette": "命令面板",
+      "tab-file-explorer": "文件管理器",
+      "file-explorer-step1": "在<strong>文件管理器</strong>中右键点击文件夹。",
+      "file-explorer-step2": "点击<strong>在文件夹中创建项目</strong>。",
+      "command-palette-step1": "打开<strong>命令面板</strong>。",
+      "command-palette-step2": "搜索<strong>创建新项目</strong>",
+      "command-palette-step3": "按<strong>Enter</strong>。",
+      "projects-view-step1": "在 <strong>Projects Plus</strong> 视图的右上角，点击<strong>新建</strong>。",
+      "projects-view-step2": "点击<strong>新建项目</strong>。"
+    },
+    "common": {
+      "yesterday": "昨天",
+      "tomorrow": "明天",
+      "close": "关闭",
+      "total": "总计",
+      "open-in-new-window": "Ctrl+点击: 在新窗口中打开",
+      "open-in-tab": "在新标签页中打开",
+      "open-in-window": "在新窗口中打开",
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除",
+      "menu": "菜单",
+      "rename": "重命名",
+      "open-note": "打开笔记",
+      "select-color": "选择颜色",
+      "value-placeholder": "值...",
+      "select-date": "选择日期",
+      "view-switcher": "视图切换",
+      "edit-project": "编辑项目",
+      "delete-project": "删除项目",
+      "select-project": "选择项目",
+      "syntax-help": "语法帮助",
+      "date-placeholder": "YYYY-MM-DD",
+      "datetime-placeholder": "YYYY-MM-DD HH:MM",
+      "field": "字段",
+      "projects": "项目",
+      "create-project": "创建项目",
+      "select-date-time": "选择日期和时间",
+      "enable": "启用",
+      "disable": "禁用",
+      "remove": "移除",
+      "apply": "应用",
+      "field-placeholder": "字段",
+      "add-criterion": "添加条件"
+    },
+    "relation-setup": {
+      "open": "关联数据库…",
+      "saved": "关联已保存。",
+      "target-unavailable": "无法加载所选数据库。",
+      "title": "关联属性到数据库",
+      "description": "值保持为 Markdown 中的 WikiLinks。预览不做任何更改。",
+      "property-label": "属性",
+      "database-label": "数据库",
+      "database-placeholder": "选择数据库…",
+      "display-field-label": "显示字段",
+      "display-field-placeholder": "例如 title",
+      "inverse-enable-label": "在 Schema 中创建反向属性",
+      "inverse-field-label": "反向属性名称",
+      "inverse-warning": "反向属性仅在保存后声明。现有笔记不会被改写。",
+      "preview-resolved": "已匹配：{{count}}",
+      "preview-unmatched": "未找到：{{count}}",
+      "preview-ambiguous": "模糊匹配：{{count}}",
+      "cancel": "取消",
+      "save": "保存关联"
+    },
+    "relation-count": {
+      "linked": "已关联 {{count}} 条",
+      "empty": "暂无关联记录"
     }
+  }
 }

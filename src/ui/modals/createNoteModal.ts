@@ -58,7 +58,7 @@ export class CreateNoteModal extends Modal {
     // Use context date/time if provided, otherwise use current time
     const contextDate = this.context?.date ?? dayjs();
     const contextTime = this.context?.time ?? dayjs().format("HH:mm");
-    
+
     this.component = new CreateNote({
       target: this.contentEl,
       props: {
@@ -68,8 +68,13 @@ export class CreateNoteModal extends Modal {
               time: (format) => {
                 // If format provided, parse contextTime and format
                 if (format && this.context?.time) {
-                  const [hours, minutes] = this.context.time.split(':').map(Number);
-                  return dayjs().hour(hours ?? 0).minute(minutes ?? 0).format(format);
+                  const [hours, minutes] = this.context.time
+                    .split(":")
+                    .map(Number);
+                  return dayjs()
+                    .hour(hours ?? 0)
+                    .minute(minutes ?? 0)
+                    .format(format);
                 }
                 return contextTime;
               },

@@ -59,7 +59,5 @@ if (typeof globalThis.crypto === "undefined") {
 }
 if (typeof (globalThis.crypto as any).randomUUID !== "function") {
   const { randomUUID } = require("crypto") as typeof import("crypto");
-  (globalThis.crypto as any).randomUUID = randomUUID.bind(
-    require("crypto")
-  );
+  (globalThis.crypto as any).randomUUID = randomUUID.bind(require("crypto"));
 }

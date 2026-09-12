@@ -7,7 +7,10 @@
 
 import { describe, expect, it, jest } from "@jest/globals";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import type { ColorFilterDefinition, FilterCondition } from "src/settings/base/settings";
+import type {
+  ColorFilterDefinition,
+  FilterCondition,
+} from "src/settings/base/settings";
 import {
   extractRelationTargetIds,
   getRecordColor,
@@ -16,7 +19,10 @@ import {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function makeRecord(values: Record<string, unknown> = {}, id = "note.md"): DataRecord {
+function makeRecord(
+  values: Record<string, unknown> = {},
+  id = "note.md"
+): DataRecord {
   return { id, values: values as DataRecord["values"] };
 }
 
@@ -77,7 +83,11 @@ describe("extractRelationTargetIds", () => {
       b: { relation: { targetProjectId: "p1-other" } },
       c: { relation: { targetProjectId: "p2" } },
     };
-    expect(extractRelationTargetIds("p0", fc)).toEqual(["p1-other", "p2", "p3"]);
+    expect(extractRelationTargetIds("p0", fc)).toEqual([
+      "p1-other",
+      "p2",
+      "p3",
+    ]);
   });
 
   it("collects both relation and rollup targets from the same field", () => {
@@ -105,10 +115,14 @@ describe("extractRelationTargetIds", () => {
 // ── getRecordColor ────────────────────────────────────────────────────────────
 
 describe("getRecordColor", () => {
-  const alwaysMatch = jest.fn((_cond: FilterCondition, _rec: DataRecord) => true) as jest.MockedFunction<
+  const alwaysMatch = jest.fn(
+    (_cond: FilterCondition, _rec: DataRecord) => true
+  ) as jest.MockedFunction<
     (condition: FilterCondition, record: DataRecord) => boolean
   >;
-  const neverMatch = jest.fn((_cond: FilterCondition, _rec: DataRecord) => false) as jest.MockedFunction<
+  const neverMatch = jest.fn(
+    (_cond: FilterCondition, _rec: DataRecord) => false
+  ) as jest.MockedFunction<
     (condition: FilterCondition, record: DataRecord) => boolean
   >;
 
@@ -119,18 +133,14 @@ describe("getRecordColor", () => {
 
   it("returns the color of the first matching rule", () => {
     const filter: ColorFilterDefinition = {
-      conditions: [
-        { color: "#ff0000", condition: makeCond("status", "done") },
-      ],
+      conditions: [{ color: "#ff0000", condition: makeCond("status", "done") }],
     };
     expect(getRecordColor(makeRecord(), filter, alwaysMatch)).toBe("#ff0000");
   });
 
   it("returns null when no rule matches", () => {
     const filter: ColorFilterDefinition = {
-      conditions: [
-        { color: "#ff0000", condition: makeCond("status", "done") },
-      ],
+      conditions: [{ color: "#ff0000", condition: makeCond("status", "done") }],
     };
     expect(getRecordColor(makeRecord(), filter, neverMatch)).toBeNull();
   });
@@ -156,7 +166,11 @@ describe("getRecordColor", () => {
   });
 
   it("treats missing enabled flag as true (backward compat)", () => {
-    const condWithoutEnabled = { field: "x", operator: "is", value: "" } as FilterCondition;
+    const condWithoutEnabled = {
+      field: "x",
+      operator: "is",
+      value: "",
+    } as FilterCondition;
     const filter: ColorFilterDefinition = {
       conditions: [{ color: "#0000ff", condition: condWithoutEnabled }],
     };

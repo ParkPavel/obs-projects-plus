@@ -2,7 +2,9 @@ import { createSuggestionController } from "../dashboardSuggest";
 import type { SmartSuggestion } from "../smartSuggest";
 import type { DatabaseViewConfig } from "../types";
 
-function makeConfig(overrides?: Partial<DatabaseViewConfig>): DatabaseViewConfig {
+function makeConfig(
+  overrides?: Partial<DatabaseViewConfig>
+): DatabaseViewConfig {
   return {
     widgets: [],
     layoutMode: "free",
@@ -16,7 +18,9 @@ function makeConfig(overrides?: Partial<DatabaseViewConfig>): DatabaseViewConfig
 
 describe("createSuggestionController (#113)", () => {
   let config: DatabaseViewConfig;
-  const saveConfig = jest.fn((cfg: DatabaseViewConfig) => { config = cfg; });
+  const saveConfig = jest.fn((cfg: DatabaseViewConfig) => {
+    config = cfg;
+  });
   const addWidget = jest.fn();
   const getPrimaryWidgetId = jest.fn(() => "w-master" as string | undefined);
 
@@ -45,7 +49,12 @@ describe("createSuggestionController (#113)", () => {
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
     expect(addWidget).toHaveBeenCalledWith("database-call", {
       sourceConfig: { projectId: "proj-sessions" },
-      config: { linkedSelection: { sourceWidgetId: "w-master", relationField: "client" } },
+      config: {
+        linkedSelection: {
+          sourceWidgetId: "w-master",
+          relationField: "client",
+        },
+      },
     });
   });
 
@@ -57,7 +66,10 @@ describe("createSuggestionController (#113)", () => {
     };
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
     expect(addWidget).toHaveBeenCalledWith("database-call");
-    expect(addWidget).not.toHaveBeenCalledWith("database-call", expect.anything());
+    expect(addWidget).not.toHaveBeenCalledWith(
+      "database-call",
+      expect.anything()
+    );
   });
 
   it("accept 'numeric-stats' calls addWidget with type only", () => {
@@ -79,15 +91,24 @@ describe("createSuggestionController (#113)", () => {
       relationTargetProjectId: "proj-sessions",
     };
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
-    expect(addWidget).toHaveBeenCalledWith("database-call", expect.objectContaining({
-      config: expect.objectContaining({ linkedSelection: expect.objectContaining({ sourceWidgetId: "" }) }),
-    }));
+    expect(addWidget).toHaveBeenCalledWith(
+      "database-call",
+      expect.objectContaining({
+        config: expect.objectContaining({
+          linkedSelection: expect.objectContaining({ sourceWidgetId: "" }),
+        }),
+      })
+    );
   });
 
   it("dismiss persists kind to dismissedSuggestions", () => {
-    ctrl().dismiss(new CustomEvent("dismissForever", { detail: "relation-block" as const }));
-    expect(saveConfig).toHaveBeenCalledWith(expect.objectContaining({
-      dismissedSuggestions: expect.arrayContaining(["relation-block"]),
-    }));
+    ctrl().dismiss(
+      new CustomEvent("dismissForever", { detail: "relation-block" as const })
+    );
+    expect(saveConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dismissedSuggestions: expect.arrayContaining(["relation-block"]),
+      })
+    );
   });
 });

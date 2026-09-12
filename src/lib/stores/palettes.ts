@@ -43,7 +43,10 @@ function loadFromStorage(): Favorite[] {
 
 function persistToStorage(favorites: Favorite[]): void {
   try {
-    getAppInstance()?.saveLocalStorage(FAVORITES_KEY, JSON.stringify(favorites));
+    getAppInstance()?.saveLocalStorage(
+      FAVORITES_KEY,
+      JSON.stringify(favorites)
+    );
   } catch {
     // ignore
   }
@@ -60,7 +63,10 @@ function createFavoritesStore() {
   }
 
   return {
-    subscribe: (run: Parameters<typeof subscribe>[0], invalidate?: Parameters<typeof subscribe>[1]) => {
+    subscribe: (
+      run: Parameters<typeof subscribe>[0],
+      invalidate?: Parameters<typeof subscribe>[1]
+    ) => {
       ensureInit();
       return subscribe(run, invalidate);
     },
@@ -68,7 +74,8 @@ function createFavoritesStore() {
     add(color: string, name = "Custom") {
       ensureInit();
       update((favs) => {
-        if (favs.find((f) => f.color.toLowerCase() === color.toLowerCase())) return favs;
+        if (favs.find((f) => f.color.toLowerCase() === color.toLowerCase()))
+          return favs;
         const next = [...favs, { color, name }];
         persistToStorage(next);
         return next;
@@ -78,7 +85,9 @@ function createFavoritesStore() {
     remove(color: string) {
       ensureInit();
       update((favs) => {
-        const next = favs.filter((f) => f.color.toLowerCase() !== color.toLowerCase());
+        const next = favs.filter(
+          (f) => f.color.toLowerCase() !== color.toLowerCase()
+        );
         persistToStorage(next);
         return next;
       });

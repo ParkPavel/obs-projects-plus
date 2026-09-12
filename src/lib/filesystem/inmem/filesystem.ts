@@ -37,7 +37,8 @@ class InMemFile extends IFile {
     const content = this._content ?? "";
 
     // 1) Markdown inline tags like #tag, #multi-word_tag, #tag/sub
-    const inlineTagRegex = /(^|\s)#([\p{L}\p{N}_\-/]+)(?=$|\s|[^\p{L}\p{N}_\-/])/gu;
+    const inlineTagRegex =
+      /(^|\s)#([\p{L}\p{N}_\-/]+)(?=$|\s|[^\p{L}\p{N}_\-/])/gu;
     for (const match of content.matchAll(inlineTagRegex)) {
       const tag = `#${match[2]}`;
       tags.add(tag);
@@ -55,7 +56,9 @@ class InMemFile extends IFile {
         //   - tag2
         // или: tags: tag1, tag2
         const tagsLine = frontMatter.match(/^tags[ \t]*:[ \t]*([^\n]+)$/m);
-        const tagBlock = frontMatter.match(/^tags[ \t]*:[ \t]*\n((?:[ \t]+-[^\n]*\n?)+)/m);
+        const tagBlock = frontMatter.match(
+          /^tags[ \t]*:[ \t]*\n((?:[ \t]+-[^\n]*\n?)+)/m
+        );
 
         const tagsLineValue = tagsLine?.[1] ?? "";
         if (tagsLineValue) {
@@ -76,7 +79,12 @@ class InMemFile extends IFile {
               .split("\n")
               .map((l) => l.trim())
               .filter((l) => l.startsWith("- "))
-              .map((l) => l.slice(2).trim().replace(/^["']|["']$/g, ""))
+              .map((l) =>
+                l
+                  .slice(2)
+                  .trim()
+                  .replace(/^["']|["']$/g, "")
+              )
               .filter(Boolean);
             for (const v of lines) {
               const normalized = normalizeTag(v);

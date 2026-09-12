@@ -46,7 +46,9 @@ describe("formulaMetadata", () => {
   });
 
   it("signature mentions expected sentinel tokens", () => {
-    expect(getFormulaMetadata("IF")?.signature).toBe("IF(condition, then, else?)");
+    expect(getFormulaMetadata("IF")?.signature).toBe(
+      "IF(condition, then, else?)"
+    );
     expect(getFormulaMetadata("SUM")?.signature).toBe("SUM(values...)");
     expect(getFormulaMetadata("DATE_ADD")?.signature).toContain("unit");
   });

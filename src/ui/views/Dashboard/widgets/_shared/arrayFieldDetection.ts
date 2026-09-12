@@ -9,11 +9,13 @@ import type { TransformStep } from "src/lib/dashboard-engine/transformTypes";
 export function detectArrayFields(
   src: { records: Array<{ values: Record<string, unknown> }> } | null,
   fields: DataField[],
-  currentSteps: readonly TransformStep[],
+  currentSteps: readonly TransformStep[]
 ): string[] {
   if (!src || src.records.length === 0) return [];
   const alreadyUnnested = new Set(
-    currentSteps.filter((s) => s.type === "unnest").map((s) => (s as { field: string }).field),
+    currentSteps
+      .filter((s) => s.type === "unnest")
+      .map((s) => (s as { field: string }).field)
   );
   const candidates = new Set<string>();
   const sampleSize = Math.min(src.records.length, 50);

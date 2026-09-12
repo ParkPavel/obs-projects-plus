@@ -1,9 +1,9 @@
 /**
  * CalendarDataProcessor (v3.0.0)
- * 
+ *
  * Processes DataFrame records ONCE and produces ProcessedCalendarData.
  * All views (month/week/day) use the same processed data.
- * 
+ *
  * Key responsibilities:
  * 1. Parse dates/times with timezone awareness
  * 2. Determine render type (all-day, timed, multi-day)
@@ -14,10 +14,7 @@
 
 import dayjs from "dayjs";
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
-import {
-  parseDateInTimezone,
-  extractTimeWithPriority,
-} from "./calendar";
+import { parseDateInTimezone, extractTimeWithPriority } from "./calendar";
 import { resolveRecordColor } from "src/lib/colors/recordColor";
 import {
   EventRenderType,
@@ -27,7 +24,7 @@ import {
   type TimeInfo,
   type SpanInfo,
 } from "./types";
-import { calendarLogger } from './logger';
+import { calendarLogger } from "./logger";
 
 /**
  * Check if a date value contains embedded time
@@ -75,7 +72,7 @@ export class CalendarDataProcessor {
     // Assign lanes for header events (all-day and multi-day)
     this.assignLanes(processed);
     const t2 = performance.now();
-    
+
     // Group by date
     const grouped = this.groupByDate(processed);
     const t3 = performance.now();
@@ -89,7 +86,9 @@ export class CalendarDataProcessor {
     // Calculate max lane
     const maxLane = processed.reduce((max, pr) => Math.max(max, pr.lane), 0);
 
-    calendarLogger.debug(`[Perf] process(): ${(t1-t0).toFixed(1)}ms records, ${(t2-t1).toFixed(1)}ms lanes, ${(t3-t2).toFixed(1)}ms group, total=${(performance.now()-t0).toFixed(1)}ms (${frame.records.length} records, ${processed.length} processed, ${Object.keys(grouped).length} days)`);
+    calendarLogger.debug(
+      `[Perf] process(): ${(t1 - t0).toFixed(1)}ms records, ${(t2 - t1).toFixed(1)}ms lanes, ${(t3 - t2).toFixed(1)}ms group, total=${(performance.now() - t0).toFixed(1)}ms (${frame.records.length} records, ${processed.length} processed, ${Object.keys(grouped).length} days)`
+    );
 
     return { processed, grouped, index, maxLane };
   }
@@ -153,15 +152,30 @@ export class CalendarDataProcessor {
     let endDate: dayjs.Dayjs | null = null;
 
     // Try startDateField first (from config)
-    if (this.config.startDateField && record.values[this.config.startDateField] !== undefined) {
-      startDate = parseDateInTimezone(record.values[this.config.startDateField], this.timezone);
+    if (
+      this.config.startDateField &&
+      record.values[this.config.startDateField] !== undefined
+    ) {
+      startDate = parseDateInTimezone(
+        record.values[this.config.startDateField],
+        this.timezone
+      );
     }
     // Try common field names in priority order
     else {
-      const commonDateFields = ["startDate", "date", "deadline", "dueDate", "scheduled"];
+      const commonDateFields = [
+        "startDate",
+        "date",
+        "deadline",
+        "dueDate",
+        "scheduled",
+      ];
       for (const fieldName of commonDateFields) {
         if (record.values[fieldName] !== undefined) {
-          startDate = parseDateInTimezone(record.values[fieldName], this.timezone);
+          startDate = parseDateInTimezone(
+            record.values[fieldName],
+            this.timezone
+          );
           if (startDate) break;
         }
       }
@@ -181,7 +195,10 @@ export class CalendarDataProcessor {
       const commonEndFields = ["endDate", "end", "due"];
       for (const fieldName of commonEndFields) {
         if (record.values[fieldName] !== undefined) {
-          endDate = parseDateInTimezone(record.values[fieldName], this.timezone);
+          endDate = parseDateInTimezone(
+            record.values[fieldName],
+            this.timezone
+          );
           if (endDate) break;
         }
       }
@@ -207,7 +224,9 @@ export class CalendarDataProcessor {
     const nameWithoutExt = basename.replace(/\.[^.]+$/, "");
 
     // Try YYYY-MM-DD or YYYY.MM.DD at start of filename
-    const separatedMatch = nameWithoutExt.match(/^(\d{4})[-.](\d{2})[-.](\d{2})/);
+    const separatedMatch = nameWithoutExt.match(
+      /^(\d{4})[-.](\d{2})[-.](\d{2})/
+    );
     if (separatedMatch) {
       const dateStr = `${separatedMatch[1]}-${separatedMatch[2]}-${separatedMatch[3]}`;
       const parsed = parseDateInTimezone(dateStr, this.timezone);
@@ -240,7 +259,9 @@ export class CalendarDataProcessor {
     const endTimeFieldName = this.config.endTimeField || "endTime";
 
     // Check if date fields have embedded time
-    const startHasEmbeddedTime = hasTimeComponent(record.values[startFieldName]);
+    const startHasEmbeddedTime = hasTimeComponent(
+      record.values[startFieldName]
+    );
     const endHasEmbeddedTime = hasTimeComponent(record.values[endFieldName]);
 
     // Extract separate time fields (only used if no embedded time)
@@ -290,7 +311,10 @@ export class CalendarDataProcessor {
       if (endTime.hour() < startTime.hour()) {
         // Move end time to next day
         endTime = endTime.add(1, "day");
-      } else if (endTime.hour() === startTime.hour() && endTime.minute() < startTime.minute()) {
+      } else if (
+        endTime.hour() === startTime.hour() &&
+        endTime.minute() < startTime.minute()
+      ) {
         // Edge case: same hour but earlier minutes (e.g., 10:30-10:15)
         endTime = endTime.add(1, "day");
       } else {
@@ -298,7 +322,7 @@ export class CalendarDataProcessor {
         endTime = startTime.add(1, "hour");
       }
     }
-    
+
     // Handle same time (default to 1 hour duration)
     if (endTime.isSame(startTime)) {
       endTime = startTime.add(1, "hour");
@@ -330,7 +354,9 @@ export class CalendarDataProcessor {
     const isMultiDay = !effectiveStart.isSame(effectiveEnd, "day");
 
     if (isMultiDay) {
-      return hasTime ? EventRenderType.MULTI_DAY_TIMED : EventRenderType.MULTI_DAY_ALLDAY;
+      return hasTime
+        ? EventRenderType.MULTI_DAY_TIMED
+        : EventRenderType.MULTI_DAY_ALLDAY;
     } else {
       return hasTime ? EventRenderType.TIMED : EventRenderType.ALL_DAY;
     }
@@ -350,7 +376,7 @@ export class CalendarDataProcessor {
       effectiveStart = endDate;
       effectiveEnd = startDate;
     }
-    
+
     const startDay = effectiveStart.startOf("day");
     const endDay = effectiveEnd.startOf("day");
 
@@ -391,11 +417,11 @@ export class CalendarDataProcessor {
 
   /**
    * Assign lanes to header events (all-day and multi-day)
-   * 
+   *
    * Lane assignment ensures events on the same day don't overlap visually.
    * Events spanning multiple days get the SAME lane across all days
    * to create the illusion of a continuous bar.
-   * 
+   *
    * Algorithm: Greedy lane assignment with proper overlap detection
    * - Sort by start date, then by duration (longer first)
    * - For each event, find first available lane
@@ -418,7 +444,7 @@ export class CalendarDataProcessor {
       if (!aStart && !bStart) return 0;
       if (!aStart) return 1;
       if (!bStart) return -1;
-      
+
       const startDiff = aStart.valueOf() - bStart.valueOf();
       if (startDiff !== 0) return startDiff;
 
@@ -439,25 +465,32 @@ export class CalendarDataProcessor {
         event.lane = 0;
         continue;
       }
-      
-      const eventStartMs = (event.startDate || event.endDate!).startOf("day").valueOf();
-      const eventEndMs = (event.endDate || event.startDate!).startOf("day").valueOf();
+
+      const eventStartMs = (event.startDate || event.endDate!)
+        .startOf("day")
+        .valueOf();
+      const eventEndMs = (event.endDate || event.startDate!)
+        .startOf("day")
+        .valueOf();
 
       // Find first available lane (no overlap)
       let assignedLane = -1;
       for (let i = 0; i < laneEvents.length; i++) {
         const eventsInLane = laneEvents[i];
         if (!eventsInLane) continue;
-        
+
         let hasOverlap = false;
         for (const existing of eventsInLane) {
           // Ranges intersect if eventStart <= existingEnd AND eventEnd >= existingStart
-          if (eventStartMs <= existing.endMs && eventEndMs >= existing.startMs) {
+          if (
+            eventStartMs <= existing.endMs &&
+            eventEndMs >= existing.startMs
+          ) {
             hasOverlap = true;
             break;
           }
         }
-        
+
         if (!hasOverlap) {
           assignedLane = i;
           break;
@@ -468,7 +501,7 @@ export class CalendarDataProcessor {
         assignedLane = laneEvents.length;
         laneEvents.push([]);
       }
-      
+
       const targetLane = laneEvents[assignedLane];
       if (targetLane) {
         targetLane.push({ startMs: eventStartMs, endMs: eventEndMs });
@@ -480,10 +513,12 @@ export class CalendarDataProcessor {
 
   /**
    * Group processed records by date (YYYY-MM-DD)
-   * 
+   *
    * Multi-day events appear in EACH day they span.
    */
-  private groupByDate(processed: ProcessedRecord[]): Record<string, ProcessedRecord[]> {
+  private groupByDate(
+    processed: ProcessedRecord[]
+  ): Record<string, ProcessedRecord[]> {
     const grouped: Record<string, ProcessedRecord[]> = {};
 
     for (const pr of processed) {
@@ -500,7 +535,9 @@ export class CalendarDataProcessor {
 
       // Multi-day: use native Date arithmetic (5-10x faster than dayjs per iteration)
       // Extract calendar date components from timezone-aware dayjs objects
-      const cursor = new Date(Date.UTC(startDay.year(), startDay.month(), startDay.date()));
+      const cursor = new Date(
+        Date.UTC(startDay.year(), startDay.month(), startDay.date())
+      );
       const endMs = Date.UTC(endDay.year(), endDay.month(), endDay.date());
       const maxDays = 90;
       let guard = 0;
@@ -509,7 +546,7 @@ export class CalendarDataProcessor {
         const y = cursor.getUTCFullYear();
         const m = cursor.getUTCMonth() + 1;
         const d = cursor.getUTCDate();
-        const dateStr = `${y}-${m < 10 ? '0' : ''}${m}-${d < 10 ? '0' : ''}${d}`;
+        const dateStr = `${y}-${m < 10 ? "0" : ""}${m}-${d < 10 ? "0" : ""}${d}`;
 
         if (!grouped[dateStr]) grouped[dateStr] = [];
         grouped[dateStr].push(pr);
@@ -517,11 +554,11 @@ export class CalendarDataProcessor {
         cursor.setUTCDate(d + 1);
         guard++;
       }
-      
+
       if (guard >= maxDays) {
         calendarLogger.warn(
-          `Event "${pr.record?.id || 'unknown'}" spans more than ${maxDays} days and was truncated. ` +
-          `Start: ${startDay.format('YYYY-MM-DD')}, End: ${endDay.format('YYYY-MM-DD')}`
+          `[Calendar] Event "${pr.record?.id || "unknown"}" spans more than ${maxDays} days and was truncated. ` +
+            `Start: ${startDay.format("YYYY-MM-DD")}, End: ${endDay.format("YYYY-MM-DD")}`
         );
       }
     }
@@ -582,7 +619,7 @@ export function getTimelineEventsForDate(
 
 /**
  * Calculate timeline columns for overlapping events
- * 
+ *
  * Events that overlap in time are placed in adjacent columns.
  * Each column gets equal width = 100% / totalColumns.
  */
@@ -590,7 +627,10 @@ export function calculateTimelineColumns(
   timedEvents: ProcessedRecord[],
   startHour: number,
   endHour: number
-): { events: ProcessedRecord[]; columns: Map<string, { index: number; total: number }> } {
+): {
+  events: ProcessedRecord[];
+  columns: Map<string, { index: number; total: number }>;
+} {
   if (timedEvents.length === 0) {
     return { events: [], columns: new Map() };
   }

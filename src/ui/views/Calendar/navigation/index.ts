@@ -2,8 +2,8 @@
  * Navigation module exports
  */
 
-export { 
+export {
   NavigationController,
   type ScrollPosition,
   type NavigableCalendar,
-} from './NavigationController';
+} from "./NavigationController";

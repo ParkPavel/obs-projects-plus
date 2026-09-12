@@ -8,10 +8,7 @@ export {
   getFormulaFunctions,
   isStyledValue,
 } from "src/lib/formula";
-export type {
-  StyledValue,
-  FormulaResult,
-} from "src/lib/formula";
+export type { StyledValue, FormulaResult } from "src/lib/formula";
 
 export {
   getFormulaMetadata,

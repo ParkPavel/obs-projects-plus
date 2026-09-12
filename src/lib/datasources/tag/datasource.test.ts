@@ -84,7 +84,7 @@ describe("TagDataSource.includes", () => {
   // ─────────────────────────────────────────────────────────────
   // Problem 2: Double ## in frontmatter
   // ─────────────────────────────────────────────────────────────
-  it("matches file with YAML tags: [\"#daily\"] (the double-# bug)", async () => {
+  it('matches file with YAML tags: ["#daily"] (the double-# bug)', async () => {
     const fs = await createFSWithFiles({
       "note.md": '---\ntags: "#daily"\n---\nContent',
     });
@@ -94,7 +94,7 @@ describe("TagDataSource.includes", () => {
     expect(ds.includes("note.md")).toBe(true);
   });
 
-  it("matches file with YAML tags: [\"#daily\"] when config has no #", async () => {
+  it('matches file with YAML tags: ["#daily"] when config has no #', async () => {
     const fs = await createFSWithFiles({
       "note.md": '---\ntags: "#daily"\n---\nContent',
     });
@@ -194,7 +194,10 @@ describe("TagDataSource.includes", () => {
       "note.md": "---\ntags: daily\n---\nContent",
     });
     const project = makeTagProject("#daily");
-    (project as any).dataSource = { kind: "folder", config: { path: "/", recursive: true } };
+    (project as any).dataSource = {
+      kind: "folder",
+      config: { path: "/", recursive: true },
+    };
     const ds = new TagDataSource(fs, project, defaultPrefs);
 
     expect(ds.includes("note.md")).toBe(false);

@@ -11,9 +11,15 @@
  */
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import { filterRecordsBySelection } from "../statsSelectionReceiver";
-import { dataTableSourceId, type SelectionState } from "../../../canvasSelectionStore";
+import {
+  dataTableSourceId,
+  type SelectionState,
+} from "../../../canvasSelectionStore";
 
-const record = (id: string, values: DataRecord["values"]): DataRecord => ({ id, values });
+const record = (id: string, values: DataRecord["values"]): DataRecord => ({
+  id,
+  values,
+});
 
 function selection(values: string[]): SelectionState {
   return {
@@ -80,7 +86,11 @@ describe("#153 Stats matches relation cells by canonical key", () => {
 
     const out = filterRecordsBySelection({
       records,
-      selection: { source: null, field: null, values: [] } as unknown as SelectionState,
+      selection: {
+        source: null,
+        field: null,
+        values: [],
+      } as unknown as SelectionState,
       myWidgetId: "stats-1",
     });
 

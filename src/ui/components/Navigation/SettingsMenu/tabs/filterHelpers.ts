@@ -1,43 +1,91 @@
 /**
  * Filter/Sort/Color helpers for SettingsMenu tabs
- * 
+ *
  * Provides operator filtering by field type, display labels,
  * and unary operator detection for the general project filter system.
  */
 
-import { get } from 'svelte/store';
-import { i18n } from 'src/lib/stores/i18n';
-import type { FilterOperator } from '../../../../../settings/base/settings';
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
+import type { FilterOperator } from "../../../../../settings/base/settings";
 
 /** Field type strings as used by DataField.type */
-type FieldTypeStr = 'string' | 'number' | 'boolean' | 'date' | 'autotime' | 'multitext' | 'unknown';
+type FieldTypeStr =
+  | "string"
+  | "number"
+  | "boolean"
+  | "date"
+  | "autotime"
+  | "multitext"
+  | "unknown";
 
 /**
  * Get available operators for a given field type.
  * Returns only operators that make sense for the field's data type.
  */
 export function getOperatorsForField(fieldType: string): FilterOperator[] {
-  const base: FilterOperator[] = ['is-empty', 'is-not-empty'];
-  const ftype = (fieldType || 'string') as FieldTypeStr;
+  const base: FilterOperator[] = ["is-empty", "is-not-empty"];
+  const ftype = (fieldType || "string") as FieldTypeStr;
 
   switch (ftype) {
-    case 'string':
-      return [...base, 'is', 'is-not', 'contains', 'not-contains', 'starts-with', 'ends-with'];
-    case 'number':
-      return [...base, 'eq', 'neq', 'lt', 'gt', 'lte', 'gte'];
-    case 'boolean':
-      return ['is-checked', 'is-not-checked'];
-    case 'date':
-    case 'autotime':
-      return [...base, 'is-on', 'is-not-on', 'is-before', 'is-after', 'is-on-and-before', 'is-on-and-after',
-        'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-this-year',
-        'is-past-week', 'is-past-month', 'is-past-year',
-        'is-next-week', 'is-next-month', 'is-next-year',
-        'is-last-n-days', 'is-next-n-days', 'is-overdue', 'is-upcoming'];
-    case 'multitext':
-      return [...base, 'has-any-of', 'has-all-of', 'has-none-of', 'has-keyword'];
+    case "string":
+      return [
+        ...base,
+        "is",
+        "is-not",
+        "contains",
+        "not-contains",
+        "starts-with",
+        "ends-with",
+      ];
+    case "number":
+      return [...base, "eq", "neq", "lt", "gt", "lte", "gte"];
+    case "boolean":
+      return ["is-checked", "is-not-checked"];
+    case "date":
+    case "autotime":
+      return [
+        ...base,
+        "is-on",
+        "is-not-on",
+        "is-before",
+        "is-after",
+        "is-on-and-before",
+        "is-on-and-after",
+        "is-today",
+        "is-this-week",
+        "is-this-month",
+        "is-this-quarter",
+        "is-this-year",
+        "is-past-week",
+        "is-past-month",
+        "is-past-year",
+        "is-next-week",
+        "is-next-month",
+        "is-next-year",
+        "is-last-n-days",
+        "is-next-n-days",
+        "is-overdue",
+        "is-upcoming",
+      ];
+    case "multitext":
+      return [
+        ...base,
+        "has-any-of",
+        "has-all-of",
+        "has-none-of",
+        "has-keyword",
+      ];
     default:
-      return [...base, 'is', 'is-not', 'contains', 'not-contains', 'starts-with', 'ends-with'];
+      return [
+        ...base,
+        "is",
+        "is-not",
+        "contains",
+        "not-contains",
+        "starts-with",
+        "ends-with",
+      ];
   }
 }
 
@@ -46,11 +94,23 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
  */
 export function operatorNeedsValue(operator: FilterOperator): boolean {
   const unary: FilterOperator[] = [
-    'is-empty', 'is-not-empty', 'is-checked', 'is-not-checked',
-    'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-this-year',
-    'is-past-week', 'is-past-month', 'is-past-year',
-    'is-next-week', 'is-next-month', 'is-next-year',
-    'is-overdue', 'is-upcoming',
+    "is-empty",
+    "is-not-empty",
+    "is-checked",
+    "is-not-checked",
+    "is-today",
+    "is-this-week",
+    "is-this-month",
+    "is-this-quarter",
+    "is-this-year",
+    "is-past-week",
+    "is-past-month",
+    "is-past-year",
+    "is-next-week",
+    "is-next-month",
+    "is-next-year",
+    "is-overdue",
+    "is-upcoming",
   ];
   return !unary.includes(operator);
 }
@@ -59,64 +119,66 @@ export function operatorNeedsValue(operator: FilterOperator): boolean {
  * Human-readable display labels for operators (Russian).
  */
 export const OPERATOR_LABELS: Record<FilterOperator, string> = {
-  'is-empty': 'Пусто',
-  'is-not-empty': 'Не пусто',
-  'is': 'Равно',
-  'is-any-of': 'Одно из',
-  'is-not': 'Не равно',
-  'contains': 'Содержит',
-  'not-contains': 'Не содержит',
-  'starts-with': 'Начинается с',
-  'ends-with': 'Заканчивается на',
-  'regex': 'Регулярное выражение',
-  'eq': '=',
-  'neq': '≠',
-  'lt': '<',
-  'gt': '>',
-  'lte': '≤',
-  'gte': '≥',
-  'is-checked': 'Отмечено',
-  'is-not-checked': 'Не отмечено',
-  'is-on': 'Дата =',
-  'is-not-on': 'Дата ≠',
-  'is-before': 'До',
-  'is-after': 'После',
-  'is-on-and-before': '≤ Дата',
-  'is-on-and-after': '≥ Дата',
-  'is-today': 'Сегодня',
-  'is-this-week': 'Эта неделя',
-  'is-this-month': 'Этот месяц',
-  'is-this-quarter': 'Этот квартал',
-  'is-this-year': 'Этот год',
-  'is-past-week': 'Прошлая неделя',
-  'is-past-month': 'Прошлый месяц',
-  'is-past-year': 'Прошлый год',
-  'is-next-week': 'Следующая неделя',
-  'is-next-month': 'Следующий месяц',
-  'is-next-year': 'Следующий год',
-  'is-last-n-days': 'За последние N дней',
-  'is-next-n-days': 'В ближайшие N дней',
-  'is-overdue': 'Просрочено',
-  'is-upcoming': 'Предстоящее',
-  'has-any-of': 'Любой из',
-  'has-all-of': 'Все из',
-  'has-none-of': 'Ни один из',
-  'has-keyword': 'Ключевое слово',
+  "is-empty": "Пусто",
+  "is-not-empty": "Не пусто",
+  is: "Равно",
+  "is-any-of": "Одно из",
+  "is-not": "Не равно",
+  contains: "Содержит",
+  "not-contains": "Не содержит",
+  "starts-with": "Начинается с",
+  "ends-with": "Заканчивается на",
+  regex: "Регулярное выражение",
+  eq: "=",
+  neq: "≠",
+  lt: "<",
+  gt: ">",
+  lte: "≤",
+  gte: "≥",
+  "is-checked": "Отмечено",
+  "is-not-checked": "Не отмечено",
+  "is-on": "Дата =",
+  "is-not-on": "Дата ≠",
+  "is-before": "До",
+  "is-after": "После",
+  "is-on-and-before": "≤ Дата",
+  "is-on-and-after": "≥ Дата",
+  "is-today": "Сегодня",
+  "is-this-week": "Эта неделя",
+  "is-this-month": "Этот месяц",
+  "is-this-quarter": "Этот квартал",
+  "is-this-year": "Этот год",
+  "is-past-week": "Прошлая неделя",
+  "is-past-month": "Прошлый месяц",
+  "is-past-year": "Прошлый год",
+  "is-next-week": "Следующая неделя",
+  "is-next-month": "Следующий месяц",
+  "is-next-year": "Следующий год",
+  "is-last-n-days": "За последние N дней",
+  "is-next-n-days": "В ближайшие N дней",
+  "is-overdue": "Просрочено",
+  "is-upcoming": "Предстоящее",
+  "has-any-of": "Любой из",
+  "has-all-of": "Все из",
+  "has-none-of": "Ни один из",
+  "has-keyword": "Ключевое слово",
 };
 
 /**
  * Get display label for operator
  */
 export function getOperatorLabel(op: FilterOperator): string {
-  return get(i18n).t(`components.filter.operators.${op}`, { defaultValue: OPERATOR_LABELS[op] ?? op });
+  return get(i18n).t(`components.filter.operators.${op}`, {
+    defaultValue: OPERATOR_LABELS[op] ?? op,
+  });
 }
 
 /**
  * Sort order display labels (Russian).
  */
 export const SORT_ORDER_LABELS: Record<string, string> = {
-  'asc': '↑ А–Я',
-  'desc': '↓ Я–А',
+  asc: "↑ А–Я",
+  desc: "↓ Я–А",
 };
 
 /**
@@ -130,18 +192,31 @@ export function getSortOrderLabel(order: string): string {
  * property table; extended for TABLE_V2_CANON §1 header icons). */
 export function getFieldIcon(fieldType: string): string {
   switch (fieldType) {
-    case 'string': return 'type';
-    case 'number': return 'hash';
-    case 'boolean': return 'check-square';
-    case 'date': return 'calendar';
-    case 'autotime': return 'clock';
-    case 'multitext': return 'layers';
-    case 'select': return 'list';
-    case 'status': return 'circle-dot';
-    case 'relation': return 'link';
-    case 'rollup': return 'sigma';
-    case 'formula': return 'function-square';
-    case 'uniqueid': return 'fingerprint';
-    default: return 'file-text';
+    case "string":
+      return "type";
+    case "number":
+      return "hash";
+    case "boolean":
+      return "check-square";
+    case "date":
+      return "calendar";
+    case "autotime":
+      return "clock";
+    case "multitext":
+      return "layers";
+    case "select":
+      return "list";
+    case "status":
+      return "circle-dot";
+    case "relation":
+      return "link";
+    case "rollup":
+      return "sigma";
+    case "formula":
+      return "function-square";
+    case "uniqueid":
+      return "fingerprint";
+    default:
+      return "file-text";
   }
 }

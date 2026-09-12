@@ -10,7 +10,9 @@ import type { ProjectDefinition } from "src/settings/settings";
 import type { DateFormatConfig } from "src/settings/v3/settings";
 
 // Mock project with minimal required fields
-const createMockProject = (dateFormat?: DateFormatConfig): ProjectDefinition => ({
+const createMockProject = (
+  dateFormat?: DateFormatConfig
+): ProjectDefinition => ({
   name: "Test Project",
   id: "test-project",
   fieldConfig: {},
@@ -99,7 +101,9 @@ describe("formatDateForProject", () => {
       preset: "us",
       includeTime: true,
     });
-    expect(formatDateForProject(dateWithTime, project)).toBe("01/18/2025 14:30");
+    expect(formatDateForProject(dateWithTime, project)).toBe(
+      "01/18/2025 14:30"
+    );
   });
 
   it("includes time with ISO format", () => {
@@ -109,7 +113,9 @@ describe("formatDateForProject", () => {
       preset: "iso",
       includeTime: true,
     });
-    expect(formatDateForProject(dateWithTime, project)).toBe("2025-01-18 09:15");
+    expect(formatDateForProject(dateWithTime, project)).toBe(
+      "2025-01-18 09:15"
+    );
   });
 
   it("handles custom format", () => {
@@ -186,7 +192,9 @@ describe("formatDateForDisplay", () => {
       displayFormat: "MMM DD, YYYY",
       includeTime: true,
     });
-    expect(formatDateForDisplay(dateWithTime, project)).toBe("Jan 18, 2025 16:45");
+    expect(formatDateForDisplay(dateWithTime, project)).toBe(
+      "Jan 18, 2025 16:45"
+    );
   });
 });
 

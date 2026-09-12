@@ -19,16 +19,16 @@ interface FakeListener {
 }
 
 function makeApp(
-  files: { path: string; frontmatter: Record<string, unknown> | null }[],
+  files: { path: string; frontmatter: Record<string, unknown> | null }[]
 ): { app: App; listeners: FakeListener[] } {
   const listeners: FakeListener[] = [];
   const fileCache = new Map(
     files.map((f) => [
       f.path,
       f.frontmatter ? { frontmatter: f.frontmatter } : null,
-    ]),
+    ])
   );
-  const tFiles = files.map((f) => ({ path: f.path } as unknown as TFile));
+  const tFiles = files.map((f) => ({ path: f.path }) as unknown as TFile);
 
   const app = {
     vault: {
@@ -78,10 +78,20 @@ describe("createInverseIndexStore", () => {
 
   it("rebuilds when the resolved event fires", () => {
     let frontmatter: Record<string, unknown> | null = null;
-    const dynamicFiles = [{ path: "A.md", get frontmatter() { return frontmatter; } }];
+    const dynamicFiles = [
+      {
+        path: "A.md",
+        get frontmatter() {
+          return frontmatter;
+        },
+      },
+    ];
     const listeners: FakeListener[] = [];
     const app = {
-      vault: { getMarkdownFiles: () => dynamicFiles.map((f) => ({ path: f.path } as unknown as TFile)) },
+      vault: {
+        getMarkdownFiles: () =>
+          dynamicFiles.map((f) => ({ path: f.path }) as unknown as TFile),
+      },
       metadataCache: {
         getFileCache: (file: TFile) => {
           if (file.path === "A.md" && frontmatter) return { frontmatter };
@@ -109,7 +119,10 @@ describe("createInverseIndexStore", () => {
 
   it("respects the keys option", () => {
     const { app } = makeApp([
-      { path: "A.md", frontmatter: { parent: "[[Root]]", links: ["[[Other]]"] } },
+      {
+        path: "A.md",
+        frontmatter: { parent: "[[Root]]", links: ["[[Other]]"] },
+      },
     ]);
     const store = createInverseIndexStore(app, { keys: ["parent"] });
     store.rebuild();

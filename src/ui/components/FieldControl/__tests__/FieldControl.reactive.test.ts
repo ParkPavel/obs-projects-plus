@@ -18,40 +18,65 @@
 jest.mock(
   "obsidian-svelte",
   () => ({
-    Autocomplete: class { $set() {} $destroy() {} },
-    NumberInput: class { $set() {} $destroy() {} },
-    Switch: class { $set() {} $destroy() {} },
-    Icon: class { $set() {} $destroy() {} },
+    Autocomplete: class {
+      $set() {}
+      $destroy() {}
+    },
+    NumberInput: class {
+      $set() {}
+      $destroy() {}
+    },
+    Switch: class {
+      $set() {}
+      $destroy() {}
+    },
+    Icon: class {
+      $set() {}
+      $destroy() {}
+    },
   }),
-  { virtual: true },
+  { virtual: true }
 );
 
 jest.mock(
   "src/ui/components/ColorPicker",
-  () => ({ ColorPicker: class { $set() {} $destroy() {} } }),
-  { virtual: true },
+  () => ({
+    ColorPicker: class {
+      $set() {}
+      $destroy() {}
+    },
+  }),
+  { virtual: true }
 );
 
 jest.mock(
   "src/ui/components/ImagePreview",
-  () => ({ ImagePreview: class { $set() {} $destroy() {} } }),
-  { virtual: true },
+  () => ({
+    ImagePreview: class {
+      $set() {}
+      $destroy() {}
+    },
+  }),
+  { virtual: true }
 );
 
 jest.mock(
   "src/ui/components/TagList",
-  () => ({ TagList: class { $set() {} $destroy() {} } }),
-  { virtual: true },
+  () => ({
+    TagList: class {
+      $set() {}
+      $destroy() {}
+    },
+  }),
+  { virtual: true }
 );
 
-jest.mock(
-  "src/ui/components/DateInput.svelte",
-  () => require("./mocks/DateInput.mock.svelte"),
+jest.mock("src/ui/components/DateInput.svelte", () =>
+  require("./mocks/DateInput.mock.svelte")
 );
 
-jest.mock(
-  "src/ui/components/DatetimeInput.svelte",
-  () => require("./mocks/DatetimeInput.mock.svelte"),
+jest.mock("src/ui/components/DatetimeInput.svelte", () =>
+  require("./mocks/DatetimeInput.mock.svelte")
 );
 
 import { DataFieldType } from "src/lib/dataframe/dataframe";
@@ -77,7 +102,15 @@ describe("FieldControl / reactive sync (REFACTOR-304)", () => {
         onChange,
       },
     });
-    return { component, target, onChange, destroy: () => { component.$destroy(); target.remove(); } };
+    return {
+      component,
+      target,
+      onChange,
+      destroy: () => {
+        component.$destroy();
+        target.remove();
+      },
+    };
   }
 
   it("re-derives cachedValue when parent updates value prop", async () => {
@@ -93,7 +126,9 @@ describe("FieldControl / reactive sync (REFACTOR-304)", () => {
     // scenario). The mocked DateInput exposes a button that dispatches
     // `blur` directly so the on:blur handler calls onChange with the
     // currently-cached value.
-    const btn = target.querySelector<HTMLButtonElement>("[data-testid='blur-only']");
+    const btn = target.querySelector<HTMLButtonElement>(
+      "[data-testid='blur-only']"
+    );
     if (!btn) throw new Error("DateInput mock missing blur trigger");
     btn.click();
 
@@ -105,10 +140,14 @@ describe("FieldControl / reactive sync (REFACTOR-304)", () => {
   });
 
   it("falls back to null when parent updates to a non-date value", async () => {
-    const { component, target, onChange, destroy } = mount(new Date(2026, 0, 15));
+    const { component, target, onChange, destroy } = mount(
+      new Date(2026, 0, 15)
+    );
     component.$set({ value: null });
     await Promise.resolve();
-    const btn = target.querySelector<HTMLButtonElement>("[data-testid='blur-only']");
+    const btn = target.querySelector<HTMLButtonElement>(
+      "[data-testid='blur-only']"
+    );
     if (!btn) throw new Error("DateInput mock missing blur trigger");
     btn.click();
     expect(onChange).toHaveBeenCalledWith(null);

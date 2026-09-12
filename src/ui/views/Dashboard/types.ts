@@ -1,5 +1,8 @@
 import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
-import type { FilterOperator, FilterDefinition } from "src/settings/base/settings";
+import type {
+  FilterOperator,
+  FilterDefinition,
+} from "src/settings/base/settings";
 import type { DataSource } from "src/settings/v3/settings";
 
 // ── Widget Types ──────────────────────────────────────────────
@@ -337,22 +340,15 @@ export interface ToggleFormulaQuickAction {
 }
 
 /**
- * #191 — a union of one, and deliberately still a union.
+ * #191 — `ApplyTemplateQuickAction` is gone with the dashboard template
+ * mechanism. Unlike `DataTableConfig.subBases`, which is carried untouched
+ * because dropping it would make real user data unmodellable, this member
+ * described a button OUR migration generated pointing at OUR mechanism: no
+ * user data is unmodellable without it. Stored ones are removed on read by
+ * `dropTemplateQuickActions` in `migration.ts`.
  *
- * `ApplyTemplateQuickAction` left when dashboard templates were removed. The
- * alias stays because the concept is "a quick action", which is extensible;
- * collapsing it to the interface would say the opposite.
- *
- * Removing the member is what makes the deletion complete rather than hopeful:
- * `migration.ts` could not compile until it stopped generating the artefact,
- * and nothing can reintroduce `kind: "apply-template"` without the compiler
- * objecting. That is stronger and cheaper than any text scan.
- *
- * The `DataTableConfig.subBases` precedent does NOT apply here, and the
- * difference matters: that key is carried untouched because removing it would
- * make existing user data unmodellable. This was never user data — it was a
- * button our own migration generated, pointing at our own mechanism. The
- * mechanism goes, so the button goes with it.
+ * A one-member union on purpose: it is what makes the compiler refuse to
+ * re-create the artefact anywhere, which is cheaper than a grep ratchet.
  */
 export type QuickActionConfig = ToggleFormulaQuickAction;
 

@@ -11,45 +11,42 @@ import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
 import type { BulkFieldWriteOutcome, DataApi } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
-import { noticeFor } from "src/lib/errors/errorText";
-
-/**
- * #202 — the codes this module can raise, named once at the top so a number a
- * user quotes greps straight to the line that raised it. The words live in the
- * registry; these are only the tokens.
- */
-const RECORD_WRITE_FAILED = "PPP-201";
-const RECORDS_WRITE_FAILED = "PPP-202";
-const RECORD_FILE_MISSING = "PPP-203";
-const FIELD_WRITE_PARTIAL = "PPP-204";
-/** Raised here, but a relations event to the user, so it lives in 5xx. */
-const INVERSE_WRITE_FAILED = "PPP-501";
 import type { DataSource } from "./datasources";
 import { app } from "./stores/obsidian";
+import { i18n } from "./stores/i18n";
 import { writeInverseRelations } from "./relations/relationsWriter";
 import { adaptRelationFieldConfig } from "./relations/relationContract";
 import type { RelationFieldConfig } from "src/settings/base/settings";
 
-const EMPTY_BULK_WRITE: BulkFieldWriteOutcome = { written: 0, failed: [], missing: [] };
+const EMPTY_BULK_WRITE: BulkFieldWriteOutcome = {
+  written: 0,
+  failed: [],
+  missing: [],
+};
 
 /**
  * #144 — tells the user when a schema write did not reach every note. Silent on
  * success: a Notice per successful field write would be noise, and the column
  * appearing is already the confirmation.
  */
-function reportBulkFieldWrite(outcome: BulkFieldWriteOutcome, fieldName: string): void {
+function reportBulkFieldWrite(
+  outcome: BulkFieldWriteOutcome,
+  fieldName: string
+): void {
   const unwritten = outcome.failed.length + outcome.missing.length;
   if (unwritten === 0) return;
 
   new Notice(
-    noticeFor(FIELD_WRITE_PARTIAL, {
+    get(i18n).t("errors.fieldWritePartial", {
+      defaultValue:
+        "'{{field}}' was written to {{written}} notes; {{unwritten}} could not be updated. See the console for the list.",
       field: fieldName,
       written: outcome.written,
       unwritten,
     })
   );
   console.error(
-    `[Projects+] field '${fieldName}': ${outcome.failed.length} write(s) failed, ` +
+    `[obs-projects-plus] field '${fieldName}': ${outcome.failed.length} write(s) failed, ` +
       `${outcome.missing.length} path(s) not found`,
     { failed: outcome.failed, missing: outcome.missing }
   );
@@ -67,7 +64,9 @@ export class ViewApi {
      * correlation widgets (JoinStep, ScatterConfig.correlation). Returns
      * `null` if the requested source cannot be loaded.
      */
-    readonly resolveExternalFrame?: (projectId: string) => Promise<DataFrame | null>
+    readonly resolveExternalFrame?: (
+      projectId: string
+    ) => Promise<DataFrame | null>
   ) {}
 
   addRecord(record: DataRecord, fields: DataField[], templatePath: string) {
@@ -82,8 +81,13 @@ export class ViewApi {
    * the note is gone. #161: callers that keep their own copy of the frame must
    * not mirror a value that was rolled back here.
    */
-  async updateRecord(record: DataRecord, fields: DataField[]): Promise<boolean> {
-    const oldRecord = get(dataFrame).records.find((candidate) => candidate.id === record.id);
+  async updateRecord(
+    record: DataRecord,
+    fields: DataField[]
+  ): Promise<boolean> {
+    const oldRecord = get(dataFrame).records.find(
+      (candidate) => candidate.id === record.id
+    );
     const optimistic = this.dataSource.includes(record.id);
     if (optimistic) {
       dataFrame.updateRecord(record);
@@ -94,7 +98,13 @@ export class ViewApi {
         // The note is gone. Silently keeping the optimistic value would show a
         // number that exists nowhere on disk.
         this.revertOptimistic(optimistic, record, oldRecord);
-        new Notice(noticeFor(RECORD_FILE_MISSING, { path: record.id }));
+        new Notice(
+          get(i18n).t("errors.recordFileMissing", {
+            defaultValue:
+              "{{path}} no longer exists; the change was not saved.",
+            path: record.id,
+          })
+        );
         return false;
       }
     } catch (error) {
@@ -104,8 +114,18 @@ export class ViewApi {
       // sites do not await this, and an unhandled rejection would replace a
       // visible message with a console entry.
       this.revertOptimistic(optimistic, record, oldRecord);
-      new Notice(noticeFor(RECORD_WRITE_FAILED, { path: record.id }));
-      console.error("[Projects+] record write failed:", record.id, error);
+      new Notice(
+        get(i18n).t("errors.recordWriteFailed", {
+          defaultValue:
+            "Could not save changes to {{path}}; the previous value was restored.",
+          path: record.id,
+        })
+      );
+      console.error(
+        "[obs-projects-plus] record write failed:",
+        record.id,
+        error
+      );
       return false;
     }
 
@@ -146,7 +166,10 @@ export class ViewApi {
    * Returns false when the batch did not reach disk. Not rethrown, for the same
    * reason as `updateRecord`: several call sites do not await.
    */
-  async updateRecords(records: DataRecord[], fields: DataField[]): Promise<boolean> {
+  async updateRecords(
+    records: DataRecord[],
+    fields: DataField[]
+  ): Promise<boolean> {
     const rs = records.filter((r) => this.dataSource.includes(r.id));
     const previous = get(dataFrame).records.filter((candidate) =>
       rs.some((r) => r.id === candidate.id)
@@ -165,8 +188,14 @@ export class ViewApi {
         return attempted !== undefined && current.includes(attempted);
       });
       if (untouched.length > 0) dataFrame.updateRecords(untouched);
-      new Notice(noticeFor(RECORDS_WRITE_FAILED, { count: rs.length }));
-      console.error("[Projects+] batch record write failed", error);
+      new Notice(
+        get(i18n).t("errors.recordsWriteFailed", {
+          defaultValue:
+            "Could not save {{count}} record(s); the previous values were restored.",
+          count: rs.length,
+        })
+      );
+      console.error("[obs-projects-plus] batch record write failed", error);
       return false;
     }
   }
@@ -201,7 +230,10 @@ export class ViewApi {
     return outcome;
   }
 
-  async updateField(field: DataField, oldName?: string): Promise<BulkFieldWriteOutcome> {
+  async updateField(
+    field: DataField,
+    oldName?: string
+  ): Promise<BulkFieldWriteOutcome> {
     dataFrame.updateField(field, oldName);
 
     if (!oldName) return EMPTY_BULK_WRITE;
@@ -237,20 +269,32 @@ async function fireInverseRelations(
   const relFields = fields.filter(
     (f) =>
       f.type === DataFieldType.Relation &&
-      (f.typeConfig as { relation?: RelationFieldConfig } | undefined)?.relation?.inverseFieldName
+      (f.typeConfig as { relation?: RelationFieldConfig } | undefined)?.relation
+        ?.inverseFieldName
   );
   if (relFields.length === 0) return;
 
   const outcomes = await Promise.all(
     relFields.map(async (f) => {
-      const cfg = (f.typeConfig as { relation?: RelationFieldConfig }).relation!;
+      const cfg = (f.typeConfig as { relation?: RelationFieldConfig })
+        .relation!;
       const outcome = await writeInverseRelations({
         sourceRecordId: oldRecord.id,
         fieldName: f.name,
         fieldConfig: cfg,
-        newValue: newRecord.values[f.name] as string | string[] | null | undefined,
-        oldValue: oldRecord.values[f.name] as string | string[] | null | undefined,
-        createIfMissing: adaptRelationFieldConfig("", f.name, cfg).inverse?.createIfMissing ?? false,
+        newValue: newRecord.values[f.name] as
+          | string
+          | string[]
+          | null
+          | undefined,
+        oldValue: oldRecord.values[f.name] as
+          | string
+          | string[]
+          | null
+          | undefined,
+        createIfMissing:
+          adaptRelationFieldConfig("", f.name, cfg).inverse?.createIfMissing ??
+          false,
         app: obsApp,
       });
       return { field: f.name, outcome };
@@ -263,9 +307,18 @@ async function fireInverseRelations(
   // *derived*, so a missing property on the target is normal and stays quiet;
   // a write that actually failed, or a target that cannot be found, is not.
   for (const { field, outcome } of outcomes) {
-    const real = outcome.issues.filter((issue) => issue.code !== "inverse-field-missing");
+    const real = outcome.issues.filter(
+      (issue) => issue.code !== "inverse-field-missing"
+    );
     if (real.length === 0) continue;
-    console.error(`[Projects+] inverse write for '${field}'`, real);
-    new Notice(noticeFor(INVERSE_WRITE_FAILED, { field, count: real.length }));
+    console.error(`[obs-projects-plus] inverse write for '${field}'`, real);
+    new Notice(
+      get(i18n).t("errors.inverseWriteFailed", {
+        defaultValue:
+          "The back-link for '{{field}}' could not be written to {{count}} note(s). See the console.",
+        field,
+        count: real.length,
+      })
+    );
   }
 }

@@ -85,7 +85,11 @@ describe("#144 DataApi reports the outcome of a bulk field write", () => {
     // The old Promise.all rejected here and the rejection was voided by the
     // caller: the second note was written, the first was not, nobody was told.
     const files = {
-      "Clients/locked.md": new MemoryFile("Clients/locked.md", note("locked"), true),
+      "Clients/locked.md": new MemoryFile(
+        "Clients/locked.md",
+        note("locked"),
+        true
+      ),
       "Clients/ok.md": new MemoryFile("Clients/ok.md", note("ok")),
     };
     const api = new DataApi(fileSystemOf(files));
@@ -116,7 +120,11 @@ describe("#144 DataApi reports the outcome of a bulk field write", () => {
   it("rename and delete report the same way — the hole was identical", async () => {
     const files = {
       "Clients/a.md": new MemoryFile("Clients/a.md", note("a")),
-      "Clients/locked.md": new MemoryFile("Clients/locked.md", note("locked"), true),
+      "Clients/locked.md": new MemoryFile(
+        "Clients/locked.md",
+        note("locked"),
+        true
+      ),
     };
     const api = new DataApi(fileSystemOf(files));
 

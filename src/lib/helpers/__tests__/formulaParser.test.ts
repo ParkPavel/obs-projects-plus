@@ -15,8 +15,10 @@ import {
 } from "src/lib/helpers/formulaParser";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 
-const rec = (values: Record<string, unknown>): DataRecord =>
-  ({ id: "x", values: values as DataRecord["values"] });
+const rec = (values: Record<string, unknown>): DataRecord => ({
+  id: "x",
+  values: values as DataRecord["values"],
+});
 
 describe("formulaParser", () => {
   describe("tokenize", () => {
@@ -40,7 +42,9 @@ describe("formulaParser", () => {
     });
     test("operator tokens", () => {
       const t = tokenize("a >= 5");
-      expect(t.some((tk) => tk.type === "OPERATOR" && tk.value === ">=")).toBe(true);
+      expect(t.some((tk) => tk.type === "OPERATOR" && tk.value === ">=")).toBe(
+        true
+      );
     });
   });
 
@@ -105,7 +109,7 @@ describe("formulaParser", () => {
       }
     });
     test("nested function call", () => {
-      const ast = parseFormula("OR(IS_EMPTY(due), CONTAINS(tags, \"x\"))");
+      const ast = parseFormula('OR(IS_EMPTY(due), CONTAINS(tags, "x"))');
       expect(ast.type).toBe("function");
     });
     test("field reference", () => {
@@ -145,7 +149,9 @@ describe("formulaParser", () => {
     });
     test("CONTAINS case-insensitive", () => {
       const ast = parseFormula('CONTAINS(title, "URGENT")');
-      expect(evaluateFormula(ast, rec({ title: "Very urgent task" }))).toBe(true);
+      expect(evaluateFormula(ast, rec({ title: "Very urgent task" }))).toBe(
+        true
+      );
     });
     test("STARTS_WITH", () => {
       const ast = parseFormula('STARTS_WITH(name, "Pro")');
@@ -188,7 +194,7 @@ describe("formulaParser", () => {
 
   describe("validateFormula", () => {
     test("returns no errors for valid formula with known fields", () => {
-      const errors = validateFormula("status = \"x\"", ["status"]);
+      const errors = validateFormula('status = "x"', ["status"]);
       expect(errors).toEqual([]);
     });
     test("reports unknown field", () => {

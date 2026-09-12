@@ -17,26 +17,38 @@ const file = { path: "Note.md" } as unknown as TFile;
 describe("writeOverlay", () => {
   it("returns false when host lacks processFrontMatter", async () => {
     const app = makeApp();
-    const ok = await writeOverlay(app, file, { hidden: [], pinned: [], order: [] });
+    const ok = await writeOverlay(app, file, {
+      hidden: [],
+      pinned: [],
+      order: [],
+    });
     expect(ok).toBe(false);
   });
 
   it("removes pp_overlay when the overlay is empty", async () => {
     const fm: Record<string, unknown> = { [OVERLAY_KEY]: { hidden: ["x"] } };
-    const processFn = jest.fn(async (_f: TFile, mutate: (m: Record<string, unknown>) => void) => {
-      mutate(fm);
-    });
+    const processFn = jest.fn(
+      async (_f: TFile, mutate: (m: Record<string, unknown>) => void) => {
+        mutate(fm);
+      }
+    );
     const app = makeApp(processFn);
-    const ok = await writeOverlay(app, file, { hidden: [], pinned: [], order: [] });
+    const ok = await writeOverlay(app, file, {
+      hidden: [],
+      pinned: [],
+      order: [],
+    });
     expect(ok).toBe(true);
     expect(fm[OVERLAY_KEY]).toBeUndefined();
   });
 
   it("writes a compacted overlay (omits empty arrays)", async () => {
     const fm: Record<string, unknown> = {};
-    const processFn = jest.fn(async (_f: TFile, mutate: (m: Record<string, unknown>) => void) => {
-      mutate(fm);
-    });
+    const processFn = jest.fn(
+      async (_f: TFile, mutate: (m: Record<string, unknown>) => void) => {
+        mutate(fm);
+      }
+    );
     const app = makeApp(processFn);
     const ok = await writeOverlay(app, file, {
       hidden: ["color"],
@@ -49,9 +61,11 @@ describe("writeOverlay", () => {
 
   it("preserves all three lists when populated", async () => {
     const fm: Record<string, unknown> = { other: "untouched" };
-    const processFn = jest.fn(async (_f: TFile, mutate: (m: Record<string, unknown>) => void) => {
-      mutate(fm);
-    });
+    const processFn = jest.fn(
+      async (_f: TFile, mutate: (m: Record<string, unknown>) => void) => {
+        mutate(fm);
+      }
+    );
     const app = makeApp(processFn);
     await writeOverlay(app, file, {
       hidden: ["a"],

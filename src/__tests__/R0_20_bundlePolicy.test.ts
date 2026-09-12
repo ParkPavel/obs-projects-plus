@@ -21,7 +21,9 @@ import * as path from "path";
 const ROOT = path.resolve(__dirname, "..", "..");
 
 /** Attribute lines, comments and blanks removed. */
-export function attributeRules(text: string): Array<{ pattern: string; attrs: string[] }> {
+export function attributeRules(
+  text: string
+): Array<{ pattern: string; attrs: string[] }> {
   return text
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -50,8 +52,14 @@ describe("R0.20 — the tree", () => {
     const rules = attributeRules(fs.readFileSync(file, "utf8"));
     for (const pattern of ["main.js", "styles.css", "releases/*/main.js"]) {
       const rule = rules.find((r) => r.pattern === pattern);
-      expect({ pattern, found: rule !== undefined }).toEqual({ pattern, found: true });
-      expect({ pattern, merge: rule?.attrs.includes("-merge") }).toEqual({ pattern, merge: true });
+      expect({ pattern, found: rule !== undefined }).toEqual({
+        pattern,
+        found: true,
+      });
+      expect({ pattern, merge: rule?.attrs.includes("-merge") }).toEqual({
+        pattern,
+        merge: true,
+      });
     }
   });
 
@@ -68,8 +76,14 @@ describe("R0.20 — the tree", () => {
     // If a workflow ever started depending on the committed file, a stale
     // commit would ship as a release.
     for (const wf of ["ci.yml", "release.yml"]) {
-      const text = fs.readFileSync(path.join(ROOT, ".github", "workflows", wf), "utf8");
-      expect({ wf, builds: /npm run build/.test(text) }).toEqual({ wf, builds: true });
+      const text = fs.readFileSync(
+        path.join(ROOT, ".github", "workflows", wf),
+        "utf8"
+      );
+      expect({ wf, builds: /npm run build/.test(text) }).toEqual({
+        wf,
+        builds: true,
+      });
     }
   });
 });

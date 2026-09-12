@@ -93,6 +93,8 @@ describe("#184 — the PRIMARY source keeps its identity through every edit", ()
   });
 
   it("the primary source also carries a name across a kind change", () => {
-    expect(EDITOR).toMatch(/\.\.\.\(previous\?\.name \? \{ name: previous\.name \} : \{\}\)/);
+    expect(EDITOR).toMatch(
+      /\.\.\.\(previous\?\.name \? \{ name: previous\.name \} : \{\}\)/
+    );
   });
 });

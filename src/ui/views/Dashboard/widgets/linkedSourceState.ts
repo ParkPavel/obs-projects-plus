@@ -11,16 +11,31 @@
 // instead of receiving a frame that might be someone else's.
 
 import type { DataFrame } from "src/lib/dataframe/dataframe";
-import type { WidgetDefinition, WidgetDataContext, WidgetSourceConfig, LinkedSelectionConfig, ChartConfig, StatsConfig } from "../types";
+import type {
+  WidgetDefinition,
+  WidgetDataContext,
+  WidgetSourceConfig,
+  LinkedSelectionConfig,
+  ChartConfig,
+  StatsConfig,
+} from "../types";
 import type { ExternalSourceState } from "../dashboardPreload";
 
 export type BlockSource =
   /** No external source configured: the block reads the host's own frame. */
   | { readonly kind: "parent"; readonly frame: DataFrame }
   | { readonly kind: "loading"; readonly projectId: string }
-  | { readonly kind: "ready"; readonly projectId: string; readonly frame: DataFrame }
+  | {
+      readonly kind: "ready";
+      readonly projectId: string;
+      readonly frame: DataFrame;
+    }
   | { readonly kind: "unavailable"; readonly projectId: string }
-  | { readonly kind: "error"; readonly projectId: string; readonly message: string };
+  | {
+      readonly kind: "error";
+      readonly projectId: string;
+      readonly message: string;
+    };
 
 /**
  * Resolve what this block reads.
@@ -39,8 +54,10 @@ export function resolveBlockSource(
   if (!projectId) return { kind: "parent", frame: parentFrame };
 
   const state = states.get(projectId);
-  if (!state || state.status === "loading") return { kind: "loading", projectId };
-  if (state.status === "ready") return { kind: "ready", projectId, frame: state.frame };
+  if (!state || state.status === "loading")
+    return { kind: "loading", projectId };
+  if (state.status === "ready")
+    return { kind: "ready", projectId, frame: state.frame };
   if (state.status === "error") {
     return { kind: "error", projectId, message: state.message };
   }
@@ -74,7 +91,10 @@ export function blockFrame(source: BlockSource): DataFrame | null {
  * satisfied without the caller reaching for the parent's frame again, which is
  * the defect this module was written to remove.
  */
-const EMPTY_FRAME: DataFrame = { fields: [], records: [] } as unknown as DataFrame;
+const EMPTY_FRAME: DataFrame = {
+  fields: [],
+  records: [],
+} as unknown as DataFrame;
 
 /** {@link blockFrame}, with the empty stand-in instead of null. */
 export function blockFrameOrEmpty(source: BlockSource): DataFrame {
@@ -105,7 +125,11 @@ export function resolveDbCallView(
 ): DbCallView {
   const isDbCall = widget.type === "database-call";
   const sourceConfig = isDbCall ? widget.sourceConfig : undefined;
-  const source = resolveBlockSource(sourceConfig?.projectId, states, transformedFrame);
+  const source = resolveBlockSource(
+    sourceConfig?.projectId,
+    states,
+    transformedFrame
+  );
   return {
     sourceConfig,
     source,
@@ -124,11 +148,17 @@ export function resolveDbCallView(
 // than inline in the host, which has a LOC budget it earns by not accumulating
 // helpers like these.
 
-export function asChartConfig(cfg: Record<string, unknown>): ChartConfig | null {
-  return cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
+export function asChartConfig(
+  cfg: Record<string, unknown>
+): ChartConfig | null {
+  return cfg && "chartType" in cfg && "xAxis" in cfg
+    ? (cfg as unknown as ChartConfig)
+    : null;
 }
 
-export function asStatsConfig(cfg: Record<string, unknown>): StatsConfig | null {
+export function asStatsConfig(
+  cfg: Record<string, unknown>
+): StatsConfig | null {
   return cfg && "cards" in cfg ? (cfg as unknown as StatsConfig) : null;
 }
 
@@ -145,6 +175,7 @@ export function chartRightFrameOf(
   rightFrames: ReadonlyMap<string, DataFrame>
 ): DataFrame | null {
   if (type !== "chart" || !chartConfig) return null;
-  const id = (chartConfig as { correlation?: { rightSourceId?: string } }).correlation?.rightSourceId;
-  return id ? rightFrames.get(id) ?? null : null;
+  const id = (chartConfig as { correlation?: { rightSourceId?: string } })
+    .correlation?.rightSourceId;
+  return id ? (rightFrames.get(id) ?? null) : null;
 }

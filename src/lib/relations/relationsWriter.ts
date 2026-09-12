@@ -55,8 +55,12 @@ export async function writeInverseRelations(
   const inverseField = fieldConfig.inverseFieldName;
   const sourceLink = `[[${sourceRecordId}]]`;
   const outcomes = await Promise.all([
-    ...added.map((targetLink) => writeOne("add", targetLink, ctx, inverseField, sourceLink)),
-    ...removed.map((targetLink) => writeOne("remove", targetLink, ctx, inverseField, sourceLink)),
+    ...added.map((targetLink) =>
+      writeOne("add", targetLink, ctx, inverseField, sourceLink)
+    ),
+    ...removed.map((targetLink) =>
+      writeOne("remove", targetLink, ctx, inverseField, sourceLink)
+    ),
   ]);
   return outcomes.reduce<RelationWriteOutcome>(
     (result, outcome) => ({
@@ -96,7 +100,10 @@ async function writeOne(
     let inverseFieldMissing = false;
     let changed = false;
     await ctx.app.fileManager.processFrontMatter(file, (frontmatter) => {
-      inverseFieldMissing = !Object.prototype.hasOwnProperty.call(frontmatter, inverseField);
+      inverseFieldMissing = !Object.prototype.hasOwnProperty.call(
+        frontmatter,
+        inverseField
+      );
       if (inverseFieldMissing && !ctx.createIfMissing) return;
 
       const current = normalizeFmList(frontmatter[inverseField]);
@@ -127,13 +134,19 @@ async function writeOne(
   }
 }
 
-function resolveFile(app: App, nameOrLink: string, sourcePath: string): TFile | null {
+function resolveFile(
+  app: App,
+  nameOrLink: string,
+  sourcePath: string
+): TFile | null {
   const bare = stripWikiLink(nameOrLink);
   const byPath = app.vault.getAbstractFileByPath(bare);
   if (byPath instanceof TFile) return byPath;
   const metadataCache = (
     app as unknown as {
-      metadataCache?: { getFirstLinkpathDest?(path: string, source: string): TFile | null };
+      metadataCache?: {
+        getFirstLinkpathDest?(path: string, source: string): TFile | null;
+      };
     }
   ).metadataCache;
   return metadataCache?.getFirstLinkpathDest?.(bare, sourcePath) ?? null;
@@ -158,6 +171,13 @@ function issueOutcome(
   return {
     added: [],
     removed: [],
-    issues: [{ operation, targetLink, code, ...(error === undefined ? {} : { error }) }],
+    issues: [
+      {
+        operation,
+        targetLink,
+        code,
+        ...(error === undefined ? {} : { error }),
+      },
+    ],
   };
 }

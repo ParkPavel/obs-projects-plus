@@ -7,7 +7,10 @@ import type { App } from "obsidian";
 import type { DataviewApi } from "obsidian-dataview";
 import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
-import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/settings";
+import type {
+  ProjectDefinition,
+  ProjectsPluginPreferences,
+} from "src/settings/settings";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { createDataSource } from "src/lib/datasources";
 
@@ -33,7 +36,10 @@ function warnThrottled(projectId: string, err: unknown): void {
   if (now - last < WARN_THROTTLE_MS) return;
   recentWarnings.set(projectId, now);
   // eslint-disable-next-line no-console
-  console.warn(`[Projects+] resolveExternalFrame(${projectId}) failed`, err);
+  console.warn(
+    `[obs-projects-plus] resolveExternalFrame(${projectId}) failed`,
+    err
+  );
 }
 
 /** Non-derived Relation fields, the ones backlink enrichment is defined over. */

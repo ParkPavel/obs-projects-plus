@@ -22,7 +22,10 @@ export function widgetScopeFilter(
 }
 
 /** Every field name the definition references, groups included. */
-function referencedFields(filter: FilterDefinition, out: Set<string> = new Set()): Set<string> {
+function referencedFields(
+  filter: FilterDefinition,
+  out: Set<string> = new Set()
+): Set<string> {
   for (const condition of filter.conditions ?? []) {
     if (condition?.field) out.add(condition.field);
   }
@@ -44,7 +47,10 @@ function referencedFields(filter: FilterDefinition, out: Set<string> = new Set()
  * for the block to apply after the transform, exactly as it did before. Found by
  * cross-model review (Codex, 2026-08-25).
  */
-export function scopeIsEvaluableOn(filter: FilterDefinition, frame: DataFrame): boolean {
+export function scopeIsEvaluableOn(
+  filter: FilterDefinition,
+  frame: DataFrame
+): boolean {
   const available = new Set(frame.fields.map((f) => f.name));
   for (const name of referencedFields(filter)) {
     if (!available.has(name)) return false;

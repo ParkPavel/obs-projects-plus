@@ -73,11 +73,23 @@ import {
  */
 export type NamedSourceView =
   /** Showing this source, or the whole project when none was named. */
-  | { readonly kind: "ok"; readonly frame: DataFrame; readonly label: string | undefined }
+  | {
+      readonly kind: "ok";
+      readonly frame: DataFrame;
+      readonly label: string | undefined;
+    }
   /** Resolved correctly, and nothing is in it. A real answer. */
-  | { readonly kind: "empty"; readonly frame: DataFrame; readonly label: string }
+  | {
+      readonly kind: "empty";
+      readonly frame: DataFrame;
+      readonly label: string;
+    }
   /** Cannot be resolved: what it reads from is gone. */
-  | { readonly kind: "broken"; readonly reason: string; readonly label: string };
+  | {
+      readonly kind: "broken";
+      readonly reason: string;
+      readonly label: string;
+    };
 
 export interface NamedSourceInput {
   /**
@@ -138,7 +150,10 @@ export function resolveNamedSource(input: NamedSourceInput): NamedSourceView {
 
   // Derived FIRST — see "Order trap 1". A saved filter is never in `parts`.
   if (stored && stored.kind === "derived") {
-    const resolved = resolveDerived(stored as DerivedDataSource, { enriched, parts });
+    const resolved = resolveDerived(stored as DerivedDataSource, {
+      enriched,
+      parts,
+    });
     switch (resolved.kind) {
       case "ok":
         return { kind: "ok", frame: resolved.frame, label };
@@ -149,7 +164,11 @@ export function resolveNamedSource(input: NamedSourceInput): NamedSourceView {
         // for an absent frame, and `enriched` above is required. Kept as a
         // total branch rather than a cast, so that if the precondition ever
         // changes this is where it surfaces instead of silently rendering.
-        return { kind: "broken", reason: "the project frame has not resolved", label };
+        return {
+          kind: "broken",
+          reason: "the project frame has not resolved",
+          label,
+        };
       case "broken":
         return { kind: "broken", reason: resolved.reason, label };
     }
@@ -168,7 +187,10 @@ export function resolveNamedSource(input: NamedSourceInput): NamedSourceView {
     };
   }
 
-  const frame = intersect(enriched, selectSourceFrame(enriched, parts, sourceId));
+  const frame = intersect(
+    enriched,
+    selectSourceFrame(enriched, parts, sourceId)
+  );
   return frame.records.length > 0
     ? { kind: "ok", frame, label }
     : { kind: "empty", frame, label };
@@ -186,7 +208,12 @@ export function buildDerivedSource(
   where: FilterDefinition,
   id: string
 ): DerivedDataSource {
-  return { kind: "derived", id, name: name.trim(), config: { from: "project", where } };
+  return {
+    kind: "derived",
+    id,
+    name: name.trim(),
+    config: { from: "project", where },
+  };
 }
 
 /** A source a block can actually be pointed at, with the name to show for it. */
@@ -215,11 +242,20 @@ export interface ProjectSourceOptions {
 export function projectSourceOptions(
   project: ProjectDefinition | undefined
 ): ProjectSourceOptions {
-  const sources = project ? [project.dataSource, ...(project.additionalSources ?? [])] : [];
+  const sources = project
+    ? [project.dataSource, ...(project.additionalSources ?? [])]
+    : [];
   const pickable = sources
-    .filter((s): s is StoredDataSource & { id: string } => typeof (s as { id?: string }).id === "string")
+    .filter(
+      (s): s is StoredDataSource & { id: string } =>
+        typeof (s as { id?: string }).id === "string"
+    )
     .map((s) => ({ id: s.id, label: sourceLabel(s) }));
-  return { sources, pickable, hasUnaddressable: pickable.length < sources.length };
+  return {
+    sources,
+    pickable,
+    hasUnaddressable: pickable.length < sources.length,
+  };
 }
 
 /**
@@ -241,5 +277,7 @@ export function sourceNameTaken(
 ): boolean {
   const wanted = name.trim().toLocaleLowerCase();
   if (!wanted) return false;
-  return sources.some((s) => sourceLabel(s).trim().toLocaleLowerCase() === wanted);
+  return sources.some(
+    (s) => sourceLabel(s).trim().toLocaleLowerCase() === wanted
+  );
 }

@@ -22,8 +22,16 @@
 // Invariant: any new dataFrame mutator MUST call `notifyDataFrameInvalidation()`
 // at its top, otherwise this cache can return stale data on the next pipeline call.
 
-import type { DataFrame, DataField, DataRecord } from "src/lib/dataframe/dataframe";
-import type { TransformPipeline, TransformResult, TransformContext } from "./transformTypes";
+import type {
+  DataFrame,
+  DataField,
+  DataRecord,
+} from "src/lib/dataframe/dataframe";
+import type {
+  TransformPipeline,
+  TransformResult,
+  TransformContext,
+} from "./transformTypes";
 import { executeTransform } from "./transformExecutor";
 
 interface CacheEntry {
@@ -54,7 +62,7 @@ export function executeTransformCached(
   const now = Date.now();
 
   const existing = cache.get(key);
-  if (existing && (now - existing.timestamp) < CACHE_TTL_MS) {
+  if (existing && now - existing.timestamp < CACHE_TTL_MS) {
     return existing.result;
   }
 
@@ -162,7 +170,10 @@ function hashDataFrame(df: DataFrame): string {
   return simpleHash(`${fieldSig}|${count}${sampleSig}`);
 }
 
-function sampleValues(record: DataRecord, fields: readonly DataField[]): string {
+function sampleValues(
+  record: DataRecord,
+  fields: readonly DataField[]
+): string {
   // Sample up to 5 field values for hash
   const maxFields = Math.min(fields.length, 5);
   const parts: string[] = [];
@@ -181,7 +192,7 @@ function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const chr = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
+    hash = (hash << 5) - hash + chr;
     hash |= 0; // Convert to 32bit integer
   }
   return hash.toString(36);

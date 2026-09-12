@@ -18,7 +18,11 @@
 // inert by design.
 
 import type { ComponentType } from "svelte";
-import type { DataFrame, DataRecord, DataField } from "src/lib/dataframe/dataframe";
+import type {
+  DataFrame,
+  DataRecord,
+  DataField,
+} from "src/lib/dataframe/dataframe";
 import type { ViewApi } from "src/lib/viewApi";
 import type { ProjectDefinition } from "src/settings/settings";
 import type {
@@ -71,7 +75,9 @@ export interface WidgetRenderContext {
   readonly dbCallFields: DataField[];
   readonly dbCallSourceConfig: WidgetSourceConfig | undefined;
   readonly dbCallLinkedSelection: LinkedSelectionConfig | undefined;
-  readonly dbCallLinkedSelectionValidation: LegacyLinkedSelectionStatus | undefined;
+  readonly dbCallLinkedSelectionValidation:
+    | LegacyLinkedSelectionStatus
+    | undefined;
   /**
    * #118: true when the host already narrowed the frame by `config.subFilter`
    * ahead of the transform pipeline (axis A of the canonical A→C→B order), so
@@ -105,7 +111,11 @@ export interface ContentEntry {
   /** When false, the host renders the wizard (if any) or the placeholder. */
   readonly canRender?: (ctx: WidgetRenderContext) => boolean;
   /** Zero-config prompt shown when `canRender` is false. */
-  readonly wizard?: { readonly icon: string; readonly messageKey: string; readonly messageDefault: string };
+  readonly wizard?: {
+    readonly icon: string;
+    readonly messageKey: string;
+    readonly messageDefault: string;
+  };
 }
 
 export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
@@ -115,16 +125,21 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
   "data-table": {
     component: DatabaseCallBlock,
     props: (c) => ({
-      frame: c.transformedFrame, api: c.api, readonly: c.readonly,
-      getRecordColor: c.getRecordColor, fields: c.transformedFrame.fields,
-      fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
+      frame: c.transformedFrame,
+      api: c.api,
+      readonly: c.readonly,
+      getRecordColor: c.getRecordColor,
+      fields: c.transformedFrame.fields,
+      fieldPresets: c.fieldPresets,
+      activeFieldPresetId: c.activeFieldPresetId,
       project: c.project,
       // #112 F1 restore: re-merge block-level subFilter from widget.config.
       config: restoreDataTableConfig(
         (c.effectiveTableConfig ?? {}) as Record<string, unknown>,
         c.widget.config as Record<string, unknown> | undefined
       ),
-      widgetId: c.widget.id, widgetTitle: c.widget.title,
+      widgetId: c.widget.id,
+      widgetTitle: c.widget.title,
       // #118: data-table always renders the host's scoped+transformed frame.
       scopeApplied: true,
       primaryActionSignal: c.primaryActionSignal,
@@ -134,20 +149,40 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
   chart: {
     component: ChartWidget,
     canRender: (c) => c.chartConfig !== null,
-    wizard: { icon: "bar-chart-2", messageKey: "views.dashboard.widget.chart-not-configured", messageDefault: "Chart is not configured" },
-    props: (c) => ({ config: c.chartConfig, source: c.transformedFrame, rightFrame: c.chartRightFrame, widgetId: c.widget.id }),
+    wizard: {
+      icon: "bar-chart-2",
+      messageKey: "views.dashboard.widget.chart-not-configured",
+      messageDefault: "Chart is not configured",
+    },
+    props: (c) => ({
+      config: c.chartConfig,
+      source: c.transformedFrame,
+      rightFrame: c.chartRightFrame,
+      widgetId: c.widget.id,
+    }),
   },
   stats: {
     component: StatsWidget,
     canRender: (c) => c.statsConfig !== null,
-    wizard: { icon: "trending-up", messageKey: "views.dashboard.widget.stats-not-configured", messageDefault: "Stats widget is not configured" },
-    props: (c) => ({ config: c.statsConfig, source: c.transformedFrame, widgetId: c.widget.id }),
+    wizard: {
+      icon: "trending-up",
+      messageKey: "views.dashboard.widget.stats-not-configured",
+      messageDefault: "Stats widget is not configured",
+    },
+    props: (c) => ({
+      config: c.statsConfig,
+      source: c.transformedFrame,
+      widgetId: c.widget.id,
+    }),
   },
   checklist: {
     component: ChecklistWidget,
     props: (c) => ({
-      config: c.widget.config, source: c.transformedFrame, api: c.api,
-      readonly: c.readonly, fields: c.transformedFrame.fields,
+      config: c.widget.config,
+      source: c.transformedFrame,
+      api: c.api,
+      readonly: c.readonly,
+      fields: c.transformedFrame.fields,
       pipelineSteps: c.pipelineStepCount,
     }),
   },
@@ -158,13 +193,21 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
   "database-call": {
     component: DatabaseCallBlock,
     props: (c) => ({
-      frame: c.dbCallFrame, api: c.api, readonly: c.readonly,
-      getRecordColor: c.getRecordColor, fields: c.dbCallFields,
-      fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
-      project: c.project, config: c.widget.config, widgetId: c.widget.id,
-      widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection,
+      frame: c.dbCallFrame,
+      api: c.api,
+      readonly: c.readonly,
+      getRecordColor: c.getRecordColor,
+      fields: c.dbCallFields,
+      fieldPresets: c.fieldPresets,
+      activeFieldPresetId: c.activeFieldPresetId,
+      project: c.project,
+      config: c.widget.config,
+      widgetId: c.widget.id,
+      widgetTitle: c.widget.title,
+      linkedSelection: c.dbCallLinkedSelection,
       linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
-      pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
+      pipelineStepCount: c.pipelineStepCount,
+      pipelineInputRowCount: c.pipelineInputRowCount,
       scopeApplied: c.dbCallScopeApplied,
       primaryActionSignal: c.primaryActionSignal,
       namedSource: c.namedSource,
@@ -194,10 +237,44 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
  * distinct event contract (source/linkedSelection) and stays an explicit
  * branch in WidgetHost. Archived types have no panels (F3).
  */
-export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
-  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: c.fields, availableSources: c.availableSources }) },
-  checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
-  stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields }) },
-  "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },
-  "cover-banner": { component: CoverBannerConfigPanel, props: (c) => ({ config: c.widget.config }) },
+export const WIDGET_PANELS: Partial<
+  Record<
+    WidgetType,
+    { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }
+  >
+> = {
+  chart: {
+    component: ChartConfigPanel,
+    props: (c) => ({
+      config: c.chartConfig,
+      fields: c.fields,
+      availableSources: c.availableSources,
+    }),
+  },
+  checklist: {
+    component: ChecklistConfigPanel,
+    props: (c) => ({
+      config: c.widget.config,
+      fields: c.transformedFrame.fields,
+    }),
+  },
+  stats: {
+    component: StatsConfigPanel,
+    props: (c) => ({
+      config: c.statsConfig,
+      fields: c.transformedFrame.fields,
+    }),
+  },
+  "filter-tabs": {
+    component: FilterTabsConfigPanel,
+    props: (c) => ({
+      config: c.widget.config,
+      fields: c.transformedFrame.fields,
+      source: c.transformedFrame,
+    }),
+  },
+  "cover-banner": {
+    component: CoverBannerConfigPanel,
+    props: (c) => ({ config: c.widget.config }),
+  },
 };

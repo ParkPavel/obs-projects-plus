@@ -46,7 +46,9 @@ function spyApp() {
   return { app, calls };
 }
 
-type Mods = Partial<Record<"shiftKey" | "ctrlKey" | "metaKey" | "altKey", boolean>>;
+type Mods = Partial<
+  Record<"shiftKey" | "ctrlKey" | "metaKey" | "altKey", boolean>
+>;
 
 /** Only the modifier flags matter, and `modeFromEvent` reads nothing else. */
 function ev(mods: Mods) {
@@ -109,7 +111,11 @@ const MODIFIER_TABLE: ReadonlyArray<readonly [string, Mods, RecordOpenMode]> = [
   ["shift+ctrl+alt", { shiftKey: true, ctrlKey: true, altKey: true }, "window"],
   ["shift+meta", { shiftKey: true, metaKey: true }, "window"],
   ["shift+meta+alt", { shiftKey: true, metaKey: true, altKey: true }, "window"],
-  ["shift+ctrl+meta", { shiftKey: true, ctrlKey: true, metaKey: true }, "window"],
+  [
+    "shift+ctrl+meta",
+    { shiftKey: true, ctrlKey: true, metaKey: true },
+    "window",
+  ],
   [
     "shift+ctrl+meta+alt",
     { shiftKey: true, ctrlKey: true, metaKey: true, altKey: true },
@@ -136,7 +142,9 @@ describe("A189 (2) — the peek is one modifier away, and the taken ones are unt
 
   it("alt actually reaches the panel and never the workspace", () => {
     const { app, calls } = spyApp();
-    void openRecord({ id: "Row.md" }, modeFromEvent(ev({ altKey: true })), { app });
+    void openRecord({ id: "Row.md" }, modeFromEvent(ev({ altKey: true })), {
+      app,
+    });
     expect(get(recordPeek)).toEqual({ id: "Row.md" });
     expect(calls).toEqual([]);
   });
@@ -145,7 +153,9 @@ describe("A189 (2) — the peek is one modifier away, and the taken ones are unt
     // The table above says what each combination gives; this says the peek is
     // scarce. A branch placed one line too early would satisfy the first and
     // fail here, because ctrl+alt and shift+alt would start peeking too.
-    const peeking = MODIFIER_TABLE.filter(([, mods]) => modeFromEvent(ev(mods)) === "peek");
+    const peeking = MODIFIER_TABLE.filter(
+      ([, mods]) => modeFromEvent(ev(mods)) === "peek"
+    );
     expect(peeking.map(([name]) => name)).toEqual(["alt"]);
   });
 
@@ -154,11 +164,19 @@ describe("A189 (2) — the peek is one modifier away, and the taken ones are unt
     // table row hands its MouseEvent to the orchestrator, which is the only
     // place allowed to turn it into a mode.
     const row = require("fs").readFileSync(
-      require("path").join(__dirname, "..", "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte"),
+      require("path").join(
+        __dirname,
+        "..",
+        "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte"
+      ),
       "utf8"
     ) as string;
     const content = require("fs").readFileSync(
-      require("path").join(__dirname, "..", "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte"),
+      require("path").join(
+        __dirname,
+        "..",
+        "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte"
+      ),
       "utf8"
     ) as string;
     expect(row).toMatch(/dispatch\("openRecord", \{ record, event: e \}\)/);
@@ -167,12 +185,25 @@ describe("A189 (2) — the peek is one modifier away, and the taken ones are unt
 });
 
 describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () => {
-  const record: DataRecord = { id: "Clients/Acme.md", values: { name: "Acme" } } as DataRecord;
+  const record: DataRecord = {
+    id: "Clients/Acme.md",
+    values: { name: "Acme" },
+  } as DataRecord;
   const fields: DataField[] = [
-    { name: "name", type: "string", identifier: true, derived: false, repeated: false } as unknown as DataField,
+    {
+      name: "name",
+      type: "string",
+      identifier: true,
+      derived: false,
+      repeated: false,
+    } as unknown as DataField,
   ];
 
-  function menu(app: App | undefined, readonly = false, deleted: string[] = []) {
+  function menu(
+    app: App | undefined,
+    readonly = false,
+    deleted: string[] = []
+  ) {
     return buildRowMenuEntries({
       record,
       project: { id: "p1" } as ProjectDefinition,
@@ -209,7 +240,9 @@ describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () 
     // the defect the adversarial review of #168 found, and the menu entry is a
     // new call site that could have reintroduced it.
     const { app } = spyApp();
-    items(menu(app)).find((e) => e.title === "Show fields")?.onClick();
+    items(menu(app))
+      .find((e) => e.title === "Show fields")
+      ?.onClick();
     const target = get(recordPeek);
     expect(target?.record).toEqual(record);
     expect(target?.fields).toEqual(fields);
@@ -219,7 +252,9 @@ describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () 
     // Both entrances in one menu is the shape the user asked for; this proves
     // they do different things rather than both landing on the same mode.
     const { app, calls } = spyApp();
-    items(menu(app)).find((e) => e.title === "Open note")?.onClick();
+    items(menu(app))
+      .find((e) => e.title === "Open note")
+      ?.onClick();
     expect(calls).toEqual([["Clients/Acme.md", "Clients/Acme.md", false]]);
     expect(get(recordPeek)).toBeNull();
   });
@@ -230,9 +265,18 @@ describe("A189 (4) — a READ-ONLY row keeps the reading entries and loses the w
   // written for — its rows come from a source the host frame never held — and
   // it was the one case where the discoverable entrance did not exist, because
   // the button that opens the menu was hidden wholesale.
-  const record: DataRecord = { id: "External/Row.md", values: { name: "Row" } } as DataRecord;
+  const record: DataRecord = {
+    id: "External/Row.md",
+    values: { name: "Row" },
+  } as DataRecord;
   const fields: DataField[] = [
-    { name: "name", type: "string", identifier: true, derived: false, repeated: false } as unknown as DataField,
+    {
+      name: "name",
+      type: "string",
+      identifier: true,
+      derived: false,
+      repeated: false,
+    } as unknown as DataField,
   ];
 
   function menu(readonly: boolean, deleted: string[] = []) {
@@ -297,7 +341,11 @@ describe("A189 (4) — a READ-ONLY row keeps the reading entries and loses the w
     // ⋯ button meant a read-only row had no menu at all, so `alt` was the only
     // way in — the hidden-feature outcome the user's decision rules out.
     const row = require("fs").readFileSync(
-      require("path").join(__dirname, "..", "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte"),
+      require("path").join(
+        __dirname,
+        "..",
+        "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte"
+      ),
       "utf8"
     ) as string;
     expect(row).toMatch(/dispatch\("rowMenu", \{ record, event: e \}\)/);
@@ -314,7 +362,11 @@ describe("A189 (4) — a READ-ONLY row keeps the reading entries and loses the w
     // several more times further down the file. It did, and it passed, and the
     // red-first run is the only reason that was caught.
     const content = require("fs").readFileSync(
-      require("path").join(__dirname, "..", "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte"),
+      require("path").join(
+        __dirname,
+        "..",
+        "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte"
+      ),
       "utf8"
     ) as string;
     const args = /buildRowMenuEntries\(\{([^}]*)/.exec(content)?.[1] ?? "";

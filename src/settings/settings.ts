@@ -1,13 +1,28 @@
 import { either } from "fp-ts";
 
-import type { ViewDefinition, ProjectsPluginPreferences } from "./base/settings";
-import type { ProjectDefinition as V1ProjectDefinition, ProjectsPluginSettings as V1ProjectsPluginSettings } from "./v1/settings";
+import type {
+  ViewDefinition,
+  ProjectsPluginPreferences,
+} from "./base/settings";
+import type {
+  ProjectDefinition as V1ProjectDefinition,
+  ProjectsPluginSettings as V1ProjectsPluginSettings,
+} from "./v1/settings";
 import { resolve as v1Resolve } from "./v1/settings";
-import type { ProjectDefinition as V2ProjectDefinition, ProjectsPluginSettings as V2ProjectsPluginSettings } from "./v2/settings";
+import type {
+  ProjectDefinition as V2ProjectDefinition,
+  ProjectsPluginSettings as V2ProjectsPluginSettings,
+} from "./v2/settings";
 import { resolve as v2Resolve } from "./v2/settings";
-import type { ProjectDefinition as V3ProjectDefinition, ProjectsPluginSettings as V3ProjectsPluginSettings } from "./v3/settings";
+import type {
+  ProjectDefinition as V3ProjectDefinition,
+  ProjectsPluginSettings as V3ProjectsPluginSettings,
+} from "./v3/settings";
 import { resolve as v3Resolve } from "./v3/settings";
-import type { ProjectDefinition as V4ProjectDefinition, ProjectsPluginSettings as V4ProjectsPluginSettings } from "./v4/settings";
+import type {
+  ProjectDefinition as V4ProjectDefinition,
+  ProjectsPluginSettings as V4ProjectsPluginSettings,
+} from "./v4/settings";
 import { resolve as v4Resolve } from "./v4/settings";
 
 export * from "./base/settings";
@@ -68,9 +83,15 @@ export function migrateSettings(
   if ("version" in settings && typeof settings.version === "number") {
     try {
       if (settings.version === 1) {
-        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrate(v1Resolve(settings))))));
+        return either.right(
+          v4Resolve(migrateV3ToV4(v3Resolve(migrate(v1Resolve(settings)))))
+        );
       } else if (settings.version === 2) {
-        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrateV2ToV3(v2Resolve(settings))))));
+        return either.right(
+          v4Resolve(
+            migrateV3ToV4(v3Resolve(migrateV2ToV3(v2Resolve(settings))))
+          )
+        );
       } else if (settings.version === 3) {
         return either.right(v4Resolve(migrateV3ToV4(v3Resolve(settings))));
       } else if (settings.version === 4) {
@@ -81,8 +102,7 @@ export function migrateSettings(
         );
       }
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : String(err);
+      const message = err instanceof Error ? err.message : String(err);
       return either.left(
         new Error(
           `Settings migration failed (version=${settings.version}): ${message}`
@@ -96,14 +116,20 @@ export function migrateSettings(
 
 export function migrate(
   v1settings: V1ProjectsPluginSettings<V1ProjectDefinition<ViewDefinition>>
-): V3ProjectsPluginSettings<V3ProjectDefinition<ViewDefinition>, ProjectPreferences> {
+): V3ProjectsPluginSettings<
+  V3ProjectDefinition<ViewDefinition>,
+  ProjectPreferences
+> {
   const v2settings = migrateV1ToV2(v1settings);
   return migrateV2ToV3(v2settings);
 }
 
 function migrateV1ToV2(
   v1settings: V1ProjectsPluginSettings<V1ProjectDefinition<ViewDefinition>>
-): V2ProjectsPluginSettings<V2ProjectDefinition<ViewDefinition>, ProjectPreferences> {
+): V2ProjectsPluginSettings<
+  V2ProjectDefinition<ViewDefinition>,
+  ProjectPreferences
+> {
   return {
     version: 2,
     projects: v1settings.projects.map(migrateProjectFromV1),
@@ -144,10 +170,10 @@ function migrateProjectFromV1(
   };
 }
 
- 
-function migrateDataSource(
-  project: V1ProjectDefinition<ViewDefinition>
-): { kind: "dataview" | "folder"; config: any } {
+function migrateDataSource(project: V1ProjectDefinition<ViewDefinition>): {
+  kind: "dataview" | "folder";
+  config: any;
+} {
   if (project.dataview) {
     return {
       kind: "dataview",
@@ -171,7 +197,10 @@ function migrateV2ToV3(
     V2ProjectDefinition<ViewDefinition>,
     ProjectPreferences
   >
-): V3ProjectsPluginSettings<V3ProjectDefinition<ViewDefinition>, ProjectPreferences> {
+): V3ProjectsPluginSettings<
+  V3ProjectDefinition<ViewDefinition>,
+  ProjectPreferences
+> {
   return {
     version: 3,
     projects: v2settings.projects.map(migrateProjectFromV2),
@@ -190,12 +219,25 @@ function migrateProjectFromV2(
 }
 
 function migrateV3ToV4(
-  v3settings: V3ProjectsPluginSettings<V3ProjectDefinition<ViewDefinition>, ProjectPreferences>
-): { version: 4; projects: V3ProjectDefinition<ViewDefinition>[]; archives: V3ProjectDefinition<ViewDefinition>[]; preferences: ProjectPreferences } {
+  v3settings: V3ProjectsPluginSettings<
+    V3ProjectDefinition<ViewDefinition>,
+    ProjectPreferences
+  >
+): {
+  version: 4;
+  projects: V3ProjectDefinition<ViewDefinition>[];
+  archives: V3ProjectDefinition<ViewDefinition>[];
+  preferences: ProjectPreferences;
+} {
   // Data shape is identical between v3 and v4.
   // The view-type migration (table/database → dashboard) is handled by v3Resolve's
   // resolveView, so all types are already canonical before this function runs.
-  return { version: 4, projects: v3settings.projects, archives: v3settings.archives, preferences: v3settings.preferences };
+  return {
+    version: 4,
+    projects: v3settings.projects,
+    archives: v3settings.archives,
+    preferences: v3settings.preferences,
+  };
 }
 
 function migrateViewDefinition(view: ViewDefinition): ViewDefinition {

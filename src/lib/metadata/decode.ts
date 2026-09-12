@@ -4,7 +4,7 @@ import { parse } from "yaml";
 /**
  * decodeFrontMatter returns metadata from a note with YAML front matter.
  */
- 
+
 export function decodeFrontMatter(
   data: string
 ): E.Either<Error, Record<string, any>> {
@@ -21,7 +21,6 @@ export function decodeFrontMatter(
     : E.right({});
 }
 
- 
 export function parseYaml(data: string): E.Either<Error, Record<string, any>> {
   return F.pipe(
     data,
@@ -30,7 +29,6 @@ export function parseYaml(data: string): E.Either<Error, Record<string, any>> {
   );
 }
 
- 
 function parseRawYaml(data: string): E.Either<Error, Record<string, any>> {
   return E.tryCatch(
     () =>

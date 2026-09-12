@@ -19,7 +19,7 @@ export async function writeCellValue(
   app: App,
   file: TFile,
   key: string,
-  value: CellValue,
+  value: CellValue
 ): Promise<boolean> {
   const fileManager = app.fileManager as unknown as FileManagerWithProcessFM;
   if (typeof fileManager.processFrontMatter !== "function") {
@@ -29,4 +29,3 @@ export async function writeCellValue(
   await writer.setField(file, key, value);
   return true;
 }
-

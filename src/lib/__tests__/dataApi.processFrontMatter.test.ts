@@ -11,14 +11,37 @@
  *   3. When `processFrontMatter` returns `false` (unsupported), DataApi
  *      falls back to the legacy `read()` / `write()` pipeline.
  */
-import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
+import {
+  DataFieldType,
+  type DataField,
+  type DataRecord,
+} from "src/lib/dataframe/dataframe";
 import { DataApi, applyRecordToFrontmatter } from "src/lib/dataApi";
 import { IFile, type IFileSystem } from "src/lib/filesystem/filesystem";
 
 const fields: DataField[] = [
-  { name: "title", type: DataFieldType.String, repeated: false, derived: false, identifier: false },
-  { name: "due", type: DataFieldType.Date, repeated: false, derived: false, identifier: false, typeConfig: { time: false } },
-  { name: "computed", type: DataFieldType.Number, repeated: false, derived: true, identifier: false },
+  {
+    name: "title",
+    type: DataFieldType.String,
+    repeated: false,
+    derived: false,
+    identifier: false,
+  },
+  {
+    name: "due",
+    type: DataFieldType.Date,
+    repeated: false,
+    derived: false,
+    identifier: false,
+    typeConfig: { time: false },
+  },
+  {
+    name: "computed",
+    type: DataFieldType.Number,
+    repeated: false,
+    derived: true,
+    identifier: false,
+  },
 ];
 
 function makeRecord(): DataRecord {
@@ -34,10 +57,15 @@ function makeRecord(): DataRecord {
 
 class FakeFile extends IFile {
   writeSpy = jest.fn<Promise<void>, [string]>(async () => {});
-  readSpy = jest.fn<Promise<string>, []>(async () => "---\nexisting: keep\n---\nBody");
+  readSpy = jest.fn<Promise<string>, []>(
+    async () => "---\nexisting: keep\n---\nBody"
+  );
   pfmSpy: jest.Mock<Promise<boolean>, [(fm: Record<string, unknown>) => void]>;
 
-  constructor(pfmSupported: boolean, public fmSeed: Record<string, unknown> = { existing: "keep" }) {
+  constructor(
+    pfmSupported: boolean,
+    public fmSeed: Record<string, unknown> = { existing: "keep" }
+  ) {
     super();
     this.pfmSpy = jest.fn(async (fn) => {
       if (!pfmSupported) return false;
@@ -46,13 +74,25 @@ class FakeFile extends IFile {
     });
   }
 
-  override get basename(): string { return "a"; }
-  override get path(): string { return "notes/a.md"; }
-  override async read(): Promise<string> { return this.readSpy(); }
-  override async write(content: string): Promise<void> { return this.writeSpy(content); }
+  override get basename(): string {
+    return "a";
+  }
+  override get path(): string {
+    return "notes/a.md";
+  }
+  override async read(): Promise<string> {
+    return this.readSpy();
+  }
+  override async write(content: string): Promise<void> {
+    return this.writeSpy(content);
+  }
   override async delete(): Promise<void> {}
-  override readTags(): Set<string> { return new Set(); }
-  override async processFrontMatter(fn: (fm: Record<string, unknown>) => void): Promise<boolean> {
+  override readTags(): Set<string> {
+    return new Set();
+  }
+  override async processFrontMatter(
+    fn: (fm: Record<string, unknown>) => void
+  ): Promise<boolean> {
     return this.pfmSpy(fn);
   }
 }
@@ -83,7 +123,10 @@ describe("applyRecordToFrontmatter", () => {
 
   test("skips derived fields", () => {
     const fm: Record<string, unknown> = {};
-    applyRecordToFrontmatter(fm, fields, { id: "x", values: { computed: 999 } });
+    applyRecordToFrontmatter(fm, fields, {
+      id: "x",
+      values: { computed: 999 },
+    });
     expect("computed" in fm).toBe(false);
   });
 });

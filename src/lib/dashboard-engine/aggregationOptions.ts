@@ -65,51 +65,189 @@ export interface AggregationOption {
  * warning. It is interpreted now rather than silently unhandled.
  */
 export const AGGREGATIONS: ReadonlyArray<AggregationOption> = [
-  { value: "none", label: "None", consequence: "No summary for this column", badge: "" },
+  {
+    value: "none",
+    label: "None",
+    consequence: "No summary for this column",
+    badge: "",
+  },
 
   // ── the count family, which is a family everywhere ──
-  { value: "count_total", label: "Count all", consequence: "Every record, including ones with nothing in this field", badge: "COUNT ALL" },
-  { value: "count", label: "Count all", consequence: "Every record, including ones with nothing in this field (legacy spelling of Count all)", badge: "COUNT ALL" },
-  { value: "count_values", label: "Count values", consequence: "Records where this field has something in it", badge: "VALUES" },
-  { value: "count_numeric", label: "Count numbers", consequence: "Values this field can do arithmetic on", badge: "NUMBERS" },
-  { value: "count_unique", label: "Count unique", consequence: "How many different values, empties excluded", badge: "UNIQUE" },
-  { value: "count_empty", label: "Count empty", consequence: "Records where this field is blank", badge: "EMPTY" },
+  {
+    value: "count_total",
+    label: "Count all",
+    consequence: "Every record, including ones with nothing in this field",
+    badge: "COUNT ALL",
+  },
+  {
+    value: "count",
+    label: "Count all",
+    consequence:
+      "Every record, including ones with nothing in this field (legacy spelling of Count all)",
+    badge: "COUNT ALL",
+  },
+  {
+    value: "count_values",
+    label: "Count values",
+    consequence: "Records where this field has something in it",
+    badge: "VALUES",
+  },
+  {
+    value: "count_numeric",
+    label: "Count numbers",
+    consequence: "Values this field can do arithmetic on",
+    badge: "NUMBERS",
+  },
+  {
+    value: "count_unique",
+    label: "Count unique",
+    consequence: "How many different values, empties excluded",
+    badge: "UNIQUE",
+  },
+  {
+    value: "count_empty",
+    label: "Count empty",
+    consequence: "Records where this field is blank",
+    badge: "EMPTY",
+  },
 
   // ── checkboxes ──
-  { value: "count_checked", label: "Checked", consequence: "How many are ticked", badge: "✓" },
-  { value: "count_unchecked", label: "Unchecked", consequence: "How many are unticked", badge: "✗" },
-  { value: "percent_checked", label: "Percent checked", consequence: "Share of the boxes that are ticked", badge: "%✓" },
-  { value: "percent_unchecked", label: "Percent unchecked", consequence: "Share of the boxes that are unticked", badge: "%✗" },
+  {
+    value: "count_checked",
+    label: "Checked",
+    consequence: "How many are ticked",
+    badge: "✓",
+  },
+  {
+    value: "count_unchecked",
+    label: "Unchecked",
+    consequence: "How many are unticked",
+    badge: "✗",
+  },
+  {
+    value: "percent_checked",
+    label: "Percent checked",
+    consequence: "Share of the boxes that are ticked",
+    badge: "%✓",
+  },
+  {
+    value: "percent_unchecked",
+    label: "Percent unchecked",
+    consequence: "Share of the boxes that are unticked",
+    badge: "%✗",
+  },
 
   // ── shares ──
-  { value: "percent_empty", label: "Percent empty", consequence: "Share of records with nothing in this field", badge: "%∅" },
-  { value: "percent_not_empty", label: "Percent filled", consequence: "Share of records with something in this field", badge: "%¬∅" },
+  {
+    value: "percent_empty",
+    label: "Percent empty",
+    consequence: "Share of records with nothing in this field",
+    badge: "%∅",
+  },
+  {
+    value: "percent_not_empty",
+    label: "Percent filled",
+    consequence: "Share of records with something in this field",
+    badge: "%¬∅",
+  },
 
   // ── numbers ──
-  { value: "sum", label: "Sum", consequence: "Total of the numbers; text is ignored", badge: "SUM" },
-  { value: "avg", label: "Average", consequence: "Mean of the numbers; empty cells are not counted in", badge: "AVG" },
-  { value: "median", label: "Median", consequence: "Middle number; text is ignored", badge: "MEDIAN" },
-  { value: "min", label: "Min", consequence: "Smallest number; empty when there is none", badge: "MIN" },
-  { value: "max", label: "Max", consequence: "Largest number; empty when there is none", badge: "MAX" },
-  { value: "range", label: "Range", consequence: "Largest minus smallest", badge: "RANGE" },
+  {
+    value: "sum",
+    label: "Sum",
+    consequence: "Total of the numbers; text is ignored",
+    badge: "SUM",
+  },
+  {
+    value: "avg",
+    label: "Average",
+    consequence: "Mean of the numbers; empty cells are not counted in",
+    badge: "AVG",
+  },
+  {
+    value: "median",
+    label: "Median",
+    consequence: "Middle number; text is ignored",
+    badge: "MEDIAN",
+  },
+  {
+    value: "min",
+    label: "Min",
+    consequence: "Smallest number; empty when there is none",
+    badge: "MIN",
+  },
+  {
+    value: "max",
+    label: "Max",
+    consequence: "Largest number; empty when there is none",
+    badge: "MAX",
+  },
+  {
+    value: "range",
+    label: "Range",
+    consequence: "Largest minus smallest",
+    badge: "RANGE",
+  },
 
   // ── rollup-only names (the kernel vocabulary a Rollup field picks from) ──
-  { value: "percent_true", label: "Percent checked", consequence: "Share of the boxes that are ticked", badge: "%✓" },
-  { value: "concat", label: "Concatenate", consequence: "Every value joined into one line", badge: "JOIN" },
-  { value: "concat_unique", label: "Concatenate unique", consequence: "Each different value once, joined into one line", badge: "JOIN∪" },
-  { value: "show_original", label: "Show original", consequence: "The values themselves, as a list", badge: "SHOW" },
-  { value: "show_unique", label: "Show unique values", consequence: "Each different value once, as a list", badge: "SHOW∪" },
+  {
+    value: "percent_true",
+    label: "Percent checked",
+    consequence: "Share of the boxes that are ticked",
+    badge: "%✓",
+  },
+  {
+    value: "concat",
+    label: "Concatenate",
+    consequence: "Every value joined into one line",
+    badge: "JOIN",
+  },
+  {
+    value: "concat_unique",
+    label: "Concatenate unique",
+    consequence: "Each different value once, joined into one line",
+    badge: "JOIN∪",
+  },
+  {
+    value: "show_original",
+    label: "Show original",
+    consequence: "The values themselves, as a list",
+    badge: "SHOW",
+  },
+  {
+    value: "show_unique",
+    label: "Show unique values",
+    consequence: "Each different value once, as a list",
+    badge: "SHOW∪",
+  },
 
   // ── dates ──
-  { value: "earliest", label: "Earliest date", consequence: "Oldest date in the column", badge: "EARLIEST" },
-  { value: "latest", label: "Latest date", consequence: "Newest date in the column", badge: "LATEST" },
-  { value: "date_range", label: "Date range", consequence: "From the earliest to the latest", badge: "RANGE" },
+  {
+    value: "earliest",
+    label: "Earliest date",
+    consequence: "Oldest date in the column",
+    badge: "EARLIEST",
+  },
+  {
+    value: "latest",
+    label: "Latest date",
+    consequence: "Newest date in the column",
+    badge: "LATEST",
+  },
+  {
+    value: "date_range",
+    label: "Date range",
+    consequence: "From the earliest to the latest",
+    badge: "RANGE",
+  },
 ];
 
 const BY_VALUE = new Map(AGGREGATIONS.map((o) => [o.value, o]));
 
 /** The description of one aggregation, or `undefined` for a name nothing knows. */
-export function aggregationOption(value: AggregationName): AggregationOption | undefined {
+export function aggregationOption(
+  value: AggregationName
+): AggregationOption | undefined {
   return BY_VALUE.get(value);
 }
 
@@ -154,7 +292,12 @@ export function aggregationOptionsFor(field: DataField): ColumnAggregation[] {
   if (NUMERIC_TYPES.has(field.type)) {
     out.push("count_numeric", "sum", "avg", "median", "min", "max", "range");
   } else if (field.type === DataFieldType.Boolean) {
-    out.push("count_checked", "count_unchecked", "percent_checked", "percent_unchecked");
+    out.push(
+      "count_checked",
+      "count_unchecked",
+      "percent_checked",
+      "percent_unchecked"
+    );
   } else if (DATE_TYPES.has(field.type)) {
     out.push("earliest", "latest", "date_range");
   } else {

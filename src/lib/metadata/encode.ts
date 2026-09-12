@@ -9,7 +9,7 @@ import { parseYaml } from "./decode";
  * @param frontmatter - The front matter to add to the note.
  * @returns Data with the updated front matter.
  */
- 
+
 export function encodeFrontMatter(
   data: string,
   frontmatter: Record<string, any>,
@@ -18,16 +18,21 @@ export function encodeFrontMatter(
   const delim = "---";
 
   const startPosition = data.indexOf(delim);
-  const endPosition = startPosition >= 0 ? data.indexOf(delim, startPosition + delim.length) : -1;
+  const endPosition =
+    startPosition >= 0 ? data.indexOf(delim, startPosition + delim.length) : -1;
 
   const isStart = startPosition === 0;
   const hasFrontMatter = isStart && endPosition > startPosition + delim.length;
 
   return F.pipe(
-    parseYaml(hasFrontMatter ? data.slice(startPosition + delim.length, endPosition) : ""),
+    parseYaml(
+      hasFrontMatter
+        ? data.slice(startPosition + delim.length, endPosition)
+        : ""
+    ),
     E.map((existing) => {
       const result = { ...existing };
-      
+
       // Process frontmatter properties
       for (const [key, value] of Object.entries(frontmatter)) {
         if (value === undefined) {
@@ -38,7 +43,7 @@ export function encodeFrontMatter(
         // For all other values (including null), use the provided value
         result[key] = value;
       }
-      
+
       return result;
     }),
     E.map((fm) => {
@@ -46,14 +51,15 @@ export function encodeFrontMatter(
       const filteredFm = Object.fromEntries(
         Object.entries(fm).filter(([_, value]) => value !== undefined)
       );
-      
+
       if (Object.entries(filteredFm).length) {
         const d = stringifyYaml(filteredFm, defaultStringType);
 
         if (hasFrontMatter) {
           // Replace existing frontmatter - find the exact end position
-          const frontmatterEnd = data.indexOf('\n', endPosition);
-          const afterFrontmatter = frontmatterEnd !== -1 ? data.slice(frontmatterEnd + 1) : '';
+          const frontmatterEnd = data.indexOf("\n", endPosition);
+          const afterFrontmatter =
+            frontmatterEnd !== -1 ? data.slice(frontmatterEnd + 1) : "";
           return delim + "\n" + d + delim + "\n" + afterFrontmatter;
         } else {
           // Add new frontmatter at the beginning
@@ -63,11 +69,12 @@ export function encodeFrontMatter(
 
       if (hasFrontMatter) {
         // Remove existing frontmatter
-        const frontmatterEnd = data.indexOf('\n', endPosition);
-        const afterFrontmatter = frontmatterEnd !== -1 ? data.slice(frontmatterEnd + 1) : '';
+        const frontmatterEnd = data.indexOf("\n", endPosition);
+        const afterFrontmatter =
+          frontmatterEnd !== -1 ? data.slice(frontmatterEnd + 1) : "";
         return afterFrontmatter;
       }
-      
+
       return data;
     })
   );
@@ -76,7 +83,7 @@ export function encodeFrontMatter(
 /**
  * stringifyYaml converts a value to YAML.
  */
- 
+
 export function stringifyYaml(
   value: any,
   defaultStringType: "PLAIN" | "QUOTE_DOUBLE" = "PLAIN"
@@ -88,8 +95,7 @@ export function stringifyYaml(
     defaultKeyType: "PLAIN",
     simpleKeys: false,
   });
-  
+
   // Remove trailing space after colon for null values (YAML outputs "key: " instead of "key:")
   return result.replace(/: \n/g, ":\n");
 }
-

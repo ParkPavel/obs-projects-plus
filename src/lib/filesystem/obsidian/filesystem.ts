@@ -23,7 +23,10 @@ class ObsidianFile extends IFile {
     throw new Error("Not a file");
   }
 
-  constructor(readonly file: TFile, readonly app: App) {
+  constructor(
+    readonly file: TFile,
+    readonly app: App
+  ) {
     super();
   }
 
@@ -56,16 +59,18 @@ class ObsidianFile extends IFile {
    * Closes F6 (Phase 3).
    */
   override async processFrontMatter(
-    fn: (frontmatter: Record<string, unknown>) => void,
+    fn: (frontmatter: Record<string, unknown>) => void
   ): Promise<boolean> {
     // `fileManager.processFrontMatter` exists on Obsidian API 1.4+. Guard
     // defensively so older API surfaces degrade gracefully.
-    const fm = (this.app.fileManager as unknown as {
-      processFrontMatter?: (
-        file: TFile,
-        fn: (fm: Record<string, unknown>) => void,
-      ) => Promise<void>;
-    }).processFrontMatter;
+    const fm = (
+      this.app.fileManager as unknown as {
+        processFrontMatter?: (
+          file: TFile,
+          fn: (fm: Record<string, unknown>) => void
+        ) => Promise<void>;
+      }
+    ).processFrontMatter;
     if (typeof fm !== "function") return false;
     await fm.call(this.app.fileManager, this.file, fn);
     return true;
@@ -142,7 +147,9 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.vault.on("create", (file) => {
         if (file instanceof TFile && file.extension === "md") {
-          callback(new ObsidianFile(file, this.plugin.app)).catch(console.error);
+          callback(new ObsidianFile(file, this.plugin.app)).catch(
+            console.error
+          );
         }
       })
     );
@@ -153,7 +160,9 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.metadataCache.on("changed", (file) => {
         if (file instanceof TFile && file.extension === "md") {
-          callback(new ObsidianFile(file, this.plugin.app)).catch(console.error);
+          callback(new ObsidianFile(file, this.plugin.app)).catch(
+            console.error
+          );
         }
       })
     );
@@ -164,7 +173,9 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.vault.on("delete", (file) => {
         if (file instanceof TFile && file.extension === "md") {
-          callback(new ObsidianFile(file, this.plugin.app)).catch(console.error);
+          callback(new ObsidianFile(file, this.plugin.app)).catch(
+            console.error
+          );
         }
       })
     );
@@ -175,7 +186,9 @@ export class ObsidianFileSystemWatcher implements IFileSystemWatcher {
     this.plugin.registerEvent(
       this.plugin.app.vault.on("rename", (file, oldPath) => {
         if (file instanceof TFile && file.extension === "md") {
-          callback(new ObsidianFile(file, this.plugin.app), oldPath).catch(console.error);
+          callback(new ObsidianFile(file, this.plugin.app), oldPath).catch(
+            console.error
+          );
         }
       })
     );

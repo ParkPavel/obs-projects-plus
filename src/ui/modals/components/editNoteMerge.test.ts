@@ -21,7 +21,11 @@ describe("mergeExternal", () => {
   });
 
   it("mixed: dirty from local, untouched from store", () => {
-    const local = rec("a.md", { title: "local-edit", status: "draft", tag: "x" });
+    const local = rec("a.md", {
+      title: "local-edit",
+      status: "draft",
+      tag: "x",
+    });
     const store = rec("a.md", { title: "external", status: "done", tag: "y" });
     const result = mergeExternal(local, store, new Set(["title"]));
     expect(result.values).toEqual({
@@ -57,9 +61,9 @@ describe("mergeExternal", () => {
   // #101.3 — models the live-modal sequence the reactive declaration drives:
   //   $: live = $dataFrame.records.find(r => r.id === recordId)
   //   $: if (live) record = mergeExternal(record, live, dirty)
-  // The mocked Obsidian modal does not mount the real field controls here.
-  // This checks reconciliation against an external store update; live modal
-  // wiring and focus still require an Obsidian interaction check.
+  // The Svelte reactive wiring itself is not jest-mountable (see
+  // editNoteMerge.untestable.md), so we verify the exact reconciliation it
+  // performs against an external store update.
   describe("live-modal external update sequence", () => {
     it("external update refreshes untouched fields and preserves the field being edited", () => {
       // User opens modal, starts editing `title` (title ∈ dirty).

@@ -64,21 +64,21 @@ describe("REFACTOR-201 — rollup mode↔fn migration", () => {
       expect(isRollupInvariantValid({ mode: "sum" })).toBe(true);
     });
     test("matching mode and fn is valid", () => {
-      expect(
-        isRollupInvariantValid({ function: "sum", mode: "sum" }),
-      ).toBe(true);
+      expect(isRollupInvariantValid({ function: "sum", mode: "sum" })).toBe(
+        true
+      );
     });
     test("inconsistent mode and fn is invalid", () => {
-      expect(
-        isRollupInvariantValid({ function: "sum", mode: "average" }),
-      ).toBe(false);
+      expect(isRollupInvariantValid({ function: "sum", mode: "average" })).toBe(
+        false
+      );
     });
     test("presentational mode (fn=null) is always valid", () => {
       expect(
         isRollupInvariantValid({
           function: "sum" as RollupFunction,
           mode: "show_original",
-        }),
+        })
       ).toBe(true);
     });
     test("unknown mode id is invalid", () => {
@@ -86,15 +86,15 @@ describe("REFACTOR-201 — rollup mode↔fn migration", () => {
         isRollupInvariantValid({
           function: "sum",
           mode: "bogus" as never,
-        }),
+        })
       ).toBe(false);
     });
     test("earliest mode pairs only with min kernel", () => {
       expect(
-        isRollupInvariantValid({ function: "min", mode: "earliest" }),
+        isRollupInvariantValid({ function: "min", mode: "earliest" })
       ).toBe(true);
       expect(
-        isRollupInvariantValid({ function: "max", mode: "earliest" }),
+        isRollupInvariantValid({ function: "max", mode: "earliest" })
       ).toBe(false);
     });
   });
@@ -102,12 +102,12 @@ describe("REFACTOR-201 — rollup mode↔fn migration", () => {
   describe("assertRollupInvariant", () => {
     test("does not throw on valid config", () => {
       expect(() =>
-        assertRollupInvariant({ function: "sum", mode: "sum" }),
+        assertRollupInvariant({ function: "sum", mode: "sum" })
       ).not.toThrow();
     });
     test("throws on inconsistent config", () => {
       expect(() =>
-        assertRollupInvariant({ function: "sum", mode: "average" }),
+        assertRollupInvariant({ function: "sum", mode: "average" })
       ).toThrow(/R2\.1b violation/);
     });
   });

@@ -38,7 +38,9 @@ function sanitizeWidget(widget: WidgetLike, removedId: string): WidgetLike {
   // 1) Join steps in transform pipeline.
   const steps = widget.transform?.steps;
   if (Array.isArray(steps)) {
-    const filtered = steps.filter((s) => !(isJoinStep(s) && s.rightSourceId === removedId));
+    const filtered = steps.filter(
+      (s) => !(isJoinStep(s) && s.rightSourceId === removedId)
+    );
     if (filtered.length !== steps.length) {
       nextWidget = {
         ...nextWidget,
@@ -51,10 +53,19 @@ function sanitizeWidget(widget: WidgetLike, removedId: string): WidgetLike {
   }
 
   // 2) Chart-widget correlation pointing at the removed project.
-  if (widget.type === "chart" && widget.config && typeof widget.config === "object") {
-    const correlation = (widget.config as { correlation?: { rightSourceId?: string } }).correlation;
+  if (
+    widget.type === "chart" &&
+    widget.config &&
+    typeof widget.config === "object"
+  ) {
+    const correlation = (
+      widget.config as { correlation?: { rightSourceId?: string } }
+    ).correlation;
     if (correlation && correlation.rightSourceId === removedId) {
-      const { correlation: _stripped, ...restConfig } = widget.config as Record<string, unknown>;
+      const { correlation: _stripped, ...restConfig } = widget.config as Record<
+        string,
+        unknown
+      >;
       nextWidget = {
         ...nextWidget,
         config: restConfig,
@@ -83,7 +94,8 @@ export function removeDanglingSourceReferences(
     let viewsChanged = false;
 
     const nextViews = views.map((view) => {
-      const cfg = (view as unknown as { config?: { widgets?: unknown[] } }).config;
+      const cfg = (view as unknown as { config?: { widgets?: unknown[] } })
+        .config;
       const widgets = cfg?.widgets;
       if (!Array.isArray(widgets)) return view;
 

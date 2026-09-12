@@ -1,20 +1,20 @@
 /**
  * Formula Parser (v3.1.0)
- * 
+ *
  * Advanced filter mode with formula-based filtering
  * Supports logical expressions, built-in functions, and field references
- * 
+ *
  * Example formulas:
  * - AND(status = "Active", priority > 5)
  * - OR(IS_EMPTY(dueDate), IS_OVERDUE(dueDate))
  * - AND(CONTAINS(tags, "urgent"), date >= TODAY())
  */
 
-import type { DataRecord } from 'src/lib/dataframe/dataframe';
-import { toNumber } from 'src/lib/engine/numeric';
-import dayjs from 'dayjs';
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import type { DataRecord } from "src/lib/dataframe/dataframe";
+import { toNumber } from "src/lib/engine/numeric";
+import dayjs from "dayjs";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -24,12 +24,17 @@ dayjs.extend(isSameOrBefore);
 // ============================================
 
 export type FormulaNode =
-  | { type: 'function'; name: string; args: FormulaNode[] }
-  | { type: 'operator'; operator: string; left: FormulaNode; right: FormulaNode }
-  | { type: 'field'; name: string }
-  | { type: 'column_ref'; name: string }
-  | { type: 'literal'; value: string | number | boolean | null }
-  | { type: 'array'; items: FormulaNode[] };
+  | { type: "function"; name: string; args: FormulaNode[] }
+  | {
+      type: "operator";
+      operator: string;
+      left: FormulaNode;
+      right: FormulaNode;
+    }
+  | { type: "field"; name: string }
+  | { type: "column_ref"; name: string }
+  | { type: "literal"; value: string | number | boolean | null }
+  | { type: "array"; items: FormulaNode[] };
 
 /**
  * Optional source-position offsets into the ORIGINAL formula string
@@ -39,69 +44,164 @@ export type FormulaNode =
 type Span = { start?: number; end?: number };
 
 export type Token =
-  | ({ type: 'FUNCTION'; value: string } & Span)
-  | ({ type: 'FIELD'; value: string } & Span)
-  | ({ type: 'STRING'; value: string } & Span)
-  | ({ type: 'NUMBER'; value: number } & Span)
-  | ({ type: 'BOOLEAN'; value: boolean } & Span)
-  | ({ type: 'NULL'; value: null } & Span)
-  | ({ type: 'OPERATOR'; value: string } & Span)
-  | ({ type: 'LPAREN'; value: '(' } & Span)
-  | ({ type: 'RPAREN'; value: ')' } & Span)
-  | ({ type: 'LBRACKET'; value: '[' } & Span)
-  | ({ type: 'RBRACKET'; value: ']' } & Span)
-  | ({ type: 'COMMA'; value: ',' } & Span)
-  | ({ type: 'EOF'; value: '' } & Span);
+  | ({ type: "FUNCTION"; value: string } & Span)
+  | ({ type: "FIELD"; value: string } & Span)
+  | ({ type: "STRING"; value: string } & Span)
+  | ({ type: "NUMBER"; value: number } & Span)
+  | ({ type: "BOOLEAN"; value: boolean } & Span)
+  | ({ type: "NULL"; value: null } & Span)
+  | ({ type: "OPERATOR"; value: string } & Span)
+  | ({ type: "LPAREN"; value: "(" } & Span)
+  | ({ type: "RPAREN"; value: ")" } & Span)
+  | ({ type: "LBRACKET"; value: "[" } & Span)
+  | ({ type: "RBRACKET"; value: "]" } & Span)
+  | ({ type: "COMMA"; value: "," } & Span)
+  | ({ type: "EOF"; value: "" } & Span);
 
 // ============================================
 // Tokenizer
 // ============================================
 
-const OPERATORS = ['>=', '<=', '!=', '=', '>', '<', '+', '-', '*', '/'];
+const OPERATORS = [">=", "<=", "!=", "=", ">", "<", "+", "-", "*", "/"];
 const FUNCTIONS = [
-  'AND', 'OR', 'NOT', 
-  'IS_EMPTY', 'IS_NOT_EMPTY',
-  'CONTAINS', 'NOT_CONTAINS', 'STARTS_WITH', 'ENDS_WITH',
-  'TODAY', 'NOW', 'TOMORROW', 'YESTERDAY',
-  'IS_TODAY', 'IS_THIS_WEEK', 'IS_THIS_MONTH',
-  'IS_BEFORE', 'IS_AFTER', 'IS_ON_AND_BEFORE', 'IS_ON_AND_AFTER',
-  'IS_OVERDUE', 'IS_UPCOMING',
-  'DATE_ADD', 'DATE_SUB',
-  'HAS_ANY_OF', 'HAS_ALL_OF', 'HAS_NONE_OF',
+  "AND",
+  "OR",
+  "NOT",
+  "IS_EMPTY",
+  "IS_NOT_EMPTY",
+  "CONTAINS",
+  "NOT_CONTAINS",
+  "STARTS_WITH",
+  "ENDS_WITH",
+  "TODAY",
+  "NOW",
+  "TOMORROW",
+  "YESTERDAY",
+  "IS_TODAY",
+  "IS_THIS_WEEK",
+  "IS_THIS_MONTH",
+  "IS_BEFORE",
+  "IS_AFTER",
+  "IS_ON_AND_BEFORE",
+  "IS_ON_AND_AFTER",
+  "IS_OVERDUE",
+  "IS_UPCOMING",
+  "DATE_ADD",
+  "DATE_SUB",
+  "HAS_ANY_OF",
+  "HAS_ALL_OF",
+  "HAS_NONE_OF",
   // Extended functions (FormulaField / Database View)
-  'IF', 'IFS', 'SWITCH', 'EMPTY',
-  'ROUND', 'CEIL', 'FLOOR', 'ABS', 'SQRT', 'POWER', 'LOG', 'SIGN',
-  'TRIM', 'LOWER', 'UPPER', 'LENGTH', 'SUBSTRING', 'REPLACE', 'SPLIT', 'FORMAT',
-  'DATE_BETWEEN', 'FORMAT_DATE', 'PARSE_DATE',
-  'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'WEEK',
-  'TO_NUMBER', 'TO_TEXT', 'TO_DATE',
+  "IF",
+  "IFS",
+  "SWITCH",
+  "EMPTY",
+  "ROUND",
+  "CEIL",
+  "FLOOR",
+  "ABS",
+  "SQRT",
+  "POWER",
+  "LOG",
+  "SIGN",
+  "TRIM",
+  "LOWER",
+  "UPPER",
+  "LENGTH",
+  "SUBSTRING",
+  "REPLACE",
+  "SPLIT",
+  "FORMAT",
+  "DATE_BETWEEN",
+  "FORMAT_DATE",
+  "PARSE_DATE",
+  "YEAR",
+  "MONTH",
+  "DAY",
+  "HOUR",
+  "MINUTE",
+  "WEEK",
+  "TO_NUMBER",
+  "TO_TEXT",
+  "TO_DATE",
   // Financial
-  'PMT', 'FV', 'PV', 'NPV', 'IRR', 'RATE', 'IPMT', 'PPMT', 'NPER', 'CUMPRINC', 'CUMIPMT',
+  "PMT",
+  "FV",
+  "PV",
+  "NPV",
+  "IRR",
+  "RATE",
+  "IPMT",
+  "PPMT",
+  "NPER",
+  "CUMPRINC",
+  "CUMIPMT",
   // Statistical
-  'VARIANCE', 'VARIANCE_S', 'PERCENTILE', 'QUARTILE', 'CORREL', 'MODE', 'RANK', 'STD_DEV_S',
+  "VARIANCE",
+  "VARIANCE_S",
+  "PERCENTILE",
+  "QUARTILE",
+  "CORREL",
+  "MODE",
+  "RANK",
+  "STD_DEV_S",
   // Aggregate-aware
-  'SUM', 'AVG', 'COUNT', 'MIN', 'MAX', 'STD_DEV',
+  "SUM",
+  "AVG",
+  "COUNT",
+  "MIN",
+  "MAX",
+  "STD_DEV",
   // Enhanced Math
-  'MEDIAN', 'PRODUCT', 'MOD', 'EVEN', 'ODD', 'PI', 'RANDOM_INT',
+  "MEDIAN",
+  "PRODUCT",
+  "MOD",
+  "EVEN",
+  "ODD",
+  "PI",
+  "RANDOM_INT",
   // Enhanced String
-  'LEFT', 'RIGHT', 'MID', 'REGEX_MATCH', 'REGEX_REPLACE', 'JOIN', 'REPEAT', 'ENCODE_URL',
+  "LEFT",
+  "RIGHT",
+  "MID",
+  "REGEX_MATCH",
+  "REGEX_REPLACE",
+  "JOIN",
+  "REPEAT",
+  "ENCODE_URL",
   // Enhanced Conversion/Logic/Date
-  'TO_CURRENCY', 'TO_PERCENT', 'LET', 'IFBLANK',
-  'END_OF_MONTH', 'WEEKDAY_NAME', 'ISO_WEEK',
+  "TO_CURRENCY",
+  "TO_PERCENT",
+  "LET",
+  "IFBLANK",
+  "END_OF_MONTH",
+  "WEEKDAY_NAME",
+  "ISO_WEEK",
   // Duration
-  'DAYS', 'HOURS', 'MINUTES', 'TO_DAYS', 'TO_HOURS', 'WORKDAYS',
+  "DAYS",
+  "HOURS",
+  "MINUTES",
+  "TO_DAYS",
+  "TO_HOURS",
+  "WORKDAYS",
   // Conditional Aggregation
-  'SUMIF', 'COUNTIF', 'AVERAGEIF',
+  "SUMIF",
+  "COUNTIF",
+  "AVERAGEIF",
   // Visual formatting
-  'STYLE',
+  "STYLE",
   // List iteration
-  'MAP', 'FILTER', 'REDUCE',
+  "MAP",
+  "FILTER",
+  "REDUCE",
   // List utilities
-  'ZIP', 'EXTRACT',
+  "ZIP",
+  "EXTRACT",
   // Multi-bind LET
-  'LETS',
+  "LETS",
   // Notion 2.0 special
-  'PROP', 'ID',
+  "PROP",
+  "ID",
 ];
 
 export function tokenize(formula: string): Token[] {
@@ -119,8 +219,8 @@ export function tokenize(formula: string): Token[] {
     }
 
     // Comments (from # to end of line)
-    if (char === '#') {
-      while (i < formula.length && formula[i] !== '\n') {
+    if (char === "#") {
+      while (i < formula.length && formula[i] !== "\n") {
         i++;
       }
       continue;
@@ -131,55 +231,69 @@ export function tokenize(formula: string): Token[] {
     // String literals (double or single quotes)
     if (char === '"' || char === "'") {
       const quote = char;
-      let value = '';
+      let value = "";
       i++; // Skip opening quote
-      
+
       while (i < formula.length && formula[i] !== quote) {
-        if (formula[i] === '\\' && i + 1 < formula.length) {
+        if (formula[i] === "\\" && i + 1 < formula.length) {
           // Escape sequences
           i++;
           const escaped = formula[i];
           switch (escaped) {
-            case 'n': value += '\n'; break;
-            case 't': value += '\t'; break;
-            case '\\': value += '\\'; break;
-            case quote: value += quote; break;
-            default: value += escaped;
+            case "n":
+              value += "\n";
+              break;
+            case "t":
+              value += "\t";
+              break;
+            case "\\":
+              value += "\\";
+              break;
+            case quote:
+              value += quote;
+              break;
+            default:
+              value += escaped;
           }
         } else {
           value += formula[i];
         }
         i++;
       }
-      
+
       i++; // Skip closing quote
-      tokens.push({ type: 'STRING', value, start: tokenStart, end: i });
+      tokens.push({ type: "STRING", value, start: tokenStart, end: i });
       continue;
     }
 
     // Numbers
     const nextChar = formula[i + 1];
-    if (/\d/.test(char) || (char === '-' && nextChar && /\d/.test(nextChar))) {
-      let value = '';
-      if (char === '-') {
+    if (/\d/.test(char) || (char === "-" && nextChar && /\d/.test(nextChar))) {
+      let value = "";
+      if (char === "-") {
         value += char;
         i++;
       }
-      
+
       while (i < formula.length) {
         const ch = formula[i];
         if (!ch || !/[\d.]/.test(ch)) break;
         value += ch;
         i++;
       }
-      
+
       // coercion-exempt: Class B — lexing source text, not interpreting user
       // data. The scanner above has already consumed exactly the `[\d.]` run
       // that makes up this token, so the whole-string question `toNumber` asks
       // has been answered by the scan itself. This is also what lets the
       // evaluator route its argument coercion wholesale: a numeric literal is
       // a JS number before evaluation, so `toNumber` is a no-op on it (#180a).
-      tokens.push({ type: 'NUMBER', value: parseFloat(value), start: tokenStart, end: i });
+      tokens.push({
+        type: "NUMBER",
+        value: parseFloat(value),
+        start: tokenStart,
+        end: i,
+      });
       continue;
     }
 
@@ -188,7 +302,7 @@ export function tokenize(formula: string): Token[] {
     for (const op of OPERATORS) {
       if (formula.substring(i, i + op.length) === op) {
         i += op.length;
-        tokens.push({ type: 'OPERATOR', value: op, start: tokenStart, end: i });
+        tokens.push({ type: "OPERATOR", value: op, start: tokenStart, end: i });
         foundOperator = true;
         break;
       }
@@ -196,36 +310,36 @@ export function tokenize(formula: string): Token[] {
     if (foundOperator) continue;
 
     // Parentheses and brackets
-    if (char === '(') {
+    if (char === "(") {
       i++;
-      tokens.push({ type: 'LPAREN', value: '(', start: tokenStart, end: i });
+      tokens.push({ type: "LPAREN", value: "(", start: tokenStart, end: i });
       continue;
     }
-    if (char === ')') {
+    if (char === ")") {
       i++;
-      tokens.push({ type: 'RPAREN', value: ')', start: tokenStart, end: i });
+      tokens.push({ type: "RPAREN", value: ")", start: tokenStart, end: i });
       continue;
     }
-    if (char === '[') {
+    if (char === "[") {
       i++;
-      tokens.push({ type: 'LBRACKET', value: '[', start: tokenStart, end: i });
+      tokens.push({ type: "LBRACKET", value: "[", start: tokenStart, end: i });
       continue;
     }
-    if (char === ']') {
+    if (char === "]") {
       i++;
-      tokens.push({ type: 'RBRACKET', value: ']', start: tokenStart, end: i });
+      tokens.push({ type: "RBRACKET", value: "]", start: tokenStart, end: i });
       continue;
     }
-    if (char === ',') {
+    if (char === ",") {
       i++;
-      tokens.push({ type: 'COMMA', value: ',', start: tokenStart, end: i });
+      tokens.push({ type: "COMMA", value: ",", start: tokenStart, end: i });
       continue;
     }
 
     // @column reference (cross-record)
-    if (char === '@') {
+    if (char === "@") {
       i++; // skip @
-      let value = '';
+      let value = "";
       while (i < formula.length) {
         const ch = formula[i];
         if (!ch || !/[a-zA-Z0-9_]/.test(ch)) break;
@@ -233,14 +347,19 @@ export function tokenize(formula: string): Token[] {
         i++;
       }
       if (value) {
-        tokens.push({ type: 'FIELD', value: `@${value}`, start: tokenStart, end: i });
+        tokens.push({
+          type: "FIELD",
+          value: `@${value}`,
+          start: tokenStart,
+          end: i,
+        });
       }
       continue;
     }
 
     // Identifiers (functions, fields, booleans, null)
     if (/[a-zA-Z_]/.test(char)) {
-      let value = '';
+      let value = "";
       while (i < formula.length) {
         const ch = formula[i];
         if (!ch || !/[a-zA-Z0-9_]/.test(ch)) break;
@@ -251,17 +370,32 @@ export function tokenize(formula: string): Token[] {
       const upperValue = value.toUpperCase();
 
       // Keywords
-      if (upperValue === 'TRUE') {
-        tokens.push({ type: 'BOOLEAN', value: true, start: tokenStart, end: i });
-      } else if (upperValue === 'FALSE') {
-        tokens.push({ type: 'BOOLEAN', value: false, start: tokenStart, end: i });
-      } else if (upperValue === 'NULL') {
-        tokens.push({ type: 'NULL', value: null, start: tokenStart, end: i });
+      if (upperValue === "TRUE") {
+        tokens.push({
+          type: "BOOLEAN",
+          value: true,
+          start: tokenStart,
+          end: i,
+        });
+      } else if (upperValue === "FALSE") {
+        tokens.push({
+          type: "BOOLEAN",
+          value: false,
+          start: tokenStart,
+          end: i,
+        });
+      } else if (upperValue === "NULL") {
+        tokens.push({ type: "NULL", value: null, start: tokenStart, end: i });
       } else if (FUNCTIONS.includes(upperValue)) {
-        tokens.push({ type: 'FUNCTION', value: upperValue, start: tokenStart, end: i });
+        tokens.push({
+          type: "FUNCTION",
+          value: upperValue,
+          start: tokenStart,
+          end: i,
+        });
       } else {
         // Field reference
-        tokens.push({ type: 'FIELD', value, start: tokenStart, end: i });
+        tokens.push({ type: "FIELD", value, start: tokenStart, end: i });
       }
       continue;
     }
@@ -269,7 +403,7 @@ export function tokenize(formula: string): Token[] {
     throw new Error(`Unexpected character at position ${i}: ${char}`);
   }
 
-  tokens.push({ type: 'EOF', value: '', start: i, end: i });
+  tokens.push({ type: "EOF", value: "", start: i, end: i });
   return tokens;
 }
 
@@ -287,17 +421,17 @@ class Parser {
 
   private peek(): Token {
     const token = this.tokens[this.current];
-    if (!token) throw new Error('Unexpected end of input');
+    if (!token) throw new Error("Unexpected end of input");
     return token;
   }
 
   private advance(): Token {
     const token = this.tokens[this.current++];
-    if (!token) throw new Error('Unexpected end of input');
+    if (!token) throw new Error("Unexpected end of input");
     return token;
   }
 
-  private expect(type: Token['type']): Token {
+  private expect(type: Token["type"]): Token {
     const token = this.peek();
     if (token.type !== type) {
       throw new Error(`Expected ${type} but got ${token.type}`);
@@ -307,7 +441,7 @@ class Parser {
 
   parse(): FormulaNode {
     const result = this.parseExpression();
-    this.expect('EOF');
+    this.expect("EOF");
     return result;
   }
 
@@ -318,10 +452,13 @@ class Parser {
   private parseComparison(): FormulaNode {
     let left = this.parseAdditive();
 
-    while (this.peek().type === 'OPERATOR' && ['=', '!=', '>', '<', '>=', '<='].includes(this.peek().value as string)) {
+    while (
+      this.peek().type === "OPERATOR" &&
+      ["=", "!=", ">", "<", ">=", "<="].includes(this.peek().value as string)
+    ) {
       const operator = this.advance().value as string;
       const right = this.parseAdditive();
-      left = { type: 'operator', operator, left, right };
+      left = { type: "operator", operator, left, right };
     }
 
     return left;
@@ -330,10 +467,13 @@ class Parser {
   private parseAdditive(): FormulaNode {
     let left = this.parseMultiplicative();
 
-    while (this.peek().type === 'OPERATOR' && ['+', '-'].includes(this.peek().value as string)) {
+    while (
+      this.peek().type === "OPERATOR" &&
+      ["+", "-"].includes(this.peek().value as string)
+    ) {
       const operator = this.advance().value as string;
       const right = this.parseMultiplicative();
-      left = { type: 'operator', operator, left, right };
+      left = { type: "operator", operator, left, right };
     }
 
     return left;
@@ -342,10 +482,13 @@ class Parser {
   private parseMultiplicative(): FormulaNode {
     let left = this.parseTerm();
 
-    while (this.peek().type === 'OPERATOR' && ['*', '/'].includes(this.peek().value as string)) {
+    while (
+      this.peek().type === "OPERATOR" &&
+      ["*", "/"].includes(this.peek().value as string)
+    ) {
       const operator = this.advance().value as string;
       const right = this.parseTerm();
-      left = { type: 'operator', operator, left, right };
+      left = { type: "operator", operator, left, right };
     }
 
     return left;
@@ -354,46 +497,46 @@ class Parser {
   private parseTerm(): FormulaNode {
     const token = this.peek();
 
-    if (token.type === 'FUNCTION') {
+    if (token.type === "FUNCTION") {
       return this.parseFunction();
     }
 
-    if (token.type === 'FIELD') {
+    if (token.type === "FIELD") {
       this.advance();
-      if (typeof token.value === 'string' && token.value.startsWith('@')) {
-        return { type: 'column_ref', name: token.value.substring(1) };
+      if (typeof token.value === "string" && token.value.startsWith("@")) {
+        return { type: "column_ref", name: token.value.substring(1) };
       }
-      return { type: 'field', name: token.value };
+      return { type: "field", name: token.value };
     }
 
-    if (token.type === 'STRING') {
+    if (token.type === "STRING") {
       this.advance();
-      return { type: 'literal', value: token.value };
+      return { type: "literal", value: token.value };
     }
 
-    if (token.type === 'NUMBER') {
+    if (token.type === "NUMBER") {
       this.advance();
-      return { type: 'literal', value: token.value };
+      return { type: "literal", value: token.value };
     }
 
-    if (token.type === 'BOOLEAN') {
+    if (token.type === "BOOLEAN") {
       this.advance();
-      return { type: 'literal', value: token.value };
+      return { type: "literal", value: token.value };
     }
 
-    if (token.type === 'NULL') {
+    if (token.type === "NULL") {
       this.advance();
-      return { type: 'literal', value: null };
+      return { type: "literal", value: null };
     }
 
-    if (token.type === 'LPAREN') {
+    if (token.type === "LPAREN") {
       this.advance(); // Skip (
       const expr = this.parseExpression();
-      this.expect('RPAREN');
+      this.expect("RPAREN");
       return expr;
     }
 
-    if (token.type === 'LBRACKET') {
+    if (token.type === "LBRACKET") {
       return this.parseArray();
     }
 
@@ -401,44 +544,47 @@ class Parser {
   }
 
   private parseFunction(): FormulaNode {
-    const funcToken = this.expect('FUNCTION');
-    const name = typeof funcToken.value === 'string' ? funcToken.value : String(funcToken.value);
-    
-    this.expect('LPAREN');
-    
+    const funcToken = this.expect("FUNCTION");
+    const name =
+      typeof funcToken.value === "string"
+        ? funcToken.value
+        : String(funcToken.value);
+
+    this.expect("LPAREN");
+
     const args: FormulaNode[] = [];
-    
-    if (this.peek().type !== 'RPAREN') {
+
+    if (this.peek().type !== "RPAREN") {
       args.push(this.parseExpression());
-      
-      while (this.peek().type === 'COMMA') {
+
+      while (this.peek().type === "COMMA") {
         this.advance(); // Skip comma
         args.push(this.parseExpression());
       }
     }
-    
-    this.expect('RPAREN');
-    
-    return { type: 'function', name, args };
+
+    this.expect("RPAREN");
+
+    return { type: "function", name, args };
   }
 
   private parseArray(): FormulaNode {
-    this.expect('LBRACKET');
-    
+    this.expect("LBRACKET");
+
     const items: FormulaNode[] = [];
-    
-    if (this.peek().type !== 'RBRACKET') {
+
+    if (this.peek().type !== "RBRACKET") {
       items.push(this.parseExpression());
-      
-      while (this.peek().type === 'COMMA') {
+
+      while (this.peek().type === "COMMA") {
         this.advance();
         items.push(this.parseExpression());
       }
     }
-    
-    this.expect('RBRACKET');
-    
-    return { type: 'array', items };
+
+    this.expect("RBRACKET");
+
+    return { type: "array", items };
   }
 }
 
@@ -466,43 +612,48 @@ export function evaluateFormula(
    * Smart equality: case-insensitive strings, type coercion, date-aware.
    * Matches behavior of visual-mode 'is' operator for consistency.
    */
-   
+
   function smartEquals(left: any, right: any): boolean {
     // Both null/undefined
     if (left == null && right == null) return true;
     if (left == null || right == null) return false;
 
     // Both strings → case-insensitive, trimmed
-    if (typeof left === 'string' && typeof right === 'string') {
+    if (typeof left === "string" && typeof right === "string") {
       const l = left.trim().toLowerCase();
       const r = right.trim().toLowerCase();
       if (l === r) return true;
       // Date-aware: both look like dates → compare as day
       const dl = dayjs(left);
       const dr = dayjs(right);
-      if (dl.isValid() && dr.isValid() && isDateLikeStr(left) && isDateLikeStr(right)) {
-        return dl.isSame(dr, 'day');
+      if (
+        dl.isValid() &&
+        dr.isValid() &&
+        isDateLikeStr(left) &&
+        isDateLikeStr(right)
+      ) {
+        return dl.isSame(dr, "day");
       }
       return false;
     }
 
     // Number ↔ String coercion (#180a: one rule — `"12abc" = 12` is false,
     // and `"" = 0` is false rather than true via `Number("") === 0`).
-    if (typeof left === 'number' && typeof right === 'string') {
+    if (typeof left === "number" && typeof right === "string") {
       const num = toNumber(right);
       return num !== null && left === num;
     }
-    if (typeof left === 'string' && typeof right === 'number') {
+    if (typeof left === "string" && typeof right === "number") {
       const num = toNumber(left);
       return num !== null && num === right;
     }
 
     // Boolean ↔ String coercion
-    if (typeof left === 'boolean' && typeof right === 'string') {
-      return left === (right.toLowerCase() === 'true');
+    if (typeof left === "boolean" && typeof right === "string") {
+      return left === (right.toLowerCase() === "true");
     }
-    if (typeof left === 'string' && typeof right === 'boolean') {
-      return (left.toLowerCase() === 'true') === right;
+    if (typeof left === "string" && typeof right === "boolean") {
+      return (left.toLowerCase() === "true") === right;
     }
 
     return left === right;
@@ -518,7 +669,7 @@ export function evaluateFormula(
    * Numbers compared numerically; dates compared by day; strings by locale.
    * Returns negative, zero, or positive like compareTo.
    */
-   
+
   function smartCompare(left: any, right: any): number {
     // Both null → equal
     if (left == null && right == null) return 0;
@@ -526,30 +677,35 @@ export function evaluateFormula(
     if (right == null) return 1;
 
     // Number ↔ Number
-    if (typeof left === 'number' && typeof right === 'number') {
+    if (typeof left === "number" && typeof right === "number") {
       return left - right;
     }
 
     // Number ↔ String coercion (#180a). When the string is not a number the
     // comparison falls through to the string/date branches below, as before.
-    if (typeof left === 'number' && typeof right === 'string') {
+    if (typeof left === "number" && typeof right === "string") {
       const num = toNumber(right);
       if (num !== null) return left - num;
     }
-    if (typeof left === 'string' && typeof right === 'number') {
+    if (typeof left === "string" && typeof right === "number") {
       const num = toNumber(left);
       if (num !== null) return num - right;
     }
 
     // Date strings
-    if (typeof left === 'string' && typeof right === 'string') {
+    if (typeof left === "string" && typeof right === "string") {
       const dl = dayjs(left);
       const dr = dayjs(right);
-      if (dl.isValid() && dr.isValid() && isDateLikeStr(left) && isDateLikeStr(right)) {
+      if (
+        dl.isValid() &&
+        dr.isValid() &&
+        isDateLikeStr(left) &&
+        isDateLikeStr(right)
+      ) {
         return dl.valueOf() - dr.valueOf();
       }
       // Fallback: locale-aware string compare
-      return left.localeCompare(right, undefined, { sensitivity: 'base' });
+      return left.localeCompare(right, undefined, { sensitivity: "base" });
     }
 
     // Fallback to string coercion
@@ -568,227 +724,287 @@ export function evaluateFormula(
    * @returns any - Formula values can be: string | number | boolean | Date | null
    *                Type depends on runtime expression, cannot be statically determined
    */
-   
+
   function evaluate(n: FormulaNode): any {
     switch (n.type) {
-      case 'literal':
+      case "literal":
         return n.value;
 
-      case 'field': {
+      case "field": {
         const value = record.values[n.name];
         if (value === undefined) return null;
         // Strip wiki-link syntax: [[path|display]] → display
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
           const m = value.match(/^\[\[([^\]]+)\]\]$/);
           if (m && m[1]) {
             const inner = m[1];
-            const pipeIdx = inner.indexOf('|');
+            const pipeIdx = inner.indexOf("|");
             return pipeIdx >= 0 ? inner.substring(pipeIdx + 1) : inner;
           }
         }
         return value;
       }
 
-      case 'array':
-        return n.items.map(item => evaluate(item));
+      case "array":
+        return n.items.map((item) => evaluate(item));
 
-      case 'operator': {
+      case "operator": {
         const left = evaluate(n.left);
         const right = evaluate(n.right);
 
         switch (n.operator) {
-          case '=': return smartEquals(left, right);
-          case '!=': return !smartEquals(left, right);
-          case '>': return smartCompare(left, right) > 0;
-          case '<': return smartCompare(left, right) < 0;
-          case '>=': return smartCompare(left, right) >= 0;
-          case '<=': return smartCompare(left, right) <= 0;
-          case '+': return left + right;
-          case '-': return left - right;
-          case '*': return left * right;
-          case '/': return left / right;
-          default: throw new Error(`Unknown operator: ${n.operator}`);
+          case "=":
+            return smartEquals(left, right);
+          case "!=":
+            return !smartEquals(left, right);
+          case ">":
+            return smartCompare(left, right) > 0;
+          case "<":
+            return smartCompare(left, right) < 0;
+          case ">=":
+            return smartCompare(left, right) >= 0;
+          case "<=":
+            return smartCompare(left, right) <= 0;
+          case "+":
+            return left + right;
+          case "-":
+            return left - right;
+          case "*":
+            return left * right;
+          case "/":
+            return left / right;
+          default:
+            throw new Error(`Unknown operator: ${n.operator}`);
         }
       }
 
-      case 'function': {
+      case "function": {
         const funcName = n.name;
         const args = n.args;
 
         // Logical functions
-        if (funcName === 'AND') {
-          return args.every(arg => evaluate(arg) === true);
+        if (funcName === "AND") {
+          return args.every((arg) => evaluate(arg) === true);
         }
-        if (funcName === 'OR') {
-          return args.some(arg => evaluate(arg) === true);
+        if (funcName === "OR") {
+          return args.some((arg) => evaluate(arg) === true);
         }
-        if (funcName === 'NOT') {
-          if (args.length !== 1) throw new Error('NOT expects 1 argument');
+        if (funcName === "NOT") {
+          if (args.length !== 1) throw new Error("NOT expects 1 argument");
           return !evaluate(getArg(args, 0));
         }
 
         // Empty checks
-        if (funcName === 'IS_EMPTY') {
-          if (args.length !== 1) throw new Error('IS_EMPTY expects 1 argument');
+        if (funcName === "IS_EMPTY") {
+          if (args.length !== 1) throw new Error("IS_EMPTY expects 1 argument");
           const val = evaluate(getArg(args, 0));
-          return val === null || val === undefined || val === '' || 
-                 (Array.isArray(val) && val.length === 0);
+          return (
+            val === null ||
+            val === undefined ||
+            val === "" ||
+            (Array.isArray(val) && val.length === 0)
+          );
         }
-        if (funcName === 'IS_NOT_EMPTY') {
-          if (args.length !== 1) throw new Error('IS_NOT_EMPTY expects 1 argument');
+        if (funcName === "IS_NOT_EMPTY") {
+          if (args.length !== 1)
+            throw new Error("IS_NOT_EMPTY expects 1 argument");
           const val = evaluate(getArg(args, 0));
-          return !(val === null || val === undefined || val === '' || 
-                   (Array.isArray(val) && val.length === 0));
+          return !(
+            val === null ||
+            val === undefined ||
+            val === "" ||
+            (Array.isArray(val) && val.length === 0)
+          );
         }
 
         // String functions
-        if (funcName === 'CONTAINS') {
-          if (args.length !== 2) throw new Error('CONTAINS expects 2 arguments');
-          const haystack = String(evaluate(getArg(args, 0)) ?? '').toLowerCase();
-          const needle = String(evaluate(getArg(args, 1)) ?? '').toLowerCase();
+        if (funcName === "CONTAINS") {
+          if (args.length !== 2)
+            throw new Error("CONTAINS expects 2 arguments");
+          const haystack = String(
+            evaluate(getArg(args, 0)) ?? ""
+          ).toLowerCase();
+          const needle = String(evaluate(getArg(args, 1)) ?? "").toLowerCase();
           return haystack.includes(needle);
         }
-        if (funcName === 'NOT_CONTAINS') {
-          if (args.length !== 2) throw new Error('NOT_CONTAINS expects 2 arguments');
-          const haystack = String(evaluate(getArg(args, 0)) ?? '').toLowerCase();
-          const needle = String(evaluate(getArg(args, 1)) ?? '').toLowerCase();
+        if (funcName === "NOT_CONTAINS") {
+          if (args.length !== 2)
+            throw new Error("NOT_CONTAINS expects 2 arguments");
+          const haystack = String(
+            evaluate(getArg(args, 0)) ?? ""
+          ).toLowerCase();
+          const needle = String(evaluate(getArg(args, 1)) ?? "").toLowerCase();
           return !haystack.includes(needle);
         }
-        if (funcName === 'STARTS_WITH') {
-          if (args.length !== 2) throw new Error('STARTS_WITH expects 2 arguments');
-          const str = String(evaluate(getArg(args, 0)) ?? '');
-          const prefix = String(evaluate(getArg(args, 1)) ?? '');
+        if (funcName === "STARTS_WITH") {
+          if (args.length !== 2)
+            throw new Error("STARTS_WITH expects 2 arguments");
+          const str = String(evaluate(getArg(args, 0)) ?? "");
+          const prefix = String(evaluate(getArg(args, 1)) ?? "");
           return str.startsWith(prefix);
         }
-        if (funcName === 'ENDS_WITH') {
-          if (args.length !== 2) throw new Error('ENDS_WITH expects 2 arguments');
-          const str = String(evaluate(getArg(args, 0)) ?? '');
-          const suffix = String(evaluate(getArg(args, 1)) ?? '');
+        if (funcName === "ENDS_WITH") {
+          if (args.length !== 2)
+            throw new Error("ENDS_WITH expects 2 arguments");
+          const str = String(evaluate(getArg(args, 0)) ?? "");
+          const suffix = String(evaluate(getArg(args, 1)) ?? "");
           return str.endsWith(suffix);
         }
 
         // Date constants
-        if (funcName === 'TODAY') {
-          return base.format('YYYY-MM-DD');
+        if (funcName === "TODAY") {
+          return base.format("YYYY-MM-DD");
         }
-        if (funcName === 'NOW') {
+        if (funcName === "NOW") {
           return base.toISOString();
         }
-        if (funcName === 'TOMORROW') {
-          return base.add(1, 'day').format('YYYY-MM-DD');
+        if (funcName === "TOMORROW") {
+          return base.add(1, "day").format("YYYY-MM-DD");
         }
-        if (funcName === 'YESTERDAY') {
-          return base.subtract(1, 'day').format('YYYY-MM-DD');
+        if (funcName === "YESTERDAY") {
+          return base.subtract(1, "day").format("YYYY-MM-DD");
         }
 
         // Date comparisons
-        if (funcName === 'IS_TODAY') {
-          if (args.length !== 1) throw new Error('IS_TODAY expects 1 argument');
+        if (funcName === "IS_TODAY") {
+          if (args.length !== 1) throw new Error("IS_TODAY expects 1 argument");
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
           const date = dayjs(val);
-          return date.isValid() && date.isSame(base, 'day');
+          return date.isValid() && date.isSame(base, "day");
         }
-        if (funcName === 'IS_THIS_WEEK') {
-          if (args.length !== 1) throw new Error('IS_THIS_WEEK expects 1 argument');
+        if (funcName === "IS_THIS_WEEK") {
+          if (args.length !== 1)
+            throw new Error("IS_THIS_WEEK expects 1 argument");
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
           const date = dayjs(val);
-          return date.isValid() && date.isSame(base, 'week');
+          return date.isValid() && date.isSame(base, "week");
         }
-        if (funcName === 'IS_THIS_MONTH') {
-          if (args.length !== 1) throw new Error('IS_THIS_MONTH expects 1 argument');
+        if (funcName === "IS_THIS_MONTH") {
+          if (args.length !== 1)
+            throw new Error("IS_THIS_MONTH expects 1 argument");
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
           const date = dayjs(val);
-          return date.isValid() && date.isSame(base, 'month');
+          return date.isValid() && date.isSame(base, "month");
         }
-        if (funcName === 'IS_BEFORE') {
-          if (args.length !== 2) throw new Error('IS_BEFORE expects 2 arguments');
+        if (funcName === "IS_BEFORE") {
+          if (args.length !== 2)
+            throw new Error("IS_BEFORE expects 2 arguments");
           const date1 = dayjs(evaluate(getArg(args, 0)));
           const date2 = dayjs(evaluate(getArg(args, 1)));
-          return date1.isValid() && date2.isValid() && date1.isBefore(date2, 'day');
+          return (
+            date1.isValid() && date2.isValid() && date1.isBefore(date2, "day")
+          );
         }
-        if (funcName === 'IS_AFTER') {
-          if (args.length !== 2) throw new Error('IS_AFTER expects 2 arguments');
+        if (funcName === "IS_AFTER") {
+          if (args.length !== 2)
+            throw new Error("IS_AFTER expects 2 arguments");
           const date1 = dayjs(evaluate(getArg(args, 0)));
           const date2 = dayjs(evaluate(getArg(args, 1)));
-          return date1.isValid() && date2.isValid() && date1.isAfter(date2, 'day');
+          return (
+            date1.isValid() && date2.isValid() && date1.isAfter(date2, "day")
+          );
         }
-        if (funcName === 'IS_ON_AND_BEFORE') {
-          if (args.length !== 2) throw new Error('IS_ON_AND_BEFORE expects 2 arguments');
+        if (funcName === "IS_ON_AND_BEFORE") {
+          if (args.length !== 2)
+            throw new Error("IS_ON_AND_BEFORE expects 2 arguments");
           const date1 = dayjs(evaluate(getArg(args, 0)));
           const date2 = dayjs(evaluate(getArg(args, 1)));
-          return date1.isValid() && date2.isValid() && date1.isSameOrBefore(date2, 'day');
+          return (
+            date1.isValid() &&
+            date2.isValid() &&
+            date1.isSameOrBefore(date2, "day")
+          );
         }
-        if (funcName === 'IS_ON_AND_AFTER') {
-          if (args.length !== 2) throw new Error('IS_ON_AND_AFTER expects 2 arguments');
+        if (funcName === "IS_ON_AND_AFTER") {
+          if (args.length !== 2)
+            throw new Error("IS_ON_AND_AFTER expects 2 arguments");
           const date1 = dayjs(evaluate(getArg(args, 0)));
           const date2 = dayjs(evaluate(getArg(args, 1)));
-          return date1.isValid() && date2.isValid() && date1.isSameOrAfter(date2, 'day');
+          return (
+            date1.isValid() &&
+            date2.isValid() &&
+            date1.isSameOrAfter(date2, "day")
+          );
         }
-        if (funcName === 'IS_OVERDUE') {
-          if (args.length !== 1) throw new Error('IS_OVERDUE expects 1 argument');
+        if (funcName === "IS_OVERDUE") {
+          if (args.length !== 1)
+            throw new Error("IS_OVERDUE expects 1 argument");
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
           const date = dayjs(val);
-          return date.isValid() && date.isBefore(base, 'day');
+          return date.isValid() && date.isBefore(base, "day");
         }
-        if (funcName === 'IS_UPCOMING') {
-          if (args.length !== 1) throw new Error('IS_UPCOMING expects 1 argument');
+        if (funcName === "IS_UPCOMING") {
+          if (args.length !== 1)
+            throw new Error("IS_UPCOMING expects 1 argument");
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
           const date = dayjs(val);
-          return date.isValid() && date.isAfter(base, 'day');
+          return date.isValid() && date.isAfter(base, "day");
         }
 
         // Date arithmetic
-        if (funcName === 'DATE_ADD') {
-          if (args.length !== 3) throw new Error('DATE_ADD expects 3 arguments (date, amount, unit)');
+        if (funcName === "DATE_ADD") {
+          if (args.length !== 3)
+            throw new Error(
+              "DATE_ADD expects 3 arguments (date, amount, unit)"
+            );
           const date = dayjs(evaluate(getArg(args, 0)));
           // #180a: `?? NaN` keeps the existing shape — a non-numeric amount
           // already produced an Invalid Date here. What changes is that `""`
           // and a missing field no longer count as "add zero days".
           const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
-          const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
-          return date.add(amount, unit).format('YYYY-MM-DD');
+          const unit = String(
+            evaluate(getArg(args, 2))
+          ) as dayjs.ManipulateType;
+          return date.add(amount, unit).format("YYYY-MM-DD");
         }
-        if (funcName === 'DATE_SUB') {
-          if (args.length !== 3) throw new Error('DATE_SUB expects 3 arguments (date, amount, unit)');
+        if (funcName === "DATE_SUB") {
+          if (args.length !== 3)
+            throw new Error(
+              "DATE_SUB expects 3 arguments (date, amount, unit)"
+            );
           const date = dayjs(evaluate(getArg(args, 0)));
           const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
-          const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
-          return date.subtract(amount, unit).format('YYYY-MM-DD');
+          const unit = String(
+            evaluate(getArg(args, 2))
+          ) as dayjs.ManipulateType;
+          return date.subtract(amount, unit).format("YYYY-MM-DD");
         }
 
         // Array/Tag functions
-        if (funcName === 'HAS_ANY_OF') {
-          if (args.length !== 2) throw new Error('HAS_ANY_OF expects 2 arguments');
+        if (funcName === "HAS_ANY_OF") {
+          if (args.length !== 2)
+            throw new Error("HAS_ANY_OF expects 2 arguments");
           const arr1 = evaluate(getArg(args, 0));
           const arr2 = evaluate(getArg(args, 1));
           if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-          return arr1.some(item => arr2.includes(item));
+          return arr1.some((item) => arr2.includes(item));
         }
-        if (funcName === 'HAS_ALL_OF') {
-          if (args.length !== 2) throw new Error('HAS_ALL_OF expects 2 arguments');
+        if (funcName === "HAS_ALL_OF") {
+          if (args.length !== 2)
+            throw new Error("HAS_ALL_OF expects 2 arguments");
           const arr1 = evaluate(getArg(args, 0));
           const arr2 = evaluate(getArg(args, 1));
           if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-          return arr2.every(item => arr1.includes(item));
+          return arr2.every((item) => arr1.includes(item));
         }
-        if (funcName === 'HAS_NONE_OF') {
-          if (args.length !== 2) throw new Error('HAS_NONE_OF expects 2 arguments');
+        if (funcName === "HAS_NONE_OF") {
+          if (args.length !== 2)
+            throw new Error("HAS_NONE_OF expects 2 arguments");
           const arr1 = evaluate(getArg(args, 0));
           const arr2 = evaluate(getArg(args, 1));
           if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-          return !arr1.some(item => arr2.includes(item));
+          return !arr1.some((item) => arr2.includes(item));
         }
 
         throw new Error(`Unknown function: ${funcName}`);
       }
 
       default:
-         
         throw new Error(`Unknown node type: ${(n as any).type}`);
     }
   }
@@ -806,7 +1022,10 @@ export type ValidationError = {
   position?: number;
 };
 
-export function validateFormula(formula: string, availableFields: string[]): ValidationError[] {
+export function validateFormula(
+  formula: string,
+  availableFields: string[]
+): ValidationError[] {
   const errors: ValidationError[] = [];
 
   try {
@@ -816,24 +1035,23 @@ export function validateFormula(formula: string, availableFields: string[]): Val
 
     // Check for undefined fields
     function checkFields(node: FormulaNode) {
-      if (node.type === 'field') {
+      if (node.type === "field") {
         if (!availableFields.includes(node.name)) {
           errors.push({
             message: `Unknown field: ${node.name}`,
           });
         }
-      } else if (node.type === 'function') {
+      } else if (node.type === "function") {
         node.args.forEach(checkFields);
-      } else if (node.type === 'operator') {
+      } else if (node.type === "operator") {
         checkFields(node.left);
         checkFields(node.right);
-      } else if (node.type === 'array') {
+      } else if (node.type === "array") {
         node.items.forEach(checkFields);
       }
     }
 
     checkFields(ast);
-
   } catch (error) {
     errors.push({
       message: error instanceof Error ? error.message : String(error),

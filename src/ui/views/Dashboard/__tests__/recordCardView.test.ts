@@ -9,12 +9,21 @@ import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
 const ICON_CANDIDATES = ["icon", "cover", "thumbnail"];
 const DESC_CANDIDATES = ["description", "summary", "excerpt"];
 
-function mkField(name: string, type: DataFieldType = DataFieldType.String): DataField {
+function mkField(
+  name: string,
+  type: DataFieldType = DataFieldType.String
+): DataField {
   return { name, type, repeated: false, derived: false, identifier: false };
 }
 
-function resolveIconField(fields: DataField[], iconField?: string): string | undefined {
-  return iconField ?? fields.find((f) => ICON_CANDIDATES.includes(f.name.toLowerCase()))?.name;
+function resolveIconField(
+  fields: DataField[],
+  iconField?: string
+): string | undefined {
+  return (
+    iconField ??
+    fields.find((f) => ICON_CANDIDATES.includes(f.name.toLowerCase()))?.name
+  );
 }
 
 function resolveDescField(fields: DataField[]): DataField | undefined {

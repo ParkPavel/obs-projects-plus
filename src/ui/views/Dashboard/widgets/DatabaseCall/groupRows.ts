@@ -7,7 +7,11 @@
 // regardless of whether the underlying source is folder, tag, or
 // Dataview — closing M-DATAVIEW-BRIDGE Gap on cross-view consistency.
 
-import type { DataRecord, Optional, DataValue } from "src/lib/dataframe/dataframe";
+import type {
+  DataRecord,
+  Optional,
+  DataValue,
+} from "src/lib/dataframe/dataframe";
 import type { GroupConfig } from "src/ui/views/Dashboard/types";
 
 export interface RowGroup {
@@ -46,9 +50,12 @@ export function bucketLabelForRaw(
   statusGroups: StatusGroups,
   labels: SemanticLabels
 ): string {
-  if (raw !== null && (statusGroups.todo ?? []).includes(raw)) return labels.todo;
-  if (raw !== null && (statusGroups.inProgress ?? []).includes(raw)) return labels.inProgress;
-  if (raw !== null && (statusGroups.complete ?? []).includes(raw)) return labels.complete;
+  if (raw !== null && (statusGroups.todo ?? []).includes(raw))
+    return labels.todo;
+  if (raw !== null && (statusGroups.inProgress ?? []).includes(raw))
+    return labels.inProgress;
+  if (raw !== null && (statusGroups.complete ?? []).includes(raw))
+    return labels.complete;
   return labels.none;
 }
 
@@ -72,9 +79,13 @@ export function groupRecords(
 
     // Sort groups (value mode only — semantic order is fixed).
     if (config.sortOrder === "asc") {
-      groups.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+      groups.sort((a, b) =>
+        a.key.localeCompare(b.key, undefined, { numeric: true })
+      );
     } else if (config.sortOrder === "desc") {
-      groups.sort((a, b) => b.key.localeCompare(a.key, undefined, { numeric: true }));
+      groups.sort((a, b) =>
+        b.key.localeCompare(a.key, undefined, { numeric: true })
+      );
     }
     // "manual" → keep insertion order
   }
@@ -136,8 +147,10 @@ function buildSemanticGroups(
 
   const labels: SemanticLabels = {
     todo: config.semanticLabels?.todo ?? DEFAULT_SEMANTIC_LABELS.todo,
-    inProgress: config.semanticLabels?.inProgress ?? DEFAULT_SEMANTIC_LABELS.inProgress,
-    complete: config.semanticLabels?.complete ?? DEFAULT_SEMANTIC_LABELS.complete,
+    inProgress:
+      config.semanticLabels?.inProgress ?? DEFAULT_SEMANTIC_LABELS.inProgress,
+    complete:
+      config.semanticLabels?.complete ?? DEFAULT_SEMANTIC_LABELS.complete,
     none: config.semanticLabels?.none ?? DEFAULT_SEMANTIC_LABELS.none,
   };
 
@@ -170,7 +183,8 @@ function buildSemanticGroups(
 export function stringifyForBucket(value: Optional<DataValue>): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   // Arrays / Dates / objects don't participate in semantic bucketing —
   // they always fall through to "No Status".
   return null;
@@ -198,9 +212,13 @@ function buildSubGroups(
   }));
 
   if (sortOrder === "asc") {
-    subGroups.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+    subGroups.sort((a, b) =>
+      a.key.localeCompare(b.key, undefined, { numeric: true })
+    );
   } else if (sortOrder === "desc") {
-    subGroups.sort((a, b) => b.key.localeCompare(a.key, undefined, { numeric: true }));
+    subGroups.sort((a, b) =>
+      b.key.localeCompare(a.key, undefined, { numeric: true })
+    );
   }
 
   return subGroups;

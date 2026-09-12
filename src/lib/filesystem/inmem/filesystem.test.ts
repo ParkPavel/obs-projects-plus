@@ -42,19 +42,23 @@ describe("InMemFile.readTags", () => {
   });
 
   it("parses YAML list tags with #", async () => {
-    const file = await createFile("---\ntags:\n  - \"#daily\"\n  - \"#project\"\n---\n");
+    const file = await createFile(
+      '---\ntags:\n  - "#daily"\n  - "#project"\n---\n'
+    );
     const tags = file.readTags();
     expect(tags).toEqual(new Set(["#daily", "#project"]));
   });
 
   it("strips YAML quotes from tags", async () => {
-    const file = await createFile("---\ntags:\n  - 'daily'\n  - \"project\"\n---\n");
+    const file = await createFile(
+      "---\ntags:\n  - 'daily'\n  - \"project\"\n---\n"
+    );
     const tags = file.readTags();
     expect(tags).toEqual(new Set(["#daily", "#project"]));
   });
 
   it("handles double ## in YAML list (the bug scenario)", async () => {
-    const file = await createFile("---\ntags:\n  - \"##daily\"\n---\n");
+    const file = await createFile('---\ntags:\n  - "##daily"\n---\n');
     const tags = file.readTags();
     expect(tags).toEqual(new Set(["#daily"]));
   });

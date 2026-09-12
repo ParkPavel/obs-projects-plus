@@ -73,7 +73,9 @@ export function truncateLabel(label: string, max: number): string {
  *  2. labels overlap a little   → rotate (-30°), render all
  *  3. labels overlap a lot      → rotate AND skip every Nth label
  */
-export function computeAxisLabelLayout(opts: AxisLabelOptions): AxisLabelLayout {
+export function computeAxisLabelLayout(
+  opts: AxisLabelOptions
+): AxisLabelLayout {
   const fontSize = opts.fontSize ?? 10;
   const truncateAt = opts.truncateAt ?? 12;
   const count = Math.max(opts.count, 1);

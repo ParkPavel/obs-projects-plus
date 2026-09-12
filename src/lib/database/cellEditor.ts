@@ -35,12 +35,7 @@ export type CellEditType =
   | "email"
   | "phone";
 
-export type CellValue =
-  | string
-  | number
-  | boolean
-  | string[]
-  | null;
+export type CellValue = string | number | boolean | string[] | null;
 
 export interface CellEditError {
   readonly kind: "invalid";
@@ -57,7 +52,8 @@ export type CellEditResult =
 /** Treat empty / whitespace-only input as a clear command. */
 const EMPTY_TEXT_RE = /^\s*$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+const ISO_DATETIME_RE =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/;
 const HEX_COLOR_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /**
@@ -72,7 +68,7 @@ const HEX_COLOR_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
  */
 export function parseCellInput(
   raw: string | boolean | readonly string[] | null,
-  type: CellEditType,
+  type: CellEditType
 ): CellEditResult {
   if (raw === null) return ok(null);
 
@@ -82,7 +78,7 @@ export function parseCellInput(
     if (typeof raw === "boolean") return ok(raw);
     if (typeof raw === "string") {
       const t = raw.trim().toLowerCase();
-      if (t === "" ) return ok(null);
+      if (t === "") return ok(null);
       if (t === "true") return ok(true);
       if (t === "false") return ok(false);
       return invalid("database.cell-editor.errors.boolean");
@@ -95,8 +91,8 @@ export function parseCellInput(
     const arr = Array.isArray(raw)
       ? raw
       : typeof raw === "string"
-      ? splitCsv(raw)
-      : null;
+        ? splitCsv(raw)
+        : null;
     if (arr === null) return invalid("database.cell-editor.errors.list");
     const cleaned = arr.map((s) => s.trim()).filter((s) => s.length > 0);
     if (type === "tags") {
@@ -160,10 +156,7 @@ export function parseCellInput(
  * editor's text input. Inverse of `parseCellInput` for round-trip
  * fidelity (modulo case-normalisation on hex colors).
  */
-export function formatCellValue(
-  value: CellValue,
-  type: CellEditType,
-): string {
+export function formatCellValue(value: CellValue, type: CellEditType): string {
   if (value === null || value === undefined) return "";
   if (type === "boolean") return value ? "true" : "false";
   if (Array.isArray(value)) {
@@ -183,7 +176,7 @@ function ok(value: CellValue): CellEditResult {
 
 function invalid(
   i18nKey: string,
-  params?: Record<string, string | number>,
+  params?: Record<string, string | number>
 ): CellEditResult {
   return params
     ? { ok: false, error: { kind: "invalid", i18nKey, params } }

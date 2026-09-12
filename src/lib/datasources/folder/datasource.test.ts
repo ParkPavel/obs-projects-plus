@@ -29,7 +29,7 @@ const defaultPrefs: ProjectsPluginPreferences = {
 function makeProject(
   path: string,
   recursive: boolean,
-  excludedNotes: string[] = [],
+  excludedNotes: string[] = []
 ): ProjectDefinition {
   return {
     name: "Test",
@@ -48,10 +48,14 @@ function makeProject(
 function makeSource(
   path: string,
   recursive: boolean,
-  excludedNotes: string[] = [],
+  excludedNotes: string[] = []
 ): FolderDataSource {
   const fs = new InMemFileSystem({});
-  return new FolderDataSource(fs, makeProject(path, recursive, excludedNotes), defaultPrefs);
+  return new FolderDataSource(
+    fs,
+    makeProject(path, recursive, excludedNotes),
+    defaultPrefs
+  );
 }
 
 describe("FolderDataSource.includes", () => {

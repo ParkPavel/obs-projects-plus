@@ -27,7 +27,8 @@ import { subscribeCanvasCommands } from "../dashboardCommands";
  * future by a later test could outrank a real one. A gate that compares
  * timestamps has to be tested with timestamps the test controls.
  */
-const send = (action: CommandBusAction, ts: number) => commandBus.set({ action, ts });
+const send = (action: CommandBusAction, ts: number) =>
+  commandBus.set({ action, ts });
 
 describe("#186 — the bus replays its last message to every new subscriber", () => {
   beforeEach(() => commandBus.set(null));

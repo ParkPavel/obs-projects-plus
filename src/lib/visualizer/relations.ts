@@ -51,7 +51,7 @@ export function formatWikilink(target: RelationTarget): string {
  */
 export function readRelations(
   frontmatter: Record<string, unknown> | null | undefined,
-  key: string = DEFAULT_RELATION_KEY,
+  key: string = DEFAULT_RELATION_KEY
 ): RelationTarget[] {
   if (!frontmatter) return [];
   const raw = frontmatter[key];
@@ -75,7 +75,7 @@ export function readRelations(
 export function appendRelation(
   frontmatter: Record<string, unknown> | null | undefined,
   key: string,
-  target: RelationTarget,
+  target: RelationTarget
 ): string[] {
   const existing = readRelations(frontmatter, key);
   if (existing.some((e) => e.path === target.path)) {
@@ -88,10 +88,8 @@ export function appendRelation(
 export function removeRelation(
   frontmatter: Record<string, unknown> | null | undefined,
   key: string,
-  path: string,
+  path: string
 ): string[] {
   const existing = readRelations(frontmatter, key);
-  return existing
-    .filter((e) => e.path !== path)
-    .map(formatWikilink);
+  return existing.filter((e) => e.path !== path).map(formatWikilink);
 }

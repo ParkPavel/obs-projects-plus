@@ -26,7 +26,11 @@ function mount(props: Record<string, unknown>) {
 
 describe("FilterBridge (#103 — no global-filter duplication)", () => {
   test("renders nothing when there is no local filter-tab selection", () => {
-    const m = mount({ activeFilterTab: null, readonly: false, canPromote: false });
+    const m = mount({
+      activeFilterTab: null,
+      readonly: false,
+      canPromote: false,
+    });
     expect(m.target.querySelector(".ppp-filter-bridge")).toBeNull();
     m.destroy();
   });
@@ -37,7 +41,9 @@ describe("FilterBridge (#103 — no global-filter duplication)", () => {
       readonly: false,
       canPromote: true,
     });
-    expect(m.target.querySelector(".ppp-filter-bridge-chip--global")).toBeNull();
+    expect(
+      m.target.querySelector(".ppp-filter-bridge-chip--global")
+    ).toBeNull();
     m.destroy();
   });
 
@@ -47,7 +53,9 @@ describe("FilterBridge (#103 — no global-filter duplication)", () => {
       readonly: false,
       canPromote: true,
     });
-    expect(m.target.querySelector(".ppp-filter-bridge-chip--local")).not.toBeNull();
+    expect(
+      m.target.querySelector(".ppp-filter-bridge-chip--local")
+    ).not.toBeNull();
     m.destroy();
   });
 
@@ -57,7 +65,9 @@ describe("FilterBridge (#103 — no global-filter duplication)", () => {
       readonly: false,
       canPromote: true,
     });
-    const promote = m.target.querySelector<HTMLButtonElement>(".ppp-filter-bridge-promote");
+    const promote = m.target.querySelector<HTMLButtonElement>(
+      ".ppp-filter-bridge-promote"
+    );
     expect(promote).not.toBeNull();
     promote?.click();
     expect(m.events.promote).toBe(1);

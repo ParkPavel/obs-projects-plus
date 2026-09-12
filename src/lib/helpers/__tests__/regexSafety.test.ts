@@ -75,7 +75,10 @@ describe("#126 the policy has exactly one implementation", () => {
   });
 
   it("no consumer hardcodes the pattern-length bound", () => {
-    for (const rel of ["lib/engine/filterEvaluator.ts", "lib/formula/extendedEvaluator.ts"]) {
+    for (const rel of [
+      "lib/engine/filterEvaluator.ts",
+      "lib/formula/extendedEvaluator.ts",
+    ]) {
       expect(read(rel)).not.toMatch(/pattern\.length\s*>\s*\d+/);
     }
   });

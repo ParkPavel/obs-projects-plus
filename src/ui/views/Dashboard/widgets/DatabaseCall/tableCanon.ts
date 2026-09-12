@@ -84,8 +84,9 @@ export function buildColumns(
       const cfg = fieldCfg[f.name];
       // legacy px width migrates lazily on read (types.ts deprecation note)
       const widthRem =
-        cfg?.widthRem ?? (cfg?.width ? cfg.width / 16 : undefined) ??
-        (f.name === primary ? 17 : DEFAULT_WIDTH_REM[f.type] ?? 11);
+        cfg?.widthRem ??
+        (cfg?.width ? cfg.width / 16 : undefined) ??
+        (f.name === primary ? 17 : (DEFAULT_WIDTH_REM[f.type] ?? 11));
       return { field: f, widthRem, isPrimary: f.name === primary };
     })
     .sort((a, b) => (a.isPrimary === b.isPrimary ? 0 : a.isPrimary ? -1 : 1));
@@ -113,7 +114,12 @@ export function activeSortCriteria(
 ): DataTableSortCriteria[] {
   if (config?.sortCriteria?.length) return [...config.sortCriteria];
   if (config?.sortField) {
-    return [{ field: config.sortField, order: config.sortAsc === false ? "desc" : "asc" }];
+    return [
+      {
+        field: config.sortField,
+        order: config.sortAsc === false ? "desc" : "asc",
+      },
+    ];
   }
   return [];
 }
@@ -126,7 +132,8 @@ function compareValues(a: Optional<DataValue>, b: Optional<DataValue>): number {
   const emptiness = rank(a) - rank(b);
   if (emptiness !== 0 || rank(a) === 1) return emptiness;
   if (typeof a === "number" && typeof b === "number") return a - b;
-  if (typeof a === "boolean" && typeof b === "boolean") return (a ? 1 : 0) - (b ? 1 : 0);
+  if (typeof a === "boolean" && typeof b === "boolean")
+    return (a ? 1 : 0) - (b ? 1 : 0);
   if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
   return String(a).localeCompare(String(b), undefined, { numeric: true });
 }
@@ -154,9 +161,12 @@ export function applySearch(
 ): DataRecord[] {
   const q = query.trim().toLowerCase();
   if (!q) return [...records];
-  return records.filter((r) =>
-    r.id.toLowerCase().includes(q) ||
-    Object.values(r.values).some((v) => v != null && String(v).toLowerCase().includes(q))
+  return records.filter(
+    (r) =>
+      r.id.toLowerCase().includes(q) ||
+      Object.values(r.values).some(
+        (v) => v != null && String(v).toLowerCase().includes(q)
+      )
   );
 }
 
@@ -164,7 +174,12 @@ export function applySearch(
 
 export type RenderRow =
   | { readonly kind: "record"; readonly record: DataRecord }
-  | { readonly kind: "group"; readonly key: string; readonly count: number; readonly collapsed: boolean };
+  | {
+      readonly kind: "group";
+      readonly key: string;
+      readonly count: number;
+      readonly collapsed: boolean;
+    };
 
 /**
  * Flatten records into the body render list. With groupBy the canonical
@@ -175,13 +190,20 @@ export function buildRenderRows(
   config: DataTableConfig | undefined
 ): RenderRow[] {
   const groupBy = config?.groupBy;
-  if (!groupBy?.field) return records.map((record) => ({ kind: "record", record }));
+  if (!groupBy?.field)
+    return records.map((record) => ({ kind: "record", record }));
   const collapsed = new Set(groupBy.collapsedGroups ?? []);
   const out: RenderRow[] = [];
   for (const group of groupRecords([...records], groupBy)) {
     const isCollapsed = collapsed.has(group.key);
-    out.push({ kind: "group", key: group.key, count: group.records.length, collapsed: isCollapsed });
-    if (!isCollapsed) for (const record of group.records) out.push({ kind: "record", record });
+    out.push({
+      kind: "group",
+      key: group.key,
+      count: group.records.length,
+      collapsed: isCollapsed,
+    });
+    if (!isCollapsed)
+      for (const record of group.records) out.push({ kind: "record", record });
   }
   return out;
 }
@@ -200,13 +222,22 @@ export type CellDisplay =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "number"; readonly text: string }
   | { readonly kind: "check"; readonly checked: boolean }
-  | { readonly kind: "pills"; readonly pills: CellPill[]; readonly overflow: number; readonly status: boolean };
+  | {
+      readonly kind: "pills";
+      readonly pills: CellPill[];
+      readonly overflow: number;
+      readonly status: boolean;
+    };
 
 // Закон 4 (compliance-аудит): wikilink-парсинг — ТОЛЬКО канонический
 // parseRelationLinks из src/lib/relations. Локальный дубль-парсер удалён.
 const HAS_WIKILINK = /\[\[/;
 
-function toPills(labels: string[], color: (label: string) => string | null, status: boolean): CellDisplay {
+function toPills(
+  labels: string[],
+  color: (label: string) => string | null,
+  status: boolean
+): CellDisplay {
   const visible = labels.slice(0, MAX_VISIBLE_PILLS);
   return {
     kind: "pills",
@@ -216,8 +247,12 @@ function toPills(labels: string[], color: (label: string) => string | null, stat
   };
 }
 
-export function cellDisplay(field: DataField, value: Optional<DataValue>): CellDisplay {
-  if (value === null || value === undefined || value === "") return { kind: "empty" };
+export function cellDisplay(
+  field: DataField,
+  value: Optional<DataValue>
+): CellDisplay {
+  if (value === null || value === undefined || value === "")
+    return { kind: "empty" };
 
   const optionColor = (label: string): string | null => {
     const cfg = field.typeConfig as ExtendedFieldTypeConfig | undefined;
@@ -225,16 +260,30 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
   };
 
   if (field.repeated && Array.isArray(value)) {
-    return toPills(value.map((v) => String(v)), optionColor, false);
+    return toPills(
+      value.map((v) => String(v)),
+      optionColor,
+      false
+    );
   }
 
   switch (field.type) {
     case DataFieldType.Boolean:
       return { kind: "check", checked: value === true };
     case DataFieldType.Number:
-      return { kind: "number", text: typeof value === "number" ? value.toLocaleString() : String(value) };
+      return {
+        kind: "number",
+        text:
+          typeof value === "number" ? value.toLocaleString() : String(value),
+      };
     case DataFieldType.Date:
-      return { kind: "text", text: value instanceof Date ? value.toISOString().slice(0, 10) : String(value) };
+      return {
+        kind: "text",
+        text:
+          value instanceof Date
+            ? value.toISOString().slice(0, 10)
+            : String(value),
+      };
     case DataFieldType.Select:
       return toPills([String(value)], optionColor, false);
     case DataFieldType.Status:

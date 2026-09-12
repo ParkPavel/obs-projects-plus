@@ -42,8 +42,20 @@ function makeRecord(id: string, progress: number): DataRecord {
 }
 
 const fields: DataField[] = [
-  { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-  { name: "progress", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+  {
+    name: "name",
+    type: DataFieldType.String,
+    repeated: false,
+    identifier: true,
+    derived: false,
+  },
+  {
+    name: "progress",
+    type: DataFieldType.Number,
+    repeated: false,
+    identifier: false,
+    derived: false,
+  },
 ];
 
 const emptyPipeline: TransformPipeline = { steps: [] };
@@ -83,7 +95,9 @@ describe("dataFrame invalidation hook (#016 regression)", () => {
 
     expect(order[0]).toBe("invalidate");
     expect(order).toContain("subscribe");
-    expect(order.indexOf("invalidate")).toBeLessThan(order.indexOf("subscribe"));
+    expect(order.indexOf("invalidate")).toBeLessThan(
+      order.indexOf("subscribe")
+    );
 
     sub();
     unsubscribe();
@@ -113,8 +127,23 @@ describe("dataFrame invalidation hook (#016 regression)", () => {
     dataFrame.updateRecord(makeRecord("r1", 2));
     dataFrame.updateRecords([makeRecord("r1", 3)]);
     dataFrame.deleteRecord("r1");
-    dataFrame.addField({ name: "extra", type: DataFieldType.String, repeated: false, identifier: false, derived: false });
-    dataFrame.updateField({ name: "extra2", type: DataFieldType.String, repeated: false, identifier: false, derived: false }, "extra");
+    dataFrame.addField({
+      name: "extra",
+      type: DataFieldType.String,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    });
+    dataFrame.updateField(
+      {
+        name: "extra2",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      "extra"
+    );
     dataFrame.deleteField("extra2");
     dataFrame.merge({ fields, records: [makeRecord("m", 9)] });
 
@@ -132,7 +161,9 @@ describe("dataFrame invalidation hook (#016 regression)", () => {
     const offBoom = registerDataFrameInvalidation(boom);
     const offOk = registerDataFrameInvalidation(ok);
 
-    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     expect(() => dataFrame.addRecord(makeRecord("x", 0))).not.toThrow();
     expect(boom).toHaveBeenCalledTimes(1);
     expect(ok).toHaveBeenCalledTimes(1);

@@ -19,7 +19,7 @@ interface MetadataCacheLike {
   getFileCache?: (file: TFile) => CachedMetadata | null;
   on?: (
     event: "changed",
-    cb: (file: TFile, data: string, cache: CachedMetadata) => void,
+    cb: (file: TFile, data: string, cache: CachedMetadata) => void
   ) => EventRef;
   offref?: (ref: EventRef) => void;
 }
@@ -32,7 +32,9 @@ export function createFrontmatterReader(app: App): FrontmatterReader {
 }
 
 function readSync(app: App, file: TFile): Record<string, unknown> {
-  const cache = (app.metadataCache as unknown as MetadataCacheLike).getFileCache?.(file);
+  const cache = (
+    app.metadataCache as unknown as MetadataCacheLike
+  ).getFileCache?.(file);
   const fm = cache?.frontmatter;
   if (!fm || typeof fm !== "object") return {};
   const out: Record<string, unknown> = {};
@@ -46,7 +48,7 @@ function readSync(app: App, file: TFile): Record<string, unknown> {
 function observeChanges(
   app: App,
   file: TFile,
-  cb: (fm: Record<string, unknown>) => void,
+  cb: (fm: Record<string, unknown>) => void
 ): Disposer {
   const cache = app.metadataCache as unknown as MetadataCacheLike;
   if (typeof cache.on !== "function") return () => undefined;

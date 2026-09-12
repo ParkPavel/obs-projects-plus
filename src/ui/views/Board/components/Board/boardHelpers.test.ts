@@ -3,7 +3,13 @@ import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
 import { excludeHeaderField, getDisplayName } from "./boardHelpers";
 
 function field(name: string): DataField {
-  return { name, type: DataFieldType.String, repeated: false, identifier: false, derived: false };
+  return {
+    name,
+    type: DataFieldType.String,
+    repeated: false,
+    identifier: false,
+    derived: false,
+  };
 }
 
 describe("getDisplayName", () => {

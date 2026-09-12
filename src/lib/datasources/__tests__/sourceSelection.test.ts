@@ -36,7 +36,11 @@ const frameOf = (...ids: string[]): DataFrame => ({
 
 const CLIENTS = frameOf("Clients/Acme.md", "Clients/Orbit.md");
 const ARCHIVE = frameOf("Archive/Clients/Old.md");
-const MERGED = frameOf("Clients/Acme.md", "Clients/Orbit.md", "Archive/Clients/Old.md");
+const MERGED = frameOf(
+  "Clients/Acme.md",
+  "Clients/Orbit.md",
+  "Archive/Clients/Old.md"
+);
 
 const PARTS: IdentifiedFrame[] = [
   { id: "src-primary", frame: CLIENTS },
@@ -98,7 +102,11 @@ describe("#170 step 1 — a source that no longer exists", () => {
 
 describe("#170 step 1 — what a source is called", () => {
   const folder = (path: string, name?: string): StoredDataSource =>
-    ({ kind: "folder", config: { path, recursive: true }, ...(name ? { name } : {}) }) as StoredDataSource;
+    ({
+      kind: "folder",
+      config: { path, recursive: true },
+      ...(name ? { name } : {}),
+    }) as StoredDataSource;
 
   it("its name when it has one", () => {
     expect(sourceLabel(folder("Archive/Clients", "Archive"))).toBe("Archive");
@@ -108,8 +116,12 @@ describe("#170 step 1 — what a source is called", () => {
     // Every source stored before #170 is unnamed, and "Source 2" would say
     // less than the path the user chose when they added it.
     expect(sourceLabel(folder("Archive/Clients"))).toBe("Archive/Clients");
-    expect(sourceLabel({ kind: "tag", config: { tag: "#client", hierarchy: true } } as StoredDataSource))
-      .toBe("#client");
+    expect(
+      sourceLabel({
+        kind: "tag",
+        config: { tag: "#client", hierarchy: true },
+      } as StoredDataSource)
+    ).toBe("#client");
   });
 
   it("a whitespace-only name is not a name", () => {

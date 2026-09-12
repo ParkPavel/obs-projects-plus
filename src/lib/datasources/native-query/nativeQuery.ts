@@ -3,8 +3,9 @@
  *
  * Ticket: #045.2 (M-DATAVIEW-BRIDGE Gap 2)
  *
- * Provides a native SQL-like query surface without a Dataview dependency:
- * `FROM folder|tag WHERE conditions SORT
+ * Bridges the "DQL is the only path for ad-hoc queries" gap identified in
+ * `docs/internal/DATAVIEW_ABSORPTION_PLAN.md` §4 Gap 2. Provides a small
+ * SQL-like programmatic surface — `FROM folder|tag WHERE conditions SORT
  * field LIMIT n` — built strictly on top of:
  *
  *   - the existing `FolderDataSource` / `TagDataSource` (data acquisition)
@@ -56,8 +57,16 @@ import { TagDataSource } from "../tag/datasource";
  * Dataview-backed queries are produced by `createDataviewSource` instead.
  */
 export type NativeQuerySource =
-  | { readonly kind: "folder"; readonly path: string; readonly recursive?: boolean }
-  | { readonly kind: "tag"; readonly tag: string; readonly hierarchy?: boolean };
+  | {
+      readonly kind: "folder";
+      readonly path: string;
+      readonly recursive?: boolean;
+    }
+  | {
+      readonly kind: "tag";
+      readonly tag: string;
+      readonly hierarchy?: boolean;
+    };
 
 /**
  * A lightweight ad-hoc query. All clauses except `from` are optional.
@@ -141,25 +150,31 @@ async function acquireBaseFrame(
   const excludedNotes = [...(deps.excludedNotes ?? [])];
 
   if (source.kind === "folder") {
-    const project: ProjectDefinition = synthesizeProject({
-      kind: "folder",
-      config: {
-        path: source.path,
-        recursive: source.recursive ?? false,
+    const project: ProjectDefinition = synthesizeProject(
+      {
+        kind: "folder",
+        config: {
+          path: source.path,
+          recursive: source.recursive ?? false,
+        },
       },
-    }, excludedNotes);
+      excludedNotes
+    );
     const ds = new FolderDataSource(deps.fileSystem, project, deps.preferences);
     return ds.queryAll();
   }
 
   // source.kind === "tag"
-  const project: ProjectDefinition = synthesizeProject({
-    kind: "tag",
-    config: {
-      tag: source.tag,
-      hierarchy: source.hierarchy ?? false,
+  const project: ProjectDefinition = synthesizeProject(
+    {
+      kind: "tag",
+      config: {
+        tag: source.tag,
+        hierarchy: source.hierarchy ?? false,
+      },
     },
-  }, excludedNotes);
+    excludedNotes
+  );
   const ds = new TagDataSource(deps.fileSystem, project, deps.preferences);
   return ds.queryAll();
 }
@@ -194,8 +209,7 @@ function synthesizeProject(
  */
 function hasFilterConditions(filter: FilterDefinition): boolean {
   return (
-    (filter.conditions?.length ?? 0) > 0 ||
-    (filter.groups?.length ?? 0) > 0
+    (filter.conditions?.length ?? 0) > 0 || (filter.groups?.length ?? 0) > 0
   );
 }
 
@@ -204,10 +218,7 @@ function hasFilterConditions(filter: FilterDefinition): boolean {
  * stable for equal keys (Array.prototype.sort is stable in modern engines
  * — Node 12+ / V8 7.0+ per ECMAScript 2019).
  */
-export function applySort(
-  frame: DataFrame,
-  sort: SortDefinition
-): DataFrame {
+export function applySort(frame: DataFrame, sort: SortDefinition): DataFrame {
   const activeCriteria = sort.criteria.filter((c) => c.enabled);
   if (activeCriteria.length === 0) {
     return frame;
@@ -287,7 +298,10 @@ function compareValues(
       // Coerce to string and use locale-aware numeric-aware comparison.
       const as = stringifyForSort(a);
       const bs = stringifyForSort(b);
-      return as.localeCompare(bs, undefined, { numeric: true, sensitivity: "base" });
+      return as.localeCompare(bs, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
     }
   }
 }
@@ -317,7 +331,9 @@ function stringifyForSort(v: DataValue | undefined): string {
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (v instanceof Date) return v.toISOString();
   if (Array.isArray(v)) {
-    return v.map((el) => stringifyForSort(el as DataValue | undefined)).join(",");
+    return v
+      .map((el) => stringifyForSort(el as DataValue | undefined))
+      .join(",");
   }
   // Fallback for plain objects — keep deterministic.
   try {

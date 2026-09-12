@@ -66,11 +66,15 @@ describe("getColumns — semantic group mode (NPLAN-C1)", () => {
     // Todo bucket: Todo + Backlog
     expect(byId["To Do"]?.map((r) => r.id).sort()).toEqual(["r1", "r5"].sort());
     // InProgress bucket: In Progress + Blocked
-    expect(byId["In Progress"]?.map((r) => r.id).sort()).toEqual(["r2", "r4"].sort());
+    expect(byId["In Progress"]?.map((r) => r.id).sort()).toEqual(
+      ["r2", "r4"].sort()
+    );
     // Complete bucket: Done
     expect(byId["Done"]?.map((r) => r.id).sort()).toEqual(["r3"]);
     // None bucket: null + unknown value
-    expect(byId["views.board.no-status"]?.map((r) => r.id).sort()).toEqual(["r6", "r7"].sort());
+    expect(byId["views.board.no-status"]?.map((r) => r.id).sort()).toEqual(
+      ["r6", "r7"].sort()
+    );
   });
 
   test("semantic columns are marked pinned:true", () => {
@@ -107,7 +111,15 @@ describe("getColumns — semantic group mode (NPLAN-C1)", () => {
       identifier: false,
       derived: false,
     };
-    const cols = getColumns(records, {}, noGroupsField, undefined, false, [], true);
+    const cols = getColumns(
+      records,
+      {},
+      noGroupsField,
+      undefined,
+      false,
+      [],
+      true
+    );
     const ids = cols.map((c) => c.id);
     // no semantic grouping → individual values appear as separate columns
     expect(ids).toContain("Blocked");

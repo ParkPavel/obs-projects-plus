@@ -18,7 +18,9 @@ const URL_RE = /^(https?:\/\/|mailto:|tel:)\S+$/i;
 const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 const PHONE_RE = /^\+?[\d][\d\s\-().]{5,}$/;
 
-export function detectLinkable(raw: string | null | undefined): Linkable | null {
+export function detectLinkable(
+  raw: string | null | undefined
+): Linkable | null {
   if (!raw) return null;
   const value = raw.trim();
   if (!value) return null;

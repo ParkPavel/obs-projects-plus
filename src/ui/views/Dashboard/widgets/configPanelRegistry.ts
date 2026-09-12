@@ -107,7 +107,10 @@ const PANELS = {
   "cover-banner": {
     hasCog: true,
     isConfigured: (c) =>
-      !!c && typeof c === "object" && typeof (c as { src?: unknown }).src === "string" && !!(c as { src?: string }).src,
+      !!c &&
+      typeof c === "object" &&
+      typeof (c as { src?: unknown }).src === "string" &&
+      !!(c as { src?: string }).src,
     initDefaults: () => ({
       src: "",
       widthMode: "full",
@@ -145,8 +148,9 @@ const NO_PANEL: ConfigPanelDescriptor = {
   initDefaults: () => ({}),
 };
 
-export const configPanelRegistry: Partial<Record<WidgetType, ConfigPanelDescriptor>> =
-  PANELS;
+export const configPanelRegistry: Partial<
+  Record<WidgetType, ConfigPanelDescriptor>
+> = PANELS;
 
 /** Total over `WidgetType`: a type without an entry gets {@link NO_PANEL}. */
 export function getConfigPanel(type: WidgetType): ConfigPanelDescriptor {

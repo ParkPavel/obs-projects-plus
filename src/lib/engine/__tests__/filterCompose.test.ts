@@ -4,10 +4,18 @@
 // opposite of what composing two filters means.
 
 import { andComposeFilters, hasFilterEffect } from "../filterCompose";
-import type { FilterCondition, FilterDefinition } from "src/settings/base/settings";
+import type {
+  FilterCondition,
+  FilterDefinition,
+} from "src/settings/base/settings";
 
 const cond = (field: string, value: string): FilterCondition =>
-  ({ field, operator: "is", value, enabled: true } as unknown as FilterCondition);
+  ({
+    field,
+    operator: "is",
+    value,
+    enabled: true,
+  }) as unknown as FilterCondition;
 
 const and = (...conditions: FilterCondition[]): FilterDefinition => ({
   conjunction: "and",
@@ -22,21 +30,29 @@ describe("hasFilterEffect", () => {
 
   it("is true for a groups-only definition", () => {
     expect(
-      hasFilterEffect({ conjunction: "and", conditions: [], groups: [and(cond("a", "1"))] })
+      hasFilterEffect({
+        conjunction: "and",
+        conditions: [],
+        groups: [and(cond("a", "1"))],
+      })
     ).toBe(true);
   });
 
   it("tolerates persisted JSON with no conditions array at all", () => {
-    expect(hasFilterEffect({ groups: [and(cond("a", "1"))] } as unknown as FilterDefinition)).toBe(
-      true
-    );
+    expect(
+      hasFilterEffect({
+        groups: [and(cond("a", "1"))],
+      } as unknown as FilterDefinition)
+    ).toBe(true);
     expect(hasFilterEffect({} as unknown as FilterDefinition)).toBe(false);
   });
 });
 
 describe("andComposeFilters", () => {
   it("returns undefined when nothing meaningful is supplied", () => {
-    expect(andComposeFilters([undefined, { conjunction: "and", conditions: [] }])).toBeUndefined();
+    expect(
+      andComposeFilters([undefined, { conjunction: "and", conditions: [] }])
+    ).toBeUndefined();
   });
 
   it("returns the single meaningful definition unchanged", () => {
@@ -46,7 +62,10 @@ describe("andComposeFilters", () => {
   });
 
   it("flattens plain AND definitions into one condition list", () => {
-    const merged = andComposeFilters([and(cond("a", "1")), and(cond("b", "2"))]);
+    const merged = andComposeFilters([
+      and(cond("a", "1")),
+      and(cond("b", "2")),
+    ]);
 
     expect(merged?.conditions).toEqual([cond("a", "1"), cond("b", "2")]);
     expect(merged?.groups).toBeUndefined();
@@ -78,7 +97,10 @@ describe("andComposeFilters", () => {
   it("keeps a flattened merge visible to conditions-only emptiness guards", () => {
     // A groups-only shape reads as "no filter" to every guard that checks
     // conditions.length alone — the common case must not produce one.
-    const merged = andComposeFilters([and(cond("a", "1")), and(cond("b", "2"))]);
+    const merged = andComposeFilters([
+      and(cond("a", "1")),
+      and(cond("b", "2")),
+    ]);
 
     expect(merged?.conditions.length).toBeGreaterThan(0);
   });

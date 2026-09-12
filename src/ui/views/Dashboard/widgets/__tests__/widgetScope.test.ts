@@ -3,7 +3,11 @@
 // the frame BEFORE the pipeline runs, which is an inversion of the pre-#118
 // wiring and is exactly what these tests pin.
 
-import { applyWidgetScope, widgetScopeFilter, scopeIsEvaluableOn } from "../widgetScope";
+import {
+  applyWidgetScope,
+  widgetScopeFilter,
+  scopeIsEvaluableOn,
+} from "../widgetScope";
 import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
@@ -16,7 +20,11 @@ const frame = (rows: Array<Record<string, unknown>>): DataFrame =>
       { name: "status", type: DataFieldType.String },
       { name: "amount", type: DataFieldType.Number },
     ],
-    records: rows.map((values, i) => ({ id: `r${i}`, path: `r${i}.md`, values })),
+    records: rows.map((values, i) => ({
+      id: `r${i}`,
+      path: `r${i}.md`,
+      values,
+    })),
   }) as unknown as DataFrame;
 
 const isDone: FilterDefinition = {
@@ -39,7 +47,9 @@ describe("#118 widgetScopeFilter", () => {
   });
 
   it("returns undefined for a filter that would remove nothing", () => {
-    expect(widgetScopeFilter({ subFilter: { conditions: [] } })).toBeUndefined();
+    expect(
+      widgetScopeFilter({ subFilter: { conditions: [] } })
+    ).toBeUndefined();
   });
 
   it("recognises a groups-only filter as a real scope", () => {
@@ -89,7 +99,9 @@ describe("#118 order invariant — A runs before C", () => {
     steps: [
       {
         type: "aggregate",
-        columns: [{ sourceField: "amount", outputName: "total", function: "SUM" }],
+        columns: [
+          { sourceField: "amount", outputName: "total", function: "SUM" },
+        ],
       },
     ],
   };

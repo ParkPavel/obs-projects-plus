@@ -11,9 +11,27 @@ import {
 function makeDF(records: DataRecord[]): DataFrame {
   return {
     fields: [
-      { name: "name", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "links", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "score", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "links",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "score",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records,
   };
@@ -54,9 +72,7 @@ describe("extractWikiLinks", () => {
   });
 
   it("should handle multiple links on same line", () => {
-    expect(
-      extractWikiLinks("[[A]], [[B]], [[C]]")
-    ).toEqual(["A", "B", "C"]);
+    expect(extractWikiLinks("[[A]], [[B]], [[C]]")).toEqual(["A", "B", "C"]);
   });
 
   it("should trim whitespace in link targets", () => {

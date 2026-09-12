@@ -146,7 +146,6 @@ export async function standardizeRecords(
   );
 }
 
- 
 function filterUndefinedValues(val: Record<string, any>): Record<string, any> {
   return Object.fromEntries(
     Object.entries(val).filter(([_key, value]) => notUndefined(value))
@@ -154,35 +153,38 @@ function filterUndefinedValues(val: Record<string, any>): Record<string, any> {
 }
 
 export function detectSchema(records: DataRecord[]): DataField[] {
-  return detectFields(records)
-    .map<DataField>((field) =>
-      field.name === "name"
-        ? produce(field, (draft) => {
-            draft.derived = true;
-            draft.typeConfig = produce(field.typeConfig ?? {}, (draft) => {
-              draft.richText = true;
-            });
-          })
-        : field
-    )
-    .map<DataField>((field) =>
-      field.name === "path"
-        ? produce(field, (draft) => {
-            draft.derived = true;
-          })
-        : field
-    )
-    // PARITY-008 — mark virtual time fields as derived so the UI treats them
-    // as read-only (no edit affordance, no writeback).
-    .map<DataField>((field) =>
-      field.name === "pp_created_time" || field.name === "pp_last_edited_time"
-        ? produce(field, (draft) => {
-            draft.derived = true;
-            draft.type = DataFieldType.AutoTime;
-            draft.typeConfig = produce(field.typeConfig ?? {}, (tc) => {
-              tc.autoTime = field.name === "pp_created_time" ? "created" : "modified";
-            });
-          })
-        : field
-    );
+  return (
+    detectFields(records)
+      .map<DataField>((field) =>
+        field.name === "name"
+          ? produce(field, (draft) => {
+              draft.derived = true;
+              draft.typeConfig = produce(field.typeConfig ?? {}, (draft) => {
+                draft.richText = true;
+              });
+            })
+          : field
+      )
+      .map<DataField>((field) =>
+        field.name === "path"
+          ? produce(field, (draft) => {
+              draft.derived = true;
+            })
+          : field
+      )
+      // PARITY-008 — mark virtual time fields as derived so the UI treats them
+      // as read-only (no edit affordance, no writeback).
+      .map<DataField>((field) =>
+        field.name === "pp_created_time" || field.name === "pp_last_edited_time"
+          ? produce(field, (draft) => {
+              draft.derived = true;
+              draft.type = DataFieldType.AutoTime;
+              draft.typeConfig = produce(field.typeConfig ?? {}, (tc) => {
+                tc.autoTime =
+                  field.name === "pp_created_time" ? "created" : "modified";
+              });
+            })
+          : field
+      )
+  );
 }

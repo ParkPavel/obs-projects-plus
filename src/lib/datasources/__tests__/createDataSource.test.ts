@@ -19,13 +19,13 @@ jest.mock("src/lib/datasources/dataview/datasource", () => ({
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { FolderDataSource } = require("src/lib/datasources/folder/datasource");
 const { TagDataSource } = require("src/lib/datasources/tag/datasource");
-const { DataviewDataSource } = require("src/lib/datasources/dataview/datasource");
+const {
+  DataviewDataSource,
+} = require("src/lib/datasources/dataview/datasource");
 const { createDataSource } = require("src/lib/datasources");
 /* eslint-enable @typescript-eslint/no-var-requires */
 
-function makeProject(
-  kind: "folder" | "tag" | "dataview"
-): any {
+function makeProject(kind: "folder" | "tag" | "dataview"): any {
   const base: any = {
     id: `p-${kind}`,
     name: `project-${kind}`,
@@ -70,7 +70,9 @@ describe("createDataSource", () => {
   });
 
   it("constructs FolderDataSource for kind 'folder'", () => {
-    (FolderDataSource as jest.Mock).mockImplementation(() => ({ tag: "folder" }));
+    (FolderDataSource as jest.Mock).mockImplementation(() => ({
+      tag: "folder",
+    }));
     const result = createDataSource(makeProject("folder"), makeDeps());
     expect(result.kind).toBe("ok");
     expect(FolderDataSource).toHaveBeenCalledTimes(1);
@@ -100,7 +102,10 @@ describe("createDataSource", () => {
   });
 
   it("returns 'unavailable' for kind 'dataview' when api is undefined", () => {
-    const result = createDataSource(makeProject("dataview"), makeDeps(undefined));
+    const result = createDataSource(
+      makeProject("dataview"),
+      makeDeps(undefined)
+    );
     expect(result.kind).toBe("unavailable");
     if (result.kind === "unavailable") {
       expect(result.reason).toBe("dataview-unavailable");

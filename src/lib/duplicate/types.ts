@@ -8,20 +8,20 @@ export interface DuplicateState {
   // === Источник ===
   sourceRecord: ProcessedRecord | null;
   sourceDate: dayjs.Dayjs | null;
-  
+
   // === Редактирование времени (TIMED события) ===
   editedTime: {
     startTime: dayjs.Dayjs;
     endTime: dayjs.Dayjs;
   } | null;
-  
+
   // === Выбор ===
-  selectedDates: Set<string>;       // YYYY-MM-DD формат
-  hoveredDate: dayjs.Dayjs | null;  // Дата под курсором
-  
+  selectedDates: Set<string>; // YYYY-MM-DD формат
+  hoveredDate: dayjs.Dayjs | null; // Дата под курсором
+
   // === Phantom records (preview) ===
-  phantomRecords: Map<string, ProcessedRecord>;  // date → phantom
-  
+  phantomRecords: Map<string, ProcessedRecord>; // date → phantom
+
   // === Коллизии ===
   collisions: Map<string, CollisionInfo>; // date → collision details
 }
@@ -31,7 +31,7 @@ export interface DuplicateState {
  */
 export interface CollisionInfo {
   date: string;
-  overlapType: 'time' | 'allday' | 'none';
+  overlapType: "time" | "allday" | "none";
   overlappingRecords: ProcessedRecord[];
 }
 
@@ -39,9 +39,10 @@ export interface CollisionInfo {
  * Опции дублирования
  */
 export interface DuplicateOptions {
-  copyFrontmatter: boolean;       // Копировать все поля frontmatter
-  updateDateFields: boolean;      // Обновить date/time поля
-  customTime: {                   // Кастомное время (если редактировалось)
+  copyFrontmatter: boolean; // Копировать все поля frontmatter
+  updateDateFields: boolean; // Обновить date/time поля
+  customTime: {
+    // Кастомное время (если редактировалось)
     startTime: dayjs.Dayjs;
     endTime: dayjs.Dayjs;
   } | null;

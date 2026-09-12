@@ -15,8 +15,20 @@ import type { TransformPipeline } from "./transformTypes";
 function makeFrame(): DataFrame {
   return {
     fields: [
-      { name: "id", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-      { name: "status", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+      {
+        name: "id",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "status",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { id: "1", status: "done" } },
@@ -47,7 +59,9 @@ const emptyingPipeline: TransformPipeline = {
       type: "filter",
       conditions: {
         conjunction: "and",
-        conditions: [{ field: "status", operator: "is", value: "archived", enabled: true }],
+        conditions: [
+          { field: "status", operator: "is", value: "archived", enabled: true },
+        ],
       },
     },
   ],
@@ -78,17 +92,32 @@ describe("#092 pipeline empty-output recovery", () => {
 
     // No steps → not a pipeline dead-end.
     expect(
-      pipelineHidAll({ stepCount: 0, inputRowCount: 3, outputRowCount: 0, isFilterEmpty: false })
+      pipelineHidAll({
+        stepCount: 0,
+        inputRowCount: 3,
+        outputRowCount: 0,
+        isFilterEmpty: false,
+      })
     ).toBe(false);
 
     // Empty source (inputRowCount 0) → not a pipeline dead-end.
     expect(
-      pipelineHidAll({ stepCount: 1, inputRowCount: 0, outputRowCount: 0, isFilterEmpty: false })
+      pipelineHidAll({
+        stepCount: 1,
+        inputRowCount: 0,
+        outputRowCount: 0,
+        isFilterEmpty: false,
+      })
     ).toBe(false);
 
     // Narrowed by a block filter, not the pipeline → defer to the filter state.
     expect(
-      pipelineHidAll({ stepCount: 1, inputRowCount: 3, outputRowCount: 0, isFilterEmpty: true })
+      pipelineHidAll({
+        stepCount: 1,
+        inputRowCount: 3,
+        outputRowCount: 0,
+        isFilterEmpty: true,
+      })
     ).toBe(false);
   });
 
@@ -97,7 +126,12 @@ describe("#092 pipeline empty-output recovery", () => {
     // displayed frame, so WidgetHost forwards zeroed counters. The predicate must
     // then read false even though the external source is empty and steps exist.
     expect(
-      pipelineHidAll({ stepCount: 0, inputRowCount: 0, outputRowCount: 0, isFilterEmpty: false })
+      pipelineHidAll({
+        stepCount: 0,
+        inputRowCount: 0,
+        outputRowCount: 0,
+        isFilterEmpty: false,
+      })
     ).toBe(false);
   });
 

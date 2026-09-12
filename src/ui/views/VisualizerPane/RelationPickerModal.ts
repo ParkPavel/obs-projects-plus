@@ -20,7 +20,7 @@ export class RelationPickerModal extends FuzzySuggestModal<TFile> {
   constructor(
     app: App,
     onPick: RelationPickHandler,
-    options: { excludePath?: string; placeholder?: string } = {},
+    options: { excludePath?: string; placeholder?: string } = {}
   ) {
     super(app);
     this.onPick = onPick;

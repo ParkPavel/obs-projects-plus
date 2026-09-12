@@ -7,7 +7,7 @@
  * @module dnd/SnapEngine
  */
 
-import { DND_CONSTANTS, type SnapLine } from './types';
+import { DND_CONSTANTS, type SnapLine } from "./types";
 
 /**
  * Round minutes to the nearest snap interval.
@@ -35,10 +35,10 @@ export function snapTime(
   time: string,
   interval: number = DND_CONSTANTS.SNAP_INTERVAL_DEFAULT
 ): string {
-  const [hourStr, minStr] = time.split(':');
+  const [hourStr, minStr] = time.split(":");
   // coercion-exempt: Class B - lexing an HH:MM token a split has already shaped
-  const hours = parseInt(hourStr ?? '0', 10);
-  const mins = parseInt(minStr ?? '0', 10);
+  const hours = parseInt(hourStr ?? "0", 10);
+  const mins = parseInt(minStr ?? "0", 10);
   const totalMinutes = hours * 60 + mins;
 
   const snapped = snapMinutes(totalMinutes, interval);
@@ -50,7 +50,7 @@ export function snapTime(
   const clampedHours = Math.floor(clamped / 60);
   const clampedMins = clamped % 60;
 
-  return `${clampedHours.toString().padStart(2, '0')}:${clampedMins.toString().padStart(2, '0')}`;
+  return `${clampedHours.toString().padStart(2, "0")}:${clampedMins.toString().padStart(2, "0")}`;
 }
 
 /**
@@ -94,7 +94,7 @@ export function minutesToTime(minutes: number): string {
   const m = minutes % 60;
   const clampedH = Math.min(23, Math.max(0, h));
   const clampedM = Math.max(0, m);
-  return `${clampedH.toString().padStart(2, '0')}:${clampedM.toString().padStart(2, '0')}`;
+  return `${clampedH.toString().padStart(2, "0")}:${clampedM.toString().padStart(2, "0")}`;
 }
 
 /**
@@ -133,9 +133,9 @@ export function getSnapLines(
     const min = m % 60;
     lines.push({
       minutes: m,
-      time: `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`,
+      time: `${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`,
       positionRem: minutesToRem(m, startHour, hourHeightRem),
-      type: min === 0 ? 'major' : 'minor',
+      type: min === 0 ? "major" : "minor",
     });
   }
 

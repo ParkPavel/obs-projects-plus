@@ -10,7 +10,11 @@
  */
 import { get } from "svelte/store";
 
-import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
+import {
+  DataFieldType,
+  type DataField,
+  type DataRecord,
+} from "src/lib/dataframe/dataframe";
 import type { DataApi } from "src/lib/dataApi";
 import { dataFrame } from "src/lib/stores/dataframe";
 import type { DataSource } from "src/lib/datasources";
@@ -41,7 +45,9 @@ function stubApi(over: Partial<DataApi>): DataApi {
 }
 
 function currentStatus(): unknown {
-  return get(dataFrame).records.find((r) => r.id === "Clients/Ivan.md")?.values["status"];
+  return get(dataFrame).records.find((r) => r.id === "Clients/Ivan.md")?.values[
+    "status"
+  ];
 }
 
 beforeEach(() => {
@@ -66,7 +72,10 @@ describe("#144 optimistic record writes are compensated", () => {
 
   it("restores the previous value when the note no longer exists", async () => {
     // The silent case: no throw, nothing written, `false` returned.
-    const api = new ViewApi(source, stubApi({ updateRecord: async () => false }));
+    const api = new ViewApi(
+      source,
+      stubApi({ updateRecord: async () => false })
+    );
 
     await api.updateRecord(seed({ status: "new" }), fields);
 
@@ -74,7 +83,10 @@ describe("#144 optimistic record writes are compensated", () => {
   });
 
   it("keeps the new value when the write succeeds", async () => {
-    const api = new ViewApi(source, stubApi({ updateRecord: async () => true }));
+    const api = new ViewApi(
+      source,
+      stubApi({ updateRecord: async () => true })
+    );
 
     await api.updateRecord(seed({ status: "new" }), fields);
 
@@ -121,7 +133,10 @@ describe("#163 batch writes are compensated too", () => {
   });
 
   it("keeps the new values when the batch write succeeds", async () => {
-    const api = new ViewApi(source, stubApi({ updateRecords: async () => undefined }));
+    const api = new ViewApi(
+      source,
+      stubApi({ updateRecords: async () => undefined })
+    );
 
     const ok = await api.updateRecords([seed({ status: "new" })], fields);
 

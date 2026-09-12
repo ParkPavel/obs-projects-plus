@@ -4,7 +4,12 @@
 // resulting `applyFilterTab` end-to-end behavior via `filterByLinkedSelection`
 // / `matchesCondition`, replacing the old `String(raw) === value` comparator.
 
-import { DataFieldType, type DataField, type DataFrame, type DataRecord } from "src/lib/dataframe/dataframe";
+import {
+  DataFieldType,
+  type DataField,
+  type DataFrame,
+  type DataRecord,
+} from "src/lib/dataframe/dataframe";
 import {
   applyFilterTab,
   deriveTabCondition,
@@ -12,10 +17,18 @@ import {
   type ActiveFilterTab,
 } from "../dashboardFilters";
 import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
-import type { FilterCondition, FilterDefinition } from "src/settings/base/settings";
+import type {
+  FilterCondition,
+  FilterDefinition,
+} from "src/settings/base/settings";
 
 const cond = (f: string, value: string): FilterCondition =>
-  ({ field: f, operator: "is", value, enabled: true } as unknown as FilterCondition);
+  ({
+    field: f,
+    operator: "is",
+    value,
+    enabled: true,
+  }) as unknown as FilterCondition;
 
 function field(name: string, type: DataFieldType): DataField {
   return { name, type, repeated: false, identifier: false, derived: false };
@@ -29,7 +42,9 @@ describe("deriveTabCondition", () => {
   const active: ActiveFilterTab = { field: "status", value: "Done" };
 
   it("String field -> default 'is'", () => {
-    expect(deriveTabCondition(field("status", DataFieldType.String), active)).toEqual({
+    expect(
+      deriveTabCondition(field("status", DataFieldType.String), active)
+    ).toEqual({
       field: "status",
       operator: "is",
       value: "Done",
@@ -38,7 +53,9 @@ describe("deriveTabCondition", () => {
   });
 
   it("Select field -> default 'is'", () => {
-    expect(deriveTabCondition(field("status", DataFieldType.Select), active)).toEqual({
+    expect(
+      deriveTabCondition(field("status", DataFieldType.Select), active)
+    ).toEqual({
       field: "status",
       operator: "is",
       value: "Done",
@@ -47,7 +64,9 @@ describe("deriveTabCondition", () => {
   });
 
   it("Status field -> default 'is'", () => {
-    expect(deriveTabCondition(field("status", DataFieldType.Status), active)).toEqual({
+    expect(
+      deriveTabCondition(field("status", DataFieldType.Status), active)
+    ).toEqual({
       field: "status",
       operator: "is",
       value: "Done",
@@ -57,7 +76,9 @@ describe("deriveTabCondition", () => {
 
   it("Relation field (bare-name tab) -> default 'is'", () => {
     const rel: ActiveFilterTab = { field: "client", value: "Acme Studio" };
-    expect(deriveTabCondition(field("client", DataFieldType.Relation), rel)).toEqual({
+    expect(
+      deriveTabCondition(field("client", DataFieldType.Relation), rel)
+    ).toEqual({
       field: "client",
       operator: "is",
       value: "Acme Studio",
@@ -67,7 +88,9 @@ describe("deriveTabCondition", () => {
 
   it("Number field -> 'eq'", () => {
     const num: ActiveFilterTab = { field: "score", value: "42" };
-    expect(deriveTabCondition(field("score", DataFieldType.Number), num)).toEqual({
+    expect(
+      deriveTabCondition(field("score", DataFieldType.Number), num)
+    ).toEqual({
       field: "score",
       operator: "eq",
       value: "42",
@@ -77,7 +100,9 @@ describe("deriveTabCondition", () => {
 
   it("Boolean field, value 'true' -> 'is-checked'", () => {
     const bool: ActiveFilterTab = { field: "archived", value: "true" };
-    expect(deriveTabCondition(field("archived", DataFieldType.Boolean), bool)).toEqual({
+    expect(
+      deriveTabCondition(field("archived", DataFieldType.Boolean), bool)
+    ).toEqual({
       field: "archived",
       operator: "is-checked",
       enabled: true,
@@ -86,7 +111,9 @@ describe("deriveTabCondition", () => {
 
   it("Boolean field, value 'false' -> 'is-not-checked'", () => {
     const bool: ActiveFilterTab = { field: "archived", value: "false" };
-    expect(deriveTabCondition(field("archived", DataFieldType.Boolean), bool)).toEqual({
+    expect(
+      deriveTabCondition(field("archived", DataFieldType.Boolean), bool)
+    ).toEqual({
       field: "archived",
       operator: "is-not-checked",
       enabled: true,
@@ -105,12 +132,14 @@ describe("deriveTabCondition", () => {
 
   it("List field -> 'has-any-of' with JSON-encoded single-value array", () => {
     const list: ActiveFilterTab = { field: "tags", value: "urgent" };
-    expect(deriveTabCondition(field("tags", DataFieldType.List), list)).toEqual({
-      field: "tags",
-      operator: "has-any-of",
-      value: JSON.stringify(["urgent"]),
-      enabled: true,
-    });
+    expect(deriveTabCondition(field("tags", DataFieldType.List), list)).toEqual(
+      {
+        field: "tags",
+        operator: "has-any-of",
+        value: JSON.stringify(["urgent"]),
+        enabled: true,
+      }
+    );
   });
 
   it("undefined field (lookup miss) -> default 'is'", () => {
@@ -135,7 +164,10 @@ describe("applyFilterTab", () => {
   it("String field: exact match only", () => {
     const frame: DataFrame = {
       fields: [field("status", DataFieldType.String)],
-      records: [record("1", { status: "Done" }), record("2", { status: "Todo" })],
+      records: [
+        record("1", { status: "Done" }),
+        record("2", { status: "Todo" }),
+      ],
     };
     const result = applyFilterTab(frame, { field: "status", value: "Done" });
     expect(result.records.map((r) => r.id)).toEqual(["1"]);
@@ -144,7 +176,10 @@ describe("applyFilterTab", () => {
   it("Select field: exact match, no case-insensitive matching introduced", () => {
     const frame: DataFrame = {
       fields: [field("priority", DataFieldType.Select)],
-      records: [record("1", { priority: "High" }), record("2", { priority: "high" })],
+      records: [
+        record("1", { priority: "High" }),
+        record("2", { priority: "high" }),
+      ],
     };
     const result = applyFilterTab(frame, { field: "priority", value: "high" });
     // Only the lowercase-cell record matches; "High" must NOT match "high".
@@ -154,7 +189,10 @@ describe("applyFilterTab", () => {
   it("Status field: exact match", () => {
     const frame: DataFrame = {
       fields: [field("stage", DataFieldType.Status)],
-      records: [record("1", { stage: "In Progress" }), record("2", { stage: "Done" })],
+      records: [
+        record("1", { stage: "In Progress" }),
+        record("2", { stage: "Done" }),
+      ],
     };
     const result = applyFilterTab(frame, { field: "stage", value: "Done" });
     expect(result.records.map((r) => r.id)).toEqual(["2"]);
@@ -168,7 +206,10 @@ describe("applyFilterTab", () => {
         record("2", { client: "[[Other Co]]" }),
       ],
     };
-    const result = applyFilterTab(frame, { field: "client", value: "Acme Studio" });
+    const result = applyFilterTab(frame, {
+      field: "client",
+      value: "Acme Studio",
+    });
     expect(result.records.map((r) => r.id)).toEqual(["1"]);
   });
 
@@ -180,7 +221,10 @@ describe("applyFilterTab", () => {
         record("2", { client: "[[Other Co]]" }),
       ],
     };
-    const result = applyFilterTab(frame, { field: "client", value: "[[Acme Studio]]" });
+    const result = applyFilterTab(frame, {
+      field: "client",
+      value: "[[Acme Studio]]",
+    });
     expect(result.records.map((r) => r.id)).toEqual(["1"]);
   });
 
@@ -192,7 +236,10 @@ describe("applyFilterTab", () => {
         record("2", { clients: ["[[Other Co]]"] }),
       ],
     };
-    const result = applyFilterTab(frame, { field: "clients", value: "Acme Studio" });
+    const result = applyFilterTab(frame, {
+      field: "clients",
+      value: "Acme Studio",
+    });
     expect(result.records.map((r) => r.id)).toEqual(["1"]);
   });
 
@@ -238,7 +285,10 @@ describe("applyFilterTab", () => {
   it("Boolean field: true-tab vs true-cell matches (regression-guard)", () => {
     const frame: DataFrame = {
       fields: [field("archived", DataFieldType.Boolean)],
-      records: [record("1", { archived: true }), record("2", { archived: false })],
+      records: [
+        record("1", { archived: true }),
+        record("2", { archived: false }),
+      ],
     };
     const result = applyFilterTab(frame, { field: "archived", value: "true" });
     expect(result.records.map((r) => r.id)).toEqual(["1"]);
@@ -256,9 +306,14 @@ describe("applyFilterTab", () => {
   it("field absent from frame.fields falls back gracefully without throwing", () => {
     const frame: DataFrame = {
       fields: [],
-      records: [record("1", { status: "Done" }), record("2", { status: "Todo" })],
+      records: [
+        record("1", { status: "Done" }),
+        record("2", { status: "Todo" }),
+      ],
     };
-    expect(() => applyFilterTab(frame, { field: "status", value: "Done" })).not.toThrow();
+    expect(() =>
+      applyFilterTab(frame, { field: "status", value: "Done" })
+    ).not.toThrow();
     const result = applyFilterTab(frame, { field: "status", value: "Done" });
     expect(result.records.map((r) => r.id)).toEqual(["1"]);
   });
@@ -275,7 +330,9 @@ describe("promoteFilterTabToGlobal (#123)", () => {
     active: ActiveFilterTab,
     values: DataRecord["values"]
   ) => {
-    const { conditions: [condition] } = promoteFilterTabToGlobal(active, undefined, [f]);
+    const {
+      conditions: [condition],
+    } = promoteFilterTabToGlobal(active, undefined, [f]);
     expect(condition).toBeDefined();
     return matchesFilterConditions(
       { conjunction: "and", conditions: [condition as never] },
@@ -285,43 +342,79 @@ describe("promoteFilterTabToGlobal (#123)", () => {
 
   it("keeps the record for a Number field (regression: was operator 'is')", () => {
     const f = field("estimate", DataFieldType.Number);
-    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, undefined, [f]);
+    const {
+      conditions: [condition],
+    } = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, undefined, [
+      f,
+    ]);
 
     expect(condition?.operator).toBe("eq");
-    expect(promoteAndMatch(f, { field: "estimate", value: "3" }, { estimate: 3 })).toBe(true);
+    expect(
+      promoteAndMatch(f, { field: "estimate", value: "3" }, { estimate: 3 })
+    ).toBe(true);
   });
 
   it("keeps the record for a Boolean field", () => {
     const f = field("done", DataFieldType.Boolean);
-    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "done", value: "true" }, undefined, [f]);
+    const {
+      conditions: [condition],
+    } = promoteFilterTabToGlobal({ field: "done", value: "true" }, undefined, [
+      f,
+    ]);
 
     expect(condition?.operator).toBe("is-checked");
-    expect(promoteAndMatch(f, { field: "done", value: "true" }, { done: true })).toBe(true);
+    expect(
+      promoteAndMatch(f, { field: "done", value: "true" }, { done: true })
+    ).toBe(true);
   });
 
   it("keeps the record for a Date field", () => {
     const f = field("due", DataFieldType.Date);
-    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "due", value: "2026-08-25" }, undefined, [f]);
+    const {
+      conditions: [condition],
+    } = promoteFilterTabToGlobal(
+      { field: "due", value: "2026-08-25" },
+      undefined,
+      [f]
+    );
 
     expect(condition?.operator).toBe("is-on");
     expect(
-      promoteAndMatch(f, { field: "due", value: "2026-08-25" }, { due: new Date("2026-08-25") })
+      promoteAndMatch(
+        f,
+        { field: "due", value: "2026-08-25" },
+        { due: new Date("2026-08-25") }
+      )
     ).toBe(true);
   });
 
   it("keeps the record for a List field", () => {
     const f = field("tags", DataFieldType.List);
-    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "tags", value: "alpha" }, undefined, [f]);
+    const {
+      conditions: [condition],
+    } = promoteFilterTabToGlobal({ field: "tags", value: "alpha" }, undefined, [
+      f,
+    ]);
 
     expect(condition?.operator).toBe("has-any-of");
-    expect(promoteAndMatch(f, { field: "tags", value: "alpha" }, { tags: ["alpha", "beta"] })).toBe(
-      true
-    );
+    expect(
+      promoteAndMatch(
+        f,
+        { field: "tags", value: "alpha" },
+        { tags: ["alpha", "beta"] }
+      )
+    ).toBe(true);
   });
 
   it("still emits 'is' for a String field", () => {
     const f = field("status", DataFieldType.String);
-    const { conditions: [condition] } = promoteFilterTabToGlobal({ field: "status", value: "done" }, undefined, [f]);
+    const {
+      conditions: [condition],
+    } = promoteFilterTabToGlobal(
+      { field: "status", value: "done" },
+      undefined,
+      [f]
+    );
 
     expect(condition?.operator).toBe("is");
     expect(condition?.value).toBe("done");
@@ -344,16 +437,32 @@ describe("promoteFilterTabToGlobal (#123)", () => {
 
   it("suppresses a duplicate of the derived condition", () => {
     const f = field("estimate", DataFieldType.Number);
-    const once = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, undefined, [f]);
-    const twice = promoteFilterTabToGlobal({ field: "estimate", value: "3" }, once, [f]);
+    const once = promoteFilterTabToGlobal(
+      { field: "estimate", value: "3" },
+      undefined,
+      [f]
+    );
+    const twice = promoteFilterTabToGlobal(
+      { field: "estimate", value: "3" },
+      once,
+      [f]
+    );
 
     expect(twice.conditions).toHaveLength(1);
   });
 
   it("does not confuse a Boolean true tab with a false one (neither carries a value)", () => {
     const f = field("done", DataFieldType.Boolean);
-    const afterTrue = promoteFilterTabToGlobal({ field: "done", value: "true" }, undefined, [f]);
-    const afterBoth = promoteFilterTabToGlobal({ field: "done", value: "false" }, afterTrue, [f]);
+    const afterTrue = promoteFilterTabToGlobal(
+      { field: "done", value: "true" },
+      undefined,
+      [f]
+    );
+    const afterBoth = promoteFilterTabToGlobal(
+      { field: "done", value: "false" },
+      afterTrue,
+      [f]
+    );
 
     expect(afterBoth.conditions).toHaveLength(2);
     expect(afterBoth.conditions.map((c) => c.operator)).toEqual([
@@ -363,7 +472,11 @@ describe("promoteFilterTabToGlobal (#123)", () => {
   });
 
   it("falls back to 'is' when the field is not in the frame", () => {
-    const next = promoteFilterTabToGlobal({ field: "ghost", value: "x" }, undefined, []);
+    const next = promoteFilterTabToGlobal(
+      { field: "ghost", value: "x" },
+      undefined,
+      []
+    );
 
     expect(next.conditions[0]?.operator).toBe("is");
   });
@@ -380,7 +493,12 @@ describe("promoteFilterTabToGlobal (#125) — preserves the stored filter", () =
     const current: FilterDefinition = {
       conjunction: "and",
       conditions: [cond("owner", "ann")],
-      groups: [{ conjunction: "or", conditions: [cond("tier", "a"), cond("tier", "b")] }],
+      groups: [
+        {
+          conjunction: "or",
+          conditions: [cond("tier", "a"), cond("tier", "b")],
+        },
+      ],
     };
     const next = promoteFilterTabToGlobal(tab, current, statusField);
 
@@ -402,7 +520,10 @@ describe("promoteFilterTabToGlobal (#125) — preserves the stored filter", () =
   });
 
   it("keeps disabled conditions that the caller never rendered", () => {
-    const disabled = { ...cond("archived", "true"), enabled: false } as typeof current.conditions[number];
+    const disabled = {
+      ...cond("archived", "true"),
+      enabled: false,
+    } as (typeof current.conditions)[number];
     const current: FilterDefinition = {
       conjunction: "and",
       conditions: [cond("owner", "ann"), disabled],
@@ -415,7 +536,12 @@ describe("promoteFilterTabToGlobal (#125) — preserves the stored filter", () =
   it("dedups against a disabled condition too, instead of adding a second copy", () => {
     const current: FilterDefinition = {
       conjunction: "and",
-      conditions: [{ ...cond("status", "done"), enabled: false } as typeof current.conditions[number]],
+      conditions: [
+        {
+          ...cond("status", "done"),
+          enabled: false,
+        } as (typeof current.conditions)[number],
+      ],
     };
     const next = promoteFilterTabToGlobal(tab, current, statusField);
 

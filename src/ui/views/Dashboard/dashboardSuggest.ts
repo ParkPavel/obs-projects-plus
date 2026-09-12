@@ -17,7 +17,10 @@ export interface SuggestionController {
 export function createSuggestionController(opts: {
   getConfig: () => DatabaseViewConfig | undefined;
   saveConfig: (cfg: DatabaseViewConfig) => void;
-  addWidget: (type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>) => void;
+  addWidget: (
+    type: WidgetType,
+    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>
+  ) => void;
   getPrimaryWidgetId: () => string | undefined;
 }): SuggestionController {
   const { getConfig, saveConfig, addWidget, getPrimaryWidgetId } = opts;
@@ -32,7 +35,10 @@ export function createSuggestionController(opts: {
 
   return {
     accept(e) {
-      if (e.detail.kind === "relation-block" && e.detail.relationTargetProjectId) {
+      if (
+        e.detail.kind === "relation-block" &&
+        e.detail.relationTargetProjectId
+      ) {
         const primaryWidgetId = getPrimaryWidgetId() ?? "";
         addWidget("database-call", {
           sourceConfig: { projectId: e.detail.relationTargetProjectId },

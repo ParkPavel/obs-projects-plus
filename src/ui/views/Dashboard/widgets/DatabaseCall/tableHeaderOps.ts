@@ -7,10 +7,13 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
 import { aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
-import type { ColumnAggregation, DataTableConfig, DataTableSortCriteria } from "../../types";
+import type {
+  ColumnAggregation,
+  DataTableConfig,
+  DataTableSortCriteria,
+} from "../../types";
 
 export type SortOrder = "asc" | "desc";
-
 
 /**
  * #180d: this file had the project's one good habit — options gated by field
@@ -37,13 +40,17 @@ export function optionPools(
 ): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const f of fields) {
-    if (f.type !== DataFieldType.Select && f.type !== DataFieldType.Status) continue;
+    if (f.type !== DataFieldType.Select && f.type !== DataFieldType.Status)
+      continue;
     const seen = new Set<string>();
     for (const r of records) {
       const v = r.values[f.name];
       if (typeof v === "string" && v !== "") seen.add(v);
     }
-    map.set(f.name, [...seen].sort((a, b) => a.localeCompare(b)));
+    map.set(
+      f.name,
+      [...seen].sort((a, b) => a.localeCompare(b))
+    );
   }
   return map;
 }
@@ -56,15 +63,22 @@ export function applySortPatch(
   order: SortOrder | null
 ): DataTableConfig {
   const { sortField: _f, sortAsc: _a, ...rest } = config ?? {};
-  void _f; void _a;
+  void _f;
+  void _a;
   const criteria: DataTableSortCriteria[] = order ? [{ field, order }] : [];
   return { ...rest, sortCriteria: criteria } as DataTableConfig;
 }
 
-export function applyHidePatch(config: DataTableConfig | undefined, field: string): DataTableConfig {
+export function applyHidePatch(
+  config: DataTableConfig | undefined,
+  field: string
+): DataTableConfig {
   return {
     ...config,
-    fieldConfig: { ...config?.fieldConfig, [field]: { ...config?.fieldConfig?.[field], hide: true } },
+    fieldConfig: {
+      ...config?.fieldConfig,
+      [field]: { ...config?.fieldConfig?.[field], hide: true },
+    },
   } as DataTableConfig;
 }
 
@@ -76,7 +90,10 @@ export function applyWidthPatch(
   const rounded = Math.max(4, Math.round(widthRem * 4) / 4);
   return {
     ...config,
-    fieldConfig: { ...config?.fieldConfig, [field]: { ...config?.fieldConfig?.[field], widthRem: rounded } },
+    fieldConfig: {
+      ...config?.fieldConfig,
+      [field]: { ...config?.fieldConfig?.[field], widthRem: rounded },
+    },
   } as DataTableConfig;
 }
 
@@ -89,7 +106,13 @@ export function applyGroupPatch(
   if (field === null) return rest as DataTableConfig;
   return {
     ...rest,
-    groupBy: { field, sortOrder: "asc", hiddenGroups: [], collapsedGroups: [], showEmptyGroups: false },
+    groupBy: {
+      field,
+      sortOrder: "asc",
+      hiddenGroups: [],
+      collapsedGroups: [],
+      showEmptyGroups: false,
+    },
   } as DataTableConfig;
 }
 
@@ -102,7 +125,10 @@ export function toggleGroupCollapsed(
   const collapsed = new Set(groupBy.collapsedGroups ?? []);
   if (collapsed.has(key)) collapsed.delete(key);
   else collapsed.add(key);
-  return { ...config, groupBy: { ...groupBy, collapsedGroups: [...collapsed] } } as DataTableConfig;
+  return {
+    ...config,
+    groupBy: { ...groupBy, collapsedGroups: [...collapsed] },
+  } as DataTableConfig;
 }
 
 export function applyCalculatePatch(
@@ -110,7 +136,9 @@ export function applyCalculatePatch(
   field: string,
   fn: ColumnAggregation | null
 ): DataTableConfig {
-  const aggregations: Record<string, ColumnAggregation> = { ...config?.aggregations };
+  const aggregations: Record<string, ColumnAggregation> = {
+    ...config?.aggregations,
+  };
   if (fn === null) delete aggregations[field];
   else aggregations[field] = fn;
   return {
@@ -158,26 +186,66 @@ export function buildHeaderMenuEntries(opts: {
   onCalculate: (fn: ColumnAggregation | null) => void;
   onGroup: (group: boolean) => void;
 }): ContextMenuEntry[] {
-  const { field, isPrimary, currentSort, currentCalc, groupedBy, t, onSort, onHide, onCalculate, onGroup } = opts;
+  const {
+    field,
+    isPrimary,
+    currentSort,
+    currentCalc,
+    groupedBy,
+    t,
+    onSort,
+    onHide,
+    onCalculate,
+    onGroup,
+  } = opts;
   const entries: ContextMenuEntry[] = [
-    { title: t("views.dashboard.table-v2.sort-asc", "Sort ascending"), icon: "arrow-up", onClick: () => onSort("asc"), disabled: currentSort === "asc" },
-    { title: t("views.dashboard.table-v2.sort-desc", "Sort descending"), icon: "arrow-down", onClick: () => onSort("desc"), disabled: currentSort === "desc" },
+    {
+      title: t("views.dashboard.table-v2.sort-asc", "Sort ascending"),
+      icon: "arrow-up",
+      onClick: () => onSort("asc"),
+      disabled: currentSort === "asc",
+    },
+    {
+      title: t("views.dashboard.table-v2.sort-desc", "Sort descending"),
+      icon: "arrow-down",
+      onClick: () => onSort("desc"),
+      disabled: currentSort === "desc",
+    },
   ];
   if (currentSort) {
-    entries.push({ title: t("views.dashboard.table-v2.sort-clear", "Clear sort"), icon: "x", onClick: () => onSort(null) });
+    entries.push({
+      title: t("views.dashboard.table-v2.sort-clear", "Clear sort"),
+      icon: "x",
+      onClick: () => onSort(null),
+    });
   }
   entries.push({ separator: true });
   entries.push(
     groupedBy
-      ? { title: t("views.dashboard.table-v2.ungroup", "Ungroup"), icon: "x", onClick: () => onGroup(false) }
-      : { title: t("views.dashboard.table-v2.group-by", "Group by this field"), icon: "layers", onClick: () => onGroup(true) }
+      ? {
+          title: t("views.dashboard.table-v2.ungroup", "Ungroup"),
+          icon: "x",
+          onClick: () => onGroup(false),
+        }
+      : {
+          title: t("views.dashboard.table-v2.group-by", "Group by this field"),
+          icon: "layers",
+          onClick: () => onGroup(true),
+        }
   );
   entries.push({
     title: t("views.dashboard.table-v2.calculate", "Calculate"),
     icon: "sigma",
-    onClick: () => { /* submenu container */ },
+    onClick: () => {
+      /* submenu container */
+    },
     submenu: [
-      { title: t("views.dashboard.table-v2.calc-none", "None"), icon: "x", disabled: currentCalc === undefined, onClick: () => onCalculate(null) },
+      {
+        title: t("views.dashboard.table-v2.calc-none", "None"),
+        icon: "x",
+        disabled: currentCalc === undefined,
+        onClick: () => onCalculate(null),
+      },
       ...calculateOptions(field).map((fn) => ({
         title: fn.replace(/_/g, " "),
         icon: fn === currentCalc ? "check" : "sigma",
@@ -187,7 +255,11 @@ export function buildHeaderMenuEntries(opts: {
   });
   if (!isPrimary) {
     entries.push({ separator: true });
-    entries.push({ title: t("views.dashboard.table-v2.hide-field", "Hide in view"), icon: "eye-off", onClick: onHide });
+    entries.push({
+      title: t("views.dashboard.table-v2.hide-field", "Hide in view"),
+      icon: "eye-off",
+      onClick: onHide,
+    });
   }
   return entries;
 }

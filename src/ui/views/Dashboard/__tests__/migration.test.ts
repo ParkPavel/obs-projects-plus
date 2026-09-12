@@ -1,6 +1,12 @@
 ﻿// src/ui/views/Dashboard/__tests__/migration.test.ts
 
-import { migrateTableConfig, isLegacyTableConfig, migrateAggregationCount, migrateDashboardTransforms, dropTemplateQuickActions } from "../migration";
+import {
+  migrateTableConfig,
+  isLegacyTableConfig,
+  migrateAggregationCount,
+  migrateDashboardTransforms,
+  dropTemplateQuickActions,
+} from "../migration";
 import type { DatabaseViewConfig } from "../types";
 
 describe("isLegacyTableConfig", () => {
@@ -9,9 +15,9 @@ describe("isLegacyTableConfig", () => {
   });
 
   test("identifies config with fieldConfig as legacy", () => {
-    expect(
-      isLegacyTableConfig({ fieldConfig: { name: { width: 200 } } })
-    ).toBe(true);
+    expect(isLegacyTableConfig({ fieldConfig: { name: { width: 200 } } })).toBe(
+      true
+    );
   });
 
   test("identifies config with sortField as legacy", () => {
@@ -44,14 +50,18 @@ describe("migrateTableConfig", () => {
     expect(result.layoutVersion).toBe(1);
     expect(result.showWidgetToolbar).toBe(true);
     expect(result.compactMode).toBe(false);
-    // #191: one, not two. The "Overview Preset" action applied a dashboard
-    // template and went with that mechanism; migrating a dashboard must not
-    // mint a button pointing at something that no longer exists.
+    // #191 — the migrator used to generate an `apply-template` action beside
+    // this one, pointing at a mechanism that no longer exists. It now emits the
+    // formula toggle alone; `dropTemplateQuickActions` below removes the other
+    // from configs written before this change.
     expect(result.quickActions).toHaveLength(1);
     expect(result.quickActions?.[0]).toMatchObject({
       id: "qa-formula",
       kind: "toggle-formula-bar",
     });
+    expect(result.quickActions?.map((a) => a.kind)).not.toContain(
+      "apply-template"
+    );
   });
 
   test("preserves table config fields", () => {
@@ -93,7 +103,10 @@ describe("migrateAggregationCount (R5-004)", () => {
     const out = migrateAggregationCount({
       table: { aggregations: { name: "count", budget: "sum" } },
     });
-    expect(out.table.aggregations).toEqual({ name: "count_total", budget: "sum" });
+    expect(out.table.aggregations).toEqual({
+      name: "count_total",
+      budget: "sum",
+    });
   });
 
   test("renames Stats card aggregation 'count' -> 'count_total'", () => {
@@ -118,8 +131,16 @@ describe("migrateAggregationCount (R5-004)", () => {
   test("recurses into nested widgets array", () => {
     const out: any = migrateAggregationCount({
       widgets: [
-        { id: "w1", type: "data-table", config: { aggregations: { f: "count" } } },
-        { id: "w2", type: "stats", config: { cards: [{ id: "c", aggregation: "count" }] } },
+        {
+          id: "w1",
+          type: "data-table",
+          config: { aggregations: { f: "count" } },
+        },
+        {
+          id: "w2",
+          type: "stats",
+          config: { cards: [{ id: "c", aggregation: "count" }] },
+        },
       ],
     });
     expect(out.widgets[0].config.aggregations.f).toBe("count_total");
@@ -127,7 +148,9 @@ describe("migrateAggregationCount (R5-004)", () => {
   });
 
   test("does not touch RollupFunction-shaped 'count' (no aggregation key)", () => {
-    const input = { rollup: { relationField: "r", targetField: "t", function: "count" } };
+    const input = {
+      rollup: { relationField: "r", targetField: "t", function: "count" },
+    };
     const out = migrateAggregationCount(input);
     expect(out.rollup.function).toBe("count");
   });
@@ -172,7 +195,9 @@ describe("migrateDashboardTransforms (#118)", () => {
   };
 
   const dashboard = (widgets: unknown[]) =>
-    ({ widgets }) as unknown as Parameters<typeof migrateDashboardTransforms>[0];
+    ({ widgets }) as unknown as Parameters<
+      typeof migrateDashboardTransforms
+    >[0];
 
   it("lifts a leading pipeline filter onto the widget subFilter", () => {
     const result = migrateDashboardTransforms(
@@ -186,7 +211,9 @@ describe("migrateDashboardTransforms (#118)", () => {
   });
 
   it("leaves a dashboard with nothing to split untouched", () => {
-    const input = dashboard([widget("w1", { transform: { steps: [pivotStep] } })]);
+    const input = dashboard([
+      widget("w1", { transform: { steps: [pivotStep] } }),
+    ]);
     const result = migrateDashboardTransforms(input);
 
     expect(result.migrated).toBe(false);
@@ -206,7 +233,10 @@ describe("migrateDashboardTransforms (#118)", () => {
   it("migrates only the widgets that need it, preserving the rest by identity", () => {
     const untouched = widget("keep", { transform: { steps: [pivotStep] } });
     const result = migrateDashboardTransforms(
-      dashboard([widget("move", { transform: { steps: [filterStep] } }), untouched])
+      dashboard([
+        widget("move", { transform: { steps: [filterStep] } }),
+        untouched,
+      ])
     );
 
     expect(result.migrated).toBe(true);
@@ -216,7 +246,9 @@ describe("migrateDashboardTransforms (#118)", () => {
 
 describe("migrateDashboardTransforms — malformed persisted config (Codex review)", () => {
   const malformed = (widgets: unknown) =>
-    ({ widgets }) as unknown as Parameters<typeof migrateDashboardTransforms>[0];
+    ({ widgets }) as unknown as Parameters<
+      typeof migrateDashboardTransforms
+    >[0];
 
   it.each([
     ["an object", {}],
@@ -234,73 +266,157 @@ describe("migrateDashboardTransforms — malformed persisted config (Codex revie
 
   it("does not throw for a config with no widgets key at all", () => {
     expect(() =>
-      migrateDashboardTransforms({} as unknown as Parameters<typeof migrateDashboardTransforms>[0])
+      migrateDashboardTransforms(
+        {} as unknown as Parameters<typeof migrateDashboardTransforms>[0]
+      )
     ).not.toThrow();
   });
 });
 
-describe("#191 dropTemplateQuickActions — a vault that still carries the artefact", () => {
-  const stored = () =>
+// ── #191 — a vault carrying the retired template button opens ────────────
+//
+// The mechanism went in this commit; the button it generated is already on
+// disk in real vaults. `migration.ts` produced it for EVERY dashboard it
+// migrated, so "nobody will have one" is not available as an argument. These
+// are the tests that get forgotten: they assert such a config still opens,
+// that only the dead action leaves, and that everything else comes back by
+// reference so no widget is rewritten on the way past.
+
+describe("dropTemplateQuickActions (#191)", () => {
+  const widgets = [
+    {
+      id: "w1",
+      type: "data-table",
+      title: "T",
+      layout: { x: 0, y: 0, w: 12, h: 6 },
+      config: {},
+    },
+  ];
+  const table = { aggregations: {}, showAggregationRow: false };
+  const fieldPresets = [{ id: "p1", name: "Wide", fieldConfig: {} }];
+
+  const storedConfig = (quickActions: unknown): DatabaseViewConfig =>
     ({
-      widgets: [{ id: "w1", type: "database-call" }],
+      widgets,
       layoutMode: "stack",
       layoutVersion: 1,
-      table: {},
-      quickActions: [
-        { id: "qa-overview", kind: "apply-template", label: "Overview Preset", templateId: "overview-finance" },
-        { id: "qa-formula", kind: "toggle-formula-bar", label: "Formula Builder" },
-      ],
+      table,
+      showWidgetToolbar: true,
+      compactMode: false,
+      fieldPresets,
+      quickActions,
     }) as unknown as DatabaseViewConfig;
 
-  it("opens without error and loses only the dead action", () => {
-    // The test that matters most and is easiest to forget: a real vault holds
-    // this exact shape right now, generated by migrateTableConfig before #191.
-    const r = dropTemplateQuickActions(stored());
-    expect(r.migrated).toBe(true);
-    expect(r.config.quickActions).toHaveLength(1);
-    expect(r.config.quickActions?.[0]?.kind).toBe("toggle-formula-bar");
+  it("drops the stored apply-template action and keeps the formula toggle", () => {
+    // The exact pair `migrateTableConfig` used to write, which is what a real
+    // vault carries — the button a user sees as «Обзорный пресет».
+    const config = storedConfig([
+      {
+        id: "qa-overview",
+        label: "Overview Preset",
+        labelKey: "views.dashboard.quick.overview",
+        kind: "apply-template",
+        templateId: "overview-finance",
+      },
+      {
+        id: "qa-formula",
+        label: "Formula Builder",
+        labelKey: "views.dashboard.quick.formula",
+        kind: "toggle-formula-bar",
+      },
+    ]);
+
+    const result = dropTemplateQuickActions(config);
+
+    expect(result.migrated).toBe(true);
+    expect(result.config.quickActions).toHaveLength(1);
+    expect(result.config.quickActions?.[0]?.id).toBe("qa-formula");
+    expect(result.config.quickActions?.[0]?.kind).toBe("toggle-formula-bar");
   });
 
-  it("touches nothing else — by reference, not by equality", () => {
-    // A migrator that rebuilds the widgets array would re-render every widget
-    // and lose object identity the canvas keys on. `toBe`, deliberately.
-    const before = stored();
-    const r = dropTemplateQuickActions(before);
-    expect(r.config.widgets).toBe(before.widgets);
-    expect(r.config.table).toBe(before.table);
+  it("touches nothing but quickActions, by reference", () => {
+    // Reference equality, not deep equality: this runs on a path that then
+    // writes to disk (#145), so a migration that rebuilds widgets it had no
+    // reason to change is a rewrite of user data wearing a no-op's clothes.
+    const config = storedConfig([
+      {
+        id: "qa-overview",
+        label: "x",
+        kind: "apply-template",
+        templateId: "overview-finance",
+      },
+    ]);
+
+    const result = dropTemplateQuickActions(config);
+
+    expect(result.migrated).toBe(true);
+    expect(result.config).not.toBe(config);
+    expect(result.config.widgets).toBe(config.widgets);
+    expect(result.config.table).toBe(config.table);
+    expect(result.config.fieldPresets).toBe(config.fieldPresets);
+    expect(result.config.quickActions).toEqual([]);
   });
 
-  it("drops a templateId this codebase has never heard of", () => {
-    // CX-MAP-191 recorded that quick actions hold the id as a string and that
-    // static reading cannot enumerate what real vaults contain. Filtering on a
-    // list of known ids would leave that unknown as a hole.
-    const alien = {
-      widgets: [],
-      quickActions: [{ id: "x", kind: "apply-template", label: "?", templateId: "whatever-user-had" }],
-    } as unknown as DatabaseViewConfig;
-    expect(dropTemplateQuickActions(alien).config.quickActions).toHaveLength(0);
+  it("drops a templateId that never existed in this codebase", () => {
+    // The usage map's UNKNOWN: which ids actually sit in users' vaults cannot
+    // be enumerated statically, because a quick action stores one as a plain
+    // string. So the filter is on `kind` — a list of known ids would leave
+    // every id we never saw behind, still rendering, still doing nothing.
+    const config = storedConfig([
+      {
+        id: "qa-legacy",
+        label: "Legacy",
+        kind: "apply-template",
+        templateId: "never-shipped-2019",
+      },
+      { id: "qa-formula", label: "Formula", kind: "toggle-formula-bar" },
+    ]);
+
+    const result = dropTemplateQuickActions(config);
+
+    expect(result.migrated).toBe(true);
+    expect(result.config.quickActions?.map((a) => a.id)).toEqual([
+      "qa-formula",
+    ]);
   });
 
-  it("is idempotent, and says so by returning the same object", () => {
-    // Otherwise the view saves on every single open.
-    const once = dropTemplateQuickActions(stored());
-    const twice = dropTemplateQuickActions(once.config);
-    expect(twice.migrated).toBe(false);
-    expect(twice.config).toBe(once.config);
+  it("is idempotent — a second open writes nothing", () => {
+    const config = storedConfig([
+      {
+        id: "qa-overview",
+        label: "x",
+        kind: "apply-template",
+        templateId: "overview-finance",
+      },
+      { id: "qa-formula", label: "Formula", kind: "toggle-formula-bar" },
+    ]);
+
+    const first = dropTemplateQuickActions(config);
+    const second = dropTemplateQuickActions(first.config);
+
+    expect(second.migrated).toBe(false);
+    expect(second.config).toBe(first.config);
   });
 
-  it("survives a config with no quickActions at all", () => {
-    const bare = { widgets: [] } as unknown as DatabaseViewConfig;
-    const r = dropTemplateQuickActions(bare);
-    expect(r.migrated).toBe(false);
-    expect(r.config).toBe(bare);
+  it.each([
+    ["absent", undefined],
+    ["an object", {}],
+    ["a string", "qa-overview"],
+    ["a number", 7],
+    ["null", null],
+  ])("does not throw when quickActions is %s", (_name, value) => {
+    const config = storedConfig(value);
+
+    expect(() => dropTemplateQuickActions(config)).not.toThrow();
+
+    const result = dropTemplateQuickActions(config);
+    expect(result.migrated).toBe(false);
+    expect(result.config).toBe(config);
   });
 
-  it("survives quickActions that are not an array", () => {
-    // Persisted JSON: a hand-edited or older vault can hold anything here, and
-    // throwing would take the whole dashboard down rather than one button.
-    const broken = { widgets: [], quickActions: "nope" } as unknown as DatabaseViewConfig;
-    expect(() => dropTemplateQuickActions(broken)).not.toThrow();
-    expect(dropTemplateQuickActions(broken).migrated).toBe(false);
+  it("does not throw on a config that is not an object at all", () => {
+    expect(() =>
+      dropTemplateQuickActions(undefined as unknown as DatabaseViewConfig)
+    ).not.toThrow();
   });
 });

@@ -1,6 +1,10 @@
 import { produce } from "immer";
 import type { DataviewApi, Link } from "obsidian-dataview";
-import type { TableResult, ListResult, TaskResult } from "obsidian-dataview/lib/api/plugin-api";
+import type {
+  TableResult,
+  ListResult,
+  TaskResult,
+} from "obsidian-dataview/lib/api/plugin-api";
 import type { SListItem } from "obsidian-dataview/lib/data-model/serialized/markdown";
 import {
   emptyDataFrame,
@@ -79,11 +83,24 @@ export class DataviewDataSource extends DataSource {
       rows = parseTableResult(result.value as TableResult);
       sortHeaders = (result.value as TableResult).headers;
     } else if (resultType === "list") {
-      rows = parseListResult(result.value as ListResult, this.api.settings.tableIdColumnName);
+      rows = parseListResult(
+        result.value as ListResult,
+        this.api.settings.tableIdColumnName
+      );
       sortHeaders = [this.api.settings.tableIdColumnName];
     } else if (resultType === "task") {
-      rows = parseTaskResult(result.value as TaskResult, this.api.settings.tableIdColumnName);
-      sortHeaders = [this.api.settings.tableIdColumnName, "text", "status", "checked", "completed", "tags"];
+      rows = parseTaskResult(
+        result.value as TaskResult,
+        this.api.settings.tableIdColumnName
+      );
+      sortHeaders = [
+        this.api.settings.tableIdColumnName,
+        "text",
+        "status",
+        "checked",
+        "completed",
+        "tags",
+      ];
     } else {
       throw new Error(`Unsupported Dataview query type: ${resultType}`);
     }
@@ -156,7 +173,6 @@ export class DataviewDataSource extends DataSource {
     return true;
   }
 
-
   standardizeRecords(rows: Array<Record<string, any>>): DataRecord[] {
     const records: DataRecord[] = [];
 
@@ -165,9 +181,10 @@ export class DataviewDataSource extends DataSource {
     rows.forEach((row, index) => {
       const idRaw = row[columnName];
       // ID can be a Link object (TABLE/LIST) or a string (TASK)
-      const id = typeof idRaw === "object" && idRaw && "path" in idRaw
-        ? (idRaw as Link).path
-        : String(idRaw ?? `row-${index}`);
+      const id =
+        typeof idRaw === "object" && idRaw && "path" in idRaw
+          ? (idRaw as Link).path
+          : String(idRaw ?? `row-${index}`);
       records.push({ id, values: standardizeValues(row) });
     });
 
@@ -175,15 +192,12 @@ export class DataviewDataSource extends DataSource {
   }
 }
 
- 
 function parseTableResult(value: TableResult): Array<Record<string, any>> {
   const headers: string[] = value.headers;
 
-   
   const rows: Array<Record<string, any>> = [];
 
   value.values.forEach((row) => {
-     
     const values: Record<string, any> = {};
 
     headers.forEach((header, index) => {
@@ -201,8 +215,11 @@ function parseTableResult(value: TableResult): Array<Record<string, any>> {
  * Convert LIST query result to row format.
  * Each value becomes a record with the id column pointing to the source file.
  */
- 
-function parseListResult(value: ListResult, idColumnName: string): Array<Record<string, any>> {
+
+function parseListResult(
+  value: ListResult,
+  idColumnName: string
+): Array<Record<string, any>> {
   return value.values.map((item) => {
     if (typeof item === "object" && item !== null && "path" in item) {
       // Link object — use as file identifier
@@ -217,11 +234,16 @@ function parseListResult(value: ListResult, idColumnName: string): Array<Record<
  * Flatten TASK query result (Grouping<SListItem>) to row format.
  * Supports both flat array and grouped (by file) formats.
  */
- 
-function parseTaskResult(value: TaskResult, idColumnName: string): Array<Record<string, any>> {
+
+function parseTaskResult(
+  value: TaskResult,
+  idColumnName: string
+): Array<Record<string, any>> {
   const rows: Array<Record<string, any>> = [];
 
-  function flattenItems(items: SListItem[] | Array<{ key: unknown; rows: SListItem[] }>): void {
+  function flattenItems(
+    items: SListItem[] | Array<{ key: unknown; rows: SListItem[] }>
+  ): void {
     for (const item of items) {
       if ("rows" in item && Array.isArray((item as { rows: unknown }).rows)) {
         // Grouped format: { key: Link, rows: SListItem[] }
@@ -233,14 +255,38 @@ function parseTaskResult(value: TaskResult, idColumnName: string): Array<Record<
           text: task.text ?? "",
           status: "status" in task ? task.status : "",
           checked: "checked" in task ? task.checked : false,
-          completed: "completed" in task ? (task as { completed: boolean }).completed : false,
+          completed:
+            "completed" in task
+              ? (task as { completed: boolean }).completed
+              : false,
           tags: task.tags ?? [],
           path: task.path ?? "",
         };
         // Copy annotation fields (custom frontmatter-like fields on tasks)
         if (task.annotated) {
           for (const key of Object.keys(task)) {
-            if (!(key in row) && !["symbol", "link", "section", "line", "lineCount", "position", "list", "blockId", "parent", "children", "outlinks", "visual", "annotated", "subtasks", "real", "header", "task"].includes(key)) {
+            if (
+              !(key in row) &&
+              ![
+                "symbol",
+                "link",
+                "section",
+                "line",
+                "lineCount",
+                "position",
+                "list",
+                "blockId",
+                "parent",
+                "children",
+                "outlinks",
+                "visual",
+                "annotated",
+                "subtasks",
+                "real",
+                "header",
+                "task",
+              ].includes(key)
+            ) {
               row[key] = task[key];
             }
           }
@@ -284,6 +330,11 @@ export function createDataviewSource(
   }
   return {
     kind: "ok",
-    source: new DataviewDataSource(fileSystem, project, preferences, dataviewApi),
+    source: new DataviewDataSource(
+      fileSystem,
+      project,
+      preferences,
+      dataviewApi
+    ),
   };
 }

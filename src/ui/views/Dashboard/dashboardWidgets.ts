@@ -26,10 +26,15 @@ interface WidgetControllerOptions {
 }
 
 export interface WidgetController {
-  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): void;
+  addWidget(
+    type: WidgetType,
+    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>
+  ): void;
   removeWidget(id: string): void;
   /** CustomEvent handler: widget's own config changed (title, layout, type-specific options). */
-  handleWidgetConfigChange(e: CustomEvent<{ id: string; changes: Partial<WidgetDefinition> }>): void;
+  handleWidgetConfigChange(
+    e: CustomEvent<{ id: string; changes: Partial<WidgetDefinition> }>
+  ): void;
   /** CustomEvent handler: primary DataTable config changed. */
   handleTableConfigChange(e: CustomEvent<unknown>): void;
   /** FormulaBar apply: upsert a view-level formula field by name. */
@@ -45,7 +50,10 @@ export function createWidgetController({
     return getConfig();
   }
 
-  function addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): void {
+  function addWidget(
+    type: WidgetType,
+    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>
+  ): void {
     const config = cfg();
     if (!config) return;
     const meta = getWidgetMeta(type);
@@ -100,5 +108,11 @@ export function createWidgetController({
     saveConfig({ ...config, formulaFields: updated });
   }
 
-  return { addWidget, removeWidget, handleWidgetConfigChange, handleTableConfigChange, applyFormulaField };
+  return {
+    addWidget,
+    removeWidget,
+    handleWidgetConfigChange,
+    handleTableConfigChange,
+    applyFormulaField,
+  };
 }

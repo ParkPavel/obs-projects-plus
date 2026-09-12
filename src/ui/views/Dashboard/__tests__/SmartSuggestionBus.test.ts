@@ -18,7 +18,13 @@ jest.mock("src/lib/stores/i18n", () => {
 const SmartSuggestionBus = require("../SmartSuggestionBus.svelte").default;
 
 function numericField(name = "price") {
-  return { name, type: DataFieldType.Number, repeated: false, identifier: false, derived: false };
+  return {
+    name,
+    type: DataFieldType.Number,
+    repeated: false,
+    identifier: false,
+    derived: false,
+  };
 }
 
 function mount(props: Record<string, unknown>) {
@@ -56,9 +62,9 @@ describe("SmartSuggestionBus (#059)", () => {
   it("renders the strip when a numeric field triggers a suggestion", () => {
     const { target, destroy } = mount({ fields: [numericField()] });
     expect(target.querySelector(".ppp-smart-suggest")).not.toBeNull();
-    expect(target.querySelector(".ppp-smart-suggest__message")).toHaveTextContent(
-      "Numeric field"
-    );
+    expect(
+      target.querySelector(".ppp-smart-suggest__message")
+    ).toHaveTextContent("Numeric field");
     destroy();
   });
 
@@ -127,17 +133,19 @@ describe("SmartSuggestionBus (#059)", () => {
       // no project cannot produce a linked block, so it produces no suggestion.
       typeConfig: { relation: { targetProjectId: "p-clients" } },
     };
-    const { target, destroy } = mount({ fields: [numericField(), relationField] });
-    expect(target.querySelector(".ppp-smart-suggest__message")).toHaveTextContent(
-      "Numeric field"
-    );
+    const { target, destroy } = mount({
+      fields: [numericField(), relationField],
+    });
+    expect(
+      target.querySelector(".ppp-smart-suggest__message")
+    ).toHaveTextContent("Numeric field");
 
     click(target.querySelector(".ppp-smart-suggest__close"));
     await flush();
 
-    expect(target.querySelector(".ppp-smart-suggest__message")).toHaveTextContent(
-      "Relation field"
-    );
+    expect(
+      target.querySelector(".ppp-smart-suggest__message")
+    ).toHaveTextContent("Relation field");
     destroy();
   });
 });

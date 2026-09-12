@@ -16,8 +16,7 @@ import type {
   WidgetDefinition,
 } from "src/ui/views/Dashboard/types";
 
-const WidgetInlineBadges =
-  require("../WidgetInlineBadges.svelte").default;
+const WidgetInlineBadges = require("../WidgetInlineBadges.svelte").default;
 
 function makeFrame(fieldCount: number): DataFrame {
   return {
@@ -73,7 +72,10 @@ describe("WidgetInlineBadges", () => {
       columns: 3,
     };
     const handle = mount({
-      widget: makeWidget("stats", statsCfg as unknown as Record<string, unknown>),
+      widget: makeWidget(
+        "stats",
+        statsCfg as unknown as Record<string, unknown>
+      ),
       frame: makeFrame(3),
     });
     const badge = handle.target.querySelector<HTMLElement>(
@@ -97,7 +99,10 @@ describe("WidgetInlineBadges", () => {
       columns: 3,
     };
     const handle = mount({
-      widget: makeWidget("stats", statsCfg as unknown as Record<string, unknown>),
+      widget: makeWidget(
+        "stats",
+        statsCfg as unknown as Record<string, unknown>
+      ),
       frame: makeFrame(2),
     });
     const badge = handle.target.querySelector<HTMLElement>(
@@ -131,7 +136,10 @@ describe("WidgetInlineBadges", () => {
       },
     };
     const handle = mount({
-      widget: makeWidget("chart", chartCfg as unknown as Record<string, unknown>),
+      widget: makeWidget(
+        "chart",
+        chartCfg as unknown as Record<string, unknown>
+      ),
       frame: makeFrame(4),
     });
     const typeBadge = handle.target.querySelector<HTMLElement>(
@@ -167,7 +175,10 @@ describe("WidgetInlineBadges", () => {
       },
     };
     const handle = mount({
-      widget: makeWidget("chart", chartCfg as unknown as Record<string, unknown>),
+      widget: makeWidget(
+        "chart",
+        chartCfg as unknown as Record<string, unknown>
+      ),
       frame: makeFrame(2),
     });
     expect(

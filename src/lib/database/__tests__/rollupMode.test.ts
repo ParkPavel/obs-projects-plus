@@ -58,10 +58,10 @@ describe("modesForTarget", () => {
 
   it("includes percent-per-group only for boolean targets", () => {
     expect(modesForTarget("boolean").map((m) => m.id)).toContain(
-      "percent_per_group",
+      "percent_per_group"
     );
     expect(modesForTarget("text").map((m) => m.id)).not.toContain(
-      "percent_per_group",
+      "percent_per_group"
     );
   });
 });
@@ -69,7 +69,10 @@ describe("modesForTarget", () => {
 describe("groupModes", () => {
   it("partitions modes into their groups in order", () => {
     const grouped = groupModes(modesForTarget("numeric"));
-    expect(grouped.show.map((m) => m.id)).toEqual(["show_original", "show_unique"]);
+    expect(grouped.show.map((m) => m.id)).toEqual([
+      "show_original",
+      "show_unique",
+    ]);
     expect(grouped.more.map((m) => m.id)).toContain("sum");
   });
 });

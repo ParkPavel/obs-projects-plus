@@ -1,6 +1,7 @@
 /**
  * statsSelectionReceiver.ts — pure helpers for StatsWidget's receiver role.
  *
+ * Spec: .ai_internal/New-specification/CROSS_WIDGET_SPEC.md §4, §5.3.
  * Ticket: #044.4 (Phase 5 sub-PR 4 — receiver only; Stats as driver is v2).
  *
  * Given the canvas-level selection and the widget's source records (already
@@ -16,8 +17,15 @@
  */
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import { canonicalLinkKey, parseRelationLinks } from "src/lib/relations/parseRelationLinks";
-import { dataTableSourceId, chartSourceId, type SelectionState } from "../../canvasSelectionStore";
+import {
+  canonicalLinkKey,
+  parseRelationLinks,
+} from "src/lib/relations/parseRelationLinks";
+import {
+  dataTableSourceId,
+  chartSourceId,
+  type SelectionState,
+} from "../../canvasSelectionStore";
 
 /**
  * Stable source-id prefix reserved for a future Stats driver (v2 drill-down).
@@ -26,7 +34,7 @@ import { dataTableSourceId, chartSourceId, type SelectionState } from "../../can
  * same Stats widget once driver support lands.
  */
 export function statsSourceId(widgetId: string): string {
-	return `stats:${widgetId}`;
+  return `stats:${widgetId}`;
 }
 
 /**
@@ -40,10 +48,13 @@ export function statsSourceId(widgetId: string): string {
  * widget's records — a "selection that filters everything out" is still
  * conceptually active and should show the indicator (and a zero/empty value).
  */
-export function isSelectionActive(selection: SelectionState, myWidgetId: string): boolean {
-	if (selection.source === null) return false;
-	if (selection.source === statsSourceId(myWidgetId)) return false;
-	return true;
+export function isSelectionActive(
+  selection: SelectionState,
+  myWidgetId: string
+): boolean {
+  if (selection.source === null) return false;
+  if (selection.source === statsSourceId(myWidgetId)) return false;
+  return true;
 }
 
 /**
@@ -62,61 +73,62 @@ export function isSelectionActive(selection: SelectionState, myWidgetId: string)
  * records "belong" to the selection.
  */
 export function filterRecordsBySelection(args: {
-	readonly records: readonly DataRecord[];
-	readonly selection: SelectionState;
-	readonly myWidgetId: string;
+  readonly records: readonly DataRecord[];
+  readonly selection: SelectionState;
+  readonly myWidgetId: string;
 }): readonly DataRecord[] {
-	const { records, selection, myWidgetId } = args;
+  const { records, selection, myWidgetId } = args;
 
-	if (
-		selection.source === null ||
-		selection.field === null ||
-		selection.values.length === 0
-	) {
-		return records;
-	}
+  if (
+    selection.source === null ||
+    selection.field === null ||
+    selection.values.length === 0
+  ) {
+    return records;
+  }
 
-	if (selection.source === statsSourceId(myWidgetId)) {
-		return records;
-	}
+  if (selection.source === statsSourceId(myWidgetId)) {
+    return records;
+  }
 
-	// Local match — kept duplicated with dataTableSelectionReceiver's check to
-	// avoid coupling the two receivers through a third helper module. Both
-	// receivers MUST agree on semantics: array-typed cells match if any element
-	// equals the selection value, scalars match on string equality, null/undef
-	// never match. If a third receiver adds a different rule, extract then.
-	//
-	// #153 — relation cells are compared by canonical link key, not by raw
-	// string. `[[Ivan Petrov]]`, `[[Clients/Ivan Petrov|Ivan]]` and
-	// `Clients/Ivan Petrov.md` are the same target; `String(cell)` said they
-	// were three different ones, so a Stats card could aggregate a different
-	// cohort than the table it sits next to was highlighting. The relation
-	// filter path (`relationFilterAdapter`) already canonicalises both sides.
-	const field = selection.field;
-	const values = selection.values;
-	// #153 — the SELECTION side is always canonicalised, because the table
-	// driver publishes a bare basename (`rowSelectionValue` → `recordBaseName`),
-	// never a wikilink. Gating this on "the selection looks like a link" is what
-	// made the first version of this fix inert in the real path: cell
-	// `[[Ivan Petrov]]` never met selection `Ivan Petrov`.
-	//
-	// The CELL side stays gated on link shape, and that asymmetry is deliberate:
-	// `parseRelationLinks` splits plain strings on commas, so running every cell
-	// through it would silently widen matching for ordinary String fields —
-	// "Ivan, Petrov" would start matching a selection of "Ivan".
-	const linkKeys = values.map((value) => canonicalLinkKey(String(value)));
+  // Local match — kept duplicated with dataTableSelectionReceiver's check to
+  // avoid coupling the two receivers through a third helper module. Both
+  // receivers MUST agree on semantics: array-typed cells match if any element
+  // equals the selection value, scalars match on string equality, null/undef
+  // never match. If a third receiver adds a different rule, extract then.
+  //
+  // #153 — relation cells are compared by canonical link key, not by raw
+  // string. `[[Ivan Petrov]]`, `[[Clients/Ivan Petrov|Ivan]]` and
+  // `Clients/Ivan Petrov.md` are the same target; `String(cell)` said they
+  // were three different ones, so a Stats card could aggregate a different
+  // cohort than the table it sits next to was highlighting. The relation
+  // filter path (`relationFilterAdapter`) already canonicalises both sides.
+  const field = selection.field;
+  const values = selection.values;
+  // #153 — the SELECTION side is always canonicalised, because the table
+  // driver publishes a bare basename (`rowSelectionValue` → `recordBaseName`),
+  // never a wikilink. Gating this on "the selection looks like a link" is what
+  // made the first version of this fix inert in the real path: cell
+  // `[[Ivan Petrov]]` never met selection `Ivan Petrov`.
+  //
+  // The CELL side stays gated on link shape, and that asymmetry is deliberate:
+  // `parseRelationLinks` splits plain strings on commas, so running every cell
+  // through it would silently widen matching for ordinary String fields —
+  // "Ivan, Petrov" would start matching a selection of "Ivan".
+  const linkKeys = values.map((value) => canonicalLinkKey(String(value)));
 
-	return records.filter((record) => {
-		const cell = record.values[field];
-		if (cell === null || cell === undefined) return false;
-		if (Array.isArray(cell)) {
-			if (cell.some((item) => item != null && values.includes(String(item)))) return true;
-		} else if (values.includes(String(cell))) {
-			return true;
-		}
-		if (linkKeys.length === 0) return false;
-		return toLinkKeys(cell).some((key) => linkKeys.includes(key));
-	});
+  return records.filter((record) => {
+    const cell = record.values[field];
+    if (cell === null || cell === undefined) return false;
+    if (Array.isArray(cell)) {
+      if (cell.some((item) => item != null && values.includes(String(item))))
+        return true;
+    } else if (values.includes(String(cell))) {
+      return true;
+    }
+    if (linkKeys.length === 0) return false;
+    return toLinkKeys(cell).some((key) => linkKeys.includes(key));
+  });
 }
 
 /**
@@ -127,14 +139,14 @@ export function filterRecordsBySelection(args: {
  * than the table beside it was highlighting.
  */
 function toLinkKeys(cell: unknown): string[] {
-	if (Array.isArray(cell)) {
-		return cell
-			.filter((item) => item != null)
-			.flatMap((item) => parseRelationLinks(String(item)))
-			.map((key) => canonicalLinkKey(key));
-	}
-	if (typeof cell !== "string" || !cell.includes("[[")) return [];
-	return parseRelationLinks(cell).map((key) => canonicalLinkKey(key));
+  if (Array.isArray(cell)) {
+    return cell
+      .filter((item) => item != null)
+      .flatMap((item) => parseRelationLinks(String(item)))
+      .map((key) => canonicalLinkKey(key));
+  }
+  if (typeof cell !== "string" || !cell.includes("[[")) return [];
+  return parseRelationLinks(cell).map((key) => canonicalLinkKey(key));
 }
 
 // Re-exports so consumers that already touch this file have one import surface

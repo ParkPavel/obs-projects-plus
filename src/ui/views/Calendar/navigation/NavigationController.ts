@@ -1,29 +1,29 @@
 /**
  * NavigationController - Централизованное управление навигацией календаря
- * 
+ *
  * Отвечает за:
  * - Навигацию к конкретной дате с позиционированием (start/center/end)
  * - Плавную анимацию прокрутки
  * - Координацию между вертикальным и горизонтальным календарями
- * 
+ *
  * @example
  * ```typescript
  * const nav = new NavigationController(animationController);
- * 
+ *
  * // Прокрутить к дате с центрированием
  * nav.scrollToDate(dayjs('2024-03-15'), 'center');
- * 
+ *
  * // Навигация на сегодня
  * nav.navigateToToday();
  * ```
  */
 
-import dayjs from 'dayjs';
-import type { AnimationController } from '../animation/AnimationController';
-import { getAnimationDuration } from 'src/lib/helpers/animation';
-import { calendarLogger } from '../logger';
+import dayjs from "dayjs";
+import type { AnimationController } from "../animation/AnimationController";
+import { getAnimationDuration } from "src/lib/helpers/animation";
+import { calendarLogger } from "../logger";
 
-export type ScrollPosition = 'start' | 'center' | 'end';
+export type ScrollPosition = "start" | "center" | "end";
 
 /**
  * Интерфейс для компонентов календаря, поддерживающих навигацию
@@ -38,35 +38,35 @@ export class NavigationController {
   private verticalCalendar: NavigableCalendar | null = null;
   private horizontalCalendar: NavigableCalendar | null = null;
   private animationController: AnimationController;
-  
+
   constructor(animationController: AnimationController) {
     this.animationController = animationController;
   }
-  
+
   /**
    * Установить активный календарь для вертикальной навигации (month/2weeks)
    */
   setVerticalCalendar(calendar: NavigableCalendar | null): void {
     this.verticalCalendar = calendar;
   }
-  
+
   /**
    * Установить активный календарь для горизонтальной навигации (week/day)
    */
   setHorizontalCalendar(calendar: NavigableCalendar | null): void {
     this.horizontalCalendar = calendar;
   }
-  
+
   /**
    * Основной метод навигации к дате
-   * 
+   *
    * @param date - Целевая дата
    * @param position - Позиция в viewport ('start', 'center', 'end')
    * @param animated - Использовать анимацию (default: true)
    */
   scrollToDate(
     date: dayjs.Dayjs,
-    position: ScrollPosition = 'center',
+    position: ScrollPosition = "center",
     animated: boolean = true
   ): void {
     // Делегируем в соответствующий календарь
@@ -76,7 +76,7 @@ export class NavigationController {
       this.scrollHorizontalCalendar(date, position, animated);
     }
   }
-  
+
   /**
    * Навигация в вертикальном календаре (month/2weeks)
    */
@@ -86,34 +86,46 @@ export class NavigationController {
     animated: boolean
   ): void {
     if (!this.verticalCalendar) return;
-    
+
     // Find target element
     const element = this.verticalCalendar.findElementForDate(date);
     if (!element) {
-      calendarLogger.warn('[NavigationController] Element not found for date: ' + date.format());
+      calendarLogger.warn(
+        "[NavigationController] Element not found for date: " + date.format()
+      );
       // Fallback to calendar's own method
       this.verticalCalendar.scrollToDate(date, position);
       return;
     }
-    
+
     // Get scrollable container
     const container = this.verticalCalendar.getScrollableParent();
     if (!container) {
-      calendarLogger.warn('[NavigationController] No scrollable container found');
+      calendarLogger.warn(
+        "[NavigationController] No scrollable container found"
+      );
       return;
     }
-    
+
     // Calculate target scroll offset
-    const targetScroll = this.calculateScrollOffset(element, container, position);
-    
+    const targetScroll = this.calculateScrollOffset(
+      element,
+      container,
+      position
+    );
+
     // Perform scroll (animated or instant)
     if (animated) {
-      this.animateScroll(container, targetScroll.top, getAnimationDuration(400));
+      this.animateScroll(
+        container,
+        targetScroll.top,
+        getAnimationDuration(400)
+      );
     } else {
       container.scrollTop = targetScroll.top;
     }
   }
-  
+
   /**
    * Навигация в горизонтальном календаре (week/day)
    */
@@ -123,34 +135,47 @@ export class NavigationController {
     animated: boolean
   ): void {
     if (!this.horizontalCalendar) return;
-    
+
     // Find target element
     const element = this.horizontalCalendar.findElementForDate(date);
     if (!element) {
-      calendarLogger.warn('[NavigationController] Element not found for date: ' + date.format());
+      calendarLogger.warn(
+        "[NavigationController] Element not found for date: " + date.format()
+      );
       // Fallback to calendar's own method
       this.horizontalCalendar.scrollToDate(date, position);
       return;
     }
-    
+
     // Get scrollable container
     const container = this.horizontalCalendar.getScrollableParent();
     if (!container) {
-      calendarLogger.warn('[NavigationController] No scrollable container found');
+      calendarLogger.warn(
+        "[NavigationController] No scrollable container found"
+      );
       return;
     }
-    
+
     // Calculate target scroll offset
-    const targetScroll = this.calculateScrollOffset(element, container, position);
-    
+    const targetScroll = this.calculateScrollOffset(
+      element,
+      container,
+      position
+    );
+
     // Perform scroll (animated or instant)
     if (animated) {
-      this.animateScroll(container, targetScroll.left, getAnimationDuration(400), 'left');
+      this.animateScroll(
+        container,
+        targetScroll.left,
+        getAnimationDuration(400),
+        "left"
+      );
     } else {
       container.scrollLeft = targetScroll.left;
     }
   }
-  
+
   /**
    * Вычислить scroll offset для заданной позиции
    */
@@ -163,28 +188,40 @@ export class NavigationController {
     const containerRect = container.getBoundingClientRect();
     const currentScrollTop = container.scrollTop;
     const currentScrollLeft = container.scrollLeft;
-    
+
     switch (position) {
-      case 'start':
+      case "start":
         return {
           top: currentScrollTop + (elementRect.top - containerRect.top),
-          left: currentScrollLeft + (elementRect.left - containerRect.left)
+          left: currentScrollLeft + (elementRect.left - containerRect.left),
         };
-      
-      case 'center':
+
+      case "center":
         return {
-          top: currentScrollTop + (elementRect.top - containerRect.top) - (containerRect.height - elementRect.height) / 2,
-          left: currentScrollLeft + (elementRect.left - containerRect.left) - (containerRect.width - elementRect.width) / 2
+          top:
+            currentScrollTop +
+            (elementRect.top - containerRect.top) -
+            (containerRect.height - elementRect.height) / 2,
+          left:
+            currentScrollLeft +
+            (elementRect.left - containerRect.left) -
+            (containerRect.width - elementRect.width) / 2,
         };
-      
-      case 'end':
+
+      case "end":
         return {
-          top: currentScrollTop + (elementRect.top - containerRect.top) - (containerRect.height - elementRect.height),
-          left: currentScrollLeft + (elementRect.left - containerRect.left) - (containerRect.width - elementRect.width)
+          top:
+            currentScrollTop +
+            (elementRect.top - containerRect.top) -
+            (containerRect.height - elementRect.height),
+          left:
+            currentScrollLeft +
+            (elementRect.left - containerRect.left) -
+            (containerRect.width - elementRect.width),
         };
     }
   }
-  
+
   /**
    * Анимированный скролл с использованием AnimationController
    */
@@ -192,16 +229,17 @@ export class NavigationController {
     container: HTMLElement,
     targetOffset: number,
     duration: number,
-    axis: 'top' | 'left' = 'top'
+    axis: "top" | "left" = "top"
   ): void {
-    const startOffset = axis === 'top' ? container.scrollTop : container.scrollLeft;
+    const startOffset =
+      axis === "top" ? container.scrollTop : container.scrollLeft;
     const distance = targetOffset - startOffset;
-    
+
     this.animationController.animate(
       `nav-scroll-${axis}`,
       (progress) => {
         const currentOffset = startOffset + distance * progress;
-        if (axis === 'top') {
+        if (axis === "top") {
           container.scrollTop = currentOffset;
         } else {
           container.scrollLeft = currentOffset;
@@ -211,7 +249,7 @@ export class NavigationController {
       // Use default easing (easeOutCubic)
     );
   }
-  
+
   /**
    * Вычислить scroll offset для центрирования элемента
    */
@@ -221,15 +259,19 @@ export class NavigationController {
   ): { top: number; left: number } {
     const elementRect = element.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
-    
+
     return {
-      top: elementRect.top - containerRect.top 
-           - (containerRect.height - elementRect.height) / 2,
-      left: elementRect.left - containerRect.left
-           - (containerRect.width - elementRect.width) / 2,
+      top:
+        elementRect.top -
+        containerRect.top -
+        (containerRect.height - elementRect.height) / 2,
+      left:
+        elementRect.left -
+        containerRect.left -
+        (containerRect.width - elementRect.width) / 2,
     };
   }
-  
+
   /**
    * Вычислить scroll offset для выравнивания по концу
    */
@@ -239,20 +281,24 @@ export class NavigationController {
   ): { top: number; left: number } {
     const elementRect = element.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
-    
+
     return {
-      top: elementRect.top - containerRect.top
-           - (containerRect.height - elementRect.height),
-      left: elementRect.left - containerRect.left
-           - (containerRect.width - elementRect.width),
+      top:
+        elementRect.top -
+        containerRect.top -
+        (containerRect.height - elementRect.height),
+      left:
+        elementRect.left -
+        containerRect.left -
+        (containerRect.width - elementRect.width),
     };
   }
-  
+
   /**
    * Навигация на сегодня
    */
   navigateToToday(): void {
     const today = dayjs();
-    this.scrollToDate(today, 'center');
+    this.scrollToDate(today, "center");
   }
 }

@@ -56,7 +56,12 @@ export type RollupModeGroup = "show" | "count" | "percent" | "more";
  * `DataFieldType` is mapped down to one of these buckets via
  * `classifyRollupTarget`.
  */
-export type RollupTargetKind = "any" | "numeric" | "temporal" | "boolean" | "text";
+export type RollupTargetKind =
+  | "any"
+  | "numeric"
+  | "temporal"
+  | "boolean"
+  | "text";
 
 export interface RollupModeDescriptor {
   readonly id: RollupModeId;
@@ -231,11 +236,9 @@ export function getRollupMode(id: string): RollupModeDescriptor | null {
  * Filter the mode list to those applicable for a given target kind.
  * `"any"` modes are always included.
  */
-export function modesForTarget(
-  kind: RollupTargetKind,
-): RollupModeDescriptor[] {
+export function modesForTarget(kind: RollupTargetKind): RollupModeDescriptor[] {
   return ROLLUP_MODES.filter(
-    (m) => m.applicableTo.includes("any") || m.applicableTo.includes(kind),
+    (m) => m.applicableTo.includes("any") || m.applicableTo.includes(kind)
   );
 }
 
@@ -244,7 +247,7 @@ export function modesForTarget(
  * group). The empty group is omitted from the result.
  */
 export function groupModes(
-  modes: readonly RollupModeDescriptor[],
+  modes: readonly RollupModeDescriptor[]
 ): Record<RollupModeGroup, RollupModeDescriptor[]> {
   const out: Record<RollupModeGroup, RollupModeDescriptor[]> = {
     show: [],
@@ -264,9 +267,7 @@ export function groupModes(
  * number, boolean, date, datetime, list, tags, select, status,
  * relation, formula, rollup, color).
  */
-export function classifyRollupTarget(
-  fieldType: string,
-): RollupTargetKind {
+export function classifyRollupTarget(fieldType: string): RollupTargetKind {
   switch (fieldType) {
     case "number":
       return "numeric";
@@ -308,7 +309,9 @@ export function classifyRollupTarget(
  *
  * @since 3.4.2 (REFACTOR-201)
  */
-export function defaultModeForFunction(fn: RollupFunction): RollupModeId | null {
+export function defaultModeForFunction(
+  fn: RollupFunction
+): RollupModeId | null {
   for (const mode of ROLLUP_MODES) {
     if (mode.fn === fn) return mode.id;
   }
@@ -357,8 +360,7 @@ export function assertRollupInvariant(config: {
   if (!isRollupInvariantValid(config)) {
     throw new Error(
       `R2.1b violation: rollup mode=${String(config.mode)} ` +
-        `does not match function=${String(config.function)}`,
+        `does not match function=${String(config.function)}`
     );
   }
 }
-

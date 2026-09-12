@@ -16,7 +16,11 @@ describe("VIEW_TYPE_VISUALIZER_PANE", () => {
 });
 
 describe("readFrontmatter", () => {
-  const fakeFile = { path: "Notes/A.md", basename: "A", extension: "md" } as never;
+  const fakeFile = {
+    path: "Notes/A.md",
+    basename: "A",
+    extension: "md",
+  } as never;
 
   it("returns the frontmatter when present", () => {
     const cache = {

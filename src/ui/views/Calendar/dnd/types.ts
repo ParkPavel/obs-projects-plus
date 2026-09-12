@@ -7,9 +7,9 @@
  * @module dnd/types
  */
 
-import type dayjs from 'dayjs';
-import type { DataRecord } from '../../../../lib/dataframe/dataframe';
-import type { EventRenderType, ProcessedRecord } from '../types';
+import type dayjs from "dayjs";
+import type { DataRecord } from "../../../../lib/dataframe/dataframe";
+import type { EventRenderType, ProcessedRecord } from "../types";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -70,16 +70,16 @@ export type HapticPatternName = keyof typeof HAPTIC_PATTERNS;
 // ─── Drag State Types ────────────────────────────────────────────────────────
 
 /** State machine states for drag operations */
-export type DragState = 'idle' | 'pending' | 'dragging' | 'committing';
+export type DragState = "idle" | "pending" | "dragging" | "committing";
 
 /** Drag operation modes */
 export type DragMode =
-  | 'move'               // Vertical drag of EventBar (time change)
-  | 'resize-top'         // Resize top edge of EventBar (startTime)
-  | 'resize-bottom'      // Resize bottom edge of EventBar (endTime)
-  | 'strip-move'         // Horizontal drag of strip (date change)
-  | 'strip-resize-start' // Resize left edge of MultiDay strip (startDate)
-  | 'strip-resize-end';  // Resize right edge of MultiDay strip (endDate)
+  | "move" // Vertical drag of EventBar (time change)
+  | "resize-top" // Resize top edge of EventBar (startTime)
+  | "resize-bottom" // Resize bottom edge of EventBar (endTime)
+  | "strip-move" // Horizontal drag of strip (date change)
+  | "strip-resize-start" // Resize left edge of MultiDay strip (startDate)
+  | "strip-resize-end"; // Resize right edge of MultiDay strip (endDate)
 
 /** Ghost bar position during drag */
 export interface GhostPosition {
@@ -110,7 +110,7 @@ export interface SnapLine {
   /** Vertical position in rem */
   positionRem: number;
   /** Line type: hour boundary vs sub-hour */
-  type: 'major' | 'minor';
+  type: "major" | "minor";
 }
 
 /** Complete drag context passed to commit handler */
@@ -138,7 +138,7 @@ export interface StripDragContext {
   originalStartDate: dayjs.Dayjs;
   originalEndDate: dayjs.Dayjs;
   spanDays: number;
-  sourceView: 'timeline' | 'headers';
+  sourceView: "timeline" | "headers";
 }
 
 /** Ghost position for strip drag */
@@ -157,7 +157,9 @@ export interface StripGhostPosition {
 export interface DayColumnMap {
   columns: DOMRect[];
   days: dayjs.Dayjs[];
-  getDayFromClientX(clientX: number): { day: dayjs.Dayjs; index: number } | null;
+  getDayFromClientX(
+    clientX: number
+  ): { day: dayjs.Dayjs; index: number } | null;
 }
 
 // ─── Options for handleRecordChange extension ────────────────────────────────

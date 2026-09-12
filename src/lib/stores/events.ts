@@ -4,7 +4,6 @@ import { get, writable } from "svelte/store";
 
 export const events = writable<Events>(new Events());
 
- 
 export function onEvent(type: string, cb: (...data: any) => void) {
   let eventRef: EventRef;
 

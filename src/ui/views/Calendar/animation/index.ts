@@ -2,4 +2,4 @@
  * Animation module exports
  */
 
-export { AnimationController } from './AnimationController';
+export { AnimationController } from "./AnimationController";

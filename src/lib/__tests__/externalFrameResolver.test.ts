@@ -20,15 +20,14 @@ jest.mock("src/lib/datasources/dataview/datasource", () => ({
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { FolderDataSource } = require("src/lib/datasources/folder/datasource");
 const { TagDataSource } = require("src/lib/datasources/tag/datasource");
-const { DataviewDataSource } = require("src/lib/datasources/dataview/datasource");
+const {
+  DataviewDataSource,
+} = require("src/lib/datasources/dataview/datasource");
 /* eslint-enable @typescript-eslint/no-var-requires */
 
 const EMPTY_FRAME = { fields: [], records: [] } as const;
 
-function makeProject(
-  id: string,
-  kind: "folder" | "tag" | "dataview"
-): any {
+function makeProject(id: string, kind: "folder" | "tag" | "dataview"): any {
   const base: any = {
     id,
     name: `project-${id}`,

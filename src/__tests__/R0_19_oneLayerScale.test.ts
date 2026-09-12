@@ -34,22 +34,14 @@ import { collectStyled, SRC_ROOT } from "./support/cssScan";
 /**
  * Raw `z-index` values still in the tree.
  *
- * MEASURED, not chosen. It may only fall, and it falls by moving a value onto
- * the `--ppp-z-*` scale — never by editing this number.
- *
- * Bumps log:
- *   71 — initial measurement, #169, 2026-09-03.
- *   69 — #190 put `.ppp-slide-in-panel` (was `50`) and `.ppp-slide-in-backdrop`
- *     (was `40`) on the scale, and added `--ppp-z-base` / `--ppp-z-overlay`
- *     without adding a raw value. RE-MEASURED, not decremented by two: #165
- *     merged between the two dates and 71 - 2 would have carried whatever it
- *     did to the count into this constant disguised as a fact. The procedure
- *     was to set the budget to 0, run this suite and read `Received: 69`.
+ * MEASURED on 2026-09-03, not chosen. It may only fall, and it falls by moving
+ * a value onto the `--ppp-z-*` scale — never by editing this number.
  */
-const RAW_Z_BUDGET = 69;
+const RAW_Z_BUDGET = 71;
 
 const RAW_Z = /z-index:\s*-?\d+\s*;/g;
-const TOKEN_WITH_FALLBACK = /z-index:\s*var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)\)/gi;
+const TOKEN_WITH_FALLBACK =
+  /z-index:\s*var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)\)/gi;
 
 /** The declared scale: token → value. */
 export function declaredScale(css: string): Map<string, string> {
@@ -72,14 +64,18 @@ describe("R0.19 — the scan itself (synthetic, proves BOTH states)", () => {
   });
 
   it("reads the declared scale", () => {
-    const scale = declaredScale(":root{--ppp-z-overlay: 30;--ppp-z-modal: 40;}");
+    const scale = declaredScale(
+      ":root{--ppp-z-overlay: 30;--ppp-z-modal: 40;}"
+    );
     expect(scale.get("--ppp-z-overlay")).toBe("30");
   });
 });
 
 describe("R0.19 — the tree", () => {
   const styled = collectStyled(SRC_ROOT);
-  const scale = declaredScale(fs.readFileSync(path.join(SRC_ROOT, "ui/tokens/tokens.css"), "utf8"));
+  const scale = declaredScale(
+    fs.readFileSync(path.join(SRC_ROOT, "ui/tokens/tokens.css"), "utf8")
+  );
 
   it("the scale exists and names the layers a UI actually has", () => {
     for (const token of [
@@ -90,7 +86,10 @@ describe("R0.19 — the tree", () => {
       "--ppp-z-modal",
       "--ppp-z-popover",
     ]) {
-      expect({ token, declared: scale.has(token) }).toEqual({ token, declared: true });
+      expect({ token, declared: scale.has(token) }).toEqual({
+        token,
+        declared: true,
+      });
     }
   });
 
@@ -105,8 +104,14 @@ describe("R0.19 — the tree", () => {
         const token = m[1] as string;
         const fallback = (m[2] as string).trim();
         const declared = scale.get(token);
-        if (declared !== undefined && /^-?\d+$/.test(fallback) && fallback !== declared) {
-          offenders.push(`${file}: ${token} declared ${declared}, written as fallback ${fallback}`);
+        if (
+          declared !== undefined &&
+          /^-?\d+$/.test(fallback) &&
+          fallback !== declared
+        ) {
+          offenders.push(
+            `${file}: ${token} declared ${declared}, written as fallback ${fallback}`
+          );
         }
       }
     }

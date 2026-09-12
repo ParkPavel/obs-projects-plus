@@ -43,7 +43,10 @@ describe("extractTargets", () => {
 
 describe("buildInverseIndex", () => {
   const notes: BuildInverseIndexInput[] = [
-    { path: "Projects/Acme.md", frontmatter: { links: ["[[Team/John]]", "[[Roadmap]]"] } },
+    {
+      path: "Projects/Acme.md",
+      frontmatter: { links: ["[[Team/John]]", "[[Roadmap]]"] },
+    },
     { path: "Projects/Globex.md", frontmatter: { links: ["[[Team/John]]"] } },
     { path: "Daily/2026-05-01.md", frontmatter: null },
     { path: "Notes/Standalone.md", frontmatter: { other: "no-relations" } },
@@ -63,7 +66,10 @@ describe("buildInverseIndex", () => {
   it("respects the keys option", () => {
     const customNotes: BuildInverseIndexInput[] = [
       { path: "A.md", frontmatter: { parent: "[[Root]]" } },
-      { path: "B.md", frontmatter: { parent: "[[Root]]", links: ["[[Other]]"] } },
+      {
+        path: "B.md",
+        frontmatter: { parent: "[[Root]]", links: ["[[Other]]"] },
+      },
     ];
     const idx = buildInverseIndex(customNotes, { keys: ["parent"] });
     expect(idx.get("Root")?.length).toBe(2);
@@ -91,7 +97,7 @@ describe("buildInverseIndex", () => {
     const resolveLinkPath = jest.fn((text: string) => `Resolved/${text}.md`);
     const idx = buildInverseIndex(
       [{ path: "A.md", frontmatter: { links: ["[[Foo]]"] } }],
-      { resolveLinkPath },
+      { resolveLinkPath }
     );
     expect(resolveLinkPath).toHaveBeenCalledWith("Foo", "A.md");
     expect(idx.get("Resolved/Foo")).toBeDefined();
@@ -100,7 +106,7 @@ describe("buildInverseIndex", () => {
   it("falls back to raw target when resolver returns null", () => {
     const idx = buildInverseIndex(
       [{ path: "A.md", frontmatter: { links: ["[[Foo]]"] } }],
-      { resolveLinkPath: () => null },
+      { resolveLinkPath: () => null }
     );
     expect(idx.get("Foo")).toBeDefined();
   });

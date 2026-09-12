@@ -24,17 +24,17 @@ export function getDisplayName(recordId: string): string {
  * @returns Clean display text without link syntax
  */
 export function cleanWikiLink(text: string): string {
-  if (!text || typeof text !== 'string') return '';
-  
+  if (!text || typeof text !== "string") return "";
+
   const trimmed = text.trim();
-  
+
   // Wiki link with display text: [[path|display]] → display
   const wikiWithDisplay = /^\[\[([^\]|]+)\|([^\]]+)\]\]$/;
   const wikiMatch = trimmed.match(wikiWithDisplay);
   if (wikiMatch && wikiMatch[2]) {
     return wikiMatch[2].trim();
   }
-  
+
   // Wiki link without display: [[path]] → extract filename
   const wikiSimple = /^\[\[([^\]]+)\]\]$/;
   const simpleMatch = trimmed.match(wikiSimple);
@@ -42,16 +42,16 @@ export function cleanWikiLink(text: string): string {
     const path = simpleMatch[1];
     const basename = getBasename(path);
     // Remove .md extension if present
-    return basename.replace(/\.md$/i, '').trim();
+    return basename.replace(/\.md$/i, "").trim();
   }
-  
+
   // Markdown link: [display](path) → display
   const mdLink = /^\[([^\]]+)\]\([^)]+\)$/;
   const mdMatch = trimmed.match(mdLink);
   if (mdMatch && mdMatch[1]) {
     return mdMatch[1].trim();
   }
-  
+
   // No link formatting, return as-is
   return trimmed;
 }

@@ -46,22 +46,42 @@ describe("accessibility", () => {
     const maxCol = 4;
 
     test("ArrowDown moves row down", () => {
-      const result = navigateGrid({ row: 1, col: 2 }, "ArrowDown", maxRow, maxCol);
+      const result = navigateGrid(
+        { row: 1, col: 2 },
+        "ArrowDown",
+        maxRow,
+        maxCol
+      );
       expect(result).toEqual({ row: 2, col: 2 });
     });
 
     test("ArrowUp moves row up", () => {
-      const result = navigateGrid({ row: 2, col: 0 }, "ArrowUp", maxRow, maxCol);
+      const result = navigateGrid(
+        { row: 2, col: 0 },
+        "ArrowUp",
+        maxRow,
+        maxCol
+      );
       expect(result).toEqual({ row: 1, col: 0 });
     });
 
     test("ArrowRight moves col right", () => {
-      const result = navigateGrid({ row: 0, col: 1 }, "ArrowRight", maxRow, maxCol);
+      const result = navigateGrid(
+        { row: 0, col: 1 },
+        "ArrowRight",
+        maxRow,
+        maxCol
+      );
       expect(result).toEqual({ row: 0, col: 2 });
     });
 
     test("ArrowLeft moves col left", () => {
-      const result = navigateGrid({ row: 0, col: 2 }, "ArrowLeft", maxRow, maxCol);
+      const result = navigateGrid(
+        { row: 0, col: 2 },
+        "ArrowLeft",
+        maxRow,
+        maxCol
+      );
       expect(result).toEqual({ row: 0, col: 1 });
     });
 
@@ -76,23 +96,33 @@ describe("accessibility", () => {
     });
 
     test("returns null for out-of-bounds up", () => {
-      expect(navigateGrid({ row: 0, col: 0 }, "ArrowUp", maxRow, maxCol)).toBeNull();
+      expect(
+        navigateGrid({ row: 0, col: 0 }, "ArrowUp", maxRow, maxCol)
+      ).toBeNull();
     });
 
     test("returns null for out-of-bounds down", () => {
-      expect(navigateGrid({ row: 4, col: 0 }, "ArrowDown", maxRow, maxCol)).toBeNull();
+      expect(
+        navigateGrid({ row: 4, col: 0 }, "ArrowDown", maxRow, maxCol)
+      ).toBeNull();
     });
 
     test("returns null for out-of-bounds left", () => {
-      expect(navigateGrid({ row: 0, col: 0 }, "ArrowLeft", maxRow, maxCol)).toBeNull();
+      expect(
+        navigateGrid({ row: 0, col: 0 }, "ArrowLeft", maxRow, maxCol)
+      ).toBeNull();
     });
 
     test("returns null for out-of-bounds right", () => {
-      expect(navigateGrid({ row: 0, col: 3 }, "ArrowRight", maxRow, maxCol)).toBeNull();
+      expect(
+        navigateGrid({ row: 0, col: 3 }, "ArrowRight", maxRow, maxCol)
+      ).toBeNull();
     });
 
     test("returns null for unknown key", () => {
-      expect(navigateGrid({ row: 1, col: 1 }, "Enter", maxRow, maxCol)).toBeNull();
+      expect(
+        navigateGrid({ row: 1, col: 1 }, "Enter", maxRow, maxCol)
+      ).toBeNull();
     });
   });
 

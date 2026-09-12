@@ -32,10 +32,7 @@ describe("src/lib/formula (R0.1 unified entry)", () => {
   });
 
   it("validateFormula reports unknown field references", () => {
-    const errors = validateFormula(
-      "missingField > 0",
-      ["status", "priority"],
-    );
+    const errors = validateFormula("missingField > 0", ["status", "priority"]);
     expect(errors.length).toBeGreaterThan(0);
   });
 });

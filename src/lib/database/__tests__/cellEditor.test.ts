@@ -6,7 +6,7 @@ import {
 import { NUMERIC_COERCION_CASES } from "src/lib/engine/__tests__/numericContract.test";
 
 function expectOk<T extends ReturnType<typeof parseCellInput>>(
-  result: T,
+  result: T
 ): Extract<T, { ok: true }> {
   if (!result.ok) {
     throw new Error(`expected ok, got error ${result.error.i18nKey}`);
@@ -90,18 +90,20 @@ describe("parseCellInput — number", () => {
 
 describe("parseCellInput — date / datetime", () => {
   it("accepts ISO-8601 dates", () => {
-    expect(expectOk(parseCellInput("2026-05-01", "date")).value).toBe("2026-05-01");
+    expect(expectOk(parseCellInput("2026-05-01", "date")).value).toBe(
+      "2026-05-01"
+    );
   });
   it("rejects malformed dates", () => {
     expect(parseCellInput("2026/05/01", "date").ok).toBe(false);
   });
   it("accepts datetime with seconds and timezone", () => {
     expect(
-      expectOk(parseCellInput("2026-05-01T12:30:00Z", "datetime")).value,
+      expectOk(parseCellInput("2026-05-01T12:30:00Z", "datetime")).value
     ).toBe("2026-05-01T12:30:00Z");
-    expect(
-      expectOk(parseCellInput("2026-05-01T12:30", "datetime")).value,
-    ).toBe("2026-05-01T12:30");
+    expect(expectOk(parseCellInput("2026-05-01T12:30", "datetime")).value).toBe(
+      "2026-05-01T12:30"
+    );
   });
 });
 
@@ -112,7 +114,9 @@ describe("parseCellInput — color", () => {
   it("accepts 3/4/6/8-digit hex", () => {
     expect(expectOk(parseCellInput("#abc", "color")).value).toBe("#abc");
     expect(expectOk(parseCellInput("#abcd", "color")).value).toBe("#abcd");
-    expect(expectOk(parseCellInput("#11223344", "color")).value).toBe("#11223344");
+    expect(expectOk(parseCellInput("#11223344", "color")).value).toBe(
+      "#11223344"
+    );
   });
   it("rejects rgb() / named colors here (color-picker handles those)", () => {
     expect(parseCellInput("rgb(0,0,0)", "color").ok).toBe(false);
@@ -122,20 +126,33 @@ describe("parseCellInput — color", () => {
 
 describe("parseCellInput — list / tags / relation", () => {
   it("splits CSV strings and trims", () => {
-    expect(expectOk(parseCellInput("a, b ,  c", "list")).value).toEqual(["a", "b", "c"]);
+    expect(expectOk(parseCellInput("a, b ,  c", "list")).value).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
   });
   it("accepts arrays directly", () => {
-    expect(expectOk(parseCellInput(["a", "b"], "list")).value).toEqual(["a", "b"]);
+    expect(expectOk(parseCellInput(["a", "b"], "list")).value).toEqual([
+      "a",
+      "b",
+    ]);
   });
   it("strips leading # for tags", () => {
-    expect(expectOk(parseCellInput(["#alpha", "beta"], "tags")).value).toEqual(["alpha", "beta"]);
+    expect(expectOk(parseCellInput(["#alpha", "beta"], "tags")).value).toEqual([
+      "alpha",
+      "beta",
+    ]);
   });
   it("filters out empty entries", () => {
-    expect(expectOk(parseCellInput(",,a,, ,b", "list")).value).toEqual(["a", "b"]);
+    expect(expectOk(parseCellInput(",,a,, ,b", "list")).value).toEqual([
+      "a",
+      "b",
+    ]);
   });
   it("preserves wikilink syntax for relation", () => {
     expect(
-      expectOk(parseCellInput("[[Foo]], [[Bar]]", "relation")).value,
+      expectOk(parseCellInput("[[Foo]], [[Bar]]", "relation")).value
     ).toEqual(["[[Foo]]", "[[Bar]]"]);
   });
 });

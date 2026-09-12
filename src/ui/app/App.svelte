@@ -36,10 +36,6 @@
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
   import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
-  import { noticeFor } from "src/lib/errors/errorText";
-
-  /** #202 — a refusal, so it carries a code; the success below does not. */
-  const SOURCE_NAME_TAKEN = "PPP-701";
   import type {
     ProjectId,
     ProjectDefinition,
@@ -122,7 +118,12 @@
     // two sources sharing a label are indistinguishable in the only picker
     // that exists — so the promise has to be enforced where it is made.
     if (sourceNameTaken(projectSourceOptions(project).sources, name)) {
-      new Notice(noticeFor(SOURCE_NAME_TAKEN, { name }));
+      new Notice(
+        $i18n.t("views.filter.bar.save-name-taken", {
+          defaultValue: 'This project already has a source called "{{name}}"',
+          name,
+        })
+      );
       return;
     }
     settings.updateProject({
@@ -338,7 +339,10 @@
     {views}
     viewId={view?.id}
     {view}
+    {projects}
+    projectId={project?.id}
     on:viewChange={(event) => (viewId = event.detail)}
+    on:projectChange={(event) => { projectId = event.detail; dispatch('projectIdChange', event.detail); }}
     on:addView={() => handleAddView(project)}
     on:openSettings={(event) => handleOpenSettings(event.detail)}
     on:centerToday={handleCenterToday}
@@ -371,21 +375,6 @@
       </DataFrameProvider>
     {/if}
   </div>
-
-  <!--
-    #190 — the area a panel may occupy. It shares grid row 2 with
-    `.projects-main`, so its top edge IS the nav bar's bottom edge and no header
-    height is written anywhere. It is empty until something portals into it
-    (`portalToOverlay`), and it is present in every leaf even when the peek has
-    never been opened — do not delete it as unused markup.
-
-    Its position here is load-bearing and no test can see it:
-    `SettingsMenuPopover` below declares the SAME layer (`--ppp-z-overlay`), and
-    at equal z-index the later node in the DOM wins. Move the layer after the
-    popover and the settings menu slides under an open panel; the popover
-    renders conditionally, so nothing would catch it.
-  -->
-  <div class="ppp-app-overlay"></div>
 
   {#if settingsMenuOpen}
     <SettingsMenuPopover
@@ -460,25 +449,15 @@
 </div>
 
 <style>
-  /* #190: two rows — the nav bar sizes itself, everything else gets the rest.
-     A grid rather than a column flex because the overlay layer has to share a
-     cell with `.projects-main`, which is what makes the panel start exactly
-     where the header ends without anyone writing the header's height down. */
   .projects-container {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     height: 100%;
     overflow: hidden;
   }
 
   .projects-main {
-    grid-row: 2;
-    grid-column: 1;
-    /* #190: the containing block for the fallback branch of `portalToOverlay`,
-       and — with a z-index — a stacking context, so a popup inside the view
-       cannot paint over the layer above it. */
-    position: relative;
-    z-index: var(--ppp-z-base);
+    flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -487,24 +466,5 @@
     overflow-y: auto;
     /* v3.1.0: Prevent scroll chaining to Obsidian body on mobile */
     overscroll-behavior: contain;
-  }
-
-  /* #190. No size of its own: it IS the second grid row, in the same cell as
-     `.projects-main`.
-
-     `clip`, not `hidden` — `hidden` would make this a scroll container, and the
-     closed panel parked at `translateX(100%)` would become scrollable overflow.
-     `.projects-container` above says `hidden` for its own reasons; the two are
-     not the same case and must not be "aligned".
-
-     `pointer-events: none` so an empty layer over the whole view is not a
-     transparent lid; whatever is portalled in re-enables them for itself. */
-  .ppp-app-overlay {
-    grid-row: 2;
-    grid-column: 1;
-    position: relative;
-    overflow: clip;
-    pointer-events: none;
-    z-index: var(--ppp-z-overlay);
   }
 </style>

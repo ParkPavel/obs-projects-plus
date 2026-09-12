@@ -57,7 +57,8 @@ describe("#139 data writes are guarded, config writes are not", () => {
   });
 
   it("every view component receives the combined write permission", () => {
-    const combined = block.match(/readonly=\{readonly \|\| sourceReadOnly\}/g) ?? [];
+    const combined =
+      block.match(/readonly=\{readonly \|\| sourceReadOnly\}/g) ?? [];
 
     // DataTableContent, BoardView, CalendarView, GalleryView — each routes
     // edits through `api`. Gallery was missed by #139 and added by #142; the
@@ -71,12 +72,16 @@ describe("#139 data writes are guarded, config writes are not", () => {
     // where they are stored. Reusing it would break editing a linked block's
     // configuration to fix a data problem that has nothing to do with config.
     expect(registry).not.toMatch(/readonly:\s*c\.dbCallUsesLinkedSource/);
-    expect(registry).not.toMatch(/readonly:\s*c\.readonly \|\| c\.dbCallUsesLinkedSource/);
+    expect(registry).not.toMatch(
+      /readonly:\s*c\.readonly \|\| c\.dbCallUsesLinkedSource/
+    );
   });
 
   it("keeps adding a view tab available on a linked-source block", () => {
     // The config affordance is gated on `readonly` alone, deliberately.
-    expect(block).toMatch(/\{#if !readonly\}\s*\n\s*<button on:click=\{\(\) => addTab\("table"\)\}/);
+    expect(block).toMatch(
+      /\{#if !readonly\}\s*\n\s*<button on:click=\{\(\) => addTab\("table"\)\}/
+    );
   });
 });
 
@@ -97,7 +102,9 @@ describe("#142 the gallery branch is guarded too", () => {
   });
 
   it("record creation is gated", () => {
-    expect(gallery).toMatch(/\{#if !readonly\}\s*\n\s*<IconButton\s*\n\s*icon="plus"/);
+    expect(gallery).toMatch(
+      /\{#if !readonly\}\s*\n\s*<IconButton\s*\n\s*icon="plus"/
+    );
   });
 
   it("the edit modal is not opened read-only — the note is opened instead", () => {
@@ -115,7 +122,9 @@ describe("#142 the gallery branch is guarded too", () => {
   });
 
   it("the block hands the gallery the same combined permission as the others", () => {
-    expect(block).toMatch(/<GalleryView[\s\S]*?readonly=\{readonly \|\| sourceReadOnly\}/);
+    expect(block).toMatch(
+      /<GalleryView[\s\S]*?readonly=\{readonly \|\| sourceReadOnly\}/
+    );
   });
 });
 
@@ -157,11 +166,15 @@ describe("#137 the pipeline editor reads the block's own source", () => {
     // Without them a `join` preview resolves no right frame and reports
     // different numbers than the widget behind the popup.
     expect(host).toMatch(/<PipelineEditor[\s\S]*?\{rightFrames\}/);
-    expect(editor).toMatch(/executeTransform\(frame, \{ steps: steps\.slice\(0, i \+ 1\) \}, \{ rightFrames \}\)/);
+    expect(editor).toMatch(
+      /executeTransform\(frame, \{ steps: steps\.slice\(0, i \+ 1\) \}, \{ rightFrames \}\)/
+    );
   });
 
   it("the editor says so when there is no schema to configure against", () => {
-    expect(editor).toMatch(/sourceState\.kind !== "parent" && sourceState\.kind !== "ready"/);
+    expect(editor).toMatch(
+      /sourceState\.kind !== "parent" && sourceState\.kind !== "ready"/
+    );
     expect(editor).toContain("views.dashboard.pipeline.source-not-ready");
   });
 });

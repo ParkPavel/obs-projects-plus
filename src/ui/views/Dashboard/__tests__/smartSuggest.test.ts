@@ -32,7 +32,10 @@ describe("computeSuggestions (#059)", () => {
   describe("numeric-stats rule", () => {
     it("suggests a Stats block when a numeric field exists and no stats widget does", () => {
       const result = computeSuggestions(
-        [field("name", DataFieldType.String), field("price", DataFieldType.Number)],
+        [
+          field("name", DataFieldType.String),
+          field("price", DataFieldType.Number),
+        ],
         [widget("database-call")],
         []
       );
@@ -72,7 +75,10 @@ describe("computeSuggestions (#059)", () => {
 
     it("reports the first numeric field by schema order", () => {
       const result = computeSuggestions(
-        [field("price", DataFieldType.Number), field("qty", DataFieldType.Number)],
+        [
+          field("price", DataFieldType.Number),
+          field("qty", DataFieldType.Number),
+        ],
         [],
         []
       );
@@ -149,7 +155,11 @@ describe("computeSuggestions (#059)", () => {
     });
 
     it("omits relationTargetProjectId when relation field has no typeConfig", () => {
-      const result = computeSuggestions([field("client", DataFieldType.Relation)], [], []);
+      const result = computeSuggestions(
+        [field("client", DataFieldType.Relation)],
+        [],
+        []
+      );
       const suggestion = result.find((s) => s.kind === "relation-block");
       expect(suggestion?.relationTargetProjectId).toBeUndefined();
     });
@@ -161,7 +171,10 @@ describe("computeSuggestions (#059)", () => {
       [],
       []
     );
-    expect(result.map((s) => s.kind)).toEqual(["numeric-stats", "relation-block"]);
+    expect(result.map((s) => s.kind)).toEqual([
+      "numeric-stats",
+      "relation-block",
+    ]);
   });
 
   it("returns an empty list for an empty schema", () => {

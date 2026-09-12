@@ -1,17 +1,37 @@
 ﻿// src/ui/views/Dashboard/engine/chartDataPipeline.test.ts
 
-import { buildChartPipeline, computeChartData, computeScatterData, chartHeightPx } from "./chartDataPipeline";
+import {
+  buildChartPipeline,
+  computeChartData,
+  computeScatterData,
+  chartHeightPx,
+} from "./chartDataPipeline";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { ChartConfig, ScatterChartConfig } from "src/ui/views/Dashboard/types";
+import type {
+  ChartConfig,
+  ScatterChartConfig,
+} from "src/ui/views/Dashboard/types";
 
 // ── Helpers ──────────────────────────────────────────────────
 
 function makeStatusFrame(): DataFrame {
   return {
     fields: [
-      { name: "status", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "priority", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "status",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "priority",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { status: "Done", priority: 3 } },
@@ -61,7 +81,10 @@ describe("buildChartPipeline", () => {
 
   test("group-by uses xAxis property", () => {
     const pipeline = buildChartPipeline(makeConfig());
-    const groupStep = pipeline.steps[0] as { type: "group-by"; fields: string[] };
+    const groupStep = pipeline.steps[0] as {
+      type: "group-by";
+      fields: string[];
+    };
 
     expect(groupStep.fields).toEqual(["status"]);
   });
@@ -123,15 +146,31 @@ describe("computeChartData", () => {
     const data = computeChartData(makeStatusFrame(), config);
 
     // Active=2, Done=2, Todo=1 → desc: [2, 2, 1]
-    expect(data.series[0]?.values[0]).toBeGreaterThanOrEqual(data.series[0]?.values[1] ?? 0);
-    expect(data.series[0]?.values[1]).toBeGreaterThanOrEqual(data.series[0]?.values[2] ?? 0);
+    expect(data.series[0]?.values[0]).toBeGreaterThanOrEqual(
+      data.series[0]?.values[1] ?? 0
+    );
+    expect(data.series[0]?.values[1]).toBeGreaterThanOrEqual(
+      data.series[0]?.values[2] ?? 0
+    );
   });
 
   test("omitZero filters out zero/null values", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "cat", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-        { name: "val", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "cat",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "val",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { cat: "A", val: 10 } },
@@ -172,7 +211,11 @@ describe("computeChartData", () => {
 
   test("cumulative applies running total", () => {
     const config = makeConfig({
-      yAxis: { property: "count", aggregation: "count_total", cumulative: true },
+      yAxis: {
+        property: "count",
+        aggregation: "count_total",
+        cumulative: true,
+      },
     });
 
     const data = computeChartData(makeStatusFrame(), config);
@@ -203,8 +246,20 @@ describe("computeChartData", () => {
 function makeDateFrame(): DataFrame {
   return {
     fields: [
-      { name: "due", type: DataFieldType.Date, repeated: false, identifier: true, derived: false },
-      { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "due",
+        type: DataFieldType.Date,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "value",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { due: "2024-01-15", value: 10 } },
@@ -215,7 +270,10 @@ function makeDateFrame(): DataFrame {
   };
 }
 
-function makeDateConfig(overrides: Partial<ChartConfig["xAxis"]> = {}, yOverride?: Partial<ChartConfig["yAxis"]>): ChartConfig {
+function makeDateConfig(
+  overrides: Partial<ChartConfig["xAxis"]> = {},
+  yOverride?: Partial<ChartConfig["yAxis"]>
+): ChartConfig {
   return makeConfig({
     xAxis: {
       property: "due",
@@ -236,7 +294,10 @@ describe("buildChartPipeline — date bucketing", () => {
 
     expect(groupStep?.type).toBe("group-by");
     if (groupStep?.type === "group-by") {
-      expect(groupStep.dateGrouping).toEqual({ field: "due", granularity: "month" });
+      expect(groupStep.dateGrouping).toEqual({
+        field: "due",
+        granularity: "month",
+      });
     }
   });
 
@@ -246,7 +307,10 @@ describe("buildChartPipeline — date bucketing", () => {
     const groupStep = pipeline.steps[0];
 
     if (groupStep?.type === "group-by") {
-      expect(groupStep.dateGrouping).toEqual({ field: "due", granularity: "quarter" });
+      expect(groupStep.dateGrouping).toEqual({
+        field: "due",
+        granularity: "quarter",
+      });
     }
   });
 
@@ -256,7 +320,10 @@ describe("buildChartPipeline — date bucketing", () => {
     const groupStep = pipeline.steps[0];
 
     if (groupStep?.type === "group-by") {
-      expect(groupStep.dateGrouping).toEqual({ field: "due", granularity: "year" });
+      expect(groupStep.dateGrouping).toEqual({
+        field: "due",
+        granularity: "year",
+      });
     }
   });
 
@@ -281,7 +348,10 @@ describe("computeChartData — date bucketing", () => {
   });
 
   test("explicit quarter granularity collapses to one bucket", () => {
-    const data = computeChartData(makeDateFrame(), makeDateConfig({ dateGranularity: "quarter" }));
+    const data = computeChartData(
+      makeDateFrame(),
+      makeDateConfig({ dateGranularity: "quarter" })
+    );
 
     // All four dates fall in Q1 2024.
     expect(data.labels).toEqual(["2024-Q1"]);
@@ -307,7 +377,11 @@ describe("computeChartData — date bucketing", () => {
 // ── Semantic status-group buckets (#094) ─────────────────────
 
 function makeSemanticStatusFrame(
-  statusGroups?: { todo?: string[]; inProgress?: string[]; complete?: string[] },
+  statusGroups?: {
+    todo?: string[];
+    inProgress?: string[];
+    complete?: string[];
+  },
   fieldType: DataFieldType = DataFieldType.Status
 ): DataFrame {
   return {
@@ -320,7 +394,13 @@ function makeSemanticStatusFrame(
         derived: false,
         ...(statusGroups ? { typeConfig: { statusGroups } } : {}),
       },
-      { name: "priority", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "priority",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { status: "planning", priority: 1 } },
@@ -340,7 +420,10 @@ const STATUS_GROUPS = {
 
 describe("computeChartData — semantic status groups (#094)", () => {
   test("raw status keys collapse into To Do / In Progress / Done buckets", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      makeConfig({ groupMode: "semantic" })
+    );
 
     // planning→To Do(1); inProgress+review→In Progress(2); done→Done(2)
     expect(data.labels).toEqual(["To Do", "In Progress", "Done"]);
@@ -348,7 +431,10 @@ describe("computeChartData — semantic status groups (#094)", () => {
   });
 
   test("values of the same bucket merge additively (count summed)", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      makeConfig({ groupMode: "semantic" })
+    );
     // In Progress = inProgress(1) + review(1) = 2
     const idx = data.labels.indexOf("In Progress");
     expect(data.series[0]?.values[idx]).toBe(2);
@@ -364,21 +450,35 @@ describe("computeChartData — semantic status groups (#094)", () => {
   });
 
   test("No Status absent when every value is mapped", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }));
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      makeConfig({ groupMode: "semantic" })
+    );
     expect(data.labels).not.toContain("No Status");
   });
 
   test("canonical order To Do→In Progress→Done regardless of sortBy/sortOrder", () => {
     const config = makeConfig({
       groupMode: "semantic",
-      xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: false },
+      xAxis: {
+        property: "status",
+        sortBy: "value",
+        sortOrder: "desc",
+        omitZero: false,
+      },
     });
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), config);
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      config
+    );
     expect(data.labels).toEqual(["To Do", "In Progress", "Done"]);
   });
 
   test("semantic mode with no statusGroups falls back to raw keys", () => {
-    const data = computeChartData(makeSemanticStatusFrame(undefined), makeConfig({ groupMode: "semantic" }));
+    const data = computeChartData(
+      makeSemanticStatusFrame(undefined),
+      makeConfig({ groupMode: "semantic" })
+    );
     // groupMode semantic but hasAnyBucket=false → raw keys, sorted by label asc.
     expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
     expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
@@ -386,13 +486,19 @@ describe("computeChartData — semantic status groups (#094)", () => {
 
   test("default (no groupMode) keeps raw status keys even with statusGroups", () => {
     // Regression guard for #107: semantic must be opt-in, default == values.
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig());
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      makeConfig()
+    );
     expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
     expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
   });
 
   test("explicit groupMode 'values' keeps raw status keys with statusGroups", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "values" }));
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      makeConfig({ groupMode: "values" })
+    );
     expect(data.labels).toEqual(["done", "inProgress", "planning", "review"]);
     expect(data.series[0]?.values).toEqual([2, 1, 1, 1]);
   });
@@ -400,9 +506,18 @@ describe("computeChartData — semantic status groups (#094)", () => {
   test("hiddenGroups hides a bucket by semantic label", () => {
     const config = makeConfig({
       groupMode: "semantic",
-      xAxis: { property: "status", sortBy: "label", sortOrder: "asc", omitZero: false, hiddenGroups: ["In Progress"] },
+      xAxis: {
+        property: "status",
+        sortBy: "label",
+        sortOrder: "asc",
+        omitZero: false,
+        hiddenGroups: ["In Progress"],
+      },
     });
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), config);
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      config
+    );
     expect(data.labels).toEqual(["To Do", "Done"]);
   });
 
@@ -417,7 +532,13 @@ describe("computeChartData — semantic status groups (#094)", () => {
           derived: false,
           typeConfig: { statusGroups: STATUS_GROUPS },
         },
-        { name: "value", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "value",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { due: "2024-01-15", value: 10 } },
@@ -426,7 +547,13 @@ describe("computeChartData — semantic status groups (#094)", () => {
     };
     const config = makeConfig({
       groupMode: "semantic",
-      xAxis: { property: "due", sortBy: "label", sortOrder: "asc", omitZero: false, dateGranularity: "month" },
+      xAxis: {
+        property: "due",
+        sortBy: "label",
+        sortOrder: "asc",
+        omitZero: false,
+        dateGranularity: "month",
+      },
     });
     const data = computeChartData(frame, config);
     // dateGrouping active → semantic suppressed; labels are month buckets.
@@ -434,12 +561,16 @@ describe("computeChartData — semantic status groups (#094)", () => {
   });
 
   test("custom semantic labels passed via 3rd arg", () => {
-    const data = computeChartData(makeSemanticStatusFrame(STATUS_GROUPS), makeConfig({ groupMode: "semantic" }), {
-      todo: "К выполнению",
-      inProgress: "В работе",
-      complete: "Готово",
-      none: "Без статуса",
-    });
+    const data = computeChartData(
+      makeSemanticStatusFrame(STATUS_GROUPS),
+      makeConfig({ groupMode: "semantic" }),
+      {
+        todo: "К выполнению",
+        inProgress: "В работе",
+        complete: "Готово",
+        none: "Без статуса",
+      }
+    );
     expect(data.labels).toEqual(["К выполнению", "В работе", "Готово"]);
   });
 });
@@ -463,10 +594,34 @@ describe("chartHeightPx", () => {
 function makeNumericFrame(): DataFrame {
   return {
     fields: [
-      { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "y", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "group", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "size", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "x",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "y",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "group",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "size",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { x: 1, y: 2, group: "A", size: 5 } },
@@ -478,7 +633,9 @@ function makeNumericFrame(): DataFrame {
   };
 }
 
-function makeScatterConfig(overrides: Partial<ScatterChartConfig> = {}): ScatterChartConfig {
+function makeScatterConfig(
+  overrides: Partial<ScatterChartConfig> = {}
+): ScatterChartConfig {
   return {
     xAxis: { field: "x" },
     yAxis: { field: "y" },
@@ -501,8 +658,20 @@ describe("computeScatterData", () => {
   test("skips records with non-numeric values", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "y", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "x",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "y",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { x: 1, y: 2 } },
@@ -531,8 +700,20 @@ describe("computeScatterData", () => {
   test("R² ≈ 1.0 for perfectly linear data", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "y", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "x",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "y",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { x: 1, y: 3 } },
@@ -582,8 +763,20 @@ describe("computeScatterData", () => {
   test("handles single point (no trend line)", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "y", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "x",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "y",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [{ id: "1", values: { x: 5, y: 10 } }],
     };
@@ -595,9 +788,27 @@ describe("computeScatterData", () => {
   test("clamps sizeBy values to [2, 20]", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "x", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "y", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-        { name: "s", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "x",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "y",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "s",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { x: 1, y: 2, s: 0.5 } },

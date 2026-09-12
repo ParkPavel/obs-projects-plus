@@ -1,7 +1,6 @@
 ﻿import dayjs from "dayjs";
 import { produce } from "immer";
 
-
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
 
@@ -13,7 +12,11 @@ import {
   type DataValue,
   type Optional,
 } from "./dataframe/dataframe";
-import { nextUniqueProjectName, getNameFromPath, stripTagHash } from "./helpers";
+import {
+  nextUniqueProjectName,
+  getNameFromPath,
+  stripTagHash,
+} from "./helpers";
 import { decodeFrontMatter, encodeFrontMatter } from "./metadata";
 import { i18n } from "./stores/i18n";
 import { settings } from "./stores/settings";
@@ -36,7 +39,10 @@ import { normalizePath } from "obsidian";
  */
 export type BulkFieldWriteOutcome = {
   readonly written: number;
-  readonly failed: ReadonlyArray<{ readonly path: string; readonly error: Error }>;
+  readonly failed: ReadonlyArray<{
+    readonly path: string;
+    readonly error: Error;
+  }>;
   readonly missing: ReadonlyArray<string>;
 };
 
@@ -51,17 +57,20 @@ export class DataApi {
    * originally treated that as success — the caller kept an optimistic value in
    * the store for a file that could not receive it. Found by cross-model review.
    */
-  async updateRecord(fields: DataField[], record: DataRecord): Promise<boolean> {
+  async updateRecord(
+    fields: DataField[],
+    record: DataRecord
+  ): Promise<boolean> {
     const file = this.fileSystem.getFile(record.id);
     if (!file) return false;
     // Phase 3 / F6: prefer Obsidian's processFrontMatter (body-safe,
     // lock-protected) over the legacy read-modify-write path.
     const processed = await file.processFrontMatter((fm) =>
-      applyRecordToFrontmatter(fm, fields, record),
+      applyRecordToFrontmatter(fm, fields, record)
     );
     if (processed) return true;
     await this.updateFile(file, (data) =>
-      doUpdateRecord(data, fields, record),
+      doUpdateRecord(data, fields, record)
     )();
     return true;
   }
@@ -75,13 +84,13 @@ export class DataApi {
         const file = this.fileSystem.getFile(record.id);
         if (!file) return;
         const processed = await file.processFrontMatter((fm) =>
-          applyRecordToFrontmatter(fm, fields, record),
+          applyRecordToFrontmatter(fm, fields, record)
         );
         if (processed) return;
         await this.updateFile(file, (data) =>
-          doUpdateRecord(data, fields, record),
+          doUpdateRecord(data, fields, record)
         )();
-      }),
+      })
     );
   }
 
@@ -127,7 +136,9 @@ export class DataApi {
     field: DataField,
     value: Optional<DataValue>
   ): Promise<BulkFieldWriteOutcome> {
-    return this.writeAcrossFiles(paths, (data) => doAddField(data, field, value));
+    return this.writeAcrossFiles(paths, (data) =>
+      doAddField(data, field, value)
+    );
   }
 
   async renameField(
@@ -135,10 +146,15 @@ export class DataApi {
     from: string,
     to: string
   ): Promise<BulkFieldWriteOutcome> {
-    return this.writeAcrossFiles(paths, (data) => doRenameField(data, from, to));
+    return this.writeAcrossFiles(paths, (data) =>
+      doRenameField(data, from, to)
+    );
   }
 
-  async deleteField(paths: string[], name: string): Promise<BulkFieldWriteOutcome> {
+  async deleteField(
+    paths: string[],
+    name: string
+  ): Promise<BulkFieldWriteOutcome> {
     return this.writeAcrossFiles(paths, (data) => doDeleteField(data, name));
   }
 
@@ -157,7 +173,6 @@ export class DataApi {
           title: () => getNameFromPath(record.id),
           date: (format) => dayjs().format(format || "YYYY-MM-DD"),
           time: (format) => dayjs().format(format || "HH:mm"),
-
         });
         if (record.values["tags"]) {
           const templateTags = F.pipe(
@@ -268,7 +283,7 @@ export function doUpdateRecord(
 export function applyRecordToFrontmatter(
   frontmatter: Record<string, unknown>,
   fields: DataField[],
-  record: DataRecord,
+  record: DataRecord
 ): void {
   for (const [key, value] of Object.entries(record.values)) {
     const field = fields.find((f) => f.name === key);
@@ -283,7 +298,7 @@ export function applyRecordToFrontmatter(
           value.getSeconds() ||
           value.getMilliseconds());
       frontmatter[key] = dayjs(value).format(
-        isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD",
+        isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"
       );
     } else {
       frontmatter[key] = value as unknown;

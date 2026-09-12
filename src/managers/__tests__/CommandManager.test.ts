@@ -1,4 +1,11 @@
-import { describe, expect, it, beforeEach, afterEach, jest } from "@jest/globals";
+import {
+  describe,
+  expect,
+  it,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
 import { CommandManager } from "../CommandManager";
 import type { App } from "obsidian";
 import type { ProjectDefinition, ShowCommand } from "../../settings/settings";
@@ -26,11 +33,13 @@ describe("CommandManager", () => {
     mockPlugin = {
       addCommand: jest.fn(),
     };
-    
+
     // Setup mock activateView function
-    commandManager.setActivateViewFunction((projectId?: string, viewId?: string) => {
-      console.log(`Activating view: ${projectId}/${viewId}`);
-    });
+    commandManager.setActivateViewFunction(
+      (projectId?: string, viewId?: string) => {
+        console.log(`Activating view: ${projectId}/${viewId}`);
+      }
+    );
   });
 
   afterEach(() => {
@@ -47,9 +56,9 @@ describe("CommandManager", () => {
     it("should generate correct global command ID", () => {
       const command: ShowCommand = {
         project: "test-project",
-        view: "test-view"
+        view: "test-view",
       };
-      
+
       // Access private method through any cast for testing
       const result = (commandManager as any).getShowCommandId(command, true);
       expect(result).toBe("obs-projects-plus:show:test-project:test-view");
@@ -57,21 +66,27 @@ describe("CommandManager", () => {
 
     it("should generate correct local command ID", () => {
       const command: ShowCommand = {
-        project: "test-project"
+        project: "test-project",
       };
-      
+
       const result = (commandManager as any).getShowCommandId(command, false);
       expect(result).toBe("show:test-project");
     });
 
     it("should handle command without view", () => {
       const command: ShowCommand = {
-        project: "test-project"
+        project: "test-project",
       };
-      
-      const globalResult = (commandManager as any).getShowCommandId(command, true);
-      const localResult = (commandManager as any).getShowCommandId(command, false);
-      
+
+      const globalResult = (commandManager as any).getShowCommandId(
+        command,
+        true
+      );
+      const localResult = (commandManager as any).getShowCommandId(
+        command,
+        false
+      );
+
       expect(globalResult).toBe("obs-projects-plus:show:test-project");
       expect(localResult).toBe("show:test-project");
     });
@@ -80,7 +95,7 @@ describe("CommandManager", () => {
   describe("getRegisteredCommandIds", () => {
     it("should return empty set when no plugin commands exist", () => {
       mockApp.commands.commands = {};
-      
+
       const result = (commandManager as any).getRegisteredCommandIds();
       expect(result).toEqual(new Set());
     });
@@ -92,12 +107,14 @@ describe("CommandManager", () => {
         "other-plugin:command": {} as any,
         "show:unrelated": {} as any,
       };
-      
+
       const result = (commandManager as any).getRegisteredCommandIds();
-      expect(result).toEqual(new Set([
-        "obs-projects-plus:show:project1",
-        "obs-projects-plus:show:project2"
-      ]));
+      expect(result).toEqual(
+        new Set([
+          "obs-projects-plus:show:project1",
+          "obs-projects-plus:show:project2",
+        ])
+      );
     });
   });
 
@@ -105,7 +122,7 @@ describe("CommandManager", () => {
     it("should register command with view", () => {
       const command: ShowCommand = {
         project: "test-project",
-        view: "test-view"
+        view: "test-view",
       };
 
       const project: ProjectDefinition = {
@@ -113,18 +130,38 @@ describe("CommandManager", () => {
         id: "test-project",
         fieldConfig: {},
         views: [
-          { id: "test-view", name: "Test View", type: "table", config: {}, filter: { conjunction: "and", conditions: [] }, colors: { conditions: [] }, sort: { criteria: [] } },
-          { id: "other-view", name: "Other View", type: "table", config: {}, filter: { conjunction: "and", conditions: [] }, colors: { conditions: [] }, sort: { criteria: [] } }
+          {
+            id: "test-view",
+            name: "Test View",
+            type: "table",
+            config: {},
+            filter: { conjunction: "and", conditions: [] },
+            colors: { conditions: [] },
+            sort: { criteria: [] },
+          },
+          {
+            id: "other-view",
+            name: "Other View",
+            type: "table",
+            config: {},
+            filter: { conjunction: "and", conditions: [] },
+            colors: { conditions: [] },
+            sort: { criteria: [] },
+          },
         ],
         defaultName: "",
         templates: [],
         excludedNotes: [],
         isDefault: false,
         dataSource: { kind: "folder", config: { path: "", recursive: false } },
-        newNotesFolder: ""
+        newNotesFolder: "",
       };
 
-      (commandManager as any).registerProjectCommand(command, project, "show:test-project:test-view");
+      (commandManager as any).registerProjectCommand(
+        command,
+        project,
+        "show:test-project:test-view"
+      );
 
       // Check that command was added to registration queue
       expect((commandManager as any).commandsToRegister).toHaveLength(1);
@@ -135,7 +172,7 @@ describe("CommandManager", () => {
 
     it("should register command without view", () => {
       const command: ShowCommand = {
-        project: "test-project"
+        project: "test-project",
       };
 
       const project: ProjectDefinition = {
@@ -148,10 +185,14 @@ describe("CommandManager", () => {
         excludedNotes: [],
         isDefault: false,
         dataSource: { kind: "folder", config: { path: "", recursive: false } },
-        newNotesFolder: ""
+        newNotesFolder: "",
       };
 
-      (commandManager as any).registerProjectCommand(command, project, "show:test-project");
+      (commandManager as any).registerProjectCommand(
+        command,
+        project,
+        "show:test-project"
+      );
 
       expect((commandManager as any).commandsToRegister).toHaveLength(1);
       const registeredCommand = (commandManager as any).commandsToRegister[0];
@@ -162,7 +203,7 @@ describe("CommandManager", () => {
     it("should not register command if view not found in project", () => {
       const command: ShowCommand = {
         project: "test-project",
-        view: "missing-view"
+        view: "missing-view",
       };
 
       const project: ProjectDefinition = {
@@ -170,17 +211,29 @@ describe("CommandManager", () => {
         id: "test-project",
         fieldConfig: {},
         views: [
-          { id: "test-view", name: "Test View", type: "table", config: {}, filter: { conjunction: "and", conditions: [] }, colors: { conditions: [] }, sort: { criteria: [] } }
+          {
+            id: "test-view",
+            name: "Test View",
+            type: "table",
+            config: {},
+            filter: { conjunction: "and", conditions: [] },
+            colors: { conditions: [] },
+            sort: { criteria: [] },
+          },
         ],
         defaultName: "",
         templates: [],
         excludedNotes: [],
         isDefault: false,
         dataSource: { kind: "folder", config: { path: "", recursive: false } },
-        newNotesFolder: ""
+        newNotesFolder: "",
       };
 
-      (commandManager as any).registerProjectCommand(command, project, "show:test-project:missing-view");
+      (commandManager as any).registerProjectCommand(
+        command,
+        project,
+        "show:test-project:missing-view"
+      );
 
       expect((commandManager as any).commandsToRegister).toHaveLength(0);
     });
@@ -190,17 +243,23 @@ describe("CommandManager", () => {
     it("should remove commands that are no longer enabled", () => {
       const enabledCommands: ShowCommand[] = [];
       const projects: ProjectDefinition[] = [];
-      const registeredCommandIds = new Set(["obs-projects-plus:show:old-project"]);
+      const registeredCommandIds = new Set([
+        "obs-projects-plus:show:old-project",
+      ]);
 
-      (commandManager as any).removeRedundantCommands(enabledCommands, projects, registeredCommandIds);
+      (commandManager as any).removeRedundantCommands(
+        enabledCommands,
+        projects,
+        registeredCommandIds
+      );
 
-      expect(mockApp.commands.removeCommand).toHaveBeenCalledWith("obs-projects-plus:show:old-project");
+      expect(mockApp.commands.removeCommand).toHaveBeenCalledWith(
+        "obs-projects-plus:show:old-project"
+      );
     });
 
     it("should not remove commands that are still enabled", () => {
-      const enabledCommands: ShowCommand[] = [
-        { project: "active-project" }
-      ];
+      const enabledCommands: ShowCommand[] = [{ project: "active-project" }];
       const projects: ProjectDefinition[] = [
         {
           name: "Active Project",
@@ -211,35 +270,48 @@ describe("CommandManager", () => {
           templates: [],
           excludedNotes: [],
           isDefault: false,
-          dataSource: { kind: "folder", config: { path: "", recursive: false } },
-          newNotesFolder: ""
-        }
+          dataSource: {
+            kind: "folder",
+            config: { path: "", recursive: false },
+          },
+          newNotesFolder: "",
+        },
       ];
-      const registeredCommandIds = new Set(["obs-projects-plus:show:active-project"]);
+      const registeredCommandIds = new Set([
+        "obs-projects-plus:show:active-project",
+      ]);
 
-      (commandManager as any).removeRedundantCommands(enabledCommands, projects, registeredCommandIds);
+      (commandManager as any).removeRedundantCommands(
+        enabledCommands,
+        projects,
+        registeredCommandIds
+      );
 
       expect(mockApp.commands.removeCommand).not.toHaveBeenCalled();
     });
 
     it("should remove commands for deleted projects", () => {
-      const enabledCommands: ShowCommand[] = [
-        { project: "deleted-project" }
-      ];
+      const enabledCommands: ShowCommand[] = [{ project: "deleted-project" }];
       const projects: ProjectDefinition[] = [];
-      const registeredCommandIds = new Set(["obs-projects-plus:show:deleted-project"]);
+      const registeredCommandIds = new Set([
+        "obs-projects-plus:show:deleted-project",
+      ]);
 
-      (commandManager as any).removeRedundantCommands(enabledCommands, projects, registeredCommandIds);
+      (commandManager as any).removeRedundantCommands(
+        enabledCommands,
+        projects,
+        registeredCommandIds
+      );
 
-      expect(mockApp.commands.removeCommand).toHaveBeenCalledWith("obs-projects-plus:show:deleted-project");
+      expect(mockApp.commands.removeCommand).toHaveBeenCalledWith(
+        "obs-projects-plus:show:deleted-project"
+      );
     });
   });
 
   describe("addMissingCommands", () => {
     it("should add new commands for enabled commands", () => {
-      const enabledCommands: ShowCommand[] = [
-        { project: "new-project" }
-      ];
+      const enabledCommands: ShowCommand[] = [{ project: "new-project" }];
       const projects: ProjectDefinition[] = [
         {
           name: "New Project",
@@ -250,21 +322,26 @@ describe("CommandManager", () => {
           templates: [],
           excludedNotes: [],
           isDefault: false,
-          dataSource: { kind: "folder", config: { path: "", recursive: false } },
-          newNotesFolder: ""
-        }
+          dataSource: {
+            kind: "folder",
+            config: { path: "", recursive: false },
+          },
+          newNotesFolder: "",
+        },
       ];
       const registeredCommandIds = new Set();
 
-      (commandManager as any).addMissingCommands(enabledCommands, projects, registeredCommandIds);
+      (commandManager as any).addMissingCommands(
+        enabledCommands,
+        projects,
+        registeredCommandIds
+      );
 
       expect((commandManager as any).commandsToRegister).toHaveLength(1);
     });
 
     it("should not add commands that are already registered", () => {
-      const enabledCommands: ShowCommand[] = [
-        { project: "existing-project" }
-      ];
+      const enabledCommands: ShowCommand[] = [{ project: "existing-project" }];
       const projects: ProjectDefinition[] = [
         {
           name: "Existing Project",
@@ -275,13 +352,22 @@ describe("CommandManager", () => {
           templates: [],
           excludedNotes: [],
           isDefault: false,
-          dataSource: { kind: "folder", config: { path: "", recursive: false } },
-          newNotesFolder: ""
-        }
+          dataSource: {
+            kind: "folder",
+            config: { path: "", recursive: false },
+          },
+          newNotesFolder: "",
+        },
       ];
-      const registeredCommandIds = new Set(["obs-projects-plus:show:existing-project"]);
+      const registeredCommandIds = new Set([
+        "obs-projects-plus:show:existing-project",
+      ]);
 
-      (commandManager as any).addMissingCommands(enabledCommands, projects, registeredCommandIds);
+      (commandManager as any).addMissingCommands(
+        enabledCommands,
+        projects,
+        registeredCommandIds
+      );
 
       expect((commandManager as any).commandsToRegister).toHaveLength(0);
     });
@@ -291,7 +377,7 @@ describe("CommandManager", () => {
     it("should handle complete command lifecycle", () => {
       const enabledCommands: ShowCommand[] = [
         { project: "project1" },
-        { project: "project2", view: "view1" }
+        { project: "project2", view: "view1" },
       ];
       const projects: ProjectDefinition[] = [
         {
@@ -303,27 +389,43 @@ describe("CommandManager", () => {
           templates: [],
           excludedNotes: [],
           isDefault: false,
-          dataSource: { kind: "folder", config: { path: "", recursive: false } },
-          newNotesFolder: ""
+          dataSource: {
+            kind: "folder",
+            config: { path: "", recursive: false },
+          },
+          newNotesFolder: "",
         },
         {
           name: "Project 2",
           id: "project2",
           fieldConfig: {},
-          views: [{ id: "view1", name: "View 1", type: "table", config: {}, filter: { conjunction: "and", conditions: [] }, colors: { conditions: [] }, sort: { criteria: [] } }],
+          views: [
+            {
+              id: "view1",
+              name: "View 1",
+              type: "table",
+              config: {},
+              filter: { conjunction: "and", conditions: [] },
+              colors: { conditions: [] },
+              sort: { criteria: [] },
+            },
+          ],
           defaultName: "",
           templates: [],
           excludedNotes: [],
           isDefault: false,
-          dataSource: { kind: "folder", config: { path: "", recursive: false } },
-          newNotesFolder: ""
-        }
+          dataSource: {
+            kind: "folder",
+            config: { path: "", recursive: false },
+          },
+          newNotesFolder: "",
+        },
       ];
 
       // Mock existing commands
       mockApp.commands.commands = {
         "obs-projects-plus:show:old-project": {} as any,
-        "obs-projects-plus:show:project3": {} as any
+        "obs-projects-plus:show:project3": {} as any,
       };
 
       commandManager.ensureCommands(enabledCommands, projects);
@@ -355,8 +457,8 @@ describe("CommandManager", () => {
         {
           id: "test-command",
           name: "Test Command",
-          callback: jest.fn()
-        }
+          callback: jest.fn(),
+        },
       ];
 
       commandManager.finalizeRegistrations(mockPlugin);
@@ -364,27 +466,29 @@ describe("CommandManager", () => {
       expect(mockPlugin.addCommand).toHaveBeenCalledWith({
         id: "test-command",
         name: "Test Command",
-        callback: expect.any(Function)
+        callback: expect.any(Function),
       });
 
       expect((commandManager as any).commandsToRegister).toHaveLength(0);
     });
 
     it("should handle missing plugin reference", () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
 
       (commandManager as any).commandsToRegister = [
         {
           id: "test-command",
           name: "Test Command",
-          callback: jest.fn()
-        }
+          callback: jest.fn(),
+        },
       ];
 
       commandManager.finalizeRegistrations(null);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[Projects+] CommandManager: plugin reference required for command registration"
+        "CommandManager: Plugin reference required for command registration"
       );
 
       expect(mockPlugin.addCommand).not.toHaveBeenCalled();
@@ -394,21 +498,23 @@ describe("CommandManager", () => {
     });
 
     it("should handle missing addCommand method", () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
       const invalidPlugin = {};
 
       (commandManager as any).commandsToRegister = [
         {
           id: "test-command",
           name: "Test Command",
-          callback: jest.fn()
-        }
+          callback: jest.fn(),
+        },
       ];
 
       commandManager.finalizeRegistrations(invalidPlugin);
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "[Projects+] CommandManager: plugin reference required for command registration"
+        "CommandManager: Plugin reference required for command registration"
       );
 
       expect((commandManager as any).commandsToRegister).toHaveLength(1);

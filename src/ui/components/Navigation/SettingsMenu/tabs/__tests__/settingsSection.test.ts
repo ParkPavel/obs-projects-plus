@@ -10,7 +10,10 @@ const SettingsSection = require("../SettingsSection.svelte").default;
 function mount(props: Record<string, unknown>) {
   const target = document.createElement("div");
   document.body.appendChild(target);
-  const component = new SettingsSection({ target, props: { title: "Section", ...props } });
+  const component = new SettingsSection({
+    target,
+    props: { title: "Section", ...props },
+  });
   return {
     target,
     header: target.querySelector<HTMLButtonElement>(".settings-section-header"),
@@ -51,7 +54,9 @@ describe("SettingsSection (#093 §3 accordion)", () => {
 
   test("renders the title", () => {
     const m = mount({ title: "Время и Timeline" });
-    expect(m.target.querySelector(".settings-section-title")?.textContent).toBe("Время и Timeline");
+    expect(m.target.querySelector(".settings-section-title")?.textContent).toBe(
+      "Время и Timeline"
+    );
     m.destroy();
   });
 });

@@ -35,7 +35,9 @@ export interface NamedSourceNotice {
  * itself. `empty` is a hint rather than a screen: it is a real answer, and
  * giving it a full screen of its own would read as a failure.
  */
-export function namedSourceNotice(view: NamedSourceView): NamedSourceNotice | null {
+export function namedSourceNotice(
+  view: NamedSourceView
+): NamedSourceNotice | null {
   switch (view.kind) {
     case "broken":
       // Configuration the user can fix. "No records" would send them to look

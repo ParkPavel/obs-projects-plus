@@ -19,9 +19,11 @@ function noopComponent() {
     ctx: [],
   };
 }
-noopComponent.prototype.$set = function() {};
-noopComponent.prototype.$on = function() { return () => {}; };
-noopComponent.prototype.$destroy = function() {};
+noopComponent.prototype.$set = function () {};
+noopComponent.prototype.$on = function () {
+  return () => {};
+};
+noopComponent.prototype.$destroy = function () {};
 
 module.exports = {
   Autocomplete: noopComponent,

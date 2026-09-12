@@ -38,7 +38,10 @@ export type ProjectsViewState = {
 export class ProjectsView extends ItemView {
   component?: App;
 
-  constructor(leaf: WorkspaceLeaf, readonly plugin: ProjectsPlugin) {
+  constructor(
+    leaf: WorkspaceLeaf,
+    readonly plugin: ProjectsPlugin
+  ) {
     super(leaf);
 
     // Whether this view can be used to navigate to other Obsidian views.
@@ -98,12 +101,13 @@ export class ProjectsView extends ItemView {
     await super.setState(state, result);
   }
 
-   
   async onOpen(): Promise<void> {
     customViews.set(this.getProjectViews());
 
     // Get the current state or use defaults
-    const currentState = (this.getState && this.getState()) as ProjectsViewState | undefined;
+    const currentState = (this.getState && this.getState()) as
+      | ProjectsViewState
+      | undefined;
     const projectId = currentState?.projectId;
     const viewId = currentState?.viewId;
 
@@ -112,16 +116,18 @@ export class ProjectsView extends ItemView {
       props: {
         projectId,
         viewId,
-      }
+      },
     });
 
     // Listen for projectId changes and save them to view state
     if (this.component) {
-       
-      this.component.$on('projectIdChange', (event: any) => {
+      this.component.$on("projectIdChange", (event: any) => {
         const newProjectId = event.detail;
         // Update internal state and persist it
-        const newState: ProjectsViewState = { projectId: newProjectId, viewId: viewId ?? '' };
+        const newState: ProjectsViewState = {
+          projectId: newProjectId,
+          viewId: viewId ?? "",
+        };
         void this.setState(newState, { history: false });
         // Update the component with new projectId
         this.component?.$set({ projectId: newProjectId });
@@ -129,7 +135,6 @@ export class ProjectsView extends ItemView {
     }
   }
 
-   
   async onClose(): Promise<void> {
     if (this.component) {
       this.component.$destroy();

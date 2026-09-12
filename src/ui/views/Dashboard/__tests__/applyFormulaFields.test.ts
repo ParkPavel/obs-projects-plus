@@ -1,16 +1,25 @@
 // MPLAN-001 — Tests for applyFormulaFields.
 
-import {
-  DataFieldType,
-  type DataFrame,
-} from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 import { applyFormulaFields } from "src/lib/dashboard-engine/applyFormulaFields";
 
 function makeFrame(): DataFrame {
   return {
     fields: [
-      { name: "qty", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "price", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "qty",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "price",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "a", values: { qty: 2, price: 10 } },

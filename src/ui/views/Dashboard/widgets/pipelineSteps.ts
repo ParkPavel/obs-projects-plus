@@ -13,7 +13,10 @@ export function updateStep(
   return steps.map((s, i) => (i === index ? step : s));
 }
 
-export function toggleDisableStep(steps: TransformStep[], index: number): TransformStep[] {
+export function toggleDisableStep(
+  steps: TransformStep[],
+  index: number
+): TransformStep[] {
   const step = steps[index];
   if (!step) return steps;
   return updateStep(steps, index, { ...step, disabled: !step.disabled });

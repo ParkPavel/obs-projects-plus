@@ -16,7 +16,11 @@
 import { executeTransform } from "../transformExecutor";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { AggregationFunction, TransformPipeline, TransformStep } from "../transformTypes";
+import type {
+  AggregationFunction,
+  TransformPipeline,
+  TransformStep,
+} from "../transformTypes";
 
 const field = (name: string, type: DataFieldType = DataFieldType.Number) => ({
   name,
@@ -84,7 +88,9 @@ describe("#180 T3 — the pipeline's aggregations, recorded value by value", () 
       // The value itself is pinned by the snapshots below; this pins that every
       // operator survives every shape, which is what a delegation could break
       // wholesale.
-      expect(() => aggregateThrough(fn as AggregationFunction, values as unknown[])).not.toThrow();
+      expect(() =>
+        aggregateThrough(fn as AggregationFunction, values as unknown[])
+      ).not.toThrow();
     });
   });
 
@@ -105,7 +111,10 @@ describe("#180 T3 — the pipeline's aggregations, recorded value by value", () 
         "PCT_EMPTY",
         "PCT_NOT_EMPTY",
       ] as const) {
-        table[label]![fn] = aggregateThrough(fn as AggregationFunction, values as unknown[]);
+        table[label]![fn] = aggregateThrough(
+          fn as AggregationFunction,
+          values as unknown[]
+        );
       }
     }
     expect(table).toMatchSnapshot();

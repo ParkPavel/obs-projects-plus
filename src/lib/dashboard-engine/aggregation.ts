@@ -72,7 +72,11 @@ export function computeAggregations(
 ): AggregationResult {
   const result: Record<
     string,
-    { function: ColumnAggregation; value: string | number | null; formattedValue: string }
+    {
+      function: ColumnAggregation;
+      value: string | number | null;
+      formattedValue: string;
+    }
   > = {};
 
   for (const field of frame.fields) {
@@ -158,7 +162,8 @@ function computeColumn(
     case "percent_unchecked": {
       const bools = values.filter((v) => typeof v === "boolean");
       if (bools.length === 0) return fmt(null);
-      const pct = (bools.filter((v) => v === false).length / bools.length) * 100;
+      const pct =
+        (bools.filter((v) => v === false).length / bools.length) * 100;
       return fmt(pct, `${Math.round(pct)}%`);
     }
 
@@ -216,7 +221,8 @@ export function computeAggregateValue(
 ): number | string | null {
   const kernelFn = KERNEL_OPS[fn];
   if (kernelFn) {
-    if (NULL_ON_EMPTY.has(fn) && extractNumbers(values).length === 0) return null;
+    if (NULL_ON_EMPTY.has(fn) && extractNumbers(values).length === 0)
+      return null;
     const out = aggregate(values, {
       relationField: "",
       targetField: "",
@@ -230,26 +236,40 @@ export function computeAggregateValue(
   const nonEmpty = values.filter((v) => v != null && v !== "");
 
   switch (fn) {
-    case "count_total": return values.length;
-    case "count": return values.length;
-    case "count_values": return nonEmpty.length;
-    case "count_numeric": return toNumbers(values).length;
-    case "count_empty": return values.length - nonEmpty.length;
-    case "count_checked": return values.filter((v) => v === true).length;
-    case "count_unchecked": return values.filter((v) => v === false).length;
+    case "count_total":
+      return values.length;
+    case "count":
+      return values.length;
+    case "count_values":
+      return nonEmpty.length;
+    case "count_numeric":
+      return toNumbers(values).length;
+    case "count_empty":
+      return values.length - nonEmpty.length;
+    case "count_checked":
+      return values.filter((v) => v === true).length;
+    case "count_unchecked":
+      return values.filter((v) => v === false).length;
     case "percent_empty":
-      return values.length ? ((values.length - nonEmpty.length) / values.length) * 100 : null;
+      return values.length
+        ? ((values.length - nonEmpty.length) / values.length) * 100
+        : null;
     case "percent_not_empty":
       return values.length ? (nonEmpty.length / values.length) * 100 : null;
     case "percent_checked": {
       const bools = values.filter((v) => typeof v === "boolean");
-      return bools.length ? (bools.filter((v) => v === true).length / bools.length) * 100 : null;
+      return bools.length
+        ? (bools.filter((v) => v === true).length / bools.length) * 100
+        : null;
     }
     case "percent_unchecked": {
       const bools = values.filter((v) => typeof v === "boolean");
-      return bools.length ? (bools.filter((v) => v === false).length / bools.length) * 100 : null;
+      return bools.length
+        ? (bools.filter((v) => v === false).length / bools.length) * 100
+        : null;
     }
-    default: return null;
+    default:
+      return null;
   }
 }
 

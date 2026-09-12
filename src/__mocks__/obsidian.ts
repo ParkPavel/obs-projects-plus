@@ -24,36 +24,30 @@ export class MockApp {
 }
 
 // Mock Vault
- 
+
 class MockVault {
   adapter = new MockAdapter();
-  
-   
+
   getAbstractFileByPath(path: string): any {
     return new MockTFile(path);
   }
-  
-   
+
   create(path: string, data: string): Promise<any> {
     return Promise.resolve(new MockTFile(path));
   }
-  
-   
+
   modify(file: any, data: string): Promise<void> {
     return Promise.resolve();
   }
-  
-   
+
   read(file: any): Promise<string> {
     return Promise.resolve("Mock content");
   }
-  
-   
+
   delete(file: any): Promise<void> {
     return Promise.resolve();
   }
-  
-   
+
   rename(file: any, newPath: string): Promise<void> {
     return Promise.resolve();
   }
@@ -135,21 +129,20 @@ class MockAdapter {
 class MockTFile {
   path: string;
   name: string;
-  
+
   constructor(path: string) {
     this.path = path;
-    this.name = path.split('/').pop() || 'file.md';
+    this.name = path.split("/").pop() || "file.md";
   }
-  
+
   get basename() {
     return this.name.replace(/\.[^/.]+$/, "");
   }
-  
+
   get extension() {
-    return this.name.split('.').pop() || 'md';
+    return this.name.split(".").pop() || "md";
   }
 }
-
 
 // Mock Menu (R0.2 — needed by contextMenu helper and downstream callers)
 export class Menu {
@@ -168,7 +161,10 @@ export class Menu {
     this.items.push(item);
     return this;
   }
-  addSeparator() { this.items.push({ separator: true }); return this; }
+  addSeparator() {
+    this.items.push({ separator: true });
+    return this;
+  }
   showAtMouseEvent = jest.fn();
   showAtPosition = jest.fn();
 }
@@ -179,12 +175,16 @@ export class TAbstractFile {
   name: string;
   constructor(path: string) {
     this.path = path;
-    this.name = path.split('/').pop() || '';
+    this.name = path.split("/").pop() || "";
   }
 }
 export class TFile extends TAbstractFile {
-  get basename() { return this.name.replace(/\.[^/.]+$/, ""); }
-  get extension() { return this.name.split('.').pop() || 'md'; }
+  get basename() {
+    return this.name.replace(/\.[^/.]+$/, "");
+  }
+  get extension() {
+    return this.name.split(".").pop() || "md";
+  }
 }
 export class TFolder extends TAbstractFile {
   children: TAbstractFile[] = [];
@@ -193,33 +193,51 @@ export class TFolder extends TAbstractFile {
 // Re-exports for tests that import from "obsidian"
 export const App = MockApp;
 
-
 // Mock ItemView (R1.1 — used by VisualizerPaneView and ProjectsView tests)
 export class ItemView {
   contentEl: HTMLElement;
   app: any;
   navigation: boolean = true;
   constructor(public leaf: any) {
-    this.contentEl = (typeof document !== "undefined" ? document.createElement("div") : { children: [] } as any);
+    this.contentEl =
+      typeof document !== "undefined"
+        ? document.createElement("div")
+        : ({ children: [] } as any);
     this.app = leaf?.app ?? new MockApp();
   }
   onload() {}
   onunload() {}
-  onOpen(): Promise<void> { return Promise.resolve(); }
-  onClose(): Promise<void> { return Promise.resolve(); }
-  getViewType(): string { return ""; }
-  getDisplayText(): string { return ""; }
-  getIcon(): string { return ""; }
+  onOpen(): Promise<void> {
+    return Promise.resolve();
+  }
+  onClose(): Promise<void> {
+    return Promise.resolve();
+  }
+  getViewType(): string {
+    return "";
+  }
+  getDisplayText(): string {
+    return "";
+  }
+  getIcon(): string {
+    return "";
+  }
   onPaneMenu(_menu: any, _source: string) {}
 }
 
 // Mock WorkspaceLeaf (subset)
 export class WorkspaceLeaf {
   app: any;
-  constructor(app?: any) { this.app = app ?? new MockApp(); }
+  constructor(app?: any) {
+    this.app = app ?? new MockApp();
+  }
   detach() {}
-  setViewState(_s: any) { return Promise.resolve(); }
-  openFile(_f: any) { return Promise.resolve(); }
+  setViewState(_s: any) {
+    return Promise.resolve();
+  }
+  openFile(_f: any) {
+    return Promise.resolve();
+  }
 }
 
 // Mock Notice
@@ -238,13 +256,10 @@ export function stringifyYaml(obj: unknown): string {
 
 // Minimal normalizePath: forward slashes, collapse doubles, strip trailing slash
 export function normalizePath(path: string): string {
-  return path
-    .replace(/\\/g, "/")
-    .replace(/\/+/g, "/")
-    .replace(/\/$/, "")
-    || "/";
+  return (
+    path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/$/, "") || "/"
+  );
 }
-
 
 // Mock Modal / SuggestModal / FuzzySuggestModal (R1.3)
 export class Modal {
@@ -252,7 +267,10 @@ export class Modal {
   app: any;
   constructor(app: any) {
     this.app = app;
-    this.contentEl = (typeof document !== "undefined" ? document.createElement("div") : { children: [] } as any);
+    this.contentEl =
+      typeof document !== "undefined"
+        ? document.createElement("div")
+        : ({ children: [] } as any);
   }
   open() {}
   close() {}
@@ -260,15 +278,24 @@ export class Modal {
   onClose() {}
 }
 export class SuggestModal<T> extends Modal {
-  inputEl: HTMLInputElement = (typeof document !== "undefined" ? document.createElement("input") : ({} as any));
+  inputEl: HTMLInputElement =
+    typeof document !== "undefined"
+      ? document.createElement("input")
+      : ({} as any);
   setPlaceholder(_p: string) {}
   setInstructions(_i: any) {}
 }
 export class FuzzySuggestModal<T> extends SuggestModal<T> {
-  getSuggestions(_q: string): any[] { return []; }
+  getSuggestions(_q: string): any[] {
+    return [];
+  }
   renderSuggestion(_i: any, _el: any) {}
   onChooseSuggestion(_i: any, _e: any) {}
-  getItems(): T[] { return []; }
-  getItemText(_t: T): string { return ""; }
+  getItems(): T[] {
+    return [];
+  }
+  getItemText(_t: T): string {
+    return "";
+  }
   onChooseItem(_t: T, _e: any) {}
 }

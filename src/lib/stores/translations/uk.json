@@ -1,1650 +1,1625 @@
 ﻿{
-    "translation": {
-        "data-types": {
-            "string": "Текст",
-            "number": "Число",
-            "boolean": "Прапорець",
-            "date": "ДАТА",
-            "unknown": "Невідомий тип даних",
-            "repeated": "Повторюване поле",
-            "datetime": "Дата та час",
-            "list": "Список",
-            "tags": "Мітки",
-            "aliases": "Псевдоніми",
-            "select": "Вибір",
-            "status": "Статус",
-            "formula": "Формула",
-            "relation": "Зв'язок",
-            "rollup": "Згортка",
-            "color": "Колір",
-            "url": "URL",
-            "email": "Email",
-            "phone": "Телефон"
+  "translation": {
+    "data-types": {
+      "string": "Текст",
+      "number": "Число",
+      "boolean": "Прапорець",
+      "date": "ДАТА",
+      "unknown": "Невідомий тип даних",
+      "repeated": "Повторюване поле",
+      "datetime": "Дата та час",
+      "list": "Список",
+      "tags": "Мітки",
+      "aliases": "Псевдоніми",
+      "select": "Вибір",
+      "status": "Статус",
+      "formula": "Формула",
+      "relation": "Зв'язок",
+      "rollup": "Згортка",
+      "color": "Колір",
+      "url": "URL",
+      "email": "Email",
+      "phone": "Телефон"
+    },
+    "datasources": {
+      "folder": "Тека",
+      "tag": "Тег",
+      "dataview": "Dataview"
+    },
+    "commands": {
+      "show-projects": {
+        "name": "Показати проєкти"
+      },
+      "create-project": {
+        "name": "Створити новий проєкт"
+      },
+      "create-note": {
+        "name": "Створити нову нотатку"
+      },
+      "open-schema": {
+        "name": "Відкрити панель схеми"
+      },
+      "add-field": {
+        "name": "Додати поле"
+      },
+      "toggle-visualizer-pane": {
+        "name": "Перемкнути панель YAML візуалізатора"
+      },
+      "open-visualizer-for-file": {
+        "name": "Відкрити активну замітку в YAML візуалізаторі"
+      },
+      "add-relation": {
+        "name": "Додати зв’язок до активної замітки"
+      },
+      "open-formula-editor": {
+        "name": "Відкрити редактор формул"
+      }
+    },
+    "menus": {
+      "project": {
+        "create": {
+          "title": "Створити проєкт у теці"
+        }
+      },
+      "file": {
+        "open-in-visualizer": {
+          "title": "Відкрити в YAML візуалізаторі"
         },
-        "datasources": {
-            "folder": "Тека",
-            "tag": "Тег",
-            "dataview": "Dataview"
+        "add-relation": {
+          "title": "Додати як зв’язок…"
+        }
+      },
+      "tab-header": {
+        "new-window": {
+          "title": "Відкрити в новому вікні"
+        }
+      }
+    },
+    "modals": {
+      "project": {
+        "create": {
+          "short-title": "Новий проєкт",
+          "untitled": "Проєкт без назви",
+          "title": "Створити новий проєкт",
+          "cta": "Створити проєкт",
+          "existing-name-error": "Проєкт з таким ім'ям вже існує.",
+          "empty-name-error": "Ім'я проєкту не може бути порожнім."
         },
-        "commands": {
-            "show-projects": {
-                "name": "Показати проєкти"
+        "edit": {
+          "short-title": "Редагувати проєкт",
+          "title": "Редагувати проєкт",
+          "cta": "Зберегти"
+        },
+        "duplicate": {
+          "title": "Дублювати проєкт",
+          "suffix": "Скопіювати"
+        },
+        "archive": {
+          "short-title": "Архівувати проєкт",
+          "title": "Архівувати проєкт",
+          "message": "Are you sure you want to archive \"{{project}}\"? You can restore it later in Projects plugin's setting tab.",
+          "notice": "Project archived! If you are using Projects across multiple devices and syncing between them, please upgrade to version 1.17.0 or above for all your devices to avoid losing your archived project configurations.",
+          "cta": "Архів"
+        },
+        "delete": {
+          "short-title": "Видалити проєкт",
+          "title": "Видалити проєкт",
+          "message": "Ви впевнені, що бажаєте видалити \"{{project}}\"? Це неможливо скасувати.",
+          "cta": "Видалити"
+        },
+        "name": {
+          "name": "Назва",
+          "description": ""
+        },
+        "default": {
+          "name": "Встановити за замовчуванням",
+          "description": "Увімкніть, щоб відкривати цей проєкт за замовчуванням."
+        },
+        "datasource": {
+          "name": "Джерело даних",
+          "description": "Виберіть, як ви хочете визначити, які нотатки слід включити."
+        },
+        "path": {
+          "name": "Шлях",
+          "description": "Шлях до теки, якою потрібно керувати. Залиште порожнім для використання кореневої теки."
+        },
+        "tag": {
+          "name": "Мітка",
+          "description": "Включити усі нотатки з цією міткою."
+        },
+        "dataview": {
+          "name": "Використовувати Dataview",
+          "description": "Використовуйте Dataview для запиту даних тільки для читання, замість використання шляхів.",
+          "error": {
+            "title": "Dataview вимкнений",
+            "message": "Увімкніть плагін Dataview, щоб продовжити використовувати цей проєкт."
+          },
+          "validating": "Перевірка запиту...",
+          "query-error": "Помилка запиту. Перевірте синтаксис.",
+          "preview-table": "{{count}} записів знайдено (TABLE)",
+          "preview-list": "{{count}} елементів знайдено (LIST)",
+          "preview-task": "{{count}} завдань знайдено (TASK)",
+          "unsupported-type": "Непідтримуваний тип запиту: {{type}}"
+        },
+        "query": {
+          "name": "Запит",
+          "description": "Підтримуються запити TABLE, LIST та TASK."
+        },
+        "recursive": {
+          "name": "Включати підтеки",
+          "description": "Керування нотатками всередині підтек по шляху проєкту."
+        },
+        "hierarchy": {
+          "name": "Ієрархія міток",
+          "description": "Керування нотатками, що містять суб-мітки головної мітки проєкту."
+        },
+        "more-settings": {
+          "name": "Додаткові налаштування",
+          "description": ""
+        },
+        "additional-sources": {
+          "name": "Додаткові джерела даних",
+          "add": "Додати джерело"
+        },
+        "templates": {
+          "name": "Шаблони",
+          "description": "Вибрати шаблони для створення нових нотаток.",
+          "add": "Додати шаблон"
+        },
+        "exclude": {
+          "name": "Виключені нотатки",
+          "description": "Нотатки для виключення, навіть якщо вони були б частиною проєкту.",
+          "add": "Додати нотатку"
+        },
+        "newNotesFolder": {
+          "name": "Місце для нових нотаток",
+          "description": "Тека, де будуть створюватися всі нові нотатки."
+        },
+        "defaultName": {
+          "name": "Типове ім'я для нових нотаток",
+          "description": "Підтримує змінні шаблонів {{date:YYYY-MM-DD}} та {{time:HHmm}}.",
+          "invalid": "Містить неприпустимі символи."
+        },
+        "autosave": {
+          "name": "Автозбереження",
+          "description": "Автоматичне збереження змін при редагуванні нотаток. При вимкненні з'явиться кнопка Зберегти."
+        },
+        "agenda": {
+          "name": "Режим агенди",
+          "description": "Оберіть, як агенда відображає завдання та події.",
+          "modes": {
+            "standard": "Стандартний",
+            "standard-description": "Використовує фільтри календаря",
+            "custom": "Користувальницький",
+            "custom-description": "Власні списки з фільтрами"
+          },
+          "inherit-filters": {
+            "name": "Успадкувати фільтри календаря",
+            "description": "Застосовувати ті ж фільтри, що і в календарі"
+          }
+        }
+      },
+      "archive": {
+        "delete": {
+          "short-title": "Видалити архів",
+          "title": "Видалити архів",
+          "message": "Ви впевнені, що бажаєте видалити \"{{archive}}\"? Це неможливо скасувати.",
+          "cta": "Видалити"
+        }
+      },
+      "view": {
+        "create": {
+          "short-title": "Новий вигляд",
+          "title": "Додати новий вигляд",
+          "optional": "За бажанням",
+          "type": {
+            "name": "Тип",
+            "description": ""
+          },
+          "name": {
+            "name": "Назва",
+            "description": ""
+          },
+          "cta": "Додати вигляд",
+          "existing-name-error": "Вигляд з таким іменем вже існує."
+        },
+        "duplicate": {
+          "title": "Дублювати вигляд",
+          "suffix": "Скопіювати"
+        },
+        "delete": {
+          "short-title": "Видалити вигляд",
+          "title": "Видалити вигляд",
+          "message": "Ви впевнені, що бажаєте видалити перегляд \"{{view}}\"?",
+          "cta": "Видалити"
+        }
+      },
+      "note": {
+        "create": {
+          "short-title": "Нова нотатка",
+          "title": "Створити нову нотатку",
+          "name": {
+            "name": "Назва",
+            "description": ""
+          },
+          "templatePath": {
+            "name": "Шаблон",
+            "description": "",
+            "none": "Нічого"
+          },
+          "project": {
+            "name": "Проєкт",
+            "description": ""
+          },
+          "name-taken-error": "Нотатка з таким іменем вже існує.",
+          "empty-name-error": "Ім'я не може бути порожнім.",
+          "dot-start-error": "Ім'я файлу не може починатися з крапки.",
+          "create": "Створити нотатку",
+          "readonly": {
+            "title": "Проект тільки для читання",
+            "message": "{{project}} is a read-only project. Select another project to create a note."
+          },
+          "untitled": "Без назви"
+        },
+        "edit": {
+          "short-title": "Редагувати нотатку",
+          "title": "Редагувати нотатку",
+          "save": "Зберегти",
+          "confirm": "Підтвердити",
+          "no-editable-fields": {
+            "title": "Немає полів для редагування",
+            "message": "Ця нотатка не має полів для редагування."
+          },
+          "saving": "Збереження...",
+          "autosave-enabled": "Автозбереження увімкнено",
+          "save-error": "Не вдалося зберегти зміни"
+        }
+      },
+      "field": {
+        "configure": {
+          "short-title": "Налаштувати поле",
+          "title": "Налаштувати поле",
+          "name": {
+            "name": "Назва",
+            "description": ""
+          },
+          "empty-name-error": "Ім'я поля не може бути порожнім.",
+          "existing-name-error": "Неможливо перейменувати на наявну назву поля.",
+          "type": {
+            "name": "Тип",
+            "description": "Перетворити поле на інший тип. Сумісні значення зберігаються."
+          },
+          "options": {
+            "name": "Налаштування",
+            "description": "Дозволяє автозаповнення з використанням попередньо визначених значень для поля."
+          },
+          "rich-text": {
+            "name": "Увімкнути форматування тексту",
+            "description": "Для полів з Markdown вмістом."
+          },
+          "time": {
+            "name": "Увімкнути час",
+            "description": "Розпізнати це поле як Дата і час."
+          },
+          "relation": {
+            "target-project": {
+              "name": "Цільовий проект",
+              "description": "Пов'язані записи розв'язуватимуться в цьому проекті. Wiki-посилання стануть навігаційними.",
+              "placeholder": "Виберіть проект"
             },
-            "create-project": {
-                "name": "Створити новий проєкт"
+            "display-field": {
+              "name": "Поле відображення",
+              "description": "Необов'язково. Поле цільового проекту, що використовується як ярлик. За замовчуванням — ім'я файлу.",
+              "placeholder": "напр. title"
             },
-            "create-note": {
-                "name": "Створити нову нотатку"
+            "no-project": "— Немає —",
+            "this-project-suffix": "(цей проєкт)"
+          },
+          "rollup": {
+            "relation-field": {
+              "name": "Через зв'язок",
+              "description": "Виберіть колонку зв'язку в цьому проекті, що вказує на записи для зведення."
             },
-            "open-schema": {
-                "name": "Відкрити панель схеми"
+            "no-relation": "— Виберіть зв'язок —",
+            "no-relations-warning": "У проекті ще немає полів-зв'язків. Створіть їх, щоб увімкнути згортки.",
+            "target-field": {
+              "name": "Поле агрегації",
+              "description": "Поле цільового проекту для агрегації.",
+              "description-with-project": "Поле «{{project}}» для агрегації.",
+              "placeholder": "напр. amount"
             },
-            "add-field": {
-                "name": "Додати поле"
+            "no-target-field": "— Виберіть поле —",
+            "function": {
+              "name": "Функція",
+              "description": "Як зводяться значення з пов'язаних записів."
             },
-            "toggle-visualizer-pane": {
-                "name": "Перемкнути панель YAML візуалізатора"
+            "functions": {
+              "count": "Кількість",
+              "count_values": "Кількість значень",
+              "count_unique": "Унікальні",
+              "sum": "Сума",
+              "avg": "Середнє",
+              "min": "Мінімум",
+              "max": "Максимум",
+              "median": "Медіана",
+              "range": "Розмах",
+              "percent_true": "% істини",
+              "concat": "Об'єднати",
+              "concat_unique": "Об'єднати унікальні"
             },
-            "open-visualizer-for-file": {
-                "name": "Відкрити активну замітку в YAML візуалізаторі"
-            },
-            "add-relation": {
-                "name": "Додати зв’язок до активної замітки"
-            },
-            "open-formula-editor": {
-                "name": "Відкрити редактор формул"
+            "separator": {
+              "name": "Роздільник",
+              "description": "Використовується при об'єднанні значень."
             }
-
+          },
+          "formula": {
+            "name": "Формула",
+            "description": "Обчислює значення поля з інших полів і функцій.",
+            "placeholder": "напр. ROUND(price * quantity, 2)"
+          },
+          "save": "Зберегти"
         },
-        "menus": {
-            "project": {
-                "create": {
-                    "title": "Створити проєкт у теці"
-                }
-            },
-            "file": {
-                "open-in-visualizer": {
-                    "title": "Відкрити в YAML візуалізаторі"
-                },
-                "add-relation": {
-                    "title": "Додати як зв’язок…"
-                }
-            },
-            "tab-header": {
-                "new-window": {
-                    "title": "Відкрити в новому вікні"
-                }
-            }
+        "create": {
+          "short-title": "Нове поле",
+          "title": "Створити нове поле",
+          "name": {
+            "name": "Назва",
+            "description": ""
+          },
+          "untitled": "Нове поле",
+          "no-default-stage-a": "Цей тип обчислюється або пов'язаний — значення за замовчуванням не потрібно.",
+          "empty-name-error": "Ім'я поля не може бути порожнім.",
+          "existing-name-error": "Поле з таким іменем вже існує.",
+          "type": {
+            "name": "Тип",
+            "description": ""
+          },
+          "default": {
+            "name": "Типове значення",
+            "description": ""
+          },
+          "options": {
+            "name": "Налаштування",
+            "description": "Дозволяє автозаповнення з використанням попередньо визначених значень для поля."
+          },
+          "rich-text": {
+            "name": "Увімкнути форматування тексту",
+            "description": "Для полів з Markdown вмістом."
+          },
+          "create": "Створити поле"
+        }
+      },
+      "schema": {
+        "title": "Схема проекту",
+        "empty": "Полів ще немає.",
+        "configure": "Налаштувати",
+        "delete": "Видалити",
+        "close": "Закрити",
+        "identifier": "Ідентифікатор",
+        "add-field": {
+          "name": "Додати нове поле",
+          "description": "Додає нову властивість до проекту.",
+          "button": "Додати поле"
         },
-        "modals": {
-            "project": {
-                "create": {
-                    "short-title": "Новий проєкт",
-                    "untitled": "Проєкт без назви",
-                    "title": "Створити новий проєкт",
-                    "cta": "Створити проєкт",
-                    "existing-name-error": "Проєкт з таким ім'ям вже існує.",
-                    "empty-name-error": "Ім'я проєкту не може бути порожнім."
-                },
-                "edit": {
-                    "short-title": "Редагувати проєкт",
-                    "title": "Редагувати проєкт",
-                    "cta": "Зберегти"
-                },
-                "duplicate": {
-                    "title": "Дублювати проєкт",
-                    "suffix": "Скопіювати"
-                },
-                "archive": {
-                    "short-title": "Архівувати проєкт",
-                    "title": "Архівувати проєкт",
-                    "message": "Are you sure you want to archive \"{{project}}\"? You can restore it later in Projects plugin's setting tab.",
-                    "notice": "Project archived! If you are using Projects across multiple devices and syncing between them, please upgrade to version 1.17.0 or above for all your devices to avoid losing your archived project configurations.",
-                    "cta": "Архів"
-                },
-                "delete": {
-                    "short-title": "Видалити проєкт",
-                    "title": "Видалити проєкт",
-                    "message": "Ви впевнені, що бажаєте видалити \"{{project}}\"? Це неможливо скасувати.",
-                    "cta": "Видалити"
-                },
-                "name": {
-                    "name": "Назва",
-                    "description": ""
-                },
-                "default": {
-                    "name": "Встановити за замовчуванням",
-                    "description": "Увімкніть, щоб відкривати цей проєкт за замовчуванням."
-                },
-                "datasource": {
-                    "name": "Джерело даних",
-                    "description": "Виберіть, як ви хочете визначити, які нотатки слід включити."
-                },
-                "path": {
-                    "name": "Шлях",
-                    "description": "Шлях до теки, якою потрібно керувати. Залиште порожнім для використання кореневої теки."
-                },
-                "tag": {
-                    "name": "Мітка",
-                    "description": "Включити усі нотатки з цією міткою."
-                },
-                "dataview": {
-                    "name": "Використовувати Dataview",
-                    "description": "Використовуйте Dataview для запиту даних тільки для читання, замість використання шляхів.",
-                    "error": {
-                        "title": "Dataview вимкнений",
-                        "message": "Увімкніть плагін Dataview, щоб продовжити використовувати цей проєкт."
-                    },
-                    "validating": "Перевірка запиту...",
-                    "query-error": "Помилка запиту. Перевірте синтаксис.",
-                    "preview-table": "{{count}} записів знайдено (TABLE)",
-                    "preview-list": "{{count}} елементів знайдено (LIST)",
-                    "preview-task": "{{count}} завдань знайдено (TASK)",
-                    "unsupported-type": "Непідтримуваний тип запиту: {{type}}"
-                },
-                "query": {
-                    "name": "Запит",
-                    "description": "Підтримуються запити TABLE, LIST та TASK."
-                },
-                "recursive": {
-                    "name": "Включати підтеки",
-                    "description": "Керування нотатками всередині підтек по шляху проєкту."
-                },
-                "hierarchy": {
-                    "name": "Ієрархія міток",
-                    "description": "Керування нотатками, що містять суб-мітки головної мітки проєкту."
-                },
-                "more-settings": {
-                    "name": "Додаткові налаштування",
-                    "description": ""
-                },
-                "additional-sources": {
-                    "name": "Додаткові джерела даних",
-                    "add": "Додати джерело"
-                },
-                "templates": {
-                    "name": "Шаблони",
-                    "description": "Вибрати шаблони для створення нових нотаток.",
-                    "add": "Додати шаблон"
-                },
-                "exclude": {
-                    "name": "Виключені нотатки",
-                    "description": "Нотатки для виключення, навіть якщо вони були б частиною проєкту.",
-                    "add": "Додати нотатку"
-                },
-                "newNotesFolder": {
-                    "name": "Місце для нових нотаток",
-                    "description": "Тека, де будуть створюватися всі нові нотатки."
-                },
-                "defaultName": {
-                    "name": "Типове ім'я для нових нотаток",
-                    "description": "Підтримує змінні шаблонів {{date:YYYY-MM-DD}} та {{time:HHmm}}.",
-                    "invalid": "Містить неприпустимі символи."
-                },
-                "autosave": {
-                    "name": "Автозбереження",
-                    "description": "Автоматичне збереження змін при редагуванні нотаток. При вимкненні з'явиться кнопка Зберегти."
-                },
-                "agenda": {
-                    "name": "Режим агенди",
-                    "description": "Оберіть, як агенда відображає завдання та події.",
-                    "modes": {
-                        "standard": "Стандартний",
-                        "standard-description": "Використовує фільтри календаря",
-                        "custom": "Користувальницький",
-                        "custom-description": "Власні списки з фільтрами"
-                    },
-                    "inherit-filters": {
-                        "name": "Успадкувати фільтри календаря",
-                        "description": "Застосовувати ті ж фільтри, що і в календарі"
-                    }
-                }
-            },
-            "archive": {
-                "delete": {
-                    "short-title": "Видалити архів",
-                    "title": "Видалити архів",
-                    "message": "Ви впевнені, що бажаєте видалити \"{{archive}}\"? Це неможливо скасувати.",
-                    "cta": "Видалити"
-                }
-            },
-            "view": {
-                "create": {
-                    "short-title": "Новий вигляд",
-                    "title": "Додати новий вигляд",
-                    "optional": "За бажанням",
-                    "type": {
-                        "name": "Тип",
-                        "description": ""
-                    },
-                    "name": {
-                        "name": "Назва",
-                        "description": ""
-                    },
-                    "cta": "Додати вигляд",
-                    "existing-name-error": "Вигляд з таким іменем вже існує."
-                },
-                "duplicate": {
-                    "title": "Дублювати вигляд",
-                    "suffix": "Скопіювати"
-                },
-                "delete": {
-                    "short-title": "Видалити вигляд",
-                    "title": "Видалити вигляд",
-                    "message": "Ви впевнені, що бажаєте видалити перегляд \"{{view}}\"?",
-                    "cta": "Видалити"
-                }
-            },
-            "note": {
-                "create": {
-                    "short-title": "Нова нотатка",
-                    "title": "Створити нову нотатку",
-                    "name": {
-                        "name": "Назва",
-                        "description": ""
-                    },
-                    "templatePath": {
-                        "name": "Шаблон",
-                        "description": "",
-                        "none": "Нічого"
-                    },
-                    "project": {
-                        "name": "Проєкт",
-                        "description": ""
-                    },
-                    "name-taken-error": "Нотатка з таким іменем вже існує.",
-                    "empty-name-error": "Ім'я не може бути порожнім.",
-                    "dot-start-error": "Ім'я файлу не може починатися з крапки.",
-                    "create": "Створити нотатку",
-                    "readonly": {
-                        "title": "Проект тільки для читання",
-                        "message": "{{project}} is a read-only project. Select another project to create a note."
-                    },
-                    "untitled": "Без назви"
-                },
-                "edit": {
-                    "short-title": "Редагувати нотатку",
-                    "title": "Редагувати нотатку",
-                    "save": "Зберегти",
-                    "confirm": "Підтвердити",
-                    "no-editable-fields": {
-                        "title": "Немає полів для редагування",
-                        "message": "Ця нотатка не має полів для редагування."
-                    },
-                    "saving": "Збереження...",
-                    "autosave-enabled": "Автозбереження увімкнено",
-                    "save-error": "Не вдалося зберегти зміни"
-                }
-            },
-            "field": {
-                "configure": {
-                    "short-title": "Налаштувати поле",
-                    "title": "Налаштувати поле",
-                    "name": {
-                        "name": "Назва",
-                        "description": ""
-                    },
-                    "empty-name-error": "Ім'я поля не може бути порожнім.",
-                    "existing-name-error": "Неможливо перейменувати на наявну назву поля.",
-                    "type": {
-                        "name": "Тип",
-                        "description": "Перетворити поле на інший тип. Сумісні значення зберігаються."
-                    },
-                    "options": {
-                        "name": "Налаштування",
-                        "description": "Дозволяє автозаповнення з використанням попередньо визначених значень для поля."
-                    },
-                    "rich-text": {
-                        "name": "Увімкнути форматування тексту",
-                        "description": "Для полів з Markdown вмістом."
-                    },
-                    "time": {
-                        "name": "Увімкнути час",
-                        "description": "Розпізнати це поле як Дата і час."
-                    },
-                    "relation": {
-                        "target-project": {
-                            "name": "Цільовий проект",
-                            "description": "Пов'язані записи розв'язуватимуться в цьому проекті. Wiki-посилання стануть навігаційними.",
-                            "placeholder": "Виберіть проект"
-                        },
-                        "display-field": {
-                            "name": "Поле відображення",
-                            "description": "Необов'язково. Поле цільового проекту, що використовується як ярлик. За замовчуванням — ім'я файлу.",
-                            "placeholder": "напр. title"
-                        },
-                        "no-project": "— Немає —",
-                        "this-project-suffix": "(цей проєкт)"
-                    },
-                    "rollup": {
-                        "relation-field": {
-                            "name": "Через зв'язок",
-                            "description": "Виберіть колонку зв'язку в цьому проекті, що вказує на записи для зведення."
-                        },
-                        "no-relation": "— Виберіть зв'язок —",
-                        "no-relations-warning": "У проекті ще немає полів-зв'язків. Створіть їх, щоб увімкнути згортки.",
-                        "target-field": {
-                            "name": "Поле агрегації",
-                            "description": "Поле цільового проекту для агрегації.",
-                            "description-with-project": "Поле «{{project}}» для агрегації.",
-                            "placeholder": "напр. amount"
-                        },
-                        "no-target-field": "— Виберіть поле —",
-                        "function": {
-                            "name": "Функція",
-                            "description": "Як зводяться значення з пов'язаних записів."
-                        },
-                        "functions": {
-                            "count": "Кількість",
-                            "count_values": "Кількість значень",
-                            "count_unique": "Унікальні",
-                            "sum": "Сума",
-                            "avg": "Середнє",
-                            "min": "Мінімум",
-                            "max": "Максимум",
-                            "median": "Медіана",
-                            "range": "Розмах",
-                            "percent_true": "% істини",
-                            "concat": "Об'єднати",
-                            "concat_unique": "Об'єднати унікальні"
-                        },
-                        "separator": {
-                            "name": "Роздільник",
-                            "description": "Використовується при об'єднанні значень."
-                        }
-                    },
-                    "formula": {
-                        "name": "Формула",
-                        "description": "Обчислює значення поля з інших полів і функцій.",
-                        "placeholder": "напр. ROUND(price * quantity, 2)"
-                    },
-                    "save": "Зберегти"
-                },
-                "create": {
-                    "short-title": "Нове поле",
-                    "title": "Створити нове поле",
-                    "name": {
-                        "name": "Назва",
-                        "description": ""
-                    },
-                    "untitled": "Нове поле",
-                    "no-default-stage-a": "Цей тип обчислюється або пов'язаний — значення за замовчуванням не потрібно.",
-                    "empty-name-error": "Ім'я поля не може бути порожнім.",
-                    "existing-name-error": "Поле з таким іменем вже існує.",
-                    "type": {
-                        "name": "Тип",
-                        "description": ""
-                    },
-                    "default": {
-                        "name": "Типове значення",
-                        "description": ""
-                    },
-                    "options": {
-                        "name": "Налаштування",
-                        "description": "Дозволяє автозаповнення з використанням попередньо визначених значень для поля."
-                    },
-                    "rich-text": {
-                        "name": "Увімкнути форматування тексту",
-                        "description": "Для полів з Markdown вмістом."
-                    },
-                    "create": "Створити поле"
-                }
-            },
-            "schema": {
-                "title": "Схема проекту",
-                "empty": "Полів ще немає.",
-                "configure": "Налаштувати",
-                "delete": "Видалити",
-                "close": "Закрити",
-                "identifier": "Ідентифікатор",
-                "add-field": {
-                    "name": "Додати нове поле",
-                    "description": "Додає нову властивість до проекту.",
-                    "button": "Додати поле"
-                },
-                "delete-confirm": {
-                    "title": "Видалити поле",
-                    "message": "Видалити поле «{{name}}» з проекту? Існуючі значення залишаться у нотатках, але більше не з'являтимуться у видах.",
-                    "cta": "Видалити"
-                },
-                "relation-summary": "→ {{project}}",
-                "relation-missing-target": "Цільовий проект не вибраний",
-                "rollup-summary": "{{function}}({{target}}) через {{via}}"
-            },
-            "input": {
-                "cancel": "Скасувати"
-            },
-            "confirm": {
-                "delete": "Видалити",
-                "cancel": "Скасувати"
-            }
+        "delete-confirm": {
+          "title": "Видалити поле",
+          "message": "Видалити поле «{{name}}» з проекту? Існуючі значення залишаться у нотатках, але більше не з'являтимуться у видах.",
+          "cta": "Видалити"
         },
-        "views": {
-            "filter": {
-                "bar": {
-                    "aria": "Фільтр подання",
-                    "add": "Фільтр",
-                    "scope": "Це подання"
-                }
-            },
-            "visualizer": {
-                "pane": {
-                    "title": "YAML візуалізатор",
-                    "no-file": "Відкрийте замітку, щоб побачити її властивості.",
-                    "no-properties": "Ця замітка ще не має frontmatter-властивостей.",
-                    "actions": {
-                        "pin": "Закріпити вгорі",
-                        "unpin": "Відкріпити",
-                        "hide": "Приховати",
-                        "unhide": "Показати",
-                        "move-up": "Перемістити вгору",
-                        "move-down": "Перемістити вниз",
-                        "show-hidden": "Показати приховані",
-                        "hide-hidden": "Сховати приховані",
-                        "reset": "Скинути налаштування",
-                        "add-relation": "+ Пов'язати",
-                        "pick-relation-placeholder": "Оберіть замітку…",
-                        "set-type": "Змінити тип"
-                    },
-                    "types": {
-                        "auto": "Авто"
-                    },
-                    "linked-from": {
-                        "title": "Посилаються",
-                        "empty": "На цю замітку ще ніхто не посилається.",
-                        "via": "через"
-                    }
-                }
-            },
-            "developer": {
-                "name": "Розробник"
-            },
-            "table": {
-                "name": "Таблиця",
-                "deprecation-notice": "Вигляд Таблиця застарів. Перейдіть на Базу даних для розширених можливостей.",
-                "hide-fields": "Приховати поля",
-                "rename-field": "Перейменувати поле",
-                "rename": "Перейменувати"
-            },
-            "board": {
-                "name": "Дошка",
-                "no-status": "Без статусу",
-                "fields": {
-                    "status": "статус",
-                    "priority": "Пріоритет",
-                    "check": "Відмітити",
-                    "none": "Нічого"
-                },
-                "unprioritized": "Непріоритетні",
-                "include-fields": "Долучати поля",
-                "settings": {
-                    "name": "Налаштування дошки",
-                    "column-width": {
-                        "name": "Ширина стовпця",
-                        "description": "Ширина кожного стовпця у пікселях."
-                    },
-                    "custom-header": {
-                        "name": "Налаштувати заголовок картки",
-                        "description": "Використовуйте вибране поле як заголовок картки."
-                    },
-                    "order-sync-field": {
-                        "name": "Синхронізувати порядок карт з полем",
-                        "description": "Поле для зберігання положення карток на дошці."
-                    }
-                },
-                "note": {
-                    "add": "Додати нотатку"
-                }
-            },
-            "calendar": {
-                "name": "Календар",
-                "new-note": "Нова нотатка",
-                "no-events": "Немає подій",
-                "fields": {
-                    "date": "ДАТА",
-                    "check": "Відмітити",
-                    "none": "Стандартний"
-                },
-                "today": "Сьогодні",
-                "weekday": "{{value, datetime}}",
-                "date": "{{value, datetime}}",
-                "interval": "{{from, datetime}} – {{to, datetime}}{{en_separator}}{{custom_year, datetime}}",
-                "intervals": {
-                    "month_one": "Місяць",
-                    "month_other": "Місяці",
-                    "monthWithCount_one": "{{count}} місяць",
-                    "monthWithCount_other": "{{count}} місяців",
-                    "week_one": "Тиждень",
-                    "week_other": "Тижні",
-                    "weekWithCount_one": "{{count}} тиждень",
-                    "weekWithCount_other": "{{count}} тижня",
-                    "day_one": "День",
-                    "day_other": "Дні",
-                    "dayWithCount_one": "{{count}} день",
-                    "dayWithCount_other": "{{count}} днів",
-                    "year_one": "Рік",
-                    "year_other": "Роки",
-                    "yearWithCount_one": "{{count}} рік",
-                    "yearWithCount_other": "{{count}} років",
-                    "2weeks": "2 тижні"
-                },
-                "record": {
-                    "settings": "Налаштування",
-                    "duplicate": "Дублювати",
-                    "delete": "Видалити",
-                    "open": "Відкрити нотатку",
-                    "open-new-tab": "Відкрити в новій вкладці",
-                    "color": "Колір"
-                },
-                "duplicate": {
-                    "title": "Виберіть дати для дублювання",
-                    "selected": "Вибрано дат: {{count}}",
-                    "cancel": "Скасувати",
-                    "confirm": "Дублювати",
-                    "time": "Час",
-                    "today": "Сьогодні"
-                },
-                "navigation": {
-                    "aria-label": "Навігація календарем",
-                    "today-tooltip": "Перейти до сьогодні",
-                    "previous": "Попередній",
-                    "next": "Наступний"
-                },
-                "empty": {
-                    "no-date-field": "Оберіть поле дати для відображення подій",
-                    "no-events": "Немає подій за цей період"
-                },
-                "errors": {
-                    "create-readonly": "Неможливо створити події в проєктах лише для читання",
-                    "date-required": "Поле дати потрібне для створення подій"
-                },
-                "colors": {
-                    "favorites": "Обрані",
-                    "all": "Всі кольори",
-                    "custom": "Довільний колір",
-                    "invalid": "Невірний формат HEX",
-                    "picker": "Палітра кольорів",
-                    "quick": "Швидкий вибір",
-                    "hex": "HEX код"
-                },
-                "popup": {
-                    "today": "Сьогодні",
-                    "empty-hint": "Натисніть кнопку нижче для створення"
-                },
-                "agenda": {
-                    "title": "Агенда",
-                    "empty": "Немає подій на цей день",
-                    "all-day": "📅 Весь день",
-                    "all-day-time": "Весь день",
-                    "morning": "🌅 Ранок (до 12:00)",
-                    "afternoon": "☀️ День (12:00–18:00)",
-                    "evening": "🌙 Вечір (після 18:00)",
-                    "overdue": "⛔ Прострочені",
-                    "today": "📅 Сьогодні",
-                    "multiday": "📊 Багатоденні",
-                    "upcoming": "🔮 Найближчі",
-                    "undated": "📥 Вхідні (без дати)",
-                    "expand": "Розгорнути агенду",
-                    "collapse": "Згорнути агенду",
-                    "add-note": "Додати",
-                    "today-btn": "Сьогодні",
-                    "custom": {
-                        "add-list": "Додати список",
-                        "edit-list": "Редагувати список",
-                        "delete-list": "Видалити список",
-                        "move-up": "Перемістити вгору",
-                        "move-down": "Перемістити вниз",
-                        "empty-list": "Немає записів за фільтрами",
-                        "list-editor": {
-                            "title-new": "Новий список",
-                            "title-edit": "Редагувати список",
-                            "name-label": "Назва списку",
-                            "name-placeholder": "напр., Термінові завдання",
-                            "name-required": "Назва обов'язкова",
-                            "name-exists": "Така назва вже існує",
-                            "icon-label": "Іконка",
-                            "change-icon": "Змінити іконку...",
-                            "color-label": "Акцентний колір списку (необов'язково)",
-                            "color-hint": "Встановлює колір лівої межі для візуальної ідентифікації",
-                            "preview": "Попередній перегляд",
-                            "filters-label": "Фільтри",
-                            "filters-hint": "Формули дат: 'today', 'today+1w', 'sow', 'eom'. DQL-сумісні: sow/eow/som/eom/soy/eoy. Оператори: 'Is today', 'Is this week', 'Is overdue'.",
-                            "formula-hint": "Використовуйте функції AND(), OR(), CONTAINS(), IS_TODAY(). Див. довідку для повного опису.",
-                            "save": "Зберегти зміни",
-                            "create": "Створити список",
-                            "cancel": "Скасувати"
-                        },
-                        "filter-editor": {
-                            "add-filter": "Додати фільтр",
-                            "empty": "Немає фільтрів — усі записи будуть показані",
-                            "value-placeholder": "Значення...",
-                            "remove-filter": "Видалити фільтр",
-                            "enable-filter": "Увімкнути фільтр",
-                            "disable-filter": "Вимкнути фільтр",
-                            "operators": {
-                                "is-empty": "Порожнє",
-                                "is_empty": "Порожнє",
-                                "is-not-empty": "Не порожнє",
-                                "is_not_empty": "Не порожнє",
-                                "is": "Є",
-                                "is-not": "Не є",
-                                "contains": "Містить",
-                                "not-contains": "Не містить",
-                                "not_contains": "Не містить",
-                                "starts-with": "Починається з",
-                                "ends-with": "Закінчується на",
-                                "regex": "Відповідає regex",
-                                "eq": "=",
-                                "neq": "≠",
-                                "lt": "<",
-                                "gt": ">",
-                                "lte": "≤",
-                                "gte": "≥",
-                                "equals": "=",
-                                "not_equals": "≠",
-                                "greater_than": ">",
-                                "less_than": "<",
-                                "greater_or_equal": "≥",
-                                "less_or_equal": "≤",
-                                "is-checked": "Позначено",
-                                "is-not-checked": "Не позначено",
-                                "is-on": "На дату",
-                                "is-not-on": "Не на дату",
-                                "is-before": "Раніше",
-                                "is-after": "Пізніше",
-                                "is-on-and-before": "На дату або раніше",
-                                "is-on-and-after": "На дату або пізніше",
-                                "is-today": "Сьогодні",
-                                "is_today": "Сьогодні",
-                                "is-this-week": "Цього тижня",
-                                "is_this_week": "Цього тижня",
-                                "is-this-month": "Цього місяця",
-                                "is-overdue": "Прострочено",
-                                "is_overdue": "Прострочено",
-                                "is-upcoming": "Найближчі",
-                                "is_upcoming": "Найближчі",
-                                "has-any-of": "Містить будь-який з",
-                                "has-all-of": "Містить всі з",
-                                "has-none-of": "Не містить жодного з",
-                                "has-keyword": "Містить ключове слово"
-                            },
-                            "match-label": "Збіг",
-                            "match-all": "Усі з наступних",
-                            "match-any": "Будь-який з наступних",
-                            "field-label": "Де",
-                            "operator-label": "Оператор",
-                            "value-label": "Значення",
-                            "add-group": "Додати групу фільтрів",
-                            "remove-group": "Видалити групу",
-                            "field-placeholder": "Оберіть поле...",
-                            "operator-placeholder": "Оберіть оператор...",
-                            "filter-group-label": "Група фільтрів",
-                            "date-suggestions": "Формули дат (DQL)",
-                            "date-formula-hint": "Формула: today, sow, eom, today+1w, som-1m",
-                            "where-prefix": "Де",
-                            "and-prefix": "та",
-                            "no-value": "Немає значення"
-                        },
-                        "advanced-filter": {
-                            "toolbar-help": "Довідка",
-                            "hint-valid": "✓ Формула коректна",
-                            "hint-error": "⚠ {{count}} помилок",
-                            "hint-ctrl-space": "Ctrl+Space — підказки",
-                            "textarea-placeholder": "Почніть вводити формулу або натисніть Ctrl+Space...",
-                            "help-title-logical": "🔗 Логічні",
-                            "help-title-strings": "📝 Рядки",
-                            "help-title-checks": "🔍 Перевірки",
-                            "help-title-dates": "📅 Дати",
-                            "help-title-arrays": "📋 Масиви / Теги",
-                            "help-title-operators": "⚙ Оператори",
-                            "help-examples-title": "Приклади:",
-                            "snippet-active-tasks": "📌 Активні завдання",
-                            "snippet-active-tasks-desc": "Активні з датою",
-                            "snippet-urgent-overdue": "🔥 Термінові прострочені",
-                            "snippet-urgent-overdue-desc": "Прострочені + urgent",
-                            "snippet-this-week": "📅 Завдання на цей тиждень",
-                            "snippet-this-week-desc": "Все на цьому тижні",
-                            "snippet-undated-overdue": "🗓 Без дати або прострочені",
-                            "snippet-undated-overdue-desc": "Порожня дата АБО прострочено"
-                        },
-                        "icon-picker": {
-                            "lucide-tab": "Іконки",
-                            "emoji-tab": "Емодзі",
-                            "search-placeholder": "Пошук..."
-                        },
-                        "no-lists": "Немає користувацьких списків",
-                        "create-list": "Створити список"
-                    }
-                },
-                "heatmap": {
-                    "less": "Менше",
-                    "more": "Більше",
-                    "events": "подій",
-                    "clickToViewMonth": "Натисніть для перегляду місяця",
-                    "previousYear": "Попередній рік",
-                    "nextYear": "Наступний рік",
-                    "loading": "Завантаження...",
-                    "noData": "Немає даних"
-                }
-            },
-            "gallery": {
-                "name": "Галерея",
-                "fields": {
-                    "cover": "Обкладинка",
-                    "none": "Нічого"
-                },
-                "fit-style": {
-                    "fill": "Заповнити зображення",
-                    "fit": "За розміром зображення"
-                },
-                "include-fields": "Включити поля",
-                "settings": {
-                    "name": "Налаштування галереї",
-                    "card-width": {
-                        "name": "Ширина картки",
-                        "description": "Ширина кожної картки у пікселях."
-                    }
-                },
-                "empty": "Цей вигляд порожній."
-            },
-            "dashboard": {
-                "name": "База даних",
-                "add-row": "Нова нотатка",
-
-                "table": {
-                    "header-hint": "Клацніть правою кнопкою по заголовку колонки, щоб перейменувати, змінити тип, сховати, закріпити або перевпорядкувати. Потягніть край, щоб змінити ширину.",
-                    "row-height": "Висота рядка",
-                    "row-height-compact": "Компактна",
-                    "row-height-default": "За замовчуванням",
-                    "row-height-expanded": "Простора",
-                    "wrap-text": "Переносити текст у клітинках",
-                    "show-aggregation": "Показувати рядок підсумків",
-                    "freeze-up-to": "Закріпити колонки до поля",
-                    "column-menu": {
-                        "property-type": "Тип властивості",
-                        "property-type-auto": "Авто",
-                        "rollup-mode": "Режим rollup"
-                    }
-                },
-                "canvas": {
-                    "widgets": "Віджети",
-                    "hide-toolbar": "Сховати панель віджетів",
-                    "show-toolbar": "Показати панель віджетів",
-                    "toggle-layout": "Перемкнути макет",
-                    "layout-grid": "Сітка",
-                    "layout-stack": "Список",
-                    "hide-formula-bar": "Сховати редактор формул",
-                    "show-formula-bar": "Показати редактор формул",
-                    "formula-builder": "Формули",
-                    "schema": "Схема",
-                    "schema-tip": "Керування полями проекту — типи, зв'язки, зведення",
-                    "filter-bridge-global": "Глобальний фільтр: {{count}} умов",
-                    "filter-bridge-local": "Локальний: {{field}} = {{value}}",
-                    "filter-bridge-clear": "Скинути локальний фільтр",
-                    "filter-bridge-promote": "Зберегти як глобальний фільтр"
-                },
-                "field-presets": {
-                    "label": "Макет",
-                    "title": "Пресети макета колонок",
-                    "aria-label": "Пресети макета колонок",
-                    "save-current": "Зберегти поточний макет…",
-                    "apply": "Застосувати",
-                    "rename": "Перейменувати",
-                    "delete": "Видалити",
-                    "detach": "Від'єднати пресет",
-                    "prompt-new": "Назва пресета макета:",
-                    "prompt-rename": "Перейменувати пресет:",
-                    "confirm-delete": "Видалити цей пресет макета?"
-                },
-                "widget": {
-                    "expand": "Розгорнути віджет",
-                    "collapse": "Згорнути віджет",
-                    "chart-settings": "Налаштування діаграми",
-                    "pipeline": "Конвеєр: перетворіть дані перед показом — групуйте, рахуйте, сортуйте",
-                    "remove": "Видалити віджет",
-                    "not-configured": "Тип віджета \"{{type}}\" — не налаштовано",
-                    "add": "Додати віджет",
-                    "add-aria": "Додати віджет",
-                    "data-scope": {
-                        "title": "Область даних",
-                        "subtitle": "Про які записи цей блок. Як він їх показує — налаштовується окремо.",
-                        "label": "Яке джерело",
-                        "all": "Усі джерела, у межах цього вигляду",
-                        "hint": "Проєкт може збирати записи з кількох джерел. Блок може показувати лише одне з них — у межах того, що вже показує вигляд.",
-                        "unnamed": "Джерела, додані до появи імен, вибрати не можна — відкрийте проєкт і дайте їм ім'я.",
-                        "missing": "{{id}} — більше немає в цьому проєкті",
-                        "single": "Цей проєкт збирає записи з одного джерела, тож звужувати поки немає до чого."
-                    }
-                },
-                "quick": {
-                    "group": "Швидкі дії",
-                    "formula": "Конструктор формул"
-                },
-                "types": {
-                    "data-table": "Таблиця даних",
-                    "chart": "Діаграма",
-                    "stats": "Статистика",
-                    "comparison": "Порівняння",
-                    "checklist": "Чекліст",
-                    "view-port": "Вікно перегляду",
-                    "filter-tabs": "Вкладки фільтрів",
-                    "summary-row": "Підсумковий рядок"
-                },
-                "formula": {
-                    "title": "Редактор формул",
-                    "hint": "Ctrl+Enter щоб застосувати, Esc для скасування",
-                    "field-name": "Назва поля",
-                    "field-placeholder": "напр. Підсумковий бюджет",
-                    "expression-placeholder": "напр. IF(Status = \"Active\", Budget * 1.2, 0)",
-                    "preview": "Попередній перегляд:",
-                    "cancel": "Скасувати",
-                    "apply": "Застосувати",
-                    "mode-code": "Код",
-                    "mode-visual": "Візуальний",
-                    "visual-empty": "Натисніть, щоб додати блок формули",
-                    "visual-parse-error": "Неможливо відобразити у візуальному режимі — перейдіть на Код",
-                    "signature-returns": "повертає",
-                    "signature-category": "категорія",
-                    "help-category": {
-                        "logical": "Логічні",
-                        "math": "Математика",
-                        "string": "Рядки",
-                        "date": "Дати",
-                        "financial": "Фінанси",
-                        "statistical": "Статистика",
-                        "array": "Масиви",
-                        "conversion": "Перетворення",
-                        "utility": "Утиліти"
-                    },
-                    "debug-title": "Діагностика",
-                    "debug-cursor": "Позиція курсора",
-                    "debug-copy": "Копіювати помилку",
-                    "debug-dismiss": "Приховати",
-                    "runtime-error": "Помилка виконання"
-                },
-                "block-filter": {
-                    "aria": "Фільтр блоку",
-                    "add": "Фільтр",
-                    "remove": "Прибрати умову",
-                    "scope": "Цей блок — усі його подання"
-                },
-                "pipeline": {
-                    "title": "Розширені перетворення",
-                    "advanced-hint": "Звичайні фільтри та групування тепер живуть у самому поданні — ці кроки змінюють форму даних.",
-                    "steps": "крок(ів)",
-                    "clear": "Очистити",
-                    "empty": {
-                        "title": "Перетворіть дані перед показом",
-                        "beforeLabel": "Було",
-                        "afterLabel": "Стало",
-                        "caption": "Виберіть крок нижче — групуйте, рахуйте, фільтруйте або сортуйте.",
-                        "sampleBefore": [
-                            "Віджимання — 30",
-                            "Віджимання — 25",
-                            "Присідання — 50",
-                            "Присідання — 40",
-                            "Планка — 60"
-                        ],
-                        "sampleAfter": [
-                            "Віджимання — 55 разом",
-                            "Присідання — 90 разом",
-                            "Планка — 60 разом"
-                        ]
-                    },
-                    "move-up": "Вгору",
-                    "move-down": "Вниз",
-                    "remove": "Видалити",
-                    "add-step": "Додати крок перетворення",
-                    "filter": "Фільтр",
-                    "group-by": "Групування",
-                    "aggregate": "Агрегація",
-                    "compute": "Обчислення",
-                    "unpivot": "Розвертка",
-                    "pivot": "Зведена",
-                    "join": "Об'єднання",
-                    "join-right-source": "Праве джерело",
-                    "join-left-key": "Лівий ключ",
-                    "join-right-key": "Правий ключ",
-                    "join-right-key-placeholder": "назва поля в правому джерелі",
-                    "join-how": "Тип об'єднання",
-                    "join-inner": "Внутрішнє (відкидати невідповідні)",
-                    "join-left": "Ліве (зберігати, невідповідні — null)",
-                    "join-aggregate": "Агрегувати кілька збігів справа",
-                    "join-no-sources": "Немає доступних проєктів як праве джерело.",
-                    "aggregate-function": "Функція агрегації",
-                    "none": "(немає)",
-                    "columns": "стовпець(ів)",
-                    "groups": "група(и)",
-                    "unset": "(не задано)",
-                    "live": "Зміни застосовуються одразу",
-                    "done": "Готово",
-                    "flow-tip": "Записів на вході → на виході кроку",
-                    "unknown": "Невідомо",
-                    "unnest-suggestion-title": "Виявлено поля-масиви",
-                    "unnest-suggestion-body": "Поля {{fields}} містять масиви. Використайте Unnest, щоб розгорнути кожен елемент в окремий рядок.",
-                    "unnest-suggestion-button": "Розгорнути «{{field}}»",
-                    "disable-step": "Вимкнути крок",
-                    "enable-step": "Увімкнути крок"
-                },
-                "database-call": {
-                    "empty": "Вигляди не налаштовані",
-                    "add-first": "Додати перший вигляд",
-                    "no-records": "Ще немає записів",
-                    "add-first-record": "Додати перший запис",
-                    "no-matches": "Немає збігів",
-                    "clear-filter": "Очистити фільтр",
-                    "pipeline-hid-all": "Конвеєр не повернув жодного рядка (кроків: {{count}})",
-                    "open-pipeline": "Відкрити конвеєр",
-                    "clear-pipeline": "Очистити конвеєр",
-                    "settings": {
-                        "source": "Джерело даних",
-                        "source-inherit": "Дані цього вью (за замовчуванням)",
-                        "source-hint": "За замовчуванням блок показує записи цього вью. Виберіть інший проєкт, щоб показати його дані.",
-                        "link-to": "Зв'язати з блоком",
-                        "standalone": "Без зв'язку — показати всі записи",
-                        "link-hint": "Без зв'язку блок показує всі записи. Зі зв'язком — лише записи, пов'язані з вибраним блоком.",
-                        "relation-field": "Фільтрувати за полем",
-                        "select-field": "Виберіть поле"
-                    }
-                },
-                "group": {
-                    "empty": "(порожньо)"
-                },
-                "chart": {
-                    "no-data": "Немає даних",
-                    "type": "Тип діаграми",
-                    "x-axis": "Вісь X",
-                    "y-axis": "Вісь Y",
-                    "aggregation": "Агрегація",
-                    "sort-by": "Сортування",
-                    "height": "Висота",
-                    "granularity": "Групувати дати за",
-                    "granularities": {
-                        "day": "Днем",
-                        "week": "Тижнем",
-                        "month": "Місяцем",
-                        "quarter": "Кварталом",
-                        "year": "Роком"
-                    },
-                    "types": {
-                        "bar": "Стовпці",
-                        "horizontal-bar": "Горизонтальні стовпці",
-                        "stacked-bar": "Стовпці з накопиченням",
-                        "line": "Лінія",
-                        "area": "Область",
-                        "pie": "Кругова",
-                        "donut": "Кільцева",
-                        "number": "Число / KPI",
-                        "progress": "Прогрес",
-                        "scatter": "Точкова"
-                    },
-                    "aggregations": {
-                        "sum": "Сума",
-                        "average": "Середнє",
-                        "min": "Мінімум",
-                        "max": "Максимум",
-                        "median": "Медіана",
-                        "count": "Кількість",
-                        "unique": "Унікальні"
-                    },
-                    "sort": {
-                        "label": "Мітка",
-                        "value": "Значення",
-                        "manual": "Вручну"
-                    },
-                    "group-mode": {
-                        "label": "Групування статусів",
-                        "values": "Значення",
-                        "semantic": "Семантичні групи"
-                    },
-                    "heights": {
-                        "small": "Маленька",
-                        "medium": "Середня",
-                        "large": "Велика"
-                    },
-                    "options": {
-                        "grid": "Сітка",
-                        "labels": "Підписи",
-                        "values": "Значення",
-                        "legend": "Легенда",
-                        "hide-zero": "Приховати нулі",
-                        "cumulative": "Накопичувально"
-                    },
-                    "scatter": {
-                        "color-by": "Колір за",
-                        "size-by": "Розмір за",
-                        "trend-line": "Лінія тренду",
-                        "r-squared": "Показати R²",
-                        "point-size": "Розмір точки",
-                        "opacity": "Прозорість",
-                        "none": "(немає)",
-                        "correlate-enable": "Кореляція з іншим джерелом",
-                        "correlate-hint": "X береться з джерела віджета; Y — з обраного правого джерела, зіставлення за ключем з'єднання.",
-                        "right-source": "Праве джерело (Y)",
-                        "left-key": "Лівий ключ (цей джерело)",
-                        "right-key": "Правий ключ (праве джерело)",
-                        "right-key-placeholder": "назва поля в правому джерелі",
-                        "no-sources": "У сховищі немає інших проєктів.",
-                        "warn-missing-right": "Праве джерело не завантажене. Перевірте обраний id та доступність сусіднього проєкту.",
-                        "warn-no-matches": "Немає збігів по ключу з'єднання. Перевірте імена лівого/правого ключів та перетин значень.",
-                        "warn-mostly-unmatched": "Збіглося лише {{matched}} з {{total}} записів — результати можуть бути спотворені."
-                    },
-                    "section": {
-                        "display": "Налаштування відображення",
-                        "data": "Дані",
-                        "scatter": "Точкова діаграма"
-                    }
-                },
-                "comparison": {
-                    "empty": "Налаштуйте метрики порівняння",
-                    "metric-a": "Метрика A",
-                    "metric-b": "Метрика B"
-                },
-                "filter-tabs": {
-                    "all": "Всі",
-                    "config": {
-                        "title": "Вкладки фільтра",
-                        "subtitle": "Виберіть поле — віджет збере вкладки з унікальних значень. Або задайте вкладки вручну для фіксованого набору.",
-                        "field": "Поле фільтра",
-                        "auto": "Автовизначені значення",
-                        "seed": "Використати як вкладки",
-                        "seed-tip": "Скопіювати значення в редаговані вкладки",
-                        "add": "Додати вкладку",
-                        "tab-label": "Підпис",
-                        "tab-value": "Значення"
-                    }
-                },
-                "stats": {
-                    "config": {
-                        "title": "Картки статистики",
-                        "subtitle": "Кожна картка — одна агрегація за даними (після конвеєра). Поле * = кількість записів.",
-                        "empty": "Поки немає карток. Додайте, щоб показати KPI-плитку.",
-                        "add": "Додати картку",
-                        "columns": "Колонок у сітці",
-                        "label": "Підпис",
-                        "field": "Поле",
-                        "aggregation": "Агрегація",
-                        "format": "Формат",
-                        "currency": "Символ",
-                        "sparkline": "Спарклайн",
-                        "fmt-number": "Число",
-                        "fmt-percent": "Відсоток",
-                        "fmt-currency": "Валюта",
-                        "fmt-duration": "Тривалість"
-                    }
-                },
-                "agg": {
-                    "count_total": "Кількість",
-                    "count_values": "Заповнено",
-                    "count_unique": "Унікальних",
-                    "sum": "Сума",
-                    "avg": "Середнє",
-                    "median": "Медіана",
-                    "min": "Мінімум",
-                    "max": "Максимум",
-                    "range": "Розмах",
-                    "count_checked": "Відмічено",
-                    "count_unchecked": "Не відмічено",
-                    "percent_checked": "% відмічених",
-                    "percent_unchecked": "% не відмічених",
-                    "percent_empty": "% порожніх",
-                    "percent_not_empty": "% заповнених",
-                    "earliest": "Рання дата",
-                    "latest": "Пізня дата"
-                },
-                "checklist": {
-                    "select-field": "Оберіть булеве поле",
-                    "no-items": "Немає записів",
-                    "done": "виконано",
-                    "config": {
-                        "check-field": "Поле-прапорець",
-                        "check-field-placeholder": "напр. completed",
-                        "label-field": "Поле підпису",
-                        "label-field-placeholder": "name",
-                        "limit": "Ліміт",
-                        "limit-placeholder": "0 = без ліміту",
-                        "show": "Показувати",
-                        "show-all": "Усі нотатки",
-                        "show-done": "Лише виконані",
-                        "show-open": "Лише відкриті",
-                        "sort-field": "Поле сортування",
-                        "sort-field-placeholder": "name",
-                        "sort-order": "Порядок"
-                    }
-                },
-                "viewport": {
-                    "select": "Оберіть подання для вбудовування",
-                    "change": "Змінити вбудоване подання",
-                    "embedded": "Вбудоване подання: {{label}}",
-                    "embed-title": "Вбудувати подання",
-                    "table": "Таблиця",
-                    "board": "Дошка",
-                    "calendar": "Календар",
-                    "gallery": "Галерея"
-                }
-            }
+        "relation-summary": "→ {{project}}",
+        "relation-missing-target": "Цільовий проект не вибраний",
+        "rollup-summary": "{{function}}({{target}}) через {{via}}"
+      },
+      "input": {
+        "cancel": "Скасувати"
+      },
+      "confirm": {
+        "delete": "Видалити",
+        "cancel": "Скасувати"
+      }
+    },
+    "views": {
+      "filter": {
+        "bar": {
+          "aria": "Фільтр подання",
+          "add": "Фільтр",
+          "scope": "Це подання"
+        }
+      },
+      "visualizer": {
+        "pane": {
+          "title": "YAML візуалізатор",
+          "no-file": "Відкрийте замітку, щоб побачити її властивості.",
+          "no-properties": "Ця замітка ще не має frontmatter-властивостей.",
+          "actions": {
+            "pin": "Закріпити вгорі",
+            "unpin": "Відкріпити",
+            "hide": "Приховати",
+            "unhide": "Показати",
+            "move-up": "Перемістити вгору",
+            "move-down": "Перемістити вниз",
+            "show-hidden": "Показати приховані",
+            "hide-hidden": "Сховати приховані",
+            "reset": "Скинути налаштування",
+            "add-relation": "+ Пов'язати",
+            "pick-relation-placeholder": "Оберіть замітку…",
+            "set-type": "Змінити тип"
+          },
+          "types": {
+            "auto": "Авто"
+          },
+          "linked-from": {
+            "title": "Посилаються",
+            "empty": "На цю замітку ще ніхто не посилається.",
+            "via": "через"
+          }
+        }
+      },
+      "developer": {
+        "name": "Розробник"
+      },
+      "table": {
+        "name": "Таблиця",
+        "deprecation-notice": "Вигляд Таблиця застарів. Перейдіть на Базу даних для розширених можливостей.",
+        "hide-fields": "Приховати поля",
+        "rename-field": "Перейменувати поле",
+        "rename": "Перейменувати"
+      },
+      "board": {
+        "name": "Дошка",
+        "no-status": "Без статусу",
+        "fields": {
+          "status": "статус",
+          "priority": "Пріоритет",
+          "check": "Відмітити",
+          "none": "Нічого"
         },
-        "components": {
-            "filter-pills": {
-                "aria": "Фільтр",
-                "add": "Фільтр",
-                "remove": "Видалити умову"
-            },
-            "data-grid": {
-                "grid-label": "Таблиця даних",
-                "column": {
-                    "configure": "Налаштувати поле",
-                    "add": "Додати поле",
-                    "insert-left": "Вставити зліва",
-                    "insert-right": "Вставити зправа",
-                    "rename": "Перейменувати поле",
-                    "pin": "Закріпити поле",
-                    "unpin": "Відкріпити поле",
-                    "hide": "Приховати поле",
-                    "delete": "Видалити поле"
-                },
-                "row": {
-                    "add": "Додати нотатку",
-                    "edit": "Редагувати нотатку",
-                    "delete": "Видалити нотатку"
-                },
-                "cell": {
-                    "clear": "Очистити подання"
-                },
-                "sort": {
-                    "asc": "Сортувати А → Я",
-                    "desc": "Сортувати Я → А"
-                },
-                "sortDate": {
-                    "asc": "Сортувати Старі → Нові",
-                    "desc": "Сортувати Нові → Старі"
-                }
-            },
-            "board": {
-                "column": {
-                    "add": {
-                        "name": "Додати стовпчик",
-                        "placeholder": "Новий стовпець",
-                        "no-status-field": "Status field required",
-                        "derived-status-field": "Current status field is read-only"
-                    },
-                    "rename": "Перейменувати стовпець",
-                    "delete": "Видалити стовпець",
-                    "expand": "Розгорнути стовпець",
-                    "collapse": "Згорнути стовпець",
-                    "pin": "Закріпити стовпець",
-                    "unpin": "Відкріпити стовпець",
-                    "persist": "Зберігати при відсутності карток",
-                    "unpersist": "Прибирати при відсутності карток"
-                }
-            },
-            "color": {
-                "label": "Колір",
-                "where": "Де",
-                "add": "Додати колір",
-                "add-to-favorites": "Додати в обране",
-                "project-palette": "Палітра проєкту",
-                "apply-color": "Застосувати колір",
-                "add-rule": "Додати правило",
-                "title": "Колірні правила",
-                "empty-hint": "Немає правил",
-                "pick-color": "Вибір кольору",
-                "favorites": "Обране",
-                "favorites-empty-hint": "Натисніть ⭐ щоб додати",
-                "hex-code": "HEX код",
-                "invalid-format": "Невірний формат",
-                "expand-palette": "Розгорнути палітру",
-                "collapse-palette": "Згорнути палітру"
-            },
-            "filter": {
-                "label": "Фільтр",
-                "where": "Де",
-                "and": "і",
-                "or": "або",
-                "add": "Додати умову",
-                "add-condition": "Додати умову",
-                "add-group": "Додати групу",
-                "conjunction-or": "АБО",
-                "conjunction-and": "І",
-                "match-all": "Усі умови",
-                "match-any": "Будь-яка умова",
-                "empty-hint": "Немає умов фільтрації",
-                "operators": {
-                    "is-empty": "Порожньо",
-                    "is-not-empty": "Не порожньо",
-                    "is": "Дорівнює",
-                    "is-any-of": "Одне з",
-                    "is-not": "Не дорівнює",
-                    "contains": "Містить",
-                    "not-contains": "Не містить",
-                    "starts-with": "Починається з",
-                    "ends-with": "Закінчується на",
-                    "regex": "Регулярний вираз",
-                    "eq": "=",
-                    "neq": "≠",
-                    "lt": "<",
-                    "gt": ">",
-                    "lte": "≤",
-                    "gte": "≥",
-                    "is-checked": "Позначено",
-                    "is-not-checked": "Не позначено",
-                    "is-on": "Дата =",
-                    "is-not-on": "Дата ≠",
-                    "is-before": "До",
-                    "is-after": "Після",
-                    "is-on-and-before": "≤ Дата",
-                    "is-on-and-after": "≥ Дата",
-                    "is-today": "Сьогодні",
-                    "is-this-week": "Цей тиждень",
-                    "is-this-month": "Цей місяць",
-                    "is-this-quarter": "Цей квартал",
-                    "is-this-year": "Цей рік",
-                    "is-past-week": "Минулий тиждень",
-                    "is-past-month": "Минулий місяць",
-                    "is-past-year": "Минулий рік",
-                    "is-next-week": "Наступний тиждень",
-                    "is-next-month": "Наступний місяць",
-                    "is-next-year": "Наступний рік",
-                    "is-last-n-days": "За останні N днів",
-                    "is-next-n-days": "У найближчі N днів",
-                    "is-overdue": "Прострочено",
-                    "is-upcoming": "Майбутнє",
-                    "has-any-of": "Будь-яке з",
-                    "has-all-of": "Усі з",
-                    "has-none-of": "Жодного з",
-                    "has-keyword": "Ключове слово"
-                }
-            },
-            "sort": {
-                "label": "Сортувати",
-                "add": "Додати інше сортування",
-                "empty-hint": "Критерії не задані"
-            },
-            "tag": {
-                "edit": "Редагувати",
-                "remove": "Видалити"
-            },
-            "multi-text": {
-                "add": "Додати параметр"
-            },
-            "note": {
-                "edit": "Редагувати нотатку"
-            }
-        },
-        "toolbar": {
-            "view": {
-                "add": "Додати вигляд"
-            },
-            "projects": {
-                "none": "Немає проєктів",
-                "options": "Інші параметри"
-            },
-            "read-only": "Тільки читання",
-            "read-only-desc": "Ви не можете створювати або редагувати нотатки у проєктах лише для читання.",
-            "collapse": {
-                "show": "Показати панель",
-                "hide": "Сховати панель"
-            }
-        },
+        "unprioritized": "Непріоритетні",
+        "include-fields": "Долучати поля",
         "settings": {
-            "about": {
-                "title": "Про Projects Plus",
-                "description": "Розширене управління проєктами для Obsidian з додатковими функціями.",
-                "author": "Мейнтейнер",
-                "author-name": "Park Pavel",
-                "original-author": "Оригінальний автор",
-                "original-author-name": "Marcus Olsson",
-                "version": "Версія",
-                "version-number": "3.0.5",
-                "credits": "Подяки",
-                "credits-desc": "Це форк спільноти оригінального плагіна Obsidian Projects від Marcus Olsson.",
-                "support": "Підтримка",
-                "support-desc": "Якщо цей плагін корисний для вас, розгляньте підтримку розробки.",
-                "visit-website": "Відвідати сайт",
-                "github": "GitHub",
-                "star-github": "⭐ Зірка на GitHub",
-                "original-repo": "Оригінальний репозиторій",
-                "languages": "Підтримувані мови",
-                "languages-desc": "Доступні мови: English, Русский, Українська, 中文 (автоматичне визначення на основі системної мови)"
-            },
-            "general": {
-                "size-limit": {
-                    "name": "Обмеження розміру проєкта",
-                    "desc": "Уникати випадкового завантаження занадто багатьох нотаток."
-                },
-                "link-behavior": {
-                    "name": "Поведінка посилання",
-                    "desc": "Визначає, що відбувається, коли ви вибираєте нотатку. Натисніть {{modifier}} для вибору посилання для протилежної поведінки.",
-                    "options": {
-                        "open-editor": "Відкрити редактор",
-                        "open-note": "Відкрити нотатку"
-                    }
-                },
-                "start-of-week": {
-                    "name": "Почати тиждень з",
-                    "options": {
-                        "sunday": "Неділя",
-                        "monday": "Понеділок",
-                        "default": "За замовчуванням"
-                    }
-                },
-                "mobile-calendar": {
-                    "name": "Вигляд календаря на мобільних",
-                    "desc": "Типовий вигляд календаря на мобільних пристроях.",
-                    "options": {
-                        "month": "Місяць",
-                        "week": "Тиждень",
-                        "day": "День"
-                    }
-                },
-                "animation-behavior": {
-                    "name": "Поведінка анімації",
-                    "desc": "Контроль анімацій прокрутки в плагіні",
-                    "options": {
-                        "smooth": "Плавна (анімована)",
-                        "instant": "Миттєва (без анімації)"
-                    }
-                },
-                "disable-haptic": {
-                    "name": "Вимкнути вібровідгук",
-                    "desc": "Вимкнути вібрацію під час перетягування на мобільних пристроях"
-                }
-            },
-            "front-matter": {
-                "heading": "Front matter",
-                "quote-strings": {
-                    "name": "Цитований рядок",
-                    "options": {
-                        "plain": "За потреби",
-                        "quote-double": "Завжди"
-                    }
-                }
-            },
-            "commands": {
-                "name": "Команди",
-                "desc": "Додайте команди для Ваших улюблених проєктів та переглядів."
-            },
-            "archives": {
-                "name": "Архіви",
-                "desc": "Відновіть або видаліть архівні проєкти.",
-                "empty": "Немає архівованих проєктів."
-            }
+          "name": "Налаштування дошки",
+          "column-width": {
+            "name": "Ширина стовпця",
+            "description": "Ширина кожного стовпця у пікселях."
+          },
+          "custom-header": {
+            "name": "Налаштувати заголовок картки",
+            "description": "Використовуйте вибране поле як заголовок картки."
+          },
+          "order-sync-field": {
+            "name": "Синхронізувати порядок карт з полем",
+            "description": "Поле для зберігання положення карток на дошці."
+          }
         },
-        "errors": {
-            "missingDataview": {
-                "title": "Dataview вимкнений",
-                "message": "Увімкніть плагін Dataview, щоб продовжити використовувати цей проєкт."
-            },
-            "boundary": {
-                "title": "Щось пішло не так",
-                "message": "Під час рендерингу компонента сталася помилка.",
-                "retry": "Спробувати знову",
-                "details": "Деталі помилки"
-            }
+        "note": {
+          "add": "Додати нотатку"
+        }
+      },
+      "calendar": {
+        "name": "Календар",
+        "new-note": "Нова нотатка",
+        "no-events": "Немає подій",
+        "fields": {
+          "date": "ДАТА",
+          "check": "Відмітити",
+          "none": "Стандартний"
         },
-        "database": {
-            "cell-editor": {
-                "errors": {
-                    "boolean": "Введіть true або false.",
-                    "number": "Введіть коректне число.",
-                    "date": "Формат РРРР-ММ-ДД.",
-                    "datetime": "Формат ISO 8601 (напр. 2026-05-01T12:30).",
-                    "color": "#hex-колір (3, 4, 6 або 8 знаків).",
-                    "list": "Введіть значення через кому.",
-                    "scalar": "Некоректне значення для цього типу."
-                }
-            },
-            "rollup": {
-                "modes": {
-                    "show-original": "Показати як є",
-                    "show-unique": "Показати унікальні",
-                    "count-all": "Рахувати всі",
-                    "count-values": "Рахувати значення",
-                    "count-unique": "Рахувати унікальні",
-                    "count-empty": "Рахувати порожні",
-                    "count-not-empty": "Рахувати непорожні",
-                    "percent-empty": "Відсоток порожніх",
-                    "percent-not-empty": "Відсоток непорожніх",
-                    "percent-per-group": "Відсоток за групами",
-                    "sum": "Сума",
-                    "average": "Середнє",
-                    "min": "Мінімум",
-                    "max": "Максимум",
-                    "median": "Медіана",
-                    "range": "Діапазон",
-                    "earliest": "Найраніша",
-                    "latest": "Найпізніша"
-                }
-            }
+        "today": "Сьогодні",
+        "weekday": "{{value, datetime}}",
+        "date": "{{value, datetime}}",
+        "interval": "{{from, datetime}} – {{to, datetime}}{{en_separator}}{{custom_year, datetime}}",
+        "intervals": {
+          "month_one": "Місяць",
+          "month_other": "Місяці",
+          "monthWithCount_one": "{{count}} місяць",
+          "monthWithCount_other": "{{count}} місяців",
+          "week_one": "Тиждень",
+          "week_other": "Тижні",
+          "weekWithCount_one": "{{count}} тиждень",
+          "weekWithCount_other": "{{count}} тижня",
+          "day_one": "День",
+          "day_other": "Дні",
+          "dayWithCount_one": "{{count}} день",
+          "dayWithCount_other": "{{count}} днів",
+          "year_one": "Рік",
+          "year_other": "Роки",
+          "yearWithCount_one": "{{count}} рік",
+          "yearWithCount_other": "{{count}} років",
+          "2weeks": "2 тижні"
         },
-        "obsidian": {
-            "ribbon-tooltip": "Відкриті проєкти",
-            "hover-link-settings": "Проєкти"
+        "record": {
+          "settings": "Налаштування",
+          "duplicate": "Дублювати",
+          "delete": "Видалити",
+          "open": "Відкрити нотатку",
+          "open-new-tab": "Відкрити в новій вкладці",
+          "color": "Колір"
+        },
+        "duplicate": {
+          "title": "Виберіть дати для дублювання",
+          "selected": "Вибрано дат: {{count}}",
+          "cancel": "Скасувати",
+          "confirm": "Дублювати",
+          "time": "Час",
+          "today": "Сьогодні"
         },
         "navigation": {
-            "active-project": "Активний проєкт"
+          "aria-label": "Навігація календарем",
+          "today-tooltip": "Перейти до сьогодні",
+          "previous": "Попередній",
+          "next": "Наступний"
         },
-        "save-status": {
-            "failed": {
-                "label": "Не збережено",
-                "tooltip": "Не вдалося записати налаштування у data.json. Зміна лишилася в цьому сеансі — натисніть, щоб повторити.",
-                "notice": "Projects+: налаштування не записалися на диск. Зміна ще тут, але зникне після перезавантаження. Повторити можна з позначки «Не збережено» на панелі."
-            },
-            "diverged": {
-                "label": "\u0417\u043c\u0456\u043d\u0435\u043d\u043e \u0437\u0437\u043e\u0432\u043d\u0456",
-                "tooltip": "\u0424\u0430\u0439\u043b data.json \u0437\u0430\u043c\u0456\u043d\u0438\u043b\u0438 \u043f\u043e\u0437\u0430 \u0446\u0438\u043c \u0432\u0456\u043a\u043d\u043e\u043c. \u0412\u0430\u0448\u0456 \u0437\u043c\u0456\u043d\u0438 \u043b\u0438\u0448\u0438\u043b\u0438\u0441\u044f; \u043f\u043e\u0432\u0442\u043e\u0440 \u0437\u0430\u043f\u0438\u0441\u0443 \u0437\u0430\u0442\u0435\u0440 \u0431\u0438 \u0447\u0443\u0436\u0443 \u0432\u0435\u0440\u0441\u0456\u044e, \u0442\u043e\u043c\u0443 \u0439\u043e\u0433\u043e \u043d\u0435 \u043f\u0440\u043e\u043f\u043e\u043d\u0443\u044e\u0442\u044c."
-            },
-            "superseded": {
-                "notice": "Projects+: файл data.json змінено поза цим вікном. Остання зміна могла не зберегтися — перевідкрийте сховище, перш ніж продовжувати."
-            },
-            "conflict": {
-                "notice": "Projects+: \u0444\u0430\u0439\u043b data.json \u0437\u043c\u0456\u043d\u0438\u043b\u0438 \u043f\u043e\u0437\u0430 \u0446\u0438\u043c \u0432\u0456\u043a\u043d\u043e\u043c, \u0456 \u043f\u0440\u0438\u0439\u043d\u044f\u0442\u0438 \u0447\u0443\u0436\u0443 \u0432\u0435\u0440\u0441\u0456\u044e \u043d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f. \u0412\u0430\u0448\u0430 \u0432\u0435\u0440\u0441\u0456\u044f \u043b\u0438\u0448\u0430\u0454\u0442\u044c\u0441\u044f \u0447\u0438\u043d\u043d\u043e\u044e, \u0430 \u0432\u0435\u0440\u0441\u0456\u044f \u0437 \u0434\u0438\u0441\u043a\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043d\u0430 \u044f\u043a {{path}}."
-            },
-            "conflict-uncopied": {
-                "notice": "Projects+: \u0444\u0430\u0439\u043b data.json \u0437\u043c\u0456\u043d\u0438\u043b\u0438 \u043f\u043e\u0437\u0430 \u0446\u0438\u043c \u0432\u0456\u043a\u043d\u043e\u043c, \u0430 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0447\u0443\u0436\u0443 \u0432\u0435\u0440\u0441\u0456\u044e \u043d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u043d\u0456\u0434\u0435 \u2014 \u043d\u0456 \u043f\u043e\u0440\u0443\u0447 \u0456\u0437 \u0444\u0430\u0439\u043b\u043e\u043c, \u043d\u0456 \u043d\u043e\u0442\u0430\u0442\u043a\u043e\u044e \u0443 \u0441\u0445\u043e\u0432\u0438\u0449\u0456. \u0412\u043e\u043d\u0430 \u0437\u0430\u0440\u0430\u0437 \u0443 \u0434\u0432\u043e\u0445 \u043c\u0456\u0441\u0446\u044f\u0445: \u0443 \u043a\u043e\u043d\u0441\u043e\u043b\u0456 \u0440\u043e\u0437\u0440\u043e\u0431\u043d\u0438\u043a\u0430 \u0442\u0430 \u0432 \u0441\u0430\u043c\u043e\u043c\u0443 data.json, \u043f\u043e\u0432\u0435\u0440\u0445 \u044f\u043a\u043e\u0433\u043e \u043d\u0456\u0447\u043e\u0433\u043e \u043d\u0435 \u043f\u0438\u0448\u0435\u0442\u044c\u0441\u044f, \u0434\u043e\u043a\u0438 \u0432\u0438 \u0441\u0430\u043c\u0456 \u043d\u0435 \u0437\u043c\u0456\u043d\u0438\u0442\u0435 \u043d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f."
-            }
+        "empty": {
+          "no-date-field": "Оберіть поле дати для відображення подій",
+          "no-events": "Немає подій за цей період"
         },
-        "settings-menu": {
-            "title": "Налаштування",
-            "tabs": {
-                "projects": "Проєкти",
-                "views": "Вигляди",
-                "filters": "Фільтри",
-                "colors": "Кольори",
-                "sort": "Сортування",
-                "view-config": "Вигляд"
+        "errors": {
+          "create-readonly": "Неможливо створити події в проєктах лише для читання",
+          "date-required": "Поле дати потрібне для створення подій"
+        },
+        "colors": {
+          "favorites": "Обрані",
+          "all": "Всі кольори",
+          "custom": "Довільний колір",
+          "invalid": "Невірний формат HEX",
+          "picker": "Палітра кольорів",
+          "quick": "Швидкий вибір",
+          "hex": "HEX код"
+        },
+        "popup": {
+          "today": "Сьогодні",
+          "empty-hint": "Натисніть кнопку нижче для створення"
+        },
+        "agenda": {
+          "title": "Агенда",
+          "empty": "Немає подій на цей день",
+          "all-day": "📅 Весь день",
+          "all-day-time": "Весь день",
+          "morning": "🌅 Ранок (до 12:00)",
+          "afternoon": "☀️ День (12:00–18:00)",
+          "evening": "🌙 Вечір (після 18:00)",
+          "overdue": "⛔ Прострочені",
+          "today": "📅 Сьогодні",
+          "multiday": "📊 Багатоденні",
+          "upcoming": "🔮 Найближчі",
+          "undated": "📥 Вхідні (без дати)",
+          "expand": "Розгорнути агенду",
+          "collapse": "Згорнути агенду",
+          "add-note": "Додати",
+          "today-btn": "Сьогодні",
+          "custom": {
+            "add-list": "Додати список",
+            "edit-list": "Редагувати список",
+            "delete-list": "Видалити список",
+            "move-up": "Перемістити вгору",
+            "move-down": "Перемістити вниз",
+            "empty-list": "Немає записів за фільтрами",
+            "list-editor": {
+              "title-new": "Новий список",
+              "title-edit": "Редагувати список",
+              "name-label": "Назва списку",
+              "name-placeholder": "напр., Термінові завдання",
+              "name-required": "Назва обов'язкова",
+              "name-exists": "Така назва вже існує",
+              "icon-label": "Іконка",
+              "change-icon": "Змінити іконку...",
+              "color-label": "Акцентний колір списку (необов'язково)",
+              "color-hint": "Встановлює колір лівої межі для візуальної ідентифікації",
+              "preview": "Попередній перегляд",
+              "filters-label": "Фільтри",
+              "filters-hint": "Формули дат: 'today', 'today+1w', 'sow', 'eom'. DQL-сумісні: sow/eow/som/eom/soy/eoy. Оператори: 'Is today', 'Is this week', 'Is overdue'.",
+              "formula-hint": "Використовуйте функції AND(), OR(), CONTAINS(), IS_TODAY(). Див. довідку для повного опису.",
+              "save": "Зберегти зміни",
+              "create": "Створити список",
+              "cancel": "Скасувати"
             },
-            "done": "Готово",
-            "views": {
-                "title": "Керування виглядами",
-                "show-titles": "Показувати назви виглядів",
-                "select-view": "Обрати вигляд",
-                "rename": "Перейменувати",
-                "duplicate": "Дублювати",
-                "delete": "Видалити",
-                "add-view": "Додати вигляд",
-                "drag-to-reorder": "Перетягніть для зміни порядку"
+            "filter-editor": {
+              "add-filter": "Додати фільтр",
+              "empty": "Немає фільтрів — усі записи будуть показані",
+              "value-placeholder": "Значення...",
+              "remove-filter": "Видалити фільтр",
+              "enable-filter": "Увімкнути фільтр",
+              "disable-filter": "Вимкнути фільтр",
+              "operators": {
+                "is-empty": "Порожнє",
+                "is_empty": "Порожнє",
+                "is-not-empty": "Не порожнє",
+                "is_not_empty": "Не порожнє",
+                "is": "Є",
+                "is-not": "Не є",
+                "contains": "Містить",
+                "not-contains": "Не містить",
+                "not_contains": "Не містить",
+                "starts-with": "Починається з",
+                "ends-with": "Закінчується на",
+                "regex": "Відповідає regex",
+                "eq": "=",
+                "neq": "≠",
+                "lt": "<",
+                "gt": ">",
+                "lte": "≤",
+                "gte": "≥",
+                "equals": "=",
+                "not_equals": "≠",
+                "greater_than": ">",
+                "less_than": "<",
+                "greater_or_equal": "≥",
+                "less_or_equal": "≤",
+                "is-checked": "Позначено",
+                "is-not-checked": "Не позначено",
+                "is-on": "На дату",
+                "is-not-on": "Не на дату",
+                "is-before": "Раніше",
+                "is-after": "Пізніше",
+                "is-on-and-before": "На дату або раніше",
+                "is-on-and-after": "На дату або пізніше",
+                "is-today": "Сьогодні",
+                "is_today": "Сьогодні",
+                "is-this-week": "Цього тижня",
+                "is_this_week": "Цього тижня",
+                "is-this-month": "Цього місяця",
+                "is-overdue": "Прострочено",
+                "is_overdue": "Прострочено",
+                "is-upcoming": "Найближчі",
+                "is_upcoming": "Найближчі",
+                "has-any-of": "Містить будь-який з",
+                "has-all-of": "Містить всі з",
+                "has-none-of": "Не містить жодного з",
+                "has-keyword": "Містить ключове слово"
+              },
+              "match-label": "Збіг",
+              "match-all": "Усі з наступних",
+              "match-any": "Будь-який з наступних",
+              "field-label": "Де",
+              "operator-label": "Оператор",
+              "value-label": "Значення",
+              "add-group": "Додати групу фільтрів",
+              "remove-group": "Видалити групу",
+              "field-placeholder": "Оберіть поле...",
+              "operator-placeholder": "Оберіть оператор...",
+              "filter-group-label": "Група фільтрів",
+              "date-suggestions": "Формули дат (DQL)",
+              "date-formula-hint": "Формула: today, sow, eom, today+1w, som-1m",
+              "where-prefix": "Де",
+              "and-prefix": "та",
+              "no-value": "Немає значення"
             },
-            "view-config": {
-                "title": "Налаштування вигляду",
-                "current-view": "Поточний вигляд",
-                "no-view": "Немає активного вигляду",
-                "calendar": {
-                    "interval": "Інтервал",
-                    "layout": "Макет",
-                    "time-format": "Формат часу",
-                    "timezone": "Часовий пояс",
-                    "show-agenda": "Показати агенду",
-                    "hide-agenda": "Сховати агенду",
-                    "hints": {
-                        "timezone": "напр. Europe/Kyiv або local"
-                    },
-                    "timeline": {
-                        "title": "Налаштування шкали",
-                        "start-hour": "Час початку",
-                        "end-hour": "Час завершення",
-                        "event-color-field": "Поле кольору події",
-                        "show-weekends": "Показувати вихідні",
-                        "show-all-day": "Показувати секцію 'Весь день'",
-                        "hints": {
-                            "event-color-field": "Поле для кольору подій (необов'язково)",
-                            "event-color-placeholder": "напр. status, priority"
-                        }
-                    },
-                    "interval-options": {
-                        "year": "Рік",
-                        "day": "День",
-                        "week": "Тиждень",
-                        "month": "Місяць"
-                    },
-                    "layout-options": {
-                        "headers": "Заголовки (класичний)",
-                        "bars": "Бари (шкала)"
-                    },
-                    "field-mapping": {
-                        "title": "Зіставлення полів",
-                        "hint": "Оберіть існуюче поле зі списку або введіть назву нового поля",
-                        "placeholder": "Введіть або оберіть поле",
-                        "new-field": "+ нове поле",
-                        "date": "Дата створення (date)",
-                        "start-date": "Початок (startDate)",
-                        "end-date": "Кінець (endDate)",
-                        "start-time": "Час початку (startTime)",
-                        "end-time": "Час закінчення (endTime)",
-                        "check": "Поле статусу (check)",
-                        "hints": {
-                            "date": "Автоматично заповнюється при створенні нотатки. Не визначає початок події",
-                            "start-date": "Дата початку для багатоденних подій",
-                            "end-date": "Дата закінчення для багатоденних подій",
-                            "start-time": "Окреме поле часу початку (HH:mm)",
-                            "end-time": "Окреме поле часу закінчення",
-                            "check": "Поле для відмітки виконання (completed, done тощо)"
-                        }
-                    }
-                },
-                "board": {
-                    "column-width": "Ширина стовпців",
-                    "group-by-field": "Поле групування (статус)",
-                    "header-field": "Заголовок картки",
-                    "order-sync-field": "Поле синхронізації порядку",
-                    "freeze-columns": "Заморозити стовпці",
-                    "hints": {
-                        "column-width": "Ширина кожного стовпця в пікселях",
-                        "group-by-field": "Рядкове поле фронтметеру для групування карток по стовпцях",
-                        "header-field": "Поле для заголовків карток",
-                        "order-sync-field": "Числове поле для зберігання позицій карток"
-                    }
-                },
-                "gallery": {
-                    "card-width": "Ширина картки",
-                    "cover-field": "Поле обкладинки",
-                    "fit-style": "Стиль підгонки",
-                    "include-fields": "Включити поля",
-                    "fit-options": {
-                        "fill": "Заповнити",
-                        "fit": "Підігнати"
-                    },
-                    "hints": {
-                        "card-width": "Ширина кожної картки галереї в пікселях",
-                        "cover-field": "Текстове поле з шляхом до зображення",
-                        "include-fields": "Оберіть поля для відображення на картках"
-                    }
-                },
-                "table": {
-                    "hide-fields": "Приховати поля",
-                    "hints": {
-                        "hide-fields": "Оберіть поля для приховування в таблиці"
-                    },
-                    "hidden-fields": "Приховані поля",
-                    "show-all": "Показати всі поля"
-                },
-                "shared": {
-                    "icon-field": "Поле іконки",
-                    "hints": {
-                        "icon-field": "Поле з emoji або назвою lucide-іконки. Показується як іконка запису."
-                    }
-                },
-                "none": "— Немає —"
-            }
+            "advanced-filter": {
+              "toolbar-help": "Довідка",
+              "hint-valid": "✓ Формула коректна",
+              "hint-error": "⚠ {{count}} помилок",
+              "hint-ctrl-space": "Ctrl+Space — підказки",
+              "textarea-placeholder": "Почніть вводити формулу або натисніть Ctrl+Space...",
+              "help-title-logical": "🔗 Логічні",
+              "help-title-strings": "📝 Рядки",
+              "help-title-checks": "🔍 Перевірки",
+              "help-title-dates": "📅 Дати",
+              "help-title-arrays": "📋 Масиви / Теги",
+              "help-title-operators": "⚙ Оператори",
+              "help-examples-title": "Приклади:",
+              "snippet-active-tasks": "📌 Активні завдання",
+              "snippet-active-tasks-desc": "Активні з датою",
+              "snippet-urgent-overdue": "🔥 Термінові прострочені",
+              "snippet-urgent-overdue-desc": "Прострочені + urgent",
+              "snippet-this-week": "📅 Завдання на цей тиждень",
+              "snippet-this-week-desc": "Все на цьому тижні",
+              "snippet-undated-overdue": "🗓 Без дати або прострочені",
+              "snippet-undated-overdue-desc": "Порожня дата АБО прострочено"
+            },
+            "icon-picker": {
+              "lucide-tab": "Іконки",
+              "emoji-tab": "Емодзі",
+              "search-placeholder": "Пошук..."
+            },
+            "no-lists": "Немає користувацьких списків",
+            "create-list": "Створити список"
+          }
         },
-        "onboarding": {
-            "title": "Почніть роботу з Projects Plus",
-            "description": "Projects Plus дозволяє керувати групами пов'язаних нотаток за допомогою <a>front matter</a>. Наприклад, папка з публікаціями блогу, над якими ви працюєте.",
-            "front-matter-link": "front matter",
-            "explore": "Почніть з нуля або спробуйте демо-проєкт 👇",
-            "create-new": "Створити новий проєкт",
-            "try-demo": "Спробувати демо-проєкт",
-            "try-demo-tooltip": "Створює нову папку в корені сховища з прикладами нотаток.",
-            "hint": "Наступного разу ви можете створювати проєкти будь-яким з наступних способів:",
-            "tab-projects-view": "Вигляд проєктів",
-            "tab-command-palette": "Палітра команд",
-            "tab-file-explorer": "Провідник файлів",
-            "file-explorer-step1": "Клікніть правою кнопкою на папку в <strong>Провіднику файлів</strong>.",
-            "file-explorer-step2": "Натисніть <strong>Створити проєкт в папці</strong>.",
-            "command-palette-step1": "Відкрийте <strong>Палітру команд</strong>.",
-            "command-palette-step2": "Знайдіть <strong>Створити новий проєкт</strong>",
-            "command-palette-step3": "Натисніть <strong>Enter</strong>.",
-            "projects-view-step1": "У правому верхньому куті <strong>Projects Plus</strong> натисніть <strong>Новий</strong>.",
-            "projects-view-step2": "Натисніть <strong>Новий проєкт</strong>."
-        },
-        "common": {
-            "yesterday": "Вчора",
-            "tomorrow": "Завтра",
-            "close": "Закрити",
-            "total": "Всього",
-            "open-in-new-window": "Ctrl+Click: відкрити в новому вікні",
-            "open-in-tab": "Відкрити в новій вкладці",
-            "open-in-window": "Відкрити в новому вікні",
-            "save": "Зберегти",
-            "cancel": "Скасувати",
-            "delete": "Видалити",
-            "menu": "Меню",
-            "rename": "Перейменувати",
-            "open-note": "Відкрити нотатку",
-            "select-color": "Обрати колір",
-            "value-placeholder": "Значення...",
-            "select-date": "Оберіть дату",
-            "view-switcher": "Перемикання видів",
-            "edit-project": "Редагувати проект",
-            "delete-project": "Видалити проект",
-            "select-project": "Вибір проекту",
-            "syntax-help": "Довідка з синтаксису",
-            "date-placeholder": "РРРР-ММ-ДД",
-            "datetime-placeholder": "РРРР-ММ-ДД ГГ:ХХ",
-            "field": "Поле",
-            "projects": "Проекти",
-            "create-project": "Створити проект",
-            "select-date-time": "Оберіть дату і час",
-            "enable": "Увімкнути",
-            "disable": "Вимкнути",
-            "remove": "Видалити",
-            "apply": "Застосувати",
-            "field-placeholder": "Поле",
-            "add-criterion": "Додати критерій"
-        },
-        "relation-setup": {
-            "open": "Зв’язати з базою…",
-            "saved": "Зв’язок збережено.",
-            "target-unavailable": "Не вдалося завантажити вибрану базу.",
-            "title": "Зв’язати з базою",
-            "description": "Значення залишаються WikiLinks у Markdown. Попередній перегляд нічого не змінює.",
-            "property-label": "Властивість",
-            "database-label": "База даних",
-            "database-placeholder": "Оберіть базу…",
-            "display-field-label": "Поле відображення",
-            "display-field-placeholder": "наприклад, title",
-            "inverse-enable-label": "Створити зворотну властивість у схемі",
-            "inverse-field-label": "Ім’я зворотної властивості",
-            "inverse-warning": "Зворотня властивість буде оголошена лише після збереження. Наявні нотатки не перезаписуються.",
-            "preview-resolved": "Збіги: {{count}}",
-            "preview-unmatched": "Не знайдено: {{count}}",
-            "preview-ambiguous": "Неоднозначно: {{count}}",
-            "cancel": "Скасувати",
-            "save": "Зберегти зв’язок"
-        },
-        "relation-count": {
-            "linked": "Пов’язано: {{count}}",
-            "empty": "Пов’язаних записів немає"
+        "heatmap": {
+          "less": "Менше",
+          "more": "Більше",
+          "events": "подій",
+          "clickToViewMonth": "Натисніть для перегляду місяця",
+          "previousYear": "Попередній рік",
+          "nextYear": "Наступний рік",
+          "loading": "Завантаження...",
+          "noData": "Немає даних"
         }
+      },
+      "gallery": {
+        "name": "Галерея",
+        "fields": {
+          "cover": "Обкладинка",
+          "none": "Нічого"
+        },
+        "fit-style": {
+          "fill": "Заповнити зображення",
+          "fit": "За розміром зображення"
+        },
+        "include-fields": "Включити поля",
+        "settings": {
+          "name": "Налаштування галереї",
+          "card-width": {
+            "name": "Ширина картки",
+            "description": "Ширина кожної картки у пікселях."
+          }
+        },
+        "empty": "Цей вигляд порожній."
+      },
+      "dashboard": {
+        "name": "База даних",
+        "add-row": "Нова нотатка",
+
+        "table": {
+          "header-hint": "Клацніть правою кнопкою по заголовку колонки, щоб перейменувати, змінити тип, сховати, закріпити або перевпорядкувати. Потягніть край, щоб змінити ширину.",
+          "row-height": "Висота рядка",
+          "row-height-compact": "Компактна",
+          "row-height-default": "За замовчуванням",
+          "row-height-expanded": "Простора",
+          "wrap-text": "Переносити текст у клітинках",
+          "show-aggregation": "Показувати рядок підсумків",
+          "freeze-up-to": "Закріпити колонки до поля",
+          "column-menu": {
+            "property-type": "Тип властивості",
+            "property-type-auto": "Авто",
+            "rollup-mode": "Режим rollup"
+          }
+        },
+        "canvas": {
+          "widgets": "Віджети",
+          "hide-toolbar": "Сховати панель віджетів",
+          "show-toolbar": "Показати панель віджетів",
+          "toggle-layout": "Перемкнути макет",
+          "layout-grid": "Сітка",
+          "layout-stack": "Список",
+          "hide-formula-bar": "Сховати редактор формул",
+          "show-formula-bar": "Показати редактор формул",
+          "formula-builder": "Формули",
+          "schema": "Схема",
+          "schema-tip": "Керування полями проекту — типи, зв'язки, зведення",
+          "filter-bridge-global": "Глобальний фільтр: {{count}} умов",
+          "filter-bridge-local": "Локальний: {{field}} = {{value}}",
+          "filter-bridge-clear": "Скинути локальний фільтр",
+          "filter-bridge-promote": "Зберегти як глобальний фільтр"
+        },
+        "field-presets": {
+          "label": "Макет",
+          "title": "Пресети макета колонок",
+          "aria-label": "Пресети макета колонок",
+          "save-current": "Зберегти поточний макет…",
+          "apply": "Застосувати",
+          "rename": "Перейменувати",
+          "delete": "Видалити",
+          "detach": "Від'єднати пресет",
+          "prompt-new": "Назва пресета макета:",
+          "prompt-rename": "Перейменувати пресет:",
+          "confirm-delete": "Видалити цей пресет макета?"
+        },
+        "widget": {
+          "expand": "Розгорнути віджет",
+          "collapse": "Згорнути віджет",
+          "chart-settings": "Налаштування діаграми",
+          "pipeline": "Конвеєр: перетворіть дані перед показом — групуйте, рахуйте, сортуйте",
+          "remove": "Видалити віджет",
+          "not-configured": "Тип віджета \"{{type}}\" — не налаштовано",
+          "add": "Додати віджет",
+          "add-aria": "Додати віджет"
+        },
+        "quick": {
+          "group": "Швидкі дії",
+          "formula": "Конструктор формул"
+        },
+        "types": {
+          "data-table": "Таблиця даних",
+          "chart": "Діаграма",
+          "stats": "Статистика",
+          "comparison": "Порівняння",
+          "checklist": "Чекліст",
+          "view-port": "Вікно перегляду",
+          "filter-tabs": "Вкладки фільтрів",
+          "summary-row": "Підсумковий рядок"
+        },
+        "formula": {
+          "title": "Редактор формул",
+          "hint": "Ctrl+Enter щоб застосувати, Esc для скасування",
+          "field-name": "Назва поля",
+          "field-placeholder": "напр. Підсумковий бюджет",
+          "expression-placeholder": "напр. IF(Status = \"Active\", Budget * 1.2, 0)",
+          "preview": "Попередній перегляд:",
+          "cancel": "Скасувати",
+          "apply": "Застосувати",
+          "mode-code": "Код",
+          "mode-visual": "Візуальний",
+          "visual-empty": "Натисніть, щоб додати блок формули",
+          "visual-parse-error": "Неможливо відобразити у візуальному режимі — перейдіть на Код",
+          "signature-returns": "повертає",
+          "signature-category": "категорія",
+          "help-category": {
+            "logical": "Логічні",
+            "math": "Математика",
+            "string": "Рядки",
+            "date": "Дати",
+            "financial": "Фінанси",
+            "statistical": "Статистика",
+            "array": "Масиви",
+            "conversion": "Перетворення",
+            "utility": "Утиліти"
+          },
+          "debug-title": "Діагностика",
+          "debug-cursor": "Позиція курсора",
+          "debug-copy": "Копіювати помилку",
+          "debug-dismiss": "Приховати",
+          "runtime-error": "Помилка виконання"
+        },
+        "block-filter": {
+          "aria": "Фільтр блоку",
+          "add": "Фільтр",
+          "remove": "Прибрати умову",
+          "scope": "Цей блок — усі його подання"
+        },
+        "pipeline": {
+          "title": "Розширені перетворення",
+          "advanced-hint": "Звичайні фільтри та групування тепер живуть у самому поданні — ці кроки змінюють форму даних.",
+          "steps": "крок(ів)",
+          "clear": "Очистити",
+          "empty": {
+            "title": "Перетворіть дані перед показом",
+            "beforeLabel": "Було",
+            "afterLabel": "Стало",
+            "caption": "Виберіть крок нижче — групуйте, рахуйте, фільтруйте або сортуйте.",
+            "sampleBefore": [
+              "Віджимання — 30",
+              "Віджимання — 25",
+              "Присідання — 50",
+              "Присідання — 40",
+              "Планка — 60"
+            ],
+            "sampleAfter": [
+              "Віджимання — 55 разом",
+              "Присідання — 90 разом",
+              "Планка — 60 разом"
+            ]
+          },
+          "move-up": "Вгору",
+          "move-down": "Вниз",
+          "remove": "Видалити",
+          "add-step": "Додати крок перетворення",
+          "filter": "Фільтр",
+          "group-by": "Групування",
+          "aggregate": "Агрегація",
+          "compute": "Обчислення",
+          "unpivot": "Розвертка",
+          "pivot": "Зведена",
+          "join": "Об'єднання",
+          "join-right-source": "Праве джерело",
+          "join-left-key": "Лівий ключ",
+          "join-right-key": "Правий ключ",
+          "join-right-key-placeholder": "назва поля в правому джерелі",
+          "join-how": "Тип об'єднання",
+          "join-inner": "Внутрішнє (відкидати невідповідні)",
+          "join-left": "Ліве (зберігати, невідповідні — null)",
+          "join-aggregate": "Агрегувати кілька збігів справа",
+          "join-no-sources": "Немає доступних проєктів як праве джерело.",
+          "aggregate-function": "Функція агрегації",
+          "none": "(немає)",
+          "columns": "стовпець(ів)",
+          "groups": "група(и)",
+          "unset": "(не задано)",
+          "live": "Зміни застосовуються одразу",
+          "done": "Готово",
+          "flow-tip": "Записів на вході → на виході кроку",
+          "unknown": "Невідомо",
+          "unnest-suggestion-title": "Виявлено поля-масиви",
+          "unnest-suggestion-body": "Поля {{fields}} містять масиви. Використайте Unnest, щоб розгорнути кожен елемент в окремий рядок.",
+          "unnest-suggestion-button": "Розгорнути «{{field}}»",
+          "disable-step": "Вимкнути крок",
+          "enable-step": "Увімкнути крок"
+        },
+        "database-call": {
+          "empty": "Вигляди не налаштовані",
+          "add-first": "Додати перший вигляд",
+          "no-records": "Ще немає записів",
+          "add-first-record": "Додати перший запис",
+          "no-matches": "Немає збігів",
+          "clear-filter": "Очистити фільтр",
+          "pipeline-hid-all": "Конвеєр не повернув жодного рядка (кроків: {{count}})",
+          "open-pipeline": "Відкрити конвеєр",
+          "clear-pipeline": "Очистити конвеєр",
+          "settings": {
+            "source": "Джерело даних",
+            "source-inherit": "Дані цього вью (за замовчуванням)",
+            "source-hint": "За замовчуванням блок показує записи цього вью. Виберіть інший проєкт, щоб показати його дані.",
+            "link-to": "Зв'язати з блоком",
+            "standalone": "Без зв'язку — показати всі записи",
+            "link-hint": "Без зв'язку блок показує всі записи. Зі зв'язком — лише записи, пов'язані з вибраним блоком.",
+            "relation-field": "Фільтрувати за полем",
+            "select-field": "Виберіть поле"
+          }
+        },
+        "group": {
+          "empty": "(порожньо)"
+        },
+        "chart": {
+          "no-data": "Немає даних",
+          "type": "Тип діаграми",
+          "x-axis": "Вісь X",
+          "y-axis": "Вісь Y",
+          "aggregation": "Агрегація",
+          "sort-by": "Сортування",
+          "height": "Висота",
+          "granularity": "Групувати дати за",
+          "granularities": {
+            "day": "Днем",
+            "week": "Тижнем",
+            "month": "Місяцем",
+            "quarter": "Кварталом",
+            "year": "Роком"
+          },
+          "types": {
+            "bar": "Стовпці",
+            "horizontal-bar": "Горизонтальні стовпці",
+            "stacked-bar": "Стовпці з накопиченням",
+            "line": "Лінія",
+            "area": "Область",
+            "pie": "Кругова",
+            "donut": "Кільцева",
+            "number": "Число / KPI",
+            "progress": "Прогрес",
+            "scatter": "Точкова"
+          },
+          "aggregations": {
+            "sum": "Сума",
+            "average": "Середнє",
+            "min": "Мінімум",
+            "max": "Максимум",
+            "median": "Медіана",
+            "count": "Кількість",
+            "unique": "Унікальні"
+          },
+          "sort": {
+            "label": "Мітка",
+            "value": "Значення",
+            "manual": "Вручну"
+          },
+          "group-mode": {
+            "label": "Групування статусів",
+            "values": "Значення",
+            "semantic": "Семантичні групи"
+          },
+          "heights": {
+            "small": "Маленька",
+            "medium": "Середня",
+            "large": "Велика"
+          },
+          "options": {
+            "grid": "Сітка",
+            "labels": "Підписи",
+            "values": "Значення",
+            "legend": "Легенда",
+            "hide-zero": "Приховати нулі",
+            "cumulative": "Накопичувально"
+          },
+          "scatter": {
+            "color-by": "Колір за",
+            "size-by": "Розмір за",
+            "trend-line": "Лінія тренду",
+            "r-squared": "Показати R²",
+            "point-size": "Розмір точки",
+            "opacity": "Прозорість",
+            "none": "(немає)",
+            "correlate-enable": "Кореляція з іншим джерелом",
+            "correlate-hint": "X береться з джерела віджета; Y — з обраного правого джерела, зіставлення за ключем з'єднання.",
+            "right-source": "Праве джерело (Y)",
+            "left-key": "Лівий ключ (цей джерело)",
+            "right-key": "Правий ключ (праве джерело)",
+            "right-key-placeholder": "назва поля в правому джерелі",
+            "no-sources": "У сховищі немає інших проєктів.",
+            "warn-missing-right": "Праве джерело не завантажене. Перевірте обраний id та доступність сусіднього проєкту.",
+            "warn-no-matches": "Немає збігів по ключу з'єднання. Перевірте імена лівого/правого ключів та перетин значень.",
+            "warn-mostly-unmatched": "Збіглося лише {{matched}} з {{total}} записів — результати можуть бути спотворені."
+          },
+          "section": {
+            "display": "Налаштування відображення",
+            "data": "Дані",
+            "scatter": "Точкова діаграма"
+          }
+        },
+        "comparison": {
+          "empty": "Налаштуйте метрики порівняння",
+          "metric-a": "Метрика A",
+          "metric-b": "Метрика B"
+        },
+        "filter-tabs": {
+          "all": "Всі",
+          "config": {
+            "title": "Вкладки фільтра",
+            "subtitle": "Виберіть поле — віджет збере вкладки з унікальних значень. Або задайте вкладки вручну для фіксованого набору.",
+            "field": "Поле фільтра",
+            "auto": "Автовизначені значення",
+            "seed": "Використати як вкладки",
+            "seed-tip": "Скопіювати значення в редаговані вкладки",
+            "add": "Додати вкладку",
+            "tab-label": "Підпис",
+            "tab-value": "Значення"
+          }
+        },
+        "stats": {
+          "config": {
+            "title": "Картки статистики",
+            "subtitle": "Кожна картка — одна агрегація за даними (після конвеєра). Поле * = кількість записів.",
+            "empty": "Поки немає карток. Додайте, щоб показати KPI-плитку.",
+            "add": "Додати картку",
+            "columns": "Колонок у сітці",
+            "label": "Підпис",
+            "field": "Поле",
+            "aggregation": "Агрегація",
+            "format": "Формат",
+            "currency": "Символ",
+            "sparkline": "Спарклайн",
+            "fmt-number": "Число",
+            "fmt-percent": "Відсоток",
+            "fmt-currency": "Валюта",
+            "fmt-duration": "Тривалість"
+          }
+        },
+        "agg": {
+          "count_total": "Кількість",
+          "count_values": "Заповнено",
+          "count_unique": "Унікальних",
+          "sum": "Сума",
+          "avg": "Середнє",
+          "median": "Медіана",
+          "min": "Мінімум",
+          "max": "Максимум",
+          "range": "Розмах",
+          "count_checked": "Відмічено",
+          "count_unchecked": "Не відмічено",
+          "percent_checked": "% відмічених",
+          "percent_unchecked": "% не відмічених",
+          "percent_empty": "% порожніх",
+          "percent_not_empty": "% заповнених",
+          "earliest": "Рання дата",
+          "latest": "Пізня дата"
+        },
+        "checklist": {
+          "select-field": "Оберіть булеве поле",
+          "no-items": "Немає записів",
+          "done": "виконано",
+          "config": {
+            "check-field": "Поле-прапорець",
+            "check-field-placeholder": "напр. completed",
+            "label-field": "Поле підпису",
+            "label-field-placeholder": "name",
+            "limit": "Ліміт",
+            "limit-placeholder": "0 = без ліміту",
+            "show": "Показувати",
+            "show-all": "Усі нотатки",
+            "show-done": "Лише виконані",
+            "show-open": "Лише відкриті",
+            "sort-field": "Поле сортування",
+            "sort-field-placeholder": "name",
+            "sort-order": "Порядок"
+          }
+        },
+        "viewport": {
+          "select": "Оберіть подання для вбудовування",
+          "change": "Змінити вбудоване подання",
+          "embedded": "Вбудоване подання: {{label}}",
+          "embed-title": "Вбудувати подання",
+          "table": "Таблиця",
+          "board": "Дошка",
+          "calendar": "Календар",
+          "gallery": "Галерея"
+        }
+      }
+    },
+    "components": {
+      "filter-pills": {
+        "aria": "Фільтр",
+        "add": "Фільтр",
+        "remove": "Видалити умову"
+      },
+      "data-grid": {
+        "grid-label": "Таблиця даних",
+        "column": {
+          "configure": "Налаштувати поле",
+          "add": "Додати поле",
+          "insert-left": "Вставити зліва",
+          "insert-right": "Вставити зправа",
+          "rename": "Перейменувати поле",
+          "pin": "Закріпити поле",
+          "unpin": "Відкріпити поле",
+          "hide": "Приховати поле",
+          "delete": "Видалити поле"
+        },
+        "row": {
+          "add": "Додати нотатку",
+          "edit": "Редагувати нотатку",
+          "delete": "Видалити нотатку"
+        },
+        "cell": {
+          "clear": "Очистити подання"
+        },
+        "sort": {
+          "asc": "Сортувати А → Я",
+          "desc": "Сортувати Я → А"
+        },
+        "sortDate": {
+          "asc": "Сортувати Старі → Нові",
+          "desc": "Сортувати Нові → Старі"
+        }
+      },
+      "board": {
+        "column": {
+          "add": {
+            "name": "Додати стовпчик",
+            "placeholder": "Новий стовпець",
+            "no-status-field": "Status field required",
+            "derived-status-field": "Current status field is read-only"
+          },
+          "rename": "Перейменувати стовпець",
+          "delete": "Видалити стовпець",
+          "expand": "Розгорнути стовпець",
+          "collapse": "Згорнути стовпець",
+          "pin": "Закріпити стовпець",
+          "unpin": "Відкріпити стовпець",
+          "persist": "Зберігати при відсутності карток",
+          "unpersist": "Прибирати при відсутності карток"
+        }
+      },
+      "color": {
+        "label": "Колір",
+        "where": "Де",
+        "add": "Додати колір",
+        "add-to-favorites": "Додати в обране",
+        "project-palette": "Палітра проєкту",
+        "apply-color": "Застосувати колір",
+        "add-rule": "Додати правило",
+        "title": "Колірні правила",
+        "empty-hint": "Немає правил",
+        "pick-color": "Вибір кольору",
+        "favorites": "Обране",
+        "favorites-empty-hint": "Натисніть ⭐ щоб додати",
+        "hex-code": "HEX код",
+        "invalid-format": "Невірний формат",
+        "expand-palette": "Розгорнути палітру",
+        "collapse-palette": "Згорнути палітру"
+      },
+      "filter": {
+        "label": "Фільтр",
+        "where": "Де",
+        "and": "і",
+        "or": "або",
+        "add": "Додати умову",
+        "add-condition": "Додати умову",
+        "add-group": "Додати групу",
+        "conjunction-or": "АБО",
+        "conjunction-and": "І",
+        "match-all": "Усі умови",
+        "match-any": "Будь-яка умова",
+        "empty-hint": "Немає умов фільтрації",
+        "operators": {
+          "is-empty": "Порожньо",
+          "is-not-empty": "Не порожньо",
+          "is": "Дорівнює",
+          "is-any-of": "Одне з",
+          "is-not": "Не дорівнює",
+          "contains": "Містить",
+          "not-contains": "Не містить",
+          "starts-with": "Починається з",
+          "ends-with": "Закінчується на",
+          "regex": "Регулярний вираз",
+          "eq": "=",
+          "neq": "≠",
+          "lt": "<",
+          "gt": ">",
+          "lte": "≤",
+          "gte": "≥",
+          "is-checked": "Позначено",
+          "is-not-checked": "Не позначено",
+          "is-on": "Дата =",
+          "is-not-on": "Дата ≠",
+          "is-before": "До",
+          "is-after": "Після",
+          "is-on-and-before": "≤ Дата",
+          "is-on-and-after": "≥ Дата",
+          "is-today": "Сьогодні",
+          "is-this-week": "Цей тиждень",
+          "is-this-month": "Цей місяць",
+          "is-this-quarter": "Цей квартал",
+          "is-this-year": "Цей рік",
+          "is-past-week": "Минулий тиждень",
+          "is-past-month": "Минулий місяць",
+          "is-past-year": "Минулий рік",
+          "is-next-week": "Наступний тиждень",
+          "is-next-month": "Наступний місяць",
+          "is-next-year": "Наступний рік",
+          "is-last-n-days": "За останні N днів",
+          "is-next-n-days": "У найближчі N днів",
+          "is-overdue": "Прострочено",
+          "is-upcoming": "Майбутнє",
+          "has-any-of": "Будь-яке з",
+          "has-all-of": "Усі з",
+          "has-none-of": "Жодного з",
+          "has-keyword": "Ключове слово"
+        }
+      },
+      "sort": {
+        "label": "Сортувати",
+        "add": "Додати інше сортування",
+        "empty-hint": "Критерії не задані"
+      },
+      "tag": {
+        "edit": "Редагувати",
+        "remove": "Видалити"
+      },
+      "multi-text": {
+        "add": "Додати параметр"
+      },
+      "note": {
+        "edit": "Редагувати нотатку"
+      }
+    },
+    "toolbar": {
+      "view": {
+        "add": "Додати вигляд"
+      },
+      "projects": {
+        "none": "Немає проєктів",
+        "options": "Інші параметри"
+      },
+      "read-only": "Тільки читання",
+      "read-only-desc": "Ви не можете створювати або редагувати нотатки у проєктах лише для читання.",
+      "collapse": {
+        "show": "Показати панель",
+        "hide": "Сховати панель"
+      }
+    },
+    "settings": {
+      "about": {
+        "title": "Про Projects Plus",
+        "description": "Розширене управління проєктами для Obsidian з додатковими функціями.",
+        "author": "Мейнтейнер",
+        "author-name": "Park Pavel",
+        "original-author": "Оригінальний автор",
+        "original-author-name": "Marcus Olsson",
+        "version": "Версія",
+        "version-number": "3.0.5",
+        "credits": "Подяки",
+        "credits-desc": "Це форк спільноти оригінального плагіна Obsidian Projects від Marcus Olsson.",
+        "support": "Підтримка",
+        "support-desc": "Якщо цей плагін корисний для вас, розгляньте підтримку розробки.",
+        "visit-website": "Відвідати сайт",
+        "github": "GitHub",
+        "star-github": "⭐ Зірка на GitHub",
+        "original-repo": "Оригінальний репозиторій",
+        "languages": "Підтримувані мови",
+        "languages-desc": "Доступні мови: English, Русский, Українська, 中文 (автоматичне визначення на основі системної мови)"
+      },
+      "general": {
+        "size-limit": {
+          "name": "Обмеження розміру проєкта",
+          "desc": "Уникати випадкового завантаження занадто багатьох нотаток."
+        },
+        "link-behavior": {
+          "name": "Поведінка посилання",
+          "desc": "Визначає, що відбувається, коли ви вибираєте нотатку. Натисніть {{modifier}} для вибору посилання для протилежної поведінки.",
+          "options": {
+            "open-editor": "Відкрити редактор",
+            "open-note": "Відкрити нотатку"
+          }
+        },
+        "start-of-week": {
+          "name": "Почати тиждень з",
+          "options": {
+            "sunday": "Неділя",
+            "monday": "Понеділок",
+            "default": "За замовчуванням"
+          }
+        },
+        "mobile-calendar": {
+          "name": "Вигляд календаря на мобільних",
+          "desc": "Типовий вигляд календаря на мобільних пристроях.",
+          "options": {
+            "month": "Місяць",
+            "week": "Тиждень",
+            "day": "День"
+          }
+        },
+        "animation-behavior": {
+          "name": "Поведінка анімації",
+          "desc": "Контроль анімацій прокрутки в плагіні",
+          "options": {
+            "smooth": "Плавна (анімована)",
+            "instant": "Миттєва (без анімації)"
+          }
+        },
+        "disable-haptic": {
+          "name": "Вимкнути вібровідгук",
+          "desc": "Вимкнути вібрацію під час перетягування на мобільних пристроях"
+        }
+      },
+      "front-matter": {
+        "heading": "Front matter",
+        "quote-strings": {
+          "name": "Цитований рядок",
+          "options": {
+            "plain": "За потреби",
+            "quote-double": "Завжди"
+          }
+        }
+      },
+      "commands": {
+        "name": "Команди",
+        "desc": "Додайте команди для Ваших улюблених проєктів та переглядів."
+      },
+      "archives": {
+        "name": "Архіви",
+        "desc": "Відновіть або видаліть архівні проєкти.",
+        "empty": "Немає архівованих проєктів."
+      }
+    },
+    "errors": {
+      "missingDataview": {
+        "title": "Dataview вимкнений",
+        "message": "Увімкніть плагін Dataview, щоб продовжити використовувати цей проєкт."
+      },
+      "boundary": {
+        "title": "Щось пішло не так",
+        "message": "Під час рендерингу компонента сталася помилка.",
+        "retry": "Спробувати знову",
+        "details": "Деталі помилки"
+      }
+    },
+    "database": {
+      "cell-editor": {
+        "errors": {
+          "boolean": "Введіть true або false.",
+          "number": "Введіть коректне число.",
+          "date": "Формат РРРР-ММ-ДД.",
+          "datetime": "Формат ISO 8601 (напр. 2026-05-01T12:30).",
+          "color": "#hex-колір (3, 4, 6 або 8 знаків).",
+          "list": "Введіть значення через кому.",
+          "scalar": "Некоректне значення для цього типу."
+        }
+      },
+      "rollup": {
+        "modes": {
+          "show-original": "Показати як є",
+          "show-unique": "Показати унікальні",
+          "count-all": "Рахувати всі",
+          "count-values": "Рахувати значення",
+          "count-unique": "Рахувати унікальні",
+          "count-empty": "Рахувати порожні",
+          "count-not-empty": "Рахувати непорожні",
+          "percent-empty": "Відсоток порожніх",
+          "percent-not-empty": "Відсоток непорожніх",
+          "percent-per-group": "Відсоток за групами",
+          "sum": "Сума",
+          "average": "Середнє",
+          "min": "Мінімум",
+          "max": "Максимум",
+          "median": "Медіана",
+          "range": "Діапазон",
+          "earliest": "Найраніша",
+          "latest": "Найпізніша"
+        }
+      }
+    },
+    "obsidian": {
+      "ribbon-tooltip": "Відкриті проєкти",
+      "hover-link-settings": "Проєкти"
+    },
+    "navigation": {
+      "active-project": "Активний проєкт"
+    },
+    "nav": {
+      "project-switcher": {
+        "tooltip": "Перемкнути проєкт",
+        "search-placeholder": "Пошук проєктів..."
+      }
+    },
+    "settings-menu": {
+      "title": "Налаштування",
+      "tabs": {
+        "projects": "Проєкти",
+        "views": "Вигляди",
+        "filters": "Фільтри",
+        "colors": "Кольори",
+        "sort": "Сортування",
+        "view-config": "Вигляд"
+      },
+      "done": "Готово",
+      "views": {
+        "title": "Керування виглядами",
+        "show-titles": "Показувати назви виглядів",
+        "select-view": "Обрати вигляд",
+        "rename": "Перейменувати",
+        "duplicate": "Дублювати",
+        "delete": "Видалити",
+        "add-view": "Додати вигляд",
+        "drag-to-reorder": "Перетягніть для зміни порядку"
+      },
+      "view-config": {
+        "title": "Налаштування вигляду",
+        "current-view": "Поточний вигляд",
+        "no-view": "Немає активного вигляду",
+        "calendar": {
+          "interval": "Інтервал",
+          "layout": "Макет",
+          "time-format": "Формат часу",
+          "timezone": "Часовий пояс",
+          "show-agenda": "Показати агенду",
+          "hide-agenda": "Сховати агенду",
+          "hints": {
+            "timezone": "напр. Europe/Kyiv або local"
+          },
+          "timeline": {
+            "title": "Налаштування шкали",
+            "start-hour": "Час початку",
+            "end-hour": "Час завершення",
+            "event-color-field": "Поле кольору події",
+            "show-weekends": "Показувати вихідні",
+            "show-all-day": "Показувати секцію 'Весь день'",
+            "hints": {
+              "event-color-field": "Поле для кольору подій (необов'язково)",
+              "event-color-placeholder": "напр. status, priority"
+            }
+          },
+          "interval-options": {
+            "year": "Рік",
+            "day": "День",
+            "week": "Тиждень",
+            "month": "Місяць"
+          },
+          "layout-options": {
+            "headers": "Заголовки (класичний)",
+            "bars": "Бари (шкала)"
+          },
+          "field-mapping": {
+            "title": "Зіставлення полів",
+            "hint": "Оберіть існуюче поле зі списку або введіть назву нового поля",
+            "placeholder": "Введіть або оберіть поле",
+            "new-field": "+ нове поле",
+            "date": "Дата створення (date)",
+            "start-date": "Початок (startDate)",
+            "end-date": "Кінець (endDate)",
+            "start-time": "Час початку (startTime)",
+            "end-time": "Час закінчення (endTime)",
+            "check": "Поле статусу (check)",
+            "hints": {
+              "date": "Автоматично заповнюється при створенні нотатки. Не визначає початок події",
+              "start-date": "Дата початку для багатоденних подій",
+              "end-date": "Дата закінчення для багатоденних подій",
+              "start-time": "Окреме поле часу початку (HH:mm)",
+              "end-time": "Окреме поле часу закінчення",
+              "check": "Поле для відмітки виконання (completed, done тощо)"
+            }
+          }
+        },
+        "board": {
+          "column-width": "Ширина стовпців",
+          "group-by-field": "Поле групування (статус)",
+          "header-field": "Заголовок картки",
+          "order-sync-field": "Поле синхронізації порядку",
+          "freeze-columns": "Заморозити стовпці",
+          "hints": {
+            "column-width": "Ширина кожного стовпця в пікселях",
+            "group-by-field": "Рядкове поле фронтметеру для групування карток по стовпцях",
+            "header-field": "Поле для заголовків карток",
+            "order-sync-field": "Числове поле для зберігання позицій карток"
+          }
+        },
+        "gallery": {
+          "card-width": "Ширина картки",
+          "cover-field": "Поле обкладинки",
+          "fit-style": "Стиль підгонки",
+          "include-fields": "Включити поля",
+          "fit-options": {
+            "fill": "Заповнити",
+            "fit": "Підігнати"
+          },
+          "hints": {
+            "card-width": "Ширина кожної картки галереї в пікселях",
+            "cover-field": "Текстове поле з шляхом до зображення",
+            "include-fields": "Оберіть поля для відображення на картках"
+          }
+        },
+        "table": {
+          "hide-fields": "Приховати поля",
+          "hints": {
+            "hide-fields": "Оберіть поля для приховування в таблиці"
+          },
+          "hidden-fields": "Приховані поля",
+          "show-all": "Показати всі поля"
+        },
+        "shared": {
+          "icon-field": "Поле іконки",
+          "hints": {
+            "icon-field": "Поле з emoji або назвою lucide-іконки. Показується як іконка запису."
+          }
+        },
+        "none": "— Немає —"
+      }
+    },
+    "onboarding": {
+      "title": "Почніть роботу з Projects Plus",
+      "description": "Projects Plus дозволяє керувати групами пов'язаних нотаток за допомогою <a>front matter</a>. Наприклад, папка з публікаціями блогу, над якими ви працюєте.",
+      "front-matter-link": "front matter",
+      "explore": "Почніть з нуля або спробуйте демо-проєкт 👇",
+      "create-new": "Створити новий проєкт",
+      "try-demo": "Спробувати демо-проєкт",
+      "try-demo-tooltip": "Створює нову папку в корені сховища з прикладами нотаток.",
+      "hint": "Наступного разу ви можете створювати проєкти будь-яким з наступних способів:",
+      "tab-projects-view": "Вигляд проєктів",
+      "tab-command-palette": "Палітра команд",
+      "tab-file-explorer": "Провідник файлів",
+      "file-explorer-step1": "Клікніть правою кнопкою на папку в <strong>Провіднику файлів</strong>.",
+      "file-explorer-step2": "Натисніть <strong>Створити проєкт в папці</strong>.",
+      "command-palette-step1": "Відкрийте <strong>Палітру команд</strong>.",
+      "command-palette-step2": "Знайдіть <strong>Створити новий проєкт</strong>",
+      "command-palette-step3": "Натисніть <strong>Enter</strong>.",
+      "projects-view-step1": "У правому верхньому куті <strong>Projects Plus</strong> натисніть <strong>Новий</strong>.",
+      "projects-view-step2": "Натисніть <strong>Новий проєкт</strong>."
+    },
+    "common": {
+      "yesterday": "Вчора",
+      "tomorrow": "Завтра",
+      "close": "Закрити",
+      "total": "Всього",
+      "open-in-new-window": "Ctrl+Click: відкрити в новому вікні",
+      "open-in-tab": "Відкрити в новій вкладці",
+      "open-in-window": "Відкрити в новому вікні",
+      "save": "Зберегти",
+      "cancel": "Скасувати",
+      "delete": "Видалити",
+      "menu": "Меню",
+      "rename": "Перейменувати",
+      "open-note": "Відкрити нотатку",
+      "select-color": "Обрати колір",
+      "value-placeholder": "Значення...",
+      "select-date": "Оберіть дату",
+      "view-switcher": "Перемикання видів",
+      "edit-project": "Редагувати проект",
+      "delete-project": "Видалити проект",
+      "select-project": "Вибір проекту",
+      "syntax-help": "Довідка з синтаксису",
+      "date-placeholder": "РРРР-ММ-ДД",
+      "datetime-placeholder": "РРРР-ММ-ДД ГГ:ХХ",
+      "field": "Поле",
+      "projects": "Проекти",
+      "create-project": "Створити проект",
+      "select-date-time": "Оберіть дату і час",
+      "enable": "Увімкнути",
+      "disable": "Вимкнути",
+      "remove": "Видалити",
+      "apply": "Застосувати",
+      "field-placeholder": "Поле",
+      "add-criterion": "Додати критерій"
+    },
+    "relation-setup": {
+      "open": "Зв’язати з базою…",
+      "saved": "Зв’язок збережено.",
+      "target-unavailable": "Не вдалося завантажити вибрану базу.",
+      "title": "Зв’язати з базою",
+      "description": "Значення залишаються WikiLinks у Markdown. Попередній перегляд нічого не змінює.",
+      "property-label": "Властивість",
+      "database-label": "База даних",
+      "database-placeholder": "Оберіть базу…",
+      "display-field-label": "Поле відображення",
+      "display-field-placeholder": "наприклад, title",
+      "inverse-enable-label": "Створити зворотну властивість у схемі",
+      "inverse-field-label": "Ім’я зворотної властивості",
+      "inverse-warning": "Зворотня властивість буде оголошена лише після збереження. Наявні нотатки не перезаписуються.",
+      "preview-resolved": "Збіги: {{count}}",
+      "preview-unmatched": "Не знайдено: {{count}}",
+      "preview-ambiguous": "Неоднозначно: {{count}}",
+      "cancel": "Скасувати",
+      "save": "Зберегти зв’язок"
+    },
+    "relation-count": {
+      "linked": "Пов’язано: {{count}}",
+      "empty": "Пов’язаних записів немає"
     }
+  }
 }

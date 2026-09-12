@@ -6,8 +6,12 @@
  * @module dnd
  */
 
-export * from './types';
-export * from './SnapEngine';
-export * from './HapticManager';
-export { TimelineDragManager } from './TimelineDragManager';
-export type { OnDragCommit, TimelineConfig, DayColumnRef } from './TimelineDragManager';
+export * from "./types";
+export * from "./SnapEngine";
+export * from "./HapticManager";
+export { TimelineDragManager } from "./TimelineDragManager";
+export type {
+  OnDragCommit,
+  TimelineConfig,
+  DayColumnRef,
+} from "./TimelineDragManager";

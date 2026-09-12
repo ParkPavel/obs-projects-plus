@@ -82,7 +82,7 @@ export function inferType(value: unknown): PropertyType {
 
 /** Read the `pp_types` map from frontmatter, dropping non-string entries. */
 export function readPropertyTypes(
-  frontmatter: Record<string, unknown> | null | undefined,
+  frontmatter: Record<string, unknown> | null | undefined
 ): Record<string, PropertyType> {
   if (!frontmatter) return {};
   const raw = frontmatter[TYPES_KEY];
@@ -105,7 +105,7 @@ export function readPropertyTypes(
 export function resolveType(
   key: string,
   value: unknown,
-  overrides: Record<string, PropertyType>,
+  overrides: Record<string, PropertyType>
 ): PropertyType {
   return overrides[key] ?? inferType(value);
 }

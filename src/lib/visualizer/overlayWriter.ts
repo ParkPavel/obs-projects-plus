@@ -13,21 +13,19 @@
  */
 
 import type { App, TFile } from "obsidian";
-import {
-  OVERLAY_KEY,
-  compactOverlay,
-  type NoteOverlay,
-} from "./overlay";
+import { OVERLAY_KEY, compactOverlay, type NoteOverlay } from "./overlay";
 
 type ProcessFn = (
   file: TFile,
-  fn: (frontmatter: Record<string, unknown>) => void,
+  fn: (frontmatter: Record<string, unknown>) => void
 ) => Promise<void>;
 
 function getProcessFrontMatter(app: App): ProcessFn | null {
-  const fm = (app.fileManager as unknown as {
-    processFrontMatter?: ProcessFn;
-  }).processFrontMatter;
+  const fm = (
+    app.fileManager as unknown as {
+      processFrontMatter?: ProcessFn;
+    }
+  ).processFrontMatter;
   return typeof fm === "function" ? fm.bind(app.fileManager) : null;
 }
 
@@ -42,7 +40,7 @@ function getProcessFrontMatter(app: App): ProcessFn | null {
 export async function writeOverlay(
   app: App,
   file: TFile,
-  overlay: NoteOverlay,
+  overlay: NoteOverlay
 ): Promise<boolean> {
   const processFn = getProcessFrontMatter(app);
   if (!processFn) return false;

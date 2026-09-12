@@ -20,7 +20,11 @@ import {
   aggregationOptionsFor,
 } from "src/lib/dashboard-engine/aggregationOptions";
 import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
-import { DataFieldType, type DataField, type DataRecord } from "src/lib/dataframe/dataframe";
+import {
+  DataFieldType,
+  type DataField,
+  type DataRecord,
+} from "src/lib/dataframe/dataframe";
 import type { ColumnAggregation } from "src/ui/views/Dashboard/types";
 
 const field = (name: string, type: DataFieldType): DataField => ({
@@ -103,7 +107,9 @@ describe("A180d — no option is offered without saying what it does", () => {
   it("a badge distinguishes count_total from count_values", () => {
     // The badge used to print COUNT for both, re-introducing the ambiguity the
     // picker had just resolved.
-    expect(aggregationBadge("count_total")).not.toBe(aggregationBadge("count_values"));
+    expect(aggregationBadge("count_total")).not.toBe(
+      aggregationBadge("count_values")
+    );
   });
 });
 
@@ -166,7 +172,10 @@ describe("A180d — a surface offers only what the field can answer", () => {
 
 describe("A180d — the pickers read the one table", () => {
   const read = (rel: string) =>
-    require("fs").readFileSync(require("path").join(__dirname, "..", rel), "utf8") as string;
+    require("fs").readFileSync(
+      require("path").join(__dirname, "..", rel),
+      "utf8"
+    ) as string;
 
   it("the Stats card offers what the field allows and shows the consequence", () => {
     const s = read("ui/views/Dashboard/widgets/Stats/StatsConfig.svelte");
@@ -181,7 +190,9 @@ describe("A180d — the pickers read the one table", () => {
   });
 
   it("the inline badge reads the shared table rather than its own", () => {
-    const s = read("ui/views/Dashboard/widgets/_shared/WidgetInlineBadges.svelte");
+    const s = read(
+      "ui/views/Dashboard/widgets/_shared/WidgetInlineBadges.svelte"
+    );
     expect(s).toMatch(/aggregationBadge/);
     expect(s).not.toMatch(/count_total: "COUNT"/);
   });

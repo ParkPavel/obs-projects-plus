@@ -7,8 +7,17 @@
 // one-click conversion patch; where it doesn't, the placeholder explains the
 // archival and the stored config is left untouched.
 
-import type { WidgetDefinition, WidgetType, StatsConfig, SummaryColumnConfig } from "../types";
-import type { TransformPipeline, TransformStep, FilterStep } from "src/lib/dashboard-engine/transformTypes";
+import type {
+  WidgetDefinition,
+  WidgetType,
+  StatsConfig,
+  SummaryColumnConfig,
+} from "../types";
+import type {
+  TransformPipeline,
+  TransformStep,
+  FilterStep,
+} from "src/lib/dashboard-engine/transformTypes";
 import type { FilterDefinition } from "src/settings/settings";
 import { andComposeFilters } from "src/lib/engine/filterCompose";
 
@@ -17,7 +26,9 @@ export function tableTabConfig(
   tableConfig: Record<string, unknown> = {}
 ): Record<string, unknown> {
   return {
-    viewTabs: [{ id: "table", label: "Table", viewType: "table", config: tableConfig }],
+    viewTabs: [
+      { id: "table", label: "Table", viewType: "table", config: tableConfig },
+    ],
     activeTabId: "table",
   };
 }
@@ -40,8 +51,11 @@ export function restoreDataTableConfig(
 }
 
 /** summary-row → stats: each footer column becomes a stats card. */
-export function summaryRowToStatsConfig(config: Record<string, unknown>): StatsConfig {
-  const columns = (config["columns"] as SummaryColumnConfig[] | undefined) ?? [];
+export function summaryRowToStatsConfig(
+  config: Record<string, unknown>
+): StatsConfig {
+  const columns =
+    (config["columns"] as SummaryColumnConfig[] | undefined) ?? [];
   return {
     cards: columns.map((col, i) => ({
       id: `m-${i}`,
@@ -49,7 +63,9 @@ export function summaryRowToStatsConfig(config: Record<string, unknown>): StatsC
       field: col.field,
       aggregation: col.aggregation,
       ...(col.format !== undefined && { format: col.format }),
-      ...(col.currencySymbol !== undefined && { currencySymbol: col.currencySymbol }),
+      ...(col.currencySymbol !== undefined && {
+        currencySymbol: col.currencySymbol,
+      }),
     })),
     columns: columns.length >= 4 ? 4 : columns.length >= 3 ? 3 : 2,
   };
@@ -67,12 +83,17 @@ export function convertLegacyWidget(
     case "data-table":
       return {
         type: "database-call",
-        config: tableTabConfig((widget.config["table"] as Record<string, unknown>) ?? {}),
+        config: tableTabConfig(
+          (widget.config["table"] as Record<string, unknown>) ?? {}
+        ),
       };
     case "summary-row":
       return {
         type: "stats",
-        config: summaryRowToStatsConfig(widget.config) as unknown as Record<string, unknown>,
+        config: summaryRowToStatsConfig(widget.config) as unknown as Record<
+          string,
+          unknown
+        >,
       };
     case "data-list":
     case "view-port":
@@ -94,7 +115,10 @@ export function unwrapDataTableConfigChange(
 ):
   | { kind: "convert"; config: Record<string, unknown> }
   | { kind: "table"; tableConfig: Record<string, unknown> } {
-  const tabs = (detail["viewTabs"] as Array<{ viewType: string; config: Record<string, unknown> }> | undefined) ?? [];
+  const tabs =
+    (detail["viewTabs"] as
+      | Array<{ viewType: string; config: Record<string, unknown> }>
+      | undefined) ?? [];
   if (tabs.length === 1 && tabs[0]?.viewType === "table") {
     return { kind: "table", tableConfig: tabs[0].config };
   }
@@ -132,7 +156,11 @@ export type DataTableChange =
   /** The block grew past one table tab: it becomes a real database-call. */
   | { kind: "convert"; config: Record<string, unknown> }
   /** Still one table tab, and this widget owns the root `config.table`. */
-  | { kind: "table"; tableConfig: Record<string, unknown>; widgetConfig: Record<string, unknown> }
+  | {
+      kind: "table";
+      tableConfig: Record<string, unknown>;
+      widgetConfig: Record<string, unknown>;
+    }
   /** Still one table tab, nested — the table config rides `widget.config`. */
   | { kind: "nested"; widgetConfig: Record<string, unknown> };
 
@@ -142,7 +170,8 @@ export function dataTableConfigChange(
   isPrimary: boolean
 ): DataTableChange {
   const result = unwrapDataTableConfigChange(detail);
-  if (result.kind === "convert") return { kind: "convert", config: result.config };
+  if (result.kind === "convert")
+    return { kind: "convert", config: result.config };
   if (isPrimary) {
     return {
       kind: "table",
@@ -152,7 +181,9 @@ export function dataTableConfigChange(
   }
   return {
     kind: "nested",
-    widgetConfig: persistDataTableSubFilter(detail, currentConfig, { table: result.tableConfig }),
+    widgetConfig: persistDataTableSubFilter(detail, currentConfig, {
+      table: result.tableConfig,
+    }),
   };
 }
 
@@ -197,7 +228,9 @@ export function isRetiredLegacyType(type: WidgetType): boolean {
  * Disabled steps stop the scan: `subFilter` has no disabled state, so moving a
  * disabled step would silently switch it on.
  */
-function countLeadingMigratableFilters(steps: readonly TransformStep[]): number {
+function countLeadingMigratableFilters(
+  steps: readonly TransformStep[]
+): number {
   let count = 0;
   for (const step of steps) {
     if (step.type !== "filter" || step.disabled === true) break;
@@ -209,7 +242,6 @@ function countLeadingMigratableFilters(steps: readonly TransformStep[]): number 
   }
   return count;
 }
-
 
 export interface TransformMigrationResult {
   /** Pipeline with the remaining advanced steps; absent when nothing is left. */

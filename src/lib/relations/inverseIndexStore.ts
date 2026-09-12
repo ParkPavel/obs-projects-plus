@@ -46,7 +46,7 @@ const EMPTY: InverseIndex = new Map();
  */
 export function createInverseIndexStore(
   app: App,
-  options: InverseIndexStoreOptions = {},
+  options: InverseIndexStoreOptions = {}
 ): InverseIndexStore {
   const keys = options.keys ?? ["links"];
   const inner = writable<InverseIndex>(EMPTY);
@@ -61,7 +61,8 @@ export function createInverseIndexStore(
       const cache = app.metadataCache.getFileCache(file);
       out.push({
         path: file.path,
-        frontmatter: (cache?.frontmatter as Record<string, unknown> | null) ?? null,
+        frontmatter:
+          (cache?.frontmatter as Record<string, unknown> | null) ?? null,
       });
     }
     return out;
@@ -70,8 +71,14 @@ export function createInverseIndexStore(
   function rebuildNow(): void {
     pending = false;
     scheduled = null;
-    const resolveLinkPath = (linktext: string, sourcePath: string): string | null => {
-      const dest = app.metadataCache.getFirstLinkpathDest?.(linktext, sourcePath);
+    const resolveLinkPath = (
+      linktext: string,
+      sourcePath: string
+    ): string | null => {
+      const dest = app.metadataCache.getFirstLinkpathDest?.(
+        linktext,
+        sourcePath
+      );
       return dest ? dest.path : null;
     };
     const idx = buildInverseIndex(gatherInputs(), { keys, resolveLinkPath });

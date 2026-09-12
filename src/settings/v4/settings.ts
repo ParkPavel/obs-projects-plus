@@ -234,9 +234,10 @@ const removeDuplicateCommands = (commands: ShowCommand[]): ShowCommand[] =>
       )
   );
 
-const removeOrphanCommands = (
-  allProjects: ProjectDefinition<ViewDefinition>[]
-): ((commands: ShowCommand[]) => ShowCommand[]) =>
+const removeOrphanCommands =
+  (
+    allProjects: ProjectDefinition<ViewDefinition>[]
+  ): ((commands: ShowCommand[]) => ShowCommand[]) =>
   (commands) =>
     commands.filter((cmd) =>
       allProjects.some(

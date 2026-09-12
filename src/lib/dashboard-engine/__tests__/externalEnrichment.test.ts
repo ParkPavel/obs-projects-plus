@@ -16,11 +16,16 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { TransformPipeline } from "../transformTypes";
 
-const field = (name: string, type: DataFieldType = DataFieldType.String, derived = false) =>
-  ({ name, type, repeated: false, identifier: false, derived }) as never;
+const field = (
+  name: string,
+  type: DataFieldType = DataFieldType.String,
+  derived = false
+) => ({ name, type, repeated: false, identifier: false, derived }) as never;
 
-const frame = (fields: unknown[], records: Array<{ id: string; values: Record<string, unknown> }>) =>
-  ({ fields, records }) as unknown as DataFrame;
+const frame = (
+  fields: unknown[],
+  records: Array<{ id: string; values: Record<string, unknown> }>
+) => ({ fields, records }) as unknown as DataFrame;
 
 describe("#138 enrichWithBacklinks — the collision guard", () => {
   it("adds the derived field when the name is free", () => {
@@ -51,8 +56,12 @@ describe("#138 enrichWithBacklinks — the collision guard", () => {
 
     const out = enrichWithBacklinks(df, ["owner"]);
 
-    expect(out.records.find((r) => r.id === "b.md")?.values["owner_backlinks"]).toBe("also mine");
-    expect(out.fields.filter((f) => f.name === "owner_backlinks")).toHaveLength(1);
+    expect(
+      out.records.find((r) => r.id === "b.md")?.values["owner_backlinks"]
+    ).toBe("also mine");
+    expect(out.fields.filter((f) => f.name === "owner_backlinks")).toHaveLength(
+      1
+    );
   });
 
   it("still enriches the relations that do not collide", () => {
@@ -63,7 +72,10 @@ describe("#138 enrichWithBacklinks — the collision guard", () => {
         field("client", DataFieldType.Relation),
       ],
       [
-        { id: "a.md", values: { owner: "[[b]]", client: "[[b]]", owner_backlinks: "mine" } },
+        {
+          id: "a.md",
+          values: { owner: "[[b]]", client: "[[b]]", owner_backlinks: "mine" },
+        },
         { id: "b.md", values: {} },
       ]
     );
@@ -96,8 +108,17 @@ describe("#138 join output widens when right frames are enriched", () => {
   );
 
   const rightEnriched = frame(
-    [field("id"), field("title"), field("owner_backlinks", DataFieldType.Relation, true)],
-    [{ id: "c1.md", values: { id: "c1", title: "Client", owner_backlinks: ["[[l1]]"] } }]
+    [
+      field("id"),
+      field("title"),
+      field("owner_backlinks", DataFieldType.Relation, true),
+    ],
+    [
+      {
+        id: "c1.md",
+        values: { id: "c1", title: "Client", owner_backlinks: ["[[l1]]"] },
+      },
+    ]
   );
 
   const pipeline: TransformPipeline = {
@@ -136,11 +157,18 @@ describe("#138 the resolver is where enrichment happens", () => {
     // App caches the resolver's promise per project id, so enriching here costs
     // once per source instead of once per canvas or once per widget.
     const source = require("fs").readFileSync(
-      require("path").resolve(__dirname, "..", "..", "externalFrameResolver.ts"),
+      require("path").resolve(
+        __dirname,
+        "..",
+        "..",
+        "externalFrameResolver.ts"
+      ),
       "utf8"
     ) as string;
 
     expect(source).toContain("enrichWithBacklinks");
-    expect(source).toMatch(/return enrichWithBacklinks\(frame, relationFieldNames\(frame\)\)/);
+    expect(source).toMatch(
+      /return enrichWithBacklinks\(frame, relationFieldNames\(frame\)\)/
+    );
   });
 });

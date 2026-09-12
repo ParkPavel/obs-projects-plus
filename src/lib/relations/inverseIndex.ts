@@ -108,7 +108,7 @@ const DEFAULT_KEYS = ["links"] as const;
  */
 export function buildInverseIndex(
   notes: readonly BuildInverseIndexInput[],
-  options: BuildInverseIndexOptions = {},
+  options: BuildInverseIndexOptions = {}
 ): InverseIndex {
   const keys = options.keys ?? DEFAULT_KEYS;
   const resolve = options.resolveLinkPath;
@@ -122,7 +122,7 @@ export function buildInverseIndex(
       if (value === undefined) continue;
       for (const rawTarget of extractTargets(value)) {
         const resolved = resolve
-          ? resolve(rawTarget, note.path) ?? rawTarget
+          ? (resolve(rawTarget, note.path) ?? rawTarget)
           : rawTarget;
         const normalised = normalizeTargetPath(resolved);
         const list = index.get(normalised);
@@ -133,7 +133,12 @@ export function buildInverseIndex(
         if (list) {
           // Avoid duplicate (path, key) pairs from arrays containing
           // the same target multiple times.
-          if (!list.some((e) => e.sourcePath === entry.sourcePath && e.viaKey === entry.viaKey)) {
+          if (
+            !list.some(
+              (e) =>
+                e.sourcePath === entry.sourcePath && e.viaKey === entry.viaKey
+            )
+          ) {
             list.push(entry);
           }
         } else {
@@ -152,7 +157,7 @@ export function buildInverseIndex(
  */
 export function lookupInverse(
   index: InverseIndex,
-  notePath: string,
+  notePath: string
 ): InverseIndexEntry[] {
   return index.get(normalizeTargetPath(notePath)) ?? [];
 }

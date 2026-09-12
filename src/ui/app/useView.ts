@@ -10,7 +10,6 @@ import { customViews } from "src/lib/stores/customViews";
 import type { ViewApi } from "src/lib/viewApi";
 import type { ProjectDefinition, ViewDefinition } from "src/settings/settings";
 
- 
 export interface ViewProps {
   view: ViewDefinition;
   dataProps: DataQueryResult;
@@ -29,7 +28,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
   // Keep track of previous view id to determine if view should be invalidated.
   let viewId: string;
   const projectId = props.project.id;
-   
+
   let projectView: ProjectView<Record<string, any>> | undefined;
   let prevConfigJson: string = "";
   let prevProjectJson: string = "";
@@ -75,20 +74,20 @@ export function useView(node: HTMLElement, props: ViewProps) {
       viewId = newprops.view.id;
     } else {
       // Batch prop changes into a single $set call to avoid multiple reactive waves
-       
+
       const updates: Record<string, any> = {};
 
       // Check if config changed (for freeze, centerOn, etc.)
       const currentConfigJson = JSON.stringify(newprops.config);
       if (currentConfigJson !== prevConfigJson) {
-        updates['config'] = newprops.config;
+        updates["config"] = newprops.config;
         prevConfigJson = currentConfigJson;
       }
 
       // Check if project changed (for agenda list saves, etc.)
       const currentProjectJson = JSON.stringify(newprops.project);
       if (currentProjectJson !== prevProjectJson) {
-        updates['project'] = newprops.project;
+        updates["project"] = newprops.project;
         prevProjectJson = currentProjectJson;
       }
       if (Object.keys(updates).length > 0) {

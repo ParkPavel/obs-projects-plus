@@ -18,8 +18,16 @@ import { namedSourceNotice } from "../namedSourceNotice";
 
 const FRAME = { fields: [], records: [] };
 
-const broken: NamedSourceView = { kind: "broken", reason: "reads a source that no longer exists (src-x)", label: "Archive" };
-const empty: NamedSourceView = { kind: "empty", frame: FRAME, label: "Archive" };
+const broken: NamedSourceView = {
+  kind: "broken",
+  reason: "reads a source that no longer exists (src-x)",
+  label: "Archive",
+};
+const empty: NamedSourceView = {
+  kind: "empty",
+  frame: FRAME,
+  label: "Archive",
+};
 const ok: NamedSourceView = { kind: "ok", frame: FRAME, label: "Archive" };
 
 describe("#184 — two failures, two different things said", () => {

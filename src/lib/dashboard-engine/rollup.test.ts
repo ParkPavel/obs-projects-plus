@@ -8,10 +8,34 @@ import type { RollupConfig } from "./rollup";
 function makeDF(records: DataRecord[]): DataFrame {
   return {
     fields: [
-      { name: "name", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "tasks", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "hours", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-      { name: "done", type: DataFieldType.Boolean, repeated: false, identifier: false, derived: false },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "tasks",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "hours",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "done",
+        type: DataFieldType.Boolean,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records,
   };
@@ -155,7 +179,12 @@ describe("computeRollup", () => {
   it("should use custom separator for concat", () => {
     const result = computeRollup(
       df.records[0]!,
-      { ...baseConfig, targetField: "name", function: "concat", separator: " | " },
+      {
+        ...baseConfig,
+        targetField: "name",
+        function: "concat",
+        separator: " | ",
+      },
       df
     );
     expect(result.formattedValue).toBe("Task A | Task B | Task C");

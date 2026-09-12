@@ -17,15 +17,27 @@ const formats: ConditionalFormat[] = [
     id: "fmt1",
     field: "status",
     conditions: [
-      { operator: "is", value: "active", style: { backgroundColor: "#00ff00" } },
-      { operator: "is", value: "done", style: { textColor: "#999999", italic: true } },
+      {
+        operator: "is",
+        value: "active",
+        style: { backgroundColor: "#00ff00" },
+      },
+      {
+        operator: "is",
+        value: "done",
+        style: { textColor: "#999999", italic: true },
+      },
     ],
   },
   {
     id: "fmt2",
     field: "priority",
     conditions: [
-      { operator: "gt", value: "5", style: { bold: true, textColor: "#ff0000" } },
+      {
+        operator: "gt",
+        value: "5",
+        style: { bold: true, textColor: "#ff0000" },
+      },
     ],
   },
 ];

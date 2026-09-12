@@ -53,7 +53,10 @@ describe("ObsidianFileSystemWatcher / reload-cycle", () => {
     expect(p.app.vault.on).toHaveBeenCalledWith("create", expect.any(Function));
     expect(p.app.vault.on).toHaveBeenCalledWith("delete", expect.any(Function));
     expect(p.app.vault.on).toHaveBeenCalledWith("rename", expect.any(Function));
-    expect(p.app.metadataCache.on).toHaveBeenCalledWith("changed", expect.any(Function));
+    expect(p.app.metadataCache.on).toHaveBeenCalledWith(
+      "changed",
+      expect.any(Function)
+    );
   });
 
   it("reload N times = exactly N×K registrations on the live plugin only", () => {

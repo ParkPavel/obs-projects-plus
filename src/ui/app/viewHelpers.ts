@@ -1,7 +1,10 @@
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import type { FilterCondition } from "src/settings/base/settings";
 import type { ColorFilterDefinition } from "src/settings/base/settings";
-import type { RelationFieldConfig, RollupFieldConfig } from "src/settings/base/settings";
+import type {
+  RelationFieldConfig,
+  RollupFieldConfig,
+} from "src/settings/base/settings";
 
 export type FieldConfigRelationMap = Record<
   string,
@@ -20,10 +23,16 @@ export function extractRelationTargetIds(
   if (!fieldConfig) return [];
   const ids = new Set<string>();
   for (const cfg of Object.values(fieldConfig)) {
-    if (cfg?.relation?.targetProjectId && cfg.relation.targetProjectId !== projectId) {
+    if (
+      cfg?.relation?.targetProjectId &&
+      cfg.relation.targetProjectId !== projectId
+    ) {
       ids.add(cfg.relation.targetProjectId);
     }
-    if (cfg?.rollup?.targetProjectId && cfg.rollup.targetProjectId !== projectId) {
+    if (
+      cfg?.rollup?.targetProjectId &&
+      cfg.rollup.targetProjectId !== projectId
+    ) {
       ids.add(cfg.rollup.targetProjectId);
     }
   }

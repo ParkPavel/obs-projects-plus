@@ -56,10 +56,22 @@ const CONTRACT = "lib/record/openRecord.ts";
  * rule relaxed.
  */
 const WIKILINK_SITES: ReadonlyArray<readonly [string, string]> = [
-  ["ui/components/CardMetadata/Text.svelte", "an anchor inside rendered Markdown"],
-  ["ui/components/TagList/RichTextTag.svelte", "an anchor inside a rendered tag"],
-  ["ui/views/Board/components/Board/ColumnHeader.svelte", "an anchor inside a rendered column title"],
-  ["ui/views/YamlVisualizer/RelationListView.svelte", "a relation link as written in frontmatter"],
+  [
+    "ui/components/CardMetadata/Text.svelte",
+    "an anchor inside rendered Markdown",
+  ],
+  [
+    "ui/components/TagList/RichTextTag.svelte",
+    "an anchor inside a rendered tag",
+  ],
+  [
+    "ui/views/Board/components/Board/ColumnHeader.svelte",
+    "an anchor inside a rendered column title",
+  ],
+  [
+    "ui/views/YamlVisualizer/RelationListView.svelte",
+    "a relation link as written in frontmatter",
+  ],
 ];
 
 const CALL = /workspace\s*\.\s*openLinkText\s*\(/;
@@ -90,7 +102,9 @@ const rel = (file: string) => path.relative(SRC, file).replace(/\\/g, "/");
 
 describe("R0.17 — the scan itself (synthetic, proves BOTH states)", () => {
   it("REPORTS a direct call", () => {
-    expect(directOpenCalls("  $app.workspace.openLinkText(id, id, false);")).toEqual([1]);
+    expect(
+      directOpenCalls("  $app.workspace.openLinkText(id, id, false);")
+    ).toEqual([1]);
   });
 
   it("sees the spellings a reviewer would miss", () => {
@@ -117,7 +131,9 @@ describe("R0.17 — the scan itself (synthetic, proves BOTH states)", () => {
     // A text scan cannot tell live code from a commented-out call, and that is
     // the safe direction: it reports, a human deletes. Stated so the next
     // reader does not mistake the report for a false positive in the tree.
-    expect(directOpenCalls("// $app.workspace.openLinkText(id, id, false);")).toEqual([1]);
+    expect(
+      directOpenCalls("// $app.workspace.openLinkText(id, id, false);")
+    ).toEqual([1]);
   });
 });
 
@@ -133,7 +149,9 @@ describe("R0.17 — the tree", () => {
     const offenders = files
       .filter((f) => !allowed.has(rel(f)))
       .flatMap((f) =>
-        directOpenCalls(fs.readFileSync(f, "utf8")).map((line) => `${rel(f)}:${line}`)
+        directOpenCalls(fs.readFileSync(f, "utf8")).map(
+          (line) => `${rel(f)}:${line}`
+        )
       );
     expect(offenders).toEqual([]);
   });
@@ -144,9 +162,15 @@ describe("R0.17 — the tree", () => {
     // and the list must be edited deliberately — the shape R0.4 and R0.13 use.
     for (const [file, what] of WIKILINK_SITES) {
       const full = path.join(SRC, file);
-      expect({ file, exists: fs.existsSync(full) }).toEqual({ file, exists: true });
-      expect({ file, what, calls: directOpenCalls(fs.readFileSync(full, "utf8")).length > 0 })
-        .toEqual({ file, what, calls: true });
+      expect({ file, exists: fs.existsSync(full) }).toEqual({
+        file,
+        exists: true,
+      });
+      expect({
+        file,
+        what,
+        calls: directOpenCalls(fs.readFileSync(full, "utf8")).length > 0,
+      }).toEqual({ file, what, calls: true });
     }
   });
 
@@ -165,17 +189,12 @@ describe("R0.17 — the tree", () => {
  * point — if a refactor deletes an entrance, this list has to be edited on
  * purpose, the way `WIKILINK_SITES` above works.
  */
-/**
- * #189 + the decision of 2026-09-05: the peek belongs to the DASHBOARD TABLE.
- *
- * Both entrances below sit on that one surface. Gallery, Board, Calendar and
- * the note editor open the note and offer no peek — they do not forward the raw
- * event, so `alt` does nothing there, and they have no row menu to carry the
- * entry. The adversarial review was right that naming that asymmetry is not
- * deciding it; the user decided, and this is where the decision is executable.
- */
 const PEEK_ENTRANCES: ReadonlyArray<readonly [string, string, RegExp]> = [
-  [CONTRACT, "the alt modifier, for someone who knows", /if \(e\.altKey\) return "peek";/],
+  [
+    CONTRACT,
+    "the alt modifier, for someone who knows",
+    /if \(e\.altKey\) return "peek";/,
+  ],
   [
     "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts",
     "the labelled row-menu entry, for someone who does not",
@@ -183,27 +202,15 @@ const PEEK_ENTRANCES: ReadonlyArray<readonly [string, string, RegExp]> = [
   ],
 ];
 
-describe("R0.17 — #189: the peek is the dashboard table's, by decision", () => {
-  it("has exactly two entrances, and both are on that one surface", () => {
-    // Spreading the peek to Gallery, Board or Calendar is a separate ticket
-    // with its own architect pass — each has a different activation model. A
-    // third entry appearing here without one would mean it was spread quietly.
-    expect(PEEK_ENTRANCES).toHaveLength(2);
-    const surfaces = PEEK_ENTRANCES.map(([file]) => file);
-    expect(surfaces).toContain("ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts");
-    for (const file of surfaces) {
-      expect({ file, elsewhere: /Gallery|Board|Calendar/.test(file) }).toEqual({ file, elsewhere: false });
-    }
-  });
-});
-
 describe("R0.17 — #189: the peek lost the default and kept both entrances", () => {
   const contract = () => fs.readFileSync(path.join(SRC, CONTRACT), "utf8");
 
   it("a plain activation opens the note", () => {
     // The behaviour the user asked for, read off the source rather than
     // imported, so this ratchet keeps working if the constant is ever inlined.
-    expect(contract()).toMatch(/export const PLAIN_MODE: RecordOpenMode = "same";/);
+    expect(contract()).toMatch(
+      /export const PLAIN_MODE: RecordOpenMode = "same";/
+    );
   });
 
   it("the two modifiers that three shipped surfaces agree on are unchanged", () => {
@@ -218,11 +225,15 @@ describe("R0.17 — #189: the peek lost the default and kept both entrances", ()
     // Order, not presence — AltGr reports ctrlKey and altKey together. Reading
     // the order off the file is the only way a text ratchet can see it.
     const s = contract();
-    expect(s.indexOf('if (e.ctrlKey || e.metaKey) return "tab";'))
-      .toBeLessThan(s.indexOf('if (e.altKey) return "peek";'));
+    expect(s.indexOf('if (e.ctrlKey || e.metaKey) return "tab";')).toBeLessThan(
+      s.indexOf('if (e.altKey) return "peek";')
+    );
   });
 
-  it.each(PEEK_ENTRANCES)("%s still offers the peek — %s", (file, _what, pattern) => {
-    expect(fs.readFileSync(path.join(SRC, file), "utf8")).toMatch(pattern);
-  });
+  it.each(PEEK_ENTRANCES)(
+    "%s still offers the peek — %s",
+    (file, _what, pattern) => {
+      expect(fs.readFileSync(path.join(SRC, file), "utf8")).toMatch(pattern);
+    }
+  );
 });

@@ -14,7 +14,11 @@
  * inside the modal cannot.
  */
 
-import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
+import {
+  DataFieldType,
+  type DataField,
+  type DataFrame,
+} from "src/lib/dataframe/dataframe";
 import {
   buildRelationTargetIndex,
   resolveRelationValue,
@@ -43,7 +47,9 @@ export type RelationPreviewItem = {
  * number the wizard shows before the user commits — «12 resolved, 3 unmatched»
  * is the difference between a relation that works and one that looks like it.
  */
-export type RelationPreviewSummary = Readonly<Record<RelationResolutionStatus, number>>;
+export type RelationPreviewSummary = Readonly<
+  Record<RelationResolutionStatus, number>
+>;
 
 /** Either the draft is usable, or it is not and there is one reason why. */
 export type RelationSetupValidation =
@@ -59,15 +65,28 @@ export function validateRelationSetupDraft(
   draft: RelationSetupDraft,
   existingFields: readonly DataField[]
 ): RelationSetupValidation {
-  if (!draft.fieldName.trim()) return { valid: false, message: "A relation property name is required." };
-  if (!draft.targetProjectId.trim()) return { valid: false, message: "Choose a database to link." };
-  if (draft.createSourceField && existingFields.some((field) => field.name === draft.fieldName.trim())) {
-    return { valid: false, message: "A property with this name already exists." };
+  if (!draft.fieldName.trim())
+    return { valid: false, message: "A relation property name is required." };
+  if (!draft.targetProjectId.trim())
+    return { valid: false, message: "Choose a database to link." };
+  if (
+    draft.createSourceField &&
+    existingFields.some((field) => field.name === draft.fieldName.trim())
+  ) {
+    return {
+      valid: false,
+      message: "A property with this name already exists.",
+    };
   }
   if (!draft.createSourceField) {
-    const field = existingFields.find((candidate) => candidate.name === draft.fieldName);
+    const field = existingFields.find(
+      (candidate) => candidate.name === draft.fieldName
+    );
     if (!field || field.type !== DataFieldType.Relation) {
-      return { valid: false, message: "Choose an existing Relation property or create one." };
+      return {
+        valid: false,
+        message: "Choose an existing Relation property or create one.",
+      };
     }
   }
   if (draft.inverse?.enabled && !draft.inverse.fieldName.trim()) {
@@ -88,7 +107,10 @@ export function previewRelationSetup(
   target: DataFrame,
   displayField?: string
 ): readonly RelationPreviewItem[] {
-  const index = buildRelationTargetIndex(target, displayField ? [displayField] : []);
+  const index = buildRelationTargetIndex(
+    target,
+    displayField ? [displayField] : []
+  );
   return source.records.map((record) => ({
     recordId: record.id,
     resolutions: resolveRelationValue(record.values[sourceFieldName], index),
@@ -96,9 +118,16 @@ export function previewRelationSetup(
 }
 
 /** Tally a preview by status. */
-export function summarizeRelationPreview(items: readonly RelationPreviewItem[]): RelationPreviewSummary {
-  const summary: Record<RelationResolutionStatus, number> = { resolved: 0, unmatched: 0, ambiguous: 0 };
-  for (const item of items) for (const resolution of item.resolutions) summary[resolution.status] += 1;
+export function summarizeRelationPreview(
+  items: readonly RelationPreviewItem[]
+): RelationPreviewSummary {
+  const summary: Record<RelationResolutionStatus, number> = {
+    resolved: 0,
+    unmatched: 0,
+    ambiguous: 0,
+  };
+  for (const item of items)
+    for (const resolution of item.resolutions) summary[resolution.status] += 1;
   return summary;
 }
 
@@ -106,13 +135,18 @@ export function summarizeRelationPreview(items: readonly RelationPreviewItem[]):
  * Lower a validated draft into the shape that is stored on the field.
  * `displayField` survives this step — #150 dropped it here.
  */
-export function toRelationFieldConfig(draft: RelationSetupDraft): RelationFieldConfig {
-  const inverse = draft.inverse?.enabled && draft.inverse.fieldName.trim()
-    ? { inverseFieldName: draft.inverse.fieldName.trim() }
-    : {};
+export function toRelationFieldConfig(
+  draft: RelationSetupDraft
+): RelationFieldConfig {
+  const inverse =
+    draft.inverse?.enabled && draft.inverse.fieldName.trim()
+      ? { inverseFieldName: draft.inverse.fieldName.trim() }
+      : {};
   return {
     targetProjectId: draft.targetProjectId.trim(),
-    ...(draft.displayField?.trim() ? { displayField: draft.displayField.trim() } : {}),
+    ...(draft.displayField?.trim()
+      ? { displayField: draft.displayField.trim() }
+      : {}),
     ...inverse,
   };
 }

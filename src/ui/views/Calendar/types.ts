@@ -4,17 +4,17 @@ import type dayjs from "dayjs";
 
 export interface CalendarConfig {
   readonly interval?: CalendarInterval;
-  readonly displayMode?: 'headers' | 'bars'; // default: "headers" (legacy mode), "bars" (timeline mode for day)
+  readonly displayMode?: "headers" | "bars"; // default: "headers" (legacy mode), "bars" (timeline mode for day)
   // NEW fields (v3.0.0) - startDate/endDate/startTime/endTime
-  readonly startDateField?: string;  // default: "startDate"
-  readonly endDateField?: string;    // default: "endDate"
-  readonly startTimeField?: string;  // default: "startTime"
-  readonly endTimeField?: string;    // default: "endTime"
+  readonly startDateField?: string; // default: "startDate"
+  readonly endDateField?: string; // default: "endDate"
+  readonly startTimeField?: string; // default: "startTime"
+  readonly endTimeField?: string; // default: "endTime"
   readonly eventColorField?: string; // default: "eventColor" (hex color for event bars)
-  readonly startHour?: number;       // default: 6 (timeline start hour)
-  readonly endHour?: number;         // default: 22 (timeline end hour)
+  readonly startHour?: number; // default: 6 (timeline start hour)
+  readonly endHour?: number; // default: 22 (timeline end hour)
   // Creation date field — auto-filled when creating notes, NOT used for event start detection
-  readonly dateField?: string;       // default: "date" (creation date)
+  readonly dateField?: string; // default: "date" (creation date)
   readonly checkField?: string;
   /** NPLAN-D2 — page-level icon field (emoji or lucide icon name). */
   readonly iconField?: string;
@@ -47,44 +47,44 @@ export enum EventRenderType {
  * Time information extracted from record
  */
 export interface TimeInfo {
-  startTime: dayjs.Dayjs;       // Full datetime with time
-  endTime: dayjs.Dayjs;         // Full datetime with time
-  durationMinutes: number;      // Duration in minutes
-  hasEmbeddedTime: boolean;     // Time was in date field (not separate)
+  startTime: dayjs.Dayjs; // Full datetime with time
+  endTime: dayjs.Dayjs; // Full datetime with time
+  durationMinutes: number; // Duration in minutes
+  hasEmbeddedTime: boolean; // Time was in date field (not separate)
 }
 
 /**
  * Span information for multi-day events
  */
 export interface SpanInfo {
-  startDate: dayjs.Dayjs;       // First day of span
-  endDate: dayjs.Dayjs;         // Last day of span
-  spanDays: number;             // Total days in span
+  startDate: dayjs.Dayjs; // First day of span
+  endDate: dayjs.Dayjs; // Last day of span
+  spanDays: number; // Total days in span
 }
 
 /**
  * Processed record with all calendar-relevant data pre-computed
  */
 export interface ProcessedRecord {
-  record: DataRecord;           // Original record reference
-  renderType: EventRenderType;  // How to render this event
-  
+  record: DataRecord; // Original record reference
+  renderType: EventRenderType; // How to render this event
+
   // Parsed dates (computed ONCE)
-  startDate: dayjs.Dayjs | null;  // Can be null if only endDate exists
-  endDate: dayjs.Dayjs | null;    // Can be null for single-day events
-  
+  startDate: dayjs.Dayjs | null; // Can be null if only endDate exists
+  endDate: dayjs.Dayjs | null; // Can be null for single-day events
+
   // Time info (for TIMED/MULTI_DAY_TIMED)
   timeInfo: TimeInfo | null;
-  
+
   // Span info (for MULTI_DAY events)
   spanInfo: SpanInfo | null;
-  
+
   // Visual properties
-  color: string | null;         // From eventColorField or getRecordColor
-  
+  color: string | null; // From eventColorField or getRecordColor
+
   // Lane assignment for header stacking (assigned by processor)
   lane: number;
-  
+
   // Phantom record marker (for drag-and-drop preview duplicates)
   isPhantom?: boolean;
 }
@@ -95,13 +95,13 @@ export interface ProcessedRecord {
 export interface ProcessedCalendarData {
   /** All records processed with dates/times/spans/colors */
   processed: ProcessedRecord[];
-  
+
   /** Records grouped by date (YYYY-MM-DD → records touching that date) */
   grouped: Record<string, ProcessedRecord[]>;
-  
+
   /** Quick lookup by record ID */
   index: Map<string, ProcessedRecord>;
-  
+
   /** Maximum lane number used (for header height calculation) */
   maxLane: number;
 }
@@ -112,8 +112,8 @@ export interface ProcessedCalendarData {
 export interface HeaderPlaque {
   event: ProcessedRecord;
   lane: number;
-  top: string;                  // CSS rem value
-  height: string;               // CSS rem value
+  top: string; // CSS rem value
+  height: string; // CSS rem value
 }
 
 /**
@@ -121,8 +121,8 @@ export interface HeaderPlaque {
  */
 export interface TimelineColumn {
   events: ProcessedRecord[];
-  width: string;                // CSS width (percentage or calc)
-  left: string;                 // CSS left offset
+  width: string; // CSS width (percentage or calc)
+  left: string; // CSS left offset
   columnIndex: number;
   totalColumns: number;
 }
@@ -131,12 +131,12 @@ export interface TimelineColumn {
  * Zoom level configuration
  */
 export interface ZoomLevelConfig {
-  hourHeight: number;           // rem per hour
-  dayPadding: string;           // rem
-  eventGap: string;             // rem
-  fontSize: string;             // rem
-  minBarHeight: number;         // rem (minimum visible bar)
-  maxBarsPerDay: number;        // After N → "+X more"
+  hourHeight: number; // rem per hour
+  dayPadding: string; // rem
+  eventGap: string; // rem
+  fontSize: string; // rem
+  minBarHeight: number; // rem (minimum visible bar)
+  maxBarsPerDay: number; // After N → "+X more"
   showTimeLabels: boolean;
   showTimeGrid: boolean;
 }
@@ -212,5 +212,5 @@ export const ZOOM_HIERARCHY: ZoomLevel[] = [
   { interval: "month", order: 0 },
   { interval: "2weeks", order: 1 },
   { interval: "week", order: 2 },
-  { interval: "day", order: 3 }
+  { interval: "day", order: 3 },
 ];

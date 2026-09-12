@@ -50,7 +50,9 @@ describe("#169 — a signal raised before this row existed still opens it", () =
   });
 
   it("opens on a later press, the ordinary path", async () => {
-    const { container, component } = render(TableNewRow, { props: { openSignal: 0 } });
+    const { container, component } = render(TableNewRow, {
+      props: { openSignal: 0 },
+    });
     expect(input(container)).toBeNull();
     await component.$set({ openSignal: 1 });
     await waitFor(() => {
@@ -70,7 +72,9 @@ describe("#169 — a signal raised before this row existed still opens it", () =
   it("does not re-open on a repeat of a signal it already spent", async () => {
     // Setting the same value again is not a new press. Without this the row
     // would reopen on any unrelated re-render that re-sent its props.
-    const { container, component } = render(TableNewRow, { props: { openSignal: 1 } });
+    const { container, component } = render(TableNewRow, {
+      props: { openSignal: 1 },
+    });
     await waitFor(() => expect(input(container)).not.toBeNull());
     input(container)!.dispatchEvent(new Event("blur"));
     await waitFor(() => expect(input(container)).toBeNull());
@@ -81,14 +85,18 @@ describe("#169 — a signal raised before this row existed still opens it", () =
 
   it("commits the typed name once, and only when there is one", async () => {
     const created: string[] = [];
-    const { container, component } = render(TableNewRow, { props: { openSignal: 1 } });
+    const { container, component } = render(TableNewRow, {
+      props: { openSignal: 1 },
+    });
     component.$on("create", (e: CustomEvent<string>) => created.push(e.detail));
     await waitFor(() => expect(input(container)).not.toBeNull());
 
     const el = input(container)!;
     el.value = "  Acme  ";
     el.dispatchEvent(new Event("input"));
-    el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    el.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
     await waitFor(() => expect(created).toEqual(["Acme"]));
 
     // Enter chains the next row; an empty one must not create anything.

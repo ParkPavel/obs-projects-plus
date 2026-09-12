@@ -8,7 +8,11 @@ import type { TransformStep } from "src/lib/dashboard-engine/transformTypes";
 import type { FilterDefinition } from "src/settings/settings";
 
 const cond = (field: string, value: string) =>
-  ({ field, operator: "is", value } as unknown as FilterDefinition["conditions"][number]);
+  ({
+    field,
+    operator: "is",
+    value,
+  }) as unknown as FilterDefinition["conditions"][number];
 
 const filterDef = (field: string, value: string): FilterDefinition => ({
   conjunction: "and",
@@ -44,14 +48,19 @@ const groupStep = (...fields: string[]): TransformStep => ({
   fields,
 });
 
-const tabsConfig = (tabConfig: Record<string, unknown> = {}, viewType = "table") => ({
+const tabsConfig = (
+  tabConfig: Record<string, unknown> = {},
+  viewType = "table"
+) => ({
   viewTabs: [{ id: "t1", label: "Tab", viewType, config: tabConfig }],
   activeTabId: "t1",
 });
 
 describe("#118 migrateTransformToViewLevel — filter to axis A", () => {
   it("moves a leading filter step into subFilter and drops it from the pipeline", () => {
-    const result = migrateTransformToViewLevel(widget([filterStep("status", "done")]));
+    const result = migrateTransformToViewLevel(
+      widget([filterStep("status", "done")])
+    );
 
     expect(result.migrated).toBe(true);
     expect(result.transform).toBeUndefined();
@@ -66,7 +75,10 @@ describe("#118 migrateTransformToViewLevel — filter to axis A", () => {
 
     const merged = result.config["subFilter"] as FilterDefinition;
     expect(merged.conjunction).toBe("and");
-    expect(merged.conditions).toEqual([cond("owner", "ann"), cond("status", "done")]);
+    expect(merged.conditions).toEqual([
+      cond("owner", "ann"),
+      cond("status", "done"),
+    ]);
     expect(merged.groups).toBeUndefined();
   });
 
@@ -125,7 +137,10 @@ describe("#118 migrateTransformToViewLevel — filter to axis A", () => {
   });
 
   it("never moves a disabled filter — subFilter has no disabled state", () => {
-    const disabled: TransformStep = { ...filterStep("status", "done"), disabled: true };
+    const disabled: TransformStep = {
+      ...filterStep("status", "done"),
+      disabled: true,
+    };
     const result = migrateTransformToViewLevel(widget([disabled]));
 
     expect(result.migrated).toBe(false);
@@ -139,18 +154,25 @@ describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
     // A pipeline group-by AGGREGATES (executeGroupBy collapses to one record
     // per group with _group_size); a view-level groupBy only sections the
     // original records. The two are not the same operation.
-    const result = migrateTransformToViewLevel(widget([groupStep("status")], tabsConfig()));
+    const result = migrateTransformToViewLevel(
+      widget([groupStep("status")], tabsConfig())
+    );
 
     expect(result.migrated).toBe(false);
     expect(result.transform?.steps).toEqual([groupStep("status")]);
-    const tabs = result.config["viewTabs"] as Array<{ config: Record<string, unknown> }>;
+    const tabs = result.config["viewTabs"] as Array<{
+      config: Record<string, unknown>;
+    }>;
     expect(tabs[0]?.config["groupBy"]).toBeUndefined();
   });
 
   it("keeps a group-by that feeds an aggregate — that is an advanced chain", () => {
     const steps: TransformStep[] = [
       groupStep("status"),
-      { type: "aggregate", columns: [{ sourceField: "v", outputName: "sum", function: "SUM" }] },
+      {
+        type: "aggregate",
+        columns: [{ sourceField: "v", outputName: "sum", function: "SUM" }],
+      },
     ];
     const result = migrateTransformToViewLevel(widget(steps, tabsConfig()));
 
@@ -160,7 +182,11 @@ describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
 
   it("keeps a date-bucketing group-by — view-level grouping cannot express it", () => {
     const steps: TransformStep[] = [
-      { type: "group-by", fields: ["due"], dateGrouping: { field: "due", granularity: "month" } },
+      {
+        type: "group-by",
+        fields: ["due"],
+        dateGrouping: { field: "due", granularity: "month" },
+      },
     ];
     const result = migrateTransformToViewLevel(widget(steps, tabsConfig()));
 
@@ -168,7 +194,9 @@ describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
   });
 
   it("keeps a multi-field group-by — the view slot holds one field", () => {
-    const result = migrateTransformToViewLevel(widget([groupStep("a", "b")], tabsConfig()));
+    const result = migrateTransformToViewLevel(
+      widget([groupStep("a", "b")], tabsConfig())
+    );
 
     expect(result.transform?.steps).toEqual([groupStep("a", "b")]);
   });
@@ -183,7 +211,9 @@ describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
         showEmptyGroups: false,
       },
     });
-    const result = migrateTransformToViewLevel(widget([groupStep("status")], config));
+    const result = migrateTransformToViewLevel(
+      widget([groupStep("status")], config)
+    );
 
     expect(result.migrated).toBe(false);
     expect(result.transform?.steps).toEqual([groupStep("status")]);
@@ -196,7 +226,9 @@ describe("#118 migrateTransformToViewLevel — group-by to view level", () => {
         { id: "b", label: "B", viewType: "board", config: {} },
       ],
     };
-    const result = migrateTransformToViewLevel(widget([groupStep("status")], twoTabs));
+    const result = migrateTransformToViewLevel(
+      widget([groupStep("status")], twoTabs)
+    );
 
     expect(result.migrated).toBe(false);
     expect(result.transform?.steps).toEqual([groupStep("status")]);
@@ -228,12 +260,19 @@ describe("#118 migrateTransformToViewLevel — idempotence and no-op", () => {
   };
 
   it.each([
-    ["filter only", [filterStep("status", "done")], {} as Record<string, unknown>],
+    [
+      "filter only",
+      [filterStep("status", "done")],
+      {} as Record<string, unknown>,
+    ],
     ["filter before pivot", [filterStep("s", "d"), pivotStep], {}],
     ["filter after pivot", [pivotStep, filterStep("s", "d")], {}],
     [
       "group then aggregate",
-      [groupStep("status"), { type: "aggregate", columns: [] } as TransformStep],
+      [
+        groupStep("status"),
+        { type: "aggregate", columns: [] } as TransformStep,
+      ],
       {},
     ],
     ["terminal group-by", [groupStep("status")], tabsConfig()],
@@ -257,7 +296,10 @@ describe("#118 migrateTransformToViewLevel — idempotence and no-op", () => {
   });
 
   it("leaves an all-advanced pipeline untouched", () => {
-    const steps = [pivotStep, { type: "unnest", field: "tags" } as TransformStep];
+    const steps = [
+      pivotStep,
+      { type: "unnest", field: "tags" } as TransformStep,
+    ];
     const result = migrateTransformToViewLevel(widget(steps));
 
     expect(result.migrated).toBe(false);
@@ -281,7 +323,9 @@ describe("#118 group-by is never migrated (Codex review, 2026-08-25)", () => {
 
       expect(result.migrated).toBe(false);
       expect(result.transform?.steps).toEqual([groupStep("status")]);
-      const tabs = result.config["viewTabs"] as Array<{ config: Record<string, unknown> }>;
+      const tabs = result.config["viewTabs"] as Array<{
+        config: Record<string, unknown>;
+      }>;
       expect(tabs[0]?.config["groupBy"]).toBeUndefined();
     }
   );
@@ -296,11 +340,15 @@ describe("#118 group-by is never migrated (Codex review, 2026-08-25)", () => {
   });
 
   it("never writes a group into the data-table overlay — a primary table reads the view-level config", () => {
-    const result = migrateTransformToViewLevel(widget([groupStep("status")], { table: {} }));
+    const result = migrateTransformToViewLevel(
+      widget([groupStep("status")], { table: {} })
+    );
 
     expect(result.migrated).toBe(false);
     expect(result.transform?.steps).toEqual([groupStep("status")]);
-    expect((result.config["table"] as Record<string, unknown>)["groupBy"]).toBeUndefined();
+    expect(
+      (result.config["table"] as Record<string, unknown>)["groupBy"]
+    ).toBeUndefined();
   });
 });
 
@@ -326,7 +374,10 @@ describe("#118 filter migration — an empty step is not migratable", () => {
     );
 
     expect(result.migrated).toBe(false);
-    expect(result.transform?.steps).toEqual([emptyFilter, filterStep("status", "done")]);
+    expect(result.transform?.steps).toEqual([
+      emptyFilter,
+      filterStep("status", "done"),
+    ]);
   });
 
   it("still migrates a filled step that precedes an empty one", () => {

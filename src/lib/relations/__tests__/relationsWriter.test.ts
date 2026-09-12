@@ -64,7 +64,13 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
     expect(outcome).toEqual({
       added: [],
       removed: [],
-      issues: [{ operation: "add", targetLink: "Target", code: "inverse-field-missing" }],
+      issues: [
+        {
+          operation: "add",
+          targetLink: "Target",
+          code: "inverse-field-missing",
+        },
+      ],
     });
   });
 
@@ -167,15 +173,21 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
     expect(outcome).toEqual({
       added: [],
       removed: [],
-      issues: [{ operation: "add", targetLink: "Ghost", code: "target-not-found" }],
+      issues: [
+        { operation: "add", targetLink: "Ghost", code: "target-not-found" },
+      ],
     });
   });
 
   test("returns a write failure and passes the source path to canonical resolution", async () => {
-    const files: Record<string, Record<string, unknown>> = { "Folder/Target.md": {} };
+    const files: Record<string, Record<string, unknown>> = {
+      "Folder/Target.md": {},
+    };
     const app = makeApp(files);
     const resolve = app.metadataCache.getFirstLinkpathDest as jest.Mock;
-    (app.fileManager.processFrontMatter as jest.Mock).mockRejectedValueOnce(new Error("read-only"));
+    (app.fileManager.processFrontMatter as jest.Mock).mockRejectedValueOnce(
+      new Error("read-only")
+    );
     const outcome = await writeInverseRelations({
       sourceRecordId: "Sessions/Source.md",
       fieldName: "client",
@@ -186,7 +198,11 @@ describe("writeInverseRelations (NPLAN-C2)", () => {
     });
     expect(resolve).toHaveBeenCalledWith("Folder/Target", "Sessions/Source.md");
     expect(outcome.added).toEqual([]);
-    expect(outcome.issues[0]).toMatchObject({ operation: "add", targetLink: "Folder/Target", code: "write-failed" });
+    expect(outcome.issues[0]).toMatchObject({
+      operation: "add",
+      targetLink: "Folder/Target",
+      code: "write-failed",
+    });
   });
 
   test("no-op when both oldValue and newValue null", async () => {

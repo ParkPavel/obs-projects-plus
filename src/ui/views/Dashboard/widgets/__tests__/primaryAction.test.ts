@@ -37,15 +37,30 @@ describe("#169 — a type has a primary action only if it creates what it shows"
     // A chart and a stats card are computed from other records; they hold none
     // of their own. `filter-tabs` narrows, `text` and `divider` are chrome —
     // and narrowing, sorting and display config are never primary by the rule.
-    for (const type of ["chart", "stats", "filter-tabs", "text", "divider", "cover-banner"] as WidgetType[]) {
-      expect({ type, action: primaryActionFor(type) }).toEqual({ type, action: null });
+    for (const type of [
+      "chart",
+      "stats",
+      "filter-tabs",
+      "text",
+      "divider",
+      "cover-banner",
+    ] as WidgetType[]) {
+      expect({ type, action: primaryActionFor(type) }).toEqual({
+        type,
+        action: null,
+      });
     }
   });
 
   it("names no type the widget registry does not have", () => {
     // A label keyed off a type that no longer exists would render nowhere and
     // be found by nobody. Every answer above is about a live member.
-    const live: WidgetType[] = ["data-table", "database-call", "chart", "stats"];
+    const live: WidgetType[] = [
+      "data-table",
+      "database-call",
+      "chart",
+      "stats",
+    ];
     for (const type of live) {
       expect(() => primaryActionFor(type)).not.toThrow();
     }

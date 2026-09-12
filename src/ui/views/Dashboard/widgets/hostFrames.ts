@@ -16,7 +16,10 @@
 import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
 import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
 import type { IdentifiedFrame } from "src/lib/datasources/sourceSelection";
-import { resolveNamedSource, type NamedSourceView } from "src/lib/datasources/namedSource";
+import {
+  resolveNamedSource,
+  type NamedSourceView,
+} from "src/lib/datasources/namedSource";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
 import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
@@ -63,8 +66,13 @@ export interface HostFrames {
 }
 
 /** Backlink-enrich `frame` when any field of the widget is a stored Relation. */
-export function enrichForWidget(frame: DataFrame, fields: readonly DataField[]): DataFrame {
-  const names = fields.filter((f) => f.type === DataFieldType.Relation && !f.derived).map((f) => f.name);
+export function enrichForWidget(
+  frame: DataFrame,
+  fields: readonly DataField[]
+): DataFrame {
+  const names = fields
+    .filter((f) => f.type === DataFieldType.Relation && !f.derived)
+    .map((f) => f.name);
   return names.length > 0 ? enrichWithBacklinks(frame, names) : frame;
 }
 
@@ -88,17 +96,22 @@ export function computeHostFrames(input: HostFramesInput): HostFrames {
     sources: input.sources,
     sourceId: widget.sourceConfig?.sourceId,
   });
-  const enrichedFrame = "frame" in namedSource ? namedSource.frame : projectEnriched;
+  const enrichedFrame =
+    "frame" in namedSource ? namedSource.frame : projectEnriched;
   const scope = applyWidgetScope(enrichedFrame, widget.config); // #118: A before C when evaluable
   const transformResult =
-    pipeline.steps.length > 0 ? executeTransform(scope.frame, pipeline, { rightFrames }) : null;
+    pipeline.steps.length > 0
+      ? executeTransform(scope.frame, pipeline, { rightFrames })
+      : null;
   const transformedFrame = transformResult ? transformResult.data : scope.frame;
   const pipelineInputRowCount = transformResult
     ? transformResult.meta.inputRowCount
     : scope.frame.records.length;
 
-  const chartConfig = widget.type === "chart" ? asChartConfig(widget.config) : null;
-  const statsConfig = widget.type === "stats" ? asStatsConfig(widget.config) : null;
+  const chartConfig =
+    widget.type === "chart" ? asChartConfig(widget.config) : null;
+  const statsConfig =
+    widget.type === "stats" ? asStatsConfig(widget.config) : null;
 
   // NPLAN-V7.1 / #136: per-widget independent source, resolved as one value.
   const dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);

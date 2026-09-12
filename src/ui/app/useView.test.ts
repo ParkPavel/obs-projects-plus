@@ -31,7 +31,15 @@ const emptyColors: ColorFilterDefinition = { conditions: [] };
 const emptySort: SortDefinition = { criteria: [] };
 
 function makeView(id: string, type = "mock"): ViewDefinition {
-  return { id, type, name: id, config: {}, filter: emptyFilter, colors: emptyColors, sort: emptySort };
+  return {
+    id,
+    type,
+    name: id,
+    config: {},
+    filter: emptyFilter,
+    colors: emptyColors,
+    sort: emptySort,
+  };
 }
 
 function makeProject(id: string): ProjectDefinition<ViewDefinition> {
@@ -73,7 +81,9 @@ function makeProps(overrides: Partial<ViewProps> = {}): ViewProps {
 
 /** Mock HTMLElement with Obsidian's .empty() polyfill. */
 function makeNode(): HTMLElement & { empty: () => void } {
-  const el = document.createElement("div") as HTMLElement & { empty: () => void };
+  const el = document.createElement("div") as HTMLElement & {
+    empty: () => void;
+  };
   el.empty = jest.fn() as any;
   return el;
 }
@@ -141,7 +151,9 @@ describe("useView lifecycle", () => {
     const updatedProject = { ...makeProject("p1"), name: "Updated Project" };
     action.update(makeProps({ project: updatedProject, view: makeView("v1") }));
 
-    expect(mockView.updateProps).toHaveBeenCalledWith({ project: updatedProject });
+    expect(mockView.updateProps).toHaveBeenCalledWith({
+      project: updatedProject,
+    });
     expect(mockView.onOpen).toHaveBeenCalledTimes(1);
   });
 
@@ -167,9 +179,14 @@ describe("useView lifecycle", () => {
 
   it("remounts when project id changes even with same view id", () => {
     const node = makeNode();
-    const action = useView(node, makeProps({ project: makeProject("p1"), view: makeView("v1") }));
+    const action = useView(
+      node,
+      makeProps({ project: makeProject("p1"), view: makeView("v1") })
+    );
 
-    action.update(makeProps({ project: makeProject("p2"), view: makeView("v1") }));
+    action.update(
+      makeProps({ project: makeProject("p2"), view: makeView("v1") })
+    );
 
     expect(mockView.onClose).toHaveBeenCalledTimes(1);
     expect(mockView.onOpen).toHaveBeenCalledTimes(2);

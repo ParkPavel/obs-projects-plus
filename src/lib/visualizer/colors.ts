@@ -97,4 +97,5 @@ export function hexLuminance(raw: string): number {
 }
 
 /** Regex that extracts hex colors from arbitrary text (preview-mode injection). */
-export const HEX_COLOR_TOKEN_RE = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g;
+export const HEX_COLOR_TOKEN_RE =
+  /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g;

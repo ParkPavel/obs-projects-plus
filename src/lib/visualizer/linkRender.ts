@@ -30,12 +30,13 @@ const PHONE_STRIP_RE = /[^\d+]/g;
  */
 export function buildLinkHref(
   raw: unknown,
-  kind: LinkKind,
+  kind: LinkKind
 ): LinkRenderable | null {
   if (typeof raw !== "string") return null;
   // URL: also strip surrounding angle brackets (markdown autolink shape).
   // Email: do NOT strip angle brackets — they delimit "Name <addr>" form.
-  const text = (kind === "url" ? raw.replace(URL_TRIM_RE, "") : raw.replace(TRIM_RE, ""));
+  const text =
+    kind === "url" ? raw.replace(URL_TRIM_RE, "") : raw.replace(TRIM_RE, "");
   if (text === "") return null;
 
   switch (kind) {

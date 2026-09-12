@@ -5,10 +5,7 @@
  */
 import { describe, expect, it } from "@jest/globals";
 
-import {
-  DataFieldType,
-  type DataFrame,
-} from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 import {
   computeCrossProjectRollup,
   computeCrossProjectRollupColumn,
@@ -16,7 +13,14 @@ import {
 
 const accounts = (): DataFrame => ({
   fields: [
-    { name: "name", type: DataFieldType.String, identifier: true, derived: false, repeated: false, typeConfig: {} },
+    {
+      name: "name",
+      type: DataFieldType.String,
+      identifier: true,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
   ],
   records: [
     { id: "Accounts/A1.md", values: { name: "A1" } },
@@ -26,16 +30,78 @@ const accounts = (): DataFrame => ({
 
 const journal = (): DataFrame => ({
   fields: [
-    { name: "name", type: DataFieldType.String, identifier: true, derived: false, repeated: false, typeConfig: {} },
-    { name: "account", type: DataFieldType.Relation, identifier: false, derived: false, repeated: false, typeConfig: {} },
-    { name: "amount", type: DataFieldType.Number, identifier: false, derived: false, repeated: false, typeConfig: {} },
-    { name: "date", type: DataFieldType.String, identifier: false, derived: false, repeated: false, typeConfig: {} },
-    { name: "label", type: DataFieldType.String, identifier: false, derived: false, repeated: false, typeConfig: {} },
+    {
+      name: "name",
+      type: DataFieldType.String,
+      identifier: true,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
+    {
+      name: "account",
+      type: DataFieldType.Relation,
+      identifier: false,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
+    {
+      name: "amount",
+      type: DataFieldType.Number,
+      identifier: false,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
+    {
+      name: "date",
+      type: DataFieldType.String,
+      identifier: false,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
+    {
+      name: "label",
+      type: DataFieldType.String,
+      identifier: false,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
   ],
   records: [
-    { id: "J1.md", values: { name: "J1", account: "[[A1]]", amount: 50, date: "2026-01-01", label: "x" } },
-    { id: "J2.md", values: { name: "J2", account: "[[A1]]", amount: 25, date: "2026-02-15", label: "y" } },
-    { id: "J3.md", values: { name: "J3", account: "[[A2]]", amount: 100, date: "2026-03-01", label: "z" } },
+    {
+      id: "J1.md",
+      values: {
+        name: "J1",
+        account: "[[A1]]",
+        amount: 50,
+        date: "2026-01-01",
+        label: "x",
+      },
+    },
+    {
+      id: "J2.md",
+      values: {
+        name: "J2",
+        account: "[[A1]]",
+        amount: 25,
+        date: "2026-02-15",
+        label: "y",
+      },
+    },
+    {
+      id: "J3.md",
+      values: {
+        name: "J3",
+        account: "[[A2]]",
+        amount: 100,
+        date: "2026-03-01",
+        label: "z",
+      },
+    },
   ],
 });
 
@@ -64,9 +130,22 @@ describe("computeCrossProjectRollup — direction Account ← Journal (rollup on
     // Synthesize a frame where Account A1 has its own relation field
     // pointing back to Journal entries (forward direction).
     const accountsWithRel: DataFrame = {
-      fields: [...accounts().fields, { name: "entries", type: DataFieldType.Relation, identifier: false, derived: false, repeated: true, typeConfig: {} }],
+      fields: [
+        ...accounts().fields,
+        {
+          name: "entries",
+          type: DataFieldType.Relation,
+          identifier: false,
+          derived: false,
+          repeated: true,
+          typeConfig: {},
+        },
+      ],
       records: [
-        { id: "Accounts/A1.md", values: { name: "A1", entries: ["[[J1]]", "[[J2]]"] } },
+        {
+          id: "Accounts/A1.md",
+          values: { name: "A1", entries: ["[[J1]]", "[[J2]]"] },
+        },
       ],
     };
     const result = computeCrossProjectRollup(
@@ -84,7 +163,10 @@ describe("computeCrossProjectRollup — direction Account ← Journal (rollup on
     const accountsWithRel: DataFrame = {
       fields: accounts().fields,
       records: [
-        { id: "Accounts/A1.md", values: { name: "A1", entries: ["[[J1]]", "[[J3]]"] } },
+        {
+          id: "Accounts/A1.md",
+          values: { name: "A1", entries: ["[[J1]]", "[[J3]]"] },
+        },
       ],
     };
     const result = computeCrossProjectRollup(
@@ -100,7 +182,9 @@ describe("computeCrossProjectRollup — direction Account ← Journal (rollup on
   it("COUNT over an empty relation returns 0 with sourceCount 0", () => {
     const empty: DataFrame = {
       fields: accounts().fields,
-      records: [{ id: "Accounts/A1.md", values: { name: "A1", entries: null } }],
+      records: [
+        { id: "Accounts/A1.md", values: { name: "A1", entries: null } },
+      ],
     };
     const result = computeCrossProjectRollup(
       empty.records[0]!,
@@ -116,12 +200,20 @@ describe("computeCrossProjectRollup — direction Account ← Journal (rollup on
     const accountsWithRel: DataFrame = {
       fields: accounts().fields,
       records: [
-        { id: "Accounts/A1.md", values: { name: "A1", entries: ["[[J1]]", "[[J2]]", "[[J3]]"] } },
+        {
+          id: "Accounts/A1.md",
+          values: { name: "A1", entries: ["[[J1]]", "[[J2]]", "[[J3]]"] },
+        },
       ],
     };
     const result = computeCrossProjectRollup(
       accountsWithRel.records[0]!,
-      { relationField: "entries", targetField: "label", function: "concat_unique", separator: "|" },
+      {
+        relationField: "entries",
+        targetField: "label",
+        function: "concat_unique",
+        separator: "|",
+      },
       accountsWithRel,
       journal()
     );
@@ -153,7 +245,10 @@ describe("computeCrossProjectRollup — direction Account ← Journal (rollup on
         },
       ],
       records: [
-        { id: "Accounts/A1.md", values: { name: "A1", entries: ["[[J1]]", "[[J2]]"] } },
+        {
+          id: "Accounts/A1.md",
+          values: { name: "A1", entries: ["[[J1]]", "[[J2]]"] },
+        },
       ],
     };
     const result = computeCrossProjectRollup(

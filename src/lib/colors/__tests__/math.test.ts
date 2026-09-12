@@ -47,12 +47,12 @@ describe("colors/math — hexToHsv", () => {
   });
 
   it("computes hue across all 6 sectors", () => {
-    expect(hexToHsv("#ff0000")?.h).toBe(0);    // red
-    expect(hexToHsv("#ffff00")?.h).toBe(60);   // yellow
-    expect(hexToHsv("#00ff00")?.h).toBe(120);  // green
-    expect(hexToHsv("#00ffff")?.h).toBe(180);  // cyan
-    expect(hexToHsv("#0000ff")?.h).toBe(240);  // blue
-    expect(hexToHsv("#ff00ff")?.h).toBe(300);  // magenta
+    expect(hexToHsv("#ff0000")?.h).toBe(0); // red
+    expect(hexToHsv("#ffff00")?.h).toBe(60); // yellow
+    expect(hexToHsv("#00ff00")?.h).toBe(120); // green
+    expect(hexToHsv("#00ffff")?.h).toBe(180); // cyan
+    expect(hexToHsv("#0000ff")?.h).toBe(240); // blue
+    expect(hexToHsv("#ff00ff")?.h).toBe(300); // magenta
   });
 
   it("trims surrounding whitespace", () => {

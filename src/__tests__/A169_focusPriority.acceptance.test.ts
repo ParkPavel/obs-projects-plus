@@ -15,14 +15,22 @@
 import { execFileSync } from "child_process";
 import * as path from "path";
 
-import { findChrome, renderProbe, svelteStyle, unscope, SRC_ROOT } from "./support/renderProbe";
+import {
+  findChrome,
+  renderProbe,
+  svelteStyle,
+  unscope,
+  SRC_ROOT,
+} from "./support/renderProbe";
 import { focusableWithin } from "src/lib/a11y/focusTrap";
 
 const chrome = findChrome();
 const describeIfChrome = chrome ? describe : describe.skip;
 
 if (!chrome) {
-  console.warn("A169: no Chrome found (set CHROME_PATH) — the keyboard acceptance did NOT run.");
+  console.warn(
+    "A169: no Chrome found (set CHROME_PATH) — the keyboard acceptance did NOT run."
+  );
 }
 
 /**
@@ -42,12 +50,12 @@ function trapSource(): string {
   const out = execFileSync(
     process.execPath,
     [
-      // The npm CLI entry may be an ELF executable on Linux. Load the JS API
-      // in the clean child process instead of passing that binary to Node.
-      "-e",
-      "process.stdout.write(require(process.argv[1]).buildSync({entryPoints:[process.argv[2]],bundle:true,format:'iife',globalName:'PPPTrap',logLevel:'error',write:false}).outputFiles[0].text)",
-      require.resolve("esbuild"),
+      path.join(SRC_ROOT, "..", "node_modules", "esbuild", "bin", "esbuild"),
       path.join(SRC_ROOT, "lib/a11y/focusTrap.ts"),
+      "--bundle",
+      "--format=iife",
+      "--global-name=PPPTrap",
+      "--log-level=error",
     ],
     { encoding: "utf8", timeout: 120_000, maxBuffer: 8 * 1024 * 1024 }
   );
@@ -55,91 +63,103 @@ function trapSource(): string {
   return trapCache;
 }
 
-describeIfChrome("A169 — a surface that calls itself modal keeps the keyboard", () => {
-  const PANEL = [
-    "<button id='outside-before'>before</button>",
-    "<aside id='panel' role='dialog' aria-modal='true'>",
-    "  <button id='first'>first</button>",
-    "  <input id='middle' />",
-    "  <button id='last'>last</button>",
-    "</aside>",
-    "<button id='outside-after'>after</button>",
-  ].join("\n");
-
-  const withTrap = (script: string) =>
-    renderProbe({
-      css: [],
-      html: `${PANEL}<script>${trapSource()}</script>`,
-      evaluate: [
-        "const panel = document.getElementById('panel');",
-        "document.getElementById('outside-before').focus();",
-        "const handle = PPPTrap.focusTrap(panel, { active: true });",
-        script,
-        "probe.active = document.activeElement ? document.activeElement.id : '(none)';",
-      ].join("\n"),
-      measure: [],
-    });
-
-  const tab = (shift = false) =>
-    [
-      "const ev = new KeyboardEvent('keydown', " +
-        `{ key: 'Tab', shiftKey: ${shift}, bubbles: true, cancelable: true });`,
-      "document.activeElement.dispatchEvent(ev);",
-      // A synthetic Tab does not move focus by itself — the browser's own
-      // default action is not run for an untrusted event. So the trap's job
-      // here is precisely the interesting half: when it calls preventDefault
-      // and redirects, focus moves; when it does not, focus stays put and the
-      // real browser would have carried it out of the dialog.
+describeIfChrome(
+  "A169 — a surface that calls itself modal keeps the keyboard",
+  () => {
+    const PANEL = [
+      "<button id='outside-before'>before</button>",
+      "<aside id='panel' role='dialog' aria-modal='true'>",
+      "  <button id='first'>first</button>",
+      "  <input id='middle' />",
+      "  <button id='last'>last</button>",
+      "</aside>",
+      "<button id='outside-after'>after</button>",
     ].join("\n");
 
-  it("moves focus into the panel when it opens", () => {
-    const r = withTrap("");
-    expect(r["__probe"]!["active"]).toBe("first");
-  });
+    const withTrap = (script: string) =>
+      renderProbe({
+        css: [],
+        html: `${PANEL}<script>${trapSource()}</script>`,
+        evaluate: [
+          "const panel = document.getElementById('panel');",
+          "document.getElementById('outside-before').focus();",
+          "const handle = PPPTrap.focusTrap(panel, { active: true });",
+          script,
+          "probe.active = document.activeElement ? document.activeElement.id : '(none)';",
+        ].join("\n"),
+        measure: [],
+      });
 
-  it("Tab at the last element wraps to the first instead of leaving", () => {
-    const r = withTrap(["document.getElementById('last').focus();", tab()].join("\n"));
-    expect(r["__probe"]!["active"]).toBe("first");
-  });
+    const tab = (shift = false) =>
+      [
+        "const ev = new KeyboardEvent('keydown', " +
+          `{ key: 'Tab', shiftKey: ${shift}, bubbles: true, cancelable: true });`,
+        "document.activeElement.dispatchEvent(ev);",
+        // A synthetic Tab does not move focus by itself — the browser's own
+        // default action is not run for an untrusted event. So the trap's job
+        // here is precisely the interesting half: when it calls preventDefault
+        // and redirects, focus moves; when it does not, focus stays put and the
+        // real browser would have carried it out of the dialog.
+      ].join("\n");
 
-  it("Shift+Tab at the first element wraps to the last instead of leaving", () => {
-    const r = withTrap(["document.getElementById('first').focus();", tab(true)].join("\n"));
-    expect(r["__probe"]!["active"]).toBe("last");
-  });
-
-  it("gives focus back to whatever had it when the panel closes", () => {
-    const r = withTrap("handle.update({ active: false });");
-    expect(r["__probe"]!["active"]).toBe("outside-before");
-  });
-
-  it("does not steal focus back when the caller has moved it on purpose", () => {
-    // Closing a panel by activating something else must not yank the user
-    // backwards. The trap checks where focus actually is rather than assuming.
-    const r = withTrap(
-      ["document.getElementById('outside-after').focus();", "handle.update({ active: false });"].join("\n")
-    );
-    expect(r["__probe"]!["active"]).toBe("outside-after");
-  });
-
-  it("focuses the container itself when the panel has nothing focusable", () => {
-    const r = renderProbe({
-      css: [],
-      html: `<button id='before'>b</button><aside id='empty' role='dialog'><p>text</p></aside><script>${trapSource()}</script>`,
-      evaluate: [
-        "document.getElementById('before').focus();",
-        "PPPTrap.focusTrap(document.getElementById('empty'), { active: true });",
-        "probe.active = document.activeElement ? document.activeElement.id : '(none)';",
-        "probe.tabindex = document.getElementById('empty').getAttribute('tabindex') || '(none)';",
-      ].join("\n"),
-      measure: [],
+    it("moves focus into the panel when it opens", () => {
+      const r = withTrap("");
+      expect(r["__probe"]!["active"]).toBe("first");
     });
-    expect(r["__probe"]!["active"]).toBe("empty");
-    expect(r["__probe"]!["tabindex"]).toBe("-1");
-  });
-});
+
+    it("Tab at the last element wraps to the first instead of leaving", () => {
+      const r = withTrap(
+        ["document.getElementById('last').focus();", tab()].join("\n")
+      );
+      expect(r["__probe"]!["active"]).toBe("first");
+    });
+
+    it("Shift+Tab at the first element wraps to the last instead of leaving", () => {
+      const r = withTrap(
+        ["document.getElementById('first').focus();", tab(true)].join("\n")
+      );
+      expect(r["__probe"]!["active"]).toBe("last");
+    });
+
+    it("gives focus back to whatever had it when the panel closes", () => {
+      const r = withTrap("handle.update({ active: false });");
+      expect(r["__probe"]!["active"]).toBe("outside-before");
+    });
+
+    it("does not steal focus back when the caller has moved it on purpose", () => {
+      // Closing a panel by activating something else must not yank the user
+      // backwards. The trap checks where focus actually is rather than assuming.
+      const r = withTrap(
+        [
+          "document.getElementById('outside-after').focus();",
+          "handle.update({ active: false });",
+        ].join("\n")
+      );
+      expect(r["__probe"]!["active"]).toBe("outside-after");
+    });
+
+    it("focuses the container itself when the panel has nothing focusable", () => {
+      const r = renderProbe({
+        css: [],
+        html: `<button id='before'>b</button><aside id='empty' role='dialog'><p>text</p></aside><script>${trapSource()}</script>`,
+        evaluate: [
+          "document.getElementById('before').focus();",
+          "PPPTrap.focusTrap(document.getElementById('empty'), { active: true });",
+          "probe.active = document.activeElement ? document.activeElement.id : '(none)';",
+          "probe.tabindex = document.getElementById('empty').getAttribute('tabindex') || '(none)';",
+        ].join("\n"),
+        measure: [],
+      });
+      expect(r["__probe"]!["active"]).toBe("empty");
+      expect(r["__probe"]!["tabindex"]).toBe("-1");
+    });
+  }
+);
 
 describeIfChrome("A169 — an invisible action is not a tab stop", () => {
-  const actions = unscope(svelteStyle("ui/views/Dashboard/widgets/WidgetHeaderActions.svelte"));
+  const actions = unscope(
+    svelteStyle("ui/views/Dashboard/widgets/WidgetHeaderActions.svelte")
+  );
 
   it("a widget's hover-only buttons are unreachable until the widget is focused", () => {
     const r = renderProbe({
@@ -205,7 +225,9 @@ describe("A169 — the focusable scan itself (no browser needed)", () => {
       "  <span id='e' tabindex='-1'>e</span>",
       "</div>",
     ].join("");
-    const ids = focusableWithin(document.getElementById("root") as HTMLElement).map((el) => el.id);
+    const ids = focusableWithin(
+      document.getElementById("root") as HTMLElement
+    ).map((el) => el.id);
     expect(ids).toEqual(["a", "d"]);
   });
 });

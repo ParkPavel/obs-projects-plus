@@ -42,10 +42,22 @@ const KERNEL = "lib/engine/aggregate.ts";
  * them, each with the reason.
  */
 const BOUNDARIES: ReadonlyArray<readonly [string, string]> = [
-  ["lib/dashboard-engine/aggregation.ts", "the footer's adapter: counts and dates the kernel has no name for"],
-  ["lib/dashboard-engine/transformExecutor.ts", "the pipeline's adapter: FIRST/LAST/STD_DEV have no kernel equivalent"],
-  ["lib/dashboard-engine/aggregationOptions.ts", "the option table: names, not math"],
-  ["lib/dashboard-engine/chartDataPipeline.ts", "maps a chart's axis choice onto a stored name"],
+  [
+    "lib/dashboard-engine/aggregation.ts",
+    "the footer's adapter: counts and dates the kernel has no name for",
+  ],
+  [
+    "lib/dashboard-engine/transformExecutor.ts",
+    "the pipeline's adapter: FIRST/LAST/STD_DEV have no kernel equivalent",
+  ],
+  [
+    "lib/dashboard-engine/aggregationOptions.ts",
+    "the option table: names, not math",
+  ],
+  [
+    "lib/dashboard-engine/chartDataPipeline.ts",
+    "maps a chart's axis choice onto a stored name",
+  ],
   ["lib/database/rollupMode.ts", "maps a picker's mode onto a stored name"],
 ];
 
@@ -115,7 +127,11 @@ describe("R0.18 — the tree", () => {
     // A declared exemption that has drifted silently widens the allowlist.
     for (const [file, why] of BOUNDARIES) {
       const full = path.join(SRC, file);
-      expect({ file, why, exists: fs.existsSync(full) }).toEqual({ file, why, exists: true });
+      expect({ file, why, exists: fs.existsSync(full) }).toEqual({
+        file,
+        why,
+        exists: true,
+      });
     }
   });
 
@@ -135,14 +151,19 @@ describe("R0.18 — a stored vocabulary is append-only", () => {
     const start = text.indexOf(`export type ${typeName} =`);
     expect({ typeName, found: start >= 0 }).toEqual({ typeName, found: true });
     const end = text.indexOf(";", start);
-    return [...text.slice(start, end).matchAll(/"([a-z_A-Z]+)"/g)].map((m) => m[1] as string);
+    return [...text.slice(start, end).matchAll(/"([a-z_A-Z]+)"/g)].map(
+      (m) => m[1] as string
+    );
   }
 
   it("ColumnAggregation still carries every member a config may hold", () => {
     // Removing one orphans every stored config that names it. `count` is the
     // cautionary member: renamed in R5-004, kept here, and unhandled in the
     // footer's switch until #180d — a value that rendered as nothing.
-    const members = unionMembers("ui/views/Dashboard/types.ts", "ColumnAggregation");
+    const members = unionMembers(
+      "ui/views/Dashboard/types.ts",
+      "ColumnAggregation"
+    );
     for (const required of [
       "none",
       "count",
@@ -167,12 +188,18 @@ describe("R0.18 — a stored vocabulary is append-only", () => {
       "latest",
       "date_range",
     ]) {
-      expect({ required, present: members.includes(required) }).toEqual({ required, present: true });
+      expect({ required, present: members.includes(required) }).toEqual({
+        required,
+        present: true,
+      });
     }
   });
 
   it("AggregationFunction still carries every name a stored pipeline step may hold", () => {
-    const members = unionMembers("lib/dashboard-engine/transformTypes.ts", "AggregationFunction");
+    const members = unionMembers(
+      "lib/dashboard-engine/transformTypes.ts",
+      "AggregationFunction"
+    );
     for (const required of [
       "COUNT",
       "COUNT_DISTINCT",
@@ -188,7 +215,10 @@ describe("R0.18 — a stored vocabulary is append-only", () => {
       "PCT_EMPTY",
       "PCT_NOT_EMPTY",
     ]) {
-      expect({ required, present: members.includes(required) }).toEqual({ required, present: true });
+      expect({ required, present: members.includes(required) }).toEqual({
+        required,
+        present: true,
+      });
     }
   });
 });
@@ -221,7 +251,10 @@ describe("R0.18 — a picker reads the shared table", () => {
   it("the shared table describes every member of the stored vocabulary", () => {
     // An option the table does not know renders as a blank line in a picker.
     const table = fs.readFileSync(path.join(SRC, OPTION_TABLE), "utf8");
-    const types = fs.readFileSync(path.join(SRC, "ui/views/Dashboard/types.ts"), "utf8");
+    const types = fs.readFileSync(
+      path.join(SRC, "ui/views/Dashboard/types.ts"),
+      "utf8"
+    );
     const start = types.indexOf("export type ColumnAggregation =");
     const members = [
       ...types.slice(start, types.indexOf(";", start)).matchAll(/"([a-z_]+)"/g),

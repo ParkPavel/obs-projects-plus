@@ -47,14 +47,24 @@ describe("WidgetHeaderActions (#067 F1)", () => {
   it("dispatches one semantic event per button", () => {
     const { component, target, destroy } = mount({});
     const events: string[] = [];
-    for (const name of ["toggleConfig", "togglePipeline", "toggleLock", "remove"]) {
+    for (const name of [
+      "toggleConfig",
+      "togglePipeline",
+      "toggleLock",
+      "remove",
+    ]) {
       component.$on(name, () => events.push(name));
     }
     click(target, ".ppp-widget-settings-btn");
     click(target, ".ppp-widget-pipeline-btn");
     click(target, ".ppp-widget-lock-btn");
     click(target, ".ppp-widget-remove-btn");
-    expect(events).toEqual(["toggleConfig", "togglePipeline", "toggleLock", "remove"]);
+    expect(events).toEqual([
+      "toggleConfig",
+      "togglePipeline",
+      "toggleLock",
+      "remove",
+    ]);
     destroy();
   });
 
@@ -75,8 +85,12 @@ describe("WidgetHeaderActions (#067 F1)", () => {
 
   it("shows the step-count badge when the pipeline is active", () => {
     const { target, destroy } = mount({ pipelineStepCount: 3 });
-    expect(target.querySelector(".ppp-widget-pipeline-count")).toHaveTextContent("3");
-    expect(target.querySelector(".ppp-widget-pipeline-btn--active")).not.toBeNull();
+    expect(
+      target.querySelector(".ppp-widget-pipeline-count")
+    ).toHaveTextContent("3");
+    expect(
+      target.querySelector(".ppp-widget-pipeline-btn--active")
+    ).not.toBeNull();
     destroy();
   });
 

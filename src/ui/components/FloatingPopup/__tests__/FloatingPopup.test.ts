@@ -2,6 +2,7 @@
  * FloatingPopup smoke tests — verifies the popup engine renders, positions,
  * dismisses on outside click + Escape, and supports placement flip.
  *
+ * Spec: .ai_internal/New-specification/POPUP_PATTERN_GUIDE.md
  * Ticket: #034.1 (Phase 4 — Popup standardisation).
  */
 
@@ -64,7 +65,9 @@ function createTrigger(rect: Partial<DOMRect>): HTMLElement {
 
 function stubPopupRect(width = 200, height = 100) {
   // The desktop popup is portaled to <body> (#112 F2), so query the document.
-  const popup = document.querySelector(".ppp-popup--floating") as HTMLElement | null;
+  const popup = document.querySelector(
+    ".ppp-popup--floating"
+  ) as HTMLElement | null;
   if (!popup) return null;
   popup.getBoundingClientRect = () =>
     ({
@@ -77,7 +80,7 @@ function stubPopupRect(width = 200, height = 100) {
       width,
       height,
       toJSON: () => ({}),
-    } as DOMRect);
+    }) as DOMRect;
   return popup;
 }
 
@@ -86,12 +89,25 @@ describe("FloatingPopup", () => {
     document.body.innerHTML = "";
     isMobile.set(false);
     // Default viewport to a sane desktop size.
-    Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true });
-    Object.defineProperty(window, "innerHeight", { value: 768, configurable: true });
+    Object.defineProperty(window, "innerWidth", {
+      value: 1024,
+      configurable: true,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      value: 768,
+      configurable: true,
+    });
   });
 
   test("does not render content when closed", () => {
-    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const trigger = createTrigger({
+      top: 100,
+      left: 100,
+      bottom: 120,
+      right: 200,
+      width: 100,
+      height: 20,
+    });
     const view = mount({ open: false, triggerEl: trigger, ariaLabel: "test" });
 
     expect(document.querySelector(".ppp-popup--floating")).toBeNull();
@@ -99,7 +115,14 @@ describe("FloatingPopup", () => {
   });
 
   test("renders floating popup with role and aria-label when open", async () => {
-    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const trigger = createTrigger({
+      top: 100,
+      left: 100,
+      bottom: 120,
+      right: 200,
+      width: 100,
+      height: 20,
+    });
     const view = mount({
       open: true,
       triggerEl: trigger,
@@ -118,8 +141,19 @@ describe("FloatingPopup", () => {
   });
 
   test("positions popup below trigger for bottom-start placement", async () => {
-    const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });
-    const view = mount({ open: true, triggerEl: trigger, placement: "bottom-start" });
+    const trigger = createTrigger({
+      top: 100,
+      left: 50,
+      bottom: 120,
+      right: 150,
+      width: 100,
+      height: 20,
+    });
+    const view = mount({
+      open: true,
+      triggerEl: trigger,
+      placement: "bottom-start",
+    });
 
     await flush(10);
     stubPopupRect(160, 80);
@@ -140,8 +174,19 @@ describe("FloatingPopup", () => {
     // Trigger sits near the right edge; popup is wider than the available
     // viewport space (vw - 2*margin), so the clamp must pin left AND emit a
     // max-width cap that prevents right overflow.
-    const trigger = createTrigger({ top: 100, left: 980, bottom: 120, right: 1020, width: 40, height: 20 });
-    const view = mount({ open: true, triggerEl: trigger, placement: "bottom-start" });
+    const trigger = createTrigger({
+      top: 100,
+      left: 980,
+      bottom: 120,
+      right: 1020,
+      width: 40,
+      height: 20,
+    });
+    const view = mount({
+      open: true,
+      triggerEl: trigger,
+      placement: "bottom-start",
+    });
 
     await flush(10);
     // vw = 1024, margin ≈ 8px → available ≈ 1008px. Popup wants 1200px.
@@ -168,8 +213,19 @@ describe("FloatingPopup", () => {
   });
 
   test("repositions on window resize while open (#098)", async () => {
-    const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });
-    const view = mount({ open: true, triggerEl: trigger, placement: "bottom-start" });
+    const trigger = createTrigger({
+      top: 100,
+      left: 50,
+      bottom: 120,
+      right: 150,
+      width: 100,
+      height: 20,
+    });
+    const view = mount({
+      open: true,
+      triggerEl: trigger,
+      placement: "bottom-start",
+    });
 
     await flush(10);
     const popup = stubPopupRect(160, 80) as HTMLElement;
@@ -185,7 +241,14 @@ describe("FloatingPopup", () => {
 
   test("removes the resize listener on destroy (#098)", async () => {
     const removeSpy = jest.spyOn(window, "removeEventListener");
-    const trigger = createTrigger({ top: 100, left: 50, bottom: 120, right: 150, width: 100, height: 20 });
+    const trigger = createTrigger({
+      top: 100,
+      left: 50,
+      bottom: 120,
+      right: 150,
+      width: 100,
+      height: 20,
+    });
     const view = mount({ open: true, triggerEl: trigger });
 
     await flush(10);
@@ -196,7 +259,14 @@ describe("FloatingPopup", () => {
   });
 
   test("dismisses on Escape key", async () => {
-    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const trigger = createTrigger({
+      top: 100,
+      left: 100,
+      bottom: 120,
+      right: 200,
+      width: 100,
+      height: 20,
+    });
     const onClose = jest.fn();
     const view = mount({ open: true, triggerEl: trigger });
     view.component.$on("close", onClose);
@@ -213,7 +283,14 @@ describe("FloatingPopup", () => {
   });
 
   test("dismisses on outside mousedown but not on trigger mousedown", async () => {
-    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const trigger = createTrigger({
+      top: 100,
+      left: 100,
+      bottom: 120,
+      right: 200,
+      width: 100,
+      height: 20,
+    });
     const onClose = jest.fn();
     const view = mount({ open: true, triggerEl: trigger });
     view.component.$on("close", onClose);
@@ -238,7 +315,14 @@ describe("FloatingPopup", () => {
   });
 
   test("closeOnInnerClick=true closes when popup body is clicked", async () => {
-    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const trigger = createTrigger({
+      top: 100,
+      left: 100,
+      bottom: 120,
+      right: 200,
+      width: 100,
+      height: 20,
+    });
     const onClose = jest.fn();
     const view = mount({
       open: true,
@@ -260,13 +344,22 @@ describe("FloatingPopup", () => {
 
   test("renders bottom-sheet on mobile with backdrop", async () => {
     isMobile.set(true);
-    const trigger = createTrigger({ top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 });
+    const trigger = createTrigger({
+      top: 100,
+      left: 100,
+      bottom: 120,
+      right: 200,
+      width: 100,
+      height: 20,
+    });
     const view = mount({ open: true, triggerEl: trigger });
 
     await flush(10);
 
     expect(view.target.querySelector(".ppp-popup-backdrop")).not.toBeNull();
-    expect(view.target.querySelector(".ppp-popup--bottom-sheet")).not.toBeNull();
+    expect(
+      view.target.querySelector(".ppp-popup--bottom-sheet")
+    ).not.toBeNull();
     expect(document.querySelector(".ppp-popup--floating")).toBeNull();
 
     view.destroy();

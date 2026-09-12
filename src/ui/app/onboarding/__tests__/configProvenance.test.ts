@@ -20,8 +20,14 @@ import type {
 } from "src/ui/views/Dashboard/types";
 
 const LEGACY_TYPES: ReadonlyArray<string> = [
-  "data-table", "summary-row", "comparison", "view-port",
-  "data-list", "sub-base-canvas", "yaml-visualizer", "timeline",
+  "data-table",
+  "summary-row",
+  "comparison",
+  "view-port",
+  "data-list",
+  "sub-base-canvas",
+  "yaml-visualizer",
+  "timeline",
 ];
 
 describe("config provenance (UT2026-D, #072)", () => {
@@ -42,11 +48,13 @@ describe("config provenance (UT2026-D, #072)", () => {
   // restore-point file for a config the product had just generated.
 
   const asDashboard = (widgets: WidgetDefinition[]): DatabaseViewConfig =>
-    ({ widgets } as unknown as DatabaseViewConfig);
+    ({ widgets }) as unknown as DatabaseViewConfig;
 
   it("demo widget generator output passes migrateDashboardTransforms as a no-op", () => {
     const widgets = demoGeneratedWidgets();
-    expect(migrateDashboardTransforms(asDashboard(widgets)).migrated).toBe(false);
+    expect(migrateDashboardTransforms(asDashboard(widgets)).migrated).toBe(
+      false
+    );
   });
 
   it("no generator emits a leading filter step — scope belongs in config.subFilter", () => {
@@ -80,15 +88,22 @@ describe("config provenance (UT2026-D, #072)", () => {
     const charts = demoGeneratedWidgets().filter((w) => w.type === "chart");
     expect(charts.length).toBeGreaterThan(0);
     for (const chart of charts) {
-      const yAxis = (chart.config as { yAxis?: { aggregation?: string } }).yAxis;
+      const yAxis = (chart.config as { yAxis?: { aggregation?: string } })
+        .yAxis;
       expect(yAxis?.aggregation).not.toBe("count");
     }
   });
 
+  // ── F3 (UT2026-A L3) — the widget-template half is gone ────────────
+  //
+  // These rules were written over two generators: the demo project and the
+  // dashboard widget templates. #191 deleted the templates, so each rule below
+  // now runs over the one generator the product still has. The rules themselves
+  // did not weaken — their subject got smaller, which is what a deletion does,
+  // and saying so here is cheaper than a future reader wondering why the
+  // section is named after something that no longer exists.
+
   it("no generator emits retired legacy widget types", () => {
-    // #191: dashboard templates were the second generator this covered. They
-    // are gone; the demo project is the one that remains, and it is the one
-    // that ships to a user.
     const offenders = demoGeneratedWidgets()
       .filter((w) => LEGACY_TYPES.includes(w.type))
       .map((w) => `${w.type}:${w.title}`);
@@ -96,7 +111,9 @@ describe("config provenance (UT2026-D, #072)", () => {
   });
 
   it("every generated database-call carries viewTabs (UT2026-G finding)", () => {
-    const blocks = demoGeneratedWidgets().filter((w) => w.type === "database-call");
+    const blocks = demoGeneratedWidgets().filter(
+      (w) => w.type === "database-call"
+    );
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
       const tabs = (block.config as { viewTabs?: unknown[] }).viewTabs;

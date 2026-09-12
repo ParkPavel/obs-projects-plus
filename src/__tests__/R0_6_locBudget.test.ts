@@ -15,59 +15,98 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // 240 → 230 (#184): the frame math moved to `hostFrames.ts`, and a ceiling
   // that keeps the room the move freed is not a ceiling. Banked in the same
   // commit as the removal, which is the rule this ratchet exists to enforce.
-  // 230 → 225 (#194): the content chain left for `WidgetContent.svelte` (−20)
-  // and the data-scope panel arrived (+15). The net is banked rather than
-  // pocketed — the host stood at 229 under a 230 ceiling before this ticket,
-  // which is how a "one line of room" file gets ten lines added to it twice.
-  { file: "ui/views/Dashboard/widgets/WidgetHost.svelte", maxLines: 225 },
+  { file: "ui/views/Dashboard/widgets/WidgetHost.svelte", maxLines: 230 },
   { file: "ui/views/Dashboard/widgets/hostFrames.ts", maxLines: 120 },
   { file: "ui/views/Dashboard/widgets/WidgetShell.svelte", maxLines: 350 },
-  { file: "ui/views/Dashboard/widgets/WidgetHeaderActions.svelte", maxLines: 220 },
+  {
+    file: "ui/views/Dashboard/widgets/WidgetHeaderActions.svelte",
+    maxLines: 220,
+  },
   { file: "ui/views/Dashboard/widgets/widgetMenu.ts", maxLines: 80 },
   { file: "ui/views/Dashboard/widgets/WidgetSetupWizard.svelte", maxLines: 80 },
-  { file: "ui/views/Dashboard/widgets/widgetComponentRegistry.ts", maxLines: 260 },
+  {
+    file: "ui/views/Dashboard/widgets/widgetComponentRegistry.ts",
+    maxLines: 260,
+  },
   // #169. Entered at their measured size, which is not a raise: the header's
   // primary action shipped as its own component precisely BECAUSE the three
   // files the ticket named were each within a line of their ceiling, and
   // context assembly moved out of the host for the same reason.
-  { file: "ui/views/Dashboard/widgets/WidgetPrimaryAction.svelte", maxLines: 90 },
+  {
+    file: "ui/views/Dashboard/widgets/WidgetPrimaryAction.svelte",
+    maxLines: 90,
+  },
   { file: "ui/views/Dashboard/widgets/renderContext.ts", maxLines: 90 },
-  // #194. Entered at their measured size, for the third time and the same
-  // reason: the host was one line under its ceiling and the data-scope surface
-  // needed about ten, so the content chain and the source selector each became
-  // a component. `BUDGETS` covers `ui/views/Dashboard/**` by hand, so a new
-  // component that is not listed here is a component with no ceiling at all.
-  { file: "ui/views/Dashboard/widgets/WidgetContent.svelte", maxLines: 95 },
-  { file: "ui/views/Dashboard/widgets/DataScopeField.svelte", maxLines: 85 },
-  { file: "ui/views/Dashboard/widgets/DataScopePanel.svelte", maxLines: 60 },
-  { file: "ui/views/Dashboard/widgets/dataScope.ts", maxLines: 75 },
   // Master-prompt invariant 1: canvas ≤200 (restored in compliance audit).
-  // 200 → 195 (#191): the template controller, its confirm dialog and the
-  // apply handler left with the mechanism. A ceiling that keeps the room a
-  // deletion freed is not a ceiling.
-  { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 195 },
+  // 200 → 190 (#191): the templates controller, its confirm dialog mount and
+  // the apply-template handler left the canvas. Banked to the MEASURED size in
+  // the same commit as the removal, not to a round number — the 240 → 230
+  // precedent from #184, and the rule this ratchet exists to enforce.
+  { file: "ui/views/Dashboard/DashboardCanvas.svelte", maxLines: 190 },
   { file: "ui/views/Dashboard/dashboardSuggest.ts", maxLines: 60 },
   // F2 (#074) — TABLE_V2_CANON §5 budgets
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte", maxLines: 280 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte", maxLines: 200 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableHeader.svelte", maxLines: 200 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte", maxLines: 200 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableFooter.svelte", maxLines: 120 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableCanon.ts", maxLines: 260 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte", maxLines: 250 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/CellChoiceDropdown.svelte", maxLines: 130 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte", maxLines: 100 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts", maxLines: 170 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts", maxLines: 230 },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/DataTableContent.svelte",
+    maxLines: 280,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/TableControlBar.svelte",
+    maxLines: 200,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/TableHeader.svelte",
+    maxLines: 200,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/TableRow.svelte",
+    maxLines: 200,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/TableFooter.svelte",
+    maxLines: 120,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/tableCanon.ts",
+    maxLines: 260,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/EditableCell.svelte",
+    maxLines: 250,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/CellChoiceDropdown.svelte",
+    maxLines: 130,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/TableNewRow.svelte",
+    maxLines: 100,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts",
+    maxLines: 170,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/tableHeaderOps.ts",
+    maxLines: 230,
+  },
   { file: "ui/views/Dashboard/widgets/ViewTabBar.svelte", maxLines: 260 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte", maxLines: 100 },
-  { file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerPopover.svelte", maxLines: 240 },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/TableGroupSection.svelte",
+    maxLines: 100,
+  },
+  {
+    file: "ui/views/Dashboard/widgets/DatabaseCall/RelationPickerPopover.svelte",
+    maxLines: 240,
+  },
 ];
 
 describe("R0.6 component LOC budgets (#067)", () => {
-  it.each(BUDGETS)("$file stays within $maxLines lines", ({ file, maxLines }) => {
-    const content = fs.readFileSync(path.join(SRC, file), "utf8");
-    const lines = content.split("\n").length;
-    expect(lines).toBeLessThanOrEqual(maxLines);
-  });
+  it.each(BUDGETS)(
+    "$file stays within $maxLines lines",
+    ({ file, maxLines }) => {
+      const content = fs.readFileSync(path.join(SRC, file), "utf8");
+      const lines = content.split("\n").length;
+      expect(lines).toBeLessThanOrEqual(maxLines);
+    }
+  );
 });

@@ -3,11 +3,18 @@
 // Tests the full chain: DataFrame → Pipeline → Aggregation → Charts → Formatting
 
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { DataFrame, DataField, DataRecord } from "src/lib/dataframe/dataframe";
+import type {
+  DataFrame,
+  DataField,
+  DataRecord,
+} from "src/lib/dataframe/dataframe";
 import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
 import { computeAggregations } from "src/lib/dashboard-engine/aggregation";
 import { computeChartData } from "src/lib/dashboard-engine/chartDataPipeline";
-import { computeRowStyles, cellStyleToCSS } from "src/lib/dashboard-engine/conditionalFormat";
+import {
+  computeRowStyles,
+  cellStyleToCSS,
+} from "src/lib/dashboard-engine/conditionalFormat";
 import {
   computeBacklinks,
   enrichWithBacklinks,
@@ -15,7 +22,11 @@ import {
   resolveRelations,
 } from "src/lib/dashboard-engine/relationResolver";
 import { computeRollup } from "src/lib/dashboard-engine/rollup";
-import { migrateTableConfig, isLegacyTableConfig } from "../migration";
+import {
+  migrateTableConfig,
+  isLegacyTableConfig,
+  dropTemplateQuickActions,
+} from "../migration";
 import type {
   DatabaseViewConfig,
   ChartConfig,
@@ -28,39 +39,129 @@ import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes"
 
 function makeProjectFrame(): DataFrame {
   const fields: DataField[] = [
-    { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-    { name: "status", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-    { name: "priority", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-    { name: "budget", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
-    { name: "deadline", type: DataFieldType.Date, repeated: false, identifier: false, derived: false },
-    { name: "done", type: DataFieldType.Boolean, repeated: false, identifier: false, derived: false },
-    { name: "assignee", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
+    {
+      name: "name",
+      type: DataFieldType.String,
+      repeated: false,
+      identifier: true,
+      derived: false,
+    },
+    {
+      name: "status",
+      type: DataFieldType.String,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
+    {
+      name: "priority",
+      type: DataFieldType.Number,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
+    {
+      name: "budget",
+      type: DataFieldType.Number,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
+    {
+      name: "deadline",
+      type: DataFieldType.Date,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
+    {
+      name: "done",
+      type: DataFieldType.Boolean,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
+    {
+      name: "assignee",
+      type: DataFieldType.String,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
   ];
 
   const records: DataRecord[] = [
     {
       id: "Projects/Alpha.md",
-      values: { name: "[[Projects/Alpha|Alpha]]", status: "Active", priority: 1, budget: 50000, deadline: "2026-06-01", done: false, assignee: "Alice" },
+      values: {
+        name: "[[Projects/Alpha|Alpha]]",
+        status: "Active",
+        priority: 1,
+        budget: 50000,
+        deadline: "2026-06-01",
+        done: false,
+        assignee: "Alice",
+      },
     },
     {
       id: "Projects/Beta.md",
-      values: { name: "[[Projects/Beta|Beta]]", status: "Active", priority: 2, budget: 30000, deadline: "2026-07-15", done: false, assignee: "Bob" },
+      values: {
+        name: "[[Projects/Beta|Beta]]",
+        status: "Active",
+        priority: 2,
+        budget: 30000,
+        deadline: "2026-07-15",
+        done: false,
+        assignee: "Bob",
+      },
     },
     {
       id: "Projects/Gamma.md",
-      values: { name: "[[Projects/Gamma|Gamma]]", status: "Completed", priority: 1, budget: 20000, deadline: "2026-03-01", done: true, assignee: "Alice" },
+      values: {
+        name: "[[Projects/Gamma|Gamma]]",
+        status: "Completed",
+        priority: 1,
+        budget: 20000,
+        deadline: "2026-03-01",
+        done: true,
+        assignee: "Alice",
+      },
     },
     {
       id: "Projects/Delta.md",
-      values: { name: "[[Projects/Delta|Delta]]", status: "On Hold", priority: 3, budget: 15000, deadline: "2026-09-01", done: false, assignee: "Carol" },
+      values: {
+        name: "[[Projects/Delta|Delta]]",
+        status: "On Hold",
+        priority: 3,
+        budget: 15000,
+        deadline: "2026-09-01",
+        done: false,
+        assignee: "Carol",
+      },
     },
     {
       id: "Projects/Epsilon.md",
-      values: { name: "[[Projects/Epsilon|Epsilon]]", status: "Active", priority: 2, budget: 45000, deadline: "2026-08-01", done: false, assignee: "Bob" },
+      values: {
+        name: "[[Projects/Epsilon|Epsilon]]",
+        status: "Active",
+        priority: 2,
+        budget: 45000,
+        deadline: "2026-08-01",
+        done: false,
+        assignee: "Bob",
+      },
     },
     {
       id: "Projects/Zeta.md",
-      values: { name: "[[Projects/Zeta|Zeta]]", status: "Completed", priority: 1, budget: 10000, deadline: "2026-02-15", done: true, assignee: "Carol" },
+      values: {
+        name: "[[Projects/Zeta|Zeta]]",
+        status: "Completed",
+        priority: 1,
+        budget: 10000,
+        deadline: "2026-02-15",
+        done: true,
+        assignee: "Carol",
+      },
     },
   ];
 
@@ -69,9 +170,27 @@ function makeProjectFrame(): DataFrame {
 
 function makeRelationFrame(): DataFrame {
   const fields: DataField[] = [
-    { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-    { name: "related", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-    { name: "score", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+    {
+      name: "name",
+      type: DataFieldType.String,
+      repeated: false,
+      identifier: true,
+      derived: false,
+    },
+    {
+      name: "related",
+      type: DataFieldType.String,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
+    {
+      name: "score",
+      type: DataFieldType.Number,
+      repeated: false,
+      identifier: false,
+      derived: false,
+    },
   ];
 
   const records: DataRecord[] = [
@@ -97,7 +216,12 @@ describe("E2E: Pipeline → Aggregation → Formatting", () => {
           type: "filter",
           conditions: {
             conditions: [
-              { field: "status", operator: "is" as const, value: "Active", enabled: true },
+              {
+                field: "status",
+                operator: "is" as const,
+                value: "Active",
+                enabled: true,
+              },
             ],
           },
         },
@@ -121,8 +245,16 @@ describe("E2E: Pipeline → Aggregation → Formatting", () => {
         {
           type: "aggregate",
           columns: [
-            { sourceField: "budget", outputName: "total_budget", function: "SUM" },
-            { sourceField: "budget", outputName: "avg_budget", function: "AVG" },
+            {
+              sourceField: "budget",
+              outputName: "total_budget",
+              function: "SUM",
+            },
+            {
+              sourceField: "budget",
+              outputName: "avg_budget",
+              function: "AVG",
+            },
           ],
         },
       ],
@@ -256,7 +388,10 @@ describe("E2E: Chart data pipeline", () => {
     expect(data.series[0]?.name).toBe("Count");
 
     // Total should be 6
-    const total = data.series[0]!.values.reduce((s: number, v) => s + (v ?? 0), 0);
+    const total = data.series[0]!.values.reduce(
+      (s: number, v) => s + (v ?? 0),
+      0
+    );
     expect(total).toBe(6);
 
     // Active = 3, Completed = 2, On Hold = 1
@@ -293,7 +428,7 @@ describe("E2E: Chart data pipeline", () => {
     // Values should be sorted desc
     const values = data.series[0]!.values;
     for (let i = 1; i < values.length; i++) {
-      expect((values[i - 1] ?? 0)).toBeGreaterThanOrEqual(values[i] ?? 0);
+      expect(values[i - 1] ?? 0).toBeGreaterThanOrEqual(values[i] ?? 0);
     }
 
     // Bob: 30000 + 45000 = 75000 (highest)
@@ -331,7 +466,7 @@ describe("E2E: Chart data pipeline", () => {
 
     // Cumulative: each value >= previous
     for (let i = 1; i < values.length; i++) {
-      expect((values[i] ?? 0)).toBeGreaterThanOrEqual(values[i - 1] ?? 0);
+      expect(values[i] ?? 0).toBeGreaterThanOrEqual(values[i - 1] ?? 0);
     }
 
     // Last value should be total budget = 170000
@@ -346,16 +481,36 @@ describe("E2E: Chart data pipeline", () => {
         ...makeProjectFrame().records,
         {
           id: "Projects/Zero.md",
-          values: { name: "Zero", status: "Draft", priority: 4, budget: 0, deadline: "2026-12-01", done: false, assignee: "Nobody" },
+          values: {
+            name: "Zero",
+            status: "Draft",
+            priority: 4,
+            budget: 0,
+            deadline: "2026-12-01",
+            done: false,
+            assignee: "Nobody",
+          },
         },
       ],
     };
 
     const config: ChartConfig = {
       chartType: "bar",
-      xAxis: { property: "assignee", sortBy: "label", sortOrder: "asc", omitZero: true },
+      xAxis: {
+        property: "assignee",
+        sortBy: "label",
+        sortOrder: "asc",
+        omitZero: true,
+      },
       yAxis: { property: "budget", aggregation: "sum" },
-      style: { colorScheme: "auto", height: "medium", showGrid: false, showLabels: true, showLegend: false, showValues: false },
+      style: {
+        colorScheme: "auto",
+        height: "medium",
+        showGrid: false,
+        showLabels: true,
+        showLegend: false,
+        showValues: false,
+      },
     };
 
     const data = computeChartData(frameWithZero, config);
@@ -389,33 +544,49 @@ describe("E2E: Relation resolution → Rollup", () => {
     expect(resultD).toBeUndefined();
 
     // Step 3: Rollup scores from A's relations (B=20, C=30)
-    const rollupSum = computeRollup(frame.records[0]!, {
-      relationField: "related",
-      targetField: "score",
-      function: "sum",
-    }, frame);
+    const rollupSum = computeRollup(
+      frame.records[0]!,
+      {
+        relationField: "related",
+        targetField: "score",
+        function: "sum",
+      },
+      frame
+    );
     expect(rollupSum.value).toBe(50); // 20 + 30
 
-    const rollupAvg = computeRollup(frame.records[0]!, {
-      relationField: "related",
-      targetField: "score",
-      function: "avg",
-    }, frame);
+    const rollupAvg = computeRollup(
+      frame.records[0]!,
+      {
+        relationField: "related",
+        targetField: "score",
+        function: "avg",
+      },
+      frame
+    );
     expect(rollupAvg.value).toBe(25); // (20 + 30) / 2
 
-    const rollupCount = computeRollup(frame.records[0]!, {
-      relationField: "related",
-      targetField: "score",
-      function: "count",
-    }, frame);
+    const rollupCount = computeRollup(
+      frame.records[0]!,
+      {
+        relationField: "related",
+        targetField: "score",
+        function: "count",
+      },
+      frame
+    );
     expect(rollupCount.value).toBe(2);
 
     // Record D: no relations → rollup should be 0 or null
-    const rollupEmpty = computeRollup(frame.records[3]!, {
-      relationField: "related",
-      targetField: "score",
-      function: "sum",
-    }, frame);
+    const rollupEmpty = computeRollup(
+      frame.records[3]!,
+      {
+        relationField: "related",
+        targetField: "score",
+        function: "sum",
+      },
+      frame
+    );
     expect(rollupEmpty.value === 0 || rollupEmpty.value === null).toBe(true);
   });
 
@@ -423,8 +594,20 @@ describe("E2E: Relation resolution → Rollup", () => {
     // A links to B and C; B links to A
     const frame: DataFrame = {
       fields: [
-        { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-        { name: "related", type: DataFieldType.Relation, repeated: true, identifier: false, derived: false },
+        {
+          name: "name",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "related",
+          type: DataFieldType.Relation,
+          repeated: true,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "A.md", values: { name: "A", related: "[[B]] [[C]]" } },
@@ -444,8 +627,13 @@ describe("E2E: Relation resolution → Rollup", () => {
 
     // enrichWithBacklinks: adds derived field + values
     const enriched = enrichWithBacklinks(frame, ["related"]);
-    expect(enriched.fields.find((f: DataField) => f.name === "related_backlinks")).toBeDefined();
-    expect(enriched.fields.find((f: DataField) => f.name === "related_backlinks")?.derived).toBe(true);
+    expect(
+      enriched.fields.find((f: DataField) => f.name === "related_backlinks")
+    ).toBeDefined();
+    expect(
+      enriched.fields.find((f: DataField) => f.name === "related_backlinks")
+        ?.derived
+    ).toBe(true);
 
     // B's backlinks should contain [[A]]
     const recordB = enriched.records.find((r: DataRecord) => r.id === "B.md");
@@ -462,12 +650,15 @@ describe("E2E: Relation resolution → Rollup", () => {
   });
 });
 
-// ── E2E: Config Migration + Templates ────────────────────────
+// ── E2E: Config Migration ─────────────────────────────────────
 
-describe("E2E: Config migration → template application", () => {
+describe("E2E: Config migration", () => {
   test("legacy TableConfig migrates and produces valid DatabaseViewConfig", () => {
     const legacy = {
-      fieldConfig: { name: { width: 250 }, budget: { width: 120, pinned: true } },
+      fieldConfig: {
+        name: { width: 250 },
+        budget: { width: 120, pinned: true },
+      },
       sortField: "budget",
       sortAsc: false,
       orderFields: ["name", "budget", "status", "deadline"],
@@ -488,19 +679,219 @@ describe("E2E: Config migration → template application", () => {
     expect(config.table.fieldConfig?.["budget"]?.pinned).toBe(true);
     expect(config.table.sortField).toBe("budget");
     expect(config.table.sortAsc).toBe(false);
-    expect(config.table.orderFields).toEqual(["name", "budget", "status", "deadline"]);
+    expect(config.table.orderFields).toEqual([
+      "name",
+      "budget",
+      "status",
+      "deadline",
+    ]);
   });
 
   test("DatabaseViewConfig is NOT detected as legacy", () => {
     const dbConfig: DatabaseViewConfig = {
-      widgets: [{ id: "w1", type: "data-table", title: "Table", layout: { x: 0, y: 0, w: 12, h: 6 }, config: {} }],
+      widgets: [
+        {
+          id: "w1",
+          type: "data-table",
+          title: "Table",
+          layout: { x: 0, y: 0, w: 12, h: 6 },
+          config: {},
+        },
+      ],
       layoutMode: "stack",
       layoutVersion: 1,
       table: {},
       showWidgetToolbar: true,
       compactMode: false,
     };
-    expect(isLegacyTableConfig(dbConfig as unknown as Record<string, unknown>)).toBe(false);
+    expect(
+      isLegacyTableConfig(dbConfig as unknown as Record<string, unknown>)
+    ).toBe(false);
   });
 
+  // #191 — the three template-shape tests that stood here went with
+  // `WIDGET_TEMPLATES`. What replaces them is not another shape assertion but
+  // the end of the path a migrated config actually takes: the migrator no
+  // longer emits a button to the deleted mechanism, and a config that already
+  // carries one loses it on the way through.
+  test("migration emits no quick action pointing at a deleted mechanism", () => {
+    const config = migrateTableConfig({ sortField: "name" });
+
+    expect(config.quickActions?.map((a) => a.kind)).toEqual([
+      "toggle-formula-bar",
+    ]);
+  });
+
+  test("a config migrated by the OLD migrator loses its template button on open", () => {
+    // Literally what `migrateTableConfig` wrote before #191, which is what sits
+    // in vaults today — reconstructed here rather than referenced, because the
+    // code that produced it no longer exists to be imported.
+    const stored = {
+      widgets: [],
+      layoutMode: "stack",
+      layoutVersion: 1,
+      table: {},
+      showWidgetToolbar: true,
+      compactMode: false,
+      quickActions: [
+        {
+          id: "qa-overview",
+          label: "Overview Preset",
+          labelKey: "views.dashboard.quick.overview",
+          kind: "apply-template",
+          templateId: "overview-finance",
+        },
+        {
+          id: "qa-formula",
+          label: "Formula Builder",
+          labelKey: "views.dashboard.quick.formula",
+          kind: "toggle-formula-bar",
+        },
+      ],
+    } as unknown as DatabaseViewConfig;
+
+    const result = dropTemplateQuickActions(stored);
+
+    expect(result.migrated).toBe(true);
+    expect(result.config.quickActions?.map((a) => a.id)).toEqual([
+      "qa-formula",
+    ]);
+  });
+});
+
+// ── E2E: Multi-step pipeline with compute + filter + aggregate ─
+
+describe("E2E: Complex multi-step pipeline", () => {
+  const frame = makeProjectFrame();
+
+  test("compute → filter → group-by → aggregate", () => {
+    const pipeline: TransformPipeline = {
+      steps: [
+        // Step 1: Compute a "budget per priority" column
+        {
+          type: "compute",
+          columns: [
+            { name: "budget_per_prio", expression: "budget / priority" },
+          ],
+        },
+        // Step 2: Filter only non-completed (use string field; boolean needs is-not-checked)
+        {
+          type: "filter",
+          conditions: {
+            conditions: [
+              {
+                field: "status",
+                operator: "is-not" as const,
+                value: "Completed",
+                enabled: true,
+              },
+            ],
+          },
+        },
+        // Step 3: Group by status
+        { type: "group-by", fields: ["status"] },
+        // Step 4: Aggregate
+        {
+          type: "aggregate",
+          columns: [
+            { sourceField: "budget", outputName: "total", function: "SUM" },
+            { sourceField: "budget", outputName: "avg", function: "AVG" },
+          ],
+        },
+      ],
+    };
+
+    const result = executeTransform(frame, pipeline);
+
+    // Should have executed all 4 steps
+    expect(result.meta.stepsExecuted).toBe(4);
+
+    // Non-completed: Active(3) + On Hold(1) = 4 records before group-by
+    // After group-by + aggregate: Active, On Hold
+    expect(result.data.records.length).toBe(2);
+
+    const active = result.data.records.find(
+      (r) => r.values["status"] === "Active"
+    );
+    const onHold = result.data.records.find(
+      (r) => r.values["status"] === "On Hold"
+    );
+
+    // Active: 50000 + 30000 + 45000 = 125000
+    expect(active?.values["total"]).toBe(125000);
+
+    // On Hold: 15000
+    expect(onHold?.values["total"]).toBe(15000);
+    expect(onHold?.values["avg"]).toBe(15000); // single record
+  });
+
+  test("pipeline preserves execution metadata", () => {
+    const pipeline: TransformPipeline = {
+      steps: [
+        {
+          type: "compute",
+          columns: [{ name: "doubled", expression: "budget * 2" }],
+        },
+        {
+          type: "filter",
+          conditions: {
+            conditions: [
+              {
+                field: "status",
+                operator: "is" as const,
+                value: "Active",
+                enabled: true,
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const result = executeTransform(frame, pipeline);
+
+    expect(result.meta.inputRowCount).toBe(6);
+    expect(result.meta.outputRowCount).toBe(3);
+    expect(result.meta.stepsExecuted).toBe(2);
+    expect(result.meta.executionTimeMs).toBeGreaterThanOrEqual(0);
+    expect(result.meta.warnings).toEqual([]);
+  });
+});
+
+// ── E2E: Security scenarios ──────────────────────────────────
+
+describe("E2E: Security — CSS injection prevention", () => {
+  test("malicious color values are sanitized", () => {
+    const formats: ConditionalFormat[] = [
+      {
+        id: "evil",
+        field: "status",
+        conditions: [
+          {
+            operator: "is" as const,
+            value: "Active",
+            style: {
+              backgroundColor: "red; background-image: url(evil)",
+              textColor: "#ff0000",
+            },
+          },
+        ],
+      },
+    ];
+
+    const record: DataRecord = {
+      id: "test.md",
+      values: { status: "Active" },
+    };
+
+    const styles = computeRowStyles(formats, record);
+    const css = cellStyleToCSS(styles["status"]!);
+
+    // Malicious backgroundColor should be stripped (doesn't match SAFE_COLOR)
+    expect(css).not.toContain("url(evil)");
+    expect(css).not.toContain("background-image");
+
+    // Valid textColor should be preserved
+    expect(css).toContain("color: #ff0000");
+  });
 });

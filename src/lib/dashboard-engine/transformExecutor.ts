@@ -26,7 +26,10 @@ import { matchesFilterConditions } from "src/lib/engine/filterEvaluator";
 import { isNumeric, toNumber, toNumbers } from "src/lib/engine/numeric";
 import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
 import { evaluateFormulaValue } from "./formulaEngine";
-import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
+import {
+  isUnsafePattern,
+  MAX_REGEX_PATTERN_LENGTH,
+} from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
 import dayjs from "dayjs";
 
@@ -55,9 +58,7 @@ function validatePipelineOrder(steps: readonly TransformStep[]): string[] {
     const prev = steps[i - 1] as TransformStep;
     const curr = steps[i] as TransformStep;
     if (STEP_ORDER[curr.type] < STEP_ORDER[prev.type]) {
-      warnings.push(
-        `Step order warning: ${curr.type} after ${prev.type}`
-      );
+      warnings.push(`Step order warning: ${curr.type} after ${prev.type}`);
     }
   }
   return warnings;
@@ -177,7 +178,12 @@ function executeUnnest(
     }
     arrayData.push({ record, items: raw });
     for (const item of raw) {
-      if (item != null && typeof item === "object" && !Array.isArray(item) && !(item instanceof Date)) {
+      if (
+        item != null &&
+        typeof item === "object" &&
+        !Array.isArray(item) &&
+        !(item instanceof Date)
+      ) {
         for (const key of Object.keys(item as Record<string, unknown>)) {
           if (!pickFields || pickFields.has(key)) {
             discoveredKeys.add(key);
@@ -189,9 +195,7 @@ function executeUnnest(
 
   // If no object keys found, treat as flat array → single "_value" column
   const isObjectArray = discoveredKeys.size > 0;
-  const newFieldNames = isObjectArray
-    ? [...discoveredKeys].sort()
-    : ["_value"];
+  const newFieldNames = isObjectArray ? [...discoveredKeys].sort() : ["_value"];
 
   // Build new fields list
   const parentFields = df.fields.filter(
@@ -199,14 +203,22 @@ function executeUnnest(
   );
   const newFields: DataField[] = [
     ...parentFields,
-    { name: `${prefix}_index`, type: DataFieldType.Number, repeated: false, identifier: false, derived: true },
-    ...newFieldNames.map((key): DataField => ({
-      name: `${prefix}${key}`,
-      type: DataFieldType.Unknown,
+    {
+      name: `${prefix}_index`,
+      type: DataFieldType.Number,
       repeated: false,
       identifier: false,
       derived: true,
-    })),
+    },
+    ...newFieldNames.map(
+      (key): DataField => ({
+        name: `${prefix}${key}`,
+        type: DataFieldType.Unknown,
+        repeated: false,
+        identifier: false,
+        derived: true,
+      })
+    ),
   ];
 
   // Build expanded records
@@ -229,11 +241,21 @@ function executeUnnest(
       // Extract nested values
       if (item == null) {
         // null item → all nested fields undefined
-      } else if (isObjectArray && typeof item === "object" && !Array.isArray(item) && !(item instanceof Date)) {
+      } else if (
+        isObjectArray &&
+        typeof item === "object" &&
+        !Array.isArray(item) &&
+        !(item instanceof Date)
+      ) {
         const obj = item as Record<string, unknown>;
         for (const key of newFieldNames) {
           const val = obj[key];
-          if (val !== undefined && (typeof val === "string" || typeof val === "number" || typeof val === "boolean")) {
+          if (
+            val !== undefined &&
+            (typeof val === "string" ||
+              typeof val === "number" ||
+              typeof val === "boolean")
+          ) {
             parentValues[`${prefix}${key}`] = val;
           } else if (val instanceof Date) {
             parentValues[`${prefix}${key}`] = val;
@@ -242,7 +264,11 @@ function executeUnnest(
         }
       } else {
         // Flat array item → _value column
-        if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") {
+        if (
+          typeof item === "string" ||
+          typeof item === "number" ||
+          typeof item === "boolean"
+        ) {
           parentValues[`${prefix}_value`] = item;
         }
       }
@@ -269,10 +295,7 @@ function executeUnnest(
 /**
  * Safe regex execution with ReDoS mitigation.
  */
-function safeRegexExec(
-  pattern: string,
-  input: string
-): RegExpExecArray | null {
+function safeRegexExec(pattern: string, input: string): RegExpExecArray | null {
   // Check pattern safety BEFORE constructing RegExp
   if (isUnsafePattern(pattern)) return null;
 
@@ -385,7 +408,9 @@ function executeUnpivot(
       });
 
       if (newRecords.length >= MAX_OUTPUT_RECORDS) {
-        warnings.push(`Unpivot: output capped at ${MAX_OUTPUT_RECORDS} records`);
+        warnings.push(
+          `Unpivot: output capped at ${MAX_OUTPUT_RECORDS} records`
+        );
         break;
       }
     }
@@ -473,7 +498,9 @@ function executeCompute(
   warnings: string[]
 ): DataFrame {
   // First pass: compute all values to infer types
-  const columnValues: (DataValue | undefined | null)[][] = step.columns.map(() => []);
+  const columnValues: (DataValue | undefined | null)[][] = step.columns.map(
+    () => []
+  );
 
   const newRecords = df.records.map((record) => {
     const newValues = { ...record.values };
@@ -565,7 +592,10 @@ function evaluateTokens(tokens: (number | string)[]): number | null {
   for (const token of tokens) {
     if (typeof token === "number") {
       nums.push(token);
-    } else if (typeof token === "string" && ["+", "-", "*", "/"].includes(token)) {
+    } else if (
+      typeof token === "string" &&
+      ["+", "-", "*", "/"].includes(token)
+    ) {
       ops.push(token);
     } else {
       return null; // Invalid token
@@ -631,7 +661,10 @@ function executeFilter(
 /**
  * Truncate a date to the specified granularity.
  */
-function truncateDate(dateVal: DataValue | undefined | null, granularity: string): string {
+function truncateDate(
+  dateVal: DataValue | undefined | null,
+  granularity: string
+): string {
   if (dateVal == null) return "__empty__";
 
   const d = dateVal instanceof Date ? dateVal : dayjs(String(dateVal)).toDate();
@@ -654,7 +687,14 @@ function truncateDate(dateVal: DataValue | undefined | null, granularity: string
       thu.setDate(thu.getDate() + 3 - ((thu.getDay() + 6) % 7));
       const isoYear = thu.getFullYear();
       const jan4 = new Date(isoYear, 0, 4);
-      const weekNum = 1 + Math.round(((thu.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+      const weekNum =
+        1 +
+        Math.round(
+          ((thu.getTime() - jan4.getTime()) / 86400000 -
+            3 +
+            ((jan4.getDay() + 6) % 7)) /
+            7
+        );
       return `${isoYear}-W${String(weekNum).padStart(2, "0")}`;
     }
     case "day":
@@ -696,7 +736,9 @@ function executeGroupBy(
   warnings: string[]
 ): DataFrame {
   if (step.fields.length === 0) {
-    warnings.push("Group-by step: no fields specified, returning unchanged data");
+    warnings.push(
+      "Group-by step: no fields specified, returning unchanged data"
+    );
     return df;
   }
 
@@ -714,12 +756,19 @@ function executeGroupBy(
 
   // Build output fields: group fields + _group_size
   const outFields: DataField[] = [];
-  const dateOutputField = step.dateGrouping?.outputField ??
-    (step.dateGrouping ? `${step.dateGrouping.field}_${step.dateGrouping.granularity}` : null);
+  const dateOutputField =
+    step.dateGrouping?.outputField ??
+    (step.dateGrouping
+      ? `${step.dateGrouping.field}_${step.dateGrouping.granularity}`
+      : null);
 
   for (const fieldName of step.fields) {
     const orig = df.fields.find((f) => f.name === fieldName);
-    if (dateOutputField && step.dateGrouping && fieldName === step.dateGrouping.field) {
+    if (
+      dateOutputField &&
+      step.dateGrouping &&
+      fieldName === step.dateGrouping.field
+    ) {
       // Date grouping produces a derived string field
       outFields.push({
         name: dateOutputField,
@@ -760,8 +809,15 @@ function executeGroupBy(
     const values: Record<string, DataValue | undefined | null> = {};
 
     for (const fieldName of step.fields) {
-      if (dateOutputField && step.dateGrouping && fieldName === step.dateGrouping.field) {
-        values[dateOutputField] = truncateDate(representative.values[fieldName], step.dateGrouping.granularity);
+      if (
+        dateOutputField &&
+        step.dateGrouping &&
+        fieldName === step.dateGrouping.field
+      ) {
+        values[dateOutputField] = truncateDate(
+          representative.values[fieldName],
+          step.dateGrouping.granularity
+        );
       } else {
         values[fieldName] = representative.values[fieldName];
       }
@@ -830,7 +886,7 @@ function computeAggFn(
   val: DataValue | undefined | null,
   warnings: string[]
 ): DataValue | null {
-  const arr = Array.isArray(val) ? val : (val != null ? [val] : []);
+  const arr = Array.isArray(val) ? val : val != null ? [val] : [];
 
   const kernelFn = KERNEL_FN[fn];
   if (kernelFn) {
@@ -838,7 +894,9 @@ function computeAggFn(
     // pipeline — a multi-value field with nothing in it. Normalising it to
     // null at the boundary keeps `PCT_EMPTY` answering what it always has,
     // which is the one place the two vocabularies genuinely differed.
-    const normalised = arr.map((v) => (Array.isArray(v) && v.length === 0 ? null : v));
+    const normalised = arr.map((v) =>
+      Array.isArray(v) && v.length === 0 ? null : v
+    );
     const result = aggregate(normalised, {
       relationField: "",
       targetField: "",
@@ -858,7 +916,8 @@ function computeAggFn(
       const nums = toNumbers(arr);
       if (nums.length === 0) return null;
       const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
-      const variance = nums.reduce((sum, x) => sum + (x - avg) ** 2, 0) / nums.length;
+      const variance =
+        nums.reduce((sum, x) => sum + (x - avg) ** 2, 0) / nums.length;
       return Math.sqrt(variance);
     }
 
@@ -883,8 +942,12 @@ function executeAggregate(
   }
 
   // Build new fields: keep existing non-aggregated fields, add aggregated ones
-  const aggregatedSourceFields = new Set(step.columns.map((c) => c.sourceField));
-  const keptFields = df.fields.filter((f) => !aggregatedSourceFields.has(f.name));
+  const aggregatedSourceFields = new Set(
+    step.columns.map((c) => c.sourceField)
+  );
+  const keptFields = df.fields.filter(
+    (f) => !aggregatedSourceFields.has(f.name)
+  );
 
   const newFields: DataField[] = [
     ...keptFields,
@@ -941,7 +1004,9 @@ function executePivot(
   const valFieldExists = df.fields.some((f) => f.name === step.valueField);
 
   if (!catFieldExists) {
-    warnings.push(`Pivot step: categoryField '${step.categoryField}' not found`);
+    warnings.push(
+      `Pivot step: categoryField '${step.categoryField}' not found`
+    );
     return df;
   }
   if (!valFieldExists) {
@@ -962,7 +1027,9 @@ function executePivot(
   }
 
   if (categoryValues.size > 200) {
-    warnings.push(`Pivot step: ${categoryValues.size} categories (max 200). Consider filtering first.`);
+    warnings.push(
+      `Pivot step: ${categoryValues.size} categories (max 200). Consider filtering first.`
+    );
     return df;
   }
 
@@ -976,8 +1043,14 @@ function executePivot(
     .map((f) => f.name);
 
   // 3. Group records by row-key
-  const rowKeyMap = new Map<string, Map<string, (DataValue | undefined | null)[]>>();
-  const rowKeyValues = new Map<string, Record<string, DataValue | undefined | null>>();
+  const rowKeyMap = new Map<
+    string,
+    Map<string, (DataValue | undefined | null)[]>
+  >();
+  const rowKeyValues = new Map<
+    string,
+    Record<string, DataValue | undefined | null>
+  >();
 
   for (const record of df.records) {
     const keyParts = rowKeyFieldNames.map((fn) => {
@@ -1027,14 +1100,20 @@ function executePivot(
 
   for (const [rowKey, catMap] of rowKeyMap) {
     const baseValues = rowKeyValues.get(rowKey)!;
-    const values: Record<string, DataValue | undefined | null> = { ...baseValues };
+    const values: Record<string, DataValue | undefined | null> = {
+      ...baseValues,
+    };
 
     for (const cat of sortedCategories) {
       const cellValues = catMap.get(cat);
       if (!cellValues || cellValues.length === 0) {
         values[cat] = null;
       } else {
-        values[cat] = computeAggFn(step.aggregation, cellValues as unknown as DataValue, warnings);
+        values[cat] = computeAggFn(
+          step.aggregation,
+          cellValues as unknown as DataValue,
+          warnings
+        );
       }
     }
 
@@ -1132,7 +1211,9 @@ function executeJoin(
 
     if (!matches || matches.length === 0) {
       if (step.how === "left") {
-        const values: Record<string, DataValue | undefined | null> = { ...left.values };
+        const values: Record<string, DataValue | undefined | null> = {
+          ...left.values,
+        };
         for (const [, outName] of rightNameMap) values[outName] = null;
         newRecords.push({ id: `${left.id}__joinL`, values });
       }
@@ -1141,7 +1222,9 @@ function executeJoin(
 
     if (step.aggregation) {
       // Reduce matches → single merged row.
-      const values: Record<string, DataValue | undefined | null> = { ...left.values };
+      const values: Record<string, DataValue | undefined | null> = {
+        ...left.values,
+      };
       for (const [orig, outName] of rightNameMap) {
         const gathered: DataValue[] = [];
         for (const m of matches) {
@@ -1157,7 +1240,11 @@ function executeJoin(
         // aggregate about what a number is.
         const allNumeric = gathered.every(isNumeric);
         values[outName] = allNumeric
-          ? computeAggFn(step.aggregation, gathered as unknown as DataValue, warnings)
+          ? computeAggFn(
+              step.aggregation,
+              gathered as unknown as DataValue,
+              warnings
+            )
           : (gathered[0] ?? null);
       }
       newRecords.push({ id: `${left.id}__joinA`, values });
@@ -1170,7 +1257,9 @@ function executeJoin(
           );
           return { fields: newFields, records: newRecords };
         }
-        const values: Record<string, DataValue | undefined | null> = { ...left.values };
+        const values: Record<string, DataValue | undefined | null> = {
+          ...left.values,
+        };
         for (const [orig, outName] of rightNameMap) {
           values[outName] = right.values[orig];
         }
@@ -1181,4 +1270,3 @@ function executeJoin(
 
   return { fields: newFields, records: newRecords };
 }
-

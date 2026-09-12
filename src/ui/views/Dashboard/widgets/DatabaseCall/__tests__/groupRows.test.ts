@@ -17,18 +17,28 @@ describe("bucketLabelForRaw (#094 extracted pure fn)", () => {
   };
 
   test("maps raw value into the matching bucket label", () => {
-    expect(bucketLabelForRaw("planning", sg, DEFAULT_SEMANTIC_LABELS)).toBe("To Do");
-    expect(bucketLabelForRaw("review", sg, DEFAULT_SEMANTIC_LABELS)).toBe("In Progress");
+    expect(bucketLabelForRaw("planning", sg, DEFAULT_SEMANTIC_LABELS)).toBe(
+      "To Do"
+    );
+    expect(bucketLabelForRaw("review", sg, DEFAULT_SEMANTIC_LABELS)).toBe(
+      "In Progress"
+    );
     expect(bucketLabelForRaw("done", sg, DEFAULT_SEMANTIC_LABELS)).toBe("Done");
   });
 
   test("unmapped and null values fall into none", () => {
-    expect(bucketLabelForRaw("blocked", sg, DEFAULT_SEMANTIC_LABELS)).toBe("No Status");
-    expect(bucketLabelForRaw(null, sg, DEFAULT_SEMANTIC_LABELS)).toBe("No Status");
+    expect(bucketLabelForRaw("blocked", sg, DEFAULT_SEMANTIC_LABELS)).toBe(
+      "No Status"
+    );
+    expect(bucketLabelForRaw(null, sg, DEFAULT_SEMANTIC_LABELS)).toBe(
+      "No Status"
+    );
   });
 
   test("empty statusGroups → everything is none", () => {
-    expect(bucketLabelForRaw("planning", {}, DEFAULT_SEMANTIC_LABELS)).toBe("No Status");
+    expect(bucketLabelForRaw("planning", {}, DEFAULT_SEMANTIC_LABELS)).toBe(
+      "No Status"
+    );
   });
 
   test("stringifyForBucket normalises scalars, rejects compound values", () => {
@@ -123,7 +133,10 @@ describe("groupRecords", () => {
     const active = groups.find((g) => g.key === "active")!;
     expect(active.subGroups).toBeDefined();
     expect(active.subGroups).toHaveLength(2);
-    expect(active.subGroups!.map((s) => s.key).sort()).toEqual(["backend", "frontend"]);
+    expect(active.subGroups!.map((s) => s.key).sort()).toEqual([
+      "backend",
+      "frontend",
+    ]);
 
     const done = groups.find((g) => g.key === "done")!;
     expect(done.subGroups).toHaveLength(1);
@@ -137,7 +150,10 @@ describe("groupRecords", () => {
       { id: "2", values: { status: "active", team: "A" } },
       { id: "3", values: { status: "active", team: "B" } },
     ];
-    const groups = groupRecords(data, makeConfig({ subGroupField: "team", subGroupSortOrder: "desc" }));
+    const groups = groupRecords(
+      data,
+      makeConfig({ subGroupField: "team", subGroupSortOrder: "desc" })
+    );
     const sub = groups[0]!.subGroups!;
     expect(sub.map((s) => s.key)).toEqual(["C", "B", "A"]);
   });

@@ -7,7 +7,7 @@
 // the rules are unit-testable without mounting Svelte.
 //
 // V2 note: the relation suggestion adds a `database-call` block, not the
-// legacy `sub-base-canvas` widget — V2 retires the latter
+// legacy `sub-base-canvas` widget — DASHBOARD_V2_SPEC §4 retires the latter
 // (sub-bases live inside database-call via SubBasePanel).
 
 import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
@@ -58,21 +58,32 @@ export function computeSuggestions(
   const relationField = fields.find(
     (f) =>
       f.type === DataFieldType.Relation &&
-      !!(f.typeConfig as { relation?: { targetProjectId?: string } } | undefined)?.relation
-        ?.targetProjectId
+      !!(
+        f.typeConfig as { relation?: { targetProjectId?: string } } | undefined
+      )?.relation?.targetProjectId
   );
   // A database-call block with linkedSelection means the user already wired
   // related records to a master block — nothing left to suggest.
   const hasLinkedBlock = widgets.some(
     (w) => w.type === "database-call" && w.config["linkedSelection"] != null
   );
-  if (relationField && !hasLinkedBlock && !dismissed.includes("relation-block")) {
-    const relConfig = (relationField.typeConfig as { relation?: { targetProjectId?: string } } | undefined)?.relation;
+  if (
+    relationField &&
+    !hasLinkedBlock &&
+    !dismissed.includes("relation-block")
+  ) {
+    const relConfig = (
+      relationField.typeConfig as
+        | { relation?: { targetProjectId?: string } }
+        | undefined
+    )?.relation;
     suggestions.push({
       kind: "relation-block",
       fieldName: relationField.name,
       widgetType: "database-call",
-      ...(relConfig?.targetProjectId ? { relationTargetProjectId: relConfig.targetProjectId } : {}),
+      ...(relConfig?.targetProjectId
+        ? { relationTargetProjectId: relConfig.targetProjectId }
+        : {}),
     });
   }
 

@@ -106,7 +106,9 @@ export function readyFrames(
  * the async/generation bookkeeping.
  */
 export function createPreloadRunner(
-  resolveExternalFrame: ((id: string) => Promise<DataFrame | undefined>) | undefined,
+  resolveExternalFrame:
+    | ((id: string) => Promise<DataFrame | undefined>)
+    | undefined,
   setStates: (states: ReadonlyMap<string, ExternalSourceState>) => void
 ): (referencedIds: readonly string[]) => void {
   let generation = 0;
@@ -125,23 +127,29 @@ export function createPreloadRunner(
 
     void (async () => {
       const entries = await Promise.all(
-        referencedIds.map(async (id): Promise<readonly [string, ExternalSourceState]> => {
-          try {
-            const df = await resolveExternalFrame(id);
-            const state: ExternalSourceState = df
-              ? { status: "ready", frame: df }
-              : { status: "unavailable" };
-            return [id, state] as const;
-          } catch (err) {
-            // Per-source, so one broken project cannot blank the others — the
-            // previous version caught at the batch level and published an empty
-            // map, taking every sibling source down with it.
-            // eslint-disable-next-line no-console
-            console.warn("[Projects+] right-frame preload failed", id, err);
-            const message = err instanceof Error ? err.message : String(err);
-            return [id, { status: "error", message }] as const;
+        referencedIds.map(
+          async (id): Promise<readonly [string, ExternalSourceState]> => {
+            try {
+              const df = await resolveExternalFrame(id);
+              const state: ExternalSourceState = df
+                ? { status: "ready", frame: df }
+                : { status: "unavailable" };
+              return [id, state] as const;
+            } catch (err) {
+              // Per-source, so one broken project cannot blank the others — the
+              // previous version caught at the batch level and published an empty
+              // map, taking every sibling source down with it.
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[obs-projects-plus] right-frame preload failed",
+                id,
+                err
+              );
+              const message = err instanceof Error ? err.message : String(err);
+              return [id, { status: "error", message }] as const;
+            }
           }
-        })
+        )
       );
       if (token !== generation) return;
       setStates(new Map(entries));

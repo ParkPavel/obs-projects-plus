@@ -2,8 +2,15 @@
 // Evaluates conditional formatting rules against records.
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import type { ConditionalFormat, ConditionalFormatRule, CellStyle } from "src/ui/views/Dashboard/types";
-import type { FilterCondition, FilterOperator } from "src/settings/base/settings";
+import type {
+  ConditionalFormat,
+  ConditionalFormatRule,
+  CellStyle,
+} from "src/ui/views/Dashboard/types";
+import type {
+  FilterCondition,
+  FilterOperator,
+} from "src/settings/base/settings";
 import { matchesCondition } from "src/ui/app/filterFunctions";
 
 /**
@@ -44,7 +51,8 @@ export function computeRowStyles(
     for (const rule of fmt.conditions) {
       if (ruleMatches(rule, fmt.field, record)) {
         const existing = result[fmt.field];
-        result[fmt.field] = mergeStyles(existing ?? null, rule.style) ?? rule.style;
+        result[fmt.field] =
+          mergeStyles(existing ?? null, rule.style) ?? rule.style;
       }
     }
   }
@@ -53,7 +61,8 @@ export function computeRowStyles(
 }
 
 /** Validate CSS color value to prevent CSS injection. */
-const SAFE_COLOR = /^(#[0-9a-fA-F]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-zA-Z]{1,20})$/;
+const SAFE_COLOR =
+  /^(#[0-9a-fA-F]{3,8}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|rgba\(\d{1,3},\s*\d{1,3},\s*\d{1,3},\s*[\d.]+\)|[a-zA-Z]{1,20})$/;
 
 export function sanitizeColor(value: string): string | null {
   return SAFE_COLOR.test(value) ? value : null;
@@ -81,11 +90,22 @@ export function cellStyleToCSS(style: CellStyle): string {
 
 /** Known operators from FilterOperator. Reject unknown to prevent silent failures. */
 const VALID_OPERATORS = new Set<string>([
-  "is", "is-not", "contains", "not-contains",
-  "starts-with", "ends-with",
-  "eq", "neq", "lt", "gt", "lte", "gte",
-  "is-empty", "is-not-empty",
-  "is-checked", "is-not-checked",
+  "is",
+  "is-not",
+  "contains",
+  "not-contains",
+  "starts-with",
+  "ends-with",
+  "eq",
+  "neq",
+  "lt",
+  "gt",
+  "lte",
+  "gte",
+  "is-empty",
+  "is-not-empty",
+  "is-checked",
+  "is-not-checked",
 ]);
 
 function ruleMatches(
@@ -107,10 +127,7 @@ function ruleMatches(
   return matchesCondition(condition, record);
 }
 
-function mergeStyles(
-  base: CellStyle | null,
-  overlay: CellStyle
-): CellStyle {
+function mergeStyles(base: CellStyle | null, overlay: CellStyle): CellStyle {
   const result: Record<string, string | boolean> = {};
   const bg = overlay.backgroundColor ?? base?.backgroundColor;
   const tc = overlay.textColor ?? base?.textColor;

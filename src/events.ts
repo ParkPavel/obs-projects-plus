@@ -59,7 +59,9 @@ export function registerFileEvents(watcher: IFileSystemWatcher) {
 /**
  * withDataSource is a helper function to access the current data source.
  */
-function withDataSource(callback: (source: DataSource) => Promise<void> | void) {
+function withDataSource(
+  callback: (source: DataSource) => Promise<void> | void
+) {
   const source = get(dataSource);
   if (!source) {
     return;

@@ -23,8 +23,18 @@
  *   / Name / Title are tried, which is what keeps older vaults resolving.
  */
 
-import { DataFieldType, type DataField, type DataFrame, type DataRecord, type DataValue, type Optional } from "src/lib/dataframe/dataframe";
-import type { RelationFieldConfig, RollupFieldConfig } from "src/settings/base/settings";
+import {
+  DataFieldType,
+  type DataField,
+  type DataFrame,
+  type DataRecord,
+  type DataValue,
+  type Optional,
+} from "src/lib/dataframe/dataframe";
+import type {
+  RelationFieldConfig,
+  RollupFieldConfig,
+} from "src/settings/base/settings";
 import { applyFilter } from "src/lib/engine/filterEvaluator";
 import {
   buildRelationTargetIndex,
@@ -52,7 +62,10 @@ export function resolveCrossProjectRelations(
     externalFrame,
     displayField ? [displayField] : LEGACY_DISPLAY_FALLBACKS
   );
-  return resolvedRecords(resolveRelationValue(record.values[fieldName], index), index);
+  return resolvedRecords(
+    resolveRelationValue(record.values[fieldName], index),
+    index
+  );
 }
 
 /**
@@ -75,24 +88,43 @@ export function enrichFrameWithRelations(
     config.displayField ? [config.displayField] : LEGACY_DISPLAY_FALLBACKS
   );
   const allowedIds = config.targetSubBaseFilter
-    ? new Set(applyFilter(externalFrame, config.targetSubBaseFilter).records.map((record) => record.id))
+    ? new Set(
+        applyFilter(externalFrame, config.targetSubBaseFilter).records.map(
+          (record) => record.id
+        )
+      )
     : undefined;
   const records = frame.records.map((record) => {
     const resolutions = resolveRelationValue(record.values[fieldName], index);
     if (resolutions.length === 0) return record;
-    const resolved = resolvedRecords(resolutions, index).filter((target) => !allowedIds || allowedIds.has(target.id));
-    return { ...record, values: { ...record.values, [derivedName]: resolved as unknown as DataValue } };
+    const resolved = resolvedRecords(resolutions, index).filter(
+      (target) => !allowedIds || allowedIds.has(target.id)
+    );
+    return {
+      ...record,
+      values: {
+        ...record.values,
+        [derivedName]: resolved as unknown as DataValue,
+      },
+    };
   });
-  const fields: DataField[] = frame.fields.some((field) => field.name === derivedName)
+  const fields: DataField[] = frame.fields.some(
+    (field) => field.name === derivedName
+  )
     ? frame.fields
-    : [...frame.fields, {
-      name: derivedName,
-      type: frame.fields.find((field) => field.name === fieldName)?.type ?? DataFieldType.Relation,
-      identifier: false,
-      derived: true,
-      repeated: true,
-      typeConfig: {},
-    }];
+    : [
+        ...frame.fields,
+        {
+          name: derivedName,
+          type:
+            frame.fields.find((field) => field.name === fieldName)?.type ??
+            DataFieldType.Relation,
+          identifier: false,
+          derived: true,
+          repeated: true,
+          typeConfig: {},
+        },
+      ];
   return { ...frame, fields, records };
 }
 
@@ -108,10 +140,18 @@ export function enrichFrameWithAllRelations(
 ): DataFrame {
   let enriched = frame;
   for (const field of frame.fields) {
-    const relation = field.typeConfig?.relation as RelationFieldConfig | undefined;
+    const relation = field.typeConfig?.relation as
+      | RelationFieldConfig
+      | undefined;
     if (!relation) continue;
     const target = externalFrames.get(relation.targetProjectId);
-    if (target) enriched = enrichFrameWithRelations(enriched, field.name, relation, target);
+    if (target)
+      enriched = enrichFrameWithRelations(
+        enriched,
+        field.name,
+        relation,
+        target
+      );
   }
   return enriched;
 }

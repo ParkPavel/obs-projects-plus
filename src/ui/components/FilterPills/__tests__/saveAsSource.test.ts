@@ -49,7 +49,9 @@ describe("#184 — the action exists only when there is something worth naming",
     // narrows nothing, so the user has not watched this filter work either.
     const disabled = {
       conjunction: "and",
-      conditions: [{ field: "status", operator: "is", value: "open", enabled: false }],
+      conditions: [
+        { field: "status", operator: "is", value: "open", enabled: false },
+      ],
     } as unknown as FilterDefinition;
     const { container } = mount({ filter: disabled });
     expect(save(container)).toBeNull();
@@ -74,7 +76,9 @@ describe("#184 — naming it", () => {
     // later, so it is not optional and there is no unnamed path.
     const saved: string[] = [];
     const { container, component } = mount({ filter: withCondition });
-    component.$on("saveAsSource", (e: CustomEvent<string>) => saved.push(e.detail));
+    component.$on("saveAsSource", (e: CustomEvent<string>) =>
+      saved.push(e.detail)
+    );
 
     save(container)!.click();
     await waitFor(() => expect(nameInput(container)).not.toBeNull());
@@ -84,14 +88,18 @@ describe("#184 — naming it", () => {
   it("emits the trimmed name on Enter", async () => {
     const saved: string[] = [];
     const { container, component } = mount({ filter: withCondition });
-    component.$on("saveAsSource", (e: CustomEvent<string>) => saved.push(e.detail));
+    component.$on("saveAsSource", (e: CustomEvent<string>) =>
+      saved.push(e.detail)
+    );
 
     save(container)!.click();
     await waitFor(() => expect(nameInput(container)).not.toBeNull());
     const el = nameInput(container)!;
     el.value = "  Active clients  ";
     el.dispatchEvent(new Event("input"));
-    el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    el.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
 
     await waitFor(() => expect(saved).toEqual(["Active clients"]));
   });
@@ -99,14 +107,18 @@ describe("#184 — naming it", () => {
   it("Escape abandons it, and nothing is saved", async () => {
     const saved: string[] = [];
     const { container, component } = mount({ filter: withCondition });
-    component.$on("saveAsSource", (e: CustomEvent<string>) => saved.push(e.detail));
+    component.$on("saveAsSource", (e: CustomEvent<string>) =>
+      saved.push(e.detail)
+    );
 
     save(container)!.click();
     await waitFor(() => expect(nameInput(container)).not.toBeNull());
     const el = nameInput(container)!;
     el.value = "typed then abandoned";
     el.dispatchEvent(new Event("input"));
-    el.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    el.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
 
     await waitFor(() => expect(nameInput(container)).toBeNull());
     expect(saved).toEqual([]);
@@ -117,7 +129,9 @@ describe("#184 — naming it", () => {
     // one must not therefore write a source called "".
     const saved: string[] = [];
     const { container, component } = mount({ filter: withCondition });
-    component.$on("saveAsSource", (e: CustomEvent<string>) => saved.push(e.detail));
+    component.$on("saveAsSource", (e: CustomEvent<string>) =>
+      saved.push(e.detail)
+    );
 
     save(container)!.click();
     await waitFor(() => expect(nameInput(container)).not.toBeNull());
@@ -135,14 +149,18 @@ describe("#184 — naming it", () => {
     // would rewrite the user's view filter as a side effect of naming it.
     const changes: unknown[] = [];
     const { container, component } = mount({ filter: withCondition });
-    component.$on("change", (e: CustomEvent<unknown>) => changes.push(e.detail));
+    component.$on("change", (e: CustomEvent<unknown>) =>
+      changes.push(e.detail)
+    );
 
     save(container)!.click();
     await waitFor(() => expect(nameInput(container)).not.toBeNull());
     const el = nameInput(container)!;
     el.value = "Active";
     el.dispatchEvent(new Event("input"));
-    el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    el.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
 
     await waitFor(() => expect(nameInput(container)).toBeNull());
     expect(changes).toEqual([]);

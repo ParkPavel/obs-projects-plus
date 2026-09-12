@@ -11,14 +11,35 @@ import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 
 const fields: DataField[] = [
-  { name: "name", type: DataFieldType.String, repeated: false, derived: false, identifier: true },
-  { name: "status", type: DataFieldType.String, repeated: false, derived: false, identifier: false },
-  { name: "estimate", type: DataFieldType.Number, repeated: false, derived: false, identifier: false },
+  {
+    name: "name",
+    type: DataFieldType.String,
+    repeated: false,
+    derived: false,
+    identifier: true,
+  },
+  {
+    name: "status",
+    type: DataFieldType.String,
+    repeated: false,
+    derived: false,
+    identifier: false,
+  },
+  {
+    name: "estimate",
+    type: DataFieldType.Number,
+    repeated: false,
+    derived: false,
+    identifier: false,
+  },
 ];
 
 const records: DataRecord[] = [
   { id: "note1.md", values: { name: "Alice", status: "done", estimate: 3 } },
-  { id: "note2.md", values: { name: "Bob, Jr.", status: "todo", estimate: null } },
+  {
+    id: "note2.md",
+    values: { name: "Bob, Jr.", status: "todo", estimate: null },
+  },
   { id: "note3.md", values: { name: "Carol", status: undefined, estimate: 7 } },
 ];
 

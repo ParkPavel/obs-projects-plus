@@ -1,6 +1,7 @@
 /**
  * chartSelectionDriver.ts — pure helpers for ChartWidget's driver role.
  *
+ * Spec: .ai_internal/New-specification/CROSS_WIDGET_SPEC.md §5 (drivers).
  * Ticket: #044.2.
  *
  * The Svelte component delegates all state-mutation decisions to these
@@ -21,25 +22,34 @@ export { chartSourceId };
  * Empty `value` strings are ignored (no useful filter could be built).
  */
 export function computeChartSelectionToggle(
-	current: SelectionState,
-	args: { readonly widgetId: string; readonly field: string; readonly value: string },
+  current: SelectionState,
+  args: {
+    readonly widgetId: string;
+    readonly field: string;
+    readonly value: string;
+  }
 ):
-	| { readonly kind: "set"; readonly source: string; readonly field: string; readonly values: ReadonlyArray<string> }
-	| { readonly kind: "clear" }
-	| { readonly kind: "noop" } {
-	if (args.value === "") return { kind: "noop" };
-	if (args.field === "") return { kind: "noop" };
+  | {
+      readonly kind: "set";
+      readonly source: string;
+      readonly field: string;
+      readonly values: ReadonlyArray<string>;
+    }
+  | { readonly kind: "clear" }
+  | { readonly kind: "noop" } {
+  if (args.value === "") return { kind: "noop" };
+  if (args.field === "") return { kind: "noop" };
 
-	const source = chartSourceId(args.widgetId);
-	const isOwnActive =
-		current.source === source &&
-		current.field === args.field &&
-		current.values.length === 1 &&
-		current.values[0] === args.value;
+  const source = chartSourceId(args.widgetId);
+  const isOwnActive =
+    current.source === source &&
+    current.field === args.field &&
+    current.values.length === 1 &&
+    current.values[0] === args.value;
 
-	if (isOwnActive) return { kind: "clear" };
+  if (isOwnActive) return { kind: "clear" };
 
-	return { kind: "set", source, field: args.field, values: [args.value] };
+  return { kind: "set", source, field: args.field, values: [args.value] };
 }
 
 /**
@@ -50,10 +60,10 @@ export function computeChartSelectionToggle(
  * other widgets is deferred to later sub-PRs (#044.4/.5).
  */
 export function getSelectedChartLabel(
-	current: SelectionState,
-	args: { readonly widgetId: string; readonly field: string },
+  current: SelectionState,
+  args: { readonly widgetId: string; readonly field: string }
 ): string | null {
-	if (current.source !== chartSourceId(args.widgetId)) return null;
-	if (current.field !== args.field) return null;
-	return current.values[0] ?? null;
+  if (current.source !== chartSourceId(args.widgetId)) return null;
+  if (current.field !== args.field) return null;
+  return current.values[0] ?? null;
 }

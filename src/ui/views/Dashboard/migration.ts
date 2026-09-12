@@ -1,12 +1,20 @@
 ﻿// src/ui/views/Dashboard/migration.ts
 
-import type { DatabaseViewConfig, DataTableConfig, WidgetDefinition } from "./types";
+import type {
+  DatabaseViewConfig,
+  DataTableConfig,
+  WidgetDefinition,
+} from "./types";
 import { migrateTransformToViewLevel } from "./widgets/legacyMigration";
 
 interface LegacyTableConfig {
   readonly fieldConfig?: Record<
     string,
-    { readonly width?: number; readonly hide?: boolean; readonly pinned?: boolean }
+    {
+      readonly width?: number;
+      readonly hide?: boolean;
+      readonly pinned?: boolean;
+    }
   >;
   readonly sortField?: string;
   readonly sortAsc?: boolean;
@@ -21,9 +29,7 @@ function generateId(): string {
  * Migrate legacy TableConfig (v3.2.x) → DatabaseViewConfig (v3.3.0).
  * Creates a single DataTable widget with the old table settings.
  */
-export function migrateTableConfig(
-  old: LegacyTableConfig
-): DatabaseViewConfig {
+export function migrateTableConfig(old: LegacyTableConfig): DatabaseViewConfig {
   const tableConfig: DataTableConfig = {
     ...(old.fieldConfig != null && { fieldConfig: old.fieldConfig }),
     ...(old.sortField != null && { sortField: old.sortField }),
@@ -49,11 +55,12 @@ export function migrateTableConfig(
     table: tableConfig,
     showWidgetToolbar: true,
     compactMode: false,
-    // #191: one quick action, not two. The "Overview Preset" button applied a
-    // dashboard template and went with that mechanism; `toggle-formula-bar` is
-    // a live path and the only hint a migrated user gets that quick actions
-    // exist at all, so the row keeps a member and does not become an empty
-    // stripe.
+    // #191 — this list used to open with an `apply-template` action pointing at
+    // the `overview-finance` preset. The presets are gone, and a generator that
+    // emits a button to a mechanism the tree no longer has is the defect this
+    // ticket removes. The row does not empty: the formula toggle is live
+    // (`DashboardCanvas` → `showFormulaBar`) and still says "there are actions
+    // here", so nothing is replaced to fill a hole.
     quickActions: [
       {
         id: "qa-formula",
@@ -66,13 +73,60 @@ export function migrateTableConfig(
 }
 
 /**
+ * #191 — remove a stored `apply-template` quick action.
+ *
+ * The mechanism it invoked was deleted with this function's arrival, and the
+ * button was not hand-written by anyone: `migrateTableConfig` above generated
+ * one for every dashboard it migrated, so real vaults carry it. Leaving it
+ * would leave a visible promise with nothing behind it, and disabling it would
+ * be the same defect explaining itself.
+ *
+ * Dropped at READ time rather than by a forced rewrite of every view: the
+ * existing `saveConfig`-on-`migrated` path in `dashboardView.ts` then cleans
+ * the file naturally, without touching the #145 restore-point path for the
+ * sake of one button.
+ *
+ * The filter is on `kind`, never on a list of known `templateId`s — a vault's
+ * actual ids cannot be enumerated statically (`CX-MAP-191.md`, UNKNOWN), so an
+ * id-based filter would silently keep every id we never saw.
+ *
+ * Idempotent, and returns the ORIGINAL reference when nothing matched, which is
+ * the contract `migrateAggregationCount` and `migrateDashboardTransforms` share
+ * — a caller uses it to decide whether to write to disk.
+ */
+export function dropTemplateQuickActions(config: DatabaseViewConfig): {
+  readonly config: DatabaseViewConfig;
+  readonly migrated: boolean;
+} {
+  // Persisted JSON, not a typed value: an older or hand-edited config can carry
+  // a non-array `quickActions` or none at all, and `.filter` on it would take
+  // the dashboard down on open — the same hole cross-model review found in
+  // `migrateDashboardTransforms`' `widgets`.
+  if (!Array.isArray(config?.quickActions)) return { config, migrated: false };
+
+  // The union no longer HAS an `apply-template` member, so the stored shape has
+  // to be read raw. One local `as` over persisted JSON — the technique
+  // `isLegacyTableConfig` already uses — never a suppression pragma, which
+  // invariant 1 forbids outright.
+  const kept = config.quickActions.filter(
+    (action) => (action as { kind?: unknown }).kind !== "apply-template"
+  );
+
+  if (kept.length === config.quickActions.length)
+    return { config, migrated: false };
+
+  return { config: { ...config, quickActions: kept }, migrated: true };
+}
+
+/**
  * Check if a config object looks like a legacy TableConfig.
  */
-export function isLegacyTableConfig(
-  config: Record<string, unknown>
-): boolean {
+export function isLegacyTableConfig(config: Record<string, unknown>): boolean {
   // DatabaseViewConfig always has 'widgets' array and 'layoutVersion'
-  if (Array.isArray(config["widgets"]) && typeof config["layoutVersion"] === "number") {
+  if (
+    Array.isArray(config["widgets"]) &&
+    typeof config["layoutVersion"] === "number"
+  ) {
     return false;
   }
   // LegacyTableConfig has fieldConfig/sortField/orderFields at top level
@@ -106,7 +160,7 @@ export function migrateAggregationCount<T>(value: T): T {
       if (m !== v) changed = true;
       return m;
     });
-    return (changed ? (next as unknown as T) : value);
+    return changed ? (next as unknown as T) : value;
   }
   if (value && typeof value === "object") {
     const obj = value as Record<string, unknown>;
@@ -116,7 +170,12 @@ export function migrateAggregationCount<T>(value: T): T {
       if (k === "aggregation" && v === "count") {
         next[k] = "count_total";
         changed = true;
-      } else if (k === "aggregations" && v && typeof v === "object" && !Array.isArray(v)) {
+      } else if (
+        k === "aggregations" &&
+        v &&
+        typeof v === "object" &&
+        !Array.isArray(v)
+      ) {
         const inner = v as Record<string, unknown>;
         const innerNext: Record<string, unknown> = {};
         let innerChanged = false;
@@ -136,7 +195,7 @@ export function migrateAggregationCount<T>(value: T): T {
         if (m !== v) changed = true;
       }
     }
-    return (changed ? (next as unknown as T) : value);
+    return changed ? (next as unknown as T) : value;
   }
   return value;
 }
@@ -176,47 +235,7 @@ export function migrateDashboardTransforms(config: DatabaseViewConfig): {
     };
   });
 
-  return migrated ? { config: { ...config, widgets }, migrated } : { config, migrated };
-}
-
-/**
- * #191 — drop a quick action that points at a mechanism that no longer exists.
- *
- * Dashboard templates were removed, and `migrateTableConfig` had been *writing*
- * an `apply-template` action into every dashboard it migrated. Those live in
- * real vaults right now. Leaving one would leave a button that does nothing —
- * the visible-promise-without-effect defect this project keeps catching — and
- * disabling it is the same defect in a politer wrapper: it tells the reader
- * something used to be there and gives them nothing to do about it.
- *
- * **Read-time, not a forced rewrite.** The view's existing chain saves when
- * `migrated` is set, so a vault cleans itself the first time the dashboard is
- * opened and saved, and the #145 restore point is taken upstream of all of it.
- * Rewriting every stored view up front would buy nothing and would touch that
- * path for the sake of one button.
- *
- * **Filtered on `kind`, never on a list of known ids.** `CX-MAP-191` recorded
- * that quick actions hold a `templateId` as a string and static reading cannot
- * enumerate what real vaults contain. An id nobody in this codebase has ever
- * heard of must be dropped too, or the unknown stays a hole.
- *
- * Idempotent: the same config in twice returns the same reference the second
- * time, so the view does not save on every open.
- */
-export function dropTemplateQuickActions(config: DatabaseViewConfig): {
-  config: DatabaseViewConfig;
-  migrated: boolean;
-} {
-  const actions = (config as { quickActions?: unknown }).quickActions;
-  // Persisted JSON, so the guard is against the shape and not against the type:
-  // an older or hand-edited vault can hold anything here.
-  if (!Array.isArray(actions)) return { config, migrated: false };
-  const kept = actions.filter(
-    (action) => (action as { kind?: unknown } | null)?.kind !== "apply-template"
-  );
-  if (kept.length === actions.length) return { config, migrated: false };
-  return {
-    config: { ...config, quickActions: kept as NonNullable<DatabaseViewConfig["quickActions"]> },
-    migrated: true,
-  };
+  return migrated
+    ? { config: { ...config, widgets }, migrated }
+    : { config, migrated };
 }

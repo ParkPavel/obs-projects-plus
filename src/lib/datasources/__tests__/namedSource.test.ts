@@ -20,10 +20,19 @@ import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { FilterDefinition } from "src/settings/base/settings";
 import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
 
-import { buildDerivedSource, projectSourceOptions, resolveNamedSource, sourceNameTaken } from "../namedSource";
+import {
+  buildDerivedSource,
+  projectSourceOptions,
+  resolveNamedSource,
+  sourceNameTaken,
+} from "../namedSource";
 import type { IdentifiedFrame } from "../sourceSelection";
 
-const field = (name: string, type: DataFieldType = DataFieldType.String, derived = false) => ({
+const field = (
+  name: string,
+  type: DataFieldType = DataFieldType.String,
+  derived = false
+) => ({
   name,
   type,
   identifier: name === "name",
@@ -59,19 +68,38 @@ const PARTS: IdentifiedFrame[] = [
   },
   {
     id: "src-archive",
-    frame: { fields: [field("name")], records: [{ id: "Archive/Old.md", values: { name: "Old" } }] },
+    frame: {
+      fields: [field("name")],
+      records: [{ id: "Archive/Old.md", values: { name: "Old" } }],
+    },
   },
 ];
 
 const where = (f: string, operator: string, value?: string): FilterDefinition =>
   ({
     conjunction: "and",
-    conditions: [{ field: f, operator, ...(value === undefined ? {} : { value }), enabled: true }],
+    conditions: [
+      {
+        field: f,
+        operator,
+        ...(value === undefined ? {} : { value }),
+        enabled: true,
+      },
+    ],
   }) as FilterDefinition;
 
 const SOURCES: StoredDataSource[] = [
-  { kind: "folder", id: "src-clients", name: "Clients", config: { path: "Clients", recursive: true } },
-  { kind: "folder", id: "src-archive", config: { path: "Archive", recursive: true } },
+  {
+    kind: "folder",
+    id: "src-clients",
+    name: "Clients",
+    config: { path: "Clients", recursive: true },
+  },
+  {
+    kind: "folder",
+    id: "src-archive",
+    config: { path: "Archive", recursive: true },
+  },
   {
     kind: "derived",
     id: "sel-active",
@@ -80,8 +108,10 @@ const SOURCES: StoredDataSource[] = [
   },
 ] as unknown as StoredDataSource[];
 
-const run = (sourceId: string | undefined, enriched: DataFrame | undefined = ENRICHED) =>
-  resolveNamedSource({ enriched, parts: PARTS, sources: SOURCES, sourceId });
+const run = (
+  sourceId: string | undefined,
+  enriched: DataFrame | undefined = ENRICHED
+) => resolveNamedSource({ enriched, parts: PARTS, sources: SOURCES, sourceId });
 
 describe("#184 — a block that names no source is byte-for-byte unchanged", () => {
   it("is handed the very same frame object, not a copy of it", () => {
@@ -95,7 +125,12 @@ describe("#184 — a block that names no source is byte-for-byte unchanged", () 
 
   it("is handed the frame even when the project has no sources at all", () => {
     // A block with no source has always rendered whatever it was given.
-    const r = resolveNamedSource({ enriched: ENRICHED, parts: [], sources: [], sourceId: undefined });
+    const r = resolveNamedSource({
+      enriched: ENRICHED,
+      parts: [],
+      sources: [],
+      sourceId: undefined,
+    });
     expect(r.kind).toBe("ok");
     expect(r.kind === "ok" && r.frame).toBe(ENRICHED);
   });
@@ -109,20 +144,27 @@ describe("#184 — the rows come from the enriched frame, never from the raw par
     const r = run("src-clients");
     expect(r.kind).toBe("ok");
     if (r.kind !== "ok") return;
-    expect(r.frame.records.map((x) => x.id)).toEqual(["Clients/Acme.md", "Clients/Orbit.md"]);
+    expect(r.frame.records.map((x) => x.id)).toEqual([
+      "Clients/Acme.md",
+      "Clients/Orbit.md",
+    ]);
     expect(r.frame.fields.map((f) => f.name)).toContain("sessionCount");
     expect(r.frame.records[0]?.values["sessionCount"]).toBe(7);
   });
 
   it("selects only that source's records", () => {
     const r = run("src-archive");
-    expect(r.kind === "ok" && r.frame.records.map((x) => x.id)).toEqual(["Archive/Old.md"]);
+    expect(r.kind === "ok" && r.frame.records.map((x) => x.id)).toEqual([
+      "Archive/Old.md",
+    ]);
   });
 
   it("a source that acquired nothing is empty, and names itself", () => {
     const r = resolveNamedSource({
       enriched: ENRICHED,
-      parts: [{ id: "src-clients", frame: { fields: [field("name")], records: [] } }],
+      parts: [
+        { id: "src-clients", frame: { fields: [field("name")], records: [] } },
+      ],
       sources: SOURCES,
       sourceId: "src-clients",
     });
@@ -138,7 +180,9 @@ describe("#184 — a saved filter is checked BEFORE sourceExists", () => {
     // Ask that first and every saved filter is broken forever.
     const r = run("sel-active");
     expect(r.kind).toBe("ok");
-    expect(r.kind === "ok" && r.frame.records.map((x) => x.id)).toEqual(["Clients/Acme.md"]);
+    expect(r.kind === "ok" && r.frame.records.map((x) => x.id)).toEqual([
+      "Clients/Acme.md",
+    ]);
   });
 
   it("and it narrows by a ROLLUP, which is why it resolves here and not at acquisition", () => {
@@ -159,7 +203,12 @@ describe("#184 — a saved filter is checked BEFORE sourceExists", () => {
         config: { from: "project", where: where("sessionCount", "gt", "999") },
       },
     ] as unknown as StoredDataSource[];
-    const r = resolveNamedSource({ enriched: ENRICHED, parts: PARTS, sources, sourceId: "sel-none" });
+    const r = resolveNamedSource({
+      enriched: ENRICHED,
+      parts: PARTS,
+      sources,
+      sourceId: "sel-none",
+    });
     expect(r.kind).toBe("empty");
     expect(r.kind === "empty" && r.label).toBe("Nobody");
   });
@@ -205,7 +254,12 @@ describe("#184 — four states, because three of them look like an empty table",
       run(undefined).kind,
       resolveNamedSource({
         enriched: ENRICHED,
-        parts: [{ id: "src-clients", frame: { fields: [field("name")], records: [] } }],
+        parts: [
+          {
+            id: "src-clients",
+            frame: { fields: [field("name")], records: [] },
+          },
+        ],
         sources: SOURCES,
         sourceId: "src-clients",
       }).kind,
@@ -231,17 +285,45 @@ describe("#184 — overlapping sources, which the merge deduplicates", () => {
     // review was that dedup could hide it from the second one; it cannot,
     // because every part's ids are all present in the merge.
     const overlapping: IdentifiedFrame[] = [
-      { id: "by-folder", frame: { fields: [field("name")], records: [{ id: "Clients/Acme.md", values: { name: "Acme" } }] } },
-      { id: "by-tag", frame: { fields: [field("name")], records: [{ id: "Clients/Acme.md", values: { name: "Acme" } }] } },
+      {
+        id: "by-folder",
+        frame: {
+          fields: [field("name")],
+          records: [{ id: "Clients/Acme.md", values: { name: "Acme" } }],
+        },
+      },
+      {
+        id: "by-tag",
+        frame: {
+          fields: [field("name")],
+          records: [{ id: "Clients/Acme.md", values: { name: "Acme" } }],
+        },
+      },
     ];
     const sources = [
-      { kind: "folder", id: "by-folder", config: { path: "Clients", recursive: true } },
-      { kind: "tag", id: "by-tag", config: { tag: "#client", hierarchy: false } },
+      {
+        kind: "folder",
+        id: "by-folder",
+        config: { path: "Clients", recursive: true },
+      },
+      {
+        kind: "tag",
+        id: "by-tag",
+        config: { tag: "#client", hierarchy: false },
+      },
     ] as unknown as StoredDataSource[];
 
     for (const id of ["by-folder", "by-tag"]) {
-      const r = resolveNamedSource({ enriched: ENRICHED, parts: overlapping, sources, sourceId: id });
-      expect({ id, ids: r.kind === "ok" ? r.frame.records.map((x) => x.id) : null }).toEqual({
+      const r = resolveNamedSource({
+        enriched: ENRICHED,
+        parts: overlapping,
+        sources,
+        sourceId: id,
+      });
+      expect({
+        id,
+        ids: r.kind === "ok" ? r.frame.records.map((x) => x.id) : null,
+      }).toEqual({
         id,
         ids: ["Clients/Acme.md"],
       });
@@ -263,12 +345,18 @@ describe("#184 step 2 — the object a saved filter is stored as", () => {
   });
 
   it("trims the name, because a label is what the user reads", () => {
-    expect(buildDerivedSource("  Active  ", filter, "id-2").name).toBe("Active");
+    expect(buildDerivedSource("  Active  ", filter, "id-2").name).toBe(
+      "Active"
+    );
   });
 
   it("is immediately resolvable by the module that will read it", () => {
     // The two halves of #184 meet here: what step 2 writes, step 1 resolves.
-    const built = buildDerivedSource("Busy", where("sessionCount", "gt", "0"), "sel-new");
+    const built = buildDerivedSource(
+      "Busy",
+      where("sessionCount", "gt", "0"),
+      "sel-new"
+    );
     const r = resolveNamedSource({
       enriched: ENRICHED,
       parts: PARTS,
@@ -276,7 +364,9 @@ describe("#184 step 2 — the object a saved filter is stored as", () => {
       sourceId: "sel-new",
     });
     expect(r.kind).toBe("ok");
-    expect(r.kind === "ok" && r.frame.records.map((x) => x.id)).toEqual(["Clients/Acme.md"]);
+    expect(r.kind === "ok" && r.frame.records.map((x) => x.id)).toEqual([
+      "Clients/Acme.md",
+    ]);
   });
 });
 
@@ -291,7 +381,11 @@ describe("#184 — what a picker may offer, and what it must explain", () => {
 
   it("offers every source that carries an id, primary included", () => {
     const opts = projectSourceOptions(project([SOURCES[1], SOURCES[2]]));
-    expect(opts.pickable.map((p) => p.id)).toEqual(["src-clients", "src-archive", "sel-active"]);
+    expect(opts.pickable.map((p) => p.id)).toEqual([
+      "src-clients",
+      "src-archive",
+      "sel-active",
+    ]);
     expect(opts.sources).toHaveLength(3);
   });
 
@@ -306,21 +400,30 @@ describe("#184 — what a picker may offer, and what it must explain", () => {
     // A source stored before #170 cannot be referenced, so it must not appear.
     // Silently shorter is the version that reads as a bug, which is what
     // `hasUnaddressable` exists to let the UI explain.
-    const legacy = { kind: "folder", config: { path: "Old", recursive: false } };
+    const legacy = {
+      kind: "folder",
+      config: { path: "Old", recursive: false },
+    };
     const opts = projectSourceOptions(project([legacy]));
     expect(opts.pickable.map((p) => p.id)).toEqual(["src-clients"]);
     expect(opts.hasUnaddressable).toBe(true);
   });
 
   it("says nothing is missing when nothing is", () => {
-    expect(projectSourceOptions(project([SOURCES[1]])).hasUnaddressable).toBe(false);
+    expect(projectSourceOptions(project([SOURCES[1]])).hasUnaddressable).toBe(
+      false
+    );
   });
 
   it("survives having no project at all", () => {
     // The panel renders before a project resolves; an exception here would take
     // the whole canvas down.
     const opts = projectSourceOptions(undefined);
-    expect(opts).toEqual({ sources: [], pickable: [], hasUnaddressable: false });
+    expect(opts).toEqual({
+      sources: [],
+      pickable: [],
+      hasUnaddressable: false,
+    });
   });
 });
 

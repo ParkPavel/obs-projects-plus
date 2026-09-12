@@ -172,8 +172,8 @@ describe("detectCellType", () => {
     // Complex values.
     ["2022-01-01", DataFieldType.Date],
     ["2022-01-01T22:35", DataFieldType.Date],
-    [new Date("2024-01-15"), DataFieldType.Date],  // Date objects from YAML parser
-    [{ my: "object" }, DataFieldType.String],       // Nested YAML maps → String so they appear
+    [new Date("2024-01-15"), DataFieldType.Date], // Date objects from YAML parser
+    [{ my: "object" }, DataFieldType.String], // Nested YAML maps → String so they appear
 
     // Wiki-link / Relation detection (Stage A.9 — single string stays
     // String to preserve `[[path|alias]]` semantics for the derived `name`
@@ -248,15 +248,17 @@ describe("parseRecords (Stage A field types)", () => {
     const records: DataRecord[] = [
       { id: "j.md", values: { accounts: ["[[A]]", "[[B|alias]]"] } },
     ];
-    parseRecords(records, [buildField("accounts", DataFieldType.Relation, true)]);
+    parseRecords(records, [
+      buildField("accounts", DataFieldType.Relation, true),
+    ]);
     expect(records[0]?.values["accounts"]).toStrictEqual(["A", "B"]);
   });
 
   it("Relation: null/undefined left intact", () => {
-    const records: DataRecord[] = [
-      { id: "j.md", values: { accounts: null } },
-    ];
-    parseRecords(records, [buildField("accounts", DataFieldType.Relation, true)]);
+    const records: DataRecord[] = [{ id: "j.md", values: { accounts: null } }];
+    parseRecords(records, [
+      buildField("accounts", DataFieldType.Relation, true),
+    ]);
     expect(records[0]?.values["accounts"]).toBeNull();
   });
 
@@ -273,9 +275,7 @@ describe("parseRecords (Stage A field types)", () => {
   });
 
   it("Formula / Rollup: raw value left intact", () => {
-    const records: DataRecord[] = [
-      { id: "j.md", values: { f: 42, r: "x" } },
-    ];
+    const records: DataRecord[] = [{ id: "j.md", values: { f: 42, r: "x" } }];
     parseRecords(records, [
       buildField("f", DataFieldType.Formula),
       buildField("r", DataFieldType.Rollup),

@@ -2,6 +2,8 @@
 // Demo project — Projects Plus
 //
 // Single coherent B2B Studio (digital agency) domain.
+// Replaces the legacy 1937-LOC mishmash (fitness + finance + CRM + tasks)
+// archived under .ai_internal/Archive/OLD-demoProject-2026-05-27.ts.
 //
 // Story: a digital studio with 6 clients, 8 projects, 10 tasks and
 // 5 meetings — naturally exercises relations (Project.client → Client),
@@ -16,13 +18,9 @@ import dayjs from "dayjs";
 import { Notice, normalizePath, stringifyYaml, type Vault } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
 import { settings } from "src/lib/stores/settings";
-import { sanitizeNoteName } from "./noteName";
-import { noticeFor } from "src/lib/errors/errorText";
-
-/** #202 — the codes the demo can raise. */
-const DEMO_FOLDER_FAILED = "PPP-601";
-const DEMO_PARTIAL = "PPP-602";
 import type { BoardConfig } from "src/ui/views/Board/types";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { GalleryConfig } from "src/ui/views/Gallery/types";
@@ -32,7 +30,11 @@ import type {
 } from "src/ui/views/Dashboard/types";
 import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
-import type { ColorRule, FieldConfig, FilterDefinition } from "src/settings/base/settings";
+import type {
+  ColorRule,
+  FieldConfig,
+  FilterDefinition,
+} from "src/settings/base/settings";
 
 const DEMO_FOLDER = "Projects Plus - Демо";
 
@@ -97,7 +99,7 @@ interface ClientSeed {
   industry: string;
   stage: "lead" | "active" | "churn";
   mrr: number;
-  daysAgo: number;   // signup offset
+  daysAgo: number; // signup offset
   cover: string;
   tagline: string;
 }
@@ -141,44 +143,352 @@ interface MeetingSeed {
 }
 
 const CLIENT_SEEDS: ClientSeed[] = [
-  { name: "Acme Studio",   industry: "SaaS",       stage: "active", mrr: 12000, daysAgo: 180, cover: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800", tagline: "Платформа для управления подписками." },
-  { name: "Helix Labs",    industry: "FinTech",    stage: "active", mrr: 18000, daysAgo: 240, cover: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800", tagline: "Платежный процессинг для маркетплейсов." },
-  { name: "Nimbus Retail", industry: "E-commerce", stage: "active", mrr: 7500,  daysAgo: 90,  cover: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800", tagline: "Сеть бутиков, омниканальная розница." },
-  { name: "Lumen Academy", industry: "EdTech",     stage: "lead",   mrr: 0,     daysAgo: 14,  cover: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800", tagline: "Онлайн-курсы по data science." },
-  { name: "Orbit Media",   industry: "Media",      stage: "active", mrr: 4500,  daysAgo: 45,  cover: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800", tagline: "Подкаст-сеть и видеопродакшен." },
-  { name: "Vertex Health", industry: "HealthTech", stage: "churn",  mrr: 0,     daysAgo: 420, cover: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800", tagline: "Телемедицина, ушли по бюджету Q4." },
+  {
+    name: "Acme Studio",
+    industry: "SaaS",
+    stage: "active",
+    mrr: 12000,
+    daysAgo: 180,
+    cover: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
+    tagline: "Платформа для управления подписками.",
+  },
+  {
+    name: "Helix Labs",
+    industry: "FinTech",
+    stage: "active",
+    mrr: 18000,
+    daysAgo: 240,
+    cover: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800",
+    tagline: "Платежный процессинг для маркетплейсов.",
+  },
+  {
+    name: "Nimbus Retail",
+    industry: "E-commerce",
+    stage: "active",
+    mrr: 7500,
+    daysAgo: 90,
+    cover: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800",
+    tagline: "Сеть бутиков, омниканальная розница.",
+  },
+  {
+    name: "Lumen Academy",
+    industry: "EdTech",
+    stage: "lead",
+    mrr: 0,
+    daysAgo: 14,
+    cover: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800",
+    tagline: "Онлайн-курсы по data science.",
+  },
+  {
+    name: "Orbit Media",
+    industry: "Media",
+    stage: "active",
+    mrr: 4500,
+    daysAgo: 45,
+    cover: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800",
+    tagline: "Подкаст-сеть и видеопродакшен.",
+  },
+  {
+    name: "Vertex Health",
+    industry: "HealthTech",
+    stage: "churn",
+    mrr: 0,
+    daysAgo: 420,
+    cover: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800",
+    tagline: "Телемедицина, ушли по бюджету Q4.",
+  },
 ];
 
 const PROJECT_SEEDS: ProjectSeed[] = [
-  { name: "Redesign — Acme Studio",        client: "Acme Studio",   value: 48000, startOffset: -20, deadlineOffset: 15,  status: "inProgress", progress: 55,  cover: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800", goal: "Обновить дашборд и онбординг для повышения retention.", scope: ["UX-аудит", "Новая палитра", "Прототип Figma", "Внедрение"], tags: ["project", "design"] },
-  { name: "Mobile App — Helix Labs",       client: "Helix Labs",    value: 85000, startOffset: -60, deadlineOffset: 45,  status: "inProgress", progress: 40,  cover: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800", goal: "Нативное iOS/Android приложение для платежей.",         scope: ["Архитектура", "iOS MVP", "Android MVP", "QA", "Релиз"], tags: ["project", "mobile"] },
-  { name: "Storefront — Nimbus Retail",    client: "Nimbus Retail", value: 32000, startOffset: -5,  deadlineOffset: 40,  status: "planning",   progress: 10,  cover: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800", goal: "Новый Shopify storefront с кастомным чекаутом.",          scope: ["Discovery", "Каталог", "Чекаут", "Тестирование"],       tags: ["project", "ecommerce"] },
-  { name: "Brand Refresh — Orbit Media",   client: "Orbit Media",   value: 18000, startOffset: -30, deadlineOffset: 5,   status: "review",     progress: 85,  cover: "https://images.unsplash.com/photo-1561070791-2526d30994b8?w=800", goal: "Ребрендинг подкаст-сети: лого, гайдлайн, обложки.",       scope: ["Концепт", "Лого", "Гайдлайн", "Применение"],            tags: ["project", "branding"] },
-  { name: "Pitch Deck — Lumen Academy",    client: "Lumen Academy", value: 6000,  startOffset: -7,  deadlineOffset: 10,  status: "inProgress", progress: 30,  cover: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800", goal: "Инвестиционный pitch deck для seed-раунда.",              scope: ["Storyline", "Финансы", "Дизайн слайдов"],               tags: ["project", "presentation"] },
-  { name: "Site Audit — Vertex Health",    client: "Vertex Health", value: 8500,  startOffset: -120,deadlineOffset: -60, status: "done",       progress: 100, cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800", goal: "Технический и UX-аудит лендинга (закрыт).",               scope: ["Lighthouse", "UX-ревью", "Отчет"],                       tags: ["project", "audit"] },
-  { name: "Onboarding Flow — Acme Studio", client: "Acme Studio",   value: 14000, startOffset: 7,   deadlineOffset: 50,  status: "planning",   progress: 0,   cover: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800", goal: "Переработка флоу регистрации и активации.",               scope: ["Research", "Wireframes", "A/B-эксперимент"],            tags: ["project", "ux"] },
-  { name: "Content Hub — Orbit Media",     client: "Orbit Media",   value: 22000, startOffset: -90, deadlineOffset: -10, status: "done",       progress: 100, cover: "https://images.unsplash.com/photo-1542435503-956c469947f6?w=800", goal: "CMS для подкастов с публикацией по расписанию.",          scope: ["Архитектура", "CMS", "Интеграции", "Запуск"],           tags: ["project", "content"] },
+  {
+    name: "Redesign — Acme Studio",
+    client: "Acme Studio",
+    value: 48000,
+    startOffset: -20,
+    deadlineOffset: 15,
+    status: "inProgress",
+    progress: 55,
+    cover: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800",
+    goal: "Обновить дашборд и онбординг для повышения retention.",
+    scope: ["UX-аудит", "Новая палитра", "Прототип Figma", "Внедрение"],
+    tags: ["project", "design"],
+  },
+  {
+    name: "Mobile App — Helix Labs",
+    client: "Helix Labs",
+    value: 85000,
+    startOffset: -60,
+    deadlineOffset: 45,
+    status: "inProgress",
+    progress: 40,
+    cover: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800",
+    goal: "Нативное iOS/Android приложение для платежей.",
+    scope: ["Архитектура", "iOS MVP", "Android MVP", "QA", "Релиз"],
+    tags: ["project", "mobile"],
+  },
+  {
+    name: "Storefront — Nimbus Retail",
+    client: "Nimbus Retail",
+    value: 32000,
+    startOffset: -5,
+    deadlineOffset: 40,
+    status: "planning",
+    progress: 10,
+    cover: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800",
+    goal: "Новый Shopify storefront с кастомным чекаутом.",
+    scope: ["Discovery", "Каталог", "Чекаут", "Тестирование"],
+    tags: ["project", "ecommerce"],
+  },
+  {
+    name: "Brand Refresh — Orbit Media",
+    client: "Orbit Media",
+    value: 18000,
+    startOffset: -30,
+    deadlineOffset: 5,
+    status: "review",
+    progress: 85,
+    cover: "https://images.unsplash.com/photo-1561070791-2526d30994b8?w=800",
+    goal: "Ребрендинг подкаст-сети: лого, гайдлайн, обложки.",
+    scope: ["Концепт", "Лого", "Гайдлайн", "Применение"],
+    tags: ["project", "branding"],
+  },
+  {
+    name: "Pitch Deck — Lumen Academy",
+    client: "Lumen Academy",
+    value: 6000,
+    startOffset: -7,
+    deadlineOffset: 10,
+    status: "inProgress",
+    progress: 30,
+    cover: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800",
+    goal: "Инвестиционный pitch deck для seed-раунда.",
+    scope: ["Storyline", "Финансы", "Дизайн слайдов"],
+    tags: ["project", "presentation"],
+  },
+  {
+    name: "Site Audit — Vertex Health",
+    client: "Vertex Health",
+    value: 8500,
+    startOffset: -120,
+    deadlineOffset: -60,
+    status: "done",
+    progress: 100,
+    cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800",
+    goal: "Технический и UX-аудит лендинга (закрыт).",
+    scope: ["Lighthouse", "UX-ревью", "Отчет"],
+    tags: ["project", "audit"],
+  },
+  {
+    name: "Onboarding Flow — Acme Studio",
+    client: "Acme Studio",
+    value: 14000,
+    startOffset: 7,
+    deadlineOffset: 50,
+    status: "planning",
+    progress: 0,
+    cover: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800",
+    goal: "Переработка флоу регистрации и активации.",
+    scope: ["Research", "Wireframes", "A/B-эксперимент"],
+    tags: ["project", "ux"],
+  },
+  {
+    name: "Content Hub — Orbit Media",
+    client: "Orbit Media",
+    value: 22000,
+    startOffset: -90,
+    deadlineOffset: -10,
+    status: "done",
+    progress: 100,
+    cover: "https://images.unsplash.com/photo-1542435503-956c469947f6?w=800",
+    goal: "CMS для подкастов с публикацией по расписанию.",
+    scope: ["Архитектура", "CMS", "Интеграции", "Запуск"],
+    tags: ["project", "content"],
+  },
 ];
 
 const TASK_SEEDS: TaskSeed[] = [
-  { name: "Audit performance — Redesign Acme",          project: "Redesign — Acme Studio",        assignee: "Алексей", dueOffset: 2,   priority: "high",   status: "doing",  estimate: 4,  completed: false, description: "Профилирование загрузки дашборда: цель TTI < 1.5s.",           checklist: ["Lighthouse", "Bundle analyzer", "Оптимизация изображений"], tags: ["task", "performance"] },
-  { name: "Color palette draft — Redesign Acme",        project: "Redesign — Acme Studio",        assignee: "Ольга",   dueOffset: 5,   priority: "medium", status: "todo",   estimate: 6,  completed: false, description: "Подобрать акцентные и нейтральные оттенки под новый brand.",   checklist: ["Mood-board", "3 варианта", "Контраст AA"],                  tags: ["task", "design"] },
-  { name: "iOS auth flow — Mobile App Helix",           project: "Mobile App — Helix Labs",       assignee: "Мария",   dueOffset: 7,   priority: "high",   status: "doing",  estimate: 16, completed: false, description: "FaceID + biometric storage для авторизации.",                  checklist: ["KeychainSwift", "FaceID", "Тесты"],                          tags: ["task", "ios"] },
-  { name: "Android push — Mobile App Helix",            project: "Mobile App — Helix Labs",       assignee: "Дмитрий", dueOffset: 12,  priority: "medium", status: "todo",   estimate: 10, completed: false, description: "FCM-интеграция и обработка deep-links.",                       checklist: ["FCM setup", "Deep links", "QA на 3 устройствах"],          tags: ["task", "android"] },
-  { name: "Catalog import — Storefront Nimbus",         project: "Storefront — Nimbus Retail",    assignee: "Сергей",  dueOffset: 9,   priority: "high",   status: "todo",   estimate: 8,  completed: false, description: "CSV → Shopify импорт 12 000 SKU с медиа.",                     checklist: ["Маппинг", "Импорт", "Валидация"],                          tags: ["task", "etl"] },
-  { name: "Logo final variants — Brand Orbit",          project: "Brand Refresh — Orbit Media",   assignee: "Ольга",   dueOffset: 1,   priority: "high",   status: "review", estimate: 3,  completed: false, description: "Финальные lockup-варианты лого: horizontal/stacked/mark.",     checklist: ["3 варианта", "SVG/PNG", "Презентация"],                    tags: ["task", "branding"] },
-  { name: "Pitch deck visuals — Lumen",                 project: "Pitch Deck — Lumen Academy",    assignee: "Ольга",   dueOffset: 8,   priority: "medium", status: "doing",  estimate: 5,  completed: false, description: "Слайды traction и market sizing.",                              checklist: ["Traction chart", "TAM/SAM/SOM", "Команда"],                tags: ["task", "presentation"] },
-  { name: "Overdue: budget review — Storefront Nimbus", project: "Storefront — Nimbus Retail",    assignee: "Алексей", dueOffset: -3,  priority: "high",   status: "doing",  estimate: 2,  completed: false, description: "Просрочено: пересогласовать бюджет фазы 2.",                    checklist: ["Финансовый прогноз", "Звонок клиенту"],                    tags: ["task", "overdue"] },
-  { name: "QA pass — Site Audit Vertex",                project: "Site Audit — Vertex Health",    assignee: "Мария",   dueOffset: -65, priority: "low",    status: "done",   estimate: 4,  completed: true,  description: "Финальный прогон чек-листа аудита.",                            checklist: ["Lighthouse", "axe-core", "Cross-browser"],                  tags: ["task", "qa"] },
-  { name: "Sitemap — Onboarding Flow",                  project: "Onboarding Flow — Acme Studio", assignee: "Дмитрий", dueOffset: 14,  priority: "medium", status: "todo",   estimate: 4,  completed: false, description: "Информационная архитектура нового онбординга.",                 checklist: ["User flow", "Sitemap", "Wireframes"],                       tags: ["task", "ux"] },
+  {
+    name: "Audit performance — Redesign Acme",
+    project: "Redesign — Acme Studio",
+    assignee: "Алексей",
+    dueOffset: 2,
+    priority: "high",
+    status: "doing",
+    estimate: 4,
+    completed: false,
+    description: "Профилирование загрузки дашборда: цель TTI < 1.5s.",
+    checklist: ["Lighthouse", "Bundle analyzer", "Оптимизация изображений"],
+    tags: ["task", "performance"],
+  },
+  {
+    name: "Color palette draft — Redesign Acme",
+    project: "Redesign — Acme Studio",
+    assignee: "Ольга",
+    dueOffset: 5,
+    priority: "medium",
+    status: "todo",
+    estimate: 6,
+    completed: false,
+    description: "Подобрать акцентные и нейтральные оттенки под новый brand.",
+    checklist: ["Mood-board", "3 варианта", "Контраст AA"],
+    tags: ["task", "design"],
+  },
+  {
+    name: "iOS auth flow — Mobile App Helix",
+    project: "Mobile App — Helix Labs",
+    assignee: "Мария",
+    dueOffset: 7,
+    priority: "high",
+    status: "doing",
+    estimate: 16,
+    completed: false,
+    description: "FaceID + biometric storage для авторизации.",
+    checklist: ["KeychainSwift", "FaceID", "Тесты"],
+    tags: ["task", "ios"],
+  },
+  {
+    name: "Android push — Mobile App Helix",
+    project: "Mobile App — Helix Labs",
+    assignee: "Дмитрий",
+    dueOffset: 12,
+    priority: "medium",
+    status: "todo",
+    estimate: 10,
+    completed: false,
+    description: "FCM-интеграция и обработка deep-links.",
+    checklist: ["FCM setup", "Deep links", "QA на 3 устройствах"],
+    tags: ["task", "android"],
+  },
+  {
+    name: "Catalog import — Storefront Nimbus",
+    project: "Storefront — Nimbus Retail",
+    assignee: "Сергей",
+    dueOffset: 9,
+    priority: "high",
+    status: "todo",
+    estimate: 8,
+    completed: false,
+    description: "CSV → Shopify импорт 12 000 SKU с медиа.",
+    checklist: ["Маппинг", "Импорт", "Валидация"],
+    tags: ["task", "etl"],
+  },
+  {
+    name: "Logo final variants — Brand Orbit",
+    project: "Brand Refresh — Orbit Media",
+    assignee: "Ольга",
+    dueOffset: 1,
+    priority: "high",
+    status: "review",
+    estimate: 3,
+    completed: false,
+    description: "Финальные lockup-варианты лого: horizontal/stacked/mark.",
+    checklist: ["3 варианта", "SVG/PNG", "Презентация"],
+    tags: ["task", "branding"],
+  },
+  {
+    name: "Pitch deck visuals — Lumen",
+    project: "Pitch Deck — Lumen Academy",
+    assignee: "Ольга",
+    dueOffset: 8,
+    priority: "medium",
+    status: "doing",
+    estimate: 5,
+    completed: false,
+    description: "Слайды traction и market sizing.",
+    checklist: ["Traction chart", "TAM/SAM/SOM", "Команда"],
+    tags: ["task", "presentation"],
+  },
+  {
+    name: "Overdue: budget review — Storefront Nimbus",
+    project: "Storefront — Nimbus Retail",
+    assignee: "Алексей",
+    dueOffset: -3,
+    priority: "high",
+    status: "doing",
+    estimate: 2,
+    completed: false,
+    description: "Просрочено: пересогласовать бюджет фазы 2.",
+    checklist: ["Финансовый прогноз", "Звонок клиенту"],
+    tags: ["task", "overdue"],
+  },
+  {
+    name: "QA pass — Site Audit Vertex",
+    project: "Site Audit — Vertex Health",
+    assignee: "Мария",
+    dueOffset: -65,
+    priority: "low",
+    status: "done",
+    estimate: 4,
+    completed: true,
+    description: "Финальный прогон чек-листа аудита.",
+    checklist: ["Lighthouse", "axe-core", "Cross-browser"],
+    tags: ["task", "qa"],
+  },
+  {
+    name: "Sitemap — Onboarding Flow",
+    project: "Onboarding Flow — Acme Studio",
+    assignee: "Дмитрий",
+    dueOffset: 14,
+    priority: "medium",
+    status: "todo",
+    estimate: 4,
+    completed: false,
+    description: "Информационная архитектура нового онбординга.",
+    checklist: ["User flow", "Sitemap", "Wireframes"],
+    tags: ["task", "ux"],
+  },
 ];
 
 const MEETING_SEEDS: MeetingSeed[] = [
-  { name: "Kickoff — Acme Studio",       client: "Acme Studio",   dayOffset: 1, startTime: "10:00", endTime: "11:00", participants: ["PM", "Алексей", "Клиент"],        agenda: ["Цели нового онбординга", "Сроки и риски", "Следующие шаги"] },
-  { name: "Weekly sync — Helix Labs",    client: "Helix Labs",    dayOffset: 2, startTime: "14:00", endTime: "14:45", participants: ["PM", "Мария", "Дмитрий", "CTO"],  agenda: ["Статус iOS auth", "Блокеры на Android", "План на следующую неделю"] },
-  { name: "Discovery — Nimbus Retail",   client: "Nimbus Retail", dayOffset: 3, startTime: "11:00", endTime: "12:30", participants: ["PM", "Сергей", "Магазин"],        agenda: ["Болевые точки", "Объем каталога", "Интеграции с ERP"] },
-  { name: "Brand review — Orbit Media",  client: "Orbit Media",   dayOffset: 4, startTime: "15:00", endTime: "16:00", participants: ["PM", "Ольга", "Креативный директор"], agenda: ["Презентация лого", "Применение", "Финальные правки"] },
-  { name: "Pitch rehearsal — Lumen",     client: "Lumen Academy", dayOffset: 6, startTime: "09:30", endTime: "10:15", participants: ["PM", "Ольга", "CEO"],             agenda: ["Прогон слайдов", "Q&A репетиция", "Правки"] },
+  {
+    name: "Kickoff — Acme Studio",
+    client: "Acme Studio",
+    dayOffset: 1,
+    startTime: "10:00",
+    endTime: "11:00",
+    participants: ["PM", "Алексей", "Клиент"],
+    agenda: ["Цели нового онбординга", "Сроки и риски", "Следующие шаги"],
+  },
+  {
+    name: "Weekly sync — Helix Labs",
+    client: "Helix Labs",
+    dayOffset: 2,
+    startTime: "14:00",
+    endTime: "14:45",
+    participants: ["PM", "Мария", "Дмитрий", "CTO"],
+    agenda: [
+      "Статус iOS auth",
+      "Блокеры на Android",
+      "План на следующую неделю",
+    ],
+  },
+  {
+    name: "Discovery — Nimbus Retail",
+    client: "Nimbus Retail",
+    dayOffset: 3,
+    startTime: "11:00",
+    endTime: "12:30",
+    participants: ["PM", "Сергей", "Магазин"],
+    agenda: ["Болевые точки", "Объем каталога", "Интеграции с ERP"],
+  },
+  {
+    name: "Brand review — Orbit Media",
+    client: "Orbit Media",
+    dayOffset: 4,
+    startTime: "15:00",
+    endTime: "16:00",
+    participants: ["PM", "Ольга", "Креативный директор"],
+    agenda: ["Презентация лого", "Применение", "Финальные правки"],
+  },
+  {
+    name: "Pitch rehearsal — Lumen",
+    client: "Lumen Academy",
+    dayOffset: 6,
+    startTime: "09:30",
+    endTime: "10:15",
+    participants: ["PM", "Ольга", "CEO"],
+    agenda: ["Прогон слайдов", "Q&A репетиция", "Правки"],
+  },
 ];
 
 // ── seed → DemoFile builders ────────────────────────────────────────
@@ -195,7 +505,12 @@ function buildClients(): Record<string, DemoFile> {
         mrr: s.mrr,
         signupDate: t.subtract(s.daysAgo, "day").format("YYYY-MM-DD"),
         cover: s.cover,
-        tags: s.stage === "lead" ? ["client", "lead"] : s.stage === "churn" ? ["client", "churn"] : ["client"],
+        tags:
+          s.stage === "lead"
+            ? ["client", "lead"]
+            : s.stage === "churn"
+              ? ["client", "churn"]
+              : ["client"],
       },
       content: clientBody(s.industry, s.tagline),
     };
@@ -302,12 +617,34 @@ function overviewWidgets(): WidgetDefinition[] {
           // UT2026-D P1: kernel "count" was renamed to count_total/count_values (R5-004);
           // generators must emit the current schema. count_values on a segment-specific
           // field (industry → clients only, status → projects only) keeps the labels honest.
-          { id: "k1", label: "Клиентов",           field: "industry",  aggregation: "count_values" },
+          {
+            id: "k1",
+            label: "Клиентов",
+            field: "industry",
+            aggregation: "count_values",
+          },
           // UT-R2 #087: `status` exists on tasks too (showed 17) — `progress`
           // is project-only, so the card counts what its label promises.
-          { id: "k2", label: "Проектов",           field: "progress",  aggregation: "count_values" },
-          { id: "k3", label: "Открытых задач",     field: "completed", aggregation: "count_unchecked" },
-          { id: "k4", label: "MRR (sum)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
+          {
+            id: "k2",
+            label: "Проектов",
+            field: "progress",
+            aggregation: "count_values",
+          },
+          {
+            id: "k3",
+            label: "Открытых задач",
+            field: "completed",
+            aggregation: "count_unchecked",
+          },
+          {
+            id: "k4",
+            label: "MRR (sum)",
+            field: "mrr",
+            aggregation: "sum",
+            format: "currency",
+            currencySymbol: "$",
+          },
         ],
         columns: 4,
       },
@@ -320,9 +657,21 @@ function overviewWidgets(): WidgetDefinition[] {
       config: {
         subFilter: typeScope("project"),
         chartType: "donut",
-        xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
+        xAxis: {
+          property: "status",
+          sortBy: "value",
+          sortOrder: "desc",
+          omitZero: true,
+        },
         yAxis: { property: "count", aggregation: "count_total" },
-        style: { colorScheme: "categorical", height: "medium", showGrid: false, showLabels: true, showLegend: true, showValues: true },
+        style: {
+          colorScheme: "categorical",
+          height: "medium",
+          showGrid: false,
+          showLabels: true,
+          showLegend: true,
+          showValues: true,
+        },
       },
     },
     {
@@ -393,10 +742,34 @@ function clientsWidgets(): WidgetDefinition[] {
           // UT2026-D P1: count → count_total (view is globally filtered to clients).
           // "Активных" needed a per-card filter stats cards don't have — replaced with
           // an honest metric (earliest signup) instead of a mislabeled count.
-          { id: "c1", label: "Всего",         field: "name",       aggregation: "count_total" },
-          { id: "c2", label: "Первый клиент", field: "signupDate", aggregation: "earliest" },
-          { id: "c3", label: "MRR (sum)",     field: "mrr",        aggregation: "sum", format: "currency", currencySymbol: "$" },
-          { id: "c4", label: "Средний MRR",  field: "mrr",        aggregation: "avg", format: "currency", currencySymbol: "$" },
+          {
+            id: "c1",
+            label: "Всего",
+            field: "name",
+            aggregation: "count_total",
+          },
+          {
+            id: "c2",
+            label: "Первый клиент",
+            field: "signupDate",
+            aggregation: "earliest",
+          },
+          {
+            id: "c3",
+            label: "MRR (sum)",
+            field: "mrr",
+            aggregation: "sum",
+            format: "currency",
+            currencySymbol: "$",
+          },
+          {
+            id: "c4",
+            label: "Средний MRR",
+            field: "mrr",
+            aggregation: "avg",
+            format: "currency",
+            currencySymbol: "$",
+          },
         ],
         columns: 4,
       },
@@ -408,7 +781,9 @@ function clientsWidgets(): WidgetDefinition[] {
       type: "database-call",
       title: "Список клиентов",
       layout: { x: 0, y: 2, w: 12, h: 8 },
-      config: tableTabConfig(commonTableConfig as unknown as Record<string, unknown>),
+      config: tableTabConfig(
+        commonTableConfig as unknown as Record<string, unknown>
+      ),
     },
   ];
 }
@@ -435,8 +810,26 @@ const commonTableConfig: DatabaseViewConfig["table"] = {
     client: { width: 180 },
     project: { width: 200 },
   },
-  orderFields: ["name", "status", "stage", "priority", "client", "project", "value", "mrr", "progress", "deadline", "dueDate", "assignee"],
-  aggregations: { progress: "avg", value: "sum", mrr: "sum", name: "count_total" },
+  orderFields: [
+    "name",
+    "status",
+    "stage",
+    "priority",
+    "client",
+    "project",
+    "value",
+    "mrr",
+    "progress",
+    "deadline",
+    "dueDate",
+    "assignee",
+  ],
+  aggregations: {
+    progress: "avg",
+    value: "sum",
+    mrr: "sum",
+    name: "count_total",
+  },
   showAggregationRow: true,
   rowHeight: "default",
   wrapText: false,
@@ -453,20 +846,25 @@ const commonTableConfig: DatabaseViewConfig["table"] = {
  * way — so a demo missing half its notes looked exactly like a healthy one.
  * Only the first case is silent now; the second is reported back.
  */
-async function writeFiles(vault: Vault, folder: string, files: Record<string, DemoFile>): Promise<string[]> {
+async function writeFiles(
+  vault: Vault,
+  folder: string,
+  files: Record<string, DemoFile>
+): Promise<string[]> {
   const failed: string[] = [];
   for (const [name, file] of Object.entries(files)) {
-    // #198: the host refuses `* " \ / < > : | ?` in a filename, and a demo set
-    // written as prose collects colons. Sanitising here rather than at each
-    // string keeps the next author from reintroducing it.
-    const path = normalizePath(`${folder}/${sanitizeNoteName(name)}.md`);
+    const path = normalizePath(`${folder}/${name}.md`);
     const body = `---\n${stringifyYaml(file.frontmatter)}---\n\n${file.content}`;
     if (vault.getAbstractFileByPath(path)) continue; // idempotent re-run
     try {
       await vault.create(path, body);
     } catch (error) {
       failed.push(path);
-      console.error("[Projects+] demo note could not be created", path, error);
+      console.error(
+        "[obs-projects-plus] demo note could not be created",
+        path,
+        error
+      );
     }
   }
   return failed;
@@ -476,24 +874,6 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
 // MAIN ENTRY POINT
 // ============================================================
 
-/**
- * Write every seed note that is not already there, and return the paths that
- * could not be written.
- *
- * Separate from `createDemoProject` because of #198: a user who hit the illegal
- * filename has a registered demo project with a note missing, and the command
- * that would fix it returns early precisely because the project exists. Seeding
- * is idempotent, so it can be re-run on its own to repair that.
- */
-export async function seedDemoNotes(vault: Vault): Promise<string[]> {
-  return [
-    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
-  ];
-}
-
 export async function createDemoProject(vault: Vault): Promise<void> {
   // 1. Ensure root demo folder exists (idempotent).
   if (!vault.getAbstractFileByPath(DEMO_FOLDER)) {
@@ -502,19 +882,39 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     } catch (error) {
       // #156 — without the folder nothing below can land. Say so rather than
       // registering a project that points at nowhere.
-      console.error("[Projects+] demo folder could not be created", error);
-      new Notice(noticeFor(DEMO_FOLDER_FAILED, { folder: DEMO_FOLDER }));
+      console.error(
+        "[obs-projects-plus] demo folder could not be created",
+        error
+      );
+      new Notice(
+        get(i18n).t("onboarding.demo.folder-failed", {
+          defaultValue:
+            "Could not create the demo folder '{{folder}}'. The demo project was not created.",
+          folder: DEMO_FOLDER,
+        })
+      );
       return;
     }
   }
 
   // 2. Write all seed files.
-  const failed = await seedDemoNotes(vault);
+  const failed = [
+    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
+  ];
   if (failed.length > 0) {
     // The project is still registered: a partial demo is more useful than none,
     // and the notes that did land are correct. But the user is told, because
     // otherwise the gaps read as a broken plugin.
-    new Notice(noticeFor(DEMO_PARTIAL, { count: failed.length }));
+    new Notice(
+      get(i18n).t("onboarding.demo.partial", {
+        defaultValue:
+          "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
+        count: failed.length,
+      })
+    );
   }
 
   // 3. View configs.
@@ -542,10 +942,10 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     headerField: "client",
     includeFields: ["client", "value", "deadline", "progress", "tags"],
     columns: {
-      planning:   { weight: 1 },
+      planning: { weight: 1 },
       inProgress: { weight: 1.5 },
-      review:     { weight: 1 },
-      done:       { weight: 1, collapse: false },
+      review: { weight: 1 },
+      done: { weight: 1, collapse: false },
     },
   };
 
@@ -575,23 +975,47 @@ export async function createDemoProject(vault: Vault): Promise<void> {
   };
 
   const priorityColors: ColorRule[] = [
-    { color: "#F44336", condition: { field: "priority", operator: "is", value: "high",   enabled: true } },
-    { color: "#FF9800", condition: { field: "priority", operator: "is", value: "medium", enabled: true } },
-    { color: "#4CAF50", condition: { field: "priority", operator: "is", value: "low",    enabled: true } },
+    {
+      color: "#F44336",
+      condition: {
+        field: "priority",
+        operator: "is",
+        value: "high",
+        enabled: true,
+      },
+    },
+    {
+      color: "#FF9800",
+      condition: {
+        field: "priority",
+        operator: "is",
+        value: "medium",
+        enabled: true,
+      },
+    },
+    {
+      color: "#4CAF50",
+      condition: {
+        field: "priority",
+        operator: "is",
+        value: "low",
+        enabled: true,
+      },
+    },
   ];
 
   const fieldConfig: { [field: string]: FieldConfig } = {
-    startDate:  { time: false },
-    deadline:   { time: false },
-    dueDate:    { time: false },
+    startDate: { time: false },
+    deadline: { time: false },
+    dueDate: { time: false },
     signupDate: { time: false },
-    startTime:  { time: true },
-    endTime:    { time: true },
+    startTime: { time: true },
+    endTime: { time: true },
     status: {
       statusGroups: {
-        todo:       ["planning", "todo"],
+        todo: ["planning", "todo"],
         inProgress: ["inProgress", "doing", "review"],
-        complete:   ["done"],
+        complete: ["done"],
       },
     },
   };
@@ -602,7 +1026,10 @@ export async function createDemoProject(vault: Vault): Promise<void> {
       name: "Демо-проект",
       id: uuidv4(),
       path: DEMO_FOLDER,
-      dataSource: { kind: "folder", config: { path: DEMO_FOLDER, recursive: false } },
+      dataSource: {
+        kind: "folder",
+        config: { path: DEMO_FOLDER, recursive: false },
+      },
       fieldConfig,
       views: [
         // 1. Обзор
@@ -613,7 +1040,9 @@ export async function createDemoProject(vault: Vault): Promise<void> {
           config: overviewConfig,
           filter: { conjunction: "and", conditions: [] },
           colors: { conditions: priorityColors },
-          sort: { criteria: [{ field: "deadline", order: "asc", enabled: true }] },
+          sort: {
+            criteria: [{ field: "deadline", order: "asc", enabled: true }],
+          },
         }),
         // 2. Pipeline
         Object.assign({}, DEFAULT_VIEW, {
@@ -621,9 +1050,21 @@ export async function createDemoProject(vault: Vault): Promise<void> {
           id: uuidv4(),
           type: "board",
           config: boardConfig,
-          filter: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "project", enabled: true }] },
+          filter: {
+            conjunction: "and",
+            conditions: [
+              {
+                field: "type",
+                operator: "is",
+                value: "project",
+                enabled: true,
+              },
+            ],
+          },
           colors: { conditions: [] },
-          sort: { criteria: [{ field: "deadline", order: "asc", enabled: true }] },
+          sort: {
+            criteria: [{ field: "deadline", order: "asc", enabled: true }],
+          },
         }),
         // 3. График
         Object.assign({}, DEFAULT_VIEW, {
@@ -634,7 +1075,12 @@ export async function createDemoProject(vault: Vault): Promise<void> {
           filter: {
             conjunction: "or",
             conditions: [
-              { field: "type", operator: "is", value: "meeting", enabled: true },
+              {
+                field: "type",
+                operator: "is",
+                value: "meeting",
+                enabled: true,
+              },
               { field: "type", operator: "is", value: "task", enabled: true },
             ],
           },
@@ -647,7 +1093,12 @@ export async function createDemoProject(vault: Vault): Promise<void> {
           id: uuidv4(),
           type: "dashboard",
           config: clientsConfig,
-          filter: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "client", enabled: true }] },
+          filter: {
+            conjunction: "and",
+            conditions: [
+              { field: "type", operator: "is", value: "client", enabled: true },
+            ],
+          },
           colors: { conditions: [] },
           sort: { criteria: [{ field: "mrr", order: "desc", enabled: true }] },
         }),
@@ -660,12 +1111,19 @@ export async function createDemoProject(vault: Vault): Promise<void> {
           filter: {
             conjunction: "and",
             conditions: [
-              { field: "type", operator: "is", value: "project", enabled: true },
+              {
+                field: "type",
+                operator: "is",
+                value: "project",
+                enabled: true,
+              },
               { field: "cover", operator: "is-not-empty", enabled: true },
             ],
           },
           colors: { conditions: [] },
-          sort: { criteria: [{ field: "deadline", order: "desc", enabled: true }] },
+          sort: {
+            criteria: [{ field: "deadline", order: "desc", enabled: true }],
+          },
         }),
       ],
     })

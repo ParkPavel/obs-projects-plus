@@ -21,7 +21,12 @@ function mount(props: Record<string, unknown>) {
   document.body.appendChild(target);
   const component = new WidgetShell({
     target,
-    props: { widgetId: "w-1", title: "My widget", widgetType: "stats", ...props },
+    props: {
+      widgetId: "w-1",
+      title: "My widget",
+      widgetType: "stats",
+      ...props,
+    },
   });
   return {
     component,
@@ -41,8 +46,12 @@ describe("WidgetShell (#067 F1)", () => {
   it("renders host frame with header title and type badge", () => {
     const { target, destroy } = mount({});
     expect(target.querySelector(".ppp-widget-host")).not.toBeNull();
-    expect(target.querySelector(".ppp-widget-title")).toHaveTextContent("My widget");
-    expect(target.querySelector(".ppp-widget-type-badge")).toHaveTextContent("(stats)");
+    expect(target.querySelector(".ppp-widget-title")).toHaveTextContent(
+      "My widget"
+    );
+    expect(target.querySelector(".ppp-widget-type-badge")).toHaveTextContent(
+      "(stats)"
+    );
     destroy();
   });
 

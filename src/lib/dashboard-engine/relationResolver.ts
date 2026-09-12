@@ -3,7 +3,12 @@
  * within DataRecord field values to actual DataRecords from the same DataFrame.
  */
 
-import type { DataFrame, DataRecord, DataValue, Optional } from "src/lib/dataframe/dataframe";
+import type {
+  DataFrame,
+  DataRecord,
+  DataValue,
+  Optional,
+} from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { extractWikilinks } from "src/lib/engine/wikilink";
 import {
@@ -46,7 +51,12 @@ export type RecordIndex = Map<string, DataRecord> & RelationTargetIndex;
  * Uses the record id (path) basename and optionally an explicit "name" field.
  */
 export function buildRecordIndex(df: DataFrame): RecordIndex {
-  const targetIndex = buildRelationTargetIndex(df, ["name", "title", "Name", "Title"]);
+  const targetIndex = buildRelationTargetIndex(df, [
+    "name",
+    "title",
+    "Name",
+    "Title",
+  ]);
   const idx = new Map<string, DataRecord>() as RecordIndex;
   Object.assign(idx, targetIndex);
   for (const r of df.records) {
@@ -85,9 +95,10 @@ export function resolveRelationsForValue(
   const resolutions = resolveRelationValue(value, index);
   return resolutions.map((resolution) => ({
     linkText: resolution.canonicalPath,
-    target: resolution.status === "resolved" && resolution.targetRecordId
-      ? index.recordsById.get(resolution.targetRecordId)
-      : undefined,
+    target:
+      resolution.status === "resolved" && resolution.targetRecordId
+        ? index.recordsById.get(resolution.targetRecordId)
+        : undefined,
   }));
 }
 
@@ -203,7 +214,7 @@ export function enrichWithBacklinks(
   const safeFields = relationFields.filter((f) => {
     if (!existing.has(`${f}_backlinks`)) return true;
     console.warn(
-      `[Projects+] backlinks for "${f}" skipped: the frame already has a field named "${f}_backlinks"`
+      `[obs-projects-plus] backlinks for "${f}" skipped: the frame already has a field named "${f}_backlinks"`
     );
     return false;
   });

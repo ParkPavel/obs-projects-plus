@@ -9,12 +9,23 @@
  * mixed types, non-numeric strings, booleans, dates) get explicit cases.
  */
 
-import { aggregate, type RollupConfig, type RollupFunction } from "../aggregate";
+import {
+  aggregate,
+  type RollupConfig,
+  type RollupFunction,
+} from "../aggregate";
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
 import { NUMERIC_COERCION_CASES } from "./numericContract.test";
 
-const cfg = (function_: RollupConfig["function"], separator?: string): RollupConfig => {
-  const base = { relationField: "rel", targetField: "target", function: function_ };
+const cfg = (
+  function_: RollupConfig["function"],
+  separator?: string
+): RollupConfig => {
+  const base = {
+    relationField: "rel",
+    targetField: "target",
+    function: function_,
+  };
   return separator === undefined ? base : { ...base, separator };
 };
 
@@ -46,7 +57,8 @@ describe("aggregate() — kernel", () => {
     test("excludes empty string", () => {
       expect(aggregate(["a", "", "b"], cfg("count_values")).value).toBe(2);
     });
-    // Decided 2026-09-02: an unchecked box is an answer, not a blank. The footer never
+    // FLIPPED by #180c, executing the user's D4 (BACKLOG #180, RESOLVED
+    // 2026-09-02): an unchecked box is an answer, not a blank. The footer never
     // excluded `false`, so until now the same question had two answers — over
     // `[false]` the kernel said 100% empty and the footer said 0%.
     // `count_checked` / `percent_true` are the operators for "how many are
@@ -65,7 +77,9 @@ describe("aggregate() — kernel", () => {
   // ── count_unique ────────────────────────────────────
   describe("count_unique", () => {
     test("dedupes duplicates", () => {
-      expect(aggregate(["a", "b", "a", "c"], cfg("count_unique")).value).toBe(3);
+      expect(aggregate(["a", "b", "a", "c"], cfg("count_unique")).value).toBe(
+        3
+      );
     });
     test("treats string and number forms as equal (string-based key)", () => {
       expect(aggregate([1, "1", 2], cfg("count_unique")).value).toBe(2);
@@ -136,7 +150,7 @@ describe("aggregate() — kernel", () => {
     // into the reduction, so this returned the visible nonsense NaN. With the
     // value dropped the list is genuinely empty, and 0 would print a number
     // that reads like an answer. `sum` keeps 0 — the additive identity is a
-    // real total of nothing (decided 2026-09-02). Found by the
+    // real total of nothing (BACKLOG #180, RESOLVED 2026-09-02). Found by the
     // Codex adversarial review, which traced it to the footer.
     test("empty input → null, printed as the empty placeholder", () => {
       const r = aggregate([], cfg("avg"));
@@ -216,16 +230,24 @@ describe("aggregate() — kernel", () => {
   // ── percent_true ─────────────────────────────────────
   describe("percent_true", () => {
     test("all true → 100%", () => {
-      expect(aggregate([true, true], cfg("percent_true")).formattedValue).toBe("100%");
+      expect(aggregate([true, true], cfg("percent_true")).formattedValue).toBe(
+        "100%"
+      );
     });
     test("none true → 0%", () => {
-      expect(aggregate([false, false], cfg("percent_true")).formattedValue).toBe("0%");
+      expect(
+        aggregate([false, false], cfg("percent_true")).formattedValue
+      ).toBe("0%");
     });
     test("mixed → rounded percent", () => {
-      expect(aggregate([true, false, false], cfg("percent_true")).formattedValue).toBe("33%");
+      expect(
+        aggregate([true, false, false], cfg("percent_true")).formattedValue
+      ).toBe("33%");
     });
     test('"true" string counts as true', () => {
-      expect(aggregate(["true", "true", false], cfg("percent_true")).formattedValue).toBe("67%");
+      expect(
+        aggregate(["true", "true", false], cfg("percent_true")).formattedValue
+      ).toBe("67%");
     });
     // FLIPPED by #180b (spec §3.2 item 3). Zero percent is a claim about a
     // population, and there is none — and in a footer cell "0%" is
@@ -237,7 +259,9 @@ describe("aggregate() — kernel", () => {
       expect(r.formattedValue).toBe("—");
     });
     test("all-null → the empty placeholder", () => {
-      expect(aggregate([null, undefined], cfg("percent_true")).value).toBeNull();
+      expect(
+        aggregate([null, undefined], cfg("percent_true")).value
+      ).toBeNull();
     });
 
     // #180b item 2: the datum is a number, the "NN%" is how it is written.
@@ -265,8 +289,12 @@ describe("aggregate() — kernel", () => {
     test("the rendered text is unchanged from before #180b", () => {
       // The point of splitting value from formattedValue is that nothing on
       // screen moves: only the type of the datum behind it.
-      expect(aggregate(["a", "b", "", ""], cfg("percent_empty")).formattedValue).toBe("50%");
-      expect(aggregate(["a", "b", "", ""], cfg("percent_not_empty")).formattedValue).toBe("50%");
+      expect(
+        aggregate(["a", "b", "", ""], cfg("percent_empty")).formattedValue
+      ).toBe("50%");
+      expect(
+        aggregate(["a", "b", "", ""], cfg("percent_not_empty")).formattedValue
+      ).toBe("50%");
     });
   });
 
@@ -291,10 +319,14 @@ describe("aggregate() — kernel", () => {
 
   describe("concat_unique", () => {
     test("dedupes", () => {
-      expect(aggregate(["a", "a", "b", "a"], cfg("concat_unique")).value).toBe("a, b");
+      expect(aggregate(["a", "a", "b", "a"], cfg("concat_unique")).value).toBe(
+        "a, b"
+      );
     });
     test("custom separator", () => {
-      expect(aggregate(["a", "b", "a"], cfg("concat_unique", " · ")).value).toBe("a · b");
+      expect(
+        aggregate(["a", "b", "a"], cfg("concat_unique", " · ")).value
+      ).toBe("a · b");
     });
     test("empty → empty string", () => {
       expect(aggregate([], cfg("concat_unique")).value).toBe("");
@@ -327,7 +359,9 @@ describe("aggregate() — kernel", () => {
   // ── count_total (R5-004) ─────────────────────────────
   describe("count_total", () => {
     test("counts all values including null", () => {
-      expect(aggregate([1, null, undefined, 3], cfg("count_total")).value).toBe(4);
+      expect(aggregate([1, null, undefined, 3], cfg("count_total")).value).toBe(
+        4
+      );
     });
     test("empty input → 0", () => {
       expect(aggregate([], cfg("count_total")).value).toBe(0);
@@ -340,10 +374,14 @@ describe("aggregate() — kernel", () => {
   // ── show_original / show_unique (NPLAN-C3) ───────────
   describe("show_original", () => {
     test("returns all non-null values joined", () => {
-      expect(aggregate(["a", "b", "a"], cfg("show_original")).value).toBe("a, b, a");
+      expect(aggregate(["a", "b", "a"], cfg("show_original")).value).toBe(
+        "a, b, a"
+      );
     });
     test("ignores null", () => {
-      expect(aggregate(["a", null, "b"], cfg("show_original")).value).toBe("a, b");
+      expect(aggregate(["a", null, "b"], cfg("show_original")).value).toBe(
+        "a, b"
+      );
     });
     test("empty → empty string", () => {
       expect(aggregate([], cfg("show_original")).value).toBe("");
@@ -355,7 +393,9 @@ describe("aggregate() — kernel", () => {
       expect(aggregate(["a", "b", "a"], cfg("show_unique")).value).toBe("a, b");
     });
     test("custom separator", () => {
-      expect(aggregate(["x", "y", "x"], cfg("show_unique", " | ")).value).toBe("x | y");
+      expect(aggregate(["x", "y", "x"], cfg("show_unique", " | ")).value).toBe(
+        "x | y"
+      );
     });
     test("empty → empty string", () => {
       expect(aggregate([], cfg("show_unique")).value).toBe("");

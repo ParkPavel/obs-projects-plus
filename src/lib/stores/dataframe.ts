@@ -61,7 +61,7 @@ function notifyDataFrameInvalidation(): void {
       cb();
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error("[Projects+] dataFrame invalidation callback threw", err);
+      console.error("[dataFrame] invalidation callback threw", err);
     }
   }
 }
@@ -204,9 +204,7 @@ function createDataFrame() {
 
           draft.fields = draft.fields.filter((field) =>
             draft.records.some((record) => {
-              return (
-                record.values[field.name] !== undefined
-              );
+              return record.values[field.name] !== undefined;
             })
           );
 

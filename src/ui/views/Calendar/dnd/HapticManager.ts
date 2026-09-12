@@ -9,8 +9,8 @@
  * @module dnd/HapticManager
  */
 
-import { Platform } from 'obsidian';
-import { HAPTIC_PATTERNS, type HapticPattern } from './types';
+import { Platform } from "obsidian";
+import { HAPTIC_PATTERNS, type HapticPattern } from "./types";
 
 // ─── Module-level state ──────────────────────────────────────────────────────
 
@@ -49,14 +49,17 @@ function isAndroid(): boolean {
  */
 function vibrate(pattern: HapticPattern): void {
   if (_disabled) return;
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.vibrate === "function"
+  ) {
     let durations: number[] = Array.isArray(pattern.duration)
       ? [...pattern.duration]
       : [pattern.duration];
 
     // Scale down on Android for softer feedback
     if (isAndroid()) {
-      durations = durations.map(d => Math.round(d * ANDROID_INTENSITY_SCALE));
+      durations = durations.map((d) => Math.round(d * ANDROID_INTENSITY_SCALE));
     }
 
     navigator.vibrate(durations);

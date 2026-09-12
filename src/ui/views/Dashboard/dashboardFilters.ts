@@ -2,8 +2,15 @@
 //
 // R5-013 — Pure filter helpers extracted from DashboardCanvas.svelte.
 
-import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
-import type { FilterCondition, FilterDefinition } from "src/settings/base/settings";
+import {
+  DataFieldType,
+  type DataField,
+  type DataFrame,
+} from "src/lib/dataframe/dataframe";
+import type {
+  FilterCondition,
+  FilterDefinition,
+} from "src/settings/base/settings";
 import { andComposeFilters } from "src/lib/engine/filterCompose";
 import { filterByLinkedSelection } from "./widgets/DatabaseCall/relationFilterAdapter";
 
@@ -24,7 +31,12 @@ export function deriveTabCondition(
 ): FilterCondition {
   switch (field?.type) {
     case DataFieldType.Number:
-      return { field: active.field, operator: "eq", value: active.value, enabled: true };
+      return {
+        field: active.field,
+        operator: "eq",
+        value: active.value,
+        enabled: true,
+      };
     case DataFieldType.Boolean:
       return {
         field: active.field,
@@ -32,7 +44,12 @@ export function deriveTabCondition(
         enabled: true,
       };
     case DataFieldType.Date:
-      return { field: active.field, operator: "is-on", value: active.value, enabled: true };
+      return {
+        field: active.field,
+        operator: "is-on",
+        value: active.value,
+        enabled: true,
+      };
     case DataFieldType.List:
       return {
         field: active.field,
@@ -41,7 +58,12 @@ export function deriveTabCondition(
         enabled: true,
       };
     default:
-      return { field: active.field, operator: "is", value: active.value, enabled: true };
+      return {
+        field: active.field,
+        operator: "is",
+        value: active.value,
+        enabled: true,
+      };
   }
 }
 

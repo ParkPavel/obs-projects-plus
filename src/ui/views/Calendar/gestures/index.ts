@@ -1,6 +1,6 @@
 /**
  * Gesture management module for Calendar views
- * 
+ *
  * Provides:
  * - GestureManager class for imperative usage (legacy)
  * - GestureCoordinator class for state machine-based gestures (v3.1.0)
@@ -9,13 +9,13 @@
  */
 
 export {
-  GestureManager, 
+  GestureManager,
   gestures,
   type GestureConfig,
   type GestureType,
   type GestureEvent,
   type GestureHandlers,
-} from './GestureManager';
+} from "./GestureManager";
 
 export {
   GestureCoordinator,
@@ -24,4 +24,4 @@ export {
   resumeGestures,
   type GestureState,
   type GestureZone,
-} from './GestureCoordinator';
+} from "./GestureCoordinator";

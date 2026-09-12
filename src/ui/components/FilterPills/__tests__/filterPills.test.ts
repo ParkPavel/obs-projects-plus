@@ -35,7 +35,12 @@ function mount(props: Record<string, unknown>) {
 
 describe("FilterPills", () => {
   test("renders one pill per enabled condition with operator label", () => {
-    const m = mount({ conditions: [cond(), cond({ field: "priority", operator: "gt", value: "5" })] });
+    const m = mount({
+      conditions: [
+        cond(),
+        cond({ field: "priority", operator: "gt", value: "5" }),
+      ],
+    });
     const pills = m.target.querySelectorAll(".ppp-filterpills-pill-text");
     expect(pills).toHaveLength(2);
     expect(pills[0]?.textContent).toContain("status");
@@ -44,14 +49,20 @@ describe("FilterPills", () => {
   });
 
   test("disabled conditions are not rendered", () => {
-    const m = mount({ conditions: [cond({ enabled: false }), cond({ field: "x" })] });
-    expect(m.target.querySelectorAll(".ppp-filterpills-pill-text")).toHaveLength(1);
+    const m = mount({
+      conditions: [cond({ enabled: false }), cond({ field: "x" })],
+    });
+    expect(
+      m.target.querySelectorAll(".ppp-filterpills-pill-text")
+    ).toHaveLength(1);
     m.destroy();
   });
 
   test("clicking remove dispatches the pill index", () => {
     const m = mount({ conditions: [cond(), cond({ field: "x" })] });
-    const xs = m.target.querySelectorAll<HTMLButtonElement>(".ppp-filterpills-pill-x");
+    const xs = m.target.querySelectorAll<HTMLButtonElement>(
+      ".ppp-filterpills-pill-x"
+    );
     xs[1]?.click();
     expect(m.removed).toEqual([1]);
     m.destroy();
@@ -59,7 +70,9 @@ describe("FilterPills", () => {
 
   test("clicking add dispatches addClick", () => {
     const m = mount({ conditions: [] });
-    const add = m.target.querySelector<HTMLButtonElement>(".ppp-filterpills-add");
+    const add = m.target.querySelector<HTMLButtonElement>(
+      ".ppp-filterpills-add"
+    );
     add?.click();
     expect(m.addClicks).toBe(1);
     m.destroy();

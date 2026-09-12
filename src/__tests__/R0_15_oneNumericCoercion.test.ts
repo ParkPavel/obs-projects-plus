@@ -329,7 +329,9 @@ describe("R0.15 — the scan itself (synthetic, proves BOTH states)", () => {
       "</script>",
       "<input on:input={(e) => emit(parseInt(e.currentTarget.value))} />",
     ].join("\n");
-    expect(findUnmarkedCoercions(text, true).map((h) => h.line)).toEqual([2, 4]);
+    expect(findUnmarkedCoercions(text, true).map((h) => h.line)).toEqual([
+      2, 4,
+    ]);
   });
 
   it("a block-comment marker exempts the expression it sits in", () => {
@@ -340,7 +342,9 @@ describe("R0.15 — the scan itself (synthetic, proves BOTH states)", () => {
   });
 
   it("a block-comment marker with an empty reason does not exempt", () => {
-    const text = ["<input on:input={(e) => emit(/* coercion-exempt: */ parseInt(e.currentTarget.value))} />"].join("\n");
+    const text = [
+      "<input on:input={(e) => emit(/* coercion-exempt: */ parseInt(e.currentTarget.value))} />",
+    ].join("\n");
     expect(findUnmarkedCoercions(text, true).map((h) => h.line)).toEqual([1]);
   });
 

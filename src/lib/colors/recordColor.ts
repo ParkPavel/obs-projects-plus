@@ -30,7 +30,9 @@ export const COLOR_FIELD_NAME_FRAGMENTS = [
 /** True when a field name should get color-picker affordances in editors. */
 export function isColorFieldName(name: string): boolean {
   const lower = name.toLowerCase();
-  return COLOR_FIELD_NAME_FRAGMENTS.some((fragment) => lower.includes(fragment));
+  return COLOR_FIELD_NAME_FRAGMENTS.some((fragment) =>
+    lower.includes(fragment)
+  );
 }
 
 /**

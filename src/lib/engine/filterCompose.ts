@@ -14,7 +14,9 @@ export function hasFilterEffect(
   if (!filter) return false;
   // `conditions` is required by the type, but these values come from persisted
   // JSON where an older or hand-edited config may not carry it.
-  return (filter.conditions?.length ?? 0) > 0 || (filter.groups?.length ?? 0) > 0;
+  return (
+    (filter.conditions?.length ?? 0) > 0 || (filter.groups?.length ?? 0) > 0
+  );
 }
 
 /**

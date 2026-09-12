@@ -2,7 +2,11 @@ import { normalizePath, TFile } from "obsidian";
 import { get } from "svelte/store";
 
 import { app } from "src/lib/stores/obsidian";
-import type { FilterCondition, ProjectDefinition, ViewDefinition } from "src/settings/settings";
+import type {
+  FilterCondition,
+  ProjectDefinition,
+  ViewDefinition,
+} from "src/settings/settings";
 import { getContext, setContext } from "svelte";
 import type { DataField } from "./dataframe/dataframe";
 
@@ -190,7 +194,11 @@ export function getFilterValuesFromConditions(
 ): Record<string, string> {
   const values: Record<string, string> = {};
   for (const c of conditions) {
-    if (c.operator === "is" && c.value !== undefined && c.field !== excludeField) {
+    if (
+      c.operator === "is" &&
+      c.value !== undefined &&
+      c.field !== excludeField
+    ) {
       values[c.field] = c.value;
     }
   }

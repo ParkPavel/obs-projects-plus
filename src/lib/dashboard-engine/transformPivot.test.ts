@@ -10,9 +10,27 @@ import type { TransformPipeline } from "./transformTypes";
 function makeSalesFrame(): DataFrame {
   return {
     fields: [
-      { name: "region", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "product", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "revenue", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "region",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "product",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "revenue",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { region: "North", product: "Widget", revenue: 100 } },
@@ -27,9 +45,27 @@ function makeSalesFrame(): DataFrame {
 function makeSingleCategoryFrame(): DataFrame {
   return {
     fields: [
-      { name: "name", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-      { name: "status", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-      { name: "hours", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+      {
+        name: "name",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: true,
+        derived: false,
+      },
+      {
+        name: "status",
+        type: DataFieldType.String,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
+      {
+        name: "hours",
+        type: DataFieldType.Number,
+        repeated: false,
+        identifier: false,
+        derived: false,
+      },
     ],
     records: [
       { id: "1", values: { name: "Alice", status: "Done", hours: 5 } },
@@ -81,7 +117,9 @@ describe("executeTransform — PIVOT", () => {
     const result = executeTransform(makeSalesFrame(), pipeline);
 
     // North + Widget: 100 + 50 = 150
-    const northRow = result.data.records.find((r) => r.values["region"] === "North");
+    const northRow = result.data.records.find(
+      (r) => r.values["region"] === "North"
+    );
     expect(northRow?.values["Widget"]).toBe(150);
     expect(northRow?.values["Gadget"]).toBe(200);
   });
@@ -89,7 +127,9 @@ describe("executeTransform — PIVOT", () => {
   test("single value cells are not aggregated", () => {
     const result = executeTransform(makeSalesFrame(), pipeline);
 
-    const southRow = result.data.records.find((r) => r.values["region"] === "South");
+    const southRow = result.data.records.find(
+      (r) => r.values["region"] === "South"
+    );
     expect(southRow?.values["Widget"]).toBe(150);
     expect(southRow?.values["Gadget"]).toBe(300);
   });
@@ -107,7 +147,9 @@ describe("executeTransform — PIVOT", () => {
     };
 
     const result = executeTransform(makeSalesFrame(), avgPipeline);
-    const northRow = result.data.records.find((r) => r.values["region"] === "North");
+    const northRow = result.data.records.find(
+      (r) => r.values["region"] === "North"
+    );
 
     // North + Widget: (100 + 50) / 2 = 75
     expect(northRow?.values["Widget"]).toBe(75);
@@ -126,7 +168,9 @@ describe("executeTransform — PIVOT", () => {
     };
 
     const result = executeTransform(makeSalesFrame(), countPipeline);
-    const northRow = result.data.records.find((r) => r.values["region"] === "North");
+    const northRow = result.data.records.find(
+      (r) => r.values["region"] === "North"
+    );
 
     // North has 2 Widget entries, 1 Gadget
     expect(northRow?.values["Widget"]).toBe(2);
@@ -135,9 +179,7 @@ describe("executeTransform — PIVOT", () => {
 
   test("sorts category columns alphabetically", () => {
     const result = executeTransform(makeSalesFrame(), pipeline);
-    const catFields = result.data.fields.filter(
-      (f) => f.name !== "region"
-    );
+    const catFields = result.data.fields.filter((f) => f.name !== "region");
 
     expect(catFields[0]?.name).toBe("Gadget");
     expect(catFields[1]?.name).toBe("Widget");
@@ -146,9 +188,27 @@ describe("executeTransform — PIVOT", () => {
   test("handles missing values gracefully", () => {
     const frame: DataFrame = {
       fields: [
-        { name: "key", type: DataFieldType.String, repeated: false, identifier: true, derived: false },
-        { name: "cat", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-        { name: "val", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "key",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: true,
+          derived: false,
+        },
+        {
+          name: "cat",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "val",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [
         { id: "1", values: { key: "A", cat: "X", val: 10 } },
@@ -158,7 +218,14 @@ describe("executeTransform — PIVOT", () => {
     };
 
     const result = executeTransform(frame, {
-      steps: [{ type: "pivot", categoryField: "cat", valueField: "val", aggregation: "SUM" }],
+      steps: [
+        {
+          type: "pivot",
+          categoryField: "cat",
+          valueField: "val",
+          aggregation: "SUM",
+        },
+      ],
     });
 
     const rowA = result.data.records.find((r) => r.values["key"] === "A");
@@ -169,8 +236,20 @@ describe("executeTransform — PIVOT", () => {
   test("empty frame returns empty result", () => {
     const emptyFrame: DataFrame = {
       fields: [
-        { name: "cat", type: DataFieldType.String, repeated: false, identifier: false, derived: false },
-        { name: "val", type: DataFieldType.Number, repeated: false, identifier: false, derived: false },
+        {
+          name: "cat",
+          type: DataFieldType.String,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
+        {
+          name: "val",
+          type: DataFieldType.Number,
+          repeated: false,
+          identifier: false,
+          derived: false,
+        },
       ],
       records: [],
     };
@@ -181,12 +260,21 @@ describe("executeTransform — PIVOT", () => {
 
   test("pivot with multiple row-key fields", () => {
     const result = executeTransform(makeSingleCategoryFrame(), {
-      steps: [{ type: "pivot", categoryField: "status", valueField: "hours", aggregation: "SUM" }],
+      steps: [
+        {
+          type: "pivot",
+          categoryField: "status",
+          valueField: "hours",
+          aggregation: "SUM",
+        },
+      ],
     });
 
     // row-key = "name" (identifier)
     expect(result.data.records.length).toBe(2);
-    const aliceRow = result.data.records.find((r) => r.values["name"] === "Alice");
+    const aliceRow = result.data.records.find(
+      (r) => r.values["name"] === "Alice"
+    );
     expect(aliceRow?.values["Done"]).toBe(5);
     expect(aliceRow?.values["Active"]).toBe(3);
   });

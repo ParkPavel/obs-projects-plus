@@ -72,16 +72,22 @@ describe("R0.3 — CSS px-budget ratchet", () => {
   //   191 → 187 (TDT-12 — WidgetHost.svelte: 4 × border/border-bottom 1px solid → 0.0625rem solid).
   //   187 → 186 (#034.2a — net px reduction during popoverDropdown→FloatingPopup migration: archived popoverDropdown.ts (legacy .ts file did not count); new PopoverList.svelte uses 0.0625rem hairlines).
   //   186 → 177 (#077 slice 4 — DateFormulaInput retired its imperative inline-style portal (px borders/box-shadow/badge radii); now a thin FormulaConstructor wrapper with rem-only cell overrides).
-  //   151 → 143 (#191 — the dashboard-template mechanism deleted:
-  //     widgetTemplates.ts, dashboardTemplates.ts, TemplateConfirmDialog.svelte
-  //     and the template rules in WidgetToolbar. Re-measured, not decremented —
-  //     the architect estimated 149 from a reading of the diff and the tree said
-  //     143, which is the whole reason this log says "re-measured" twice above.
   //   177 → 151 (#165 step 1 — src/lib/tokens/design-tokens.css deleted: the dead
   //     token file carried 3 px (--ppp-border-width 1px/2px, --ppp-radius-full 9999px),
   //     all of them re-declared live in tokens.css. Re-measured rather than decremented,
   //     because the ceiling had drifted 23 above the tree: a ratchet that is not the
   //     measurement cannot see a deletion, which is what let a dead file sit here.
+  //   151 → 143 (#191 — dashboard widget templates deleted. Only 2 of the 8 are
+  //     this ticket's: TemplateConfirmDialog's `1px` dialog border, which went
+  //     with the file, and WidgetToolbar's `1px` template-submenu separator.
+  //     The other 6 were DRIFT: measured on the base commit the tree already
+  //     stood at 145 against a ceiling of 151, so six px had been removed at
+  //     some point without the constant following. Re-measured rather than
+  //     decremented by 2, for the reason #165 gave one entry above — a ceiling
+  //     that is not the measurement cannot see a deletion, and this is the
+  //     second time in this file's history that gap has been found rather than
+  //     reported. R0.16 pins itself to its measurement with a planted-value
+  //     assertion precisely to make that impossible; R0.3 still cannot.
   const PX_BUDGET = 143;
 
   it("does not exceed the agreed px-budget", () => {
@@ -95,7 +101,7 @@ describe("R0.3 — CSS px-budget ratchet", () => {
       throw new Error(
         `px-budget exceeded: ${total} > ${PX_BUDGET}\nTop offenders:\n${top}\n\n` +
           `If this is the result of a deliberate conversion that REDUCES the count, ` +
-          `lower PX_BUDGET in this test. If it is new px, please convert to rem/em/%.`,
+          `lower PX_BUDGET in this test. If it is new px, please convert to rem/em/%.`
       );
     }
     expect(total).toBeLessThanOrEqual(PX_BUDGET);

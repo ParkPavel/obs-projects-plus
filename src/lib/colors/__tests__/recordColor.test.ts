@@ -37,10 +37,14 @@ describe("normalizeHexColor", () => {
 });
 
 describe("isColorFieldName", () => {
-  it.each(["color", "Color", "eventColor", "tagColor", "backgroundColor", "myColorField"])(
-    "detects %s",
-    (name) => expect(isColorFieldName(name)).toBe(true)
-  );
+  it.each([
+    "color",
+    "Color",
+    "eventColor",
+    "tagColor",
+    "backgroundColor",
+    "myColorField",
+  ])("detects %s", (name) => expect(isColorFieldName(name)).toBe(true));
 
   it("ignores unrelated names", () => {
     expect(isColorFieldName("status")).toBe(false);
@@ -50,15 +54,21 @@ describe("isColorFieldName", () => {
 
 describe("explicitRecordColor", () => {
   it("reads the configured eventColorField", () => {
-    expect(explicitRecordColor(record({ myTint: "#112233" }), "myTint")).toBe("#112233");
+    expect(explicitRecordColor(record({ myTint: "#112233" }), "myTint")).toBe(
+      "#112233"
+    );
   });
 
   it("matches frontmatter keys case-insensitively (Color vs color)", () => {
-    expect(explicitRecordColor(record({ Color: "#00ffb3" }), "color")).toBe("#00ffb3");
+    expect(explicitRecordColor(record({ Color: "#00ffb3" }), "color")).toBe(
+      "#00ffb3"
+    );
   });
 
   it("falls back to any color-named field when config field is absent", () => {
-    expect(explicitRecordColor(record({ eventColor: "#aabbcc" }))).toBe("#aabbcc");
+    expect(explicitRecordColor(record({ eventColor: "#aabbcc" }))).toBe(
+      "#aabbcc"
+    );
   });
 
   it("normalizes shorthand hex from frontmatter", () => {
@@ -66,7 +76,9 @@ describe("explicitRecordColor", () => {
   });
 
   it("returns null when no valid color present", () => {
-    expect(explicitRecordColor(record({ color: "red", status: "x" }))).toBeNull();
+    expect(
+      explicitRecordColor(record({ color: "red", status: "x" }))
+    ).toBeNull();
   });
 });
 

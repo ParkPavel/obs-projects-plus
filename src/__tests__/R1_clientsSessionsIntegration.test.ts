@@ -18,8 +18,15 @@
 
 import { describe, expect, it } from "@jest/globals";
 
-import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
-import { parseRelationLinks, canonicalLinkKey } from "src/lib/relations/parseRelationLinks";
+import {
+  DataFieldType,
+  type DataField,
+  type DataFrame,
+} from "src/lib/dataframe/dataframe";
+import {
+  parseRelationLinks,
+  canonicalLinkKey,
+} from "src/lib/relations/parseRelationLinks";
 import {
   enrichFrameWithRelations,
   enrichFrameWithAllRelations,
@@ -96,9 +103,18 @@ const sessionsFrame = (): DataFrame => ({
     clientRelationField,
   ],
   records: [
-    { id: "Sessions/Session1.md", values: { title: "Session 1", date: "2026-08-01", client: "[[Alice]]" } },
-    { id: "Sessions/Session2.md", values: { title: "Session 2", date: "2026-08-15", client: "[[Alice]]" } },
-    { id: "Sessions/Session3.md", values: { title: "Session 3", date: "2026-08-20", client: "[[Bob]]" } },
+    {
+      id: "Sessions/Session1.md",
+      values: { title: "Session 1", date: "2026-08-01", client: "[[Alice]]" },
+    },
+    {
+      id: "Sessions/Session2.md",
+      values: { title: "Session 2", date: "2026-08-15", client: "[[Alice]]" },
+    },
+    {
+      id: "Sessions/Session3.md",
+      values: { title: "Session 3", date: "2026-08-20", client: "[[Bob]]" },
+    },
   ],
 });
 
@@ -112,7 +128,9 @@ describe("R1 — WikiLink resolution (parseRelationLinks)", () => {
   it('parseRelationLinks("[[People/Alice|Alice]]") returns the canonical path ["People/Alice"] (alias is stripped, not promoted)', () => {
     // The alias "|Alice" is discarded; parseRelationLinks returns the link target path.
     // Alias-based display is handled at render time, not during link parsing.
-    expect(parseRelationLinks("[[People/Alice|Alice]]")).toEqual(["People/Alice"]);
+    expect(parseRelationLinks("[[People/Alice|Alice]]")).toEqual([
+      "People/Alice",
+    ]);
   });
 });
 
@@ -173,11 +191,16 @@ describe("R1 — inverse backlinks (enrichWithBacklinks / enrichFrameWithAllRela
     const externalFrames = new Map<string, DataFrame>([
       ["clients-project-id", clientsFrame()],
     ]);
-    const enriched = enrichFrameWithAllRelations(sessionsFrame(), externalFrames);
+    const enriched = enrichFrameWithAllRelations(
+      sessionsFrame(),
+      externalFrames
+    );
     const derivedField = derivedFieldName("client");
 
     // Derived field registered in schema
-    const registeredField = enriched.fields.find((f) => f.name === derivedField);
+    const registeredField = enriched.fields.find(
+      (f) => f.name === derivedField
+    );
     expect(registeredField).toBeDefined();
     expect(registeredField?.derived).toBe(true);
 
@@ -293,16 +316,26 @@ describe("R1 — count rollup via __resolved__client derived field", () => {
 
     // Collect all resolved targets across sessions
     const aliceCount = enriched.records.filter((record) => {
-      const resolved = record.values[derivedField] as unknown as DataRecord[] | undefined;
-      return Array.isArray(resolved) && resolved.some((r) => r.values["name"] === "Alice");
+      const resolved = record.values[derivedField] as unknown as
+        | DataRecord[]
+        | undefined;
+      return (
+        Array.isArray(resolved) &&
+        resolved.some((r) => r.values["name"] === "Alice")
+      );
     }).length;
 
     const bobCount = enriched.records.filter((record) => {
-      const resolved = record.values[derivedField] as unknown as DataRecord[] | undefined;
-      return Array.isArray(resolved) && resolved.some((r) => r.values["name"] === "Bob");
+      const resolved = record.values[derivedField] as unknown as
+        | DataRecord[]
+        | undefined;
+      return (
+        Array.isArray(resolved) &&
+        resolved.some((r) => r.values["name"] === "Bob")
+      );
     }).length;
 
     expect(aliceCount).toBe(2); // Session 1 + Session 2
-    expect(bobCount).toBe(1);   // Session 3 only
+    expect(bobCount).toBe(1); // Session 3 only
   });
 });

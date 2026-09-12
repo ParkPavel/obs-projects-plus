@@ -10,7 +10,10 @@ import { describe, expect, it } from "@jest/globals";
 
 import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 
-import { applyRollupColumns, resolveRollupTargetProjectId } from "./rollupColumns";
+import {
+  applyRollupColumns,
+  resolveRollupTargetProjectId,
+} from "./rollupColumns";
 import type { FieldConfigRelationMap } from "./viewHelpers";
 
 const field = (name: string, type: DataFieldType, repeated = false) => ({
@@ -29,13 +32,19 @@ const clients = (): DataFrame => ({
     field("sessions", DataFieldType.Relation, true),
   ],
   records: [
-    { id: "Clients/Ivan.md", values: { name: "Ivan", sessions: ["[[S1]]", "[[S2]]"] } },
+    {
+      id: "Clients/Ivan.md",
+      values: { name: "Ivan", sessions: ["[[S1]]", "[[S2]]"] },
+    },
     { id: "Clients/Anna.md", values: { name: "Anna", sessions: ["[[S3]]"] } },
   ],
 });
 
 const sessions = (): DataFrame => ({
-  fields: [field("name", DataFieldType.String), field("pain", DataFieldType.Number)],
+  fields: [
+    field("name", DataFieldType.String),
+    field("pain", DataFieldType.Number),
+  ],
   records: [
     { id: "S1.md", values: { name: "S1", pain: 6 } },
     { id: "S2.md", values: { name: "S2", pain: 4 } },
@@ -48,7 +57,11 @@ describe("resolveRollupTargetProjectId", () => {
     const fieldConfig: FieldConfigRelationMap = {
       sessions: { relation: { targetProjectId: "p-sessions" } },
       "Number of sessions": {
-        rollup: { relationField: "sessions", targetField: "name", function: "count" },
+        rollup: {
+          relationField: "sessions",
+          targetField: "name",
+          function: "count",
+        },
       },
     };
     expect(
@@ -75,14 +88,20 @@ describe("resolveRollupTargetProjectId", () => {
         },
       },
     };
-    expect(resolveRollupTargetProjectId(fieldConfig["rolled"]!.rollup!, fieldConfig)).toBe(
-      "p-sessions"
-    );
+    expect(
+      resolveRollupTargetProjectId(fieldConfig["rolled"]!.rollup!, fieldConfig)
+    ).toBe("p-sessions");
   });
 
   it("returns undefined when the named relation has no target", () => {
     const fieldConfig: FieldConfigRelationMap = {
-      rolled: { rollup: { relationField: "missing", targetField: "name", function: "count" } },
+      rolled: {
+        rollup: {
+          relationField: "missing",
+          targetField: "name",
+          function: "count",
+        },
+      },
     };
     expect(
       resolveRollupTargetProjectId(fieldConfig["rolled"]!.rollup!, fieldConfig)
@@ -95,7 +114,11 @@ describe("applyRollupColumns", () => {
     const fieldConfig: FieldConfigRelationMap = {
       sessions: { relation: { targetProjectId: "p-sessions" } },
       "Number of sessions": {
-        rollup: { relationField: "sessions", targetField: "name", function: "count" },
+        rollup: {
+          relationField: "sessions",
+          targetField: "name",
+          function: "count",
+        },
       },
     };
     const out = applyRollupColumns(
@@ -112,7 +135,11 @@ describe("applyRollupColumns", () => {
     const fieldConfig: FieldConfigRelationMap = {
       sessions: { relation: { targetProjectId: "p-sessions" } },
       "Total pain": {
-        rollup: { relationField: "sessions", targetField: "pain", function: "sum" },
+        rollup: {
+          relationField: "sessions",
+          targetField: "pain",
+          function: "sum",
+        },
       },
     };
     const out = applyRollupColumns(
@@ -158,7 +185,11 @@ describe("applyRollupColumns", () => {
     const fieldConfig: FieldConfigRelationMap = {
       sessions: { relation: { targetProjectId: "p-sessions" } },
       "Total pain": {
-        rollup: { relationField: "sessions", targetField: "pain", function: "sum" },
+        rollup: {
+          relationField: "sessions",
+          targetField: "pain",
+          function: "sum",
+        },
       },
     };
     const out = applyRollupColumns(
@@ -180,7 +211,10 @@ describe("applyRollupColumns", () => {
         field("estimate", DataFieldType.Number),
       ],
       records: [
-        { id: "T1.md", values: { name: "T1", blocks: ["[[T2]]", "[[T3]]"], estimate: 1 } },
+        {
+          id: "T1.md",
+          values: { name: "T1", blocks: ["[[T2]]", "[[T3]]"], estimate: 1 },
+        },
         { id: "T2.md", values: { name: "T2", blocks: [], estimate: 3 } },
         { id: "T3.md", values: { name: "T3", blocks: [], estimate: 5 } },
       ],
@@ -188,7 +222,11 @@ describe("applyRollupColumns", () => {
     const fieldConfig: FieldConfigRelationMap = {
       blocks: { relation: { targetProjectId: "p-tasks" } },
       "Blocked estimate": {
-        rollup: { relationField: "blocks", targetField: "estimate", function: "sum" },
+        rollup: {
+          relationField: "blocks",
+          targetField: "estimate",
+          function: "sum",
+        },
       },
     };
     const out = applyRollupColumns(tasks, fieldConfig, "p-tasks", new Map());
@@ -198,10 +236,18 @@ describe("applyRollupColumns", () => {
 
   it("leaves the frame untouched when the rollup cannot be resolved", () => {
     const fieldConfig: FieldConfigRelationMap = {
-      orphan: { rollup: { relationField: "nope", targetField: "name", function: "count" } },
+      orphan: {
+        rollup: {
+          relationField: "nope",
+          targetField: "name",
+          function: "count",
+        },
+      },
     };
     const input = clients();
-    expect(applyRollupColumns(input, fieldConfig, "p-clients", new Map())).toBe(input);
+    expect(applyRollupColumns(input, fieldConfig, "p-clients", new Map())).toBe(
+      input
+    );
   });
 
   it("does not depend on the key order of fieldConfig", () => {
@@ -216,7 +262,10 @@ describe("applyRollupColumns", () => {
         field("estimate", DataFieldType.Number),
       ],
       records: [
-        { id: "T1.md", values: { name: "T1", blocks: ["[[T2]]", "[[T3]]"], estimate: 1 } },
+        {
+          id: "T1.md",
+          values: { name: "T1", blocks: ["[[T2]]", "[[T3]]"], estimate: 1 },
+        },
         { id: "T2.md", values: { name: "T2", blocks: [], estimate: 3 } },
         { id: "T3.md", values: { name: "T3", blocks: [], estimate: 5 } },
       ],
@@ -226,10 +275,18 @@ describe("applyRollupColumns", () => {
     const base: FieldConfigRelationMap = {
       blocks: {
         relation: { targetProjectId: "p-tasks" },
-        rollup: { relationField: "blocks", targetField: "estimate", function: "count" },
+        rollup: {
+          relationField: "blocks",
+          targetField: "estimate",
+          function: "count",
+        },
       },
       "Blocked estimate": {
-        rollup: { relationField: "blocks", targetField: "estimate", function: "sum" },
+        rollup: {
+          relationField: "blocks",
+          targetField: "estimate",
+          function: "sum",
+        },
       },
     };
     const reversed: FieldConfigRelationMap = {
@@ -240,7 +297,9 @@ describe("applyRollupColumns", () => {
     const a = applyRollupColumns(tasks, base, "p-tasks", new Map());
     const b = applyRollupColumns(tasks, reversed, "p-tasks", new Map());
 
-    expect(b.records.map((r) => r.values)).toEqual(a.records.map((r) => r.values));
+    expect(b.records.map((r) => r.values)).toEqual(
+      a.records.map((r) => r.values)
+    );
     // Both rollups resolved the links the user wrote, not each other's output.
     expect(a.records[0]!.values["Blocked estimate"]).toBe(8);
     expect(a.records[0]!.values["blocks"]).toBe(2);

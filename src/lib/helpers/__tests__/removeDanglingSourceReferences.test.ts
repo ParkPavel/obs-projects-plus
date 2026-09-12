@@ -28,7 +28,12 @@ describe("removeDanglingSourceReferences", () => {
           id: "w1",
           type: "chart",
           transform: { steps: [{ type: "filter", conditions: [] }] },
-          config: { correlation: { rightSourceId: "other", on: { leftKey: "k", rightKey: "k" } } },
+          config: {
+            correlation: {
+              rightSourceId: "other",
+              on: { leftKey: "k", rightKey: "k" },
+            },
+          },
         },
       ]),
     ];
@@ -45,7 +50,12 @@ describe("removeDanglingSourceReferences", () => {
         transform: {
           steps: [
             { type: "filter", conditions: [] },
-            { type: "join", rightSourceId: "deleted", on: { leftKey: "k", rightKey: "k" }, how: "inner" },
+            {
+              type: "join",
+              rightSourceId: "deleted",
+              on: { leftKey: "k", rightKey: "k" },
+              how: "inner",
+            },
             { type: "sort", by: [] },
           ],
         },
@@ -67,7 +77,10 @@ describe("removeDanglingSourceReferences", () => {
         transform: { steps: [] },
         config: {
           chartType: "scatter",
-          correlation: { rightSourceId: "deleted", on: { leftKey: "k", rightKey: "k" } },
+          correlation: {
+            rightSourceId: "deleted",
+            on: { leftKey: "k", rightKey: "k" },
+          },
           other: "preserved",
         },
       },
@@ -88,7 +101,10 @@ describe("removeDanglingSourceReferences", () => {
         transform: { steps: [] },
         config: {
           chartType: "scatter",
-          correlation: { rightSourceId: "still-here", on: { leftKey: "k", rightKey: "k" } },
+          correlation: {
+            rightSourceId: "still-here",
+            on: { leftKey: "k", rightKey: "k" },
+          },
         },
       },
     ];
@@ -113,7 +129,12 @@ describe("removeDanglingSourceReferences", () => {
                 {
                   id: "w1",
                   type: "chart",
-                  config: { correlation: { rightSourceId: "deleted", on: { leftKey: "k", rightKey: "k" } } },
+                  config: {
+                    correlation: {
+                      rightSourceId: "deleted",
+                      on: { leftKey: "k", rightKey: "k" },
+                    },
+                  },
                 },
               ],
             },
@@ -122,7 +143,16 @@ describe("removeDanglingSourceReferences", () => {
             id: "va2",
             name: "v2",
             type: "database",
-            config: { widgets: [{ id: "w2", type: "table", transform: { steps: [] }, config: {} }] },
+            config: {
+              widgets: [
+                {
+                  id: "w2",
+                  type: "table",
+                  transform: { steps: [] },
+                  config: {},
+                },
+              ],
+            },
           },
         ],
       },
@@ -141,7 +171,12 @@ describe("removeDanglingSourceReferences", () => {
                   type: "table",
                   transform: {
                     steps: [
-                      { type: "join", rightSourceId: "deleted", on: { leftKey: "k", rightKey: "k" }, how: "inner" },
+                      {
+                        type: "join",
+                        rightSourceId: "deleted",
+                        on: { leftKey: "k", rightKey: "k" },
+                        how: "inner",
+                      },
                     ],
                   },
                   config: {},
@@ -153,14 +188,21 @@ describe("removeDanglingSourceReferences", () => {
       },
     ];
     const result = removeDanglingSourceReferences(projects as any, "deleted");
-    expect((result[0]!.views[0]!.config as any).widgets[0].config.correlation).toBeUndefined();
-    expect((result[1]!.views[0]!.config as any).widgets[0].transform.steps).toHaveLength(0);
+    expect(
+      (result[0]!.views[0]!.config as any).widgets[0].config.correlation
+    ).toBeUndefined();
+    expect(
+      (result[1]!.views[0]!.config as any).widgets[0].transform.steps
+    ).toHaveLength(0);
   });
 
   it("tolerates widgets without transform or config", () => {
     const widgets = [{ id: "w1", type: "heading" }];
     const projects = [makeProject("a", widgets)];
     const result = removeDanglingSourceReferences(projects, "deleted");
-    expect(result[0]!.views[0]!.config!["widgets"][0]).toEqual({ id: "w1", type: "heading" });
+    expect(result[0]!.views[0]!.config!["widgets"][0]).toEqual({
+      id: "w1",
+      type: "heading",
+    });
   });
 });

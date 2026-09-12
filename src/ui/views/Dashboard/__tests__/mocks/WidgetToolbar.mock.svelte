@@ -1,19 +1,14 @@
 <script>
+	// #191: this mock existed to fire `applyTemplate`, the toolbar's other
+	// event, which is gone with the template mechanism. It stays as a stub
+	// because `DashboardCanvas.test.ts` still mocks the real component — that
+	// one pulls in FloatingPopup and the widget registry, neither of which a
+	// canvas layout test has any reason to mount.
 	import { createEventDispatcher } from "svelte";
 
 	const dispatch = createEventDispatcher();
-
-	const templateWidgets = [
-		{
-			id: "toolbar-template-widget",
-			type: "chart",
-			title: "Toolbar Template",
-			layout: { x: 0, y: 0, w: 6, h: 4 },
-			config: {},
-		},
-	];
 </script>
 
-<button class="widget-toolbar-mock-apply" on:click={() => dispatch("applyTemplate", templateWidgets)}>
-	Apply Mock Template
+<button class="widget-toolbar-mock-add" on:click={() => dispatch("addWidget", "chart")}>
+	Add Mock Widget
 </button>

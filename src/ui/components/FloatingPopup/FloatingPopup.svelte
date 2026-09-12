@@ -1,6 +1,7 @@
 <!--
   FloatingPopup.svelte — the only popup engine in the plugin.
 
+  Spec:    .ai_internal/New-specification/POPUP_PATTERN_GUIDE.md (#034 / #040).
   Ticket:  #034.1 — Popup standardisation, Phase 4 (DEMOLISH zone, absorbs #040).
 
   Contract:
@@ -15,7 +16,6 @@
 -->
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
-  import { portal } from "src/ui/portal";
   import { isMobile } from "src/lib/stores/ui";
 
   // ── Public types ───────────────────────────────────────────
@@ -85,60 +85,18 @@
   }
 
   // ── Lifecycle ──────────────────────────────────────────────
-  //
-  // #192: these follow the popup's own document, not the bundle's. Moving the
-  // node into a popout window and leaving the listeners on the main window
-  // would be a half fix: Escape and outside-click would be watched in a window
-  // the popup is not in, so it could not be dismissed at all.
-  //
-  // The document is resolved at mount from the trigger, because the popup's own
-  // element does not exist until it opens. Both are in the same leaf, so they
-  // are in the same document by construction.
-  let boundDoc: Document = document;
-  let boundView: Window = window;
-  let listening = false;
-
-  /**
-   * Put the listeners on `doc`, taking them off whatever held them before.
-   *
-   * Binding once at mount is not enough, and that is the correction the review
-   * caught: several callers mount this component before their anchor exists
-   * (`SortTab`, `ColorFiltersTab` supply `triggerEl` only when the popover
-   * opens). Bound at mount, such a popup would listen on the main window
-   * forever — the exact defect, one level up.
-   */
-  function bindTo(doc: Document): void {
-    if (listening && doc === boundDoc) return;
-    if (listening) {
-      boundDoc.removeEventListener("keydown", handleKeydown, true);
-      boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
-      boundView.removeEventListener("resize", handleReposition);
-      boundView.removeEventListener("scroll", handleReposition, true);
-    }
-    boundDoc = doc;
-    boundView = doc.defaultView ?? window;
-    boundDoc.addEventListener("keydown", handleKeydown, true);
-    boundDoc.addEventListener("mousedown", handleOutsideMouseDown, true);
-    boundView.addEventListener("resize", handleReposition);
-    boundView.addEventListener("scroll", handleReposition, true);
-    listening = true;
-  }
-
-  // The anchor may arrive long after mount, and the popup's own element only
-  // exists while it is open. Whichever appears first names the document.
-  $: bindTo(popupEl?.ownerDocument ?? triggerEl?.ownerDocument ?? document);
-
   onMount(() => {
-    bindTo(triggerEl?.ownerDocument ?? document);
+    document.addEventListener("keydown", handleKeydown, true);
+    document.addEventListener("mousedown", handleOutsideMouseDown, true);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
   });
 
   onDestroy(() => {
-    if (!listening) return;
-    boundDoc.removeEventListener("keydown", handleKeydown, true);
-    boundDoc.removeEventListener("mousedown", handleOutsideMouseDown, true);
-    boundView.removeEventListener("resize", handleReposition);
-    boundView.removeEventListener("scroll", handleReposition, true);
-    listening = false;
+    document.removeEventListener("keydown", handleKeydown, true);
+    document.removeEventListener("mousedown", handleOutsideMouseDown, true);
+    window.removeEventListener("resize", handleReposition);
+    window.removeEventListener("scroll", handleReposition, true);
   });
 
   // Reposition on viewport changes (resize / scroll) while open so a popup
@@ -155,17 +113,12 @@
 
     const tRect = triggerEl.getBoundingClientRect();
     const pRect = popupEl.getBoundingClientRect();
-    // #192: measured against the window the popup is actually in. The main
-    // window's viewport would clamp a popout's popup to coordinates from a
-    // different screen area entirely.
-    const doc = popupEl.ownerDocument;
-    const view = doc.defaultView ?? window;
-    const vw = view.innerWidth;
-    const vh = view.innerHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
     const baseFontPx = parseFloat(
-      view.getComputedStyle(doc.documentElement).fontSize || "16"
+      getComputedStyle(document.documentElement).fontSize || "16"
     );
     const offsetPx = offsetRem * baseFontPx;
     const marginPx = 0.5 * baseFontPx;
@@ -215,7 +168,7 @@
     // take the MIN of the viewport-derived cap and the resolved CSS max-width.
     const viewportWidthCap = vw - clampedLeft - marginPx;
     // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const cssMaxWidth = parseFloat(view.getComputedStyle(popupEl).maxWidth);
+    const cssMaxWidth = parseFloat(getComputedStyle(popupEl).maxWidth);
     const widthCap =
       Number.isFinite(cssMaxWidth) && cssMaxWidth > 0
         ? Math.min(viewportWidthCap, cssMaxWidth)
@@ -250,7 +203,7 @@
       if (focusable.length === 0) return;
       const first = focusable[0]!;
       const last = focusable[focusable.length - 1]!;
-      const activeEl = boundDoc.activeElement as HTMLElement | null;
+      const activeEl = document.activeElement as HTMLElement | null;
       if (e.shiftKey && activeEl === first) {
         e.preventDefault();
         last.focus();
@@ -266,7 +219,7 @@
       );
       if (items.length === 0) return;
       e.preventDefault();
-      const current = items.indexOf(boundDoc.activeElement as HTMLElement);
+      const current = items.indexOf(document.activeElement as HTMLElement);
       let next = current;
       if (e.key === "ArrowDown") next = current < 0 ? 0 : (current + 1) % items.length;
       if (e.key === "ArrowUp") next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length;
@@ -301,12 +254,14 @@
   // Fixes an empty overflow column + plugin shift. Positioning, outside-click,
   // Escape and focus-trap all work on the moved node (document listeners +
   // direct popupEl references survive the reparent).
-  //
-  // #192: this used to append to `document.body` — the MAIN window's body,
-  // because the bundle is evaluated in that window's realm. A Projects leaf
-  // moved into an Obsidian popout window therefore sent its popup to the other
-  // window entirely. `portal` targets `node.ownerDocument.body` instead, which
-  // is the document the node actually lives in.
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node);
+    return {
+      destroy() {
+        node.remove();
+      },
+    };
+  }
 </script>
 
 {#if open}
@@ -333,7 +288,7 @@
     <!-- ── DESKTOP: Floating popup ───────────────────────── -->
     <div
       bind:this={popupEl}
-      use:portal={{ to: "document-body" }}
+      use:portal
       class="ppp-popup ppp-popup--floating"
       {style}
       {role}

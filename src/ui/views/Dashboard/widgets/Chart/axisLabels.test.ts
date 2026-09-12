@@ -10,38 +10,67 @@ import { CHART_WIDTH_FALLBACK, resolveChartWidth } from "./chartWidth";
 
 describe("computeAxisLabelLayout", () => {
   test("renders all labels horizontally when they fit", () => {
-    const layout = computeAxisLabelLayout({ count: 3, plotWidth: 300, maxLabelChars: 7 });
+    const layout = computeAxisLabelLayout({
+      count: 3,
+      plotWidth: 300,
+      maxLabelChars: 7,
+    });
     expect(layout.skipInterval).toBe(1);
     expect(layout.rotate).toBe(false);
     expect(layout.rotationDeg).toBe(0);
   });
 
   test("rotates without skipping under moderate crowding", () => {
-    const layout = computeAxisLabelLayout({ count: 8, plotWidth: 300, maxLabelChars: 10 });
+    const layout = computeAxisLabelLayout({
+      count: 8,
+      plotWidth: 300,
+      maxLabelChars: 10,
+    });
     expect(layout.rotate).toBe(true);
     expect(layout.rotationDeg).toBe(-30);
     expect(layout.skipInterval).toBe(1);
   });
 
   test("rotates AND skips when heavily crowded", () => {
-    const layout = computeAxisLabelLayout({ count: 30, plotWidth: 300, maxLabelChars: 7 });
+    const layout = computeAxisLabelLayout({
+      count: 30,
+      plotWidth: 300,
+      maxLabelChars: 7,
+    });
     expect(layout.rotate).toBe(true);
     expect(layout.skipInterval).toBeGreaterThan(1);
   });
 
   test("bottom padding grows when labels rotate", () => {
-    const flat = computeAxisLabelLayout({ count: 3, plotWidth: 300, maxLabelChars: 7 });
-    const rotated = computeAxisLabelLayout({ count: 8, plotWidth: 300, maxLabelChars: 10 });
+    const flat = computeAxisLabelLayout({
+      count: 3,
+      plotWidth: 300,
+      maxLabelChars: 7,
+    });
+    const rotated = computeAxisLabelLayout({
+      count: 8,
+      plotWidth: 300,
+      maxLabelChars: 10,
+    });
     expect(rotated.bottomPadding).toBeGreaterThan(flat.bottomPadding);
   });
 
   test("never returns a skipInterval below 1", () => {
-    const layout = computeAxisLabelLayout({ count: 1, plotWidth: 10, maxLabelChars: 50 });
+    const layout = computeAxisLabelLayout({
+      count: 1,
+      plotWidth: 10,
+      maxLabelChars: 50,
+    });
     expect(layout.skipInterval).toBeGreaterThanOrEqual(1);
   });
 
   test("honours custom truncateAt", () => {
-    const layout = computeAxisLabelLayout({ count: 3, plotWidth: 300, maxLabelChars: 7, truncateAt: 20 });
+    const layout = computeAxisLabelLayout({
+      count: 3,
+      plotWidth: 300,
+      maxLabelChars: 7,
+      truncateAt: 20,
+    });
     expect(layout.truncateAt).toBe(20);
   });
 });
@@ -67,8 +96,8 @@ describe("shouldRenderLabel", () => {
  * #166 Step 2 — the axis now receives the MEASURED container width instead of
  * the constant 480, so the cull decision is the container's. This is arithmetic,
  * not layout, which is the only reason it is safe in jsdom: jsdom lays out no
- * SVG text, so nothing here is evidence about rendering. Actual label sizing
- * still requires a browser layout check.
+ * SVG text, so nothing here is evidence about rendering. The rendering half of
+ * the claim is measured in `docs/internal/probes/166-chart-viewbox-scale.html`.
  *
  * The chain mirrored below is BarChart.svelte:20-36 verbatim — the same paddings
  * and the same LABEL_FONT — so a change there breaks these numbers rather than
@@ -100,7 +129,7 @@ describe("#166 — the container width decides the cull", () => {
 
   function renderedIndices(skipInterval: number): number[] {
     return [...Array(MONTHS).keys()].filter((i) =>
-      shouldRenderLabel(i, MONTHS, skipInterval),
+      shouldRenderLabel(i, MONTHS, skipInterval)
     );
   }
 
@@ -110,7 +139,7 @@ describe("#166 — the container width decides the cull", () => {
 
     expect(narrow.layout.skipInterval).toBeGreaterThan(old.layout.skipInterval);
     expect(renderedIndices(narrow.layout.skipInterval).length).toBeLessThan(
-      renderedIndices(old.layout.skipInterval).length,
+      renderedIndices(old.layout.skipInterval).length
     );
   });
 
@@ -127,14 +156,18 @@ describe("#166 — the container width decides the cull", () => {
       // occupies its whole estimated box. Same two numbers axisLabels.ts uses.
       const needed = layout.rotate
         ? LABEL_FONT + MIN_LABEL_GAP
-        : Math.min(LABEL_CHARS, layout.truncateAt) * LABEL_FONT * CHAR_WIDTH_RATIO +
+        : Math.min(LABEL_CHARS, layout.truncateAt) *
+            LABEL_FONT *
+            CHAR_WIDTH_RATIO +
           MIN_LABEL_GAP;
 
       const rendered = renderedIndices(layout.skipInterval);
       // The final label is rendered unconditionally so the axis reads to its
       // end — it may crowd its predecessor by design. Every other pair is
       // interval-driven and must clear.
-      const intervalDriven = rendered.filter((i) => i % layout.skipInterval === 0);
+      const intervalDriven = rendered.filter(
+        (i) => i % layout.skipInterval === 0
+      );
       let previous: number | undefined;
       for (const index of intervalDriven) {
         if (previous !== undefined) {

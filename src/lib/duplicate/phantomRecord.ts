@@ -17,43 +17,53 @@ export function createPhantomRecord(
       ...source.record,
       id: `phantom_${source.record.id}_${formatDateForInternal(targetDate)}`,
     },
-    
+
     // Пересчитать даты
     startDate: recalculateStartDate(source, targetDate),
     endDate: recalculateEndDate(source, targetDate),
-    
+
     // Пересчитать время (если есть)
-    timeInfo: source.timeInfo ? {
-      ...source.timeInfo,
-      startTime: editedTime 
-        ? setTimeOnDate(targetDate, editedTime.startTime)
-        : recalculateTime(source.timeInfo.startTime, targetDate),
-      endTime: editedTime
-        ? (source.spanInfo 
-          ? setTimeOnDate(targetDate.add(source.spanInfo.spanDays - 1, 'day'), editedTime.endTime)
-          : setTimeOnDate(targetDate, editedTime.endTime))
-        : (source.spanInfo
-          ? recalculateTime(source.timeInfo.endTime, targetDate.add(source.spanInfo.spanDays - 1, 'day'))
-          : recalculateTime(source.timeInfo.endTime, targetDate)),
-      durationMinutes: editedTime
-        ? editedTime.endTime.diff(editedTime.startTime, 'minute')
-        : source.timeInfo.durationMinutes,
-    } : null,
-    
+    timeInfo: source.timeInfo
+      ? {
+          ...source.timeInfo,
+          startTime: editedTime
+            ? setTimeOnDate(targetDate, editedTime.startTime)
+            : recalculateTime(source.timeInfo.startTime, targetDate),
+          endTime: editedTime
+            ? source.spanInfo
+              ? setTimeOnDate(
+                  targetDate.add(source.spanInfo.spanDays - 1, "day"),
+                  editedTime.endTime
+                )
+              : setTimeOnDate(targetDate, editedTime.endTime)
+            : source.spanInfo
+              ? recalculateTime(
+                  source.timeInfo.endTime,
+                  targetDate.add(source.spanInfo.spanDays - 1, "day")
+                )
+              : recalculateTime(source.timeInfo.endTime, targetDate),
+          durationMinutes: editedTime
+            ? editedTime.endTime.diff(editedTime.startTime, "minute")
+            : source.timeInfo.durationMinutes,
+        }
+      : null,
+
     // Пересчитать span (если multi-day)
-    spanInfo: source.spanInfo ? {
-      startDate: targetDate,
-      endDate: targetDate.add(source.spanInfo.spanDays - 1, 'day'),
-      spanDays: source.spanInfo.spanDays,
-    } : null,
-    
+    spanInfo: source.spanInfo
+      ? {
+          startDate: targetDate,
+          endDate: targetDate.add(source.spanInfo.spanDays - 1, "day"),
+          spanDays: source.spanInfo.spanDays,
+        }
+      : null,
+
     // Lane будет назначена отдельно при рендеринге
     lane: source.lane,
   };
-  
+
   // Добавляем маркер phantom для идентификации
   phantom.isPhantom = true;
-  
+
   return phantom;
 }
 
@@ -77,7 +87,7 @@ function recalculateEndDate(
   if (!source.spanInfo) {
     return targetDate;
   }
-  return targetDate.add(source.spanInfo.spanDays - 1, 'day');
+  return targetDate.add(source.spanInfo.spanDays - 1, "day");
 }
 
 /**
@@ -96,14 +106,8 @@ function recalculateTime(
 /**
  * Устанавливает время из одной даты на другую дату
  */
-function setTimeOnDate(
-  date: dayjs.Dayjs,
-  time: dayjs.Dayjs
-): dayjs.Dayjs {
-  return date
-    .hour(time.hour())
-    .minute(time.minute())
-    .second(time.second());
+function setTimeOnDate(date: dayjs.Dayjs, time: dayjs.Dayjs): dayjs.Dayjs {
+  return date.hour(time.hour()).minute(time.minute()).second(time.second());
 }
 
 /**
@@ -122,12 +126,12 @@ export function createPhantomRecordsForDates(
   editedTime?: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null
 ): Map<string, ProcessedRecord> {
   const phantoms = new Map<string, ProcessedRecord>();
-  
-  dates.forEach(dateStr => {
+
+  dates.forEach((dateStr) => {
     const targetDate = dayjs(dateStr);
     const phantom = createPhantomRecord(source, targetDate, editedTime);
     phantoms.set(dateStr, phantom);
   });
-  
+
   return phantoms;
 }

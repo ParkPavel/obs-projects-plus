@@ -4,7 +4,13 @@ import type { TransformStep } from "src/lib/dashboard-engine/transformTypes";
 import { detectArrayFields } from "../arrayFieldDetection";
 
 function field(name: string): DataField {
-  return { name, type: DataFieldType.Unknown, repeated: false, identifier: false, derived: false };
+  return {
+    name,
+    type: DataFieldType.Unknown,
+    repeated: false,
+    identifier: false,
+    derived: false,
+  };
 }
 
 describe("detectArrayFields", () => {
@@ -18,7 +24,9 @@ describe("detectArrayFields", () => {
   test("detects fields holding a non-empty array", () => {
     const src = {
       records: [
-        { values: { title: "Mon", exercises: [{ name: "Bench" }], tags: ["a"] } },
+        {
+          values: { title: "Mon", exercises: [{ name: "Bench" }], tags: ["a"] },
+        },
       ],
     };
     const result = detectArrayFields(src, fields, []);

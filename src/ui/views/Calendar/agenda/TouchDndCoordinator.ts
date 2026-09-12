@@ -45,19 +45,19 @@
 
 export const enum GestureState {
   /** Нет активного касания */
-  IDLE = 'IDLE',
+  IDLE = "IDLE",
   /** Касание зарегистрировано, ожидаем определения типа жеста */
-  PENDING = 'PENDING',
+  PENDING = "PENDING",
   /** Вертикальное движение обнаружено → нативный скролл */
-  SCROLLING = 'SCROLLING',
+  SCROLLING = "SCROLLING",
   /** Быстрый тап → клик */
-  TAP = 'TAP',
+  TAP = "TAP",
   /** Долгое нажатие → контекстное меню */
-  CONTEXT_MENU = 'CONTEXT_MENU',
+  CONTEXT_MENU = "CONTEXT_MENU",
   /** DnD ожидает подтверждения (grip зажат) */
-  DND_PENDING = 'DND_PENDING',
+  DND_PENDING = "DND_PENDING",
   /** Элемент перетаскивается */
-  DRAGGING = 'DRAGGING',
+  DRAGGING = "DRAGGING",
 }
 
 // ── Configuration ─────────────────────────────────────────────
@@ -83,13 +83,13 @@ export const GESTURE_CONFIG: GestureConfig = {
   tapMaxMove: 10,
   holdDelay: 500,
   hapticDuration: 15,
-  dragReadyClass: 'drag-activating',
+  dragReadyClass: "drag-activating",
 };
 
 // ── Drag Handle CSS selector ──────────────────────────────────
 
 /** CSS-селектор grip-элемента для фильтрации в обработчиках событий */
-export const DRAG_HANDLE_SELECTOR = '.drag-grip';
+export const DRAG_HANDLE_SELECTOR = ".drag-grip";
 
 // ── Utility functions ─────────────────────────────────────────
 
@@ -111,9 +111,11 @@ export function isDragHandleTarget(target: EventTarget | null): boolean {
  *
  * @param durationMs — продолжительность вибрации (по умолчанию из конфига)
  */
-export function hapticFeedback(durationMs: number = GESTURE_CONFIG.hapticDuration): void {
+export function hapticFeedback(
+  durationMs: number = GESTURE_CONFIG.hapticDuration
+): void {
   try {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(durationMs);
     }
   } catch {
@@ -129,7 +131,7 @@ export function hapticFeedback(durationMs: number = GESTURE_CONFIG.hapticDuratio
  */
 export function applyDragFeedback(el: HTMLElement | null | undefined): void {
   if (!el) return;
-  el.classList.add('ppp-drag-feedback');
+  el.classList.add("ppp-drag-feedback");
   hapticFeedback();
 }
 
@@ -168,7 +170,7 @@ export interface LongPressHandlers {
  */
 export function createLongPressHandler(
   onLongPress: (e: TouchEvent) => void,
-  config: GestureConfig = GESTURE_CONFIG,
+  config: GestureConfig = GESTURE_CONFIG
 ): LongPressHandlers {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let startY = 0;

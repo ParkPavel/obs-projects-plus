@@ -207,7 +207,9 @@ function getSemanticColumns(
   const t = get(i18n).t.bind(get(i18n));
   const LABELS = {
     todo: t("views.board.status-groups.todo", { defaultValue: "To Do" }),
-    inProgress: t("views.board.status-groups.in-progress", { defaultValue: "In Progress" }),
+    inProgress: t("views.board.status-groups.in-progress", {
+      defaultValue: "In Progress",
+    }),
     complete: t("views.board.status-groups.complete", { defaultValue: "Done" }),
     none: t("views.board.no-status"),
   };

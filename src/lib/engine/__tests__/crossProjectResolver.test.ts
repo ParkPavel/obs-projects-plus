@@ -22,18 +22,45 @@ import {
 
 const accountsFrame = (): DataFrame => ({
   fields: [
-    { name: "name", type: DataFieldType.String, identifier: true, derived: false, repeated: false, typeConfig: {} },
-    { name: "balance", type: DataFieldType.Number, identifier: false, derived: false, repeated: false, typeConfig: {} },
+    {
+      name: "name",
+      type: DataFieldType.String,
+      identifier: true,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
+    {
+      name: "balance",
+      type: DataFieldType.Number,
+      identifier: false,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
   ],
   records: [
-    { id: "Accounts/Account 1.md", values: { name: "Account 1", balance: 100 } },
-    { id: "Accounts/Account 2.md", values: { name: "Account 2", balance: 250 } },
+    {
+      id: "Accounts/Account 1.md",
+      values: { name: "Account 1", balance: 100 },
+    },
+    {
+      id: "Accounts/Account 2.md",
+      values: { name: "Account 2", balance: 250 },
+    },
   ],
 });
 
 const journalFrame = (): DataFrame => ({
   fields: [
-    { name: "name", type: DataFieldType.String, identifier: true, derived: false, repeated: false, typeConfig: {} },
+    {
+      name: "name",
+      type: DataFieldType.String,
+      identifier: true,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
     {
       name: "account",
       type: DataFieldType.Relation,
@@ -42,13 +69,33 @@ const journalFrame = (): DataFrame => ({
       repeated: false,
       typeConfig: { relation: { targetProjectId: "accounts" } },
     },
-    { name: "amount", type: DataFieldType.Number, identifier: false, derived: false, repeated: false, typeConfig: {} },
+    {
+      name: "amount",
+      type: DataFieldType.Number,
+      identifier: false,
+      derived: false,
+      repeated: false,
+      typeConfig: {},
+    },
   ],
   records: [
-    { id: "Journal/J1.md", values: { name: "J1", account: "[[Account 1]]", amount: 50 } },
-    { id: "Journal/J2.md", values: { name: "J2", account: ["[[Account 1]]", "[[Account 2|alias]]"], amount: 75 } },
+    {
+      id: "Journal/J1.md",
+      values: { name: "J1", account: "[[Account 1]]", amount: 50 },
+    },
+    {
+      id: "Journal/J2.md",
+      values: {
+        name: "J2",
+        account: ["[[Account 1]]", "[[Account 2|alias]]"],
+        amount: 75,
+      },
+    },
     { id: "Journal/J3.md", values: { name: "J3", account: null, amount: 0 } },
-    { id: "Journal/J4.md", values: { name: "J4", account: "[[Missing Account]]", amount: 5 } },
+    {
+      id: "Journal/J4.md",
+      values: { name: "J4", account: "[[Missing Account]]", amount: 5 },
+    },
   ],
 });
 
@@ -89,29 +136,41 @@ describe("resolveCrossProjectRelations", () => {
     const journal = journalFrame();
     const j2 = journal.records[1]!;
     const out = resolveCrossProjectRelations(j2, "account", accountsFrame());
-    expect(out.map((r) => r.values["name"])).toEqual(["Account 1", "Account 2"]);
+    expect(out.map((r) => r.values["name"])).toEqual([
+      "Account 1",
+      "Account 2",
+    ]);
   });
 
   it("returns empty array for null value", () => {
     const journal = journalFrame();
     const j3 = journal.records[2]!;
-    expect(resolveCrossProjectRelations(j3, "account", accountsFrame())).toEqual([]);
+    expect(
+      resolveCrossProjectRelations(j3, "account", accountsFrame())
+    ).toEqual([]);
   });
 
   it("silently drops unmatched links", () => {
     const journal = journalFrame();
     const j4 = journal.records[3]!;
-    expect(resolveCrossProjectRelations(j4, "account", accountsFrame())).toEqual([]);
+    expect(
+      resolveCrossProjectRelations(j4, "account", accountsFrame())
+    ).toEqual([]);
   });
 
   it("uses displayField when provided", () => {
     const ext: DataFrame = {
       fields: [
-        { name: "code", type: DataFieldType.String, identifier: true, derived: false, repeated: false, typeConfig: {} },
+        {
+          name: "code",
+          type: DataFieldType.String,
+          identifier: true,
+          derived: false,
+          repeated: false,
+          typeConfig: {},
+        },
       ],
-      records: [
-        { id: "Misc/A.md", values: { code: "A-001" } },
-      ],
+      records: [{ id: "Misc/A.md", values: { code: "A-001" } }],
     };
     const r: DataRecord = { id: "x", values: { rel: "[[A-001]]" } };
     const out = resolveCrossProjectRelations(r, "rel", ext, "code");

@@ -16,21 +16,47 @@ export function buildWidgetMenuEntries(opts: {
   onToggleLock: () => void;
   onRemove: () => void;
 }): ContextMenuEntry[] {
-  const { hasCog, hasPipeline, pipelineStepCount, locked, t, onConfigure, onPipeline, onRename, onToggleLock, onRemove } = opts;
+  const {
+    hasCog,
+    hasPipeline,
+    pipelineStepCount,
+    locked,
+    t,
+    onConfigure,
+    onPipeline,
+    onRename,
+    onToggleLock,
+    onRemove,
+  } = opts;
   const entries: ContextMenuEntry[] = [];
   if (hasCog) {
-    entries.push({ title: t("views.dashboard.widget.menu-configure", "Configure widget…"), icon: "settings-2", onClick: onConfigure });
+    entries.push({
+      title: t("views.dashboard.widget.menu-configure", "Configure widget…"),
+      icon: "settings-2",
+      onClick: onConfigure,
+    });
   }
   if (hasPipeline) {
     entries.push({
-      title: pipelineStepCount > 0
-        ? t("views.dashboard.widget.menu-pipeline-active", "Data pipeline ({{count}})").replace("{{count}}", String(pipelineStepCount))
-        : t("views.dashboard.widget.menu-pipeline", "Data pipeline — filter, group, compute…"),
+      title:
+        pipelineStepCount > 0
+          ? t(
+              "views.dashboard.widget.menu-pipeline-active",
+              "Data pipeline ({{count}})"
+            ).replace("{{count}}", String(pipelineStepCount))
+          : t(
+              "views.dashboard.widget.menu-pipeline",
+              "Data pipeline — filter, group, compute…"
+            ),
       icon: "sigma",
       onClick: onPipeline,
     });
   }
-  entries.push({ title: t("views.dashboard.widget.menu-rename", "Rename"), icon: "pencil", onClick: onRename });
+  entries.push({
+    title: t("views.dashboard.widget.menu-rename", "Rename"),
+    icon: "pencil",
+    onClick: onRename,
+  });
   entries.push({
     title: locked
       ? t("views.dashboard.widget.unlock", "Unlock widget")
@@ -39,6 +65,11 @@ export function buildWidgetMenuEntries(opts: {
     onClick: onToggleLock,
   });
   entries.push({ separator: true });
-  entries.push({ title: t("views.dashboard.widget.menu-remove", "Remove widget"), icon: "trash", danger: true, onClick: onRemove });
+  entries.push({
+    title: t("views.dashboard.widget.menu-remove", "Remove widget"),
+    icon: "trash",
+    danger: true,
+    onClick: onRemove,
+  });
   return entries;
 }

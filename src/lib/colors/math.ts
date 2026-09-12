@@ -41,9 +41,12 @@ export function hexToHsv(input: string): HSV | null {
   let normalised: string;
   if (HEX_3.test("#" + raw)) {
     normalised =
-      raw.charAt(0) + raw.charAt(0) +
-      raw.charAt(1) + raw.charAt(1) +
-      raw.charAt(2) + raw.charAt(2);
+      raw.charAt(0) +
+      raw.charAt(0) +
+      raw.charAt(1) +
+      raw.charAt(1) +
+      raw.charAt(2) +
+      raw.charAt(2);
   } else if (HEX_6_OR_8.test("#" + raw)) {
     normalised = raw.slice(0, 6);
   } else {
@@ -82,7 +85,7 @@ export function hexToHsv(input: string): HSV | null {
  * defensively so callers can pass slider values without pre-validation.
  */
 export function hsvToHex(h: number, s: number, v: number): string {
-  const hue = ((Number.isFinite(h) ? h : 0) % 360 + 360) % 360;
+  const hue = (((Number.isFinite(h) ? h : 0) % 360) + 360) % 360;
   const sat = clamp01(Number.isFinite(s) ? s / 100 : 0);
   const val = clamp01(Number.isFinite(v) ? v / 100 : 0);
 
@@ -94,17 +97,23 @@ export function hsvToHex(h: number, s: number, v: number): string {
   let g = 0;
   let b = 0;
   if (hue < 60) {
-    r = c; g = x;
+    r = c;
+    g = x;
   } else if (hue < 120) {
-    r = x; g = c;
+    r = x;
+    g = c;
   } else if (hue < 180) {
-    g = c; b = x;
+    g = c;
+    b = x;
   } else if (hue < 240) {
-    g = x; b = c;
+    g = x;
+    b = c;
   } else if (hue < 300) {
-    r = x; b = c;
+    r = x;
+    b = c;
   } else {
-    r = c; b = x;
+    r = c;
+    b = x;
   }
 
   return `#${toHexByte(r + m)}${toHexByte(g + m)}${toHexByte(b + m)}`;

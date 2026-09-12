@@ -37,7 +37,11 @@ import * as path from "path";
  * same reading of "the CSS of this component"; two definitions of that would
  * have let the two ratchets disagree about what they guard.
  */
-import { SRC_ROOT, collectStyled, stripCssComments as stripComments } from "./support/cssScan";
+import {
+  SRC_ROOT,
+  collectStyled,
+  stripCssComments as stripComments,
+} from "./support/cssScan";
 
 const ENTRY_POINT = path.join(SRC_ROOT, "main.ts");
 
@@ -105,7 +109,9 @@ function moduleSpecifiers(content: string): string[] {
 
 /** Whether `content` imports the module whose path ends with `suffix`. */
 function importsTokenSource(content: string, suffix: string): boolean {
-  return moduleSpecifiers(content).some((s) => s.replace(/\\/g, "/").endsWith(suffix));
+  return moduleSpecifiers(content).some((s) =>
+    s.replace(/\\/g, "/").endsWith(suffix)
+  );
 }
 
 /** Every `.css` file under `src/`, excluding test fixtures, relative to `src/`. */
@@ -115,7 +121,9 @@ function collectStylesheets(dir: string, out: string[] = []): string[] {
       if (entry.name === "__tests__" || entry.name === "__mocks__") continue;
       collectStylesheets(path.join(dir, entry.name), out);
     } else if (entry.name.endsWith(".css")) {
-      out.push(path.relative(SRC_ROOT, path.join(dir, entry.name)).replace(/\\/g, "/"));
+      out.push(
+        path.relative(SRC_ROOT, path.join(dir, entry.name)).replace(/\\/g, "/")
+      );
     }
   }
   return out;
@@ -199,7 +207,8 @@ function containerTypeSelectors(css: string): string[] {
     const selector = normalizeSelector(match[1] ?? "");
     const body = match[2] ?? "";
     if (selector === "" || selector.startsWith("@")) continue;
-    if (!/\bcontainer-type\s*:/.test(body) && !/\bcontainer\s*:/.test(body)) continue;
+    if (!/\bcontainer-type\s*:/.test(body) && !/\bcontainer\s*:/.test(body))
+      continue;
     for (const part of selector.split(",")) {
       const trimmed = part.trim();
       if (trimmed !== "") out.push(trimmed);
@@ -213,23 +222,34 @@ function containerTypeSelectors(css: string): string[] {
  * value, as `selector → name`. The selector is reported verbatim so a failure
  * names the place to look.
  */
-function cqScaleDeclarationSites(css: string): { selector: string; name: string; value: string }[] {
+function cqScaleDeclarationSites(
+  css: string
+): { selector: string; name: string; value: string }[] {
   const sites: { selector: string; name: string; value: string }[] = [];
   for (const match of stripComments(css).matchAll(RULE_BLOCK)) {
     const selector = normalizeSelector(match[1] ?? "");
     const body = match[2] ?? "";
     if (selector === "" || selector.startsWith("@")) continue;
-    for (const decl of body.matchAll(/(--ppp-local-[a-zA-Z0-9_-]*)\s*:\s*([^;]+)/g)) {
+    for (const decl of body.matchAll(
+      /(--ppp-local-[a-zA-Z0-9_-]*)\s*:\s*([^;]+)/g
+    )) {
       const value = (decl[2] as string).trim();
-      if (CQ_UNIT.test(value)) sites.push({ selector, name: decl[1] as string, value });
+      if (CQ_UNIT.test(value))
+        sites.push({ selector, name: decl[1] as string, value });
     }
   }
   return sites;
 }
 
 /** Whether every comma-separated part of `selector` is a declared container root. */
-function isContainerRootSelector(selector: string, roots: readonly string[]): boolean {
-  const parts = selector.split(",").map((p) => p.trim()).filter((p) => p !== "");
+function isContainerRootSelector(
+  selector: string,
+  roots: readonly string[]
+): boolean {
+  const parts = selector
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p !== "");
   return parts.length > 0 && parts.every((p) => roots.includes(p));
 }
 
@@ -240,7 +260,9 @@ function isContainerRootSelector(selector: string, roots: readonly string[]): bo
  */
 function declaredTokens(css: string): Map<string, string> {
   const out = new Map<string, string>();
-  for (const m of css.matchAll(/^[ \t]*(--ppp-[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/gm)) {
+  for (const m of css.matchAll(
+    /^[ \t]*(--ppp-[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/gm
+  )) {
     out.set(m[1] as string, (m[2] as string).trim());
   }
   return out;
@@ -253,7 +275,9 @@ function declaredTokens(css: string): Map<string, string> {
  * synthetic proof rather than a grep.
  */
 function declaredTokenNames(text: string): string[] {
-  return [...text.matchAll(/(?<!var\(\s*)(--ppp-[a-zA-Z0-9_-]+)\s*:/g)].map((m) => m[1] as string);
+  return [...text.matchAll(/(?<!var\(\s*)(--ppp-[a-zA-Z0-9_-]+)\s*:/g)].map(
+    (m) => m[1] as string
+  );
 }
 
 /**
@@ -265,14 +289,18 @@ function declaredTokenNames(text: string): string[] {
  * boundary of this ratchet (Codex adversarial review of #165, 2026-09-02).
  */
 function assignedTokenNames(text: string): string[] {
-  return [...text.matchAll(/setProperty\(\s*["'`](--ppp-[a-zA-Z0-9_-]+)["'`]/g)].map(
-    (m) => m[1] as string
-  );
+  return [
+    ...text.matchAll(/setProperty\(\s*["'`](--ppp-[a-zA-Z0-9_-]+)["'`]/g),
+  ].map((m) => m[1] as string);
 }
 
 /** The names `tokens.css` owns — the scale a component may read but not redeclare. */
 function ownedScale(): Set<string> {
-  return new Set(declaredTokens(content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"))).keys());
+  return new Set(
+    declaredTokens(
+      content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"))
+    ).keys()
+  );
 }
 
 /**
@@ -280,14 +308,20 @@ function ownedScale(): Set<string> {
  * mocks, as `[path, text]`. `.js` is in the set because esbuild bundles it
  * exactly like `.ts`, so a scale hidden there would ship the same way.
  */
-function collectModules(dir: string, out: { file: string; text: string }[] = []) {
+function collectModules(
+  dir: string,
+  out: { file: string; text: string }[] = []
+) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name === "__tests__" || entry.name === "__mocks__") continue;
       collectModules(full, out);
     } else if (/\.(ts|js|svelte)$/.test(entry.name)) {
-      out.push({ file: path.relative(SRC_ROOT, full).replace(/\\/g, "/"), text: content(full) });
+      out.push({
+        file: path.relative(SRC_ROOT, full).replace(/\\/g, "/"),
+        text: content(full),
+      });
     }
   }
   return out;
@@ -297,7 +331,9 @@ describe("R0.13 token source integrity (#165)", () => {
   it("the declared token sources are exactly the stylesheets in the tree", () => {
     // The assertion that makes a fifth token source impossible to add quietly,
     // and a deleted one impossible to forget about.
-    expect(collectStylesheets(SRC_ROOT).sort()).toEqual([...LIVE_TOKEN_SOURCES].sort());
+    expect(collectStylesheets(SRC_ROOT).sort()).toEqual(
+      [...LIVE_TOKEN_SOURCES].sort()
+    );
   });
 
   it("every declared token source is imported by the entry point", () => {
@@ -311,11 +347,15 @@ describe("R0.13 token source integrity (#165)", () => {
 
   it("notices an import that is present and one that is not", () => {
     // Proves the scan fails on the broken state without breaking the tree.
-    const present = 'import "./ui/tokens/tokens.css";\nimport dayjs from "dayjs";';
+    const present =
+      'import "./ui/tokens/tokens.css";\nimport dayjs from "dayjs";';
     const removed = 'import dayjs from "dayjs";';
     expect(importsTokenSource(present, "ui/tokens/tokens.css")).toBe(true);
     expect(importsTokenSource(removed, "ui/tokens/tokens.css")).toBe(false);
-    expect(moduleSpecifiers(present)).toEqual(["./ui/tokens/tokens.css", "dayjs"]);
+    expect(moduleSpecifiers(present)).toEqual([
+      "./ui/tokens/tokens.css",
+      "dayjs",
+    ]);
   });
 
   it("does not mistake a quoted path for an import", () => {
@@ -334,21 +374,30 @@ describe("R0.13 token source integrity (#165)", () => {
     // Synthetic proof, because the tree is expected to have zero offenders and
     // an all-clear scan is indistinguishable from a broken one.
     const trap = ".widget { container-type: inline-size; padding: 2cqi; }";
-    const safe = ".widget { container-type: inline-size; } .widget > .row { padding: 2cqi; }";
+    const safe =
+      ".widget { container-type: inline-size; } .widget > .row { padding: 2cqi; }";
     expect(selfQueryOffenders(trap)).toEqual([".widget"]);
     expect(selfQueryOffenders(safe)).toEqual([]);
     // Split across rules for the same selector — still the same element.
-    expect(selfQueryOffenders(".w { container-type: inline-size; } .w { gap: 1cqi; }")).toEqual([".w"]);
+    expect(
+      selfQueryOffenders(
+        ".w { container-type: inline-size; } .w { gap: 1cqi; }"
+      )
+    ).toEqual([".w"]);
     // #166: a `cq` unit inside a custom property is handed DOWN and resolves at
     // each descendant's use site. That is the container-roots mechanism, not the
     // trap, and the rule has to tell them apart rather than be relaxed.
     expect(
-      selfQueryOffenders(".w { container-type: inline-size; --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em); }")
+      selfQueryOffenders(
+        ".w { container-type: inline-size; --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em); }"
+      )
     ).toEqual([]);
     // …and it must still catch real sizing standing next to one.
-    expect(selfQueryOffenders(".w { container-type: inline-size; --ppp-local-text-sm: 1cqi; padding: 2cqi; }")).toEqual([
-      ".w",
-    ]);
+    expect(
+      selfQueryOffenders(
+        ".w { container-type: inline-size; --ppp-local-text-sm: 1cqi; padding: 2cqi; }"
+      )
+    ).toEqual([".w"]);
   });
 
   it("the cqi form of the scale is declared only in container-root rules", () => {
@@ -358,16 +407,19 @@ describe("R0.13 token source integrity (#165)", () => {
     // jump exactly where the principle does not apply. Confining the `cqi` form
     // to container roots makes the no-container case the clamp FLOOR, which is
     // today's render, and makes the whole thing statically checkable.
-    const offenders = collectStyled(SRC_ROOT)
-      .flatMap(({ file, css }) =>
-        cqScaleDeclarationSites(css)
-          .filter(({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS))
-          .map(({ selector, name }) => `${file} → ${selector} → ${name}`)
-      );
+    const offenders = collectStyled(SRC_ROOT).flatMap(({ file, css }) =>
+      cqScaleDeclarationSites(css)
+        .filter(
+          ({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS)
+        )
+        .map(({ selector, name }) => `${file} → ${selector} → ${name}`)
+    );
     expect(offenders).toEqual([]);
     // A vacuous pass would otherwise be indistinguishable: the mechanism has to
     // exist somewhere, or there is nothing being confined.
-    const sites = collectStyled(SRC_ROOT).flatMap(({ css }) => cqScaleDeclarationSites(css));
+    const sites = collectStyled(SRC_ROOT).flatMap(({ css }) =>
+      cqScaleDeclarationSites(css)
+    );
     expect(sites.length).toBeGreaterThan(0);
   });
 
@@ -378,13 +430,17 @@ describe("R0.13 token source integrity (#165)", () => {
     const tokens = content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"));
     const planted = `${tokens}\n:root { --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em); }\n`;
     const offenders = cqScaleDeclarationSites(planted)
-      .filter(({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS))
+      .filter(
+        ({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS)
+      )
       .map(({ selector }) => selector);
     expect(offenders).toEqual([":root"]);
     // The same declaration moved under a container root is clean.
     const moved = `${tokens}\n.ppp-widget-host { --ppp-local-text-sm: clamp(1em, 0.85em + 0.6cqi, 1.25em); }\n`;
     expect(
-      cqScaleDeclarationSites(moved).filter(({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS))
+      cqScaleDeclarationSites(moved).filter(
+        ({ selector }) => !isContainerRootSelector(selector, CONTAINER_ROOTS)
+      )
     ).toEqual([]);
   });
 
@@ -393,7 +449,9 @@ describe("R0.13 token source integrity (#165)", () => {
     // hands the `cqi` form to descendants of a plain box, where it resolves
     // against whatever ancestor happens to be a container — the nearest-ancestor
     // re-pointing risk, arriving through the guard itself.
-    const declared = new Set(collectStyled(SRC_ROOT).flatMap(({ css }) => containerTypeSelectors(css)));
+    const declared = new Set(
+      collectStyled(SRC_ROOT).flatMap(({ css }) => containerTypeSelectors(css))
+    );
     expect(declared.size).toBeGreaterThan(0);
     const missing = CONTAINER_ROOTS.filter((root) => !declared.has(root));
     expect(missing).toEqual([]);
@@ -401,9 +459,13 @@ describe("R0.13 token source integrity (#165)", () => {
 
   it("fails when a declared root is a container nowhere on the real tree", () => {
     // Planted regression for the direction above, against the real tree.
-    const declared = new Set(collectStyled(SRC_ROOT).flatMap(({ css }) => containerTypeSelectors(css)));
+    const declared = new Set(
+      collectStyled(SRC_ROOT).flatMap(({ css }) => containerTypeSelectors(css))
+    );
     const planted = [...CONTAINER_ROOTS, ".ppp-not-a-container"];
-    expect(planted.filter((root) => !declared.has(root))).toEqual([".ppp-not-a-container"]);
+    expect(planted.filter((root) => !declared.has(root))).toEqual([
+      ".ppp-not-a-container",
+    ]);
     // And `.ppp-widget-config` is a real container, just deliberately unlisted —
     // proof the scan reads the tree rather than the list. (`.ppp-dt-content`
     // was this witness until #166 Step 3 deleted a container nobody queried;
@@ -423,18 +485,25 @@ describe("R0.13 token source integrity (#165)", () => {
     const fallback = declaredTokens(rootBlock).get("--ppp-local-text-sm");
     expect(fallback).toBe("1em");
     expect(CQ_UNIT.test(fallback ?? "")).toBe(false);
-    const containerForm = cqScaleDeclarationSites(tokens).find((s) => s.name === "--ppp-local-text-sm");
+    const containerForm = cqScaleDeclarationSites(tokens).find(
+      (s) => s.name === "--ppp-local-text-sm"
+    );
     expect(containerForm).toBeDefined();
-    const clampFloor = /^clamp\(\s*([^,]+),/.exec(containerForm?.value ?? "")?.[1];
+    const clampFloor = /^clamp\(\s*([^,]+),/.exec(
+      containerForm?.value ?? ""
+    )?.[1];
     expect(clampFloor?.trim()).toBe(fallback);
   });
 
   it("every merged Dashboard key survived the merge at its own value", () => {
     const css = content(path.join(SRC_ROOT, "ui", "tokens", "tokens.css"));
     const declared = declaredTokens(css);
-    const wrong = MERGED_DASHBOARD_TOKENS
-      .filter(([key, value]) => declared.get(key) !== value)
-      .map(([key, value]) => `${key}: expected ${value}, found ${declared.get(key) ?? "nothing"}`);
+    const wrong = MERGED_DASHBOARD_TOKENS.filter(
+      ([key, value]) => declared.get(key) !== value
+    ).map(
+      ([key, value]) =>
+        `${key}: expected ${value}, found ${declared.get(key) ?? "nothing"}`
+    );
     expect(wrong).toEqual([]);
   });
 
@@ -444,7 +513,9 @@ describe("R0.13 token source integrity (#165)", () => {
     // Level 2 needs both of its mechanisms present: `em` spacing that follows
     // the element's own font-size, and a clamp whose middle term is in `cqi`.
     expect(tokens).toMatch(/--ppp-local-[a-z-]*pad[a-z-]*\s*:\s*[\d.]+em\s*;/);
-    expect(tokens).toMatch(/--ppp-local-[a-z-]+\s*:\s*clamp\([^;]*cqi[^;]*\)\s*;/);
+    expect(tokens).toMatch(
+      /--ppp-local-[a-z-]+\s*:\s*clamp\([^;]*cqi[^;]*\)\s*;/
+    );
   });
 
   it("the container-derived scale has at least one shipped consumer", () => {
@@ -452,26 +523,39 @@ describe("R0.13 token source integrity (#165)", () => {
     // section nothing reads is a document, not a scale — see the ADR's rejected
     // option (D). One pilot rule is the difference between the two.
     const consumers = collectStyled(SRC_ROOT)
-      .filter(({ file, css }) => file.endsWith(".svelte") && /var\(\s*--ppp-local-/.test(css))
+      .filter(
+        ({ file, css }) =>
+          file.endsWith(".svelte") && /var\(\s*--ppp-local-/.test(css)
+      )
       .map(({ file }) => file);
     expect(consumers.length).toBeGreaterThan(0);
   });
 
   it("no element in the tree sizes itself in its own container units", () => {
-    const offenders = collectStyled(SRC_ROOT)
-      .flatMap(({ file, css }) => selfQueryOffenders(css).map((s) => `${file} → ${s}`));
+    const offenders = collectStyled(SRC_ROOT).flatMap(({ file, css }) =>
+      selfQueryOffenders(css).map((s) => `${file} → ${s}`)
+    );
     expect(offenders).toEqual([]);
   });
 
   it("tells a token declaration from a token read", () => {
     // Synthetic, because both scans below are expected to find nothing and an
     // all-clear is otherwise indistinguishable from a broken matcher.
-    expect(declaredTokenNames("--ppp-radius-md: 0.375rem;")).toEqual(["--ppp-radius-md"]);
-    expect(declaredTokenNames("border-radius: var(--ppp-radius-md);")).toEqual([]);
-    expect(declaredTokenNames("z-index: var( --ppp-db-z-dropdown , 100);")).toEqual([]);
+    expect(declaredTokenNames("--ppp-radius-md: 0.375rem;")).toEqual([
+      "--ppp-radius-md",
+    ]);
+    expect(declaredTokenNames("border-radius: var(--ppp-radius-md);")).toEqual(
+      []
+    );
+    expect(
+      declaredTokenNames("z-index: var( --ppp-db-z-dropdown , 100);")
+    ).toEqual([]);
     // The shape the deleted designTokens.ts had: a scale assembled in a string.
-    expect(declaredTokenNames('const css = `--ppp-radius-md: ${R.md}; --ppp-space-lg: ${S.lg};`'))
-      .toEqual(["--ppp-radius-md", "--ppp-space-lg"]);
+    expect(
+      declaredTokenNames(
+        "const css = `--ppp-radius-md: ${R.md}; --ppp-space-lg: ${S.lg};`"
+      )
+    ).toEqual(["--ppp-radius-md", "--ppp-space-lg"]);
   });
 
   it("no script module declares a design token", () => {
@@ -483,22 +567,26 @@ describe("R0.13 token source integrity (#165)", () => {
     // coming back (Codex audit of #165, 2026-09-01).
     const offenders = collectModules(SRC_ROOT)
       .filter(({ file }) => /\.(ts|js)$/.test(file))
-      .flatMap(({ file, text }) => declaredTokenNames(text).map((n) => `${file} → ${n}`));
+      .flatMap(({ file, text }) =>
+        declaredTokenNames(text).map((n) => `${file} → ${n}`)
+      );
     expect(offenders).toEqual([]);
   });
 
   it("tells a runtime token assignment from a runtime read", () => {
-    expect(assignedTokenNames('el.style.setProperty("--ppp-radius-md", value);')).toEqual([
-      "--ppp-radius-md",
-    ]);
-    expect(assignedTokenNames("root.style.setProperty( '--ppp-space-lg' , s )")).toEqual([
-      "--ppp-space-lg",
-    ]);
-    expect(assignedTokenNames('el.style.getPropertyValue("--ppp-radius-md")')).toEqual([]);
+    expect(
+      assignedTokenNames('el.style.setProperty("--ppp-radius-md", value);')
+    ).toEqual(["--ppp-radius-md"]);
+    expect(
+      assignedTokenNames("root.style.setProperty( '--ppp-space-lg' , s )")
+    ).toEqual(["--ppp-space-lg"]);
+    expect(
+      assignedTokenNames('el.style.getPropertyValue("--ppp-radius-md")')
+    ).toEqual([]);
     // A per-instance variable is reported too; ownership is the rule's job, not the matcher's.
-    expect(assignedTokenNames("node.style.setProperty(`--ppp-icon-size`, size)")).toEqual([
-      "--ppp-icon-size",
-    ]);
+    expect(
+      assignedTokenNames("node.style.setProperty(`--ppp-icon-size`, size)")
+    ).toEqual(["--ppp-icon-size"]);
   });
 
   it("no module assigns a name from the scale through the CSSOM", () => {
@@ -524,10 +612,11 @@ describe("R0.13 token source integrity (#165)", () => {
     // local and correct where they stand.
     const scale = ownedScale();
     expect(scale.size).toBeGreaterThan(0); // a vacuous scan would otherwise pass
-    const offenders = collectModules(SRC_ROOT)
-      .flatMap(({ file, text }) =>
-        declaredTokenNames(text).filter((n) => scale.has(n)).map((n) => `${file} → ${n}`)
-      );
+    const offenders = collectModules(SRC_ROOT).flatMap(({ file, text }) =>
+      declaredTokenNames(text)
+        .filter((n) => scale.has(n))
+        .map((n) => `${file} → ${n}`)
+    );
     expect(offenders).toEqual([]);
   });
 });

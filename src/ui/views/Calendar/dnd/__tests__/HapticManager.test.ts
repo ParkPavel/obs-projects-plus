@@ -7,14 +7,14 @@ import {
   hapticCancel,
   hapticCreationConfirm,
   setHapticEnabled,
-} from '../HapticManager';
+} from "../HapticManager";
 
-describe('HapticManager', () => {
+describe("HapticManager", () => {
   let vibrateMock: jest.Mock;
 
   beforeEach(() => {
     vibrateMock = jest.fn();
-    Object.defineProperty(navigator, 'vibrate', {
+    Object.defineProperty(navigator, "vibrate", {
       value: vibrateMock,
       writable: true,
       configurable: true,
@@ -27,43 +27,43 @@ describe('HapticManager', () => {
     jest.restoreAllMocks();
   });
 
-  it('hapticTapCreate vibrates 30ms', () => {
+  it("hapticTapCreate vibrates 30ms", () => {
     hapticTapCreate();
     expect(vibrateMock).toHaveBeenCalledWith([30]);
   });
 
-  it('hapticDragStart vibrates 50ms', () => {
+  it("hapticDragStart vibrates 50ms", () => {
     hapticDragStart();
     expect(vibrateMock).toHaveBeenCalledWith([50]);
   });
 
-  it('hapticSnap vibrates 15ms', () => {
+  it("hapticSnap vibrates 15ms", () => {
     hapticSnap();
     expect(vibrateMock).toHaveBeenCalledWith([15]);
   });
 
-  it('hapticDrop vibrates 40ms', () => {
+  it("hapticDrop vibrates 40ms", () => {
     hapticDrop();
     expect(vibrateMock).toHaveBeenCalledWith([40]);
   });
 
-  it('hapticResizeLimit vibrates with pattern', () => {
+  it("hapticResizeLimit vibrates with pattern", () => {
     hapticResizeLimit();
     expect(vibrateMock).toHaveBeenCalledWith([20, 50, 20]);
   });
 
-  it('hapticCancel vibrates with pattern', () => {
+  it("hapticCancel vibrates with pattern", () => {
     hapticCancel();
     expect(vibrateMock).toHaveBeenCalledWith([15, 30, 15]);
   });
 
-  it('hapticCreationConfirm vibrates with pattern', () => {
+  it("hapticCreationConfirm vibrates with pattern", () => {
     hapticCreationConfirm();
     expect(vibrateMock).toHaveBeenCalledWith([20, 40]);
   });
 
-  it('does not throw when vibrate is not available', () => {
-    Object.defineProperty(navigator, 'vibrate', {
+  it("does not throw when vibrate is not available", () => {
+    Object.defineProperty(navigator, "vibrate", {
       value: undefined,
       writable: true,
       configurable: true,
@@ -71,7 +71,7 @@ describe('HapticManager', () => {
     expect(() => hapticDragStart()).not.toThrow();
   });
 
-  it('setHapticEnabled(false) disables all vibrations', () => {
+  it("setHapticEnabled(false) disables all vibrations", () => {
     setHapticEnabled(false);
     hapticDragStart();
     hapticSnap();
@@ -79,7 +79,7 @@ describe('HapticManager', () => {
     expect(vibrateMock).not.toHaveBeenCalled();
   });
 
-  it('setHapticEnabled(true) re-enables vibrations', () => {
+  it("setHapticEnabled(true) re-enables vibrations", () => {
     setHapticEnabled(false);
     hapticDragStart();
     expect(vibrateMock).not.toHaveBeenCalled();

@@ -6,7 +6,7 @@ import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
  * standardizeValues converts a Dataview data structure of values to the common
  * DataValue format.
  */
- 
+
 export function standardizeValues(
   values: Record<string, any>
 ): Record<string, Optional<DataValue>> {
@@ -20,7 +20,9 @@ export function standardizeValues(
     }
 
     if (Array.isArray(value)) {
-      res[field] = value.map((v) => (typeof v === "object" ? standardizeObject(v) : v));
+      res[field] = value.map((v) =>
+        typeof v === "object" ? standardizeObject(v) : v
+      );
     } else if (typeof value === "object") {
       res[field] = standardizeObject(value);
     } else {
@@ -31,7 +33,6 @@ export function standardizeValues(
   return res;
 }
 
- 
 function standardizeObject(value: any) {
   if ("path" in value && "display" in value) {
     return (value as Link).toString();

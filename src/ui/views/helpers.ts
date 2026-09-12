@@ -144,20 +144,26 @@ export function showMobileNavMenu(
   appInstance: App,
   target: OpenRecordTarget,
   event: TouchEvent | MouseEvent,
-  onModal?: () => void,
+  onModal?: () => void
 ): void {
   const t = get(i18n);
   const entries: ContextMenuEntry[] = [];
 
   if (onModal) {
-    entries.push({ title: t.t("common.open-note"), icon: "file-text", onClick: () => onModal!() });
+    entries.push({
+      title: t.t("common.open-note"),
+      icon: "file-text",
+      onClick: () => onModal!(),
+    });
   }
   entries.push({
-    title: t.t("common.open-in-tab"), icon: "file-plus",
+    title: t.t("common.open-in-tab"),
+    icon: "file-plus",
     onClick: () => void openRecord(target, "tab", { app: appInstance }),
   });
   entries.push({
-    title: t.t("common.open-in-window"), icon: "maximize",
+    title: t.t("common.open-in-window"),
+    icon: "maximize",
     onClick: () => void openRecord(target, "window", { app: appInstance }),
   });
 

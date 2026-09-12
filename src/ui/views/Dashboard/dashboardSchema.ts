@@ -14,11 +14,6 @@
 
 import type { App } from "obsidian";
 import { Notice } from "obsidian";
-import { noticeFor } from "src/lib/errors/errorText";
-
-/** #202 — the codes this module raises. Words live in the registry. */
-const ADD_FIELD_FAILED = "PPP-401";
-const REOPEN_SCHEMA_FAILED = "PPP-402";
 import { tick } from "svelte";
 
 import type { DataField } from "src/lib/dataframe/dataframe";
@@ -47,7 +42,10 @@ export interface SchemaControllerDeps {
   /** Live projection of all projects (for cross-project relation pickers). */
   readonly getProjects: () => ProjectDefinition[];
   /** Translator. Receives optional fallback via `defaultValue` opts. */
-  readonly t: (key: string, opts?: { defaultValue?: string; [k: string]: unknown }) => string;
+  readonly t: (
+    key: string,
+    opts?: { defaultValue?: string; [k: string]: unknown }
+  ) => string;
 }
 
 export interface SchemaController {
@@ -63,13 +61,22 @@ export interface SchemaController {
   dispose(): void;
 }
 
-export function createSchemaController(deps: SchemaControllerDeps): SchemaController {
+export function createSchemaController(
+  deps: SchemaControllerDeps
+): SchemaController {
   let schemaModal: SchemaModal | null = null;
   /** False once the owning view is gone; nothing may open after that. */
   let alive = true;
   const relationSetup = createRelationSetupController({
-    app: deps.app, api: deps.api, projectId: deps.projectId, getFrame: () => ({ fields: deps.getFields(), records: deps.getRecords() as never }),
-    getProjects: deps.getProjects, t: deps.t,
+    app: deps.app,
+    api: deps.api,
+    projectId: deps.projectId,
+    getFrame: () => ({
+      fields: deps.getFields(),
+      records: deps.getRecords() as never,
+    }),
+    getProjects: deps.getProjects,
+    t: deps.t,
   });
 
   function persistFieldTypeConfig(field: DataField) {
@@ -92,9 +99,13 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           persistFieldTypeConfig(field);
           reopenSchema();
         } catch (err) {
-          new Notice(noticeFor(ADD_FIELD_FAILED));
+          new Notice(
+            deps.t("views.dashboard.canvas.error-add-field", {
+              defaultValue: "Failed to add field. Please try again.",
+            })
+          );
           // eslint-disable-next-line no-console
-          console.warn("[Projects+] addField failed", err);
+          console.warn("[obs-projects-plus] addField failed", err);
         }
       },
       deps.getProjects(),
@@ -104,7 +115,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         const displayField = f.typeConfig?.relation?.displayField;
         void relationSetup.open({
           fieldName: f.name,
-          targetProjectId: (f.typeConfig?.relation?.targetProjectId ?? ""),
+          targetProjectId: f.typeConfig?.relation?.targetProjectId ?? "",
           createSourceField: true,
           ...(displayField !== undefined ? { displayField } : {}),
         });
@@ -143,7 +154,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         const displayField = f.typeConfig?.relation?.displayField;
         void relationSetup.open({
           fieldName: f.name,
-          targetProjectId: (f.typeConfig?.relation?.targetProjectId ?? ""),
+          targetProjectId: f.typeConfig?.relation?.targetProjectId ?? "",
           createSourceField: false,
           ...(displayField !== undefined ? { displayField } : {}),
         });
@@ -191,9 +202,16 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
           fieldName: field.name,
           targetProjectId: relation?.targetProjectId ?? "",
           createSourceField: false,
-          ...(relation?.displayField !== undefined ? { displayField: relation.displayField } : {}),
+          ...(relation?.displayField !== undefined
+            ? { displayField: relation.displayField }
+            : {}),
           ...(relation?.inverseFieldName
-            ? { inverse: { enabled: true, fieldName: relation.inverseFieldName } }
+            ? {
+                inverse: {
+                  enabled: true,
+                  fieldName: relation.inverseFieldName,
+                },
+              }
             : {}),
         });
       },
@@ -217,9 +235,13 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
     tick()
       .then(() => openSchema())
       .catch((err) => {
-        new Notice(noticeFor(REOPEN_SCHEMA_FAILED));
+        new Notice(
+          deps.t("views.dashboard.canvas.error-reopen-schema", {
+            defaultValue: "Failed to reopen schema.",
+          })
+        );
         // eslint-disable-next-line no-console
-        console.warn("[Projects+] reopenSchema failed", err);
+        console.warn("[obs-projects-plus] reopenSchema failed", err);
       });
   }
 

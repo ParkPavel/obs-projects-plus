@@ -52,9 +52,7 @@ function makeProject(
   };
 }
 
-async function makeFs(
-  files: Record<string, string>
-): Promise<InMemFileSystem> {
+async function makeFs(files: Record<string, string>): Promise<InMemFileSystem> {
   const fs = new InMemFileSystem({});
   for (const [path, content] of Object.entries(files)) {
     await fs.create(path, content);

@@ -22,9 +22,13 @@ describe("groupFormulaMetadata", () => {
     const groups = groupFormulaMetadata();
     const logical = groups.find((g) => g.category === "logical");
     expect(logical).toBeDefined();
-    expect(logical?.entries.some((e) => e.signature.startsWith("IF("))).toBe(true);
+    expect(logical?.entries.some((e) => e.signature.startsWith("IF("))).toBe(
+      true
+    );
 
     const date = groups.find((g) => g.category === "date");
-    expect(date?.entries.some((e) => e.signature.startsWith("TODAY("))).toBe(true);
+    expect(date?.entries.some((e) => e.signature.startsWith("TODAY("))).toBe(
+      true
+    );
   });
 });

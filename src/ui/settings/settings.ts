@@ -16,7 +16,10 @@ import { i18n } from "src/lib/stores/i18n";
  * ProjectsSettingTab builds the plugin settings tab.
  */
 export class ProjectsSettingTab extends PluginSettingTab {
-  constructor(app: App, readonly plugin: ProjectsPlugin) {
+  constructor(
+    app: App,
+    readonly plugin: ProjectsPlugin
+  ) {
     super(app, plugin);
   }
 
@@ -59,7 +62,10 @@ export class ProjectsSettingTab extends PluginSettingTab {
           .setButtonText(get(i18n).t("settings.about.original-repo"))
           .setCta()
           .onClick(() => {
-            window.open("https://github.com/marcusolsson/obsidian-projects", "_blank");
+            window.open(
+              "https://github.com/marcusolsson/obsidian-projects",
+              "_blank"
+            );
           });
       });
 
@@ -76,7 +82,10 @@ export class ProjectsSettingTab extends PluginSettingTab {
           .setButtonText(get(i18n).t("settings.about.github"))
           .setCta()
           .onClick(() => {
-            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
+            window.open(
+              "https://github.com/ParkPavel/obs-projects-plus",
+              "_blank"
+            );
           });
       });
 
@@ -93,7 +102,10 @@ export class ProjectsSettingTab extends PluginSettingTab {
           .setButtonText(get(i18n).t("settings.about.star-github"))
           .setCta()
           .onClick(() => {
-            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
+            window.open(
+              "https://github.com/ParkPavel/obs-projects-plus",
+              "_blank"
+            );
           });
       });
 
@@ -197,12 +209,27 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.animation-behavior.name") || "Animation Behavior")
-      .setDesc(get(i18n).t("settings.general.animation-behavior.desc") || "Control scrolling animations throughout the plugin")
+      .setName(
+        get(i18n).t("settings.general.animation-behavior.name") ||
+          "Animation Behavior"
+      )
+      .setDesc(
+        get(i18n).t("settings.general.animation-behavior.desc") ||
+          "Control scrolling animations throughout the plugin"
+      )
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("smooth", get(i18n).t("settings.general.animation-behavior.options.smooth") || "Smooth (animated)")
-          .addOption("instant", get(i18n).t("settings.general.animation-behavior.options.instant") || "Instant (no animation)")
+          .addOption(
+            "smooth",
+            get(i18n).t("settings.general.animation-behavior.options.smooth") ||
+              "Smooth (animated)"
+          )
+          .addOption(
+            "instant",
+            get(i18n).t(
+              "settings.general.animation-behavior.options.instant"
+            ) || "Instant (no animation)"
+          )
           .setValue(preferences.animationBehavior || "smooth")
           .onChange((value) => {
             save({
@@ -213,8 +240,14 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.disable-haptic.name") || "Disable Haptic Feedback")
-      .setDesc(get(i18n).t("settings.general.disable-haptic.desc") || "Turn off vibration feedback during drag-and-drop on mobile devices")
+      .setName(
+        get(i18n).t("settings.general.disable-haptic.name") ||
+          "Disable Haptic Feedback"
+      )
+      .setDesc(
+        get(i18n).t("settings.general.disable-haptic.desc") ||
+          "Turn off vibration feedback during drag-and-drop on mobile devices"
+      )
       .addToggle((toggle) =>
         toggle
           .setValue(preferences.disableHapticFeedback ?? false)

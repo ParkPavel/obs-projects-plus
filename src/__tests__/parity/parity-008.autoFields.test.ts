@@ -20,7 +20,7 @@ class StubFile extends IFile {
     private readonly _path: string,
     private readonly _content: string,
     private readonly _ctime: number,
-    private readonly _mtime: number,
+    private readonly _mtime: number
   ) {
     super();
   }
@@ -57,7 +57,7 @@ describe("PARITY-008 — auto-fields", () => {
     "Notes/example.md",
     "---\ntitle: Example\n---\nbody",
     ctime,
-    mtime,
+    mtime
   );
 
   it("injects pp_created_time and pp_last_edited_time as Date", async () => {

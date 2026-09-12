@@ -20,10 +20,14 @@ describe("svelte-ts-transformer", () => {
 
     const result = transformer.process(source, "TransformerFixture.svelte");
 
-    expect(result.code).toContain('const { writable } = require("svelte/store");');
-    expect(result.code).toContain('const { isMobile } = require("src/lib/stores/ui");');
-    expect(result.code).not.toContain('src/lib/dataframe/dataframe');
-    expect(result.code).not.toContain('DataRecord');
-    expect(result.code).not.toContain('from;');
+    expect(result.code).toContain(
+      'const { writable } = require("svelte/store");'
+    );
+    expect(result.code).toContain(
+      'const { isMobile } = require("src/lib/stores/ui");'
+    );
+    expect(result.code).not.toContain("src/lib/dataframe/dataframe");
+    expect(result.code).not.toContain("DataRecord");
+    expect(result.code).not.toContain("from;");
   });
 });

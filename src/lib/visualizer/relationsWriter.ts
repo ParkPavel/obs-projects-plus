@@ -15,13 +15,15 @@ import {
 
 type ProcessFn = (
   file: TFile,
-  fn: (frontmatter: Record<string, unknown>) => void,
+  fn: (frontmatter: Record<string, unknown>) => void
 ) => Promise<void>;
 
 function getProcessFrontMatter(app: App): ProcessFn | null {
-  const fm = (app.fileManager as unknown as {
-    processFrontMatter?: ProcessFn;
-  }).processFrontMatter;
+  const fm = (
+    app.fileManager as unknown as {
+      processFrontMatter?: ProcessFn;
+    }
+  ).processFrontMatter;
   return typeof fm === "function" ? fm.bind(app.fileManager) : null;
 }
 
@@ -29,7 +31,7 @@ export async function appendRelationToFile(
   app: App,
   file: TFile,
   target: RelationTarget,
-  key: string = DEFAULT_RELATION_KEY,
+  key: string = DEFAULT_RELATION_KEY
 ): Promise<boolean> {
   const processFn = getProcessFrontMatter(app);
   if (!processFn) return false;
@@ -43,7 +45,7 @@ export async function removeRelationFromFile(
   app: App,
   file: TFile,
   path: string,
-  key: string = DEFAULT_RELATION_KEY,
+  key: string = DEFAULT_RELATION_KEY
 ): Promise<boolean> {
   const processFn = getProcessFrontMatter(app);
   if (!processFn) return false;

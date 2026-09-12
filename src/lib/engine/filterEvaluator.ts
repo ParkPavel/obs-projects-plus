@@ -70,7 +70,10 @@ import {
   type ListFilterOperator,
 } from "src/settings/settings";
 
-import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/lib/engine/emptiness";
+import {
+  isEmpty as kernelIsEmpty,
+  isNotEmpty as kernelIsNotEmpty,
+} from "src/lib/engine/emptiness";
 import { toNumber } from "src/lib/engine/numeric";
 import {
   isUnsafePattern,
@@ -140,7 +143,9 @@ export function matchesCondition(
     }
     if (candidates.length === 0) return false;
     if (Array.isArray(value)) {
-      const items = (value as unknown[]).map((v) => (v == null ? "" : String(v)));
+      const items = (value as unknown[]).map((v) =>
+        v == null ? "" : String(v)
+      );
       return candidates.some((c) => items.includes(c));
     }
     const strVal = value == null ? "" : String(value);
@@ -218,7 +223,9 @@ export function matchesCondition(
   }
 
   if (process.env["NODE_ENV"] !== "production") {
-    console.warn(`[Projects+] FilterEngine Unhandled filter: operator="${operator}", field="${cond.field}"`);
+    console.warn(
+      `[FilterEngine] Unhandled filter: operator="${operator}", field="${cond.field}"`
+    );
   }
   return false;
 }
@@ -253,7 +260,9 @@ export function matchesFilterConditions(
     return cond?.enabled ?? true;
   });
 
-  const condResults = validConds.map((cond) => matchesCondition(cond, record, baseDateCtx, opts));
+  const condResults = validConds.map((cond) =>
+    matchesCondition(cond, record, baseDateCtx, opts)
+  );
   const groupResults = (filter.groups ?? []).map((group) =>
     matchesFilterConditions(group, record, baseDateCtx, opts, _depth + 1)
   );
@@ -335,7 +344,9 @@ function safeRegexTest(pattern: string, input: string): boolean {
   if (pattern.length > MAX_REGEX_PATTERN_LENGTH) return false;
   if (isUnsafePattern(pattern)) return false;
   try {
-    return new RegExp(pattern, "i").test(input.slice(0, MAX_REGEX_INPUT_LENGTH));
+    return new RegExp(pattern, "i").test(
+      input.slice(0, MAX_REGEX_INPUT_LENGTH)
+    );
   } catch {
     return false;
   }
@@ -363,11 +374,15 @@ export const stringFns: Record<
   // is-any-of is handled by a dedicated branch in matchesCondition before stringFns dispatch.
   "is-any-of": () => false,
   "is-not": (left, right) => (left ? left != right : true),
-  contains: (left, right) => (left ? left.toLowerCase().includes((right ?? "").toLowerCase()) : false),
-  "not-contains": (left, right) => (left ? !left.toLowerCase().includes((right ?? "").toLowerCase()) : true),
+  contains: (left, right) =>
+    left ? left.toLowerCase().includes((right ?? "").toLowerCase()) : false,
+  "not-contains": (left, right) =>
+    left ? !left.toLowerCase().includes((right ?? "").toLowerCase()) : true,
   // PARITY-019 — Notion-parity prefix/suffix matching, case-insensitive.
-  "starts-with": (left, right) => (left ? left.toLowerCase().startsWith((right ?? "").toLowerCase()) : false),
-  "ends-with": (left, right) => (left ? left.toLowerCase().endsWith((right ?? "").toLowerCase()) : false),
+  "starts-with": (left, right) =>
+    left ? left.toLowerCase().startsWith((right ?? "").toLowerCase()) : false,
+  "ends-with": (left, right) =>
+    left ? left.toLowerCase().endsWith((right ?? "").toLowerCase()) : false,
   // R5-003 — regex with ReDoS guards; promoted from Calendar agenda filterEngine.
   regex: (left, right) => (left && right ? safeRegexTest(right, left) : false),
 };
@@ -452,12 +467,14 @@ export const dateFns: Record<
   },
   "is-on-and-before": (left, rv) => {
     if (!left || !rv) return false;
-    const l = dayjs(left), r = dayjs(rv);
+    const l = dayjs(left),
+      r = dayjs(rv);
     return l.isBefore(r, "day") || l.isSame(r, "day");
   },
   "is-on-and-after": (left, rv) => {
     if (!left || !rv) return false;
-    const l = dayjs(left), r = dayjs(rv);
+    const l = dayjs(left),
+      r = dayjs(rv);
     return l.isAfter(r, "day") || l.isSame(r, "day");
   },
   // ── Relative date operators ──
@@ -468,7 +485,10 @@ export const dateFns: Record<
   "is-this-week": (left, _rv, baseDate) => {
     if (!left) return false;
     const now = baseDate ?? dayjs();
-    return dayjs(left).isoWeek() === now.isoWeek() && dayjs(left).year() === now.year();
+    return (
+      dayjs(left).isoWeek() === now.isoWeek() &&
+      dayjs(left).year() === now.year()
+    );
   },
   "is-this-month": (left, _rv, baseDate) => {
     if (!left) return false;
@@ -477,7 +497,10 @@ export const dateFns: Record<
   "is-this-quarter": (left, _rv, baseDate) => {
     if (!left) return false;
     const now = baseDate ?? dayjs();
-    return dayjs(left).quarter() === now.quarter() && dayjs(left).year() === now.year();
+    return (
+      dayjs(left).quarter() === now.quarter() &&
+      dayjs(left).year() === now.year()
+    );
   },
   "is-this-year": (left, _rv, baseDate) => {
     if (!left) return false;
@@ -486,39 +509,57 @@ export const dateFns: Record<
   // Notion-style rolling windows: past_* = last N days inclusive of today, next_* = next N days inclusive of today.
   "is-past-week": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return (d.isSame(today, "day") || d.isBefore(today, "day"))
-      && d.isAfter(today.subtract(7, "day"), "day");
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      (d.isSame(today, "day") || d.isBefore(today, "day")) &&
+      d.isAfter(today.subtract(7, "day"), "day")
+    );
   },
   "is-past-month": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return (d.isSame(today, "day") || d.isBefore(today, "day"))
-      && d.isAfter(today.subtract(1, "month").subtract(1, "day"), "day");
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      (d.isSame(today, "day") || d.isBefore(today, "day")) &&
+      d.isAfter(today.subtract(1, "month").subtract(1, "day"), "day")
+    );
   },
   "is-past-year": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return (d.isSame(today, "day") || d.isBefore(today, "day"))
-      && d.isAfter(today.subtract(1, "year").subtract(1, "day"), "day");
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      (d.isSame(today, "day") || d.isBefore(today, "day")) &&
+      d.isAfter(today.subtract(1, "year").subtract(1, "day"), "day")
+    );
   },
   "is-next-week": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return (d.isSame(today, "day") || d.isAfter(today, "day"))
-      && d.isBefore(today.add(7, "day").add(1, "day"), "day");
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      (d.isSame(today, "day") || d.isAfter(today, "day")) &&
+      d.isBefore(today.add(7, "day").add(1, "day"), "day")
+    );
   },
   "is-next-month": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return (d.isSame(today, "day") || d.isAfter(today, "day"))
-      && d.isBefore(today.add(1, "month").add(1, "day"), "day");
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      (d.isSame(today, "day") || d.isAfter(today, "day")) &&
+      d.isBefore(today.add(1, "month").add(1, "day"), "day")
+    );
   },
   "is-next-year": (left, _rv, baseDate) => {
     if (!left) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return (d.isSame(today, "day") || d.isAfter(today, "day"))
-      && d.isBefore(today.add(1, "year").add(1, "day"), "day");
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      (d.isSame(today, "day") || d.isAfter(today, "day")) &&
+      d.isBefore(today.add(1, "year").add(1, "day"), "day")
+    );
   },
   "is-last-n-days": (left, rv, baseDate) => {
     // #180a: `parseInt(rv, 10)` read "7 days" as 7. The operand is user-typed
@@ -526,14 +567,22 @@ export const dateFns: Record<
     // a non-number, so `?? 0` keeps that path.
     const n = toNumber(rv) ?? 0;
     if (!left || !n || n <= 0) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return d.isAfter(today.subtract(n, "day"), "day") && (d.isBefore(today, "day") || d.isSame(today, "day"));
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      d.isAfter(today.subtract(n, "day"), "day") &&
+      (d.isBefore(today, "day") || d.isSame(today, "day"))
+    );
   },
   "is-next-n-days": (left, rv, baseDate) => {
     const n = toNumber(rv) ?? 0;
     if (!left || !n || n <= 0) return false;
-    const d = dayjs(left), today = baseDate ?? dayjs();
-    return (d.isAfter(today, "day") || d.isSame(today, "day")) && d.isBefore(today.add(n, "day"), "day");
+    const d = dayjs(left),
+      today = baseDate ?? dayjs();
+    return (
+      (d.isAfter(today, "day") || d.isSame(today, "day")) &&
+      d.isBefore(today.add(n, "day"), "day")
+    );
   },
   "is-overdue": (left, _rv, baseDate) => {
     if (!left) return false;
@@ -588,7 +637,9 @@ export const listFns_text: Record<
 > = {
   "has-keyword": (left, right) => {
     return right
-      ? left.some((value) => String(value).toLowerCase().includes(String(right).toLowerCase()))
+      ? left.some((value) =>
+          String(value).toLowerCase().includes(String(right).toLowerCase())
+        )
       : false;
   },
 };

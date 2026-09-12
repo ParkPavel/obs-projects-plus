@@ -12,7 +12,7 @@ export interface ViewDefinition {
   readonly name: string;
   readonly id: ViewId;
   readonly type: ViewType;
-   
+
   readonly config: Record<string, any>;
   readonly filter: FilterDefinition;
   readonly colors: ColorFilterDefinition;
@@ -61,7 +61,16 @@ export type StringFilterOperator =
 export function isStringFilterOperator(
   op: FilterOperator
 ): op is StringFilterOperator {
-  return ["is", "is-any-of", "is-not", "contains", "not-contains", "starts-with", "ends-with", "regex"].includes(op);
+  return [
+    "is",
+    "is-any-of",
+    "is-not",
+    "contains",
+    "not-contains",
+    "starts-with",
+    "ends-with",
+    "regex",
+  ].includes(op);
 }
 
 export type NumberFilterOperator = "eq" | "neq" | "lt" | "gt" | "lte" | "gte";

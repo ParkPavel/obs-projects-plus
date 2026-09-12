@@ -15,7 +15,7 @@ function makeApp(): {
     fileManager: {
       async processFrontMatter(
         file: TFile,
-        fn: (fm: Record<string, unknown>) => void,
+        fn: (fm: Record<string, unknown>) => void
       ) {
         calls.push({ file, mutate: fn });
         fn(data);

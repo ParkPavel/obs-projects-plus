@@ -57,8 +57,16 @@ describe("A168 — a peek opens the panel and does not navigate", () => {
 
   it("ctrl still opens a tab and shift still opens a window — nothing became unreachable", () => {
     const { app, calls } = spyApp();
-    const ctrl = { ctrlKey: true, metaKey: false, shiftKey: false } as MouseEvent;
-    const shift = { ctrlKey: false, metaKey: false, shiftKey: true } as MouseEvent;
+    const ctrl = {
+      ctrlKey: true,
+      metaKey: false,
+      shiftKey: false,
+    } as MouseEvent;
+    const shift = {
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: true,
+    } as MouseEvent;
     expect(modeFromEvent(ctrl)).toBe("tab");
     expect(modeFromEvent(shift)).toBe("window");
     void openRecord({ id: "a.md" }, modeFromEvent(ctrl), { app });
@@ -73,7 +81,10 @@ describe("A168 — a peek opens the panel and does not navigate", () => {
   it("a surface with its own panel is asked instead of the store", () => {
     const { app, calls } = spyApp();
     const seen: string[] = [];
-    void openRecord({ id: "own.md" }, "peek", { app, peek: (t) => seen.push(t.id) });
+    void openRecord({ id: "own.md" }, "peek", {
+      app,
+      peek: (t) => seen.push(t.id),
+    });
     expect(seen).toEqual(["own.md"]);
     expect(get(recordPeek)).toBeNull();
     expect(calls).toEqual([]);
@@ -94,13 +105,18 @@ describe("A168 — a peek opens the panel and does not navigate", () => {
     const { app } = spyApp();
     const record = { id: "External/Row.md", values: { name: "Row" } };
     const fields = [
-      { name: "name", type: "string", identifier: true, derived: false, repeated: false, typeConfig: {} },
+      {
+        name: "name",
+        type: "string",
+        identifier: true,
+        derived: false,
+        repeated: false,
+        typeConfig: {},
+      },
     ];
-    void openRecord(
-      { id: record.id, record, fields } as never,
-      "peek",
-      { app }
-    );
+    void openRecord({ id: record.id, record, fields } as never, "peek", {
+      app,
+    });
     const target = get(recordPeek);
     expect(target?.record).toEqual(record);
     expect(target?.fields).toEqual(fields);
@@ -121,7 +137,11 @@ describe("A168 — a peek opens the panel and does not navigate", () => {
 describe("A168 — scene 3: the record says which frontmatter keys it writes", () => {
   const source = () =>
     require("fs").readFileSync(
-      require("path").join(__dirname, "..", "ui/components/RecordCardView/RecordCardView.svelte"),
+      require("path").join(
+        __dirname,
+        "..",
+        "ui/components/RecordCardView/RecordCardView.svelte"
+      ),
       "utf8"
     ) as string;
 
@@ -159,10 +179,15 @@ describe("A168 — closing the peek does not throw away what was typed", () => {
     // Asserted on the source because the alternative is mounting Svelte with a
     // fake vault to watch a timer, which would test the harness.
     const s = require("fs").readFileSync(
-      require("path").join(__dirname, "..", "ui/modals/components/EditNote.svelte"),
+      require("path").join(
+        __dirname,
+        "..",
+        "ui/modals/components/EditNote.svelte"
+      ),
       "utf8"
     ) as string;
-    const onDestroy = /onDestroy\(\(\) => \{([\s\S]*?)\n {2}\}\);/.exec(s)?.[1] ?? "";
+    const onDestroy =
+      /onDestroy\(\(\) => \{([\s\S]*?)\n {2}\}\);/.exec(s)?.[1] ?? "";
     expect(onDestroy).toContain("performSave()");
     expect(onDestroy).toMatch(/clearTimeout\(saveTimer\)/);
   });
@@ -185,7 +210,11 @@ describe("A168 — a target this view cannot show never becomes a click that did
 describe("A168 step (c) — a link that did not resolve says so", () => {
   const source = () =>
     require("fs").readFileSync(
-      require("path").join(__dirname, "..", "ui/components/RecordCardView/RecordCardView.svelte"),
+      require("path").join(
+        __dirname,
+        "..",
+        "ui/components/RecordCardView/RecordCardView.svelte"
+      ),
       "utf8"
     ) as string;
 
@@ -210,6 +239,8 @@ describe("A168 step (c) — a link that did not resolve says so", () => {
 
   it("matching is by path and by basename, the two keys the contract indexes on", () => {
     const s = source();
-    expect(s).toMatch(/keys\.has\(bare\.toLowerCase\(\)\) \|\| keys\.has\(base\.toLowerCase\(\)\)/);
+    expect(s).toMatch(
+      /keys\.has\(bare\.toLowerCase\(\)\) \|\| keys\.has\(base\.toLowerCase\(\)\)/
+    );
   });
 });

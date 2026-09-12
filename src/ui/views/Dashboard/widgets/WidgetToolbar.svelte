@@ -11,7 +11,9 @@
   let open = false;
   let triggerEl: HTMLButtonElement | null = null;
 
-  const dispatch = createEventDispatcher<{ addWidget: WidgetType }>();
+  const dispatch = createEventDispatcher<{
+    addWidget: WidgetType;
+  }>();
 
   function handleAdd(type: WidgetType) {
     dispatch("addWidget", type);
@@ -57,7 +59,6 @@
         <span>{$i18n.t(meta.labelKey)}</span>
       </button>
     {/each}
-
   </FloatingPopup>
 </div>
 

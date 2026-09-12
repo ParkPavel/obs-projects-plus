@@ -26,11 +26,7 @@ function mkFrame(
   };
 }
 
-function runJoin(
-  left: DataFrame,
-  right: DataFrame,
-  step: JoinStep
-) {
+function runJoin(left: DataFrame, right: DataFrame, step: JoinStep) {
   const pipeline: TransformPipeline = { steps: [step] };
   const context: TransformContext = {
     rightFrames: new Map([[step.rightSourceId, right]]),
@@ -77,7 +73,9 @@ describe("executeJoin", () => {
     // w3 has no match → dropped. w2 has two matches → cartesian 2 rows.
     expect(data.records).toHaveLength(3);
     expect(data.records.map((r) => r.values["weight"])).toEqual([80, 82, 82]);
-    expect(data.records.map((r) => r.values["calories"])).toEqual([2200, 2400, 2100]);
+    expect(data.records.map((r) => r.values["calories"])).toEqual([
+      2200, 2400, 2100,
+    ]);
     expect(meta.warnings).toEqual([]);
   });
 
@@ -115,11 +113,19 @@ describe("executeJoin", () => {
 
   it("suffixes colliding right field names", () => {
     const leftNotes = mkFrame(
-      [["id", DataFieldType.String], ["date", DataFieldType.Date], ["note", DataFieldType.String]],
+      [
+        ["id", DataFieldType.String],
+        ["date", DataFieldType.Date],
+        ["note", DataFieldType.String],
+      ],
       [{ id: "l1", date: new Date(2026, 3, 1), note: "left-note" }]
     );
     const rightNotes = mkFrame(
-      [["id", DataFieldType.String], ["date", DataFieldType.Date], ["note", DataFieldType.String]],
+      [
+        ["id", DataFieldType.String],
+        ["date", DataFieldType.Date],
+        ["note", DataFieldType.String],
+      ],
       [{ id: "r1", date: new Date(2026, 3, 1), note: "right-note" }]
     );
     const step: JoinStep = {
@@ -144,7 +150,9 @@ describe("executeJoin", () => {
       how: "inner",
     };
     const pipeline: TransformPipeline = { steps: [step] };
-    const { data, meta } = executeTransform(workouts, pipeline, { rightFrames: new Map() });
+    const { data, meta } = executeTransform(workouts, pipeline, {
+      rightFrames: new Map(),
+    });
     expect(data.records).toHaveLength(workouts.records.length);
     expect(meta.warnings.some((w) => w.includes("not resolved"))).toBe(true);
   });
@@ -163,14 +171,22 @@ describe("executeJoin", () => {
 
   it("normalises date keys to day granularity", () => {
     const workoutsWithTime = mkFrame(
-      [["id", DataFieldType.String], ["date", DataFieldType.Date], ["weight", DataFieldType.Number]],
+      [
+        ["id", DataFieldType.String],
+        ["date", DataFieldType.Date],
+        ["weight", DataFieldType.Number],
+      ],
       [
         { id: "w1", date: new Date(2026, 3, 1, 8, 30), weight: 80 },
         { id: "w2", date: new Date(2026, 3, 1, 20, 0), weight: 81 },
       ]
     );
     const nutritionDay = mkFrame(
-      [["id", DataFieldType.String], ["date", DataFieldType.Date], ["calories", DataFieldType.Number]],
+      [
+        ["id", DataFieldType.String],
+        ["date", DataFieldType.Date],
+        ["calories", DataFieldType.Number],
+      ],
       [{ id: "n1", date: new Date(2026, 3, 1, 0, 0), calories: 2000 }]
     );
     const step: JoinStep = {
