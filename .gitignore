@@ -5,8 +5,7 @@
 # npm
 node_modules
 
-# Don't include the compiled main.js file in the repo.
-# They should be uploaded to GitHub releases instead.
+# Ignore new build outputs. Already tracked root and release bundles are retained.
 main.js
 !releases/*/main.js
 
@@ -59,17 +58,15 @@ test-results.json
 CLAUDE.md
 AGENTS.md
 
-# The Copilot agent system was archived out of the repo entirely on 2026-08-25
-# (see ../.ai_internal/archive/copilot-2026-08-25/). Guard against it returning.
+# Keep legacy agent integrations outside the product repository.
 .github/agents/
 .github/instructions/
 .github/prompts/
 .github/hooks/
 .github/COPILOT_SETUP.md
 
-# Still tracked on purpose: docs/internal/ is engineering documentation —
-# BACKLOG, CONTEXT, ADRs, design briefs — not agent configuration, and
-# docs/internal/CONTEXT.md is the canonical baseline the test ratchet reads.
+# Internal planning and session records belong to the external development workspace.
+docs/internal/
 
 # The legacy .vscode/mcp.json was retired into a private Claudex migration backup.
 # Editor preferences remain local; .vscode is already ignored above.

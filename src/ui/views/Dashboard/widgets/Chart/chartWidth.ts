@@ -4,8 +4,7 @@
 // Every chart root carries a `viewBox` and no `width`/`height` attribute, so the
 // SVG fills its container's inline size and the viewBox width decides only the
 // scale. With a constant there, 11 user units rendered at ~5.5 CSS px in a 240px
-// widget and ~22 CSS px in a 960px one (measured:
-// `docs/internal/probes/166-chart-viewbox-scale.html`). Pinning the viewBox to
+// widget and ~22 CSS px in a 960px one. Pinning the viewBox to
 // the measured container width makes one user unit one CSS pixel at every width.
 //
 // Kept out of ChartWidget.svelte so the guard below is reachable from jest

@@ -1,5 +1,7 @@
 # 📋 Шаблоны Projects Plus
 
+> Русский · [English](README-EN.md)
+
 Коллекция Templater-шаблонов для плагина **Projects Plus**. Все шаблоны используют стандартные поля плагина и интерактивные диалоги выбора.
 
 ## 🚀 Быстрый старт
@@ -71,5 +73,5 @@
 
 ## 📖 Документация
 
-- [Руководство по Templater](../docs/user-guide.md#templater-интеграция)
-- [Основной README](../README.md#-интеграция-с-templater)
+- [Руководство пользователя](../docs/user-guide.md)
+- [Основной README](../README.md)

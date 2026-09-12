@@ -1,10 +1,14 @@
-# Demo Vault — Projects Plus v5.0
+# Demo Vault
 
-This demo vault showcases **all major features** of Projects Plus. Open it as a vault in Obsidian to explore every view, widget, formula, and data source capability.
+> [Русский](README-RU.md) · English
+
+A ready-made vault for trying Projects Plus: notes with filled-in fields, relations between
+folders, and a Dashboard worth configuring. Open it as a vault in Obsidian and walk through the
+steps below.
 
 ## Setup
 
-1. Copy `main.js`, `main.css`, `styles.css`, `manifest.json` from the project root into `demo-vault/.obsidian/plugins/obs-projects-plus/`
+1. Copy `main.js`, `manifest.json` and `styles.css` from the project root into `demo-vault/.obsidian/plugins/obs-projects-plus/`
 2. Open `demo-vault` as an Obsidian vault
 3. Enable "OBS Projects Plus" in Settings → Community Plugins
 4. `Ctrl/Cmd+P` → "Projects Plus: Create Project" → select `Projects/` folder
@@ -14,17 +18,17 @@ This demo vault showcases **all major features** of Projects Plus. Open it as a 
 | Folder | Purpose | Notes |
 |--------|---------|-------|
 | `Projects/` | Primary data source (folder) | 22 task/project notes |
-| `Team/` | Relation targets (v5.0 cross-source) | 4 team member notes — declared as `relation` field in fieldConfig |
+| `Team/` | Relation targets | 4 team member notes — declared as a `relation` field in the field config |
 | `Clients/` | Multi-source merge demo | 4 client notes — add as additional data source |
 
-## What's Pre-Configured (v5.0)
+## What is pre-configured
 
 The `data.json` ships with:
 
 - **Two projects**: "Demo Project" (Projects/) and "Team Members" (Team/)
 - **Cross-source relations**: `assignee` and `reviewer` fields declared as `relation` pointing to Team Members
 - **Field types**: `status` with color groups, `priority` as select with colors
-- **Database view**: pre-wired with Filter-Tabs (by status), Stats overview (4 KPI cards), and Data Table
+- **Dashboard**: filter tabs (by status), a stats overview (4 cards) and a data block in table mode
 - **Formula fields**: `Budget Utilization` (`ROUND(spent / budget * 100, 1)`) and `Days Remaining` (`DATE_BETWEEN(TODAY(), due, "day")`)
 - **Aggregation row**: budget SUM, spent SUM, progress AVG, hours SUM
 
@@ -48,7 +52,7 @@ The `data.json` ships with:
 | `type` | text | All notes | Chart grouping |
 | `progress` | number (0–100) | Tracked tasks | Progress chart, conditional format |
 | `budget` | number | Financial tasks | SUM, AVG, financial formulas |
-| `spent` | number | Financial tasks | Comparison widget, formulas |
+| `spent` | number | Financial tasks | Charts against `budget`, formulas |
 | `hours` | number | Time-tracked tasks | Duration formulas, stats |
 | `completed` | boolean | Checklist tasks | Checklist widget |
 | `sprint` | text | Sprint tasks | Stacked bar grouping |
@@ -59,27 +63,26 @@ The `data.json` ships with:
 
 | View | Configuration | What It Shows |
 |------|---------------|---------------|
-| **Table** | Sort by priority, filter status≠done | Sorting, filtering, cell navigation |
-| **Board** | Group by `status` | Kanban, column persist, drag cards |
-| **Calendar** | Date=`startDate`, End=`endDate`, Time=`startTime`/`endTime`, Color=`color` | Timeline, multi-day bars, time slots, color coding |
+| **Board** | Group by `status` | Kanban, columns that stay, dragging cards |
+| **Calendar** | Date=`startDate`, End=`endDate`, Time=`startTime`/`endTime`, Color=`color` | Timeline, multi-day bars, time slots, colour coding |
 | **Gallery** | Title + priority + assignee | Card browsing |
-| **Database View** | See widget setup below | Full widget dashboard |
+| **Dashboard** | See the block setup below | Blocks, charts, totals |
 
-### Database View Widgets to Add
+### Dashboard blocks to add
 
-| Widget | Configuration | Demonstrates |
-|--------|---------------|--------------|
-| **Data Table** | All fields, group by category | Conditional formatting, relations, sorting |
+| Block | Configuration | Demonstrates |
+|-------|---------------|--------------|
+| **Database** (table mode) | All fields, group by category | Sorting, filtering, cell editing, conditional formatting, relations |
+| **Database** (board / calendar / gallery mode) | Same source, another mode | One block showing the data the way the task needs |
 | **Chart (Bar)** | X=assignee, Y=count | Bar chart |
 | **Chart (Pie)** | X=status | Pie/donut distribution |
 | **Chart (Scatter)** | X=budget, Y=progress, Color=priority | Scatter plot with trend line |
 | **Chart (Stacked Bar)** | X=sprint, Stack=status | Stacked bar |
-| **Chart (Line)** | X=date, Y=progress | Timeline trend |
-| **Stats** | budget: SUM, AVG, MAX; progress: AVG, MEDIAN | KPI cards |
-| **Comparison** | budget vs spent | Side-by-side metric bars |
+| **Chart (Line)** | X=date, Y=progress | Trend over time |
+| **Stats** | budget: SUM, AVG, MAX; progress: AVG, MEDIAN | Summary cards |
 | **Checklist** | Field=completed | Boolean toggle list |
 | **Filter Tabs** | Field=category | Quick category filter |
-| **Summary Row** | count, sum(budget), avg(progress) | Aggregation bar |
+| **Text / Divider / Cover Banner** | — | Titles, separators and a header image on the canvas |
 
 ### Formula Examples to Try
 

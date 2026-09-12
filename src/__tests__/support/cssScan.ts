@@ -4,8 +4,7 @@
  * R0.13 grew `svelteStyles` / `stripComments` / `collectStyled` as private
  * helpers; R0.16 (#167) needs the same three over a narrower file set. Copying
  * them would put two definitions of "the CSS of this component" in the tree,
- * and the two ratchets would then disagree about what they are guarding — the
- * defect class `configScan.ts` was extracted for (#181), one layer up.
+ * and the two ratchets would then disagree about what they are guarding.
  *
  * One thing this module deliberately does NOT decide is which files are in
  * scope. R0.13 scans everything; R0.16 scans only what lives inside a declared

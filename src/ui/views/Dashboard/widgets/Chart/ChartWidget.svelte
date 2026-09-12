@@ -243,8 +243,7 @@
      the MEASURED container width instead (`bind:contentRect` above): one user
      unit becomes one CSS pixel, so 11 units render at 11 CSS pixels at any width,
      and `axisLabels.ts` receives the true available width and culls honestly.
-     Measured both ways in `docs/internal/probes/166-chart-viewbox-scale.html`;
-     the decision is ADR_MATRYOSHKA_SIZING_2026-09-02 Q1. Making the labels GROW
+     Making the labels grow
      with the container is still possible, but only as a number threaded into the
      layout model — never as CSS. */
   .ppp-chart-widget {

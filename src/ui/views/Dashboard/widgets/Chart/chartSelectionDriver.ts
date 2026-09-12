@@ -1,7 +1,6 @@
 /**
  * chartSelectionDriver.ts — pure helpers for ChartWidget's driver role.
  *
- * Spec: .ai_internal/New-specification/CROSS_WIDGET_SPEC.md §5 (drivers).
  * Ticket: #044.2.
  *
  * The Svelte component delegates all state-mutation decisions to these

@@ -1,7 +1,6 @@
 /**
  * SelectionBadge.test.ts — visibility predicate + component-mount coverage.
  *
- * Spec: .ai_internal/New-specification/CROSS_WIDGET_SPEC.md §6.2, §7.
  * Ticket: #044.5.
  */
 

@@ -1,12 +1,20 @@
 # Contributing to Projects Plus
 
+> [Русский](CONTRIBUTING-RU.md) · English
+
 Thank you for your interest in contributing! Projects Plus is a community-maintained fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) plugin.
 
 This document is the **engineering onboarding** entry point. Before opening a non-trivial PR, please also read:
 
-- [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) — target architecture and codebase map (4 layers, A-F module grades)
+- [docs/architecture-EN.md](docs/architecture-EN.md) — how the code is laid out: layers, dependency rules, where to add things
 - [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md) — coding rules and security baselines
-- [docs/internal/REFACTOR_BACKLOG_V5.md](docs/internal/REFACTOR_BACKLOG_V5.md) — active refactor queue (so your work doesn't collide with in-flight changes)
+
+Planned work and in-flight changes are tracked in
+[GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues) and
+[Pull Requests](https://github.com/ParkPavel/obs-projects-plus/pulls) — check there before starting
+something large, so two changes don't collide. Day-to-day development is coordinated with
+[Claudex](https://github.com/ParkPavel/claudex), which lives outside this repository: internal
+plans, session notes and agent instructions are not part of this tree, and a PR never needs them.
 
 ---
 
@@ -57,7 +65,7 @@ Reload Obsidian (`Ctrl/Cmd+R`) to pick up the new build.
 |---|---|
 | `npm run dev` | esbuild watch mode |
 | `npm run build` | `tsc -noEmit -skipLibCheck && esbuild production` (must pass before PR) |
-| `npm run test` | Jest — **98 suites, ~1597 tests** |
+| `npm run test` | Jest — the whole suite must pass |
 | `npm run test:watch` | Jest in watch mode |
 | `npm run test:coverage` | Coverage report |
 | `npm run lint` | ESLint with Obsidian rules |
@@ -69,9 +77,9 @@ Reload Obsidian (`Ctrl/Cmd+R`) to pick up the new build.
 
 ## Project structure
 
-**The authoritative codebase map is [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md)**. It documents every top-level folder under `src/`, the four-layer architecture (Plugin shell → UI surface → Engine core → Data layer), and where to add new widgets, charts, datasources, field types, formula functions, or languages.
+**The codebase map is [docs/architecture-EN.md](docs/architecture-EN.md)**. It lists what lives under `src/`, the four layers (Shell → UI → Engine → Data), the dependency rules between them, and where to add a new widget, chart, datasource, formula function, error code or language.
 
-This `CONTRIBUTING.md` intentionally does not duplicate that map — start with `ARCHITECTURE_V5.md §1` ("Слои / Layers") before opening a non-trivial PR.
+This `CONTRIBUTING.md` does not duplicate that map — read its “Layers” section before opening a non-trivial PR.
 
 ---
 
@@ -104,9 +112,10 @@ Detailed rules: [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md). Hard rules:
 2. Keep commits atomic and descriptive.
 3. Run the quality gate locally:
    ```bash
-   npm run build      # must pass (tsc + esbuild)
-   npm run test       # all 98 suites must pass
-   npm run lint       # 0 errors
+   npm run build         # must pass (tsc + esbuild)
+   npm run test          # every suite must pass
+   npm run lint          # 0 errors
+   npm run svelte-check  # 0 errors
    ```
 4. Update documentation if your change affects user-facing behaviour or public API.
 5. Open a PR with a clear description of *what* changed and *why*.
@@ -114,12 +123,13 @@ Detailed rules: [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md). Hard rules:
 ### PR checklist
 
 - [ ] `npm run build` passes
-- [ ] `npm run test` — all suites pass
+- [ ] `npm run test` — every suite passes
 - [ ] `npm run lint` — 0 errors
+- [ ] `npm run svelte-check` — 0 errors
 - [ ] No `console.log`, `innerHTML`, `document.*`, `@ts-ignore`
 - [ ] Translations updated (if UI text changed)
-- [ ] Documentation updated (if behaviour or API changed)
-- [ ] CHANGELOG entry under `## [Unreleased]`
+- [ ] Documentation updated **in both languages** (if behaviour or API changed)
+- [ ] An entry in `CHANGELOG.md` and `CHANGELOG-RU.md` under `## Unreleased` / «Не выпущено»
 
 ---
 
@@ -136,6 +146,18 @@ To add or update translations:
 
 ---
 
+## Documentation comes in pairs
+
+Every document exists in both languages: the file under its base name, and a file whose suffix
+names its language (`-RU` or `-EN`). Two pages keep both languages inside one file — the index
+`docs/README.md` and the error-code table `docs/ERROR_CODES.md` — because their English text is
+taken straight from the code.
+
+`src/__tests__/R0_25_documentationPairs.test.ts` enforces this: a document that exists in one
+language only fails the suite. If you edit one language, edit the other in the same commit.
+
+---
+
 ## Reporting issues
 
 Use [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues). Please include:
@@ -148,16 +170,15 @@ Use [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues). Plea
 
 ---
 
-## Subsystem deep-dives
+## Where to read further
 
-When working on a specific subsystem, the relevant document is the source of truth:
-
-| Subsystem | Document |
+| Topic | Document |
 |---|---|
-| Codebase map (start here) | [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) |
-| Refactor backlog / task queue | [docs/internal/REFACTOR_BACKLOG_V5.md](docs/internal/REFACTOR_BACKLOG_V5.md) |
-| Dashboard View (canvas, widgets, engine) | [docs/ARCHITECTURE_V5.md](docs/ARCHITECTURE_V5.md) §2 (Module Inventory) |
-| Custom View API | [docs/api.md](docs/api.md) |
+| Codebase map (start here) | [docs/architecture-EN.md](docs/architecture-EN.md) |
+| Coding rules and security baselines | [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md) |
+| Custom view API for other plugins | [docs/api.md](docs/api.md) |
+| Error codes surfaced to users | [docs/ERROR_CODES.md](docs/ERROR_CODES.md) |
+| What the plugin does, from a user's side | [docs/user-guide-EN.md](docs/user-guide-EN.md) |
 
 ---
 

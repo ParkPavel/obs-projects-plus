@@ -35,7 +35,7 @@
  *     answer: `avg`/`min`/`max`/`range` over no numeric value (#180a), and
  *     since #180b the percent operators over no population (§3.2 item 3).
  *     `sum` keeps `0` deliberately — the additive identity is a real total of
- *     nothing (BACKLOG #180, RESOLVED 2026-09-02).
+ *     nothing (decided 2026-09-02).
  *     `median` joined them in #180c, which closed the three gaps #180a and
  *     #180b had recorded rather than hidden.
  */
@@ -210,8 +210,7 @@ function sumNumbers(values: DataValue[]): number {
  * — `count_values`, `count_empty`, `percent_empty`, `percent_not_empty` — so
  * they cannot drift apart, which is the whole shape of #180.
  *
- * **An unchecked box is an answer, not a blank** (BACKLOG #180, RESOLVED
- * 2026-09-02, D4). Until #180c the four read `v !== "" && v !== false`, so over
+ * **An unchecked box is an answer, not a blank** (decided 2026-09-02). Until #180c the four read `v !== "" && v !== false`, so over
  * `[false]` this kernel reported 100% empty while the footer, which never
  * excluded `false`, reported 0% — the same question, two answers, visible in
  * the product. `count_checked` / `percent_true` exist for the other question,
@@ -231,7 +230,7 @@ function isFilled(v: DataValue): boolean {
  * average of nothing rendered the visible nonsense `NaN`. Now the value is
  * dropped, the list is genuinely empty, and returning 0 would print a number
  * that looks like an answer. `sum` keeps 0 deliberately — the additive
- * identity is a real total of nothing (BACKLOG #180, RESOLVED 2026-09-02).
+ * identity is a real total of nothing (decided 2026-09-02).
  * Found by the Codex adversarial review of #180a, which named the footer path
  * `computeAggregations` where the guard `computeAggregateValue` already had
  * was missing.

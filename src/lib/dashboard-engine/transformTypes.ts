@@ -21,8 +21,7 @@
  *   (2026-09-02) renamed that one to `TransformStepIR` and left this one alone:
  *   this is the stored shape, so its name is part of the persistence format,
  *   not a local choice. #178 (2026-09-02) then deleted the IR outright — it had
- *   no consumers and described an engine that was never built; its text is kept
- *   at `docs/internal/archive/ENGINE_CONTRACTS_V4_DESIGN.md`. The collision is
+ *   no consumers and described an engine that was never built. The collision is
  *   gone, but `src/__tests__/R0_14_duplicateExportedTypeNames.test.ts` still
  *   forbids a new one, which is what keeps this name safe to rely on.
  * - **`AggregationFunction` is UPPERCASE on purpose,** and it is a THIRD

@@ -1,10 +1,8 @@
 # 📋 Code Standards & Obsidian Compliance Guide
 
-**Version**: 3.4.0  
-**Last Updated**: April 3, 2026  
-**Status**: ✅ Community Plugins Compliant
+> [Русский](CODE_STANDARDS-RU.md) · English
 
-This document serves as a comprehensive guide for contributors, explaining coding standards, Obsidian Community Plugins requirements, and architectural decisions made in the Projects Plus codebase.
+This document is the reference for contributors: coding standards, the Obsidian Community Plugins requirements the code has to satisfy, and the architectural decisions behind them. It describes the rules the checks enforce — when a rule and the code disagree, fix one of them rather than leaving both in place.
 
 ---
 
@@ -246,7 +244,7 @@ draft.values[field.name] = value;     // @ts-ignore - Immer Draft compat
 
 **Alternative Considered**: Remove Immer → Would require rewriting all immutable update patterns (~500 lines).
 
-**Decision**: Keep `@ts-ignore` with comments. Immer is battle-tested; runtime correctness is verified by 839 unit tests.
+**Decision**: Keep `@ts-ignore` with comments. Immer is battle-tested, and runtime correctness is covered by the unit tests.
 
 #### Filter Functions
 
@@ -270,7 +268,7 @@ Before submitting a PR, ensure:
 ### Required ✅
 
 - [ ] `npm run build` — Compiles without errors
-- [ ] `npm test` — All 923 tests pass
+- [ ] `npm test` — every suite passes
 - [ ] `npm run lint` — 0 ESLint errors
 - [ ] No `console.log()` statements (use `console.debug()` if needed)
 - [ ] No direct `localStorage` access (use App API)
@@ -401,7 +399,7 @@ Projects Plus maintains high code quality through:
 1. **Strict TypeScript** — Catches errors at compile time
 2. **ESLint Rules** — Enforces consistent style
 3. **Justified Exceptions** — Every deviation documented
-4. **Comprehensive Tests** — 800 unit tests
+4. **Comprehensive tests** — unit tests over the engine, data layer and UI logic
 5. **Obsidian Compliance** — All requirements met
 
 When contributing, follow this guide to ensure your code meets the project's standards and Obsidian Community Plugin requirements.

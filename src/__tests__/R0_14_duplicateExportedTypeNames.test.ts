@@ -12,8 +12,7 @@
  *
  * **The original subject no longer exists.** #179 renamed the IR to
  * `TransformStepIR`; #178 (2026-09-02) then deleted the module that declared it,
- * along with the two dead modules that were its only importers, and preserved
- * their text at `docs/internal/archive/ENGINE_CONTRACTS_V4_DESIGN.md`. Like R0.4,
+ * along with the two dead modules that were its only importers. Like R0.4,
  * this ratchet now outlives its subject: it guards the NEXT collision rather
  * than the one it was written for, and nothing about that changes its logic. The
  * synthetic case below still names the pre-#179 file — that is a record of what
@@ -60,7 +59,7 @@ const ENGINE_ROOTS = ["engine", "dashboard-engine"] as const;
  *   plus an optional `position` and is re-exported through
  *   `lib/formula/index.ts`; `lib/types/validation.ts:15` carries `field`,
  *   `message` and an optional `code`, and has no importer. Same collision
- *   class, different owner; filed as a note under #179 in `BACKLOG.md`.
+ *   class, different owner; kept as a note for a later cleanup.
  *
  * This list may only SHRINK. Removing a name here is how a fix is recorded.
  */
