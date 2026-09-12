@@ -1,137 +1,63 @@
-# Demo Vault — Projects Plus v5.0
+# Projects Plus demo vault
 
-This demo vault showcases **all major features** of Projects Plus. Open it as a vault in Obsidian to explore every view, widget, formula, and data source capability.
+[Русское руководство](../docs/user-guide.md) · [English guide](../docs/user-guide-EN.md)
 
-## Setup
+This folder is a sample vault with fictional project, team, and client notes. It is separate from the demo created by the plugin's **Create demo project** command. Use a copy of this folder to explore without changing the repository's examples.
 
-1. Copy `main.js`, `main.css`, `styles.css`, `manifest.json` from the project root into `demo-vault/.obsidian/plugins/obs-projects-plus/`
-2. Open `demo-vault` as an Obsidian vault
-3. Enable "OBS Projects Plus" in Settings → Community Plugins
-4. `Ctrl/Cmd+P` → "Projects Plus: Create Project" → select `Projects/` folder
+Это отдельное демонстрационное хранилище с вымышленными проектами, участниками команды и клиентами. Оно отличается от демо, создаваемого командой плагина. Для экспериментов скопируйте папку целиком, включая скрытую `.obsidian`.
 
-## Structure
+## Open the demo
 
-| Folder | Purpose | Notes |
-|--------|---------|-------|
-| `Projects/` | Primary data source (folder) | 22 task/project notes |
-| `Team/` | Relation targets (v5.0 cross-source) | 4 team member notes — declared as `relation` field in fieldConfig |
-| `Clients/` | Multi-source merge demo | 4 client notes — add as additional data source |
+1. Copy this entire directory, including `.obsidian`, to a location for your demo vault.
+2. Download `main.js`, `manifest.json`, and `styles.css` from the same [plugin release](https://github.com/ParkPavel/obs-projects-plus/releases).
+3. Put those three files in the copy's `.obsidian/plugins/obs-projects-plus/` directory. Keep the supplied `data.json`.
+4. Open the copied folder as a vault in Obsidian and enable **OBS Projects Plus** in Community plugins settings.
+5. Run **Show projects plus** from the command palette and select **Demo Project**.
 
-## What's Pre-Configured (v5.0)
+The saved configuration includes **Demo Project** and **Team Members**. You do not need to create duplicate projects. Older saved view settings are migrated when loaded by the current plugin. If you copied only the notes and omitted `.obsidian`, create a folder project for `Projects` manually; the prepared views will not be present.
 
-The `data.json` ships with:
+Скопируйте в папку плагина три файла одного релиза, сохраните готовый `data.json`, откройте копию как хранилище и включите плагин. Затем выберите **Demo Project**. Создавать его повторно не нужно. Если скрытая папка `.obsidian` не была скопирована, настройте проект по папке `Projects` самостоятельно.
 
-- **Two projects**: "Demo Project" (Projects/) and "Team Members" (Team/)
-- **Cross-source relations**: `assignee` and `reviewer` fields declared as `relation` pointing to Team Members
-- **Field types**: `status` with color groups, `priority` as select with colors
-- **Database view**: pre-wired with Filter-Tabs (by status), Stats overview (4 KPI cards), and Data Table
-- **Formula fields**: `Budget Utilization` (`ROUND(spent / budget * 100, 1)`) and `Days Remaining` (`DATE_BETWEEN(TODAY(), due, "day")`)
-- **Aggregation row**: budget SUM, spent SUM, progress AVG, hours SUM
+## Data you can explore
 
-## Feature Coverage
+| Folder | Contents | Use |
+| --- | --- | --- |
+| [Projects](Projects/) | Task, meeting, and project notes | Main data source |
+| [Team](Team/) | Team member notes | Targets for `assignee` and `reviewer` links |
+| [Clients](Clients/) | Client notes | An additional source to try |
 
-### Frontmatter Fields Demonstrated
+The supplied configuration contains status filter tabs, summary cards, a data table, and relation targets. Notes include dates, statuses, priorities, numeric metrics, and wiki-links. Dates are fixed example data: a calendar opened on today's date may initially show no events. Navigate to a date found in one of the notes.
 
-| Field | Type | Where Used | Plugin Feature |
-|-------|------|------------|----------------|
-| `status` | text (todo/in-progress/done/blocked) | All notes | Board grouping, filters |
-| `priority` | text (critical/high/medium/low) | All notes | Conditional formatting, sorting |
-| `startDate` / `endDate` | date | Multi-day tasks | Calendar multi-day bars |
-| `startTime` / `endTime` | time | Meetings | Calendar timeline slots |
-| `date` | date | All notes | Calendar fallback, creation date |
-| `due` | date | Deadlines | Filter: is-overdue, is-upcoming |
-| `color` | hex color | Selected notes | Calendar color coding |
-| `assignee` | `[[wiki-link]]` | All notes | **Relation field** → Team/ notes |
-| `reviewer` | `[[wiki-link]]` | Some notes | Second relation field |
-| `tags` | list | All notes | Tag grouping, filter-tabs |
-| `category` | text | All notes | Filter tabs, board grouping |
-| `type` | text | All notes | Chart grouping |
-| `progress` | number (0–100) | Tracked tasks | Progress chart, conditional format |
-| `budget` | number | Financial tasks | SUM, AVG, financial formulas |
-| `spent` | number | Financial tasks | Comparison widget, formulas |
-| `hours` | number | Time-tracked tasks | Duration formulas, stats |
-| `completed` | boolean | Checklist tasks | Checklist widget |
-| `sprint` | text | Sprint tasks | Stacked bar grouping |
-| `risk` | text (low/medium/high) | Some tasks | Scatter chart dimension |
-| `score` | number | Rated items | Statistical formulas |
+Даты в примерах фиксированные. Если календарь пуст на сегодняшней дате, откройте заметку и перейдите к дате из её `startDate`.
 
-### Views to Configure
+## A short walkthrough
 
-| View | Configuration | What It Shows |
-|------|---------------|---------------|
-| **Table** | Sort by priority, filter status≠done | Sorting, filtering, cell navigation |
-| **Board** | Group by `status` | Kanban, column persist, drag cards |
-| **Calendar** | Date=`startDate`, End=`endDate`, Time=`startTime`/`endTime`, Color=`color` | Timeline, multi-day bars, time slots, color coding |
-| **Gallery** | Title + priority + assignee | Card browsing |
-| **Database View** | See widget setup below | Full widget dashboard |
+### 1. Inspect a record
 
-### Database View Widgets to Add
+Open a note in `Projects`, then find it in **Demo Project**. Compare its YAML properties with the displayed row. Change a writable property such as `status`, reopen the Markdown file, and check the stored value.
 
-| Widget | Configuration | Demonstrates |
-|--------|---------------|--------------|
-| **Data Table** | All fields, group by category | Conditional formatting, relations, sorting |
-| **Chart (Bar)** | X=assignee, Y=count | Bar chart |
-| **Chart (Pie)** | X=status | Pie/donut distribution |
-| **Chart (Scatter)** | X=budget, Y=progress, Color=priority | Scatter plot with trend line |
-| **Chart (Stacked Bar)** | X=sprint, Stack=status | Stacked bar |
-| **Chart (Line)** | X=date, Y=progress | Timeline trend |
-| **Stats** | budget: SUM, AVG, MAX; progress: AVG, MEDIAN | KPI cards |
-| **Comparison** | budget vs spent | Side-by-side metric bars |
-| **Checklist** | Field=completed | Boolean toggle list |
-| **Filter Tabs** | Field=category | Quick category filter |
-| **Summary Row** | count, sum(budget), avg(progress) | Aggregation bar |
+### 2. Try a board and calendar
 
-### Formula Examples to Try
+Add a Board view grouped by `status`. Move a card between columns and inspect the note's status afterward.
 
-```
-# Financial
-PMT(0.05/12, 360, -budget)         → monthly payment
-NPV(0.1, budget, spent)            → net present value
-IRR([-budget, spent, spent])        → internal rate of return
+Add a Calendar view and map start/end dates to `startDate` and `endDate`, times to `startTime` and `endTime`, and color to `color`. Navigate to one of the sample event dates. Explicit field mappings make it easier to see why a note appears on a particular day.
 
-# Statistical
-VARIANCE(@score)                    → variance across all scores
-PERCENTILE(@progress, 0.75)         → 75th percentile of progress
-CORREL(@budget, @progress)          → budget-progress correlation
+### 3. Follow a relation
 
-# Date
-DATE_BETWEEN(endDate, startDate)    → duration in days
-FORMAT_DATE(due, "MMM DD")          → formatted date
-WORKDAYS(startDate, endDate)        → business days only
+Inspect an `assignee` or `reviewer` link and open the corresponding note in `Team`. The supplied relation settings point to **Team Members**. If a link is unresolved, check its spelling and whether that project is available.
 
-# Conditional
-IF(progress > 80, "✅", IF(progress > 50, "🔶", "🔴"))
-SWITCH(priority, "critical", 4, "high", 3, "medium", 2, 1)
+### 4. Add an overview block
 
-# Aggregation
-SUM(@budget)                        → total budget
-COUNTIF(@status, "done")            → completed count
-AVERAGEIF(@progress, ">50")         → avg progress of advanced tasks
+On Dashboard, add a chart or summary block and select the data source. Start with a count by `status` or a sum of `budget`; compare the result with a few source records. Filters affect the records included in the result.
 
-# String
-REGEX_MATCH(tags, "bug|fix")        → find bug-related
-JOIN(@assignee, ", ")               → all assignees as string
-```
+### 5. Combine sources
 
-### Multi-Source Merge Demo
+In **Demo Project** settings, add `Clients` as another folder source. Client notes have different properties from task notes, so some columns will be empty. Remove the additional source to return to the original selection; the client files remain in the vault.
 
-1. Create a project with `Projects/` as primary source
-2. Add `Clients/` as additional source (Settings → Additional Sources)
-3. See merged data from both folders in a single view
+## Keep the experiment reproducible
 
-### Filter Operators to Test
+Record the plugin version you installed. To restart, make another copy of this demo directory and install the same release. Replacing only notes does not reset saved filters, views, or layout in `data.json`.
 
-- `is-today` — notes with today's date
-- `is-overdue` — notes with `due` before today
-- `is-upcoming` — notes with `due` in the future
-- `is-this-week` / `is-this-month` / `is-this-quarter`
-- `contains` / `not-contains` — text search
-- `has-any-of` / `has-all-of` — tag/list matching
+Для полного сброса эксперимента создайте свежую копию этой папки и установите тот же релиз. Замена одних заметок не сбрасывает фильтры и расположение блоков в `data.json`.
 
----
-
-## Attribution
-
-Projects Plus is a fork of [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) by Marcus Olsson.  
-Current maintainer: **Park Pavel** • [Telegram](https://t.me/parkpavel_chigon) • [GitHub](https://github.com/ParkPavel/obs-projects-plus)  
-License: [Apache 2.0](../LICENSE)
+[Report a problem](https://github.com/ParkPavel/obs-projects-plus/issues) · [License](../LICENSE)
