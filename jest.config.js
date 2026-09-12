@@ -21,8 +21,10 @@ module.exports = {
     "^obsidian-svelte$": "<rootDir>/src/__mocks__/obsidian-svelte.js",
   },
   testMatch: [
-    "<rootDir>/src/**/__tests__/**/*.(test|spec).(ts|js)",
-    "<rootDir>/src/**/*.(test|spec).(ts|js)"
+    // roots already bounds discovery to this project's src. Avoid interpolating
+    // Windows backslashes before hidden workspace directories into a glob.
+    "**/src/**/__tests__/**/*.(test|spec).(ts|js)",
+    "**/src/**/*.(test|spec).(ts|js)"
   ],
   collectCoverageFrom: [
     "src/**/*.{ts,js}",

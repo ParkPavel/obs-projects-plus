@@ -15,3 +15,16 @@ are retired. Existing Git worktrees and private configuration backups are retain
 Future releases should link to Claudex for setup rather than reintroducing copied agent
 configuration. Global provider authentication is user-owned and is not part of the public
 package. See [the current development protocol](internal/TWO_MODEL_PROTOCOL.md).
+
+## Checks and publication
+
+Run project checks through Claudex to keep logs, Jest JSON and source identity together in
+private per-run artifacts. The old root `test-results.json` described an April run and is
+retired from tracking. Tracked `main.js`, `styles.css` and versioned release bundles remain
+intentional installation artifacts under the existing bundle policy.
+
+Product CI checks pull requests with read-only repository permissions. It does not commit
+beta metadata or push directly to `main`. Versioned release publication remains in the tag
+workflow. Local publication guards are supplied by the sibling Claudex installation with
+an explicit reviewed public baseline; see its product guard adoption guide. GitHub requires
+the product `build` check and a pull request before integration.

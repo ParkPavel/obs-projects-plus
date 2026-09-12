@@ -44,6 +44,7 @@ _git_log.txt
 failures.txt
 ts_errors.txt
 lint_output*.txt
+test-results.json
 /RELEASE_NOTES.md
 
 # Recovery bundles
