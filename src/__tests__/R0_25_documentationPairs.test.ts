@@ -26,8 +26,13 @@ import { resolve } from "path";
 
 const ROOT = resolve(__dirname, "..", "..");
 
-/** Pages whose two languages live in one file. */
-const BILINGUAL = ["docs/README.md", "docs/ERROR_CODES.md"];
+/**
+ * Pages whose two languages live in one file: the index and the error-code table,
+ * whose English text is copied from the code, and the two short vault-side pages
+ * a reader meets inside Obsidian, where a second file is a worse answer than two
+ * paragraphs on one screen.
+ */
+const BILINGUAL = ["docs/README.md", "docs/ERROR_CODES.md", "demo-vault/README.md", "templates/README.md"];
 
 /** Pairs, written as they are on disk: [base, twin]. */
 const PAIRS: readonly [string, string][] = [
@@ -39,8 +44,6 @@ const PAIRS: readonly [string, string][] = [
   ["docs/architecture.md", "docs/architecture-EN.md"],
   ["docs/api.md", "docs/api-RU.md"],
   ["docs/CODE_STANDARDS.md", "docs/CODE_STANDARDS-RU.md"],
-  ["demo-vault/README.md", "demo-vault/README-RU.md"],
-  ["templates/README.md", "templates/README-EN.md"],
   ["obsidian-projects-types/README.md", "obsidian-projects-types/README-RU.md"],
 ];
 

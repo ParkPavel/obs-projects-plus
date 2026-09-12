@@ -1,685 +1,168 @@
-# 📖 Projects Plus User Guide
+# Projects Plus user guide
 
-> [Русский](user-guide.md) · English
+[Русский](user-guide.md) · [Documentation](README.md) · [Installation and first project](../README-EN.md)
 
-Welcome to Projects Plus! This comprehensive guide will help you get the most out of your project management experience in Obsidian.
+This guide describes the current source code. Some labels may differ in older builds; check the installed plugin version in its settings.
 
-## 🚀 Getting Started
+## Understanding your data
 
-### First Steps
+A **note** is a Markdown file in your vault. A **field** is a note property, such as `status` or `startDate`. A **project** selects a set of notes through a data source. A **view** determines how that set is displayed. One project can have several views, and one note can belong to several projects.
 
-1. **Enable the Plugin**
-   - Go to Settings → Community plugins
-   - Enable "Projects Plus"
-   - The plugin will appear in your ribbon bar
+Editing a writable field updates the original file. Filters, block layout, and view settings are stored separately in `.obsidian/plugins/obs-projects-plus/data.json`. Include this file alongside your notes when backing up or moving a vault.
 
-2. **Open Projects Plus**
-   - Click the Projects Plus icon in the ribbon
-   - Or use `Ctrl+P` → "Projects Plus: Show projects plus"
+Calculated fields and query results are not always writable. If you cannot edit a field, check its type and source; a displayed calculation is not necessarily a separate property in the Markdown file.
 
-3. **Create Your First Project**
-   - Click the "+" button
-   - Choose your project type
-   - Configure settings
-   - Start organizing!
+## Creating and configuring a project
 
----
+Open the Obsidian command palette and choose **Create new project plus**. Enter a name and select a source. Folder paths are relative to the vault root, for example `Projects/Work`.
 
-## ⌨️ Keyboard Shortcuts & Gestures
+| Source | When to use it | What to configure |
+| --- | --- | --- |
+| Folder | Records are stored together | Path and whether to include subfolders |
+| Tag | Records are in different folders | Tag and whether to include its hierarchy |
+| Query (filter) | You need filtering without another plugin | Source folder or tag, then filter conditions |
+| Dataview | You need a Dataview query | The enabled Dataview plugin and query text |
 
-### 🖥️ Desktop (Windows/Linux/Mac)
+Build a native query using the dialog fields: for example, source `Projects`, field `status`, equality operator, and value `todo`. With multiple conditions, choose whether all conditions or any condition must match.
 
-#### General Shortcuts
+For Dataview, enter a complete query, including its type. For example:
 
-> The plugin **does not assign global hotkeys** by default. All keys below work when focus is inside the corresponding view.
-
-**Obsidian Commands** (available via `Ctrl/Cmd+P`, hotkeys can be assigned in Settings → Hotkeys):
-
-| Command | ID |
-|---------|-----|
-| Show Projects Plus | `show-projects` |
-| Create Project | `create-project` |
-| Create Note | `create-note` |
-
-#### Calendar
-
-| Action | Keys / Gesture |
-|--------|----------------|
-| **Zoom In** | `Ctrl` + scroll up / `+` / `Ctrl+→` |
-| **Zoom Out** | `Ctrl` + scroll down / `-` / `Ctrl+←` |
-| **Go to Today** | `T` key or "Today" button |
-| **Next Period** | `→` / scroll down |
-| **Previous Period** | `←` / scroll up |
-| **Back in History** | `Backspace` |
-| **Open Note** | Click on event |
-| **Open in New Window** | `Ctrl+Click` (Win/Linux) / `Cmd+Click` (Mac) |
-| **Create Note** | Double-click on empty cell |
-| **Scroll events inside cell** | `Shift` + scroll (in headers mode) |
-
-#### Event Dragging (Drag & Drop 2.0, v3.2.0+)
-
-| Action | Method |
-|--------|--------|
-| **Move event to another day** | Grab EventBar → drag to target day (Week/Day view) |
-| **Move event to another time** | Grab EventBar → drag up/down on timeline |
-| **Resize duration** | Hover over left/right edge of strip → grab → drag |
-| **Snap to 15-min interval** | Automatic when dragging timed events |
-| **Visual feedback** | Drop target highlights with accent color on hover |
-
-> **Note:** DnD works only in **Week** and **Day** modes (timeline views). In Month and Year modes, use EditNote to reschedule events.
-
-#### Calendar Zoom Levels
-
-When using Zoom (`Ctrl+scroll` / `+` / `-` / `Ctrl+←→`):
-1. **Year** — annual overview
-2. **Month** — full month overview
-3. **2 Weeks** — intermediate view
-4. **Week** — detailed weekly plan
-5. **Day** — single day timeline (07:00–22:00)
-
-#### Table View
-
-| Action | Keys |
-|--------|------|
-| **Edit Cell** | `Enter` or double-click |
-| **Exit Editing** | `Escape` |
-| **Navigate** | `←` `→` `↑` `↓` (arrows) |
-| **Next Cell** | `Tab` |
-| **Previous Cell** | `Shift+Tab` |
-| **Copy** | `Ctrl+C` / `Cmd+C` |
-| **Cut** | `Ctrl+X` / `Cmd+X` |
-| **Paste** | `Ctrl+V` / `Cmd+V` |
-
-#### Board View
-
-| Action | Method |
-|--------|--------|
-| **Drag Card** | Grab grip icon (⠿) → drag to target position |
-| **Drag Column** | Grab grip icon (⠿) in column header → drag |
-| **Open Note** | Click on card |
-| **Open in New Window** | `Ctrl+Click` on card |
-| **Change Status** | Drag card to another column |
-
----
-
-### 📱 Mobile Gestures (iOS/Android)
-
-#### Calendar
-
-| Gesture | Action |
-|---------|--------|
-| **Single tap** on day cell | Open DayPopup with events |
-| **Double tap** on day cell | Create new note |
-| **Swipe left** | Next period (month/week) |
-| **Swipe right** | Previous period |
-| **Pinch in** | Zoom Out |
-| **Pinch out** | Zoom In |
-| **Tap on event** | Open note |
-
-#### Calendar — Drag & Drop (v3.2.0+)
-
-| Gesture | Action |
-|---------|--------|
-| **Long press (500ms)** on EventBar | Activate drag mode |
-| **Drag** after activation | Move event to another day / time |
-| **Long press on strip edge** | Activate resize (change duration) |
-| **Drag edge** | Shrink / extend event across days |
-
-> On long press the device provides **haptic feedback** (vibration). A short vibration also occurs on each 15-minute snap.
-
-#### DayPopup (Full-screen Day Overview)
-
-| Gesture | Action |
-|---------|--------|
-| **Tap on note** | Open note |
-| **Tap on checkbox** | Toggle task status |
-| **Tap on ⚙️** | Open edit modal |
-| **Tap on 📋** | Duplicate note to other dates |
-| **Tap on 🗑️** | Delete note |
-| **Scroll up/down** | Scroll events list |
-| **Tap outside popup** | Close DayPopup |
-
-#### Board (v3.0.10+)
-
-| Gesture | Action |
-|---------|--------|
-| **Tap on card** | Open note edit modal |
-| **Long press (500ms)** | Context menu: open / new tab / new window |
-| **Long press on grip (⠿)** | Activate card/column DnD |
-| **Pinch (two fingers)** | Board zoom (25%–200%) |
-| **Horizontal scroll** | Browse between columns |
-
-#### Table (v3.0.10+)
-
-| Gesture | Action |
-|---------|--------|
-| **Tap on row number** | Open note edit modal |
-| **Long press (500ms)** | Navigation context menu |
-
-#### Gallery (v3.0.10+)
-
-| Gesture | Action |
-|---------|--------|
-| **Tap on card** | Open note edit modal |
-| **Long press on cover** | Navigation context menu |
-| **Scroll** | Browse gallery |
-
-#### Agenda — Lists (v3.1.0+)
-
-| Gesture | Action |
-|---------|--------|
-| **Long press on grip (⠿)** | Activate list DnD |
-| **Long press on list header** | Context menu with "Move up/down" |
-| **Scroll** | Free scrolling (scroll does not conflict with DnD) |
-
-#### ViewSwitcher: View Switching (v3.1.0+)
-
-| Gesture | Action |
-|---------|--------|
-| **Tap on tab** | Switch to view + scroll tab to center |
-| **Horizontal scroll** | Scroll the tab bar (native `pan-x`) |
-
-> **Misclick prevention (v3.2.1+):** If the finger moves more than 8px, the tap on the tab is blocked. You can freely scroll the view bar to find the right tab, then tap it to select. `touchcancel` handling ensures correct behavior even during native scrolling.
-
----
-
-## 📱 Mobile Version (v2.2.0+)
-
-### Mobile Interface Features
-
-- **Larger day cells** — 100% taller for easier touch
-- **Floating buttons** — semi-transparent, minimalist
-- **Floating "Today" button** — appears when toolbar is hidden
-- **iOS Safe Area** — respects notch/Dynamic Island (v3.1.0+)
-
-### Note Navigation (v3.0.10+)
-
-On mobile devices, long-press (500ms) provides navigation:
-- **Board, Table, Gallery**: long-press → context menu with open options
-- **EditNote**: "Open note" button → dropdown with 3 modes (current tab / new tab / new window)
-
-### Agenda Mobile Adaptation (v3.1.0+)
-
-- **Drag-and-drop via grip** — list reordering only through grip icon (⠿), no conflict with scrolling
-- **List reordering** — also via context menu "Move up/down"
-- **Modal windows** — rendered as full-width bottom sheets
-- **Scroll isolation** — scroll within modals doesn't chain to Obsidian
-### Mobile Popovers & Keyboard (v3.2.0+)
-
-Field, operator, and value selection popovers are adapted for the virtual keyboard:
-- **Positioned above keyboard** — popover opens above the trigger element, within the visible screen area
-- **Smooth reveal** — popover is invisible until the keyboard animation finishes, then appears at the correct position
-- **Reversed layout** — search bar at bottom (near trigger), field list scrolls upward
-- **Full-width mode** — popover stretches to screen width for easier touch targets
-- **Build-resilient (v3.2.1+)** — mobile popover CSS is stored in Svelte components via `:global()`, not in static `styles.css`. Styles compile into `main.js` and are not lost during updates
-
-### Mobile Agenda: Date Selection (v3.2.1+)
-
-- **Custom date selection** — tapping a day in the mini-calendar switches Agenda to that day
-- **Calendar navigation** — switching months only resets the selected date when the `currentDate` prop changes (navigation from the main calendar), not when the user makes a manual selection
-### 🔀 Drag & Drop — Unified System (v3.1.0 / v3.2.0)
-
-Since v3.1.0, all drag operations in Projects Plus use **grip icons** (⠿) — small dot indicators visible on hover (desktop) or always visible (mobile). This guarantees that scrolling and DnD never conflict.
-
-#### 🖥️ Desktop — How to Use DnD
-
-**Board:**
-1. Hover over a card or column header — the grip (⠿) appears
-2. Grab the grip and drag the card to the desired position / column
-
-**Agenda (calendar sidebar):**
-1. Hover over a list header — the grip (⠿) appears
-2. Grab the grip and drag the list up/down
-
-**Calendar Timeline (v3.2.0+):**
-1. Switch to **Week** or **Day** mode (timeline with time axis)
-2. Grab an EventBar (colored event strip) and drag:
-   - **Up/down** → change time (snaps to 15-min intervals)
-   - **Left/right** → move to another day (in Week mode)
-3. To resize: hover over the **left or right edge** of a multi-day strip → a resize marker appears → drag to adjust
-
-#### 📱 Mobile — How to Use DnD
-
-**Board and Agenda:**
-1. **Long press (500ms)** on the grip icon (⠿) — the device vibrates
-2. Without releasing, drag the element to the desired position
-3. Release to complete
-
-**Calendar Timeline (v3.2.0+):**
-1. Switch to **Week** or **Day** mode
-2. **Long press (500ms)** on an EventBar — the device vibrates, the bar lifts and becomes semi-transparent
-3. Without releasing, drag:
-   - **Up/down** → change time (vibration on each 15-min snap)
-   - **Left/right** → move to another day
-4. To resize: **long press on the strip edge** → drag to change duration
-5. Release — the event saves to the new position
-
-> **Important:** Mobile DnD works **only via grip** (Board/Agenda) or **long press** (Calendar). A simple tap always opens the event, never drags it — accidental drags are eliminated.
-
-### Board: Pinch-to-Zoom (v3.0.10+)
-
-Two-finger pinch gesture for board zoom:
-- Range: 25% — 200%
-- Safari GestureEvent support
-- Works alongside Ctrl+Scroll on desktop
-
-### Gallery: Responsive Grid (v3.0.10+)
-
-- Card width automatically capped at 200px on mobile
-- Touch feedback via `:active` states on tap
-
-### DayPopup — Day Overview
-
-Single tap on a day cell opens full-screen popup:
-
-| Element | Action |
-|---------|--------|
-| ✅ **Checkbox** | Toggle note status (done/not done) |
-| ⚙️ **Gear** | Open field editing modal |
-| 📋 **Duplicate** | Copy note to selected dates |
-| 🗑️ **Delete** | Delete note |
-
-### Duplicating Notes
-
-1. Tap the "Duplicate" button next to a note
-2. A mini-calendar will open
-3. Select one or more dates (by tapping)
-4. Click "Duplicate"
-
-The note will be copied to all selected dates with all fields preserved.
-
-### Hiding the Toolbar
-
-- Tap the collapse button in the toolbar (up arrow)
-- The toolbar will fully hide
-- Floating buttons appear in the top-left corner
-- On mobile, a floating "Today" button appears
-
-## 📊 View Types
-
-A project can use four views: **Dashboard**, **Board**, **Calendar** and **Gallery**. A table is
-no longer a separate view — it lives as a data block inside a Dashboard (see below).
-
-### 📋 Table (a Dashboard block)
-Good for projects whose notes carry many fields and are best read as rows and columns.
-
-**How to open it:** add a Dashboard view to the project, place a data block on it, then choose the
-Table mode.
-
-**Features:**
-- Sorting and filtering by column
-- Editing a value straight in the cell — the plugin writes it to the note's frontmatter
-- Hiding and reordering columns
-- Column totals: sum, average, count, minimum, maximum
-- Formula columns (115 functions) with a visual builder
-- Right-click context menus for a column, a row and a cell
-
-**Best for:**
-- Research projects
-- Content calendars
-- Task management
-- Data analysis
-
-### 📌 Board View
-Kanban-style interface for workflow management.
-
-**Features:**
-- Drag and drop cards
-- Custom columns
-- Card filtering
-- Progress tracking
-
-**Best for:**
-- Agile development
-- Content creation
-- Task workflows
-- Project phases
-
-### 📅 Calendar View
-Timeline-based project visualization.
-
-**Features:**
-- Monthly/weekly views
-- Date-based filtering
-- Timeline visualization
-- Deadline tracking
-
-**Best for:**
-- Event planning
-- Content scheduling
-- Deadline management
-- Time-based projects
-
-#### Calendar Date Fields
-
-The calendar uses three types of date fields:
-
-| Field | Purpose | Affects position |
-|-------|---------|:----------------:|
-| `startDate` | Event start — determines which day the event appears on the calendar | ✅ |
-| `endDate` | Event end — for multi-day events (displayed as a bar) | ✅ |
-| `date` | Note creation date — auto-filled when creating a note | ❌ |
-
-> **Important:** The `date` field is the note creation date, **not** the event start date. It is auto-filled when a note is created via the calendar and does not affect event positioning. Use `startDate` to position events on the calendar.
-
-### 🖼️ Gallery View
-Visual card-based project browsing.
-
-**Features:**
-- Image previews
-- Card layouts
-- Visual filtering
-- Quick navigation
-
-**Best for:**
-- Design projects
-- Media libraries
-- Visual content
-- Portfolio management
-
-### 🗄️ Dashboard
-One screen composed of blocks. Each block shows its own records and can be linked to the others.
-
-**Features:**
-- Data block: a table, board, calendar or gallery with its own source
-- Linked blocks: pick a record in one block and the others show only what relates to it
-- Selecting several records acts as a filter
-- Charts, counters and column totals
-- Formula fields with a visual builder
-- The same filter panel as in the other views
-
-**Best for:**
-- Project management with analytics
-- Tracking metrics and KPIs
-- Complex filtering and grouping
-- Working with several related projects on one screen
-
-**If you have a saved Database view:** it opens as a Dashboard, and the column setup and sorting
-carry over automatically.
-
-## 🔧 Project Types
-
-### 📁 Folder-based Projects
-
-Create projects from existing folders in your vault.
-
-**Setup:**
-1. Right-click any folder in File Explorer
-2. Select "Create project in folder"
-3. Configure project settings
-4. Start organizing!
-
-**Configuration:**
-- **Path**: Folder location
-- **Recursive**: Include subfolders
-- **Templates**: Default note template
-- **Exclusions**: Files to ignore
-
-### 🏷️ Tag-based Projects
-
-Organize projects using Obsidian tags.
-
-**Setup:**
-1. Create a new project
-2. Select "Tag" as data source
-3. Enter your tag (e.g., `#project/my-project`)
-4. Configure hierarchy settings
-
-**Features:**
-- Hierarchical tags support
-- Automatic note detection
-- Tag-based filtering
-- Dynamic updates
-
-### 🔍 Dataview Projects
-
-Use Dataview queries for complex project filtering.
-
-**Setup:**
-1. Create a new project
-2. Select "Dataview" as data source
-3. Enter your query
-4. Test and refine
-
-**Example Queries:**
 ```dataview
-FROM "Projects/MyProject"
-WHERE status != "completed"
-SORT file.ctime DESC
+TABLE status, startDate
+FROM "Projects"
+WHERE status != "done"
+SORT startDate ASC
 ```
 
-## ⚙️ Configuration
+Project settings also let you add sources: folders, tags, or Dataview queries. This combines several note collections in one overview. A native query is available as the primary source; nested queries are not offered as additional sources.
 
-### General Settings
+Also check the new-note folder, templates, default name, and excluded files. These matter especially for tag and query projects: selecting existing records and deciding where new notes are created are separate settings.
 
-| Setting | Description | Recommendation |
-|---------|-------------|----------------|
-| **Project Size Limit** | Max notes to load | 1000 (default) |
-| **Link Behavior** | Click behavior | "Open note" |
-| **Start Week On** | Calendar start | "Monday" |
+## Creating and editing records
 
-### Advanced Settings
+Use the project's create-note action or **Create new note plus**. Check the selected project in the dialog, enter a name, and choose a template if needed. In the calendar, double-clicking an empty cell can create a note.
 
-#### Front Matter Configuration
-- **Quote Strings**: When to use quotes in YAML
-- **Date Format**: Custom date formatting
-- **Boolean Values**: true/false vs yes/no
+These properties are enough to begin:
 
-#### Template Management
-- **Default Template**: Global template for new notes
-- **Project Templates**: Per-project templates
-- **Template Variables**: Dynamic content insertion
+```yaml
+---
+title: Prepare meeting
+status: todo
+priority: high
+startDate: 2026-09-15
+endDate: 2026-09-15
+startTime: "09:00"
+endTime: "10:00"
+completed: false
+color: "#2196F3"
+tags:
+  - work
+---
+```
 
-## 📝 Templates
+Write dates as `YYYY-MM-DD` and times as `HH:mm`. Quoting times and colors helps preserve them as YAML strings. You choose the field names; map them in view settings afterward.
 
-### Basic Template Structure
+Open a record through its name or card. The **Link behavior** setting determines whether a normal click opens the property editor or the note. After editing, you can open the source file to inspect the stored value. If the plugin reports a write error, do not assume the change was saved.
+
+## Views
+
+### Dashboard and tables
+
+A Dashboard is a workspace made of blocks. Start with one data block: select its source and display mode, such as a table. Add charts, metrics, and other blocks as you need them.
+
+In a table you can edit writable cells, choose columns, sort, and filter records. The schema configures field types, including text, number, checkbox, status, list, formula, and relation. Older saved Table and Database views are converted to Dashboard on load; they are not separate new installation modes.
+
+Each block can have its own source and filters. If two blocks show different records, compare those settings first. To link blocks, configure a dependency on a selected record: selecting a client in one block can then limit another block's data. Placing blocks next to each other does not create a link.
+
+### Board
+
+Choose a grouping field such as `status`. Its values become columns. Dragging a card into another column changes the grouping field in the note, provided the record is writable.
+
+Use the grip icon to move cards and columns. Persistent columns keep workflow stages visible even when empty. Use consistent values for a shared process: `todo`, `doing`, and `done` are easier to maintain than several spellings of the same status.
+
+### Calendar and Agenda
+
+Explicitly select event start and end fields in calendar settings. For the example above, use `startDate` and `endDate`; map the time fields to `startTime` and `endTime`, and color to `color`.
+
+When a start field is not configured or is absent, the calendar tries common fields, including `startDate` and `date`, then a date in the filename. Therefore, `date` **can affect event placement**. For predictable results, configure the start field explicitly and fill it in every relevant note.
+
+Switch between year-to-day scales. In week and day modes, timed events appear on a timeline; dragging changes their date or time, and resizing a bar changes its duration. In other modes, edit dates through record properties. Use **Today** to return to the current date.
+
+Agenda is a sidebar with event lists. You can select a day and configure filters for individual lists. If an event appears in the calendar but not in Agenda, check the selected date and the list's filter.
+
+### Gallery
+
+Gallery displays records as cards. Choose a cover field and the properties to show on each card. If an image is missing, check the field value and whether the image file is available. A card's title opens its record according to the link behavior setting.
+
+## Filters, formulas, and relations
+
+A filter limits displayed records; it does not delete notes. Conditions can be combined using “all” or “any.” Project, view, and block filters act at different levels: clearing one filter does not necessarily clear the others.
+
+Formulas calculate values from fields. Begin with a small expression over numeric fields, such as `budget - spent`. Check the result against a known record before using it in summary statistics. The built-in editor helps you choose fields and functions; valid operations depend on data types.
+
+A relation points to notes in another project. For example, a YAML link can look like this:
+
+```yaml
+assignee: "[[Team/Alice Chen]]"
+```
+
+Configure the target project for the relation field. If several notes share a filename, include the folder in the link. A missing or ambiguous link needs its address corrected; it does not mean a target record was created automatically. After configuring the relation, a rollup can calculate a summary over related records.
+
+## Note templates
+
+### Built-in templates
+
+Create a normal Markdown template file and add it to the project's template list. Select it when creating a note. Template content supports `{{title}}`, `{{date}}`, and `{{time}}`; dates and times accept a format, such as `{{date:YYYY-MM-DD}}`.
 
 ```markdown
 ---
-title: "{{title}}"
-status: "draft"
-startDate: {{date}}
-date: {{date}}
-project: "{{project}}
+status: todo
+startDate: {{date:YYYY-MM-DD}}
 ---
 
 # {{title}}
 
-## Overview
-<!-- Add your project overview here -->
+## Work to do
 
-## Tasks
-- [ ] Task 1
-- [ ] Task 2
-- [ ] Task 3
-
-## Notes
-<!-- Add your notes here -->
-
-## Resources
-<!-- Add links and resources here -->
+## Result
 ```
 
-### Advanced Template Features
+The default note-name setting supports date and time, for example `{{date:YYYY-MM-DD}} Task`. Variables such as `{{project}}` and `{{author}}`, and conditional blocks such as `{{#if ...}}`, are not features of the built-in processor.
 
-#### Dynamic Variables
-- `{{title}}` - Note title
-- `{{date}}` - Current date
-- `{{time}}` - Current time
-- `{{project}}` - Project name
-- `{{author}}` - Your name
+### Templater
 
-#### Conditional Content
-```markdown
-{{#if status}}
-Status: {{status}}
-{{/if}}
+Files in the [templates folder](../templates/README.md) use Templater syntax (`<% ... %>`) and require the separately enabled Templater plugin. Create the note using its command and place the result in the project's folder. Projects Plus's built-in substitution does not execute Templater code.
 
-{{#unless completed}}
-This task is not completed yet.
-{{/unless}}
-```
+## Keyboard and touch
 
-## 🔄 Workflows
+Assign global command shortcuts in Obsidian's Hotkeys settings. The plugin does not assign them by default. Command names follow the interface language.
 
-### Content Creation Workflow
+| Calendar action | Keys while the calendar has focus |
+| --- | --- |
+| Previous / next period | `←` / `→` |
+| Return to today | `T` |
+| Zoom in / out | `+` / `-` |
+| Change zoom | `Ctrl` or `Cmd` + `←` / `→` |
+| Return to the previous position | `Backspace` |
+| Close the day overview | `Escape` |
 
-1. **Planning Phase**
-   - Create project in Calendar view
-   - Set up content calendar
-   - Define milestones
+These shortcuts are not intercepted while typing into a field. On touch screens, the calendar supports swiping between periods and a two-finger zoom gesture. To drag on the board, long-press the grip icon; use ordinary scrolling to browse. Individual gestures depend on the platform and view mode.
 
-2. **Creation Phase**
-   - Use Board view for content stages
-   - Track progress with cards
-   - Manage drafts and reviews
+## Settings and troubleshooting
 
-3. **Publishing Phase**
-   - Move to Table view for final review
-   - Check metadata and tags
-   - Schedule publication
+Plugin settings include the project size limit, link behavior, first day of the week, and property-writing preferences. Configure individual sources and views inside their project.
 
-### Research Workflow
+| Symptom | What to check |
+| --- | --- |
+| A note is missing | Source path, subfolders, tag, exclusions, and every filter level |
+| Only some records are loaded | Project size limit |
+| An event appears on the wrong date | Start field, stored date, and calendar timezone |
+| Dataview is unavailable | Whether it is installed and enabled in this vault |
+| A field cannot be edited | Field type, calculated value, and source write capability |
+| `<% ... %>` remains in a note | Whether the template was processed by Templater |
+| An edit did not persist | Error message and actual Markdown file contents |
+| Settings cannot be saved after a conflict | Plugin message; keep a copy of `data.json` before restoring |
 
-1. **Collection Phase**
-   - Create folder-based project
-   - Import research materials
-   - Organize by topic
+When reporting an issue, include the Obsidian and plugin versions, device, source type, reproduction steps, and expected and actual behavior. Attach a small anonymized note example. Do not submit your entire personal vault or settings containing private paths.
 
-2. **Analysis Phase**
-   - Use Table view for data analysis
-   - Sort and filter information
-   - Identify patterns
-
-3. **Synthesis Phase**
-   - Create summary notes
-   - Link related concepts
-   - Prepare final report
-
-## 🎨 Customization
-
-### View Customization
-
-#### Table View
-- **Column Configuration**: Show/hide columns
-- **Sorting Options**: Primary and secondary sort
-- **Filter Settings**: Advanced filtering options
-- **Display Options**: Row height, font size
-
-#### Board View
-- **Column Setup**: Custom column names
-- **Card Layout**: Information display
-- **Color Coding**: Status-based colors
-- **Drag Behavior**: Move restrictions
-
-#### Calendar View
-- **Date Range**: Month/week/day views
-- **Event Display**: Show/hide details
-- **Color Coding**: Category colors
-- **Navigation**: Quick date jumping
-
-### Theme Integration
-
-Projects Plus automatically adapts to your Obsidian theme:
-- **Light Themes**: Clean, minimal interface
-- **Dark Themes**: High contrast, easy reading
-- **Custom Themes**: Automatic color adaptation
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-#### Performance Problems
-- **Large Projects**: Reduce project size limit
-- **Memory Issues**: Restart Obsidian
-- **Slow Loading**: Check for corrupted files
-
-#### Data Issues
-- **Missing Notes**: Check folder permissions
-- **Broken Links**: Verify file paths
-- **Template Errors**: Check template syntax
-
-#### Plugin Conflicts
-- **Other Plugins**: Disable conflicting plugins
-- **Settings Reset**: Reset to defaults
-- **Reinstall**: Clean reinstall if needed
-
-### Getting Help
-
-1. **Check Documentation**: Review this guide
-2. **Search Issues**: Look for similar problems
-3. **Create Issue**: Report bugs with details
-4. **Community**: Ask in discussions
-
-## 📚 Advanced Features
-
-### Your own view from another plugin
-
-The plugin does not expose an `api` object for reading or creating projects from scripts. The one
-public extension point is registering your own view: your plugin declares an
-`onRegisterProjectView` method, and Projects Plus lists your view alongside the built-in ones.
-
-```typescript
-import { Plugin } from "obsidian";
-import { ProjectView } from "obsidian-projects-types";
-
-class MyCustomView extends ProjectView {
-  getViewType() { return "my-view"; }
-  getDisplayName() { return "My View"; }
-  getIcon() { return "layout-grid"; }
-  onOpen({ contentEl }) { contentEl.createEl("h2", { text: "My Custom View" }); }
-  onData({ data }) { /* data.fields is the schema, data.records are the notes */ }
-  onClose() { /* cleanup */ }
-}
-
-export default class MyPlugin extends Plugin {
-  onRegisterProjectView = () => new MyCustomView();
-}
-```
-
-The full contract and types are in the [developer API guide](api.md). The API is experimental and
-may change.
-
-### Automating note creation
-
-Notes are created from the plugin's own templates (see Templates above) or by any plugin such as
-Templater that writes frontmatter. Projects Plus picks a new note up as soon as it lands in the
-project's folder, tag or query — no separate API is needed for that.
-
-## 🎯 Best Practices
-
-### Project Organization
-
-1. **Consistent Naming**: Use clear, descriptive names
-2. **Logical Structure**: Organize by purpose, not type
-3. **Regular Cleanup**: Archive completed projects
-4. **Documentation**: Keep project notes updated
-
-### Performance Optimization
-
-1. **Reasonable Limits**: Don't load too many notes
-2. **Efficient Queries**: Optimize Dataview queries
-3. **Regular Maintenance**: Clean up unused files
-4. **Backup Strategy**: Regular vault backups
-
-### Collaboration
-
-1. **Shared Projects**: Use consistent metadata
-2. **Template Standards**: Agree on templates
-3. **Naming Conventions**: Follow team standards
-4. **Documentation**: Keep processes documented
-
----
-
-## 📞 Support
-
-Need help? We're here for you!
-
-- **📧 GitHub Issues**: [Report bugs](https://github.com/ParkPavel/obs-projects-plus/issues)
-- **💬 Discussions**: [Ask questions](https://github.com/ParkPavel/obs-projects-plus/discussions)
-- **🌐 Website**: [parkpavel.github.io](https://parkpavel.github.io/park-pavel/)
-- **📧 Email**: Contact through GitHub
-
----
-
-*Happy project managing! 🚀*
+[Report an issue](https://github.com/ParkPavel/obs-projects-plus/issues) · [Custom view API](api.md)
