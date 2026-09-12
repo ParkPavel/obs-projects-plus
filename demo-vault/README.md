@@ -1,5 +1,7 @@
 # Demo Vault
 
+> [Русский](README-RU.md) · English
+
 A ready-made vault for trying Projects Plus: notes with filled-in fields, relations between
 folders, and a Dashboard worth configuring. Open it as a vault in Obsidian and walk through the
 steps below.

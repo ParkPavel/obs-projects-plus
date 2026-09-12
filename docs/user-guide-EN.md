@@ -1,5 +1,7 @@
 # 📖 Projects Plus User Guide
 
+> [Русский](user-guide.md) · English
+
 Welcome to Projects Plus! This comprehensive guide will help you get the most out of your project management experience in Obsidian.
 
 ## 🚀 Getting Started

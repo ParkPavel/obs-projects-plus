@@ -1,16 +1,14 @@
-# Устройство кода / Code structure
+# Устройство кода
+
+> Русский · [English](architecture-EN.md)
 
 Документ описывает код, который лежит в этом дереве сейчас: слои, правила зависимостей,
 точки расширения и инварианты, которые проверяются тестами. Это не план и не спецификация
 будущего — если код и документ расходятся, прав код, а документ нужно поправить.
 
-This document describes the code as it stands in this tree: layers, dependency rules,
-extension points and the invariants that tests enforce. It is not a roadmap. If the code and
-this document disagree, the code wins and this file needs an update.
-
 ---
 
-## 1. Слои / Layers
+## 1. Слои
 
 Зависимости направлены внутрь: внешний слой знает о внутреннем, внутренний о внешнем — нет.
 
@@ -21,7 +19,7 @@ this document disagree, the code wins and this file needs an update.
 | **Engine** | `src/lib/engine/`, `src/lib/dashboard-engine/`, `src/lib/formula/`, `src/lib/database/`, `src/lib/relations/`, `src/lib/visualizer/` | Чистая логика: фильтры, агрегация, формулы, связи и rollup. Без DOM и без Obsidian API |
 | **Data** | `src/lib/dataframe/`, `src/lib/dataApi.ts`, `src/lib/datasources/`, `src/lib/filesystem/`, `src/lib/frontmatter/`, `src/lib/metadata/`, `src/lib/settings/`, `src/settings/` | Чтение и запись заметок, источники данных, схема полей, настройки |
 
-### Правила зависимостей / Dependency rules
+### Правила зависимостей
 
 - **Engine и Data не трогают DOM** и не импортируют `obsidian`. Исключение — адаптеры
   в `src/lib/filesystem/obsidian/`, которые для этого и существуют.
@@ -34,7 +32,7 @@ this document disagree, the code wins and this file needs an update.
 
 ---
 
-## 2. Как данные попадают на экран / From note to view
+## 2. Как данные попадают на экран
 
 1. Проект описан папкой, тегом или Dataview-запросом (`src/lib/datasources/`).
 2. Источник отдаёт `DataFrame` — список полей и записей (`src/lib/dataframe/dataframe.ts`).
@@ -50,7 +48,7 @@ this document disagree, the code wins and this file needs an update.
 
 ---
 
-## 3. Где что добавлять / Where to add things
+## 3. Где что добавлять
 
 | Что нужно | Куда смотреть |
 |---|---|
@@ -62,18 +60,18 @@ this document disagree, the code wins and this file needs an update.
 | Новая операция агрегации | `src/lib/engine/aggregate.ts` (ядро) и `src/lib/dashboard-engine/aggregation.ts` (итоговые строки) |
 | Новый язык интерфейса | `src/lib/stores/translations/` (`en.json` — источник, затем `ru.json`, `uk.json`, `zh-CN.json`) |
 | Новый код ошибки | реестр `src/lib/errors/` и таблица в [ERROR_CODES.md](ERROR_CODES.md) |
-| Своё представление из другого плагина | публичный контракт `src/customViewApi.ts`, описан в [api.md](api.md) / [api-ru.md](api-ru.md) |
+| Своё представление из другого плагина | публичный контракт `src/customViewApi.ts`, описан в [api.md](api.md) / [api-RU.md](api-RU.md) |
 
 ---
 
-## 4. Ключевые контракты / Key contracts
+## 4. Ключевые контракты
 
 Источник правды — код; здесь только карта, чтобы знать, какой файл открыть.
 
 | Контракт | Файл | Смысл |
 |---|---|---|
 | `DataFrame` | `src/lib/dataframe/dataframe.ts` | `{ fields, records }` — единая форма данных между слоями. Любой движок принимает и возвращает её |
-| Фильтр | `src/lib/engine/filterEvaluator.ts` | `matchesCondition`, `matchesFilterConditions`, `applyFilter`. Единственный движок фильтрации, включая agenda календаря |
+| Фильтр | `src/lib/engine/filterEvaluator.ts` | `matchesCondition`, `matchesFilterConditions`, `applyFilter`. Единственный движок фильтрации, включая боковую панель календаря |
 | Формулы | `src/lib/formula/index.ts` | Канонический путь импорта: разбор, проверка и вычисление формул, включая формулы дат |
 | Агрегация | `src/lib/engine/aggregate.ts` | Ядро операций; `count` во всех слоях считает непустые значения |
 | Связи и rollup | `src/lib/engine/crossProjectResolver.ts`, `crossProjectRollup.ts`, `src/lib/dashboard-engine/relationResolver.ts` | Разбор wikilink-ссылки, статусы (найдена / не найдена / неоднозначна), расчёт по связанным записям |
@@ -82,7 +80,7 @@ this document disagree, the code wins and this file needs an update.
 
 ---
 
-## 5. Инварианты / Invariants
+## 5. Инварианты
 
 Каждый пункт закреплён тестом в `src/__tests__/` (имена файлов `R0_*`) или правилом ESLint;
 нарушение валит сборку, а не остаётся на усмотрение ревью.
@@ -103,10 +101,12 @@ this document disagree, the code wins and this file needs an update.
 11. **Обещания не бросаем без обработки.** Любая запись сообщает об ошибке (`Notice`) и, если была
     оптимистичная правка интерфейса, откатывает её.
 12. **Никаких полифилов Obsidian** (`String.contains`, `.first()`, `.last()`) — стандартные методы.
+13. **Документация парная.** У русского документа есть английский двойник и наоборот
+    (`R0_25_documentationPairs`).
 
 ---
 
-## 6. Сборка и проверки / Build and checks
+## 6. Сборка и проверки
 
 ```bash
 npm ci
@@ -120,5 +120,5 @@ npm run svelte-check   # типы в Svelte-шаблонах
 Публикуемый плагин — ровно три файла: `main.js`, `manifest.json`, `styles.css`.
 Все четыре проверки должны проходить без ошибок; CI запускает их на каждый pull request.
 
-Правила оформления кода — [CODE_STANDARDS-RU.md](CODE_STANDARDS-RU.md) /
-[CODE_STANDARDS.md](CODE_STANDARDS.md). Процесс изменений — [CONTRIBUTING](../CONTRIBUTING.md).
+Правила оформления кода — [CODE_STANDARDS-RU.md](CODE_STANDARDS-RU.md).
+Процесс изменений — [CONTRIBUTING-RU](../CONTRIBUTING-RU.md).

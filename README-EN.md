@@ -249,7 +249,7 @@ Install types: `npm install --save-dev obsidian-projects-types`
 ### Architecture
 
 Four layers nested like a matryoshka (Shell → UI → Engine → Data). Details:
-[code structure](docs/architecture.md).
+[code structure](docs/architecture-EN.md).
 
 Development is managed with a separate project,
 [Claudex](https://github.com/ParkPavel/claudex): working instructions, plans and session records
@@ -267,13 +267,17 @@ Start from the [documentation index](docs/README.md) — it points to the right 
 
 | Document | What it covers |
 |---|---|
-| [User Guide (EN)](docs/user-guide-EN.md) | Shortcuts, gestures, templates, settings |
-| [Руководство пользователя (RU)](docs/user-guide.md) | The same guide in Russian |
+| [User guide](docs/user-guide-EN.md) | Shortcuts, gestures, templates, settings |
 | [Error codes](docs/ERROR_CODES.md) | What a message means and what to do about it |
-| [Code structure](docs/architecture.md) | Layers, dependency rules, where to add things |
-| [CONTRIBUTING](CONTRIBUTING.md) | How to build, check and propose a change |
-| [Custom View API](obsidian-projects-types/README.md) | Your own view from another plugin |
-| [CHANGELOG](CHANGELOG.md) | What changed and what to watch when updating |
+| [Demo vault](demo-vault/README.md) | Ready-made data for trying it without your own notes |
+| [Note templates](templates/README-EN.md) | Templater templates and the standard fields |
+| [Code structure](docs/architecture-EN.md) | Layers, dependency rules, where to add things |
+| [Contributing](CONTRIBUTING.md) | How to build, check and propose a change |
+| [Custom view API](docs/api.md) | Your own view from another plugin |
+| [Changelog](CHANGELOG.md) | What changed and what to watch when updating |
+
+Every document also exists in Russian: the file with the `-RU` suffix, or the base name where the
+Russian half is the base.
 
 ---
 

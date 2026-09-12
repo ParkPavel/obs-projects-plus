@@ -1,5 +1,7 @@
 # Contributor Covenant Code of Conduct
 
+> [Русский](CODE_OF_CONDUCT-RU.md) · English
+
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our

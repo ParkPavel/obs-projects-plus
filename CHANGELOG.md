@@ -1,5 +1,7 @@
 # Changelog
 
+> [Русский](CHANGELOG-RU.md) · English
+
 This file describes the current development line and changes to consider when updating.
 Downloadable versions and their publication dates are listed in
 [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases).
@@ -30,6 +32,7 @@ mean that a new release has been published.
 - The demo-vault guide lists the blocks the Dashboard actually offers.
 - The filter-order test no longer asserts sentences in a deleted design document; it pins the
   wiring, which is the part that can silently regress.
+- Every document now exists in Russian and English; a test keeps the pairs in place.
 
 ## 3.6.0-alpha
 

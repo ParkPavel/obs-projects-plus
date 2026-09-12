@@ -1,11 +1,13 @@
 # Projects Plus — Custom View API Reference
 
+> [Русский](api-RU.md) · English
+
 > **Status**: Experimental — inherited from [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) by Marcus Olsson.  
 > This API may change or be removed without notice. Use at your own risk.
 
 ## Overview
 
-Projects Plus lets third-party plugins register **custom views** that appear alongside the built-in Table, Board, Calendar, and Gallery. This is the **only** public API the plugin exposes.
+Projects Plus lets third-party plugins register **custom views** that appear alongside the built-in Dashboard, Board, Calendar and Gallery. This is the **only** public API the plugin exposes.
 
 There is no `plugin.api` object, no events system, and no programmatic project management API.
 

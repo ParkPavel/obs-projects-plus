@@ -1,5 +1,7 @@
 # 📋 Code Standards & Obsidian Compliance Guide
 
+> [Русский](CODE_STANDARDS-RU.md) · English
+
 This document is the reference for contributors: coding standards, the Obsidian Community Plugins requirements the code has to satisfy, and the architectural decisions behind them. It describes the rules the checks enforce — when a rule and the code disagree, fix one of them rather than leaving both in place.
 
 ---

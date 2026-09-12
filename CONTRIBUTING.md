@@ -1,10 +1,12 @@
 # Contributing to Projects Plus
 
+> [Русский](CONTRIBUTING-RU.md) · English
+
 Thank you for your interest in contributing! Projects Plus is a community-maintained fork of the original [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) plugin.
 
 This document is the **engineering onboarding** entry point. Before opening a non-trivial PR, please also read:
 
-- [docs/architecture.md](docs/architecture.md) — how the code is laid out: layers, dependency rules, where to add things
+- [docs/architecture-EN.md](docs/architecture-EN.md) — how the code is laid out: layers, dependency rules, where to add things
 - [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md) — coding rules and security baselines
 
 Planned work and in-flight changes are tracked in
@@ -75,9 +77,9 @@ Reload Obsidian (`Ctrl/Cmd+R`) to pick up the new build.
 
 ## Project structure
 
-**The codebase map is [docs/architecture.md](docs/architecture.md)**. It lists what lives under `src/`, the four layers (Shell → UI → Engine → Data), the dependency rules between them, and where to add a new widget, chart, datasource, formula function, error code or language.
+**The codebase map is [docs/architecture-EN.md](docs/architecture-EN.md)**. It lists what lives under `src/`, the four layers (Shell → UI → Engine → Data), the dependency rules between them, and where to add a new widget, chart, datasource, formula function, error code or language.
 
-This `CONTRIBUTING.md` does not duplicate that map — read its “Слои / Layers” section before opening a non-trivial PR.
+This `CONTRIBUTING.md` does not duplicate that map — read its “Layers” section before opening a non-trivial PR.
 
 ---
 
@@ -126,8 +128,8 @@ Detailed rules: [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md). Hard rules:
 - [ ] `npm run svelte-check` — 0 errors
 - [ ] No `console.log`, `innerHTML`, `document.*`, `@ts-ignore`
 - [ ] Translations updated (if UI text changed)
-- [ ] Documentation updated (if behaviour or API changed)
-- [ ] CHANGELOG entry under `## Unreleased`
+- [ ] Documentation updated **in both languages** (if behaviour or API changed)
+- [ ] An entry in `CHANGELOG.md` and `CHANGELOG-RU.md` under `## Unreleased` / «Не выпущено»
 
 ---
 
@@ -141,6 +143,18 @@ To add or update translations:
 2. Mirror the keys in `ru.json`, `uk.json`, `zh-CN.json`.
 3. Run `node scripts/sync-translations.mjs` to detect missing keys.
 4. Run `npm run build` to verify nothing is broken.
+
+---
+
+## Documentation comes in pairs
+
+Every document exists in both languages: the file under its base name, and a file whose suffix
+names its language (`-RU` or `-EN`). Two pages keep both languages inside one file — the index
+`docs/README.md` and the error-code table `docs/ERROR_CODES.md` — because their English text is
+taken straight from the code.
+
+`src/__tests__/R0_25_documentationPairs.test.ts` enforces this: a document that exists in one
+language only fails the suite. If you edit one language, edit the other in the same commit.
 
 ---
 
@@ -160,7 +174,7 @@ Use [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues). Plea
 
 | Topic | Document |
 |---|---|
-| Codebase map (start here) | [docs/architecture.md](docs/architecture.md) |
+| Codebase map (start here) | [docs/architecture-EN.md](docs/architecture-EN.md) |
 | Coding rules and security baselines | [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md) |
 | Custom view API for other plugins | [docs/api.md](docs/api.md) |
 | Error codes surfaced to users | [docs/ERROR_CODES.md](docs/ERROR_CODES.md) |
