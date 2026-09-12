@@ -21,9 +21,8 @@ views. Choose the guide that matches your task — each one exists in both langu
 
 | Задача / Task | Русский | English |
 |---|---|---|
-| Предложить изменение / Propose a change | [Как участвовать](../CONTRIBUTING-RU.md) | [Contributing](../CONTRIBUTING.md) |
+| Предложить изменение и соблюсти правила кода / Propose a change and follow the coding rules | [Как участвовать](../CONTRIBUTING-RU.md) | [Contributing](../CONTRIBUTING.md) |
 | Понять устройство кода / Understand the code | [Устройство кода](architecture.md) | [Code structure](architecture-EN.md) |
-| Соблюдать правила кода / Follow the coding rules | [Стандарты кода](CODE_STANDARDS-RU.md) | [Code standards](CODE_STANDARDS.md) |
 | Сделать своё представление / Build a custom view | [API](api-RU.md) | [API](api.md) |
 | Подключить типы из npm / Use the npm types | [obsidian-projects-types](../obsidian-projects-types/README-RU.md) | [obsidian-projects-types](../obsidian-projects-types/README.md) |
 | Правила сообщества / Community rules | [Кодекс поведения](../CODE_OF_CONDUCT-RU.md) | [Code of conduct](../CODE_OF_CONDUCT.md) |

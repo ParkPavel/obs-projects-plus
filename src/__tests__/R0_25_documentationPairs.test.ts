@@ -3,7 +3,7 @@
  *
  * Every documentation page exists in Russian and in English. The twin of a file
  * is the same path with a suffix naming its language: `README.md` pairs with
- * `README-EN.md`, `CODE_STANDARDS.md` with `CODE_STANDARDS-RU.md`. Which side
+ * `README-EN.md`, `CONTRIBUTING.md` with `CONTRIBUTING-RU.md`. Which side
  * carries the suffix depends on the language the base file is written in, and
  * that is deliberately not something this test judges — the pair is the
  * invariant, not which half came first.
@@ -43,7 +43,6 @@ const PAIRS: readonly [string, string][] = [
   ["docs/user-guide.md", "docs/user-guide-EN.md"],
   ["docs/architecture.md", "docs/architecture-EN.md"],
   ["docs/api.md", "docs/api-RU.md"],
-  ["docs/CODE_STANDARDS.md", "docs/CODE_STANDARDS-RU.md"],
   ["obsidian-projects-types/README.md", "obsidian-projects-types/README-RU.md"],
 ];
 
