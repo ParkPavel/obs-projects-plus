@@ -67,8 +67,8 @@ describe("shouldRenderLabel", () => {
  * #166 Step 2 — the axis now receives the MEASURED container width instead of
  * the constant 480, so the cull decision is the container's. This is arithmetic,
  * not layout, which is the only reason it is safe in jsdom: jsdom lays out no
- * SVG text, so nothing here is evidence about rendering. The rendering half of
- * the claim is measured in `docs/internal/probes/166-chart-viewbox-scale.html`.
+ * SVG text, so nothing here is evidence about rendering. Actual label sizing
+ * still requires a browser layout check.
  *
  * The chain mirrored below is BarChart.svelte:20-36 verbatim — the same paddings
  * and the same LABEL_FONT — so a change there breaks these numbers rather than

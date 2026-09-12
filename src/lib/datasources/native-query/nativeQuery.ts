@@ -3,9 +3,8 @@
  *
  * Ticket: #045.2 (M-DATAVIEW-BRIDGE Gap 2)
  *
- * Bridges the "DQL is the only path for ad-hoc queries" gap identified in
- * `docs/internal/DATAVIEW_ABSORPTION_PLAN.md` §4 Gap 2. Provides a small
- * SQL-like programmatic surface — `FROM folder|tag WHERE conditions SORT
+ * Provides a native SQL-like query surface without a Dataview dependency:
+ * `FROM folder|tag WHERE conditions SORT
  * field LIMIT n` — built strictly on top of:
  *
  *   - the existing `FolderDataSource` / `TagDataSource` (data acquisition)

@@ -10,9 +10,6 @@
  * call-sites MUST import from here (`src/lib/formula`). Migrations from
  * the legacy paths (`src/lib/helpers/formulaParser`) happen in R0.1b/c.
  *
- * Anchors:
- * - REVISION_3 §1.5
- * - .ai_internal/R0_4_ENTRY_POINTS_INVENTORY.md (lists `open-formula-editor`)
  */
 export {
   tokenize,

@@ -1,5 +1,7 @@
 # Contributing to Projects Plus
 
+[Русский](CONTRIBUTING-RU.md)
+
 Projects Plus is an Obsidian plugin maintained as a fork of [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). This guide covers building, changing and testing the plugin. Development coordination is maintained in [Claudex](https://github.com/ParkPavel/claudex).
 
 ## Build locally

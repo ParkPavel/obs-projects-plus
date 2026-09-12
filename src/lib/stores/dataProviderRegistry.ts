@@ -5,8 +5,6 @@ import type { DataFrame } from "src/lib/dataframe/dataframe";
 /**
  * DataProvider Registry — per-canvas, context-scoped.
  *
- * Spec: `.ai_internal/New-specification/DATA_PROVIDER_SPEC.md` (v1.1).
- *
  * The registry is created **once per canvas** (e.g. each DashboardCanvas)
  * via {@link createDataProviderRegistry} and shared with descendant
  * widgets through Svelte Context API using {@link DATA_PROVIDER_REGISTRY_CONTEXT_KEY}.

@@ -98,8 +98,8 @@ export function applyRollupColumns(
         // so `percent > 50` could not reach the numeric branch at all and a
         // sort compared text — 33.1 and 33.4 were both "33%". The number goes
         // in, and the missing "%" is a gap in the DISPLAY layer, which has no
-        // notion of units for a rollup field yet. #180d (T4) is where a cell
-        // learns the unit; recorded in BACKLOG #180 rather than paid for here
+        // notion of units for a rollup field yet. Teaching a cell its unit is
+        // recorded as follow-up work rather than paid for here
         // with a string, which is the conflation this ticket exists to remove.
         // (Found by the Codex adversarial review of #180b, against the first
         // version of this very line.)

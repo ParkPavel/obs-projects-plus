@@ -1,8 +1,10 @@
 # Custom view types
 
+[Русский](README-RU.md)
+
 This package contains the `ProjectView` base class and TypeScript declarations used by third-party views for Projects Plus. It originates from the custom view extension in Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects).
 
-Start with the [English API reference](../docs/api.md) or [русский справочник](../docs/api-ru.md) for registration, lifecycle and an example.
+Start with the [English API reference](../docs/api.md) or [русский справочник](../docs/api-RU.md) for registration, lifecycle and an example.
 
 ## Compatibility
 

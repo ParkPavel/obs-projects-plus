@@ -9,7 +9,7 @@ import { join } from "path";
  * appended by `mergeCSS()` in `esbuild.config.mjs` behind a marker line.
  *
  * On 2026-08-28 the file went missing from the working tree (the same event
- * that removed `manifest.json` — see CONTEXT.md). `mergeCSS` reads a missing
+ * that removed `manifest.json`). `mergeCSS` reads a missing
  * file as the empty string, so the next production build recreated it as
  * `"\n\n" + marker + tokens`: 685 lines of layout gone, tokens intact. It was
  * committed in `2597c9f`, merged, and pushed. Nothing caught it, because none

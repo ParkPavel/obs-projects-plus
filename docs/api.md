@@ -1,6 +1,6 @@
 # Custom view API
 
-[Русская версия](api-ru.md)
+[Русская версия](api-RU.md)
 
 Projects Plus can discover a custom view supplied by another enabled Obsidian plugin. This extension point is experimental: check compatibility with the exact host release you support. Internal stores and modules under `src` are not a stable external API.
 

@@ -1,56 +1,58 @@
-# Project architecture
+# Устройство проекта
 
-This map describes the code in this repository. It helps contributors find a feature's implementation. See [Contributing](../CONTRIBUTING.md) for build and test instructions.
+[English](architecture-EN.md)
 
-## Entry points and interface
+Эта карта описывает код в репозитории и помогает найти, где реализована та или иная возможность. Сборка и проверки — в [руководстве для контрибьюторов](../CONTRIBUTING-RU.md).
 
-| Location | Responsibility |
+## Точки входа и интерфейс
+
+| Где | За что отвечает |
 | --- | --- |
-| [src/main.ts](../src/main.ts) | Plugin lifecycle, settings initialization, commands and Obsidian integration |
-| [src/view.ts](../src/view.ts) | Projects workspace view and registration of built-in and custom views |
-| [src/events.ts](../src/events.ts) | Vault event handling |
-| [src/managers](../src/managers) | Command management |
-| [src/ui/app](../src/ui/app) | Project navigation, shared application UI and view lifecycle |
-| [src/ui/views](../src/ui/views) | Dashboard, Board, Calendar, Gallery and visualizer interfaces |
-| [src/ui/tokens/tokens.css](../src/ui/tokens/tokens.css) | Shared visual tokens |
+| [src/main.ts](../src/main.ts) | Жизненный цикл плагина, инициализация настроек, команды и связь с Obsidian |
+| [src/view.ts](../src/view.ts) | Рабочая область Projects и регистрация встроенных и сторонних видов |
+| [src/events.ts](../src/events.ts) | Обработка событий хранилища |
+| [src/managers](../src/managers) | Управление командами |
+| [src/ui/app](../src/ui/app) | Навигация по проектам, общий интерфейс и жизненный цикл вида |
+| [src/ui/views](../src/ui/views) | Интерфейсы Dashboard, доски, календаря, галереи и визуализатора |
+| [src/ui/tokens/tokens.css](../src/ui/tokens/tokens.css) | Общие визуальные токены |
 
-`ProjectsView.getProjectViews()` registers Board, Calendar, Gallery and Dashboard. The `database` view key remains an alias for Dashboard so older saved configurations can resolve their view. Visualizer panes also have their own Obsidian integration.
+`ProjectsView.getProjectViews()` регистрирует доску, календарь, галерею и Dashboard. Ключ `database` остаётся псевдонимом Dashboard, чтобы старые сохранённые настройки находили свой вид. У панелей визуализатора своя связка с Obsidian.
 
-The custom view lifecycle is connected in [useView.ts](../src/ui/app/useView.ts). It passes configuration, project data and write callbacks to the active view. Read the [API reference](api.md) before relying on that extension point.
+Жизненный цикл стороннего вида подключён в [useView.ts](../src/ui/app/useView.ts): он передаёт виду настройку, данные проекта и обратные вызовы записи. Прежде чем опираться на эту точку расширения, прочтите [справочник API](api-RU.md).
 
-## From notes to a view
+## От заметок к представлению
 
-1. A project definition selects a data source. The [source factory](../src/lib/datasources/index.ts) constructs a folder, tag, native-query or Dataview source. Dataview is optional; the factory reports when its backend is unavailable.
-2. A source reads notes through the [filesystem abstraction](../src/lib/filesystem/README.md) and produces a [data frame](../src/lib/dataframe/README.md): field definitions, records and optional parsing errors.
-3. [Svelte stores](../src/lib/stores/README.md) hold reactive data and coordinate invalidation when records change.
-4. The selected view renders that data. Dashboard widgets use the transformation, formula, relation and aggregation modules for their derived results.
+1. Определение проекта выбирает источник данных. [Фабрика источников](../src/lib/datasources/index.ts) создаёт источник по папке, тегу, встроенному запросу или Dataview. Dataview необязателен; фабрика сообщает, когда его нет.
+2. Источник читает заметки через [абстракцию файловой системы](../src/lib/filesystem/README.md) и отдаёт [фрейм данных](../src/lib/dataframe/README.md): описания полей, записи и, если были, ошибки разбора.
+3. [Хранилища Svelte](../src/lib/stores/README.md) держат реактивные данные и согласуют их обновление при изменении записей.
+4. Выбранный вид отображает эти данные. Блоки Dashboard используют модули преобразований, формул, связей и агрегации для производных значений.
 
-| Location | Responsibility |
+| Где | За что отвечает |
 | --- | --- |
-| [src/lib/datasources](../src/lib/datasources/README.md) | Source selection, queries and combining source results |
-| [src/lib/metadata](../src/lib/metadata/README.md) | YAML frontmatter encoding and decoding |
-| [src/lib/engine](../src/lib/engine) | Filtering, aggregation and cross-project calculations |
-| [src/lib/dashboard-engine](../src/lib/dashboard-engine) | Dashboard transformations, formula application, charts and caches |
-| [src/lib/formula](../src/lib/formula) | Formula parsing and evaluation |
-| [src/lib/relations](../src/lib/relations) | Relation contracts, inverse indexes and relation writes |
-| [src/lib/visualizer](../src/lib/visualizer) | Visualizer-specific property, relation and overlay handling |
+| [src/lib/datasources](../src/lib/datasources/README.md) | Выбор источника, запросы и объединение результатов |
+| [src/lib/metadata](../src/lib/metadata/README.md) | Кодирование и разбор YAML-свойств заметки |
+| [src/lib/engine](../src/lib/engine) | Фильтрация, агрегация и расчёты между проектами |
+| [src/lib/dashboard-engine](../src/lib/dashboard-engine) | Преобразования Dashboard, применение формул, графики и кэши |
+| [src/lib/formula](../src/lib/formula) | Разбор и вычисление формул |
+| [src/lib/relations](../src/lib/relations) | Контракты связей, обратные индексы и запись связей |
+| [src/lib/visualizer](../src/lib/visualizer) | Свойства, связи и наложения визуализатора |
 
-These directories describe responsibilities; dependencies do not all follow a strict layered boundary. Follow the imports and callers when changing a path shared by several views.
+Эти каталоги описывают ответственность, но зависимости не везде следуют строгой границе слоёв. Меняя путь, общий для нескольких видов, идите по импортам и вызывающим местам.
 
-## Writes and persistence
+## Запись и хранение
 
-Record and field edits enter through [ViewApi](../src/lib/viewApi.ts) and [dataApi.ts](../src/lib/dataApi.ts). They coordinate filesystem writes and the displayed data frame. Some updates are optimistic; a visible change alone does not prove that the note was written. Failure paths can restore the previous value and show a coded error.
+Правки записей и полей проходят через [ViewApi](../src/lib/viewApi.ts) и [dataApi.ts](../src/lib/dataApi.ts): они согласуют запись в файловую систему с показанным фреймом данных. Часть обновлений оптимистична — видимое изменение само по себе не доказывает, что заметка записана. Путь отказа умеет вернуть прежнее значение и показать ошибку с кодом.
 
-Settings schemas and migrations live in [src/settings](../src/settings). The runtime settings writer and reconciliation helpers live in [src/lib/settings](../src/lib/settings), with lifecycle wiring in `src/main.ts`. Keep new settings writes on this path to preserve conflict checks and retry behavior.
+Схемы настроек и миграции лежат в [src/settings](../src/settings). Записывающий модуль и согласование настроек — в [src/lib/settings](../src/lib/settings), связка жизненного цикла — в `src/main.ts`. Новые записи настроек ведите этим же путём, иначе потеряются проверка конфликтов и повторные попытки.
 
-Note content is stored in the vault. Plugin configuration is stored in the plugin's `data.json`. Derived values, such as formula results, should not be treated as stored frontmatter fields.
+Содержимое заметок хранится в хранилище, настройка плагина — в его `data.json`. Производные значения, например результаты формул, не следует считать сохранёнными свойствами заметки.
 
-## Errors and diagnostics
+## Ошибки и диагностика
 
-The error registry is [errorCodes.ts](../src/lib/errors/errorCodes.ts); formatting and logging helpers are in the same directory. The bilingual [error reference](ERROR_CODES.md) explains what a user can do for each code. Preserve the meaning of existing codes when changing their presentation.
+Реестр ошибок — [errorCodes.ts](../src/lib/errors/errorCodes.ts); форматирование и журналирование лежат рядом. Двуязычный [справочник кодов](ERROR_CODES.md) объясняет, что делать пользователю с каждым кодом. Меняя подачу кода, сохраняйте его смысл.
 
-## Extension boundaries
+## Границы расширения
 
-[Custom views](api.md) are experimental. `src` modules, stores and settings structures are implementation interfaces, not a stable public SDK. The [type package](../obsidian-projects-types/README.md) is a separate compatibility surface and currently differs from the host in several places documented in the API reference.
+[Пользовательские виды](api-RU.md) — экспериментальная возможность. Модули `src`, хранилища и структуры настроек — внутренние интерфейсы, а не стабильный публичный SDK. [Пакет типов](../obsidian-projects-types/README-RU.md) — отдельная поверхность совместимости, и сейчас он расходится с хостом в нескольких местах, описанных в справочнике API.
 
-Before changing a shared type, inspect its consumers and the relevant tests. Source records, filters and write results cross multiple views, so a change that works in one widget may affect other interfaces.
+Прежде чем менять общий тип, посмотрите его потребителей и относящиеся к нему тесты. Записи источника, фильтры и результаты записи проходят через несколько видов, поэтому изменение, работающее в одном блоке, может задеть другие интерфейсы.

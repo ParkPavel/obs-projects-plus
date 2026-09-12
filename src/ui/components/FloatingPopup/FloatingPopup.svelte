@@ -1,7 +1,6 @@
 <!--
   FloatingPopup.svelte — the only popup engine in the plugin.
 
-  Spec:    .ai_internal/New-specification/POPUP_PATTERN_GUIDE.md (#034 / #040).
   Ticket:  #034.1 — Popup standardisation, Phase 4 (DEMOLISH zone, absorbs #040).
 
   Contract:
