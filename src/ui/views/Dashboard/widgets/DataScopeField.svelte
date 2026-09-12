@@ -62,7 +62,7 @@
       {$i18n.t("views.dashboard.widget.data-scope.label", { defaultValue: "Which source" })}
       <select value={current} on:change={handleChange}>
         <option value="">
-          {$i18n.t("views.dashboard.widget.data-scope.all", { defaultValue: "All sources, within this view" })}
+          {$i18n.t("views.dashboard.widget.data-scope.all", { defaultValue: "All sources of this project" })}
         </option>
         {#each options as src (src.id)}
           <option value={src.id}
@@ -73,7 +73,7 @@
         {/each}
       </select>
       <span class="ppp-cfg-hint">
-        {$i18n.t("views.dashboard.widget.data-scope.hint", { defaultValue: "A project can gather records from several sources. This block can show just one of them, within what the view already shows." })}
+        {$i18n.t("views.dashboard.widget.data-scope.hint", { defaultValue: "A project can gather records from several sources. This block can show just one of them." })}
         {#if hasUnaddressableSource}
           {$i18n.t("views.dashboard.widget.data-scope.unnamed", { defaultValue: "Sources added before naming was introduced cannot be picked — open the project and give them a name." })}
         {/if}

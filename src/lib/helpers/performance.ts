@@ -15,7 +15,7 @@
  * 
  * @example
  * const handleScroll = throttle((e) => {
- *   console.log('[Projects+] Performance Scrolled!', e);
+ *   console.log('Scrolled!', e);
  * }, 100);
  * 
  * window.addEventListener('scroll', handleScroll);
@@ -65,7 +65,7 @@ export function throttle<T extends (...args: any[]) => any>(
  * 
  * @example
  * const handleResize = debounce(() => {
- *   console.log('[Projects+] Performance Resized!');
+ *   console.log('Resized!');
  * }, 200);
  * 
  * window.addEventListener('resize', handleResize);
@@ -222,7 +222,7 @@ export function measureTime<T>(label: string, fn: () => T): T {
   const end = performance.now();
   
   if (process.env['NODE_ENV'] !== 'production') {
-    console.debug(`[Projects+] Performance ${label}: ${(end - start).toFixed(2)}ms`);
+    console.debug(`[Performance] ${label}: ${(end - start).toFixed(2)}ms`);
   }
   
   return result;
@@ -237,7 +237,7 @@ export async function measureTimeAsync<T>(label: string, fn: () => Promise<T>): 
   const end = performance.now();
   
   if (process.env['NODE_ENV'] !== 'production') {
-    console.debug(`[Projects+] Performance ${label}: ${(end - start).toFixed(2)}ms`);
+    console.debug(`[Performance] ${label}: ${(end - start).toFixed(2)}ms`);
   }
   
   return result;
