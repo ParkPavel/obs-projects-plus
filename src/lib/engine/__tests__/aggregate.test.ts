@@ -46,8 +46,7 @@ describe("aggregate() — kernel", () => {
     test("excludes empty string", () => {
       expect(aggregate(["a", "", "b"], cfg("count_values")).value).toBe(2);
     });
-    // FLIPPED by #180c, executing the user's D4 (BACKLOG #180, RESOLVED
-    // 2026-09-02): an unchecked box is an answer, not a blank. The footer never
+    // Decided 2026-09-02: an unchecked box is an answer, not a blank. The footer never
     // excluded `false`, so until now the same question had two answers — over
     // `[false]` the kernel said 100% empty and the footer said 0%.
     // `count_checked` / `percent_true` are the operators for "how many are
@@ -137,7 +136,7 @@ describe("aggregate() — kernel", () => {
     // into the reduction, so this returned the visible nonsense NaN. With the
     // value dropped the list is genuinely empty, and 0 would print a number
     // that reads like an answer. `sum` keeps 0 — the additive identity is a
-    // real total of nothing (BACKLOG #180, RESOLVED 2026-09-02). Found by the
+    // real total of nothing (decided 2026-09-02). Found by the
     // Codex adversarial review, which traced it to the footer.
     test("empty input → null, printed as the empty placeholder", () => {
       const r = aggregate([], cfg("avg"));

@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug encountered while using the Projects plugin
+description: Report a problem with Projects Plus
 labels: ["kind/bug", "needs-triage"]
 body:
   - type: textarea
@@ -7,7 +7,7 @@ body:
     attributes:
       label: What happened?
       description: |
-        Please provide as much info as possible.
+        Describe the problem and include any visible error code. Remove private note content from examples.
     validations:
       required: true
 
@@ -21,7 +21,8 @@ body:
   - type: textarea
     id: repro
     attributes:
-      label: How can we reproduce it (as minimally and precisely as possible)?
+      label: Steps to reproduce
+      description: Start with the view you opened, then list the actions that caused the problem.
     validations:
       required: true
 
@@ -34,7 +35,7 @@ body:
     id: pluginVersion
     attributes:
       label: Plugin version
-      description: You can find the version under Settings -> Community plugins -> Installed plugins -> Projects.
+      description: Open Settings -> Community plugins -> Installed plugins -> Projects Plus.
     validations:
       required: true
 
@@ -55,6 +56,8 @@ body:
         - Windows
         - macOS
         - Linux
+        - Android
+        - iOS
         - Other
     validations:
       required: true

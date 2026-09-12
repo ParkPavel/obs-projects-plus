@@ -7,7 +7,7 @@
 // the rules are unit-testable without mounting Svelte.
 //
 // V2 note: the relation suggestion adds a `database-call` block, not the
-// legacy `sub-base-canvas` widget — DASHBOARD_V2_SPEC §4 retires the latter
+// legacy `sub-base-canvas` widget — V2 retires the latter
 // (sub-bases live inside database-call via SubBasePanel).
 
 import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";

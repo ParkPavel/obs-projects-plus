@@ -1,5 +1,8 @@
 # Коды ошибок Projects+ · Projects+ error codes
 
+> Двуязычная страница: каждый раздел приведён по-русски и по-английски. /
+> A bilingual page: every section appears in Russian and in English.
+
 *Каждый раздел приведён на двух языках: русское описание и английское, взятое из самого реестра — те же слова, что показывает уведомление и печатает консоль.*
 
 *Every section appears twice: the Russian description, then the English one taken from the registry itself — the same words the notice shows and the console prints, so this page cannot drift from the product.*

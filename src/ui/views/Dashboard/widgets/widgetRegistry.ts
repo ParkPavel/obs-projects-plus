@@ -13,9 +13,8 @@ export interface WidgetMeta {
   readonly minH: number;
   readonly maxCount?: number;
   /**
-   * UT2026-A L2 (#073) — V2 fate table (DASHBOARD_V2_SPEC §4) sends this
-   * type to archive/replace. Legacy types keep rendering for existing
-   * configs but are hidden from creation surfaces (palette) unless an
+   * V2 sends this type to archive/replace. Legacy types keep rendering for
+   * existing configs but are hidden from creation surfaces (palette) unless an
    * instance already exists on the canvas.
    */
   readonly legacy?: boolean;

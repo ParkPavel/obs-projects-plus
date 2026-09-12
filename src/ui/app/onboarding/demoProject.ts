@@ -2,8 +2,6 @@
 // Demo project — Projects Plus
 //
 // Single coherent B2B Studio (digital agency) domain.
-// Replaces the legacy 1937-LOC mishmash (fitness + finance + CRM + tasks)
-// archived under .ai_internal/Archive/OLD-demoProject-2026-05-27.ts.
 //
 // Story: a digital studio with 6 clients, 8 projects, 10 tasks and
 // 5 meetings — naturally exercises relations (Project.client → Client),

@@ -346,8 +346,7 @@
      nearest ancestor query container, not against the element that
      declared the property.
 
-     THE DECLARATION IS SPLIT IN TWO, and #166 split it (see
-     `docs/internal/ADR_MATRYOSHKA_SIZING_2026-09-02.md` Q4):
+     THE DECLARATION IS SPLIT IN TWO:
 
        - here at `:root`, every level-2 name is declared CQI-FREE, at
          the clamp FLOOR. This is what a consumer with no query
@@ -372,9 +371,7 @@
      which is today's render. Same silence, opposite and harmless
      direction — and unlike a convention it is statically checkable,
      which is the `CONTAINER_ROOTS` rule in
-     `src/__tests__/R0_13_tokenSourceIntegrity.test.ts`. Measured both
-     ways: `docs/internal/probes/165-cqi-in-custom-property.html` and
-     `docs/internal/probes/166-no-container-fallback.html`.
+     `src/__tests__/R0_13_tokenSourceIntegrity.test.ts`.
 
      Two mechanisms, deliberately different:
 
