@@ -10,29 +10,41 @@ mean that a new release has been published.
 
 ## Unreleased
 
-### Documentation and development
+### Documentation
 
-- Reorganised the documentation around installation, daily use and contribution.
-  Russian and English guides now distinguish supported behaviour from limitations.
-- Removed internal plans, agent reports, session instructions and duplicate release
-  documents from the current tree. Development is managed with
-  [Claudex](https://github.com/ParkPavel/claudex); its configuration lives separately.
-- Retired tests of the old project-local agent hooks and configuration. Plugin behaviour
-  tests remain in this repository; Claudex checks its own harness and publication guards.
-- CI checks pull requests without writing beta metadata or pushing changes to `main`.
-  Tagged releases still use the release workflow.
-- Corrected documentation that no longer matched the plugin. A project has four views —
-  Dashboard, Board, Calendar and Gallery — and a table is a block inside a Dashboard, not a
-  view of its own. The guides no longer describe a `getProjects` / `createProject` /
-  `registerView` plugin API: the one public extension point is `onRegisterProjectView`,
-  described in the API guide.
-- The architecture document now describes the code as it stands — layers, dependency rules,
-  extension points and the invariants tests enforce — instead of a superseded target design.
-  It moved to `docs/architecture.md`.
-- The demo-vault guide lists the blocks the Dashboard actually offers.
-- The filter-order test no longer asserts sentences in a deleted design document; it pins the
-  wiring, which is the part that can silently regress.
-- Every document now exists in Russian and English; a test keeps the pairs in place.
+- The documentation a user reads was rewritten short. The README is 62 lines instead of 305
+  and the user guide 168 instead of 688: each page answers a question a reader has, rather
+  than listing everything the plugin contains.
+- The documentation a contributor reads was rewritten too. One architecture map links each
+  responsibility to the file that implements it; one contribution guide carries the coding
+  rules, so the two `CODE_STANDARDS` pages are gone without a rule going with them. The API
+  references and the library notes under `src/lib` were rewritten against the current source.
+- Corrected what no longer matched the plugin: a project has four views — Dashboard, Board,
+  Calendar and Gallery — a table is a block inside a Dashboard rather than a view of its own,
+  and the only public extension point is `onRegisterProjectView`. The `getProjects` /
+  `createProject` / `registerView` API the guides described does not exist.
+- Every document exists in Russian and English: as a pair of files, or bilingual in one file
+  for the index, the error codes and the two pages a reader meets inside a vault. A test keeps
+  that in place.
+- Internal plans, agent reports, session instructions and duplicate release documents are no
+  longer part of the tree. Development is managed with
+  [Claudex](https://github.com/ParkPavel/claudex); earlier versions remain in Git history.
+
+### Fixes
+
+- A console line no longer quotes the message template. Codes whose text carries a placeholder
+  such as `{{path}}` printed it verbatim, so a user quoting their console reported the template
+  while the notice beside it named the real file. A placeholder with nothing to fill it now reads
+  `<path>`, which tells the reader the value is unknown rather than that the code is unfinished.
+
+### Development
+
+- Retired tests of the old project-local agent hooks and configuration. Plugin behaviour tests
+  remain here; Claudex checks its own harness and publication guards.
+- The filter-order test no longer asserts sentences in a design document; it pins the wiring,
+  which is the part that can silently regress.
+- CI checks pull requests without writing beta metadata or pushing changes to `main`. Tagged
+  releases still use the release workflow.
 
 ## 3.6.0-alpha
 

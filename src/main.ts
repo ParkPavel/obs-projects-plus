@@ -73,7 +73,12 @@ import type {
   WriteVerdict,
 } from "src/lib/settings/settingsWriter";
 import { noticeFor, withCode } from "src/lib/errors/errorText";
-import { logError, logWarning } from "src/lib/errors/errorLog";
+import {
+  logError,
+  logErrorAbout,
+  logWarning,
+  logWarningAbout,
+} from "src/lib/errors/errorLog";
 import { registerFileEvents } from "./events";
 import { ObsidianFileSystemWatcher } from "./lib/filesystem/obsidian/filesystem";
 import { ProjectsSettingTab } from "./ui/settings/settings";
@@ -1030,8 +1035,13 @@ export default class ProjectsPlusPlugin extends Plugin {
     if (report.code === null) return;
     // A standing report is the one nothing could be done about, so it is the
     // one that goes to the console as an error.
-    if (report.standing) logError(report.code, "episode ended unresolved");
-    else logWarning(report.code, "episode resolved", report.params);
+    // #207: the params fill the caption's placeholders, so the console line and
+    // the notice carry the same sentence with the same path in it.
+    if (report.standing) {
+      logErrorAbout(report.code, report.params, "episode ended unresolved");
+    } else {
+      logWarningAbout(report.code, report.params, "episode resolved");
+    }
     new Notice(noticeFor(report.code, report.params), 15000);
   }
 
