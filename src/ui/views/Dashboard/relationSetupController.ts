@@ -60,7 +60,11 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
         fields = fields.map((field) => (field.name === relationField.name ? relationField : field));
       }
     }
-    settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });
+    // #158: merge, not replace. A converted property may carry configuration
+    // of its own — options, a date format — and the relation is one more key
+    // beside them, not a reason to forget the rest.
+    const previous = fields.find((field) => field.name === draft.fieldName.trim())?.typeConfig ?? {};
+    settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((field) => field.name), { ...previous, relation: config });
   }
   async function refreshPreview(source: DataFrame, draft: RelationSetupDraft, modal: RelationSetupModal): Promise<void> {
     if (!draft.targetProjectId.trim()) { modal.setSummary(undefined); return; }

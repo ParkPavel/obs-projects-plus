@@ -63,4 +63,30 @@ describe("relation setup preview", () => {
       expect(result.valid === false && result.messageKey).toBe("relation-setup.error-existing-property-required");
     });
   });
+
+  describe("what a relation may not take over", () => {
+    const draft = (name: string) => ({ fieldName: name, targetProjectId: "clients", createSourceField: false });
+    const plain = { name: "client", type: DataFieldType.String, repeated: false, identifier: false, derived: false };
+
+    test.each([
+      ["a formula", { ...plain, name: "computed", type: DataFieldType.Formula }],
+      ["a rollup", { ...plain, name: "computed", type: DataFieldType.Rollup }],
+      ["an identifier", { ...plain, name: "computed", identifier: true }],
+      ["a derived property", { ...plain, name: "computed", derived: true }],
+    ])("refuses %s", (_label, field) => {
+      const result = validateRelationSetupDraft(draft("computed"), [field]);
+      // Converting these would drop the definition that produces their values,
+      // or claim a property the project does not write. The wizard says so
+      // instead of writing and finding out.
+      expect(result).toEqual({
+        valid: false,
+        messageKey: "relation-setup.error-not-convertible",
+        message: expect.stringContaining("cannot become a relation"),
+      });
+    });
+
+    test("still converts a plain stored property", () => {
+      expect(validateRelationSetupDraft(draft("client"), [plain])).toEqual({ valid: true });
+    });
+  });
 });

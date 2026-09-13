@@ -1,11 +1,13 @@
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import { createSchemaController } from "../dashboardSchema";
 
-// #158 — a live run created a Relation field while project B was on screen,
-// and the field configuration landed under project A, the project that had
-// been on screen before it. DashboardCanvas is retargeted to a new project
-// in place (useView.ts), so a controller built once at mount time must keep
-// reading the project id, not remember the one it was built with.
+// #158 — this pins a contract, not a reproduction. The observation that
+// started it, a field configured under the previously open project, was
+// traced to the test harness clicking a leftover modal and does not
+// reproduce on any build. What is protected here is the property the rest of
+// the interface already had: DashboardCanvas can be retargeted in place
+// (useView.ts), so a controller built once must keep reading the project id
+// rather than remembering the one it was built with.
 
 let capturedOnCreate: ((field: unknown, value: unknown) => void) | undefined;
 

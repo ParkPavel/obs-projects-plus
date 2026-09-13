@@ -161,11 +161,11 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
   });
 
   test("gives a time-carrying rollup value the day its own host is living (#158)", () => {
-    const value = hostLocalDate(new Date("2024-03-15T12:00:00Z"), 8 * 60);
+    const value = hostLocalDate(new Date("2024-03-15T20:00:00Z"), 8 * 60);
     const { container } = render(RollupCellRenderer, {
       props: { value, fn: "min" },
     });
-    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2024-03-15");
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2024-03-16");
   });
 
   test("supports custom emptyPlaceholder", () => {

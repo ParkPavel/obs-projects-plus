@@ -14,7 +14,7 @@
  * inside the modal cannot.
  */
 
-import type { DataField, DataFrame } from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
 import {
   buildRelationTargetIndex,
   resolveRelationValue,
@@ -67,6 +67,18 @@ export type RelationSetupValidation =
  * the second shape converts it; only a NAME THAT DOES NOT EXIST AT ALL is
  * refused here, since there is nothing to convert or edit.
  */
+/**
+ * Which existing properties a relation may take over. A Formula or a Rollup
+ * carries the definition that produces its values; an identifier is what the
+ * project matches records by; a derived property is not written by this
+ * plugin at all. Converting any of them would either erase that definition or
+ * claim a property the project does not own — so the wizard refuses instead.
+ */
+function isConvertible(field: DataField): boolean {
+  if (field.identifier || field.derived) return false;
+  return field.type !== DataFieldType.Formula && field.type !== DataFieldType.Rollup;
+}
+
 export function validateRelationSetupDraft(
   draft: RelationSetupDraft,
   existingFields: readonly DataField[]
@@ -82,8 +94,18 @@ export function validateRelationSetupDraft(
     if (existingFields.some((field) => field.name === name)) {
       return { valid: false, messageKey: "relation-setup.error-name-taken", message: "A property with this name already exists." };
     }
-  } else if (!existingFields.some((field) => field.name === name)) {
-    return { valid: false, messageKey: "relation-setup.error-existing-property-required", message: "Choose an existing property or create one." };
+  } else {
+    const existing = existingFields.find((field) => field.name === name);
+    if (!existing) {
+      return { valid: false, messageKey: "relation-setup.error-existing-property-required", message: "Choose an existing property or create one." };
+    }
+    // A property whose value is computed, or whose identity the project rests
+    // on, is not something a relation may quietly take over: converting it
+    // would drop the formula or rollup that produces its values, or write a
+    // property the project does not own. Only a plain stored value converts.
+    if (existing.type !== DataFieldType.Relation && !isConvertible(existing)) {
+      return { valid: false, messageKey: "relation-setup.error-not-convertible", message: "This property cannot become a relation: it is computed or identifies the record." };
+    }
   }
   if (draft.inverse?.enabled && !draft.inverse.fieldName.trim()) {
     return { valid: false, messageKey: "relation-setup.error-inverse-name-required", message: "An inverse property name is required." };

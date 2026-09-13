@@ -169,7 +169,10 @@ export function parseDate(
  * it testable at a chosen offset without moving the process timezone.
  */
 export function formatLocalDay(value: Date): string {
-  const year = value.getFullYear();
+  // An invalid Date would otherwise render `NaN-NaN-NaN` in a cell; the empty
+  // string is what every other display path answers with for nothing to show.
+  if (Number.isNaN(value.getTime())) return "";
+  const year = String(value.getFullYear()).padStart(4, "0");
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;

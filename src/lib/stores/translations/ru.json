@@ -1810,6 +1810,7 @@
             "error-target-required": "Выберите базу для связи.",
             "error-name-taken": "Свойство с таким именем уже существует.",
             "error-existing-property-required": "Выберите существующее свойство или создайте новое.",
+"error-not-convertible": "Это свойство нельзя превратить в связь: оно вычисляется или определяет запись.",
             "error-inverse-name-required": "Название обратного свойства обязательно."
         },
         "relation-count": {
