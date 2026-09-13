@@ -10,7 +10,8 @@ import { RelationSetupModal } from "src/ui/modals/relationSetupModal";
 export type RelationSetupControllerDeps = {
   readonly app: App;
   readonly api: ViewApi;
-  readonly projectId: ProjectId;
+  /** #158 — live projection; see the matching note on SchemaControllerDeps. */
+  readonly getProjectId: () => ProjectId;
   readonly getFrame: () => DataFrame;
   readonly getProjects: () => readonly ProjectDefinition[];
   readonly t: (key: string, options?: { defaultValue?: string }) => string;
@@ -33,7 +34,7 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
       fields = [...fields, field];
       const unwritten = outcome.failed.length + outcome.missing.length;
       if (unwritten > 0) {
-        settings.updateFieldConfig(deps.projectId, draft.fieldName.trim(), fields.map((f) => f.name), { relation: config });
+        settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((f) => f.name), { relation: config });
         throw new Error(
           deps.t("relation-setup.saved-partial", {
             defaultValue: `Relation saved, but the property could not be added to ${unwritten} note(s). See the console.`,
@@ -41,7 +42,7 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
         );
       }
     }
-    settings.updateFieldConfig(deps.projectId, draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });
+    settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });
   }
   async function refreshPreview(source: DataFrame, draft: RelationSetupDraft, modal: RelationSetupModal): Promise<void> {
     if (!draft.targetProjectId.trim()) { modal.setSummary(undefined); return; }

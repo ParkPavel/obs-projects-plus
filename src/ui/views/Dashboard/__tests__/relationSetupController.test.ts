@@ -26,7 +26,7 @@ function makeDeps(overrides?: Record<string, unknown>) {
   return {
     app: {} as never,
     api: mockApi as never,
-    projectId: "proj-1",
+    getProjectId: () => "proj-1",
     getFrame: () => ({
       fields: [{ name: "client", type: "relation" as never, repeated: true, identifier: false, derived: false }],
       records: [],
