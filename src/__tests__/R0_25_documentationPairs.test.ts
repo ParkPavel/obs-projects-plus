@@ -21,6 +21,16 @@
  * directories documentation lives in and asks disk and git what belongs there,
  * so a page added in one language and forgotten in the other fails on its own
  * without anyone remembering to add it to a table first.
+ *
+ * Discovery alone cannot catch a pair that vanishes by being renamed on both
+ * sides at once — README.md and README-EN.md becoming GUIDE.md and
+ * GUIDE-EN.md still discovers as a valid pair, even though every doc and
+ * every reader that reaches "README" by name now finds nothing. A page a
+ * reader is sent to by name is an invariant, not an implementation detail, so
+ * a floor list below names the eight pairs that exist today and must keep
+ * existing under those names. The floor is a lower bound, not the source of
+ * truth: it does not need editing when a new pair is added correctly, only
+ * when one of today's eight is deliberately renamed or removed.
  */
 
 import { execFileSync } from "child_process";
@@ -39,6 +49,26 @@ const BILINGUAL = ["docs/README.md", "docs/ERROR_CODES.md", "demo-vault/README.m
 
 /** Directories documentation pages live under, walked recursively. */
 const DOC_DIRS = ["docs", "demo-vault", "templates", "obsidian-projects-types"];
+
+/**
+ * The pairs discovery finds on disk today, named here as a floor rather than
+ * a source of truth: consistently renaming both halves of one of these
+ * — same suffix, same languages, same reciprocal links — would still
+ * discover as a valid pair, so discovery alone cannot notice that the page a
+ * reader was sent to by name is gone. A page added correctly does not touch
+ * this list; a page in it renamed or removed does, and should say so in the
+ * same commit.
+ */
+const FLOOR_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["README.md", "README-EN.md"],
+  ["CHANGELOG.md", "CHANGELOG-RU.md"],
+  ["CONTRIBUTING.md", "CONTRIBUTING-RU.md"],
+  ["CODE_OF_CONDUCT.md", "CODE_OF_CONDUCT-RU.md"],
+  ["docs/user-guide.md", "docs/user-guide-EN.md"],
+  ["docs/architecture.md", "docs/architecture-EN.md"],
+  ["docs/api.md", "docs/api-RU.md"],
+  ["obsidian-projects-types/README.md", "obsidian-projects-types/README-RU.md"],
+];
 
 /**
  * Directories that are never documentation, wherever they occur. Dot-folders
@@ -175,11 +205,18 @@ describe("R0.25 — documentation pairs", () => {
     expect(unpaired).toEqual([]);
   });
 
-  it("found the pairs and bilingual pages actually on disk", () => {
+  it("found at least the bilingual pages actually on disk", () => {
     // A walk that silently finds nothing would make every other test in this
-    // file vacuously pass. Pin today's counts so an empty result is loud.
-    expect(pairs.length).toBe(8);
+    // file vacuously pass. Pin today's count so an empty result is loud.
     expect(BILINGUAL.length).toBe(4);
+  });
+
+  it.each(FLOOR_PAIRS)("still pairs %s with %s", (base, twin) => {
+    // A wrong set of eight pairs — or an empty, truncated walk — cannot
+    // satisfy this: each floor pair must be found by name, so a walk that
+    // finds nothing, or finds the wrong eight, fails here naming exactly the
+    // pair that went missing rather than passing on a matching count.
+    expect(pairs).toContainEqual(expect.objectContaining({ base, twin }));
   });
 
   it.each(pairs.map(({ base, twin, twinLanguage }): [string, string, "EN" | "RU"] => [base, twin, twinLanguage]))(
