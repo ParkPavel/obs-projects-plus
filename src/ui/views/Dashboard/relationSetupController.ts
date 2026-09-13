@@ -54,17 +54,17 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
         const relationField: DataField = {
           ...existing,
           type: DataFieldType.Relation,
-          typeConfig: { ...existing.typeConfig, relation: config },
+          typeConfig: { relation: config },
         };
         await deps.api.updateField(relationField);
         fields = fields.map((field) => (field.name === relationField.name ? relationField : field));
       }
     }
-    // #158: merge, not replace. A converted property may carry configuration
-    // of its own — options, a date format — and the relation is one more key
-    // beside them, not a reason to forget the rest.
-    const previous = fields.find((field) => field.name === draft.fieldName.trim())?.typeConfig ?? {};
-    settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((field) => field.name), { ...previous, relation: config });
+    // #158: only `relation` survives, which is the allowlist
+    // `ConfigureField.handleTypeChange` already applies for this type. Carrying
+    // the previous keys over would leave a rollup behind, and a stale rollup is
+    // not inert — `rollupColumns.ts` runs every fieldConfig entry that has one.
+    settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });
   }
   async function refreshPreview(source: DataFrame, draft: RelationSetupDraft, modal: RelationSetupModal): Promise<void> {
     if (!draft.targetProjectId.trim()) { modal.setSummary(undefined); return; }

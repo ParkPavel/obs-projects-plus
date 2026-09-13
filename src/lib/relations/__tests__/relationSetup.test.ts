@@ -85,6 +85,20 @@ describe("relation setup preview", () => {
       });
     });
 
+    test("refuses an identifier even when it is already a relation", () => {
+      // The write lands on the field whatever its current type, so the guard
+      // cannot be something only non-relations pass through.
+      const field = { ...plain, name: "computed", type: DataFieldType.Relation, identifier: true };
+      expect(validateRelationSetupDraft(draft("computed"), [field]).valid).toBe(false);
+    });
+
+    test("refuses when a second field of the same name is not convertible", () => {
+      // The writer replaces every entry with that name; validating only the
+      // first is how a refusal gets bypassed by ordering.
+      const ok = { ...plain, name: "twice" };
+      const notOk = { ...plain, name: "twice", type: DataFieldType.Formula };
+      expect(validateRelationSetupDraft(draft("twice"), [ok, notOk]).valid).toBe(false);
+    });
     test("still converts a plain stored property", () => {
       expect(validateRelationSetupDraft(draft("client"), [plain])).toEqual({ valid: true });
     });

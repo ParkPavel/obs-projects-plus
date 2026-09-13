@@ -5,6 +5,7 @@ import {
   formatDateForDisplay,
   formatDateForInternal,
   parseDate,
+  formatLocalDay,
 } from "./dateFormatting";
 import type { ProjectDefinition } from "src/settings/settings";
 import type { DateFormatConfig } from "src/settings/v3/settings";
@@ -410,5 +411,27 @@ describe("Edge cases", () => {
       includeTime: true,
     });
     expect(formatDateForProject(lastMinute, project)).toBe("01/18/2025 23:59");
+  });
+});
+
+describe("formatLocalDay (#158)", () => {
+  const localDate = (year: number, month: number, day: number): Date => {
+    const value = new Date(2000, 0, 1);
+    value.setFullYear(year, month - 1, day);
+    return value;
+  };
+
+  test("pads a year below 1000 to four digits", () => {
+    // `1-01-01` is not a date a reader can parse back; the cell claims the
+    // ISO shape, so it keeps it.
+    expect(formatLocalDay(localDate(1, 1, 1))).toBe("0001-01-01");
+  });
+
+  test("keeps the sign of a year before the era", () => {
+    expect(formatLocalDay(localDate(-1, 1, 1))).toBe("-0001-01-01");
+  });
+
+  test("answers empty for an invalid date instead of NaN-NaN-NaN", () => {
+    expect(formatLocalDay(new Date("not a date"))).toBe("");
   });
 });

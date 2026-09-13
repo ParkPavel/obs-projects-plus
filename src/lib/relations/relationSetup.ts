@@ -76,6 +76,7 @@ export type RelationSetupValidation =
  */
 function isConvertible(field: DataField): boolean {
   if (field.identifier || field.derived) return false;
+  if (field.type === DataFieldType.Relation) return true;
   return field.type !== DataFieldType.Formula && field.type !== DataFieldType.Rollup;
 }
 
@@ -95,15 +96,18 @@ export function validateRelationSetupDraft(
       return { valid: false, messageKey: "relation-setup.error-name-taken", message: "A property with this name already exists." };
     }
   } else {
-    const existing = existingFields.find((field) => field.name === name);
-    if (!existing) {
+    // Every field of that name, not the first: a frame can carry the name
+    // twice, and the writer replaces all of them — validating one and writing
+    // both is how a refusal gets bypassed by ordering.
+    const matches = existingFields.filter((field) => field.name === name);
+    if (matches.length === 0) {
       return { valid: false, messageKey: "relation-setup.error-existing-property-required", message: "Choose an existing property or create one." };
     }
     // A property whose value is computed, or whose identity the project rests
-    // on, is not something a relation may quietly take over: converting it
-    // would drop the formula or rollup that produces its values, or write a
-    // property the project does not own. Only a plain stored value converts.
-    if (existing.type !== DataFieldType.Relation && !isConvertible(existing)) {
+    // on, is not something a relation may quietly take over — and that holds
+    // whether or not it is already a relation, because the write lands on it
+    // either way.
+    if (!matches.every(isConvertible)) {
       return { valid: false, messageKey: "relation-setup.error-not-convertible", message: "This property cannot become a relation: it is computed or identifies the record." };
     }
   }
