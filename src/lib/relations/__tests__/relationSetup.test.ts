@@ -31,4 +31,36 @@ describe("relation setup preview", () => {
     expect(toRelationFieldConfig({ fieldName: "client", targetProjectId: "clients", displayField: "name", createSourceField: false, inverse: { enabled: true, fieldName: "sessions" } })).toEqual({ targetProjectId: "clients", displayField: "name", inverseFieldName: "sessions" });
     expect(toRelationFieldConfig({ fieldName: "client", targetProjectId: "clients", createSourceField: false, inverse: { enabled: false, fieldName: "sessions" } })).toEqual({ targetProjectId: "clients" });
   });
+
+  // #158 — the guided setup could not finish from «Выбрать поле → Связать с
+  // базой» for a property that already exists as, say, text: the validator
+  // accepted only a brand-new name (createSourceField: true) or an existing
+  // property ALREADY typed Relation, and refused everything else with
+  // "Choose an existing Relation property or create one." — including the
+  // exact property the user had just opened the wizard from.
+  describe("the third shape — an existing property that is not yet a Relation", () => {
+    const textField = { name: "client", type: DataFieldType.String, repeated: false, identifier: false, derived: false };
+    const relationField = { name: "client", type: DataFieldType.Relation, repeated: true, identifier: false, derived: false };
+
+    test("saves: an existing non-Relation property with a target is a valid draft", () => {
+      expect(validateRelationSetupDraft({ fieldName: "client", targetProjectId: "clients", createSourceField: false }, [textField]).valid).toBe(true);
+    });
+
+    test("the two shapes that worked before still work", () => {
+      expect(validateRelationSetupDraft({ fieldName: "newField", targetProjectId: "clients", createSourceField: true }, [textField]).valid).toBe(true);
+      expect(validateRelationSetupDraft({ fieldName: "client", targetProjectId: "clients", createSourceField: false }, [relationField]).valid).toBe(true);
+    });
+
+    test("a create-draft whose name collides with an existing property is still refused", () => {
+      const result = validateRelationSetupDraft({ fieldName: "client", targetProjectId: "clients", createSourceField: true }, [textField]);
+      expect(result.valid).toBe(false);
+      expect(result.valid === false && result.messageKey).toBe("relation-setup.error-name-taken");
+    });
+
+    test("naming a property that does not exist at all, without asking to create it, is still refused", () => {
+      const result = validateRelationSetupDraft({ fieldName: "ghost", targetProjectId: "clients", createSourceField: false }, [textField]);
+      expect(result.valid).toBe(false);
+      expect(result.valid === false && result.messageKey).toBe("relation-setup.error-existing-property-required");
+    });
+  });
 });

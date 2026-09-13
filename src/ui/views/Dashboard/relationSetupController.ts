@@ -21,7 +21,7 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
   async function save(draft: RelationSetupDraft): Promise<void> {
     const source = deps.getFrame();
     const valid = validateRelationSetupDraft(draft, source.fields);
-    if (!valid.valid) throw new Error(valid.message);
+    if (!valid.valid) throw new Error(deps.t(valid.messageKey, { defaultValue: valid.message }));
     const config = toRelationFieldConfig(draft);
     let fields = source.fields;
     if (draft.createSourceField) {
@@ -40,6 +40,24 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
             defaultValue: `Relation saved, but the property could not be added to ${unwritten} note(s). See the console.`,
           })
         );
+      }
+    } else {
+      // #158 — the third shape: the named property already exists but is not
+      // yet typed Relation (validated above). Convert it in place: `updateField`
+      // with no `oldName` changes the declared type in the live frame without
+      // renaming anything, so `ViewApi.updateField` never calls
+      // `dataApi.renameField` and no note is rewritten (viewApi.ts, updateField).
+      // This is the same call `ConfigureField`'s own "type changed, name did
+      // not" save path makes — the wizard is not inventing a new write path.
+      const existing = fields.find((field) => field.name === draft.fieldName.trim());
+      if (existing && existing.type !== DataFieldType.Relation) {
+        const relationField: DataField = {
+          ...existing,
+          type: DataFieldType.Relation,
+          typeConfig: { ...existing.typeConfig, relation: config },
+        };
+        await deps.api.updateField(relationField);
+        fields = fields.map((field) => (field.name === relationField.name ? relationField : field));
       }
     }
     settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });

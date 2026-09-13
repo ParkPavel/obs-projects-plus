@@ -14,7 +14,7 @@
  * inside the modal cannot.
  */
 
-import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
+import type { DataField, DataFrame } from "src/lib/dataframe/dataframe";
 import {
   buildRelationTargetIndex,
   resolveRelationValue,
@@ -45,33 +45,48 @@ export type RelationPreviewItem = {
  */
 export type RelationPreviewSummary = Readonly<Record<RelationResolutionStatus, number>>;
 
-/** Either the draft is usable, or it is not and there is one reason why. */
+/**
+ * Either the draft is usable, or it is not and there is one reason why.
+ * `messageKey` is the i18n lookup; `message` is the English text to pass as
+ * that key's `defaultValue` — a caller without a translator can still use
+ * `message` directly, and a caller with one gets a localized refusal instead
+ * of an English string a Russian user cannot read (#158).
+ */
 export type RelationSetupValidation =
   | { readonly valid: true }
-  | { readonly valid: false; readonly message: string };
+  | { readonly valid: false; readonly messageKey: string; readonly message: string };
 
 /**
  * Reject a draft that cannot be written: no name, no target, a name that is
  * already taken, an inverse asked for without a name. Returns the first
  * problem only — the wizard shows one message at a time.
+ *
+ * `createSourceField: false` accepts THREE existing shapes, not just one:
+ * a property already typed Relation (the config is being edited), and — the
+ * one #158 was missing — a property that exists with any other type. Saving
+ * the second shape converts it; only a NAME THAT DOES NOT EXIST AT ALL is
+ * refused here, since there is nothing to convert or edit.
  */
 export function validateRelationSetupDraft(
   draft: RelationSetupDraft,
   existingFields: readonly DataField[]
 ): RelationSetupValidation {
-  if (!draft.fieldName.trim()) return { valid: false, message: "A relation property name is required." };
-  if (!draft.targetProjectId.trim()) return { valid: false, message: "Choose a database to link." };
-  if (draft.createSourceField && existingFields.some((field) => field.name === draft.fieldName.trim())) {
-    return { valid: false, message: "A property with this name already exists." };
+  const name = draft.fieldName.trim();
+  if (!name) {
+    return { valid: false, messageKey: "relation-setup.error-name-required", message: "A relation property name is required." };
   }
-  if (!draft.createSourceField) {
-    const field = existingFields.find((candidate) => candidate.name === draft.fieldName);
-    if (!field || field.type !== DataFieldType.Relation) {
-      return { valid: false, message: "Choose an existing Relation property or create one." };
+  if (!draft.targetProjectId.trim()) {
+    return { valid: false, messageKey: "relation-setup.error-target-required", message: "Choose a database to link." };
+  }
+  if (draft.createSourceField) {
+    if (existingFields.some((field) => field.name === name)) {
+      return { valid: false, messageKey: "relation-setup.error-name-taken", message: "A property with this name already exists." };
     }
+  } else if (!existingFields.some((field) => field.name === name)) {
+    return { valid: false, messageKey: "relation-setup.error-existing-property-required", message: "Choose an existing property or create one." };
   }
   if (draft.inverse?.enabled && !draft.inverse.fieldName.trim()) {
-    return { valid: false, message: "An inverse property name is required." };
+    return { valid: false, messageKey: "relation-setup.error-inverse-name-required", message: "An inverse property name is required." };
   }
   return { valid: true };
 }
