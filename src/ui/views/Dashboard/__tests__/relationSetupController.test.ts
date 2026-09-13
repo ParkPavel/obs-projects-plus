@@ -19,6 +19,9 @@ const mockApi = {
   // decide whether the wizard may claim success. A stub returning undefined was
   // describing an API that no longer exists.
   addField: jest.fn().mockResolvedValue({ written: 1, failed: [], missing: [] }),
+  // #158 — conversion goes through updateField without a rename, so no note is
+  // rewritten; the stub has to exist for that path to be exercised at all.
+  updateField: jest.fn().mockResolvedValue(undefined),
   resolveExternalFrame: jest.fn(),
 };
 
@@ -99,5 +102,33 @@ describe("createRelationSetupController", () => {
     expect(instance.setSummary).toHaveBeenCalledWith(
       expect.objectContaining({ resolved: expect.any(Number) })
     );
+  });
+
+  test("converting a stored property persists the relation and nothing else (#158)", async () => {
+    // The round that produced this test: carrying the property's previous
+    // typeConfig across the conversion left a rollup behind, and a stale
+    // rollup keeps executing against a field that is now a relation.
+    const { settings } = jest.requireMock("src/lib/stores/settings") as {
+      settings: { updateFieldConfig: jest.Mock };
+    };
+    const stored = {
+      name: "client",
+      type: "string" as never,
+      repeated: false,
+      identifier: false,
+      derived: false,
+      typeConfig: { rollup: { fn: "count" }, options: ["a"] },
+    };
+    const { save } = createRelationSetupController(
+      makeDeps({ getFrame: () => ({ fields: [stored], records: [] }) })
+    );
+
+    await save({ fieldName: "client", targetProjectId: "proj-2", createSourceField: false });
+
+    const config = settings.updateFieldConfig.mock.calls[0]?.[3];
+    expect(Object.keys(config)).toEqual(["relation"]);
+    expect(mockApi.addField).not.toHaveBeenCalled();
+    // the conversion writes the field itself with the same allowlist
+    expect(mockApi.updateField.mock.calls[0]?.[0]?.typeConfig).toEqual({ relation: expect.anything() });
   });
 });
