@@ -98,6 +98,19 @@
       .filter(Boolean);
   }
 
+  /**
+   * #158: mirrors tableCanon's `dateCellText`. A rollup over a Date field
+   * (min, max, a passed-through value) carries the same local-midnight
+   * instants ingestion produced, and the UTC calendar day is a different day
+   * east of UTC. The cell shows a calendar day, so it shows the local one.
+   */
+  function dateCellText(val: Date): string {
+    const year = val.getFullYear();
+    const month = String(val.getMonth() + 1).padStart(2, "0");
+    const day = String(val.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
   function formatPlain(val: Optional<DataValue>, decimals: number): string {
     if (val == null) return emptyPlaceholder;
     if (val === "") return emptyPlaceholder;
@@ -110,7 +123,7 @@
       return val.toFixed(Math.max(0, decimals));
     }
     if (val instanceof Date) {
-      return val.toISOString().slice(0, 10);
+      return dateCellText(val);
     }
     return String(val);
   }

@@ -216,6 +216,22 @@ function toPills(labels: string[], color: (label: string) => string | null, stat
   };
 }
 
+/**
+ * #158: ingestion turns a date-only frontmatter value into *local* midnight
+ * (helpers.ts `dayjs(value).toDate()`), so reading the UTC calendar day back
+ * out showed the previous day everywhere east of UTC — a note saying
+ * 2026-09-01 rendered as 2026-08-31. The cell shows a calendar day, and the
+ * calendar the user lives in is the local one, so the local components are
+ * what it reads. One rule for every Date: a value carrying a time would lose
+ * the same day whenever its local day and its UTC day differ.
+ */
+function dateCellText(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function cellDisplay(field: DataField, value: Optional<DataValue>): CellDisplay {
   if (value === null || value === undefined || value === "") return { kind: "empty" };
 
@@ -234,7 +250,7 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
     case DataFieldType.Number:
       return { kind: "number", text: typeof value === "number" ? value.toLocaleString() : String(value) };
     case DataFieldType.Date:
-      return { kind: "text", text: value instanceof Date ? value.toISOString().slice(0, 10) : String(value) };
+      return { kind: "text", text: value instanceof Date ? dateCellText(value) : String(value) };
     case DataFieldType.Select:
       return toPills([String(value)], optionColor, false);
     case DataFieldType.Status:

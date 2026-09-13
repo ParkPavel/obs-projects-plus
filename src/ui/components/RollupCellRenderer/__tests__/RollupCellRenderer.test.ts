@@ -130,6 +130,44 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2024-03-15");
   });
 
+  /**
+   * #158: a date-only rollup input (e.g. min/max over a Date field) is
+   * local midnight from ingestion; reading it back through the UTC
+   * calendar day loses a day east of UTC. `hostLocalDate` builds a Date
+   * whose local getters answer as a chosen UTC-offset host would, without
+   * depending on — or mocking — the timezone this suite actually runs in.
+   */
+  function hostLocalDate(utcInstant: Date, hostUtcOffsetMinutes: number): Date {
+    const asLocal = new Date(utcInstant.getTime() + hostUtcOffsetMinutes * 60_000);
+    const faked = new Date(utcInstant.getTime());
+    faked.getFullYear = () => asLocal.getUTCFullYear();
+    faked.getMonth = () => asLocal.getUTCMonth();
+    faked.getDate = () => asLocal.getUTCDate();
+    faked.getHours = () => asLocal.getUTCHours();
+    faked.getMinutes = () => asLocal.getUTCMinutes();
+    faked.getSeconds = () => asLocal.getUTCSeconds();
+    faked.getMilliseconds = () => asLocal.getUTCMilliseconds();
+    return faked;
+  }
+
+  test("keeps a date-only rollup's calendar day on a host east of UTC (#158)", () => {
+    // Local midnight of 2026-09-01 on an Asia/Irkutsk host (UTC+8) is the
+    // absolute instant 2026-08-31T16:00:00Z.
+    const value = hostLocalDate(new Date("2026-08-31T16:00:00Z"), 8 * 60);
+    const { container } = render(RollupCellRenderer, {
+      props: { value, fn: "min" },
+    });
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2026-09-01");
+  });
+
+  test("leaves a time-carrying rollup value's rendering alone on the same host (#158)", () => {
+    const value = hostLocalDate(new Date("2024-03-15T12:00:00Z"), 8 * 60);
+    const { container } = render(RollupCellRenderer, {
+      props: { value, fn: "min" },
+    });
+    expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2024-03-15");
+  });
+
   test("supports custom emptyPlaceholder", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: null, fn: "sum", emptyPlaceholder: "(none)" },
