@@ -38,6 +38,7 @@
     RollupFieldConfig,
   } from "src/settings/base/settings";
   import type { RollupFunction } from "src/lib/engine/aggregate";
+  import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
   export let existingFields: DataField[];
   export let defaultName: string;
@@ -266,7 +267,7 @@
     })),
   ];
   $: relationFieldsOnThisProject = existingFields.filter(
-    (f) => f.type === DataFieldType.Relation
+    (f) => f.type === DataFieldType.Relation && !isRelationCompanionField(f.name)
   );
   $: rollupRelationOptions = [
     { label: $i18n.t("modals.field.configure.rollup.no-relation"), value: "" },

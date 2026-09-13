@@ -16,6 +16,7 @@ import {
   derivedFieldName,
   enrichFrameWithAllRelations,
   enrichFrameWithRelations,
+  isRelationCompanionField,
   normalizeRelationValue,
   resolveCrossProjectRelations,
 } from "../crossProjectResolver";
@@ -193,5 +194,28 @@ describe("enrichFrameWithAllRelations", () => {
     expect(() =>
       enrichFrameWithAllRelations(journalFrame(), new Map())
     ).not.toThrow();
+  });
+});
+
+describe("isRelationCompanionField", () => {
+  it("recognizes the __resolved__ prefix this module owns", () => {
+    expect(isRelationCompanionField(derivedFieldName("account"))).toBe(true);
+  });
+
+  it("does not flag an ordinary field name", () => {
+    expect(isRelationCompanionField("account")).toBe(false);
+  });
+
+  // A Formula field is also `derived: true` (applyFormulaFields.ts), so
+  // `derived` cannot be the filter a picker uses — only the __resolved__
+  // prefix identifies an engine companion.
+  it("lets a derived Formula field survive the filter that removes companions", () => {
+    const fields: DataField[] = [
+      { name: "account", type: DataFieldType.Relation, identifier: false, derived: false, repeated: false, typeConfig: {} },
+      { name: derivedFieldName("account"), type: DataFieldType.Relation, identifier: false, derived: true, repeated: true, typeConfig: {} },
+      { name: "total", type: DataFieldType.Formula, identifier: false, derived: true, repeated: false, typeConfig: {} },
+    ];
+    const pickable = fields.filter((f) => !isRelationCompanionField(f.name));
+    expect(pickable.map((f) => f.name)).toEqual(["account", "total"]);
   });
 });

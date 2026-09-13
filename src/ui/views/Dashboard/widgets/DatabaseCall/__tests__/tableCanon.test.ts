@@ -75,6 +75,22 @@ describe("buildColumns (canon §0/§1)", () => {
     const cols = buildColumns(withPath, { fieldConfig: { path: { hide: false } } } as never);
     expect(cols.map((c) => c.field.name)).toContain("path");
   });
+
+  it("hides a relation's __resolved__ companion by default, but keeps a Formula field that is also derived:true", () => {
+    const withCompanion = [
+      ...FIELDS,
+      field("__resolved__client", DataFieldType.Relation, { derived: true, repeated: true }),
+      field("total", DataFieldType.Formula, { derived: true }),
+    ];
+    const names = buildColumns(withCompanion, undefined).map((c) => c.field.name);
+    expect(names).not.toContain("__resolved__client");
+    expect(names).toContain("total");
+    // Same escape hatch as `path`: an explicit hide:false surfaces it.
+    const shown = buildColumns(withCompanion, {
+      fieldConfig: { __resolved__client: { hide: false } },
+    } as never);
+    expect(shown.map((c) => c.field.name)).toContain("__resolved__client");
+  });
 });
 
 describe("sorting (multi-criteria + legacy)", () => {

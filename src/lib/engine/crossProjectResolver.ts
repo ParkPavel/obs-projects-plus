@@ -121,4 +121,15 @@ export function derivedFieldName(fieldName: string): string {
   return DERIVED_PREFIX + fieldName;
 }
 
+/**
+ * Whether a field name is one of this module's `__resolved__` companions —
+ * the projected target records that ride beside a relation's raw wikilinks
+ * (`enrichFrameWithRelations`). `derived: true` cannot serve as this test:
+ * a Formula field is `derived` too (`applyFormulaFields.ts`) and must stay
+ * selectable everywhere a companion must not.
+ */
+export function isRelationCompanionField(fieldName: string): boolean {
+  return fieldName.startsWith(DERIVED_PREFIX);
+}
+
 export type { RelationFieldConfig, RollupFieldConfig };

@@ -24,6 +24,7 @@
   } from "src/lib/dashboard-engine/aggregationOptions";
   import { settings as settingsStore } from "src/lib/stores/settings";
   import { dataFieldTypeOptions } from "./dataFieldTypeOptions";
+  import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
   export let title: string;
   export let field: DataField;
@@ -406,6 +407,7 @@
   $: relationFieldsOnThisProject = existingFields.filter(
     (f) =>
       f.type === DataFieldType.Relation &&
+      !isRelationCompanionField(f.name) &&
       Boolean(
         (f.typeConfig as { relation?: RelationFieldConfig })?.relation
           ?.targetProjectId
