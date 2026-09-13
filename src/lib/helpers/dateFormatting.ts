@@ -158,3 +158,19 @@ export function parseDate(
   // Delegate to existing parsing logic from calendar.ts
   return parseDateInTimezone(value, timezone);
 }
+
+/**
+ * #158 — the calendar day a value falls on where the reader lives.
+ *
+ * Ingestion stores a date-only frontmatter value as *local* midnight
+ * (`datasources/helpers.ts`), so a UTC serialisation of it names the previous
+ * day everywhere east of UTC: a note saying 2026-09-01 rendered 2026-08-31.
+ * This reads the components the host itself reports, which is also what makes
+ * it testable at a chosen offset without moving the process timezone.
+ */
+export function formatLocalDay(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

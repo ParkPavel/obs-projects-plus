@@ -77,11 +77,6 @@
   }
   function toggleToolbar() { if (effectiveConfig) saveConfig({ ...effectiveConfig, showWidgetToolbar: !showToolbar }); }
   const t = (key: string, opts?: Record<string, unknown>) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key);
-  // #158: `project` is reassigned in place when the canvas is retargeted to a
-  // different project (see useView.ts) — no new DashboardCanvas is created.
-  // A captured `project.id` here would keep writing schema/relation config
-  // against whichever project was on screen when this ran once, so the id is
-  // read live just like fields/records/projects already were.
   const schemaController = createSchemaController({
     app: $app, api, getProjectId: () => project.id, t,
     getFields: () => frame.fields, getRecords: () => frame.records, getProjects: () => $settings.projects,

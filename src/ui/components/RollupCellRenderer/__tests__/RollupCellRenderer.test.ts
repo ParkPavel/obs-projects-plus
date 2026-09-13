@@ -160,7 +160,7 @@ describe("RollupCellRenderer — plain (count / more) group", () => {
     expect(container.querySelector(".ppp-rollup-plain")?.textContent).toBe("2026-09-01");
   });
 
-  test("leaves a time-carrying rollup value's rendering alone on the same host (#158)", () => {
+  test("gives a time-carrying rollup value the day its own host is living (#158)", () => {
     const value = hostLocalDate(new Date("2024-03-15T12:00:00Z"), 8 * 60);
     const { container } = render(RollupCellRenderer, {
       props: { value, fn: "min" },
