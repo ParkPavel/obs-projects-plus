@@ -205,10 +205,21 @@ describe("R0.25 — documentation pairs", () => {
     expect(unpaired).toEqual([]);
   });
 
-  it("found at least the bilingual pages actually on disk", () => {
-    // A walk that silently finds nothing would make every other test in this
-    // file vacuously pass. Pin today's count so an empty result is loud.
-    expect(BILINGUAL.length).toBe(4);
+  it("names the four bilingual pages and no more", () => {
+    // The floor cases below are what make an empty walk loud; this one pins
+    // the only hand-written list of pages left, so a fifth page cannot be
+    // quietly excused from pairing by being added to it.
+    expect(BILINGUAL).toHaveLength(4);
+  });
+
+  it("discovers each page and each pair once", () => {
+    // The count assertion this replaced caught one thing on its way past:
+    // a page reached twice — two walked directories overlapping, a pair
+    // pushed twice — would run every check below twice and pass. The floor
+    // is containment, so it cannot notice a duplicate; this can.
+    expect(new Set(pages).size).toBe(pages.length);
+    const identities = pairs.map(({ base, twin }) => `${base}|${twin}`);
+    expect(new Set(identities).size).toBe(identities.length);
   });
 
   it.each(FLOOR_PAIRS)("still pairs %s with %s", (base, twin) => {
