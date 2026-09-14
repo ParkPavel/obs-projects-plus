@@ -24,7 +24,6 @@
  * ║  Anything tagged `@deprecated` will be removed in v4.x.               ║
  * ╚═══════════════════════════════════════════════════════════════════════╝
  *
- * @see ../docs/PHASE_3_TICKETS.md REFACTOR-007
  * @since 3.0.0
  */
 
