@@ -103,7 +103,15 @@ describe("#207 — placeholders in the console line", () => {
     );
   });
 
-  it("the two `About` helpers write at the levels their names promise", () => {
+  it("the two `About` helpers write at the levels their names promise, with the params filled in", () => {
+    // "p" used to stand in for the path here, but the unsubstituted caption
+    // ("...saved as {{path}}.") also contains "p" — the assertion held even
+    // once a helper stopped forwarding params. The marker below does not
+    // occur anywhere in PPP-105's caption, substituted or not, so dropping
+    // the forward is the only way this can pass.
+    const marker = "forwarded-value-not-in-any-caption";
+    const expected = errorLine("PPP-105", { path: marker });
+
     const errors: unknown[][] = [];
     const warnings: unknown[][] = [];
     const error = jest.spyOn(console, "error").mockImplementation((...a) => {
@@ -114,14 +122,54 @@ describe("#207 — placeholders in the console line", () => {
     });
 
     try {
-      logErrorAbout("PPP-105", { path: "p" }, "detail");
-      logWarningAbout("PPP-105", { path: "p" }, "detail");
+      logErrorAbout("PPP-105", { path: marker }, "detail");
+      logWarningAbout("PPP-105", { path: marker }, "detail");
 
-      expect(String(errors[0]?.[0])).toContain("p");
-      expect(String(warnings[0]?.[0])).toContain("p");
+      expect(errors[0]?.[0]).toBe(expected);
+      expect(errors[0]?.[1]).toBe("detail");
+      expect(warnings[0]?.[0]).toBe(expected);
+      expect(warnings[0]?.[1]).toBe("detail");
     } finally {
       error.mockRestore();
       warn.mockRestore();
     }
+  });
+
+  it("fills every placeholder when a caption carries more than one", () => {
+    // PPP-204's caption has three: the field name and the two counts, and a
+    // caller could easily forward one params object that only happens to
+    // cover the first placeholder it wrote.
+    const caption = findErrorCode("PPP-204")?.caption ?? "";
+    expect(caption).toContain("{{field}}");
+    expect(caption).toContain("{{written}}");
+    expect(caption).toContain("{{unwritten}}");
+
+    const line = errorLine("PPP-204", {
+      field: "Priority",
+      written: 12,
+      unwritten: 3,
+    });
+
+    expect(line).toBe(
+      `[Projects+] PPP-204 ${caption
+        .replace("{{field}}", "Priority")
+        .replace("{{written}}", "12")
+        .replace("{{unwritten}}", "3")}`
+    );
+    expect(line).not.toContain("{{");
+  });
+
+  it("inserts a supplied value verbatim, even one that looks like another placeholder", () => {
+    // The substitution is one pass over the caption's own `{{...}}` tokens; a
+    // value is data, not a template, so a value that happens to spell
+    // `{{nested}}` must survive untouched rather than being expanded again.
+    const caption = findErrorCode("PPP-105")?.caption ?? "";
+    const line = errorLine("PPP-105", { path: "{{nested}}" });
+
+    expect(line).toBe(
+      `[Projects+] PPP-105 ${caption
+        .replace(/^Projects\+:\s*/, "")
+        .replace("{{path}}", "{{nested}}")}`
+    );
   });
 });
