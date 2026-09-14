@@ -13,7 +13,7 @@
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
   import { applyRollupColumns } from "./rollupColumns";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
-  import { extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
+  import { applyDeclaredFieldTypes, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
   import { useView } from "./useView";
   import { applySort, sortRecords } from "./viewSort";
@@ -162,13 +162,17 @@
     const fc = project.fieldConfig as
       | import("./viewHelpers").FieldConfigRelationMap
       | undefined;
+    // A field the user typed as a relation reads as one from here on, whether
+    // it holds one wikilink or many — before enrichment, so the derived
+    // `__resolved__<field>` companion below inherits the same type.
+    const declaredFrame = applyDeclaredFieldTypes(frame, fc);
     // Relation enrichment needs the external frames; rollups do not — a rollup
     // over a self-relation resolves against this very frame (#141), so the old
     // `externalFramesMap.size === 0` early return dropped a whole class of them.
     const enriched =
       externalFramesMap.size > 0
-        ? enrichFrameWithAllRelations(frame, externalFramesMap)
-        : frame;
+        ? enrichFrameWithAllRelations(declaredFrame, externalFramesMap)
+        : declaredFrame;
     // Rollup values are folded in under the field's own name, so filter, sort
     // and cell renderers all see the aggregate without a separate column.
     return applyRollupColumns(enriched, fc, project.id, externalFramesMap);

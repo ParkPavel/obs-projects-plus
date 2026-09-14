@@ -67,12 +67,17 @@
     return 10 * mag;
   }
 
-  function yPos(val: number): number {
-    return plotH - (val / maxVal) * plotH;
+  // #166 follow-up: same closure blindness LineChart had — called straight
+  // from the template (`xPos(gl)`), Svelte tracks only the identifiers the
+  // call expression names, not what the function reaches into, so a width
+  // change never reran these. Values are passed in rather than closed over
+  // (the fix PieChart already uses for CX/CY/R) so the call site names them.
+  function yPos(val: number, plotHeight: number, maxValue: number): number {
+    return plotHeight - (val / maxValue) * plotHeight;
   }
 
-  function xPos(val: number): number {
-    return (val / maxVal) * plotW;
+  function xPos(val: number, maxValue: number, plotWidth: number): number {
+    return (val / maxValue) * plotWidth;
   }
 
   function barColor(index: number): string {
@@ -115,14 +120,14 @@
       {#each gridLines as gl}
         {#if horizontal}
           <line
-            x1={xPos(gl)} y1={0}
-            x2={xPos(gl)} y2={plotH}
+            x1={xPos(gl, maxVal, plotW)} y1={0}
+            x2={xPos(gl, maxVal, plotW)} y2={plotH}
             stroke="var(--background-modifier-border)" stroke-dasharray="3,3"
           />
         {:else}
           <line
-            x1={0} y1={yPos(gl)}
-            x2={plotW} y2={yPos(gl)}
+            x1={0} y1={yPos(gl, plotH, maxVal)}
+            x2={plotW} y2={yPos(gl, plotH, maxVal)}
             stroke="var(--background-modifier-border)" stroke-dasharray="3,3"
           />
         {/if}
@@ -134,7 +139,7 @@
       {@const isSelected = selectedLabel != null && label === selectedLabel}
       {#if horizontal}
         {@const bY = i * (barWidth + barGap)}
-        {@const bW = xPos(val)}
+        {@const bW = xPos(val, maxVal, plotW)}
         <rect
           x={0} y={bY}
           width={bW} height={barWidth}

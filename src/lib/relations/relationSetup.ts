@@ -15,6 +15,7 @@
  */
 
 import { DataFieldType, type DataField, type DataFrame } from "src/lib/dataframe/dataframe";
+import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 import {
   buildRelationTargetIndex,
   resolveRelationValue,
@@ -90,6 +91,13 @@ export function validateRelationSetupDraft(
   }
   if (!draft.targetProjectId.trim()) {
     return { valid: false, messageKey: "relation-setup.error-target-required", message: "Choose a database to link." };
+  }
+  if (isRelationCompanionField(name)) {
+    // The engine's own resolved-relation columns live under this prefix and
+    // the product hides them; a property created here would vanish from the
+    // user's table. Refused in the wizard as well as in the field dialogs —
+    // one door left open is the whole namespace left open.
+    return { valid: false, messageKey: "relation-setup.error-reserved-name", message: "Names starting with __resolved__ are reserved for the plugin's own columns." };
   }
   if (draft.createSourceField) {
     if (existingFields.some((field) => field.name === name)) {

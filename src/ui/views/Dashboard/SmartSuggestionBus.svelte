@@ -37,40 +37,74 @@
   ]);
   $: current = suggestions[0];
 
-  const STRIP_TEXT: Record<
-    SuggestionKind,
-    { messageKey: string; messageDefault: string; actionKey: string; actionDefault: string }
-  > = {
-    "numeric-stats": {
-      messageKey: "views.dashboard.smart-suggest.numeric-message",
-      messageDefault:
-        'Numeric field "{{field}}" detected — want a Stats block with sum and average?',
-      actionKey: "views.dashboard.smart-suggest.numeric-action",
-      actionDefault: "Add Stats",
-    },
-    "relation-block": {
-      messageKey: "views.dashboard.smart-suggest.relation-message",
-      messageDefault:
-        'Relation field "{{field}}" detected — show related records in a linked data block?',
-      actionKey: "views.dashboard.smart-suggest.relation-action",
-      actionDefault: "Add data block",
-    },
-  };
+  interface StripText {
+    messageKey: string;
+    messageDefault: string;
+    messageParams: Record<string, string>;
+    actionKey: string;
+    actionDefault: string;
+  }
+
+  // date-chart's message names whichever field it will actually plot on Y
+  // (the numeric field it found, or nothing when it will count records
+  // instead) — that is the one variable part; the other two kinds are static
+  // per-kind text keyed only by the triggering field.
+  function stripText(s: SmartSuggestion): StripText {
+    switch (s.kind) {
+      case "numeric-stats":
+        return {
+          messageKey: "views.dashboard.smart-suggest.numeric-message",
+          messageDefault:
+            'Numeric field "{{field}}" detected — want a Stats block with sum and average?',
+          messageParams: { field: s.fieldName },
+          actionKey: "views.dashboard.smart-suggest.numeric-action",
+          actionDefault: "Add Stats",
+        };
+      case "relation-block":
+        return {
+          messageKey: "views.dashboard.smart-suggest.relation-message",
+          messageDefault:
+            'Relation field "{{field}}" detected — show related records in a linked data block?',
+          messageParams: { field: s.fieldName },
+          actionKey: "views.dashboard.smart-suggest.relation-action",
+          actionDefault: "Add data block",
+        };
+      case "date-chart":
+        return s.numericFieldName
+          ? {
+              messageKey: "views.dashboard.smart-suggest.date-avg-message",
+              messageDefault:
+                'Date field "{{field}}" detected — build a chart of "{{numericField}}" averaged by date?',
+              messageParams: { field: s.fieldName, numericField: s.numericFieldName },
+              actionKey: "views.dashboard.smart-suggest.date-action",
+              actionDefault: "Build dynamics",
+            }
+          : {
+              messageKey: "views.dashboard.smart-suggest.date-count-message",
+              messageDefault:
+                'Date field "{{field}}" detected — build a chart of record count by date?',
+              messageParams: { field: s.fieldName },
+              actionKey: "views.dashboard.smart-suggest.date-action",
+              actionDefault: "Build dynamics",
+            };
+    }
+  }
 </script>
 
 {#if current}
   {@const s = current}
+  {@const text = stripText(s)}
   <div class="ppp-smart-suggest" role="status">
     <span class="ppp-smart-suggest__icon"><Icon name="lightbulb" /></span>
     <span class="ppp-smart-suggest__message">
-      {$i18n.t(STRIP_TEXT[s.kind].messageKey, {
-        defaultValue: STRIP_TEXT[s.kind].messageDefault,
-        field: s.fieldName,
+      {$i18n.t(text.messageKey, {
+        defaultValue: text.messageDefault,
+        ...text.messageParams,
       })}
     </span>
     <button class="ppp-smart-suggest__accept" on:click={() => dispatch("accept", s)}>
-      {$i18n.t(STRIP_TEXT[s.kind].actionKey, {
-        defaultValue: STRIP_TEXT[s.kind].actionDefault,
+      {$i18n.t(text.actionKey, {
+        defaultValue: text.actionDefault,
       })}
     </button>
     <button

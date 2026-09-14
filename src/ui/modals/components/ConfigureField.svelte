@@ -24,6 +24,7 @@
   } from "src/lib/dashboard-engine/aggregationOptions";
   import { settings as settingsStore } from "src/lib/stores/settings";
   import { dataFieldTypeOptions } from "./dataFieldTypeOptions";
+  import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
   export let title: string;
   export let field: DataField;
@@ -53,6 +54,12 @@
     }
     if (existingFields.findIndex((field) => field.name === fieldName) !== -1)
       return $i18n.t("modals.field.configure.existing-name-error");
+    // Same reserved namespace as the create dialog: renaming INTO it would
+    // hide the property just as surely as creating it there.
+    if (isRelationCompanionField(fieldName.trim()))
+      return $i18n.t("modals.field.create.reserved-name-error", {
+        defaultValue: "Names starting with __resolved__ are reserved for the plugin's own columns.",
+      });
     return "";
   }
 
@@ -406,6 +413,7 @@
   $: relationFieldsOnThisProject = existingFields.filter(
     (f) =>
       f.type === DataFieldType.Relation &&
+      !isRelationCompanionField(f.name) &&
       Boolean(
         (f.typeConfig as { relation?: RelationFieldConfig })?.relation
           ?.targetProjectId

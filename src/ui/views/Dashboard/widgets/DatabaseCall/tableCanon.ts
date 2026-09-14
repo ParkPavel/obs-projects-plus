@@ -6,6 +6,7 @@
 // presents what the canonical pipeline already produced.
 
 import { formatLocalDay } from "src/lib/helpers/dateFormatting";
+import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 import {
   DataFieldType,
   type DataField,
@@ -61,7 +62,7 @@ function isVisible(
 ): boolean {
   if (name === primary) return true;
   if (cfg?.hide === true) return false;
-  if (DEFAULT_HIDDEN.has(name)) return cfg?.hide === false;
+  if (DEFAULT_HIDDEN.has(name) || isRelationCompanionField(name)) return cfg?.hide === false;
   return true;
 }
 

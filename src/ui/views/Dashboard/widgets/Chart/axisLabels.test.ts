@@ -3,6 +3,7 @@
 
 import {
   computeAxisLabelLayout,
+  labelAnchor,
   shouldRenderLabel,
   truncateLabel,
 } from "./axisLabels";
@@ -150,6 +151,36 @@ describe("#166 — the container width decides the cull", () => {
     const { plotWidth, layout } = layoutFor(0);
     expect(plotWidth).toBe(CHART_WIDTH_FALLBACK - PADDING_LEFT - PADDING_RIGHT);
     expect(Number.isFinite(layout.skipInterval)).toBe(true);
+  });
+});
+
+describe("labelAnchor", () => {
+  // A label centered ("middle") on the plot's edge overflows half its width
+  // past that edge — that overflow is what clipped the right-most X axis
+  // label ("2026-09-07" rendering as "2026-09-0"). Anchoring the edge labels
+  // to the edge they sit on keeps them inside the plot instead.
+  test("anchors the first label to start and the last to end", () => {
+    expect(labelAnchor(0, 5, false)).toBe("start");
+    expect(labelAnchor(4, 5, false)).toBe("end");
+  });
+
+  test("keeps interior labels centered", () => {
+    expect(labelAnchor(2, 5, false)).toBe("middle");
+  });
+
+  test("a single label is both first and last: anchors to start", () => {
+    expect(labelAnchor(0, 1, false)).toBe("start");
+  });
+
+  test("rotation does not rescue an edge label either", () => {
+    // This used to expect `middle` for rotated labels, on the idea that the
+    // transform already leans them away from the edge. It does not: text
+    // turned about its own midpoint keeps half of itself on the far side of
+    // the anchor, and at the plot's edge that half hangs outside. The edge
+    // labels anchor to their edge whether or not they are rotated.
+    expect(labelAnchor(0, 5, true)).toBe("start");
+    expect(labelAnchor(4, 5, true)).toBe("end");
+    expect(labelAnchor(2, 5, true)).toBe("middle");
   });
 });
 

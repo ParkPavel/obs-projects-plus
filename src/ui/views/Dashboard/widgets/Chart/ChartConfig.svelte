@@ -4,6 +4,7 @@
   import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig, ChartAxisX } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
   export let config: ChartConfig;
   export let fields: DataField[];
@@ -25,7 +26,11 @@
     { value: "scatter", labelKey: "views.dashboard.chart.types.scatter" },
   ];
 
-  $: fieldNames = fields.map((f) => f.name);
+  // The engine's `__resolved__` relation companions (crossProjectResolver.ts)
+  // are pipeline plumbing, not something a user picks an axis by.
+  $: fieldNames = fields
+    .filter((f) => !isRelationCompanionField(f.name))
+    .map((f) => f.name);
   $: isScatter = config.chartType === "scatter";
 
   // #096.3 — granularity <select> is gated on the X-axis field being a Date.

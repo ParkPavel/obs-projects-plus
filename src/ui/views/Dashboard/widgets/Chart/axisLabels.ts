@@ -67,6 +67,29 @@ export function truncateLabel(label: string, max: number): string {
 }
 
 /**
+ * SVG `text-anchor` for the label at `index`. The first and last labels sit
+ * exactly at the plot's edges (BarChart/LineChart both place them there), so
+ * centering them (`middle`) lets half their width overflow past the plot's
+ * padding — that half was what a wide right-most date label was losing to
+ * the SVG's own clip. Anchoring the edge labels to the edge they sit on
+ * keeps the whole label inside the plot instead. A rotated label already
+ * leans away from its anchor point via the transform, so it keeps `middle`.
+ */
+export function labelAnchor(
+  index: number,
+  count: number,
+  _rotate: boolean
+): "start" | "middle" | "end" {
+  // Rotation does not save an edge label: text turned about its own midpoint
+  // still has half of itself on the far side of the anchor, and at the plot's
+  // edge that half is outside. So the edge labels anchor to their edge
+  // whether or not they are rotated.
+  if (index === 0) return "start";
+  if (index === count - 1) return "end";
+  return "middle";
+}
+
+/**
  * Compute a density-based label layout. The estimated label box width drives
  * three escalating responses to crowding:
  *  1. labels fit horizontally   → render all, no rotation
