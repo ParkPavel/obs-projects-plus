@@ -10,7 +10,8 @@ import { RelationSetupModal } from "src/ui/modals/relationSetupModal";
 export type RelationSetupControllerDeps = {
   readonly app: App;
   readonly api: ViewApi;
-  readonly projectId: ProjectId;
+  /** #158 — live projection; see the matching note on SchemaControllerDeps. */
+  readonly getProjectId: () => ProjectId;
   readonly getFrame: () => DataFrame;
   readonly getProjects: () => readonly ProjectDefinition[];
   readonly t: (key: string, options?: { defaultValue?: string }) => string;
@@ -20,7 +21,7 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
   async function save(draft: RelationSetupDraft): Promise<void> {
     const source = deps.getFrame();
     const valid = validateRelationSetupDraft(draft, source.fields);
-    if (!valid.valid) throw new Error(valid.message);
+    if (!valid.valid) throw new Error(deps.t(valid.messageKey, { defaultValue: valid.message }));
     const config = toRelationFieldConfig(draft);
     let fields = source.fields;
     if (draft.createSourceField) {
@@ -33,15 +34,37 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
       fields = [...fields, field];
       const unwritten = outcome.failed.length + outcome.missing.length;
       if (unwritten > 0) {
-        settings.updateFieldConfig(deps.projectId, draft.fieldName.trim(), fields.map((f) => f.name), { relation: config });
+        settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((f) => f.name), { relation: config });
         throw new Error(
           deps.t("relation-setup.saved-partial", {
             defaultValue: `Relation saved, but the property could not be added to ${unwritten} note(s). See the console.`,
           })
         );
       }
+    } else {
+      // #158 — the third shape: the named property already exists but is not
+      // yet typed Relation (validated above). Convert it in place: `updateField`
+      // with no `oldName` changes the declared type in the live frame without
+      // renaming anything, so `ViewApi.updateField` never calls
+      // `dataApi.renameField` and no note is rewritten (viewApi.ts, updateField).
+      // This is the same call `ConfigureField`'s own "type changed, name did
+      // not" save path makes — the wizard is not inventing a new write path.
+      const existing = fields.find((field) => field.name === draft.fieldName.trim());
+      if (existing && existing.type !== DataFieldType.Relation) {
+        const relationField: DataField = {
+          ...existing,
+          type: DataFieldType.Relation,
+          typeConfig: { relation: config },
+        };
+        await deps.api.updateField(relationField);
+        fields = fields.map((field) => (field.name === relationField.name ? relationField : field));
+      }
     }
-    settings.updateFieldConfig(deps.projectId, draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });
+    // #158: only `relation` survives, which is the allowlist
+    // `ConfigureField.handleTypeChange` already applies for this type. Carrying
+    // the previous keys over would leave a rollup behind, and a stale rollup is
+    // not inert — `rollupColumns.ts` runs every fieldConfig entry that has one.
+    settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((field) => field.name), { relation: config });
   }
   async function refreshPreview(source: DataFrame, draft: RelationSetupDraft, modal: RelationSetupModal): Promise<void> {
     if (!draft.targetProjectId.trim()) { modal.setSummary(undefined); return; }

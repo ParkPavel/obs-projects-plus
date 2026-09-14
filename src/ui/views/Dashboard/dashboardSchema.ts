@@ -35,7 +35,14 @@ import { createRelationSetupController } from "./relationSetupController";
 export interface SchemaControllerDeps {
   readonly app: App;
   readonly api: ViewApi;
-  readonly projectId: ProjectId;
+  /**
+   * #158 — live projection, not a captured id: the canvas that owns this
+   * controller can be retargeted to a different project without being
+   * recreated, and every write below must land on whichever project is on
+   * screen at write time, not the one that was on screen when this
+   * controller was built.
+   */
+  readonly getProjectId: () => ProjectId;
   /** Live projection — read on every modal open so newly-added fields surface. */
   readonly getFields: () => DataField[];
   /**
@@ -68,14 +75,14 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
   /** False once the owning view is gone; nothing may open after that. */
   let alive = true;
   const relationSetup = createRelationSetupController({
-    app: deps.app, api: deps.api, projectId: deps.projectId, getFrame: () => ({ fields: deps.getFields(), records: deps.getRecords() as never }),
+    app: deps.app, api: deps.api, getProjectId: deps.getProjectId, getFrame: () => ({ fields: deps.getFields(), records: deps.getRecords() as never }),
     getProjects: deps.getProjects, t: deps.t,
   });
 
   function persistFieldTypeConfig(field: DataField) {
     if (!field.typeConfig) return;
     settings.updateFieldConfig(
-      deps.projectId,
+      deps.getProjectId(),
       field.name,
       deps.getFields().map((f) => f.name),
       field.typeConfig
@@ -98,7 +105,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         }
       },
       deps.getProjects(),
-      deps.projectId,
+      deps.getProjectId(),
       (f) => {
         createModal.close();
         const displayField = f.typeConfig?.relation?.displayField;
@@ -128,7 +135,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         if (!field.derived && !field.identifier) {
           if (next.name !== field.name) {
             await deps.api.updateField(next, field.name);
-            settings.deleteFieldConfig(deps.projectId, field.name);
+            settings.deleteFieldConfig(deps.getProjectId(), field.name);
           } else {
             await deps.api.updateField(next);
           }
@@ -137,7 +144,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         reopenSchema();
       },
       deps.getProjects(),
-      deps.projectId,
+      deps.getProjectId(),
       (f) => {
         configModal.close();
         const displayField = f.typeConfig?.relation?.displayField;
@@ -162,7 +169,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
         // #144 — same reason as the rename path: the outcome of a write across
         // every note is reported before the schema claims the field is gone.
         await deps.api.deleteField(field.name);
-        settings.deleteFieldConfig(deps.projectId, field.name);
+        settings.deleteFieldConfig(deps.getProjectId(), field.name);
         reopenSchema();
       }
     ).open();
@@ -175,7 +182,7 @@ export function createSchemaController(deps: SchemaControllerDeps): SchemaContro
       deps.t("modals.schema.title"),
       deps.getFields(),
       deps.getProjects(),
-      deps.projectId,
+      deps.getProjectId(),
       (field) => {
         schemaModal?.close();
         openConfigureField(field);

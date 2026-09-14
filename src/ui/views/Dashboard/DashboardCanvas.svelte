@@ -78,7 +78,7 @@
   function toggleToolbar() { if (effectiveConfig) saveConfig({ ...effectiveConfig, showWidgetToolbar: !showToolbar }); }
   const t = (key: string, opts?: Record<string, unknown>) => opts !== undefined ? $i18n.t(key, opts) : $i18n.t(key);
   const schemaController = createSchemaController({
-    app: $app, api, projectId: project.id, t,
+    app: $app, api, getProjectId: () => project.id, t,
     getFields: () => frame.fields, getRecords: () => frame.records, getProjects: () => $settings.projects,
   });
   const unsubCommands = subscribeCanvasCommands(() => schemaController.openSchema(), () => schemaController.openCreateField());

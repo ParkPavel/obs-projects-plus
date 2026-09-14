@@ -171,7 +171,7 @@
     if (!project?.id) return;
     const rel = (field.typeConfig as { relation?: { targetProjectId?: string; displayField?: string } } | undefined)?.relation;
     const displayField = rel?.displayField;
-    void createRelationSetupController({ app: $app, api, projectId: project.id, getFrame: () => frame, getProjects: () => get(settingsStore).projects, t: (k, o) => o ? $i18n.t(k, o) : $i18n.t(k) })
+    void createRelationSetupController({ app: $app, api, getProjectId: () => project.id, getFrame: () => frame, getProjects: () => get(settingsStore).projects, t: (k, o) => o ? $i18n.t(k, o) : $i18n.t(k) })
       .open({ fieldName: field.name, targetProjectId: rel?.targetProjectId ?? "", createSourceField: false, ...(displayField !== undefined ? { displayField } : {}) });
   }
 </script>

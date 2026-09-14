@@ -162,6 +162,47 @@ describe("cellDisplay (canon §2)", () => {
     expect(cell).toEqual({ kind: "text", text: "2026-06-11" });
   });
 
+  /**
+   * #158: ingestion turns a date-only frontmatter value into *local*
+   * midnight (helpers.ts `dayjs(value).toDate()`); reading it back through
+   * the UTC calendar day loses a day everywhere east of UTC. Rather than
+   * trust whatever timezone happens to run this suite, `hostLocalDate`
+   * builds a Date whose local getters answer as a host at a chosen UTC
+   * offset would answer, while leaving `toISOString()` — the real absolute
+   * instant — untouched. That is exactly the surface `dateCellText` reads,
+   * so this pins the host timezone the test needs without mocking `Date`
+   * globally or depending on the machine running it.
+   */
+  function hostLocalDate(utcInstant: Date, hostUtcOffsetMinutes: number): Date {
+    const asLocal = new Date(utcInstant.getTime() + hostUtcOffsetMinutes * 60_000);
+    const faked = new Date(utcInstant.getTime());
+    faked.getFullYear = () => asLocal.getUTCFullYear();
+    faked.getMonth = () => asLocal.getUTCMonth();
+    faked.getDate = () => asLocal.getUTCDate();
+    faked.getHours = () => asLocal.getUTCHours();
+    faked.getMinutes = () => asLocal.getUTCMinutes();
+    faked.getSeconds = () => asLocal.getUTCSeconds();
+    faked.getMilliseconds = () => asLocal.getUTCMilliseconds();
+    return faked;
+  }
+
+  it("keeps a date-only note's calendar day on a host east of UTC (#158)", () => {
+    // Frontmatter "2026-09-01" on an Asia/Irkutsk host (UTC+8): local
+    // midnight for that date is the absolute instant 2026-08-31T16:00:00Z.
+    const value = hostLocalDate(new Date("2026-08-31T16:00:00Z"), 8 * 60);
+    const cell = cellDisplay(field("d", DataFieldType.Date), value);
+    expect(cell).toEqual({ kind: "text", text: "2026-09-01" });
+  });
+
+  it("gives a time-carrying value the day its own host is living (#158)", () => {
+    // 20:00Z on a UTC+8 host is already the next morning there. The UTC day
+    // and the local day part company here, and the cell shows a calendar
+    // day — so it shows the one the reader is in.
+    const value = hostLocalDate(new Date("2026-06-11T20:00:00Z"), 8 * 60);
+    const cell = cellDisplay(field("d", DataFieldType.Date), value);
+    expect(cell).toEqual({ kind: "text", text: "2026-06-12" });
+  });
+
   it("renders wikilinks inside plain String fields as link chips (#085)", () => {
     const cell = cellDisplay(field("project", DataFieldType.String), "[[Onboarding Flow — Acme Studio]]");
     expect(cell.kind).toBe("pills");

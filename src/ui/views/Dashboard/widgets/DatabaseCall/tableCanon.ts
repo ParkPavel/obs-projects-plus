@@ -5,6 +5,7 @@
 // engine — filtering stays at view/block level; this module only orders and
 // presents what the canonical pipeline already produced.
 
+import { formatLocalDay } from "src/lib/helpers/dateFormatting";
 import {
   DataFieldType,
   type DataField,
@@ -219,10 +220,8 @@ function toPills(labels: string[], color: (label: string) => string | null, stat
 export function cellDisplay(field: DataField, value: Optional<DataValue>): CellDisplay {
   if (value === null || value === undefined || value === "") return { kind: "empty" };
 
-  const optionColor = (label: string): string | null => {
-    const cfg = field.typeConfig as ExtendedFieldTypeConfig | undefined;
-    return cfg ? getOptionColor(cfg, label) : null;
-  };
+  const cfg = field.typeConfig as ExtendedFieldTypeConfig | undefined;
+  const optionColor = (label: string) => (cfg ? getOptionColor(cfg, label) : null);
 
   if (field.repeated && Array.isArray(value)) {
     return toPills(value.map((v) => String(v)), optionColor, false);
@@ -234,7 +233,7 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
     case DataFieldType.Number:
       return { kind: "number", text: typeof value === "number" ? value.toLocaleString() : String(value) };
     case DataFieldType.Date:
-      return { kind: "text", text: value instanceof Date ? value.toISOString().slice(0, 10) : String(value) };
+      return { kind: "text", text: value instanceof Date ? formatLocalDay(value) : String(value) };
     case DataFieldType.Select:
       return toPills([String(value)], optionColor, false);
     case DataFieldType.Status:
