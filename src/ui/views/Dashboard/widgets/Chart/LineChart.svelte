@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
-  import { computeAxisLabelLayout, shouldRenderLabel, truncateLabel } from "./axisLabels";
+  import { computeAxisLabelLayout, labelAnchor, shouldRenderLabel, truncateLabel } from "./axisLabels";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -40,18 +40,30 @@
   $: pointCount = labels.length || 1;
   $: stepX = plotW / Math.max(pointCount - 1, 1);
 
-  function yPos(val: number | null): number {
-    return plotH - ((val ?? 0) / maxVal) * plotH;
+  // #166 follow-up: these read plotH/maxVal/stepX from the closure. Called
+  // straight from the template (`xPos(i)`), Svelte only tracks the identifiers
+  // the call expression names — `i`, not what `xPos` reaches into — so a width
+  // change patched the viewBox and nothing else. Same fix PieChart already
+  // uses for CX/CY/R: the values are passed in rather than closed over, so the
+  // template call site names them and the compiler sees the dependency.
+  function yPos(val: number | null, plotHeight: number, maxValue: number): number {
+    return plotHeight - ((val ?? 0) / maxValue) * plotHeight;
   }
 
-  function xPos(index: number): number {
-    return index * stepX;
+  function xPos(index: number, step: number): number {
+    return index * step;
   }
 
-  function buildPath(values: (number | null)[], smooth: boolean): string {
+  function buildPath(
+    values: (number | null)[],
+    smooth: boolean,
+    step: number,
+    plotHeight: number,
+    maxValue: number
+  ): string {
     const points = values.map((v, i) => ({
-      x: xPos(i),
-      y: yPos(v),
+      x: xPos(i, step),
+      y: yPos(v, plotHeight, maxValue),
     }));
 
     if (points.length === 0) return "";
@@ -78,11 +90,17 @@
     return d;
   }
 
-  function areaPath(values: (number | null)[], smooth: boolean): string {
-    const linePath = buildPath(values, smooth);
+  function areaPath(
+    values: (number | null)[],
+    smooth: boolean,
+    step: number,
+    plotHeight: number,
+    maxValue: number
+  ): string {
+    const linePath = buildPath(values, smooth, step, plotHeight, maxValue);
     if (!linePath) return "";
-    const lastX = xPos(values.length - 1);
-    return `${linePath} L ${lastX},${plotH} L 0,${plotH} Z`;
+    const lastX = xPos(values.length - 1, step);
+    return `${linePath} L ${lastX},${plotHeight} L 0,${plotHeight} Z`;
   }
 
   function seriesColor(index: number): string {
@@ -103,8 +121,8 @@
     {#if style.showGrid}
       {#each labels as _, i}
         <line
-          x1={xPos(i)} y1={0}
-          x2={xPos(i)} y2={plotH}
+          x1={xPos(i, stepX)} y1={0}
+          x2={xPos(i, stepX)} y2={plotH}
           stroke="var(--background-modifier-border)" stroke-dasharray="3,3"
         />
       {/each}
@@ -119,13 +137,13 @@
           </linearGradient>
         </defs>
         <path
-          d={areaPath(series.values, !!style.smooth)}
+          d={areaPath(series.values, !!style.smooth, stepX, plotH, maxVal)}
           fill="url(#grad-{si})"
         />
       {/if}
 
       <path
-        d={buildPath(series.values, !!style.smooth)}
+        d={buildPath(series.values, !!style.smooth, stepX, plotH, maxVal)}
         fill="none"
         stroke={seriesColor(si)}
         stroke-width="2"
@@ -136,7 +154,7 @@
           {@const label = labels[i] ?? ""}
           {@const isSelected = selectedLabel != null && label === selectedLabel}
           <circle
-            cx={xPos(i)} cy={yPos(val)}
+            cx={xPos(i, stepX)} cy={yPos(val, plotH, maxVal)}
             r={isSelected ? 5 : 3}
             fill={seriesColor(si)}
             stroke={isSelected ? "var(--interactive-accent)" : "none"}
@@ -157,7 +175,7 @@
           />
           {#if style.showValues}
             <text
-              x={xPos(i)} y={yPos(val) - 8}
+              x={xPos(i, stepX)} y={yPos(val, plotH, maxVal) - 8}
               text-anchor="middle"
               fill="var(--text-muted)" font-size="10"
             >{val}</text>
@@ -170,10 +188,10 @@
       {#each labels as label, i}
         {#if shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
           <text
-            x={xPos(i)} y={plotH + 16}
-            text-anchor="middle"
+            x={xPos(i, stepX)} y={plotH + 16}
+            text-anchor={labelAnchor(i, labels.length, axisLabels.rotate)}
             fill="var(--text-normal)" font-size={LABEL_FONT}
-            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${xPos(i)} ${plotH + 16})` : ""}
+            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${xPos(i, stepX)} ${plotH + 16})` : ""}
           >{truncateLabel(label, axisLabels.truncateAt)}</text>
         {/if}
       {/each}
