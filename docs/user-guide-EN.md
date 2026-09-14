@@ -106,11 +106,11 @@ A relation points to notes in another project. For example, a YAML link can look
 client: "[[Clients/Maria Ivanova]]"
 ```
 
-The links in your frontmatter are the relation's data: the plugin neither rewrites them nor creates them anew. Configuring a relation only tells it where to resolve them.
+The links in your frontmatter are the relation's data. Configuring a relation leaves them alone: it only tells the plugin where to resolve them. The plugin rewrites a link only when you change the value in a cell yourself, and then it writes the new one back to the frontmatter.
 
 **From links to a relation.** Open “Schema,” find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Unmatched: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
 
-A formula, a rollup, the record's identifier and a derived property cannot become a relation: their values are computed or belong elsewhere, and a relation would overwrite what produces them. The wizard refuses and says which it is.
+A formula, a rollup, the record's identifier and a derived property cannot become a relation: their values are computed or belong elsewhere, and a relation would overwrite what produces them. The wizard refuses with one wording for all four — computed, or identifying the record — without naming which case applied.
 
 If several notes share a filename, include the folder in the link. A missing or ambiguous link needs its address corrected; it does not mean a target record was created automatically.
 

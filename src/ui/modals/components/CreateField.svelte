@@ -94,6 +94,16 @@
       return $i18n.t("modals.field.create.existing-name-error");
     }
 
+    // The engine puts its resolved-relation columns under this prefix and the
+    // product hides them; a property a user names that way would vanish from
+    // their own table. The namespace is reserved rather than the hiding made
+    // cleverer — a name nobody can see is worse than a name they cannot use.
+    if (isRelationCompanionField(fieldName.trim())) {
+      return $i18n.t("modals.field.create.reserved-name-error", {
+        defaultValue: "Names starting with __resolved__ are reserved for the plugin's own columns.",
+      });
+    }
+
     return "";
   }
 

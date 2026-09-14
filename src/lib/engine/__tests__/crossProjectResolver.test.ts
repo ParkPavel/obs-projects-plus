@@ -219,3 +219,13 @@ describe("isRelationCompanionField", () => {
     expect(pickable.map((f) => f.name)).toEqual(["account", "total"]);
   });
 });
+
+describe("the reserved namespace (#158)", () => {
+  test("a user property named like a companion is recognised as one", () => {
+    // The product hides companions, so a field a user named this way would
+    // vanish from their own table. Creating one is refused in the field
+    // dialog; this pins the predicate that refusal leans on.
+    expect(isRelationCompanionField("__resolved__vendor")).toBe(true);
+    expect(isRelationCompanionField("vendor")).toBe(false);
+  });
+});

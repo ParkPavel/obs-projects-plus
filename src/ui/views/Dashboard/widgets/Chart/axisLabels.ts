@@ -78,9 +78,12 @@ export function truncateLabel(label: string, max: number): string {
 export function labelAnchor(
   index: number,
   count: number,
-  rotate: boolean
+  _rotate: boolean
 ): "start" | "middle" | "end" {
-  if (rotate) return "middle";
+  // Rotation does not save an edge label: text turned about its own midpoint
+  // still has half of itself on the far side of the anchor, and at the plot's
+  // edge that half is outside. So the edge labels anchor to their edge
+  // whether or not they are rotated.
   if (index === 0) return "start";
   if (index === count - 1) return "end";
   return "middle";

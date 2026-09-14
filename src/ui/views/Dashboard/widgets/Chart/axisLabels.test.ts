@@ -172,9 +172,15 @@ describe("labelAnchor", () => {
     expect(labelAnchor(0, 1, false)).toBe("start");
   });
 
-  test("rotated labels stay centered regardless of position", () => {
-    expect(labelAnchor(0, 5, true)).toBe("middle");
-    expect(labelAnchor(4, 5, true)).toBe("middle");
+  test("rotation does not rescue an edge label either", () => {
+    // This used to expect `middle` for rotated labels, on the idea that the
+    // transform already leans them away from the edge. It does not: text
+    // turned about its own midpoint keeps half of itself on the far side of
+    // the anchor, and at the plot's edge that half hangs outside. The edge
+    // labels anchor to their edge whether or not they are rotated.
+    expect(labelAnchor(0, 5, true)).toBe("start");
+    expect(labelAnchor(4, 5, true)).toBe("end");
+    expect(labelAnchor(2, 5, true)).toBe("middle");
   });
 });
 
