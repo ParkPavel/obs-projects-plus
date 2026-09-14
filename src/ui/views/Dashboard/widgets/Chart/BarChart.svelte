@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
-  import { computeAxisLabelLayout, labelAnchor, shouldRenderLabel, truncateLabel } from "./axisLabels";
+  import { computeAxisLabelLayout, shouldRenderLabel, truncateLabel } from "./axisLabels";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -190,7 +190,7 @@
         {#if style.showLabels && shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
           <text
             x={bX + barWidth / 2} y={plotH + 14}
-            text-anchor={labelAnchor(i, labels.length, axisLabels.rotate)}
+            text-anchor="middle"
             fill="var(--text-normal)" font-size={LABEL_FONT}
             transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${bX + barWidth / 2} ${plotH + 14})` : ""}
           >{truncateLabel(label, axisLabels.truncateAt)}</text>

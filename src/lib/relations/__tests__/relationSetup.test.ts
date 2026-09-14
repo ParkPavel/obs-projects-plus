@@ -99,6 +99,19 @@ describe("relation setup preview", () => {
       const notOk = { ...plain, name: "twice", type: DataFieldType.Formula };
       expect(validateRelationSetupDraft(draft("twice"), [ok, notOk]).valid).toBe(false);
     });
+    test("refuses the plugin's reserved namespace", () => {
+      // One door left open is the whole namespace left open: the create
+      // dialog refuses it, so the wizard must too.
+      const result = validateRelationSetupDraft(
+        { fieldName: "__resolved__vendor", targetProjectId: "clients", createSourceField: true },
+        []
+      );
+      expect(result).toEqual({
+        valid: false,
+        messageKey: "relation-setup.error-reserved-name",
+        message: expect.stringContaining("reserved"),
+      });
+    });
     test("still converts a plain stored property", () => {
       expect(validateRelationSetupDraft(draft("client"), [plain])).toEqual({ valid: true });
     });

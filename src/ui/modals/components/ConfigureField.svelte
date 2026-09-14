@@ -54,6 +54,12 @@
     }
     if (existingFields.findIndex((field) => field.name === fieldName) !== -1)
       return $i18n.t("modals.field.configure.existing-name-error");
+    // Same reserved namespace as the create dialog: renaming INTO it would
+    // hide the property just as surely as creating it there.
+    if (isRelationCompanionField(fieldName.trim()))
+      return $i18n.t("modals.field.create.reserved-name-error", {
+        defaultValue: "Names starting with __resolved__ are reserved for the plugin's own columns.",
+      });
     return "";
   }
 

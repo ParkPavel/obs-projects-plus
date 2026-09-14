@@ -106,7 +106,7 @@ A relation points to notes in another project. For example, a YAML link can look
 client: "[[Clients/Maria Ivanova]]"
 ```
 
-The links in your frontmatter are the relation's data. Configuring a relation leaves them alone: it only tells the plugin where to resolve them. The plugin rewrites a link only when you change the value in a cell yourself, and then it writes the new one back to the frontmatter.
+The links in your frontmatter are the relation's data. Configuring a relation leaves them alone: it only tells the plugin where to resolve them. The plugin rewrites a link only when you change the value yourself — in a table cell or in the record editor — and then it writes the new one back to the frontmatter.
 
 **From links to a relation.** Open “Schema,” find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Unmatched: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
 
