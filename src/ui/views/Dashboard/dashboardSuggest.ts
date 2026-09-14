@@ -1,12 +1,12 @@
 // dashboardSuggest.ts — SmartSuggest wiring controller (#059).
 //
-// Extracted from DashboardCanvas.svelte during the vision-compliance audit
-// to restore the canvas ≤200 LOC invariant (master-prompt invariant 1).
-// Accepting a suggestion also persists its dismissal: the relation
-// suggestion's gate (a linked database-call) is not satisfied by merely
-// adding the block, so without this the strip would reappear.
+// Accepting persists the dismissal too — no rule's gate is satisfied by the
+// widget alone — and folds it onto the config `addWidget` returned rather
+// than a fresh read, which is what used to throw the widget away.
+// What each kind adds lives in `suggestionWidgets.ts`.
 
 import type { DatabaseViewConfig, WidgetDefinition, WidgetType } from "./types";
+import { widgetForSuggestion } from "./suggestionWidgets";
 import type { SmartSuggestion, SuggestionKind } from "./smartSuggest";
 
 export interface SuggestionController {
@@ -17,39 +17,42 @@ export interface SuggestionController {
 export function createSuggestionController(opts: {
   getConfig: () => DatabaseViewConfig | undefined;
   saveConfig: (cfg: DatabaseViewConfig) => void;
-  addWidget: (type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>) => void;
+  addWidget: (
+    type: WidgetType,
+    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>
+  ) => DatabaseViewConfig | undefined;
   getPrimaryWidgetId: () => string | undefined;
 }): SuggestionController {
   const { getConfig, saveConfig, addWidget, getPrimaryWidgetId } = opts;
 
+  function withDismissed(config: DatabaseViewConfig, kind: SuggestionKind): string[] | undefined {
+    const prev = config.dismissedSuggestions ?? [];
+    return prev.includes(kind) ? undefined : [...prev, kind];
+  }
   function persistDismiss(kind: SuggestionKind): void {
     const config = getConfig();
     if (!config) return;
-    const prev = config.dismissedSuggestions ?? [];
-    if (prev.includes(kind)) return;
-    saveConfig({ ...config, dismissedSuggestions: [...prev, kind] });
+    const dismissedSuggestions = withDismissed(config, kind);
+    if (!dismissedSuggestions) return;
+    saveConfig({ ...config, dismissedSuggestions });
   }
 
   return {
     accept(e) {
-      if (e.detail.kind === "relation-block" && e.detail.relationTargetProjectId) {
-        const primaryWidgetId = getPrimaryWidgetId() ?? "";
-        addWidget("database-call", {
-          sourceConfig: { projectId: e.detail.relationTargetProjectId },
-          config: {
-            linkedSelection: {
-              sourceWidgetId: primaryWidgetId,
-              relationField: e.detail.fieldName,
-            },
-          },
-        });
-      } else {
-        addWidget(e.detail.widgetType);
-      }
-      persistDismiss(e.detail.kind);
+      const s = e.detail;
+      // A double accept (kind already dismissed) must add nothing.
+      const config = getConfig();
+      if (!config || !withDismissed(config, s.kind)) return;
+
+      const { type, initial } = widgetForSuggestion(s, getPrimaryWidgetId() ?? "");
+      const saved = initial ? addWidget(type, initial) : addWidget(type);
+      if (!saved) return;
+
+      // Built on what addWidget saved, never on a fresh read: that is what
+      // used to throw the widget away.
+      const dismissedSuggestions = withDismissed(saved, s.kind);
+      if (dismissedSuggestions) saveConfig({ ...saved, dismissedSuggestions });
     },
-    dismiss(e) {
-      persistDismiss(e.detail);
-    },
+    dismiss: (e) => persistDismiss(e.detail),
   };
 }

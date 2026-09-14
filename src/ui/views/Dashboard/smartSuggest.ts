@@ -13,7 +13,7 @@
 import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
 import type { WidgetDefinition, WidgetType } from "./types";
 
-export type SuggestionKind = "numeric-stats" | "relation-block";
+export type SuggestionKind = "numeric-stats" | "relation-block" | "date-chart";
 
 export interface SmartSuggestion {
   readonly kind: SuggestionKind;
@@ -23,6 +23,13 @@ export interface SmartSuggestion {
   readonly widgetType: WidgetType;
   /** Defined for kind === "relation-block" when the field has a configured targetProjectId. */
   readonly relationTargetProjectId?: string;
+  /**
+   * Defined for kind === "date-chart" when the frame also has a numeric
+   * field — the accepted chart averages it on Y instead of counting records.
+   * The strip message must name exactly this field when it is present, so
+   * it is carried on the suggestion rather than recomputed at accept time.
+   */
+  readonly numericFieldName?: string;
 }
 
 type WidgetLike = Pick<WidgetDefinition, "type" | "config">;
@@ -73,6 +80,25 @@ export function computeSuggestions(
       fieldName: relationField.name,
       widgetType: "database-call",
       ...(relConfig?.targetProjectId ? { relationTargetProjectId: relConfig.targetProjectId } : {}),
+    });
+  }
+
+  // A date field's next analytical step is a trend chart. The gate is a
+  // chart widget that already plots this exact field on its X axis — that
+  // is the one fact that makes the suggestion redundant, mirroring how the
+  // relation rule gates on a block already wired to that field rather than
+  // on "some database-call exists somewhere".
+  const dateField = fields.find((f) => f.type === DataFieldType.Date);
+  const hasDateChart = widgets.some(
+    (w) => w.type === "chart" && (w.config as { xAxis?: { property?: string } })?.xAxis?.property === dateField?.name
+  );
+  if (dateField && !hasDateChart && !dismissed.includes("date-chart")) {
+    const yNumericField = fields.find((f) => f.type === DataFieldType.Number);
+    suggestions.push({
+      kind: "date-chart",
+      fieldName: dateField.name,
+      widgetType: "chart",
+      ...(yNumericField ? { numericFieldName: yNumericField.name } : {}),
     });
   }
 

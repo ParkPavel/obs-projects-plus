@@ -26,7 +26,14 @@ interface WidgetControllerOptions {
 }
 
 export interface WidgetController {
-  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): void;
+  /**
+   * Saves the widget and returns the config it saved — dashboardSuggest.ts
+   * chains a second save (the suggestion's dismissal) off this return value
+   * instead of re-reading getConfig(), which can still lag the save it just
+   * made (Svelte's `$:` block that refreshes it runs on the next tick, not
+   * synchronously). Every other caller ignores the return value.
+   */
+  addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): DatabaseViewConfig | undefined;
   removeWidget(id: string): void;
   /** CustomEvent handler: widget's own config changed (title, layout, type-specific options). */
   handleWidgetConfigChange(e: CustomEvent<{ id: string; changes: Partial<WidgetDefinition> }>): void;
@@ -45,11 +52,14 @@ export function createWidgetController({
     return getConfig();
   }
 
-  function addWidget(type: WidgetType, initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>): void {
+  function addWidget(
+    type: WidgetType,
+    initialConfig?: Partial<Omit<WidgetDefinition, "id" | "type">>
+  ): DatabaseViewConfig | undefined {
     const config = cfg();
-    if (!config) return;
+    if (!config) return undefined;
     const meta = getWidgetMeta(type);
-    if (!meta) return;
+    if (!meta) return undefined;
 
     const id = `w-${crypto.randomUUID().slice(0, 8)}`;
     const title = get(i18nStore).t(meta.labelKey);
@@ -61,7 +71,9 @@ export function createWidgetController({
       config: {},
       ...initialConfig,
     };
-    saveConfig({ ...config, widgets: [...config.widgets, newWidget] });
+    const next: DatabaseViewConfig = { ...config, widgets: [...config.widgets, newWidget] };
+    saveConfig(next);
+    return next;
   }
 
   function removeWidget(id: string): void {

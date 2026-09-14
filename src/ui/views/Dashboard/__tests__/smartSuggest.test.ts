@@ -155,6 +155,67 @@ describe("computeSuggestions (#059)", () => {
     });
   });
 
+  describe("date-chart rule", () => {
+    it("suggests a chart when a Date field exists and no chart plots it", () => {
+      const result = computeSuggestions(
+        [field("name", DataFieldType.String), field("dueDate", DataFieldType.Date)],
+        [],
+        []
+      );
+      expect(result).toContainEqual({
+        kind: "date-chart",
+        fieldName: "dueDate",
+        widgetType: "chart",
+      });
+    });
+
+    it("carries the numeric field for the Y axis when one exists", () => {
+      const result = computeSuggestions(
+        [field("dueDate", DataFieldType.Date), field("pain", DataFieldType.Number)],
+        [],
+        []
+      );
+      expect(result).toContainEqual({
+        kind: "date-chart",
+        fieldName: "dueDate",
+        widgetType: "chart",
+        numericFieldName: "pain",
+      });
+    });
+
+    it("stays silent without a Date field", () => {
+      const result = computeSuggestions([field("name", DataFieldType.String)], [], []);
+      expect(result.find((s) => s.kind === "date-chart")).toBeUndefined();
+    });
+
+    it("stays silent when a chart already plots that field on its X axis", () => {
+      const result = computeSuggestions(
+        [field("dueDate", DataFieldType.Date)],
+        [widget("chart", { xAxis: { property: "dueDate" } })],
+        []
+      );
+      expect(result.find((s) => s.kind === "date-chart")).toBeUndefined();
+    });
+
+    it("still suggests when a chart exists but plots a different field", () => {
+      const result = computeSuggestions(
+        [field("dueDate", DataFieldType.Date)],
+        [widget("chart", { xAxis: { property: "status" } })],
+        []
+      );
+      expect(result.find((s) => s.kind === "date-chart")).toBeDefined();
+    });
+
+    it("respects a persisted dismissal", () => {
+      const result = computeSuggestions(
+        [field("dueDate", DataFieldType.Date)],
+        [],
+        ["date-chart"]
+      );
+      expect(result.find((s) => s.kind === "date-chart")).toBeUndefined();
+    });
+  });
+
   it("returns both suggestions ordered numeric-first when both rules fire", () => {
     const result = computeSuggestions(
       [field("price", DataFieldType.Number), relationField("client")],

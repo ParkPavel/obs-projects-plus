@@ -9,8 +9,16 @@ jest.mock("src/lib/stores/i18n", () => {
   const { writable } = require("svelte/store");
   return {
     i18n: writable({
-      t: (key: string, options?: { defaultValue?: string }) =>
-        options?.defaultValue ?? key,
+      // Interpolates like the real translator does: a test that asserts on the
+      // sentence a user reads cannot do it against a mock that hands back the
+      // template. The placeholders are the whole point of these messages —
+      // #207 was a template printed raw to a user.
+      t: (key: string, options?: Record<string, unknown>) => {
+        const template = (options?.["defaultValue"] as string) ?? key;
+        return template.replace(/\{\{(\w+)\}\}/g, (whole: string, name: string) =>
+          options && name in options ? String(options[name]) : whole
+        );
+      },
     }),
   };
 });
@@ -19,6 +27,10 @@ const SmartSuggestionBus = require("../SmartSuggestionBus.svelte").default;
 
 function numericField(name = "price") {
   return { name, type: DataFieldType.Number, repeated: false, identifier: false, derived: false };
+}
+
+function dateField(name = "dueDate") {
+  return { name, type: DataFieldType.Date, repeated: false, identifier: false, derived: false };
 }
 
 function mount(props: Record<string, unknown>) {
@@ -138,6 +150,40 @@ describe("SmartSuggestionBus (#059)", () => {
     expect(target.querySelector(".ppp-smart-suggest__message")).toHaveTextContent(
       "Relation field"
     );
+    destroy();
+  });
+
+  it("names the numeric field it will average when a date field and a numeric field coexist", () => {
+    // numeric-stats fires too for this schema and is shown first (strip shows
+    // one at a time) — dismiss it so the assertion exercises date-chart's text.
+    const { target, destroy } = mount({
+      fields: [dateField(), numericField("pain")],
+      dismissed: ["numeric-stats"],
+    });
+    expect(target.querySelector(".ppp-smart-suggest__message")).toHaveTextContent("pain");
+    destroy();
+  });
+
+  it("promises a count, not a named field, when only a date field exists", () => {
+    const { target, destroy } = mount({ fields: [dateField()] });
+    expect(target.querySelector(".ppp-smart-suggest__message")).toHaveTextContent(
+      "record count"
+    );
+    destroy();
+  });
+
+  it("dispatches accept with the date-chart suggestion on CTA click", () => {
+    const { component, target, destroy } = mount({ fields: [dateField()] });
+    const onAccept = jest.fn();
+    component.$on("accept", (e: CustomEvent) => onAccept(e.detail));
+
+    click(target.querySelector(".ppp-smart-suggest__accept"));
+
+    expect(onAccept).toHaveBeenCalledWith({
+      kind: "date-chart",
+      fieldName: "dueDate",
+      widgetType: "chart",
+    });
     destroy();
   });
 });
