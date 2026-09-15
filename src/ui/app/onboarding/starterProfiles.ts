@@ -18,7 +18,7 @@
 // a live Obsidian instance or the global `settings` store.
 // ============================================================
 
-import type { Vault } from "obsidian";
+import type { TAbstractFile, Vault } from "obsidian";
 import { normalizePath, TFolder } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
@@ -43,14 +43,19 @@ export const STARTER_PROFILE_IDS: readonly StarterProfileId[] = [
  * Vault surface this module needs, expressed as a `Pick` of the real
  * `obsidian.Vault` interface rather than a hand-rolled shape — a real
  * `Vault` satisfies it with no cast, and a test fake only has to
- * implement four methods. `delete` is the rollback primitive: it is the
+ * implement five methods. `delete` is the rollback primitive: it is the
  * method a real `Vault` exposes for removing a file OR a folder it
  * created, with no cast needed (see `Vault.delete` in
- * `node_modules/obsidian/obsidian.d.ts`).
+ * `node_modules/obsidian/obsidian.d.ts`). `getRoot` returns the vault's
+ * own root `TFolder` (same file, `Vault.getRoot(): TFolder`) — its
+ * `children` are how root-level case-only collisions are found, since
+ * `getAbstractFileByPath` is documented case-sensitive there ("case
+ * sensitive" on the `path` parameter) while Windows/macOS file systems
+ * commonly are not.
  */
 export type StarterProfileVault = Pick<
   Vault,
-  "getAbstractFileByPath" | "createFolder" | "create" | "delete"
+  "getAbstractFileByPath" | "createFolder" | "create" | "delete" | "getRoot"
 >;
 
 export interface StarterProfileDeps {
@@ -80,6 +85,31 @@ export class StarterProfileWriteError extends Error {
         : `Could not write "${path}"`
     );
     this.name = "StarterProfileWriteError";
+  }
+}
+
+/**
+ * Thrown when every folder/template write succeeded but `deps.addProject`
+ * itself threw while registering the finished project. This run's own
+ * writes are rolled back exactly like a `StarterProfileWriteError` (see
+ * `leftovers`), but nothing failed to WRITE — the vault holds exactly what
+ * this run intended — so the message never names a path or claims a write
+ * failed. `Onboarding.svelte`'s `catch` only special-cases
+ * `StarterProfileWriteError`; anything else (this included) falls through
+ * to its generic "could not create the profile" message, which is honest
+ * for a registration failure.
+ */
+export class StarterProfileRegistrationError extends Error {
+  constructor(
+    readonly leftovers: readonly string[],
+    cause?: unknown
+  ) {
+    super(
+      cause instanceof Error
+        ? `Could not register the starter profile: ${cause.message}`
+        : "Could not register the starter profile"
+    );
+    this.name = "StarterProfileRegistrationError";
   }
 }
 
@@ -349,70 +379,135 @@ function buildProjectDefinition(
 // its own next to it, under the SAME root). The template is always
 // created inside a subfolder this run just created, so it can never
 // collide with anything.
+//
+// `getAbstractFileByPath` is explicitly case-sensitive (see its doc
+// comment in `node_modules/obsidian/obsidian.d.ts`), but Windows and
+// macOS vaults commonly sit on a case-insensitive file system: a folder
+// named `клиенты` is invisible to a case-sensitive probe for `Клиенты`,
+// and `createFolder("Клиенты")` then fails against the on-disk name it
+// never saw coming. Both resolvers therefore also compare candidate names
+// against the relevant parent's existing children with
+// `toLocaleLowerCase()`. A case-only match is treated as taken, not as
+// something to reuse: for the root, reuse is still restricted to an EXACT
+// name match on a FOLDER (a case-only root match forces the numbered
+// suffix, same as a file at that path); for a subfolder, any
+// case-insensitive match — exact or not — forces the suffix, matching the
+// existing "anything here forces a suffix" subfolder rule.
 
 const ROOT_FOLDER_BASE = "Projects Plus — Профили";
 
 interface RootResolution {
   readonly path: string;
-  /** True when an existing FOLDER at `path` is being reused, not created. */
-  readonly existed: boolean;
+  /**
+   * The existing root `TFolder` when one is being reused at `path`
+   * (returned directly from the `instanceof TFolder` narrowing below —
+   * never cast), or `null` when `path` is free and this run has to create
+   * it itself.
+   */
+  readonly folder: TFolder | null;
 }
 
 function resolveRootFolder(vault: StarterProfileVault): RootResolution {
+  const rootChildren = vault.getRoot().children;
   let candidate = ROOT_FOLDER_BASE;
   let n = 2;
   for (;;) {
-    const existing = vault.getAbstractFileByPath(normalizePath(candidate));
-    if (existing === null) return { path: candidate, existed: false };
-    if (existing instanceof TFolder) return { path: candidate, existed: true };
-    // A file occupies this path — never written into or reused. Try the
-    // next numbered root.
+    const path = normalizePath(candidate);
+    const existing = vault.getAbstractFileByPath(path);
+    if (existing instanceof TFolder) return { path: candidate, folder: existing };
+    if (existing === null) {
+      const caseOnlyMatch = rootChildren.some(
+        (child) => child.name.toLocaleLowerCase() === candidate.toLocaleLowerCase()
+      );
+      if (!caseOnlyMatch) return { path: candidate, folder: null };
+    }
+    // A file occupies this path, or something with the same name modulo
+    // case does (which is not eligible for reuse either way) — never
+    // written into or reused. Try the next numbered root.
     candidate = `${ROOT_FOLDER_BASE} ${n}`;
     n++;
   }
 }
 
-function resolveFreeSubfolder(vault: StarterProfileVault, root: string, folderName: string): string {
-  let candidate = normalizePath(`${root}/${folderName}`);
+function resolveFreeSubfolder(
+  vault: StarterProfileVault,
+  root: string,
+  rootFolder: TFolder,
+  folderName: string
+): string {
+  let name = folderName;
   let n = 2;
-  while (vault.getAbstractFileByPath(candidate) !== null) {
-    candidate = normalizePath(`${root}/${folderName} ${n}`);
+  for (;;) {
+    const candidate = normalizePath(`${root}/${name}`);
+    const exact = vault.getAbstractFileByPath(candidate) !== null;
+    const caseOnlyMatch = rootFolder.children.some(
+      (child) => child.name.toLocaleLowerCase() === name.toLocaleLowerCase()
+    );
+    if (!exact && !caseOnlyMatch) return candidate;
+    name = `${folderName} ${n}`;
     n++;
   }
-  return candidate;
+}
+
+/**
+ * One thing this run created. `file` is the exact object `createFolder`/
+ * `create` returned, used during cleanup to guard against deleting a
+ * same-path REPLACEMENT — something else removed this run's own entry and
+ * put a new, unrelated file or folder at the same path before cleanup ran.
+ * `file` is `null` for exactly one case: the failing step's own target
+ * when it turns out to have been materialized despite its promise
+ * rejecting (see `writeStep`). That rejection means no object was ever
+ * returned to record, so cleanup falls back to comparing by path alone for
+ * that one entry — accepted because the path was verified absent
+ * immediately before this run's own attempt at it, and nothing else in
+ * this flow writes to a path this run is still in the middle of claiming.
+ */
+interface CreatedEntry {
+  readonly path: string;
+  readonly file: TAbstractFile | null;
 }
 
 /**
  * Removes exactly what this run created, in reverse order, stopping at
- * the first path that can no longer be safely removed — either because
+ * the first entry that can no longer be safely removed — because
  * something else has since put content into it (a folder this run
- * created is no longer empty) or because the removal itself failed.
- * Everything from that path outward (its parents, which by construction
- * still contain it) is left in place and returned as `leftovers`, in the
- * order this run created them. Never touches anything not in `created`.
+ * created is no longer empty), because something else now occupies its
+ * path instead (a same-path replacement, identified by object identity —
+ * see `CreatedEntry`), or because the removal itself failed. Everything
+ * from that entry outward (its parents, which by construction still
+ * contain it) is left in place and returned as `leftovers`, in the order
+ * this run created them. Never touches anything not in `created`, and
+ * never deletes an object this run did not itself create.
  */
 async function cleanupCreated(
   vault: StarterProfileVault,
-  created: readonly string[]
+  created: readonly CreatedEntry[]
 ): Promise<readonly string[]> {
   let leftoverFrom = created.length;
 
   for (let i = created.length - 1; i >= 0; i--) {
-    const path = created[i]!;
-    const file = vault.getAbstractFileByPath(path);
-    if (file === null) {
+    const entry = created[i]!;
+    const current = vault.getAbstractFileByPath(entry.path);
+    if (current === null) {
       // Already gone — nothing to do, keep unwinding toward the root.
       leftoverFrom = i;
       continue;
     }
-    if (file instanceof TFolder && file.children.length > 0) {
+    if (entry.file !== null && current !== entry.file) {
+      // Something else now lives at this path — not the object this run
+      // created. Leave it untouched and report it, same as "no longer
+      // empty": everything from here outward has to stay too.
+      leftoverFrom = i + 1;
+      break;
+    }
+    if (current instanceof TFolder && current.children.length > 0) {
       // No longer empty — do not delete, and stop: everything from here
       // outward (this path and its parents) has to stay too.
       leftoverFrom = i + 1;
       break;
     }
     try {
-      await vault.delete(file);
+      await vault.delete(current);
       leftoverFrom = i;
     } catch {
       leftoverFrom = i + 1;
@@ -420,18 +515,27 @@ async function cleanupCreated(
     }
   }
 
-  return created.slice(0, leftoverFrom);
+  return created.slice(0, leftoverFrom).map((entry) => entry.path);
 }
 
-async function writeStep(
-  step: () => Promise<unknown>,
+async function writeStep<T extends TAbstractFile>(
+  step: () => Promise<T>,
   path: string,
   vault: StarterProfileVault,
-  created: readonly string[]
-): Promise<void> {
+  created: CreatedEntry[]
+): Promise<T> {
   try {
-    await step();
+    return await step();
   } catch (cause) {
+    // The step may have materialized its target before rejecting (e.g. an
+    // adapter that writes the file/folder and only fails on a later,
+    // separate part of the same operation). `path` was confirmed absent
+    // immediately before this call, so if it exists now it is this run's
+    // own — fold it into cleanup (and, if it cannot be removed, into
+    // `leftovers`) instead of silently leaving it unreported.
+    if (vault.getAbstractFileByPath(path) !== null) {
+      created.push({ path, file: null });
+    }
     const leftovers = await cleanupCreated(vault, created);
     throw new StarterProfileWriteError(path, leftovers, cause);
   }
@@ -448,9 +552,18 @@ async function writeStep(
  * and any paths cleanup could not remove, so the caller can tell the
  * user exactly what — if anything — is still in the vault. Existing
  * files and folders are never modified, overwritten or deleted: the
- * root is only reused when it is already a folder, the subfolder is
- * suffixed whenever its plain name is taken, and cleanup only ever
- * touches paths this same run created.
+ * root is only reused when it is already a folder (an exact-name match,
+ * not merely a case-insensitive one — see `resolveRootFolder`), the
+ * subfolder is suffixed whenever its plain name is taken (including a
+ * case-only match — see `resolveFreeSubfolder`), and cleanup only ever
+ * touches paths this same run created, verified by object identity where
+ * one is available.
+ *
+ * `deps.addProject` is called inside its own try/catch: a synchronous
+ * registration failure — every file already written, only the settings
+ * update itself throwing — rolls back this run's writes exactly like a
+ * write failure would, but is reported as `StarterProfileRegistrationError`
+ * rather than `StarterProfileWriteError`, since no path failed to write.
  */
 export async function createStarterProfile(
   profileId: StarterProfileId,
@@ -458,29 +571,42 @@ export async function createStarterProfile(
 ): Promise<ProjectDefinition> {
   const descriptor = DESCRIPTORS[profileId];
   const display = STARTER_PROFILE_DISPLAY[profileId];
-  const created: string[] = [];
+  const created: CreatedEntry[] = [];
 
   const root = resolveRootFolder(deps.vault);
   const rootPath = normalizePath(root.path);
-  if (!root.existed) {
-    await writeStep(() => deps.vault.createFolder(rootPath), rootPath, deps.vault, created);
-    created.push(rootPath);
+  let rootFolder: TFolder;
+  if (root.folder !== null) {
+    rootFolder = root.folder;
+  } else {
+    rootFolder = await writeStep(() => deps.vault.createFolder(rootPath), rootPath, deps.vault, created);
+    created.push({ path: rootPath, file: rootFolder });
   }
 
-  const profileFolder = resolveFreeSubfolder(deps.vault, root.path, descriptor.folderName);
-  await writeStep(() => deps.vault.createFolder(profileFolder), profileFolder, deps.vault, created);
-  created.push(profileFolder);
+  const profileFolder = resolveFreeSubfolder(deps.vault, root.path, rootFolder, descriptor.folderName);
+  const subfolder = await writeStep(
+    () => deps.vault.createFolder(profileFolder),
+    profileFolder,
+    deps.vault,
+    created
+  );
+  created.push({ path: profileFolder, file: subfolder });
 
   const templatePath = normalizePath(`${profileFolder}/${descriptor.templateFileName}`);
-  await writeStep(
+  const templateFile = await writeStep(
     () => deps.vault.create(templatePath, descriptor.templateBody),
     templatePath,
     deps.vault,
     created
   );
-  created.push(templatePath);
+  created.push({ path: templatePath, file: templateFile });
 
   const project = buildProjectDefinition(descriptor, display.name, profileFolder, templatePath);
-  deps.addProject(project);
+  try {
+    deps.addProject(project);
+  } catch (cause) {
+    const leftovers = await cleanupCreated(deps.vault, created);
+    throw new StarterProfileRegistrationError(leftovers, cause);
+  }
   return project;
 }

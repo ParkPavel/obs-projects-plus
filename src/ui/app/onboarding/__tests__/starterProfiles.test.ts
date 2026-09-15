@@ -15,6 +15,7 @@ import { TFile, TFolder } from "obsidian";
 import {
   createStarterProfile,
   STARTER_PROFILE_IDS,
+  StarterProfileRegistrationError,
   StarterProfileWriteError,
   type StarterProfileVault,
 } from "src/ui/app/onboarding/starterProfiles";
@@ -51,10 +52,14 @@ function createFakeVault(seed: SeedEntry[] = []): {
 } {
   const entries = new Map<string, TFolder | TFile>();
   const calls: RecordedCall[] = [];
+  // The vault's own root, real `Vault.getRoot()` returns a `TFolder` whose
+  // `children` are exactly the top-level entries — used both to seed
+  // top-level content below and to exercise case-only root collisions.
+  const root = makeFolder("");
 
   const parentOf = (path: string): TFolder | undefined => {
     const idx = path.lastIndexOf("/");
-    if (idx < 0) return undefined;
+    if (idx < 0) return root;
     const parent = entries.get(path.slice(0, idx));
     return parent instanceof TFolder ? parent : undefined;
   };
@@ -64,8 +69,10 @@ function createFakeVault(seed: SeedEntry[] = []): {
     const node = entry.kind === "folder" ? makeFolder(entry.path) : makeFile(entry.path);
     entries.set(entry.path, node);
   }
-  // Wire seeded children into seeded parents so a pre-existing folder with
-  // pre-existing content reports non-empty via `children`.
+  // Wire seeded children into seeded parents (or the vault root, for
+  // top-level entries) so a pre-existing folder with pre-existing content
+  // reports non-empty via `children`, and so root-level case collisions are
+  // visible through `getRoot().children`.
   for (const node of entries.values()) {
     const parent = parentOf(node.path);
     if (parent) parent.children.push(node);
@@ -73,6 +80,7 @@ function createFakeVault(seed: SeedEntry[] = []): {
 
   const vault: StarterProfileVault = {
     getAbstractFileByPath: (path: string) => entries.get(path) ?? null,
+    getRoot: () => root,
     createFolder: async (path: string) => {
       if (entries.has(path)) throw new Error(`Folder already exists: ${path}`);
       const folder = makeFolder(path);
@@ -362,6 +370,192 @@ describe("starterProfiles — rollback on write failure", () => {
     }
     // The unrelated file that showed up is never touched by cleanup.
     expect(entries.has("Projects Plus — Профили/Клиенты/чужой файл.md")).toBe(true);
+  });
+
+  it("cleans up a root folder that was materialized despite createFolder rejecting", async () => {
+    const { vault, calls, entries } = createFakeVault();
+    const failingVault: StarterProfileVault = {
+      ...vault,
+      createFolder: async (path: string) => {
+        // An adapter that writes the folder to disk and only fails on a
+        // later, separate part of the same call (e.g. metadata) — the
+        // folder is left behind on disk despite the rejection.
+        await vault.createFolder(path);
+        throw new Error("metadata write failed");
+      },
+    };
+    const addProject = trackedAddProject(calls);
+
+    try {
+      await createStarterProfile("clients", { vault: failingVault, addProject });
+      throw new Error("expected createStarterProfile to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StarterProfileWriteError);
+      const writeError = error as StarterProfileWriteError;
+      expect(writeError.path).toBe("Projects Plus — Профили");
+      // Folded into cleanup and removed — not silently left out of
+      // `leftovers` while still sitting in the vault.
+      expect(writeError.leftovers).toEqual([]);
+    }
+    expect(entries.has("Projects Plus — Профили")).toBe(false);
+    expect(addProject).not.toHaveBeenCalled();
+  });
+
+  it("cleans up a profile subfolder that was materialized despite createFolder rejecting", async () => {
+    const { vault, calls, entries } = createFakeVault();
+    let call = 0;
+    const failingVault: StarterProfileVault = {
+      ...vault,
+      createFolder: async (path: string) => {
+        call++;
+        if (call === 2) {
+          await vault.createFolder(path);
+          throw new Error("metadata write failed");
+        }
+        return vault.createFolder(path);
+      },
+    };
+    const addProject = trackedAddProject(calls);
+
+    try {
+      await createStarterProfile("clients", { vault: failingVault, addProject });
+      throw new Error("expected createStarterProfile to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StarterProfileWriteError);
+      const writeError = error as StarterProfileWriteError;
+      expect(writeError.path).toBe("Projects Plus — Профили/Клиенты");
+      expect(writeError.leftovers).toEqual([]);
+    }
+    // Both the materialized-then-rejected subfolder and the root created
+    // before it are gone — nothing leaked.
+    expect(entries.has("Projects Plus — Профили/Клиенты")).toBe(false);
+    expect(entries.has("Projects Plus — Профили")).toBe(false);
+    expect(addProject).not.toHaveBeenCalled();
+  });
+
+  it("cleans up a template file that was materialized despite create rejecting", async () => {
+    const { vault, calls, entries } = createFakeVault();
+    const failingVault: StarterProfileVault = {
+      ...vault,
+      create: async (path: string, data: string) => {
+        await vault.create(path, data);
+        throw new Error("metadata write failed");
+      },
+    };
+    const addProject = trackedAddProject(calls);
+
+    try {
+      await createStarterProfile("clients", { vault: failingVault, addProject });
+      throw new Error("expected createStarterProfile to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StarterProfileWriteError);
+      const writeError = error as StarterProfileWriteError;
+      expect(writeError.path).toBe("Projects Plus — Профили/Клиенты/Шаблон — клиент.md");
+      expect(writeError.leftovers).toEqual([]);
+    }
+    expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(false);
+    expect(entries.has("Projects Plus — Профили/Клиенты")).toBe(false);
+    expect(entries.has("Projects Plus — Профили")).toBe(false);
+    expect(addProject).not.toHaveBeenCalled();
+  });
+
+  it("does not delete a same-path replacement during cleanup, and reports it as a leftover instead", async () => {
+    const { vault, calls, entries } = createFakeVault();
+    const failingVault: StarterProfileVault = {
+      ...vault,
+      create: async () => {
+        // Something else removed this run's own subfolder and put an
+        // unrelated new folder at the exact same path before this run's
+        // own template write itself fails.
+        entries.delete("Projects Plus — Профили/Клиенты");
+        entries.set("Projects Plus — Профили/Клиенты", makeFolder("Projects Plus — Профили/Клиенты"));
+        throw new Error("disk full");
+      },
+    };
+    const addProject = trackedAddProject(calls);
+
+    try {
+      await createStarterProfile("clients", { vault: failingVault, addProject });
+      throw new Error("expected createStarterProfile to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StarterProfileWriteError);
+      const writeError = error as StarterProfileWriteError;
+      // The replacement is not this run's object — left alone and
+      // reported, and the root (which still contains it) is left too.
+      expect(writeError.leftovers).toEqual([
+        "Projects Plus — Профили",
+        "Projects Plus — Профили/Клиенты",
+      ]);
+    }
+    // The replacement itself was never deleted by cleanup.
+    expect(entries.get("Projects Plus — Профили/Клиенты")).toBeInstanceOf(TFolder);
+    expect(
+      calls.some((c) => c.op === "delete" && c.path === "Projects Plus — Профили/Клиенты")
+    ).toBe(false);
+  });
+});
+
+describe("starterProfiles — addProject failure", () => {
+  it("rolls back every write and throws a registration-specific error when addProject throws", async () => {
+    const { vault, calls, entries } = createFakeVault();
+    const addProject = jest.fn(() => {
+      throw new Error("settings write failed");
+    });
+
+    try {
+      await createStarterProfile("clients", { vault, addProject });
+      throw new Error("expected createStarterProfile to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StarterProfileRegistrationError);
+      expect(error).not.toBeInstanceOf(StarterProfileWriteError);
+      const registrationError = error as StarterProfileRegistrationError;
+      expect(registrationError.leftovers).toEqual([]);
+      // The message never claims a path failed to write — nothing did.
+      expect(registrationError.message).not.toMatch(/Could not write/);
+    }
+    expect(addProject).toHaveBeenCalledTimes(1);
+    expect(entries.has("Projects Plus — Профили")).toBe(false);
+    expect(entries.has("Projects Plus — Профили/Клиенты")).toBe(false);
+    expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(false);
+    expect(calls.filter((c) => c.op === "delete")).toHaveLength(3);
+  });
+});
+
+describe("starterProfiles — case-only collisions", () => {
+  it("suffixes the root when a case-only variant already occupies the base name", async () => {
+    const { vault, calls, entries } = createFakeVault([
+      // Same name as ROOT_FOLDER_BASE modulo case — what a case-insensitive
+      // Windows/macOS file system would already have on disk.
+      "projects plus — профили",
+    ]);
+    const addProject = trackedAddProject(calls);
+
+    const project = await createStarterProfile("clients", { vault, addProject });
+
+    expect(calls[0]).toEqual({ op: "createFolder", path: "Projects Plus — Профили 2" });
+    expect((project.dataSource as { config: { path: string } }).config.path).toBe(
+      "Projects Plus — Профили 2/Клиенты"
+    );
+    // The case-variant is left untouched, and the exact-case base name is
+    // never created (it would collide on disk).
+    expect(entries.has("projects plus — профили")).toBe(true);
+    expect(entries.has("Projects Plus — Профили")).toBe(false);
+  });
+
+  it("suffixes the subfolder when a case-only variant already occupies the plain subfolder name", async () => {
+    const { vault, calls } = createFakeVault([
+      "Projects Plus — Профили",
+      "Projects Plus — Профили/клиенты",
+    ]);
+    const addProject = trackedAddProject(calls);
+
+    const project = await createStarterProfile("clients", { vault, addProject });
+
+    expect(calls.map((c) => c.op)).toEqual(["createFolder", "create", "addProject"]);
+    expect(calls[0]!.path).toBe("Projects Plus — Профили/Клиенты 2");
+    expect((project.dataSource as { config: { path: string } }).config.path).toBe(
+      "Projects Plus — Профили/Клиенты 2"
+    );
   });
 });
 

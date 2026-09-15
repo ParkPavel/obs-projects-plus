@@ -35,6 +35,7 @@
   import { createDemoProject } from "./onboarding/demoProject";
   import { OnboardingModal } from "./onboarding/onboardingModal";
   import { createStarterProfile, type StarterProfileId } from "./onboarding/starterProfiles";
+  import { firstNoteFailureMessage } from "./onboarding/firstNoteFailure";
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
   import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
@@ -249,16 +250,20 @@
    * onboarding modal open, so no "saved" notice is shown here — settings
    * writes are not confirmed to disk per call.
    *
-   * The first record's write is awaited here (unlike `CreateNoteModal`'s
-   * other callers, which fire-and-forget through `api.addRecord`/
-   * `ViewApi`): this is the ONLY note the user has just been promised by
-   * the onboarding flow itself, with no table row yet to retry from, so a
-   * silent console-only failure would leave a brand-new user with nothing
-   * and no idea why. A failure surfaces as an Obsidian `Notice` naming the
-   * record and pointing at "Добавить первую запись" in the now-empty
-   * table — `CreateNoteModal` has already closed by then (unchanged for
-   * every other caller), so the empty table is exactly what the user sees
-   * next.
+   * The first record's write is watched here, same as every other
+   * `CreateNoteModal` caller (`api.addRecord`/`ViewApi`): it is NOT
+   * awaited, only given a `.catch`, and `CreateNoteModal` closes
+   * immediately either way. This is still the ONLY note the user has just
+   * been promised by the onboarding flow itself, with no table row yet to
+   * retry from, so a silent console-only failure would leave a brand-new
+   * user with nothing and no idea why — this callback's `.catch` is what
+   * turns that into a Notice. `dataApi.createNote` writes the note file
+   * and only afterwards updates its front matter (`src/lib/dataApi.ts`),
+   * so the rejection can arrive after the file already exists; the Notice
+   * text is chosen accordingly by `firstNoteFailureMessage` (see
+   * `./onboarding/firstNoteFailure`) — pointing at the empty table only
+   * when the file itself never appeared, and at checking the note's own
+   * properties when it did.
    */
   async function handleOnboardingProfile(profileId: StarterProfileId): Promise<void> {
     if (onboardingProfileInFlight) return;
@@ -276,13 +281,13 @@
           .createNote(record, [], templatePath)
           .catch((error) => {
             console.error(error);
-            new Notice(
-              $i18n.t("onboarding.profiles.first-note-failed", {
-                defaultValue:
-                  'Не удалось создать первую запись «{{name}}». Добавьте её вручную кнопкой «Добавить первую запись» в пустой таблице.',
-                name,
-              })
-            );
+            // `record.id` is the exact path `createDataRecord` resolved the
+            // note to, and the same path `dataApi.createNote` passes to
+            // `fileSystem.create` — checking it here tells us whether the
+            // file itself survived the rejection.
+            const fileExists = $app.vault.getAbstractFileByPath(record.id) !== null;
+            const { key, defaultValue } = firstNoteFailureMessage(fileExists);
+            new Notice($i18n.t(key, { defaultValue, name }));
           });
       }).open();
     } finally {
