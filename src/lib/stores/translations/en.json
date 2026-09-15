@@ -1801,9 +1801,17 @@
             "command-palette-step3": "Press <strong>Enter</strong>.",
             "projects-view-step1": "In the top-right corner of the <strong>Projects Plus</strong> view, click <strong>New</strong>.",
             "projects-view-step2": "Click <strong>New project</strong>.",
+            "other-ways-summary": "Another way",
             "demo": {
                 "partial": "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
                 "folder-failed": "Could not create the demo folder '{{folder}}'. The demo project was not created."
+            },
+            "profiles": {
+                "intro": "Pick a starting point — your first record will be here in a minute.",
+                "group-label": "Starter profiles",
+                "busy": "Creating the profile…",
+                "error-path": "Could not create the profile's files: \"{{path}}\". Nothing was saved — please try again.",
+                "error-generic": "Could not create the profile. Please try again."
             }
         },
         "common": {

@@ -4,7 +4,7 @@
 
   import { Notice } from "obsidian";
   import { v4 as uuidv4 } from "uuid";
-  import { createProject } from "src/lib/dataApi";
+  import { createProject, createDataRecord } from "src/lib/dataApi";
   import { buildDerivedSource, projectSourceOptions, sourceNameTaken } from "src/lib/datasources/namedSource";
   import { api } from "src/lib/stores/api";
   import { i18n } from "src/lib/stores/i18n";
@@ -27,12 +27,14 @@
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
+  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { AddViewModal } from "src/ui/modals/addViewModal";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
   import CompactNavBar from "src/ui/components/Navigation/CompactNavBar.svelte";
   import SettingsMenuPopover from "src/ui/components/Navigation/SettingsMenu/SettingsMenuPopover.svelte";
   import { createDemoProject } from "./onboarding/demoProject";
   import { OnboardingModal } from "./onboarding/onboardingModal";
+  import { createStarterProfile, type StarterProfileId } from "./onboarding/starterProfiles";
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
   import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
@@ -226,6 +228,31 @@
     return promise;
   };
 
+  /**
+   * Scene 7 — the primary onboarding path. Writes the chosen starter
+   * profile's folder/template/project, switches the app to it the same
+   * way `deleteProject` below switches away from one, and immediately
+   * opens the existing `CreateNoteModal` for it so the user only has to
+   * type one name and press Enter — the template is already selected
+   * (`CreateNote.svelte` preselects `project.templates[0]`) and the name
+   * field already has focus. Rejects (without registering anything) on a
+   * write failure; `Onboarding.svelte` shows that inline and keeps the
+   * onboarding modal open, so no "saved" notice is shown here — settings
+   * writes are not confirmed to disk per call.
+   */
+  async function handleOnboardingProfile(profileId: StarterProfileId): Promise<void> {
+    const project = await createStarterProfile(profileId, {
+      vault: $app.vault,
+      addProject: settings.addProject,
+    });
+    projectId = project.id;
+    dispatch("projectIdChange", project.id);
+    new CreateNoteModal($app, project, (name, templatePath, targetProject) => {
+      const record = createDataRecord(name, targetProject);
+      get(api).createNote(record, [], templatePath).catch(console.error);
+    }).open();
+  }
+
   onMount(() => {
     if (!projects.length) {
       new OnboardingModal(
@@ -242,14 +269,14 @@
         },
         // Try demo project.
         () => {
-          // `createDemoProject` seeds the main demo folder AND three vertical
-          // subfolders (Fitness / Finance / CRM), registering one integrated
-          // project with dedicated vertical database views. The legacy
-          // standalone vertical projects have been merged in to avoid
-          // fragmenting the sidebar and to exercise the in-view
-          // VerticalSwitcher mechanic.
+          // `createDemoProject` seeds one B2B-studio demo folder and
+          // registers a single project over it (clients/projects/tasks/
+          // meetings with 5 views) — a secondary, optional path distinct
+          // from the primary starter-profile buttons above it.
           createDemoProject($app.vault);
-        }
+        },
+        // Scene 7 — pick a starter profile.
+        handleOnboardingProfile
       ).open();
     }
   });

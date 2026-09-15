@@ -12,6 +12,22 @@ Editing a writable field updates the original file. Filters, block layout, and v
 
 Calculated fields and query results are not always writable. If you cannot edit a field, check its type and source; a displayed calculation is not necessarily a separate property in the Markdown file.
 
+## Quick start: starter profiles
+
+When your vault has no project yet, the welcome dialog offers three starter profiles: "Clients," "Workouts," and "Project journal." Picking one asks nothing about folders, fields, or views — it goes straight to creating a note with a template already selected; type a name and press Enter.
+
+Each profile creates:
+
+| Profile | Folder | Template | Views |
+| --- | --- | --- | --- |
+| Clients | `Projects Plus — Профили/Клиенты` | `Шаблон — клиент.md` (`статус`, `следующийКонтакт`, `сумма`) | "Обзор" (counter and table) and "Статусы" (board grouped by `статус`) |
+| Workouts | `Projects Plus — Профили/Тренировки` | `Шаблон — тренировка.md` (`дата`, `тип`, `минуты`) | "Обзор" and "Календарь" (by the `дата` field) |
+| Project journal | `Projects Plus — Профили/Дневник проекта` | `Шаблон — запись.md` (`дата`, `статус`, `следующийШаг`) | "Обзор" and "Хронология" (a calendar view keyed on `дата`) |
+
+The folder, field, and view names above are the actual Russian names the profile writes to your vault — they are not translated by the interface language. A profile creates no example record: the first row in the table and on the timeline is the note you create yourself. No existing file or folder is ever overwritten: if the expected root folder name is already taken, the profile picks a free numbered name instead, such as "Projects Plus — Профили 2."
+
+Undo a starter profile the same way you would remove any other project: open the project menu and delete it — this removes the settings entry but does not delete your notes. Afterward, delete or move the created folder and template manually if you want them gone too.
+
 ## Creating and configuring a project
 
 Open the Obsidian command palette and choose **Create new project plus**. Enter a name and select a source. Folder paths are relative to the vault root, for example `Projects/Work`.

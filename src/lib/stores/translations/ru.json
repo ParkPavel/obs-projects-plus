@@ -1753,7 +1753,15 @@
             "command-palette-step2": "Найдите <strong>Создать новый проект</strong>",
             "command-palette-step3": "Нажмите <strong>Enter</strong>.",
             "projects-view-step1": "В правом верхнем углу представления <strong>Projects Plus</strong> нажмите <strong>Новый</strong>.",
-            "projects-view-step2": "Нажмите <strong>Новый проект</strong>."
+            "projects-view-step2": "Нажмите <strong>Новый проект</strong>.",
+            "other-ways-summary": "Другой способ",
+            "profiles": {
+                "intro": "Выберите, с чего начать — через минуту здесь появится ваша первая запись.",
+                "group-label": "Готовые профили",
+                "busy": "Создаём профиль…",
+                "error-path": "Не удалось создать файлы профиля: «{{path}}». Ничего не сохранено — попробуйте ещё раз.",
+                "error-generic": "Не удалось создать профиль. Попробуйте ещё раз."
+            }
         },
         "common": {
             "yesterday": "Вчера",
