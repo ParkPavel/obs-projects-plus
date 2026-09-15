@@ -107,7 +107,7 @@ const KEY_PAIRS: ReadonlyArray<{ keyProp: string; defaultProp: string; requireDe
 const LEADING_COMMENTS = /^(?:\s*(?:\/\/[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))*/;
 
 /** Characters after which a `/` can only begin an expression, so it opens a regex literal rather than dividing. */
-const REGEX_PRECEDERS = new Set(["(", ",", "=", ":", "[", "!", "&", "|", "?", "{", "}", ";", "+", "-", "*", "%", "<", ">", "~", "^"]);
+const REGEX_PRECEDERS = new Set(["(", ",", "=", ":", "[", "!", "&", "|", "?", "{", ";", "+", "-", "*", "%", "<", ">", "~", "^"]);
 
 function startsRegex(text: string, slashIdx: number): boolean {
   const next = text[slashIdx + 1];
@@ -328,6 +328,17 @@ describe("extractStaticKeys — synthetic proof", () => {
       { key: "a.b", hasDefault: true, count: "dynamic" },
     ]);
     expect(extractStaticKeys('t("a.b", { width: total / 2, defaultValue: "B" })')).toEqual([
+      { key: "a.b", hasDefault: true },
+    ]);
+    // After a closing bracket a slash divides too — review round 3 found `}`
+    // wrongly listed as a regex predecessor, which swallowed the rest.
+    expect(extractStaticKeys('t("a.b", { width: {} / 2, defaultValue: "B" })')).toEqual([
+      { key: "a.b", hasDefault: true },
+    ]);
+    expect(extractStaticKeys('t("a.b", { width: (n) / 2, ratio: xs[0] / 2, defaultValue: "B" })')).toEqual([
+      { key: "a.b", hasDefault: true },
+    ]);
+    expect(extractStaticKeys('{ key: "a.b", width: {} / 2, caption: "B" }')).toEqual([
       { key: "a.b", hasDefault: true },
     ]);
   });
