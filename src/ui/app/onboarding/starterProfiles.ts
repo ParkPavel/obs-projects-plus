@@ -19,7 +19,7 @@
 // ============================================================
 
 import type { Vault } from "obsidian";
-import { normalizePath } from "obsidian";
+import { normalizePath, TFolder } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
 import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
@@ -43,11 +43,14 @@ export const STARTER_PROFILE_IDS: readonly StarterProfileId[] = [
  * Vault surface this module needs, expressed as a `Pick` of the real
  * `obsidian.Vault` interface rather than a hand-rolled shape — a real
  * `Vault` satisfies it with no cast, and a test fake only has to
- * implement three methods.
+ * implement four methods. `delete` is the rollback primitive: it is the
+ * method a real `Vault` exposes for removing a file OR a folder it
+ * created, with no cast needed (see `Vault.delete` in
+ * `node_modules/obsidian/obsidian.d.ts`).
  */
 export type StarterProfileVault = Pick<
   Vault,
-  "getAbstractFileByPath" | "createFolder" | "create"
+  "getAbstractFileByPath" | "createFolder" | "create" | "delete"
 >;
 
 export interface StarterProfileDeps {
@@ -58,11 +61,19 @@ export interface StarterProfileDeps {
 /**
  * Thrown when any of the folder/template writes fails. Carries the exact
  * path that could not be written so the calling UI can name it in an
- * alert. `settings.addProject` is never reached when this is thrown —
+ * alert, AND the paths (if any) that this run created but could not
+ * remove again during rollback — `leftovers` is empty when cleanup fully
+ * undid this run's writes, and non-empty when something had to be left
+ * behind (because it was no longer empty, or because removing it itself
+ * failed). `settings.addProject` is never reached when this is thrown —
  * see `createStarterProfile`.
  */
 export class StarterProfileWriteError extends Error {
-  constructor(readonly path: string, cause?: unknown) {
+  constructor(
+    readonly path: string,
+    readonly leftovers: readonly string[],
+    cause?: unknown
+  ) {
     super(
       cause instanceof Error
         ? `Could not write "${path}": ${cause.message}`
@@ -249,8 +260,11 @@ const widgetId = (() => {
  * plain record count (see its own default "Total" card), so it reads 0
  * before the first note and 1 right after, unlike counting a field that
  * does not exist yet in an empty folder — plus one `database-call`
- * block with a single Table tab (the current V2 shape; `data-table` is
- * retired — see `legacyMigration.ts`).
+ * block with a single «Таблица» tab (the current V2 shape; `data-table`
+ * is retired — see `legacyMigration.ts`). The tab is labelled in
+ * Russian, like every other name this profile writes — `tableTabConfig`
+ * defaults its label to "Table" for its other (locale-less) callers, so
+ * this is the one call site that overrides it.
  */
 function buildOverviewConfig(statsLabel: string): DatabaseViewConfig {
   const statsConfig: StatsConfig = {
@@ -275,7 +289,7 @@ function buildOverviewConfig(statsLabel: string): DatabaseViewConfig {
         type: "database-call",
         title: "Таблица",
         layout: { x: 0, y: 2, w: 12, h: 8 },
-        config: tableTabConfig(),
+        config: tableTabConfig({}, "Таблица"),
       },
     ],
     layoutMode: "stack",
@@ -320,35 +334,106 @@ function buildProjectDefinition(
   });
 }
 
-// ── Root-folder collision handling ────────────────────────────
+// ── Root-folder / subfolder collision handling ──────────────────
+//
+// One shared root for every profile, forever: `resolveRootFolder` REUSES
+// an existing root FOLDER rather than suffixing past it, so a second (or
+// third) profile lands next to the first one instead of growing its own
+// numbered root. Only a FILE occupying the root path forces a suffixed
+// root — that is the one case where writing "into" the existing thing is
+// not an option. Collision handling therefore moves to the profile
+// SUBFOLDER: `resolveFreeSubfolder` suffixes the folder name itself
+// («Клиенты», «Клиенты 2», …) whenever anything — file or folder — is
+// already at that path, which is exactly what a re-run of the SAME
+// profile needs (the first run's subfolder is taken, so the second gets
+// its own next to it, under the SAME root). The template is always
+// created inside a subfolder this run just created, so it can never
+// collide with anything.
 
 const ROOT_FOLDER_BASE = "Projects Plus — Профили";
 
-/**
- * Picks a root name with nothing already at that path — a file OR a
- * folder — trying suffixes `2`, `3`, … A freshly resolved root is
- * therefore always empty, so the profile subfolder and template inside
- * it never need their own collision handling: nothing pre-existing can
- * be there. This also makes a re-run of the SAME profile safe: the
- * previous run's root is occupied, so the next run gets its own root
- * rather than assuming it may write into what is already there.
- */
-function resolveFreeRootFolder(vault: StarterProfileVault): string {
-  const base = normalizePath(ROOT_FOLDER_BASE);
-  if (!vault.getAbstractFileByPath(base)) return ROOT_FOLDER_BASE;
-
-  let n = 2;
-  while (vault.getAbstractFileByPath(normalizePath(`${ROOT_FOLDER_BASE} ${n}`))) {
-    n++;
-  }
-  return `${ROOT_FOLDER_BASE} ${n}`;
+interface RootResolution {
+  readonly path: string;
+  /** True when an existing FOLDER at `path` is being reused, not created. */
+  readonly existed: boolean;
 }
 
-async function writeStep(step: () => Promise<unknown>, path: string): Promise<void> {
+function resolveRootFolder(vault: StarterProfileVault): RootResolution {
+  let candidate = ROOT_FOLDER_BASE;
+  let n = 2;
+  for (;;) {
+    const existing = vault.getAbstractFileByPath(normalizePath(candidate));
+    if (existing === null) return { path: candidate, existed: false };
+    if (existing instanceof TFolder) return { path: candidate, existed: true };
+    // A file occupies this path — never written into or reused. Try the
+    // next numbered root.
+    candidate = `${ROOT_FOLDER_BASE} ${n}`;
+    n++;
+  }
+}
+
+function resolveFreeSubfolder(vault: StarterProfileVault, root: string, folderName: string): string {
+  let candidate = normalizePath(`${root}/${folderName}`);
+  let n = 2;
+  while (vault.getAbstractFileByPath(candidate) !== null) {
+    candidate = normalizePath(`${root}/${folderName} ${n}`);
+    n++;
+  }
+  return candidate;
+}
+
+/**
+ * Removes exactly what this run created, in reverse order, stopping at
+ * the first path that can no longer be safely removed — either because
+ * something else has since put content into it (a folder this run
+ * created is no longer empty) or because the removal itself failed.
+ * Everything from that path outward (its parents, which by construction
+ * still contain it) is left in place and returned as `leftovers`, in the
+ * order this run created them. Never touches anything not in `created`.
+ */
+async function cleanupCreated(
+  vault: StarterProfileVault,
+  created: readonly string[]
+): Promise<readonly string[]> {
+  let leftoverFrom = created.length;
+
+  for (let i = created.length - 1; i >= 0; i--) {
+    const path = created[i]!;
+    const file = vault.getAbstractFileByPath(path);
+    if (file === null) {
+      // Already gone — nothing to do, keep unwinding toward the root.
+      leftoverFrom = i;
+      continue;
+    }
+    if (file instanceof TFolder && file.children.length > 0) {
+      // No longer empty — do not delete, and stop: everything from here
+      // outward (this path and its parents) has to stay too.
+      leftoverFrom = i + 1;
+      break;
+    }
+    try {
+      await vault.delete(file);
+      leftoverFrom = i;
+    } catch {
+      leftoverFrom = i + 1;
+      break;
+    }
+  }
+
+  return created.slice(0, leftoverFrom);
+}
+
+async function writeStep(
+  step: () => Promise<unknown>,
+  path: string,
+  vault: StarterProfileVault,
+  created: readonly string[]
+): Promise<void> {
   try {
     await step();
   } catch (cause) {
-    throw new StarterProfileWriteError(path, cause);
+    const leftovers = await cleanupCreated(vault, created);
+    throw new StarterProfileWriteError(path, leftovers, cause);
   }
 }
 
@@ -356,13 +441,16 @@ async function writeStep(step: () => Promise<unknown>, path: string): Promise<vo
 
 /**
  * Writes the profile's folder, subfolder and template, then registers
- * the project — in that order. On any write failure the project is
- * NOT registered (`deps.addProject` is never called) and a
- * `StarterProfileWriteError` naming the failed path is thrown instead;
- * no partial write is ever presented as success. Existing files are
- * never modified or overwritten — `Vault.createFolder`/`Vault.create`
- * already refuse to do that, and `resolveFreeRootFolder` keeps every
- * write inside a root that was empty at the moment it was chosen.
+ * the project — in that order. On any write failure the project is NOT
+ * registered (`deps.addProject` is never called); this run's own writes
+ * are rolled back in reverse order (see `cleanupCreated`), and the
+ * thrown `StarterProfileWriteError` carries both the path that failed
+ * and any paths cleanup could not remove, so the caller can tell the
+ * user exactly what — if anything — is still in the vault. Existing
+ * files and folders are never modified, overwritten or deleted: the
+ * root is only reused when it is already a folder, the subfolder is
+ * suffixed whenever its plain name is taken, and cleanup only ever
+ * touches paths this same run created.
  */
 export async function createStarterProfile(
   profileId: StarterProfileId,
@@ -370,18 +458,27 @@ export async function createStarterProfile(
 ): Promise<ProjectDefinition> {
   const descriptor = DESCRIPTORS[profileId];
   const display = STARTER_PROFILE_DISPLAY[profileId];
+  const created: string[] = [];
 
-  const root = resolveFreeRootFolder(deps.vault);
-  const rootPath = normalizePath(root);
-  const profileFolder = normalizePath(`${root}/${descriptor.folderName}`);
+  const root = resolveRootFolder(deps.vault);
+  const rootPath = normalizePath(root.path);
+  if (!root.existed) {
+    await writeStep(() => deps.vault.createFolder(rootPath), rootPath, deps.vault, created);
+    created.push(rootPath);
+  }
+
+  const profileFolder = resolveFreeSubfolder(deps.vault, root.path, descriptor.folderName);
+  await writeStep(() => deps.vault.createFolder(profileFolder), profileFolder, deps.vault, created);
+  created.push(profileFolder);
+
   const templatePath = normalizePath(`${profileFolder}/${descriptor.templateFileName}`);
-
-  await writeStep(() => deps.vault.createFolder(rootPath), rootPath);
-  await writeStep(() => deps.vault.createFolder(profileFolder), profileFolder);
   await writeStep(
     () => deps.vault.create(templatePath, descriptor.templateBody),
-    templatePath
+    templatePath,
+    deps.vault,
+    created
   );
+  created.push(templatePath);
 
   const project = buildProjectDefinition(descriptor, display.name, profileFolder, templatePath);
   deps.addProject(project);

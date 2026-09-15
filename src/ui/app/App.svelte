@@ -229,6 +229,15 @@
   };
 
   /**
+   * Scene 7 — guards `handleOnboardingProfile` against a second overlapping
+   * call. `Onboarding.svelte` already refuses to invoke `onProfile` twice
+   * with its own `busy` flag, so in the ordinary click path this never
+   * triggers; it exists so the write itself is never started twice from
+   * two independent callers, not only from two clicks on one button.
+   */
+  let onboardingProfileInFlight = false;
+
+  /**
    * Scene 7 — the primary onboarding path. Writes the chosen starter
    * profile's folder/template/project, switches the app to it the same
    * way `deleteProject` below switches away from one, and immediately
@@ -239,18 +248,46 @@
    * write failure; `Onboarding.svelte` shows that inline and keeps the
    * onboarding modal open, so no "saved" notice is shown here — settings
    * writes are not confirmed to disk per call.
+   *
+   * The first record's write is awaited here (unlike `CreateNoteModal`'s
+   * other callers, which fire-and-forget through `api.addRecord`/
+   * `ViewApi`): this is the ONLY note the user has just been promised by
+   * the onboarding flow itself, with no table row yet to retry from, so a
+   * silent console-only failure would leave a brand-new user with nothing
+   * and no idea why. A failure surfaces as an Obsidian `Notice` naming the
+   * record and pointing at "Добавить первую запись" in the now-empty
+   * table — `CreateNoteModal` has already closed by then (unchanged for
+   * every other caller), so the empty table is exactly what the user sees
+   * next.
    */
   async function handleOnboardingProfile(profileId: StarterProfileId): Promise<void> {
-    const project = await createStarterProfile(profileId, {
-      vault: $app.vault,
-      addProject: settings.addProject,
-    });
-    projectId = project.id;
-    dispatch("projectIdChange", project.id);
-    new CreateNoteModal($app, project, (name, templatePath, targetProject) => {
-      const record = createDataRecord(name, targetProject);
-      get(api).createNote(record, [], templatePath).catch(console.error);
-    }).open();
+    if (onboardingProfileInFlight) return;
+    onboardingProfileInFlight = true;
+    try {
+      const project = await createStarterProfile(profileId, {
+        vault: $app.vault,
+        addProject: settings.addProject,
+      });
+      projectId = project.id;
+      dispatch("projectIdChange", project.id);
+      new CreateNoteModal($app, project, (name, templatePath, targetProject) => {
+        const record = createDataRecord(name, targetProject);
+        get(api)
+          .createNote(record, [], templatePath)
+          .catch((error) => {
+            console.error(error);
+            new Notice(
+              $i18n.t("onboarding.profiles.first-note-failed", {
+                defaultValue:
+                  'Не удалось создать первую запись «{{name}}». Добавьте её вручную кнопкой «Добавить первую запись» в пустой таблице.',
+                name,
+              })
+            );
+          });
+      }).open();
+    } finally {
+      onboardingProfileInFlight = false;
+    }
   }
 
   onMount(() => {

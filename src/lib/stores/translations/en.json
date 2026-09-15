@@ -1811,7 +1811,9 @@
                 "group-label": "Starter profiles",
                 "busy": "Creating the profile…",
                 "error-path": "Could not create the profile's files: \"{{path}}\". Nothing was saved — please try again.",
-                "error-generic": "Could not create the profile. Please try again."
+                "error-path-leftover": "Could not create the profile's files: \"{{path}}\". Some files could not be removed automatically and were left in your vault: {{leftovers}}. You can delete them by hand.",
+                "error-generic": "Could not create the profile. Please try again.",
+                "first-note-failed": "Could not create the first record \"{{name}}\". Add it by hand using \"Add first record\" in the empty table."
             }
         },
         "common": {

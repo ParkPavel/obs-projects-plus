@@ -49,16 +49,25 @@
       // to do here, and this component may unmount right after.
     } catch (error) {
       busy = false;
-      errorMessage =
-        error instanceof StarterProfileWriteError
-          ? t("onboarding.profiles.error-path", {
-              defaultValue:
-                'Не удалось создать файлы профиля: «{{path}}». Ничего не сохранено — попробуйте ещё раз.',
-              path: error.path,
-            })
-          : t("onboarding.profiles.error-generic", {
-              defaultValue: "Не удалось создать профиль. Попробуйте ещё раз.",
-            });
+      if (error instanceof StarterProfileWriteError) {
+        errorMessage =
+          error.leftovers.length === 0
+            ? t("onboarding.profiles.error-path", {
+                defaultValue:
+                  'Не удалось создать файлы профиля: «{{path}}». Ничего не сохранено — попробуйте ещё раз.',
+                path: error.path,
+              })
+            : t("onboarding.profiles.error-path-leftover", {
+                defaultValue:
+                  'Не удалось создать файлы профиля: «{{path}}». В хранилище остались файлы, которые не получилось убрать автоматически: {{leftovers}}. Их можно удалить вручную.',
+                path: error.path,
+                leftovers: error.leftovers.map((p) => `«${p}»`).join(", "),
+              });
+      } else {
+        errorMessage = t("onboarding.profiles.error-generic", {
+          defaultValue: "Не удалось создать профиль. Попробуйте ещё раз.",
+        });
+      }
     }
   }
 </script>
@@ -102,7 +111,14 @@
   {/if}
 
   <details class="ppp-onboarding-secondary">
-    <summary>{t("onboarding.other-ways-summary", { defaultValue: "Другой способ" })}</summary>
+    <summary
+      aria-disabled={busy}
+      tabindex={busy ? -1 : 0}
+      on:click={(event) => {
+        if (busy) event.preventDefault();
+      }}
+      >{t("onboarding.other-ways-summary", { defaultValue: "Другой способ" })}</summary
+    >
 
     <Typography variant="body">
       {t("onboarding.description").split("<a>")[0]}<a href="https://help.obsidian.md/Editing+and+formatting/Properties">{t("onboarding.front-matter-link")}</a>{t("onboarding.description").split("</a>")[1] || ""}
@@ -123,13 +139,14 @@ published: false
     </Typography>
 
     <ModalButtonGroup>
-      <Button variant="primary" on:click={() => onCreate()}>
+      <Button variant="primary" disabled={busy} on:click={() => !busy && onCreate()}>
         {t("onboarding.create-new")}
       </Button>
       <Button
         variant="default"
+        disabled={busy}
         tooltip={t("onboarding.try-demo-tooltip")}
-        on:click={() => onTry()}
+        on:click={() => !busy && onTry()}
       >
         {t("onboarding.try-demo")}
       </Button>
@@ -209,6 +226,11 @@ published: false
 
   .ppp-onboarding-secondary {
     margin-top: 1rem;
+  }
+
+  .ppp-onboarding-secondary summary[aria-disabled="true"] {
+    opacity: 0.6;
+    cursor: default;
   }
 
   pre {
