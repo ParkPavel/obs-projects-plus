@@ -79,12 +79,11 @@ describe("#188 — the strings exist in the locales that carry this panel", () =
     }
   });
 
-  it("records that Russian has no filter-label block at all", () => {
-    // Not an oversight of this ticket and not fixed by it: the whole
-    // `filter-label` group is untranslated in ru and runs on defaultValue, like
-    // several others. Pinned so the gap is visible to #140 rather than
-    // rediscovered, and so that adding the block later trips this and gets read.
+  it("Russian carries the filter-label block too", () => {
+    // This used to pin the opposite: the whole `filter-label` group ran on
+    // defaultValue in ru, recorded so that adding it would trip here and get
+    // read. The scene 5 translation pass added it; R0.26 now guards every key.
     expect(locale("en")["filter-label"]).toBeDefined();
-    expect(locale("ru")["filter-label"]).toBeUndefined();
+    expect(locale("ru")["filter-label"]).toBeDefined();
   });
 });

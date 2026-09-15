@@ -24,7 +24,9 @@
     <IconButton
       icon={isAgendaOpen ? "panel-right-close" : "panel-right-open"}
       size="md"
-      tooltip={isAgendaOpen ? t("views.calendar.hide-agenda") : t("views.calendar.show-agenda")}
+      tooltip={isAgendaOpen
+        ? t("settings-menu.view-config.calendar.hide-agenda")
+        : t("settings-menu.view-config.calendar.show-agenda")}
       onClick={() => onToggleAgenda?.()}
     />
   {/if}

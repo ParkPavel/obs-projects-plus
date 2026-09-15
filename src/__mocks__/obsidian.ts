@@ -222,9 +222,21 @@ export class WorkspaceLeaf {
   openFile(_f: any) { return Promise.resolve(); }
 }
 
-// Mock Notice
+// Mock Notice — accepts a DocumentFragment too (real Obsidian API, #undo-notice):
+// removeWidget's undo affordance builds a fragment with a clickable "Undo"
+// element, and the test for it calls .hide() the way production code does.
 export class Notice {
-  constructor(public message: string) {}
+  message: string | DocumentFragment;
+  duration: number | undefined;
+  constructor(message: string | DocumentFragment, duration?: number) {
+    this.message = message;
+    this.duration = duration;
+  }
+  setMessage(message: string | DocumentFragment): this {
+    this.message = message;
+    return this;
+  }
+  hide = jest.fn();
 }
 
 // Mock addIcon / setIcon (no-op)

@@ -219,6 +219,27 @@ describe("cellDisplay (canon §2)", () => {
     expect(cell).toEqual({ kind: "text", text: "2026-06-12" });
   });
 
+  it("formats AutoTime (pp_created_time / pp_last_edited_time) Date instances as local date-time, not Date.toString()", () => {
+    const value = hostLocalDate(new Date("2026-06-11T20:00:00Z"), 8 * 60);
+    const cell = cellDisplay(field("pp_created_time", DataFieldType.AutoTime), value);
+    expect(cell).toEqual({ kind: "text", text: "2026-06-12 04:00" });
+  });
+
+  it("parses an ISO-string AutoTime value before formatting it", () => {
+    const cell = cellDisplay(field("pp_last_edited_time", DataFieldType.AutoTime), "2026-06-11T10:00:00Z");
+    expect(cell.kind).toBe("text");
+    expect((cell as { text: string }).text).not.toBe("");
+  });
+
+  it("keeps a string in a Date field as written — only AutoTime parses (a date-only ISO string is UTC midnight)", () => {
+    expect(cellDisplay(field("due", DataFieldType.Date), "2026-06-11")).toEqual({ kind: "text", text: "2026-06-11" });
+    expect(cellDisplay(field("due", DataFieldType.Date), "next week")).toEqual({ kind: "text", text: "next week" });
+  });
+
+  it("prints an unparseable AutoTime string as written rather than empty", () => {
+    expect(cellDisplay(field("pp_created_time", DataFieldType.AutoTime), "unknown")).toEqual({ kind: "text", text: "unknown" });
+  });
+
   it("renders wikilinks inside plain String fields as link chips (#085)", () => {
     const cell = cellDisplay(field("project", DataFieldType.String), "[[Onboarding Flow — Acme Studio]]");
     expect(cell.kind).toBe("pills");
