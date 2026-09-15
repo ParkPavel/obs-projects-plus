@@ -302,7 +302,8 @@
           on:drop={(e) => onDrop(index, e)}
           on:dragend={onDragEnd}
         >
-          <button class="row-btn row-drag" type="button" aria-label={$i18n.t('components.filter.drag-reorder')} tabindex="-1">
+          <!-- Pointer-only affordance: no keyboard path reorders rows, so it is hidden from assistive technology rather than named for an action it cannot offer. -->
+          <button class="row-btn row-drag" type="button" aria-hidden="true" tabindex="-1">
             <Icon name="grip-vertical" size="sm" />
           </button>
           <!-- Row prefix: "Где" for first, "и"/"или" for rest -->

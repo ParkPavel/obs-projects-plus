@@ -113,7 +113,8 @@ describe("createSuggestionController (#113)", () => {
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
     expect(addWidget).toHaveBeenCalledWith("chart", {
       config: expect.objectContaining({
-        xAxis: expect.objectContaining({ property: "dueDate", dateGranularity: "day" }),
+        // Chronological: a trend sorted by its own values draws a rise that is not there.
+        xAxis: expect.objectContaining({ property: "dueDate", dateGranularity: "day", sortBy: "label", sortOrder: "asc" }),
         yAxis: { property: "pain", aggregation: "avg" },
       }),
     });
@@ -128,7 +129,8 @@ describe("createSuggestionController (#113)", () => {
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
     expect(addWidget).toHaveBeenCalledWith("chart", {
       config: expect.objectContaining({
-        xAxis: expect.objectContaining({ property: "dueDate", dateGranularity: "day" }),
+        // Chronological: a trend sorted by its own values draws a rise that is not there.
+        xAxis: expect.objectContaining({ property: "dueDate", dateGranularity: "day", sortBy: "label", sortOrder: "asc" }),
         yAxis: { property: "count", aggregation: "count_total" },
       }),
     });

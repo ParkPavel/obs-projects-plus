@@ -807,6 +807,11 @@
                     "card-width": {
                         "name": "Card width",
                         "description": "Width of each card in pixels."
+                    },
+                    "card-size": {
+                        "small": "S",
+                        "medium": "M",
+                        "large": "L"
                     }
                 },
                 "empty": "This view is empty.",
@@ -1390,7 +1395,6 @@
                 "match-all": "All conditions",
                 "match-any": "Any condition",
                 "empty-hint": "No filter conditions",
-                "drag-reorder": "Drag to reorder",
                 "enable-condition": "Enable condition",
                 "disable-condition": "Disable condition",
                 "operators": {
