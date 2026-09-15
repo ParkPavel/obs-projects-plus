@@ -302,10 +302,10 @@
           on:drop={(e) => onDrop(index, e)}
           on:dragend={onDragEnd}
         >
-          <!-- Pointer-only affordance: no keyboard path reorders rows, so it is hidden from assistive technology rather than named for an action it cannot offer. -->
-          <button class="row-btn row-drag" type="button" aria-hidden="true" tabindex="-1">
+          <!-- Pointer-only affordance: the row itself is draggable and no keyboard path reorders rows, so the grip is decoration — not a control, and hidden from assistive technology. -->
+          <span class="row-btn row-drag" aria-hidden="true">
             <Icon name="grip-vertical" size="sm" />
-          </button>
+          </span>
           <!-- Row prefix: "Где" for first, "и"/"или" for rest -->
           <span class="row-prefix">
             {#if index === 0 && (local.groups?.length ?? 0) === 0}

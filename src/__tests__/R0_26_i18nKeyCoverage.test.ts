@@ -106,12 +106,46 @@ const KEY_PAIRS: ReadonlyArray<{ keyProp: string; defaultProp: string; requireDe
 
 const LEADING_COMMENTS = /^(?:\s*(?:\/\/[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))*/;
 
+/** Characters after which a `/` can only begin an expression, so it opens a regex literal rather than dividing. */
+const REGEX_PRECEDERS = new Set(["(", ",", "=", ":", "[", "!", "&", "|", "?", "{", "}", ";", "+", "-", "*", "%", "<", ">", "~", "^"]);
+
+function startsRegex(text: string, slashIdx: number): boolean {
+  const next = text[slashIdx + 1];
+  if (next === "/" || next === "*") return false;
+  let j = slashIdx - 1;
+  while (j >= 0 && /\s/.test(text[j] as string)) j--;
+  return j < 0 || REGEX_PRECEDERS.has(text[j] as string);
+}
+
+/** Index of the last character of the regex literal opening at `slashIdx` (its closing `/` or final flag). */
+function regexEnd(text: string, slashIdx: number): number {
+  let inClass = false;
+  for (let i = slashIdx + 1; i < text.length; i++) {
+    const c = text[i];
+    if (c === "\\") { i++; continue; }
+    if (c === "\n") return i - 1;
+    if (inClass) { if (c === "]") inClass = false; continue; }
+    if (c === "[") { inClass = true; continue; }
+    if (c === "/") {
+      while (/[a-z]/i.test(text[i + 1] ?? "")) i++;
+      return i;
+    }
+  }
+  return text.length;
+}
+
 /**
  * The top-level comma-separated segments of the bracketed run starting at
- * `openIdx` (which must point at one of `( { [`). Strings, template literals
- * and comments are opaque: real `defaultValue` texts contain parentheses
- * ("Pattern (regex)"), and neither a comment nor a nested call that mentions
- * `defaultValue` may count for the outer call.
+ * `openIdx` (which must point at one of `( { [`). Strings, template literals,
+ * comments and regex literals are opaque: real `defaultValue` texts contain
+ * parentheses ("Pattern (regex)"), a regex such as `/["}]/` would otherwise
+ * open a string or close the object, and neither a comment nor a nested call
+ * that mentions `defaultValue` may count for the outer call.
+ *
+ * A `/` starts a regex literal when the previous significant character can
+ * only be followed by an expression (an operator, an opening bracket, a comma
+ * or nothing); after an identifier, a number or a closing bracket it is
+ * division. That is the heuristic tokenizers use without a full parse.
  */
 function topLevelSegments(text: string, openIdx: number): string[] {
   const segments: string[] = [];
@@ -133,6 +167,10 @@ function topLevelSegments(text: string, openIdx: number): string[] {
     if (c === "/" && text[i + 1] === "*") {
       const close = text.indexOf("*/", i + 2);
       i = close === -1 ? text.length : close + 1;
+      continue;
+    }
+    if (c === "/" && startsRegex(text, i)) {
+      i = regexEnd(text, i);
       continue;
     }
     if (c === '"' || c === "'" || c === "`") { inString = c; continue; }
@@ -282,6 +320,15 @@ describe("extractStaticKeys — synthetic proof", () => {
     ]);
     expect(extractStaticKeys('t("a.b", { /* defaultValue: "x" */ count: n })')).toEqual([
       { key: "a.b", hasDefault: false, count: "dynamic" },
+    ]);
+  });
+
+  it("keeps a regex literal with quotes or brackets opaque, and still reads division as division", () => {
+    expect(extractStaticKeys('t("a.b", { matcher: /["}]/g, defaultValue: "B", count: n })')).toEqual([
+      { key: "a.b", hasDefault: true, count: "dynamic" },
+    ]);
+    expect(extractStaticKeys('t("a.b", { width: total / 2, defaultValue: "B" })')).toEqual([
+      { key: "a.b", hasDefault: true },
     ]);
   });
 
