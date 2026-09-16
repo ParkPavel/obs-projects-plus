@@ -251,9 +251,10 @@
    *
    * The first record's write is not awaited: `CreateNoteModal` closes as
    * soon as this callback returns, exactly as it does for its other
-   * callers. Unlike them it is given a `.catch` — `ViewApi.addRecord`
-   * hands its promise off without one, because those callers already have
-   * a table to retry from. This is the ONLY note the user has just
+   * callers. Unlike the view callers that go through `ViewApi.addRecord`,
+   * which hands the promise off with no catch at all because they already
+   * have a table to retry from, this one attaches a `.catch` — as does the
+   * command caller in `main.ts`. This is the ONLY note the user has just
    * been promised by the onboarding flow itself, with no table row yet to
    * retry from, so a silent console-only failure would leave a brand-new
    * user with nothing and no idea why — this callback's `.catch` is what
