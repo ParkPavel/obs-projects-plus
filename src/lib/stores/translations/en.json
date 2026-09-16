@@ -1813,8 +1813,8 @@
                 "error-path": "Could not create the profile's files: \"{{path}}\". Nothing was saved — please try again.",
                 "error-path-leftover": "Could not create the profile's files: \"{{path}}\". Some files could not be removed automatically and were left in your vault: {{leftovers}}. You can delete them by hand.",
                 "error-generic": "Could not create the profile. Please try again.",
-                "first-note-failed": "Could not create the first record \"{{name}}\". Add it by hand using \"Add first record\" in the empty table.",
-                "first-note-partial": "The note \"{{name}}\" was created, but its properties could not be written — open it and check them."
+                "first-note-failed": "Could not save the first record \"{{name}}\" in full. Check the profile folder: if the note is there, open it and fill in its properties; if it is not, add the record with \"Add first record\" in the empty table.",
+                "error-registered": "The profile's files were created, but the settings may not have been saved. Restart Obsidian and check whether the project is listed; the profile's files stay in your vault."
             }
         },
         "common": {

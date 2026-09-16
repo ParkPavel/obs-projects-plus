@@ -5,6 +5,7 @@
   import {
     STARTER_PROFILE_DISPLAY,
     STARTER_PROFILE_IDS,
+    StarterProfileRegistrationError,
     StarterProfileWriteError,
     type StarterProfileId,
   } from "./starterProfiles";
@@ -63,6 +64,11 @@
                 path: error.path,
                 leftovers: error.leftovers.map((p) => `«${p}»`).join(", "),
               });
+      } else if (error instanceof StarterProfileRegistrationError && error.registered) {
+        errorMessage = t("onboarding.profiles.error-registered", {
+          defaultValue:
+            'Файлы профиля созданы, но настройки могли не сохраниться. Перезапустите Obsidian и проверьте, есть ли проект в списке; файлы профиля остаются в хранилище.',
+        });
       } else {
         errorMessage = t("onboarding.profiles.error-generic", {
           defaultValue: "Не удалось создать профиль. Попробуйте ещё раз.",

@@ -520,7 +520,7 @@ describe("starterProfiles — addProject failure", () => {
     expect(calls.filter((c) => c.op === "delete")).toHaveLength(3);
   });
 
-  it("keeps this run's files when addProject threw but the project is registered anyway", async () => {
+  it("keeps this run's files when the project is registered, and still reports the failure", async () => {
     const { vault, calls, entries } = createFakeVault();
     // Svelte's writable assigns the new value and only then notifies
     // subscribers, so a subscriber that throws leaves the project IN
@@ -530,13 +530,18 @@ describe("starterProfiles — addProject failure", () => {
       throw new Error("a subscriber threw after the store was updated");
     });
 
-    const project = await createStarterProfile("clients", {
-      vault,
-      addProject,
-      isProjectRegistered: () => true,
-    });
+    try {
+      await createStarterProfile("clients", { vault, addProject, isProjectRegistered: () => true });
+      throw new Error("expected createStarterProfile to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StarterProfileRegistrationError);
+      const registrationError = error as StarterProfileRegistrationError;
+      // The project is in the store's value, so the files stay — and they are
+      // NOT reported as leftovers for the user to delete by hand.
+      expect(registrationError.registered).toBe(true);
+      expect(registrationError.leftovers).toEqual([]);
+    }
 
-    expect(project.templates).toHaveLength(1);
     expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(true);
     expect(calls.filter((c) => c.op === "delete")).toHaveLength(0);
   });

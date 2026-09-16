@@ -113,6 +113,13 @@ export class StarterProfileWriteError extends Error {
 export class StarterProfileRegistrationError extends Error {
   constructor(
     readonly leftovers: readonly string[],
+    /**
+     * True when the project IS in the settings value despite the throw, and
+     * this run's files were therefore kept. It does NOT mean the settings
+     * reached disk or that the subscribers after the throwing one ran —
+     * which is why this is still an error and not a quiet success.
+     */
+    readonly registered: boolean,
     cause?: unknown
   ) {
     super(
@@ -622,9 +629,16 @@ export async function createStarterProfile(
     // place. Its files must stay — the profile the user asked for exists —
     // and reporting the failure is that subscriber's own job. Only a
     // registration that did NOT land is rolled back.
-    if (deps.isProjectRegistered?.(project.id) === true) return project;
-    const leftovers = await cleanupCreated(deps.vault, created);
-    throw new StarterProfileRegistrationError(leftovers, cause);
+    // "Registered" means the store's VALUE holds the project — Svelte
+    // assigns it before notifying subscribers. It does not mean the settings
+    // were written to disk, nor that the subscribers after the throwing one
+    // ran. So the files stay (the profile the user asked for is on disk and
+    // deleting it would be the worse mistake), but this is still a failure:
+    // the caller is told, the onboarding stays open, and nothing walks the
+    // user into a project that may not survive a reload.
+    const registered = deps.isProjectRegistered?.(project.id) === true;
+    const leftovers = registered ? [] : await cleanupCreated(deps.vault, created);
+    throw new StarterProfileRegistrationError(leftovers, registered, cause);
   }
   return project;
 }

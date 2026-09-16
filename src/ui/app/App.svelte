@@ -35,7 +35,6 @@
   import { createDemoProject } from "./onboarding/demoProject";
   import { OnboardingModal } from "./onboarding/onboardingModal";
   import { createStarterProfile, type StarterProfileId } from "./onboarding/starterProfiles";
-  import { firstNoteFailureMessage } from "./onboarding/firstNoteFailure";
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
   import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
@@ -259,11 +258,10 @@
    * user with nothing and no idea why — this callback's `.catch` is what
    * turns that into a Notice. `dataApi.createNote` writes the note file
    * and only afterwards updates its front matter (`src/lib/dataApi.ts`),
-   * so the rejection can arrive after the file already exists; the Notice
-   * text is chosen accordingly by `firstNoteFailureMessage` (see
-   * `./onboarding/firstNoteFailure`) — pointing at the empty table only
-   * when the file itself never appeared, and at checking the note's own
-   * properties when it did.
+   * so the rejection can arrive after the file already exists. The Notice
+   * therefore asks the user to check the profile folder instead of claiming
+   * what happened: a file at that path proves only that something is there,
+   * not that this attempt put it there.
    */
   async function handleOnboardingProfile(profileId: StarterProfileId): Promise<void> {
     if (onboardingProfileInFlight) return;
@@ -278,23 +276,17 @@
       dispatch("projectIdChange", project.id);
       new CreateNoteModal($app, project, (name, templatePath, targetProject) => {
         const record = createDataRecord(name, targetProject);
-        // `record.id` is the exact path `createDataRecord` resolved the note
-        // to, and the same path `dataApi.createNote` passes to
-        // `fileSystem.create`. Whether something is ALREADY there decides
-        // what a later rejection means: only a path that was free before
-        // this attempt and is taken after it can be the note this attempt
-        // created — otherwise the thing at that path is somebody else's
-        // (an existing folder, a file created meanwhile) and claiming it
-        // would be the same false message this check exists to avoid.
-        const pathWasFree = $app.vault.getAbstractFileByPath(record.id) === null;
         get(api)
           .createNote(record, [], templatePath)
           .catch((error) => {
             console.error(error);
-            const fileExists =
-              pathWasFree && $app.vault.getAbstractFileByPath(record.id) !== null;
-            const { key, defaultValue } = firstNoteFailureMessage(fileExists);
-            new Notice($i18n.t(key, { defaultValue, name }));
+            new Notice(
+              $i18n.t("onboarding.profiles.first-note-failed", {
+                defaultValue:
+                  'Не удалось сохранить первую запись «{{name}}» целиком. Проверьте папку профиля: если заметка появилась, откройте её и заполните свойства; если нет — добавьте запись кнопкой «Добавить первую запись» в пустой таблице.',
+                name,
+              })
+            );
           });
       }).open();
     } finally {
