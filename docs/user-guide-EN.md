@@ -12,6 +12,24 @@ Editing a writable field updates the original file. Filters, block layout, and v
 
 Calculated fields and query results are not always writable. If you cannot edit a field, check its type and source; a displayed calculation is not necessarily a separate property in the Markdown file.
 
+## Quick start: starter profiles
+
+When your vault has no project yet, the welcome dialog offers three starter profiles: "Clients," "Workouts," and "Project journal." Picking one asks nothing about folders, fields, or views — it goes straight to creating a note with a template already selected; type a name and press Enter.
+
+Each profile creates:
+
+| Profile | Folder | Template | Views |
+| --- | --- | --- | --- |
+| Clients | `Projects Plus — Профили/Клиенты` | `Шаблон — клиент.md` (`статус`, `следующийКонтакт`, `сумма`) | "Обзор" (counter and table) and "Статусы" (board grouped by `статус`) |
+| Workouts | `Projects Plus — Профили/Тренировки` | `Шаблон — тренировка.md` (`дата`, `тип`, `минуты`) | "Обзор" and "Календарь" (by the `дата` field) |
+| Project journal | `Projects Plus — Профили/Дневник проекта` | `Шаблон — запись.md` (`дата`, `статус`, `следующийШаг`) | "Обзор" and "Хронология" (a calendar view keyed on `дата`) |
+
+The folder, field, and view names above are the actual Russian names the profile writes to your vault — they are not translated by the interface language. A profile creates no example record: the first record is the note you create yourself. It appears right away on the "Обзор" tab, in the counter and the table, and in the profile's second view: a board grouped by status for Clients, a calendar keyed on date for Workouts, and a chronological calendar for the Project journal. All three profiles share one root folder, "Projects Plus — Профили," with its own subfolder per profile; a re-run reuses that root folder and adds a new subfolder, picking a free numbered name such as "Клиенты 2" if the plain name is already taken, even when it matches only in letter case. No existing file or folder is ever overwritten. If registering the project fails, there are two outcomes. When the project did land in settings, the profile's files stay and the dialog asks you to restart Obsidian and check whether the project is listed. When registration did not land, what this run created is removed as far as it can be attributed, and the dialog names only what could not be removed. Writing settings to disk happens separately and on its own schedule: the plugin reports a failure there through its own save status. If a write fails partway through, the dialog names the path it could not create: once everything created during that attempt has been cleaned up, nothing was saved and you can try again; if anything from that attempt is still in your vault (it could not be removed automatically, or something else has since taken its place), the dialog lists those paths. Check them and delete only what the profile itself created: something unrelated may now sit at such a path.
+
+The first note is created as a separate step, after the "Create note" dialog closes, apart from the profile's folder and template. If it could not be saved in full, a notification asks you to open the profile folder and look at what is there: if the record is missing, add it with "Add first record" in the empty table, and if the error repeats, try a different name, because something else may occupy that path. The notification deliberately says nothing about what is at that path or who created it: a file being there does not prove it came from this attempt, and the plugin should not send you off to edit somebody else's note.
+
+Undo a starter profile the same way you would remove any other project: open the project menu and delete it — this removes the settings entry but does not delete your notes. Afterward, delete or move the created folder and template manually if you want them gone too.
+
 ## Creating and configuring a project
 
 Open the Obsidian command palette and choose **Create new project plus**. Enter a name and select a source. Folder paths are relative to the vault root, for example `Projects/Work`.

@@ -1821,9 +1821,21 @@
             "command-palette-step3": "Press <strong>Enter</strong>.",
             "projects-view-step1": "In the top-right corner of the <strong>Projects Plus</strong> view, click <strong>New</strong>.",
             "projects-view-step2": "Click <strong>New project</strong>.",
+            "other-ways-summary": "Another way",
             "demo": {
                 "partial": "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
                 "folder-failed": "Could not create the demo folder '{{folder}}'. The demo project was not created."
+            },
+            "profiles": {
+                "intro": "Pick a starting point — your first record will be here in a minute.",
+                "group-label": "Starter profiles",
+                "busy": "Creating the profile…",
+                "error-path": "Could not create the profile's files: \"{{path}}\". Nothing was saved — please try again.",
+                "error-path-leftover": "Could not create the profile's files: \"{{path}}\". These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
+                "error-generic": "Could not create the profile. Please try again.",
+                "first-note-failed": "Could not save the first record \"{{name}}\" in full. Open the profile folder and look at what is there: if the record is missing, add it with \"Add first record\" in the empty table. If this keeps happening, try a different name — something else may occupy that path.",
+                "error-registration-leftover": "Could not create the profile. These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
+                "error-registered": "The profile's files were created, but the settings may not have been saved. Restart Obsidian and check whether the project is listed; the profile's files stay in your vault."
             }
         },
         "common": {

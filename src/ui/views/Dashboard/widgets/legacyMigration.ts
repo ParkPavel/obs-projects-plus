@@ -12,12 +12,18 @@ import type { TransformPipeline, TransformStep, FilterStep } from "src/lib/dashb
 import type { FilterDefinition } from "src/settings/settings";
 import { andComposeFilters } from "src/lib/engine/filterCompose";
 
-/** Build a single-Table-tab database-call config (the data-table successor). */
+/**
+ * Build a single-Table-tab database-call config (the data-table successor).
+ * `label` defaults to "Table" for the legacy-conversion callers below, which
+ * carry no domain locale of their own; a caller writing data for a known
+ * locale (e.g. a Russian starter profile) should pass its own tab label.
+ */
 export function tableTabConfig(
-  tableConfig: Record<string, unknown> = {}
+  tableConfig: Record<string, unknown> = {},
+  label = "Table"
 ): Record<string, unknown> {
   return {
-    viewTabs: [{ id: "table", label: "Table", viewType: "table", config: tableConfig }],
+    viewTabs: [{ id: "table", label, viewType: "table", config: tableConfig }],
     activeTabId: "table",
   };
 }
