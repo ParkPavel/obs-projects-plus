@@ -249,10 +249,11 @@
    * onboarding modal open, so no "saved" notice is shown here — settings
    * writes are not confirmed to disk per call.
    *
-   * The first record's write is watched here, same as every other
-   * `CreateNoteModal` caller (`api.addRecord`/`ViewApi`): it is NOT
-   * awaited, only given a `.catch`, and `CreateNoteModal` closes
-   * immediately either way. This is still the ONLY note the user has just
+   * The first record's write is not awaited: `CreateNoteModal` closes as
+   * soon as this callback returns, exactly as it does for its other
+   * callers. Unlike them it is given a `.catch` — `ViewApi.addRecord`
+   * hands its promise off without one, because those callers already have
+   * a table to retry from. This is the ONLY note the user has just
    * been promised by the onboarding flow itself, with no table row yet to
    * retry from, so a silent console-only failure would leave a brand-new
    * user with nothing and no idea why — this callback's `.catch` is what

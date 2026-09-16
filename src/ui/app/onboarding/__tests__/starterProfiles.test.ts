@@ -643,7 +643,7 @@ describe("starterProfiles — root reuse and subfolder suffixing", () => {
     );
   });
 
-  it("suffixes the ROOT only when a FILE occupies the root path", async () => {
+  it("suffixes the ROOT when a FILE occupies the root path", async () => {
     const { vault, calls } = createFakeVault([{ path: "Projects Plus — Профили", kind: "file" }]);
     const addProject = trackedAddProject(calls);
 
