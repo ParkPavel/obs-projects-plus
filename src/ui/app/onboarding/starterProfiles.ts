@@ -495,7 +495,11 @@ interface CreatedEntry {
  * from that entry outward (its parents, which by construction still
  * contain it) is left in place and returned as `leftovers`, in the order
  * this run created them. Never touches anything not in `created`, and
- * never deletes an object this run did not itself create.
+ * never deletes an object this run did not itself create — including the
+ * failing step's own target, which materialized without ever handing back
+ * an object to compare against (`file: null`). Deleting that on the path
+ * alone is precisely the rule this module refuses to break, so it is
+ * reported instead: the user is told a path was left behind and decides.
  */
 async function cleanupCreated(
   vault: StarterProfileVault,
@@ -511,7 +515,16 @@ async function cleanupCreated(
       leftoverFrom = i;
       continue;
     }
-    if (entry.file !== null && current !== entry.file) {
+    if (entry.file === null) {
+      // The failing step's own target: it exists, but that step rejected
+      // without returning an object, so there is nothing to compare the
+      // thing at this path against. It may be what the step wrote; it may
+      // be a replacement that arrived since. Unattributable means kept
+      // and reported, never deleted — and its parents stay with it.
+      leftoverFrom = i + 1;
+      break;
+    }
+    if (current !== entry.file) {
       // Something else now lives at this path — not the object this run
       // created. Leave it untouched and report it, same as "no longer
       // empty": everything from here outward has to stay too.
@@ -548,9 +561,11 @@ async function writeStep<T extends TAbstractFile>(
     // The step may have materialized its target before rejecting (e.g. an
     // adapter that writes the file/folder and only fails on a later,
     // separate part of the same operation). `path` was confirmed absent
-    // immediately before this call, so if it exists now it is this run's
-    // own — fold it into cleanup (and, if it cannot be removed, into
-    // `leftovers`) instead of silently leaving it unreported.
+    // immediately before this call, so something is there that was not
+    // there a moment ago — but the rejection means no object came back to
+    // identify it with, and anything could have replaced it since. It is
+    // recorded so the user is TOLD about it (`leftovers`), never deleted:
+    // see `cleanupCreated`, which stops at an entry with no identity.
     if (vault.getAbstractFileByPath(path) !== null) {
       created.push({ path, file: null });
     }

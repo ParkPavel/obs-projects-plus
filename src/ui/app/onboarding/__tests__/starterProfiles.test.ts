@@ -372,7 +372,7 @@ describe("starterProfiles — rollback on write failure", () => {
     expect(entries.has("Projects Plus — Профили/Клиенты/чужой файл.md")).toBe(true);
   });
 
-  it("cleans up a root folder that was materialized despite createFolder rejecting", async () => {
+  it("reports a root folder materialized by a rejecting createFolder instead of deleting it", async () => {
     const { vault, calls, entries } = createFakeVault();
     const failingVault: StarterProfileVault = {
       ...vault,
@@ -393,15 +393,16 @@ describe("starterProfiles — rollback on write failure", () => {
       expect(error).toBeInstanceOf(StarterProfileWriteError);
       const writeError = error as StarterProfileWriteError;
       expect(writeError.path).toBe("Projects Plus — Профили");
-      // Folded into cleanup and removed — not silently left out of
-      // `leftovers` while still sitting in the vault.
-      expect(writeError.leftovers).toEqual([]);
+      // It exists but cannot be attributed — the step returned no object —
+      // so it is named rather than deleted.
+      expect(writeError.leftovers).toEqual(["Projects Plus — Профили"]);
     }
-    expect(entries.has("Projects Plus — Профили")).toBe(false);
+    expect(entries.has("Projects Plus — Профили")).toBe(true);
+    expect(calls.filter((c) => c.op === "delete")).toHaveLength(0);
     expect(addProject).not.toHaveBeenCalled();
   });
 
-  it("cleans up a profile subfolder that was materialized despite createFolder rejecting", async () => {
+  it("reports a subfolder materialized by a rejecting createFolder, and keeps its root", async () => {
     const { vault, calls, entries } = createFakeVault();
     let call = 0;
     const failingVault: StarterProfileVault = {
@@ -424,16 +425,20 @@ describe("starterProfiles — rollback on write failure", () => {
       expect(error).toBeInstanceOf(StarterProfileWriteError);
       const writeError = error as StarterProfileWriteError;
       expect(writeError.path).toBe("Projects Plus — Профили/Клиенты");
-      expect(writeError.leftovers).toEqual([]);
+      // The unattributable subfolder stops the unwinding, so the root this
+      // run created stays with it — and both are named.
+      expect(writeError.leftovers).toEqual([
+        "Projects Plus — Профили",
+        "Projects Plus — Профили/Клиенты",
+      ]);
     }
-    // Both the materialized-then-rejected subfolder and the root created
-    // before it are gone — nothing leaked.
-    expect(entries.has("Projects Plus — Профили/Клиенты")).toBe(false);
-    expect(entries.has("Projects Plus — Профили")).toBe(false);
+    expect(entries.has("Projects Plus — Профили/Клиенты")).toBe(true);
+    expect(entries.has("Projects Plus — Профили")).toBe(true);
+    expect(calls.filter((c) => c.op === "delete")).toHaveLength(0);
     expect(addProject).not.toHaveBeenCalled();
   });
 
-  it("cleans up a template file that was materialized despite create rejecting", async () => {
+  it("reports a template materialized by a rejecting create, and keeps the folders under it", async () => {
     const { vault, calls, entries } = createFakeVault();
     const failingVault: StarterProfileVault = {
       ...vault,
@@ -451,11 +456,49 @@ describe("starterProfiles — rollback on write failure", () => {
       expect(error).toBeInstanceOf(StarterProfileWriteError);
       const writeError = error as StarterProfileWriteError;
       expect(writeError.path).toBe("Projects Plus — Профили/Клиенты/Шаблон — клиент.md");
-      expect(writeError.leftovers).toEqual([]);
+      expect(writeError.leftovers).toEqual([
+        "Projects Plus — Профили",
+        "Projects Plus — Профили/Клиенты",
+        "Projects Plus — Профили/Клиенты/Шаблон — клиент.md",
+      ]);
     }
-    expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(false);
-    expect(entries.has("Projects Plus — Профили/Клиенты")).toBe(false);
-    expect(entries.has("Projects Plus — Профили")).toBe(false);
+    expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(true);
+    expect(entries.has("Projects Plus — Профили/Клиенты")).toBe(true);
+    expect(entries.has("Projects Plus — Профили")).toBe(true);
+    expect(calls.filter((c) => c.op === "delete")).toHaveLength(0);
+    expect(addProject).not.toHaveBeenCalled();
+  });
+
+  it("never deletes the rejecting step's own target, even replaced at the same path", async () => {
+    // Review round 7's reproduction: the step materializes its target and
+    // then rejects, and something else takes that path before cleanup runs.
+    // The step returned no object, so nothing here can be attributed to this
+    // run — and nothing may be deleted on the strength of a path alone.
+    const { vault, calls, entries } = createFakeVault();
+    const failingVault: StarterProfileVault = {
+      ...vault,
+      create: async (path: string, data: string) => {
+        await vault.create(path, data);
+        entries.delete(path);
+        await vault.create(path, "somebody else's file");
+        throw new Error("metadata write failed");
+      },
+    };
+    const addProject = trackedAddProject(calls);
+
+    try {
+      await createStarterProfile("clients", { vault: failingVault, addProject });
+      throw new Error("expected createStarterProfile to reject");
+    } catch (error) {
+      expect(error).toBeInstanceOf(StarterProfileWriteError);
+      expect((error as StarterProfileWriteError).leftovers).toEqual([
+        "Projects Plus — Профили",
+        "Projects Plus — Профили/Клиенты",
+        "Projects Plus — Профили/Клиенты/Шаблон — клиент.md",
+      ]);
+    }
+    expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(true);
+    expect(calls.filter((c) => c.op === "delete")).toHaveLength(0);
     expect(addProject).not.toHaveBeenCalled();
   });
 
