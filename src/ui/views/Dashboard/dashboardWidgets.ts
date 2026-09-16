@@ -16,6 +16,7 @@
 import { get } from "svelte/store";
 import type { i18n as I18nStore } from "src/lib/stores/i18n";
 import { getWidgetMeta } from "./widgets/widgetRegistry";
+import { notifyWidgetRemoved } from "./dashboardWidgetUndo";
 import type { DatabaseViewConfig, WidgetDefinition, WidgetType } from "./types";
 
 interface WidgetControllerOptions {
@@ -79,10 +80,14 @@ export function createWidgetController({
   function removeWidget(id: string): void {
     const config = cfg();
     if (!config) return;
+    const index = config.widgets.findIndex((w) => w.id === id);
+    if (index === -1) return;
+    const removed = config.widgets[index]!;
     saveConfig({
       ...config,
       widgets: config.widgets.filter((w) => w.id !== id),
     });
+    notifyWidgetRemoved((key, options) => get(i18nStore).t(key, options), removed, index, cfg, saveConfig);
   }
 
   function handleWidgetConfigChange(

@@ -6,6 +6,7 @@ import {
   formatDateForInternal,
   parseDate,
   formatLocalDay,
+  formatLocalDateTime,
 } from "./dateFormatting";
 import type { ProjectDefinition } from "src/settings/settings";
 import type { DateFormatConfig } from "src/settings/v3/settings";
@@ -433,5 +434,26 @@ describe("formatLocalDay (#158)", () => {
 
   test("answers empty for an invalid date instead of NaN-NaN-NaN", () => {
     expect(formatLocalDay(new Date("not a date"))).toBe("");
+  });
+});
+
+describe("formatLocalDateTime — AutoTime cells (pp_created_time / pp_last_edited_time)", () => {
+  const localDate = (year: number, month: number, day: number, hours: number, minutes: number): Date => {
+    const value = new Date(2000, 0, 1);
+    value.setFullYear(year, month - 1, day);
+    value.setHours(hours, minutes, 0, 0);
+    return value;
+  };
+
+  test("appends local hours and minutes to the formatLocalDay date", () => {
+    expect(formatLocalDateTime(localDate(2026, 6, 11, 9, 5))).toBe("2026-06-11 09:05");
+  });
+
+  test("pads single-digit hours and minutes", () => {
+    expect(formatLocalDateTime(localDate(2026, 1, 1, 0, 0))).toBe("2026-01-01 00:00");
+  });
+
+  test("answers empty for an invalid date, same as formatLocalDay", () => {
+    expect(formatLocalDateTime(new Date("not a date"))).toBe("");
   });
 });

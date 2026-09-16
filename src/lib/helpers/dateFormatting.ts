@@ -178,3 +178,17 @@ export function formatLocalDay(value: Date): string {
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Same local-component rule as `formatLocalDay`, with hours and minutes
+ * appended — used for AutoTime cells (pp_created_time / pp_last_edited_time)
+ * so they stop falling through to `Date.toString()`'s locale-and-timezone
+ * dump in the table.
+ */
+export function formatLocalDateTime(value: Date): string {
+  const day = formatLocalDay(value);
+  if (!day) return "";
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+  return `${day} ${hours}:${minutes}`;
+}

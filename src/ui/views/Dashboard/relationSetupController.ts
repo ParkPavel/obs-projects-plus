@@ -14,7 +14,7 @@ export type RelationSetupControllerDeps = {
   readonly getProjectId: () => ProjectId;
   readonly getFrame: () => DataFrame;
   readonly getProjects: () => readonly ProjectDefinition[];
-  readonly t: (key: string, options?: { defaultValue?: string }) => string;
+  readonly t: (key: string, options?: { defaultValue?: string; count?: number }) => string;
 };
 
 export function createRelationSetupController(deps: RelationSetupControllerDeps) {
@@ -37,6 +37,7 @@ export function createRelationSetupController(deps: RelationSetupControllerDeps)
         settings.updateFieldConfig(deps.getProjectId(), draft.fieldName.trim(), fields.map((f) => f.name), { relation: config });
         throw new Error(
           deps.t("relation-setup.saved-partial", {
+            count: unwritten,
             defaultValue: `Relation saved, but the property could not be added to ${unwritten} note(s). See the console.`,
           })
         );

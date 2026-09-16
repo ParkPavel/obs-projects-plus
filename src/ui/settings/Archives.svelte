@@ -40,7 +40,11 @@
         // a new stored kind has to be described everywhere sources are shown,
         // and the switch refused to compile until it was.
         const { from } = archive.dataSource.config;
-        const of = from === "project" ? $i18n.t("datasources.derived.project", { defaultValue: "the project" }) : from;
+        // "derived-project" (not "derived.project") on purpose: i18next reads
+        // "datasources.derived" too, and a nested "project" key under it would
+        // make that lookup resolve to an object instead of a string, breaking
+        // the always-shown "Saved filter" label in every locale.
+        const of = from === "project" ? $i18n.t("datasources.derived-project", { defaultValue: "the project" }) : from;
         return `${$i18n.t("datasources.derived", { defaultValue: "Saved filter" })}: ${of}`;
       }
     }

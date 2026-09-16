@@ -19,7 +19,7 @@ type InitialWidget = Partial<Omit<WidgetDefinition, "id" | "type">>;
 function dateChartWidget(suggestion: SmartSuggestion): InitialWidget {
   const config: ChartConfig = {
     chartType: suggestion.numericFieldName ? "line" : "bar",
-    xAxis: { property: suggestion.fieldName, sortBy: "value", sortOrder: "asc", omitZero: false, dateGranularity: "day" },
+    xAxis: { property: suggestion.fieldName, sortBy: "label", sortOrder: "asc", omitZero: false, dateGranularity: "day" },
     yAxis: suggestion.numericFieldName
       ? { property: suggestion.numericFieldName, aggregation: "avg" }
       : { property: "count", aggregation: "count_total" },

@@ -56,6 +56,7 @@
         on:click={() => dispatch("addClick")}
         aria-haspopup="dialog"
         aria-expanded={open}
+        aria-label={resolvedAdd}
       >
         <Icon name="filter" size="sm" />
         {enabled.length === 0 ? resolvedAdd : ""}
