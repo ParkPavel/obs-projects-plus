@@ -80,9 +80,11 @@ export interface StarterProfileDeps {
  * alert, AND the paths (if any) that this run created but could not
  * remove again during rollback — `leftovers` is empty when cleanup fully
  * undid this run's writes, and non-empty when something had to be left
- * behind (because it was no longer empty, or because removing it itself
- * failed). `settings.addProject` is never reached when this is thrown —
- * see `createStarterProfile`.
+ * behind: a folder that is no longer empty, a removal that itself failed,
+ * or a path this run cannot prove it owns (the failing step's own target,
+ * or a path something else has taken over — `cleanupCreated` keeps those
+ * rather than deleting on a path alone). `settings.addProject` is never
+ * reached when this is thrown — see `createStarterProfile`.
  */
 export class StarterProfileWriteError extends Error {
   constructor(
@@ -101,14 +103,22 @@ export class StarterProfileWriteError extends Error {
 
 /**
  * Thrown when every folder/template write succeeded but `deps.addProject`
- * itself threw while registering the finished project. This run's own
- * writes are rolled back exactly like a `StarterProfileWriteError` (see
- * `leftovers`), but nothing failed to WRITE — the vault holds exactly what
- * this run intended — so the message never names a path or claims a write
- * failed. `Onboarding.svelte`'s `catch` only special-cases
- * `StarterProfileWriteError`; anything else (this included) falls through
- * to its generic "could not create the profile" message, which is honest
- * for a registration failure.
+ * itself threw while registering the finished project. Nothing failed to
+ * WRITE, so the message never names a path or claims a write failed, and
+ * what happens to the files depends on `registered`:
+ *
+ *   - `registered: false` — the project is not in the settings value, so
+ *     this run's writes are rolled back exactly like a
+ *     `StarterProfileWriteError` and `leftovers` carries whatever cleanup
+ *     could not remove.
+ *   - `registered: true` — the store's value holds the project (Svelte
+ *     assigns before notifying subscribers), so the files are deliberately
+ *     KEPT and `leftovers` is empty: they belong to a project the user now
+ *     has, and deleting them would be the worse mistake.
+ *
+ * `Onboarding.svelte` renders all three shapes — registered, unregistered
+ * with leftovers, and the generic "could not create the profile" — so the
+ * user is told which one happened.
  */
 export class StarterProfileRegistrationError extends Error {
   constructor(
@@ -581,7 +591,9 @@ async function writeStep<T extends TAbstractFile>(
  * Writes the profile's folder, subfolder and template, then registers
  * the project — in that order. On any write failure the project is NOT
  * registered (`deps.addProject` is never called); this run's own writes
- * are rolled back in reverse order (see `cleanupCreated`), and the
+ * are rolled back in reverse order as far as they can be attributed (see
+ * `cleanupCreated`: an entry whose recorded object is gone, or was never
+ * returned at all, is kept and reported instead of deleted), and the
  * thrown `StarterProfileWriteError` carries both the path that failed
  * and any paths cleanup could not remove, so the caller can tell the
  * user exactly what — if anything — is still in the vault. Existing
@@ -593,11 +605,12 @@ async function writeStep<T extends TAbstractFile>(
  * touches paths this same run created, verified by object identity where
  * one is available.
  *
- * `deps.addProject` is called inside its own try/catch: a synchronous
- * registration failure — every file already written, only the settings
- * update itself throwing — rolls back this run's writes exactly like a
- * write failure would, but is reported as `StarterProfileRegistrationError`
- * rather than `StarterProfileWriteError`, since no path failed to write.
+ * `deps.addProject` is called inside its own try/catch and a failure is
+ * reported as `StarterProfileRegistrationError`, never as a write error,
+ * since no path failed to write. Whether the files survive depends on
+ * `deps.isProjectRegistered`: if the project is already in the settings
+ * value the writes are KEPT (see that error's own contract), and only a
+ * registration that did not land is rolled back like a write failure.
  */
 export async function createStarterProfile(
   profileId: StarterProfileId,
