@@ -61,6 +61,17 @@ export type StarterProfileVault = Pick<
 export interface StarterProfileDeps {
   readonly vault: StarterProfileVault;
   readonly addProject: (project: ProjectDefinition) => void;
+  /**
+   * Whether the project with this id is registered in settings, asked only
+   * after `addProject` threw. `settings.addProject` writes the new value
+   * into the store BEFORE notifying subscribers (Svelte's `writable`), so a
+   * subscriber that throws leaves the project registered and the exception
+   * still reaching us — rolling the files back then would delete the
+   * folders of a project the user now has. Optional: a caller that cannot
+   * answer gets the conservative old behaviour (roll back), which is right
+   * when `addProject` itself is what failed.
+   */
+  readonly isProjectRegistered?: (projectId: string) => boolean;
 }
 
 /**
@@ -605,6 +616,13 @@ export async function createStarterProfile(
   try {
     deps.addProject(project);
   } catch (cause) {
+    // The project may be registered already: Svelte's store assigns the new
+    // value and only then calls subscribers, so a throwing subscriber (a
+    // settings writer, a view rebuilding) surfaces here with the project in
+    // place. Its files must stay — the profile the user asked for exists —
+    // and reporting the failure is that subscriber's own job. Only a
+    // registration that did NOT land is rolled back.
+    if (deps.isProjectRegistered?.(project.id) === true) return project;
     const leftovers = await cleanupCreated(deps.vault, created);
     throw new StarterProfileRegistrationError(leftovers, cause);
   }

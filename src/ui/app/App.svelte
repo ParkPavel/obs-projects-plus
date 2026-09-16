@@ -272,20 +272,27 @@
       const project = await createStarterProfile(profileId, {
         vault: $app.vault,
         addProject: settings.addProject,
+        isProjectRegistered: (id) => get(settings).projects.some((p) => p.id === id),
       });
       projectId = project.id;
       dispatch("projectIdChange", project.id);
       new CreateNoteModal($app, project, (name, templatePath, targetProject) => {
         const record = createDataRecord(name, targetProject);
+        // `record.id` is the exact path `createDataRecord` resolved the note
+        // to, and the same path `dataApi.createNote` passes to
+        // `fileSystem.create`. Whether something is ALREADY there decides
+        // what a later rejection means: only a path that was free before
+        // this attempt and is taken after it can be the note this attempt
+        // created — otherwise the thing at that path is somebody else's
+        // (an existing folder, a file created meanwhile) and claiming it
+        // would be the same false message this check exists to avoid.
+        const pathWasFree = $app.vault.getAbstractFileByPath(record.id) === null;
         get(api)
           .createNote(record, [], templatePath)
           .catch((error) => {
             console.error(error);
-            // `record.id` is the exact path `createDataRecord` resolved the
-            // note to, and the same path `dataApi.createNote` passes to
-            // `fileSystem.create` — checking it here tells us whether the
-            // file itself survived the rejection.
-            const fileExists = $app.vault.getAbstractFileByPath(record.id) !== null;
+            const fileExists =
+              pathWasFree && $app.vault.getAbstractFileByPath(record.id) !== null;
             const { key, defaultValue } = firstNoteFailureMessage(fileExists);
             new Notice($i18n.t(key, { defaultValue, name }));
           });

@@ -519,6 +519,27 @@ describe("starterProfiles — addProject failure", () => {
     expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(false);
     expect(calls.filter((c) => c.op === "delete")).toHaveLength(3);
   });
+
+  it("keeps this run's files when addProject threw but the project is registered anyway", async () => {
+    const { vault, calls, entries } = createFakeVault();
+    // Svelte's writable assigns the new value and only then notifies
+    // subscribers, so a subscriber that throws leaves the project IN
+    // settings and still surfaces the exception here. Deleting the files
+    // then would strip the folders off a project the user now has.
+    const addProject = jest.fn(() => {
+      throw new Error("a subscriber threw after the store was updated");
+    });
+
+    const project = await createStarterProfile("clients", {
+      vault,
+      addProject,
+      isProjectRegistered: () => true,
+    });
+
+    expect(project.templates).toHaveLength(1);
+    expect(entries.has("Projects Plus — Профили/Клиенты/Шаблон — клиент.md")).toBe(true);
+    expect(calls.filter((c) => c.op === "delete")).toHaveLength(0);
+  });
 });
 
 describe("starterProfiles — case-only collisions", () => {
