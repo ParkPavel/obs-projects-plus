@@ -16,6 +16,7 @@
             "formula": "Formula",
             "relation": "Relation",
             "rollup": "Rollup",
+            "unique_id": "Unique ID",
             "color": "Color",
             "url": "URL",
             "email": "Email",
@@ -539,7 +540,11 @@
                 },
                 "note": {
                     "add": "Add note"
-                }
+                },
+                "freeze-all": "Freeze all columns",
+                "unfreeze-all": "Unfreeze all columns",
+                "records_one": "record",
+                "records_other": "records"
             },
             "calendar": {
                 "name": "Calendar",
@@ -802,9 +807,16 @@
                     "card-width": {
                         "name": "Card width",
                         "description": "Width of each card in pixels."
+                    },
+                    "card-size": {
+                        "small": "S",
+                        "medium": "M",
+                        "large": "L"
                     }
                 },
-                "empty": "This view is empty."
+                "empty": "This view is empty.",
+                "records_one": "record",
+                "records_other": "records"
             },
             "dashboard": {
                 "name": "Dashboard",
@@ -952,6 +964,8 @@
                     "menu-remove": "Remove widget",
                     "menu-rename": "Rename",
                     "unlock": "Unlock widget",
+                    "removed": "Block \"{{title}}\" removed",
+                    "undo": "Undo",
                     "primary": {
                         "add-record": "Add record"
                     },
@@ -1381,6 +1395,8 @@
                 "match-all": "All conditions",
                 "match-any": "Any condition",
                 "empty-hint": "No filter conditions",
+                "enable-condition": "Enable condition",
+                "disable-condition": "Disable condition",
                 "operators": {
                     "is-empty": "Is empty",
                     "is-not-empty": "Is not empty",
@@ -1520,6 +1536,10 @@
                 "disable-haptic": {
                     "name": "Disable Haptic Feedback",
                     "desc": "Turn off vibration feedback during drag-and-drop on mobile devices"
+                },
+                "replace-properties": {
+                    "name": "Replace Obsidian Properties pane",
+                    "desc": "Close the built-in file-properties leaves and surface the YAML Visualizer pane instead."
                 }
             },
             "front-matter": {
@@ -1861,7 +1881,14 @@
             "cancel": "Cancel",
             "save": "Save relation",
             "saving": "Saving…",
-            "inverse-warning-v2": "The name is recorded on this relation. The property is not created in the other database, and existing notes are not rewritten — related records are resolved from the links you already have."
+            "inverse-warning-v2": "The name is recorded on this relation. The property is not created in the other database, and existing notes are not rewritten — related records are resolved from the links you already have.",
+            "error-name-required": "A relation property name is required.",
+            "error-target-required": "Choose a database to link.",
+            "error-name-taken": "A property with this name already exists.",
+            "error-existing-property-required": "Choose an existing property or create one.",
+            "error-not-convertible": "This property cannot become a relation: it is computed or identifies the record.",
+            "error-reserved-name": "Names starting with __resolved__ are reserved for the plugin's own columns.",
+            "error-inverse-name-required": "An inverse property name is required."
         },
         "relation-count": {
             "linked": "{{count}} linked",

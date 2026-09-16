@@ -302,9 +302,10 @@
           on:drop={(e) => onDrop(index, e)}
           on:dragend={onDragEnd}
         >
-          <button class="row-btn row-drag" type="button" aria-label="Drag to reorder" tabindex="-1">
+          <!-- Pointer-only affordance: the row itself is draggable and no keyboard path reorders rows, so the grip is decoration — not a control, and hidden from assistive technology. -->
+          <span class="row-btn row-drag" aria-hidden="true">
             <Icon name="grip-vertical" size="sm" />
-          </button>
+          </span>
           <!-- Row prefix: "Где" for first, "и"/"или" for rest -->
           <span class="row-prefix">
             {#if index === 0 && (local.groups?.length ?? 0) === 0}
@@ -321,6 +322,7 @@
             class="row-btn row-toggle"
             class:row-toggle--off={!condition.enabled}
             type="button"
+            aria-label={condition.enabled ? $i18n.t('components.filter.disable-condition') : $i18n.t('components.filter.enable-condition')}
             on:click|stopPropagation={() => updateCondition(index, { enabled: !condition.enabled })}
           >
             <Icon name={condition.enabled ? 'eye' : 'eye-off'} size="sm" />
@@ -411,6 +413,7 @@
                   class="row-btn row-toggle"
                   class:row-toggle--off={!gCond.enabled}
                   type="button"
+                  aria-label={gCond.enabled ? $i18n.t('components.filter.disable-condition') : $i18n.t('components.filter.enable-condition')}
                   on:click|stopPropagation={() => updateCondition(cIdx, { enabled: !gCond.enabled }, [gIndex])}
                 >
                   <Icon name={gCond.enabled ? 'eye' : 'eye-off'} size="sm" />
@@ -495,6 +498,7 @@
                         class="row-btn row-toggle"
                         class:row-toggle--off={!nCond.enabled}
                         type="button"
+                        aria-label={nCond.enabled ? $i18n.t('components.filter.disable-condition') : $i18n.t('components.filter.enable-condition')}
                         on:click|stopPropagation={() => updateCondition(nCIdx, { enabled: !nCond.enabled }, nPath)}
                       >
                         <Icon name={nCond.enabled ? 'eye' : 'eye-off'} size="sm" />

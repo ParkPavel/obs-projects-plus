@@ -5,7 +5,7 @@
 // engine — filtering stays at view/block level; this module only orders and
 // presents what the canonical pipeline already produced.
 
-import { formatLocalDay } from "src/lib/helpers/dateFormatting";
+import { formatLocalDay, formatLocalDateTime } from "src/lib/helpers/dateFormatting";
 import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 import {
   DataFieldType,
@@ -217,16 +217,19 @@ function toPills(labels: string[], color: (label: string) => string | null, stat
     status,
   };
 }
-
+// A Date field keeps a string as written; only AutoTime parses its ISO stat string. Never Date.toString().
+function dateCellText(auto: boolean, value: Optional<DataValue>): string {
+  if (value instanceof Date) return auto ? formatLocalDateTime(value) : formatLocalDay(value);
+  const parsed = auto && typeof value === "string" ? new Date(value) : null;
+  return parsed && !Number.isNaN(parsed.getTime()) ? formatLocalDateTime(parsed) : String(value);
+}
 export function cellDisplay(field: DataField, value: Optional<DataValue>): CellDisplay {
   if (value === null || value === undefined || value === "") return { kind: "empty" };
 
   const cfg = field.typeConfig as ExtendedFieldTypeConfig | undefined;
   const optionColor = (label: string) => (cfg ? getOptionColor(cfg, label) : null);
 
-  if (field.repeated && Array.isArray(value)) {
-    return toPills(value.map((v) => String(v)), optionColor, false);
-  }
+  if (field.repeated && Array.isArray(value)) return toPills(value.map((v) => String(v)), optionColor, false);
 
   switch (field.type) {
     case DataFieldType.Boolean:
@@ -234,7 +237,8 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
     case DataFieldType.Number:
       return { kind: "number", text: typeof value === "number" ? value.toLocaleString() : String(value) };
     case DataFieldType.Date:
-      return { kind: "text", text: value instanceof Date ? formatLocalDay(value) : String(value) };
+    case DataFieldType.AutoTime:
+      return { kind: "text", text: dateCellText(field.type === DataFieldType.AutoTime, value) };
     case DataFieldType.Select:
       return toPills([String(value)], optionColor, false);
     case DataFieldType.Status:
@@ -243,16 +247,12 @@ export function cellDisplay(field: DataField, value: Optional<DataValue>): CellD
       return toPills(parseRelationLinks(value), () => null, false);
     case DataFieldType.Formula:
     case DataFieldType.Rollup:
-      return typeof value === "number"
-        ? { kind: "number", text: value.toLocaleString() }
-        : { kind: "text", text: String(value) };
+      return typeof value === "number" ? { kind: "number", text: value.toLocaleString() } : { kind: "text", text: String(value) };
     default: {
       // UT-R2 #085: wikilinks in plain String fields read as link chips,
       // not raw "[[...]]" markup — the cell honors what the user wrote.
       const text = String(value);
-      if (HAS_WIKILINK.test(text)) {
-        return toPills(parseRelationLinks(text), () => null, false);
-      }
+      if (HAS_WIKILINK.test(text)) return toPills(parseRelationLinks(text), () => null, false);
       return { kind: "text", text };
     }
   }
