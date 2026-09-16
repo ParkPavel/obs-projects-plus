@@ -3,8 +3,10 @@
 //
 // Three ready-made project shapes a brand-new user can pick from the
 // onboarding modal instead of facing an empty vault: «Клиенты»,
-// «Тренировки», «Дневник проекта». Each writes one folder, one Markdown
-// template and one `ProjectDefinition` with exactly two views (an
+// «Тренировки», «Дневник проекта». Each writes a subfolder under the
+// shared root «Projects Plus — Профили» (creating that root on the
+// first run), one Markdown template inside it, and one
+// `ProjectDefinition` with exactly two views (an
 // «Обзор» dashboard with a record counter + table, and one subject
 // view — Board or Calendar). No relations, rollups or additional
 // sources — the smallest shape that lets a first note show up
@@ -107,7 +109,9 @@ export class StarterProfileWriteError extends Error {
  * WRITE, so the message never names a path or claims a write failed, and
  * what happens to the files depends on `registered`:
  *
- *   - `registered: false` — the project is not in the settings value, so
+ *   - `registered: false` — nobody could confirm the project is in the
+ *     settings value: either `deps.isProjectRegistered` said so, or the
+ *     caller does not supply it at all. Treated as "did not land", so
  *     this run's writes are rolled back exactly like a
  *     `StarterProfileWriteError` and `leftovers` carries whatever cleanup
  *     could not remove.
@@ -318,8 +322,9 @@ const widgetId = (() => {
  * plain record count (see its own default "Total" card), so it reads 0
  * before the first note and 1 right after, unlike counting a field that
  * does not exist yet in an empty folder — plus one `database-call`
- * block with a single «Таблица» tab (the current V2 shape; `data-table`
- * is retired — see `legacyMigration.ts`). The tab is labelled in
+ * block with a single «Таблица» tab, the shape new blocks are written
+ * in (`tableTabConfig` in `legacyMigration.ts` builds it). The tab is
+ * labelled in
  * Russian, like every other name this profile writes — `tableTabConfig`
  * defaults its label to "Table" for its other (locale-less) callers, so
  * this is the one call site that overrides it.
@@ -397,16 +402,19 @@ function buildProjectDefinition(
 // One shared root for every profile, forever: `resolveRootFolder` REUSES
 // an existing root FOLDER rather than suffixing past it, so a second (or
 // third) profile lands next to the first one instead of growing its own
-// numbered root. Only a FILE occupying the root path forces a suffixed
-// root — that is the one case where writing "into" the existing thing is
-// not an option. Collision handling therefore moves to the profile
+// numbered root. A suffixed root is forced by a FILE occupying the root
+// path, and by a name that differs only in case (see the paragraph
+// below) — neither is something to write "into". Collision handling
+// otherwise moves to the profile
 // SUBFOLDER: `resolveFreeSubfolder` suffixes the folder name itself
 // («Клиенты», «Клиенты 2», …) whenever anything — file or folder — is
 // already at that path, which is exactly what a re-run of the SAME
 // profile needs (the first run's subfolder is taken, so the second gets
-// its own next to it, under the SAME root). The template is always
-// created inside a subfolder this run just created, so it can never
-// collide with anything.
+// its own next to it, under the SAME root). The template goes into a
+// subfolder this run has just created, so nothing of the user's is
+// there to collide with — but nothing locks that folder either, and a
+// write that fails against something arriving in between is handled
+// like any other failed write (`writeStep`).
 //
 // `getAbstractFileByPath` is explicitly case-sensitive (see its doc
 // comment in `node_modules/obsidian/obsidian.d.ts`), but Windows and
@@ -571,10 +579,10 @@ async function writeStep<T extends TAbstractFile>(
   } catch (cause) {
     // The step may have materialized its target before rejecting (e.g. an
     // adapter that writes the file/folder and only fails on a later,
-    // separate part of the same operation). `path` was confirmed absent
-    // immediately before this call, so something is there that was not
-    // there a moment ago — but the rejection means no object came back to
-    // identify it with, and anything could have replaced it since. It is
+    // separate part of the same operation). `path` was free when this run
+    // resolved it, so something is there that was not there then — but
+    // nothing held it in the meantime, the rejection means no object came
+    // back to identify it with, and anything could be sitting there. It is
     // recorded so the user is TOLD about it (`leftovers`), never deleted:
     // see `cleanupCreated`, which stops at an entry with no identity.
     if (vault.getAbstractFileByPath(path) !== null) {
@@ -592,8 +600,10 @@ async function writeStep<T extends TAbstractFile>(
  * the project — in that order. On any write failure the project is NOT
  * registered (`deps.addProject` is never called); this run's own writes
  * are rolled back in reverse order as far as they can be attributed (see
- * `cleanupCreated`: an entry whose recorded object is gone, or was never
- * returned at all, is kept and reported instead of deleted), and the
+ * `cleanupCreated`: an entry that has already vanished is skipped, while
+ * one whose path now holds something else — or that never returned an
+ * object to compare against — is kept and reported instead of deleted),
+ * and the
  * thrown `StarterProfileWriteError` carries both the path that failed
  * and any paths cleanup could not remove, so the caller can tell the
  * user exactly what — if anything — is still in the vault. Existing
@@ -652,19 +662,17 @@ export async function createStarterProfile(
   try {
     deps.addProject(project);
   } catch (cause) {
-    // The project may be registered already: Svelte's store assigns the new
-    // value and only then calls subscribers, so a throwing subscriber (a
+    // "Registered" means the store's VALUE holds the project: Svelte assigns
+    // it before notifying subscribers, so a subscriber that throws (a
     // settings writer, a view rebuilding) surfaces here with the project in
-    // place. Its files must stay — the profile the user asked for exists —
-    // and reporting the failure is that subscriber's own job. Only a
-    // registration that did NOT land is rolled back.
-    // "Registered" means the store's VALUE holds the project — Svelte
-    // assigns it before notifying subscribers. It does not mean the settings
-    // were written to disk, nor that the subscribers after the throwing one
-    // ran. So the files stay (the profile the user asked for is on disk and
-    // deleting it would be the worse mistake), but this is still a failure:
-    // the caller is told, the onboarding stays open, and nothing walks the
-    // user into a project that may not survive a reload.
+    // place. It does NOT mean the settings reached disk, nor that the
+    // subscribers after the throwing one ran. So the files stay — the
+    // profile the user asked for is on disk and deleting it would be the
+    // worse mistake — but this is still a failure, raised from here as
+    // `StarterProfileRegistrationError` and shown by `Onboarding.svelte`:
+    // the modal stays open and nothing walks the user into a project that
+    // may not survive a reload. Only a registration that did NOT land is
+    // rolled back.
     const registered = deps.isProjectRegistered?.(project.id) === true;
     const leftovers = registered ? [] : await cleanupCreated(deps.vault, created);
     throw new StarterProfileRegistrationError(leftovers, registered, cause);

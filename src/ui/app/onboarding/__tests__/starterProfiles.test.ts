@@ -6,7 +6,8 @@
  * the template registered as BOTH a template and an excluded note, the
  * mandatory write-before-addProject order (root folder → profile subfolder →
  * template → addProject, in that order), a failure at any step rolling back
- * exactly what THIS run created (never anything older or unrelated), and the
+ * what THIS run created AND can still attribute to itself — keeping and
+ * reporting the rest, never touching anything older or unrelated — and the
  * root-reuse / subfolder-suffix rules a re-run of the same profile relies on.
  */
 
