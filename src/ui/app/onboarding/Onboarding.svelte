@@ -69,6 +69,17 @@
           defaultValue:
             'Файлы профиля созданы, но настройки могли не сохраниться. Перезапустите Obsidian и проверьте, есть ли проект в списке; файлы профиля остаются в хранилище.',
         });
+      } else if (
+        error instanceof StarterProfileRegistrationError &&
+        error.leftovers.length > 0
+      ) {
+        // Registration did not land AND rollback could not remove everything:
+        // the next attempt would start beside files nobody mentioned.
+        errorMessage = t("onboarding.profiles.error-registration-leftover", {
+          defaultValue:
+            'Не удалось создать профиль. В хранилище остались файлы, которые не получилось убрать автоматически: {{leftovers}}. Проверьте их перед следующей попыткой — их можно удалить вручную.',
+          leftovers: error.leftovers.map((p) => `«${p}»`).join(", "),
+        });
       } else {
         errorMessage = t("onboarding.profiles.error-generic", {
           defaultValue: "Не удалось создать профиль. Попробуйте ещё раз.",

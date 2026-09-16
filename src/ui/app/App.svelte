@@ -259,9 +259,11 @@
    * turns that into a Notice. `dataApi.createNote` writes the note file
    * and only afterwards updates its front matter (`src/lib/dataApi.ts`),
    * so the rejection can arrive after the file already exists. The Notice
-   * therefore asks the user to check the profile folder instead of claiming
-   * what happened: a file at that path proves only that something is there,
-   * not that this attempt put it there.
+   * therefore asks the user to LOOK at the profile folder, and says nothing
+   * about what is at that path or who put it there: something else can win
+   * the same-path race, and a folder can sit on the note's own path. Naming
+   * the note as something to open and fill in would be an instruction to
+   * edit a file this attempt may not have created.
    */
   async function handleOnboardingProfile(profileId: StarterProfileId): Promise<void> {
     if (onboardingProfileInFlight) return;
@@ -283,7 +285,7 @@
             new Notice(
               $i18n.t("onboarding.profiles.first-note-failed", {
                 defaultValue:
-                  'Не удалось сохранить первую запись «{{name}}» целиком. Проверьте папку профиля: если заметка появилась, откройте её и заполните свойства; если нет — добавьте запись кнопкой «Добавить первую запись» в пустой таблице.',
+                  'Не удалось сохранить первую запись «{{name}}» целиком. Откройте папку профиля и посмотрите, что в ней: если записи там нет, добавьте её кнопкой «Добавить первую запись» в пустой таблице. Если ошибка повторяется, попробуйте другое название — путь может быть занят чем-то ещё.',
                 name,
               })
             );
