@@ -475,10 +475,11 @@ function resolveFreeSubfolder(
  * `file` is `null` for exactly one case: the failing step's own target
  * when it turns out to have been materialized despite its promise
  * rejecting (see `writeStep`). That rejection means no object was ever
- * returned to record, so cleanup falls back to comparing by path alone for
- * that one entry — accepted because the path was verified absent
- * immediately before this run's own attempt at it, and nothing else in
- * this flow writes to a path this run is still in the middle of claiming.
+ * returned to record, so such an entry can never be attributed — and
+ * cleanup therefore NEVER deletes it: an existing `file: null` entry stops
+ * the unwinding, stays in the vault with the entries created before it,
+ * and is reported to the user as a leftover to check. Comparing by path
+ * alone would be exactly the deletion this guard exists to prevent.
  */
 interface CreatedEntry {
   readonly path: string;

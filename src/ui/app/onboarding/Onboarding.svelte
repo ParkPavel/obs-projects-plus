@@ -16,9 +16,13 @@
   export let onTry: () => void;
   /**
    * Scene 7 — the primary path. Resolves once the profile (folders +
-   * template + project) is written and registered; rejects (with the
-   * write's `StarterProfileWriteError` when it is one) without touching
-   * anything, so this component knows to keep the modal open and say why.
+   * template + project) is written and registered. On failure it rejects —
+   * with `StarterProfileWriteError` for a write, `StarterProfileRegistrationError`
+   * for a registration — and the vault is NOT necessarily back as it was:
+   * a target that materialized before its step rejected, or a path taken
+   * over by something else, is kept rather than deleted, and the error
+   * names those paths in `leftovers`. This component keeps the modal open
+   * and says which case it was, including what was left behind.
    */
   export let onProfile: (profileId: StarterProfileId) => Promise<void>;
 
