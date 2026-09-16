@@ -1811,10 +1811,10 @@
                 "group-label": "Starter profiles",
                 "busy": "Creating the profile…",
                 "error-path": "Could not create the profile's files: \"{{path}}\". Nothing was saved — please try again.",
-                "error-path-leftover": "Could not create the profile's files: \"{{path}}\". Some files could not be removed automatically and were left in your vault: {{leftovers}}. You can delete them by hand.",
+                "error-path-leftover": "Could not create the profile's files: \"{{path}}\". These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
                 "error-generic": "Could not create the profile. Please try again.",
                 "first-note-failed": "Could not save the first record \"{{name}}\" in full. Open the profile folder and look at what is there: if the record is missing, add it with \"Add first record\" in the empty table. If this keeps happening, try a different name — something else may occupy that path.",
-                "error-registration-leftover": "Could not create the profile. Some files could not be removed automatically and were left in your vault: {{leftovers}}. Check them before trying again — you can delete them by hand.",
+                "error-registration-leftover": "Could not create the profile. These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
                 "error-registered": "The profile's files were created, but the settings may not have been saved. Restart Obsidian and check whether the project is listed; the profile's files stay in your vault."
             }
         },
