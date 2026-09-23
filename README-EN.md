@@ -23,7 +23,7 @@ This illustration shows one interface configuration; your installed version may 
 
 ## Install
 
-The plugin is in alpha development. The source version is recorded in [manifest.json](manifest.json); packaged builds are available in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases). The manifest also specifies the minimum Obsidian version.
+The plugin is in alpha development. The source version is recorded in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json); packaged builds are available in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases). The manifest also specifies the minimum Obsidian version.
 
 1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
 2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there.
@@ -59,4 +59,4 @@ To explore prepared data, use **Create demo project** or the separate [demo vaul
 
 Development is managed through [Claudex](https://github.com/ParkPavel/claudex). AI configuration and instructions are maintained in that separate project.
 
-Projects Plus is based on Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). The current maintainer is Park Pavel. Licensed under [Apache 2.0](LICENSE); see [NOTICE](NOTICE) for attribution.
+Projects Plus is based on Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). The current maintainer is Park Pavel. Licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); see [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE) for attribution.

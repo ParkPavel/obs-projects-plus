@@ -1,6 +1,6 @@
 # Input validation types
 
-[validation.ts](validation.ts) defines the shared types used to display validation errors.
+[validation.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/types/validation.ts) defines the shared types used to display validation errors.
 
 | Export | Meaning |
 | --- | --- |

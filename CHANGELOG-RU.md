@@ -5,7 +5,7 @@
 Здесь описана текущая линия разработки и то, на что стоит посмотреть при обновлении.
 Версии, которые можно скачать, и даты их публикации — в
 [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases).
-Версия в [manifest.json](manifest.json) обозначает это дерево исходников и не означает,
+Версия в [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) обозначает это дерево исходников и не означает,
 что выпуск опубликован.
 
 ## Не выпущено

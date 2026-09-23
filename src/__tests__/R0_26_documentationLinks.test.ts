@@ -12,8 +12,9 @@
  *
  * So the rule is the common subset:
  *  - a relative link must point at an existing `.md` page;
- *  - an anchor must be one token equal to a heading's text (`#ppp-101` for
- *    `## PPP-101`), never a slug of a multi-word heading;
+ *  - an anchor must be what both of them derive from the same heading: its
+ *    text for Obsidian and its slug for GitHub (`#ppp-101` for `## PPP-101`);
+ *    a multi-word heading or one with punctuation GitHub drops cannot qualify;
  *  - code, folders, extensionless files and data go through the canonical
  *    GitHub URL (`…/blob/main/<file>`, `…/tree/main/<folder>`), which opens a
  *    browser from Obsidian instead of a local program, and must name
@@ -43,8 +44,9 @@ const extractLinks = (text: string): Link[] => {
     if (FENCE.test(raw)) { fenced = !fenced; return; }
     if (fenced) return;
     const line = raw.replace(/`[^`]*`/g, "");
-    for (const m of line.matchAll(/(!?)\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
-      links.push({ line: index + 1, destination: m[2], embed: m[1] === "!" });
+    // Destination bare or in <angle brackets>; optional title in "", '' or () — all CommonMark.
+    for (const m of line.matchAll(/(!?)\[[^\]]*\]\(\s*(?:<([^>]*)>|([^\s)]+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g)) {
+      links.push({ line: index + 1, destination: m[2] ?? m[3], embed: m[1] === "!" });
     }
     const def = line.match(/^\s*\[[^\]]+\]:\s*<?(\S+?)>?(\s|$)/);
     if (def) links.push({ line: index + 1, destination: def[1], embed: false });
@@ -52,14 +54,14 @@ const extractLinks = (text: string): Link[] => {
   return links;
 };
 
-/** Heading texts of a page, outside fenced code, case-folded. */
-const headings = (text: string): Set<string> => {
-  const out = new Set<string>();
+/** Heading texts of a page, outside fenced code. */
+const headings = (text: string): string[] => {
+  const out: string[] = [];
   let fenced = false;
   for (const line of text.split(/\r?\n/)) {
     if (FENCE.test(line)) { fenced = !fenced; continue; }
     const m = !fenced && line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
-    if (m) out.add(m[1].trim().toLowerCase());
+    if (m) out.push(m[1].trim());
   }
   return out;
 };
@@ -69,11 +71,20 @@ const inside = (absolute: string) => {
   return rel !== "" && !rel.startsWith("..") && !posix.isAbsolute(rel.replace(/\\/g, "/"));
 };
 
-const checkAnchor = (anchor: string, targetPage: string): string | null => {
+/** GitHub's section slug: lower-case, punctuation other than - and _ dropped, spaces to hyphens. */
+const githubSlug = (heading: string) =>
+  heading.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s/g, "-");
+
+/** Obsidian matches the heading text, GitHub its slug; an anchor must satisfy both. */
+const anchorProblem = (anchor: string, headingTexts: readonly string[]): string | null => {
   const token = decodeURIComponent(anchor);
   if (/\s/.test(token)) return "anchor has spaces (GitHub and Obsidian disagree)";
-  return headings(read(targetPage)).has(token.toLowerCase()) ? null : "anchor names no single-token heading";
+  const lower = token.toLowerCase();
+  const agreed = headingTexts.some((h) => h.toLowerCase() === lower && githubSlug(h) === lower);
+  return agreed ? null : "anchor is not both a heading text and its GitHub slug";
 };
+
+const checkAnchor = (anchor: string, targetPage: string): string | null => anchorProblem(anchor, headings(read(targetPage)));
 
 const checkLink = (page: string, link: Link): string | null => {
   const { destination } = link;
@@ -116,5 +127,24 @@ describe("R0.26 — documentation links work on GitHub and in Obsidian", () => {
       }
     }
     expect(errors).toEqual([]);
+  });
+});
+
+describe("R0.26 — the rules themselves", () => {
+  it("extracts links whatever title syntax CommonMark allows", () => {
+    const text = [
+      '[a](one.md "double")',
+      "[b](two.md 'single')",
+      "[c](three.md (paren))",
+      "[d](<four five.md>)",
+    ].join("\n");
+    expect(extractLinks(text).map((l) => l.destination)).toEqual(["one.md", "two.md", "three.md", "four five.md"]);
+  });
+
+  it("accepts an anchor only when Obsidian's heading text and GitHub's slug agree", () => {
+    expect(anchorProblem("ppp-101", ["PPP-101"])).toBeNull();
+    expect(anchorProblem("foo.bar", ["foo.bar"])).not.toBeNull(); // GitHub slug is foobar
+    expect(anchorProblem("minimal-example", ["Minimal example"])).not.toBeNull(); // Obsidian needs the text
+    expect(anchorProblem("missing", ["Other"])).not.toBeNull();
   });
 });

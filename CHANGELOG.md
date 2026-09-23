@@ -5,7 +5,7 @@
 This file describes the current development line and changes to consider when updating.
 Downloadable versions and their publication dates are listed in
 [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases).
-The version in [manifest.json](manifest.json) identifies this source tree; it does not
+The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
 ## Unreleased

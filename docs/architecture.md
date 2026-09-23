@@ -8,21 +8,21 @@
 
 | Где | За что отвечает |
 | --- | --- |
-| [src/main.ts](../src/main.ts) | Жизненный цикл плагина, инициализация настроек, команды и связь с Obsidian |
-| [src/view.ts](../src/view.ts) | Рабочая область Projects и регистрация встроенных и сторонних видов |
-| [src/events.ts](../src/events.ts) | Обработка событий хранилища |
-| [src/managers](../src/managers) | Управление командами |
-| [src/ui/app](../src/ui/app) | Навигация по проектам, общий интерфейс и жизненный цикл вида |
-| [src/ui/views](../src/ui/views) | Интерфейсы Dashboard, доски, календаря, галереи и визуализатора |
-| [src/ui/tokens/tokens.css](../src/ui/tokens/tokens.css) | Общие визуальные токены |
+| [src/main.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/main.ts) | Жизненный цикл плагина, инициализация настроек, команды и связь с Obsidian |
+| [src/view.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/view.ts) | Рабочая область Projects и регистрация встроенных и сторонних видов |
+| [src/events.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/events.ts) | Обработка событий хранилища |
+| [src/managers](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/managers) | Управление командами |
+| [src/ui/app](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/ui/app) | Навигация по проектам, общий интерфейс и жизненный цикл вида |
+| [src/ui/views](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/ui/views) | Интерфейсы Dashboard, доски, календаря, галереи и визуализатора |
+| [src/ui/tokens/tokens.css](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/tokens/tokens.css) | Общие визуальные токены |
 
 `ProjectsView.getProjectViews()` регистрирует доску, календарь, галерею и Dashboard. Ключ `database` остаётся псевдонимом Dashboard, чтобы старые сохранённые настройки находили свой вид. У панелей визуализатора своя связка с Obsidian.
 
-Жизненный цикл стороннего вида подключён в [useView.ts](../src/ui/app/useView.ts): он передаёт виду настройку, данные проекта и обратные вызовы записи. Прежде чем опираться на эту точку расширения, прочтите [справочник API](api-RU.md).
+Жизненный цикл стороннего вида подключён в [useView.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/app/useView.ts): он передаёт виду настройку, данные проекта и обратные вызовы записи. Прежде чем опираться на эту точку расширения, прочтите [справочник API](api-RU.md).
 
 ## От заметок к представлению
 
-1. Определение проекта выбирает источник данных. [Фабрика источников](../src/lib/datasources/index.ts) создаёт источник по папке, тегу, встроенному запросу или Dataview. Dataview необязателен; фабрика сообщает, когда его нет.
+1. Определение проекта выбирает источник данных. [Фабрика источников](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/datasources/index.ts) создаёт источник по папке, тегу, встроенному запросу или Dataview. Dataview необязателен; фабрика сообщает, когда его нет.
 2. Источник читает заметки через [абстракцию файловой системы](../src/lib/filesystem/README.md) и отдаёт [фрейм данных](../src/lib/dataframe/README.md): описания полей, записи и, если были, ошибки разбора.
 3. [Хранилища Svelte](../src/lib/stores/README.md) держат реактивные данные и согласуют их обновление при изменении записей.
 4. Выбранный вид отображает эти данные. Блоки Dashboard используют модули преобразований, формул, связей и агрегации для производных значений.
@@ -31,25 +31,25 @@
 | --- | --- |
 | [src/lib/datasources](../src/lib/datasources/README.md) | Выбор источника, запросы и объединение результатов |
 | [src/lib/metadata](../src/lib/metadata/README.md) | Кодирование и разбор YAML-свойств заметки |
-| [src/lib/engine](../src/lib/engine) | Фильтрация, агрегация и расчёты между проектами |
-| [src/lib/dashboard-engine](../src/lib/dashboard-engine) | Преобразования Dashboard, применение формул, графики и кэши |
-| [src/lib/formula](../src/lib/formula) | Разбор и вычисление формул |
-| [src/lib/relations](../src/lib/relations) | Контракты связей, обратные индексы и запись связей |
-| [src/lib/visualizer](../src/lib/visualizer) | Свойства, связи и наложения визуализатора |
+| [src/lib/engine](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/engine) | Фильтрация, агрегация и расчёты между проектами |
+| [src/lib/dashboard-engine](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/dashboard-engine) | Преобразования Dashboard, применение формул, графики и кэши |
+| [src/lib/formula](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/formula) | Разбор и вычисление формул |
+| [src/lib/relations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/relations) | Контракты связей, обратные индексы и запись связей |
+| [src/lib/visualizer](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/visualizer) | Свойства, связи и наложения визуализатора |
 
 Эти каталоги описывают ответственность, но зависимости не везде следуют строгой границе слоёв. Меняя путь, общий для нескольких видов, идите по импортам и вызывающим местам.
 
 ## Запись и хранение
 
-Правки записей и полей проходят через [ViewApi](../src/lib/viewApi.ts) и [dataApi.ts](../src/lib/dataApi.ts): они согласуют запись в файловую систему с показанным фреймом данных. Часть обновлений оптимистична — видимое изменение само по себе не доказывает, что заметка записана. Путь отказа умеет вернуть прежнее значение и показать ошибку с кодом.
+Правки записей и полей проходят через [ViewApi](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts) и [dataApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts): они согласуют запись в файловую систему с показанным фреймом данных. Часть обновлений оптимистична — видимое изменение само по себе не доказывает, что заметка записана. Путь отказа умеет вернуть прежнее значение и показать ошибку с кодом.
 
-Схемы настроек и миграции лежат в [src/settings](../src/settings). Записывающий модуль и согласование настроек — в [src/lib/settings](../src/lib/settings), связка жизненного цикла — в `src/main.ts`. Новые записи настроек ведите этим же путём, иначе потеряются проверка конфликтов и повторные попытки.
+Схемы настроек и миграции лежат в [src/settings](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/settings). Записывающий модуль и согласование настроек — в [src/lib/settings](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/settings), связка жизненного цикла — в `src/main.ts`. Новые записи настроек ведите этим же путём, иначе потеряются проверка конфликтов и повторные попытки.
 
 Содержимое заметок хранится в хранилище, настройка плагина — в его `data.json`. Производные значения, например результаты формул, не следует считать сохранёнными свойствами заметки.
 
 ## Ошибки и диагностика
 
-Реестр ошибок — [errorCodes.ts](../src/lib/errors/errorCodes.ts); форматирование и журналирование лежат рядом. Двуязычный [справочник кодов](ERROR_CODES.md) объясняет, что делать пользователю с каждым кодом. Меняя подачу кода, сохраняйте его смысл.
+Реестр ошибок — [errorCodes.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/errors/errorCodes.ts); форматирование и журналирование лежат рядом. Двуязычный [справочник кодов](ERROR_CODES.md) объясняет, что делать пользователю с каждым кодом. Меняя подачу кода, сохраняйте его смысл.
 
 ## Границы расширения
 
