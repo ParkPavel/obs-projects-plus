@@ -13,7 +13,7 @@ mean that a new release has been published.
 ### Documentation
 
 - The documentation a user reads was rewritten short. The README is 62 lines instead of 305
-  and the user guide 168 instead of 688: each page answers a question a reader has, rather
+  and the user guide 196 instead of 688: each page answers a question a reader has, rather
   than listing everything the plugin contains.
 - The documentation a contributor reads was rewritten too. One architecture map links each
   responsibility to the file that implements it; one contribution guide carries the coding

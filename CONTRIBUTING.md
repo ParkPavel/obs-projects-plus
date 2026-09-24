@@ -56,9 +56,13 @@ UI changes also need an Obsidian check: open the affected view, perform the chan
 
 UI translations live in [src/lib/stores/translations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/stores/translations): English, Russian, Ukrainian and Simplified Chinese. Add or update corresponding keys in all four language files. Keep labels short and explain unfamiliar concepts in the user guide.
 
+## Paired documentation
+
+Each document has a version in two languages: a file with a base name and a file with a language suffix (`-RU` or `-EN`). The index [docs/README.md](docs/README.md), the [error codes](docs/ERROR_CODES.md) and two short in-vault pages hold both languages in one file. Pairing is checked by `src/__tests__/R0_25_documentationPairs.test.ts`: if you edit one language, edit the other in the same commit.
+
 ## Submit a pull request
 
-State what was wrong, what now happens and how you checked it. Include screenshots for visible changes and mention limitations or checks you could not perform. Update the relevant user guide or API reference when behavior changes. Record release-facing changes in [CHANGELOG.md](CHANGELOG.md).
+State what was wrong, what now happens and how you checked it. Include screenshots for visible changes and mention limitations or checks you could not perform. Update the relevant user guide or API reference when behavior changes. Record release-facing changes in [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG-RU.md](CHANGELOG-RU.md).
 
 Do not include credentials, vault contents, local logs or machine-specific configuration. Report bugs through [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues), with reproduction steps, plugin and Obsidian versions, operating system, and expected and actual results.
 

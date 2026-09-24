@@ -91,7 +91,7 @@ export const ERROR_AREAS: Readonly<Record<string, string>> = {
  * Issued in one pass over the 43 live `new Notice(` sites in `src/`. Six of
  * them confirm a success and are deliberately absent: numbering "Demo project
  * created." would teach the reader that the token carries no information. The
- * remaining 37 sites collapse to the 30 entries below, because a code names an
+ * remaining 37 sites collapse to the 32 entries below, because a code names an
  * event and not a call site — renaming a note fails identically from Board,
  * Gallery and two places in Calendar, and giving that one event four numbers
  * would recreate the confusion this registry exists to remove.
