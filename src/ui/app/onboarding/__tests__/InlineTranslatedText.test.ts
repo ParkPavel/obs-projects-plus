@@ -18,6 +18,9 @@ import { render } from "@testing-library/svelte";
 
 import InlineTranslatedText from "../InlineTranslatedText.svelte";
 
+// The rule reads ".obsidian" inside the help.obsidian.md host as a config-folder path;
+// this is Obsidian's help site URL, not a vault path.
+// eslint-disable-next-line obsidianmd/hardcoded-config-path
 const PROPERTIES_URL = "https://help.obsidian.md/Editing+and+formatting/Properties";
 
 describe("InlineTranslatedText — parses onboarding markup into real DOM nodes (P1)", () => {
@@ -55,5 +58,22 @@ describe("InlineTranslatedText — parses onboarding markup into real DOM nodes 
 
     const link = container.querySelector("a");
     expect(link).toHaveAttribute("href", PROPERTIES_URL);
+  });
+});
+
+describe("InlineTranslatedText — nested or broken markup stays safe text (P1 review)", () => {
+  it.each([
+    ["bold around a link", "**[front matter](properties)**"],
+    ["link around bold", "[front **matter**](properties)"],
+    ["unbalanced bold", "Press **Enter to continue."],
+    ["tag inside bold", "**<img src=x onerror=alert(1)>**"],
+    ["empty link label", "[](properties)"],
+  ])("%s never produces markup beyond strong and the Properties link", (_name, text) => {
+    const { container } = render(InlineTranslatedText, { props: { text } });
+    expect(container.querySelector("img, script, [onerror], [onclick]")).toBeNull();
+    for (const a of Array.from(container.querySelectorAll("a"))) {
+      expect(a).toHaveAttribute("href", PROPERTIES_URL);
+    }
+    expect(container.querySelectorAll("strong strong, a a").length).toBe(0);
   });
 });

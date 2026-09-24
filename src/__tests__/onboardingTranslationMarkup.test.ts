@@ -19,13 +19,15 @@ import ru from "src/lib/stores/translations/ru.json";
 import uk from "src/lib/stores/translations/uk.json";
 import zhCN from "src/lib/stores/translations/zh-CN.json";
 
+// i18next resources: every key lives under the "translation" namespace.
 type Bundle = { onboarding: Record<string, unknown> };
+const ns = (json: unknown): Bundle => (json as { translation: Bundle }).translation;
 
 const LOCALES: Array<{ name: string; bundle: Bundle }> = [
-  { name: "en", bundle: en as unknown as Bundle },
-  { name: "ru", bundle: ru as unknown as Bundle },
-  { name: "uk", bundle: uk as unknown as Bundle },
-  { name: "zh-CN", bundle: zhCN as unknown as Bundle },
+  { name: "en", bundle: ns(en) },
+  { name: "ru", bundle: ns(ru) },
+  { name: "uk", bundle: ns(uk) },
+  { name: "zh-CN", bundle: ns(zhCN) },
 ];
 
 // The eight leaves that used to carry `<strong>`/`<a>` markup for

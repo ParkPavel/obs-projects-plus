@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Button, ModalButtonGroup, Typography } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
-  import { sanitizeHtml } from "src/lib/helpers/sanitizeHtml";
   import {
     STARTER_PROFILE_DISPLAY,
     STARTER_PROFILE_IDS,
@@ -11,6 +10,7 @@
   } from "./starterProfiles";
 
   import TabContainer from "./TabContainer.svelte";
+  import InlineTranslatedText from "./InlineTranslatedText.svelte";
 
   export let onCreate: () => void;
   export let onTry: () => void;
@@ -30,8 +30,6 @@
   let errorMessage = "";
 
   $: t = $i18n.t;
-  /** Translate + sanitize for safe {@html} usage */
-  const ts = (key: string) => sanitizeHtml(t(key));
   $: tabProjects = t("onboarding.tab-projects-view");
   $: tabCommand = t("onboarding.tab-command-palette");
   $: tabExplorer = t("onboarding.tab-file-explorer");
@@ -142,7 +140,7 @@
     >
 
     <Typography variant="body">
-      {t("onboarding.description").split("<a>")[0]}<a href="https://help.obsidian.md/Editing+and+formatting/Properties">{t("onboarding.front-matter-link")}</a>{t("onboarding.description").split("</a>")[1] || ""}
+      <InlineTranslatedText text={t("onboarding.description")} />
     </Typography>
 
     <pre><code
@@ -183,19 +181,19 @@ published: false
     >
       {#if selected === tabExplorer}
         <ol>
-          <li>{@html ts("onboarding.file-explorer-step1")}</li>
-          <li>{@html ts("onboarding.file-explorer-step2")}</li>
+          <li><InlineTranslatedText text={t("onboarding.file-explorer-step1")} /></li>
+          <li><InlineTranslatedText text={t("onboarding.file-explorer-step2")} /></li>
         </ol>
       {:else if selected === tabCommand}
         <ol>
-          <li>{@html ts("onboarding.command-palette-step1")}</li>
-          <li>{@html ts("onboarding.command-palette-step2")}</li>
-          <li>{@html ts("onboarding.command-palette-step3")}</li>
+          <li><InlineTranslatedText text={t("onboarding.command-palette-step1")} /></li>
+          <li><InlineTranslatedText text={t("onboarding.command-palette-step2")} /></li>
+          <li><InlineTranslatedText text={t("onboarding.command-palette-step3")} /></li>
         </ol>
       {:else}
         <ol>
-          <li>{@html ts("onboarding.projects-view-step1")}</li>
-          <li>{@html ts("onboarding.projects-view-step2")}</li>
+          <li><InlineTranslatedText text={t("onboarding.projects-view-step1")} /></li>
+          <li><InlineTranslatedText text={t("onboarding.projects-view-step2")} /></li>
         </ol>
       {/if}
     </TabContainer>

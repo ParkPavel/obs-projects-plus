@@ -1569,8 +1569,7 @@
         },
         "onboarding": {
             "title": "Почніть роботу з Projects Plus",
-            "description": "Projects Plus дозволяє керувати групами пов'язаних нотаток за допомогою <a>front matter</a>. Наприклад, папка з публікаціями блогу, над якими ви працюєте.",
-            "front-matter-link": "front matter",
+            "description": "Projects Plus дозволяє керувати групами пов'язаних нотаток за допомогою [front matter](properties). Наприклад, папка з публікаціями блогу, над якими ви працюєте.",
             "explore": "Почніть з нуля або спробуйте демо-проєкт 👇",
             "create-new": "Створити новий проєкт",
             "try-demo": "Спробувати демо-проєкт",
@@ -1579,13 +1578,13 @@
             "tab-projects-view": "Вигляд проєктів",
             "tab-command-palette": "Палітра команд",
             "tab-file-explorer": "Провідник файлів",
-            "file-explorer-step1": "Клікніть правою кнопкою на папку в <strong>Провіднику файлів</strong>.",
-            "file-explorer-step2": "Натисніть <strong>Створити проєкт в папці</strong>.",
-            "command-palette-step1": "Відкрийте <strong>Палітру команд</strong>.",
-            "command-palette-step2": "Знайдіть <strong>Створити новий проєкт</strong>",
-            "command-palette-step3": "Натисніть <strong>Enter</strong>.",
-            "projects-view-step1": "У правому верхньому куті <strong>Projects Plus</strong> натисніть <strong>Новий</strong>.",
-            "projects-view-step2": "Натисніть <strong>Новий проєкт</strong>."
+            "file-explorer-step1": "Клікніть правою кнопкою на папку в **Провіднику файлів**.",
+            "file-explorer-step2": "Натисніть **Створити проєкт в папці**.",
+            "command-palette-step1": "Відкрийте **Палітру команд**.",
+            "command-palette-step2": "Знайдіть **Створити новий проєкт**",
+            "command-palette-step3": "Натисніть **Enter**.",
+            "projects-view-step1": "У правому верхньому куті **Projects Plus** натисніть **Новий**.",
+            "projects-view-step2": "Натисніть **Новий проєкт**."
         },
         "common": {
             "yesterday": "Вчора",

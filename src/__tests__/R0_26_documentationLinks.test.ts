@@ -46,10 +46,10 @@ const extractLinks = (text: string): Link[] => {
     const line = raw.replace(/`[^`]*`/g, "");
     // Destination bare or in <angle brackets>; optional title in "", '' or () — all CommonMark.
     for (const m of line.matchAll(/(!?)\[[^\]]*\]\(\s*(?:<([^>]*)>|([^\s)]+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g)) {
-      links.push({ line: index + 1, destination: m[2] ?? m[3], embed: m[1] === "!" });
+      links.push({ line: index + 1, destination: m[2] ?? m[3] ?? "", embed: m[1] === "!" });
     }
     const def = line.match(/^\s*\[[^\]]+\]:\s*<?(\S+?)>?(\s|$)/);
-    if (def) links.push({ line: index + 1, destination: def[1], embed: false });
+    if (def) links.push({ line: index + 1, destination: def[1] ?? "", embed: false });
   });
   return links;
 };
@@ -61,7 +61,7 @@ const headings = (text: string): string[] => {
   for (const line of text.split(/\r?\n/)) {
     if (FENCE.test(line)) { fenced = !fenced; continue; }
     const m = !fenced && line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
-    if (m) out.push(m[1].trim());
+    if (m) out.push((m[1] ?? "").trim());
   }
   return out;
 };
@@ -91,7 +91,7 @@ const checkLink = (page: string, link: Link): string | null => {
   if (/^(mailto:|obsidian:)/i.test(destination)) return null;
   const canonical = destination.match(CANONICAL);
   if (canonical) {
-    const target = resolve(ROOT, decodeURIComponent(canonical[2]));
+    const target = resolve(ROOT, decodeURIComponent(canonical[2] ?? ""));
     if (!inside(target) || !existsSync(target)) return "canonical URL names nothing in the repository";
     const isDir = statSync(target).isDirectory();
     if (canonical[1] === "tree" && !isDir) return "tree/ URL names a file";
