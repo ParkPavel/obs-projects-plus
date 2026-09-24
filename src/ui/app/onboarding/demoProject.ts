@@ -334,7 +334,7 @@ function overviewWidgets(): WidgetDefinition[] {
       // the current schema (P1).
       layout: { x: 6, y: 2, w: 6, h: 4 },
       config: {
-        ...tableTabConfig(),
+        ...tableTabConfig({}, "Таблица"),
         subFilter: {
           conjunction: "and",
           conditions: [
@@ -349,7 +349,7 @@ function overviewWidgets(): WidgetDefinition[] {
       type: "database-call",
       title: "Встречи",
       layout: { x: 0, y: 6, w: 12, h: 4 },
-      config: { ...tableTabConfig(), subFilter: typeScope("meeting") },
+      config: { ...tableTabConfig({}, "Таблица"), subFilter: typeScope("meeting") },
     },
     // R3: living showcase of the Canvas Selection Bus — pick a client row
     // (row menu → «Фильтровать связанные блоки»), the projects block narrows.
@@ -365,7 +365,7 @@ function linkedClientProjectsPair(): WidgetDefinition[] {
       type: "database-call",
       title: "Клиенты (мастер связи)",
       layout: { x: 0, y: 10, w: 6, h: 4 },
-      config: { ...tableTabConfig(), subFilter: typeScope("client") },
+      config: { ...tableTabConfig({}, "Таблица"), subFilter: typeScope("client") },
     },
     {
       id: widgetId(),
@@ -373,7 +373,7 @@ function linkedClientProjectsPair(): WidgetDefinition[] {
       title: "Проекты клиента (связанный блок)",
       layout: { x: 6, y: 10, w: 6, h: 4 },
       config: {
-        ...tableTabConfig(),
+        ...tableTabConfig({}, "Таблица"),
         subFilter: typeScope("project"),
         linkedSelection: { sourceWidgetId: rosterId, relationField: "client" },
       },
@@ -408,7 +408,7 @@ function clientsWidgets(): WidgetDefinition[] {
       type: "database-call",
       title: "Список клиентов",
       layout: { x: 0, y: 2, w: 12, h: 8 },
-      config: tableTabConfig(commonTableConfig as unknown as Record<string, unknown>),
+      config: tableTabConfig(commonTableConfig as unknown as Record<string, unknown>, "Таблица"),
     },
   ];
 }
