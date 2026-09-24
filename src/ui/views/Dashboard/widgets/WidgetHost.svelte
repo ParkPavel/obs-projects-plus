@@ -22,8 +22,10 @@
   import { hasDataScope, hasPipelineButton, primaryActionFor } from "./headerChrome";
   import { applyDataScope } from "./dataScope";
   import { buildRenderContext } from "./renderContext";
+  import { withLinkedSelection } from "./linkedSourceState";
   import { dataTableConfigChange } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
+  import WidgetInlineBadges from "./_shared/WidgetInlineBadges.svelte";
   import WidgetHeaderActions from "./WidgetHeaderActions.svelte";
   import WidgetPrimaryAction from "./WidgetPrimaryAction.svelte";
   import WidgetContent from "./WidgetContent.svelte";
@@ -121,10 +123,7 @@
     showPipeline = false;
   }
   function handleLinkedSelectionChange(e: CustomEvent<LinkedSelectionConfig | undefined>) {
-    const cfg = { ...widget.config };
-    if (e.detail !== undefined) cfg["linkedSelection"] = e.detail;
-    else delete cfg["linkedSelection"];
-    handleWidgetConfigChange(cfg);
+    handleWidgetConfigChange(withLinkedSelection(widget.config, e.detail));
   }
   function handleDbCallSourceChange(e: CustomEvent<WidgetSourceConfig>) {
     patchWidget({ sourceConfig: e.detail });
@@ -141,6 +140,7 @@
   on:toggleCollapse={() => { primaryActionSignal = 0; patchWidget({ collapsed: !collapsed }); }}
   on:titleChange={(e) => patchWidget({ title: e.detail })}
 >
+  <svelte:fragment slot="badges"><WidgetInlineBadges {widget} frame={ctx.transformedFrame} tableConfig={ctx.effectiveTableConfig} /></svelte:fragment>
   <svelte:fragment slot="actions">
     <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
     <!-- #194 gives the cog a SECOND reason, not a registry edit: `hasCog` means

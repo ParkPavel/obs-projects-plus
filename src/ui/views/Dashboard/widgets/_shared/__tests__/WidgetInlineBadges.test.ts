@@ -154,7 +154,7 @@ describe("WidgetInlineBadges", () => {
       "[data-testid='widget-badge-chart-agg']"
     );
     expect(typeBadge).not.toBeNull();
-    expect(typeBadge!.textContent?.trim()).toBe("views.dashboard.chart.types.bar");
+    expect(typeBadge!.textContent?.trim()).toBe('views.dashboard.chart.types.bar|{"defaultValue":"bar"}');
     expect(typeBadge!.getAttribute("title")).toBe("views.dashboard.chart.type");
     expect(aggBadge).not.toBeNull();
     expect(aggBadge!.getAttribute("title")).toBe("views.dashboard.widget.badge.y-aggregation");
@@ -235,6 +235,25 @@ describe("WidgetInlineBadges", () => {
     expect(groupBadge).not.toBeNull();
     expect(groupBadge!.textContent?.trim()).toBe("views.dashboard.widget.badge.grouped");
     expect(groupBadge!.getAttribute("title")).toBe('views.dashboard.widget.badge.grouped-title|{"field":"status"}');
+    handle.destroy();
+  });
+
+  it("data-table: the config passed by the host wins over a stale nested copy", () => {
+    const handle = mount({
+      widget: makeWidget("data-table", {
+        table: { groupBy: { field: "stale", sortOrder: "asc", hiddenGroups: [], collapsedGroups: [], showEmptyGroups: false } },
+      }),
+      frame: makeFrame(2),
+      tableConfig: {},
+    });
+    expect(handle.target.querySelector("[data-testid='widget-badge-table-grouped']")).toBeNull();
+    handle.destroy();
+  });
+
+  it("an unknown chart type falls back to its own name, not a raw key", () => {
+    const handle = mount({ widget: makeWidget("chart", { chartType: "radar", xAxis: {}, yAxis: { property: "y", aggregation: "none" }, style: {} }), frame: makeFrame(1) });
+    const typeBadge = handle.target.querySelector("[data-testid='widget-badge-chart-type']");
+    expect(typeBadge!.textContent).toContain('"defaultValue":"radar"');
     handle.destroy();
   });
 

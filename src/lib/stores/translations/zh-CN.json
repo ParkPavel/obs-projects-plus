@@ -960,6 +960,16 @@
                     },
                     "primary": {
                         "add-record": "添加记录"
+                    },
+                    "badge": {
+                        "y-aggregation": "Y 轴聚合",
+                        "aggregation": "聚合",
+                        "card-count_other": "{{count}} 张卡片",
+                        "card-count-title": "卡片数量",
+                        "column-count_other": "{{count}} 列",
+                        "column-count-title": "可见列",
+                        "grouped": "已分组",
+                        "grouped-title": "按“{{field}}”分组"
                     }
                 },
                 "quick": {

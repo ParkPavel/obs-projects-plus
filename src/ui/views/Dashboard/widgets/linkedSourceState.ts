@@ -124,6 +124,17 @@ export function resolveDbCallView(
 // than inline in the host, which has a LOC budget it earns by not accumulating
 // helpers like these.
 
+/** The widget config with its linked selection set, or removed when `selection` is undefined. */
+export function withLinkedSelection(
+  config: Record<string, unknown>,
+  selection: LinkedSelectionConfig | undefined,
+): Record<string, unknown> {
+  const cfg = { ...config };
+  if (selection !== undefined) cfg["linkedSelection"] = selection;
+  else delete cfg["linkedSelection"];
+  return cfg;
+}
+
 export function asChartConfig(cfg: Record<string, unknown>): ChartConfig | null {
   return cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
 }

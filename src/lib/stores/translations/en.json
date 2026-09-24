@@ -978,6 +978,18 @@
                         "unnamed": "Sources added before naming was introduced cannot be picked — open the project and give them a name.",
                         "missing": "{{id}} — no longer in this project",
                         "single": "This project gathers records from a single source, so there is nothing to narrow to yet."
+                    },
+                    "badge": {
+                        "y-aggregation": "Y-axis aggregation",
+                        "aggregation": "Aggregation",
+                        "card-count_one": "{{count}} card",
+                        "card-count_other": "{{count}} cards",
+                        "card-count-title": "Number of cards",
+                        "column-count_one": "{{count}} column",
+                        "column-count_other": "{{count}} columns",
+                        "column-count-title": "Visible columns",
+                        "grouped": "Grouped",
+                        "grouped-title": "Grouped by {{field}}"
                     }
                 },
                 "quick": {

@@ -1348,6 +1348,22 @@
                         "unnamed": "Источники, добавленные до появления имён, выбрать нельзя — откройте проект и дайте им имя.",
                         "missing": "{{id}} — больше нет в этом проекте",
                         "single": "Этот проект собирает записи из одного источника, поэтому сужать пока не к чему."
+                    },
+                    "badge": {
+                        "y-aggregation": "Агрегация по оси Y",
+                        "aggregation": "Агрегация",
+                        "card-count_one": "{{count}} карточка",
+                        "card-count_few": "{{count}} карточки",
+                        "card-count_many": "{{count}} карточек",
+                        "card-count_other": "{{count}} карточки",
+                        "card-count-title": "Число карточек",
+                        "column-count_one": "{{count}} колонка",
+                        "column-count_few": "{{count}} колонки",
+                        "column-count_many": "{{count}} колонок",
+                        "column-count_other": "{{count}} колонки",
+                        "column-count-title": "Видимые колонки",
+                        "grouped": "Группировка",
+                        "grouped-title": "Сгруппировано по «{{field}}»"
                     }
                 },
                 "quick": {

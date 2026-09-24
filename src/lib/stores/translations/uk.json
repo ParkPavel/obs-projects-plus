@@ -982,6 +982,22 @@
                     },
                     "primary": {
                         "add-record": "Додати запис"
+                    },
+                    "badge": {
+                        "y-aggregation": "Агрегація за віссю Y",
+                        "aggregation": "Агрегація",
+                        "card-count_one": "{{count}} картка",
+                        "card-count_few": "{{count}} картки",
+                        "card-count_many": "{{count}} карток",
+                        "card-count_other": "{{count}} картки",
+                        "card-count-title": "Кількість карток",
+                        "column-count_one": "{{count}} колонка",
+                        "column-count_few": "{{count}} колонки",
+                        "column-count_many": "{{count}} колонок",
+                        "column-count_other": "{{count}} колонки",
+                        "column-count-title": "Видимі колонки",
+                        "grouped": "Групування",
+                        "grouped-title": "Згруповано за «{{field}}»"
                     }
                 },
                 "quick": {
