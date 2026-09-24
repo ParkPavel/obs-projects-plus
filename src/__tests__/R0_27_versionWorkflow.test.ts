@@ -17,8 +17,14 @@ const BUMP = path.join(ROOT, "scripts", "version-bump.mjs");
 const STAGE = path.join(ROOT, "scripts", "stage-release-manifest.mjs");
 const STRICT = /^\d+\.\d+\.\d+$/;
 
-const readJson = (file: string): Record<string, unknown> =>
-  JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+interface Metadata {
+  version?: string;
+  minAppVersion?: string;
+  [key: string]: unknown;
+}
+
+const readJson = (file: string): Metadata =>
+  JSON.parse(fs.readFileSync(file, "utf8")) as Metadata;
 
 interface Run {
   status: number;
@@ -78,7 +84,7 @@ describe("R0.27 version workflow", () => {
       expect(pkg.version).toMatch(STRICT);
       expect(manifest.version).toBe(pkg.version);
       expect(lock.version).toBe(pkg.version);
-      expect(lock.packages[""].version).toBe(pkg.version);
+      expect(lock.packages[""]?.version).toBe(pkg.version);
       for (const key of Object.keys(versions)) expect(key).toMatch(STRICT);
       expect(versions[pkg.version as string]).toBe(manifest.minAppVersion);
     });
@@ -163,7 +169,13 @@ describe("R0.27 version workflow", () => {
     });
 
     it("marks only -beta.N tags as prerelease", () => {
-      expect(yml).toMatch(/-beta\.\d+|-beta\.\[0-9\]/);
+      // The workflow names the beta pattern as a regex or glob: -beta\.[0-9]+, -beta\.\d+ or -beta.[0-9]
+      expect(yml).toMatch(/-beta\\?\.(?:\[0-9\]|\\d)/);
+    });
+
+    it("corrects an existing release's title and prerelease flag on rerun", () => {
+      expect(yml).toMatch(/gh release edit "\$tag" --title="\$tag" "\$prerelease"/);
+      expect(yml).toContain('prerelease="--prerelease=false"');
       expect(yml).not.toMatch(/\*-\*\)\s*prerelease=/);
     });
   });
