@@ -12,7 +12,10 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-const prod = process.argv[2] === "production";
+// `analyze` reports what the production bundle is made of without writing it.
+const mode = process.argv[2];
+const analyze = mode === "analyze";
+const prod = mode === "production" || analyze;
 
 // Custom plugin to log warnings
 const logWarningsPlugin = {
@@ -159,7 +162,18 @@ function mergeCSS() {
   }
 }
 
-if (prod) {
+if (analyze) {
+  // write:false keeps main.js and styles.css untouched: this is a report, not a build.
+  esbuild.build({ ...buildOptions, metafile: true, write: false }).then(async (result) => {
+    console.log(await esbuild.analyzeMetafile(result.metafile));
+    for (const file of result.outputFiles) {
+      console.log(`${file.path}: ${file.contents.length} bytes`);
+    }
+  }).catch((error) => {
+    console.error(`\n[FAIL] ${error?.message ?? error}\n`);
+    process.exit(1);
+  });
+} else if (prod) {
   esbuild.build(buildOptions).then(() => {
     mergeCSS();
   }).catch((error) => {

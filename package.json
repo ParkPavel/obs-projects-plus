@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "build:analyze": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npx esbuild-bundle-analyzer main.js",
-    "bundle:stats": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production --analyze",
-    "bundle:size": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && Get-ChildItem main.js | Select-Object Name, Length",
+    "bundle:analyze": "node esbuild.config.mjs analyze",
     "version": "node scripts/version-bump.mjs && git add manifest.json versions.json",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
@@ -54,7 +52,6 @@
     "builtin-modules": "^3.3.0",
     "dayjs": "^1.11.11",
     "esbuild": "^0.24.0",
-    "esbuild-bundle-analyzer": "^0.0.1",
     "esbuild-jest": "^0.5.0",
     "esbuild-plugin-replace": "^1.4.0",
     "esbuild-svelte": "^0.7.4",
