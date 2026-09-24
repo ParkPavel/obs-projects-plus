@@ -59,9 +59,9 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 		).toBe(true);
 	});
 
-	// Tables do not narrow by selection (only stats does, statsSelectionReceiver),
-	// so they may not claim it: legacy data-table and modern database-call alike.
-	it.each(["data-table", "database-call"])("hides badge for a %s widget: it is not narrowed", (type) => {
+	// database-call narrows but labels it in its own content; the legacy
+	// data-table does not narrow at all. Neither carries the pill.
+	it.each(["data-table", "database-call"])("hides badge for a %s widget", (type) => {
 		expect(
 			shouldShowSelectionBadge(
 				{ type, id: "w1" },

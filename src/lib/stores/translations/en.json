@@ -1384,6 +1384,9 @@
                     "earliest": "EARLIEST",
                     "latest": "LATEST",
                     "date_range": "SPAN"
+                },
+                "selection": {
+                    "clear": "Clear selection"
                 }
             }
         },

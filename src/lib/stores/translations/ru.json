@@ -1759,6 +1759,9 @@
                     "earliest": "РАНЬШЕ",
                     "latest": "ПОЗЖЕ",
                     "date_range": "ПЕРИОД"
+                },
+                "selection": {
+                    "clear": "Сбросить выбор"
                 }
             }
         },

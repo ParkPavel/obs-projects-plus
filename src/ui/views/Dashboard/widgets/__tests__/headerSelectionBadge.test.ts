@@ -1,8 +1,8 @@
 /**
  * d13 step 2 — a stats widget narrowed by another widget's selection says so
  * in its header (SelectionBadge, #044.5), and clearing it ends the selection
- * for the whole canvas. Only stats really narrows by selection today
- * (statsSelectionReceiver), so only stats may carry the claim.
+ * for the whole canvas. Only stats carries the pill: database-call labels its
+ * own narrowing in its content, the legacy data-table does not narrow.
  */
 
 import "@testing-library/jest-dom";
@@ -64,7 +64,7 @@ describe("header selection badge", () => {
   });
 
   test.each(["chart", "data-table", "database-call", "text"])(
-    "a %s widget makes no claim: it is not narrowed by the selection",
+    "a %s widget carries no selection pill",
     (type) => {
       const h = mount(type, "chart:c1");
       expect(h.badge()).toBeNull();

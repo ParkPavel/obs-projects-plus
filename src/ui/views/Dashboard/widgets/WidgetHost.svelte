@@ -25,7 +25,7 @@
   import { withLinkedSelection } from "./linkedSourceState";
   import { dataTableConfigChange } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
-  import WidgetInlineBadges from "./_shared/WidgetInlineBadges.svelte";
+  import WidgetHeaderBadges from "./_shared/WidgetHeaderBadges.svelte";
   import WidgetHeaderActions from "./WidgetHeaderActions.svelte";
   import WidgetPrimaryAction from "./WidgetPrimaryAction.svelte";
   import WidgetContent from "./WidgetContent.svelte";
@@ -140,7 +140,7 @@
   on:toggleCollapse={() => { primaryActionSignal = 0; patchWidget({ collapsed: !collapsed }); }}
   on:titleChange={(e) => patchWidget({ title: e.detail })}
 >
-  <svelte:fragment slot="badges"><WidgetInlineBadges {widget} frame={ctx.transformedFrame} tableConfig={ctx.effectiveTableConfig} /></svelte:fragment>
+  <svelte:fragment slot="badges"><WidgetHeaderBadges {widget} frame={ctx.transformedFrame} tableConfig={ctx.effectiveTableConfig} /></svelte:fragment>
   <svelte:fragment slot="actions">
     <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
     <!-- #194 gives the cog a SECOND reason, not a registry edit: `hasCog` means

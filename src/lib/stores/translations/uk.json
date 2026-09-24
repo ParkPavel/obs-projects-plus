@@ -1514,6 +1514,9 @@
                     "earliest": "РАНІШЕ",
                     "latest": "ПІЗНІШЕ",
                     "date_range": "ПЕРІОД"
+                },
+                "selection": {
+                    "clear": "Скинути вибір"
                 }
             }
         },

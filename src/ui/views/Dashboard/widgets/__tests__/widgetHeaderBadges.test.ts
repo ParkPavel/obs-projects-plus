@@ -162,7 +162,8 @@ describe("d13 — header badges", () => {
   it("WidgetHost fills the badges slot with the transformed frame", () => {
     const src = fs.readFileSync(path.join(__dirname, "..", "WidgetHost.svelte"), "utf8");
     expect(src).toMatch(/slot="badges"/);
-    expect(src).toMatch(/<WidgetInlineBadges[^>]*frame=\{ctx\.transformedFrame\}/);
-    expect(src).toMatch(/<WidgetInlineBadges[^>]*tableConfig=\{ctx\.effectiveTableConfig\}/);
+    // WidgetHeaderBadges passes both through to WidgetInlineBadges.
+    expect(src).toMatch(/<WidgetHeaderBadges[^>]*frame=\{ctx\.transformedFrame\}/);
+    expect(src).toMatch(/<WidgetHeaderBadges[^>]*tableConfig=\{ctx\.effectiveTableConfig\}/);
   });
 });

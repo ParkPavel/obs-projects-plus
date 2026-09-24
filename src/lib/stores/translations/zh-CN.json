@@ -1486,6 +1486,9 @@
                     "earliest": "最早",
                     "latest": "最晚",
                     "date_range": "日期跨度"
+                },
+                "selection": {
+                    "clear": "清除选择"
                 }
             }
         },

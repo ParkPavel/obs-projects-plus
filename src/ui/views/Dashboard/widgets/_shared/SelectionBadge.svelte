@@ -3,9 +3,10 @@
    * Pure visibility predicate — exposed via context="module" so unit tests
    * can verify the rule without mounting the component.
    *
-   * Returns `true` exactly when the WindowShell `badges` slot of `widget`
+   * Returns `true` exactly when the WidgetShell `badges` slot of `widget`
    * should render a `<SelectionBadge>`:
-   *   - the widget's type is a v1 receiver (stats, data-table);
+   *   - the widget's type is a receiver the pill may label (stats — see
+   *     SELECTION_RECEIVER_TYPES below for why the tables are not);
    *   - a selection is active;
    *   - the selection was NOT emitted by this widget itself (self-skip rule
    *     keeps the driver from labelling its own selection — driver widgets
@@ -20,17 +21,16 @@
   import type { SelectionState } from "../../canvasSelectionStore";
 
   /**
-   * Widget types that receive a SelectionBadge in v1.
-   *   - `stats`        — receiver-only (#044.4)
-   *   - `data-table`   — receiver (#044.3a) + driver hybrid (#044.3b, deferred)
-   * Chart is driver-only (#044.2); its active-segment styling is the v1 UX,
-   * a badge would duplicate that signal so it is intentionally excluded.
+   * Widget types the badge may label: the ones a selection really narrows.
+   *   - `stats` — recomputes its cards from the selected records (#044.4,
+   *     statsSelectionReceiver).
+   * Not the tables: a database-call block does narrow by the canvas selection,
+   * but says so itself — its "Filtered by canvas selection" label and "Clear
+   * filter" button in the content — so a pill would repeat it; the legacy
+   * data-table does not narrow at all, so a pill would be false. Chart is
+   * driver-only (#044.2); its active-segment styling is its signal.
    */
-  const SELECTION_RECEIVER_TYPES: ReadonlySet<string> = new Set([
-    "stats",
-    "data-table",
-    "database-call",
-  ]);
+  const SELECTION_RECEIVER_TYPES: ReadonlySet<string> = new Set(["stats"]);
 
   export function shouldShowSelectionBadge(
     widget: { readonly type: string; readonly id: string },
@@ -57,7 +57,7 @@
 
 <script lang="ts">
   /**
-   * SelectionBadge.svelte — pill rendered into the WindowShell `badges` slot
+   * SelectionBadge.svelte — pill rendered into the WidgetShell `badges` slot
    * to label a cross-widget selection that is actively narrowing this widget.
    *
    * Ticket: #044.5 (Phase 5 sub-PR 5).
@@ -68,6 +68,7 @@
    */
 
   import { createEventDispatcher } from "svelte";
+  import { i18n } from "src/lib/stores/i18n";
 
   export let field: string;
   export let values: ReadonlyArray<string>;
@@ -94,8 +95,8 @@
   <button
     type="button"
     class="ppp-selection-badge__clear"
-    title="Clear selection"
-    aria-label="Clear selection"
+    title={$i18n.t("views.dashboard.selection.clear")}
+    aria-label={$i18n.t("views.dashboard.selection.clear")}
     on:click|stopPropagation={handleClear}
   >
     ✕
