@@ -42,7 +42,7 @@ describe("aggregation vocabulary on the surfaces", () => {
         fields: [amount],
       },
     });
-    const options = [...container.querySelectorAll("option[title]")];
+    const options = Array.from(container.querySelectorAll("option[title]"));
     expect(options.length).toBeGreaterThan(3);
     for (const option of options) {
       expect(option.getAttribute("title")).toMatch(/^views\.dashboard\.agg-consequence\.[a-z_]+\|/);

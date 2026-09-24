@@ -6,7 +6,7 @@
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 import type { ContextMenuEntry } from "src/lib/contextMenu";
-import { aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
+import { aggregationLabel, aggregationOptionsFor } from "src/lib/dashboard-engine/aggregationOptions";
 import type { ColumnAggregation, DataTableConfig, DataTableSortCriteria } from "../../types";
 
 export type SortOrder = "asc" | "desc";
@@ -179,7 +179,7 @@ export function buildHeaderMenuEntries(opts: {
     submenu: [
       { title: t("views.dashboard.table-v2.calc-none", "None"), icon: "x", disabled: currentCalc === undefined, onClick: () => onCalculate(null) },
       ...calculateOptions(field).map((fn) => ({
-        title: fn.replace(/_/g, " "),
+        title: aggregationLabel(fn, t),
         icon: fn === currentCalc ? "check" : "sigma",
         onClick: () => onCalculate(fn),
       })),

@@ -1,6 +1,6 @@
 <script lang="ts" context="module">
   import type { ColumnAggregation } from "../../types";
-  import { aggregationBadge } from "src/lib/dashboard-engine/aggregationOptions";
+  import { aggregationBadge, aggregationBadgeText } from "src/lib/dashboard-engine/aggregationOptions";
 
   /**
    * #034.3 / #040.2 — labels used by inline header badges. Kept exported
@@ -54,9 +54,8 @@
     return !!cfg && typeof cfg === "object" && "cards" in (cfg as object);
   }
 
-  function aggLabel(agg: string): string {
-    return aggregationBadge(agg as ColumnAggregation);
-  }
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
+  $: aggLabel = (agg: string): string => aggregationBadgeText(agg as ColumnAggregation, tr);
 
   function firstCardAgg(cfg: StatsConfig): string {
     const card = cfg.cards[0];

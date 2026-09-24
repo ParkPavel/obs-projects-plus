@@ -171,7 +171,8 @@ describe("A180d — the pickers read the one table", () => {
   it("the Stats card offers what the field allows and shows the consequence", () => {
     const s = read("ui/views/Dashboard/widgets/Stats/StatsConfig.svelte");
     expect(s).toMatch(/aggregationOptionsFor/);
-    expect(s).toMatch(/title=\{agg\.consequence\}/);
+    // The consequence comes from the one table, in the user's language.
+    expect(s).toMatch(/title=\{aggregationConsequence\(agg\.value, tr\)\}/);
   });
 
   it("the table header menu no longer keeps its own list", () => {

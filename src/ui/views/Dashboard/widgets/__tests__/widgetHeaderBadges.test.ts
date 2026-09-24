@@ -70,8 +70,8 @@ const chartConfig = (aggregation: string) => ({
 });
 
 // With the echoing i18n mock a translated string is its key (plus options);
-// the aggregation symbols (SUM, AVG, …) come from aggregationBadge.
-const TRANSLATED = /^views\.dashboard\.(widget\.badge|chart\.type)[\w.-]*(\|\{.*\})?$|^[A-Z%#∑]+$/;
+// the aggregation codes come from the translated vocabulary (agg-badge).
+const TRANSLATED = /^views\.dashboard\.(widget\.badge|chart\.type|agg-badge)[\w.-]*(\|\{.*\})?$/;
 
 function visibleStrings(header: HTMLElement): string[] {
   return Array.from(header.querySelectorAll(".ppp-widget-badge")).flatMap((el) => [

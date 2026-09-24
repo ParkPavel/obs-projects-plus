@@ -24,7 +24,7 @@
   } from "src/lib/dataframe/dataframe";
   import { i18n } from "src/lib/stores/i18n";
   import {
-    aggregationOption,
+    aggregationLabel,
     ROLLUP_PICKER_ORDER,
   } from "src/lib/dashboard-engine/aggregationOptions";
   import { settings as settingsStore } from "src/lib/stores/settings";
@@ -286,9 +286,7 @@
   // #180d/T5: the default label came from the raw stored name, so this picker
   // showed `count_total` where every other surface showed "Count all".
   $: rollupFunctionOptions = ROLLUP_PICKER_ORDER.map((fn) => ({
-    label: $i18n.t(`modals.field.configure.rollup.functions.${fn}`, {
-      defaultValue: aggregationOption(fn)?.label ?? fn,
-    }),
+    label: aggregationLabel(fn, (key, defaultValue) => $i18n.t(key, { defaultValue })),
     value: fn,
   }));
 

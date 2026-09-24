@@ -6,9 +6,13 @@
    */
   import type { AggregationResult } from "../../types";
   import type { TableColumn } from "./tableCanon";
+  import { i18n } from "src/lib/stores/i18n";
+  import { aggregationLabel } from "src/lib/dashboard-engine/aggregationOptions";
 
   export let columns: TableColumn[];
   export let aggregations: AggregationResult;
+
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
 </script>
 
 <div class="ppp-t2-footer" role="row">
@@ -16,7 +20,7 @@
     {@const agg = aggregations[col.field.name]}
     <div class="ppp-t2-footer-cell" role="gridcell">
       {#if agg}
-        <span class="ppp-t2-footer-fn">{agg.function.replace(/_/g, " ")}</span>
+        <span class="ppp-t2-footer-fn">{aggregationLabel(agg.function, tr)}</span>
         <span class="ppp-t2-footer-value">{agg.formattedValue}</span>
       {/if}
     </div>

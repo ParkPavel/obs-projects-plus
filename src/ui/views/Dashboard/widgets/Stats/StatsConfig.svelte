@@ -7,8 +7,9 @@
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
     AGGREGATIONS,
-    aggregationOption,
     aggregationOptionsFor,
+    aggregationLabel,
+    aggregationConsequence,
     type AggregationOption,
   } from "src/lib/dashboard-engine/aggregationOptions";
   import type { StatsConfig, StatsCardConfig, ColumnAggregation } from "../../types";
@@ -48,6 +49,8 @@
       (o) => o.value !== "none" && (allowed === null || allowed.has(o.value))
     );
   };
+
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
 
   const FORMATS = ["number", "percent", "currency", "duration"] as const;
 
@@ -157,8 +160,8 @@
             on:change={(e) => onAggChange(idx, e)}
           >
             {#each optionsFor(card.field) as agg (agg.value)}
-              <option value={agg.value} title={agg.consequence}>
-                {$i18n.t("views.dashboard.agg." + agg.value, { defaultValue: agg.label })}
+              <option value={agg.value} title={aggregationConsequence(agg.value, tr)}>
+                {aggregationLabel(agg.value, tr)}
               </option>
             {/each}
             {#if card.aggregation && !optionsFor(card.field).some((o) => o.value === card.aggregation)}
@@ -166,9 +169,7 @@
                    today still has to appear, or the dropdown renders empty and
                    the card looks unconfigured. -->
               <option value={card.aggregation}>
-                {$i18n.t("views.dashboard.agg." + card.aggregation, {
-                  defaultValue: aggregationOption(card.aggregation)?.label ?? card.aggregation,
-                })}
+                {aggregationLabel(card.aggregation, tr)}
               </option>
             {/if}
           </select>

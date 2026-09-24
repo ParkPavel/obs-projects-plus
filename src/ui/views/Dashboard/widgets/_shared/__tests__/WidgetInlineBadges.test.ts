@@ -92,7 +92,7 @@ describe("WidgetInlineBadges", () => {
       "[data-testid='widget-badge-stats-agg']"
     );
     expect(badge).not.toBeNull();
-    expect(badge!.textContent?.trim()).toBe("SUM");
+    expect(badge!.textContent?.trim()).toBe('views.dashboard.agg-badge.sum|{"defaultValue":"SUM"}');
     expect(
       handle.target.querySelector("[data-testid='widget-badge-stats-count']")
     ).toBeNull();
@@ -158,7 +158,7 @@ describe("WidgetInlineBadges", () => {
     expect(typeBadge!.getAttribute("title")).toBe("views.dashboard.chart.type");
     expect(aggBadge).not.toBeNull();
     expect(aggBadge!.getAttribute("title")).toBe("views.dashboard.widget.badge.y-aggregation");
-    expect(aggBadge!.textContent?.trim()).toBe("AVG");
+    expect(aggBadge!.textContent?.trim()).toBe('views.dashboard.agg-badge.avg|{"defaultValue":"AVG"}');
     handle.destroy();
   });
 

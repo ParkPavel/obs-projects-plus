@@ -103,7 +103,7 @@ export const AGGREGATIONS: ReadonlyArray<AggregationOption> = [
   // ── dates ──
   { value: "earliest", label: "Earliest date", consequence: "Oldest date in the column", badge: "EARLIEST" },
   { value: "latest", label: "Latest date", consequence: "Newest date in the column", badge: "LATEST" },
-  { value: "date_range", label: "Date range", consequence: "From the earliest to the latest", badge: "RANGE" },
+  { value: "date_range", label: "Date range", consequence: "From the earliest to the latest", badge: "SPAN" },
 ];
 
 const BY_VALUE = new Map(AGGREGATIONS.map((o) => [o.value, o]));
@@ -116,6 +116,28 @@ export function aggregationOption(value: AggregationName): AggregationOption | u
 /** Compact form for a badge. Falls back to the raw name rather than to silence. */
 export function aggregationBadge(value: AggregationName): string {
   return BY_VALUE.get(value)?.badge ?? String(value).toUpperCase();
+}
+
+/**
+ * The table above is the English source; every surface shows it through these
+ * keys in the user's language. The caller passes its own translate function
+ * (`(key, english) => text`), so this module stays free of stores.
+ */
+export type TranslateWithDefault = (key: string, defaultValue: string) => string;
+
+/** The name of an aggregation, as a picker or menu shows it. */
+export function aggregationLabel(value: AggregationName, t: TranslateWithDefault): string {
+  return t(`views.dashboard.agg.${value}`, BY_VALUE.get(value)?.label ?? String(value));
+}
+
+/** One line on what the aggregation does with empty cells or text. */
+export function aggregationConsequence(value: AggregationName, t: TranslateWithDefault): string {
+  return t(`views.dashboard.agg-consequence.${value}`, BY_VALUE.get(value)?.consequence ?? "");
+}
+
+/** The compact code for a badge, in the user's language. */
+export function aggregationBadgeText(value: AggregationName, t: TranslateWithDefault): string {
+  return t(`views.dashboard.agg-badge.${value}`, aggregationBadge(value));
 }
 
 const NUMERIC_TYPES: ReadonlySet<DataFieldType> = new Set([
