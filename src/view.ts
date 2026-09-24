@@ -24,7 +24,9 @@ import type { ProjectView } from "./customViewApi";
 import type ProjectsPlugin from "./main";
 import type { ProjectId, ViewId } from "./settings/settings";
 
-export const VIEW_TYPE_PROJECTS = "obs-projects-plus";
+import { VIEW_TYPE_PROJECTS } from "./viewType";
+
+export { VIEW_TYPE_PROJECTS };
 
 export type ProjectsViewState = {
   projectId: ProjectId;

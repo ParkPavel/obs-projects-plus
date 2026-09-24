@@ -6,7 +6,7 @@ import { TFile, type App, type Menu } from "obsidian";
 import { i18n } from "src/lib/stores/i18n";
 import { app } from "src/lib/stores/obsidian";
 import { get } from "svelte/store";
-import { VIEW_TYPE_PROJECTS } from "src/view";
+import { VIEW_TYPE_PROJECTS } from "src/viewType";
 import { openContextMenu, type ContextMenuEntry } from "src/lib/contextMenu";
 import { openRecord, type OpenRecordTarget } from "src/lib/record/openRecord";
 
