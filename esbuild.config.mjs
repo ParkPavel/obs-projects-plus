@@ -46,6 +46,12 @@ const buildOptions = {
         dev: !prod
       },
       preprocess: sveltePreprocess(),
+      // obsidian-svelte's barrel compiles its IconButton (a <div on:click> with
+      // no keyboard access) even though nothing mounts it: the plugin uses its
+      // own src/ui/components/IconButton, and iconButtonAccess.test.ts keeps it
+      // that way. Only that one file's a11y warning is dropped.
+      filterWarnings: (warning) =>
+        !(warning.code?.startsWith("a11y") && /obsidian-svelte[\\/]Icon[\\/]IconButton\.svelte$/.test(warning.filename ?? "")),
     }),
     replace({
       include: /svelte-dnd-action.*$/,

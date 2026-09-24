@@ -1,6 +1,7 @@
 <script lang="ts">
   import { produce } from "immer";
-  import { Button, Icon, IconButton, TextInput } from "obsidian-svelte";
+  import { Button, Icon, TextInput } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import { dndzone } from "svelte-dnd-action";
   import { i18n } from "src/lib/stores/i18n";
   import { tick, onMount } from "svelte";

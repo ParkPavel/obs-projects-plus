@@ -1,6 +1,7 @@
 <script lang="ts">
   // import { Checkbox, InternalLink} from "obsidian-svelte";
-  import { Checkbox, Icon, IconButton } from "obsidian-svelte";
+  import { Checkbox, Icon } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
 
   import {
@@ -151,7 +152,11 @@
               <IconButton
                 icon="pencil"
                 tooltip={$i18n.t("components.note.edit")}
-                on:click={() => onRecordClick(item)}
+                onClick={(event) => {
+                  // The card itself opens the record on click; open it once.
+                  event.stopPropagation();
+                  onRecordClick(item);
+                }}
               />
             </span>
           {:else}

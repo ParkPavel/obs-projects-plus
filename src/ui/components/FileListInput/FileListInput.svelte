@@ -1,6 +1,7 @@
 <script lang="ts">
   import { produce } from "immer";
-  import { Button, FileAutocomplete, IconButton } from "obsidian-svelte";
+  import { Button, FileAutocomplete } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
 
   import { getFilesInFolder } from "src/lib/obsidian";
   import { app } from "src/lib/stores/obsidian";

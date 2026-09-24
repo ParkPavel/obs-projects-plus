@@ -1,11 +1,11 @@
 <script lang="ts">
   import {
     Button,
-    IconButton,
     ModalButtonGroup,
     ModalContent,
     ModalLayout,
   } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import { Flair } from "src/ui/components/Flair";
   import { Accordion } from "src/ui/components/Accordion";
   import { AccordionItem } from "src/ui/components/Accordion";

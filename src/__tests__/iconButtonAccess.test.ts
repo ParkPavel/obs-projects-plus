@@ -45,6 +45,15 @@ describe("IconButton — keyboard access", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  test("keeps its key from a parent that also handles Enter", async () => {
+    const parentKeydown = jest.fn();
+    const { button, onClick } = renderButton();
+    button.parentElement?.addEventListener("keydown", parentKeydown);
+    await fireEvent.keyDown(button, { key: "Enter" });
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(parentKeydown).not.toHaveBeenCalled();
+  });
+
   test("ignores other keys", async () => {
     const { button, onClick } = renderButton();
     await fireEvent.keyDown(button, { key: "a" });
@@ -69,6 +78,16 @@ describe("IconButton — no source uses the inaccessible one", () => {
         const code = fs.readFileSync(file, "utf8").replace(/^\s*\/\/.*$/gm, "");
         return /import\s*\{[^}]*\bIconButton\b[^}]*\}\s*from\s*["']obsidian-svelte["']/.test(code);
       })
+      .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"));
+    expect(offenders).toEqual([]);
+  });
+
+  // IconButton takes an onClick prop and dispatches no component events, so
+  // `on:click` on it is never called — the board card's pencil was wired that
+  // way and did nothing, with the mouse as with the keyboard.
+  test("no IconButton is wired with on:click", () => {
+    const offenders = collectSourceFiles(SRC_ROOT, [".svelte"])
+      .filter((file) => /<IconButton\b[^>]*\son:click\b/.test(fs.readFileSync(file, "utf8")))
       .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"));
     expect(offenders).toEqual([]);
   });

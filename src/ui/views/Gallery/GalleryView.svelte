@@ -1,6 +1,7 @@
 <script lang="ts">
   // import { Icon, IconButton, InternalLink, Typography } from "obsidian-svelte";
-  import { Icon, IconButton, Typography } from "obsidian-svelte";
+  import { Icon, Typography } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
   import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";

@@ -3,7 +3,8 @@
   import { app, view } from "src/lib/stores/obsidian";
   import { i18n } from "src/lib/stores/i18n";
   import { getContext } from "svelte";
-  import { TextInput, IconButton } from "obsidian-svelte";
+  import { TextInput } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import { Flair } from "src/ui/components/Flair";
   import { handleHoverLink } from "src/ui/views/helpers";
 
