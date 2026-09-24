@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import type { StatsCardConfig } from "../../types";
   import type { DataValue } from "src/lib/dataframe/dataframe";
   import type { Optional } from "src/lib/dataframe/dataframe";
@@ -69,7 +70,7 @@
   title={fieldMissing ? `Field "${config.field}" not found in data. Edit the widget config to pick an existing field.` : ""}
 >
   {#if fieldMissing}
-    <span class="ppp-stats-value ppp-stats-value--missing" aria-label="Field not found">⚠</span>
+    <span class="ppp-stats-value ppp-stats-value--missing" aria-label={$i18n.t("views.dashboard.stats.field-not-found")}>⚠</span>
   {:else}
     <span
       class="ppp-stats-value"

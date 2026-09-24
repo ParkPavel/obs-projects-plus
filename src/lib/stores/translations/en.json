@@ -462,6 +462,16 @@
             "confirm": {
                 "delete": "Delete",
                 "cancel": "Cancel"
+            },
+            "configure-field": {
+                "prefix-placeholder": "e.g. TASK-"
+            },
+            "create-project": {
+                "no-custom-lists": "No custom lists yet",
+                "create-lists-hint": "Create lists in the Calendar view agenda sidebar"
+            },
+            "edit-note": {
+                "read-only-fields": "Read-only Fields"
             }
         },
         "views": {
@@ -544,7 +554,9 @@
                 "freeze-all": "Freeze all columns",
                 "unfreeze-all": "Unfreeze all columns",
                 "records_one": "record",
-                "records_other": "records"
+                "records_other": "records",
+                "drag-column": "Drag to reorder column",
+                "reset-zoom": "Reset zoom"
             },
             "calendar": {
                 "name": "Calendar",
@@ -617,7 +629,12 @@
                     "invalid": "Invalid HEX format",
                     "picker": "Color Picker",
                     "quick": "Quick Colors",
-                    "hex": "HEX Code"
+                    "hex": "HEX Code",
+                    "palette": "Color picker palette",
+                    "saturation-lightness": "Saturation and lightness",
+                    "save-favorite": "Save to favorites",
+                    "apply": "Apply color",
+                    "no-favorites": "No favorites"
                 },
                 "popup": {
                     "today": "Today",
@@ -774,7 +791,15 @@
                         },
                         "no-lists": "No custom lists",
                         "create-list": "Create list"
-                    }
+                    },
+                    "select-icon": "Select Icon",
+                    "clear-color": "Clear color",
+                    "clear": "Clear",
+                    "visual": "Visual",
+                    "advanced": "Advanced",
+                    "visual-mode-hint": "Visual mode - drag-and-drop filter builder",
+                    "advanced-mode-hint": "Advanced mode - formula-based filtering",
+                    "date-formula-detected": "Date formula detected"
                 },
                 "heatmap": {
                     "less": "Less",
@@ -789,7 +814,17 @@
                 "notices": {
                     "renamed": "Note renamed: {{name}}",
                     "duplicated": "Note duplicated to {{count}} date(s)"
-                }
+                },
+                "close-error": "Close error message",
+                "timed-events": "Timed events",
+                "multi-day-events": "Multi-day and all-day events",
+                "all-day": "All day",
+                "previous-year": "Previous year",
+                "next-year": "Next year",
+                "events-count_one": "{{count}} event",
+                "events-count_other": "{{count}} events",
+                "reset-to-original": "Reset to original",
+                "reset-to-original-time": "Reset to original time"
             },
             "gallery": {
                 "name": "Gallery",
@@ -816,7 +851,8 @@
                 },
                 "empty": "This view is empty.",
                 "records_one": "record",
-                "records_other": "records"
+                "records_other": "records",
+                "cover-alt": "Title"
             },
             "dashboard": {
                 "name": "Dashboard",
@@ -932,7 +968,12 @@
                         "relation-named": "Showing records where {{field}} is {{value}}",
                         "relation-idle": "Linked through {{field}} — select a row to narrow this block",
                         "broken-v2": "Relation '{{field}}' is broken ({{reason}}) — this block is filtered by the plain selection instead"
-                    }
+                    },
+                    "filtered-by-relation": "Filtered by relation",
+                    "linked-by-relation": "Linked by relation",
+                    "filtered-by-canvas": "Filtered by canvas selection",
+                    "relation-not-configured": "Relation not configured",
+                    "relation-broken": "Relation broken"
                 },
                 "field-presets": {
                     "label": "Layout",
@@ -1113,7 +1154,8 @@
                     "unnest-suggestion-button": "Unnest \"{{field}}\"",
                     "disable-step": "Disable step",
                     "enable-step": "Enable step",
-                    "source-not-ready": "The linked project is not loaded, so its fields are unavailable here."
+                    "source-not-ready": "The linked project is not loaded, so its fields are unavailable here.",
+                    "formula-placeholder": "e.g. fieldA + fieldB * 2"
                 },
                 "group": {
                     "empty": "(empty)"
@@ -1195,13 +1237,16 @@
                         "no-sources": "No sibling projects found in this vault.",
                         "warn-missing-right": "Right source is not loaded. Check the selected source id and that the sibling project is still available.",
                         "warn-no-matches": "No records matched on the join key. Verify the left/right key names and that values overlap.",
-                        "warn-mostly-unmatched": "Only {{matched}} of {{total}} records matched — results may be skewed."
+                        "warn-mostly-unmatched": "Only {{matched}} of {{total}} records matched — results may be skewed.",
+                        "aria-label": "Scatter chart"
                     },
                     "section": {
                         "display": "Display Options",
                         "data": "Data",
                         "scatter": "Scatter plot"
-                    }
+                    },
+                    "bar": "Bar chart",
+                    "line": "Line chart"
                 },
                 "comparison": {
                     "empty": "Configure comparison metrics",
@@ -1239,7 +1284,8 @@
                         "fmt-percent": "Percent",
                         "fmt-currency": "Currency",
                         "fmt-duration": "Duration"
-                    }
+                    },
+                    "field-not-found": "Field not found"
                 },
                 "agg": {
                     "count_total": "Count all",
@@ -1287,7 +1333,9 @@
                         "sort-field": "Sort field",
                         "sort-field-placeholder": "name",
                         "sort-order": "Order"
-                    }
+                    },
+                    "asc": "ASC",
+                    "desc": "DESC"
                 },
                 "viewport": {
                     "select": "Select a view to embed",
@@ -1387,6 +1435,15 @@
                 },
                 "selection": {
                     "clear": "Clear selection"
+                },
+                "cover-banner": {
+                    "empty": "No image — open settings to set a source."
+                },
+                "divider": {
+                    "label-placeholder": "Divider label…"
+                },
+                "text": {
+                    "placeholder": "Enter Markdown…"
                 }
             }
         },
@@ -1537,6 +1594,38 @@
             },
             "multi-text": {
                 "add": "Add an option"
+            },
+            "color-picker": {
+                "saturation-brightness": "Saturation and brightness",
+                "hue": "Hue"
+            },
+            "datetime-input": {
+                "open-time-picker": "Open time picker",
+                "visual-time-picker": "Visual time picker"
+            },
+            "error-boundary": {
+                "component": "Component:",
+                "error": "Error:"
+            },
+            "field-control": {
+                "image-placeholder": "https://... or [[Image.png]]"
+            },
+            "image-preview": {
+                "remove-image": "Remove image",
+                "failed": "Failed to load image",
+                "no-image": "No image"
+            },
+            "multi-text-input": {
+                "list": "Editable options list"
+            },
+            "settings-menu": {
+                "tabs": "Settings tabs"
+            },
+            "record-card-view": {
+                "icon-placeholder": "📄  or  file-text"
+            },
+            "time-picker": {
+                "label": "Time picker"
             }
         },
         "toolbar": {
@@ -1632,7 +1721,8 @@
                 "name": "Archives",
                 "desc": "Restore or delete your archived projects.",
                 "empty": "No archived project."
-            }
+            },
+            "no-project-yet": "No project yet."
         },
         "errors": {
             "missingDataview": {
@@ -1907,7 +1997,8 @@
                 "first-note-failed": "Could not save the first record \"{{name}}\" in full. Open the profile folder and look at what is there: if the record is missing, add it with \"Add first record\" in the empty table. If this keeps happening, try a different name — something else may occupy that path.",
                 "error-registration-leftover": "Could not create the profile. These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
                 "error-registered": "The profile's files were created, but the settings may not have been saved. Restart Obsidian and check whether the project is listed; the profile's files stay in your vault."
-            }
+            },
+            "psst": "Psst! 👋"
         },
         "common": {
             "yesterday": "Yesterday",
@@ -1942,7 +2033,13 @@
             "remove": "Remove",
             "apply": "Apply",
             "field-placeholder": "Field",
-            "add-criterion": "Add criterion"
+            "add-criterion": "Add criterion",
+            "loading": "Loading...",
+            "drag-to-reorder": "Drag to reorder",
+            "confirm": "Confirm",
+            "move-up": "Move up",
+            "move-down": "Move down",
+            "actions": "Actions"
         },
         "relation-setup": {
             "open": "Link database…",

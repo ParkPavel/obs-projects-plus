@@ -65,7 +65,7 @@
 <div 
   class="tabs" 
   role="tablist" 
-  aria-label="Settings tabs"
+  aria-label={$i18n.t("components.settings-menu.tabs")}
   bind:this={tabsContainer}
   on:wheel={handleWheel}
 >

@@ -70,8 +70,8 @@
     <button 
       class="reset-btn" 
       on:click={handleReset} 
-      title="Reset to original"
-      aria-label="Reset to original time"
+      title={$i18n.t("views.calendar.reset-to-original")}
+      aria-label={$i18n.t("views.calendar.reset-to-original-time")}
     >
       ↺
     </button>

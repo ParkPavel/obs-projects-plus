@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   /**
    * HeaderStripsSection.svelte - v3.2.0
    * 
@@ -313,7 +314,7 @@
     bind:this={sectionElement}
     style:--lane-count={maxLane}
     role="rowgroup"
-    aria-label="Multi-day and all-day events"
+    aria-label={$i18n.t("views.calendar.multi-day-events")}
   >
     <!-- v3.2.1 DnD: Strip ghost overlay showing target position during drag -->
     {#if stripGhost}

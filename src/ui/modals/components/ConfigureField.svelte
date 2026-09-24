@@ -845,7 +845,7 @@
       >
         <TextInput
           value={uniqueIdPrefixValue}
-          placeholder="e.g. TASK-"
+          placeholder={$i18n.t("modals.configure-field.prefix-placeholder")}
           on:input={handleUniqueIdPrefixChange}
         />
       </SettingItem>

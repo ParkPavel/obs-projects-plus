@@ -80,8 +80,8 @@
     <label>
       {$i18n.t("views.dashboard.checklist.config.sort-order", { defaultValue: "Order" })}
       <select value={sortOrder} on:change={(e) => emit({ sortOrder: selectVal(e) })}>
-        <option value="asc">ASC</option>
-        <option value="desc">DESC</option>
+        <option value="asc">{$i18n.t("views.dashboard.checklist.asc")}</option>
+        <option value="desc">{$i18n.t("views.dashboard.checklist.desc")}</option>
       </select>
     </label>
   </div>

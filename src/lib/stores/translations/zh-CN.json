@@ -493,6 +493,16 @@
             "confirm": {
                 "delete": "删除",
                 "cancel": "取消"
+            },
+            "configure-field": {
+                "prefix-placeholder": "例如 TASK-"
+            },
+            "create-project": {
+                "no-custom-lists": "暂无自定义列表",
+                "create-lists-hint": "请在日历视图的日程侧边栏中创建列表"
+            },
+            "edit-note": {
+                "read-only-fields": "只读字段"
             }
         },
         "views": {
@@ -589,7 +599,9 @@
                 },
                 "freeze-all": "冻结所有列",
                 "unfreeze-all": "取消冻结所有列",
-                "records_other": "条记录"
+                "records_other": "条记录",
+                "drag-column": "拖动以重新排序列",
+                "reset-zoom": "重置缩放"
             },
             "calendar": {
                 "name": "日历",
@@ -670,7 +682,12 @@
                     "invalid": "无效的HEX格式",
                     "picker": "颜色选择器",
                     "quick": "快速选色",
-                    "hex": "HEX代码"
+                    "hex": "HEX代码",
+                    "palette": "颜色选择器调色板",
+                    "saturation-lightness": "饱和度和明度",
+                    "save-favorite": "保存到收藏",
+                    "apply": "应用颜色",
+                    "no-favorites": "无收藏"
                 },
                 "popup": {
                     "today": "今天",
@@ -819,7 +836,15 @@
                         },
                         "no-lists": "没有自定义列表",
                         "create-list": "创建列表"
-                    }
+                    },
+                    "select-icon": "选择图标",
+                    "clear-color": "清除颜色",
+                    "clear": "清除",
+                    "visual": "可视化",
+                    "advanced": "高级",
+                    "visual-mode-hint": "可视化模式——拖放式筛选器构建器",
+                    "advanced-mode-hint": "高级模式——基于公式的筛选",
+                    "date-formula-detected": "检测到日期公式"
                 },
                 "heatmap": {
                     "less": "较少",
@@ -834,7 +859,16 @@
                 "notices": {
                     "renamed": "笔记已重命名：{{name}}",
                     "duplicated": "笔记已复制到 {{count}} 个日期"
-                }
+                },
+                "close-error": "关闭错误消息",
+                "timed-events": "定时事件",
+                "multi-day-events": "多日和全天事件",
+                "all-day": "全天",
+                "previous-year": "上一年",
+                "next-year": "下一年",
+                "events-count_other": "{{count}} 个事件",
+                "reset-to-original": "重置为原始值",
+                "reset-to-original-time": "重置为原始时间"
             },
             "gallery": {
                 "name": "画册",
@@ -862,7 +896,8 @@
                 },
                 "empty": "该视图还没有数据。",
                 "empty-hint": "创建一篇笔记以开始",
-                "records_other": "条记录"
+                "records_other": "条记录",
+                "cover-alt": "标题"
             },
             "dashboard": {
                 "name": "数据库",
@@ -1120,7 +1155,8 @@
                     "prefix": "提取字段的前缀",
                     "optional": "可选",
                     "keep-original": "保留原始数组字段",
-                    "config-hint": "无法配置"
+                    "config-hint": "无法配置",
+                    "formula-placeholder": "例如 fieldA + fieldB * 2"
                 },
                 "database-call": {
                     "empty": "尚未配置视图",
@@ -1168,7 +1204,12 @@
                     "source-loading": "正在加载关联的项目…",
                     "source-unavailable": "关联的项目不可用",
                     "source-unavailable-hint": "未找到此块所读取的项目：{{id}}",
-                    "source-error": "无法加载关联的项目"
+                    "source-error": "无法加载关联的项目",
+                    "filtered-by-relation": "按关联筛选",
+                    "linked-by-relation": "按关联链接",
+                    "filtered-by-canvas": "按画布选择筛选",
+                    "relation-not-configured": "未配置关联",
+                    "relation-broken": "关联已失效"
                 },
                 "group": {
                     "empty": "（空）"
@@ -1250,14 +1291,17 @@
                         "no-sources": "此保库中没有其他项目。",
                         "warn-missing-right": "右侧数据源未加载。请检查所选 id 并确认并列项目仍然可用。",
                         "warn-no-matches": "没有按连接键匹配的记录。请核对左/右键的名称与值是否相交。",
-                        "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。"
+                        "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。",
+                        "aria-label": "散点图"
                     },
                     "section": {
                         "display": "显示设置",
                         "data": "数据",
                         "scatter": "散点图"
                     },
-                    "degenerate-hint": "所有记录的“{{field}}”字段值都相同 — 图表只显示一个类别。请丰富数据或更换 X 字段。"
+                    "degenerate-hint": "所有记录的“{{field}}”字段值都相同 — 图表只显示一个类别。请丰富数据或更换 X 字段。",
+                    "bar": "柱状图",
+                    "line": "折线图"
                 },
                 "comparison": {
                     "empty": "配置对比指标",
@@ -1298,7 +1342,8 @@
                         "fmt-percent": "百分比",
                         "fmt-currency": "货币",
                         "fmt-duration": "时长"
-                    }
+                    },
+                    "field-not-found": "未找到字段"
                 },
                 "agg": {
                     "count_total": "全部计数",
@@ -1346,7 +1391,9 @@
                         "sort-field": "排序字段",
                         "sort-field-placeholder": "name",
                         "sort-order": "排序"
-                    }
+                    },
+                    "asc": "升序",
+                    "desc": "降序"
                 },
                 "viewport": {
                     "select": "选择要嵌入的视图",
@@ -1489,6 +1536,15 @@
                 },
                 "selection": {
                     "clear": "清除选择"
+                },
+                "cover-banner": {
+                    "empty": "无图片——请打开设置以指定来源。"
+                },
+                "divider": {
+                    "label-placeholder": "分隔线标签…"
+                },
+                "text": {
+                    "placeholder": "输入 Markdown…"
                 }
             }
         },
@@ -1639,6 +1695,38 @@
             },
             "note": {
                 "edit": "编辑笔记"
+            },
+            "color-picker": {
+                "saturation-brightness": "饱和度和亮度",
+                "hue": "色相"
+            },
+            "datetime-input": {
+                "open-time-picker": "打开时间选择器",
+                "visual-time-picker": "可视化时间选择器"
+            },
+            "error-boundary": {
+                "component": "组件：",
+                "error": "错误："
+            },
+            "field-control": {
+                "image-placeholder": "https://... 或 [[Image.png]]"
+            },
+            "image-preview": {
+                "remove-image": "移除图片",
+                "failed": "图片加载失败",
+                "no-image": "无图片"
+            },
+            "multi-text-input": {
+                "list": "可编辑的选项列表"
+            },
+            "settings-menu": {
+                "tabs": "设置标签页"
+            },
+            "record-card-view": {
+                "icon-placeholder": "📄  或  file-text"
+            },
+            "time-picker": {
+                "label": "时间选择器"
             }
         },
         "toolbar": {
@@ -1737,7 +1825,8 @@
             },
             "filters": {
                 "scope-view": "视图筛选"
-            }
+            },
+            "no-project-yet": "暂无项目。"
         },
         "errors": {
             "missingDataview": {
@@ -2012,7 +2101,8 @@
             "demo": {
                 "folder-failed": "无法创建演示文件夹 '{{folder}}'。演示项目未创建。",
                 "partial": "演示项目已创建，但有 {{count}} 篇笔记无法写入。列表请见控制台。"
-            }
+            },
+            "psst": "嘿！👋"
         },
         "common": {
             "yesterday": "昨天",
@@ -2050,7 +2140,13 @@
             "add-criterion": "添加条件",
             "scroll-left": "向左滚动",
             "scroll-right": "向右滚动",
-            "retry": "重试"
+            "retry": "重试",
+            "loading": "加载中...",
+            "drag-to-reorder": "拖动以重新排序",
+            "confirm": "确认",
+            "move-up": "上移",
+            "move-down": "下移",
+            "actions": "操作"
         },
         "relation-setup": {
             "open": "关联数据库…",

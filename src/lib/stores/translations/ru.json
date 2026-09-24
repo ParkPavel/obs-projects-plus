@@ -493,6 +493,16 @@
             "confirm": {
                 "delete": "Удалить",
                 "cancel": "Отмена"
+            },
+            "configure-field": {
+                "prefix-placeholder": "напр. TASK-"
+            },
+            "create-project": {
+                "no-custom-lists": "Пользовательских списков пока нет",
+                "create-lists-hint": "Создавайте списки в боковой панели повестки представления «Календарь»"
+            },
+            "edit-note": {
+                "read-only-fields": "Поля только для чтения"
             }
         },
         "components": {
@@ -642,6 +652,38 @@
             },
             "multi-text": {
                 "add": "Добавить вариант"
+            },
+            "color-picker": {
+                "saturation-brightness": "Насыщенность и яркость",
+                "hue": "Оттенок"
+            },
+            "datetime-input": {
+                "open-time-picker": "Открыть выбор времени",
+                "visual-time-picker": "Визуальный выбор времени"
+            },
+            "error-boundary": {
+                "component": "Компонент:",
+                "error": "Ошибка:"
+            },
+            "field-control": {
+                "image-placeholder": "https://... или [[Image.png]]"
+            },
+            "image-preview": {
+                "remove-image": "Удалить изображение",
+                "failed": "Не удалось загрузить изображение",
+                "no-image": "Нет изображения"
+            },
+            "multi-text-input": {
+                "list": "Редактируемый список вариантов"
+            },
+            "settings-menu": {
+                "tabs": "Вкладки настроек"
+            },
+            "record-card-view": {
+                "icon-placeholder": "📄  или  file-text"
+            },
+            "time-picker": {
+                "label": "Выбор времени"
             }
         },
         "toolbar": {
@@ -740,7 +782,8 @@
                 "name": "Архивы",
                 "desc": "Восстановите или удалите ваши архивированные проекты.",
                 "empty": "Нет архивированных проектов."
-            }
+            },
+            "no-project-yet": "Проектов пока нет."
         },
         "views": {
             "filter": {
@@ -838,7 +881,9 @@
                 "unfreeze-all": "Открепить все колонки",
                 "records_one": "запись",
                 "records_few": "записи",
-                "records_many": "записей"
+                "records_many": "записей",
+                "drag-column": "Перетащите, чтобы изменить порядок колонок",
+                "reset-zoom": "Сбросить масштаб"
             },
             "gallery": {
                 "name": "Галерея",
@@ -868,7 +913,8 @@
                 "empty-hint": "Создайте заметку, чтобы начать",
                 "records_one": "запись",
                 "records_few": "записи",
-                "records_many": "записей"
+                "records_many": "записей",
+                "cover-alt": "Заголовок"
             },
             "calendar": {
                 "name": "Календарь",
@@ -957,7 +1003,12 @@
                     "invalid": "Неверный формат HEX",
                     "picker": "Выбор цвета",
                     "quick": "Избранные цвета",
-                    "hex": "HEX-код"
+                    "hex": "HEX-код",
+                    "palette": "Палитра выбора цвета",
+                    "saturation-lightness": "Насыщенность и светлота",
+                    "save-favorite": "Сохранить в избранное",
+                    "apply": "Применить цвет",
+                    "no-favorites": "Нет избранного"
                 },
                 "popup": {
                     "today": "Сегодня",
@@ -1114,7 +1165,15 @@
                         },
                         "no-lists": "Нет пользовательских списков",
                         "create-list": "Создать список"
-                    }
+                    },
+                    "select-icon": "Выбрать значок",
+                    "clear-color": "Сбросить цвет",
+                    "clear": "Очистить",
+                    "visual": "Визуальный",
+                    "advanced": "Расширенный",
+                    "visual-mode-hint": "Визуальный режим — конструктор фильтров с перетаскиванием",
+                    "advanced-mode-hint": "Расширенный режим — фильтрация по формулам",
+                    "date-formula-detected": "Обнаружена формула даты"
                 },
                 "heatmap": {
                     "less": "Меньше",
@@ -1129,7 +1188,18 @@
                 "notices": {
                     "renamed": "Заметка переименована: {{name}}",
                     "duplicated": "Заметка продублирована на {{count}} дат"
-                }
+                },
+                "close-error": "Закрыть сообщение об ошибке",
+                "timed-events": "События с указанным временем",
+                "multi-day-events": "Многодневные события и события на весь день",
+                "all-day": "Весь день",
+                "previous-year": "Предыдущий год",
+                "next-year": "Следующий год",
+                "events-count_one": "{{count}} событие",
+                "events-count_few": "{{count}} события",
+                "events-count_many": "{{count}} событий",
+                "reset-to-original": "Вернуть исходное",
+                "reset-to-original-time": "Вернуть исходное время"
             },
             "dashboard": {
                 "name": "База данных",
@@ -1294,7 +1364,12 @@
                     "source-loading": "Загрузка связанного проекта…",
                     "source-unavailable": "Связанный проект недоступен",
                     "source-unavailable-hint": "Проект, из которого читает этот блок, не найден: {{id}}",
-                    "source-error": "Не удалось загрузить связанный проект"
+                    "source-error": "Не удалось загрузить связанный проект",
+                    "filtered-by-relation": "Отфильтровано по связи",
+                    "linked-by-relation": "Связано через связь",
+                    "filtered-by-canvas": "Отфильтровано по выбору на холсте",
+                    "relation-not-configured": "Связь не настроена",
+                    "relation-broken": "Связь нарушена"
                 },
                 "field-presets": {
                     "label": "Макет",
@@ -1514,7 +1589,8 @@
                     "prefix": "Префикс для извлечённых полей",
                     "optional": "Необязательно",
                     "keep-original": "Сохранить исходное поле-массив",
-                    "config-hint": "Настройка недоступна"
+                    "config-hint": "Настройка недоступна",
+                    "formula-placeholder": "напр. fieldA + fieldB * 2"
                 },
                 "group": {
                     "empty": "(пусто)"
@@ -1597,13 +1673,16 @@
                         "no-sources": "В хранилище нет других проектов.",
                         "warn-missing-right": "Правый источник не загружен. Проверьте выбранный id и доступность соседнего проекта.",
                         "warn-no-matches": "Нет совпадений по ключу соединения. Проверьте имена левого/правого ключей и пересечение значений.",
-                        "warn-mostly-unmatched": "Совпали только {{matched}} из {{total}} записей — результаты могут быть искажены."
+                        "warn-mostly-unmatched": "Совпали только {{matched}} из {{total}} записей — результаты могут быть искажены.",
+                        "aria-label": "Точечная диаграмма"
                     },
                     "section": {
                         "display": "Настройки отображения",
                         "data": "Данные",
                         "scatter": "Точечная диаграмма"
-                    }
+                    },
+                    "bar": "Столбчатая диаграмма",
+                    "line": "Линейный график"
                 },
                 "comparison": {
                     "empty": "Настройте метрики сравнения",
@@ -1644,7 +1723,8 @@
                         "fmt-percent": "Процент",
                         "fmt-currency": "Валюта",
                         "fmt-duration": "Длительность"
-                    }
+                    },
+                    "field-not-found": "Поле не найдено"
                 },
                 "agg": {
                     "count_total": "Количество всех",
@@ -1692,7 +1772,9 @@
                         "sort-field": "Поле сортировки",
                         "sort-field-placeholder": "name",
                         "sort-order": "Порядок"
-                    }
+                    },
+                    "asc": "По возр.",
+                    "desc": "По убыв."
                 },
                 "viewport": {
                     "select": "Выберите представление для вставки",
@@ -1762,6 +1844,15 @@
                 },
                 "selection": {
                     "clear": "Сбросить выбор"
+                },
+                "cover-banner": {
+                    "empty": "Нет изображения — откройте настройки, чтобы указать источник."
+                },
+                "divider": {
+                    "label-placeholder": "Подпись разделителя…"
+                },
+                "text": {
+                    "placeholder": "Введите Markdown…"
                 }
             }
         },
@@ -2038,7 +2129,8 @@
             "demo": {
                 "folder-failed": "Не удалось создать папку демо-проекта «{{folder}}». Демо-проект не создан.",
                 "partial": "Демо-проект создан, но {{count}} заметок не удалось записать. Список — в консоли."
-            }
+            },
+            "psst": "Псст! 👋"
         },
         "common": {
             "yesterday": "Вчера",
@@ -2076,7 +2168,13 @@
             "add-criterion": "Добавить критерий",
             "scroll-left": "Прокрутить влево",
             "scroll-right": "Прокрутить вправо",
-            "retry": "Повторить"
+            "retry": "Повторить",
+            "loading": "Загрузка...",
+            "drag-to-reorder": "Перетащите, чтобы изменить порядок",
+            "confirm": "Подтвердить",
+            "move-up": "Переместить вверх",
+            "move-down": "Переместить вниз",
+            "actions": "Действия"
         },
         "relation-setup": {
             "open": "Связать с базой…",

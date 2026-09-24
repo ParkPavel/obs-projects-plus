@@ -197,12 +197,12 @@
               bind:value={pickerInput}
               class="ppp-rcv-icon-input"
               use:focusInput
-              placeholder="📄  or  file-text"
+              placeholder={$i18n.t("components.record-card-view.icon-placeholder")}
               aria-label={$i18n.t("views.dashboard.record-card.icon-input", { defaultValue: "Emoji or icon name" })}
               on:keydown={handlePickerKeydown}
             />
-            <button class="ppp-rcv-icon-confirm" on:click={confirmPicker} aria-label="Confirm">✓</button>
-            <button class="ppp-rcv-icon-cancel" on:click={closePicker} aria-label="Cancel">✕</button>
+            <button class="ppp-rcv-icon-confirm" on:click={confirmPicker} aria-label={$i18n.t("common.confirm")}>✓</button>
+            <button class="ppp-rcv-icon-cancel" on:click={closePicker} aria-label={$i18n.t("common.cancel")}>✕</button>
           </div>
         {/if}
       </div>

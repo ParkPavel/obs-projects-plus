@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { produce } from "immer";
   import { Callout, SettingItem, Typography, Switch } from "obsidian-svelte";
   import type {
@@ -13,7 +14,7 @@
 
 {#if !projects.length}
   <Callout title={"Info"} icon="info" variant="info">
-    <Typography variant="body">No project yet.</Typography>
+    <Typography variant="body">{$i18n.t("settings.no-project-yet")}</Typography>
   </Callout>
 {:else}
   {#each projects as project}

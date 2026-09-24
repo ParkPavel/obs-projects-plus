@@ -149,7 +149,7 @@
           on:drop={(e) => onDrop(index, e)}
           on:dragend={onDragEnd}
         >
-          <button class="row-btn row-drag" type="button" aria-label="Drag to reorder" tabindex="-1">
+          <button class="row-btn row-drag" type="button" aria-label={$i18n.t("common.drag-to-reorder")} tabindex="-1">
             <Icon name="grip-vertical" size="sm" />
           </button>
           <!-- Toggle -->

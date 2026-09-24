@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher, tick } from "svelte";
 
   export let config: Record<string, unknown>;
@@ -45,7 +46,7 @@
           class="ppp-divider-widget__input"
           on:keydown={handleKeydown}
           on:blur={commitEdit}
-          placeholder="Divider label…"
+          placeholder={$i18n.t("views.dashboard.divider.label-placeholder")}
         />
       {:else}
         <!-- svelte-ignore a11y-click-events-have-key-events -->

@@ -77,8 +77,8 @@
   <button 
     class="time-picker-toggle"
     on:click={() => showTimePicker = !showTimePicker}
-    aria-label="Open time picker"
-    title="Visual time picker"
+    aria-label={$i18n.t("components.datetime-input.open-time-picker")}
+    title={$i18n.t("components.datetime-input.visual-time-picker")}
   >
     <Icon name="clock" size="sm" />
   </button>

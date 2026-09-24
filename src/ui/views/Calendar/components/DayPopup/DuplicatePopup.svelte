@@ -172,7 +172,7 @@
     >
       <header class="popup-header">
         <h3>{$i18n.t("views.calendar.duplicate.title")}</h3>
-        <button class="close-button" on:click={handleClose} aria-label="Close">
+        <button class="close-button" on:click={handleClose} aria-label={$i18n.t("common.close")}>
           <Icon name="x" size="md" />
         </button>
       </header>

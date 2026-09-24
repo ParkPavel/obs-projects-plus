@@ -58,11 +58,11 @@
 
 <div class="icon-picker-modal">
   <div class="modal-header">
-    <h3>Select Icon</h3>
+    <h3>{$i18n.t("views.calendar.agenda.select-icon")}</h3>
     <button 
       class="close-btn"
       on:click={() => dispatch('close')}
-      aria-label="Close"
+      aria-label={$i18n.t("common.close")}
     >
       <Icon name="x" size="sm" />
     </button>

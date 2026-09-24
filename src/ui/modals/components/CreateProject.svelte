@@ -997,8 +997,8 @@
             <div class="custom-lists-preview">
               {#if customLists.length === 0}
                 <div class="empty-state">
-                  <p>No custom lists yet</p>
-                  <small>Create lists in the Calendar view agenda sidebar</small>
+                  <p>{$i18n.t("modals.create-project.no-custom-lists")}</p>
+                  <small>{$i18n.t("modals.create-project.create-lists-hint")}</small>
                 </div>
               {:else}
                 <div class="lists-container">
@@ -1020,7 +1020,7 @@
                           class="action-btn" 
                           on:click={() => moveListUp(index)}
                           disabled={index === 0}
-                          title="Move up"
+                          title={$i18n.t("common.move-up")}
                         >
                           <Icon name="chevron-up" size="xs" />
                         </button>
@@ -1028,14 +1028,14 @@
                           class="action-btn" 
                           on:click={() => moveListDown(index)}
                           disabled={index === customLists.length - 1}
-                          title="Move down"
+                          title={$i18n.t("common.move-down")}
                         >
                           <Icon name="chevron-down" size="xs" />
                         </button>
                         <button 
                           class="action-btn delete-btn" 
                           on:click={() => removeList(index)}
-                          title="Delete"
+                          title={$i18n.t("common.delete")}
                         >
                           <Icon name="trash-2" size="xs" />
                         </button>

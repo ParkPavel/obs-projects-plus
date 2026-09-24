@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { portal } from "src/ui/portal";
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
@@ -504,7 +505,7 @@
       <!-- Empty space above timeline for header + allday section -->
       {#if showAllDaySection}
         <div class="projects-calendar-allday-axis-label">
-          All day
+          {$i18n.t("views.calendar.all-day")}
         </div>
       {/if}
     </div>

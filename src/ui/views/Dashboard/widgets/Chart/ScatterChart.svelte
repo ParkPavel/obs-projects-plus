@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { tickCountFor } from "./chartWidth";
   import type { ScatterData, ChartStyle } from "../../types";
 
@@ -114,7 +115,7 @@
   viewBox="0 0 {width} {height}"
   class="ppp-chart-scatter"
   role="img"
-  aria-label="Scatter chart"
+  aria-label={$i18n.t("views.dashboard.chart.scatter.aria-label")}
 >
   <g transform="translate({PADDING.left}, {PADDING.top})">
     <!-- Grid lines -->

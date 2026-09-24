@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { computeAxisLabelLayout, labelAnchor, shouldRenderLabel, truncateLabel } from "./axisLabels";
@@ -115,7 +116,7 @@
   viewBox="0 0 {width} {height}"
   class="ppp-chart-line"
   role="img"
-  aria-label="Line chart"
+  aria-label={$i18n.t("views.dashboard.chart.line")}
 >
   <g transform="translate({PADDING_LEFT}, {PADDING_TOP})">
     {#if style.showGrid}

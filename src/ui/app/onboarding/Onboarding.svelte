@@ -173,7 +173,7 @@ published: false
     <p
       style={"color: var(--text-muted); margin-top: 2.8125rem; font-size: var(--font-ui-smaller);"}
     >
-      <strong>Psst! 👋</strong> {t("onboarding.hint")}
+      <strong>{t("onboarding.psst")}</strong> {t("onboarding.hint")}
     </p>
     <TabContainer
       options={[tabProjects, tabCommand, tabExplorer]}

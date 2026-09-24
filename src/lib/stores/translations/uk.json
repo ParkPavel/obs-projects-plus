@@ -493,6 +493,16 @@
             "confirm": {
                 "delete": "Видалити",
                 "cancel": "Скасувати"
+            },
+            "configure-field": {
+                "prefix-placeholder": "напр. TASK-"
+            },
+            "create-project": {
+                "no-custom-lists": "Власних списків поки немає",
+                "create-lists-hint": "Створюйте списки на бічній панелі порядку денного подання «Календар»"
+            },
+            "edit-note": {
+                "read-only-fields": "Поля лише для читання"
             }
         },
         "views": {
@@ -592,7 +602,9 @@
                 "records_one": "запис",
                 "records_few": "записи",
                 "records_many": "записів",
-                "records_other": "запису"
+                "records_other": "запису",
+                "drag-column": "Перетягніть, щоб змінити порядок стовпців",
+                "reset-zoom": "Скинути масштаб"
             },
             "calendar": {
                 "name": "Календар",
@@ -689,7 +701,12 @@
                     "invalid": "Невірний формат HEX",
                     "picker": "Палітра кольорів",
                     "quick": "Швидкий вибір",
-                    "hex": "HEX код"
+                    "hex": "HEX код",
+                    "palette": "Палітра вибору кольору",
+                    "saturation-lightness": "Насиченість і світлота",
+                    "save-favorite": "Зберегти в обране",
+                    "apply": "Застосувати колір",
+                    "no-favorites": "Немає обраного"
                 },
                 "popup": {
                     "today": "Сьогодні",
@@ -838,7 +855,15 @@
                         },
                         "no-lists": "Немає користувацьких списків",
                         "create-list": "Створити список"
-                    }
+                    },
+                    "select-icon": "Вибрати значок",
+                    "clear-color": "Скинути колір",
+                    "clear": "Очистити",
+                    "visual": "Візуальний",
+                    "advanced": "Розширений",
+                    "visual-mode-hint": "Візуальний режим — конструктор фільтрів із перетягуванням",
+                    "advanced-mode-hint": "Розширений режим — фільтрація за формулами",
+                    "date-formula-detected": "Виявлено формулу дати"
                 },
                 "heatmap": {
                     "less": "Менше",
@@ -853,7 +878,18 @@
                 "notices": {
                     "renamed": "Нотатку перейменовано: {{name}}",
                     "duplicated": "Нотатку дубльовано на дати: {{count}}"
-                }
+                },
+                "close-error": "Закрити повідомлення про помилку",
+                "timed-events": "Події із зазначеним часом",
+                "multi-day-events": "Багатоденні події та події на весь день",
+                "all-day": "Увесь день",
+                "previous-year": "Попередній рік",
+                "next-year": "Наступний рік",
+                "events-count_one": "{{count}} подія",
+                "events-count_few": "{{count}} події",
+                "events-count_many": "{{count}} подій",
+                "reset-to-original": "Повернути початкове",
+                "reset-to-original-time": "Повернути початковий час"
             },
             "gallery": {
                 "name": "Галерея",
@@ -884,7 +920,8 @@
                 "records_one": "запис",
                 "records_few": "записи",
                 "records_many": "записів",
-                "records_other": "запису"
+                "records_other": "запису",
+                "cover-alt": "Заголовок"
             },
             "dashboard": {
                 "name": "База даних",
@@ -1148,7 +1185,8 @@
                     "prefix": "Префікс для витягнутих полів",
                     "optional": "Необов’язково",
                     "keep-original": "Зберегти вихідне поле-масив",
-                    "config-hint": "Налаштування недоступне"
+                    "config-hint": "Налаштування недоступне",
+                    "formula-placeholder": "напр. fieldA + fieldB * 2"
                 },
                 "database-call": {
                     "empty": "Вигляди не налаштовані",
@@ -1196,7 +1234,12 @@
                     "source-loading": "Завантаження пов’язаного проєкту…",
                     "source-unavailable": "Пов’язаний проєкт недоступний",
                     "source-unavailable-hint": "Проєкт, з якого читає цей блок, не знайдено: {{id}}",
-                    "source-error": "Не вдалося завантажити пов’язаний проєкт"
+                    "source-error": "Не вдалося завантажити пов’язаний проєкт",
+                    "filtered-by-relation": "Відфільтровано за зв’язком",
+                    "linked-by-relation": "Пов’язано через зв’язок",
+                    "filtered-by-canvas": "Відфільтровано за вибором на полотні",
+                    "relation-not-configured": "Зв’язок не налаштовано",
+                    "relation-broken": "Зв’язок порушено"
                 },
                 "group": {
                     "empty": "(порожньо)"
@@ -1278,14 +1321,17 @@
                         "no-sources": "У сховищі немає інших проєктів.",
                         "warn-missing-right": "Праве джерело не завантажене. Перевірте обраний id та доступність сусіднього проєкту.",
                         "warn-no-matches": "Немає збігів по ключу з'єднання. Перевірте імена лівого/правого ключів та перетин значень.",
-                        "warn-mostly-unmatched": "Збіглося лише {{matched}} з {{total}} записів — результати можуть бути спотворені."
+                        "warn-mostly-unmatched": "Збіглося лише {{matched}} з {{total}} записів — результати можуть бути спотворені.",
+                        "aria-label": "Точкова діаграма"
                     },
                     "section": {
                         "display": "Налаштування відображення",
                         "data": "Дані",
                         "scatter": "Точкова діаграма"
                     },
-                    "degenerate-hint": "Усі записи мають те саме значення поля «{{field}}» — діаграма показує лише одну категорію. Додайте різноманітності в дані або змініть поле X."
+                    "degenerate-hint": "Усі записи мають те саме значення поля «{{field}}» — діаграма показує лише одну категорію. Додайте різноманітності в дані або змініть поле X.",
+                    "bar": "Стовпчаста діаграма",
+                    "line": "Лінійний графік"
                 },
                 "comparison": {
                     "empty": "Налаштуйте метрики порівняння",
@@ -1326,7 +1372,8 @@
                         "fmt-percent": "Відсоток",
                         "fmt-currency": "Валюта",
                         "fmt-duration": "Тривалість"
-                    }
+                    },
+                    "field-not-found": "Поле не знайдено"
                 },
                 "agg": {
                     "count_total": "Кількість усіх",
@@ -1374,7 +1421,9 @@
                         "sort-field": "Поле сортування",
                         "sort-field-placeholder": "name",
                         "sort-order": "Порядок"
-                    }
+                    },
+                    "asc": "За зрост.",
+                    "desc": "За спад."
                 },
                 "viewport": {
                     "select": "Оберіть подання для вбудовування",
@@ -1517,6 +1566,15 @@
                 },
                 "selection": {
                     "clear": "Скинути вибір"
+                },
+                "cover-banner": {
+                    "empty": "Немає зображення — відкрийте налаштування, щоб указати джерело."
+                },
+                "divider": {
+                    "label-placeholder": "Підпис роздільника…"
+                },
+                "text": {
+                    "placeholder": "Введіть Markdown…"
                 }
             }
         },
@@ -1667,6 +1725,38 @@
             },
             "note": {
                 "edit": "Редагувати нотатку"
+            },
+            "color-picker": {
+                "saturation-brightness": "Насиченість і яскравість",
+                "hue": "Відтінок"
+            },
+            "datetime-input": {
+                "open-time-picker": "Відкрити вибір часу",
+                "visual-time-picker": "Візуальний вибір часу"
+            },
+            "error-boundary": {
+                "component": "Компонент:",
+                "error": "Помилка:"
+            },
+            "field-control": {
+                "image-placeholder": "https://... або [[Image.png]]"
+            },
+            "image-preview": {
+                "remove-image": "Видалити зображення",
+                "failed": "Не вдалося завантажити зображення",
+                "no-image": "Немає зображення"
+            },
+            "multi-text-input": {
+                "list": "Список варіантів, що редагується"
+            },
+            "settings-menu": {
+                "tabs": "Вкладки налаштувань"
+            },
+            "record-card-view": {
+                "icon-placeholder": "📄  або  file-text"
+            },
+            "time-picker": {
+                "label": "Вибір часу"
             }
         },
         "toolbar": {
@@ -1765,7 +1855,8 @@
             },
             "filters": {
                 "scope-view": "Фільтр вигляду"
-            }
+            },
+            "no-project-yet": "Проєктів поки немає."
         },
         "errors": {
             "missingDataview": {
@@ -2040,7 +2131,8 @@
             "demo": {
                 "folder-failed": "Не вдалося створити теку демопроєкту «{{folder}}». Демопроєкт не створено.",
                 "partial": "Демопроєкт створено, але не вдалося записати нотатки: {{count}}. Список — у консолі."
-            }
+            },
+            "psst": "Псст! 👋"
         },
         "common": {
             "yesterday": "Вчора",
@@ -2078,7 +2170,13 @@
             "add-criterion": "Додати критерій",
             "scroll-left": "Прокрутити вліво",
             "scroll-right": "Прокрутити вправо",
-            "retry": "Повторити"
+            "retry": "Повторити",
+            "loading": "Завантаження...",
+            "drag-to-reorder": "Перетягніть, щоб змінити порядок",
+            "confirm": "Підтвердити",
+            "move-up": "Перемістити вгору",
+            "move-down": "Перемістити вниз",
+            "actions": "Дії"
         },
         "relation-setup": {
             "open": "Зв’язати з базою…",

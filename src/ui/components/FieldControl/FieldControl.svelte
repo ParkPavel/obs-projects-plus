@@ -239,7 +239,7 @@
         type="text"
         class="field-input"
         value={textInputActive ? textInputBuffer : localDisplayValue}
-        placeholder="https://... or [[Image.png]]"
+        placeholder={$i18n.t("components.field-control.image-placeholder")}
         on:focus={onTextFocus}
         on:input={onTextInput}
         on:blur={onTextBlur}

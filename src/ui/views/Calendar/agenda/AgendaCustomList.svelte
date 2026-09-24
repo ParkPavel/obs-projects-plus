@@ -167,7 +167,7 @@
     on:touchmove|passive={longPress.onTouchMove}
   >
     <!-- Grip handle — visible drag affordance, only initiates DnD via svelte-dnd-action dragHandle -->
-    <span class="drag-grip" use:dragHandle aria-label="Drag to reorder">
+    <span class="drag-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
       <Icon name="grip-vertical" size="xs" />
     </span>
     <button 

@@ -493,7 +493,7 @@
       on:change={handleSubFilterChange}
     />
     {#if filterLabel === "relation"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Filtered by relation">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
         {$i18n.t("views.dashboard.database-call.filter-label.relation-named", {
           defaultValue: "Showing records where {{field}} is {{value}}",
           field: linkedSelection?.relationField ?? "",
@@ -501,14 +501,14 @@
         })}
       </span>
     {:else if filterLabel === "relation-idle"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Linked by relation">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.linked-by-relation")}>
         {$i18n.t("views.dashboard.database-call.filter-label.relation-idle", {
           defaultValue: "Linked through {{field}} — select a row to narrow this block",
           field: linkedSelection?.relationField ?? "",
         })}
       </span>
     {:else if filterLabel === "canvas"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label="Filtered by canvas selection">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-canvas")}>
         {$i18n.t("views.dashboard.database-call.filter-label.canvas", { defaultValue: "Filtered by canvas selection" })}
       </span>
     {:else if filterLabel === "broken" && !linkedSelection?.relationField}
@@ -519,13 +519,13 @@
         and configured-then-broken are different situations and now read as
         different sentences.
       -->
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation not configured">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label={$i18n.t("views.dashboard.database-call.relation-not-configured")}>
         {$i18n.t("views.dashboard.database-call.filter-label.relation-unset", {
           defaultValue: "No field chosen to link by — this block shows every record",
         })}
       </span>
     {:else if filterLabel === "broken"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation broken">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label={$i18n.t("views.dashboard.database-call.relation-broken")}>
         {selectionActive
           ? $i18n.t("views.dashboard.database-call.filter-label.broken-v2", {
               defaultValue:

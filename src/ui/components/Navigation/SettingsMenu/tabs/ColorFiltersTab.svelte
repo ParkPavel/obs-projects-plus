@@ -208,7 +208,7 @@
           on:dragend={onDragEnd}
         >
           <!-- Drag handle -->
-          <button class="row-btn row-drag" type="button" tabindex="-1" aria-hidden="true" title="Drag to reorder">
+          <button class="row-btn row-drag" type="button" tabindex="-1" aria-hidden="true" title={$i18n.t("common.drag-to-reorder")}>
             <Icon name="grip-vertical" size="sm" />
           </button>
           <!-- Toggle -->

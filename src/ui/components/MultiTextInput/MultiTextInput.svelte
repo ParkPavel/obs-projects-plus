@@ -162,12 +162,12 @@
     on:consider={handleDndConsider}
     on:finalize={handleDndFinalize}
     role="list"
-    aria-label="Editable options list"
+    aria-label={$i18n.t("components.multi-text-input.list")}
   >
     {#each optionItems as optionItem, i (optionItem.id)}
       <div class="dnd-item-wrapper" role="listitem">
         <div class="dnd-item">
-          <span class="drag-handle" role="button" tabindex="0" title="Drag to reorder">
+          <span class="drag-handle" role="button" tabindex="0" title={$i18n.t("common.drag-to-reorder")}>
             <Icon name="grip-vertical" />
           </span>
           <div class="input-wrapper">

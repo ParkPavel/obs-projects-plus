@@ -703,7 +703,7 @@
                     class="ppp-compute-expr"
                     type="text"
                     list="ppp-pipeline-formula-hints"
-                    placeholder="e.g. fieldA + fieldB * 2"
+                    placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
                     value={col.expression}
                     on:input={(e) => updateComputeColumn(i, ci, col.name, inputVal(e))}
                   />

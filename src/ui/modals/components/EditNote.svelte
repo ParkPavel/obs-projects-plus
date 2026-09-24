@@ -567,7 +567,7 @@
       <div class="field-group readonly-group">
         <div class="group-header-static">
           <Icon name="lock" size="sm" />
-          <span class="group-title">Read-only Fields</span>
+          <span class="group-title">{$i18n.t("modals.edit-note.read-only-fields")}</span>
           <span class="group-count">({readonlyFields.length})</span>
         </div>
         

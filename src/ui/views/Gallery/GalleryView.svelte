@@ -190,7 +190,7 @@
             {@const coverPath = getCoverRealPath($app, record, coverField)}
 
             {#if coverPath}
-              <Image alt="Title" src={coverPath} fit={fitStyle} />
+              <Image alt={$i18n.t("views.gallery.cover-alt")} src={coverPath} fit={fitStyle} />
             {:else}
               <Icon name="image" size="lg" />
             {/if}

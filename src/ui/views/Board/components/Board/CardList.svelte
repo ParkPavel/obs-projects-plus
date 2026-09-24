@@ -105,7 +105,7 @@
       on:click={() => onRecordClick(item)}
       animate:flip={{ duration: flipDurationMs }}
     >
-      <span class="board-card-grip" use:dragHandle aria-label="Drag to reorder">
+      <span class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
         <Icon name="grip-vertical" size="xs" />
       </span>
       <ColorItem {color}>

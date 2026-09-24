@@ -1873,7 +1873,7 @@
     on:wheel={handleZoomWheel}
     on:keydown={handleKeyDown}
     role="application"
-    aria-label="Calendar navigation"
+    aria-label={$i18n.t("views.calendar.navigation.aria-label")}
     tabindex="-1"
   >
     <ViewContent noScroll={interval !== 'month' && interval !== '2weeks' && interval !== 'year'}>
@@ -2026,7 +2026,7 @@
     <div class="loading-overlay">
       <div class="loading-spinner">
         <div class="spinner"></div>
-        <span>Loading...</span>
+        <span>{$i18n.t("common.loading")}</span>
       </div>
     </div>
   {/if}
@@ -2047,7 +2047,7 @@
       {errorMessage}
       <button
         class="error-close"
-        aria-label="Close error message"
+        aria-label={$i18n.t("views.calendar.close-error")}
         on:click|stopPropagation={(e) => {
           e.stopPropagation();
           errorMessage = null;

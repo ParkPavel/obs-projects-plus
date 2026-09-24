@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
     dragHandleZone,
@@ -317,7 +318,7 @@
           {#if isShadowPlaceholder(column)}
             <div class="projects--board--column--placeholder" style={`width: ${getColumnFootprint(column)}px; min-width: ${getColumnFootprint(column)}px; max-width: ${getColumnFootprint(column)}px;`}></div>
           {:else}
-            <span class="board-column-grip" use:dragHandle aria-label="Drag to reorder column">
+            <span class="board-column-grip" use:dragHandle aria-label={$i18n.t("views.board.drag-column")}>
               <Icon name="grip-vertical" size="xs" />
             </span>
             <BoardColumn
@@ -404,7 +405,7 @@
   <button
     class="projects--board--zoom-badge"
     on:click={handleResetZoom}
-    title="Reset zoom"
+    title={$i18n.t("views.board.reset-zoom")}
   >
     {Math.round(zoom * 100)}%
   </button>

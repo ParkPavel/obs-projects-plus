@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher, tick } from "svelte";
   import { MarkdownRenderer } from "obsidian";
   import { app, view } from "src/lib/stores/obsidian";
@@ -56,11 +57,11 @@
         class="ppp-text-widget__textarea"
         on:keydown={handleKeydown}
         rows={6}
-        placeholder="Enter Markdown…"
+        placeholder={$i18n.t("views.dashboard.text.placeholder")}
       />
       <div class="ppp-text-widget__actions">
-        <button class="ppp-text-widget__btn ppp-text-widget__btn--save" on:click={commitEdit}>Save</button>
-        <button class="ppp-text-widget__btn" on:click={cancelEdit}>Cancel</button>
+        <button class="ppp-text-widget__btn ppp-text-widget__btn--save" on:click={commitEdit}>{$i18n.t("common.save")}</button>
+        <button class="ppp-text-widget__btn" on:click={cancelEdit}>{$i18n.t("common.cancel")}</button>
       </div>
     </div>
   {:else}
