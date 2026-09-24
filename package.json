@@ -15,7 +15,7 @@
     "test:integration": "jest --config jest.config.js --testPathPattern=integration",
     "test:performance": "jest --config jest.config.js --testPathPattern=performance",
     "svelte-check": "svelte-check",
-    "lint": "eslint ./src",
+    "lint": "eslint ./src --max-warnings 0",
     "format": "prettier -w ./src",
     "quality:check": "npm run test:coverage && npm run build && npm run lint",
     "benchmark": "jest --config jest.config.js --testPathPattern=performance --verbose"

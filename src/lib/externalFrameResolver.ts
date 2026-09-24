@@ -32,7 +32,6 @@ function warnThrottled(projectId: string, err: unknown): void {
   const last = recentWarnings.get(projectId) ?? 0;
   if (now - last < WARN_THROTTLE_MS) return;
   recentWarnings.set(projectId, now);
-  // eslint-disable-next-line no-console
   console.warn(`[Projects+] resolveExternalFrame(${projectId}) failed`, err);
 }
 

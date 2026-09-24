@@ -26,8 +26,8 @@
  *               touchstart
  *   IDLE ─────────────────► PENDING
  *     │                       │
- *     │    ├─ dy > SCROLL_THRESHOLD (8px) → SCROLLING (native, no-op)
- *     │    ├─ touchend < TAP_DURATION (200ms) → TAP (click forwarded)
+ *     │    ├─ `dy > SCROLL_THRESHOLD` (8px) → SCROLLING (native, no-op)
+ *     │    ├─ `touchend < TAP_DURATION` (200ms) → TAP (click forwarded)
  *     │    └─ HOLD_DELAY (500ms) expires → CONTEXT_MENU
  *
  * Схема состояний жестов (touch на grip-области):
@@ -97,7 +97,7 @@ export const DRAG_HANDLE_SELECTOR = '.drag-grip';
  * Проверяет, является ли touch target частью drag handle (grip).
  * Используется для исключения grip-области из обработки context menu.
  *
- * @param target — EventTarget от touch/mouse event
+ * @param target - EventTarget от touch/mouse event
  * @returns true если target находится внутри drag handle
  */
 export function isDragHandleTarget(target: EventTarget | null): boolean {
@@ -109,7 +109,7 @@ export function isDragHandleTarget(target: EventTarget | null): boolean {
  * Тактильная обратная связь (вибрация) при начале перетаскивания.
  * Безопасно работает на платформах без поддержки Vibration API.
  *
- * @param durationMs — продолжительность вибрации (по умолчанию из конфига)
+ * @param durationMs - продолжительность вибрации (по умолчанию из конфига)
  */
 export function hapticFeedback(durationMs: number = GESTURE_CONFIG.hapticDuration): void {
   try {
@@ -125,7 +125,7 @@ export function hapticFeedback(durationMs: number = GESTURE_CONFIG.hapticDuratio
  * Добавляет визуальную обратную связь при активации drag.
  * Вызывается из transformDraggedElement callback в dndzone.
  *
- * @param el — перетаскивемый HTML-элемент (shadow)
+ * @param el - перетаскивемый HTML-элемент (shadow)
  */
 export function applyDragFeedback(el: HTMLElement | null | undefined): void {
   if (!el) return;
@@ -145,11 +145,11 @@ export interface LongPressHandlers {
 /**
  * Фабрика обработчиков long-press с защитой от:
  * - Grip-зоны (drag handle) — не запускается при касании grip
- * - Scroll — отменяется при вертикальном движении > scrollThreshold
+ * - Scroll — отменяется при вертикальном движении `> scrollThreshold`
  * - Множественных вызовов — корректная очистка таймеров
  *
- * @param onLongPress — callback при успешном long-press
- * @param config — настройки жестов (по умолчанию GESTURE_CONFIG)
+ * @param onLongPress - callback при успешном long-press
+ * @param config - настройки жестов (по умолчанию GESTURE_CONFIG)
  * @returns объект с обработчиками событий и методом очистки
  *
  * @example

@@ -3,8 +3,8 @@
  *
  * Per Revision 3 §5.4 inverse relations are derived at runtime, never
  * written back to YAML. This module builds an in-memory
- * `Map<noteId, Set<noteId>>` from a flat collection of `(sourcePath,
- * frontmatter)` entries.
+ * `Map<noteId, Set<noteId>>` from a flat collection of
+ * `(sourcePath, frontmatter)` entries.
  *
  * Why not reuse `Database/engine/relationResolver`?
  *  - That helper is scoped to a single `DataFrame` (one project's

@@ -1,5 +1,5 @@
 /**
- * P1 — onboarding markup no longer reaches the DOM through {@html}.
+ * P1 — onboarding markup no longer reaches the DOM through `{@html}`.
  *
  * v3.0.7 put presentational markup (`<strong>`, `<a>`) directly into
  * translation strings, and `Onboarding.svelte` rendered them through

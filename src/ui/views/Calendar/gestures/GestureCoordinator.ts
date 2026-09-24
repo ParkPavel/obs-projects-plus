@@ -593,7 +593,7 @@ export class GestureCoordinator {
 
 /**
  * Svelte action для GestureCoordinator
- * Usage: <div use:gestureCoordinator={{onTap: handleTap}}>
+ * Usage: `<div use:gestureCoordinator={{onTap: handleTap}}>`
  */
 export function gestureCoordinator(
   node: HTMLElement,

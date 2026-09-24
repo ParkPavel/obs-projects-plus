@@ -115,7 +115,7 @@ export interface LinkedSelectionConfig {
   readonly sourceWidgetId: string;
   /**
    * Field name in THIS block's data source that contains the relation to the master.
-   * When master selects record X, this block adds filter: { field: relationField, is: X.id }
+   * When master selects record X, this block adds filter: `{ field: relationField, is: X.id }`
    */
   readonly relationField: string;
 }

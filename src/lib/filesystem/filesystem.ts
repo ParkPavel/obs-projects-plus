@@ -41,7 +41,6 @@ export abstract class IFile {
    * user edits made concurrently in the native editor.
    */
   async processFrontMatter(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _fn: (frontmatter: Record<string, unknown>) => void,
   ): Promise<boolean> {
     return false;

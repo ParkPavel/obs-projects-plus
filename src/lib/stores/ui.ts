@@ -7,8 +7,8 @@ import { writable, derived } from "svelte/store";
  * ЕДИНСТВЕННЫЙ источник истины для определения типа устройства
  * Заменяет все 3 предыдущих метода:
  * ❌ isMobileDevice store (старый)
- * ❌ window.innerWidth < 768
- * ❌ @media (max-width: 30rem)
+ * ❌ `window.innerWidth < 768`
+ * ❌ `@media (max-width: 30rem)`
  * 
  * ✅ Единый reactive store
  * ✅ Поддержка touch/mouse независимо от размера экрана

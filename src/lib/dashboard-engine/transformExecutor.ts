@@ -147,7 +147,7 @@ function executeStep(
 /**
  * Expand a field containing an array of objects into multiple rows.
  *
- * Given a record with field "exercises" = [{name:"Bench", sets:3}, {name:"Squat", sets:4}],
+ * Given a record with field "exercises" = `[{name:"Bench", sets:3}, {name:"Squat", sets:4}]`,
  * UNNEST("exercises") produces 2 rows, each inheriting parent fields plus
  * "name" and "sets" as new scalar columns.
  *

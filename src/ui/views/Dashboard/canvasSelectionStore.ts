@@ -182,7 +182,7 @@ function selectionOpToFilterOperator(op: SelectionOp): FilterOperator {
  * - the active selection's source does not match the configured master block.
  *
  * Returns a FilterCondition when the master block has an active selection:
- *   { field: linkedSelection.relationField, operator: "is", value: selectionValue }
+ *   `{ field: linkedSelection.relationField, operator: "is", value: selectionValue }`
  */
 function composeLinkedSelectionFilter(args: {
 	readonly linkedSelection: import("./types").LinkedSelectionConfig | undefined;

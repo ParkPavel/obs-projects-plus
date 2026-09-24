@@ -16,8 +16,8 @@
  * rendered, twice, **with two different header heights**: one run would pass
  * just as happily against a hardcoded offset, and the pair is the whole point.
  *
- * The width test is the other non-tautology: `panel.boxWidth ===
- * container.boxWidth` inside a container narrower than the viewport is exactly
+ * The width test is the other non-tautology: `panel.boxWidth` ===
+ * `container.boxWidth` inside a container narrower than the viewport is exactly
  * what the old `max-width: 100vw` failed.
  *
  * ## What it cannot see, said here rather than implied

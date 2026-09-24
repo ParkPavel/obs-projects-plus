@@ -49,12 +49,12 @@ const DEFAULT_DATE_FORMAT: DateFormatConfig = {
  * 
  * @example
  * // Project with US format
- * const project = { dateFormat: { writeFormat: "MM/DD/YYYY" } };
+ * const project = \{ dateFormat: \{ writeFormat: "MM/DD/YYYY" \} \};
  * formatDateForProject(dayjs("2025-01-18"), project); // "01/18/2025"
  * 
  * @example
  * // Project with time inclusion
- * const project = { dateFormat: { writeFormat: "YYYY-MM-DD", includeTime: true } };
+ * const project = \{ dateFormat: \{ writeFormat: "YYYY-MM-DD", includeTime: true \} \};
  * formatDateForProject(dayjs("2025-01-18 14:30"), project); // "2025-01-18 14:30"
  */
 export function formatDateForProject(
@@ -83,12 +83,12 @@ export function formatDateForProject(
  * 
  * @example
  * // Project with separate display format
- * const project = { 
- *   dateFormat: { 
+ * const project = \{
+ *   dateFormat: \{
  *     writeFormat: "YYYY-MM-DD",
  *     displayFormat: "MMM DD, YYYY"
- *   } 
- * };
+ *   \}
+ * \};
  * formatDateForDisplay(dayjs("2025-01-18"), project); // "Jan 18, 2025"
  */
 export function formatDateForDisplay(
@@ -128,7 +128,7 @@ export function formatDateForDisplay(
  * formatDateForInternal(date); // "2025-01-18"
  * 
  * // Even with a US-formatted project
- * const usProject = { dateFormat: { writeFormat: "MM/DD/YYYY" } };
+ * const usProject = \{ dateFormat: \{ writeFormat: "MM/DD/YYYY" \} \};
  * formatDateForInternal(date); // Still "2025-01-18"
  */
 export function formatDateForInternal(date: dayjs.Dayjs | null): string | null {

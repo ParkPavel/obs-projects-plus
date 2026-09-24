@@ -227,7 +227,7 @@ export class CalendarDataProcessor {
 
   /**
    * Extract time information from record
-   * Implements TIME_PRIORITY_LOGIC: date field time > separate time field
+   * Implements TIME_PRIORITY_LOGIC: date field time \> separate time field
    */
   private extractTimeInfo(
     record: DataRecord,

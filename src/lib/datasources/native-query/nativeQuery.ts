@@ -4,8 +4,8 @@
  * Ticket: #045.2 (M-DATAVIEW-BRIDGE Gap 2)
  *
  * Provides a native SQL-like query surface without a Dataview dependency:
- * `FROM folder|tag WHERE conditions SORT
- * field LIMIT n` — built strictly on top of:
+ * `FROM folder|tag WHERE conditions SORT` +
+ * `field LIMIT n` — built strictly on top of:
  *
  *   - the existing `FolderDataSource` / `TagDataSource` (data acquisition)
  *   - the canonical `filterEvaluator.applyFilter` (single filter engine,
@@ -65,7 +65,7 @@ export type NativeQuerySource =
  *   from   — datasource to read records from (folder or tag)
  *   where  — canonical FilterDefinition; applied via `applyFilter`
  *   sort   — multi-criterion sort with per-criterion `enabled` flag
- *   limit  — non-negative integer; values <= 0 disable the limit
+ *   limit  — non-negative integer; values `<= 0` disable the limit
  *
  * Semantically equivalent to:
  *   FROM <from> [WHERE <where>] [SORT <sort>] [LIMIT <limit>]

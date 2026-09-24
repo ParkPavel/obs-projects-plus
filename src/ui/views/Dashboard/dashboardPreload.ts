@@ -136,7 +136,6 @@ export function createPreloadRunner(
             // Per-source, so one broken project cannot blank the others — the
             // previous version caught at the batch level and published an empty
             // map, taking every sibling source down with it.
-            // eslint-disable-next-line no-console
             console.warn("[Projects+] right-frame preload failed", id, err);
             const message = err instanceof Error ? err.message : String(err);
             return [id, { status: "error", message }] as const;

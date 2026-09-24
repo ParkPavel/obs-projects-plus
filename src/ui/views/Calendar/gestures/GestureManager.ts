@@ -359,7 +359,7 @@ export class GestureManager {
 
 /**
  * Svelte action for gesture handling
- * Usage: <div use:gestures={{onHorizontalSwipe: handleSwipe}}>
+ * Usage: `<div use:gestures={{onHorizontalSwipe: handleSwipe}}>`
  */
 export function gestures(
   node: HTMLElement, 

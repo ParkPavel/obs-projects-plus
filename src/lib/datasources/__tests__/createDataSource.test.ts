@@ -16,12 +16,10 @@ jest.mock("src/lib/datasources/dataview/datasource", () => ({
 }));
 
 // Retrieve the mocked constructors after jest.mock rewrites them.
-/* eslint-disable @typescript-eslint/no-var-requires */
 const { FolderDataSource } = require("src/lib/datasources/folder/datasource");
 const { TagDataSource } = require("src/lib/datasources/tag/datasource");
 const { DataviewDataSource } = require("src/lib/datasources/dataview/datasource");
 const { createDataSource } = require("src/lib/datasources");
-/* eslint-enable @typescript-eslint/no-var-requires */
 
 function makeProject(
   kind: "folder" | "tag" | "dataview"
