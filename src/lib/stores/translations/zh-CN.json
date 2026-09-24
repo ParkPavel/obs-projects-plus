@@ -1312,14 +1312,6 @@
                     "name": "最大条目数量",
                     "desc": "防止意外加载过多条目。"
                 },
-                "link-behavior": {
-                    "name": "链接行为",
-                    "desc": "选择在 Projects 中点击链接时的行为。按下 {{modifier}} 键时点击将执行另一项。",
-                    "options": {
-                        "open-editor": "打开元数据编辑器",
-                        "open-note": "打开目标笔记"
-                    }
-                },
                 "start-of-week": {
                     "name": "一周的第一天",
                     "options": {

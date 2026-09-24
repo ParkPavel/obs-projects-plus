@@ -1,4 +1,4 @@
-import { App, Platform, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting } from "obsidian";
 import Projects from "src/ui/settings/Projects.svelte";
 import Archives from "src/ui/settings/Archives.svelte";
 import { settings } from "src/lib/stores/settings";
@@ -6,7 +6,6 @@ import { get } from "svelte/store";
 import type ProjectsPlugin from "src/main";
 import type {
   FirstDayOfWeek,
-  LinkBehavior,
   ProjectId,
   ProjectsPluginPreferences,
 } from "src/settings/settings";
@@ -112,32 +111,6 @@ export class ProjectsSettingTab extends PluginSettingTab {
             });
           })
       );
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.link-behavior.name"))
-      .setDesc(
-        get(i18n).t("settings.general.link-behavior.desc", {
-          modifier: Platform.isMacOS ? "Cmd" : "Ctrl",
-        })
-      )
-      .addDropdown((dropdown) => {
-        dropdown
-          .addOptions({
-            "open-editor": get(i18n).t(
-              "settings.general.link-behavior.options.open-editor"
-            ),
-            "open-note": get(i18n).t(
-              "settings.general.link-behavior.options.open-note"
-            ),
-          })
-          .setValue(preferences.linkBehavior)
-          .onChange((value) => {
-            save({
-              ...preferences,
-              linkBehavior: value as LinkBehavior,
-            });
-          });
-      });
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.general.start-of-week.name"))
