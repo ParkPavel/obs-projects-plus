@@ -108,6 +108,40 @@ describe("applyRollupColumns", () => {
     expect(out.records[1]!.values["Number of sessions"]).toBe(1);
   });
 
+  // A rollup column is computed, not stored (dataframe.ts): a user who could
+  // edit it would write into the note a value the next fold overwrites. The
+  // column keeps its detected type (a sum stays a Number, so it filters and
+  // sorts as one) and is marked derived, which every editor honours.
+  it("marks the rollup column derived and keeps its detected type", () => {
+    const withProperty = (): DataFrame => {
+      const frame = clients();
+      return { ...frame, fields: [...frame.fields, field("Total pain", DataFieldType.Number)] };
+    };
+    const fieldConfig: FieldConfigRelationMap = {
+      sessions: { relation: { targetProjectId: "p-sessions" } },
+      "Total pain": {
+        rollup: { relationField: "sessions", targetField: "pain", function: "sum" },
+      },
+    };
+    const out = applyRollupColumns(withProperty(), fieldConfig, "p-clients", new Map([["p-sessions", sessions()]]));
+    const column = out.fields.find((f) => f.name === "Total pain");
+    expect(column?.derived).toBe(true);
+    expect(column?.type).toBe(DataFieldType.Number);
+    expect(out.fields.find((f) => f.name === "name")?.derived).toBe(false);
+  });
+
+  it("marks a configured rollup derived even when its target is not available", () => {
+    const frame = clients();
+    const withProperty: DataFrame = { ...frame, fields: [...frame.fields, field("Total pain", DataFieldType.Number)] };
+    const fieldConfig: FieldConfigRelationMap = {
+      sessions: { relation: { targetProjectId: "p-sessions" } },
+      "Total pain": { rollup: { relationField: "sessions", targetField: "pain", function: "sum" } },
+    };
+    // The target project is not loaded (external frames empty).
+    const out = applyRollupColumns(withProperty, fieldConfig, "p-clients", new Map());
+    expect(out.fields.find((f) => f.name === "Total pain")?.derived).toBe(true);
+  });
+
   it("aggregates a numeric target field, not only counts", () => {
     const fieldConfig: FieldConfigRelationMap = {
       sessions: { relation: { targetProjectId: "p-sessions" } },

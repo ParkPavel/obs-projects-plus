@@ -20,6 +20,7 @@
   import { toNumber } from "src/lib/engine/numeric";
   import CellChoiceDropdown from "./CellChoiceDropdown.svelte";
   import RelationPickerPopover from "./RelationPickerPopover.svelte";
+  import RollupCellRenderer from "src/ui/components/RollupCellRenderer/RollupCellRenderer.svelte";
 
   export let field: DataField;
   export let value: Optional<DataValue>;
@@ -41,7 +42,8 @@
   $: cell = cellDisplay(field, value);
   $: editable = !readonly && !field.derived &&
     field.type !== DataFieldType.Formula &&
-    field.type !== DataFieldType.Rollup;
+    field.type !== DataFieldType.Rollup &&
+    !field.typeConfig?.rollup;
   $: isChoice = field.type === DataFieldType.Select || field.type === DataFieldType.Status;
 
   let draft = "";
@@ -117,6 +119,10 @@
   {:else if editing}
     <input bind:this={inputEl} class="ppp-t2-editor" type="text" bind:value={draft}
       on:keydown={handleKeydown} on:blur={() => commitDraft(draft)} />
+  {:else if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}
+    <!-- #045.4: shown by its mode (percent bar, show chips, plain count); read-only like every derived field.
+         A rollup column keeps its detected type (a sum is a Number); its typeConfig.rollup says what it is. -->
+    <RollupCellRenderer {value} fn={field.typeConfig?.rollup?.function ?? ""} modeId={field.typeConfig?.rollup?.mode ?? ""} />
   {:else if cell.kind === "empty"}
     <span class="ppp-t2-empty" aria-hidden="true">—</span>
   {:else if cell.kind === "check"}

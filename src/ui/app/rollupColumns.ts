@@ -79,6 +79,14 @@ export function applyRollupColumns(
     const rollup = cfg?.rollup;
     if (!rollup) continue;
 
+    // Computed, not stored (dataframe.ts): derived keeps every editor off the
+    // column — also while its target is unresolved or not loaded yet, when no
+    // value is folded in. Its detected type stays, so a sum filters as a Number.
+    // A frame with nothing to mark is returned as it came (identity is relied on).
+    if (out.fields.some((field) => field.name === fieldName && !field.derived)) {
+      out = { ...out, fields: out.fields.map((field) => (field.name === fieldName ? { ...field, derived: true } : field)) };
+    }
+
     const targetProjectId = resolveRollupTargetProjectId(rollup, fieldConfig);
     if (!targetProjectId) continue;
 

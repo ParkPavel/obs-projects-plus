@@ -12,6 +12,7 @@
   import Date from "./Date.svelte";
   import Datetime from "./Datetime.svelte";
   import Number from "./Number.svelte";
+  import RollupCellRenderer from "src/ui/components/RollupCellRenderer/RollupCellRenderer.svelte";
 
   export let fields: DataField[];
   export let record: DataRecord;
@@ -26,7 +27,14 @@
       <div class="setting-item-description" style:margin-bottom={"0.25rem"}>
         {field.name}
       </div>
-      {#if field.repeated}
+      <!-- A rollup keeps the type detected from its values (a sum is a Number), so it is
+           recognised by its typeConfig.rollup before any type branch. -->
+      {#if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}
+        <span class="ppp-card-meta-derived" title={field.type}>
+          <span class="ppp-card-meta-derived-icon" aria-hidden="true">ƒ</span>
+          <RollupCellRenderer {value} fn={field.typeConfig?.rollup?.function ?? ""} modeId={field.typeConfig?.rollup?.mode ?? ""} />
+        </span>
+      {:else if field.repeated}
         {#if field.type === DataFieldType.String}
           <Tags {field} {value} />
         {/if}
@@ -60,7 +68,7 @@
             {String(value)}
           </span>
         {/if}
-      {:else if field.type === DataFieldType.Formula || field.type === DataFieldType.Rollup}
+      {:else if field.type === DataFieldType.Formula}
         <span class="ppp-card-meta-derived" title={field.type}>
           <span class="ppp-card-meta-derived-icon" aria-hidden="true">ƒ</span>
           {#if typeof value === "number"}
