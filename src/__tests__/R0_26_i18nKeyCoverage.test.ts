@@ -52,11 +52,13 @@ import * as fs from "fs";
 import * as path from "path";
 import { collectSourceFiles, SRC_ROOT } from "./support/cssScan";
 
-// ── en.json / ru.json, loaded once ──────────────────────────────
+// ── the four locale bundles, loaded once ────────────────────────
 
 type Bundle = Record<string, unknown>;
 
-function loadBundle(locale: "en" | "ru"): Bundle {
+type Locale = "en" | "ru" | "uk" | "zh-CN";
+
+function loadBundle(locale: Locale): Bundle {
   const file = path.join(SRC_ROOT, "lib", "stores", "translations", `${locale}.json`);
   // ru.json carries a UTF-8 BOM; Node's `fs.readFileSync(..., "utf8")` does not
   // strip it (unlike the bundler's JSON loader), and a leading U+FEFF makes
@@ -251,12 +253,12 @@ export function extractStaticKeys(text: string): FoundKey[] {
 
 // ── Pure function 2: plural-aware bundle resolution ──────────────
 
-type Locale = "en" | "ru";
-
 /** The CLDR categories an integer count can select — what a `{ count }` call needs when the number is not known statically. */
 const INTEGER_PLURAL_CATEGORIES: Record<Locale, readonly string[]> = {
   en: ["one", "other"],
   ru: ["one", "few", "many"],
+  uk: ["one", "few", "many"],
+  "zh-CN": ["other"],
 };
 
 function getAtPath(bundle: unknown, parts: readonly string[]): unknown {
@@ -444,6 +446,24 @@ const ALL_FOUND: (FoundKey & { file: string })[] = SOURCE_FILES.flatMap((file) =
 
 const EN = loadBundle("en");
 const RU = loadBundle("ru");
+const OTHER_LOCALES = ["uk", "zh-CN"] as const;
+
+/** Every string leaf of a bundle as a dotted path. */
+function leaves(bundle: unknown, prefix = ""): string[] {
+  if (bundle === null || typeof bundle !== "object") return [];
+  return Object.entries(bundle as Record<string, unknown>).flatMap(([k, v]) => {
+    const key = prefix ? `${prefix}.${k}` : k;
+    return typeof v === "string" ? [key] : leaves(v, key);
+  });
+}
+
+const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+
+/** Placeholders a locale leaves out on purpose, by key. */
+const PLACEHOLDER_OMISSIONS: Partial<Record<Locale, Record<string, readonly string[]>>> = {
+  // The Chinese date range puts the year first and has no English separator.
+  "zh-CN": { "views.calendar.interval": ["en_separator"] },
+};
 
 describe("R0.26 i18n key coverage — the real tree", () => {
   it("scanned a non-trivial number of call sites (a vacuous scan must not pass)", () => {
@@ -460,6 +480,50 @@ describe("R0.26 i18n key coverage — the real tree", () => {
       ALL_FOUND.filter(({ key, count }) => !resolvesInBundle(RU, key, "ru", count)).map(({ file, key }) => `${key} (${file})`)
     )].sort();
     expect(missing).toEqual([]);
+  });
+
+  // uk and zh-CN used to miss 226 keys each, so their readers saw English
+  // mid-interface. ru.json is the complete reference (the test above holds it
+  // to every static call); the other locales must carry each of its keys, a
+  // plural key in their own integer categories.
+  it.each(OTHER_LOCALES)("every statically-called key resolves in %s.json for the count it passes", (locale) => {
+    const bundle = loadBundle(locale);
+    const missing = [...new Set(
+      ALL_FOUND.filter(({ key, count }) => !resolvesInBundle(bundle, key, locale, count)).map(({ file, key }) => `${key} (${file})`)
+    )].sort();
+    expect(missing).toEqual([]);
+  });
+
+  it.each(OTHER_LOCALES)("%s.json carries every key ru.json carries", (locale) => {
+    const bundle = loadBundle(locale);
+    const missing = [...new Set(leaves(RU).flatMap((key) => {
+      const base = key.replace(PLURAL_SUFFIX, "");
+      if (base === key) return resolvesInBundle(bundle, key, locale, undefined) ? [] : [key];
+      return resolvesInBundle(bundle, base, locale, "dynamic") ? [] : [`${base} (plural)`];
+    }))].sort();
+    expect(missing).toEqual([]);
+  });
+
+  it.each(OTHER_LOCALES)("every %s.json string keeps the placeholders of its ru.json counterpart", (locale) => {
+    const bundle = loadBundle(locale);
+    // A placeholder is compared by name ({{from, datetime}} → from); a
+    // formatter may differ between languages, the variable may not.
+    const tokens = (text: unknown, key: string): string =>
+      typeof text === "string"
+        ? [...text.matchAll(/\{\{\s*([\w.]+)[^}]*\}\}|(\$t\([^)]*\))/g)]
+            .map((m) => m[1] ?? (m[2] as string).replace(/\s+/g, ""))
+            .filter((name) => !(PLACEHOLDER_OMISSIONS[locale]?.[key] ?? []).includes(name))
+            .sort()
+            .join(" ")
+        : "";
+    const drift = leaves(bundle).flatMap((key) => {
+      const ruText = getAtPath(RU, key.split("."));
+      if (typeof ruText !== "string") return [];
+      const own = tokens(getAtPath(bundle, key.split(".")), key);
+      const source = tokens(ruText, key);
+      return own === source ? [] : [`${key}: ${own || "∅"} ≠ ${source || "∅"}`];
+    });
+    expect(drift).toEqual([]);
   });
 
   it("every statically-called key with no defaultValue resolves in en.json", () => {
