@@ -16,7 +16,8 @@
   import { i18n } from "src/lib/stores/i18n";
   import { get } from "svelte/store";
   import { Icon } from "obsidian-svelte";
-  import { getOperatorsForField, operatorNeedsValue, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
+  import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
+  import { operatorNeedsValue } from "src/settings/base/settings";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";

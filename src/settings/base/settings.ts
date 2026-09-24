@@ -212,6 +212,14 @@ export function getFilterOperatorType(
   return op ? filterOperatorTypes[op] : undefined;
 }
 
+/**
+ * Whether an operator takes a value input. The unary operators are the single
+ * source of truth; an unknown (legacy) operator is treated as taking a value.
+ */
+export function operatorNeedsValue(op: FilterOperator): boolean {
+  return getFilterOperatorType(op) !== "unary";
+}
+
 export interface FilterCondition {
   readonly field: string;
   readonly operator: FilterOperator;

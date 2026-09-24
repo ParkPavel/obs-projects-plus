@@ -11,7 +11,8 @@
     FilterOperator,
   } from "../../../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
-  import { getOperatorsForField, operatorNeedsValue, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+  import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+  import { operatorNeedsValue } from "src/settings/base/settings";
   import { COLOR_RULE_DEFAULT } from "src/lib/stores/palettes";
 
   function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }

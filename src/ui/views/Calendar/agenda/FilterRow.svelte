@@ -6,7 +6,8 @@
   import { app } from 'src/lib/stores/obsidian';
   import { DataFieldType, type DataField, type DataRecord } from 'src/lib/dataframe/dataframe';
   import type { AgendaFilter, AgendaFilterOperator } from 'src/settings/v3/settings';
-  import { getOperatorsForFieldType, operatorNeedsValue } from './operatorHelpers';
+  import { getOperatorsForFieldType } from './operatorHelpers';
+  import { operatorNeedsValue } from 'src/settings/base/settings';
   import DateFormulaInput from './DateFormulaInput.svelte';
   
   const dispatch = createEventDispatcher<{

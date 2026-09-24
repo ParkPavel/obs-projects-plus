@@ -3,7 +3,6 @@
  * 
  * Helper functions for working with filter operators:
  * - Get available operators for field types
- * - Determine if operator needs a value
  * - Check if operator accepts multiple values
  */
 
@@ -135,34 +134,6 @@ export function getOperatorsForFieldType(
     default:
       return base;
   }
-}
-
-/**
- * Check if operator needs a value input
- * Some operators are unary (e.g., is-empty, is-today) and don't need a value
- */
-export function operatorNeedsValue(operator: AgendaFilterOperator): boolean {
-  const unaryOps: AgendaFilterOperator[] = [
-    'is-empty',
-    'is-not-empty',
-    'is-checked',
-    'is-not-checked',
-    'is-today',
-    'is-this-week',
-    'is-this-month',
-    'is-this-quarter',
-    'is-this-year',
-    'is-past-week',
-    'is-past-month',
-    'is-past-year',
-    'is-next-week',
-    'is-next-month',
-    'is-next-year',
-    'is-overdue',
-    'is-upcoming',
-  ];
-
-  return !unaryOps.includes(operator);
 }
 
 /**

@@ -1,8 +1,8 @@
 /**
  * Filter/Sort/Color helpers for SettingsMenu tabs
  * 
- * Provides operator filtering by field type, display labels,
- * and unary operator detection for the general project filter system.
+ * Provides operator filtering by field type and display labels
+ * for the general project filter system.
  */
 
 import { get } from 'svelte/store';
@@ -39,20 +39,6 @@ export function getOperatorsForField(fieldType: string): FilterOperator[] {
     default:
       return [...base, 'is', 'is-not', 'contains', 'not-contains', 'starts-with', 'ends-with'];
   }
-}
-
-/**
- * Operator needs a value input? Returns false for unary operators.
- */
-export function operatorNeedsValue(operator: FilterOperator): boolean {
-  const unary: FilterOperator[] = [
-    'is-empty', 'is-not-empty', 'is-checked', 'is-not-checked',
-    'is-today', 'is-this-week', 'is-this-month', 'is-this-quarter', 'is-this-year',
-    'is-past-week', 'is-past-month', 'is-past-year',
-    'is-next-week', 'is-next-month', 'is-next-year',
-    'is-overdue', 'is-upcoming',
-  ];
-  return !unary.includes(operator);
 }
 
 /**
