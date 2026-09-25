@@ -3,6 +3,7 @@
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { computeAxisLabelLayout, labelAnchor, shouldRenderLabel, truncateLabel } from "./axisLabels";
+  import { axisTicks, gappedPath, scaleOf, scaleY, seriesScales, type AxisScale } from "./chartScale";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -17,13 +18,14 @@
   const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
   const PADDING_TOP = 20;
-  const PADDING_RIGHT = 20;
   const PADDING_LEFT = 50;
   const LABEL_FONT = 10;
 
   $: labels = data.labels;
-  $: allValues = data.series.flatMap((s) => s.values).filter((v): v is number => v != null);
-  $: maxVal = Math.max(...allValues, 1);
+  // 3.6.0 (chartScale.ts): scales span 0, series on the right axis get their
+  // own, and a missing value is a gap in the line, not a point at 0.
+  $: scales = seriesScales(data.series);
+  $: PADDING_RIGHT = scales.right ? 50 : 20;
 
   // #096.2 — density-based label layout replaces the old `/8` magic skip.
   $: maxLabelChars = labels.reduce((m, l) => Math.max(m, l.length), 0);
@@ -47,8 +49,8 @@
   // change patched the viewBox and nothing else. Same fix PieChart already
   // uses for CX/CY/R: the values are passed in rather than closed over, so the
   // template call site names them and the compiler sees the dependency.
-  function yPos(val: number | null, plotHeight: number, maxValue: number): number {
-    return plotHeight - ((val ?? 0) / maxValue) * plotHeight;
+  function yPos(val: number, plotHeight: number, scale: AxisScale): number {
+    return scaleY(val, plotHeight, scale);
   }
 
   function xPos(index: number, step: number): number {
@@ -60,48 +62,58 @@
     smooth: boolean,
     step: number,
     plotHeight: number,
-    maxValue: number
+    scale: AxisScale
   ): string {
-    const points = values.map((v, i) => ({
-      x: xPos(i, step),
-      y: yPos(v, plotHeight, maxValue),
-    }));
-
-    if (points.length === 0) return "";
-
     if (!smooth) {
-      return "M " + points.map((p) => `${p.x},${p.y}`).join(" L ");
+      return gappedPath(values, (i) => xPos(i, step), (v) => yPos(v, plotHeight, scale));
     }
-
-    // Catmull-Rom → cubic bezier approximation
-    let d = `M ${points[0]!.x},${points[0]!.y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[Math.max(i - 1, 0)]!;
-      const p1 = points[i]!;
-      const p2 = points[i + 1]!;
-      const p3 = points[Math.min(i + 2, points.length - 1)]!;
-
-      const cp1x = p1.x + (p2.x - p0.x) / 6;
-      const cp1y = p1.y + (p2.y - p0.y) / 6;
-      const cp2x = p2.x - (p3.x - p1.x) / 6;
-      const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-      d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
-    }
-    return d;
+    // Catmull-Rom → cubic bezier, within each run of values between gaps.
+    return runs(values).map((run) => {
+      const pts = run.map(({ i, v }) => ({ x: xPos(i, step), y: yPos(v, plotHeight, scale) }));
+      let d = `M ${pts[0]!.x},${pts[0]!.y}`;
+      for (let k = 0; k < pts.length - 1; k++) {
+        const p0 = pts[Math.max(k - 1, 0)]!;
+        const p1 = pts[k]!;
+        const p2 = pts[k + 1]!;
+        const p3 = pts[Math.min(k + 2, pts.length - 1)]!;
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+      }
+      return d;
+    }).join(" ");
   }
 
+  /** Consecutive values between gaps, with their indices. */
+  function runs(values: (number | null)[]): Array<Array<{ i: number; v: number }>> {
+    const out: Array<Array<{ i: number; v: number }>> = [];
+    let run: Array<{ i: number; v: number }> = [];
+    values.forEach((v, i) => {
+      if (v == null) {
+        if (run.length > 0) out.push(run);
+        run = [];
+      } else run.push({ i, v });
+    });
+    if (run.length > 0) out.push(run);
+    return out;
+  }
+
+  /** The area under each run, closed to the zero line of its scale. */
   function areaPath(
     values: (number | null)[],
-    smooth: boolean,
     step: number,
     plotHeight: number,
-    maxValue: number
+    scale: AxisScale
   ): string {
-    const linePath = buildPath(values, smooth, step, plotHeight, maxValue);
-    if (!linePath) return "";
-    const lastX = xPos(values.length - 1, step);
-    return `${linePath} L ${lastX},${plotHeight} L 0,${plotHeight} Z`;
+    const zero = yPos(0, plotHeight, scale);
+    return runs(values).map((run) => {
+      const pts = run.map(({ i, v }) => `${xPos(i, step)},${yPos(v, plotHeight, scale)}`);
+      const first = xPos(run[0]!.i, step);
+      const last = xPos(run[run.length - 1]!.i, step);
+      return `M ${first},${zero} L ${pts.join(" L ")} L ${last},${zero} Z`;
+    }).join(" ");
   }
 
   function seriesColor(index: number): string {
@@ -138,13 +150,13 @@
           </linearGradient>
         </defs>
         <path
-          d={areaPath(series.values, !!style.smooth, stepX, plotH, maxVal)}
+          d={areaPath(series.values, stepX, plotH, scaleOf(series, scales))}
           fill="url(#grad-{si})"
         />
       {/if}
 
       <path
-        d={buildPath(series.values, !!style.smooth, stepX, plotH, maxVal)}
+        d={buildPath(series.values, !!style.smooth, stepX, plotH, scaleOf(series, scales))}
         fill="none"
         stroke={seriesColor(si)}
         stroke-width="2"
@@ -155,7 +167,7 @@
           {@const label = labels[i] ?? ""}
           {@const isSelected = selectedLabel != null && label === selectedLabel}
           <circle
-            cx={xPos(i, stepX)} cy={yPos(val, plotH, maxVal)}
+            cx={xPos(i, stepX)} cy={yPos(val, plotH, scaleOf(series, scales))}
             r={isSelected ? 5 : 3}
             fill={seriesColor(si)}
             stroke={isSelected ? "var(--interactive-accent)" : "none"}
@@ -176,7 +188,7 @@
           />
           {#if style.showValues}
             <text
-              x={xPos(i, stepX)} y={yPos(val, plotH, maxVal) - 8}
+              x={xPos(i, stepX)} y={yPos(val, plotH, scaleOf(series, scales)) - 8}
               text-anchor="middle"
               fill="var(--text-muted)" font-size="10"
             >{val}</text>
@@ -201,6 +213,21 @@
     <!-- Axes -->
     <line x1={0} y1={plotH} x2={plotW} y2={plotH} stroke="var(--text-muted)" />
     <line x1={0} y1={0} x2={0} y2={plotH} stroke="var(--text-muted)" />
+    {#if scales.left.min < 0}
+      <line x1={0} y1={yPos(0, plotH, scales.left)} x2={plotW} y2={yPos(0, plotH, scales.left)}
+        stroke="var(--text-muted)" stroke-dasharray="2,2" class="ppp-chart-zero" />
+    {/if}
+    {#each axisTicks(scales.left) as tick}
+      <text x={-6} y={yPos(tick, plotH, scales.left) + 3} text-anchor="end"
+        fill="var(--text-muted)" font-size={LABEL_FONT} class="ppp-chart-tick">{tick}</text>
+    {/each}
+    {#if scales.right}
+      <line x1={plotW} y1={0} x2={plotW} y2={plotH} stroke="var(--text-muted)" class="ppp-chart-axis-right" />
+      {#each axisTicks(scales.right) as tick}
+        <text x={plotW + 6} y={yPos(tick, plotH, scales.right) + 3} text-anchor="start"
+          fill="var(--text-muted)" font-size={LABEL_FONT} class="ppp-chart-tick">{tick}</text>
+      {/each}
+    {/if}
   </g>
 </svg>
 

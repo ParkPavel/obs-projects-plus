@@ -1332,7 +1332,20 @@
                     },
                     "degenerate-hint": "所有记录的“{{field}}”字段值都相同 — 图表只显示一个类别。请丰富数据或更换 X 字段。",
                     "bar": "柱状图",
-                    "line": "折线图"
+                    "line": "折线图",
+                    "series": {
+                        "title": "更多系列",
+                        "add": "添加系列",
+                        "remove": "删除系列",
+                        "label": "名称",
+                        "field": "字段",
+                        "x-field": "来源中的 X 字段",
+                        "same-x": "— 与图表相同 —",
+                        "this-chart": "本图表数据",
+                        "axis": "坐标轴",
+                        "axis-left": "左侧",
+                        "axis-right": "右侧"
+                    }
                 },
                 "comparison": {
                     "empty": "配置对比指标",

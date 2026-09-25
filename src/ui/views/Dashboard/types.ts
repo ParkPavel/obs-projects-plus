@@ -429,6 +429,27 @@ export interface ChartConfig {
   readonly yAxis: ChartAxisY;
   readonly style: ChartStyle;
   readonly groupMode?: "values" | "semantic";
+  /**
+   * 3.6.0 — more lines beside `yAxis`, each with its own field, aggregation,
+   * project and axis. Absent in every config stored before: one series.
+   */
+  readonly series?: readonly ChartSeriesConfig[];
+}
+
+/** One extra series of a chart (3.6.0). */
+export interface ChartSeriesConfig {
+  readonly id: string;
+  /** Legend name; the field name when absent. */
+  readonly label?: string;
+  readonly property: string | "count";
+  readonly aggregation: ColumnAggregation;
+  /** Another project to read (preloaded like a join's right frame); this chart's input when absent. */
+  readonly dataProjectId?: string;
+  /** The x field in that source; the chart's x field when absent. */
+  readonly xProperty?: string;
+  /** Which y axis the series is read against. Left when absent. */
+  readonly axis?: "left" | "right";
+  readonly cumulative?: boolean;
 }
 
 export interface ChartAxisX {
@@ -469,6 +490,8 @@ export interface ChartSeries {
   readonly name: string;
   readonly values: (number | null)[];
   readonly color?: string;
+  /** 3.6.0: the y axis this series is scaled against; left when absent. */
+  readonly axis?: "left" | "right";
 }
 
 // ── Stats Types ──────────────────────────────────────────────

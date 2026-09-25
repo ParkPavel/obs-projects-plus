@@ -23,9 +23,8 @@ import type { ExternalSourceState } from "../dashboardPreload";
 import type { ChartConfig, StatsConfig, WidgetDefinition } from "../types";
 import { applyWidgetScope, type WidgetScopeResult } from "./widgetScope";
 import {
-  asChartConfig,
-  asStatsConfig,
-  chartRightFrameOf,
+  chartFramesOf,
+  widgetConfigsOf,
   resolveDbCallView,
   type BlockSource,
   type DbCallView,
@@ -58,6 +57,7 @@ export interface HostFrames {
   readonly chartConfig: ChartConfig | null;
   readonly statsConfig: StatsConfig | null;
   readonly chartRightFrame: DataFrame | null;
+  readonly chartSeriesFrames: ReadonlyMap<string, DataFrame>;
   readonly dbCall: DbCallView;
   /** #137: the pipeline editor is configured against what the pipeline receives. */
   readonly pipelineSource: DataFrame;
@@ -84,8 +84,7 @@ export function computeHostFrames(input: HostFramesInput): HostFrames {
     ? transformResult.meta.inputRowCount
     : scope.frame.records.length;
 
-  const chartConfig = widget.type === "chart" ? asChartConfig(widget.config) : null;
-  const statsConfig = widget.type === "stats" ? asStatsConfig(widget.config) : null;
+  const { chartConfig, statsConfig } = widgetConfigsOf(widget);
 
   // NPLAN-V7.1 / #136: per-widget independent source, resolved as one value.
   const dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);
@@ -98,7 +97,7 @@ export function computeHostFrames(input: HostFramesInput): HostFrames {
     pipelineInputRowCount,
     chartConfig,
     statsConfig,
-    chartRightFrame: chartRightFrameOf(widget.type, chartConfig, rightFrames),
+    ...chartFramesOf(widget.type, chartConfig, rightFrames),
     dbCall,
     pipelineSource: dbCall.isExternal ? dbCall.frame : scope.frame,
     otherProject,

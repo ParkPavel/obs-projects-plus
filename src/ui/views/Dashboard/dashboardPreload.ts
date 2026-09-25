@@ -38,6 +38,11 @@ export function collectReferencedSourceIds(
     // 3.6.0: a chart or stats block reading another project.
     const dataProjectId = dataProjectIdOf(w);
     if ((w.type === "chart" || w.type === "stats") && dataProjectId) ids.add(dataProjectId);
+    if (w.type === "chart") {
+      for (const s of (w.config as { series?: Array<{ dataProjectId?: string }> }).series ?? []) {
+        if (s.dataProjectId) ids.add(s.dataProjectId);
+      }
+    }
   }
 
   // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.4 (R-11 mitigation).

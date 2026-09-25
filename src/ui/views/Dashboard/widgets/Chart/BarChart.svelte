@@ -3,6 +3,7 @@
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { computeAxisLabelLayout, shouldRenderLabel, truncateLabel } from "./axisLabels";
+  import { axisScale, axisTicks, gappedPath, scaleOf, scaleY, seriesScales, type AxisScale } from "./chartScale";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -19,13 +20,19 @@
   const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
   const PADDING_TOP = 20;
-  const PADDING_RIGHT = 20;
   const PADDING_LEFT = 50;
   const LABEL_FONT = 11;
 
   $: labels = data.labels;
   $: values = data.series[0]?.values ?? [];
-  $: maxVal = Math.max(...values.map((v) => v ?? 0), 1);
+  // 3.6.0 (chartScale.ts): bars grow from the zero line, up or down; a missing
+  // value draws no bar; series after the first are lines over the bars on
+  // their own axis (a combo chart: income bars, visits line).
+  $: scales = seriesScales(data.series);
+  $: barScale = data.series[0] ? scaleOf(data.series[0], scales) : axisScale([]);
+  $: lineSeries = horizontal ? [] : data.series.slice(1);
+  $: PADDING_RIGHT = scales.right && !horizontal ? 50 : 20;
+  $: maxVal = barScale.max;
 
   // #096.2 — vertical bars previously had no skip/rotate, so dense category
   // axes overlapped. Reuse the shared density helper (horizontal bars label
@@ -73,12 +80,12 @@
   // call expression names, not what the function reaches into, so a width
   // change never reran these. Values are passed in rather than closed over
   // (the fix PieChart already uses for CX/CY/R) so the call site names them.
-  function yPos(val: number, plotHeight: number, maxValue: number): number {
-    return plotHeight - (val / maxValue) * plotHeight;
+  function yPos(val: number, plotHeight: number, scale: AxisScale): number {
+    return scaleY(val, plotHeight, scale);
   }
 
-  function xPos(val: number, maxValue: number, plotWidth: number): number {
-    return (val / maxValue) * plotWidth;
+  function xPos(val: number, scale: AxisScale, plotWidth: number): number {
+    return ((val - scale.min) / (scale.max - scale.min)) * plotWidth;
   }
 
   function barColor(index: number): string {
@@ -121,14 +128,14 @@
       {#each gridLines as gl}
         {#if horizontal}
           <line
-            x1={xPos(gl, maxVal, plotW)} y1={0}
-            x2={xPos(gl, maxVal, plotW)} y2={plotH}
+            x1={xPos(gl, barScale, plotW)} y1={0}
+            x2={xPos(gl, barScale, plotW)} y2={plotH}
             stroke="var(--background-modifier-border)" stroke-dasharray="3,3"
           />
         {:else}
           <line
-            x1={0} y1={yPos(gl, plotH, maxVal)}
-            x2={plotW} y2={yPos(gl, plotH, maxVal)}
+            x1={0} y1={yPos(gl, plotH, barScale)}
+            x2={plotW} y2={yPos(gl, plotH, barScale)}
             stroke="var(--background-modifier-border)" stroke-dasharray="3,3"
           />
         {/if}
@@ -136,13 +143,17 @@
     {/if}
 
     {#each labels as label, i}
-      {@const val = values[i] ?? 0}
+      {@const val = values[i] ?? null}
       {@const isSelected = selectedLabel != null && label === selectedLabel}
-      {#if horizontal}
+      {#if val == null}
+        <!-- A missing value draws no bar: an empty slot, not a zero. -->
+      {:else if horizontal}
         {@const bY = i * (barWidth + barGap)}
-        {@const bW = xPos(val, maxVal, plotW)}
+        {@const x0 = xPos(0, barScale, plotW)}
+        {@const xv = xPos(val, barScale, plotW)}
+        {@const bW = Math.abs(xv - x0)}
         <rect
-          x={0} y={bY}
+          x={Math.min(x0, xv)} y={bY}
           width={bW} height={barWidth}
           fill={barColor(i)} rx="2"
           opacity={barOpacity(label)}
@@ -165,16 +176,18 @@
         {/if}
         {#if style.showValues}
           <text
-            x={bW + 4} y={bY + barWidth / 2}
+            x={Math.max(x0, xv) + 4} y={bY + barWidth / 2}
             dominant-baseline="middle"
             fill="var(--text-muted)" font-size="10"
           >{val}</text>
         {/if}
       {:else}
         {@const bX = i * (barWidth + barGap)}
-        {@const bH = (val / maxVal) * plotH}
+        {@const y0 = yPos(0, plotH, barScale)}
+        {@const yv = yPos(val, plotH, barScale)}
+        {@const bH = Math.abs(y0 - yv)}
         <rect
-          x={bX} y={plotH - bH}
+          x={bX} y={Math.min(y0, yv)}
           width={barWidth} height={bH}
           fill={barColor(i)} rx="2"
           opacity={barOpacity(label)}
@@ -198,7 +211,7 @@
         {/if}
         {#if style.showValues}
           <text
-            x={bX + barWidth / 2} y={plotH - bH - 4}
+            x={bX + barWidth / 2} y={Math.min(y0, yv) - 4}
             text-anchor="middle"
             fill="var(--text-muted)" font-size="10"
           >{val}</text>
@@ -206,9 +219,27 @@
       {/if}
     {/each}
 
+    {#each lineSeries as series, k}
+      <path
+        d={gappedPath(series.values, (i) => i * (barWidth + barGap) + barWidth / 2, (v) => yPos(v, plotH, scaleOf(series, scales)))}
+        fill="none" stroke={barColor(k + 1)} stroke-width="2" class="ppp-chart-bar-line"
+      />
+    {/each}
+
     <!-- Axes -->
     <line x1={0} y1={plotH} x2={plotW} y2={plotH} stroke="var(--text-muted)" />
     <line x1={0} y1={0} x2={0} y2={plotH} stroke="var(--text-muted)" />
+    {#if !horizontal && barScale.min < 0}
+      <line x1={0} y1={yPos(0, plotH, barScale)} x2={plotW} y2={yPos(0, plotH, barScale)}
+        stroke="var(--text-muted)" class="ppp-chart-zero" />
+    {/if}
+    {#if !horizontal && scales.right}
+      <line x1={plotW} y1={0} x2={plotW} y2={plotH} stroke="var(--text-muted)" class="ppp-chart-axis-right" />
+      {#each axisTicks(scales.right) as tick}
+        <text x={plotW + 6} y={yPos(tick, plotH, scales.right) + 3} text-anchor="start"
+          fill="var(--text-muted)" font-size={LABEL_FONT} class="ppp-chart-tick">{tick}</text>
+      {/each}
+    {/if}
   </g>
 </svg>
 

@@ -199,6 +199,34 @@ export function asStatsConfig(cfg: Record<string, unknown>): StatsConfig | null 
  * host earns its budget by not accumulating helpers, and this one is entirely
  * knowledge about what a `chart` config means.
  */
+/** A widget's typed chart and stats configs (null for other types or shapes). */
+export function widgetConfigsOf(widget: WidgetDefinition): { chartConfig: ChartConfig | null; statsConfig: StatsConfig | null } {
+  return {
+    chartConfig: widget.type === "chart" ? asChartConfig(widget.config) : null,
+    statsConfig: widget.type === "stats" ? asStatsConfig(widget.config) : null,
+  };
+}
+
+/**
+ * The preloaded frames a chart reads beside its input: the correlation's right
+ * frame, and (3.6.0) each extra series' other project. A series whose project
+ * is not loaded is simply absent, and its line is all gaps.
+ */
+export function chartFramesOf(
+  type: string,
+  chartConfig: ChartConfig | null,
+  rightFrames: ReadonlyMap<string, DataFrame>
+): { chartRightFrame: DataFrame | null; chartSeriesFrames: ReadonlyMap<string, DataFrame> } {
+  const chartSeriesFrames = new Map<string, DataFrame>();
+  if (type === "chart") {
+    for (const s of chartConfig?.series ?? []) {
+      const f = s.dataProjectId ? rightFrames.get(s.dataProjectId) : undefined;
+      if (f && s.dataProjectId) chartSeriesFrames.set(s.dataProjectId, f);
+    }
+  }
+  return { chartRightFrame: chartRightFrameOf(type, chartConfig, rightFrames), chartSeriesFrames };
+}
+
 export function chartRightFrameOf(
   type: string,
   chartConfig: ChartConfig | null,

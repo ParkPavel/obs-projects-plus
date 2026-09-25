@@ -1,7 +1,7 @@
 ﻿<script lang="ts">
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartData, ScatterChartConfig } from "../../types";
-  import { computeChartData, computeScatterData, chartHeightPx } from "src/lib/dashboard-engine/chartDataPipeline";
+  import { computeMultiSeriesChartData, computeScatterData, chartHeightPx } from "src/lib/dashboard-engine/chartDataPipeline";
   import BarChart from "./BarChart.svelte";
   import LineChart from "./LineChart.svelte";
   import PieChart from "./PieChart.svelte";
@@ -25,6 +25,8 @@
   export let source: DataFrame;
   /** Pillar 5: preloaded DataFrame for scatter correlation. */
   export let rightFrame: DataFrame | null = null;
+  /** 3.6.0: preloaded frames of the other projects its extra series read. */
+  export let seriesFrames: ReadonlyMap<string, DataFrame> = new Map();
   /**
    * #044.2: widget id used to discriminate this chart's selection from
    * sibling drivers on the same canvas. Optional so tests and non-canvas
@@ -92,7 +94,7 @@
   };
 
   $: isScatter = config.chartType === "scatter";
-  $: chartData = isScatter ? EMPTY_CHART : computeChartData(source, config, semanticLabels);
+  $: chartData = isScatter ? EMPTY_CHART : computeMultiSeriesChartData(source, config, seriesFrames, semanticLabels);
   $: scatterConfig = isScatter ? extractScatterConfig(config) : null;
   $: scatterData = isScatter && scatterConfig ? computeScatterData(source, scatterConfig, rightFrame ?? undefined) : null;
   $: heightPx = chartHeightPx(config.style.height);

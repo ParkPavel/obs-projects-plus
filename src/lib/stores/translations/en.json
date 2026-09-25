@@ -1277,7 +1277,20 @@
                         "scatter": "Scatter plot"
                     },
                     "bar": "Bar chart",
-                    "line": "Line chart"
+                    "line": "Line chart",
+                    "series": {
+                        "title": "More series",
+                        "add": "Add series",
+                        "remove": "Remove series",
+                        "label": "Name",
+                        "field": "Field",
+                        "x-field": "X field there",
+                        "same-x": "— Same as the chart —",
+                        "this-chart": "This chart's data",
+                        "axis": "Axis",
+                        "axis-left": "Left",
+                        "axis-right": "Right"
+                    }
                 },
                 "comparison": {
                     "empty": "Configure comparison metrics",

@@ -213,6 +213,62 @@ export function computeChartData(
 }
 
 /**
+ * 3.6.0 — a chart with extra series (`config.series`).
+ *
+ * Each extra series is computed like a chart of its own over its own source —
+ * this chart's input, or another project's preloaded frame — with the chart's
+ * x bucketing and its own field, aggregation and x field. The results are
+ * aligned on the union of labels: in time order when the x axis is bucketed by
+ * date (bucket labels sort as text), otherwise the primary series' order with
+ * new labels after it. A label a series has no point for is null, never 0;
+ * a series whose project is not loaded is all nulls.
+ */
+export function computeMultiSeriesChartData(
+  source: DataFrame,
+  config: ChartConfig,
+  frames: ReadonlyMap<string, DataFrame>,
+  semanticLabels: SemanticLabels = DEFAULT_SEMANTIC_LABELS
+): ChartData {
+  const primary = computeChartData(source, config, semanticLabels);
+  const extras = config.series ?? [];
+  if (extras.length === 0) return primary;
+
+  const computed = extras.map((s) => {
+    const name = s.label || s.property;
+    const frame = s.dataProjectId ? frames.get(s.dataProjectId) : source;
+    if (!frame) return { name, axis: s.axis, points: new Map<string, number | null>() };
+    const own: ChartConfig = {
+      ...config,
+      groupMode: "values",
+      xAxis: { ...config.xAxis, property: s.xProperty || config.xAxis.property, hiddenGroups: [] },
+      yAxis: { property: s.property, aggregation: s.aggregation, ...(s.cumulative ? { cumulative: true } : {}) },
+    };
+    delete (own as { series?: unknown }).series;
+    const data = computeChartData(frame, own, semanticLabels);
+    const values = data.series[0]?.values ?? [];
+    return { name, axis: s.axis, points: new Map(data.labels.map((l, i) => [l, values[i] ?? null])) };
+  });
+
+  const dated = config.xAxis.dateGranularity != null ||
+    source.fields.find((f) => f.name === config.xAxis.property)?.type === DataFieldType.Date;
+  const labels = [...primary.labels];
+  const seen = new Set(labels);
+  for (const c of computed) for (const l of c.points.keys()) if (!seen.has(l)) { seen.add(l); labels.push(l); }
+  if (dated) labels.sort((a, b) => a.localeCompare(b));
+
+  const primaryPoints = new Map(primary.labels.map((l, i) => [l, primary.series[0]?.values[i] ?? null]));
+  const series: ChartSeries[] = [
+    { ...(primary.series[0] ?? { name: "" }), values: labels.map((l) => primaryPoints.get(l) ?? null) },
+    ...computed.map((c) => ({
+      name: c.name,
+      values: labels.map((l) => c.points.get(l) ?? null),
+      ...(c.axis === "right" ? { axis: "right" as const } : {}),
+    })),
+  ];
+  return { labels, series };
+}
+
+/**
  * Get chart height in pixels from style size.
  */
 export function chartHeightPx(height: ChartConfig["style"]["height"]): number {

@@ -67,6 +67,8 @@ export interface WidgetRenderContext {
   readonly chartConfig: ChartConfig | null;
   readonly statsConfig: StatsConfig | null;
   readonly chartRightFrame: DataFrame | null;
+  /** 3.6.0: preloaded frames of other projects a chart's extra series read. */
+  readonly chartSeriesFrames: ReadonlyMap<string, DataFrame>;
   /** 3.6.0: the other project a chart or stats block reads, or null (hostFrames). */
   readonly otherProject: import("./linkedSourceState").BlockSource | null;
   readonly dbCallFrame: DataFrame;
@@ -137,7 +139,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
     component: ChartWidget,
     canRender: (c) => c.chartConfig !== null,
     wizard: { icon: "bar-chart-2", messageKey: "views.dashboard.widget.chart-not-configured", messageDefault: "Chart is not configured" },
-    props: (c) => ({ config: c.chartConfig, source: c.transformedFrame, rightFrame: c.chartRightFrame, widgetId: c.widget.id }),
+    props: (c) => ({ config: c.chartConfig, source: c.transformedFrame, rightFrame: c.chartRightFrame, seriesFrames: c.chartSeriesFrames, widgetId: c.widget.id }),
   },
   stats: {
     component: StatsWidget,
@@ -207,7 +209,7 @@ export function panelFields(c: Pick<WidgetRenderContext, "transformedFrame">): D
  * branch in WidgetHost. Archived types have no panels (F3).
  */
 export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
-  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources }) },
+  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames }) },
   checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
   stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields, availableSources: c.availableSources }) },
   "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },
