@@ -868,6 +868,33 @@ function computeAggFn(
   }
 }
 
+/** The row-count column group-by writes; its presence marks a grouped frame. */
+const GROUP_SIZE_FIELD = "_group_size";
+
+/**
+ * Fold every record into a single group row holding, per aggregated column,
+ * the list of all its values — exactly what a group-by on one shared key
+ * builds, so the two roads give the same number. A list inside a record stays
+ * one element of that list, as it does after a group-by; flattening it made
+ * [[1,2], 3] sum to 6 here and to 3 everywhere else (math-review). Non-
+ * aggregated fields are dropped: across the table they have no single value.
+ */
+function collapseToOneGroup(df: DataFrame, step: AggregateStep): DataFrame {
+  const sources = [...new Set(step.columns.map((c) => c.sourceField))];
+  const values: Record<string, DataValue | undefined | null> = { [GROUP_SIZE_FIELD]: df.records.length };
+  for (const name of sources) {
+    values[name] = df.records.map((r) => r.values[name]) as unknown as DataValue;
+  }
+  const fields: DataField[] = [
+    { name: GROUP_SIZE_FIELD, type: DataFieldType.Number, repeated: false, identifier: false, derived: true },
+    ...sources.map((name) => {
+      const orig = df.fields.find((f) => f.name === name);
+      return { ...(orig ?? { name, type: DataFieldType.Number, identifier: false, derived: false }), repeated: true };
+    }),
+  ];
+  return { fields, records: [{ id: "group__all", values }] };
+}
+
 /**
  * AGGREGATE step: replaces grouped array fields with computed aggregations.
  * Best used after GROUP BY, but can also work on ungrouped data (treats all records as one group).
@@ -882,9 +909,21 @@ function executeAggregate(
     return df;
   }
 
+  // Without a group-by the whole frame is one group, as documented above: a
+  // total over the table, not a per-row "sum of one value" (math oracles,
+  // 2026-09-26). The one exception is a single record whose aggregated
+  // fields each hold a list: that list is the population to reduce (the
+  // "sum this record's list" case). A single scalar — null included — is a
+  // population of one, and collapses like any other frame (math-recheck2).
+  const grouped = df.fields.some((f) => f.name === GROUP_SIZE_FIELD);
+  const listRow =
+    df.records.length === 1 &&
+    step.columns.every((c) => Array.isArray(df.records[0]!.values[c.sourceField]));
+  const input = grouped || listRow ? df : collapseToOneGroup(df, step);
+
   // Build new fields: keep existing non-aggregated fields, add aggregated ones
   const aggregatedSourceFields = new Set(step.columns.map((c) => c.sourceField));
-  const keptFields = df.fields.filter((f) => !aggregatedSourceFields.has(f.name));
+  const keptFields = input.fields.filter((f) => !aggregatedSourceFields.has(f.name));
 
   const newFields: DataField[] = [
     ...keptFields,
@@ -897,7 +936,7 @@ function executeAggregate(
     })),
   ];
 
-  const newRecords = df.records.map((record) => {
+  const newRecords = input.records.map((record) => {
     const values: Record<string, DataValue | undefined | null> = {};
 
     // Copy non-aggregated fields

@@ -50,7 +50,6 @@ import {
   isNumber,
   isOptionalString,
   isOptionalNumber,
-  isOptionalBoolean,
   isOptionalDate,
   isOptionalList,
 } from "src/lib/dataframe/dataframe";
@@ -72,6 +71,7 @@ import {
 
 import { isEmpty as kernelIsEmpty, isNotEmpty as kernelIsNotEmpty } from "src/lib/engine/emptiness";
 import { toNumber } from "src/lib/engine/numeric";
+import { asCheckbox } from "src/lib/engine/aggregate";
 import {
   isUnsafePattern,
   MAX_REGEX_INPUT_LENGTH,
@@ -170,6 +170,14 @@ export function matchesCondition(
     return items.every((s) => stringFns[operator](s, cond.value));
   }
 
+  // A box is a box by one definition (asCheckbox): the quoted words a note
+  // may hold count here as they do in every aggregate, so filtering and
+  // counting the same records agree (math-recheck2, 2026-09-26). Native
+  // booleans and empty cells read exactly as before.
+  if (isBooleanFilterOperator(operator)) {
+    return booleanFns[operator](asCheckbox(value) ?? undefined);
+  }
+
   if (isOptionalString(value) && isStringFilterOperator(operator)) {
     return stringFns[operator](value, cond.value);
   } else if (isOptionalNumber(value) && isNumberFilterOperator(operator)) {
@@ -180,8 +188,6 @@ export function matchesCondition(
     // existing "no operand" path for a non-numeric one, which is what the
     // falsy `cond.value` check already did for "".
     return numberFns[operator](value, toNumber(cond.value) ?? undefined);
-  } else if (isOptionalBoolean(value) && isBooleanFilterOperator(operator)) {
-    return booleanFns[operator](value);
   } else if (isOptionalDate(value) && isDateFilterOperator(operator)) {
     // Resolve date formula in cond.value when baseDateCtx is available
     let rv = cond.value;

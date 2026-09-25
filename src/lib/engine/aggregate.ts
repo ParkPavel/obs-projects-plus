@@ -171,11 +171,13 @@ export function aggregate(
     }
 
     case "percent_true": {
-      if (nonNull.length === 0) return fmtEmpty();
-      const trueCount = nonNull.filter(
-        (v) => v === true || v === "true"
-      ).length;
-      return fmtPct((trueCount / nonNull.length) * 100);
+      // The share of checked boxes among boxes (asCheckbox): other text is not
+      // a box and stays out of the denominator. It used to divide by every
+      // non-null value, so [true, "true", false, "n/a"] read 50% here and 67%
+      // in the footer (math-review, 2026-09-26).
+      const boxes = nonNull.map(asCheckbox).filter((b): b is boolean => b !== null);
+      if (boxes.length === 0) return fmtEmpty();
+      return fmtPct((boxes.filter(Boolean).length / boxes.length) * 100);
     }
 
     case "concat":
@@ -200,6 +202,25 @@ export function aggregate(
 }
 
 // ── Helpers ─────────────────────────────────────────────
+
+/**
+ * Is this value a checkbox, and which way? `true` / `false`, or the words
+ * "true" / "false" as a note may hold them when quoted in YAML. Anything else
+ * — other text, numbers, dates — is not a box: `null`.
+ *
+ * The one definition for every "checked" question — the rollup kernel's
+ * percent_true and the footer's count/percent checked/unchecked — so a column
+ * cannot read 67% in a rollup and 50% in its footer (math-review, 2026-09-26).
+ */
+export function asCheckbox(v: Optional<DataValue>): boolean | null {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    const word = v.trim().toLowerCase();
+    if (word === "true") return true;
+    if (word === "false") return false;
+  }
+  return null;
+}
 
 function sumNumbers(values: DataValue[]): number {
   return toNumbers(values).reduce((a, b) => a + b, 0);

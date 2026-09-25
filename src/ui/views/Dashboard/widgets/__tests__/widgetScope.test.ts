@@ -99,7 +99,11 @@ describe("#118 order invariant — A runs before C", () => {
     const result = executeTransform(scoped.frame, pipeline);
 
     expect(result.meta.inputRowCount).toBe(2);
-    expect(result.data.records).toHaveLength(2);
+    // Without a group-by the aggregate totals the table (math oracles,
+    // 2026-09-26): one row, summing only the rows the scope let through —
+    // 1 + 3, not 1 + 2 + 3.
+    expect(result.data.records).toHaveLength(1);
+    expect(result.data.records[0]!.values["total"]).toBe(4);
   });
 
   it("differs from the reversed order, so the inversion cannot regress silently", () => {
