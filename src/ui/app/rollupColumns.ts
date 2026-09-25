@@ -32,7 +32,8 @@
  *    result was order-dependent garbage; this one resolves the link the user
  *    actually wrote.
  */
-import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataFrame, type DataRecord } from "src/lib/dataframe/dataframe";
+import type { RollupFunction } from "src/lib/engine/aggregate";
 import type { RollupFieldConfig } from "src/settings/base/settings";
 import {
   computeBacklinkRollupColumn,
@@ -67,6 +68,13 @@ export function resolveRollupTargetProjectId(
  * frame, because `extractRelationTargetIds` excludes self-references from the
  * fetch set by design.
  */
+/** Rollup functions whose answer is a number. */
+const NUMERIC_ROLLUPS: ReadonlySet<RollupFunction> = new Set<RollupFunction>([
+  "count", "count_total", "count_values", "count_unique", "count_empty",
+  "percent_empty", "percent_not_empty", "percent_true",
+  "sum", "avg", "min", "max", "median", "range",
+]);
+
 export function applyRollupColumns(
   frame: DataFrame,
   fieldConfig: FieldConfigRelationMap | undefined,
@@ -88,6 +96,27 @@ export function applyRollupColumns(
     // A frame with nothing to mark is returned as it came (identity is relied on).
     if (out.fields.some((field) => field.name === fieldName && !field.derived)) {
       out = { ...out, fields: out.fields.map((field) => (field.name === fieldName ? { ...field, derived: true } : field)) };
+    }
+    // 3.6.0: a declared rollup is a column even when no note carries its key —
+    // a computed value has no business in the notes (writing an empty key into
+    // every note is what made the column appear before). Numeric functions
+    // give a Number column; first/last value and the list functions keep the
+    // values' own type, read as text here. Only for a rollup that names a
+    // source — a backlink, or a relation with a target: an orphan leaves the
+    // frame as it came (identity is relied on, see above).
+    const hasSource = !!rollup.backlink || !!resolveRollupTargetProjectId(rollup, fieldConfig);
+    if (hasSource && !out.fields.some((field) => field.name === fieldName)) {
+      out = {
+        ...out,
+        fields: [...out.fields, {
+          name: fieldName,
+          type: NUMERIC_ROLLUPS.has(rollup.function) ? DataFieldType.Number : DataFieldType.String,
+          identifier: false,
+          derived: true,
+          repeated: false,
+          typeConfig: { rollup },
+        }],
+      };
     }
 
     let column: ReturnType<typeof computeCrossProjectRollupColumn>;

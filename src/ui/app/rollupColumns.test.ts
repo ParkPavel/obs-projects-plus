@@ -280,3 +280,36 @@ describe("applyRollupColumns", () => {
     expect(a.records[0]!.values["blocks"]).toBe(2);
   });
 });
+
+// 3.6.0 — a declared rollup is a column even when no note carries its key.
+// A client's visit count is computed; writing an empty `visitCount:` into
+// every client note (what CreateField did so the column would appear) is
+// exactly the pollution a backlink rollup exists to avoid.
+describe("a declared rollup is a column without a key in any note", () => {
+  const own = (): DataFrame => ({
+    fields: [field("name", DataFieldType.String), field("client", DataFieldType.Relation)],
+    records: [
+      { id: "Clients/Anna.md", values: { name: "Anna" } },
+      { id: "Visits/v1.md", values: { name: "v1", client: "[[Anna]]" } },
+      { id: "Visits/v2.md", values: { name: "v2", client: "[[Anna]]" } },
+    ],
+  });
+  const config = {
+    client: { relation: { targetProjectId: "cab" } },
+    visitCount: { rollup: { relationField: "", targetField: "name", function: "count_total", backlink: { projectId: "cab", relationField: "client" } } },
+  } as unknown as FieldConfigRelationMap;
+
+  it("adds the field, derived and numeric, and folds the values in", () => {
+    const out = applyRollupColumns(own(), config, "cab", new Map());
+    const f = out.fields.find((x) => x.name === "visitCount");
+    expect(f).toMatchObject({ derived: true, type: DataFieldType.Number });
+    expect((f?.typeConfig as { rollup?: unknown })?.rollup).toBeDefined();
+    expect(out.records.find((r) => r.id === "Clients/Anna.md")!.values["visitCount"]).toBe(2);
+  });
+
+  it("the column is there, empty, while its source project is not loaded", () => {
+    const cfg = { visitCount: { rollup: { relationField: "", targetField: "name", function: "count_total", backlink: { projectId: "other", relationField: "client" } } } } as unknown as FieldConfigRelationMap;
+    const out = applyRollupColumns(own(), cfg, "cab", new Map());
+    expect(out.fields.some((x) => x.name === "visitCount")).toBe(true);
+  });
+});
