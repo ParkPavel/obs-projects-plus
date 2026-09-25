@@ -19,6 +19,8 @@
   export let availableSources: Array<{ id: string; name: string }> = [];
   /** Loaded frames of other projects, by id. */
   export let seriesFrames: ReadonlyMap<string, DataFrame> = new Map();
+  /** True when the chart follows another block's selection: each series names its relation field. */
+  export let following = false;
 
   const dispatch = createEventDispatcher<{ change: ChartSeriesConfig[] }>();
 
@@ -41,7 +43,7 @@
       if (i !== index) return s;
       const merged: Record<string, unknown> = { ...s, ...patch };
       // Optional keys are removed rather than stored empty.
-      for (const key of ["label", "dataProjectId", "xProperty"]) if (!merged[key]) delete merged[key];
+      for (const key of ["label", "dataProjectId", "xProperty", "selectionField"]) if (!merged[key]) delete merged[key];
       if (merged["axis"] !== "right") delete merged["axis"];
       return merged as unknown as ChartSeriesConfig;
     });
@@ -115,6 +117,15 @@
           {:else}
             <input type="text" value={s.xProperty ?? ""} on:change={(e) => update(i, { xProperty: e.currentTarget.value })} />
           {/if}
+        </label>
+      {/if}
+      {#if following}
+        <label class="ppp-config-row">
+          <span>{$i18n.t("views.dashboard.follow.field")}</span>
+          <select value={s.selectionField ?? ""} on:change={(e) => update(i, { selectionField: e.currentTarget.value })}>
+            <option value="">—</option>
+            {#each names as name}<option value={name}>{name}</option>{/each}
+          </select>
         </label>
       {/if}
       <label class="ppp-config-row">

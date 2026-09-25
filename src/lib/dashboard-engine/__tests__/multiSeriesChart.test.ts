@@ -86,3 +86,22 @@ describe("computeMultiSeriesChartData", () => {
     expect(computeMultiSeriesChartData(tracker, cfg, new Map()).series[0]!.axis ?? "left").toBe("left");
   });
 });
+
+describe("narrowing each series to a picked record (linked selection)", () => {
+  test("the primary is narrowed through its field, each series through its own", () => {
+    const seen: Array<string | undefined> = [];
+    const narrow = (frame: DataFrame, s?: { selectionField?: string }) => {
+      seen.push(s ? s.selectionField : "primary");
+      return { ...frame, records: frame.records.slice(0, 1) };
+    };
+    const cfg: ChartConfig = {
+      ...base,
+      series: [{ id: "w", property: "wellbeing", aggregation: "avg", dataProjectId: "visits", xProperty: "day", selectionField: "client" }],
+    };
+    const out = computeMultiSeriesChartData(tracker, cfg, new Map([["visits", visits]]), undefined, narrow);
+    expect(seen).toEqual(["primary", "client"]);
+    // Only the first record of each source survived the narrowing.
+    expect(out.series[0]!.values.filter((v) => v !== null)).toEqual([80]);
+    expect(out.series[1]!.values.filter((v) => v !== null)).toEqual([7]);
+  });
+});

@@ -2,7 +2,8 @@
   import DataProjectPicker from "../_shared/DataProjectPicker.svelte";
   import ChartSeriesEditor from "./ChartSeriesEditor.svelte";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
-  import type { ChartSeriesConfig } from "../../types";
+  import type { ChartSeriesConfig, LinkedSelectionConfig } from "../../types";
+  import FollowSelectionPicker from "../_shared/FollowSelectionPicker.svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig, ChartAxisX } from "../../types";
@@ -16,6 +17,8 @@
   export let availableSources: Array<{ id: string; name: string }> = [];
   /** 3.6.0: loaded frames of the projects the extra series read. */
   export let seriesFrames: ReadonlyMap<string, DataFrame> = new Map();
+  /** 3.6.0: blocks whose selection this chart may follow. */
+  export let availableWidgets: Array<{ id: string; title: string }> = [];
 
   const dispatch = createEventDispatcher<{ change: ChartConfig }>();
 
@@ -83,6 +86,13 @@
   }
 
   $: dataProjectId = (config as unknown as { dataProjectId?: string }).dataProjectId;
+
+  /** 3.6.0 — follow another block's selection; the key is removed when off. */
+  function setLinkedSelection(next: LinkedSelectionConfig | undefined) {
+    const { linkedSelection: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (next ? { ...rest, linkedSelection: next } : rest) as unknown as ChartConfig);
+  }
 
   /** 3.6.0 — the extra series; the key is removed when there are none. */
   function setSeries(next: ChartSeriesConfig[]) {
@@ -308,8 +318,16 @@
       <span>{$i18n.t("views.dashboard.chart.options.cumulative")}</span>
     </label>
 
+    <FollowSelectionPicker
+      value={config.linkedSelection}
+      {availableWidgets}
+      {fields}
+      on:change={(e) => setLinkedSelection(e.detail)}
+    />
+
     {#if config.chartType === "line" || config.chartType === "area" || config.chartType === "bar"}
       <ChartSeriesEditor
+        following={!!config.linkedSelection}
         series={config.series ?? []}
         {fields}
         {availableSources}

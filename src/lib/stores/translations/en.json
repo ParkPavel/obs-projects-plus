@@ -1498,6 +1498,11 @@
                 "data-project": {
                     "label": "Data from",
                     "this-project": "This project"
+                },
+                "follow": {
+                    "label": "Follow selection in",
+                    "none": "— Don't follow —",
+                    "field": "Through relation field"
                 }
             }
         },

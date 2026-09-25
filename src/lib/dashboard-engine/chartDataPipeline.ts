@@ -3,7 +3,7 @@
 
 import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
+import type { ChartConfig, ChartData, ChartSeries, ChartSeriesConfig, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
 import type { TransformPipeline, TransformStep, GroupByStep, AggregationFunction } from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
 import { toNumber } from "src/lib/engine/numeric";
@@ -227,9 +227,15 @@ export function computeMultiSeriesChartData(
   source: DataFrame,
   config: ChartConfig,
   frames: ReadonlyMap<string, DataFrame>,
-  semanticLabels: SemanticLabels = DEFAULT_SEMANTIC_LABELS
+  semanticLabels: SemanticLabels = DEFAULT_SEMANTIC_LABELS,
+  /**
+   * Narrows each series' input before it is aggregated — the chart's linked
+   * selection, through the primary's relation field (`series` undefined) or
+   * the series' own `selectionField`. Identity when absent.
+   */
+  narrow: (frame: DataFrame, series?: ChartSeriesConfig) => DataFrame = (frame) => frame
 ): ChartData {
-  const primary = computeChartData(source, config, semanticLabels);
+  const primary = computeChartData(narrow(source), config, semanticLabels);
   const extras = config.series ?? [];
   if (extras.length === 0) return primary;
 
@@ -244,7 +250,7 @@ export function computeMultiSeriesChartData(
       yAxis: { property: s.property, aggregation: s.aggregation, ...(s.cumulative ? { cumulative: true } : {}) },
     };
     delete (own as { series?: unknown }).series;
-    const data = computeChartData(frame, own, semanticLabels);
+    const data = computeChartData(narrow(frame, s), own, semanticLabels);
     const values = data.series[0]?.values ?? [];
     return { name, axis: s.axis, points: new Map(data.labels.map((l, i) => [l, values[i] ?? null])) };
   });

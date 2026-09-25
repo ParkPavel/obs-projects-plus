@@ -60,6 +60,8 @@ export interface WidgetRenderContext {
   readonly fieldPresets: FieldPreset[];
   readonly activeFieldPresetId: string | undefined;
   readonly availableSources: Array<{ id: string; name: string }>;
+  /** 3.6.0: other blocks on the canvas, for "follow selection" (chart, stats). */
+  readonly availableWidgets: Array<{ id: string; title: string }>;
   readonly project: ProjectDefinition | undefined;
   readonly effectiveTableConfig: DataTableConfig | undefined;
   readonly pipelineStepCount: number;
@@ -209,9 +211,9 @@ export function panelFields(c: Pick<WidgetRenderContext, "transformedFrame">): D
  * branch in WidgetHost. Archived types have no panels (F3).
  */
 export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
-  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames }) },
+  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames, availableWidgets: c.availableWidgets }) },
   checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
-  stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields, availableSources: c.availableSources }) },
+  stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields, availableSources: c.availableSources, availableWidgets: c.availableWidgets }) },
   "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },
   "cover-banner": { component: CoverBannerConfigPanel, props: (c) => ({ config: c.widget.config }) },
 };

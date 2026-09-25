@@ -434,6 +434,8 @@ export interface ChartConfig {
    * project and axis. Absent in every config stored before: one series.
    */
   readonly series?: readonly ChartSeriesConfig[];
+  /** 3.6.0 — narrowed to the record picked in another block, through a relation (selectionFollow.ts). */
+  readonly linkedSelection?: LinkedSelectionConfig;
 }
 
 /** One extra series of a chart (3.6.0). */
@@ -450,6 +452,8 @@ export interface ChartSeriesConfig {
   /** Which y axis the series is read against. Left when absent. */
   readonly axis?: "left" | "right";
   readonly cumulative?: boolean;
+  /** The relation field in this series' source that follows the chart's linked selection. */
+  readonly selectionField?: string;
 }
 
 export interface ChartAxisX {
@@ -499,6 +503,8 @@ export interface ChartSeries {
 export interface StatsConfig {
   readonly cards: StatsCardConfig[];
   readonly columns: 2 | 3 | 4;
+  /** 3.6.0 — narrowed to the record picked in another block, through a relation (selectionFollow.ts). */
+  readonly linkedSelection?: LinkedSelectionConfig;
 }
 
 export interface StatsCardConfig {

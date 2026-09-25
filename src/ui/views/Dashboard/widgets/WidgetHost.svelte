@@ -73,7 +73,7 @@
 
   $: ctx = buildRenderContext({
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields, fieldPresets,
-    activeFieldPresetId, availableSources, project, tableConfig, isPrimaryDataTable,
+    activeFieldPresetId, availableSources, availableWidgets: availableWidgets.filter((w) => w.id !== widget.id), project, tableConfig, isPrimaryDataTable,
     pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount, chartConfig,
     statsConfig, chartRightFrame, chartSeriesFrames, dbCall, scopeApplied: scope.applied, primaryActionSignal,
     namedSource, otherProject,

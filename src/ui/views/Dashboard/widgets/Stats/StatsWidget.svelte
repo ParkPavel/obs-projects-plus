@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { followLinkedSelection, isFollowing } from "../_shared/selectionFollow";
   import type { DataFrame, DataRecord, DataValue } from "src/lib/dataframe/dataframe";
   import type { Optional } from "src/lib/dataframe/dataframe";
   import type { StatsConfig, StatsCardConfig } from "../../types";
@@ -62,14 +63,19 @@
   // Receiver core: narrow source.records by the active selection (no-op when
   // no widgetId, no canvas store, or empty selection). Reference-equal to
   // `source.records` in the no-op path so downstream `$:` blocks short-circuit.
-  $: filteredRecords = widgetId
-    ? filterRecordsBySelection({ records: source.records, selection, myWidgetId: widgetId })
-    : source.records;
+  // 3.6.0: a linked selection narrows through a relation (selectionFollow.ts).
+  $: filteredRecords = config.linkedSelection
+    ? followLinkedSelection(source.records, selection, config.linkedSelection)
+    : widgetId
+      ? filterRecordsBySelection({ records: source.records, selection, myWidgetId: widgetId })
+      : source.records;
 
   // Dot indicator predicate — true exactly when a sibling-emitted selection is
   // narrowing this widget. Empty-result selections still show the dot (per
   // helper docs); a value of "—" or 0 then communicates the empty cohort.
-  $: filteredActive = widgetId ? isSelectionActive(selection, widgetId) : false;
+  $: filteredActive = config.linkedSelection
+    ? isFollowing(selection, config.linkedSelection)
+    : widgetId ? isSelectionActive(selection, widgetId) : false;
 
   function getFieldValues(records: readonly DataRecord[], fieldName: string): Optional<DataValue>[] {
     if (fieldName === "*") return records.map(() => true);

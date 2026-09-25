@@ -1,4 +1,7 @@
 ﻿<script lang="ts">
+  import { followLinkedSelection } from "../_shared/selectionFollow";
+  import { EMPTY_SELECTION } from "../../canvasSelectionStore";
+  import type { ChartSeriesConfig } from "../../types";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartData, ScatterChartConfig } from "../../types";
   import { computeMultiSeriesChartData, computeScatterData, chartHeightPx } from "src/lib/dashboard-engine/chartDataPipeline";
@@ -94,7 +97,16 @@
   };
 
   $: isScatter = config.chartType === "scatter";
-  $: chartData = isScatter ? EMPTY_CHART : computeMultiSeriesChartData(source, config, seriesFrames, semanticLabels);
+  // 3.6.0: the chart follows the record picked in its master block, through
+  // the primary's relation field and each series' own selectionField.
+  $: followSelection = (frame: DataFrame, s?: ChartSeriesConfig): DataFrame => {
+    const linked = config.linkedSelection;
+    const relationField = s ? s.selectionField : linked?.relationField;
+    if (!linked || !relationField) return frame;
+    const records = followLinkedSelection(frame.records, currentSelection ?? EMPTY_SELECTION, { ...linked, relationField });
+    return records === frame.records ? frame : { ...frame, records: [...records] };
+  };
+  $: chartData = isScatter ? EMPTY_CHART : computeMultiSeriesChartData(source, config, seriesFrames, semanticLabels, followSelection);
   $: scatterConfig = isScatter ? extractScatterConfig(config) : null;
   $: scatterData = isScatter && scatterConfig ? computeScatterData(source, scatterConfig, rightFrame ?? undefined) : null;
   $: heightPx = chartHeightPx(config.style.height);

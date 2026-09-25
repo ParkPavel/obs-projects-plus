@@ -1,4 +1,6 @@
 ﻿<script lang="ts">
+  import FollowSelectionPicker from "../_shared/FollowSelectionPicker.svelte";
+  import type { LinkedSelectionConfig } from "../../types";
   import DataProjectPicker from "../_shared/DataProjectPicker.svelte";
   /**
    * StatsConfig — user-facing editor for cards of a Stats widget.
@@ -22,6 +24,8 @@
   export let fields: DataField[] = [];
   /** 3.6.0 — projects this block may read instead of its own. */
   export let availableSources: Array<{ id: string; name: string }> = [];
+  /** 3.6.0: blocks whose selection this block may follow. */
+  export let availableWidgets: Array<{ id: string; title: string }> = [];
 
   const dispatch = createEventDispatcher<{
     change: StatsConfig;
@@ -66,6 +70,13 @@
   }
 
   $: dataProjectId = (config as unknown as { dataProjectId?: string }).dataProjectId;
+
+  /** 3.6.0 — follow another block's selection; the key is removed when off. */
+  function setLinkedSelection(next: LinkedSelectionConfig | undefined) {
+    const { linkedSelection: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (next ? { ...rest, linkedSelection: next } : rest) as unknown as StatsConfig);
+  }
 
   /** 3.6.0 — read another project; the empty value reads this one (key removed). */
   function setDataProject(id: string) {
@@ -131,6 +142,15 @@
       {availableSources}
       rowClass=""
       on:change={(e) => setDataProject(e.detail)}
+    />
+  </div>
+  <div class="ppp-cfg-row">
+    <FollowSelectionPicker
+      value={config.linkedSelection}
+      {availableWidgets}
+      {fields}
+      rowClass=""
+      on:change={(e) => setLinkedSelection(e.detail)}
     />
   </div>
   <div class="ppp-cfg-row">
