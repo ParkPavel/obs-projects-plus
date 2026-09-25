@@ -6,7 +6,7 @@
  *   - show group: chip strip / empty-placeholder
  *   - plain group: numeric formatting, list join, empty
  *   - modeId wins over fn when both present
- *   - clamp + scale 0..1 percent values
+ *   - clamp percent values; the engine's 0..100 scale is taken as is
  */
 
 import "@testing-library/jest-dom";
@@ -34,12 +34,34 @@ describe("RollupCellRenderer — percent group", () => {
     expect(container.textContent).toContain("100%");
   });
 
-  test("scales 0..1 (Notion-style) to 0..100 range", () => {
+  // Stack gate 2026-09-26: every percent mode maps to an engine function that
+  // returns 0..100 (aggregate.ts). Rescaling values under 1 turned 1 checked
+  // of 100 into a full bar.
+  test("takes the engine's 0..100 scale as is: 1 is 1%, not 100%", () => {
+    const { container } = render(RollupCellRenderer, {
+      props: { value: 1, fn: "percent_true" },
+    });
+    const bar = container.querySelector("[data-testid='ppp-rollup-bar']") as HTMLElement | null;
+    expect(bar!.getAttribute("style")).toContain("width: 1%");
+    expect(container.textContent).toContain("1%");
+    expect(container.textContent).not.toContain("100%");
+  });
+
+  test("a value under 1 stays under 1%", () => {
     const { container } = render(RollupCellRenderer, {
       props: { value: 0.37, fn: "percent_true" },
     });
     const bar = container.querySelector("[data-testid='ppp-rollup-bar']") as HTMLElement | null;
-    expect(bar!.getAttribute("style")).toContain("width: 37%");
+    expect(bar!.getAttribute("style")).toContain("width: 0.37%");
+  });
+
+  test.each([null, undefined, "", "—"])("no percentage (%p) shows the placeholder, not 0%%", (value) => {
+    const { container } = render(RollupCellRenderer, {
+      props: { value, fn: "percent_not_empty" },
+    });
+    expect(container.querySelector("[data-testid='ppp-rollup-bar']")).toBeNull();
+    expect(container.textContent).toContain("—");
+    expect(container.textContent).not.toContain("0%");
   });
 
   test("accepts a string like '25%'", () => {

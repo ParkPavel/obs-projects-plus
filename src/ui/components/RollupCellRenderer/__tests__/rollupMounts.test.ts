@@ -35,6 +35,13 @@ function card(field: DataField, value: Optional<DataValue>) {
 }
 
 describe("rollup values in the dashboard table", () => {
+  test("a percent rollup over no records shows the empty placeholder, not 0%", () => {
+    const c = cell(rollupField("percent_true"), null);
+    expect(c.querySelector("[data-testid='ppp-rollup-bar']")).toBeNull();
+    expect(c.textContent).toContain("—");
+    expect(c.textContent).not.toContain("0%");
+  });
+
   test("a percent rollup is a progress bar", () => {
     const c = cell(rollupField("percent_true"), 42);
     expect(c.querySelector("[data-rollup-group='percent']")).not.toBeNull();
