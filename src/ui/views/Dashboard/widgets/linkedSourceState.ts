@@ -13,6 +13,7 @@
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { WidgetDefinition, WidgetDataContext, WidgetSourceConfig, LinkedSelectionConfig, ChartConfig, StatsConfig } from "../types";
 import type { ExternalSourceState } from "../dashboardPreload";
+import type { NamedSourceNotice } from "./DatabaseCall/namedSourceNotice";
 
 export type BlockSource =
   /** No external source configured: the block reads the host's own frame. */
@@ -79,6 +80,54 @@ const EMPTY_FRAME: DataFrame = { fields: [], records: [] } as unknown as DataFra
 /** {@link blockFrame}, with the empty stand-in instead of null. */
 export function blockFrameOrEmpty(source: BlockSource): DataFrame {
   return blockFrame(source) ?? EMPTY_FRAME;
+}
+
+/**
+ * 3.6.0 — a chart or a stats block may read another project as its own data.
+ *
+ * The project is named in `widget.config.dataProjectId`, not in
+ * `widget.sourceConfig`: the chart and stats panels change a block by
+ * replacing its config, and only `database-call` has the separate source
+ * contract (WIDGET_PANELS in widgetComponentRegistry.ts). Other types ignore
+ * the key. `null` when the block reads this project.
+ */
+export function otherProjectSource(
+  widget: WidgetDefinition,
+  states: ReadonlyMap<string, ExternalSourceState>
+): BlockSource | null {
+  if (widget.type !== "chart" && widget.type !== "stats") return null;
+  const id = dataProjectIdOf(widget);
+  return id ? resolveBlockSource(id, states, EMPTY_FRAME) : null;
+}
+
+/**
+ * What a chart or stats block reading another project shows while that
+ * project is not ready — the screen notice WidgetContent already renders,
+ * with the words database-call uses for the same states. `null` when there
+ * is no other project or it is ready.
+ */
+export function otherProjectNotice(source: BlockSource | null): NamedSourceNotice | null {
+  if (!source || source.kind === "ready" || source.kind === "parent") return null;
+  const k = "views.dashboard.database-call.";
+  if (source.kind === "loading") {
+    return { placement: "screen", icon: "loader", key: k + "source-loading", fallback: "Loading the linked project…", vars: {} };
+  }
+  if (source.kind === "unavailable") {
+    return {
+      placement: "screen", icon: "unlink", key: k + "source-unavailable-hint",
+      fallback: "The project this block reads was not found: {{id}}", vars: { id: source.projectId },
+    };
+  }
+  return {
+    placement: "screen", icon: "alert-triangle", key: k + "source-error",
+    fallback: "Could not load the linked project", vars: {}, hint: source.message,
+  };
+}
+
+/** The project a chart or stats block reads, when it names one. */
+export function dataProjectIdOf(widget: WidgetDefinition): string | undefined {
+  const id = (widget.config as { dataProjectId?: unknown } | undefined)?.dataProjectId;
+  return typeof id === "string" && id ? id : undefined;
 }
 
 /** Everything the host needs to know about a database-call block's data. */

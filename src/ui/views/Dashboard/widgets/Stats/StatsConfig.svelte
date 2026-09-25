@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+  import DataProjectPicker from "../_shared/DataProjectPicker.svelte";
   /**
    * StatsConfig — user-facing editor for cards of a Stats widget.
    * Each card: label, source field, aggregation, format, optional currency.
@@ -19,6 +20,8 @@
 
   export let config: StatsConfig;
   export let fields: DataField[] = [];
+  /** 3.6.0 — projects this block may read instead of its own. */
+  export let availableSources: Array<{ id: string; name: string }> = [];
 
   const dispatch = createEventDispatcher<{
     change: StatsConfig;
@@ -60,6 +63,15 @@
 
   function emit(next: Partial<StatsConfig>) {
     dispatch("change", { ...config, ...next });
+  }
+
+  $: dataProjectId = (config as unknown as { dataProjectId?: string }).dataProjectId;
+
+  /** 3.6.0 — read another project; the empty value reads this one (key removed). */
+  function setDataProject(id: string) {
+    const { dataProjectId: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (id ? { ...rest, dataProjectId: id } : rest) as unknown as StatsConfig);
   }
 
   function addCard() {
@@ -113,6 +125,14 @@
   subtitle={$i18n.t("views.dashboard.stats.config.subtitle", { defaultValue: "Each card shows one aggregation from the (post-pipeline) data. Use * as field for Count of records." })}
   on:close={() => dispatch("close")}
 >
+  <div class="ppp-cfg-row">
+    <DataProjectPicker
+      value={dataProjectId}
+      {availableSources}
+      rowClass=""
+      on:change={(e) => setDataProject(e.detail)}
+    />
+  </div>
   <div class="ppp-cfg-row">
     <label>
       {$i18n.t("views.dashboard.stats.config.columns", { defaultValue: "Grid columns" })}

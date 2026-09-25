@@ -20,7 +20,12 @@ const BUDGETS: ReadonlyArray<{ file: string; maxLines: number }> = [
   // pocketed — the host stood at 229 under a 230 ceiling before this ticket,
   // which is how a "one line of room" file gets ten lines added to it twice.
   { file: "ui/views/Dashboard/widgets/WidgetHost.svelte", maxLines: 225 },
-  { file: "ui/views/Dashboard/widgets/hostFrames.ts", maxLines: 120 },
+  // 120 → 107 (3.6.0): which records a widget starts from moved to
+  // widgetInput.ts when a chart or stats block learned to read another
+  // project; the room that move freed is not kept.
+  { file: "ui/views/Dashboard/widgets/hostFrames.ts", maxLines: 107 },
+  { file: "ui/views/Dashboard/widgets/widgetInput.ts", maxLines: 64 },
+  { file: "ui/views/Dashboard/widgets/_shared/DataProjectPicker.svelte", maxLines: 36 },
   { file: "ui/views/Dashboard/widgets/WidgetShell.svelte", maxLines: 350 },
   { file: "ui/views/Dashboard/widgets/WidgetHeaderActions.svelte", maxLines: 220 },
   { file: "ui/views/Dashboard/widgets/widgetMenu.ts", maxLines: 80 },

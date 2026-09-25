@@ -1481,6 +1481,10 @@
                 },
                 "text": {
                     "placeholder": "Enter Markdown…"
+                },
+                "data-project": {
+                    "label": "Data from",
+                    "this-project": "This project"
                 }
             }
         },

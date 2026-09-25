@@ -1,6 +1,7 @@
 // dashboardPreload.ts — pure utilities for cross-source right-frame preloading.
 // Extracted from DashboardCanvas.svelte (R5-013).
 
+import { dataProjectIdOf } from "./widgets/linkedSourceState";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { WidgetDefinition } from "./types";
 import type { ProjectDefinition } from "src/settings/settings";
@@ -34,6 +35,9 @@ export function collectReferencedSourceIds(
     if (w.type === "database-call" && w.sourceConfig?.projectId) {
       ids.add(w.sourceConfig.projectId);
     }
+    // 3.6.0: a chart or stats block reading another project.
+    const dataProjectId = dataProjectIdOf(w);
+    if ((w.type === "chart" || w.type === "stats") && dataProjectId) ids.add(dataProjectId);
   }
 
   // Anchored in: docs/IMPLEMENTATION_BLUEPRINT.md §A.4 (R-11 mitigation).

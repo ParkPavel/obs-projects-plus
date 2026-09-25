@@ -1582,6 +1582,10 @@
                 },
                 "text": {
                     "placeholder": "输入 Markdown…"
+                },
+                "data-project": {
+                    "label": "数据来源",
+                    "this-project": "本项目"
                 }
             }
         },

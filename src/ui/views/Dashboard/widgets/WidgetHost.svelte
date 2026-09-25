@@ -69,14 +69,14 @@
   $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames,
         sourceStates, parts: $frameParts, sources: sourceOptions.sources });
   $: ({ namedSource, scope, transformedFrame, pipelineInputRowCount, chartConfig, statsConfig,
-        chartRightFrame, dbCall, pipelineSource } = frames);
+        chartRightFrame, dbCall, pipelineSource, otherProject } = frames);
 
   $: ctx = buildRenderContext({
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields, fieldPresets,
     activeFieldPresetId, availableSources, project, tableConfig, isPrimaryDataTable,
     pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount, chartConfig,
     statsConfig, chartRightFrame, dbCall, scopeApplied: scope.applied, primaryActionSignal,
-    namedSource,
+    namedSource, otherProject,
   });
 
   // #169: the block's own action, and NOT run here. Hidden for a linked project

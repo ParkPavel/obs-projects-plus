@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+  import DataProjectPicker from "../_shared/DataProjectPicker.svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig, ChartAxisX } from "../../types";
@@ -76,6 +77,15 @@
     dispatch("change", { ...config, ...partial } as ChartConfig);
   }
 
+  $: dataProjectId = (config as unknown as { dataProjectId?: string }).dataProjectId;
+
+  /** 3.6.0 — read another project; the empty value reads this one (key removed). */
+  function setDataProject(id: string) {
+    const { dataProjectId: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (id ? { ...rest, dataProjectId: id } : rest) as unknown as ChartConfig);
+  }
+
   function setCorrelationEnabled(enabled: boolean) {
     if (!enabled) {
       // Strip the key rather than set undefined (exactOptionalPropertyTypes).
@@ -136,6 +146,11 @@
 <div class="ppp-chart-config">
   <details class="ppp-config-section" open>
     <summary class="ppp-config-section-header">{$i18n.t("views.dashboard.chart.section.data")}</summary>
+  <DataProjectPicker
+    value={dataProjectId}
+    {availableSources}
+    on:change={(e) => setDataProject(e.detail)}
+  />
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.type")}</span>
     <select

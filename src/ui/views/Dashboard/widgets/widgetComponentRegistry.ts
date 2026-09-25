@@ -67,6 +67,8 @@ export interface WidgetRenderContext {
   readonly chartConfig: ChartConfig | null;
   readonly statsConfig: StatsConfig | null;
   readonly chartRightFrame: DataFrame | null;
+  /** 3.6.0: the other project a chart or stats block reads, or null (hostFrames). */
+  readonly otherProject: import("./linkedSourceState").BlockSource | null;
   readonly dbCallFrame: DataFrame;
   readonly dbCallFields: DataField[];
   readonly dbCallSourceConfig: WidgetSourceConfig | undefined;
@@ -207,7 +209,7 @@ export function panelFields(c: Pick<WidgetRenderContext, "transformedFrame">): D
 export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
   chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources }) },
   checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
-  stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields }) },
+  stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields, availableSources: c.availableSources }) },
   "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },
   "cover-banner": { component: CoverBannerConfigPanel, props: (c) => ({ config: c.widget.config }) },
 };

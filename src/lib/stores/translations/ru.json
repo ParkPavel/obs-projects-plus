@@ -1897,6 +1897,10 @@
                 },
                 "text": {
                     "placeholder": "Введите Markdown…"
+                },
+                "data-project": {
+                    "label": "Данные из",
+                    "this-project": "Этот проект"
                 }
             }
         },
