@@ -44,9 +44,16 @@ describe("R0.29 catalogue manifest", () => {
     expect(description.length).toBeGreaterThan(0);
     expect(description.length).toBeLessThanOrEqual(250);
     expect(description.endsWith(".")).toBe(true);
-    expect(description).not.toMatch(/[:()[\]{}<>|#*_~]/);
-    expect(description).not.toMatch(/\p{Extended_Pictographic}/u);
+    // The rules eslint-plugin-obsidianmd's validateManifest applies at review.
+    expect(description).toMatch(/^[A-Z]/);
+    expect(description).toMatch(/^[A-Za-z0-9\s.,!?'"-]+$/);
     expect(description).not.toMatch(/^this (is a )?plugin/i);
+  });
+
+  test("name, id and description avoid the words the validator forbids", () => {
+    for (const key of ["name", "id", "description"]) {
+      expect(String(manifest[key])).not.toMatch(/\b(obsidian|plugin)\b/i);
+    }
   });
 
   test("minAppVersion covers the App storage API the code calls (@since 1.8.7)", () => {
