@@ -24,9 +24,10 @@ jest.mock("obsidian", () => {
     );
   class Setting {
     constructor(_el: unknown) {}
-    setName(name: string) { mockRendered.push(`name:${name}`); return this; }
+    name = "";
+    setName(name: string) { this.name = name; mockRendered.push(`name:${name}`); return this; }
     setDesc() { return this; }
-    setHeading() { return this; }
+    setHeading() { mockRendered.push(`heading:${this.name}`); return this; }
     addButton(cb: (mockControl: unknown) => void) { cb(chain()); return this; }
     addDropdown(cb: (mockControl: unknown) => void) { cb(chain()); return this; }
     addText(cb: (mockControl: unknown) => void) { cb(chain()); return this; }
@@ -40,8 +41,12 @@ jest.mock("obsidian", () => {
   return { Setting, PluginSettingTab, Platform: { isMacOS: false } };
 });
 
-jest.mock("src/ui/settings/Projects.svelte", () => jest.fn().mockImplementation(() => ({ $set: jest.fn() })));
-jest.mock("src/ui/settings/Archives.svelte", () => jest.fn().mockImplementation(() => ({ $set: jest.fn() })));
+// Every component the tab mounts, so a test can see which were destroyed.
+const mockMounted: Array<{ $destroy: jest.Mock }> = [];
+jest.mock("src/ui/settings/Projects.svelte", () =>
+  jest.fn().mockImplementation(() => { const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
+jest.mock("src/ui/settings/Archives.svelte", () =>
+  jest.fn().mockImplementation(() => { const c = { $set: jest.fn(), $destroy: jest.fn() }; mockMounted.push(c); return c; }));
 
 jest.mock("src/lib/stores/settings", () => {
   const { writable } = require("svelte/store");
@@ -70,6 +75,32 @@ describe("settings tab", () => {
     const out = renderTab();
     expect(out).toContain("name:settings.general.size-limit.name");
     expect(out).toContain("name:settings.general.start-of-week.name");
+  });
+
+  // Catalogue guideline: general settings first, without a heading, and no
+  // top-level heading named after the plugin; "About" belongs at the end.
+  test("opens with the general settings, not with a heading", () => {
+    const out = renderTab();
+    expect(out[0]).toBe("name:settings.general.size-limit.name");
+  });
+
+  test("the About section comes last, under one heading", () => {
+    const out = renderTab();
+    const headings = out.filter((r) => r.startsWith("heading:"));
+    expect(headings[headings.length - 1]).toBe("heading:settings.about.title");
+    expect(headings.filter((h) => h.startsWith("heading:settings.about."))).toEqual(["heading:settings.about.title"]);
+    expect(out.indexOf("heading:settings.about.title")).toBeGreaterThan(out.indexOf("heading:settings.archives.name"));
+  });
+
+  test("redisplaying or hiding the tab destroys the components it mounted", () => {
+    mockMounted.length = 0;
+    const tab = new ProjectsSettingTab({}, { manifest: { version: "0.0.0" } });
+    tab.display();
+    const first = [...mockMounted];
+    tab.display();
+    expect(first.every((c) => c.$destroy.mock.calls.length === 1)).toBe(true);
+    tab.hide();
+    expect(mockMounted.every((c) => c.$destroy.mock.calls.length === 1)).toBe(true);
   });
 
   test.each(["en", "ru", "uk", "zh-CN"])("%s carries no link-behavior translation", (locale) => {
