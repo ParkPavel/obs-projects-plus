@@ -189,13 +189,23 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
 };
 
 /**
+ * The columns a widget's configuration may offer: those of the frame the
+ * widget is drawn from. A pipeline's Compute, Group By and Aggregate steps
+ * create columns the base frame does not have, and a chart handed the base
+ * fields drew them but could not pick them (calc-charts-map, 2026-09-26).
+ */
+export function panelFields(c: Pick<WidgetRenderContext, "transformedFrame">): DataField[] {
+  return c.transformedFrame.fields;
+}
+
+/**
  * Config panels routed generically (on:change → widget config replace,
  * on:close → hide). `database-call` is NOT here: its settings panel has a
  * distinct event contract (source/linkedSelection) and stays an explicit
  * branch in WidgetHost. Archived types have no panels (F3).
  */
 export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
-  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: c.fields, availableSources: c.availableSources }) },
+  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources }) },
   checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
   stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields }) },
   "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },

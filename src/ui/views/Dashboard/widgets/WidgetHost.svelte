@@ -18,7 +18,7 @@
   import { frameParts } from "src/lib/stores/dataframe";
   import { projectSourceOptions } from "src/lib/datasources/namedSource";
   import { getConfigPanel } from "./configPanelRegistry";
-  import { WIDGET_CONTENT, WIDGET_PANELS } from "./widgetComponentRegistry";
+  import { WIDGET_CONTENT, WIDGET_PANELS, panelFields } from "./widgetComponentRegistry";
   import { hasDataScope, hasPipelineButton, primaryActionFor } from "./headerChrome";
   import { applyDataScope } from "./dataScope";
   import { buildRenderContext } from "./renderContext";
@@ -112,7 +112,7 @@
   /** Toggle panel, seeding type defaults on first configure. */
   function toggleConfig() {
     if (!panelDescriptor.isConfigured(widget.config ?? {})) {
-      handleWidgetConfigChange(panelDescriptor.initDefaults(fields));
+      handleWidgetConfigChange(panelDescriptor.initDefaults(panelFields(ctx)));
       showConfig = true;
       return;
     }
