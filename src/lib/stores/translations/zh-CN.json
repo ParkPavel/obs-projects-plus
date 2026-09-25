@@ -1746,7 +1746,7 @@
         },
         "settings": {
             "about": {
-                "title": "关于 Projects Plus",
+                "title": "关于",
                 "description": "为 Obsidian 提供增强的项目管理功能。",
                 "author": "维护者",
                 "author-name": "Park Pavel",

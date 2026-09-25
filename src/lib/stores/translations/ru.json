@@ -703,7 +703,7 @@
         },
         "settings": {
             "about": {
-                "title": "О Projects Plus",
+                "title": "О плагине",
                 "description": "Расширенное управление проектами для Obsidian с дополнительными функциями.",
                 "author": "Мейнтейнер",
                 "author-name": "Park Pavel",

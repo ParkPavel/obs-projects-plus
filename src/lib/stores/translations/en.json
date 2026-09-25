@@ -471,7 +471,7 @@
                 "create-lists-hint": "Create lists in the Calendar view agenda sidebar"
             },
             "edit-note": {
-                "read-only-fields": "Read-only Fields"
+                "read-only-fields": "Read-only fields"
             }
         },
         "views": {
@@ -485,7 +485,7 @@
             },
             "visualizer": {
                 "pane": {
-                    "title": "YAML Visualizer",
+                    "title": "YAML visualizer",
                     "no-file": "Open a Markdown note to view its properties.",
                     "no-properties": "This note has no frontmatter properties yet.",
                     "actions": {
@@ -591,7 +591,7 @@
                     "2weeks": "2 Weeks"
                 },
                 "navigation": {
-                    "aria-label": "Calendar Navigation",
+                    "aria-label": "Calendar navigation",
                     "today-tooltip": "Go to today",
                     "previous": "Previous",
                     "next": "Next"
@@ -624,12 +624,12 @@
                 },
                 "colors": {
                     "favorites": "Favorites",
-                    "all": "All Colors",
-                    "custom": "Custom Color",
+                    "all": "All colors",
+                    "custom": "Custom color",
                     "invalid": "Invalid HEX format",
-                    "picker": "Color Picker",
-                    "quick": "Quick Colors",
-                    "hex": "HEX Code",
+                    "picker": "Color picker",
+                    "quick": "Quick colors",
+                    "hex": "HEX code",
                     "palette": "Color picker palette",
                     "saturation-lightness": "Saturation and lightness",
                     "save-favorite": "Save to favorites",
@@ -651,7 +651,7 @@
                 "agenda": {
                     "title": "Agenda",
                     "empty": "No events for this day",
-                    "all-day": "📅 All Day",
+                    "all-day": "📅 All day",
                     "all-day-time": "All day",
                     "morning": "🌅 Morning (before 12:00)",
                     "afternoon": "☀️ Afternoon (12:00–18:00)",
@@ -660,7 +660,7 @@
                     "today": "📅 Today",
                     "multiday": "📊 Multi-day",
                     "upcoming": "🔮 Upcoming",
-                    "undated": "📥 Inbox (No Date)",
+                    "undated": "📥 Inbox (no date)",
                     "expand": "Expand agenda",
                     "collapse": "Collapse agenda",
                     "add-note": "Add",
@@ -673,22 +673,22 @@
                         "move-down": "Move down",
                         "empty-list": "No records match filters",
                         "list-editor": {
-                            "title-new": "New List",
-                            "title-edit": "Edit List",
-                            "name-label": "List Name",
-                            "name-placeholder": "e.g., Urgent Tasks",
+                            "title-new": "New list",
+                            "title-edit": "Edit list",
+                            "name-label": "List name",
+                            "name-placeholder": "e.g., urgent tasks",
                             "name-required": "Name is required",
                             "name-exists": "Name already exists",
                             "icon-label": "Icon",
                             "change-icon": "Change icon...",
-                            "color-label": "List Accent Color (optional)",
+                            "color-label": "List accent color (optional)",
                             "color-hint": "Sets the left border color for visual identification",
                             "preview": "Preview",
                             "filters-label": "Filters",
                             "filters-hint": "Date formulas: 'today', 'today+1w', 'sow', 'eom'. DQL-compatible: sow/eow/som/eom/soy/eoy. Operators: 'Is today', 'Is this week', 'Is overdue'.",
                             "formula-hint": "Use functions like AND(), OR(), CONTAINS(), IS_TODAY(). See Help for full reference.",
-                            "save": "Save Changes",
-                            "create": "Create List",
+                            "save": "Save changes",
+                            "create": "Create list",
                             "cancel": "Cancel"
                         },
                         "filter-editor": {
@@ -755,8 +755,8 @@
                             "remove-group": "Remove group",
                             "field-placeholder": "Select field...",
                             "operator-placeholder": "Select operator...",
-                            "filter-group-label": "Filter Group",
-                            "date-suggestions": "Date Formulas (DQL)",
+                            "filter-group-label": "Filter group",
+                            "date-suggestions": "Date formulas (DQL)",
                             "date-formula-hint": "Formula: today, sow, eom, today+1w, som-1m",
                             "where-prefix": "Where",
                             "and-prefix": "and",
@@ -772,7 +772,7 @@
                             "help-title-strings": "📝 Strings",
                             "help-title-checks": "🔍 Checks",
                             "help-title-dates": "📅 Dates",
-                            "help-title-arrays": "📋 Arrays / Tags",
+                            "help-title-arrays": "📋 Arrays / tags",
                             "help-title-operators": "⚙ Operators",
                             "help-examples-title": "Examples:",
                             "snippet-active-tasks": "📌 Active tasks",
@@ -792,7 +792,7 @@
                         "no-lists": "No custom lists",
                         "create-list": "Create list"
                     },
-                    "select-icon": "Select Icon",
+                    "select-icon": "Select icon",
                     "clear-color": "Clear color",
                     "clear": "Clear",
                     "visual": "Visual",
@@ -921,7 +921,7 @@
                 },
                 "smart-suggest": {
                     "numeric-message": "Numeric field \"{{field}}\" detected — want a Stats block with sum and average?",
-                    "numeric-action": "Add Stats",
+                    "numeric-action": "Add stats",
                     "relation-message": "Relation field \"{{field}}\" detected — show related records in a linked data block?",
                     "relation-action": "Add data block",
                     "never": "Don't suggest again",
@@ -995,7 +995,7 @@
                     "pipeline": "Pipeline: reshape data before showing — group, count, sort",
                     "remove": "Remove widget",
                     "not-configured": "Widget type \"{{type}}\" — not configured",
-                    "add": "Add Widget",
+                    "add": "Add widget",
                     "add-aria": "Add widget",
                     "lock": "Lock widget position",
                     "menu": "Widget menu",
@@ -1035,31 +1035,31 @@
                 },
                 "quick": {
                     "group": "Quick actions",
-                    "formula": "Formula Builder"
+                    "formula": "Formula builder"
                 },
                 "types": {
-                    "data-table": "Data Table",
+                    "data-table": "Data table",
                     "chart": "Chart",
                     "stats": "Stats",
                     "comparison": "Comparison",
                     "checklist": "Checklist",
-                    "view-port": "View Port",
-                    "filter-tabs": "Filter Tabs",
-                    "summary-row": "Summary Row",
+                    "view-port": "View port",
+                    "filter-tabs": "Filter tabs",
+                    "summary-row": "Summary row",
                     "data-list": "List",
-                    "sub-base-canvas": "Sub-base Canvas",
+                    "sub-base-canvas": "Sub-base canvas",
                     "yaml-visualizer": "Properties",
                     "database-call": "Database",
                     "timeline": "Timeline",
-                    "cover-banner": "Cover Banner",
+                    "cover-banner": "Cover banner",
                     "text": "Text",
                     "divider": "Divider"
                 },
                 "formula": {
-                    "title": "Formula Editor",
+                    "title": "Formula editor",
                     "hint": "Ctrl+Enter to apply, Esc to cancel",
                     "field-name": "Field name",
-                    "field-placeholder": "e.g. Computed Budget",
+                    "field-placeholder": "e.g. computed budget",
                     "expression-placeholder": "e.g. IF(Status = \"Active\", Budget * 1.2, 0)",
                     "preview": "Preview:",
                     "cancel": "Cancel",
@@ -1115,7 +1115,7 @@
                     "remove": "Remove",
                     "add-step": "Add a data step",
                     "filter": "Filter",
-                    "group-by": "Group By",
+                    "group-by": "Group by",
                     "aggregate": "Aggregate",
                     "compute": "Compute",
                     "unpivot": "Unpivot",
@@ -1162,11 +1162,11 @@
                 },
                 "chart": {
                     "no-data": "No data",
-                    "type": "Chart Type",
-                    "x-axis": "X Axis",
-                    "y-axis": "Y Axis",
+                    "type": "Chart type",
+                    "x-axis": "X axis",
+                    "y-axis": "Y axis",
                     "aggregation": "Aggregation",
-                    "sort-by": "Sort By",
+                    "sort-by": "Sort by",
                     "height": "Height",
                     "granularity": "Group dates by",
                     "granularities": {
@@ -1178,8 +1178,8 @@
                     },
                     "types": {
                         "bar": "Bar",
-                        "horizontal-bar": "Horizontal Bar",
-                        "stacked-bar": "Stacked Bar",
+                        "horizontal-bar": "Horizontal bar",
+                        "stacked-bar": "Stacked bar",
                         "line": "Line",
                         "area": "Area",
                         "pie": "Pie",
@@ -1221,11 +1221,11 @@
                         "cumulative": "Cumulative"
                     },
                     "scatter": {
-                        "color-by": "Color By",
-                        "size-by": "Size By",
-                        "trend-line": "Trend Line",
+                        "color-by": "Color by",
+                        "size-by": "Size by",
+                        "trend-line": "Trend line",
                         "r-squared": "Show R²",
-                        "point-size": "Point Size",
+                        "point-size": "Point size",
                         "opacity": "Opacity",
                         "none": "(none)",
                         "correlate-enable": "Correlate with another source",
@@ -1241,7 +1241,7 @@
                         "aria-label": "Scatter chart"
                     },
                     "section": {
-                        "display": "Display Options",
+                        "display": "Display options",
                         "data": "Data",
                         "scatter": "Scatter plot"
                     },
@@ -1342,10 +1342,10 @@
                     "change": "Change embedded view",
                     "embedded": "Embedded view: {{label}}",
                     "embed-title": "Embed a view",
-                    "table": "Table View",
-                    "board": "Board View",
-                    "calendar": "Calendar View",
-                    "gallery": "Gallery View"
+                    "table": "Table view",
+                    "board": "Board view",
+                    "calendar": "Calendar view",
+                    "gallery": "Gallery view"
                 },
                 "table-v2": {
                     "add-property": "Add property",
@@ -1479,8 +1479,8 @@
                     "desc": "Sort Z → A"
                 },
                 "sortDate": {
-                    "asc": "Sort Old → New",
-                    "desc": "Sort New → Old"
+                    "asc": "Sort old → new",
+                    "desc": "Sort new → old"
                 }
             },
             "board": {
@@ -1645,11 +1645,11 @@
         },
         "settings": {
             "about": {
-                "title": "About Projects Plus",
+                "title": "About",
                 "description": "Enhanced project management for Obsidian with advanced features.",
                 "author": "Maintainer",
                 "author-name": "Park Pavel",
-                "original-author": "Original Author",
+                "original-author": "Original author",
                 "original-author-name": "Marcus Olsson",
                 "version": "Version",
                 "version-number": "3.0.5",
@@ -1657,11 +1657,11 @@
                 "credits-desc": "This is a community-maintained fork of the original Obsidian Projects plugin by Marcus Olsson.",
                 "support": "Support",
                 "support-desc": "If you find this plugin useful, consider supporting the development.",
-                "visit-website": "Visit Website",
+                "visit-website": "Visit website",
                 "github": "GitHub",
                 "star-github": "⭐ Star on GitHub",
-                "original-repo": "Original Repository",
-                "languages": "Supported Languages",
+                "original-repo": "Original repository",
+                "languages": "Supported languages",
                 "languages-desc": "Available languages: English, Russian, Ukrainian, Chinese (automatic detection based on system language)"
             },
             "general": {
@@ -1687,7 +1687,7 @@
                     }
                 },
                 "animation-behavior": {
-                    "name": "Animation Behavior",
+                    "name": "Animation behavior",
                     "desc": "Control scrolling animations throughout the plugin",
                     "options": {
                         "smooth": "Smooth (animated)",
@@ -1695,7 +1695,7 @@
                     }
                 },
                 "disable-haptic": {
-                    "name": "Disable Haptic Feedback",
+                    "name": "Disable haptic feedback",
                     "desc": "Turn off vibration feedback during drag-and-drop on mobile devices"
                 },
                 "replace-properties": {
@@ -1853,7 +1853,7 @@
             },
             "done": "Done",
             "views": {
-                "title": "View Management",
+                "title": "View management",
                 "show-titles": "Show view titles",
                 "select-view": "Select view",
                 "rename": "Rename",
@@ -1863,7 +1863,7 @@
                 "drag-to-reorder": "Drag to reorder"
             },
             "view-config": {
-                "title": "View Settings",
+                "title": "View settings",
                 "current-view": "Current view",
                 "no-view": "No active view",
                 "calendar": {
@@ -1871,16 +1871,16 @@
                     "layout": "Layout",
                     "time-format": "Time format",
                     "timezone": "Timezone",
-                    "show-agenda": "Show Agenda",
-                    "hide-agenda": "Hide Agenda",
+                    "show-agenda": "Show agenda",
+                    "hide-agenda": "Hide agenda",
                     "hints": {
                         "timezone": "e.g. Europe/Moscow or local"
                     },
                     "timeline": {
-                        "title": "Timeline Settings",
-                        "start-hour": "Start Hour",
-                        "end-hour": "End Hour",
-                        "event-color-field": "Event Color Field",
+                        "title": "Timeline settings",
+                        "start-hour": "Start hour",
+                        "end-hour": "End hour",
+                        "event-color-field": "Event color field",
                         "show-weekends": "Show weekends",
                         "show-all-day": "Show 'All day' section",
                         "hints": {
@@ -1899,7 +1899,7 @@
                         "bars": "Bars (timeline)"
                     },
                     "field-mapping": {
-                        "title": "Field Mapping",
+                        "title": "Field mapping",
                         "hint": "Select an existing field from the list or enter a new field name",
                         "placeholder": "Enter or select field",
                         "new-field": "+ new field",
