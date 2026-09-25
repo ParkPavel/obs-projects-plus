@@ -298,6 +298,29 @@ export type RollupFieldConfig = {
    * @since 3.4.2 (R2.1b)
    */
   readonly mode?: import("src/lib/database/rollupMode").RollupModeId;
+  /**
+   * Reverse rollup: aggregate the records of `projectId` whose relation
+   * field `relationField` links to this record, instead of following a
+   * relation field of this record. No inverse field has to exist or be kept
+   * in sync — a client's visit count comes from the visits that name the
+   * client. When set, `relationField` above is not read. `projectId` may be
+   * this project's own id (links between its own notes).
+   *
+   * @since 3.6.0
+   */
+  readonly backlink?: {
+    readonly projectId: string;
+    readonly relationField: string;
+  };
+  /**
+   * Field the reached records are ordered by before aggregating, ascending,
+   * empty last. What `first_value` / `last_value` mean: "the latest
+   * wellbeing" is `last_value` of `wellbeing` ordered by `date`. Without
+   * it the records keep the order they were reached in.
+   *
+   * @since 3.6.0
+   */
+  readonly orderBy?: string;
 };
 
 export type FieldConfig = StringFieldConfig &

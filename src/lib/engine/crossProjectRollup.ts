@@ -27,7 +27,12 @@ import {
   type RollupConfig,
   type RollupResult,
 } from "src/lib/engine/aggregate";
-import { resolveCrossProjectRelations } from "./crossProjectResolver";
+import dayjs from "dayjs";
+import { LEGACY_DISPLAY_FALLBACKS, resolveCrossProjectRelations } from "./crossProjectResolver";
+import {
+  buildRelationTargetIndex,
+  resolveRelationValue,
+} from "src/lib/relations/relationContract";
 import { applyFilter } from "src/lib/engine/filterEvaluator";
 import { isNumeric } from "src/lib/engine/numeric";
 
@@ -107,11 +112,9 @@ export function computeCrossProjectRollup(
     ? applyFilter(externalFrame, relCfg.targetSubBaseFilter)
     : externalFrame;
 
-  const targets = resolveCrossProjectRelations(
-    record,
-    config.relationField,
-    scopedFrame,
-    undefined
+  const targets = orderRecords(
+    resolveCrossProjectRelations(record, config.relationField, scopedFrame, relCfg?.displayField),
+    config.orderBy
   );
   const rawValues = targets.map((t) => t.values[config.targetField]);
   const errors = detectTypeMismatch(rawValues, config.function);
@@ -144,6 +147,100 @@ export function computeCrossProjectRollupColumn(
       record.id,
       computeCrossProjectRollup(record, config, thisFrame, externalFrame)
     );
+  }
+  return out;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
+
+/**
+ * Order reached records by `orderBy`, ascending, records without a value
+ * last. Numbers compare as numbers, anything else as text — ISO dates, as
+ * front matter holds them, sort correctly as text, and Date objects by time.
+ * The sort is stable, so equal keys keep the order they were reached in.
+ */
+function orderRecords(records: DataRecord[], orderBy: string | undefined): DataRecord[] {
+  if (!orderBy) return records;
+  const key = (r: DataRecord): number | string | null => {
+    const v = r.values[orderBy];
+    if (v === null || v === undefined || v === "") return null;
+    if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v.getTime();
+    if (typeof v === "number") return v;
+    // A date written as text is read as ingestion reads it (local time), so
+    // "2026-09-01" and a Date for 2026-09-10 compare as the instants they are,
+    // not as a timestamp against a string (backlink-review).
+    const text = String(v);
+    if (ISO_DATE.test(text)) {
+      const parsed = dayjs(text);
+      if (parsed.isValid()) return parsed.valueOf();
+    }
+    return text;
+  };
+  return [...records].sort((a, b) => {
+    const ka = key(a);
+    const kb = key(b);
+    if (ka === null || kb === null) return ka === kb ? 0 : ka === null ? 1 : -1;
+    if (typeof ka === "number" && typeof kb === "number") return ka - kb;
+    return String(ka).localeCompare(String(kb));
+  });
+}
+
+/**
+ * Reverse rollup for every record of `thisFrame`: aggregate `targetField`
+ * over the records of `sourceFrame` whose `backlink.relationField` links to
+ * it. Links are resolved against `thisFrame` by the relation contract — the
+ * same ladder a forward link climbs — so a backlink reaches exactly the
+ * records a forward link from them would reach. A source record linking the
+ * same record twice counts once. Every record gets a result, so "nobody links
+ * here" reads as a count of 0 and an empty average rather than as nothing.
+ *
+ * @since 3.6.0
+ */
+export function computeBacklinkRollupColumn(
+  thisFrame: DataFrame,
+  config: RollupFieldConfig,
+  sourceFrame: DataFrame
+): Map<string, CrossProjectRollupResult> {
+  const out = new Map<string, CrossProjectRollupResult>();
+  const relationField = config.backlink?.relationField;
+  if (!relationField) return out;
+
+  // The source relation's own configuration decides what it can reach, as it
+  // does for a forward link from that record: its display field (or the
+  // shared fallbacks) and its targetSubBaseFilter (backlink-review).
+  const relCfg = sourceFrame.fields.find((f) => f.name === relationField)?.typeConfig
+    ?.relation as RelationFieldConfig | undefined;
+  const reachable = relCfg?.targetSubBaseFilter ? applyFilter(thisFrame, relCfg.targetSubBaseFilter) : thisFrame;
+  const index = buildRelationTargetIndex(
+    reachable,
+    relCfg?.displayField ? [relCfg.displayField] : LEGACY_DISPLAY_FALLBACKS
+  );
+  const linking = new Map<string, DataRecord[]>();
+  for (const source of sourceFrame.records) {
+    const reached = new Set<string>();
+    for (const resolution of resolveRelationValue(source.values[relationField], index)) {
+      if (resolution.status !== "resolved" || !resolution.targetRecordId) continue;
+      if (reached.has(resolution.targetRecordId)) continue;
+      reached.add(resolution.targetRecordId);
+      const list = linking.get(resolution.targetRecordId) ?? [];
+      list.push(source);
+      linking.set(resolution.targetRecordId, list);
+    }
+  }
+
+  for (const record of thisFrame.records) {
+    const sources = orderRecords(linking.get(record.id) ?? [], config.orderBy);
+    const rawValues = sources.map((s) => s.values[config.targetField]);
+    const errors = detectTypeMismatch(rawValues, config.function);
+    if (errors.length > 0) {
+      out.set(record.id, { value: null, sourceCount: sources.length, errors });
+      continue;
+    }
+    out.set(record.id, {
+      value: aggregate(rawValues, toRollupConfig(config)).value,
+      sourceCount: sources.length,
+      errors: [],
+    });
   }
   return out;
 }

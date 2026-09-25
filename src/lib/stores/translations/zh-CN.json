@@ -1395,7 +1395,9 @@
                     "concat_unique": "连接唯一值",
                     "show_original": "显示原值",
                     "show_unique": "显示唯一值",
-                    "date_range": "日期范围"
+                    "date_range": "日期范围",
+                    "first_value": "第一个值",
+                    "last_value": "最后一个值"
                 },
                 "checklist": {
                     "select-field": "选择布尔字段",
@@ -1528,7 +1530,9 @@
                     "show_unique": "每个不同的值只出现一次，以列表显示",
                     "earliest": "该列中最早的日期",
                     "latest": "该列中最晚的日期",
-                    "date_range": "从最早到最晚"
+                    "date_range": "从最早到最晚",
+                    "first_value": "按所选字段排序后的第一个非空值",
+                    "last_value": "按所选字段排序后的最后一个非空值，例如按日期最新的值"
                 },
                 "agg-badge": {
                     "count_total": "总计数",
@@ -1556,7 +1560,9 @@
                     "show_unique": "显示∪",
                     "earliest": "最早",
                     "latest": "最晚",
-                    "date_range": "日期跨度"
+                    "date_range": "日期跨度",
+                    "first_value": "首个",
+                    "last_value": "最后"
                 },
                 "selection": {
                     "clear": "清除选择"

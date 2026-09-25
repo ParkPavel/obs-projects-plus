@@ -26,6 +26,10 @@ export function extractRelationTargetIds(
     if (cfg?.rollup?.targetProjectId && cfg.rollup.targetProjectId !== projectId) {
       ids.add(cfg.rollup.targetProjectId);
     }
+    // A reverse rollup reads the project whose records link here.
+    if (cfg?.rollup?.backlink?.projectId && cfg.rollup.backlink.projectId !== projectId) {
+      ids.add(cfg.rollup.backlink.projectId);
+    }
   }
   return Array.from(ids).sort();
 }

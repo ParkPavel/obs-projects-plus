@@ -42,6 +42,7 @@
 
 import type { DataValue, Optional } from "src/lib/dataframe/dataframe";
 import { toNumbers } from "src/lib/engine/numeric";
+import { formatLocalDay } from "src/lib/helpers/dateFormatting";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -66,7 +67,10 @@ export type RollupFunction =
   /** NPLAN-C3 — show all original values as a visual list. */
   | "show_original"
   /** NPLAN-C3 — show unique values as a visual chip list. */
-  | "show_unique";
+  | "show_unique"
+  /** The first / last filled value in the order given (see RollupFieldConfig.orderBy). @since 3.6.0 */
+  | "first_value"
+  | "last_value";
 
 export interface RollupConfig {
   /** Relation field containing wiki-links */
@@ -194,6 +198,22 @@ export function aggregate(
     case "show_unique": {
       const uniq = [...new Set(nonNull.map(String))];
       return fmtStr(uniq.join(sep));
+    }
+
+    case "first_value":
+    case "last_value": {
+      // Positional: the caller owns the order (a rollup sorts by its orderBy).
+      const filled = nonNull.filter((v) => v !== "");
+      const v = fn === "first_value" ? filled[0] : filled[filled.length - 1];
+      if (v === undefined) return fmtEmpty();
+      if (typeof v === "number") return fmtNum(v);
+      if (typeof v === "boolean") return { value: v, formattedValue: String(v) };
+      // A date is carried as its ISO day, a list as its joined text: RollupResult
+      // holds scalars only, and both read the same way in a cell.
+      // The local calendar day, as ingestion stored it (dateFormatting.ts
+      // formatLocalDay): toISOString named the previous day east of UTC.
+      if (v instanceof Date) return fmtStr(formatLocalDay(v));
+      return fmtStr(Array.isArray(v) ? v.map(String).join(sep) : String(v));
     }
 
     default:

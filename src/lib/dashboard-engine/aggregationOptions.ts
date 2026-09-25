@@ -99,6 +99,8 @@ export const AGGREGATIONS: ReadonlyArray<AggregationOption> = [
   { value: "concat_unique", label: "Concatenate unique", consequence: "Each different value once, joined into one line", badge: "JOIN∪" },
   { value: "show_original", label: "Show original", consequence: "The values themselves, as a list", badge: "SHOW" },
   { value: "show_unique", label: "Show unique values", consequence: "Each different value once, as a list", badge: "SHOW∪" },
+  { value: "first_value", label: "First value", consequence: "The first filled value, in the order of the chosen field", badge: "FIRST" },
+  { value: "last_value", label: "Last value", consequence: "The last filled value, in the order of the chosen field — e.g. the latest by date", badge: "LAST" },
 
   // ── dates ──
   { value: "earliest", label: "Earliest date", consequence: "Oldest date in the column", badge: "EARLIEST" },

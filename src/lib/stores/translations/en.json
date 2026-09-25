@@ -1337,7 +1337,9 @@
                     "concat_unique": "Concatenate unique",
                     "show_original": "Show original",
                     "show_unique": "Show unique values",
-                    "date_range": "Date range"
+                    "date_range": "Date range",
+                    "first_value": "First value",
+                    "last_value": "Last value"
                 },
                 "checklist": {
                     "select-field": "Select a boolean field to bind",
@@ -1427,7 +1429,9 @@
                     "show_unique": "Each different value once, as a list",
                     "earliest": "Oldest date in the column",
                     "latest": "Newest date in the column",
-                    "date_range": "From the earliest to the latest"
+                    "date_range": "From the earliest to the latest",
+                    "first_value": "The first filled value, in the order of the chosen field",
+                    "last_value": "The last filled value, in the order of the chosen field — e.g. the latest by date"
                 },
                 "agg-badge": {
                     "count_total": "COUNT ALL",
@@ -1455,7 +1459,9 @@
                     "show_unique": "SHOW∪",
                     "earliest": "EARLIEST",
                     "latest": "LATEST",
-                    "date_range": "SPAN"
+                    "date_range": "SPAN",
+                    "first_value": "FIRST",
+                    "last_value": "LAST"
                 },
                 "selection": {
                     "clear": "Clear selection"

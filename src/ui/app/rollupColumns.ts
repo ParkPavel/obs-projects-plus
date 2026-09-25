@@ -34,7 +34,10 @@
  */
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
 import type { RollupFieldConfig } from "src/settings/base/settings";
-import { computeCrossProjectRollupColumn } from "src/lib/engine/crossProjectRollup";
+import {
+  computeBacklinkRollupColumn,
+  computeCrossProjectRollupColumn,
+} from "src/lib/engine/crossProjectRollup";
 
 import type { FieldConfigRelationMap } from "./viewHelpers";
 
@@ -87,14 +90,25 @@ export function applyRollupColumns(
       out = { ...out, fields: out.fields.map((field) => (field.name === fieldName ? { ...field, derived: true } : field)) };
     }
 
-    const targetProjectId = resolveRollupTargetProjectId(rollup, fieldConfig);
-    if (!targetProjectId) continue;
+    let column: ReturnType<typeof computeCrossProjectRollupColumn>;
+    if (rollup.backlink) {
+      // Reverse rollup: the records of backlink.projectId that link here.
+      // The project is named by the rollup itself — there is no relation
+      // field on this side to take it from.
+      const sourceId = rollup.backlink.projectId;
+      const sourceFrame = sourceId === projectId ? snapshot : externalFrames.get(sourceId);
+      if (!sourceFrame) continue;
+      column = computeBacklinkRollupColumn(snapshot, rollup, sourceFrame);
+    } else {
+      const targetProjectId = resolveRollupTargetProjectId(rollup, fieldConfig);
+      if (!targetProjectId) continue;
 
-    const targetFrame =
-      targetProjectId === projectId ? snapshot : externalFrames.get(targetProjectId);
-    if (!targetFrame) continue;
+      const targetFrame =
+        targetProjectId === projectId ? snapshot : externalFrames.get(targetProjectId);
+      if (!targetFrame) continue;
 
-    const column = computeCrossProjectRollupColumn(snapshot, rollup, targetFrame);
+      column = computeCrossProjectRollupColumn(snapshot, rollup, targetFrame);
+    }
     out = {
       ...out,
       records: out.records.map((record) => {
