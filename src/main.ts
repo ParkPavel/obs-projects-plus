@@ -714,6 +714,13 @@ export default class ProjectsPlusPlugin extends Plugin {
    */
   private async settingsAreStillOurs(): Promise<boolean> {
     if (this.confirmedOnDisk === null) return true;
+    // A fresh vault: the load confirmed "no file yet" (`canonical(null)`), and
+    // the file still not existing is that same state, not a change. Reading it
+    // anyway fails with ENOENT and used to warn about our own first write.
+    if (this.confirmedOnDisk === canonical(null)) {
+      const path = settingsFilePath(this.manifest.dir);
+      if (path !== null && !(await this.app.vault.adapter.exists(path))) return true;
+    }
     const raw = await this.readSettingsFile();
     if (raw === null) return true;
     let onDisk: string | null;
