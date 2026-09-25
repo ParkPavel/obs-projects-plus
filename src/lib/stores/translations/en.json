@@ -242,6 +242,10 @@
                         "name": "Inherit calendar filters",
                         "description": "Apply the same filters as the calendar view"
                     }
+                },
+                "agenda-custom-lists": {
+                    "name": "Custom lists",
+                    "desc": "Manage your custom agenda lists. Lists are created in the Calendar view."
                 }
             },
             "archive": {
@@ -472,6 +476,26 @@
             },
             "edit-note": {
                 "read-only-fields": "Read-only fields"
+            },
+            "date-format": {
+                "name": "Date format",
+                "desc": "Choose how dates are formatted when creating or editing notes",
+                "preset": {
+                    "name": "Format preset",
+                    "desc": "Select a predefined format or choose Custom"
+                },
+                "custom": {
+                    "name": "Custom format",
+                    "desc": "Enter a dayjs format string (e.g., DD-MMM-YYYY)"
+                },
+                "include-time": {
+                    "name": "Include time",
+                    "desc": "Append HH:mm time to the date format"
+                },
+                "preview": {
+                    "name": "Preview",
+                    "desc": "How today's date will be formatted"
+                }
             }
         },
         "views": {
@@ -1616,7 +1640,10 @@
                 "no-image": "No image"
             },
             "multi-text-input": {
-                "list": "Editable options list"
+                "list": "Editable options list",
+                "option": "Option {{index}}",
+                "remove-option": "Remove option {{index}}",
+                "add-option": "Add new option (or press Enter)"
             },
             "settings-menu": {
                 "tabs": "Settings tabs"
@@ -1715,12 +1742,16 @@
             },
             "commands": {
                 "name": "Commands",
-                "desc": "Add commands for your favorite projects and views."
+                "desc": "Add commands for your favorite projects and views.",
+                "project": "Project",
+                "view": "View"
             },
             "archives": {
                 "name": "Archives",
                 "desc": "Restore or delete your archived projects.",
-                "empty": "No archived project."
+                "empty": "No archived project.",
+                "restore": "Restore this archive",
+                "delete": "Delete this archive"
             },
             "no-project-yet": "No project yet."
         },
@@ -2039,7 +2070,8 @@
             "confirm": "Confirm",
             "move-up": "Move up",
             "move-down": "Move down",
-            "actions": "Actions"
+            "actions": "Actions",
+            "info": "Info"
         },
         "relation-setup": {
             "open": "Link database…",

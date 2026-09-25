@@ -247,6 +247,10 @@
                         "is-checked": "已勾选",
                         "is-not-checked": "未勾选"
                     }
+                },
+                "agenda-custom-lists": {
+                    "name": "自定义列表",
+                    "desc": "管理自定义议程列表。列表在日历视图中创建。"
                 }
             },
             "archive": {
@@ -503,6 +507,26 @@
             },
             "edit-note": {
                 "read-only-fields": "只读字段"
+            },
+            "date-format": {
+                "name": "日期格式",
+                "desc": "创建或编辑笔记时日期的格式",
+                "preset": {
+                    "name": "预设格式",
+                    "desc": "选择预设格式或自定义"
+                },
+                "custom": {
+                    "name": "自定义格式",
+                    "desc": "dayjs 格式字符串（例如 DD-MMM-YYYY）"
+                },
+                "include-time": {
+                    "name": "包含时间",
+                    "desc": "在日期格式后附加 HH:mm 时间"
+                },
+                "preview": {
+                    "name": "预览",
+                    "desc": "今天的日期将显示为"
+                }
             }
         },
         "views": {
@@ -1717,7 +1741,10 @@
                 "no-image": "无图片"
             },
             "multi-text-input": {
-                "list": "可编辑的选项列表"
+                "list": "可编辑的选项列表",
+                "option": "选项 {{index}}",
+                "remove-option": "删除选项 {{index}}",
+                "add-option": "添加选项（或按 Enter）"
             },
             "settings-menu": {
                 "tabs": "设置标签页"
@@ -1805,7 +1832,7 @@
                 }
             },
             "front-matter": {
-                "heading": "Front matter",
+                "heading": "属性",
                 "quote-strings": {
                     "name": "使用引号包裹字符串",
                     "options": {
@@ -1816,12 +1843,16 @@
             },
             "commands": {
                 "name": "命令",
-                "desc": "为你最常用的项目和视图添加命令到命令面板。"
+                "desc": "为你最常用的项目和视图添加命令到命令面板。",
+                "project": "项目",
+                "view": "视图"
             },
             "archives": {
                 "name": "存档管理",
                 "desc": "恢复或删除已存档项目。",
-                "empty": "没有已存档项目。"
+                "empty": "没有已存档项目。",
+                "restore": "恢复此归档",
+                "delete": "删除此归档"
             },
             "filters": {
                 "scope-view": "视图筛选"
@@ -2146,7 +2177,8 @@
             "confirm": "确认",
             "move-up": "上移",
             "move-down": "下移",
-            "actions": "操作"
+            "actions": "操作",
+            "info": "信息"
         },
         "relation-setup": {
             "open": "关联数据库…",

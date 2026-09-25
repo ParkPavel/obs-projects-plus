@@ -174,7 +174,7 @@
             <TextInput
               width="100%"
               value={optionItem.value}
-              placeholder={`Option ${i + 1}`}
+              placeholder={$i18n.t("components.multi-text-input.option", { index: i + 1 })}
               on:input={handleOptionInput(i)}
               on:blur={handleOptionChange(i)}
               on:keydown={handleKeyDown(i)}
@@ -183,7 +183,7 @@
           <IconButton 
             icon="cross" 
             onClick={handleOptionRemove(i)}
-            tooltip={`Remove option ${i + 1}`}
+            tooltip={$i18n.t("components.multi-text-input.remove-option", { index: i + 1 })}
           />
         </div>
       </div>
@@ -192,7 +192,7 @@
   <Button 
     variant="plain" 
     on:click={handleOptionAdd}
-    tooltip="Add new option (or press Enter)"
+    tooltip={$i18n.t("components.multi-text-input.add-option")}
   >
     <Icon name="plus" />
     {$i18n.t("components.multi-text.add")}

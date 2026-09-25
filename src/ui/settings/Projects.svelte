@@ -13,12 +13,12 @@
 </script>
 
 {#if !projects.length}
-  <Callout title={"Info"} icon="info" variant="info">
+  <Callout title={$i18n.t("common.info")} icon="info" variant="info">
     <Typography variant="body">{$i18n.t("settings.no-project-yet")}</Typography>
   </Callout>
 {:else}
   {#each projects as project}
-    <SettingItem name={`${project.name}`} description={"Project"}>
+    <SettingItem name={`${project.name}`} description={$i18n.t("settings.commands.project")}>
       <Switch
         checked={!!preferences.commands.find(
           (command) => command.project == project.id && !command.view
@@ -42,7 +42,7 @@
       />
     </SettingItem>
     {#each project.views as view}
-      <SettingItem name={`${project.name}: ${view.name}`} description="View">
+      <SettingItem name={`${project.name}: ${view.name}`} description={$i18n.t("settings.commands.view")}>
         <Switch
           checked={!!preferences.commands.find(
             (command) =>

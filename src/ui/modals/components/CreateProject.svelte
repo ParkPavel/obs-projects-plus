@@ -991,8 +991,8 @@
           </SettingItem>
         {:else if (project.agenda?.mode ?? 'standard') === 'custom'}
           <SettingItem
-            name="Custom Lists"
-            description="Manage your custom agenda lists. Lists are created in the Calendar view."
+            name={$i18n.t("modals.project.agenda-custom-lists.name")}
+            description={$i18n.t("modals.project.agenda-custom-lists.desc")}
           >
             <div class="custom-lists-preview">
               {#if customLists.length === 0}

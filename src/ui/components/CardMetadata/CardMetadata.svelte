@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
   import {
     DataFieldType,
@@ -30,7 +31,7 @@
       <!-- A rollup keeps the type detected from its values (a sum is a Number), so it is
            recognised by its typeConfig.rollup before any type branch. -->
       {#if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}
-        <span class="ppp-card-meta-derived" title={field.type}>
+        <span class="ppp-card-meta-derived" title={$i18n.t(`data-types.${field.type}`, { defaultValue: field.type })}>
           <span class="ppp-card-meta-derived-icon" aria-hidden="true">ƒ</span>
           <RollupCellRenderer {value} fn={field.typeConfig?.rollup?.function ?? ""} modeId={field.typeConfig?.rollup?.mode ?? ""} />
         </span>
@@ -69,7 +70,7 @@
           </span>
         {/if}
       {:else if field.type === DataFieldType.Formula}
-        <span class="ppp-card-meta-derived" title={field.type}>
+        <span class="ppp-card-meta-derived" title={$i18n.t(`data-types.${field.type}`, { defaultValue: field.type })}>
           <span class="ppp-card-meta-derived-icon" aria-hidden="true">ƒ</span>
           {#if typeof value === "number"}
             <Number {field} {value} />

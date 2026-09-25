@@ -30,6 +30,7 @@ const NOT_LANGUAGE: ReadonlyMap<string, string> = new Map([
   ["ui/modals/components/CreateProject.svelte|folder/path", "path syntax hint"],
   ["ui/modals/components/CreateProject.svelte|TABLE ...", "Dataview query keyword"],
   ["ui/modals/components/CreateProject.svelte|TABLE status Status FROM Work", "Dataview query sample"],
+  ["ui/modals/components/EditNote.svelte|color", "the name of the note property the row writes, shown like every other field row"],
   ["ui/views/Dashboard/widgets/PipelineEditor.svelte|SUM", "formula function name"],
   ["ui/app/onboarding/Onboarding.svelte|---\nstatus: Backlog\ndue: 2023-01-01\npublished: false\n---\n\n# My blog post", "front matter code sample"],
   ["ui/views/Calendar/components/Calendar/HeaderStripsSection.svelte|= stripGhost.startDayIndex && dayIdx", "not text: a `<` comparison inside a template expression"],
@@ -60,7 +61,7 @@ export function englishInMarkup(source: string): string[] {
     found.push((m[1] ?? "").trim());
   }
   // A SettingItem's name is its visible label (an HTML name= is not text).
-  for (const m of s.matchAll(/<SettingItem\b[^>]*?\bname="([^"{]*[A-Z][a-z]{2,}[^"{]*)"/g)) {
+  for (const m of s.matchAll(/<SettingItem\b[^>]*?\bname="([^"{]*[A-Za-z]{3,}[^"{]*)"/g)) {
     found.push((m[1] ?? "").trim());
   }
   // English words in a template-literal attribute: `Remove option ${i}`.
@@ -114,7 +115,13 @@ describe("R0.28 — the real tree", () => {
   it("no widget or view type identifier is printed raw", () => {
     const offenders = files.flatMap((file) => {
       const src = fs.readFileSync(file, "utf8");
-      return [...src.matchAll(/\(\{(widgetType|view\.type|widget\.type)\}\)|\$\{(col\.field\.type|field\.type)\}/g)]
+      return [...src.matchAll(new RegExp([
+        /\(\{(?:widgetType|view\.type|widget\.type)\}\)/.source,
+        /(?<!data-types\.)\$\{(?:col\.field\.type|field\.type)\}/.source,
+        /title=\{(?:col\.)?field\.type\}/.source,
+        /\b(?:type|viewType):\s*(?:widget\.type|activeTab\.viewType)\b/.source,
+        /<option value=\{fn\}>\{fn\}<\/option>/.source,
+      ].join("|"), "g"))]
         .map((m) => `${path.relative(SRC_ROOT, file).split(path.sep).join("/")}: ${m[0]}`);
     });
     expect(offenders).toEqual([]);

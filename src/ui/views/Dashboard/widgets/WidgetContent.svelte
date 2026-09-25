@@ -88,6 +88,6 @@
   />
 {:else}
   <div class="ppp-widget-placeholder">
-    {$i18n.t("views.dashboard.widget.not-configured", { type: widget.type })}
+    {$i18n.t("views.dashboard.widget.not-configured", { type: $i18n.t(`views.dashboard.types.${widget.type}`, { defaultValue: widget.type }) })}
   </div>
 {/if}

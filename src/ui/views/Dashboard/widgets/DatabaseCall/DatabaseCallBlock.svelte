@@ -663,7 +663,7 @@
           <div class="ppp-database-call-placeholder">
             <span>{$i18n.t("views.dashboard.database-call.view-not-implemented", {
               defaultValue: "{{viewType}} view not yet implemented",
-              viewType: activeTab.viewType
+              viewType: $i18n.t(`views.${activeTab.viewType}.name`, { defaultValue: activeTab.viewType })
             })}</span>
           </div>
         {/if}

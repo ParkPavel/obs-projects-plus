@@ -62,7 +62,7 @@
 </script>
 
 {#if !archives.length}
-  <Callout title={"Info"} icon="info" variant="info">
+  <Callout title={$i18n.t("common.info")} icon="info" variant="info">
     <Typography variant="body">{$i18n.t("settings.archives.empty")}</Typography>
   </Callout>
 {:else}
@@ -70,12 +70,12 @@
     <SettingItem name={`${archive.name}`} description={getDescription(archive)}>
       <IconButton
         icon="archive-restore"
-        tooltip="Restore this archive"
+        tooltip={$i18n.t("settings.archives.restore")}
         onClick={() => onRestore(archive.id)}
       />
       <IconButton
         icon="trash-2"
-        tooltip="Delete this archive"
+        tooltip={$i18n.t("settings.archives.delete")}
         onClick={() => {
           new ConfirmDialogModal(
             $app,

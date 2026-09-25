@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   /**
    * DateFormatSelector.svelte
    * 
@@ -107,8 +108,8 @@
 </script>
 
 <SettingItem
-  name="Date Format"
-  description="Choose how dates are formatted when creating or editing notes"
+  name={$i18n.t("modals.date-format.name")}
+  description={$i18n.t("modals.date-format.desc")}
 >
   <Switch
     checked={!!dateFormat}
@@ -124,8 +125,8 @@
 
 {#if dateFormat}
   <SettingItem
-    name="Format Preset"
-    description="Select a predefined format or choose Custom"
+    name={$i18n.t("modals.date-format.preset.name")}
+    description={$i18n.t("modals.date-format.preset.desc")}
   >
     <Select
       value={currentPreset}
@@ -136,8 +137,8 @@
 
   {#if currentPreset === "custom"}
     <SettingItem
-      name="Custom Format"
-      description="Enter a dayjs format string (e.g., DD-MMM-YYYY)"
+      name={$i18n.t("modals.date-format.custom.name")}
+      description={$i18n.t("modals.date-format.custom.desc")}
       vertical
     >
       <TextInput
@@ -152,8 +153,8 @@
   {/if}
 
   <SettingItem
-    name="Include Time"
-    description="Append HH:mm time to the date format"
+    name={$i18n.t("modals.date-format.include-time.name")}
+    description={$i18n.t("modals.date-format.include-time.desc")}
   >
     <Switch
       checked={includeTime}
@@ -162,8 +163,8 @@
   </SettingItem>
 
   <SettingItem
-    name="Preview"
-    description="How today's date will be formatted"
+    name={$i18n.t("modals.date-format.preview.name")}
+    description={$i18n.t("modals.date-format.preview.desc")}
   >
     <div class="preview-text" class:error={!isValidFormat}>
       {previewFormatted}

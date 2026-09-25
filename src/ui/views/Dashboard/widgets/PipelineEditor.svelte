@@ -14,6 +14,7 @@
   import type { BlockSource } from "./linkedSourceState";
   import type { FilterCondition } from "src/settings/base/settings";
   import { i18n } from "src/lib/stores/i18n";
+  import { aggregationLabel, type AggregationName } from "src/lib/dashboard-engine/aggregationOptions";
   import { get } from "svelte/store";
   import { Icon } from "obsidian-svelte";
   import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
@@ -91,6 +92,10 @@
   // discoverability banner pointing users at the Unnest transform when their
   // YAML frontmatter contains nested lists (e.g. `sets: [{reps, weight}]`).
   $: arrayFields = detectArrayFields(source, fields, steps);
+
+  // Pipeline aggregation codes (SUM, AVG…) shown by their name in the shared vocabulary.
+  $: aggOptionLabel = (fn: string): string =>
+    aggregationLabel(fn.toLowerCase() as AggregationName, (key, defaultValue) => $i18n.t(key, { defaultValue }));
 
   const AGG_FUNCTIONS: AggregationFunction[] = [
     "SUM", "AVG", "MEDIAN", "MIN", "MAX", "RANGE",
@@ -885,7 +890,7 @@
                     on:change={(e) => updateJoinStep(i, { aggregation: normalizeAggFunction(selectVal(e), step.aggregation ?? "SUM") })}
                   >
                     {#each AGG_FUNCTIONS as fn}
-                      <option value={fn}>{fn}</option>
+                      <option value={fn}>{aggOptionLabel(fn)}</option>
                     {/each}
                   </select>
                 </label>

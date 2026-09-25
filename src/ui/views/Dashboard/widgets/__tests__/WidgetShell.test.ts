@@ -38,11 +38,12 @@ describe("WidgetShell (#067 F1)", () => {
     document.body.innerHTML = "";
   });
 
-  it("renders host frame with header title and type badge", () => {
+  it("renders host frame with header title and no raw type badge", () => {
     const { target, destroy } = mount({});
     expect(target.querySelector(".ppp-widget-host")).not.toBeNull();
     expect(target.querySelector(".ppp-widget-title")).toHaveTextContent("My widget");
-    expect(target.querySelector(".ppp-widget-type-badge")).toHaveTextContent("(stats)");
+    // The raw type identifier was a diagnostic, not product text (visual acceptance 2026-09-25).
+    expect(target.querySelector(".ppp-widget-type-badge")).toBeNull();
     destroy();
   });
 

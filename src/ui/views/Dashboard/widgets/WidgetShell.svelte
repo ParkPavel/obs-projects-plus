@@ -3,7 +3,7 @@
    * WidgetShell — #067 F1 (UT2026-F).
    *
    * The frame every canvas widget lives in: host container, header
-   * (collapse toggle, title, type badge, `badges` and `actions` slots), `panels` slot
+   * (collapse toggle, title, `badges` and `actions` slots), `panels` slot
    * (config panels / pipeline editor), and the content area with
    * lazy-render skeleton (DG-9 IntersectionObserver) and scoped
    * resource-error capture. Owns NO widget semantics — collapse is the
@@ -127,7 +127,6 @@
         on:dblclick={() => { if (!readonly) void startTitleEdit(); }}
       >{title}</span>
     {/if}
-    <span class="ppp-widget-type-badge" aria-hidden="true">({widgetType})</span>
     {#if $$slots.badges}
       <span class="ppp-widget-badges"><slot name="badges" /></span>
     {/if}
@@ -225,24 +224,6 @@
     height: 1.5rem;
     font-size: var(--font-ui-small);
     font-weight: var(--font-semibold, 600);
-  }
-
-  .ppp-widget-type-badge {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-faint);
-    flex-shrink: 0;
-    opacity: 0;
-    transition: opacity var(--ppp-duration-normal, 0.15s) ease;
-  }
-
-  .ppp-widget-header:hover .ppp-widget-type-badge {
-    opacity: 1;
-  }
-
-  @media (pointer: coarse) {
-    .ppp-widget-type-badge {
-      opacity: 1;
-    }
   }
 
   .ppp-widget-badges {

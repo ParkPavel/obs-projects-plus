@@ -74,7 +74,7 @@
       class:ppp-t2-header-cell--interactive={!readonly}
       role="columnheader"
       aria-sort={sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"}
-      title={`${col.field.name} · ${col.field.type}`}
+      title={`${col.field.name} · ${$i18n.t(`data-types.${col.field.type}`, { defaultValue: col.field.type })}`}
     >
       <button class="ppp-t2-header-btn" on:click={(e) => openMenu(col, e)} disabled={readonly}>
         <span class="ppp-t2-header-icon"><Icon name={getFieldIcon(col.field.type)} size="sm" /></span>
