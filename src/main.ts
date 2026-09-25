@@ -1026,7 +1026,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       return await this.app.vault.adapter.read(path);
     } catch (err) {
       console.warn(
-        "[Projects+] settings changed on disk but could not be read:",
+        "[Projects+] could not read the settings file:",
         err
       );
       return null;
