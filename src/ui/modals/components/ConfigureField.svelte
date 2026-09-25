@@ -23,6 +23,13 @@
     ROLLUP_PICKER_ORDER,
   } from "src/lib/dashboard-engine/aggregationOptions";
   import { settings as settingsStore } from "src/lib/stores/settings";
+  import {
+    applyRollupSource,
+    rollupFunctionIsPositional,
+    rollupSources,
+    rollupSourceProjectId,
+    rollupSourceValue,
+  } from "src/lib/rollup/rollupSources";
   import { dataFieldTypeOptions } from "./dataFieldTypeOptions";
   import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
@@ -420,22 +427,39 @@
       )
   );
 
+  // 3.6.0 — one picker for where a rollup reads from: this project's
+  // relations, then every relation elsewhere that links HERE (a backlink
+  // rollup: "visits of this client" without a visits field on the client).
+  $: rollupSourceList = rollupSources(
+    relationFieldsOnThisProject.map((f) => f.name),
+    effectiveProjects,
+    currentProjectId
+  );
+
   $: rollupRelationOptions = [
     { label: $i18n.t("modals.field.configure.rollup.no-relation"), value: "" },
-    ...relationFieldsOnThisProject.map((f) => ({ label: f.name, value: f.name })),
+    ...rollupSourceList.map((s) => ({
+      label:
+        s.kind === "forward"
+          ? s.relationField
+          : $i18n.t("modals.field.configure.rollup.backlink-option", {
+              project: s.projectName,
+              field: s.relationField,
+            }),
+      value: s.value,
+    })),
   ];
 
-  $: rollupResolvedTargetProjectId = (() => {
-    if (rollupCfg?.targetProjectId) return rollupCfg.targetProjectId;
-    if (!rollupCfg?.relationField) return "";
-    const rf = relationFieldsOnThisProject.find(
-      (f) => f.name === rollupCfg.relationField
-    );
-    return (
-      (rf?.typeConfig as { relation?: RelationFieldConfig })?.relation
-        ?.targetProjectId ?? ""
-    );
-  })();
+  $: rollupResolvedTargetProjectId = rollupSourceProjectId(rollupCfg, (name) =>
+    (relationFieldsOnThisProject.find((f) => f.name === name)?.typeConfig as
+      | { relation?: RelationFieldConfig }
+      | undefined)?.relation?.targetProjectId
+  );
+
+  $: rollupOrderByOptions = [
+    { label: $i18n.t("modals.field.configure.rollup.order-by.none"), value: "" },
+    ...rollupTargetFieldOptions.filter((o) => o.value !== ""),
+  ];
 
   $: rollupTargetProject = effectiveProjects.find(
     (p) => p.id === rollupResolvedTargetProjectId
@@ -478,6 +502,9 @@
     if (!merged.separator) {
       delete (merged as { separator?: string }).separator;
     }
+    if (!merged.orderBy) {
+      delete (merged as { orderBy?: string }).orderBy;
+    }
     const nextTypeConfig = { ...(field.typeConfig ?? {}) } as {
       rollup?: RollupFieldConfig;
     };
@@ -486,8 +513,8 @@
   }
 
   function handleRollupRelationFieldChange(ev: CustomEvent<string>) {
-    const relationField = ev.detail;
-    if (!relationField) {
+    const next = applyRollupSource(rollupCfg, ev.detail);
+    if (!next) {
       // User cleared selection → wipe whole rollup config.
       const next = { ...(field.typeConfig ?? {}) } as {
         rollup?: RollupFieldConfig;
@@ -496,7 +523,11 @@
       field = { ...field, typeConfig: next };
       return;
     }
-    patchRollup({ relationField });
+    field = { ...field, typeConfig: { ...(field.typeConfig ?? {}), rollup: next } };
+  }
+
+  function handleRollupOrderByChange(ev: CustomEvent<string>) {
+    patchRollup({ orderBy: ev.detail });
   }
 
   function handleRollupTargetFieldChange(ev: CustomEvent<string>) {
@@ -747,20 +778,20 @@
           "modals.field.configure.rollup.relation-field.description"
         )}
       >
-        {#if relationFieldsOnThisProject.length === 0}
+        {#if rollupSourceList.length === 0}
           <p class="ppp-rollup-empty">
             {$i18n.t("modals.field.configure.rollup.no-relations-warning")}
           </p>
         {:else}
           <Select
-            value={rollupCfg?.relationField ?? ""}
+            value={rollupSourceValue(rollupCfg)}
             options={rollupRelationOptions}
             allowEmpty
             on:change={handleRollupRelationFieldChange}
           />
         {/if}
       </SettingItem>
-      {#if rollupCfg?.relationField && rollupResolvedTargetProjectId}
+      {#if (rollupCfg?.relationField || rollupCfg?.backlink) && rollupResolvedTargetProjectId}
         <SettingItem
           name={$i18n.t("modals.field.configure.rollup.target-field.name")}
           description={rollupTargetProject
@@ -801,6 +832,27 @@
             on:change={handleRollupFunctionChange}
           />
         </SettingItem>
+        {#if rollupFunctionIsPositional(rollupCfg?.function)}
+          <SettingItem
+            name={$i18n.t("modals.field.configure.rollup.order-by.name")}
+            description={$i18n.t("modals.field.configure.rollup.order-by.description")}
+          >
+            {#if rollupOrderByOptions.length > 1}
+              <Select
+                value={rollupCfg?.orderBy ?? ""}
+                options={rollupOrderByOptions}
+                allowEmpty
+                on:change={handleRollupOrderByChange}
+              />
+            {:else}
+              <TextInput
+                value={rollupCfg?.orderBy ?? ""}
+                placeholder={$i18n.t("modals.field.configure.rollup.order-by.placeholder")}
+                on:input={handleRollupOrderByChange}
+              />
+            {/if}
+          </SettingItem>
+        {/if}
         {#if rollupCfg?.function === "concat" || rollupCfg?.function === "concat_unique"}
           <SettingItem
             name={$i18n.t("modals.field.configure.rollup.separator.name")}

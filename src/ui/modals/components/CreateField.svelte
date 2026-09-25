@@ -39,6 +39,12 @@
   } from "src/settings/base/settings";
   import type { RollupFunction } from "src/lib/engine/aggregate";
   import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
+  import {
+    applyRollupSource,
+    rollupFunctionIsPositional,
+    rollupSources,
+    rollupSourceValue,
+  } from "src/lib/rollup/rollupSources";
 
   export let existingFields: DataField[];
   export let defaultName: string;
@@ -279,9 +285,27 @@
   $: relationFieldsOnThisProject = existingFields.filter(
     (f) => f.type === DataFieldType.Relation && !isRelationCompanionField(f.name)
   );
+  // 3.6.0 — one picker for where a rollup reads from: this project's
+  // relations, then every relation elsewhere that links HERE (a backlink
+  // rollup: "visits of this client" without a visits field on the client).
+  $: rollupSourceList = rollupSources(
+    relationFieldsOnThisProject.map((f) => f.name),
+    effectiveProjects,
+    currentProjectId
+  );
+
   $: rollupRelationOptions = [
     { label: $i18n.t("modals.field.configure.rollup.no-relation"), value: "" },
-    ...relationFieldsOnThisProject.map((f) => ({ label: f.name, value: f.name })),
+    ...rollupSourceList.map((s) => ({
+      label:
+        s.kind === "forward"
+          ? s.relationField
+          : $i18n.t("modals.field.configure.rollup.backlink-option", {
+              project: s.projectName,
+              field: s.relationField,
+            }),
+      value: s.value,
+    })),
   ];
   // #180d/T5: the default label came from the raw stored name, so this picker
   // showed `count_total` where every other surface showed "Count all".
@@ -327,6 +351,7 @@
     ) {
       delete merged.separator;
     }
+    if (!merged.orderBy) delete merged.orderBy;
     field = {
       ...field,
       typeConfig: {
@@ -353,6 +378,20 @@
         },
       };
     }
+  }
+
+  function handleRollupSourceChange(e: CustomEvent<string>) {
+    const next = applyRollupSource(rollupCfg, e.detail);
+    if (!next) {
+      const { rollup: _omit, ...rest } = (field.typeConfig ?? {}) as {
+        rollup?: RollupFieldConfig;
+        [k: string]: unknown;
+      };
+      void _omit;
+      field = { ...field, typeConfig: rest };
+      return;
+    }
+    field = { ...field, typeConfig: { ...field.typeConfig, rollup: next } };
   }
 
   function handleRollupFunctionChange(e: CustomEvent<string>) {
@@ -547,7 +586,7 @@
       {/if}
     {/if}
     {#if field.type === DataFieldType.Rollup}
-      {#if relationFieldsOnThisProject.length === 0}
+      {#if rollupSourceList.length === 0}
         <p class="ppp-create-field-stagea-note">
           {$i18n.t("modals.field.configure.rollup.no-relations-warning")}
         </p>
@@ -559,12 +598,12 @@
           )}
         >
           <Select
-            value={rollupCfg?.relationField ?? ""}
+            value={rollupSourceValue(rollupCfg)}
             options={rollupRelationOptions}
-            on:change={(e) => patchRollup({ relationField: e.detail })}
+            on:change={handleRollupSourceChange}
           />
         </SettingItem>
-        {#if rollupCfg?.relationField}
+        {#if rollupCfg?.relationField || rollupCfg?.backlink}
           <SettingItem
             name={$i18n.t("modals.field.configure.rollup.target-field.name")}
             description={$i18n.t(
@@ -591,6 +630,18 @@
               on:change={handleRollupFunctionChange}
             />
           </SettingItem>
+          {#if rollupFunctionIsPositional(rollupCfg?.function)}
+            <SettingItem
+              name={$i18n.t("modals.field.configure.rollup.order-by.name")}
+              description={$i18n.t("modals.field.configure.rollup.order-by.description")}
+            >
+              <TextInput
+                value={rollupCfg?.orderBy ?? ""}
+                placeholder={$i18n.t("modals.field.configure.rollup.order-by.placeholder")}
+                on:input={(e) => patchRollup({ orderBy: e.detail })}
+              />
+            </SettingItem>
+          {/if}
           {#if rollupCfg?.function === "concat" || rollupCfg?.function === "concat_unique"}
             <SettingItem
               name={$i18n.t("modals.field.configure.rollup.separator.name")}

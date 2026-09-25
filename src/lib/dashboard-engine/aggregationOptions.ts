@@ -217,4 +217,6 @@ export const ROLLUP_PICKER_ORDER: ReadonlyArray<RollupFunction> = [
   "range",
   "concat",
   "concat_unique",
+  "first_value",
+  "last_value",
 ];

@@ -399,6 +399,13 @@
                         "separator": {
                             "name": "Separator",
                             "description": "Used to join values when the function is Concatenate."
+                        },
+                        "backlink-option": "{{project}} · {{field}} (links here)",
+                        "order-by": {
+                            "name": "Order by",
+                            "description": "The field that decides which value is first and which is last — usually a date",
+                            "none": "— In link order —",
+                            "placeholder": "date"
                         }
                     },
                     "formula": {

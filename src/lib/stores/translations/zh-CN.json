@@ -415,6 +415,13 @@
                         "separator": {
                             "name": "分隔符",
                             "description": "用于连接值时的分隔符。"
+                        },
+                        "backlink-option": "{{project}} · {{field}}（链接到此处）",
+                        "order-by": {
+                            "name": "排序依据",
+                            "description": "决定哪个值是第一个、哪个是最后一个的字段，通常是日期",
+                            "none": "— 按链接顺序 —",
+                            "placeholder": "日期"
                         }
                     },
                     "formula": {
