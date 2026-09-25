@@ -1,4 +1,6 @@
 import { writable, derived } from "svelte/store";
+import { app as appStore } from "src/lib/stores/obsidian";
+import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
 
 /**
  * 📱 Unified Device Detection Store
@@ -30,42 +32,31 @@ export const BREAKPOINTS = {
 	xxl: 1920 // 120rem - ultra-wide
 } as const;
 
-// Helper to create persistent store using Obsidian App API
+// A store persisted in Obsidian's per-vault local storage. It is created at
+// import time, before onload hands the plugin its App, so it hydrates when
+// the App arrives and only writes after that — never through the global app.
 function createPersistentStore<T>(key: string, initialValue: T) {
-  // Get stored value using App API
-  let storedValue = initialValue;
-  if (typeof window !== 'undefined') {
+  const storageKey = `obs-projects-plus-${key}`;
+  const store = writable<T>(initialValue);
+  let hydrated = false;
+  appStore.subscribe((instance) => {
+    if (!instance || hydrated) return;
+    hydrated = true;
     try {
-       
-      const app = (window as any).app;
-      if (app?.loadLocalStorage) {
-        const stored = app.loadLocalStorage(`obs-projects-plus-${key}`);
-        if (stored !== null) {
-          storedValue = JSON.parse(stored);
-        }
-      }
+      const stored = loadAppLocal(storageKey);
+      if (stored !== null) store.set(JSON.parse(stored) as T);
     } catch (e) {
       console.warn(`[Projects+] Failed to load ${key} from App storage`, e);
     }
-  }
-  
-  const store = writable<T>(storedValue);
-  
-  // Subscribe to changes and persist using App API
+  });
   store.subscribe((value) => {
-    if (typeof window !== 'undefined') {
-      try {
-         
-        const app = (window as any).app;
-        if (app?.saveLocalStorage) {
-          app.saveLocalStorage(`obs-projects-plus-${key}`, JSON.stringify(value));
-        }
-      } catch (e) {
-        console.warn(`[Projects+] Failed to save ${key} to App storage`, e);
-      }
+    if (!hydrated) return;
+    try {
+      saveAppLocal(storageKey, JSON.stringify(value));
+    } catch (e) {
+      console.warn(`[Projects+] Failed to save ${key} to App storage`, e);
     }
   });
-  
   return store;
 }
 
@@ -83,8 +74,13 @@ const windowSize = writable({
 /** Внутренний store для pointer type */
 const pointerType = writable<"fine" | "coarse" | "none">("fine");
 
-/** Обновление размера окна и pointer type */
-if (typeof window !== "undefined") {
+/**
+ * Keep windowSize and pointerType current while the plugin runs. Returns the
+ * cleanup; onload registers it, so the listeners end when the plugin unloads
+ * (they were added at import time and never removed).
+ */
+export function watchViewport(): () => void {
+	if (typeof window === "undefined") return () => {};
 	const updateWindowSize = () => {
 		windowSize.set({
 			width: window.innerWidth,
@@ -94,10 +90,11 @@ if (typeof window !== "undefined") {
 
 	// Debounced resize handler
 	let resizeTimeout: number | null = null;
-	window.addEventListener("resize", () => {
+	const onResize = () => {
 		if (resizeTimeout) window.clearTimeout(resizeTimeout);
 		resizeTimeout = window.setTimeout(updateWindowSize, 150);
-	});
+	};
+	window.addEventListener("resize", onResize);
 
 	// Определяем pointer type
 	const updatePointerType = () => {
@@ -113,8 +110,14 @@ if (typeof window !== "undefined") {
 	updatePointerType();
 	
 	// Отслеживаем изменения pointer type
-	window.matchMedia("(pointer: coarse)").addEventListener("change", updatePointerType);
-	window.matchMedia("(pointer: fine)").addEventListener("change", updatePointerType);
+	const queries = [window.matchMedia("(pointer: coarse)"), window.matchMedia("(pointer: fine)")];
+	for (const query of queries) query.addEventListener("change", updatePointerType);
+
+	return () => {
+		window.removeEventListener("resize", onResize);
+		if (resizeTimeout) window.clearTimeout(resizeTimeout);
+		for (const query of queries) query.removeEventListener("change", updatePointerType);
+	};
 }
 
 /** 

@@ -59,7 +59,7 @@ describe("R0.29 catalogue manifest", () => {
   test("minAppVersion covers the App storage API the code calls (@since 1.8.7)", () => {
     const usesAppStorage = collectSourceFiles(SRC_ROOT, [".ts", ".svelte"])
       .filter((f) => !/\.(test|spec)\.ts$/.test(f))
-      .some((f) => /\b(load|save)LocalStorage\s*\(/.test(fs.readFileSync(f, "utf8")));
+      .some((f) => /\b(load|save)LocalStorage\s*(\?\.)?\(/.test(fs.readFileSync(f, "utf8")));
     expect(usesAppStorage).toBe(true);
     expect(atLeast(String(manifest["minAppVersion"]), "1.8.7")).toBe(true);
   });

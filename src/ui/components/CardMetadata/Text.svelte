@@ -5,7 +5,10 @@
     DataValue,
     Optional,
   } from "src/lib/dataframe/dataframe";
-  import { app, view } from "src/lib/stores/obsidian";
+  import { app } from "src/lib/stores/obsidian";
+  import { markdownOwner } from "src/lib/markdownOwner";
+  // Rendered Markdown lives as long as this component (not the last opened view).
+  const owner = markdownOwner();
   import { handleHoverLink } from "src/ui/views/helpers";
   import { getContext } from "svelte";
 
@@ -16,7 +19,7 @@
 
   function useMarkdown(node: HTMLElement) {
     if (typeof value === "string") {
-      MarkdownRenderer.render($app, value, node, sourcePath, $view);
+      MarkdownRenderer.render($app, value, node, sourcePath, owner);
     }
   }
 

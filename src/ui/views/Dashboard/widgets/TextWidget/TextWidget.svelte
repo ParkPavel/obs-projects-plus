@@ -2,7 +2,10 @@
   import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher, tick } from "svelte";
   import { MarkdownRenderer } from "obsidian";
-  import { app, view } from "src/lib/stores/obsidian";
+  import { app } from "src/lib/stores/obsidian";
+  import { markdownOwner } from "src/lib/markdownOwner";
+  // Rendered Markdown lives as long as this component (not the last opened view).
+  const owner = markdownOwner();
 
   export let config: Record<string, unknown>;
   export let readonly: boolean = false;
@@ -38,11 +41,11 @@
 
   function useMarkdown(node: HTMLElement, text: string) {
     const sourcePath = "";
-    MarkdownRenderer.render($app, text || "", node, sourcePath, $view);
+    MarkdownRenderer.render($app, text || "", node, sourcePath, owner);
     return {
       update(newText: string) {
         node.empty();
-        MarkdownRenderer.render($app, newText || "", node, sourcePath, $view);
+        MarkdownRenderer.render($app, newText || "", node, sourcePath, owner);
       },
     };
   }

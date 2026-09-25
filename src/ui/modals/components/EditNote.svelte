@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../../../lib/stores/obsidian';
+  import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
   import {
     Button,
     Callout,
@@ -321,8 +321,7 @@
   
   // Load collapsed state from localStorage on mount
   onMount(() => {
-    const appInstance = (window as any).app || $app;
-    const saved = appInstance?.loadLocalStorage('editNote.collapsedGroups');
+    const saved = loadAppLocal('editNote.collapsedGroups');
     if (saved) {
       try {
         collapsedState = JSON.parse(saved);
@@ -334,8 +333,7 @@
   
   // Save collapsed state to localStorage
   function saveCollapsedState() {
-    const appInstance = (window as any).app || $app;
-    appInstance?.saveLocalStorage('editNote.collapsedGroups', JSON.stringify(collapsedState));
+    saveAppLocal('editNote.collapsedGroups', JSON.stringify(collapsedState));
   }
 
   // Группировка полей

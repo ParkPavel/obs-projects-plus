@@ -12,6 +12,7 @@
   but user can pick any date to view agenda relative to that date.
 -->
 <script lang="ts">
+  import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
   import dayjs from 'dayjs';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
@@ -24,7 +25,6 @@
   import { formatDateForDisplay } from '../../../../../lib/helpers';
   import { extractTimeWithPriority, parseDateInTimezone } from '../../../Calendar/calendar';
   import { isMobileDevice } from '../../../../../lib/stores/ui';
-  import { app } from '../../../../../lib/stores/obsidian';
   import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
@@ -157,8 +157,7 @@
   
   function loadState() {
     try {
-      const appInstance = (window as any).app || $app;
-      const data = appInstance?.loadLocalStorage(STORAGE_KEY);
+      const data = loadAppLocal(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
         if (parsed.collapsed) {
@@ -173,8 +172,7 @@
   
   function saveState() {
     try {
-      const appInstance = (window as any).app || $app;
-      appInstance?.saveLocalStorage(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories, collapsedCustom: [...collapsedCustomLists] }));
+      saveAppLocal(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories, collapsedCustom: [...collapsedCustomLists] }));
     } catch { /* ignore */ }
   }
   

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
   import dayjs from "dayjs";
   import { Notice } from "obsidian";
   import { createDataRecord } from "src/lib/dataApi";
@@ -122,8 +123,7 @@
         version: 1
       };
       
-      const appInstance = (window as any).app || $app;
-      appInstance?.saveLocalStorage(getStorageKey(), JSON.stringify(state));
+      saveAppLocal(getStorageKey(), JSON.stringify(state));
       calendarLogger.debug('View state saved', { component: 'CalendarView', data: state as unknown as Record<string, unknown> });
     } catch (error) {
       calendarLogger.warn('Failed to save view state', { component: 'CalendarView', data: { error } });
@@ -135,8 +135,7 @@
    */
   function loadViewState(): PersistedViewState | null {
     try {
-      const appInstance = (window as any).app || $app;
-      const stored = appInstance?.loadLocalStorage(getStorageKey());
+      const stored = loadAppLocal(getStorageKey());
       if (!stored) return null;
       
       const state = JSON.parse(stored) as PersistedViewState;
@@ -148,9 +147,7 @@
       const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
       if (Date.now() - state.timestamp > MAX_AGE_MS) {
         // Remove stale state using App API
-        if (appInstance?.saveLocalStorage) {
-          appInstance.saveLocalStorage(getStorageKey(), null);
-        }
+        saveAppLocal(getStorageKey(), null);
         return null;
       }
       

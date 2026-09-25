@@ -17,6 +17,7 @@ import { createDataRecord, createProject } from "src/lib/dataApi";
 import { api } from "src/lib/stores/api";
 import { i18n, syncLocale } from "src/lib/stores/i18n";
 import { app, plugin } from "src/lib/stores/obsidian";
+import { watchViewport } from "src/lib/stores/ui";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
@@ -447,6 +448,7 @@ export default class ProjectsPlusPlugin extends Plugin {
     // Initialize Svelte stores so that Svelte components can access the App and
     // Plugin objects.
     app.set(this.app);
+    this.register(watchViewport());
     plugin.set(this);
 
     // REFACTOR-008: instantiate the command manager and wire the activate-view

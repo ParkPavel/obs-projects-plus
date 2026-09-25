@@ -10,7 +10,6 @@ import { get } from "svelte/store";
 import App from "src/ui/app/App.svelte";
 import { i18n } from "./lib/stores/i18n";
 import { customViews } from "src/lib/stores/customViews";
-import { view } from "src/lib/stores/obsidian";
 import { BoardView } from "src/ui/views/Board";
 import { CalendarView } from "src/ui/views/Calendar";
 import { DashboardView } from "src/ui/views/Dashboard";
@@ -80,10 +79,6 @@ export class ProjectsView extends ItemView {
 
     // In other cases, keep the original behavior
     super.onPaneMenu(menu, source);
-  }
-
-  onload(): void {
-    view.set(this);
   }
 
   async setState(
