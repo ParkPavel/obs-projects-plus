@@ -343,7 +343,8 @@
     saveAppLocal('editNote.collapsedGroups', JSON.stringify(collapsedState));
   }
 
-  // Группировка полей
+  // Группировка полей. Titles and descriptions were English literals shown in
+  // every locale (live batch check 2026-09-26); they are translation keys now.
   $: fieldGroups = (() => {
     const groups: Record<string, FieldGroup> = {};
     
@@ -353,40 +354,40 @@
       if (!groups[category]) {
         const groupConfig: Record<string, { title: string; icon: string; priority: number; description: string }> = {
           'datetime': { 
-            title: 'Date & Time', 
+            title: $i18n.t("modals.note.edit.groups.datetime.title"),
             icon: 'calendar-clock', 
             priority: 1,
-            description: 'Schedule and timing information'
+            description: $i18n.t("modals.note.edit.groups.datetime.description")
           },
           'basic': { 
-            title: 'Basic Information', 
+            title: $i18n.t("modals.note.edit.groups.basic.title"),
             icon: 'file-text', 
             priority: 2,
-            description: 'Core note properties'
+            description: $i18n.t("modals.note.edit.groups.basic.description")
           },
           'color': { 
-            title: 'Colors', 
+            title: $i18n.t("modals.note.edit.groups.color.title"),
             icon: 'palette', 
             priority: 3,
-            description: 'Visual appearance and tags'
+            description: $i18n.t("modals.note.edit.groups.color.description")
           },
           'image': { 
-            title: 'Cover & Images', 
+            title: $i18n.t("modals.note.edit.groups.image.title"),
             icon: 'image', 
             priority: 4,
-            description: 'Visual content and media'
+            description: $i18n.t("modals.note.edit.groups.image.description")
           },
           'other_note': { 
-            title: 'Note Fields', 
+            title: $i18n.t("modals.note.edit.groups.other-note.title"),
             icon: 'file-check', 
             priority: 5,
-            description: 'Fields present in this note'
+            description: $i18n.t("modals.note.edit.groups.other-note.description")
           },
           'other_project': { 
-            title: 'Project Fields', 
+            title: $i18n.t("modals.note.edit.groups.other-project.title"),
             icon: 'database', 
             priority: 6,
-            description: 'Fields from other notes in the project'
+            description: $i18n.t("modals.note.edit.groups.other-project.description")
           }
         };
         

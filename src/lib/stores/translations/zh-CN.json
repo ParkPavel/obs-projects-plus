@@ -329,7 +329,33 @@
                     "save-error": "保存失败",
                     "color-title": "颜色",
                     "color-hint": "选择颜色 — 笔记中会添加 `color` 属性，日历和看板会使用它。",
-                    "readonly-notice": "只读 — 此记录属于项目 {{project}}"
+                    "readonly-notice": "只读 — 此记录属于项目 {{project}}",
+                    "groups": {
+                        "datetime": {
+                            "title": "日期和时间",
+                            "description": "日程和时间信息"
+                        },
+                        "basic": {
+                            "title": "基本信息",
+                            "description": "笔记的核心属性"
+                        },
+                        "color": {
+                            "title": "颜色",
+                            "description": "外观和标签"
+                        },
+                        "image": {
+                            "title": "封面和图片",
+                            "description": "图片和媒体内容"
+                        },
+                        "other-note": {
+                            "title": "笔记字段",
+                            "description": "此笔记中已有的字段"
+                        },
+                        "other-project": {
+                            "title": "项目字段",
+                            "description": "项目中其他笔记的字段"
+                        }
+                    }
                 }
             },
             "field": {

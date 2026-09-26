@@ -322,6 +322,32 @@
                     "no-editable-fields": {
                         "title": "No editable fields",
                         "message": "This note has no editable fields."
+                    },
+                    "groups": {
+                        "datetime": {
+                            "title": "Date and time",
+                            "description": "Schedule and timing information"
+                        },
+                        "basic": {
+                            "title": "Basic information",
+                            "description": "Core note properties"
+                        },
+                        "color": {
+                            "title": "Colors",
+                            "description": "Visual appearance and tags"
+                        },
+                        "image": {
+                            "title": "Cover and images",
+                            "description": "Visual content and media"
+                        },
+                        "other-note": {
+                            "title": "Note fields",
+                            "description": "Fields present in this note"
+                        },
+                        "other-project": {
+                            "title": "Project fields",
+                            "description": "Fields from other notes in the project"
+                        }
                     }
                 }
             },
