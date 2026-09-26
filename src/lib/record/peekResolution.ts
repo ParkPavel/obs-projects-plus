@@ -60,3 +60,32 @@ export function resolvePeek(
     !ctx.viewReadonly && !target.readonly && ctx.dataSourceIncludes(target.id);
   return { kind: "ready", record, fields: ctx.ownFrame.fields, writable };
 }
+
+/**
+ * Who may save through the peek. Held across the close, so the save EditNote
+ * flushes while it is destroyed still lands: closing within the autosave
+ * debounce lost the edit when the view dropped `onSave` first (Codex review
+ * of e9a4329, P1). Only for the record it was granted for, and an open
+ * read-only record revokes it.
+ */
+export interface PeekSaveAuthority {
+  readonly id: string;
+  readonly fields: DataField[];
+}
+
+export function nextSaveAuthority(
+  prev: PeekSaveAuthority | null,
+  peekedId: string | null,
+  writable: boolean,
+  fields: DataField[]
+): PeekSaveAuthority | null {
+  if (peekedId === null) return prev; // closing: the flush may still come
+  return writable ? { id: peekedId, fields } : null;
+}
+
+export function mayPeekSave(
+  authority: PeekSaveAuthority | null,
+  recordId: string
+): authority is PeekSaveAuthority {
+  return authority !== null && authority.id === recordId;
+}

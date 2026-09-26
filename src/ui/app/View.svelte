@@ -19,7 +19,7 @@
   import { applySort, sortRecords } from "./viewSort";
   import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
   import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
-  import { resolvePeek } from "src/lib/record/peekResolution";
+  import { mayPeekSave, nextSaveAuthority, resolvePeek, type PeekSaveAuthority } from "src/lib/record/peekResolution";
   import { openRecord } from "src/lib/record/openRecord";
   import { app as obsidianApp } from "src/lib/stores/obsidian";
   import { get } from "svelte/store";
@@ -290,6 +290,16 @@
   /** The fields that describe `peeked` — the owning frame's, own or external. */
   $: peekFields = peekResolution && peekResolution.kind === "ready" ? peekResolution.fields : sortedFrame.fields;
   $: peekWritable = peekResolution !== null && peekResolution.kind === "ready" && peekResolution.writable;
+  /** Kept across the close so the flushed autosave lands (peekResolution.ts). */
+  let saveAuthority: PeekSaveAuthority | null = null;
+  function updateSaveAuthority(id: string | null, writable: boolean, fields: typeof peekFields): void {
+    saveAuthority = nextSaveAuthority(saveAuthority, id, writable, fields);
+  }
+  $: updateSaveAuthority(peeked?.id ?? null, peekWritable, peekFields);
+  async function savePeeked(updated: DataRecord): Promise<void> {
+    if (!mayPeekSave(saveAuthority, updated.id)) return;
+    await api.updateRecord(updated, saveAuthority.fields);
+  }
   /** Named in the read-only notice: the peeked record's own project, own or external. */
   $: peekProjectId = $recordPeek === null ? undefined : $recordPeek.projectId;
   $: peekProjectName =
@@ -359,11 +369,7 @@
   autosave={project.autosave ?? true}
   readonly={!peekWritable}
   projectName={peekProjectName}
-  onSave={peekWritable
-    ? async (updated) => {
-        await api.updateRecord(updated, peekFields);
-      }
-    : undefined}
+  onSave={saveAuthority ? savePeeked : undefined}
   on:close={closePeek}
 />
 
