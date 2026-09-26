@@ -352,6 +352,9 @@ export function doRenameField(
   from: string,
   to: string
 ): E.Either<Error, string> {
+  // Renaming to its own name is no change; the spread below would set the key
+  // and then clear it, deleting the property (C5 review).
+  if (from === to) return E.right(data);
   return F.pipe(
     data,
     decodeFrontMatter,

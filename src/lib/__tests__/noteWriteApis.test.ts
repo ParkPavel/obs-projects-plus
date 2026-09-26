@@ -13,7 +13,8 @@
  */
 
 import { DataFieldType, type DataField } from "src/lib/dataframe/dataframe";
-import { DataApi } from "src/lib/dataApi";
+import { DataApi, doRenameField } from "src/lib/dataApi";
+import { either as E } from "fp-ts";
 import { IFile, type IFileSystem } from "src/lib/filesystem/filesystem";
 import { CONFLICT_NOTE_FOLDER, writeConflictNote } from "src/lib/settings/brokenBackup";
 
@@ -125,5 +126,18 @@ describe("a recovery note is created through the vault when it is given", () => 
     expect(created).toEqual([at]);
     expect(folders).toEqual([CONFLICT_NOTE_FOLDER]);
     expect(adapterWrites).toEqual([]);
+  });
+});
+
+describe("renaming a property to its own name changes nothing on either path", () => {
+  test("processFrontMatter path keeps the value", async () => {
+    const f = new FmFile("a.md", { status: "todo" });
+    await new DataApi(fsOf({ "a.md": f })).renameField(["a.md"], "status", "status");
+    expect(f.fm).toEqual({ status: "todo" });
+  });
+
+  test("string path keeps the value (it used to delete it)", async () => {
+    const r = doRenameField("---\nstatus: todo\n---\nbody\n", "status", "status");
+    expect(E.isRight(r) && r.right).toContain("status: todo");
   });
 });
