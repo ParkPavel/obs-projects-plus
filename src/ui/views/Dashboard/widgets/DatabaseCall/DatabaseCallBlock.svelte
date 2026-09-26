@@ -207,7 +207,7 @@
   $: effectiveFrame = autoFilter
     ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
     : masterSelected && masterFrame && linkedSelection
-      ? { ...subFiltered, records: filterByMasterSide(subFiltered, masterFrame, $canvasStore.values, linkedSelection.relationField) }
+      ? { ...subFiltered, records: filterByMasterSide(frame, subFiltered.records, masterFrame, $canvasStore.values, linkedSelection.relationField) }
       : subFiltered;
 
   function handleSubFilterChange(e: CustomEvent<FilterDefinition | undefined>) {

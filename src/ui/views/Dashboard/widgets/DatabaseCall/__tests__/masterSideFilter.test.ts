@@ -19,13 +19,13 @@ const clients = frame([["Клиенты/Анна.md", {}], ["Клиенты/Бо
 
 describe("filterByMasterSide", () => {
   test("the picked session's client, however it links", () => {
-    expect(filterByMasterSide(clients, sessions, ["Сеанс 1"], "client").map((r) => r.id)).toEqual(["Клиенты/Анна.md"]);
-    expect(filterByMasterSide(clients, sessions, ["Сеанс 2"], "client").map((r) => r.id)).toEqual(["Клиенты/Борис.md"]);
+    expect(filterByMasterSide(clients, clients.records, sessions, ["Сеанс 1"], "client").map((r) => r.id)).toEqual(["Клиенты/Анна.md"]);
+    expect(filterByMasterSide(clients, clients.records, sessions, ["Сеанс 2"], "client").map((r) => r.id)).toEqual(["Клиенты/Борис.md"]);
   });
   test("several picked sessions show each of their clients once", () => {
-    expect(filterByMasterSide(clients, sessions, ["Сеанс 1", "Сеанс 2"], "client").map((r) => r.id)).toEqual(["Клиенты/Анна.md", "Клиенты/Борис.md"]);
+    expect(filterByMasterSide(clients, clients.records, sessions, ["Сеанс 1", "Сеанс 2"], "client").map((r) => r.id)).toEqual(["Клиенты/Анна.md", "Клиенты/Борис.md"]);
   });
   test("a link that matches nobody shows nothing, not everything", () => {
-    expect(filterByMasterSide(clients, sessions, ["Сеанс 3"], "client")).toEqual([]);
+    expect(filterByMasterSide(clients, clients.records, sessions, ["Сеанс 3"], "client")).toEqual([]);
   });
 });

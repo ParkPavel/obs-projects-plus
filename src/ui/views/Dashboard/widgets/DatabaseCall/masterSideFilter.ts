@@ -14,6 +14,11 @@
  *
  * Master rows are matched by file name, which is what the table drives the
  * selection with (tableRowOps.rowSelectionValue).
+ *
+ * Links resolve over the block's WHOLE source, by the relation's own display
+ * field, and only then meet the records the block shows: resolving among the
+ * filtered records let an explicit link to a hidden note fall back by basename
+ * onto a namesake (Codex review of 0ebea59).
  */
 
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
@@ -22,14 +27,18 @@ import { buildRelationTargetIndex, resolveRelationValue } from "src/lib/relation
 import { recordBaseName } from "./tableRowOps";
 
 export function filterByMasterSide(
-  receiving: DataFrame,
+  universe: DataFrame,
+  visible: readonly DataRecord[],
   master: DataFrame,
   selectedNames: readonly string[],
-  relationField: string,
-  displayField?: string
+  relationField: string
 ): DataRecord[] {
   const names = new Set(selectedNames.map((n) => n.toLowerCase()));
-  const index = buildRelationTargetIndex(receiving, displayField ? [displayField] : LEGACY_DISPLAY_FALLBACKS);
+  const relation = master.fields.find((fl) => fl.name === relationField)?.typeConfig?.["relation"] as
+    | { displayField?: string }
+    | undefined;
+  const displayField = relation?.displayField;
+  const index = buildRelationTargetIndex(universe, displayField ? [displayField] : LEGACY_DISPLAY_FALLBACKS);
   const reached = new Set<string>();
   for (const row of master.records) {
     if (!names.has(recordBaseName(row).toLowerCase())) continue;
@@ -37,5 +46,5 @@ export function filterByMasterSide(
       if (r.status === "resolved" && r.targetRecordId) reached.add(r.targetRecordId);
     }
   }
-  return receiving.records.filter((r) => reached.has(r.id));
+  return visible.filter((r) => reached.has(r.id));
 }

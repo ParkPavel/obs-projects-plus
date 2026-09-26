@@ -180,6 +180,7 @@
         projectSources={sourceOptions.pickable}
         hasUnaddressableSource={sourceOptions.hasUnaddressable}
         fields={dbCall.frame.fields}
+        masterFields={ctx.frame.fields}
         on:change={handleDbCallSourceChange}
         on:linkedSelectionChange={handleLinkedSelectionChange}
         on:close={() => (showConfig = false)}
