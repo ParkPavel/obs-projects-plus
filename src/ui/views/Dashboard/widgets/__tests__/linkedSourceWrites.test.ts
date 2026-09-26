@@ -225,7 +225,9 @@ describe("#C4 every write path is guarded, handler by handler", () => {
     if (at < 0) throw new Error(`handler not found: ${signature}`);
     const body = src.slice(at, at + 600);
     const guard = body.search(/if \(dataReadOnly\) return;/);
-    const write = body.search(/\bapi\.|await |updateRecord|\.process\(/);
+    // Settings writes count too: a sort or rename can persist config before any
+    // record is touched (recheck of 5f331b7).
+    const write = body.search(/\bapi\.|await |updateRecord|\.process\(|updateFieldConfig|saveConfig|settings\./);
     return guard >= 0 && (write < 0 || guard < write);
   }
 
@@ -245,8 +247,20 @@ describe("#C4 every write path is guarded, handler by handler", () => {
     ["popup check", /async function handleDayPopupRecordCheck\(/],
     ["popup delete", /async function handleDayPopupRecordDelete\(/],
     ["popup colour", /async function handleDayPopupRecordColorChange\(/],
+    ["popup duplicate", /async function handleDayPopupRecordDuplicate\(/],
   ])("Calendar %s opens with the guard", (_name, signature) => {
     expect(opensWithGuard(calendarView, signature)).toBe(true);
+  });
+
+  it("the read-only flag reaches every board component that decides on drag", () => {
+    // A child defaults dataReadOnly to false: dropping it anywhere in the chain
+    // re-enables dragging while the local expressions stay green (recheck of 5f331b7).
+    expect(boardView).toMatch(/<Board\b[\s\S]*?\{dataReadOnly\}/);
+    const board = read("../../Board/components/Board/Board.svelte");
+    expect(board).toMatch(/export let dataReadOnly: boolean = false;/);
+    const columns = board.match(/<BoardColumn\b[\s\S]*?\/>/g) ?? [];
+    expect(columns.length).toBeGreaterThan(0);
+    for (const c of columns) expect(c).toMatch(/\{dataReadOnly\}/);
   });
 
   it("Board disables every drag path on read-only data", () => {
