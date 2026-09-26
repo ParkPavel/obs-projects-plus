@@ -209,3 +209,49 @@ describe("#137 the pipeline editor reads the block's own source", () => {
     expect(editor).toContain("views.dashboard.pipeline.source-not-ready");
   });
 });
+
+// Codex review of 23d98a6: the assertions above name "check" and "drag" but
+// only pinned the click guard — deleting the checkbox or drag guards left every
+// test green. Each write handler must open with the guard, before any write,
+// and every drag path must be disabled by it.
+describe("#C4 every write path is guarded, handler by handler", () => {
+  const read = (rel: string) => readFileSync(resolve(WIDGETS, rel), "utf8");
+  const boardView = read("../../Board/BoardView.svelte");
+  const calendarView = read("../../Calendar/CalendarView.svelte");
+
+  /** The handler's text from its signature up to its first write-looking call. */
+  function opensWithGuard(src: string, signature: RegExp): boolean {
+    const at = src.search(signature);
+    if (at < 0) throw new Error(`handler not found: ${signature}`);
+    const body = src.slice(at, at + 600);
+    const guard = body.search(/if \(dataReadOnly\) return;/);
+    const write = body.search(/\bapi\.|await |updateRecord|\.process\(/);
+    return guard >= 0 && (write < 0 || guard < write);
+  }
+
+  it.each([
+    ["check", /const handleRecordCheck =/],
+    ["drag-update", /const handleRecordUpdate =/],
+    ["column sort", /const handleSortColumns =/],
+    ["column delete", /const handleColumnDelete =/],
+    ["column rename", /const handleColumnRename =/],
+  ])("Board %s opens with the guard", (_name, signature) => {
+    expect(opensWithGuard(boardView, signature)).toBe(true);
+  });
+
+  it.each([
+    ["check", /function handleRecordCheck\(/],
+    ["drag-change", /async function handleRecordChange\(/],
+    ["popup check", /async function handleDayPopupRecordCheck\(/],
+    ["popup delete", /async function handleDayPopupRecordDelete\(/],
+    ["popup colour", /async function handleDayPopupRecordColorChange\(/],
+  ])("Calendar %s opens with the guard", (_name, signature) => {
+    expect(opensWithGuard(calendarView, signature)).toBe(true);
+  });
+
+  it("Board disables every drag path on read-only data", () => {
+    expect(read("../../Board/components/Board/Board.svelte")).toMatch(/dragDisabled: [^\n]*\bdataReadOnly\b/);
+    expect(read("../../Board/components/Board/BoardColumn.svelte")).toMatch(/disableDnd=\{[^}]*\bdataReadOnly\b[^}]*\}/);
+    expect(read("../../Board/components/Board/CardList.svelte")).toMatch(/dragDisabled: [^\n]*\bdisableDnd\b/);
+  });
+});
