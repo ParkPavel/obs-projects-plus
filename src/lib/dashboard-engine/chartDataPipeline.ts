@@ -247,10 +247,14 @@ export function computeMultiSeriesChartData(
     const name = s.label || s.property;
     const frame = s.dataProjectId ? frames.get(s.dataProjectId) : source;
     if (!frame) return { name, axis: s.axis, points: new Map<string, number | null>() };
+    // On the chart's own x field a series groups and hides as the chart does,
+    // so its values line up with the primary's (review of c5cf809); on
+    // another field those settings name other categories and do not apply.
+    const sameAxis = !s.xProperty || s.xProperty === config.xAxis.property;
     const own: ChartConfig = {
       ...config,
-      groupMode: "values",
-      xAxis: { ...config.xAxis, property: s.xProperty || config.xAxis.property, hiddenGroups: [] },
+      groupMode: sameAxis ? config.groupMode ?? "values" : "values",
+      xAxis: { ...config.xAxis, property: s.xProperty || config.xAxis.property, hiddenGroups: sameAxis ? config.xAxis.hiddenGroups ?? [] : [] },
       yAxis: { property: s.property, aggregation: s.aggregation, ...(s.cumulative ? { cumulative: true } : {}) },
     };
     delete (own as { series?: unknown }).series;
@@ -267,7 +271,8 @@ export function computeMultiSeriesChartData(
   const dated = config.xAxis.dateGranularity != null ||
     source.fields.find((f) => f.name === config.xAxis.property)?.type === DataFieldType.Date;
   const labels = [...primary.labels];
-  const seen = new Set(labels);
+  // A category the chart hides stays hidden whichever series brings it.
+  const seen = new Set([...labels, ...(config.xAxis.hiddenGroups ?? [])]);
   for (const c of computed) for (const l of c.points.keys()) if (!seen.has(l)) { seen.add(l); labels.push(l); }
   if (dated) labels.sort((a, b) => a.localeCompare(b));
 

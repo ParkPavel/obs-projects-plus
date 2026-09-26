@@ -3,7 +3,7 @@
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { computeAxisLabelLayout, labelAnchor, shouldRenderLabel, truncateLabel } from "./axisLabels";
-  import { axisTicks, gappedPath, scaleOf, scaleY, seriesScales, type AxisScale } from "./chartScale";
+  import { axisTicks, gappedPath, runSegments, scaleOf, scaleY, seriesScales, type AxisScale } from "./chartScale";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -70,19 +70,7 @@
     // Catmull-Rom → cubic bezier, within each run of values between gaps.
     return runs(values).map((run) => {
       const pts = run.map(({ i, v }) => ({ x: xPos(i, step), y: yPos(v, plotHeight, scale) }));
-      let d = `M ${pts[0]!.x},${pts[0]!.y}`;
-      for (let k = 0; k < pts.length - 1; k++) {
-        const p0 = pts[Math.max(k - 1, 0)]!;
-        const p1 = pts[k]!;
-        const p2 = pts[k + 1]!;
-        const p3 = pts[Math.min(k + 2, pts.length - 1)]!;
-        const cp1x = p1.x + (p2.x - p0.x) / 6;
-        const cp1y = p1.y + (p2.y - p0.y) / 6;
-        const cp2x = p2.x - (p3.x - p1.x) / 6;
-        const cp2y = p2.y - (p3.y - p1.y) / 6;
-        d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
-      }
-      return d;
+      return `M ${pts[0]!.x},${pts[0]!.y}${runSegments(pts, true)}`;
     }).join(" ");
   }
 
@@ -100,19 +88,20 @@
     return out;
   }
 
-  /** The area under each run, closed to the zero line of its scale. */
+  /** The area under each run, closed to the zero line of its scale, along the line's own curve. */
   function areaPath(
     values: (number | null)[],
+    smooth: boolean,
     step: number,
     plotHeight: number,
     scale: AxisScale
   ): string {
     const zero = yPos(0, plotHeight, scale);
     return runs(values).map((run) => {
-      const pts = run.map(({ i, v }) => `${xPos(i, step)},${yPos(v, plotHeight, scale)}`);
-      const first = xPos(run[0]!.i, step);
-      const last = xPos(run[run.length - 1]!.i, step);
-      return `M ${first},${zero} L ${pts.join(" L ")} L ${last},${zero} Z`;
+      const pts = run.map(({ i, v }) => ({ x: xPos(i, step), y: yPos(v, plotHeight, scale) }));
+      const first = pts[0]!;
+      const last = pts[pts.length - 1]!;
+      return `M ${first.x},${zero} L ${first.x},${first.y}${runSegments(pts, smooth)} L ${last.x},${zero} Z`;
     }).join(" ");
   }
 
@@ -150,7 +139,7 @@
           </linearGradient>
         </defs>
         <path
-          d={areaPath(series.values, stepX, plotH, scaleOf(series, scales))}
+          d={areaPath(series.values, !!style.smooth, stepX, plotH, scaleOf(series, scales))}
           fill="url(#grad-{si})"
         />
       {/if}

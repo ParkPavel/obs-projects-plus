@@ -100,3 +100,72 @@ export function axisTicks(scale: AxisScale): number[] {
   if (scale.min < 0 && scale.max > 0) ticks.push(0);
   return [...new Set(ticks.map(round))].sort((a, b) => a - b);
 }
+/** A readable step near `rough`: 1, 2 or 5 times a power of ten. */
+function niceStep(rough: number): number {
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const normalized = rough / mag;
+  if (normalized <= 1.5) return mag;
+  if (normalized <= 3.5) return 2 * mag;
+  if (normalized <= 7.5) return 5 * mag;
+  return 10 * mag;
+}
+
+/**
+ * Grid values inside a scale, at a readable step, never 0 (the axis or the
+ * zero line is drawn there). Empty for a scale with no height. The bar chart
+ * stepped from 0 up to its max: all-negative bars have a max of 0, the step
+ * was 0 and the loop never ended (review of c5cf809).
+ */
+/** Grid values are rounded to this many parts, so 0.1 steps do not print 0.30000000000000004. */
+const ROUNDING = 1e9;
+
+export function gridValues(scale: AxisScale, ticks: number): number[] {
+  const span = scale.max - scale.min;
+  if (!Number.isFinite(span) || span <= 0 || ticks <= 0) return [];
+  const step = niceStep(span / ticks);
+  if (!Number.isFinite(step) || step <= 0) return [];
+  const out: number[] = [];
+  for (let k = Math.ceil(scale.min / step); k * step <= scale.max + step * 0.05; k++) {
+    if (k !== 0) out.push(Math.round(k * step * ROUNDING) / ROUNDING);
+  }
+  return out;
+}
+
+/** Indices of values with no value on either side: a path draws nothing there. */
+export function isolatedPoints(values: readonly (number | null)[]): number[] {
+  const out: number[] = [];
+  values.forEach((v, i) => {
+    if (v != null && values[i - 1] == null && values[i + 1] == null) out.push(i);
+  });
+  return out;
+}
+
+export interface Pt {
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Path commands from a run's first point to its last: straight segments, or
+ * Catmull-Rom as cubic Béziers. The line and the area under it share them, so
+ * a smooth area follows its line (review of c5cf809).
+ */
+export function runSegments(pts: readonly Pt[], smooth: boolean): string {
+  let d = "";
+  for (let k = 0; k < pts.length - 1; k++) {
+    const p1 = pts[k]!;
+    const p2 = pts[k + 1]!;
+    if (!smooth) {
+      d += ` L ${p2.x},${p2.y}`;
+      continue;
+    }
+    const p0 = pts[Math.max(k - 1, 0)]!;
+    const p3 = pts[Math.min(k + 2, pts.length - 1)]!;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+  return d;
+}

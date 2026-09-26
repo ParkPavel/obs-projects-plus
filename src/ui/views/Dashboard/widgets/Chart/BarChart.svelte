@@ -3,7 +3,7 @@
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { computeAxisLabelLayout, shouldRenderLabel, truncateLabel } from "./axisLabels";
-  import { axisScale, axisTicks, gappedPath, scaleOf, scaleY, seriesScales, type AxisScale } from "./chartScale";
+  import { axisScale, type AxisScale, axisTicks, gappedPath, gridValues, isolatedPoints, scaleOf, scaleY, seriesScales } from "./chartScale";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -32,7 +32,6 @@
   $: barScale = data.series[0] ? scaleOf(data.series[0], scales) : axisScale([]);
   $: lineSeries = horizontal ? [] : data.series.slice(1);
   $: PADDING_RIGHT = scales.right && !horizontal ? 50 : 20;
-  $: maxVal = barScale.max;
 
   // #096.2 — vertical bars previously had no skip/rotate, so dense category
   // axes overlapped. Reuse the shared density helper (horizontal bars label
@@ -55,25 +54,7 @@
     ? (plotH - barGap * barCount) / barCount
     : (plotW - barGap * barCount) / barCount;
 
-  $: gridLines = computeGrid(maxVal, 5);
-
-  function computeGrid(max: number, ticks: number): number[] {
-    const step = niceStep(max / ticks);
-    const result: number[] = [];
-    for (let v = step; v <= max * 1.05; v += step) {
-      result.push(v);
-    }
-    return result;
-  }
-
-  function niceStep(rough: number): number {
-    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
-    const normalized = rough / mag;
-    if (normalized <= 1.5) return mag;
-    if (normalized <= 3.5) return 2 * mag;
-    if (normalized <= 7.5) return 5 * mag;
-    return 10 * mag;
-  }
+  $: gridLines = gridValues(barScale, 5);
 
   // #166 follow-up: same closure blindness LineChart had — called straight
   // from the template (`xPos(gl)`), Svelte tracks only the identifiers the
@@ -172,13 +153,6 @@
           on:click={() => handleBarClick(label)}
           on:keydown={(e) => handleBarKey(e, label)}
         />
-        {#if style.showLabels}
-          <text
-            x={-4} y={bY + barWidth / 2}
-            text-anchor="end" dominant-baseline="middle"
-            fill="var(--text-normal)" font-size="11"
-          >{label}</text>
-        {/if}
         {#if style.showValues}
           <text
             x={Math.max(x0, xv) + 4} y={bY + barWidth / 2}
@@ -206,14 +180,6 @@
           on:click={() => handleBarClick(label)}
           on:keydown={(e) => handleBarKey(e, label)}
         />
-        {#if style.showLabels && shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
-          <text
-            x={bX + barWidth / 2} y={plotH + 14}
-            text-anchor="middle"
-            fill="var(--text-normal)" font-size={LABEL_FONT}
-            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${bX + barWidth / 2} ${plotH + 14})` : ""}
-          >{truncateLabel(label, axisLabels.truncateAt)}</text>
-        {/if}
         {#if style.showValues}
           <text
             x={bX + barWidth / 2} y={Math.min(y0, yv) - 4}
@@ -224,11 +190,38 @@
       {/if}
     {/each}
 
+    <!-- Every category keeps its label, with or without a bar (review of c5cf809). -->
+    {#if style.showLabels}
+      {#each labels as label, i}
+        {#if horizontal}
+          <text
+            x={-4} y={i * (barWidth + barGap) + barWidth / 2}
+            text-anchor="end" dominant-baseline="middle"
+            fill="var(--text-normal)" font-size="11"
+          >{label}</text>
+        {:else if shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
+          <text
+            x={i * (barWidth + barGap) + barWidth / 2} y={plotH + 14}
+            text-anchor="middle"
+            fill="var(--text-normal)" font-size={LABEL_FONT}
+            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${i * (barWidth + barGap) + barWidth / 2} ${plotH + 14})` : ""}
+          >{truncateLabel(label, axisLabels.truncateAt)}</text>
+        {/if}
+      {/each}
+    {/if}
+
     {#each lineSeries as series, k}
       <path
         d={gappedPath(series.values, (i) => i * (barWidth + barGap) + barWidth / 2, (v) => yPos(v, plotH, scaleOf(series, scales)))}
         fill="none" stroke={barColor(k + 1)} stroke-width="2" class="ppp-chart-bar-line"
       />
+      <!-- A value with gaps on both sides: a path draws nothing, a point does. -->
+      {#each isolatedPoints(series.values) as i}
+        <circle
+          cx={i * (barWidth + barGap) + barWidth / 2} cy={yPos(series.values[i] ?? 0, plotH, scaleOf(series, scales))}
+          r="3" fill={barColor(k + 1)} class="ppp-chart-bar-point"
+        />
+      {/each}
     {/each}
 
     <!-- Axes -->
