@@ -13,7 +13,7 @@
   export let tableConfig: DataTableConfig | undefined = undefined;
 </script>
 
-<WidgetShell widgetId={widget.id} title={widget.title ?? ""} widgetType={widget.type}>
+<WidgetShell widgetId={widget.id} title={widget.title ?? ""}>
   <svelte:fragment slot="badges">
     <WidgetInlineBadges {widget} {frame} {tableConfig} />
   </svelte:fragment>

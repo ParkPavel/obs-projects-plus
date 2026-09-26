@@ -17,7 +17,6 @@
 
   export let widgetId: string;
   export let title: string;
-  export let widgetType: string;
   export let collapsed = false;
   export let readonly = false;
   /** R3 P0 — increment to enter title-edit mode (menu «Rename»). */

@@ -1419,7 +1419,10 @@
                         "fmt-currency": "Валюта",
                         "fmt-duration": "Тривалість"
                     },
-                    "field-not-found": "Поле не знайдено"
+                    "field-not-found": "Поле не знайдено",
+                    "filtered-title": "Відфільтровано вибором на полотні",
+                    "filtered-aria": "{{value}} — відфільтровано вибором на полотні",
+                    "missing-field-hint": "немає поля «{{field}}»"
                 },
                 "agg": {
                     "count_total": "Кількість усіх",

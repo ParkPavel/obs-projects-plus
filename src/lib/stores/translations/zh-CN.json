@@ -1389,7 +1389,10 @@
                         "fmt-currency": "货币",
                         "fmt-duration": "时长"
                     },
-                    "field-not-found": "未找到字段"
+                    "field-not-found": "未找到字段",
+                    "filtered-title": "已按画布选择筛选",
+                    "filtered-aria": "{{value}} — 已按画布选择筛选",
+                    "missing-field-hint": "没有字段「{{field}}」"
                 },
                 "agg": {
                     "count_total": "全部计数",

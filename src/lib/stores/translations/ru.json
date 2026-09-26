@@ -1779,7 +1779,10 @@
                         "fmt-currency": "Валюта",
                         "fmt-duration": "Длительность"
                     },
-                    "field-not-found": "Поле не найдено"
+                    "field-not-found": "Поле не найдено",
+                    "filtered-title": "Отфильтровано выбором на холсте",
+                    "filtered-aria": "{{value}} — отфильтровано выбором на холсте",
+                    "missing-field-hint": "нет поля «{{field}}»"
                 },
                 "agg": {
                     "count_total": "Количество всех",

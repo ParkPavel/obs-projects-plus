@@ -1333,7 +1333,10 @@
                         "fmt-currency": "Currency",
                         "fmt-duration": "Duration"
                     },
-                    "field-not-found": "Field not found"
+                    "field-not-found": "Field not found",
+                    "filtered-title": "Filtered by canvas selection",
+                    "filtered-aria": "{{value}} — filtered by canvas selection",
+                    "missing-field-hint": "no field «{{field}}»"
                 },
                 "agg": {
                     "count_total": "Count all",

@@ -75,8 +75,8 @@
     <span
       class="ppp-stats-value"
       class:ppp-stats-value--filtered={filtered}
-      title={filtered ? "Filtered by canvas selection" : undefined}
-      aria-label={filtered ? `${formatted} — filtered by canvas selection` : undefined}
+      title={filtered ? $i18n.t("views.dashboard.stats.filtered-title") : undefined}
+      aria-label={filtered ? $i18n.t("views.dashboard.stats.filtered-aria", { value: formatted }) : undefined}
     >{formatted}</span>
   {/if}
   {#if config.sparkline && sparklinePath && !fieldMissing}
@@ -85,7 +85,7 @@
     </svg>
   {/if}
   <span class="ppp-stats-label">
-    {config.label}{#if fieldMissing} — <span class="ppp-stats-missing-hint">no field “{config.field}”</span>{/if}
+    {config.label}{#if fieldMissing} — <span class="ppp-stats-missing-hint">{$i18n.t("views.dashboard.stats.missing-field-hint", { field: config.field })}</span>{/if}
   </span>
 </div>
 

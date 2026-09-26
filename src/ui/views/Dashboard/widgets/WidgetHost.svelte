@@ -133,7 +133,6 @@
 <WidgetShell
   widgetId={widget.id}
   title={widget.title}
-  widgetType={widget.type}
   {collapsed}
   {readonly}
   {renameSignal}
