@@ -118,6 +118,13 @@ export interface LinkedSelectionConfig {
    * When master selects record X, this block adds filter: `{ field: relationField, is: X.id }`
    */
   readonly relationField: string;
+  /**
+   * F3b: "master" — `relationField` lives in the MASTER block's frame and
+   * points at this block's project; the selected master rows' links decide
+   * which of this block's records show (masterSideFilter.ts). Absent — the
+   * shape every stored config has — keeps the meaning above.
+   */
+  readonly relationSide?: "master";
 }
 
 export interface WidgetDataContext {

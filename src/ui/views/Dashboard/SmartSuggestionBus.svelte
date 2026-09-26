@@ -16,6 +16,7 @@
   import type { WidgetDefinition } from "./types";
   import {
     computeSuggestions,
+    type SuggestContext,
     type SmartSuggestion,
     type SuggestionKind,
   } from "./smartSuggest";
@@ -23,6 +24,8 @@
   export let fields: readonly DataField[];
   export let widgets: readonly WidgetDefinition[];
   export let dismissed: readonly string[] = [];
+  /** 3.6.0: this project and the others' declared relations, for the linked-block rule. */
+  export let context: SuggestContext | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     accept: SmartSuggestion;
@@ -34,7 +37,7 @@
   $: suggestions = computeSuggestions(fields, widgets, [
     ...dismissed,
     ...sessionDismissed,
-  ]);
+  ], context);
   $: current = suggestions[0];
 
   interface StripText {
@@ -61,6 +64,25 @@
           actionDefault: "Add Stats",
         };
       case "relation-block":
+        // The message names what the block will actually do (M2-C7/C8).
+        if (s.relationWiring?.relationSide === "master" && s.relationWiring.readProjectName) {
+          return {
+            messageKey: "views.dashboard.smart-suggest.relation-master-message",
+            messageDefault: '"{{field}}" links to {{project}} — show the linked record of the row you pick?',
+            messageParams: { field: s.relationWiring.relationField, project: s.relationWiring.readProjectName ?? "" },
+            actionKey: "views.dashboard.smart-suggest.relation-action",
+            actionDefault: "Add data block",
+          };
+        }
+        if (s.relationWiring?.readProjectName) {
+          return {
+            messageKey: "views.dashboard.smart-suggest.relation-incoming-message",
+            messageDefault: '{{project}} links here through "{{field}}" — show the related records of the row you pick?',
+            messageParams: { field: s.relationWiring.relationField, project: s.relationWiring.readProjectName },
+            actionKey: "views.dashboard.smart-suggest.relation-action",
+            actionDefault: "Add data block",
+          };
+        }
         return {
           messageKey: "views.dashboard.smart-suggest.relation-message",
           messageDefault:

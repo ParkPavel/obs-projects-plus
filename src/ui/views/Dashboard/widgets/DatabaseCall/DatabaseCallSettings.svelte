@@ -80,7 +80,12 @@
   function handleRelationFieldChange(e: Event) {
     const field = (e.currentTarget as HTMLSelectElement).value;
     if (!currentLinkedId) return;
-    dispatch("linkedSelectionChange", { sourceWidgetId: currentLinkedId, relationField: field });
+    // F3b: changing the field keeps which side of the relation it is read from.
+    dispatch("linkedSelectionChange", {
+      sourceWidgetId: currentLinkedId,
+      relationField: field,
+      ...(linkedSelection?.relationSide ? { relationSide: linkedSelection.relationSide } : {}),
+    });
   }
 </script>
 

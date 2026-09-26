@@ -62,15 +62,35 @@ export function deliversSuggestion(suggestion: SmartSuggestion, saved: DatabaseV
   if (!added) return false;
   if (suggestion.kind === "numeric-stats") return (asStatsConfig(added.config)?.cards.length ?? 0) > 0;
   if (suggestion.kind === "date-chart") return asChartConfig(added.config) !== null;
+  if (suggestion.kind === "relation-block") {
+    const cfg = added.config as { viewTabs?: unknown[]; linkedSelection?: { relationField?: string } };
+    return (cfg.viewTabs?.length ?? 0) > 0 && !!cfg.linkedSelection?.relationField;
+  }
   return true;
 }
 
-/** The linked block a "relation-block" suggestion promised, wired to the master block. */
+/**
+ * The linked block a "relation-block" suggestion promised: it reads the
+ * project the wiring names (none when it is this project, so the block stays
+ * writable), follows the master block through the wiring's relation field,
+ * and opens on a table tab — without one it said "No views configured"
+ * (architect F1–F3, M2-C7).
+ */
 function relationBlockWidget(suggestion: SmartSuggestion, primaryWidgetId: string): InitialWidget {
+  const w = suggestion.relationWiring;
+  const readProjectId = w ? w.readProjectId : suggestion.relationTargetProjectId;
+  const tabId = `table-${Date.now().toString(36)}`;
+  const label = get(i18n).t("views.dashboard.database-call.view-type.table", { defaultValue: "Table" });
   return {
-    sourceConfig: { projectId: suggestion.relationTargetProjectId ?? "" },
+    ...(readProjectId ? { sourceConfig: { projectId: readProjectId } } : {}),
     config: {
-      linkedSelection: { sourceWidgetId: primaryWidgetId, relationField: suggestion.fieldName },
+      linkedSelection: {
+        sourceWidgetId: primaryWidgetId,
+        relationField: w?.relationField ?? suggestion.fieldName,
+        ...(w?.relationSide ? { relationSide: w.relationSide } : {}),
+      },
+      viewTabs: [{ id: tabId, label, viewType: "table", config: {} }],
+      activeTabId: tabId,
     },
   };
 }
@@ -80,7 +100,7 @@ export function widgetForSuggestion(
   suggestion: SmartSuggestion,
   primaryWidgetId: string
 ): { type: WidgetType; initial?: InitialWidget } {
-  if (suggestion.kind === "relation-block" && suggestion.relationTargetProjectId) {
+  if (suggestion.kind === "relation-block" && (suggestion.relationWiring || suggestion.relationTargetProjectId)) {
     return { type: "database-call", initial: relationBlockWidget(suggestion, primaryWidgetId) };
   }
   if (suggestion.kind === "date-chart") return { type: "chart", initial: dateChartWidget(suggestion) };

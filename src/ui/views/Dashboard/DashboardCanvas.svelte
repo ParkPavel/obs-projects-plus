@@ -130,7 +130,7 @@
     getConfig: () => effectiveConfig,
     saveConfig,
     addWidget: (t, init) => widgetController.addWidget(t, init),
-    getPrimaryWidgetId: () => effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id,
+    getPrimaryWidgetId: () => effectiveConfig?.widgets.find((w) => w.type === "data-table" || (w.type === "database-call" && !w.sourceConfig?.projectId))?.id, // the first block reading THIS project (M2-C7)
   });
 </script>
 <ViewLayout>
@@ -162,7 +162,7 @@
       <FilterBridge {activeFilterTab} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
       {#if !readonly && widgets.length > 0}
-        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []}
+        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []} context={{ hostProjectId: project.id, projects: $settings.projects ?? [] }}
           on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />
       {/if}
       <WidgetGrid

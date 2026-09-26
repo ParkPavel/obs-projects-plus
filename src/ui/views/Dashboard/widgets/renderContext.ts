@@ -65,13 +65,18 @@ export function buildRenderContext(input: RenderContextInput): WidgetRenderConte
     dbCallSource: dbCall.source,
     dbCallScopeApplied: !dbCall.isExternal && scopeApplied,
     dbCallUsesLinkedSource: dbCall.isExternal,
+    // F3b: a master-side link lives in the MASTER's frame (this dashboard's)
+    // and must point at the project the block reads.
     dbCallLinkedSelectionValidation: dbCall.linkedSelection
-      ? validateLegacyLinkedSelection(
+      ? (dbCall.linkedSelection.relationSide === "master"
+        ? validateLegacyLinkedSelection({ relationField: dbCall.linkedSelection.relationField }, project?.id ?? "",
+          dbCall.sourceConfig?.projectId || project?.id, input.frame.fields).status
+        : validateLegacyLinkedSelection(
           { relationField: dbCall.linkedSelection.relationField },
           dbCall.sourceConfig?.projectId ?? project?.id ?? "",
           project?.id,
           dbCall.frame.fields
-        ).status
+        ).status)
       : undefined,
   };
 }

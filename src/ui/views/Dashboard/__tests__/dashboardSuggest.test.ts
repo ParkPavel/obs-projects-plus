@@ -63,10 +63,29 @@ describe("createSuggestionController (#113)", () => {
       relationTargetProjectId: "proj-sessions",
     };
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
+    // M2-C7: the block opens on a table tab (it said "No views configured").
     expect(addWidget).toHaveBeenCalledWith("database-call", {
       sourceConfig: { projectId: "proj-sessions" },
-      config: { linkedSelection: { sourceWidgetId: "w-master", relationField: "client" } },
+      config: expect.objectContaining({
+        linkedSelection: { sourceWidgetId: "w-master", relationField: "client" },
+        viewTabs: [expect.objectContaining({ viewType: "table" })],
+        activeTabId: expect.any(String),
+      }),
     });
+    const cfg = config.widgets.at(-1)!.config as { viewTabs: Array<{ id: string }>; activeTabId: string };
+    expect(cfg.activeTabId).toBe(cfg.viewTabs[0]!.id);
+  });
+
+  it("accept an incoming-relation suggestion reads that project through its field; a self-relation stays unsourced", () => {
+    const incoming: SmartSuggestion = {
+      kind: "relation-block", fieldName: "client", widgetType: "database-call",
+      relationWiring: { readProjectId: "p-sessions", readProjectName: "Сеансы", relationField: "client" },
+    };
+    ctrl().accept(new CustomEvent("accept", { detail: incoming }));
+    expect(addWidget).toHaveBeenLastCalledWith("database-call", expect.objectContaining({
+      sourceConfig: { projectId: "p-sessions" },
+      config: expect.objectContaining({ linkedSelection: { sourceWidgetId: "w-master", relationField: "client" } }),
+    }));
   });
 
   it("accept 'relation-block' without targetProjectId creates bare database-call widget", () => {

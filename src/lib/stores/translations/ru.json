@@ -1355,7 +1355,9 @@
                     "date-count-message": "Найдено поле даты «{{field}}» — построить график количества записей по датам?",
                     "date-action": "Построить динамику",
                     "never": "Не предлагать снова",
-                    "close": "Скрыть подсказку"
+                    "close": "Скрыть подсказку",
+                    "relation-incoming-message": "«{{project}}» ссылается сюда через «{{field}}» — показать связанные записи выбранной строки?",
+                    "relation-master-message": "«{{field}}» ссылается на «{{project}}» — показать связанную запись выбранной строки?"
                 },
                 "database-call": {
                     "empty": "Представления не настроены",
@@ -1408,7 +1410,8 @@
                     "linked-by-relation": "Связано через связь",
                     "filtered-by-canvas": "Отфильтровано по выбору на холсте",
                     "relation-not-configured": "Связь не настроена",
-                    "relation-broken": "Связь нарушена"
+                    "relation-broken": "Связь нарушена",
+                    "filter-master": "Показано то, на что {{name}} ссылается через {{field}}"
                 },
                 "field-presets": {
                     "label": "Макет",

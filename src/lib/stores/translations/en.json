@@ -957,7 +957,9 @@
                     "relation-message": "Relation field \"{{field}}\" detected — show related records in a linked data block?",
                     "relation-action": "Add data block",
                     "never": "Don't suggest again",
-                    "close": "Hide suggestion"
+                    "close": "Hide suggestion",
+                    "relation-incoming-message": "{{project}} links here through «{{field}}» — show the related records of the row you pick?",
+                    "relation-master-message": "«{{field}}» links to {{project}} — show the linked record of the row you pick?"
                 },
                 "database-call": {
                     "empty": "No views configured",
@@ -1005,7 +1007,8 @@
                     "linked-by-relation": "Linked by relation",
                     "filtered-by-canvas": "Filtered by canvas selection",
                     "relation-not-configured": "Relation not configured",
-                    "relation-broken": "Relation broken"
+                    "relation-broken": "Relation broken",
+                    "filter-master": "Showing what {{name}} links through {{field}}"
                 },
                 "field-presets": {
                     "label": "Layout",

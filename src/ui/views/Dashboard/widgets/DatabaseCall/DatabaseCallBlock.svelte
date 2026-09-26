@@ -40,6 +40,14 @@
   } from "../../canvasSelectionStore";
   import { applyFilter } from "src/lib/engine/filterEvaluator";
   import { filterByLinkedSelection } from "./relationFilterAdapter";
+  import { filterByMasterSide } from "./masterSideFilter";
+  import { chartSourceId, dataTableSourceId, type SelectionState } from "../../canvasSelectionStore";
+
+  /** True when the canvas selection comes from the master block and names rows. */
+  function isMasterSelection(sel: SelectionState, masterId: string | undefined): boolean {
+    if (!masterId || sel.source === null || sel.values.length === 0) return false;
+    return sel.source === dataTableSourceId(masterId) || sel.source === chartSourceId(masterId);
+  }
   import type { FilterDefinition } from "src/settings/base/settings";
   import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
   import BlockFilterBar from "./BlockFilterBar.svelte";
@@ -62,6 +70,8 @@
   export let config: Record<string, unknown>;
   /** Canvas Selection Bus: drives auto-filter when a master block has a selection. */
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
+  /** F3b: the master block's frame (this dashboard's), for a master-side link. */
+  export let masterFrame: DataFrame | undefined = undefined;
   /** #114 (E1/E4): runtime validation result from WidgetHost — drives label rendering. */
   export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
   /**
@@ -140,11 +150,16 @@
   // #114 (E7): composeEffectiveFilter consolidates linked + canvas selection.
   // When linkedSelection is configured and valid, it maps the selection through
   // the relationField. When validation fails, falls back to canvas condition.
+  // F3b: a master-side link narrows by the master rows' own links
+  // (masterSideFilter.ts), not by a condition on this block's records — so
+  // neither the linked condition nor the plain canvas one applies here.
+  $: masterSide = linkedSelection?.relationSide === "master" && linkedSelectionValidation === "valid";
+  $: masterSelected = masterSide && isMasterSelection($canvasStore, linkedSelection?.sourceWidgetId);
   $: effectiveConditions = composeEffectiveFilter({
     userFilters: [],
-    selection: $canvasStore,
+    selection: masterSide ? EMPTY_SELECTION : $canvasStore,
     myWidgetId: widgetId,
-    linkedSelection,
+    linkedSelection: masterSide ? undefined : linkedSelection,
     validationResult: linkedSelectionValidation,
   });
   $: autoFilter = effectiveConditions.length > 0 ? effectiveConditions[0] : null;
@@ -191,7 +206,9 @@
 
   $: effectiveFrame = autoFilter
     ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
-    : subFiltered;
+    : masterSelected && masterFrame && linkedSelection
+      ? { ...subFiltered, records: filterByMasterSide(subFiltered, masterFrame, $canvasStore.values, linkedSelection.relationField) }
+      : subFiltered;
 
   function handleSubFilterChange(e: CustomEvent<FilterDefinition | undefined>) {
     const next = { ...config };
@@ -497,7 +514,14 @@
       {readonly}
       on:change={handleSubFilterChange}
     />
-    {#if filterLabel === "relation"}
+    {#if filterLabel === "relation" && masterSide}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
+        {$i18n.t("views.dashboard.database-call.filter-master", {
+          name: selectedLabel,
+          field: linkedSelection?.relationField ?? "",
+        })}
+      </span>
+    {:else if filterLabel === "relation"}
       <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
         {$i18n.t("views.dashboard.database-call.filter-label.relation-named", {
           defaultValue: "Showing records where {{field}} is {{value}}",

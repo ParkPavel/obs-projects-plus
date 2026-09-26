@@ -1241,7 +1241,8 @@
                     "linked-by-relation": "按关联链接",
                     "filtered-by-canvas": "按画布选择筛选",
                     "relation-not-configured": "未配置关联",
-                    "relation-broken": "关联已失效"
+                    "relation-broken": "关联已失效",
+                    "filter-master": "显示 {{name}} 通过 {{field}} 链接的内容"
                 },
                 "group": {
                     "empty": "（空）"
@@ -1517,7 +1518,9 @@
                     "date-count-message": "检测到日期字段“{{field}}” — 要按日期绘制记录数量的图表吗？",
                     "date-action": "绘制趋势",
                     "never": "不再建议",
-                    "close": "隐藏建议"
+                    "close": "隐藏建议",
+                    "relation-incoming-message": "「{{project}}」通过「{{field}}」链接到这里 — 显示所选行的相关记录？",
+                    "relation-master-message": "「{{field}}」链接到「{{project}}」— 显示所选行链接的记录？"
                 },
                 "legacy": {
                     "retired": "组件类型“{{type}}”已在 Dashboard V2 中停用",

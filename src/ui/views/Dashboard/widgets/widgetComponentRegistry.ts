@@ -168,7 +168,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       getRecordColor: c.getRecordColor, fields: c.dbCallFields,
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project, config: c.widget.config, widgetId: c.widget.id,
-      widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection,
+      widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection, masterFrame: c.frame,
       linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
       scopeApplied: c.dbCallScopeApplied,

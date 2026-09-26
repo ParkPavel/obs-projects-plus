@@ -30,6 +30,83 @@ export interface SmartSuggestion {
    * it is carried on the suggestion rather than recomputed at accept time.
    */
   readonly numericFieldName?: string;
+  /**
+   * For kind === "relation-block": the block the strip promises, resolved
+   * when the suggestion is computed so the strip text and the added block
+   * cannot disagree (architect F1–F3, M2-C7/C8).
+   */
+  readonly relationWiring?: RelationWiring;
+}
+
+/**
+ * How a linked block reads related records. `relationField` lives in the
+ * RECEIVING block's frame and points at the master's project — except for
+ * `relationSide: "master"`, where it lives in the master's frame and points
+ * at the receiving project (no field exists on the receiving side).
+ */
+export interface RelationWiring {
+  /** The project the block reads; absent when it reads the dashboard's own project. */
+  readonly readProjectId?: string;
+  readonly readProjectName?: string;
+  readonly relationField: string;
+  readonly relationSide?: "master";
+}
+
+/** What the relation rule needs beyond the frame: this project, and every project's declared relations. */
+export interface SuggestContext {
+  readonly hostProjectId: string;
+  readonly projects: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly fieldConfig?: Readonly<Record<string, { relation?: { targetProjectId?: string } } | undefined>>;
+  }>;
+}
+
+const targetOf = (cfg: { relation?: { targetProjectId?: string } } | undefined) => cfg?.relation?.targetProjectId;
+
+/**
+ * The linked block to offer, most direct first:
+ * 1. incoming — some project declares a field pointing HERE: read it through
+ *    that field (the block stays writable when that project is this one);
+ * 2. an outgoing field whose target declares a field pointing back: read the
+ *    target through it;
+ * 3. an outgoing field with no way back: read the target from the master's
+ *    side (F3b).
+ * Without a context only case 3 can be seen.
+ */
+function relationWiringFor(fields: readonly DataField[], context: SuggestContext | undefined): { fieldName: string; target?: string; wiring: RelationWiring } | null {
+  const host = context?.hostProjectId;
+  if (context && host) {
+    for (const p of context.projects) {
+      for (const [f, cfg] of Object.entries(p.fieldConfig ?? {})) {
+        if (targetOf(cfg) !== host) continue;
+        return {
+          fieldName: f,
+          wiring: p.id === host ? { relationField: f } : { readProjectId: p.id, readProjectName: p.name, relationField: f },
+        };
+      }
+    }
+  }
+  const outgoing = fields.filter((f) => f.type === DataFieldType.Relation && !!targetOf(f.typeConfig as never));
+  if (context && host) {
+    for (const f of outgoing) {
+      const t = targetOf(f.typeConfig as never)!;
+      const target = context.projects.find((p) => p.id === t);
+      const back = Object.entries(target?.fieldConfig ?? {}).find(([, cfg]) => targetOf(cfg) === host);
+      if (target && back) {
+        return { fieldName: f.name, target: t, wiring: { readProjectId: t, readProjectName: target.name, relationField: back[0] } };
+      }
+    }
+  }
+  const first = outgoing[0];
+  if (!first) return null;
+  const t = targetOf(first.typeConfig as never)!;
+  const name = context?.projects.find((p) => p.id === t)?.name;
+  return {
+    fieldName: first.name,
+    target: t,
+    wiring: { readProjectId: t, ...(name ? { readProjectName: name } : {}), relationField: first.name, relationSide: "master" },
+  };
 }
 
 type WidgetLike = Pick<WidgetDefinition, "type" | "config">;
@@ -44,7 +121,8 @@ type WidgetLike = Pick<WidgetDefinition, "type" | "config">;
 export function computeSuggestions(
   fields: readonly DataField[],
   widgets: readonly WidgetLike[],
-  dismissed: readonly string[]
+  dismissed: readonly string[],
+  context?: SuggestContext
 ): SmartSuggestion[] {
   const suggestions: SmartSuggestion[] = [];
 
@@ -62,24 +140,19 @@ export function computeSuggestions(
   // block. Suggesting one for an unconfigured Relation field used to add an
   // empty `database-call`: the strip promised related records and delivered a
   // blank block, which reads as a broken feature rather than an unset field.
-  const relationField = fields.find(
-    (f) =>
-      f.type === DataFieldType.Relation &&
-      !!(f.typeConfig as { relation?: { targetProjectId?: string } } | undefined)?.relation
-        ?.targetProjectId
-  );
+  const relation = relationWiringFor(fields, context);
   // A database-call block with linkedSelection means the user already wired
   // related records to a master block — nothing left to suggest.
   const hasLinkedBlock = widgets.some(
     (w) => w.type === "database-call" && w.config["linkedSelection"] != null
   );
-  if (relationField && !hasLinkedBlock && !dismissed.includes("relation-block")) {
-    const relConfig = (relationField.typeConfig as { relation?: { targetProjectId?: string } } | undefined)?.relation;
+  if (relation && !hasLinkedBlock && !dismissed.includes("relation-block")) {
     suggestions.push({
       kind: "relation-block",
-      fieldName: relationField.name,
+      fieldName: relation.fieldName,
       widgetType: "database-call",
-      ...(relConfig?.targetProjectId ? { relationTargetProjectId: relConfig.targetProjectId } : {}),
+      ...(relation.target ? { relationTargetProjectId: relation.target } : {}),
+      relationWiring: relation.wiring,
     });
   }
 
