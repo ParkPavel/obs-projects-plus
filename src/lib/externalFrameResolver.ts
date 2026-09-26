@@ -10,6 +10,7 @@ import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
 import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/settings";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { createDataSource } from "src/lib/datasources";
+import { applyDeclaredFieldTypes, type DeclaredRelations } from "src/lib/relations/declaredFieldTypes";
 
 export interface ResolverDeps {
   readonly fileSystem: IFileSystem;
@@ -64,7 +65,13 @@ export async function resolveExternalFrame(
     if (resolution.kind === "unavailable") {
       return null;
     }
-    const frame = await resolution.source.queryAll();
+    // M2-C6: the project's declared relation types, as the host frame gets
+    // them in View — a single `[[…]]` is a String by inference and a Relation
+    // once declared. Before backlink enrichment, which reads the types.
+    const frame = applyDeclaredFieldTypes(
+      await resolution.source.queryAll(),
+      project.fieldConfig as DeclaredRelations | undefined
+    );
 
     // #138: enrich here, so every frame reaching a widget has the same shape
     // regardless of origin. Previously only the parent frame got backlinks

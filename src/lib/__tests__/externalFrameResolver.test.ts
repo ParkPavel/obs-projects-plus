@@ -141,3 +141,36 @@ describe("resolveExternalFrame", () => {
     warnSpy.mockRestore();
   });
 });
+
+// M2-C6 (architect-F1-F3-2026-09-17): the host frame gets its project's
+// declared field types (View → applyDeclaredFieldTypes); an external frame did
+// not, so a single `[[…]]` stayed a String there — linked-selection validation
+// failed and the settings picker could not list the field.
+describe("an external frame carries its project's declared relation types", () => {
+  it("a declared single-link relation is a Relation with its backlinks", async () => {
+    const frame = {
+      fields: [
+        { name: "name", type: "string", repeated: false, identifier: true, derived: false },
+        { name: "client", type: "string", repeated: false, identifier: false, derived: false },
+      ],
+      records: [
+        { id: "Sessions/S1.md", values: { name: "S1", client: "[[Alice]]" } },
+        { id: "Alice.md", values: { name: "Alice" } },
+      ],
+    };
+    const queryAll = jest.fn().mockResolvedValue(frame);
+    (FolderDataSource as jest.Mock).mockImplementation(() => ({ queryAll }));
+    const project = { ...makeProject("s", "folder"), fieldConfig: { client: { relation: { targetProjectId: "s" } } } };
+    const result = await resolveExternalFrame("s", makeDeps({ projects: [project] }));
+    expect(result?.fields.find((f) => f.name === "client")?.type).toBe("relation");
+    expect(result?.fields.some((f) => f.name === "client_backlinks")).toBe(true);
+  });
+
+  it("a project without declared relations is returned as it came", async () => {
+    const frame = { fields: [{ name: "name", type: "string", repeated: false, identifier: true, derived: false }], records: [] };
+    const queryAll = jest.fn().mockResolvedValue(frame);
+    (FolderDataSource as jest.Mock).mockImplementation(() => ({ queryAll }));
+    const result = await resolveExternalFrame("p", makeDeps({ projects: [makeProject("p", "folder")] }));
+    expect(result).toBe(frame);
+  });
+});
