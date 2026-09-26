@@ -6,7 +6,7 @@
 // What each kind adds lives in `suggestionWidgets.ts`.
 
 import type { DatabaseViewConfig, WidgetDefinition, WidgetType } from "./types";
-import { widgetForSuggestion } from "./suggestionWidgets";
+import { deliversSuggestion, widgetForSuggestion } from "./suggestionWidgets";
 import type { SmartSuggestion, SuggestionKind } from "./smartSuggest";
 
 export interface SuggestionController {
@@ -50,7 +50,7 @@ export function createSuggestionController(opts: {
 
       // Built on what addWidget saved, never on a fresh read: that is what
       // used to throw the widget away.
-      const dismissedSuggestions = withDismissed(saved, s.kind);
+      const dismissedSuggestions = deliversSuggestion(s, saved) ? withDismissed(saved, s.kind) : undefined;
       if (dismissedSuggestions) saveConfig({ ...saved, dismissedSuggestions });
     },
     dismiss: (e) => persistDismiss(e.detail),
