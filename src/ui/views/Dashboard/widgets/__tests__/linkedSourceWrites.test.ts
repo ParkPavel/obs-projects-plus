@@ -84,38 +84,82 @@ describe("#139 data writes are guarded, config writes are not", () => {
 // no `readonly` prop at all, so an external-source gallery kept its `+`, and
 // that button builds the note from the PARENT `project`. Same defect as #139,
 // one component further down the same `{#if}` chain.
-describe("#142 the gallery branch is guarded too", () => {
+describe("#142/#C4 the gallery branch is guarded too", () => {
   const gallery = readFileSync(
     resolve(WIDGETS, "../../Gallery/GalleryView.svelte"),
     "utf8"
   );
 
-  it("the gallery declares the prop, defaulting to writable", () => {
-    // Default false: the standalone gallery view passes nothing and must keep
+  it("the gallery declares both props, each defaulting to writable", () => {
+    // Default false: the standalone gallery view passes neither and must keep
     // behaving exactly as before.
     expect(gallery).toMatch(/export let readonly = false;/);
+    expect(gallery).toMatch(/export let dataReadOnly = false;/);
   });
 
-  it("record creation is gated", () => {
+  it("record creation is gated on the generic flag, unchanged since #142", () => {
     expect(gallery).toMatch(/\{#if !readonly\}\s*\n\s*<IconButton\s*\n\s*icon="plus"/);
   });
 
-  it("the edit modal is not opened read-only — the note is opened instead", () => {
-    // Viewing stays available; only the editor whose writes would land in the
-    // wrong project is withheld.
-    //
-    // #168 step (a) changed the spelling, not the guarantee: the branch now
-    // calls the record-open contract instead of the workspace directly, and
-    // `PLAIN_MODE` is what `false` meant. The assertion follows the contract so
-    // that step (b) — where a plain open becomes a peek — changes this branch
-    // with every other one, instead of leaving it behind on the old behaviour.
+  it("the edit modal keys on dataReadOnly, not the generic flag — #C4", () => {
+    // #142 keyed this on `readonly` alone, which also silenced editing on a
+    // STANDALONE gallery over a Dataview project (DataSource.readonly() is
+    // always true there). Moving the guard to a prop only DatabaseCallBlock
+    // sets restores that standalone editing while keeping the external-block
+    // guarantee: viewing stays available, only the editor whose writes would
+    // land in the wrong project is withheld.
     expect(gallery).toMatch(
-      /if \(readonly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE[\s\S]*?return;/
+      /if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE[\s\S]*?return;/
+    );
+    expect(gallery).not.toMatch(
+      /if \(readonly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/
     );
   });
 
-  it("the block hands the gallery the same combined permission as the others", () => {
-    expect(block).toMatch(/<GalleryView[\s\S]*?readonly=\{readonly \|\| sourceReadOnly\}/);
+  it("the block hands the gallery the same combined readonly as the others, plus dataReadOnly", () => {
+    expect(block).toMatch(/<GalleryView[\s\S]*?readonly=\{readonly \|\| sourceReadOnly\}[\s\S]*?dataReadOnly=\{sourceReadOnly\}/);
+  });
+});
+
+// #C4 — Board and Calendar never checked `readonly` for editing, checking off
+// or reordering a card/event; #139 handed them `readonly || sourceReadOnly`
+// on the assumption they treated it the way Table does, and 5a60412's own
+// commit message says so without a render test to check it. They did not:
+// EditNoteModal, the checkbox and every drag path opened regardless. A
+// SEPARATE prop, set only here, is what actually closes those paths without
+// changing what `readonly` means for every other Board/Calendar in the vault.
+describe("#C4 Board and Calendar consume the guard, not just receive it", () => {
+  const boardView = readFileSync(
+    resolve(WIDGETS, "../../Board/BoardView.svelte"),
+    "utf8"
+  );
+  const calendarView = readFileSync(
+    resolve(WIDGETS, "../../Calendar/CalendarView.svelte"),
+    "utf8"
+  );
+
+  it("the block hands both a combined readonly and the separate dataReadOnly", () => {
+    expect(block).toMatch(/<BoardView[\s\S]*?readonly=\{readonly \|\| sourceReadOnly\}[\s\S]*?dataReadOnly=\{sourceReadOnly\}/);
+    expect(block).toMatch(/<CalendarView[\s\S]*?readonly=\{readonly \|\| sourceReadOnly\}[\s\S]*?dataReadOnly=\{sourceReadOnly\}/);
+  });
+
+  it("Board declares the prop and guards click, check and drag-update", () => {
+    expect(boardView).toMatch(/export let dataReadOnly: boolean = false;/);
+    expect(boardView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: record\.id \}, PLAIN_MODE/);
+  });
+
+  it("Calendar declares the prop and guards click, check and drag-change", () => {
+    expect(calendarView).toMatch(/export let dataReadOnly: boolean = false;/);
+    expect(calendarView).toMatch(/if \(dataReadOnly\) \{[\s\S]*?openRecord\(\{ id: entry\.id \}, PLAIN_MODE/);
+  });
+
+  it("Calendar's infinite views lose onRecordChange/onRecordAdd, not just gain a Notice", () => {
+    // :1609's Notice guard predates this fix and stays — it is the CREATE
+    // path, gated by the generic `readonly` as it always was. The drag-move
+    // and quick-add callbacks are a different door, and #C4's fix is that the
+    // children stop being handed a function to call at all.
+    expect(calendarView).toMatch(/onRecordChange=\{dataReadOnly \? undefined : handleRecordChange\}/);
+    expect(calendarView).toMatch(/onRecordAdd=\{dataReadOnly \? undefined : handleRecordAdd\}/);
   });
 });
 

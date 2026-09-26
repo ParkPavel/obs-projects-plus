@@ -31,6 +31,8 @@
   export let columns: Column[];
 
   export let readonly: boolean;
+  /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
+  export let dataReadOnly: boolean = false;
   export let richText: boolean;
   export let onRecordClick: OnRecordClick;
   export let onRecordCheck: OnRecordCheck;
@@ -230,6 +232,7 @@
           <div class="projects--board--column--dndwrapper projects--board--column--pinned">
             <BoardColumn
               {readonly}
+              {dataReadOnly}
               {richText}
               {boardEditing}
               {onEdit}
@@ -300,7 +303,7 @@
           element.style.boxSizing = "border-box";
           element.style.zIndex = "30";
         },
-        dragDisabled: boardEditing || zoom !== 1,
+        dragDisabled: boardEditing || zoom !== 1 || dataReadOnly,
         morphDisabled: true,
       }}
       on:consider={handleDndConsider}
@@ -323,6 +326,7 @@
             </span>
             <BoardColumn
               {readonly}
+              {dataReadOnly}
               {richText}
               {boardEditing}
               {onEdit}

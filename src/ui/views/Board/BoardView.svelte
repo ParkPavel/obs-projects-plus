@@ -10,7 +10,7 @@
   import { notUndefined } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
+  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { Notice } from "obsidian";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
@@ -49,6 +49,15 @@
   export let project: ProjectDefinition;
   export let frame: DataFrame;
   export let readonly: boolean;
+  /**
+   * #C4 — set only by DatabaseCallBlock for a block reading an EXTERNAL
+   * project (`dataReadOnly={sourceReadOnly}`). Separate from `readonly`,
+   * which a standalone board keeps meaning "no creating notes": Board never
+   * checked `readonly` for editing, checking off or reordering a card, so
+   * folding the block's data-write ban into `readonly` (#139) would have
+   * changed what `readonly` means for every other Board on the vault.
+   */
+  export let dataReadOnly: boolean = false;
   export let api: ViewApi;
   export let getRecordColor: ProjectViewProps["getRecordColor"];
   export let sortRecords: ProjectViewProps["sortRecords"];
@@ -85,6 +94,10 @@
   );
 
   const handleRecordClick: OnRecordClick = (record) => {
+    if (dataReadOnly) {
+      void openRecord({ id: record.id }, PLAIN_MODE, { app: $app });
+      return;
+    }
     new EditNoteModal(
       $app,
       fields,
@@ -124,6 +137,7 @@
   const handleRecordCheck =
     (checkField: string): OnRecordCheck =>
     (record, checked) => {
+      if (dataReadOnly) return;
       api.updateRecord(
         updateRecordValues(record, {
           [checkField]: checked,
@@ -135,6 +149,7 @@
   const handleRecordUpdate =
     (groupByField: DataField | undefined): OnRecordUpdate =>
     (record, { id: column, records }, trigger) => {
+      if (dataReadOnly) return;
       // Update record groupByField
       if (trigger === "addToColumn" && groupByField?.name) {
         record = updateRecordValues(record, {
@@ -283,6 +298,7 @@
   const handleSortColumns =
     (field: DataField | undefined): OnSortColumns =>
     (columns) => {
+      if (dataReadOnly) return;
       if (field?.name && field?.typeConfig && field.typeConfig?.options) {
         settings.updateFieldConfig(
           project.id,
@@ -336,6 +352,7 @@
   const handleColumnDelete =
     (field: DataField | undefined): OnColumnDelete =>
     async (columns, name, records) => {
+      if (dataReadOnly) return;
       if (!field) return;
 
       const newRecords = records.map((record) =>
@@ -375,6 +392,7 @@
   const handleColumnRename =
     (field: DataField | undefined): OnColumnRename =>
     async (columns, oldName, newName, records) => {
+      if (dataReadOnly) return;
       if (!field) return;
 
       const newRecords = records.map((record) =>
@@ -555,6 +573,7 @@
     onColumnPersist={handleColumnPersist}
     onSortColumns={handleSortColumns(groupByField)}
     {readonly}
+    {dataReadOnly}
     validateStatusField={() => {
       if (groupByField?.derived) return "derived-status-field";
       if (!groupByField) return "no-status-field";

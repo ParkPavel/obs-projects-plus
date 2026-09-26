@@ -17,6 +17,8 @@
   export let name: string;
   export let records: DataRecord[];
   export let readonly: boolean;
+  /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
+  export let dataReadOnly: boolean = false;
   export let richText: boolean;
   export let checkField: string | undefined;
   export let includeFields: DataField[];
@@ -48,11 +50,15 @@
 
   function onColumnMenu(event: MouseEvent) {
     openContextMenu([
-      {
-        title: $i18n.t("components.board.column.rename"),
-        icon: "edit",
-        onClick: () => { editing = true; },
-      },
+      ...(!dataReadOnly
+        ? [
+            {
+              title: $i18n.t("components.board.column.rename"),
+              icon: "edit",
+              onClick: () => { editing = true; },
+            },
+          ]
+        : []),
       {
         title: collapse
           ? $i18n.t("components.board.column.expand")
@@ -74,7 +80,7 @@
         icon: persisted ? "bookmark-minus" : "bookmark-plus",
         onClick: () => { onColumnPersist(name); },
       },
-      ...(name !== $i18n.t("views.board.no-status")
+      ...(!dataReadOnly && name !== $i18n.t("views.board.no-status")
         ? [
             { separator: true as const },
             {
@@ -102,6 +108,7 @@
     {count}
     {checkedCount}
     bind:editing
+    {dataReadOnly}
     {richText}
     {collapse}
     {pinned}
@@ -119,7 +126,7 @@
     <CardGroup
       items={records}
       {boardEditing}
-      disableDnd={pinned}
+      disableDnd={pinned || dataReadOnly}
       {customHeader}
       {iconField}
       {onRecordClick}

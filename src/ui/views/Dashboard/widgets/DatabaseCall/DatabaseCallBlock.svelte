@@ -108,6 +108,11 @@
    *
    * Config writes are NOT affected: a view tab or a block filter belongs to the
    * widget in the parent dashboard, which is exactly where they are stored.
+   *
+   * #C4: only DataTableContent (Table already treats `readonly` fully) is
+   * handed this folded into `readonly`. Board, Calendar and Gallery receive
+   * it separately as `dataReadOnly` — see BoardView.svelte for why folding it
+   * into their `readonly` would have been wrong.
    */
   export let sourceReadOnly: boolean = false;
   /**
@@ -630,6 +635,7 @@
             frame={effectiveFrame}
             {api}
             readonly={readonly || sourceReadOnly}
+            dataReadOnly={sourceReadOnly}
             {getRecordColor}
             {sortRecords}
             {getRecord}
@@ -644,6 +650,7 @@
             frame={effectiveFrame}
             {api}
             readonly={readonly || sourceReadOnly}
+            dataReadOnly={sourceReadOnly}
             {getRecordColor}
             config={calendarConfig}
             onConfigChange={handleCalendarConfigChange}
@@ -655,6 +662,7 @@
             frame={effectiveFrame}
             {api}
             readonly={readonly || sourceReadOnly}
+            dataReadOnly={sourceReadOnly}
             {getRecordColor}
             config={galleryConfig}
             onConfigChange={handleGalleryConfigChange}

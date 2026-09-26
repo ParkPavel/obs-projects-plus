@@ -58,6 +58,8 @@
   export let onValidate: (value: string) => boolean;
   export let onColumnRename: (value: string) => void;
   export let editing: boolean = false;
+  /** #C4 — see BoardView.svelte; blocks the dblclick-to-rename shortcut too. */
+  export let dataReadOnly: boolean = false;
   export let pinned: boolean = false;
   export let persisted: boolean = false;
   export let onColumnPin: () => void;
@@ -79,7 +81,7 @@
 <div
   class="projects--board--column--header"
   on:dblclick={() => {
-    if (!collapse) editing = true;
+    if (!collapse && !dataReadOnly) editing = true;
   }}
 >
   {#if editing}

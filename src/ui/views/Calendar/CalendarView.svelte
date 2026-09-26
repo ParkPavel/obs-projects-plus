@@ -13,7 +13,7 @@
   import { formatDateForProject, getFilterValuesFromConditions } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
-  import { openRecord, modeFromNewLeaf } from "src/lib/record/openRecord";
+  import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { settings } from "src/lib/stores/settings";
   import { isMobileDevice } from "src/lib/stores/ui";
   import type { ViewApi } from "src/lib/viewApi";
@@ -79,6 +79,15 @@
   export let project: ProjectDefinition;
   export let frame: DataFrame;
   export let readonly: boolean;
+  /**
+   * #C4 — set only by DatabaseCallBlock for a block reading an EXTERNAL
+   * project (`dataReadOnly={sourceReadOnly}`). Separate from `readonly`,
+   * which historically only hid "create" (:1609) — the click-to-edit modal,
+   * checkbox and drag-to-move handlers never checked it, so folding the
+   * block's data-write ban into `readonly` (#139) would have changed what
+   * `readonly` means for every standalone Calendar.
+   */
+  export let dataReadOnly: boolean = false;
   export let api: ViewApi;
   export let getRecordColor: (record: DataRecord) => string | null;
   export let config: CalendarConfig | undefined;
@@ -937,6 +946,10 @@
   function handleDayPopupRecordSettings(record: DataRecord) {
     showDayPopup = false;
     const app_instance = get(app);
+    if (dataReadOnly) {
+      void openRecord({ id: record.id }, PLAIN_MODE, { app: app_instance });
+      return;
+    }
     new EditNoteModal(
       app_instance, 
       fields, 
@@ -987,6 +1000,7 @@
   }
   
   async function handleDayPopupRecordDelete(record: DataRecord) {
+    if (dataReadOnly) return;
     try {
       await api.deleteRecord(record.id);
       // Remove from popup records
@@ -1005,9 +1019,10 @@
     targetDates: dayjs.Dayjs[];
     customTime?: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null;
   }) {
+    if (dataReadOnly) return;
     const { record, targetDates, customTime } = event;
     if (!dateField) return;
-    
+
     try {
       const startFieldName = dateField.name;
       const endFieldName = endDateField?.name;
@@ -1084,6 +1099,7 @@
   }
   
   async function handleDayPopupRecordCheck(record: DataRecord, checked: boolean) {
+    if (dataReadOnly) return;
     if (!booleanField) return;
     
     try {
@@ -1119,6 +1135,7 @@
    * Saves to frontmatter using eventColorField
    */
   async function handleDayPopupRecordColorChange(record: DataRecord, color: string) {
+    if (dataReadOnly) return;
     const colorFieldName = config?.eventColorField;
     if (!colorFieldName) {
       new Notice(noticeFor(COLOR_FIELD_REQUIRED));
@@ -1287,6 +1304,7 @@
    * Deep drag handler with time preservation, timezone awareness, and validation
    */
   async function handleRecordChange(date: dayjs.Dayjs, record: DataRecord, options?: RecordChangeOptions) {
+    if (dataReadOnly) return;
     // Validate record integrity first
     const recordValidation = validateRecordIntegrity(record);
     if (!recordValidation.isValid) {
@@ -1512,6 +1530,7 @@
   }
 
   function handleRecordCheck(record: DataRecord, checked: boolean) {
+    if (dataReadOnly) return;
     if (!booleanField) {
       calendarLogger.warn('No boolean field configured for check operations', { component: 'CalendarView' });
       new Notice(noticeFor(CHECK_FIELD_REQUIRED));
@@ -1541,7 +1560,12 @@
       calendarLogger.warn('No entry provided for record click', { component: 'CalendarView' });
       return;
     }
-  
+
+    if (dataReadOnly) {
+      void openRecord({ id: entry.id }, PLAIN_MODE, { app: get(app) });
+      return;
+    }
+
     try {
       const app_instance = get(app);
       new EditNoteModal(
@@ -1930,9 +1954,9 @@
             scrollPosition={focusedScrollPosition}
             isActive={interval === 'month' || interval === '2weeks'}
             onRecordClick={handleRecordClick}
-            onRecordChange={handleRecordChange}
+            onRecordChange={dataReadOnly ? undefined : handleRecordChange}
             onRecordCheck={handleRecordCheck}
-            onRecordAdd={handleRecordAdd}
+            onRecordAdd={dataReadOnly ? undefined : handleRecordAdd}
             onDayTap={handleDayTap}
             {isMobile}
             dateFieldName={dateField?.name}
@@ -1970,9 +1994,9 @@
               targetDate={focusedDate}
               isActive={interval === 'week' || interval === 'day'}
               onRecordClick={handleRecordClick}
-              onRecordChange={handleRecordChange}
+              onRecordChange={dataReadOnly ? undefined : handleRecordChange}
               onRecordCheck={onRecordCheckWrapper}
-              onRecordAdd={handleRecordAdd}
+              onRecordAdd={dataReadOnly ? undefined : handleRecordAdd}
               onDayTap={handleDayTap}
               {isMobile}
               {now}

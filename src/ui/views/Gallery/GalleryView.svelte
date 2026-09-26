@@ -51,6 +51,15 @@
    * one it reads. Defaults to false so every existing caller is unchanged.
    */
   export let readonly = false;
+  /**
+   * #C4 — the block's data-write ban, distinct from `readonly`. #142 keyed
+   * the guard below on `readonly` alone, which also broke a STANDALONE
+   * gallery on a Dataview project: `DataSource.readonly()` is always true
+   * there, so editing (not just creating) silently stopped working. Only a
+   * `database-call` block reading an EXTERNAL project sets this; every other
+   * caller keeps its default and is unaffected.
+   */
+  export let dataReadOnly = false;
 
   // Use onConfigChange to avoid unused warning
   $: void onConfigChange;
@@ -58,9 +67,9 @@
   $: ({ fields, records } = frame);
 
   function handleRecordClick(record: DataRecord) {
-    // #142 — read-only gallery still opens the note; it just does not offer an
-    // editor whose writes would land in the wrong project.
-    if (readonly) {
+    // #142/#C4 — a read-only-DATA gallery still opens the note; it just does
+    // not offer an editor whose writes would land in the wrong project.
+    if (dataReadOnly) {
       void openRecord({ id: record.id }, PLAIN_MODE, { app: $app });
       return;
     }
