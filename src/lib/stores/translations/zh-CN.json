@@ -328,7 +328,8 @@
                     "autosave-enabled": "自动保存已启用",
                     "save-error": "保存失败",
                     "color-title": "颜色",
-                    "color-hint": "选择颜色 — 笔记中会添加 `color` 属性，日历和看板会使用它。"
+                    "color-hint": "选择颜色 — 笔记中会添加 `color` 属性，日历和看板会使用它。",
+                    "readonly-notice": "只读 — 此记录属于项目 {{project}}"
                 }
             },
             "field": {

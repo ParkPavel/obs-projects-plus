@@ -178,7 +178,7 @@ const PEEK_ENTRANCES: ReadonlyArray<readonly [string, string, RegExp]> = [
   [
     "ui/views/Dashboard/widgets/DatabaseCall/tableRowOps.ts",
     "the labelled row-menu entry, for someone who does not",
-    /openRecord\(\{ id: record\.id, record, fields \}, "peek"/,
+    /openRecord\(\{ id: record\.id, projectId: sourceProjectId, readonly \}, "peek"/,
   ],
 ];
 

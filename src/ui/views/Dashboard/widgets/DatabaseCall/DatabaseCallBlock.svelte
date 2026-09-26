@@ -623,6 +623,7 @@
               {fieldPresets}
               {activeFieldPresetId}
               {project}
+              sourceProjectId={sourceState.kind === "ready" ? sourceState.projectId : undefined}
               {widgetId}
               {newRowSignal}
               on:configChange={handleDataTableConfigChange}

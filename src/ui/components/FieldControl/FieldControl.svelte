@@ -40,7 +40,52 @@
   export let onChange: (value: Optional<DataValue>) => void;
   export let readonly: boolean = false;
   export let suggestions: string[] = [];
-  
+
+  // ── N1 — a prop change is not user input ────────────────────────────
+  // obsidian-svelte's inputs re-dispatch their change event whenever the
+  // PARENT hands them a new `value` prop, not only on a real keystroke or
+  // click (NumberInput/Switch/Autocomplete all use `$: dispatch(...)`).
+  // FieldControl used to forward that dispatch straight to `onChange`, so a
+  // stale record pushed back into a peek/modal wrote its own stale values
+  // back to disk. Each `commit*` below compares the reported value against
+  // what THIS component last passed the control down, and writes only when
+  // they differ — true for a keystroke, false for an echo — and returns
+  // early when `readonly`, so no branch can write through a control it also
+  // has to keep disabled.
+  function datesEqual(a: Optional<Date>, b: Optional<Date>): boolean {
+    if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+    return Object.is(a, b);
+  }
+
+  // A cleared NumberInput reports NaN (from `valueAsNumber`), which is not a
+  // value FieldControl ever passed down. #180a: "not a number" means the
+  // field is absent, i.e. `undefined`, not the JSON-illegal `NaN`.
+  function commitNumber(detail: number | null) {
+    if (readonly) return;
+    const passedDown = isNumber(value) ? value : null;
+    const normalized = detail === null || Number.isNaN(detail) ? null : detail;
+    if (Object.is(normalized, passedDown)) return;
+    onChange(normalized === null ? undefined : normalized);
+  }
+
+  function commitBoolean(detail: boolean) {
+    if (readonly) return;
+    if (Object.is(detail, isBoolean(value) ? value : false)) return;
+    onChange(detail);
+  }
+
+  function commitSelection(detail: string) {
+    if (readonly) return;
+    if (Object.is(detail, isString(value) ? value : "")) return;
+    onChange(detail);
+  }
+
+  function commitDate(next: Optional<Date>) {
+    if (readonly) return;
+    if (datesEqual(next, isDate(value) ? value : null)) return;
+    onChange(next);
+  }
+
   // ========================================
   // TEXT INPUT STATE
   // ========================================
@@ -174,7 +219,8 @@
   {#if field.type === DataFieldType.Boolean}
     <Switch
       checked={isBoolean(value) ? value : false}
-      on:check={({ detail }) => onChange(detail)}
+      disabled={readonly}
+      on:check={({ detail }) => commitBoolean(detail)}
     />
     
   {:else if field.repeated && isOptionalList(value)}
@@ -203,20 +249,22 @@
             spellcheck="false"
           />
           
-          <button 
-            class="picker-btn"
-            class:active={showColorPicker}
-            on:click|stopPropagation={toggleColorPicker}
-            type="button"
-            aria-expanded={showColorPicker}
-            aria-label={showColorPicker ? $i18n.t('components.color.collapse-palette') : $i18n.t('components.color.expand-palette')}
-          >
-            <Icon name={showColorPicker ? "chevron-up" : "palette"} size="sm" />
-          </button>
+          {#if !readonly}
+            <button
+              class="picker-btn"
+              class:active={showColorPicker}
+              on:click|stopPropagation={toggleColorPicker}
+              type="button"
+              aria-expanded={showColorPicker}
+              aria-label={showColorPicker ? $i18n.t('components.color.collapse-palette') : $i18n.t('components.color.expand-palette')}
+            >
+              <Icon name={showColorPicker ? "chevron-up" : "palette"} size="sm" />
+            </button>
+          {/if}
         </div>
-        
+
         <!-- INLINE Color Picker - встроен в форму, не popup -->
-        {#if showColorPicker}
+        {#if showColorPicker && !readonly}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div 
@@ -267,7 +315,8 @@
       <Autocomplete
         value={isString(value) ? value : ""}
         {options}
-        on:change={({ detail }) => onChange(detail)}
+        readonly={readonly}
+        on:change={({ detail }) => commitSelection(detail)}
       />
       
     {:else}
@@ -287,23 +336,26 @@
     <NumberInput
       value={isNumber(value) ? value : null}
       placeholder="0"
-      on:input={({ detail: val }) => onChange(val !== null ? val : undefined)}
+      readonly={readonly}
+      on:input={({ detail: val }) => commitNumber(val)}
     />
-    
+
   {:else if field.type === DataFieldType.Date}
     {#if field.typeConfig?.time}
       <DatetimeInput
         value={isDate(value) ? value : null}
+        disabled={readonly}
         on:input={({ detail: v }) => (cachedValue = v)}
-        on:blur={() => onChange(cachedValue)}
+        on:blur={() => commitDate(cachedValue)}
       />
     {:else}
       <DateInput
         value={isDate(value) ? value : null}
+        disabled={readonly}
         on:change={({ detail: v }) => (cachedValue = v)}
         on:blur={() => {
           if (!cachedValue || !isDate(value)) {
-            onChange(cachedValue);
+            commitDate(cachedValue);
             return;
           }
           const cachedDate = dayjs(cachedValue);
@@ -311,7 +363,7 @@
             .set("year", cachedDate.year())
             .set("month", cachedDate.month())
             .set("date", cachedDate.date());
-          onChange(newDatetime.toDate());
+          commitDate(newDatetime.toDate());
         }}
       />
     {/if}

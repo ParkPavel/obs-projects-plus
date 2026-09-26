@@ -16,6 +16,12 @@
    */
   export let embed: boolean = false;
 
+  /**
+   * Specifies whether the input and the time-picker toggle reject edits —
+   * the peek's read-only path (#158 C1/C3) has no other way to stop them.
+   */
+  export let disabled: boolean = false;
+
   const dispatch = createEventDispatcher<{
     change: Date | null;
     input: Date | null;
@@ -70,20 +76,23 @@
     max="9999-12-31T23:59"
     placeholder={$i18n.t('common.datetime-placeholder')}
     title={$i18n.t('common.select-date-time')}
+    disabled={disabled}
     on:change={handleChange}
     on:input={handleInput}
     on:blur
   />
-  <button 
-    class="time-picker-toggle"
-    on:click={() => showTimePicker = !showTimePicker}
-    aria-label={$i18n.t("components.datetime-input.open-time-picker")}
-    title={$i18n.t("components.datetime-input.visual-time-picker")}
-  >
-    <Icon name="clock" size="sm" />
-  </button>
-  
-  {#if showTimePicker}
+  {#if !disabled}
+    <button
+      class="time-picker-toggle"
+      on:click={() => showTimePicker = !showTimePicker}
+      aria-label={$i18n.t("components.datetime-input.open-time-picker")}
+      title={$i18n.t("components.datetime-input.visual-time-picker")}
+    >
+      <Icon name="clock" size="sm" />
+    </button>
+  {/if}
+
+  {#if showTimePicker && !disabled}
     <div class="time-picker-dropdown">
       <TimePicker 
         value={value ? dayjs(value).format("HH:mm") : "12:00"}

@@ -318,6 +318,7 @@
                     "saving": "Saving...",
                     "autosave-enabled": "Autosave enabled",
                     "save-error": "Failed to save changes",
+                    "readonly-notice": "Read-only — this record belongs to {{project}}",
                     "no-editable-fields": {
                         "title": "No editable fields",
                         "message": "This note has no editable fields."

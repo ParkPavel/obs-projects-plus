@@ -16,33 +16,31 @@
  *
  * ## What it deliberately does not do
  *
- * It does not fetch. `id` is a vault path, and the surface that renders the
- * peek already holds the frame the record came from — looking it up there keeps
- * this a piece of view state rather than a second, slower data path beside
- * `DataFrame`.
+ * It does not fetch, and it does not carry the record. `id` is a vault path,
+ * and the peek is RESOLVED — every tick, by `resolvePeek` in
+ * `src/lib/record/peekResolution.ts` — from whichever frame actually owns it:
+ * this view's own `sortedFrame` for an own record, or `api.resolveExternalFrame`
+ * for one named by `projectId`. Carrying a copy here, as the first version did,
+ * meant a re-render could hand the copy back to the editor as if it were fresh
+ * (#158 N1) and meant the peek could never notice the record it named had
+ * disappeared. Identity plus origin is enough to look the record up again on
+ * every tick; a copy is not.
  */
 
 import { writable } from "svelte/store";
-
-import type { DataField, DataRecord } from "src/lib/dataframe/dataframe";
 
 export interface PeekTarget {
   /** `record.id` — a vault path. */
   readonly id: string;
   /**
-   * The record itself, when the caller has it.
-   *
-   * The first version resolved the id in the host view's frame and nothing
-   * else, which the adversarial review showed was a defect rather than a
-   * simplification: a dashboard table widget can read an EXTERNAL source whose
-   * records are not in that frame at all, so its rows opened nothing — a click
-   * with no result, which is worse than the navigation it replaced. A caller
-   * that has the record hands it over; a caller that does not still resolves
-   * by id.
+   * The project that holds the record, when it is not this view's own — a
+   * dashboard table widget can read an EXTERNAL source whose records are not
+   * in the host view's frame at all. Absent means "resolve in this view's own
+   * frame".
    */
-  readonly record?: DataRecord;
-  /** The fields that go with `record`, for the same reason. */
-  readonly fields?: DataField[];
+  readonly projectId?: string | undefined;
+  /** The row this target came from is read-only, independent of the record's own project. */
+  readonly readonly?: boolean | undefined;
 }
 
 /** `null` when nothing is peeked. */

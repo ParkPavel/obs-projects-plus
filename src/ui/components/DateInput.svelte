@@ -14,6 +14,12 @@
    */
   export let embed: boolean = false;
 
+  /**
+   * Specifies whether the input rejects edits — the peek's read-only path
+   * (#158 C1/C3) has no other way to stop a native date picker from writing.
+   */
+  export let disabled: boolean = false;
+
   const dispatch = createEventDispatcher<{
     change: Date | null;
     input: Date | null;
@@ -49,6 +55,7 @@
   max="9999-12-31"
   placeholder={$i18n.t('common.date-placeholder')}
   title={$i18n.t('common.select-date')}
+  disabled={disabled}
   on:change={handleChange}
   on:input={handleInput}
   on:blur

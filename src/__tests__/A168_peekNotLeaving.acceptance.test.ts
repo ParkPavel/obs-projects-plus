@@ -86,24 +86,21 @@ describe("A168 — a peek opens the panel and does not navigate", () => {
     expect(get(recordPeek)).toEqual({ id: "second.md" });
   });
 
-  it("a caller that has the record hands it over, so a row from an external source can be peeked", () => {
+  it("a caller that names the record's origin hands it over, so a row from an external source can be peeked", () => {
     // The adversarial review's sharpest finding: a dashboard table widget can
     // read a source whose records are not in the host view's frame at all, so
     // resolving by id alone left those rows opening NOTHING — a click with no
-    // result, which is worse than the navigation it replaced.
+    // result, which is worse than the navigation it replaced. #158 replaced
+    // the record COPY this used to carry with `projectId`/`readonly`, so the
+    // peek resolves the record fresh — every tick — instead of an echo of it.
     const { app } = spyApp();
-    const record = { id: "External/Row.md", values: { name: "Row" } };
-    const fields = [
-      { name: "name", type: "string", identifier: true, derived: false, repeated: false, typeConfig: {} },
-    ];
     void openRecord(
-      { id: record.id, record, fields } as never,
+      { id: "External/Row.md", projectId: "Clients", readonly: true },
       "peek",
       { app }
     );
     const target = get(recordPeek);
-    expect(target?.record).toEqual(record);
-    expect(target?.fields).toEqual(fields);
+    expect(target).toEqual({ id: "External/Row.md", projectId: "Clients", readonly: true });
   });
 
   it("the legacy newLeaf bridge follows PLAIN_MODE, so no call site is left behind", () => {
@@ -177,7 +174,11 @@ describe("A168 — a target this view cannot show never becomes a click that did
       require("path").join(__dirname, "..", "ui/app/View.svelte"),
       "utf8"
     ) as string;
-    expect(s).toMatch(/\$: if \(\$recordPeek !== null && peeked === null\)/);
+    // #158 L2: the record is RESOLVED every tick instead of carried as a copy
+    // (see `peekResolution.ts`), so the fallback now fires on `absent` —
+    // filtered out, renamed, deleted, or unresolved — not on any null `peeked`,
+    // which would also catch the first tick of a still-`loading` external peek.
+    expect(s).toMatch(/\$: if \(\$recordPeek !== null && peekResolution\?\.kind === "absent"\)/);
     expect(s).toMatch(/openRecord\(\{ id: unresolved\.id \}, "same"/);
   });
 });
