@@ -127,6 +127,7 @@
       items={records}
       {boardEditing}
       disableDnd={pinned || dataReadOnly}
+      readOnly={dataReadOnly}
       {customHeader}
       {iconField}
       {onRecordClick}

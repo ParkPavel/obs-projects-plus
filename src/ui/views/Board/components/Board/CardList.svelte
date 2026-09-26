@@ -46,6 +46,8 @@
   export let iconField: DataField | undefined = undefined;
   export let boardEditing: boolean;
   export let disableDnd: boolean = false;
+  /** The data is read-only (a source block): the pencil opens the note, and says so. */
+  export let readOnly: boolean = false;
 
   const getRecordColor = getRecordColorContext.get();
   const sortRecords = sortRecordsContext.get();
@@ -151,7 +153,7 @@
             <span class="edit-hint">
               <IconButton
                 icon="pencil"
-                tooltip={$i18n.t("components.note.edit")}
+                tooltip={$i18n.t(readOnly ? "common.open-note" : "components.note.edit")}
                 onClick={(event) => {
                   // The card itself opens the record on click; open it once.
                   event.stopPropagation();
