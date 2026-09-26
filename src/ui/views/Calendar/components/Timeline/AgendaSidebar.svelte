@@ -496,22 +496,17 @@
     // not something a portal should know about.
     const moved = portal(node, { to: "document-body" });
 
+    // Position and the whole-viewport fallback are classes (catalogue C6,
+    // Codex review of 125c617); only the container's measured bounds are inline.
+    node.classList.add('obsidian-projects-agenda-overlay');
+    node.classList.toggle('obsidian-projects-agenda-overlay--viewport', !container);
     function update() {
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        node.style.position = 'fixed';
-        node.style.top = `${rect.top}px`;
-        node.style.left = `${rect.left}px`;
-        node.style.width = `${rect.width}px`;
-        node.style.height = `${rect.height}px`;
-      } else {
-        // Fallback: full viewport
-        node.style.position = 'fixed';
-        node.style.top = '0';
-        node.style.left = '0';
-        node.style.width = '100vw';
-        node.style.height = '100vh';
-      }
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      node.style.top = `${rect.top}px`;
+      node.style.left = `${rect.left}px`;
+      node.style.width = `${rect.width}px`;
+      node.style.height = `${rect.height}px`;
     }
 
     update();
@@ -848,6 +843,14 @@
 
 <style>
   /* Set on the body while the sidebar is resized (catalogue audit C6). */
+  :global(.obsidian-projects-agenda-overlay) {
+    position: fixed;
+  }
+  :global(.obsidian-projects-agenda-overlay--viewport) {
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+  }
   :global(body.obsidian-projects-col-resizing) {
     cursor: col-resize;
     user-select: none;
