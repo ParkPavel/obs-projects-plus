@@ -132,3 +132,22 @@ describe("area on a fitted scale (review of 08eda4e)", () => {
     expect(Math.max(...ys)).toBeLessThanOrEqual(200);
   });
 });
+
+describe("grid precision (review of 680bca3)", () => {
+  test("a tiny all-negative scale keeps distinct lines below zero", () => {
+    const g = gridValues({ min: -1e-10, max: 0 }, 5);
+    expect(g.length).toBeGreaterThan(1);
+    expect(new Set(g).size).toBe(g.length);
+    expect(g.every((v) => v < 0)).toBe(true);
+  });
+
+  test("a huge scale gives finite lines", () => {
+    const g = gridValues({ min: 0, max: 1e300 }, 5);
+    expect(g.length).toBeGreaterThan(0);
+    expect(g.every((v) => Number.isFinite(v) && v > 0)).toBe(true);
+  });
+
+  test("decimal steps print as written", () => {
+    expect(gridValues({ min: 0, max: 0.5 }, 5)).toEqual([0.1, 0.2, 0.3, 0.4, 0.5]);
+  });
+});

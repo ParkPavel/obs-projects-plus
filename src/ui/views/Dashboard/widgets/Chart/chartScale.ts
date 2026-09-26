@@ -108,14 +108,12 @@ export function axisTicks(scale: AxisScale): number[] {
   if (scale.min < 0 && scale.max > 0) ticks.push(0);
   return [...new Set(ticks)].sort((a, b) => a - b);
 }
-/** A readable step near `rough`: 1, 2 or 5 times a power of ten. */
-function niceStep(rough: number): number {
-  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
-  const normalized = rough / mag;
-  if (normalized <= 1.5) return mag;
-  if (normalized <= 3.5) return 2 * mag;
-  if (normalized <= 7.5) return 5 * mag;
-  return 10 * mag;
+/** A readable step near `rough`: m × 10^e with m of 1, 2, 5 or 10. */
+function niceStep(rough: number): { m: number; e: number } {
+  const e = Math.floor(Math.log10(rough));
+  const normalized = rough / Math.pow(10, e);
+  const m = normalized <= 1.5 ? 1 : normalized <= 3.5 ? 2 : normalized <= 7.5 ? 5 : 10;
+  return { m, e };
 }
 
 /**
@@ -123,18 +121,21 @@ function niceStep(rough: number): number {
  * zero line is drawn there). Empty for a scale with no height. The bar chart
  * stepped from 0 up to its max: all-negative bars have a max of 0, the step
  * was 0 and the loop never ended (review of c5cf809).
+ *
+ * Each value is built from the step's digits, k·m / 10^-e, not rounded after
+ * the fact: 0.1 steps print 0.3, and neither 1e-10 nor 1e300 scales collapse
+ * to 0 or overflow (review of 680bca3).
  */
-/** Grid values are rounded to this many parts, so 0.1 steps do not print 0.30000000000000004. */
-const ROUNDING = 1e9;
-
 export function gridValues(scale: AxisScale, ticks: number): number[] {
   const span = scale.max - scale.min;
   if (!Number.isFinite(span) || span <= 0 || ticks <= 0) return [];
-  const step = niceStep(span / ticks);
+  const { m, e } = niceStep(span / ticks);
+  const step = m * Math.pow(10, e);
   if (!Number.isFinite(step) || step <= 0) return [];
+  const at = (k: number) => (e < 0 ? (k * m) / Math.pow(10, -e) : k * m * Math.pow(10, e));
   const out: number[] = [];
-  for (let k = Math.ceil(scale.min / step); k * step <= scale.max + step * 0.05; k++) {
-    if (k !== 0) out.push(Math.round(k * step * ROUNDING) / ROUNDING);
+  for (let k = Math.ceil(scale.min / step); at(k) <= scale.max + step * 0.05; k++) {
+    if (k !== 0) out.push(at(k));
   }
   return out;
 }
