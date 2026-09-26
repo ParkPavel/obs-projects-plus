@@ -108,7 +108,7 @@
   };
   $: chartData = isScatter ? EMPTY_CHART : computeMultiSeriesChartData(source, config, seriesFrames, semanticLabels, followSelection);
   $: scatterConfig = isScatter ? extractScatterConfig(config) : null;
-  $: scatterData = isScatter && scatterConfig ? computeScatterData(source, scatterConfig, rightFrame ?? undefined) : null;
+  $: scatterData = isScatter && scatterConfig ? computeScatterData(followSelection(source), scatterConfig, rightFrame ?? undefined) : null; // follows too (review of 696a7f4)
   $: heightPx = chartHeightPx(config.style.height);
   $: isEmpty = isScatter
     ? (scatterData?.points.length ?? 0) === 0
