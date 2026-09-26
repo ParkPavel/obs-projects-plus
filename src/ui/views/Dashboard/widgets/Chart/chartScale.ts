@@ -132,10 +132,16 @@ export function gridValues(scale: AxisScale, ticks: number): number[] {
   const { m, e } = niceStep(span / ticks);
   const step = m * Math.pow(10, e);
   if (!Number.isFinite(step) || step <= 0) return [];
-  const at = (k: number) => (e < 0 ? (k * m) / Math.pow(10, -e) : k * m * Math.pow(10, e));
+  // 10^-e overflows below 1e-308: fall back to k × step there, which is exact
+  // enough at that scale (recheck of 63338a3).
+  const divisor = Math.pow(10, -e);
+  const at = (k: number) => (e < 0 && Number.isFinite(divisor) ? (k * m) / divisor : k * step);
   const out: number[] = [];
-  for (let k = Math.ceil(scale.min / step); at(k) <= scale.max + step * 0.05; k++) {
-    if (k !== 0) out.push(at(k));
+  // At most a few lines per tick: the loop ends even if a value stops moving.
+  const limit = ticks * 4 + 4;
+  for (let k = Math.ceil(scale.min / step), n = 0; n < limit && at(k) <= scale.max + step * 0.05; k++, n++) {
+    const v = at(k);
+    if (k !== 0 && Number.isFinite(v)) out.push(v);
   }
   return out;
 }

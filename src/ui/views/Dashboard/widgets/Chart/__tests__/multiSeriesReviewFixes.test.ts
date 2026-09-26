@@ -151,3 +151,15 @@ describe("grid precision (review of 680bca3)", () => {
     expect(gridValues({ min: 0, max: 0.5 }, 5)).toEqual([0.1, 0.2, 0.3, 0.4, 0.5]);
   });
 });
+
+describe("grid termination (recheck of 63338a3)", () => {
+  test.each([
+    [{ min: 0, max: 1e-308 }],
+    [{ min: -1e-308, max: 0 }],
+    [{ min: 0, max: Number.MIN_VALUE }],
+  ])("%o ends with a handful of finite lines", (scale) => {
+    const g = gridValues(scale, 5);
+    expect(g.length).toBeLessThanOrEqual(24);
+    expect(g.every((v) => Number.isFinite(v))).toBe(true);
+  });
+});
