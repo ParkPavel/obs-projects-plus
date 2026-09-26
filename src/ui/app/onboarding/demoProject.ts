@@ -1,7 +1,12 @@
 // ============================================================
-// Demo project — Projects Plus
+// Demo projects — Projects Plus
 //
-// Single coherent B2B Studio (digital agency) domain.
+// 3.6.0: THREE projects, one person's story — the B2B studio below, a
+// private massage practice (demoCabinet.ts) and personal finances
+// (demoFinance.ts). They read each other: the studio sees the sessions it
+// pays for in the massage room, the finances see both as income sources.
+//
+// The studio: a coherent B2B Studio (digital agency) domain.
 //
 // Story: a digital studio with 6 clients, 8 projects, 10 tasks and
 // 5 meetings — naturally exercises relations (Project.client → Client),
@@ -12,7 +17,6 @@
 // creation calls are wrapped in try/catch — duplicates are skipped.
 // ============================================================
 
-import dayjs from "dayjs";
 import { Notice, normalizePath, stringifyYaml, type Vault } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
 
@@ -31,45 +35,37 @@ import type {
   WidgetDefinition,
 } from "src/ui/views/Dashboard/types";
 import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
-import { DEFAULT_PROJECT, DEFAULT_VIEW } from "src/settings/settings";
-import type { ColorRule, FieldConfig, FilterDefinition } from "src/settings/base/settings";
+import { DEFAULT_PROJECT, DEFAULT_VIEW, type ProjectDefinition } from "src/settings/settings";
+import type { ColorRule, FieldConfig } from "src/settings/base/settings";
+import { get } from "svelte/store";
+import {
+  CABINET_FOLDER,
+  DEMO_FOLDER,
+  DEMO_NAMES,
+  FINANCE_FOLDER,
+  dayOf,
+  today,
+  typeScope,
+  widgetId,
+  wikilink,
+  type DemoFile,
+} from "./demoShared";
+import {
+  buildCabinetNotes,
+  cabinetCalendar,
+  cabinetFieldConfig,
+  cabinetOverview,
+  cabinetTable,
+  cabinetWidgets,
+} from "./demoCabinet";
+import { buildFinanceNotes, financeFieldConfig, financeOverview, financeTable, financeWidgets } from "./demoFinance";
 
-const DEMO_FOLDER = "Projects Plus - Демо";
+export { DEMO_FOLDER, DEMO_NAMES } from "./demoShared";
 
-/**
- * #164 — narrowing a demo block to one record type is axis A (scope), so it
- * belongs in `config.subFilter`, NOT in a leading `filter` step of
- * `widget.transform`.
- *
- * The generator used to emit the pipeline form, which is exactly what
- * `migrateDashboardTransforms` hoists into `subFilter`. A freshly created demo
- * therefore migrated itself the first time the user opened «Обзор»: it rewrote
- * `data.json` and dropped a `migration-backup-*.json` on the first screen, for
- * a config the product had generated seconds earlier. The demo is supposed to
- * be the reference for the CURRENT shape — see the no-op rule stated above
- * `demoGeneratedWidgets` — and it was shipping the legacy one instead.
- *
- * `transform` stays reserved for what is genuinely a pipeline (unnest, compute,
- * aggregate, join). None of the demo blocks need one.
- */
-const typeScope = (value: string): FilterDefinition => ({
-  conjunction: "and",
-  conditions: [{ field: "type", operator: "is", value, enabled: true }],
-});
-
-type FrontMatter = Record<string, unknown>;
-interface DemoFile {
-  readonly frontmatter: FrontMatter;
-  readonly content: string;
-}
-
-// ── helpers ─────────────────────────────────────────────────────────
-const today = () => dayjs();
-const wikilink = (name: string) => `[[${name}]]`;
-const widgetId = (() => {
-  let n = Date.now();
-  return () => `w-${n++}`;
-})();
+// #164: a block narrowed to one record type carries `config.subFilter`
+// (typeScope, demoShared.ts), never a leading `filter` step in its transform —
+// the generator must emit the CURRENT shape so a fresh demo never migrates
+// itself on first open.
 
 // ── content templates ───────────────────────────────────────────────
 const clientBody = (industry: string, tagline: string) =>
@@ -181,6 +177,33 @@ const MEETING_SEEDS: MeetingSeed[] = [
   { name: "Pitch rehearsal — Lumen",     client: "Lumen Academy", dayOffset: 6, startTime: "09:30", endTime: "10:15", participants: ["PM", "Ольга", "CEO"],             agenda: ["Прогон слайдов", "Q&A репетиция", "Правки"] },
 ];
 
+/** 3.6.0 — client payments received by the studio: [client, day, amount, project]. */
+const PAYMENT_SEEDS: Array<[string, number, number, string]> = [
+  ["Acme Studio",   -75, 12000, "Redesign — Acme Studio"],
+  ["Acme Studio",   -45, 12000, "Redesign — Acme Studio"],
+  ["Acme Studio",   -15, 12000, "Redesign — Acme Studio"],
+  ["Helix Labs",    -80, 18000, "Mobile App — Helix Labs"],
+  ["Helix Labs",    -50, 18000, "Mobile App — Helix Labs"],
+  ["Helix Labs",    -20, 18000, "Mobile App — Helix Labs"],
+  ["Nimbus Retail", -60, 7500,  "Storefront — Nimbus Retail"],
+  ["Nimbus Retail", -30, 7500,  "Storefront — Nimbus Retail"],
+  ["Orbit Media",   -50, 4500,  "Brand Refresh — Orbit Media"],
+  ["Orbit Media",   -20, 9000,  "Brand Refresh — Orbit Media"],
+  ["Lumen Academy", -5,  3000,  "Pitch Deck — Lumen Academy"],
+];
+
+function buildPayments(): Record<string, DemoFile> {
+  const out: Record<string, DemoFile> = {};
+  for (const [client, day, amount, project] of PAYMENT_SEEDS) {
+    const date = dayOf(day);
+    out[`Оплата ${client} ${date}`] = {
+      frontmatter: { type: "payment", date, client: wikilink(client), project: wikilink(project), amount, tags: ["payment"] },
+      content: "",
+    };
+  }
+  return out;
+}
+
 // ── seed → DemoFile builders ────────────────────────────────────────
 
 function buildClients(): Record<string, DemoFile> {
@@ -287,10 +310,11 @@ function buildMeetings(): Record<string, DemoFile> {
  * (#072, aggregation "count" pre-R5-004).
  */
 export function demoGeneratedWidgets(): WidgetDefinition[] {
-  return [...overviewWidgets(), ...clientsWidgets()];
+  const ids = { cabinetId: "cabinet", studioId: "studio" };
+  return [...overviewWidgets(ids), ...clientsWidgets(), ...cabinetWidgets(), ...financeWidgets(ids)];
 }
 
-function overviewWidgets(): WidgetDefinition[] {
+function overviewWidgets(ids: { cabinetId: string }): WidgetDefinition[] {
   return [
     {
       id: widgetId(),
@@ -354,6 +378,35 @@ function overviewWidgets(): WidgetDefinition[] {
     // R3: living showcase of the Canvas Selection Bus — pick a client row
     // (row menu → «Фильтровать связанные блоки»), the projects block narrows.
     ...linkedClientProjectsPair(),
+    {
+      id: widgetId(),
+      type: "chart",
+      title: "Выручка по месяцам",
+      layout: { x: 0, y: 14, w: 8, h: 4 },
+      config: {
+        subFilter: typeScope("payment"),
+        chartType: "bar",
+        xAxis: { property: "date", sortBy: "label", sortOrder: "asc", omitZero: false, dateGranularity: "month" },
+        yAxis: { label: "Выручка", property: "amount", aggregation: "sum" },
+        style: { colorScheme: "accent", height: "medium", showGrid: true, showLabels: true, showLegend: false, showValues: true },
+      },
+    },
+    {
+      // 3.6.0: read from another project — the massage room's visits the studio pays for.
+      id: widgetId(),
+      type: "stats",
+      title: "Корпоративный велнес (из «Кабинета»)",
+      layout: { x: 8, y: 14, w: 4, h: 4 },
+      config: {
+        dataProjectId: ids.cabinetId,
+        subFilter: { conjunction: "and", conditions: [{ field: "payer", operator: "is", value: "Студия", enabled: true }] },
+        cards: [
+          { id: "w1", label: "Сеансов оплачено", field: "price", aggregation: "count_values" },
+          { id: "w2", label: "Расход студии",    field: "price", aggregation: "sum", format: "currency", currencySymbol: "₽" },
+        ],
+        columns: 2,
+      },
+    },
   ];
 }
 
@@ -486,15 +539,35 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
  * is idempotent, so it can be re-run on its own to repair that.
  */
 export async function seedDemoNotes(vault: Vault): Promise<string[]> {
+  for (const folder of [CABINET_FOLDER, FINANCE_FOLDER]) {
+    if (!vault.getAbstractFileByPath(folder)) {
+      try {
+        await vault.createFolder(folder);
+      } catch (error) {
+        console.error("[Projects+] demo folder could not be created", folder, error);
+      }
+    }
+  }
   return [
     ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
     ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
     ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
     ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
+    ...(await writeFiles(vault, DEMO_FOLDER, buildPayments())),
+    ...(await writeFiles(vault, CABINET_FOLDER, buildCabinetNotes())),
+    ...(await writeFiles(vault, FINANCE_FOLDER, buildFinanceNotes())),
   ];
 }
 
-export async function createDemoProject(vault: Vault): Promise<void> {
+/**
+ * Create the demo — or, when some of it exists, restore what is missing.
+ *
+ * 3.6.0: three projects that name each other by id. Each is found by name
+ * first, so a repair run (or a vault that has only the old single demo)
+ * registers just the missing ones against the ids already in use. Returns
+ * the names registered now and the notes that could not be written.
+ */
+export async function createDemoProject(vault: Vault): Promise<{ created: string[]; failed: number }> {
   // 1. Ensure root demo folder exists (idempotent).
   if (!vault.getAbstractFileByPath(DEMO_FOLDER)) {
     try {
@@ -504,7 +577,7 @@ export async function createDemoProject(vault: Vault): Promise<void> {
       // registering a project that points at nowhere.
       console.error("[Projects+] demo folder could not be created", error);
       new Notice(noticeFor(DEMO_FOLDER_FAILED, { folder: DEMO_FOLDER }));
-      return;
+      return { created: [], failed: 0 };
     }
   }
 
@@ -517,9 +590,18 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     new Notice(noticeFor(DEMO_PARTIAL, { count: failed.length }));
   }
 
+  // The three ids first: the projects name each other.
+  const existing = get(settings).projects;
+  const idOf = (name: string) => existing.find((p) => p.name === name)?.id;
+  const ids = {
+    studioId: idOf(DEMO_NAMES.studio) ?? uuidv4(),
+    cabinetId: idOf(DEMO_NAMES.cabinet) ?? uuidv4(),
+    financeId: idOf(DEMO_NAMES.finance) ?? uuidv4(),
+  };
+
   // 3. View configs.
   const overviewConfig: DatabaseViewConfig = {
-    widgets: overviewWidgets(),
+    widgets: overviewWidgets(ids),
     layoutMode: "stack",
     layoutVersion: 1,
     table: commonTableConfig,
@@ -581,6 +663,16 @@ export async function createDemoProject(vault: Vault): Promise<void> {
   ];
 
   const fieldConfig: { [field: string]: FieldConfig } = {
+    date:       { time: false },
+    // Declared as relations: the linked block «Проекты клиента» follows the
+    // clients roster through `client`, which reported "invalid-field" while
+    // the field was a plain string (live demo check, 2026-09-26).
+    client:     { relation: { targetProjectId: ids.studioId } },
+    project:    { relation: { targetProjectId: ids.studioId } },
+    // 3.6.0: a client's payments, summed from the payment notes that link it.
+    "Оплачено": {
+      rollup: { relationField: "", targetField: "amount", function: "sum", backlink: { projectId: ids.studioId, relationField: "client" } },
+    } as unknown as FieldConfig,
     startDate:  { time: false },
     deadline:   { time: false },
     dueDate:    { time: false },
@@ -596,11 +688,18 @@ export async function createDemoProject(vault: Vault): Promise<void> {
     },
   };
 
-  // 4. Register project with exactly 5 views.
-  settings.addProject(
+  const created: string[] = [];
+  const register = (project: ProjectDefinition) => {
+    if (existing.some((p) => p.name === project.name)) return;
+    settings.addProject(project);
+    created.push(project.name);
+  };
+
+  // 4. Register the studio with exactly 5 views.
+  register(
     Object.assign({}, DEFAULT_PROJECT, {
-      name: "Демо-проект",
-      id: uuidv4(),
+      name: DEMO_NAMES.studio,
+      id: ids.studioId,
       path: DEMO_FOLDER,
       dataSource: { kind: "folder", config: { path: DEMO_FOLDER, recursive: false } },
       fieldConfig,
@@ -668,6 +767,65 @@ export async function createDemoProject(vault: Vault): Promise<void> {
           sort: { criteria: [{ field: "deadline", order: "desc", enabled: true }] },
         }),
       ],
-    })
+    }) as ProjectDefinition
   );
+
+  // 5. The massage room: an overview dashboard and the visit schedule.
+  register(
+    Object.assign({}, DEFAULT_PROJECT, {
+      name: DEMO_NAMES.cabinet,
+      id: ids.cabinetId,
+      path: CABINET_FOLDER,
+      dataSource: { kind: "folder", config: { path: CABINET_FOLDER, recursive: false } },
+      fieldConfig: cabinetFieldConfig(ids.cabinetId),
+      views: [
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "Обзор кабинета",
+          id: uuidv4(),
+          type: "dashboard",
+          config: cabinetOverview(cabinetTable),
+          filter: { conjunction: "and", conditions: [] },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "date", order: "asc", enabled: true }] },
+        }),
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "Расписание",
+          id: uuidv4(),
+          type: "calendar",
+          config: cabinetCalendar,
+          filter: typeScope("visit"),
+          colors: { conditions: [] },
+          sort: { criteria: [] },
+        }),
+      ],
+    }) as ProjectDefinition
+  );
+
+  // 6. Personal finances: reads the other two.
+  register(
+    Object.assign({}, DEFAULT_PROJECT, {
+      name: DEMO_NAMES.finance,
+      id: ids.financeId,
+      path: FINANCE_FOLDER,
+      dataSource: { kind: "folder", config: { path: FINANCE_FOLDER, recursive: false } },
+      fieldConfig: financeFieldConfig(),
+      views: [
+        Object.assign({}, DEFAULT_VIEW, {
+          name: "Финансы",
+          id: uuidv4(),
+          type: "dashboard",
+          config: financeOverview(ids, financeTable),
+          filter: { conjunction: "and", conditions: [] },
+          colors: { conditions: [] },
+          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
+        }),
+      ],
+    }) as ProjectDefinition
+  );
+
+  if (failed.length > 0 && created.length === 0) {
+    // Nothing new was registered, so the caller's notice is the only word the
+    // user gets about the missing notes; the count goes back with it.
+  }
+  return { created, failed: failed.length };
 }

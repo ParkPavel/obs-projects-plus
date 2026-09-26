@@ -88,6 +88,11 @@
     return ((val - scale.min) / (scale.max - scale.min)) * plotWidth;
   }
 
+  /** With lines over the bars, every bar is the first series: one colour, as in the legend. */
+  function barFill(index: number, multi: boolean): string {
+    return multi ? barColor(0) : barColor(index);
+  }
+
   function barColor(index: number): string {
     if (style.colorScheme === "accent") return "var(--interactive-accent)";
     const hues = [210, 340, 120, 45, 275, 180, 15, 300];
@@ -155,7 +160,7 @@
         <rect
           x={Math.min(x0, xv)} y={bY}
           width={bW} height={barWidth}
-          fill={barColor(i)} rx="2"
+          fill={barFill(i, lineSeries.length > 0)} rx="2"
           opacity={barOpacity(label)}
           stroke={isSelected ? "var(--interactive-accent)" : "none"}
           stroke-width={isSelected ? 2 : 0}
@@ -189,7 +194,7 @@
         <rect
           x={bX} y={Math.min(y0, yv)}
           width={barWidth} height={bH}
-          fill={barColor(i)} rx="2"
+          fill={barFill(i, lineSeries.length > 0)} rx="2"
           opacity={barOpacity(label)}
           stroke={isSelected ? "var(--interactive-accent)" : "none"}
           stroke-width={isSelected ? 2 : 0}
@@ -242,6 +247,17 @@
     {/if}
   </g>
 </svg>
+
+{#if style.showLegend && lineSeries.length > 0}
+  <div class="ppp-chart-legend">
+    {#each data.series as series, si}
+      <span class="ppp-legend-item">
+        <span class="ppp-legend-dot" style="background: {barColor(si)}"></span>
+        {series.name}
+      </span>
+    {/each}
+  </div>
+{/if}
 
 <style>
   /*

@@ -205,7 +205,7 @@ export function computeChartData(
   const values = entries.map((e) => e.value);
 
   const series: ChartSeries[] = [{
-    name: config.yAxis.property === "count" ? "Count" : config.yAxis.property,
+    name: config.yAxis.label || (config.yAxis.property === "count" ? "Count" : config.yAxis.property),
     values,
   }];
 
@@ -235,9 +235,13 @@ export function computeMultiSeriesChartData(
    */
   narrow: (frame: DataFrame, series?: ChartSeriesConfig) => DataFrame = (frame) => frame
 ): ChartData {
-  const primary = computeChartData(narrow(source), config, semanticLabels);
   const extras = config.series ?? [];
-  if (extras.length === 0) return primary;
+  if (extras.length === 0) return computeChartData(narrow(source), config, semanticLabels);
+  // Several series share one x axis, so each reads only the notes that have
+  // its field: a day with visits but no tracker note has no training minutes,
+  // and SUM of nothing drew a point at 0 there (live demo check). A logged 0
+  // is still a 0.
+  const primary = computeChartData(withField(narrow(source), config.yAxis.property), config, semanticLabels);
 
   const computed = extras.map((s) => {
     const name = s.label || s.property;
@@ -250,9 +254,14 @@ export function computeMultiSeriesChartData(
       yAxis: { property: s.property, aggregation: s.aggregation, ...(s.cumulative ? { cumulative: true } : {}) },
     };
     delete (own as { series?: unknown }).series;
-    const data = computeChartData(narrow(frame, s), own, semanticLabels);
+    const data = computeChartData(withField(narrow(frame, s), s.property), own, semanticLabels);
     const values = data.series[0]?.values ?? [];
-    return { name, axis: s.axis, points: new Map(data.labels.map((l, i) => [l, values[i] ?? null])) };
+    // A point with no x value cannot be placed on the axis. An extra series is
+    // not narrowed by the chart's scope, so another project's undated notes
+    // would otherwise open an empty slot at the start (live demo check).
+    const points = new Map<string, number | null>();
+    data.labels.forEach((l, i) => { if (l !== "") points.set(l, values[i] ?? null); });
+    return { name, axis: s.axis, points };
   });
 
   const dated = config.xAxis.dateGranularity != null ||
@@ -272,6 +281,16 @@ export function computeMultiSeriesChartData(
     })),
   ];
   return { labels, series };
+}
+
+/** The records that have a value for `property` (all of them for a count). */
+function withField(frame: DataFrame, property: string): DataFrame {
+  if (property === "count") return frame;
+  const records = frame.records.filter((r) => {
+    const v = r.values[property];
+    return v !== undefined && v !== null && v !== "";
+  });
+  return records.length === frame.records.length ? frame : { ...frame, records };
 }
 
 /**

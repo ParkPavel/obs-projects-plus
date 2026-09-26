@@ -32,7 +32,7 @@
 
     switch (fmt) {
       case "percent": return val.toFixed(1) + "%";
-      case "currency": return (currency ?? "$") + val.toLocaleString();
+      case "currency": return (currency ?? "$") + val.toLocaleString(undefined, { maximumFractionDigits: 2 });
       case "duration": {
         const h = Math.floor(val / 3600);
         const m = Math.floor((val % 3600) / 60);

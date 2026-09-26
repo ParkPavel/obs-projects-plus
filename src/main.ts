@@ -21,10 +21,7 @@ import { watchViewport } from "src/lib/stores/ui";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-import {
-  createDemoProject,
-  seedDemoNotes,
-} from "src/ui/app/onboarding/demoProject";
+import { createDemoProject } from "src/ui/app/onboarding/demoProject";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
@@ -415,31 +412,25 @@ export default class ProjectsPlusPlugin extends Plugin {
       id: "create-demo-project",
       name: t("commands.create-demo-project.name"),
       callback: () => {
-        const existing = get(settings).projects.find((p) => p.name === "Демо-проект");
-        if (existing) {
-          // #198: a user who hit the illegal filename has this project already,
-          // with a note missing — and returning early here is exactly what kept
-          // them from ever getting it. Seeding is idempotent, so re-run it and
-          // say what it found rather than refusing outright.
-          void seedDemoNotes(this.app.vault).then((failed) => {
+        // #198 / 3.6.0: the demo is three projects. Creating is also repairing:
+        // notes are seeded idempotently and only the projects missing by name
+        // are registered, so an existing demo (or the old single one) gets
+        // what it lacks instead of a refusal.
+        void createDemoProject(this.app.vault).then(({ created, failed }) => {
+          if (created.length > 0) {
             new Notice(
-              failed.length > 0
-                ? noticeFor(DEMO_REPAIR_FAILED, { count: failed.length })
-                : t("commands.create-demo-project.repaired", {
-                    defaultValue:
-                      "Demo project already exists; any missing notes have been restored.",
-                  }),
-              6000,
+              t("commands.create-demo-project.created", { defaultValue: "Demo project created." }),
+              4000,
             );
-          });
-          return;
-        }
-        void createDemoProject(this.app.vault).then(() => {
+            return;
+          }
           new Notice(
-            t("commands.create-demo-project.created", {
-              defaultValue: "Demo project created.",
-            }),
-            4000,
+            failed > 0
+              ? noticeFor(DEMO_REPAIR_FAILED, { count: failed })
+              : t("commands.create-demo-project.repaired", {
+                  defaultValue: "Demo project already exists; any missing notes have been restored.",
+                }),
+            6000,
           );
         });
       },

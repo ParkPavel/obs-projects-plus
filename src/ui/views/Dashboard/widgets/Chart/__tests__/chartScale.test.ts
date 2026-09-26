@@ -12,6 +12,21 @@ describe("axisScale", () => {
   });
 });
 
+describe("a line far from zero fits its data", () => {
+  test("weight 62.9..64.2 is not drawn on 0..64", () => {
+    const s = axisScale([62.9, 64.2], false);
+    expect(s.min).toBeGreaterThan(60);
+    expect(s.max).toBeLessThan(66);
+  });
+  test("counts from 0 or near it keep their zero", () => {
+    expect(axisScale([0, 10], false)).toEqual({ min: 0, max: 10 });
+    expect(axisScale([3, 10], false)).toEqual({ min: 0, max: 10 });
+  });
+  test("bars always keep their zero", () => {
+    expect(axisScale([62.9, 64.2])).toEqual({ min: 0, max: 64.2 });
+  });
+});
+
 describe("scaleY", () => {
   test("max at the top, min at the bottom, 0 in between", () => {
     const s = { min: -50, max: 100 };

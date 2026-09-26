@@ -466,6 +466,8 @@ export interface ChartAxisX {
 }
 
 export interface ChartAxisY {
+  /** 3.6.0: the series' legend name; the field name when absent. */
+  readonly label?: string;
   readonly property: string | "count";
   readonly aggregation: ColumnAggregation;
   readonly groupBy?: string;

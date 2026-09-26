@@ -105,3 +105,25 @@ describe("narrowing each series to a picked record (linked selection)", () => {
     expect(out.series[1]!.values.filter((v) => v !== null)).toEqual([7]);
   });
 });
+
+describe("a day with no value for a series' field is a gap, not a zero", () => {
+  // Live demo check: visits share the time axis with the tracker; on a visit
+  // day nobody logged training, and SUM of nothing drew a point at 0.
+  test("summed minutes are absent on days that only have other notes", () => {
+    const mixed = frame(
+      [
+        { date: d("2026-09-01"), weight: 80, minutes: 30 },
+        { date: d("2026-09-02"), wellbeing: 7 },
+        { date: d("2026-09-03"), weight: 79, minutes: 0 },
+      ],
+      { date: DataFieldType.Date, weight: DataFieldType.Number, minutes: DataFieldType.Number, wellbeing: DataFieldType.Number }
+    );
+    const cfg: ChartConfig = { ...base, series: [{ id: "m", property: "minutes", aggregation: "sum", axis: "right" }] };
+    const out = computeMultiSeriesChartData(mixed, cfg, new Map());
+    const idx = out.labels.findIndex((l) => l.includes("09-02"));
+    expect(out.series[1]!.values[idx] ?? null).toBeNull();
+    // A logged zero is still a zero.
+    const idx3 = out.labels.findIndex((l) => l.includes("09-03"));
+    expect(out.series[1]!.values[idx3]).toBe(0);
+  });
+});

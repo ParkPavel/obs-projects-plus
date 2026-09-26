@@ -32,9 +32,13 @@ describe("LineChart", () => {
     const { container } = render(LineChart, { props: { data, width: 300, height: 200, style } });
     expect(container.querySelector(".ppp-chart-axis-right")).not.toBeNull();
     const cys = Array.from(container.querySelectorAll(".ppp-chart-line__point")).map((c) => Number(c.getAttribute("cy")));
-    // 45 is the top of the right axis, 80 the top of the left one.
-    expect(cys[0]).toBe(0);
-    expect(cys[3]).toBe(0);
+    // Both sit far from zero, so each axis fits its own data: 80 above 79 on
+    // the left, 45 above 30 on the right, each spread over the plot.
+    const plotH = 200 - 20 - 16;
+    expect(cys[0]).toBeLessThan(cys[1]!);
+    expect(cys[3]).toBeLessThan(cys[2]!);
+    expect(cys[1]! - cys[0]!).toBeGreaterThan(plotH / 2);
+    expect(cys[2]! - cys[3]!).toBeGreaterThan(plotH / 2);
   });
 
   test("a negative value draws a zero line inside the plot", () => {

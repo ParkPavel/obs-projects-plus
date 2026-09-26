@@ -24,7 +24,7 @@
   $: labels = data.labels;
   // 3.6.0 (chartScale.ts): scales span 0, series on the right axis get their
   // own, and a missing value is a gap in the line, not a point at 0.
-  $: scales = seriesScales(data.series);
+  $: scales = seriesScales(data.series, false);
   $: PADDING_RIGHT = scales.right ? 50 : 20;
 
   // #096.2 — density-based label layout replaces the old `/8` magic skip.
@@ -213,7 +213,7 @@
     <!-- Axes -->
     <line x1={0} y1={plotH} x2={plotW} y2={plotH} stroke="var(--text-muted)" />
     <line x1={0} y1={0} x2={0} y2={plotH} stroke="var(--text-muted)" />
-    {#if scales.left.min < 0}
+    {#if scales.left.min < 0 && scales.left.max > 0}
       <line x1={0} y1={yPos(0, plotH, scales.left)} x2={plotW} y2={yPos(0, plotH, scales.left)}
         stroke="var(--text-muted)" stroke-dasharray="2,2" class="ppp-chart-zero" />
     {/if}

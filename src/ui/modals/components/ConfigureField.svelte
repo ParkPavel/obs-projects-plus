@@ -53,6 +53,14 @@
   export let currentProjectId: string = "";
   export let onSetupRelation: ((field: DataField) => void) | undefined = undefined;
 
+  // A rollup column keeps the type its values have (a sum is a Number) and is
+  // recognised by typeConfig.rollup, as the table cell and the card already
+  // do. Opened here it must show its rollup settings, not a text field — the
+  // live demo check (2026-09-26) found it opening as «Текст».
+  if (field.typeConfig?.rollup && field.type !== DataFieldType.Rollup) {
+    field = { ...field, type: DataFieldType.Rollup };
+  }
+
   $: fieldNameError = validateFieldName(field.name);
 
   function validateFieldName(fieldName: string) {
@@ -469,7 +477,15 @@
     const fc = rollupTargetProject?.fieldConfig as
       | Record<string, unknown>
       | undefined;
-    const candidates = fc ? Object.keys(fc) : [];
+    // The target project's configured fields; for this project, every field
+    // it has (a backlink rollup reads this project's own notes); and always
+    // the field already chosen, so a stored rollup shows its target instead
+    // of an empty select (live demo check, 2026-09-26).
+    const own = rollupResolvedTargetProjectId === currentProjectId
+      ? existingFields.filter((f) => !f.derived && !isRelationCompanionField(f.name)).map((f) => f.name)
+      : [];
+    const chosen = rollupCfg?.targetField ? [rollupCfg.targetField] : [];
+    const candidates = [...new Set([...(fc ? Object.keys(fc) : []), ...own, ...chosen])];
     return [
       { label: $i18n.t("modals.field.configure.rollup.no-target-field"), value: "" },
       ...candidates.map((name) => ({ label: name, value: name })),
