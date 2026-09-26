@@ -13,7 +13,7 @@
   import { fileSystem } from "src/lib/stores/fileSystem";
   import { ViewApi } from "src/lib/viewApi";
   import { resolveExternalFrame } from "src/lib/externalFrameResolver";
-  import { bumpExternalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
+  import { bumpExternalFrameInvalidation, projectsCacheKey } from "src/lib/stores/externalFrameInvalidation";
   // #016 (Phase 1, Option A) — transform-cache invalidation is wired into the
   // dataFrame store mutators themselves so it fires atomically (synchronously
   // before each `update()`), eliminating the previous TOCTOU race between
@@ -187,10 +187,11 @@
     };
   });
 
-  // Invalidate when the user adds/removes/renames projects or changes preferences.
+  // Invalidate when projects are added, removed or renamed, or their source or
+  // field configuration changes (rollups are folded into sibling frames).
   let lastProjectsKey = "";
   $: {
-    const key = ($settings.projects ?? []).map((p) => `${p.id}|${p.name}`).join("\u0001");
+    const key = projectsCacheKey($settings.projects ?? []);
     if (key !== lastProjectsKey) {
       lastProjectsKey = key;
       invalidateExternalFrameCache();
