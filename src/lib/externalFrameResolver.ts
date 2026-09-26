@@ -11,6 +11,8 @@ import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { createDataSource } from "src/lib/datasources";
 import { applyDeclaredFieldTypes, type DeclaredRelations } from "src/lib/relations/declaredFieldTypes";
+import { applyRollupColumns } from "src/lib/relations/rollupColumns";
+import { extractRelationTargetIds, type FieldConfigRelationMap } from "src/lib/relations/relationTargets";
 
 export interface ResolverDeps {
   readonly fileSystem: IFileSystem;
@@ -50,6 +52,27 @@ function relationFieldNames(frame: DataFrame): string[] {
  * so correlation widgets degrade gracefully without spamming the console.
  */
 export async function resolveExternalFrame(
+  projectId: string,
+  deps: ResolverDeps
+): Promise<DataFrame | null> {
+  const base = await resolveEnrichedFrame(projectId, deps);
+  const project = deps.projects.find((p) => p.id === projectId);
+  const fieldConfig = project?.fieldConfig as FieldConfigRelationMap | undefined;
+  if (!base || !fieldConfig) return base;
+  // 3.6.0: the project's rollup columns, as its own view folds them in
+  // (View.svelte) — a block reading this project saw its notes without them.
+  // The projects the rollups read are resolved without their own rollups: one
+  // level, so two projects rolling each other up cannot recurse.
+  const targets = new Map<string, DataFrame>();
+  for (const id of extractRelationTargetIds(projectId, fieldConfig)) {
+    const frame = await resolveEnrichedFrame(id, deps);
+    if (frame) targets.set(id, frame);
+  }
+  return applyRollupColumns(base, fieldConfig, projectId, targets);
+}
+
+/** A project's frame with its declared types and backlinks, before rollups. */
+async function resolveEnrichedFrame(
   projectId: string,
   deps: ResolverDeps
 ): Promise<DataFrame | null> {

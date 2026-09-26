@@ -11,7 +11,7 @@ import { describe, expect, it } from "@jest/globals";
 import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 
 import { applyRollupColumns, resolveRollupTargetProjectId } from "./rollupColumns";
-import type { FieldConfigRelationMap } from "./viewHelpers";
+import type { FieldConfigRelationMap } from "./relationTargets";
 
 const field = (name: string, type: DataFieldType, repeated = false) => ({
   name,

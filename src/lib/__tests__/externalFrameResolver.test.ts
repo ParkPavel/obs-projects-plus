@@ -174,3 +174,41 @@ describe("an external frame carries its project's declared relation types", () =
     expect(result).toBe(frame);
   });
 });
+
+// 3.6.0 follow-up: a block reading another project got its notes without
+// that project's rollup columns — the clients' «Визитов» existed in the
+// cabinet's own view and nowhere else. The resolver now folds them in, with
+// the frames of the projects those rollups read.
+describe("resolveExternalFrame — rollup columns", () => {
+  const field = (name: string, type: string) => ({ name, type, repeated: false, identifier: false, derived: false });
+
+  it("folds a backlink rollup in, reading the project it names", async () => {
+    const clients = {
+      fields: [field("name", "string")],
+      records: [{ id: "C/Anna.md", values: { name: "Anna" } }, { id: "C/Boris.md", values: { name: "Boris" } }],
+    };
+    const visits = {
+      fields: [field("client", "string"), field("price", "number")],
+      records: [
+        { id: "V/1.md", values: { client: "[[Anna]]", price: 3000 } },
+        { id: "V/2.md", values: { client: "[[Anna]]", price: 3500 } },
+        { id: "V/3.md", values: { client: "[[Boris]]", price: 4000 } },
+      ],
+    };
+    (FolderDataSource as jest.Mock).mockImplementation(() => ({ queryAll: jest.fn().mockResolvedValue(clients) }));
+    (TagDataSource as jest.Mock).mockImplementation(() => ({ queryAll: jest.fn().mockResolvedValue(visits) }));
+    const clientsProject = {
+      ...makeProject("clients", "folder"),
+      fieldConfig: {
+        visitCount: { rollup: { relationField: "", targetField: "price", function: "count_total", backlink: { projectId: "visits", relationField: "client" } } },
+        paid: { rollup: { relationField: "", targetField: "price", function: "sum", backlink: { projectId: "visits", relationField: "client" } } },
+      },
+    };
+    const visitsProject = makeProject("visits", "tag");
+    const out = await resolveExternalFrame("clients", makeDeps({ projects: [clientsProject, visitsProject] }));
+    const anna = out!.records.find((r: { id: string }) => r.id === "C/Anna.md")!;
+    expect(anna.values["visitCount"]).toBe(2);
+    expect(anna.values["paid"]).toBe(6500);
+    expect(out!.fields.find((f: { name: string }) => f.name === "paid")?.derived).toBe(true);
+  });
+});
