@@ -109,3 +109,14 @@ export function promoteFilterTabToGlobal(
     { conjunction: "and", conditions: [promoted] },
   ]) as FilterDefinition;
 }
+
+/**
+ * Whether a filter narrows anything: an enabled condition, at any depth. A
+ * view that narrows its frame hides notes a same-project linked block needs
+ * (smartSuggest `hostViewFiltered`).
+ */
+export function narrowsFrame(filter: { conditions: ReadonlyArray<{ enabled?: boolean }>; groups?: ReadonlyArray<unknown> } | undefined): boolean {
+  if (!filter) return false;
+  return filter.conditions.some((c) => c.enabled !== false) ||
+    (filter.groups ?? []).some((g) => narrowsFrame(g as Parameters<typeof narrowsFrame>[0]));
+}

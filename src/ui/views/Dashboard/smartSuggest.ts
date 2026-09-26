@@ -60,6 +60,13 @@ export interface SuggestContext {
     readonly name: string;
     readonly fieldConfig?: Readonly<Record<string, { relation?: { targetProjectId?: string } } | undefined>>;
   }>;
+  /**
+   * The dashboard's view narrows the frame (a view filter). A block reading
+   * the dashboard's frame then cannot see the notes that link to the master
+   * (live batch check 2026-09-26: clients only, no `client` field), so a
+   * same-project linked block reads its project whole instead.
+   */
+  readonly hostViewFiltered?: boolean;
 }
 
 const targetOf = (cfg: { relation?: { targetProjectId?: string } } | undefined) => cfg?.relation?.targetProjectId;
@@ -82,7 +89,9 @@ function relationWiringFor(fields: readonly DataField[], context: SuggestContext
         if (targetOf(cfg) !== host) continue;
         return {
           fieldName: f,
-          wiring: p.id === host ? { relationField: f } : { readProjectId: p.id, readProjectName: p.name, relationField: f },
+          wiring: p.id !== host
+            ? { readProjectId: p.id, readProjectName: p.name, relationField: f }
+            : context.hostViewFiltered ? { readProjectId: host, relationField: f } : { relationField: f },
         };
       }
     }
