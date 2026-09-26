@@ -1504,7 +1504,8 @@
                 },
                 "data-project": {
                     "label": "Data from",
-                    "this-project": "This project"
+                    "this-project": "This project",
+                    "unavailable": "Unavailable project"
                 },
                 "follow": {
                     "label": "Follow selection in",

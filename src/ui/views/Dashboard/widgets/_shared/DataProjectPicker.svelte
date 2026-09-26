@@ -2,10 +2,9 @@
   /**
    * DataProjectPicker — which project a chart or stats block reads (3.6.0).
    *
-   * "This project" is the empty value; any other project makes the block read
-   * that project's rows instead (`widget.config.dataProjectId`, see
-   * `otherProjectSource`). Shared by the chart and stats panels so the choice
-   * reads the same in both.
+   * "This project" is the empty value; another project makes the block read its
+   * rows (`widget.config.dataProjectId`, `otherProjectSource`). Shared by the chart
+   * and stats panels. A deleted project stays listed so it can be cleared.
    */
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
@@ -18,7 +17,7 @@
   const dispatch = createEventDispatcher<{ change: string }>();
 </script>
 
-{#if availableSources.length > 0}
+{#if availableSources.length > 0 || value}
   <label class={rowClass}>
     <span>{$i18n.t("views.dashboard.data-project.label")}</span>
     <select
@@ -30,6 +29,7 @@
       {#each availableSources as src (src.id)}
         <option value={src.id}>{src.name}</option>
       {/each}
+      {#if value && !availableSources.some((s) => s.id === value)}<option value={value}>{$i18n.t("views.dashboard.data-project.unavailable")}</option>{/if}
     </select>
   </label>
 {/if}

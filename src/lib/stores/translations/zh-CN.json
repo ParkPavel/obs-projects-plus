@@ -1605,7 +1605,8 @@
                 },
                 "data-project": {
                     "label": "数据来源",
-                    "this-project": "本项目"
+                    "this-project": "本项目",
+                    "unavailable": "不可用的项目"
                 },
                 "follow": {
                     "label": "跟随选择来源",

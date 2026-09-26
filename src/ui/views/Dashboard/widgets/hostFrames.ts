@@ -77,8 +77,8 @@ export function computeHostFrames(input: HostFramesInput): HostFrames {
   // Enrichment and #184 source selection (or 3.6.0 another project): widgetInput.ts.
   const { namedSource, enrichedFrame, otherProject } = resolveWidgetInput(input);
   const scope = applyWidgetScope(enrichedFrame, widget.config); // #118: A before C when evaluable
-  const transformResult =
-    pipeline.steps.length > 0 ? executeTransform(scope.frame, pipeline, { rightFrames }) : null;
+  const runs = pipeline.steps.length > 0 && (!otherProject || otherProject.kind === "ready"); // unresolved: no rows
+  const transformResult = runs ? executeTransform(scope.frame, pipeline, { rightFrames }) : null;
   const transformedFrame = transformResult ? transformResult.data : scope.frame;
   const pipelineInputRowCount = transformResult
     ? transformResult.meta.inputRowCount

@@ -1920,7 +1920,8 @@
                 },
                 "data-project": {
                     "label": "Данные из",
-                    "this-project": "Этот проект"
+                    "this-project": "Этот проект",
+                    "unavailable": "Недоступный проект"
                 },
                 "follow": {
                     "label": "Следовать выбору в",

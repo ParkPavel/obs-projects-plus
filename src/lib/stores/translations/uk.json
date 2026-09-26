@@ -1635,7 +1635,8 @@
                 },
                 "data-project": {
                     "label": "Дані з",
-                    "this-project": "Цей проєкт"
+                    "this-project": "Цей проєкт",
+                    "unavailable": "Недоступний проєкт"
                 },
                 "follow": {
                     "label": "Стежити за вибором у",
