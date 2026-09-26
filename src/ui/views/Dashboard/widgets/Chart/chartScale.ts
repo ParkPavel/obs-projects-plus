@@ -93,12 +93,20 @@ export function gappedPath(
   return segments.join(" ");
 }
 
-/** Tick values for an axis: its ends, and 0 when 0 is inside, rounded for reading. */
+/**
+ * Tick values for an axis: its ends, and 0 when 0 is inside, rounded for
+ * reading at the scale's own precision, and inward, so a tick never lands
+ * outside the plot. One decimal for every scale left 0..0.02 with only 0
+ * (review of 08eda4e).
+ */
 export function axisTicks(scale: AxisScale): number[] {
-  const round = (v: number) => Math.round(v * 10) / 10;
-  const ticks = [scale.min, scale.max];
+  const span = scale.max - scale.min;
+  const decimals = span > 0 && Number.isFinite(span) ? Math.min(10, Math.max(1, Math.ceil(-Math.log10(span)) + 1)) : 1;
+  const unit = Math.pow(10, decimals);
+  const tidy = (v: number) => Math.round(v * unit) / unit; // float noise after ceil/floor
+  const ticks = [tidy(Math.ceil(scale.min * unit) / unit), tidy(Math.floor(scale.max * unit) / unit)];
   if (scale.min < 0 && scale.max > 0) ticks.push(0);
-  return [...new Set(ticks.map(round))].sort((a, b) => a - b);
+  return [...new Set(ticks)].sort((a, b) => a - b);
 }
 /** A readable step near `rough`: 1, 2 or 5 times a power of ten. */
 function niceStep(rough: number): number {

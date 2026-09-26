@@ -25,6 +25,13 @@ export interface DemoFile {
 export const today = () => dayjs();
 export const dayOf = (offset: number) => today().add(offset, "day").format("YYYY-MM-DD");
 export const wikilink = (name: string) => `[[${name}]]`;
+/**
+ * A seed note's number in its series. Dated notes are named by it, not by
+ * their date: dates are relative to today, so a date in the name made every
+ * name new the next day and a repair run wrote the whole series again
+ * (review of 08eda4e).
+ */
+export const seq = (n: number) => String(n).padStart(2, "0");
 export const widgetId = (() => {
   let n = Date.now();
   return () => `w-${n++}`;

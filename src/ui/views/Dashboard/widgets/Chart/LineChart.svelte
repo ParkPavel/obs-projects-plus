@@ -96,7 +96,9 @@
     plotHeight: number,
     scale: AxisScale
   ): string {
-    const zero = yPos(0, plotHeight, scale);
+    // Closed at 0 when 0 is on the scale, else at the plot's nearer edge: a
+    // fitted scale (weight 79–80) put 0 far below the plot (review of 08eda4e).
+    const zero = yPos(Math.min(Math.max(0, scale.min), scale.max), plotHeight, scale);
     return runs(values).map((run) => {
       const pts = run.map(({ i, v }) => ({ x: xPos(i, step), y: yPos(v, plotHeight, scale) }));
       const first = pts[0]!;

@@ -15,7 +15,7 @@
 import type { FieldConfig } from "src/settings/base/settings";
 import type { DatabaseViewConfig, WidgetDefinition } from "src/ui/views/Dashboard/types";
 import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
-import { dayOf, widgetId, type DemoFile } from "./demoShared";
+import { dayOf, seq, widgetId, type DemoFile } from "./demoShared";
 
 interface OpSeed { kind: "income" | "expense"; category: string; day: number; amount: number; note: string }
 
@@ -40,13 +40,13 @@ export const FINANCE_OPS: OpSeed[] = [
 
 export function buildFinanceNotes(): Record<string, DemoFile> {
   const out: Record<string, DemoFile> = {};
-  for (const s of FINANCE_OPS) {
+  FINANCE_OPS.forEach((s, n) => {
     const date = dayOf(s.day);
-    out[`${s.kind === "income" ? "Доход" : "Трата"} ${s.category} ${date}`] = {
+    out[`${s.kind === "income" ? "Доход" : "Трата"} ${s.category} ${seq(n + 1)}`] = {
       frontmatter: { type: "op", date, kind: s.kind, category: s.category, amount: s.amount, tags: ["op"] },
       content: `${s.note}\n`,
     };
-  }
+  });
   return out;
 }
 

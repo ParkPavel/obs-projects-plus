@@ -237,11 +237,13 @@ export function computeMultiSeriesChartData(
 ): ChartData {
   const extras = config.series ?? [];
   if (extras.length === 0) return computeChartData(narrow(source), config, semanticLabels);
+  const dated = config.xAxis.dateGranularity != null ||
+    source.fields.find((f) => f.name === config.xAxis.property)?.type === DataFieldType.Date;
   // Several series share one x axis, so each reads only the notes that have
   // its field: a day with visits but no tracker note has no training minutes,
   // and SUM of nothing drew a point at 0 there (live demo check). A logged 0
   // is still a 0.
-  const primary = computeChartData(withField(narrow(source), config.yAxis.property), config, semanticLabels);
+  const primary = computeChartData(withField(narrow(source), config.yAxis.property, config.yAxis.aggregation), config, semanticLabels);
 
   const computed = extras.map((s) => {
     const name = s.label || s.property;
@@ -258,18 +260,17 @@ export function computeMultiSeriesChartData(
       yAxis: { property: s.property, aggregation: s.aggregation, ...(s.cumulative ? { cumulative: true } : {}) },
     };
     delete (own as { series?: unknown }).series;
-    const data = computeChartData(withField(narrow(frame, s), s.property), own, semanticLabels);
+    const data = computeChartData(withField(narrow(frame, s), s.property, s.aggregation), own, semanticLabels);
     const values = data.series[0]?.values ?? [];
-    // A point with no x value cannot be placed on the axis. An extra series is
+    // A point with no date cannot be placed on a time axis. An extra series is
     // not narrowed by the chart's scope, so another project's undated notes
-    // would otherwise open an empty slot at the start (live demo check).
+    // would otherwise open an empty slot at the start (live demo check). On a
+    // categorical axis "" is the uncategorised bucket and stays (review of 08eda4e).
     const points = new Map<string, number | null>();
-    data.labels.forEach((l, i) => { if (l !== "") points.set(l, values[i] ?? null); });
+    data.labels.forEach((l, i) => { if (l !== "" || !dated) points.set(l, values[i] ?? null); });
     return { name, axis: s.axis, points };
   });
 
-  const dated = config.xAxis.dateGranularity != null ||
-    source.fields.find((f) => f.name === config.xAxis.property)?.type === DataFieldType.Date;
   const labels = [...primary.labels];
   // A category the chart hides stays hidden whichever series brings it.
   const seen = new Set([...labels, ...(config.xAxis.hiddenGroups ?? [])]);
@@ -288,9 +289,19 @@ export function computeMultiSeriesChartData(
   return { labels, series };
 }
 
-/** The records that have a value for `property` (all of them for a count). */
-function withField(frame: DataFrame, property: string): DataFrame {
-  if (property === "count") return frame;
+/**
+ * Aggregations that read only the values present: over notes without the
+ * field they would draw a point from nothing (SUM of none is 0). Counting
+ * records, empties or checkboxes needs every note (review of 08eda4e).
+ */
+const VALUE_ONLY = new Set<string>([
+  "count_values", "count_numeric", "count_unique", "sum", "avg", "median", "min", "max", "range",
+  "earliest", "latest", "date_range",
+]);
+
+/** The records that have a value for `property`, when the aggregation reads only values. */
+function withField(frame: DataFrame, property: string, aggregation: string | undefined): DataFrame {
+  if (property === "count" || !VALUE_ONLY.has(aggregation ?? "")) return frame;
   const records = frame.records.filter((r) => {
     const v = r.values[property];
     return v !== undefined && v !== null && v !== "";

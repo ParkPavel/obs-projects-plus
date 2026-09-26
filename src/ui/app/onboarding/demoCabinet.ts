@@ -19,7 +19,7 @@ import type { FieldConfig } from "src/settings/base/settings";
 import type { CalendarConfig } from "src/ui/views/Calendar/types";
 import type { DatabaseViewConfig, WidgetDefinition } from "src/ui/views/Dashboard/types";
 import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
-import { dayOf, datedScope, typeScope, widgetId, wikilink, type DemoFile } from "./demoShared";
+import { dayOf, seq, datedScope, typeScope, widgetId, wikilink, type DemoFile } from "./demoShared";
 
 interface ClientSeed { name: string; since: number; goal: string }
 interface VisitSeed {
@@ -93,7 +93,7 @@ export function buildCabinetVisits(): Record<string, DemoFile> {
   for (const s of CABINET_VISITS) {
     s.days.forEach((day, i) => {
       const date = dayOf(day);
-      out[`Визит ${s.client} ${date}`] = {
+      out[`Визит ${s.client} ${seq(i + 1)}`] = {
         frontmatter: {
           type: "visit",
           date,
@@ -119,7 +119,7 @@ export function buildCabinetTracker(): Record<string, DemoFile> {
     for (let i = 0; i < TRACKER_DAYS; i++) {
       const date = dayOf(i - TRACKER_DAYS + 1);
       const mood = ramp(s.mood[0], s.mood[1], i, TRACKER_DAYS);
-      out[`Трекер ${s.person} ${date}`] = {
+      out[`Трекер ${s.person} ${seq(i + 1)}`] = {
         frontmatter: {
           type: "tracker",
           date,
@@ -140,13 +140,13 @@ export function buildCabinetTracker(): Record<string, DemoFile> {
 
 export function buildCabinetExpenses(): Record<string, DemoFile> {
   const out: Record<string, DemoFile> = {};
-  for (const s of CABINET_EXPENSES) {
+  CABINET_EXPENSES.forEach((s, n) => {
     const date = dayOf(s.day);
-    out[`Расход ${s.category} ${date}`] = {
+    out[`Расход ${s.category} ${seq(n + 1)}`] = {
       frontmatter: { type: "expense", date, category: s.category, amount: s.amount, tags: ["expense"] },
       content: "",
     };
-  }
+  });
   return out;
 }
 

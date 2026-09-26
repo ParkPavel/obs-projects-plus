@@ -122,3 +122,13 @@ describe("extra series follow the chart's x axis", () => {
     expect(at(done, 1)).toBe(20);
   });
 });
+
+describe("area on a fitted scale (review of 08eda4e)", () => {
+  test("the area closes at the plot's bottom, not at a zero far below it", () => {
+    const data: ChartData = { labels: ["a", "b"], series: [{ name: "kg", values: [79, 80] }] };
+    const { container } = render(LineChart, { props: { data, width: 300, height: 200, style: { ...style, gradient: true } } });
+    const area = Array.from(container.querySelectorAll(".ppp-chart-line path")).map((p) => p.getAttribute("d") ?? "").find((d) => d.includes("Z"))!;
+    const ys = Array.from(area.matchAll(/[\d.]+,(-?[\d.]+)/g)).map((m) => JSON.parse(m[1]!) as number);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(200);
+  });
+});

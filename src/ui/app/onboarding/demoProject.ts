@@ -43,7 +43,7 @@ import {
   DEMO_FOLDER,
   DEMO_NAMES,
   FINANCE_FOLDER,
-  dayOf,
+  dayOf, seq,
   today,
   typeScope,
   widgetId,
@@ -194,13 +194,13 @@ const PAYMENT_SEEDS: Array<[string, number, number, string]> = [
 
 function buildPayments(): Record<string, DemoFile> {
   const out: Record<string, DemoFile> = {};
-  for (const [client, day, amount, project] of PAYMENT_SEEDS) {
+  PAYMENT_SEEDS.forEach(([client, day, amount, project], n) => {
     const date = dayOf(day);
-    out[`Оплата ${client} ${date}`] = {
+    out[`Оплата ${client} ${seq(n + 1)}`] = {
       frontmatter: { type: "payment", date, client: wikilink(client), project: wikilink(project), amount, tags: ["payment"] },
       content: "",
     };
-  }
+  });
   return out;
 }
 
