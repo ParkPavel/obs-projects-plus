@@ -1070,7 +1070,8 @@ export default class ProjectsPlusPlugin extends Plugin {
         this.app.vault.adapter,
         raw,
         new Date(),
-        settingsFilePath(this.manifest.dir)
+        settingsFilePath(this.manifest.dir),
+        this.app.vault
       );
       if (noteAt !== null) {
         console.debug(

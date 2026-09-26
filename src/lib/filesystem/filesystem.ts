@@ -40,6 +40,16 @@ export abstract class IFile {
    * Closes F6 (Phase 3): inline DataTable edits no longer risk losing
    * user edits made concurrently in the native editor.
    */
+  /**
+   * Transform the file's contents as they are when the write happens
+   * (catalogue audit C5). The Obsidian implementation is `Vault.process`,
+   * which hands `fn` the current contents, so an edit made after an earlier
+   * read is not overwritten. This default reads and writes.
+   */
+  async process(fn: (data: string) => string): Promise<void> {
+    await this.write(fn(await this.read()));
+  }
+
   async processFrontMatter(
     _fn: (frontmatter: Record<string, unknown>) => void,
   ): Promise<boolean> {

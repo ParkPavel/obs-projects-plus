@@ -50,6 +50,10 @@ class ObsidianFile extends IFile {
     await this.app.vault.process(this.file, () => content);
   }
 
+  override async process(fn: (data: string) => string): Promise<void> {
+    await this.app.vault.process(this.file, fn);
+  }
+
   /**
    * Delegates to Obsidian's `fileManager.processFrontMatter`, which
    * acquires a write lock and mutates only the frontmatter block.
