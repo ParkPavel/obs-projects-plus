@@ -72,6 +72,8 @@
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
   /** F3b: the master block's frame (this dashboard's), for a master-side link. */
   export let masterFrame: DataFrame | undefined = undefined;
+  /** F3b: the source before this block's filter, when the host scoped `frame` already. */
+  export let masterUniverse: DataFrame | undefined = undefined;
   /** #114 (E1/E4): runtime validation result from WidgetHost — drives label rendering. */
   export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
   /**
@@ -207,7 +209,7 @@
   $: effectiveFrame = autoFilter
     ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
     : masterSelected && masterFrame && linkedSelection
-      ? { ...subFiltered, records: filterByMasterSide(frame, subFiltered.records, masterFrame, $canvasStore.values, linkedSelection.relationField) }
+      ? { ...subFiltered, records: filterByMasterSide(masterUniverse ?? frame, subFiltered.records, masterFrame, $canvasStore.values, linkedSelection.relationField) }
       : subFiltered;
 
   function handleSubFilterChange(e: CustomEvent<FilterDefinition | undefined>) {

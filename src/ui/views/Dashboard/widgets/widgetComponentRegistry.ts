@@ -169,6 +169,9 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project, config: c.widget.config, widgetId: c.widget.id,
       widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection, masterFrame: c.frame,
+      // F3b: links resolve over the source before this block's filter — for a
+      // same-project block the host already scoped `frame` (review of 4a971d7).
+      masterUniverse: c.dbCallSource.kind === "parent" ? c.frame : undefined,
       linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
       scopeApplied: c.dbCallScopeApplied,

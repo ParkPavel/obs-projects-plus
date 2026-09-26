@@ -45,3 +45,15 @@ test("the settings offer the master's relation fields for a master-side link", (
   const host = readFileSync(resolve(dir, "../WidgetHost.svelte"), "utf8");
   expect(host).toMatch(/masterFields=\{ctx\.frame\.fields\}/);
 });
+
+// Codex recheck of 4a971d7: a block reading its own project gets a frame the
+// host already scoped by the block's filter, so "the whole source" was still
+// filtered there. The registry hands such a block the host's frame from
+// before its filter; an external block resolves over its own unscoped frame.
+test("a same-project block resolves over the host frame before its filter", () => {
+  const registry = readFileSync(resolve(__dirname, "../../widgetComponentRegistry.ts"), "utf8");
+  expect(registry).toMatch(/masterUniverse: c\.dbCallSource\.kind === "parent" \? c\.frame : undefined/);
+  const block = readFileSync(resolve(__dirname, "../DatabaseCallBlock.svelte"), "utf8");
+  expect(block).toMatch(/export let masterUniverse: DataFrame \| undefined = undefined;/);
+  expect(block).toMatch(/filterByMasterSide\(masterUniverse \?\? frame, subFiltered\.records,/);
+});
