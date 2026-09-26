@@ -5,6 +5,19 @@ import { get } from "svelte/store";
 
 import { commandBus } from "src/lib/stores/commandBus";
 
+/** How many dashboard canvases are mounted and listening right now. */
+let listeningCanvases = 0;
+
+/**
+ * Whether a dashboard canvas would handle a schema command now. The palette
+ * offered «Open schema» / «Add field» whenever any Projects leaf was open —
+ * a Board-only leaf too — and the command then did nothing (catalogue
+ * audit C4). main.ts gates the commands on this.
+ */
+export function hasCanvasCommandTarget(): boolean {
+  return listeningCanvases > 0;
+}
+
 /**
  * Subscribe to the global commandBus for canvas-level commands
  * (`open-schema`, `add-field`). Each ts-gated to prevent double-fire on
@@ -29,10 +42,18 @@ export function subscribeCanvasCommands(
   onAddField: () => void
 ): () => void {
   let lastCommandTs = get(commandBus)?.ts ?? 0;
-  return commandBus.subscribe((msg) => {
+  listeningCanvases++;
+  const unsubscribe = commandBus.subscribe((msg) => {
     if (!msg || msg.ts <= lastCommandTs) return;
     lastCommandTs = msg.ts;
     if (msg.action === "open-schema") onOpenSchema();
     else if (msg.action === "add-field") onAddField();
   });
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    listeningCanvases--;
+    unsubscribe();
+  };
 }

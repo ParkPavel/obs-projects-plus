@@ -16,7 +16,7 @@
 
 import { commandBus } from "src/lib/stores/commandBus";
 import type { CommandBusAction } from "src/lib/stores/commandBus";
-import { subscribeCanvasCommands } from "../dashboardCommands";
+import { hasCanvasCommandTarget, subscribeCanvasCommands } from "../dashboardCommands";
 
 /**
  * Timestamps are written by hand rather than taken from `emitCommand`.
@@ -92,7 +92,7 @@ describe("#186 — the bus replays its last message to every new subscriber", ()
     const openSchema = jest.fn();
     const unsubscribe = subscribeCanvasCommands(openSchema, addField);
 
-    send("open-formula-editor", 1);
+    send("add-relation", 1);
 
     expect(addField).not.toHaveBeenCalled();
     expect(openSchema).not.toHaveBeenCalled();
@@ -106,5 +106,21 @@ describe("#186 — the bus replays its last message to every new subscriber", ()
     send("add-field", 1);
 
     expect(addField).not.toHaveBeenCalled();
+  });
+});
+
+// Catalogue audit C4: the palette offered the schema commands with a
+// Board-only Projects leaf, where nothing handles them.
+describe("hasCanvasCommandTarget — the schema commands need a mounted dashboard", () => {
+  it("is true only while a canvas listens, and an unsubscribe counts once", () => {
+    expect(hasCanvasCommandTarget()).toBe(false);
+    const a = subscribeCanvasCommands(() => {}, () => {});
+    const b = subscribeCanvasCommands(() => {}, () => {});
+    expect(hasCanvasCommandTarget()).toBe(true);
+    a();
+    a();
+    expect(hasCanvasCommandTarget()).toBe(true);
+    b();
+    expect(hasCanvasCommandTarget()).toBe(false);
   });
 });

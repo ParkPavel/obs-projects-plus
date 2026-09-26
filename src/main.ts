@@ -22,6 +22,7 @@ import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
 import { createDemoProject } from "src/ui/app/onboarding/demoProject";
+import { hasCanvasCommandTarget } from "src/ui/views/Dashboard/dashboardCommands";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
@@ -336,9 +337,8 @@ export default class ProjectsPlusPlugin extends Plugin {
       id: "open-schema",
       name: t("commands.open-schema.name"),
       checkCallback: (checking) => {
-        const hasProjectLeaf =
-          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
-        if (!hasProjectLeaf) return false;
+        // Only a mounted dashboard handles it (catalogue audit C4).
+        if (!hasCanvasCommandTarget()) return false;
         if (!checking) emitCommand("open-schema");
         return true;
       },
@@ -348,9 +348,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       id: "add-field",
       name: t("commands.add-field.name"),
       checkCallback: (checking) => {
-        const hasProjectLeaf =
-          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
-        if (!hasProjectLeaf) return false;
+        if (!hasCanvasCommandTarget()) return false;
         if (!checking) emitCommand("add-field");
         return true;
       },
@@ -391,13 +389,9 @@ export default class ProjectsPlusPlugin extends Plugin {
       },
     });
 
-    this.addCommand({
-      id: "open-formula-editor",
-      name: t("commands.open-formula-editor.name"),
-      callback: () => {
-        emitCommand("open-formula-editor");
-      },
-    });
+    // «Open formula editor» was removed (catalogue audit C4): it emitted an
+    // action nothing handled. Formulas are edited in the field dialog and the
+    // dashboard's formula bar.
 
     // #043 / feedback-demo-api-bridge — programmatic demo regen so REST API
     // automation and QA scripts can rebuild the onboarding demo without the
@@ -411,17 +405,15 @@ export default class ProjectsPlusPlugin extends Plugin {
     this.addCommand({
       id: "create-demo-project",
       name: t("commands.create-demo-project.name"),
-      callback: () => {
+      callback: async () => {
         // #198 / 3.6.0: the demo is three projects. Creating is also repairing:
         // notes are seeded idempotently and only the projects missing by name
         // are registered, so an existing demo (or the old single one) gets
         // what it lacks instead of a refusal.
-        void createDemoProject(this.app.vault).then(({ created, failed }) => {
+        try {
+          const { created, failed } = await createDemoProject(this.app.vault);
           if (created.length > 0) {
-            new Notice(
-              t("commands.create-demo-project.created", { defaultValue: "Demo project created." }),
-              4000,
-            );
+            new Notice(t("commands.create-demo-project.created", { defaultValue: "Demo project created." }), 4000);
             return;
           }
           new Notice(
@@ -432,7 +424,12 @@ export default class ProjectsPlusPlugin extends Plugin {
                 }),
             6000,
           );
-        });
+        } catch (error) {
+          // A failure the generator did not report itself (it reports folders
+          // and notes): say so rather than let the promise fail unseen.
+          console.error("[Projects+] the demo could not be created", error);
+          new Notice(noticeFor(DEMO_REPAIR_FAILED, { count: 0 }), 6000);
+        }
       },
     });
 
