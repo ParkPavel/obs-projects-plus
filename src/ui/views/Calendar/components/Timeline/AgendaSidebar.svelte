@@ -233,8 +233,7 @@
     resizeStartWidth = width;
     activeDocument.addEventListener('mousemove', doResize);
     activeDocument.addEventListener('mouseup', endResize);
-    activeDocument.body.style.cursor = 'col-resize';
-    activeDocument.body.style.userSelect = 'none';
+    activeDocument.body.classList.add('obsidian-projects-col-resizing');
   }
   
   function doResize(e: MouseEvent) {
@@ -248,8 +247,7 @@
     isResizing = false;
     activeDocument.removeEventListener('mousemove', doResize);
     activeDocument.removeEventListener('mouseup', endResize);
-    activeDocument.body.style.cursor = '';
-    activeDocument.body.style.userSelect = '';
+    activeDocument.body.classList.remove('obsidian-projects-col-resizing');
   }
   
   // DATA PROCESSING
@@ -849,6 +847,11 @@
 </aside>
 
 <style>
+  /* Set on the body while the sidebar is resized (catalogue audit C6). */
+  :global(body.obsidian-projects-col-resizing) {
+    cursor: col-resize;
+    user-select: none;
+  }
   /* ═══════════════════════════════════════════════════════════
      AgendaSidebar v9.1 — Fluid Architecture (tokens-based)
      All values in rem, inheriting from --ppp-* design tokens
