@@ -13,7 +13,7 @@
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
   import { applyRollupColumns } from "./rollupColumns";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
-  import { applyDeclaredFieldTypes, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
+  import { applyDeclaredFieldTypes, conditionFieldsKnown, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
   import { useView } from "./useView";
   import { applySort, sortRecords } from "./viewSort";
@@ -66,9 +66,13 @@
   // Guard: skip when frame is empty (initial load) to prevent deleting valid conditions
   // before the first data query completes.
   $: if (frame.fields.length > 0) {
-    const fieldNames = frame.fields.map((field) => field.name);
+    // Declared rollups count: they are columns with no key in any note.
+    const fieldNames = conditionFieldsKnown(
+      frame.fields.map((field) => field.name),
+      project.fieldConfig as import("./viewHelpers").FieldConfigRelationMap | undefined
+    );
     const nConds = viewFilter.conditions.length;
-    const filtered = viewFilter.conditions.filter((cond) => fieldNames.includes(cond.field));
+    const filtered = viewFilter.conditions.filter((cond) => fieldNames.has(cond.field));
     if (nConds !== filtered.length) {
       settings.updateView(project.id, {
         ...view,
