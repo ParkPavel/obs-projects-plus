@@ -136,6 +136,24 @@ If several notes share a filename, include the folder in the link. A missing or 
 
 **A chart over related data.** The “+” in the block palette adds a “Chart”; its settings choose the type and the X and Y axes. Dates on the X axis group by day, week, month, quarter or year, and the Y axis can take a sum, an average, a min, a max, a median, a count or a unique count.
 
+## Computation across tables and projects
+
+**A reverse rollup — a total over the records that link here.** A client needs no field listing its visits: the visits link to the client. In the rollup field's settings, pick under “Through relation” a source marked “(links here)” — the project and the field through which its records point at this one. “Count” gives the number of visits, “Sum” over the price field the amount paid, “Last value” over the wellbeing field the latest score. The client's note does not change: a rollup is computed, never written to the note, and cannot be edited.
+
+**First and last value** are picked by an ordering field — usually a date. Choose it from the list; if the property you need is not there (the list knows only the fields configured in the source project), choose “Another field…” and type the property name.
+
+**Another project's data in charts and stats.** In a chart's or stats block's settings, “Data from” switches the source to another project; the block's filter and pipeline then run over its records. While that project loads, the block says so instead of showing the current project's numbers. If the project was deleted, the list keeps an “Unavailable project” entry — choose “This project” to clear it.
+
+**Several series on one chart.** Add series in the chart's settings: each has its own field and aggregation, and optionally another project, its own X field and the right-hand axis (for values of different scale, such as weight and training minutes). Series line up on the shared axis labels; a day without a value is a gap in the line, not a zero. Bars can go below zero: a month with a loss shows under the axis.
+
+**Follow the selection in another block.** “Follow selection in” ties a chart or stats block to a table on the same Dashboard: pick a table row (row menu → “Filter linked blocks by this row”) and the chart shows only the records linked to it. In the demo, picking a client leaves that client's visits and tracker on the chart.
+
+**A block from another project is read-only.** A data block whose source is another project is read-only as a whole: table cells cannot be edited, the row menu has no duplicate or delete, the board does not drag cards, and the calendar and gallery open no editor — a card opens the note. The record panel (“Show fields”) says which project the record belongs to. Edit such records in their own project.
+
+**The linked-block suggestion.** When a project has a relation field, a suggestion “Add data block” appears above the blocks. It adds a block that shows the records related to the selected row: another project's records that link here, or — when the relation only points outward — the record the selected row links to. On a filtered view (for example, clients only) the block reads the project whole, so it can see the records the view's filter hides.
+
+**The three-project demo.** **Create demo project** creates three linked projects: “Демо-проект” (the studio), “Демо: Кабинет” (a massage room) and “Демо: Финансы” (personal finances). In the massage room, clients count visits, wellbeing and payments through reverse rollups, and charts show income, expenses and profit by month and wellbeing beside the tracker's tests. The finances read the room's income and the studio's payments as separate series of one chart. Running the command again restores missing notes and duplicates nothing.
+
 ## Note templates
 
 ### Built-in templates

@@ -34,14 +34,16 @@
 | [src/lib/engine](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/engine) | Фильтрация, агрегация и расчёты между проектами |
 | [src/lib/dashboard-engine](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/dashboard-engine) | Преобразования Dashboard, применение формул, графики и кэши |
 | [src/lib/formula](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/formula) | Разбор и вычисление формул |
-| [src/lib/relations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/relations) | Контракты связей, обратные индексы и запись связей |
+| [src/lib/relations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/relations) | Контракты связей, обратные индексы, запись связей, объявленные типы полей и свёртки ([rollupColumns.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/relations/rollupColumns.ts)) |
 | [src/lib/visualizer](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/visualizer) | Свойства, связи и наложения визуализатора |
+
+**Кадры других проектов.** Блок, график или свёртка, читающие другой проект, получают его кадр через [externalFrameResolver.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/externalFrameResolver.ts): объявленные типы связей, обратные ссылки и свёртки этого проекта применяются так же, как в его собственном виде. Кадры кэшируются в `App.svelte`; кэш сбрасывается при изменении файлов и при смене источника или настройки полей любого проекта. Блок с чужим источником доступен только для чтения — запись через его `ViewApi` попала бы не в тот проект.
 
 Эти каталоги описывают ответственность, но зависимости не везде следуют строгой границе слоёв. Меняя путь, общий для нескольких видов, идите по импортам и вызывающим местам.
 
 ## Запись и хранение
 
-Правки записей и полей проходят через [ViewApi](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts) и [dataApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts): они согласуют запись в файловую систему с показанным фреймом данных. Часть обновлений оптимистична — видимое изменение само по себе не доказывает, что заметка записана. Путь отказа умеет вернуть прежнее значение и показать ошибку с кодом.
+Правки записей и полей проходят через [ViewApi](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts) и [dataApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts): они согласуют запись в файловую систему с показанным фреймом данных. Свойства пишутся через `processFrontMatter`, а чтение-изменение-запись — через `Vault.process` по текущему содержимому файла, чтобы правка, сделанная между чтением и записью, не терялась. Часть обновлений оптимистична — видимое изменение само по себе не доказывает, что заметка записана. Путь отказа умеет вернуть прежнее значение и показать ошибку с кодом.
 
 Схемы настроек и миграции лежат в [src/settings](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/settings). Записывающий модуль и согласование настроек — в [src/lib/settings](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/settings), связка жизненного цикла — в `src/main.ts`. Новые записи настроек ведите этим же путём, иначе потеряются проверка конфликтов и повторные попытки.
 

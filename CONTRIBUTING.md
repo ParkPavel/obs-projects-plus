@@ -66,6 +66,16 @@ State what was wrong, what now happens and how you checked it. Include screensho
 
 Do not include credentials, vault contents, local logs or machine-specific configuration. Report bugs through [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues), with reproduction steps, plugin and Obsidian versions, operating system, and expected and actual results.
 
+## Release a version
+
+Maintainers release from `main`, which accepts changes only through a pull request with a green `build` check.
+
+1. On a branch, set the version with `npm version X.Y.Z --tag-version-prefix="" --no-git-tag-version`. The `version` hook copies it to `manifest.json` and adds it to `versions.json`; it never increments on its own.
+2. Update both changelogs, rebuild with `npm run build` and commit `main.js` — it is tracked in Git and must match the release commit.
+3. Merge the pull request, then push the tag `X.Y.Z` — the version itself, without `v` — on the merge commit. The release workflow refuses a tag that differs from `manifest.json`, builds the plugin and publishes `main.js`, `manifest.json` and `styles.css`.
+
+A beta for [BRAT](https://github.com/TfTHacker/obsidian42-brat) is a tag `X.Y.Z-beta.N` on a commit of `main`, with `X.Y.Z` above the current version (after 3.6.0: `3.6.1-beta.1`); the workflow publishes it as a pre-release with the beta version in its manifest, leaving `manifest.json` on `main` untouched.
+
 ## License and attribution
 
 Contributions to the plugin are licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE). Preserve applicable copyright and license notices. The original plugin was created by [Marcus Olsson](https://github.com/marcusolsson); this fork is maintained by Park Pavel. The separate [type package](obsidian-projects-types/README.md) declares an MIT license.

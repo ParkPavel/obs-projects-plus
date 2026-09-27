@@ -8,7 +8,113 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
-## Unreleased
+## 3.6.0 — 2026-09-27
+
+The first version published in the format of the Obsidian community catalogue. It brings
+computation across tables and projects, charts over the computed values, three linked demo
+projects, a clear read-only boundary for data that belongs to another project, and a pass
+over everything a catalogue reviewer checks.
+
+### Computation across tables and projects
+
+- **Reverse rollups.** A record can aggregate the records that link *to* it: a client counts
+  its visits, sums what they paid, or takes the latest wellbeing score, while its own note
+  stays unchanged. In the field dialog pick a source marked «(links here)».
+- **First and last value** rollups pick a value by an ordering field, usually a date. Pick it
+  from the list, or type any property of the source with «Another field…».
+- A declared rollup is a column even when no note carries its key. A view filter on a rollup
+  column is kept.
+- Rollups are read-only, shown by their mode (percent bar, chips, count), and a percent shows
+  the engine's 0–100 value.
+- Blocks that read another project see that project's rollup columns too. Changing a rollup
+  (for example sum → average) refreshes every block that reads it.
+- The calculation engine is checked against a real spreadsheet: an aggregate without a
+  group-by is one total, and every path agrees on what "checked" means.
+
+### Charts and statistics
+
+- A chart or stats block can read **another project** («Data from»). While that project
+  loads, the block shows a state and never this project's numbers. A deleted source stays
+  selectable so it can be cleared.
+- A chart can hold **several series**, each with its own field, aggregation, project, x field
+  and axis. A right-hand axis is available; bars can go below zero, and a missing value is
+  a gap, not a zero.
+- Charts and stats **follow the record picked in another block** through a relation («Follow
+  selection in»). This also works for scatter charts.
+- Readability: the value axis of bar charts is labelled, legends show colour marks, isolated
+  points stay visible, smooth areas follow their line, and a chart's settings offer the
+  columns its pipeline made.
+
+### Demo
+
+- «Create demo project» creates **three linked projects**: the studio, a massage room and
+  personal finances. The finances read the room's income and the studio's payments, and the
+  room's clients count their visits and payments through reverse rollups.
+- Running the command again restores what is missing and never duplicates notes, on any day.
+
+### Relations and the read-only boundary
+
+- A block that reads another project is **read-only as a whole**. Its board, calendar and
+  gallery open no editor, and its row menu offers no duplicate or delete. The record panel
+  says which project the record belongs to.
+- Frames read from another project carry that project's declared relation types.
+- **Linked-block suggestion:**
+  - it reads the right project through the right relation;
+  - it can also follow the master's side of a relation («Show the linked record of the row you
+    pick»);
+  - on a filtered view it reads the project whole;
+  - accepting it dismisses it only once the block really works.
+- Closing the record panel keeps an edit made within the autosave delay.
+
+### Platform and catalogue readiness
+
+- `manifest.json` meets the catalogue rules; the minimum Obsidian version is **1.8.7**.
+- Note writes use the platform APIs:
+  - bulk field changes go through `processFrontMatter`;
+  - read-modify-write goes through `Vault.process` on the current contents;
+  - the settings recovery note goes through `Vault.create`;
+  - template paths are normalised.
+- The plugin releases everything it registered when it unloads.
+- Static styles moved from scripts to CSS classes.
+- The settings tab reads like Obsidian's own, and the inert «Link behavior» control is gone.
+- The schema commands appear only where a dashboard handles them. The «Open formula editor»
+  command, which did nothing, is gone.
+- Onboarding text is parsed into nodes and never rendered as HTML.
+- No false ENOENT warning on the first settings write in a fresh vault.
+
+### Languages and accessibility
+
+- Ukrainian and Simplified Chinese are complete against Russian. The aggregation vocabulary,
+  stats wording, the record panel's field groups and every word in the markup come from the
+  locale layer.
+- Icon buttons work from the keyboard.
+
+### Updating from an earlier version
+
+- Replace all three files (`main.js`, `manifest.json`, `styles.css`) from the same release,
+  and keep `data.json`.
+- **Saved configurations stay valid.** New keys are optional and only written when you use the
+  feature:
+  - `config.dataProjectId`, `config.series` and `config.linkedSelection` on charts and stats;
+  - `relationSide` on a linked selection;
+  - `backlink` and `orderBy` on a rollup.
+- **The demo notes changed their names** from dates to series numbers. A demo created by a
+  3.6.0 pre-release keeps its old notes; delete the demo folder and run the command again for
+  a clean copy.
+
+### Build and release
+
+- **Versions:**
+  - a release is `x.y.z` in `package.json`, `manifest.json` and `versions.json`, and its tag
+    is the same string without a `v`;
+  - the release workflow refuses a tag that does not match the manifest;
+  - pre-releases for [BRAT](https://github.com/TfTHacker/obsidian42-brat) use tags
+    `x.y.z-beta.N` and are marked as pre-release on GitHub.
+- **Release assets:** `main.js`, `manifest.json` and `styles.css`. `styles.css` merges the
+  design tokens and the handwritten styles; the build checks both are present.
+- `main.js` is still tracked in Git and is rebuilt from the release commit.
+- **Requirements:** Obsidian 1.8.7 or newer, desktop and mobile. Dataview is optional; the
+  Dataview source reports when it is missing.
 
 ### Documentation
 

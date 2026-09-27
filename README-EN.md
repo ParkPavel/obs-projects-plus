@@ -15,6 +15,8 @@ Each record remains a Markdown file. Fields such as status, date, and assignee l
 | Browse meetings and deadlines | Calendar with year-to-day views |
 | Browse materials by cover image | Gallery |
 | Combine records, charts, and metrics | Dashboard with configurable blocks |
+| Total up related records | Rollups through a relation, and reverse ones — records that link here |
+| Compare figures across projects | Charts with several series, another project's data and a second axis |
 | Select the notes to include | Folder, tag, built-in filtered query, or Dataview |
 
 ![Example Projects Plus calendar](images/2026-01-27_12-24-17.png)
@@ -23,7 +25,7 @@ This illustration shows one interface configuration; your installed version may 
 
 ## Install
 
-The plugin is in alpha development. The source version is recorded in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json); packaged builds are available in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases). The manifest also specifies the minimum Obsidian version.
+The current version is **3.6.0**, the first in the Obsidian community catalogue format. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
 
 1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
 2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there.
@@ -48,7 +50,7 @@ When updating, replace these three files with files from the same build. Keep `d
 4. Open it with **Show projects plus**. Use the add-view control to add a view; for a table, use a data block on a Dashboard.
 5. Change the record's `status`, then open its Markdown file: the updated value should be stored in its properties.
 
-To explore prepared data, use **Create demo project** or the separate [demo vault](demo-vault/README.md).
+To explore prepared data, use **Create demo project**: it creates three linked projects — a studio, a massage room and personal finances — whose data flows between them. A separate [demo vault](demo-vault/README.md) is also available.
 
 ## Continue
 
