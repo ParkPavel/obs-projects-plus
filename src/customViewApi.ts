@@ -23,11 +23,11 @@ export interface DataQueryResult {
  * ProjectViewProps provides various metadata for the views.
  */
  
-export interface ProjectViewProps<T = Record<string, any>> {
+export interface ProjectViewProps<T = Record<string, unknown>> {
   viewId: ViewId;
   project: ProjectDefinition;
   config: T;
-  saveConfig: (config: T) => void;
+  saveConfig(this: void, config: T): void;
   /**
    * Persist a new filter definition on the current view. Optional: not all
    * views implement promote-to-global UX. When omitted, the consumer should
@@ -50,12 +50,12 @@ export interface ProjectViewProps<T = Record<string, any>> {
  * ProjectsView.getProjectViews().
  */
  
-export abstract class ProjectView<T = Record<string, any>> {
+export abstract class ProjectView<T = Record<string, unknown>> {
   onData(result: DataQueryResult): void {}
   onOpen(props: ProjectViewProps<T>): void {}
   onClose(): void {}
   /** Push config/project prop changes to the active Svelte component without a full remount. */
-  updateProps(_updates: Record<string, any>): void {}
+  updateProps(_updates: Record<string, unknown>): void {}
 
   abstract getViewType(): string;
   abstract getDisplayName(): string;

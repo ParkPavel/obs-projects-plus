@@ -21,7 +21,7 @@ export class GalleryView extends ProjectView<GalleryConfig> {
     return "layout-grid";
   }
 
-  updateProps(updates: Record<string, any>) {
+  updateProps(updates: Record<string, unknown>) {
     this.view?.$set(updates);
   }
 

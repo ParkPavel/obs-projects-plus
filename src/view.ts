@@ -137,7 +137,7 @@ export class ProjectsView extends ItemView {
    * getProjectViews returns a map of instances for each supported Projects view.
    */
   getProjectViews() {
-    const views: Record<string, ProjectView> = {};
+    const views: Record<string, ProjectView<never>> = {};
 
     // Allow other Obsidian plugins to register custom views.
     this.getEnabledPlugins().forEach((plugin) => {

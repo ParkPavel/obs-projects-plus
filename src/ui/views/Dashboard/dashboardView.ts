@@ -48,7 +48,7 @@ export const VIEW_TYPE_DASHBOARD = "dashboard";
 /** @deprecated Use {@link VIEW_TYPE_DASHBOARD}. Kept for v3-save compatibility. */
 export const VIEW_TYPE_DATABASE = "database";
 
-export class DashboardView extends ProjectView {
+export class DashboardView extends ProjectView<DatabaseViewConfig> {
   view?: DashboardCanvasSvelte | null;
 
   getViewType(): string {
@@ -63,7 +63,7 @@ export class DashboardView extends ProjectView {
     return "database";
   }
 
-  updateProps(updates: Record<string, any>) {
+  updateProps(updates: Record<string, unknown>) {
     this.view?.$set(updates);
   }
 
@@ -73,7 +73,7 @@ export class DashboardView extends ProjectView {
     this.view?.$set({ frame: data, globalFilter: filter });
   }
 
-  onOpen(props: ProjectViewProps) {
+  onOpen(props: ProjectViewProps<DatabaseViewConfig>) {
     // Auto-migrate legacy TableConfig if needed
     // #145 — the shape to preserve, captured before anything rewrites it.
     //
@@ -85,13 +85,13 @@ export class DashboardView extends ProjectView {
     // audit, 2026-08-28).
     const preMigrationConfig = snapshot(props.config);
 
-    let config = props.config as DatabaseViewConfig;
+    let config = props.config;
     let migrated = false;
     if (
-      isLegacyTableConfig(props.config as Record<string, unknown>)
+      isLegacyTableConfig(props.config as unknown as Record<string, unknown>)
     ) {
       config = migrateTableConfig(
-        props.config as Record<string, unknown>
+        props.config as unknown as Record<string, unknown>
       );
       migrated = true;
       props.saveConfig(config);

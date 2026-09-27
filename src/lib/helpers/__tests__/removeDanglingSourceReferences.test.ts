@@ -54,7 +54,7 @@ describe("removeDanglingSourceReferences", () => {
     ];
     const projects = [makeProject("a", widgets)];
     const result = removeDanglingSourceReferences(projects, "deleted");
-    const steps = result[0]!.views[0]!.config!["widgets"][0].transform.steps;
+    const steps = (result[0]!.views[0]!.config!["widgets"] as any[])[0].transform.steps;
     expect(steps).toHaveLength(2);
     expect(steps.map((s: any) => s.type)).toEqual(["filter", "sort"]);
   });
@@ -74,7 +74,7 @@ describe("removeDanglingSourceReferences", () => {
     ];
     const projects = [makeProject("a", widgets)];
     const result = removeDanglingSourceReferences(projects, "deleted");
-    const resultConfig = result[0]!.views[0]!.config!["widgets"][0].config;
+    const resultConfig = (result[0]!.views[0]!.config!["widgets"] as any[])[0].config;
     expect(resultConfig.correlation).toBeUndefined();
     expect(resultConfig.chartType).toBe("scatter");
     expect(resultConfig.other).toBe("preserved");
@@ -94,7 +94,7 @@ describe("removeDanglingSourceReferences", () => {
     ];
     const projects = [makeProject("a", widgets)];
     const result = removeDanglingSourceReferences(projects, "deleted");
-    const resultConfig = result[0]!.views[0]!.config!["widgets"][0].config;
+    const resultConfig = (result[0]!.views[0]!.config!["widgets"] as any[])[0].config;
     expect(resultConfig.correlation.rightSourceId).toBe("still-here");
   });
 
@@ -161,6 +161,6 @@ describe("removeDanglingSourceReferences", () => {
     const widgets = [{ id: "w1", type: "heading" }];
     const projects = [makeProject("a", widgets)];
     const result = removeDanglingSourceReferences(projects, "deleted");
-    expect(result[0]!.views[0]!.config!["widgets"][0]).toEqual({ id: "w1", type: "heading" });
+    expect((result[0]!.views[0]!.config!["widgets"] as any[])[0]).toEqual({ id: "w1", type: "heading" });
   });
 });

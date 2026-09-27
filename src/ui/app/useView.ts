@@ -14,8 +14,8 @@ import type { ProjectDefinition, ViewDefinition } from "src/settings/settings";
 export interface ViewProps {
   view: ViewDefinition;
   dataProps: DataQueryResult;
-  config: Record<string, any>;
-  onConfigChange: (config: Record<string, any>) => void;
+  config: Record<string, unknown>;
+  onConfigChange: (config: Record<string, unknown>) => void;
   onViewFilterChange?: ProjectViewProps["saveViewFilter"];
   viewApi: ViewApi;
   readonly: boolean;
@@ -30,7 +30,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
   let viewId: string;
   const projectId = props.project.id;
    
-  let projectView: ProjectView<Record<string, any>> | undefined;
+  let projectView: ProjectView<never> | undefined;
   let prevConfigJson: string = "";
   let prevProjectJson: string = "";
 
@@ -51,7 +51,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
 
       if (projectView) {
         // exactOptionalPropertyTypes: only spread saveViewFilter when defined
-        const openProps: ProjectViewProps<Record<string, any>> = {
+        const openProps: ProjectViewProps<Record<string, unknown>> = {
           contentEl: node,
           viewId: newprops.view.id,
           project: newprops.project,
@@ -66,7 +66,9 @@ export function useView(node: HTMLElement, props: ViewProps) {
             ? { saveViewFilter: newprops.onViewFilterChange }
             : {}),
         };
-        projectView.onOpen(openProps);
+        // The host holds each view with its config type erased and passes it
+        // the config that view saved.
+        projectView.onOpen(openProps as unknown as ProjectViewProps<never>);
         projectView.onData(newprops.dataProps);
         prevConfigJson = JSON.stringify(newprops.config);
         prevProjectJson = JSON.stringify(newprops.project);
@@ -76,7 +78,7 @@ export function useView(node: HTMLElement, props: ViewProps) {
     } else {
       // Batch prop changes into a single $set call to avoid multiple reactive waves
        
-      const updates: Record<string, any> = {};
+      const updates: Record<string, unknown> = {};
 
       // Check if config changed (for freeze, centerOn, etc.)
       const currentConfigJson = JSON.stringify(newprops.config);

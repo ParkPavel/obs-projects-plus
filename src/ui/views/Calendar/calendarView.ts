@@ -9,7 +9,7 @@ import type { CalendarConfig } from "./types";
 
 export class CalendarView extends ProjectView<CalendarConfig> {
   view?: CalendarViewSvelte | null;
-  props?: ProjectViewProps;
+  props?: ProjectViewProps<CalendarConfig>;
   private dataVersion = 0;
 
   getViewType(): string {
@@ -22,7 +22,7 @@ export class CalendarView extends ProjectView<CalendarConfig> {
     return "calendar";
   }
 
-  updateProps(updates: Record<string, any>) {
+  updateProps(updates: Record<string, unknown>) {
     this.view?.$set(updates);
   }
 
