@@ -227,9 +227,6 @@ export function isOptionalDate(
 }
 
  
-export function isStringLink(value: any): boolean {
-  if (isString(value)) {
-    return /^\[\[(.*)\]\]$/.test(value);
-  }
-  return false;
+export function isStringLink(value: unknown): boolean {
+  return typeof value === "string" && /^\[\[(.*)\]\]$/.test(value);
 }

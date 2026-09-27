@@ -323,7 +323,7 @@ function createSettings() {
       projectId: ProjectId,
       viewId: ViewId,
        
-      config: Record<string, any>
+      config: Record<string, unknown>
     ) {
       update((state) =>
         produce(state, (draft) => {

@@ -1,3 +1,4 @@
+import { isProduction } from "src/lib/env";
 /**
  * filterEvaluator — the filter evaluation kernel (REFACTOR-104).
  *
@@ -39,7 +40,6 @@
  *   here, not only to the settings union.
  */
 
-import { produce } from "immer";
 import dayjs, { type Dayjs } from "dayjs";
 import { isDateFormula, parseDateFormula } from "src/lib/formula";
 import {
@@ -120,7 +120,7 @@ export function matchesCondition(
     } else {
       let parsed: DataValue[] | undefined;
       try {
-        parsed = cond.value ? JSON.parse(cond.value) : undefined;
+        parsed = cond.value ? (JSON.parse(cond.value) as DataValue[]) : undefined;
       } catch {
         parsed = undefined;
       }
@@ -140,7 +140,7 @@ export function matchesCondition(
     }
     if (candidates.length === 0) return false;
     if (Array.isArray(value)) {
-      const items = (value as unknown[]).map((v) => (v == null ? "" : String(v)));
+      const items = (value as Optional<DataValue>[]).map((v) => (v == null ? "" : String(v)));
       return candidates.some((c) => items.includes(c));
     }
     const strVal = value == null ? "" : String(value);
@@ -155,7 +155,7 @@ export function matchesCondition(
   // records silently because the list type-guard above only handles list
   // operators.
   if (Array.isArray(value) && isStringFilterOperator(operator)) {
-    const arr = value as Array<unknown>;
+    const arr = value as Optional<DataValue>[];
     if (arr.length === 0) {
       // Empty array: no element to match. Affirmative → false, negative
       // → true. The base "is-empty" branch above only fires when the
@@ -223,7 +223,7 @@ export function matchesCondition(
     return false;
   }
 
-  if (process.env["NODE_ENV"] !== "production") {
+  if (!isProduction) {
     console.warn(`[Projects+] FilterEngine Unhandled filter: operator="${operator}", field="${cond.field}"`);
   }
   return false;
@@ -306,11 +306,10 @@ export function applyFilter(
   frame: DataFrame,
   filter: FilterDefinition
 ): DataFrame {
-  return produce(frame, (draft) => {
-    draft.records = draft.records.filter((record) =>
-      matchesFilterConditions(filter, record)
-    );
-  });
+  return {
+    ...frame,
+    records: frame.records.filter((record) => matchesFilterConditions(filter, record)),
+  };
 }
 
 /**

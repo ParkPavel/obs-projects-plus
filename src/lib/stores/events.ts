@@ -5,11 +5,12 @@ import { get, writable } from "svelte/store";
 export const events = writable<Events>(new Events());
 
  
-export function onEvent(type: string, cb: (...data: any) => void) {
+export function onEvent<A extends unknown[]>(type: string, cb: (...data: A) => void) {
   let eventRef: EventRef;
 
   onMount(() => {
-    eventRef = get(events).on(type, cb);
+    // Whoever triggers `type` passes the arguments the listener declares.
+    eventRef = get(events).on(type, cb as (...data: unknown[]) => unknown);
   });
   onDestroy(() => {
     get(events).offref(eventRef);

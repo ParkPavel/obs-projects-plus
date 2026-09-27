@@ -528,7 +528,7 @@ export function evaluateExpression(
   // Tokenize: split by operators, preserving them
   const tokens = expression
     .trim()
-    .split(/\s*([\+\-\*\/\(\)])\s*/)
+    .split(/\s*([+\-*/()])\s*/)
     .filter((t) => t.length > 0);
 
   if (tokens.length === 0) return null;
@@ -1185,7 +1185,7 @@ function executeJoin(
         const gathered: DataValue[] = [];
         for (const m of matches) {
           const v = m.values[orig];
-          if (v != null) gathered.push(v as DataValue);
+          if (v != null) gathered.push(v);
         }
         if (gathered.length === 0) {
           values[outName] = null;

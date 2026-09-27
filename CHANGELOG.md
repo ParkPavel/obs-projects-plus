@@ -8,6 +8,21 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
+## Unreleased
+
+### Ready for the community directory
+
+- The code passes the Obsidian community directory's automated review set
+  (`eslint-plugin-obsidianmd` recommended: type-checked TypeScript and the
+  Obsidian plugin rules) with no errors or warnings, and CI enforces it.
+- The interface language comes from Obsidian's own setting (`getLanguage()`)
+  rather than from `moment` or local storage.
+- Fixed: a template whose `tags` is a single string, not a list, no longer
+  merges into a new note's tags letter by letter.
+- Fixed: a plain object value (in a join key, an exported cell, or front
+  matter of an unexpected shape) is written as its content rather than
+  `[object Object]`; as join keys, such values no longer all match each other.
+
 ## 3.6.1 — 2026-09-28
 
 ### Demo rebuilt

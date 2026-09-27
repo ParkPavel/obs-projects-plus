@@ -1,3 +1,4 @@
+import { valueText } from "src/lib/valueText";
 /**
  * Frontmatter codec — type-preserving (de)serialisation of `DataValue`
  * for Obsidian's YAML frontmatter store.
@@ -55,8 +56,8 @@ export function decodeValue(raw: unknown): Optional<DataValue> {
   if (Array.isArray(raw)) {
     return raw.map(decodeValue) as DataValue;
   }
-  // Unknown shape (e.g. nested object) — coerce to string for safety.
-  return String(raw);
+  // Unknown shape (e.g. nested object) — coerce to text for safety.
+  return valueText(raw);
 }
 
 function encodeDate(d: Date): string {

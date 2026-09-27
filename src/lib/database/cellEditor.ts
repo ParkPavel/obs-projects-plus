@@ -92,13 +92,17 @@ export function parseCellInput(
 
   // List-style types: accept arrays directly; coerce CSV strings.
   if (type === "list" || type === "tags" || type === "relation") {
-    const arr = Array.isArray(raw)
-      ? raw
+    const arr: unknown[] | null = Array.isArray(raw)
+      ? (raw as unknown[])
       : typeof raw === "string"
       ? splitCsv(raw)
       : null;
     if (arr === null) return invalid("database.cell-editor.errors.list");
-    const cleaned = arr.map((s) => s.trim()).filter((s) => s.length > 0);
+    // Items are text; a number or boolean in a list reads as its text.
+    const cleaned = arr
+      .map((s) => (typeof s === "string" ? s : typeof s === "number" || typeof s === "boolean" ? String(s) : ""))
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     if (type === "tags") {
       // Strip leading `#` so YAML stores bare tag names; UI re-adds.
       return ok(cleaned.map((s) => s.replace(/^#+/, "")));

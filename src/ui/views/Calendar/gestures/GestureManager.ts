@@ -82,12 +82,12 @@ export class GestureManager {
   private touchStartY = 0;
   private touchStartTime = 0;
   private initialDistance = 0;
-  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressTimer: number | null = null;
   private isDragging = false;
   private isMultiTouch = false;
   
   // Debounce state for touch events (v7.0)
-  private touchMoveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private touchMoveDebounceTimer: number | null = null;
   private lastTouchMoveTime = 0;
   private readonly TOUCH_DEBOUNCE_MS = 16; // ~60fps
   
@@ -133,11 +133,11 @@ export class GestureManager {
   
   private cancelGesture(): void {
     if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
+      window.clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
     if (this.touchMoveDebounceTimer) {
-      clearTimeout(this.touchMoveDebounceTimer);
+      window.clearTimeout(this.touchMoveDebounceTimer);
       this.touchMoveDebounceTimer = null;
     }
     this.isDragging = false;
@@ -179,7 +179,7 @@ export class GestureManager {
     }
     
     // Start long press timer
-    this.longPressTimer = setTimeout(() => {
+    this.longPressTimer = window.setTimeout(() => {
       if (!this.isDragging) {
         const event = this.createGestureEvent(touch.clientX, touch.clientY, e.target);
         this.handlers.onLongPress?.(event);
@@ -204,7 +204,7 @@ export class GestureManager {
     
     // Cancel long press if moved too much
     if (distance > this.config.tapMaxDistance && this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
+      window.clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
     
@@ -241,7 +241,7 @@ export class GestureManager {
   
   private handleTouchEnd(e: TouchEvent): void {
     if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
+      window.clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
     

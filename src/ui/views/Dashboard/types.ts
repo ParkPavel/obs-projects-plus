@@ -167,7 +167,7 @@ export interface ViewTab {
 export interface DataTableFieldConfig {
   readonly [key: string]: {
     /**
-     * @deprecated since Phase 3 — use `widthRem` for Zero-Pixels
+     * Legacy (before Phase 3): use `widthRem` for Zero-Pixels
      * compliance. Legacy px value kept for backward compatibility with
      * pre-v3.5.0 settings; migrated lazily on first read.
      */
@@ -450,7 +450,8 @@ export interface ChartSeriesConfig {
   readonly id: string;
   /** Legend name; the field name when absent. */
   readonly label?: string;
-  readonly property: string | "count";
+  /** A field name, or "count" for the number of records. */
+  readonly property: string;
   readonly aggregation: ColumnAggregation;
   /** Another project to read (preloaded like a join's right frame); this chart's input when absent. */
   readonly dataProjectId?: string;
@@ -475,7 +476,8 @@ export interface ChartAxisX {
 export interface ChartAxisY {
   /** 3.6.0: the series' legend name; the field name when absent. */
   readonly label?: string;
-  readonly property: string | "count";
+  /** A field name, or "count" for the number of records. */
+  readonly property: string;
   readonly aggregation: ColumnAggregation;
   readonly groupBy?: string;
   readonly cumulative?: boolean;

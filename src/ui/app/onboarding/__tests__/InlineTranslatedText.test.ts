@@ -20,7 +20,7 @@ import InlineTranslatedText from "../InlineTranslatedText.svelte";
 
 // The rule reads ".obsidian" inside the help.obsidian.md host as a config-folder path;
 // this is Obsidian's help site URL, not a vault path.
-// eslint-disable-next-line obsidianmd/hardcoded-config-path
+ 
 const PROPERTIES_URL = "https://help.obsidian.md/Editing+and+formatting/Properties";
 
 describe("InlineTranslatedText — parses onboarding markup into real DOM nodes (P1)", () => {

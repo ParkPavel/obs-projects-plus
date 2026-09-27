@@ -228,15 +228,12 @@ export function announceChange(message: string): void {
   const doc = activeDocument ?? document;
   let region = doc.getElementById("ppp-sr-announce");
   if (!region) {
-    region = doc.createElement("div");
-    region.id = "ppp-sr-announce";
-    region.setAttribute("role", "status");
-    region.setAttribute("aria-live", "polite");
-    region.setAttribute("aria-atomic", "true");
     // Visually hidden by the global .ppp-sr-announce rule in styles.css: the
     // region sits on <body>, where the plugin's scoped .sr-only does not reach.
-    region.className = "ppp-sr-announce";
-    doc.body.appendChild(region);
+    region = doc.body.createDiv({
+      cls: "ppp-sr-announce",
+      attr: { id: "ppp-sr-announce", role: "status", "aria-live": "polite", "aria-atomic": "true" },
+    });
   }
   region.textContent = message;
 }

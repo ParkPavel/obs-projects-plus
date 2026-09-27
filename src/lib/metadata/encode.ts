@@ -12,7 +12,7 @@ import { parseYaml } from "./decode";
  
 export function encodeFrontMatter(
   data: string,
-  frontmatter: Record<string, any>,
+  frontmatter: Record<string, unknown>,
   defaultStringType: "PLAIN" | "QUOTE_DOUBLE"
 ): E.Either<Error, string> {
   const delim = "---";
@@ -78,7 +78,7 @@ export function encodeFrontMatter(
  */
  
 export function stringifyYaml(
-  value: any,
+  value: unknown,
   defaultStringType: "PLAIN" | "QUOTE_DOUBLE" = "PLAIN"
 ): string {
   const result = stringify(value, {

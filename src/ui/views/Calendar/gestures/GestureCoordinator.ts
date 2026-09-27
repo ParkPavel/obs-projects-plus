@@ -160,8 +160,8 @@ export class GestureCoordinator {
   private touchState: TouchState | null = null;
   
   // Timers
-  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
-  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressTimer: number | null = null;
+  private debounceTimer: number | null = null;
   
   // Bound handlers for cleanup
   private boundTouchStart: (e: TouchEvent) => void;
@@ -287,7 +287,7 @@ export class GestureCoordinator {
     }
     
     // Start long press timer для center zone
-    this.longPressTimer = setTimeout(() => {
+    this.longPressTimer = window.setTimeout(() => {
       if (this.state === 'detecting' && this.touchState) {
         const distance = this.getDistanceFromStart();
         if (distance < this.config.tapMaxDistance) {
@@ -312,7 +312,7 @@ export class GestureCoordinator {
     
     // Cancel long press if moved too far
     if (this.longPressTimer && this.getDistanceFromStart() > this.config.tapMaxDistance) {
-      clearTimeout(this.longPressTimer);
+      window.clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
     
@@ -579,11 +579,11 @@ export class GestureCoordinator {
   
   private reset(): void {
     if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
+      window.clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
     if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
+      window.clearTimeout(this.debounceTimer);
       this.debounceTimer = null;
     }
     this.touchState = null;

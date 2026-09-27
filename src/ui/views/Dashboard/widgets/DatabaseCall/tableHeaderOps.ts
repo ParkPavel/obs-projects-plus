@@ -98,7 +98,7 @@ export function toggleGroupCollapsed(
   key: string
 ): DataTableConfig {
   const groupBy = config?.groupBy;
-  if (!groupBy) return (config ?? {}) as DataTableConfig;
+  if (!groupBy) return (config ?? {});
   const collapsed = new Set(groupBy.collapsedGroups ?? []);
   if (collapsed.has(key)) collapsed.delete(key);
   else collapsed.add(key);

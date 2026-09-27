@@ -156,7 +156,7 @@ export type WriteOutcome<T> =
  */
 type Permit =
   | { kind: "open" }
-  | { kind: "fenced"; code: string; until: ReturnType<typeof setTimeout> }
+  | { kind: "fenced"; code: string; until: number }
   | { kind: "held"; code: string }
   | { kind: "closed" };
 
@@ -318,9 +318,9 @@ export function createSettingsWriter<T>(
    */
   let queue: { value: T } | null = null;
   let inFlight: Promise<void> | null = null;
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
-  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let debounceTimer: number | null = null;
+  let ceilingTimer: number | null = null;
+  let retryTimer: number | null = null;
   let attempt = 0;
   let status: SaveStatus = { kind: "idle" };
   /**
@@ -355,18 +355,18 @@ export function createSettingsWriter<T>(
 
   function cancelSchedule(): void {
     if (debounceTimer !== null) {
-      clearTimeout(debounceTimer);
+      window.clearTimeout(debounceTimer);
       debounceTimer = null;
     }
     if (ceilingTimer !== null) {
-      clearTimeout(ceilingTimer);
+      window.clearTimeout(ceilingTimer);
       ceilingTimer = null;
     }
   }
 
   /** The fence's deadline, and nothing else, since only a fence has one. */
   function clearPermitTimer(): void {
-    if (permit.kind === "fenced") clearTimeout(permit.until);
+    if (permit.kind === "fenced") window.clearTimeout(permit.until);
   }
 
   /**
@@ -408,7 +408,7 @@ export function createSettingsWriter<T>(
     permit = {
       kind: "fenced",
       code,
-      until: setTimeout(() => {
+      until: window.setTimeout(() => {
         permit = { kind: "open" };
         if (queue !== null) schedule();
       }, SETTINGS_RECONCILE_BACKSTOP_MS),
@@ -561,16 +561,16 @@ export function createSettingsWriter<T>(
 
   function cancelRetry(): void {
     if (retryTimer !== null) {
-      clearTimeout(retryTimer);
+      window.clearTimeout(retryTimer);
       retryTimer = null;
     }
   }
 
   function schedule(): void {
     if (permit.kind === "closed") return;
-    if (debounceTimer !== null) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(onDue, debounceMs);
-    if (ceilingTimer === null) ceilingTimer = setTimeout(onDue, maxWaitMs);
+    if (debounceTimer !== null) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(onDue, debounceMs);
+    if (ceilingTimer === null) ceilingTimer = window.setTimeout(onDue, maxWaitMs);
   }
 
   function onDue(): void {
@@ -730,7 +730,7 @@ export function createSettingsWriter<T>(
     attempt += 1;
     const delay = retryDelays[attempt - 1];
     if (delay !== undefined && permit.kind !== "closed") {
-      retryTimer = setTimeout(() => {
+      retryTimer = window.setTimeout(() => {
         retryTimer = null;
         startWrite();
       }, delay);
@@ -838,13 +838,13 @@ export function createSettingsWriter<T>(
           // decision that never returns still releases the queue.
           toFenced(code);
           await new Promise<void>((resolve) => {
-            const timer = setTimeout(() => {
+            const timer = window.setTimeout(() => {
               continuation = null;
               resolve();
             }, after);
             continuation = {
               wake: () => {
-                clearTimeout(timer);
+                window.clearTimeout(timer);
                 continuation = null;
                 resolve();
               },

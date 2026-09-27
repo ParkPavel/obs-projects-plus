@@ -21,7 +21,7 @@ export class BoardView extends ProjectView<BoardConfig> {
     return "columns";
   }
 
-  updateProps(updates: Record<string, any>) {
+  updateProps(updates: Record<string, unknown>) {
     this.view?.$set(updates);
   }
 

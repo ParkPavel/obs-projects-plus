@@ -220,7 +220,7 @@ export function carryUniqueIdCounters<T>(
   for (const key of ["projects", "archives"] as const) {
     const list = (adopted as CounterHolder)[key];
     if (!Array.isArray(list)) continue;
-    next[key] = list.map((item) => {
+    next[key] = (list as unknown[]).map((item) => {
       const id = idOf(item);
       if (id === null) return item;
       const mine = highest.get(id);

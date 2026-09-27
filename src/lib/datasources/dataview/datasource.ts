@@ -1,7 +1,13 @@
 import { produce } from "immer";
-import type { DataviewApi, Link } from "obsidian-dataview";
-import type { TableResult, ListResult, TaskResult } from "obsidian-dataview/lib/api/plugin-api";
-import type { SListItem } from "obsidian-dataview/lib/data-model/serialized/markdown";
+import {
+  isDataviewLink,
+  type DataviewApi,
+  type DataviewListResult,
+  type DataviewTableResult,
+  type DataviewTaskGroup,
+  type DataviewTaskItem,
+  type DataviewTaskResult,
+} from "./api";
 import {
   emptyDataFrame,
   type DataField,
@@ -16,7 +22,7 @@ import type {
   ProjectsPluginPreferences,
 } from "src/settings/settings";
 import { get } from "svelte/store";
-import { DataSource } from "..";
+import { DataSource } from "../dataSource";
 import { parseRecords } from "../helpers";
 import { detectSchema } from "./schema";
 import { standardizeValues } from "./standardize";
@@ -70,22 +76,23 @@ export class DataviewDataSource extends DataSource {
       throw new Error("dataview query failed");
     }
 
-    const resultType = result.value.type;
+    const value = result.value;
+    const idColumn = this.api.settings.tableIdColumnName;
 
     let rows: Array<Record<string, unknown>>;
     let sortHeaders: string[];
 
-    if (resultType === "table") {
-      rows = parseTableResult(result.value as TableResult);
-      sortHeaders = (result.value as TableResult).headers;
-    } else if (resultType === "list") {
-      rows = parseListResult(result.value as ListResult, this.api.settings.tableIdColumnName);
-      sortHeaders = [this.api.settings.tableIdColumnName];
-    } else if (resultType === "task") {
-      rows = parseTaskResult(result.value as TaskResult, this.api.settings.tableIdColumnName);
-      sortHeaders = [this.api.settings.tableIdColumnName, "text", "status", "checked", "completed", "tags"];
+    if (value.type === "table") {
+      rows = parseTableResult(value);
+      sortHeaders = value.headers;
+    } else if (value.type === "list") {
+      rows = parseListResult(value, idColumn);
+      sortHeaders = [idColumn];
+    } else if (value.type === "task") {
+      rows = parseTaskResult(value, idColumn);
+      sortHeaders = [idColumn, "text", "status", "checked", "completed", "tags"];
     } else {
-      throw new Error(`Unsupported Dataview query type: ${resultType}`);
+      throw new Error(`Unsupported Dataview query type: ${value.type}`);
     }
     const standardizedRecords = this.standardizeRecords(rows);
 
@@ -157,7 +164,7 @@ export class DataviewDataSource extends DataSource {
   }
 
 
-  standardizeRecords(rows: Array<Record<string, any>>): DataRecord[] {
+  standardizeRecords(rows: Array<Record<string, unknown>>): DataRecord[] {
     const records: DataRecord[] = [];
 
     const columnName = this.api.settings.tableIdColumnName;
@@ -165,9 +172,11 @@ export class DataviewDataSource extends DataSource {
     rows.forEach((row, index) => {
       const idRaw = row[columnName];
       // ID can be a Link object (TABLE/LIST) or a string (TASK)
-      const id = typeof idRaw === "object" && idRaw && "path" in idRaw
-        ? (idRaw as Link).path
-        : String(idRaw ?? `row-${index}`);
+      const id = isDataviewLink(idRaw)
+        ? idRaw.path
+        : typeof idRaw === "string" || typeof idRaw === "number"
+          ? String(idRaw)
+          : `row-${index}`;
       records.push({ id, values: standardizeValues(row) });
     });
 
@@ -176,77 +185,66 @@ export class DataviewDataSource extends DataSource {
 }
 
  
-function parseTableResult(value: TableResult): Array<Record<string, any>> {
-  const headers: string[] = value.headers;
-
-   
-  const rows: Array<Record<string, any>> = [];
-
-  value.values.forEach((row) => {
-     
-    const values: Record<string, any> = {};
-
-    headers.forEach((header, index) => {
-      const value = row[index];
-      values[header] = value;
+function parseTableResult(value: DataviewTableResult): Array<Record<string, unknown>> {
+  return value.values.map((row) => {
+    const values: Record<string, unknown> = {};
+    value.headers.forEach((header, index) => {
+      values[header] = row[index];
     });
-
-    rows.push(values);
+    return values;
   });
-
-  return rows;
 }
 
 /**
  * Convert LIST query result to row format.
  * Each value becomes a record with the id column pointing to the source file.
  */
- 
-function parseListResult(value: ListResult, idColumnName: string): Array<Record<string, any>> {
-  return value.values.map((item) => {
-    if (typeof item === "object" && item !== null && "path" in item) {
-      // Link object — use as file identifier
-      return { [idColumnName]: item };
-    }
-    // Primitive value — wrap in a "Value" field with synthetic id
-    return { [idColumnName]: item, Value: item };
-  });
+function parseListResult(value: DataviewListResult, idColumnName: string): Array<Record<string, unknown>> {
+  return value.values.map((item) =>
+    // A link names the file; a primitive gets a "Value" field and a synthetic id.
+    isDataviewLink(item) ? { [idColumnName]: item } : { [idColumnName]: item, Value: item }
+  );
+}
+
+/** Task fields that are Dataview's own structure, not annotations. */
+const TASK_STRUCTURE = new Set([
+  "symbol", "link", "section", "line", "lineCount", "position", "list", "blockId", "parent",
+  "children", "outlinks", "visual", "annotated", "subtasks", "real", "header", "task",
+]);
+
+function isTaskGroup(item: DataviewTaskItem | DataviewTaskGroup): item is DataviewTaskGroup {
+  return "rows" in item && Array.isArray(item.rows);
 }
 
 /**
- * Flatten TASK query result (Grouping<SListItem>) to row format.
- * Supports both flat array and grouped (by file) formats.
+ * Flatten TASK query result (flat or grouped by file) to row format.
  */
- 
-function parseTaskResult(value: TaskResult, idColumnName: string): Array<Record<string, any>> {
-  const rows: Array<Record<string, any>> = [];
+function parseTaskResult(value: DataviewTaskResult, idColumnName: string): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
 
-  function flattenItems(items: SListItem[] | Array<{ key: unknown; rows: SListItem[] }>): void {
+  function flattenItems(items: readonly (DataviewTaskItem | DataviewTaskGroup)[]): void {
     for (const item of items) {
-      if ("rows" in item && Array.isArray((item as { rows: unknown }).rows)) {
-        // Grouped format: { key: Link, rows: SListItem[] }
-        flattenItems((item as { key: unknown; rows: SListItem[] }).rows);
-      } else {
-        const task = item as SListItem;
-        const row: Record<string, any> = {
-          [idColumnName]: task.link ?? { path: task.path, display: task.path },
-          text: task.text ?? "",
-          status: "status" in task ? task.status : "",
-          checked: "checked" in task ? task.checked : false,
-          completed: "completed" in task ? (task as { completed: boolean }).completed : false,
-          tags: task.tags ?? [],
-          path: task.path ?? "",
-        };
-        // Copy annotation fields (custom frontmatter-like fields on tasks)
-        if (task.annotated) {
-          for (const key of Object.keys(task)) {
-            if (!(key in row) && !["symbol", "link", "section", "line", "lineCount", "position", "list", "blockId", "parent", "children", "outlinks", "visual", "annotated", "subtasks", "real", "header", "task"].includes(key)) {
-              row[key] = task[key];
-            }
-          }
-        }
-        rows.push(row);
+      if (isTaskGroup(item)) {
+        flattenItems(item.rows);
+        continue;
       }
+      const task = item;
+      const row: Record<string, unknown> = {
+        [idColumnName]: task.link ?? { path: task.path, display: task.path },
+        text: task.text ?? "",
+        status: task.status ?? "",
+        checked: task.checked ?? false,
+        completed: task.completed ?? false,
+        tags: task.tags ?? [],
+        path: task.path ?? "",
+      };
+      // Copy annotation fields (custom frontmatter-like fields on tasks)
+      if (task.annotated) {
+        for (const key of Object.keys(task)) {
+          if (!(key in row) && !TASK_STRUCTURE.has(key)) row[key] = task[key];
+        }
+      }
+      rows.push(row);
     }
   }
 

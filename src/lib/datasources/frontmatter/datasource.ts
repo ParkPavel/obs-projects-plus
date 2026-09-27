@@ -21,7 +21,7 @@ import type {
   ProjectDefinition,
   ProjectsPluginPreferences,
 } from "src/settings/settings";
-import { DataSource } from "..";
+import { DataSource } from "../dataSource";
 
 /**
  * FrontMatterDataSource is a intermediate data source for records that use
@@ -147,7 +147,7 @@ export async function standardizeRecords(
 }
 
  
-function filterUndefinedValues(val: Record<string, any>): Record<string, any> {
+function filterUndefinedValues(val: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(val).filter(([_key, value]) => notUndefined(value))
   );

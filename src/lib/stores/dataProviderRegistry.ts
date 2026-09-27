@@ -75,7 +75,7 @@ export const DATA_PROVIDER_REGISTRY_CONTEXT_KEY = Symbol(
  * {@link DATA_PROVIDER_REGISTRY_CONTEXT_KEY}.
  */
 export function createDataProviderRegistry(): DataProviderRegistry {
-  const _store: Writable<Map<string, DataProvider>> = writable(new Map());
+  const _store: Writable<Map<string, DataProvider>> = writable(new Map<string, DataProvider>());
 
   return {
     subscribe: _store.subscribe,

@@ -147,7 +147,7 @@ function kernelAggregate(
   for (const a of args) {
     const val = evaluate(a);
     if (Array.isArray(val)) {
-      for (const v of val) if (v != null) flat.push(v as DataValue);
+      for (const v of val) if (v != null) flat.push(v);
     } else if (val != null) {
       flat.push(val as DataValue);
     }
@@ -164,7 +164,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   IF: (args, evaluate) => {
     if (args.length < 2) return null;
     const cond = evaluate(args[0] as FormulaNode);
-    return cond ? evaluate(args[1] as FormulaNode) : (args[2] ? evaluate(args[2] as FormulaNode) : null);
+    return cond ? evaluate(args[1] as FormulaNode) : (args[2] ? evaluate(args[2]) : null);
   },
 
   IFS: (args, evaluate) => {
@@ -202,7 +202,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   // ── Math ───────────────────────────────────────────────────
   ROUND: (args, evaluate) => {
     const val = argNumber(evaluate(args[0] as FormulaNode));
-    const decimals = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : 0;
+    const decimals = args[1] ? argNumber(evaluate(args[1])) : 0;
     if (isNaN(val)) return null;
     const factor = Math.pow(10, decimals);
     return Math.round(val * factor) / factor;
@@ -239,7 +239,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   LOG: (args, evaluate) => {
     const val = argNumber(evaluate(args[0] as FormulaNode));
     if (isNaN(val) || val <= 0) return null;
-    const base = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : Math.E;
+    const base = args[1] ? argNumber(evaluate(args[1])) : Math.E;
     if (base <= 0 || base === 1) return null;
     return base === Math.E ? Math.log(val) : Math.log(val) / Math.log(base);
   },
@@ -273,7 +273,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   SUBSTRING: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
     const start = argNumber(evaluate(args[1] as FormulaNode));
-    const end = args[2] ? argNumber(evaluate(args[2] as FormulaNode)) : undefined;
+    const end = args[2] ? argNumber(evaluate(args[2])) : undefined;
     return str.substring(start, end);
   },
 
@@ -337,7 +337,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   DATE_BETWEEN: (args, evaluate) => {
     const d1 = dayjs(String(evaluate(args[0] as FormulaNode)));
     const d2 = dayjs(String(evaluate(args[1] as FormulaNode)));
-    const unit = (args[2] ? String(evaluate(args[2] as FormulaNode)) : "day") as dayjs.QUnitType;
+    const unit = (args[2] ? String(evaluate(args[2])) : "day") as dayjs.QUnitType;
     if (!d1.isValid() || !d2.isValid()) return null;
     return d2.diff(d1, unit);
   },
@@ -413,8 +413,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const rate = argNumber(evaluate(args[0] as FormulaNode));
     const nper = argNumber(evaluate(args[1] as FormulaNode));
     const pv = argNumber(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
     if (isNaN(rate) || isNaN(nper) || isNaN(pv) || nper === 0) return null;
     return pmtCore(rate, nper, pv, fv, type);
   },
@@ -423,8 +423,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const rate = argNumber(evaluate(args[0] as FormulaNode));
     const nper = argNumber(evaluate(args[1] as FormulaNode));
     const pmt = argNumber(evaluate(args[2] as FormulaNode));
-    const pv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
+    const pv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
     if (isNaN(rate) || isNaN(nper) || isNaN(pmt)) return null;
     if (rate === 0) return -(pv + pmt * nper);
     const pvif = Math.pow(1 + rate, nper);
@@ -435,8 +435,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const rate = argNumber(evaluate(args[0] as FormulaNode));
     const nper = argNumber(evaluate(args[1] as FormulaNode));
     const pmt = argNumber(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
     if (isNaN(rate) || isNaN(nper) || isNaN(pmt)) return null;
     if (rate === 0) return -(fv + pmt * nper);
     const pvif = Math.pow(1 + rate, nper);
@@ -496,9 +496,9 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const nper = argNumber(evaluate(args[0] as FormulaNode));
     const pmt = argNumber(evaluate(args[1] as FormulaNode));
     const pv = argNumber(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
-    let rate = args[5] ? argNumber(evaluate(args[5] as FormulaNode)) : 0.1;
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
+    let rate = args[5] ? argNumber(evaluate(args[5])) : 0.1;
     if (isNaN(nper) || isNaN(pmt) || isNaN(pv) || nper <= 0) return null;
 
     for (let iter = 0; iter < 100; iter++) {
@@ -526,8 +526,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const per = argNumber(evaluate(args[1] as FormulaNode));
     const nper = argNumber(evaluate(args[2] as FormulaNode));
     const pv = argNumber(evaluate(args[3] as FormulaNode));
-    const fv = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
-    const type = args[5] ? argNumber(evaluate(args[5] as FormulaNode)) : 0;
+    const fv = args[4] ? argNumber(evaluate(args[4])) : 0;
+    const type = args[5] ? argNumber(evaluate(args[5])) : 0;
     if (isNaN(rate) || isNaN(per) || isNaN(nper) || per < 1 || per > nper) return null;
     const pmt = pmtCore(rate, nper, pv, fv, type);
     return ipmtForPeriod(rate, per, pv, pmt, type);
@@ -538,8 +538,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const per = argNumber(evaluate(args[1] as FormulaNode));
     const nper = argNumber(evaluate(args[2] as FormulaNode));
     const pv = argNumber(evaluate(args[3] as FormulaNode));
-    const fv = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
-    const type = args[5] ? argNumber(evaluate(args[5] as FormulaNode)) : 0;
+    const fv = args[4] ? argNumber(evaluate(args[4])) : 0;
+    const type = args[5] ? argNumber(evaluate(args[5])) : 0;
     if (isNaN(rate) || isNaN(per) || isNaN(nper) || per < 1 || per > nper) return null;
     const pmt = pmtCore(rate, nper, pv, fv, type);
     return pmt - ipmtForPeriod(rate, per, pv, pmt, type);
@@ -549,8 +549,8 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const rate = argNumber(evaluate(args[0] as FormulaNode));
     const pmt = argNumber(evaluate(args[1] as FormulaNode));
     const pv = argNumber(evaluate(args[2] as FormulaNode));
-    const fv = args[3] ? argNumber(evaluate(args[3] as FormulaNode)) : 0;
-    const type = args[4] ? argNumber(evaluate(args[4] as FormulaNode)) : 0;
+    const fv = args[3] ? argNumber(evaluate(args[3])) : 0;
+    const type = args[4] ? argNumber(evaluate(args[4])) : 0;
     if (isNaN(rate) || isNaN(pmt) || isNaN(pv)) return null;
     if (rate === 0) {
       if (pmt === 0) return null;
@@ -730,13 +730,13 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   // ── Enhanced String ────────────────────────────────────────
   LEFT: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
-    const n = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : 1;
+    const n = args[1] ? argNumber(evaluate(args[1])) : 1;
     return str.substring(0, n);
   },
 
   RIGHT: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
-    const n = args[1] ? argNumber(evaluate(args[1] as FormulaNode)) : 1;
+    const n = args[1] ? argNumber(evaluate(args[1])) : 1;
     return str.substring(Math.max(0, str.length - n));
   },
 
@@ -787,7 +787,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   // ── Conversion (enhanced) ──────────────────────────────────
   TO_CURRENCY: (args, evaluate) => {
     const val = argNumber(evaluate(args[0] as FormulaNode));
-    const code = args[1] ? String(evaluate(args[1] as FormulaNode)) : "USD";
+    const code = args[1] ? String(evaluate(args[1])) : "USD";
     if (isNaN(val)) return null;
     try {
       return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(val);
@@ -815,7 +815,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   ZIP: (args, evaluate) => {
     if (args.length === 0) return [] as unknown as DataValue;
     const lists = args.map(a => {
-      const v = evaluate(a as FormulaNode);
+      const v = evaluate(a);
       return Array.isArray(v) ? v : (v != null ? [v] : []);
     });
     const len = Math.min(...lists.map(l => l.length));
@@ -837,7 +837,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   IFBLANK: (args, evaluate) => {
     const val = evaluate(args[0] as FormulaNode);
     if (val == null || val === "" || (typeof val === "number" && isNaN(val))) {
-      return args[1] ? evaluate(args[1] as FormulaNode) : null;
+      return args[1] ? evaluate(args[1]) : null;
     }
     return val;
   },
@@ -1042,7 +1042,7 @@ function evaluateNode(
     return vals;
   }
 
-  function evaluate(n: FormulaNode): any {
+  function evaluate(n: FormulaNode): Optional<DataValue> {
     switch (n.type) {
       case "literal":
         return n.value;
@@ -1163,8 +1163,8 @@ function evaluateNode(
         if (n.name === "STYLE") {
           if (n.args.length < 1) return null;
           const text = String(evaluate(n.args[0] as FormulaNode) ?? "");
-          const color = n.args[1] ? String(evaluate(n.args[1] as FormulaNode) ?? "") : undefined;
-          const weight = n.args[2] ? String(evaluate(n.args[2] as FormulaNode) ?? "") : undefined;
+          const color = n.args[1] ? String(evaluate(n.args[1]) ?? "") : undefined;
+          const weight = n.args[2] ? String(evaluate(n.args[2]) ?? "") : undefined;
           const cssClass = buildSafeClass(color, weight);
           return { __styled: true, text, cssClass } as unknown as DataValue;
         }
@@ -1172,7 +1172,7 @@ function evaluateNode(
         if (n.name === "MAP") {
           if (n.args.length < 3) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1188,7 +1188,7 @@ function evaluateNode(
         if (n.name === "FILTER") {
           if (n.args.length < 3) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1204,7 +1204,7 @@ function evaluateNode(
         if (n.name === "REDUCE") {
           if (n.args.length < 5) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1234,10 +1234,10 @@ function evaluateNode(
     }
   }
 
-  return evaluate(node) as Optional<DataValue>;
+  return evaluate(node);
 }
 
-function smartEq(a: any, b: any): boolean {
+function smartEq(a: unknown, b: unknown): boolean {
   if (a == null && b == null) return true;
   if (a == null || b == null) return false;
   if (typeof a === "string" && typeof b === "string") {

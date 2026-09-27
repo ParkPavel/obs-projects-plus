@@ -18,7 +18,7 @@ export class CreateFieldModal extends Modal {
   constructor(
     app: App,
     readonly fields: DataField[],
-    readonly onCreate: (field: DataField, value: Optional<DataValue>) => void,
+    readonly onCreate: (field: DataField, value: Optional<DataValue>) => void | Promise<void>,
     readonly availableProjects: ProjectDefinition[] = [],
     readonly currentProjectId: string = "",
     readonly onSetupRelation?: (field: DataField) => void,
@@ -46,7 +46,7 @@ export class CreateFieldModal extends Modal {
         onSetupRelation: this.onSetupRelation,
         recordCount: this.recordCount,
         onCreate: (field: DataField, value: Optional<DataValue>) => {
-          this.onCreate(field, value);
+          void this.onCreate(field, value);
           this.close();
         },
       },

@@ -1,4 +1,4 @@
-import { produce, castDraft, castImmutable } from "immer";
+import { produce, castDraft } from "immer";
 import { writable } from "svelte/store";
 
 import {
@@ -89,83 +89,55 @@ function createDataFrame() {
     subscribe,
     addRecord(record: DataRecord) {
       notifyDataFrameInvalidation();
-      update((state) =>
-        produce(state, (draft) => {
-          // @ts-expect-error: TS2589 — immer produce type instantiation excessively deep with DataRecord union
-          draft.records.push(record);
-        })
-      );
+      update((state) => ({ ...state, records: [...state.records, record] }));
     },
     updateRecord(record: DataRecord) {
       notifyDataFrameInvalidation();
-      update((state) =>
-        produce(state, (draft) => {
-          draft.records = castDraft(
-            draft.records
-              .map(castImmutable)
-              .map((r) => (r.id === record.id ? record : r))
-          );
-        })
-      );
+      update((state) => ({
+        ...state,
+        records: state.records.map((r) => (r.id === record.id ? record : r)),
+      }));
     },
     updateRecords(records: DataRecord[]) {
       notifyDataFrameInvalidation();
-      update((state) =>
-        produce(state, (draft) => {
-          draft.records = castDraft(
-            draft.records.map(castImmutable).map((r) => {
-              const found = records.find((_r) => _r.id === r.id);
-              return found ? found : r;
-            })
-          );
-        })
-      );
+      update((state) => ({
+        ...state,
+        records: state.records.map((r) => records.find((_r) => _r.id === r.id) ?? r),
+      }));
     },
     deleteRecord(id: string) {
       notifyDataFrameInvalidation();
-      update((state) =>
-        produce(state, (draft) => {
-          draft.records = draft.records.filter((record) => record.id !== id);
-        })
-      );
+      update((state) => ({ ...state, records: state.records.filter((record) => record.id !== id) }));
     },
     addField(newField: DataField, position?: number) {
       notifyDataFrameInvalidation();
-      update((state) =>
-        produce(state, (draft) => {
-          if (position) draft.fields.splice(position, 0, newField);
-          else draft.fields.push(newField);
-        })
-      );
+      update((state) => {
+        const fields = [...state.fields];
+        if (position) fields.splice(position, 0, newField);
+        else fields.push(newField);
+        return { ...state, fields };
+      });
     },
     updateField(updated: DataField, oldName?: string) {
       notifyDataFrameInvalidation();
-      update((state) =>
-        produce(state, (draft) => {
-          draft.fields = draft.fields
-            .map((field) => (field.name === oldName ? updated : field))
-            .filter((field) => field.name !== oldName);
-
-          draft.records = draft.records.map((record) =>
-            produce(record, (draft) => {
-              if (oldName) {
-                draft.values[updated.name] = draft.values[oldName];
-                delete draft.values[oldName];
-              }
+      update((state) => ({
+        ...state,
+        fields: state.fields
+          .map((field) => (field.name === oldName ? updated : field))
+          .filter((field) => field.name !== oldName),
+        records: oldName
+          ? state.records.map((record) => {
+              const values = { ...record.values };
+              values[updated.name] = values[oldName];
+              delete values[oldName];
+              return { ...record, values };
             })
-          );
-        })
-      );
+          : state.records,
+      }));
     },
     deleteField(fieldName: string) {
       notifyDataFrameInvalidation();
-      update((state) =>
-        produce(state, (draft) => {
-          draft.fields = draft.fields.filter(
-            (field) => field.name !== fieldName
-          );
-        })
-      );
+      update((state) => ({ ...state, fields: state.fields.filter((field) => field.name !== fieldName) }));
     },
     merge(updated: DataFrame) {
       notifyDataFrameInvalidation();
@@ -178,7 +150,8 @@ function createDataFrame() {
           updated.records.forEach((record) => {
             recordSet[record.id] = record;
           });
-          draft.records = castDraft(Object.values(recordSet));
+          const records = Object.values(recordSet);
+          draft.records = castDraft(records);
 
           // Merge fields.
           updated.fields.forEach((newField) => {
@@ -201,12 +174,10 @@ function createDataFrame() {
             }
           });
 
+          // Read the plain records, not the draft: immer's draft type for the
+          // DataRecord union exceeds TypeScript's instantiation depth (TS2589).
           draft.fields = draft.fields.filter((field) =>
-            draft.records.some((record) => {
-              return (
-                record.values[field.name] !== undefined
-              );
-            })
+            records.some((record) => record.values[field.name] !== undefined)
           );
 
           // Merge errors.

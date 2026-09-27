@@ -13,7 +13,7 @@ export interface ViewDefinition {
   readonly id: ViewId;
   readonly type: ViewType;
    
-  readonly config: Record<string, any>;
+  readonly config: Record<string, unknown>;
   readonly filter: FilterDefinition;
   readonly colors: ColorFilterDefinition;
   readonly sort: SortDefinition;

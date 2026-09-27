@@ -108,7 +108,7 @@ export function validateLegacyLinkedSelection(
   if (!fieldName || !masterProjectId) return { status: "missing-relation" };
   const field = fields.find((candidate) => candidate.name === fieldName);
   if (!field || field.type !== DataFieldType.Relation) return { status: "invalid-field" };
-  const config = field.typeConfig?.relation as RelationFieldConfig | undefined;
+  const config = field.typeConfig?.relation;
   if (!config) return { status: "missing-relation" };
   const relation = adaptRelationFieldConfig(receivingProjectId, fieldName, config);
   if (relation.target.projectId !== masterProjectId) {

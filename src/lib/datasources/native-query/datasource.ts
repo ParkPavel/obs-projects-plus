@@ -23,7 +23,7 @@ import type {
   ProjectsPluginPreferences,
 } from "src/settings/settings";
 
-import { DataSource } from "..";
+import { DataSource } from "../dataSource";
 import { FolderDataSource } from "../folder/datasource";
 import { TagDataSource } from "../tag/datasource";
 import { executeNativeQuery, type NativeQuery } from "./nativeQuery";

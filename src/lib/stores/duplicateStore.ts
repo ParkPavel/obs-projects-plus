@@ -94,7 +94,7 @@ function createDuplicateStore() {
         // Пересчитываем коллизии
         const collisions = existingDataCache
           ? detectCollisionsForPhantoms(phantoms, existingDataCache.grouped)
-          : new Map();
+          : (new Map() as DuplicateState["collisions"]);
         
         return {
           ...state,
@@ -127,7 +127,7 @@ function createDuplicateStore() {
         // Пересчитываем коллизии
         const collisions = existingDataCache
           ? detectCollisionsForPhantoms(phantoms, existingDataCache.grouped)
-          : new Map();
+          : (new Map() as DuplicateState["collisions"]);
         
         return {
           ...state,
@@ -160,7 +160,7 @@ function createDuplicateStore() {
         // Пересчитываем коллизии
         const collisions = existingDataCache
           ? detectCollisionsForPhantoms(phantoms, existingDataCache.grouped)
-          : new Map();
+          : (new Map() as DuplicateState["collisions"]);
         
         return {
           ...state,
@@ -194,7 +194,7 @@ function createDuplicateStore() {
         // Вычисляем коллизии
         const collisions = existingDataCache
           ? detectCollisionsForPhantoms(phantoms, existingDataCache.grouped)
-          : new Map();
+          : (new Map() as DuplicateState["collisions"]);
         
         return {
           ...state,

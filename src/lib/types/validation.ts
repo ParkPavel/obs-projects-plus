@@ -29,7 +29,7 @@ export type ValidationErrors = ValidationError[];
  * Принимает значение и возвращает ошибку или null
  */
  
-export type Validator<T = any> = (value: T) => FieldError;
+export type Validator<T = unknown> = (value: T) => FieldError;
 
 /**
  * Хелперы для валидации
@@ -52,8 +52,8 @@ export function createFieldValidator<T>(
  * @returns Ошибка или null
  */
  
-export function validateRequired(value: any): FieldError {
-  return !value || value.toString().trim() === ""
+export function validateRequired(value: unknown): FieldError {
+  return !value || (value as { toString(): string }).toString().trim() === ""
     ? "This field is required"
     : null;
 }

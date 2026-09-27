@@ -628,7 +628,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       type: VIEW_TYPE_VISUALIZER_PANE,
       active: true,
     });
-    this.app.workspace.revealLeaf(right);
+    await this.app.workspace.revealLeaf(right);
   }
 
   /**

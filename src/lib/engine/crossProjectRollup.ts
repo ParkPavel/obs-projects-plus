@@ -21,7 +21,7 @@ import type {
   DataValue,
   Optional,
 } from "src/lib/dataframe/dataframe";
-import type { RelationFieldConfig, RollupFieldConfig } from "src/settings/base/settings";
+import type { RollupFieldConfig } from "src/settings/base/settings";
 import {
   aggregate,
   type RollupConfig,
@@ -107,7 +107,7 @@ export function computeCrossProjectRollup(
   // the resolution scope before walking targets. Pre-filter the external
   // frame so the resolver index already excludes out-of-scope records.
   const relField = thisFrame.fields.find((f) => f.name === config.relationField);
-  const relCfg = relField?.typeConfig?.relation as RelationFieldConfig | undefined;
+  const relCfg = relField?.typeConfig?.relation;
   const scopedFrame: DataFrame = relCfg?.targetSubBaseFilter
     ? applyFilter(externalFrame, relCfg.targetSubBaseFilter)
     : externalFrame;
@@ -209,7 +209,7 @@ export function computeBacklinkRollupColumn(
   // does for a forward link from that record: its display field (or the
   // shared fallbacks) and its targetSubBaseFilter (backlink-review).
   const relCfg = sourceFrame.fields.find((f) => f.name === relationField)?.typeConfig
-    ?.relation as RelationFieldConfig | undefined;
+    ?.relation;
   const reachable = relCfg?.targetSubBaseFilter ? applyFilter(thisFrame, relCfg.targetSubBaseFilter) : thisFrame;
   const index = buildRelationTargetIndex(
     reachable,

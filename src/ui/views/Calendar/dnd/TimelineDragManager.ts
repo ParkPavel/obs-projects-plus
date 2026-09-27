@@ -129,7 +129,7 @@ interface DragSession {
   // State flags
   thresholdCrossed: boolean;
   longPressConfirmed: boolean;
-  longPressTimer: ReturnType<typeof setTimeout> | null;
+  longPressTimer: number | null;
 
   // Haptic tracking
   lastSnappedMinutes: number;
@@ -172,7 +172,7 @@ export class TimelineDragManager {
   // v4.0.2: After a successful drag, remember the record so the next touch
   // on the same bar skips the long-press delay (quick re-grab).
   private lastActivatedRecordId: string | null = null;
-  private lastActivatedTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastActivatedTimer: number | null = null;
 
   // ── Per-drag session (created in initiate, cleared in cleanup) ──
   private session: DragSession | null = null;
@@ -367,7 +367,7 @@ export class TimelineDragManager {
         if (this.config?.isMobile) hapticDragStart();
         pauseGestures();
       } else {
-        this.session.longPressTimer = setTimeout(() => {
+        this.session.longPressTimer = window.setTimeout(() => {
           if (!this.session) return;
           this.session.longPressConfirmed = true;
           this.longPressActive.set(true);
@@ -400,7 +400,7 @@ export class TimelineDragManager {
     this.dayColumns = [];
     this.horizontalScrollContainer = null;
     if (this.lastActivatedTimer) {
-      clearTimeout(this.lastActivatedTimer);
+      window.clearTimeout(this.lastActivatedTimer);
       this.lastActivatedTimer = null;
     }
     this.lastActivatedRecordId = null;
@@ -1121,7 +1121,7 @@ export class TimelineDragManager {
     };
     doc.addEventListener('click', handler, { capture: true, once: true });
     // Safety: remove if click doesn't fire within 200ms (e.g., touch scenario)
-    setTimeout(() => {
+    window.setTimeout(() => {
       doc.removeEventListener('click', handler, { capture: true });
     }, 200);
   }
@@ -1187,10 +1187,10 @@ export class TimelineDragManager {
       // Re-evaluate ghost position as content shifts under the pointer
       this.updateGhostPosition(s.lastX, s.lastY);
 
-      s.verticalScrollRAF = requestAnimationFrame(tick);
+      s.verticalScrollRAF = window.requestAnimationFrame(tick);
     };
 
-    s.verticalScrollRAF = requestAnimationFrame(tick);
+    s.verticalScrollRAF = window.requestAnimationFrame(tick);
   }
 
   private stopVerticalAutoScroll(): void {
@@ -1255,10 +1255,10 @@ export class TimelineDragManager {
         s.lastDndCheckLoadTime = now;
       }
 
-      s.horizontalScrollRAF = requestAnimationFrame(tick);
+      s.horizontalScrollRAF = window.requestAnimationFrame(tick);
     };
 
-    s.horizontalScrollRAF = requestAnimationFrame(tick);
+    s.horizontalScrollRAF = window.requestAnimationFrame(tick);
   }
 
   private stopHorizontalAutoScroll(): void {
@@ -1353,7 +1353,7 @@ export class TimelineDragManager {
     try {
       const elements = doc.elementsFromPoint(clientX, clientY);
       for (const el of elements) {
-        if (!(el instanceof HTMLElement)) continue;
+        if (!(el.instanceOf(HTMLElement))) continue;
 
         const dateStr = el.getAttribute('data-date');
         if (dateStr) {
@@ -1400,7 +1400,7 @@ export class TimelineDragManager {
 
     if (s) {
       // Clear long-press timer
-      if (s.longPressTimer !== null) clearTimeout(s.longPressTimer);
+      if (s.longPressTimer !== null) window.clearTimeout(s.longPressTimer);
 
       // Remove global listeners
       s.listenerDoc.removeEventListener('mousemove', this.handlePointerMoveBound);
@@ -1442,8 +1442,8 @@ export class TimelineDragManager {
       this.lastActivatedRecordId = activatedRecordId;
       this.dragRecordId.set(activatedRecordId);
       // longPressActive stays true — handles remain visible
-      if (this.lastActivatedTimer) clearTimeout(this.lastActivatedTimer);
-      this.lastActivatedTimer = setTimeout(() => {
+      if (this.lastActivatedTimer) window.clearTimeout(this.lastActivatedTimer);
+      this.lastActivatedTimer = window.setTimeout(() => {
         this.lastActivatedRecordId = null;
         this.lastActivatedTimer = null;
         this.longPressActive.set(false);
@@ -1453,7 +1453,7 @@ export class TimelineDragManager {
       this.longPressActive.set(false);
       this.lastActivatedRecordId = null;
       if (this.lastActivatedTimer) {
-        clearTimeout(this.lastActivatedTimer);
+        window.clearTimeout(this.lastActivatedTimer);
         this.lastActivatedTimer = null;
       }
     }

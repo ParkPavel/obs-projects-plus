@@ -213,9 +213,9 @@ function parseFrontMatterTags(property: unknown): string[] {
       .filter(Boolean)
       .forEach((tag) => res.push(tag));
   } else if (Array.isArray(property)) {
-    property
+    (property as unknown[])
       .filter(notEmpty)
-      .map((tag) => normalizeTag(tag.toString()))
+      .map((tag) => normalizeTag(typeof tag === "string" ? tag : JSON.stringify(tag)))
       .filter(Boolean)
       .forEach((tag) => res.push(tag));
   }
