@@ -101,7 +101,7 @@ export function isLegacyTableConfig(
 export function migrateAggregationCount<T>(value: T): T {
   if (Array.isArray(value)) {
     let changed = false;
-    const next = value.map((v) => {
+    const next = (value as unknown[]).map((v) => {
       const m = migrateAggregationCount(v);
       if (m !== v) changed = true;
       return m;

@@ -13,7 +13,7 @@ export class ConfigureFieldModal extends Modal {
     readonly field: DataField,
     readonly existingFields: DataField[],
     readonly editable: boolean,
-    readonly onSave: (field: DataField) => void,
+    readonly onSave: (field: DataField) => void | Promise<void>,
     /**
      * All projects in the current vault. Surfaced to the modal so the
      * Relation/Rollup sub-panels can populate their target-project picker
@@ -44,7 +44,7 @@ export class ConfigureFieldModal extends Modal {
         currentProjectId: this.currentProjectId,
         onSetupRelation: this.onSetupRelation,
         onSave: (field: DataField) => {
-          this.onSave(field);
+          void this.onSave(field);
           this.close();
         },
       },

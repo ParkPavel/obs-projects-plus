@@ -10,7 +10,7 @@ export class ConfirmDialogModal extends Modal {
     readonly title: string,
     readonly message: string,
     readonly cta: string,
-    readonly onConfirm: () => void
+    readonly onConfirm: () => void | Promise<void>
   ) {
     super(app);
   }
@@ -23,7 +23,7 @@ export class ConfirmDialogModal extends Modal {
         message: this.message,
         cta: this.cta,
         onConfirm: () => {
-          this.onConfirm();
+          void this.onConfirm();
           this.close();
         },
         onCancel: () => {
