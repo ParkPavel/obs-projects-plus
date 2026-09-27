@@ -91,11 +91,38 @@ export function buildCabinetServices(): Record<string, DemoFile> {
   return out;
 }
 
+/** Where the clients' cover images live: a subfolder the non-recursive project does not read. */
+export const COVERS_SUBFOLDER = "Обложки";
+const coverName = (client: string) => `Обложка ${client}.svg`;
+
+/**
+ * An offline cover for each client — a gradient in the client's own hue with
+ * their initials — so the gallery shows pictures without the network.
+ */
+export function buildCabinetCovers(): Record<string, string> {
+  const out: Record<string, string> = {};
+  CABINET_CLIENTS.forEach((c, i) => {
+    const hue = Math.round((i * 360) / CABINET_CLIENTS.length);
+    const initials = c.name.split(" ").map((w) => w[0]).join("");
+    out[coverName(c.name)] = [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300">`,
+      `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`,
+      `<stop offset="0" stop-color="hsl(${hue},55%,45%)"/><stop offset="1" stop-color="hsl(${(hue + 40) % 360},60%,28%)"/>`,
+      `</linearGradient></defs>`,
+      `<rect width="600" height="300" fill="url(#g)"/>`,
+      `<circle cx="300" cy="150" r="92" fill="rgba(255,255,255,0.14)"/>`,
+      `<text x="300" y="178" font-family="sans-serif" font-size="84" font-weight="600" fill="#ffffff" text-anchor="middle">${initials}</text>`,
+      `</svg>`,
+    ].join("");
+  });
+  return out;
+}
+
 export function buildCabinetClients(): Record<string, DemoFile> {
   const out: Record<string, DemoFile> = {};
   for (const c of CABINET_CLIENTS) {
     out[c.name] = {
-      frontmatter: { type: "client", icon: c.icon, since: dayOf(c.since), source: c.source, goal: c.goal, payer: c.payer, tags: ["client"] },
+      frontmatter: { type: "client", icon: c.icon, cover: wikilink(coverName(c.name)), since: dayOf(c.since), source: c.source, goal: c.goal, payer: c.payer, tags: ["client"] },
       content: `## Клиент\n\n**Запрос:** ${c.goal}\n\nВизиты, оплаты, самочувствие, вес и тренировки этой карточки считаются из заметок визитов и трекера, которые ссылаются сюда. В самой карточке их нет.\n`,
     };
   }
@@ -198,6 +225,7 @@ export const CABINET_ROLLUPS = {
   training: "Тренировки, мин",
   sleep: "Сон, ч",
   revenue: "Выручка",
+  serviceSessions: "Проведено сеансов",
 } as const;
 
 export function cabinetFieldConfig(ids: DemoIds): { [field: string]: FieldConfig } {
@@ -226,11 +254,12 @@ export function cabinetFieldConfig(ids: DemoIds): { [field: string]: FieldConfig
     [R.sleep]: back(ids.trackerId, "person", "sleep", "avg"),
     // A service, from the visits that name it.
     [R.revenue]: back(ids.cabinetId, "service", "paidAmount", "sum"),
+    [R.serviceSessions]: back(ids.cabinetId, "service", "sessions", "sum"),
   } as unknown as { [field: string]: FieldConfig };
 }
 
 const VISIT_FIELDS = ["date", "startTime", "endTime", "client", "service", "serviceName", "status", "price", "paid", "paidAmount", "debt", "net", "sessions", "doneDate", "wellbeingBefore", "wellbeingAfter", "payer", "color"];
-const CLIENT_FIELDS = ["icon", "since", "source", "goal", "payer"];
+const CLIENT_FIELDS = ["icon", "cover", "since", "source", "goal", "payer"];
 const OTHER = ["amount", "category", "duration", "client_backlinks", "service_backlinks", "person_backlinks"];
 const ALL_ROLLUPS = Object.values(CABINET_ROLLUPS) as string[];
 const R = CABINET_ROLLUPS;
@@ -250,10 +279,10 @@ const VISITS_TABLE = tableOf(
 );
 
 const SERVICES_TABLE = tableOf(
-  ["name", "duration", "price", R.sessions, R.revenue],
+  ["name", "duration", "price", R.serviceSessions, R.revenue],
   [...VISIT_FIELDS, ...CLIENT_FIELDS, ...OTHER, ...ALL_ROLLUPS],
   { name: 200 },
-  { [R.revenue]: "sum", [R.sessions]: "sum" }
+  { [R.revenue]: "sum", [R.serviceSessions]: "sum" }
 );
 
 const EXPENSES_TABLE = tableOf(
@@ -443,6 +472,8 @@ const board: BoardConfig = {
 };
 
 const gallery: GalleryConfig = {
+  coverField: "cover",
+  fitStyle: "cover",
   iconField: "icon",
   cardWidth: 260,
   includeFields: ["goal", R.sessions, R.last, R.lastVisit, R.weight],

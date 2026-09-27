@@ -36,7 +36,7 @@ import {
   type DemoFile,
   type DemoIds,
 } from "./demoShared";
-import { buildCabinetNotes, cabinetFieldConfig, cabinetViews } from "./demoCabinet";
+import { COVERS_SUBFOLDER, buildCabinetCovers, buildCabinetNotes, cabinetFieldConfig, cabinetViews } from "./demoCabinet";
 import { buildTrackerNotes, trackerFieldConfig, trackerViews } from "./demoTracker";
 import { buildFinanceNotes, financeFieldConfig, financeViews } from "./demoFinance";
 
@@ -67,6 +67,22 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
   return failed;
 }
 
+/** Non-note files (the clients' cover images), with the same idempotency. */
+async function writeRaw(vault: Vault, folder: string, files: Record<string, string>): Promise<string[]> {
+  const failed: string[] = [];
+  for (const [name, body] of Object.entries(files)) {
+    const path = normalizePath(`${folder}/${sanitizeNoteName(name.replace(/\.svg$/, ""))}.svg`);
+    if (vault.getAbstractFileByPath(path)) continue;
+    try {
+      await vault.create(path, body);
+    } catch (error) {
+      failed.push(path);
+      console.error("[Projects+] demo file could not be created", path, error);
+    }
+  }
+  return failed;
+}
+
 /**
  * Write every seed note that is not already there, and return the paths that
  * could not be written. Separate from `createDemoProject` (#198) so a repair
@@ -82,7 +98,16 @@ export async function seedDemoNotes(vault: Vault): Promise<string[]> {
       }
     }
   }
+  const covers = normalizePath(`${CABINET_FOLDER}/${COVERS_SUBFOLDER}`);
+  if (!vault.getAbstractFileByPath(covers)) {
+    try {
+      await vault.createFolder(covers);
+    } catch (error) {
+      console.error("[Projects+] demo folder could not be created", covers, error);
+    }
+  }
   return [
+    ...(await writeRaw(vault, covers, buildCabinetCovers())),
     ...(await writeFiles(vault, CABINET_FOLDER, buildCabinetNotes())),
     ...(await writeFiles(vault, TRACKER_FOLDER, buildTrackerNotes())),
     ...(await writeFiles(vault, FINANCE_FOLDER, buildFinanceNotes())),

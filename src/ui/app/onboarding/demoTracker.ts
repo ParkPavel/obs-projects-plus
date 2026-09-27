@@ -120,7 +120,7 @@ export function trackerDynamicsWidgets(ids: DemoIds): WidgetDefinition[] {
       title: "Как читать трекер",
       layout: { x: 0, y: 0, w: 12, h: 1 },
       config: {
-        content: "Таблица ниже читает клиентов из проекта «Демо: Кабинет» — только для чтения; её колонки вес, тренировки и сон считаются из записей этого трекера. Выберите клиента (меню строки → «Фильтровать связанные блоки по этой строке»): показатели и графики покажут только его, а линия «Самочувствие после визита» придёт из визитов кабинета.",
+        content: "Таблица ниже читает клиентов из проекта «Демо: Кабинет» — только для чтения; её колонки вес, тренировки и сон считаются из записей этого трекера. Сначала выберите клиента (меню строки → «Фильтровать связанные блоки по этой строке»): показатели и графики покажут только его — без выбора они усредняют всех троих. Линия «Самочувствие после визита» приходит из визитов кабинета.",
       },
     },
     {
@@ -134,7 +134,7 @@ export function trackerDynamicsWidgets(ids: DemoIds): WidgetDefinition[] {
     {
       id: widgetId(),
       type: "stats",
-      title: "Показатели",
+      title: "Показатели клиента",
       layout: { x: 0, y: 5, w: 12, h: 2 },
       config: {
         linkedSelection: follow,
@@ -150,7 +150,7 @@ export function trackerDynamicsWidgets(ids: DemoIds): WidgetDefinition[] {
     {
       id: widgetId(),
       type: "chart",
-      title: "Вес и тренировки",
+      title: "Вес и тренировки клиента",
       layout: { x: 0, y: 7, w: 12, h: 4 },
       config: {
         chartType: "line",
@@ -166,7 +166,7 @@ export function trackerDynamicsWidgets(ids: DemoIds): WidgetDefinition[] {
     {
       id: widgetId(),
       type: "chart",
-      title: "Настроение, энергия, боль и самочувствие после визита",
+      title: "Настроение, энергия, боль и самочувствие после визита — клиента",
       layout: { x: 0, y: 11, w: 12, h: 4 },
       config: {
         chartType: "line",

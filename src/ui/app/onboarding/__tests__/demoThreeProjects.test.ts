@@ -10,7 +10,7 @@ import { DataFieldType, type DataFrame, type DataValue } from "src/lib/dataframe
 import { applyRollupColumns } from "src/lib/relations/rollupColumns";
 import type { FieldConfigRelationMap } from "src/lib/relations/relationTargets";
 import { CABINET_FOLDER, DEMO_NAMES, FINANCE_FOLDER, TRACKER_FOLDER, type DemoFile } from "../demoShared";
-import { CABINET_CLIENTS, CABINET_ROLLUPS, CABINET_SERVICES, buildCabinetNotes, cabinetFieldConfig } from "../demoCabinet";
+import { CABINET_CLIENTS, CABINET_ROLLUPS, CABINET_SERVICES, buildCabinetCovers, buildCabinetNotes, cabinetFieldConfig } from "../demoCabinet";
 import { TRACKER_PEOPLE, buildTrackerNotes } from "../demoTracker";
 import { FINANCE_CATEGORIES, FINANCE_ROLLUPS, buildFinanceNotes, financeFieldConfig } from "../demoFinance";
 import { demoProjects } from "../demoProject";
@@ -82,6 +82,15 @@ describe("the practice's notes", () => {
     expect(statuses).toEqual(new Set(["проведён", "отменён", "запланирован"]));
   });
 
+  test("every client has an offline cover the gallery can show", () => {
+    const covers = buildCabinetCovers();
+    for (const c of CABINET_CLIENTS) {
+      const link = String(cabinetNotes[c.name]!.frontmatter["cover"]);
+      const file = link.replace(/^\[\[|\]\]$/g, "");
+      expect(covers[file]).toMatch(/^<svg /);
+    }
+  });
+
   test("a client note carries no computed field", () => {
     for (const c of CABINET_CLIENTS) {
       for (const col of Object.values(CABINET_ROLLUPS)) expect(cabinetNotes[c.name]!.frontmatter).not.toHaveProperty(col);
@@ -119,6 +128,8 @@ describe("the client card is computed from the notes that link the client", () =
       const card = cabinet.records.find((r) => r.id === `${CABINET_FOLDER}/${s.name}.md`)!.values;
       const visits = linking(cabinetRaw, "service", s.name);
       expect(card[CABINET_ROLLUPS.revenue]).toBe(sum(visits.map((v) => num(v.values["paidAmount"]))));
+      expect(card[CABINET_ROLLUPS.serviceSessions]).toBe(visits.filter((v) => v.values["status"] === "проведён").length);
+      expect(card[CABINET_ROLLUPS.serviceSessions]).toBeGreaterThan(0);
     }
   });
 });
