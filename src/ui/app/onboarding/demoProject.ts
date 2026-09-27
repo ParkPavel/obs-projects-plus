@@ -3,11 +3,11 @@
 //
 // 3.6.1: the demo is THREE new projects of one person's story, each at least
 // the size of the single demo it replaces, reading each other:
-// - «Демо: Кабинет» (demoCabinet.ts) — a private massage practice: clients,
+// - «Демо: Массажный кабинет» (demoCabinet.ts) — a private massage practice: clients,
 //   services, half a year of visits and expenses, profit by month;
 // - «Демо: Трекер» (demoTracker.ts) — three clients' daily log of weight,
 //   sleep, mood, pain and training, linked to the practice's clients;
-// - «Демо: Финансы» (demoFinance.ts) — the personal budget, with the
+// - «Демо: Личный бюджет» (demoFinance.ts) — the personal budget, with the
 //   practice read as a second income.
 // The practice's client cards compute visits, payments, debt, wellbeing,
 // weight, training and sleep from the notes of this and the tracker project;
@@ -115,29 +115,50 @@ export async function seedDemoNotes(vault: Vault): Promise<string[]> {
 }
 
 /**
- * The ids the registered demo projects use for their siblings: the generated
- * projects are laid over the registered ones and each place that names a
- * sibling is read back. Ids of other registered projects are never taken.
+ * The ids the registered demo projects still use for missing siblings. A
+ * surviving project names a sibling by an id that is no longer registered;
+ * which sibling it is follows from what the generated project reads (the
+ * tracker and the budget read only the practice, the practice only the
+ * tracker), so moving or editing views does not lose it.
  */
 export function referencedDemoIds(registered: readonly ProjectDefinition[]): Partial<DemoIds> {
   const marks: DemoIds = { cabinetId: "\u0000cabinet", trackerId: "\u0000tracker", financeId: "\u0000finance" };
-  const keyOf = new Map(Object.entries(marks).map(([key, mark]) => [mark, key as keyof DemoIds]));
+  const keys = Object.keys(marks) as (keyof DemoIds)[];
   const taken = new Set(registered.map((p) => p.id));
-  const found: { -readonly [K in keyof DemoIds]?: string } = {};
-  const walk = (template: unknown, actual: unknown): void => {
-    if (typeof template === "string") {
-      const key = keyOf.get(template);
-      if (key && !found[key] && typeof actual === "string" && actual && !taken.has(actual)) found[key] = actual;
-      return;
-    }
-    if (!template || typeof template !== "object" || !actual || typeof actual !== "object") return;
-    for (const [k, v] of Object.entries(template)) walk(v, (actual as Record<string, unknown>)[k]);
+  const refKey = /^(?:projectId|targetProjectId|dataProjectId)$/;
+  const idsIn = (node: unknown, out: Set<string>): Set<string> => {
+    if (Array.isArray(node)) node.forEach((v) => idsIn(v, out));
+    else if (node && typeof node === "object")
+      for (const [k, v] of Object.entries(node)) {
+        if (refKey.test(k) && typeof v === "string" && v) out.add(v);
+        else idsIn(v, out);
+      }
+    return out;
   };
+  const found: { -readonly [K in keyof DemoIds]?: string } = {};
   for (const template of demoProjects(marks)) {
-    const actual = registered.find((p) => p.name === template.name);
-    if (actual) walk({ fieldConfig: template.fieldConfig, views: template.views }, actual);
+    const actual = registered.find((p) => isDemoProject(p, template));
+    if (!actual) continue;
+    const reads = idsIn({ f: template.fieldConfig, v: template.views }, new Set());
+    const siblings = keys.filter((k) => reads.has(marks[k]) && marks[k] !== template.id);
+    const dangling = [...idsIn({ f: actual.fieldConfig, v: actual.views }, new Set())].filter((id) => !taken.has(id));
+    // One sibling read, one id that no registered project answers to.
+    const [sibling] = siblings;
+    const [id] = dangling;
+    if (siblings.length === 1 && dangling.length === 1 && sibling && id && !found[sibling]) found[sibling] = id;
   }
   return found;
+}
+
+/** The folder a project reads its notes from. */
+function folderOf(project: ProjectDefinition): string | undefined {
+  const config = (project.dataSource as { config?: { path?: unknown } } | undefined)?.config;
+  return typeof config?.path === "string" ? config.path : undefined;
+}
+
+/** A registered project is this generated one: same name and same folder. */
+export function isDemoProject(registered: ProjectDefinition, generated: ProjectDefinition): boolean {
+  return registered.name === generated.name && folderOf(registered) === folderOf(generated);
 }
 
 /** The three projects, as the generator registers them. */
@@ -207,18 +228,22 @@ export async function createDemoProject(vault: Vault): Promise<DemoResult> {
   // The three ids first: the projects name each other. A project restored
   // after being deleted takes the id its surviving siblings still name, so
   // their rollups and chart series find it again.
+  // A project is the demo's by name AND folder, so the 3.6.0 demo (same
+  // names, older folder) and a user's own «Демо: …» are left alone.
   const existing = get(settings).projects;
-  const idOf = (name: string) => existing.find((p) => p.name === name)?.id;
+  const [cabinetT, trackerT, financeT] = demoProjects({ cabinetId: "", trackerId: "", financeId: "" });
+  const idOf = (template: ProjectDefinition | undefined) =>
+    template ? existing.find((p) => isDemoProject(p, template))?.id : undefined;
   const named = referencedDemoIds(existing);
   const ids: DemoIds = {
-    cabinetId: idOf(DEMO_NAMES.cabinet) ?? named.cabinetId ?? uuidv4(),
-    trackerId: idOf(DEMO_NAMES.tracker) ?? named.trackerId ?? uuidv4(),
-    financeId: idOf(DEMO_NAMES.finance) ?? named.financeId ?? uuidv4(),
+    cabinetId: idOf(cabinetT) ?? named.cabinetId ?? uuidv4(),
+    trackerId: idOf(trackerT) ?? named.trackerId ?? uuidv4(),
+    financeId: idOf(financeT) ?? named.financeId ?? uuidv4(),
   };
 
   const created: string[] = [];
   for (const project of demoProjects(ids)) {
-    if (existing.some((p) => p.name === project.name)) continue;
+    if (existing.some((p) => isDemoProject(p, project))) continue;
     settings.addProject(project);
     created.push(project.name);
   }

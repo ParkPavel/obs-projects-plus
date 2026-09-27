@@ -163,7 +163,7 @@ export function financeBudgetWidgets(ids: DemoIds): WidgetDefinition[] {
     {
       id: widgetId(),
       type: "stats",
-      title: "Частная практика (из «Демо: Кабинет»)",
+      title: "Частная практика (из «Демо: Массажный кабинет»)",
       layout: { x: 8, y: 0, w: 4, h: 2 },
       // Read from the massage practice: its visits and expenses, not a copy.
       config: {

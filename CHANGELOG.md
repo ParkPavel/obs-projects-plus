@@ -13,8 +13,11 @@ mean that a new release has been published.
 ### Demo rebuilt
 
 - **The demo is three new projects**, each larger than the single demo it replaces:
-  «Демо: Кабинет» (a massage practice), «Демо: Трекер» (three clients' daily wellbeing log)
-  and «Демо: Финансы» (a personal budget). The studio project is gone.
+  «Демо: Массажный кабинет» (a massage practice), «Демо: Трекер» (three clients' daily wellbeing log)
+  and «Демо: Личный бюджет» (a personal budget). The studio project is gone.
+- The new demo is created in the `Projects Plus - Демо 2` folder. A 3.6.0 demo (folder
+  `Projects Plus - Демо`) is left as it is: the new one neither changes nor mixes with it, and
+  the old one can be deleted by hand.
 - Client cards compute visits, payments, debt, wellbeing, weight, training and sleep from the
   practice's visits and from the tracker; services count their sessions and revenue. The
   tracker and the budget chart series read from the practice, and the gallery shows offline

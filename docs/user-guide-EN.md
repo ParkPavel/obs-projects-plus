@@ -16,15 +16,15 @@ Calculated fields and query results are not always writable. If you cannot edit 
 
 When your vault has no project yet, the welcome dialog offers two ways in: the "Demo: three linked projects" card and a "Create new project" button. If you close the dialog, the same two actions stay on the empty projects screen. Later you can create the demo from the project menu (view settings → "Projects" → "Create demo project") or with the **Create demo project** command.
 
-The demo is three projects of one story in the `Projects Plus - Демо` folder:
+The demo is three projects of one story in the `Projects Plus - Демо 2` folder:
 
 | Project | What it holds | Views |
 | --- | --- | --- |
-| "Демо: Кабинет" | a private massage practice: 5 services, 10 clients, half a year of visits and expenses | "Обзор кабинета" (stats, profit by month, clients with their visits and wellbeing), "Расписание", "Визиты по статусам", "Клиенты" (a gallery with covers), "Услуги и расходы" |
+| "Демо: Массажный кабинет" | a private massage practice: 5 services, 10 clients, half a year of visits and expenses | "Обзор кабинета" (stats, profit by month, clients with their visits and wellbeing), "Расписание", "Визиты по статусам", "Клиенты" (a gallery with covers), "Услуги и расходы" |
 | "Демо: Трекер" | a daily log kept by three of the practice's clients: weight, sleep, mood, energy, pain, training | "Динамика" (the selected client's measures beside their wellbeing after visits), "Календарь тренировок", "Виды тренировок", "Недели", "Журнал" |
-| "Демо: Финансы" | a personal budget: categories with limits and half a year of transactions | "Бюджет" (the practice's income as its own series), "Статьи", "Операции по статьям", "Календарь операций", "Журнал" |
+| "Демо: Личный бюджет" | a personal budget: categories with limits and half a year of transactions | "Бюджет" (the practice's income as its own series), "Статьи", "Операции по статьям", "Календарь операций", "Журнал" |
 
-A client card in the practice stores nothing itself: visits, payments, debt, latest and average wellbeing and the last visit are reverse rollups over the visits, while current weight, training minutes and sleep come from the tracker, another project. The folder, field and view names are the actual Russian names the demo writes to your vault — the interface language does not translate them. Running it again restores missing notes and projects and duplicates nothing. Remove the demo like any other projects: delete the three projects in the menu and, if you like, the `Projects Plus - Демо` folder.
+A client card in the practice stores nothing itself: visits, payments, debt, latest and average wellbeing and the last visit are reverse rollups over the visits, while current weight, training minutes and sleep come from the tracker, another project. The folder, field and view names are the actual Russian names the demo writes to your vault — the interface language does not translate them. Running it again restores missing notes and projects and duplicates nothing. Remove the demo like any other projects: delete the three projects in the menu and, if you like, the `Projects Plus - Демо 2` folder.
 
 ## Creating and configuring a project
 

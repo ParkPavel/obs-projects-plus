@@ -6,16 +6,16 @@ import dayjs from "dayjs";
 import { v4 as uuidv4 } from "uuid";
 import { DEFAULT_VIEW, type FilterDefinition, type ViewDefinition } from "src/settings/base/settings";
 
-export const DEMO_FOLDER = "Projects Plus - Демо";
+export const DEMO_FOLDER = "Projects Plus - Демо 2";
 export const CABINET_FOLDER = `${DEMO_FOLDER}/Кабинет`;
 export const TRACKER_FOLDER = `${DEMO_FOLDER}/Трекер`;
 export const FINANCE_FOLDER = `${DEMO_FOLDER}/Финансы`;
 
 /** The three demo projects, found again by name on a repair run. */
 export const DEMO_NAMES = {
-  cabinet: "Демо: Кабинет",
+  cabinet: "Демо: Массажный кабинет",
   tracker: "Демо: Трекер",
-  finance: "Демо: Финансы",
+  finance: "Демо: Личный бюджет",
 } as const;
 
 export interface DemoIds {

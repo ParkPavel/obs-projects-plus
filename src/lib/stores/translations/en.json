@@ -59,7 +59,7 @@
             "create-demo-project": {
                 "name": "Create demo project",
                 "duplicate-warning": "Demo project already exists — delete it first to regenerate.",
-                "created": "Demo created: «Демо: Кабинет», «Демо: Трекер» and «Демо: Финансы».",
+                "created": "Demo created: «Демо: Массажный кабинет», «Демо: Трекер» and «Демо: Личный бюджет».",
                 "repair-failed": "Demo project already exists. {{count}} missing notes could not be written — see the console.",
                 "repaired": "The demo already exists; any missing notes have been restored."
             }

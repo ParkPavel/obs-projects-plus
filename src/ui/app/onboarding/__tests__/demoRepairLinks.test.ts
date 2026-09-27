@@ -69,6 +69,22 @@ test("a restored practice takes the id the tracker and the budget read it by", a
   expect(get(settings).projects.find((p) => p.name === DEMO_NAMES.cabinet)!.id).toBe(cabinet.id);
 });
 
+// Codex review 3: the id was read by array position, so moving a view lost it.
+test("the practice's id is recovered after the budget's views were reordered", async () => {
+  const { vault } = fakeVault();
+  await createDemoProject(vault);
+  const byName = (n: string) => get(settings).projects.find((p) => p.name === n)!;
+  const cabinet = byName(DEMO_NAMES.cabinet);
+  const finance = byName(DEMO_NAMES.finance);
+  settings.updateProject({ ...finance, views: [...finance.views.slice(1), finance.views[0]!] });
+  settings.deleteProject(cabinet.id);
+  settings.deleteProject(byName(DEMO_NAMES.tracker).id);
+
+  await createDemoProject(vault);
+
+  expect(byName(DEMO_NAMES.cabinet).id).toBe(cabinet.id);
+});
+
 test("a second click while the demo is being created joins the first run", async () => {
   const { vault, files, create } = fakeVault();
   const open = jest.fn();
