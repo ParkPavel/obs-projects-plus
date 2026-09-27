@@ -240,6 +240,8 @@ export class Notice {
 }
 
 // Mock addIcon / setIcon (no-op)
+/** The app language; tests run in English. */
+export const getLanguage = jest.fn(() => "en");
 export const addIcon = jest.fn();
 export const setIcon = jest.fn();
 

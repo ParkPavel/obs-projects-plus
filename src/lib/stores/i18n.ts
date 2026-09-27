@@ -1,3 +1,4 @@
+import { getLanguage } from "obsidian";
 import i18next from "i18next";
 import { createI18nStore } from "svelte-i18next";
 import dayjs from "dayjs";
@@ -40,35 +41,17 @@ function mapToResourceLocale(raw: string): string {
 
 // Функция для получения локали из различных источников
 function getObsidianLocale(): string {
-  // 1. Obsidian's moment.js — Obsidian ALWAYS sets window.moment.locale()
-  //    to match its language setting (Settings → About → Language).
-  //    This is the most reliable source.
+  // 1. Obsidian's configured language (Settings → General → Language).
   try {
-     
-    const m = (window as any).moment;
-    if (m && typeof m.locale === 'function') {
-      const momentLang = m.locale();
-      if (momentLang) {
-        return mapToResourceLocale(momentLang);
-      }
+    const lang = getLanguage();
+    if (lang) {
+      return mapToResourceLocale(lang);
     }
   } catch {
-    // moment not available yet
+    // Not running inside Obsidian (tests, older app)
   }
 
-  // 2. Direct localStorage key (Obsidian may store it here on some platforms)
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const obsLang = window.localStorage.getItem('language');
-      if (obsLang) {
-        return mapToResourceLocale(obsLang);
-      }
-    }
-  } catch {
-    // localStorage not available
-  }
-
-  // 3. navigator.language fallback (system language)
+  // 2. navigator.language fallback (system language)
   try {
     if (typeof navigator !== 'undefined' && navigator.language) {
       return mapToResourceLocale(navigator.language);
@@ -131,7 +114,7 @@ export function syncLocale(): void {
   const detected = getObsidianLocale();
   const current = i18next.language;
    
-  console.debug(`[Projects+] i18n syncLocale: detected=${detected}, current=${current}, moment=${(window as any).moment?.locale?.()}`);
+  console.debug(`[Projects+] i18n syncLocale: detected=${detected}, current=${current}`);
   if (detected !== current) {
     void i18next.changeLanguage(detected);
   }

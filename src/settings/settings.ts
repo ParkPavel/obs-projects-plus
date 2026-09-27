@@ -52,7 +52,7 @@ export const DEFAULT_PROJECT = {
  */
 
 export function migrateSettings(
-  settings: any
+  settings: unknown
 ): either.Either<Error, LatestProjectsPluginSettings> {
   if (!settings) {
     return either.right(Object.assign({}, v4Resolve({ version: 4 })));
@@ -66,18 +66,21 @@ export function migrateSettings(
   }
 
   if ("version" in settings && typeof settings.version === "number") {
+    // Each version's resolve fills in what its shape leaves out; a throw on a
+    // wrong shape is caught below.
+    const version = settings.version;
     try {
-      if (settings.version === 1) {
-        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrate(v1Resolve(settings))))));
-      } else if (settings.version === 2) {
-        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrateV2ToV3(v2Resolve(settings))))));
-      } else if (settings.version === 3) {
-        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(settings))));
-      } else if (settings.version === 4) {
-        return either.right(v4Resolve(settings));
+      if (version === 1) {
+        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrate(v1Resolve(settings as Parameters<typeof v1Resolve>[0]))))));
+      } else if (version === 2) {
+        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(migrateV2ToV3(v2Resolve(settings as Parameters<typeof v2Resolve>[0]))))));
+      } else if (version === 3) {
+        return either.right(v4Resolve(migrateV3ToV4(v3Resolve(settings as Parameters<typeof v3Resolve>[0]))));
+      } else if (version === 4) {
+        return either.right(v4Resolve(settings as Parameters<typeof v4Resolve>[0]));
       } else {
         return either.left(
-          new Error(`Unknown settings version: ${settings.version}`)
+          new Error(`Unknown settings version: ${version}`)
         );
       }
     } catch (err) {
@@ -85,7 +88,7 @@ export function migrateSettings(
         err instanceof Error ? err.message : String(err);
       return either.left(
         new Error(
-          `Settings migration failed (version=${settings.version}): ${message}`
+          `Settings migration failed (version=${version}): ${message}`
         )
       );
     }
@@ -147,7 +150,7 @@ function migrateProjectFromV1(
  
 function migrateDataSource(
   project: V1ProjectDefinition<ViewDefinition>
-): { kind: "dataview" | "folder"; config: any } {
+): V2ProjectDefinition<ViewDefinition>["dataSource"] {
   if (project.dataview) {
     return {
       kind: "dataview",
