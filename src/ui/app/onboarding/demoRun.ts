@@ -23,6 +23,8 @@ export async function createDemoWithNotices(
   try {
     const result = await createDemoProject(vault);
     progress.hide();
+    // The generator has reported it (PPP-601); nothing exists to repair or open.
+    if (result.aborted) return null;
     if (result.created.length > 0) {
       new Notice(t("commands.create-demo-project.created", { defaultValue: "Demo projects created." }), 5000);
     } else {

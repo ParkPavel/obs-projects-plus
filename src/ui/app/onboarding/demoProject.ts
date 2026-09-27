@@ -151,6 +151,8 @@ export interface DemoResult {
   readonly failed: number;
   /** Where to take the user: the practice's overview. */
   readonly open?: { readonly projectId: string; readonly viewId: string };
+  /** Nothing could be written (the demo folder is missing); already reported. */
+  readonly aborted?: true;
 }
 
 /**
@@ -166,7 +168,7 @@ export async function createDemoProject(vault: Vault): Promise<DemoResult> {
       // #156 — without the folder nothing below can land.
       console.error("[Projects+] demo folder could not be created", error);
       new Notice(noticeFor(DEMO_FOLDER_FAILED, { folder: DEMO_FOLDER }));
-      return { created: [], failed: 0 };
+      return { created: [], failed: 0, aborted: true };
     }
   }
 
