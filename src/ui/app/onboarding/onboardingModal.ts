@@ -1,7 +1,6 @@
 import { App, Modal } from "obsidian";
 
 import Onboarding from "./Onboarding.svelte";
-import type { StarterProfileId } from "./starterProfiles";
 
 export class OnboardingModal extends Modal {
   component?: Onboarding;
@@ -9,13 +8,11 @@ export class OnboardingModal extends Modal {
   constructor(
     readonly app: App,
     readonly onCreate: () => void,
-    readonly onTry: () => void,
     /**
-     * Scene 7 — the primary path. The modal closes only once this
-     * resolves; a rejection (e.g. `StarterProfileWriteError`) is left for
-     * `Onboarding.svelte` to show inline and keeps the modal open.
+     * 3.6.1 — the primary path: the three linked demo projects. The modal
+     * closes once this resolves `true`; `false` keeps it open with a message.
      */
-    readonly onProfile: (profileId: StarterProfileId) => Promise<void>
+    readonly onTry: () => Promise<boolean>
   ) {
     super(app);
   }
@@ -28,15 +25,16 @@ export class OnboardingModal extends Modal {
           this.onCreate();
           this.close();
         },
-        onTry: () => {
-          this.onTry();
-          this.close();
-        },
-        onProfile: async (profileId: StarterProfileId) => {
-          await this.onProfile(profileId);
-          this.close();
+        onTry: async () => {
+          const ok = await this.onTry();
+          if (ok) this.close();
+          return ok;
         },
       },
     });
+  }
+
+  onClose() {
+    this.component?.$destroy();
   }
 }

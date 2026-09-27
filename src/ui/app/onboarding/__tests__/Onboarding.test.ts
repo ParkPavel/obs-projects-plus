@@ -51,7 +51,7 @@ describe("Onboarding — translation markup renders as real DOM nodes, never as 
 
   it("renders **bold** markers from the initially selected Projects tab as real <strong> elements", () => {
     const { container } = render(Onboarding, {
-      props: { onCreate: jest.fn(), onTry: jest.fn(), onProfile: jest.fn() },
+      props: { onCreate: jest.fn(), onTry: jest.fn(() => Promise.resolve(true)) },
     });
 
     const strongTexts = Array.from(container.querySelectorAll("strong")).map(
@@ -72,7 +72,7 @@ describe("Onboarding — translation markup renders as real DOM nodes, never as 
     };
 
     const { container } = render(Onboarding, {
-      props: { onCreate: jest.fn(), onTry: jest.fn(), onProfile: jest.fn() },
+      props: { onCreate: jest.fn(), onTry: jest.fn(() => Promise.resolve(true)) },
     });
 
     expect(container.querySelector("img")).toBeNull();

@@ -10,6 +10,7 @@
   const dispatch = createEventDispatcher<{
     select: ProjectId;
     addProject: void;
+    createDemo: void;
     editProject: ProjectId;
     deleteProject: ProjectId;
   }>();
@@ -61,6 +62,8 @@
   </div>
   <div class="actions">
     <button class="ghost" on:click={() => dispatch("addProject")}>{$i18n.t('common.create-project')}</button>
+    <!-- 3.6.1: the demo stays reachable after the first run. -->
+    <button class="ghost" on:click={() => dispatch("createDemo")}>{$i18n.t('commands.create-demo-project.name')}</button>
   </div>
 </div>
 

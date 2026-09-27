@@ -8,6 +8,24 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
+## Unreleased
+
+### Demo rebuilt
+
+- **The demo is three new projects**, each larger than the single demo it replaces:
+  «Демо: Массажный кабинет» (a massage practice), «Демо: Трекер» (three clients' daily wellbeing log)
+  and «Демо: Личный бюджет» (a personal budget). The studio project is gone.
+- The new demo is created in the `Projects Plus - Демо 2` folder. A 3.6.0 demo (folder
+  `Projects Plus - Демо`) is left as it is: the new one neither changes nor mixes with it, and
+  the old one can be deleted by hand.
+- Client cards compute visits, payments, debt, wellbeing, weight, training and sleep from the
+  practice's visits and from the tracker; services count their sessions and revenue. The
+  tracker and the budget chart series read from the practice, and the gallery shows offline
+  covers.
+- **The starter profiles are removed.** The welcome dialog offers the demo and «Create new
+  project»; closing it leaves an **empty projects screen** with the same two actions, and the
+  project menu gains «Create demo project», so the demo stays reachable after the first run.
+
 ## 3.6.0 — 2026-09-27
 
 The first version published in the format of the Obsidian community catalogue. It brings

@@ -36,6 +36,7 @@
     projectChange: ProjectId;
     viewChange: ViewId;
     addProject: void;
+    createDemo: void;
     editProject: ProjectId;
     deleteProject: ProjectId;
     addView: void;
@@ -156,6 +157,7 @@
             {projectId}
             on:select={(event) => dispatch("projectChange", event.detail)}
             on:addProject={() => dispatch("addProject")}
+            on:createDemo={() => dispatch("createDemo")}
             on:editProject={(event) => dispatch("editProject", event.detail)}
             on:deleteProject={(event) => dispatch("deleteProject", event.detail)}
           />
