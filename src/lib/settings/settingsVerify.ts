@@ -61,7 +61,7 @@ export function stableStringify(value: unknown): string {
  * Returns `null` for a value JSON cannot represent at all (a cycle, a BigInt) —
  * such a value could not have been written either.
  */
-function asPersisted(value: unknown): unknown | null {
+function asPersisted(value: unknown): unknown {
   try {
     const text = JSON.stringify(value);
     if (text === undefined) return null;

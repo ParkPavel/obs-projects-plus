@@ -1,3 +1,4 @@
+import { valueText } from "src/lib/valueText";
 /**
  * Inverse WikiLink relation write-back.
  */
@@ -95,7 +96,7 @@ async function writeOne(
   try {
     let inverseFieldMissing = false;
     let changed = false;
-    await ctx.app.fileManager.processFrontMatter(file, (frontmatter) => {
+    await ctx.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
       inverseFieldMissing = !Object.prototype.hasOwnProperty.call(frontmatter, inverseField);
       if (inverseFieldMissing && !ctx.createIfMissing) return;
 
@@ -141,8 +142,8 @@ function resolveFile(app: App, nameOrLink: string, sourcePath: string): TFile | 
 
 function normalizeFmList(value: unknown): string[] {
   if (!value) return [];
-  if (Array.isArray(value)) return value.map(String);
-  return [String(value)];
+  if (Array.isArray(value)) return (value as unknown[]).map(valueText);
+  return [valueText(value)];
 }
 
 function emptyOutcome(): RelationWriteOutcome {

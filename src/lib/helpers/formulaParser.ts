@@ -1,3 +1,4 @@
+import { valueText } from "src/lib/valueText";
 /**
  * Formula Parser (v3.1.0)
  * 
@@ -453,17 +454,6 @@ export function parseFormula(formula: string): FormulaNode {
 // ============================================
 
 /**
- * A formula value as text, as `String(v)` gives it for primitives, dates and
- * lists. Plain objects are not formula values; if one arrives it reads as
- * JSON rather than "[object Object]".
- */
-function formulaText(v: unknown): string {
-  if (v === null || v === undefined || Array.isArray(v) || v instanceof Date) return String(v);
-  if (typeof v === "object") return JSON.stringify(v);
-  return String(v as string | number | boolean | bigint | symbol);
-}
-
-/**
  * Evaluate a filter formula against one record. Import it from
  * `src/lib/formula`, the canonical path (R5-002); that module re-exports it.
  */
@@ -565,7 +555,7 @@ export function evaluateFormula(
     }
 
     // Fallback to string coercion
-    return formulaText(left).localeCompare(formulaText(right));
+    return valueText(left).localeCompare(valueText(right));
   }
 
   // Helper to safely get argument
@@ -655,26 +645,26 @@ export function evaluateFormula(
         // String functions
         if (funcName === 'CONTAINS') {
           if (args.length !== 2) throw new Error('CONTAINS expects 2 arguments');
-          const haystack = formulaText(evaluate(getArg(args, 0)) ?? '').toLowerCase();
-          const needle = formulaText(evaluate(getArg(args, 1)) ?? '').toLowerCase();
+          const haystack = valueText(evaluate(getArg(args, 0)) ?? '').toLowerCase();
+          const needle = valueText(evaluate(getArg(args, 1)) ?? '').toLowerCase();
           return haystack.includes(needle);
         }
         if (funcName === 'NOT_CONTAINS') {
           if (args.length !== 2) throw new Error('NOT_CONTAINS expects 2 arguments');
-          const haystack = formulaText(evaluate(getArg(args, 0)) ?? '').toLowerCase();
-          const needle = formulaText(evaluate(getArg(args, 1)) ?? '').toLowerCase();
+          const haystack = valueText(evaluate(getArg(args, 0)) ?? '').toLowerCase();
+          const needle = valueText(evaluate(getArg(args, 1)) ?? '').toLowerCase();
           return !haystack.includes(needle);
         }
         if (funcName === 'STARTS_WITH') {
           if (args.length !== 2) throw new Error('STARTS_WITH expects 2 arguments');
-          const str = formulaText(evaluate(getArg(args, 0)) ?? '');
-          const prefix = formulaText(evaluate(getArg(args, 1)) ?? '');
+          const str = valueText(evaluate(getArg(args, 0)) ?? '');
+          const prefix = valueText(evaluate(getArg(args, 1)) ?? '');
           return str.startsWith(prefix);
         }
         if (funcName === 'ENDS_WITH') {
           if (args.length !== 2) throw new Error('ENDS_WITH expects 2 arguments');
-          const str = formulaText(evaluate(getArg(args, 0)) ?? '');
-          const suffix = formulaText(evaluate(getArg(args, 1)) ?? '');
+          const str = valueText(evaluate(getArg(args, 0)) ?? '');
+          const suffix = valueText(evaluate(getArg(args, 1)) ?? '');
           return str.endsWith(suffix);
         }
 
@@ -761,14 +751,14 @@ export function evaluateFormula(
           // already produced an Invalid Date here. What changes is that `""`
           // and a missing field no longer count as "add zero days".
           const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
-          const unit = formulaText(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
+          const unit = valueText(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.add(amount, unit).format('YYYY-MM-DD');
         }
         if (funcName === 'DATE_SUB') {
           if (args.length !== 3) throw new Error('DATE_SUB expects 3 arguments (date, amount, unit)');
           const date = dayjs(evaluate(getArg(args, 0)) as dayjs.ConfigType);
           const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
-          const unit = formulaText(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
+          const unit = valueText(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.subtract(amount, unit).format('YYYY-MM-DD');
         }
 

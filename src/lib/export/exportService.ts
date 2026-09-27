@@ -1,3 +1,4 @@
+import { valueText } from "src/lib/valueText";
 /**
  * S7 — ExportService: export a DataFrame to text formats.
  *
@@ -14,8 +15,8 @@ export type ExportFormat = "csv" | "tsv" | "json" | "markdown";
 
 function cellStr(value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (Array.isArray(value)) return value.map(cellStr).join(", ");
-  return String(value);
+  if (Array.isArray(value)) return (value as unknown[]).map(cellStr).join(", ");
+  return valueText(value);
 }
 
 function escapeCsv(s: string, sep: string): string {

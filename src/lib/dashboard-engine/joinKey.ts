@@ -1,4 +1,5 @@
-﻿// src/ui/views/Dashboard/engine/joinKey.ts
+﻿import { valueText } from "src/lib/valueText";
+// src/ui/views/Dashboard/engine/joinKey.ts
 // Shared equality-key normaliser for JoinStep (Pillar 5 — cross-type correlation)
 // and scatter correlation.
 //
@@ -35,5 +36,5 @@ export function joinKey(v: unknown): string {
     return `string:${v}`;
   }
   if (Array.isArray(v)) return JSON.stringify(v);
-  return `${typeof v}:${String(v)}`;
+  return `${typeof v}:${valueText(v)}`;
 }

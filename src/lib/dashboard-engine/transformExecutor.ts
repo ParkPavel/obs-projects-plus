@@ -528,7 +528,7 @@ export function evaluateExpression(
   // Tokenize: split by operators, preserving them
   const tokens = expression
     .trim()
-    .split(/\s*([\+\-\*\/\(\)])\s*/)
+    .split(/\s*([+\-*/()])\s*/)
     .filter((t) => t.length > 0);
 
   if (tokens.length === 0) return null;
