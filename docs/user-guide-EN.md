@@ -132,13 +132,13 @@ A formula, a rollup, the record's identifier and a derived property cannot becom
 
 If several notes share a filename, include the folder in the link. A missing or ambiguous link needs its address corrected; it does not mean a target record was created automatically.
 
-**A summary over related records.** With the relation configured, add a field of type “Rollup”: pick the relation column under “Through relation” and a function such as “Count.” The card then shows how many records are related — `2` for a client with two sessions, `0` for a client with none. No data pipeline is needed for this.
+**A summary over related records.** With the relation configured, add a field of type “Rollup”: pick the relation column under “Through relation” and a function such as “Count all.” The card then shows how many records are related — `2` for a client with two sessions, `0` for a client with none. No data pipeline is needed for this.
 
 **A chart over related data.** The “+” in the block palette adds a “Chart”; its settings choose the type and the X and Y axes. Dates on the X axis group by day, week, month, quarter or year, and the Y axis can take a sum, an average, a min, a max, a median, a count or a unique count.
 
 ## Computation across tables and projects
 
-**A reverse rollup — a total over the records that link here.** A client needs no field listing its visits: the visits link to the client. In the rollup field's settings, pick under “Through relation” a source marked “(links here)” — the project and the field through which its records point at this one. “Count” gives the number of visits, “Sum” over the price field the amount paid, “Last value” over the wellbeing field the latest score. The client's note does not change: a rollup is computed, never written to the note, and cannot be edited.
+**A reverse rollup — a total over the records that link here.** A client needs no field listing its visits: the visits link to the client. In the rollup field's settings, pick under “Through relation” a source marked “(links here)” — the project and the field through which its records point at this one. “Count all” gives the number of visits, “Sum” over the price field the amount paid, “Last value” over the wellbeing field the latest score. The client's note does not change: a rollup is computed, never written to the note, and cannot be edited.
 
 **First and last value** are picked by an ordering field — usually a date. Choose it from the list; if the property you need is not there (the list knows only the fields configured in the source project), choose “Another field…” and type the property name.
 
