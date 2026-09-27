@@ -22,6 +22,8 @@
  */
 
 import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
+import type { FilterDefinition } from "src/settings/base/settings";
+import { applyFilter } from "src/lib/engine/filterEvaluator";
 import { LEGACY_DISPLAY_FALLBACKS } from "src/lib/engine/crossProjectResolver";
 import { buildRelationTargetIndex, resolveRelationValue } from "src/lib/relations/relationContract";
 import { recordBaseName } from "./tableRowOps";
@@ -35,15 +37,26 @@ export function filterByMasterSide(
 ): DataRecord[] {
   const names = new Set(selectedNames.map((n) => n.toLowerCase()));
   const relation = master.fields.find((fl) => fl.name === relationField)?.typeConfig?.["relation"] as
-    | { displayField?: string }
+    | { displayField?: string; targetSubBaseFilter?: FilterDefinition }
     | undefined;
   const displayField = relation?.displayField;
   const index = buildRelationTargetIndex(universe, displayField ? [displayField] : LEGACY_DISPLAY_FALLBACKS);
-  const reached = new Set<string>();
+  // The relation's own target scope, as enrichment applies it (crossProjectResolver).
+  const allowed = relation?.targetSubBaseFilter
+    ? new Set(applyFilter(universe, relation.targetSubBaseFilter).records.map((r) => r.id))
+    : undefined;
+  // The selection names a master row by file name; when two rows share it the
+  // pick is ambiguous and follows neither (Codex gate of calc-demo).
+  const byName = new Map<string, DataRecord[]>();
   for (const row of master.records) {
-    if (!names.has(recordBaseName(row).toLowerCase())) continue;
-    for (const r of resolveRelationValue(row.values[relationField], index)) {
-      if (r.status === "resolved" && r.targetRecordId) reached.add(r.targetRecordId);
+    const key = recordBaseName(row).toLowerCase();
+    if (names.has(key)) byName.set(key, [...(byName.get(key) ?? []), row]);
+  }
+  const reached = new Set<string>();
+  for (const rows of byName.values()) {
+    if (rows.length !== 1) continue;
+    for (const r of resolveRelationValue(rows[0]!.values[relationField], index)) {
+      if (r.status === "resolved" && r.targetRecordId && (!allowed || allowed.has(r.targetRecordId))) reached.add(r.targetRecordId);
     }
   }
   return visible.filter((r) => reached.has(r.id));

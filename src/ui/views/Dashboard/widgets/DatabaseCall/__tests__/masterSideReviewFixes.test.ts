@@ -57,3 +57,24 @@ test("a same-project block resolves over the host frame before its filter", () =
   expect(block).toMatch(/export let masterUniverse: DataFrame \| undefined = undefined;/);
   expect(block).toMatch(/filterByMasterSide\(masterUniverse \?\? frame, subFiltered\.records,/);
 });
+
+// Codex gate of calc-demo, two P2 on the master side:
+// - the relation's target scope (targetSubBaseFilter) was ignored, so a link
+//   to a client outside it showed although enrichment excludes it;
+// - the selection names a row by file name, and two master rows sharing one
+//   ("A/Visit", "B/Visit") both contributed their links.
+test("a target outside the relation's scope is not shown", () => {
+  const clients = frame([f("name"), f("status")], [["C/Alice.md", { name: "Alice", status: "active" }], ["C/Bob.md", { name: "Bob", status: "inactive" }]]);
+  const scope = { conjunction: "and", conditions: [{ field: "status", operator: "is", value: "active", enabled: true }] };
+  const sessions = frame(
+    [f("client", DataFieldType.Relation, { relation: { targetProjectId: "clients", targetSubBaseFilter: scope } })],
+    [["S/s1.md", { client: ["[[Alice]]", "[[Bob]]"] as unknown as DataValue }]]
+  );
+  expect(filterByMasterSide(clients, clients.records, sessions, ["s1"], "client").map((r) => r.id)).toEqual(["C/Alice.md"]);
+});
+
+test("master rows that share the selected name contribute nothing", () => {
+  const clients = frame([f("name")], [["C/Alice.md", { name: "Alice" }], ["C/Bob.md", { name: "Bob" }]]);
+  const visits = frame([f("client", DataFieldType.Relation)], [["A/Visit.md", { client: "[[Alice]]" }], ["B/Visit.md", { client: "[[Bob]]" }]]);
+  expect(filterByMasterSide(clients, clients.records, visits, ["Visit"], "client")).toEqual([]);
+});
