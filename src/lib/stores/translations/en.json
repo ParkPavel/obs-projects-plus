@@ -59,8 +59,9 @@
             "create-demo-project": {
                 "name": "Create demo project",
                 "duplicate-warning": "Demo project already exists — delete it first to regenerate.",
-                "created": "Demo project created.",
-                "repair-failed": "Demo project already exists. {{count}} missing notes could not be written — see the console."
+                "created": "Demo created: «Демо: Кабинет», «Демо: Трекер» and «Демо: Финансы».",
+                "repair-failed": "Demo project already exists. {{count}} missing notes could not be written — see the console.",
+                "repaired": "The demo already exists; any missing notes have been restored."
             }
         },
         "menus": {
@@ -2068,10 +2069,7 @@
         "onboarding": {
             "title": "Get started with Projects Plus",
             "description": "Projects Plus lets you manage groups of related notes using [front matter](properties). For example, a folder with the blog posts you're working on.",
-            "explore": "Start from scratch, or explore a demo project 👇",
             "create-new": "Create new project",
-            "try-demo": "Try a demo project",
-            "try-demo-tooltip": "Creates a new folder at the root of your vault with example notes.",
             "hint": "Next time you can create your projects using any of the following ways:",
             "tab-projects-view": "Projects view",
             "tab-command-palette": "Command palette",
@@ -2083,23 +2081,17 @@
             "command-palette-step3": "Press **Enter**.",
             "projects-view-step1": "In the top-right corner of the **Projects Plus** view, click **New**.",
             "projects-view-step2": "Click **New project**.",
-            "other-ways-summary": "Another way",
+            "other-ways-summary": "How projects work",
             "demo": {
                 "partial": "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
-                "folder-failed": "Could not create the demo folder '{{folder}}'. The demo project was not created."
+                "folder-failed": "Could not create the demo folder '{{folder}}'. The demo project was not created.",
+                "title": "Demo: three linked projects",
+                "summary": "A massage practice, a wellbeing tracker and a personal budget. Client cards are computed from visits and the tracker; the budget reads the practice's income.",
+                "busy": "Creating the demo…",
+                "error": "The demo could not be created. Details are in the developer console."
             },
-            "profiles": {
-                "intro": "Pick a starting point — your first record will be here in a minute.",
-                "group-label": "Starter profiles",
-                "busy": "Creating the profile…",
-                "error-path": "Could not create the profile's files: \"{{path}}\". Nothing was saved — please try again.",
-                "error-path-leftover": "Could not create the profile's files: \"{{path}}\". These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
-                "error-generic": "Could not create the profile. Please try again.",
-                "first-note-failed": "Could not save the first record \"{{name}}\" in full. Open the profile folder and look at what is there: if the record is missing, add it with \"Add first record\" in the empty table. If this keeps happening, try a different name — something else may occupy that path.",
-                "error-registration-leftover": "Could not create the profile. These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
-                "error-registered": "The profile's files were created, but the settings may not have been saved. Restart Obsidian and check whether the project is listed; the profile's files stay in your vault."
-            },
-            "psst": "Psst! 👋"
+            "psst": "Psst! 👋",
+            "intro": "Start with the demo — three linked projects show tables, boards, calendars, charts and computation across them — or create your own project."
         },
         "common": {
             "yesterday": "Yesterday",
@@ -2175,6 +2167,12 @@
         "relation-count": {
             "linked": "{{count}} linked",
             "empty": "No linked records yet"
+        },
+        "projects-empty": {
+            "title": "No projects yet",
+            "text": "Create the demo — three linked projects with tables, boards, calendars and charts — or start your own project from a folder, a tag or a query.",
+            "create-demo": "Create demo: three linked projects",
+            "create-project": "Create project"
         }
     }
 }

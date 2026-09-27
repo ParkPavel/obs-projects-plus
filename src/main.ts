@@ -21,7 +21,7 @@ import { watchViewport } from "src/lib/stores/ui";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-import { createDemoProject } from "src/ui/app/onboarding/demoProject";
+import { createDemoWithNotices } from "src/ui/app/onboarding/demoRun";
 import { hasCanvasCommandTarget } from "src/ui/views/Dashboard/dashboardCommands";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
@@ -127,8 +127,6 @@ const SETTINGS_UNPARSABLE_RECHECK_MS = 2000;
  * finishes.
  */
 const SETTINGS_EMPTY_FILE_LOOKS = 3;
-/** #202 — the demo repair path; the demo itself raises 601/602 in its own module. */
-const DEMO_REPAIR_FAILED = "PPP-603";
 
 export default class ProjectsPlusPlugin extends Plugin {
   unsubscribeSettings?: Unsubscriber;
@@ -406,30 +404,12 @@ export default class ProjectsPlusPlugin extends Plugin {
       id: "create-demo-project",
       name: t("commands.create-demo-project.name"),
       callback: async () => {
-        // #198 / 3.6.0: the demo is three projects. Creating is also repairing:
-        // notes are seeded idempotently and only the projects missing by name
-        // are registered, so an existing demo (or the old single one) gets
-        // what it lacks instead of a refusal.
-        try {
-          const { created, failed } = await createDemoProject(this.app.vault);
-          if (created.length > 0) {
-            new Notice(t("commands.create-demo-project.created", { defaultValue: "Demo project created." }), 4000);
-            return;
-          }
-          new Notice(
-            failed > 0
-              ? noticeFor(DEMO_REPAIR_FAILED, { count: failed })
-              : t("commands.create-demo-project.repaired", {
-                  defaultValue: "Demo project already exists; any missing notes have been restored.",
-                }),
-            6000,
-          );
-        } catch (error) {
-          // A failure the generator did not report itself (it reports folders
-          // and notes): say so rather than let the promise fail unseen.
-          console.error("[Projects+] the demo could not be created", error);
-          new Notice(noticeFor(DEMO_REPAIR_FAILED, { count: 0 }), 6000);
-        }
+        // 3.6.1: the three linked demo projects. Creating is also repairing:
+        // only missing notes are written and only projects missing by name are
+        // registered; the practice's overview opens when it is ready.
+        await createDemoWithNotices(this.app.vault, (projectId, viewId) => {
+          void this.activateView(projectId, viewId);
+        });
       },
     });
 

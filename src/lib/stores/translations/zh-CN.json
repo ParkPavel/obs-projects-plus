@@ -61,8 +61,8 @@
             "create-demo-project": {
                 "name": "创建演示项目",
                 "duplicate-warning": "演示项目已存在 — 请先删除后再重新生成。",
-                "created": "演示项目已创建。",
-                "repaired": "演示项目已存在；已恢复缺失的笔记。",
+                "created": "演示已创建：「Демо: Кабинет」「Демо: Трекер」和「Демо: Финансы」。",
+                "repaired": "演示已存在；缺失的笔记已恢复。",
                 "repair-failed": "演示项目已存在。有 {{count}} 篇缺失的笔记无法写入 — 详见控制台。"
             }
 
@@ -2172,10 +2172,7 @@
         "onboarding": {
             "title": "开始使用 Projects Plus",
             "description": "Projects Plus 让您使用 [front matter](properties) 管理相关笔记组。例如，一个包含您正在撰写的博客文章的文件夹。",
-            "explore": "从零开始，或探索演示项目 👇",
             "create-new": "创建新项目",
-            "try-demo": "试用演示项目",
-            "try-demo-tooltip": "在仓库根目录创建一个包含示例笔记的新文件夹。",
             "hint": "下次您可以通过以下任一方式创建项目：",
             "tab-projects-view": "项目视图",
             "tab-command-palette": "命令面板",
@@ -2187,23 +2184,17 @@
             "command-palette-step3": "按**Enter**。",
             "projects-view-step1": "在 **Projects Plus** 视图的右上角，点击**新建**。",
             "projects-view-step2": "点击**新建项目**。",
-            "other-ways-summary": "其他方式",
-            "profiles": {
-                "intro": "选择一个起点 — 一分钟后您的第一条记录就会出现在这里。",
-                "group-label": "入门配置",
-                "busy": "正在创建配置…",
-                "error-path": "无法创建配置的文件：“{{path}}”。未保存任何内容 — 请重试。",
-                "error-path-leftover": "无法创建配置的文件：“{{path}}”。以下路径无法自动移除，仍留在您的库中：{{leftovers}}。请在重试前检查它们，并且只删除配置本身创建的内容：此类路径上现在可能有无关的内容。",
-                "error-generic": "无法创建配置。请重试。",
-                "first-note-failed": "无法完整保存第一条记录“{{name}}”。请打开配置文件夹查看其中内容：如果记录缺失，请使用空表格中的“添加第一条记录”添加。如果问题持续出现，请换一个名称 — 该路径可能被其他内容占用。",
-                "error-registration-leftover": "无法创建配置。以下路径无法自动移除，仍留在您的库中：{{leftovers}}。请在重试前检查它们，并且只删除配置本身创建的内容：此类路径上现在可能有无关的内容。",
-                "error-registered": "配置的文件已创建，但设置可能未保存。请重启 Obsidian 并检查项目是否已列出；配置的文件会保留在您的库中。"
-            },
+            "other-ways-summary": "项目如何运作",
             "demo": {
                 "folder-failed": "无法创建演示文件夹 '{{folder}}'。演示项目未创建。",
-                "partial": "演示项目已创建，但有 {{count}} 篇笔记无法写入。列表请见控制台。"
+                "partial": "演示项目已创建，但有 {{count}} 篇笔记无法写入。列表请见控制台。",
+                "title": "演示：三个关联项目",
+                "summary": "按摩工作室、健康追踪和个人预算。客户卡片由到访记录和追踪数据计算得出，预算读取工作室的收入。",
+                "busy": "正在创建演示…",
+                "error": "无法创建演示。详情见开发者控制台。"
             },
-            "psst": "嘿！👋"
+            "psst": "嘿！👋",
+            "intro": "从演示开始——三个相互关联的项目展示表格、看板、日历、图表以及跨项目计算——或创建你自己的项目。"
         },
         "common": {
             "yesterday": "昨天",
@@ -2284,6 +2275,12 @@
         "relation-count": {
             "linked": "已关联 {{count}} 条",
             "empty": "暂无关联记录"
+        },
+        "projects-empty": {
+            "title": "还没有项目",
+            "text": "创建演示——三个带有表格、看板、日历和图表的关联项目——或从文件夹、标签或查询开始你自己的项目。",
+            "create-demo": "创建演示：三个关联项目",
+            "create-project": "创建项目"
         }
     }
 }

@@ -4,7 +4,7 @@
 
   import { Notice } from "obsidian";
   import { v4 as uuidv4 } from "uuid";
-  import { createProject, createDataRecord } from "src/lib/dataApi";
+  import { createProject } from "src/lib/dataApi";
   import { buildDerivedSource, projectSourceOptions, sourceNameTaken } from "src/lib/datasources/namedSource";
   import { api } from "src/lib/stores/api";
   import { i18n } from "src/lib/stores/i18n";
@@ -27,14 +27,13 @@
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-  import { CreateNoteModal } from "src/ui/modals/createNoteModal";
   import { AddViewModal } from "src/ui/modals/addViewModal";
   import { ConfirmDialogModal } from "src/ui/modals/confirmDialog";
   import CompactNavBar from "src/ui/components/Navigation/CompactNavBar.svelte";
   import SettingsMenuPopover from "src/ui/components/Navigation/SettingsMenu/SettingsMenuPopover.svelte";
-  import { createDemoProject } from "./onboarding/demoProject";
+  import { createDemoWithNotices } from "./onboarding/demoRun";
+  import ProjectsEmptyState from "./ProjectsEmptyState.svelte";
   import { OnboardingModal } from "./onboarding/onboardingModal";
-  import { createStarterProfile, type StarterProfileId } from "./onboarding/starterProfiles";
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
   import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
@@ -230,73 +229,18 @@
   };
 
   /**
-   * Scene 7 — guards `handleOnboardingProfile` against a second overlapping
-   * call. `Onboarding.svelte` already refuses to invoke `onProfile` twice
-   * with its own `busy` flag, so in the ordinary click path this never
-   * triggers; it exists so the write itself is never started twice from
-   * two independent callers, not only from two clicks on one button.
+   * 3.6.1 — the demo from any entry point in this view (first-run window,
+   * empty screen, project menu): the three linked projects, then the
+   * practice's overview opened. `true` once the demo exists.
    */
-  let onboardingProfileInFlight = false;
-
-  /**
-   * Scene 7 — the primary onboarding path. Writes the chosen starter
-   * profile's folder/template/project, switches the app to it the same
-   * way `deleteProject` below switches away from one, and immediately
-   * opens the existing `CreateNoteModal` for it so the user only has to
-   * type one name and press Enter — the template is already selected
-   * (`CreateNote.svelte` preselects `project.templates[0]`) and the name
-   * field already has focus. Rejects (without registering anything) on a
-   * write failure; `Onboarding.svelte` shows that inline and keeps the
-   * onboarding modal open, so no "saved" notice is shown here — settings
-   * writes are not confirmed to disk per call.
-   *
-   * The first record's write is not awaited: `CreateNoteModal` closes as
-   * soon as this callback returns, exactly as it does for its other
-   * callers. Unlike the view callers that go through `ViewApi.addRecord`,
-   * which hands the promise off with no catch at all because they already
-   * have a table to retry from, this one attaches a `.catch` — as does the
-   * command caller in `main.ts`. This is the ONLY note the user has just
-   * been promised by the onboarding flow itself, with no table row yet to
-   * retry from, so a silent console-only failure would leave a brand-new
-   * user with nothing and no idea why — this callback's `.catch` is what
-   * turns that into a Notice. `dataApi.createNote` writes the note file
-   * and only afterwards updates its front matter (`src/lib/dataApi.ts`),
-   * so the rejection can arrive after the file already exists. The Notice
-   * therefore asks the user to LOOK at the profile folder, and says nothing
-   * about what is at that path or who put it there: something else can win
-   * the same-path race, and a folder can sit on the note's own path. Naming
-   * the note as something to open and fill in would be an instruction to
-   * edit a file this attempt may not have created.
-   */
-  async function handleOnboardingProfile(profileId: StarterProfileId): Promise<void> {
-    if (onboardingProfileInFlight) return;
-    onboardingProfileInFlight = true;
-    try {
-      const project = await createStarterProfile(profileId, {
-        vault: $app.vault,
-        addProject: settings.addProject,
-        isProjectRegistered: (id) => get(settings).projects.some((p) => p.id === id),
-      });
-      projectId = project.id;
-      dispatch("projectIdChange", project.id);
-      new CreateNoteModal($app, project, (name, templatePath, targetProject) => {
-        const record = createDataRecord(name, targetProject);
-        get(api)
-          .createNote(record, [], templatePath)
-          .catch((error) => {
-            console.error(error);
-            new Notice(
-              $i18n.t("onboarding.profiles.first-note-failed", {
-                defaultValue:
-                  'Не удалось сохранить первую запись «{{name}}» целиком. Откройте папку профиля и посмотрите, что в ней: если записи там нет, добавьте её кнопкой «Добавить первую запись» в пустой таблице. Если ошибка повторяется, попробуйте другое название — путь может быть занят чем-то ещё.',
-                name,
-              })
-            );
-          });
-      }).open();
-    } finally {
-      onboardingProfileInFlight = false;
-    }
+  async function createDemo(): Promise<boolean> {
+    const result = await createDemoWithNotices($app.vault, (nextProject, nextView) => {
+      projectId = nextProject;
+      dispatch("projectIdChange", nextProject);
+      viewId = nextView;
+      dispatch("viewIdChange", nextView);
+    });
+    return result !== null;
   }
 
   onMount(() => {
@@ -313,19 +257,21 @@
             createProject()
           ).open();
         },
-        // Try demo project.
-        () => {
-          // `createDemoProject` seeds one B2B-studio demo folder and
-          // registers a single project over it (clients/projects/tasks/
-          // meetings with 5 views) — a secondary, optional path distinct
-          // from the primary starter-profile buttons above it.
-          createDemoProject($app.vault);
-        },
-        // Scene 7 — pick a starter profile.
-        handleOnboardingProfile
+        // 3.6.1 — the three linked demo projects: the window's primary path.
+        createDemo
       ).open();
     }
   });
+
+  function openCreateProject() {
+    new CreateProjectModal(
+      $app,
+      $i18n.t("modals.project.create.title"),
+      $i18n.t("modals.project.create.cta"),
+      settings.addProject,
+      createProject()
+    ).open();
+  }
 
   function mergeViewConfig(next: Record<string, any>) {
     if (!project || !view) {
@@ -442,6 +388,8 @@
         {/if}
         <slot {project} {view} {source} {frame} />
       </DataFrameProvider>
+    {:else if $settings.projects.length === 0}
+      <ProjectsEmptyState on:createDemo={() => void createDemo()} on:createProject={openCreateProject} />
     {/if}
   </div>
 
@@ -477,14 +425,10 @@
       on:viewChange={(event) => {
         viewId = event.detail;
       }}
-      on:addProject={() => {
-        new CreateProjectModal(
-          $app,
-          $i18n.t("modals.project.create.title"),
-          $i18n.t("modals.project.create.cta"),
-          settings.addProject,
-          createProject()
-        ).open();
+      on:addProject={openCreateProject}
+      on:createDemo={() => {
+        closeSettingsMenu();
+        void createDemo();
       }}
       on:editProject={(event) => {
         const projectToEdit = $settings.projects.find(p => p.id === event.detail);

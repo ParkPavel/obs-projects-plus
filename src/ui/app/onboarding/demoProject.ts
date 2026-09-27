@@ -1,517 +1,59 @@
 // ============================================================
 // Demo projects — Projects Plus
 //
-// 3.6.0: THREE projects, one person's story — the B2B studio below, a
-// private massage practice (demoCabinet.ts) and personal finances
-// (demoFinance.ts). They read each other: the studio sees the sessions it
-// pays for in the massage room, the finances see both as income sources.
+// 3.6.1: the demo is THREE new projects of one person's story, each at least
+// the size of the single demo it replaces, reading each other:
+// - «Демо: Кабинет» (demoCabinet.ts) — a private massage practice: clients,
+//   services, half a year of visits and expenses, profit by month;
+// - «Демо: Трекер» (demoTracker.ts) — three clients' daily log of weight,
+//   sleep, mood, pain and training, linked to the practice's clients;
+// - «Демо: Финансы» (demoFinance.ts) — the personal budget, with the
+//   practice read as a second income.
+// The practice's client cards compute visits, payments, debt, wellbeing,
+// weight, training and sleep from the notes of this and the tracker project;
+// the tracker and the finances chart series read from the practice.
 //
-// The studio: a coherent B2B Studio (digital agency) domain.
-//
-// Story: a digital studio with 6 clients, 8 projects, 10 tasks and
-// 5 meetings — naturally exercises relations (Project.client → Client),
-// filters (active vs done), board grouping by status, calendar timed
-// events, gallery covers and rollup aggregates (MRR sum, project value).
-//
-// Idempotency: createDemoProject is safe to re-run. Folder / file
-// creation calls are wrapped in try/catch — duplicates are skipped.
+// Idempotency: createDemoProject is safe to re-run. It writes only the notes
+// that are missing and registers only the projects missing by name.
 // ============================================================
 
 import { Notice, normalizePath, stringifyYaml, type Vault } from "obsidian";
 import { v4 as uuidv4 } from "uuid";
+import { get } from "svelte/store";
 
 import { settings } from "src/lib/stores/settings";
-import { sanitizeNoteName } from "./noteName";
 import { noticeFor } from "src/lib/errors/errorText";
-
-/** #202 — the codes the demo can raise. */
-const DEMO_FOLDER_FAILED = "PPP-601";
-const DEMO_PARTIAL = "PPP-602";
-import type { BoardConfig } from "src/ui/views/Board/types";
-import type { CalendarConfig } from "src/ui/views/Calendar/types";
-import type { GalleryConfig } from "src/ui/views/Gallery/types";
-import type {
-  DatabaseViewConfig,
-  WidgetDefinition,
-} from "src/ui/views/Dashboard/types";
-import { tableTabConfig } from "src/ui/views/Dashboard/widgets/legacyMigration";
-import { DEFAULT_PROJECT, DEFAULT_VIEW, type ProjectDefinition } from "src/settings/settings";
-import type { ColorRule, FieldConfig } from "src/settings/base/settings";
-import { get } from "svelte/store";
+import { DEFAULT_PROJECT, type ProjectDefinition } from "src/settings/settings";
+import type { ViewDefinition } from "src/settings/base/settings";
+import type { WidgetDefinition } from "src/ui/views/Dashboard/types";
+import { sanitizeNoteName } from "./noteName";
 import {
   CABINET_FOLDER,
   DEMO_FOLDER,
   DEMO_NAMES,
   FINANCE_FOLDER,
-  dayOf, seq,
-  today,
-  typeScope,
-  widgetId,
-  wikilink,
+  TRACKER_FOLDER,
   type DemoFile,
+  type DemoIds,
 } from "./demoShared";
-import {
-  buildCabinetNotes,
-  cabinetCalendar,
-  cabinetFieldConfig,
-  cabinetOverview,
-  cabinetTable,
-  cabinetWidgets,
-} from "./demoCabinet";
-import { buildFinanceNotes, financeFieldConfig, financeOverview, financeTable, financeWidgets } from "./demoFinance";
+import { buildCabinetNotes, cabinetFieldConfig, cabinetViews } from "./demoCabinet";
+import { buildTrackerNotes, trackerFieldConfig, trackerViews } from "./demoTracker";
+import { buildFinanceNotes, financeFieldConfig, financeViews } from "./demoFinance";
 
 export { DEMO_FOLDER, DEMO_NAMES } from "./demoShared";
 
-// #164: a block narrowed to one record type carries `config.subFilter`
-// (typeScope, demoShared.ts), never a leading `filter` step in its transform —
-// the generator must emit the CURRENT shape so a fresh demo never migrates
-// itself on first open.
-
-// ── content templates ───────────────────────────────────────────────
-const clientBody = (industry: string, tagline: string) =>
-  `## Клиент\n\n**Индустрия:** ${industry}\n**Описание:** ${tagline}\n\n### История\n*Заметки по аккаунту.*\n`;
-
-const projectBody = (goal: string, scope: string[]) =>
-  `## Проект\n\n**Цель:** ${goal}\n\n### Скоуп\n${scope.map((s) => `- ${s}`).join("\n")}\n\n### Заметки\n*Решения, ссылки, артефакты.*\n`;
-
-const taskBody = (description: string, checklist: string[]) =>
-  `## Задача\n\n${description}\n\n### Чеклист\n${checklist.map((c) => `- [ ] ${c}`).join("\n")}\n`;
-
-const meetingBody = (agenda: string[]) =>
-  `## Встреча\n\n### Повестка\n${agenda.map((a, i) => `${i + 1}. ${a}`).join("\n")}\n\n### Решения\n*Заполните во время встречи.*\n`;
-
-// ============================================================
-// SEED DATA — agency domain (compact tuple format)
-// ============================================================
-//
-// Each entity row is a flat tuple converted to DemoFile by the
-// build* function. This keeps the seed data dense and grep-friendly:
-// names align as columns, no per-record `frontmatter:/content:` boilerplate.
-
-interface ClientSeed {
-  name: string;
-  industry: string;
-  stage: "lead" | "active" | "churn";
-  mrr: number;
-  daysAgo: number;   // signup offset
-  cover: string;
-  tagline: string;
-}
-
-interface ProjectSeed {
-  name: string;
-  client: string;
-  value: number;
-  startOffset: number; // days from today (negative = past)
-  deadlineOffset: number;
-  status: "planning" | "inProgress" | "review" | "done";
-  progress: number;
-  cover: string;
-  goal: string;
-  scope: string[];
-  tags: string[];
-}
-
-interface TaskSeed {
-  name: string;
-  project: string;
-  assignee: string;
-  dueOffset: number;
-  priority: "high" | "medium" | "low";
-  status: "todo" | "doing" | "review" | "done";
-  estimate: number;
-  completed: boolean;
-  description: string;
-  checklist: string[];
-  tags?: string[];
-}
-
-interface MeetingSeed {
-  name: string;
-  client: string;
-  dayOffset: number;
-  startTime: string;
-  endTime: string;
-  participants: string[];
-  agenda: string[];
-}
-
-const CLIENT_SEEDS: ClientSeed[] = [
-  { name: "Acme Studio",   industry: "SaaS",       stage: "active", mrr: 12000, daysAgo: 180, cover: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800", tagline: "Платформа для управления подписками." },
-  { name: "Helix Labs",    industry: "FinTech",    stage: "active", mrr: 18000, daysAgo: 240, cover: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800", tagline: "Платежный процессинг для маркетплейсов." },
-  { name: "Nimbus Retail", industry: "E-commerce", stage: "active", mrr: 7500,  daysAgo: 90,  cover: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800", tagline: "Сеть бутиков, омниканальная розница." },
-  { name: "Lumen Academy", industry: "EdTech",     stage: "lead",   mrr: 0,     daysAgo: 14,  cover: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800", tagline: "Онлайн-курсы по data science." },
-  { name: "Orbit Media",   industry: "Media",      stage: "active", mrr: 4500,  daysAgo: 45,  cover: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800", tagline: "Подкаст-сеть и видеопродакшен." },
-  { name: "Vertex Health", industry: "HealthTech", stage: "churn",  mrr: 0,     daysAgo: 420, cover: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800", tagline: "Телемедицина, ушли по бюджету Q4." },
-];
-
-const PROJECT_SEEDS: ProjectSeed[] = [
-  { name: "Redesign — Acme Studio",        client: "Acme Studio",   value: 48000, startOffset: -20, deadlineOffset: 15,  status: "inProgress", progress: 55,  cover: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800", goal: "Обновить дашборд и онбординг для повышения retention.", scope: ["UX-аудит", "Новая палитра", "Прототип Figma", "Внедрение"], tags: ["project", "design"] },
-  { name: "Mobile App — Helix Labs",       client: "Helix Labs",    value: 85000, startOffset: -60, deadlineOffset: 45,  status: "inProgress", progress: 40,  cover: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800", goal: "Нативное iOS/Android приложение для платежей.",         scope: ["Архитектура", "iOS MVP", "Android MVP", "QA", "Релиз"], tags: ["project", "mobile"] },
-  { name: "Storefront — Nimbus Retail",    client: "Nimbus Retail", value: 32000, startOffset: -5,  deadlineOffset: 40,  status: "planning",   progress: 10,  cover: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800", goal: "Новый Shopify storefront с кастомным чекаутом.",          scope: ["Discovery", "Каталог", "Чекаут", "Тестирование"],       tags: ["project", "ecommerce"] },
-  { name: "Brand Refresh — Orbit Media",   client: "Orbit Media",   value: 18000, startOffset: -30, deadlineOffset: 5,   status: "review",     progress: 85,  cover: "https://images.unsplash.com/photo-1561070791-2526d30994b8?w=800", goal: "Ребрендинг подкаст-сети: лого, гайдлайн, обложки.",       scope: ["Концепт", "Лого", "Гайдлайн", "Применение"],            tags: ["project", "branding"] },
-  { name: "Pitch Deck — Lumen Academy",    client: "Lumen Academy", value: 6000,  startOffset: -7,  deadlineOffset: 10,  status: "inProgress", progress: 30,  cover: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800", goal: "Инвестиционный pitch deck для seed-раунда.",              scope: ["Storyline", "Финансы", "Дизайн слайдов"],               tags: ["project", "presentation"] },
-  { name: "Site Audit — Vertex Health",    client: "Vertex Health", value: 8500,  startOffset: -120,deadlineOffset: -60, status: "done",       progress: 100, cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800", goal: "Технический и UX-аудит лендинга (закрыт).",               scope: ["Lighthouse", "UX-ревью", "Отчет"],                       tags: ["project", "audit"] },
-  { name: "Onboarding Flow — Acme Studio", client: "Acme Studio",   value: 14000, startOffset: 7,   deadlineOffset: 50,  status: "planning",   progress: 0,   cover: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800", goal: "Переработка флоу регистрации и активации.",               scope: ["Research", "Wireframes", "A/B-эксперимент"],            tags: ["project", "ux"] },
-  { name: "Content Hub — Orbit Media",     client: "Orbit Media",   value: 22000, startOffset: -90, deadlineOffset: -10, status: "done",       progress: 100, cover: "https://images.unsplash.com/photo-1542435503-956c469947f6?w=800", goal: "CMS для подкастов с публикацией по расписанию.",          scope: ["Архитектура", "CMS", "Интеграции", "Запуск"],           tags: ["project", "content"] },
-];
-
-const TASK_SEEDS: TaskSeed[] = [
-  { name: "Audit performance — Redesign Acme",          project: "Redesign — Acme Studio",        assignee: "Алексей", dueOffset: 2,   priority: "high",   status: "doing",  estimate: 4,  completed: false, description: "Профилирование загрузки дашборда: цель TTI < 1.5s.",           checklist: ["Lighthouse", "Bundle analyzer", "Оптимизация изображений"], tags: ["task", "performance"] },
-  { name: "Color palette draft — Redesign Acme",        project: "Redesign — Acme Studio",        assignee: "Ольга",   dueOffset: 5,   priority: "medium", status: "todo",   estimate: 6,  completed: false, description: "Подобрать акцентные и нейтральные оттенки под новый brand.",   checklist: ["Mood-board", "3 варианта", "Контраст AA"],                  tags: ["task", "design"] },
-  { name: "iOS auth flow — Mobile App Helix",           project: "Mobile App — Helix Labs",       assignee: "Мария",   dueOffset: 7,   priority: "high",   status: "doing",  estimate: 16, completed: false, description: "FaceID + biometric storage для авторизации.",                  checklist: ["KeychainSwift", "FaceID", "Тесты"],                          tags: ["task", "ios"] },
-  { name: "Android push — Mobile App Helix",            project: "Mobile App — Helix Labs",       assignee: "Дмитрий", dueOffset: 12,  priority: "medium", status: "todo",   estimate: 10, completed: false, description: "FCM-интеграция и обработка deep-links.",                       checklist: ["FCM setup", "Deep links", "QA на 3 устройствах"],          tags: ["task", "android"] },
-  { name: "Catalog import — Storefront Nimbus",         project: "Storefront — Nimbus Retail",    assignee: "Сергей",  dueOffset: 9,   priority: "high",   status: "todo",   estimate: 8,  completed: false, description: "CSV → Shopify импорт 12 000 SKU с медиа.",                     checklist: ["Маппинг", "Импорт", "Валидация"],                          tags: ["task", "etl"] },
-  { name: "Logo final variants — Brand Orbit",          project: "Brand Refresh — Orbit Media",   assignee: "Ольга",   dueOffset: 1,   priority: "high",   status: "review", estimate: 3,  completed: false, description: "Финальные lockup-варианты лого: horizontal/stacked/mark.",     checklist: ["3 варианта", "SVG/PNG", "Презентация"],                    tags: ["task", "branding"] },
-  { name: "Pitch deck visuals — Lumen",                 project: "Pitch Deck — Lumen Academy",    assignee: "Ольга",   dueOffset: 8,   priority: "medium", status: "doing",  estimate: 5,  completed: false, description: "Слайды traction и market sizing.",                              checklist: ["Traction chart", "TAM/SAM/SOM", "Команда"],                tags: ["task", "presentation"] },
-  { name: "Overdue: budget review — Storefront Nimbus", project: "Storefront — Nimbus Retail",    assignee: "Алексей", dueOffset: -3,  priority: "high",   status: "doing",  estimate: 2,  completed: false, description: "Просрочено: пересогласовать бюджет фазы 2.",                    checklist: ["Финансовый прогноз", "Звонок клиенту"],                    tags: ["task", "overdue"] },
-  { name: "QA pass — Site Audit Vertex",                project: "Site Audit — Vertex Health",    assignee: "Мария",   dueOffset: -65, priority: "low",    status: "done",   estimate: 4,  completed: true,  description: "Финальный прогон чек-листа аудита.",                            checklist: ["Lighthouse", "axe-core", "Cross-browser"],                  tags: ["task", "qa"] },
-  { name: "Sitemap — Onboarding Flow",                  project: "Onboarding Flow — Acme Studio", assignee: "Дмитрий", dueOffset: 14,  priority: "medium", status: "todo",   estimate: 4,  completed: false, description: "Информационная архитектура нового онбординга.",                 checklist: ["User flow", "Sitemap", "Wireframes"],                       tags: ["task", "ux"] },
-];
-
-const MEETING_SEEDS: MeetingSeed[] = [
-  { name: "Kickoff — Acme Studio",       client: "Acme Studio",   dayOffset: 1, startTime: "10:00", endTime: "11:00", participants: ["PM", "Алексей", "Клиент"],        agenda: ["Цели нового онбординга", "Сроки и риски", "Следующие шаги"] },
-  { name: "Weekly sync — Helix Labs",    client: "Helix Labs",    dayOffset: 2, startTime: "14:00", endTime: "14:45", participants: ["PM", "Мария", "Дмитрий", "CTO"],  agenda: ["Статус iOS auth", "Блокеры на Android", "План на следующую неделю"] },
-  { name: "Discovery — Nimbus Retail",   client: "Nimbus Retail", dayOffset: 3, startTime: "11:00", endTime: "12:30", participants: ["PM", "Сергей", "Магазин"],        agenda: ["Болевые точки", "Объем каталога", "Интеграции с ERP"] },
-  { name: "Brand review — Orbit Media",  client: "Orbit Media",   dayOffset: 4, startTime: "15:00", endTime: "16:00", participants: ["PM", "Ольга", "Креативный директор"], agenda: ["Презентация лого", "Применение", "Финальные правки"] },
-  { name: "Pitch rehearsal — Lumen",     client: "Lumen Academy", dayOffset: 6, startTime: "09:30", endTime: "10:15", participants: ["PM", "Ольга", "CEO"],             agenda: ["Прогон слайдов", "Q&A репетиция", "Правки"] },
-];
-
-/** 3.6.0 — client payments received by the studio: [client, day, amount, project]. */
-const PAYMENT_SEEDS: Array<[string, number, number, string]> = [
-  ["Acme Studio",   -75, 12000, "Redesign — Acme Studio"],
-  ["Acme Studio",   -45, 12000, "Redesign — Acme Studio"],
-  ["Acme Studio",   -15, 12000, "Redesign — Acme Studio"],
-  ["Helix Labs",    -80, 18000, "Mobile App — Helix Labs"],
-  ["Helix Labs",    -50, 18000, "Mobile App — Helix Labs"],
-  ["Helix Labs",    -20, 18000, "Mobile App — Helix Labs"],
-  ["Nimbus Retail", -60, 7500,  "Storefront — Nimbus Retail"],
-  ["Nimbus Retail", -30, 7500,  "Storefront — Nimbus Retail"],
-  ["Orbit Media",   -50, 4500,  "Brand Refresh — Orbit Media"],
-  ["Orbit Media",   -20, 9000,  "Brand Refresh — Orbit Media"],
-  ["Lumen Academy", -5,  3000,  "Pitch Deck — Lumen Academy"],
-];
-
-function buildPayments(): Record<string, DemoFile> {
-  const out: Record<string, DemoFile> = {};
-  PAYMENT_SEEDS.forEach(([client, day, amount, project], n) => {
-    const date = dayOf(day);
-    out[`Оплата ${client} ${seq(n + 1)}`] = {
-      frontmatter: { type: "payment", date, client: wikilink(client), project: wikilink(project), amount, tags: ["payment"] },
-      content: "",
-    };
-  });
-  return out;
-}
-
-// ── seed → DemoFile builders ────────────────────────────────────────
-
-function buildClients(): Record<string, DemoFile> {
-  const t = today();
-  const out: Record<string, DemoFile> = {};
-  for (const s of CLIENT_SEEDS) {
-    out[s.name] = {
-      frontmatter: {
-        type: "client",
-        industry: s.industry,
-        stage: s.stage,
-        mrr: s.mrr,
-        signupDate: t.subtract(s.daysAgo, "day").format("YYYY-MM-DD"),
-        cover: s.cover,
-        tags: s.stage === "lead" ? ["client", "lead"] : s.stage === "churn" ? ["client", "churn"] : ["client"],
-      },
-      content: clientBody(s.industry, s.tagline),
-    };
-  }
-  return out;
-}
-
-function buildProjects(): Record<string, DemoFile> {
-  const t = today();
-  const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
-  const out: Record<string, DemoFile> = {};
-  for (const s of PROJECT_SEEDS) {
-    out[s.name] = {
-      frontmatter: {
-        type: "project",
-        client: wikilink(s.client),
-        value: s.value,
-        startDate: fmt(s.startOffset),
-        deadline: fmt(s.deadlineOffset),
-        status: s.status,
-        progress: s.progress,
-        cover: s.cover,
-        tags: s.tags,
-      },
-      content: projectBody(s.goal, s.scope),
-    };
-  }
-  return out;
-}
-
-function buildTasks(): Record<string, DemoFile> {
-  const t = today();
-  const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
-  const out: Record<string, DemoFile> = {};
-  for (const s of TASK_SEEDS) {
-    out[s.name] = {
-      frontmatter: {
-        type: "task",
-        project: wikilink(s.project),
-        assignee: s.assignee,
-        dueDate: fmt(s.dueOffset),
-        priority: s.priority,
-        status: s.status,
-        estimate: s.estimate,
-        completed: s.completed,
-        tags: s.tags ?? ["task"],
-      },
-      content: taskBody(s.description, s.checklist),
-    };
-  }
-  return out;
-}
-
-// R3: meetings carry an explicit per-record color so the calendar showcases
-// the record-color contract (explicit hex beats project rules — UT2026-C).
-const MEETING_COLORS = ["#7c6ce8", "#2e9e5b", "#d98324", "#3498db", "#c0566f"];
-
-function buildMeetings(): Record<string, DemoFile> {
-  const t = today();
-  const fmt = (off: number) => t.add(off, "day").format("YYYY-MM-DD");
-  const out: Record<string, DemoFile> = {};
-  let i = 0;
-  for (const s of MEETING_SEEDS) {
-    out[s.name] = {
-      frontmatter: {
-        type: "meeting",
-        client: wikilink(s.client),
-        startDate: fmt(s.dayOffset),
-        startTime: s.startTime,
-        endTime: s.endTime,
-        participants: s.participants,
-        color: MEETING_COLORS[i++ % MEETING_COLORS.length],
-        tags: ["meeting"],
-      },
-      content: meetingBody(s.agenda),
-    };
-  }
-  return out;
-}
-
-// ============================================================
-// VIEW CONFIGS — inline widget layouts
-// ============================================================
+/** #202 — the codes the demo can raise. */
+const DEMO_FOLDER_FAILED = "PPP-601";
+const DEMO_PARTIAL = "PPP-602";
 
 /**
- * Exported for `configProvenance.test.ts` (UT2026-D P1): generated widget
- * configs must pass all migrations as a no-op — a generator emitting a
- * pre-migration schema value is how the demo shipped broken stats cards
- * (#072, aggregation "count" pre-R5-004).
- */
-export function demoGeneratedWidgets(): WidgetDefinition[] {
-  const ids = { cabinetId: "cabinet", studioId: "studio" };
-  return [...overviewWidgets(ids), ...clientsWidgets(), ...cabinetWidgets(), ...financeWidgets(ids)];
-}
-
-function overviewWidgets(ids: { cabinetId: string }): WidgetDefinition[] {
-  return [
-    {
-      id: widgetId(),
-      type: "stats",
-      title: "Студия в цифрах",
-      layout: { x: 0, y: 0, w: 12, h: 2 },
-      config: {
-        cards: [
-          // UT2026-D P1: kernel "count" was renamed to count_total/count_values (R5-004);
-          // generators must emit the current schema. count_values on a segment-specific
-          // field (industry → clients only, status → projects only) keeps the labels honest.
-          { id: "k1", label: "Клиентов",           field: "industry",  aggregation: "count_values" },
-          // UT-R2 #087: `status` exists on tasks too (showed 17) — `progress`
-          // is project-only, so the card counts what its label promises.
-          { id: "k2", label: "Проектов",           field: "progress",  aggregation: "count_values" },
-          { id: "k3", label: "Открытых задач",     field: "completed", aggregation: "count_unchecked" },
-          { id: "k4", label: "MRR (сумма)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
-        ],
-        columns: 4,
-      },
-    },
-    {
-      id: widgetId(),
-      type: "chart",
-      title: "Проекты по статусу",
-      layout: { x: 0, y: 2, w: 6, h: 4 },
-      config: {
-        subFilter: typeScope("project"),
-        chartType: "donut",
-        xAxis: { property: "status", sortBy: "value", sortOrder: "desc", omitZero: true },
-        yAxis: { property: "count", aggregation: "count_total" },
-        style: { colorScheme: "categorical", height: "medium", showGrid: false, showLabels: true, showLegend: true, showValues: true },
-      },
-    },
-    {
-      id: widgetId(),
-      type: "database-call",
-      title: "Приоритетные задачи",
-      // (config below) UT2026-G finding: `{ activeTab }` was a pre-viewTabs
-      // shape — the block rendered "No views configured". Generators emit
-      // the current schema (P1).
-      layout: { x: 6, y: 2, w: 6, h: 4 },
-      config: {
-        ...tableTabConfig({}, "Таблица"),
-        subFilter: {
-          conjunction: "and",
-          conditions: [
-            { field: "type", operator: "is", value: "task", enabled: true },
-            { field: "completed", operator: "is-not-checked", enabled: true },
-          ],
-        },
-      },
-    },
-    {
-      id: widgetId(),
-      type: "database-call",
-      title: "Встречи",
-      layout: { x: 0, y: 6, w: 12, h: 4 },
-      config: { ...tableTabConfig({}, "Таблица"), subFilter: typeScope("meeting") },
-    },
-    // R3: living showcase of the Canvas Selection Bus — pick a client row
-    // (row menu → «Фильтровать связанные блоки»), the projects block narrows.
-    ...linkedClientProjectsPair(),
-    {
-      id: widgetId(),
-      type: "chart",
-      title: "Выручка по месяцам",
-      layout: { x: 0, y: 14, w: 8, h: 4 },
-      config: {
-        subFilter: typeScope("payment"),
-        chartType: "bar",
-        xAxis: { property: "date", sortBy: "label", sortOrder: "asc", omitZero: false, dateGranularity: "month" },
-        yAxis: { label: "Выручка", property: "amount", aggregation: "sum" },
-        style: { colorScheme: "accent", height: "medium", showGrid: true, showLabels: true, showLegend: false, showValues: true },
-      },
-    },
-    {
-      // 3.6.0: read from another project — the massage room's visits the studio pays for.
-      id: widgetId(),
-      type: "stats",
-      title: "Корпоративный велнес (из «Кабинета»)",
-      layout: { x: 8, y: 14, w: 4, h: 4 },
-      config: {
-        dataProjectId: ids.cabinetId,
-        subFilter: { conjunction: "and", conditions: [{ field: "payer", operator: "is", value: "Студия", enabled: true }] },
-        cards: [
-          { id: "w1", label: "Сеансов оплачено", field: "price", aggregation: "count_values" },
-          { id: "w2", label: "Расход студии",    field: "price", aggregation: "sum", format: "currency", currencySymbol: "₽" },
-        ],
-        columns: 2,
-      },
-    },
-  ];
-}
-
-function linkedClientProjectsPair(): WidgetDefinition[] {
-  const rosterId = widgetId();
-  return [
-    {
-      id: rosterId,
-      type: "database-call",
-      title: "Клиенты (мастер связи)",
-      layout: { x: 0, y: 10, w: 6, h: 4 },
-      config: { ...tableTabConfig({}, "Таблица"), subFilter: typeScope("client") },
-    },
-    {
-      id: widgetId(),
-      type: "database-call",
-      title: "Проекты клиента (связанный блок)",
-      layout: { x: 6, y: 10, w: 6, h: 4 },
-      config: {
-        ...tableTabConfig({}, "Таблица"),
-        subFilter: typeScope("project"),
-        linkedSelection: { sourceWidgetId: rosterId, relationField: "client" },
-      },
-    },
-  ];
-}
-
-function clientsWidgets(): WidgetDefinition[] {
-  return [
-    {
-      id: widgetId(),
-      type: "stats",
-      title: "Клиентская база",
-      layout: { x: 0, y: 0, w: 12, h: 2 },
-      config: {
-        cards: [
-          // UT2026-D P1: count → count_total (view is globally filtered to clients).
-          // "Активных" needed a per-card filter stats cards don't have — replaced with
-          // an honest metric (earliest signup) instead of a mislabeled count.
-          { id: "c1", label: "Всего",         field: "name",       aggregation: "count_total" },
-          { id: "c2", label: "Первый клиент", field: "signupDate", aggregation: "earliest" },
-          { id: "c3", label: "MRR (сумма)",     field: "mrr",        aggregation: "sum", format: "currency", currencySymbol: "$" },
-          { id: "c4", label: "Средний MRR",  field: "mrr",        aggregation: "avg", format: "currency", currencySymbol: "$" },
-        ],
-        columns: 4,
-      },
-    },
-    {
-      // F3 (UT2026-A L3): generators emit V2 types — data-table is retired,
-      // the clients roster is a database-call with a single Table tab.
-      id: widgetId(),
-      type: "database-call",
-      title: "Список клиентов",
-      layout: { x: 0, y: 2, w: 12, h: 8 },
-      config: tableTabConfig(commonTableConfig as unknown as Record<string, unknown>, "Таблица"),
-    },
-  ];
-}
-
-const commonTableConfig: DatabaseViewConfig["table"] = {
-  fieldConfig: {
-    name: { width: 280 },
-    path: { hide: true },
-    status: { width: 110 },
-    priority: { width: 90 },
-    progress: { width: 80 },
-    value: { width: 100 },
-    mrr: { width: 100 },
-    startDate: { width: 110 },
-    deadline: { width: 110 },
-    dueDate: { width: 110 },
-    signupDate: { width: 110 },
-    industry: { width: 110 },
-    stage: { width: 90 },
-    assignee: { width: 110 },
-    estimate: { width: 80 },
-    completed: { width: 80 },
-    cover: { hide: true },
-    client: { width: 180 },
-    project: { width: 200 },
-  },
-  orderFields: ["name", "status", "stage", "priority", "client", "project", "value", "mrr", "progress", "deadline", "dueDate", "assignee"],
-  aggregations: { progress: "avg", value: "sum", mrr: "sum", name: "count_total" },
-  showAggregationRow: true,
-  rowHeight: "default",
-  wrapText: false,
-};
-
-// ============================================================
-// FILE WRITING (idempotent)
-// ============================================================
-
-/**
- * #156 — the demo used to swallow every failure here. "Already exists" (an
- * idempotent re-run) and "could not be written" (permissions, disk, an illegal
- * name) landed in the same empty catch, and the project was registered either
- * way — so a demo missing half its notes looked exactly like a healthy one.
- * Only the first case is silent now; the second is reported back.
+ * #156 — "already exists" (an idempotent re-run) is silent; "could not be
+ * written" (permissions, disk, an illegal name) is reported back.
  */
 async function writeFiles(vault: Vault, folder: string, files: Record<string, DemoFile>): Promise<string[]> {
   const failed: string[] = [];
   for (const [name, file] of Object.entries(files)) {
-    // #198: the host refuses `* " \ / < > : | ?` in a filename, and a demo set
-    // written as prose collects colons. Sanitising here rather than at each
-    // string keeps the next author from reintroducing it.
+    // #198: the host refuses `* " \ / < > : | ?` in a filename.
     const path = normalizePath(`${folder}/${sanitizeNoteName(name)}.md`);
     const body = `---\n${stringifyYaml(file.frontmatter)}---\n\n${file.content}`;
     if (vault.getAbstractFileByPath(path)) continue; // idempotent re-run
@@ -525,21 +67,13 @@ async function writeFiles(vault: Vault, folder: string, files: Record<string, De
   return failed;
 }
 
-// ============================================================
-// MAIN ENTRY POINT
-// ============================================================
-
 /**
  * Write every seed note that is not already there, and return the paths that
- * could not be written.
- *
- * Separate from `createDemoProject` because of #198: a user who hit the illegal
- * filename has a registered demo project with a note missing, and the command
- * that would fix it returns early precisely because the project exists. Seeding
- * is idempotent, so it can be re-run on its own to repair that.
+ * could not be written. Separate from `createDemoProject` (#198) so a repair
+ * can re-run it on its own.
  */
 export async function seedDemoNotes(vault: Vault): Promise<string[]> {
-  for (const folder of [CABINET_FOLDER, FINANCE_FOLDER]) {
+  for (const folder of [DEMO_FOLDER, CABINET_FOLDER, TRACKER_FOLDER, FINANCE_FOLDER]) {
     if (!vault.getAbstractFileByPath(folder)) {
       try {
         await vault.createFolder(folder);
@@ -549,283 +83,91 @@ export async function seedDemoNotes(vault: Vault): Promise<string[]> {
     }
   }
   return [
-    ...(await writeFiles(vault, DEMO_FOLDER, buildClients())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildProjects())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildTasks())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildMeetings())),
-    ...(await writeFiles(vault, DEMO_FOLDER, buildPayments())),
     ...(await writeFiles(vault, CABINET_FOLDER, buildCabinetNotes())),
+    ...(await writeFiles(vault, TRACKER_FOLDER, buildTrackerNotes())),
     ...(await writeFiles(vault, FINANCE_FOLDER, buildFinanceNotes())),
   ];
 }
 
+/** The three projects, as the generator registers them. */
+export function demoProjects(ids: DemoIds): ProjectDefinition[] {
+  const project = (name: string, id: string, path: string, fieldConfig: unknown, views: ViewDefinition[]) =>
+    Object.assign({}, DEFAULT_PROJECT, {
+      name,
+      id,
+      path,
+      dataSource: { kind: "folder", config: { path, recursive: false } },
+      fieldConfig,
+      views,
+    }) as ProjectDefinition;
+  return [
+    project(DEMO_NAMES.cabinet, ids.cabinetId, CABINET_FOLDER, cabinetFieldConfig(ids), cabinetViews(ids)),
+    project(DEMO_NAMES.tracker, ids.trackerId, TRACKER_FOLDER, trackerFieldConfig(ids), trackerViews(ids)),
+    project(DEMO_NAMES.finance, ids.financeId, FINANCE_FOLDER, financeFieldConfig(ids), financeViews(ids)),
+  ];
+}
+
+/**
+ * Exported for `configProvenance.test.ts`: generated widget configs must pass
+ * all migrations as a no-op — a generator emitting a pre-migration schema is
+ * how the demo once shipped broken stats cards (#072).
+ */
+export function demoGeneratedWidgets(): WidgetDefinition[] {
+  const ids = { cabinetId: "cabinet", trackerId: "tracker", financeId: "finance" };
+  return demoProjects(ids).flatMap((p) =>
+    p.views.flatMap((v) => ((v.config as { widgets?: WidgetDefinition[] }).widgets ?? []))
+  );
+}
+
+export interface DemoResult {
+  /** Names of the projects registered now. */
+  readonly created: string[];
+  /** Notes that could not be written. */
+  readonly failed: number;
+  /** Where to take the user: the practice's overview. */
+  readonly open?: { readonly projectId: string; readonly viewId: string };
+}
+
 /**
  * Create the demo — or, when some of it exists, restore what is missing.
- *
- * 3.6.0: three projects that name each other by id. Each is found by name
- * first, so a repair run (or a vault that has only the old single demo)
- * registers just the missing ones against the ids already in use. Returns
- * the names registered now and the notes that could not be written.
+ * Each project is found by name first, so a repair run registers just the
+ * missing ones against the ids already in use.
  */
-export async function createDemoProject(vault: Vault): Promise<{ created: string[]; failed: number }> {
-  // 1. Ensure root demo folder exists (idempotent).
+export async function createDemoProject(vault: Vault): Promise<DemoResult> {
   if (!vault.getAbstractFileByPath(DEMO_FOLDER)) {
     try {
       await vault.createFolder(DEMO_FOLDER);
     } catch (error) {
-      // #156 — without the folder nothing below can land. Say so rather than
-      // registering a project that points at nowhere.
+      // #156 — without the folder nothing below can land.
       console.error("[Projects+] demo folder could not be created", error);
       new Notice(noticeFor(DEMO_FOLDER_FAILED, { folder: DEMO_FOLDER }));
       return { created: [], failed: 0 };
     }
   }
 
-  // 2. Write all seed files.
   const failed = await seedDemoNotes(vault);
   if (failed.length > 0) {
-    // The project is still registered: a partial demo is more useful than none,
-    // and the notes that did land are correct. But the user is told, because
-    // otherwise the gaps read as a broken plugin.
+    // A partial demo is more useful than none, but the gaps are reported.
     new Notice(noticeFor(DEMO_PARTIAL, { count: failed.length }));
   }
 
   // The three ids first: the projects name each other.
   const existing = get(settings).projects;
   const idOf = (name: string) => existing.find((p) => p.name === name)?.id;
-  const ids = {
-    studioId: idOf(DEMO_NAMES.studio) ?? uuidv4(),
+  const ids: DemoIds = {
     cabinetId: idOf(DEMO_NAMES.cabinet) ?? uuidv4(),
+    trackerId: idOf(DEMO_NAMES.tracker) ?? uuidv4(),
     financeId: idOf(DEMO_NAMES.finance) ?? uuidv4(),
   };
 
-  // 3. View configs.
-  const overviewConfig: DatabaseViewConfig = {
-    widgets: overviewWidgets(ids),
-    layoutMode: "stack",
-    layoutVersion: 1,
-    table: commonTableConfig,
-    showWidgetToolbar: true,
-    compactMode: false,
-  };
-
-  const clientsConfig: DatabaseViewConfig = {
-    widgets: clientsWidgets(),
-    layoutMode: "stack",
-    layoutVersion: 1,
-    table: commonTableConfig,
-    showWidgetToolbar: true,
-    compactMode: false,
-  };
-
-  const boardConfig: BoardConfig = {
-    groupByField: "status",
-    orderSyncField: "deadline",
-    headerField: "client",
-    includeFields: ["client", "value", "deadline", "progress", "tags"],
-    columns: {
-      planning:   { weight: 1 },
-      inProgress: { weight: 1.5 },
-      review:     { weight: 1 },
-      done:       { weight: 1, collapse: false },
-    },
-  };
-
-  const calendarConfig: CalendarConfig = {
-    interval: "week",
-    displayMode: "bars",
-    startDateField: "startDate",
-    dateField: "dueDate",
-    endDateField: "deadline",
-    startTimeField: "startTime",
-    endTimeField: "endTime",
-    // R3: per-record hex color (explicit beats rules); meetings ship colored.
-    eventColorField: "color",
-    checkField: "completed",
-    startHour: 8,
-    endHour: 20,
-    timezone: "local",
-    timeFormat: "24h",
-    agendaOpen: true,
-  };
-
-  const galleryConfig: GalleryConfig = {
-    coverField: "cover",
-    fitStyle: "cover",
-    cardWidth: 280,
-    includeFields: ["client", "status", "value", "deadline"],
-  };
-
-  const priorityColors: ColorRule[] = [
-    { color: "#F44336", condition: { field: "priority", operator: "is", value: "high",   enabled: true } },
-    { color: "#FF9800", condition: { field: "priority", operator: "is", value: "medium", enabled: true } },
-    { color: "#4CAF50", condition: { field: "priority", operator: "is", value: "low",    enabled: true } },
-  ];
-
-  const fieldConfig: { [field: string]: FieldConfig } = {
-    date:       { time: false },
-    // Declared as relations: the linked block «Проекты клиента» follows the
-    // clients roster through `client`, which reported "invalid-field" while
-    // the field was a plain string (live demo check, 2026-09-26).
-    client:     { relation: { targetProjectId: ids.studioId } },
-    project:    { relation: { targetProjectId: ids.studioId } },
-    // 3.6.0: a client's payments, summed from the payment notes that link it.
-    "Оплачено": {
-      rollup: { relationField: "", targetField: "amount", function: "sum", backlink: { projectId: ids.studioId, relationField: "client" } },
-    } as unknown as FieldConfig,
-    startDate:  { time: false },
-    deadline:   { time: false },
-    dueDate:    { time: false },
-    signupDate: { time: false },
-    startTime:  { time: true },
-    endTime:    { time: true },
-    status: {
-      statusGroups: {
-        todo:       ["planning", "todo"],
-        inProgress: ["inProgress", "doing", "review"],
-        complete:   ["done"],
-      },
-    },
-  };
-
   const created: string[] = [];
-  const register = (project: ProjectDefinition) => {
-    if (existing.some((p) => p.name === project.name)) return;
+  for (const project of demoProjects(ids)) {
+    if (existing.some((p) => p.name === project.name)) continue;
     settings.addProject(project);
     created.push(project.name);
-  };
-
-  // 4. Register the studio with exactly 5 views.
-  register(
-    Object.assign({}, DEFAULT_PROJECT, {
-      name: DEMO_NAMES.studio,
-      id: ids.studioId,
-      path: DEMO_FOLDER,
-      dataSource: { kind: "folder", config: { path: DEMO_FOLDER, recursive: false } },
-      fieldConfig,
-      views: [
-        // 1. Обзор
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "Обзор",
-          id: uuidv4(),
-          type: "dashboard",
-          config: overviewConfig,
-          filter: { conjunction: "and", conditions: [] },
-          colors: { conditions: priorityColors },
-          sort: { criteria: [{ field: "deadline", order: "asc", enabled: true }] },
-        }),
-        // 2. Pipeline
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "Pipeline",
-          id: uuidv4(),
-          type: "board",
-          config: boardConfig,
-          filter: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "project", enabled: true }] },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "deadline", order: "asc", enabled: true }] },
-        }),
-        // 3. График
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "График",
-          id: uuidv4(),
-          type: "calendar",
-          config: calendarConfig,
-          filter: {
-            conjunction: "or",
-            conditions: [
-              { field: "type", operator: "is", value: "meeting", enabled: true },
-              { field: "type", operator: "is", value: "task", enabled: true },
-            ],
-          },
-          colors: { conditions: priorityColors },
-          sort: { criteria: [] },
-        }),
-        // 4. Клиенты
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "Клиенты",
-          id: uuidv4(),
-          type: "dashboard",
-          config: clientsConfig,
-          filter: { conjunction: "and", conditions: [{ field: "type", operator: "is", value: "client", enabled: true }] },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "mrr", order: "desc", enabled: true }] },
-        }),
-        // 5. Портфолио
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "Портфолио",
-          id: uuidv4(),
-          type: "gallery",
-          config: galleryConfig,
-          filter: {
-            conjunction: "and",
-            conditions: [
-              { field: "type", operator: "is", value: "project", enabled: true },
-              { field: "cover", operator: "is-not-empty", enabled: true },
-            ],
-          },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "deadline", order: "desc", enabled: true }] },
-        }),
-      ],
-    }) as ProjectDefinition
-  );
-
-  // 5. The massage room: an overview dashboard and the visit schedule.
-  register(
-    Object.assign({}, DEFAULT_PROJECT, {
-      name: DEMO_NAMES.cabinet,
-      id: ids.cabinetId,
-      path: CABINET_FOLDER,
-      dataSource: { kind: "folder", config: { path: CABINET_FOLDER, recursive: false } },
-      fieldConfig: cabinetFieldConfig(ids.cabinetId),
-      views: [
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "Обзор кабинета",
-          id: uuidv4(),
-          type: "dashboard",
-          config: cabinetOverview(cabinetTable),
-          filter: { conjunction: "and", conditions: [] },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "date", order: "asc", enabled: true }] },
-        }),
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "Расписание",
-          id: uuidv4(),
-          type: "calendar",
-          config: cabinetCalendar,
-          filter: typeScope("visit"),
-          colors: { conditions: [] },
-          sort: { criteria: [] },
-        }),
-      ],
-    }) as ProjectDefinition
-  );
-
-  // 6. Personal finances: reads the other two.
-  register(
-    Object.assign({}, DEFAULT_PROJECT, {
-      name: DEMO_NAMES.finance,
-      id: ids.financeId,
-      path: FINANCE_FOLDER,
-      dataSource: { kind: "folder", config: { path: FINANCE_FOLDER, recursive: false } },
-      fieldConfig: financeFieldConfig(),
-      views: [
-        Object.assign({}, DEFAULT_VIEW, {
-          name: "Финансы",
-          id: uuidv4(),
-          type: "dashboard",
-          config: financeOverview(ids, financeTable),
-          filter: { conjunction: "and", conditions: [] },
-          colors: { conditions: [] },
-          sort: { criteria: [{ field: "date", order: "desc", enabled: true }] },
-        }),
-      ],
-    }) as ProjectDefinition
-  );
-
-  if (failed.length > 0 && created.length === 0) {
-    // Nothing new was registered, so the caller's notice is the only word the
-    // user gets about the missing notes; the count goes back with it.
   }
-  return { created, failed: failed.length };
+
+  const cabinet = get(settings).projects.find((p) => p.id === ids.cabinetId);
+  const first = cabinet?.views[0];
+  return { created, failed: failed.length, ...(cabinet && first ? { open: { projectId: cabinet.id, viewId: first.id } } : {}) };
 }
