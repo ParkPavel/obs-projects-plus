@@ -371,14 +371,17 @@ export class ViewportStateManager {
    */
   public importHistory(data: string): void {
     try {
-      const parsed = JSON.parse(data);
-      
-       
-      this.history = parsed.history.map((state: any) => ({
+      // The shape exportHistory writes; the date is its ISO string.
+      const parsed = JSON.parse(data) as {
+        history: Array<Omit<ViewportState, "date"> & { date: string }>;
+        currentIndex: number;
+      };
+
+      this.history = parsed.history.map((state) => ({
         date: dayjs(state.date),
         interval: state.interval,
         scrollOffset: state.scrollOffset,
-        scrollPosition: state.scrollPosition,
+        ...(state.scrollPosition ? { scrollPosition: state.scrollPosition } : {}),
         timestamp: state.timestamp,
       }));
       

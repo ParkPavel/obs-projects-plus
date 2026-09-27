@@ -4,10 +4,9 @@ import { parse } from "yaml";
 /**
  * decodeFrontMatter returns metadata from a note with YAML front matter.
  */
- 
 export function decodeFrontMatter(
   data: string
-): E.Either<Error, Record<string, any>> {
+): E.Either<Error, Record<string, unknown>> {
   const delim = "---";
 
   const startPosition = data.indexOf(delim) + delim.length;
@@ -21,8 +20,7 @@ export function decodeFrontMatter(
     : E.right({});
 }
 
- 
-export function parseYaml(data: string): E.Either<Error, Record<string, any>> {
+export function parseYaml(data: string): E.Either<Error, Record<string, unknown>> {
   return F.pipe(
     data,
     (data) => E.right(preprocessYaml(data)),
@@ -30,16 +28,15 @@ export function parseYaml(data: string): E.Either<Error, Record<string, any>> {
   );
 }
 
- 
-function parseRawYaml(data: string): E.Either<Error, Record<string, any>> {
+function parseRawYaml(data: string): E.Either<Error, Record<string, unknown>> {
   return E.tryCatch(
     () =>
-      parse(data, (_key, value) => {
+      (parse(data, (_key, value: unknown) => {
         if (typeof value === "string") {
           return unquoteInternalLinks(value);
         }
         return value;
-      }) || {},
+      }) as Record<string, unknown> | null) || {},
     (e) => (e instanceof Error ? e : new Error("unknown error"))
   );
 }
@@ -54,7 +51,7 @@ export function preprocessYaml(data: string): string {
   const internalLinks = /("?!?\[\[.*\]\]"?)/g;
 
   const quoteInternalLinks = (line: string) =>
-    line.replace(internalLinks, (_match, p1) => {
+    line.replace(internalLinks, (_match: string, p1: string) => {
       if (p1.startsWith('"') && p1.endsWith('"')) {
         return p1; // quoted
       }
@@ -68,5 +65,5 @@ export function preprocessYaml(data: string): string {
  * unquoteInternalLinks converts a "[[Link]]" to [[Link]].
  */
 function unquoteInternalLinks(value: string) {
-  return value.replace(/"(!?\[\[.*\]\])"/g, (_match, p1) => p1);
+  return value.replace(/"(!?\[\[.*\]\])"/g, (_match: string, p1: string) => p1);
 }

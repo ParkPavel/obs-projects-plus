@@ -182,8 +182,15 @@ export class DataApi {
             decodeFrontMatter,
             E.map((frontmatter) => frontmatter["tags"]),
             E.fold(
-              () => [],
-              (right) => right ?? [] // handle `null`
+              (): string[] => [],
+              // A list of tags, or a single tag written as a string (which
+              // used to be concatenated as text and split into characters).
+              (right): string[] =>
+                Array.isArray(right)
+                  ? right.filter((tag): tag is string => typeof tag === "string")
+                  : typeof right === "string"
+                    ? [right]
+                    : []
             )
           );
           const tagSet: Set<string> = new Set(
@@ -251,20 +258,21 @@ export function doUpdateRecord(
       return Object.fromEntries(
         Object.entries({ ...frontmatter, ...record.values })
           .map((entry) => {
-            if (isDate(entry[1])) {
+            const value = entry[1];
+            if (value instanceof Date) {
               const isDatetime = fields.find(
                 (field) =>
                   field.name === entry[0] &&
                   field.type === DataFieldType.Date &&
                   (field.typeConfig?.time ||
-                    entry[1].getHours() ||
-                    entry[1].getMinutes() ||
-                    entry[1].getSeconds() ||
-                    entry[1].getMilliseconds())
+                    value.getHours() ||
+                    value.getMinutes() ||
+                    value.getSeconds() ||
+                    value.getMilliseconds())
               );
 
               return produce(entry, (draft) => {
-                draft[1] = dayjs(entry[1]).format(
+                draft[1] = dayjs(value).format(
                   isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD"
                 );
               });
