@@ -1,4 +1,3 @@
-import { produce } from "immer";
 import {
   isNumber,
   isDate,
@@ -10,9 +9,7 @@ import type { DataRecord } from "../../lib/dataframe/dataframe";
 import { isNullish as kernelIsNullish } from "src/lib/engine/emptiness";
 
 export function applySort(frame: DataFrame, sort: SortDefinition): DataFrame {
-  return produce(frame, (draft) => {
-    sortRecords(draft.records, sort);
-  });
+  return { ...frame, records: sortRecords([...frame.records], sort) };
 }
 
 /**

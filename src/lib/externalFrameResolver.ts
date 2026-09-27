@@ -4,7 +4,7 @@
 // ScatterConfig.correlation without every widget owning a DataSource.
 
 import type { App } from "obsidian";
-import type { DataviewApi } from "obsidian-dataview";
+import type { DataviewApi } from "src/lib/datasources/dataview/api";
 import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
 import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/settings";

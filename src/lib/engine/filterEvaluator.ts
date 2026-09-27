@@ -39,7 +39,6 @@
  *   here, not only to the settings union.
  */
 
-import { produce } from "immer";
 import dayjs, { type Dayjs } from "dayjs";
 import { isDateFormula, parseDateFormula } from "src/lib/formula";
 import {
@@ -306,11 +305,10 @@ export function applyFilter(
   frame: DataFrame,
   filter: FilterDefinition
 ): DataFrame {
-  return produce(frame, (draft) => {
-    draft.records = draft.records.filter((record) =>
-      matchesFilterConditions(filter, record)
-    );
-  });
+  return {
+    ...frame,
+    records: frame.records.filter((record) => matchesFilterConditions(filter, record)),
+  };
 }
 
 /**

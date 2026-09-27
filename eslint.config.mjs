@@ -51,6 +51,18 @@ export default defineConfig([
       "obsidianmd/prefer-window-timers": "off",
       "obsidianmd/prefer-create-el": "off",
       "obsidianmd/no-tfile-tfolder-cast": "off",
+      // Fixtures: raw markup, stringified fixture data, awaited component
+      // updates and test labels. The type service also resolves test files
+      // outside tsconfig, so its "unnecessary assertion" verdicts there are
+      // wrong (it dropped casts the compiler needs).
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/no-base-to-string": "off",
+      "@typescript-eslint/await-thenable": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "no-unsanitized/property": "off",
+      "@microsoft/sdl/no-inner-html": "off",
+      "obsidianmd/ui/sentence-case": "off",
+      "obsidianmd/rule-custom-message": "off",
     },
   },
 ]);

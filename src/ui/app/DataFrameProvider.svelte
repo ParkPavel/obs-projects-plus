@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { getAPI, isPluginEnabled, type DataviewApi } from "obsidian-dataview";
+  import { getAPI, isPluginEnabled } from "obsidian-dataview";
+  import type { DataviewApi } from "src/lib/datasources/dataview/api";
   import { Callout, Loading, Typography } from "obsidian-svelte";
   import {
     createDataSource,

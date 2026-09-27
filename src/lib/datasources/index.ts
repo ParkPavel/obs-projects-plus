@@ -1,58 +1,16 @@
-import type { DataviewApi } from "obsidian-dataview";
+import type { DataviewApi } from "./dataview/api";
 import type {
   ProjectDefinition,
   ProjectsPluginPreferences,
 } from "src/settings/settings";
-import type { DataField, DataFrame } from "../dataframe/dataframe";
-import type { IFile, IFileSystem } from "../filesystem/filesystem";
+import type { IFileSystem } from "../filesystem/filesystem";
+import type { DataSource } from "./dataSource";
+import { DataviewDataSource } from "./dataview/datasource";
+import { FolderDataSource } from "./folder/datasource";
+import { NativeQueryDataSource } from "./native-query/datasource";
+import { TagDataSource } from "./tag/datasource";
 
-/**
- * DataSource reads data frames from a project.
- */
-export abstract class DataSource {
-  constructor(
-    readonly project: ProjectDefinition,
-    readonly preferences: ProjectsPluginPreferences
-  ) {}
-
-  /**
-   * Returns a DataFrame with all records in the project.
-   */
-  abstract queryAll(): Promise<DataFrame>;
-
-  /**
-   * Returns a DataFrame with a single record for the given file.
-   *
-   * @param fields - The existing fields to allow parsing file into the existing schema
-   * @returns A dataframe containing a single record
-   */
-  abstract queryOne(file: IFile, fields: DataField[]): Promise<DataFrame>;
-
-  /**
-   * Returns whether a path belongs to the current project.
-   */
-  abstract includes(path: string): boolean;
-
-  /**
-   * Returns whether the data source is read-only.
-   *
-   * Read-only data sources are typically derived records where the data
-   * source can't determine the original names of the fields.
-   */
-  readonly(): boolean {
-    return false;
-  }
-
-  /**
-   * Optional explicit refresh — implementations that maintain an internal
-   * cache (e.g. Dataview-backed sources whose results depend on an external
-   * engine) override this to re-query their backend on vault events.
-   *
-   * Sources that read directly from the vault on every `queryOne()` do not
-   * need to implement this hook.
-   */
-  refresh?(): Promise<DataFrame>;
-}
+export { DataSource } from "./dataSource";
 
 /**
  * Dependencies required to construct a {@link DataSource} from a project.
@@ -94,9 +52,8 @@ export type DataSourceUnavailableReason = "dataview-unavailable";
  * `DataFrameProvider` (primary view) and `externalFrameResolver`
  * (cross-project lookups) so degradation semantics stay consistent.
  *
- * Implementations are loaded lazily via `require` to avoid a static import
- * cycle between this module and the concrete sources that re-export
- * {@link DataSource}.
+ * The concrete sources extend {@link DataSource} from `./dataSource`, not
+ * from this module, so they are imported statically without a cycle.
  */
 export function createDataSource(
   project: ProjectDefinition,
@@ -107,8 +64,6 @@ export function createDataSource(
       if (!deps.dataviewApi) {
         return { kind: "unavailable", reason: "dataview-unavailable" };
       }
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { DataviewDataSource } = require("./dataview/datasource");
       return {
         kind: "ok",
         source: new DataviewDataSource(
@@ -120,8 +75,6 @@ export function createDataSource(
       };
     }
     case "native-query": {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { NativeQueryDataSource } = require("./native-query/datasource");
       return {
         kind: "ok",
         source: new NativeQueryDataSource(
@@ -132,8 +85,6 @@ export function createDataSource(
       };
     }
     case "tag": {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { TagDataSource } = require("./tag/datasource");
       return {
         kind: "ok",
         source: new TagDataSource(deps.fileSystem, project, deps.preferences),
@@ -141,8 +92,6 @@ export function createDataSource(
     }
     case "folder":
     default: {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { FolderDataSource } = require("./folder/datasource");
       return {
         kind: "ok",
         source: new FolderDataSource(

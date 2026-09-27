@@ -21,7 +21,7 @@ import type {
   ProjectDefinition,
   ProjectsPluginPreferences,
 } from "src/settings/settings";
-import { DataSource } from "..";
+import { DataSource } from "../dataSource";
 
 /**
  * FrontMatterDataSource is a intermediate data source for records that use

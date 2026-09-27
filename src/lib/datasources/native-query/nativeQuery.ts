@@ -23,14 +23,13 @@
  *     a layer on top of existing sources, not a new persisted source kind.
  */
 
-import { produce } from "immer";
 import dayjs from "dayjs";
 
 import {
   DataFieldType,
   type DataField,
   type DataFrame,
-  type DataRecord,
+  type Optional,
   type DataValue,
 } from "src/lib/dataframe/dataframe";
 import { applyFilter } from "src/lib/engine/filterEvaluator";
@@ -218,8 +217,9 @@ export function applySort(
     fieldByName.set(f.name, f);
   }
 
-  return produce(frame, (draft) => {
-    draft.records.sort((a, b) => {
+  return {
+    ...frame,
+    records: [...frame.records].sort((a, b) => {
       for (const criterion of activeCriteria) {
         const fld = fieldByName.get(criterion.field);
         const av = a.values[criterion.field];
@@ -235,14 +235,15 @@ export function applySort(
         if (aEmpty) return 1;
         if (bEmpty) return -1;
 
-        const cmp = compareValues(av, bv, fld?.type ?? DataFieldType.String);
+        // Empties (null included) are handled above.
+        const cmp = compareValues(av ?? undefined, bv ?? undefined, fld?.type ?? DataFieldType.String);
         if (cmp !== 0) {
           return criterion.order === "desc" ? -cmp : cmp;
         }
       }
       return 0;
-    });
-  });
+    }),
+  };
 }
 
 /**
@@ -292,7 +293,7 @@ function compareValues(
   }
 }
 
-function isEmptyForSort(v: DataValue | undefined): boolean {
+function isEmptyForSort(v: Optional<DataValue>): boolean {
   if (v === undefined || v === null) return true;
   if (typeof v === "string" && v.length === 0) return true;
   if (Array.isArray(v) && v.length === 0) return true;
@@ -335,7 +336,5 @@ export function applyLimit(frame: DataFrame, n: number): DataFrame {
   const safeN = Math.floor(n);
   if (safeN <= 0) return frame;
   if (frame.records.length <= safeN) return frame;
-  return produce(frame, (draft) => {
-    draft.records = draft.records.slice(0, safeN) as DataRecord[];
-  });
+  return { ...frame, records: frame.records.slice(0, safeN) };
 }
