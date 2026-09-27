@@ -1,3 +1,4 @@
+import { isProduction } from "src/lib/env";
 /**
  * Calendar Logger (v3.0.0)
  * 
@@ -23,7 +24,6 @@ interface LogContext {
 }
 
 // Production detection - disable verbose logs in production
-const isProduction = process.env['NODE_ENV'] === 'production';
 
 // Default log level based on environment
 let currentLogLevel: LogLevel = isProduction ? LogLevel.WARN : LogLevel.DEBUG;

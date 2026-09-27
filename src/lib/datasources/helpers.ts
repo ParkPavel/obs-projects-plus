@@ -215,7 +215,7 @@ export function detectCellType(value: unknown): DataFieldType {
     ) {
       return DataFieldType.Relation;
     }
-    return typeFromValues(value);
+    return typeFromValues(value as Optional<DataValue>[]);
   }
 
   if (value === null || value === undefined) {
