@@ -3,7 +3,7 @@
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import type { ConditionalFormat, ConditionalFormatRule, CellStyle } from "src/ui/views/Dashboard/types";
-import type { FilterCondition, FilterOperator } from "src/settings/base/settings";
+import type { FilterCondition } from "src/settings/base/settings";
 import { matchesCondition } from "src/ui/app/filterFunctions";
 
 /**
@@ -99,7 +99,7 @@ function ruleMatches(
 
   const condition: FilterCondition = {
     field,
-    operator: rule.operator as FilterOperator,
+    operator: rule.operator,
     value: rule.value ?? "",
     enabled: true,
   };

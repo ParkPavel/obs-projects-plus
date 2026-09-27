@@ -138,7 +138,7 @@ export function resolveNamedSource(input: NamedSourceInput): NamedSourceView {
 
   // Derived FIRST — see "Order trap 1". A saved filter is never in `parts`.
   if (stored && stored.kind === "derived") {
-    const resolved = resolveDerived(stored as DerivedDataSource, { enriched, parts });
+    const resolved = resolveDerived(stored, { enriched, parts });
     switch (resolved.kind) {
       case "ok":
         return { kind: "ok", frame: resolved.frame, label };

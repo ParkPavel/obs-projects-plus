@@ -351,7 +351,7 @@ export function computeScatterData(
     for (const r of rightFrame.records) {
       const k = scatterJoinKey(r.values[rightKey]);
       const list = idx.get(k);
-      if (list) (list as DataFrame["records"][number][]).push(r);
+      if (list) (list).push(r);
       else idx.set(k, [r]);
     }
 

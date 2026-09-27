@@ -80,7 +80,7 @@ export function showMobileNavMenu(
   const entries: ContextMenuEntry[] = [];
 
   if (onModal) {
-    entries.push({ title: t.t("common.open-note"), icon: "file-text", onClick: () => onModal!() });
+    entries.push({ title: t.t("common.open-note"), icon: "file-text", onClick: () => onModal() });
   }
   entries.push({
     title: t.t("common.open-in-tab"), icon: "file-plus",

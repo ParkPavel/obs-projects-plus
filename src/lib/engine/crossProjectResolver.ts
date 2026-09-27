@@ -109,7 +109,7 @@ export function enrichFrameWithAllRelations(
 ): DataFrame {
   let enriched = frame;
   for (const field of frame.fields) {
-    const relation = field.typeConfig?.relation as RelationFieldConfig | undefined;
+    const relation = field.typeConfig?.relation;
     if (!relation) continue;
     const target = externalFrames.get(relation.targetProjectId);
     if (target) enriched = enrichFrameWithRelations(enriched, field.name, relation, target);

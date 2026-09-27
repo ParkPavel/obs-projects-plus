@@ -1185,7 +1185,7 @@ function executeJoin(
         const gathered: DataValue[] = [];
         for (const m of matches) {
           const v = m.values[orig];
-          if (v != null) gathered.push(v as DataValue);
+          if (v != null) gathered.push(v);
         }
         if (gathered.length === 0) {
           values[outName] = null;

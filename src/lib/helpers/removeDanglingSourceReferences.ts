@@ -54,7 +54,7 @@ function sanitizeWidget(widget: WidgetLike, removedId: string): WidgetLike {
   if (widget.type === "chart" && widget.config && typeof widget.config === "object") {
     const correlation = (widget.config as { correlation?: { rightSourceId?: string } }).correlation;
     if (correlation && correlation.rightSourceId === removedId) {
-      const { correlation: _stripped, ...restConfig } = widget.config as Record<string, unknown>;
+      const { correlation: _stripped, ...restConfig } = widget.config;
       nextWidget = {
         ...nextWidget,
         config: restConfig,
@@ -76,7 +76,7 @@ export function removeDanglingSourceReferences(
   projects: readonly ProjectDefinition[],
   removedId: string
 ): ProjectDefinition[] {
-  if (!removedId) return projects.slice() as ProjectDefinition[];
+  if (!removedId) return projects.slice();
 
   return projects.map((project) => {
     const views = project.views ?? [];
