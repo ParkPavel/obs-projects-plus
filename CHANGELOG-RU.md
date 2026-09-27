@@ -8,7 +8,7 @@
 Версия в [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) обозначает это дерево исходников и не означает,
 что выпуск опубликован.
 
-## Не выпущено
+## 3.6.2 — 2026-09-28
 
 ### Готовность к каталогу сообщества
 
