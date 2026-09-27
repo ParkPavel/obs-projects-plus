@@ -50,7 +50,7 @@ When updating, replace these three files with files from the same build. Keep `d
 4. Open it with **Show projects plus**. Use the add-view control to add a view; for a table, use a data block on a Dashboard.
 5. Change the record's `status`, then open its Markdown file: the updated value should be stored in its properties.
 
-To explore prepared data, use **Create demo project**: it creates three linked projects — a studio, a massage room and personal finances — whose data flows between them. A separate [demo vault](demo-vault/README.md) is also available.
+To explore prepared data, use **Create demo project**: it creates three linked projects — a massage practice, a wellbeing tracker and a personal budget — whose data flows between them. The welcome dialog and the empty projects screen offer it too. A separate [demo vault](demo-vault/README.md) is also available.
 
 ## Continue
 

@@ -12,23 +12,19 @@ Editing a writable field updates the original file. Filters, block layout, and v
 
 Calculated fields and query results are not always writable. If you cannot edit a field, check its type and source; a displayed calculation is not necessarily a separate property in the Markdown file.
 
-## Quick start: starter profiles
+## Quick start: the demo
 
-When your vault has no project yet, the welcome dialog offers three starter profiles: "Clients," "Workouts," and "Project journal." Picking one asks nothing about folders, fields, or views — it goes straight to creating a note with a template already selected; type a name and press Enter.
+When your vault has no project yet, the welcome dialog offers two ways in: the "Demo: three linked projects" card and a "Create new project" button. If you close the dialog, the same two actions stay on the empty projects screen. Later you can create the demo from the project menu (view settings → "Projects" → "Create demo project") or with the **Create demo project** command.
 
-Each profile creates:
+The demo is three projects of one story in the `Projects Plus - Демо` folder:
 
-| Profile | Folder | Template | Views |
-| --- | --- | --- | --- |
-| Clients | `Projects Plus — Профили/Клиенты` | `Шаблон — клиент.md` (`статус`, `следующийКонтакт`, `сумма`) | "Обзор" (counter and table) and "Статусы" (board grouped by `статус`) |
-| Workouts | `Projects Plus — Профили/Тренировки` | `Шаблон — тренировка.md` (`дата`, `тип`, `минуты`) | "Обзор" and "Календарь" (by the `дата` field) |
-| Project journal | `Projects Plus — Профили/Дневник проекта` | `Шаблон — запись.md` (`дата`, `статус`, `следующийШаг`) | "Обзор" and "Хронология" (a calendar view keyed on `дата`) |
+| Project | What it holds | Views |
+| --- | --- | --- |
+| "Демо: Кабинет" | a private massage practice: 5 services, 10 clients, half a year of visits and expenses | "Обзор кабинета" (stats, profit by month, clients with their visits and wellbeing), "Расписание", "Визиты по статусам", "Клиенты" (a gallery with covers), "Услуги и расходы" |
+| "Демо: Трекер" | a daily log kept by three of the practice's clients: weight, sleep, mood, energy, pain, training | "Динамика" (the selected client's measures beside their wellbeing after visits), "Календарь тренировок", "Виды тренировок", "Недели", "Журнал" |
+| "Демо: Финансы" | a personal budget: categories with limits and half a year of transactions | "Бюджет" (the practice's income as its own series), "Статьи", "Операции по статьям", "Календарь операций", "Журнал" |
 
-The folder, field, and view names above are the actual Russian names the profile writes to your vault — they are not translated by the interface language. A profile creates no example record: the first record is the note you create yourself. It appears right away on the "Обзор" tab, in the counter and the table, and in the profile's second view: a board grouped by status for Clients, a calendar keyed on date for Workouts, and a chronological calendar for the Project journal. All three profiles share one root folder, "Projects Plus — Профили," with its own subfolder per profile; a re-run reuses that root folder and adds a new subfolder, picking a free numbered name such as "Клиенты 2" if the plain name is already taken, even when it matches only in letter case. No existing file or folder is ever overwritten. If registering the project fails, there are two outcomes. When the project did land in settings, the profile's files stay and the dialog asks you to restart Obsidian and check whether the project is listed. When registration did not land, what this run created is removed as far as it can be attributed, and the dialog names only what could not be removed. Writing settings to disk happens separately and on its own schedule: the plugin reports a failure there through its own save status. If a write fails partway through, the dialog names the path it could not create: once everything created during that attempt has been cleaned up, nothing was saved and you can try again; if anything from that attempt is still in your vault (it could not be removed automatically, or something else has since taken its place), the dialog lists those paths. Check them and delete only what the profile itself created: something unrelated may now sit at such a path.
-
-The first note is created as a separate step, after the "Create note" dialog closes, apart from the profile's folder and template. If it could not be saved in full, a notification asks you to open the profile folder and look at what is there: if the record is missing, add it with "Add first record" in the empty table, and if the error repeats, try a different name, because something else may occupy that path. The notification deliberately says nothing about what is at that path or who created it: a file being there does not prove it came from this attempt, and the plugin should not send you off to edit somebody else's note.
-
-Undo a starter profile the same way you would remove any other project: open the project menu and delete it — this removes the settings entry but does not delete your notes. Afterward, delete or move the created folder and template manually if you want them gone too.
+A client card in the practice stores nothing itself: visits, payments, debt, latest and average wellbeing and the last visit are reverse rollups over the visits, while current weight, training minutes and sleep come from the tracker, another project. The folder, field and view names are the actual Russian names the demo writes to your vault — the interface language does not translate them. Running it again restores missing notes and projects and duplicates nothing. Remove the demo like any other projects: delete the three projects in the menu and, if you like, the `Projects Plus - Демо` folder.
 
 ## Creating and configuring a project
 
@@ -152,7 +148,7 @@ If several notes share a filename, include the folder in the link. A missing or 
 
 **The linked-block suggestion.** When a project has a relation field, a suggestion “Add data block” appears above the blocks. It adds a block that shows the records related to the selected row: another project's records that link here, or — when the relation only points outward — the record the selected row links to. On a filtered view (for example, clients only) the block reads the project whole, so it can see the records the view's filter hides.
 
-**The three-project demo.** **Create demo project** creates three linked projects: “Демо-проект” (the studio), “Демо: Кабинет” (a massage room) and “Демо: Финансы” (personal finances). In the massage room, clients count visits, wellbeing and payments through reverse rollups, and charts show income, expenses and profit by month and wellbeing beside the tracker's tests. The finances read the room's income and the studio's payments as separate series of one chart. Running the command again restores missing notes and duplicates nothing.
+**The three-project demo.** The practice, the tracker and the budget (see "Quick start: the demo") show computation at work. In the practice, clients and services count visits, revenue and wellbeing through reverse rollups, and weight, training and sleep through rollups over the tracker. On "Обзор кабинета" pick a client row (row menu → "Filter linked blocks by this row"): their visits and the wellbeing chart, with a mood series from the tracker, narrow to that client. The tracker's "Динамика" follows the client picked in its block of the practice's clients the same way. The budget shows the practice's income as a separate series beside its own income and expenses.
 
 ## Note templates
 
