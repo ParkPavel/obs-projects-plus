@@ -191,4 +191,19 @@ describe("the projects read each other by id", () => {
       }
     }
   });
+
+  // Codex review of ccc13ee: «До визита» kept averaging every client while
+  // «После визита» followed the picked one. A following chart narrows an extra
+  // series only by the field that series declares.
+  test("every series of a following chart follows the selection too", () => {
+    for (const p of [cab, trk, fin]) {
+      for (const v of p!.views) {
+        const ws = (v.config as { widgets?: Array<{ title?: string; config: { linkedSelection?: unknown; series?: Array<{ id: string; selectionField?: string }> } }> }).widgets ?? [];
+        for (const w of ws) {
+          if (!w.config.linkedSelection) continue;
+          for (const s of w.config.series ?? []) expect(`${w.title}/${s.id}:${s.selectionField ?? ""}`).not.toMatch(/:$/);
+        }
+      }
+    }
+  });
 });

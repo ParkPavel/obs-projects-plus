@@ -14,7 +14,22 @@ import { createDemoProject, type DemoResult } from "./demoProject";
 /** #202 — a repair that could not write every missing note. */
 const DEMO_REPAIR_FAILED = "PPP-603";
 
-export async function createDemoWithNotices(
+/** The run in progress: a second click or command joins it instead of racing it. */
+let inFlight: Promise<DemoResult | null> | null = null;
+
+export function createDemoWithNotices(
+  vault: Vault,
+  open: (projectId: string, viewId: string) => void
+): Promise<DemoResult | null> {
+  if (!inFlight) {
+    inFlight = runDemo(vault, open).finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
+}
+
+async function runDemo(
   vault: Vault,
   open: (projectId: string, viewId: string) => void
 ): Promise<DemoResult | null> {

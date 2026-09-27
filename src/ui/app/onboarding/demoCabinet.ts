@@ -368,7 +368,7 @@ export function cabinetOverviewWidgets(ids: DemoIds): WidgetDefinition[] {
         yAxis: { label: "После визита", property: "wellbeingAfter", aggregation: "avg" },
         linkedSelection: { sourceWidgetId: clients, relationField: "client" },
         series: [
-          { id: "s-before", label: "До визита", property: "wellbeingBefore", aggregation: "avg" },
+          { id: "s-before", label: "До визита", property: "wellbeingBefore", aggregation: "avg", selectionField: "client" },
           { id: "s-mood", label: "Настроение (трекер)", property: "mood", aggregation: "avg", dataProjectId: ids.trackerId, selectionField: "person" },
         ],
         style: { ...CHART_STYLE, smooth: true },

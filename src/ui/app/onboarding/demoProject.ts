@@ -114,6 +114,32 @@ export async function seedDemoNotes(vault: Vault): Promise<string[]> {
   ];
 }
 
+/**
+ * The ids the registered demo projects use for their siblings: the generated
+ * projects are laid over the registered ones and each place that names a
+ * sibling is read back. Ids of other registered projects are never taken.
+ */
+export function referencedDemoIds(registered: readonly ProjectDefinition[]): Partial<DemoIds> {
+  const marks: DemoIds = { cabinetId: "\u0000cabinet", trackerId: "\u0000tracker", financeId: "\u0000finance" };
+  const keyOf = new Map(Object.entries(marks).map(([key, mark]) => [mark, key as keyof DemoIds]));
+  const taken = new Set(registered.map((p) => p.id));
+  const found: { -readonly [K in keyof DemoIds]?: string } = {};
+  const walk = (template: unknown, actual: unknown): void => {
+    if (typeof template === "string") {
+      const key = keyOf.get(template);
+      if (key && !found[key] && typeof actual === "string" && actual && !taken.has(actual)) found[key] = actual;
+      return;
+    }
+    if (!template || typeof template !== "object" || !actual || typeof actual !== "object") return;
+    for (const [k, v] of Object.entries(template)) walk(v, (actual as Record<string, unknown>)[k]);
+  };
+  for (const template of demoProjects(marks)) {
+    const actual = registered.find((p) => p.name === template.name);
+    if (actual) walk({ fieldConfig: template.fieldConfig, views: template.views }, actual);
+  }
+  return found;
+}
+
 /** The three projects, as the generator registers them. */
 export function demoProjects(ids: DemoIds): ProjectDefinition[] {
   const project = (name: string, id: string, path: string, fieldConfig: unknown, views: ViewDefinition[]) =>
@@ -178,13 +204,16 @@ export async function createDemoProject(vault: Vault): Promise<DemoResult> {
     new Notice(noticeFor(DEMO_PARTIAL, { count: failed.length }));
   }
 
-  // The three ids first: the projects name each other.
+  // The three ids first: the projects name each other. A project restored
+  // after being deleted takes the id its surviving siblings still name, so
+  // their rollups and chart series find it again.
   const existing = get(settings).projects;
   const idOf = (name: string) => existing.find((p) => p.name === name)?.id;
+  const named = referencedDemoIds(existing);
   const ids: DemoIds = {
-    cabinetId: idOf(DEMO_NAMES.cabinet) ?? uuidv4(),
-    trackerId: idOf(DEMO_NAMES.tracker) ?? uuidv4(),
-    financeId: idOf(DEMO_NAMES.finance) ?? uuidv4(),
+    cabinetId: idOf(DEMO_NAMES.cabinet) ?? named.cabinetId ?? uuidv4(),
+    trackerId: idOf(DEMO_NAMES.tracker) ?? named.trackerId ?? uuidv4(),
+    financeId: idOf(DEMO_NAMES.finance) ?? named.financeId ?? uuidv4(),
   };
 
   const created: string[] = [];
