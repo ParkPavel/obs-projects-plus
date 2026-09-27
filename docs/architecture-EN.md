@@ -34,14 +34,16 @@ The custom view lifecycle is connected in [useView.ts](https://github.com/ParkPa
 | [src/lib/engine](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/engine) | Filtering, aggregation and cross-project calculations |
 | [src/lib/dashboard-engine](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/dashboard-engine) | Dashboard transformations, formula application, charts and caches |
 | [src/lib/formula](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/formula) | Formula parsing and evaluation |
-| [src/lib/relations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/relations) | Relation contracts, inverse indexes and relation writes |
+| [src/lib/relations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/relations) | Relation contracts, inverse indexes, relation writes, declared field types and rollups ([rollupColumns.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/relations/rollupColumns.ts)) |
 | [src/lib/visualizer](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/visualizer) | Visualizer-specific property, relation and overlay handling |
+
+**Frames of other projects.** A block, chart or rollup that reads another project gets its frame through [externalFrameResolver.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/externalFrameResolver.ts): that project's declared relation types, backlinks and rollups are applied as in its own view. Frames are cached in `App.svelte`; the cache is cleared when files change and when any project's source or field configuration changes. A block with another project's source is read-only — a write through its `ViewApi` would land in the wrong project.
 
 These directories describe responsibilities; dependencies do not all follow a strict layered boundary. Follow the imports and callers when changing a path shared by several views.
 
 ## Writes and persistence
 
-Record and field edits enter through [ViewApi](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts) and [dataApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts). They coordinate filesystem writes and the displayed data frame. Some updates are optimistic; a visible change alone does not prove that the note was written. Failure paths can restore the previous value and show a coded error.
+Record and field edits enter through [ViewApi](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts) and [dataApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataApi.ts). They coordinate filesystem writes and the displayed data frame. Properties are written through `processFrontMatter`, and read-modify-write goes through `Vault.process` on the file's current contents, so an edit made between the read and the write is not lost. Some updates are optimistic; a visible change alone does not prove that the note was written. Failure paths can restore the previous value and show a coded error.
 
 Settings schemas and migrations live in [src/settings](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/settings). The runtime settings writer and reconciliation helpers live in [src/lib/settings](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/settings), with lifecycle wiring in `src/main.ts`. Keep new settings writes on this path to preserve conflict checks and retry behavior.
 

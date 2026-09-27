@@ -66,6 +66,16 @@ npm run svelte-check
 
 Не включайте учётные данные, содержимое хранилища, локальные журналы и настройки, привязанные к вашей машине. Об ошибках сообщайте через [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues): шаги воспроизведения, версии плагина и Obsidian, операционная система, ожидаемый и фактический результат.
 
+## Выпустить версию
+
+Релиз выпускается из `main`, который принимает изменения только через pull request с зелёной проверкой `build`.
+
+1. В ветке задайте версию командой `npm version X.Y.Z --tag-version-prefix="" --no-git-tag-version`. Хук `version` копирует её в `manifest.json` и добавляет в `versions.json`; сам он версию не повышает.
+2. Обновите обе истории изменений, пересоберите `npm run build` и закоммитьте `main.js` — он хранится в Git и должен совпадать с коммитом релиза.
+3. Слейте pull request и запушьте тег `X.Y.Z` — саму версию, без `v` — на коммите слияния. Релизный workflow отклоняет тег, не совпадающий с `manifest.json`, собирает плагин и публикует `main.js`, `manifest.json` и `styles.css`.
+
+Бета для [BRAT](https://github.com/TfTHacker/obsidian42-brat) — это тег `X.Y.Z-beta.N` на коммите `main`, где `X.Y.Z` выше текущей версии (после 3.6.0 — `3.6.1-beta.1`): workflow публикует её как предрелиз с бета-версией в манифесте релиза, не меняя `manifest.json` в `main`.
+
 ## Лицензия и авторство
 
 Вклад в плагин распространяется под [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE). Сохраняйте применимые уведомления об авторстве и лицензии. Оригинальный плагин создал [Marcus Olsson](https://github.com/marcusolsson), этот форк ведёт Park Pavel. Отдельный [пакет типов](obsidian-projects-types/README-RU.md) объявляет лицензию MIT.
