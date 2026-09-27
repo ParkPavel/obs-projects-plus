@@ -147,7 +147,7 @@ export async function standardizeRecords(
 }
 
  
-function filterUndefinedValues(val: Record<string, any>): Record<string, any> {
+function filterUndefinedValues(val: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(val).filter(([_key, value]) => notUndefined(value))
   );

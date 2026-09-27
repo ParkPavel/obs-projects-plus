@@ -426,13 +426,12 @@ export function computeScatterData(
 
   // Compute linear regression (least squares)
   const n = points.length;
-  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
   for (const p of points) {
     sumX += p.x;
     sumY += p.y;
     sumXY += p.x * p.y;
     sumX2 += p.x * p.x;
-    sumY2 += p.y * p.y;
   }
 
   const denominator = n * sumX2 - sumX * sumX;

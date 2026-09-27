@@ -167,7 +167,7 @@ export interface ViewTab {
 export interface DataTableFieldConfig {
   readonly [key: string]: {
     /**
-     * @deprecated since Phase 3 — use `widthRem` for Zero-Pixels
+     * Legacy (before Phase 3): use `widthRem` for Zero-Pixels
      * compliance. Legacy px value kept for backward compatibility with
      * pre-v3.5.0 settings; migrated lazily on first read.
      */

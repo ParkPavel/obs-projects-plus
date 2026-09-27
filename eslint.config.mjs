@@ -23,6 +23,25 @@ export default defineConfig([
     plugins: { tsdoc },
     rules: {
       "tsdoc/syntax": "warn",
+      // getSettingDefinitions() (settings search) arrives in Obsidian 1.13;
+      // minAppVersion is 1.8.7, whose API does not have it.
+      "obsidianmd/settings-tab/prefer-setting-definitions": "off",
+    },
+  },
+  {
+    // Build and release tooling runs in Node and is not part of the plugin:
+    // Node modules, Node globals and console output are its job.
+    files: ["esbuild.config.mjs", "jest.config.js", "scripts/**"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "obsidianmd/no-nodejs-modules": "off",
+      "obsidianmd/rule-custom-message": "off",
     },
   },
   {

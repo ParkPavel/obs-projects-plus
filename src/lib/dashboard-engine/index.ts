@@ -55,7 +55,7 @@ export {
   invalidateTransformCache,
   getTransformCacheSize,
 } from "./transformCache";
-export { executeTransform, evaluateExpression } from "./transformExecutor";
+export { executeTransform } from "./transformExecutor";
 export type {
   TransformPipeline,
   TransformStep,

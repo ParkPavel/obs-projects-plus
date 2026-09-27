@@ -57,7 +57,7 @@ export abstract class IFile {
   }
 
    
-  async readValues(): Promise<Record<string, any>> {
+  async readValues(): Promise<Record<string, unknown>> {
     const data = await this.read();
 
     const values = decodeFrontMatter(data);
@@ -66,7 +66,7 @@ export abstract class IFile {
   }
 
    
-  async writeValues(values: Record<string, any>): Promise<void> {
+  async writeValues(values: Record<string, unknown>): Promise<void> {
     const data = await this.read();
 
     const updatedData = encodeFrontMatter(data, values, "PLAIN");
