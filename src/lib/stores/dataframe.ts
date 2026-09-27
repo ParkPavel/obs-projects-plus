@@ -60,7 +60,6 @@ function notifyDataFrameInvalidation(): void {
     try {
       cb();
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[Projects+] dataFrame invalidation callback threw", err);
     }
   }

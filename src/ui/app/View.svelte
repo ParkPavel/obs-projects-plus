@@ -13,12 +13,13 @@
   import { enrichFrameWithAllRelations } from "src/lib/engine/crossProjectResolver";
   import { applyRollupColumns } from "./rollupColumns";
   import { externalFrameInvalidation } from "src/lib/stores/externalFrameInvalidation";
-  import { applyDeclaredFieldTypes, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
+  import { applyDeclaredFieldTypes, conditionFieldsKnown, extractRelationTargetIds, getRecordColor as computeRecordColor } from "./viewHelpers";
 
   import { useView } from "./useView";
   import { applySort, sortRecords } from "./viewSort";
   import RecordCardView from "src/ui/components/RecordCardView/RecordCardView.svelte";
   import { recordPeek, closePeek } from "src/lib/stores/recordPeek";
+  import { mayPeekSave, nextSaveAuthority, resolvePeek, type PeekSaveAuthority } from "src/lib/record/peekResolution";
   import { openRecord } from "src/lib/record/openRecord";
   import { app as obsidianApp } from "src/lib/stores/obsidian";
   import { get } from "svelte/store";
@@ -65,9 +66,13 @@
   // Guard: skip when frame is empty (initial load) to prevent deleting valid conditions
   // before the first data query completes.
   $: if (frame.fields.length > 0) {
-    const fieldNames = frame.fields.map((field) => field.name);
+    // Declared rollups count: they are columns with no key in any note.
+    const fieldNames = conditionFieldsKnown(
+      frame.fields.map((field) => field.name),
+      project.fieldConfig as import("./viewHelpers").FieldConfigRelationMap | undefined
+    );
     const nConds = viewFilter.conditions.length;
-    const filtered = viewFilter.conditions.filter((cond) => fieldNames.includes(cond.field));
+    const filtered = viewFilter.conditions.filter((cond) => fieldNames.has(cond.field));
     if (nConds !== filtered.length) {
       settings.updateView(project.id, {
         ...view,
@@ -236,31 +241,86 @@
     settings.updateView(project.id, { ...view, filter });
   };
 
-  /**
-   * #168 step (b) — the record held open in the peek, looked up in the frame
-   * this view already has rather than fetched. `sortedFrame` is used and not
-   * `frame`, so a record filtered out of the view cannot be shown by it: the
-   * peek is a closer look at what is on screen, not a back door around the
-   * filter.
-   */
-  $: peeked =
+  // ── #158 (L2) — the peek is RESOLVED, every tick, from identity ──────
+  // The store carries `{id, projectId?, readonly?}`, never a copy (see
+  // `stores/recordPeek.ts`), so a stale re-render can no longer hand the
+  // editor back a value it already wrote over. An own record resolves
+  // against `sortedFrame`, already used and not `frame`, so a record
+  // filtered out of the view cannot be shown by it — the peek is a closer
+  // look at what is on screen, not a back door around the filter. An
+  // external record resolves against the same cached promise the
+  // enrichment fetch above uses, guarded by the same token/invalidation.
+  let peekExternalFrame: DataFrame | null | undefined = undefined;
+  let peekExternalProjectId: string | undefined = undefined;
+  let lastPeekInvalidation = -1;
+  let peekFetchToken = 0;
+
+  $: {
+    const targetProjectId = $recordPeek?.projectId;
+    if (targetProjectId === undefined) {
+      peekExternalFrame = undefined;
+      peekExternalProjectId = undefined;
+    } else {
+      const invalidation = $externalFrameInvalidation;
+      if (targetProjectId !== peekExternalProjectId || invalidation !== lastPeekInvalidation) {
+        peekExternalProjectId = targetProjectId;
+        lastPeekInvalidation = invalidation;
+        peekExternalFrame = undefined;
+        const myToken = ++peekFetchToken;
+        const resolveFn = api.resolveExternalFrame;
+        if (resolveFn) {
+          void resolveFn(targetProjectId).then((f) => {
+            if (myToken !== peekFetchToken) return;
+            peekExternalFrame = f ?? null;
+          });
+        } else {
+          peekExternalFrame = null;
+        }
+      }
+    }
+  }
+
+  $: peekResolution =
     $recordPeek === null
       ? null
-      : ($recordPeek.record ??
-        sortedFrame.records.find((r) => r.id === $recordPeek?.id) ??
-        null);
+      : resolvePeek($recordPeek, {
+          viewReadonly: readonly,
+          ownFrame: sortedFrame,
+          dataSourceIncludes: (id) => api.dataSource.includes(id),
+          externalFrame: peekExternalFrame,
+        });
 
-  /** The fields that describe `peeked` — the carrier's, or this view's. */
-  $: peekFields = $recordPeek?.fields ?? sortedFrame.fields;
+  $: peeked = peekResolution && peekResolution.kind === "ready" ? peekResolution.record : null;
+  /** The fields that describe `peeked` — the owning frame's, own or external. */
+  $: peekFields = peekResolution && peekResolution.kind === "ready" ? peekResolution.fields : sortedFrame.fields;
+  $: peekWritable = peekResolution !== null && peekResolution.kind === "ready" && peekResolution.writable;
+  /** Kept across the close so the flushed autosave lands (peekResolution.ts). */
+  let saveAuthority: PeekSaveAuthority | null = null;
+  function updateSaveAuthority(id: string | null, writable: boolean, fields: typeof peekFields): void {
+    saveAuthority = nextSaveAuthority(saveAuthority, id, writable, fields);
+  }
+  $: updateSaveAuthority(peeked?.id ?? null, peekWritable, peekFields);
+  async function savePeeked(updated: DataRecord): Promise<void> {
+    if (!mayPeekSave(saveAuthority, updated.id)) return;
+    await api.updateRecord(updated, saveAuthority.fields);
+  }
+  /** Named in the read-only notice: the peeked record's own project, own or external. */
+  $: peekProjectId = $recordPeek === null ? undefined : $recordPeek.projectId;
+  $: peekProjectName =
+    peekProjectId !== undefined
+      ? ($settings.projects.find((p) => p.id === peekProjectId)?.name ?? peekProjectId)
+      : project.name;
 
   /**
    * A target this view cannot show must not become a click that did nothing.
-   * It happens when the record is neither carried nor in the sorted frame —
-   * filtered out, renamed, deleted — and the honest answer is the behaviour
-   * the peek replaced: open the note. (Found by the adversarial review of step
-   * (b), which named the external-source dashboard row.)
+   * It happens when the record is resolved as absent — filtered out, renamed,
+   * deleted, or from a frame this view never had — and the honest answer is
+   * the behaviour the peek replaced: open the note. Never while `loading`:
+   * the first tick of an external peek must not flash closed. (Found by the
+   * adversarial review of step (b), which named the external-source
+   * dashboard row.)
    */
-  $: if ($recordPeek !== null && peeked === null) {
+  $: if ($recordPeek !== null && peekResolution?.kind === "absent") {
     const unresolved = $recordPeek;
     closePeek();
     void openRecord({ id: unresolved.id }, "same", { app: get(obsidianApp) });
@@ -311,9 +371,9 @@
   record={peeked}
   allRecords={sortedFrame.records}
   autosave={project.autosave ?? true}
-  onSave={async (updated) => {
-    await api.updateRecord(updated, sortedFrame.fields);
-  }}
+  readonly={!peekWritable}
+  projectName={peekProjectName}
+  onSave={saveAuthority ? savePeeked : undefined}
   on:close={closePeek}
 />
 

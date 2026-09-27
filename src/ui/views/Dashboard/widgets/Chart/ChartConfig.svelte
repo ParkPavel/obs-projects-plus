@@ -1,4 +1,9 @@
 ﻿<script lang="ts">
+  import DataProjectPicker from "../_shared/DataProjectPicker.svelte";
+  import ChartSeriesEditor from "./ChartSeriesEditor.svelte";
+  import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import type { ChartSeriesConfig, LinkedSelectionConfig } from "../../types";
+  import FollowSelectionPicker from "../_shared/FollowSelectionPicker.svelte";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import { DataFieldType } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartType, ChartStyle, ScatterChartConfig, ChartAxisX } from "../../types";
@@ -10,6 +15,10 @@
   export let fields: DataField[];
   /** Sibling projects available as correlation sources (scatter). */
   export let availableSources: Array<{ id: string; name: string }> = [];
+  /** 3.6.0: loaded frames of the projects the extra series read. */
+  export let seriesFrames: ReadonlyMap<string, DataFrame> = new Map();
+  /** 3.6.0: blocks whose selection this chart may follow. */
+  export let availableWidgets: Array<{ id: string; title: string }> = [];
 
   const dispatch = createEventDispatcher<{ change: ChartConfig }>();
 
@@ -76,6 +85,29 @@
     dispatch("change", { ...config, ...partial } as ChartConfig);
   }
 
+  $: dataProjectId = (config as unknown as { dataProjectId?: string }).dataProjectId;
+
+  /** 3.6.0 — follow another block's selection; the key is removed when off. */
+  function setLinkedSelection(next: LinkedSelectionConfig | undefined) {
+    const { linkedSelection: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (next ? { ...rest, linkedSelection: next } : rest) as unknown as ChartConfig);
+  }
+
+  /** 3.6.0 — the extra series; the key is removed when there are none. */
+  function setSeries(next: ChartSeriesConfig[]) {
+    const { series: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (next.length > 0 ? { ...rest, series: next } : rest) as unknown as ChartConfig);
+  }
+
+  /** 3.6.0 — read another project; the empty value reads this one (key removed). */
+  function setDataProject(id: string) {
+    const { dataProjectId: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (id ? { ...rest, dataProjectId: id } : rest) as unknown as ChartConfig);
+  }
+
   function setCorrelationEnabled(enabled: boolean) {
     if (!enabled) {
       // Strip the key rather than set undefined (exactOptionalPropertyTypes).
@@ -136,6 +168,11 @@
 <div class="ppp-chart-config">
   <details class="ppp-config-section" open>
     <summary class="ppp-config-section-header">{$i18n.t("views.dashboard.chart.section.data")}</summary>
+  <DataProjectPicker
+    value={dataProjectId}
+    {availableSources}
+    on:change={(e) => setDataProject(e.detail)}
+  />
   <label class="ppp-config-row">
     <span>{$i18n.t("views.dashboard.chart.type")}</span>
     <select
@@ -280,6 +317,24 @@
         on:change={(e) => emit({ yAxis: { ...config.yAxis, cumulative: e.currentTarget.checked } })} />
       <span>{$i18n.t("views.dashboard.chart.options.cumulative")}</span>
     </label>
+
+    <FollowSelectionPicker
+      value={config.linkedSelection}
+      {availableWidgets}
+      {fields}
+      on:change={(e) => setLinkedSelection(e.detail)}
+    />
+
+    {#if config.chartType === "line" || config.chartType === "area" || config.chartType === "bar"}
+      <ChartSeriesEditor
+        following={!!config.linkedSelection}
+        series={config.series ?? []}
+        {fields}
+        {availableSources}
+        {seriesFrames}
+        on:change={(e) => setSeries(e.detail)}
+      />
+    {/if}
   </details>
 
   <!-- Scatter-specific options -->

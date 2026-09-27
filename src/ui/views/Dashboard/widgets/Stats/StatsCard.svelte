@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import type { StatsCardConfig } from "../../types";
   import type { DataValue } from "src/lib/dataframe/dataframe";
   import type { Optional } from "src/lib/dataframe/dataframe";
@@ -31,7 +32,7 @@
 
     switch (fmt) {
       case "percent": return val.toFixed(1) + "%";
-      case "currency": return (currency ?? "$") + val.toLocaleString();
+      case "currency": return (currency ?? "$") + val.toLocaleString(undefined, { maximumFractionDigits: 2 });
       case "duration": {
         const h = Math.floor(val / 3600);
         const m = Math.floor((val % 3600) / 60);
@@ -69,13 +70,13 @@
   title={fieldMissing ? `Field "${config.field}" not found in data. Edit the widget config to pick an existing field.` : ""}
 >
   {#if fieldMissing}
-    <span class="ppp-stats-value ppp-stats-value--missing" aria-label="Field not found">⚠</span>
+    <span class="ppp-stats-value ppp-stats-value--missing" aria-label={$i18n.t("views.dashboard.stats.field-not-found")}>⚠</span>
   {:else}
     <span
       class="ppp-stats-value"
       class:ppp-stats-value--filtered={filtered}
-      title={filtered ? "Filtered by canvas selection" : undefined}
-      aria-label={filtered ? `${formatted} — filtered by canvas selection` : undefined}
+      title={filtered ? $i18n.t("views.dashboard.stats.filtered-title") : undefined}
+      aria-label={filtered ? $i18n.t("views.dashboard.stats.filtered-aria", { value: formatted }) : undefined}
     >{formatted}</span>
   {/if}
   {#if config.sparkline && sparklinePath && !fieldMissing}
@@ -84,7 +85,7 @@
     </svg>
   {/if}
   <span class="ppp-stats-label">
-    {config.label}{#if fieldMissing} — <span class="ppp-stats-missing-hint">no field “{config.field}”</span>{/if}
+    {config.label}{#if fieldMissing} — <span class="ppp-stats-missing-hint">{$i18n.t("views.dashboard.stats.missing-field-hint", { field: config.field })}</span>{/if}
   </span>
 </div>
 

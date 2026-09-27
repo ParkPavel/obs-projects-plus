@@ -157,7 +157,7 @@
 <div class="section">
   <div class="header">{$i18n.t('settings-menu.view-config.title')}</div>
   {#if view}
-    <p class="muted">{$i18n.t('settings-menu.view-config.current-view')}: {view.name} ({view.type})</p>
+    <p class="muted">{$i18n.t('settings-menu.view-config.current-view')}: {view.name} ({$i18n.t(`views.${view.type}.name`, { defaultValue: view.type })})</p>
 
     {#if isCalendar}
       <div class="group">

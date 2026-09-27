@@ -5,7 +5,7 @@ import type {
   DataField,
   DataValue,
 } from "src/lib/dataframe/dataframe";
-import { aggregate, type RollupFunction } from "src/lib/engine/aggregate";
+import { aggregate, asCheckbox, type RollupFunction } from "src/lib/engine/aggregate";
 import { toNumbers } from "src/lib/engine/numeric";
 import type {
   AggregationConfig,
@@ -138,27 +138,29 @@ function computeColumn(
       return fmt(values.length - nonEmpty.length);
 
     case "count_checked":
-      return fmt(values.filter((v) => v === true).length);
+      return fmt(values.filter((v) => asCheckbox(v) === true).length);
 
     case "count_unchecked":
-      return fmt(values.filter((v) => v === false).length);
+      return fmt(values.filter((v) => asCheckbox(v) === false).length);
 
     // #180b (spec §3.2 item 3): all four percent branches used to answer
     // `0`/"0%" for an empty population. `computeAggregateValue` below already
     // answered `null` for the same four inputs — the same file, two functions,
     // two answers, which is the exact defect the adversarial review of #180a
     // named in this file. The footer now agrees with it.
+    // asCheckbox is the one definition of a box, shared with the stats path
+    // below and the rollup kernel (math-recheck, 2026-09-26).
     case "percent_checked": {
-      const bools = values.filter((v) => typeof v === "boolean");
-      if (bools.length === 0) return fmt(null);
-      const pct = (bools.filter((v) => v === true).length / bools.length) * 100;
+      const boxes = values.map(asCheckbox).filter((b): b is boolean => b !== null);
+      if (boxes.length === 0) return fmt(null);
+      const pct = (boxes.filter((b) => b).length / boxes.length) * 100;
       return fmt(pct, `${Math.round(pct)}%`);
     }
 
     case "percent_unchecked": {
-      const bools = values.filter((v) => typeof v === "boolean");
-      if (bools.length === 0) return fmt(null);
-      const pct = (bools.filter((v) => v === false).length / bools.length) * 100;
+      const boxes = values.map(asCheckbox).filter((b): b is boolean => b !== null);
+      if (boxes.length === 0) return fmt(null);
+      const pct = (boxes.filter((b) => !b).length / boxes.length) * 100;
       return fmt(pct, `${Math.round(pct)}%`);
     }
 
@@ -235,19 +237,19 @@ export function computeAggregateValue(
     case "count_values": return nonEmpty.length;
     case "count_numeric": return toNumbers(values).length;
     case "count_empty": return values.length - nonEmpty.length;
-    case "count_checked": return values.filter((v) => v === true).length;
-    case "count_unchecked": return values.filter((v) => v === false).length;
+    case "count_checked": return values.filter((v) => asCheckbox(v) === true).length;
+    case "count_unchecked": return values.filter((v) => asCheckbox(v) === false).length;
     case "percent_empty":
       return values.length ? ((values.length - nonEmpty.length) / values.length) * 100 : null;
     case "percent_not_empty":
       return values.length ? (nonEmpty.length / values.length) * 100 : null;
     case "percent_checked": {
-      const bools = values.filter((v) => typeof v === "boolean");
-      return bools.length ? (bools.filter((v) => v === true).length / bools.length) * 100 : null;
+      const boxes = values.map(asCheckbox).filter((b): b is boolean => b !== null);
+      return boxes.length ? (boxes.filter((b) => b).length / boxes.length) * 100 : null;
     }
     case "percent_unchecked": {
-      const bools = values.filter((v) => typeof v === "boolean");
-      return bools.length ? (bools.filter((v) => v === false).length / bools.length) * 100 : null;
+      const boxes = values.map(asCheckbox).filter((b): b is boolean => b !== null);
+      return boxes.length ? (boxes.filter((b) => !b).length / boxes.length) * 100 : null;
     }
     default: return null;
   }

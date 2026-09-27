@@ -44,7 +44,6 @@ describe("commandBus", () => {
       "toggle-visualizer-pane",
       "open-visualizer-for-file",
       "add-relation",
-      "open-formula-editor",
     ];
     for (const a of actions) {
       emitCommand(a);

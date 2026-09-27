@@ -34,7 +34,8 @@ import {
 } from "src/lib/relations/relationContract";
 
 const DERIVED_PREFIX = "__resolved__";
-const LEGACY_DISPLAY_FALLBACKS = ["name", "title", "Name", "Title"];
+/** Display fields a link may name when the relation sets none — shared by every relation path. */
+export const LEGACY_DISPLAY_FALLBACKS = ["name", "title", "Name", "Title"];
 
 /** Re-export of the contract's normalizer, so callers of this module need only one import. */
 export function normalizeRelationValue(value: Optional<DataValue>): string[] {

@@ -230,6 +230,16 @@ function longestBacktickRun(text: string): number {
   return longest;
 }
 
+/**
+ * The vault's own note API. A note written through the adapter is a file
+ * Obsidian learns about only from a later filesystem event; one made with
+ * `Vault.create` is indexed at once (catalogue audit C5).
+ */
+export interface ConflictNoteVault {
+  create(path: string, data: string): Promise<unknown>;
+  createFolder(path: string): Promise<unknown>;
+}
+
 export async function writeConflictNote(
   adapter: BrokenCopyAdapter,
   payload: string,
@@ -240,15 +250,19 @@ export async function writeConflictNote(
    * the one branch that reaches this function is also the branch where it may
    * be unknown.
    */
-  settingsPath?: string | null
+  settingsPath?: string | null,
+  vault?: ConflictNoteVault
 ): Promise<string | null> {
+  const write = (path: string, data: string): Promise<unknown> =>
+    vault ? vault.create(path, data) : adapter.write(path, data);
   // A folder of its own, because this note is a real vault note and a project
   // whose source is the vault root will list it as a record. A folder does not
   // make that impossible — a recursive root source still reaches it — but it
   // takes the common case out of the way, and the note says the rest plainly
   // rather than claiming nothing reads it.
   try {
-    await adapter.mkdir?.(CONFLICT_NOTE_FOLDER);
+    if (vault) await vault.createFolder(CONFLICT_NOTE_FOLDER);
+    else await adapter.mkdir?.(CONFLICT_NOTE_FOLDER);
   } catch {
     // Already there, or not creatable. Both are answered by the write below.
   }
@@ -282,7 +296,7 @@ export async function writeConflictNote(
     "",
   ].join("\n");
   try {
-    await adapter.write(notePath, contents);
+    await write(notePath, contents);
     return notePath;
   } catch {
     // The folder could not be written to — most likely it was never created.
@@ -291,7 +305,7 @@ export async function writeConflictNote(
     const rootPath = await freeName(adapter, conflictNoteRootPath(at));
     if (rootPath === null) return null;
     try {
-      await adapter.write(rootPath, contents);
+      await write(rootPath, contents);
       return rootPath;
     } catch {
       return null;

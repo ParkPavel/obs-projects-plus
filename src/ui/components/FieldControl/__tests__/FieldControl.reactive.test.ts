@@ -80,38 +80,40 @@ describe("FieldControl / reactive sync (REFACTOR-304)", () => {
     return { component, target, onChange, destroy: () => { component.$destroy(); target.remove(); } };
   }
 
-  it("re-derives cachedValue when parent updates value prop", async () => {
+  // #158 (N1/C1) reversed this pair on purpose: cachedValue still re-derives
+  // from the prop (that part of REFACTOR-304 stands), but a blur that saw no
+  // user edit in between now commits NOTHING rather than pushing the
+  // re-derived — and therefore merely echoed — prop back through `onChange`.
+  it("does not commit when only the parent updated the value prop (no user edit)", async () => {
     const initial = new Date(2026, 0, 15);
     const next = new Date(2026, 4, 5);
     const { component, target, onChange, destroy } = mount(initial);
 
-    // Parent updates the value prop after mount.
+    // Parent updates the value prop after mount — not a user edit.
     component.$set({ value: next });
     await Promise.resolve();
 
     // Trigger blur without an intermediate input event (the regression
     // scenario). The mocked DateInput exposes a button that dispatches
-    // `blur` directly so the on:blur handler calls onChange with the
-    // currently-cached value.
+    // `blur` directly, and `cachedValue` re-derived to equal the new prop —
+    // exactly what `commit` compares against — so there is nothing to commit.
     const btn = target.querySelector<HTMLButtonElement>("[data-testid='blur-only']");
     if (!btn) throw new Error("DateInput mock missing blur trigger");
     btn.click();
 
-    expect(onChange).toHaveBeenCalledTimes(1);
-    const passed = onChange.mock.calls[0]![0] as Date;
-    expect(passed.getTime()).toBe(next.getTime());
+    expect(onChange).not.toHaveBeenCalled();
 
     destroy();
   });
 
-  it("falls back to null when parent updates to a non-date value", async () => {
+  it("does not commit when the parent updates value to null (no user edit)", async () => {
     const { component, target, onChange, destroy } = mount(new Date(2026, 0, 15));
     component.$set({ value: null });
     await Promise.resolve();
     const btn = target.querySelector<HTMLButtonElement>("[data-testid='blur-only']");
     if (!btn) throw new Error("DateInput mock missing blur trigger");
     btn.click();
-    expect(onChange).toHaveBeenCalledWith(null);
+    expect(onChange).not.toHaveBeenCalled();
     destroy();
   });
 });

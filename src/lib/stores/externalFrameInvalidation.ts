@@ -14,3 +14,17 @@ export const externalFrameInvalidation = writable<number>(0);
 export function bumpExternalFrameInvalidation(): void {
   externalFrameInvalidation.update((n) => n + 1);
 }
+
+/**
+ * What decides whether cached sibling frames are still right: each project's
+ * id, name, source and field configuration. Rollups are folded into those
+ * frames (externalFrameResolver), so a changed rollup — sum to avg — must
+ * refresh every reader, not only a renamed project (Codex review of 316d058).
+ */
+export function projectsCacheKey(
+  projects: ReadonlyArray<{ id: string; name: string; dataSource?: unknown; fieldConfig?: unknown }>
+): string {
+  return projects
+    .map((p) => `${p.id}|${p.name}|${JSON.stringify(p.dataSource ?? null)}|${JSON.stringify(p.fieldConfig ?? null)}`)
+    .join("\u0001");
+}

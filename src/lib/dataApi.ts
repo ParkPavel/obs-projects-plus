@@ -94,7 +94,8 @@ export class DataApi {
    */
   private async writeAcrossFiles(
     paths: string[],
-    mutate: (data: string) => E.Either<Error, string>
+    mutate: (data: string) => E.Either<Error, string>,
+    mutateFrontmatter: (frontmatter: Record<string, unknown>) => void
   ): Promise<BulkFieldWriteOutcome> {
     const targets: IFile[] = [];
     const missing: string[] = [];
@@ -105,7 +106,12 @@ export class DataApi {
     }
 
     const settled = await Promise.allSettled(
-      targets.map((file) => this.updateFile(file, mutate)())
+      // Catalogue audit C5: the frontmatter is changed in place when the file
+      // offers it (body-safe, under Obsidian's lock), else by the old path.
+      targets.map(async (file) => {
+        if (await file.processFrontMatter(mutateFrontmatter)) return;
+        await this.updateFile(file, mutate)();
+      })
     );
 
     const failed = settled.flatMap((result, index) =>
@@ -127,7 +133,11 @@ export class DataApi {
     field: DataField,
     value: Optional<DataValue>
   ): Promise<BulkFieldWriteOutcome> {
-    return this.writeAcrossFiles(paths, (data) => doAddField(data, field, value));
+    return this.writeAcrossFiles(paths, (data) => doAddField(data, field, value), (fm) => {
+      // An absent value removes the key, as encodeFrontMatter does.
+      if (value === undefined) delete fm[field.name];
+      else applyRecordToFrontmatter(fm, [field], { id: "", values: { [field.name]: value } });
+    });
   }
 
   async renameField(
@@ -135,11 +145,18 @@ export class DataApi {
     from: string,
     to: string
   ): Promise<BulkFieldWriteOutcome> {
-    return this.writeAcrossFiles(paths, (data) => doRenameField(data, from, to));
+    return this.writeAcrossFiles(paths, (data) => doRenameField(data, from, to), (fm) => {
+      const moved = fm[from];
+      delete fm[from];
+      if (moved === undefined) delete fm[to];
+      else fm[to] = moved;
+    });
   }
 
   async deleteField(paths: string[], name: string): Promise<BulkFieldWriteOutcome> {
-    return this.writeAcrossFiles(paths, (data) => doDeleteField(data, name));
+    return this.writeAcrossFiles(paths, (data) => doDeleteField(data, name), (fm) => {
+      delete fm[name];
+    });
   }
 
   async createNote(
@@ -150,7 +167,7 @@ export class DataApi {
     let content = "";
 
     if (templatePath) {
-      const file = this.fileSystem.getFile(templatePath);
+      const file = this.fileSystem.getFile(normalizePath(templatePath));
       if (file) {
         content = await file.read();
         content = interpolateTemplate(content, {
@@ -188,11 +205,18 @@ export class DataApi {
     file: IFile,
     cb: (data: string) => E.Either<Error, string>
   ): T.Task<void> {
+    // Catalogue audit C5: `cb` runs on the contents the file holds when it is
+    // written (IFile.process), not on an earlier read an edit may have passed.
     return F.pipe(
-      TE.tryCatch((): Promise<string> => file.read(), E.toError),
-      TE.map(cb),
-      TE.chain(TE.fromEither),
-      TE.chain((result) => TE.tryCatch(() => file.write(result), E.toError)),
+      TE.tryCatch(
+        () =>
+          file.process((data) =>
+            E.getOrElse<Error, string>((err) => {
+              throw err;
+            })(cb(data))
+          ),
+        E.toError
+      ),
       T.map(
         E.fold(
           (err) => {
@@ -328,6 +352,9 @@ export function doRenameField(
   from: string,
   to: string
 ): E.Either<Error, string> {
+  // Renaming to its own name is no change; the spread below would set the key
+  // and then clear it, deleting the property (C5 review).
+  if (from === to) return E.right(data);
   return F.pipe(
     data,
     decodeFrontMatter,

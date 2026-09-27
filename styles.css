@@ -64,7 +64,9 @@
 .obs-projects-plus .sr-only,
 .obs-projects-plus .visually-hidden,
 .workspace-leaf-content[data-type="obs-projects-plus"] .sr-only,
-.workspace-leaf-content[data-type="obs-projects-plus"] .visually-hidden {
+.workspace-leaf-content[data-type="obs-projects-plus"] .visually-hidden,
+/* announceChange's live region is appended to <body>, outside the scoped roots. */
+.ppp-sr-announce {
   position: absolute;
   width: 1px;
   height: 1px;

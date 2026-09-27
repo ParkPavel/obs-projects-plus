@@ -13,6 +13,7 @@
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { WidgetDefinition, WidgetDataContext, WidgetSourceConfig, LinkedSelectionConfig, ChartConfig, StatsConfig } from "../types";
 import type { ExternalSourceState } from "../dashboardPreload";
+import type { NamedSourceNotice } from "./DatabaseCall/namedSourceNotice";
 
 export type BlockSource =
   /** No external source configured: the block reads the host's own frame. */
@@ -81,6 +82,54 @@ export function blockFrameOrEmpty(source: BlockSource): DataFrame {
   return blockFrame(source) ?? EMPTY_FRAME;
 }
 
+/**
+ * 3.6.0 — a chart or a stats block may read another project as its own data.
+ *
+ * The project is named in `widget.config.dataProjectId`, not in
+ * `widget.sourceConfig`: the chart and stats panels change a block by
+ * replacing its config, and only `database-call` has the separate source
+ * contract (WIDGET_PANELS in widgetComponentRegistry.ts). Other types ignore
+ * the key. `null` when the block reads this project.
+ */
+export function otherProjectSource(
+  widget: WidgetDefinition,
+  states: ReadonlyMap<string, ExternalSourceState>
+): BlockSource | null {
+  if (widget.type !== "chart" && widget.type !== "stats") return null;
+  const id = dataProjectIdOf(widget);
+  return id ? resolveBlockSource(id, states, EMPTY_FRAME) : null;
+}
+
+/**
+ * What a chart or stats block reading another project shows while that
+ * project is not ready — the screen notice WidgetContent already renders,
+ * with the words database-call uses for the same states. `null` when there
+ * is no other project or it is ready.
+ */
+export function otherProjectNotice(source: BlockSource | null): NamedSourceNotice | null {
+  if (!source || source.kind === "ready" || source.kind === "parent") return null;
+  const k = "views.dashboard.database-call.";
+  if (source.kind === "loading") {
+    return { placement: "screen", icon: "loader", key: k + "source-loading", fallback: "Loading the linked project…", vars: {} };
+  }
+  if (source.kind === "unavailable") {
+    return {
+      placement: "screen", icon: "unlink", key: k + "source-unavailable-hint",
+      fallback: "The project this block reads was not found: {{id}}", vars: { id: source.projectId },
+    };
+  }
+  return {
+    placement: "screen", icon: "alert-triangle", key: k + "source-error",
+    fallback: "Could not load the linked project", vars: {}, hint: source.message,
+  };
+}
+
+/** The project a chart or stats block reads, when it names one. */
+export function dataProjectIdOf(widget: WidgetDefinition): string | undefined {
+  const id = (widget.config as { dataProjectId?: unknown } | undefined)?.dataProjectId;
+  return typeof id === "string" && id ? id : undefined;
+}
+
 /** Everything the host needs to know about a database-call block's data. */
 export interface DbCallView {
   readonly sourceConfig: WidgetSourceConfig | undefined;
@@ -124,6 +173,17 @@ export function resolveDbCallView(
 // than inline in the host, which has a LOC budget it earns by not accumulating
 // helpers like these.
 
+/** The widget config with its linked selection set, or removed when `selection` is undefined. */
+export function withLinkedSelection(
+  config: Record<string, unknown>,
+  selection: LinkedSelectionConfig | undefined,
+): Record<string, unknown> {
+  const cfg = { ...config };
+  if (selection !== undefined) cfg["linkedSelection"] = selection;
+  else delete cfg["linkedSelection"];
+  return cfg;
+}
+
 export function asChartConfig(cfg: Record<string, unknown>): ChartConfig | null {
   return cfg && "chartType" in cfg && "xAxis" in cfg ? (cfg as unknown as ChartConfig) : null;
 }
@@ -139,6 +199,34 @@ export function asStatsConfig(cfg: Record<string, unknown>): StatsConfig | null 
  * host earns its budget by not accumulating helpers, and this one is entirely
  * knowledge about what a `chart` config means.
  */
+/** A widget's typed chart and stats configs (null for other types or shapes). */
+export function widgetConfigsOf(widget: WidgetDefinition): { chartConfig: ChartConfig | null; statsConfig: StatsConfig | null } {
+  return {
+    chartConfig: widget.type === "chart" ? asChartConfig(widget.config) : null,
+    statsConfig: widget.type === "stats" ? asStatsConfig(widget.config) : null,
+  };
+}
+
+/**
+ * The preloaded frames a chart reads beside its input: the correlation's right
+ * frame, and (3.6.0) each extra series' other project. A series whose project
+ * is not loaded is simply absent, and its line is all gaps.
+ */
+export function chartFramesOf(
+  type: string,
+  chartConfig: ChartConfig | null,
+  rightFrames: ReadonlyMap<string, DataFrame>
+): { chartRightFrame: DataFrame | null; chartSeriesFrames: ReadonlyMap<string, DataFrame> } {
+  const chartSeriesFrames = new Map<string, DataFrame>();
+  if (type === "chart") {
+    for (const s of chartConfig?.series ?? []) {
+      const f = s.dataProjectId ? rightFrames.get(s.dataProjectId) : undefined;
+      if (f && s.dataProjectId) chartSeriesFrames.set(s.dataProjectId, f);
+    }
+  }
+  return { chartRightFrame: chartRightFrameOf(type, chartConfig, rightFrames), chartSeriesFrames };
+}
+
 export function chartRightFrameOf(
   type: string,
   chartConfig: ChartConfig | null,

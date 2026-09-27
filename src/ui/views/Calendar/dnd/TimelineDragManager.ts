@@ -224,7 +224,7 @@ export class TimelineDragManager {
   /**
    * Auto-detect the nearest scrollable ancestor for vertical auto-scroll.
    * Walks up from the given element looking for overflow-y: auto|scroll
-   * with actual scrollable content (scrollHeight > clientHeight).
+   * with actual scrollable content (`scrollHeight > clientHeight`).
    */
   autoDetectScrollContainer(element: HTMLElement): void {
     if (this.scrollContainer) return;

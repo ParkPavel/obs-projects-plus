@@ -6,7 +6,8 @@
   import { app } from 'src/lib/stores/obsidian';
   import { DataFieldType, type DataField, type DataRecord } from 'src/lib/dataframe/dataframe';
   import type { AgendaFilter, AgendaFilterOperator } from 'src/settings/v3/settings';
-  import { getOperatorsForFieldType, operatorNeedsValue } from './operatorHelpers';
+  import { getOperatorsForFieldType } from './operatorHelpers';
+  import { operatorNeedsValue } from 'src/settings/base/settings';
   import DateFormulaInput from './DateFormulaInput.svelte';
   
   const dispatch = createEventDispatcher<{
@@ -115,15 +116,14 @@
         el.style.maxHeight = toRem(h);
       }
 
-      el.classList.add('ppp-popover-container--mobile-kbd');
-      el.style.position = 'fixed';
-      el.style.bottom = 'auto';
+      // Position and the hidden start are classes (catalogue audit C6); the
+      // desktop placement's inline bottom would outrank the class, so it goes.
+      el.classList.add('ppp-popover-container--mobile-kbd', 'ppp-popover-container--pending');
+      el.style.removeProperty('bottom');
 
       // Start invisible вЂ” searchInput.focus() will trigger keyboard AFTER
       // this function returns, making the initial position wrong.
       // Show after first resize (keyboard settled) or fallback timeout.
-      el.style.opacity = '0';
-      el.style.pointerEvents = 'none';
       place();  // approximate position, hidden
 
       let revealed = false;
@@ -131,8 +131,7 @@
         if (revealed) return;
         revealed = true;
         place();  // re-run with actual viewport
-        el.style.opacity = '1';
-        el.style.pointerEvents = '';
+        el.classList.remove('ppp-popover-container--pending');
       }
 
       // Fallback: if keyboard was already open, no resize fires вЂ” reveal after short delay
@@ -221,8 +220,6 @@
     // List
     const list = activeDocument.createElement('div');
     list.addClass('ppp-popover-list');
-    list.style.flex = '1';
-    list.style.minHeight = '0';
     container.appendChild(list);
 
     function renderItems(searchText: string) {
@@ -252,7 +249,6 @@
         iconSpan.addClass('ppp-popover-item-icon');
         const iconName = getFieldIconName(f);
         setIcon(iconSpan, iconName);
-        if (isSelected) iconSpan.style.color = 'var(--interactive-accent)';
         btn.appendChild(iconSpan);
 
         // Label
@@ -265,13 +261,10 @@
         if (isSelected) {
           const check = activeDocument.createElement('span');
           check.addClass('ppp-popover-item-icon');
-          check.style.color = 'var(--interactive-accent)';
           setIcon(check, 'check');
           btn.appendChild(check);
         }
 
-        btn.addEventListener('mouseenter', () => { btn.style.background = 'var(--background-modifier-hover)'; });
-        btn.addEventListener('mouseleave', () => { btn.style.background = isSelected ? '' : 'transparent'; });
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           selectField(f.name);
@@ -291,12 +284,12 @@
         e.preventDefault();
         fieldSelectedIdx = Math.min(fieldSelectedIdx + 1, items.length - 1);
         items[fieldSelectedIdx]?.scrollIntoView({ block: 'nearest' });
-        items.forEach((it, i) => { (it as HTMLElement).style.background = i === fieldSelectedIdx ? 'var(--background-modifier-hover)' : 'transparent'; });
+        items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === fieldSelectedIdx));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         fieldSelectedIdx = Math.max(fieldSelectedIdx - 1, 0);
         items[fieldSelectedIdx]?.scrollIntoView({ block: 'nearest' });
-        items.forEach((it, i) => { (it as HTMLElement).style.background = i === fieldSelectedIdx ? 'var(--background-modifier-hover)' : 'transparent'; });
+        items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === fieldSelectedIdx));
       } else if (e.key === 'Enter') {
         e.preventDefault();
         (items[fieldSelectedIdx] as HTMLElement)?.click();
@@ -331,8 +324,6 @@
 
     const list = activeDocument.createElement('div');
     list.addClass('ppp-popover-list');
-    list.style.flex = '1';
-    list.style.minHeight = '0';
     container.appendChild(list);
 
     operators.forEach(op => {
@@ -350,13 +341,10 @@
       if (isSelected) {
         const check = activeDocument.createElement('span');
         check.addClass('ppp-popover-item-icon');
-        check.style.color = 'var(--interactive-accent)';
         setIcon(check, 'check');
         btn.appendChild(check);
       }
 
-      btn.addEventListener('mouseenter', () => { btn.style.background = 'var(--background-modifier-hover)'; });
-      btn.addEventListener('mouseleave', () => { btn.style.background = isSelected ? '' : 'transparent'; });
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         selectOperator(op);
@@ -590,8 +578,6 @@
 
     const list = activeDocument.createElement('div');
     list.addClass('ppp-popover-list');
-    list.style.flex = '1';
-    list.style.minHeight = '0';
     container.appendChild(list);
 
     items.forEach((val, idx) => {
@@ -611,7 +597,6 @@
       if (isSelected) {
         const check = activeDocument.createElement('span');
         check.addClass('ppp-popover-item-icon');
-        check.style.color = 'var(--interactive-accent)';
         setIcon(check, 'check');
         btn.appendChild(check);
       }
@@ -619,12 +604,7 @@
       btn.addEventListener('mouseenter', () => {
         valueSelectedIdx = idx;
         const btns = list.querySelectorAll('button');
-        btns.forEach((b, i) => {
-          (b as HTMLElement).style.background = i === idx ? 'var(--background-modifier-hover)' : 'transparent';
-        });
-      });
-      btn.addEventListener('mouseleave', () => {
-        btn.style.background = isSelected ? '' : 'transparent';
+        btns.forEach((b, i) => b.classList.toggle('ppp-popover-item--hover', i === idx));
       });
       btn.addEventListener('mousedown', (e) => {
         e.preventDefault(); // prevent blur
@@ -664,12 +644,12 @@
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       valueSelectedIdx = Math.min(valueSelectedIdx + 1, items.length - 1);
-      items.forEach((it, i) => { (it as HTMLElement).style.background = i === valueSelectedIdx ? 'var(--background-modifier-hover)' : 'transparent'; });
+      items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === valueSelectedIdx));
       items[valueSelectedIdx]?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       valueSelectedIdx = Math.max(valueSelectedIdx - 1, 0);
-      items.forEach((it, i) => { (it as HTMLElement).style.background = i === valueSelectedIdx ? 'var(--background-modifier-hover)' : 'transparent'; });
+      items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === valueSelectedIdx));
       items[valueSelectedIdx]?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'Enter') {
       e.preventDefault();
@@ -1032,6 +1012,25 @@
      so :global() is required. Compiled into main.css в†’ auto-merged. */
   :global(.ppp-popover-container--mobile-kbd) {
     flex-direction: column-reverse;
+    position: fixed;
+    bottom: auto;
+  }
+  /* Hidden until the keyboard settles and the popover is placed. */
+  :global(.ppp-popover-container--pending) {
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* The filter popovers' list, hover and selected-icon colour were inline
+     styles set per item (catalogue audit C6). */
+  :global(.ppp-filter-popover .ppp-popover-list) {
+    flex: 1;
+    min-height: 0;
+  }
+  :global(.ppp-filter-popover .ppp-popover-item:hover) {
+    background: var(--background-modifier-hover);
+  }
+  :global(.ppp-filter-popover .ppp-popover-item--selected .ppp-popover-item-icon) {
+    color: var(--interactive-accent);
   }
   :global(.ppp-popover-container--mobile-kbd) :global(.ppp-popover-search) {
     border-bottom: none;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import type { CoverBannerConfig } from "../../types";
 
@@ -46,7 +47,7 @@
       <div class="ppp-cover-overlay">{overlay}</div>
     {/if}
   {:else}
-    <div class="ppp-cover-empty">No image — open settings to set a source.</div>
+    <div class="ppp-cover-empty">{$i18n.t("views.dashboard.cover-banner.empty")}</div>
   {/if}
 </div>
 

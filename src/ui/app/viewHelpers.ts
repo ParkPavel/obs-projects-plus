@@ -1,67 +1,14 @@
-import { DataFieldType, type DataFrame, type DataRecord } from "src/lib/dataframe/dataframe";
+import type { DataRecord } from "src/lib/dataframe/dataframe";
 import type { FilterCondition } from "src/settings/base/settings";
 import type { ColorFilterDefinition } from "src/settings/base/settings";
-import type { RelationFieldConfig, RollupFieldConfig } from "src/settings/base/settings";
+import type { FieldConfigRelationMap } from "src/lib/relations/relationTargets";
 
-export type FieldConfigRelationMap = Record<
-  string,
-  { relation?: RelationFieldConfig; rollup?: RollupFieldConfig } | undefined
->;
+// Moved to src/lib/relations/relationTargets.ts (3.6.0); re-exported here.
+export { extractRelationTargetIds, type FieldConfigRelationMap } from "src/lib/relations/relationTargets";
 
-/**
- * Extracts unique external target project IDs from relation/rollup field configs.
- * Self-references (targetProjectId === projectId) are excluded — they don't need
- * an external frame fetch. Result is sorted for stable reactive key comparison.
- */
-export function extractRelationTargetIds(
-  projectId: string,
-  fieldConfig: FieldConfigRelationMap | undefined
-): string[] {
-  if (!fieldConfig) return [];
-  const ids = new Set<string>();
-  for (const cfg of Object.values(fieldConfig)) {
-    if (cfg?.relation?.targetProjectId && cfg.relation.targetProjectId !== projectId) {
-      ids.add(cfg.relation.targetProjectId);
-    }
-    if (cfg?.rollup?.targetProjectId && cfg.rollup.targetProjectId !== projectId) {
-      ids.add(cfg.rollup.targetProjectId);
-    }
-  }
-  return Array.from(ids).sort();
-}
-
-/**
- * A field the user explicitly typed as a relation through "Настроить поле"
- * must READ as a relation everywhere the frame is inspected — the schema
- * list, the header tooltip, the rollup picker — not just where enrichment
- * already consults `typeConfig.relation` directly.
- *
- * `detectCellType` (datasources/helpers.ts) deliberately leaves a single
- * `[[…]]` string as String, because the historical `name` alias encoding
- * depends on staying a string for `MarkdownRenderer`. That rule governs
- * INFERENCE for a field nobody configured. Once a field carries an explicit
- * `fieldConfig.relation.targetProjectId`, inference is no longer the
- * question being asked, and this is the one place the two are reconciled —
- * on the frame, because only the frame's own project knows which of its
- * fields were configured this way; a datasource has no notion of a project.
- *
- * Runs before enrichment (`enrichFrameWithAllRelations`), so the type a
- * relation's own `__resolved__<field>` companion inherits is correct too.
- */
-export function applyDeclaredFieldTypes(
-  frame: DataFrame,
-  fieldConfig: FieldConfigRelationMap | undefined
-): DataFrame {
-  if (!fieldConfig) return frame;
-  let changed = false;
-  const fields = frame.fields.map((field) => {
-    if (field.type === DataFieldType.Relation) return field;
-    if (!fieldConfig[field.name]?.relation?.targetProjectId) return field;
-    changed = true;
-    return { ...field, type: DataFieldType.Relation };
-  });
-  return changed ? { ...frame, fields } : frame;
-}
+// Moved to src/lib (M2-C6): external frames need it too, and lib must not
+// import from ui. Re-exported so existing importers keep working.
+export { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
 
 /**
  * Returns the first matching color from a color-filter rule set, or null.
@@ -81,4 +28,21 @@ export function getRecordColor(
     }
   }
   return null;
+}
+
+/**
+ * Fields a view filter condition may name: the frame's own, plus every
+ * declared rollup — a rollup is a computed column without a key in any note
+ * (3.6.0), so the raw frame never lists it, and the cleanup deleted filters on
+ * it (Codex gate of calc-demo).
+ */
+export function conditionFieldsKnown(
+  frameFieldNames: readonly string[],
+  fieldConfig: FieldConfigRelationMap | undefined
+): Set<string> {
+  const known = new Set(frameFieldNames);
+  for (const [name, cfg] of Object.entries(fieldConfig ?? {})) {
+    if (cfg?.rollup) known.add(name);
+  }
+  return known;
 }

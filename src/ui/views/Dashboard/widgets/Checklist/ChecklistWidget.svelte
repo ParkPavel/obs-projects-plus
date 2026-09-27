@@ -3,6 +3,7 @@
   import type { ViewApi } from "src/lib/viewApi";
   import ChecklistItem from "./ChecklistItem.svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { asCheckbox } from "src/lib/engine/aggregate";
 
   export let config: Record<string, unknown>;
   export let source: DataFrame;
@@ -52,8 +53,10 @@
     return s || id;
   }
 
+  // The one definition of a checked box, shared with the aggregates and the
+  // filter: " TRUE " was checked in a stats card and unchecked here.
   function isChecked(value: unknown): boolean {
-    return value === true || value === "true";
+    return asCheckbox(value as Parameters<typeof asCheckbox>[0]) === true;
   }
 
   function compareValues(a: unknown, b: unknown): number {

@@ -111,8 +111,8 @@
           <details class="error-details">
             <summary>{detailsLabel}</summary>
             <div class="error-stack">
-              <p><strong>Component:</strong> {componentName}</p>
-              <p><strong>Error:</strong> {error.message}</p>
+              <p><strong>{$i18n.t("components.error-boundary.component")}</strong> {componentName}</p>
+              <p><strong>{$i18n.t("components.error-boundary.error")}</strong> {error.message}</p>
               {#if errorInfo}
                 <pre>{errorInfo}</pre>
               {/if}

@@ -2,7 +2,7 @@
 
 /**
  * Validate a regex pattern for safety.
- * Rejects lookbehind/lookahead (iOS <16.4 compat) and nested quantifiers (ReDoS).
+ * Rejects lookbehind/lookahead (iOS `<16.4` compat) and nested quantifiers (ReDoS).
  */
 export function isUnsafePattern(pattern: string): boolean {
   // Lookahead/lookbehind — iOS <16.4 compat

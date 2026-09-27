@@ -27,6 +27,7 @@
   import type { ContentEntry, WidgetRenderContext } from "./widgetComponentRegistry";
   import { convertLegacyWidget, isRetiredLegacyType } from "./legacyMigration";
   import { hostSourceNotice } from "./dataScope";
+  import { otherProjectNotice } from "./linkedSourceState";
   import EmptyState from "src/ui/components/EmptyState/EmptyState.svelte";
   import WidgetSetupWizard from "./WidgetSetupWizard.svelte";
   import LegacyWidgetPlaceholder from "./LegacyWidgetPlaceholder.svelte";
@@ -48,7 +49,7 @@
    * purpose: a broken source is a configuration fault, and "not configured yet"
    * would send the user to fix the wrong thing.
    */
-  $: sourceNotice = hostSourceNotice(widget.type, ctx.namedSource);
+  $: sourceNotice = otherProjectNotice(ctx.otherProject) ?? hostSourceNotice(widget.type, ctx.namedSource);
 
   function handleConvert() {
     const patch = convertLegacyWidget(widget);
@@ -88,6 +89,6 @@
   />
 {:else}
   <div class="ppp-widget-placeholder">
-    {$i18n.t("views.dashboard.widget.not-configured", { type: widget.type })}
+    {$i18n.t("views.dashboard.widget.not-configured", { type: $i18n.t(`views.dashboard.types.${widget.type}`, { defaultValue: widget.type }) })}
   </div>
 {/if}

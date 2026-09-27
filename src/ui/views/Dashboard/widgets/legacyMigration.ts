@@ -11,16 +11,23 @@ import type { WidgetDefinition, WidgetType, StatsConfig, SummaryColumnConfig } f
 import type { TransformPipeline, TransformStep, FilterStep } from "src/lib/dashboard-engine/transformTypes";
 import type { FilterDefinition } from "src/settings/settings";
 import { andComposeFilters } from "src/lib/engine/filterCompose";
+import { get } from "svelte/store";
+import { i18n } from "src/lib/stores/i18n";
+
+/** The label a new table tab is written with: "Table" in the user's language. */
+export function defaultTableTabLabel(): string {
+  return get(i18n).t("views.dashboard.database-call.view-type.table");
+}
 
 /**
  * Build a single-Table-tab database-call config (the data-table successor).
- * `label` defaults to "Table" for the legacy-conversion callers below, which
- * carry no domain locale of their own; a caller writing data for a known
- * locale (e.g. a Russian starter profile) should pass its own tab label.
+ * `label` defaults to "Table" in the user's language for the legacy-conversion
+ * callers below, which carry no domain locale of their own; a caller writing
+ * data for a known locale (e.g. a Russian starter profile) passes its own.
  */
 export function tableTabConfig(
   tableConfig: Record<string, unknown> = {},
-  label = "Table"
+  label = defaultTableTabLabel()
 ): Record<string, unknown> {
   return {
     viewTabs: [{ id: "table", label, viewType: "table", config: tableConfig }],

@@ -21,7 +21,7 @@
   import { subscribeCanvasCommands } from "./dashboardCommands";
   import { collectReferencedSourceIds, createPreloadRunner, createPreloadSync, readyFrames, type ExternalSourceState } from "./dashboardPreload";
   import { createSchemaController } from "./dashboardSchema";
-  import { applyFilterTab, promoteFilterTabToGlobal, type ActiveFilterTab } from "./dashboardFilters";
+  import { applyFilterTab, narrowsFrame, promoteFilterTabToGlobal, type ActiveFilterTab } from "./dashboardFilters";
   import DashboardToolbar from "./DashboardToolbar.svelte";
   import FilterBridge from "./FilterBridge.svelte";
   import WidgetGrid from "./WidgetGrid.svelte";
@@ -130,7 +130,7 @@
     getConfig: () => effectiveConfig,
     saveConfig,
     addWidget: (t, init) => widgetController.addWidget(t, init),
-    getPrimaryWidgetId: () => effectiveConfig?.widgets.find((w) => w.type === "data-table" || w.type === "database-call")?.id,
+    getPrimaryWidgetId: () => effectiveConfig?.widgets.find((w) => w.type === "data-table" || (w.type === "database-call" && !w.sourceConfig?.projectId))?.id, // the first block reading THIS project (M2-C7)
   });
 </script>
 <ViewLayout>
@@ -162,7 +162,7 @@
       <FilterBridge {activeFilterTab} {readonly}
         canPromote={!!onViewFilterChange} on:promote={promoteLocalToGlobal} on:clear={() => (activeFilterTab = null)} />
       {#if !readonly && widgets.length > 0}
-        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []}
+        <SmartSuggestionBus fields={frame.fields} {widgets} dismissed={effectiveConfig?.dismissedSuggestions ?? []} context={{ hostProjectId: project.id, projects: $settings.projects ?? [], hostViewFiltered: narrowsFrame(globalFilter) }}
           on:accept={suggest.accept} on:dismissForever={suggest.dismiss} />
       {/if}
       <WidgetGrid

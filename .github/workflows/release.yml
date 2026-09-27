@@ -20,9 +20,14 @@ jobs:
         with:
           node-version: "18.x"
 
+      - name: Validate tag and stage manifest
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          node scripts/stage-release-manifest.mjs "$tag" "$RUNNER_TEMP/release-manifest"
+
       - name: Build plugin
         run: |
-          npm install
+          npm ci
           npm run build
 
       - name: Create or update release
@@ -30,23 +35,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
+          manifest="$RUNNER_TEMP/release-manifest/manifest.json"
 
-          # A semver prerelease tag (3.6.0-alpha, 3.6.0-beta.2, …) must be
-          # published as a prerelease. GitHub shows the newest NON-prerelease as
-          # "Latest release", so without this an alpha becomes the shop window
-          # and anyone landing on the repo is offered it as the stable build.
-          prerelease=""
-          case "$tag" in
-            *-*) prerelease="--prerelease" ;;
-          esac
+          # Only x.y.z-beta.N is a prerelease (BRAT channel). GitHub shows the
+          # newest NON-prerelease as "Latest release", so a beta must not be it.
+          prerelease="--prerelease=false"
+          if [[ "$tag" =~ -beta\.[0-9]+$ ]]; then
+            prerelease="--prerelease"
+          fi
 
           if gh release view "$tag" &>/dev/null; then
+            # A rerun also corrects the release's own metadata: BRAT needs the
+            # release name to equal the tag, and only a beta may be a prerelease.
+            gh release edit "$tag" --title="$tag" "$prerelease"
             gh release upload "$tag" \
-              main.js manifest.json styles.css --clobber
+              main.js "$manifest" styles.css --clobber
           else
             gh release create "$tag" \
               --title="$tag" \
               --generate-notes \
-              $prerelease \
-              main.js manifest.json styles.css
+              "$prerelease" \
+              main.js "$manifest" styles.css
           fi

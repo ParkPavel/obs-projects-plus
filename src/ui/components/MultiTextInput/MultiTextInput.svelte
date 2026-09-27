@@ -1,6 +1,7 @@
 <script lang="ts">
   import { produce } from "immer";
-  import { Button, Icon, IconButton, TextInput } from "obsidian-svelte";
+  import { Button, Icon, TextInput } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import { dndzone } from "svelte-dnd-action";
   import { i18n } from "src/lib/stores/i18n";
   import { tick, onMount } from "svelte";
@@ -161,19 +162,19 @@
     on:consider={handleDndConsider}
     on:finalize={handleDndFinalize}
     role="list"
-    aria-label="Editable options list"
+    aria-label={$i18n.t("components.multi-text-input.list")}
   >
     {#each optionItems as optionItem, i (optionItem.id)}
       <div class="dnd-item-wrapper" role="listitem">
         <div class="dnd-item">
-          <span class="drag-handle" role="button" tabindex="0" title="Drag to reorder">
+          <span class="drag-handle" role="button" tabindex="0" title={$i18n.t("common.drag-to-reorder")}>
             <Icon name="grip-vertical" />
           </span>
           <div class="input-wrapper">
             <TextInput
               width="100%"
               value={optionItem.value}
-              placeholder={`Option ${i + 1}`}
+              placeholder={$i18n.t("components.multi-text-input.option", { index: i + 1 })}
               on:input={handleOptionInput(i)}
               on:blur={handleOptionChange(i)}
               on:keydown={handleKeyDown(i)}
@@ -182,7 +183,7 @@
           <IconButton 
             icon="cross" 
             onClick={handleOptionRemove(i)}
-            tooltip={`Remove option ${i + 1}`}
+            tooltip={$i18n.t("components.multi-text-input.remove-option", { index: i + 1 })}
           />
         </div>
       </div>
@@ -191,7 +192,7 @@
   <Button 
     variant="plain" 
     on:click={handleOptionAdd}
-    tooltip="Add new option (or press Enter)"
+    tooltip={$i18n.t("components.multi-text-input.add-option")}
   >
     <Icon name="plus" />
     {$i18n.t("components.multi-text.add")}

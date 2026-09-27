@@ -23,7 +23,7 @@ Projects Plus помогает работать с заметками Obsidian �
 
 ## Установка
 
-Плагин находится в alpha-разработке. Версия исходного кода указана в [manifest.json](manifest.json), готовые сборки — в [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases). Минимальная версия Obsidian также указана в манифесте.
+Плагин находится в alpha-разработке. Версия исходного кода указана в [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json), готовые сборки — в [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases). Минимальная версия Obsidian также указана в манифесте.
 
 1. Выберите релиз и скачайте из него **все три файла**: `main.js`, `manifest.json` и `styles.css`.
 2. Создайте в своём хранилище папку `.obsidian/plugins/obs-projects-plus/` и поместите туда файлы.
@@ -59,4 +59,4 @@ Projects Plus помогает работать с заметками Obsidian �
 
 Разработка проекта ведётся через [Claudex](https://github.com/ParkPavel/claudex). Настройки и инструкции для ИИ поддерживаются в том отдельном проекте.
 
-Projects Plus основан на [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) Маркуса Олссона. Текущий сопровождающий — Park Pavel. Лицензия: [Apache 2.0](LICENSE); сведения об авторстве — [NOTICE](NOTICE).
+Projects Plus основан на [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) Маркуса Олссона. Текущий сопровождающий — Park Pavel. Лицензия: [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); сведения об авторстве — [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE).

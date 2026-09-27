@@ -40,6 +40,14 @@
   } from "../../canvasSelectionStore";
   import { applyFilter } from "src/lib/engine/filterEvaluator";
   import { filterByLinkedSelection } from "./relationFilterAdapter";
+  import { filterByMasterSide } from "./masterSideFilter";
+  import { chartSourceId, dataTableSourceId, type SelectionState } from "../../canvasSelectionStore";
+
+  /** True when the canvas selection comes from the master block and names rows. */
+  function isMasterSelection(sel: SelectionState, masterId: string | undefined): boolean {
+    if (!masterId || sel.source === null || sel.values.length === 0) return false;
+    return sel.source === dataTableSourceId(masterId) || sel.source === chartSourceId(masterId);
+  }
   import type { FilterDefinition } from "src/settings/base/settings";
   import type { LegacyLinkedSelectionStatus } from "src/lib/relations/relationContract";
   import BlockFilterBar from "./BlockFilterBar.svelte";
@@ -62,6 +70,10 @@
   export let config: Record<string, unknown>;
   /** Canvas Selection Bus: drives auto-filter when a master block has a selection. */
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
+  /** F3b: the master block's frame (this dashboard's), for a master-side link. */
+  export let masterFrame: DataFrame | undefined = undefined;
+  /** F3b: the source before this block's filter, when the host scoped `frame` already. */
+  export let masterUniverse: DataFrame | undefined = undefined;
   /** #114 (E1/E4): runtime validation result from WidgetHost — drives label rendering. */
   export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
   /**
@@ -108,6 +120,11 @@
    *
    * Config writes are NOT affected: a view tab or a block filter belongs to the
    * widget in the parent dashboard, which is exactly where they are stored.
+   *
+   * #C4: only DataTableContent (Table already treats `readonly` fully) is
+   * handed this folded into `readonly`. Board, Calendar and Gallery receive
+   * it separately as `dataReadOnly` — see BoardView.svelte for why folding it
+   * into their `readonly` would have been wrong.
    */
   export let sourceReadOnly: boolean = false;
   /**
@@ -135,11 +152,16 @@
   // #114 (E7): composeEffectiveFilter consolidates linked + canvas selection.
   // When linkedSelection is configured and valid, it maps the selection through
   // the relationField. When validation fails, falls back to canvas condition.
+  // F3b: a master-side link narrows by the master rows' own links
+  // (masterSideFilter.ts), not by a condition on this block's records — so
+  // neither the linked condition nor the plain canvas one applies here.
+  $: masterSide = linkedSelection?.relationSide === "master" && linkedSelectionValidation === "valid";
+  $: masterSelected = masterSide && isMasterSelection($canvasStore, linkedSelection?.sourceWidgetId);
   $: effectiveConditions = composeEffectiveFilter({
     userFilters: [],
-    selection: $canvasStore,
+    selection: masterSide ? EMPTY_SELECTION : $canvasStore,
     myWidgetId: widgetId,
-    linkedSelection,
+    linkedSelection: masterSide ? undefined : linkedSelection,
     validationResult: linkedSelectionValidation,
   });
   $: autoFilter = effectiveConditions.length > 0 ? effectiveConditions[0] : null;
@@ -186,7 +208,9 @@
 
   $: effectiveFrame = autoFilter
     ? { ...subFiltered, records: filterByLinkedSelection(subFiltered.records, autoFilter, subFiltered.fields) }
-    : subFiltered;
+    : masterSelected && masterFrame && linkedSelection
+      ? { ...subFiltered, records: filterByMasterSide(masterUniverse ?? frame, subFiltered.records, masterFrame, $canvasStore.values, linkedSelection.relationField) }
+      : subFiltered;
 
   function handleSubFilterChange(e: CustomEvent<FilterDefinition | undefined>) {
     const next = { ...config };
@@ -492,8 +516,15 @@
       {readonly}
       on:change={handleSubFilterChange}
     />
-    {#if filterLabel === "relation"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Filtered by relation">
+    {#if filterLabel === "relation" && masterSide}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
+        {$i18n.t("views.dashboard.database-call.filter-master", {
+          name: selectedLabel,
+          field: linkedSelection?.relationField ?? "",
+        })}
+      </span>
+    {:else if filterLabel === "relation"}
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-relation")}>
         {$i18n.t("views.dashboard.database-call.filter-label.relation-named", {
           defaultValue: "Showing records where {{field}} is {{value}}",
           field: linkedSelection?.relationField ?? "",
@@ -501,14 +532,14 @@
         })}
       </span>
     {:else if filterLabel === "relation-idle"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label="Linked by relation">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--relation" aria-label={$i18n.t("views.dashboard.database-call.linked-by-relation")}>
         {$i18n.t("views.dashboard.database-call.filter-label.relation-idle", {
           defaultValue: "Linked through {{field}} — select a row to narrow this block",
           field: linkedSelection?.relationField ?? "",
         })}
       </span>
     {:else if filterLabel === "canvas"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label="Filtered by canvas selection">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--canvas" aria-label={$i18n.t("views.dashboard.database-call.filtered-by-canvas")}>
         {$i18n.t("views.dashboard.database-call.filter-label.canvas", { defaultValue: "Filtered by canvas selection" })}
       </span>
     {:else if filterLabel === "broken" && !linkedSelection?.relationField}
@@ -519,13 +550,13 @@
         and configured-then-broken are different situations and now read as
         different sentences.
       -->
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation not configured">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label={$i18n.t("views.dashboard.database-call.relation-not-configured")}>
         {$i18n.t("views.dashboard.database-call.filter-label.relation-unset", {
           defaultValue: "No field chosen to link by — this block shows every record",
         })}
       </span>
     {:else if filterLabel === "broken"}
-      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label="Relation broken">
+      <span class="ppp-dbc-filter-label ppp-dbc-filter-label--broken" aria-label={$i18n.t("views.dashboard.database-call.relation-broken")}>
         {selectionActive
           ? $i18n.t("views.dashboard.database-call.filter-label.broken-v2", {
               defaultValue:
@@ -618,6 +649,7 @@
               {fieldPresets}
               {activeFieldPresetId}
               {project}
+              sourceProjectId={sourceState.kind === "ready" ? sourceState.projectId : undefined}
               {widgetId}
               {newRowSignal}
               on:configChange={handleDataTableConfigChange}
@@ -630,6 +662,7 @@
             frame={effectiveFrame}
             {api}
             readonly={readonly || sourceReadOnly}
+            dataReadOnly={sourceReadOnly}
             {getRecordColor}
             {sortRecords}
             {getRecord}
@@ -644,6 +677,7 @@
             frame={effectiveFrame}
             {api}
             readonly={readonly || sourceReadOnly}
+            dataReadOnly={sourceReadOnly}
             {getRecordColor}
             config={calendarConfig}
             onConfigChange={handleCalendarConfigChange}
@@ -655,6 +689,7 @@
             frame={effectiveFrame}
             {api}
             readonly={readonly || sourceReadOnly}
+            dataReadOnly={sourceReadOnly}
             {getRecordColor}
             config={galleryConfig}
             onConfigChange={handleGalleryConfigChange}
@@ -663,7 +698,7 @@
           <div class="ppp-database-call-placeholder">
             <span>{$i18n.t("views.dashboard.database-call.view-not-implemented", {
               defaultValue: "{{viewType}} view not yet implemented",
-              viewType: activeTab.viewType
+              viewType: $i18n.t(`views.${activeTab.viewType}.name`, { defaultValue: activeTab.viewType })
             })}</span>
           </div>
         {/if}

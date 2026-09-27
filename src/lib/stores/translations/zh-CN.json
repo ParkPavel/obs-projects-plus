@@ -19,12 +19,16 @@
             "color": "颜色",
             "url": "网址",
             "email": "邮箱",
-            "phone": "电话"
+            "phone": "电话",
+            "unique_id": "唯一 ID"
         },
         "datasources": {
             "folder": "文件夹",
             "tag": "标签",
-            "dataview": "Dataview"
+            "dataview": "Dataview",
+            "native-query": "查询（筛选）",
+            "derived": "已保存的筛选",
+            "derived-project": "项目"
         },
         "commands": {
             "show-projects": {
@@ -53,6 +57,13 @@
             },
             "open-formula-editor": {
                 "name": "打开公式编辑器"
+            },
+            "create-demo-project": {
+                "name": "创建演示项目",
+                "duplicate-warning": "演示项目已存在 — 请先删除后再重新生成。",
+                "created": "演示项目已创建。",
+                "repaired": "演示项目已存在；已恢复缺失的笔记。",
+                "repair-failed": "演示项目已存在。有 {{count}} 篇缺失的笔记无法写入 — 详见控制台。"
             }
 
         },
@@ -122,7 +133,9 @@
                 },
                 "path": {
                     "name": "路径",
-                    "description": "目标文件夹路径。若为空值，路径将设为根目录。"
+                    "description": "目标文件夹路径。若为空值，路径将设为根目录。",
+                    "consequence-root": "路径为空表示整个库：每篇笔记都会成为此项目的记录。",
+                    "consequence": "读取 '{{path}}' 中已有的笔记。不会创建文件夹，也不会写入笔记 — 项目只是对现有文件的视图。"
                 },
                 "tag": {
                     "name": "标签",
@@ -160,7 +173,8 @@
                 },
                 "additional-sources": {
                     "name": "附加数据源",
-                    "add": "添加数据源"
+                    "add": "添加数据源",
+                    "name-placeholder": "名称（可选）"
                 },
                 "templates": {
                     "name": "模板",
@@ -198,6 +212,45 @@
                         "name": "继承日历筛选器",
                         "description": "应用与日历视图相同的筛选器"
                     }
+                },
+                "native-query": {
+                    "from": {
+                        "name": "来源",
+                        "description": "筛选前从何处读取笔记。"
+                    },
+                    "where": {
+                        "name": "筛选条件",
+                        "description": "仅包含满足所有条件的笔记。",
+                        "add": "添加条件",
+                        "field-placeholder": "字段名称",
+                        "value-placeholder": "值"
+                    },
+                    "limit": {
+                        "name": "限制",
+                        "description": "记录的最大数量。留空表示不限制。"
+                    },
+                    "operators": {
+                        "is": "等于",
+                        "is-not": "不等于",
+                        "contains": "包含",
+                        "not-contains": "不包含",
+                        "starts-with": "开头是",
+                        "ends-with": "结尾是",
+                        "is-empty": "为空",
+                        "is-not-empty": "不为空",
+                        "eq": "=",
+                        "neq": "≠",
+                        "lt": "<",
+                        "gt": ">",
+                        "lte": "≤",
+                        "gte": "≥",
+                        "is-checked": "已勾选",
+                        "is-not-checked": "未勾选"
+                    }
+                },
+                "agenda-custom-lists": {
+                    "name": "自定义列表",
+                    "desc": "管理自定义议程列表。列表在日历视图中创建。"
                 }
             },
             "archive": {
@@ -273,7 +326,36 @@
                     },
                     "saving": "保存中...",
                     "autosave-enabled": "自动保存已启用",
-                    "save-error": "保存失败"
+                    "save-error": "保存失败",
+                    "color-title": "颜色",
+                    "color-hint": "选择颜色 — 笔记中会添加 `color` 属性，日历和看板会使用它。",
+                    "readonly-notice": "只读 — 此记录属于项目 {{project}}",
+                    "groups": {
+                        "datetime": {
+                            "title": "日期和时间",
+                            "description": "日程和时间信息"
+                        },
+                        "basic": {
+                            "title": "基本信息",
+                            "description": "笔记的核心属性"
+                        },
+                        "color": {
+                            "title": "颜色",
+                            "description": "外观和标签"
+                        },
+                        "image": {
+                            "title": "封面和图片",
+                            "description": "图片和媒体内容"
+                        },
+                        "other-note": {
+                            "title": "笔记字段",
+                            "description": "此笔记中已有的字段"
+                        },
+                        "other-project": {
+                            "title": "项目字段",
+                            "description": "项目中其他笔记的字段"
+                        }
+                    }
                 }
             },
             "field": {
@@ -314,7 +396,16 @@
                             "placeholder": "例如 title"
                         },
                         "no-project": "— 无 —",
-                        "this-project-suffix": "(当前项目)"
+                        "this-project-suffix": "(当前项目)",
+                        "inverse-field": {
+                            "name": "反向字段名称",
+                            "description": "目标笔记中反映此关联的字段名称（双向记录）。留空则禁用。",
+                            "placeholder": "例如 backlinks"
+                        },
+                        "sub-base-scope": {
+                            "name": "子库范围（高级）",
+                            "description": "JSON FilterDefinition；仅显示通过此筛选的目标记录。留空则使用项目的完整范围。"
+                        }
                     },
                     "rollup": {
                         "relation-field": {
@@ -351,6 +442,14 @@
                         "separator": {
                             "name": "分隔符",
                             "description": "用于连接值时的分隔符。"
+                        },
+                        "backlink-option": "{{project}} · {{field}}（链接到此处）",
+                        "order-by": {
+                            "name": "排序依据",
+                            "description": "决定哪个值是第一个、哪个是最后一个的字段，通常是日期",
+                            "none": "— 按链接顺序 —",
+                            "placeholder": "日期",
+                            "custom": "其他字段…"
                         }
                     },
                     "formula": {
@@ -358,7 +457,21 @@
                         "description": "根据其他字段和函数计算此字段的值。",
                         "placeholder": "例如 ROUND(price * quantity, 2)"
                     },
-                    "save": "保存修改"
+                    "save": "保存修改",
+                    "file-links": {
+                        "name": "文件链接",
+                        "description": "将 [[wiki-link]] 值显示为可点击的文件标签"
+                    },
+                    "status-groups": {
+                        "name": "语义分组",
+                        "description": "将选项分配到看板的语义列（待办 / 进行中 / 完成）"
+                    },
+                    "uniqueid": {
+                        "prefix": {
+                            "name": "ID 前缀",
+                            "description": "生成 ID 的可选前缀（例如 “TASK-”）。计数会自动追加。"
+                        }
+                    }
                 },
                 "create": {
                     "short-title": "新建字段",
@@ -387,7 +500,9 @@
                         "name": "富文本",
                         "description": "依照 Markdown 格式渲染字段内容。"
                     },
-                    "create": "添加字段"
+                    "create": "添加字段",
+                    "reserved-name-error": "以 __resolved__ 开头的名称为插件自身的列保留。",
+                    "bulk-write-notice": "将 '{{field}}' 添加到 {{count}} 篇笔记。会写入空值；现有值不会更改。"
                 }
             },
             "schema": {
@@ -417,6 +532,36 @@
             "confirm": {
                 "delete": "删除",
                 "cancel": "取消"
+            },
+            "configure-field": {
+                "prefix-placeholder": "例如 TASK-"
+            },
+            "create-project": {
+                "no-custom-lists": "暂无自定义列表",
+                "create-lists-hint": "请在日历视图的日程侧边栏中创建列表"
+            },
+            "edit-note": {
+                "read-only-fields": "只读字段"
+            },
+            "date-format": {
+                "name": "日期格式",
+                "desc": "创建或编辑笔记时日期的格式",
+                "preset": {
+                    "name": "预设格式",
+                    "desc": "选择预设格式或自定义"
+                },
+                "custom": {
+                    "name": "自定义格式",
+                    "desc": "dayjs 格式字符串（例如 DD-MMM-YYYY）"
+                },
+                "include-time": {
+                    "name": "包含时间",
+                    "desc": "在日期格式后附加 HH:mm 时间"
+                },
+                "preview": {
+                    "name": "预览",
+                    "desc": "今天的日期将显示为"
+                }
             }
         },
         "views": {
@@ -424,7 +569,12 @@
                 "bar": {
                     "aria": "视图筛选",
                     "add": "筛选",
-                    "scope": "此视图"
+                    "scope": "此视图",
+                    "saved": "“{{name}}”现在是此项目的来源 — 请在块设置中选择它",
+                    "save-name": "此筛选结果的名称…",
+                    "save-name-taken": "此项目已有名为“{{name}}”的来源",
+                    "save-tip": "将此筛选保存为项目来源，以便在块中显示",
+                    "save": "保存为来源"
                 }
             },
             "visualizer": {
@@ -490,11 +640,27 @@
                     "order-sync-field": {
                         "name": "卡片顺序同步字段",
                         "description": "该字段将用于存储卡片在看板列中的位置顺序信息。"
+                    },
+                    "group-mode": {
+                        "name": "列分组",
+                        "description": "按值：每个不同的值一列。按语义：按状态类别分组（需要在字段上配置语义分组）。",
+                        "values": "按值",
+                        "semantic": "语义分组"
                     }
                 },
                 "note": {
                     "add": "新建笔记"
-                }
+                },
+                "status-groups": {
+                    "todo": "待办",
+                    "in-progress": "进行中",
+                    "complete": "完成"
+                },
+                "freeze-all": "冻结所有列",
+                "unfreeze-all": "取消冻结所有列",
+                "records_other": "条记录",
+                "drag-column": "拖动以重新排序列",
+                "reset-zoom": "重置缩放"
             },
             "calendar": {
                 "name": "日历",
@@ -556,7 +722,17 @@
                 },
                 "errors": {
                     "create-readonly": "无法在只读项目中创建事件",
-                    "date-required": "创建事件需要日期字段"
+                    "date-required": "创建事件需要日期字段",
+                    "delete-failed": "无法删除该笔记。",
+                    "duplicate-failed": "无法复制该笔记。",
+                    "check-failed": "无法更改复选框。",
+                    "check-field-required": "请先为复选框选择一个字段。",
+                    "date-change-failed": "无法更改事件日期。",
+                    "date-invalid": "此日期不能用于该事件。",
+                    "record-invalid": "无法移动此记录。",
+                    "color-failed": "无法更改颜色。",
+                    "color-field-required": "此项目未设置颜色字段。",
+                    "navigation-failed": "日历无法跳转到该日期。"
                 },
                 "colors": {
                     "favorites": "收藏",
@@ -565,7 +741,12 @@
                     "invalid": "无效的HEX格式",
                     "picker": "颜色选择器",
                     "quick": "快速选色",
-                    "hex": "HEX代码"
+                    "hex": "HEX代码",
+                    "palette": "颜色选择器调色板",
+                    "saturation-lightness": "饱和度和明度",
+                    "save-favorite": "保存到收藏",
+                    "apply": "应用颜色",
+                    "no-favorites": "无收藏"
                 },
                 "popup": {
                     "today": "今天",
@@ -714,7 +895,15 @@
                         },
                         "no-lists": "没有自定义列表",
                         "create-list": "创建列表"
-                    }
+                    },
+                    "select-icon": "选择图标",
+                    "clear-color": "清除颜色",
+                    "clear": "清除",
+                    "visual": "可视化",
+                    "advanced": "高级",
+                    "visual-mode-hint": "可视化模式——拖放式筛选器构建器",
+                    "advanced-mode-hint": "高级模式——基于公式的筛选",
+                    "date-formula-detected": "检测到日期公式"
                 },
                 "heatmap": {
                     "less": "较少",
@@ -725,7 +914,20 @@
                     "nextYear": "下一年",
                     "loading": "加载中...",
                     "noData": "暂无数据"
-                }
+                },
+                "notices": {
+                    "renamed": "笔记已重命名：{{name}}",
+                    "duplicated": "笔记已复制到 {{count}} 个日期"
+                },
+                "close-error": "关闭错误消息",
+                "timed-events": "定时事件",
+                "multi-day-events": "多日和全天事件",
+                "all-day": "全天",
+                "previous-year": "上一年",
+                "next-year": "下一年",
+                "events-count_other": "{{count}} 个事件",
+                "reset-to-original": "重置为原始值",
+                "reset-to-original-time": "重置为原始时间"
             },
             "gallery": {
                 "name": "画册",
@@ -743,9 +945,18 @@
                     "card-width": {
                         "name": "卡片宽度",
                         "description": "调整每张卡片的像素宽度。"
+                    },
+                    "card-size": {
+                        "group": "卡片尺寸预设",
+                        "small": "S",
+                        "medium": "M",
+                        "large": "L"
                     }
                 },
-                "empty": "该视图还没有数据。"
+                "empty": "该视图还没有数据。",
+                "empty-hint": "创建一篇笔记以开始",
+                "records_other": "条记录",
+                "cover-alt": "标题"
             },
             "dashboard": {
                 "name": "数据库",
@@ -781,7 +992,15 @@
                     "filter-bridge-global": "全局筛选器：{{count}} 个条件",
                     "filter-bridge-local": "本地：{{field}} = {{value}}",
                     "filter-bridge-clear": "清除本地筛选器",
-                    "filter-bridge-promote": "保存为全局筛选器"
+                    "filter-bridge-promote": "保存为全局筛选器",
+                    "empty-title": "空画布",
+                    "empty-hint": "从数据块开始",
+                    "empty-add-block": "添加数据块",
+                    "recalculating": "正在重新计算…",
+                    "show-formula-bar-tip": "显示公式编辑器 — 提示、实时预览、语法检查",
+                    "add-widget": "添加组件",
+                    "error-add-field": "添加字段失败。请重试。",
+                    "error-reopen-schema": "重新打开模式失败。"
                 },
                 "field-presets": {
                     "label": "布局",
@@ -814,6 +1033,37 @@
                         "unnamed": "在引入命名之前添加的来源无法选择 — 请打开项目并为它们命名。",
                         "missing": "{{id}} — 已不在本项目中",
                         "single": "本项目只从一个来源收集记录，因此暂时无从缩小范围。"
+                    },
+                    "menu": "组件菜单 — 配置、管道、重命名、删除",
+                    "menu-configure": "配置组件…",
+                    "menu-pipeline": "数据管道 — 筛选、分组、计算…",
+                    "menu-pipeline-active": "数据管道（{{count}}）",
+                    "menu-rename": "重命名",
+                    "menu-remove": "移除组件",
+                    "lock": "锁定组件位置",
+                    "unlock": "解锁组件",
+                    "removed": "块“{{title}}”已移除",
+                    "undo": "撤销",
+                    "chart-not-configured": "图表尚未配置",
+                    "stats-not-configured": "统计组件尚未配置",
+                    "configure": "配置组件",
+                    "pipeline-active": "管道：{{count}} 个步骤 — 筛选、分组、展开、排序",
+                    "pipeline-tip": "数据管道 — 筛选、分组、展开、排序（空）",
+                    "config": {
+                        "dirty": "未保存"
+                    },
+                    "primary": {
+                        "add-record": "添加记录"
+                    },
+                    "badge": {
+                        "y-aggregation": "Y 轴聚合",
+                        "aggregation": "聚合",
+                        "card-count_other": "{{count}} 张卡片",
+                        "card-count-title": "卡片数量",
+                        "column-count_other": "{{count}} 列",
+                        "column-count-title": "可见列",
+                        "grouped": "已分组",
+                        "grouped-title": "按“{{field}}”分组"
                     }
                 },
                 "quick": {
@@ -828,7 +1078,15 @@
                     "checklist": "清单",
                     "view-port": "视口",
                     "filter-tabs": "筛选选项卡",
-                    "summary-row": "汇总行"
+                    "summary-row": "汇总行",
+                    "data-list": "列表",
+                    "sub-base-canvas": "子库画布",
+                    "yaml-visualizer": "属性",
+                    "database-call": "数据库",
+                    "timeline": "时间线",
+                    "cover-banner": "封面横幅",
+                    "text": "文本",
+                    "divider": "分隔线"
                 },
                 "formula": {
                     "title": "公式编辑器",
@@ -924,7 +1182,40 @@
                     "unnest-suggestion-body": "字段 {{fields}} 包含数组。使用 Unnest 将每个元素拆分为独立的行。",
                     "unnest-suggestion-button": "展开 \"{{field}}\"",
                     "disable-step": "禁用步骤",
-                    "enable-step": "启用步骤"
+                    "enable-step": "启用步骤",
+                    "unnest": "展开列表",
+                    "select-field": "选择字段…",
+                    "filter-desc": "仅保留匹配的记录 — 例如 status = active",
+                    "group-by-desc": "按字段对行分组 — 例如每个客户一组",
+                    "aggregate-desc": "将分组汇总为数字 — 总和、平均值、计数",
+                    "compute-desc": "添加计算列 — 例如 price * quantity",
+                    "unpivot-desc": "将列转为行 — 宽表变长表",
+                    "pivot-desc": "将类别值转为列 — 汇总表",
+                    "unnest-desc": "将列表拆分为多行 — 每位参与者一行",
+                    "join-desc": "通过共有的键引入其他项目的数据",
+                    "source-not-ready": "关联的项目尚未加载，因此其字段在此处不可用。",
+                    "match": "匹配",
+                    "all-conditions": "满足所有条件（且）",
+                    "any-condition": "满足任一条件（或）",
+                    "add-condition": "添加条件",
+                    "group-field": "分组字段",
+                    "add-aggregation": "添加聚合",
+                    "column-name": "列名称",
+                    "add-column": "添加计算列",
+                    "category-field": "类别字段",
+                    "value-field": "值字段",
+                    "aggregation-fn": "聚合函数",
+                    "keep-fields": "保留字段（ID 列）",
+                    "field-groups": "字段组（要转置的列）",
+                    "pattern": "模式 (regex)",
+                    "output-name": "输出名称",
+                    "add-group": "添加分组",
+                    "source-field": "要展开的数组字段",
+                    "prefix": "提取字段的前缀",
+                    "optional": "可选",
+                    "keep-original": "保留原始数组字段",
+                    "config-hint": "无法配置",
+                    "formula-placeholder": "例如 fieldA + fieldB * 2"
                 },
                 "database-call": {
                     "empty": "尚未配置视图",
@@ -944,8 +1235,41 @@
                         "standalone": "无关联 — 显示所有记录",
                         "link-hint": "无关联时块显示所有记录。关联后仅显示与所选块相关的记录。",
                         "relation-field": "按字段筛选",
-                        "select-field": "选择字段"
-                    }
+                        "select-field": "选择字段",
+                        "relation-missing-hint": "没有关联字段指向关联块所属的项目 - 请添加一个以便按其筛选。",
+                        "relation-open-schema": "打开模式编辑器",
+                        "title": "数据来源",
+                        "subtitle": "从其他项目加载数据，而不是使用当前视图。"
+                    },
+                    "tab-add": "添加视图",
+                    "tab-rename": "重命名",
+                    "tab-delete": "删除视图",
+                    "tab-menu": "视图选项",
+                    "filter-label": {
+                        "relation-named": "显示 {{field}} 为 {{value}} 的记录",
+                        "relation-idle": "通过 {{field}} 关联 — 选择一行以缩小此块的范围",
+                        "canvas": "已按画布上的选择筛选",
+                        "relation-unset": "未选择用于关联的字段 - 此块显示所有记录",
+                        "broken-v2": "关联 '{{field}}' 已损坏（{{reason}}） — 此块改为按普通选择筛选",
+                        "broken-idle": "关联“{{field}}”已损坏（{{reason}}） — 此块显示所有记录"
+                    },
+                    "view-not-implemented": "尚未实现“{{viewType}}”视图",
+                    "view-type": {
+                        "table": "表格",
+                        "board": "看板",
+                        "calendar": "日历",
+                        "gallery": "画廊"
+                    },
+                    "source-loading": "正在加载关联的项目…",
+                    "source-unavailable": "关联的项目不可用",
+                    "source-unavailable-hint": "未找到此块所读取的项目：{{id}}",
+                    "source-error": "无法加载关联的项目",
+                    "filtered-by-relation": "按关联筛选",
+                    "linked-by-relation": "按关联链接",
+                    "filtered-by-canvas": "按画布选择筛选",
+                    "relation-not-configured": "未配置关联",
+                    "relation-broken": "关联已失效",
+                    "filter-master": "显示 {{name}} 通过 {{field}} 链接的内容"
                 },
                 "group": {
                     "empty": "（空）"
@@ -1027,12 +1351,29 @@
                         "no-sources": "此保库中没有其他项目。",
                         "warn-missing-right": "右侧数据源未加载。请检查所选 id 并确认并列项目仍然可用。",
                         "warn-no-matches": "没有按连接键匹配的记录。请核对左/右键的名称与值是否相交。",
-                        "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。"
+                        "warn-mostly-unmatched": "{{total}} 条记录中只有 {{matched}} 条匹配——结果可能偏斜。",
+                        "aria-label": "散点图"
                     },
                     "section": {
                         "display": "显示设置",
                         "data": "数据",
                         "scatter": "散点图"
+                    },
+                    "degenerate-hint": "所有记录的“{{field}}”字段值都相同 — 图表只显示一个类别。请丰富数据或更换 X 字段。",
+                    "bar": "柱状图",
+                    "line": "折线图",
+                    "series": {
+                        "title": "更多系列",
+                        "add": "添加系列",
+                        "remove": "删除系列",
+                        "label": "名称",
+                        "field": "字段",
+                        "x-field": "来源中的 X 字段",
+                        "same-x": "— 与图表相同 —",
+                        "this-chart": "本图表数据",
+                        "axis": "坐标轴",
+                        "axis-left": "左侧",
+                        "axis-right": "右侧"
                     }
                 },
                 "comparison": {
@@ -1051,8 +1392,11 @@
                         "seed-tip": "将值复制到可编辑标签",
                         "add": "添加标签",
                         "tab-label": "标签",
-                        "tab-value": "值"
-                    }
+                        "tab-value": "值",
+                        "show-all": "显示“全部”选项卡"
+                    },
+                    "empty-no-field": "点击 ⚙ 选择筛选选项卡的字段",
+                    "empty-no-values": "在“{{field}}”中未找到值"
                 },
                 "stats": {
                     "config": {
@@ -1071,12 +1415,16 @@
                         "fmt-percent": "百分比",
                         "fmt-currency": "货币",
                         "fmt-duration": "时长"
-                    }
+                    },
+                    "field-not-found": "未找到字段",
+                    "filtered-title": "已按画布选择筛选",
+                    "filtered-aria": "{{value}} — 已按画布选择筛选",
+                    "missing-field-hint": "没有字段「{{field}}」"
                 },
                 "agg": {
-                    "count_total": "计数",
-                    "count_values": "已填写数",
-                    "count_unique": "唯一值",
+                    "count_total": "全部计数",
+                    "count_values": "已填写计数",
+                    "count_unique": "唯一值计数",
                     "sum": "求和",
                     "avg": "平均值",
                     "median": "中位数",
@@ -1090,7 +1438,18 @@
                     "percent_empty": "空值百分比",
                     "percent_not_empty": "已填写百分比",
                     "earliest": "最早日期",
-                    "latest": "最晚日期"
+                    "latest": "最晚日期",
+                    "count": "全部计数",
+                    "count_numeric": "数字计数",
+                    "count_empty": "空值计数",
+                    "percent_true": "勾选百分比",
+                    "concat": "连接",
+                    "concat_unique": "连接唯一值",
+                    "show_original": "显示原值",
+                    "show_unique": "显示唯一值",
+                    "date_range": "日期范围",
+                    "first_value": "第一个值",
+                    "last_value": "最后一个值"
                 },
                 "checklist": {
                     "select-field": "选择布尔字段",
@@ -1110,7 +1469,9 @@
                         "sort-field": "排序字段",
                         "sort-field-placeholder": "name",
                         "sort-order": "排序"
-                    }
+                    },
+                    "asc": "升序",
+                    "desc": "降序"
                 },
                 "viewport": {
                     "select": "选择要嵌入的视图",
@@ -1121,6 +1482,163 @@
                     "board": "看板视图",
                     "calendar": "日历视图",
                     "gallery": "画廊视图"
+                },
+                "cover-banner-config": {
+                    "src": "图片来源",
+                    "src-placeholder": "库路径或 URL",
+                    "width": "宽度",
+                    "width-full": "全宽",
+                    "width-half": "半宽",
+                    "width-custom": "自定义",
+                    "width-rem": "宽度 (rem)",
+                    "fit": "适应方式",
+                    "fit-cover": "填充",
+                    "fit-contain": "包含",
+                    "position": "位置",
+                    "position-top": "顶部",
+                    "position-center": "居中",
+                    "position-bottom": "底部",
+                    "overlay": "叠加标题",
+                    "overlay-placeholder": "可选",
+                    "done": "完成"
+                },
+                "table-v2": {
+                    "open": "打开笔记",
+                    "open-new-tab": "在新标签页中打开",
+                    "peek": "显示字段",
+                    "row-menu": "行操作",
+                    "duplicate": "复制",
+                    "delete": "删除笔记",
+                    "new": "新建",
+                    "new-name": "笔记名称…",
+                    "search": "搜索记录",
+                    "search-placeholder": "搜索…",
+                    "remove-sort": "移除排序",
+                    "controls": "表格控件",
+                    "sort-asc": "升序排序",
+                    "sort-desc": "降序排序",
+                    "sort-clear": "清除排序",
+                    "calculate": "计算",
+                    "calc-none": "无",
+                    "hide-field": "在视图中隐藏",
+                    "add-property": "添加属性",
+                    "group-by": "按此字段分组",
+                    "ungroup": "取消分组",
+                    "relation-search": "搜索记录…",
+                    "relation-empty": "没有可关联的记录",
+                    "relation-done": "完成",
+                    "relation-cancel": "取消",
+                    "filter-canvas": "按此行筛选关联的块",
+                    "unfilter-canvas": "停止按此行筛选画布",
+                    "group-empty": "无值"
+                },
+                "record-card": {
+                    "change-icon": "更换图标",
+                    "icon-input": "表情符号或图标名称",
+                    "frontmatter": "Frontmatter 属性",
+                    "unresolved": "未找到笔记：",
+                    "empty": "未选择记录"
+                },
+                "smart-suggest": {
+                    "numeric-message": "检测到数值字段“{{field}}” — 要添加包含总和与平均值的统计块吗？",
+                    "numeric-action": "添加统计",
+                    "relation-message": "检测到关联字段“{{field}}” — 要在关联的数据块中显示相关记录吗？",
+                    "relation-action": "添加数据块",
+                    "date-avg-message": "检测到日期字段“{{field}}” — 要按日期绘制“{{numericField}}”平均值的图表吗？",
+                    "date-count-message": "检测到日期字段“{{field}}” — 要按日期绘制记录数量的图表吗？",
+                    "date-action": "绘制趋势",
+                    "never": "不再建议",
+                    "close": "隐藏建议",
+                    "relation-incoming-message": "「{{project}}」通过「{{field}}」链接到这里 — 显示所选行的相关记录？",
+                    "relation-master-message": "「{{field}}」链接到「{{project}}」— 显示所选行链接的记录？"
+                },
+                "legacy": {
+                    "retired": "组件类型“{{type}}”已在 Dashboard V2 中停用",
+                    "convert-hint": "数据并未丢失 — 请将此块转换为 V2 的对应块。在转换之前，已保存的设置会保留。",
+                    "no-successor": "设置已保存在画布配置中。请使用 V2 块（数据库、统计、图表）重新创建视图。",
+                    "convert": "转换为 V2 块"
+                },
+                "agg-consequence": {
+                    "count_total": "所有记录，包括此字段为空的记录",
+                    "count": "所有记录，包括此字段为空的记录（“全部计数”的旧写法）",
+                    "count_values": "此字段有内容的记录",
+                    "count_numeric": "此字段中可进行算术运算的值",
+                    "count_unique": "不同值的数量，不含空值",
+                    "count_empty": "此字段为空白的记录",
+                    "count_checked": "已勾选的数量",
+                    "count_unchecked": "未勾选的数量",
+                    "percent_checked": "已勾选复选框所占比例",
+                    "percent_unchecked": "未勾选复选框所占比例",
+                    "percent_empty": "此字段为空的记录所占比例",
+                    "percent_not_empty": "此字段有内容的记录所占比例",
+                    "sum": "数字之和；忽略文本",
+                    "avg": "数字的平均值；不计入空单元格",
+                    "median": "居中的数字；忽略文本",
+                    "min": "最小的数字；没有数字时为空",
+                    "max": "最大的数字；没有数字时为空",
+                    "range": "最大值减最小值",
+                    "percent_true": "已勾选复选框所占比例",
+                    "concat": "所有值连接成一行",
+                    "concat_unique": "每个不同的值只出现一次，连接成一行",
+                    "show_original": "以列表显示值本身",
+                    "show_unique": "每个不同的值只出现一次，以列表显示",
+                    "earliest": "该列中最早的日期",
+                    "latest": "该列中最晚的日期",
+                    "date_range": "从最早到最晚",
+                    "first_value": "按所选字段排序后的第一个非空值",
+                    "last_value": "按所选字段排序后的最后一个非空值，例如按日期最新的值"
+                },
+                "agg-badge": {
+                    "count_total": "总计数",
+                    "count": "总计数",
+                    "count_values": "已填写",
+                    "count_numeric": "数字数",
+                    "count_unique": "唯一值",
+                    "count_empty": "空值数",
+                    "count_checked": "✓",
+                    "count_unchecked": "✗",
+                    "percent_checked": "%✓",
+                    "percent_unchecked": "%✗",
+                    "percent_empty": "%∅",
+                    "percent_not_empty": "%¬∅",
+                    "sum": "求和",
+                    "avg": "平均",
+                    "median": "中位数",
+                    "min": "最小",
+                    "max": "最大",
+                    "range": "极差",
+                    "percent_true": "%✓",
+                    "concat": "连接",
+                    "concat_unique": "连接∪",
+                    "show_original": "显示",
+                    "show_unique": "显示∪",
+                    "earliest": "最早",
+                    "latest": "最晚",
+                    "date_range": "日期跨度",
+                    "first_value": "首个",
+                    "last_value": "最后"
+                },
+                "selection": {
+                    "clear": "清除选择"
+                },
+                "cover-banner": {
+                    "empty": "无图片——请打开设置以指定来源。"
+                },
+                "divider": {
+                    "label-placeholder": "分隔线标签…"
+                },
+                "text": {
+                    "placeholder": "输入 Markdown…"
+                },
+                "data-project": {
+                    "label": "数据来源",
+                    "this-project": "本项目",
+                    "unavailable": "不可用的项目"
+                },
+                "follow": {
+                    "label": "跟随选择来源",
+                    "none": "— 不跟随 —",
+                    "field": "通过关联字段"
                 }
             }
         },
@@ -1253,7 +1771,9 @@
                     "has-all-of": "包含全部",
                     "has-none-of": "不包含任何",
                     "has-keyword": "包含关键词"
-                }
+                },
+                "enable-condition": "启用条件",
+                "disable-condition": "禁用条件"
             },
             "sort": {
                 "label": "排序",
@@ -1269,6 +1789,41 @@
             },
             "note": {
                 "edit": "编辑笔记"
+            },
+            "color-picker": {
+                "saturation-brightness": "饱和度和亮度",
+                "hue": "色相"
+            },
+            "datetime-input": {
+                "open-time-picker": "打开时间选择器",
+                "visual-time-picker": "可视化时间选择器"
+            },
+            "error-boundary": {
+                "component": "组件：",
+                "error": "错误："
+            },
+            "field-control": {
+                "image-placeholder": "https://... 或 [[Image.png]]"
+            },
+            "image-preview": {
+                "remove-image": "移除图片",
+                "failed": "图片加载失败",
+                "no-image": "无图片"
+            },
+            "multi-text-input": {
+                "list": "可编辑的选项列表",
+                "option": "选项 {{index}}",
+                "remove-option": "删除选项 {{index}}",
+                "add-option": "添加选项（或按 Enter）"
+            },
+            "settings-menu": {
+                "tabs": "设置标签页"
+            },
+            "record-card-view": {
+                "icon-placeholder": "📄  或  file-text"
+            },
+            "time-picker": {
+                "label": "时间选择器"
             }
         },
         "toolbar": {
@@ -1288,7 +1843,7 @@
         },
         "settings": {
             "about": {
-                "title": "关于 Projects Plus",
+                "title": "关于",
                 "description": "为 Obsidian 提供增强的项目管理功能。",
                 "author": "维护者",
                 "author-name": "Park Pavel",
@@ -1311,14 +1866,6 @@
                 "size-limit": {
                     "name": "最大条目数量",
                     "desc": "防止意外加载过多条目。"
-                },
-                "link-behavior": {
-                    "name": "链接行为",
-                    "desc": "选择在 Projects 中点击链接时的行为。按下 {{modifier}} 键时点击将执行另一项。",
-                    "options": {
-                        "open-editor": "打开元数据编辑器",
-                        "open-note": "打开目标笔记"
-                    }
                 },
                 "start-of-week": {
                     "name": "一周的第一天",
@@ -1348,10 +1895,14 @@
                 "disable-haptic": {
                     "name": "禁用触觉反馈",
                     "desc": "在移动设备拖放操作时关闭振动反馈"
+                },
+                "replace-properties": {
+                    "name": "替换 Obsidian 属性面板",
+                    "desc": "关闭内置的文件属性面板，改为显示 YAML Visualizer 面板。"
                 }
             },
             "front-matter": {
-                "heading": "Front matter",
+                "heading": "属性",
                 "quote-strings": {
                     "name": "使用引号包裹字符串",
                     "options": {
@@ -1362,13 +1913,21 @@
             },
             "commands": {
                 "name": "命令",
-                "desc": "为你最常用的项目和视图添加命令到命令面板。"
+                "desc": "为你最常用的项目和视图添加命令到命令面板。",
+                "project": "项目",
+                "view": "视图"
             },
             "archives": {
                 "name": "存档管理",
                 "desc": "恢复或删除已存档项目。",
-                "empty": "没有已存档项目。"
-            }
+                "empty": "没有已存档项目。",
+                "restore": "恢复此归档",
+                "delete": "删除此归档"
+            },
+            "filters": {
+                "scope-view": "视图筛选"
+            },
+            "no-project-yet": "暂无项目。"
         },
         "errors": {
             "missingDataview": {
@@ -1380,6 +1939,49 @@
                 "message": "渲染此组件时发生错误。",
                 "retry": "重试",
                 "details": "错误详情"
+            },
+            "recordWriteFailed": "无法保存对 {{path}} 的更改；已恢复之前的值。",
+            "recordFileMissing": "{{path}} 已不存在；更改未保存。",
+            "fieldWritePartial": "'{{field}}' 已写入 {{written}} 篇笔记；{{unwritten}} 篇无法更新。列表请见控制台。",
+            "inverseWriteFailed": "无法将 '{{field}}' 的反向链接写入 {{count}} 篇笔记。详见控制台。",
+            "recordsWriteFailed": "无法保存 {{count}} 条记录；已恢复之前的值。",
+            "migrationBackupFailed": "仪表盘配置已迁移，但无法写入其还原点。详见控制台。",
+            "renameFailed": "无法重命名该笔记。",
+            "settingsUnreadable": "无法读取设置文件；正在使用默认值。",
+            "settingsCorrupted": "设置文件已损坏；已恢复默认值。",
+            "causes": {
+                "settings-write-failed": "写入已被接受，但 data.json 仍保存着旧值，因此该更改仅存在于本次会话中。",
+                "settings-superseded": "其他窗口或同步工具替换了该文件，因此此窗口无法确定自己的更改是否保留。",
+                "settings-unreadable": "无法读取或解析 data.json，因此插件使用默认值启动，并保持磁盘上的文件不变。",
+                "settings-corrupted": "data.json 已解析，但与任何已知的设置版本都不匹配，因此没有可迁移的内容。",
+                "settings-conflict": "本次会话持有自己的更改时，其他窗口、同步工具或手动编辑替换了 data.json，因此无法直接丢弃任何一个版本。",
+                "settings-conflict-uncopied": "data.json 旁的副本和库中的笔记都无法写入，因此另一个版本只保留在两个位置：控制台输出，以及 data.json 本身 — 本次会话会将其保持未写入状态，直到您下次更改。",
+                "record-write-failed": "写入笔记的 frontmatter 失败，因此屏幕上的值已回滚到磁盘上的内容。",
+                "records-write-failed": "批量写入在中途失败，因此该批次中的每条记录都已回滚到磁盘上的内容。",
+                "record-file-missing": "该笔记在视图加载后被重命名、移动或删除，因此没有可写入的文件。",
+                "field-write-partial": "新字段会逐篇写入项目的笔记，其中部分写入未成功。",
+                "rename-failed": "Obsidian 拒绝了重命名 — 通常是新名称已被占用，或包含文件系统不允许的字符。",
+                "note-save-failed": "笔记编辑器无法将更改写回文件，因此屏幕上的内容比磁盘上的更新。",
+                "delete-failed": "删除文件失败 — 它可能在别处打开、为只读，或已经不存在。",
+                "duplicate-failed": "其中一份副本无法创建，因此新笔记的集合不完整。",
+                "check-failed": "将复选框字段写回笔记失败，因此勾选状态与文件不一致。",
+                "check-field-required": "此视图未分配布尔字段，因此勾选状态无处可写。",
+                "date-change-failed": "将新日期写回笔记失败，因此事件保持在原来的位置。",
+                "date-field-required": "此视图未分配日期字段，因此事件没有可用于定位的依据。",
+                "date-invalid": "目标日期未通过验证 — 它超出了支持的范围，或会使事件的结束早于开始。",
+                "record-invalid": "该记录缺少日历所需的字段，因此无法计算其新位置。",
+                "color-failed": "将颜色字段写回笔记失败，因此事件保留之前的颜色。",
+                "color-field-required": "此视图未分配用于保存事件颜色的字段，因此所选颜色无处可写。",
+                "navigation-failed": "计算下一个时间段失败，因此日历停留在原处。",
+                "create-readonly": "该项目为只读，因此无法从此视图创建笔记。",
+                "dashboard-add-field": "无法将该字段写入项目的笔记，因此模式未更改。",
+                "dashboard-reopen-schema": "编辑后无法重新打开模式对话框；编辑本身已应用。",
+                "dashboard-migration-backup": "无法保存迁移前的配置副本，因此没有可回滚的内容。",
+                "inverse-write-failed": "反向链接会写入关联另一端的笔记，其中部分写入失败。",
+                "demo-folder-failed": "无法创建存放演示笔记的文件夹，因此这些笔记无处存放。",
+                "demo-partial": "部分演示笔记无法写入，因此项目已注册但不完整。",
+                "demo-repair-failed": "为恢复缺失的笔记，演示项目已重新生成，其中部分写入失败。",
+                "source-name-taken": "名称相同的两个来源在唯一列出它们的选择器中无法区分，因此该名称被拒绝。"
             }
         },
         "database": {
@@ -1569,8 +2171,7 @@
         },
         "onboarding": {
             "title": "开始使用 Projects Plus",
-            "description": "Projects Plus 让您使用 <a>front matter</a> 管理相关笔记组。例如，一个包含您正在撰写的博客文章的文件夹。",
-            "front-matter-link": "front matter",
+            "description": "Projects Plus 让您使用 [front matter](properties) 管理相关笔记组。例如，一个包含您正在撰写的博客文章的文件夹。",
             "explore": "从零开始，或探索演示项目 👇",
             "create-new": "创建新项目",
             "try-demo": "试用演示项目",
@@ -1579,13 +2180,30 @@
             "tab-projects-view": "项目视图",
             "tab-command-palette": "命令面板",
             "tab-file-explorer": "文件管理器",
-            "file-explorer-step1": "在<strong>文件管理器</strong>中右键点击文件夹。",
-            "file-explorer-step2": "点击<strong>在文件夹中创建项目</strong>。",
-            "command-palette-step1": "打开<strong>命令面板</strong>。",
-            "command-palette-step2": "搜索<strong>创建新项目</strong>",
-            "command-palette-step3": "按<strong>Enter</strong>。",
-            "projects-view-step1": "在 <strong>Projects Plus</strong> 视图的右上角，点击<strong>新建</strong>。",
-            "projects-view-step2": "点击<strong>新建项目</strong>。"
+            "file-explorer-step1": "在**文件管理器**中右键点击文件夹。",
+            "file-explorer-step2": "点击**在文件夹中创建项目**。",
+            "command-palette-step1": "打开**命令面板**。",
+            "command-palette-step2": "搜索**创建新项目**",
+            "command-palette-step3": "按**Enter**。",
+            "projects-view-step1": "在 **Projects Plus** 视图的右上角，点击**新建**。",
+            "projects-view-step2": "点击**新建项目**。",
+            "other-ways-summary": "其他方式",
+            "profiles": {
+                "intro": "选择一个起点 — 一分钟后您的第一条记录就会出现在这里。",
+                "group-label": "入门配置",
+                "busy": "正在创建配置…",
+                "error-path": "无法创建配置的文件：“{{path}}”。未保存任何内容 — 请重试。",
+                "error-path-leftover": "无法创建配置的文件：“{{path}}”。以下路径无法自动移除，仍留在您的库中：{{leftovers}}。请在重试前检查它们，并且只删除配置本身创建的内容：此类路径上现在可能有无关的内容。",
+                "error-generic": "无法创建配置。请重试。",
+                "first-note-failed": "无法完整保存第一条记录“{{name}}”。请打开配置文件夹查看其中内容：如果记录缺失，请使用空表格中的“添加第一条记录”添加。如果问题持续出现，请换一个名称 — 该路径可能被其他内容占用。",
+                "error-registration-leftover": "无法创建配置。以下路径无法自动移除，仍留在您的库中：{{leftovers}}。请在重试前检查它们，并且只删除配置本身创建的内容：此类路径上现在可能有无关的内容。",
+                "error-registered": "配置的文件已创建，但设置可能未保存。请重启 Obsidian 并检查项目是否已列出；配置的文件会保留在您的库中。"
+            },
+            "demo": {
+                "folder-failed": "无法创建演示文件夹 '{{folder}}'。演示项目未创建。",
+                "partial": "演示项目已创建，但有 {{count}} 篇笔记无法写入。列表请见控制台。"
+            },
+            "psst": "嘿！👋"
         },
         "common": {
             "yesterday": "昨天",
@@ -1620,7 +2238,17 @@
             "remove": "移除",
             "apply": "应用",
             "field-placeholder": "字段",
-            "add-criterion": "添加条件"
+            "add-criterion": "添加条件",
+            "scroll-left": "向左滚动",
+            "scroll-right": "向右滚动",
+            "retry": "重试",
+            "loading": "加载中...",
+            "drag-to-reorder": "拖动以重新排序",
+            "confirm": "确认",
+            "move-up": "上移",
+            "move-down": "下移",
+            "actions": "操作",
+            "info": "信息"
         },
         "relation-setup": {
             "open": "关联数据库…",
@@ -1640,7 +2268,18 @@
             "preview-unmatched": "未找到：{{count}}",
             "preview-ambiguous": "模糊匹配：{{count}}",
             "cancel": "取消",
-            "save": "保存关联"
+            "save": "保存关联",
+            "saved-partial_other": "关联已保存，但无法将属性添加到 {{count}} 篇笔记。详见控制台。",
+            "inverse-enable-label-v2": "指定另一端的反向属性名称",
+            "inverse-warning-v2": "该名称会记录在此关联上。不会在另一个数据库中创建该属性，现有笔记也不会被改写 — 相关记录根据您已有的链接解析。",
+            "saving": "正在保存…",
+            "error-name-required": "必须填写关联属性名称。",
+            "error-target-required": "请选择要关联的数据库。",
+            "error-name-taken": "已存在同名属性。",
+            "error-existing-property-required": "请选择现有属性或新建一个。",
+            "error-not-convertible": "此属性无法变为关联：它是计算得出的，或用于标识记录。",
+            "error-reserved-name": "以 __resolved__ 开头的名称为插件自身的列保留。",
+            "error-inverse-name-required": "必须填写反向属性名称。"
         },
         "relation-count": {
             "linked": "已关联 {{count}} 条",

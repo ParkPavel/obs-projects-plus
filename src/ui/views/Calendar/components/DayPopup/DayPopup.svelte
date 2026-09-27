@@ -140,29 +140,26 @@
     if (workspaceLeaf) {
       // Create portal container inside workspace-leaf (not body)
       portalContainer = doc.createElement('div');
+      // Its layout is the class's (catalogue audit C6: no static inline styles).
       portalContainer.className = 'obsidian-projects-popup-portal';
-      // z-index 100 is enough within workspace-leaf scope
-      portalContainer.style.cssText = 'position: absolute; inset: 0; z-index: 100; pointer-events: none; overflow: hidden;';
       
       // Ensure workspace-leaf has relative positioning for absolute child
       const view = doc.defaultView ?? window;
       const computedStyle = view.getComputedStyle(workspaceLeaf);
       if (computedStyle.position === 'static') {
-        workspaceLeaf.style.position = 'relative';
+        workspaceLeaf.classList.add('obsidian-projects-popup-host');
       }
       
       workspaceLeaf.appendChild(portalContainer);
     } else {
       // Fallback to body if no workspace-leaf found
       portalContainer = doc.createElement('div');
-      portalContainer.className = 'obsidian-projects-popup-portal';
-      portalContainer.style.cssText = 'position: fixed; inset: 0; z-index: 100; pointer-events: none;';
+      portalContainer.className = 'obsidian-projects-popup-portal obsidian-projects-popup-portal--fixed';
       doc.body.appendChild(portalContainer);
     }
     
     // Move node to portal
     portalContainer.appendChild(node);
-    node.style.pointerEvents = 'auto';
     
     return {
       destroy() {
@@ -248,14 +245,14 @@
   /** Hold the lock on exactly one document: the one the popup is now in. */
   function syncScrollLock(): void {
     for (const doc of lockedDocs) {
-      if (doc !== ownDoc) doc.body.style.overflow = '';
+      if (doc !== ownDoc) doc.body.classList.remove('obsidian-projects-scroll-locked');
     }
     lockedDocs.clear();
     if (visible && isMobile) {
-      ownDoc.body.style.overflow = 'hidden';
+      ownDoc.body.classList.add('obsidian-projects-scroll-locked');
       lockedDocs.add(ownDoc);
     } else {
-      ownDoc.body.style.overflow = '';
+      ownDoc.body.classList.remove('obsidian-projects-scroll-locked');
     }
   }
 
@@ -278,9 +275,9 @@
   
   onDestroy(() => {
     unbind();
-    for (const doc of lockedDocs) doc.body.style.overflow = '';
+    for (const doc of lockedDocs) doc.body.classList.remove('obsidian-projects-scroll-locked');
     lockedDocs.clear();
-    ownDoc.body.style.overflow = '';
+    ownDoc.body.classList.remove('obsidian-projects-scroll-locked');
     // Cleanup portal if still exists
     if (portalContainer && portalContainer.parentNode) {
       portalContainer.parentNode.removeChild(portalContainer);
@@ -319,9 +316,9 @@
     
     // Unlock body scroll — every document this popup ever locked, not just the
     // one it happens to be bound to now.
-    for (const doc of lockedDocs) doc.body.style.overflow = '';
+    for (const doc of lockedDocs) doc.body.classList.remove('obsidian-projects-scroll-locked');
     lockedDocs.clear();
-    ownDoc.body.style.overflow = '';
+    ownDoc.body.classList.remove('obsidian-projects-scroll-locked');
     
     setTimeout(() => {
       visible = false;
@@ -642,6 +639,30 @@
 {/if}
 
 <style>
+  /* The portal layer and the scroll lock are set by script as classes
+     (catalogue audit C6), so their rules are global. */
+  :global(.obsidian-projects-popup-portal) {
+    position: absolute;
+    inset: 0;
+    /* 100, as the inline style had it: the scale token of that height. */
+    z-index: var(--ppp-db-z-dropdown, 100);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  :global(.obsidian-projects-popup-portal--fixed) {
+    position: fixed;
+    overflow: visible;
+  }
+  :global(.obsidian-projects-popup-portal > *) {
+    pointer-events: auto;
+  }
+  :global(.obsidian-projects-popup-host) {
+    position: relative;
+  }
+  :global(body.obsidian-projects-scroll-locked) {
+    overflow: hidden;
+  }
+
   /* ═══════════════════════════════════════════════════════════════
      iOS POPUP - CSS VARIABLES
      ═══════════════════════════════════════════════════════════════ */

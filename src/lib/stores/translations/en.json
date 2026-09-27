@@ -242,6 +242,10 @@
                         "name": "Inherit calendar filters",
                         "description": "Apply the same filters as the calendar view"
                     }
+                },
+                "agenda-custom-lists": {
+                    "name": "Custom lists",
+                    "desc": "Manage your custom agenda lists. Lists are created in the Calendar view."
                 }
             },
             "archive": {
@@ -314,9 +318,36 @@
                     "saving": "Saving...",
                     "autosave-enabled": "Autosave enabled",
                     "save-error": "Failed to save changes",
+                    "readonly-notice": "Read-only — this record belongs to {{project}}",
                     "no-editable-fields": {
                         "title": "No editable fields",
                         "message": "This note has no editable fields."
+                    },
+                    "groups": {
+                        "datetime": {
+                            "title": "Date and time",
+                            "description": "Schedule and timing information"
+                        },
+                        "basic": {
+                            "title": "Basic information",
+                            "description": "Core note properties"
+                        },
+                        "color": {
+                            "title": "Colors",
+                            "description": "Visual appearance and tags"
+                        },
+                        "image": {
+                            "title": "Cover and images",
+                            "description": "Visual content and media"
+                        },
+                        "other-note": {
+                            "title": "Note fields",
+                            "description": "Fields present in this note"
+                        },
+                        "other-project": {
+                            "title": "Project fields",
+                            "description": "Fields from other notes in the project"
+                        }
                     }
                 }
             },
@@ -395,6 +426,14 @@
                         "separator": {
                             "name": "Separator",
                             "description": "Used to join values when the function is Concatenate."
+                        },
+                        "backlink-option": "{{project}} · {{field}} (links here)",
+                        "order-by": {
+                            "name": "Order by",
+                            "description": "The field that decides which value is first and which is last — usually a date",
+                            "none": "— In link order —",
+                            "placeholder": "date",
+                            "custom": "Another field…"
                         }
                     },
                     "formula": {
@@ -462,6 +501,36 @@
             "confirm": {
                 "delete": "Delete",
                 "cancel": "Cancel"
+            },
+            "configure-field": {
+                "prefix-placeholder": "e.g. TASK-"
+            },
+            "create-project": {
+                "no-custom-lists": "No custom lists yet",
+                "create-lists-hint": "Create lists in the Calendar view agenda sidebar"
+            },
+            "edit-note": {
+                "read-only-fields": "Read-only fields"
+            },
+            "date-format": {
+                "name": "Date format",
+                "desc": "Choose how dates are formatted when creating or editing notes",
+                "preset": {
+                    "name": "Format preset",
+                    "desc": "Select a predefined format or choose Custom"
+                },
+                "custom": {
+                    "name": "Custom format",
+                    "desc": "Enter a dayjs format string (e.g., DD-MMM-YYYY)"
+                },
+                "include-time": {
+                    "name": "Include time",
+                    "desc": "Append HH:mm time to the date format"
+                },
+                "preview": {
+                    "name": "Preview",
+                    "desc": "How today's date will be formatted"
+                }
             }
         },
         "views": {
@@ -475,7 +544,7 @@
             },
             "visualizer": {
                 "pane": {
-                    "title": "YAML Visualizer",
+                    "title": "YAML visualizer",
                     "no-file": "Open a Markdown note to view its properties.",
                     "no-properties": "This note has no frontmatter properties yet.",
                     "actions": {
@@ -544,7 +613,9 @@
                 "freeze-all": "Freeze all columns",
                 "unfreeze-all": "Unfreeze all columns",
                 "records_one": "record",
-                "records_other": "records"
+                "records_other": "records",
+                "drag-column": "Drag to reorder column",
+                "reset-zoom": "Reset zoom"
             },
             "calendar": {
                 "name": "Calendar",
@@ -579,7 +650,7 @@
                     "2weeks": "2 Weeks"
                 },
                 "navigation": {
-                    "aria-label": "Calendar Navigation",
+                    "aria-label": "Calendar navigation",
                     "today-tooltip": "Go to today",
                     "previous": "Previous",
                     "next": "Next"
@@ -612,12 +683,17 @@
                 },
                 "colors": {
                     "favorites": "Favorites",
-                    "all": "All Colors",
-                    "custom": "Custom Color",
+                    "all": "All colors",
+                    "custom": "Custom color",
                     "invalid": "Invalid HEX format",
-                    "picker": "Color Picker",
-                    "quick": "Quick Colors",
-                    "hex": "HEX Code"
+                    "picker": "Color picker",
+                    "quick": "Quick colors",
+                    "hex": "HEX code",
+                    "palette": "Color picker palette",
+                    "saturation-lightness": "Saturation and lightness",
+                    "save-favorite": "Save to favorites",
+                    "apply": "Apply color",
+                    "no-favorites": "No favorites"
                 },
                 "popup": {
                     "today": "Today",
@@ -634,7 +710,7 @@
                 "agenda": {
                     "title": "Agenda",
                     "empty": "No events for this day",
-                    "all-day": "📅 All Day",
+                    "all-day": "📅 All day",
                     "all-day-time": "All day",
                     "morning": "🌅 Morning (before 12:00)",
                     "afternoon": "☀️ Afternoon (12:00–18:00)",
@@ -643,7 +719,7 @@
                     "today": "📅 Today",
                     "multiday": "📊 Multi-day",
                     "upcoming": "🔮 Upcoming",
-                    "undated": "📥 Inbox (No Date)",
+                    "undated": "📥 Inbox (no date)",
                     "expand": "Expand agenda",
                     "collapse": "Collapse agenda",
                     "add-note": "Add",
@@ -656,22 +732,22 @@
                         "move-down": "Move down",
                         "empty-list": "No records match filters",
                         "list-editor": {
-                            "title-new": "New List",
-                            "title-edit": "Edit List",
-                            "name-label": "List Name",
-                            "name-placeholder": "e.g., Urgent Tasks",
+                            "title-new": "New list",
+                            "title-edit": "Edit list",
+                            "name-label": "List name",
+                            "name-placeholder": "e.g., urgent tasks",
                             "name-required": "Name is required",
                             "name-exists": "Name already exists",
                             "icon-label": "Icon",
                             "change-icon": "Change icon...",
-                            "color-label": "List Accent Color (optional)",
+                            "color-label": "List accent color (optional)",
                             "color-hint": "Sets the left border color for visual identification",
                             "preview": "Preview",
                             "filters-label": "Filters",
                             "filters-hint": "Date formulas: 'today', 'today+1w', 'sow', 'eom'. DQL-compatible: sow/eow/som/eom/soy/eoy. Operators: 'Is today', 'Is this week', 'Is overdue'.",
                             "formula-hint": "Use functions like AND(), OR(), CONTAINS(), IS_TODAY(). See Help for full reference.",
-                            "save": "Save Changes",
-                            "create": "Create List",
+                            "save": "Save changes",
+                            "create": "Create list",
                             "cancel": "Cancel"
                         },
                         "filter-editor": {
@@ -738,8 +814,8 @@
                             "remove-group": "Remove group",
                             "field-placeholder": "Select field...",
                             "operator-placeholder": "Select operator...",
-                            "filter-group-label": "Filter Group",
-                            "date-suggestions": "Date Formulas (DQL)",
+                            "filter-group-label": "Filter group",
+                            "date-suggestions": "Date formulas (DQL)",
                             "date-formula-hint": "Formula: today, sow, eom, today+1w, som-1m",
                             "where-prefix": "Where",
                             "and-prefix": "and",
@@ -755,7 +831,7 @@
                             "help-title-strings": "📝 Strings",
                             "help-title-checks": "🔍 Checks",
                             "help-title-dates": "📅 Dates",
-                            "help-title-arrays": "📋 Arrays / Tags",
+                            "help-title-arrays": "📋 Arrays / tags",
                             "help-title-operators": "⚙ Operators",
                             "help-examples-title": "Examples:",
                             "snippet-active-tasks": "📌 Active tasks",
@@ -774,7 +850,15 @@
                         },
                         "no-lists": "No custom lists",
                         "create-list": "Create list"
-                    }
+                    },
+                    "select-icon": "Select icon",
+                    "clear-color": "Clear color",
+                    "clear": "Clear",
+                    "visual": "Visual",
+                    "advanced": "Advanced",
+                    "visual-mode-hint": "Visual mode - drag-and-drop filter builder",
+                    "advanced-mode-hint": "Advanced mode - formula-based filtering",
+                    "date-formula-detected": "Date formula detected"
                 },
                 "heatmap": {
                     "less": "Less",
@@ -789,7 +873,17 @@
                 "notices": {
                     "renamed": "Note renamed: {{name}}",
                     "duplicated": "Note duplicated to {{count}} date(s)"
-                }
+                },
+                "close-error": "Close error message",
+                "timed-events": "Timed events",
+                "multi-day-events": "Multi-day and all-day events",
+                "all-day": "All day",
+                "previous-year": "Previous year",
+                "next-year": "Next year",
+                "events-count_one": "{{count}} event",
+                "events-count_other": "{{count}} events",
+                "reset-to-original": "Reset to original",
+                "reset-to-original-time": "Reset to original time"
             },
             "gallery": {
                 "name": "Gallery",
@@ -816,7 +910,8 @@
                 },
                 "empty": "This view is empty.",
                 "records_one": "record",
-                "records_other": "records"
+                "records_other": "records",
+                "cover-alt": "Title"
             },
             "dashboard": {
                 "name": "Dashboard",
@@ -885,11 +980,13 @@
                 },
                 "smart-suggest": {
                     "numeric-message": "Numeric field \"{{field}}\" detected — want a Stats block with sum and average?",
-                    "numeric-action": "Add Stats",
+                    "numeric-action": "Add stats",
                     "relation-message": "Relation field \"{{field}}\" detected — show related records in a linked data block?",
                     "relation-action": "Add data block",
                     "never": "Don't suggest again",
-                    "close": "Hide suggestion"
+                    "close": "Hide suggestion",
+                    "relation-incoming-message": "{{project}} links here through «{{field}}» — show the related records of the row you pick?",
+                    "relation-master-message": "«{{field}}» links to {{project}} — show the linked record of the row you pick?"
                 },
                 "database-call": {
                     "empty": "No views configured",
@@ -932,7 +1029,13 @@
                         "relation-named": "Showing records where {{field}} is {{value}}",
                         "relation-idle": "Linked through {{field}} — select a row to narrow this block",
                         "broken-v2": "Relation '{{field}}' is broken ({{reason}}) — this block is filtered by the plain selection instead"
-                    }
+                    },
+                    "filtered-by-relation": "Filtered by relation",
+                    "linked-by-relation": "Linked by relation",
+                    "filtered-by-canvas": "Filtered by canvas selection",
+                    "relation-not-configured": "Relation not configured",
+                    "relation-broken": "Relation broken",
+                    "filter-master": "Showing what {{name}} links through {{field}}"
                 },
                 "field-presets": {
                     "label": "Layout",
@@ -954,7 +1057,7 @@
                     "pipeline": "Pipeline: reshape data before showing — group, count, sort",
                     "remove": "Remove widget",
                     "not-configured": "Widget type \"{{type}}\" — not configured",
-                    "add": "Add Widget",
+                    "add": "Add widget",
                     "add-aria": "Add widget",
                     "lock": "Lock widget position",
                     "menu": "Widget menu",
@@ -978,35 +1081,47 @@
                         "unnamed": "Sources added before naming was introduced cannot be picked — open the project and give them a name.",
                         "missing": "{{id}} — no longer in this project",
                         "single": "This project gathers records from a single source, so there is nothing to narrow to yet."
+                    },
+                    "badge": {
+                        "y-aggregation": "Y-axis aggregation",
+                        "aggregation": "Aggregation",
+                        "card-count_one": "{{count}} card",
+                        "card-count_other": "{{count}} cards",
+                        "card-count-title": "Number of cards",
+                        "column-count_one": "{{count}} column",
+                        "column-count_other": "{{count}} columns",
+                        "column-count-title": "Visible columns",
+                        "grouped": "Grouped",
+                        "grouped-title": "Grouped by {{field}}"
                     }
                 },
                 "quick": {
                     "group": "Quick actions",
-                    "formula": "Formula Builder"
+                    "formula": "Formula builder"
                 },
                 "types": {
-                    "data-table": "Data Table",
+                    "data-table": "Data table",
                     "chart": "Chart",
                     "stats": "Stats",
                     "comparison": "Comparison",
                     "checklist": "Checklist",
-                    "view-port": "View Port",
-                    "filter-tabs": "Filter Tabs",
-                    "summary-row": "Summary Row",
+                    "view-port": "View port",
+                    "filter-tabs": "Filter tabs",
+                    "summary-row": "Summary row",
                     "data-list": "List",
-                    "sub-base-canvas": "Sub-base Canvas",
+                    "sub-base-canvas": "Sub-base canvas",
                     "yaml-visualizer": "Properties",
                     "database-call": "Database",
                     "timeline": "Timeline",
-                    "cover-banner": "Cover Banner",
+                    "cover-banner": "Cover banner",
                     "text": "Text",
                     "divider": "Divider"
                 },
                 "formula": {
-                    "title": "Formula Editor",
+                    "title": "Formula editor",
                     "hint": "Ctrl+Enter to apply, Esc to cancel",
                     "field-name": "Field name",
-                    "field-placeholder": "e.g. Computed Budget",
+                    "field-placeholder": "e.g. computed budget",
                     "expression-placeholder": "e.g. IF(Status = \"Active\", Budget * 1.2, 0)",
                     "preview": "Preview:",
                     "cancel": "Cancel",
@@ -1062,7 +1177,7 @@
                     "remove": "Remove",
                     "add-step": "Add a data step",
                     "filter": "Filter",
-                    "group-by": "Group By",
+                    "group-by": "Group by",
                     "aggregate": "Aggregate",
                     "compute": "Compute",
                     "unpivot": "Unpivot",
@@ -1101,18 +1216,19 @@
                     "unnest-suggestion-button": "Unnest \"{{field}}\"",
                     "disable-step": "Disable step",
                     "enable-step": "Enable step",
-                    "source-not-ready": "The linked project is not loaded, so its fields are unavailable here."
+                    "source-not-ready": "The linked project is not loaded, so its fields are unavailable here.",
+                    "formula-placeholder": "e.g. fieldA + fieldB * 2"
                 },
                 "group": {
                     "empty": "(empty)"
                 },
                 "chart": {
                     "no-data": "No data",
-                    "type": "Chart Type",
-                    "x-axis": "X Axis",
-                    "y-axis": "Y Axis",
+                    "type": "Chart type",
+                    "x-axis": "X axis",
+                    "y-axis": "Y axis",
                     "aggregation": "Aggregation",
-                    "sort-by": "Sort By",
+                    "sort-by": "Sort by",
                     "height": "Height",
                     "granularity": "Group dates by",
                     "granularities": {
@@ -1124,8 +1240,8 @@
                     },
                     "types": {
                         "bar": "Bar",
-                        "horizontal-bar": "Horizontal Bar",
-                        "stacked-bar": "Stacked Bar",
+                        "horizontal-bar": "Horizontal bar",
+                        "stacked-bar": "Stacked bar",
                         "line": "Line",
                         "area": "Area",
                         "pie": "Pie",
@@ -1167,11 +1283,11 @@
                         "cumulative": "Cumulative"
                     },
                     "scatter": {
-                        "color-by": "Color By",
-                        "size-by": "Size By",
-                        "trend-line": "Trend Line",
+                        "color-by": "Color by",
+                        "size-by": "Size by",
+                        "trend-line": "Trend line",
                         "r-squared": "Show R²",
-                        "point-size": "Point Size",
+                        "point-size": "Point size",
                         "opacity": "Opacity",
                         "none": "(none)",
                         "correlate-enable": "Correlate with another source",
@@ -1183,12 +1299,28 @@
                         "no-sources": "No sibling projects found in this vault.",
                         "warn-missing-right": "Right source is not loaded. Check the selected source id and that the sibling project is still available.",
                         "warn-no-matches": "No records matched on the join key. Verify the left/right key names and that values overlap.",
-                        "warn-mostly-unmatched": "Only {{matched}} of {{total}} records matched — results may be skewed."
+                        "warn-mostly-unmatched": "Only {{matched}} of {{total}} records matched — results may be skewed.",
+                        "aria-label": "Scatter chart"
                     },
                     "section": {
-                        "display": "Display Options",
+                        "display": "Display options",
                         "data": "Data",
                         "scatter": "Scatter plot"
+                    },
+                    "bar": "Bar chart",
+                    "line": "Line chart",
+                    "series": {
+                        "title": "More series",
+                        "add": "Add series",
+                        "remove": "Remove series",
+                        "label": "Name",
+                        "field": "Field",
+                        "x-field": "X field there",
+                        "same-x": "— Same as the chart —",
+                        "this-chart": "This chart's data",
+                        "axis": "Axis",
+                        "axis-left": "Left",
+                        "axis-right": "Right"
                     }
                 },
                 "comparison": {
@@ -1227,12 +1359,16 @@
                         "fmt-percent": "Percent",
                         "fmt-currency": "Currency",
                         "fmt-duration": "Duration"
-                    }
+                    },
+                    "field-not-found": "Field not found",
+                    "filtered-title": "Filtered by canvas selection",
+                    "filtered-aria": "{{value}} — filtered by canvas selection",
+                    "missing-field-hint": "no field «{{field}}»"
                 },
                 "agg": {
-                    "count_total": "Count",
-                    "count_values": "Count filled",
-                    "count_unique": "Unique",
+                    "count_total": "Count all",
+                    "count_values": "Count values",
+                    "count_unique": "Count unique",
                     "sum": "Sum",
                     "avg": "Average",
                     "median": "Median",
@@ -1241,12 +1377,23 @@
                     "range": "Range",
                     "count_checked": "Checked",
                     "count_unchecked": "Unchecked",
-                    "percent_checked": "% checked",
-                    "percent_unchecked": "% unchecked",
-                    "percent_empty": "% empty",
-                    "percent_not_empty": "% filled",
+                    "percent_checked": "Percent checked",
+                    "percent_unchecked": "Percent unchecked",
+                    "percent_empty": "Percent empty",
+                    "percent_not_empty": "Percent filled",
                     "earliest": "Earliest date",
-                    "latest": "Latest date"
+                    "latest": "Latest date",
+                    "count": "Count all",
+                    "count_numeric": "Count numbers",
+                    "count_empty": "Count empty",
+                    "percent_true": "Percent checked",
+                    "concat": "Concatenate",
+                    "concat_unique": "Concatenate unique",
+                    "show_original": "Show original",
+                    "show_unique": "Show unique values",
+                    "date_range": "Date range",
+                    "first_value": "First value",
+                    "last_value": "Last value"
                 },
                 "checklist": {
                     "select-field": "Select a boolean field to bind",
@@ -1266,17 +1413,19 @@
                         "sort-field": "Sort field",
                         "sort-field-placeholder": "name",
                         "sort-order": "Order"
-                    }
+                    },
+                    "asc": "ASC",
+                    "desc": "DESC"
                 },
                 "viewport": {
                     "select": "Select a view to embed",
                     "change": "Change embedded view",
                     "embedded": "Embedded view: {{label}}",
                     "embed-title": "Embed a view",
-                    "table": "Table View",
-                    "board": "Board View",
-                    "calendar": "Calendar View",
-                    "gallery": "Gallery View"
+                    "table": "Table view",
+                    "board": "Board view",
+                    "calendar": "Calendar view",
+                    "gallery": "Gallery view"
                 },
                 "table-v2": {
                     "add-property": "Add property",
@@ -1307,6 +1456,88 @@
                     "unfilter-canvas": "Stop filtering canvas by this row",
                     "ungroup": "Ungroup",
                     "group-empty": "No value"
+                },
+                "agg-consequence": {
+                    "count_total": "Every record, including ones with nothing in this field",
+                    "count": "Every record, including ones with nothing in this field (legacy spelling of Count all)",
+                    "count_values": "Records where this field has something in it",
+                    "count_numeric": "Values this field can do arithmetic on",
+                    "count_unique": "How many different values, empties excluded",
+                    "count_empty": "Records where this field is blank",
+                    "count_checked": "How many are ticked",
+                    "count_unchecked": "How many are unticked",
+                    "percent_checked": "Share of the boxes that are ticked",
+                    "percent_unchecked": "Share of the boxes that are unticked",
+                    "percent_empty": "Share of records with nothing in this field",
+                    "percent_not_empty": "Share of records with something in this field",
+                    "sum": "Total of the numbers; text is ignored",
+                    "avg": "Mean of the numbers; empty cells are not counted in",
+                    "median": "Middle number; text is ignored",
+                    "min": "Smallest number; empty when there is none",
+                    "max": "Largest number; empty when there is none",
+                    "range": "Largest minus smallest",
+                    "percent_true": "Share of the boxes that are ticked",
+                    "concat": "Every value joined into one line",
+                    "concat_unique": "Each different value once, joined into one line",
+                    "show_original": "The values themselves, as a list",
+                    "show_unique": "Each different value once, as a list",
+                    "earliest": "Oldest date in the column",
+                    "latest": "Newest date in the column",
+                    "date_range": "From the earliest to the latest",
+                    "first_value": "The first filled value, in the order of the chosen field",
+                    "last_value": "The last filled value, in the order of the chosen field — e.g. the latest by date"
+                },
+                "agg-badge": {
+                    "count_total": "COUNT ALL",
+                    "count": "COUNT ALL",
+                    "count_values": "VALUES",
+                    "count_numeric": "NUMBERS",
+                    "count_unique": "UNIQUE",
+                    "count_empty": "EMPTY",
+                    "count_checked": "✓",
+                    "count_unchecked": "✗",
+                    "percent_checked": "%✓",
+                    "percent_unchecked": "%✗",
+                    "percent_empty": "%∅",
+                    "percent_not_empty": "%¬∅",
+                    "sum": "SUM",
+                    "avg": "AVG",
+                    "median": "MEDIAN",
+                    "min": "MIN",
+                    "max": "MAX",
+                    "range": "RANGE",
+                    "percent_true": "%✓",
+                    "concat": "JOIN",
+                    "concat_unique": "JOIN∪",
+                    "show_original": "SHOW",
+                    "show_unique": "SHOW∪",
+                    "earliest": "EARLIEST",
+                    "latest": "LATEST",
+                    "date_range": "SPAN",
+                    "first_value": "FIRST",
+                    "last_value": "LAST"
+                },
+                "selection": {
+                    "clear": "Clear selection"
+                },
+                "cover-banner": {
+                    "empty": "No image — open settings to set a source."
+                },
+                "divider": {
+                    "label-placeholder": "Divider label…"
+                },
+                "text": {
+                    "placeholder": "Enter Markdown…"
+                },
+                "data-project": {
+                    "label": "Data from",
+                    "this-project": "This project",
+                    "unavailable": "Unavailable project"
+                },
+                "follow": {
+                    "label": "Follow selection in",
+                    "none": "— Don't follow —",
+                    "field": "Through relation field"
                 }
             }
         },
@@ -1342,8 +1573,8 @@
                     "desc": "Sort Z → A"
                 },
                 "sortDate": {
-                    "asc": "Sort Old → New",
-                    "desc": "Sort New → Old"
+                    "asc": "Sort old → new",
+                    "desc": "Sort new → old"
                 }
             },
             "board": {
@@ -1457,6 +1688,41 @@
             },
             "multi-text": {
                 "add": "Add an option"
+            },
+            "color-picker": {
+                "saturation-brightness": "Saturation and brightness",
+                "hue": "Hue"
+            },
+            "datetime-input": {
+                "open-time-picker": "Open time picker",
+                "visual-time-picker": "Visual time picker"
+            },
+            "error-boundary": {
+                "component": "Component:",
+                "error": "Error:"
+            },
+            "field-control": {
+                "image-placeholder": "https://... or [[Image.png]]"
+            },
+            "image-preview": {
+                "remove-image": "Remove image",
+                "failed": "Failed to load image",
+                "no-image": "No image"
+            },
+            "multi-text-input": {
+                "list": "Editable options list",
+                "option": "Option {{index}}",
+                "remove-option": "Remove option {{index}}",
+                "add-option": "Add new option (or press Enter)"
+            },
+            "settings-menu": {
+                "tabs": "Settings tabs"
+            },
+            "record-card-view": {
+                "icon-placeholder": "📄  or  file-text"
+            },
+            "time-picker": {
+                "label": "Time picker"
             }
         },
         "toolbar": {
@@ -1476,11 +1742,11 @@
         },
         "settings": {
             "about": {
-                "title": "About Projects Plus",
+                "title": "About",
                 "description": "Enhanced project management for Obsidian with advanced features.",
                 "author": "Maintainer",
                 "author-name": "Park Pavel",
-                "original-author": "Original Author",
+                "original-author": "Original author",
                 "original-author-name": "Marcus Olsson",
                 "version": "Version",
                 "version-number": "3.0.5",
@@ -1488,25 +1754,17 @@
                 "credits-desc": "This is a community-maintained fork of the original Obsidian Projects plugin by Marcus Olsson.",
                 "support": "Support",
                 "support-desc": "If you find this plugin useful, consider supporting the development.",
-                "visit-website": "Visit Website",
+                "visit-website": "Visit website",
                 "github": "GitHub",
                 "star-github": "⭐ Star on GitHub",
-                "original-repo": "Original Repository",
-                "languages": "Supported Languages",
+                "original-repo": "Original repository",
+                "languages": "Supported languages",
                 "languages-desc": "Available languages: English, Russian, Ukrainian, Chinese (automatic detection based on system language)"
             },
             "general": {
                 "size-limit": {
                     "name": "Project size limit",
                     "desc": "Avoid accidentally loading too many notes."
-                },
-                "link-behavior": {
-                    "name": "Link behavior",
-                    "desc": "Determines what happens when you select the link of a note. Press {{modifier}} while selecting link for opposite behavior.",
-                    "options": {
-                        "open-editor": "Open editor",
-                        "open-note": "Open note"
-                    }
                 },
                 "start-of-week": {
                     "name": "Start week on",
@@ -1526,7 +1784,7 @@
                     }
                 },
                 "animation-behavior": {
-                    "name": "Animation Behavior",
+                    "name": "Animation behavior",
                     "desc": "Control scrolling animations throughout the plugin",
                     "options": {
                         "smooth": "Smooth (animated)",
@@ -1534,7 +1792,7 @@
                     }
                 },
                 "disable-haptic": {
-                    "name": "Disable Haptic Feedback",
+                    "name": "Disable haptic feedback",
                     "desc": "Turn off vibration feedback during drag-and-drop on mobile devices"
                 },
                 "replace-properties": {
@@ -1554,13 +1812,18 @@
             },
             "commands": {
                 "name": "Commands",
-                "desc": "Add commands for your favorite projects and views."
+                "desc": "Add commands for your favorite projects and views.",
+                "project": "Project",
+                "view": "View"
             },
             "archives": {
                 "name": "Archives",
                 "desc": "Restore or delete your archived projects.",
-                "empty": "No archived project."
-            }
+                "empty": "No archived project.",
+                "restore": "Restore this archive",
+                "delete": "Delete this archive"
+            },
+            "no-project-yet": "No project yet."
         },
         "errors": {
             "missingDataview": {
@@ -1691,7 +1954,7 @@
             },
             "done": "Done",
             "views": {
-                "title": "View Management",
+                "title": "View management",
                 "show-titles": "Show view titles",
                 "select-view": "Select view",
                 "rename": "Rename",
@@ -1701,7 +1964,7 @@
                 "drag-to-reorder": "Drag to reorder"
             },
             "view-config": {
-                "title": "View Settings",
+                "title": "View settings",
                 "current-view": "Current view",
                 "no-view": "No active view",
                 "calendar": {
@@ -1709,16 +1972,16 @@
                     "layout": "Layout",
                     "time-format": "Time format",
                     "timezone": "Timezone",
-                    "show-agenda": "Show Agenda",
-                    "hide-agenda": "Hide Agenda",
+                    "show-agenda": "Show agenda",
+                    "hide-agenda": "Hide agenda",
                     "hints": {
                         "timezone": "e.g. Europe/Moscow or local"
                     },
                     "timeline": {
-                        "title": "Timeline Settings",
-                        "start-hour": "Start Hour",
-                        "end-hour": "End Hour",
-                        "event-color-field": "Event Color Field",
+                        "title": "Timeline settings",
+                        "start-hour": "Start hour",
+                        "end-hour": "End hour",
+                        "event-color-field": "Event color field",
                         "show-weekends": "Show weekends",
                         "show-all-day": "Show 'All day' section",
                         "hints": {
@@ -1737,7 +2000,7 @@
                         "bars": "Bars (timeline)"
                     },
                     "field-mapping": {
-                        "title": "Field Mapping",
+                        "title": "Field mapping",
                         "hint": "Select an existing field from the list or enter a new field name",
                         "placeholder": "Enter or select field",
                         "new-field": "+ new field",
@@ -1804,8 +2067,7 @@
         },
         "onboarding": {
             "title": "Get started with Projects Plus",
-            "description": "Projects Plus lets you manage groups of related notes using <a>front matter</a>. For example, a folder with the blog posts you're working on.",
-            "front-matter-link": "front matter",
+            "description": "Projects Plus lets you manage groups of related notes using [front matter](properties). For example, a folder with the blog posts you're working on.",
             "explore": "Start from scratch, or explore a demo project 👇",
             "create-new": "Create new project",
             "try-demo": "Try a demo project",
@@ -1814,13 +2076,13 @@
             "tab-projects-view": "Projects view",
             "tab-command-palette": "Command palette",
             "tab-file-explorer": "File explorer",
-            "file-explorer-step1": "Right-click a folder in <strong>File explorer</strong>.",
-            "file-explorer-step2": "Click <strong>Create project in folder</strong>.",
-            "command-palette-step1": "Open the <strong>Command palette</strong>.",
-            "command-palette-step2": "Search for <strong>Create new project</strong>",
-            "command-palette-step3": "Press <strong>Enter</strong>.",
-            "projects-view-step1": "In the top-right corner of the <strong>Projects Plus</strong> view, click <strong>New</strong>.",
-            "projects-view-step2": "Click <strong>New project</strong>.",
+            "file-explorer-step1": "Right-click a folder in **File explorer**.",
+            "file-explorer-step2": "Click **Create project in folder**.",
+            "command-palette-step1": "Open the **Command palette**.",
+            "command-palette-step2": "Search for **Create new project**",
+            "command-palette-step3": "Press **Enter**.",
+            "projects-view-step1": "In the top-right corner of the **Projects Plus** view, click **New**.",
+            "projects-view-step2": "Click **New project**.",
             "other-ways-summary": "Another way",
             "demo": {
                 "partial": "The demo project was created, but {{count}} notes could not be written. See the console for the list.",
@@ -1836,7 +2098,8 @@
                 "first-note-failed": "Could not save the first record \"{{name}}\" in full. Open the profile folder and look at what is there: if the record is missing, add it with \"Add first record\" in the empty table. If this keeps happening, try a different name — something else may occupy that path.",
                 "error-registration-leftover": "Could not create the profile. These paths could not be removed automatically and are still in your vault: {{leftovers}}. Check them before trying again and delete only what the profile itself created: something unrelated may now sit at such a path.",
                 "error-registered": "The profile's files were created, but the settings may not have been saved. Restart Obsidian and check whether the project is listed; the profile's files stay in your vault."
-            }
+            },
+            "psst": "Psst! 👋"
         },
         "common": {
             "yesterday": "Yesterday",
@@ -1871,7 +2134,14 @@
             "remove": "Remove",
             "apply": "Apply",
             "field-placeholder": "Field",
-            "add-criterion": "Add criterion"
+            "add-criterion": "Add criterion",
+            "loading": "Loading...",
+            "drag-to-reorder": "Drag to reorder",
+            "confirm": "Confirm",
+            "move-up": "Move up",
+            "move-down": "Move down",
+            "actions": "Actions",
+            "info": "Info"
         },
         "relation-setup": {
             "open": "Link database…",

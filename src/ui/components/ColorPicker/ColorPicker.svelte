@@ -237,7 +237,7 @@
       on:touchmove|stopPropagation={handleSatLightTouchMove}
       on:touchend|stopPropagation={handleSatLightTouchEnd}
       role="slider"
-      aria-label="Saturation and brightness"
+      aria-label={$i18n.t("components.color-picker.saturation-brightness")}
       aria-valuenow={saturationValue}
       tabindex="0"
     >
@@ -257,7 +257,7 @@
       on:touchmove|stopPropagation={handleHueTouchMove}
       on:touchend|stopPropagation={handleHueTouchEnd}
       role="slider"
-      aria-label="Hue"
+      aria-label={$i18n.t("components.color-picker.hue")}
       aria-valuenow={hueValue}
       tabindex="0"
     >

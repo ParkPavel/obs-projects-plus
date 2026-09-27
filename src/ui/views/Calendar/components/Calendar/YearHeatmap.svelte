@@ -266,7 +266,7 @@
         class="nav-button" 
         on:click={handlePrevYear}
         title="{$i18n.t('views.calendar.heatmap.previousYear')}"
-        aria-label="Previous year"
+        aria-label={$i18n.t("views.calendar.previous-year")}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       </button>
@@ -275,7 +275,7 @@
         class="nav-button" 
         on:click={handleNextYear}
         title="{$i18n.t('views.calendar.heatmap.nextYear')}"
-        aria-label="Next year"
+        aria-label={$i18n.t("views.calendar.next-year")}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       </button>
@@ -343,7 +343,7 @@
                       on:click={() => handleDayClick(date)}
                       disabled={isOutside}
                     >
-                      <span class="sr-only">{displayDate}: {count} events</span>
+                      <span class="sr-only">{displayDate}: {$i18n.t("views.calendar.events-count", { count })}</span>
                     </button>
                   {/each}
                 </div>

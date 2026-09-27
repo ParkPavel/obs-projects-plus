@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   // DateFormulaInput — inline date-formula filter cell (#077, slice 4).
   //
   // Thin wrapper over the canonical FormulaConstructor. The parallel imperative
@@ -56,7 +57,7 @@
     on:change={handleChange}
   />
   {#if isFormula}
-    <div class="formula-indicator" title="Date formula detected">
+    <div class="formula-indicator" title={$i18n.t("views.calendar.agenda.date-formula-detected")}>
       <Icon name="calendar-clock" size="xs" />
     </div>
   {/if}

@@ -7,14 +7,26 @@
 
 import "@testing-library/jest-dom";
 
+// Echo key and options: interpolated values stay observable, and an English
+// literal can no longer pass as a translation.
+jest.mock("src/lib/stores/i18n", () => {
+  const { writable } = require("svelte/store");
+  return {
+    i18n: writable({
+      t: (key: string, options?: Record<string, unknown>) =>
+        options ? `${key}|${JSON.stringify(options)}` : key,
+    }),
+  };
+});
+
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { DataFrame } from "src/lib/dataframe/dataframe";
-import type {
-  ChartConfig,
-  DataTableConfig,
-  StatsConfig,
-  WidgetDefinition,
-} from "src/ui/views/Dashboard/types";
+// Type aliases, not `import type`: a file with jest.mock() goes through babel,
+// which cannot strip an imported binding used only in annotations.
+type DataFrame = import("src/lib/dataframe/dataframe").DataFrame;
+type ChartConfig = import("src/ui/views/Dashboard/types").ChartConfig;
+type DataTableConfig = import("src/ui/views/Dashboard/types").DataTableConfig;
+type StatsConfig = import("src/ui/views/Dashboard/types").StatsConfig;
+type WidgetDefinition = import("src/ui/views/Dashboard/types").WidgetDefinition;
 
 const WidgetInlineBadges =
   require("../WidgetInlineBadges.svelte").default;
@@ -80,7 +92,7 @@ describe("WidgetInlineBadges", () => {
       "[data-testid='widget-badge-stats-agg']"
     );
     expect(badge).not.toBeNull();
-    expect(badge!.textContent?.trim()).toBe("SUM");
+    expect(badge!.textContent?.trim()).toBe('views.dashboard.agg-badge.sum|{"defaultValue":"SUM"}');
     expect(
       handle.target.querySelector("[data-testid='widget-badge-stats-count']")
     ).toBeNull();
@@ -104,7 +116,8 @@ describe("WidgetInlineBadges", () => {
       "[data-testid='widget-badge-stats-count']"
     );
     expect(badge).not.toBeNull();
-    expect(badge!.textContent?.trim()).toBe("3 cards");
+    expect(badge!.textContent?.trim()).toBe('views.dashboard.widget.badge.card-count|{"count":3}');
+    expect(badge!.getAttribute("title")).toBe("views.dashboard.widget.badge.card-count-title");
     handle.destroy();
   });
 
@@ -141,9 +154,11 @@ describe("WidgetInlineBadges", () => {
       "[data-testid='widget-badge-chart-agg']"
     );
     expect(typeBadge).not.toBeNull();
-    expect(typeBadge!.textContent?.trim()).toBe("bar");
+    expect(typeBadge!.textContent?.trim()).toBe('views.dashboard.chart.types.bar|{"defaultValue":"bar"}');
+    expect(typeBadge!.getAttribute("title")).toBe("views.dashboard.chart.type");
     expect(aggBadge).not.toBeNull();
-    expect(aggBadge!.textContent?.trim()).toBe("AVG");
+    expect(aggBadge!.getAttribute("title")).toBe("views.dashboard.widget.badge.y-aggregation");
+    expect(aggBadge!.textContent?.trim()).toBe('views.dashboard.agg-badge.avg|{"defaultValue":"AVG"}');
     handle.destroy();
   });
 
@@ -188,7 +203,8 @@ describe("WidgetInlineBadges", () => {
       "[data-testid='widget-badge-table-cols']"
     );
     expect(colsBadge).not.toBeNull();
-    expect(colsBadge!.textContent?.trim()).toBe("7 cols");
+    expect(colsBadge!.textContent?.trim()).toBe('views.dashboard.widget.badge.column-count|{"count":7}');
+    expect(colsBadge!.getAttribute("title")).toBe("views.dashboard.widget.badge.column-count-title");
     expect(
       handle.target.querySelector("[data-testid='widget-badge-table-grouped']")
     ).toBeNull();
@@ -217,7 +233,27 @@ describe("WidgetInlineBadges", () => {
       "[data-testid='widget-badge-table-grouped']"
     );
     expect(groupBadge).not.toBeNull();
-    expect(groupBadge!.textContent?.trim()).toBe("grouped");
+    expect(groupBadge!.textContent?.trim()).toBe("views.dashboard.widget.badge.grouped");
+    expect(groupBadge!.getAttribute("title")).toBe('views.dashboard.widget.badge.grouped-title|{"field":"status"}');
+    handle.destroy();
+  });
+
+  it("data-table: the config passed by the host wins over a stale nested copy", () => {
+    const handle = mount({
+      widget: makeWidget("data-table", {
+        table: { groupBy: { field: "stale", sortOrder: "asc", hiddenGroups: [], collapsedGroups: [], showEmptyGroups: false } },
+      }),
+      frame: makeFrame(2),
+      tableConfig: {},
+    });
+    expect(handle.target.querySelector("[data-testid='widget-badge-table-grouped']")).toBeNull();
+    handle.destroy();
+  });
+
+  it("an unknown chart type falls back to its own name, not a raw key", () => {
+    const handle = mount({ widget: makeWidget("chart", { chartType: "radar", xAxis: {}, yAxis: { property: "y", aggregation: "none" }, style: {} }), frame: makeFrame(1) });
+    const typeBadge = handle.target.querySelector("[data-testid='widget-badge-chart-type']");
+    expect(typeBadge!.textContent).toContain('"defaultValue":"radar"');
     handle.destroy();
   });
 

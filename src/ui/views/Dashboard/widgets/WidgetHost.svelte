@@ -18,12 +18,14 @@
   import { frameParts } from "src/lib/stores/dataframe";
   import { projectSourceOptions } from "src/lib/datasources/namedSource";
   import { getConfigPanel } from "./configPanelRegistry";
-  import { WIDGET_CONTENT, WIDGET_PANELS } from "./widgetComponentRegistry";
+  import { WIDGET_CONTENT, WIDGET_PANELS, panelFields } from "./widgetComponentRegistry";
   import { hasDataScope, hasPipelineButton, primaryActionFor } from "./headerChrome";
   import { applyDataScope } from "./dataScope";
   import { buildRenderContext } from "./renderContext";
+  import { withLinkedSelection } from "./linkedSourceState";
   import { dataTableConfigChange } from "./legacyMigration";
   import WidgetShell from "./WidgetShell.svelte";
+  import WidgetHeaderBadges from "./_shared/WidgetHeaderBadges.svelte";
   import WidgetHeaderActions from "./WidgetHeaderActions.svelte";
   import WidgetPrimaryAction from "./WidgetPrimaryAction.svelte";
   import WidgetContent from "./WidgetContent.svelte";
@@ -67,14 +69,14 @@
   $: frames = computeHostFrames({ widget, frame, fields, pipeline: currentPipeline, rightFrames,
         sourceStates, parts: $frameParts, sources: sourceOptions.sources });
   $: ({ namedSource, scope, transformedFrame, pipelineInputRowCount, chartConfig, statsConfig,
-        chartRightFrame, dbCall, pipelineSource } = frames);
+        chartRightFrame, chartSeriesFrames, dbCall, pipelineSource, otherProject } = frames);
 
   $: ctx = buildRenderContext({
     widget, frame, transformedFrame, api, readonly, getRecordColor, fields, fieldPresets,
-    activeFieldPresetId, availableSources, project, tableConfig, isPrimaryDataTable,
+    activeFieldPresetId, availableSources, availableWidgets: availableWidgets.filter((w) => w.id !== widget.id), project, tableConfig, isPrimaryDataTable,
     pipelineStepCount: currentPipeline.steps.length, pipelineInputRowCount, chartConfig,
-    statsConfig, chartRightFrame, dbCall, scopeApplied: scope.applied, primaryActionSignal,
-    namedSource,
+    statsConfig, chartRightFrame, chartSeriesFrames, dbCall, scopeApplied: scope.applied, primaryActionSignal,
+    namedSource, otherProject,
   });
 
   // #169: the block's own action, and NOT run here. Hidden for a linked project
@@ -110,7 +112,7 @@
   /** Toggle panel, seeding type defaults on first configure. */
   function toggleConfig() {
     if (!panelDescriptor.isConfigured(widget.config ?? {})) {
-      handleWidgetConfigChange(panelDescriptor.initDefaults(fields));
+      handleWidgetConfigChange(panelDescriptor.initDefaults(panelFields(ctx)));
       showConfig = true;
       return;
     }
@@ -121,10 +123,7 @@
     showPipeline = false;
   }
   function handleLinkedSelectionChange(e: CustomEvent<LinkedSelectionConfig | undefined>) {
-    const cfg = { ...widget.config };
-    if (e.detail !== undefined) cfg["linkedSelection"] = e.detail;
-    else delete cfg["linkedSelection"];
-    handleWidgetConfigChange(cfg);
+    handleWidgetConfigChange(withLinkedSelection(widget.config, e.detail));
   }
   function handleDbCallSourceChange(e: CustomEvent<WidgetSourceConfig>) {
     patchWidget({ sourceConfig: e.detail });
@@ -134,13 +133,13 @@
 <WidgetShell
   widgetId={widget.id}
   title={widget.title}
-  widgetType={widget.type}
   {collapsed}
   {readonly}
   {renameSignal}
   on:toggleCollapse={() => { primaryActionSignal = 0; patchWidget({ collapsed: !collapsed }); }}
   on:titleChange={(e) => patchWidget({ title: e.detail })}
 >
+  <svelte:fragment slot="badges"><WidgetHeaderBadges {widget} frame={ctx.transformedFrame} tableConfig={ctx.effectiveTableConfig} /></svelte:fragment>
   <svelte:fragment slot="actions">
     <WidgetPrimaryAction action={primaryAction} on:primaryAction={handlePrimaryAction} />
     <!-- #194 gives the cog a SECOND reason, not a registry edit: `hasCog` means
@@ -181,6 +180,7 @@
         projectSources={sourceOptions.pickable}
         hasUnaddressableSource={sourceOptions.hasUnaddressable}
         fields={dbCall.frame.fields}
+        masterFields={ctx.frame.fields}
         on:change={handleDbCallSourceChange}
         on:linkedSelectionChange={handleLinkedSelectionChange}
         on:close={() => (showConfig = false)}

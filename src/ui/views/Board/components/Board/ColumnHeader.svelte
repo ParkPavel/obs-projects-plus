@@ -1,9 +1,13 @@
 <script lang="ts">
   import { MarkdownRenderer } from "obsidian";
-  import { app, view } from "src/lib/stores/obsidian";
+  import { app } from "src/lib/stores/obsidian";
+  import { markdownOwner } from "src/lib/markdownOwner";
+  // Rendered Markdown lives as long as this component (not the last opened view).
+  const owner = markdownOwner();
   import { i18n } from "src/lib/stores/i18n";
   import { getContext } from "svelte";
-  import { TextInput, IconButton } from "obsidian-svelte";
+  import { TextInput } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import { Flair } from "src/ui/components/Flair";
   import { handleHoverLink } from "src/ui/views/helpers";
 
@@ -16,12 +20,12 @@
   const sourcePath = getContext<string>("sourcePath") ?? "";
 
   function useMarkdown(node: HTMLElement, value: string) {
-    MarkdownRenderer.render($app, value, node, sourcePath, $view);
+    MarkdownRenderer.render($app, value, node, sourcePath, owner);
 
     return {
       update(newValue: string) {
         node.empty();
-        MarkdownRenderer.render($app, newValue, node, sourcePath, $view);
+        MarkdownRenderer.render($app, newValue, node, sourcePath, owner);
       },
     };
   }
@@ -54,6 +58,8 @@
   export let onValidate: (value: string) => boolean;
   export let onColumnRename: (value: string) => void;
   export let editing: boolean = false;
+  /** #C4 — see BoardView.svelte; blocks the dblclick-to-rename shortcut too. */
+  export let dataReadOnly: boolean = false;
   export let pinned: boolean = false;
   export let persisted: boolean = false;
   export let onColumnPin: () => void;
@@ -75,7 +81,7 @@
 <div
   class="projects--board--column--header"
   on:dblclick={() => {
-    if (!collapse) editing = true;
+    if (!collapse && !dataReadOnly) editing = true;
   }}
 >
   {#if editing}

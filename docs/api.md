@@ -6,11 +6,11 @@ Projects Plus can discover a custom view supplied by another enabled Obsidian pl
 
 ## Registration and lifecycle
 
-When a Projects workspace view opens, [getProjectViews()](../src/view.ts) examines enabled plugins for an `onRegisterProjectView` method. It calls that method to obtain a view instance and uses `getViewType()` as its key.
+When a Projects workspace view opens, [getProjectViews()](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/view.ts) examines enabled plugins for an `onRegisterProjectView` method. It calls that method to obtain a view instance and uses `getViewType()` as its key.
 
 Return a fresh instance and choose a unique, namespaced type, such as `my-plugin-summary`. Built-in types are registered afterward and override conflicting keys. Reopen the Projects pane after enabling your extension so discovery runs again.
 
-[useView.ts](../src/ui/app/useView.ts) calls the lifecycle methods:
+[useView.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/app/useView.ts) calls the lifecycle methods:
 
 | Method | Purpose |
 | --- | --- |
@@ -26,7 +26,7 @@ The host calls `onOpen` and then `onData` without awaiting them. Keep initial se
 
 ## Minimal example
 
-This read-only view uses types from the companion package. Install a package version you have checked against your target host; [the package source](../obsidian-projects-types/index.ts) records the declarations maintained in this repository.
+This read-only view uses types from the companion package. Install a package version you have checked against your target host; [the package source](https://github.com/ParkPavel/obs-projects-plus/blob/main/obsidian-projects-types/index.ts) records the declarations maintained in this repository.
 
 ```typescript
 import { Plugin } from "obsidian";
@@ -74,7 +74,7 @@ Bundle the runtime `ProjectView` import with your plugin. Type-only imports disa
 
 ## Data supplied to views
 
-The host contract is [src/customViewApi.ts](../src/customViewApi.ts). Use it together with the [data-frame definitions](../src/lib/dataframe/dataframe.ts), rather than copying type declarations from this page.
+The host contract is [src/customViewApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/customViewApi.ts). Use it together with the [data-frame definitions](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataframe/dataframe.ts), rather than copying type declarations from this page.
 
 `DataQueryResult` includes `data`, `hasSort`, `hasFilter`, optional `dataGeneration` and optional `filterConditions`. The host also supplies an optional complete `filter`, including disabled conditions and nested groups. When saving a filter, retaining only the visible enabled conditions would discard that configuration.
 
@@ -98,7 +98,7 @@ A data frame contains `fields`, `records` and optional parsing `errors`. Each re
 
 Use the host-provided `viewApi`. It supports record creation, update, batch update and deletion, plus field creation, update and deletion. In particular, `deleteField` takes a field **name**, not a field object.
 
-The implementation in [src/lib/viewApi.ts](../src/lib/viewApi.ts) owns persistence behavior and failure reporting. Several methods are asynchronous, and the companion package does not describe all return values accurately. For example, the host's `updateRecord` returns `Promise<boolean>`, while the package declaration returns `void`. Do not interpret a `void` call or an optimistic screen update as confirmation that a write succeeded.
+The implementation in [src/lib/viewApi.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/viewApi.ts) owns persistence behavior and failure reporting. Several methods are asynchronous, and the companion package does not describe all return values accurately. For example, the host's `updateRecord` returns `Promise<boolean>`, while the package declaration returns `void`. Do not interpret a `void` call or an optimistic screen update as confirmation that a write succeeded.
 
 Respect `readonly` and derived field flags. Constructing the package's `ViewApi` class does not create a working writer: its methods are stubs. Nor is that class the same runtime constructor as the host's implementation.
 

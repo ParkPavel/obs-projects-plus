@@ -59,13 +59,15 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 		).toBe(true);
 	});
 
-	it("shows badge for DataTable widget when external selection is active", () => {
+	// database-call narrows but labels it in its own content; the legacy
+	// data-table does not narrow at all. Neither carries the pill.
+	it.each(["data-table", "database-call"])("hides badge for a %s widget", (type) => {
 		expect(
 			shouldShowSelectionBadge(
-				{ type: "data-table", id: "w1" },
+				{ type, id: "w1" },
 				externalSelection("status", "Done"),
 			),
-		).toBe(true);
+		).toBe(false);
 	});
 
 	it("hides badge for Chart widget (driver-only in v1, no badge per spec §6.2)", () => {
@@ -118,7 +120,7 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 		).toBe(false);
 	});
 
-	it("widget-scoped: another DataTable still shows the badge for a sibling's emission", () => {
+	it("widget-scoped: a stats widget shows the badge for a table row's emission", () => {
 		const otherSelection: SelectionState = {
 			source: "data-table:other",
 			field: "status",
@@ -127,7 +129,7 @@ describe("shouldShowSelectionBadge — visibility predicate (#044.5)", () => {
 		};
 		expect(
 			shouldShowSelectionBadge(
-				{ type: "data-table", id: "w1" },
+				{ type: "stats", id: "w1" },
 				otherSelection,
 			),
 		).toBe(true);
@@ -196,7 +198,8 @@ describe("SelectionBadge.svelte — component (#044.5)", () => {
 		try {
 			const clearBtn = m.target.querySelector(".ppp-selection-badge__clear");
 			expect(clearBtn?.tagName).toBe("BUTTON");
-			expect(clearBtn?.getAttribute("aria-label")).toBe("Clear selection");
+			// Named through i18n (the jest mock returns the key), never an English literal.
+			expect(clearBtn?.getAttribute("aria-label")).toBe("views.dashboard.selection.clear");
 		} finally {
 			m.destroy();
 		}

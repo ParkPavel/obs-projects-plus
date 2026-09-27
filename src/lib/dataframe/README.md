@@ -1,6 +1,6 @@
 # Data frames
 
-A data frame is the shared representation of a project's notes. [dataframe.ts](dataframe.ts) defines the types used by sources, views, filters and calculations.
+A data frame is the shared representation of a project's notes. [dataframe.ts](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/dataframe/dataframe.ts) defines the types used by sources, views, filters and calculations.
 
 - `fields` describes the columns: name, type and flags such as `derived`.
 - `records` contains rows. Each record's `id` is its vault path, and `values` holds the field values.

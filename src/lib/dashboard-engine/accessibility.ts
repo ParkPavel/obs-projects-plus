@@ -216,8 +216,9 @@ export function focusGridCell(
  * first use and reused after: `aria-live="polite"` announces on text change,
  * so a second region would compete with the first and a fresh region per call
  * would often be announced before it is even in the tree. The region is
- * visually hidden by inline styles rather than a class, so it works even where
- * the plugin stylesheet has not loaded.
+ * visually hidden by the global `.ppp-sr-announce` rule in styles.css (it sits
+ * on `<body>`, outside the plugin's scoped `.sr-only`); Obsidian loads that
+ * stylesheet with the plugin, so the rule is present whenever this runs.
  *
  * `activeDocument` is Obsidian's global for the document of the focused
  * window. Using plain `document` here would put the region in the main window
@@ -232,9 +233,9 @@ export function announceChange(message: string): void {
     region.setAttribute("role", "status");
     region.setAttribute("aria-live", "polite");
     region.setAttribute("aria-atomic", "true");
-    region.className = "sr-only";
-    region.style.cssText =
-      "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0";
+    // Visually hidden by the global .ppp-sr-announce rule in styles.css: the
+    // region sits on <body>, where the plugin's scoped .sr-only does not reach.
+    region.className = "ppp-sr-announce";
     doc.body.appendChild(region);
   }
   region.textContent = message;

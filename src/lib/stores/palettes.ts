@@ -10,8 +10,7 @@
  */
 
 import { writable } from "svelte/store";
-import { get } from "svelte/store";
-import { app } from "src/lib/stores/obsidian";
+import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
 
 /** Default color for new color pickers. */
 export const DEFAULT_COLOR = "#3b82f6";
@@ -27,13 +26,9 @@ export interface Favorite {
   name: string;
 }
 
-function getAppInstance(): any {
-  return (typeof window !== "undefined" && (window as any).app) ?? get(app);
-}
-
 function loadFromStorage(): Favorite[] {
   try {
-    const stored = getAppInstance()?.loadLocalStorage(FAVORITES_KEY);
+    const stored = loadAppLocal(FAVORITES_KEY);
     if (stored) return JSON.parse(stored) as Favorite[];
   } catch {
     // ignore
@@ -43,7 +38,7 @@ function loadFromStorage(): Favorite[] {
 
 function persistToStorage(favorites: Favorite[]): void {
   try {
-    getAppInstance()?.saveLocalStorage(FAVORITES_KEY, JSON.stringify(favorites));
+    saveAppLocal(FAVORITES_KEY, JSON.stringify(favorites));
   } catch {
     // ignore
   }

@@ -172,7 +172,12 @@ describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () 
     { name: "name", type: "string", identifier: true, derived: false, repeated: false } as unknown as DataField,
   ];
 
-  function menu(app: App | undefined, readonly = false, deleted: string[] = []) {
+  function menu(
+    app: App | undefined,
+    readonly = false,
+    deleted: string[] = [],
+    sourceProjectId?: string
+  ) {
     return buildRowMenuEntries({
       record,
       project: { id: "p1" } as ProjectDefinition,
@@ -183,6 +188,7 @@ describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () 
       } as unknown as ViewApi,
       app,
       readonly,
+      sourceProjectId,
       t: (_k, d) => d,
       selectionEntry: { driving: false, onToggle: () => {} },
     });
@@ -203,16 +209,16 @@ describe("A189 (3) — the peek is a row-menu entry, so it is discoverable", () 
     expect(get(recordPeek)?.id).toBe("Clients/Acme.md");
   });
 
-  it("it hands over the record and its fields, so an external-source row peeks into itself", () => {
+  it("it hands over identity and origin, so an external-source row peeks into itself", () => {
     // A dashboard table can read a source whose records the host view's frame
     // never held. Resolving by id alone made those rows open an empty panel —
-    // the defect the adversarial review of #168 found, and the menu entry is a
-    // new call site that could have reintroduced it.
+    // the defect the adversarial review of #168 found. #158 replaced the
+    // record COPY the menu used to carry with `projectId`/`readonly`, so the
+    // peek resolves the record fresh, every tick, instead of an echo of it.
     const { app } = spyApp();
-    items(menu(app)).find((e) => e.title === "Show fields")?.onClick();
+    items(menu(app, false, [], "Clients")).find((e) => e.title === "Show fields")?.onClick();
     const target = get(recordPeek);
-    expect(target?.record).toEqual(record);
-    expect(target?.fields).toEqual(fields);
+    expect(target).toEqual({ id: "Clients/Acme.md", projectId: "Clients", readonly: false });
   });
 
   it("the neighbouring 'Open note' entry still opens the note", () => {
@@ -260,6 +266,14 @@ describe("A189 (4) — a READ-ONLY row keeps the reading entries and loses the w
     expect(titles(true)).toEqual(
       expect.arrayContaining(["Open note", "Open in new tab", "Show fields"])
     );
+  });
+
+  it("'Show fields' on a read-only row peeks with readonly: true", () => {
+    const entry = menu(true).find(
+      (e): e is ContextMenuItem => !("separator" in e) && e.title === "Show fields"
+    );
+    entry?.onClick();
+    expect(get(recordPeek)).toEqual({ id: "External/Row.md", projectId: undefined, readonly: true });
   });
 
   it("Delete and Duplicate are ABSENT, not merely disabled", () => {

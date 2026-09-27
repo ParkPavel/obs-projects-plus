@@ -1,6 +1,7 @@
 import type { DataField } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
 import type { WidgetType, ChartConfig, StatsConfig } from "../types";
+import { defaultTableTabLabel } from "./legacyMigration";
 
 /**
  * Phase 2a — INTERFACE RECLAMATION.
@@ -96,7 +97,7 @@ const PANELS = {
       viewTabs: [
         {
           id: `tab-${Date.now()}`,
-          label: "Table",
+          label: defaultTableTabLabel(),
           viewType: "table",
           config: {},
         },

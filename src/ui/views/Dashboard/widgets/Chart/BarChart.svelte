@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
   import { computeAxisLabelLayout, shouldRenderLabel, truncateLabel } from "./axisLabels";
+  import { axisScale, type AxisScale, axisTicks, gappedPath, gridValues, isolatedPoints, scaleOf, scaleY, seriesScales } from "./chartScale";
 
   export let data: ChartData;
   export let width: number = 400;
@@ -18,13 +20,18 @@
   const dispatch = createEventDispatcher<{ select: { label: string } }>();
 
   const PADDING_TOP = 20;
-  const PADDING_RIGHT = 20;
   const PADDING_LEFT = 50;
   const LABEL_FONT = 11;
 
   $: labels = data.labels;
   $: values = data.series[0]?.values ?? [];
-  $: maxVal = Math.max(...values.map((v) => v ?? 0), 1);
+  // 3.6.0 (chartScale.ts): bars grow from the zero line, up or down; a missing
+  // value draws no bar; series after the first are lines over the bars on
+  // their own axis (a combo chart: income bars, visits line).
+  $: scales = seriesScales(data.series);
+  $: barScale = data.series[0] ? scaleOf(data.series[0], scales) : axisScale([]);
+  $: lineSeries = horizontal ? [] : data.series.slice(1);
+  $: PADDING_RIGHT = scales.right && !horizontal ? 50 : 20;
 
   // #096.2 — vertical bars previously had no skip/rotate, so dense category
   // axes overlapped. Reuse the shared density helper (horizontal bars label
@@ -47,37 +54,24 @@
     ? (plotH - barGap * barCount) / barCount
     : (plotW - barGap * barCount) / barCount;
 
-  $: gridLines = computeGrid(maxVal, 5);
-
-  function computeGrid(max: number, ticks: number): number[] {
-    const step = niceStep(max / ticks);
-    const result: number[] = [];
-    for (let v = step; v <= max * 1.05; v += step) {
-      result.push(v);
-    }
-    return result;
-  }
-
-  function niceStep(rough: number): number {
-    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
-    const normalized = rough / mag;
-    if (normalized <= 1.5) return mag;
-    if (normalized <= 3.5) return 2 * mag;
-    if (normalized <= 7.5) return 5 * mag;
-    return 10 * mag;
-  }
+  $: gridLines = gridValues(barScale, 5);
 
   // #166 follow-up: same closure blindness LineChart had — called straight
   // from the template (`xPos(gl)`), Svelte tracks only the identifiers the
   // call expression names, not what the function reaches into, so a width
   // change never reran these. Values are passed in rather than closed over
   // (the fix PieChart already uses for CX/CY/R) so the call site names them.
-  function yPos(val: number, plotHeight: number, maxValue: number): number {
-    return plotHeight - (val / maxValue) * plotHeight;
+  function yPos(val: number, plotHeight: number, scale: AxisScale): number {
+    return scaleY(val, plotHeight, scale);
   }
 
-  function xPos(val: number, maxValue: number, plotWidth: number): number {
-    return (val / maxValue) * plotWidth;
+  function xPos(val: number, scale: AxisScale, plotWidth: number): number {
+    return ((val - scale.min) / (scale.max - scale.min)) * plotWidth;
+  }
+
+  /** With lines over the bars, every bar is the first series: one colour, as in the legend. */
+  function barFill(index: number, multi: boolean): string {
+    return multi ? barColor(0) : barColor(index);
   }
 
   function barColor(index: number): string {
@@ -113,21 +107,21 @@
   viewBox="0 0 {width} {height}"
   class="ppp-chart-bar"
   role="img"
-  aria-label="Bar chart"
+  aria-label={$i18n.t("views.dashboard.chart.bar")}
 >
   <g transform="translate({PADDING_LEFT}, {PADDING_TOP})">
     {#if style.showGrid}
       {#each gridLines as gl}
         {#if horizontal}
           <line
-            x1={xPos(gl, maxVal, plotW)} y1={0}
-            x2={xPos(gl, maxVal, plotW)} y2={plotH}
+            x1={xPos(gl, barScale, plotW)} y1={0}
+            x2={xPos(gl, barScale, plotW)} y2={plotH}
             stroke="var(--background-modifier-border)" stroke-dasharray="3,3"
           />
         {:else}
           <line
-            x1={0} y1={yPos(gl, plotH, maxVal)}
-            x2={plotW} y2={yPos(gl, plotH, maxVal)}
+            x1={0} y1={yPos(gl, plotH, barScale)}
+            x2={plotW} y2={yPos(gl, plotH, barScale)}
             stroke="var(--background-modifier-border)" stroke-dasharray="3,3"
           />
         {/if}
@@ -135,15 +129,19 @@
     {/if}
 
     {#each labels as label, i}
-      {@const val = values[i] ?? 0}
+      {@const val = values[i] ?? null}
       {@const isSelected = selectedLabel != null && label === selectedLabel}
-      {#if horizontal}
+      {#if val == null}
+        <!-- A missing value draws no bar: an empty slot, not a zero. -->
+      {:else if horizontal}
         {@const bY = i * (barWidth + barGap)}
-        {@const bW = xPos(val, maxVal, plotW)}
+        {@const x0 = xPos(0, barScale, plotW)}
+        {@const xv = xPos(val, barScale, plotW)}
+        {@const bW = Math.abs(xv - x0)}
         <rect
-          x={0} y={bY}
+          x={Math.min(x0, xv)} y={bY}
           width={bW} height={barWidth}
-          fill={barColor(i)} rx="2"
+          fill={barFill(i, lineSeries.length > 0)} rx="2"
           opacity={barOpacity(label)}
           stroke={isSelected ? "var(--interactive-accent)" : "none"}
           stroke-width={isSelected ? 2 : 0}
@@ -155,27 +153,22 @@
           on:click={() => handleBarClick(label)}
           on:keydown={(e) => handleBarKey(e, label)}
         />
-        {#if style.showLabels}
-          <text
-            x={-4} y={bY + barWidth / 2}
-            text-anchor="end" dominant-baseline="middle"
-            fill="var(--text-normal)" font-size="11"
-          >{label}</text>
-        {/if}
         {#if style.showValues}
           <text
-            x={bW + 4} y={bY + barWidth / 2}
+            x={Math.max(x0, xv) + 4} y={bY + barWidth / 2}
             dominant-baseline="middle"
             fill="var(--text-muted)" font-size="10"
           >{val}</text>
         {/if}
       {:else}
         {@const bX = i * (barWidth + barGap)}
-        {@const bH = (val / maxVal) * plotH}
+        {@const y0 = yPos(0, plotH, barScale)}
+        {@const yv = yPos(val, plotH, barScale)}
+        {@const bH = Math.abs(y0 - yv)}
         <rect
-          x={bX} y={plotH - bH}
+          x={bX} y={Math.min(y0, yv)}
           width={barWidth} height={bH}
-          fill={barColor(i)} rx="2"
+          fill={barFill(i, lineSeries.length > 0)} rx="2"
           opacity={barOpacity(label)}
           stroke={isSelected ? "var(--interactive-accent)" : "none"}
           stroke-width={isSelected ? 2 : 0}
@@ -187,17 +180,9 @@
           on:click={() => handleBarClick(label)}
           on:keydown={(e) => handleBarKey(e, label)}
         />
-        {#if style.showLabels && shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
-          <text
-            x={bX + barWidth / 2} y={plotH + 14}
-            text-anchor="middle"
-            fill="var(--text-normal)" font-size={LABEL_FONT}
-            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${bX + barWidth / 2} ${plotH + 14})` : ""}
-          >{truncateLabel(label, axisLabels.truncateAt)}</text>
-        {/if}
         {#if style.showValues}
           <text
-            x={bX + barWidth / 2} y={plotH - bH - 4}
+            x={bX + barWidth / 2} y={Math.min(y0, yv) - 4}
             text-anchor="middle"
             fill="var(--text-muted)" font-size="10"
           >{val}</text>
@@ -205,11 +190,75 @@
       {/if}
     {/each}
 
+    <!-- Every category keeps its label, with or without a bar (review of c5cf809). -->
+    {#if style.showLabels}
+      {#each labels as label, i}
+        {#if horizontal}
+          <text
+            x={-4} y={i * (barWidth + barGap) + barWidth / 2}
+            text-anchor="end" dominant-baseline="middle"
+            fill="var(--text-normal)" font-size="11"
+          >{label}</text>
+        {:else if shouldRenderLabel(i, labels.length, axisLabels.skipInterval)}
+          <text
+            x={i * (barWidth + barGap) + barWidth / 2} y={plotH + 14}
+            text-anchor="middle"
+            fill="var(--text-normal)" font-size={LABEL_FONT}
+            transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${i * (barWidth + barGap) + barWidth / 2} ${plotH + 14})` : ""}
+          >{truncateLabel(label, axisLabels.truncateAt)}</text>
+        {/if}
+      {/each}
+    {/if}
+
+    {#each lineSeries as series, k}
+      <path
+        d={gappedPath(series.values, (i) => i * (barWidth + barGap) + barWidth / 2, (v) => yPos(v, plotH, scaleOf(series, scales)))}
+        fill="none" stroke={barColor(k + 1)} stroke-width="2" class="ppp-chart-bar-line"
+      />
+      <!-- A value with gaps on both sides: a path draws nothing, a point does. -->
+      {#each isolatedPoints(series.values) as i}
+        <circle
+          cx={i * (barWidth + barGap) + barWidth / 2} cy={yPos(series.values[i] ?? 0, plotH, scaleOf(series, scales))}
+          r="3" fill={barColor(k + 1)} class="ppp-chart-bar-point"
+        />
+      {/each}
+    {/each}
+
     <!-- Axes -->
     <line x1={0} y1={plotH} x2={plotW} y2={plotH} stroke="var(--text-muted)" />
     <line x1={0} y1={0} x2={0} y2={plotH} stroke="var(--text-muted)" />
+    <!-- The value axis is labelled, as the line chart's is: a combo chart
+         without numbers could not be read (visual check on ff08260). -->
+    {#if !horizontal}
+      {#each axisTicks(barScale) as tick}
+        <text x={-6} y={yPos(tick, plotH, barScale) + 3} text-anchor="end"
+          fill="var(--text-muted)" font-size={LABEL_FONT} class="ppp-chart-tick">{tick}</text>
+      {/each}
+    {/if}
+    {#if !horizontal && barScale.min < 0}
+      <line x1={0} y1={yPos(0, plotH, barScale)} x2={plotW} y2={yPos(0, plotH, barScale)}
+        stroke="var(--text-muted)" class="ppp-chart-zero" />
+    {/if}
+    {#if !horizontal && scales.right}
+      <line x1={plotW} y1={0} x2={plotW} y2={plotH} stroke="var(--text-muted)" class="ppp-chart-axis-right" />
+      {#each axisTicks(scales.right) as tick}
+        <text x={plotW + 6} y={yPos(tick, plotH, scales.right) + 3} text-anchor="start"
+          fill="var(--text-muted)" font-size={LABEL_FONT} class="ppp-chart-tick">{tick}</text>
+      {/each}
+    {/if}
   </g>
 </svg>
+
+{#if style.showLegend && lineSeries.length > 0}
+  <div class="ppp-chart-legend">
+    {#each data.series as series, si}
+      <span class="ppp-legend-item">
+        <span class="ppp-legend-dot" style="background: {barColor(si)}"></span>
+        {series.name}
+      </span>
+    {/each}
+  </div>
+{/if}
 
 <style>
   /*

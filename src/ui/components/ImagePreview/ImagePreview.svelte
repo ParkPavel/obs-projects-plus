@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { Icon } from 'obsidian-svelte';
   import { createEventDispatcher } from 'svelte';
 
@@ -57,7 +58,7 @@
       {#if !imageLoaded}
         <div class="preview-loading">
           <Icon name="image" size="lg" />
-          <span>Loading...</span>
+          <span>{$i18n.t("common.loading")}</span>
         </div>
       {/if}
       
@@ -70,7 +71,7 @@
       />
       
       {#if removable}
-        <button class="remove-button" on:click={handleRemove} aria-label="Remove image">
+        <button class="remove-button" on:click={handleRemove} aria-label={$i18n.t("components.image-preview.remove-image")}>
           <Icon name="x" size="sm" />
         </button>
       {/if}
@@ -85,15 +86,15 @@
   {:else if imageError}
     <div class="preview-error">
       <Icon name="alert-circle" size="lg" />
-      <span>Failed to load image</span>
+      <span>{$i18n.t("components.image-preview.failed")}</span>
       {#if removable}
-        <button class="text-button" on:click={handleRemove}>Remove</button>
+        <button class="text-button" on:click={handleRemove}>{$i18n.t("common.remove")}</button>
       {/if}
     </div>
   {:else}
     <div class="preview-empty">
       <Icon name="image" size="lg" />
-      <span>No image</span>
+      <span>{$i18n.t("components.image-preview.no-image")}</span>
     </div>
   {/if}
 </div>

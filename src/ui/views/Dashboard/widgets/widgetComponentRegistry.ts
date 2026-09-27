@@ -60,6 +60,8 @@ export interface WidgetRenderContext {
   readonly fieldPresets: FieldPreset[];
   readonly activeFieldPresetId: string | undefined;
   readonly availableSources: Array<{ id: string; name: string }>;
+  /** 3.6.0: other blocks on the canvas, for "follow selection" (chart, stats). */
+  readonly availableWidgets: Array<{ id: string; title: string }>;
   readonly project: ProjectDefinition | undefined;
   readonly effectiveTableConfig: DataTableConfig | undefined;
   readonly pipelineStepCount: number;
@@ -67,6 +69,10 @@ export interface WidgetRenderContext {
   readonly chartConfig: ChartConfig | null;
   readonly statsConfig: StatsConfig | null;
   readonly chartRightFrame: DataFrame | null;
+  /** 3.6.0: preloaded frames of other projects a chart's extra series read. */
+  readonly chartSeriesFrames: ReadonlyMap<string, DataFrame>;
+  /** 3.6.0: the other project a chart or stats block reads, or null (hostFrames). */
+  readonly otherProject: import("./linkedSourceState").BlockSource | null;
   readonly dbCallFrame: DataFrame;
   readonly dbCallFields: DataField[];
   readonly dbCallSourceConfig: WidgetSourceConfig | undefined;
@@ -135,7 +141,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
     component: ChartWidget,
     canRender: (c) => c.chartConfig !== null,
     wizard: { icon: "bar-chart-2", messageKey: "views.dashboard.widget.chart-not-configured", messageDefault: "Chart is not configured" },
-    props: (c) => ({ config: c.chartConfig, source: c.transformedFrame, rightFrame: c.chartRightFrame, widgetId: c.widget.id }),
+    props: (c) => ({ config: c.chartConfig, source: c.transformedFrame, rightFrame: c.chartRightFrame, seriesFrames: c.chartSeriesFrames, widgetId: c.widget.id }),
   },
   stats: {
     component: StatsWidget,
@@ -162,7 +168,10 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       getRecordColor: c.getRecordColor, fields: c.dbCallFields,
       fieldPresets: c.fieldPresets, activeFieldPresetId: c.activeFieldPresetId,
       project: c.project, config: c.widget.config, widgetId: c.widget.id,
-      widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection,
+      widgetTitle: c.widget.title, linkedSelection: c.dbCallLinkedSelection, masterFrame: c.frame,
+      // F3b: links resolve over the source before this block's filter — for a
+      // same-project block the host already scoped `frame` (review of 4a971d7).
+      masterUniverse: c.dbCallSource.kind === "parent" ? c.frame : undefined,
       linkedSelectionValidation: c.dbCallLinkedSelectionValidation,
       pipelineStepCount: c.pipelineStepCount, pipelineInputRowCount: c.pipelineInputRowCount,
       scopeApplied: c.dbCallScopeApplied,
@@ -189,15 +198,25 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
 };
 
 /**
+ * The columns a widget's configuration may offer: those of the frame the
+ * widget is drawn from. A pipeline's Compute, Group By and Aggregate steps
+ * create columns the base frame does not have, and a chart handed the base
+ * fields drew them but could not pick them (calc-charts-map, 2026-09-26).
+ */
+export function panelFields(c: Pick<WidgetRenderContext, "transformedFrame">): DataField[] {
+  return c.transformedFrame.fields;
+}
+
+/**
  * Config panels routed generically (on:change → widget config replace,
  * on:close → hide). `database-call` is NOT here: its settings panel has a
  * distinct event contract (source/linkedSelection) and stays an explicit
  * branch in WidgetHost. Archived types have no panels (F3).
  */
 export const WIDGET_PANELS: Partial<Record<WidgetType, { component: ComponentType; props: (ctx: WidgetRenderContext) => Props }>> = {
-  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: c.fields, availableSources: c.availableSources }) },
+  chart: { component: ChartConfigPanel, props: (c) => ({ config: c.chartConfig, fields: panelFields(c), availableSources: c.availableSources, seriesFrames: c.chartSeriesFrames, availableWidgets: c.availableWidgets }) },
   checklist: { component: ChecklistConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields }) },
-  stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields }) },
+  stats: { component: StatsConfigPanel, props: (c) => ({ config: c.statsConfig, fields: c.transformedFrame.fields, availableSources: c.availableSources, availableWidgets: c.availableWidgets }) },
   "filter-tabs": { component: FilterTabsConfigPanel, props: (c) => ({ config: c.widget.config, fields: c.transformedFrame.fields, source: c.transformedFrame }) },
   "cover-banner": { component: CoverBannerConfigPanel, props: (c) => ({ config: c.widget.config }) },
 };

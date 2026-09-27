@@ -5,6 +5,7 @@ import { get } from "svelte/store";
 
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import { i18n } from "src/lib/stores/i18n";
+import { loadAppLocal } from "src/lib/appStorage";
 import type { FirstDayOfWeek } from "src/settings/settings";
 import type { ZoomLevel } from "./types";
 
@@ -280,12 +281,9 @@ export function getLocale(locale: LocaleOption): Intl.Locale {
   let obsidianLanguage = dayjs().locale();
   try {
      
-    const app = (window as any).app;
-    if (app?.loadLocalStorage) {
-      const storedLang = app.loadLocalStorage("language");
-      if (storedLang) {
-        obsidianLanguage = storedLang;
-      }
+    const storedLang = loadAppLocal("language");
+    if (storedLang) {
+      obsidianLanguage = storedLang;
     }
   } catch {
     // Fallback to dayjs locale

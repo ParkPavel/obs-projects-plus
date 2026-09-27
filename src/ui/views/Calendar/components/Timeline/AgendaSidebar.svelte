@@ -12,6 +12,7 @@
   but user can pick any date to view agenda relative to that date.
 -->
 <script lang="ts">
+  import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
   import dayjs from 'dayjs';
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
@@ -24,7 +25,6 @@
   import { formatDateForDisplay } from '../../../../../lib/helpers';
   import { extractTimeWithPriority, parseDateInTimezone } from '../../../Calendar/calendar';
   import { isMobileDevice } from '../../../../../lib/stores/ui';
-  import { app } from '../../../../../lib/stores/obsidian';
   import AgendaCustomListComponent from '../../agenda/AgendaCustomList.svelte';
   import AgendaListEditor from '../../agenda/AgendaListEditor.svelte';
   import { applyDragFeedback } from '../../agenda/TouchDndCoordinator';
@@ -157,8 +157,7 @@
   
   function loadState() {
     try {
-      const appInstance = (window as any).app || $app;
-      const data = appInstance?.loadLocalStorage(STORAGE_KEY);
+      const data = loadAppLocal(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
         if (parsed.collapsed) {
@@ -173,8 +172,7 @@
   
   function saveState() {
     try {
-      const appInstance = (window as any).app || $app;
-      appInstance?.saveLocalStorage(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories, collapsedCustom: [...collapsedCustomLists] }));
+      saveAppLocal(STORAGE_KEY, JSON.stringify({ collapsed: collapsedCategories, collapsedCustom: [...collapsedCustomLists] }));
     } catch { /* ignore */ }
   }
   
@@ -235,8 +233,7 @@
     resizeStartWidth = width;
     activeDocument.addEventListener('mousemove', doResize);
     activeDocument.addEventListener('mouseup', endResize);
-    activeDocument.body.style.cursor = 'col-resize';
-    activeDocument.body.style.userSelect = 'none';
+    activeDocument.body.classList.add('obsidian-projects-col-resizing');
   }
   
   function doResize(e: MouseEvent) {
@@ -250,8 +247,7 @@
     isResizing = false;
     activeDocument.removeEventListener('mousemove', doResize);
     activeDocument.removeEventListener('mouseup', endResize);
-    activeDocument.body.style.cursor = '';
-    activeDocument.body.style.userSelect = '';
+    activeDocument.body.classList.remove('obsidian-projects-col-resizing');
   }
   
   // DATA PROCESSING
@@ -500,22 +496,17 @@
     // not something a portal should know about.
     const moved = portal(node, { to: "document-body" });
 
+    // Position and the whole-viewport fallback are classes (catalogue C6,
+    // Codex review of 125c617); only the container's measured bounds are inline.
+    node.classList.add('obsidian-projects-agenda-overlay');
+    node.classList.toggle('obsidian-projects-agenda-overlay--viewport', !container);
     function update() {
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        node.style.position = 'fixed';
-        node.style.top = `${rect.top}px`;
-        node.style.left = `${rect.left}px`;
-        node.style.width = `${rect.width}px`;
-        node.style.height = `${rect.height}px`;
-      } else {
-        // Fallback: full viewport
-        node.style.position = 'fixed';
-        node.style.top = '0';
-        node.style.left = '0';
-        node.style.width = '100vw';
-        node.style.height = '100vh';
-      }
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      node.style.top = `${rect.top}px`;
+      node.style.left = `${rect.left}px`;
+      node.style.width = `${rect.width}px`;
+      node.style.height = `${rect.height}px`;
     }
 
     update();
@@ -851,6 +842,19 @@
 </aside>
 
 <style>
+  /* Set on the body while the sidebar is resized (catalogue audit C6). */
+  :global(.obsidian-projects-agenda-overlay) {
+    position: fixed;
+  }
+  :global(.obsidian-projects-agenda-overlay--viewport) {
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+  :global(body.obsidian-projects-col-resizing) {
+    cursor: col-resize;
+    user-select: none;
+  }
   /* ═══════════════════════════════════════════════════════════
      AgendaSidebar v9.1 — Fluid Architecture (tokens-based)
      All values in rem, inheriting from --ppp-* design tokens

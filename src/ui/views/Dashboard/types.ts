@@ -115,9 +115,16 @@ export interface LinkedSelectionConfig {
   readonly sourceWidgetId: string;
   /**
    * Field name in THIS block's data source that contains the relation to the master.
-   * When master selects record X, this block adds filter: { field: relationField, is: X.id }
+   * When master selects record X, this block adds filter: `{ field: relationField, is: X.id }`
    */
   readonly relationField: string;
+  /**
+   * F3b: "master" — `relationField` lives in the MASTER block's frame and
+   * points at this block's project; the selected master rows' links decide
+   * which of this block's records show (masterSideFilter.ts). Absent — the
+   * shape every stored config has — keeps the meaning above.
+   */
+  readonly relationSide?: "master";
 }
 
 export interface WidgetDataContext {
@@ -429,6 +436,31 @@ export interface ChartConfig {
   readonly yAxis: ChartAxisY;
   readonly style: ChartStyle;
   readonly groupMode?: "values" | "semantic";
+  /**
+   * 3.6.0 — more lines beside `yAxis`, each with its own field, aggregation,
+   * project and axis. Absent in every config stored before: one series.
+   */
+  readonly series?: readonly ChartSeriesConfig[];
+  /** 3.6.0 — narrowed to the record picked in another block, through a relation (selectionFollow.ts). */
+  readonly linkedSelection?: LinkedSelectionConfig;
+}
+
+/** One extra series of a chart (3.6.0). */
+export interface ChartSeriesConfig {
+  readonly id: string;
+  /** Legend name; the field name when absent. */
+  readonly label?: string;
+  readonly property: string | "count";
+  readonly aggregation: ColumnAggregation;
+  /** Another project to read (preloaded like a join's right frame); this chart's input when absent. */
+  readonly dataProjectId?: string;
+  /** The x field in that source; the chart's x field when absent. */
+  readonly xProperty?: string;
+  /** Which y axis the series is read against. Left when absent. */
+  readonly axis?: "left" | "right";
+  readonly cumulative?: boolean;
+  /** The relation field in this series' source that follows the chart's linked selection. */
+  readonly selectionField?: string;
 }
 
 export interface ChartAxisX {
@@ -441,6 +473,8 @@ export interface ChartAxisX {
 }
 
 export interface ChartAxisY {
+  /** 3.6.0: the series' legend name; the field name when absent. */
+  readonly label?: string;
   readonly property: string | "count";
   readonly aggregation: ColumnAggregation;
   readonly groupBy?: string;
@@ -469,6 +503,8 @@ export interface ChartSeries {
   readonly name: string;
   readonly values: (number | null)[];
   readonly color?: string;
+  /** 3.6.0: the y axis this series is scaled against; left when absent. */
+  readonly axis?: "left" | "right";
 }
 
 // ── Stats Types ──────────────────────────────────────────────
@@ -476,6 +512,8 @@ export interface ChartSeries {
 export interface StatsConfig {
   readonly cards: StatsCardConfig[];
   readonly columns: 2 | 3 | 4;
+  /** 3.6.0 — narrowed to the record picked in another block, through a relation (selectionFollow.ts). */
+  readonly linkedSelection?: LinkedSelectionConfig;
 }
 
 export interface StatsCardConfig {

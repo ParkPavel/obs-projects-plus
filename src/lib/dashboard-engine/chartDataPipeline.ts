@@ -3,7 +3,7 @@
 
 import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
 import { DataFieldType } from "src/lib/dataframe/dataframe";
-import type { ChartConfig, ChartData, ChartSeries, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
+import type { ChartConfig, ChartData, ChartSeries, ChartSeriesConfig, ColumnAggregation, ScatterChartConfig, ScatterData, ScatterPoint } from "src/ui/views/Dashboard/types";
 import type { TransformPipeline, TransformStep, GroupByStep, AggregationFunction } from "./transformTypes";
 import { executeTransformCached } from "./transformCache";
 import { toNumber } from "src/lib/engine/numeric";
@@ -205,11 +205,108 @@ export function computeChartData(
   const values = entries.map((e) => e.value);
 
   const series: ChartSeries[] = [{
-    name: config.yAxis.property === "count" ? "Count" : config.yAxis.property,
+    name: config.yAxis.label || (config.yAxis.property === "count" ? "Count" : config.yAxis.property),
     values,
   }];
 
   return { labels, series };
+}
+
+/**
+ * 3.6.0 — a chart with extra series (`config.series`).
+ *
+ * Each extra series is computed like a chart of its own over its own source —
+ * this chart's input, or another project's preloaded frame — with the chart's
+ * x bucketing and its own field, aggregation and x field. The results are
+ * aligned on the union of labels: in time order when the x axis is bucketed by
+ * date (bucket labels sort as text), otherwise the primary series' order with
+ * new labels after it. A label a series has no point for is null, never 0;
+ * a series whose project is not loaded is all nulls.
+ */
+export function computeMultiSeriesChartData(
+  source: DataFrame,
+  config: ChartConfig,
+  frames: ReadonlyMap<string, DataFrame>,
+  semanticLabels: SemanticLabels = DEFAULT_SEMANTIC_LABELS,
+  /**
+   * Narrows each series' input before it is aggregated — the chart's linked
+   * selection, through the primary's relation field (`series` undefined) or
+   * the series' own `selectionField`. Identity when absent.
+   */
+  narrow: (frame: DataFrame, series?: ChartSeriesConfig) => DataFrame = (frame) => frame
+): ChartData {
+  const extras = config.series ?? [];
+  if (extras.length === 0) return computeChartData(narrow(source), config, semanticLabels);
+  const dated = config.xAxis.dateGranularity != null ||
+    source.fields.find((f) => f.name === config.xAxis.property)?.type === DataFieldType.Date;
+  // Several series share one x axis, so each reads only the notes that have
+  // its field: a day with visits but no tracker note has no training minutes,
+  // and SUM of nothing drew a point at 0 there (live demo check). A logged 0
+  // is still a 0.
+  const primary = computeChartData(withField(narrow(source), config.yAxis.property, config.yAxis.aggregation), config, semanticLabels);
+
+  const computed = extras.map((s) => {
+    const name = s.label || s.property;
+    const frame = s.dataProjectId ? frames.get(s.dataProjectId) : source;
+    if (!frame) return { name, axis: s.axis, points: new Map<string, number | null>() };
+    // On the chart's own x field a series groups and hides as the chart does,
+    // so its values line up with the primary's (review of c5cf809); on
+    // another field those settings name other categories and do not apply.
+    const sameAxis = !s.xProperty || s.xProperty === config.xAxis.property;
+    const own: ChartConfig = {
+      ...config,
+      groupMode: sameAxis ? config.groupMode ?? "values" : "values",
+      xAxis: { ...config.xAxis, property: s.xProperty || config.xAxis.property, hiddenGroups: sameAxis ? config.xAxis.hiddenGroups ?? [] : [] },
+      yAxis: { property: s.property, aggregation: s.aggregation, ...(s.cumulative ? { cumulative: true } : {}) },
+    };
+    delete (own as { series?: unknown }).series;
+    const data = computeChartData(withField(narrow(frame, s), s.property, s.aggregation), own, semanticLabels);
+    const values = data.series[0]?.values ?? [];
+    // A point with no date cannot be placed on a time axis. An extra series is
+    // not narrowed by the chart's scope, so another project's undated notes
+    // would otherwise open an empty slot at the start (live demo check). On a
+    // categorical axis "" is the uncategorised bucket and stays (review of 08eda4e).
+    const points = new Map<string, number | null>();
+    data.labels.forEach((l, i) => { if (l !== "" || !dated) points.set(l, values[i] ?? null); });
+    return { name, axis: s.axis, points };
+  });
+
+  const labels = [...primary.labels];
+  // A category the chart hides stays hidden whichever series brings it.
+  const seen = new Set([...labels, ...(config.xAxis.hiddenGroups ?? [])]);
+  for (const c of computed) for (const l of c.points.keys()) if (!seen.has(l)) { seen.add(l); labels.push(l); }
+  if (dated) labels.sort((a, b) => a.localeCompare(b));
+
+  const primaryPoints = new Map(primary.labels.map((l, i) => [l, primary.series[0]?.values[i] ?? null]));
+  const series: ChartSeries[] = [
+    { ...(primary.series[0] ?? { name: "" }), values: labels.map((l) => primaryPoints.get(l) ?? null) },
+    ...computed.map((c) => ({
+      name: c.name,
+      values: labels.map((l) => c.points.get(l) ?? null),
+      ...(c.axis === "right" ? { axis: "right" as const } : {}),
+    })),
+  ];
+  return { labels, series };
+}
+
+/**
+ * Aggregations that read only the values present: over notes without the
+ * field they would draw a point from nothing (SUM of none is 0). Counting
+ * records, empties or checkboxes needs every note (review of 08eda4e).
+ */
+const VALUE_ONLY = new Set<string>([
+  "count_values", "count_numeric", "count_unique", "sum", "avg", "median", "min", "max", "range",
+  "earliest", "latest", "date_range",
+]);
+
+/** The records that have a value for `property`, when the aggregation reads only values. */
+function withField(frame: DataFrame, property: string, aggregation: string | undefined): DataFrame {
+  if (property === "count" || !VALUE_ONLY.has(aggregation ?? "")) return frame;
+  const records = frame.records.filter((r) => {
+    const v = r.values[property];
+    return v !== undefined && v !== null && v !== "";
+  });
+  return records.length === frame.records.length ? frame : { ...frame, records };
 }
 
 /**

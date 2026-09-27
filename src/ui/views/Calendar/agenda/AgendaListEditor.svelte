@@ -192,7 +192,7 @@
       >
         {list ? t('save') : t('create')}
       </button>
-      <button class="editor-close" on:click={handleCancel} aria-label="Close">
+      <button class="editor-close" on:click={handleCancel} aria-label={$i18n.t("common.close")}>
         <Icon name="x" size="sm" />
       </button>
     </div>
@@ -254,9 +254,9 @@
       <div class="field-label-row">
         <span class="field-label" id="color-label">{t('color-label')}</span>
         {#if formData.color}
-          <button class="color-clear" on:click={clearColor} aria-label="Clear color">
+          <button class="color-clear" on:click={clearColor} aria-label={$i18n.t("views.calendar.agenda.clear-color")}>
             <Icon name="x" size="xs" />
-            <span>Clear</span>
+            <span>{$i18n.t("views.calendar.agenda.clear")}</span>
           </button>
         {/if}
       </div>
@@ -313,19 +313,19 @@
             class="mode-btn"
             class:active={formData.filterMode === 'visual'}
             on:click={() => formData.filterMode = 'visual'}
-            title="Visual mode - drag-and-drop filter builder"
+            title={$i18n.t("views.calendar.agenda.visual-mode-hint")}
           >
             <Icon name="sliders-horizontal" size="xs" />
-            <span>Visual</span>
+            <span>{$i18n.t("views.calendar.agenda.visual")}</span>
           </button>
           <button 
             class="mode-btn"
             class:active={formData.filterMode === 'advanced'}
             on:click={() => formData.filterMode = 'advanced'}
-            title="Advanced mode - formula-based filtering"
+            title={$i18n.t("views.calendar.agenda.advanced-mode-hint")}
           >
             <Icon name="code" size="xs" />
-            <span>Advanced</span>
+            <span>{$i18n.t("views.calendar.agenda.advanced")}</span>
           </button>
         </div>
       </div>

@@ -599,7 +599,7 @@
     <!-- CONTENT ZONE: Only TIMED events -->
     <!-- BARS MODE: Relative time bars (7:00-21:00 scale) -->
     {#if displayMode === 'bars' && timedBars.length > 0}
-      <div class="timed-bars-container" aria-label="Timed events">
+      <div class="timed-bars-container" aria-label={$i18n.t("views.calendar.timed-events")}>
         {#each timedBars as bar (bar.record.id)}
           {@const gapPx = bar.totalColumns > 1 ? 4 : 0}
           {@const leftPercent = (bar.column / bar.totalColumns) * 100}

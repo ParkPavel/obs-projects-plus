@@ -48,7 +48,7 @@
 
   $: percentValue = isPercent ? parsePercent(value) : null;
   $: chips = isShow ? splitChips(value) : null;
-  $: plainText = !isPercent && !isShow ? formatPlain(value, precision) : "";
+  $: plainText = isPercent ? (percentValue === null ? emptyPlaceholder : "") : !isShow ? formatPlain(value, precision) : "";
 
   /**
    * Resolve the presentational group. When `modeId` is unknown (e.g.
@@ -74,15 +74,22 @@
     return "more";
   }
 
-  function parsePercent(val: Optional<DataValue>): number {
-    if (val == null) return 0;
+  /**
+   * The percentage to draw, or `null` when there is none to draw.
+   *
+   * Every percent mode maps to an engine function that returns 0–100
+   * (`aggregate.ts`), so the value is taken as is. Rescaling values under 1
+   * as if they were fractions turned 1 checked of 100 into a full bar (stack
+   * gate, 2026-09-26). No population comes back as `null` / "—", and that is
+   * not a measured 0: it gets the placeholder, not a 0% bar.
+   */
+  function parsePercent(val: Optional<DataValue>): number | null {
+    if (val == null || val === "") return null;
     // The engine emits "57%" or a bare number; strip the sign the engine added,
     // then ask the one rule instead of prefix-parsing what is left (#180a).
     const n = toNumber(String(val).replace("%", ""));
-    if (n === null) return 0;
-    // Clamp; the engine may emit 0–1 (Notion-style) or 0–100 — accept both.
-    const scaled = n <= 1 && n >= 0 ? n * 100 : n;
-    return Math.min(100, Math.max(0, scaled));
+    if (n === null) return null;
+    return Math.min(100, Math.max(0, n));
   }
 
   function splitChips(val: Optional<DataValue>): string[] {

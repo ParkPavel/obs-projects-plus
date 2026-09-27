@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../../../lib/stores/obsidian';
+  import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
   import {
     Button,
     Callout,
@@ -37,6 +37,11 @@
   export let onRenameNote: ((newName: string) => void) | undefined = undefined;
   // v3.0.4: Autosave mode - controlled by project settings
   export let autosave: boolean = true;
+  // #158 (L3/C3): the peek's read-only path — no write reaches `onSave`,
+  // regardless of `autosave`, and every FieldControl below is disabled too.
+  export let readonly: boolean = false;
+  /** Named in the read-only notice; the project this record actually belongs to. */
+  export let projectName: string = "";
   
   // v3.0.1: Note title state
   $: noteFileName = record.id.split('/').pop()?.replace('.md', '') ?? record.id;
@@ -159,7 +164,7 @@
   
   // Perform actual save
   async function performSave(): Promise<void> {
-    if (isSaving) return;
+    if (readonly || isSaving) return;
     
     const now = Date.now();
     // Prevent saves more frequent than debounce interval
@@ -214,6 +219,7 @@
   
   // Set value and trigger autosave based on field type (only if autosave is enabled)
   function setValueWithAutosave(fieldName: string, newValue: Optional<DataValue>, field: DataField) {
+    if (readonly) return;
     setValue(fieldName, newValue);
     
     // Only trigger autosave if enabled
@@ -234,6 +240,7 @@
   // the underlying promise so callers (e.g. modal close handler) can
   // await it to avoid close-during-save races.
   async function handleManualSave(): Promise<void> {
+    if (readonly) return;
     await onSave(record);
     // #101: clear dirty on the manual save-success path too (not only autosave).
     dirty = new Set<string>();
@@ -321,8 +328,7 @@
   
   // Load collapsed state from localStorage on mount
   onMount(() => {
-    const appInstance = (window as any).app || $app;
-    const saved = appInstance?.loadLocalStorage('editNote.collapsedGroups');
+    const saved = loadAppLocal('editNote.collapsedGroups');
     if (saved) {
       try {
         collapsedState = JSON.parse(saved);
@@ -334,11 +340,11 @@
   
   // Save collapsed state to localStorage
   function saveCollapsedState() {
-    const appInstance = (window as any).app || $app;
-    appInstance?.saveLocalStorage('editNote.collapsedGroups', JSON.stringify(collapsedState));
+    saveAppLocal('editNote.collapsedGroups', JSON.stringify(collapsedState));
   }
 
-  // Группировка полей
+  // Группировка полей. Titles and descriptions were English literals shown in
+  // every locale (live batch check 2026-09-26); they are translation keys now.
   $: fieldGroups = (() => {
     const groups: Record<string, FieldGroup> = {};
     
@@ -348,40 +354,40 @@
       if (!groups[category]) {
         const groupConfig: Record<string, { title: string; icon: string; priority: number; description: string }> = {
           'datetime': { 
-            title: 'Date & Time', 
+            title: $i18n.t("modals.note.edit.groups.datetime.title"),
             icon: 'calendar-clock', 
             priority: 1,
-            description: 'Schedule and timing information'
+            description: $i18n.t("modals.note.edit.groups.datetime.description")
           },
           'basic': { 
-            title: 'Basic Information', 
+            title: $i18n.t("modals.note.edit.groups.basic.title"),
             icon: 'file-text', 
             priority: 2,
-            description: 'Core note properties'
+            description: $i18n.t("modals.note.edit.groups.basic.description")
           },
           'color': { 
-            title: 'Colors', 
+            title: $i18n.t("modals.note.edit.groups.color.title"),
             icon: 'palette', 
             priority: 3,
-            description: 'Visual appearance and tags'
+            description: $i18n.t("modals.note.edit.groups.color.description")
           },
           'image': { 
-            title: 'Cover & Images', 
+            title: $i18n.t("modals.note.edit.groups.image.title"),
             icon: 'image', 
             priority: 4,
-            description: 'Visual content and media'
+            description: $i18n.t("modals.note.edit.groups.image.description")
           },
           'other_note': { 
-            title: 'Note Fields', 
+            title: $i18n.t("modals.note.edit.groups.other-note.title"),
             icon: 'file-check', 
             priority: 5,
-            description: 'Fields present in this note'
+            description: $i18n.t("modals.note.edit.groups.other-note.description")
           },
           'other_project': { 
-            title: 'Project Fields', 
+            title: $i18n.t("modals.note.edit.groups.other-project.title"),
             icon: 'database', 
             priority: 6,
-            description: 'Fields from other notes in the project'
+            description: $i18n.t("modals.note.edit.groups.other-project.description")
           }
         };
         
@@ -533,6 +539,7 @@
                 value={valuesSnapshot[field.name]}
                 onChange={(value) => setValueWithAutosave(field.name, value, field)}
                 suggestions={fieldSuggestions[field.name] ?? []}
+                readonly={readonly}
               />
             </SettingItem>
           {/each}
@@ -540,8 +547,9 @@
       </div>
     {/each}
     
-    <!-- R3: standalone Colors section when the note has no color field yet -->
-    {#if !hasColorField}
+    <!-- R3: standalone Colors section when the note has no color field yet.
+         Not offered read-only: adding a `color` key is a write like any other. -->
+    {#if !hasColorField && !readonly}
       <div class="field-group">
         <div class="group-header-static">
           <Icon name="palette" size="sm" />
@@ -567,7 +575,7 @@
       <div class="field-group readonly-group">
         <div class="group-header-static">
           <Icon name="lock" size="sm" />
-          <span class="group-title">Read-only Fields</span>
+          <span class="group-title">{$i18n.t("modals.edit-note.read-only-fields")}</span>
           <span class="group-count">({readonlyFields.length})</span>
         </div>
         
@@ -587,7 +595,18 @@
     {/if}
     
     <!-- Save Status / Button based on autosave setting -->
-    {#if autosave}
+    {#if readonly}
+      <!-- #158 (L3): no Save button, no "Autosave enabled" — this peek cannot write. -->
+      <div class="readonly-notice">
+        <Icon name="lock" size="sm" />
+        <span>
+          {$i18n.t("modals.note.edit.readonly-notice", {
+            defaultValue: "Read-only — this record belongs to {{project}}",
+            project: projectName,
+          })}
+        </span>
+      </div>
+    {:else if autosave}
       <!-- Autosave Status Indicator -->
       <div class="autosave-status" class:saving={isSaving}>
         {#if isSaving}
@@ -600,9 +619,9 @@
       </div>
     {/if}
   </ModalContent>
-  
-  <!-- Manual Save Button (when autosave is disabled) -->
-  {#if !autosave}
+
+  <!-- Manual Save Button (when autosave is disabled and the peek is writable) -->
+  {#if !autosave && !readonly}
     <ModalButtonGroup>
       <Button variant="primary" on:click={handleManualSave}>
         {$i18n.t("modals.note.edit.save") || "Save"}
@@ -618,7 +637,7 @@
     padding: 0.75rem 1rem;
     background: var(--background-secondary);
     border-radius: var(--radius-m);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--border-width) solid var(--background-modifier-border);
   }
   
   .title-display-row {
@@ -887,7 +906,7 @@
     background: var(--background-secondary);
     color: var(--text-muted);
     font-size: 0.875rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--border-width) solid var(--background-modifier-border);
     transition: all 0.2s ease;
   }
   
@@ -902,6 +921,20 @@
   
   .autosave-status.saving :global(svg) {
     animation: spin 1s linear infinite;
+  }
+
+  .readonly-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    border: var(--border-width) solid var(--background-modifier-border);
   }
   
   @keyframes spin {

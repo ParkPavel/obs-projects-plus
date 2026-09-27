@@ -80,7 +80,7 @@ tags:
 
 Write dates as `YYYY-MM-DD` and times as `HH:mm`. Quoting times and colors helps preserve them as YAML strings. You choose the field names; map them in view settings afterward.
 
-Open a record through its name or card. The **Link behavior** setting determines whether a normal click opens the property editor or the note. After editing, you can open the source file to inspect the stored value. If the plugin reports a write error, do not assume the change was saved.
+Open a record through its name or card. In the Dashboard table, a normal click opens the note; Alt opens a record preview instead, and the same action is available from a row-menu entry. After editing, you can open the source file to inspect the stored value. If the plugin reports a write error, do not assume the change was saved.
 
 ## Views
 
@@ -104,13 +104,13 @@ Explicitly select event start and end fields in calendar settings. For the examp
 
 When a start field is not configured or is absent, the calendar tries common fields, including `startDate` and `date`, then a date in the filename. Therefore, `date` **can affect event placement**. For predictable results, configure the start field explicitly and fill it in every relevant note.
 
-Switch between year-to-day scales. In week and day modes, timed events appear on a timeline; dragging changes their date or time, and resizing a bar changes its duration. In other modes, edit dates through record properties. Use **Today** to return to the current date.
+Switch between year-to-day scales. In week and day modes, timed events appear on a timeline; dragging changes their date or time, and resizing a bar changes its duration. In month and 2-weeks modes, drag a record onto another day to change its date. Use **Today** to return to the current date.
 
 Agenda is a sidebar with event lists. You can select a day and configure filters for individual lists. If an event appears in the calendar but not in Agenda, check the selected date and the list's filter.
 
 ### Gallery
 
-Gallery displays records as cards. Choose a cover field and the properties to show on each card. If an image is missing, check the field value and whether the image file is available. A card's title opens its record according to the link behavior setting.
+Gallery displays records as cards. Choose a cover field and the properties to show on each card. If an image is missing, check the field value and whether the image file is available. A card's title opens the record's edit dialog, from which the note itself can be opened; in a read-only gallery the title opens the note directly. The card's menu opens the note in a new tab or window.
 
 ## Filters, formulas, and relations
 
@@ -126,7 +126,7 @@ client: "[[Clients/Maria Ivanova]]"
 
 The links in your frontmatter are the relation's data. Configuring a relation leaves them alone: it only tells the plugin where to resolve them. The plugin rewrites a link only when you change the value yourself — in a table cell or in the record editor — and then it writes the new one back to the frontmatter.
 
-**From links to a relation.** Open “Schema,” find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Unmatched: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
+**From links to a relation.** Open “Schema,” find the row of the field you want, and choose “Configure.” Set “Type” to “Relation,” then pick the “Target project” — the base its links resolve in. The “Link database…” button opens the wizard, which previews the outcome before anything is saved — “Matched: 3; Not found: 0; Ambiguous: 0” — so a mismatch is visible in advance. A property that already exists as text becomes a relation; your notes are not rewritten.
 
 A formula, a rollup, the record's identifier and a derived property cannot become a relation: their values are computed or belong elsewhere, and a relation would overwrite what produces them. The wizard refuses with one wording for all four — computed, or identifying the record — without naming which case applied.
 
@@ -134,7 +134,7 @@ If several notes share a filename, include the folder in the link. A missing or 
 
 **A summary over related records.** With the relation configured, add a field of type “Rollup”: pick the relation column under “Through relation” and a function such as “Count.” The card then shows how many records are related — `2` for a client with two sessions, `0` for a client with none. No data pipeline is needed for this.
 
-**A chart over related data.** The “+” in the block palette adds a “Chart”; its settings choose the type and the X and Y axes. Dates on the X axis group by day, month, quarter or year, and the Y axis can take an average, a sum or a count.
+**A chart over related data.** The “+” in the block palette adds a “Chart”; its settings choose the type and the X and Y axes. Dates on the X axis group by day, week, month, quarter or year, and the Y axis can take a sum, an average, a min, a max, a median, a count or a unique count.
 
 ## Note templates
 
@@ -174,11 +174,11 @@ Assign global command shortcuts in Obsidian's Hotkeys settings. The plugin does 
 | Return to the previous position | `Backspace` |
 | Close the day overview | `Escape` |
 
-These shortcuts are not intercepted while typing into a field. On touch screens, the calendar supports swiping between periods and a two-finger zoom gesture. To drag on the board, long-press the grip icon; use ordinary scrolling to browse. Individual gestures depend on the platform and view mode.
+These shortcuts are not intercepted while typing into a field. On touch screens, the calendar supports swiping between periods and a two-finger zoom gesture. To drag on the board, start from the grip icon; use ordinary scrolling to browse. Individual gestures depend on the platform and view mode.
 
 ## Settings and troubleshooting
 
-Plugin settings include the project size limit, link behavior, first day of the week, and property-writing preferences. Configure individual sources and views inside their project.
+Plugin settings include the project size limit, first day of the week, and property-writing preferences. Configure individual sources and views inside their project.
 
 | Symptom | What to check |
 | --- | --- |

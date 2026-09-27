@@ -81,7 +81,7 @@ export const GESTURE = {
   /** Minimum distance for pinch zoom (px) */
   PINCH_THRESHOLD: 50,
   
-  /** Ratio: if horizontal > vertical * this, it's horizontal swipe */
+  /** Ratio: if `horizontal > vertical * this`, it's horizontal swipe */
   HORIZONTAL_RATIO: 1.5,
 } as const;
 

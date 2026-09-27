@@ -1,7 +1,10 @@
 ﻿<script lang="ts">
+  import { followLinkedSelection } from "../_shared/selectionFollow";
+  import { EMPTY_SELECTION } from "../../canvasSelectionStore";
+  import type { ChartSeriesConfig } from "../../types";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import type { ChartConfig, ChartData, ScatterChartConfig } from "../../types";
-  import { computeChartData, computeScatterData, chartHeightPx } from "src/lib/dashboard-engine/chartDataPipeline";
+  import { computeMultiSeriesChartData, computeScatterData, chartHeightPx } from "src/lib/dashboard-engine/chartDataPipeline";
   import BarChart from "./BarChart.svelte";
   import LineChart from "./LineChart.svelte";
   import PieChart from "./PieChart.svelte";
@@ -25,6 +28,8 @@
   export let source: DataFrame;
   /** Pillar 5: preloaded DataFrame for scatter correlation. */
   export let rightFrame: DataFrame | null = null;
+  /** 3.6.0: preloaded frames of the other projects its extra series read. */
+  export let seriesFrames: ReadonlyMap<string, DataFrame> = new Map();
   /**
    * #044.2: widget id used to discriminate this chart's selection from
    * sibling drivers on the same canvas. Optional so tests and non-canvas
@@ -92,9 +97,18 @@
   };
 
   $: isScatter = config.chartType === "scatter";
-  $: chartData = isScatter ? EMPTY_CHART : computeChartData(source, config, semanticLabels);
+  // 3.6.0: the chart follows the record picked in its master block, through
+  // the primary's relation field and each series' own selectionField.
+  $: followSelection = (frame: DataFrame, s?: ChartSeriesConfig): DataFrame => {
+    const linked = config.linkedSelection;
+    const relationField = s ? s.selectionField : linked?.relationField;
+    if (!linked || !relationField) return frame;
+    const records = followLinkedSelection(frame.records, currentSelection ?? EMPTY_SELECTION, { ...linked, relationField });
+    return records === frame.records ? frame : { ...frame, records: [...records] };
+  };
+  $: chartData = isScatter ? EMPTY_CHART : computeMultiSeriesChartData(source, config, seriesFrames, semanticLabels, followSelection);
   $: scatterConfig = isScatter ? extractScatterConfig(config) : null;
-  $: scatterData = isScatter && scatterConfig ? computeScatterData(source, scatterConfig, rightFrame ?? undefined) : null;
+  $: scatterData = isScatter && scatterConfig ? computeScatterData(followSelection(source), scatterConfig, rightFrame ?? undefined) : null; // follows too (review of 696a7f4)
   $: heightPx = chartHeightPx(config.style.height);
   $: isEmpty = isScatter
     ? (scatterData?.points.length ?? 0) === 0
@@ -223,6 +237,28 @@
 </div>
 
 <style>
+  /* The legend of every chart type. It lived in PieChart's scoped block, so
+     the bar and line legends rendered as large plain text (visual check). */
+  :global(.ppp-chart-legend) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+  }
+  :global(.ppp-legend-item) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  :global(.ppp-legend-dot) {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
   /* #165 pilot for the container-derived scale. This element is a DESCENDANT
      of WidgetShell's `widget` container (`container-type: inline-size`), so
      `cqi` inside these tokens measures the widget's own width. The padding is

@@ -11,7 +11,8 @@
     FilterOperator,
   } from "../../../../../settings/base/settings";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
-  import { getOperatorsForField, operatorNeedsValue, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+  import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "./filterHelpers";
+  import { operatorNeedsValue } from "src/settings/base/settings";
   import { COLOR_RULE_DEFAULT } from "src/lib/stores/palettes";
 
   function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }
@@ -207,7 +208,7 @@
           on:dragend={onDragEnd}
         >
           <!-- Drag handle -->
-          <button class="row-btn row-drag" type="button" tabindex="-1" aria-hidden="true" title="Drag to reorder">
+          <button class="row-btn row-drag" type="button" tabindex="-1" aria-hidden="true" title={$i18n.t("common.drag-to-reorder")}>
             <Icon name="grip-vertical" size="sm" />
           </button>
           <!-- Toggle -->

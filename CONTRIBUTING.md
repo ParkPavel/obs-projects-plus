@@ -19,7 +19,7 @@ To test in Obsidian, copy those three files into `.obsidian/plugins/obs-projects
 
 ## Find the relevant code
 
-Start with the [architecture map](docs/architecture.md). The plugin uses TypeScript, Svelte, Obsidian APIs and Svelte stores. Exact dependencies and compiler options are in [package.json](package.json), [package-lock.json](package-lock.json) and [tsconfig.json](tsconfig.json).
+Start with the [architecture map](docs/architecture.md). The plugin uses TypeScript, Svelte, Obsidian APIs and Svelte stores. Exact dependencies and compiler options are in [package.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/package.json), [package-lock.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/package-lock.json) and [tsconfig.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/tsconfig.json).
 
 Third-party view authors should read the [custom view API](docs/api.md). Internal modules are implementation details and may change between releases.
 
@@ -30,8 +30,8 @@ Create a branch from `main`. Describe the problem and the behavior your change s
 - Preserve note bodies when editing frontmatter. Use the existing data API and its Obsidian `processFrontMatter` path rather than replacing whole files from UI components.
 - Keep settings writes on the existing settings writer path so retries, conflict detection and failure reporting remain consistent.
 - Build DOM content with text-safe APIs. Use the owning element's document or Obsidian's active document for pop-out window support.
-- Validate data read from settings and user input. Reuse the [regular-expression helpers](src/lib/helpers/regexSafety.ts) where applicable.
-- Use Obsidian theme variables and the [design tokens](src/ui/tokens/tokens.css). Keep controls usable with a keyboard and give icon-only buttons accessible names.
+- Validate data read from settings and user input. Reuse the [regular-expression helpers](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/helpers/regexSafety.ts) where applicable.
+- Use Obsidian theme variables and the [design tokens](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/tokens/tokens.css). Keep controls usable with a keyboard and give icon-only buttons accessible names.
 - Release subscriptions, event handlers and other resources when the owning view closes.
 - Keep TypeScript types meaningful. Explain unavoidable suppressions and remove temporary debug output before review.
 
@@ -54,14 +54,18 @@ UI changes also need an Obsidian check: open the affected view, perform the chan
 
 ## Translate the interface
 
-UI translations live in [src/lib/stores/translations](src/lib/stores/translations): English, Russian, Ukrainian and Simplified Chinese. Add or update corresponding keys in all four language files. Keep labels short and explain unfamiliar concepts in the user guide.
+UI translations live in [src/lib/stores/translations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/stores/translations): English, Russian, Ukrainian and Simplified Chinese. Add or update corresponding keys in all four language files. Keep labels short and explain unfamiliar concepts in the user guide.
+
+## Paired documentation
+
+Each document has a version in two languages: a file with a base name and a file with a language suffix (`-RU` or `-EN`). The index [docs/README.md](docs/README.md), the [error codes](docs/ERROR_CODES.md) and two short in-vault pages hold both languages in one file. Pairing is checked by `src/__tests__/R0_25_documentationPairs.test.ts`: if you edit one language, edit the other in the same commit.
 
 ## Submit a pull request
 
-State what was wrong, what now happens and how you checked it. Include screenshots for visible changes and mention limitations or checks you could not perform. Update the relevant user guide or API reference when behavior changes. Record release-facing changes in [CHANGELOG.md](CHANGELOG.md).
+State what was wrong, what now happens and how you checked it. Include screenshots for visible changes and mention limitations or checks you could not perform. Update the relevant user guide or API reference when behavior changes. Record release-facing changes in [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG-RU.md](CHANGELOG-RU.md).
 
 Do not include credentials, vault contents, local logs or machine-specific configuration. Report bugs through [GitHub Issues](https://github.com/ParkPavel/obs-projects-plus/issues), with reproduction steps, plugin and Obsidian versions, operating system, and expected and actual results.
 
 ## License and attribution
 
-Contributions to the plugin are licensed under [Apache 2.0](LICENSE). Preserve applicable copyright and license notices. The original plugin was created by [Marcus Olsson](https://github.com/marcusolsson); this fork is maintained by Park Pavel. The separate [type package](obsidian-projects-types/README.md) declares an MIT license.
+Contributions to the plugin are licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE). Preserve applicable copyright and license notices. The original plugin was created by [Marcus Olsson](https://github.com/marcusolsson); this fork is maintained by Park Pavel. The separate [type package](obsidian-projects-types/README.md) declares an MIT license.

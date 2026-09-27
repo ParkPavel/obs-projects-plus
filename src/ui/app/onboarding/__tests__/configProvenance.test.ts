@@ -60,10 +60,20 @@ describe("config provenance (UT2026-D, #072)", () => {
     // Guards the other direction: dropping the pipeline without moving the
     // conditions would leave every demo block unfiltered and still pass the
     // no-op assertions above.
-    const scoped = demoGeneratedWidgets().filter(
-      (w) => (w.config as { subFilter?: unknown }).subFilter !== undefined
-    );
-    expect(scoped.length).toBe(5);
+    // 3.6.0: the demo is three projects and more blocks are scoped; the five
+    // that used to carry a filter step are named, not counted.
+    const scopedTitles = demoGeneratedWidgets()
+      .filter((w) => (w.config as { subFilter?: unknown }).subFilter !== undefined)
+      .map((w) => w.title);
+    for (const title of [
+      "Проекты по статусу",
+      "Приоритетные задачи",
+      "Встречи",
+      "Клиенты (мастер связи)",
+      "Проекты клиента (связанный блок)",
+    ]) {
+      expect(scopedTitles).toContain(title);
+    }
   });
 
   it("demo stats cards never use the retired kernel literal 'count'", () => {

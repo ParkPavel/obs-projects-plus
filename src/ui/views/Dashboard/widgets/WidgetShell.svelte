@@ -3,7 +3,7 @@
    * WidgetShell — #067 F1 (UT2026-F).
    *
    * The frame every canvas widget lives in: host container, header
-   * (collapse toggle, title, type badge, `actions` slot), `panels` slot
+   * (collapse toggle, title, `badges` and `actions` slots), `panels` slot
    * (config panels / pipeline editor), and the content area with
    * lazy-render skeleton (DG-9 IntersectionObserver) and scoped
    * resource-error capture. Owns NO widget semantics — collapse is the
@@ -17,7 +17,6 @@
 
   export let widgetId: string;
   export let title: string;
-  export let widgetType: string;
   export let collapsed = false;
   export let readonly = false;
   /** R3 P0 — increment to enter title-edit mode (menu «Rename»). */
@@ -127,7 +126,9 @@
         on:dblclick={() => { if (!readonly) void startTitleEdit(); }}
       >{title}</span>
     {/if}
-    <span class="ppp-widget-type-badge" aria-hidden="true">({widgetType})</span>
+    {#if $$slots.badges}
+      <span class="ppp-widget-badges"><slot name="badges" /></span>
+    {/if}
     <slot name="actions" />
   </div>
 
@@ -224,22 +225,12 @@
     font-weight: var(--font-semibold, 600);
   }
 
-  .ppp-widget-type-badge {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-faint);
+  .ppp-widget-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
     flex-shrink: 0;
-    opacity: 0;
-    transition: opacity var(--ppp-duration-normal, 0.15s) ease;
-  }
-
-  .ppp-widget-header:hover .ppp-widget-type-badge {
-    opacity: 1;
-  }
-
-  @media (pointer: coarse) {
-    .ppp-widget-type-badge {
-      opacity: 1;
-    }
+    min-width: 0;
   }
 
   .ppp-widget-content {

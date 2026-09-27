@@ -1,6 +1,7 @@
 // dashboardPreload.ts — pure utilities for cross-source right-frame preloading.
 // Extracted from DashboardCanvas.svelte (R5-013).
 
+import { dataProjectIdOf } from "./widgets/linkedSourceState";
 import type { DataFrame } from "src/lib/dataframe/dataframe";
 import type { WidgetDefinition } from "./types";
 import type { ProjectDefinition } from "src/settings/settings";
@@ -33,6 +34,14 @@ export function collectReferencedSourceIds(
     // invalidation and stale-resolution guards apply automatically.
     if (w.type === "database-call" && w.sourceConfig?.projectId) {
       ids.add(w.sourceConfig.projectId);
+    }
+    // 3.6.0: a chart or stats block reading another project.
+    const dataProjectId = dataProjectIdOf(w);
+    if ((w.type === "chart" || w.type === "stats") && dataProjectId) ids.add(dataProjectId);
+    if (w.type === "chart") {
+      for (const s of (w.config as { series?: Array<{ dataProjectId?: string }> }).series ?? []) {
+        if (s.dataProjectId) ids.add(s.dataProjectId);
+      }
     }
   }
 
@@ -136,7 +145,6 @@ export function createPreloadRunner(
             // Per-source, so one broken project cannot blank the others — the
             // previous version caught at the batch level and published an empty
             // map, taking every sibling source down with it.
-            // eslint-disable-next-line no-console
             console.warn("[Projects+] right-frame preload failed", id, err);
             const message = err instanceof Error ? err.message : String(err);
             return [id, { status: "error", message }] as const;

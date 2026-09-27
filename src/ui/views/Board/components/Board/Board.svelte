@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
     dragHandleZone,
@@ -30,6 +31,8 @@
   export let columns: Column[];
 
   export let readonly: boolean;
+  /** #C4 — see BoardView.svelte for what this covers and why it is separate from `readonly`. */
+  export let dataReadOnly: boolean = false;
   export let richText: boolean;
   export let onRecordClick: OnRecordClick;
   export let onRecordCheck: OnRecordCheck;
@@ -229,6 +232,7 @@
           <div class="projects--board--column--dndwrapper projects--board--column--pinned">
             <BoardColumn
               {readonly}
+              {dataReadOnly}
               {richText}
               {boardEditing}
               {onEdit}
@@ -299,7 +303,7 @@
           element.style.boxSizing = "border-box";
           element.style.zIndex = "30";
         },
-        dragDisabled: boardEditing || zoom !== 1,
+        dragDisabled: boardEditing || zoom !== 1 || dataReadOnly,
         morphDisabled: true,
       }}
       on:consider={handleDndConsider}
@@ -317,11 +321,12 @@
           {#if isShadowPlaceholder(column)}
             <div class="projects--board--column--placeholder" style={`width: ${getColumnFootprint(column)}px; min-width: ${getColumnFootprint(column)}px; max-width: ${getColumnFootprint(column)}px;`}></div>
           {:else}
-            <span class="board-column-grip" use:dragHandle aria-label="Drag to reorder column">
+            <span class="board-column-grip" use:dragHandle aria-label={$i18n.t("views.board.drag-column")}>
               <Icon name="grip-vertical" size="xs" />
             </span>
             <BoardColumn
               {readonly}
+              {dataReadOnly}
               {richText}
               {boardEditing}
               {onEdit}
@@ -404,7 +409,7 @@
   <button
     class="projects--board--zoom-badge"
     on:click={handleResetZoom}
-    title="Reset zoom"
+    title={$i18n.t("views.board.reset-zoom")}
   >
     {Math.round(zoom * 100)}%
   </button>

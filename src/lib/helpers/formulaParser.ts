@@ -5,9 +5,9 @@
  * Supports logical expressions, built-in functions, and field references
  * 
  * Example formulas:
- * - AND(status = "Active", priority > 5)
+ * - `AND(status = "Active", priority > 5)`
  * - OR(IS_EMPTY(dueDate), IS_OVERDUE(dueDate))
- * - AND(CONTAINS(tags, "urgent"), date >= TODAY())
+ * - `AND(CONTAINS(tags, "urgent"), date >= TODAY())`
  */
 
 import type { DataRecord } from 'src/lib/dataframe/dataframe';
@@ -514,7 +514,7 @@ export function evaluateFormula(
   }
 
   /**
-   * Smart comparison for >, <, >=, <=.
+   * Smart comparison for `>`, `<`, `>=`, `<=`.
    * Numbers compared numerically; dates compared by day; strings by locale.
    * Returns negative, zero, or positive like compareTo.
    */

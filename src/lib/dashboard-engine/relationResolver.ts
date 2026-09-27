@@ -152,7 +152,7 @@ export interface BacklinkResult {
  * For each record A that links to record B via `fieldName`,
  * record B gets an entry in the backlink map pointing back to A.
  *
- * @returns Map<targetRecordId, sourceRecordIds[]>
+ * @returns `Map<targetRecordId, sourceRecordIds[]>`
  */
 export function computeBacklinks(
   df: DataFrame,

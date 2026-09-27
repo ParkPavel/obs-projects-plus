@@ -22,9 +22,9 @@ The saved configuration includes **Demo Project** and **Team Members**. You do n
 
 | Folder | Contents | Use |
 | --- | --- | --- |
-| [Projects](Projects/) | Task, meeting, and project notes | Main data source |
-| [Team](Team/) | Team member notes | Targets for `assignee` and `reviewer` links |
-| [Clients](Clients/) | Client notes | An additional source to try |
+| `Projects/` | Task, meeting, and project notes | Main data source |
+| `Team/` | Team member notes | Targets for `assignee` and `reviewer` links |
+| `Clients/` | Client notes | An additional source to try |
 
 The supplied configuration contains status filter tabs, summary cards, a data table, and relation targets. Notes include dates, statuses, priorities, numeric metrics, and wiki-links. Dates are fixed example data: a calendar opened on today's date may initially show no events. Navigate to a date found in one of the notes.
 
@@ -60,4 +60,4 @@ Record the plugin version you installed. To restart, make another copy of this d
 
 Для полного сброса эксперимента создайте свежую копию этой папки и установите тот же релиз. Замена одних заметок не сбрасывает фильтры и расположение блоков в `data.json`.
 
-[Report a problem](https://github.com/ParkPavel/obs-projects-plus/issues) · [License](../LICENSE)
+[Report a problem](https://github.com/ParkPavel/obs-projects-plus/issues) · [License](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE)

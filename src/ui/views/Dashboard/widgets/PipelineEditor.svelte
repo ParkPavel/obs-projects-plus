@@ -14,9 +14,11 @@
   import type { BlockSource } from "./linkedSourceState";
   import type { FilterCondition } from "src/settings/base/settings";
   import { i18n } from "src/lib/stores/i18n";
+  import { aggregationLabel, type AggregationName } from "src/lib/dashboard-engine/aggregationOptions";
   import { get } from "svelte/store";
   import { Icon } from "obsidian-svelte";
-  import { getOperatorsForField, operatorNeedsValue, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
+  import { getOperatorsForField, getOperatorLabel } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
+  import { operatorNeedsValue } from "src/settings/base/settings";
   import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { detectArrayFields } from "./_shared/arrayFieldDetection";
@@ -90,6 +92,10 @@
   // discoverability banner pointing users at the Unnest transform when their
   // YAML frontmatter contains nested lists (e.g. `sets: [{reps, weight}]`).
   $: arrayFields = detectArrayFields(source, fields, steps);
+
+  // Pipeline aggregation codes (SUM, AVG…) shown by their name in the shared vocabulary.
+  $: aggOptionLabel = (fn: string): string =>
+    aggregationLabel(fn.toLowerCase() as AggregationName, (key, defaultValue) => $i18n.t(key, { defaultValue }));
 
   const AGG_FUNCTIONS: AggregationFunction[] = [
     "SUM", "AVG", "MEDIAN", "MIN", "MAX", "RANGE",
@@ -702,7 +708,7 @@
                     class="ppp-compute-expr"
                     type="text"
                     list="ppp-pipeline-formula-hints"
-                    placeholder="e.g. fieldA + fieldB * 2"
+                    placeholder={$i18n.t("views.dashboard.pipeline.formula-placeholder")}
                     value={col.expression}
                     on:input={(e) => updateComputeColumn(i, ci, col.name, inputVal(e))}
                   />
@@ -884,7 +890,7 @@
                     on:change={(e) => updateJoinStep(i, { aggregation: normalizeAggFunction(selectVal(e), step.aggregation ?? "SUM") })}
                   >
                     {#each AGG_FUNCTIONS as fn}
-                      <option value={fn}>{fn}</option>
+                      <option value={fn}>{aggOptionLabel(fn)}</option>
                     {/each}
                   </select>
                 </label>

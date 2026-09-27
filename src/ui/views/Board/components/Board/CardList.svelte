@@ -1,6 +1,7 @@
 <script lang="ts">
   // import { Checkbox, InternalLink} from "obsidian-svelte";
-  import { Checkbox, Icon, IconButton } from "obsidian-svelte";
+  import { Checkbox, Icon } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
 
   import {
@@ -45,6 +46,8 @@
   export let iconField: DataField | undefined = undefined;
   export let boardEditing: boolean;
   export let disableDnd: boolean = false;
+  /** The data is read-only (a source block): the pencil opens the note, and says so. */
+  export let readOnly: boolean = false;
 
   const getRecordColor = getRecordColorContext.get();
   const sortRecords = sortRecordsContext.get();
@@ -104,7 +107,7 @@
       on:click={() => onRecordClick(item)}
       animate:flip={{ duration: flipDurationMs }}
     >
-      <span class="board-card-grip" use:dragHandle aria-label="Drag to reorder">
+      <span class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
         <Icon name="grip-vertical" size="xs" />
       </span>
       <ColorItem {color}>
@@ -150,8 +153,12 @@
             <span class="edit-hint">
               <IconButton
                 icon="pencil"
-                tooltip={$i18n.t("components.note.edit")}
-                on:click={() => onRecordClick(item)}
+                tooltip={$i18n.t(readOnly ? "common.open-note" : "components.note.edit")}
+                onClick={(event) => {
+                  // The card itself opens the record on click; open it once.
+                  event.stopPropagation();
+                  onRecordClick(item);
+                }}
               />
             </span>
           {:else}

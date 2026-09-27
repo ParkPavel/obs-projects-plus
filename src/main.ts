@@ -17,13 +17,12 @@ import { createDataRecord, createProject } from "src/lib/dataApi";
 import { api } from "src/lib/stores/api";
 import { i18n, syncLocale } from "src/lib/stores/i18n";
 import { app, plugin } from "src/lib/stores/obsidian";
+import { watchViewport } from "src/lib/stores/ui";
 import { settings } from "src/lib/stores/settings";
 import { CreateNoteModal } from "src/ui/modals/createNoteModal";
 import { CreateProjectModal } from "src/ui/modals/createProjectModal";
-import {
-  createDemoProject,
-  seedDemoNotes,
-} from "src/ui/app/onboarding/demoProject";
+import { createDemoProject } from "src/ui/app/onboarding/demoProject";
+import { hasCanvasCommandTarget } from "src/ui/views/Dashboard/dashboardCommands";
 import { commandBus, emitCommand } from "src/lib/stores/commandBus";
 import {
   VIEW_TYPE_VISUALIZER_PANE,
@@ -338,9 +337,8 @@ export default class ProjectsPlusPlugin extends Plugin {
       id: "open-schema",
       name: t("commands.open-schema.name"),
       checkCallback: (checking) => {
-        const hasProjectLeaf =
-          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
-        if (!hasProjectLeaf) return false;
+        // Only a mounted dashboard handles it (catalogue audit C4).
+        if (!hasCanvasCommandTarget()) return false;
         if (!checking) emitCommand("open-schema");
         return true;
       },
@@ -350,9 +348,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       id: "add-field",
       name: t("commands.add-field.name"),
       checkCallback: (checking) => {
-        const hasProjectLeaf =
-          this.app.workspace.getLeavesOfType(VIEW_TYPE_PROJECTS).length > 0;
-        if (!hasProjectLeaf) return false;
+        if (!hasCanvasCommandTarget()) return false;
         if (!checking) emitCommand("add-field");
         return true;
       },
@@ -393,13 +389,9 @@ export default class ProjectsPlusPlugin extends Plugin {
       },
     });
 
-    this.addCommand({
-      id: "open-formula-editor",
-      name: t("commands.open-formula-editor.name"),
-      callback: () => {
-        emitCommand("open-formula-editor");
-      },
-    });
+    // «Open formula editor» was removed (catalogue audit C4): it emitted an
+    // action nothing handled. Formulas are edited in the field dialog and the
+    // dashboard's formula bar.
 
     // #043 / feedback-demo-api-bridge — programmatic demo regen so REST API
     // automation and QA scripts can rebuild the onboarding demo without the
@@ -413,40 +405,38 @@ export default class ProjectsPlusPlugin extends Plugin {
     this.addCommand({
       id: "create-demo-project",
       name: t("commands.create-demo-project.name"),
-      callback: () => {
-        const existing = get(settings).projects.find((p) => p.name === "Демо-проект");
-        if (existing) {
-          // #198: a user who hit the illegal filename has this project already,
-          // with a note missing — and returning early here is exactly what kept
-          // them from ever getting it. Seeding is idempotent, so re-run it and
-          // say what it found rather than refusing outright.
-          void seedDemoNotes(this.app.vault).then((failed) => {
-            new Notice(
-              failed.length > 0
-                ? noticeFor(DEMO_REPAIR_FAILED, { count: failed.length })
-                : t("commands.create-demo-project.repaired", {
-                    defaultValue:
-                      "Demo project already exists; any missing notes have been restored.",
-                  }),
-              6000,
-            );
-          });
-          return;
-        }
-        void createDemoProject(this.app.vault).then(() => {
+      callback: async () => {
+        // #198 / 3.6.0: the demo is three projects. Creating is also repairing:
+        // notes are seeded idempotently and only the projects missing by name
+        // are registered, so an existing demo (or the old single one) gets
+        // what it lacks instead of a refusal.
+        try {
+          const { created, failed } = await createDemoProject(this.app.vault);
+          if (created.length > 0) {
+            new Notice(t("commands.create-demo-project.created", { defaultValue: "Demo project created." }), 4000);
+            return;
+          }
           new Notice(
-            t("commands.create-demo-project.created", {
-              defaultValue: "Demo project created.",
-            }),
-            4000,
+            failed > 0
+              ? noticeFor(DEMO_REPAIR_FAILED, { count: failed })
+              : t("commands.create-demo-project.repaired", {
+                  defaultValue: "Demo project already exists; any missing notes have been restored.",
+                }),
+            6000,
           );
-        });
+        } catch (error) {
+          // A failure the generator did not report itself (it reports folders
+          // and notes): say so rather than let the promise fail unseen.
+          console.error("[Projects+] the demo could not be created", error);
+          new Notice(noticeFor(DEMO_REPAIR_FAILED, { count: 0 }), 6000);
+        }
       },
     });
 
     // Initialize Svelte stores so that Svelte components can access the App and
     // Plugin objects.
     app.set(this.app);
+    this.register(watchViewport());
     plugin.set(this);
 
     // REFACTOR-008: instantiate the command manager and wire the activate-view
@@ -712,6 +702,13 @@ export default class ProjectsPlusPlugin extends Plugin {
    */
   private async settingsAreStillOurs(): Promise<boolean> {
     if (this.confirmedOnDisk === null) return true;
+    // A fresh vault: the load confirmed "no file yet" (`canonical(null)`), and
+    // the file still not existing is that same state, not a change. Reading it
+    // anyway fails with ENOENT and used to warn about our own first write.
+    if (this.confirmedOnDisk === canonical(null)) {
+      const path = settingsFilePath(this.manifest.dir);
+      if (path !== null && !(await this.app.vault.adapter.exists(path))) return true;
+    }
     const raw = await this.readSettingsFile();
     if (raw === null) return true;
     let onDisk: string | null;
@@ -1017,7 +1014,7 @@ export default class ProjectsPlusPlugin extends Plugin {
       return await this.app.vault.adapter.read(path);
     } catch (err) {
       console.warn(
-        "[Projects+] settings changed on disk but could not be read:",
+        "[Projects+] could not read the settings file:",
         err
       );
       return null;
@@ -1073,7 +1070,8 @@ export default class ProjectsPlusPlugin extends Plugin {
         this.app.vault.adapter,
         raw,
         new Date(),
-        settingsFilePath(this.manifest.dir)
+        settingsFilePath(this.manifest.dir),
+        this.app.vault
       );
       if (noteAt !== null) {
         console.debug(

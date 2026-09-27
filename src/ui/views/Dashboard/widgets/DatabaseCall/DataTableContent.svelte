@@ -56,6 +56,8 @@
   export let fieldPresets: FieldPreset[] = [];
   export let activeFieldPresetId: string | undefined = undefined;
   export let project: ProjectDefinition | undefined = undefined;
+  /** This table's actual project, when it differs from `project` — see tableRowOps. */
+  export let sourceProjectId: string | undefined = undefined;
   /** R3 — Selection Bus driver identity (canvas widget id). */
   export let widgetId: string | undefined = undefined;
   /**
@@ -125,18 +127,17 @@
 
   // ── Row operations (F2.3) ────────────────────────────────────
   function handleOpenRecord(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
-    // #189: plain opens the note, `alt` peeks. `record`/`fields` ride along so
-    // an external-source row peeks into itself rather than into a frame that
-    // never held it.
+    // #189: plain opens the note, `alt` peeks. `projectId`/`readonly` ride
+    // along so an external-source row peeks into itself, read-only.
     const { record } = e.detail;
-    if ($app) void openRecord({ id: record.id, record, fields }, modeFromEvent(e.detail.event), { app: $app });
+    if ($app) void openRecord({ id: record.id, projectId: sourceProjectId, readonly }, modeFromEvent(e.detail.event), { app: $app });
   }
 
   function handleRowMenu(e: CustomEvent<{ record: DataRecord; event: MouseEvent }>) {
     const record = e.detail.record;
     const primaryField = columns.find((c) => c.isPrimary)?.field.name ?? "name";
     const entries = buildRowMenuEntries({
-      record, project, fields, api, readonly, app: $app ?? undefined,
+      record, project, fields, api, readonly, sourceProjectId, app: $app ?? undefined,
       t: (k, d) => $i18n.t(k, { defaultValue: d }),
       selectionEntry: selectionStore && widgetId
         ? {

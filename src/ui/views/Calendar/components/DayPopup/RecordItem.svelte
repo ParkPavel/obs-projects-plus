@@ -589,7 +589,7 @@
     <button 
       class="actions-toggle" 
       on:click|stopPropagation={toggleActions}
-      aria-label="Actions"
+      aria-label={$i18n.t("common.actions")}
     >
       <Icon name="more-horizontal" size="sm" />
     </button>
@@ -612,7 +612,7 @@
           class="color-palette"
           data-color-palette="true"
           role="region"
-          aria-label="Color picker palette"
+          aria-label={$i18n.t("views.calendar.colors.palette")}
           on:touchstart|stopPropagation={handlePaletteTouchStart}
           on:touchmove|stopPropagation={handlePaletteTouchMove}
           on:touchend|stopPropagation={handlePaletteTouchEnd}
@@ -632,7 +632,7 @@
               on:touchmove|stopPropagation={handleSatLightTouchMove}
               on:touchend|stopPropagation={handleSatLightTouchEnd}
               role="slider"
-              aria-label="Saturation and lightness"
+              aria-label={$i18n.t("views.calendar.colors.saturation-lightness")}
               aria-valuenow={saturationValue}
               tabindex="0"
             >
@@ -652,7 +652,7 @@
               on:touchmove|stopPropagation={handleHueTouchMove}
               on:touchend|stopPropagation={handleHueTouchEnd}
               role="slider"
-              aria-label="Hue"
+              aria-label={$i18n.t("components.color-picker.hue")}
               aria-valuemin="0"
               aria-valuemax="360"
               aria-valuenow={hueValue}
@@ -676,7 +676,7 @@
                 class="hsl-apply-button"
                 on:click|stopPropagation={() => favoritesStore.add(hsvToHex(hueValue, saturationValue, valueValue))}
                 on:touchend|stopPropagation|preventDefault={() => favoritesStore.add(hsvToHex(hueValue, saturationValue, valueValue))}
-                aria-label="Save to favorites"
+                aria-label={$i18n.t("views.calendar.colors.save-favorite")}
                 style="margin-right: var(--ppp-spacing-xs, 0.25rem); background: var(--background-secondary-alt); color: var(--text-muted);"
               >
                 <Icon name="star" size="sm" />
@@ -685,7 +685,7 @@
                 class="hsl-apply-button"
                 on:click|stopPropagation={applyHslColor}
                 on:touchend|stopPropagation|preventDefault={applyHslColor}
-                aria-label="Apply color"
+                aria-label={$i18n.t("views.calendar.colors.apply")}
               >
                 <Icon name="check" size="sm" />
               </button>
@@ -697,7 +697,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--ppp-spacing-sm, 0.5rem);">
                <span class="palette-label" style="margin-bottom: 0;">{$i18n.t("views.calendar.colors.quick") ?? "Favorites"}</span>
                {#if $favoritesStore.length === 0}
-                 <span style="font-size: 0.7em; color: var(--text-muted);">No favorites</span>
+                 <span style="font-size: 0.7em; color: var(--text-muted);">{$i18n.t("views.calendar.colors.no-favorites")}</span>
                {/if}
             </div>
             <div class="palette-grid compact">
@@ -720,7 +720,7 @@
                     class="remove-favorite"
                     on:click|stopPropagation={() => favoritesStore.remove(color)}
                     on:touchend|stopPropagation|preventDefault={() => favoritesStore.remove(color)}
-                    aria-label="Remove"
+                    aria-label={$i18n.t("common.remove")}
                   >
                     Г—
                   </button>
@@ -749,7 +749,7 @@
                 on:click|stopPropagation={applyCustomHex}
                 on:touchend|stopPropagation|preventDefault={applyCustomHex}
                 disabled={!customHexInput}
-                aria-label="Apply color"
+                aria-label={$i18n.t("views.calendar.colors.apply")}
               >
                 <Icon name="check" size="sm" />
               </button>

@@ -915,7 +915,7 @@
     <div class="sticky-time-axis">
       {#if allDayHeight > 0}
         <div class="sticky-allday-row" style:height="{allDayHeight}rem">
-          <div class="sticky-allday-label">All day</div>
+          <div class="sticky-allday-label">{$i18n.t("views.calendar.all-day")}</div>
         </div>
       {/if}
       <div class="sticky-time-axis-header" style:height="{DAY_HEADER_HEIGHT_REM}rem">

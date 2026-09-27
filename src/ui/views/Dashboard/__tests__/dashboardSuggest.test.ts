@@ -1,5 +1,6 @@
 import { createSuggestionController } from "../dashboardSuggest";
 import type { SmartSuggestion } from "../smartSuggest";
+import { asStatsConfig } from "../widgets/linkedSourceState";
 import type { DatabaseViewConfig, WidgetDefinition, WidgetType } from "../types";
 
 function makeConfig(overrides?: Partial<DatabaseViewConfig>): DatabaseViewConfig {
@@ -62,10 +63,29 @@ describe("createSuggestionController (#113)", () => {
       relationTargetProjectId: "proj-sessions",
     };
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
+    // M2-C7: the block opens on a table tab (it said "No views configured").
     expect(addWidget).toHaveBeenCalledWith("database-call", {
       sourceConfig: { projectId: "proj-sessions" },
-      config: { linkedSelection: { sourceWidgetId: "w-master", relationField: "client" } },
+      config: expect.objectContaining({
+        linkedSelection: { sourceWidgetId: "w-master", relationField: "client" },
+        viewTabs: [expect.objectContaining({ viewType: "table" })],
+        activeTabId: expect.any(String),
+      }),
     });
+    const cfg = config.widgets.at(-1)!.config as { viewTabs: Array<{ id: string }>; activeTabId: string };
+    expect(cfg.activeTabId).toBe(cfg.viewTabs[0]!.id);
+  });
+
+  it("accept an incoming-relation suggestion reads that project through its field; a self-relation stays unsourced", () => {
+    const incoming: SmartSuggestion = {
+      kind: "relation-block", fieldName: "client", widgetType: "database-call",
+      relationWiring: { readProjectId: "p-sessions", readProjectName: "Сеансы", relationField: "client" },
+    };
+    ctrl().accept(new CustomEvent("accept", { detail: incoming }));
+    expect(addWidget).toHaveBeenLastCalledWith("database-call", expect.objectContaining({
+      sourceConfig: { projectId: "p-sessions" },
+      config: expect.objectContaining({ linkedSelection: { sourceWidgetId: "w-master", relationField: "client" } }),
+    }));
   });
 
   it("accept 'relation-block' without targetProjectId creates bare database-call widget", () => {
@@ -79,14 +99,34 @@ describe("createSuggestionController (#113)", () => {
     expect(addWidget).not.toHaveBeenCalledWith("database-call", expect.anything());
   });
 
-  it("accept 'numeric-stats' calls addWidget with type only", () => {
+  // M2-C5 (architect F1–F3): the strip promised the sum and the average of the
+  // named field; a bare {type:"stats"} saved config {} and showed the setup
+  // wizard, and the suggestion was already dismissed.
+  it("accept 'numeric-stats' adds the promised cards: sum and average of the named field", () => {
     const suggestion: SmartSuggestion = {
       kind: "numeric-stats",
       fieldName: "price",
       widgetType: "stats",
     };
     ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
-    expect(addWidget).toHaveBeenCalledWith("stats");
+    const [type, initial] = addWidget.mock.calls[0]!;
+    expect(type).toBe("stats");
+    const cfg = (initial as { config: { cards: Array<{ field: string; aggregation: string }>; columns: number } }).config;
+    expect(cfg.cards.map((c) => [c.field, c.aggregation])).toEqual([["price", "sum"], ["price", "avg"]]);
+    expect(cfg.columns).toBe(2);
+    expect(asStatsConfig(config.widgets.at(-1)!.config)).not.toBeNull();
+  });
+
+  it("a suggestion whose added block cannot render is not dismissed", () => {
+    // addWidget that saves a stats widget without cards (as the old accept did).
+    addWidget.mockImplementationOnce((type: WidgetType) => {
+      const next = { ...config, widgets: [...config.widgets, { id: "w-bad", type, title: "", layout: { x: 0, y: 0, w: 1, h: 1 }, config: {} } as WidgetDefinition] };
+      saveConfig(next);
+      return next;
+    });
+    const suggestion: SmartSuggestion = { kind: "numeric-stats", fieldName: "price", widgetType: "stats" };
+    ctrl().accept(new CustomEvent("accept", { detail: suggestion }));
+    expect(config.dismissedSuggestions ?? []).not.toContain("numeric-stats");
   });
 
   it("accept 'relation-block' uses empty sourceWidgetId when getPrimaryWidgetId returns undefined", () => {

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { IconButton, Tag } from "obsidian-svelte";
+  import { Tag } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import {
     isString,
     type DataValue,

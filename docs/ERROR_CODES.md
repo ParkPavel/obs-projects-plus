@@ -15,11 +15,10 @@ Search this page for the code shown in a notice, such as `PPP-104`. Each section
 | [5xx](#ppp-501) | Связи записей / Record relations |
 | [6xx](#ppp-601) | Первый запуск / Onboarding |
 | [7xx](#ppp-701) | Источники и фильтры / Sources and filters |
-| [9xx](#ppp-901) | Непредвиденные ошибки / Unexpected errors |
 
-Код сохраняет свой смысл независимо от языка интерфейса. Английские сообщения сверяются с [реестром ошибок](../src/lib/errors/errorCodes.ts); русский текст объясняет те же ситуации. Набор тестов проверяет наличие кодов и совпадение английских сообщений с реестром.
+Код сохраняет свой смысл независимо от языка интерфейса. Английские сообщения сверяются с [реестром ошибок](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/errors/errorCodes.ts); русский текст объясняет те же ситуации. Набор тестов проверяет наличие кодов и совпадение английских сообщений с реестром.
 
-Codes identify the same condition in every interface language. Tests check code coverage and English message parity with the [error registry](../src/lib/errors/errorCodes.ts). The Russian text explains the same conditions.
+Codes identify the same condition in every interface language. Tests check code coverage and English message parity with the [error registry](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/errors/errorCodes.ts). The Russian text explains the same conditions.
 
 ## PPP-101
 

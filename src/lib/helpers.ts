@@ -180,8 +180,8 @@ export function makeContext<T>(): Context<T> {
  * Extract frontmatter values from active "is" filter conditions.
  * Only equality filters can reliably map to record values.
  *
- * @param conditions  — Enabled filter conditions from the view
- * @param excludeField — Optional field name to exclude (e.g., Board groupBy field)
+ * @param conditions - Enabled filter conditions from the view
+ * @param excludeField - Optional field name to exclude (e.g., Board groupBy field)
  * @returns Record of field→value pairs for note creation
  */
 export function getFilterValuesFromConditions(

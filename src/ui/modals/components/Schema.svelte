@@ -19,6 +19,7 @@
     SettingItem,
   } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { aggregationLabel, type AggregationName } from "src/lib/dashboard-engine/aggregationOptions";
   import {
     DataFieldType,
     type DataField,
@@ -137,9 +138,7 @@
   }
 
   function rollupFunctionLabel(fn: string): string {
-    return $i18n.t(`modals.field.configure.rollup.functions.${fn}`, {
-      defaultValue: fn,
-    });
+    return aggregationLabel(fn as AggregationName, (key, defaultValue) => $i18n.t(key, { defaultValue }));
   }
 
   function rollupSummary(field: DataField): string {

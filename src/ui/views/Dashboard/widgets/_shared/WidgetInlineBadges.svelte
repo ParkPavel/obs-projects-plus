@@ -1,6 +1,6 @@
 <script lang="ts" context="module">
   import type { ColumnAggregation } from "../../types";
-  import { aggregationBadge } from "src/lib/dashboard-engine/aggregationOptions";
+  import { aggregationBadge, aggregationBadgeText } from "src/lib/dashboard-engine/aggregationOptions";
 
   /**
    * #034.3 / #040.2 — labels used by inline header badges. Kept exported
@@ -18,7 +18,8 @@
 <script lang="ts">
   /**
    * WidgetInlineBadges.svelte — renders inline informational badges into the
-   * WindowShell `badges` slot for stats / chart / data-table widgets.
+   * WidgetShell `badges` slot (filled by WidgetHost) for stats / chart /
+   * data-table widgets. Every text and title comes from i18n.
    *
    * Spec: #034.3 (orchestrator brief — Phase 4 sub-PR 3) + #040.2 inline
    * consumer wiring of the slot API introduced in #034.1.
@@ -31,6 +32,7 @@
    */
 
   import type { DataFrame } from "src/lib/dataframe/dataframe";
+  import { i18n } from "src/lib/stores/i18n";
   import type {
     ChartConfig,
     DataTableConfig,
@@ -52,9 +54,8 @@
     return !!cfg && typeof cfg === "object" && "cards" in (cfg as object);
   }
 
-  function aggLabel(agg: string): string {
-    return aggregationBadge(agg as ColumnAggregation);
-  }
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
+  $: aggLabel = (agg: string): string => aggregationBadgeText(agg as ColumnAggregation, tr);
 
   function firstCardAgg(cfg: StatsConfig): string {
     const card = cfg.cards[0];
@@ -69,9 +70,12 @@
     widget.type === "stats" && isStatsConfig(widget.config)
       ? widget.config
       : null;
+  // The host passes the config the table actually uses (the root config for a
+  // primary table, its own otherwise); the widget's nested copy is only a
+  // fallback for a caller that passes none.
   $: effectiveTableConfig =
     widget.type === "data-table"
-      ? (widget.config as { table?: DataTableConfig })?.table ?? tableConfig
+      ? tableConfig ?? (widget.config as { table?: DataTableConfig })?.table
       : undefined;
 </script>
 
@@ -79,15 +83,15 @@
   <span
     class="ppp-widget-badge ppp-widget-badge--type"
     data-testid="widget-badge-chart-type"
-    title="Chart type"
+    title={$i18n.t("views.dashboard.chart.type")}
   >
-    {chartCfg.chartType}
+    {$i18n.t(`views.dashboard.chart.types.${chartCfg.chartType}`, { defaultValue: chartCfg.chartType })}
   </span>
   {#if chartCfg.yAxis?.aggregation && chartCfg.yAxis.aggregation !== "none"}
     <span
       class="ppp-widget-badge ppp-widget-badge--agg"
       data-testid="widget-badge-chart-agg"
-      title="Y-axis aggregation"
+      title={$i18n.t("views.dashboard.widget.badge.y-aggregation")}
     >
       {aggLabel(chartCfg.yAxis.aggregation)}
     </span>
@@ -97,7 +101,7 @@
     <span
       class="ppp-widget-badge ppp-widget-badge--agg"
       data-testid="widget-badge-stats-agg"
-      title="Aggregation"
+      title={$i18n.t("views.dashboard.widget.badge.aggregation")}
     >
       {aggLabel(firstCardAgg(statsCfg))}
     </span>
@@ -105,26 +109,26 @@
     <span
       class="ppp-widget-badge ppp-widget-badge--count"
       data-testid="widget-badge-stats-count"
-      title="Number of cards"
+      title={$i18n.t("views.dashboard.widget.badge.card-count-title")}
     >
-      {statsCfg.cards.length} cards
+      {$i18n.t("views.dashboard.widget.badge.card-count", { count: statsCfg.cards.length })}
     </span>
   {/if}
 {:else if widget.type === "data-table"}
   <span
     class="ppp-widget-badge ppp-widget-badge--count"
     data-testid="widget-badge-table-cols"
-    title="Visible columns"
+    title={$i18n.t("views.dashboard.widget.badge.column-count-title")}
   >
-    {frame.fields.length} cols
+    {$i18n.t("views.dashboard.widget.badge.column-count", { count: frame.fields.length })}
   </span>
   {#if effectiveTableConfig?.groupBy?.field}
     <span
       class="ppp-widget-badge ppp-widget-badge--grouped"
       data-testid="widget-badge-table-grouped"
-      title="Grouped by {effectiveTableConfig.groupBy.field}"
+      title={$i18n.t("views.dashboard.widget.badge.grouped-title", { field: effectiveTableConfig.groupBy.field })}
     >
-      grouped
+      {$i18n.t("views.dashboard.widget.badge.grouped")}
     </span>
   {/if}
 {/if}

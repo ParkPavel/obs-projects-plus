@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { portal } from "src/ui/portal";
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
@@ -248,8 +249,6 @@
     isDragging = true;
     startY = e.clientY;
     startScrollTop = scrollContainer.scrollTop;
-    scrollContainer.style.cursor = 'grabbing';
-    scrollContainer.style.userSelect = 'none';
   }
   
   function handleMouseMove(e: MouseEvent) {
@@ -262,8 +261,6 @@
   function handleMouseUp() {
     if (!scrollContainer) return;
     isDragging = false;
-    scrollContainer.style.cursor = 'grab';
-    scrollContainer.style.userSelect = '';
   }
   
   // Mobile: Touch gestures with momentum
@@ -504,7 +501,7 @@
       <!-- Empty space above timeline for header + allday section -->
       {#if showAllDaySection}
         <div class="projects-calendar-allday-axis-label">
-          All day
+          {$i18n.t("views.calendar.all-day")}
         </div>
       {/if}
     </div>
@@ -607,6 +604,7 @@
     <div 
       class="projects-calendar-timeline-content" 
       class:draggable={!isMobile}
+      class:grabbing={isDragging}
       bind:this={scrollContainer}
       style:--hour-height="{HOUR_HEIGHT_REM}rem"
       style:--total-height="{TOTAL_HEIGHT_REM}rem"
@@ -881,6 +879,12 @@
   
   .projects-calendar-timeline-content.draggable {
     cursor: default;
+  }
+
+  /* While dragged to scroll (catalogue audit C6: was set inline). */
+  .projects-calendar-timeline-content.draggable.grabbing {
+    cursor: grabbing;
+    user-select: none;
   }
   
   /* AllDay Section */

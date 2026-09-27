@@ -1,7 +1,11 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher, tick } from "svelte";
   import { MarkdownRenderer } from "obsidian";
-  import { app, view } from "src/lib/stores/obsidian";
+  import { app } from "src/lib/stores/obsidian";
+  import { markdownOwner } from "src/lib/markdownOwner";
+  // Rendered Markdown lives as long as this component (not the last opened view).
+  const owner = markdownOwner();
 
   export let config: Record<string, unknown>;
   export let readonly: boolean = false;
@@ -37,11 +41,11 @@
 
   function useMarkdown(node: HTMLElement, text: string) {
     const sourcePath = "";
-    MarkdownRenderer.render($app, text || "", node, sourcePath, $view);
+    MarkdownRenderer.render($app, text || "", node, sourcePath, owner);
     return {
       update(newText: string) {
         node.empty();
-        MarkdownRenderer.render($app, newText || "", node, sourcePath, $view);
+        MarkdownRenderer.render($app, newText || "", node, sourcePath, owner);
       },
     };
   }
@@ -56,11 +60,11 @@
         class="ppp-text-widget__textarea"
         on:keydown={handleKeydown}
         rows={6}
-        placeholder="Enter Markdown…"
+        placeholder={$i18n.t("views.dashboard.text.placeholder")}
       />
       <div class="ppp-text-widget__actions">
-        <button class="ppp-text-widget__btn ppp-text-widget__btn--save" on:click={commitEdit}>Save</button>
-        <button class="ppp-text-widget__btn" on:click={cancelEdit}>Cancel</button>
+        <button class="ppp-text-widget__btn ppp-text-widget__btn--save" on:click={commitEdit}>{$i18n.t("common.save")}</button>
+        <button class="ppp-text-widget__btn" on:click={cancelEdit}>{$i18n.t("common.cancel")}</button>
       </div>
     </div>
   {:else}

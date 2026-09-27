@@ -83,11 +83,14 @@ describe("computeSuggestions (#059)", () => {
   describe("relation-block rule", () => {
     it("suggests a database-call block when a configured relation field exists", () => {
       const result = computeSuggestions([relationField("client")], [], []);
+      // Without a project context only the outgoing link is visible: read the
+      // target from the master's side (F3b).
       expect(result).toContainEqual({
         kind: "relation-block",
         fieldName: "client",
         widgetType: "database-call",
         relationTargetProjectId: "p-clients",
+        relationWiring: { readProjectId: "p-clients", relationField: "client", relationSide: "master" },
       });
     });
 
@@ -227,5 +230,40 @@ describe("computeSuggestions (#059)", () => {
 
   it("returns an empty list for an empty schema", () => {
     expect(computeSuggestions([], [], [])).toEqual([]);
+  });
+});
+
+// ── M2-C7/C8 (architect F1–F3): which project the linked block reads ──────
+describe("relation-block wiring with the project context", () => {
+  const ctx = (projects: Array<{ id: string; name: string; fieldConfig?: Record<string, { relation?: { targetProjectId?: string } }> }>, host = "p-clients") =>
+    ({ hostProjectId: host, projects });
+
+  test("incoming: a project whose field points here is read through that field", () => {
+    const r = computeSuggestions([], [], [], ctx([
+      { id: "p-clients", name: "Клиенты" },
+      { id: "p-sessions", name: "Сеансы", fieldConfig: { client: { relation: { targetProjectId: "p-clients" } } } },
+    ]));
+    expect(r.find((s) => s.kind === "relation-block")?.relationWiring).toEqual({ readProjectId: "p-sessions", readProjectName: "Сеансы", relationField: "client" });
+  });
+
+  test("a relation inside this project reads this project (no source, stays writable)", () => {
+    const r = computeSuggestions([], [], [], ctx([{ id: "p-cab", name: "Кабинет", fieldConfig: { client: { relation: { targetProjectId: "p-cab" } } } }], "p-cab"));
+    expect(r.find((s) => s.kind === "relation-block")?.relationWiring).toEqual({ relationField: "client" });
+  });
+
+  test("outgoing with a field pointing back: read the target through that field", () => {
+    const r = computeSuggestions([relationField("client", "p-clients")], [], [], ctx([
+      { id: "p-sessions", name: "Сеансы", fieldConfig: { client: { relation: { targetProjectId: "p-clients" } } } },
+      { id: "p-clients", name: "Клиенты", fieldConfig: { sessions: { relation: { targetProjectId: "p-sessions" } } } },
+    ], "p-sessions"));
+    expect(r.find((s) => s.kind === "relation-block")?.relationWiring).toEqual({ readProjectId: "p-clients", readProjectName: "Клиенты", relationField: "sessions" });
+  });
+
+  test("outgoing with no way back: read the target from the master's side (F3b)", () => {
+    const r = computeSuggestions([relationField("client", "p-clients")], [], [], ctx([
+      { id: "p-sessions", name: "Сеансы", fieldConfig: { client: { relation: { targetProjectId: "p-clients" } } } },
+      { id: "p-clients", name: "Клиенты" },
+    ], "p-sessions"));
+    expect(r.find((s) => s.kind === "relation-block")?.relationWiring).toEqual({ readProjectId: "p-clients", readProjectName: "Клиенты", relationField: "client", relationSide: "master" });
   });
 });

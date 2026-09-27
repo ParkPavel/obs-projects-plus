@@ -19,10 +19,16 @@
   import type { ProjectDefinition } from "src/settings/settings";
   import { i18n } from "src/lib/stores/i18n";
   import {
-    aggregationOption,
+    aggregationLabel,
     ROLLUP_PICKER_ORDER,
   } from "src/lib/dashboard-engine/aggregationOptions";
   import { settings as settingsStore } from "src/lib/stores/settings";
+  import {
+    applyRollupSource,
+    rollupFunctionIsPositional,
+    rollupSources,
+    rollupSourceProjectId,
+    rollupSourceValue, ORDER_BY_CUSTOM, rollupOrderByChoices } from "src/lib/rollup/rollupSources";
   import { dataFieldTypeOptions } from "./dataFieldTypeOptions";
   import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
@@ -45,6 +51,14 @@
    */
   export let currentProjectId: string = "";
   export let onSetupRelation: ((field: DataField) => void) | undefined = undefined;
+
+  // A rollup column keeps the type its values have (a sum is a Number) and is
+  // recognised by typeConfig.rollup, as the table cell and the card already
+  // do. Opened here it must show its rollup settings, not a text field — the
+  // live demo check (2026-09-26) found it opening as «Текст».
+  if (field.typeConfig?.rollup && field.type !== DataFieldType.Rollup) {
+    field = { ...field, type: DataFieldType.Rollup };
+  }
 
   $: fieldNameError = validateFieldName(field.name);
 
@@ -420,22 +434,44 @@
       )
   );
 
+  // 3.6.0 — one picker for where a rollup reads from: this project's
+  // relations, then every relation elsewhere that links HERE (a backlink
+  // rollup: "visits of this client" without a visits field on the client).
+  $: rollupSourceList = rollupSources(
+    relationFieldsOnThisProject.map((f) => f.name),
+    effectiveProjects,
+    currentProjectId
+  );
+
   $: rollupRelationOptions = [
     { label: $i18n.t("modals.field.configure.rollup.no-relation"), value: "" },
-    ...relationFieldsOnThisProject.map((f) => ({ label: f.name, value: f.name })),
+    ...rollupSourceList.map((s) => ({
+      label:
+        s.kind === "forward"
+          ? s.relationField
+          : $i18n.t("modals.field.configure.rollup.backlink-option", {
+              project: s.projectName,
+              field: s.relationField,
+            }),
+      value: s.value,
+    })),
   ];
 
-  $: rollupResolvedTargetProjectId = (() => {
-    if (rollupCfg?.targetProjectId) return rollupCfg.targetProjectId;
-    if (!rollupCfg?.relationField) return "";
-    const rf = relationFieldsOnThisProject.find(
-      (f) => f.name === rollupCfg.relationField
-    );
-    return (
-      (rf?.typeConfig as { relation?: RelationFieldConfig })?.relation
-        ?.targetProjectId ?? ""
-    );
-  })();
+  $: rollupResolvedTargetProjectId = rollupSourceProjectId(rollupCfg, (name) =>
+    (relationFieldsOnThisProject.find((f) => f.name === name)?.typeConfig as
+      | { relation?: RelationFieldConfig }
+      | undefined)?.relation?.targetProjectId
+  );
+
+  // The saved field is always listed, and «Another field…» switches to typing
+  // one: the dialog knows only the target's configured fields (Codex gate).
+  let orderByCustom = false;
+  $: rollupOrderByOptions = rollupOrderByChoices(
+    rollupTargetFieldOptions,
+    rollupCfg?.orderBy,
+    $i18n.t("modals.field.configure.rollup.order-by.none"),
+    $i18n.t("modals.field.configure.rollup.order-by.custom")
+  );
 
   $: rollupTargetProject = effectiveProjects.find(
     (p) => p.id === rollupResolvedTargetProjectId
@@ -445,7 +481,15 @@
     const fc = rollupTargetProject?.fieldConfig as
       | Record<string, unknown>
       | undefined;
-    const candidates = fc ? Object.keys(fc) : [];
+    // The target project's configured fields; for this project, every field
+    // it has (a backlink rollup reads this project's own notes); and always
+    // the field already chosen, so a stored rollup shows its target instead
+    // of an empty select (live demo check, 2026-09-26).
+    const own = rollupResolvedTargetProjectId === currentProjectId
+      ? existingFields.filter((f) => !f.derived && !isRelationCompanionField(f.name)).map((f) => f.name)
+      : [];
+    const chosen = rollupCfg?.targetField ? [rollupCfg.targetField] : [];
+    const candidates = [...new Set([...(fc ? Object.keys(fc) : []), ...own, ...chosen])];
     return [
       { label: $i18n.t("modals.field.configure.rollup.no-target-field"), value: "" },
       ...candidates.map((name) => ({ label: name, value: name })),
@@ -460,9 +504,7 @@
    */
 
   $: rollupFunctionOptions = ROLLUP_PICKER_ORDER.map((fn) => ({
-    label: $i18n.t(`modals.field.configure.rollup.functions.${fn}`, {
-      defaultValue: aggregationOption(fn)?.label ?? fn,
-    }),
+    label: aggregationLabel(fn, (key, defaultValue) => $i18n.t(key, { defaultValue })),
     value: fn,
   }));
 
@@ -480,6 +522,9 @@
     if (!merged.separator) {
       delete (merged as { separator?: string }).separator;
     }
+    if (!merged.orderBy) {
+      delete (merged as { orderBy?: string }).orderBy;
+    }
     const nextTypeConfig = { ...(field.typeConfig ?? {}) } as {
       rollup?: RollupFieldConfig;
     };
@@ -488,8 +533,8 @@
   }
 
   function handleRollupRelationFieldChange(ev: CustomEvent<string>) {
-    const relationField = ev.detail;
-    if (!relationField) {
+    const next = applyRollupSource(rollupCfg, ev.detail);
+    if (!next) {
       // User cleared selection → wipe whole rollup config.
       const next = { ...(field.typeConfig ?? {}) } as {
         rollup?: RollupFieldConfig;
@@ -498,7 +543,15 @@
       field = { ...field, typeConfig: next };
       return;
     }
-    patchRollup({ relationField });
+    field = { ...field, typeConfig: { ...(field.typeConfig ?? {}), rollup: next } };
+  }
+
+  function handleRollupOrderByChange(ev: CustomEvent<string>) {
+    if (ev.detail === ORDER_BY_CUSTOM) {
+      orderByCustom = true;
+      return;
+    }
+    patchRollup({ orderBy: ev.detail });
   }
 
   function handleRollupTargetFieldChange(ev: CustomEvent<string>) {
@@ -749,20 +802,20 @@
           "modals.field.configure.rollup.relation-field.description"
         )}
       >
-        {#if relationFieldsOnThisProject.length === 0}
+        {#if rollupSourceList.length === 0}
           <p class="ppp-rollup-empty">
             {$i18n.t("modals.field.configure.rollup.no-relations-warning")}
           </p>
         {:else}
           <Select
-            value={rollupCfg?.relationField ?? ""}
+            value={rollupSourceValue(rollupCfg)}
             options={rollupRelationOptions}
             allowEmpty
             on:change={handleRollupRelationFieldChange}
           />
         {/if}
       </SettingItem>
-      {#if rollupCfg?.relationField && rollupResolvedTargetProjectId}
+      {#if (rollupCfg?.relationField || rollupCfg?.backlink) && rollupResolvedTargetProjectId}
         <SettingItem
           name={$i18n.t("modals.field.configure.rollup.target-field.name")}
           description={rollupTargetProject
@@ -803,6 +856,27 @@
             on:change={handleRollupFunctionChange}
           />
         </SettingItem>
+        {#if rollupFunctionIsPositional(rollupCfg?.function)}
+          <SettingItem
+            name={$i18n.t("modals.field.configure.rollup.order-by.name")}
+            description={$i18n.t("modals.field.configure.rollup.order-by.description")}
+          >
+            {#if !orderByCustom}
+              <Select
+                value={rollupCfg?.orderBy ?? ""}
+                options={rollupOrderByOptions}
+                allowEmpty
+                on:change={handleRollupOrderByChange}
+              />
+            {:else}
+              <TextInput
+                value={rollupCfg?.orderBy ?? ""}
+                placeholder={$i18n.t("modals.field.configure.rollup.order-by.placeholder")}
+                on:input={handleRollupOrderByChange}
+              />
+            {/if}
+          </SettingItem>
+        {/if}
         {#if rollupCfg?.function === "concat" || rollupCfg?.function === "concat_unique"}
           <SettingItem
             name={$i18n.t("modals.field.configure.rollup.separator.name")}
@@ -847,7 +921,7 @@
       >
         <TextInput
           value={uniqueIdPrefixValue}
-          placeholder="e.g. TASK-"
+          placeholder={$i18n.t("modals.configure-field.prefix-placeholder")}
           on:input={handleUniqueIdPrefixChange}
         />
       </SettingItem>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher, onMount } from 'svelte';
 
   const dispatch = createEventDispatcher<{ change: string }>();
@@ -45,7 +46,7 @@
     on:change={handleChange}
     on:click|stopPropagation
     class="native-time-input"
-    aria-label="Time picker"
+    aria-label={$i18n.t("components.time-picker.label")}
   />
 </div>
 

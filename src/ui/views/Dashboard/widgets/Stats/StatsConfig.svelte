@@ -1,4 +1,7 @@
 ﻿<script lang="ts">
+  import FollowSelectionPicker from "../_shared/FollowSelectionPicker.svelte";
+  import type { LinkedSelectionConfig } from "../../types";
+  import DataProjectPicker from "../_shared/DataProjectPicker.svelte";
   /**
    * StatsConfig — user-facing editor for cards of a Stats widget.
    * Each card: label, source field, aggregation, format, optional currency.
@@ -7,8 +10,9 @@
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
     AGGREGATIONS,
-    aggregationOption,
     aggregationOptionsFor,
+    aggregationLabel,
+    aggregationConsequence,
     type AggregationOption,
   } from "src/lib/dashboard-engine/aggregationOptions";
   import type { StatsConfig, StatsCardConfig, ColumnAggregation } from "../../types";
@@ -18,6 +22,10 @@
 
   export let config: StatsConfig;
   export let fields: DataField[] = [];
+  /** 3.6.0 — projects this block may read instead of its own. */
+  export let availableSources: Array<{ id: string; name: string }> = [];
+  /** 3.6.0: blocks whose selection this block may follow. */
+  export let availableWidgets: Array<{ id: string; title: string }> = [];
 
   const dispatch = createEventDispatcher<{
     change: StatsConfig;
@@ -49,6 +57,8 @@
     );
   };
 
+  $: tr = (key: string, defaultValue: string) => $i18n.t(key, { defaultValue });
+
   const FORMATS = ["number", "percent", "currency", "duration"] as const;
 
   $: cards = config.cards.slice();
@@ -57,6 +67,22 @@
 
   function emit(next: Partial<StatsConfig>) {
     dispatch("change", { ...config, ...next });
+  }
+
+  $: dataProjectId = (config as unknown as { dataProjectId?: string }).dataProjectId;
+
+  /** 3.6.0 — follow another block's selection; the key is removed when off. */
+  function setLinkedSelection(next: LinkedSelectionConfig | undefined) {
+    const { linkedSelection: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (next ? { ...rest, linkedSelection: next } : rest) as unknown as StatsConfig);
+  }
+
+  /** 3.6.0 — read another project; the empty value reads this one (key removed). */
+  function setDataProject(id: string) {
+    const { dataProjectId: _drop, ...rest } = config as unknown as Record<string, unknown>;
+    void _drop;
+    dispatch("change", (id ? { ...rest, dataProjectId: id } : rest) as unknown as StatsConfig);
   }
 
   function addCard() {
@@ -111,6 +137,23 @@
   on:close={() => dispatch("close")}
 >
   <div class="ppp-cfg-row">
+    <DataProjectPicker
+      value={dataProjectId}
+      {availableSources}
+      rowClass=""
+      on:change={(e) => setDataProject(e.detail)}
+    />
+  </div>
+  <div class="ppp-cfg-row">
+    <FollowSelectionPicker
+      value={config.linkedSelection}
+      {availableWidgets}
+      {fields}
+      rowClass=""
+      on:change={(e) => setLinkedSelection(e.detail)}
+    />
+  </div>
+  <div class="ppp-cfg-row">
     <label>
       {$i18n.t("views.dashboard.stats.config.columns", { defaultValue: "Grid columns" })}
       <select value={columnsCount} on:change={onColumnsChange}>
@@ -157,8 +200,8 @@
             on:change={(e) => onAggChange(idx, e)}
           >
             {#each optionsFor(card.field) as agg (agg.value)}
-              <option value={agg.value} title={agg.consequence}>
-                {$i18n.t("views.dashboard.agg." + agg.value, { defaultValue: agg.label })}
+              <option value={agg.value} title={aggregationConsequence(agg.value, tr)}>
+                {aggregationLabel(agg.value, tr)}
               </option>
             {/each}
             {#if card.aggregation && !optionsFor(card.field).some((o) => o.value === card.aggregation)}
@@ -166,9 +209,7 @@
                    today still has to appear, or the dropdown renders empty and
                    the card looks unconfigured. -->
               <option value={card.aggregation}>
-                {$i18n.t("views.dashboard.agg." + card.aggregation, {
-                  defaultValue: aggregationOption(card.aggregation)?.label ?? card.aggregation,
-                })}
+                {aggregationLabel(card.aggregation, tr)}
               </option>
             {/if}
           </select>

@@ -1,4 +1,4 @@
-import { App, Platform, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting } from "obsidian";
 import Projects from "src/ui/settings/Projects.svelte";
 import Archives from "src/ui/settings/Archives.svelte";
 import { settings } from "src/lib/stores/settings";
@@ -6,7 +6,6 @@ import { get } from "svelte/store";
 import type ProjectsPlugin from "src/main";
 import type {
   FirstDayOfWeek,
-  LinkBehavior,
   ProjectId,
   ProjectsPluginPreferences,
 } from "src/settings/settings";
@@ -16,8 +15,20 @@ import { i18n } from "src/lib/stores/i18n";
  * ProjectsSettingTab builds the plugin settings tab.
  */
 export class ProjectsSettingTab extends PluginSettingTab {
+  /** Svelte components mounted by display(); destroyed before the next display and on hide. */
+  private mounted: Array<{ $destroy(): void }> = [];
+
   constructor(app: App, readonly plugin: ProjectsPlugin) {
     super(app, plugin);
+  }
+
+  private destroyMounted(): void {
+    for (const component of this.mounted) component.$destroy();
+    this.mounted = [];
+  }
+
+  hide(): void {
+    this.destroyMounted();
   }
 
   // display runs when the user opens the settings tab.
@@ -31,71 +42,8 @@ export class ProjectsSettingTab extends PluginSettingTab {
 
     const { containerEl } = this;
 
+    this.destroyMounted();
     containerEl.empty();
-
-    // Add About section
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.about.title"))
-      .setDesc(get(i18n).t("settings.about.description"))
-      .setHeading();
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.about.author"))
-      .setDesc(get(i18n).t("settings.about.author-name"))
-      .addButton((button) => {
-        button
-          .setButtonText(get(i18n).t("settings.about.visit-website"))
-          .setCta()
-          .onClick(() => {
-            window.open("https://parkpavel.github.io/park-pavel/", "_blank");
-          });
-      });
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.about.original-author"))
-      .setDesc(get(i18n).t("settings.about.original-author-name"))
-      .addButton((button) => {
-        button
-          .setButtonText(get(i18n).t("settings.about.original-repo"))
-          .setCta()
-          .onClick(() => {
-            window.open("https://github.com/marcusolsson/obsidian-projects", "_blank");
-          });
-      });
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.about.credits"))
-      .setDesc(get(i18n).t("settings.about.credits-desc"))
-      .setHeading();
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.about.version"))
-      .setDesc(this.plugin.manifest.version)
-      .addButton((button) => {
-        button
-          .setButtonText(get(i18n).t("settings.about.github"))
-          .setCta()
-          .onClick(() => {
-            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
-          });
-      });
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.about.languages"))
-      .setDesc(get(i18n).t("settings.about.languages-desc"))
-      .setHeading();
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.about.support"))
-      .setDesc(get(i18n).t("settings.about.support-desc"))
-      .addButton((button) => {
-        button
-          .setButtonText(get(i18n).t("settings.about.star-github"))
-          .setCta()
-          .onClick(() => {
-            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
-          });
-      });
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.general.size-limit.name"))
@@ -112,32 +60,6 @@ export class ProjectsSettingTab extends PluginSettingTab {
             });
           })
       );
-
-    new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.link-behavior.name"))
-      .setDesc(
-        get(i18n).t("settings.general.link-behavior.desc", {
-          modifier: Platform.isMacOS ? "Cmd" : "Ctrl",
-        })
-      )
-      .addDropdown((dropdown) => {
-        dropdown
-          .addOptions({
-            "open-editor": get(i18n).t(
-              "settings.general.link-behavior.options.open-editor"
-            ),
-            "open-note": get(i18n).t(
-              "settings.general.link-behavior.options.open-note"
-            ),
-          })
-          .setValue(preferences.linkBehavior)
-          .onChange((value) => {
-            save({
-              ...preferences,
-              linkBehavior: value as LinkBehavior,
-            });
-          });
-      });
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.general.start-of-week.name"))
@@ -197,7 +119,7 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.animation-behavior.name") || "Animation Behavior")
+      .setName(get(i18n).t("settings.general.animation-behavior.name"))
       .setDesc(get(i18n).t("settings.general.animation-behavior.desc") || "Control scrolling animations throughout the plugin")
       .addDropdown((dropdown) =>
         dropdown
@@ -213,7 +135,7 @@ export class ProjectsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName(get(i18n).t("settings.general.disable-haptic.name") || "Disable Haptic Feedback")
+      .setName(get(i18n).t("settings.general.disable-haptic.name"))
       .setDesc(get(i18n).t("settings.general.disable-haptic.desc") || "Turn off vibration feedback during drag-and-drop on mobile devices")
       .addToggle((toggle) =>
         toggle
@@ -284,6 +206,7 @@ export class ProjectsSettingTab extends PluginSettingTab {
         projects: get(settings).projects,
       },
     });
+    this.mounted.push(projectsManager);
 
     new Setting(containerEl)
       .setName(get(i18n).t("settings.archives.name"))
@@ -305,5 +228,68 @@ export class ProjectsSettingTab extends PluginSettingTab {
         },
       },
     });
+    this.mounted.push(archivesManager);
+
+    // About comes last, under the tab's only plugin-level heading.
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.title"))
+      .setDesc(get(i18n).t("settings.about.description"))
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.author"))
+      .setDesc(get(i18n).t("settings.about.author-name"))
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.visit-website"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://parkpavel.github.io/park-pavel/", "_blank");
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.original-author"))
+      .setDesc(get(i18n).t("settings.about.original-author-name"))
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.original-repo"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://github.com/marcusolsson/obsidian-projects", "_blank");
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.credits"))
+      .setDesc(get(i18n).t("settings.about.credits-desc"));
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.version"))
+      .setDesc(this.plugin.manifest.version)
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.github"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.languages"))
+      .setDesc(get(i18n).t("settings.about.languages-desc"));
+
+    new Setting(containerEl)
+      .setName(get(i18n).t("settings.about.support"))
+      .setDesc(get(i18n).t("settings.about.support-desc"))
+      .addButton((button) => {
+        button
+          .setButtonText(get(i18n).t("settings.about.star-github"))
+          .setCta()
+          .onClick(() => {
+            window.open("https://github.com/ParkPavel/obs-projects-plus", "_blank");
+          });
+      });
   }
 }

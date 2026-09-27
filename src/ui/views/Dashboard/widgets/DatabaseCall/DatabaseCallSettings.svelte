@@ -32,6 +32,8 @@
   export let hasUnaddressableSource = false;
   export let availableWidgets: Array<{ id: string; title: string }> = [];
   export let fields: DataField[] = [];
+  /** F3b: a master-side link names a field of the master's frame (Codex review of 0ebea59). */
+  export let masterFields: DataField[] = [];
   export let linkedSelection: LinkedSelectionConfig | undefined = undefined;
   export let linkedSelectionValidation: LegacyLinkedSelectionStatus | undefined = undefined;
 
@@ -45,7 +47,7 @@
   $: currentLinkedId = linkedSelection?.sourceWidgetId ?? "";
   $: currentRelationField = linkedSelection?.relationField ?? "";
   // E2: only Relation-type fields are valid for the linked-selection filter.
-  $: relationFields = fields.filter((f) => f.type === DataFieldType.Relation);
+  $: relationFields = (linkedSelection?.relationSide === "master" ? masterFields : fields).filter((f) => f.type === DataFieldType.Relation);
   // E8: show inline hint when validation indicates a problem.
   // #151 — `invalid-field` was missing from this list, so deleting the Relation
   // property a block filters through left the panel looking correctly
@@ -80,7 +82,12 @@
   function handleRelationFieldChange(e: Event) {
     const field = (e.currentTarget as HTMLSelectElement).value;
     if (!currentLinkedId) return;
-    dispatch("linkedSelectionChange", { sourceWidgetId: currentLinkedId, relationField: field });
+    // F3b: changing the field keeps which side of the relation it is read from.
+    dispatch("linkedSelectionChange", {
+      sourceWidgetId: currentLinkedId,
+      relationField: field,
+      ...(linkedSelection?.relationSide ? { relationSide: linkedSelection.relationSide } : {}),
+    });
   }
 </script>
 

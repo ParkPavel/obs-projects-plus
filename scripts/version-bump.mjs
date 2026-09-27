@@ -1,41 +1,39 @@
 #!/usr/bin/env node
 
+// npm `version` lifecycle hook: npm has already written the selected version to
+// package.json. Copy it verbatim to manifest.json and versions.json; never
+// increment. Only strict x.y.z versions are mapped in versions.json.
+
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-// Read package.json
-const packageJsonPath = join(process.cwd(), 'package.json');
-const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+const STRICT = /^\d+\.\d+\.\d+$/;
+const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
-// Read manifest.json
-const manifestJsonPath = join(process.cwd(), 'manifest.json');
-const manifestJson = JSON.parse(readFileSync(manifestJsonPath, 'utf8'));
+const read = (name) => JSON.parse(readFileSync(join(process.cwd(), name), 'utf8'));
+const write = (name, value) =>
+	writeFileSync(join(process.cwd(), name), JSON.stringify(value, null, 2) + '\n');
 
-// Read versions.json
-const versionsJsonPath = join(process.cwd(), 'versions.json');
-const versionsJson = JSON.parse(readFileSync(versionsJsonPath, 'utf8'));
+const packageJson = read('package.json');
+const manifestJson = read('manifest.json');
+const versionsJson = read('versions.json');
 
-// Extract version parts
-const [major, minor, patch] = packageJson.version.split('.').map(Number);
-
-// Increment patch version
-const newVersion = `${major}.${minor}.${patch + 1}`;
-
-// Update package.json
-packageJson.version = newVersion;
-
-// Update manifest.json
-manifestJson.version = newVersion;
-
-// Update versions.json
-versionsJson[newVersion] = manifestJson.minAppVersion;
-if (packageJson.name in versionsJson) {
-	delete versionsJson[packageJson.name];
+const version = packageJson.version;
+if (typeof version !== 'string' || !SEMVER.test(version)) {
+	console.error(`package.json version "${version}" is not a valid SemVer`);
+	process.exit(1);
 }
 
-// Write files back
-writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
-writeFileSync(manifestJsonPath, JSON.stringify(manifestJson, null, 2) + '\n');
-writeFileSync(versionsJsonPath, JSON.stringify(versionsJson, null, 2) + '\n');
+manifestJson.version = version;
 
-console.log(`Version bumped to ${newVersion}`);
+for (const key of Object.keys(versionsJson)) {
+	if (!STRICT.test(key)) delete versionsJson[key];
+}
+if (STRICT.test(version)) {
+	versionsJson[version] = manifestJson.minAppVersion;
+}
+
+write('manifest.json', manifestJson);
+write('versions.json', versionsJson);
+
+console.log(`Version synchronized to ${version}`);

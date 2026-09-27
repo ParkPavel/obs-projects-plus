@@ -17,11 +17,9 @@ jest.mock("src/lib/datasources/dataview/datasource", () => ({
 }));
 
 // Retrieve the mocked constructors after jest.mock rewrites them.
-/* eslint-disable @typescript-eslint/no-var-requires */
 const { FolderDataSource } = require("src/lib/datasources/folder/datasource");
 const { TagDataSource } = require("src/lib/datasources/tag/datasource");
 const { DataviewDataSource } = require("src/lib/datasources/dataview/datasource");
-/* eslint-enable @typescript-eslint/no-var-requires */
 
 const EMPTY_FRAME = { fields: [], records: [] } as const;
 
@@ -141,5 +139,76 @@ describe("resolveExternalFrame", () => {
     // console.warn is throttled per-projectId; ensure at least one call landed.
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+});
+
+// M2-C6 (architect-F1-F3-2026-09-17): the host frame gets its project's
+// declared field types (View → applyDeclaredFieldTypes); an external frame did
+// not, so a single `[[…]]` stayed a String there — linked-selection validation
+// failed and the settings picker could not list the field.
+describe("an external frame carries its project's declared relation types", () => {
+  it("a declared single-link relation is a Relation with its backlinks", async () => {
+    const frame = {
+      fields: [
+        { name: "name", type: "string", repeated: false, identifier: true, derived: false },
+        { name: "client", type: "string", repeated: false, identifier: false, derived: false },
+      ],
+      records: [
+        { id: "Sessions/S1.md", values: { name: "S1", client: "[[Alice]]" } },
+        { id: "Alice.md", values: { name: "Alice" } },
+      ],
+    };
+    const queryAll = jest.fn().mockResolvedValue(frame);
+    (FolderDataSource as jest.Mock).mockImplementation(() => ({ queryAll }));
+    const project = { ...makeProject("s", "folder"), fieldConfig: { client: { relation: { targetProjectId: "s" } } } };
+    const result = await resolveExternalFrame("s", makeDeps({ projects: [project] }));
+    expect(result?.fields.find((f) => f.name === "client")?.type).toBe("relation");
+    expect(result?.fields.some((f) => f.name === "client_backlinks")).toBe(true);
+  });
+
+  it("a project without declared relations is returned as it came", async () => {
+    const frame = { fields: [{ name: "name", type: "string", repeated: false, identifier: true, derived: false }], records: [] };
+    const queryAll = jest.fn().mockResolvedValue(frame);
+    (FolderDataSource as jest.Mock).mockImplementation(() => ({ queryAll }));
+    const result = await resolveExternalFrame("p", makeDeps({ projects: [makeProject("p", "folder")] }));
+    expect(result).toBe(frame);
+  });
+});
+
+// 3.6.0 follow-up: a block reading another project got its notes without
+// that project's rollup columns — the clients' «Визитов» existed in the
+// cabinet's own view and nowhere else. The resolver now folds them in, with
+// the frames of the projects those rollups read.
+describe("resolveExternalFrame — rollup columns", () => {
+  const field = (name: string, type: string) => ({ name, type, repeated: false, identifier: false, derived: false });
+
+  it("folds a backlink rollup in, reading the project it names", async () => {
+    const clients = {
+      fields: [field("name", "string")],
+      records: [{ id: "C/Anna.md", values: { name: "Anna" } }, { id: "C/Boris.md", values: { name: "Boris" } }],
+    };
+    const visits = {
+      fields: [field("client", "string"), field("price", "number")],
+      records: [
+        { id: "V/1.md", values: { client: "[[Anna]]", price: 3000 } },
+        { id: "V/2.md", values: { client: "[[Anna]]", price: 3500 } },
+        { id: "V/3.md", values: { client: "[[Boris]]", price: 4000 } },
+      ],
+    };
+    (FolderDataSource as jest.Mock).mockImplementation(() => ({ queryAll: jest.fn().mockResolvedValue(clients) }));
+    (TagDataSource as jest.Mock).mockImplementation(() => ({ queryAll: jest.fn().mockResolvedValue(visits) }));
+    const clientsProject = {
+      ...makeProject("clients", "folder"),
+      fieldConfig: {
+        visitCount: { rollup: { relationField: "", targetField: "price", function: "count_total", backlink: { projectId: "visits", relationField: "client" } } },
+        paid: { rollup: { relationField: "", targetField: "price", function: "sum", backlink: { projectId: "visits", relationField: "client" } } },
+      },
+    };
+    const visitsProject = makeProject("visits", "tag");
+    const out = await resolveExternalFrame("clients", makeDeps({ projects: [clientsProject, visitsProject] }));
+    const anna = out!.records.find((r: { id: string }) => r.id === "C/Anna.md")!;
+    expect(anna.values["visitCount"]).toBe(2);
+    expect(anna.values["paid"]).toBe(6500);
+    expect(out!.fields.find((f: { name: string }) => f.name === "paid")?.derived).toBe(true);
   });
 });

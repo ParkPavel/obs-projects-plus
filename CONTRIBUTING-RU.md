@@ -19,7 +19,7 @@ npm run build
 
 ## Найти нужный код
 
-Начните с [карты устройства проекта](docs/architecture.md). Плагин написан на TypeScript и Svelte, использует API Obsidian и хранилища Svelte. Точные зависимости и параметры компилятора — в [package.json](package.json), [package-lock.json](package-lock.json) и [tsconfig.json](tsconfig.json).
+Начните с [карты устройства проекта](docs/architecture.md). Плагин написан на TypeScript и Svelte, использует API Obsidian и хранилища Svelte. Точные зависимости и параметры компилятора — в [package.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/package.json), [package-lock.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/package-lock.json) и [tsconfig.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/tsconfig.json).
 
 Авторам сторонних видов нужен [справочник API](docs/api-RU.md). Внутренние модули — детали реализации и могут меняться между выпусками.
 
@@ -30,8 +30,8 @@ npm run build
 - Сохраняйте текст заметки при правке свойств. Используйте существующий data API и его путь через `processFrontMatter` Obsidian, а не перезапись файла целиком из компонента интерфейса.
 - Пишите настройки только существующим модулем записи настроек — иначе теряются повторные попытки, обнаружение конфликта и сообщение об отказе.
 - Стройте DOM безопасными для текста способами. Для поддержки отдельных окон берите документ владеющего элемента или активный документ Obsidian.
-- Проверяйте данные из настроек и пользовательский ввод. Где уместно, используйте [помощники для регулярных выражений](src/lib/helpers/regexSafety.ts).
-- Используйте переменные темы Obsidian и [токены оформления](src/ui/tokens/tokens.css). Управление должно работать с клавиатуры, а кнопкам без подписи нужны доступные имена.
+- Проверяйте данные из настроек и пользовательский ввод. Где уместно, используйте [помощники для регулярных выражений](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/lib/helpers/regexSafety.ts).
+- Используйте переменные темы Obsidian и [токены оформления](https://github.com/ParkPavel/obs-projects-plus/blob/main/src/ui/tokens/tokens.css). Управление должно работать с клавиатуры, а кнопкам без подписи нужны доступные имена.
 - Освобождайте подписки, обработчики событий и прочие ресурсы при закрытии вида.
 - Держите типы осмысленными. Неизбежные подавления объясняйте, а временный отладочный вывод убирайте до ревью.
 
@@ -54,7 +54,7 @@ npm run svelte-check
 
 ## Перевести интерфейс
 
-Переводы интерфейса лежат в [src/lib/stores/translations](src/lib/stores/translations): английский, русский, украинский и упрощённый китайский. Ключи добавляйте или правьте во всех четырёх файлах. Подписи держите короткими, а незнакомые понятия объясняйте в руководстве пользователя.
+Переводы интерфейса лежат в [src/lib/stores/translations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/stores/translations): английский, русский, украинский и упрощённый китайский. Ключи добавляйте или правьте во всех четырёх файлах. Подписи держите короткими, а незнакомые понятия объясняйте в руководстве пользователя.
 
 ## Документация парная
 
@@ -68,4 +68,4 @@ npm run svelte-check
 
 ## Лицензия и авторство
 
-Вклад в плагин распространяется под [Apache 2.0](LICENSE). Сохраняйте применимые уведомления об авторстве и лицензии. Оригинальный плагин создал [Marcus Olsson](https://github.com/marcusolsson), этот форк ведёт Park Pavel. Отдельный [пакет типов](obsidian-projects-types/README-RU.md) объявляет лицензию MIT.
+Вклад в плагин распространяется под [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE). Сохраняйте применимые уведомления об авторстве и лицензии. Оригинальный плагин создал [Marcus Olsson](https://github.com/marcusolsson), этот форк ведёт Park Pavel. Отдельный [пакет типов](obsidian-projects-types/README-RU.md) объявляет лицензию MIT.

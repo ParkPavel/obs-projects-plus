@@ -10,6 +10,9 @@ import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
 import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/settings";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { createDataSource } from "src/lib/datasources";
+import { applyDeclaredFieldTypes, type DeclaredRelations } from "src/lib/relations/declaredFieldTypes";
+import { applyRollupColumns } from "src/lib/relations/rollupColumns";
+import { extractRelationTargetIds, type FieldConfigRelationMap } from "src/lib/relations/relationTargets";
 
 export interface ResolverDeps {
   readonly fileSystem: IFileSystem;
@@ -32,7 +35,6 @@ function warnThrottled(projectId: string, err: unknown): void {
   const last = recentWarnings.get(projectId) ?? 0;
   if (now - last < WARN_THROTTLE_MS) return;
   recentWarnings.set(projectId, now);
-  // eslint-disable-next-line no-console
   console.warn(`[Projects+] resolveExternalFrame(${projectId}) failed`, err);
 }
 
@@ -53,6 +55,27 @@ export async function resolveExternalFrame(
   projectId: string,
   deps: ResolverDeps
 ): Promise<DataFrame | null> {
+  const base = await resolveEnrichedFrame(projectId, deps);
+  const project = deps.projects.find((p) => p.id === projectId);
+  const fieldConfig = project?.fieldConfig as FieldConfigRelationMap | undefined;
+  if (!base || !fieldConfig) return base;
+  // 3.6.0: the project's rollup columns, as its own view folds them in
+  // (View.svelte) — a block reading this project saw its notes without them.
+  // The projects the rollups read are resolved without their own rollups: one
+  // level, so two projects rolling each other up cannot recurse.
+  const targets = new Map<string, DataFrame>();
+  for (const id of extractRelationTargetIds(projectId, fieldConfig)) {
+    const frame = await resolveEnrichedFrame(id, deps);
+    if (frame) targets.set(id, frame);
+  }
+  return applyRollupColumns(base, fieldConfig, projectId, targets);
+}
+
+/** A project's frame with its declared types and backlinks, before rollups. */
+async function resolveEnrichedFrame(
+  projectId: string,
+  deps: ResolverDeps
+): Promise<DataFrame | null> {
   const project = deps.projects.find((p) => p.id === projectId);
   if (!project) return null;
 
@@ -65,7 +88,13 @@ export async function resolveExternalFrame(
     if (resolution.kind === "unavailable") {
       return null;
     }
-    const frame = await resolution.source.queryAll();
+    // M2-C6: the project's declared relation types, as the host frame gets
+    // them in View — a single `[[…]]` is a String by inference and a Relation
+    // once declared. Before backlink enrichment, which reads the types.
+    const frame = applyDeclaredFieldTypes(
+      await resolution.source.queryAll(),
+      project.fieldConfig as DeclaredRelations | undefined
+    );
 
     // #138: enrich here, so every frame reaching a widget has the same shape
     // regardless of origin. Previously only the parent frame got backlinks

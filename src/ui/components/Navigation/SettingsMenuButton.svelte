@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconButton } from "obsidian-svelte";
+  import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import { i18n } from "src/lib/stores/i18n";
 
   export let onOpen: (event: MouseEvent) => void;

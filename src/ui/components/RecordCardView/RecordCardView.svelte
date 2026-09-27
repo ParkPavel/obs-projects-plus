@@ -32,6 +32,11 @@
   export let record: DataRecord | null = null;
   export let allRecords: DataRecord[] = [];
   export let autosave: boolean = true;
+  // #158 (L3/C3): the peek's read-only path — gates EditNote, the icon
+  // picker and `confirmPicker` below, all independent of `onSave`'s presence.
+  export let readonly: boolean = false;
+  /** Named in EditNote's read-only notice. */
+  export let projectName: string = "";
   export let onSave: ((record: DataRecord) => Promise<void> | void) | undefined = undefined;
   export let onOpenNote: ((openMode: false | "tab" | "window") => void) | undefined = undefined;
   export let onRenameNote: ((newName: string) => void) | undefined = undefined;
@@ -138,7 +143,7 @@
   }
 
   function confirmPicker() {
-    if (!record || !resolvedIconField) { closePicker(); return; }
+    if (readonly || !record || !resolvedIconField) { closePicker(); return; }
     const nextValue: string | null = pickerInput.trim() || null;
     const updated: DataRecord = {
       ...record,
@@ -174,7 +179,16 @@
   <!-- Header icon slot: svelte:fragment must be unconditional direct child (Svelte 3 constraint).
        The {#if} lives inside the fragment so the slot is declared but empty when no icon field. -->
   <svelte:fragment slot="icon">
-    {#if resolvedIconField}
+    {#if resolvedIconField && readonly}
+      <!-- Read-only: the icon shows, but it is not a button — there is nothing to pick. -->
+      <div class="ppp-rcv-icon-wrap">
+        {#if iconValue}
+          <span class="ppp-rcv-icon-static" aria-hidden="true">
+            <PageIcon value={iconValue} size={1.25} />
+          </span>
+        {/if}
+      </div>
+    {:else if resolvedIconField}
       <div class="ppp-rcv-icon-wrap">
         <button
           class="ppp-rcv-icon-btn"
@@ -197,12 +211,12 @@
               bind:value={pickerInput}
               class="ppp-rcv-icon-input"
               use:focusInput
-              placeholder="📄  or  file-text"
+              placeholder={$i18n.t("components.record-card-view.icon-placeholder")}
               aria-label={$i18n.t("views.dashboard.record-card.icon-input", { defaultValue: "Emoji or icon name" })}
               on:keydown={handlePickerKeydown}
             />
-            <button class="ppp-rcv-icon-confirm" on:click={confirmPicker} aria-label="Confirm">✓</button>
-            <button class="ppp-rcv-icon-cancel" on:click={closePicker} aria-label="Cancel">✕</button>
+            <button class="ppp-rcv-icon-confirm" on:click={confirmPicker} aria-label={$i18n.t("common.confirm")}>✓</button>
+            <button class="ppp-rcv-icon-cancel" on:click={closePicker} aria-label={$i18n.t("common.cancel")}>✕</button>
           </div>
         {/if}
       </div>
@@ -220,6 +234,8 @@
       {record}
       {allRecords}
       {autosave}
+      {readonly}
+      {projectName}
       onSave={handleSave}
       onOpenNote={onOpenNote}
       onRenameNote={onRenameNote}
@@ -342,6 +358,13 @@
   .ppp-rcv-icon-btn:focus-visible {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.0625rem;
+  }
+
+  .ppp-rcv-icon-static {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem;
   }
 
   .ppp-rcv-icon-btn--empty {

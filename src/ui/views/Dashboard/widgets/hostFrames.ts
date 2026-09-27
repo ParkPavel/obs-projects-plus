@@ -16,21 +16,21 @@
 import type { DataFrame, DataField } from "src/lib/dataframe/dataframe";
 import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
 import type { IdentifiedFrame } from "src/lib/datasources/sourceSelection";
-import { resolveNamedSource, type NamedSourceView } from "src/lib/datasources/namedSource";
-import { DataFieldType } from "src/lib/dataframe/dataframe";
-import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
+import type { NamedSourceView } from "src/lib/datasources/namedSource";
 import { executeTransform } from "src/lib/dashboard-engine/transformExecutor";
 import type { TransformPipeline } from "src/lib/dashboard-engine/transformTypes";
 import type { ExternalSourceState } from "../dashboardPreload";
 import type { ChartConfig, StatsConfig, WidgetDefinition } from "../types";
 import { applyWidgetScope, type WidgetScopeResult } from "./widgetScope";
 import {
-  asChartConfig,
-  asStatsConfig,
-  chartRightFrameOf,
+  chartFramesOf,
+  widgetConfigsOf,
   resolveDbCallView,
+  type BlockSource,
   type DbCallView,
 } from "./linkedSourceState";
+import { resolveWidgetInput } from "./widgetInput";
+export { enrichForWidget } from "./widgetInput";
 
 export interface HostFramesInput {
   readonly widget: WidgetDefinition;
@@ -57,15 +57,12 @@ export interface HostFrames {
   readonly chartConfig: ChartConfig | null;
   readonly statsConfig: StatsConfig | null;
   readonly chartRightFrame: DataFrame | null;
+  readonly chartSeriesFrames: ReadonlyMap<string, DataFrame>;
   readonly dbCall: DbCallView;
   /** #137: the pipeline editor is configured against what the pipeline receives. */
   readonly pipelineSource: DataFrame;
-}
-
-/** Backlink-enrich `frame` when any field of the widget is a stored Relation. */
-export function enrichForWidget(frame: DataFrame, fields: readonly DataField[]): DataFrame {
-  const names = fields.filter((f) => f.type === DataFieldType.Relation && !f.derived).map((f) => f.name);
-  return names.length > 0 ? enrichWithBacklinks(frame, names) : frame;
+  /** 3.6.0: another project a chart or stats block reads (widgetInput.ts), or null. */
+  readonly otherProject: BlockSource | null;
 }
 
 /**
@@ -75,30 +72,19 @@ export function enrichForWidget(frame: DataFrame, fields: readonly DataField[]):
  * down, in the block and the view.
  */
 export function computeHostFrames(input: HostFramesInput): HostFrames {
-  const { widget, frame, fields, pipeline, rightFrames, sourceStates } = input;
+  const { widget, pipeline, rightFrames, sourceStates } = input;
 
-  const projectEnriched = enrichForWidget(frame, fields);
-  // #184. Source selection heads axis A: it decides WHICH records the widget is
-  // about, before any filter narrows them. Over the ENRICHED frame, because a
-  // saved filter may name a rollup (#170's Gate 0 refutation). A block naming
-  // no source gets the same frame object back — a no-op for everything shipped.
-  const namedSource = resolveNamedSource({
-    enriched: projectEnriched,
-    parts: input.parts,
-    sources: input.sources,
-    sourceId: widget.sourceConfig?.sourceId,
-  });
-  const enrichedFrame = "frame" in namedSource ? namedSource.frame : projectEnriched;
+  // Enrichment and #184 source selection (or 3.6.0 another project): widgetInput.ts.
+  const { namedSource, enrichedFrame, otherProject } = resolveWidgetInput(input);
   const scope = applyWidgetScope(enrichedFrame, widget.config); // #118: A before C when evaluable
-  const transformResult =
-    pipeline.steps.length > 0 ? executeTransform(scope.frame, pipeline, { rightFrames }) : null;
+  const runs = pipeline.steps.length > 0 && (!otherProject || otherProject.kind === "ready"); // unresolved: no rows
+  const transformResult = runs ? executeTransform(scope.frame, pipeline, { rightFrames }) : null;
   const transformedFrame = transformResult ? transformResult.data : scope.frame;
   const pipelineInputRowCount = transformResult
     ? transformResult.meta.inputRowCount
     : scope.frame.records.length;
 
-  const chartConfig = widget.type === "chart" ? asChartConfig(widget.config) : null;
-  const statsConfig = widget.type === "stats" ? asStatsConfig(widget.config) : null;
+  const { chartConfig, statsConfig } = widgetConfigsOf(widget);
 
   // NPLAN-V7.1 / #136: per-widget independent source, resolved as one value.
   const dbCall = resolveDbCallView(widget, sourceStates, transformedFrame);
@@ -111,8 +97,9 @@ export function computeHostFrames(input: HostFramesInput): HostFrames {
     pipelineInputRowCount,
     chartConfig,
     statsConfig,
-    chartRightFrame: chartRightFrameOf(widget.type, chartConfig, rightFrames),
+    ...chartFramesOf(widget.type, chartConfig, rightFrames),
     dbCall,
     pipelineSource: dbCall.isExternal ? dbCall.frame : scope.frame,
+    otherProject,
   };
 }

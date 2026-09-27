@@ -1,6 +1,8 @@
 <script lang="ts">
   import { MarkdownRenderer } from "obsidian";
-  import { view } from "src/lib/stores/obsidian";
+  import { markdownOwner } from "src/lib/markdownOwner";
+  // Rendered Markdown lives as long as this component (not the last opened view).
+  const owner = markdownOwner();
   import { getContext } from "svelte";
   const sourcePath = getContext<string>("sourcePath") ?? "";
 
@@ -11,12 +13,12 @@
   export let richText: boolean = false;
 
   function useMarkdown(node: HTMLElement, value: string) {
-    MarkdownRenderer.renderMarkdown(value, node, sourcePath, $view);
+    MarkdownRenderer.renderMarkdown(value, node, sourcePath, owner);
 
     return {
       update(newValue: string) {
         node.empty();
-        MarkdownRenderer.renderMarkdown(newValue, node, sourcePath, $view);
+        MarkdownRenderer.renderMarkdown(newValue, node, sourcePath, owner);
       },
     };
   }

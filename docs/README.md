@@ -49,7 +49,7 @@ for whoever reads it, not documentation pages, and the rule does not apply to th
 
 ## Лицензия / License
 
-[License](../LICENSE) and [attribution](../NOTICE).
+[License](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE) and [attribution](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE).
 
 Разработка проекта ведётся через [Claudex / Клаудекс](https://github.com/ParkPavel/claudex).
 Внутренние инструкции для ИИ, планы и отчёты удалены из текущего дерева. Их прежние версии
