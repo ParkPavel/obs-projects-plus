@@ -142,3 +142,23 @@ export function rollupSourceProjectId(
 export function rollupFunctionIsPositional(fn: RollupFieldConfig["function"] | undefined): boolean {
   return fn === "first_value" || fn === "last_value";
 }
+
+/** The order-by choice that switches the dialog to free text. */
+export const ORDER_BY_CUSTOM = "\u0000custom";
+
+/**
+ * Order-by choices for a positional rollup: none, the target's known fields,
+ * the saved field even when it is not among them, and a way to type any other
+ * — the dialog knows only the target's configured fields, while ordering is
+ * usually by a plain `date` property (Codex gate of calc-demo).
+ */
+export function rollupOrderByChoices(
+  targetOptions: ReadonlyArray<{ label: string; value: string }>,
+  saved: string | undefined,
+  noneLabel: string,
+  customLabel: string
+): Array<{ label: string; value: string }> {
+  const known = targetOptions.filter((o) => o.value !== "");
+  const withSaved = saved && !known.some((o) => o.value === saved) ? [...known, { label: saved, value: saved }] : known;
+  return [{ label: noneLabel, value: "" }, ...withSaved, { label: customLabel, value: ORDER_BY_CUSTOM }];
+}

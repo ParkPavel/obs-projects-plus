@@ -448,7 +448,8 @@
                             "name": "排序依据",
                             "description": "决定哪个值是第一个、哪个是最后一个的字段，通常是日期",
                             "none": "— 按链接顺序 —",
-                            "placeholder": "日期"
+                            "placeholder": "日期",
+                            "custom": "其他字段…"
                         }
                     },
                     "formula": {

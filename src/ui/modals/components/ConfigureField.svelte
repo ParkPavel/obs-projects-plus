@@ -28,8 +28,7 @@
     rollupFunctionIsPositional,
     rollupSources,
     rollupSourceProjectId,
-    rollupSourceValue,
-  } from "src/lib/rollup/rollupSources";
+    rollupSourceValue, ORDER_BY_CUSTOM, rollupOrderByChoices } from "src/lib/rollup/rollupSources";
   import { dataFieldTypeOptions } from "./dataFieldTypeOptions";
   import { isRelationCompanionField } from "src/lib/engine/crossProjectResolver";
 
@@ -464,10 +463,15 @@
       | undefined)?.relation?.targetProjectId
   );
 
-  $: rollupOrderByOptions = [
-    { label: $i18n.t("modals.field.configure.rollup.order-by.none"), value: "" },
-    ...rollupTargetFieldOptions.filter((o) => o.value !== ""),
-  ];
+  // The saved field is always listed, and «Another field…» switches to typing
+  // one: the dialog knows only the target's configured fields (Codex gate).
+  let orderByCustom = false;
+  $: rollupOrderByOptions = rollupOrderByChoices(
+    rollupTargetFieldOptions,
+    rollupCfg?.orderBy,
+    $i18n.t("modals.field.configure.rollup.order-by.none"),
+    $i18n.t("modals.field.configure.rollup.order-by.custom")
+  );
 
   $: rollupTargetProject = effectiveProjects.find(
     (p) => p.id === rollupResolvedTargetProjectId
@@ -543,6 +547,10 @@
   }
 
   function handleRollupOrderByChange(ev: CustomEvent<string>) {
+    if (ev.detail === ORDER_BY_CUSTOM) {
+      orderByCustom = true;
+      return;
+    }
     patchRollup({ orderBy: ev.detail });
   }
 
@@ -853,7 +861,7 @@
             name={$i18n.t("modals.field.configure.rollup.order-by.name")}
             description={$i18n.t("modals.field.configure.rollup.order-by.description")}
           >
-            {#if rollupOrderByOptions.length > 1}
+            {#if !orderByCustom}
               <Select
                 value={rollupCfg?.orderBy ?? ""}
                 options={rollupOrderByOptions}

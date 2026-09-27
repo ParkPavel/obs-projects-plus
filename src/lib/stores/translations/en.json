@@ -432,7 +432,8 @@
                             "name": "Order by",
                             "description": "The field that decides which value is first and which is last — usually a date",
                             "none": "— In link order —",
-                            "placeholder": "date"
+                            "placeholder": "date",
+                            "custom": "Another field…"
                         }
                     },
                     "formula": {

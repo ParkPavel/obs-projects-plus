@@ -1,4 +1,6 @@
 import {
+  ORDER_BY_CUSTOM,
+  rollupOrderByChoices,
   applyRollupSource,
   rollupFunctionIsPositional,
   rollupSourceProjectId,
@@ -82,4 +84,33 @@ describe("picking a source", () => {
     expect(rollupFunctionIsPositional("last_value")).toBe(true);
     expect(rollupFunctionIsPositional("sum")).toBe(false);
   });
+});
+
+// Codex gate of calc-demo: a positional rollup over another project could
+// order only by that project's configured fields — an ordinary `date`
+// property was missing, a stored orderBy=date was not among the options, and
+// the free-text entry was hidden once any option existed.
+describe("rollupOrderByChoices", () => {
+  const targets = [{ label: "—", value: "" }, { label: "weight", value: "weight" }];
+
+  test("the saved order field is always offered", () => {
+    const out = rollupOrderByChoices(targets, "date", "none", "other");
+    expect(out.map((o) => o.value)).toEqual(["", "weight", "date", ORDER_BY_CUSTOM]);
+  });
+
+  test("any other field can be typed", () => {
+    const out = rollupOrderByChoices(targets, undefined, "none", "other");
+    expect(out[out.length - 1]).toEqual({ label: "other", value: ORDER_BY_CUSTOM });
+    expect(out.filter((o) => o.value === "weight")).toHaveLength(1);
+  });
+});
+
+test("the field dialog builds its order-by list with rollupOrderByChoices and switches to typing", () => {
+  const src: string = jest.requireActual<typeof import("fs")>("fs").readFileSync(
+    jest.requireActual<typeof import("path")>("path").resolve(__dirname, "../../../ui/modals/components/ConfigureField.svelte"),
+    "utf8"
+  );
+  expect(src).toMatch(/rollupOrderByOptions = rollupOrderByChoices\(/);
+  expect(src).toMatch(/if \(ev\.detail === ORDER_BY_CUSTOM\) \{\s*orderByCustom = true;/);
+  expect(src).toMatch(/\{#if !orderByCustom\}/);
 });
