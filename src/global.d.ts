@@ -10,13 +10,15 @@ declare global {
 declare type Item = import("svelte-dnd-action").Item;
 declare type DndEvent<ItemType = Item> =
   import("svelte-dnd-action").DndEvent<ItemType>;
+// Handlers take a DndEvent of their own item type; `never` in this parameter
+// position accepts every one of them.
 declare namespace svelte.JSX {
   interface HTMLAttributes<T> {
     onconsider?: (
-      event: CustomEvent<DndEvent<ItemType>> & { target: EventTarget & T }
+      event: CustomEvent<DndEvent<never>> & { target: EventTarget & T }
     ) => void;
     onfinalize?: (
-      event: CustomEvent<DndEvent<ItemType>> & { target: EventTarget & T }
+      event: CustomEvent<DndEvent<never>> & { target: EventTarget & T }
     ) => void;
   }
 }

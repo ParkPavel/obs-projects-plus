@@ -3,6 +3,9 @@
 // declaration.  Without `export {}` the Svelte Language Server treats this as
 // the *entire* "obsidian" module and cannot see the real exports from
 // node_modules/obsidian/obsidian.d.ts.
+import type { Command } from "obsidian";
+import type { ProjectView } from "./customViewApi";
+
 export {};
 
 declare global {

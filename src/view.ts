@@ -115,7 +115,7 @@ export class ProjectsView extends ItemView {
     // Listen for projectId changes and save them to view state
     if (this.component) {
        
-      this.component.$on('projectIdChange', (event: any) => {
+      this.component.$on('projectIdChange', (event: CustomEvent<string>) => {
         const newProjectId = event.detail;
         // Update internal state and persist it
         const newState: ProjectsViewState = { projectId: newProjectId, viewId: viewId ?? '' };
