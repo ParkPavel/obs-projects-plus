@@ -453,6 +453,17 @@ export function parseFormula(formula: string): FormulaNode {
 // ============================================
 
 /**
+ * A formula value as text, as `String(v)` gives it for primitives, dates and
+ * lists. Plain objects are not formula values; if one arrives it reads as
+ * JSON rather than "[object Object]".
+ */
+function formulaText(v: unknown): string {
+  if (v === null || v === undefined || Array.isArray(v) || v instanceof Date) return String(v);
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v as string | number | boolean | bigint | symbol);
+}
+
+/**
  * @deprecated Import from `src/lib/formula` (canonical path). R5-002.
  */
 export function evaluateFormula(
@@ -467,7 +478,7 @@ export function evaluateFormula(
    * Matches behavior of visual-mode 'is' operator for consistency.
    */
    
-  function smartEquals(left: any, right: any): boolean {
+  function smartEquals(left: unknown, right: unknown): boolean {
     // Both null/undefined
     if (left == null && right == null) return true;
     if (left == null || right == null) return false;
@@ -519,7 +530,7 @@ export function evaluateFormula(
    * Returns negative, zero, or positive like compareTo.
    */
    
-  function smartCompare(left: any, right: any): number {
+  function smartCompare(left: unknown, right: unknown): number {
     // Both null → equal
     if (left == null && right == null) return 0;
     if (left == null) return -1;
@@ -553,7 +564,7 @@ export function evaluateFormula(
     }
 
     // Fallback to string coercion
-    return String(left).localeCompare(String(right));
+    return formulaText(left).localeCompare(formulaText(right));
   }
 
   // Helper to safely get argument
@@ -564,12 +575,10 @@ export function evaluateFormula(
   }
 
   /**
-   * Evaluate formula node to dynamic value
-   * @returns any - Formula values can be: string | number | boolean | Date | null
-   *                Type depends on runtime expression, cannot be statically determined
+   * Evaluate formula node to dynamic value: string | number | boolean | Date |
+   * null or a list of them, depending on the expression at run time.
    */
-   
-  function evaluate(n: FormulaNode): any {
+  function evaluate(n: FormulaNode): unknown {
     switch (n.type) {
       case 'literal':
         return n.value;
@@ -603,10 +612,11 @@ export function evaluateFormula(
           case '<': return smartCompare(left, right) < 0;
           case '>=': return smartCompare(left, right) >= 0;
           case '<=': return smartCompare(left, right) <= 0;
-          case '+': return left + right;
-          case '-': return left - right;
-          case '*': return left * right;
-          case '/': return left / right;
+          // JavaScript's own coercion, as before (`+` also concatenates).
+          case '+': return (left as number) + (right as number);
+          case '-': return (left as number) - (right as number);
+          case '*': return (left as number) * (right as number);
+          case '/': return (left as number) / (right as number);
           default: throw new Error(`Unknown operator: ${n.operator}`);
         }
       }
@@ -644,26 +654,26 @@ export function evaluateFormula(
         // String functions
         if (funcName === 'CONTAINS') {
           if (args.length !== 2) throw new Error('CONTAINS expects 2 arguments');
-          const haystack = String(evaluate(getArg(args, 0)) ?? '').toLowerCase();
-          const needle = String(evaluate(getArg(args, 1)) ?? '').toLowerCase();
+          const haystack = formulaText(evaluate(getArg(args, 0)) ?? '').toLowerCase();
+          const needle = formulaText(evaluate(getArg(args, 1)) ?? '').toLowerCase();
           return haystack.includes(needle);
         }
         if (funcName === 'NOT_CONTAINS') {
           if (args.length !== 2) throw new Error('NOT_CONTAINS expects 2 arguments');
-          const haystack = String(evaluate(getArg(args, 0)) ?? '').toLowerCase();
-          const needle = String(evaluate(getArg(args, 1)) ?? '').toLowerCase();
+          const haystack = formulaText(evaluate(getArg(args, 0)) ?? '').toLowerCase();
+          const needle = formulaText(evaluate(getArg(args, 1)) ?? '').toLowerCase();
           return !haystack.includes(needle);
         }
         if (funcName === 'STARTS_WITH') {
           if (args.length !== 2) throw new Error('STARTS_WITH expects 2 arguments');
-          const str = String(evaluate(getArg(args, 0)) ?? '');
-          const prefix = String(evaluate(getArg(args, 1)) ?? '');
+          const str = formulaText(evaluate(getArg(args, 0)) ?? '');
+          const prefix = formulaText(evaluate(getArg(args, 1)) ?? '');
           return str.startsWith(prefix);
         }
         if (funcName === 'ENDS_WITH') {
           if (args.length !== 2) throw new Error('ENDS_WITH expects 2 arguments');
-          const str = String(evaluate(getArg(args, 0)) ?? '');
-          const suffix = String(evaluate(getArg(args, 1)) ?? '');
+          const str = formulaText(evaluate(getArg(args, 0)) ?? '');
+          const suffix = formulaText(evaluate(getArg(args, 1)) ?? '');
           return str.endsWith(suffix);
         }
 
@@ -686,78 +696,78 @@ export function evaluateFormula(
           if (args.length !== 1) throw new Error('IS_TODAY expects 1 argument');
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
-          const date = dayjs(val);
+          const date = dayjs(val as dayjs.ConfigType);
           return date.isValid() && date.isSame(base, 'day');
         }
         if (funcName === 'IS_THIS_WEEK') {
           if (args.length !== 1) throw new Error('IS_THIS_WEEK expects 1 argument');
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
-          const date = dayjs(val);
+          const date = dayjs(val as dayjs.ConfigType);
           return date.isValid() && date.isSame(base, 'week');
         }
         if (funcName === 'IS_THIS_MONTH') {
           if (args.length !== 1) throw new Error('IS_THIS_MONTH expects 1 argument');
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
-          const date = dayjs(val);
+          const date = dayjs(val as dayjs.ConfigType);
           return date.isValid() && date.isSame(base, 'month');
         }
         if (funcName === 'IS_BEFORE') {
           if (args.length !== 2) throw new Error('IS_BEFORE expects 2 arguments');
-          const date1 = dayjs(evaluate(getArg(args, 0)));
-          const date2 = dayjs(evaluate(getArg(args, 1)));
+          const date1 = dayjs(evaluate(getArg(args, 0)) as dayjs.ConfigType);
+          const date2 = dayjs(evaluate(getArg(args, 1)) as dayjs.ConfigType);
           return date1.isValid() && date2.isValid() && date1.isBefore(date2, 'day');
         }
         if (funcName === 'IS_AFTER') {
           if (args.length !== 2) throw new Error('IS_AFTER expects 2 arguments');
-          const date1 = dayjs(evaluate(getArg(args, 0)));
-          const date2 = dayjs(evaluate(getArg(args, 1)));
+          const date1 = dayjs(evaluate(getArg(args, 0)) as dayjs.ConfigType);
+          const date2 = dayjs(evaluate(getArg(args, 1)) as dayjs.ConfigType);
           return date1.isValid() && date2.isValid() && date1.isAfter(date2, 'day');
         }
         if (funcName === 'IS_ON_AND_BEFORE') {
           if (args.length !== 2) throw new Error('IS_ON_AND_BEFORE expects 2 arguments');
-          const date1 = dayjs(evaluate(getArg(args, 0)));
-          const date2 = dayjs(evaluate(getArg(args, 1)));
+          const date1 = dayjs(evaluate(getArg(args, 0)) as dayjs.ConfigType);
+          const date2 = dayjs(evaluate(getArg(args, 1)) as dayjs.ConfigType);
           return date1.isValid() && date2.isValid() && date1.isSameOrBefore(date2, 'day');
         }
         if (funcName === 'IS_ON_AND_AFTER') {
           if (args.length !== 2) throw new Error('IS_ON_AND_AFTER expects 2 arguments');
-          const date1 = dayjs(evaluate(getArg(args, 0)));
-          const date2 = dayjs(evaluate(getArg(args, 1)));
+          const date1 = dayjs(evaluate(getArg(args, 0)) as dayjs.ConfigType);
+          const date2 = dayjs(evaluate(getArg(args, 1)) as dayjs.ConfigType);
           return date1.isValid() && date2.isValid() && date1.isSameOrAfter(date2, 'day');
         }
         if (funcName === 'IS_OVERDUE') {
           if (args.length !== 1) throw new Error('IS_OVERDUE expects 1 argument');
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
-          const date = dayjs(val);
+          const date = dayjs(val as dayjs.ConfigType);
           return date.isValid() && date.isBefore(base, 'day');
         }
         if (funcName === 'IS_UPCOMING') {
           if (args.length !== 1) throw new Error('IS_UPCOMING expects 1 argument');
           const val = evaluate(getArg(args, 0));
           if (!val) return false;
-          const date = dayjs(val);
+          const date = dayjs(val as dayjs.ConfigType);
           return date.isValid() && date.isAfter(base, 'day');
         }
 
         // Date arithmetic
         if (funcName === 'DATE_ADD') {
           if (args.length !== 3) throw new Error('DATE_ADD expects 3 arguments (date, amount, unit)');
-          const date = dayjs(evaluate(getArg(args, 0)));
+          const date = dayjs(evaluate(getArg(args, 0)) as dayjs.ConfigType);
           // #180a: `?? NaN` keeps the existing shape — a non-numeric amount
           // already produced an Invalid Date here. What changes is that `""`
           // and a missing field no longer count as "add zero days".
           const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
-          const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
+          const unit = formulaText(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.add(amount, unit).format('YYYY-MM-DD');
         }
         if (funcName === 'DATE_SUB') {
           if (args.length !== 3) throw new Error('DATE_SUB expects 3 arguments (date, amount, unit)');
-          const date = dayjs(evaluate(getArg(args, 0)));
+          const date = dayjs(evaluate(getArg(args, 0)) as dayjs.ConfigType);
           const amount = toNumber(evaluate(getArg(args, 1))) ?? NaN;
-          const unit = String(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
+          const unit = formulaText(evaluate(getArg(args, 2))) as dayjs.ManipulateType;
           return date.subtract(amount, unit).format('YYYY-MM-DD');
         }
 
@@ -767,29 +777,28 @@ export function evaluateFormula(
           const arr1 = evaluate(getArg(args, 0));
           const arr2 = evaluate(getArg(args, 1));
           if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-          return arr1.some(item => arr2.includes(item));
+          return (arr1 as unknown[]).some(item => (arr2 as unknown[]).includes(item));
         }
         if (funcName === 'HAS_ALL_OF') {
           if (args.length !== 2) throw new Error('HAS_ALL_OF expects 2 arguments');
           const arr1 = evaluate(getArg(args, 0));
           const arr2 = evaluate(getArg(args, 1));
           if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-          return arr2.every(item => arr1.includes(item));
+          return (arr2 as unknown[]).every(item => (arr1 as unknown[]).includes(item));
         }
         if (funcName === 'HAS_NONE_OF') {
           if (args.length !== 2) throw new Error('HAS_NONE_OF expects 2 arguments');
           const arr1 = evaluate(getArg(args, 0));
           const arr2 = evaluate(getArg(args, 1));
           if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-          return !arr1.some(item => arr2.includes(item));
+          return !(arr1 as unknown[]).some(item => (arr2 as unknown[]).includes(item));
         }
 
         throw new Error(`Unknown function: ${funcName}`);
       }
 
       default:
-         
-        throw new Error(`Unknown node type: ${(n as any).type}`);
+        throw new Error(`Unknown node type: ${JSON.stringify((n as { type?: unknown }).type)}`);
     }
   }
 
