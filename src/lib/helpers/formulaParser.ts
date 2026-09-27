@@ -464,7 +464,8 @@ function formulaText(v: unknown): string {
 }
 
 /**
- * @deprecated Import from `src/lib/formula` (canonical path). R5-002.
+ * Evaluate a filter formula against one record. Import it from
+ * `src/lib/formula`, the canonical path (R5-002); that module re-exports it.
  */
 export function evaluateFormula(
   node: FormulaNode,

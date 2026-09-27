@@ -1042,7 +1042,7 @@ function evaluateNode(
     return vals;
   }
 
-  function evaluate(n: FormulaNode): any {
+  function evaluate(n: FormulaNode): Optional<DataValue> {
     switch (n.type) {
       case "literal":
         return n.value;
@@ -1172,7 +1172,7 @@ function evaluateNode(
         if (n.name === "MAP") {
           if (n.args.length < 3) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1188,7 +1188,7 @@ function evaluateNode(
         if (n.name === "FILTER") {
           if (n.args.length < 3) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1204,7 +1204,7 @@ function evaluateNode(
         if (n.name === "REDUCE") {
           if (n.args.length < 5) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList = Array.isArray(listVal) ? listVal : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1234,10 +1234,10 @@ function evaluateNode(
     }
   }
 
-  return evaluate(node) as Optional<DataValue>;
+  return evaluate(node);
 }
 
-function smartEq(a: any, b: any): boolean {
+function smartEq(a: unknown, b: unknown): boolean {
   if (a == null && b == null) return true;
   if (a == null || b == null) return false;
   if (typeof a === "string" && typeof b === "string") {

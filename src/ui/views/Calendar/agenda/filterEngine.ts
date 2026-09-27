@@ -49,7 +49,7 @@ function prepareRecord(record: DataRecord, field: string, op: FilterOperator): D
     if (d.isValid()) v = d.toDate();
   }
   if (v === raw) return record;
-  return { ...record, values: { ...record.values, [field]: v as any } };
+  return { ...record, values: { ...record.values, [field]: v } };
 }
 
 export function evaluateFilter(record: DataRecord, filter: AgendaFilter, baseDate: Dayjs = dayjs()): boolean {
@@ -108,10 +108,12 @@ export function filterRecordsForList(
     return records.filter(r => evaluateFilterGroup(r, list.filterGroup!, baseDate));
   }
 
-  if ('filters' in list && Array.isArray((list as any).filters)) {
+  // Lists saved before filter groups kept a flat `filters` array.
+  const legacy = (list as { filters?: unknown }).filters;
+  if (Array.isArray(legacy)) {
     calendarLogger.warn('[FilterEngine] legacy list.filters format');
-
-    return records.filter(r => evaluateFilters(r, (list as any).filters, baseDate));
+    const filters = legacy as AgendaFilter[];
+    return records.filter(r => evaluateFilters(r, filters, baseDate));
   }
   return records;
 }
