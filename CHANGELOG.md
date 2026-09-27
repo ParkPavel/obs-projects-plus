@@ -8,7 +8,7 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
-## Unreleased
+## 3.6.2 — 2026-09-28
 
 ### Ready for the community directory
 

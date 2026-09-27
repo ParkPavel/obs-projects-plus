@@ -1,7 +1,7 @@
 {
   "id": "obs-projects-plus",
   "name": "OBS Projects Plus",
-  "version": "3.6.1",
+  "version": "3.6.2",
   "minAppVersion": "1.8.7",
   "description": "Turn your notes into projects with dashboards, tables, boards, calendars and galleries built from note properties, relations, rollups and formulas.",
   "author": "Park Pavel",
