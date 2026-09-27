@@ -82,9 +82,9 @@ export function createInverseIndexStore(
     if (pending) return;
     pending = true;
     if (typeof requestAnimationFrame === "function") {
-      scheduled = requestAnimationFrame(rebuildNow);
+      scheduled = window.requestAnimationFrame(rebuildNow);
     } else {
-      scheduled = setTimeout(rebuildNow, 16) as unknown as number;
+      scheduled = window.setTimeout(rebuildNow, 16) as unknown as number;
     }
   }
 
@@ -114,7 +114,7 @@ export function createInverseIndexStore(
         if (typeof cancelAnimationFrame === "function") {
           cancelAnimationFrame(scheduled);
         } else {
-          clearTimeout(scheduled);
+          window.clearTimeout(scheduled);
         }
       }
     },

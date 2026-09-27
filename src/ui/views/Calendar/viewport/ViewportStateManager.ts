@@ -414,10 +414,10 @@ export class ViewportStateManager {
         }
         
         lastScrollTop = element.scrollTop;
-        requestAnimationFrame(checkScroll);
+        window.requestAnimationFrame(checkScroll);
       };
       
-      requestAnimationFrame(checkScroll);
+      window.requestAnimationFrame(checkScroll);
     });
   }
 }

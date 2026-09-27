@@ -63,3 +63,19 @@ if (typeof (globalThis.crypto as any).randomUUID !== "function") {
     require("crypto")
   );
 }
+// Obsidian's DOM helpers are globals in the app; code prefers them to raw
+// document.createElement (obsidianmd/prefer-create-el). Minimal stand-ins:
+// the element, its text and class, which is all the plugin passes them.
+type DomInfo = string | { text?: string; cls?: string | string[] } | undefined;
+const make = <K extends keyof HTMLElementTagNameMap>(tag: K, o?: DomInfo): HTMLElementTagNameMap[K] => {
+  const el = document.createElement(tag);
+  const info = typeof o === "string" ? { cls: o } : o;
+  if (info?.text !== undefined) el.textContent = info.text;
+  if (info?.cls) el.classList.add(...(Array.isArray(info.cls) ? info.cls : info.cls.split(" ").filter(Boolean)));
+  return el;
+};
+const g = globalThis as any;
+if (typeof g.createEl !== "function") g.createEl = make;
+if (typeof g.createDiv !== "function") g.createDiv = (o?: DomInfo) => make("div", o);
+if (typeof g.createSpan !== "function") g.createSpan = (o?: DomInfo) => make("span", o);
+if (typeof g.createFragment !== "function") g.createFragment = () => document.createDocumentFragment();

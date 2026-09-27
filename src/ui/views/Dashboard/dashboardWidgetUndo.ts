@@ -27,9 +27,9 @@ export function notifyWidgetRemoved(
   getConfig: () => DatabaseViewConfig | undefined,
   saveConfig: (cfg: DatabaseViewConfig) => void
 ): void {
-  const message = document.createDocumentFragment();
+  const message = createFragment();
 
-  const text = document.createElement("span");
+  const text = createSpan();
   text.textContent = t("views.dashboard.widget.removed", {
     title: removed.title,
     defaultValue: 'Block "{{title}}" removed',
@@ -37,7 +37,7 @@ export function notifyWidgetRemoved(
   message.appendChild(text);
   message.appendChild(document.createTextNode(" "));
 
-  const undo = document.createElement("button");
+  const undo = createEl("button");
   undo.textContent = t("views.dashboard.widget.undo", { defaultValue: "Undo" });
   message.appendChild(undo);
 

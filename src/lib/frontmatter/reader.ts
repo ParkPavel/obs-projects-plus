@@ -51,11 +51,11 @@ function observeChanges(
   const cache = app.metadataCache as unknown as MetadataCacheLike;
   if (typeof cache.on !== "function") return () => undefined;
 
-  let timer: ReturnType<typeof setTimeout> | null = null;
+  let timer: number | null = null;
   const ref = cache.on("changed", (changedFile) => {
     if (changedFile.path !== file.path) return;
-    if (timer !== null) clearTimeout(timer);
-    timer = setTimeout(() => {
+    if (timer !== null) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
       timer = null;
       try {
         cb(readSync(app, file));
@@ -68,7 +68,7 @@ function observeChanges(
 
   return () => {
     if (timer !== null) {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
       timer = null;
     }
     cache.offref?.(ref);

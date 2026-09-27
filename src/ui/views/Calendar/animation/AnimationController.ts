@@ -65,14 +65,14 @@ export class AnimationController {
       updateFn(easedProgress);
       
       if (rawProgress < 1) {
-        const rafId = requestAnimationFrame(tick);
+        const rafId = window.requestAnimationFrame(tick);
         this.activeAnimations.set(key, rafId);
       } else {
         this.activeAnimations.delete(key);
       }
     };
     
-    const rafId = requestAnimationFrame(tick);
+    const rafId = window.requestAnimationFrame(tick);
     this.activeAnimations.set(key, rafId);
   }
   

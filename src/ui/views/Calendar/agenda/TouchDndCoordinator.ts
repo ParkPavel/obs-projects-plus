@@ -170,13 +170,13 @@ export function createLongPressHandler(
   onLongPress: (e: TouchEvent) => void,
   config: GestureConfig = GESTURE_CONFIG,
 ): LongPressHandlers {
-  let timer: ReturnType<typeof setTimeout> | null = null;
+  let timer: number | null = null;
   let startY = 0;
   let isCancelled = false;
 
   function clearTimer(): void {
     if (timer !== null) {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
       timer = null;
     }
   }
@@ -194,7 +194,7 @@ export function createLongPressHandler(
     startY = touch.clientY;
 
     clearTimer();
-    timer = setTimeout(() => {
+    timer = window.setTimeout(() => {
       if (!isCancelled) {
         onLongPress(e);
       }
