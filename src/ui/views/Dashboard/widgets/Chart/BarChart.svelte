@@ -227,6 +227,14 @@
     <!-- Axes -->
     <line x1={0} y1={plotH} x2={plotW} y2={plotH} stroke="var(--text-muted)" />
     <line x1={0} y1={0} x2={0} y2={plotH} stroke="var(--text-muted)" />
+    <!-- The value axis is labelled, as the line chart's is: a combo chart
+         without numbers could not be read (visual check on ff08260). -->
+    {#if !horizontal}
+      {#each axisTicks(barScale) as tick}
+        <text x={-6} y={yPos(tick, plotH, barScale) + 3} text-anchor="end"
+          fill="var(--text-muted)" font-size={LABEL_FONT} class="ppp-chart-tick">{tick}</text>
+      {/each}
+    {/if}
     {#if !horizontal && barScale.min < 0}
       <line x1={0} y1={yPos(0, plotH, barScale)} x2={plotW} y2={yPos(0, plotH, barScale)}
         stroke="var(--text-muted)" class="ppp-chart-zero" />

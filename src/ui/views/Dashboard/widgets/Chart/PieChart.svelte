@@ -198,26 +198,5 @@
     stroke: var(--interactive-accent);
     stroke-width: 2.5;
   }
-
-  .ppp-chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.375rem 0.5rem;
-    font-size: var(--font-ui-smaller);
-    color: var(--text-muted);
-  }
-
-  .ppp-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  .ppp-legend-dot {
-    width: 0.625rem;
-    height: 0.625rem;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+  /* Legend styles: ChartWidget, shared by every chart type. */
 </style>

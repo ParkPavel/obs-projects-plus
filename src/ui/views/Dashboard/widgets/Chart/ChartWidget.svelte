@@ -237,6 +237,28 @@
 </div>
 
 <style>
+  /* The legend of every chart type. It lived in PieChart's scoped block, so
+     the bar and line legends rendered as large plain text (visual check). */
+  :global(.ppp-chart-legend) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+  }
+  :global(.ppp-legend-item) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  :global(.ppp-legend-dot) {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
   /* #165 pilot for the container-derived scale. This element is a DESCENDANT
      of WidgetShell's `widget` container (`container-type: inline-size`), so
      `cqi` inside these tokens measures the widget's own width. The padding is

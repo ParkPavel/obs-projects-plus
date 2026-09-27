@@ -331,7 +331,7 @@ function overviewWidgets(ids: { cabinetId: string }): WidgetDefinition[] {
           // is project-only, so the card counts what its label promises.
           { id: "k2", label: "Проектов",           field: "progress",  aggregation: "count_values" },
           { id: "k3", label: "Открытых задач",     field: "completed", aggregation: "count_unchecked" },
-          { id: "k4", label: "MRR (sum)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
+          { id: "k4", label: "MRR (сумма)",          field: "mrr",       aggregation: "sum", format: "currency", currencySymbol: "$" },
         ],
         columns: 4,
       },
@@ -448,7 +448,7 @@ function clientsWidgets(): WidgetDefinition[] {
           // an honest metric (earliest signup) instead of a mislabeled count.
           { id: "c1", label: "Всего",         field: "name",       aggregation: "count_total" },
           { id: "c2", label: "Первый клиент", field: "signupDate", aggregation: "earliest" },
-          { id: "c3", label: "MRR (sum)",     field: "mrr",        aggregation: "sum", format: "currency", currencySymbol: "$" },
+          { id: "c3", label: "MRR (сумма)",     field: "mrr",        aggregation: "sum", format: "currency", currencySymbol: "$" },
           { id: "c4", label: "Средний MRR",  field: "mrr",        aggregation: "avg", format: "currency", currencySymbol: "$" },
         ],
         columns: 4,

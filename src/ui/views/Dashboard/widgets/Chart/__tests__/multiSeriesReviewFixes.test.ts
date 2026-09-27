@@ -163,3 +163,24 @@ describe("grid termination (recheck of 63338a3)", () => {
     expect(g.every((v) => Number.isFinite(v))).toBe(true);
   });
 });
+
+// Visual check on ff08260: the combo charts (cabinet income/expenses/profit,
+// finances) showed no values at all — a bar chart drew grid lines but never
+// labelled its axis — and the bar and line legends rendered as large plain
+// text: their styles lived only in PieChart's scoped block.
+describe("readable charts (visual check)", () => {
+  test("a vertical bar chart labels its value axis", () => {
+    const data: ChartData = { labels: ["a", "b"], series: [{ name: "s", values: [1000, 4000] }] };
+    const { container } = render(BarChart, { props: { data, width: 300, height: 200, style } });
+    const ticks = Array.from(container.querySelectorAll(".ppp-chart-tick")).map((t) => t.textContent);
+    expect(ticks).toContain("4000");
+  });
+
+  test("the legend styles apply to every chart type", () => {
+    const fs = jest.requireActual<typeof import("fs")>("fs");
+    const path = jest.requireActual<typeof import("path")>("path");
+    const widget = fs.readFileSync(path.resolve(__dirname, "..", "ChartWidget.svelte"), "utf8");
+    expect(widget).toMatch(/:global\(\.ppp-chart-legend\)\s*\{[^}]*display: flex/);
+    expect(widget).toMatch(/:global\(\.ppp-legend-dot\)\s*\{[^}]*border-radius: 50%/);
+  });
+});
