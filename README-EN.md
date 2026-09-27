@@ -25,7 +25,7 @@ This illustration shows one interface configuration; your installed version may 
 
 ## Install
 
-The current version is **3.6.0**, the first in the Obsidian community catalogue format. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
+The current version is **3.6.1**: a new demo of three linked projects. The first version in the Obsidian community catalogue format is 3.6.0. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
 
 1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
 2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there.

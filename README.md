@@ -25,7 +25,7 @@ Projects Plus помогает работать с заметками Obsidian �
 
 ## Установка
 
-Текущая версия — **3.6.0**, первая в формате каталога сообщества Obsidian. Готовые сборки лежат в [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); нужен Obsidian 1.8.7 или новее, на компьютере или телефоне. Что изменилось — в [истории изменений](CHANGELOG-RU.md).
+Текущая версия — **3.6.1**: новое демо из трёх связанных проектов. Первая версия в формате каталога сообщества Obsidian — 3.6.0. Готовые сборки лежат в [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); нужен Obsidian 1.8.7 или новее, на компьютере или телефоне. Что изменилось — в [истории изменений](CHANGELOG-RU.md).
 
 1. Выберите релиз и скачайте из него **все три файла**: `main.js`, `manifest.json` и `styles.css`.
 2. Создайте в своём хранилище папку `.obsidian/plugins/obs-projects-plus/` и поместите туда файлы.
