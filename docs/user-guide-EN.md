@@ -1,6 +1,6 @@
 # Projects Plus user guide
 
-[Русский](user-guide.md) · [Documentation](README.md) · [Installation and first project](../README-EN.md)
+[Русский](user-guide.md) · [Documentation](README.md) · [Installation and first project](../README.md)
 
 This guide describes the current source code. Some labels may differ in older builds; check the installed plugin version in its settings.
 
