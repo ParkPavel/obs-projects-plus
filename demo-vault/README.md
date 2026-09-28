@@ -11,7 +11,7 @@ This folder is a sample vault with fictional project, team, and client notes. It
 1. Copy this entire directory, including `.obsidian`, to a location for your demo vault.
 2. Download `main.js`, `manifest.json`, and `styles.css` from the same [plugin release](https://github.com/ParkPavel/obs-projects-plus/releases).
 3. Put those three files in the copy's `.obsidian/plugins/obs-projects-plus/` directory. Keep the supplied `data.json`.
-4. Open the copied folder as a vault in Obsidian and enable **OBS Projects Plus** in Community plugins settings.
+4. Open the copied folder as a vault in Obsidian and enable **Projects Plus** in Community plugins settings.
 5. Run **Show projects plus** from the command palette and select **Demo Project**.
 
 The saved configuration includes **Demo Project** and **Team Members**. You do not need to create duplicate projects. Older saved view settings are migrated when loaded by the current plugin. If you copied only the notes and omitted `.obsidian`, create a folder project for `Projects` manually; the prepared views will not be present.

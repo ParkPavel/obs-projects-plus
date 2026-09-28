@@ -79,8 +79,8 @@ export function parseDateInTimezone(
 
   const targetTz = tz && tz !== "local" ? tz : undefined;
   const parsed = targetTz
-    ? dayjs.tz(value as string | Date, targetTz)
-    : dayjs(value as string | Date);
+    ? dayjs.tz(value, targetTz)
+    : dayjs(value);
 
   return parsed.isValid() ? parsed : null;
 }

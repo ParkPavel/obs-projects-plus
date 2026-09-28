@@ -75,7 +75,7 @@ export function blockFrame(source: BlockSource): DataFrame | null {
  * satisfied without the caller reaching for the parent's frame again, which is
  * the defect this module was written to remove.
  */
-const EMPTY_FRAME: DataFrame = { fields: [], records: [] } as unknown as DataFrame;
+const EMPTY_FRAME: DataFrame = { fields: [], records: [] };
 
 /** {@link blockFrame}, with the empty stand-in instead of null. */
 export function blockFrameOrEmpty(source: BlockSource): DataFrame {

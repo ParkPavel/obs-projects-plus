@@ -178,7 +178,7 @@ function executeUnnest(
     arrayData.push({ record, items: raw });
     for (const item of raw) {
       if (item != null && typeof item === "object" && !Array.isArray(item) && !(item instanceof Date)) {
-        for (const key of Object.keys(item as Record<string, unknown>)) {
+        for (const key of Object.keys(item)) {
           if (!pickFields || pickFields.has(key)) {
             discoveredKeys.add(key);
           }
@@ -771,7 +771,7 @@ function executeGroupBy(
 
     // Collect arrays for non-group fields
     for (const fn of nonGroupFieldNames) {
-      values[fn] = records.map((r) => r.values[fn]) as unknown as DataValue;
+      values[fn] = records.map((r) => r.values[fn]);
     }
 
     outRecords.push({
@@ -844,7 +844,7 @@ function computeAggFn(
       targetField: "",
       function: kernelFn,
     });
-    return result.value as DataValue | null;
+    return result.value;
   }
 
   switch (fn) {
@@ -883,7 +883,7 @@ function collapseToOneGroup(df: DataFrame, step: AggregateStep): DataFrame {
   const sources = [...new Set(step.columns.map((c) => c.sourceField))];
   const values: Record<string, DataValue | undefined | null> = { [GROUP_SIZE_FIELD]: df.records.length };
   for (const name of sources) {
-    values[name] = df.records.map((r) => r.values[name]) as unknown as DataValue;
+    values[name] = df.records.map((r) => r.values[name]);
   }
   const fields: DataField[] = [
     { name: GROUP_SIZE_FIELD, type: DataFieldType.Number, repeated: false, identifier: false, derived: true },
@@ -929,7 +929,7 @@ function executeAggregate(
     ...keptFields,
     ...step.columns.map((col) => ({
       name: col.outputName,
-      type: DataFieldType.Number as DataFieldType,
+      type: DataFieldType.Number,
       repeated: false,
       identifier: false,
       derived: true,
@@ -1053,7 +1053,7 @@ function executePivot(
     ...rowKeyFields,
     ...sortedCategories.map((cat) => ({
       name: cat,
-      type: DataFieldType.Number as DataFieldType,
+      type: DataFieldType.Number,
       repeated: false,
       identifier: false,
       derived: true,
@@ -1073,7 +1073,7 @@ function executePivot(
       if (!cellValues || cellValues.length === 0) {
         values[cat] = null;
       } else {
-        values[cat] = computeAggFn(step.aggregation, cellValues as unknown as DataValue, warnings);
+        values[cat] = computeAggFn(step.aggregation, cellValues, warnings);
       }
     }
 
@@ -1096,7 +1096,7 @@ const MAX_JOIN_OUTPUT_RECORDS = MAX_OUTPUT_RECORDS;
  * callers can pre-project for finer-grained joins via FORMAT_DATE compute.
  */
 function joinKeyOf(v: DataValue | undefined | null): string {
-  return joinKey(v as unknown);
+  return joinKey(v);
 }
 
 /**
@@ -1156,7 +1156,7 @@ function executeJoin(
   // Build hash index on right frame.
   const bucket = new Map<string, DataRecord[]>();
   for (const r of rightFrame.records) {
-    const k = joinKeyOf(r.values[rightKey] as DataValue | undefined);
+    const k = joinKeyOf(r.values[rightKey]);
     const list = bucket.get(k);
     if (list) list.push(r);
     else bucket.set(k, [r]);
@@ -1166,7 +1166,7 @@ function executeJoin(
   let joinedRowIdx = 0;
 
   for (const left of df.records) {
-    const k = joinKeyOf(left.values[leftKey] as DataValue | undefined);
+    const k = joinKeyOf(left.values[leftKey]);
     const matches = bucket.get(k);
 
     if (!matches || matches.length === 0) {
@@ -1196,7 +1196,7 @@ function executeJoin(
         // aggregate about what a number is.
         const allNumeric = gathered.every(isNumeric);
         values[outName] = allNumeric
-          ? computeAggFn(step.aggregation, gathered as unknown as DataValue, warnings)
+          ? computeAggFn(step.aggregation, gathered, warnings)
           : (gathered[0] ?? null);
       }
       newRecords.push({ id: `${left.id}__joinA`, values });

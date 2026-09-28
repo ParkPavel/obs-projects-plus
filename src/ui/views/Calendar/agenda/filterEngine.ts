@@ -28,7 +28,7 @@ const LEGACY_OPS: Record<string, FilterOperator> = {
 };
 
 function toCondition(filter: AgendaFilter): FilterCondition {
-  const op = (LEGACY_OPS[filter.operator] ?? filter.operator) as FilterOperator;
+  const op = (LEGACY_OPS[filter.operator] ?? filter.operator);
   const v = filter.value;
   const value = v == null ? undefined
     : typeof v === 'string' ? v
@@ -72,7 +72,7 @@ function toDefinition(group: AgendaFilterGroup): FilterDefinition {
 function collectFieldOps(group: AgendaFilterGroup, out: Map<string, FilterOperator>): void {
   for (const f of group.filters) {
     if (f.enabled === false) continue;
-    const op = (LEGACY_OPS[f.operator] ?? f.operator) as FilterOperator;
+    const op = (LEGACY_OPS[f.operator] ?? f.operator);
     if (!out.has(f.field)) out.set(f.field, op);
   }
   for (const g of group.groups) collectFieldOps(g, out);

@@ -293,12 +293,12 @@ export type DataQueryResult = {
 /**
  * ProjectViewProps provides various metadata for the views.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is plugin-specific; T defaults to any
-export interface ProjectViewProps<T = Record<string, any>> {
+export interface ProjectViewProps<T = Record<string, unknown>> {
   viewId: ViewId;
   project: ProjectDefinition;
   config: T;
-  saveConfig: (config: T) => void;
+  /** A method without `this`, so a view of any config type fits the registry. */
+  saveConfig(this: void, config: T): void;
   /**
    * @since 3.0.0
    * Persist a new filter definition on the current view. Optional — not
@@ -335,8 +335,7 @@ export interface ProjectViewProps<T = Record<string, any>> {
  * To create a new built-in view, create a class that extends this one
  * and register it via `onRegisterProjectView()` in your plugin entry.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- View config is plugin-specific; T defaults to any
-export abstract class ProjectView<T = Record<string, any>> {
+export abstract class ProjectView<T = Record<string, unknown>> {
   onData(_result: DataQueryResult): void {}
   onOpen(_props: ProjectViewProps<T>): void {}
   onClose(): void {}

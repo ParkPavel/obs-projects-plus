@@ -128,7 +128,7 @@ export const WIDGET_CONTENT: Partial<Record<WidgetType, ContentEntry>> = {
       // #112 F1 restore: re-merge block-level subFilter from widget.config.
       config: restoreDataTableConfig(
         (c.effectiveTableConfig ?? {}) as Record<string, unknown>,
-        c.widget.config as Record<string, unknown> | undefined
+        c.widget.config
       ),
       widgetId: c.widget.id, widgetTitle: c.widget.title,
       // #118: data-table always renders the host's scoped+transformed frame.

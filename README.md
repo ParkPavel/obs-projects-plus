@@ -1,64 +1,78 @@
-# OBS Projects Plus
+# Projects Plus
 
-[English](README-EN.md) · [Руководство пользователя](docs/user-guide.md) · [Документация](docs/README.md)
+[Русский](README-RU.md) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md)
 
-Projects Plus помогает работать с заметками Obsidian как с проектом: просматривать записи в таблице, распределять их по колонкам, планировать события в календаре и собирать обзор на Dashboard.
+Projects Plus helps you work with Obsidian notes as a project: compare records in a table, arrange them on a board, plan events in a calendar, and build an overview on a Dashboard.
 
-Каждая запись остаётся Markdown-файлом. Поля, например статус, дата и исполнитель, хранятся в свойствах заметки — YAML-блоке в начале файла. Изменение обычного редактируемого поля в плагине записывается в заметку.
+Each record remains a Markdown file. Fields such as status, date, and assignee live in note properties — the YAML block at the beginning of the file. Editing an ordinary writable field in the plugin updates the note.
 
-## Что можно сделать
+## What you can do
 
-| Задача | Инструмент |
+| Task | Tool |
 | --- | --- |
-| Сравнить записи и изменить их свойства | Таблица в блоке Dashboard |
-| Распределить задачи по статусам | Доска с перетаскиванием карточек |
-| Посмотреть встречи и сроки | Календарь с обзором от года до дня |
-| Просматривать материалы по обложкам | Галерея |
-| Объединить данные, графики и показатели | Dashboard с настраиваемыми блоками |
-| Считать итоги по связанным записям | Свёртки через связь и обратные — «записи, которые ссылаются сюда» |
-| Сравнить показатели разных проектов | Графики с несколькими сериями, данными другого проекта и второй осью |
-| Выбрать нужные заметки | Папка, тег, встроенный запрос с фильтром или Dataview |
+| Compare records and edit their properties | A table inside a Dashboard block |
+| Organize tasks by status | Board with draggable cards |
+| Browse meetings and deadlines | Calendar with year-to-day views |
+| Browse materials by cover image | Gallery |
+| Combine records, charts, and metrics | Dashboard with configurable blocks |
+| Total up related records | Rollups through a relation, and reverse ones — records that link here |
+| Compare figures across projects | Charts with several series, another project's data and a second axis |
+| Select the notes to include | Folder, tag, built-in filtered query, or Dataview |
 
-![Пример календаря Projects Plus](images/2026-01-27_12-24-17.png)
+![Example Projects Plus calendar](images/2026-01-27_12-24-17.png)
 
-Иллюстрация показывает один из вариантов интерфейса; оформление установленной версии может отличаться.
+This illustration shows one interface configuration; your installed version may look different.
 
-## Установка
+## Installation
 
-Текущая версия — **3.6.2**: код проходит автоматическое ревью каталога сообщества Obsidian; 3.6.1 принесла новое демо из трёх связанных проектов. Первая версия в формате каталога сообщества Obsidian — 3.6.0. Готовые сборки лежат в [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); нужен Obsidian 1.8.7 или новее, на компьютере или телефоне. Что изменилось — в [истории изменений](CHANGELOG-RU.md).
+Once Projects Plus is listed in the Obsidian community directory, install it from Obsidian: **Settings → Community plugins → Browse**, search for **Projects Plus**, then select **Install** and **Enable**.
 
-1. Выберите релиз и скачайте из него **все три файла**: `main.js`, `manifest.json` и `styles.css`.
-2. Создайте в своём хранилище папку `.obsidian/plugins/obs-projects-plus/` и поместите туда файлы.
-3. Перезапустите Obsidian и включите **OBS Projects Plus** в настройках сторонних плагинов.
+To install a release by hand:
 
-При обновлении заменяйте эти три файла одной сборкой. Сохраните `data.json`: в нём находятся настройки ваших проектов и представлений.
+The current version is **3.6.3**: the plugin is named Projects Plus and meets the Obsidian community directory's review; 3.6.1 brought a new demo of three linked projects. The first version in the Obsidian community catalogue format is 3.6.0. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
 
-## Первый проект
+1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
+2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there.
+3. Restart Obsidian and enable **Projects Plus** in Community plugins settings.
 
-1. Создайте в хранилище папку `Projects`, а в ней заметку `First task.md`:
+When updating, replace these three files with files from the same build. Keep `data.json`: it contains your project and view settings.
+
+## Usage
+
+Create your first project:
+
+1. Create a `Projects` folder in your vault and a note named `First task.md` inside it:
 
    ```yaml
    ---
-   title: Первый шаг
+   title: First step
    status: todo
    startDate: 2026-09-15
    ---
    ```
 
-2. Откройте палитру команд Obsidian и найдите **Создать новый проект плюс**.
-3. Задайте имя проекта, выберите источник **Папка** и путь `Projects`.
-4. Откройте проект командой **Показать проекты плюс**. Добавьте представление через кнопку добавления представления; для таблицы используйте блок данных на Dashboard.
-5. Измените `status` у записи и откройте Markdown-файл: значение должно сохраниться в свойствах заметки.
+2. Open the Obsidian command palette and find **Create new project plus**.
+3. Name the project, choose **Folder** as its source, and select `Projects`.
+4. Open it with **Show projects plus**. Use the add-view control to add a view; for a table, use a data block on a Dashboard.
+5. Change the record's `status`, then open its Markdown file: the updated value should be stored in its properties.
 
-Для знакомства на готовых данных используйте команду **Создать демо-проект**: она создаёт три связанных проекта — массажный кабинет, трекер самочувствия и личный бюджет, — данные которых перетекают между ними. Её же предлагают окно приветствия и пустой экран проектов. Есть и отдельное [демо-хранилище](demo-vault/README.md).
+To explore prepared data, use **Create demo project**: it creates three linked projects — a massage practice, a wellbeing tracker and a personal budget — whose data flows between them. The welcome dialog and the empty projects screen offer it too. A separate [demo vault](demo-vault/README.md) is also available.
 
-## Куда дальше
+## Privacy and access
 
-- [Руководство пользователя](docs/user-guide.md): источники, представления, фильтры, шаблоны и решение проблем.
-- [Шаблоны заметок](templates/README.md): примеры для задач, встреч и обзоров.
-- [История изменений](CHANGELOG-RU.md) и [сообщения об ошибках](https://github.com/ParkPavel/obs-projects-plus/issues).
-- [Участие в разработке](CONTRIBUTING.md) и [API пользовательских представлений](docs/api.md).
+Projects Plus works only with your vault through the Obsidian API. It makes no network requests and collects no data.
 
-Разработка проекта ведётся через [Claudex](https://github.com/ParkPavel/claudex). Настройки и инструкции для ИИ поддерживаются в том отдельном проекте.
+- **Vault files.** To find the notes of a project and the records that link to one another, it lists the files in the vault and reads their properties. It writes to a note only when you edit a record, create one, or run an action such as creating the demo.
+- **Clipboard.** It writes to the clipboard only when you press the copy button in the formula debug panel; it never reads the clipboard.
+- **Settings.** Projects and views are stored in the plugin's `data.json` inside your vault.
 
-Projects Plus основан на [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects) Маркуса Олссона. Текущий сопровождающий — Park Pavel. Лицензия: [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); сведения об авторстве — [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE).
+## Continue
+
+- [User guide](docs/user-guide-EN.md): sources, views, filters, templates, and troubleshooting.
+- [Note templates](templates/README.md): examples for tasks, meetings, and reviews.
+- [Changelog](CHANGELOG.md) and [issue tracker](https://github.com/ParkPavel/obs-projects-plus/issues).
+- [Contributing](CONTRIBUTING.md) and [custom view API](docs/api.md).
+
+Development is managed through [Claudex](https://github.com/ParkPavel/claudex). AI configuration and instructions are maintained in that separate project.
+
+Projects Plus is based on Marcus Olsson's [Obsidian Projects](https://github.com/marcusolsson/obsidian-projects). The current maintainer is Park Pavel. Licensed under [Apache 2.0](https://github.com/ParkPavel/obs-projects-plus/blob/main/LICENSE); see [NOTICE](https://github.com/ParkPavel/obs-projects-plus/blob/main/NOTICE) for attribution.

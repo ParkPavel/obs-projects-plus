@@ -8,6 +8,15 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
+## 3.6.3 — 2026-09-28
+
+- The plugin is named **Projects Plus** (was «OBS Projects Plus»): the community directory does not accept
+  part of the Obsidian name in a plugin name. The plugin id `obs-projects-plus` is unchanged, so installed
+  copies, their settings and data stay as they are.
+- `README.md` is now the English overview, with Installation, Usage and Privacy sections; the Russian
+  one is `README-RU.md`.
+- Release assets carry GitHub build provenance attestations.
+
 ## 3.6.2 — 2026-09-28
 
 ### Ready for the community directory

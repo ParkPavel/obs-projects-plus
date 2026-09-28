@@ -10,7 +10,7 @@ import { enrichWithBacklinks } from "src/lib/dashboard-engine/relationResolver";
 import type { ProjectDefinition, ProjectsPluginPreferences } from "src/settings/settings";
 import type { IFileSystem } from "src/lib/filesystem/filesystem";
 import { createDataSource } from "src/lib/datasources";
-import { applyDeclaredFieldTypes, type DeclaredRelations } from "src/lib/relations/declaredFieldTypes";
+import { applyDeclaredFieldTypes } from "src/lib/relations/declaredFieldTypes";
 import { applyRollupColumns } from "src/lib/relations/rollupColumns";
 import { extractRelationTargetIds, type FieldConfigRelationMap } from "src/lib/relations/relationTargets";
 
@@ -93,7 +93,7 @@ async function resolveEnrichedFrame(
     // once declared. Before backlink enrichment, which reads the types.
     const frame = applyDeclaredFieldTypes(
       await resolution.source.queryAll(),
-      project.fieldConfig as DeclaredRelations | undefined
+      project.fieldConfig
     );
 
     // #138: enrich here, so every frame reaching a widget has the same shape

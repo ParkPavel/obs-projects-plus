@@ -3,7 +3,7 @@
  *
  * Every documentation page exists in Russian and in English. The twin of a file
  * is the same path with a suffix naming its language: `README.md` pairs with
- * `README-EN.md`, `CONTRIBUTING.md` with `CONTRIBUTING-RU.md`. The suffix is a
+ * `README-RU.md`, `CONTRIBUTING.md` with `CONTRIBUTING-RU.md`. The suffix is a
  * claim about the language inside, so the test holds it to it: a `-RU` twin
  * written in English fails here. Comparing the two sides without knowing which
  * is which is what let that pass before.
@@ -23,8 +23,8 @@
  * without anyone remembering to add it to a table first.
  *
  * Discovery alone cannot catch a pair that vanishes by being renamed on both
- * sides at once — README.md and README-EN.md becoming GUIDE.md and
- * GUIDE-EN.md still discovers as a valid pair, even though every doc and
+ * sides at once — README.md and README-RU.md becoming GUIDE.md and
+ * GUIDE-RU.md still discovers as a valid pair, even though every doc and
  * every reader that reaches "README" by name now finds nothing. A page a
  * reader is sent to by name is an invariant, not an implementation detail, so
  * a floor list below names the eight pairs that exist today and must keep
@@ -58,7 +58,9 @@ const DOC_DIRS = ["docs", "demo-vault", "templates", "obsidian-projects-types"];
  * same commit.
  */
 const FLOOR_PAIRS: ReadonlyArray<readonly [string, string]> = [
-  ["README.md", "README-EN.md"],
+  // README.md is English: the community directory shows it and requires English
+  // (its review, 2026-09-28); the Russian twin is README-RU.md.
+  ["README.md", "README-RU.md"],
   ["CHANGELOG.md", "CHANGELOG-RU.md"],
   ["CONTRIBUTING.md", "CONTRIBUTING-RU.md"],
   ["CODE_OF_CONDUCT.md", "CODE_OF_CONDUCT-RU.md"],

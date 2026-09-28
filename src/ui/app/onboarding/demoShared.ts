@@ -114,7 +114,7 @@ export function demoView(
     filter,
     colors: { conditions: [] },
     sort,
-  }) as ViewDefinition;
+  });
 }
 
 /**

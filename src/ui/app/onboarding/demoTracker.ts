@@ -98,7 +98,7 @@ export function trackerFieldConfig(ids: DemoIds): { [field: string]: FieldConfig
   return {
     date: { time: false },
     person: { relation: { targetProjectId: ids.cabinetId } },
-  } as unknown as { [field: string]: FieldConfig };
+  };
 }
 
 const ENTRY_FIELDS = ["date", "person", "weight", "sleep", "mood", "energy", "pain", "trainingType", "trainingMinutes", "color", "person_backlinks"];
@@ -243,7 +243,7 @@ export function trackerJournalWidgets(): WidgetDefinition[] {
 
 const dashboard = (widgets: WidgetDefinition[]): DatabaseViewConfig => ({
   widgets,
-  table: tableOf([], []) as unknown as DatabaseViewConfig["table"],
+  table: tableOf([], []),
   layoutMode: "stack",
   layoutVersion: 1,
   showWidgetToolbar: true,

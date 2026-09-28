@@ -140,7 +140,7 @@ export function matchesCondition(
     }
     if (candidates.length === 0) return false;
     if (Array.isArray(value)) {
-      const items = (value as Optional<DataValue>[]).map((v) => (v == null ? "" : String(v)));
+      const items = (value).map((v) => (v == null ? "" : String(v)));
       return candidates.some((c) => items.includes(c));
     }
     const strVal = value == null ? "" : String(value);
@@ -155,7 +155,7 @@ export function matchesCondition(
   // records silently because the list type-guard above only handles list
   // operators.
   if (Array.isArray(value) && isStringFilterOperator(operator)) {
-    const arr = value as Optional<DataValue>[];
+    const arr = value;
     if (arr.length === 0) {
       // Empty array: no element to match. Affirmative → false, negative
       // → true. The base "is-empty" branch above only fires when the

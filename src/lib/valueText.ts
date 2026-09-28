@@ -14,5 +14,9 @@ export function valueText(v: unknown): string {
       return Object.prototype.toString.call(v);
     }
   }
-  return String(v as string | number | boolean | bigint | symbol);
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint") return String(v);
+  if (typeof v === "symbol") return v.toString();
+  // A function is not a value; say what it is rather than print its source.
+  return Object.prototype.toString.call(v);
 }

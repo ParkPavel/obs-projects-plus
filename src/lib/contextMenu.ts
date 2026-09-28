@@ -101,7 +101,7 @@ function appendEntries(menu: Menu, entries: ContextMenuEntry[]): void {
       // Obsidian's typed surface for `setSubmenu` is patchy across versions;
       // we feature-detect at runtime to stay forward-compatible.
       menu.addItem((mi) => {
-        fillItem(mi as never, entry);
+        fillItem(mi, entry);
         const maybeSub = (mi as unknown as {
           setSubmenu?: () => Menu;
         }).setSubmenu;
@@ -111,7 +111,7 @@ function appendEntries(menu: Menu, entries: ContextMenuEntry[]): void {
         }
       });
     } else {
-      menu.addItem((mi) => fillItem(mi as never, entry));
+      menu.addItem((mi) => fillItem(mi, entry));
     }
   }
 }
