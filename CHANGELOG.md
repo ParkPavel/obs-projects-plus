@@ -13,6 +13,9 @@ mean that a new release has been published.
 - The plugin is named **Projects Plus** (was «OBS Projects Plus»): the community directory does not accept
   part of the Obsidian name in a plugin name. The plugin id `obs-projects-plus` is unchanged, so installed
   copies, their settings and data stay as they are.
+- `README.md` is now the English overview, with Installation, Usage and Privacy sections; the Russian
+  one is `README-RU.md`.
+- Release assets carry GitHub build provenance attestations.
 
 ## 3.6.2 — 2026-09-28
 

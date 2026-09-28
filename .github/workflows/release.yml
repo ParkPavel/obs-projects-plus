@@ -7,6 +7,9 @@ on:
 
 permissions:
   contents: write
+  # Build provenance attestations for the release assets.
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -29,6 +32,16 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      # Lets anyone verify that main.js and styles.css were built from this
+      # repository (`gh attestation verify main.js -R ParkPavel/obs-projects-plus`);
+      # the community directory recommends it.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            styles.css
 
       - name: Create or update release
         env:
