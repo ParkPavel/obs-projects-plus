@@ -15,7 +15,7 @@ interface AppLocalStorage {
 }
 
 function storage(): AppLocalStorage | undefined {
-  return get(app) as unknown as AppLocalStorage | undefined;
+  return get(app);
 }
 
 /** The stored string for `key`, or null when absent or before the plugin has its App. */

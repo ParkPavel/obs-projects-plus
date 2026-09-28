@@ -99,7 +99,7 @@ function relationWiringFor(fields: readonly DataField[], context: SuggestContext
   const outgoing = fields.filter((f) => f.type === DataFieldType.Relation && !!targetOf(f.typeConfig as never));
   if (context && host) {
     for (const f of outgoing) {
-      const t = targetOf(f.typeConfig as never)!;
+      const t = targetOf(f.typeConfig)!;
       const target = context.projects.find((p) => p.id === t);
       const back = Object.entries(target?.fieldConfig ?? {}).find(([, cfg]) => targetOf(cfg) === host);
       if (target && back) {
@@ -109,7 +109,7 @@ function relationWiringFor(fields: readonly DataField[], context: SuggestContext
   }
   const first = outgoing[0];
   if (!first) return null;
-  const t = targetOf(first.typeConfig as never)!;
+  const t = targetOf(first.typeConfig)!;
   const name = context?.projects.find((p) => p.id === t)?.name;
   return {
     fieldName: first.name,

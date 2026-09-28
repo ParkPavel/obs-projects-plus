@@ -35,7 +35,7 @@ export function andComposeFilters(
 ): FilterDefinition | undefined {
   const meaningful = defs.filter(hasFilterEffect);
   if (meaningful.length === 0) return undefined;
-  if (meaningful.length === 1) return meaningful[0] as FilterDefinition;
+  if (meaningful.length === 1) return meaningful[0];
 
   const flattenable = meaningful.every(
     (d) => d.conjunction !== "or" && (d.groups?.length ?? 0) === 0

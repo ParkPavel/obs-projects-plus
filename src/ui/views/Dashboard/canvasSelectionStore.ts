@@ -65,9 +65,9 @@ export interface SelectionState {
 export const EMPTY_SELECTION: SelectionState = Object.freeze({
 	source: null,
 	field: null,
-	values: Object.freeze([]) as ReadonlyArray<string>,
+	values: Object.freeze([]),
 	op: null,
-}) as SelectionState;
+});
 
 /** Payload accepted by `setSelection`. Op defaults to `"is"` for single value, `"is-any-of"` for multiple. */
 export interface SetSelectionInput {

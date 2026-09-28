@@ -149,7 +149,7 @@ function kernelAggregate(
     if (Array.isArray(val)) {
       for (const v of val) if (v != null) flat.push(v);
     } else if (val != null) {
-      flat.push(val as DataValue);
+      flat.push(val);
     }
   }
   if (flat.length === 0 && fn !== "sum") return null;
@@ -305,7 +305,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
   SPLIT: (args, evaluate) => {
     const str = String(evaluate(args[0] as FormulaNode) ?? "");
     const delim = String(evaluate(args[1] as FormulaNode) ?? ",");
-    return str.split(delim) as unknown as DataValue;
+    return str.split(delim);
   },
 
   FORMAT: (args, evaluate) => {
@@ -813,7 +813,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
 
   // ── List utilities ─────────────────────────────────────────
   ZIP: (args, evaluate) => {
-    if (args.length === 0) return [] as unknown as DataValue;
+    if (args.length === 0) return [];
     const lists = args.map(a => {
       const v = evaluate(a);
       return Array.isArray(v) ? v : (v != null ? [v] : []);
@@ -831,7 +831,7 @@ const EXTENDED_FUNCTIONS: Record<string, FormulaFn> = {
     const idx = argNumber(evaluate(args[1] as FormulaNode));
     if (isNaN(idx)) return null;
     const i = idx < 0 ? list.length + Math.trunc(idx) : Math.trunc(idx);
-    return (list[i] ?? null) as DataValue;
+    return (list[i] ?? null);
   },
 
   IFBLANK: (args, evaluate) => {
@@ -1063,7 +1063,7 @@ function evaluateNode(
       }
 
       case "column_ref":
-        return resolveColumn(n.name) as unknown as DataValue;
+        return resolveColumn(n.name);
 
       case "array":
         return n.items.map((item) => evaluate(item));
@@ -1131,14 +1131,14 @@ function evaluateNode(
             nameArg.type === "literal" ? String(nameArg.value) :
             nameArg.type === "field" ? nameArg.name : null;
           if (!fieldName) return null;
-          if (scope?.has(fieldName)) return scope.get(fieldName) as DataValue;
+          if (scope?.has(fieldName)) return scope.get(fieldName);
           const v = record.values[fieldName];
-          return (v === undefined ? null : v) as DataValue;
+          return (v === undefined ? null : v);
         }
 
         if (n.name === "ID") {
           // ID() — returns the unique identifier of the current record
-          return record.id as unknown as DataValue;
+          return record.id;
         }
 
         if (n.name === "LETS") {
@@ -1172,7 +1172,7 @@ function evaluateNode(
         if (n.name === "MAP") {
           if (n.args.length < 3) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1182,13 +1182,13 @@ function evaluateNode(
             const iterScope = new Map<string, DataValue>(scope ?? []);
             iterScope.set(iterName, item as DataValue);
             return evaluateNode(n.args[2] as FormulaNode, record, dataFrame, iterScope, depth + 1);
-          }) as unknown as DataValue;
+          });
         }
 
         if (n.name === "FILTER") {
           if (n.args.length < 3) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =
@@ -1204,7 +1204,7 @@ function evaluateNode(
         if (n.name === "REDUCE") {
           if (n.args.length < 5) return null;
           const listVal = evaluate(n.args[0] as FormulaNode);
-          const rawList: unknown[] = Array.isArray(listVal) ? (listVal as unknown[]) : (listVal != null ? [listVal] : []);
+          const rawList: unknown[] = Array.isArray(listVal) ? (listVal) : (listVal != null ? [listVal] : []);
           const list = rawList.length > MAX_LIST_ITEMS ? rawList.slice(0, MAX_LIST_ITEMS) : rawList;
           const iterNameNode = n.args[1] as FormulaNode;
           const iterName =

@@ -281,7 +281,7 @@ export function financeJournalWidgets(): WidgetDefinition[] {
 
 const dashboard = (widgets: WidgetDefinition[]): DatabaseViewConfig => ({
   widgets,
-  table: tableOf([], []) as unknown as DatabaseViewConfig["table"],
+  table: tableOf([], []),
   layoutMode: "stack",
   layoutVersion: 1,
   showWidgetToolbar: true,

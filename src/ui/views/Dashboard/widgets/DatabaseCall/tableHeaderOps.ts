@@ -58,14 +58,14 @@ export function applySortPatch(
   const { sortField: _f, sortAsc: _a, ...rest } = config ?? {};
   void _f; void _a;
   const criteria: DataTableSortCriteria[] = order ? [{ field, order }] : [];
-  return { ...rest, sortCriteria: criteria } as DataTableConfig;
+  return { ...rest, sortCriteria: criteria };
 }
 
 export function applyHidePatch(config: DataTableConfig | undefined, field: string): DataTableConfig {
   return {
     ...config,
     fieldConfig: { ...config?.fieldConfig, [field]: { ...config?.fieldConfig?.[field], hide: true } },
-  } as DataTableConfig;
+  };
 }
 
 export function applyWidthPatch(
@@ -77,7 +77,7 @@ export function applyWidthPatch(
   return {
     ...config,
     fieldConfig: { ...config?.fieldConfig, [field]: { ...config?.fieldConfig?.[field], widthRem: rounded } },
-  } as DataTableConfig;
+  };
 }
 
 export function applyGroupPatch(
@@ -86,11 +86,11 @@ export function applyGroupPatch(
 ): DataTableConfig {
   const { groupBy: _omit, ...rest } = config ?? {};
   void _omit;
-  if (field === null) return rest as DataTableConfig;
+  if (field === null) return rest;
   return {
     ...rest,
     groupBy: { field, sortOrder: "asc", hiddenGroups: [], collapsedGroups: [], showEmptyGroups: false },
-  } as DataTableConfig;
+  };
 }
 
 export function toggleGroupCollapsed(
@@ -102,7 +102,7 @@ export function toggleGroupCollapsed(
   const collapsed = new Set(groupBy.collapsedGroups ?? []);
   if (collapsed.has(key)) collapsed.delete(key);
   else collapsed.add(key);
-  return { ...config, groupBy: { ...groupBy, collapsedGroups: [...collapsed] } } as DataTableConfig;
+  return { ...config, groupBy: { ...groupBy, collapsedGroups: [...collapsed] } };
 }
 
 export function applyCalculatePatch(
@@ -117,7 +117,7 @@ export function applyCalculatePatch(
     ...config,
     aggregations,
     showAggregationRow: Object.keys(aggregations).length > 0,
-  } as DataTableConfig;
+  };
 }
 
 /** Pointer-driven column resize: live preview per move, commit on release. */

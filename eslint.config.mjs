@@ -9,7 +9,7 @@ import globals from "globals";
 
 export default defineConfig([
   {
-    ignores: ["**/node_modules", "**/build", "main.js", "releases/**", "demo-vault/**", "obsidian-projects-types/**"],
+    ignores: ["**/node_modules", "**/build", "main.js", "releases/**", "demo-vault/**"],
   },
   ...obsidianmd.configs.recommended,
   {

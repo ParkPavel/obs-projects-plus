@@ -54,7 +54,7 @@ export function decodeValue(raw: unknown): Optional<DataValue> {
   }
   if (typeof raw === "number" || typeof raw === "boolean") return raw;
   if (Array.isArray(raw)) {
-    return raw.map(decodeValue) as DataValue;
+    return raw.map(decodeValue);
   }
   // Unknown shape (e.g. nested object) — coerce to text for safety.
   return valueText(raw);

@@ -61,7 +61,7 @@ export function createInverseIndexStore(
       const cache = app.metadataCache.getFileCache(file);
       out.push({
         path: file.path,
-        frontmatter: (cache?.frontmatter as Record<string, unknown> | null) ?? null,
+        frontmatter: (cache?.frontmatter) ?? null,
       });
     }
     return out;
@@ -84,7 +84,7 @@ export function createInverseIndexStore(
     if (typeof requestAnimationFrame === "function") {
       scheduled = window.requestAnimationFrame(rebuildNow);
     } else {
-      scheduled = window.setTimeout(rebuildNow, 16) as unknown as number;
+      scheduled = window.setTimeout(rebuildNow, 16);
     }
   }
 

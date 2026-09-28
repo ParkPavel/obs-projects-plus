@@ -120,5 +120,5 @@ function mergeStyles(
   if (tc !== undefined) result["textColor"] = tc;
   if (b !== undefined) result["bold"] = b;
   if (it !== undefined) result["italic"] = it;
-  return result as unknown as CellStyle;
+  return result;
 }

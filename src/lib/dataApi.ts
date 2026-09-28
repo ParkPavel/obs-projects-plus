@@ -318,7 +318,7 @@ export function applyRecordToFrontmatter(
         isDatetime ? "YYYY-MM-DDTHH:mm" : "YYYY-MM-DD",
       );
     } else {
-      frontmatter[key] = value as unknown;
+      frontmatter[key] = value;
     }
   }
 }

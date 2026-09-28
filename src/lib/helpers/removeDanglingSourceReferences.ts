@@ -46,7 +46,7 @@ function sanitizeWidget(widget: WidgetLike, removedId: string): WidgetLike {
           ...(nextWidget.transform ?? {}),
           steps: filtered,
         },
-      } as WidgetLike;
+      };
     }
   }
 
@@ -58,7 +58,7 @@ function sanitizeWidget(widget: WidgetLike, removedId: string): WidgetLike {
       nextWidget = {
         ...nextWidget,
         config: restConfig,
-      } as WidgetLike;
+      };
     }
   }
 
@@ -102,7 +102,7 @@ export function removeDanglingSourceReferences(
           ...(cfg ?? {}),
           widgets: nextWidgets,
         },
-      } as typeof view;
+      };
     });
 
     if (!viewsChanged) return project;

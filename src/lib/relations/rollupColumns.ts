@@ -32,7 +32,7 @@
  *    result was order-dependent garbage; this one resolves the link the user
  *    actually wrote.
  */
-import { DataFieldType, type DataFrame, type DataRecord } from "src/lib/dataframe/dataframe";
+import { DataFieldType, type DataFrame } from "src/lib/dataframe/dataframe";
 import type { RollupFunction } from "src/lib/engine/aggregate";
 import type { RollupFieldConfig } from "src/settings/base/settings";
 import {
@@ -158,7 +158,7 @@ export function applyRollupColumns(
           ...record,
           values: {
             ...record.values,
-            [fieldName]: result.value as unknown as DataRecord["values"][string],
+            [fieldName]: result.value,
           },
         };
       }),

@@ -35,7 +35,7 @@ const EMPTY: NoteOverlay = Object.freeze({
   hidden: [],
   pinned: [],
   order: [],
-}) as NoteOverlay;
+});
 
 /** Sanitize an unknown value into a `string[]`, dropping non-strings. */
 function asStringArray(v: unknown): string[] {
