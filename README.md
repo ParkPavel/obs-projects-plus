@@ -1,4 +1,4 @@
-# OBS Projects Plus
+# Projects Plus
 
 [English](README-EN.md) · [Руководство пользователя](docs/user-guide.md) · [Документация](docs/README.md)
 
@@ -29,7 +29,7 @@ Projects Plus помогает работать с заметками Obsidian �
 
 1. Выберите релиз и скачайте из него **все три файла**: `main.js`, `manifest.json` и `styles.css`.
 2. Создайте в своём хранилище папку `.obsidian/plugins/obs-projects-plus/` и поместите туда файлы.
-3. Перезапустите Obsidian и включите **OBS Projects Plus** в настройках сторонних плагинов.
+3. Перезапустите Obsidian и включите **Projects Plus** в настройках сторонних плагинов.
 
 При обновлении заменяйте эти три файла одной сборкой. Сохраните `data.json`: в нём находятся настройки ваших проектов и представлений.
 

@@ -57,7 +57,7 @@ describe("R0.27 version workflow", () => {
     w("package.json", { name: "obs-projects-plus", version: pkgVersion });
     w("manifest.json", {
       id: "obs-projects-plus",
-      name: "OBS Projects Plus",
+      name: "Projects Plus",
       version: manifestVersion,
       minAppVersion: "1.5.7",
       description: "d",

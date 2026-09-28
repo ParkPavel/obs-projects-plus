@@ -1,4 +1,4 @@
-# OBS Projects Plus
+# Projects Plus
 
 [Русский](README.md) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md)
 
@@ -29,7 +29,7 @@ The current version is **3.6.2**: the code passes the Obsidian community directo
 
 1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
 2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there.
-3. Restart Obsidian and enable **OBS Projects Plus** in Community plugins settings.
+3. Restart Obsidian and enable **Projects Plus** in Community plugins settings.
 
 When updating, replace these three files with files from the same build. Keep `data.json`: it contains your project and view settings.
 

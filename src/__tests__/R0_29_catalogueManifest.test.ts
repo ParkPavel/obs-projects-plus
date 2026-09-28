@@ -56,6 +56,14 @@ describe("R0.29 catalogue manifest", () => {
     }
   });
 
+  // The directory rejects a name with any part of "Obsidian" (its trademark):
+  // "OBS Projects Plus" failed its review. The id keeps its historical form —
+  // installed copies and their data are found by it.
+  test("the name carries no part of the Obsidian name", () => {
+    const words = String(manifest["name"]).toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 3);
+    for (const word of words) expect("obsidian".includes(word)).toBe(false);
+  });
+
   test("minAppVersion covers the App storage API the code calls (@since 1.8.7)", () => {
     const usesAppStorage = collectSourceFiles(SRC_ROOT, [".ts", ".svelte"])
       .filter((f) => !/\.(test|spec)\.ts$/.test(f))
