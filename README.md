@@ -29,7 +29,7 @@ Once Projects Plus is listed in the Obsidian community directory, install it fro
 
 To install a release by hand:
 
-The current version is **3.6.2**: the code passes the Obsidian community directory's automated review; 3.6.1 brought a new demo of three linked projects. The first version in the Obsidian community catalogue format is 3.6.0. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
+The current version is **3.6.3**: the plugin is named Projects Plus and meets the Obsidian community directory's review; 3.6.1 brought a new demo of three linked projects. The first version in the Obsidian community catalogue format is 3.6.0. Packaged builds are in [GitHub Releases](https://github.com/ParkPavel/obs-projects-plus/releases); it needs Obsidian 1.8.7 or newer, on desktop or mobile. See the [changelog](CHANGELOG.md) for what changed.
 
 1. Choose a release and download **all three files** from it: `main.js`, `manifest.json`, and `styles.css`.
 2. Create `.obsidian/plugins/obs-projects-plus/` inside your vault and place the files there.
