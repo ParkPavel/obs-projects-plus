@@ -1,6 +1,6 @@
 # Projects Plus
 
-[Русский](README-RU.md) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md)
+[Русский](README-RU.md) · [User guide](docs/user-guide-EN.md) · [Documentation](docs/README.md) · [Roadmap](ROADMAP.md)
 
 Projects Plus helps you work with Obsidian notes as a project: compare records in a table, arrange them on a board, plan events in a calendar, and build an overview on a Dashboard.
 
@@ -70,6 +70,7 @@ Projects Plus works only with your vault through the Obsidian API. It makes no n
 
 - [User guide](docs/user-guide-EN.md): sources, views, filters, templates, and troubleshooting.
 - [Note templates](templates/README.md): examples for tasks, meetings, and reviews.
+- [Roadmap](ROADMAP.md): what comes next.
 - [Changelog](CHANGELOG.md) and [issue tracker](https://github.com/ParkPavel/obs-projects-plus/issues).
 - [Contributing](CONTRIBUTING.md) and [custom view API](docs/api.md).
 
