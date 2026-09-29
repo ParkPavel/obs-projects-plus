@@ -1,6 +1,6 @@
 # Projects Plus
 
-[English](README.md) · [Руководство пользователя](docs/user-guide.md) · [Документация](docs/README.md)
+[English](README.md) · [Руководство пользователя](docs/user-guide.md) · [Документация](docs/README.md) · [План развития](ROADMAP-RU.md)
 
 Projects Plus помогает работать с заметками Obsidian как с проектом: просматривать записи в таблице, распределять их по колонкам, планировать события в календаре и собирать обзор на Dashboard.
 
@@ -70,6 +70,7 @@ Projects Plus работает только с вашим хранилищем �
 
 - [Руководство пользователя](docs/user-guide.md): источники, представления, фильтры, шаблоны и решение проблем.
 - [Шаблоны заметок](templates/README.md): примеры для задач, встреч и обзоров.
+- [План развития](ROADMAP-RU.md): что будет дальше.
 - [История изменений](CHANGELOG-RU.md) и [сообщения об ошибках](https://github.com/ParkPavel/obs-projects-plus/issues).
 - [Участие в разработке](CONTRIBUTING.md) и [API пользовательских представлений](docs/api.md).
 
