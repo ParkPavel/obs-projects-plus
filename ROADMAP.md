@@ -10,8 +10,8 @@ dates are promised.
 
 - **Your data stays in your notes.** Frontmatter and Markdown are the database. Nothing is moved into a
   separate store; everything computed is built on top of your notes.
-- **Relations are frontmatter properties.** A plain `[[link]]` stays text until you declare the property
-  a relation. Nothing is guessed behind your back.
+- **Relations are frontmatter properties.** A property holding a list of links is recognised as a relation;
+  a single plain `[[link]]` stays text until you declare the property a relation.
 - **One behaviour on every device.** The bar is how a well-made iOS app behaves — on a phone, a tablet,
   a desktop, and a narrow pane inside Obsidian alike.
 - **Layouts adapt to their container, not to the screen.** A view sized for a small window works the same
