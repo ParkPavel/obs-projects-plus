@@ -480,9 +480,15 @@
   /* #190: two rows — the nav bar sizes itself, everything else gets the rest.
      A grid rather than a column flex because the overlay layer has to share a
      cell with `.projects-main`, which is what makes the panel start exactly
-     where the header ends without anyone writing the header's height down. */
+     where the header ends without anyone writing the header's height down.
+
+     mobile-k1: the column is `minmax(0, 1fr)`. An implicit column is `auto`,
+     so wide content (navbar, calendar) made it wider than a phone and, with
+     `overflow: hidden` still scrollable programmatically, the root could be
+     shifted sideways. */
   .projects-container {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     height: 100%;
     overflow: hidden;

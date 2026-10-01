@@ -6,6 +6,7 @@
   import type { ViewDefinition, ViewId } from "src/settings/settings";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onDestroy } from "svelte";
+  import { getTabStripScrollLeft } from "./tabStripScroll";
 
   export let views: ViewDefinition[] = [];
   export let activeViewId: ViewId | undefined;
@@ -77,7 +78,9 @@
 
     const nextView = views[nextIndex];
     if (nextView) {
-      buttonRefs[nextIndex]?.focus();
+      // preventScroll: a plain focus() scrolls every ancestor into view too.
+      buttonRefs[nextIndex]?.focus({ preventScroll: true });
+      centerTab(nextIndex);
       onSelect?.(nextView.id);
       event.preventDefault();
     }
@@ -86,8 +89,25 @@
   function handleButtonClick(viewId: ViewId, index: number) {
     if (touchHandled) return;
     onSelect?.(viewId);
-    // v3.2.1: Scroll the selected tab into view for better visibility
-    buttonRefs[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    centerTab(index);
+  }
+
+  // Scrolls only the strip. scrollIntoView would also scroll
+  // `.projects-container` and clip the left edge of the view on phones.
+  function centerTab(index: number) {
+    const tab = buttonRefs[index];
+    if (!tab || !viewSwitcherElement) return;
+    const stripRect = viewSwitcherElement.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    viewSwitcherElement.scrollTo({
+      left: getTabStripScrollLeft({
+        clientWidth: viewSwitcherElement.clientWidth,
+        scrollWidth: viewSwitcherElement.scrollWidth,
+        tabOffset: tabRect.left - stripRect.left + viewSwitcherElement.scrollLeft,
+        tabWidth: tabRect.width,
+      }),
+      behavior: "smooth",
+    });
   }
 
   function getViewIcon(type: string): string {
