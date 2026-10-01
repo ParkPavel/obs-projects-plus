@@ -103,8 +103,10 @@
       left: getTabStripScrollLeft({
         clientWidth: viewSwitcherElement.clientWidth,
         scrollWidth: viewSwitcherElement.scrollWidth,
-        tabOffset: tabRect.left - stripRect.left + viewSwitcherElement.scrollLeft,
+        scrollLeft: viewSwitcherElement.scrollLeft,
+        tabLeft: tabRect.left - stripRect.left,
         tabWidth: tabRect.width,
+        rtl: getComputedStyle(viewSwitcherElement).direction === "rtl",
       }),
       behavior: "smooth",
     });

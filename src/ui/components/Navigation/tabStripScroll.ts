@@ -3,20 +3,28 @@ export interface TabStripMetrics {
   clientWidth: number;
   /** Full scrollable width of the strip. */
   scrollWidth: number;
-  /** Tab's left edge measured from the strip's scrollable origin. */
-  tabOffset: number;
+  /** Current `scrollLeft` (0..max in LTR, -max..0 in RTL). */
+  scrollLeft: number;
+  /** Tab rect left minus strip rect left (viewport-relative). */
+  tabLeft: number;
   tabWidth: number;
+  /** Strip computed direction is rtl. */
+  rtl: boolean;
 }
 
 /**
  * The strip `scrollLeft` that centres a tab, clamped to what the strip can
- * actually scroll. Used instead of `scrollIntoView`, which also scrolls every
- * scrollable ancestor — on a phone that includes `.projects-container` and
- * shifts the whole plugin view sideways.
+ * actually scroll. Direction-aware: in RTL, Chromium's `scrollLeft` ranges
+ * from -max (far left) to 0 (start, right edge). Used instead of
+ * `scrollIntoView`, which also scrolls every scrollable ancestor — on a phone
+ * that includes `.projects-container` and shifts the whole plugin view sideways.
  */
 export function getTabStripScrollLeft(metrics: TabStripMetrics): number {
-  const { clientWidth, scrollWidth, tabOffset, tabWidth } = metrics;
+  const { clientWidth, scrollWidth, scrollLeft, tabLeft, tabWidth, rtl } = metrics;
   const max = Math.max(0, scrollWidth - clientWidth);
-  const centred = tabOffset + tabWidth / 2 - clientWidth / 2;
-  return Math.min(max, Math.max(0, centred));
+  const origin = rtl ? max + scrollLeft : scrollLeft;
+  const tabContentX = tabLeft + origin;
+  const centred = Math.min(max, Math.max(0, tabContentX + tabWidth / 2 - clientWidth / 2));
+  const result = rtl ? centred - max : centred;
+  return result === 0 ? 0 : result;
 }
