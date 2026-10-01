@@ -94,7 +94,7 @@
 
   // Scrolls only the strip. scrollIntoView would also scroll
   // `.projects-container` and clip the left edge of the view on phones.
-  function centerTab(index: number) {
+  function centerTab(index: number, behavior: ScrollBehavior = "smooth") {
     const tab = buttonRefs[index];
     if (!tab || !viewSwitcherElement) return;
     const stripRect = viewSwitcherElement.getBoundingClientRect();
@@ -108,8 +108,25 @@
         tabWidth: tabRect.width,
         rtl: getComputedStyle(viewSwitcherElement).direction === "rtl",
       }),
-      behavior: "smooth",
+      behavior,
     });
+  }
+
+  // When the strip's width changes (e.g. the active view mounts extra navbar
+  // controls and the strip shrinks), the active tab can end up outside the
+  // visible area while scrollLeft stays put. Re-centre it without animation.
+  // Kept as a separate function so the observer's reactive block below does
+  // not take `views` / `activeViewId` as dependencies.
+  let lastStripWidth = -1;
+  function recenterActiveTabOnResize() {
+    if (!viewSwitcherElement) return;
+    const width = viewSwitcherElement.clientWidth;
+    const previous = lastStripWidth;
+    lastStripWidth = width;
+    // The first observation is the initial layout, not a resize.
+    if (previous < 0 || previous === width) return;
+    const index = views.findIndex((view) => view.id === activeViewId);
+    if (index >= 0) centerTab(index, "auto");
   }
 
   function getViewIcon(type: string): string {
@@ -148,7 +165,11 @@
   let resizeObserver: ResizeObserver | null = null;
   $: if (viewSwitcherElement && typeof ResizeObserver !== "undefined") {
     resizeObserver?.disconnect();
-    resizeObserver = new ResizeObserver(() => updateScrollIndicators());
+    lastStripWidth = -1;
+    resizeObserver = new ResizeObserver(() => {
+      recenterActiveTabOnResize();
+      updateScrollIndicators();
+    });
     resizeObserver.observe(viewSwitcherElement);
   }
   onDestroy(() => {
