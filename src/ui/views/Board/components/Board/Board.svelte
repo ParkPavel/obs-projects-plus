@@ -436,6 +436,16 @@
     width: 100%;
     height: 100%;
     overscroll-behavior: contain;
+    /* ios-s1: this box scrolls the board on both axes, and on a phone its
+       bottom is under Obsidian's floating navbar. End space of the host's own
+       `--view-bottom-spacing` (Obsidian app.css, `.is-phone`; 0 by default,
+       navbar + home-indicator inset with the floating nav — the value Bases
+       reserves) lets the last card scroll above the bar; vertical only, the
+       horizontal end is not obstructed. `border-box` keeps it inside the
+       100%, so a short board's columns end above the bar instead of the
+       container growing past its parent. 0/unset on desktop and tablets. */
+    box-sizing: border-box;
+    padding-bottom: var(--view-bottom-spacing, 0);
   }
 
   .projects--board--viewport {
@@ -446,6 +456,10 @@
   .projects--board--zoom-badge {
     position: fixed;
     bottom: 2.5rem;
+    /* ios-s1: fixed to the window's bottom, i.e. under Obsidian's floating
+       navbar on a phone. The margin lifts the offset by the host's
+       `--view-bottom-spacing` without a calc over a value that may be 0. */
+    margin-bottom: var(--view-bottom-spacing, 0);
     right: 1rem;
     z-index: 100;
     background: var(--interactive-accent);

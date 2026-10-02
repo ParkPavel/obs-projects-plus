@@ -452,14 +452,18 @@
             on:change={(e) => handleViewFilterPillsChange(e.detail)}
             on:saveAsSource={(e) => handleSaveFilterAsSource(e.detail)}
           />
-          <View
-            {project}
-            {view}
-            readonly={source.readonly()}
-            api={new ViewApi(source, $api, resolveFrameById)}
-            onConfigChange={settings.updateViewConfig}
-            {frame}
-          />
+          <!-- ios-s1: the view gets the room LEFT after the filter row, not
+               the whole of `.projects-main`. See `.ppp-view-fill` below. -->
+          <div class="ppp-view-fill">
+            <View
+              {project}
+              {view}
+              readonly={source.readonly()}
+              api={new ViewApi(source, $api, resolveFrameById)}
+              onConfigChange={settings.updateViewConfig}
+              {frame}
+            />
+          </div>
         {/if}
         <slot {project} {view} {source} {frame} />
       </DataFrameProvider>
@@ -587,6 +591,59 @@
     overscroll-behavior: contain;
   }
 
+  /* ios-s1. `View`'s root is `height: 100%` of `.projects-main`, and the
+     filter row sits above it in the same column, so every view was one filter
+     row taller than its room (measured: the phone agenda drawer ended 52 px
+     below the window). The overhang made `.projects-main` scroll, but a board,
+     a calendar or an agenda contain their own overscroll, so a finger inside
+     them could never reach it — the bottom of every view was simply lost.
+     A flexed item with a zero basis in a column of definite height has a
+     definite height, so the view's `100%` now resolves to what is left. */
+  .ppp-view-fill {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  /* ios-s1 — the end of each view above Obsidian's bottom bar.
+
+     The host variable, not a measurement and not our own arithmetic:
+     Obsidian (1.13 app.css) defines `--view-bottom-spacing` on `.is-phone`,
+     0 by default and navbar height + home-indicator inset under
+     `.is-floating-nav` / `.auto-full-screen`, and its own Bases view reserves
+     exactly this at the end of its card and table containers. Reading the
+     same value keeps us level with the host, never doubles it, and is 0 on
+     desktop and tablets (unset there, hence the fallback).
+
+     The space goes INSIDE the box that actually scrolls each view, so content
+     still slides under the translucent bar and the last item can be lifted
+     above it. Each scroller below owns it once; nothing above them is shrunk.
+     The ones another component owns are reached from here, the way the
+     short-landscape rule below already reaches the navbar and filter row:
+       - the dashboard scrolls in its `ViewContent`; the canvas root fills that
+         at `min-height: 100%`, so the space is its own bottom padding, inside
+         that 100%;
+       - the calendar's month and year layers scroll in their `ViewContent`
+         the same way (week/day/timeline scroll in their own wrapper, which
+         reserves the space itself in InfiniteHorizontalCalendar). */
+  .projects-main :global(.ppp-database-root),
+  .projects-main :global(.view-layer--month.view-layer--active),
+  .projects-main :global(.view-layer--year.view-layer--active) {
+    box-sizing: border-box;
+    padding-bottom: var(--view-bottom-spacing, 0);
+  }
+
+  /* ios-s1: on touch the settings panel is capped at the window below the
+     plugin navbar (SettingsMenuPopover's `--below-nav`) and scrolls as one,
+     so its "Done" footer ended under the host bar. A trailing spacer of the
+     host's own height lets it scroll clear; a spacer rather than padding
+     because the panel is a flex column, where end padding is not reliably
+     part of the scrollable overflow in WebKit. */
+  .projects-container :global(.settings-popover--below-nav::after) {
+    content: "";
+    flex: none;
+    height: var(--view-bottom-spacing, 0);
+  }
+
   /* #190. No size of its own: it IS the second grid row, in the same cell as
      `.projects-main`.
 
@@ -626,7 +683,10 @@
   @media (orientation: landscape) and (max-height: 30em) {
     /* The sheet stops at the navbar instead of covering it; its own
        `overflow-y: auto` scrolls whatever no longer fits. 85vh stays the
-       fallback until the first measurement lands. */
+       fallback until the first measurement lands. The room measured here runs
+       to the window's bottom edge, under Obsidian's bar; the sheet keeps the
+       host's `--view-bottom-spacing` clear INSIDE this cap (FloatingPopup), so
+       the cap itself is not reduced a second time. */
     .projects-container {
       --ppp-bottom-sheet-max-h: var(--ppp-below-nav-h, 85vh);
     }

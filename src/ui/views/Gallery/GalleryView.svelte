@@ -267,6 +267,8 @@
       />
       {/if}
     </Grid>
+    <!-- ios-s1: end space under the last row of cards; see `.ppp-gallery-end`. -->
+    <div class="ppp-gallery-end" aria-hidden="true"></div>
   {:else}
     <CenterBox>
       <div class="ppp-gallery-empty">
@@ -282,6 +284,23 @@
 <style>
   .ppp-gallery-content {
     display: contents;
+  }
+
+  /* ios-s1: the gallery scrolls in its `ViewContent` (GalleryOptionsProvider),
+     whose bottom is under Obsidian's floating navbar on a phone. `.ppp-gallery-
+     content` is `display: contents` and the grid is another component, so the
+     end space is a block of its own after the grid, of the host's
+     `--view-bottom-spacing` (Obsidian app.css, `.is-phone`; 0 by default,
+     navbar + home-indicator inset with the floating nav — Bases reserves the
+     same at the end of its cards container). 0/unset on desktop and tablets.
+     A gallery embedded in a dashboard block is not at the view's bottom — the
+     dashboard reserves the space once, at its own end — so it has none. */
+  .ppp-gallery-end {
+    height: var(--view-bottom-spacing, 0);
+  }
+
+  :global(.ppp-widget-host) .ppp-gallery-end {
+    display: none;
   }
 
   .ppp-gallery-footer {

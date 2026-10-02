@@ -931,7 +931,13 @@
     position: absolute;
     top: 0;
     right: 0;
-    bottom: 0;
+    /* ios-s1: the drawer stops where Obsidian's floating navbar begins, so its
+       own bottom controls stay tappable. The host's `--view-bottom-spacing`
+       (Obsidian app.css, `.is-phone`; 0 by default, navbar + home-indicator
+       inset with the floating nav — what Bases reserves) is the obstruction;
+       0/unset on desktop and tablets. Because the box itself is bounded, the
+       list inside no longer pads for the bar (see `.agenda.mobile .content`). */
+    bottom: var(--view-bottom-spacing, 0);
     width: 85vw;
     max-width: 20rem;
     min-width: auto;
@@ -955,6 +961,9 @@
   .agenda-scrim {
     position: absolute;
     inset: 0;
+    /* ios-s1: level with the drawer's bottom — the strip under Obsidian's bar
+       belongs to the host, a tap there must not be read as "outside". */
+    bottom: var(--view-bottom-spacing, 0);
     /* Layer scale, not a raw number: --agenda-z-overlay is declared on .agenda and the
        scrim is its sibling, so read the global token (30) directly; still below the drawer (50) */
     z-index: var(--ppp-z-overlay, 30);
@@ -1208,7 +1217,20 @@
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
-  
+
+  /* ios-s1: the docked sidebar runs to the view's bottom, under Obsidian's
+     floating navbar on a phone, and this list is its scroller. A trailing
+     spacer of the host's `--view-bottom-spacing` (Obsidian app.css,
+     `.is-phone`; 0 by default, navbar + home-indicator inset with the
+     floating nav — what Bases reserves) lets the last item scroll above the
+     bar. A spacer, not padding arithmetic, so a host value of plain 0 never
+     lands in a calc. Hidden in the drawer, which is bounded instead. */
+  .content::after {
+    content: "";
+    display: block;
+    height: var(--view-bottom-spacing, 0);
+  }
+
   /* Categories */
   .categories {
     display: flex;
@@ -1381,8 +1403,13 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    /* Reserve space for Obsidian mobile bottom toolbar + safe area */
-    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* ios-s1: the fixed `3.5rem + env(safe-area-inset-bottom)` allowance that
+     stood here is gone. It guessed the host bar's height, and the drawer now
+     ends above that bar itself (`bottom` above), so padding for it as well
+     would reserve the obstruction twice. */
+  .agenda.mobile .content::after {
+    display: none;
   }
   .agenda.mobile .event { 
     padding: var(--ppp-space-5, 0.75rem) var(--agenda-gap-lg); 

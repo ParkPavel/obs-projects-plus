@@ -1058,6 +1058,17 @@
        auto-scroll. Modern iOS no longer needs this for momentum scrolling. */
     /* v3.2.7: Allow proper flex shrinking when agenda sidebar is open */
     min-width: 0;
+    /* ios-s1: the only vertical scroller of week/day/timeline, and on a phone
+       its bottom is under Obsidian's floating navbar, so the late hours could
+       not be lifted above it. End space of the host's own
+       `--view-bottom-spacing` (Obsidian app.css, `.is-phone`; 0 by default,
+       navbar + home-indicator inset with the floating nav — what Bases
+       reserves). `border-box` keeps it inside the 100%: the axis and the
+       inner calendar (`min-height: 100%`) then stop above the bar when they
+       fit, and scroll past it by exactly that much when they do not.
+       0/unset on desktop and tablets. */
+    box-sizing: border-box;
+    padding-bottom: var(--view-bottom-spacing, 0);
   }
   
   .infinite-horizontal-calendar-wrapper.with-timeline {

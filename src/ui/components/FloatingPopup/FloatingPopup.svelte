@@ -394,6 +394,23 @@
     animation: ppp-sheet-in var(--ppp-duration-fast, 100ms) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1)) forwards;
   }
 
+  /* ios-s1: the sheet is pinned to the window's bottom edge, which on a phone
+     with Obsidian's floating navbar is under that bar — "Добавить условие" sat
+     at 786..830 against a bar starting at 760, and a tap on it landed on the
+     host bar and closed the sheet. The sheet's background may run under the
+     bar; its content may not. A trailing spacer of Obsidian's own
+     `--view-bottom-spacing` (app.css, `.is-phone`: 0 by default, navbar +
+     home-indicator inset with the floating nav; Bases reserves the same
+     value) keeps the last control above the bar. It is inside the box, so it
+     counts within any cap (`--ppp-bottom-sheet-max-h` included) and the
+     content's room shrinks by exactly the obstruction, never twice. 0 and
+     unset — desktop, tablets — change nothing. */
+  .ppp-popup--bottom-sheet::after {
+    content: "";
+    display: block;
+    height: var(--view-bottom-spacing, 0);
+  }
+
   @keyframes ppp-sheet-in {
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
