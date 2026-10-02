@@ -631,7 +631,15 @@
   })();
 </script>
 
-<aside 
+{#if isMobile && visible}
+  <!-- Mobile scrim: the drawer is secondary content, so tapping the uncovered grid dismisses it.
+       Reuses the same `toggle` event; CalendarView persists agendaOpen=false. -->
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class="agenda-scrim" on:click={() => dispatch('toggle')}></div>
+{/if}
+
+<aside
   class="agenda"
   class:collapsed
   class:mobile={isMobile}
@@ -942,6 +950,23 @@
     pointer-events: none;
   }
   
+  /* Mobile scrim: covers the calendar area (CalendarView's positioned container) just
+     below the drawer (z:50) so a tap outside the drawer closes it */
+  .agenda-scrim {
+    position: absolute;
+    inset: 0;
+    /* Layer scale, not a raw number: --agenda-z-overlay is declared on .agenda and the
+       scrim is its sibling, so read the global token (30) directly; still below the drawer (50) */
+    z-index: var(--ppp-z-overlay, 30);
+    background: var(--background-modifier-cover);
+    animation: agenda-scrim-in var(--ppp-duration-normal, 150ms) var(--ppp-ease-out, ease-out) both;
+  }
+
+  @keyframes agenda-scrim-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   /* Landscape orientation: narrower sidebar on mobile */
   @media (max-width: 48rem) and (orientation: landscape) { /* 768 at 16 base */
     .agenda.mobile {
@@ -1511,5 +1536,6 @@
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .agenda, .event, .add-btn, .date-btn, .custom-add-btn, .custom-add-empty { transition: none; }
+    .agenda-scrim { animation: none; }
   }
 </style>

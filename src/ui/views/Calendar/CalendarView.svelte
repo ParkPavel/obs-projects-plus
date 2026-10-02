@@ -1713,8 +1713,30 @@
   let desktopAgendaVisible = true;
   // Sync agendaVisible with config for mobile in day scale
   // On mobile day scale, agendaOpen controls visibility directly
-  $: agendaVisible = isMobile 
-    ? (config?.agendaOpen ?? true)  // Mobile: use config
+  // Mobile drawer is local state that always starts closed on mount: persisted
+  // config.agendaOpen is the desktop panel / toggle intent and (e.g. the cabinet demo
+  // stores true) must not cover the grid on entry.
+  let mobileAgendaVisible = false;
+  let prevAgendaOpen: boolean | undefined;
+  let agendaOpenTracked = false;
+  // After mount every agendaOpen change comes from a navbar tap (App.svelte flips the stored
+  // value), so treat it as a TOGGLE of the drawer: copying the new value would make the first
+  // tap a no-op when the stored value was already true (e.g. cabinet demo).
+  // A function keeps `config` the only reactive dependency of the call site below.
+  function syncMobileAgenda(next: boolean | undefined) {
+    if (!agendaOpenTracked) {
+      agendaOpenTracked = true;
+      prevAgendaOpen = next;
+      return;
+    }
+    if (next !== prevAgendaOpen) {
+      prevAgendaOpen = next;
+      mobileAgendaVisible = !mobileAgendaVisible;
+    }
+  }
+  $: syncMobileAgenda(config?.agendaOpen);
+  $: agendaVisible = isMobile
+    ? mobileAgendaVisible  // Mobile: local state, closed on mount
     : desktopAgendaVisible;  // Desktop: use local state
 
   function handleAgendaRecordClick(id: string) {
@@ -1853,6 +1875,15 @@
   }
   
   function handleAgendaToggle() {
+    // Mobile: close the local drawer state and persist the toggle intent
+    // (same agendaOpen flag the navbar toggle flips) through saveConfig
+    if (isMobile) {
+      mobileAgendaVisible = false;
+      // Pre-sync the tracker so this save is not mistaken for a navbar tap and toggled back open
+      prevAgendaOpen = false;
+      saveConfig({ ...config, agendaOpen: false });
+      return;
+    }
     // Desktop: toggle local state
     desktopAgendaVisible = !desktopAgendaVisible;
   }
