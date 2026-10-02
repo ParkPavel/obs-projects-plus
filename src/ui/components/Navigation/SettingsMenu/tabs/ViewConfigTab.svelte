@@ -232,6 +232,7 @@
             
             <label class="checkbox">
               <input
+                class="ppp-touch-target"
                 type="checkbox"
                 bind:checked={showWeekends}
                 on:change={() => emitUpdate({ showWeekends })}
@@ -241,6 +242,7 @@
             
             <label class="checkbox">
               <input
+                class="ppp-touch-target"
                 type="checkbox"
                 bind:checked={showAllDaySection}
                 on:change={() => emitUpdate({ showAllDaySection })}
@@ -252,6 +254,7 @@
 
         <label class="checkbox">
           <input
+            class="ppp-touch-target"
             type="checkbox"
             bind:checked={agendaOpen}
             on:change={() => emitUpdate({ agendaOpen })}
@@ -413,6 +416,7 @@
 
         <label class="checkbox">
           <input
+            class="ppp-touch-target"
             type="checkbox"
             bind:checked={freezeAll}
             on:change={() => emitUpdate({ freezeAll, freezeColumns: freezeAll })}
@@ -473,6 +477,7 @@
           {#each fields as field}
             <label class="field-item">
               <input
+                class="ppp-touch-target"
                 type="checkbox"
                 checked={galleryIncludeFields.includes(field.name)}
                 on:change={(e) => handleGalleryIncludeFieldChange(field.name, e.currentTarget.checked)}
@@ -509,6 +514,7 @@
 
         <label class="checkbox">
           <input
+            class="ppp-touch-target"
             type="checkbox"
             bind:checked={wrapText}
             on:change={() => emitTableUpdate({ wrapText })}
@@ -518,6 +524,7 @@
 
         <label class="checkbox">
           <input
+            class="ppp-touch-target"
             type="checkbox"
             bind:checked={showAggregationRow}
             on:change={() => emitTableUpdate({ showAggregationRow })}
@@ -564,6 +571,7 @@
               <span class="field-drag-handle" aria-hidden="true">⠿</span>
               <label class="field-item-label">
                 <input
+                  class="ppp-touch-target"
                   type="checkbox"
                   checked={true}
                   on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
@@ -583,6 +591,7 @@
             {#each hiddenFields as field}
               <label class="field-item field-item--hidden">
                 <input
+                  class="ppp-touch-target"
                   type="checkbox"
                   checked={false}
                   on:change={(e) => handleFieldVisibilityChange(field.name, e.currentTarget.checked)}
@@ -633,10 +642,6 @@
     cursor: pointer;
     font-size: 0.75rem;
   }
-  .quick-link-btn:hover {
-    text-decoration: underline;
-    color: var(--text-accent-hover, var(--text-accent));
-  }
   .row {
     display: flex;
     flex-wrap: wrap;
@@ -656,9 +661,6 @@
     min-height: 2.75rem;
     width: 100%;
     box-sizing: border-box;
-  }
-  select:hover, input[type="text"]:hover {
-    border-color: var(--interactive-accent);
   }
   .checkbox { flex-direction: row; align-items: center; gap: 0.5rem; min-height: 2.75rem; }
   .hint {
@@ -685,9 +687,6 @@
     border-radius: 0.375rem;
     cursor: pointer;
   }
-  .field-item:hover {
-    background: var(--background-modifier-hover);
-  }
   .field-item input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
@@ -709,12 +708,6 @@
     font-size: 0.875rem;
     flex-shrink: 0;
     transition: opacity 100ms ease;
-  }
-  .field-item--draggable:hover .field-drag-handle {
-    opacity: 0.6;
-  }
-  .field-drag-handle:hover {
-    opacity: 1 !important;
   }
   .field-item-label {
     display: flex;
@@ -747,7 +740,46 @@
     cursor: pointer;
     text-align: center;
   }
-  .show-all-btn:hover {
-    background: var(--background-modifier-hover);
+
+  /* ios-t1: hover tints and the drag handle's hover reveal reach only a pointer
+     that hovers. Collected here, after every base rule they refine; none of
+     them shares a property with a later rule of equal weight, so the desktop
+     cascade is unchanged by the move. */
+  @media (hover: hover) and (pointer: fine) {
+    .quick-link-btn:hover {
+      text-decoration: underline;
+      color: var(--text-accent-hover, var(--text-accent));
+    }
+    select:hover, input[type="text"]:hover {
+      border-color: var(--interactive-accent);
+    }
+    .field-item:hover {
+      background: var(--background-modifier-hover);
+    }
+    .field-item--draggable:hover .field-drag-handle {
+      opacity: 0.6;
+    }
+    .field-drag-handle:hover {
+      opacity: 1 !important;
+    }
+    .show-all-btn:hover {
+      background: var(--background-modifier-hover);
+    }
+  }
+
+  /* ios-t1: each checkbox carries `.ppp-touch-target` (tokens.css), a finger
+     square centred on the box. Field rows grow to a target tall so the squares
+     of neighbouring rows meet instead of overlapping. The drag handle is the
+     row's HTML drag, which touch never starts, so it steps aside. */
+  @media (pointer: coarse) {
+    .field-item {
+      min-height: var(--ppp-touch-target-min);
+    }
+    .field-drag-handle {
+      display: none;
+    }
+    .quick-link-btn {
+      min-height: var(--ppp-touch-target-min);
+    }
   }
 </style>

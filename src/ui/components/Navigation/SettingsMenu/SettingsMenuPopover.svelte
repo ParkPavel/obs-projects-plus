@@ -321,9 +321,22 @@
                 color var(--ppp-duration-fast, 0.1s) ease;
   }
 
-  .close-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
+  @media (hover: hover) and (pointer: fine) {
+    .close-btn:hover {
+      background: var(--background-modifier-hover);
+      color: var(--text-normal);
+    }
+  }
+
+  /* ios-t1: the close button is the panel's only corner exit on a phone, so it
+     is finger-sized there; the header row grows to hold it. */
+  @media (pointer: coarse) {
+    .close-btn {
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+      min-width: var(--ppp-touch-target-min);
+      min-height: var(--ppp-touch-target-min);
+    }
   }
 
   .tab-content {
@@ -356,8 +369,10 @@
     min-height: 2.75rem;
   }
 
-  .btn-primary:hover {
-    opacity: 0.9;
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
   }
 
   /* Responsive for smaller containers */

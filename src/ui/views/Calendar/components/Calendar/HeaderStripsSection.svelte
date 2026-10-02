@@ -309,8 +309,9 @@
 </script>
 
 {#if hasAnyEvents}
-  <div 
+  <div
     class="header-strips-section"
+    class:header-strips-section--single-lane={maxLane === 1}
     bind:this={sectionElement}
     style:--lane-count={maxLane}
     role="rowgroup"
@@ -525,10 +526,15 @@
    * day-cell and strip-empty border model exactly. This eliminates
    * sub-pixel alignment drift between rows with different border approaches. */
 
-  .strip-segment:hover {
-    background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
-    /* v8.1: Preserve the inset start/end indicator (if any) alongside the hover shadow */
-    box-shadow: var(--_strip-inset-shadow, none), 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+  /* ios-t1: the hover tint is gated to a pointer that hovers. The start/end
+     rules below out-rank it by source order at equal weight; gated in place,
+     it keeps that order. */
+  @media (hover: hover) and (pointer: fine) {
+    .strip-segment:hover {
+      background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
+      /* v8.1: Preserve the inset start/end indicator (if any) alongside the hover shadow */
+      box-shadow: var(--_strip-inset-shadow, none), 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    }
   }
   .strip-segment:focus-visible {
     outline: 0.125rem solid var(--strip-color);
@@ -804,6 +810,17 @@
       min-height: 0;
       min-width: 0;
     }
+
+    /* ios-t1: a week with ONE lane has no neighbouring lane to intercept, so
+       its lane — and the segments filling it — is a finger tall. With two or
+       more lanes they stay at strip height: any taller target would cover the
+       lane beside it, and growing every lane is a layout decision for the
+       calendar track, not this batch. */
+    .header-strips-section--single-lane .multiday-lane {
+      height: var(--ppp-touch-target-min);
+      min-height: var(--ppp-touch-target-min);
+      max-height: var(--ppp-touch-target-min);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -931,10 +948,21 @@
     border-left-width: 0.25rem;
   }
 
-  /* Show handles on hover (desktop) */
-  .strip-segment:hover .resize-handle-start,
-  .strip-segment:hover .resize-handle-end {
-    opacity: 1;
+  /* Show handles on hover (desktop) — only where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
+    .strip-segment:hover .resize-handle-start,
+    .strip-segment:hover .resize-handle-end {
+      opacity: 1;
+    }
+  }
+
+  /* ios-t1: on any touch screen the handles are shown, not only in the narrow
+     and landscape cases below — there is no hover to find them by. */
+  @media (pointer: coarse) {
+    .resize-handle-start,
+    .resize-handle-end {
+      opacity: 1;
+    }
   }
 
   /* Mobile: always show resize handles, enlarge touch zone */

@@ -113,8 +113,10 @@
     flex-shrink: 0;
   }
 
-  button:hover {
-    color: var(--text-normal);
+  @media (hover: hover) and (pointer: fine) {
+    button:hover {
+      color: var(--text-normal);
+    }
   }
 
   button.selected {
@@ -136,6 +138,16 @@
     button {
       padding: 0.375rem 0.375rem;
       font-size: 0.625rem;
+    }
+  }
+
+  /* ios-t1: a finger-sized tab on touch — a short label ("Вид") is narrower
+     than a finger, so width has a floor too. The strip already scrolls
+     sideways, so the extra width costs nothing. */
+  @media (pointer: coarse) {
+    button {
+      min-height: var(--ppp-touch-target-min);
+      min-width: var(--ppp-touch-target-min);
     }
   }
 </style>

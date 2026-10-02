@@ -175,9 +175,6 @@
     scrollbar-width: thin;
   }
 
-  /* On touch the shades are the cue, so the scrollbar can go. */
-  @media (pointer: coarse) { .ppp-view-tab-bar { scrollbar-width: none; } }
-
   .ppp-view-tab {
     flex-shrink: 0;
     display: flex;
@@ -192,11 +189,6 @@
     font-size: var(--font-ui-small, 0.875rem);
     white-space: nowrap;
     transition: background 120ms ease, color 120ms ease;
-  }
-
-  .ppp-view-tab:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
   }
 
   .ppp-view-tab--active {
@@ -222,13 +214,15 @@
     transition: opacity 120ms ease;
   }
 
-  /* Hover-revealed only where hover exists; a finger has no hover to find it. */
+  /* Hover-revealed only where hover exists; a finger has no hover to find it. The active tab
+     out-ranked the plain hover tint by source order; `:not` keeps that inside the gate. */
   @media (hover: hover) and (pointer: fine) {
+    .ppp-view-tab:hover:not(.ppp-view-tab--active) { background: var(--background-modifier-hover); color: var(--text-normal); }
     .ppp-view-tab-more { opacity: 0; }
     .ppp-view-tab:hover .ppp-view-tab-more, .ppp-view-tab:focus-visible .ppp-view-tab-more { opacity: 1; }
+    .ppp-view-tab-more:hover { color: var(--text-normal); }
+    .ppp-view-tab-add:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
   }
-
-  .ppp-view-tab-more:hover { color: var(--text-normal); }
 
   .ppp-view-tab-rename {
     height: 1.75rem;
@@ -252,5 +246,12 @@
     margin-left: 0.25rem;
   }
 
-  .ppp-view-tab-add:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+  /* On touch the shades are the cue, so the scrollbar can go. ios-t1: tabs are a target tall,
+     and the active tab's menu fills that height in its own box beside the label. */
+  @media (pointer: coarse) {
+    .ppp-view-tab-bar { scrollbar-width: none; }
+    .ppp-view-tab { padding-block: 0; min-height: var(--ppp-touch-target-min); }
+    .ppp-view-tab-more { align-self: stretch; justify-content: center; min-width: var(--ppp-touch-target-min); }
+    .ppp-view-tab-add { width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min); }
+  }
 </style>

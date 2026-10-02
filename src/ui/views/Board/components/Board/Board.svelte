@@ -326,6 +326,7 @@
         <div
           class="projects--board--column--dndwrapper"
           class:projects--board--column--dndwrapper--placeholder={isShadowPlaceholder(column)}
+          class:projects--board--column--dndwrapper--collapsed={column.collapse}
           data-dnd-width={`${getColumnFootprint(column)}px`}
           style={`width: ${getColumnFootprint(column)}px; min-width: ${getColumnFootprint(column)}px; max-width: ${getColumnFootprint(column)}px;`}
           aria-hidden={isShadowPlaceholder(column) ? "true" : undefined}
@@ -460,8 +461,10 @@
     box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
   }
 
-  .projects--board--zoom-badge:hover {
-    opacity: 1;
+  @media (hover: hover) and (pointer: fine) {
+    .projects--board--zoom-badge:hover {
+      opacity: 1;
+    }
   }
 
   .projects--board--column--dndwrapper {
@@ -494,19 +497,25 @@
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
-    opacity: 0;
     transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
     z-index: 2;
   }
 
-  .projects--board--column--dndwrapper:hover .board-column-grip {
-    opacity: 0.45;
-  }
+  /* Hidden until the column is hovered — only where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
+    .board-column-grip {
+      opacity: 0;
+    }
 
-  .board-column-grip:hover {
-    opacity: 1;
-    color: var(--text-muted);
-    background: var(--background-modifier-hover);
+    .projects--board--column--dndwrapper:hover .board-column-grip {
+      opacity: 0.45;
+    }
+
+    .board-column-grip:hover {
+      opacity: 1;
+      color: var(--text-muted);
+      background: var(--background-modifier-hover);
+    }
   }
 
   .board-column-grip:active {
@@ -514,12 +523,31 @@
     color: var(--text-normal);
   }
 
-  /* On touch devices, always show the column grip (subtle) */
+  /* ios-t1: on touch the grip is the only way to move a column, so it is shown
+     plainly (it sat at 0.3) and is a finger-sized box of its own in the
+     column's top-left corner, glyph centred. The header beside it starts after
+     that box, so the grip covers no title text and no header action. A
+     collapsed column is a rotated 3rem strip whose expand action sits in this
+     same corner; its grip keeps the small glyph-sized box rather than cover it. */
   @media (pointer: coarse) {
     .board-column-grip {
-      opacity: 0.3;
+      opacity: 0.7;
+      color: var(--text-muted);
       width: 1.125rem;
       height: 1.5rem;
+    }
+
+    .projects--board--column--dndwrapper:not(.projects--board--column--dndwrapper--collapsed) > .board-column-grip {
+      top: 0;
+      left: 0;
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+    }
+
+    /* Pinned columns render no grip, so their header keeps its full width. */
+    .projects--board--column--dndwrapper:not(.projects--board--column--dndwrapper--collapsed):not(.projects--board--column--pinned)
+      :global(.projects--board--column--header) {
+      padding-left: calc(var(--ppp-touch-target-min) - var(--size-4-1));
     }
   }
 </style>

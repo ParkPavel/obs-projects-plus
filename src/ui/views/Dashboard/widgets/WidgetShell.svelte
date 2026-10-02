@@ -210,15 +210,23 @@
     touch-action: none;
   }
 
-  .ppp-widget-grip:hover,
   .ppp-widget-grip:focus-visible {
     color: var(--text-normal);
     background: var(--background-modifier-hover);
   }
 
-  /* Finger-sized target; the token is declared at :root, so no fallback length. */
+  /* ios-t1: hover tints only where a hover exists; on touch they stuck after a tap. */
+  @media (hover: hover) and (pointer: fine) {
+    .ppp-widget-grip:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+    .ppp-widget-collapse-btn:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+    .ppp-widget-error-retry:hover { background: var(--text-error); color: var(--background-primary); }
+  }
+
+  /* Finger-sized targets (grip; collapse since ios-t1) — a floor over the glyph-sized
+     width/height, so the box grows. The token is declared at :root, so no fallback length. */
   @media (pointer: coarse) {
-    .ppp-widget-grip {
+    .ppp-widget-grip,
+    .ppp-widget-collapse-btn {
       min-width: var(--ppp-touch-target-min);
       min-height: var(--ppp-touch-target-min);
     }
@@ -242,11 +250,6 @@
 
   .ppp-widget-host--collapsed .ppp-widget-collapse-btn {
     transform: rotate(-90deg);
-  }
-
-  .ppp-widget-collapse-btn:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
   }
 
   .ppp-widget-title {
@@ -319,11 +322,6 @@
     color: var(--text-error);
     cursor: pointer;
     font-size: var(--font-ui-smaller);
-  }
-
-  .ppp-widget-error-retry:hover {
-    background: var(--text-error);
-    color: var(--background-primary);
   }
 
   /* DG-9 lazy-render skeleton */

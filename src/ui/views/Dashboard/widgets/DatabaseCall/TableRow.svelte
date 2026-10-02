@@ -100,10 +100,6 @@
     border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
 
-  .ppp-t2-row:hover {
-    background: var(--ppp-db-surface-hover, var(--background-modifier-hover));
-  }
-
   /* Selection Bus driver row — the source of the canvas-wide filter */
   .ppp-t2-row--driving {
     background: var(--ppp-db-surface-selected, var(--background-modifier-hover));
@@ -139,16 +135,42 @@
     color: var(--text-faint);
     border-radius: var(--radius-s, 0.25rem);
     cursor: pointer;
-    opacity: 0;
     transition: opacity 120ms ease;
   }
 
-  .ppp-t2-row:hover .ppp-t2-rowbtn {
-    opacity: 1;
+  /* ios-t1: the row actions are revealed by hover only where hover exists.
+     The row tint sits in the gate too, or a tap would leave it stuck. */
+  @media (hover: hover) and (pointer: fine) {
+    .ppp-t2-row:hover {
+      background: var(--ppp-db-surface-hover, var(--background-modifier-hover));
+    }
+
+    .ppp-t2-rowbtn {
+      opacity: 0;
+    }
+
+    .ppp-t2-row:hover .ppp-t2-rowbtn {
+      opacity: 1;
+    }
+
+    .ppp-t2-rowbtn:hover {
+      color: var(--text-normal);
+      background: var(--background-modifier-hover);
+    }
   }
 
-  .ppp-t2-rowbtn:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
+  /* A finger has no hover to find them: both actions stay shown, each in its
+     own finger-sized box side by side, so the two targets never overlap. The
+     row grows to fit them; the name keeps its ellipsis. */
+  @media (pointer: coarse) {
+    .ppp-t2-rowbtn {
+      opacity: 1;
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+    }
+
+    .ppp-t2-cell--primary {
+      gap: 0;
+    }
   }
 </style>

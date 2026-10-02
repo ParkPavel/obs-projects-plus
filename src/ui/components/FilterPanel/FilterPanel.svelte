@@ -616,9 +616,13 @@
     background-position: right 0.375rem center;
     padding-right: 1.25rem;
   }
-  .conj-select:hover {
-    border-color: var(--interactive-accent);
-    background-color: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.15);
+  /* ios-t1: every hover rule in this file is gated to a pointer that hovers,
+     each in place so the cascade order it had stays the same on desktop. */
+  @media (hover: hover) and (pointer: fine) {
+    .conj-select:hover {
+      border-color: var(--interactive-accent);
+      background-color: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.15);
+    }
   }
   .conj-select:focus {
     border-color: var(--interactive-accent);
@@ -641,9 +645,11 @@
     padding: 0.1875rem 0.125rem; min-height: 2rem; border-radius: 0.375rem;
     transition: background 100ms ease;
   }
-  .filter-row:hover { background: var(--background-secondary); }
-  .filter-row:hover .row-delete,
-  .filter-row:hover .row-toggle { opacity: 1; }
+  @media (hover: hover) and (pointer: fine) {
+    .filter-row:hover { background: var(--background-secondary); }
+    .filter-row:hover .row-delete,
+    .filter-row:hover .row-toggle { opacity: 1; }
+  }
   .filter-row--disabled { opacity: 0.5; }
   .filter-row--disabled .chip,
   .filter-row--disabled .value-input { pointer-events: none; }
@@ -690,7 +696,9 @@
     white-space: nowrap; line-height: 1; flex-shrink: 0;
     transition: border-color 100ms ease, background 100ms ease;
   }
-  .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
+  @media (hover: hover) and (pointer: fine) {
+    .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
+  }
   .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
   .chip-label { max-width: 6.25rem; overflow: hidden; text-overflow: ellipsis; }
   .chip--field .chip-label { font-weight: 500; }
@@ -712,15 +720,25 @@
   .row-btn {
     flex-shrink: 0; color: var(--text-faint); border-radius: 0.25rem;
     padding: 0.25rem; border: none; background: transparent;
-    cursor: pointer; opacity: 0; transition: opacity 100ms ease, color 100ms ease, background 100ms ease;
+    cursor: pointer; transition: opacity 100ms ease, color 100ms ease, background 100ms ease;
+  }
+  /* Hidden until the row is hovered — only where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
+    .row-btn { opacity: 0; }
   }
   .row-toggle { color: var(--interactive-accent); opacity: 0.8; }
-  .row-toggle:hover { color: var(--interactive-accent); opacity: 1; background: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.08); }
+  @media (hover: hover) and (pointer: fine) {
+    .row-toggle:hover { color: var(--interactive-accent); opacity: 1; background: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.08); }
+  }
   .row-toggle--off { opacity: 1; color: var(--text-faint); }
-  .row-delete:hover { color: var(--text-error); background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06); }
+  @media (hover: hover) and (pointer: fine) {
+    .row-delete:hover { color: var(--text-error); background: rgba(var(--color-red-rgb, 255, 0, 0), 0.06); }
+  }
   .row-drag { cursor: grab; }
   .row-drag:active { cursor: grabbing; }
-  .filter-row:hover .row-drag { opacity: 0.5; }
+  @media (hover: hover) and (pointer: fine) {
+    .filter-row:hover .row-drag { opacity: 0.5; }
+  }
   .filter-row--drag-over {
     border-top: 0.125rem solid var(--interactive-accent);
     background: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.04);
@@ -736,20 +754,47 @@
     cursor: pointer; font-size: 0.8125rem; flex: 1;
     transition: border-color 100ms ease, color 100ms ease;
   }
-  .add-btn:hover { border-color: var(--interactive-accent); color: var(--text-normal); }
+  @media (hover: hover) and (pointer: fine) {
+    .add-btn:hover { border-color: var(--interactive-accent); color: var(--text-normal); }
+  }
   .add-btn--nested {
     font-size: 0.75rem; padding: 0.25rem 0.5rem;
     border-style: dashed; margin-top: 0.125rem;
   }
 
+  /* ios-t1: on a phone one condition row does not fit a 390-wide panel — the
+     delete button was clipped at its right edge. The row becomes a two-line
+     grid: prefix, toggle, both chips and delete on top, the value below at full
+     width. The chips share what is left and ellipsize; every control is a
+     finger-sized box of its own, so no two targets overlap. The grip goes: it
+     is pointer-only decoration for the row's HTML drag, which touch never starts. */
   @media (pointer: coarse) {
-    .filter-row { gap: 0.1875rem; min-height: 2.375rem; }
-    .chip { height: 2rem; padding: 0 0.625rem; font-size: 0.875rem; }
-    .value-input { height: 2rem; font-size: 0.875rem; }
-    .row-btn { opacity: 1; padding: 0.375rem; }
-    .add-btn { min-height: 2.5rem; font-size: 0.875rem; }
+    .filter-row {
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 1fr) auto;
+      grid-template-areas:
+        "prefix toggle field op delete"
+        "value value value value value";
+      gap: 0.25rem;
+      min-height: var(--ppp-touch-target-min);
+    }
+    .filter-row .row-prefix { grid-area: prefix; }
+    .filter-row .row-toggle { grid-area: toggle; }
+    .filter-row .chip--field { grid-area: field; }
+    .filter-row .chip--op { grid-area: op; }
+    .filter-row .value-area { grid-area: value; min-width: 0; }
+    .filter-row .row-delete { grid-area: delete; }
+    .filter-row .row-drag { display: none; }
+    .chip { width: 100%; height: var(--ppp-touch-target-min); min-width: 0; overflow: hidden; padding: 0 0.625rem; font-size: 0.875rem; }
+    .chip-label { min-width: 0; flex: 0 1 auto; }
+    .value-input { height: var(--ppp-touch-target-min); font-size: 0.875rem; }
+    .row-btn {
+      opacity: 1; display: inline-flex; align-items: center; justify-content: center;
+      width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min); padding: 0;
+    }
+    .add-btn { min-height: var(--ppp-touch-target-min); font-size: 0.875rem; }
     .row-prefix { min-width: 2.25rem; font-size: 0.8125rem; }
-    .conj-select { font-size: 0.8125rem; padding: 0.25rem 0.625rem; padding-right: 1.5rem; }
+    .conj-select { min-height: var(--ppp-touch-target-min); font-size: 0.8125rem; padding: 0.25rem 0.625rem; padding-right: 1.5rem; }
   }
 
   /* v3.2.1: Mobile keyboard — reverse column so list scrolls upward.

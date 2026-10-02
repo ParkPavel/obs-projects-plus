@@ -519,6 +519,45 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   TOUCH TARGETS (ios-t1)
+   ───────────────────────────────────────────────────────────
+   `.ppp-touch-target` gives a small control a finger-sized hit
+   area on a coarse pointer without moving anything: the glyph
+   keeps its box and the layout is untouched. An invisible
+   `::before` square of --ppp-touch-target-min, centred on the
+   control, takes the touch; a pseudo-element hit-tests as its own
+   element, so the press lands on the control itself.
+
+   Use it only where the square falls on room the neighbours have
+   left free (padding, a gap of at least half a target). Where it
+   would cover another control, enlarge the control's own box or
+   reflow the row instead: of two overlapping targets the one
+   painted later wins, silently.
+
+   The class anchors the square with `position: relative`; a
+   control that is already positioned keeps its own value, because
+   its scoped rule is more specific. Not for an element that draws
+   its own `::before`. On a fine pointer the class does nothing.
+   The board card grip (CardList, ios-d1) is the same geometry
+   written in place, because its glyph is absolutely positioned.
+   ═══════════════════════════════════════════════════════════ */
+@media (pointer: coarse) {
+  .ppp-touch-target {
+    position: relative;
+  }
+
+  .ppp-touch-target::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--ppp-touch-target-min);
+    height: var(--ppp-touch-target-min);
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* v8.0: Mobile viewport - reduce event strip height for better fit */
 @media (max-width: 48rem) {
   :root {

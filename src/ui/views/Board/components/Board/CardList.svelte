@@ -258,10 +258,16 @@
     transition: background 150ms ease, box-shadow 150ms ease;
     position: relative;
   }
-  .projects--board--card:hover,
   .projects--board--card:focus-within {
     background: var(--background-primary-alt);
     box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+  }
+  /* ios-t1: hover states reach only a pointer that hovers; a tap left them stuck. */
+  @media (hover: hover) and (pointer: fine) {
+    .projects--board--card:hover {
+      background: var(--background-primary-alt);
+      box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    }
   }
 
   /* Card drag grip — left edge tab, inset from card border */
@@ -282,19 +288,25 @@
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
-    opacity: 0;
     transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
     z-index: 1;
   }
 
-  .projects--board--card:hover .board-card-grip {
-    opacity: 0.45;
-  }
+  /* Hidden until the card is hovered — only where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
+    .board-card-grip {
+      opacity: 0;
+    }
 
-  .board-card-grip:hover {
-    opacity: 1;
-    color: var(--text-muted);
-    background: var(--background-modifier-hover);
+    .projects--board--card:hover .board-card-grip {
+      opacity: 0.45;
+    }
+
+    .board-card-grip:hover {
+      opacity: 1;
+      color: var(--text-muted);
+      background: var(--background-modifier-hover);
+    }
   }
 
   .board-card-grip:active {
@@ -305,13 +317,13 @@
   /* ios-d1: on touch the grip is the only way to move a card (a pan on the
      card body scrolls the board), so it is shown plainly and caught by a
      finger-sized hit area. The glyph keeps its size; the ::before box is the
-     invisible target, centred on it. Its touches land on the grip itself, so
-     `touch-action: none` and the `dragHandle` listeners apply unchanged. */
+     invisible target, centred on it — the geometry of `.ppp-touch-target`
+     (tokens.css), written here because the glyph is absolutely positioned.
+     Its touches land on the grip itself, so `touch-action: none` and the
+     `dragHandle` listeners apply unchanged. Since ios-t1 the desktop hover
+     rules above are gated, so no stuck hover can dim the grip here. */
   @media (pointer: coarse) {
-    /* The :hover form too: touch leaves hover stuck after a tap, and the
-       desktop hover rule above would dim the grip again. */
-    .board-card-grip,
-    .projects--board--card:hover .board-card-grip {
+    .board-card-grip {
       opacity: 0.7;
       color: var(--text-muted);
       width: 0.625rem;
@@ -341,15 +353,21 @@
 
   .card-header .edit-hint {
     margin-left: auto;
-    opacity: 0;
-    visibility: hidden;
     transition: opacity 120ms ease;
   }
 
-  .projects--board--card:hover .edit-hint,
-  .projects--board--card:focus-within .edit-hint {
-    opacity: 1;
-    visibility: visible;
+  /* The pencil is revealed by hover or keyboard focus where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
+    .card-header .edit-hint {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .projects--board--card:hover .edit-hint,
+    .projects--board--card:focus-within .edit-hint {
+      opacity: 1;
+      visibility: visible;
+    }
   }
 
   .checkbox-wrapper {
@@ -357,5 +375,41 @@
     flex-direction: column;
     align-self: start;
     margin-top: 0.25rem;
+  }
+
+  @media (pointer: coarse) {
+    /* ios-t1: a tap on the card opens the record, which is all the pencil
+       does, so on touch it is not a separate target to aim between. */
+    .card-header .edit-hint {
+      display: none;
+    }
+
+    /* ios-t1: the checkbox's finger square is its wrapper's own box. The
+       wrapper is a target wide and tall, the box centred in it, and the
+       input's ::before fills exactly that square — so the target starts where
+       the grip's hit area ends (the card's left padding above) and ends before
+       the title, covering neither. */
+    .checkbox-wrapper {
+      flex-shrink: 0;
+      align-self: center;
+      align-items: center;
+      justify-content: center;
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+      margin-top: 0;
+    }
+    .checkbox-wrapper :global(input[type="checkbox"]) {
+      position: relative;
+      margin: 0;
+    }
+    .checkbox-wrapper :global(input[type="checkbox"]::before) {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+      transform: translate(-50%, -50%);
+    }
   }
 </style>
