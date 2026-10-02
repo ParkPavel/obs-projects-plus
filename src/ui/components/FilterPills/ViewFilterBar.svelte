@@ -42,6 +42,10 @@
   // has no client rects, which is how the hidden one is told apart.
   let popupAnchor: HTMLElement | null = null;
   $: if (open) popupAnchor = anchor && anchor.getClientRects().length > 0 ? anchor : triggerEl;
+  // Opened from the navbar means the row — and the save action in it — is
+  // hidden, so the action travels into the popup for exactly that case. It is
+  // rendered in one place at a time; the row gets it back when the popup closes.
+  $: saveInPopup = open && anchor !== null && popupAnchor === anchor;
   let naming = false;
   let sourceName = "";
   let nameEl: HTMLInputElement | null = null;
@@ -54,6 +58,9 @@
   // nothing. The bar is the right home precisely because the filter is already
   // visible here and has already been applied to what is on screen.
   $: canSave = !readonly && conditions.length > 0;
+  $: nameLabel = $i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" });
+  $: saveLabel = $i18n.t("views.filter.bar.save", { defaultValue: "Save as source" });
+  $: saveTip = $i18n.t("views.filter.bar.save-tip", { defaultValue: "Keep this filter as a source of the project, so a block can show it" });
 
   async function startNaming() {
     naming = true;
@@ -69,6 +76,11 @@
     // A blank name is a cancel, not an unnamed source: the name is the only
     // thing that will identify this selection in a picker later.
     if (trimmed) dispatch("saveAsSource", trimmed);
+  }
+
+  function handleNameKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter") commitName();
+    else if (e.key === "Escape") { naming = false; sourceName = ""; }
   }
 
   function handleUpdate(e: CustomEvent<FilterDefinition>) {
@@ -98,29 +110,12 @@
       on:remove={(e) => removeCondition(e.detail)}
       on:addClick={() => (open = !open)}
     />
-    {#if canSave}
+    {#if canSave && !saveInPopup}
       {#if naming}
-        <input
-          bind:this={nameEl}
-          class="ppp-viewfilter-name"
-          type="text"
-          bind:value={sourceName}
-          placeholder={$i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" })}
-          aria-label={$i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" })}
-          on:keydown={(e) => {
-            if (e.key === "Enter") commitName();
-            else if (e.key === "Escape") { naming = false; sourceName = ""; }
-          }}
-          on:blur={commitName}
-        />
+        <input bind:this={nameEl} class="ppp-viewfilter-name" type="text" bind:value={sourceName}
+          placeholder={nameLabel} aria-label={nameLabel} on:keydown={handleNameKeydown} on:blur={commitName} />
       {:else}
-        <button
-          class="ppp-viewfilter-save"
-          on:click={startNaming}
-          title={$i18n.t("views.filter.bar.save-tip", { defaultValue: "Keep this filter as a source of the project, so a block can show it" })}
-        >
-          {$i18n.t("views.filter.bar.save", { defaultValue: "Save as source" })}
-        </button>
+        <button class="ppp-viewfilter-save" on:click={startNaming} title={saveTip}>{saveLabel}</button>
       {/if}
     {/if}
     {#if !readonly}
@@ -134,6 +129,16 @@
             scopeLabel={$i18n.t("views.filter.bar.scope", { defaultValue: "This view" })}
             on:update={handleUpdate}
           />
+          {#if canSave && saveInPopup}
+            <div class="ppp-viewfilter-popover-save">
+              {#if naming}
+                <input bind:this={nameEl} class="ppp-viewfilter-name" type="text" bind:value={sourceName}
+                  placeholder={nameLabel} aria-label={nameLabel} on:keydown={handleNameKeydown} on:blur={commitName} />
+              {:else}
+                <button class="ppp-viewfilter-save" on:click={startNaming} title={saveTip}>{saveLabel}</button>
+              {/if}
+            </div>
+          {/if}
         </div>
       </FloatingPopup>
     {/if}
@@ -168,6 +173,13 @@
     height: 1.5rem;
     max-width: 14rem;
     font-size: var(--font-ui-smaller);
+  }
+
+  .ppp-viewfilter-popover-save {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0.375rem;
+    border-top: 0.0625rem solid var(--background-modifier-border);
   }
 
   .ppp-viewfilter-popover {
