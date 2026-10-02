@@ -49,6 +49,7 @@
   export let project: import("src/settings/settings").ProjectDefinition | undefined = undefined;
   /** Multi-DataTable: primary widget round-trips the root `config.table`. */
   export let isPrimaryDataTable: boolean = true;
+  export let reorderable = false; // ios-g1 G1: set inside a `dragHandleZone`; the shell renders the grip.
 
   const dispatch = createEventDispatcher<{
     configChange: { id: string; changes: Partial<WidgetDefinition> };
@@ -133,9 +134,7 @@
 <WidgetShell
   widgetId={widget.id}
   title={widget.title}
-  {collapsed}
-  {readonly}
-  {renameSignal}
+  {collapsed} {readonly} {renameSignal} {reorderable}
   on:toggleCollapse={() => { primaryActionSignal = 0; patchWidget({ collapsed: !collapsed }); }}
   on:titleChange={(e) => patchWidget({ title: e.detail })}
 >

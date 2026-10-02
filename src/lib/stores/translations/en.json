@@ -1054,6 +1054,7 @@
                 "widget": {
                     "expand": "Expand widget",
                     "collapse": "Collapse widget",
+                    "drag-handle": "Drag to reorder the widget",
                     "chart-settings": "Chart settings",
                     "pipeline": "Pipeline: reshape data before showing — group, count, sort",
                     "remove": "Remove widget",

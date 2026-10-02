@@ -30,6 +30,7 @@
   import { handleHoverLink, showMobileNavMenu } from "../helpers";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onDestroy } from "svelte";
+  import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { noticeFor } from "src/lib/errors/errorText";
   import { logError } from "src/lib/errors/errorLog";
 
@@ -168,6 +169,10 @@
   let:cardWidth
 >
   {#if records.length}
+    <!-- ios-g1 G2: `Grid` is a component, so the swipe-ownership action needs
+         an element of its own. `display: contents` keeps it out of layout while
+         it stays an ancestor in the DOM, which is all Obsidian's recogniser reads. -->
+    <div class="ppp-gallery-content" use:ignoreHostSwipe>
     <!-- C18: count footer -->
     <div class="ppp-gallery-footer">
       <span class="ppp-gallery-footer-count">
@@ -260,6 +265,7 @@
       />
       {/if}
     </Grid>
+    </div>
   {:else}
     <CenterBox>
       <div class="ppp-gallery-empty">
@@ -272,6 +278,10 @@
 </GalleryOptionsProvider>
 
 <style>
+  .ppp-gallery-content {
+    display: contents;
+  }
+
   .ppp-gallery-footer {
     display: flex;
     align-items: center;

@@ -55,6 +55,7 @@
   import { ViewportStateManager } from "./viewport/ViewportStateManager";
   import { AnimationController } from "./animation/AnimationController";
   import { gestureCoordinator as gestureAction } from "./gestures/GestureCoordinator";
+  import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { noticeFor } from "src/lib/errors/errorText";
 
   /**
@@ -1904,6 +1905,7 @@
   <div 
     class="calendar-zoom-container"
     use:gestureAction={{ handlers: _gestureHandlers }}
+    use:ignoreHostSwipe
     on:wheel={handleZoomWheel}
     on:keydown={handleKeyDown}
     role="application"

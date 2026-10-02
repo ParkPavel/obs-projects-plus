@@ -16,8 +16,9 @@
 
   import { i18n } from "src/lib/stores/i18n";
   import { createEventDispatcher } from "svelte";
-  import { dndzone, type DndEvent } from "svelte-dnd-action";
+  import { dragHandleZone, SOURCES, TRIGGERS, type DndEvent } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
+  import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
@@ -49,6 +50,72 @@
   /** #136: per-source state, so a block can tell "loading" from "gone". */
   export let sourceStates: ReadonlyMap<string, ExternalSourceState> = new Map();
   export let project: ProjectDefinition;
+
+  // ── ios-g1 G1: widgets drag from the grip only ──
+  //
+  // `dragHandleZone` keeps every item drag-disabled until a `dragHandle` (the
+  // grip WidgetShell renders) is pressed, so a pan or long press on the widget
+  // body scrolls. The library re-disables the items only on a POINTER
+  // `finalize` or a KEYBOARD `dragStopped` `consider`. A press on the grip that
+  // never moves far enough to start a drag (a tap) produces neither, and leaves
+  // every item armed: the next pan anywhere on a widget would start a drag —
+  // exactly the accident this change removes. So on release after a grip press
+  // that started no drag, this disarms the zone through the one public route
+  // the library listens to: a `consider` it reads as "keyboard drag stopped".
+  // That event is ours, never a reorder, and the forwarding handlers drop it.
+  const GRIP_SELECTOR = ".ppp-widget-grip";
+  const disarmEvents = new WeakSet<Event>();
+
+  function disarmAfterGripTap(node: HTMLElement) {
+    let pressed = false;
+    let dragStarted = false;
+
+    function onPress(e: Event) {
+      if (!(e.target instanceof Element) || !e.target.closest(GRIP_SELECTOR)) return;
+      pressed = true;
+      dragStarted = false;
+    }
+    function onConsider(e: Event) {
+      // A real `consider` means a drag is under way; the library itself
+      // disarms the zone when that drag finalizes.
+      if (!disarmEvents.has(e)) dragStarted = true;
+    }
+    function onRelease() {
+      if (!pressed) return;
+      pressed = false;
+      if (dragStarted) return;
+      const detail: DndEvent<WidgetDefinition> = {
+        items: dndWidgets,
+        info: { trigger: TRIGGERS.DRAG_STOPPED, id: "", source: SOURCES.KEYBOARD },
+      };
+      const disarm = new CustomEvent("consider", { detail });
+      disarmEvents.add(disarm);
+      node.dispatchEvent(disarm);
+    }
+
+    // Capture on the zone: runs before the grip's own handler, whatever it does.
+    node.addEventListener("mousedown", onPress, true);
+    node.addEventListener("touchstart", onPress, { capture: true, passive: true });
+    node.addEventListener("consider", onConsider);
+    window.addEventListener("mouseup", onRelease);
+    window.addEventListener("touchend", onRelease);
+    window.addEventListener("touchcancel", onRelease);
+    return {
+      destroy() {
+        node.removeEventListener("mousedown", onPress, true);
+        node.removeEventListener("touchstart", onPress, true);
+        node.removeEventListener("consider", onConsider);
+        window.removeEventListener("mouseup", onRelease);
+        window.removeEventListener("touchend", onRelease);
+        window.removeEventListener("touchcancel", onRelease);
+      },
+    };
+  }
+
+  function forwardConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) {
+    if (disarmEvents.has(e)) return;
+    dispatch("consider", e.detail);
+  }
 </script>
 
 {#if widgets.length === 0}
@@ -69,14 +136,19 @@
     </svelte:fragment>
   </EmptyState>
 {:else if canDnd}
+  <!-- ios-g1: G1 grip-only drag (see the script), G2 interior swipes stay in
+       the dashboard instead of opening Obsidian's drawers. -->
   <div
     class="ppp-database-canvas ppp-database-canvas--stack"
-    use:dndzone={{ items: dndWidgets, flipDurationMs: 200, type: "widgets" }}
-    on:consider={(e) => dispatch("consider", e.detail)}
+    use:dragHandleZone={{ items: dndWidgets, flipDurationMs: 200, type: "widgets" }}
+    use:disarmAfterGripTap
+    use:ignoreHostSwipe
+    on:consider={forwardConsider}
     on:finalize={(e) => dispatch("finalize", e.detail)}
   >
     {#each dndWidgets as widget (widget.id)}
       <WidgetHost
+        reorderable
         {widget}
         frame={widget.type === "filter-tabs" ? frame : displayFrame}
         {api}
@@ -107,7 +179,7 @@
     />
   </div>
 {:else}
-  <div class="ppp-database-canvas ppp-database-canvas--stack">
+  <div class="ppp-database-canvas ppp-database-canvas--stack" use:ignoreHostSwipe>
     {#each widgets as widget (widget.id)}
       <WidgetHost
         {widget}

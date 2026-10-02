@@ -1018,6 +1018,7 @@
                 "widget": {
                     "expand": "展开组件",
                     "collapse": "折叠组件",
+                    "drag-handle": "拖动以重新排列组件",
                     "chart-settings": "图表设置",
                     "pipeline": "管道：显示前重塑数据 — 分组、计数、排序",
                     "remove": "删除组件",

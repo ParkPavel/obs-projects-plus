@@ -10,6 +10,7 @@
   import { Icon } from "obsidian-svelte";
   import { onDestroy } from "svelte";
   import { flip } from "svelte/animate";
+  import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
@@ -221,7 +222,9 @@
   }
 </script>
 
-<div class="projects--board--container" use:wheelZoom>
+<!-- ios-g1 G2: interior swipes pan the board instead of opening Obsidian's
+     drawer at the board's scroll boundary; edge swipes still reach the host. -->
+<div class="projects--board--container" use:wheelZoom use:ignoreHostSwipe>
   <div
     class="projects--board--viewport"
     style={zoom !== 1 ? `transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%; height: ${100 / zoom}%` : ""}
