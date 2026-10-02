@@ -168,11 +168,13 @@
   let:iconField
   let:cardWidth
 >
+  <!-- ios-g1 G2: `Grid` and `CenterBox` are components, so the swipe-ownership
+       action needs an element of its own, wrapping BOTH branches — an empty
+       gallery must not hand interior swipes to Obsidian either. `display:
+       contents` keeps it out of layout while it stays an ancestor in the DOM,
+       which is all Obsidian's recogniser reads. -->
+  <div class="ppp-gallery-content" use:ignoreHostSwipe>
   {#if records.length}
-    <!-- ios-g1 G2: `Grid` is a component, so the swipe-ownership action needs
-         an element of its own. `display: contents` keeps it out of layout while
-         it stays an ancestor in the DOM, which is all Obsidian's recogniser reads. -->
-    <div class="ppp-gallery-content" use:ignoreHostSwipe>
     <!-- C18: count footer -->
     <div class="ppp-gallery-footer">
       <span class="ppp-gallery-footer-count">
@@ -265,7 +267,6 @@
       />
       {/if}
     </Grid>
-    </div>
   {:else}
     <CenterBox>
       <div class="ppp-gallery-empty">
@@ -275,6 +276,7 @@
       </div>
     </CenterBox>
   {/if}
+  </div>
 </GalleryOptionsProvider>
 
 <style>
