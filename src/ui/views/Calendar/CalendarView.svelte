@@ -16,6 +16,7 @@
   import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { settings } from "src/lib/stores/settings";
   import { isMobileDevice } from "src/lib/stores/ui";
+  import { agendaDrawer, close as closeAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { AgendaCustomList } from "src/settings/v3/settings";
@@ -1716,27 +1717,12 @@
   // Mobile drawer is local state that always starts closed on mount: persisted
   // config.agendaOpen is the desktop panel / toggle intent and (e.g. the cabinet demo
   // stores true) must not cover the grid on entry.
-  let mobileAgendaVisible = false;
-  let prevAgendaOpen: boolean | undefined;
-  let agendaOpenTracked = false;
-  // After mount every agendaOpen change comes from a navbar tap (App.svelte flips the stored
-  // value), so treat it as a TOGGLE of the drawer: copying the new value would make the first
-  // tap a no-op when the stored value was already true (e.g. cabinet demo).
-  // A function keeps `config` the only reactive dependency of the call site below.
-  function syncMobileAgenda(next: boolean | undefined) {
-    if (!agendaOpenTracked) {
-      agendaOpenTracked = true;
-      prevAgendaOpen = next;
-      return;
-    }
-    if (next !== prevAgendaOpen) {
-      prevAgendaOpen = next;
-      mobileAgendaVisible = !mobileAgendaVisible;
-    }
-  }
-  $: syncMobileAgenda(config?.agendaOpen);
+  // Mobile drawer: session store shared with the navbar toggle (App.svelte), keyed by the
+  // project id (the same key App uses). Never persisted; default closed.
+  $: drawerKey = project?.id;
+  $: drawerOpen = drawerKey ? $agendaDrawer[drawerKey] === true : false;
   $: agendaVisible = isMobile
-    ? mobileAgendaVisible  // Mobile: local state, closed on mount
+    ? drawerOpen  // Mobile: session store
     : desktopAgendaVisible;  // Desktop: use local state
 
   function handleAgendaRecordClick(id: string) {
@@ -1875,13 +1861,9 @@
   }
   
   function handleAgendaToggle() {
-    // Mobile: close the local drawer state and persist the toggle intent
-    // (same agendaOpen flag the navbar toggle flips) through saveConfig
+    // Mobile (scrim / close button): close the session drawer, config is untouched
     if (isMobile) {
-      mobileAgendaVisible = false;
-      // Pre-sync the tracker so this save is not mistaken for a navbar tap and toggled back open
-      prevAgendaOpen = false;
-      saveConfig({ ...config, agendaOpen: false });
+      closeAgendaDrawer(drawerKey);
       return;
     }
     // Desktop: toggle local state
@@ -2049,7 +2031,7 @@
 
     <!-- Agenda sidebar: Available on ALL devices (matryoshka principle) -->
     <!-- Desktop: Side panel with collapse, Mobile: Full drawer show/hide -->
-    {#if interval === 'day' || config?.agendaOpen}
+    {#if interval === 'day' || config?.agendaOpen || (isMobile && drawerOpen)}
       <AgendaSidebar 
         project={project}
         records={agendaSidebarRecords}

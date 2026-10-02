@@ -10,6 +10,8 @@
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { isMobileDevice } from "src/lib/stores/ui";
+  import { agendaDrawer, toggle as toggleAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import { fileSystem } from "src/lib/stores/fileSystem";
   import { ViewApi } from "src/lib/viewApi";
   import { resolveExternalFrame } from "src/lib/externalFrameResolver";
@@ -84,6 +86,14 @@
     }
     return found;
   })();
+
+  // Phone agenda drawer (session store, shared with CalendarView). Keyed by the project id
+  // because CalendarView is mounted with `project`, not the view id; both sides use this key.
+  $: agendaDrawerKey = project?.id;
+  // Navbar icon/label: the drawer on a phone, the view config (undefined) on desktop.
+  $: navAgendaOpen = $isMobileDevice
+    ? (agendaDrawerKey ? $agendaDrawer[agendaDrawerKey] === true : false)
+    : undefined;
 
   // #077 — quick view-filter pills. Writes the edited FilterDefinition back to
   // the active view; empty clears to a no-condition filter. Engine evaluation
@@ -333,6 +343,12 @@
   }
 
   function handleToggleAgenda() {
+    if ($isMobileDevice) {
+      // Phone: the drawer is session state, never the persisted desktop flag
+      const open = toggleAgendaDrawer(agendaDrawerKey);
+      dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open });
+      return;
+    }
     const current = view?.config?.["agendaOpen"] ?? false;
     mergeViewConfig({ agendaOpen: !current });
     dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open: !current });
@@ -357,6 +373,7 @@
     {views}
     viewId={view?.id}
     {view}
+    agendaOpen={navAgendaOpen}
     on:viewChange={(event) => (viewId = event.detail)}
     on:addView={() => handleAddView(project)}
     on:openSettings={(event) => handleOpenSettings(event.detail)}

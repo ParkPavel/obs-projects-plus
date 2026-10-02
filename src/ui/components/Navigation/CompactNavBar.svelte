@@ -10,6 +10,8 @@
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
   export let view: ViewDefinition | undefined = undefined;
+  /** Agenda state for the icon/label; undefined falls back to the view config. */
+  export let agendaOpen: boolean | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     addView: void;
@@ -49,6 +51,7 @@
     <SettingsMenuButton onOpen={(event) => dispatch("openSettings", event)}/>
     <ViewSpecificActions
       {view}
+      {agendaOpen}
       onCenterToday={() => dispatch("centerToday")}
       onToggleAgenda={() => dispatch("toggleAgenda")}
       onFreezeColumns={() => dispatch("freezeColumns")}
