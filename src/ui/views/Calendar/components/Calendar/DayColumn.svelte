@@ -178,6 +178,11 @@
   }
   
   function handleTouchEnd(e: TouchEvent) {
+    // ios-d1: a tap on an event bar is the bar's — its click opens the record.
+    // Reading it as a tap on empty time would cancel that click (preventDefault)
+    // and open the day or a new record instead. Not stopped, only ignored, so
+    // the GestureCoordinator above still sees the touchend.
+    if (e.target instanceof Element && e.target.closest('.projects-calendar-event-bar')) return;
     const duration = Date.now() - touchStartTime;
     
     // Tap detected: short duration, no movement

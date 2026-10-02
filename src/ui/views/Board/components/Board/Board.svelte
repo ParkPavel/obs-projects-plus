@@ -14,6 +14,9 @@
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
+  // ios-d1: the column row is a `dragHandleZone` sharing the cards' arming
+  // store, so a tap on a column grip must disarm it too (see CardList).
+  import { disarmAfterGripTap, isDisarmEvent } from "./CardList.svelte";
   import type {
     Column,
     OnRecordAdd,
@@ -101,6 +104,8 @@
   }
 
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
+    // The disarm signal is not a drag: it must not freeze the column order.
+    if (isDisarmEvent(e)) return;
     isDraggingColumns = true;
     dndUnpinnedColumns = e.detail.items;
   }
@@ -309,6 +314,7 @@
         dragDisabled: boardEditing || zoom !== 1 || dataReadOnly,
         morphDisabled: true,
       }}
+      use:disarmAfterGripTap={".board-column-grip"}
       on:consider={handleDndConsider}
       on:finalize={handleDndFinalize}
     >

@@ -268,9 +268,18 @@
     font-size: inherit;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    /* v3.3.4: none prevents browser from committing to scroll on touchstart,
-       keeping touchmove events cancelable so DnD drag can preventDefault */
-    touch-action: none;
+    /* ios-d1: pan-y, not none (v3.3.4), so a vertical pan that starts on a bar
+       scrolls the timeline. The drag still owns the touch: TimelineDragManager
+       drops a press that drifts past its slop before the browser's own pan
+       slop, and after the long press it cancels the first touchmove, which is
+       still cancelable because no scroll has begun. Horizontal stays with the
+       GestureCoordinator, as before. */
+    touch-action: pan-y;
+    /* A held finger must not select the title or raise the iOS callout: either
+       takes the touch away from the drag. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   
   button.projects-calendar-event-bar {

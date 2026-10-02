@@ -1,3 +1,75 @@
+<script context="module" lang="ts">
+  import { SOURCES, TRIGGERS } from "svelte-dnd-action";
+
+  // ── ios-d1: a grip press that starts no drag must not leave the board armed ──
+  //
+  // `dragHandleZone` keeps every item drag-disabled until a `dragHandle` is
+  // pressed, and the flag it flips is ONE module-level store shared by every
+  // zone on the page: each card list and the column row. The library re-disables
+  // the items only on a POINTER `finalize` or a KEYBOARD `dragStopped`
+  // `consider`. A press on a grip that never moves far enough to start a drag
+  // (a tap) produces neither, so every card in every column stays armed and the
+  // next plain pan on a card body starts a drag instead of scrolling the board.
+  // WidgetGrid closes the same hole for widgets (ios-g1); this is that pattern
+  // for the board, shared by CardList (card grips) and Board (column grips).
+  const disarmEvents = new WeakSet<Event>();
+
+  /** Whether a `consider` is the disarm signal below rather than a real drag. */
+  export function isDisarmEvent(e: Event): boolean {
+    return disarmEvents.has(e);
+  }
+
+  /**
+   * On release after a press on `grip` (inside `node`, a `dragHandleZone`) that
+   * started no drag, disarm through the one public route the library listens
+   * to: a `consider` it reads as "keyboard drag stopped". That event is ours,
+   * never a reorder; the zone's own handlers drop it via `isDisarmEvent`.
+   */
+  export function disarmAfterGripTap(node: HTMLElement, grip: string): { destroy: () => void } {
+    let pressed = false;
+    let dragStarted = false;
+
+    function onPress(e: Event) {
+      if (!(e.target instanceof Element) || !e.target.closest(grip)) return;
+      pressed = true;
+      dragStarted = false;
+    }
+    function onConsider(e: Event) {
+      // A real `consider` means a drag is under way; the library disarms the
+      // zones itself when that drag finalizes.
+      if (!disarmEvents.has(e)) dragStarted = true;
+    }
+    function onRelease() {
+      if (!pressed) return;
+      pressed = false;
+      if (dragStarted) return;
+      const disarm = new CustomEvent("consider", {
+        detail: { items: [], info: { trigger: TRIGGERS.DRAG_STOPPED, id: "", source: SOURCES.KEYBOARD } },
+      });
+      disarmEvents.add(disarm);
+      node.dispatchEvent(disarm);
+    }
+
+    // Capture on the zone: runs before the grip's own handler, whatever it does.
+    node.addEventListener("mousedown", onPress, true);
+    node.addEventListener("touchstart", onPress, { capture: true, passive: true });
+    node.addEventListener("consider", onConsider);
+    window.addEventListener("mouseup", onRelease);
+    window.addEventListener("touchend", onRelease);
+    window.addEventListener("touchcancel", onRelease);
+    return {
+      destroy() {
+        node.removeEventListener("mousedown", onPress, true);
+        node.removeEventListener("touchstart", onPress, true);
+        node.removeEventListener("consider", onConsider);
+        window.removeEventListener("mouseup", onRelease);
+        window.removeEventListener("touchend", onRelease);
+        window.removeEventListener("touchcancel", onRelease);
+      },
+    };
+  }
+</script>
+
 <script lang="ts">
   // import { Checkbox, InternalLink} from "obsidian-svelte";
   import { Checkbox, Icon } from "obsidian-svelte";
@@ -21,9 +93,9 @@
     showMobileNavMenu,
     sortRecordsContext,
   } from "src/ui/views/helpers";
+  // TRIGGERS comes from the module script above; a second import would clash.
   import {
     SHADOW_ITEM_MARKER_PROPERTY_NAME,
-    TRIGGERS,
     dragHandleZone,
     dragHandle,
   } from "svelte-dnd-action";
@@ -55,7 +127,9 @@
   const flipDurationMs = 150;
 
   let dragItem: DataRecord | undefined;
-  function handleDndConsider({ detail }: CustomEvent<DndEvent<DataRecord>>) {
+  function handleDndConsider(e: CustomEvent<DndEvent<DataRecord>>) {
+    if (isDisarmEvent(e)) return;
+    const { detail } = e;
     if (detail.info.trigger === TRIGGERS.DRAG_STARTED) {
       dragItem = items.find((item) => item.id === detail.info.id);
     }
@@ -96,6 +170,7 @@
     dragDisabled: boardEditing || disableDnd,
     morphDisabled: true,
   }}
+  use:disarmAfterGripTap={".board-card-grip"}
 >
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}
@@ -220,12 +295,35 @@
     color: var(--text-normal);
   }
 
-  /* On touch devices, always show card grip (subtle) */
+  /* ios-d1: on touch the grip is the only way to move a card (a pan on the
+     card body scrolls the board), so it is shown plainly and caught by a
+     finger-sized hit area. The glyph keeps its size; the ::before box is the
+     invisible target, centred on it. Its touches land on the grip itself, so
+     `touch-action: none` and the `dragHandle` listeners apply unchanged. */
   @media (pointer: coarse) {
-    .board-card-grip {
-      opacity: 0.25;
+    /* The :hover form too: touch leaves hover stuck after a tap, and the
+       desktop hover rule above would dim the grip again. */
+    .board-card-grip,
+    .projects--board--card:hover .board-card-grip {
+      opacity: 0.7;
+      color: var(--text-muted);
       width: 0.625rem;
       height: 1.125rem;
+    }
+    .board-card-grip::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+      transform: translate(-50%, -50%);
+    }
+    /* The hit area reaches past the glyph by half a target; the content starts
+       after it (glyph centre = left 0.125rem + half its 0.625rem width), so the
+       checkbox and title stay tappable and a press on them never arms a drag. */
+    .projects--board--card {
+      padding-left: calc(var(--ppp-touch-target-min) / 2 + 0.4375rem);
     }
   }
   div.card-header {
