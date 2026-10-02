@@ -16,6 +16,7 @@
   import SortTab from "./tabs/SortTab.svelte";
   import ViewConfigTab from "./tabs/ViewConfigTab.svelte";
   import { i18n } from "../../../../lib/stores/i18n";
+  import { isTouchDevice } from "../../../../lib/stores/ui";
 
   export let projects: ProjectDefinition[] = [];
   export let projectId: ProjectId | undefined;
@@ -47,7 +48,22 @@
   let activeTab: SettingsTabId = "viewConfig";
   
   // Calculate safe position avoiding Obsidian sidebars and header overlap
-  let safePosition = { top: '3.5rem', right: '0.5rem', left: 'auto' };
+  let safePosition: { top: string; right: string; left: string; maxHeight: string | null } =
+    { top: '3.5rem', right: '0.5rem', left: 'auto', maxHeight: null };
+
+  /**
+   * ios-l1: on touch the panel must not cover the plugin's own navbar. The
+   * 56 floor below is Obsidian's header, and a phone's plugin navbar sits well
+   * under it, so the panel landed on top of the tabs and buttons it configures.
+   * Found through this panel's own leaf — `document.querySelector` could
+   * answer with another leaf's navbar. Null off touch and when not found, so
+   * desktop keeps exactly the position it always had.
+   */
+  function navbarBottom(): number | null {
+    if (!$isTouchDevice || !popoverElement) return null;
+    const nav = popoverElement.closest(".projects-container")?.querySelector(":scope > .compact-navbar");
+    return nav ? nav.getBoundingClientRect().bottom : null;
+  }
   
   function calculateSafePosition() {
     // Find Obsidian sidebars
@@ -79,12 +95,19 @@
     }
     
     // Position within viewport, anchored near click point and accounting for sidebars
-    const topPx = Math.max(56, Math.min(window.innerHeight - 120, (position?.y ?? 60) + 8));
+    const anchoredTopPx = Math.max(56, Math.min(window.innerHeight - 120, (position?.y ?? 60) + 8));
+    // Touch: never above the navbar's bottom edge, and only as tall as the
+    // room left beneath it — the panel then scrolls as a whole (see the
+    // `--below-nav` rule), because its tab area alone has a floor taller than
+    // a landscape phone leaves.
+    const navBottom = navbarBottom();
+    const topPx = navBottom === null ? anchoredTopPx : Math.max(anchoredTopPx, navBottom + 8);
 
     safePosition = {
       top: `${topPx / 16}rem`,
       right: `${Math.max(0.5, rightOffset / 16 + 0.5)}rem`,
-      left: 'auto'
+      left: 'auto',
+      maxHeight: navBottom === null ? null : `${Math.max(0, window.innerHeight - topPx - 8) / 16}rem`,
     };
   }
 
@@ -135,13 +158,15 @@
     on:click|self={() => dispatch("close")}
   >
     <div 
-      class="settings-popover" 
-      bind:this={popoverElement} 
+      class="settings-popover"
+      class:settings-popover--below-nav={safePosition.maxHeight !== null}
+      bind:this={popoverElement}
       use:focusTrap
       role="dialog" 
       aria-modal="true" 
       tabindex="-1"
       style="top: {safePosition.top}; right: {safePosition.right}; left: {safePosition.left};"
+      style:max-height={safePosition.maxHeight}
     >
       <div class="popover-header">
         <h3>{$i18n.t('settings-menu.title')}</h3>
@@ -235,6 +260,20 @@
     pointer-events: auto;
     z-index: var(--ppp-z-modal, 40);
     animation: ppp-popover-enter var(--ppp-duration-slow, 0.25s) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1));
+  }
+
+  /* ios-l1: below the navbar on touch the room can be shorter than the tab
+     area's own floor, so the panel scrolls as one instead of clipping the
+     footer's "Done" out of reach. */
+  .settings-popover--below-nav {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .settings-popover--below-nav .tab-content {
+    flex: 0 0 auto;
+    max-height: none;
+    overflow-y: visible;
   }
 
   @keyframes ppp-popover-enter {
