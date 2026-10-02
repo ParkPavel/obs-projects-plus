@@ -160,12 +160,26 @@
     gap: 0.125rem;
     padding: 0.25rem 0.5rem;
     border-bottom: 0.0625rem solid var(--background-modifier-border);
-    background: var(--background-secondary);
+    /* ios-l1 L2: tiles keep their width, the strip scrolls natively. A shade per edge; a `local`
+       cover riding with the content hides it at the end, so a shade means "more" — no script. */
+    background:
+      linear-gradient(to right, var(--background-secondary) 50%, transparent) left / 2em 100% no-repeat local,
+      linear-gradient(to left, var(--background-secondary) 50%, transparent) right / 2em 100% no-repeat local,
+      linear-gradient(to right, var(--background-modifier-box-shadow), transparent) left / 0.75em 100% no-repeat,
+      linear-gradient(to left, var(--background-modifier-box-shadow), transparent) right / 0.75em 100% no-repeat,
+      var(--background-secondary);
+    min-width: 0;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
   }
 
+  /* On touch the shades are the cue, so the scrollbar can go. */
+  @media (pointer: coarse) { .ppp-view-tab-bar { scrollbar-width: none; } }
+
   .ppp-view-tab {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 0.375rem;
@@ -192,11 +206,7 @@
     box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.05);
   }
 
-  .ppp-view-tab-icon {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-  }
+  .ppp-view-tab-icon { display: flex; align-items: center; flex-shrink: 0; }
 
   .ppp-view-tab-label {
     max-width: 8rem;
@@ -209,17 +219,16 @@
     align-items: center;
     color: var(--text-faint);
     border-radius: var(--radius-s, 0.25rem);
-    opacity: 0;
     transition: opacity 120ms ease;
   }
 
-  .ppp-view-tab:hover .ppp-view-tab-more {
-    opacity: 1;
+  /* Hover-revealed only where hover exists; a finger has no hover to find it. */
+  @media (hover: hover) and (pointer: fine) {
+    .ppp-view-tab-more { opacity: 0; }
+    .ppp-view-tab:hover .ppp-view-tab-more, .ppp-view-tab:focus-visible .ppp-view-tab-more { opacity: 1; }
   }
 
-  .ppp-view-tab-more:hover {
-    color: var(--text-normal);
-  }
+  .ppp-view-tab-more:hover { color: var(--text-normal); }
 
   .ppp-view-tab-rename {
     height: 1.75rem;
@@ -243,8 +252,5 @@
     margin-left: 0.25rem;
   }
 
-  .ppp-view-tab-add:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
+  .ppp-view-tab-add:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 </style>

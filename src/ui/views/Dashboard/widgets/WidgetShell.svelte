@@ -180,12 +180,12 @@
     transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
   }
 
-  .ppp-widget-host--collapsed {
-    min-height: auto;
-  }
+  .ppp-widget-host--collapsed { min-height: auto; }
 
+  /* ios-l1 L2: badges yield, the title keeps a floor, then wrap — never overflow. */
   .ppp-widget-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--ppp-space-sm, 0.25rem);
     padding: var(--ppp-space-sm, 0.25rem) var(--ppp-space-md, 0.5rem);
@@ -253,7 +253,8 @@
     font-weight: var(--font-semibold, 600);
     font-size: var(--font-ui-small);
     color: var(--text-normal);
-    flex: 1;
+    flex: 2 1 0;
+    min-width: 4em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -271,8 +272,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25em;
-    flex-shrink: 0;
+    /* Basis 0: out of the wrap decision; grown to own width, else clipped. */
+    flex: 1 1 0;
+    max-width: max-content;
     min-width: 0;
+    overflow: hidden;
   }
 
   .ppp-widget-content {

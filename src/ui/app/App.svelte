@@ -3,6 +3,7 @@
   import { get } from "svelte/store";
 
   import { Notice } from "obsidian";
+  import { Icon } from "obsidian-svelte";
   import { v4 as uuidv4 } from "uuid";
   import { createProject } from "src/lib/dataApi";
   import { buildDerivedSource, projectSourceOptions, sourceNameTaken } from "src/lib/datasources/namedSource";
@@ -94,6 +95,43 @@
   $: navAgendaOpen = $isMobileDevice
     ? (agendaDrawerKey ? $agendaDrawer[agendaDrawerKey] === true : false)
     : undefined;
+
+  // ios-l1 L1 — in short landscape the filter row gives its height back and
+  // the navbar carries one button that opens the same popover. `filterOpen` is
+  // the bar's own open state, bound through; the count stands in for the
+  // pills the row would have shown.
+  let filterOpen = false;
+  let filterTriggerEl: HTMLButtonElement | null = null;
+  $: activeFilterCount = (view?.filter?.conditions ?? []).filter((c) => c.enabled !== false).length;
+
+  // ios-l1 L1 — the phone bottom sheet is fixed to the window's bottom edge and
+  // capped at 85vh, which in short landscape rises above this navbar and covers
+  // the very button that toggles it. The room it may take is the window below
+  // the navbar's bottom edge — i.e. the top of `.projects-main`, grid row 2 —
+  // measured rather than written down, since the navbar's height is its own.
+  // Exposed as `--ppp-below-nav-h`; the short-landscape rule below hands it to
+  // the sheet, which inherits it because on phones it is not portalled.
+  let mainEl: HTMLDivElement | null = null;
+  let belowNav: string | null = null;
+  function measureBelowNav() {
+    if (!mainEl) return;
+    const win = mainEl.ownerDocument.defaultView ?? window;
+    const room = win.innerHeight - mainEl.getBoundingClientRect().top;
+    belowNav = room > 0 ? `${Math.floor(room)}px` : null;
+  }
+  onMount(() => {
+    const win = mainEl?.ownerDocument.defaultView ?? window;
+    measureBelowNav();
+    // `.projects-main` changes size when the leaf does or when the navbar's
+    // height does — the two things that move the navbar's bottom edge.
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measureBelowNav) : null;
+    if (mainEl) observer?.observe(mainEl);
+    win.addEventListener("resize", measureBelowNav);
+    return () => {
+      observer?.disconnect();
+      win.removeEventListener("resize", measureBelowNav);
+    };
+  });
 
   // #077 — quick view-filter pills. Writes the edited FilterDefinition back to
   // the active view; empty clears to a no-condition filter. Engine evaluation
@@ -368,7 +406,7 @@
 	App is the main application component and coordinates between the View and
 	the Toolbar.
 -->
-<div class="projects-container">
+<div class="projects-container" style:--ppp-below-nav-h={belowNav}>
   <CompactNavBar
     {views}
     viewId={view?.id}
@@ -380,9 +418,27 @@
     on:centerToday={handleCenterToday}
     on:toggleAgenda={handleToggleAgenda}
     on:freezeColumns={handleFreezeColumns}
-  />
+  >
+    <svelte:fragment slot="filter">
+      {#if view}
+        <button
+          bind:this={filterTriggerEl}
+          class="ppp-nav-filter clickable-icon"
+          class:ppp-nav-filter--active={activeFilterCount > 0}
+          aria-label={$i18n.t("views.filter.bar.aria", { defaultValue: "View filter" })}
+          title={$i18n.t("views.filter.bar.aria", { defaultValue: "View filter" })}
+          aria-haspopup="dialog"
+          aria-expanded={filterOpen}
+          on:click={() => (filterOpen = !filterOpen)}
+        >
+          <Icon name="filter" size="sm" />
+          {#if activeFilterCount > 0}<span class="ppp-nav-filter-count">{activeFilterCount}</span>{/if}
+        </button>
+      {/if}
+    </svelte:fragment>
+  </CompactNavBar>
 
-  <div class="projects-main">
+  <div class="projects-main" bind:this={mainEl}>
     {#if project}
       <DataFrameProvider {project} let:frame let:source>
         {#if project && view && source}
@@ -391,6 +447,8 @@
             fields={frame.fields}
             records={frame.records}
             readonly={source.readonly()}
+            bind:open={filterOpen}
+            anchor={filterTriggerEl}
             on:change={(e) => handleViewFilterPillsChange(e.detail)}
             on:saveAsSource={(e) => handleSaveFilterAsSource(e.detail)}
           />
@@ -546,5 +604,71 @@
     overflow: clip;
     pointer-events: none;
     z-index: var(--ppp-z-overlay);
+  }
+
+  /* ios-l1 L1: the navbar's filter button exists only for the short-landscape
+     rule below; everywhere else the filter row is on screen and is the trigger. */
+  .ppp-nav-filter {
+    display: none;
+  }
+
+  /* ios-l1 L1 — short landscape. A phone on its side leaves the plugin well
+     under 18rem of height, and a two-row navbar plus a filter row took 41% of
+     it before the view began. Here the chrome is one row: tab icon and label
+     side by side at the same 2.75rem touch height, and the filter row folded
+     into a navbar button that opens the very same popover.
+
+     One query, kept on the shell, so the three components it reaches into
+     cannot disagree about when the phone is "short". `em` in a media query is
+     the initial font size, so 30em does not move with the theme. Only the
+     rows inside the grid change: the navbar stays in row 1 and the #190 layer
+     in row 2, so nothing anchored to the navbar's bottom edge moves. */
+  @media (orientation: landscape) and (max-height: 30em) {
+    /* The sheet stops at the navbar instead of covering it; its own
+       `overflow-y: auto` scrolls whatever no longer fits. 85vh stays the
+       fallback until the first measurement lands. */
+    .projects-container {
+      --ppp-bottom-sheet-max-h: var(--ppp-below-nav-h, 85vh);
+    }
+
+    .projects-container :global(.compact-navbar) {
+      padding-block: 0;
+    }
+
+    .projects-container :global(.view-switcher .view-item) {
+      flex-direction: row;
+      gap: 0.375rem;
+      padding-block: 0;
+    }
+
+    /* A read-only bar has no popover, so its pills stay: they are the only
+       place its active filter is visible. */
+    .projects-container :global(.ppp-viewfilter--editable) {
+      padding: 0;
+    }
+
+    .projects-container :global(.ppp-viewfilter--editable > .ppp-filterpills),
+    .projects-container :global(.ppp-viewfilter--editable > .ppp-viewfilter-save),
+    .projects-container :global(.ppp-viewfilter--editable > .ppp-viewfilter-name) {
+      display: none;
+    }
+
+    .ppp-nav-filter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
+  }
+
+  .ppp-nav-filter--active {
+    color: var(--text-accent);
+  }
+
+  .ppp-nav-filter-count {
+    font-size: var(--font-ui-smaller);
+    font-weight: var(--font-semibold, 600);
   }
 </style>

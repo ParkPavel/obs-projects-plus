@@ -20,6 +20,15 @@
   export let fields: DataField[] = [];
   export let records: DataRecord[] = [];
   export let readonly = false;
+  /** Bindable, so a trigger outside the bar can open the same popover. */
+  export let open = false;
+  /**
+   * ios-l1 L1: that outside trigger — the shell's navbar filter button, shown
+   * in short landscape where this bar's own row is hidden. Nothing new opens:
+   * it is the same FloatingPopup and FilterPanel, anchored to whichever
+   * trigger is actually on screen.
+   */
+  export let anchor: HTMLElement | null = null;
 
   const dispatch = createEventDispatcher<{
     change: FilterDefinition | undefined;
@@ -27,8 +36,12 @@
     saveAsSource: string;
   }>();
 
-  let open = false;
   let triggerEl: HTMLButtonElement | null = null;
+  // Chosen when the popup opens, not on every change, so the trigger focus
+  // returns to on close is the one that opened it. A `display: none` trigger
+  // has no client rects, which is how the hidden one is told apart.
+  let popupAnchor: HTMLElement | null = null;
+  $: if (open) popupAnchor = anchor && anchor.getClientRects().length > 0 ? anchor : triggerEl;
   let naming = false;
   let sourceName = "";
   let nameEl: HTMLInputElement | null = null;
@@ -71,7 +84,10 @@
 </script>
 
 {#if !readonly || conditions.length > 0}
-  <div class="ppp-viewfilter">
+  <!-- `--editable` is the hook the shell's short-landscape rule hides the row
+       by: a read-only bar has no popover, so its pills are the only way to
+       see the active filter and must stay. -->
+  <div class="ppp-viewfilter" class:ppp-viewfilter--editable={!readonly}>
     <FilterPills
       {conditions}
       {readonly}
@@ -108,7 +124,7 @@
       {/if}
     {/if}
     {#if !readonly}
-      <FloatingPopup {triggerEl} bind:open placement="bottom-start" role="dialog"
+      <FloatingPopup triggerEl={popupAnchor} bind:open placement="bottom-start" role="dialog"
         ariaLabel={$i18n.t("views.filter.bar.aria", { defaultValue: "View filter" })}>
         <div class="ppp-viewfilter-popover">
           <FilterPanel

@@ -46,6 +46,9 @@
   />
 
   <div class="right">
+    <!-- ios-l1 L1: the shell's one-tap filter button. The shell owns it because
+         the filter popover lives with the view's data, which the navbar never sees. -->
+    <slot name="filter" />
     <SaveStatusChip />
     <AddViewButton onAdd={() => dispatch("addView")}/>
     <SettingsMenuButton onOpen={(event) => dispatch("openSettings", event)}/>
@@ -77,11 +80,14 @@
     flex-shrink: 0;
   }
 
+  /* ios-l1 L3: the actions take their own width first and never shrink; the
+     view strip gets only what is left (`flex: 1 1 0` in ViewSwitcher) and
+     clips at its own edge, so a tab can scroll but cannot reach an icon. */
   .right {
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-xs, 0.375rem);
-    flex-shrink: 0;
+    flex: 0 0 auto;
   }
 
   :global(.clickable-icon) {

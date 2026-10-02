@@ -382,6 +382,9 @@
     bottom: 0;
     left: 0;
     right: 0;
+    /* A caller may cap this at a measured room (App's short-landscape rule),
+       so the padding has to count inside the cap, not on top of it. */
+    box-sizing: border-box;
     max-height: var(--ppp-bottom-sheet-max-h, 85vh);
     overflow-y: auto;
     background: var(--background-primary);

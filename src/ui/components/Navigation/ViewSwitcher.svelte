@@ -257,12 +257,15 @@
     position: relative;
     display: flex;
     align-items: stretch;
-    /* #041: claim available middle space in CompactNavBar flex layout
-       (project trigger + container + .right). Without `flex: 1 1 auto`
-       the container takes natural content width → tabs overflow the navbar
-       instead of activating the inner scroll + chevrons. */
-    flex: 1 1 auto;
+    /* #041: claim the space CompactNavBar's actions leave, so the inner scroll
+       and chevrons engage instead of the tabs overflowing the navbar.
+       ios-l1 L3: basis 0, not auto — the strip's column is bounded by what
+       is left, never by its tabs' width — and `clip` makes that column's edge
+       the edge of everything the strip paints, fades and chevrons included.
+       `clip`, not `hidden`: this box must not become a second scroller. */
+    flex: 1 1 0;
     min-width: 0;
+    overflow: clip;
   }
 
   /* Edge-fade masks indicate scrollable content on either side. */
