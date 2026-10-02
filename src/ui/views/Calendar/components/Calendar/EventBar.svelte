@@ -185,6 +185,7 @@
     class:dnd-dragging={isDragging}
     class:dnd-handles-visible={longPressActiveValue && isDragging}
     type="button"
+    data-record-id={record.id}
     style="
       top: {topRem}rem; 
       height: {heightRem}rem; 
@@ -218,8 +219,9 @@
     {/if}
   </button>
 {:else}
-  <div 
+  <div
     class="projects-calendar-event-bar"
+    data-record-id={record.id}
     style="
       top: {topRem}rem; 
       height: {heightRem}rem; 

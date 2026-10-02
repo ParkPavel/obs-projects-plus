@@ -95,10 +95,6 @@ const TOUCH_SLOP_REM = 0.5;
  */
 const CLICK_GUARD_MOUSE_MS = 200;
 const CLICK_GUARD_TOUCH_MS = 400;
-
-/** A touch guard's reach around the release point: about a fingertip. */
-const CLICK_GUARD_RADIUS_REM = 0.75;
-
 const isTouchEvent = (event: Event): event is TouchEvent => 'touches' in event;
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -527,15 +523,7 @@ export class TimelineDragManager {
     const wasHeld = s.isTouchDrag && s.armedByLongPress;
     // Touch guards are scoped to this gesture (see suppressNextClick); the
     // mouse guard keeps taking the first click, as it always has.
-    const release = this.getPointerPosition(event);
-    const scope = s.isTouchDrag
-      ? {
-          origin: s.barElement,
-          x: release.clientX,
-          y: release.clientY,
-          radiusPx: CLICK_GUARD_RADIUS_REM * (this.config?.remPx ?? 16),
-        }
-      : undefined;
+    const scope = s.isTouchDrag ? { origin: s.barElement, recordId: s.record.id } : undefined;
 
     if (get(this.state) === 'dragging') {
       this.commit();
@@ -1194,25 +1182,28 @@ export class TimelineDragManager {
    * After a drag commit (or a held touch), the browser may fire a click on the
    * original target. Intercept it once to prevent record navigation.
    *
-   * With `scope`, only a click that belongs to the released gesture is taken:
-   * one inside the element the gesture started on, or landing within
-   * `radiusPx` of the release point (the bar may have re-rendered under the
-   * finger after the commit). A cancelled touchend sends no click at all, so an
-   * unscoped guard would sit armed for the whole window and swallow the user's
-   * next tap on a different event or control. Without `scope` (mouse) the first
+   * With `scope`, only a click that belongs to the released gesture is taken,
+   * matched by IDENTITY: its target is inside the element the gesture started
+   * on, or — because a commit re-renders the bar under the finger — inside an
+   * event bar carrying the same `data-record-id`. Coordinates are deliberately
+   * not used: a neighbouring event tapped right after the release sits within
+   * a fingertip of it and must still open. A cancelled touchend sends no click
+   * at all, so an unscoped guard would sit armed for the whole window and
+   * swallow the user's next tap elsewhere. Without `scope` (mouse) the first
    * click is taken, as before: after a mouse drag the click lands on the common
    * ancestor of press and release, not on the bar.
    */
   private suppressNextClick(
     doc: Document,
     windowMs: number,
-    scope?: { origin: HTMLElement; x: number; y: number; radiusPx: number }
+    scope?: { origin: HTMLElement; recordId: string }
   ): void {
     const belongs = (e: Event): boolean => {
       if (!scope) return true;
-      if (e.target instanceof Node && scope.origin.contains(e.target)) return true;
-      if (!(e instanceof MouseEvent)) return false;
-      return Math.hypot(e.clientX - scope.x, e.clientY - scope.y) <= scope.radiusPx;
+      if (!(e.target instanceof Element)) return false;
+      if (scope.origin.contains(e.target)) return true;
+      const bar = e.target.closest('[data-record-id]');
+      return bar?.getAttribute('data-record-id') === scope.recordId;
     };
     const remove = () => doc.removeEventListener('click', handler, { capture: true });
     const handler = (e: Event) => {

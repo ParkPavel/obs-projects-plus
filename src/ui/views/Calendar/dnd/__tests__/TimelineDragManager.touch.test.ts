@@ -99,6 +99,7 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
     const column = placed(document.createElement("div"), rect(0, 0, 100, 24 * HOUR_PX));
     manager.setDayColumns([{ day: start.startOf("day"), element: column }]);
     bar = placed(document.createElement("button"), rect(BAR_TOP, 10, 80, HOUR_PX));
+    bar.dataset["recordId"] = record.id; // as EventBar renders it
     onClick = jest.fn<void, [Event]>();
     bar.addEventListener("click", onClick);
   });
@@ -217,6 +218,44 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
       // …while a click that does belong to the gesture is still taken.
       clickBar();
       expect(onClick).not.toHaveBeenCalled();
+    });
+
+    it("an adjacent event tapped at the release point right after the release opens", () => {
+      // Bar B touches bar A's bottom edge; its click lands within a fingertip
+      // of where A was released. Identity, not distance, decides.
+      const barB = placed(document.createElement("button"), rect(BAR_TOP + HOUR_PX, 10, 80, HOUR_PX));
+      barB.dataset["recordId"] = "visits/other.md";
+      const onB = jest.fn<void, [Event]>();
+      barB.addEventListener("click", onB);
+
+      press();
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 200);
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y));
+      jest.advanceTimersByTime(100);
+
+      barB.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: X, clientY: BAR_TOP + HOUR_PX + 2 })
+      );
+      expect(onB).toHaveBeenCalledTimes(1);
+    });
+
+    it("the click on the bar re-rendered by the commit is still swallowed", () => {
+      press();
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 200);
+      for (let y = BAR_CENTRE_Y + 4; y <= BAR_CENTRE_Y + HOUR_PX; y += 4) {
+        bar.dispatchEvent(touch("touchmove", y));
+      }
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+      expect(onCommit).toHaveBeenCalledTimes(1);
+
+      // The commit changes the bar's key, so Svelte replaces the element.
+      bar.remove();
+      const rerendered = placed(document.createElement("button"), rect(BAR_TOP + HOUR_PX, 10, 80, HOUR_PX));
+      rerendered.dataset["recordId"] = record.id;
+      const onRerendered = jest.fn<void, [Event]>();
+      rerendered.addEventListener("click", onRerendered);
+      rerendered.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      expect(onRerendered).not.toHaveBeenCalled();
     });
   });
 
