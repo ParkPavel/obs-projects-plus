@@ -56,6 +56,10 @@ import {
  *     directives in markup and a comment, and miss one line with two selectors).
  *   217 — ios-t1 gated every hover rule of the thirteen components it touched
  *     (see `MIGRATED`): 270 − 53.
+ *   217 — unchanged when the gate test went per-branch (Codex audit of
+ *     ios-t1): a media query list is a gate only if every query in it is. No
+ *     gate in the tree is a list, so nothing moved; recorded because a
+ *     re-measurement that returns the same value is still evidence.
  */
 const UNGATED_HOVER_BUDGET = 217;
 
@@ -84,12 +88,41 @@ const UI_ROOT = join(SRC_ROOT, "ui");
 /** `:hover` as a pseudo-class; `class:hovered` and `--hovered` are not it. */
 const HOVER = /:hover(?![\w-])/g;
 
-/** Whether an at-rule prelude is the gate: a media query with both features. */
+/** The queries of a media query list, split on commas outside parentheses. */
+export function mediaQueryBranches(list: string): string[] {
+  const branches: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const ch of list) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) {
+      branches.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  branches.push(current.trim());
+  return branches;
+}
+
+/**
+ * Whether an at-rule prelude is the gate: a media query list in which EVERY
+ * query names both features. A list matches when any one query matches, so a
+ * single coarse branch
+ * (`(pointer: coarse), (hover: hover) and (pointer: fine)`)
+ * lets the rule reach a finger — that list is not a gate.
+ */
 export function isFineHoverGate(prelude: string): boolean {
-  return (
-    /^@media\b/i.test(prelude) &&
-    /\(\s*hover\s*:\s*hover\s*\)/i.test(prelude) &&
-    /\(\s*pointer\s*:\s*fine\s*\)/i.test(prelude)
+  const media = /^@media\b/i.exec(prelude);
+  if (!media) return false;
+  const branches = mediaQueryBranches(prelude.slice(media[0].length));
+  return branches.every(
+    (query) =>
+      query !== "" &&
+      /\(\s*hover\s*:\s*hover\s*\)/i.test(query) &&
+      /\(\s*pointer\s*:\s*fine\s*\)/i.test(query)
   );
 }
 
@@ -174,6 +207,23 @@ describe("R0.32 — the reader (synthetic, proves both states)", () => {
     expect(ungatedHovers("@media (pointer: fine) { .a:hover { x: 1; } }")).toHaveLength(1);
     expect(ungatedHovers("@media (any-hover: hover) and (pointer: fine) { .a:hover { x: 1; } }")).toHaveLength(1);
     expect(ungatedHovers("@media (pointer: coarse) { .a:hover .b { x: 1; } }")).toHaveLength(1);
+  });
+
+  it("treats a media query list as a gate only when every query is gated", () => {
+    // A list matches when ANY of its queries matches, so one coarse branch
+    // carries the rule to a finger (Codex audit of ios-t1).
+    expect(
+      ungatedHovers("@media (pointer: coarse), (hover: hover) and (pointer: fine) { .a:hover { x: 1; } }")
+    ).toHaveLength(1);
+    expect(
+      ungatedHovers("@media (hover: hover) and (pointer: fine), print { .a:hover { x: 1; } }")
+    ).toHaveLength(1);
+    expect(
+      ungatedHovers(
+        "@media (hover: hover) and (pointer: fine) and (min-width: 30em), (hover: hover) and (pointer: fine) { .a:hover { x: 1; } }"
+      )
+    ).toEqual([]);
+    expect(mediaQueryBranches(" (a), (b) and (c)")).toEqual(["(a)", "(b) and (c)"]);
   });
 
   it("leaves the gate when its block closes", () => {
