@@ -1,5 +1,6 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
+  import { isTouchDevice } from "src/lib/stores/ui";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
     dragHandleZone,
@@ -313,6 +314,9 @@
         },
         dragDisabled: boardEditing || zoom !== 1 || dataReadOnly,
         morphDisabled: true,
+        // ios-d1: as for cards (CardList) — the column grip is at its top-left
+        // corner, so on touch centre the clone on the finger for zone hit-tests.
+        centreDraggedOnCursor: $isTouchDevice,
       }}
       use:disarmAfterGripTap={".board-column-grip"}
       on:consider={handleDndConsider}

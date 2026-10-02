@@ -84,6 +84,7 @@
   import { app } from "src/lib/stores/obsidian";
   import { openRecord } from "src/lib/record/openRecord";
   import { i18n } from "src/lib/stores/i18n";
+  import { isTouchDevice } from "src/lib/stores/ui";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
   import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
   import { PageIcon } from "src/ui/components/PageIcon";
@@ -169,6 +170,12 @@
     },
     dragDisabled: boardEditing || disableDnd,
     morphDisabled: true,
+    // ios-d1: the library picks the drop zone from the CLONE's centre. The grip
+    // sits at the card's left edge, so on a phone the centre of a card dragged
+    // by it hangs a card-half right of the finger, past the viewport, and the
+    // card never lands in the next column. On touch, centre the clone on the
+    // finger; the mouse keeps the grab offset it has always had.
+    centreDraggedOnCursor: $isTouchDevice,
   }}
   use:disarmAfterGripTap={".board-card-grip"}
 >
