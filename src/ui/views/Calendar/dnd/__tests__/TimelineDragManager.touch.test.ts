@@ -197,6 +197,27 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
       expect(onClick).not.toHaveBeenCalled();
       expect(onCommit).not.toHaveBeenCalled();
     });
+
+    it("the guard is this gesture's: a tap elsewhere right after the release goes through", () => {
+      // The cancelled touchend sends no click, so nothing consumes the guard;
+      // it must not swallow the next tap on a different event or control.
+      const other = placed(document.createElement("button"), rect(900, 10, 80, HOUR_PX));
+      const onOther = jest.fn<void, [Event]>();
+      other.addEventListener("click", onOther);
+
+      press();
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 200);
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y));
+      jest.advanceTimersByTime(100); // well inside the guard window
+
+      other.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: X, clientY: 924 })
+      );
+      expect(onOther).toHaveBeenCalledTimes(1);
+      // …while a click that does belong to the gesture is still taken.
+      clickBar();
+      expect(onClick).not.toHaveBeenCalled();
+    });
   });
 
   describe("pan before the threshold", () => {

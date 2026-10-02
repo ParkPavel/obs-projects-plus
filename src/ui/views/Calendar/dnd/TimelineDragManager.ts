@@ -96,6 +96,9 @@ const TOUCH_SLOP_REM = 0.5;
 const CLICK_GUARD_MOUSE_MS = 200;
 const CLICK_GUARD_TOUCH_MS = 400;
 
+/** A touch guard's reach around the release point: about a fingertip. */
+const CLICK_GUARD_RADIUS_REM = 0.75;
+
 const isTouchEvent = (event: Event): event is TouchEvent => 'touches' in event;
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -522,10 +525,21 @@ export class TimelineDragManager {
     const doc = s.listenerDoc;
     const guardMs = s.isTouchDrag ? CLICK_GUARD_TOUCH_MS : CLICK_GUARD_MOUSE_MS;
     const wasHeld = s.isTouchDrag && s.armedByLongPress;
+    // Touch guards are scoped to this gesture (see suppressNextClick); the
+    // mouse guard keeps taking the first click, as it always has.
+    const release = this.getPointerPosition(event);
+    const scope = s.isTouchDrag
+      ? {
+          origin: s.barElement,
+          x: release.clientX,
+          y: release.clientY,
+          radiusPx: CLICK_GUARD_RADIUS_REM * (this.config?.remPx ?? 16),
+        }
+      : undefined;
 
     if (get(this.state) === 'dragging') {
       this.commit();
-      this.suppressNextClick(doc, guardMs);
+      this.suppressNextClick(doc, guardMs, scope);
       if (event.cancelable) event.preventDefault();
       return;
     }
@@ -535,7 +549,7 @@ export class TimelineDragManager {
       // ios-d1: a held finger asked for a drag, not for the record. Whatever
       // the platform makes of the release — a click on some browsers even after
       // a long press — must not open it.
-      this.suppressNextClick(doc, guardMs);
+      this.suppressNextClick(doc, guardMs, scope);
       if (event.cancelable) event.preventDefault();
       return;
     }
@@ -1179,18 +1193,37 @@ export class TimelineDragManager {
   /**
    * After a drag commit (or a held touch), the browser may fire a click on the
    * original target. Intercept it once to prevent record navigation.
+   *
+   * With `scope`, only a click that belongs to the released gesture is taken:
+   * one inside the element the gesture started on, or landing within
+   * `radiusPx` of the release point (the bar may have re-rendered under the
+   * finger after the commit). A cancelled touchend sends no click at all, so an
+   * unscoped guard would sit armed for the whole window and swallow the user's
+   * next tap on a different event or control. Without `scope` (mouse) the first
+   * click is taken, as before: after a mouse drag the click lands on the common
+   * ancestor of press and release, not on the bar.
    */
-  private suppressNextClick(doc: Document, windowMs: number): void {
+  private suppressNextClick(
+    doc: Document,
+    windowMs: number,
+    scope?: { origin: HTMLElement; x: number; y: number; radiusPx: number }
+  ): void {
+    const belongs = (e: Event): boolean => {
+      if (!scope) return true;
+      if (e.target instanceof Node && scope.origin.contains(e.target)) return true;
+      if (!(e instanceof MouseEvent)) return false;
+      return Math.hypot(e.clientX - scope.x, e.clientY - scope.y) <= scope.radiusPx;
+    };
+    const remove = () => doc.removeEventListener('click', handler, { capture: true });
     const handler = (e: Event) => {
+      if (!belongs(e)) return;
+      remove();
       e.stopPropagation();
       e.preventDefault();
     };
-    doc.addEventListener('click', handler, { capture: true, once: true });
-    // Safety: remove if no click arrives (a cancelled touchend sends none), so
-    // the guard cannot swallow an unrelated click later.
-    window.setTimeout(() => {
-      doc.removeEventListener('click', handler, { capture: true });
-    }, windowMs);
+    doc.addEventListener('click', handler, { capture: true });
+    // Safety: remove if no matching click arrives (a cancelled touchend sends none).
+    window.setTimeout(remove, windowMs);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
