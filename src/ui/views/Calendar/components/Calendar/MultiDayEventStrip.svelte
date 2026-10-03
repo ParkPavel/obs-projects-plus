@@ -9,6 +9,7 @@
    * v8.0: Unified height system - STRIP_HEIGHT + STRIP_GAP must match TimelineView/HeaderStripsSection
    */
   
+  import { readable } from 'svelte/store';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import type { ProcessedRecord } from '../../types';
   import type { DragMode } from '../../dnd/types';
@@ -39,7 +40,16 @@
   $: ROW_HEIGHT_REM = STRIP_HEIGHT_REM + STRIP_GAP_REM;
   // Top position for this strip
   $: topPosition = rowIndex * ROW_HEIGHT_REM;
-  
+
+  // ios-c1: `isDragging` comes from the manager's `dragRecordId`, set on the
+  // PRESS (and kept for the re-grab window after a drag). Dimming with
+  // `pointer-events: none` from it took the strip out of hit-testing between
+  // press and release, so the click landed beneath it. Dim only once the drag
+  // has actually started.
+  const noDrag = readable<string | null>(null);
+  $: draggedRecordId = dragManager?.draggedRecordId ?? noDrag;
+  $: isDimmed = isDragging && $draggedRecordId != null;
+
   function handleClick(e: MouseEvent) {
     e.stopPropagation();
     if (onClick) {
@@ -91,7 +101,7 @@
     class:first={isFirstDay}
     class:last={isLastDay}
     class:mobile={isMobile}
-    class:dnd-dragging={isDragging}
+    class:dnd-dragging={isDimmed}
     class:dnd-grab={!!dragManager}
     style="
       --strip-color: {color};
