@@ -177,6 +177,19 @@ describe("cards-g5 — pointer drag", () => {
     m.destroy();
   });
 
+  it("a cancel or lost capture of another pointer does not end the resize", () => {
+    const m = mount({ override: { heightRem: 10 } });
+    m.handle.dispatchEvent(pointer("pointerdown", 100, 100));
+    m.handle.dispatchEvent(pointer("pointermove", 100, 132));
+    m.handle.dispatchEvent(pointer("pointercancel", 0, 0, { pointerId: 2 }));
+    m.handle.dispatchEvent(pointer("lostpointercapture", 0, 0, { pointerId: 2 }));
+    expect(m.onPreview).not.toHaveBeenCalledWith(null);
+    m.handle.dispatchEvent(pointer("pointerup", 100, 132));
+    expect(m.onCommit).toHaveBeenCalledTimes(1);
+    expect(m.onCommit).toHaveBeenLastCalledWith({ heightRem: 12 });
+    m.destroy();
+  });
+
   it("Escape during a drag restores: preview ended, the release writes nothing", () => {
     const m = mount({ override: { heightRem: 10 } });
     m.handle.dispatchEvent(pointer("pointerdown", 100, 100));

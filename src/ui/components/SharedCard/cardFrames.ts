@@ -81,8 +81,10 @@ export function normalizeGridSpan(value: unknown): number | undefined {
 export function normalizeCardFrame(raw: unknown): CardFrame | undefined {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
   const r = raw as Record<string, unknown>;
-  const heightRem = normalizeHeightRem(r["heightRem"]);
-  const gridSpan = normalizeGridSpan(r["gridSpan"]);
+  // Own properties only: an inherited dimension is not a saved one.
+  const own = (key: string): unknown => (Object.prototype.hasOwnProperty.call(r, key) ? r[key] : undefined);
+  const heightRem = normalizeHeightRem(own("heightRem"));
+  const gridSpan = normalizeGridSpan(own("gridSpan"));
   if (heightRem === undefined && gridSpan === undefined) return undefined;
   return {
     ...(heightRem !== undefined ? { heightRem } : {}),

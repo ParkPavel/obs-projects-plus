@@ -210,6 +210,14 @@ describe("cards-g5 — grid span", () => {
     FakeResizeObserver.all = [];
   });
 
+  it("the column minimum is converted against the root of the window the grid is in", () => {
+    // A popout may have its own root size; the measured column count uses the
+    // same document, so both must agree.
+    const grid = readFileSync(join(__dirname, "..", "components", "Grid", "Grid.svelte"), "utf8");
+    expect(grid).toContain("toRem(cardWidth, section?.ownerDocument ?? document)");
+    expect(grid).toContain("section.ownerDocument.defaultView?.ResizeObserver");
+  });
+
   it("only the grid spans: masonry and list ignore it", () => {
     for (const layout of ["masonry", "list"]) {
       const m = mountGallery({ layout, cardFramesByRecord: { [ALPHA]: { gridSpan: 3 } } });

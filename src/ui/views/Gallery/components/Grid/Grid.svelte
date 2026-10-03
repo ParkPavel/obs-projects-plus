@@ -11,7 +11,9 @@
   // does with it is decided by the gallery's own container (styles.css,
   // `ppp-gallery`), not by the kind of device: the v3.0.10 cap to 200 on any
   // phone is gone, and a card never grows wider than the container.
-  $: width = toRem(cardWidth);
+  // cards-g5: against the root of the window the grid is IN (a popout may have
+  // its own root size), the same root the column count below is measured in.
+  $: width = toRem(cardWidth, section?.ownerDocument ?? document);
 
   // cards-g5: how many columns the grid lays out, so a card's saved span can be
   // capped to them (a span wider than the grid would add implicit columns).

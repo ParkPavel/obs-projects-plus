@@ -159,6 +159,11 @@
     if (drag) end();
   }
 
+  /** A cancel or a lost capture ends the resize only for the pointer driving it. */
+  function cancelPointer(e: PointerEvent): void {
+    if (drag && e.pointerId === drag.pointerId) end();
+  }
+
   function onEscape(e: KeyboardEvent): void {
     if (e.key !== "Escape" || !drag) return;
     e.preventDefault();
@@ -229,8 +234,8 @@
   on:pointerdown={onPointerDown}
   on:pointermove={onPointerMove}
   on:pointerup={onPointerUp}
-  on:pointercancel={cancel}
-  on:lostpointercapture={cancel}
+  on:pointercancel={cancelPointer}
+  on:lostpointercapture={cancelPointer}
   on:keydown={onKeyDown}
   on:touchstart={stop}
   on:mousedown={stop}

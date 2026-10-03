@@ -31,6 +31,12 @@ describe("cards-g5 — normalising a config", () => {
     expect(normalizeCardFrames(config)).toEqual({ view: {}, byRecord: {} });
   });
 
+  it("reads own properties only: an inherited dimension is not saved", () => {
+    expect(normalizeCardFrame(Object.create({ heightRem: 20, gridSpan: 2 }))).toBeUndefined();
+    const mixed = Object.assign(Object.create({ gridSpan: 3 }), { heightRem: 12 });
+    expect(normalizeCardFrame(mixed)).toEqual({ heightRem: 12 });
+  });
+
   it("keeps valid values as they are", () => {
     const config = {
       cardFrame: { heightRem: 12, gridSpan: 2 },
