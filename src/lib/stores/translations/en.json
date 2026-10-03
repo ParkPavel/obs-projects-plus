@@ -2040,9 +2040,25 @@
                     "cover-field": "Cover field",
                     "fit-style": "Fit style",
                     "include-fields": "Include fields",
+                    "layout": "Layout",
+                    "layout-options": {
+                        "grid": "Grid",
+                        "masonry": "Masonry",
+                        "list": "List"
+                    },
+                    "card-size": "Card size",
+                    "size-options": {
+                        "s": "Small",
+                        "m": "Medium",
+                        "l": "Large"
+                    },
+                    "aspect-ratio": "Cover aspect ratio",
+                    "aspect-ratio-none": "No cover",
+                    "show-field-labels": "Show field names",
                     "fit-options": {
                         "fill": "Fill",
-                        "fit": "Fit"
+                        "fit": "Fit",
+                        "stretch": "Stretch"
                     },
                     "hints": {
                         "card-width": "Width of each gallery card in pixels",

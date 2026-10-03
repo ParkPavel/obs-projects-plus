@@ -4,6 +4,14 @@
   import { i18n } from "src/lib/stores/i18n";
   import FieldComboInput from "./FieldComboInput.svelte";
   import SettingsSection from "./SettingsSection.svelte";
+  import {
+    GALLERY_ASPECT_RATIOS,
+    GALLERY_LAYOUTS,
+    GALLERY_SIZE_PRESETS,
+    normalizeGalleryConfig,
+    sizePresetOf,
+    type GallerySizePreset,
+  } from "src/ui/views/Gallery/galleryOptions";
 
   type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
 
@@ -47,12 +55,18 @@
   $: headerField = (view?.config?.["headerField"] as string) ?? "";
   $: orderSyncField = (view?.config?.["orderSyncField"] as string) ?? "";
 
-  // Gallery-specific settings
-  $: cardWidth = (view?.config?.["cardWidth"] as number) ?? 300;
+  // Gallery-specific settings, read through the gallery's one normaliser (cards-g3)
+  $: gallery = normalizeGalleryConfig(view?.config);
+  $: cardWidth = gallery.cardWidth;
   $: coverField = (view?.config?.["coverField"] as string) ?? "";
   $: iconField = (view?.config?.["iconField"] as string) ?? "";
-  $: fitStyle = (view?.config?.["fitStyle"] as string) ?? "cover";
-  $: galleryIncludeFields = (view?.config?.["includeFields"] as string[]) ?? [];
+  $: fitStyle = gallery.fitStyle;
+  $: galleryIncludeFields = gallery.includeFields;
+  $: galleryLayout = gallery.layout;
+  $: coverAspectRatio = gallery.coverAspectRatio;
+  $: showFieldLabels = gallery.showFieldLabels;
+  $: sizePreset = sizePresetOf(cardWidth);
+  const SIZE_PRESETS = Object.entries(GALLERY_SIZE_PRESETS) as [GallerySizePreset, number][];
 
   // Database/Table-specific settings
   $: isLegacyTable = view?.type === "table";
@@ -429,14 +443,54 @@
     {#if isGallery}
       <div class="group">
         <label>
+          {$i18n.t("settings-menu.view-config.gallery.layout")}
+          <select data-gallery-option="layout" bind:value={galleryLayout} on:change={(e) => emitUpdate({ layout: e.currentTarget.value })}>
+            {#each GALLERY_LAYOUTS as option}
+              <option value={option}>{$i18n.t(`settings-menu.view-config.gallery.layout-options.${option}`)}</option>
+            {/each}
+          </select>
+        </label>
+
+        <div class="field-list">
+          <span class="field-list-label">{$i18n.t("settings-menu.view-config.gallery.card-size")}</span>
+          <div class="size-presets" role="group" aria-label={$i18n.t("settings-menu.view-config.gallery.card-size")}>
+            {#each SIZE_PRESETS as [preset, width]}
+              <button
+                type="button"
+                class="size-preset"
+                data-gallery-size={preset}
+                aria-pressed={sizePreset === preset}
+                on:click={() => { cardWidth = width; emitUpdate({ cardWidth: width }); }}
+              >{$i18n.t(`settings-menu.view-config.gallery.size-options.${preset}`)}</button>
+            {/each}
+          </div>
+        </div>
+
+        <label>
           {$i18n.t("settings-menu.view-config.gallery.card-width")}
           <input
             type="number"
-            bind:value={cardWidth}
+            value={cardWidth}
             placeholder="300"
-            on:change={() => emitUpdate({ cardWidth })}
+            on:change={(e) => {
+              // cards-g3: read the field itself, as the presets do; a bind to
+              // the normalised width did not reach the preset state.
+              const width = e.currentTarget.valueAsNumber;
+              if (!Number.isFinite(width) || width <= 0) return;
+              cardWidth = width;
+              emitUpdate({ cardWidth: width });
+            }}
           />
           <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.card-width")}</span>
+        </label>
+
+        <label>
+          {$i18n.t("settings-menu.view-config.gallery.aspect-ratio")}
+          <select data-gallery-option="aspect-ratio" bind:value={coverAspectRatio} on:change={(e) => emitUpdate({ coverAspectRatio: e.currentTarget.value })}>
+            {#each GALLERY_ASPECT_RATIOS as option}
+              <option value={option}>{option === "none" ? $i18n.t("settings-menu.view-config.gallery.aspect-ratio-none") : option.replace("/", ":")}</option>
+            {/each}
+          </select>
         </label>
 
         <label for="fieldlist-cover-input">
@@ -465,10 +519,24 @@
 
         <label>
           {$i18n.t("settings-menu.view-config.gallery.fit-style")}
-          <select bind:value={fitStyle} on:change={() => emitUpdate({ fitStyle })}>
+          <select data-gallery-option="fit" bind:value={fitStyle} on:change={(e) => emitUpdate({ fitStyle: e.currentTarget.value })}>
             <option value="cover">{$i18n.t("settings-menu.view-config.gallery.fit-options.fill")}</option>
             <option value="contain">{$i18n.t("settings-menu.view-config.gallery.fit-options.fit")}</option>
+            {#if gallery.fitStyle === "fill"}
+              <option value="fill">{$i18n.t("settings-menu.view-config.gallery.fit-options.stretch")}</option>
+            {/if}
           </select>
+        </label>
+
+        <label class="checkbox">
+          <input
+            class="ppp-touch-target"
+            type="checkbox"
+            data-gallery-option="labels"
+            bind:checked={showFieldLabels}
+            on:change={(e) => emitUpdate({ showFieldLabels: e.currentTarget.checked })}
+          />
+          <span>{$i18n.t("settings-menu.view-config.gallery.show-field-labels")}</span>
         </label>
 
         <div class="field-list">
@@ -663,6 +731,13 @@
     box-sizing: border-box;
   }
   .checkbox { flex-direction: row; align-items: center; gap: 0.5rem; min-height: 2.75rem; }
+  /* cards-g3: card size presets, as tall as the selects beside them. */
+  .size-presets { display: flex; gap: 0.375rem; }
+  .size-preset { flex: 1 1 0; min-height: 2.75rem; }
+  .size-preset[aria-pressed="true"] {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
   .hint {
     font-size: 0.6875rem;
     opacity: 0.5;

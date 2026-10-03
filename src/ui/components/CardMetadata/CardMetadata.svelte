@@ -17,6 +17,12 @@
 
   export let fields: DataField[];
   export let record: DataRecord;
+  /**
+   * cards-g3: whether each value is headed by its field name. Defaults to
+   * shown, so every consumer that does not pass it (Board, …) is unchanged.
+   * Hidden, the name stays the value's tooltip.
+   */
+  export let showLabels = true;
 
   setContext<string>("sourcePath", record.id);
 </script>
@@ -24,10 +30,12 @@
 {#each fields as field (field.name)}
   {@const value = record.values[field.name]}
   {#if value !== undefined && value !== null}
-    <div class="field-label">
-      <div class="setting-item-description" style:margin-bottom={"0.25rem"}>
-        {field.name}
-      </div>
+    <div class="field-label" title={showLabels ? undefined : field.name}>
+      {#if showLabels}
+        <div class="setting-item-description" style:margin-bottom={"0.25rem"}>
+          {field.name}
+        </div>
+      {/if}
       <!-- A rollup keeps the type detected from its values (a sum is a Number), so it is
            recognised by its typeConfig.rollup before any type branch. -->
       {#if field.type === DataFieldType.Rollup || field.typeConfig?.rollup}

@@ -18,7 +18,8 @@
    *
    * Hooks for later batches are classes and custom properties only: the
    * variant classes, `--interactive` / `--disabled`, and `--ppp-shared-card-size`
-   * (set from `size`, read by nothing yet).
+   * (set from `size`; cards-g3 writes the gallery's card width there, for
+   * the later batches to read).
    */
   import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
 

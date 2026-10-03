@@ -26,6 +26,8 @@
   import { getFilterValuesFromConditions } from "src/lib/helpers";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { getCoverRealPath } from "./gallery";
+  import { aspectRatioCss } from "./galleryOptions";
+  import { toRem } from "src/ui/utils/cssLength";
   import { handleHoverLink, showMobileNavMenu } from "../helpers";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onDestroy } from "svelte";
@@ -166,6 +168,10 @@
   let:coverField
   let:iconField
   let:cardWidth
+  let:layout
+  let:coverAspectRatio
+  let:showFieldLabels
+  let:includeFields
 >
   <!-- ios-g1 G2: `Grid` and `CenterBox` are components, so the swipe-ownership
        action needs an element of its own, wrapping BOTH branches — an empty
@@ -174,6 +180,9 @@
        which is all Obsidian's recogniser reads. -->
   <div class="ppp-gallery-content" use:ignoreHostSwipe>
   {#if records.length}
+    {@const mediaRatio = aspectRatioCss(coverAspectRatio)}
+    {@const cardSize = toRem(cardWidth)}
+    {@const shownFields = fields.filter((field) => includeFields.includes(field.name))}
     <!-- C18: count footer -->
     <div class="ppp-gallery-footer">
       <span class="ppp-gallery-footer-count">
@@ -181,16 +190,23 @@
         {$i18n.t("views.gallery.records", { count: records.length, defaultValue: records.length === 1 ? "record" : "records" })}
       </span>
     </div>
-    <Grid {cardWidth}>
+    <Grid {cardWidth} {layout}>
       {#each records as record (record.id)}
         {@const color = getRecordColor(record)}
         {@const coverPath = getCoverRealPath($app, record, coverField)}
         <!-- cards-g2: the shared card shell; the media element and its open /
-             long-press handlers stay here, in the view that owns them. -->
-        <SharedCard recordId={record.id} variant="gallery" {color}>
+             long-press handlers stay here, in the view that owns them.
+             cards-g3: the card's width and the media's ratio and fit travel as
+             custom properties (--ppp-shared-card-size, --ppp-card-media-ratio,
+             --ppp-card-media-fit) for the later card batches to read; ratio
+             `none` renders no media element at all. -->
+        <SharedCard recordId={record.id} variant="gallery" {color} size={cardSize}>
+          <svelte:fragment slot="media">
+          {#if mediaRatio !== null}
           <div
-            slot="media"
             class="projects--gallery--card__media"
+            style:--ppp-card-media-ratio={mediaRatio}
+            style:--ppp-card-media-fit={fitStyle}
             on:keypress
             on:click={(event) => {
               // v3.0.10: Suppress click if long-press was fired
@@ -214,6 +230,8 @@
               <Icon name="image" size="lg" />
             {/if}
           </div>
+          {/if}
+          </svelte:fragment>
           <InternalLink
             slot="header"
             linkText={record.id}
@@ -243,10 +261,9 @@
           </InternalLink>
           <CardMetadata
             slot="metadata"
-            fields={fields.filter(
-              (field) => !!config?.includeFields?.includes(field.name)
-            )}
+            fields={shownFields}
             {record}
+            showLabels={showFieldLabels}
           />
         </SharedCard>
       {/each}

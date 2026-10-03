@@ -197,9 +197,68 @@
   }
 }
 
+/* cards-g3: the gallery's own query container (Grid.svelte). Everything the
+   gallery does with a narrow box is asked of this container, so a gallery in
+   a narrow leaf, a split or a dashboard block answers to its own width, never
+   to the viewport or the kind of device. */
+.ppp-gallery-container {
+  container-type: inline-size;
+  container-name: ppp-gallery;
+}
+
+/* The card width arrives as --ppp-gallery-card-width (rem, from the saved
+   cardWidth). Grid: as many columns of at least that width as fit, never
+   wider than the container itself. */
 .projects--gallery--grid {
+  --ppp-gallery-gap: 1.5rem;
   display: grid;
-  gap: 1.5rem;
+  gap: var(--ppp-gallery-gap);
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--ppp-gallery-card-width, 18.75rem), 100%), 1fr));
+}
+
+/* Masonry: CSS columns of the card width. Cards flow down each column in
+   source order, so the DOM and keyboard order stay the record order; a
+   column narrower than the card width collapses to one column. */
+.projects--gallery--grid.ppp-gallery--masonry {
+  display: block;
+  column-width: var(--ppp-gallery-card-width, 18.75rem);
+  column-gap: var(--ppp-gallery-gap);
+}
+
+.projects--gallery--grid.ppp-gallery--masonry > * {
+  break-inside: avoid;
+  margin: 0 0 var(--ppp-gallery-gap);
+}
+
+/* List: one column of rows. The media leads at a width tied to the card
+   size, never more than two fifths of the row; the body takes the rest. */
+.projects--gallery--grid.ppp-gallery--list {
+  --ppp-gallery-gap: 0.75rem;
+  --ppp-gallery-list-media: min(calc(var(--ppp-gallery-card-width, 18.75rem) * 0.4), 40%);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ppp-gallery--list > .projects--gallery--card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.ppp-gallery--list > .projects--gallery--card > .projects--gallery--card__media {
+  flex: 0 0 var(--ppp-gallery-list-media);
+  width: var(--ppp-gallery-list-media);
+  border-radius: var(--radius-s) 0 0 var(--radius-s);
+  border-bottom: none;
+  border-right: var(--ppp-border-width, 0.0625rem) solid var(--background-modifier-border);
+}
+
+.ppp-gallery--list > .projects--gallery--card > .projects--gallery--card__media img {
+  border-radius: 0;
+}
+
+.ppp-gallery--list > .projects--gallery--card > .projects--gallery--card__body {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .projects--gallery--card {
@@ -227,8 +286,11 @@
   padding: 0.5rem;
 }
 
+/* cards-g3: ratio and fit come from the media's own custom properties
+   (GalleryView), so the kanban thumbnails and card frames of the later
+   batches can set the same two and get the same media. */
 .projects--gallery--card__media {
-  aspect-ratio: 16 / 10;
+  aspect-ratio: var(--ppp-card-media-ratio, 16 / 10);
   border-top-left-radius: var(--radius-s);
   border-top-right-radius: var(--radius-s);
   display: flex;
@@ -243,7 +305,7 @@
   height: 100%;
   border-top-left-radius: var(--radius-s);
   border-top-right-radius: var(--radius-s);
-  object-fit: cover;
+  object-fit: var(--ppp-card-media-fit, cover);
 }
 
 /* Disabled button states - SCOPED to plugin */
@@ -317,13 +379,6 @@
     /* Columns keep their width, allow horizontal scroll */
     flex-shrink: 0;
   }
-
-  .obs-projects-plus .projects--gallery--grid,
-  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--grid {
-    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
-    gap: 1rem;
-    padding: 0.5rem;
-  }
 }
 
 @media (max-width: 30rem) {
@@ -332,17 +387,24 @@
     gap: 0 0.25rem;
     margin: 0.25rem;
   }
+}
 
-  .obs-projects-plus .projects--gallery--grid,
-  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+/* cards-g3: the gallery's narrow-box rules, moved off the viewport onto its
+   own container. The viewport rules they replace set column templates the
+   grid's inline style always overrode, and a fixed media height that
+   ignored the cover ratio; what was really in effect — tighter gaps and a
+   little inner padding — is what a narrow gallery keeps, now at the
+   gallery's width wherever it is rendered. */
+@container ppp-gallery (max-width: 48rem) {
+  .projects--gallery--grid {
+    --ppp-gallery-gap: 1rem;
     padding: 0.5rem;
   }
+}
 
-  .obs-projects-plus .projects--gallery--card__media,
-  .workspace-leaf-content[data-type="obs-projects-plus"] .projects--gallery--card__media {
-    height: 8.75rem;
+@container ppp-gallery (max-width: 30rem) {
+  .projects--gallery--grid {
+    --ppp-gallery-gap: 0.75rem;
   }
 }
 

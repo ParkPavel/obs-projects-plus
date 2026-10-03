@@ -2143,9 +2143,25 @@
                     "cover-field": "封面字段",
                     "fit-style": "适应方式",
                     "include-fields": "包含字段",
+                    "layout": "布局",
+                    "layout-options": {
+                        "grid": "网格",
+                        "masonry": "瀑布流",
+                        "list": "列表"
+                    },
+                    "card-size": "卡片大小",
+                    "size-options": {
+                        "s": "小",
+                        "m": "中",
+                        "l": "大"
+                    },
+                    "aspect-ratio": "封面宽高比",
+                    "aspect-ratio-none": "无封面",
+                    "show-field-labels": "显示字段名称",
                     "fit-options": {
                         "fill": "填充",
-                        "fit": "适应"
+                        "fit": "适应",
+                        "stretch": "拉伸"
                     },
                     "hints": {
                         "card-width": "每张画册卡片宽度（像素）",
