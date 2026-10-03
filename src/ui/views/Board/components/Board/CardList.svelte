@@ -259,17 +259,23 @@
    * no media element at all: no placeholder on a kanban card.
    */
   // cards-g4: an image that resolves but fails to load (a dead link) drops its
-  // media too, so a card never keeps an empty thumbnail box.
-  let failedThumbs = new Set<string>();
-  function dropThumb(src: string) {
-    failedThumbs = new Set(failedThumbs).add(src);
+  // media too, so a card never keeps an empty thumbnail box. The failure is
+  // remembered on the record OBJECT: a data refresh brings new record objects
+  // and so retries (a repaired image comes back), while a drag only reorders
+  // the same objects and retries nothing. A WeakMap holds no removed record.
+  let failedThumbs = new WeakMap<DataRecord, string>();
+  let failedVersion = 0;
+  function dropThumb(record: DataRecord, src: string) {
+    failedThumbs.set(record, src);
+    failedVersion += 1;
   }
 
   $: thumbnailOf = (record: DataRecord): { src: string; layout: "top" | "left" } | null => {
+    void failedVersion;
     const layout = thumbnailLayout;
     if (layout === "none") return null;
     const src = getCoverRealPath($app, record, coverField);
-    return src && !failedThumbs.has(src) ? { src, layout } : null;
+    return src && failedThumbs.get(record) !== src ? { src, layout } : null;
   };
 </script>
 
@@ -343,7 +349,7 @@
               class:ppp-board-card-media--left={thumbnail.layout === "left"}
               aria-hidden="true"
             >
-              <img src={thumbnail.src} alt="" loading="lazy" decoding="async" draggable="false" on:error={() => thumbnail && dropThumb(thumbnail.src)} />
+              <img src={thumbnail.src} alt="" loading="lazy" decoding="async" draggable="false" on:error={() => thumbnail && dropThumb(item, thumbnail.src)} />
             </div>
           {/if}
         </svelte:fragment>

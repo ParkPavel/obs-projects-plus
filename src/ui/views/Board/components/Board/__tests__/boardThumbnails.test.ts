@@ -290,6 +290,17 @@ describe.each(["top", "left"])("cards-g4 — %s thumbnails", (layout) => {
     expect(m.card("d.md")).not.toHaveClass(`ppp-shared-card--media-${layout}`);
     // Other cards keep their covers.
     expect(m.lanes("a.md")).toEqual(["board-card-grip", "ppp-board-card-media", "color-item"]);
+
+    // A reorder of the same record objects (what a drag does) does not retry.
+    m.component.$set({ items: [...m.items].reverse() });
+    await tick();
+    expect(m.lanes("d.md")).toEqual(["board-card-grip", "color-item"]);
+
+    // A data refresh brings new record objects: the image is tried again, so a
+    // repaired image at the same address comes back.
+    m.component.$set({ items: m.items.map((r) => ({ ...r, values: { ...r.values } })) });
+    await tick();
+    expect(m.lanes("d.md")).toEqual(["board-card-grip", "ppp-board-card-media", "color-item"]);
     m.destroy();
   });
 
