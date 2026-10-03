@@ -18,6 +18,15 @@
   import { getDisplayName } from "../Board/components/Board/boardHelpers";
 
   import SharedCard from "src/ui/components/SharedCard/SharedCard.svelte";
+  import CardResizeHandle from "src/ui/components/SharedCard/CardResizeHandle.svelte";
+  import {
+    CARD_FRAME_OVERRIDE_CAP,
+    effectiveSpan,
+    normalizeCardFrames,
+    resolveCardFrame,
+    withOverride,
+    type CardFrame,
+  } from "src/ui/components/SharedCard/cardFrames";
   import Grid from "./components/Grid/Grid.svelte";
   import Image from "./components/Image/Image.svelte";
   import { PageIcon } from "src/ui/components/PageIcon";
@@ -63,10 +72,33 @@
    */
   export let dataReadOnly = false;
 
-  // Use onConfigChange to avoid unused warning
-  $: void onConfigChange;
-
   $: ({ fields, records } = frame);
+
+  // cards-g5: saved card frames. The view-wide frame and the per-card
+  // overrides are read once (cardFrames.ts); a drag previews one card's frame
+  // here, locally, and only its release writes the config, once, through
+  // `onConfigChange` — standalone (galleryView.ts saveConfig) and embedded
+  // (DatabaseCallBlock) alike. Without a change handler there is no handle.
+  $: frames = normalizeCardFrames(config);
+  $: canResize = onConfigChange !== undefined;
+  let preview: { id: string; frame: CardFrame } | null = null;
+
+  function saveConfig(next: GalleryConfig) {
+    config = next;
+    onConfigChange?.(next);
+  }
+
+  function commitFrame(recordId: string, next: CardFrame | undefined) {
+    const patch = withOverride(config, recordId, next);
+    if (!patch) {
+      new Notice($i18n.t("settings-menu.view-config.card-frames.cap-reached", { limit: CARD_FRAME_OVERRIDE_CAP }));
+      return;
+    }
+    saveConfig({ ...config, ...patch });
+  }
+
+  const heightCss = (frame: CardFrame): string | undefined =>
+    frame.heightRem !== undefined ? `${frame.heightRem}rem` : undefined;
 
   function handleRecordClick(record: DataRecord) {
     // #142/#C4 — a read-only-DATA gallery still opens the note; it just does
@@ -208,10 +240,18 @@
         {$i18n.t("views.gallery.records", { count: records.length, defaultValue: records.length === 1 ? "record" : "records" })}
       </span>
     </div>
-    <Grid {cardWidth} {layout}>
+    <Grid {cardWidth} {layout} let:columns let:columnStep>
       {#each records as record (record.id)}
         {@const color = getRecordColor(record)}
         {@const coverPath = getCoverRealPath($app, record, coverField)}
+        {@const shown = resolveCardFrame(frames.view, preview?.id === record.id ? preview.frame : frames.byRecord[record.id])}
+        {@const height = heightCss(shown)}
+        <!-- cards-g5: the frame shown — a drag's preview, else the saved
+             override, each dimension falling back to the view-wide frame. A
+             height sizes the media (its ratio gives way to it), or the card
+             itself when there is no media; a span applies to the grid only,
+             capped to the columns the grid has (the saved value is kept). -->
+
         <!-- cards-g2: the shared card shell; the media element and its open /
              long-press handlers stay here, in the view that owns them.
              cards-g3: the card's width and the media's ratio and fit travel as
@@ -223,6 +263,8 @@
           variant="gallery"
           {color}
           size={cardSize}
+          span={layout === "grid" ? effectiveSpan(shown.gridSpan, columns) : undefined}
+          minHeight={mediaRatio === null ? height : undefined}
           interactive={mediaRatio === null}
           on:click={(event) => { if (mediaRatio === null) openFromCard(event, record); }}
           on:touchstart={(event) => { if (mediaRatio === null && !onLink(event)) handleCardTouchStart(record)(event); }}
@@ -233,8 +275,10 @@
           {#if mediaRatio !== null}
           <div
             class="projects--gallery--card__media"
-            style:--ppp-card-media-ratio={mediaRatio}
+            data-ppp-frame-target
+            style:--ppp-card-media-ratio={height ? "auto" : mediaRatio}
             style:--ppp-card-media-fit={fitStyle}
+            style:height={height}
             on:keypress
             on:click={(event) => openFromCard(event, record)}
             on:touchstart={handleCardTouchStart(record)}
@@ -282,6 +326,18 @@
             {record}
             showLabels={showFieldLabels}
           />
+          <svelte:fragment slot="controls">
+            {#if canResize}
+              <CardResizeHandle
+                view={frames.view}
+                override={frames.byRecord[record.id]}
+                horizontal={layout === "grid"}
+                {columnStep}
+                onPreview={(next) => { preview = next ? { id: record.id, frame: next } : null; }}
+                onCommit={(next) => commitFrame(record.id, next)}
+              />
+            {/if}
+          </svelte:fragment>
         </SharedCard>
       {/each}
       {#if !readonly}

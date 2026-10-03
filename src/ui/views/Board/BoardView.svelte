@@ -37,6 +37,12 @@
     OnColumnRename,
   } from "./components/Board/types";
   import type { BoardConfig } from "./types";
+  import {
+    CARD_FRAME_OVERRIDE_CAP,
+    normalizeCardFrames,
+    withOverride,
+    type CardFrame,
+  } from "src/ui/components/SharedCard/cardFrames";
   import { settings } from "src/lib/stores/settings";
   import type { FilterCondition } from "src/settings/settings";
   import { getFilterValuesFromConditions } from "src/lib/helpers";
@@ -503,6 +509,20 @@
     onConfigChange(cfg);
   }
 
+  // cards-g5: saved card frames. A resize commits one card's override here,
+  // once, through `saveConfig`; a further NEW override past the cap is refused
+  // with a notice and nothing is evicted.
+  $: cardFrames = normalizeCardFrames(config);
+
+  function handleCardFrameChange(recordId: string, next: CardFrame | undefined) {
+    const patch = withOverride(config, recordId, next);
+    if (!patch) {
+      new Notice($i18n.t("settings-menu.view-config.card-frames.cap-reached", { limit: CARD_FRAME_OVERRIDE_CAP }));
+      return;
+    }
+    saveConfig({ ...config, ...patch });
+  }
+
   const handleColumnPersist: OnColumnPersist = (name) => {
     const current = config?.persistedStatuses ?? [];
     const isPersisted = current.includes(name);
@@ -565,6 +585,8 @@
     iconField={fields.find((field) => field.name === iconField)}
     {thumbnailLayout}
     coverField={fields.find((field) => field.name === coverField)}
+    {cardFrames}
+    onCardFrameChange={handleCardFrameChange}
     onRecordClick={handleRecordClick}
     onRecordCheck={handleRecordCheck(checkField)}
     onRecordAdd={handleRecordAdd(groupByField)}

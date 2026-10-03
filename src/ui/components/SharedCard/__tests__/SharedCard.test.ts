@@ -14,6 +14,8 @@
  */
 
 import "@testing-library/jest-dom";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 type Mounted = {
   $destroy(): void;
@@ -224,6 +226,38 @@ describe("cards-g4 — board media layout", () => {
     const m = mount({ variant: "gallery", mediaLayout: "top" });
     expect(m.root).not.toHaveClass("ppp-shared-card--media-top");
     m.destroy();
+  });
+});
+
+describe("cards-g5 — frame hooks", () => {
+  it.each(["gallery", "board"])("%s: no frame writes no span and no minimum height", (variant) => {
+    const m = mount({ variant });
+    expect(m.root.style.getPropertyValue("grid-column")).toBe("");
+    expect(m.root.style.getPropertyValue("min-height")).toBe("");
+    m.destroy();
+  });
+
+  it("a span over one column is written as a grid span; one column writes nothing", () => {
+    const two = mount({ variant: "gallery", span: 2 });
+    expect(two.root.style.getPropertyValue("grid-column")).toMatch(/^span 2/);
+    two.destroy();
+    const one = mount({ variant: "gallery", span: 1 });
+    expect(one.root.style.getPropertyValue("grid-column")).toBe("");
+    one.destroy();
+  });
+
+  it("a minimum height is written as given", () => {
+    const m = mount({ variant: "board", minHeight: "12rem" });
+    expect(m.root.style.getPropertyValue("min-height")).toBe("12rem");
+    m.destroy();
+  });
+
+  it("the gallery card is the positioned box a corner control sits in", () => {
+    const source = readFileSync(join(__dirname, "..", "SharedCard.svelte"), "utf8");
+    const style = source.slice(source.indexOf("<style>"));
+    expect(style).toMatch(/\.ppp-shared-card--gallery \{\s*position: relative;\s*\}/);
+    // The board card was positioned already.
+    expect(style).toMatch(/\.projects--board--card \{[^}]*position: relative;/);
   });
 });
 

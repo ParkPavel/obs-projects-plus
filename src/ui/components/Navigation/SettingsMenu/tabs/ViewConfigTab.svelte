@@ -13,6 +13,15 @@
     type GallerySizePreset,
   } from "src/ui/views/Gallery/galleryOptions";
   import { BOARD_THUMBNAIL_LAYOUTS, normalizeThumbnailLayout } from "src/ui/views/Board/types";
+  import {
+    CARD_FRAME_BOUNDS,
+    HEIGHT_STEP_REM,
+    normalizeCardFrames,
+    normalizeHeightRem,
+    resetAllFrames,
+    snapHeightRem,
+    withViewHeight,
+  } from "src/ui/components/SharedCard/cardFrames";
 
   type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
 
@@ -70,6 +79,23 @@
   $: showFieldLabels = gallery.showFieldLabels;
   $: sizePreset = sizePresetOf(cardWidth);
   const SIZE_PRESETS = Object.entries(GALLERY_SIZE_PRESETS) as [GallerySizePreset, number][];
+
+  // cards-g5: saved card frames (gallery and board), read through their one
+  // normaliser. The tab sets the view-wide height (empty = automatic) and
+  // resets every frame; per-card frames are made on the cards themselves.
+  $: cardFrames = normalizeCardFrames(view?.config);
+  $: frameHeight = cardFrames.view.heightRem;
+  $: hasCardFrames = Object.keys(cardFrames.view).length > 0 || Object.keys(cardFrames.byRecord).length > 0;
+
+  function handleFrameHeightChange(raw: string) {
+    if (raw.trim() === "") {
+      emitUpdate(withViewHeight(view?.config, undefined));
+      return;
+    }
+    const height = normalizeHeightRem(raw);
+    if (height === undefined) return;
+    emitUpdate(withViewHeight(view?.config, snapHeightRem(height)));
+  }
 
   // Database/Table-specific settings
   $: isLegacyTable = view?.type === "table";
@@ -582,6 +608,32 @@
       </div>
     {/if}
 
+    {#if isBoard || isGallery}
+      <div class="group">
+        <label>
+          {$i18n.t("settings-menu.view-config.card-frames.height")}
+          <input
+            type="number"
+            data-card-frame-option="height"
+            min={CARD_FRAME_BOUNDS.heightRem.min}
+            max={CARD_FRAME_BOUNDS.heightRem.max}
+            step={HEIGHT_STEP_REM}
+            value={frameHeight ?? ""}
+            placeholder={$i18n.t("settings-menu.view-config.card-frames.auto")}
+            on:change={(e) => handleFrameHeightChange(e.currentTarget.value)}
+          />
+          <span class="hint">{$i18n.t("settings-menu.view-config.card-frames.height-hint")}</span>
+        </label>
+        <button
+          type="button"
+          class="reset-frames"
+          data-card-frame-option="reset-all"
+          disabled={!hasCardFrames}
+          on:click={() => emitUpdate(resetAllFrames())}
+        >{$i18n.t("settings-menu.view-config.card-frames.reset-all")}</button>
+      </div>
+    {/if}
+
     {#if isDatabase}
       <div class="group">
         <div class="quick-links">
@@ -763,6 +815,8 @@
     background: var(--interactive-accent);
     color: var(--text-on-accent);
   }
+  /* cards-g5: as tall as the selects beside it. */
+  .reset-frames { min-height: 2.75rem; }
   .hint {
     font-size: 0.6875rem;
     opacity: 0.5;

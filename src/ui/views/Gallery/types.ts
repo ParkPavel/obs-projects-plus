@@ -1,10 +1,15 @@
+import type { CardFrameConfig } from "src/ui/components/SharedCard/cardFrames";
+
 /**
  * The gallery view's saved configuration, as it is stored. Every key is
  * optional and loosely typed on purpose: a config read from disk may predate a
  * key or carry a value no version of the settings ever wrote. The one reading
  * of these values is `normalizeGalleryConfig` (galleryOptions.ts).
+ *
+ * cards-g5: `cardFrame` (view-wide) and `cardFramesByRecord` (per card) come
+ * from CardFrameConfig and are read through `normalizeCardFrames`.
  */
-export interface GalleryConfig {
+export interface GalleryConfig extends CardFrameConfig {
   readonly coverField?: string;
   /** NPLAN-D2 — page-level icon field (emoji or lucide icon name). */
   readonly iconField?: string;

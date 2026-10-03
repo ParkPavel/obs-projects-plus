@@ -2089,6 +2089,18 @@
                         "icon-field": "Field with an emoji or lucide icon name. Shown as a per-record icon."
                     }
                 },
+                "card-frames": {
+                    "height": "Card height",
+                    "height-hint": "In rem, for every card of this view; leave empty for automatic height. Drag a card's corner to size that card alone.",
+                    "auto": "Automatic",
+                    "reset-all": "Reset all card frames",
+                    "resize": "Resize card",
+                    "hint": "Drag to resize. Arrow keys change the size, Home restores the view's height, Delete resets this card.",
+                    "value-height": "Height {{height}} rem",
+                    "value-auto": "Automatic height",
+                    "value-span": "{{span}} columns wide",
+                    "cap-reached": "This view already keeps {{limit}} card sizes. Reset some cards before resizing another one."
+                },
                 "none": "— None —"
             }
         },

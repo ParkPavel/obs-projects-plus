@@ -15,7 +15,8 @@
    *              placed by `mediaLayout`, cards-g4);
    *   header   — the ColorItem header line (title link, checkbox, pencil);
    *   metadata — under the header (CardMetadata);
-   *   controls — after the body, reserved.
+   *   controls — after the body: the card's resize handle (cards-g5), placed
+ *              by the view; it positions itself at the trailing lower corner.
    *
    * Hooks for later batches are classes and custom properties only: the
    * variant classes, `--interactive` / `--disabled`, and `--ppp-shared-card-size`
@@ -41,6 +42,15 @@
    * card keeps its two lanes exactly. The gallery lays its media out itself.
    */
   export let mediaLayout: "top" | "left" | undefined = undefined;
+  /**
+   * cards-g5: a saved frame, as the view resolved it. `span` is the number of
+   * grid columns the card takes (the gallery grid caps it to the columns there
+   * are); `minHeight` is a length for a card whose frame has no media to size.
+   * Both unset (no frame) write nothing, so the card renders as before. The
+   * resize handle, when a view offers one, arrives through `controls`.
+   */
+  export let span: number | undefined = undefined;
+  export let minHeight: string | undefined = undefined;
 </script>
 
 <article
@@ -55,6 +65,8 @@
   class:ppp-shared-card--media-left={variant === "board" && mediaLayout === "left"}
   data-ppp-card-id={recordId}
   style:--ppp-shared-card-size={size}
+  style:grid-column={span !== undefined && span > 1 ? `span ${span}` : undefined}
+  style:min-height={minHeight}
   on:click
   on:keypress
   on:touchstart
@@ -80,6 +92,12 @@
 </article>
 
 <style>
+  /* cards-g5: the box a corner control (the resize handle in `controls`)
+     positions itself in. The board card is positioned below already. */
+  .ppp-shared-card--gallery {
+    position: relative;
+  }
+
   /* cards-g1, moved here by cards-g2 with the article it styles: two lanes —
      the grip's own, then the content. The grip is in flow, so no field label,
      title or checkbox ever starts under it, at any card width. The lane begins

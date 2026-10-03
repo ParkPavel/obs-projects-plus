@@ -155,6 +155,12 @@
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
   import { PageIcon } from "src/ui/components/PageIcon";
   import SharedCard from "src/ui/components/SharedCard/SharedCard.svelte";
+  import CardResizeHandle from "src/ui/components/SharedCard/CardResizeHandle.svelte";
+  import {
+    resolveCardFrame,
+    type CardFrame,
+    type NormalizedCardFrames,
+  } from "src/ui/components/SharedCard/cardFrames";
   import {
     getRecordColorContext,
     handleHoverLink,
@@ -193,6 +199,18 @@
   export let disableDnd: boolean = false;
   /** The data is read-only (a source block): the pencil opens the note, and says so. */
   export let readOnly: boolean = false;
+  /**
+   * cards-g5 — saved card frames (BoardView reads them from the config) and
+   * the one route a frame change takes back to it. A board frame sets a
+   * card's height only — its thumbnail's, or the card's minimum — never its
+   * width, which is the column's. Without a change handler there is no handle.
+   */
+  export let cardFrames: NormalizedCardFrames = { view: {}, byRecord: {} };
+  export let onCardFrameChange: ((recordId: string, frame: CardFrame | undefined) => void) | undefined = undefined;
+  /** A drag's live frame for one card: local, never written. */
+  let framePreview: { id: string; frame: CardFrame } | null = null;
+  const remOf = (frame: CardFrame): string | undefined =>
+    frame.heightRem !== undefined ? `${frame.heightRem}rem` : undefined;
 
   const getRecordColor = getRecordColorContext.get();
   const sortRecords = sortRecordsContext.get();
@@ -310,6 +328,7 @@
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}
     {@const thumbnail = thumbnailOf(item)}
+    {@const frameHeight = remOf(resolveCardFrame(cardFrames.view, framePreview?.id === item.id ? framePreview.frame : cardFrames.byRecord[item.id]))}
 
     <div
       class="ppp-board-card-slot"
@@ -330,6 +349,7 @@
         {color}
         interactive
         mediaLayout={thumbnail?.layout}
+        minHeight={thumbnail ? undefined : frameHeight}
         on:keypress
         on:click={(e) => {
           if (!isGripTarget(e)) onRecordClick(item);
@@ -347,6 +367,9 @@
               class="ppp-board-card-media"
               class:ppp-board-card-media--top={thumbnail.layout === "top"}
               class:ppp-board-card-media--left={thumbnail.layout === "left"}
+              data-ppp-frame-target
+              style:height={frameHeight}
+              style:--ppp-card-media-ratio={frameHeight ? "auto" : undefined}
               aria-hidden="true"
             >
               <img src={thumbnail.src} alt="" loading="lazy" decoding="async" draggable="false" on:error={() => thumbnail && dropThumb(item, thumbnail.src)} />
@@ -408,6 +431,19 @@
           {/if}
         </div>
         <CardMetadata slot="metadata" fields={bodyFields} record={item} />
+        <!-- cards-g5: the resize handle, at the card's trailing lower corner,
+             far from the grip lane; it is no drag handle and stops its own
+             presses, so a resize never arms the board's drag. -->
+        <svelte:fragment slot="controls">
+          {#if onCardFrameChange && !isPlaceholder(item)}
+            <CardResizeHandle
+              view={cardFrames.view}
+              override={cardFrames.byRecord[item.id]}
+              onPreview={(next) => { framePreview = next ? { id: item.id, frame: next } : null; }}
+              onCommit={(next) => onCardFrameChange?.(item.id, next)}
+            />
+          {/if}
+        </svelte:fragment>
       </SharedCard>
     </div>
   {/each}

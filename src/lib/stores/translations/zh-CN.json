@@ -2192,6 +2192,18 @@
                         "icon-field": "包含 emoji 或 lucide 图标名称的字段。作为每条记录的图标显示。"
                     }
                 },
+                "card-frames": {
+                    "height": "卡片高度",
+                    "height-hint": "以 rem 为单位，适用于此视图的所有卡片；留空则自动高度。拖动卡片的角可单独调整该卡片的大小。",
+                    "auto": "自动",
+                    "reset-all": "重置所有卡片尺寸",
+                    "resize": "调整卡片大小",
+                    "hint": "拖动以调整大小。方向键改变大小，Home 恢复视图高度，Delete 重置此卡片。",
+                    "value-height": "高度 {{height}} rem",
+                    "value-auto": "自动高度",
+                    "value-span": "宽度 {{span}} 列",
+                    "cap-reached": "此视图已保存 {{limit}} 个卡片尺寸。请先重置部分卡片，再调整其他卡片的大小。"
+                },
                 "none": "— 无 —"
             }
         },

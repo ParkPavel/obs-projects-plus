@@ -11,6 +11,7 @@
     OnColumnCollapse,
   } from "./types";
   import type { BoardThumbnailLayout } from "../../types";
+  import type { CardFrame, NormalizedCardFrames } from "src/ui/components/SharedCard/cardFrames";
   import { openContextMenu } from "src/lib/contextMenu";
   import { toRem } from "src/ui/utils/cssLength";
 
@@ -31,6 +32,9 @@
   /** cards-g4 — card thumbnails, passed through to the card list. */
   export let thumbnailLayout: BoardThumbnailLayout = "none";
   export let coverField: DataField | undefined = undefined;
+  /** cards-g5 — saved card frames and their change route, passed through to the card list. */
+  export let cardFrames: NormalizedCardFrames = { view: {}, byRecord: {} };
+  export let onCardFrameChange: ((recordId: string, frame: CardFrame | undefined) => void) | undefined = undefined;
   export let pinned: boolean;
   export let collapse: boolean;
   export let persisted: boolean;
@@ -144,6 +148,8 @@
       {iconField}
       {thumbnailLayout}
       {coverField}
+      {cardFrames}
+      {onCardFrameChange}
       {onRecordClick}
       {checkField}
       {onRecordCheck}

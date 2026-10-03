@@ -1,4 +1,11 @@
-export interface BoardConfig {
+import type { CardFrameConfig } from "src/ui/components/SharedCard/cardFrames";
+
+/**
+ * cards-g5: `cardFrame` (view-wide) and `cardFramesByRecord` (per card) come
+ * from CardFrameConfig and are read through `normalizeCardFrames`. A board
+ * card's frame sets its height only; the column governs its width.
+ */
+export interface BoardConfig extends CardFrameConfig {
   readonly groupByField?: string;
   readonly checkField?: string;
   readonly headerField?: string;

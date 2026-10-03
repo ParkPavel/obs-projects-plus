@@ -36,6 +36,7 @@
     OnColumnPersist,
   } from "./types";
   import type { BoardThumbnailLayout } from "../../types";
+  import type { CardFrame, NormalizedCardFrames } from "src/ui/components/SharedCard/cardFrames";
 
   export let columns: Column[];
 
@@ -64,6 +65,9 @@
   /** cards-g4 — card thumbnails: where (BoardConfig) and from which field. */
   export let thumbnailLayout: BoardThumbnailLayout = "none";
   export let coverField: DataField | undefined = undefined;
+  /** cards-g5 — saved card frames (BoardView) and their change route, passed to every column. */
+  export let cardFrames: NormalizedCardFrames = { view: {}, byRecord: {} };
+  export let onCardFrameChange: ((recordId: string, frame: CardFrame | undefined) => void) | undefined = undefined;
 
   /** Zoom level (0.25 – 2.0, default 1) */
   export let zoom: number = 1;
@@ -288,6 +292,8 @@
               {iconField}
               {thumbnailLayout}
               {coverField}
+              {cardFrames}
+              {onCardFrameChange}
               onColumnPin={(name) =>
                 onColumnPin(
                   columns.map((col) => col.id),
@@ -407,6 +413,8 @@
               {iconField}
               {thumbnailLayout}
               {coverField}
+              {cardFrames}
+              {onCardFrameChange}
               onColumnPin={(name) =>
                 onColumnPin(
                   columns.map((col) => col.id),
