@@ -12,6 +12,7 @@
     sizePresetOf,
     type GallerySizePreset,
   } from "src/ui/views/Gallery/galleryOptions";
+  import { BOARD_THUMBNAIL_LAYOUTS, normalizeThumbnailLayout } from "src/ui/views/Board/types";
 
   type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
 
@@ -54,6 +55,8 @@
   $: groupByField = (view?.config?.["groupByField"] as string) ?? "";
   $: headerField = (view?.config?.["headerField"] as string) ?? "";
   $: orderSyncField = (view?.config?.["orderSyncField"] as string) ?? "";
+  // cards-g4: card thumbnails; the cover field is the shared `coverField` below.
+  $: thumbnailLayout = normalizeThumbnailLayout(view?.config?.["thumbnailLayout"]);
 
   // Gallery-specific settings, read through the gallery's one normaliser (cards-g3)
   $: gallery = normalizeGalleryConfig(view?.config);
@@ -426,6 +429,28 @@
             on:change={(e) => emitUpdate({ orderSyncField: e.detail || undefined })}
           />
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.order-sync-field')}</span>
+        </label>
+
+        <label>
+          {$i18n.t("settings-menu.view-config.board.thumbnail-layout")}
+          <select data-board-option="thumbnail-layout" bind:value={thumbnailLayout} on:change={(e) => emitUpdate({ thumbnailLayout: e.currentTarget.value })}>
+            {#each BOARD_THUMBNAIL_LAYOUTS as option}
+              <option value={option}>{$i18n.t(`settings-menu.view-config.board.thumbnail-options.${option}`)}</option>
+            {/each}
+          </select>
+          <span class="hint">{$i18n.t("settings-menu.view-config.board.hints.thumbnail-layout")}</span>
+        </label>
+
+        <label for="fieldlist-cover-board-input">
+          {$i18n.t("settings-menu.view-config.board.cover-field")}
+          <FieldComboInput
+            fields={stringFields}
+            id="fieldlist-cover-board"
+            bind:value={coverField}
+            placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
+            on:change={(e) => emitUpdate({ coverField: e.detail || undefined })}
+          />
+          <span class="hint">{$i18n.t("settings-menu.view-config.board.hints.cover-field")}</span>
         </label>
 
         <label class="checkbox">

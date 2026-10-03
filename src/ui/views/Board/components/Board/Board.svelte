@@ -35,6 +35,7 @@
     OnColumnPin,
     OnColumnPersist,
   } from "./types";
+  import type { BoardThumbnailLayout } from "../../types";
 
   export let columns: Column[];
 
@@ -60,6 +61,9 @@
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;
   export let iconField: DataField | undefined = undefined;
+  /** cards-g4 — card thumbnails: where (BoardConfig) and from which field. */
+  export let thumbnailLayout: BoardThumbnailLayout = "none";
+  export let coverField: DataField | undefined = undefined;
 
   /** Zoom level (0.25 – 2.0, default 1) */
   export let zoom: number = 1;
@@ -282,6 +286,8 @@
               {includeFields}
               {customHeader}
               {iconField}
+              {thumbnailLayout}
+              {coverField}
               onColumnPin={(name) =>
                 onColumnPin(
                   columns.map((col) => col.id),
@@ -399,6 +405,8 @@
               {includeFields}
               {customHeader}
               {iconField}
+              {thumbnailLayout}
+              {coverField}
               onColumnPin={(name) =>
                 onColumnPin(
                   columns.map((col) => col.id),

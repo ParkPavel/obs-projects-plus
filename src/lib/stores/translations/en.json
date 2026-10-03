@@ -2028,11 +2028,20 @@
                     "header-field": "Card header",
                     "order-sync-field": "Order sync field",
                     "freeze-columns": "Freeze columns",
+                    "thumbnail-layout": "Card thumbnails",
+                    "thumbnail-options": {
+                        "none": "None",
+                        "top": "Cover on top",
+                        "left": "Thumbnail on the left"
+                    },
+                    "cover-field": "Cover field",
                     "hints": {
                         "column-width": "Width of each column in pixels",
                         "group-by-field": "String frontmatter field for grouping cards by columns",
                         "header-field": "Field for card headers",
-                        "order-sync-field": "Number field to store card positions"
+                        "order-sync-field": "Number field to store card positions",
+                        "thumbnail-layout": "Show the image from the cover field on each card; cards without an image stay as they are",
+                        "cover-field": "Text field with path to image"
                     }
                 },
                 "gallery": {

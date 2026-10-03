@@ -11,7 +11,8 @@
    *
    * Slots, each rendered only when given (an absent slot adds no element):
    *   grip     — before everything (the board's drag lane);
-   *   media    — before the body (the gallery cover);
+   *   media    — before the body (the gallery cover; the board thumbnail,
+   *              placed by `mediaLayout`, cards-g4);
    *   header   — the ColorItem header line (title link, checkbox, pencil);
    *   metadata — under the header (CardMetadata);
    *   controls — after the body, reserved.
@@ -33,6 +34,13 @@
   export let interactive = false;
   /** A class hook for a card that cannot be acted on; no behaviour. */
   export let disabled = false;
+  /**
+   * cards-g4: where a board card's `media` sits — `top` (above the header,
+   * across the content lane) or `left` (a lane of its own before the content).
+   * Set only when the media slot really renders an element; unset, the board
+   * card keeps its two lanes exactly. The gallery lays its media out itself.
+   */
+  export let mediaLayout: "top" | "left" | undefined = undefined;
 </script>
 
 <article
@@ -43,6 +51,8 @@
   class:projects--board--card={variant === "board"}
   class:ppp-shared-card--interactive={interactive}
   class:ppp-shared-card--disabled={disabled}
+  class:ppp-shared-card--media-top={variant === "board" && mediaLayout === "top"}
+  class:ppp-shared-card--media-left={variant === "board" && mediaLayout === "left"}
   data-ppp-card-id={recordId}
   style:--ppp-shared-card-size={size}
   on:click
@@ -97,10 +107,34 @@
     }
   }
 
+  /* cards-g4: a board card with a cover. The grip stays the first lane and
+     spans every row (CardList gives it `grid-row: 1 / -1`); the media is
+     placed by CardList in row 1 of the second lane.
+     top  — two rows in the content lane: the cover, then the colour item;
+     left — a third lane, sized by the square thumbnail, between the grip and
+            the colour item, so the title and metadata flow beside it. */
+  .projects--board--card.ppp-shared-card--media-top {
+    grid-template-rows: auto auto;
+  }
+  .projects--board--card.ppp-shared-card--media-top > :global(.color-item) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .projects--board--card.ppp-shared-card--media-left {
+    grid-template-columns: var(--board-card-grip-lane, var(--size-4-5)) auto minmax(0, 1fr);
+  }
+  .projects--board--card.ppp-shared-card--media-left > :global(.color-item) {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
   /* ios-d1 / cards-g1: on touch the grip lane is a full finger target wide. */
   @media (pointer: coarse) {
     .projects--board--card {
       grid-template-columns: var(--ppp-touch-target-min) minmax(0, 1fr);
+    }
+    .projects--board--card.ppp-shared-card--media-left {
+      grid-template-columns: var(--ppp-touch-target-min) auto minmax(0, 1fr);
     }
   }
 </style>

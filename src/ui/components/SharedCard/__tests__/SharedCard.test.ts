@@ -201,6 +201,32 @@ describe("cards-g2 — slots", () => {
   });
 });
 
+describe("cards-g4 — board media layout", () => {
+  it("unset: no layout class, and the board card is grip then colour item", () => {
+    const m = mount({ variant: "board" }, { grip: slot(() => el("span", "test-grip")) });
+    expect(m.root).not.toHaveClass("ppp-shared-card--media-top");
+    expect(m.root).not.toHaveClass("ppp-shared-card--media-left");
+    expect(childClasses(m.root)).toEqual(["test-grip", "color-item"]);
+    m.destroy();
+  });
+
+  it.each(["top", "left"])("%s: a class on the root; the media sits between the grip and the colour item", (layout) => {
+    const m = mount(
+      { variant: "board", mediaLayout: layout },
+      { grip: slot(() => el("span", "test-grip")), media: slot(() => el("div", "test-media")) }
+    );
+    expect(m.root).toHaveClass(`ppp-shared-card--media-${layout}`);
+    expect(childClasses(m.root)).toEqual(["test-grip", "test-media", "color-item"]);
+    m.destroy();
+  });
+
+  it("the gallery lays its media out itself: no board layout class", () => {
+    const m = mount({ variant: "gallery", mediaLayout: "top" });
+    expect(m.root).not.toHaveClass("ppp-shared-card--media-top");
+    m.destroy();
+  });
+});
+
 describe("cards-g2 — colour", () => {
   it("draws the colour bar only when a colour is given", () => {
     const none = mount({ variant: "board" });

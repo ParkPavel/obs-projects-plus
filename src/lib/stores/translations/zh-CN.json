@@ -2131,11 +2131,20 @@
                     "header-field": "卡片标题",
                     "order-sync-field": "排序同步字段",
                     "freeze-columns": "冻结列",
+                    "thumbnail-layout": "卡片缩略图",
+                    "thumbnail-options": {
+                        "none": "无",
+                        "top": "顶部封面",
+                        "left": "左侧缩略图"
+                    },
+                    "cover-field": "封面字段",
                     "hints": {
                         "column-width": "每列宽度（像素）",
                         "group-by-field": "用于按列分组卡片的字符串前置元数据字段",
                         "header-field": "用于卡片标题的字段",
-                        "order-sync-field": "用于存储卡片位置的数字字段"
+                        "order-sync-field": "用于存储卡片位置的数字字段",
+                        "thumbnail-layout": "在每张卡片上显示封面字段中的图片；没有图片的卡片保持不变",
+                        "cover-field": "包含图片路径的文本字段"
                     }
                 },
                 "gallery": {

@@ -10,6 +10,7 @@
     OnRecordDrop,
     OnColumnCollapse,
   } from "./types";
+  import type { BoardThumbnailLayout } from "../../types";
   import { openContextMenu } from "src/lib/contextMenu";
   import { toRem } from "src/ui/utils/cssLength";
 
@@ -27,6 +28,9 @@
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;
   export let iconField: DataField | undefined = undefined;
+  /** cards-g4 — card thumbnails, passed through to the card list. */
+  export let thumbnailLayout: BoardThumbnailLayout = "none";
+  export let coverField: DataField | undefined = undefined;
   export let pinned: boolean;
   export let collapse: boolean;
   export let persisted: boolean;
@@ -138,6 +142,8 @@
       readOnly={dataReadOnly}
       {customHeader}
       {iconField}
+      {thumbnailLayout}
+      {coverField}
       {onRecordClick}
       {checkField}
       {onRecordCheck}

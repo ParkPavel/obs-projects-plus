@@ -168,6 +168,8 @@
     dragHandle,
   } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
+  import { getCoverRealPath } from "src/ui/views/Gallery/gallery";
+  import type { BoardThumbnailLayout } from "../../types";
   import { excludeHeaderField, getDisplayName } from "./boardHelpers";
   import type {
     DropTrigger,
@@ -184,6 +186,9 @@
   export let checkField: string | undefined;
   export let customHeader: DataField | undefined;
   export let iconField: DataField | undefined = undefined;
+  /** cards-g4 — where a card shows its cover, and the field it is read from. */
+  export let thumbnailLayout: BoardThumbnailLayout = "none";
+  export let coverField: DataField | undefined = undefined;
   export let boardEditing: boolean;
   export let disableDnd: boolean = false;
   /** The data is read-only (a source block): the pencil opens the note, and says so. */
@@ -246,6 +251,26 @@
     !!(item as any)[SHADOW_ITEM_MARKER_PROPERTY_NAME];
 
   $: bodyFields = excludeHeaderField(includeFields, customHeader);
+
+  /**
+   * cards-g4: a card's thumbnail, resolved the gallery's way (an image file
+   * or an http(s) URL in the cover field). No layout, no cover field, or a
+   * value that is not an image resolves to nothing, and then the card renders
+   * no media element at all: no placeholder on a kanban card.
+   */
+  // cards-g4: an image that resolves but fails to load (a dead link) drops its
+  // media too, so a card never keeps an empty thumbnail box.
+  let failedThumbs = new Set<string>();
+  function dropThumb(src: string) {
+    failedThumbs = new Set(failedThumbs).add(src);
+  }
+
+  $: thumbnailOf = (record: DataRecord): { src: string; layout: "top" | "left" } | null => {
+    const layout = thumbnailLayout;
+    if (layout === "none") return null;
+    const src = getCoverRealPath($app, record, coverField);
+    return src && !failedThumbs.has(src) ? { src, layout } : null;
+  };
 </script>
 
   <div
@@ -278,6 +303,7 @@
 >
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}
+    {@const thumbnail = thumbnailOf(item)}
 
     <div
       class="ppp-board-card-slot"
@@ -297,6 +323,7 @@
         variant="board"
         {color}
         interactive
+        mediaLayout={thumbnail?.layout}
         on:keypress
         on:click={(e) => {
           if (!isGripTarget(e)) onRecordClick(item);
@@ -305,6 +332,21 @@
         <span slot="grip" class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
           <span class="board-card-grip-glyph"><Icon name="grip-vertical" size="xs" /></span>
         </span>
+        <!-- cards-g4: the thumbnail is decorative (the title link names the
+             record), loads lazily (a board may hold hundreds of cards) and has
+             no handler of its own: a click on it is a click on the card body. -->
+        <svelte:fragment slot="media">
+          {#if thumbnail}
+            <div
+              class="ppp-board-card-media"
+              class:ppp-board-card-media--top={thumbnail.layout === "top"}
+              class:ppp-board-card-media--left={thumbnail.layout === "left"}
+              aria-hidden="true"
+            >
+              <img src={thumbnail.src} alt="" loading="lazy" decoding="async" draggable="false" on:error={() => thumbnail && dropThumb(thumbnail.src)} />
+            </div>
+          {/if}
+        </svelte:fragment>
         <div slot="header" class="card-header">
           {#if checkField}
             <span class="checkbox-wrapper">
@@ -389,6 +431,9 @@
      is the iOS/Trello norm. */
   .board-card-grip {
     grid-column: 1;
+    /* cards-g4: every row of the card; with no explicit rows (no cover, or a
+       left thumbnail) this is the single row it always had. */
+    grid-row: 1 / -1;
     align-self: stretch;
     display: flex;
     flex-direction: column;
@@ -465,6 +510,36 @@
       color: var(--text-muted);
     }
   }
+  /* cards-g4: the thumbnail, in the card's second lane, first row (the card's
+     rows and lanes per layout are SharedCard's `--media-top` / `--media-left`).
+     Ratio and fit read the custom properties the gallery media reads. */
+  .ppp-board-card-media {
+    grid-column: 2;
+    grid-row: 1;
+    overflow: hidden;
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+  }
+  .ppp-board-card-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: var(--ppp-card-media-fit, cover);
+  }
+  /* top: across the content lane, above the header. */
+  .ppp-board-card-media--top {
+    aspect-ratio: var(--ppp-card-media-ratio, 16 / 10);
+    margin-bottom: var(--size-4-2);
+  }
+  /* left: a small square at the start of the content; the whole card is the
+     open target, so it need not be a finger target of its own. */
+  .ppp-board-card-media--left {
+    --ppp-board-card-thumb: 2.75rem;
+    width: var(--ppp-board-card-thumb);
+    height: var(--ppp-board-card-thumb);
+    margin-right: var(--size-4-2);
+  }
+
   div.card-header {
     display: flex;
     gap: 0.25rem;

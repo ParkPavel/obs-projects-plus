@@ -543,6 +543,8 @@
   let:includeFields
   let:customHeader
   let:iconField
+  let:thumbnailLayout
+  let:coverField
 >
   <Board
     columns={getColumns(
@@ -561,6 +563,8 @@
     includeFields={fields.filter((field) => includeFields.includes(field.name))}
     customHeader={fields.find((field) => field.name === customHeader)}
     iconField={fields.find((field) => field.name === iconField)}
+    {thumbnailLayout}
+    coverField={fields.find((field) => field.name === coverField)}
     onRecordClick={handleRecordClick}
     onRecordCheck={handleRecordCheck(checkField)}
     onRecordAdd={handleRecordAdd(groupByField)}
