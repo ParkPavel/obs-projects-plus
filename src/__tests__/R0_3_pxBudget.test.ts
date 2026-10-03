@@ -101,3 +101,182 @@ describe("R0.3 — CSS px-budget ratchet", () => {
     expect(total).toBeLessThanOrEqual(PX_BUDGET);
   });
 });
+
+/**
+ * R0.3 — script-built px ratchet
+ *
+ * The plugin principle is "ИСКЛЮЧИТЕЛЬНО относительные единицы" (Revision 3
+ * §2.1). The CSS ratchet above reads `<digits>px` literals, so it cannot see a
+ * length a script assembles at runtime: `${Math.floor(room)}px` written into a
+ * custom property or an inline style is a px value all the same. ios-u1 found
+ * exactly that (App.svelte's `--ppp-below-nav-h`, now rem) and added this
+ * second ratchet.
+ *
+ * Counted, in `.ts` files and the non-`<style>` part of `.svelte` files under
+ * `src` (`__tests__` and `__mocks__` skipped):
+ * - every `}px` — an interpolation followed by the unit, so a template literal
+ *   `translate(${x}px, ${y}px)` counts 2;
+ * - a quoted `px` string literal — `'px'`, `"px"` or the same in backticks (a
+ *   unit glued on by concatenation).
+ * Block comments, HTML comments and `//` line comments are stripped first;
+ * `://` (a URL) is not a comment.
+ *
+ * Converting the legacy occurrences is stage R0.3b, together with the CSS
+ * literals above. The budget may only fall: lower it after a real conversion,
+ * never raise it. The check is exact — a count below the budget fails too —
+ * so the constant always equals the tree and a conversion cannot leave slack
+ * for a new px to hide in.
+ */
+
+const SCRIPT_TEMPLATE_PX_RE = /\}px\b/g;
+const SCRIPT_QUOTED_PX_RE = /(['"`])px\1/g;
+
+/**
+ * Remove `/* … *\/` and `//` comments, keeping newlines. String literals are
+ * tracked only so that a `//` or `/*` inside one (a URL, a `**\/*.md` glob)
+ * does not start a comment; a quote left open at the end of a line (an
+ * apostrophe in markup text) is closed there, so a stray one cannot swallow
+ * the rest of the file.
+ */
+function stripScriptComments(src: string): string {
+  let out = "";
+  let quote: string | null = null;
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i]!;
+    if (quote !== null) {
+      out += c;
+      if (c === "\\" && i + 1 < src.length) {
+        out += src[i + 1]!;
+        i += 2;
+        continue;
+      }
+      if (c === quote || (c === "\n" && quote !== "`")) quote = null;
+      i++;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "*") {
+      const end = src.indexOf("*/", i + 2);
+      const stop = end === -1 ? src.length : end + 2;
+      out += src.slice(i, stop).replace(/[^\n]/g, "");
+      i = stop;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "/" && src[i - 1] !== ":") {
+      const end = src.indexOf("\n", i);
+      i = end === -1 ? src.length : end;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === "`") quote = c;
+    out += c;
+    i++;
+  }
+  return out;
+}
+
+/** The scanned code of one file: `.svelte` loses its `<style>` blocks and HTML comments. */
+function scriptCode(text: string, isSvelte: boolean): string {
+  const body = isSvelte
+    ? text.replace(/<style[\s>][\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "")
+    : text;
+  return stripScriptComments(body);
+}
+
+function countScriptPx(text: string, isSvelte: boolean): number {
+  const code = scriptCode(text, isSvelte);
+  return (code.match(SCRIPT_TEMPLATE_PX_RE)?.length ?? 0) + (code.match(SCRIPT_QUOTED_PX_RE)?.length ?? 0);
+}
+
+function* walkScripts(dir: string): Generator<string> {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      if (entry === "__tests__" || entry === "__mocks__") continue;
+      yield* walkScripts(full);
+    } else if (entry.endsWith(".ts") || entry.endsWith(".svelte")) {
+      yield full;
+    }
+  }
+}
+
+function countScriptPxAcrossSrc(): { total: number; perFile: Map<string, number> } {
+  const perFile = new Map<string, number>();
+  let total = 0;
+  for (const file of walkScripts(SRC_ROOT)) {
+    const n = countScriptPx(readFileSync(file, "utf8"), file.endsWith(".svelte"));
+    if (n > 0) {
+      perFile.set(file, n);
+      total += n;
+    }
+  }
+  return { total, perFile };
+}
+
+describe("R0.3 — script-built px ratchet", () => {
+  // Measured 2026-10-03 (ios-u1): 53 in 15 files, minus App.svelte's
+  // `--ppp-below-nav-h`, converted to rem in the same change. Lower only.
+  const SCRIPT_PX_BUDGET = 52;
+
+  it("equals the agreed script-built px budget", () => {
+    const { total, perFile } = countScriptPxAcrossSrc();
+    const top = [...perFile.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([f, c]) => `  ${c.toString().padStart(4)}  ${f}`)
+      .join("\n");
+    if (total > SCRIPT_PX_BUDGET) {
+      throw new Error(
+        `script-built px budget exceeded: ${total} > ${SCRIPT_PX_BUDGET}\nTop files:\n${top}\n\n` +
+          "A length assembled in a script is still a px length. Divide by the root " +
+          "font size and write rem/em/% instead.",
+      );
+    }
+    if (total < SCRIPT_PX_BUDGET) {
+      throw new Error(
+        `script-built px count fell: ${total} < ${SCRIPT_PX_BUDGET}. Lower SCRIPT_PX_BUDGET ` +
+          `to ${total} so the ratchet keeps equal to the tree.\nTop files:\n${top}`,
+      );
+    }
+    expect(total).toBe(SCRIPT_PX_BUDGET);
+  });
+
+  it("counts every }px, two in one translate()", () => {
+    expect(countScriptPx("el.style.transform = `translate(${x}px, ${y}px)`;", false)).toBe(2);
+  });
+
+  it("counts a planted template literal ending in }px", () => {
+    expect(countScriptPx("el.style.top = `${x}px`;", false)).toBe(1);
+    expect(countScriptPx("<script>\n  $: h = `${x}px`;\n</script>\n<div style:height={h} />", true)).toBe(1);
+  });
+
+  it("counts a quoted px unit glued on by concatenation", () => {
+    expect(countScriptPx("const a = n + 'px'; const b = n + \"px\"; const c = n + `px`;", false)).toBe(3);
+  });
+
+  it("does not count px inside a comment", () => {
+    const text = [
+      "// was `${x}px` before R0.3b",
+      "/* el.style.top = `${y}px`; */",
+      "/**",
+      " * n + 'px'",
+      " */",
+      "const ok = 1;",
+    ].join("\n");
+    expect(countScriptPx(text, false)).toBe(0);
+    expect(countScriptPx("<!-- `${x}px` -->\n<div />", true)).toBe(0);
+  });
+
+  it("does not count a rem unit", () => {
+    expect(countScriptPx("const a = `${x}rem`; const b = n + 'rem';", false)).toBe(0);
+  });
+
+  it("does not treat a URL or a glob string as a comment", () => {
+    expect(countScriptPx("const u = 'https://example.com'; el.style.top = `${x}px`;", false)).toBe(1);
+    expect(countScriptPx("const g = '**/*.md'; el.style.top = `${x}px`;", false)).toBe(1);
+  });
+
+  it("does not read a <style> block as script", () => {
+    expect(countScriptPx("<div />\n<style>\n  .a { content: 'px'; }\n</style>", true)).toBe(0);
+  });
+});

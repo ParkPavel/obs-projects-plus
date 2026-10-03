@@ -111,13 +111,21 @@
   // measured rather than written down, since the navbar's height is its own.
   // Exposed as `--ppp-below-nav-h`; the short-landscape rule below hands it to
   // the sheet, which inherits it because on phones it is not portalled.
+  // The DOM measures in px, but the plugin writes only relative units (R0.3),
+  // so the room is divided by the root font size and written in rem, floored
+  // to 3 decimals so the cap never exceeds the measured room. No room (the
+  // main area at or below the window's bottom) writes nothing, and the sheet
+  // falls back to its 85vh.
   let mainEl: HTMLDivElement | null = null;
   let belowNav: string | null = null;
   function measureBelowNav() {
     if (!mainEl) return;
     const win = mainEl.ownerDocument.defaultView ?? window;
     const room = win.innerHeight - mainEl.getBoundingClientRect().top;
-    belowNav = room > 0 ? `${Math.floor(room)}px` : null;
+    // coercion-exempt: Class C - a computed CSS length ("16px") read back from the DOM, not record data
+    const rootPx = parseFloat(win.getComputedStyle(mainEl.ownerDocument.documentElement).fontSize);
+    const base = Number.isFinite(rootPx) && rootPx > 0 ? rootPx : 16;
+    belowNav = room > 0 ? `${Math.floor((room / base) * 1000) / 1000}rem` : null;
   }
   onMount(() => {
     const win = mainEl?.ownerDocument.defaultView ?? window;
