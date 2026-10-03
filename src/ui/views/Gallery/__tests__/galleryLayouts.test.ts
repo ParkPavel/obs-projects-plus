@@ -219,6 +219,39 @@ describe("cards-g3 — cover ratio and fit", () => {
       m.destroy();
     }
   });
+
+  it("with no media area the whole card opens the record, once, and modifiers still route", () => {
+    const { EditNoteModal } = require("src/ui/modals/editNoteModal") as { EditNoteModal: jest.Mock };
+    const { openRecord } = require("src/lib/record/openRecord") as { openRecord: jest.Mock };
+    const m = mountGallery({ coverAspectRatio: "none" });
+    const body = m.card(1).querySelector<HTMLElement>(".projects--gallery--card__body") as HTMLElement;
+
+    EditNoteModal.mockClear();
+    body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    expect(EditNoteModal.mock.calls[0][3]).toMatchObject({ id: records[1]?.id });
+
+    // The title link opens through its own handler and stops the click there.
+    EditNoteModal.mockClear();
+    m.card(1).querySelector<HTMLElement>("a.internal-link")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+
+    openRecord.mockClear();
+    body.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
+    expect(openRecord).toHaveBeenCalledWith(expect.objectContaining({ id: records[1]?.id }), "window", expect.anything());
+    m.destroy();
+  });
+
+  it("with a media area the body is not an open target, as before", () => {
+    const { EditNoteModal } = require("src/ui/modals/editNoteModal") as { EditNoteModal: jest.Mock };
+    const m = mountGallery();
+    EditNoteModal.mockClear();
+    m.card(0).querySelector<HTMLElement>(".projects--gallery--card__body")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(EditNoteModal).not.toHaveBeenCalled();
+    m.media(0)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(EditNoteModal).toHaveBeenCalledTimes(1);
+    m.destroy();
+  });
 });
 
 describe("cards-g3 — field labels", () => {

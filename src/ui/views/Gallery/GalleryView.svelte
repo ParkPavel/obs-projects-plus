@@ -111,6 +111,24 @@
     ).open();
   }
 
+  /** v3.0.8: unified note navigation — Shift → new window, Ctrl → new tab, else → modal. */
+  function openFromCard(event: MouseEvent, record: DataRecord) {
+    // v3.0.10: Suppress click if long-press was fired
+    if (longPressFired) { longPressFired = false; return; }
+    if (event.shiftKey) {
+      void openRecord({ id: record.id, sourcePath: "" }, "window", { app: $app });
+    } else if (event.metaKey || event.ctrlKey) {
+      void openRecord({ id: record.id, sourcePath: "" }, "tab", { app: $app });
+    } else {
+      handleRecordClick(record);
+    }
+  }
+
+  // cards-g3: with no media area (ratio `none`) the whole card is the open and
+  // long-press target. A touch on the title link is left to the link, which has
+  // its own long press, so the menu never opens twice.
+  const onLink = (e: Event) => e.target instanceof Element && e.target.closest("a, .internal-link") !== null;
+
   // v3.0.10: Long-press detection for CardMedia on touch devices
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let longPressFired = false;
@@ -200,7 +218,17 @@
              custom properties (--ppp-shared-card-size, --ppp-card-media-ratio,
              --ppp-card-media-fit) for the later card batches to read; ratio
              `none` renders no media element at all. -->
-        <SharedCard recordId={record.id} variant="gallery" {color} size={cardSize}>
+        <SharedCard
+          recordId={record.id}
+          variant="gallery"
+          {color}
+          size={cardSize}
+          interactive={mediaRatio === null}
+          on:click={(event) => { if (mediaRatio === null) openFromCard(event, record); }}
+          on:touchstart={(event) => { if (mediaRatio === null && !onLink(event)) handleCardTouchStart(record)(event); }}
+          on:touchmove={(event) => { if (mediaRatio === null) handleCardTouchMove(event); }}
+          on:touchend={(event) => { if (mediaRatio === null) handleCardTouchEnd(event); }}
+        >
           <svelte:fragment slot="media">
           {#if mediaRatio !== null}
           <div
@@ -208,18 +236,7 @@
             style:--ppp-card-media-ratio={mediaRatio}
             style:--ppp-card-media-fit={fitStyle}
             on:keypress
-            on:click={(event) => {
-              // v3.0.10: Suppress click if long-press was fired
-              if (longPressFired) { longPressFired = false; return; }
-              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
-              if (event.shiftKey) {
-                void openRecord({ id: record.id, sourcePath: "" }, "window", { app: $app });
-              } else if (event.metaKey || event.ctrlKey) {
-                void openRecord({ id: record.id, sourcePath: "" }, "tab", { app: $app });
-              } else {
-                handleRecordClick(record);
-              }
-            }}
+            on:click={(event) => openFromCard(event, record)}
             on:touchstart={handleCardTouchStart(record)}
             on:touchmove={handleCardTouchMove}
             on:touchend={handleCardTouchEnd}

@@ -47,6 +47,9 @@
   style:--ppp-shared-card-size={size}
   on:click
   on:keypress
+  on:touchstart
+  on:touchmove
+  on:touchend
 >
   <slot name="grip" />
   <slot name="media" />
