@@ -1,6 +1,7 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
   import { isTouchDevice } from "src/lib/stores/ui";
+  import { getAnimationDuration } from "src/lib/helpers/animation";
   import type { DataField } from "src/lib/dataframe/dataframe";
   import {
     dragHandleZone,
@@ -72,7 +73,8 @@
   let boardEditing: boolean = false;
   let onEdit = (editing: boolean) => (boardEditing = editing);
 
-  const flipDurationMs = 150;
+  // cards-g1: 0 under reduced motion, as for cards (CardList).
+  const flipDurationMs = getAnimationDuration(150);
 
   // Guard: prevent reactive prop updates from resetting DnD state mid-drag
   let isDraggingColumns = false;
@@ -334,8 +336,8 @@
         // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
         dragDisabled: dataReadOnly || columnZoneDisabled,
         morphDisabled: true,
-        // ios-d1: as for cards (CardList) — the column grip is at its top-left
-        // corner, so on touch centre the clone on the finger for zone hit-tests.
+        // ios-d1: as for cards (CardList) — the column grip leads its header,
+        // so on touch centre the clone on the finger for zone hit-tests.
         centreDraggedOnCursor: $isTouchDevice,
       }}
       use:disarmAfterGripTap={".board-column-grip"}
@@ -357,9 +359,13 @@
           {#if isShadowPlaceholder(column)}
             <div class="projects--board--column--placeholder" style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}></div>
           {:else}
-            <span class="board-column-grip" use:dragHandle aria-label={$i18n.t("views.board.drag-column")}>
-              <Icon name="grip-vertical" size="xs" />
-            </span>
+            <!-- cards-g1: a collapsed column is a rotated strip whose expand action
+                 sits at its top, so its grip is a strip of its own above it. -->
+            {#if column.collapse}
+              <span class="board-column-grip board-column-grip--strip" use:dragHandle aria-label={$i18n.t("views.board.drag-column")}>
+                <Icon name="grip-vertical" size="xs" />
+              </span>
+            {/if}
             <BoardColumn
               {readonly}
               {dataReadOnly}
@@ -416,7 +422,17 @@
 
                 return true;
               }}
-            />
+            >
+              <svelte:fragment slot="grip">
+                <!-- cards-g1: the expanded column's grip is the first cell of its
+                     header row; a double click on it is not a rename. -->
+                {#if !column.collapse}
+                  <span class="board-column-grip" use:dragHandle on:dblclick|stopPropagation aria-label={$i18n.t("views.board.drag-column")}>
+                    <Icon name="grip-vertical" size="xs" />
+                  </span>
+                {/if}
+              </svelte:fragment>
+            </BoardColumn>
           {/if}
         </div>
       {/each}
@@ -516,18 +532,22 @@
     background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
   }
 
-  /* Column drag grip — top-left corner, visually separated from header */
+  /* cards-g1: the column grip is a cell of its own, in flow — the first item
+     of an expanded column's header row (BoardColumn's `grip` slot), or a strip
+     above a collapsed column — never over the border, the title or an action.
+     Pinned columns render none and keep their header whole. The cell is sized
+     from the space scale and the glyph (the xs icon) is smaller than it. */
   .board-column-grip {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.25rem;
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1rem;
-    height: 1.25rem;
+    width: var(--size-4-5);
+    height: 1.5rem;
+    margin-right: var(--size-4-1);
     border-radius: var(--radius-s);
     color: var(--text-faint);
+    opacity: 0.5;
     cursor: grab;
     touch-action: none;
     user-select: none;
@@ -537,14 +557,26 @@
     z-index: 2;
   }
 
-  /* Hidden until the column is hovered — only where a hover exists. */
-  @media (hover: hover) and (pointer: fine) {
-    .board-column-grip {
-      opacity: 0;
-    }
+  /* The collapsed column's rotated strip ends in its expand action at the top;
+     the grip takes a strip of the column's width above it, not its corner. */
+  .board-column-grip--strip {
+    width: 100%;
+    height: var(--size-4-6);
+    margin-right: 0;
+  }
 
+  /* cards-g1: low contrast at rest, so a fine pointer without hover still finds
+     it; full on keyboard focus or while focus is inside the column. */
+  .projects--board--column--dndwrapper:focus-within .board-column-grip,
+  .board-column-grip:focus-visible {
+    opacity: 1;
+    color: var(--text-muted);
+  }
+
+  /* Stronger under the mouse — only where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
     .projects--board--column--dndwrapper:hover .board-column-grip {
-      opacity: 0.45;
+      opacity: 0.8;
     }
 
     .board-column-grip:hover {
@@ -560,30 +592,20 @@
   }
 
   /* ios-t1: on touch the grip is the only way to move a column, so it is shown
-     plainly (it sat at 0.3) and is a finger-sized box of its own in the
-     column's top-left corner, glyph centred. The header beside it starts after
-     that box, so the grip covers no title text and no header action. A
-     collapsed column is a rotated 3rem strip whose expand action sits in this
-     same corner; its grip keeps the small glyph-sized box rather than cover it. */
+     plainly and is a finger-sized cell, glyph centred. cards-g1: in flow, so
+     the header's title and actions start after it with no padding to keep in
+     step; the collapsed strip is the column's full 3rem width and a target tall. */
   @media (pointer: coarse) {
     .board-column-grip {
       opacity: 0.7;
       color: var(--text-muted);
-      width: 1.125rem;
-      height: 1.5rem;
-    }
-
-    .projects--board--column--dndwrapper:not(.projects--board--column--dndwrapper--collapsed) > .board-column-grip {
-      top: 0;
-      left: 0;
       width: var(--ppp-touch-target-min);
       height: var(--ppp-touch-target-min);
+      margin-right: 0;
     }
 
-    /* Pinned columns render no grip, so their header keeps its full width. */
-    .projects--board--column--dndwrapper:not(.projects--board--column--dndwrapper--collapsed):not(.projects--board--column--pinned)
-      :global(.projects--board--column--header) {
-      padding-left: calc(var(--ppp-touch-target-min) - var(--size-4-1));
+    .board-column-grip--strip {
+      width: 100%;
     }
   }
 </style>

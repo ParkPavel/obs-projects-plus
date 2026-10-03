@@ -85,6 +85,8 @@
     if (!collapse && !dataReadOnly) editing = true;
   }}
 >
+  <!-- cards-g1: the leading cell for the column's drag grip (Board, via BoardColumn). -->
+  <slot name="grip" />
   {#if editing}
     <TextInput
       noPadding
@@ -201,10 +203,13 @@
     white-space: nowrap;
   }
 
+  /* cards-g1: with a leading grip cell the row has three items; the actions
+     still end the row instead of `space-between` centring the title. */
   .right {
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .actions {
@@ -254,8 +259,10 @@
       white-space: normal;
     }
 
+    /* cards-g1: the title fills the first row beside the grip cell (the whole
+       row in a pinned column); the actions still wrap to the second. */
     .projects--board--column--header:not(.projects--board--column--header-collapsed) > span {
-      flex: 1 1 100%;
+      flex: 1 1 0;
       min-width: 0;
       overflow-wrap: anywhere;
     }

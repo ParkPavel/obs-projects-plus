@@ -123,7 +123,12 @@
     onColumnPersist={() => onColumnPersist(name)}
     onColumnCollapse={() => onColumnCollapse(name)}
     {onValidate}
-  />
+  >
+    <svelte:fragment slot="grip">
+      <!-- cards-g1: the drag grip Board passes for an expanded, unpinned column. -->
+      <slot name="grip" />
+    </svelte:fragment>
+  </ColumnHeader>
 
   {#if !collapse}
     <CardGroup

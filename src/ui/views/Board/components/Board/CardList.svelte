@@ -148,6 +148,7 @@
     type DataRecord,
   } from "src/lib/dataframe/dataframe";
   import { app } from "src/lib/stores/obsidian";
+  import { getAnimationDuration } from "src/lib/helpers/animation";
   import { openRecord } from "src/lib/record/openRecord";
   import { i18n } from "src/lib/stores/i18n";
   import { isTouchDevice } from "src/lib/stores/ui";
@@ -191,7 +192,15 @@
   const getRecordColor = getRecordColorContext.get();
   const sortRecords = sortRecordsContext.get();
 
-  const flipDurationMs = 150;
+  // cards-g1: `getAnimationDuration` is 0 under reduced motion (or the
+  // plugin's instant setting), so the flip and the library's drop animation
+  // stop together. Measured later, live, on 20/100/300-card boards with reduced
+  // motion off and on: pointer-down on a grip to the first drag frame, and frame
+  // time during repeated drags (p50/p95 of each, Performance panel).
+  const flipDurationMs = getAnimationDuration(150);
+
+  /** cards-g1: whether a click landed on the grip lane, which drags rather than opens the card. */
+  const isGripTarget = (e: Event) => e.target instanceof Element && e.target.closest(".board-card-grip") !== null;
 
   $: zoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: disableDnd });
 
@@ -251,7 +260,8 @@
       outline: "none",
       borderRadius: "0.3125rem",
       background: "var(--board-column-drag-accent)",
-      transition: "all 150ms ease-in-out",
+      // cards-g1: only the background changes; `all` also animated layout.
+      transition: "background 150ms ease-in-out",
     },
     // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
     dragDisabled: disableDnd || zoneDisabled,
@@ -273,11 +283,14 @@
       class="projects--board--card"
       class:projects--board--card-placeholder={isPlaceholder(item)}
       on:keypress
-      on:click={() => onRecordClick(item)}
+      on:click={(e) => {
+        if (!isGripTarget(e)) onRecordClick(item);
+      }}
       animate:flip={{ duration: flipDurationMs }}
     >
+      <!-- cards-g1: the grip is the card's first grid lane; the content lane follows. -->
       <span class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
-        <Icon name="grip-vertical" size="xs" />
+        <span class="board-card-grip-glyph"><Icon name="grip-vertical" size="xs" /></span>
       </span>
       <ColorItem {color}>
         <div slot="header" class="card-header">
@@ -341,7 +354,16 @@
 </div>
 
 <style>
+  /* cards-g1: two lanes — the grip's own, then the content. The grip is in
+     flow, so no field label, title or checkbox ever starts under it, at any
+     card width. The lane begins at the card's left border (its padding is the
+     lane), sized from the space scale; a narrow pane tightens it through
+     `--board-card-grip-lane` (styles.css container query), never a viewport. */
   .projects--board--card {
+    display: grid;
+    grid-template-columns: var(--board-card-grip-lane, var(--size-4-5)) minmax(0, 1fr);
+    align-items: start;
+    padding-left: 0;
     transition: background 150ms ease, box-shadow 150ms ease;
     position: relative;
   }
@@ -357,41 +379,66 @@
     }
   }
 
-  /* Card drag grip — left edge tab, inset from card border */
+  /* cards-g1: the grip fills its lane from the card's top border to its
+     bottom one (the negative block margins reach through the card padding,
+     `--board-card-pad` in styles.css), so the whole strip is the handle. The
+     glyph is top-aligned with the header line rather than centred: on a tall
+     card a centred glyph drifts away from the title it moves, and a top handle
+     is the iOS/Trello norm. */
   .board-card-grip {
-    position: absolute;
-    top: 50%;
-    left: 0.125rem;
-    transform: translateY(-50%);
+    grid-column: 1;
+    align-self: stretch;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    width: 0.5rem;
-    height: 1rem;
-    border-radius: var(--radius-s);
+    margin-block: calc(-1 * var(--board-card-pad, var(--size-4-2)));
+    padding-top: var(--board-card-pad, var(--size-4-2));
     color: var(--text-faint);
+    opacity: 0.5;
     cursor: grab;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
-    transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+    transition: opacity 0.15s ease, color 0.15s ease;
     z-index: 1;
   }
 
-  /* Hidden until the card is hovered — only where a hover exists. */
-  @media (hover: hover) and (pointer: fine) {
-    .board-card-grip {
-      opacity: 0;
-    }
+  /* One header line tall (1rem text at the normal line height), narrower than
+     the lane; the glyph is the xs icon centred in it. */
+  .board-card-grip-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-4-4);
+    height: 1.5rem;
+    border-radius: var(--radius-s);
+    transition: background 0.15s ease;
+  }
 
+  /* cards-g1: low contrast at rest, so a fine pointer without hover still finds
+     it; full on keyboard focus or while focus is inside the card. */
+  .projects--board--card:focus-within .board-card-grip,
+  .board-card-grip:focus-visible {
+    opacity: 1;
+    color: var(--text-muted);
+  }
+  .board-card-grip:focus-visible {
+    outline-offset: calc(-1 * var(--ppp-border-width-thick, 0.125rem));
+  }
+
+  /* Stronger under the mouse — only where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
     .projects--board--card:hover .board-card-grip {
-      opacity: 0.45;
+      opacity: 0.8;
     }
 
     .board-card-grip:hover {
       opacity: 1;
       color: var(--text-muted);
+    }
+
+    .board-card-grip:hover .board-card-grip-glyph {
       background: var(--background-modifier-hover);
     }
   }
@@ -402,34 +449,20 @@
   }
 
   /* ios-d1: on touch the grip is the only way to move a card (a pan on the
-     card body scrolls the board), so it is shown plainly and caught by a
-     finger-sized hit area. The glyph keeps its size; the ::before box is the
-     invisible target, centred on it — the geometry of `.ppp-touch-target`
-     (tokens.css), written here because the glyph is absolutely positioned.
-     Its touches land on the grip itself, so `touch-action: none` and the
-     `dragHandle` listeners apply unchanged. Since ios-t1 the desktop hover
-     rules above are gated, so no stuck hover can dim the grip here. */
+     card body scrolls the board), so it is shown plainly. cards-g1: the lane
+     itself is the finger target — a full target wide, and at least one tall
+     (its negative margins let a short card stay a single target high) — so
+     the content starts where the target ends, with no invisible ::before box
+     reaching over it. Touches land on the grip, so `touch-action: none` and
+     the `dragHandle` listeners apply unchanged. */
   @media (pointer: coarse) {
+    .projects--board--card {
+      grid-template-columns: var(--ppp-touch-target-min) minmax(0, 1fr);
+    }
     .board-card-grip {
+      min-height: var(--ppp-touch-target-min);
       opacity: 0.7;
       color: var(--text-muted);
-      width: 0.625rem;
-      height: 1.125rem;
-    }
-    .board-card-grip::before {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: var(--ppp-touch-target-min);
-      height: var(--ppp-touch-target-min);
-      transform: translate(-50%, -50%);
-    }
-    /* The hit area reaches past the glyph by half a target; the content starts
-       after it (glyph centre = left 0.125rem + half its 0.625rem width), so the
-       checkbox and title stay tappable and a press on them never arms a drag. */
-    .projects--board--card {
-      padding-left: calc(var(--ppp-touch-target-min) / 2 + 0.4375rem);
     }
   }
   div.card-header {
@@ -474,8 +507,8 @@
     /* ios-t1: the checkbox's finger square is its wrapper's own box. The
        wrapper is a target wide and tall, the box centred in it, and the
        input's ::before fills exactly that square — so the target starts where
-       the grip's hit area ends (the card's left padding above) and ends before
-       the title, covering neither. */
+       the grip's lane ends (the card's first grid track above, cards-g1) and
+       ends before the title, covering neither. */
     .checkbox-wrapper {
       flex-shrink: 0;
       align-self: center;

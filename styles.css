@@ -160,10 +160,13 @@
 }
 
 .projects--board--card {
+  /* cards-g1: the padding as a variable, so the grip lane (CardList.svelte)
+     can reach through it to the card's top and bottom edges. */
+  --board-card-pad: var(--size-4-2);
   background-color: var(--background-primary);
   border-radius: var(--radius-s);
   border: 1px solid var(--background-modifier-border);
-  padding: var(--size-4-2);
+  padding: var(--board-card-pad);
   transition: background-color var(--ppp-duration-normal, 0.15s) ease,
               box-shadow var(--ppp-duration-normal, 0.15s) ease,
               border-color var(--ppp-duration-normal, 0.15s) ease;
@@ -184,7 +187,9 @@
   flex-direction: column;
   gap: var(--size-4-2);
   min-height: 2.2rem;
-  transition: all 150ms ease-in-out;
+  /* cards-g1: only the drop background changes; `all` also animated layout
+     on every list during a drag. */
+  transition: background-color 150ms ease-in-out;
 
   &:has(.projects--board--card-placeholder) {
     background: var(--board-column-drop-accent) !important;
@@ -359,7 +364,10 @@
   }
 
   .projects--board--card {
-    padding: var(--size-4-1);
+    /* cards-g1: the grip lane tightens with the pane, never below the glyph;
+       coarse pointers keep a full touch target (CardList.svelte). */
+    --board-card-pad: var(--size-4-1);
+    --board-card-grip-lane: var(--size-4-4);
   }
 }
 
