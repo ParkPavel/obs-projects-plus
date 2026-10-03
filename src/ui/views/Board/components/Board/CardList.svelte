@@ -153,8 +153,8 @@
   import { i18n } from "src/lib/stores/i18n";
   import { isTouchDevice } from "src/lib/stores/ui";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
-  import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
   import { PageIcon } from "src/ui/components/PageIcon";
+  import SharedCard from "src/ui/components/SharedCard/SharedCard.svelte";
   import {
     getRecordColorContext,
     handleHoverLink,
@@ -279,20 +279,32 @@
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}
 
-    <article
-      class="projects--board--card"
+    <div
+      class="ppp-board-card-slot"
       class:projects--board--card-placeholder={isPlaceholder(item)}
-      on:keypress
-      on:click={(e) => {
-        if (!isGripTarget(e)) onRecordClick(item);
-      }}
       animate:flip={{ duration: flipDurationMs }}
     >
-      <!-- cards-g1: the grip is the card's first grid lane; the content lane follows. -->
-      <span class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
-        <span class="board-card-grip-glyph"><Icon name="grip-vertical" size="xs" /></span>
-      </span>
-      <ColorItem {color}>
+      <!-- cards-g2: the zone's item is this plain wrapper, because `animate:flip`
+           may only sit on an element directly in the keyed each, never on a
+           component. svelte-dnd-action reads the zone's direct children: it
+           arms, clones, hides and marks the shadow on this element, and the
+           card inside moves with it. The placeholder class lives here too; the
+           column and list find it with `:has()`, at any depth.
+           cards-g1: the grip is the card's first grid lane; the content lane
+           follows. -->
+      <SharedCard
+        recordId={item.id}
+        variant="board"
+        {color}
+        interactive
+        on:keypress
+        on:click={(e) => {
+          if (!isGripTarget(e)) onRecordClick(item);
+        }}
+      >
+        <span slot="grip" class="board-card-grip" use:dragHandle aria-label={$i18n.t("common.drag-to-reorder")}>
+          <span class="board-card-grip-glyph"><Icon name="grip-vertical" size="xs" /></span>
+        </span>
         <div slot="header" class="card-header">
           {#if checkField}
             <span class="checkbox-wrapper">
@@ -347,36 +359,26 @@
             <CardMetadata fields={[customHeader]} record={item} />
           {/if}
         </div>
-        <CardMetadata fields={bodyFields} record={item} />
-      </ColorItem>
-    </article>
+        <CardMetadata slot="metadata" fields={bodyFields} record={item} />
+      </SharedCard>
+    </div>
   {/each}
 </div>
 
 <style>
-  /* cards-g1: two lanes — the grip's own, then the content. The grip is in
-     flow, so no field label, title or checkbox ever starts under it, at any
-     card width. The lane begins at the card's left border (its padding is the
-     lane), sized from the space scale; a narrow pane tightens it through
-     `--board-card-grip-lane` (styles.css container query), never a viewport. */
-  .projects--board--card {
-    display: grid;
-    grid-template-columns: var(--board-card-grip-lane, var(--size-4-5)) minmax(0, 1fr);
-    align-items: start;
-    padding-left: 0;
-    transition: background 150ms ease, box-shadow 150ms ease;
-    position: relative;
-  }
-  .projects--board--card:focus-within {
+  /* cards-g2: the card's own lanes (`.projects--board--card`: the grid, its
+     focus and hover surface, the coarse-pointer lane width) moved to
+     SharedCard.svelte with the article they style. What stays here styles
+     what this list renders: the wrapper and what goes into the card's slots
+     (the grip, the header row). A rule keyed on the card's hover or focus
+     names the wrapper, which is exactly the card's box and an ancestor of all
+     of it, so it keeps the specificity the scoped card selector had. */
+
+  /* cards-g2: in a keyboard drag the library focuses its item, which is now
+     the wrapper rather than the card; the card keeps the look it had. */
+  .ppp-board-card-slot:focus > :global(.projects--board--card) {
     background: var(--background-primary-alt);
     box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
-  }
-  /* ios-t1: hover states reach only a pointer that hovers; a tap left them stuck. */
-  @media (hover: hover) and (pointer: fine) {
-    .projects--board--card:hover {
-      background: var(--background-primary-alt);
-      box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
-    }
   }
 
   /* cards-g1: the grip fills its lane from the card's top border to its
@@ -418,7 +420,7 @@
 
   /* cards-g1: low contrast at rest, so a fine pointer without hover still finds
      it; full on keyboard focus or while focus is inside the card. */
-  .projects--board--card:focus-within .board-card-grip,
+  .ppp-board-card-slot:focus-within .board-card-grip,
   .board-card-grip:focus-visible {
     opacity: 1;
     color: var(--text-muted);
@@ -429,7 +431,7 @@
 
   /* Stronger under the mouse — only where a hover exists. */
   @media (hover: hover) and (pointer: fine) {
-    .projects--board--card:hover .board-card-grip {
+    .ppp-board-card-slot:hover .board-card-grip {
       opacity: 0.8;
     }
 
@@ -454,11 +456,9 @@
      (its negative margins let a short card stay a single target high) — so
      the content starts where the target ends, with no invisible ::before box
      reaching over it. Touches land on the grip, so `touch-action: none` and
-     the `dragHandle` listeners apply unchanged. */
+     the `dragHandle` listeners apply unchanged. The lane's width on touch is
+     the card's rule, in SharedCard.svelte. */
   @media (pointer: coarse) {
-    .projects--board--card {
-      grid-template-columns: var(--ppp-touch-target-min) minmax(0, 1fr);
-    }
     .board-card-grip {
       min-height: var(--ppp-touch-target-min);
       opacity: 0.7;
@@ -483,8 +483,8 @@
       visibility: hidden;
     }
 
-    .projects--board--card:hover .edit-hint,
-    .projects--board--card:focus-within .edit-hint {
+    .ppp-board-card-slot:hover .edit-hint,
+    .ppp-board-card-slot:focus-within .edit-hint {
       opacity: 1;
       visibility: visible;
     }

@@ -123,6 +123,11 @@ const isFineHoverGate = (at: string): boolean =>
   /^@media\b/.test(at) && /\(\s*hover\s*:\s*hover\s*\)/.test(at) && /\(\s*pointer\s*:\s*fine\s*\)/.test(at);
 const isCoarse = (at: string): boolean => /^@media\s*\(\s*pointer\s*:\s*coarse\s*\)$/.test(at);
 
+// cards-g2: the card's own rules (its grid lanes, focus/hover surface and the
+// coarse lane width) live with the article in SharedCard; the grip and header
+// rules stay in CardList, which renders those into the card's slots.
+const SHARED_CARD = readFileSync(join(SRC_ROOT, "ui", "components", "SharedCard", "SharedCard.svelte"), "utf8");
+const shellRules = readRules(svelteStyles(SHARED_CARD));
 const cardRules = readRules(svelteStyles(read("CardList.svelte")));
 const boardRules = readRules(svelteStyles(read("Board.svelte")));
 const headerRules = readRules(svelteStyles(read("ColumnHeader.svelte")));
@@ -136,7 +141,7 @@ function plain(rules: Rule[], selector: string): Map<string, string> {
 
 describe("cards-g1 — the card grip has its own lane (CSS)", () => {
   it("the card is a grid: a grip lane, then a shrinkable content lane", () => {
-    const card = plain(cardRules, ".projects--board--card");
+    const card = plain(shellRules, ".projects--board--card");
     expect(card.get("display")).toBe("grid");
     expect(card.get("grid-template-columns")).toMatch(
       /^var\(--board-card-grip-lane, var\(--size-4-\d\)\) minmax\(0, 1fr\)$/
@@ -148,13 +153,13 @@ describe("cards-g1 — the card grip has its own lane (CSS)", () => {
   it("the grip is in flow in the first lane, never absolutely placed", () => {
     const grip = plain(cardRules, ".board-card-grip");
     expect(grip.get("grid-column")).toBe("1");
-    const absolute = [...cardRules, ...boardRules]
+    const absolute = [...shellRules, ...cardRules, ...boardRules]
       .filter((r) => /board-(card|column)-grip/.test(r.selector))
       .filter((r) => decls(r.body).get("position") === "absolute")
       .map((r) => r.selector);
     expect(absolute).toEqual([]);
     // The old invisible finger box reached over the content; the lane replaced it.
-    expect(cardRules.some((r) => r.selector.includes(".board-card-grip::before"))).toBe(false);
+    expect([...shellRules, ...cardRules].some((r) => r.selector.includes(".board-card-grip::before"))).toBe(false);
   });
 
   it("the glyph box is narrower than the lane it sits in", () => {
@@ -170,12 +175,14 @@ describe("cards-g1 — the card grip has its own lane (CSS)", () => {
   });
 
   it("coarse pointers get a full touch target lane, with no padding hack", () => {
-    const coarse = cardRules.filter((r) => r.at.length === 1 && isCoarse(r.at[0] ?? ""));
-    const card = coarse.find((r) => selectorsOf(r).includes(".projects--board--card"));
+    const coarseIn = (rules: Rule[]) => rules.filter((r) => r.at.length === 1 && isCoarse(r.at[0] ?? ""));
+    const card = coarseIn(shellRules).find((r) => selectorsOf(r).includes(".projects--board--card"));
     expect(decls(card?.body ?? "").get("grid-template-columns")).toBe(
       "var(--ppp-touch-target-min) minmax(0, 1fr)"
     );
-    const grip = coarse.find((r) => selectorsOf(r).includes(".board-card-grip"));
+    // Nothing else sets the card's lanes on touch any more.
+    expect(coarseIn(cardRules).some((r) => selectorsOf(r).includes(".projects--board--card"))).toBe(false);
+    const grip = coarseIn(cardRules).find((r) => selectorsOf(r).includes(".board-card-grip"));
     expect(decls(grip?.body ?? "").get("min-height")).toBe("var(--ppp-touch-target-min)");
     expect(decls(card?.body ?? "").has("padding-left")).toBe(false);
   });
@@ -206,7 +213,9 @@ describe("cards-g1 — the column grip has its own cell (CSS)", () => {
 
 describe("cards-g1 — grips are revealed without hover", () => {
   const revealCases: [string, Rule[], string, string][] = [
-    ["card", cardRules, ".board-card-grip", ".projects--board--card:focus-within .board-card-grip"],
+    // cards-g2: the card is SharedCard's element; CardList keys the reveal on
+    // its own wrapper, which is the card's box and its keyed drag item.
+    ["card", cardRules, ".board-card-grip", ".ppp-board-card-slot:focus-within .board-card-grip"],
     ["column", boardRules, ".board-column-grip", ".projects--board--column--dndwrapper:focus-within .board-column-grip"],
   ];
   it.each(revealCases)("the %s grip is visible at rest and full on focus", (_name, rules, grip, focusWithin) => {
@@ -230,6 +239,10 @@ describe("cards-g1 — grips are revealed without hover", () => {
     );
     expect(hovers.length).toBeGreaterThanOrEqual(4);
     expect(hovers.filter((r) => !r.at.some(isFineHoverGate)).map((r) => r.selector)).toEqual([]);
+    // The card's own hover surface moved with the article; still gated there.
+    const shellHovers = shellRules.filter((r) => r.selector.includes(":hover"));
+    expect(shellHovers.length).toBeGreaterThan(0);
+    expect(shellHovers.filter((r) => !r.at.some(isFineHoverGate)).map((r) => r.selector)).toEqual([]);
   });
 
   it("coarse pointers keep the grips plainly visible", () => {
@@ -244,7 +257,7 @@ describe("cards-g1 — grips are revealed without hover", () => {
   });
 
   it("no viewport width query sizes a grip or a card lane", () => {
-    const viewport = [...cardRules, ...boardRules, ...headerRules, ...globalRules]
+    const viewport = [...shellRules, ...cardRules, ...boardRules, ...headerRules, ...globalRules]
       .filter((r) => r.at.some((a) => /^@media\b.*\b(max|min)-width\b/.test(a)))
       .filter((r) => /grip|projects--board--card(?![\w-])/.test(r.selector) || r.body.includes("--board-card"))
       .map((r) => `${r.at.join(" ")} ${r.selector}`);

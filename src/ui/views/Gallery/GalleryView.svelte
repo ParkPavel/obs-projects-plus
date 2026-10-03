@@ -4,7 +4,6 @@
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
-  import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
 
   import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
   import { createDataRecord } from "src/lib/dataApi";
@@ -18,7 +17,7 @@
   import { EditNoteModal } from "src/ui/modals/editNoteModal";
   import { getDisplayName } from "../Board/components/Board/boardHelpers";
 
-  import { Card, CardContent, CardMedia } from "./components/Card";
+  import SharedCard from "src/ui/components/SharedCard/SharedCard.svelte";
   import Grid from "./components/Grid/Grid.svelte";
   import Image from "./components/Image/Image.svelte";
   import { PageIcon } from "src/ui/components/PageIcon";
@@ -185,8 +184,14 @@
     <Grid {cardWidth}>
       {#each records as record (record.id)}
         {@const color = getRecordColor(record)}
-        <Card>
-          <CardMedia
+        {@const coverPath = getCoverRealPath($app, record, coverField)}
+        <!-- cards-g2: the shared card shell; the media element and its open /
+             long-press handlers stay here, in the view that owns them. -->
+        <SharedCard recordId={record.id} variant="gallery" {color}>
+          <div
+            slot="media"
+            class="projects--gallery--card__media"
+            on:keypress
             on:click={(event) => {
               // v3.0.10: Suppress click if long-press was fired
               if (longPressFired) { longPressFired = false; return; }
@@ -203,52 +208,47 @@
             on:touchmove={handleCardTouchMove}
             on:touchend={handleCardTouchEnd}
           >
-            {@const coverPath = getCoverRealPath($app, record, coverField)}
-
             {#if coverPath}
               <Image alt={$i18n.t("views.gallery.cover-alt")} src={coverPath} fit={fitStyle} />
             {:else}
               <Icon name="image" size="lg" />
             {/if}
-          </CardMedia>
-          <CardContent>
-            <ColorItem {color}>
-              <InternalLink
-                slot="header"
-                linkText={record.id}
-                sourcePath={record.id}
-                resolved
-                on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
-                  // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
-                  if (shiftKey) {
-                    void openRecord({ id: linkText, sourcePath }, "window", { app: $app });
-                  } else if (newLeaf) {
-                    void openRecord({ id: linkText, sourcePath }, "tab", { app: $app });
-                  } else {
-                    handleRecordClick(record);
-                  }
-                }}
-                on:longpress={({ detail: { linkText, sourcePath, event } }) => {
-                  showMobileNavMenu($app, { id: linkText, sourcePath }, event, () => handleRecordClick(record));
-                }}
-                on:hover={({ detail: { event, sourcePath } }) => {
-                  handleHoverLink(event, sourcePath);
-                }}
-              >
-                {#if iconField}
-                  <PageIcon value={record.values[iconField.name]} />
-                {/if}
-                {getDisplayName(record.id)}
-              </InternalLink>
-              <CardMetadata
-                fields={fields.filter(
-                  (field) => !!config?.includeFields?.includes(field.name)
-                )}
-                {record}
-              />
-            </ColorItem>
-          </CardContent>
-        </Card>
+          </div>
+          <InternalLink
+            slot="header"
+            linkText={record.id}
+            sourcePath={record.id}
+            resolved
+            on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
+              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+              if (shiftKey) {
+                void openRecord({ id: linkText, sourcePath }, "window", { app: $app });
+              } else if (newLeaf) {
+                void openRecord({ id: linkText, sourcePath }, "tab", { app: $app });
+              } else {
+                handleRecordClick(record);
+              }
+            }}
+            on:longpress={({ detail: { linkText, sourcePath, event } }) => {
+              showMobileNavMenu($app, { id: linkText, sourcePath }, event, () => handleRecordClick(record));
+            }}
+            on:hover={({ detail: { event, sourcePath } }) => {
+              handleHoverLink(event, sourcePath);
+            }}
+          >
+            {#if iconField}
+              <PageIcon value={record.values[iconField.name]} />
+            {/if}
+            {getDisplayName(record.id)}
+          </InternalLink>
+          <CardMetadata
+            slot="metadata"
+            fields={fields.filter(
+              (field) => !!config?.includeFields?.includes(field.name)
+            )}
+            {record}
+          />
+        </SharedCard>
       {/each}
       {#if !readonly}
       <IconButton

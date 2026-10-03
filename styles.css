@@ -161,7 +161,8 @@
 
 .projects--board--card {
   /* cards-g1: the padding as a variable, so the grip lane (CardList.svelte)
-     can reach through it to the card's top and bottom edges. */
+     can reach through it to the card's top and bottom edges. cards-g2: the
+     card is SharedCard.svelte's article; this surface stays global. */
   --board-card-pad: var(--size-4-2);
   background-color: var(--background-primary);
   border-radius: var(--radius-s);
@@ -365,7 +366,7 @@
 
   .projects--board--card {
     /* cards-g1: the grip lane tightens with the pane, never below the glyph;
-       coarse pointers keep a full touch target (CardList.svelte). */
+       coarse pointers keep a full touch target (SharedCard.svelte). */
     --board-card-pad: var(--size-4-1);
     --board-card-grip-lane: var(--size-4-4);
   }
