@@ -13,6 +13,8 @@ export class InputDialogModal extends Modal {
     readonly value?: string | undefined
   ) {
     super(app);
+    // Shared plugin modal root: phone input size, reduced motion (tokens.css).
+    this.containerEl.addClass("ppp-modal");
   }
 
   onOpen() {

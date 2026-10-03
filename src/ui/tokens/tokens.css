@@ -543,6 +543,8 @@ body {
                                       the filter sheet on a phone;
      .projects-modal                  EditNote / CreateNote modals;
      .ppp-add-view-modal              AddViewModal;
+     .ppp-modal                       every plugin modal (ios-m1): the
+                                      shared root class, behaviour only;
      .ppp-popup                       FloatingPopup (its desktop branch
                                       is portalled to <body>);
      .ppp-popover-container           agenda filter popovers (FilterRow,
@@ -572,12 +574,12 @@ body {
     --ppp-duration-slower: 0ms;
   }
 
-  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback),
-  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback)::before,
-  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback)::after,
-  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *,
-  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *::before,
-  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *::after {
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback),
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback)::before,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback)::after,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *::before,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -651,6 +653,7 @@ body {
                                       phone branch is not portalled);
      .projects-modal                  EditNote / CreateNote modals;
      .ppp-add-view-modal              AddViewModal;
+     .ppp-modal                       every plugin modal (ios-m1);
      .ppp-popup                       FloatingPopup's portalled branch;
      .ppp-popover-container           agenda filter popovers on <body>;
      .ppp-list-editor-overlay         agenda list editor on <body>;
@@ -664,7 +667,7 @@ body {
    density is unchanged.
    ═══════════════════════════════════════════════════════════ */
 @media (pointer: coarse) {
-  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal)
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal)
     :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="hidden"]), select, textarea) {
     font-size: var(--ppp-input-font-size) !important;
   }

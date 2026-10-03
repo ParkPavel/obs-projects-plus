@@ -21,6 +21,8 @@ export class AddViewModal extends Modal {
     // restyles every native select (styles.css), which would change this
     // modal on desktop.
     this.containerEl.addClass("ppp-add-view-modal");
+    // ios-m1: the shared plugin modal root, carried by every plugin modal.
+    this.containerEl.addClass("ppp-modal");
   }
 
   onOpen() {

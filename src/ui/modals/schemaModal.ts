@@ -30,6 +30,8 @@ export class SchemaModal extends Modal {
     readonly onDelete: (field: DataField) => void
   ) {
     super(app);
+    // Shared plugin modal root: phone input size, reduced motion (tokens.css).
+    this.containerEl.addClass("ppp-modal");
   }
 
   onOpen() {

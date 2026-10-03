@@ -27,6 +27,12 @@
  *   tree no longer renders is a selector that matches nothing.
  * - Every node a component portals to `<body>` with `use:portal` carries one of
  *   the roots, so a new portalled surface cannot escape the rule unnoticed.
+ * - Every plugin modal class (Modal, SuggestModal, FuzzySuggestModal) adds the
+ *   shared `ppp-modal` root to its container, and the coarse-pointer input-size
+ *   rule names that root too (ios-m1).
+ * - No script under `ui/` passes a literal `behavior: "smooth"` to a scroll call:
+ *   scroll behaviour comes from `getScrollBehavior()` in
+ *   `lib/helpers/animation.ts`, the one place that decides it (ios-m1).
  *
  * ## Where it is blind
  *
@@ -61,6 +67,9 @@ const ROOTS: ReadonlyArray<{ root: string; owner: string }> = [
   // EditNote (and CreateNote) modal containers.
   { root: ".projects-modal", owner: "ui/modals/editNoteModal.ts" },
   { root: ".ppp-add-view-modal", owner: "ui/modals/addViewModal.ts" },
+  // The shared root of every plugin modal (ios-m1); each modal file is checked
+  // separately below, this owner is one of them.
+  { root: ".ppp-modal", owner: "ui/modals/confirmDialog.ts" },
   // FloatingPopup: the desktop branch is portalled to <body>.
   { root: ".ppp-popup", owner: "ui/components/FloatingPopup/FloatingPopup.svelte" },
   // Hand-appended to <body>.
@@ -218,6 +227,29 @@ export function bodyPortalClasses(text: string): string[][] {
   return out;
 }
 
+/** A plugin modal class: one that extends Modal, SuggestModal or FuzzySuggestModal. */
+const MODAL_CLASS = /\bclass\s+\w+(?:<[^>{]*>)?\s+extends\s+(?:Fuzzy)?(?:Suggest)?Modal\b/g;
+const ADDS_MODAL_ROOT = /\bcontainerEl\.addClass\(\s*["']ppp-modal["']\s*\)/g;
+
+/** How many modal classes `text` declares and how many add the shared root. */
+export function modalRootCount(text: string): { classes: number; roots: number } {
+  return {
+    classes: [...text.matchAll(MODAL_CLASS)].length,
+    roots: [...text.matchAll(ADDS_MODAL_ROOT)].length,
+  };
+}
+
+/**
+ * A literal smooth scroll behaviour: `behavior: "smooth"`, `behavior = 'smooth'`,
+ * a `ScrollBehavior = "smooth"` default. Not `animationBehavior` (a setting
+ * value) and not the CSS `scroll-behavior` property.
+ */
+const LITERAL_SMOOTH = /(?<![\w-])(?:Scroll)?[Bb]ehavior\s*[:=]\s*["'`]smooth["'`]/g;
+
+export function literalSmoothCount(text: string): number {
+  return [...text.matchAll(LITERAL_SMOOTH)].length;
+}
+
 const ALL_FORMS = (root: string): string[] => COVERAGE.map((form) => root + form);
 
 describe("R0.33 — the reader (synthetic, proves both states)", () => {
@@ -277,6 +309,27 @@ describe("R0.33 — the reader (synthetic, proves both states)", () => {
     ].join("\n");
     expect(bodyPortalClasses(markup)).toEqual([["x", "y"], ["z"], []]);
   });
+
+  it("counts modal classes and the shared root they add", () => {
+    const two = [
+      `export class A extends Modal { constructor(app: App) { super(app); this.containerEl.addClass("ppp-modal"); } }`,
+      `export class B extends FuzzySuggestModal<TFile> { constructor(app: App) { super(app); } }`,
+      `class C extends ItemView {}`,
+    ].join("\n");
+    expect(modalRootCount(two)).toEqual({ classes: 2, roots: 1 });
+    expect(modalRootCount(`class D extends SuggestModal<string> {}; this.containerEl.addClass('ppp-modal');`)).toEqual({ classes: 1, roots: 1 });
+    expect(modalRootCount(`this.containerEl.addClass("ppp-modal-x");`).roots).toBe(0);
+  });
+
+  it("finds a literal smooth scroll behaviour and nothing else", () => {
+    expect(literalSmoothCount(`el.scrollTo({ left: 1, behavior: "smooth" });`)).toBe(1);
+    expect(literalSmoothCount(`el.scrollBy({behavior:'smooth'})`)).toBe(1);
+    expect(literalSmoothCount(`function f(behavior: ScrollBehavior = "smooth") {}`)).toBe(1);
+    expect(literalSmoothCount(`let behavior = \`smooth\`;`)).toBe(1);
+    expect(literalSmoothCount(`el.scrollTo({ behavior: getScrollBehavior() });`)).toBe(0);
+    expect(literalSmoothCount(`animationBehavior: "smooth",`)).toBe(0);
+    expect(literalSmoothCount(`.x { scroll-behavior: smooth; }`)).toBe(0);
+  });
 });
 
 describe("R0.33 — the tree", () => {
@@ -327,6 +380,51 @@ describe("R0.33 — the tree", () => {
       .filter(({ classes }) => !classes.some((c) => roots.has(c)))
       .map(({ file, classes }) => `${file} → [${classes.join(" ")}]`);
     expect(escaped).toEqual([]);
+  });
+
+  it("every plugin modal adds the shared ppp-modal root to its container", () => {
+    const modals = collectSourceFiles(join(SRC_ROOT, "ui"), [".ts"])
+      .filter((full) => !full.endsWith(".test.ts"))
+      .map((full) => ({ file: relToSrc(full), ...modalRootCount(stripComponentComments(readText(full))) }))
+      .filter(({ classes }) => classes > 0);
+    // Twelve plugin modals when ios-m1 landed; an empty scan would be vacuous.
+    expect(modals.length).toBeGreaterThanOrEqual(12);
+    const bare = modals.filter(({ classes, roots }) => roots < classes).map(({ file }) => file);
+    expect(bare).toEqual([]);
+  });
+
+  it("the coarse-pointer input-size rule reaches the shared modal root", () => {
+    const inputRule = readRules(tokens).find(
+      (r) =>
+        r.enclosing.length === 1 &&
+        /^@media\s*\(\s*pointer\s*:\s*coarse\s*\)$/.test(r.enclosing[0] ?? "") &&
+        declarations(r.body).get("font-size") === "var(--ppp-input-font-size) !important"
+    );
+    expect(inputRule).toBeDefined();
+    expect(expandSelectors(inputRule?.selector ?? "").some((s) => s.startsWith(".ppp-modal "))).toBe(true);
+  });
+
+  it("no script under ui/ passes a literal smooth scroll behaviour", () => {
+    const files = collectSourceFiles(join(SRC_ROOT, "ui"), [".ts", ".svelte"]).filter(
+      (full) => !full.endsWith(".test.ts")
+    );
+    expect(files.length).toBeGreaterThan(100);
+    const literal = files
+      .map((full) => ({ file: relToSrc(full), count: literalSmoothCount(stripComponentComments(readText(full))) }))
+      .filter(({ count }) => count > 0)
+      .map(({ file, count }) => `${file} × ${count}`);
+    expect(literal).toEqual([]);
+  });
+
+  it("view-tab and calendar centring take their behaviour from the helper", () => {
+    for (const owner of [
+      "ui/components/Navigation/ViewSwitcher.svelte",
+      "ui/views/Calendar/components/Calendar/InfiniteHorizontalCalendar.svelte",
+    ]) {
+      const text = stripComponentComments(readText(join(SRC_ROOT, owner)));
+      expect(`${owner}: ${/from\s+["']src\/lib\/helpers\/animation["']/.test(text)}`).toBe(`${owner}: true`);
+      expect(`${owner}: ${/getScrollBehavior\(\)/.test(text)}`).toBe(`${owner}: true`);
+    }
   });
 
   it("one root removed from the real rule is reported", () => {

@@ -7,6 +7,7 @@
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onDestroy } from "svelte";
   import { getTabStripScrollLeft } from "./tabStripScroll";
+  import { getScrollBehavior } from "src/lib/helpers/animation";
 
   export let views: ViewDefinition[] = [];
   export let activeViewId: ViewId | undefined;
@@ -94,7 +95,8 @@
 
   // Scrolls only the strip. scrollIntoView would also scroll
   // `.projects-container` and clip the left edge of the view on phones.
-  function centerTab(index: number, behavior: ScrollBehavior = "smooth") {
+  // The default is read per call: the helper follows the animation preference.
+  function centerTab(index: number, behavior: ScrollBehavior = getScrollBehavior()) {
     const tab = buttonRefs[index];
     if (!tab || !viewSwitcherElement) return;
     const stripRect = viewSwitcherElement.getBoundingClientRect();
@@ -152,7 +154,7 @@
   function scrollByStep(direction: -1 | 1) {
     if (!viewSwitcherElement) return;
     const step = Math.max(viewSwitcherElement.clientWidth * 0.6, 120);
-    viewSwitcherElement.scrollBy({ left: step * direction, behavior: "smooth" });
+    viewSwitcherElement.scrollBy({ left: step * direction, behavior: getScrollBehavior() });
   }
 
   // Re-check indicators when views list changes, on scroll, and on resize.

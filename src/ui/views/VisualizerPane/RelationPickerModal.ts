@@ -23,6 +23,9 @@ export class RelationPickerModal extends FuzzySuggestModal<TFile> {
     options: { excludePath?: string; placeholder?: string } = {},
   ) {
     super(app);
+    // Shared plugin modal root: phone input size, reduced motion (tokens.css).
+    // A SuggestModal is a Modal: its containerEl holds the prompt input too.
+    this.containerEl.addClass("ppp-modal");
     this.onPick = onPick;
     this.excludePath = options.excludePath;
     this.placeholder = options.placeholder ?? "Pick a note…";

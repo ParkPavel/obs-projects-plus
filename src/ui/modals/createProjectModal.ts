@@ -14,6 +14,8 @@ export class CreateProjectModal extends Modal {
     readonly defaults: ProjectDefinition
   ) {
     super(app);
+    // Shared plugin modal root: phone input size, reduced motion (tokens.css).
+    this.containerEl.addClass("ppp-modal");
   }
 
   onOpen() {
