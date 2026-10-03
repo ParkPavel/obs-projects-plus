@@ -693,7 +693,7 @@
     padding: 0.5rem 0.75rem;
     font-size: 1rem;
     font-weight: 600;
-    border: 1px solid var(--interactive-accent);
+    border: var(--ppp-border-width) solid var(--interactive-accent);
     border-radius: var(--radius-s);
     background: var(--background-primary);
     color: var(--text-normal);

@@ -82,7 +82,7 @@
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
-    box-shadow: var(--ppp-shadow-md, 0 4px 12px rgba(15, 15, 15, 0.1));
+    box-shadow: var(--ppp-shadow-md);
     z-index: 3;
     padding: 0.25rem;
   }

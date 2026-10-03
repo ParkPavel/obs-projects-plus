@@ -163,7 +163,7 @@
     font-size: var(--font-ui-smaller);
     color: var(--text-faint);
     text-align: right;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .ppp-widget-empty {

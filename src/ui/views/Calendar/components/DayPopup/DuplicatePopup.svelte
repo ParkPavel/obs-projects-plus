@@ -3,6 +3,7 @@
   import { createEventDispatcher, onMount, onDestroy } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { Icon } from "obsidian-svelte";
+  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
 
   export let visible: boolean = false;
   export let currentDate: dayjs.Dayjs;
@@ -136,13 +137,14 @@
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const PADDING = 16;
-    
+    const root = rootFontPx(popupElement.ownerDocument);
+
     // Check if popup goes beyond viewport
     if (rect.right > viewportWidth - PADDING) {
-      popupElement.style.transform = `translateX(${viewportWidth - PADDING - rect.right}px)`;
+      popupElement.style.transform = `translateX(${remAt(viewportWidth - PADDING - rect.right, root)})`;
     }
     if (rect.bottom > viewportHeight - PADDING) {
-      popupElement.style.transform = `translateY(${viewportHeight - PADDING - rect.bottom}px)`;
+      popupElement.style.transform = `translateY(${remAt(viewportHeight - PADDING - rect.bottom, root)})`;
     }
   }
   

@@ -59,7 +59,7 @@
     gap: 0.375rem;
     padding: 0.375rem 0.5rem;
     background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .ppp-filter-bridge-chip {
@@ -70,7 +70,7 @@
     font-size: var(--font-ui-smaller);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .ppp-filter-bridge-chip--local {

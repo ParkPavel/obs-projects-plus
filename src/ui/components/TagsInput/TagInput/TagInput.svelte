@@ -82,7 +82,7 @@
 
 <style>
   div {
-    min-width: 1px;
+    min-width: 0.0625rem;
     max-width: max-content;
     box-sizing: border-box;
 

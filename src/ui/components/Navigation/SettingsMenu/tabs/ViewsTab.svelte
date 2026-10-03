@@ -353,7 +353,7 @@
   .view-name-input {
     flex: 1;
     padding: 0.25rem 0.375rem;
-    border: 1px solid var(--interactive-accent, #7b68ee);
+    border: var(--ppp-border-width) solid var(--interactive-accent, #7b68ee);
     border-radius: 0.25rem;
     background: var(--background-primary);
     color: inherit;
@@ -389,7 +389,7 @@
   .ghost {
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     background: transparent;
     color: inherit;
     cursor: pointer;

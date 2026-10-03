@@ -565,7 +565,7 @@
     flex-direction: column;
     gap: 0.25rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
   }
   .ppp-vis-pane-title {
     font-weight: 600;
@@ -586,7 +586,7 @@
   .ppp-vis-pane-tool {
     background: var(--background-secondary);
     color: var(--text-normal);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: 0.25rem;
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
@@ -686,7 +686,7 @@
     border-radius: 0.1875rem;
     margin-right: 0.375rem;
     vertical-align: -0.125rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
   }
   .ppp-vis-pane-value.is-array,
   .ppp-vis-pane-value.is-object {
@@ -732,7 +732,7 @@
   .ppp-vis-pane-linked {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -801,7 +801,7 @@
     width: 100%;
     background: var(--background-primary);
     color: var(--text-normal);
-    border: 1px solid var(--interactive-accent);
+    border: var(--ppp-border-width) solid var(--interactive-accent);
     border-radius: 0.25rem;
     padding: 0.125rem 0.375rem;
     font: inherit;

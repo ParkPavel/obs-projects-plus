@@ -113,7 +113,7 @@
   input {
     flex: 1;
     border-radius: var(--ppp-radius-xl);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     background-color: var(--background-primary);
     font-family: var(--font-default);
     padding: var(--ppp-padding-sm) var(--ppp-padding-md);
@@ -145,7 +145,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     background: var(--background-secondary);
     color: var(--text-normal);
@@ -166,7 +166,7 @@
     margin-top: 0.5rem;
     z-index: 100;
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-m);
     box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
   }

@@ -72,7 +72,7 @@
   /* Styled as a board column */
   section {
     margin-top: 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-m);
     background-color: var(--background-primary-alt);
     display: flex;

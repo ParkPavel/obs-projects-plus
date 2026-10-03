@@ -147,7 +147,7 @@
     gap: 0.5rem;
     padding: 0.75rem;
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-m, 0.375rem);
     font-size: var(--font-ui-small);
   }
@@ -184,7 +184,7 @@
   .ppp-formula-name-input {
     flex: 1;
     padding: 0.25rem 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-primary);
     color: var(--text-normal);

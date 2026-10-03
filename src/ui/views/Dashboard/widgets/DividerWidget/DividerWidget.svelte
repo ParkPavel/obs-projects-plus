@@ -88,7 +88,7 @@
 
   .ppp-divider-widget__line {
     flex: 1;
-    height: 1px;
+    height: var(--ppp-border-width);
     background: var(--background-modifier-border);
   }
 
@@ -128,7 +128,7 @@
     text-align: center;
     background: transparent;
     border: none;
-    border-bottom: 1px solid var(--interactive-accent);
+    border-bottom: var(--ppp-border-width) solid var(--interactive-accent);
     color: var(--text-normal);
     padding: 0 0.25rem;
     font-family: var(--font-interface);

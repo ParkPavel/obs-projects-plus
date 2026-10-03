@@ -17,6 +17,7 @@
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import { portal } from "src/ui/portal";
   import { isMobile } from "src/lib/stores/ui";
+  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
 
   // ── Public types ───────────────────────────────────────────
   type PopupPlacement =
@@ -163,10 +164,10 @@
     const vw = view.innerWidth;
     const vh = view.innerHeight;
 
-    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const baseFontPx = parseFloat(
-      view.getComputedStyle(doc.documentElement).fontSize || "16"
-    );
+    // The root of the popup's own document (#192), read once for the offsets
+    // below and for writing the result back in rem; 16 when it reports none.
+    const baseFontPx = rootFontPx(doc);
+
     const offsetPx = offsetRem * baseFontPx;
     const marginPx = 0.5 * baseFontPx;
 
@@ -221,7 +222,7 @@
         ? Math.min(viewportWidthCap, cssMaxWidth)
         : viewportWidthCap;
 
-    style = `top: ${clampedTop}px; left: ${clampedLeft}px; max-width: ${Math.max(0, widthCap)}px;`;
+    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)};`;
   }
 
   async function focusFirst(): Promise<void> {
@@ -420,7 +421,7 @@
     width: var(--ppp-bottom-sheet-handle-w, 2.5rem);
     height: var(--ppp-bottom-sheet-handle-h, 0.25rem);
     background: var(--background-modifier-border);
-    border-radius: var(--ppp-radius-full, 9999px);
+    border-radius: var(--ppp-radius-full, 624.9375rem);
     margin: 0 auto var(--ppp-space-4, 0.5rem);
   }
 </style>

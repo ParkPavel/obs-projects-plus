@@ -1,5 +1,6 @@
 <script lang="ts">
   import { isMobileDevice } from "src/lib/stores/ui";
+  import { toRem } from "src/ui/utils/cssLength";
 
   export let cardWidth: number;
 
@@ -9,7 +10,7 @@
 
 <section
   class="projects--gallery--grid"
-  style={`grid-template-columns: repeat(auto-fill, minmax(${effectiveWidth}px, 1fr));`}
+  style={`grid-template-columns: repeat(auto-fill, minmax(${toRem(effectiveWidth)}, 1fr));`}
 >
   <slot />
 </section>

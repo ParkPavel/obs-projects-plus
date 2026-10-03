@@ -142,7 +142,7 @@
     min-height: 7.5rem;
     padding: var(--size-4-4);
     background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-m);
   }
   

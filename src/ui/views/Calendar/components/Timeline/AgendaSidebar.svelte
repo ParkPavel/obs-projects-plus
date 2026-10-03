@@ -18,6 +18,7 @@
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { portal } from "src/ui/portal";
+  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
   import type { ProjectDefinition } from '../../../../../settings/settings';
@@ -503,10 +504,11 @@
     function update() {
       if (!container) return;
       const rect = container.getBoundingClientRect();
-      node.style.top = `${rect.top}px`;
-      node.style.left = `${rect.left}px`;
-      node.style.width = `${rect.width}px`;
-      node.style.height = `${rect.height}px`;
+      const root = rootFontPx(node.ownerDocument);
+      node.style.top = remAt(rect.top, root);
+      node.style.left = remAt(rect.left, root);
+      node.style.width = remAt(rect.width, root);
+      node.style.height = remAt(rect.height, root);
     }
 
     update();
@@ -645,7 +647,7 @@
   class:mobile={isMobile}
   class:hidden={isMobile && !visible}
   class:resizing={isResizing}
-  style:--w="{isMobile ? '100%' : `${width}px`}"
+  style:--w="{isMobile ? '100%' : toRem(width)}"
 >
   {#if !collapsed && !isMobile}
     <div class="resize-handle" on:mousedown={startResize} role="separator" />

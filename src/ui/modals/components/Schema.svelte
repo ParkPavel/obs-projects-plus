@@ -254,7 +254,7 @@
     align-items: center;
     gap: var(--ppp-space-5);
     padding: var(--ppp-space-3) var(--ppp-space-5);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-secondary);
     transition: background-color 120ms ease;

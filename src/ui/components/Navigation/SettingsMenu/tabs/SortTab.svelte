@@ -233,7 +233,7 @@
   .chip {
     display: inline-flex; align-items: center; gap: 0.25rem;
     height: 1.625rem; padding: 0 0.5rem;
-    border: 1px solid var(--background-modifier-border); border-radius: 0.375rem;
+    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     cursor: pointer; font-size: 0.8125rem; font-family: var(--font-interface);
     white-space: nowrap; line-height: 1; flex-shrink: 0;
@@ -264,7 +264,7 @@
   .add-btn {
     display: flex; align-items: center; justify-content: center;
     gap: 0.375rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem;
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     background: transparent; color: var(--text-muted);
     cursor: pointer; font-size: 0.8125rem; width: 100%;
     transition: border-color 100ms ease, color 100ms ease;

@@ -82,7 +82,7 @@
   .ppp-formula-debug {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--text-error);
+    border: var(--ppp-border-width) solid var(--text-error);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-secondary);
   }
@@ -128,7 +128,7 @@
 
   .ppp-formula-debug-btn {
     padding: 0.125rem 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-primary);
     color: var(--text-normal);
@@ -142,7 +142,7 @@
 
   .ppp-formula-debug-body {
     padding: 0.375rem 0.5rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;

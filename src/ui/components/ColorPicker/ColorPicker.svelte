@@ -775,7 +775,7 @@
   }
   
   /* v5.0.0: Landscape optimizations */
-  @media (max-height: 500px) and (orientation: landscape) {
+  @media (max-height: 31.25rem) and (orientation: landscape) {
     .color-picker {
       /* Reduce heights in landscape to fit content */
       --cp-picker-height: calc(var(--cp-base) * 6);

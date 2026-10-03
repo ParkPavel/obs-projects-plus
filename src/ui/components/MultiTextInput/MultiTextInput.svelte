@@ -232,7 +232,7 @@
     padding: 0.375rem;
     border-radius: var(--radius-s);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     transition: all 0.15s ease;
   }
   

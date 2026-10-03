@@ -60,7 +60,7 @@
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
     background: color-mix(in srgb, var(--indicator-color) 20%, transparent);
-    border: 1px solid var(--indicator-color);
+    border: var(--ppp-border-width) solid var(--indicator-color);
     z-index: 5;
     cursor: default;
     transition: background 0.15s ease, transform 0.15s ease;

@@ -719,7 +719,7 @@
   .field-list--hidden {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px dashed var(--background-modifier-border);
+    border-top: var(--ppp-border-width) dashed var(--background-modifier-border);
   }
   .field-list-label--hidden {
     color: var(--text-faint);
@@ -735,7 +735,7 @@
     font-size: 0.75rem;
     color: var(--interactive-accent);
     background: transparent;
-    border: 1px dashed var(--interactive-accent);
+    border: var(--ppp-border-width) dashed var(--interactive-accent);
     border-radius: 0.375rem;
     cursor: pointer;
     text-align: center;

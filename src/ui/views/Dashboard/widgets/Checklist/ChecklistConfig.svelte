@@ -110,7 +110,7 @@
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.5rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     background: var(--background-secondary);
   }
 
@@ -133,7 +133,7 @@
     min-height: 2rem;
     padding: 0.3rem 0.45rem;
     border-radius: var(--radius-s, 0.25rem);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     background: var(--background-primary);
     color: var(--text-normal);
   }

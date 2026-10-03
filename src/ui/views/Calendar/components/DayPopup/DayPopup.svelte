@@ -17,6 +17,7 @@
   import { formatDateForDisplay } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import RecordItem from "./RecordItem.svelte";
+  import { toRem } from "src/ui/utils/cssLength";
   import { DuplicatePopup } from "../DuplicatePopup";
   import type { ProcessedRecord } from "../../types";
 
@@ -509,7 +510,7 @@
       class:desktop={!isMobile}
       class:closing={isClosing}
       class:dragging={isDragging}
-      style:--drag-offset="{dragOffset}px"
+      style:--drag-offset={toRem(dragOffset, ownDoc)}
       role="dialog"
       aria-modal="true"
       aria-labelledby="ios-popup-title"
@@ -731,7 +732,7 @@
     max-width: 100%;
     border-radius: 0 0 var(--ios-radius) var(--ios-radius);
     box-shadow: var(--ios-shadow);
-    transform: translateY(calc(var(--drag-offset, 0px)));
+    transform: translateY(calc(var(--drag-offset, 0rem)));
     animation: ios-sheet-in-top 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
     padding-top: env(safe-area-inset-top, 0);
   }
@@ -765,7 +766,7 @@
   }
   
   @keyframes ios-sheet-out-top {
-    from { transform: translateY(var(--drag-offset, 0px)); }
+    from { transform: translateY(var(--drag-offset, 0)); }
     to { transform: translateY(-100%); }
   }
   

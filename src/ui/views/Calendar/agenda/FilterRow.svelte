@@ -832,7 +832,7 @@
     gap: 0.25rem;
     height: 1.625rem;
     padding: 0 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: 0.375rem;
     background: var(--background-primary);
     color: var(--text-normal);
@@ -851,7 +851,7 @@
   
   .chip:focus-visible {
     outline: 0.125rem solid var(--interactive-accent);
-    outline-offset: 1px;
+    outline-offset: 0.0625rem;
   }
   
   .chip-icon {
@@ -890,7 +890,7 @@
   .value-input {
     width: 100%;
     height: 1.625rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: 0.375rem;
     background: var(--background-primary);
     color: var(--text-normal);
@@ -1034,6 +1034,6 @@
   }
   :global(.ppp-popover-container--mobile-kbd) :global(.ppp-popover-search) {
     border-bottom: none;
-    border-top: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
+    border-top: var(--ppp-border-width) solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
   }
 </style>

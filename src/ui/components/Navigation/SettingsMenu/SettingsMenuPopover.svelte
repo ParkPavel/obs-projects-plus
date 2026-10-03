@@ -255,7 +255,7 @@
     flex-direction: column;
     border-radius: 0.75rem;
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     box-shadow: var(--shadow-lg, 0 0.5rem 2rem rgba(0, 0, 0, 0.25));
     pointer-events: auto;
     z-index: var(--ppp-z-modal, 40);
@@ -292,7 +292,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     flex-shrink: 0;
   }
 
@@ -354,7 +354,7 @@
     display: flex;
     justify-content: flex-start;
     padding: 0.75rem 1rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .btn-primary {

@@ -5,7 +5,7 @@
 
 <span
   style:height="100%"
-  style:border-radius="9999px"
+  style:border-radius="var(--ppp-radius-full)"
   style:background-color={color}
   style:width
 />

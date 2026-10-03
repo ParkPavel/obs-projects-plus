@@ -1,6 +1,7 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
   import { portal } from "src/ui/portal";
+  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
   import type { DataRecord } from '../../../../../lib/dataframe/dataframe';
@@ -661,10 +662,11 @@
      to escape all overflow:hidden / transform containing-block ancestors -->
 {#if stripGhost?.viewportRect}
   {@const vr = stripGhost.viewportRect}
+  {@const vrRoot = rootFontPx()}
   <div
     use:portal={{ to: "document-body" }}
     class="ppp-strip-ghost-portal"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.12);"
+    style="position:fixed; top:{remAt(vr.top, vrRoot)}; left:{remAt(vr.left, vrRoot)}; width:{remAt(vr.width, vrRoot)}; height:{remAt(vr.height, vrRoot)}; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.12);"
     aria-hidden="true"
   >
     {#if stripGhost.title}
@@ -683,10 +685,11 @@
 <!-- v3.2.9: Portal ghost for cross-period TIMED event drag -->
 {#if timedDragState === 'dragging' && timedGhost?.viewportRect}
   {@const vr = timedGhost.viewportRect}
+  {@const vrRoot = rootFontPx()}
   <div
     use:portal={{ to: "document-body" }}
     class="ppp-timed-ghost-portal"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-left:0.1875rem solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.15), 0 0 0 1px color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
+    style="position:fixed; top:{remAt(vr.top, vrRoot)}; left:{remAt(vr.left, vrRoot)}; width:{remAt(vr.width, vrRoot)}; height:{remAt(vr.height, vrRoot)}; pointer-events:none; z-index:9999; border-left:0.1875rem solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.15), 0 0 0 var(--ppp-border-width) color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
     aria-hidden="true"
   >
     <!-- v4.0.2: Resize handle indicators on portal ghost -->
@@ -709,7 +712,7 @@
   <div
     use:portal={{ to: "document-body" }}
     class="ppp-timed-ghost-snapline"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:1px; background:var(--text-accent); opacity:0.5; pointer-events:none; z-index:9998;"
+    style="position:fixed; top:{remAt(vr.top, vrRoot)}; left:{remAt(vr.left, vrRoot)}; width:{remAt(vr.width, vrRoot)}; height:var(--ppp-border-width); background:var(--text-accent); opacity:0.5; pointer-events:none; z-index:9998;"
     aria-hidden="true"
   ></div>
 {/if}
@@ -756,7 +759,7 @@
   
   .projects-calendar-timeline-axis-header {
     height: 3.75rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     flex-shrink: 0;
     /* Sticky header within axis */
     position: sticky;
@@ -775,7 +778,7 @@
     /* v3.2.7: Allow flex shrinking in parent layout */
     min-width: 0;
     /* v3.2.5: Right border for single-day/last-column edge visibility */
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
   }
   
   
@@ -800,7 +803,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     padding: 0.5rem;
     transition: background-color 0.2s ease;
   }
@@ -916,7 +919,7 @@
   
   .projects-calendar-allday-column {
     position: relative;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     min-height: 100%;
     /* v7.5: Clip event strips that might overflow on mobile */
     overflow: hidden;

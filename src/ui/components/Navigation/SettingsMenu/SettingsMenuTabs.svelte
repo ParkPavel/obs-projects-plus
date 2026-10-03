@@ -88,7 +88,7 @@
     display: flex;
     gap: 0.125rem;
     padding: 0 0.75rem;
-    border-bottom: 1px solid var(--background-modifier-border, rgba(255, 255, 255, 0.1));
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border, rgba(255, 255, 255, 0.1));
     overflow-x: auto;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE/Edge */

@@ -122,7 +122,7 @@
     if (!mainEl) return;
     const win = mainEl.ownerDocument.defaultView ?? window;
     const room = win.innerHeight - mainEl.getBoundingClientRect().top;
-    // coercion-exempt: Class C - a computed CSS length ("16px") read back from the DOM, not record data
+    // coercion-exempt: Class C - a computed CSS length (sixteen CSS pixels by default) read back from the DOM, not record data
     const rootPx = parseFloat(win.getComputedStyle(mainEl.ownerDocument.documentElement).fontSize);
     const base = Number.isFinite(rootPx) && rootPx > 0 ? rootPx : 16;
     belowNav = room > 0 ? `${Math.floor((room / base) * 1000) / 1000}rem` : null;

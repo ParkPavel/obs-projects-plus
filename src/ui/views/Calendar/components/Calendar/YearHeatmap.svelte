@@ -505,7 +505,7 @@
     padding: 0.75rem;
     background: var(--background-secondary);
     border-radius: 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .month-name {
@@ -632,15 +632,15 @@
     color: var(--text-muted);
     text-align: center;
     padding-top: 0.25rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .sr-only {
     position: absolute;
-    width: 1px;
-    height: 1px;
+    width: 0.0625rem;
+    height: 0.0625rem;
     padding: 0;
-    margin: -1px;
+    margin: -0.0625rem;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;

@@ -168,7 +168,7 @@
   /* Canon §2: the editing cell becomes a popover — ring + shadow */
   .ppp-t2-cell--editing {
     background: var(--background-primary);
-    box-shadow: 0 0 0 0.125rem var(--interactive-accent), var(--ppp-shadow-md, 0 4px 12px rgba(15, 15, 15, 0.1));
+    box-shadow: 0 0 0 0.125rem var(--interactive-accent), var(--ppp-shadow-md);
     border-radius: var(--radius-s, 0.25rem);
     z-index: 2;
   }

@@ -11,6 +11,7 @@
   import { getDisplayName } from "src/ui/views/Board/components/Board/boardHelpers";
   import { parseDateInTimezone } from "src/ui/views/Calendar/calendar";
   import { openContextMenuDeferred } from "src/lib/contextMenu";
+  import { toRem } from "src/ui/utils/cssLength";
 
   /**
    * Specifies the date of the day.
@@ -514,6 +515,15 @@
       isVisible = true; // Fallback if no IntersectionObserver
       return;
     }
+    // Pre-load items 200 CSS pixels before they become visible. IntersectionObserver
+    // accepts rootMargin only in absolute pixels or %, so the band is written as the
+    // percentages that resolve to it on the viewport measured here. Caveat: they are
+    // fixed at creation, so after a window resize the band scales with the viewport
+    // until the cell remounts (it only decides when off-screen cells render).
+    const viewport = (rootEl?.ownerDocument ?? document).documentElement;
+    const band = 200;
+    const bandY = (band / Math.max(1, viewport.clientHeight)) * 100;
+    const bandX = (band / Math.max(1, viewport.clientWidth)) * 100;
     intersectionObserver = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.target === rootEl) {
@@ -522,7 +532,7 @@
       }
     }, {
       root: null,
-      rootMargin: '200px', // Pre-load items 200 before they become visible
+      rootMargin: `${bandY}% ${bandX}%`,
       threshold: 0,
     });
     if (rootEl) {
@@ -615,7 +625,7 @@
               top: ${bar.topPercent}%;
               height: ${bar.heightPercent}%;
               left: ${leftPercent}%;
-              width: calc(${widthPercent}% - ${isLastColumn ? 0 : gapPx}px);
+              width: calc(${widthPercent}% - ${toRem(isLastColumn ? 0 : gapPx)});
               --bar-color: ${bar.color ?? 'var(--interactive-accent)'};
             `}
             on:click={(e) => handleBarClick(e, bar.record)}
@@ -652,7 +662,7 @@
 <style>
   .day-cell {
     position: relative;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     padding: 0.375rem;
     font-size: var(--font-ui-small);
     display: flex;

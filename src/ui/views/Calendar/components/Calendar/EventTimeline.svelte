@@ -95,7 +95,7 @@
     top: 0;
     left: 3.75rem;
     right: -100vw; /* Extend across days */
-    height: 1px;
+    height: var(--ppp-border-width);
     background: var(--background-modifier-border);
     opacity: 0.3;
     pointer-events: none;

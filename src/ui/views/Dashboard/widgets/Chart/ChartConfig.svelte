@@ -515,7 +515,7 @@
   }
 
   .ppp-config-divider {
-    height: 1px;
+    height: var(--ppp-border-width);
     background: var(--background-modifier-border);
     margin: 0.25rem 0;
   }

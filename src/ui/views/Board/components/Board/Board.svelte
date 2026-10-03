@@ -12,6 +12,7 @@
   import { onDestroy } from "svelte";
   import { flip } from "svelte/animate";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
+  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
 
   import BoardColumn from "./BoardColumn.svelte";
   import NewColumn from "./NewColumn.svelte";
@@ -302,8 +303,9 @@
         transformDraggedElement: (element) => {
           if (!element) return;
           const rect = element.getBoundingClientRect();
-          const width = `${rect.width}px`;
-          const height = `${rect.height}px`;
+          const root = rootFontPx(element.ownerDocument);
+          const width = remAt(rect.width, root);
+          const height = remAt(rect.height, root);
           element.style.width = width;
           element.style.minWidth = width;
           element.style.maxWidth = width;
@@ -323,17 +325,18 @@
       on:finalize={handleDndFinalize}
     >
       {#each dndUnpinnedColumns as column (column.id)}
+        {@const footprint = toRem(getColumnFootprint(column))}
         <div
           class="projects--board--column--dndwrapper"
           class:projects--board--column--dndwrapper--placeholder={isShadowPlaceholder(column)}
           class:projects--board--column--dndwrapper--collapsed={column.collapse}
-          data-dnd-width={`${getColumnFootprint(column)}px`}
-          style={`width: ${getColumnFootprint(column)}px; min-width: ${getColumnFootprint(column)}px; max-width: ${getColumnFootprint(column)}px;`}
+          data-dnd-width={footprint}
+          style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}
           aria-hidden={isShadowPlaceholder(column) ? "true" : undefined}
           animate:flip={{ duration: flipDurationMs }}
         >
           {#if isShadowPlaceholder(column)}
-            <div class="projects--board--column--placeholder" style={`width: ${getColumnFootprint(column)}px; min-width: ${getColumnFootprint(column)}px; max-width: ${getColumnFootprint(column)}px;`}></div>
+            <div class="projects--board--column--placeholder" style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}></div>
           {:else}
             <span class="board-column-grip" use:dragHandle aria-label={$i18n.t("views.board.drag-column")}>
               <Icon name="grip-vertical" size="xs" />
@@ -489,7 +492,7 @@
 
   .projects--board--column--placeholder {
     min-height: 12rem;
-    border: 1px dashed var(--background-modifier-border-hover);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border-hover);
     border-radius: var(--radius-m);
     background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
   }

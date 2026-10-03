@@ -261,7 +261,7 @@
   /* High contrast mode */
   @media (prefers-contrast: high) {
     .all-day-event-strip {
-      border: 1px solid var(--text-on-accent);
+      border: var(--ppp-border-width) solid var(--text-on-accent);
     }
   }
   

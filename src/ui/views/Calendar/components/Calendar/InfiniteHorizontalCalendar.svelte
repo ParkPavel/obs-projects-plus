@@ -1091,7 +1091,7 @@
   
   .sticky-time-axis-header {
     flex-shrink: 0;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     /* v6.5: NOT sticky - scrolls with day headers to avoid empty corner */
     background: var(--background-primary);
     display: flex;
@@ -1160,7 +1160,7 @@
     /* v3.1.0: min-height fills viewport, height auto allows timeline to grow beyond */
     height: auto;
     min-height: 100%;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     animation: periodSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 

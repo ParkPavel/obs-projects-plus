@@ -76,7 +76,7 @@
     background: var(--background-secondary);
     backdrop-filter: blur(0.625rem) saturate(180%);
     -webkit-backdrop-filter: blur(0.625rem) saturate(180%);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     flex-shrink: 0;
   }
 

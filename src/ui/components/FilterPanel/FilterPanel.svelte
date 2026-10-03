@@ -603,7 +603,7 @@
   /* ── Conjunction select dropdown (like agenda) ── */
   .conj-select {
     padding: 0.1875rem 0.5rem; border-radius: 0.375rem;
-    border: 1px solid var(--interactive-accent);
+    border: var(--ppp-border-width) solid var(--interactive-accent);
     background: rgba(var(--interactive-accent-rgb, 72, 54, 153), 0.08);
     color: var(--interactive-accent);
     cursor: pointer; font-size: 0.75rem; font-weight: 600;
@@ -683,14 +683,14 @@
   .filter-group-header {
     display: flex; align-items: center; justify-content: space-between;
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid var(--background-modifier-border-hover);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border-hover);
     margin-bottom: 0.125rem;
   }
 
   .chip {
     display: inline-flex; align-items: center; gap: 0.25rem;
     height: 1.625rem; padding: 0 0.5rem;
-    border: 1px solid var(--background-modifier-border); border-radius: 0.375rem;
+    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     cursor: pointer; font-size: 0.8125rem; font-family: var(--font-interface);
     white-space: nowrap; line-height: 1; flex-shrink: 0;
@@ -707,7 +707,7 @@
   .value-area { flex: 1; min-width: 3.75rem; }
   .value-input {
     width: 100%; height: 1.625rem;
-    border: 1px solid var(--background-modifier-border); border-radius: 0.375rem;
+    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     font-size: 0.8125rem; font-family: var(--font-interface);
     padding: 0 0.5rem; outline: none; box-sizing: border-box;
@@ -749,7 +749,7 @@
   .add-btn {
     display: flex; align-items: center; justify-content: center;
     gap: 0.375rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem;
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     background: transparent; color: var(--text-muted);
     cursor: pointer; font-size: 0.8125rem; flex: 1;
     transition: border-color 100ms ease, color 100ms ease;
@@ -807,6 +807,6 @@
   }
   :global(.ppp-pop-box--mobile-kbd) :global(.ppp-pop-search) {
     border-bottom: none;
-    border-top: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
+    border-top: var(--ppp-border-width) solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
   }
 </style>

@@ -19,7 +19,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     padding: 0.5rem 0.25rem;
     text-align: center;
     font-size: 0.6875rem;

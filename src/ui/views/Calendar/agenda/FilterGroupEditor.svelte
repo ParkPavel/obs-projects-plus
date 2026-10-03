@@ -171,7 +171,7 @@
   
   .fg--nested {
     padding: 0.5rem 0.625rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-left: 0.1875rem solid var(--interactive-accent);
     border-radius: 0.5rem;
     background: var(--background-secondary);
@@ -203,7 +203,7 @@
   .fg-conjunction {
     height: 1.625rem;
     padding: 0 1.5rem 0 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: 0.375rem;
     background: var(--background-primary);
     color: var(--text-normal);
@@ -237,7 +237,7 @@
   .fg-rows {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 0.0625rem;
   }
   
   /* в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
@@ -311,7 +311,7 @@
   }
   
   .fg-actions-sep {
-    width: 1px;
+    width: var(--ppp-border-width);
     height: 0.875rem;
     background: var(--background-modifier-border);
     flex-shrink: 0;

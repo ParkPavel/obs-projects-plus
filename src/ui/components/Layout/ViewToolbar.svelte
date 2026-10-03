@@ -121,7 +121,7 @@
     align-items: center;
     padding: var(--ppp-spacing-xs, 0.375rem) var(--ppp-spacing-sm, 0.75rem);
     gap: var(--ppp-spacing-sm, 0.5rem);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     position: relative;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -169,7 +169,7 @@
     width: 2rem;
     height: 2rem;
     padding: 0;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: 0.5rem;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);

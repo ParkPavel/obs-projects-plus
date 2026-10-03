@@ -11,8 +11,11 @@
     OnColumnCollapse,
   } from "./types";
   import { openContextMenu } from "src/lib/contextMenu";
+  import { toRem } from "src/ui/utils/cssLength";
 
+  /** Column width in CSS pixels, as measured and stored; written back in rem. */
   export let width: number;
+  $: widthLength = toRem(width);
 
   export let name: string;
   export let records: DataRecord[];
@@ -101,7 +104,7 @@
   class:collapse
   class:pinned
   class:persisted
-  style={`width: ${width}px; min-width: ${width}px; max-width: ${width}px;${collapse ? ` margin-right: ${48 - width}px;` : ''}`}
+  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${collapse ? ` margin-right: ${toRem(48 - width)};` : ''}`}
 >
   <ColumnHeader
     value={name}
@@ -162,7 +165,7 @@
     display: flex;
     align-items: center;
     padding: 0.25rem 0.5rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .projects--board--column-footer-count {
@@ -184,7 +187,7 @@
 
   .collapse {
     transform: rotate(-90deg) translateX(-100%);
-    transform-origin: left top 0px;
+    transform-origin: left top 0;
     height: 3rem;
     overflow: hidden;
   }

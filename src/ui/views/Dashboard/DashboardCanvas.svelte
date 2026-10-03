@@ -188,7 +188,7 @@
   .ppp-recalc-dot { display: inline-block; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--interactive-accent); opacity: 0.7; animation: ppp-pulse 0.8s ease-in-out infinite alternate; flex-shrink: 0; }
   @keyframes ppp-pulse { from { opacity: 0.3; } to { opacity: 0.9; } }
   .ppp-quick-actions { display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; }
-  .ppp-quick-action { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; font-size: var(--font-ui-small); color: var(--text-normal); background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s, 0.25rem); cursor: pointer; }
+  .ppp-quick-action { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; font-size: var(--font-ui-small); color: var(--text-normal); background: var(--background-secondary); border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: var(--radius-s, 0.25rem); cursor: pointer; }
   .ppp-quick-action:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
   .ppp-quick-action:focus-visible { outline: 0.125rem solid var(--interactive-accent); outline-offset: 0.0625rem; }
 </style>

@@ -299,7 +299,7 @@
     width: 1.5rem;
     height: 1.5rem;
     padding: 0;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: 50%;
     background: var(--background-primary);
     color: var(--text-muted);
