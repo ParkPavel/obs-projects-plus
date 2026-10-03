@@ -68,6 +68,72 @@
       },
     };
   }
+
+  // ── ios-c1: a grip in a disabled zone must not arm the drag ──
+  //
+  // `dragHandleZone` OVERWRITES the zone's own `dragDisabled` with the shared
+  // arming flag (svelte-dnd-action 0.9.52, dist/index.mjs `getAddedOptions`),
+  // so the `dragDisabled` a zone passes is never read. Any grip press arms every
+  // zone, and the pressed item starts a drag even in a pinned or read-only
+  // column, while editing or zoomed. The zone therefore decides itself: when
+  // it is disabled, a press (or Enter/Space) on one of its grips is stopped
+  // before the grip's `dragHandle` listener, so nothing is armed.
+
+  interface DragZoneState {
+    /** A column title or new column is being edited. */
+    editing?: boolean;
+    /** The zone is pinned or its data is read-only. */
+    locked?: boolean;
+    /** Board zoom; only the column row is gated by it. */
+    zoom?: number;
+  }
+
+  /** Whether a drag may not start from a zone in this state. */
+  export function isDragZoneDisabled(state: DragZoneState): boolean {
+    return Boolean(state.editing) || Boolean(state.locked) || (state.zoom !== undefined && state.zoom !== 1);
+  }
+
+  interface GripGate {
+    /** Selector of the zone's own grips. */
+    grip: string;
+    disabled: boolean;
+  }
+
+  /**
+   * On `node` (a `dragHandleZone`): while `disabled`, stop a press or an
+   * Enter/Space on one of its grips in the capture phase, so the grip's
+   * `dragHandle` (target phase) never arms the shared flag. Other targets and
+   * an enabled zone are untouched.
+   */
+  export function gateDisabledGrip(node: HTMLElement, gate: GripGate): { update: (gate: GripGate) => void; destroy: () => void } {
+    let current = gate;
+
+    function block(e: Event) {
+      if (!current.disabled) return;
+      if (!(e.target instanceof Element)) return;
+      const grip = e.target.closest(current.grip);
+      if (!grip || !node.contains(grip)) return;
+      if (e.type === "keydown") {
+        const key = (e as KeyboardEvent).key;
+        if (key !== "Enter" && key !== " ") return;
+      }
+      e.stopPropagation();
+    }
+
+    node.addEventListener("mousedown", block, true);
+    node.addEventListener("touchstart", block, { capture: true, passive: true });
+    node.addEventListener("keydown", block, true);
+    return {
+      update(next: GripGate) {
+        current = next;
+      },
+      destroy() {
+        node.removeEventListener("mousedown", block, true);
+        node.removeEventListener("touchstart", block, true);
+        node.removeEventListener("keydown", block, true);
+      },
+    };
+  }
 </script>
 
 <script lang="ts">
@@ -127,17 +193,36 @@
 
   const flipDurationMs = 150;
 
+  $: zoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: disableDnd });
+
   let dragItem: DataRecord | undefined;
+  // ios-c1 safeguard: a drag that still starts here while the zone is disabled
+  // (the gate above should prevent it) is not committed by this zone. Its
+  // `consider` is applied so the library's DOM stays consistent; its finalize
+  // restores the order and calls no `onDrop`. Drops from other zones into this
+  // one are not affected: they start no drag here.
+  let rejectedDrag: DataRecord[] | undefined;
   function handleDndConsider(e: CustomEvent<DndEvent<DataRecord>>) {
     if (isDisarmEvent(e)) return;
     const { detail } = e;
     if (detail.info.trigger === TRIGGERS.DRAG_STARTED) {
-      dragItem = items.find((item) => item.id === detail.info.id);
+      if (zoneDisabled) {
+        rejectedDrag = items;
+        dragItem = undefined;
+      } else {
+        dragItem = items.find((item) => item.id === detail.info.id);
+      }
     }
     items = detail.items;
   }
 
   function handleDndFinalize({ detail }: CustomEvent<DndEvent<DataRecord>>) {
+    if (rejectedDrag) {
+      items = detail.info.trigger === TRIGGERS.DROPPED_INTO_ANOTHER ? sortRecords(detail.items) : rejectedDrag;
+      rejectedDrag = undefined;
+      dragItem = undefined;
+      return;
+    }
     items = sortRecords(detail.items);
     if (detail.info.trigger === TRIGGERS.DROPPED_INTO_ZONE) {
       dragItem = items.find((item) => item.id === detail.info.id);
@@ -168,7 +253,8 @@
       background: "var(--board-column-drag-accent)",
       transition: "all 150ms ease-in-out",
     },
-    dragDisabled: boardEditing || disableDnd,
+    // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
+    dragDisabled: disableDnd || zoneDisabled,
     morphDisabled: true,
     // ios-d1: the library picks the drop zone from the CLONE's centre. The grip
     // sits at the card's left edge, so on a phone the centre of a card dragged
@@ -178,6 +264,7 @@
     centreDraggedOnCursor: $isTouchDevice,
   }}
   use:disarmAfterGripTap={".board-card-grip"}
+  use:gateDisabledGrip={{ grip: ".board-card-grip", disabled: zoneDisabled }}
 >
   {#each items as item (item.id)}
     {@const color = getRecordColor(item)}

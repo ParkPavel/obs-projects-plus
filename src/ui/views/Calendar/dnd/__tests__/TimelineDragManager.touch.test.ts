@@ -309,3 +309,193 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
     });
   });
 });
+
+/**
+ * ios-c1 — a click or tap on a calendar strip segment opens its record.
+ *
+ * Traced live: the press arrived on the segment, the release and the click on
+ * the `.multiday-lane` beneath it, so the segment's click handler never ran.
+ * The segment had dimmed itself with `pointer-events: none` on the PRESS,
+ * because it followed `dragRecordId`, which the manager sets while the session
+ * is only pending. `draggedRecordId` is set only once a drag has started; the
+ * segment takes itself out of hit-testing from it. jsdom does no hit-testing,
+ * so these cases pin that contract and the click outcomes on the segment.
+ *
+ * Geometry: seven 100-wide day columns from x 0 (Mon 5 – Sun 11 Oct 2026); the
+ * two-day strip covers Tue 6 – Wed 7 and its start segment is column 1.
+ */
+describe("TimelineDragManager — press and drag on a strip segment (ios-c1)", () => {
+  const WEEK_START = dayjs("2026-10-05");
+  const SEG_X = 150;
+  const STRIP_Y = 20;
+  const record: DataRecord = { id: "trips/trip.md", values: {} };
+  const spanStart = WEEK_START.add(1, "day");
+  const spanEnd = WEEK_START.add(2, "day");
+  const processed: ProcessedRecord = {
+    record,
+    renderType: EventRenderType.MULTI_DAY_ALLDAY,
+    startDate: spanStart,
+    endDate: spanEnd,
+    timeInfo: null,
+    spanInfo: { startDate: spanStart, endDate: spanEnd, spanDays: 2 },
+    color: null,
+    lane: 0,
+  };
+
+  let manager: TimelineDragManager;
+  let onCommit: jest.Mock<void, Parameters<OnDragCommit>>;
+  let segment: HTMLButtonElement;
+  let onOpen: jest.Mock<void, [Event]>;
+  const globals = globalThis as unknown as { activeDocument?: Document };
+  let hadActiveDocument = false;
+
+  /** The manager's day lookup reads Obsidian's `activeDocument` and the hit-test API. */
+  beforeAll(() => {
+    hadActiveDocument = "activeDocument" in globals;
+    if (!hadActiveDocument) globals.activeDocument = document;
+    if (typeof document.elementsFromPoint !== "function") {
+      Object.defineProperty(document, "elementsFromPoint", { configurable: true, value: () => [] });
+    }
+  });
+
+  afterAll(() => {
+    if (!hadActiveDocument) delete globals.activeDocument;
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    manager = new TimelineDragManager();
+    onCommit = jest.fn<void, Parameters<OnDragCommit>>();
+    manager.configure({ startHour: 0, endHour: 24, hourHeightRem: 0, remPx: REM_PX, isMobile: true }, onCommit);
+    const columns = Array.from({ length: 7 }, (_, i) => ({
+      day: WEEK_START.add(i, "day"),
+      element: placed(document.createElement("div"), rect(0, i * 100, 100, 40)),
+    }));
+    manager.setDayColumns(columns);
+    segment = placed(document.createElement("button"), rect(10, 100, 100, 20));
+    onOpen = jest.fn<void, [Event]>();
+    // HeaderStripsSection: `on:click={() => onRecordClick?.(segment.record)}`
+    segment.addEventListener("click", onOpen);
+  });
+
+  afterEach(() => {
+    manager.destroy();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+    document.body.innerHTML = "";
+  });
+
+  const mouseAt = (type: string, x: number): MouseEvent =>
+    new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: STRIP_Y, button: 0 });
+
+  const touchAt = (type: string, x: number): TouchEvent => {
+    const ev = new Event(type, { bubbles: true, cancelable: true });
+    const point = [{ clientX: x, clientY: STRIP_Y }];
+    const ended = type === "touchend" || type === "touchcancel";
+    Object.defineProperty(ev, "touches", { value: ended ? [] : point });
+    Object.defineProperty(ev, "changedTouches", { value: point });
+    return ev as TouchEvent;
+  };
+
+  const clickSegment = (): void => {
+    segment.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  };
+
+  /** Two columns to the right, in small steps. */
+  const mouseDragTo = (toX: number): void => {
+    for (let x = SEG_X + 10; x <= toX; x += 10) document.dispatchEvent(mouseAt("mousemove", x));
+  };
+
+  describe("mouse", () => {
+    it("a press and release without a move keeps the segment hit-testable and opens the record", () => {
+      manager.initiate(record, processed, mouseAt("mousedown", SEG_X), "strip-move", segment);
+      expect(get(manager.state)).toBe("pending");
+      expect(get(manager.dragRecordId)).toBe(record.id);
+      // What the segment dims and drops pointer events from: nothing yet.
+      expect(get(manager.draggedRecordId)).toBeNull();
+
+      document.dispatchEvent(mouseAt("mouseup", SEG_X));
+      expect(get(manager.state)).toBe("idle");
+      expect(get(manager.draggedRecordId)).toBeNull();
+      clickSegment();
+      expect(onOpen).toHaveBeenCalledTimes(1);
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it("a drag moves the strip and does not open it", () => {
+      manager.initiate(record, processed, mouseAt("mousedown", SEG_X), "strip-move", segment);
+      mouseDragTo(SEG_X + 200);
+      expect(get(manager.state)).toBe("dragging");
+      expect(get(manager.draggedRecordId)).toBe(record.id);
+
+      document.dispatchEvent(mouseAt("mouseup", SEG_X + 200));
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const call = onCommit.mock.calls[0];
+      expect(call?.[0].format("YYYY-MM-DD")).toBe("2026-10-08");
+      expect(call?.[2]?.endDate?.format("YYYY-MM-DD")).toBe("2026-10-09");
+      clickSegment();
+      expect(onOpen).not.toHaveBeenCalled();
+      // The re-grab window keeps `dragRecordId`, but the segment is hit-testable again.
+      expect(get(manager.draggedRecordId)).toBeNull();
+    });
+
+    it("a resize from the end handle extends the strip and does not open it", () => {
+      manager.initiate(record, processed, mouseAt("mousedown", SEG_X), "strip-resize-end", segment);
+      mouseDragTo(SEG_X + 200);
+      document.dispatchEvent(mouseAt("mouseup", SEG_X + 200));
+
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      const call = onCommit.mock.calls[0];
+      expect(call?.[0].format("YYYY-MM-DD")).toBe("2026-10-06");
+      expect(call?.[2]?.endDate?.format("YYYY-MM-DD")).toBe("2026-10-08");
+      clickSegment();
+      expect(onOpen).not.toHaveBeenCalled();
+    });
+
+    it("a click right after a drag, past its guard, opens the record", () => {
+      manager.initiate(record, processed, mouseAt("mousedown", SEG_X), "strip-move", segment);
+      mouseDragTo(SEG_X + 200);
+      document.dispatchEvent(mouseAt("mouseup", SEG_X + 200));
+      jest.advanceTimersByTime(300); // past the mouse click guard, inside the re-grab window
+
+      manager.initiate(record, processed, mouseAt("mousedown", SEG_X), "strip-move", segment);
+      expect(get(manager.draggedRecordId)).toBeNull();
+      document.dispatchEvent(mouseAt("mouseup", SEG_X));
+      clickSegment();
+      expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("touch", () => {
+    it("a tap keeps the segment hit-testable, leaves the release default and opens the record", () => {
+      manager.initiate(record, processed, touchAt("touchstart", SEG_X), "strip-move", segment);
+      expect(get(manager.draggedRecordId)).toBeNull();
+      jest.advanceTimersByTime(120);
+      const end = touchAt("touchend", SEG_X);
+      segment.dispatchEvent(end);
+
+      expect(end.defaultPrevented).toBe(false);
+      expect(get(manager.draggedRecordId)).toBeNull();
+      clickSegment();
+      expect(onOpen).toHaveBeenCalledTimes(1);
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    it("a long press and a drag move the strip and do not open it", () => {
+      manager.initiate(record, processed, touchAt("touchstart", SEG_X), "strip-move", segment);
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 200);
+      expect(get(manager.draggedRecordId)).toBeNull();
+      for (let x = SEG_X + 10; x <= SEG_X + 200; x += 10) segment.dispatchEvent(touchAt("touchmove", x));
+      expect(get(manager.state)).toBe("dragging");
+      expect(get(manager.draggedRecordId)).toBe(record.id);
+
+      const end = touchAt("touchend", SEG_X + 200);
+      segment.dispatchEvent(end);
+      expect(end.defaultPrevented).toBe(true);
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(onCommit.mock.calls[0]?.[0].format("YYYY-MM-DD")).toBe("2026-10-08");
+      clickSegment();
+      expect(onOpen).not.toHaveBeenCalled();
+    });
+  });
+});

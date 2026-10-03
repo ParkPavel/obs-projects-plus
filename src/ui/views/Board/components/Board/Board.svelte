@@ -7,6 +7,7 @@
     dragHandle,
     SHADOW_ITEM_MARKER_PROPERTY_NAME,
     SHADOW_PLACEHOLDER_ITEM_ID,
+    TRIGGERS,
   } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
   import { onDestroy } from "svelte";
@@ -18,7 +19,7 @@
   import NewColumn from "./NewColumn.svelte";
   // ios-d1: the column row is a `dragHandleZone` sharing the cards' arming
   // store, so a tap on a column grip must disarm it too (see CardList).
-  import { disarmAfterGripTap, isDisarmEvent } from "./CardList.svelte";
+  import { disarmAfterGripTap, gateDisabledGrip, isDisarmEvent, isDragZoneDisabled } from "./CardList.svelte";
   import type {
     Column,
     OnRecordAdd,
@@ -105,14 +106,30 @@
     return items.filter((column) => !isShadowPlaceholder(column));
   }
 
+  // ios-c1: the column row may not start a drag while editing, zoomed or
+  // read-only. `dragHandleZone` ignores its `dragDisabled`, so the grips are
+  // gated (`gateDisabledGrip`) and, as a safeguard, a drag that still starts
+  // while disabled is not committed: its finalize restores the order.
+  $: columnZoneDisabled = isDragZoneDisabled({ editing: boardEditing, locked: dataReadOnly, zoom });
+  let rejectedColumnDrag: DndColumn[] | undefined;
+
   function handleDndConsider(e: CustomEvent<DndEvent<Column>>) {
     // The disarm signal is not a drag: it must not freeze the column order.
     if (isDisarmEvent(e)) return;
+    if (e.detail.info.trigger === TRIGGERS.DRAG_STARTED && columnZoneDisabled) {
+      rejectedColumnDrag = dndUnpinnedColumns;
+    }
     isDraggingColumns = true;
     dndUnpinnedColumns = e.detail.items;
   }
 
   function handleDndFinalize(e: CustomEvent<DndEvent<Column>>) {
+    if (rejectedColumnDrag) {
+      dndUnpinnedColumns = rejectedColumnDrag;
+      rejectedColumnDrag = undefined;
+      isDraggingColumns = false;
+      return;
+    }
     dndUnpinnedColumns = e.detail.items;
     const newUnpinned = filterShadowColumns(dndUnpinnedColumns);
     pendingColumnOrder = [...pinnedColumns, ...newUnpinned].map((col) => col.id);
@@ -314,13 +331,15 @@
           element.style.boxSizing = "border-box";
           element.style.zIndex = "30";
         },
-        dragDisabled: boardEditing || zoom !== 1 || dataReadOnly,
+        // Overwritten by `dragHandleZone`; `gateDisabledGrip` below enforces it.
+        dragDisabled: dataReadOnly || columnZoneDisabled,
         morphDisabled: true,
         // ios-d1: as for cards (CardList) — the column grip is at its top-left
         // corner, so on touch centre the clone on the finger for zone hit-tests.
         centreDraggedOnCursor: $isTouchDevice,
       }}
       use:disarmAfterGripTap={".board-column-grip"}
+      use:gateDisabledGrip={{ grip: ".board-column-grip", disabled: columnZoneDisabled }}
       on:consider={handleDndConsider}
       on:finalize={handleDndFinalize}
     >

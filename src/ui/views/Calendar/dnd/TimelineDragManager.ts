@@ -25,8 +25,8 @@
  * @module dnd/TimelineDragManager
  */
 
-import { writable, get } from 'svelte/store';
-import type { Writable } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
+import type { Readable, Writable } from 'svelte/store';
 import type dayjs from 'dayjs';
 import dayjsFactory from 'dayjs';
 import type { DataRecord } from '../../../../lib/dataframe/dataframe';
@@ -185,6 +185,19 @@ export class TimelineDragManager {
   readonly snapTimeLabel: Writable<string | null> = writable(null);
   readonly activeMode: Writable<DragMode | null> = writable(null);
   readonly dragRecordId: Writable<string | null> = writable(null);
+  /**
+   * ios-c1: the record whose drag has actually STARTED (state `dragging`),
+   * else null. `dragRecordId` is set on the press, while the session is only
+   * pending, and kept for the quick re-grab window after a drag; an element
+   * that dims and stops taking pointer events from `dragRecordId` leaves the
+   * hit point on the press, so the release and its click land on whatever is
+   * underneath and the record never opens. Anything that takes the original
+   * element out of hit-testing must follow this store instead.
+   */
+  readonly draggedRecordId: Readable<string | null> = derived(
+    [this.state, this.dragRecordId],
+    ([state, id]) => (state === 'dragging' ? id : null)
+  );
   readonly targetDayIndex: Writable<number> = writable(-1);
   readonly stripGhostPosition: Writable<StripGhostPosition | null> = writable(null);
   readonly longPressActive: Writable<boolean> = writable(false);

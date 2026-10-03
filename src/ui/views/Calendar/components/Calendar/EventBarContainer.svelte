@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import dayjs from 'dayjs';
+  import { readable } from 'svelte/store';
   import EventBar from './EventBar.svelte';
   import type { ProcessedRecord } from '../../types';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
@@ -36,6 +37,18 @@
   export let dragManager: TimelineDragManager | undefined = undefined;
   /** v3.2.0 DnD: Record ID currently being dragged */
   export let draggingRecordId: string | null = null;
+
+  // ios-c1: `draggingRecordId` follows the manager's `dragRecordId`, set on the
+  // PRESS and kept for the re-grab window. EventBar dims with
+  // `pointer-events: none` from `isDragging`, which took a bar out of
+  // hit-testing between press and release, so a click landed beneath it. The
+  // bar now dims once a drag has started, or while a touch long press is armed
+  // (EventBar shows its resize handles from the same flag; a held release opens
+  // nothing anyway). A mouse never sets `longPressActive`.
+  const noDrag = readable<string | null>(null);
+  const noLongPress = readable(false);
+  $: draggedRecordId = dragManager?.draggedRecordId ?? noDrag;
+  $: longPressActive = dragManager?.longPressActive ?? noLongPress;
 
   // Map record IDs to ProcessedRecords for quick lookup
   $: processedRecordMap = new Map<string, ProcessedRecord>(
@@ -196,7 +209,7 @@
       onClick={onEventClick ? (e) => handleEventClick(e, event.record) : undefined}
       processedRecord={processedRecordMap.get(event.record.id)}
       {dragManager}
-      isDragging={draggingRecordId === event.record.id}
+      isDragging={draggingRecordId === event.record.id && ($draggedRecordId === event.record.id || $longPressActive)}
     />
   {/each}
 </div>

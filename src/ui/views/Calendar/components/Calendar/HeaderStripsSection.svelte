@@ -63,9 +63,19 @@
   // Container element for collecting day column refs
   let sectionElement: HTMLElement | undefined;
 
-  // Subscribe to dragRecordId for visual dimming
+  // The pressed record (pending, dragging, or the re-grab window after a drag):
+  // drives the long-press lift only.
   const unsubDragId = dragManager.dragRecordId.subscribe((id) => {
     draggingRecordId = id;
+  });
+
+  // ios-c1: the dimmed, pointer-events-free state follows a drag that has
+  // STARTED. Applied on the press (from `dragRecordId`) it took the segment out
+  // of hit-testing between press and release: the mouseup and click landed on
+  // the `.multiday-lane` beneath, so a click or tap never opened the record.
+  let draggedRecordId: string | null = null;
+  const unsubDraggedId = dragManager.draggedRecordId.subscribe((id) => {
+    draggedRecordId = id;
   });
 
   // v3.2.1: Subscribe to stripGhostPosition for ghost overlay rendering
@@ -134,6 +144,7 @@
 
   onDestroy(() => {
     unsubDragId();
+    unsubDraggedId();
     unsubStripGhost();
     unsubEdgeLabel();
     unsubLongPress();
@@ -312,7 +323,6 @@
 {#if hasAnyEvents}
   <div
     class="header-strips-section"
-    class:header-strips-section--single-lane={maxLane === 1}
     bind:this={sectionElement}
     style:--lane-count={maxLane}
     role="rowgroup"
@@ -349,7 +359,8 @@
           {@const segment = laneData.segments.get(dateKey)}
           {@const isDropTarget = stripGhost != null && dayIdx >= stripGhost.startDayIndex && dayIdx <= stripGhost.endDayIndex}
           {#if segment}
-            {@const isDragging = draggingRecordId === segment.record.id}
+            {@const isPressed = draggingRecordId === segment.record.id}
+            {@const isDragging = draggedRecordId === segment.record.id}
             <button
               class="strip-segment"
               class:is-start={segment.isStart}
@@ -359,7 +370,7 @@
               class:dnd-grab={!!onRecordChange && !isDragging}
               class:dnd-dragging={isDragging}
               class:dnd-drop-target={isDropTarget && !isDragging}
-              class:dnd-long-press={isLongPressActive && isDragging}
+              class:dnd-long-press={isLongPressActive && isPressed}
               data-date={date.format('YYYY-MM-DD')}
               type="button"
               style:--strip-color={segment.color ?? 'var(--interactive-accent)'}
@@ -813,12 +824,13 @@
       min-width: 0;
     }
 
-    /* ios-t1: a week with ONE lane has no neighbouring lane to intercept, so
-       its lane — and the segments filling it — is a finger tall. With two or
-       more lanes they stay at strip height: any taller target would cover the
-       lane beside it, and growing every lane is a layout decision for the
-       calendar track, not this batch. */
-    .header-strips-section--single-lane .multiday-lane {
+    /* ios-c1: EVERY lane — and the segments filling it — is a finger tall
+       (ios-t1 grew only a week with one lane). The lanes are stacked rows of
+       a flex column, and the section and its week track size to them, so each
+       segment's hit area is its own lane: none reaches into the lane beside
+       it. This rule follows the width/landscape rules above so it wins over
+       their strip height on touch; a fine pointer keeps the strip height. */
+    .header-strips-section .multiday-lane {
       height: var(--ppp-touch-target-min);
       min-height: var(--ppp-touch-target-min);
       max-height: var(--ppp-touch-target-min);
