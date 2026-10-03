@@ -122,6 +122,42 @@ export interface DayColumnRef {
   element: HTMLElement;
 }
 
+/** How a timeline event bar shows the drag state of its own record. */
+export interface BarDragView {
+  /** Dim the bar and take it out of hit-testing (`dnd-dragging`). */
+  dimmed: boolean;
+  /** Show the resize handles and the re-grab ring (`dnd-handles-visible`). */
+  handlesVisible: boolean;
+}
+
+/**
+ * ios-p1: the two drag states of an event bar, kept apart.
+ *
+ * `dimmed` sets `pointer-events: none`, so it follows `draggedRecordId` alone:
+ * the bar dims only while its drag has actually started. `handlesVisible`
+ * follows `dragRecordId` while a touch long press is armed, which includes the
+ * quick re-grab window `cleanup` keeps open after a touch drag; there the bar
+ * stays at full opacity and hit-testable, with its handles showing, so the
+ * next touch lands on it. A mouse never sets `longPressActive`, so on a mouse
+ * only `dimmed` can change, exactly while a drag runs.
+ *
+ * @param recordId - The record the bar renders
+ * @param dragRecordId - The manager's `dragRecordId`
+ * @param draggedRecordId - The manager's `draggedRecordId`
+ * @param longPressActive - The manager's `longPressActive`
+ */
+export function barDragView(
+  recordId: string,
+  dragRecordId: string | null,
+  draggedRecordId: string | null,
+  longPressActive: boolean
+): BarDragView {
+  return {
+    dimmed: draggedRecordId === recordId,
+    handlesVisible: longPressActive && dragRecordId === recordId,
+  };
+}
+
 // ─── Internal drag session ───────────────────────────────────────────────────
 
 interface DragSession {

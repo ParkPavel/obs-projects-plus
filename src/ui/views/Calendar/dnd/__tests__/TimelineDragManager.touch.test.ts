@@ -20,7 +20,12 @@
 import dayjs from "dayjs";
 import { get } from "svelte/store";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
-import { TimelineDragManager, type OnDragCommit } from "../TimelineDragManager";
+import {
+  TimelineDragManager,
+  barDragView,
+  type BarDragView,
+  type OnDragCommit,
+} from "../TimelineDragManager";
 import { DND_CONSTANTS } from "../types";
 import { EventRenderType, type ProcessedRecord } from "../../types";
 
@@ -307,6 +312,121 @@ describe("TimelineDragManager — touch gesture on an event bar (ios-d1)", () =>
       clickBar();
       expect(onClick).not.toHaveBeenCalled();
     });
+  });
+
+  /**
+   * ios-p1 — measured live: after a touch drag the bar stayed dimmed, with
+   * `pointer-events: none`, through the whole re-grab window, because one flag
+   * drove both the dimming and the handles. `barDragView` keeps them apart;
+   * these cases read it from the manager's own stores at each phase, exactly
+   * as EventBarContainer does, so they pin what the bar shows, not a shape.
+   */
+  describe("what the bar shows through a drag (ios-p1)", () => {
+    const OTHER_ID = "visits/other.md";
+    const viewOf = (id: string): BarDragView =>
+      barDragView(id, get(manager.dragRecordId), get(manager.draggedRecordId), get(manager.longPressActive));
+    const NEITHER: BarDragView = { dimmed: false, handlesVisible: false };
+
+    const touchDragOneHour = (): void => {
+      for (let y = BAR_CENTRE_Y + 4; y <= BAR_CENTRE_Y + HOUR_PX; y += 4) {
+        bar.dispatchEvent(touch("touchmove", y));
+      }
+    };
+
+    it("touch: armed → handles only; dragging → dimmed and handles; re-grab window → handles only; expiry → neither", () => {
+      expect(viewOf(record.id)).toEqual(NEITHER);
+
+      press();
+      // A short press is not yet a drag: the bar stays as it was.
+      jest.advanceTimersByTime(120);
+      expect(viewOf(record.id)).toEqual(NEITHER);
+
+      // The long press arms the drag: handles, no dimming, still hit-testable.
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS);
+      expect(viewOf(record.id)).toEqual({ dimmed: false, handlesVisible: true });
+
+      // The active drag dims the origin bar and keeps its handles.
+      touchDragOneHour();
+      expect(get(manager.state)).toBe("dragging");
+      expect(viewOf(record.id)).toEqual({ dimmed: true, handlesVisible: true });
+      expect(viewOf(OTHER_ID)).toEqual(NEITHER);
+
+      // The release opens the re-grab window: not dimmed, handles stay.
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+      expect(onCommit).toHaveBeenCalledTimes(1);
+      expect(viewOf(record.id)).toEqual({ dimmed: false, handlesVisible: true });
+      jest.advanceTimersByTime(1000);
+      expect(get(manager.longPressActive)).toBe(true);
+      expect(viewOf(record.id)).toEqual({ dimmed: false, handlesVisible: true });
+      // Only the dragged record's bar shows the window.
+      expect(viewOf(OTHER_ID)).toEqual(NEITHER);
+
+      // The window expires (4 s after the release): back to normal.
+      jest.advanceTimersByTime(3100);
+      expect(get(manager.longPressActive)).toBe(false);
+      expect(viewOf(record.id)).toEqual(NEITHER);
+    });
+
+    it("touch: a re-grab inside the window dims again only once the second drag runs", () => {
+      press();
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 200);
+      touchDragOneHour();
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+      jest.advanceTimersByTime(1000);
+
+      press(); // quick re-grab: armed at once, no long-press wait
+      expect(viewOf(record.id)).toEqual({ dimmed: false, handlesVisible: true });
+      touchDragOneHour();
+      expect(get(manager.state)).toBe("dragging");
+      expect(viewOf(record.id)).toEqual({ dimmed: true, handlesVisible: true });
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y + HOUR_PX));
+      expect(onCommit).toHaveBeenCalledTimes(2);
+      expect(viewOf(record.id)).toEqual({ dimmed: false, handlesVisible: true });
+    });
+
+    it("touch: a long press released without a move leaves neither state behind", () => {
+      press();
+      jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 200);
+      expect(viewOf(record.id)).toEqual({ dimmed: false, handlesVisible: true });
+      bar.dispatchEvent(touch("touchend", BAR_CENTRE_Y));
+      // No drag ran, so no re-grab window opens.
+      expect(viewOf(record.id)).toEqual(NEITHER);
+    });
+
+    it("mouse, unchanged: dimmed exactly while the drag runs, never handles, nothing after", () => {
+      manager.initiate(record, processed, mouse("mousedown", BAR_CENTRE_Y), "move", bar);
+      // Pending press: the bar stays hit-testable (ios-c1).
+      expect(viewOf(record.id)).toEqual(NEITHER);
+      for (let y = BAR_CENTRE_Y + 4; y <= BAR_CENTRE_Y + HOUR_PX; y += 4) {
+        document.dispatchEvent(mouse("mousemove", y));
+      }
+      expect(get(manager.state)).toBe("dragging");
+      expect(viewOf(record.id)).toEqual({ dimmed: true, handlesVisible: false });
+
+      document.dispatchEvent(mouse("mouseup", BAR_CENTRE_Y + HOUR_PX));
+      // The manager keeps `dragRecordId` for the window, but a mouse never
+      // arms `longPressActive`, so the bar shows nothing.
+      expect(get(manager.dragRecordId)).toBe(record.id);
+      expect(viewOf(record.id)).toEqual(NEITHER);
+      jest.advanceTimersByTime(1000);
+      expect(viewOf(record.id)).toEqual(NEITHER);
+    });
+  });
+});
+
+describe("barDragView — the rule itself (ios-p1)", () => {
+  const ID = "a.md";
+  it("dims only the record whose drag runs", () => {
+    expect(barDragView(ID, ID, ID, false).dimmed).toBe(true);
+    expect(barDragView(ID, ID, null, true).dimmed).toBe(false);
+    expect(barDragView(ID, "b.md", "b.md", true).dimmed).toBe(false);
+  });
+
+  it("shows handles only for the pressed record while a long press is armed", () => {
+    expect(barDragView(ID, ID, null, true).handlesVisible).toBe(true);
+    expect(barDragView(ID, ID, ID, false).handlesVisible).toBe(false);
+    expect(barDragView(ID, "b.md", null, true).handlesVisible).toBe(false);
+    expect(barDragView(ID, null, null, true).handlesVisible).toBe(false);
   });
 });
 

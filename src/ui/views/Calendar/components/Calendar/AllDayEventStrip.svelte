@@ -17,6 +17,8 @@
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import type { ProcessedRecord } from '../../types';
   import type { DragMode } from '../../dnd/types';
+  import { isTouchDevice } from 'src/lib/stores/ui';
+  import { stripGeometry, stripTopRem } from '../../utils/stripGeometry';
 
   /** Название события */
   export let title: string;
@@ -49,17 +51,12 @@
   /** v4.0.4: Hide resize handles when resize is impossible (e.g. day view) */
   export let canResize: boolean = true;
   
-  // v8.0: Unified constants - MUST match TimelineView.svelte
-  const STRIP_HEIGHT_DESKTOP = 1.25;  // rem
-  const STRIP_HEIGHT_MOBILE = 1.125;  // rem  
-  const STRIP_GAP_REM = 0.125;        // gap between strips
-  
-  // Reactive height based on device
-  $: STRIP_HEIGHT_REM = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT_DESKTOP;
-  // Row height = strip height + gap
-  $: ROW_HEIGHT_REM = STRIP_HEIGHT_REM + STRIP_GAP_REM;
-  // Top position for this strip
-  $: topPosition = rowIndex * ROW_HEIGHT_REM;
+  // ios-p1: height and gap from the shared `stripGeometry`, the same source as
+  // TimelineView's all-day section, so lanes and section stay aligned; a
+  // coarse pointer gets a finger-sized strip.
+  $: geometry = stripGeometry({ coarse: $isTouchDevice, isMobile });
+  $: STRIP_HEIGHT_REM = geometry.heightRem;
+  $: topPosition = stripTopRem(rowIndex, geometry);
 
   // ios-c1: `isDragging` comes from the manager's `dragRecordId`, which is set
   // on the PRESS (and kept for the re-grab window after a drag). Dimming with

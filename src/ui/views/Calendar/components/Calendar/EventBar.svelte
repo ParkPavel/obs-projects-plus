@@ -35,29 +35,18 @@
   export let processedRecord: ProcessedRecord | undefined = undefined;
   /** v3.2.0 DnD: TimelineDragManager instance */
   export let dragManager: TimelineDragManager | undefined = undefined;
-  /** v3.2.0 DnD: Whether drag is currently active on this bar */
+  /**
+   * v3.2.0 DnD: the drag of this bar's record is running. Dims the bar and
+   * takes it out of hit-testing (`barDragView(...).dimmed`).
+   */
   export let isDragging: boolean = false;
-  
-  /** v3.2.6: Whether mobile long-press DnD mode is active (show handles) */
-  import { onDestroy } from 'svelte';
-  let longPressActiveValue = false;
-  let unsubLongPress: (() => void) | undefined;
-  // Use a function call to break Svelte's dependency tracking on unsubLongPress.
-  // A $: block that both reads and writes the same variable creates an infinite
-  // reactive loop (Svelte flush do...while never terminates). The function body
-  // is NOT analyzed for $: dependencies — only `dragManager` is tracked.
-  $: updateLongPressSubscription(dragManager);
-  function updateLongPressSubscription(dm: typeof dragManager) {
-    unsubLongPress?.();
-    if (dm) {
-      unsubLongPress = dm.longPressActive.subscribe(v => { longPressActiveValue = v; });
-    } else {
-      longPressActiveValue = false;
-      unsubLongPress = undefined;
-    }
-  }
-  onDestroy(() => { unsubLongPress?.(); });
-  
+  /**
+   * v3.2.6 / ios-p1: a touch long press is armed on this bar's record, the
+   * re-grab window after a touch drag included. Shows the resize handles and
+   * the ring without dimming (`barDragView(...).handlesVisible`).
+   */
+  export let showHandles: boolean = false;
+
   // Calculate position and height in REM (Matryoshka principle)
   $: {
     const startMinutes = startDate.hour() * 60 + startDate.minute();
@@ -183,7 +172,7 @@
   <button 
     class="projects-calendar-event-bar projects-calendar-event-bar-clickable"
     class:dnd-dragging={isDragging}
-    class:dnd-handles-visible={longPressActiveValue && isDragging}
+    class:dnd-handles-visible={showHandles}
     type="button"
     data-record-id={record.id}
     style="

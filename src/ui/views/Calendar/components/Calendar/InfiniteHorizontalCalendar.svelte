@@ -21,6 +21,8 @@
   import { getScrollBehavior, getAnimationDuration } from 'src/lib/helpers/animation';
   import { settings } from 'src/lib/stores/settings';
   import { isGesturesPaused } from '../../gestures/GestureCoordinator';
+  import { isTouchDevice } from 'src/lib/stores/ui';
+  import { stripGeometry, allDaySectionHeightRem, type StripGeometry } from '../../utils/stripGeometry';
 
   dayjs.extend(isSameOrAfter);
   dayjs.extend(isSameOrBefore);
@@ -58,20 +60,18 @@
   // v3.0.9: Instant mode — disable CSS animations when user prefers instant transitions
   $: isInstantMode = $settings.preferences.animationBehavior === 'instant';
   
-  // v8.1.2: Calculate AllDay section height for sticky axis sync
-  // MUST match TimelineView's STRIP_HEIGHT_REM exactly for alignment
-  // Responsive: desktop uses 1.25rem, mobile uses 1.125rem
-  const STRIP_HEIGHT_DESKTOP = 1.25;
-  const STRIP_HEIGHT_MOBILE = 1.125;
-  const STRIP_GAP_REM = 0.125;
-  $: STRIP_HEIGHT_REM = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT_DESKTOP;
+  // v8.1.2: Calculate AllDay section height for sticky axis sync.
+  // ios-p1: strip height and gap come from the shared `stripGeometry`, the
+  // source TimelineView and the strips read, so the sticky row and the day
+  // columns stay aligned on every pointer.
+  $: stripGeom = stripGeometry({ coarse: $isTouchDevice, isMobile });
   const DAY_HEADER_HEIGHT_REM = 3.75;
-  
+
   /**
    * Calculate max lane from all processed events for AllDay section height
-   * v8.3.1: Accept stripHeight as parameter to avoid closure issues with reactive vars
+   * v8.3.1: Accept the geometry as parameter to avoid closure issues with reactive vars
    */
-  function calculateAllDayHeight(stripHeight: number): number {
+  function calculateAllDayHeight(geometry: StripGeometry): number {
     if (!processedData?.grouped) return 0;
     
     let maxLane = -1;
@@ -93,17 +93,16 @@
       }
     }
     
-    if (maxLane < 0) return 0;
-    // v8.3.1: Use passed stripHeight, not closure variable
-    return (maxLane + 1) * stripHeight + maxLane * STRIP_GAP_REM;
+    // v8.3.1: Use the passed geometry, not a closure variable
+    return allDaySectionHeightRem(maxLane, geometry);
   }
-  
-  // v8.3.1: Calculate AllDay height - recalculates when STRIP_HEIGHT_REM changes (mobile toggle)
+
+  // v8.3.1: Calculate AllDay height - recalculates when the geometry changes (mobile or pointer toggle)
   let allDayHeight = 0;
   $: {
-    // Explicit dependencies: useTimelineView, processedData, STRIP_HEIGHT_REM
+    // Explicit dependencies: useTimelineView, processedData, stripGeom
     if (useTimelineView && processedData?.grouped) {
-      allDayHeight = calculateAllDayHeight(STRIP_HEIGHT_REM);
+      allDayHeight = calculateAllDayHeight(stripGeom);
     } else {
       allDayHeight = 0;
     }
@@ -1361,7 +1360,8 @@
      - The month label is a short month name in a gutter of at least 3rem;
        it stays on one line and ellipsizes if a locale makes it longer.
      - The "all day" label's row must stay exactly as tall as the all-day
-       strips beside it (one lane is 1.125rem), so a second line cannot fit:
+       strips beside it (one lane is one `stripGeometry` height), so a
+       second line is not wanted:
        it stays on one line and ellipsizes in a long locale.
      - Weekday names stay on one line inside their column and ellipsize. */
   @media (pointer: coarse) {

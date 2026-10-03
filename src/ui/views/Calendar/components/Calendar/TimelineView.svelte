@@ -17,6 +17,8 @@
   import { getScrollBehavior } from 'src/lib/helpers/animation';
   import DragOverlay from '../../dnd/DragOverlay.svelte';
   import { TimelineDragManager, type OnDragCommit } from '../../dnd/TimelineDragManager';
+  import { isTouchDevice } from 'src/lib/stores/ui';
+  import { stripGeometry, allDaySectionHeightRem } from '../../utils/stripGeometry';
 
 
   
@@ -115,18 +117,12 @@
   let touchStartY = 0;
   let touchStartTime = 0;
   
-  // Constants for AllDay section sizing
-  // IMPORTANT: Must match values in AllDayEventStrip and MultiDayEventStrip
-  // v7.0: Responsive strip height
-  const STRIP_HEIGHT_DESKTOP = 1.25;
-  const STRIP_HEIGHT_MOBILE = 1.125;
-  const STRIP_GAP_REM = 0.125;      // Gap between rows
-  
-  $: STRIP_HEIGHT_REM = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT_DESKTOP;
-  
-  const MIN_ALLDAY_HEIGHT_REM = 0;  // Minimum height when no events
+  // AllDay section sizing. ios-p1: strip height and gap come from the one
+  // shared `stripGeometry`, as in AllDayEventStrip, MultiDayEventStrip and the
+  // sticky all-day row of InfiniteHorizontalCalendar; a coarse pointer gets a
+  // finger-sized strip.
+  $: stripGeom = stripGeometry({ coarse: $isTouchDevice, isMobile });
   // v6.4: Removed MAX cap - height is controlled globally by fixedAllDayHeight
-  // v6.7: Unified STRIP_HEIGHT_REM=1.25 across all components to prevent overlap
   
   // Declare variables for reactive statements
   let maxLane: number;
@@ -168,9 +164,7 @@
     maxLane = max;
   }
   
-  $: localHeight = maxLane >= 0 
-    ? (maxLane + 1) * STRIP_HEIGHT_REM + maxLane * STRIP_GAP_REM
-    : MIN_ALLDAY_HEIGHT_REM;
+  $: localHeight = allDaySectionHeightRem(maxLane, stripGeom);
   // Use fixedAllDayHeight for global sync, fallback to local calculation
   $: allDaySectionHeight = fixedAllDayHeight !== undefined && fixedAllDayHeight > 0
     ? fixedAllDayHeight
