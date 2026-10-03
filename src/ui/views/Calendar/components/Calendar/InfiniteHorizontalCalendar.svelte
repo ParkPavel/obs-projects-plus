@@ -1354,7 +1354,45 @@
       font-size: 0.625rem;
     }
   }
-  
+
+  /* ios-r1: axis and weekday labels at the phone text floor on touch
+     (coarse pointer, so a narrow desktop pane keeps its density). Placed
+     after both width rules above so it wins over each of them.
+     - The month label is a short month name in a gutter of at least 3rem;
+       it stays on one line and ellipsizes if a locale makes it longer.
+     - The "all day" label's row must stay exactly as tall as the all-day
+       strips beside it (one lane is 1.125rem), so a second line cannot fit:
+       it stays on one line and ellipsizes in a long locale.
+     - Weekday names stay on one line inside their column and ellipsize. */
+  @media (pointer: coarse) {
+    .axis-month-label {
+      font-size: var(--ppp-text-floor);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sticky-allday-label {
+      font-size: var(--ppp-text-floor);
+      line-height: 1;
+      max-width: 100%;
+      padding-inline: 0.125em;
+      box-sizing: border-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .weekday-name {
+      font-size: var(--ppp-text-floor);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   /* Reduced motion for accessibility */
   @media (prefers-reduced-motion: reduce) {
     .period-container {

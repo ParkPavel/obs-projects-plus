@@ -228,4 +228,16 @@
     transform: scale(1.2);
     stroke-width: 2;
   }
+
+  /* ios-r1: tick, legend and R² text at the phone text floor on touch. The
+     viewBox is pinned to the measured width (chartWidth.ts), so one user unit
+     is one CSS pixel and the floor renders at its own size. It fits: the
+     y ticks have the 50-unit left margin, the x ticks a 60-unit slot each
+     (tickCountFor), the legend 92 units. A CSS font-size overrides the
+     presentation attribute; container-scoped (R0.16), so the token alone. */
+  @media (pointer: coarse) {
+    .ppp-chart-scatter text {
+      font-size: var(--ppp-text-floor);
+    }
+  }
 </style>

@@ -393,4 +393,24 @@
       max-width: 3rem;
     }
   }
+
+  /* ios-r1: on touch the label is held at the phone text floor (11 pt or
+     the host's smaller UI size). Coarse pointer rather than a width query:
+     the floor is about reading at arm's length on a touch screen, and a
+     narrow pane on a desktop keeps its density. One line with an ellipsis,
+     so the larger label cannot wrap and grow the 2.75rem tab. */
+  @media (pointer: coarse) {
+    .view-item span {
+      font-size: var(--ppp-text-floor);
+      white-space: nowrap;
+    }
+  }
+
+  /* The narrow cap above was 3rem at a 0.625rem label, about eight
+     characters. Held in em so the larger label keeps the same count. */
+  @media (pointer: coarse) and (max-width: 30rem) {
+    .view-item span {
+      max-width: 4.8em;
+    }
+  }
 </style>

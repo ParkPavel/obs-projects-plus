@@ -246,7 +246,18 @@
   .all-day-event-strip.mobile .all-day-title {
     font-size: 0.5625rem;
   }
-  
+
+  /* ios-r1: the title at the phone text floor on touch. The strip is at
+     least 1.125rem tall with `line-height: 1` on the title, so the larger
+     text still fits; it stays on one line and ellipsizes. Read through the
+     token alone: this component is container-scoped (R0.16). */
+  @media (pointer: coarse) {
+    .all-day-event-strip .all-day-title,
+    .all-day-event-strip.mobile .all-day-title {
+      font-size: var(--ppp-text-floor);
+    }
+  }
+
   /* High contrast mode */
   @media (prefers-contrast: high) {
     .all-day-event-strip {

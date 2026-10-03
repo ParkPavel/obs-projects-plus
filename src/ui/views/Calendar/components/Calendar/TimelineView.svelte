@@ -708,6 +708,7 @@
   <!-- v3.3.4: Snap line across the viewport at ghost top -->
   <div
     use:portal={{ to: "document-body" }}
+    class="ppp-timed-ghost-snapline"
     style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:1px; background:var(--text-accent); opacity:0.5; pointer-events:none; z-index:9998;"
     aria-hidden="true"
   ></div>
@@ -1001,6 +1002,27 @@
       font-size: 0.5rem;
     }
   }
-  
+
+  /* ios-r1: day names and the axis "all day" label at the phone text floor
+     on touch (coarse pointer, so a narrow desktop pane keeps its density).
+     A day name stays on one line and ellipsizes inside its column; the axis
+     label sits in a narrow gutter with the whole header height above it, so
+     it may wrap at its word break instead of being cut. */
+  @media (pointer: coarse) {
+    .projects-calendar-day-name {
+      font-size: var(--ppp-text-floor);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .projects-calendar-allday-axis-label {
+      font-size: var(--ppp-text-floor);
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+  }
+
   /* v6.2: No internal scrollbar - handled by parent container */
 </style>

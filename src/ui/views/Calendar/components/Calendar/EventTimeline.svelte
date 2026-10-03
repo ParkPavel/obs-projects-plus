@@ -120,4 +120,12 @@
       left: 3rem;
     }
   }
+
+  /* ios-r1: hour labels at the phone text floor on touch. The narrowest
+     gutter is 3rem; "12 AM" at the floor plus its 0.25rem padding fits it. */
+  @media (pointer: coarse) {
+    .projects-calendar-hour-label {
+      font-size: var(--ppp-text-floor);
+    }
+  }
 </style>
