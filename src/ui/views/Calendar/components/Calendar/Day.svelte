@@ -516,10 +516,13 @@
       return;
     }
     // Pre-load items 200 CSS pixels before they become visible. IntersectionObserver
-    // accepts rootMargin only in absolute pixels or %, so the band is written as the
-    // percentages that resolve to it on the viewport measured here. Caveat: they are
-    // fixed at creation, so after a window resize the band scales with the viewport
-    // until the cell remounts (it only decides when off-screen cells render).
+    // accepts rootMargin only in absolute pixels or %, and resolves percentages per
+    // axis: top/bottom against the root's height, left/right against its width
+    // (`root: null` = the viewport). Verified live in Chromium against a 200-pixel
+    // control at 390x844 and 844x390. So the band is written as the two
+    // percentages that resolve to it on the viewport measured here. Caveat: they
+    // are fixed at creation, so after a window resize the band scales with the
+    // viewport until the cell remounts (it only decides when off-screen cells render).
     const viewport = (rootEl?.ownerDocument ?? document).documentElement;
     const band = 200;
     const bandY = (band / Math.max(1, viewport.clientHeight)) * 100;
