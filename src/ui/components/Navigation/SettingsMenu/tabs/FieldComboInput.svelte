@@ -20,6 +20,27 @@
 
   const dispatch = createEventDispatcher<{ change: string }>();
 
+  // Picking a suggestion from the native datalist fires only `input` (Chromium:
+  // inputType `insertReplacementText`, or a plain Event without one); `change`
+  // waits for blur, so a pick looked ignored. A pick of an existing field, or
+  // Enter, commits at once; typing a new name still commits on blur.
+  // The value an interaction starts from: taken on focus, so a value the parent
+  // set meanwhile (a reset, a saved config) is the baseline, not a stale one.
+  let committed = value;
+  function commit(): void {
+    if (value === committed) return;
+    committed = value;
+    dispatch("change", value);
+  }
+  function onInput(e: Event): void {
+    const kind = (e as InputEvent).inputType;
+    const picked = kind === undefined || kind === "insertReplacementText";
+    if (picked && fields.some((f) => f.name === value)) commit();
+  }
+  function onKeydown(e: KeyboardEvent): void {
+    if (e.key === "Enter") commit();
+  }
+
   $: matched = fields.find((f) => f.name === value);
   $: isNew = !!value && !matched;
   $: leadingIcon = matched ? getFieldIcon(matched.type) : isNew ? "plus" : "list";
@@ -34,7 +55,10 @@
     list={id}
     bind:value
     {placeholder}
-    on:change={() => dispatch("change", value)}
+    on:focus={() => (committed = value)}
+    on:input={onInput}
+    on:keydown={onKeydown}
+    on:change={commit}
   />
   {#if isNew}
     <span class="new-field-badge">{$i18n.t('settings-menu.view-config.calendar.field-mapping.new-field')}</span>
