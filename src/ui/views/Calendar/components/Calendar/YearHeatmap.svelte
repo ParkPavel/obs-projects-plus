@@ -677,7 +677,9 @@
   }
   
   .year-heatmap.mobile .year-legend {
-    font-size: 0.5rem;
+    /* release-370: legend and month names are essential labels on a phone: never
+       below the text floor (11 pt, or the host's smaller UI size if larger). */
+    font-size: var(--ppp-text-floor);
     gap: 0.125rem;
   }
   
@@ -704,7 +706,7 @@
   }
   
   .year-heatmap.mobile .month-name {
-    font-size: 0.5rem;
+    font-size: var(--ppp-text-floor);
     padding: 0.125rem 0.25rem;
     margin: 0;
     min-height: 1.5rem;
@@ -747,7 +749,7 @@
   }
   
   .year-heatmap.mobile .month-summary {
-    font-size: 0.5rem;
+    font-size: var(--ppp-text-floor);
     padding-top: 0.125rem;
   }
   

@@ -48,8 +48,9 @@ mean that a new release has been published.
 - Landscape phones get a slim header and a filter button; view tabs scroll when they do not fit; the
   settings panel opens below the navigation bar; the last items of every view scroll above Obsidian's
   floating bar.
-- Touch targets of at least 44 points; text fields at 16 so iOS does not zoom; text never below 11
-  points; reduced motion is honoured everywhere.
+- Touch targets of at least 44 points; text fields at 16 so iOS does not zoom; essential labels on
+  phones (calendar days and events, the year overview, view tabs, chart axes) no smaller than 11 points;
+  reduced motion is honoured everywhere.
 - Board cards and calendar events can be moved by touch; calendar strips open their record on tap and
   on click; a swipe right after a drag still pages the calendar.
 - The whole plugin is sized in relative units.
