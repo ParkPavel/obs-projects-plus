@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 
 // #103 — FilterBridge must NOT mirror the global `view.filter` anymore. The single
-// global-filter surface is ViewFilterBar pills in the view shell. This bridge only
+// global-filter surface is the settings Filters tab (the header row is gone). This bridge only
 // renders the transient local FilterTabs selection chip. These tests lock that
 // invariant so the triple-duplication (pills + badge + SettingsMenu) cannot regress.
 

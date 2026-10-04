@@ -75,6 +75,9 @@
     bottom: 0;
     width: 100%;
     padding: 0.5rem 0.75rem;
+    /* theme-compat: the caption sits on the user's cover image, not on a theme
+       surface: a dark scrim with light text reads over any photo in either
+       theme (justified in R0_35). */
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
     color: white;
     font-weight: 600;

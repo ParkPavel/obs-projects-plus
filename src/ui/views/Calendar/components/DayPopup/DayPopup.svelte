@@ -17,6 +17,7 @@
   import { formatDateForDisplay } from "src/lib/helpers";
   import { i18n } from "src/lib/stores/i18n";
   import RecordItem from "./RecordItem.svelte";
+  import { toRem } from "src/ui/utils/cssLength";
   import { DuplicatePopup } from "../DuplicatePopup";
   import type { ProcessedRecord } from "../../types";
 
@@ -509,7 +510,7 @@
       class:desktop={!isMobile}
       class:closing={isClosing}
       class:dragging={isDragging}
-      style:--drag-offset="{dragOffset}px"
+      style:--drag-offset={toRem(dragOffset, ownDoc)}
       role="dialog"
       aria-modal="true"
       aria-labelledby="ios-popup-title"
@@ -670,7 +671,7 @@
     --ios-radius: 1.25rem;
     --ios-bg: var(--background-primary);
     --ios-border: var(--background-modifier-border);
-    --ios-shadow: 0 -0.5rem 2.5rem rgba(0, 0, 0, 0.25);
+    --ios-shadow: var(--shadow-l);
     --ios-accent: var(--interactive-accent);
     --ios-touch: 2.75rem; /* 44 iOS minimum */
   }
@@ -686,7 +687,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    background: rgba(0, 0, 0, 0);
+    background: transparent;
     animation: ios-backdrop-in 0.3s ease forwards;
     -webkit-tap-highlight-color: transparent;
   }
@@ -700,13 +701,13 @@
   }
   
   @keyframes ios-backdrop-in {
-    from { background: rgba(0, 0, 0, 0); }
-    to { background: rgba(0, 0, 0, 0.4); }
+    from { background: transparent; }
+    to { background: var(--background-modifier-cover); }
   }
-  
+
   @keyframes ios-backdrop-out {
-    from { background: rgba(0, 0, 0, 0.4); }
-    to { background: rgba(0, 0, 0, 0); }
+    from { background: var(--background-modifier-cover); }
+    to { background: transparent; }
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -731,7 +732,7 @@
     max-width: 100%;
     border-radius: 0 0 var(--ios-radius) var(--ios-radius);
     box-shadow: var(--ios-shadow);
-    transform: translateY(calc(var(--drag-offset, 0px)));
+    transform: translateY(calc(var(--drag-offset, 0rem)));
     animation: ios-sheet-in-top 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
     padding-top: env(safe-area-inset-top, 0);
   }
@@ -750,7 +751,7 @@
     max-width: calc(100% - 2rem);
     border-radius: var(--ios-radius);
     box-shadow: 
-      0 1.5rem 3rem -0.5rem rgba(0, 0, 0, 0.25),
+      var(--shadow-l),
       0 0 0 0.0625rem var(--ios-border);
     animation: ios-card-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
@@ -765,7 +766,7 @@
   }
   
   @keyframes ios-sheet-out-top {
-    from { transform: translateY(var(--drag-offset, 0px)); }
+    from { transform: translateY(var(--drag-offset, 0)); }
     to { transform: translateY(-100%); }
   }
   

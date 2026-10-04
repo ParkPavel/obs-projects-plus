@@ -663,9 +663,12 @@
     text-align: left;
   }
   
-  .note-title-link:hover:not(:disabled) {
-    background: var(--background-modifier-hover);
-    color: var(--interactive-accent);
+  /* ios-t1: hover tints only where a hover exists; on touch they stuck after a tap. */
+  @media (hover: hover) and (pointer: fine) {
+    .note-title-link:hover:not(:disabled) {
+      background: var(--background-modifier-hover);
+      color: var(--interactive-accent);
+    }
   }
   
   .note-title-link:disabled {
@@ -690,7 +693,7 @@
     padding: 0.5rem 0.75rem;
     font-size: 1rem;
     font-weight: 600;
-    border: 1px solid var(--interactive-accent);
+    border: var(--ppp-border-width) solid var(--interactive-accent);
     border-radius: var(--radius-s);
     background: var(--background-primary);
     color: var(--text-normal);
@@ -725,27 +728,46 @@
     color: var(--text-muted);
   }
   
-  .title-action-btn.edit:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-  
   .title-action-btn.save {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
   }
-  
-  .title-action-btn.save:hover {
-    opacity: 0.9;
-  }
-  
+
   .title-action-btn.cancel {
     background: var(--background-modifier-hover);
     color: var(--text-muted);
   }
-  
-  .title-action-btn.cancel:hover {
-    color: var(--text-error);
+
+  @media (hover: hover) and (pointer: fine) {
+    .title-action-btn.edit:hover {
+      background: var(--background-modifier-hover);
+      color: var(--text-normal);
+    }
+
+    .title-action-btn.save:hover {
+      opacity: 0.9;
+    }
+
+    .title-action-btn.cancel:hover {
+      color: var(--text-error);
+    }
+  }
+
+  /* ios-t1: on touch the title's rename / save / cancel are finger-sized and
+     never shrink — the title link beside them gives up width instead (it
+     ellipsizes). Each is its own box, so the targets cannot overlap. */
+  @media (pointer: coarse) {
+    .title-action-btn {
+      flex-shrink: 0;
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+    }
+
+    .note-title-link,
+    .title-input {
+      min-width: 0;
+      min-height: var(--ppp-touch-target-min);
+    }
   }
 
   .field-group {
@@ -770,10 +792,12 @@
     will-change: background-color;
   }
   
-  .group-header:hover {
-    background: var(--background-modifier-hover);
+  @media (hover: hover) and (pointer: fine) {
+    .group-header:hover {
+      background: var(--background-modifier-hover);
+    }
   }
-  
+
   .group-header:active {
     transform: scale(0.99);
   }
@@ -825,8 +849,10 @@
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  .group-header:hover .collapse-indicator {
-    transform: scale(1.1);
+  @media (hover: hover) and (pointer: fine) {
+    .group-header:hover .collapse-indicator {
+      transform: scale(1.1);
+    }
   }
   
   .group-content {

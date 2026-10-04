@@ -1,6 +1,7 @@
 <script lang="ts">
   import { i18n } from "src/lib/stores/i18n";
   import { portal } from "src/ui/portal";
+  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import dayjs from 'dayjs';
   import type { DataRecord } from '../../../../../lib/dataframe/dataframe';
@@ -16,6 +17,8 @@
   import { getScrollBehavior } from 'src/lib/helpers/animation';
   import DragOverlay from '../../dnd/DragOverlay.svelte';
   import { TimelineDragManager, type OnDragCommit } from '../../dnd/TimelineDragManager';
+  import { isTouchDevice } from 'src/lib/stores/ui';
+  import { stripGeometry, allDaySectionHeightRem } from '../../utils/stripGeometry';
 
 
   
@@ -114,18 +117,12 @@
   let touchStartY = 0;
   let touchStartTime = 0;
   
-  // Constants for AllDay section sizing
-  // IMPORTANT: Must match values in AllDayEventStrip and MultiDayEventStrip
-  // v7.0: Responsive strip height
-  const STRIP_HEIGHT_DESKTOP = 1.25;
-  const STRIP_HEIGHT_MOBILE = 1.125;
-  const STRIP_GAP_REM = 0.125;      // Gap between rows
-  
-  $: STRIP_HEIGHT_REM = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT_DESKTOP;
-  
-  const MIN_ALLDAY_HEIGHT_REM = 0;  // Minimum height when no events
+  // AllDay section sizing. ios-p1: strip height and gap come from the one
+  // shared `stripGeometry`, as in AllDayEventStrip, MultiDayEventStrip and the
+  // sticky all-day row of InfiniteHorizontalCalendar; a coarse pointer gets a
+  // finger-sized strip.
+  $: stripGeom = stripGeometry({ coarse: $isTouchDevice, isMobile });
   // v6.4: Removed MAX cap - height is controlled globally by fixedAllDayHeight
-  // v6.7: Unified STRIP_HEIGHT_REM=1.25 across all components to prevent overlap
   
   // Declare variables for reactive statements
   let maxLane: number;
@@ -167,9 +164,7 @@
     maxLane = max;
   }
   
-  $: localHeight = maxLane >= 0 
-    ? (maxLane + 1) * STRIP_HEIGHT_REM + maxLane * STRIP_GAP_REM
-    : MIN_ALLDAY_HEIGHT_REM;
+  $: localHeight = allDaySectionHeightRem(maxLane, stripGeom);
   // Use fixedAllDayHeight for global sync, fallback to local calculation
   $: allDaySectionHeight = fixedAllDayHeight !== undefined && fixedAllDayHeight > 0
     ? fixedAllDayHeight
@@ -661,10 +656,11 @@
      to escape all overflow:hidden / transform containing-block ancestors -->
 {#if stripGhost?.viewportRect}
   {@const vr = stripGhost.viewportRect}
+  {@const vrRoot = rootFontPx()}
   <div
     use:portal={{ to: "document-body" }}
     class="ppp-strip-ghost-portal"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.12);"
+    style="position:fixed; top:{remAt(vr.top, vrRoot)}; left:{remAt(vr.left, vrRoot)}; width:{remAt(vr.width, vrRoot)}; height:{remAt(vr.height, vrRoot)}; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary)); border:0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent); box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.12);"
     aria-hidden="true"
   >
     {#if stripGhost.title}
@@ -683,10 +679,11 @@
 <!-- v3.2.9: Portal ghost for cross-period TIMED event drag -->
 {#if timedDragState === 'dragging' && timedGhost?.viewportRect}
   {@const vr = timedGhost.viewportRect}
+  {@const vrRoot = rootFontPx()}
   <div
     use:portal={{ to: "document-body" }}
     class="ppp-timed-ghost-portal"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-left:0.1875rem solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.15), 0 0 0 1px color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
+    style="position:fixed; top:{remAt(vr.top, vrRoot)}; left:{remAt(vr.left, vrRoot)}; width:{remAt(vr.width, vrRoot)}; height:{remAt(vr.height, vrRoot)}; pointer-events:none; z-index:9999; border-left:0.1875rem solid var(--text-accent); border-radius:0.25rem; background:color-mix(in srgb, var(--text-accent) 20%, var(--background-primary)); opacity:0.85; box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.15), 0 0 0 var(--ppp-border-width) color-mix(in srgb, var(--text-accent) 20%, transparent); box-sizing:border-box; padding:0.125rem 0.375rem; overflow:hidden;"
     aria-hidden="true"
   >
     <!-- v4.0.2: Resize handle indicators on portal ghost -->
@@ -708,7 +705,8 @@
   <!-- v3.3.4: Snap line across the viewport at ghost top -->
   <div
     use:portal={{ to: "document-body" }}
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:1px; background:var(--text-accent); opacity:0.5; pointer-events:none; z-index:9998;"
+    class="ppp-timed-ghost-snapline"
+    style="position:fixed; top:{remAt(vr.top, vrRoot)}; left:{remAt(vr.left, vrRoot)}; width:{remAt(vr.width, vrRoot)}; height:var(--ppp-border-width); background:var(--text-accent); opacity:0.5; pointer-events:none; z-index:9998;"
     aria-hidden="true"
   ></div>
 {/if}
@@ -755,7 +753,7 @@
   
   .projects-calendar-timeline-axis-header {
     height: 3.75rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     flex-shrink: 0;
     /* Sticky header within axis */
     position: sticky;
@@ -774,7 +772,7 @@
     /* v3.2.7: Allow flex shrinking in parent layout */
     min-width: 0;
     /* v3.2.5: Right border for single-day/last-column edge visibility */
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
   }
   
   
@@ -789,7 +787,7 @@
   }
   
   .projects-calendar-timeline-days-header.sticky-mobile {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0.125rem 0.25rem var(--background-modifier-box-shadow);
   }
   
   .projects-calendar-day-header {
@@ -799,7 +797,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     padding: 0.5rem;
     transition: background-color 0.2s ease;
   }
@@ -915,7 +913,7 @@
   
   .projects-calendar-allday-column {
     position: relative;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     min-height: 100%;
     /* v7.5: Clip event strips that might overflow on mobile */
     overflow: hidden;
@@ -937,7 +935,7 @@
     border-radius: var(--radius-s, 0.25rem);
     background: color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary));
     border: 0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent);
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-s);
     pointer-events: none;
     z-index: 10;
     /* v4.0.3: Removed transition — instant ghost feedback prevents perceived
@@ -1001,6 +999,27 @@
       font-size: 0.5rem;
     }
   }
-  
+
+  /* ios-r1: day names and the axis "all day" label at the phone text floor
+     on touch (coarse pointer, so a narrow desktop pane keeps its density).
+     A day name stays on one line and ellipsizes inside its column; the axis
+     label sits in a narrow gutter with the whole header height above it, so
+     it may wrap at its word break instead of being cut. */
+  @media (pointer: coarse) {
+    .projects-calendar-day-name {
+      font-size: var(--ppp-text-floor);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .projects-calendar-allday-axis-label {
+      font-size: var(--ppp-text-floor);
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+  }
+
   /* v6.2: No internal scrollbar - handled by parent container */
 </style>

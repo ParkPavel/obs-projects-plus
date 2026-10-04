@@ -540,7 +540,11 @@
                     "aria": "View filter",
                     "add": "Filter",
                     "scope": "This view",
-                    "save-name-taken": "This project already has a source called \"{{name}}\""
+                    "saved": "\"{{name}}\" is now a source of this project — pick it in the block settings",
+                    "save-name": "Name this selection…",
+                    "save-name-taken": "This project already has a source called \"{{name}}\"",
+                    "save-tip": "Keep this filter as a source of the project, so a block can show it",
+                    "save": "Save as source"
                 }
             },
             "visualizer": {
@@ -1054,6 +1058,7 @@
                 "widget": {
                     "expand": "Expand widget",
                     "collapse": "Collapse widget",
+                    "drag-handle": "Drag to reorder the widget",
                     "chart-settings": "Chart settings",
                     "pipeline": "Pipeline: reshape data before showing — group, count, sort",
                     "remove": "Remove widget",
@@ -1954,6 +1959,11 @@
                 "view-config": "View"
             },
             "done": "Done",
+            "filters": {
+                "active": "Active conditions: {{count}}",
+                "none-active": "No active conditions",
+                "clear-all": "Clear all"
+            },
             "views": {
                 "title": "View management",
                 "show-titles": "Show view titles",
@@ -2027,11 +2037,20 @@
                     "header-field": "Card header",
                     "order-sync-field": "Order sync field",
                     "freeze-columns": "Freeze columns",
+                    "thumbnail-layout": "Card thumbnails",
+                    "thumbnail-options": {
+                        "none": "None",
+                        "top": "Cover on top",
+                        "left": "Thumbnail on the left"
+                    },
+                    "cover-field": "Cover field",
                     "hints": {
                         "column-width": "Width of each column in pixels",
                         "group-by-field": "String frontmatter field for grouping cards by columns",
                         "header-field": "Field for card headers",
-                        "order-sync-field": "Number field to store card positions"
+                        "order-sync-field": "Number field to store card positions",
+                        "thumbnail-layout": "Show the image from the cover field on each card; cards without an image stay as they are",
+                        "cover-field": "Text field with path to image"
                     }
                 },
                 "gallery": {
@@ -2039,14 +2058,39 @@
                     "cover-field": "Cover field",
                     "fit-style": "Fit style",
                     "include-fields": "Include fields",
+                    "layout": "Layout",
+                    "layout-options": {
+                        "grid": "Grid",
+                        "masonry": "Masonry",
+                        "list": "List"
+                    },
+                    "card-size": "Card size",
+                    "size-options": {
+                        "s": "Small",
+                        "m": "Medium",
+                        "l": "Large"
+                    },
+                    "aspect-ratio": "Cover aspect ratio",
+                    "aspect-ratio-none": "No cover",
+                    "show-field-labels": "Show field names",
+                    "card-fields": "Fields on the card",
+                    "card-fields-empty": "No fields on the card yet. Add one from the list below.",
+                    "card-fields-add": "Not on the card",
+                    "derived-field": "Computed field (formula or rollup)",
+                    "move-up": "Move \"{{name}}\" up",
+                    "move-down": "Move \"{{name}}\" down",
+                    "remove-field": "Hide \"{{name}}\" on the card",
+                    "add-field": "Show \"{{name}}\" on the card",
                     "fit-options": {
                         "fill": "Fill",
-                        "fit": "Fit"
+                        "fit": "Fit",
+                        "stretch": "Stretch"
                     },
                     "hints": {
                         "card-width": "Width of each gallery card in pixels",
                         "cover-field": "Text field with path to image",
-                        "include-fields": "Select which fields to show on cards"
+                        "include-fields": "Select which fields to show on cards",
+                        "card-fields": "Shown under the title of every card, in this order"
                     }
                 },
                 "table": {
@@ -2062,6 +2106,18 @@
                     "hints": {
                         "icon-field": "Field with an emoji or lucide icon name. Shown as a per-record icon."
                     }
+                },
+                "card-frames": {
+                    "height": "Card height",
+                    "height-hint": "In rem, for every card of this view; leave empty for automatic height. Drag a card's corner to size that card alone.",
+                    "auto": "Automatic",
+                    "reset-all": "Reset all card frames",
+                    "resize": "Resize card",
+                    "hint": "Drag to resize. Arrow keys change the size, Home restores the view's height, Delete resets this card.",
+                    "value-height": "Height {{height}} rem",
+                    "value-auto": "Automatic height",
+                    "value-span": "{{span}} columns wide",
+                    "cap-reached": "This view already keeps {{limit}} card sizes. Reset some cards before resizing another one."
                 },
                 "none": "— None —"
             }

@@ -10,6 +10,8 @@
   import { i18n } from "src/lib/stores/i18n";
   import { app } from "src/lib/stores/obsidian";
   import { settings } from "src/lib/stores/settings";
+  import { isMobileDevice } from "src/lib/stores/ui";
+  import { agendaDrawer, toggle as toggleAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import { fileSystem } from "src/lib/stores/fileSystem";
   import { ViewApi } from "src/lib/viewApi";
   import { resolveExternalFrame } from "src/lib/externalFrameResolver";
@@ -23,7 +25,7 @@
   // events.ts (Shell layer) because that would break the
   // Shell → UI → Engine → Data dependency direction.
   import { invalidateAll as invalidateTransformAll } from "src/lib/dashboard-engine/transformCache";
-  import { registerDataFrameInvalidation } from "src/lib/stores/dataframe";
+  import { dataSource, registerDataFrameInvalidation } from "src/lib/stores/dataframe";
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
@@ -36,7 +38,6 @@
   import { OnboardingModal } from "./onboarding/onboardingModal";
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
-  import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
   import { noticeFor } from "src/lib/errors/errorText";
 
   /** #202 — a refusal, so it carries a code; the success below does not. */
@@ -85,28 +86,68 @@
     return found;
   })();
 
-  // #077 — quick view-filter pills. Writes the edited FilterDefinition back to
-  // the active view; empty clears to a no-condition filter. Engine evaluation
-  // stays in View.svelte via the canonical applyFilter pipeline.
-  function handleViewFilterPillsChange(
-    next: import("src/settings/base/settings").FilterDefinition | undefined
-  ) {
-    if (!project || !view) return;
-    settings.updateView(project.id, {
-      ...view,
-      filter: next ?? { conjunction: "and", conditions: [] },
-    });
+  // Phone agenda drawer (session store, shared with CalendarView). Keyed by the project id
+  // because CalendarView is mounted with `project`, not the view id; both sides use this key.
+  $: agendaDrawerKey = project?.id;
+  // Navbar icon/label: the drawer on a phone, the view config (undefined) on desktop.
+  $: navAgendaOpen = $isMobileDevice
+    ? (agendaDrawerKey ? $agendaDrawer[agendaDrawerKey] === true : false)
+    : undefined;
+
+  // chrome-filters: the header carries no filter row and no filter button; the
+  // view's filter is edited, cleared and saved as a source in the settings
+  // Filters tab. That tab needs to know whether the source can be written and
+  // which source names are taken, which this shell knows and the panel does not.
+  $: sourceReadonly = $dataSource ? $dataSource.readonly() : true;
+  $: projectSources = projectSourceOptions(project).sources;
+
+  // ios-l1 L1 — the phone bottom sheet is fixed to the window's bottom edge and
+  // capped at 85vh, which in short landscape rises above this navbar and covers
+  // the very button that toggles it. The room it may take is the window below
+  // the navbar's bottom edge — i.e. the top of `.projects-main`, grid row 2 —
+  // measured rather than written down, since the navbar's height is its own.
+  // Exposed as `--ppp-below-nav-h`; the short-landscape rule below hands it to
+  // the sheet, which inherits it because on phones it is not portalled.
+  // The DOM measures in px, but the plugin writes only relative units (R0.3),
+  // so the room is divided by the root font size and written in rem, floored
+  // to 3 decimals so the cap never exceeds the measured room. No room (the
+  // main area at or below the window's bottom) writes nothing, and the sheet
+  // falls back to its 85vh.
+  let mainEl: HTMLDivElement | null = null;
+  let belowNav: string | null = null;
+  function measureBelowNav() {
+    if (!mainEl) return;
+    const win = mainEl.ownerDocument.defaultView ?? window;
+    const room = win.innerHeight - mainEl.getBoundingClientRect().top;
+    // coercion-exempt: Class C - a computed CSS length (sixteen CSS pixels by default) read back from the DOM, not record data
+    const rootPx = parseFloat(win.getComputedStyle(mainEl.ownerDocument.documentElement).fontSize);
+    const base = Number.isFinite(rootPx) && rootPx > 0 ? rootPx : 16;
+    belowNav = room > 0 ? `${Math.floor((room / base) * 1000) / 1000}rem` : null;
   }
+  onMount(() => {
+    const win = mainEl?.ownerDocument.defaultView ?? window;
+    measureBelowNav();
+    // `.projects-main` changes size when the leaf does or when the navbar's
+    // height does — the two things that move the navbar's bottom edge.
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measureBelowNav) : null;
+    if (mainEl) observer?.observe(mainEl);
+    win.addEventListener("resize", measureBelowNav);
+    return () => {
+      observer?.disconnect();
+      win.removeEventListener("resize", measureBelowNav);
+    };
+  });
 
   /**
    * #184 — keep the view's current filter as a source of the project.
    *
    * The project editor was the obvious home and is the wrong one: it holds a
    * definition, not a frame, so it has no fields to build a condition against
-   * and a selection saved there with an empty filter equals its own base. Here
-   * the filter is already visible and has already narrowed what is on screen,
-   * which is the brief's verify-after-write answer — you name something you
-   * have watched work.
+   * and a selection saved there with an empty filter equals its own base. The
+   * settings Filters tab (chrome-filters; the header filter row it replaced
+   * is gone) edits the very filter that has narrowed what is on screen, which
+   * is the brief's verify-after-write answer — you name something you have
+   * watched work. The tab forwards the trimmed name here.
    *
    * The write goes through `settings.updateProject`, the same path the project
    * editor uses, so nothing about how a project is stored is new.
@@ -114,11 +155,12 @@
   function handleSaveFilterAsSource(name: string) {
     if (!project || !view) return;
     const filter = view.filter;
-    // Guarded here as well as in the bar: the bar hides the action without
-    // conditions, and a selection equal to its own base would still be
-    // useless if some other caller reached this.
-    if (!filter || filter.conditions.length === 0) return;
-    // A name already in use is refused rather than silently accepted. The bar
+    // Guarded here as well as in the tab: the tab hides the action without an
+    // enabled condition or on a read-only source, and a selection equal to its
+    // own base would still be useless if some other caller reached this.
+    if (!filter || !filter.conditions.some((c) => c.enabled !== false)) return;
+    if (sourceReadonly) return;
+    // A name already in use is refused rather than silently accepted. The tab
     // tells the user the name is what will identify this selection later, and
     // two sources sharing a label are indistinguishable in the only picker
     // that exists — so the promise has to be enforced where it is made.
@@ -333,6 +375,12 @@
   }
 
   function handleToggleAgenda() {
+    if ($isMobileDevice) {
+      // Phone: the drawer is session state, never the persisted desktop flag
+      const open = toggleAgendaDrawer(agendaDrawerKey);
+      dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open });
+      return;
+    }
     const current = view?.config?.["agendaOpen"] ?? false;
     mergeViewConfig({ agendaOpen: !current });
     dispatch("toggleAgenda", { projectId: project?.id, viewId: view?.id, open: !current });
@@ -352,11 +400,12 @@
 	App is the main application component and coordinates between the View and
 	the Toolbar.
 -->
-<div class="projects-container">
+<div class="projects-container" style:--ppp-below-nav-h={belowNav}>
   <CompactNavBar
     {views}
     viewId={view?.id}
     {view}
+    agendaOpen={navAgendaOpen}
     on:viewChange={(event) => (viewId = event.detail)}
     on:addView={() => handleAddView(project)}
     on:openSettings={(event) => handleOpenSettings(event.detail)}
@@ -365,26 +414,22 @@
     on:freezeColumns={handleFreezeColumns}
   />
 
-  <div class="projects-main">
+  <div class="projects-main" bind:this={mainEl}>
     {#if project}
       <DataFrameProvider {project} let:frame let:source>
         {#if project && view && source}
-          <ViewFilterBar
-            filter={view.filter}
-            fields={frame.fields}
-            records={frame.records}
-            readonly={source.readonly()}
-            on:change={(e) => handleViewFilterPillsChange(e.detail)}
-            on:saveAsSource={(e) => handleSaveFilterAsSource(e.detail)}
-          />
-          <View
-            {project}
-            {view}
-            readonly={source.readonly()}
-            api={new ViewApi(source, $api, resolveFrameById)}
-            onConfigChange={settings.updateViewConfig}
-            {frame}
-          />
+          <!-- ios-s1: the view fills what is left of `.projects-main`, a
+               definite height. See `.ppp-view-fill` below. -->
+          <div class="ppp-view-fill">
+            <View
+              {project}
+              {view}
+              readonly={source.readonly()}
+              api={new ViewApi(source, $api, resolveFrameById)}
+              onConfigChange={settings.updateViewConfig}
+              {frame}
+            />
+          </div>
         {/if}
         <slot {project} {view} {source} {frame} />
       </DataFrameProvider>
@@ -416,6 +461,9 @@
       viewId={view?.id}
       position={settingsMenuPosition}
       showViewTitles={$settings.preferences.showViewTitles ?? true}
+      readonly={sourceReadonly}
+      sources={projectSources}
+      on:saveFilterAsSource={(event) => handleSaveFilterAsSource(event.detail)}
       on:close={closeSettingsMenu}
       on:projectChange={(event) => {
         projectId = event.detail;
@@ -480,9 +528,15 @@
   /* #190: two rows — the nav bar sizes itself, everything else gets the rest.
      A grid rather than a column flex because the overlay layer has to share a
      cell with `.projects-main`, which is what makes the panel start exactly
-     where the header ends without anyone writing the header's height down. */
+     where the header ends without anyone writing the header's height down.
+
+     mobile-k1: the column is `minmax(0, 1fr)`. An implicit column is `auto`,
+     so wide content (navbar, calendar) made it wider than a phone and, with
+     `overflow: hidden` still scrollable programmatically, the root could be
+     shifted sideways. */
   .projects-container {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     height: 100%;
     overflow: hidden;
@@ -506,6 +560,59 @@
     overscroll-behavior: contain;
   }
 
+  /* ios-s1. `View`'s root is `height: 100%` of its parent. When a filter row
+     sat above it in this column (removed in chrome-filters; filtering lives in
+     the settings Filters tab), every view was one row taller than its room and
+     the bottom of a board, calendar or agenda — which contain their own
+     overscroll — could never be scrolled into reach. The wrapper stays so that
+     anything ever placed above the view again cannot reopen that: a flexed
+     item with a zero basis in a column of definite height has a definite
+     height, so the view's `100%` resolves to what is left. */
+  .ppp-view-fill {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  /* ios-s1 — the end of each view above Obsidian's bottom bar.
+
+     The host variable, not a measurement and not our own arithmetic:
+     Obsidian (1.13 app.css) defines `--view-bottom-spacing` on `.is-phone`,
+     0 by default and navbar height + home-indicator inset under
+     `.is-floating-nav` / `.auto-full-screen`, and its own Bases view reserves
+     exactly this at the end of its card and table containers. Reading the
+     same value keeps us level with the host, never doubles it, and is 0 on
+     desktop and tablets (unset there, hence the fallback).
+
+     The space goes INSIDE the box that actually scrolls each view, so content
+     still slides under the translucent bar and the last item can be lifted
+     above it. Each scroller below owns it once; nothing above them is shrunk.
+     The ones another component owns are reached from here, the way the
+     short-landscape rule below already reaches the navbar:
+       - the dashboard scrolls in its `ViewContent`; the canvas root fills that
+         at `min-height: 100%`, so the space is its own bottom padding, inside
+         that 100%;
+       - the calendar's month and year layers scroll in their `ViewContent`
+         the same way (week/day/timeline scroll in their own wrapper, which
+         reserves the space itself in InfiniteHorizontalCalendar). */
+  .projects-main :global(.ppp-database-root),
+  .projects-main :global(.view-layer--month.view-layer--active),
+  .projects-main :global(.view-layer--year.view-layer--active) {
+    box-sizing: border-box;
+    padding-bottom: var(--view-bottom-spacing, 0);
+  }
+
+  /* ios-s1: on touch the settings panel is capped at the window below the
+     plugin navbar (SettingsMenuPopover's `--below-nav`) and scrolls as one,
+     so its "Done" footer ended under the host bar. A trailing spacer of the
+     host's own height lets it scroll clear; a spacer rather than padding
+     because the panel is a flex column, where end padding is not reliably
+     part of the scrollable overflow in WebKit. */
+  .projects-container :global(.settings-popover--below-nav::after) {
+    content: "";
+    flex: none;
+    height: var(--view-bottom-spacing, 0);
+  }
+
   /* #190. No size of its own: it IS the second grid row, in the same cell as
      `.projects-main`.
 
@@ -523,5 +630,38 @@
     overflow: clip;
     pointer-events: none;
     z-index: var(--ppp-z-overlay);
+  }
+
+  /* ios-l1 L1 — short landscape. A phone on its side leaves the plugin well
+     under 18rem of height, and a two-row navbar took much of it before the
+     view began. Here the chrome is one row: tab icon and label side by side at
+     the same 2.75rem touch height. (The filter row this rule once folded away
+     is gone everywhere since chrome-filters.)
+
+     One query, kept on the shell, so the components it reaches into cannot
+     disagree about when the phone is "short". `em` in a media query is
+     the initial font size, so 30em does not move with the theme. Only the
+     rows inside the grid change: the navbar stays in row 1 and the #190 layer
+     in row 2, so nothing anchored to the navbar's bottom edge moves. */
+  @media (orientation: landscape) and (max-height: 30em) {
+    /* The sheet stops at the navbar instead of covering it; its own
+       `overflow-y: auto` scrolls whatever no longer fits. 85vh stays the
+       fallback until the first measurement lands. The room measured here runs
+       to the window's bottom edge, under Obsidian's bar; the sheet keeps the
+       host's `--view-bottom-spacing` clear INSIDE this cap (FloatingPopup), so
+       the cap itself is not reduced a second time. */
+    .projects-container {
+      --ppp-bottom-sheet-max-h: var(--ppp-below-nav-h, 85vh);
+    }
+
+    .projects-container :global(.compact-navbar) {
+      padding-block: 0;
+    }
+
+    .projects-container :global(.view-switcher .view-item) {
+      flex-direction: row;
+      gap: 0.375rem;
+      padding-block: 0;
+    }
   }
 </style>

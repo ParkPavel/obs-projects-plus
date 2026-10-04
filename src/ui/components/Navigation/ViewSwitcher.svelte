@@ -6,6 +6,8 @@
   import type { ViewDefinition, ViewId } from "src/settings/settings";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onDestroy } from "svelte";
+  import { getTabStripScrollLeft } from "./tabStripScroll";
+  import { getScrollBehavior } from "src/lib/helpers/animation";
 
   export let views: ViewDefinition[] = [];
   export let activeViewId: ViewId | undefined;
@@ -77,7 +79,9 @@
 
     const nextView = views[nextIndex];
     if (nextView) {
-      buttonRefs[nextIndex]?.focus();
+      // preventScroll: a plain focus() scrolls every ancestor into view too.
+      buttonRefs[nextIndex]?.focus({ preventScroll: true });
+      centerTab(nextIndex);
       onSelect?.(nextView.id);
       event.preventDefault();
     }
@@ -86,8 +90,45 @@
   function handleButtonClick(viewId: ViewId, index: number) {
     if (touchHandled) return;
     onSelect?.(viewId);
-    // v3.2.1: Scroll the selected tab into view for better visibility
-    buttonRefs[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    centerTab(index);
+  }
+
+  // Scrolls only the strip. scrollIntoView would also scroll
+  // `.projects-container` and clip the left edge of the view on phones.
+  // The default is read per call: the helper follows the animation preference.
+  function centerTab(index: number, behavior: ScrollBehavior = getScrollBehavior()) {
+    const tab = buttonRefs[index];
+    if (!tab || !viewSwitcherElement) return;
+    const stripRect = viewSwitcherElement.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    viewSwitcherElement.scrollTo({
+      left: getTabStripScrollLeft({
+        clientWidth: viewSwitcherElement.clientWidth,
+        scrollWidth: viewSwitcherElement.scrollWidth,
+        scrollLeft: viewSwitcherElement.scrollLeft,
+        tabLeft: tabRect.left - stripRect.left,
+        tabWidth: tabRect.width,
+        rtl: getComputedStyle(viewSwitcherElement).direction === "rtl",
+      }),
+      behavior,
+    });
+  }
+
+  // When the strip's width changes (e.g. the active view mounts extra navbar
+  // controls and the strip shrinks), the active tab can end up outside the
+  // visible area while scrollLeft stays put. Re-centre it without animation.
+  // Kept as a separate function so the observer's reactive block below does
+  // not take `views` / `activeViewId` as dependencies.
+  let lastStripWidth = -1;
+  function recenterActiveTabOnResize() {
+    if (!viewSwitcherElement) return;
+    const width = viewSwitcherElement.clientWidth;
+    const previous = lastStripWidth;
+    lastStripWidth = width;
+    // The first observation is the initial layout, not a resize.
+    if (previous < 0 || previous === width) return;
+    const index = views.findIndex((view) => view.id === activeViewId);
+    if (index >= 0) centerTab(index, "auto");
   }
 
   function getViewIcon(type: string): string {
@@ -113,7 +154,7 @@
   function scrollByStep(direction: -1 | 1) {
     if (!viewSwitcherElement) return;
     const step = Math.max(viewSwitcherElement.clientWidth * 0.6, 120);
-    viewSwitcherElement.scrollBy({ left: step * direction, behavior: "smooth" });
+    viewSwitcherElement.scrollBy({ left: step * direction, behavior: getScrollBehavior() });
   }
 
   // Re-check indicators when views list changes, on scroll, and on resize.
@@ -126,7 +167,11 @@
   let resizeObserver: ResizeObserver | null = null;
   $: if (viewSwitcherElement && typeof ResizeObserver !== "undefined") {
     resizeObserver?.disconnect();
-    resizeObserver = new ResizeObserver(() => updateScrollIndicators());
+    lastStripWidth = -1;
+    resizeObserver = new ResizeObserver(() => {
+      recenterActiveTabOnResize();
+      updateScrollIndicators();
+    });
     resizeObserver.observe(viewSwitcherElement);
   }
   onDestroy(() => {
@@ -214,12 +259,15 @@
     position: relative;
     display: flex;
     align-items: stretch;
-    /* #041: claim available middle space in CompactNavBar flex layout
-       (project trigger + container + .right). Without `flex: 1 1 auto`
-       the container takes natural content width → tabs overflow the navbar
-       instead of activating the inner scroll + chevrons. */
-    flex: 1 1 auto;
+    /* #041: claim the space CompactNavBar's actions leave, so the inner scroll
+       and chevrons engage instead of the tabs overflowing the navbar.
+       ios-l1 L3: basis 0, not auto — the strip's column is bounded by what
+       is left, never by its tabs' width — and `clip` makes that column's edge
+       the edge of everything the strip paints, fades and chevrons included.
+       `clip`, not `hidden`: this box must not become a second scroller. */
+    flex: 1 1 0;
     min-width: 0;
+    overflow: clip;
   }
 
   /* Edge-fade masks indicate scrollable content on either side. */
@@ -253,14 +301,14 @@
     width: 1.5rem;
     height: 1.5rem;
     padding: 0;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: 50%;
     background: var(--background-primary);
     color: var(--text-muted);
     font-size: 1rem;
     line-height: 1;
     cursor: pointer;
-    box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-s);
   }
   .view-switcher-chevron:hover {
     background: var(--background-modifier-hover);
@@ -345,6 +393,26 @@
     .view-item span {
       font-size: 0.625rem;
       max-width: 3rem;
+    }
+  }
+
+  /* ios-r1: on touch the label is held at the phone text floor (11 pt or
+     the host's smaller UI size). Coarse pointer rather than a width query:
+     the floor is about reading at arm's length on a touch screen, and a
+     narrow pane on a desktop keeps its density. One line with an ellipsis,
+     so the larger label cannot wrap and grow the 2.75rem tab. */
+  @media (pointer: coarse) {
+    .view-item span {
+      font-size: var(--ppp-text-floor);
+      white-space: nowrap;
+    }
+  }
+
+  /* The narrow cap above was 3rem at a 0.625rem label, about eight
+     characters. Held in em so the larger label keeps the same count. */
+  @media (pointer: coarse) and (max-width: 30rem) {
+    .view-item span {
+      max-width: 4.8em;
     }
   }
 </style>

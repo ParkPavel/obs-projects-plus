@@ -2,6 +2,7 @@
   import { i18n } from "src/lib/stores/i18n";
   import type { ChartData, ChartStyle } from "../../types";
   import { createEventDispatcher } from "svelte";
+  import { isTouchDevice } from "src/lib/stores/ui";
   import { computeAxisLabelLayout, labelAnchor, shouldRenderLabel, truncateLabel } from "./axisLabels";
   import { axisTicks, gappedPath, runSegments, scaleOf, scaleY, seriesScales, type AxisScale } from "./chartScale";
 
@@ -34,6 +35,9 @@
     plotWidth: width - PADDING_LEFT - PADDING_RIGHT,
     fontSize: LABEL_FONT,
     maxLabelChars,
+    // ios-m1: on touch the axis text is drawn at the phone floor (style
+    // below), so the slots are sized for that, not for LABEL_FONT.
+    coarse: $isTouchDevice,
   });
   // Bottom padding reconciles with the (possibly rotated) label height.
   $: paddingBottom = style.showLabels ? axisLabels.bottomPadding : 16;
@@ -194,7 +198,7 @@
           <text
             x={xPos(i, stepX)} y={plotH + 16}
             text-anchor={labelAnchor(i, labels.length, axisLabels.rotate)}
-            fill="var(--text-normal)" font-size={LABEL_FONT}
+            fill="var(--text-normal)" font-size={LABEL_FONT} class="ppp-chart-axis-label"
             transform={axisLabels.rotate ? `rotate(${axisLabels.rotationDeg} ${xPos(i, stepX)} ${plotH + 16})` : ""}
           >{truncateLabel(label, axisLabels.truncateAt)}</text>
         {/if}
@@ -248,5 +252,19 @@
     outline: none;
     stroke: var(--interactive-accent);
     stroke-width: 2;
+  }
+
+  /* ios-m1: axis text (category labels, value ticks) at the phone text floor
+     on touch, as ScatterChart does. One user unit is one CSS pixel
+     (chartWidth.ts); the category slots and the bottom padding are laid out
+     for the larger size (axisLabelFont), so labels thin or rotate rather
+     than overlap. The value ticks sit in the 50-unit side margins. A CSS
+     font-size overrides the presentation attribute; container-scoped
+     (R0.16), so the token alone. */
+  @media (pointer: coarse) {
+    .ppp-chart-tick,
+    .ppp-chart-axis-label {
+      font-size: var(--ppp-text-floor);
+    }
   }
 </style>

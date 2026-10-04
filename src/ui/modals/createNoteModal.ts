@@ -33,6 +33,8 @@ export class CreateNoteModal extends Modal {
   ) {
     super(app);
     this.containerEl.addClass("projects-modal");
+    // Shared plugin modal root: phone input size, reduced motion (tokens.css).
+    this.containerEl.addClass("ppp-modal");
   }
 
   getNewNotesFolder(project: ProjectDefinition) {

@@ -30,6 +30,8 @@ export class CreateFieldModal extends Modal {
     readonly recordCount: number = 0
   ) {
     super(app);
+    // Shared plugin modal root: phone input size, reduced motion (tokens.css).
+    this.containerEl.addClass("ppp-modal");
   }
 
   onOpen() {

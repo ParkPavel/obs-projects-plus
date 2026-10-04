@@ -17,6 +17,7 @@
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import { portal } from "src/ui/portal";
   import { isMobile } from "src/lib/stores/ui";
+  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
 
   // ── Public types ───────────────────────────────────────────
   type PopupPlacement =
@@ -163,10 +164,10 @@
     const vw = view.innerWidth;
     const vh = view.innerHeight;
 
-    // coercion-exempt: Class C - a computed CSS length read back from the DOM, not record data
-    const baseFontPx = parseFloat(
-      view.getComputedStyle(doc.documentElement).fontSize || "16"
-    );
+    // The root of the popup's own document (#192), read once for the offsets
+    // below and for writing the result back in rem; 16 when it reports none.
+    const baseFontPx = rootFontPx(doc);
+
     const offsetPx = offsetRem * baseFontPx;
     const marginPx = 0.5 * baseFontPx;
 
@@ -221,7 +222,7 @@
         ? Math.min(viewportWidthCap, cssMaxWidth)
         : viewportWidthCap;
 
-    style = `top: ${clampedTop}px; left: ${clampedLeft}px; max-width: ${Math.max(0, widthCap)}px;`;
+    style = `top: ${remAt(clampedTop, baseFontPx)}; left: ${remAt(clampedLeft, baseFontPx)}; max-width: ${remAt(Math.max(0, widthCap), baseFontPx)};`;
   }
 
   async function focusFirst(): Promise<void> {
@@ -368,7 +369,7 @@
     position: fixed;
     inset: 0;
     z-index: var(--ppp-z-overlay, 30);
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--background-modifier-cover);
     animation: ppp-backdrop-in var(--ppp-duration-fast, 100ms) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1)) forwards;
   }
 
@@ -382,13 +383,33 @@
     bottom: 0;
     left: 0;
     right: 0;
+    /* A caller may cap this at a measured room (App's short-landscape rule),
+       so the padding has to count inside the cap, not on top of it. */
+    box-sizing: border-box;
     max-height: var(--ppp-bottom-sheet-max-h, 85vh);
     overflow-y: auto;
     background: var(--background-primary);
     border-radius: var(--ppp-bottom-sheet-radius, 1rem 1rem 0 0);
-    box-shadow: 0 -0.25rem 1rem rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -0.25rem 1rem var(--background-modifier-box-shadow);
     padding: var(--ppp-space-4, 0.5rem);
     animation: ppp-sheet-in var(--ppp-duration-fast, 100ms) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1)) forwards;
+  }
+
+  /* ios-s1: the sheet is pinned to the window's bottom edge, which on a phone
+     with Obsidian's floating navbar is under that bar — "Добавить условие" sat
+     at 786..830 against a bar starting at 760, and a tap on it landed on the
+     host bar and closed the sheet. The sheet's background may run under the
+     bar; its content may not. A trailing spacer of Obsidian's own
+     `--view-bottom-spacing` (app.css, `.is-phone`: 0 by default, navbar +
+     home-indicator inset with the floating nav; Bases reserves the same
+     value) keeps the last control above the bar. It is inside the box, so it
+     counts within any cap (`--ppp-bottom-sheet-max-h` included) and the
+     content's room shrinks by exactly the obstruction, never twice. 0 and
+     unset — desktop, tablets — change nothing. */
+  .ppp-popup--bottom-sheet::after {
+    content: "";
+    display: block;
+    height: var(--view-bottom-spacing, 0);
   }
 
   @keyframes ppp-sheet-in {
@@ -400,7 +421,7 @@
     width: var(--ppp-bottom-sheet-handle-w, 2.5rem);
     height: var(--ppp-bottom-sheet-handle-h, 0.25rem);
     background: var(--background-modifier-border);
-    border-radius: var(--ppp-radius-full, 9999px);
+    border-radius: var(--ppp-radius-full, 624.9375rem);
     margin: 0 auto var(--ppp-space-4, 0.5rem);
   }
 </style>

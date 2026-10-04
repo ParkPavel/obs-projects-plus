@@ -9,6 +9,7 @@
   import AdvancedFilterEditor from './AdvancedFilterEditor.svelte';
   import AgendaIconPicker from './AgendaIconPicker.svelte';
   import { calendarLogger } from '../logger';
+  import { toRem } from 'src/ui/utils/cssLength';
   
   // Generate unique ID
   function generateId(): string {
@@ -160,7 +161,7 @@
     if (!vv) return;
     const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     contentEl.style.paddingBottom = keyboardHeight > 0
-      ? `${keyboardHeight + 16}px`
+      ? toRem(keyboardHeight + 16, contentEl.ownerDocument)
       : '';
   }
 
@@ -390,7 +391,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.625rem 1rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     background: var(--background-primary);
     flex-shrink: 0;
     gap: 0.5rem;
@@ -501,7 +502,7 @@
   
   .field-group--filters {
     padding-top: var(--ppp-spacing-md, 1rem);
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
     /* v3.3.3: Reverted to overflow:visible — overflow:hidden was clipping nested filter
        group content on narrow/short screens. Popovers are portaled to document.body
        (fixed positioning, z-index 10000) so they don't need overflow escape from here.
@@ -570,7 +571,7 @@
     width: 100%;
     padding: 0.35rem 0.6rem;
     min-height: 2rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     background: var(--background-primary);
     color: var(--text-normal);
@@ -600,7 +601,7 @@
     width: 100%;
     padding: 0.3rem 0.6rem;
     min-height: 2rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     background: var(--background-primary);
     color: var(--text-normal);
@@ -633,7 +634,7 @@
   
   .icon-picker-wrapper {
     margin-top: var(--ppp-spacing-xs, 0.375rem);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--ppp-radius-md, 0.375rem);
     overflow: hidden;
     max-height: 16rem;
@@ -648,7 +649,7 @@
     width: 100%;
     padding: 0.3rem 0.6rem;
     min-height: 2rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s);
     background: var(--background-primary);
     color: var(--text-normal);
@@ -665,7 +666,7 @@
     width: 1.5rem;
     height: 1.5rem;
     border-radius: var(--ppp-radius-sm, 0.25rem);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
   }
   
   .color-value {
@@ -695,7 +696,7 @@
   
   .color-picker-wrapper {
     margin-top: var(--ppp-spacing-xs, 0.375rem);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--ppp-radius-md, 0.375rem);
     overflow: hidden;
   }
@@ -704,7 +705,7 @@
   .color-preview {
     margin-top: var(--ppp-spacing-sm, 0.5rem);
     padding: var(--ppp-spacing-sm, 0.5rem);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-left: 0.25rem solid var(--list-color);
     border-radius: var(--ppp-radius-md, 0.375rem);
     background: var(--background-secondary);
@@ -756,7 +757,7 @@
     justify-content: flex-end;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
     background: var(--background-primary);
     flex-shrink: 0;
   }

@@ -134,7 +134,7 @@
     left: var(--pill-focus-left-adjust);
     height: 100%;
     box-shadow: 0 0 0 0.0625rem var(--background-modifier-border-focus),
-      inset 0 0 0 1px var(--background-modifier-border-focus);
+      inset 0 0 0 var(--ppp-border-width) var(--background-modifier-border-focus);
   }
 
   .duplicate {

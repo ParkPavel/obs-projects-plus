@@ -6,6 +6,7 @@
  */
 
 import "@testing-library/jest-dom";
+import { rootFontPx } from "src/ui/utils/cssLength";
 
 // Make isMobile a writable store so tests can flip mobile/desktop modes.
 jest.mock("src/lib/stores/ui", () => {
@@ -129,9 +130,11 @@ describe("FloatingPopup", () => {
 
     const popup = document.querySelector(".ppp-popup--floating") as HTMLElement;
     const styleAttr = popup?.getAttribute("style") ?? "";
-    // top should be near trigger.bottom (120) + offset (~4px at 16px root font).
-    expect(styleAttr).toMatch(/top:\s*\d+px/);
-    expect(styleAttr).toMatch(/left:\s*\d+px/);
+    // top should be near trigger.bottom (120) + offset (0.25rem). R0.3b: the
+    // position is written in rem against the root font size, never in px.
+    expect(styleAttr).toMatch(/top:\s*[\d.]+rem/);
+    expect(styleAttr).toMatch(/left:\s*[\d.]+rem/);
+    expect(styleAttr).not.toMatch(/px/);
 
     view.destroy();
   });
@@ -152,14 +155,18 @@ describe("FloatingPopup", () => {
     const popup = document.querySelector(".ppp-popup--floating") as HTMLElement;
     const styleAttr = popup?.getAttribute("style") ?? "";
 
-    const leftMatch = styleAttr.match(/left:\s*([\d.]+)px/);
-    const capMatch = styleAttr.match(/max-width:\s*([\d.]+)px/);
+    // R0.3b: written in rem; the geometry is checked in CSS pixels by
+    // multiplying back by the root font size the component itself read
+    // (jsdom reports none, so this is the helper's 16 fallback).
+    const leftMatch = styleAttr.match(/left:\s*([\d.]+)rem/);
+    const capMatch = styleAttr.match(/max-width:\s*([\d.]+)rem/);
     expect(leftMatch).not.toBeNull();
     expect(capMatch).not.toBeNull();
 
-    const left = parseFloat(leftMatch![1]!);
-    const cap = parseFloat(capMatch![1]!);
-    const margin = 8; // 0.5rem at 16px root font
+    const root = rootFontPx(document);
+    const left = parseFloat(leftMatch![1]!) * root;
+    const cap = parseFloat(capMatch![1]!) * root;
+    const margin = 0.5 * root; // 0.5rem
     // Left pinned at margin, and origin + cap stays inside the right margin.
     expect(left).toBeGreaterThanOrEqual(margin - 0.5);
     expect(left + cap).toBeLessThanOrEqual(1024 - margin + 0.5);

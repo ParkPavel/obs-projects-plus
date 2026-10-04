@@ -456,7 +456,7 @@
   .ppp-fc-textarea {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-secondary);
     color: var(--text-normal);
@@ -590,7 +590,7 @@
     margin-top: 0.25rem;
     padding: 0.375rem 0.5rem;
     background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     font-size: var(--font-ui-smaller);
   }

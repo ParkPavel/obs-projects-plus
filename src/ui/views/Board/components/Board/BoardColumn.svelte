@@ -10,9 +10,14 @@
     OnRecordDrop,
     OnColumnCollapse,
   } from "./types";
+  import type { BoardThumbnailLayout } from "../../types";
+  import type { CardFrame, NormalizedCardFrames } from "src/ui/components/SharedCard/cardFrames";
   import { openContextMenu } from "src/lib/contextMenu";
+  import { toRem } from "src/ui/utils/cssLength";
 
+  /** Column width in CSS pixels, as measured and stored; written back in rem. */
   export let width: number;
+  $: widthLength = toRem(width);
 
   export let name: string;
   export let records: DataRecord[];
@@ -24,6 +29,12 @@
   export let includeFields: DataField[];
   export let customHeader: DataField | undefined;
   export let iconField: DataField | undefined = undefined;
+  /** cards-g4 — card thumbnails, passed through to the card list. */
+  export let thumbnailLayout: BoardThumbnailLayout = "none";
+  export let coverField: DataField | undefined = undefined;
+  /** cards-g5 — saved card frames and their change route, passed through to the card list. */
+  export let cardFrames: NormalizedCardFrames = { view: {}, byRecord: {} };
+  export let onCardFrameChange: ((recordId: string, frame: CardFrame | undefined) => void) | undefined = undefined;
   export let pinned: boolean;
   export let collapse: boolean;
   export let persisted: boolean;
@@ -101,7 +112,7 @@
   class:collapse
   class:pinned
   class:persisted
-  style={`width: ${width}px; min-width: ${width}px; max-width: ${width}px;${collapse ? ` margin-right: ${48 - width}px;` : ''}`}
+  style={`width: ${widthLength}; min-width: ${widthLength}; max-width: ${widthLength};${collapse ? ` margin-right: ${toRem(48 - width)};` : ''}`}
 >
   <ColumnHeader
     value={name}
@@ -120,7 +131,12 @@
     onColumnPersist={() => onColumnPersist(name)}
     onColumnCollapse={() => onColumnCollapse(name)}
     {onValidate}
-  />
+  >
+    <svelte:fragment slot="grip">
+      <!-- cards-g1: the drag grip Board passes for an expanded, unpinned column. -->
+      <slot name="grip" />
+    </svelte:fragment>
+  </ColumnHeader>
 
   {#if !collapse}
     <CardGroup
@@ -130,6 +146,10 @@
       readOnly={dataReadOnly}
       {customHeader}
       {iconField}
+      {thumbnailLayout}
+      {coverField}
+      {cardFrames}
+      {onCardFrameChange}
       {onRecordClick}
       {checkField}
       {onRecordCheck}
@@ -162,12 +182,14 @@
     display: flex;
     align-items: center;
     padding: 0.25rem 0.5rem;
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .projects--board--column-footer-count {
     font-size: 0.75rem;
-    color: var(--text-faint);
+    /* theme-compat: --text-faint measured 2.30:1 (light) and 2.97:1 (dark)
+       against the column; --text-muted reaches WCAG AA. */
+    color: var(--text-muted);
     user-select: none;
   }
 
@@ -184,7 +206,7 @@
 
   .collapse {
     transform: rotate(-90deg) translateX(-100%);
-    transform-origin: left top 0px;
+    transform-origin: left top 0;
     height: 3rem;
     overflow: hidden;
   }

@@ -180,13 +180,15 @@
   
   .duplicate-header-strip-segment-phantom {
     opacity: 0.75;
-    border: 0.125rem dashed rgba(255, 255, 255, 0.9);
+    /* theme-compat: the marks are the segment's own text colour (set on
+       .duplicate-header-strip-segment over the record's colour). */
+    border: 0.125rem dashed color-mix(in srgb, currentColor 90%, transparent);
     background: repeating-linear-gradient(
       45deg,
       transparent,
       transparent 0.1875rem,
-      rgba(255, 255, 255, 0.1) 0.1875rem,
-      rgba(255, 255, 255, 0.1) 0.375rem
+      color-mix(in srgb, currentColor 10%, transparent) 0.1875rem,
+      color-mix(in srgb, currentColor 10%, transparent) 0.375rem
     ) !important;
   }
   

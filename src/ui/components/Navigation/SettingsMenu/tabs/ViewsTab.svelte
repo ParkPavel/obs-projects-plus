@@ -263,17 +263,13 @@
     left: 0.15625rem;
     transform: translateY(-50%);
     transition: left 0.2s ease;
-    box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0.0625rem 0.1875rem var(--background-modifier-box-shadow);
   }
 
   .toggle-row input[type="checkbox"]:checked::before {
     left: calc(100% - 1.09375rem);
   }
 
-  .toggle-row:hover input[type="checkbox"]:not(:checked) {
-    background: var(--background-modifier-border-hover);
-  }
-  
   .list {
     display: flex;
     flex-direction: column;
@@ -328,10 +324,6 @@
     transition: opacity 0.2s ease;
   }
   
-  .view-item:hover .drag-handle {
-    opacity: 1;
-  }
-  
   .drag-handle:active {
     cursor: grabbing;
   }
@@ -358,14 +350,10 @@
     min-height: 1.75rem;
   }
   
-  .view-name:hover {
-    color: var(--text-accent);
-  }
-  
   .view-name-input {
     flex: 1;
     padding: 0.25rem 0.375rem;
-    border: 1px solid var(--interactive-accent, #7b68ee);
+    border: var(--ppp-border-width) solid var(--interactive-accent, #7b68ee);
     border-radius: 0.25rem;
     background: var(--background-primary);
     color: inherit;
@@ -393,16 +381,6 @@
     transition: all 0.15s ease;
   }
   
-  .action-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-  
-  .action-btn.danger:hover {
-    background: rgba(var(--color-red-rgb, 255, 100, 100), 0.2);
-    color: var(--text-error);
-  }
-  
   .actions {
     display: flex;
     justify-content: flex-end;
@@ -411,7 +389,7 @@
   .ghost {
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     background: transparent;
     color: inherit;
     cursor: pointer;
@@ -419,8 +397,49 @@
     min-height: 2.75rem;
   }
   
-  .ghost:hover {
-    border-color: var(--background-modifier-border-hover);
-    background: var(--background-modifier-hover);
+
+  /* ios-t1: hover tints reach only a pointer that hovers. Collected after the
+     base rules they refine; none shares a property with a later rule of equal
+     weight, so the desktop cascade is unchanged by the move. */
+  @media (hover: hover) and (pointer: fine) {
+    .toggle-row:hover input[type="checkbox"]:not(:checked) {
+      background: var(--background-modifier-border-hover);
+    }
+    .view-item:hover .drag-handle {
+      opacity: 1;
+    }
+    .view-name:hover {
+      color: var(--text-accent);
+    }
+    .action-btn:hover {
+      background: var(--background-modifier-hover);
+      color: var(--text-normal);
+    }
+    .action-btn.danger:hover {
+      background: rgba(var(--color-red-rgb, 255, 100, 100), 0.2);
+      color: var(--text-error);
+    }
+    .ghost:hover {
+      border-color: var(--background-modifier-border-hover);
+      background: var(--background-modifier-hover);
+    }
+  }
+
+  /* ios-t1: rename, duplicate and delete are finger-sized boxes side by side
+     (no gap needed between boxes that do not overlap); the view name gives up
+     width and stays a full-height target. The show-titles switch needs
+     nothing: its whole 2.75rem row is the label that toggles it. */
+  @media (pointer: coarse) {
+    .view-actions {
+      gap: 0;
+    }
+    .action-btn {
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
+    }
+    .view-name {
+      min-width: 0;
+      min-height: var(--ppp-touch-target-min);
+    }
   }
 </style>

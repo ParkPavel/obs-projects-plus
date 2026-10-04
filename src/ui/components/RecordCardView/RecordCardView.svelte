@@ -470,9 +470,11 @@
     -webkit-box-orient: vertical;
   }
 
+  /* theme-compat: an empty state is read, so --text-muted (WCAG AA in the
+     default themes), not --text-faint (2.30:1 light, 2.97:1 dark). */
   .ppp-rcv-empty {
     padding: 1.5rem;
-    color: var(--text-faint);
+    color: var(--text-muted);
     font-style: italic;
     text-align: center;
   }

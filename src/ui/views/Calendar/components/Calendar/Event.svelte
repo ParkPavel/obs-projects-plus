@@ -57,7 +57,7 @@
     transition: background var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease),
                 border-color var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease),
                 box-shadow var(--ppp-duration-normal, 0.15s) var(--ppp-ease-out, ease);
-    border: 1px solid transparent;
+    border: var(--ppp-border-width) solid transparent;
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -67,7 +67,7 @@
   .calendar-event:hover {
     background: var(--background-modifier-hover);
     border-color: var(--background-modifier-border);
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-s);
   }
 
   .calendar-event:active {

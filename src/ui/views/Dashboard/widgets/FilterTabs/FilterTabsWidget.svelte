@@ -116,7 +116,7 @@
     scroll-snap-type: x mandatory;
     gap: 0.25rem;
     padding: 0.25rem 0.5rem;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     scrollbar-width: none;
   }
 
@@ -138,7 +138,7 @@
 
   .ppp-filter-tab {
     padding: 0.25rem 0.75rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: transparent;
     color: var(--text-muted);

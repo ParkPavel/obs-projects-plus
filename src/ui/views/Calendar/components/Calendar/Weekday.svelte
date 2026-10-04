@@ -19,7 +19,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     padding: 0.5rem 0.25rem;
     text-align: center;
     font-size: 0.6875rem;
@@ -38,7 +38,10 @@
     border-right: 0;
   }
 
+  /* theme-compat: --text-faint fell to 2.1-2.6:1 against the calendar
+     header (WCAG AA is 4.5:1); weekends keep a quieter weight instead. */
   .weekend {
-    color: var(--text-faint);
+    color: var(--text-muted);
+    font-weight: var(--font-normal, 400);
   }
 </style>

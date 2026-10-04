@@ -93,11 +93,12 @@
 <style>
   /* #190: `absolute`, so `inset: 0` means the view's overlay layer rather than
      the window — which is what used to dim the neighbouring leaf and Obsidian's
-     own chrome. The dimming itself, its opacity and its timing are unchanged. */
+     own chrome. The dimming itself, its opacity and its timing are unchanged.
+     theme-compat: the dim is the theme's own cover colour. */
   .ppp-slide-in-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.32);
+    background: var(--background-modifier-cover);
     opacity: 0;
     pointer-events: none;
     transition: opacity 200ms cubic-bezier(0, 0, 0.2, 1);

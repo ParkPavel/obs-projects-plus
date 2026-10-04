@@ -126,7 +126,7 @@
     width: 100%;
     box-sizing: border-box;
     background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     backdrop-filter: blur(0.75rem);
     -webkit-backdrop-filter: blur(0.75rem);
   }

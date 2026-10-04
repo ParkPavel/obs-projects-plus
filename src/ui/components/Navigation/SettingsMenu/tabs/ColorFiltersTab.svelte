@@ -350,7 +350,7 @@
   .chip {
     display: inline-flex; align-items: center; gap: 0.25rem;
     height: 1.625rem; padding: 0 0.5rem;
-    border: 1px solid var(--background-modifier-border); border-radius: 0.375rem;
+    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     cursor: pointer; font-size: 0.8125rem; font-family: var(--font-interface);
     white-space: nowrap; line-height: 1; flex-shrink: 0;
@@ -365,7 +365,7 @@
   .value-area { flex: 1; min-width: 3.75rem; }
   .value-input {
     width: 100%; height: 1.625rem;
-    border: 1px solid var(--background-modifier-border); border-radius: 0.375rem;
+    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     font-size: 0.8125rem; font-family: var(--font-interface);
     padding: 0 0.5rem; outline: none; box-sizing: border-box;
@@ -387,16 +387,33 @@
   .add-btn {
     display: flex; align-items: center; justify-content: center;
     gap: 0.375rem; padding: 0.375rem 0.75rem; border-radius: 0.375rem;
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     background: transparent; color: var(--text-muted);
     cursor: pointer; font-size: 0.8125rem; width: 100%;
     transition: border-color 100ms ease, color 100ms ease;
   }
   .add-btn:hover { border-color: var(--interactive-accent); color: var(--text-normal); }
 
+  /* ios-p1: the swatch keeps its 2rem look on touch, but the transparent
+     native input that takes the tap grows to a --ppp-touch-target-min square
+     centred on it, so the colour picker opens from a finger-sized area.
+     The input itself is enlarged rather than given `.ppp-touch-target`:
+     the tap then lands on the input and not on the label that forwards it.
+     The square must not reach the neighbours, so the swatch gets side margins
+     that, with the row gap, put each neighbour half a target away from its
+     centre, and the row is a full target tall so the square stays inside it. */
   @media (pointer: coarse) {
-    .color-row { gap: 0.1875rem; min-height: 2.375rem; }
-    .color-swatch { width: 2rem; height: 2rem; }
+    .color-row { gap: 0.1875rem; min-height: var(--ppp-touch-target-min); }
+    .color-swatch {
+      width: 2rem; height: 2rem;
+      margin-inline: calc((var(--ppp-touch-target-min) - 2rem) / 2 - 0.1875rem);
+    }
+    .color-native {
+      inset: auto;
+      top: 50%; left: 50%;
+      width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min);
+      transform: translate(-50%, -50%);
+    }
     .chip { height: 2rem; padding: 0 0.625rem; font-size: 0.875rem; }
     .value-input { height: 2rem; font-size: 0.875rem; }
     .row-btn { opacity: 1; padding: 0.375rem; }

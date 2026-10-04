@@ -92,7 +92,9 @@ Each block can have its own source and filters. If two blocks show different rec
 
 Choose a grouping field such as `status`. Its values become columns. Dragging a card into another column changes the grouping field in the note, provided the record is writable.
 
-Use the grip icon to move cards and columns. Persistent columns keep workflow stages visible even when empty. Use consistent values for a shared process: `todo`, `doing`, and `done` are easier to maintain than several spellings of the same status.
+Use the grip to move cards and columns: a card's grip is the strip along its left edge, a column's grip leads its header. A pinned or read-only column cannot be dragged. Persistent columns keep workflow stages visible even when empty.
+
+In the view settings (gear → View) a board can show a cover from an image field on each card: on top, as a small square at the left, or none. A card without an image shows no thumbnail. Use consistent values for a shared process: `todo`, `doing`, and `done` are easier to maintain than several spellings of the same status.
 
 ### Calendar and Agenda
 
@@ -106,11 +108,13 @@ Agenda is a sidebar with event lists. You can select a day and configure filters
 
 ### Gallery
 
-Gallery displays records as cards. Choose a cover field and the properties to show on each card. If an image is missing, check the field value and whether the image file is available. A card's title opens the record's edit dialog, from which the note itself can be opened; in a read-only gallery the title opens the note directly. The card's menu opens the note in a new tab or window.
+Gallery displays records as cards. In the view settings (gear → View) choose the cover field, the layout (grid, masonry or list), the card size (S, M, L or a width), the cover proportions and whether the image fills or fits its frame. The "Fields on the card" section lists the fields a card shows, in their order: move a field up or down, hide it, or show another one; computed fields (formulas and rollups) are marked ƒ, and field names can be shown or hidden.
+
+Cards can be resized: drag the handle at a card's lower right corner (or focus it and use the arrow keys). The size is saved in the view settings, for one card or, through "Card height" in the settings, for all cards of the view; "Reset all card frames" clears them. In a board the frame sets a card's height. If an image is missing, check the field value and whether the image file is available. A card's title opens the record's edit dialog, from which the note itself can be opened; in a read-only gallery the title opens the note directly. The card's menu opens the note in a new tab or window.
 
 ## Filters, formulas, and relations
 
-A filter limits displayed records; it does not delete notes. Conditions can be combined using “all” or “any.” Project, view, and block filters act at different levels: clearing one filter does not necessarily clear the others.
+A filter limits displayed records; it does not delete notes. A view's filter lives in its settings (gear → Filters): the tab shows how many conditions are active, clears them all, and saves the filtered selection as a separate source ("Save as source") for other views and blocks. Conditions can be combined using “all” or “any.” Project, view, and block filters act at different levels: clearing one filter does not necessarily clear the others.
 
 Formulas calculate values from fields. Begin with a small expression over numeric fields, such as `budget - spent`. Check the result against a known record before using it in summary statistics. The built-in editor helps you choose fields and functions; valid operations depend on data types.
 
@@ -188,7 +192,7 @@ Assign global command shortcuts in Obsidian's Hotkeys settings. The plugin does 
 | Return to the previous position | `Backspace` |
 | Close the day overview | `Escape` |
 
-These shortcuts are not intercepted while typing into a field. On touch screens, the calendar supports swiping between periods and a two-finger zoom gesture. To drag on the board, start from the grip icon; use ordinary scrolling to browse. Individual gestures depend on the platform and view mode.
+These shortcuts are not intercepted while typing into a field. On touch screens, the calendar supports swiping between periods and a two-finger zoom gesture. To drag on the board, start from a grip; use ordinary scrolling to browse. A swipe that starts inside the plugin scrolls the plugin; only a swipe from the screen edge opens Obsidian's side panels. Individual gestures depend on the platform and view mode.
 
 ## Settings and troubleshooting
 

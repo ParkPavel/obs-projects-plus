@@ -64,7 +64,7 @@
 <style>
   input {
     border-radius: var(--ppp-radius-xl);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     background-color: var(--background-primary);
     font-family: var(--font-default);
     padding: var(--ppp-padding-sm) var(--ppp-padding-md);

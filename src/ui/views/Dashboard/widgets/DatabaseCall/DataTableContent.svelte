@@ -30,6 +30,7 @@
   import { updateRecordValues } from "src/lib/datasources/helpers";
   import { openContextMenu } from "src/lib/contextMenu";
   import { emitCommand } from "src/lib/stores/commandBus";
+  import { toRem } from "src/ui/utils/cssLength";
   import { buildRowMenuEntries, createNamedRecord, isRowDriving, toggleRowSelection } from "./tableRowOps";
   import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools } from "./tableHeaderOps";
   import {
@@ -203,7 +204,7 @@
         on:resizeCommit={handleResizeCommit}
         on:addProperty={() => emitCommand("add-field")}
       />
-      {#if start > 0}<div style:height={`${start * rowPx}px`} aria-hidden="true" />{/if}
+      {#if start > 0}<div style:height={toRem(start * rowPx)} aria-hidden="true" />{/if}
       {#each windowed as row (row.kind === "record" ? row.record.id : `g:${row.key}`)}
         {#if row.kind === "group"}
           <TableGroupSection
@@ -231,7 +232,7 @@
           />
         {/if}
       {/each}
-      {#if end < renderRows.length}<div style:height={`${(renderRows.length - end) * rowPx}px`} aria-hidden="true" />{/if}
+      {#if end < renderRows.length}<div style:height={toRem((renderRows.length - end) * rowPx)} aria-hidden="true" />{/if}
       {#if !readonly && project}
         <TableNewRow openSignal={newRowSignal} on:create={(e) => { if (project) createNamedRecord(e.detail, project, fields, api); }} />
       {/if}

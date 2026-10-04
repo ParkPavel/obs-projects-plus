@@ -12,6 +12,7 @@
   import ProgressChart from "./ProgressChart.svelte";
   import ScatterChart from "./ScatterChart.svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import { toRem } from "src/ui/utils/cssLength";
   import { getContext } from "svelte";
   import {
     SELECTION_CONTEXT_KEY,
@@ -161,7 +162,7 @@
   }
 </script>
 
-<div class="ppp-chart-widget" class:ppp-chart-widget--degenerate={isDegenerate} style={isDegenerate ? "" : `min-height: ${heightPx}px`} bind:contentRect>
+<div class="ppp-chart-widget" class:ppp-chart-widget--degenerate={isDegenerate} style={isDegenerate ? "" : `min-height: ${toRem(heightPx)}`} bind:contentRect>
   {#if isDegenerate}
     <div class="ppp-chart-degenerate-hint" role="note">
       <span class="ppp-chart-degenerate-hint__icon" aria-hidden="true">⚠</span>

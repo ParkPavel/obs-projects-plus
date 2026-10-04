@@ -78,7 +78,7 @@
     font-size: var(--font-ui-small);
     color: var(--text-muted);
     background: transparent;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     cursor: pointer;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;

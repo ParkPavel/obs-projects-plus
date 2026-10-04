@@ -20,7 +20,7 @@
 
 <style>
   section {
-    border-top: 1px solid var(--background-modifier-border);
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   div {

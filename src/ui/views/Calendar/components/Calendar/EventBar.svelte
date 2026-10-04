@@ -35,29 +35,18 @@
   export let processedRecord: ProcessedRecord | undefined = undefined;
   /** v3.2.0 DnD: TimelineDragManager instance */
   export let dragManager: TimelineDragManager | undefined = undefined;
-  /** v3.2.0 DnD: Whether drag is currently active on this bar */
+  /**
+   * v3.2.0 DnD: the drag of this bar's record is running. Dims the bar and
+   * takes it out of hit-testing (`barDragView(...).dimmed`).
+   */
   export let isDragging: boolean = false;
-  
-  /** v3.2.6: Whether mobile long-press DnD mode is active (show handles) */
-  import { onDestroy } from 'svelte';
-  let longPressActiveValue = false;
-  let unsubLongPress: (() => void) | undefined;
-  // Use a function call to break Svelte's dependency tracking on unsubLongPress.
-  // A $: block that both reads and writes the same variable creates an infinite
-  // reactive loop (Svelte flush do...while never terminates). The function body
-  // is NOT analyzed for $: dependencies — only `dragManager` is tracked.
-  $: updateLongPressSubscription(dragManager);
-  function updateLongPressSubscription(dm: typeof dragManager) {
-    unsubLongPress?.();
-    if (dm) {
-      unsubLongPress = dm.longPressActive.subscribe(v => { longPressActiveValue = v; });
-    } else {
-      longPressActiveValue = false;
-      unsubLongPress = undefined;
-    }
-  }
-  onDestroy(() => { unsubLongPress?.(); });
-  
+  /**
+   * v3.2.6 / ios-p1: a touch long press is armed on this bar's record, the
+   * re-grab window after a touch drag included. Shows the resize handles and
+   * the ring without dimming (`barDragView(...).handlesVisible`).
+   */
+  export let showHandles: boolean = false;
+
   // Calculate position and height in REM (Matryoshka principle)
   $: {
     const startMinutes = startDate.hour() * 60 + startDate.minute();
@@ -183,8 +172,9 @@
   <button 
     class="projects-calendar-event-bar projects-calendar-event-bar-clickable"
     class:dnd-dragging={isDragging}
-    class:dnd-handles-visible={longPressActiveValue && isDragging}
+    class:dnd-handles-visible={showHandles}
     type="button"
+    data-record-id={record.id}
     style="
       top: {topRem}rem; 
       height: {heightRem}rem; 
@@ -218,8 +208,9 @@
     {/if}
   </button>
 {:else}
-  <div 
+  <div
     class="projects-calendar-event-bar"
+    data-record-id={record.id}
     style="
       top: {topRem}rem; 
       height: {heightRem}rem; 
@@ -268,9 +259,18 @@
     font-size: inherit;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    /* v3.3.4: none prevents browser from committing to scroll on touchstart,
-       keeping touchmove events cancelable so DnD drag can preventDefault */
-    touch-action: none;
+    /* ios-d1: pan-y, not none (v3.3.4), so a vertical pan that starts on a bar
+       scrolls the timeline. The drag still owns the touch: TimelineDragManager
+       drops a press that drifts past its slop before the browser's own pan
+       slop, and after the long press it cancels the first touchmove, which is
+       still cancelable because no scroll has begun. Horizontal stays with the
+       GestureCoordinator, as before. */
+    touch-action: pan-y;
+    /* A held finger must not select the title or raise the iOS callout: either
+       takes the touch away from the drag. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   
   button.projects-calendar-event-bar {
@@ -279,7 +279,7 @@
   
   button.projects-calendar-event-bar:hover {
     background: color-mix(in srgb, var(--event-color) 25%, transparent);
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-s);
     z-index: 10;
   }
   
@@ -356,7 +356,7 @@
     width: 0.375rem;
     height: 0.375rem;
     border-radius: 50%;
-    border: 0.0625rem solid rgba(255, 255, 255, 0.3);
+    border: 0.0625rem solid rgba(var(--mono-rgb-0), 0.3);
     flex-shrink: 0;
   }
   

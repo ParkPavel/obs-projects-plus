@@ -7,10 +7,12 @@
   export let onCenterToday: (() => void) | undefined;
   export let onToggleAgenda: (() => void) | undefined;
   export let onFreezeColumns: (() => void) | undefined;
+  /** Phone: the drawer state from the session store. Undefined: read the view config. */
+  export let agendaOpen: boolean | undefined = undefined;
 
   $: t = $i18n.t;
   $: isFrozen = view?.config?.["freezeAll"] ?? view?.config?.["freezeColumns"] ?? false;
-  $: isAgendaOpen = view?.config?.["agendaOpen"] ?? false;
+  $: isAgendaOpen = agendaOpen ?? view?.config?.["agendaOpen"] ?? false;
 </script>
 
 <div class="actions">

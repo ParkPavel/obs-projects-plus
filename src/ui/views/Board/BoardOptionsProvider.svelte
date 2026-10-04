@@ -3,7 +3,7 @@
     ViewContent,
     ViewLayout,
   } from "src/ui/components/Layout";
-  import type { BoardConfig } from "./types";
+  import { normalizeThumbnailLayout, type BoardConfig } from "./types";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
 
   export let config: BoardConfig;
@@ -35,6 +35,8 @@
       checkField={config.checkField ?? ""}
       customHeader={config.headerField}
       iconField={config.iconField}
+      thumbnailLayout={normalizeThumbnailLayout(config.thumbnailLayout)}
+      coverField={config.coverField}
       groupByField={fields.find((field) => config.groupByField === field.name)}
       includeFields={config.includeFields ?? []}
     />

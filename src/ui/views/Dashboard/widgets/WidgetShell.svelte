@@ -11,6 +11,7 @@
    * slotted in by the host router.
    */
   import { createEventDispatcher, onMount, tick } from "svelte";
+  import { dragHandle } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
   import { ariaWidget } from "src/lib/dashboard-engine/accessibility";
@@ -21,6 +22,8 @@
   export let readonly = false;
   /** R3 P0 — increment to enter title-edit mode (menu «Rename»). */
   export let renameSignal = 0;
+  /** ios-g1 G1 — grip that alone arms the parent `dragHandleZone`; set only inside one. */
+  export let reorderable = false;
 
   const dispatch = createEventDispatcher<{ toggleCollapse: void; titleChange: string }>();
 
@@ -99,6 +102,16 @@
   tabindex={widgetAria.tabindex}
 >
   <div class="ppp-widget-header">
+    {#if reorderable}
+      <!-- A div, not a <button>: svelte-dnd-action ignores Enter/Space on a target
+           with a `disabled` property, so a button could never start a keyboard reorder. -->
+      <div
+        class="ppp-widget-grip" role="button" tabindex="0"
+        aria-label={$i18n.t("views.dashboard.widget.drag-handle", { defaultValue: "Drag to reorder the widget" })}
+        title={$i18n.t("views.dashboard.widget.drag-handle", { defaultValue: "Drag to reorder the widget" })}
+        use:dragHandle
+      ><Icon name="grip-vertical" size="sm" /></div>
+    {/if}
     <button
       class="ppp-widget-collapse-btn clickable-icon"
       on:click={() => dispatch("toggleCollapse")}
@@ -167,12 +180,12 @@
     transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
   }
 
-  .ppp-widget-host--collapsed {
-    min-height: auto;
-  }
+  .ppp-widget-host--collapsed { min-height: auto; }
 
+  /* ios-l1 L2: badges yield, the title keeps a floor, then wrap — never overflow. */
   .ppp-widget-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--ppp-space-sm, 0.25rem);
     padding: var(--ppp-space-sm, 0.25rem) var(--ppp-space-md, 0.5rem);
@@ -180,6 +193,43 @@
     background: var(--background-secondary);
     user-select: none;
     min-height: 2.25rem;
+  }
+
+  /* ios-g1 G1: the only place a widget drag can start. Sized in em, because
+     it lives inside the widget container. `touch-action: none` hands the
+     touch to the drag instead of letting the browser start a pan first. */
+  .ppp-widget-grip {
+    flex-shrink: 0;
+    min-width: 1.5em;
+    min-height: 1.5em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    border-radius: var(--radius-s);
+    touch-action: none;
+  }
+
+  .ppp-widget-grip:focus-visible {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  /* ios-t1: hover tints only where a hover exists; on touch they stuck after a tap. */
+  @media (hover: hover) and (pointer: fine) {
+    .ppp-widget-grip:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+    .ppp-widget-collapse-btn:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+    .ppp-widget-error-retry:hover { background: var(--text-error); color: var(--background-primary); }
+  }
+
+  /* Finger-sized targets (grip; collapse since ios-t1) — a floor over the glyph-sized
+     width/height, so the box grows. The token is declared at :root, so no fallback length. */
+  @media (pointer: coarse) {
+    .ppp-widget-grip,
+    .ppp-widget-collapse-btn {
+      min-width: var(--ppp-touch-target-min);
+      min-height: var(--ppp-touch-target-min);
+    }
   }
 
   .ppp-widget-collapse-btn {
@@ -202,16 +252,12 @@
     transform: rotate(-90deg);
   }
 
-  .ppp-widget-collapse-btn:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
-  }
-
   .ppp-widget-title {
     font-weight: var(--font-semibold, 600);
     font-size: var(--font-ui-small);
     color: var(--text-normal);
-    flex: 1;
+    flex: 2 1 0;
+    min-width: 4em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -229,8 +275,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25em;
-    flex-shrink: 0;
+    /* Basis 0: out of the wrap decision; grown to own width, else clipped. */
+    flex: 1 1 0;
+    max-width: max-content;
     min-width: 0;
+    overflow: hidden;
   }
 
   .ppp-widget-content {
@@ -273,11 +322,6 @@
     color: var(--text-error);
     cursor: pointer;
     font-size: var(--font-ui-smaller);
-  }
-
-  .ppp-widget-error-retry:hover {
-    background: var(--text-error);
-    color: var(--background-primary);
   }
 
   /* DG-9 lazy-render skeleton */

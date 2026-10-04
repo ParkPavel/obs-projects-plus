@@ -13,9 +13,12 @@
   v8.0: Unified height system - MUST match TimelineView/HeaderStripsSection
 -->
 <script lang="ts">
+  import { readable } from 'svelte/store';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import type { ProcessedRecord } from '../../types';
   import type { DragMode } from '../../dnd/types';
+  import { isTouchDevice } from 'src/lib/stores/ui';
+  import { stripGeometry, stripTopRem } from '../../utils/stripGeometry';
 
   /** Название события */
   export let title: string;
@@ -48,17 +51,21 @@
   /** v4.0.4: Hide resize handles when resize is impossible (e.g. day view) */
   export let canResize: boolean = true;
   
-  // v8.0: Unified constants - MUST match TimelineView.svelte
-  const STRIP_HEIGHT_DESKTOP = 1.25;  // rem
-  const STRIP_HEIGHT_MOBILE = 1.125;  // rem  
-  const STRIP_GAP_REM = 0.125;        // gap between strips
-  
-  // Reactive height based on device
-  $: STRIP_HEIGHT_REM = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT_DESKTOP;
-  // Row height = strip height + gap
-  $: ROW_HEIGHT_REM = STRIP_HEIGHT_REM + STRIP_GAP_REM;
-  // Top position for this strip
-  $: topPosition = rowIndex * ROW_HEIGHT_REM;
+  // ios-p1: height and gap from the shared `stripGeometry`, the same source as
+  // TimelineView's all-day section, so lanes and section stay aligned; a
+  // coarse pointer gets a finger-sized strip.
+  $: geometry = stripGeometry({ coarse: $isTouchDevice, isMobile });
+  $: STRIP_HEIGHT_REM = geometry.heightRem;
+  $: topPosition = stripTopRem(rowIndex, geometry);
+
+  // ios-c1: `isDragging` comes from the manager's `dragRecordId`, which is set
+  // on the PRESS (and kept for the re-grab window after a drag). Dimming with
+  // `pointer-events: none` from it took the strip out of hit-testing between
+  // press and release, so the click landed beneath it and never opened the
+  // record. Dim only once the drag has actually started.
+  const noDrag = readable<string | null>(null);
+  $: draggedRecordId = dragManager?.draggedRecordId ?? noDrag;
+  $: isDimmed = isDragging && $draggedRecordId != null;
   
   function handleClick(e: MouseEvent | KeyboardEvent) {
     e.stopPropagation();
@@ -117,7 +124,7 @@
   class:compact
   class:clickable={!!onClick}
   class:mobile={isMobile}
-  class:dnd-dragging={isDragging}
+  class:dnd-dragging={isDimmed}
   class:dnd-grab={!!dragManager}
   style:--strip-color={color}
   style:--strip-height="{STRIP_HEIGHT_REM}rem"
@@ -187,7 +194,7 @@
   
   .all-day-event-strip.clickable:hover {
     background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-s);
     z-index: 2;
   }
   
@@ -216,7 +223,7 @@
   
   .all-day-event-strip.compact.clickable:hover {
     transform: translateX(-50%) scale(1.1);
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-s);
   }
   
   .all-day-dot {
@@ -246,11 +253,22 @@
   .all-day-event-strip.mobile .all-day-title {
     font-size: 0.5625rem;
   }
-  
+
+  /* ios-r1: the title at the phone text floor on touch. The strip is at
+     least 1.125rem tall with `line-height: 1` on the title, so the larger
+     text still fits; it stays on one line and ellipsizes. Read through the
+     token alone: this component is container-scoped (R0.16). */
+  @media (pointer: coarse) {
+    .all-day-event-strip .all-day-title,
+    .all-day-event-strip.mobile .all-day-title {
+      font-size: var(--ppp-text-floor);
+    }
+  }
+
   /* High contrast mode */
   @media (prefers-contrast: high) {
     .all-day-event-strip {
-      border: 1px solid var(--text-on-accent);
+      border: var(--ppp-border-width) solid var(--text-on-accent);
     }
   }
   

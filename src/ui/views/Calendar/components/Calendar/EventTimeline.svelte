@@ -95,7 +95,7 @@
     top: 0;
     left: 3.75rem;
     right: -100vw; /* Extend across days */
-    height: 1px;
+    height: var(--ppp-border-width);
     background: var(--background-modifier-border);
     opacity: 0.3;
     pointer-events: none;
@@ -118,6 +118,14 @@
     
     .projects-calendar-hour-line {
       left: 3rem;
+    }
+  }
+
+  /* ios-r1: hour labels at the phone text floor on touch. The narrowest
+     gutter is 3rem; "12 AM" at the floor plus its 0.25rem padding fits it. */
+  @media (pointer: coarse) {
+    .projects-calendar-hour-label {
+      font-size: var(--ppp-text-floor);
     }
   }
 </style>

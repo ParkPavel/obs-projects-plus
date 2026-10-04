@@ -15,9 +15,10 @@
 
 <!--
   FilterBridge (#103) — shows ONLY the transient local FilterTabs selection chip.
-  The global `view.filter` is owned by a single surface — ViewFilterBar pills in the
-  view shell (App.svelte). The former "Global filter: N conditions" mirror chip was
-  removed to kill the triple-duplication of view.filter (pills + this badge + SettingsMenu).
+  The global `view.filter` is owned by a single surface — the settings Filters tab
+  (SettingsMenuPopover; the header filter row was removed in chrome-filters). The
+  former "Global filter: N conditions" mirror chip was removed to kill the
+  duplication of view.filter across surfaces.
   This chip reflects a DIFFERENT state (a cross-widget filter-tab click) and offers the
   "↥ promote to global" action, so it is not a duplicate.
 -->
@@ -59,7 +60,7 @@
     gap: 0.375rem;
     padding: 0.375rem 0.5rem;
     background: var(--background-secondary);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .ppp-filter-bridge-chip {
@@ -70,7 +71,7 @@
     font-size: var(--font-ui-smaller);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
   }
 
   .ppp-filter-bridge-chip--local {

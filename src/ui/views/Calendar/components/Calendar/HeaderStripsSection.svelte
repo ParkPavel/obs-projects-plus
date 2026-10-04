@@ -20,6 +20,7 @@
   import dayjs from "dayjs";
   import { onDestroy, tick } from "svelte";
   import { portal } from "src/ui/portal";
+  import { remAt, rootFontPx } from "src/ui/utils/cssLength";
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { EventRenderType, type ProcessedCalendarData, type ProcessedRecord } from "../../types";
   import { getDisplayName } from "src/ui/views/Board/components/Board/boardHelpers";
@@ -62,9 +63,19 @@
   // Container element for collecting day column refs
   let sectionElement: HTMLElement | undefined;
 
-  // Subscribe to dragRecordId for visual dimming
+  // The pressed record (pending, dragging, or the re-grab window after a drag):
+  // drives the long-press lift only.
   const unsubDragId = dragManager.dragRecordId.subscribe((id) => {
     draggingRecordId = id;
+  });
+
+  // ios-c1: the dimmed, pointer-events-free state follows a drag that has
+  // STARTED. Applied on the press (from `dragRecordId`) it took the segment out
+  // of hit-testing between press and release: the mouseup and click landed on
+  // the `.multiday-lane` beneath, so a click or tap never opened the record.
+  let draggedRecordId: string | null = null;
+  const unsubDraggedId = dragManager.draggedRecordId.subscribe((id) => {
+    draggedRecordId = id;
   });
 
   // v3.2.1: Subscribe to stripGhostPosition for ghost overlay rendering
@@ -133,6 +144,7 @@
 
   onDestroy(() => {
     unsubDragId();
+    unsubDraggedId();
     unsubStripGhost();
     unsubEdgeLabel();
     unsubLongPress();
@@ -309,7 +321,7 @@
 </script>
 
 {#if hasAnyEvents}
-  <div 
+  <div
     class="header-strips-section"
     bind:this={sectionElement}
     style:--lane-count={maxLane}
@@ -347,7 +359,8 @@
           {@const segment = laneData.segments.get(dateKey)}
           {@const isDropTarget = stripGhost != null && dayIdx >= stripGhost.startDayIndex && dayIdx <= stripGhost.endDayIndex}
           {#if segment}
-            {@const isDragging = draggingRecordId === segment.record.id}
+            {@const isPressed = draggingRecordId === segment.record.id}
+            {@const isDragging = draggedRecordId === segment.record.id}
             <button
               class="strip-segment"
               class:is-start={segment.isStart}
@@ -357,7 +370,7 @@
               class:dnd-grab={!!onRecordChange && !isDragging}
               class:dnd-dragging={isDragging}
               class:dnd-drop-target={isDropTarget && !isDragging}
-              class:dnd-long-press={isLongPressActive && isDragging}
+              class:dnd-long-press={isLongPressActive && isPressed}
               data-date={date.format('YYYY-MM-DD')}
               type="button"
               style:--strip-color={segment.color ?? 'var(--interactive-accent)'}
@@ -400,10 +413,11 @@
 <!-- v3.2.5: Portal ghost for cross-week strip drag in month/2weeks -->
 {#if stripGhost?.viewportRect}
   {@const vr = stripGhost.viewportRect}
+  {@const vrRoot = rootFontPx()}
   <div
     use:portal={{ to: "document-body" }}
     class="ppp-strip-ghost-portal"
-    style="position:fixed; top:{vr.top}px; left:{vr.left}px; width:{vr.width}px; height:{vr.height}px; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 30%, transparent); border:0.125rem solid var(--interactive-accent); box-shadow: 0 0.125rem 0.75rem rgba(0,0,0,0.15);"
+    style="position:fixed; top:{remAt(vr.top, vrRoot)}; left:{remAt(vr.left, vrRoot)}; width:{remAt(vr.width, vrRoot)}; height:{remAt(vr.height, vrRoot)}; pointer-events:none; z-index:9999; border-radius:0.25rem; background:color-mix(in srgb, var(--interactive-accent) 30%, transparent); border:0.125rem solid var(--interactive-accent); box-shadow: 0 0.125rem 0.75rem rgba(0,0,0,0.15);"
     aria-hidden="true"
   >
     {#if stripGhost.title}
@@ -525,10 +539,15 @@
    * day-cell and strip-empty border model exactly. This eliminates
    * sub-pixel alignment drift between rows with different border approaches. */
 
-  .strip-segment:hover {
-    background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
-    /* v8.1: Preserve the inset start/end indicator (if any) alongside the hover shadow */
-    box-shadow: var(--_strip-inset-shadow, none), 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+  /* ios-t1: the hover tint is gated to a pointer that hovers. The start/end
+     rules below out-rank it by source order at equal weight; gated in place,
+     it keeps that order. */
+  @media (hover: hover) and (pointer: fine) {
+    .strip-segment:hover {
+      background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
+      /* v8.1: Preserve the inset start/end indicator (if any) alongside the hover shadow */
+      box-shadow: var(--_strip-inset-shadow, none), var(--shadow-s);
+    }
   }
   .strip-segment:focus-visible {
     outline: 0.125rem solid var(--strip-color);
@@ -804,6 +823,18 @@
       min-height: 0;
       min-width: 0;
     }
+
+    /* ios-c1: EVERY lane — and the segments filling it — is a finger tall
+       (ios-t1 grew only a week with one lane). The lanes are stacked rows of
+       a flex column, and the section and its week track size to them, so each
+       segment's hit area is its own lane: none reaches into the lane beside
+       it. This rule follows the width/landscape rules above so it wins over
+       their strip height on touch; a fine pointer keeps the strip height. */
+    .header-strips-section .multiday-lane {
+      height: var(--ppp-touch-target-min);
+      min-height: var(--ppp-touch-target-min);
+      max-height: var(--ppp-touch-target-min);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -832,7 +863,7 @@
   /* v9.4: Long-press confirmed — lift strip for visual feedback before drag threshold */
   .strip-segment.dnd-long-press {
     transform: scale(1.08);
-    box-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-l);
     z-index: 5;
     opacity: 0.85;
     transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
@@ -884,7 +915,7 @@
     padding: 0.125rem 0.5rem;
     border-radius: var(--ppp-radius-md, 0.25rem);
     white-space: nowrap;
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-s);
   }
 
   /* Horizontal resize handles (◤ left / ◢ right) */
@@ -931,10 +962,21 @@
     border-left-width: 0.25rem;
   }
 
-  /* Show handles on hover (desktop) */
-  .strip-segment:hover .resize-handle-start,
-  .strip-segment:hover .resize-handle-end {
-    opacity: 1;
+  /* Show handles on hover (desktop) — only where a hover exists. */
+  @media (hover: hover) and (pointer: fine) {
+    .strip-segment:hover .resize-handle-start,
+    .strip-segment:hover .resize-handle-end {
+      opacity: 1;
+    }
+  }
+
+  /* ios-t1: on any touch screen the handles are shown, not only in the narrow
+     and landscape cases below — there is no hover to find them by. */
+  @media (pointer: coarse) {
+    .resize-handle-start,
+    .resize-handle-end {
+      opacity: 1;
+    }
   }
 
   /* Mobile: always show resize handles, enlarge touch zone */

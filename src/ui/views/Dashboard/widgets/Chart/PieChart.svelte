@@ -142,6 +142,8 @@
         {@const lx = CX + labelR * Math.cos(slice.midAngle)}
         {@const ly = CY + labelR * Math.sin(slice.midAngle)}
         <text
+          class="ppp-chart-pie__pct"
+          class:ppp-chart-pie__pct--small={slice.percent < 8}
           x={lx} y={ly}
           text-anchor="middle" dominant-baseline="middle"
           fill={slice.percent < 8 ? "var(--text-normal)" : "var(--text-on-accent, #fff)"}
@@ -199,4 +201,16 @@
     stroke-width: 2.5;
   }
   /* Legend styles: ChartWidget, shared by every chart type. */
+
+  /* ios-r1: an in-slice percentage at the phone text floor on touch; it sits
+     mid-slice in a slice of at least 8%, which has room for it. The viewBox is
+     the rendered size (ChartWidget), so the floor renders at its own size.
+     The outer labels of slices under 8% keep their 9-unit size: they sit
+     side by side near the rim, and a larger label collides with its
+     neighbour. Each slice's <title> carries the same percentage. */
+  @media (pointer: coarse) {
+    .ppp-chart-pie__pct:not(.ppp-chart-pie__pct--small) {
+      font-size: var(--ppp-text-floor);
+    }
+  }
 </style>

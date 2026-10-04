@@ -75,7 +75,7 @@
     font-size: var(--font-ui-small);
     color: var(--text-muted);
     background: var(--background-secondary);
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     cursor: pointer;
   }

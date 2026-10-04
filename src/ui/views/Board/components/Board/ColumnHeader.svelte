@@ -80,10 +80,13 @@
 
 <div
   class="projects--board--column--header"
+  class:projects--board--column--header-collapsed={collapse}
   on:dblclick={() => {
     if (!collapse && !dataReadOnly) editing = true;
   }}
 >
+  <!-- cards-g1: the leading cell for the column's drag grip (Board, via BoardColumn). -->
+  <slot name="grip" />
   {#if editing}
     <TextInput
       noPadding
@@ -200,23 +203,20 @@
     white-space: nowrap;
   }
 
+  /* cards-g1: with a leading grip cell the row has three items; the actions
+     still end the row instead of `space-between` centring the title. */
   .right {
     display: flex;
     align-items: center;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .actions {
     display: inline-flex;
     gap: 0.25rem;
     margin-left: 0.375rem;
-    opacity: 0.3;
     transition: opacity 150ms ease;
-  }
-
-  .projects--board--column--header:hover .actions,
-  .projects--board--column--header:focus-within .actions {
-    opacity: 1;
   }
 
   .actions :global(.clickable-icon) {
@@ -224,12 +224,69 @@
     transition: color 150ms ease;
   }
 
-  .actions :global(.clickable-icon:hover) {
-    color: var(--interactive-accent);
+  /* ios-t1: the actions rest dimmed and brighten under the mouse only where a
+     mouse exists; keyboard focus still brightens them there. */
+  @media (hover: hover) and (pointer: fine) {
+    .actions {
+      opacity: 0.3;
+    }
+
+    .projects--board--column--header:hover .actions,
+    .projects--board--column--header:focus-within .actions {
+      opacity: 1;
+    }
+
+    .actions :global(.clickable-icon:hover) {
+      color: var(--interactive-accent);
+    }
   }
 
   .collapse {
     max-height: 1.5rem;
     overflow-y: hidden;
+  }
+
+  /* ios-t1: on touch the four actions are shown in full and each gets its own
+     finger-sized slot. They no longer fit beside the title in a column, so
+     they take a second row of the header, right-aligned, and the title keeps
+     the whole first row (wrapping rather than being squeezed to nothing). A
+     collapsed column is a 3rem rotated strip holding one action, so it keeps
+     its single row — only the slot size applies there. */
+  @media (pointer: coarse) {
+    .projects--board--column--header:not(.projects--board--column--header-collapsed) {
+      flex-wrap: wrap;
+      row-gap: 0.25em;
+      white-space: normal;
+    }
+
+    /* cards-g1: the title fills the first row beside the grip cell (the whole
+       row in a pinned column); the actions still wrap to the second.
+       pin-header: the title's minimum is half the row, so it and the 100%
+       actions can never share a line. With a 0 minimum a pinned column (no
+       grip) fit both on one line and the title shrank to nothing, its letters
+       stacked into a tall empty header. */
+    .projects--board--column--header:not(.projects--board--column--header-collapsed) > span {
+      flex: 1 1 0;
+      min-width: 50%;
+      overflow-wrap: anywhere;
+    }
+
+    .projects--board--column--header:not(.projects--board--column--header-collapsed) .right {
+      flex: 1 0 100%;
+      justify-content: flex-end;
+    }
+
+    .actions {
+      opacity: 1;
+      gap: 0;
+    }
+
+    .actions :global(.clickable-icon) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--ppp-touch-target-min);
+      min-height: var(--ppp-touch-target-min);
+    }
   }
 </style>

@@ -631,9 +631,9 @@
   
   .color-swatch:hover {
     transform: scale(1.05);
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-s);
   }
-  
+
   .color-swatch.selected {
     border-color: var(--text-normal);
     box-shadow: 0 0 0 0.125rem var(--background-primary);
@@ -775,7 +775,7 @@
   }
   
   /* v5.0.0: Landscape optimizations */
-  @media (max-height: 500px) and (orientation: landscape) {
+  @media (max-height: 31.25rem) and (orientation: landscape) {
     .color-picker {
       /* Reduce heights in landscape to fit content */
       --cp-picker-height: calc(var(--cp-base) * 6);

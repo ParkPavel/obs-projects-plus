@@ -152,6 +152,8 @@
 <style>
   .ppp-smart-suggest {
     display: flex;
+    /* Wrap so a narrow banner puts the message on its own row and the actions below it */
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--ppp-space-2, 0.25rem);
     padding: var(--ppp-space-2, 0.25rem) var(--ppp-space-3, 0.375rem);
@@ -170,11 +172,15 @@
   }
 
   .ppp-smart-suggest__message {
-    flex: 1;
+    /* 15em basis (em of the small UI font, about 12 root units): below this the message
+       would break to one word per line, so wrap instead. em, not rem, as this is container-scoped */
+    flex: 1 1 15em;
     min-width: 0;
   }
 
   .ppp-smart-suggest__accept {
+    /* When wrapped, the first action starts the second row; auto margin pushes the actions to the end */
+    margin-inline-start: auto;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;

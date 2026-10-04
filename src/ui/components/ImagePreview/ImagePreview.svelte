@@ -157,6 +157,8 @@
     justify-content: center;
     border: none;
     border-radius: 50%;
+    /* theme-compat: the button floats over the user's image, so it keeps a dark
+       chip with a light glyph in either theme (justified in R0_35). */
     background: rgba(0, 0, 0, 0.6);
     color: white;
     cursor: pointer;

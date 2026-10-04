@@ -134,7 +134,8 @@ describe("radius scales, and the shadow between them (#165)", () => {
     expect(root["--ppp-radius-lg"]).toBe("0.375rem");
     expect(root["--ppp-radius-xl"]).toBe("0.5rem");
     expect(root["--ppp-radius-2xl"]).toBe("0.75rem");
-    expect(root["--ppp-radius-full"]).toBe("9999px");
+    // R0.3b: the same 9999 CSS pixels at the default root, written in rem.
+    expect(root["--ppp-radius-full"]).toBe("624.9375rem");
   });
 
   test("the canvas shim redeclares exactly the four radii that differed", () => {

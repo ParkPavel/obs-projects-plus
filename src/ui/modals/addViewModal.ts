@@ -16,6 +16,13 @@ export class AddViewModal extends Modal {
     readonly onSave: (projectId: ProjectId, view: ViewDefinition) => void
   ) {
     super(app);
+    // ios-r1: the plugin root that tokens.css's touch input-size and
+    // reduced-motion rules reach. Not `projects-modal`: that class also
+    // restyles every native select (styles.css), which would change this
+    // modal on desktop.
+    this.containerEl.addClass("ppp-add-view-modal");
+    // ios-m1: the shared plugin modal root, carried by every plugin modal.
+    this.containerEl.addClass("ppp-modal");
   }
 
   onOpen() {

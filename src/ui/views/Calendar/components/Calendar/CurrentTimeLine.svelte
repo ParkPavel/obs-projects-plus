@@ -122,7 +122,7 @@
     }
     
     .projects-calendar-time-line {
-      height: 1.5px;
+      height: calc(1.5 * var(--ppp-border-width));
     }
   }
 </style>

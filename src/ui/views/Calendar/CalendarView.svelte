@@ -16,6 +16,7 @@
   import { openRecord, modeFromNewLeaf, PLAIN_MODE } from "src/lib/record/openRecord";
   import { settings } from "src/lib/stores/settings";
   import { isMobileDevice } from "src/lib/stores/ui";
+  import { agendaDrawer, close as closeAgendaDrawer } from "src/lib/stores/agendaDrawer";
   import type { ViewApi } from "src/lib/viewApi";
   import type { ProjectDefinition } from "src/settings/settings";
   import type { AgendaCustomList } from "src/settings/v3/settings";
@@ -54,6 +55,7 @@
   import { ViewportStateManager } from "./viewport/ViewportStateManager";
   import { AnimationController } from "./animation/AnimationController";
   import { gestureCoordinator as gestureAction } from "./gestures/GestureCoordinator";
+  import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { noticeFor } from "src/lib/errors/errorText";
 
   /**
@@ -1713,8 +1715,15 @@
   let desktopAgendaVisible = true;
   // Sync agendaVisible with config for mobile in day scale
   // On mobile day scale, agendaOpen controls visibility directly
-  $: agendaVisible = isMobile 
-    ? (config?.agendaOpen ?? true)  // Mobile: use config
+  // Mobile drawer is local state that always starts closed on mount: persisted
+  // config.agendaOpen is the desktop panel / toggle intent and (e.g. the cabinet demo
+  // stores true) must not cover the grid on entry.
+  // Mobile drawer: session store shared with the navbar toggle (App.svelte), keyed by the
+  // project id (the same key App uses). Never persisted; default closed.
+  $: drawerKey = project?.id;
+  $: drawerOpen = drawerKey ? $agendaDrawer[drawerKey] === true : false;
+  $: agendaVisible = isMobile
+    ? drawerOpen  // Mobile: session store
     : desktopAgendaVisible;  // Desktop: use local state
 
   function handleAgendaRecordClick(id: string) {
@@ -1853,6 +1862,11 @@
   }
   
   function handleAgendaToggle() {
+    // Mobile (scrim / close button): close the session drawer, config is untouched
+    if (isMobile) {
+      closeAgendaDrawer(drawerKey);
+      return;
+    }
     // Desktop: toggle local state
     desktopAgendaVisible = !desktopAgendaVisible;
   }
@@ -1891,6 +1905,7 @@
   <div 
     class="calendar-zoom-container"
     use:gestureAction={{ handlers: _gestureHandlers }}
+    use:ignoreHostSwipe
     on:wheel={handleZoomWheel}
     on:keydown={handleKeyDown}
     role="application"
@@ -2018,7 +2033,7 @@
 
     <!-- Agenda sidebar: Available on ALL devices (matryoshka principle) -->
     <!-- Desktop: Side panel with collapse, Mobile: Full drawer show/hide -->
-    {#if interval === 'day' || config?.agendaOpen}
+    {#if interval === 'day' || config?.agendaOpen || (isMobile && drawerOpen)}
       <AgendaSidebar 
         project={project}
         records={agendaSidebarRecords}
@@ -2245,7 +2260,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.75rem;
-    box-shadow: 0 0.25rem 1.5rem rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-l);
   }
 
   .spinner {
@@ -2279,7 +2294,7 @@
     color: var(--text-on-accent);
     padding: 0.75rem 1rem;
     border-radius: 0.625rem;
-    box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-l);
     z-index: 1001;
     cursor: pointer;
     display: flex;
@@ -2310,7 +2325,8 @@
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
-    background: rgba(255, 255, 255, 0.2);
+    /* The error toast's own text colour (--text-on-accent), thinned. */
+    background: color-mix(in srgb, currentColor 20%, transparent);
     border: none;
     border-radius: 50%;
     color: inherit;
@@ -2320,7 +2336,7 @@
   }
 
   .error-close:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: color-mix(in srgb, currentColor 30%, transparent);
   }
 
   .horizontal-calendar-wrapper {
@@ -2333,12 +2349,13 @@
     min-width: 0;
   }
 
-  /* Apple-style transitions */
-  :global(.calendar-fade-enter) {
+  /* Apple-style transitions. Plugin-prefixed (theme-compat): a generic global
+     class name can be claimed by a theme or another plugin. */
+  :global(.ppp-calendar-fade-enter) {
     opacity: 0;
   }
 
-  :global(.calendar-fade-enter-active) {
+  :global(.ppp-calendar-fade-enter-active) {
     opacity: 1;
     transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -2373,8 +2390,8 @@
     background: var(--background-primary);
     padding: 1rem 1.5rem;
     border-radius: 1rem;
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--background-modifier-border);
+    box-shadow: var(--shadow-l);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     backdrop-filter: blur(0.75rem);
     -webkit-backdrop-filter: blur(0.75rem);
   }

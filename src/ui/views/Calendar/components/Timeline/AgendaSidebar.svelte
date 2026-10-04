@@ -18,6 +18,7 @@
   import { dragHandleZone, SHADOW_PLACEHOLDER_ITEM_ID } from 'svelte-dnd-action';
   import { Icon } from 'obsidian-svelte';
   import { portal } from "src/ui/portal";
+  import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
   import { i18n } from '../../../../../lib/stores/i18n';
   import type { DataRecord, DataField } from '../../../../../lib/dataframe/dataframe';
   import type { ProjectDefinition } from '../../../../../settings/settings';
@@ -503,10 +504,11 @@
     function update() {
       if (!container) return;
       const rect = container.getBoundingClientRect();
-      node.style.top = `${rect.top}px`;
-      node.style.left = `${rect.left}px`;
-      node.style.width = `${rect.width}px`;
-      node.style.height = `${rect.height}px`;
+      const root = rootFontPx(node.ownerDocument);
+      node.style.top = remAt(rect.top, root);
+      node.style.left = remAt(rect.left, root);
+      node.style.width = remAt(rect.width, root);
+      node.style.height = remAt(rect.height, root);
     }
 
     update();
@@ -631,13 +633,21 @@
   })();
 </script>
 
-<aside 
+{#if isMobile && visible}
+  <!-- Mobile scrim: the drawer is secondary content, so tapping the uncovered grid dismisses it.
+       Reuses the same `toggle` event; CalendarView persists agendaOpen=false. -->
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class="agenda-scrim" on:click={() => dispatch('toggle')}></div>
+{/if}
+
+<aside
   class="agenda"
   class:collapsed
   class:mobile={isMobile}
   class:hidden={isMobile && !visible}
   class:resizing={isResizing}
-  style:--w="{isMobile ? '100%' : `${width}px`}"
+  style:--w="{isMobile ? '100%' : toRem(width)}"
 >
   {#if !collapsed && !isMobile}
     <div class="resize-handle" on:mousedown={startResize} role="separator" />
@@ -923,7 +933,13 @@
     position: absolute;
     top: 0;
     right: 0;
-    bottom: 0;
+    /* ios-s1: the drawer stops where Obsidian's floating navbar begins, so its
+       own bottom controls stay tappable. The host's `--view-bottom-spacing`
+       (Obsidian app.css, `.is-phone`; 0 by default, navbar + home-indicator
+       inset with the floating nav — what Bases reserves) is the obstruction;
+       0/unset on desktop and tablets. Because the box itself is bounded, the
+       list inside no longer pads for the bar (see `.agenda.mobile .content`). */
+    bottom: var(--view-bottom-spacing, 0);
     width: 85vw;
     max-width: 20rem;
     min-width: auto;
@@ -931,7 +947,7 @@
     z-index: 50;
     border-left: var(--ppp-border-width) solid var(--background-modifier-border);
     border-top: none;
-    box-shadow: -0.25rem 0 1rem rgba(0, 0, 0, 0.2);
+    box-shadow: -0.25rem 0 1rem var(--background-modifier-box-shadow);
     transform: translateX(0);
     transition: transform var(--agenda-transition);
   }
@@ -942,6 +958,26 @@
     pointer-events: none;
   }
   
+  /* Mobile scrim: covers the calendar area (CalendarView's positioned container) just
+     below the drawer (z:50) so a tap outside the drawer closes it */
+  .agenda-scrim {
+    position: absolute;
+    inset: 0;
+    /* ios-s1: level with the drawer's bottom — the strip under Obsidian's bar
+       belongs to the host, a tap there must not be read as "outside". */
+    bottom: var(--view-bottom-spacing, 0);
+    /* Layer scale, not a raw number: --agenda-z-overlay is declared on .agenda and the
+       scrim is its sibling, so read the global token (30) directly; still below the drawer (50) */
+    z-index: var(--ppp-z-overlay, 30);
+    background: var(--background-modifier-cover);
+    animation: agenda-scrim-in var(--ppp-duration-normal, 150ms) var(--ppp-ease-out, ease-out) both;
+  }
+
+  @keyframes agenda-scrim-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   /* Landscape orientation: narrower sidebar on mobile */
   @media (max-width: 48rem) and (orientation: landscape) { /* 768 at 16 base */
     .agenda.mobile {
@@ -1032,7 +1068,7 @@
   }
   
   .agenda.mobile .picker-overlay {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--background-modifier-cover);
   }
   
   .date-picker {
@@ -1183,7 +1219,20 @@
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
-  
+
+  /* ios-s1: the docked sidebar runs to the view's bottom, under Obsidian's
+     floating navbar on a phone, and this list is its scroller. A trailing
+     spacer of the host's `--view-bottom-spacing` (Obsidian app.css,
+     `.is-phone`; 0 by default, navbar + home-indicator inset with the
+     floating nav — what Bases reserves) lets the last item scroll above the
+     bar. A spacer, not padding arithmetic, so a host value of plain 0 never
+     lands in a calc. Hidden in the drawer, which is bounded instead. */
+  .content::after {
+    content: "";
+    display: block;
+    height: var(--view-bottom-spacing, 0);
+  }
+
   /* Categories */
   .categories {
     display: flex;
@@ -1356,8 +1405,13 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    /* Reserve space for Obsidian mobile bottom toolbar + safe area */
-    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* ios-s1: the fixed `3.5rem + env(safe-area-inset-bottom)` allowance that
+     stood here is gone. It guessed the host bar's height, and the drawer now
+     ends above that bar itself (`bottom` above), so padding for it as well
+     would reserve the obstruction twice. */
+  .agenda.mobile .content::after {
+    display: none;
   }
   .agenda.mobile .event { 
     padding: var(--ppp-space-5, 0.75rem) var(--agenda-gap-lg); 
@@ -1392,7 +1446,7 @@
    * Without a constraint the shadow mirrors the full list height and pushes
    * other lists out of view on small screens.
    */
-  :global(.custom-lists [data-is-dnd-shadow-item-hint]) {
+  .custom-lists :global([data-is-dnd-shadow-item-hint]) {
     max-height: 3rem !important;
     overflow: hidden !important;
     opacity: 0.5 !important;
@@ -1457,7 +1511,7 @@
   :global(.ppp-list-editor-overlay) {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--background-modifier-cover);
     backdrop-filter: blur(0.125rem);
     -webkit-backdrop-filter: blur(0.125rem);
     display: flex;
@@ -1480,7 +1534,7 @@
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);
     border-radius: 0.625rem;
-    box-shadow: 0 0.75rem 2.5rem rgba(0, 0, 0, 0.18), 0 0.125rem 0.5rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-l);
     overscroll-behavior: contain;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
@@ -1511,5 +1565,6 @@
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .agenda, .event, .add-btn, .date-btn, .custom-add-btn, .custom-add-empty { transition: none; }
+    .agenda-scrim { animation: none; }
   }
 </style>

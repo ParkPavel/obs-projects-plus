@@ -134,8 +134,18 @@ const DEFAULT_CONFIG: GestureConfig = {
  */
 let gesturesPaused = false;
 
+/**
+ * ios-c1: attached coordinators, so a pause can drop their pending gesture.
+ * A drag pauses gestures mid-touch; without this the long-press timer and the
+ * `detecting`/`active` state of that touch outlived the drag (the paused
+ * touchend returned early), and the next swipe was refused by the state
+ * machine instead of paging.
+ */
+const liveCoordinators = new Set<GestureCoordinator>();
+
 export function pauseGestures(): void {
   gesturesPaused = true;
+  liveCoordinators.forEach((coordinator) => coordinator.cancelPending());
 }
 
 export function resumeGestures(): void {
@@ -237,12 +247,28 @@ export class GestureCoordinator {
   public getState(): GestureState {
     return this.state;
   }
-  
+
+  /**
+   * ios-c1: drop the touch in progress — its long-press timer, touch state and
+   * gesture type — and return the state machine to `idle` through its valid
+   * transitions, so the next touch starts a fresh gesture.
+   */
+  public cancelPending(): void {
+    if (this.state === 'detecting' || this.state === 'active') {
+      this.transitionState('cancelled');
+    }
+    if (this.state === 'cancelled' || this.state === 'completing') {
+      this.transitionState('idle');
+    }
+    this.reset();
+  }
+
   // ============================================================
   // PRIVATE: EVENT HANDLERS
   // ============================================================
   
   private attach(): void {
+    liveCoordinators.add(this);
     // Passive listeners для scroll performance
     this.element.addEventListener('touchstart', this.boundTouchStart, { passive: true });
     this.element.addEventListener('touchmove', this.boundTouchMove, { passive: false }); // Non-passive для preventDefault
@@ -251,6 +277,7 @@ export class GestureCoordinator {
   }
   
   private detach(): void {
+    liveCoordinators.delete(this);
     this.element.removeEventListener('touchstart', this.boundTouchStart);
     this.element.removeEventListener('touchmove', this.boundTouchMove);
     this.element.removeEventListener('touchend', this.boundTouchEnd);
@@ -258,11 +285,19 @@ export class GestureCoordinator {
   }
   
   private handleTouchStart(e: TouchEvent): void {
-    if (!this.config.enabled || gesturesPaused) return;
-    
+    if (!this.config.enabled) return;
+    if (gesturesPaused) {
+      this.cancelPending();
+      return;
+    }
+
     const touch = e.touches[0];
     if (!touch) return;
-    
+
+    // ios-c1: a touch that ended unseen (paused, cancelled) must not leave the
+    // machine outside `idle`, where `→ detecting` is refused.
+    if (this.state !== 'idle') this.cancelPending();
+
     // Transition: Idle → Detecting
     this.transitionState('detecting');
     
@@ -288,6 +323,12 @@ export class GestureCoordinator {
     
     // Start long press timer для center zone
     this.longPressTimer = window.setTimeout(() => {
+      this.longPressTimer = null;
+      // ios-c1: a drag that paused gestures owns this touch.
+      if (gesturesPaused) {
+        this.cancelPending();
+        return;
+      }
       if (this.state === 'detecting' && this.touchState) {
         const distance = this.getDistanceFromStart();
         if (distance < this.config.tapMaxDistance) {
@@ -301,7 +342,11 @@ export class GestureCoordinator {
   }
   
   private handleTouchMove(e: TouchEvent): void {
-    if (!this.config.enabled || gesturesPaused || !this.touchState) return;
+    if (!this.config.enabled || !this.touchState) return;
+    if (gesturesPaused) {
+      this.cancelPending();
+      return;
+    }
     
     const touch = e.touches[0];
     if (!touch) return;
@@ -353,7 +398,14 @@ export class GestureCoordinator {
   }
   
   private handleTouchEnd(e: TouchEvent): void {
-    if (!this.config.enabled || gesturesPaused || !this.touchState) return;
+    if (!this.config.enabled) return;
+    // ios-c1: the drag that paused gestures owned this touch; drop it here
+    // instead of leaving it pending for the next one.
+    if (gesturesPaused) {
+      this.cancelPending();
+      return;
+    }
+    if (!this.touchState) return;
     
     const touch = e.changedTouches[0];
     if (!touch) {
@@ -378,9 +430,10 @@ export class GestureCoordinator {
     this.reset();
   }
   
-  private handleTouchCancel(e: TouchEvent): void {
-    this.transitionState('cancelled');
-    this.reset();
+  private handleTouchCancel(_e: TouchEvent): void {
+    // ios-c1: back to `idle`, not parked in `cancelled` (which refuses the
+    // next touch's `→ detecting`).
+    this.cancelPending();
   }
   
   // ============================================================

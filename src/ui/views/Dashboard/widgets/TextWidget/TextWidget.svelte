@@ -139,7 +139,7 @@
     font-size: 0.8125rem;
     line-height: 1.5;
     padding: 0.5rem;
-    border: 1px solid var(--interactive-accent);
+    border: var(--ppp-border-width) solid var(--interactive-accent);
     border-radius: 0.25rem;
     background: var(--background-primary);
     color: var(--text-normal);
@@ -148,7 +148,7 @@
 
   .ppp-text-widget__textarea:focus {
     outline: 0.125rem solid var(--interactive-accent);
-    outline-offset: 1px;
+    outline-offset: var(--ppp-border-width);
   }
 
   .ppp-text-widget__actions {
@@ -160,7 +160,7 @@
   .ppp-text-widget__btn {
     padding: 0.25rem 0.75rem;
     border-radius: 0.25rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     background: var(--background-primary);
     color: var(--text-normal);
     cursor: pointer;

@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { DataRecord } from 'src/lib/dataframe/dataframe';
   import dayjs from 'dayjs';
+  import { readable } from 'svelte/store';
   import EventBar from './EventBar.svelte';
   import type { ProcessedRecord } from '../../types';
-  import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
+  import { barDragView, type TimelineDragManager } from '../../dnd/TimelineDragManager';
   import { app } from 'src/lib/stores/obsidian';
   import { openRecord } from "src/lib/record/openRecord";
   
@@ -36,6 +37,19 @@
   export let dragManager: TimelineDragManager | undefined = undefined;
   /** v3.2.0 DnD: Record ID currently being dragged */
   export let draggingRecordId: string | null = null;
+
+  // ios-c1: `draggingRecordId` follows the manager's `dragRecordId`, set on the
+  // PRESS and kept for the re-grab window. EventBar dims with
+  // `pointer-events: none` from `isDragging`, which took a bar out of
+  // hit-testing between press and release, so a click landed beneath it.
+  // ios-p1: dimming and the handles are two states (`barDragView`). The bar
+  // dims only while its drag runs; while a touch long press is armed, the
+  // re-grab window after a touch drag included, it shows its handles at full
+  // opacity and stays hit-testable. A mouse never sets `longPressActive`.
+  const noDrag = readable<string | null>(null);
+  const noLongPress = readable(false);
+  $: draggedRecordId = dragManager?.draggedRecordId ?? noDrag;
+  $: longPressActive = dragManager?.longPressActive ?? noLongPress;
 
   // Map record IDs to ProcessedRecords for quick lookup
   $: processedRecordMap = new Map<string, ProcessedRecord>(
@@ -183,6 +197,7 @@
 
 <div class="projects-calendar-event-bar-container">
   {#each eventsWithColumns as event (event.record.id + event.startDate.valueOf())}
+    {@const drag = barDragView(event.record.id, draggingRecordId, $draggedRecordId, $longPressActive)}
     <EventBar
       record={event.record}
       startDate={event.startDate}
@@ -196,7 +211,8 @@
       onClick={onEventClick ? (e) => handleEventClick(e, event.record) : undefined}
       processedRecord={processedRecordMap.get(event.record.id)}
       {dragManager}
-      isDragging={draggingRecordId === event.record.id}
+      isDragging={drag.dimmed}
+      showHandles={drag.handlesVisible}
     />
   {/each}
 </div>

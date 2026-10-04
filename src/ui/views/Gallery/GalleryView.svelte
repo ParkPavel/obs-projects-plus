@@ -4,7 +4,6 @@
   import IconButton from "src/ui/components/IconButton/IconButton.svelte";
   import InternalLink from "src/ui/components/InternalLink.svelte";
   import CardMetadata from "src/ui/components/CardMetadata/CardMetadata.svelte";
-  import ColorItem from "src/ui/components/ColorItem/ColorItem.svelte";
 
   import type { DataFrame, DataRecord } from "src/lib/dataframe/dataframe";
   import { createDataRecord } from "src/lib/dataApi";
@@ -18,7 +17,16 @@
   import { EditNoteModal } from "src/ui/modals/editNoteModal";
   import { getDisplayName } from "../Board/components/Board/boardHelpers";
 
-  import { Card, CardContent, CardMedia } from "./components/Card";
+  import SharedCard from "src/ui/components/SharedCard/SharedCard.svelte";
+  import CardResizeHandle from "src/ui/components/SharedCard/CardResizeHandle.svelte";
+  import {
+    CARD_FRAME_OVERRIDE_CAP,
+    effectiveSpan,
+    normalizeCardFrames,
+    resolveCardFrame,
+    withOverride,
+    type CardFrame,
+  } from "src/ui/components/SharedCard/cardFrames";
   import Grid from "./components/Grid/Grid.svelte";
   import Image from "./components/Image/Image.svelte";
   import { PageIcon } from "src/ui/components/PageIcon";
@@ -27,9 +35,12 @@
   import { getFilterValuesFromConditions } from "src/lib/helpers";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { getCoverRealPath } from "./gallery";
+  import { aspectRatioCss, cardFieldsInOrder } from "./galleryOptions";
+  import { toRem } from "src/ui/utils/cssLength";
   import { handleHoverLink, showMobileNavMenu } from "../helpers";
   import { isTouchDevice } from "src/lib/stores/ui";
   import { onDestroy } from "svelte";
+  import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { noticeFor } from "src/lib/errors/errorText";
   import { logError } from "src/lib/errors/errorLog";
 
@@ -61,10 +72,33 @@
    */
   export let dataReadOnly = false;
 
-  // Use onConfigChange to avoid unused warning
-  $: void onConfigChange;
-
   $: ({ fields, records } = frame);
+
+  // cards-g5: saved card frames. The view-wide frame and the per-card
+  // overrides are read once (cardFrames.ts); a drag previews one card's frame
+  // here, locally, and only its release writes the config, once, through
+  // `onConfigChange` — standalone (galleryView.ts saveConfig) and embedded
+  // (DatabaseCallBlock) alike. Without a change handler there is no handle.
+  $: frames = normalizeCardFrames(config);
+  $: canResize = onConfigChange !== undefined;
+  let preview: { id: string; frame: CardFrame } | null = null;
+
+  function saveConfig(next: GalleryConfig) {
+    config = next;
+    onConfigChange?.(next);
+  }
+
+  function commitFrame(recordId: string, next: CardFrame | undefined) {
+    const patch = withOverride(config, recordId, next);
+    if (!patch) {
+      new Notice($i18n.t("settings-menu.view-config.card-frames.cap-reached", { limit: CARD_FRAME_OVERRIDE_CAP }));
+      return;
+    }
+    saveConfig({ ...config, ...patch });
+  }
+
+  const heightCss = (frame: CardFrame): string | undefined =>
+    frame.heightRem !== undefined ? `${frame.heightRem}rem` : undefined;
 
   function handleRecordClick(record: DataRecord) {
     // #142/#C4 — a read-only-DATA gallery still opens the note; it just does
@@ -108,6 +142,24 @@
       project.autosave ?? true
     ).open();
   }
+
+  /** v3.0.8: unified note navigation — Shift → new window, Ctrl → new tab, else → modal. */
+  function openFromCard(event: MouseEvent, record: DataRecord) {
+    // v3.0.10: Suppress click if long-press was fired
+    if (longPressFired) { longPressFired = false; return; }
+    if (event.shiftKey) {
+      void openRecord({ id: record.id, sourcePath: "" }, "window", { app: $app });
+    } else if (event.metaKey || event.ctrlKey) {
+      void openRecord({ id: record.id, sourcePath: "" }, "tab", { app: $app });
+    } else {
+      handleRecordClick(record);
+    }
+  }
+
+  // cards-g3: with no media area (ratio `none`) the whole card is the open and
+  // long-press target. A touch on the title link is left to the link, which has
+  // its own long press, so the menu never opens twice.
+  const onLink = (e: Event) => e.target instanceof Element && e.target.closest("a, .internal-link") !== null;
 
   // v3.0.10: Long-press detection for CardMedia on touch devices
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -166,8 +218,22 @@
   let:coverField
   let:iconField
   let:cardWidth
+  let:layout
+  let:coverAspectRatio
+  let:showFieldLabels
+  let:includeFields
 >
+  <!-- ios-g1 G2: `Grid` and `CenterBox` are components, so the swipe-ownership
+       action needs an element of its own, wrapping BOTH branches — an empty
+       gallery must not hand interior swipes to Obsidian either. `display:
+       contents` keeps it out of layout while it stays an ancestor in the DOM,
+       which is all Obsidian's recogniser reads. -->
+  <div class="ppp-gallery-content" use:ignoreHostSwipe>
   {#if records.length}
+    {@const mediaRatio = aspectRatioCss(coverAspectRatio)}
+    {@const cardSize = toRem(cardWidth)}
+    {@const shownFields = cardFieldsInOrder(fields, includeFields)}
+    <!-- chrome-filters: card fields in the saved order, which the settings' up/down set. -->
     <!-- C18: count footer -->
     <div class="ppp-gallery-footer">
       <span class="ppp-gallery-footer-count">
@@ -175,73 +241,105 @@
         {$i18n.t("views.gallery.records", { count: records.length, defaultValue: records.length === 1 ? "record" : "records" })}
       </span>
     </div>
-    <Grid {cardWidth}>
+    <Grid {cardWidth} {layout} let:columns let:columnStep>
       {#each records as record (record.id)}
         {@const color = getRecordColor(record)}
-        <Card>
-          <CardMedia
-            on:click={(event) => {
-              // v3.0.10: Suppress click if long-press was fired
-              if (longPressFired) { longPressFired = false; return; }
-              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
-              if (event.shiftKey) {
-                void openRecord({ id: record.id, sourcePath: "" }, "window", { app: $app });
-              } else if (event.metaKey || event.ctrlKey) {
-                void openRecord({ id: record.id, sourcePath: "" }, "tab", { app: $app });
-              } else {
-                handleRecordClick(record);
-              }
-            }}
+        {@const coverPath = getCoverRealPath($app, record, coverField)}
+        {@const shown = resolveCardFrame(frames.view, preview?.id === record.id ? preview.frame : frames.byRecord[record.id])}
+        {@const height = heightCss(shown)}
+        <!-- cards-g5: the frame shown — a drag's preview, else the saved
+             override, each dimension falling back to the view-wide frame. A
+             height sizes the media (its ratio gives way to it), or the card
+             itself when there is no media; a span applies to the grid only,
+             capped to the columns the grid has (the saved value is kept). -->
+
+        <!-- cards-g2: the shared card shell; the media element and its open /
+             long-press handlers stay here, in the view that owns them.
+             cards-g3: the card's width and the media's ratio and fit travel as
+             custom properties (--ppp-shared-card-size, --ppp-card-media-ratio,
+             --ppp-card-media-fit) for the later card batches to read; ratio
+             `none` renders no media element at all. -->
+        <SharedCard
+          recordId={record.id}
+          variant="gallery"
+          {color}
+          size={cardSize}
+          span={layout === "grid" ? effectiveSpan(shown.gridSpan, columns) : undefined}
+          minHeight={mediaRatio === null ? height : undefined}
+          interactive={mediaRatio === null}
+          on:click={(event) => { if (mediaRatio === null) openFromCard(event, record); }}
+          on:touchstart={(event) => { if (mediaRatio === null && !onLink(event)) handleCardTouchStart(record)(event); }}
+          on:touchmove={(event) => { if (mediaRatio === null) handleCardTouchMove(event); }}
+          on:touchend={(event) => { if (mediaRatio === null) handleCardTouchEnd(event); }}
+        >
+          <svelte:fragment slot="media">
+          {#if mediaRatio !== null}
+          <div
+            class="projects--gallery--card__media"
+            data-ppp-frame-target
+            style:--ppp-card-media-ratio={height ? "auto" : mediaRatio}
+            style:--ppp-card-media-fit={fitStyle}
+            style:height={height}
+            on:keypress
+            on:click={(event) => openFromCard(event, record)}
             on:touchstart={handleCardTouchStart(record)}
             on:touchmove={handleCardTouchMove}
             on:touchend={handleCardTouchEnd}
           >
-            {@const coverPath = getCoverRealPath($app, record, coverField)}
-
             {#if coverPath}
               <Image alt={$i18n.t("views.gallery.cover-alt")} src={coverPath} fit={fitStyle} />
             {:else}
               <Icon name="image" size="lg" />
             {/if}
-          </CardMedia>
-          <CardContent>
-            <ColorItem {color}>
-              <InternalLink
-                slot="header"
-                linkText={record.id}
-                sourcePath={record.id}
-                resolved
-                on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
-                  // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
-                  if (shiftKey) {
-                    void openRecord({ id: linkText, sourcePath }, "window", { app: $app });
-                  } else if (newLeaf) {
-                    void openRecord({ id: linkText, sourcePath }, "tab", { app: $app });
-                  } else {
-                    handleRecordClick(record);
-                  }
-                }}
-                on:longpress={({ detail: { linkText, sourcePath, event } }) => {
-                  showMobileNavMenu($app, { id: linkText, sourcePath }, event, () => handleRecordClick(record));
-                }}
-                on:hover={({ detail: { event, sourcePath } }) => {
-                  handleHoverLink(event, sourcePath);
-                }}
-              >
-                {#if iconField}
-                  <PageIcon value={record.values[iconField.name]} />
-                {/if}
-                {getDisplayName(record.id)}
-              </InternalLink>
-              <CardMetadata
-                fields={fields.filter(
-                  (field) => !!config?.includeFields?.includes(field.name)
-                )}
-                {record}
+          </div>
+          {/if}
+          </svelte:fragment>
+          <InternalLink
+            slot="header"
+            linkText={record.id}
+            sourcePath={record.id}
+            resolved
+            on:open={({ detail: { linkText, sourcePath, newLeaf, shiftKey } }) => {
+              // v3.0.8: Unified note navigation — Shift → new window, Ctrl → new tab, else → modal
+              if (shiftKey) {
+                void openRecord({ id: linkText, sourcePath }, "window", { app: $app });
+              } else if (newLeaf) {
+                void openRecord({ id: linkText, sourcePath }, "tab", { app: $app });
+              } else {
+                handleRecordClick(record);
+              }
+            }}
+            on:longpress={({ detail: { linkText, sourcePath, event } }) => {
+              showMobileNavMenu($app, { id: linkText, sourcePath }, event, () => handleRecordClick(record));
+            }}
+            on:hover={({ detail: { event, sourcePath } }) => {
+              handleHoverLink(event, sourcePath);
+            }}
+          >
+            {#if iconField}
+              <PageIcon value={record.values[iconField.name]} />
+            {/if}
+            {getDisplayName(record.id)}
+          </InternalLink>
+          <CardMetadata
+            slot="metadata"
+            fields={shownFields}
+            {record}
+            showLabels={showFieldLabels}
+          />
+          <svelte:fragment slot="controls">
+            {#if canResize}
+              <CardResizeHandle
+                view={frames.view}
+                override={frames.byRecord[record.id]}
+                horizontal={layout === "grid"}
+                {columnStep}
+                onPreview={(next) => { preview = next ? { id: record.id, frame: next } : null; }}
+                onCommit={(next) => commitFrame(record.id, next)}
               />
-            </ColorItem>
-          </CardContent>
-        </Card>
+            {/if}
+          </svelte:fragment>
+        </SharedCard>
       {/each}
       {#if !readonly}
       <IconButton
@@ -260,6 +358,8 @@
       />
       {/if}
     </Grid>
+    <!-- ios-s1: end space under the last row of cards; see `.ppp-gallery-end`. -->
+    <div class="ppp-gallery-end" aria-hidden="true"></div>
   {:else}
     <CenterBox>
       <div class="ppp-gallery-empty">
@@ -269,18 +369,43 @@
       </div>
     </CenterBox>
   {/if}
+  </div>
 </GalleryOptionsProvider>
 
 <style>
+  .ppp-gallery-content {
+    display: contents;
+  }
+
+  /* ios-s1: the gallery scrolls in its `ViewContent` (GalleryOptionsProvider),
+     whose bottom is under Obsidian's floating navbar on a phone. `.ppp-gallery-
+     content` is `display: contents` and the grid is another component, so the
+     end space is a block of its own after the grid, of the host's
+     `--view-bottom-spacing` (Obsidian app.css, `.is-phone`; 0 by default,
+     navbar + home-indicator inset with the floating nav — Bases reserves the
+     same at the end of its cards container). 0/unset on desktop and tablets.
+     A gallery embedded in a dashboard block is not at the view's bottom — the
+     dashboard reserves the space once, at its own end — so it has none. */
+  .ppp-gallery-end {
+    height: var(--view-bottom-spacing, 0);
+  }
+
+  :global(.ppp-widget-host) .ppp-gallery-end {
+    display: none;
+  }
+
   .ppp-gallery-footer {
     display: flex;
     align-items: center;
     padding: 0.25rem 0.75rem 0;
   }
 
+  /* theme-compat: the count and the empty hint are text a user reads, so
+     --text-muted (WCAG AA in the default themes), not --text-faint
+     (2.30:1 light, 2.97:1 dark). */
   .ppp-gallery-footer-count {
     font-size: 0.75rem;
-    color: var(--text-faint);
+    color: var(--text-muted);
     user-select: none;
   }
 
@@ -294,6 +419,6 @@
 
   .ppp-gallery-empty-hint {
     font-size: 0.875rem;
-    color: var(--text-faint);
+    color: var(--text-muted);
   }
 </style>

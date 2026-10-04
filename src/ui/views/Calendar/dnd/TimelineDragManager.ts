@@ -9,6 +9,9 @@
  * Touch flow:
  *   touchstart → pending → (long-press fires, handles visible) →
  *   (finger moves past threshold, mode evaluated once) → dragging → commit → idle
+ *   A release before the long press is a tap (click goes through); a drift past
+ *   the slop before it is a pan (the scroller keeps the touch); a release after
+ *   it swallows the click the platform may still send.
  *
  * Mouse flow:
  *   mousedown → pending → (threshold crossed) → dragging → commit → idle
@@ -22,8 +25,8 @@
  * @module dnd/TimelineDragManager
  */
 
-import { writable, get } from 'svelte/store';
-import type { Writable } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
+import type { Readable, Writable } from 'svelte/store';
 import type dayjs from 'dayjs';
 import dayjsFactory from 'dayjs';
 import type { DataRecord } from '../../../../lib/dataframe/dataframe';
@@ -75,6 +78,25 @@ function getRecordTitle(record: DataRecord): string {
   return basename.replace(/\.md$/, '') || 'Untitled';
 }
 
+// ─── Touch gesture tuning (ios-d1) ───────────────────────────────────────────
+
+/**
+ * How far a finger may drift during a press and still be a press. Below the
+ * browsers' own pan slop (Chrome ≈ 15 CSS px, iOS ≈ 10 pt), so the press is
+ * dropped BEFORE the scroller takes the touch: once it has, touchmove is no
+ * longer cancelable and a drag armed later would fight the scroll.
+ */
+const TOUCH_SLOP_REM = 0.5;
+
+/**
+ * How long the click guard waits after a release. A mouse click follows the
+ * mouseup at once; a click synthesized from a touch can trail the touchend by a
+ * frame or two of re-render work after the commit, so touch gets more room.
+ */
+const CLICK_GUARD_MOUSE_MS = 200;
+const CLICK_GUARD_TOUCH_MS = 400;
+const isTouchEvent = (event: Event): event is TouchEvent => 'touches' in event;
+
 // ─── Public types ────────────────────────────────────────────────────────────
 
 export type OnDragCommit = (
@@ -98,6 +120,42 @@ export interface TimelineConfig {
 export interface DayColumnRef {
   day: dayjs.Dayjs;
   element: HTMLElement;
+}
+
+/** How a timeline event bar shows the drag state of its own record. */
+export interface BarDragView {
+  /** Dim the bar and take it out of hit-testing (`dnd-dragging`). */
+  dimmed: boolean;
+  /** Show the resize handles and the re-grab ring (`dnd-handles-visible`). */
+  handlesVisible: boolean;
+}
+
+/**
+ * ios-p1: the two drag states of an event bar, kept apart.
+ *
+ * `dimmed` sets `pointer-events: none`, so it follows `draggedRecordId` alone:
+ * the bar dims only while its drag has actually started. `handlesVisible`
+ * follows `dragRecordId` while a touch long press is armed, which includes the
+ * quick re-grab window `cleanup` keeps open after a touch drag; there the bar
+ * stays at full opacity and hit-testable, with its handles showing, so the
+ * next touch lands on it. A mouse never sets `longPressActive`, so on a mouse
+ * only `dimmed` can change, exactly while a drag runs.
+ *
+ * @param recordId - The record the bar renders
+ * @param dragRecordId - The manager's `dragRecordId`
+ * @param draggedRecordId - The manager's `draggedRecordId`
+ * @param longPressActive - The manager's `longPressActive`
+ */
+export function barDragView(
+  recordId: string,
+  dragRecordId: string | null,
+  draggedRecordId: string | null,
+  longPressActive: boolean
+): BarDragView {
+  return {
+    dimmed: draggedRecordId === recordId,
+    handlesVisible: longPressActive && dragRecordId === recordId,
+  };
 }
 
 // ─── Internal drag session ───────────────────────────────────────────────────
@@ -129,6 +187,12 @@ interface DragSession {
   // State flags
   thresholdCrossed: boolean;
   longPressConfirmed: boolean;
+  /**
+   * Touch only: the finger was HELD until the long-press timer fired. Kept
+   * apart from `longPressConfirmed`, which a quick re-grab also sets, because
+   * only a held press means "do not open the record" when the finger lifts.
+   */
+  armedByLongPress: boolean;
   longPressTimer: number | null;
 
   // Haptic tracking
@@ -157,6 +221,19 @@ export class TimelineDragManager {
   readonly snapTimeLabel: Writable<string | null> = writable(null);
   readonly activeMode: Writable<DragMode | null> = writable(null);
   readonly dragRecordId: Writable<string | null> = writable(null);
+  /**
+   * ios-c1: the record whose drag has actually STARTED (state `dragging`),
+   * else null. `dragRecordId` is set on the press, while the session is only
+   * pending, and kept for the quick re-grab window after a drag; an element
+   * that dims and stops taking pointer events from `dragRecordId` leaves the
+   * hit point on the press, so the release and its click land on whatever is
+   * underneath and the record never opens. Anything that takes the original
+   * element out of hit-testing must follow this store instead.
+   */
+  readonly draggedRecordId: Readable<string | null> = derived(
+    [this.state, this.dragRecordId],
+    ([state, id]) => (state === 'dragging' ? id : null)
+  );
   readonly targetDayIndex: Writable<number> = writable(-1);
   readonly stripGhostPosition: Writable<StripGhostPosition | null> = writable(null);
   readonly longPressActive: Writable<boolean> = writable(false);
@@ -181,6 +258,7 @@ export class TimelineDragManager {
   private readonly handlePointerMoveBound = this.handlePointerMove.bind(this);
   private readonly handlePointerUpBound = this.handlePointerUp.bind(this);
   private readonly handleKeyDownBound = this.handleKeyDown.bind(this);
+  private readonly handleContextMenuBound = this.handleContextMenu.bind(this);
   private readonly handleOrientationChangeBound = this.handleOrientationChange.bind(this);
 
   /** Whether a drag is actively in progress */
@@ -331,6 +409,7 @@ export class TimelineDragManager {
       stripLaneIndex,
       thresholdCrossed: false,
       longPressConfirmed: !isTouchDrag, // Mouse: immediate; Touch: wait for long-press
+      armedByLongPress: false,
       longPressTimer: null,
       lastSnappedMinutes: -1,
       lastSnappedDayIndex: -1,
@@ -356,6 +435,9 @@ export class TimelineDragManager {
     doc.addEventListener('touchend', this.handlePointerUpBound);
     doc.addEventListener('touchcancel', this.handlePointerUpBound);
     doc.addEventListener('keydown', this.handleKeyDownBound);
+    // A held finger makes the platform offer a context menu (Android, Electron)
+    // or a callout; either would cancel the touch the drag is about to own.
+    if (isTouchDrag) doc.addEventListener('contextmenu', this.handleContextMenuBound);
 
     // Long-press timer for touch
     if (isTouchDrag) {
@@ -370,6 +452,7 @@ export class TimelineDragManager {
         this.session.longPressTimer = window.setTimeout(() => {
           if (!this.session) return;
           this.session.longPressConfirmed = true;
+          this.session.armedByLongPress = true;
           this.longPressActive.set(true);
           if (this.config?.isMobile) hapticDragStart();
           pauseGestures();
@@ -417,6 +500,10 @@ export class TimelineDragManager {
   private handlePointerMove(event: MouseEvent | TouchEvent): void {
     const s = this.session;
     if (!s || !this.config) return;
+    // A touch session follows touches only. Browsers also emit mouse events
+    // for a held finger (Blink sends a mousemove before its long-press
+    // contextmenu); they carry no movement this session should act on.
+    if (isTouchEvent(event) !== s.isTouchDrag) return;
 
     const point = this.getPointerPosition(event);
     const deltaX = point.clientX - s.startX;
@@ -424,10 +511,13 @@ export class TimelineDragManager {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
     // ── Phase 1: Before long-press confirmed (touch only) ──
-    // If finger moves significantly before long-press fires, user is scrolling → cancel
+    // A finger that drifts past the slop is panning, and a move the browser no
+    // longer lets us cancel means it is already scrolling. Either way the touch
+    // is the scroller's: drop the press now, or the timer would arm a drag in
+    // the middle of a slow scroll.
     if (!s.longPressConfirmed) {
       const remPx = this.config.remPx ?? 16;
-      if (distance > 1.875 * remPx) {
+      if (!event.cancelable || distance > TOUCH_SLOP_REM * remPx) {
         this.cleanup();
       }
       return;
@@ -441,12 +531,15 @@ export class TimelineDragManager {
       const thresholdPx = DND_CONSTANTS.DRAG_THRESHOLD_REM * (this.config.remPx ?? 16);
       if (distance < thresholdPx) return;
 
-      // Threshold crossed — on mobile, re-evaluate mode from current finger position.
-      // Handles are now visible (longPressActive), user may have aimed toward a handle.
-      // Use generous thirds of bar height: top third = resize-top, bottom = resize-bottom, middle = move.
-      // This is evaluated ONCE — mode is final after this point.
+      // Threshold crossed — on mobile, re-evaluate the mode with the larger
+      // touch zones, evaluated ONCE (mode is final after this point).
+      // ios-d1: from where the finger PRESSED, not where it is now. The user
+      // aims at a handle or at the body before pressing; by the time the
+      // threshold is crossed the finger has already travelled in the drag
+      // direction, and on a one-hour bar a downward move from its middle landed
+      // in the bottom zone — a "move" became a resize of the end time.
       if (s.isTouchDrag && s.barElement && this.config.isMobile) {
-        s.mode = this.evaluateModeFromPosition(point.clientY, s.barElement);
+        s.mode = this.evaluateModeFromPosition(s.startY, s.barElement);
         this.activeMode.set(s.mode);
       }
 
@@ -468,19 +561,39 @@ export class TimelineDragManager {
   }
 
   private handlePointerUp(event: MouseEvent | TouchEvent): void {
-    const currentState = get(this.state);
+    const s = this.session;
+    if (!s) return;
+    // Compatibility mouse events after a touch are not this session's release.
+    if (isTouchEvent(event) !== s.isTouchDrag) return;
 
-    if (currentState === 'dragging') {
-      // Save doc ref before commit (which calls cleanup and nulls session)
-      const doc = this.session?.listenerDoc ?? document;
+    // Save what we need before commit/cleanup null the session.
+    const doc = s.listenerDoc;
+    const guardMs = s.isTouchDrag ? CLICK_GUARD_TOUCH_MS : CLICK_GUARD_MOUSE_MS;
+    const wasHeld = s.isTouchDrag && s.armedByLongPress;
+    // Touch guards are scoped to this gesture (see suppressNextClick); the
+    // mouse guard keeps taking the first click, as it always has.
+    const scope = s.isTouchDrag ? { origin: s.barElement, recordId: s.record.id } : undefined;
+
+    if (get(this.state) === 'dragging') {
       this.commit();
-      this.suppressNextClick(doc);
-    } else {
-      // Never crossed threshold — treat as click (cleanup, let click handler work)
-      this.cleanup();
+      this.suppressNextClick(doc, guardMs, scope);
+      if (event.cancelable) event.preventDefault();
+      return;
     }
 
-    if (event.cancelable) event.preventDefault();
+    this.cleanup();
+    if (wasHeld) {
+      // ios-d1: a held finger asked for a drag, not for the record. Whatever
+      // the platform makes of the release — a click on some browsers even after
+      // a long press — must not open it.
+      this.suppressNextClick(doc, guardMs, scope);
+      if (event.cancelable) event.preventDefault();
+      return;
+    }
+    // A plain tap (or a mouse press that never moved). The touchend must stay
+    // default: cancelling it is what stopped the browser from synthesizing
+    // the click that opens the record.
+    if (!s.isTouchDrag && event.cancelable) event.preventDefault();
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -488,6 +601,10 @@ export class TimelineDragManager {
       event.preventDefault();
       this.cancel();
     }
+  }
+
+  private handleContextMenu(event: Event): void {
+    if (this.session?.isTouchDrag) event.preventDefault();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -1111,19 +1228,42 @@ export class TimelineDragManager {
   }
 
   /**
-   * After a drag commit, the browser fires a click event on the
-   * original mousedown target. Intercept it once to prevent record navigation.
+   * After a drag commit (or a held touch), the browser may fire a click on the
+   * original target. Intercept it once to prevent record navigation.
+   *
+   * With `scope`, only a click that belongs to the released gesture is taken,
+   * matched by IDENTITY: its target is inside the element the gesture started
+   * on, or — because a commit re-renders the bar under the finger — inside an
+   * event bar carrying the same `data-record-id`. Coordinates are deliberately
+   * not used: a neighbouring event tapped right after the release sits within
+   * a fingertip of it and must still open. A cancelled touchend sends no click
+   * at all, so an unscoped guard would sit armed for the whole window and
+   * swallow the user's next tap elsewhere. Without `scope` (mouse) the first
+   * click is taken, as before: after a mouse drag the click lands on the common
+   * ancestor of press and release, not on the bar.
    */
-  private suppressNextClick(doc: Document): void {
+  private suppressNextClick(
+    doc: Document,
+    windowMs: number,
+    scope?: { origin: HTMLElement; recordId: string }
+  ): void {
+    const belongs = (e: Event): boolean => {
+      if (!scope) return true;
+      if (!(e.target instanceof Element)) return false;
+      if (scope.origin.contains(e.target)) return true;
+      const bar = e.target.closest('[data-record-id]');
+      return bar?.getAttribute('data-record-id') === scope.recordId;
+    };
+    const remove = () => doc.removeEventListener('click', handler, { capture: true });
     const handler = (e: Event) => {
+      if (!belongs(e)) return;
+      remove();
       e.stopPropagation();
       e.preventDefault();
     };
-    doc.addEventListener('click', handler, { capture: true, once: true });
-    // Safety: remove if click doesn't fire within 200ms (e.g., touch scenario)
-    window.setTimeout(() => {
-      doc.removeEventListener('click', handler, { capture: true });
-    }, 200);
+    doc.addEventListener('click', handler, { capture: true });
+    // Safety: remove if no matching click arrives (a cancelled touchend sends none).
+    window.setTimeout(remove, windowMs);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -1409,6 +1549,7 @@ export class TimelineDragManager {
       s.listenerDoc.removeEventListener('touchend', this.handlePointerUpBound);
       s.listenerDoc.removeEventListener('touchcancel', this.handlePointerUpBound);
       s.listenerDoc.removeEventListener('keydown', this.handleKeyDownBound);
+      s.listenerDoc.removeEventListener('contextmenu', this.handleContextMenuBound);
 
       // Stop auto-scroll (must happen before session = null)
       this.stopVerticalAutoScroll();

@@ -15,6 +15,8 @@ export class OnboardingModal extends Modal {
     readonly onTry: () => Promise<boolean>
   ) {
     super(app);
+    // Shared plugin modal root: phone input size, reduced motion (tokens.css).
+    this.containerEl.addClass("ppp-modal");
   }
 
   onOpen() {

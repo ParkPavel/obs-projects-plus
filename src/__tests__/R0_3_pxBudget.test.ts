@@ -1,26 +1,50 @@
 import { readdirSync, readFileSync, statSync } from "fs";
-import { join } from "path";
+import { join, relative, sep } from "path";
 
 /**
  * R0.3 — CSS px-budget ratchet
  *
- * Revision 3 §2.1 mandates "ИСКЛЮЧИТЕЛЬНО относительные единицы". Mass
- * conversion of legacy px values is scheduled for R0.3b (file-by-file).
- * In the meantime this test guards a NUMERIC RATCHET: the current count
- * of `<digits>px` occurrences across `src/**\/*.{svelte,css}` is captured
- * here as a budget; any change that grows the count fails the build.
+ * Revision 3 §2.1 mandates "ИСКЛЮЧИТЕЛЬНО относительные единицы". The legacy
+ * px values were converted in stage R0.3b, and this test now holds the tree
+ * at ZERO `<digits>px` occurrences across `src/**\/*.{svelte,css}` — comments
+ * included, because a comment that states a size in px is where the next px
+ * value is copied from.
  *
- * To DECREASE the budget after a real conversion, lower the constant.
- * NEVER raise it without an explicit approval recorded in CHANGELOG.
+ * The check is exact: a count above the budget fails, and so does a count
+ * below it, so the constant always equals the tree. At 0 that means no px at
+ * all. NEVER raise it.
  *
- * Allowed-by-spec exceptions (counted but not flagged at the linter level):
- * - `1px`: hairline borders / dividers (Obsidian-native idiom).
- * - `0px`: no-op offsets (rare).
- * Both are part of the budget so even decorative growth is caught.
+ * What replaced the old allowed-by-spec exceptions:
+ * - hairlines (`1px` borders, dividers, rings) read `var(--ppp-border-width)`,
+ *   which `tokens.css` declares as 0.0625rem (one CSS pixel at the default
+ *   root); a thick stroke is `--ppp-border-width-thick` (0.125rem);
+ * - `0px` is `0` (`0rem` inside `calc()`, where a unitless zero is invalid);
+ * - a length measured in a script is written back through
+ *   `src/ui/utils/cssLength.ts` (see the second ratchet below).
  */
 
 const SRC_ROOT = join(__dirname, "..");
 const PX_RE = /\b\d+(?:\.\d+)?px\b/g;
+
+/** A path relative to `src/`, slash-separated on every platform. */
+const rel = (file: string): string => relative(SRC_ROOT, file).split(sep).join("/");
+
+/** Every match of `re` in `text`, as `line: match` (1-based line numbers). */
+function sitesIn(text: string, re: RegExp): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(re)) {
+    const line = text.slice(0, m.index ?? 0).split("\n").length;
+    out.push(`${line}: ${m[0]}`);
+  }
+  return out;
+}
+
+/** The remaining sites, one per line, for a failure message. */
+function listSites(perFile: Map<string, string[]>): string {
+  return [...perFile.entries()]
+    .flatMap(([file, sites]) => sites.map((s) => `  ${rel(file)}:${s}`))
+    .join("\n");
+}
 
 function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
@@ -35,15 +59,20 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-function countPxAcrossSrc(): { total: number; perFile: Map<string, number> } {
-  const perFile = new Map<string, number>();
+/** `<digits>px` literals in a stylesheet or component, comments included. */
+function countPx(text: string): number {
+  return text.match(PX_RE)?.length ?? 0;
+}
+
+function countPxAcrossSrc(): { total: number; perFile: Map<string, string[]> } {
+  const perFile = new Map<string, string[]>();
   let total = 0;
   for (const file of walk(SRC_ROOT)) {
     const text = readFileSync(file, "utf8");
-    const matches = text.match(PX_RE);
-    if (matches && matches.length > 0) {
-      perFile.set(file, matches.length);
-      total += matches.length;
+    const n = countPx(text);
+    if (n > 0) {
+      perFile.set(file, sitesIn(text, PX_RE));
+      total += n;
     }
   }
   return { total, perFile };
@@ -82,22 +111,240 @@ describe("R0.3 — CSS px-budget ratchet", () => {
   //     all of them re-declared live in tokens.css. Re-measured rather than decremented,
   //     because the ceiling had drifted 23 above the tree: a ratchet that is not the
   //     measurement cannot see a deletion, which is what let a dead file sit here.
-  const PX_BUDGET = 143;
+  //   143 → 0 (R0.3b, units-r03b — measured 140 under the drifted 143, then all
+  //     converted: hairlines to var(--ppp-border-width), the token itself to
+  //     0.0625rem (host --border-width deferred to the user), 9999px pills to --ppp-radius-full (624.9375rem),
+  //     0px to 0, the rest to rem; comments reworded. The check became exact.)
+  const PX_BUDGET = 0;
 
-  it("does not exceed the agreed px-budget", () => {
+  it("equals the agreed px-budget, which is zero", () => {
     const { total, perFile } = countPxAcrossSrc();
-    if (total > PX_BUDGET) {
-      const top = [...perFile.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([f, c]) => `  ${c.toString().padStart(4)}  ${f}`)
-        .join("\n");
+    if (total !== PX_BUDGET) {
       throw new Error(
-        `px-budget exceeded: ${total} > ${PX_BUDGET}\nTop offenders:\n${top}\n\n` +
-          `If this is the result of a deliberate conversion that REDUCES the count, ` +
-          `lower PX_BUDGET in this test. If it is new px, please convert to rem/em/%.`,
+        `px count is ${total}, budget is ${PX_BUDGET}. Remaining sites:\n${listSites(perFile)}\n\n` +
+          `The plugin writes relative units only: a hairline is var(--ppp-border-width), ` +
+          `a zero is 0, any other length is rem/em/% (or the --ppp-local-* scale inside ` +
+          `a container). A comment that states a size in px counts too — reword it.`,
       );
     }
-    expect(total).toBeLessThanOrEqual(PX_BUDGET);
+    expect(total).toBe(PX_BUDGET);
+  });
+
+  it("counts px literals and nothing else", () => {
+    expect(countPx("border: 1px solid; margin: -1px 0.5px;")).toBe(3);
+    expect(countPx("/* was 4px */ .a { gap: 0.25rem; }")).toBe(1);
+    expect(countPx(".a { border: var(--ppp-border-width) solid; gap: 0.0625rem; }")).toBe(0);
+    expect(countPx("const name = 'gapPx'; .rpx { }")).toBe(0);
+  });
+
+  it("names every remaining site in its failure message", () => {
+    const text = ".a { border: 1px solid; }\n.b { margin: 0 2.5px; }";
+    expect(sitesIn(text, PX_RE)).toEqual(["1: 1px", "2: 2.5px"]);
+    const perFile = new Map([[join(SRC_ROOT, "ui", "x.svelte"), sitesIn(text, PX_RE)]]);
+    expect(listSites(perFile)).toBe("  ui/x.svelte:1: 1px\n  ui/x.svelte:2: 2.5px");
+  });
+});
+
+/**
+ * R0.3 — script-built px ratchet
+ *
+ * The plugin principle is "ИСКЛЮЧИТЕЛЬНО относительные единицы" (Revision 3
+ * §2.1). The CSS ratchet above reads `<digits>px` literals, so it cannot see a
+ * length a script assembles at runtime: `${Math.floor(room)}px` written into a
+ * custom property or an inline style is a px value all the same. ios-u1 found
+ * exactly that (App.svelte's `--ppp-below-nav-h`, now rem) and added this
+ * second ratchet.
+ *
+ * Counted, in `.ts` files and the non-`<style>` part of `.svelte` files under
+ * `src` (`__tests__` and `__mocks__` skipped):
+ * - every `}px` — an interpolation followed by the unit, so a template literal
+ *   `translate(${x}px, ${y}px)` counts 2;
+ * - a quoted `px` string literal — `'px'`, `"px"` or the same in backticks (a
+ *   unit glued on by concatenation).
+ * Block comments, HTML comments and `//` line comments are stripped first;
+ * `://` (a URL) is not a comment.
+ *
+ * The legacy occurrences were converted in stage R0.3b, together with the CSS
+ * literals above, and the budget is 0. A measured length (a pointer
+ * coordinate, a bounding rectangle, a stored column width) is written back
+ * through `src/ui/utils/cssLength.ts`: divided by the root font size of the
+ * element's own document and written in rem, unrounded. SVG geometry and APIs
+ * that take plain numbers keep plain numbers. The check is exact — a count
+ * below the budget fails too — so the constant always equals the tree.
+ */
+
+const SCRIPT_TEMPLATE_PX_RE = /\}px\b/g;
+const SCRIPT_QUOTED_PX_RE = /(['"`])px\1/g;
+
+/**
+ * Remove `/* … *\/` and `//` comments, keeping newlines. String literals are
+ * tracked only so that a `//` or `/*` inside one (a URL, a `**\/*.md` glob)
+ * does not start a comment; a quote left open at the end of a line (an
+ * apostrophe in markup text) is closed there, so a stray one cannot swallow
+ * the rest of the file.
+ */
+function stripScriptComments(src: string): string {
+  let out = "";
+  let quote: string | null = null;
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i]!;
+    if (quote !== null) {
+      out += c;
+      if (c === "\\" && i + 1 < src.length) {
+        out += src[i + 1]!;
+        i += 2;
+        continue;
+      }
+      if (c === quote || (c === "\n" && quote !== "`")) quote = null;
+      i++;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "*") {
+      const end = src.indexOf("*/", i + 2);
+      const stop = end === -1 ? src.length : end + 2;
+      out += src.slice(i, stop).replace(/[^\n]/g, "");
+      i = stop;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "/" && src[i - 1] !== ":") {
+      const end = src.indexOf("\n", i);
+      i = end === -1 ? src.length : end;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === "`") quote = c;
+    out += c;
+    i++;
+  }
+  return out;
+}
+
+/** `match` with everything but its newlines removed, so line numbers survive. */
+const blankKeepingLines = (match: string): string => match.replace(/[^\n]/g, "");
+
+/**
+ * The scanned code of one file: `.svelte` loses its `<style>` blocks and HTML
+ * comments. Removed regions keep their newlines, so a reported line number is
+ * the line in the file.
+ */
+function scriptCode(text: string, isSvelte: boolean): string {
+  const body = isSvelte
+    ? text
+        .replace(/<style[\s>][\s\S]*?<\/style>/g, blankKeepingLines)
+        .replace(/<!--[\s\S]*?-->/g, blankKeepingLines)
+    : text;
+  return stripScriptComments(body);
+}
+
+/** Every script-built px site in a file, as `line: match`. */
+function scriptPxSites(text: string, isSvelte: boolean): string[] {
+  const code = scriptCode(text, isSvelte);
+  return [...sitesIn(code, SCRIPT_TEMPLATE_PX_RE), ...sitesIn(code, SCRIPT_QUOTED_PX_RE)];
+}
+
+function countScriptPx(text: string, isSvelte: boolean): number {
+  return scriptPxSites(text, isSvelte).length;
+}
+
+function* walkScripts(dir: string): Generator<string> {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      if (entry === "__tests__" || entry === "__mocks__") continue;
+      yield* walkScripts(full);
+    } else if (entry.endsWith(".ts") || entry.endsWith(".svelte")) {
+      yield full;
+    }
+  }
+}
+
+function countScriptPxAcrossSrc(): { total: number; perFile: Map<string, string[]> } {
+  const perFile = new Map<string, string[]>();
+  let total = 0;
+  for (const file of walkScripts(SRC_ROOT)) {
+    const sites = scriptPxSites(readFileSync(file, "utf8"), file.endsWith(".svelte"));
+    if (sites.length > 0) {
+      perFile.set(file, sites);
+      total += sites.length;
+    }
+  }
+  return { total, perFile };
+}
+
+describe("R0.3 — script-built px ratchet", () => {
+  // Measured 2026-10-03 (ios-u1): 53 in 15 files, minus App.svelte's
+  // `--ppp-below-nav-h`, converted to rem in the same change.
+  //   52 → 0 (R0.3b, units-r03b — every site written back through
+  //     src/ui/utils/cssLength.ts; Day.svelte's IntersectionObserver band became
+  //     viewport percentages, the one API here that takes no rem.)
+  const SCRIPT_PX_BUDGET = 0;
+
+  it("equals the agreed script-built px budget, which is zero", () => {
+    const { total, perFile } = countScriptPxAcrossSrc();
+    if (total !== SCRIPT_PX_BUDGET) {
+      throw new Error(
+        `script-built px count is ${total}, budget is ${SCRIPT_PX_BUDGET}. Remaining sites:\n` +
+          `${listSites(perFile)}\n\n` +
+          "A length assembled in a script is still a px length. Write it back with " +
+          "toRem/remAt from src/ui/utils/cssLength.ts (root font size of the element's " +
+          "own document), or as em/% where the length is relative by nature.",
+      );
+    }
+    expect(total).toBe(SCRIPT_PX_BUDGET);
+  });
+
+  it("names every remaining script site with its real line", () => {
+    const svelte = [
+      "<script>",
+      "  const a = `${x}px`;",
+      "</script>",
+      "<style>",
+      "  .a { content: 'px'; }",
+      "</style>",
+      "<!-- `${y}px`",
+      "-->",
+      "<div style:top={`${z}px`} />",
+    ].join("\n");
+    expect(scriptPxSites(svelte, true)).toEqual(["2: }px", "9: }px"]);
+  });
+
+  it("counts every }px, two in one translate()", () => {
+    expect(countScriptPx("el.style.transform = `translate(${x}px, ${y}px)`;", false)).toBe(2);
+  });
+
+  it("counts a planted template literal ending in }px", () => {
+    expect(countScriptPx("el.style.top = `${x}px`;", false)).toBe(1);
+    expect(countScriptPx("<script>\n  $: h = `${x}px`;\n</script>\n<div style:height={h} />", true)).toBe(1);
+  });
+
+  it("counts a quoted px unit glued on by concatenation", () => {
+    expect(countScriptPx("const a = n + 'px'; const b = n + \"px\"; const c = n + `px`;", false)).toBe(3);
+  });
+
+  it("does not count px inside a comment", () => {
+    const text = [
+      "// was `${x}px` before R0.3b",
+      "/* el.style.top = `${y}px`; */",
+      "/**",
+      " * n + 'px'",
+      " */",
+      "const ok = 1;",
+    ].join("\n");
+    expect(countScriptPx(text, false)).toBe(0);
+    expect(countScriptPx("<!-- `${x}px` -->\n<div />", true)).toBe(0);
+  });
+
+  it("does not count a rem unit", () => {
+    expect(countScriptPx("const a = `${x}rem`; const b = n + 'rem';", false)).toBe(0);
+  });
+
+  it("does not treat a URL or a glob string as a comment", () => {
+    expect(countScriptPx("const u = 'https://example.com'; el.style.top = `${x}px`;", false)).toBe(1);
+    expect(countScriptPx("const g = '**/*.md'; el.style.top = `${x}px`;", false)).toBe(1);
+  });
+
+  it("does not read a <style> block as script", () => {
+    expect(countScriptPx("<div />\n<style>\n  .a { content: 'px'; }\n</style>", true)).toBe(0);
   });
 });

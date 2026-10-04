@@ -2,6 +2,8 @@
 // #096.2 — density-based axis-label layout.
 
 import {
+  axisLabelFont,
+  COARSE_LABEL_FONT,
   computeAxisLabelLayout,
   labelAnchor,
   shouldRenderLabel,
@@ -71,7 +73,8 @@ describe("shouldRenderLabel", () => {
  * SVG text, so nothing here is evidence about rendering. Actual label sizing
  * still requires a browser layout check.
  *
- * The chain mirrored below is BarChart.svelte:20-36 verbatim — the same paddings
+ * The chain mirrored below is BarChart.svelte's layout block verbatim (fine
+ * pointer; the coarse branch is the ios-m1 block further down) — the same paddings
  * and the same LABEL_FONT — so a change there breaks these numbers rather than
  * quietly diverging from them.
  */
@@ -151,6 +154,104 @@ describe("#166 — the container width decides the cull", () => {
     const { plotWidth, layout } = layoutFor(0);
     expect(plotWidth).toBe(CHART_WIDTH_FALLBACK - PADDING_LEFT - PADDING_RIGHT);
     expect(Number.isFinite(layout.skipInterval)).toBe(true);
+  });
+});
+
+/*
+ * ios-m1 — on a coarse pointer Bar and Line draw their axis text at
+ * `--ppp-text-floor` (CSS), larger than their LABEL_FONT (11 and 10). The
+ * layout is told so through `coarse` and sizes the slots for
+ * COARSE_LABEL_FONT. Arithmetic only: jsdom lays out no SVG text, so the live
+ * text inventory at 390x844 is the rendering evidence.
+ */
+describe("ios-m1 — axis labels on a coarse pointer", () => {
+  const MIN_LABEL_GAP = 4;
+  const CHAR_WIDTH_RATIO = 0.6;
+  const MONTHS = 12;
+  const LABEL_CHARS = 7; // "2026-01"
+  // Bar (LABEL_FONT 11) and Line (LABEL_FONT 10), both with PADDING_LEFT 50
+  // and PADDING_RIGHT 20 on a single axis.
+  const CHARTS = [
+    { name: "bar", font: 11 },
+    { name: "line", font: 10 },
+  ] as const;
+  // A phone widget at 390 wide, a narrower one, and the pre-measure fallback.
+  const WIDTHS = [240, 358, CHART_WIDTH_FALLBACK];
+
+  const layout = (containerWidth: number, font: number, coarse: boolean) =>
+    computeAxisLabelLayout({
+      count: MONTHS,
+      plotWidth: containerWidth - 50 - 20,
+      fontSize: font,
+      maxLabelChars: LABEL_CHARS,
+      coarse,
+    });
+
+  const intervalDriven = (skipInterval: number): number[] =>
+    [...Array(MONTHS).keys()].filter(
+      (i) => shouldRenderLabel(i, MONTHS, skipInterval) && i % skipInterval === 0,
+    );
+
+  test("the layout font: unchanged on a fine pointer, never below the floor guess on a coarse one", () => {
+    expect(axisLabelFont(10, false)).toBe(10);
+    expect(axisLabelFont(11, false)).toBe(11);
+    expect(axisLabelFont(10, true)).toBe(COARSE_LABEL_FONT);
+    expect(axisLabelFont(COARSE_LABEL_FONT + 2, true)).toBe(COARSE_LABEL_FONT + 2);
+    // The floor is at least 11 units at the default root; the guess must cover it.
+    expect(COARSE_LABEL_FONT).toBeGreaterThanOrEqual(11);
+  });
+
+  test("a fine pointer lays out exactly as without the option", () => {
+    for (const { font } of CHARTS) {
+      for (const width of [...WIDTHS, 960]) {
+        const plain = computeAxisLabelLayout({
+          count: MONTHS,
+          plotWidth: width - 70,
+          fontSize: font,
+          maxLabelChars: LABEL_CHARS,
+        });
+        expect(layout(width, font, false)).toEqual(plain);
+      }
+    }
+  });
+
+  test("rendered labels clear each other at the coarse size", () => {
+    for (const { name, font } of CHARTS) {
+      for (const width of WIDTHS) {
+        const l = layout(width, font, true);
+        const slotWidth = (width - 70) / MONTHS;
+        // Horizontal: the whole estimated box. Rotated by -30°: parallel
+        // baselines are d·sin(30°) apart, so one line plus the gap needs
+        // twice that along the axis.
+        const needed = l.rotate
+          ? (COARSE_LABEL_FONT + MIN_LABEL_GAP) * 2
+          : LABEL_CHARS * COARSE_LABEL_FONT * CHAR_WIDTH_RATIO + MIN_LABEL_GAP;
+        const rendered = intervalDriven(l.skipInterval);
+        for (let k = 1; k < rendered.length; k++) {
+          const gap = (rendered[k]! - rendered[k - 1]!) * slotWidth;
+          expect(`${name}@${width}: ${gap >= needed}`).toBe(`${name}@${width}: true`);
+        }
+      }
+    }
+  });
+
+  test("on a phone-width widget the coarse layout thins the labels", () => {
+    for (const { font } of CHARTS) {
+      const fine = layout(358, font, false);
+      const coarse = layout(358, font, true);
+      expect(coarse.skipInterval).toBeGreaterThan(fine.skipInterval);
+      expect(intervalDriven(coarse.skipInterval).length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  test("the bottom padding makes room for the larger labels", () => {
+    for (const { font } of CHARTS) {
+      for (const width of WIDTHS) {
+        expect(layout(width, font, true).bottomPadding).toBeGreaterThanOrEqual(
+          layout(width, font, false).bottomPadding,
+        );
+      }
+    }
   });
 });
 

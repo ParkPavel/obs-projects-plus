@@ -10,6 +10,8 @@
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
   export let view: ViewDefinition | undefined = undefined;
+  /** Agenda state for the icon/label; undefined falls back to the view config. */
+  export let agendaOpen: boolean | undefined = undefined;
 
   const dispatch = createEventDispatcher<{
     addView: void;
@@ -49,6 +51,7 @@
     <SettingsMenuButton onOpen={(event) => dispatch("openSettings", event)}/>
     <ViewSpecificActions
       {view}
+      {agendaOpen}
       onCenterToday={() => dispatch("centerToday")}
       onToggleAgenda={() => dispatch("toggleAgenda")}
       onFreezeColumns={() => dispatch("freezeColumns")}
@@ -70,23 +73,29 @@
     background: var(--background-secondary);
     backdrop-filter: blur(0.625rem) saturate(180%);
     -webkit-backdrop-filter: blur(0.625rem) saturate(180%);
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     flex-shrink: 0;
   }
 
+  /* ios-l1 L3: the actions take their own width first and never shrink; the
+     view strip gets only what is left (`flex: 1 1 0` in ViewSwitcher) and
+     clips at its own edge, so a tab can scroll but cannot reach an icon. */
   .right {
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-xs, 0.375rem);
-    flex-shrink: 0;
+    flex: 0 0 auto;
   }
 
-  :global(.clickable-icon) {
+  /* theme-compat: anchored to the navbar. A bare `:global(.clickable-icon)`
+     here restyled every clickable icon in Obsidian (the ribbon, the tab
+     header) once the plugin view mounted. R0.35 keeps it from coming back. */
+  .compact-navbar :global(.clickable-icon) {
     padding: 0.625rem;
     border-radius: 0.625rem;
   }
 
-  :global(.clickable-icon:focus-visible) {
+  .compact-navbar :global(.clickable-icon:focus-visible) {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.125rem;
     background: var(--background-modifier-hover);

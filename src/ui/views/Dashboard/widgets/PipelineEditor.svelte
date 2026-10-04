@@ -958,7 +958,7 @@
     gap: 0.75rem;
     padding: 0.75rem;
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-m, 0.375rem);
     max-width: 40rem;
   }
@@ -1122,7 +1122,7 @@
     padding: 0.625rem 0.75rem;
     margin-bottom: 0.5rem;
     background: var(--background-modifier-hover);
-    border: 1px solid var(--interactive-accent);
+    border: var(--ppp-border-width) solid var(--interactive-accent);
     border-left-width: 0.1875rem;
     border-radius: var(--radius-s, 0.25rem);
     font-size: var(--font-ui-small);
@@ -1170,7 +1170,7 @@
     flex-direction: column;
     gap: 0;
     background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
   }
 
@@ -1207,7 +1207,7 @@
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.5rem 0.5rem 0.625rem 2.25rem;
-    border-top: 1px dashed var(--background-modifier-border);
+    border-top: var(--ppp-border-width) dashed var(--background-modifier-border);
   }
 
   .ppp-step-field {
@@ -1228,7 +1228,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-small);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1322,7 +1322,7 @@
     padding: 0.125rem 0.25rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1339,7 +1339,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1349,7 +1349,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1360,7 +1360,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1377,7 +1377,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1403,7 +1403,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1414,7 +1414,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
     font-family: var(--font-monospace);
@@ -1441,7 +1441,7 @@
 
   .ppp-chip {
     padding: 0.125rem 0.5rem;
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: var(--background-primary);
     color: var(--text-muted);
@@ -1471,7 +1471,7 @@
     padding: 0.25rem 0.375rem;
     font-size: var(--font-ui-smaller);
     background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
+    border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     color: var(--text-normal);
   }
@@ -1480,7 +1480,7 @@
   .ppp-add-row-btn {
     align-self: flex-start;
     padding: 0.25rem 0.5rem;
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: none;
     color: var(--text-muted);
@@ -1511,7 +1511,7 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.25rem 0.5rem;
-    border: 1px dashed var(--background-modifier-border);
+    border: var(--ppp-border-width) dashed var(--background-modifier-border);
     border-radius: var(--radius-s, 0.25rem);
     background: none;
     color: var(--text-muted);

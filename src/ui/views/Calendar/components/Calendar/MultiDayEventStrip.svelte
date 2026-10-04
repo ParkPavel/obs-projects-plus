@@ -9,9 +9,12 @@
    * v8.0: Unified height system - STRIP_HEIGHT + STRIP_GAP must match TimelineView/HeaderStripsSection
    */
   
+  import { readable } from 'svelte/store';
   import type { TimelineDragManager } from '../../dnd/TimelineDragManager';
   import type { ProcessedRecord } from '../../types';
   import type { DragMode } from '../../dnd/types';
+  import { isTouchDevice } from 'src/lib/stores/ui';
+  import { stripGeometry, stripTopRem } from '../../utils/stripGeometry';
 
   export let title: string;
   export let color: string = 'var(--text-accent)';
@@ -28,18 +31,22 @@
   /** v4.0.4: Hide resize handles when resize is impossible (e.g. day view) */
   export let canResize: boolean = true;
   
-  // v8.0: Unified constants - MUST match TimelineView.svelte
-  const STRIP_HEIGHT_DESKTOP = 1.25;  // rem
-  const STRIP_HEIGHT_MOBILE = 1.125;  // rem  
-  const STRIP_GAP_REM = 0.125;        // gap between strips
-  
-  // Reactive height based on device
-  $: STRIP_HEIGHT_REM = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT_DESKTOP;
-  // Row height = strip height + gap
-  $: ROW_HEIGHT_REM = STRIP_HEIGHT_REM + STRIP_GAP_REM;
-  // Top position for this strip
-  $: topPosition = rowIndex * ROW_HEIGHT_REM;
-  
+  // ios-p1: height and gap from the shared `stripGeometry`, the same source as
+  // TimelineView's all-day section, so lanes and section stay aligned; a
+  // coarse pointer gets a finger-sized strip.
+  $: geometry = stripGeometry({ coarse: $isTouchDevice, isMobile });
+  $: STRIP_HEIGHT_REM = geometry.heightRem;
+  $: topPosition = stripTopRem(rowIndex, geometry);
+
+  // ios-c1: `isDragging` comes from the manager's `dragRecordId`, set on the
+  // PRESS (and kept for the re-grab window after a drag). Dimming with
+  // `pointer-events: none` from it took the strip out of hit-testing between
+  // press and release, so the click landed beneath it. Dim only once the drag
+  // has actually started.
+  const noDrag = readable<string | null>(null);
+  $: draggedRecordId = dragManager?.draggedRecordId ?? noDrag;
+  $: isDimmed = isDragging && $draggedRecordId != null;
+
   function handleClick(e: MouseEvent) {
     e.stopPropagation();
     if (onClick) {
@@ -91,7 +98,7 @@
     class:first={isFirstDay}
     class:last={isLastDay}
     class:mobile={isMobile}
-    class:dnd-dragging={isDragging}
+    class:dnd-dragging={isDimmed}
     class:dnd-grab={!!dragManager}
     style="
       --strip-color: {color};
@@ -194,7 +201,7 @@
   
   button.projects-calendar-multiday-strip:hover {
     background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-s);
     z-index: 3;
   }
   

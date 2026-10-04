@@ -21,6 +21,8 @@
   import { getScrollBehavior, getAnimationDuration } from 'src/lib/helpers/animation';
   import { settings } from 'src/lib/stores/settings';
   import { isGesturesPaused } from '../../gestures/GestureCoordinator';
+  import { isTouchDevice } from 'src/lib/stores/ui';
+  import { stripGeometry, allDaySectionHeightRem, type StripGeometry } from '../../utils/stripGeometry';
 
   dayjs.extend(isSameOrAfter);
   dayjs.extend(isSameOrBefore);
@@ -58,20 +60,18 @@
   // v3.0.9: Instant mode — disable CSS animations when user prefers instant transitions
   $: isInstantMode = $settings.preferences.animationBehavior === 'instant';
   
-  // v8.1.2: Calculate AllDay section height for sticky axis sync
-  // MUST match TimelineView's STRIP_HEIGHT_REM exactly for alignment
-  // Responsive: desktop uses 1.25rem, mobile uses 1.125rem
-  const STRIP_HEIGHT_DESKTOP = 1.25;
-  const STRIP_HEIGHT_MOBILE = 1.125;
-  const STRIP_GAP_REM = 0.125;
-  $: STRIP_HEIGHT_REM = isMobile ? STRIP_HEIGHT_MOBILE : STRIP_HEIGHT_DESKTOP;
+  // v8.1.2: Calculate AllDay section height for sticky axis sync.
+  // ios-p1: strip height and gap come from the shared `stripGeometry`, the
+  // source TimelineView and the strips read, so the sticky row and the day
+  // columns stay aligned on every pointer.
+  $: stripGeom = stripGeometry({ coarse: $isTouchDevice, isMobile });
   const DAY_HEADER_HEIGHT_REM = 3.75;
-  
+
   /**
    * Calculate max lane from all processed events for AllDay section height
-   * v8.3.1: Accept stripHeight as parameter to avoid closure issues with reactive vars
+   * v8.3.1: Accept the geometry as parameter to avoid closure issues with reactive vars
    */
-  function calculateAllDayHeight(stripHeight: number): number {
+  function calculateAllDayHeight(geometry: StripGeometry): number {
     if (!processedData?.grouped) return 0;
     
     let maxLane = -1;
@@ -93,17 +93,16 @@
       }
     }
     
-    if (maxLane < 0) return 0;
-    // v8.3.1: Use passed stripHeight, not closure variable
-    return (maxLane + 1) * stripHeight + maxLane * STRIP_GAP_REM;
+    // v8.3.1: Use the passed geometry, not a closure variable
+    return allDaySectionHeightRem(maxLane, geometry);
   }
-  
-  // v8.3.1: Calculate AllDay height - recalculates when STRIP_HEIGHT_REM changes (mobile toggle)
+
+  // v8.3.1: Calculate AllDay height - recalculates when the geometry changes (mobile or pointer toggle)
   let allDayHeight = 0;
   $: {
-    // Explicit dependencies: useTimelineView, processedData, STRIP_HEIGHT_REM
+    // Explicit dependencies: useTimelineView, processedData, stripGeom
     if (useTimelineView && processedData?.grouped) {
-      allDayHeight = calculateAllDayHeight(STRIP_HEIGHT_REM);
+      allDayHeight = calculateAllDayHeight(stripGeom);
     } else {
       allDayHeight = 0;
     }
@@ -1058,6 +1057,17 @@
        auto-scroll. Modern iOS no longer needs this for momentum scrolling. */
     /* v3.2.7: Allow proper flex shrinking when agenda sidebar is open */
     min-width: 0;
+    /* ios-s1: the only vertical scroller of week/day/timeline, and on a phone
+       its bottom is under Obsidian's floating navbar, so the late hours could
+       not be lifted above it. End space of the host's own
+       `--view-bottom-spacing` (Obsidian app.css, `.is-phone`; 0 by default,
+       navbar + home-indicator inset with the floating nav — what Bases
+       reserves). `border-box` keeps it inside the 100%: the axis and the
+       inner calendar (`min-height: 100%`) then stop above the bar when they
+       fit, and scroll past it by exactly that much when they do not.
+       0/unset on desktop and tablets. */
+    box-sizing: border-box;
+    padding-bottom: var(--view-bottom-spacing, 0);
   }
   
   .infinite-horizontal-calendar-wrapper.with-timeline {
@@ -1080,7 +1090,7 @@
   
   .sticky-time-axis-header {
     flex-shrink: 0;
-    border-bottom: 1px solid var(--background-modifier-border);
+    border-bottom: var(--ppp-border-width) solid var(--background-modifier-border);
     /* v6.5: NOT sticky - scrolls with day headers to avoid empty corner */
     background: var(--background-primary);
     display: flex;
@@ -1149,7 +1159,7 @@
     /* v3.1.0: min-height fills viewport, height auto allows timeline to grow beyond */
     height: auto;
     min-height: 100%;
-    border-right: 1px solid var(--background-modifier-border);
+    border-right: var(--ppp-border-width) solid var(--background-modifier-border);
     animation: periodSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -1343,7 +1353,46 @@
       font-size: 0.625rem;
     }
   }
-  
+
+  /* ios-r1: axis and weekday labels at the phone text floor on touch
+     (coarse pointer, so a narrow desktop pane keeps its density). Placed
+     after both width rules above so it wins over each of them.
+     - The month label is a short month name in a gutter of at least 3rem;
+       it stays on one line and ellipsizes if a locale makes it longer.
+     - The "all day" label's row must stay exactly as tall as the all-day
+       strips beside it (one lane is one `stripGeometry` height), so a
+       second line is not wanted:
+       it stays on one line and ellipsizes in a long locale.
+     - Weekday names stay on one line inside their column and ellipsize. */
+  @media (pointer: coarse) {
+    .axis-month-label {
+      font-size: var(--ppp-text-floor);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sticky-allday-label {
+      font-size: var(--ppp-text-floor);
+      line-height: 1;
+      max-width: 100%;
+      padding-inline: 0.125em;
+      box-sizing: border-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .weekday-name {
+      font-size: var(--ppp-text-floor);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   /* Reduced motion for accessibility */
   @media (prefers-reduced-motion: reduce) {
     .period-container {

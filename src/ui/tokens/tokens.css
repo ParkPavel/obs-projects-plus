@@ -74,7 +74,7 @@
   --ppp-radius-lg: 0.375rem;   /* 6 */
   --ppp-radius-xl: 0.5rem;     /* 8 */
   --ppp-radius-2xl: 0.75rem;   /* 12 */
-  --ppp-radius-full: 9999px;
+  --ppp-radius-full: 624.9375rem; /* larger than any box: always a full pill */
   --ppp-radius-pill: 62.5rem;  /* 1000 — SelectionBadge, WidgetInlineBadges */
   
   /* Shadow scale */
@@ -154,11 +154,23 @@
   --ppp-icon-size-sm: 1rem;
   --ppp-icon-size-md: 1.25rem;
   --ppp-icon-size-lg: 1.5rem;
-  
-  /* Border widths */
-  --ppp-border-width: 1px;
-  --ppp-border-width-thick: 2px;
-  
+
+  /* Border widths (R0.3b; host hairlines: thumb-hairline, user decision
+     2B of 2026-10-04).
+       --ppp-border-width        borders, dividers, rings, 1-unit lines;
+       --ppp-border-width-thick  the accent stroke, twice the hairline.
+     The hairline is the host's: Obsidian and themes set `--border-width`,
+     and on a dense screen that is half a device unit, so plugin borders
+     match the app's own lines instead of standing out at double weight,
+     and a theme that changes it reaches the plugin too. Outside a host
+     (or when nothing sets it) the fallback is 0.0625rem, one CSS unit at
+     the default root, the R0.3b value. The thick stroke follows it.
+     Obsidian declares `--border-width` on `body`, where a `var()` here
+     at `:root` cannot see it, so both lines are declared again on `body`
+     (HOST HAIRLINES, below); this pair is the value outside a host. */
+  --ppp-border-width: var(--border-width, 0.0625rem);
+  --ppp-border-width-thick: calc(2 * var(--ppp-border-width));
+
   /* ═══════════════════════════════════════════════════════════
      COMPONENT TOKENS — Table-specific
      ═══════════════════════════════════════════════════════════ */
@@ -431,6 +443,46 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PHONE TYPOGRAPHY FLOORS (ios-r1)
+   ───────────────────────────────────────────────────────────
+   Declared on `body`, not `:root`: a `var()` inside a custom property
+   is resolved where the property is DECLARED, and Obsidian declares its
+   `--font-ui-*` sizes on `body` (and on body classes such as
+   `.is-mobile`). At `:root` they would be missing and only the fallback
+   would ever be read.
+
+   Both are read only from `(pointer: coarse)` rules, so a fine pointer
+   never resolves them and desktop typography does not move.
+     --ppp-input-font-size  iOS zooms the page when an editable control
+                            under 1rem (at the default root size) takes
+                            focus; the host's medium UI size wins when
+                            it is larger.
+     --ppp-text-floor       the smallest essential label on a phone:
+                            0.6875rem (Apple's 11 pt), or the host's
+                            smaller UI size when that is larger.
+   ═══════════════════════════════════════════════════════════ */
+body {
+  --ppp-input-font-size: max(1rem, var(--font-ui-medium, 1rem));
+  --ppp-text-floor: max(0.6875rem, var(--font-ui-smaller, 0.6875rem));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HOST HAIRLINES (thumb-hairline, user decision 2B)
+   ───────────────────────────────────────────────────────────
+   The border-width pair from `:root`, declared again on `body` for the
+   reason the typography floors above are: Obsidian and themes set
+   `--border-width` on `body` (and its classes), so only here does the
+   `var()` resolve to the host's hairline. The thick stroke is computed
+   here too, so it doubles the host value rather than the fallback.
+   Popovers and modals are appended to `body` and inherit it.
+   ═══════════════════════════════════════════════════════════ */
+body {
+  --ppp-border-width: var(--border-width, 0.0625rem);
+  --ppp-border-width-thick: calc(2 * var(--ppp-border-width));
+}
+
+
+/* ═══════════════════════════════════════════════════════════
    CANVAS RADIUS COMPATIBILITY SHIM (#165)
    ───────────────────────────────────────────────────────────
    `--ppp-radius-*` used to be declared twice at values shifted one
@@ -498,7 +550,42 @@
   }
 }
 
-/* Reduced motion */
+/* ═══════════════════════════════════════════════════════════
+   REDUCED MOTION (ios-r1)
+   ───────────────────────────────────────────────────────────
+   Zeroing the duration tokens reached only the rules that read them;
+   about two hundred transition and animation declarations in the
+   components carry their own literal durations. So motion is switched
+   off where it is drawn: on every plugin root and everything inside it.
+
+   The roots, and why each is listed:
+     .projects-container              the view root of every leaf (App)
+                                      — views, navbar, settings panel,
+                                      the filter sheet on a phone;
+     .projects-modal                  EditNote / CreateNote modals;
+     .ppp-add-view-modal              AddViewModal;
+     .ppp-modal                       every plugin modal (ios-m1): the
+                                      shared root class, behaviour only;
+     .ppp-popup                       FloatingPopup (its desktop branch
+                                      is portalled to <body>);
+     .ppp-popover-container           agenda filter popovers (FilterRow,
+                                      appended to <body>);
+     .ppp-list-editor-overlay         agenda list editor (AgendaSidebar,
+                                      portalled to <body>);
+     .obsidian-projects-popup-portal  DayPopup's portal;
+     .ppp-strip-ghost-portal,
+     .ppp-timed-ghost-portal,
+     .ppp-timed-ghost-snapline        drag ghosts on <body> (TimelineView,
+                                      HeaderStripsSection);
+     .ppp-drag-feedback               the touch drag shadow.
+
+   0.01ms rather than 0: `transitionend` and `animationend` still fire,
+   so code that waits for them is not left hanging. One iteration stops
+   infinite spinners and pulses. `!important` because a component's
+   scoped rule is more specific than this one, and an inline style
+   would win otherwise. Delays are left alone: a delay is a pause, not
+   motion. Pinned by `src/__tests__/R0_33_reducedMotion.test.ts`.
+   ═══════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --ppp-duration-instant: 0ms;
@@ -506,6 +593,18 @@
     --ppp-duration-normal: 0ms;
     --ppp-duration-slow: 0ms;
     --ppp-duration-slower: 0ms;
+  }
+
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback),
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback)::before,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback)::after,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *::before,
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal, .ppp-strip-ghost-portal, .ppp-timed-ghost-portal, .ppp-timed-ghost-snapline, .ppp-drag-feedback) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -516,6 +615,82 @@
     --ppp-button-height-md: var(--ppp-touch-target-min);
     --ppp-input-height-md: var(--ppp-touch-target-min);
     --ppp-table-header-height: var(--ppp-touch-target-min);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOUCH TARGETS (ios-t1)
+   ───────────────────────────────────────────────────────────
+   `.ppp-touch-target` gives a small control a finger-sized hit
+   area on a coarse pointer without moving anything: the glyph
+   keeps its box and the layout is untouched. An invisible
+   `::before` square of --ppp-touch-target-min, centred on the
+   control, takes the touch; a pseudo-element hit-tests as its own
+   element, so the press lands on the control itself.
+
+   Use it only where the square falls on room the neighbours have
+   left free (padding, a gap of at least half a target). Where it
+   would cover another control, enlarge the control's own box or
+   reflow the row instead: of two overlapping targets the one
+   painted later wins, silently.
+
+   The class anchors the square with `position: relative`; a
+   control that is already positioned keeps its own value, because
+   its scoped rule is more specific. Not for an element that draws
+   its own `::before`. On a fine pointer the class does nothing.
+   The board card grip (CardList, ios-d1) is the same geometry
+   written in place, because its glyph is absolutely positioned.
+   ═══════════════════════════════════════════════════════════ */
+@media (pointer: coarse) {
+  .ppp-touch-target {
+    position: relative;
+  }
+
+  .ppp-touch-target::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--ppp-touch-target-min);
+    height: var(--ppp-touch-target-min);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EDITABLE CONTROLS ON TOUCH (ios-r1)
+   ───────────────────────────────────────────────────────────
+   iOS zooms the whole page when a text control smaller than the
+   default 1rem takes focus, and does not zoom back. Measured at
+   390x844 and 844x390: the record edit modal, the settings panel and
+   the add-view modal all held controls below that.
+
+   One rule, by root rather than by component, so a control added
+   later is covered without anyone remembering to:
+     .projects-container              every view, the navbar, the
+                                      settings panel (rendered inside
+                                      the container by App) and the
+                                      filter sheet (FloatingPopup's
+                                      phone branch is not portalled);
+     .projects-modal                  EditNote / CreateNote modals;
+     .ppp-add-view-modal              AddViewModal;
+     .ppp-modal                       every plugin modal (ios-m1);
+     .ppp-popup                       FloatingPopup's portalled branch;
+     .ppp-popover-container           agenda filter popovers on <body>;
+     .ppp-list-editor-overlay         agenda list editor on <body>;
+     .obsidian-projects-popup-portal  DayPopup's portal.
+
+   Only controls a keyboard edits: checkboxes, radios, ranges, colour
+   and file pickers and button-type inputs keep their own size.
+   `!important` because a scoped component rule can out-specify any
+   selector written here, and a floor that some control silently
+   escapes is not a floor. A fine pointer never matches, so desktop
+   density is unchanged.
+   ═══════════════════════════════════════════════════════════ */
+@media (pointer: coarse) {
+  :is(.projects-container, .projects-modal, .ppp-add-view-modal, .ppp-modal, .ppp-popup, .ppp-popover-container, .ppp-list-editor-overlay, .obsidian-projects-popup-portal)
+    :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="hidden"]), select, textarea) {
+    font-size: var(--ppp-input-font-size) !important;
   }
 }
 
