@@ -123,8 +123,12 @@ const WINDOW_ANCHORED = [
  *     named were real routes with nothing travelling on them today, so closing
  *     them moved no number. Recorded anyway: a re-measurement that returns the
  *     same value is evidence, and an unlogged one looks like nothing happened.
+ *   790 — theme-compat moved the dashboard widgets' hand-written shadows onto
+ *     Obsidian's --shadow-s / --shadow-l and dims onto
+ *     --background-modifier-cover, taking their rem offsets with them.
+ *     Re-measured.
  */
-const REM_IN_CONTAINER_BUDGET = 804;
+const REM_IN_CONTAINER_BUDGET = 790;
 
 /** A length in `rem`. `0.5rem`, `.5rem` and `1.5rem` all count once. */
 const REM_LENGTH = /\b\d*\.?\d+rem\b/g;
