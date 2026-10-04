@@ -1,6 +1,6 @@
 {
   "name": "obs-projects-plus",
-  "version": "3.6.3",
+  "version": "3.7.0",
   "description": "Turn your notes into projects with dashboards, tables, boards, calendars and galleries built from note properties, relations, rollups and formulas.",
   "main": "main.js",
   "scripts": {

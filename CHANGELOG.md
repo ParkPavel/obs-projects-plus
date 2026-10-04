@@ -8,6 +8,68 @@ Downloadable versions and their publication dates are listed in
 The version in [manifest.json](https://github.com/ParkPavel/obs-projects-plus/blob/main/manifest.json) identifies this source tree; it does not
 mean that a new release has been published.
 
+## 3.7.0 — 2026-10-05
+
+### Cards and gallery
+
+- Gallery view options: layout (grid, masonry, list), card size (S, M, L or a width), cover proportions
+  (16:10, 4:3, 1:1, 3:4, 2:3 or no cover) and fill or fit. Old galleries look as before.
+- "Fields on the card" in the gallery settings lists the fields a card shows, in order: move, hide or add a
+  field; formulas and rollups are marked ƒ; field names can be hidden. Cards follow that order. The
+  project's declared rollups now appear in the settings (card fields, filters, sort, colors).
+- Resizable card frames: drag a card's lower right corner (or use the arrow keys on it). A size can be set
+  for one card or for the whole view ("Card height"), and "Reset all card frames" clears them. Saved in
+  the view settings, never in notes.
+- Board card thumbnails: a cover on top, a small square at the left (it grows with the card frame, up to
+  40% of the card) or none. A card without an image, or whose image fails to load, shows none.
+- Gallery and board cards share one card component.
+
+### Board
+
+- Drag grips have their own place: a strip along the card's left edge and the first cell of a column
+  header. They no longer cover field labels or titles, are visible without hovering and get a finger-sized
+  target on touch screens.
+- A pinned or read-only column can no longer be dragged by its grip. A pinned column's header keeps its
+  title on touch screens.
+
+### Filters and settings
+
+- The filter row under the navigation bar is gone, which gives the views that height back. A view's filter
+  lives in its settings (gear → Filters), which show the number of active conditions, clear them all and
+  save the selection as a source ("Save as source").
+- Picking a field from a field list in the settings is accepted at once, and typed names and numbers are
+  no longer reset while typing.
+- Filter conditions wrap inside a narrow settings panel.
+
+### Touch and small screens
+
+- A finger scrolls the dashboard instead of dragging widgets; widgets move by their grip. A swipe inside
+  the plugin no longer opens Obsidian's side panels; a swipe from the screen edge still does.
+- Landscape phones get a slim header and a filter button; view tabs scroll when they do not fit; the
+  settings panel opens below the navigation bar; the last items of every view scroll above Obsidian's
+  floating bar.
+- Touch targets of at least 44 points; text fields at 16 so iOS does not zoom; text never below 11
+  points; reduced motion is honoured everywhere.
+- Board cards and calendar events can be moved by touch; calendar strips open their record on tap and
+  on click; a swipe right after a drag still pages the calendar.
+- The whole plugin is sized in relative units.
+
+### Themes
+
+- The plugin's styles no longer reach Obsidian's own interface: the navigation bar's icon rule used to
+  change every icon in Obsidian once a Projects view had opened.
+- Hairlines follow Obsidian's border width, so themes that change it apply to the plugin. Shadows, dims
+  and colours come from the theme; quiet labels (counts, empty states, weekend names) reach WCAG AA
+  contrast in the default light and dark themes.
+
+### Upgrading
+
+- Filters are edited in the view settings (gear → Filters); nothing about existing filters changes.
+- Gallery cards show fields in the order saved in the view settings, which may reorder fields in views
+  whose saved order differed from the notes' order.
+- Plugin icon buttons outside the navigation bar look like Obsidian's own icons.
+- After updating, restart Obsidian (or reload the window) so styles of the previous version are dropped.
+
 ## 3.6.3 — 2026-09-28
 
 - The plugin is named **Projects Plus** (was «OBS Projects Plus»): the community directory does not accept

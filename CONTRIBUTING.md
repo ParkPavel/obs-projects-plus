@@ -81,7 +81,7 @@ Maintainers release from `main`, which accepts changes only through a pull reque
 2. Update both changelogs, rebuild with `npm run build` and commit `main.js` — it is tracked in Git and must match the release commit. Build from a checkout with LF line endings: with `core.autocrlf` on Windows, whitespace in Svelte templates carries `\r` into the bundle, and it no longer matches the release, which CI builds on Linux. The release asset is the reference — if in doubt, commit it.
 3. Merge the pull request, then push the tag `X.Y.Z` — the version itself, without `v` — on the merge commit. The release workflow refuses a tag that differs from `manifest.json`, builds the plugin and publishes `main.js`, `manifest.json` and `styles.css`.
 
-A beta for [BRAT](https://github.com/TfTHacker/obsidian42-brat) is a tag `X.Y.Z-beta.N` on a commit of `main`, with `X.Y.Z` above the current version (after 3.6.3: `3.6.4-beta.1`); the workflow publishes it as a pre-release with the beta version in its manifest, leaving `manifest.json` on `main` untouched.
+A beta for [BRAT](https://github.com/TfTHacker/obsidian42-brat) is a tag `X.Y.Z-beta.N` on a commit of `main`, with `X.Y.Z` above the current version (after 3.7.0: `3.7.1-beta.1`); the workflow publishes it as a pre-release with the beta version in its manifest, leaving `manifest.json` on `main` untouched.
 
 ## License and attribution
 
