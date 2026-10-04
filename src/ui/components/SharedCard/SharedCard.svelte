@@ -51,6 +51,13 @@
    */
   export let span: number | undefined = undefined;
   export let minHeight: string | undefined = undefined;
+  /**
+   * thumb-hairline (1B): the side of a left board thumbnail, as a length (the
+   * saved frame height). Written to the card as `--ppp-board-card-thumb`,
+   * which sizes the thumbnail lane of the grid below; unset, the lane falls
+   * back to 2.75rem. Either way the lane is capped at 40% of the card.
+   */
+  export let mediaSize: string | undefined = undefined;
 </script>
 
 <article
@@ -67,6 +74,7 @@
   style:--ppp-shared-card-size={size}
   style:grid-column={span !== undefined && span > 1 ? `span ${span}` : undefined}
   style:min-height={minHeight}
+  style:--ppp-board-card-thumb={mediaSize}
   on:click
   on:keypress
   on:touchstart
@@ -129,8 +137,14 @@
      spans every row (CardList gives it `grid-row: 1 / -1`); the media is
      placed by CardList in row 1 of the second lane.
      top  — two rows in the content lane: the cover, then the colour item;
-     left — a third lane, sized by the square thumbnail, between the grip and
-            the colour item, so the title and metadata flow beside it. */
+     left — a third lane between the grip and the colour item, so the title
+            and metadata flow beside it. thumb-hairline (1B): the lane is the
+            thumbnail's side — `--ppp-board-card-thumb` (the frame height, set
+            on this card by `mediaSize`) or 2.75rem — and never more than 40%
+            of the card. The percentage resolves against this grid's own
+            content box, whose width the column gives it, so it is not
+            circular. The square media fills the lane (CardList), and the
+            colour item keeps the rest, a small gap after the thumbnail. */
   .projects--board--card.ppp-shared-card--media-top {
     grid-template-rows: auto auto;
   }
@@ -139,11 +153,12 @@
     grid-row: 2;
   }
   .projects--board--card.ppp-shared-card--media-left {
-    grid-template-columns: var(--board-card-grip-lane, var(--size-4-5)) auto minmax(0, 1fr);
+    grid-template-columns: var(--board-card-grip-lane, var(--size-4-5)) min(var(--ppp-board-card-thumb, 2.75rem), 40%) minmax(0, 1fr);
   }
   .projects--board--card.ppp-shared-card--media-left > :global(.color-item) {
     grid-column: 3;
     grid-row: 1;
+    margin-left: var(--size-4-2);
   }
 
   /* ios-d1 / cards-g1: on touch the grip lane is a full finger target wide. */
@@ -152,7 +167,7 @@
       grid-template-columns: var(--ppp-touch-target-min) minmax(0, 1fr);
     }
     .projects--board--card.ppp-shared-card--media-left {
-      grid-template-columns: var(--ppp-touch-target-min) auto minmax(0, 1fr);
+      grid-template-columns: var(--ppp-touch-target-min) min(var(--ppp-board-card-thumb, 2.75rem), 40%) minmax(0, 1fr);
     }
   }
 </style>

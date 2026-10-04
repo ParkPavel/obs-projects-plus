@@ -350,6 +350,7 @@
         interactive
         mediaLayout={thumbnail?.layout}
         minHeight={thumbnail ? undefined : frameHeight}
+        mediaSize={thumbnail?.layout === "left" ? frameHeight : undefined}
         on:keypress
         on:click={(e) => {
           if (!isGripTarget(e)) onRecordClick(item);
@@ -360,7 +361,10 @@
         </span>
         <!-- cards-g4: the thumbnail is decorative (the title link names the
              record), loads lazily (a board may hold hundreds of cards) and has
-             no handler of its own: a click on it is a click on the card body. -->
+             no handler of its own: a click on it is a click on the card body.
+             thumb-hairline (1B): a frame height is the top cover's height; a
+             left thumbnail is a square whose side the card's grid lane sets
+             (`mediaSize` above), so it carries no inline height. -->
         <svelte:fragment slot="media">
           {#if thumbnail}
             <div
@@ -368,8 +372,8 @@
               class:ppp-board-card-media--top={thumbnail.layout === "top"}
               class:ppp-board-card-media--left={thumbnail.layout === "left"}
               data-ppp-frame-target
-              style:height={frameHeight}
-              style:--ppp-card-media-ratio={frameHeight ? "auto" : undefined}
+              style:height={thumbnail.layout === "top" ? frameHeight : undefined}
+              style:--ppp-card-media-ratio={thumbnail.layout === "top" && frameHeight ? "auto" : undefined}
               aria-hidden="true"
             >
               <img src={thumbnail.src} alt="" loading="lazy" decoding="async" draggable="false" on:error={() => thumbnail && dropThumb(item, thumbnail.src)} />
@@ -573,13 +577,16 @@
     aspect-ratio: var(--ppp-card-media-ratio, 16 / 10);
     margin-bottom: var(--size-4-2);
   }
-  /* left: a small square at the start of the content; the whole card is the
-     open target, so it need not be a finger target of its own. */
+  /* left: a square at the start of the content; the whole card is the open
+     target, so it need not be a finger target of its own. thumb-hairline
+     (1B): it fills its grid lane (SharedCard sizes the lane: the frame
+     height or 2.75rem, at most 40% of the card) and its height follows the
+     width through the ratio. `overflow: hidden` above keeps the image's own
+     size from stretching the box past the square. */
   .ppp-board-card-media--left {
-    --ppp-board-card-thumb: 2.75rem;
-    width: var(--ppp-board-card-thumb);
-    height: var(--ppp-board-card-thumb);
-    margin-right: var(--size-4-2);
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
   }
 
   div.card-header {

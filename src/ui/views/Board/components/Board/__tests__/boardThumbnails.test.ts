@@ -1,6 +1,7 @@
 /**
- * cards-g4: kanban card thumbnails — a cover on top, a small square at the
- * left, or none (the default, and the card exactly as it was).
+ * cards-g4: kanban card thumbnails — a cover on top, a square at the left
+ * (2.75rem, or the frame height; at most 40% of the card — thumb-hairline
+ * 1B), or none (the default, and the card exactly as it was).
  *
  * The cover is resolved the gallery's way (`getCoverRealPath`: an image file
  * the link resolves to, or an http(s) URL). A record whose cover does not
@@ -490,11 +491,16 @@ describe("cards-g4 — geometry", () => {
     expect(body(LIST, ".ppp-board-card-media--top")).toMatch(/aspect-ratio: var\(--ppp-card-media-ratio, 16 \/ 10\)/);
   });
 
-  it("left: a rem-sized square", () => {
+  it("left: a square that fills its lane, its height following the width", () => {
     const left = body(LIST, ".ppp-board-card-media--left");
-    expect(left).toMatch(/--ppp-board-card-thumb: 2\.75rem;/);
-    expect(left).toMatch(/width: var\(--ppp-board-card-thumb\);/);
-    expect(left).toMatch(/height: var\(--ppp-board-card-thumb\);/);
+    expect(left).toMatch(/width: 100%;/);
+    expect(left).toMatch(/height: auto;/);
+    expect(left).toMatch(/aspect-ratio: 1 \/ 1;/);
+    // The side comes from the card's lane, not from the media itself.
+    expect(left).not.toMatch(/--ppp-board-card-thumb/);
+    expect(left).not.toMatch(/margin-right/);
+    // The image cannot push the box past the square.
+    expect(body(LIST, ".ppp-board-card-media")).toMatch(/overflow: hidden;/);
   });
 
   it("top: two rows in the content lane, the colour item in the second", () => {
@@ -504,16 +510,32 @@ describe("cards-g4 — geometry", () => {
     );
   });
 
-  it("left: a third lane sized by the thumbnail, the colour item after it, on fine and coarse pointers", () => {
+  it("left: a third lane, the thumbnail's side capped at 40% of the card, the colour item after it, on fine and coarse pointers", () => {
+    const lane = "min\\(var\\(--ppp-board-card-thumb, 2\\.75rem\\), 40%\\)";
     expect(SHELL).toMatch(
-      /\.projects--board--card\.ppp-shared-card--media-left \{ grid-template-columns: var\(--board-card-grip-lane, var\(--size-4-5\)\) auto minmax\(0, 1fr\); \}/
+      new RegExp(
+        `\\.projects--board--card\\.ppp-shared-card--media-left \\{ grid-template-columns: var\\(--board-card-grip-lane, var\\(--size-4-5\\)\\) ${lane} minmax\\(0, 1fr\\); \\}`
+      )
     );
-    expect(body(SHELL, ".projects--board--card.ppp-shared-card--media-left > :global(.color-item)")).toMatch(
-      /grid-column: 3; grid-row: 1;/
-    );
+    const item = body(SHELL, ".projects--board--card.ppp-shared-card--media-left > :global(.color-item)");
+    expect(item).toMatch(/grid-column: 3; grid-row: 1;/);
+    expect(item).toMatch(/margin-left: var\(--size-4-2\);/);
     expect(SHELL).toMatch(
-      /@media \(pointer: coarse\) \{[^@]*\.projects--board--card\.ppp-shared-card--media-left \{ grid-template-columns: var\(--ppp-touch-target-min\) auto minmax\(0, 1fr\); \}/
+      new RegExp(
+        `@media \\(pointer: coarse\\) \\{[^@]*\\.projects--board--card\\.ppp-shared-card--media-left \\{ grid-template-columns: var\\(--ppp-touch-target-min\\) ${lane} minmax\\(0, 1fr\\); \\}`
+      )
     );
+    // No auto lane is left that the image's own size could widen.
+    expect(SHELL).not.toMatch(/\) auto minmax\(0, 1fr\)/);
+  });
+
+  it("left without a frame: no side is written, so the lane takes its 2.75rem fallback", () => {
+    const m = mountCards({ thumbnailLayout: "left" });
+    const media = m.card("a.md").querySelector<HTMLElement>(".ppp-board-card-media");
+    expect(m.card("a.md").style.getPropertyValue("--ppp-board-card-thumb")).toBe("");
+    expect(media?.style.getPropertyValue("height")).toBe("");
+    expect(media?.style.getPropertyValue("--ppp-card-media-ratio")).toBe("");
+    m.destroy();
   });
 
   it("adds no hover rule and no stacking order", () => {

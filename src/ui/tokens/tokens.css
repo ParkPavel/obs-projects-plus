@@ -155,15 +155,21 @@
   --ppp-icon-size-md: 1.25rem;
   --ppp-icon-size-lg: 1.5rem;
 
-  /* Border widths (R0.3b). Root-relative: exactly one and two CSS pixels
-     at the default root, the values the px literals they replaced had.
+  /* Border widths (R0.3b; host hairlines: thumb-hairline, user decision
+     2B of 2026-10-04).
        --ppp-border-width        borders, dividers, rings, 1-unit lines;
        --ppp-border-width-thick  the accent stroke, twice the hairline.
-     Adopting Obsidian's `--border-width` instead (device hairlines: 0.5
-     on a high-density phone) would change every plugin border on such
-     screens. That is a design decision for the user, not part of R0.3b. */
-  --ppp-border-width: 0.0625rem;
-  --ppp-border-width-thick: 0.125rem;
+     The hairline is the host's: Obsidian and themes set `--border-width`,
+     and on a dense screen that is half a device unit, so plugin borders
+     match the app's own lines instead of standing out at double weight,
+     and a theme that changes it reaches the plugin too. Outside a host
+     (or when nothing sets it) the fallback is 0.0625rem, one CSS unit at
+     the default root, the R0.3b value. The thick stroke follows it.
+     Obsidian declares `--border-width` on `body`, where a `var()` here
+     at `:root` cannot see it, so both lines are declared again on `body`
+     (HOST HAIRLINES, below); this pair is the value outside a host. */
+  --ppp-border-width: var(--border-width, 0.0625rem);
+  --ppp-border-width-thick: calc(2 * var(--ppp-border-width));
 
   /* ═══════════════════════════════════════════════════════════
      COMPONENT TOKENS — Table-specific
@@ -458,6 +464,21 @@
 body {
   --ppp-input-font-size: max(1rem, var(--font-ui-medium, 1rem));
   --ppp-text-floor: max(0.6875rem, var(--font-ui-smaller, 0.6875rem));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HOST HAIRLINES (thumb-hairline, user decision 2B)
+   ───────────────────────────────────────────────────────────
+   The border-width pair from `:root`, declared again on `body` for the
+   reason the typography floors above are: Obsidian and themes set
+   `--border-width` on `body` (and its classes), so only here does the
+   `var()` resolve to the host's hairline. The thick stroke is computed
+   here too, so it doubles the host value rather than the fallback.
+   Popovers and modals are appended to `body` and inherit it.
+   ═══════════════════════════════════════════════════════════ */
+body {
+  --ppp-border-width: var(--border-width, 0.0625rem);
+  --ppp-border-width-thick: calc(2 * var(--ppp-border-width));
 }
 
 

@@ -1,8 +1,9 @@
 /**
  * cards-g5 — saved card frames on the board.
  *
- * A board frame sets a card's height only: its thumbnail's (top or left), or
- * the card's minimum without one. The column governs the width, and the span
+ * A board frame sets a card's height only: its top thumbnail's height, a left
+ * thumbnail's square side (thumb-hairline 1B, capped at 40% of the card by
+ * the grid), or the card's minimum without one. The column governs the width, and the span
  * of a frame means nothing here. The resize handle sits in the card's
  * controls, away from the grip lane, is no drag handle, and leaves the grip's
  * arming and keyboard reorder as they were.
@@ -178,15 +179,43 @@ describe("cards-g5 — board height", () => {
     m.destroy();
   });
 
-  it.each(["top", "left"])("%s thumbnail: the height is the thumbnail's, not the card's", (layout) => {
-    const m = mountCards({ thumbnailLayout: layout, cardFrames: { view: { heightRem: 9 }, byRecord: {} } });
+  it("top thumbnail: the height is the thumbnail's, not the card's", () => {
+    const m = mountCards({ thumbnailLayout: "top", cardFrames: { view: { heightRem: 9 }, byRecord: {} } });
     const media = m.card("a.md").querySelector<HTMLElement>(".ppp-board-card-media");
     expect(prop(media, "height")).toBe("9rem");
     expect(prop(media, "--ppp-card-media-ratio")).toBe("auto");
     expect(media).toHaveAttribute("data-ppp-frame-target");
     expect(prop(m.card("a.md"), "min-height")).toBe("");
+    expect(prop(m.card("a.md"), "--ppp-board-card-thumb")).toBe("");
     // b.md has no cover: its frame is the card's minimum.
     expect(prop(m.card("b.md"), "min-height")).toBe("9rem");
+    m.destroy();
+  });
+
+  it("left thumbnail (1B): the height is the square's side, set on the card's lane, never an inline height", () => {
+    const m = mountCards({ thumbnailLayout: "left", cardFrames: { view: { heightRem: 9 }, byRecord: {} } });
+    const media = m.card("a.md").querySelector<HTMLElement>(".ppp-board-card-media");
+    expect(prop(m.card("a.md"), "--ppp-board-card-thumb")).toBe("9rem");
+    expect(prop(media, "height")).toBe("");
+    expect(prop(media, "--ppp-card-media-ratio")).toBe("");
+    expect(media).toHaveAttribute("data-ppp-frame-target");
+    expect(prop(m.card("a.md"), "min-height")).toBe("");
+    // b.md has no cover: no side, and its frame is the card's minimum.
+    expect(prop(m.card("b.md"), "--ppp-board-card-thumb")).toBe("");
+    expect(prop(m.card("b.md"), "min-height")).toBe("9rem");
+    m.destroy();
+  });
+
+  it("left thumbnail: a resize preview grows the square live, and the release saves the height", async () => {
+    const m = mountCards({ thumbnailLayout: "left", cardFrames: { view: { heightRem: 10 }, byRecord: {} } });
+    const handle = m.handle("a.md");
+    handle.dispatchEvent(pointer("pointerdown", 100, 100));
+    handle.dispatchEvent(pointer("pointermove", 100, 132));
+    await tick();
+    expect(prop(m.card("a.md"), "--ppp-board-card-thumb")).toBe("12rem");
+    expect(prop(m.card("a.md").querySelector<HTMLElement>(".ppp-board-card-media"), "height")).toBe("");
+    handle.dispatchEvent(pointer("pointerup", 100, 132));
+    expect(m.onCardFrameChange).toHaveBeenCalledWith("a.md", { heightRem: 12 });
     m.destroy();
   });
 
