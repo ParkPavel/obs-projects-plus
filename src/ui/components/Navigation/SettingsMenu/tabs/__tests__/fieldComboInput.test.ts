@@ -109,6 +109,20 @@ describe("FieldComboInput — a datalist pick is accepted at once", () => {
     m.destroy();
   });
 
+  test("an Enter that accepts an IME candidate does not commit; the Enter after composition does", () => {
+    const m = mount({ value: "" });
+    const input = m.input as HTMLInputElement;
+    pick(input, "日付", "insertCompositionText");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, isComposing: true }));
+    const legacy = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+    Object.defineProperty(legacy, "keyCode", { value: 229 });
+    input.dispatchEvent(legacy);
+    expect(m.changes).toEqual([]);
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(m.changes).toEqual(["日付"]);
+    m.destroy();
+  });
+
   test("a new field name is still accepted, on Enter or blur", () => {
     const m = mount({ value: "" });
     const input = m.input as HTMLInputElement;

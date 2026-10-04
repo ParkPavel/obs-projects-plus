@@ -38,6 +38,9 @@
     if (picked && fields.some((f) => f.name === value)) commit();
   }
   function onKeydown(e: KeyboardEvent): void {
+    // An Enter that accepts an IME candidate is part of the composition, not a
+    // commit of the field name (229 is the composing keyCode some hosts report).
+    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === "Enter") commit();
   }
 
