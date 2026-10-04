@@ -144,7 +144,18 @@
   
   // Generate hour options (0-24)
   const hourOptions = Array.from({ length: 25 }, (_, i) => i);
-  
+  const startHourOptions = hourOptions.slice(0, 24);
+  const endHourOptions = hourOptions.slice(1);
+
+  // settings-binds: the hour selects carry numbers; the DOM reports a string,
+  // so the hour is read back from the options by the selected index, which
+  // keeps the stored value a number (as the old two-way binding wrote it).
+  function emitHour(key: "startHour" | "endHour", options: number[], index: number) {
+    const hour = options[index];
+    if (hour === undefined) return;
+    emitUpdate({ [key]: hour });
+  }
+
   // String fields for Gallery cover
   $: stringFields = fields.filter(f => f.type === "string" || f.type === "String" || f.type === "text");
   
@@ -206,7 +217,7 @@
       <div class="group">
         <label>
           {$i18n.t('settings-menu.view-config.calendar.interval')}
-          <select bind:value={interval} on:change={() => emitUpdate({ interval })}>
+          <select data-calendar-option="interval" value={interval} on:change={(e) => emitUpdate({ interval: e.currentTarget.value })}>
             <option value="year">{$i18n.t('settings-menu.view-config.calendar.interval-options.year')}</option>
             <option value="month">{$i18n.t('settings-menu.view-config.calendar.interval-options.month')}</option>
             <option value="week">{$i18n.t('settings-menu.view-config.calendar.interval-options.week')}</option>
@@ -216,7 +227,7 @@
 
         <label>
           {$i18n.t('settings-menu.view-config.calendar.layout')}
-          <select bind:value={displayMode} on:change={() => emitUpdate({ displayMode })}>
+          <select value={displayMode} on:change={(e) => emitUpdate({ displayMode: e.currentTarget.value })}>
             <option value="headers">{$i18n.t('settings-menu.view-config.calendar.layout-options.headers')}</option>
             <option value="bars">{$i18n.t('settings-menu.view-config.calendar.layout-options.bars')}</option>
           </select>
@@ -224,7 +235,7 @@
 
         <label>
           {$i18n.t('settings-menu.view-config.calendar.time-format')}
-          <select bind:value={timeFormat} on:change={() => emitUpdate({ timeFormat })}>
+          <select value={timeFormat} on:change={(e) => emitUpdate({ timeFormat: e.currentTarget.value })}>
             <option value="24h">24h</option>
             <option value="12h">12h</option>
           </select>
@@ -234,9 +245,10 @@
           {$i18n.t('settings-menu.view-config.calendar.timezone')}
           <input
             type="text"
-            bind:value={timezone}
+            data-calendar-option="timezone"
+            value={timezone}
             placeholder={$i18n.t('settings-menu.view-config.calendar.hints.timezone')}
-            on:change={() => emitUpdate({ timezone })}
+            on:change={(e) => emitUpdate({ timezone: e.currentTarget.value })}
           />
         </label>
         
@@ -245,8 +257,8 @@
             <div class="row">
               <label class="half">
                 {$i18n.t('settings-menu.view-config.calendar.timeline.start-hour')}
-                <select bind:value={startHour} on:change={() => emitUpdate({ startHour })}>
-                  {#each hourOptions.slice(0, 24) as h}
+                <select value={startHour} on:change={(e) => emitHour("startHour", startHourOptions, e.currentTarget.selectedIndex)}>
+                  {#each startHourOptions as h}
                     <option value={h}>{h.toString().padStart(2, '0')}:00</option>
                   {/each}
                 </select>
@@ -254,8 +266,8 @@
               
               <label class="half">
                 {$i18n.t('settings-menu.view-config.calendar.timeline.end-hour')}
-                <select bind:value={endHour} on:change={() => emitUpdate({ endHour })}>
-                  {#each hourOptions.slice(1) as h}
+                <select value={endHour} on:change={(e) => emitHour("endHour", endHourOptions, e.currentTarget.selectedIndex)}>
+                  {#each endHourOptions as h}
                     <option value={h}>{h.toString().padStart(2, '0')}:00</option>
                   {/each}
                 </select>
@@ -266,9 +278,9 @@
               {$i18n.t('settings-menu.view-config.calendar.timeline.event-color-field')}
               <input
                 type="text"
-                bind:value={eventColorField}
+                value={eventColorField}
                 placeholder={$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-placeholder')}
-                on:change={() => emitUpdate({ eventColorField })}
+                on:change={(e) => emitUpdate({ eventColorField: e.currentTarget.value })}
               />
               <span class="hint">{$i18n.t('settings-menu.view-config.calendar.timeline.hints.event-color-field')}</span>
             </label>
@@ -277,8 +289,8 @@
               <input
                 class="ppp-touch-target"
                 type="checkbox"
-                bind:checked={showWeekends}
-                on:change={() => emitUpdate({ showWeekends })}
+                checked={showWeekends}
+                on:change={(e) => emitUpdate({ showWeekends: e.currentTarget.checked })}
               />
               <span>{$i18n.t('settings-menu.view-config.calendar.timeline.show-weekends')}</span>
             </label>
@@ -287,8 +299,8 @@
               <input
                 class="ppp-touch-target"
                 type="checkbox"
-                bind:checked={showAllDaySection}
-                on:change={() => emitUpdate({ showAllDaySection })}
+                checked={showAllDaySection}
+                on:change={(e) => emitUpdate({ showAllDaySection: e.currentTarget.checked })}
               />
               <span>{$i18n.t('settings-menu.view-config.calendar.timeline.show-all-day')}</span>
             </label>
@@ -299,8 +311,8 @@
           <input
             class="ppp-touch-target"
             type="checkbox"
-            bind:checked={agendaOpen}
-            on:change={() => emitUpdate({ agendaOpen })}
+            checked={agendaOpen}
+            on:change={(e) => emitUpdate({ agendaOpen: e.currentTarget.checked })}
           />
           <span>{$i18n.t('settings-menu.view-config.calendar.show-agenda')}</span>
         </label>
@@ -314,7 +326,7 @@
             <FieldComboInput
               {fields}
               id="fieldlist-date"
-              bind:value={dateField}
+              value={dateField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ dateField: e.detail })}
             />
@@ -326,7 +338,7 @@
             <FieldComboInput
               {fields}
               id="fieldlist-startDate"
-              bind:value={startDateField}
+              value={startDateField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ startDateField: e.detail })}
             />
@@ -338,7 +350,7 @@
             <FieldComboInput
               {fields}
               id="fieldlist-endDate"
-              bind:value={endDateField}
+              value={endDateField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ endDateField: e.detail })}
             />
@@ -350,7 +362,7 @@
             <FieldComboInput
               {fields}
               id="fieldlist-startTime"
-              bind:value={startTimeField}
+              value={startTimeField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ startTimeField: e.detail })}
             />
@@ -362,7 +374,7 @@
             <FieldComboInput
               {fields}
               id="fieldlist-endTime"
-              bind:value={endTimeField}
+              value={endTimeField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ endTimeField: e.detail })}
             />
@@ -374,7 +386,7 @@
             <FieldComboInput
               {fields}
               id="fieldlist-check"
-              bind:value={checkField}
+              value={checkField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ checkField: e.detail })}
             />
@@ -386,7 +398,7 @@
             <FieldComboInput
               fields={stringFields}
               id="fieldlist-icon-calendar"
-              bind:value={iconField}
+              value={iconField}
               placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
               on:change={(e) => emitUpdate({ iconField: e.detail || undefined })}
             />
@@ -402,9 +414,21 @@
           {$i18n.t('settings-menu.view-config.board.column-width')}
           <input
             type="number"
-            bind:value={columnWidth}
+            data-board-option="column-width"
+            value={columnWidth}
             placeholder="270"
-            on:change={() => emitUpdate({ columnWidth })}
+            on:change={(e) => {
+              // settings-binds: read the field itself. An emptied field resets
+              // the width to the default (as the old bind did); a value that is
+              // not a positive number writes nothing.
+              if (e.currentTarget.value.trim() === "") {
+                emitUpdate({ columnWidth: undefined });
+                return;
+              }
+              const width = e.currentTarget.valueAsNumber;
+              if (!Number.isFinite(width) || width <= 0) return;
+              emitUpdate({ columnWidth: width });
+            }}
           />
           <span class="hint">{$i18n.t('settings-menu.view-config.board.hints.column-width')}</span>
         </label>
@@ -414,7 +438,7 @@
           <FieldComboInput
             fields={stringFields}
             id="fieldlist-groupBy"
-            bind:value={groupByField}
+            value={groupByField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitUpdate({ groupByField: e.detail || undefined })}
           />
@@ -426,7 +450,7 @@
           <FieldComboInput
             {fields}
             id="fieldlist-header"
-            bind:value={headerField}
+            value={headerField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitUpdate({ headerField: e.detail || undefined })}
           />
@@ -438,7 +462,7 @@
           <FieldComboInput
             fields={stringFields}
             id="fieldlist-icon-board"
-            bind:value={iconField}
+            value={iconField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitUpdate({ iconField: e.detail || undefined })}
           />
@@ -450,7 +474,7 @@
           <FieldComboInput
             fields={numberFields}
             id="fieldlist-orderSync"
-            bind:value={orderSyncField}
+            value={orderSyncField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitUpdate({ orderSyncField: e.detail || undefined })}
           />
@@ -459,7 +483,7 @@
 
         <label>
           {$i18n.t("settings-menu.view-config.board.thumbnail-layout")}
-          <select data-board-option="thumbnail-layout" bind:value={thumbnailLayout} on:change={(e) => emitUpdate({ thumbnailLayout: e.currentTarget.value })}>
+          <select data-board-option="thumbnail-layout" value={thumbnailLayout} on:change={(e) => emitUpdate({ thumbnailLayout: e.currentTarget.value })}>
             {#each BOARD_THUMBNAIL_LAYOUTS as option}
               <option value={option}>{$i18n.t(`settings-menu.view-config.board.thumbnail-options.${option}`)}</option>
             {/each}
@@ -472,7 +496,7 @@
           <FieldComboInput
             fields={stringFields}
             id="fieldlist-cover-board"
-            bind:value={coverField}
+            value={coverField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitUpdate({ coverField: e.detail || undefined })}
           />
@@ -483,8 +507,12 @@
           <input
             class="ppp-touch-target"
             type="checkbox"
-            bind:checked={freezeAll}
-            on:change={() => emitUpdate({ freezeAll, freezeColumns: freezeAll })}
+            data-board-option="freeze-columns"
+            checked={freezeAll}
+            on:change={(e) => {
+              const frozen = e.currentTarget.checked;
+              emitUpdate({ freezeAll: frozen, freezeColumns: frozen });
+            }}
           />
           <span>{$i18n.t("settings-menu.view-config.board.freeze-columns")}</span>
         </label>
@@ -495,7 +523,7 @@
       <div class="group">
         <label>
           {$i18n.t("settings-menu.view-config.gallery.layout")}
-          <select data-gallery-option="layout" bind:value={galleryLayout} on:change={(e) => emitUpdate({ layout: e.currentTarget.value })}>
+          <select data-gallery-option="layout" value={galleryLayout} on:change={(e) => emitUpdate({ layout: e.currentTarget.value })}>
             {#each GALLERY_LAYOUTS as option}
               <option value={option}>{$i18n.t(`settings-menu.view-config.gallery.layout-options.${option}`)}</option>
             {/each}
@@ -537,7 +565,7 @@
 
         <label>
           {$i18n.t("settings-menu.view-config.gallery.aspect-ratio")}
-          <select data-gallery-option="aspect-ratio" bind:value={coverAspectRatio} on:change={(e) => emitUpdate({ coverAspectRatio: e.currentTarget.value })}>
+          <select data-gallery-option="aspect-ratio" value={coverAspectRatio} on:change={(e) => emitUpdate({ coverAspectRatio: e.currentTarget.value })}>
             {#each GALLERY_ASPECT_RATIOS as option}
               <option value={option}>{option === "none" ? $i18n.t("settings-menu.view-config.gallery.aspect-ratio-none") : option.replace("/", ":")}</option>
             {/each}
@@ -549,7 +577,7 @@
           <FieldComboInput
             fields={stringFields}
             id="fieldlist-cover"
-            bind:value={coverField}
+            value={coverField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitUpdate({ coverField: e.detail || undefined })}
           />
@@ -561,7 +589,7 @@
           <FieldComboInput
             fields={stringFields}
             id="fieldlist-icon-gallery"
-            bind:value={iconField}
+            value={iconField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitUpdate({ iconField: e.detail || undefined })}
           />
@@ -570,7 +598,7 @@
 
         <label>
           {$i18n.t("settings-menu.view-config.gallery.fit-style")}
-          <select data-gallery-option="fit" bind:value={fitStyle} on:change={(e) => emitUpdate({ fitStyle: e.currentTarget.value })}>
+          <select data-gallery-option="fit" value={fitStyle} on:change={(e) => emitUpdate({ fitStyle: e.currentTarget.value })}>
             <option value="cover">{$i18n.t("settings-menu.view-config.gallery.fit-options.fill")}</option>
             <option value="contain">{$i18n.t("settings-menu.view-config.gallery.fit-options.fit")}</option>
             {#if gallery.fitStyle === "fill"}
@@ -584,7 +612,7 @@
             class="ppp-touch-target"
             type="checkbox"
             data-gallery-option="labels"
-            bind:checked={showFieldLabels}
+            checked={showFieldLabels}
             on:change={(e) => emitUpdate({ showFieldLabels: e.currentTarget.checked })}
           />
           <span>{$i18n.t("settings-menu.view-config.gallery.show-field-labels")}</span>
@@ -650,7 +678,7 @@
 
         <label>
           {$i18n.t("views.dashboard.table.row-height", { defaultValue: "Row height" })}
-          <select bind:value={rowHeight} on:change={() => emitTableUpdate({ rowHeight })}>
+          <select value={rowHeight} on:change={(e) => emitTableUpdate({ rowHeight: e.currentTarget.value })}>
             <option value="compact">{$i18n.t("views.dashboard.table.row-height-compact", { defaultValue: "Compact" })}</option>
             <option value="default">{$i18n.t("views.dashboard.table.row-height-default", { defaultValue: "Default" })}</option>
             <option value="expanded">{$i18n.t("views.dashboard.table.row-height-expanded", { defaultValue: "Expanded" })}</option>
@@ -661,8 +689,8 @@
           <input
             class="ppp-touch-target"
             type="checkbox"
-            bind:checked={wrapText}
-            on:change={() => emitTableUpdate({ wrapText })}
+            checked={wrapText}
+            on:change={(e) => emitTableUpdate({ wrapText: e.currentTarget.checked })}
           />
           <span>{$i18n.t("views.dashboard.table.wrap-text", { defaultValue: "Wrap text in cells" })}</span>
         </label>
@@ -671,8 +699,8 @@
           <input
             class="ppp-touch-target"
             type="checkbox"
-            bind:checked={showAggregationRow}
-            on:change={() => emitTableUpdate({ showAggregationRow })}
+            checked={showAggregationRow}
+            on:change={(e) => emitTableUpdate({ showAggregationRow: e.currentTarget.checked })}
           />
           <span>{$i18n.t("views.dashboard.table.show-aggregation", { defaultValue: "Show aggregation row" })}</span>
         </label>
@@ -682,7 +710,7 @@
           <FieldComboInput
             {fields}
             id="fieldlist-freezeUpTo"
-            bind:value={freezeUpTo}
+            value={freezeUpTo}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitTableUpdate({ freezeUpTo: e.detail || undefined })}
           />
@@ -693,7 +721,7 @@
           <FieldComboInput
             fields={stringFields}
             id="fieldlist-icon-database"
-            bind:value={tableConfigIconField}
+            value={tableConfigIconField}
             placeholder={$i18n.t('settings-menu.view-config.calendar.field-mapping.placeholder')}
             on:change={(e) => emitTableUpdate({ iconField: e.detail || undefined })}
           />
