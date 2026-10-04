@@ -87,12 +87,15 @@
     flex: 0 0 auto;
   }
 
-  :global(.clickable-icon) {
+  /* theme-compat: anchored to the navbar. A bare `:global(.clickable-icon)`
+     here restyled every clickable icon in Obsidian (the ribbon, the tab
+     header) once the plugin view mounted. R0.35 keeps it from coming back. */
+  .compact-navbar :global(.clickable-icon) {
     padding: 0.625rem;
     border-radius: 0.625rem;
   }
 
-  :global(.clickable-icon:focus-visible) {
+  .compact-navbar :global(.clickable-icon:focus-visible) {
     outline: 0.125rem solid var(--interactive-accent);
     outline-offset: 0.125rem;
     background: var(--background-modifier-hover);

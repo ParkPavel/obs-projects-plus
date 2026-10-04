@@ -38,7 +38,10 @@
     border-right: 0;
   }
 
+  /* theme-compat: --text-faint fell to 2.1-2.6:1 against the calendar
+     header (WCAG AA is 4.5:1); weekends keep a quieter weight instead. */
   .weekend {
-    color: var(--text-faint);
+    color: var(--text-muted);
+    font-weight: var(--font-normal, 400);
   }
 </style>

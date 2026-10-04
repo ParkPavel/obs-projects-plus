@@ -1446,7 +1446,7 @@
    * Without a constraint the shadow mirrors the full list height and pushes
    * other lists out of view on small screens.
    */
-  :global(.custom-lists [data-is-dnd-shadow-item-hint]) {
+  .custom-lists :global([data-is-dnd-shadow-item-hint]) {
     max-height: 3rem !important;
     overflow: hidden !important;
     opacity: 0.5 !important;

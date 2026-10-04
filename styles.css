@@ -599,7 +599,7 @@
 .ppp-popover-empty {
   padding: 1.25rem var(--ppp-space-5, 0.75rem);
   text-align: center;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--ppp-font-size-sm, 0.75rem);
   font-style: italic;
 }
@@ -617,7 +617,7 @@
 .ppp-popover-footer {
   padding: var(--ppp-space-2, 0.25rem) var(--ppp-space-5, 0.75rem);
   font-size: 0.625rem;
-  color: var(--text-faint);
+  color: var(--text-muted);
   border-top: var(--ppp-border-width) solid var(--background-modifier-border);
   display: flex;
   gap: var(--ppp-space-5, 0.75rem);

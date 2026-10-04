@@ -400,9 +400,12 @@
     padding: 0.25rem 0.75rem 0;
   }
 
+  /* theme-compat: the count and the empty hint are text a user reads, so
+     --text-muted (WCAG AA in the default themes), not --text-faint
+     (2.30:1 light, 2.97:1 dark). */
   .ppp-gallery-footer-count {
     font-size: 0.75rem;
-    color: var(--text-faint);
+    color: var(--text-muted);
     user-select: none;
   }
 
@@ -416,6 +419,6 @@
 
   .ppp-gallery-empty-hint {
     font-size: 0.875rem;
-    color: var(--text-faint);
+    color: var(--text-muted);
   }
 </style>

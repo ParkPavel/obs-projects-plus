@@ -187,7 +187,9 @@
 
   .projects--board--column-footer-count {
     font-size: 0.75rem;
-    color: var(--text-faint);
+    /* theme-compat: --text-faint measured 2.30:1 (light) and 2.97:1 (dark)
+       against the column; --text-muted reaches WCAG AA. */
+    color: var(--text-muted);
     user-select: none;
   }
 

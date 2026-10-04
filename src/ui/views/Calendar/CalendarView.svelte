@@ -2348,12 +2348,13 @@
     min-width: 0;
   }
 
-  /* Apple-style transitions */
-  :global(.calendar-fade-enter) {
+  /* Apple-style transitions. Plugin-prefixed (theme-compat): a generic global
+     class name can be claimed by a theme or another plugin. */
+  :global(.ppp-calendar-fade-enter) {
     opacity: 0;
   }
 
-  :global(.calendar-fade-enter-active) {
+  :global(.ppp-calendar-fade-enter-active) {
     opacity: 1;
     transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }

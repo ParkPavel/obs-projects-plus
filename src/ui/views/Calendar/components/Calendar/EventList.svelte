@@ -65,7 +65,7 @@
       borderRadius: "0.5rem",
       background: "hsla(var(--interactive-accent-hsl), 0.15)",
     },
-    dropTargetClasses: ["drop-target-active"],
+    dropTargetClasses: ["ppp-drop-target-active"],
   };
 </script>
 
@@ -137,8 +137,9 @@
     min-height: 1.5rem;
   }
 
-  /* DnD active state */
-  :global(.drop-target-active) {
+  /* DnD active state. Plugin-prefixed (theme-compat): a generic global class
+     name can be claimed by a theme or another plugin. */
+  :global(.ppp-drop-target-active) {
     background: hsla(var(--interactive-accent-hsl), 0.08) !important;
   }
 
