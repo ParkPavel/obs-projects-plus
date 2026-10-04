@@ -11,6 +11,7 @@
   import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
   import { sourceNameTaken } from "src/lib/datasources/namedSource";
   import { dataFrame } from "../../../../lib/stores/dataframe";
+  import { applyRollupColumns } from "src/lib/relations/rollupColumns";
   import SettingsMenuTabs, { type SettingsTabId } from "./SettingsMenuTabs.svelte";
   import ProjectTab from "./tabs/ProjectTab.svelte";
   import ViewsTab from "./tabs/ViewsTab.svelte";
@@ -39,7 +40,16 @@
 
   // Get fields from dataFrame store if not passed as prop. `derived` travels
   // too: the gallery's card-field list marks formulas and rollups with ƒ.
-  $: resolvedFields = fields.length > 0 ? fields : ($dataFrame?.fields ?? []).map(f => ({ name: f.name, type: f.type, derived: f.derived }));
+  // chrome-filters: the store holds the notes' own fields; the view folds the
+  // project's declared rollups in as columns later (View.svelte), so a card
+  // could show a rollup the settings never listed. The declared rollups are
+  // added here the same way the view adds them (no records, so no values).
+  $: activeProject = projects.find((p) => p.id === projectId);
+  $: storeFields = $dataFrame?.fields ?? [];
+  $: frameFields = activeProject?.fieldConfig
+    ? applyRollupColumns({ fields: storeFields, records: [] }, activeProject.fieldConfig, activeProject.id, new Map()).fields
+    : storeFields;
+  $: resolvedFields = fields.length > 0 ? fields : frameFields.map(f => ({ name: f.name, type: f.type, derived: f.derived }));
   
   // Get records from dataFrame for value suggestions
   $: resolvedRecords = $dataFrame?.records ?? [];

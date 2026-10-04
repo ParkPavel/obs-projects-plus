@@ -356,3 +356,35 @@ describe("chrome-filters — Save as source: naming it", () => {
     again.destroy();
   });
 });
+
+describe("chrome-filters — the settings list the project's declared rollups", () => {
+  // The store holds the notes' own fields; the view folds declared rollups in
+  // later. A gallery card showed 'Проведено визитов' (a rollup) while the
+  // settings never listed it, so nothing visibly controlled it.
+  it("a declared rollup with a source appears in the gallery card-field list, marked derived", async () => {
+    const { dataFrame } = require("src/lib/stores/dataframe") as { dataFrame: { set(v: unknown): void } };
+    dataFrame.set({ fields: [{ name: "goal", type: "string", repeated: false, identifier: false, derived: false }], records: [] });
+    const project = {
+      id: "p1",
+      name: "Clients",
+      fieldConfig: {
+        "Проведено визитов": { rollup: { function: "count", field: "", backlink: { projectId: "p2", relationField: "client" } } },
+      },
+      views: [],
+    };
+    const gallery = { id: "g1", name: "Gallery", type: "gallery", config: { includeFields: ["goal", "Проведено визитов"] }, filter: { conjunction: "and", conditions: [] }, colors: { conditions: [] }, sort: { criteria: [] } };
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const component = new SettingsMenuPopover({
+      target,
+      props: { projects: [project], projectId: "p1", views: [gallery], viewId: "g1", position: { x: 0, y: 0 }, fields: [], sources: [] },
+    });
+    await tick();
+    const text = target.textContent ?? "";
+    expect(text).toContain("goal");
+    expect(text).toContain("Проведено визитов");
+    component.$destroy();
+    target.remove();
+    dataFrame.set({ fields: [], records: [] });
+  });
+});
