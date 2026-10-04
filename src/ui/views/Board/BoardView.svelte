@@ -36,7 +36,7 @@
     OnColumnPersist,
     OnColumnRename,
   } from "./components/Board/types";
-  import type { BoardConfig } from "./types";
+  import { isBoardFrozen, type BoardConfig } from "./types";
   import {
     CARD_FRAME_OVERRIDE_CAP,
     normalizeCardFrames,
@@ -575,7 +575,7 @@
       !hasSort,
       config?.persistedStatuses,
       groupMode === "semantic"
-    ).map((c) => (config?.freezeAll ? { ...c, pinned: true } : c))}
+    ).map((c) => (isBoardFrozen(config) ? { ...c, pinned: true } : c))}
     {columnWidth}
     zoom={config?.boardZoom ?? 1}
     onZoomChange={(z) => saveConfig({ ...config, boardZoom: z })}
