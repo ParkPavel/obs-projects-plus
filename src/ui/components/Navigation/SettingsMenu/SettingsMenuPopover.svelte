@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from "svelte";
+  import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import { focusTrap } from "src/lib/a11y/focusTrap";
   import type {
     ProjectDefinition,
@@ -7,6 +7,9 @@
     ViewDefinition,
     ViewId,
   } from "../../../../settings/settings";
+  import type { FilterDefinition } from "src/settings/base/settings";
+  import type { DataSource as StoredDataSource } from "src/settings/v3/settings";
+  import { sourceNameTaken } from "src/lib/datasources/namedSource";
   import { dataFrame } from "../../../../lib/stores/dataframe";
   import SettingsMenuTabs, { type SettingsTabId } from "./SettingsMenuTabs.svelte";
   import ProjectTab from "./tabs/ProjectTab.svelte";
@@ -23,11 +26,20 @@
   export let views: ViewDefinition[] = [];
   export let viewId: ViewId | undefined;
   export let position: { x: number; y: number } = { x: 0, y: 0 };
-  export let fields: Array<{ name: string; type: string }> = [];
+  export let fields: Array<{ name: string; type: string; derived?: boolean }> = [];
   export let showViewTitles: boolean = true;
+  /**
+   * chrome-filters: whether the project's source can be written. A read-only
+   * source cannot take a new derived source, so the Filters tab offers no
+   * "Save as source" there (the shell guards the write as well).
+   */
+  export let readonly = false;
+  /** The project's sources, for the duplicate-name guard of "Save as source". */
+  export let sources: readonly StoredDataSource[] = [];
 
-  // Get fields from dataFrame store if not passed as prop
-  $: resolvedFields = fields.length > 0 ? fields : ($dataFrame?.fields ?? []).map(f => ({ name: f.name, type: f.type }));
+  // Get fields from dataFrame store if not passed as prop. `derived` travels
+  // too: the gallery's card-field list marks formulas and rollups with ƒ.
+  $: resolvedFields = fields.length > 0 ? fields : ($dataFrame?.fields ?? []).map(f => ({ name: f.name, type: f.type, derived: f.derived }));
   
   // Get records from dataFrame for value suggestions
   $: resolvedRecords = $dataFrame?.records ?? [];
@@ -43,6 +55,8 @@
     addView: void;
     updateViewConfig: Record<string, any>;
     toggleShowViewTitles: boolean;
+    /** #184 / chrome-filters: the trimmed, unused name for the view's filter. */
+    saveFilterAsSource: string;
   }>();
 
   let activeTab: SettingsTabId = "viewConfig";
@@ -123,6 +137,13 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape") {
+      // chrome-filters: Escape in the source-name field abandons the name, not
+      // the whole panel. This listener runs in the capture phase, before the
+      // field's own, so it has to know.
+      if (naming) {
+        cancelNaming();
+        return;
+      }
       dispatch("close");
     }
   }
@@ -146,9 +167,97 @@
   });
 
   $: activeView = views.find((view) => view.id === viewId);
-  $: currentFilter = activeView?.filter ?? { conjunction: "and" as const, conditions: [] };
+  let currentFilter: FilterDefinition;
+  $: currentFilter = activeView?.filter ?? { conjunction: "and", conditions: [] };
   $: currentColors = activeView?.colors ?? { conditions: [] };
   $: currentSort = activeView?.sort ?? { criteria: [] };
+
+  // ── chrome-filters: the Filters tab is the one place a view is filtered ──
+  // The header filter row is gone, so this tab carries what it did: how many
+  // conditions are narrowing the view, a way to drop them all at once, and
+  // "Save as source" (#184).
+
+  /** Enabled conditions, nested groups included. */
+  function enabledCount(def: FilterDefinition | undefined): number {
+    if (!def) return 0;
+    const own = def.conditions.filter((c) => c.enabled !== false).length;
+    return own + (def.groups ?? []).reduce((sum, g) => sum + enabledCount(g), 0);
+  }
+  $: activeConditionCount = enabledCount(currentFilter);
+  $: hasAnyCondition = currentFilter.conditions.length > 0 || (currentFilter.groups?.length ?? 0) > 0;
+  // FilterPanel copies its value once, on mount; a clear made here must reach
+  // it, so the panel is re-keyed when the filter is cleared from outside it,
+  // and remounts empty even before the cleared filter comes back as a prop.
+  let filterPanelKey = 0;
+  let pendingClear = false;
+  const EMPTY_FILTER: FilterDefinition = { conjunction: "and", conditions: [] };
+  function settleClear(_saved: FilterDefinition): void {
+    pendingClear = false;
+  }
+  $: settleClear(currentFilter);
+  $: panelFilter = pendingClear ? EMPTY_FILTER : currentFilter;
+
+  function clearFilter() {
+    dispatch("updateViewConfig", { filter: { conjunction: "and", conditions: [] } });
+    pendingClear = true;
+    filterPanelKey += 1;
+    cancelNaming();
+  }
+
+  // #184: the action exists only once a top-level condition is narrowing the
+  // view — a saved selection with nothing enabled equals the project it came
+  // from — and never on a source that cannot be written.
+  $: canSaveSource = !readonly && currentFilter.conditions.some((c) => c.enabled !== false);
+  let naming = false;
+  let sourceName = "";
+  let nameError = "";
+  let nameEl: HTMLInputElement | null = null;
+  // The action can disappear while a name is half typed (the last condition
+  // disabled, the source turning read-only); the naming state goes with it, so
+  // Escape closes the panel again instead of cancelling an invisible field.
+  $: if (!canSaveSource && naming) cancelNaming();
+
+  async function startNaming() {
+    naming = true;
+    sourceName = "";
+    nameError = "";
+    await tick();
+    nameEl?.focus();
+  }
+
+  function cancelNaming() {
+    naming = false;
+    sourceName = "";
+    nameError = "";
+  }
+
+  function commitName() {
+    if (!naming) return;
+    const trimmed = sourceName.trim();
+    // A blank name is a cancel, not an unnamed source: the name is the only
+    // thing that will identify this selection in a picker later.
+    if (!trimmed) {
+      cancelNaming();
+      return;
+    }
+    // Refused here, where the user can still change it; the shell refuses a
+    // taken name again with its coded notice (PPP-701).
+    if (sourceNameTaken(sources, trimmed)) {
+      nameError = $i18n.t("views.filter.bar.save-name-taken", { name: trimmed });
+      return;
+    }
+    cancelNaming();
+    dispatch("saveFilterAsSource", trimmed);
+  }
+
+  function handleNameKeydown(event: KeyboardEvent) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitName();
+    } else if (event.key === "Escape") {
+      cancelNaming();
+    }
+  }
 </script>
 
 {#if position}
@@ -197,13 +306,65 @@
             on:toggleShowTitles={(event) => dispatch("toggleShowViewTitles", event.detail)}
           />
         {:else if activeTab === "filters"}
-          <FilterPanel
-            value={currentFilter}
-            fields={resolvedFields}
-            records={resolvedRecords}
-            scopeLabel={$i18n.t('settings.filters.scope-view', { defaultValue: 'View filter' })}
-            on:update={(event) => dispatch("updateViewConfig", { filter: event.detail })}
-          />
+          <div class="ppp-filters-tab">
+            <div class="ppp-filters-summary" data-filters-summary>
+              <span class="ppp-filters-summary-text" data-filters-active={activeConditionCount}>
+                {activeConditionCount > 0
+                  ? $i18n.t("settings-menu.filters.active", { count: activeConditionCount, defaultValue: "Active conditions: {{count}}" })
+                  : $i18n.t("settings-menu.filters.none-active", { defaultValue: "No active conditions" })}
+              </span>
+              {#if hasAnyCondition}
+                <button type="button" class="ppp-filters-clear" data-filters-action="clear" on:click={clearFilter}>
+                  {$i18n.t("settings-menu.filters.clear-all", { defaultValue: "Clear all" })}
+                </button>
+              {/if}
+            </div>
+            {#key filterPanelKey}
+              <FilterPanel
+                value={panelFilter}
+                fields={resolvedFields}
+                records={resolvedRecords}
+                scopeLabel={$i18n.t('settings.filters.scope-view', { defaultValue: 'View filter' })}
+                on:update={(event) => dispatch("updateViewConfig", { filter: event.detail })}
+              />
+            {/key}
+            {#if canSaveSource}
+              <div class="ppp-filters-save" data-filters-save>
+                {#if naming}
+                  <input
+                    bind:this={nameEl}
+                    class="ppp-filters-save-name"
+                    type="text"
+                    bind:value={sourceName}
+                    placeholder={$i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" })}
+                    aria-label={$i18n.t("views.filter.bar.save-name", { defaultValue: "Name this selection…" })}
+                    aria-invalid={nameError !== ""}
+                    on:input={() => (nameError = "")}
+                    on:keydown={handleNameKeydown}
+                  />
+                  <div class="ppp-filters-save-actions">
+                    <button type="button" class="mod-cta" data-filters-action="save-confirm" on:click={commitName}>
+                      {$i18n.t("common.save")}
+                    </button>
+                    <button type="button" data-filters-action="save-cancel" on:click={cancelNaming}>
+                      {$i18n.t("common.cancel")}
+                    </button>
+                  </div>
+                  {#if nameError}
+                    <span class="ppp-filters-save-error" role="alert">{nameError}</span>
+                  {/if}
+                {:else}
+                  <button
+                    type="button"
+                    class="ppp-filters-save-start"
+                    data-filters-action="save"
+                    on:click={startNaming}
+                  >{$i18n.t("views.filter.bar.save", { defaultValue: "Save as source" })}</button>
+                  <span class="ppp-filters-save-hint">{$i18n.t("views.filter.bar.save-tip", { defaultValue: "Keep this filter as a source of the project, so a block can show it" })}</span>
+                {/if}
+              </div>
+            {/if}
+          </div>
         {:else if activeTab === "colors"}
           <ColorFiltersTab
             value={currentColors}
@@ -347,6 +508,83 @@
     min-height: 10rem;
     max-height: calc(100vh - 20rem);
     overscroll-behavior: contain;
+  }
+
+  /* chrome-filters: the Filters tab — summary row, the panel, then "Save as
+     source". Everything wraps inside the panel's width; nothing here sets a
+     width of its own. */
+  .ppp-filters-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .ppp-filters-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .ppp-filters-summary-text {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    min-width: 0;
+  }
+
+  .ppp-filters-clear,
+  .ppp-filters-save-start,
+  .ppp-filters-save-actions button {
+    min-height: 2rem;
+    font-size: var(--font-ui-small);
+  }
+
+  .ppp-filters-save {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding-top: 0.5rem;
+    border-top: var(--ppp-border-width) solid var(--background-modifier-border);
+    min-width: 0;
+  }
+
+  .ppp-filters-save-start {
+    align-self: flex-start;
+  }
+
+  .ppp-filters-save-name {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .ppp-filters-save-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .ppp-filters-save-hint {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+  }
+
+  .ppp-filters-save-error {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-error);
+  }
+
+  /* ios-t1 conventions: finger-sized controls on a coarse pointer. */
+  @media (pointer: coarse) {
+    .ppp-filters-clear,
+    .ppp-filters-save-start,
+    .ppp-filters-save-actions button,
+    .ppp-filters-save-name {
+      min-height: var(--ppp-touch-target-min);
+    }
   }
 
   .popover-footer {

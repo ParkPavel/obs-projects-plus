@@ -60,8 +60,10 @@ import {
  *     ios-t1): a media query list is a gate only if every query in it is. No
  *     gate in the tree is a list, so nothing moved; recorded because a
  *     re-measurement that returns the same value is still evidence.
+ *   216 — chrome-filters: the header filter row (ViewFilterBar) was removed
+ *     with its one ungated rule, the save button hover.
  */
-const UNGATED_HOVER_BUDGET = 217;
+const UNGATED_HOVER_BUDGET = 216;
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a

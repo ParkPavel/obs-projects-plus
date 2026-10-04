@@ -35,7 +35,7 @@
   import { getFilterValuesFromConditions } from "src/lib/helpers";
   import GalleryOptionsProvider from "./GalleryOptionsProvider.svelte";
   import { getCoverRealPath } from "./gallery";
-  import { aspectRatioCss } from "./galleryOptions";
+  import { aspectRatioCss, cardFieldsInOrder } from "./galleryOptions";
   import { toRem } from "src/ui/utils/cssLength";
   import { handleHoverLink, showMobileNavMenu } from "../helpers";
   import { isTouchDevice } from "src/lib/stores/ui";
@@ -232,7 +232,8 @@
   {#if records.length}
     {@const mediaRatio = aspectRatioCss(coverAspectRatio)}
     {@const cardSize = toRem(cardWidth)}
-    {@const shownFields = fields.filter((field) => includeFields.includes(field.name))}
+    {@const shownFields = cardFieldsInOrder(fields, includeFields)}
+    <!-- chrome-filters: card fields in the saved order, which the settings' up/down set. -->
     <!-- C18: count footer -->
     <div class="ppp-gallery-footer">
       <span class="ppp-gallery-footer-count">

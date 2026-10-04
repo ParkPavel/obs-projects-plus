@@ -46,9 +46,6 @@
   />
 
   <div class="right">
-    <!-- ios-l1 L1: the shell's one-tap filter button. The shell owns it because
-         the filter popover lives with the view's data, which the navbar never sees. -->
-    <slot name="filter" />
     <SaveStatusChip />
     <AddViewButton onAdd={() => dispatch("addView")}/>
     <SettingsMenuButton onOpen={(event) => dispatch("openSettings", event)}/>

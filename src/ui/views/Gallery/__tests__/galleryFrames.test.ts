@@ -130,6 +130,51 @@ class FakeResizeObserver {
   }
 }
 
+/**
+ * chrome-filters: the grid applies an observed width in the next animation
+ * frame of its window. Frames are a queue the test flushes, so "not yet" and
+ * "once" are both observable.
+ */
+const frames = {
+  queue: new Map<number, FrameRequestCallback>(),
+  next: 1,
+  requested: 0,
+  cancelled: [] as number[],
+  original: { raf: window.requestAnimationFrame, caf: window.cancelAnimationFrame },
+  install(): void {
+    frames.queue.clear();
+    frames.requested = 0;
+    frames.cancelled = [];
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      const id = frames.next++;
+      frames.requested++;
+      frames.queue.set(id, cb);
+      return id;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((id: number) => {
+      frames.cancelled.push(id);
+      frames.queue.delete(id);
+    }) as typeof window.cancelAnimationFrame;
+  },
+  restore(): void {
+    window.requestAnimationFrame = frames.original.raf;
+    window.cancelAnimationFrame = frames.original.caf;
+    frames.queue.clear();
+  },
+  flush(): void {
+    const due = [...frames.queue.entries()];
+    frames.queue.clear();
+    for (const [, cb] of due) cb(0);
+  },
+};
+
+/** A layout pass reported by the observer, then the frame that applies it. */
+async function reportAndFrame(observer: FakeResizeObserver | undefined, width: number): Promise<void> {
+  observer?.report(width);
+  frames.flush();
+  await tick();
+}
+
 beforeAll(() => {
   app.set({});
 });
@@ -205,9 +250,11 @@ describe("cards-g5 — heights per layout, and precedence", () => {
 });
 
 describe("cards-g5 — grid span", () => {
+  beforeEach(() => frames.install());
   afterEach(() => {
     delete (window as unknown as { ResizeObserver?: unknown }).ResizeObserver;
     FakeResizeObserver.all = [];
+    frames.restore();
   });
 
   it("the column minimum is converted against the root of the window the grid is in", () => {
@@ -233,18 +280,15 @@ describe("cards-g5 — grid span", () => {
     expect(observer).toBeDefined();
 
     // 300-wide columns (the default card width) in a 640-wide grid: two.
-    observer?.report(640);
-    await tick();
+    await reportAndFrame(observer, 640);
     expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
 
     // Narrower than one column: no span at all.
-    observer?.report(280);
-    await tick();
+    await reportAndFrame(observer, 280);
     expect(prop(m.card(ALPHA), "grid-column")).toBe("");
 
     // Wide again: the saved three come back, because nothing was rewritten.
-    observer?.report(1000);
-    await tick();
+    await reportAndFrame(observer, 1000);
     expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 3/);
     expect(m.onConfigChange).not.toHaveBeenCalled();
     m.destroy();
@@ -253,10 +297,68 @@ describe("cards-g5 — grid span", () => {
   it("a wider card width means fewer columns, and a tighter cap", async () => {
     (window as unknown as { ResizeObserver: unknown }).ResizeObserver = FakeResizeObserver;
     const m = mountGallery({ cardWidth: 400, cardFramesByRecord: { [ALPHA]: { gridSpan: 4 } } });
-    FakeResizeObserver.all[0]?.report(1000);
+    await reportAndFrame(FakeResizeObserver.all[0], 1000);
+    expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
+    m.destroy();
+  });
+});
+
+describe("chrome-filters — the grid observer defers and coalesces its update", () => {
+  beforeEach(() => {
+    frames.install();
+    (window as unknown as { ResizeObserver: unknown }).ResizeObserver = FakeResizeObserver;
+  });
+  afterEach(() => {
+    delete (window as unknown as { ResizeObserver?: unknown }).ResizeObserver;
+    FakeResizeObserver.all = [];
+    frames.restore();
+  });
+
+  it("nothing changes inside the observer callback; the next frame applies it", async () => {
+    const m = mountGallery({ cardFramesByRecord: { [ALPHA]: { gridSpan: 3 } } });
+    FakeResizeObserver.all[0]?.report(640);
+    await tick();
+    // Still uncapped: the width has been recorded, not applied.
+    expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 3/);
+    expect(frames.requested).toBe(1);
+    frames.flush();
     await tick();
     expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
     m.destroy();
+  });
+
+  it("several callbacks before a frame are one frame and one recount, with the last width", async () => {
+    const m = mountGallery({ cardFramesByRecord: { [ALPHA]: { gridSpan: 3 } } });
+    const observer = FakeResizeObserver.all[0];
+    observer?.report(1000);
+    observer?.report(280);
+    observer?.report(640);
+    expect(frames.requested).toBe(1);
+    expect(frames.queue.size).toBe(1);
+    frames.flush();
+    await tick();
+    expect(prop(m.card(ALPHA), "grid-column")).toMatch(/^span 2/);
+    // After the frame a new report asks for a new one.
+    observer?.report(1000);
+    expect(frames.requested).toBe(2);
+    m.destroy();
+  });
+
+  it("a frame still pending when the grid is destroyed is cancelled", () => {
+    const m = mountGallery();
+    FakeResizeObserver.all[0]?.report(640);
+    expect(frames.queue.size).toBe(1);
+    const [pending] = [...frames.queue.keys()];
+    m.destroy();
+    expect(frames.cancelled).toContain(pending);
+    expect(frames.queue.size).toBe(0);
+  });
+
+  it("the frame is the grid's own window's, requested from the owner document", () => {
+    const grid = readFileSync(join(__dirname, "..", "components", "Grid", "Grid.svelte"), "utf8");
+    expect(grid).toContain("section.ownerDocument.defaultView");
+    expect(grid).toMatch(/view\.requestAnimationFrame\(flush\)/);
+    expect(grid).toMatch(/view\.cancelAnimationFrame\(frame\)/);
   });
 });
 

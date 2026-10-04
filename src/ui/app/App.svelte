@@ -3,7 +3,6 @@
   import { get } from "svelte/store";
 
   import { Notice } from "obsidian";
-  import { Icon } from "obsidian-svelte";
   import { v4 as uuidv4 } from "uuid";
   import { createProject } from "src/lib/dataApi";
   import { buildDerivedSource, projectSourceOptions, sourceNameTaken } from "src/lib/datasources/namedSource";
@@ -26,7 +25,7 @@
   // events.ts (Shell layer) because that would break the
   // Shell → UI → Engine → Data dependency direction.
   import { invalidateAll as invalidateTransformAll } from "src/lib/dashboard-engine/transformCache";
-  import { registerDataFrameInvalidation } from "src/lib/stores/dataframe";
+  import { dataSource, registerDataFrameInvalidation } from "src/lib/stores/dataframe";
   import { getAPI, isPluginEnabled } from "obsidian-dataview";
   import type { DataFrame } from "src/lib/dataframe/dataframe";
   import { CreateProjectModal } from "src/ui/modals/createProjectModal";
@@ -39,7 +38,6 @@
   import { OnboardingModal } from "./onboarding/onboardingModal";
   import View from "./View.svelte";
   import DataFrameProvider from "./DataFrameProvider.svelte";
-  import ViewFilterBar from "src/ui/components/FilterPills/ViewFilterBar.svelte";
   import { noticeFor } from "src/lib/errors/errorText";
 
   /** #202 — a refusal, so it carries a code; the success below does not. */
@@ -96,13 +94,12 @@
     ? (agendaDrawerKey ? $agendaDrawer[agendaDrawerKey] === true : false)
     : undefined;
 
-  // ios-l1 L1 — in short landscape the filter row gives its height back and
-  // the navbar carries one button that opens the same popover. `filterOpen` is
-  // the bar's own open state, bound through; the count stands in for the
-  // pills the row would have shown.
-  let filterOpen = false;
-  let filterTriggerEl: HTMLButtonElement | null = null;
-  $: activeFilterCount = (view?.filter?.conditions ?? []).filter((c) => c.enabled !== false).length;
+  // chrome-filters: the header carries no filter row and no filter button; the
+  // view's filter is edited, cleared and saved as a source in the settings
+  // Filters tab. That tab needs to know whether the source can be written and
+  // which source names are taken, which this shell knows and the panel does not.
+  $: sourceReadonly = $dataSource ? $dataSource.readonly() : true;
+  $: projectSources = projectSourceOptions(project).sources;
 
   // ios-l1 L1 — the phone bottom sheet is fixed to the window's bottom edge and
   // capped at 85vh, which in short landscape rises above this navbar and covers
@@ -141,28 +138,16 @@
     };
   });
 
-  // #077 — quick view-filter pills. Writes the edited FilterDefinition back to
-  // the active view; empty clears to a no-condition filter. Engine evaluation
-  // stays in View.svelte via the canonical applyFilter pipeline.
-  function handleViewFilterPillsChange(
-    next: import("src/settings/base/settings").FilterDefinition | undefined
-  ) {
-    if (!project || !view) return;
-    settings.updateView(project.id, {
-      ...view,
-      filter: next ?? { conjunction: "and", conditions: [] },
-    });
-  }
-
   /**
    * #184 — keep the view's current filter as a source of the project.
    *
    * The project editor was the obvious home and is the wrong one: it holds a
    * definition, not a frame, so it has no fields to build a condition against
-   * and a selection saved there with an empty filter equals its own base. Here
-   * the filter is already visible and has already narrowed what is on screen,
-   * which is the brief's verify-after-write answer — you name something you
-   * have watched work.
+   * and a selection saved there with an empty filter equals its own base. The
+   * settings Filters tab (chrome-filters; the header filter row it replaced
+   * is gone) edits the very filter that has narrowed what is on screen, which
+   * is the brief's verify-after-write answer — you name something you have
+   * watched work. The tab forwards the trimmed name here.
    *
    * The write goes through `settings.updateProject`, the same path the project
    * editor uses, so nothing about how a project is stored is new.
@@ -170,11 +155,12 @@
   function handleSaveFilterAsSource(name: string) {
     if (!project || !view) return;
     const filter = view.filter;
-    // Guarded here as well as in the bar: the bar hides the action without
-    // conditions, and a selection equal to its own base would still be
-    // useless if some other caller reached this.
-    if (!filter || filter.conditions.length === 0) return;
-    // A name already in use is refused rather than silently accepted. The bar
+    // Guarded here as well as in the tab: the tab hides the action without an
+    // enabled condition or on a read-only source, and a selection equal to its
+    // own base would still be useless if some other caller reached this.
+    if (!filter || !filter.conditions.some((c) => c.enabled !== false)) return;
+    if (sourceReadonly) return;
+    // A name already in use is refused rather than silently accepted. The tab
     // tells the user the name is what will identify this selection later, and
     // two sources sharing a label are indistinguishable in the only picker
     // that exists — so the promise has to be enforced where it is made.
@@ -426,42 +412,14 @@
     on:centerToday={handleCenterToday}
     on:toggleAgenda={handleToggleAgenda}
     on:freezeColumns={handleFreezeColumns}
-  >
-    <svelte:fragment slot="filter">
-      {#if view}
-        <button
-          bind:this={filterTriggerEl}
-          class="ppp-nav-filter clickable-icon"
-          class:ppp-nav-filter--active={activeFilterCount > 0}
-          aria-label={$i18n.t("views.filter.bar.aria", { defaultValue: "View filter" })}
-          title={$i18n.t("views.filter.bar.aria", { defaultValue: "View filter" })}
-          aria-haspopup="dialog"
-          aria-expanded={filterOpen}
-          on:click={() => (filterOpen = !filterOpen)}
-        >
-          <Icon name="filter" size="sm" />
-          {#if activeFilterCount > 0}<span class="ppp-nav-filter-count">{activeFilterCount}</span>{/if}
-        </button>
-      {/if}
-    </svelte:fragment>
-  </CompactNavBar>
+  />
 
   <div class="projects-main" bind:this={mainEl}>
     {#if project}
       <DataFrameProvider {project} let:frame let:source>
         {#if project && view && source}
-          <ViewFilterBar
-            filter={view.filter}
-            fields={frame.fields}
-            records={frame.records}
-            readonly={source.readonly()}
-            bind:open={filterOpen}
-            anchor={filterTriggerEl}
-            on:change={(e) => handleViewFilterPillsChange(e.detail)}
-            on:saveAsSource={(e) => handleSaveFilterAsSource(e.detail)}
-          />
-          <!-- ios-s1: the view gets the room LEFT after the filter row, not
-               the whole of `.projects-main`. See `.ppp-view-fill` below. -->
+          <!-- ios-s1: the view fills what is left of `.projects-main`, a
+               definite height. See `.ppp-view-fill` below. -->
           <div class="ppp-view-fill">
             <View
               {project}
@@ -503,6 +461,9 @@
       viewId={view?.id}
       position={settingsMenuPosition}
       showViewTitles={$settings.preferences.showViewTitles ?? true}
+      readonly={sourceReadonly}
+      sources={projectSources}
+      on:saveFilterAsSource={(event) => handleSaveFilterAsSource(event.detail)}
       on:close={closeSettingsMenu}
       on:projectChange={(event) => {
         projectId = event.detail;
@@ -599,14 +560,14 @@
     overscroll-behavior: contain;
   }
 
-  /* ios-s1. `View`'s root is `height: 100%` of `.projects-main`, and the
-     filter row sits above it in the same column, so every view was one filter
-     row taller than its room (measured: the phone agenda drawer ended 52 px
-     below the window). The overhang made `.projects-main` scroll, but a board,
-     a calendar or an agenda contain their own overscroll, so a finger inside
-     them could never reach it — the bottom of every view was simply lost.
-     A flexed item with a zero basis in a column of definite height has a
-     definite height, so the view's `100%` now resolves to what is left. */
+  /* ios-s1. `View`'s root is `height: 100%` of its parent. When a filter row
+     sat above it in this column (removed in chrome-filters; filtering lives in
+     the settings Filters tab), every view was one row taller than its room and
+     the bottom of a board, calendar or agenda — which contain their own
+     overscroll — could never be scrolled into reach. The wrapper stays so that
+     anything ever placed above the view again cannot reopen that: a flexed
+     item with a zero basis in a column of definite height has a definite
+     height, so the view's `100%` resolves to what is left. */
   .ppp-view-fill {
     flex: 1 1 0;
     min-height: 0;
@@ -626,7 +587,7 @@
      still slides under the translucent bar and the last item can be lifted
      above it. Each scroller below owns it once; nothing above them is shrunk.
      The ones another component owns are reached from here, the way the
-     short-landscape rule below already reaches the navbar and filter row:
+     short-landscape rule below already reaches the navbar:
        - the dashboard scrolls in its `ViewContent`; the canvas root fills that
          at `min-height: 100%`, so the space is its own bottom padding, inside
          that 100%;
@@ -671,20 +632,14 @@
     z-index: var(--ppp-z-overlay);
   }
 
-  /* ios-l1 L1: the navbar's filter button exists only for the short-landscape
-     rule below; everywhere else the filter row is on screen and is the trigger. */
-  .ppp-nav-filter {
-    display: none;
-  }
-
   /* ios-l1 L1 — short landscape. A phone on its side leaves the plugin well
-     under 18rem of height, and a two-row navbar plus a filter row took 41% of
-     it before the view began. Here the chrome is one row: tab icon and label
-     side by side at the same 2.75rem touch height, and the filter row folded
-     into a navbar button that opens the very same popover.
+     under 18rem of height, and a two-row navbar took much of it before the
+     view began. Here the chrome is one row: tab icon and label side by side at
+     the same 2.75rem touch height. (The filter row this rule once folded away
+     is gone everywhere since chrome-filters.)
 
-     One query, kept on the shell, so the three components it reaches into
-     cannot disagree about when the phone is "short". `em` in a media query is
+     One query, kept on the shell, so the components it reaches into cannot
+     disagree about when the phone is "short". `em` in a media query is
      the initial font size, so 30em does not move with the theme. Only the
      rows inside the grid change: the navbar stays in row 1 and the #190 layer
      in row 2, so nothing anchored to the navbar's bottom edge moves. */
@@ -708,35 +663,5 @@
       gap: 0.375rem;
       padding-block: 0;
     }
-
-    /* A read-only bar has no popover, so its pills stay: they are the only
-       place its active filter is visible. */
-    .projects-container :global(.ppp-viewfilter--editable) {
-      padding: 0;
-    }
-
-    .projects-container :global(.ppp-viewfilter--editable > .ppp-filterpills),
-    .projects-container :global(.ppp-viewfilter--editable > .ppp-viewfilter-save),
-    .projects-container :global(.ppp-viewfilter--editable > .ppp-viewfilter-name) {
-      display: none;
-    }
-
-    .ppp-nav-filter {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.25rem;
-      min-width: 2.75rem;
-      min-height: 2.75rem;
-    }
-  }
-
-  .ppp-nav-filter--active {
-    color: var(--text-accent);
-  }
-
-  .ppp-nav-filter-count {
-    font-size: var(--font-ui-smaller);
-    font-weight: var(--font-semibold, 600);
   }
 </style>

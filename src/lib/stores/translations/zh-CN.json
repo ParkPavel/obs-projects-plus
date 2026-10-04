@@ -2058,6 +2058,11 @@
                 "view-config": "视图"
             },
             "done": "完成",
+            "filters": {
+                "active": "生效条件：{{count}}",
+                "none-active": "没有生效的条件",
+                "clear-all": "全部清除"
+            },
             "views": {
                 "title": "视图管理",
                 "show-titles": "显示视图标题",
@@ -2167,6 +2172,14 @@
                     "aspect-ratio": "封面宽高比",
                     "aspect-ratio-none": "无封面",
                     "show-field-labels": "显示字段名称",
+                    "card-fields": "卡片上的字段",
+                    "card-fields-empty": "卡片上还没有字段。请从下方列表添加。",
+                    "card-fields-add": "不在卡片上",
+                    "derived-field": "计算字段（公式或汇总）",
+                    "move-up": "将“{{name}}”上移",
+                    "move-down": "将“{{name}}”下移",
+                    "remove-field": "在卡片上隐藏“{{name}}”",
+                    "add-field": "在卡片上显示“{{name}}”",
                     "fit-options": {
                         "fill": "填充",
                         "fit": "适应",
@@ -2175,7 +2188,8 @@
                     "hints": {
                         "card-width": "每张画册卡片宽度（像素）",
                         "cover-field": "包含图片路径的文本字段",
-                        "include-fields": "选择要在卡片上显示的字段"
+                        "include-fields": "选择要在卡片上显示的字段",
+                        "card-fields": "按此顺序显示在每张卡片的标题下方"
                     }
                 },
                 "table": {

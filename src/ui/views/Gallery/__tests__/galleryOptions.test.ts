@@ -12,9 +12,37 @@ import {
   GALLERY_LAYOUTS,
   GALLERY_SIZE_PRESETS,
   aspectRatioCss,
+  cardFieldsInOrder,
+  moveIncludedField,
   normalizeGalleryConfig,
   sizePresetOf,
 } from "../galleryOptions";
+
+describe("chrome-filters — card fields in the saved order", () => {
+  const fields = [{ name: "a" }, { name: "b" }, { name: "c" }];
+
+  it("follows includeFields, not the frame", () => {
+    expect(cardFieldsInOrder(fields, ["c", "a"]).map((f) => f.name)).toEqual(["c", "a"]);
+  });
+
+  it("skips a name the frame lacks and shows a repeated name once", () => {
+    expect(cardFieldsInOrder(fields, ["x", "b", "b"]).map((f) => f.name)).toEqual(["b"]);
+    expect(cardFieldsInOrder(fields, [])).toEqual([]);
+  });
+
+  it("moves one place among shown names, keeping stale names in place", () => {
+    expect(moveIncludedField(["a", "b", "c"], "a", 1)).toEqual(["b", "a", "c"]);
+    expect(moveIncludedField(["a", "b", "c"], "c", -1)).toEqual(["a", "c", "b"]);
+    const shown = (n: string) => n !== "x";
+    expect(moveIncludedField(["a", "x", "b"], "b", -1, shown)).toEqual(["b", "x", "a"]);
+  });
+
+  it("is a no-op at either end or for an unknown name (deduplicated)", () => {
+    expect(moveIncludedField(["a", "b"], "a", -1)).toEqual(["a", "b"]);
+    expect(moveIncludedField(["a", "b"], "b", 1)).toEqual(["a", "b"]);
+    expect(moveIncludedField(["a", "a", "b"], "z", 1)).toEqual(["a", "b"]);
+  });
+});
 
 const DEFAULTS = {
   coverField: undefined,

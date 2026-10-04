@@ -4,10 +4,14 @@
   import { i18n } from "src/lib/stores/i18n";
   import FieldComboInput from "./FieldComboInput.svelte";
   import SettingsSection from "./SettingsSection.svelte";
+  import { Icon } from "obsidian-svelte";
+  import { getFieldIcon } from "./filterHelpers";
   import {
     GALLERY_ASPECT_RATIOS,
     GALLERY_LAYOUTS,
     GALLERY_SIZE_PRESETS,
+    cardFieldsInOrder,
+    moveIncludedField,
     normalizeGalleryConfig,
     sizePresetOf,
     type GallerySizePreset,
@@ -26,7 +30,7 @@
   type SettingsTabId = "viewConfig" | "projects" | "views" | "filters" | "colors" | "sort";
 
   export let view: ViewDefinition | undefined;
-  export let fields: Array<{ name: string; type: string }> = [];
+  export let fields: Array<{ name: string; type: string; derived?: boolean }> = [];
 
   const dispatch = createEventDispatcher<{ update: Record<string, any>; navigateTab: SettingsTabId }>();
 
@@ -132,14 +136,31 @@
     emitTableUpdate({ fieldConfig: newFieldConfig });
   }
 
-  function handleGalleryIncludeFieldChange(fieldName: string, enabled: boolean) {
-    const includedFields = new Set(galleryIncludeFields);
-    if (enabled) {
-      includedFields.add(fieldName);
-    } else {
-      includedFields.delete(fieldName);
-    }
-    emitUpdate({ includeFields: [...includedFields] });
+  // chrome-filters: "Fields on the card". The card shows the selected fields
+  // in the saved `includeFields` order (GalleryView reads the same helper);
+  // up/down reorder that list, remove takes a field off, and the fields not
+  // on the card follow in frame order as an add list. Every change is one
+  // `includeFields` array through emitUpdate, never a binding.
+  $: cardFields = cardFieldsInOrder(fields, galleryIncludeFields);
+  $: cardFieldNames = new Set(cardFields.map((f) => f.name));
+  $: availableCardFields = fields.filter((f) => !cardFieldNames.has(f.name));
+
+  /** Computed, not stored (dataframe.ts `derived`): marked ƒ, as on the card. */
+  const isComputed = (field: { type: string; derived?: boolean }): boolean =>
+    field.derived === true || field.type === "formula" || field.type === "rollup";
+
+  function moveCardField(fieldName: string, delta: -1 | 1) {
+    const present = new Set(fields.map((f) => f.name));
+    emitUpdate({ includeFields: moveIncludedField(galleryIncludeFields, fieldName, delta, (n) => present.has(n)) });
+  }
+
+  function removeCardField(fieldName: string) {
+    emitUpdate({ includeFields: galleryIncludeFields.filter((n) => n !== fieldName) });
+  }
+
+  function addCardField(fieldName: string) {
+    if (galleryIncludeFields.includes(fieldName)) return;
+    emitUpdate({ includeFields: [...galleryIncludeFields, fieldName] });
   }
   
   // Generate hour options (0-24)
@@ -607,31 +628,96 @@
           </select>
         </label>
 
-        <label class="checkbox">
-          <input
-            class="ppp-touch-target"
-            type="checkbox"
-            data-gallery-option="labels"
-            checked={showFieldLabels}
-            on:change={(e) => emitUpdate({ showFieldLabels: e.currentTarget.checked })}
-          />
-          <span>{$i18n.t("settings-menu.view-config.gallery.show-field-labels")}</span>
-        </label>
+        <!-- chrome-filters: everything that decides what a card shows under its
+             title, in one place: the selected fields in display order, their
+             names on or off, and the fields that could be added. -->
+        <div class="field-list card-fields" data-gallery-section="card-fields">
+          <span class="field-list-label">{$i18n.t("settings-menu.view-config.gallery.card-fields")}</span>
+          <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.card-fields")}</span>
 
-        <div class="field-list">
-          <span class="field-list-label">{$i18n.t("settings-menu.view-config.gallery.include-fields")}</span>
-          <span class="hint">{$i18n.t("settings-menu.view-config.gallery.hints.include-fields")}</span>
-          {#each fields as field}
-            <label class="field-item">
-              <input
-                class="ppp-touch-target"
-                type="checkbox"
-                checked={galleryIncludeFields.includes(field.name)}
-                on:change={(e) => handleGalleryIncludeFieldChange(field.name, e.currentTarget.checked)}
-              />
-              <span>{field.name}</span>
-            </label>
-          {/each}
+          <label class="checkbox">
+            <input
+              class="ppp-touch-target"
+              type="checkbox"
+              data-gallery-option="labels"
+              checked={showFieldLabels}
+              on:change={(e) => emitUpdate({ showFieldLabels: e.currentTarget.checked })}
+            />
+            <span>{$i18n.t("settings-menu.view-config.gallery.show-field-labels")}</span>
+          </label>
+
+          {#if cardFields.length === 0}
+            <p class="card-fields-empty" data-gallery-card-fields-empty>{$i18n.t("settings-menu.view-config.gallery.card-fields-empty")}</p>
+          {:else}
+            <ol class="card-fields-list" data-gallery-card-fields>
+              {#each cardFields as field, index (field.name)}
+                <li class="card-field" data-gallery-card-field={field.name}>
+                  <span
+                    class="card-field-kind"
+                    class:card-field-kind--derived={isComputed(field)}
+                    data-gallery-field-kind={isComputed(field) ? "derived" : field.type}
+                    title={isComputed(field)
+                      ? $i18n.t("settings-menu.view-config.gallery.derived-field")
+                      : $i18n.t(`data-types.${field.type}`, { defaultValue: field.type })}
+                  >
+                    {#if isComputed(field)}<span aria-hidden="true">ƒ</span>{:else}<Icon name={getFieldIcon(field.type)} size="sm" />{/if}
+                  </span>
+                  <span class="card-field-name">{field.name}</span>
+                  <button
+                    type="button"
+                    class="card-field-btn"
+                    data-gallery-field-action="up"
+                    disabled={index === 0}
+                    aria-label={$i18n.t("settings-menu.view-config.gallery.move-up", { name: field.name })}
+                    on:click={() => moveCardField(field.name, -1)}
+                  ><Icon name="chevron-up" size="sm" /></button>
+                  <button
+                    type="button"
+                    class="card-field-btn"
+                    data-gallery-field-action="down"
+                    disabled={index === cardFields.length - 1}
+                    aria-label={$i18n.t("settings-menu.view-config.gallery.move-down", { name: field.name })}
+                    on:click={() => moveCardField(field.name, 1)}
+                  ><Icon name="chevron-down" size="sm" /></button>
+                  <button
+                    type="button"
+                    class="card-field-btn"
+                    data-gallery-field-action="remove"
+                    aria-label={$i18n.t("settings-menu.view-config.gallery.remove-field", { name: field.name })}
+                    on:click={() => removeCardField(field.name)}
+                  ><Icon name="eye" size="sm" /></button>
+                </li>
+              {/each}
+            </ol>
+          {/if}
+
+          {#if availableCardFields.length > 0}
+            <span class="field-list-label field-list-label--hidden">{$i18n.t("settings-menu.view-config.gallery.card-fields-add")}</span>
+            <ul class="card-fields-list card-fields-list--available" data-gallery-card-fields-available>
+              {#each availableCardFields as field (field.name)}
+                <li class="card-field card-field--available" data-gallery-available-field={field.name}>
+                  <span
+                    class="card-field-kind"
+                    class:card-field-kind--derived={isComputed(field)}
+                    data-gallery-field-kind={isComputed(field) ? "derived" : field.type}
+                    title={isComputed(field)
+                      ? $i18n.t("settings-menu.view-config.gallery.derived-field")
+                      : $i18n.t(`data-types.${field.type}`, { defaultValue: field.type })}
+                  >
+                    {#if isComputed(field)}<span aria-hidden="true">ƒ</span>{:else}<Icon name={getFieldIcon(field.type)} size="sm" />{/if}
+                  </span>
+                  <span class="card-field-name">{field.name}</span>
+                  <button
+                    type="button"
+                    class="card-field-btn"
+                    data-gallery-field-action="add"
+                    aria-label={$i18n.t("settings-menu.view-config.gallery.add-field", { name: field.name })}
+                    on:click={() => addCardField(field.name)}
+                  ><Icon name="eye-off" size="sm" /></button>
+                </li>
+              {/each}
+            </ul>
+          {/if}
         </div>
       </div>
     {/if}
@@ -923,6 +1009,76 @@
     text-align: center;
   }
 
+  /* chrome-filters: "Fields on the card" — one row per field: its kind (a
+     type icon, or ƒ for a formula or rollup, as the card itself marks them),
+     its name, then the row's buttons. The name takes what is left and
+     ellipsizes, so a narrow panel never scrolls sideways. */
+  .card-fields-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .card-field {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2rem;
+    min-width: 0;
+    padding: 0.125rem 0.25rem 0.125rem 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--background-secondary);
+  }
+  .card-field--available {
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .card-field-kind {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.25rem;
+    color: var(--text-muted);
+  }
+  .card-field-kind--derived {
+    font-style: italic;
+    font-weight: 600;
+  }
+  .card-field-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+  }
+  .card-field-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .card-field-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .card-fields-empty {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--text-faint);
+  }
+
   /* ios-t1: hover tints and the drag handle's hover reveal reach only a pointer
      that hovers. Collected here, after every base rule they refine; none of
      them shares a property with a later rule of equal weight, so the desktop
@@ -947,6 +1103,10 @@
     .show-all-btn:hover {
       background: var(--background-modifier-hover);
     }
+    .card-field-btn:not(:disabled):hover {
+      color: var(--text-normal);
+      background: var(--background-modifier-hover);
+    }
   }
 
   /* ios-t1: each checkbox carries `.ppp-touch-target` (tokens.css), a finger
@@ -962,6 +1122,15 @@
     }
     .quick-link-btn {
       min-height: var(--ppp-touch-target-min);
+    }
+    /* Three buttons side by side: each grows its own box to a target rather
+       than borrowing `.ppp-touch-target`'s square, which would overlap. */
+    .card-field {
+      min-height: var(--ppp-touch-target-min);
+    }
+    .card-field-btn {
+      width: var(--ppp-touch-target-min);
+      height: var(--ppp-touch-target-min);
     }
   }
 </style>

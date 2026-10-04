@@ -3,9 +3,10 @@
    * FilterPills — purely presentational Notion-style filter pills (#077).
    *
    * Renders enabled filter conditions as removable pills plus an "add"
-   * trigger. Owns no filter state, no popup, no engine — consumers
-   * (BlockFilterBar, ViewFilterBar) wire remove/addClick to their own
-   * FilterPanel + FloatingPopup. Single shared implementation.
+   * trigger. Owns no filter state, no popup, no engine — its consumer
+   * (the dashboard's BlockFilterBar) wires remove/addClick to its own
+   * FilterPanel + FloatingPopup. The view header's filter row that once
+   * shared it is gone (chrome-filters); the view filter lives in settings.
    */
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";

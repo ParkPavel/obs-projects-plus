@@ -640,9 +640,19 @@
 
   .list { display: flex; flex-direction: column; gap: 0.25rem; max-height: 20rem; overflow-y: auto; }
 
+  /* chrome-filters: a condition row wraps inside whatever width it is given,
+     for every pointer. The settings panel is about 22rem wide, narrower on a
+     phone or a narrow leaf, and a row of prefix, toggle, two chips, the value
+     and delete does not fit it; before this only the coarse rule below
+     wrapped, so a narrow desktop panel scrolled sideways. Intrinsic wrapping,
+     not a container query: the row breaks where its items stop fitting, the
+     value field asks for a 10em basis and takes the rest of its line, and
+     every item may shrink below its content (`min-width: 0`). The chips
+     ellipsize their label instead of pushing the delete button out. */
   .filter-row {
-    display: flex; align-items: center; gap: 0.25rem;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem;
     padding: 0.1875rem 0.125rem; min-height: 2rem; border-radius: 0.375rem;
+    min-width: 0;
     transition: background 100ms ease;
   }
   @media (hover: hover) and (pointer: fine) {
@@ -658,6 +668,7 @@
   .filter-group-wrapper {
     display: flex; align-items: flex-start; gap: 0.25rem;
     margin-top: 0.125rem;
+    min-width: 0;
   }
   .filter-group-wrapper > .row-prefix {
     padding-top: 0.5rem;
@@ -665,6 +676,9 @@
   .filter-group {
     display: flex; flex-direction: column; gap: 0.25rem;
     padding: 0.375rem 0.5rem; flex: 1;
+    /* chrome-filters: a nested card shrinks with the panel instead of
+       growing to its widest row. */
+    min-width: 0;
     border: 0.0625rem solid var(--background-modifier-border);
     border-left: 0.1875rem solid var(--interactive-accent);
     border-radius: 0.5rem;
@@ -693,18 +707,20 @@
     border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
     background: var(--background-primary); color: var(--text-normal);
     cursor: pointer; font-size: 0.8125rem; font-family: var(--font-interface);
-    white-space: nowrap; line-height: 1; flex-shrink: 0;
+    white-space: nowrap; line-height: 1;
+    /* chrome-filters: a chip may shrink, never past the row, and ellipsizes. */
+    flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden;
     transition: border-color 100ms ease, background 100ms ease;
   }
   @media (hover: hover) and (pointer: fine) {
     .chip:hover { border-color: var(--interactive-accent); background: var(--background-primary-alt); }
   }
   .chip-icon { display: inline-flex; align-items: center; color: var(--text-muted); flex-shrink: 0; }
-  .chip-label { max-width: 6.25rem; overflow: hidden; text-overflow: ellipsis; }
+  .chip-label { max-width: 6.25rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .chip--field .chip-label { font-weight: 500; }
   .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
 
-  .value-area { flex: 1; min-width: 3.75rem; }
+  .value-area { flex: 1 1 10em; min-width: 0; }
   .value-input {
     width: 100%; height: 1.625rem;
     border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;

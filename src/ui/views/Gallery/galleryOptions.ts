@@ -91,6 +91,50 @@ export function normalizeGalleryConfig(
   };
 }
 
+/**
+ * chrome-filters — the fields a card shows, in the saved `includeFields`
+ * order. A saved name the frame does not have (a field renamed or gone) is
+ * skipped, not dropped from the config; a name listed twice shows once.
+ */
+export function cardFieldsInOrder<T extends { name: string }>(
+  fields: readonly T[],
+  includeFields: readonly string[]
+): T[] {
+  const byName = new Map(fields.map((field) => [field.name, field] as const));
+  const seen = new Set<string>();
+  const shown: T[] = [];
+  for (const name of includeFields) {
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const field = byName.get(name);
+    if (field) shown.push(field);
+  }
+  return shown;
+}
+
+/**
+ * chrome-filters — `includeFields` with `name` moved one place up (-1) or down
+ * (+1) among the names `isShown` accepts (the ones the card actually renders),
+ * so a stale saved name never swallows a move. Saved names the frame lacks keep
+ * their places. Returns the list unchanged (deduplicated) at either end.
+ */
+export function moveIncludedField(
+  includeFields: readonly string[],
+  name: string,
+  delta: -1 | 1,
+  isShown: (name: string) => boolean = () => true
+): string[] {
+  const list = [...new Set(includeFields)];
+  const from = list.indexOf(name);
+  if (from < 0) return list;
+  let to = from + delta;
+  while (to >= 0 && to < list.length && !isShown(list[to]!)) to += delta;
+  if (to < 0 || to >= list.length) return list;
+  list[from] = list[to]!;
+  list[to] = name;
+  return list;
+}
+
 /** The CSS `aspect-ratio` of a token, or null for `none`. */
 export function aspectRatioCss(token: GalleryCoverAspectRatio): string | null {
   if (token === "none") return null;

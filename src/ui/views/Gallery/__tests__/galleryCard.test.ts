@@ -246,6 +246,60 @@ describe("cards-g2 — a gallery card's structure", () => {
   });
 });
 
+describe("chrome-filters — the card follows the saved field order", () => {
+  const owner: DataField = { ...status, name: "owner" };
+  const ordered: DataRecord[] = [{ id: "notes/Alpha.md", values: { status: "Doing", owner: "Ann", cover: COVER } }];
+  const chips = (m: ReturnType<typeof mountGallery>) =>
+    Array.from(m.card(0).querySelectorAll(".ppp-card-meta-chip")).map((el) => el.textContent?.trim());
+
+  it("renders includeFields in their saved order, not the frame's", () => {
+    // The frame lists status before owner; the saved order puts owner first.
+    const m = mountGallery({
+      frame: { fields: [status, owner, cover], records: ordered },
+      config: { coverField: "cover", includeFields: ["owner", "status"] },
+    });
+    expect(chips(m)).toEqual(["Ann", "Doing"]);
+    m.destroy();
+  });
+
+  it("a reordered config re-renders in the new order", async () => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+    const component = new GalleryView({
+      target,
+      props: {
+        project: { autosave: true },
+        frame: { fields: [status, owner, cover], records: ordered },
+        config: { coverField: "cover", includeFields: ["status", "owner"] },
+        api: { updateRecord: jest.fn(), addRecord: jest.fn() },
+        getRecordColor: () => null,
+        readonly: true,
+      },
+    }) as Mounted & { $set(props: Record<string, unknown>): void };
+    const read = () => Array.from(target.querySelectorAll(".ppp-card-meta-chip")).map((el) => el.textContent?.trim());
+    expect(read()).toEqual(["Doing", "Ann"]);
+    component.$set({ config: { coverField: "cover", includeFields: ["owner", "status"] } });
+    await tick();
+    expect(read()).toEqual(["Ann", "Doing"]);
+    component.$destroy();
+  });
+
+  it("a saved name the frame lacks is skipped; nothing selected shows no fields", () => {
+    const m = mountGallery({
+      frame: { fields: [status, owner, cover], records: ordered },
+      config: { coverField: "cover", includeFields: ["gone", "owner"] },
+    });
+    expect(chips(m)).toEqual(["Ann"]);
+    m.destroy();
+    const none = mountGallery({
+      frame: { fields: [status, owner, cover], records: ordered },
+      config: { coverField: "cover", includeFields: [] },
+    });
+    expect(chips(none)).toEqual([]);
+    none.destroy();
+  });
+});
+
 describe("cards-g2 — opening a card from its media", () => {
   it("a plain click opens the edit modal for that record", () => {
     const m = mountGallery();

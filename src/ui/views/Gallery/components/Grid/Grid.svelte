@@ -19,7 +19,7 @@
   // capped to them (a span wider than the grid would add implicit columns).
   // The count is the auto-fill rule itself, computed from the section's content
   // width (a ResizeObserver of the section's own window, so a popout counts its
-  // own box), the column minimum (`cardWidth`, CSS pixels) and the column gap.
+  // own box, applied in that window's next animation frame), the column minimum (`cardWidth`, CSS pixels) and the column gap.
   // Unmeasured (no observer yet, masonry, list) it is undefined: nothing caps.
   let section: HTMLElement;
   let contentWidth = 0;
@@ -48,17 +48,40 @@
   /** One column of horizontal travel for the resize handle: a track and its gap. */
   const columnStep = (): number => (columns ? (contentWidth + gap) / columns : 0);
 
+  // chrome-filters: the observer only records the latest width; the state
+  // update and the recount run once, in the next animation frame of the window
+  // the grid is in. Writing state inside the observer callback re-laid the
+  // cards in the same layout pass the observer was reporting, which is the
+  // "ResizeObserver loop" warning; several callbacks before one frame are one
+  // recount. A pending frame is cancelled on destroy.
   onMount(() => {
+    const view = section.ownerDocument.defaultView;
     const Observer = section.ownerDocument.defaultView?.ResizeObserver;
-    if (!Observer) return;
+    if (!view || !Observer) return;
+    let pendingWidth = contentWidth;
+    let frame: number | null = null;
+    const flush = () => {
+      frame = null;
+      contentWidth = pendingWidth;
+      recount(cardWidth, layout);
+    };
     const observer = new Observer((entries) => {
       const entry = entries[entries.length - 1];
       if (!entry) return;
-      contentWidth = entry.contentRect.width;
-      recount(cardWidth, layout);
+      pendingWidth = entry.contentRect.width;
+      if (frame !== null) return;
+      if (typeof view.requestAnimationFrame !== "function") {
+        flush();
+        return;
+      }
+      frame = view.requestAnimationFrame(flush);
     });
     observer.observe(section);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frame !== null) view.cancelAnimationFrame(frame);
+      frame = null;
+    };
   });
 </script>
 

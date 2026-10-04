@@ -15,9 +15,10 @@
 
 <!--
   FilterBridge (#103) — shows ONLY the transient local FilterTabs selection chip.
-  The global `view.filter` is owned by a single surface — ViewFilterBar pills in the
-  view shell (App.svelte). The former "Global filter: N conditions" mirror chip was
-  removed to kill the triple-duplication of view.filter (pills + this badge + SettingsMenu).
+  The global `view.filter` is owned by a single surface — the settings Filters tab
+  (SettingsMenuPopover; the header filter row was removed in chrome-filters). The
+  former "Global filter: N conditions" mirror chip was removed to kill the
+  duplication of view.filter across surfaces.
   This chip reflects a DIFFERENT state (a cross-widget filter-tab click) and offers the
   "↥ promote to global" action, so it is not a duplicate.
 -->

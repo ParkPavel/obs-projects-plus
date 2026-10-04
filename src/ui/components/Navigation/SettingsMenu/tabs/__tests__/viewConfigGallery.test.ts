@@ -168,6 +168,19 @@ describe("cards-g3 — the saved values round-trip into the controls", () => {
     reopened.destroy();
   });
 
+  it("the fields on the card are listed in the saved includeFields order", async () => {
+    // chrome-filters: the order the card renders is the saved order, so the
+    // settings show that order, not the frame's.
+    const m = mount({ includeFields: ["cover", "status"] });
+    const listed = () =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-gallery-card-field]")).map((el) => el.dataset["galleryCardField"]);
+    expect(listed()).toEqual(["cover", "status"]);
+    m.component.$set({ view: galleryView({ includeFields: ["status", "cover"] }) });
+    await tick();
+    expect(listed()).toEqual(["status", "cover"]);
+    m.destroy();
+  });
+
   it("an updated view prop moves the controls with it", async () => {
     const m = mount();
     m.component.$set({ view: galleryView({ layout: "masonry", coverAspectRatio: "2/3" }) });
