@@ -31,6 +31,8 @@ mean that a new release has been published.
   target on touch screens.
 - A pinned or read-only column can no longer be dragged by its grip. A pinned column's header keeps its
   title on touch screens.
+- Fixed: a board whose columns were frozen by an older version (saved as `freezeColumns`) shows them
+  pinned again; the settings already showed it as frozen.
 
 ### Filters and settings
 
