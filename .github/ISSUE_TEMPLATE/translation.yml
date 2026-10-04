@@ -1,0 +1,43 @@
+name: Translation
+description: Suggest a better wording for the Russian, Ukrainian or Chinese interface / Предложить формулировку перевода
+labels: ["kind/translation", "needs-triage"]
+body:
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language / Язык
+      options:
+        - Русский
+        - Українська
+        - 简体中文
+        - English
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Where does the text appear? / Где встречается текст?
+      description: "View and control, e.g. Settings → View → Fields on the card / Вид и элемент, например «Настройки → Вид → Поля на карточке»"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text / Текущий текст
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested text / Предлагаемый текст
+      description: "Keep placeholders such as {{count}} unchanged / Подстановки вида {{count}} оставьте без изменений"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Why, or a screenshot / Почему, или снимок экрана

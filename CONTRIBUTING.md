@@ -56,6 +56,13 @@ UI changes also need an Obsidian check: open the affected view, perform the chan
 
 UI translations live in [src/lib/stores/translations](https://github.com/ParkPavel/obs-projects-plus/tree/main/src/lib/stores/translations): English, Russian, Ukrainian and Simplified Chinese. Add or update corresponding keys in all four language files. Keep labels short and explain unfamiliar concepts in the user guide.
 
+English is the reference text. The Russian, Ukrainian and Chinese strings for recent features (gallery layouts and card size, card fields, resizable card frames, board thumbnails, the settings Filters tab) were written by the maintainers without a review by native speakers. Corrections from people who use the plugin in these languages are welcome:
+
+- **Report a wording problem.** Open an issue with the [Translation](https://github.com/ParkPavel/obs-projects-plus/issues/new?template=translation.yml) form: the language, where the text appears in the plugin, the current text and your suggestion. A screenshot helps.
+- **Fix it yourself.** Search for the current text in the language file to find its key, change the value and keep the key unchanged. Keep every placeholder such as `{{count}}` or `{{name}}` exactly as it is; the text around it may move.
+- **Check before a pull request.** `npm test -- R0_26_i18nKeyCoverage` checks that every key exists in all four files with the same placeholders, and `npm test -- R0_30_sentenceCase` checks the English capitalization.
+- A label that does not fit the space it is shown in is a layout problem too: say so in the issue rather than shortening the meaning.
+
 ## Paired documentation
 
 Each document has a version in two languages: a file with a base name and a file with a language suffix (`-RU` or `-EN`). The index [docs/README.md](docs/README.md), the [error codes](docs/ERROR_CODES.md) and two short in-vault pages hold both languages in one file. Pairing is checked by `src/__tests__/R0_25_documentationPairs.test.ts`: if you edit one language, edit the other in the same commit.
