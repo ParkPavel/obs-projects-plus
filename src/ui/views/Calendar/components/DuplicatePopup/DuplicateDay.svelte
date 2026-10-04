@@ -182,13 +182,15 @@
   
   .duplicate-day-bar-phantom {
     opacity: 0.7;
-    border: 0.125rem dashed rgba(255, 255, 255, 0.9);
+    /* theme-compat: the marks are the bar's own text colour (set on
+       .duplicate-day-bar over the record's colour), not a fixed white. */
+    border: 0.125rem dashed color-mix(in srgb, currentColor 90%, transparent);
     background: repeating-linear-gradient(
       45deg,
       transparent,
       transparent 0.25rem,
-      rgba(255, 255, 255, 0.1) 0.25rem,
-      rgba(255, 255, 255, 0.1) 0.5rem
+      color-mix(in srgb, currentColor 10%, transparent) 0.25rem,
+      color-mix(in srgb, currentColor 10%, transparent) 0.5rem
     );
   }
   

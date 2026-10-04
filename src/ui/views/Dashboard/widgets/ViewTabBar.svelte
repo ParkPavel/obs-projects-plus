@@ -195,7 +195,7 @@
     background: var(--background-primary);
     color: var(--text-accent);
     font-weight: 600;
-    box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-s);
   }
 
   .ppp-view-tab-icon { display: flex; align-items: center; flex-shrink: 0; }

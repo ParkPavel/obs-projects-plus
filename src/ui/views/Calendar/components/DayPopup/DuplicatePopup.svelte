@@ -282,7 +282,7 @@
   .duplicate-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--background-modifier-cover);
     backdrop-filter: blur(0.25rem);
     -webkit-backdrop-filter: blur(0.25rem);
     z-index: 1100;
@@ -304,7 +304,7 @@
     max-width: 26rem;
     padding: 1.25rem;
     animation: scaleIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-l);
   }
 
   @keyframes scaleIn {

@@ -168,6 +168,6 @@
     background: var(--background-primary);
     border: var(--ppp-border-width) solid var(--background-modifier-border);
     border-radius: var(--radius-m);
-    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-s);
   }
 </style>

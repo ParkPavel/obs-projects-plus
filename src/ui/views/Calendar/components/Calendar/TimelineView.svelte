@@ -787,7 +787,7 @@
   }
   
   .projects-calendar-timeline-days-header.sticky-mobile {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0.125rem 0.25rem var(--background-modifier-box-shadow);
   }
   
   .projects-calendar-day-header {
@@ -935,7 +935,7 @@
     border-radius: var(--radius-s, 0.25rem);
     background: color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary));
     border: 0.09375rem solid color-mix(in srgb, var(--interactive-accent) 50%, transparent);
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-s);
     pointer-events: none;
     z-index: 10;
     /* v4.0.3: Removed transition — instant ghost feedback prevents perceived

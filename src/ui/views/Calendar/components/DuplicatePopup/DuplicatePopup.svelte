@@ -221,7 +221,7 @@
   .duplicate-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--background-modifier-cover);
     backdrop-filter: blur(0.25rem);
     z-index: 1100;
     display: flex;
@@ -237,7 +237,7 @@
     max-height: 85vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-l);
     overflow: hidden;
   }
   

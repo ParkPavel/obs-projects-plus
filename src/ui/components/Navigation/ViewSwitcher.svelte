@@ -308,7 +308,7 @@
     font-size: 1rem;
     line-height: 1;
     cursor: pointer;
-    box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-s);
   }
   .view-switcher-chevron:hover {
     background: var(--background-modifier-hover);

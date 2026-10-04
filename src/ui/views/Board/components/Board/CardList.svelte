@@ -466,7 +466,7 @@
      the wrapper rather than the card; the card keeps the look it had. */
   .ppp-board-card-slot:focus > :global(.projects--board--card) {
     background: var(--background-primary-alt);
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-s);
   }
 
   /* cards-g1: the grip fills its lane from the card's top border to its

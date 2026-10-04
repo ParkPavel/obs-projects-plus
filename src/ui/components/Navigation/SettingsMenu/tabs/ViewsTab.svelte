@@ -263,7 +263,7 @@
     left: 0.15625rem;
     transform: translateY(-50%);
     transition: left 0.2s ease;
-    box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0.0625rem 0.1875rem var(--background-modifier-box-shadow);
   }
 
   .toggle-row input[type="checkbox"]:checked::before {

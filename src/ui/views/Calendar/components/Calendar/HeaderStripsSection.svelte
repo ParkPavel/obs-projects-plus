@@ -546,7 +546,7 @@
     .strip-segment:hover {
       background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
       /* v8.1: Preserve the inset start/end indicator (if any) alongside the hover shadow */
-      box-shadow: var(--_strip-inset-shadow, none), 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+      box-shadow: var(--_strip-inset-shadow, none), var(--shadow-s);
     }
   }
   .strip-segment:focus-visible {
@@ -863,7 +863,7 @@
   /* v9.4: Long-press confirmed — lift strip for visual feedback before drag threshold */
   .strip-segment.dnd-long-press {
     transform: scale(1.08);
-    box-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-l);
     z-index: 5;
     opacity: 0.85;
     transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
@@ -915,7 +915,7 @@
     padding: 0.125rem 0.5rem;
     border-radius: var(--ppp-radius-md, 0.25rem);
     white-space: nowrap;
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-s);
   }
 
   /* Horizontal resize handles (◤ left / ◢ right) */

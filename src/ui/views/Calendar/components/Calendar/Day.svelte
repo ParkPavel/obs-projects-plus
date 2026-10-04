@@ -881,7 +881,7 @@
   
   .timed-bar:hover {
     background: color-mix(in srgb, var(--bar-color) 25%, transparent);
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-s);
     z-index: 10;
   }
   

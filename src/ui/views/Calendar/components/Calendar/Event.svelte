@@ -67,7 +67,7 @@
   .calendar-event:hover {
     background: var(--background-modifier-hover);
     border-color: var(--background-modifier-border);
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-s);
   }
 
   .calendar-event:active {

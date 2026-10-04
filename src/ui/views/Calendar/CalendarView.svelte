@@ -2260,7 +2260,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.75rem;
-    box-shadow: 0 0.25rem 1.5rem rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-l);
   }
 
   .spinner {
@@ -2294,7 +2294,7 @@
     color: var(--text-on-accent);
     padding: 0.75rem 1rem;
     border-radius: 0.625rem;
-    box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-l);
     z-index: 1001;
     cursor: pointer;
     display: flex;
@@ -2325,7 +2325,8 @@
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
-    background: rgba(255, 255, 255, 0.2);
+    /* The error toast's own text colour (--text-on-accent), thinned. */
+    background: color-mix(in srgb, currentColor 20%, transparent);
     border: none;
     border-radius: 50%;
     color: inherit;
@@ -2335,7 +2336,7 @@
   }
 
   .error-close:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: color-mix(in srgb, currentColor 30%, transparent);
   }
 
   .horizontal-calendar-wrapper {
@@ -2389,7 +2390,7 @@
     background: var(--background-primary);
     padding: 1rem 1.5rem;
     border-radius: 1rem;
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-l);
     border: var(--ppp-border-width) solid var(--background-modifier-border);
     backdrop-filter: blur(0.75rem);
     -webkit-backdrop-filter: blur(0.75rem);

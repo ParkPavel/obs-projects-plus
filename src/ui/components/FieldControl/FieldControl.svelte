@@ -405,7 +405,7 @@
     /* === LEVEL 4: Dropdown metrics === */
     --fc-dropdown-radius: calc(var(--fc-base) * 0.75);  /* 12 */
     --fc-dropdown-padding: calc(var(--fc-base) * 0.5);  /* 8 */
-    --fc-dropdown-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.25);
+    --fc-dropdown-shadow: var(--shadow-l);
     
     /* === Component styles === */
     width: 100%;

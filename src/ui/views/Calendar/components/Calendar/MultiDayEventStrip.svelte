@@ -201,7 +201,7 @@
   
   button.projects-calendar-multiday-strip:hover {
     background: color-mix(in srgb, var(--strip-color) 25%, var(--background-primary));
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-s);
     z-index: 3;
   }
   

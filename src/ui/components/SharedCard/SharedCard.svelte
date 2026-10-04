@@ -123,13 +123,13 @@
   }
   .projects--board--card:focus-within {
     background: var(--background-primary-alt);
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-s);
   }
   /* ios-t1: hover states reach only a pointer that hovers; a tap left them stuck. */
   @media (hover: hover) and (pointer: fine) {
     .projects--board--card:hover {
       background: var(--background-primary-alt);
-      box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-s);
     }
   }
 

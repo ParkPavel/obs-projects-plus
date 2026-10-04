@@ -193,7 +193,7 @@
   .floating-toggle:hover {
     opacity: 1;
     transform: scale(1.05);
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-s);
   }
 
   .floating-toggle:active {

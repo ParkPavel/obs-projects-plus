@@ -279,7 +279,7 @@
   
   button.projects-calendar-event-bar:hover {
     background: color-mix(in srgb, var(--event-color) 25%, transparent);
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-s);
     z-index: 10;
   }
   
@@ -356,7 +356,7 @@
     width: 0.375rem;
     height: 0.375rem;
     border-radius: 50%;
-    border: 0.0625rem solid rgba(255, 255, 255, 0.3);
+    border: 0.0625rem solid rgba(var(--mono-rgb-0), 0.3);
     flex-shrink: 0;
   }
   

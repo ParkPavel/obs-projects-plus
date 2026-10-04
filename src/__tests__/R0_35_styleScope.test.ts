@@ -34,7 +34,9 @@
  *    (hex, `rgb()`/`rgba()`, `hsl()`/`hsla()` with literal arguments) written
  *    in its `<style>` outside a `var()` fallback. MEASURED, exact: it may only
  *    fall, and it falls by moving a colour onto a theme variable — never by
- *    raising a number. A component not in the table must have none.
+ *    raising a number. A component not in the table must have none, and each
+ *    literal that remains is listed with its reason (`JUSTIFIED_COLOURS`):
+ *    today only the colour picker's own spectrum and handles.
  *
  * ## Where it is blind
  *
@@ -68,48 +70,64 @@ const UNANCHORED_GLOBAL_BUDGET = 0;
 /** Unanchored selectors in the root stylesheets. MEASURED; stays 0. */
 const UNANCHORED_STYLESHEET_BUDGET = 0;
 
+/** A colour literal that stays, and why it cannot follow the theme. */
+type Justified = { literal: string; why: string };
+
+/** The colour picker's spectrum: the colours being picked, not a theme surface. */
+const PICKER_SPECTRUM: readonly Justified[] = [
+  { literal: "#000", why: "saturation/lightness field: the black end of the value gradient" },
+  { literal: "#fff", why: "saturation/lightness field: the white end of the saturation gradient" },
+  {
+    literal: "rgba(0, 0, 0, 0.3)",
+    why: "field handle ring: the dark half of the white-and-dark ring that stays visible over any hue",
+  },
+  { literal: "rgba(0, 0, 0, 0.3)", why: "field handle drop shadow, over the spectrum rather than a theme surface" },
+  { literal: "hsl(0, 100%, 50%)", why: "hue strip stop: red" },
+  { literal: "hsl(60, 100%, 50%)", why: "hue strip stop: yellow" },
+  { literal: "hsl(120, 100%, 50%)", why: "hue strip stop: green" },
+  { literal: "hsl(180, 100%, 50%)", why: "hue strip stop: cyan" },
+  { literal: "hsl(240, 100%, 50%)", why: "hue strip stop: blue" },
+  { literal: "hsl(300, 100%, 50%)", why: "hue strip stop: magenta" },
+  { literal: "hsl(360, 100%, 50%)", why: "hue strip stop: red again, closing the wheel" },
+  { literal: "rgba(0, 0, 0, 0.2)", why: "hue handle border: the dark edge of a white knob sitting on the hue strip" },
+  { literal: "rgba(0, 0, 0, 0.2)", why: "hue handle drop shadow, over the hue strip rather than a theme surface" },
+];
+
+/**
+ * Every colour literal still written in a component `<style>` (outside `var()`
+ * fallbacks), in source order, with its reason. A literal not listed here is
+ * a theme colour that has to move onto a variable: status and semantic tints
+ * use `--color-red|orange|yellow|green|cyan|blue|purple|pink` (or
+ * `rgba(var(--color-*-rgb), a)`), surfaces `--background-*`, dims
+ * `--background-modifier-cover`, shadows `--shadow-s` / `--shadow-l` (or
+ * `var(--background-modifier-box-shadow)` where the offsets have to stay).
+ */
+const JUSTIFIED_COLOURS: Readonly<Record<string, readonly Justified[]>> = {
+  "ui/components/ColorPicker/ColorPicker.svelte": PICKER_SPECTRUM,
+  // The record popup carries its own copy of the picker (same field, strip and handles).
+  "ui/views/Calendar/components/DayPopup/RecordItem.svelte": PICKER_SPECTRUM,
+  // Drawn over the user's image, not a theme surface: a dark scrim or chip keeps
+  // light text readable over any photo in light and dark themes alike.
+  "ui/views/Dashboard/widgets/CoverBanner/CoverBannerWidget.svelte": [
+    { literal: "rgba(0, 0, 0, 0.55)", why: "caption scrim over the cover image" },
+  ],
+  "ui/components/ImagePreview/ImagePreview.svelte": [
+    { literal: "rgba(0, 0, 0, 0.6)", why: "remove button chip over the previewed image" },
+  ],
+};
+
 /**
  * Hard-coded colours per component (`<style>` only, outside `var()`
- * fallbacks), measured at theme-compat on a2cf8aba. Exact: lower an entry in
- * the same change that removes a colour, delete it at 0, never raise it.
- *
- * `ColorPicker.svelte` and `DayPopup/RecordItem.svelte` are mostly the colour
- * picker's own spectrum (hue strip, saturation and lightness gradients,
- * handle shadows): those are the colours being picked, not theme surfaces, and
- * stay allowed.
+ * fallbacks). 85 in 31 components at theme-compat on a2cf8aba; the migration
+ * to theme variables left only the picker spectrum above. Exact: lower an
+ * entry in the same change that removes a colour, delete it at 0, never raise
+ * it — and every entry equals the length of its `JUSTIFIED_COLOURS` list.
  */
 const HARD_COLOUR_BUDGET: Readonly<Record<string, number>> = {
-  "ui/components/ColorPicker/ColorPicker.svelte": 14,
-  "ui/components/DatetimeInput.svelte": 1,
-  "ui/components/FieldControl/FieldControl.svelte": 1,
-  "ui/components/FloatingPopup/FloatingPopup.svelte": 2,
-  "ui/components/ImagePreview/ImagePreview.svelte": 1,
-  "ui/components/Layout/ViewToolbar.svelte": 1,
-  "ui/components/Navigation/SettingsMenu/tabs/ViewsTab.svelte": 1,
-  "ui/components/Navigation/ViewSwitcher.svelte": 1,
-  "ui/components/SharedCard/SharedCard.svelte": 2,
-  "ui/components/SlideInPanel/SlideInPanel.svelte": 1,
-  "ui/views/Board/components/Board/Board.svelte": 1,
-  "ui/views/Board/components/Board/CardList.svelte": 1,
-  "ui/views/Calendar/CalendarView.svelte": 5,
-  "ui/views/Calendar/components/Calendar/AllDayEventStrip.svelte": 2,
-  "ui/views/Calendar/components/Calendar/Day.svelte": 1,
-  "ui/views/Calendar/components/Calendar/Event.svelte": 1,
-  "ui/views/Calendar/components/Calendar/EventBar.svelte": 2,
-  "ui/views/Calendar/components/Calendar/EventList.svelte": 1,
-  "ui/views/Calendar/components/Calendar/HeaderStripsSection.svelte": 3,
-  "ui/views/Calendar/components/Calendar/MultiDayEventStrip.svelte": 1,
-  "ui/views/Calendar/components/Calendar/TimelineView.svelte": 2,
-  "ui/views/Calendar/components/DayPopup/DayPopup.svelte": 7,
-  "ui/views/Calendar/components/DayPopup/DuplicatePopup.svelte": 2,
-  "ui/views/Calendar/components/DayPopup/RecordItem.svelte": 14,
-  "ui/views/Calendar/components/DuplicatePopup/DuplicateDay.svelte": 3,
-  "ui/views/Calendar/components/DuplicatePopup/DuplicateHeaderStripsSection.svelte": 3,
-  "ui/views/Calendar/components/DuplicatePopup/DuplicatePopup.svelte": 2,
-  "ui/views/Calendar/components/Timeline/AgendaSidebar.svelte": 5,
-  "ui/views/Calendar/dnd/DragOverlay.svelte": 2,
+  "ui/components/ColorPicker/ColorPicker.svelte": 13,
+  "ui/views/Calendar/components/DayPopup/RecordItem.svelte": 13,
   "ui/views/Dashboard/widgets/CoverBanner/CoverBannerWidget.svelte": 1,
-  "ui/views/Dashboard/widgets/ViewTabBar.svelte": 1,
+  "ui/components/ImagePreview/ImagePreview.svelte": 1,
 };
 
 // ── The reader ─────────────────────────────────────────────────────────────
@@ -597,9 +615,22 @@ describe("R0.35 — hard-coded colours may only fall", () => {
   const components = styledComponents();
 
   it("reads the colours it claims to read", () => {
+    // A wrong root or a blind reader would pass the budget on nothing: the
+    // picker spectrum is known to be there, so it has to be found.
     const measured = measureColours(components);
-    expect(Object.keys(measured).length).toBeGreaterThanOrEqual(20);
-    expect(Object.values(measured).reduce((a, b) => a + b, 0)).toBeGreaterThan(50);
+    for (const file of Object.keys(JUSTIFIED_COLOURS)) {
+      expect(measured[file]).toBeGreaterThan(0);
+    }
+  });
+
+  it("every remaining literal is a justified one, in place", () => {
+    for (const [file, justified] of Object.entries(JUSTIFIED_COLOURS)) {
+      expect(HARD_COLOUR_BUDGET[file]).toBe(justified.length);
+      expect(justified.filter((entry) => entry.why.trim() === "")).toEqual([]);
+      const css = components.find((c) => c.file === file)?.css ?? "";
+      expect(hardColours(css)).toEqual(justified.map((j) => j.literal));
+    }
+    expect(Object.keys(HARD_COLOUR_BUDGET).sort()).toEqual(Object.keys(JUSTIFIED_COLOURS).sort());
   });
 
   it("each component carries exactly its budgeted colours", () => {

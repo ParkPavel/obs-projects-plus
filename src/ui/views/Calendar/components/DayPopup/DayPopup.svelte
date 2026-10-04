@@ -671,7 +671,7 @@
     --ios-radius: 1.25rem;
     --ios-bg: var(--background-primary);
     --ios-border: var(--background-modifier-border);
-    --ios-shadow: 0 -0.5rem 2.5rem rgba(0, 0, 0, 0.25);
+    --ios-shadow: var(--shadow-l);
     --ios-accent: var(--interactive-accent);
     --ios-touch: 2.75rem; /* 44 iOS minimum */
   }
@@ -687,7 +687,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    background: rgba(0, 0, 0, 0);
+    background: transparent;
     animation: ios-backdrop-in 0.3s ease forwards;
     -webkit-tap-highlight-color: transparent;
   }
@@ -701,13 +701,13 @@
   }
   
   @keyframes ios-backdrop-in {
-    from { background: rgba(0, 0, 0, 0); }
-    to { background: rgba(0, 0, 0, 0.4); }
+    from { background: transparent; }
+    to { background: var(--background-modifier-cover); }
   }
-  
+
   @keyframes ios-backdrop-out {
-    from { background: rgba(0, 0, 0, 0.4); }
-    to { background: rgba(0, 0, 0, 0); }
+    from { background: var(--background-modifier-cover); }
+    to { background: transparent; }
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -751,7 +751,7 @@
     max-width: calc(100% - 2rem);
     border-radius: var(--ios-radius);
     box-shadow: 
-      0 1.5rem 3rem -0.5rem rgba(0, 0, 0, 0.25),
+      var(--shadow-l),
       0 0 0 0.0625rem var(--ios-border);
     animation: ios-card-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }

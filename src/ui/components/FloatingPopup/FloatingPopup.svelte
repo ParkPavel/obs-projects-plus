@@ -369,7 +369,7 @@
     position: fixed;
     inset: 0;
     z-index: var(--ppp-z-overlay, 30);
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--background-modifier-cover);
     animation: ppp-backdrop-in var(--ppp-duration-fast, 100ms) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1)) forwards;
   }
 
@@ -390,7 +390,7 @@
     overflow-y: auto;
     background: var(--background-primary);
     border-radius: var(--ppp-bottom-sheet-radius, 1rem 1rem 0 0);
-    box-shadow: 0 -0.25rem 1rem rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -0.25rem 1rem var(--background-modifier-box-shadow);
     padding: var(--ppp-space-4, 0.5rem);
     animation: ppp-sheet-in var(--ppp-duration-fast, 100ms) var(--ppp-ease-out, cubic-bezier(0, 0, 0.2, 1)) forwards;
   }

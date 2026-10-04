@@ -947,7 +947,7 @@
     z-index: 50;
     border-left: var(--ppp-border-width) solid var(--background-modifier-border);
     border-top: none;
-    box-shadow: -0.25rem 0 1rem rgba(0, 0, 0, 0.2);
+    box-shadow: -0.25rem 0 1rem var(--background-modifier-box-shadow);
     transform: translateX(0);
     transition: transform var(--agenda-transition);
   }
@@ -1068,7 +1068,7 @@
   }
   
   .agenda.mobile .picker-overlay {
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--background-modifier-cover);
   }
   
   .date-picker {
@@ -1511,7 +1511,7 @@
   :global(.ppp-list-editor-overlay) {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--background-modifier-cover);
     backdrop-filter: blur(0.125rem);
     -webkit-backdrop-filter: blur(0.125rem);
     display: flex;
@@ -1534,7 +1534,7 @@
     background: var(--background-primary);
     border: 0.0625rem solid var(--background-modifier-border);
     border-radius: 0.625rem;
-    box-shadow: 0 0.75rem 2.5rem rgba(0, 0, 0, 0.18), 0 0.125rem 0.5rem rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-l);
     overscroll-behavior: contain;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;

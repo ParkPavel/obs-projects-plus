@@ -148,7 +148,7 @@
     background: color-mix(in srgb, var(--text-accent) 20%, var(--background-primary));
     border-radius: 0.25rem;
     opacity: 0.85;
-    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15), 0 0 0 0.0625rem color-mix(in srgb, var(--text-accent) 20%, transparent);
+    box-shadow: var(--shadow-s), 0 0 0 0.0625rem color-mix(in srgb, var(--text-accent) 20%, transparent);
     transition: none; /* No transition during drag — instant updates */
     box-sizing: border-box;
     padding: 0.125rem 0.375rem;
@@ -267,7 +267,7 @@
     padding: 0.125rem 0.5rem;
     border-radius: 0.25rem;
     white-space: nowrap;
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-s);
     margin-top: -1.25rem;
   }
 </style>
