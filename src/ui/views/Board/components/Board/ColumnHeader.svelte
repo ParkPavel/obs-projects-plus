@@ -260,10 +260,14 @@
     }
 
     /* cards-g1: the title fills the first row beside the grip cell (the whole
-       row in a pinned column); the actions still wrap to the second. */
+       row in a pinned column); the actions still wrap to the second.
+       pin-header: the title's minimum is half the row, so it and the 100%
+       actions can never share a line. With a 0 minimum a pinned column (no
+       grip) fit both on one line and the title shrank to nothing, its letters
+       stacked into a tall empty header. */
     .projects--board--column--header:not(.projects--board--column--header-collapsed) > span {
       flex: 1 1 0;
-      min-width: 0;
+      min-width: 50%;
       overflow-wrap: anywhere;
     }
 

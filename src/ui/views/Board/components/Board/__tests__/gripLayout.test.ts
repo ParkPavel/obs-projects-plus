@@ -209,6 +209,20 @@ describe("cards-g1 — the column grip has its own cell (CSS)", () => {
   it("the header's actions still end the row beside a leading cell", () => {
     expect(plain(headerRules, ".right").get("margin-left")).toBe("auto");
   });
+
+  it("on coarse pointers the title and the full-width actions can never share a line (pinned column has no grip)", () => {
+    // A 0 minimum let a pinned column's title (basis 0) and the 100% actions
+    // fit one line: the title shrank to nothing and its letters stacked into a
+    // tall empty header (pin-header, reproduced in the host at 472 wide).
+    const coarse = headerRules.filter((r) => r.at.length === 1 && isCoarse(r.at[0] ?? ""));
+    const title = coarse.find((r) => /header-collapsed\)\s*>\s*span/.test(r.selector));
+    const actions = coarse.find((r) => /header-collapsed\)\s*\.right/.test(r.selector));
+    const t = decls(title?.body ?? "");
+    expect(decls(actions?.body ?? "").get("flex")).toBe("1 0 100%");
+    const min = t.get("min-width") ?? "0";
+    expect(min).not.toMatch(/^0(px|rem|%)?$/);
+    expect(min).toMatch(/^(50|[6-9]\d)%$/);
+  });
 });
 
 describe("cards-g1 — grips are revealed without hover", () => {
