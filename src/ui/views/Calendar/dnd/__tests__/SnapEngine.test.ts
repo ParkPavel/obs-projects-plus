@@ -107,6 +107,9 @@ describe('SnapEngine', () => {
 
     it('clamps to valid range', () => {
       expect(minutesToTime(-10)).toBe('00:00');
+      // the end of the day is 23:59, never 23:00 (an hour cut off)
+      expect(minutesToTime(1440)).toBe('23:59');
+      expect(minutesToTime(1500)).toBe('23:59');
     });
   });
 

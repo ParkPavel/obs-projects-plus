@@ -48,6 +48,7 @@
   import { calendarLogger } from "./logger";
   import { ZOOM_LEVELS, TIMING } from "./constants";
   import type { RecordChangeOptions } from "./dnd/types";
+  import { buildRecordChangeUpdates, detectTimeModel } from "./dnd/recordChangeUpdates";
   import { setHapticEnabled } from "./dnd/HapticManager";
   
   // Navigation & Animation Controllers (v3.0.0)
@@ -1341,21 +1342,15 @@
       //   - If date field has embedded time (e.g. "2026-03-12T14:30:00") → embedded model
       //   - If date field has NO embedded time but startTime/endTime fields exist → separate model
       // Writing to the wrong model corrupts the data permanently.
-      const rawStartValue = record.values[dateField.name];
-      // v3.3.6: Detect embedded time ONLY from actual raw value format, not typeConfig.
-      // Using typeConfig?.time caused date-only records to get T00:00:00 corruption
-      // when the project had time support enabled but the record had no time.
-      // The /T\d{2}:\d{2}/ pattern requires the ISO "T" separator — won't match plain "YYYY-MM-DD".
-      const startHasEmbeddedTime = typeof rawStartValue === 'string' && /T\d{2}:\d{2}/.test(rawStartValue);
-
+      // v3.3.6: Embedded time is detected ONLY from the raw value format, not typeConfig
+      // (detectTimeModel in dnd/recordChangeUpdates.ts).
       const startTimeFieldName = config?.startTimeField || 'startTime';
       const endTimeFieldName = config?.endTimeField || 'endTime';
-      const hasSeparateStartTime = !startHasEmbeddedTime
-        && typeof record.values[startTimeFieldName] === 'string'
-        && /^\d{2}:\d{2}$/.test(record.values[startTimeFieldName] as string);
-
-      // useSeparateTimeFields: true when the record uses the "date + startTime/endTime" model
-      const useSeparateTimeFields = hasSeparateStartTime;
+      const { startHasEmbeddedTime, hasSeparateStartTime } = detectTimeModel(
+        record.values,
+        dateField.name,
+        startTimeFieldName
+      );
 
       // Validate target date
       const hasAnyTime = startHasEmbeddedTime || hasSeparateStartTime || !!options?.startTime;
@@ -1366,23 +1361,25 @@
         return;
       }
 
-      // Build the new start datetime (used for validation and embedded-time writes)
-      let newStartDate: dayjs.Dayjs;
-      if (options?.startTime) {
-        const [h, m] = options.startTime.split(':').map(Number);
-        newStartDate = targetDate.hour(h ?? 0).minute(m ?? 0).second(0);
-      } else if (startHasEmbeddedTime && originalStart) {
-        // Embedded time model: preserve original hours/minutes
-        newStartDate = targetDate
-          .hour(originalStart.hour())
-          .minute(originalStart.minute())
-          .second(originalStart.second());
-      } else if (hasSeparateStartTime) {
-        // Separate time model: combine date + startTime for validation
-        const timeParts = (record.values[startTimeFieldName] as string).split(':').map(Number);
-        newStartDate = targetDate.hour(timeParts[0] ?? 0).minute(timeParts[1] ?? 0).second(0);
-      } else {
-        newStartDate = targetDate;
+      // Which fields change and to what is decided by the pure builder
+      // (dnd/recordChangeUpdates.ts): it respects the time model, keeps the
+      // duration on a move and writes the end time with or without an end-date field.
+      const endRawValue = endDateField?.name ? record.values[endDateField.name] : undefined;
+      const built = buildRecordChangeUpdates({
+        values: record.values,
+        dateFieldName: dateField.name,
+        endDateFieldName: endDateField?.name,
+        startTimeFieldName,
+        endTimeFieldName,
+        targetDate,
+        options,
+        originalStart,
+        originalEnd: endDateField?.name ? parseDateInTimezone(endRawValue, timezoneValue) : null,
+        validateEndShift: (orig, next, hasTime) => validateDateUpdate(orig, next, hasTime, timezoneValue),
+      });
+      const newStartDate = built.newStartDate;
+      for (const warning of built.warnings) {
+        calendarLogger.warn(warning, { component: 'CalendarView' });
       }
 
       // When dateField is "name", the date is stored in the filename — rename the file
@@ -1408,92 +1405,9 @@
         return;
       }
 
-      // ── Build updates object ──────────────────────────────────────────────
-      // v3.2.2: Respect the time model — write to the correct fields.
-      const updates: Record<string, string> = {};
-
-      if (useSeparateTimeFields || (!startHasEmbeddedTime && options?.startTime)) {
-        // ── Separate time model (or date-only field with DnD-provided time):
-        // v3.3.6: date field stays YYYY-MM-DD. Any time goes to startTime field.
-        // This prevents T00:00:00 corruption when options.startTime is provided
-        // for a record that doesn't use embedded time format.
-        updates[dateField.name] = targetDate.format("YYYY-MM-DD");
-
-        if (options?.startTime) {
-          // DnD provided explicit start time → write to startTime field
-          updates[startTimeFieldName] = options.startTime;
-        }
-        // If no explicit startTime from DnD, leave the existing startTime field untouched
-      } else if (startHasEmbeddedTime) {
-        // ── Embedded time model: date field is YYYY-MM-DDTHH:mm:ss ──
-        updates[dateField.name] = newStartDate.format("YYYY-MM-DDTHH:mm:ss");
-      } else {
-        // ── No time at all: date field is YYYY-MM-DD ──
-        updates[dateField.name] = targetDate.format("YYYY-MM-DD");
-      }
-
-      // Handle end date with delta shift and time preservation
-      if (endDateField?.name) {
-        const endRaw = record.values[endDateField.name];
-        const originalEnd = parseDateInTimezone(endRaw, timezoneValue);
-        // v3.3.6: Detect embedded time from actual value only (same fix as startDate)
-        const endHasEmbeddedTime = typeof endRaw === 'string' && /T\d{2}:\d{2}/.test(endRaw);
-        const hasSeparateEndTime = !endHasEmbeddedTime
-          && typeof record.values[endTimeFieldName] === 'string'
-          && /^\d{2}:\d{2}$/.test(record.values[endTimeFieldName] as string);
-        
-        if (options?.endTime) {
-          if (useSeparateTimeFields || hasSeparateEndTime || !endHasEmbeddedTime) {
-            // v3.3.6: Separate model or date-only end field — write time to separate field
-            updates[endTimeFieldName] = options.endTime;
-            const endDateDay = options.endDate ?? targetDate;
-            updates[endDateField.name] = endDateDay.format("YYYY-MM-DD");
-          } else {
-            // Embedded model: combine date+time into endDate field
-            const [eh, em] = options.endTime.split(':').map(Number);
-            let newEndDate = (options.endDate ?? targetDate).hour(eh ?? 0).minute(em ?? 0).second(0);
-            if (newEndDate.isBefore(newStartDate)) {
-              newEndDate = newStartDate;
-            }
-            updates[endDateField.name] = newEndDate.format(
-              endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
-            );
-          }
-        } else if (options?.endDate) {
-          // Strip DnD — explicit end date without time change
-          let newEndDate = options.endDate;
-          if (endHasEmbeddedTime && originalEnd) {
-            newEndDate = newEndDate.hour(originalEnd.hour()).minute(originalEnd.minute()).second(originalEnd.second());
-          }
-          if (newEndDate.isBefore(newStartDate)) {
-            newEndDate = newStartDate;
-          }
-          updates[endDateField.name] = newEndDate.format(
-            endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
-          );
-        } else if (originalStart && originalEnd) {
-          // Calculate day delta (how many days we moved)
-          const deltaDays = targetDate.diff(originalStart.startOf('day'), 'day');
-          
-          if (deltaDays !== 0) {
-            let newEndDate = originalEnd.add(deltaDays, 'day');
-            
-            const endValidation = validateDateUpdate(originalEnd, newEndDate, endHasEmbeddedTime, timezoneValue);
-            if (!endValidation.isValid) {
-              calendarLogger.warn('End date validation failed, skipping end date update', { component: 'CalendarView', data: { error: endValidation.error } });
-            } else {
-              if (newEndDate.isBefore(newStartDate)) {
-                calendarLogger.warn('End date would be before start date, adjusting to match start', { component: 'CalendarView' });
-                newEndDate = newStartDate;
-              }
-              
-              updates[endDateField.name] = newEndDate.format(
-                endHasEmbeddedTime ? "YYYY-MM-DDTHH:mm:ss" : "YYYY-MM-DD"
-              );
-            }
-          }
-        }
-      }
+      // Start/end writes (end date delta shift, time preservation, end time with or
+      // without an end-date field) come from buildRecordChangeUpdates above.
+      const updates = built.updates;
 
       // Apply update with validated data
       const updatedRecord = updateRecordValues(record, updates);

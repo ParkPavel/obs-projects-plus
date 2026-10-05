@@ -44,6 +44,7 @@ import {
   minutesToRem,
   yPositionToMinutes,
 } from './SnapEngine';
+import { pressMode, handleHitFromTarget, type HandleHit } from './pressMode';
 import { hapticDragStart, hapticSnap, hapticDrop, hapticCancel, hapticResizeLimit } from './HapticManager';
 import { pauseGestures, resumeGestures } from '../gestures/GestureCoordinator';
 
@@ -167,6 +168,8 @@ interface DragSession {
   barElement: HTMLElement;
   listenerDoc: Document;
   isTouchDrag: boolean;
+  /** Visible resize handle that took the press (decided once at pointerDown) */
+  handleHit: HandleHit;
 
   // Pointer coordinates
   startX: number;
@@ -346,7 +349,14 @@ export class TimelineDragManager {
     const timeInfo = processedRecord.timeInfo;
     if (timeInfo) {
       originalStartMinutes = timeInfo.startTime.hour() * 60 + timeInfo.startTime.minute();
-      originalEndMinutes = timeInfo.endTime.hour() * 60 + timeInfo.endTime.minute();
+      // The duration comes from the processed start/end difference, not from the
+      // clock faces: an overnight or multi-hour event would otherwise get a
+      // negative or wrapped duration.
+      const durationMinutes = Math.max(
+        DND_CONSTANTS.MIN_DURATION_MINUTES,
+        timeInfo.endTime.diff(timeInfo.startTime, 'minute')
+      );
+      originalEndMinutes = originalStartMinutes + durationMinutes;
     }
 
     // Strip span info
@@ -397,6 +407,7 @@ export class TimelineDragManager {
       barElement,
       listenerDoc: doc,
       isTouchDrag,
+      handleHit: handleHitFromTarget(event.target, barElement),
       startX: point.clientX,
       startY: point.clientY,
       lastX: point.clientX,
@@ -612,8 +623,7 @@ export class TimelineDragManager {
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Evaluate drag mode from current finger position relative to bar.
-   * Uses generous thirds: top third = resize-top, bottom third = resize-bottom, middle = move.
+   * Evaluate drag mode from the press point relative to the bar (touch).
    * Strip modes are never re-evaluated.
    */
   private evaluateModeFromPosition(clientY: number, barElement: HTMLElement): DragMode {
@@ -625,18 +635,16 @@ export class TimelineDragManager {
       return s.mode;
     }
 
-    // v4.0.2: Use 40% zones from each edge (overlapping in the middle).
-    // This gives resize a generous target while keeping a move zone in center.
+    // The same decision EventBar made at pointerDown (dnd/pressMode.ts), from
+    // the same press point and the handle hit recorded at initiate.
     const rect = barElement.getBoundingClientRect();
-    const relY = clientY - rect.top;
-    const barH = rect.height;
-    const remPx = this.config?.remPx ?? 16;
-    // Zone: 1.25rem or 40% of bar height
-    const zone = Math.min(1.25 * remPx, barH * 0.4);
-
-    if (relY <= zone) return 'resize-top';
-    if (relY >= barH - zone) return 'resize-bottom';
-    return 'move';
+    return pressMode({
+      relY: clientY - rect.top,
+      barH: rect.height,
+      remPx: this.config?.remPx ?? 16,
+      coarse: true,
+      handleHit: s.handleHit,
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -695,7 +703,11 @@ export class TimelineDragManager {
     // Calculate time from Y position relative to column
     const columnRect = columnRef.element.getBoundingClientRect();
     const relativeY = clientY - columnRect.top;
-    const duration = s.originalEndMinutes - s.originalStartMinutes;
+    // An overnight or very long event cannot be shown longer than the visible range.
+    const duration = Math.min(
+      s.originalEndMinutes - s.originalStartMinutes,
+      (endHour - startHour) * 60
+    );
 
     let newStartMinutes: number;
     let newEndMinutes: number;
@@ -719,9 +731,9 @@ export class TimelineDragManager {
 
       case 'resize-top': {
         const pointerMinutes = yPositionToMinutes(relativeY, startHour, endHour, hourHeightRem, remPx, snapInterval);
-        newStartMinutes = Math.min(pointerMinutes, s.originalEndMinutes - DND_CONSTANTS.MIN_DURATION_MINUTES);
+        newEndMinutes = Math.min(s.originalEndMinutes, endHour * 60);
+        newStartMinutes = Math.min(pointerMinutes, newEndMinutes - DND_CONSTANTS.MIN_DURATION_MINUTES);
         newStartMinutes = Math.max(startHour * 60, newStartMinutes);
-        newEndMinutes = s.originalEndMinutes;
         if (isMobile && pointerMinutes >= s.originalEndMinutes - DND_CONSTANTS.MIN_DURATION_MINUTES) {
           hapticResizeLimit();
         }
