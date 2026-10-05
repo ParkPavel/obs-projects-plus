@@ -124,12 +124,12 @@ function isClockTail(tail: string): boolean {
   if (tail === "") return true;
   const m = TAIL_PARTS.exec(tail);
   if (!m) return false;
-  const hour = Number(m[1]);
+  const hour = toNumber(m[1]) ?? 0;
   const meridiem = m[4] !== undefined;
   if (meridiem ? hour < 1 || hour > 12 : hour > 23) return false;
-  if (m[2] !== undefined && Number(m[2]) > 59) return false;
-  if (m[3] !== undefined && Number(m[3]) > 59) return false;
-  if (m[6] !== undefined && (Number(m[6]) > 14 || Number(m[7]) > 59)) return false;
+  if (m[2] !== undefined && (toNumber(m[2]) ?? 0) > 59) return false;
+  if (m[3] !== undefined && (toNumber(m[3]) ?? 0) > 59) return false;
+  if (m[6] !== undefined && ((toNumber(m[6]) ?? 0) > 14 || (toNumber(m[7]) ?? 0) > 59)) return false;
   return true;
 }
 
