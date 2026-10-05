@@ -29,13 +29,25 @@
 
   let fieldName = "";
   let inputValue = expression;
-  // Keep inputValue in sync when parent changes formula (e.g. field switch).
-  // Svelte reactive assignment, not an event — avoids double-fire on user input.
-  let lastExpression = expression;
-  $: if (expression !== lastExpression) {
-    inputValue = expression;
-    lastExpression = expression;
+  let adopted = expression;
+  let barEl: HTMLElement | null = null;
+  // Keep inputValue in sync when the parent changes the formula (e.g. a field
+  // switch) — only on a real change, and not while the user types in it. The
+  // assignment lives in a function the `$:` calls: `inputValue` is bound, and
+  // a bound variable assigned inside a `$:` statement is re-run over the
+  // user's text on the next flush in Svelte 3 (R0.34).
+  function adoptExpression(next: string): void {
+    if (next === inputValue) {
+      adopted = next;
+      return;
+    }
+    if (next === adopted) return;
+    const active = barEl?.ownerDocument.activeElement;
+    if (active instanceof HTMLTextAreaElement && barEl?.contains(active)) return;
+    adopted = next;
+    inputValue = next;
   }
+  $: adoptExpression(expression);
 
   let previewValue: Optional<DataValue> = null;
   let runtimeError: string | null = null;
@@ -81,7 +93,7 @@
   }
 </script>
 
-<div class="ppp-formula-bar">
+<div class="ppp-formula-bar" bind:this={barEl}>
   <div class="ppp-formula-header">
     <span class="ppp-formula-title">{$i18n.t("views.dashboard.formula.title")}</span>
     <span class="ppp-formula-hint">{$i18n.t("views.dashboard.formula.hint")}</span>
