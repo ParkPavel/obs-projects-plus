@@ -43,7 +43,28 @@
     }
     if (next === adopted) return;
     const active = barEl?.ownerDocument.activeElement;
-    if (active instanceof HTMLTextAreaElement && barEl?.contains(active)) return;
+    if (active instanceof HTMLTextAreaElement && barEl?.contains(active)) {
+      deferred = next;
+      return;
+    }
+    deferred = null;
+    adopted = next;
+    inputValue = next;
+  }
+
+  /** A parent change that arrived while the user was in the formula. */
+  let deferred: string | null = null;
+
+  /**
+   * On leaving the formula, take a deferred parent change if the user did not
+   * edit the text meanwhile; text the user typed wins over it.
+   */
+  function adoptDeferred(e: FocusEvent): void {
+    if (deferred === null) return;
+    if (e.relatedTarget instanceof Node && barEl?.contains(e.relatedTarget)) return;
+    const next = deferred;
+    deferred = null;
+    if (inputValue !== adopted) return;
     adopted = next;
     inputValue = next;
   }
@@ -93,7 +114,7 @@
   }
 </script>
 
-<div class="ppp-formula-bar" bind:this={barEl}>
+<div class="ppp-formula-bar" bind:this={barEl} on:focusout={adoptDeferred}>
   <div class="ppp-formula-header">
     <span class="ppp-formula-title">{$i18n.t("views.dashboard.formula.title")}</span>
     <span class="ppp-formula-hint">{$i18n.t("views.dashboard.formula.hint")}</span>

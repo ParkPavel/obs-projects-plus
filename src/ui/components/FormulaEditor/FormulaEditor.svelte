@@ -50,7 +50,28 @@
     }
     if (next === adopted) return;
     const active = rootEl?.ownerDocument.activeElement;
-    if (active instanceof HTMLTextAreaElement && rootEl?.contains(active)) return;
+    if (active instanceof HTMLTextAreaElement && rootEl?.contains(active)) {
+      deferred = next;
+      return;
+    }
+    deferred = null;
+    adopted = next;
+    inputValue = next;
+  }
+
+  /** A parent change that arrived while the user was in the formula. */
+  let deferred: string | null = null;
+
+  /**
+   * On leaving the formula, take a deferred parent change if the user did not
+   * edit the text meanwhile; text the user typed wins over it.
+   */
+  function adoptDeferred(e: FocusEvent): void {
+    if (deferred === null) return;
+    if (e.relatedTarget instanceof Node && rootEl?.contains(e.relatedTarget)) return;
+    const next = deferred;
+    deferred = null;
+    if (inputValue !== adopted) return;
     adopted = next;
     inputValue = next;
   }
@@ -64,7 +85,7 @@
     : undefined;
 </script>
 
-<div class="formula-editor" bind:this={rootEl}>
+<div class="formula-editor" bind:this={rootEl} on:focusout={adoptDeferred}>
   <slot name="header" />
 
   <FormulaConstructor

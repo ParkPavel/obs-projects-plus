@@ -60,6 +60,24 @@ describe("dateInputValue — what the date control is seeded with", () => {
 });
 
 describe("dateToStore — the value written back keeps the stored shape", () => {
+  it.each([
+    ["2024-01-15T25:99", "2024-01-16"],
+    ["2024-01-15T10:75", "2024-01-16"],
+    ["2024-01-15T10:30:61", "2024-01-16"],
+    ["2024-01-15 13:00 PM", "2024-01-16"],
+    ["2024-01-15T10:30+15:00", "2024-01-16"],
+  ])("a stored time that is no clock time (%s) is not carried to the new day", (stored, expected) => {
+    expect(dateToStore(stored, "2024-01-16")).toBe(expected);
+  });
+
+  it.each([
+    ["2024-01-15T23:59:59", "2024-01-16T23:59:59"],
+    ["2024-01-15 12:30 AM", "2024-01-16 12:30 AM"],
+    ["2024-01-15T00:00+14:00", "2024-01-16T00:00+14:00"],
+  ])("a real clock time at the edge of its range (%s) is kept", (stored, expected) => {
+    expect(dateToStore(stored, "2024-01-16")).toBe(expected);
+  });
+
   it("a date-only value stays date-only", () => {
     expect(dateToStore("2024-01-15", "2024-03-05")).toBe("2024-03-05");
   });

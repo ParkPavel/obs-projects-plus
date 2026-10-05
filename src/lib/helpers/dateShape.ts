@@ -93,7 +93,9 @@ function readStoredText(text: string): StoredText | null | undefined {
     const m = s.re.exec(trimmed);
     if (!m) continue;
     const parts: [string, string, string] = [m[1] ?? "", m[2] ?? "", m[3] ?? ""];
-    const tail = m[4] ?? "";
+    // A stored time that is not a real clock time is not carried over: the
+    // edited day is written without it rather than as an unparseable value.
+    const tail = isClockTail(m[4] ?? "") ? m[4] ?? "" : "";
     const order: Order = s.order === "mdy" && (toNumber(parts[0]) ?? 0) > 12 ? "dmy" : s.order;
     const ordered: [string, string, string] =
       order === "ymd" ? parts : order === "dmy" ? [parts[2], parts[1], parts[0]] : [parts[2], parts[0], parts[1]];
@@ -113,6 +115,22 @@ function readStoredText(text: string): StoredText | null | undefined {
     };
   }
   return undefined;
+}
+
+const TAIL_PARTS = /^[T ](\d{1,2})(?::(\d{2})(?::(\d{2})(?:\.\d+)?)?)?(\s?[AaPp][Mm])?(Z|[+-](\d{2}):?(\d{2}))?$/;
+
+/** Whether a kept time tail is a real clock time (hour, minutes, seconds, offset in range). */
+function isClockTail(tail: string): boolean {
+  if (tail === "") return true;
+  const m = TAIL_PARTS.exec(tail);
+  if (!m) return false;
+  const hour = Number(m[1]);
+  const meridiem = m[4] !== undefined;
+  if (meridiem ? hour < 1 || hour > 12 : hour > 23) return false;
+  if (m[2] !== undefined && Number(m[2]) > 59) return false;
+  if (m[3] !== undefined && Number(m[3]) > 59) return false;
+  if (m[6] !== undefined && (Number(m[6]) > 14 || Number(m[7]) > 59)) return false;
+  return true;
 }
 
 function isValidDate(value: unknown): value is Date {

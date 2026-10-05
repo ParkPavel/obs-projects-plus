@@ -79,4 +79,29 @@ describe("FormulaBar — a parent change", () => {
     await tick();
     expect(el.value).toBe("1 + 2");
   });
+  it("a parent change that arrived while typing is taken on leaving if the user did not edit", async () => {
+    const { container, component } = render(FormulaBar, { props: { expression: "1", fields: [] } });
+    const el = textarea(container);
+    el.focus();
+    await component.$set({ expression: "99" });
+    await tick();
+    expect(el.value).toBe("1");
+    el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    el.blur();
+    await tick();
+    expect(el.value).toBe("99");
+  });
+
+  it("text the user typed wins over a deferred parent change on leaving", async () => {
+    const { container, component } = render(FormulaBar, { props: { expression: "1", fields: [] } });
+    const el = textarea(container);
+    el.focus();
+    await typeInto(el, "1 + 2");
+    await component.$set({ expression: "99" });
+    await tick();
+    el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    el.blur();
+    await tick();
+    expect(el.value).toBe("1 + 2");
+  });
 });
