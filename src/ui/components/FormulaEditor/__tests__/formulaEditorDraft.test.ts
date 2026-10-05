@@ -121,4 +121,17 @@ describe("FormulaEditor — a parent change", () => {
     await tick();
     expect(el.value).toBe("1 + 2");
   });
+  it("a parent that changes and comes back while the user is in the formula leaves nothing deferred", async () => {
+    const { container, component } = mount("1");
+    const el = textarea(container);
+    el.focus();
+    await component.$set({ expression: "99" });
+    await tick();
+    await component.$set({ expression: "1" });
+    await tick();
+    el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    el.blur();
+    await tick();
+    expect(el.value).toBe("1");
+  });
 });

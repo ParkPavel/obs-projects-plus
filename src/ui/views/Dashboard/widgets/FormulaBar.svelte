@@ -39,9 +39,14 @@
   function adoptExpression(next: string): void {
     if (next === inputValue) {
       adopted = next;
+      // A parent that comes back to what is shown cancels an earlier deferred change.
+      deferred = null;
       return;
     }
-    if (next === adopted) return;
+    if (next === adopted) {
+      deferred = null;
+      return;
+    }
     const active = barEl?.ownerDocument.activeElement;
     if (active instanceof HTMLTextAreaElement && barEl?.contains(active)) {
       deferred = next;

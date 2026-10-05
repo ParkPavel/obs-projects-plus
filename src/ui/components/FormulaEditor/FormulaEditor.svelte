@@ -46,9 +46,14 @@
     if (next === inputValue) {
       // The parent echoing what is already shown is not a change to adopt.
       adopted = next;
+      // A parent that comes back to what is shown cancels an earlier deferred change.
+      deferred = null;
       return;
     }
-    if (next === adopted) return;
+    if (next === adopted) {
+      deferred = null;
+      return;
+    }
     const active = rootEl?.ownerDocument.activeElement;
     if (active instanceof HTMLTextAreaElement && rootEl?.contains(active)) {
       deferred = next;
