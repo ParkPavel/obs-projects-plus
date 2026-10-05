@@ -1,11 +1,9 @@
 <script lang="ts">
   /**
-   * EditableCell — F2.2 (TABLE_V2_CANON §2/§3). Cell = typed property edited
-   * in place. Display and editor live together so a cell has exactly one
-   * source of truth. Editor dispatch is STRICTLY by DataFieldType
-   * (invariant #1). Commit on blur/Enter/option-click, revert on Esc.
-   * Boolean toggles instantly. Relation editing is #081
-   * (RelationPickerPopover); derived types are read-only by contract.
+   * EditableCell — F2.2 (TABLE_V2_CANON §2/§3). Cell = typed property edited in place; display and
+   * editor live together, one source of truth. Editor dispatch is STRICTLY by DataFieldType (invariant #1).
+   * Commit on blur/Enter/option-click, revert on Esc. Boolean toggles instantly. Relation editing is
+   * #081 (RelationPickerPopover); derived types are read-only by contract.
    */
   import { createEventDispatcher, tick } from "svelte";
   import {
@@ -18,6 +16,7 @@
   import type { ViewApi } from "src/lib/viewApi";
   import { cellDisplay } from "./tableCanon";
   import { toNumber } from "src/lib/engine/numeric";
+  import { dateInputValue, dateToStore } from "src/lib/helpers/dateShape";
   import CellChoiceDropdown from "./CellChoiceDropdown.svelte";
   import RelationPickerPopover from "./RelationPickerPopover.svelte";
   import RollupCellRenderer from "src/ui/components/RollupCellRenderer/RollupCellRenderer.svelte";
@@ -49,13 +48,20 @@
   let draft = "";
   let inputEl: HTMLInputElement | null = null;
   let committed = false;
+  let wasEditing = false;
 
-  $: if (editing) {
-    draft = value === null || value === undefined ? "" : String(value);
-    committed = false;
-    void tick().then(() => inputEl?.focus());
+  // Seeded on the turn INTO editing, inside a function: `draft` is bound, and a `$:` that assigns it re-seeds per keystroke (R0.34).
+  function onEditing(on: boolean) {
+    if (on && !wasEditing) {
+      draft = field.type === DataFieldType.Date ? dateInputValue(value) : value === null || value === undefined ? "" : String(value);
+      committed = false;
+      void tick().then(() => inputEl?.focus());
+    }
+    wasEditing = on;
   }
+  $: onEditing(editing);
 
+  // The cell's Enter handler takes only its own Enter: the editor's bubbles up after the browser flushed `editing = false`, reopening the cell.
   function handleCellClick() {
     if (!editable || editing) return;
     if (field.type === DataFieldType.Boolean) {
@@ -69,11 +75,12 @@
     if (committed) return;
     committed = true;
     if (field.type === DataFieldType.Number) {
-      // #180a: was `Number(raw)` plus a hand-rolled empty/NaN guard — the rule
-      // restated in miniature. `toNumber` already returns null for both.
+      // #180a: `toNumber` is the one numeric rule; it returns null for empty and NaN.
       dispatch("commit", toNumber(raw));
       return;
     }
+    // A date keeps the stored shape (date-only, time, spelling); emptied clears.
+    if (field.type === DataFieldType.Date) return void dispatch("commit", dateToStore(value, raw, field.typeConfig?.time === true));
     dispatch("commit", raw);
   }
 
@@ -98,7 +105,7 @@
   role="gridcell"
   tabindex={editable ? 0 : -1}
   on:click={handleCellClick}
-  on:keydown={(e) => { if (e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
+  on:keydown={(e) => { if (e.target === e.currentTarget && e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
 >
   {#if editing && field.type === DataFieldType.Date}
     <input bind:this={inputEl} class="ppp-t2-editor" type="date" bind:value={draft}

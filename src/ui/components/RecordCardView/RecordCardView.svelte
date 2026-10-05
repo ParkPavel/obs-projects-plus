@@ -128,10 +128,16 @@
 
   // #038: when the side panel closes, clear local picker state so the next
   // record doesn't open with a stuck-open picker or stale input value.
-  $: if (!open) {
+  // Assigned in a function the `$:` calls, never in the statement: the picker
+  // input is bound to `pickerInput`, and in Svelte 3 a binding to a variable
+  // assigned inside a `$:` statement re-runs that statement on the next flush
+  // (R0.34). The picker is seeded by `openPicker` alone.
+  function resetPickerWhenClosed(isOpen: boolean): void {
+    if (isOpen) return;
     pickerOpen = false;
     pickerInput = "";
   }
+  $: resetPickerWhenClosed(open);
 
   function openPicker() {
     pickerInput = typeof iconValue === "string" ? iconValue : "";
