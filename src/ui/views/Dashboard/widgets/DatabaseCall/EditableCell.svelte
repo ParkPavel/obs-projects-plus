@@ -61,6 +61,7 @@
   }
   $: onEditing(editing);
 
+  // The cell's Enter handler takes only its own Enter: the editor's bubbles up after the browser flushed `editing = false`, reopening the cell.
   function handleCellClick() {
     if (!editable || editing) return;
     if (field.type === DataFieldType.Boolean) {
@@ -104,7 +105,7 @@
   role="gridcell"
   tabindex={editable ? 0 : -1}
   on:click={handleCellClick}
-  on:keydown={(e) => { if (e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
+  on:keydown={(e) => { if (e.target === e.currentTarget && e.key === "Enter" && !editing) { e.preventDefault(); handleCellClick(); } }}
 >
   {#if editing && field.type === DataFieldType.Date}
     <input bind:this={inputEl} class="ppp-t2-editor" type="date" bind:value={draft}
