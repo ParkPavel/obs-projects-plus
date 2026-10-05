@@ -174,6 +174,8 @@ interface DragSession {
   // Pointer coordinates
   startX: number;
   startY: number;
+  /** Pointer distance below the bar top at the press: a move keeps the bar under the same point */
+  grabOffsetPx: number;
   lastX: number;
   lastY: number;
 
@@ -410,6 +412,7 @@ export class TimelineDragManager {
       handleHit: handleHitFromTarget(event.target, barElement),
       startX: point.clientX,
       startY: point.clientY,
+      grabOffsetPx: point.clientY - barRect.top,
       lastX: point.clientX,
       lastY: point.clientY,
       originalStartMinutes,
@@ -714,7 +717,8 @@ export class TimelineDragManager {
 
     switch (s.mode) {
       case 'move': {
-        const pointerMinutes = yPositionToMinutes(relativeY, startHour, endHour, hourHeightRem, remPx, snapInterval);
+        // From the bar top, not the pointer: grabbing the middle must not jump the start to the pointer.
+        const pointerMinutes = yPositionToMinutes(relativeY - s.grabOffsetPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
         newStartMinutes = pointerMinutes;
         newEndMinutes = newStartMinutes + duration;
         // Clamp to visible range

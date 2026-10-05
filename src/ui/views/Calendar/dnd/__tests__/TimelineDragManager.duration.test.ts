@@ -122,6 +122,16 @@ describe("TimelineDragManager — duration from the processed start/end differen
     expect(options).toEqual(expect.objectContaining({ startTime: "20:00", endTime: "23:59" }));
   });
 
+  it("a move grabbed in the middle shifts by the pointer travel, the start does not jump to the pointer", () => {
+    // 10:00-12:00 bar, pressed one hour below its top, dragged two hours down.
+    const middleBar = placed(document.createElement("button"), rect(10 * HOUR_PX, 10, 80, 2 * HOUR_PX));
+    manager.initiate(record, processedFor(day.hour(10), day.hour(12), record), mouse("mousedown", 11 * HOUR_PX), "move", middleBar);
+    document.dispatchEvent(mouse("mousemove", 11 * HOUR_PX + 20));
+    document.dispatchEvent(mouse("mousemove", 13 * HOUR_PX));
+    document.dispatchEvent(mouse("mouseup", 13 * HOUR_PX));
+    expect(onCommit.mock.calls[0]?.[2]).toEqual(expect.objectContaining({ startTime: "12:00", endTime: "14:00" }));
+  });
+
   it("resize-bottom of an overnight event never ends before its start", () => {
     const options = drag(
       processedFor(day.hour(22), day.add(1, "day").hour(2), record),
