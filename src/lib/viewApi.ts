@@ -11,6 +11,7 @@ import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
 import type { BulkFieldWriteOutcome, DataApi } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
+import { changedKeys } from "./recordDiff";
 import { noticeFor } from "src/lib/errors/errorText";
 
 /**
@@ -84,12 +85,16 @@ export class ViewApi {
    */
   async updateRecord(record: DataRecord, fields: DataField[]): Promise<boolean> {
     const oldRecord = get(dataFrame).records.find((candidate) => candidate.id === record.id);
+    // Only what differs from the stored copy reaches the file: an edit of one
+    // field must not rewrite, reformat or overwrite the others. Unknown
+    // previous record: the whole record, as before.
+    const keys = changedKeys(oldRecord, record);
     const optimistic = this.dataSource.includes(record.id);
     if (optimistic) {
       dataFrame.updateRecord(record);
     }
     try {
-      const written = await this.dataApi.updateRecord(fields, record);
+      const written = await this.dataApi.updateRecord(fields, record, keys);
       if (!written) {
         // The note is gone. Silently keeping the optimistic value would show a
         // number that exists nowhere on disk.
@@ -148,13 +153,22 @@ export class ViewApi {
    */
   async updateRecords(records: DataRecord[], fields: DataField[]): Promise<boolean> {
     const rs = records.filter((r) => this.dataSource.includes(r.id));
-    const previous = get(dataFrame).records.filter((candidate) =>
+    const frameRecords = get(dataFrame).records;
+    const previous = frameRecords.filter((candidate) =>
       rs.some((r) => r.id === candidate.id)
+    );
+    // Per record, the keys that differ from the copy in the frame as it was
+    // before the optimistic update below.
+    const keys = records.map((record) =>
+      changedKeys(
+        frameRecords.find((candidate) => candidate.id === record.id),
+        record
+      )
     );
     if (rs.length > 0) dataFrame.updateRecords(rs);
 
     try {
-      await this.dataApi.updateRecords(fields, records);
+      await this.dataApi.updateRecords(fields, records, keys);
       return true;
     } catch (error) {
       // Put back only the records this call actually wrote, and only where the
