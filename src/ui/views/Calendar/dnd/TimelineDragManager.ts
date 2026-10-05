@@ -174,8 +174,10 @@ interface DragSession {
   // Pointer coordinates
   startX: number;
   startY: number;
-  /** Pointer distance below the bar top at the press: a move keeps the bar under the same point */
+  /** Press distance below the event start on the time axis: a move or top resize keeps the start under the same point */
   grabOffsetPx: number;
+  /** Press distance below the event end (negative above it): a bottom resize keeps the end under the same point */
+  grabFromEndPx: number;
   lastX: number;
   lastY: number;
 
@@ -377,6 +379,20 @@ export class TimelineDragManager {
     const barRect = barElement.getBoundingClientRect();
     const originalDayIndex = this.findDayIndex(barRect.left + barRect.width / 2);
 
+    // Where the press sits relative to the event's start and end on the time
+    // axis (not the bar box: a short bar is drawn taller than its duration on
+    // touch). A drag moves the grabbed point; the start or end does not jump
+    // to the pointer.
+    const pressColumn = this.dayColumns[originalDayIndex]?.element;
+    let grabOffsetPx = point.clientY - barRect.top;
+    let grabFromEndPx = point.clientY - barRect.bottom;
+    if (pressColumn && timeInfo) {
+      const { startHour, hourHeightRem, remPx = 16 } = this.config;
+      const pressY = point.clientY - pressColumn.getBoundingClientRect().top;
+      grabOffsetPx = pressY - minutesToRem(originalStartMinutes, startHour, hourHeightRem) * remPx;
+      grabFromEndPx = pressY - minutesToRem(originalEndMinutes, startHour, hourHeightRem) * remPx;
+    }
+
     // Auto-detect scroll container if not explicitly set
     if (!this.scrollContainer) {
       this.autoDetectScrollContainer(barElement);
@@ -412,7 +428,8 @@ export class TimelineDragManager {
       handleHit: handleHitFromTarget(event.target, barElement),
       startX: point.clientX,
       startY: point.clientY,
-      grabOffsetPx: point.clientY - barRect.top,
+      grabOffsetPx,
+      grabFromEndPx,
       lastX: point.clientX,
       lastY: point.clientY,
       originalStartMinutes,
@@ -734,7 +751,7 @@ export class TimelineDragManager {
       }
 
       case 'resize-top': {
-        const pointerMinutes = yPositionToMinutes(relativeY, startHour, endHour, hourHeightRem, remPx, snapInterval);
+        const pointerMinutes = yPositionToMinutes(relativeY - s.grabOffsetPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
         newEndMinutes = Math.min(s.originalEndMinutes, endHour * 60);
         newStartMinutes = Math.min(pointerMinutes, newEndMinutes - DND_CONSTANTS.MIN_DURATION_MINUTES);
         newStartMinutes = Math.max(startHour * 60, newStartMinutes);
@@ -745,7 +762,7 @@ export class TimelineDragManager {
       }
 
       case 'resize-bottom': {
-        const pointerMinutes = yPositionToMinutes(relativeY, startHour, endHour, hourHeightRem, remPx, snapInterval);
+        const pointerMinutes = yPositionToMinutes(relativeY - s.grabFromEndPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
         newEndMinutes = Math.max(pointerMinutes, s.originalStartMinutes + DND_CONSTANTS.MIN_DURATION_MINUTES);
         newEndMinutes = Math.min(endHour * 60, newEndMinutes);
         newStartMinutes = s.originalStartMinutes;

@@ -86,8 +86,14 @@ describe("TimelineDragManager — duration from the processed start/end differen
     mode: "move" | "resize-top" | "resize-bottom",
     toHour: number
   ): Record<string, unknown> {
-    manager.initiate(record, processed, mouse("mousedown", 0), mode, bar);
-    document.dispatchEvent(mouse("mousemove", 20));
+    // Press on the edge being dragged (the start for a move): the grabbed point
+    // then follows the pointer exactly.
+    const info = processed.timeInfo!;
+    const startMin = info.startTime.hour() * 60 + info.startTime.minute();
+    const pressMin = mode === "resize-bottom" ? startMin + info.endTime.diff(info.startTime, "minute") : startMin;
+    const pressY = (pressMin / 60) * HOUR_PX;
+    manager.initiate(record, processed, mouse("mousedown", pressY), mode, bar);
+    document.dispatchEvent(mouse("mousemove", pressY + 20));
     document.dispatchEvent(mouse("mousemove", toHour * HOUR_PX));
     document.dispatchEvent(mouse("mouseup", toHour * HOUR_PX));
     expect(onCommit).toHaveBeenCalledTimes(1);
@@ -130,6 +136,15 @@ describe("TimelineDragManager — duration from the processed start/end differen
     document.dispatchEvent(mouse("mousemove", 13 * HOUR_PX));
     document.dispatchEvent(mouse("mouseup", 13 * HOUR_PX));
     expect(onCommit.mock.calls[0]?.[2]).toEqual(expect.objectContaining({ startTime: "12:00", endTime: "14:00" }));
+  });
+
+  it("a bottom resize grabbed above the end moves the end by the pointer travel", () => {
+    // 10:00-12:00, pressed at 11:30 (inside the handle's hit area), dragged one hour down.
+    manager.initiate(record, processedFor(day.hour(10), day.hour(12), record), mouse("mousedown", 11.5 * HOUR_PX), "resize-bottom", bar);
+    document.dispatchEvent(mouse("mousemove", 11.5 * HOUR_PX + 20));
+    document.dispatchEvent(mouse("mousemove", 12.5 * HOUR_PX));
+    document.dispatchEvent(mouse("mouseup", 12.5 * HOUR_PX));
+    expect(onCommit.mock.calls[0]?.[2]).toEqual({ endTime: "13:00" });
   });
 
   it("resize-bottom of an overnight event never ends before its start", () => {
