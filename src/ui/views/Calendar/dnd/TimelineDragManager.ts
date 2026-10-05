@@ -44,7 +44,6 @@ import {
   minutesToRem,
   yPositionToMinutes,
 } from './SnapEngine';
-import { pressMode, handleHitFromTarget, type HandleHit } from './pressMode';
 import { hapticDragStart, hapticSnap, hapticDrop, hapticCancel, hapticResizeLimit } from './HapticManager';
 import { pauseGestures, resumeGestures } from '../gestures/GestureCoordinator';
 
@@ -168,8 +167,6 @@ interface DragSession {
   barElement: HTMLElement;
   listenerDoc: Document;
   isTouchDrag: boolean;
-  /** Visible resize handle that took the press (decided once at pointerDown) */
-  handleHit: HandleHit;
 
   // Pointer coordinates
   startX: number;
@@ -184,6 +181,9 @@ interface DragSession {
   // Original record geometry
   originalStartMinutes: number;
   originalEndMinutes: number;
+  /** End clock time (minutes from its own midnight) and whole days from the start day to the end day */
+  originalEndClockMinutes: number;
+  timedSpanDays: number;
   originalDayIndex: number;
   currentDayIndex: number;
 
@@ -350,6 +350,8 @@ export class TimelineDragManager {
     // Compute original time data
     let originalStartMinutes = 0;
     let originalEndMinutes = 0;
+    let originalEndClockMinutes = 0;
+    let timedSpanDays = 0;
     const timeInfo = processedRecord.timeInfo;
     if (timeInfo) {
       originalStartMinutes = timeInfo.startTime.hour() * 60 + timeInfo.startTime.minute();
@@ -361,6 +363,10 @@ export class TimelineDragManager {
         timeInfo.endTime.diff(timeInfo.startTime, 'minute')
       );
       originalEndMinutes = originalStartMinutes + durationMinutes;
+      // A move shifts both clock times by one delta and keeps the days between
+      // them (overnight = 1, multi-day timed events more).
+      originalEndClockMinutes = timeInfo.endTime.hour() * 60 + timeInfo.endTime.minute();
+      timedSpanDays = Math.max(0, timeInfo.endTime.startOf('day').diff(timeInfo.startTime.startOf('day'), 'day'));
     }
 
     // Strip span info
@@ -425,7 +431,6 @@ export class TimelineDragManager {
       barElement,
       listenerDoc: doc,
       isTouchDrag,
-      handleHit: handleHitFromTarget(event.target, barElement),
       startX: point.clientX,
       startY: point.clientY,
       grabOffsetPx,
@@ -434,6 +439,8 @@ export class TimelineDragManager {
       lastY: point.clientY,
       originalStartMinutes,
       originalEndMinutes,
+      originalEndClockMinutes,
+      timedSpanDays,
       originalDayIndex,
       currentDayIndex: originalDayIndex,
       originalSpanDays,
@@ -562,17 +569,10 @@ export class TimelineDragManager {
       const thresholdPx = DND_CONSTANTS.DRAG_THRESHOLD_REM * (this.config.remPx ?? 16);
       if (distance < thresholdPx) return;
 
-      // Threshold crossed — on mobile, re-evaluate the mode with the larger
-      // touch zones, evaluated ONCE (mode is final after this point).
-      // ios-d1: from where the finger PRESSED, not where it is now. The user
-      // aims at a handle or at the body before pressing; by the time the
-      // threshold is crossed the finger has already travelled in the drag
-      // direction, and on a one-hour bar a downward move from its middle landed
-      // in the bottom zone — a "move" became a resize of the end time.
-      if (s.isTouchDrag && s.barElement && this.config.isMobile) {
-        s.mode = this.evaluateModeFromPosition(s.startY, s.barElement);
-        this.activeMode.set(s.mode);
-      }
+      // The mode is the one EventBar chose at pointerDown (dnd/pressMode.ts)
+      // and stays until release. ios-d1 re-evaluated it here for touch; with
+      // one press-time rule there is nothing left to re-decide, and a second
+      // decision from a fresh bar box could disagree with the first.
 
       s.thresholdCrossed = true;
       this.state.set('dragging');
@@ -639,35 +639,6 @@ export class TimelineDragManager {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  MODE EVALUATION
-  // ══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Evaluate drag mode from the press point relative to the bar (touch).
-   * Strip modes are never re-evaluated.
-   */
-  private evaluateModeFromPosition(clientY: number, barElement: HTMLElement): DragMode {
-    const s = this.session;
-    if (!s) return 'move';
-
-    // Strip modes are set by the initiator and never changed
-    if (s.mode === 'strip-move' || s.mode === 'strip-resize-start' || s.mode === 'strip-resize-end') {
-      return s.mode;
-    }
-
-    // The same decision EventBar made at pointerDown (dnd/pressMode.ts), from
-    // the same press point and the handle hit recorded at initiate.
-    const rect = barElement.getBoundingClientRect();
-    return pressMode({
-      relY: clientY - rect.top,
-      barH: rect.height,
-      remPx: this.config?.remPx ?? 16,
-      coarse: true,
-      handleHit: s.handleHit,
-    });
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
   //  GHOST POSITION — TIMED EVENTS
   // ══════════════════════════════════════════════════════════════════════════
 
@@ -723,11 +694,13 @@ export class TimelineDragManager {
     // Calculate time from Y position relative to column
     const columnRect = columnRef.element.getBoundingClientRect();
     const relativeY = clientY - columnRect.top;
-    // An overnight or very long event cannot be shown longer than the visible range.
-    const duration = Math.min(
-      s.originalEndMinutes - s.originalStartMinutes,
-      (endHour - startHour) * 60
-    );
+    const DAY_MINUTES = 24 * 60;
+    // A same-day event stays inside the visible range. An event that ends on a
+    // later day (overnight, multi-day) shifts both clock times by one delta
+    // and keeps its days; the end may carry over midnight.
+    const sameDay = s.timedSpanDays === 0;
+    const duration = Math.min(s.originalEndMinutes - s.originalStartMinutes, (endHour - startHour) * 60);
+    let endDayOffset = 0;
 
     let newStartMinutes: number;
     let newEndMinutes: number;
@@ -738,6 +711,13 @@ export class TimelineDragManager {
         const pointerMinutes = yPositionToMinutes(relativeY - s.grabOffsetPx, startHour, endHour, hourHeightRem, remPx, snapInterval);
         newStartMinutes = pointerMinutes;
         newEndMinutes = newStartMinutes + duration;
+        if (!sameDay) {
+          newStartMinutes = Math.max(startHour * 60, Math.min(newStartMinutes, endHour * 60 - DND_CONSTANTS.MIN_DURATION_MINUTES));
+          const endClock = s.originalEndClockMinutes + (newStartMinutes - s.originalStartMinutes);
+          endDayOffset = s.timedSpanDays + Math.floor(endClock / DAY_MINUTES);
+          newEndMinutes = ((endClock % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
+          break;
+        }
         // Clamp to visible range
         if (newEndMinutes > endHour * 60) {
           newEndMinutes = endHour * 60;
@@ -789,10 +769,11 @@ export class TimelineDragManager {
     // Build ghost position
     const ghost: GhostPosition = {
       topRem: minutesToRem(newStartMinutes, startHour, hourHeightRem),
-      heightRem: (newEndMinutes - newStartMinutes) * (hourHeightRem / 60),
+      heightRem: ((endDayOffset > 0 ? endHour * 60 : newEndMinutes) - newStartMinutes) * (hourHeightRem / 60),
       dayColumnIndex: clampedIndex,
       time: minutesToTime(newStartMinutes),
       endTime: minutesToTime(newEndMinutes),
+      endDayOffset,
       date: columnRef.day,
       title: getRecordTitle(s.record),
     };
@@ -1243,9 +1224,9 @@ export class TimelineDragManager {
       case 'move': {
         options.startTime = ghost.time;
         options.endTime = ghost.endTime;
-        // Preserve multi-day span during timed moves
-        const origEnd = s.processedRecord.spanInfo?.endDate ?? s.processedRecord.endDate;
-        if (origEnd) options.endDate = origEnd.add(timedDayDelta, 'day');
+        // The end day follows the new start: the original span plus any carry
+        // over midnight (ghost.endDayOffset).
+        options.endDate = timedTargetDate.add(ghost.endDayOffset ?? 0, 'day');
         break;
       }
       case 'resize-top':

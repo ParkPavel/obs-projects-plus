@@ -80,6 +80,13 @@ describe("buildRecordChangeUpdates — separate time model, no end-date field", 
     expect(updates[END]).toBe("10:00");
   });
 
+  it("a move of an overnight original without an end-date field is not folded to zero length", () => {
+    const overnight = { [DATE]: "2026-10-02", [START]: "22:00", [END]: "02:00" };
+    const { updates } = build({ values: overnight, target: "2026-10-02", options: { startTime: "23:00", endTime: "03:00" } });
+    expect(updates[START]).toBe("23:00");
+    expect(updates[END]).toBe("03:00");
+  });
+
   it("an overnight original may still move its start before the stored end", () => {
     const overnight = { [DATE]: "2026-10-02", [START]: "22:00", [END]: "02:00" };
     const { updates } = build({ values: overnight, target: "2026-10-02", options: { startTime: "21:00" } });

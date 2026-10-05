@@ -158,9 +158,18 @@ export function buildRecordChangeUpdates(input: RecordChangeInput): RecordChange
     updates[dateFieldName] = targetDate.format('YYYY-MM-DD');
   }
 
+  // An overnight original (stored end before stored start) keeps ending on the
+  // next day: a move of 22:00-02:00 must not be folded into 22:00-22:00.
+  const storedStartClock = storedClock(values, startTimeFieldName);
+  const storedEndClock = storedClock(values, endTimeFieldName);
+  const storedOvernight =
+    storedStartClock !== null &&
+    storedEndClock !== null &&
+    clockMinutes(storedEndClock) < clockMinutes(storedStartClock);
+
   /** End time never lands before the start time of the same day. */
   const guardEnd = (endTime: string, sameDay: boolean): string => {
-    if (sameDay && effectiveStart && clockMinutes(endTime) < clockMinutes(effectiveStart)) {
+    if (sameDay && !storedOvernight && effectiveStart && clockMinutes(endTime) < clockMinutes(effectiveStart)) {
       return effectiveStart;
     }
     return endTime;

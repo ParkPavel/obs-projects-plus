@@ -119,13 +119,35 @@ describe("TimelineDragManager — duration from the processed start/end differen
     expect(options).toEqual(expect.objectContaining({ startTime: "09:00", endTime: "13:00" }));
   });
 
-  it("an overnight event dragged to the end of the day stays inside the visible range", () => {
+  it("an overnight event moved one hour later keeps its 4 hours and still ends the next day", () => {
     const options = drag(
       processedFor(day.hour(22), day.add(1, "day").hour(2), record),
       "move",
       23
     );
-    expect(options).toEqual(expect.objectContaining({ startTime: "20:00", endTime: "23:59" }));
+    expect(options).toEqual(expect.objectContaining({ startTime: "23:00", endTime: "03:00" }));
+    expect((options["endDate"] as dayjs.Dayjs).format("YYYY-MM-DD")).toBe(day.add(1, "day").format("YYYY-MM-DD"));
+  });
+
+  it("an overnight event moved without vertical travel keeps both times", () => {
+    const options = drag(
+      processedFor(day.hour(22), day.add(1, "day").hour(2), record),
+      "move",
+      22
+    );
+    expect(options).toEqual(expect.objectContaining({ startTime: "22:00", endTime: "02:00" }));
+    expect((options["endDate"] as dayjs.Dayjs).format("YYYY-MM-DD")).toBe(day.add(1, "day").format("YYYY-MM-DD"));
+  });
+
+  it("a multi-day timed event shifts both clock times and keeps its end day", () => {
+    // 10:00 today to 12:00 two days later, moved one hour later.
+    const options = drag(
+      processedFor(day.hour(10), day.add(2, "day").hour(12), record),
+      "move",
+      11
+    );
+    expect(options).toEqual(expect.objectContaining({ startTime: "11:00", endTime: "13:00" }));
+    expect((options["endDate"] as dayjs.Dayjs).format("YYYY-MM-DD")).toBe(day.add(2, "day").format("YYYY-MM-DD"));
   });
 
   it("a move grabbed in the middle shifts by the pointer travel, the start does not jump to the pointer", () => {

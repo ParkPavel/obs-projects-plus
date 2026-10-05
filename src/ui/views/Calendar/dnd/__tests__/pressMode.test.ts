@@ -160,11 +160,13 @@ describe("TimelineDragManager — the mode is fixed at pointerDown", () => {
     document.body.innerHTML = "";
   });
 
-  it("a touch on the bottom handle's enlarged hit area resizes, though the edge band alone would move", () => {
-    // 60px below the bar top: past the middle, but outside the 20px edge band.
+  it("a touch keeps the mode chosen at the press: the manager does not re-decide after the threshold", () => {
+    // 60px below the bar top: past the middle, outside the 20px edge band, on
+    // the bottom handle's hit area - EventBar's pressMode says resize-bottom.
     const y = BAR_TOP + 60;
+    expect(pressMode({ relY: 60, barH: BAR_H, remPx: REM, coarse: true, handleHit: handleHitFromTarget(bottomHandle, bar) })).toBe("resize-bottom");
     bottomHandle.addEventListener("touchstart", (e) =>
-      manager.initiate(record, processed, e as TouchEvent, "move", bar)
+      manager.initiate(record, processed, e as TouchEvent, "resize-bottom", bar)
     );
     bottomHandle.dispatchEvent(touch("touchstart", y));
     jest.advanceTimersByTime(DND_CONSTANTS.LONG_PRESS_MS + 200);
