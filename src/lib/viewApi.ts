@@ -11,7 +11,7 @@ import { DataFieldType } from "./dataframe/dataframe";
 import type { DataFrame } from "./dataframe/dataframe";
 import type { BulkFieldWriteOutcome, DataApi } from "./dataApi";
 import { dataFrame } from "./stores/dataframe";
-import { changedKeys } from "./recordDiff";
+import { changedKeys, patchRecord, touchedKeys } from "./recordDiff";
 import { noticeFor } from "src/lib/errors/errorText";
 
 /**
@@ -85,20 +85,23 @@ export class ViewApi {
    */
   async updateRecord(record: DataRecord, fields: DataField[]): Promise<boolean> {
     const oldRecord = get(dataFrame).records.find((candidate) => candidate.id === record.id);
-    // Only what differs from the stored copy reaches the file: an edit of one
-    // field must not rewrite, reformat or overwrite the others. Unknown
-    // previous record: the whole record, as before.
-    const keys = changedKeys(oldRecord, record);
+    // Only what the caller changed reaches the file: an edit of one field must
+    // not rewrite, reformat or overwrite the others. The keys a record was
+    // built with win over a diff against the store, which would also revert a
+    // field another edit wrote meanwhile. Unknown previous record: everything.
+    const keys = touchedKeys(record) ?? changedKeys(oldRecord, record);
+    // The store shows the change on top of its current copy, not the caller's.
+    const shown = oldRecord && keys ? patchRecord(oldRecord, record, keys) : record;
     const optimistic = this.dataSource.includes(record.id);
     if (optimistic) {
-      dataFrame.updateRecord(record);
+      dataFrame.updateRecord(shown);
     }
     try {
       const written = await this.dataApi.updateRecord(fields, record, keys);
       if (!written) {
         // The note is gone. Silently keeping the optimistic value would show a
         // number that exists nowhere on disk.
-        this.revertOptimistic(optimistic, record, oldRecord);
+        this.revertOptimistic(optimistic, shown, oldRecord);
         new Notice(noticeFor(RECORD_FILE_MISSING, { path: record.id }));
         return false;
       }
@@ -108,7 +111,7 @@ export class ViewApi {
       // Put the record back and say so. Not rethrown on purpose: several call
       // sites do not await this, and an unhandled rejection would replace a
       // visible message with a console entry.
-      this.revertOptimistic(optimistic, record, oldRecord);
+      this.revertOptimistic(optimistic, shown, oldRecord);
       new Notice(noticeFor(RECORD_WRITE_FAILED, { path: record.id }));
       console.error("[Projects+] record write failed:", record.id, error);
       return false;
@@ -116,7 +119,7 @@ export class ViewApi {
 
     const obsApp = get(app);
     if (obsApp && oldRecord) {
-      await fireInverseRelations(oldRecord, record, fields, obsApp);
+      await fireInverseRelations(oldRecord, shown, fields, obsApp);
     }
     return true;
   }
@@ -159,13 +162,24 @@ export class ViewApi {
     );
     // Per record, the keys that differ from the copy in the frame as it was
     // before the optimistic update below.
-    const keys = records.map((record) =>
-      changedKeys(
-        frameRecords.find((candidate) => candidate.id === record.id),
-        record
-      )
+    const keys = records.map(
+      (record) =>
+        touchedKeys(record) ??
+        changedKeys(
+          frameRecords.find((candidate) => candidate.id === record.id),
+          record
+        )
     );
-    if (rs.length > 0) dataFrame.updateRecords(rs);
+    // Each record is shown on top of the store's current copy, as in updateRecord.
+    const shownById = new Map(
+      records.map((record, index) => {
+        const base = frameRecords.find((candidate) => candidate.id === record.id);
+        const k = keys[index];
+        return [record.id, base && k ? patchRecord(base, record, k) : record] as const;
+      })
+    );
+    const shownRs = rs.map((r) => shownById.get(r.id) ?? r);
+    if (shownRs.length > 0) dataFrame.updateRecords(shownRs);
 
     try {
       await this.dataApi.updateRecords(fields, records, keys);
@@ -175,7 +189,7 @@ export class ViewApi {
       // store still holds what we put there — same rule as `revertOptimistic`.
       const current = get(dataFrame).records;
       const untouched = previous.filter((old) => {
-        const attempted = rs.find((r) => r.id === old.id);
+        const attempted = shownRs.find((r) => r.id === old.id);
         return attempted !== undefined && current.includes(attempted);
       });
       if (untouched.length > 0) dataFrame.updateRecords(untouched);

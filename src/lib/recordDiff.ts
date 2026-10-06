@@ -62,3 +62,32 @@ export function changedKeys(
   }
   return changed;
 }
+
+/**
+ * The keys a caller set on a record it built from an earlier copy
+ * (`updateRecordValues`). They are what the user changed, whatever the store
+ * holds by now: diffing against the store would also "change back" a field
+ * another edit wrote meanwhile from a stale base.
+ */
+const touched = new WeakMap<DataRecord, readonly string[]>();
+
+/** Remember which keys `record` was built to change. */
+export function markTouched(record: DataRecord, keys: readonly string[]): DataRecord {
+  touched.set(record, keys);
+  return record;
+}
+
+/** The keys `record` was built to change, when it was built that way. */
+export function touchedKeys(record: DataRecord): readonly string[] | undefined {
+  return touched.get(record);
+}
+
+/**
+ * `base` with only `keys` taken from `next`: the store copy an optimistic
+ * update should show, so a stale caller does not roll back other fields.
+ */
+export function patchRecord(base: DataRecord, next: DataRecord, keys: readonly string[]): DataRecord {
+  const values = { ...base.values };
+  for (const key of keys) values[key] = next.values[key];
+  return markTouched({ ...base, values }, keys);
+}
