@@ -173,7 +173,6 @@
     dragHandleZone,
     dragHandle,
   } from "svelte-dnd-action";
-  import { flip } from "svelte/animate";
   import { getCoverRealPath } from "src/ui/views/Gallery/gallery";
   import type { BoardThumbnailLayout } from "../../types";
   import { excludeHeaderField, getDisplayName } from "./boardHelpers";
@@ -216,10 +215,15 @@
   const sortRecords = sortRecordsContext.get();
 
   // cards-g1: `getAnimationDuration` is 0 under reduced motion (or the
-  // plugin's instant setting), so the flip and the library's drop animation
-  // stop together. Measured later, live, on 20/100/300-card boards with reduced
+  // plugin's instant setting), so the library's drop animation stops with it.
+  // Measured later, live, on 20/100/300-card boards with reduced
   // motion off and on: pointer-down on a grip to the first drag frame, and frame
   // time during repeated drags (p50/p95 of each, Performance panel).
+  // stab-board: the list has no per-item `animate:flip`. Svelte measures every
+  // keyed item before and after each reorder whatever the duration (a zero
+  // duration still reads the rects), and svelte-dnd-action reorders on every
+  // `consider`: 178 cards cost ~34 ms of layout per pointer move. The library
+  // reads this value for the drop animation of the dragged clone only.
   const flipDurationMs = getAnimationDuration(150);
 
   /** cards-g1: whether a click landed on the grip lane, which drags rather than opens the card. */
@@ -333,11 +337,9 @@
     <div
       class="ppp-board-card-slot"
       class:projects--board--card-placeholder={isPlaceholder(item)}
-      animate:flip={{ duration: flipDurationMs }}
     >
-      <!-- cards-g2: the zone's item is this plain wrapper, because `animate:flip`
-           may only sit on an element directly in the keyed each, never on a
-           component. svelte-dnd-action reads the zone's direct children: it
+      <!-- cards-g2: the zone's item is this plain wrapper (an element directly
+           in the keyed each, not a component). svelte-dnd-action reads the zone's direct children: it
            arms, clones, hides and marks the shadow on this element, and the
            card inside moves with it. The placeholder class lives here too; the
            column and list find it with `:has()`, at any depth.
@@ -349,7 +351,7 @@
         {color}
         interactive
         mediaLayout={thumbnail?.layout}
-        minHeight={thumbnail ? undefined : frameHeight}
+        minHeight={thumbnail?.layout === "top" ? undefined : frameHeight}
         mediaSize={thumbnail?.layout === "left" ? frameHeight : undefined}
         on:keypress
         on:click={(e) => {
