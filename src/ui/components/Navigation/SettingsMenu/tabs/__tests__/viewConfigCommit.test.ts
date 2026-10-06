@@ -109,13 +109,21 @@ describe("settings-binds — a field picker (board cover field)", () => {
     m.destroy();
   });
 
-  it("a datalist pick commits at once and is still shown after the flush", async () => {
+  // stab-forms: the native datalist is gone; a pick is a press on a listbox option.
+  it("a listbox pick commits at once and is still shown after the flush", async () => {
     const m = mount("board");
-    await edit(cover(m), "cover", "insertReplacementText");
+    cover(m).focus();
+    await tick();
+    const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      (o) => o.textContent === "cover"
+    ) as HTMLElement;
+    option.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    await tick();
     expect(m.updates).toEqual([{ coverField: "cover" }]);
     expect(cover(m).value).toBe("cover");
-    // The blur's change after the pick writes nothing more.
+    // The change and the blur after the pick write nothing more.
     change(cover(m));
+    cover(m).blur();
     expect(m.updates).toEqual([{ coverField: "cover" }]);
     m.destroy();
   });

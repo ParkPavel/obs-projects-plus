@@ -12,8 +12,7 @@
   import type { DataRecord } from "src/lib/dataframe/dataframe";
   import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "src/ui/components/Navigation/SettingsMenu/tabs/filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
-
-  function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }
+  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
 
   export let value: FilterDefinition | undefined;
   export let fields: Array<{ name: string; type: string }> = [];
@@ -45,8 +44,14 @@
   // ── Helpers for path-based updates (groups can be nested) ──
   function updateRoot(newLocal: FilterDefinition, debounce = false) {
     local = newLocal;
-    if (debounce) dispatchDebounced(local);
-    else dispatch("update", local);
+    if (debounce) {
+      dispatchDebounced(local);
+    } else {
+      // An immediate write supersedes a pending typed one: the older snapshot
+      // must not land after it.
+      clearTimeout(_valueDebounceTimer);
+      dispatch("update", local);
+    }
   }
 
   function updateGroupAtPath(root: FilterDefinition, path: number[], patch: Partial<FilterDefinition>): FilterDefinition {
@@ -190,6 +195,23 @@
     return [...vals].sort();
   }
 
+  // The suggestions of a field are read from every record; a row re-renders on
+  // each edit, so they are computed once per field for one set of records.
+  let suggestionsOf: DataRecord[] | null = null;
+  let suggestionCache = new Map<string, string[]>();
+  function suggestionsFor(fieldName: string, source: DataRecord[]): string[] {
+    if (source !== suggestionsOf) {
+      suggestionsOf = source;
+      suggestionCache = new Map();
+    }
+    let hit = suggestionCache.get(fieldName);
+    if (!hit) {
+      hit = getValueSuggestions(fieldName);
+      suggestionCache.set(fieldName, hit);
+    }
+    return hit;
+  }
+
   // ═══════════════════════════════
   // FloatingPopup-backed dropdowns (#034.2a)
   // ═══════════════════════════════
@@ -233,26 +255,6 @@
         label: getOperatorLabel(op),
         selected: op === cond.operator,
         handler: () => updateCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }, groupPath),
-      })),
-    };
-  }
-
-  function openValPop(index: number, anchor: HTMLElement, groupPath: number[] = []) {
-    const group = groupPath.length === 0 ? local : getGroupAtPath(local, groupPath);
-    const cond = group.conditions[index]!;
-    const all = getValueSuggestions(cond.field);
-    const q = String(cond.value ?? '').toLowerCase().trim();
-    const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
-    if (filtered.length === 0) { activePopover = null; return; }
-    activePopover = {
-      anchorEl: anchor,
-      searchable: false,
-      // input retains focus so user can keep typing to narrow suggestions
-      autoFocus: false,
-      items: filtered.map((v) => ({
-        label: v,
-        selected: v === String(cond.value ?? ''),
-        handler: () => updateCondition(index, { value: v }, groupPath),
       })),
     };
   }
@@ -347,11 +349,13 @@
           <!-- Value -->
           <div class="value-area">
             {#if needsVal}
-              <input class="value-input" type="text"
+              <ValueSuggestField
                 value={condition.value ?? ''}
-                on:input={(e) => { updateCondition(index, { value: inputVal(e) }, [], true); openValPop(index, e.currentTarget); }}
-                on:focus={(e) => openValPop(index, e.currentTarget)}
-                placeholder={$i18n.t('common.value-placeholder')} />
+                suggestions={suggestionsFor(condition.field, records)}
+                placeholder={$i18n.t('common.value-placeholder')}
+                ariaLabel={$i18n.t('common.value-placeholder')}
+                on:input={(e) => updateCondition(index, { value: e.detail }, [], true)}
+                on:commit={(e) => updateCondition(index, { value: e.detail })} />
             {:else}
               <span class="no-value">—</span>
             {/if}
@@ -435,11 +439,13 @@
 
                 <div class="value-area">
                   {#if gNeedsVal}
-                    <input class="value-input" type="text"
+                    <ValueSuggestField
                       value={gCond.value ?? ''}
-                      on:input={(e) => { updateCondition(cIdx, { value: inputVal(e) }, [gIndex], true); openValPop(cIdx, e.currentTarget, [gIndex]); }}
-                      on:focus={(e) => openValPop(cIdx, e.currentTarget, [gIndex])}
-                      placeholder={$i18n.t('common.value-placeholder')} />
+                      suggestions={suggestionsFor(gCond.field, records)}
+                      placeholder={$i18n.t('common.value-placeholder')}
+                      ariaLabel={$i18n.t('common.value-placeholder')}
+                      on:input={(e) => updateCondition(cIdx, { value: e.detail }, [gIndex], true)}
+                      on:commit={(e) => updateCondition(cIdx, { value: e.detail }, [gIndex])} />
                   {:else}
                     <span class="no-value">—</span>
                   {/if}
@@ -520,11 +526,13 @@
 
                       <div class="value-area">
                         {#if nNeedsVal}
-                          <input class="value-input" type="text"
+                          <ValueSuggestField
                             value={nCond.value ?? ''}
-                            on:input={(e) => { updateCondition(nCIdx, { value: inputVal(e) }, nPath, true); openValPop(nCIdx, e.currentTarget, nPath); }}
-                            on:focus={(e) => openValPop(nCIdx, e.currentTarget, nPath)}
-                            placeholder={$i18n.t('common.value-placeholder')} />
+                            suggestions={suggestionsFor(nCond.field, records)}
+                            placeholder={$i18n.t('common.value-placeholder')}
+                            ariaLabel={$i18n.t('common.value-placeholder')}
+                            on:input={(e) => updateCondition(nCIdx, { value: e.detail }, nPath, true)}
+                            on:commit={(e) => updateCondition(nCIdx, { value: e.detail }, nPath)} />
                         {:else}
                           <span class="no-value">—</span>
                         {/if}
@@ -662,7 +670,7 @@
   }
   .filter-row--disabled { opacity: 0.5; }
   .filter-row--disabled .chip,
-  .filter-row--disabled .value-input { pointer-events: none; }
+  .filter-row--disabled .value-area { pointer-events: none; }
 
   /* ── Group card ── */
   .filter-group-wrapper {
@@ -721,16 +729,6 @@
   .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
 
   .value-area { flex: 1 1 10em; min-width: 0; }
-  .value-input {
-    width: 100%; height: 1.625rem;
-    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
-    background: var(--background-primary); color: var(--text-normal);
-    font-size: 0.8125rem; font-family: var(--font-interface);
-    padding: 0 0.5rem; outline: none; box-sizing: border-box;
-    transition: border-color 100ms ease;
-  }
-  .value-input::placeholder { color: var(--text-faint); }
-  .value-input:focus { border-color: var(--interactive-accent); }
   .no-value { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0 0.5rem; }
 
   .row-btn {
@@ -803,7 +801,6 @@
     .filter-row .row-drag { display: none; }
     .chip { width: 100%; height: var(--ppp-touch-target-min); min-width: 0; overflow: hidden; padding: 0 0.625rem; font-size: 0.875rem; }
     .chip-label { min-width: 0; flex: 0 1 auto; }
-    .value-input { height: var(--ppp-touch-target-min); font-size: 0.875rem; }
     .row-btn {
       opacity: 1; display: inline-flex; align-items: center; justify-content: center;
       width: var(--ppp-touch-target-min); height: var(--ppp-touch-target-min); padding: 0;

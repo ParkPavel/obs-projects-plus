@@ -15,9 +15,13 @@
   select; the parent decides whether to close (default) or keep open
   (when item.keepOpen === true).
 
-  Item interactions use `mousedown` with `preventDefault` so the
-  originating focused element (e.g. a `<input>` triggering a type-ahead
-  popover) keeps focus and keystrokes continue to flow into it.
+  Items are chosen by pointer, touch or keyboard. A pointer press selects on
+  `mousedown` with `preventDefault` so the originating focused element (e.g.
+  a `<input>` triggering a type-ahead popover) keeps focus and keystrokes
+  continue to flow into it; the `click` that ends the same tap is ignored.
+  A click with no press before it (Enter or Space on a focused item, an
+  assistive-technology activation) selects too. In the search field
+  ArrowDown/ArrowUp move the active item and Enter chooses it.
 -->
 <script lang="ts" context="module">
   export interface PopoverItem {
@@ -32,8 +36,12 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, tick } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { setIcon } from "obsidian";
+  import { i18n } from "src/lib/stores/i18n";
+  import SearchField from "src/ui/components/fields/SearchField.svelte";
+  import { isImeKey } from "src/ui/components/fields/draftController";
+  import { filterOptions, stepActive } from "src/ui/components/fields/comboOptions";
 
   export let items: PopoverItem[] = [];
   export let searchable: boolean = false;
@@ -43,19 +51,49 @@
   }>();
 
   let query = "";
+  // The item the arrow keys are on; -1 until the user types or navigates.
+  let activeIdx = -1;
+  // The item a pointer just chose, so the click of the same tap does not choose it again.
+  let pointerPicked: string | null = null;
 
-  $: filtered = (() => {
-    if (!searchable) return items;
-    const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((it) => it.label.toLowerCase().includes(q));
-  })();
+  $: filtered = searchable ? filterOptions(items, query) : items;
 
-  function handleSelect(item: PopoverItem, e: MouseEvent): void {
-    // Preserve focus of an external trigger (e.g. text input).
-    e.preventDefault();
+  function setQuery(next: string): void {
+    query = next;
+    activeIdx = searchable && filterOptions(items, next).length > 0 && next.trim() !== "" ? 0 : -1;
+  }
+
+  function pick(item: PopoverItem): void {
     item.handler?.();
     dispatch("select", { item, keepOpen: item.keepOpen === true });
+  }
+
+  function onItemMouseDown(item: PopoverItem, e: MouseEvent): void {
+    // Preserve focus of an external trigger (e.g. text input).
+    e.preventDefault();
+    pointerPicked = item.label;
+    pick(item);
+  }
+
+  function onItemClick(item: PopoverItem): void {
+    if (pointerPicked === item.label) {
+      pointerPicked = null;
+      return;
+    }
+    pick(item);
+  }
+
+  function onSearchKeydown(e: KeyboardEvent): void {
+    if (isImeKey(e)) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIdx = stepActive(activeIdx, e.key === "ArrowDown" ? 1 : -1, filtered.length);
+    } else if (e.key === "Enter") {
+      const item = activeIdx >= 0 ? filtered[activeIdx] : undefined;
+      if (!item) return;
+      e.preventDefault();
+      pick(item);
+    }
   }
 
   function iconAction(node: HTMLElement, icon: string) {
@@ -67,42 +105,31 @@
       },
     };
   }
-
-  // When the search field is mounted (searchable), focus it so typing
-  // narrows results. This is opt-in: FloatingPopup's autoFocus prop
-  // can be set to `false` by callers that need the original trigger
-  // to keep focus instead.
-  let searchInput: HTMLInputElement | null = null;
-  $: if (searchable && searchInput) {
-    void focusSearch();
-  }
-  async function focusSearch(): Promise<void> {
-    await tick();
-    searchInput?.focus();
-  }
 </script>
 
 {#if searchable}
   <div class="ppp-pop-search">
-    <input
-      bind:this={searchInput}
-      type="text"
-      class="ppp-pop-search-input"
-      placeholder="🔍"
-      bind:value={query}
-      on:mousedown|stopPropagation
+    <SearchField
+      {query}
+      focusOnMount
+      inputClass="ppp-pop-search-input"
+      ariaLabel={$i18n.t("common.search", { defaultValue: "Search" })}
+      on:queryChange={(e) => setQuery(e.detail)}
+      on:keydown={onSearchKeydown}
     />
   </div>
 {/if}
 
 <div class="ppp-pop-list" role="presentation">
-  {#each filtered as item (item.label)}
+  {#each filtered as item, i (item.label)}
     <button
       type="button"
       role="menuitem"
       class="ppp-pop-item"
       class:ppp-pop-item--selected={item.selected}
-      on:mousedown={(e) => handleSelect(item, e)}
+      class:ppp-pop-item--active={i === activeIdx}
+      on:mousedown={(e) => onItemMouseDown(item, e)}
+      on:click={() => onItemClick(item)}
     >
       {#if item.icon}
         <span class="ppp-pop-muted" use:iconAction={item.icon}></span>
@@ -124,27 +151,14 @@
     padding: var(--ppp-space-2, 0.25rem) var(--ppp-space-4, 0.5rem);
     border-bottom: 0.0625rem solid var(--background-modifier-border);
   }
-  .ppp-pop-search-input {
-    width: 100%;
-    height: 1.75rem;
-    padding: 0 var(--ppp-space-3, 0.375rem);
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: var(--ppp-radius-md, 0.25rem);
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: var(--ppp-font-size-md, 0.8125rem);
-    outline: none;
-  }
-  .ppp-pop-search-input:focus {
-    border-color: var(--interactive-accent);
-  }
   .ppp-popover-label {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .ppp-pop-item:hover {
+  .ppp-pop-item:hover,
+  .ppp-pop-item--active {
     background: var(--background-modifier-hover);
   }
 </style>

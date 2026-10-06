@@ -19,6 +19,8 @@
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
 
   export let config: StatsConfig;
   export let fields: DataField[] = [];
@@ -63,7 +65,8 @@
 
   $: cards = config.cards.slice();
   $: columnsCount = config.columns;
-  $: fieldNames = fields.map((f) => f.name);
+  // "*" counts records, so it is offered ahead of the fields.
+  $: fieldOptions = namesToOptions(["*", ...fields.map((f) => f.name)]);
 
   function emit(next: Partial<StatsConfig>) {
     dispatch("change", { ...config, ...next });
@@ -182,14 +185,15 @@
           />
         </label>
 
+        <!-- svelte-ignore a11y-label-has-associated-control -->
         <label>
           {$i18n.t("views.dashboard.stats.config.field", { defaultValue: "Field" })}
-          <input
-            type="text"
-            list="ppp-stats-fields"
+          <ComboField
             value={card.field}
+            options={fieldOptions}
+            allowCustom
             placeholder="*"
-            on:input={(e) => updateCard(idx, { field: inputVal(e) })}
+            on:commit={(e) => updateCard(idx, { field: e.detail.value })}
           />
         </label>
 
@@ -265,12 +269,6 @@
     + {$i18n.t("views.dashboard.stats.config.add", { defaultValue: "Add card" })}
   </button>
 
-  <datalist id="ppp-stats-fields">
-    <option value="*" />
-    {#each fieldNames as name (name)}
-      <option value={name} />
-    {/each}
-  </datalist>
 </WidgetConfigShell>
 
 <style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy, tick } from "svelte";
   import { focusTrap } from "src/lib/a11y/focusTrap";
+  import { comboOwnsEscape } from "src/ui/components/fields/comboOptions";
   import type {
     ProjectDefinition,
     ProjectId,
@@ -147,6 +148,9 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape") {
+      // A suggestion list that is open takes this Escape (it only closes the
+      // list); the panel closes on the next one.
+      if (comboOwnsEscape(event.target)) return;
       // chrome-filters: Escape in the source-name field abandons the name, not
       // the whole panel. This listener runs in the capture phase, before the
       // field's own, so it has to know.

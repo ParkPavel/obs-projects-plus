@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { Icon } from 'obsidian-svelte';
   import { i18n } from 'src/lib/stores/i18n';
+  import SearchField from 'src/ui/components/fields/SearchField.svelte';
   import type { AgendaIcon } from 'src/settings/v3/settings';
   
   const dispatch = createEventDispatcher<{
@@ -70,11 +71,10 @@
   
   <div class="modal-content">
     <div class="search-box">
-      <Icon name="search" size="sm" />
-      <input 
-        type="text"
+      <SearchField
+        query={searchQuery}
         placeholder={t('search-placeholder')}
-        bind:value={searchQuery}
+        on:queryChange={(e) => (searchQuery = e.detail)}
       />
     </div>
     
@@ -164,22 +164,7 @@
   }
   
   .search-box {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
     margin-bottom: 1rem;
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: var(--radius-s);
-    background: var(--background-primary);
-  }
-  
-  .search-box input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    color: var(--text-normal);
-    font-size: 0.875rem;
   }
   
   .icon-section {

@@ -55,26 +55,32 @@ describe("FieldComboInput (#093 picker affordance)", () => {
     m.destroy();
   });
 
-  test("datalist lists every field; input is associated for label `for`", () => {
+  // stab-forms: the native <datalist> is gone; the shared listbox lists every field.
+  test("the listbox lists every field; input is associated for label `for`", async () => {
     const m = mount({ value: "" });
-    expect(m.target.querySelectorAll("datalist option")).toHaveLength(FIELDS.length);
+    m.input?.focus();
+    await tick();
+    expect(document.querySelectorAll('[role="listbox"] [role="option"]')).toHaveLength(FIELDS.length);
+    expect(m.target.querySelector("datalist")).toBeNull();
     expect(m.input?.id).toBe("fl-test-input");
     m.destroy();
   });
 
-  test("change event dispatches the current value", () => {
+  // stab-forms: there is no native `change`; leaving the field commits the typed name.
+  test("blur dispatches the current value", () => {
     const m = mount({ value: "" });
     if (m.input) {
+      m.input.focus();
       m.input.value = "mrr";
       m.input.dispatchEvent(new Event("input", { bubbles: true }));
-      m.input.dispatchEvent(new Event("change", { bubbles: true }));
+      m.input.blur();
     }
     expect(m.changes).toContain("mrr");
     m.destroy();
   });
 });
 
-describe("FieldComboInput — a datalist pick is accepted at once", () => {
+describe("FieldComboInput — a pick is accepted at once", () => {
   const pick = (input: HTMLInputElement, value: string, inputType?: string) => {
     input.focus();
     input.value = value;
@@ -84,20 +90,32 @@ describe("FieldComboInput — a datalist pick is accepted at once", () => {
     input.dispatchEvent(event);
   };
 
-  test("picking an existing field commits without waiting for blur, and only once", () => {
+  // stab-forms: a pick is a press on a listbox option, not a native datalist input event.
+  test("picking an existing field commits without waiting for blur, and only once", async () => {
     const m = mount({ value: "" });
     const input = m.input as HTMLInputElement;
-    pick(input, "deadline", "insertReplacementText");
+    input.focus();
+    await tick();
+    const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      (o) => o.textContent === "deadline"
+    ) as HTMLElement;
+    option.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
     expect(m.changes).toEqual(["deadline"]);
-    // The blur's change after the pick writes nothing more.
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    // The click that ends the tap and the blur after it write nothing more.
+    option.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    input.blur();
     expect(m.changes).toEqual(["deadline"]);
     m.destroy();
   });
 
-  test("a pick reported as a plain input event (no inputType) also commits", () => {
+  test("a pick by touch (a click with no press) also commits", async () => {
     const m = mount({ value: "" });
-    pick(m.input as HTMLInputElement, "mrr");
+    (m.input as HTMLInputElement).focus();
+    await tick();
+    const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      (o) => o.textContent === "mrr"
+    ) as HTMLElement;
+    option.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     expect(m.changes).toEqual(["mrr"]);
     m.destroy();
   });
@@ -108,7 +126,7 @@ describe("FieldComboInput — a datalist pick is accepted at once", () => {
     pick(input, "mr", "insertText");
     pick(input, "mrr", "insertText");
     expect(m.changes).toEqual([]);
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.blur();
     expect(m.changes).toEqual(["mrr"]);
     m.destroy();
   });

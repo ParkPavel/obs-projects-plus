@@ -1,7 +1,10 @@
 ﻿<script lang="ts">
-  import { createEventDispatcher, tick, onDestroy } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import { setIcon, type TFile } from 'obsidian';
   import { Icon } from 'obsidian-svelte';
+  import FloatingPopup from 'src/ui/components/FloatingPopup/FloatingPopup.svelte';
+  import PopoverList, { type PopoverItem } from 'src/ui/components/FloatingPopup/PopoverList.svelte';
+  import ValueSuggestField from 'src/ui/components/fields/ValueSuggestField.svelte';
   import { i18n } from 'src/lib/stores/i18n';
   import { app } from 'src/lib/stores/obsidian';
   import { DataFieldType, type DataField, type DataRecord } from 'src/lib/dataframe/dataframe';
@@ -25,29 +28,24 @@
   /* в”Ђв”Ђ State в”Ђв”Ђ */
   let showFieldDropdown = false;
   let showOperatorDropdown = false;
-  let fieldSearch = '';
-  let fieldWrapperEl: HTMLDivElement;
+  let fieldWrapperEl: HTMLDivElement | null = null;
   let operatorWrapperEl: HTMLDivElement;
-  let valueInputEl: HTMLInputElement;
 
   /* в”Ђв”Ђ Imperative dropdown containers (portaled to body) в”Ђв”Ђ */
-  let fieldPopoverEl: HTMLDivElement | null = null;
   let operatorPopoverEl: HTMLDivElement | null = null;
-  let valuePopoverEl: HTMLDivElement | null = null;
-  let showValueDropdown = false;
-  let valueSelectedIdx = 0;
 
   /* в”Ђв”Ђ Reactive data в”Ђв”Ђ */
   $: currentField = fields.find(f => f.name === filter.field);
   $: operators = currentField ? getOperatorsForFieldType(currentField.type) : [];
   $: needsValue = operatorNeedsValue(filter.operator);
   $: isDateField = currentField?.type === DataFieldType.Date;
-  $: filteredFields = fieldSearch.trim()
-    ? fields.filter(f => f.name.toLowerCase().includes(fieldSearch.trim().toLowerCase()))
-    : fields;
-
-  let fieldSelectedIdx = 0;
-  $: if (filteredFields) fieldSelectedIdx = 0;
+  // The field list is the shared PopoverList (search, arrows, Enter, touch).
+  $: fieldItems = fields.map((f): PopoverItem => ({
+    label: f.name,
+    icon: getFieldIconName(f),
+    selected: f.name === filter.field,
+    handler: () => selectField(f.name),
+  }));
 
   /* в”Ђв”Ђ Icon helper в”Ђв”Ђ */
   function getFieldIconName(field: DataField | undefined): string {
@@ -192,124 +190,7 @@
   }
 
   /* в”Ђв”Ђ FIELD DROPDOWN в”Ђв”Ђ */
-  function renderFieldPopover() {
-    destroyFieldPopover();
-    const chip = fieldWrapperEl?.querySelector('.chip') as HTMLElement;
-    if (!chip) return;
-
-    const container = activeDocument.createElement('div');
-    container.addClass('ppp-popover-container');
-    container.classList.add('ppp-filter-popover');
-    positionContainer(container, chip, 16.25);
-
-    // Search bar
-    const searchBar = activeDocument.createElement('div');
-    searchBar.addClass('ppp-popover-search');
-    const searchIcon = activeDocument.createElement('span');
-    setIcon(searchIcon, 'search');
-    searchBar.appendChild(searchIcon);
-    const searchInput = activeDocument.createElement('input');
-    searchInput.addClass('ppp-popover-search-input');
-    searchInput.type = 'text';
-    searchInput.placeholder = t('field-placeholder') || 'Search fields...';
-    searchInput.autocomplete = 'off';
-    searchInput.spellcheck = false;
-    searchBar.appendChild(searchInput);
-    container.appendChild(searchBar);
-
-    // List
-    const list = activeDocument.createElement('div');
-    list.addClass('ppp-popover-list');
-    container.appendChild(list);
-
-    function renderItems(searchText: string) {
-      list.empty();
-      const lower = searchText.trim().toLowerCase();
-      const filtered = lower
-        ? fields.filter(f => f.name.toLowerCase().includes(lower))
-        : fields;
-
-      if (filtered.length === 0) {
-        const empty = activeDocument.createElement('div');
-        empty.addClass('ppp-popover-empty');
-        empty.textContent = t('no-value') || 'No results';
-        list.appendChild(empty);
-        return;
-      }
-
-      filtered.forEach(f => {
-        const btn = activeDocument.createElement('button');
-        const isSelected = f.name === filter.field;
-        btn.addClass('ppp-popover-item');
-        if (isSelected) btn.addClass('ppp-popover-item--selected');
-        btn.type = 'button';
-
-        // Icon
-        const iconSpan = activeDocument.createElement('span');
-        iconSpan.addClass('ppp-popover-item-icon');
-        const iconName = getFieldIconName(f);
-        setIcon(iconSpan, iconName);
-        btn.appendChild(iconSpan);
-
-        // Label
-        const label = activeDocument.createElement('span');
-        label.addClass('ppp-popover-label');
-        label.textContent = f.name;
-        btn.appendChild(label);
-
-        // Check mark
-        if (isSelected) {
-          const check = activeDocument.createElement('span');
-          check.addClass('ppp-popover-item-icon');
-          setIcon(check, 'check');
-          btn.appendChild(check);
-        }
-
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          selectField(f.name);
-        });
-        list.appendChild(btn);
-      });
-    }
-
-    renderItems('');
-
-    searchInput.addEventListener('input', () => {
-      renderItems(searchInput.value);
-    });
-    searchInput.addEventListener('keydown', (e) => {
-      const items = list.querySelectorAll('button');
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        fieldSelectedIdx = Math.min(fieldSelectedIdx + 1, items.length - 1);
-        items[fieldSelectedIdx]?.scrollIntoView({ block: 'nearest' });
-        items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === fieldSelectedIdx));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        fieldSelectedIdx = Math.max(fieldSelectedIdx - 1, 0);
-        items[fieldSelectedIdx]?.scrollIntoView({ block: 'nearest' });
-        items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === fieldSelectedIdx));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        (items[fieldSelectedIdx] as HTMLElement)?.click();
-      } else if (e.key === 'Escape') {
-        closeFieldDropdown();
-      }
-    });
-
-    activeDocument.body.appendChild(container);
-    fieldPopoverEl = container;
-    searchInput.focus();
-  }
-
-  function destroyFieldPopover() {
-    if (fieldPopoverEl) {
-      if ((fieldPopoverEl as any).__vvCleanup) (fieldPopoverEl as any).__vvCleanup();
-      fieldPopoverEl.parentNode?.removeChild(fieldPopoverEl);
-    }
-    fieldPopoverEl = null;
-  }
+  // The field list is a FloatingPopup around PopoverList (see the markup).
 
   /* в”Ђв”Ђ OPERATOR DROPDOWN в”Ђв”Ђ */
   function renderOperatorPopover() {
@@ -365,14 +246,9 @@
   }
 
   /* в”Ђв”Ђ Toggle functions в”Ђв”Ђ */
-  async function openFieldDropdown() {
+  function openFieldDropdown() {
     closeOperatorDropdown();
-    if (showFieldDropdown) { closeFieldDropdown(); return; }
-    fieldSearch = '';
-    fieldSelectedIdx = 0;
-    showFieldDropdown = true;
-    await tick();
-    renderFieldPopover();
+    showFieldDropdown = !showFieldDropdown;
   }
 
   function openOperatorDropdown() {
@@ -384,7 +260,6 @@
 
   function closeFieldDropdown() {
     showFieldDropdown = false;
-    destroyFieldPopover();
   }
 
   function closeOperatorDropdown() {
@@ -392,29 +267,18 @@
     destroyOperatorPopover();
   }
 
-  /* Close dropdowns on outside click */
+  /* Close the operator dropdown on an outside click (the field list and the
+     value suggestions close themselves). */
   function handleWindowMousedown(e: MouseEvent) {
     const target = e.target as Node;
-    if (showFieldDropdown && fieldWrapperEl && !fieldWrapperEl.contains(target)
-        && (!fieldPopoverEl || !fieldPopoverEl.contains(target))) {
-      closeFieldDropdown();
-    }
     if (showOperatorDropdown && operatorWrapperEl && !operatorWrapperEl.contains(target)
         && (!operatorPopoverEl || !operatorPopoverEl.contains(target))) {
       closeOperatorDropdown();
     }
-    if (showValueDropdown && valueInputEl && !valueInputEl.contains(target)
-        && (!valuePopoverEl || !valuePopoverEl.contains(target))) {
-      closeValueDropdown();
-    }
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      closeFieldDropdown();
-      closeOperatorDropdown();
-      closeValueDropdown();
-    }
+    if (e.key === 'Escape') closeOperatorDropdown();
   }
 
   /* в”Ђв”Ђ Selection handlers в”Ђв”Ђ */
@@ -436,14 +300,14 @@
     closeOperatorDropdown();
   }
   
-  function handleValueInput(e: Event) {
-    const val = (e.target as HTMLInputElement).value;
+  // The value the parent was last given. An edit reports it as the user types and the
+  // commit that settles it (Enter, a pick, blur) carries the same text: one write.
+  let sentValue = '';
+  $: sentValue = String(filter.value ?? '');
+  function sendValue(val: string) {
+    if (val === sentValue) return;
+    sentValue = val;
     dispatch('update', { ...filter, value: val });
-    // Re-compute suggestions if stale, then show filtered list
-    if (valueSuggestions.length === 0) {
-      valueSuggestions = getValueSuggestions();
-    }
-    showValueSuggestions(val);
   }
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DateFormulaInput dispatches string via CustomEvent
@@ -542,154 +406,17 @@
     return sorted.length > MAX_SUGGESTIONS ? sorted.slice(0, MAX_SUGGESTIONS) : sorted;
   }
   
-  // Declare valueSuggestions, then reactively recompute when deps change
-  let valueSuggestions: string[] = [];
-  $: if (currentField || records || $app) {
-    valueSuggestions = getValueSuggestions();
-  }
-
-  /* в”Ђв”Ђ VALUE SUGGESTIONS POPOVER в”Ђв”Ђ */
-  function showValueSuggestions(inputText: string) {
-    if (valueSuggestions.length === 0 || !valueInputEl) {
-      closeValueDropdown();
-      return;
-    }
-    const q = (inputText ?? '').toLowerCase().trim();
-    const filtered = q
-      ? valueSuggestions.filter(s => s.toLowerCase().includes(q))
-      : valueSuggestions;
-    if (filtered.length === 0) {
-      closeValueDropdown();
-      return;
-    }
-    showValueDropdown = true;
-    valueSelectedIdx = 0;
-    renderValuePopover(filtered);
-  }
-
-  function renderValuePopover(items: string[]) {
-    destroyValuePopover();
-    if (!valueInputEl || items.length === 0) return;
-
-    const container = activeDocument.createElement('div');
-    container.addClass('ppp-popover-container');
-    container.classList.add('ppp-filter-popover');
-    positionContainer(container, valueInputEl, 12.5);
-
-    const list = activeDocument.createElement('div');
-    list.addClass('ppp-popover-list');
-    container.appendChild(list);
-
-    items.forEach((val, idx) => {
-      const btn = activeDocument.createElement('button');
-      const isSelected = val === String(filter.value ?? '');
-      btn.addClass('ppp-popover-item');
-      if (isSelected) btn.addClass('ppp-popover-item--selected');
-      if (idx === valueSelectedIdx) btn.addClass('ppp-popover-item--hover');
-      btn.type = 'button';
-      btn.dataset['idx'] = String(idx);
-
-      const label = activeDocument.createElement('span');
-      label.addClass('ppp-popover-label');
-      label.textContent = val;
-      btn.appendChild(label);
-
-      if (isSelected) {
-        const check = activeDocument.createElement('span');
-        check.addClass('ppp-popover-item-icon');
-        setIcon(check, 'check');
-        btn.appendChild(check);
-      }
-
-      btn.addEventListener('mouseenter', () => {
-        valueSelectedIdx = idx;
-        const btns = list.querySelectorAll('button');
-        btns.forEach((b, i) => b.classList.toggle('ppp-popover-item--hover', i === idx));
-      });
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // prevent blur
-        selectValue(val);
-      });
-      list.appendChild(btn);
-    });
-
-    // Footer hint
-    const footer = activeDocument.createElement('div');
-    footer.addClass('ppp-popover-footer');
-    footer.createSpan({ text: 'в†‘в†“ РЅР°РІРёРіР°С†РёСЏ' });
-    footer.createSpan({ text: 'Enter вЂ” РІСЃС‚Р°РІРёС‚СЊ' });
-    footer.createSpan({ text: 'Esc вЂ” Р·Р°РєСЂС‹С‚СЊ' });
-    container.appendChild(footer);
-
-    activeDocument.body.appendChild(container);
-    valuePopoverEl = container;
-  }
-
-  function selectValue(val: string) {
-    dispatch('update', { ...filter, value: val });
-    closeValueDropdown();
-    // Update the input element directly
-    tick().then(() => {
-      if (valueInputEl) {
-        valueInputEl.value = val;
-        valueInputEl.focus();
-      }
-    });
-  }
-
-  function handleValueKeydown(e: KeyboardEvent) {
-    if (!showValueDropdown || !valuePopoverEl) return;
-    const items = valuePopoverEl.querySelectorAll('button');
-    if (items.length === 0) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      valueSelectedIdx = Math.min(valueSelectedIdx + 1, items.length - 1);
-      items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === valueSelectedIdx));
-      items[valueSelectedIdx]?.scrollIntoView({ block: 'nearest' });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      valueSelectedIdx = Math.max(valueSelectedIdx - 1, 0);
-      items.forEach((it, i) => it.classList.toggle('ppp-popover-item--hover', i === valueSelectedIdx));
-      items[valueSelectedIdx]?.scrollIntoView({ block: 'nearest' });
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      (items[valueSelectedIdx] as HTMLElement)?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      closeValueDropdown();
-    }
-  }
-
-  function handleValueFocus() {
-    // Re-compute suggestions eagerly on focus (in case reactive update hasn't fired yet)
-    valueSuggestions = getValueSuggestions();
-    if (valueSuggestions.length > 0) {
-      showValueSuggestions(String(filter.value ?? ''));
-    }
-  }
-
-  function handleValueBlur() {
-    // Delay to allow mousedown on popover items
-    setTimeout(() => closeValueDropdown(), 200);
-  }
-
-  function destroyValuePopover() {
-    if (valuePopoverEl) {
-      if ((valuePopoverEl as any).__vvCleanup) (valuePopoverEl as any).__vvCleanup();
-      valuePopoverEl.parentNode?.removeChild(valuePopoverEl);
-    }
-    valuePopoverEl = null;
-  }
-
-  function closeValueDropdown() {
-    showValueDropdown = false;
-    destroyValuePopover();
+  // The suggestions follow the field, the records and the vault; `currentField` is a
+  // new object on every edit of the row, so the key is its name: typing must not rescan
+  // the vault on each keystroke.
+  $: suggestionField = currentField?.name;
+  $: valueSuggestions = collectSuggestions(suggestionField, records, $app);
+  function collectSuggestions(_name: string | undefined, _records: DataRecord[], _app: unknown): string[] {
+    return getValueSuggestions();
   }
 
   onDestroy(() => {
-    destroyFieldPopover();
     destroyOperatorPopover();
-    destroyValuePopover();
   });
 </script>
 
@@ -747,16 +474,12 @@
           on:input={(e) => handleDateValue(e.detail)}
         />
       {:else}
-        <input
-          bind:this={valueInputEl}
-          class="value-input"
-          type="text"
-          value={filter.value ?? ''}
-          on:input={handleValueInput}
-          on:keydown={handleValueKeydown}
-          on:focus={handleValueFocus}
-          on:blur={handleValueBlur}
+        <ValueSuggestField
+          value={filter.value == null ? '' : String(filter.value)}
+          suggestions={valueSuggestions}
           placeholder={t('value-placeholder') || 'Value...'}
+          on:input={(e) => sendValue(e.detail)}
+          on:commit={(e) => sendValue(e.detail)}
         />
       {/if}
     {:else}
@@ -775,6 +498,18 @@
     <Icon name="trash-2" size="sm" />
   </button>
 </div>
+
+<FloatingPopup
+  triggerEl={fieldWrapperEl}
+  open={showFieldDropdown}
+  placement="bottom-start"
+  role="menu"
+  on:close={closeFieldDropdown}
+>
+  {#if showFieldDropdown}
+    <PopoverList items={fieldItems} searchable />
+  {/if}
+</FloatingPopup>
 
 <style>
   /* ROW — single inline horizontal row */
@@ -802,7 +537,7 @@
   }
   
   .filter-row--disabled .chip,
-  .filter-row--disabled .value-input,
+  .filter-row--disabled .value-area,
   .filter-row--disabled .no-value {
     pointer-events: none;
   }
@@ -887,28 +622,6 @@
     min-width: 5rem;
   }
   
-  .value-input {
-    width: 100%;
-    height: 1.625rem;
-    border: var(--ppp-border-width) solid var(--background-modifier-border);
-    border-radius: 0.375rem;
-    background: var(--background-primary);
-    color: var(--text-normal);
-    font-size: 0.8125rem;
-    font-family: var(--font-interface);
-    padding: 0 0.5rem;
-    transition: border-color 100ms ease;
-    box-sizing: border-box;
-  }
-  
-  .value-input::placeholder {
-    color: var(--text-faint);
-  }
-  
-  .value-input:focus {
-    border-color: var(--interactive-accent);
-  }
-  
   .no-value {
     display: inline-block;
     color: var(--text-faint);
@@ -989,11 +702,6 @@
       min-width: 0;
       flex-basis: 3.125rem;
       flex-grow: 1;
-    }
-    
-    .value-input {
-      height: 2.125rem;
-      font-size: 0.875rem;
     }
     
     .row-toggle {

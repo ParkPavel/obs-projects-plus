@@ -14,6 +14,7 @@
   import { getOperatorsForField, getOperatorLabel, getFieldIcon } from "./filterHelpers";
   import { operatorNeedsValue } from "src/settings/base/settings";
   import { COLOR_RULE_DEFAULT } from "src/lib/stores/palettes";
+  import ValueSuggestField from "src/ui/components/fields/ValueSuggestField.svelte";
 
   function inputVal(e: Event): string { return (e.target as HTMLInputElement)?.value ?? ''; }
 
@@ -119,6 +120,29 @@
     return [...vals].sort();
   }
 
+  // The suggestions of a field are read from every record and a row re-renders
+  // on each edit: computed once per field for one set of records.
+  let suggestionsOf: DataRecord[] | null = null;
+  let suggestionCache = new Map<string, string[]>();
+  function suggestionsFor(fieldName: string, source: DataRecord[]): string[] {
+    if (source !== suggestionsOf) {
+      suggestionsOf = source;
+      suggestionCache = new Map();
+    }
+    let hit = suggestionCache.get(fieldName);
+    if (!hit) {
+      hit = getValueSuggestions(fieldName);
+      suggestionCache.set(fieldName, hit);
+    }
+    return hit;
+  }
+
+  /** The typed or picked value; the commit that follows an edit with the same text writes nothing. */
+  function setRuleValue(index: number, next: string): void {
+    if (local.conditions[index]?.condition.value === next) return;
+    updateNestedCondition(index, { value: next });
+  }
+
   // ═══════════════════════════════
   // FloatingPopup-backed dropdowns (#034.2a)
   // ═══════════════════════════════
@@ -157,24 +181,6 @@
         label: getOperatorLabel(op),
         selected: op === cond.operator,
         handler: () => updateNestedCondition(index, { operator: op, value: operatorNeedsValue(op) ? (cond.value ?? '') : '' }),
-      })),
-    };
-  }
-
-  function openValPop(index: number, anchor: HTMLElement) {
-    const cond = local.conditions[index]!.condition;
-    const all = getValueSuggestions(cond.field);
-    const q = String(cond.value ?? '').toLowerCase().trim();
-    const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
-    if (filtered.length === 0) { activePopover = null; return; }
-    activePopover = {
-      anchorEl: anchor,
-      // input retains focus so user can keep typing to narrow suggestions
-      autoFocus: false,
-      items: filtered.map((v) => ({
-        label: v,
-        selected: v === String(cond.value ?? ''),
-        handler: () => updateNestedCondition(index, { value: v }),
       })),
     };
   }
@@ -251,11 +257,13 @@
           <!-- Value -->
           <div class="value-area">
             {#if needsVal}
-              <input class="value-input" type="text"
+              <ValueSuggestField
                 value={cond.value ?? ''}
-                on:input={(e) => updateNestedCondition(index, { value: inputVal(e) })}
-                on:focus={(e) => openValPop(index, e.currentTarget)}
-                placeholder={$i18n.t('common.value-placeholder')} />
+                suggestions={suggestionsFor(cond.field, records)}
+                placeholder={$i18n.t('common.value-placeholder')}
+                ariaLabel={$i18n.t('common.value-placeholder')}
+                on:input={(e) => setRuleValue(index, e.detail)}
+                on:commit={(e) => setRuleValue(index, e.detail)} />
             {:else}
               <span class="no-value">—</span>
             {/if}
@@ -312,7 +320,7 @@
   .color-row:hover .row-toggle { opacity: 1; }
   .color-row--disabled { opacity: 0.5; }
   .color-row--disabled .chip,
-  .color-row--disabled .value-input,
+  .color-row--disabled .value-area,
   .color-row--disabled .color-swatch { pointer-events: none; }
   .color-row--drag-over { border-top: 0.125rem solid var(--interactive-accent); border-radius: 0; }
   .row-drag { cursor: grab; opacity: 0; transition: opacity 100ms ease; }
@@ -363,16 +371,6 @@
   .chip-chevron { display: inline-flex; align-items: center; color: var(--text-faint); margin-left: 0.125rem; }
 
   .value-area { flex: 1; min-width: 3.75rem; }
-  .value-input {
-    width: 100%; height: 1.625rem;
-    border: var(--ppp-border-width) solid var(--background-modifier-border); border-radius: 0.375rem;
-    background: var(--background-primary); color: var(--text-normal);
-    font-size: 0.8125rem; font-family: var(--font-interface);
-    padding: 0 0.5rem; outline: none; box-sizing: border-box;
-    transition: border-color 100ms ease;
-  }
-  .value-input::placeholder { color: var(--text-faint); }
-  .value-input:focus { border-color: var(--interactive-accent); }
   .no-value { color: var(--text-faint); font-size: 0.75rem; font-style: italic; padding: 0 0.5rem; }
 
   .row-btn {
@@ -415,7 +413,6 @@
       transform: translate(-50%, -50%);
     }
     .chip { height: 2rem; padding: 0 0.625rem; font-size: 0.875rem; }
-    .value-input { height: 2rem; font-size: 0.875rem; }
     .row-btn { opacity: 1; padding: 0.375rem; }
     .add-btn { min-height: 2.5rem; font-size: 0.875rem; }
   }

@@ -2150,6 +2150,8 @@
             "intro": "Start with the demo — three linked projects show tables, boards, calendars, charts and computation across them — or create your own project."
         },
         "common": {
+            "clear": "Clear",
+            "search": "Search",
             "yesterday": "Yesterday",
             "tomorrow": "Tomorrow",
             "close": "Close",

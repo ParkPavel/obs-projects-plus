@@ -1,10 +1,16 @@
 <script lang="ts">
   /**
    * CellChoiceDropdown — F2.2 (TABLE_V2_CANON §3). Select/Status in-place
-   * editor: search input + filtered option list. Option creation UX
-   * (colored "Create …" row) lands with the header property editor in F2.4.
+   * editor: a text input with a suggestion listbox. Option creation UX (colored
+   * "Create …" row) lands with the header property editor in F2.4.
+   *
+   * stab-forms: the input and list are the shared ComboField. An IME candidate's
+   * Enter no longer commits, and there is no delayed blur commit that could land
+   * after a pick: Enter, a pick and blur commit once, Escape cancels. A blur that
+   * changed nothing is still reported, so the cell leaves edit mode.
    */
-  import { createEventDispatcher, tick } from "svelte";
+  import { createEventDispatcher } from "svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
 
   export let draft: string;
   export let options: string[] = [];
@@ -14,45 +20,26 @@
     cancel: void;
   }>();
 
-  let inputEl: HTMLInputElement | null = null;
-  void tick().then(() => inputEl?.focus());
+  // The text the editor opened with; the field owns every edit after that and
+  // reports it through `draft`, so the parent's bound draft never feeds back in.
+  const initial = draft;
 
-  $: filtered = options.filter(
-    (o) => draft.trim() === "" || o.toLowerCase().includes(draft.trim().toLowerCase())
-  );
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      dispatch("commit", draft);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      dispatch("cancel");
-    }
-  }
+  $: choices = options.map((o) => ({ id: o, label: o }));
 </script>
 
 <div class="ppp-t2-choice">
-  <input
-    bind:this={inputEl}
-    class="ppp-t2-choice-input"
-    type="text"
-    bind:value={draft}
-    on:keydown={handleKeydown}
-    on:blur={() => setTimeout(() => dispatch("commit", draft), 150)}
+  <ComboField
+    value={initial}
+    options={choices}
+    allowCustom
+    commitUnchanged
+    focusOnMount
+    inputClass="ppp-t2-choice-input"
+    optionClass="ppp-t2-choice-item"
+    on:draftChange={(e) => (draft = e.detail)}
+    on:commit={(e) => dispatch("commit", e.detail.value)}
+    on:cancel={() => dispatch("cancel")}
   />
-  {#if filtered.length > 0}
-    <div class="ppp-t2-choice-list" role="listbox">
-      {#each filtered as opt (opt)}
-        <button
-          class="ppp-t2-choice-item"
-          role="option"
-          aria-selected={opt === draft}
-          on:mousedown|preventDefault={() => dispatch("commit", opt)}
-        >{opt}</button>
-      {/each}
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -61,46 +48,15 @@
     position: relative;
   }
 
-  .ppp-t2-choice-input {
+  .ppp-t2-choice :global(.ppp-t2-choice-input) {
     width: 100%;
     min-width: 0;
     border: none;
     background: transparent;
+    box-shadow: none;
     font-size: var(--font-ui-small);
     color: var(--text-normal);
     outline: none;
     padding: 0;
-  }
-
-  .ppp-t2-choice-list {
-    position: absolute;
-    top: calc(100% + 0.375rem);
-    left: -0.5rem;
-    min-width: 10rem;
-    max-height: 12rem;
-    overflow-y: auto;
-    background: var(--background-primary);
-    border: 0.0625rem solid var(--background-modifier-border);
-    border-radius: var(--radius-s, 0.25rem);
-    box-shadow: var(--ppp-shadow-md);
-    z-index: 3;
-    padding: 0.25rem;
-  }
-
-  .ppp-t2-choice-item {
-    display: block;
-    width: 100%;
-    padding: 0.25rem 0.5rem;
-    border: none;
-    background: transparent;
-    color: var(--text-normal);
-    font-size: var(--font-ui-small);
-    text-align: left;
-    border-radius: var(--radius-s, 0.25rem);
-    cursor: pointer;
-  }
-
-  .ppp-t2-choice-item:hover {
-    background: var(--background-modifier-hover);
   }
 </style>

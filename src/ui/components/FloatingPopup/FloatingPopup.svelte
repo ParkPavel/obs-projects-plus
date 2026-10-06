@@ -282,6 +282,10 @@
     const target = e.target as Node | null;
     if (!target) return;
     if (popupEl && popupEl.contains(target)) return;
+    // A suggestion list opened by a field inside this popup is portalled to the
+    // body, outside popupEl, but it belongs to the popup: a pick in it is not an
+    // outside press (the settings panel honours the same marker).
+    if ((target as Element).closest?.("[data-settings-dropdown]")) return;
     // Don't auto-close on trigger — let the trigger handle toggle.
     if (triggerEl && triggerEl.contains(target)) return;
     requestClose();

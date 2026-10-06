@@ -10,6 +10,8 @@
   import { createEventDispatcher } from "svelte";
   import { i18n } from "src/lib/stores/i18n";
   import WidgetConfigShell from "../_shared/WidgetConfigShell.svelte";
+  import ComboField from "src/ui/components/fields/ComboField.svelte";
+  import { namesToOptions } from "src/ui/components/fields/comboOptions";
 
   export let config: Record<string, unknown> = {};
   export let fields: DataField[] = [];
@@ -24,7 +26,7 @@
   $: field = (config["field"] as string) ?? "";
   $: tabs = ((config["tabs"] as FilterTabConfig[] | undefined) ?? []).slice();
   $: showAll = (config["showAll"] as boolean) ?? true;
-  $: fieldNames = fields.map((f) => f.name);
+  $: fieldOptions = namesToOptions(fields.map((f) => f.name));
 
   $: preview = source && field ? extractUnique(source, field) : [];
 
@@ -75,13 +77,14 @@
   on:close={() => dispatch("close")}
 >
   <div class="ppp-cfg-row">
+    <!-- svelte-ignore a11y-label-has-associated-control -->
     <label>
       {$i18n.t("views.dashboard.filter-tabs.config.field", { defaultValue: "Filter field" })}
-      <input
-        type="text"
-        list="ppp-ft-fields"
+      <ComboField
         value={field}
-        on:input={(e) => emit({ field: inputVal(e) })}
+        options={fieldOptions}
+        allowCustom
+        on:commit={(e) => emit({ field: e.detail.value })}
       />
     </label>
 
@@ -155,11 +158,6 @@
     + {$i18n.t("views.dashboard.filter-tabs.config.add", { defaultValue: "Add tab" })}
   </button>
 
-  <datalist id="ppp-ft-fields">
-    {#each fieldNames as name (name)}
-      <option value={name} />
-    {/each}
-  </datalist>
 </WidgetConfigShell>
 
 <style>
