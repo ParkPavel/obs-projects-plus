@@ -29,6 +29,7 @@ import { evaluateFormulaValue } from "./formulaEngine";
 import { isUnsafePattern, MAX_REGEX_PATTERN_LENGTH } from "src/lib/helpers/regexSafety";
 import { joinKey } from "./joinKey";
 import dayjs from "dayjs";
+import { parseStoredDate } from "src/lib/helpers/dateShape";
 
 /** Canonical step order for validation */
 const STEP_ORDER: Record<TransformStep["type"], number> = {
@@ -634,8 +635,10 @@ function executeFilter(
 function truncateDate(dateVal: DataValue | undefined | null, granularity: string): string {
   if (dateVal == null) return "__empty__";
 
-  const d = dateVal instanceof Date ? dateVal : dayjs(String(dateVal)).toDate();
-  if (isNaN(d.getTime())) return "__invalid__";
+  // The stored-date reading rule: written order, an impossible day is invalid.
+  const read = dateVal instanceof Date ? dateVal : parseStoredDate(String(dateVal));
+  const d = read === undefined ? dayjs(String(dateVal)).toDate() : read;
+  if (!d || isNaN(d.getTime())) return "__invalid__";
 
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
