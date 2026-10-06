@@ -171,3 +171,20 @@ describe("two edits built from the same earlier copy", () => {
     expect(get(dataFrame).records.find((r) => r.id === "a.md")!.values["source"]).toBe("new");
   });
 });
+
+describe("touched keys", () => {
+  it("a record built twice keeps both changes (a board move: column, then order)", async () => {
+    const { files, api } = setup(["a.md"]);
+    const original = get(dataFrame).records.find((r) => r.id === "a.md")!;
+    const moved = updateRecordValues(updateRecordValues(original, { source: "new" }), { price: 9 });
+    await api.updateRecords([moved], fields);
+    expect(files["a.md"]!.fm).toEqual({ source: "new", since: "10.04.2026", price: 9 });
+  });
+
+  it("a record the frame does not hold is written whole even when built with updateRecordValues", async () => {
+    const { files, api } = setup(["c.md"]);
+    await api.updateRecord(updateRecordValues(rec("c.md", { source: "x", since, price: 1 }), { price: 9 }), fields);
+    expect(files["c.md"]!.fm["source"]).toBe("x");
+    expect(files["c.md"]!.fm["price"]).toBe(9);
+  });
+});

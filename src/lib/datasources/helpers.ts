@@ -9,7 +9,7 @@ import {
 } from "../dataframe/dataframe";
 import { stripToPath as stripWikiLink } from "src/lib/engine/wikilink";
 import { toNumber } from "src/lib/engine/numeric";
-import { markTouched } from "src/lib/recordDiff";
+import { markTouched, touchedKeys } from "src/lib/recordDiff";
 
 /**
  * Parses the values for each record based on the detected field types.
@@ -128,7 +128,10 @@ export function updateRecordValues(
   record: Readonly<DataRecord>,
   values: Readonly<DataRecord["values"]>
 ): DataRecord {
-  return markTouched({ ...record, values: { ...record.values, ...values } }, Object.keys(values));
+  // A record built from an already changed one keeps both sets of keys (a
+  // board move sets the column, then the order).
+  const keys = new Set([...(touchedKeys(record) ?? []), ...Object.keys(values)]);
+  return markTouched({ ...record, values: { ...record.values, ...values } }, [...keys]);
 }
 
 export function detectFields(records: DataRecord[]): DataField[] {
