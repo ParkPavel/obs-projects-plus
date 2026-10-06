@@ -30,7 +30,8 @@
   import { updateRecordValues } from "src/lib/datasources/helpers";
   import { openContextMenu } from "src/lib/contextMenu";
   import { emitCommand } from "src/lib/stores/commandBus";
-  import { toRem } from "src/ui/utils/cssLength";
+  import { rootFontPx, toRem } from "src/ui/utils/cssLength";
+  import { trackViewport, type TableViewport } from "./tableWindow";
   import { buildRowMenuEntries, createNamedRecord, isRowDriving, toggleRowSelection } from "./tableRowOps";
   import { applySortPatch, applyHidePatch, applyCalculatePatch, applyWidthPatch, applyGroupPatch, toggleGroupCollapsed, optionPools } from "./tableHeaderOps";
   import {
@@ -105,15 +106,15 @@
   let bodyEl: HTMLDivElement | null = null;
   let scrollTop = 0;
   let viewportPx = 600;
-  $: rowPx = rowHeightRem * 16;
+  // Visible part: measured against the scrolling ancestors (in a tile, the page), see tableWindow.
+  $: rowPx = rowHeightRem * rootFontPx(bodyEl?.ownerDocument);
   $: start = Math.max(0, Math.floor(scrollTop / rowPx) - OVERSCAN);
   $: end = Math.min(renderRows.length, Math.ceil((scrollTop + viewportPx) / rowPx) + OVERSCAN);
   $: windowed = renderRows.slice(start, end);
 
-  function onScroll() {
-    if (!bodyEl) return;
-    scrollTop = bodyEl.scrollTop;
-    viewportPx = bodyEl.clientHeight;
+  function onViewport(v: TableViewport) {
+    scrollTop = v.scrollTop;
+    viewportPx = v.viewportPx;
   }
 
   // ── Editing (F2.2): one in-place editor per table ────────────
@@ -188,7 +189,7 @@
   />
   <!-- UT-R2 #083: ONE scroll container for header+rows+footer — horizontal
        scroll moves them as a unit; header/footer stay sticky vertically. -->
-  <div class="ppp-t2-scroll" bind:this={bodyEl} on:scroll={onScroll} role="rowgroup">
+  <div class="ppp-t2-scroll" bind:this={bodyEl} use:trackViewport={onViewport} role="rowgroup">
     <div class="ppp-t2-table">
       <TableHeader
         {columns}
