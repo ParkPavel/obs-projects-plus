@@ -27,7 +27,7 @@ export function duplicateRecord(
   api: ViewApi
 ): void {
   const copy = createDataRecord(`${recordBaseName(record)} (copy)`, project, { ...record.values });
-  api.addRecord(copy, fields, "");
+  void api.addRecord(copy, fields, "");
 }
 
 export function createNamedRecord(
@@ -36,7 +36,7 @@ export function createNamedRecord(
   fields: DataField[],
   api: ViewApi
 ): void {
-  api.addRecord(createDataRecord(name, project), fields, "");
+  void api.addRecord(createDataRecord(name, project), fields, "");
 }
 
 // ── Selection Bus driver (R3 — Table V2 finally drives linked blocks) ──
