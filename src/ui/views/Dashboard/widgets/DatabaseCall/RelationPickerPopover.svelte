@@ -107,7 +107,7 @@
       <span class="ppp-rel-picker-hint">…</span>
     {:else if filtered.length === 0}
       {#if !hasTargetProject && candidates.length === 0}
-        <button class="ppp-rel-picker-setup" on:mousedown|preventDefault={() => dispatch("setupRelation")}>{$i18n.t("relation-setup.open", { defaultValue: "Link database…" })}</button>
+        <button class="ppp-rel-picker-setup" on:mousedown|preventDefault on:click={() => dispatch("setupRelation")}>{$i18n.t("relation-setup.open", { defaultValue: "Link database…" })}</button>
       {:else}
         <span class="ppp-rel-picker-hint">{$i18n.t("views.dashboard.table-v2.relation-empty", { defaultValue: "No records to link" })}</span>
       {/if}
@@ -120,7 +120,8 @@
           role="option"
           aria-selected={selected.has(label)}
           use:reveal={i === activeIdx}
-          on:mousedown|preventDefault={() => choose(label)}
+          on:mousedown|preventDefault
+          on:click={() => choose(label)}
         >
           {#if multi}
             <input type="checkbox" checked={selected.has(label)} tabindex="-1" />
@@ -133,11 +134,11 @@
   <div class="ppp-rel-picker-actions">
     {#if multi}
       <span class="ppp-rel-picker-count">{selected.size}</span>
-      <button class="ppp-rel-picker-done mod-cta" on:mousedown|preventDefault={() => commitSelection([...selected])}>
+      <button class="ppp-rel-picker-done mod-cta" on:mousedown|preventDefault on:click={() => commitSelection([...selected])}>
         {$i18n.t("views.dashboard.table-v2.relation-done", { defaultValue: "Done" })}
       </button>
     {/if}
-    <button class="ppp-rel-picker-cancel" on:mousedown|preventDefault={() => dispatch("cancel")}>
+    <button class="ppp-rel-picker-cancel" on:mousedown|preventDefault on:click={() => dispatch("cancel")}>
       {$i18n.t("views.dashboard.table-v2.relation-cancel", { defaultValue: "Cancel" })}
     </button>
   </div>
