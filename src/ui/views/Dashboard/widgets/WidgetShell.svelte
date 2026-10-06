@@ -324,23 +324,13 @@
     font-size: var(--font-ui-smaller);
   }
 
-  /* DG-9 lazy-render skeleton */
+  /* DG-9 lazy-render skeleton. Static on purpose: it stands for as long as a
+     tile is below the fold, and a background-position shimmer is not composited,
+     so it cost a style recalc per frame for every such tile while idle. */
   .ppp-widget-skeleton {
     flex: 1;
     min-height: 4rem;
-    background: linear-gradient(
-      90deg,
-      var(--background-modifier-border) 25%,
-      var(--background-secondary-alt, var(--background-secondary)) 50%,
-      var(--background-modifier-border) 75%
-    );
-    background-size: 200% 100%;
-    animation: ppp-shimmer 1.4s infinite linear;
+    background: var(--background-secondary-alt, var(--background-secondary));
     border-radius: var(--radius-s, 0.25rem);
-  }
-
-  @keyframes ppp-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
   }
 </style>

@@ -19,6 +19,7 @@
   import { dragHandleZone, SOURCES, TRIGGERS, type DndEvent } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
+  import { createReorderCollapse, type ReorderCollapse } from "./reorderCollapse";
 
   import WidgetHost from "./widgets/WidgetHost.svelte";
   import DashboardBlockPalette from "./widgets/DashboardBlockPalette.svelte";
@@ -63,17 +64,27 @@
   // that started no drag, this disarms the zone through the one public route
   // the library listens to: a `consider` it reads as "keyboard drag stopped".
   // That event is ours, never a reorder, and the forwarding handlers drop it.
+  //
+  // The same press collapses every tile to its header (reorderCollapse.ts), so
+  // a tall tile cannot block the drag. It runs in the capture phase, before the
+  // library measures on the first move, and ends on `finalize` or on that same
+  // tap release.
   const GRIP_SELECTOR = ".ppp-widget-grip";
   const disarmEvents = new WeakSet<Event>();
+  let reordering = false;
+  let collapse: ReorderCollapse | null = null;
 
   function disarmAfterGripTap(node: HTMLElement) {
     let pressed = false;
     let dragStarted = false;
+    const tiles = createReorderCollapse(node, (on) => (reordering = on));
+    collapse = tiles;
 
     function onPress(e: Event) {
       if (!(e.target instanceof Element) || !e.target.closest(GRIP_SELECTOR)) return;
       pressed = true;
       dragStarted = false;
+      tiles.begin(e.target);
     }
     function onConsider(e: Event) {
       // A real `consider` means a drag is under way; the library itself
@@ -84,6 +95,7 @@
       if (!pressed) return;
       pressed = false;
       if (dragStarted) return;
+      tiles.end(false);
       const detail: DndEvent<WidgetDefinition> = {
         items: dndWidgets,
         info: { trigger: TRIGGERS.DRAG_STOPPED, id: "", source: SOURCES.KEYBOARD },
@@ -108,8 +120,15 @@
         window.removeEventListener("mouseup", onRelease);
         window.removeEventListener("touchend", onRelease);
         window.removeEventListener("touchcancel", onRelease);
+        tiles.dispose();
+        if (collapse === tiles) collapse = null;
       },
     };
+  }
+
+  function onFinalize(e: CustomEvent<DndEvent<WidgetDefinition>>) {
+    dispatch("finalize", e.detail);
+    collapse?.end(true);
   }
 
   function forwardConsider(e: CustomEvent<DndEvent<WidgetDefinition>>) {
@@ -140,11 +159,12 @@
        the dashboard instead of opening Obsidian's drawers. -->
   <div
     class="ppp-database-canvas ppp-database-canvas--stack"
+    class:ppp-database-canvas--reordering={reordering}
     use:dragHandleZone={{ items: dndWidgets, flipDurationMs: 200, type: "widgets" }}
     use:disarmAfterGripTap
     use:ignoreHostSwipe
     on:consider={forwardConsider}
-    on:finalize={(e) => dispatch("finalize", e.detail)}
+    on:finalize={onFinalize}
   >
     {#each dndWidgets as widget (widget.id)}
       <WidgetHost
@@ -229,6 +249,12 @@
     display: flex;
     justify-content: center;
     padding: var(--ppp-space-2, 0.25rem);
+  }
+
+  /* Reorder state: a held grip leaves every tile as its header, so the list
+     fits the viewport. Hidden, not unmounted — nothing is rebuilt on release. */
+  .ppp-database-canvas--reordering :global(.ppp-widget-host > :not(.ppp-widget-header)) {
+    display: none;
   }
 
   /* DG-8 drop target: dashed outline + subtle fill on svelte-dnd-action placeholder */
