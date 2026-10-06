@@ -9,6 +9,8 @@
   import { createEventDispatcher } from "svelte";
   import { Icon } from "obsidian-svelte";
   import { i18n } from "src/lib/stores/i18n";
+  import SearchField from "src/ui/components/fields/SearchField.svelte";
+  import { isImeKey } from "src/ui/components/fields/draftController";
   import type { DataTableSortCriteria } from "../../types";
 
   export let sortCriteria: DataTableSortCriteria[] = [];
@@ -23,16 +25,23 @@
   }>();
 
   let searchOpen = false;
-  let searchEl: HTMLInputElement | null = null;
 
   function toggleSearch() {
     searchOpen = !searchOpen;
     if (!searchOpen) {
       searchQuery = "";
       dispatch("search", "");
-    } else {
-      setTimeout(() => searchEl?.focus(), 0);
     }
+  }
+
+  function setQuery(next: string) {
+    searchQuery = next;
+    dispatch("search", next);
+  }
+
+  // Escape closes the search, but not while an IME composition owns the key.
+  function onSearchKeydown(e: KeyboardEvent) {
+    if (!isImeKey(e) && e.key === "Escape") toggleSearch();
   }
 </script>
 
@@ -54,16 +63,16 @@
   <span class="ppp-t2-cb-spacer" />
 
   {#if searchOpen}
-    <input
-      bind:this={searchEl}
-      class="ppp-t2-cb-search"
-      type="search"
-      bind:value={searchQuery}
-      placeholder={$i18n.t("views.dashboard.table-v2.search-placeholder", { defaultValue: "Search…" })}
-      aria-label={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
-      on:input={() => dispatch("search", searchQuery)}
-      on:keydown={(e) => { if (e.key === "Escape") toggleSearch(); }}
-    />
+    <div class="ppp-t2-cb-search">
+      <SearchField
+        query={searchQuery}
+        focusOnMount
+        placeholder={$i18n.t("views.dashboard.table-v2.search-placeholder", { defaultValue: "Search…" })}
+        ariaLabel={$i18n.t("views.dashboard.table-v2.search", { defaultValue: "Search records" })}
+        on:queryChange={(e) => setQuery(e.detail)}
+        on:keydown={onSearchKeydown}
+      />
+    </div>
   {/if}
   <button
     class="ppp-t2-cb-btn clickable-icon"
@@ -125,9 +134,8 @@
   }
 
   .ppp-t2-cb-search {
-    height: 1.75rem;
+    min-width: 0;
     max-width: 14rem;
-    font-size: var(--font-ui-small);
   }
 
   .ppp-t2-cb-btn {

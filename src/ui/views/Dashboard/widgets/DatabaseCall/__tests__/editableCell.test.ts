@@ -175,7 +175,8 @@ describe("select cell (CellChoiceDropdown)", () => {
     await typeInto(el, "Doi");
     await tick();
     expect(el.value).toBe("Doi");
-    const items = Array.from(container.querySelectorAll<HTMLButtonElement>(".ppp-t2-choice-item"));
+    // stab-forms: the options are the shared listbox, portalled to the body.
+    const items = Array.from(document.querySelectorAll<HTMLButtonElement>(".ppp-t2-choice-item"));
     expect(items.map((b) => b.textContent)).toEqual(["Doing"]);
 
     items[0]?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));

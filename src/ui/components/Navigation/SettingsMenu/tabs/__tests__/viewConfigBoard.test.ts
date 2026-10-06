@@ -72,7 +72,7 @@ afterEach(() => {
 });
 
 describe("cards-g4 — board settings offer thumbnails", () => {
-  it("a config without the keys reads as none and no cover field, and emits nothing", () => {
+  it("a config without the keys reads as none and no cover field, and emits nothing", async () => {
     const m = mount();
     expect(m.layout()).not.toBeNull();
     expect(m.layout().value).toBe("none");
@@ -86,9 +86,10 @@ describe("cards-g4 — board settings offer thumbnails", () => {
     expect(m.cover()).not.toBeNull();
     expect(m.cover().value).toBe("");
     // The cover picker offers the text fields, as the gallery's does.
-    const options = Array.from(m.target.querySelectorAll("datalist#fieldlist-cover-board option")).map((o) =>
-      o.getAttribute("value")
-    );
+    // stab-forms: the suggestions are the shared listbox, not a native datalist.
+    m.cover().focus();
+    await tick();
+    const options = Array.from(document.querySelectorAll('[role="listbox"] [role="option"]')).map((o) => o.textContent);
     expect(options).toEqual(["status", "cover"]);
     expect(m.updates).toEqual([]);
     m.destroy();
