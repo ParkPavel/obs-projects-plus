@@ -9,6 +9,7 @@ import {
 } from "../dataframe/dataframe";
 import { stripToPath as stripWikiLink } from "src/lib/engine/wikilink";
 import { toNumber } from "src/lib/engine/numeric";
+import { parseStoredDate } from "src/lib/helpers/dateShape";
 import { markTouched, touchedKeys } from "src/lib/recordDiff";
 
 /**
@@ -34,7 +35,15 @@ export function parseRecords(
       switch (field.type) {
         case DataFieldType.Date:
           if (typeof value === "string") {
-            record.values[field.name] = dayjs(value).toDate();
+            // A date is read in the order it is written: `10.04.2026` is the
+            // 10th of April, not what `Date()` makes of it (the 4th of October).
+            // A spelling nobody here knows is left to dayjs, as before. A known
+            // spelling that names no day (`2024-02-30`) stays the original
+            // string: it stays visible and editable instead of being rolled
+            // over to another day or erased.
+            const stored = parseStoredDate(value);
+            if (stored === undefined) record.values[field.name] = dayjs(value).toDate();
+            else if (stored !== null) record.values[field.name] = stored;
           }
           // Date objects from YAML parser are already Date — keep as-is
           break;

@@ -75,6 +75,19 @@ function isCalendarDay(year: string, month: string, day: string): boolean {
   return d <= last;
 }
 
+/**
+ * The order a matched spelling is read in: month first unless the first part
+ * cannot be a month, which settles it as day first.
+ */
+function writtenOrder(s: Spelling, parts: readonly [string, string, string]): Order {
+  return s.order === "mdy" && (toNumber(parts[0]) ?? 0) > 12 ? "dmy" : s.order;
+}
+
+/** The three parts, as written, rearranged to year, month, day. */
+function inYmd(order: Order, parts: readonly [string, string, string]): [string, string, string] {
+  return order === "ymd" ? [parts[0], parts[1], parts[2]] : order === "dmy" ? [parts[2], parts[1], parts[0]] : [parts[2], parts[0], parts[1]];
+}
+
 interface StoredText {
   /** The stored day as `YYYY-MM-DD`. */
   readonly day: string;
@@ -96,10 +109,8 @@ function readStoredText(text: string): StoredText | null | undefined {
     // A stored time that is not a real clock time is not carried over: the
     // edited day is written without it rather than as an unparseable value.
     const tail = isClockTail(m[4] ?? "") ? m[4] ?? "" : "";
-    const order: Order = s.order === "mdy" && (toNumber(parts[0]) ?? 0) > 12 ? "dmy" : s.order;
-    const ordered: [string, string, string] =
-      order === "ymd" ? parts : order === "dmy" ? [parts[2], parts[1], parts[0]] : [parts[2], parts[0], parts[1]];
-    const [year, month, day] = ordered;
+    const order = writtenOrder(s, parts);
+    const [year, month, day] = inYmd(order, parts);
     if (!isCalendarDay(year, month, day)) return null;
     // A part written without its leading zero is written back without one.
     const width = (stored: string, next: string): string => (stored.length === 1 ? next.replace(/^0/, "") : next);
@@ -131,6 +142,57 @@ function isClockTail(tail: string): boolean {
   if (m[3] !== undefined && (toNumber(m[3]) ?? 0) > 59) return false;
   if (m[6] !== undefined && ((toNumber(m[6]) ?? 0) > 14 || (toNumber(m[7]) ?? 0) > 59)) return false;
   return true;
+}
+
+/** A kept time tail as the ISO time `THH:mm:ss[.fff][Z or ±hh:mm]` dayjs reads. */
+function isoTail(tail: string): string {
+  const m = TAIL_PARTS.exec(tail);
+  if (!m) return "";
+  const two = (n: number): string => String(n).padStart(2, "0");
+  const meridiem = m[4]?.trim().toLowerCase();
+  let hour = toNumber(m[1]) ?? 0;
+  if (meridiem !== undefined) hour = (hour % 12) + (meridiem === "pm" ? 12 : 0);
+  const fraction = /\.\d+/.exec(tail)?.[0] ?? "";
+  const zone = m[5] === undefined ? "" : m[5] === "Z" ? "Z" : `${m[5].slice(0, 1)}${m[6] ?? "00"}:${m[7] ?? "00"}`;
+  return `T${two(hour)}:${m[2] ?? "00"}:${m[3] ?? "00"}${fraction}${zone}`;
+}
+
+/**
+ * A stored date string in the form dayjs reads without guessing: the day in its
+ * WRITTEN order (`10.04.2026` is the 10th of April) as `YYYY-MM-DD`, then the
+ * time tail as `THH:mm:ss`. `null` when the spelling is known but names no
+ * real day or clock time (`2024-02-30`, no rollover), `undefined` when it is
+ * not one of the spellings. An ISO `YYYY-MM-DD` text that names a real day is
+ * returned as it came, so its result does not change.
+ */
+export function normalizeStoredDate(text: string): string | null | undefined {
+  const trimmed = text.trim();
+  for (const s of SPELLINGS) {
+    const m = s.re.exec(trimmed);
+    if (!m) continue;
+    const parts: [string, string, string] = [m[1] ?? "", m[2] ?? "", m[3] ?? ""];
+    const [year, month, day] = inYmd(writtenOrder(s, parts), parts);
+    if (!isCalendarDay(year, month, day)) return null;
+    if (s === SPELLINGS[0]) return text;
+    const tail = m[4] ?? "";
+    if (!isClockTail(tail)) return null;
+    return `${year}-${pad2(month)}-${pad2(day)}${isoTail(tail)}`;
+  }
+  return undefined;
+}
+
+/**
+ * A stored date string as a LOCAL `Date`, read in the order it is written
+ * (`10.04.2026` is the 10th of April, `04/10/2026` the 4th of October, `13/04/2026`
+ * the 13th of April), with its time tail. `null` when the spelling is known but
+ * the day does not exist; `undefined` when the spelling is not known, or is
+ * known but dayjs cannot read it. The caller then keeps whatever it did before.
+ */
+export function parseStoredDate(text: string): Date | null | undefined {
+  const normal = normalizeStoredDate(text);
+  if (normal === null || normal === undefined) return normal;
+  const parsed = dayjs(normal);
+  return parsed.isValid() ? parsed.toDate() : undefined;
 }
 
 function isValidDate(value: unknown): value is Date {
