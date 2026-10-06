@@ -452,3 +452,26 @@ describe("ComboField — multi", () => {
     m.destroy();
   });
 });
+
+describe("ComboField dirty flag (stab-forms live finding)", () => {
+  it("marks typed, uncommitted text and clears the mark on Escape and on commit", async () => {
+    const f = mount({ value: "Todo", allowCustom: false });
+    f.input.focus();
+    f.input.dispatchEvent(new FocusEvent("focus"));
+    type(f.input, "Todox");
+    await tick();
+    expect(f.input.getAttribute("data-ppp-dirty")).toBe("true");
+    key(f.input, "Escape");
+    await tick();
+    if (f.input.getAttribute("data-ppp-dirty")) key(f.input, "Escape");
+    await tick();
+    expect(f.input.getAttribute("data-ppp-dirty")).toBeNull();
+    expect(f.input.value).toBe("Todo");
+    type(f.input, "Todo");
+    await tick();
+    key(f.input, "Enter");
+    await tick();
+    expect(f.input.getAttribute("data-ppp-dirty")).toBeNull();
+    f.destroy();
+  });
+});

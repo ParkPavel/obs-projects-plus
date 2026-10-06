@@ -68,7 +68,9 @@ export function namesToOptions(names: readonly string[]): ComboOption[] {
 export function comboOwnsEscape(target: EventTarget | null): boolean {
   const el = target as Element | null;
   if (!el || typeof el.closest !== "function") return false;
-  return el.closest('[role="combobox"][aria-expanded="true"]') !== null;
+  // An open list, or typed text not yet committed: the field's Escape closes
+  // the list or restores the text first; a container closes on the next one.
+  return el.closest('[role="combobox"][aria-expanded="true"], [role="combobox"][data-ppp-dirty="true"]') !== null;
 }
 
 /** The DOM id of an option:the list's id and the option's own, made safe for an id attribute. */

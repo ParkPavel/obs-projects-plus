@@ -212,6 +212,7 @@
     const opts = { accept, unchanged: commitUnchanged };
     const result = reason === "blur" ? ctl.blur(opts) : ctl.commit(reason === "change" ? "blur" : reason, opts);
     pull();
+    dirty = false;
     if (!result) return;
     if (exact) dispatch("select", exact);
     dispatch("commit", { value: result.value, reason: result.reason });
@@ -331,6 +332,7 @@
     aria-autocomplete="list"
     aria-haspopup="listbox"
     aria-expanded={expanded}
+    data-ppp-dirty={dirty ? "true" : undefined}
     aria-controls={expanded ? listId : undefined}
     aria-activedescendant={activeOpt ? optionDomId(listId, activeOpt.id) : undefined}
     aria-label={ariaLabel}

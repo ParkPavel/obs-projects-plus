@@ -46,6 +46,14 @@ describe("comboOwnsEscape", () => {
     expect(comboOwnsEscape(box(null))).toBe(false);
   });
 
+  it("is true for a closed combobox whose typed text is not committed yet", () => {
+    // Live: typing text with no matching option closes the list; Escape must
+    // restore the text, not close the settings panel (whose blur then saved it).
+    const input = box("false");
+    input.setAttribute("data-ppp-dirty", "true");
+    expect(comboOwnsEscape(input)).toBe(true);
+  });
+
   it("is false for an ordinary input, a non-element target and nothing", () => {
     const plain = document.createElement("input");
     document.body.appendChild(plain);
