@@ -89,7 +89,7 @@ export class ViewApi {
     // not rewrite, reformat or overwrite the others. The keys a record was
     // built with win over a diff against the store, which would also revert a
     // field another edit wrote meanwhile. Unknown previous record: everything.
-    const keys = touchedKeys(record) ?? changedKeys(oldRecord, record);
+    const keys = oldRecord ? touchedKeys(record) ?? changedKeys(oldRecord, record) : undefined;
     // The store shows the change on top of its current copy, not the caller's.
     const shown = oldRecord && keys ? patchRecord(oldRecord, record, keys) : record;
     const optimistic = this.dataSource.includes(record.id);
@@ -162,14 +162,11 @@ export class ViewApi {
     );
     // Per record, the keys that differ from the copy in the frame as it was
     // before the optimistic update below.
-    const keys = records.map(
-      (record) =>
-        touchedKeys(record) ??
-        changedKeys(
-          frameRecords.find((candidate) => candidate.id === record.id),
-          record
-        )
-    );
+    // A record the frame does not hold is written whole, as before.
+    const keys = records.map((record) => {
+      const base = frameRecords.find((candidate) => candidate.id === record.id);
+      return base ? touchedKeys(record) ?? changedKeys(base, record) : undefined;
+    });
     // Each record is shown on top of the store's current copy, as in updateRecord.
     const shownById = new Map(
       records.map((record, index) => {
