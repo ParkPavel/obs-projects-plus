@@ -113,7 +113,7 @@
       {query}
       focusOnMount
       inputClass="ppp-pop-search-input"
-      ariaLabel={$i18n.t("views.calendar.agenda.custom.icon-picker.search-placeholder", { defaultValue: "Search…" })}
+      ariaLabel={$i18n.t("common.search", { defaultValue: "Search" })}
       on:queryChange={(e) => setQuery(e.detail)}
       on:keydown={onSearchKeydown}
     />

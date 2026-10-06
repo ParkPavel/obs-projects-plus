@@ -52,7 +52,26 @@ export function reveal(node: HTMLElement, active: boolean): { update(next: boole
   return { update: run };
 }
 
-/** The DOM id of an option: the list's id and the option's own, made safe for an id attribute. */
+/**
+ * Options for a list of plain names (field names, aggregation codes): the name
+ * is both id and label, and a repeated name is offered once.
+ */
+export function namesToOptions(names: readonly string[]): ComboOption[] {
+  return [...new Set(names)].map((name) => ({ id: name, label: name }));
+}
+
+/**
+ * Whether an Escape belongs to a combobox that is open: a host that closes on
+ * Escape in the capture phase (the settings panel) must leave this one to the
+ * field, whose first Escape only closes its list.
+ */
+export function comboOwnsEscape(target: EventTarget | null): boolean {
+  const el = target as Element | null;
+  if (!el || typeof el.closest !== "function") return false;
+  return el.closest('[role="combobox"][aria-expanded="true"]') !== null;
+}
+
+/** The DOM id of an option:the list's id and the option's own, made safe for an id attribute. */
 export function optionDomId(listId: string, optionId: string): string {
   return `${listId}-opt-${optionId.replace(/[^\w-]/g, (c) => `_${c.charCodeAt(0).toString(16)}_`)}`;
 }

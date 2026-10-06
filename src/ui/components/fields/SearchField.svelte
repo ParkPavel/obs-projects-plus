@@ -80,7 +80,7 @@
     <button
       type="button"
       class="ppp-search-field-clear clickable-icon"
-      aria-label={$i18n.t("views.calendar.agenda.clear", { defaultValue: "Clear" })}
+      aria-label={$i18n.t("common.clear", { defaultValue: "Clear" })}
       on:mousedown|preventDefault
       on:click={clear}
     ><Icon name="x" size="sm" /></button>

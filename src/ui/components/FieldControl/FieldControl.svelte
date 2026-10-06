@@ -1,10 +1,11 @@
 <script lang="ts">
   import {
-    Autocomplete,
     NumberInput,
     Switch,
     Icon,
   } from "obsidian-svelte";
+  import ComboField from "../fields/ComboField.svelte";
+  import { namesToOptions } from "../fields/comboOptions";
   import DateInput from "../DateInput.svelte";
   import DatetimeInput from "../DatetimeInput.svelte";
   import { ColorPicker } from "src/ui/components/ColorPicker";
@@ -110,26 +111,9 @@
     if (typingTimer) clearTimeout(typingTimer);
   });
 
-  // Options for autocomplete - merge field options with suggestions
-  $: options = (() => {
-    // Если есть опции в typeConfig, используем их
-    if (field.typeConfig?.options?.length) {
-      return field.typeConfig.options.map((option) => ({
-        label: option,
-        description: "",
-        value: option,
-      }));
-    }
-    // Иначе используем динамические подсказки из существующих значений
-    if (suggestions.length > 0) {
-      return suggestions.map((suggestion) => ({
-        label: suggestion,
-        description: "📝", // индикатор что это существующее значение
-        value: suggestion,
-      }));
-    }
-    return [];
-  })();
+  // Options of the suggestion list: the field's own options when it has them,
+  // otherwise the values already used in the project.
+  $: options = namesToOptions(field.typeConfig?.options?.length ? field.typeConfig.options : suggestions);
     
   // Field type detection (color heuristic shared via UT2026-C contract)
   const IMAGE_FIELDS = ['cover', 'banner', 'image', 'thumbnail', 'icon'];
@@ -312,11 +296,16 @@
       />
       
     {:else if options.length > 0}
-      <Autocomplete
+      <!-- The text is the field's own draft (ComboField); a value typed outside the
+           list is kept, as before. One commit per Enter, pick or blur. -->
+      <ComboField
         value={isString(value) ? value : ""}
         {options}
-        readonly={readonly}
-        on:change={({ detail }) => commitSelection(detail)}
+        allowCustom
+        disabled={readonly}
+        ariaLabel={field.name}
+        inputClass="field-combo-input"
+        on:commit={({ detail }) => commitSelection(detail.value)}
       />
       
     {:else}
@@ -413,7 +402,8 @@
   }
   
   /* === LEVEL 3: Generic field input === */
-  .field-input {
+  .field-input,
+  .field-control-wrapper :global(.field-combo-input) {
     width: 100%;
     padding: var(--fc-input-padding-v) var(--fc-input-padding-h);
     font-size: var(--fc-font-size);
@@ -423,7 +413,8 @@
     color: var(--text-normal);
   }
   
-  .field-input:focus {
+  .field-input:focus,
+  .field-control-wrapper :global(.field-combo-input):focus {
     outline: none;
     border-color: var(--interactive-accent);
   }
@@ -588,7 +579,8 @@
       --fc-font-size: var(--fc-base);                     /* 16 - prevents zoom */
     }
     
-    .field-input {
+    .field-input,
+    .field-control-wrapper :global(.field-combo-input) {
       padding: calc(var(--fc-base) * 0.75);
     }
   }
