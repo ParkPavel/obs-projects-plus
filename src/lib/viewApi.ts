@@ -75,11 +75,13 @@ export class ViewApi {
    * `body` is the text under the frontmatter of the new note; a duplicate
    * passes the source's so the copy is not created empty.
    */
-  addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string) {
+  addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string): Promise<void> {
     if (this.dataSource.includes(record.id)) {
       dataFrame.addRecord(record);
     }
-    void this.dataApi.createNote(record, fields ?? [], templatePath, body);
+    // Returned, not voided: a caller that awaits (the calendar duplicate) must
+    // see a failed create instead of reporting a copy that does not exist.
+    return this.dataApi.createNote(record, fields ?? [], templatePath, body);
   }
 
   /**
