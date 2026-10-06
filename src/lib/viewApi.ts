@@ -71,11 +71,15 @@ export class ViewApi {
     readonly resolveExternalFrame?: (projectId: string) => Promise<DataFrame | null>
   ) {}
 
-  addRecord(record: DataRecord, fields: DataField[], templatePath: string) {
+  /**
+   * `body` is the text under the frontmatter of the new note; a duplicate
+   * passes the source's so the copy is not created empty.
+   */
+  addRecord(record: DataRecord, fields: DataField[], templatePath: string, body?: string) {
     if (this.dataSource.includes(record.id)) {
       dataFrame.addRecord(record);
     }
-    void this.dataApi.createNote(record, fields ?? [], templatePath);
+    void this.dataApi.createNote(record, fields ?? [], templatePath, body);
   }
 
   /**

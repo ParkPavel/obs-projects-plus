@@ -172,14 +172,20 @@ export class DataApi {
     });
   }
 
+  /**
+   * Creates the note for a record. `body` is the text that goes under the
+   * frontmatter: a copy passes the source's, so it is not created empty. When
+   * it is given the template is not read, the body is the whole text.
+   */
   async createNote(
     record: DataRecord,
     fields: DataField[],
-    templatePath: string
+    templatePath: string,
+    body?: string
   ): Promise<void> {
-    let content = "";
+    let content = body ?? "";
 
-    if (templatePath) {
+    if (templatePath && body === undefined) {
       const file = this.fileSystem.getFile(normalizePath(templatePath));
       if (file) {
         content = await file.read();

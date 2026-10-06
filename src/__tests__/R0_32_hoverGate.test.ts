@@ -62,8 +62,10 @@ import {
  *     re-measurement that returns the same value is still evidence.
  *   216 — chrome-filters: the header filter row (ViewFilterBar) was removed
  *     with its one ungated rule, the save button hover.
+ *   213 — stab-dup removed DayPopup/DuplicatePopup.svelte, an unused second
+ *     duplicate window, with its three ungated rules. Read from this suite.
  */
-const UNGATED_HOVER_BUDGET = 216;
+const UNGATED_HOVER_BUDGET = 213;
 
 /**
  * Components ios-t1 migrated. Each must carry no ungated `:hover` at all: a

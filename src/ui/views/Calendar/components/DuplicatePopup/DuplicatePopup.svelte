@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { onMount, onDestroy, createEventDispatcher } from "svelte";
+  import { onDestroy, createEventDispatcher } from "svelte";
   import dayjs from "dayjs";
   import type { ProcessedRecord, ProcessedCalendarData } from "../../types";
   import { duplicateStore } from "src/lib/stores/duplicateStore";
   import { i18n } from "src/lib/stores/i18n";
+  import { focusTrap } from "src/lib/a11y/focusTrap";
+  import { portal } from "src/ui/portal";
   import DuplicateCalendarView from "./DuplicateCalendarView.svelte";
   import { calendarLogger } from '../../logger';
-  
+
   export let visible: boolean = false;
   export let sourceRecord: ProcessedRecord;
   export let existingData: ProcessedCalendarData;
@@ -67,8 +69,12 @@
     }
   }
   
+  // Escape is heard on the window itself, not on the document: it closes this
+  // window and nothing behind it. The trap keeps focus inside, so the key
+  // always starts here; stopping it keeps Obsidian from also acting on it.
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
+      e.stopPropagation();
       handleClose();
     }
   }
@@ -107,27 +113,37 @@
     }
   }
   
-  onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
-  });
-  
   onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
     duplicateStore.reset();
   });
 </script>
 
 {#if visible}
-  <div 
-    class="duplicate-backdrop" 
+  <!-- `use:portal` is declared BEFORE `use:focusTrap`: the trap moves focus
+       inside on mount, and reparenting a subtree that holds focus drops it. The
+       window lives on the body of its own document, above every leaf layer, so
+       the day popup it was opened from cannot cover it. `ppp-modal` is the
+       shared plugin-modal root: the reduced-motion and coarse-pointer rules in
+       tokens.css reach a body-level surface through it. -->
+  <div
+    class="duplicate-backdrop ppp-modal"
     bind:this={backdropElement}
+    use:portal={{ to: "document-body" }}
+    use:focusTrap
     on:click={handleBackdropClick}
+    on:keydown={handleKeydown}
     role="presentation"
   >
-    <div class="duplicate-modal">
+    <div
+      class="duplicate-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="duplicate-modal-title"
+      tabindex="-1"
+    >
       <!-- HEADER: Title + Close button -->
       <header class="modal-header">
-        <h2 class="modal-title">{$i18n.t("views.calendar.duplicate.title")}</h2>
+        <h2 id="duplicate-modal-title" class="modal-title">{$i18n.t("views.calendar.duplicate.title")}</h2>
         <button 
           class="close-btn" 
           on:click={handleClose} 

@@ -18,8 +18,6 @@
   import { i18n } from "src/lib/stores/i18n";
   import RecordItem from "./RecordItem.svelte";
   import { toRem } from "src/ui/utils/cssLength";
-  import { DuplicatePopup } from "../DuplicatePopup";
-  import type { ProcessedRecord } from "../../types";
 
   // ═══════════════════════════════════════════════════════════════
   // PROPS
@@ -33,9 +31,6 @@
   export let getRecordColor: ((record: DataRecord) => string | null) | undefined = undefined;
   // v4.0.3: eventColorField for direct color reading from record.values
   export let eventColorField: string | undefined = undefined;
-  // v8.0.0: processedData for new DuplicatePopup
-  export let processedData: import('../../types').ProcessedCalendarData | null = null;
-  export let firstDayOfWeek: number = 1;
   // v8.1.0: config for timezone and other calendar config
   export let config: import('../../types').CalendarConfig | undefined = undefined;
   // Note: anchorX and anchorY are preserved for API compatibility but not used in iOS-style popup
@@ -52,11 +47,9 @@
     recordOpenInNewWindow: DataRecord;
     recordSettings: DataRecord;
     recordDelete: DataRecord;
-    recordDuplicate: { 
-      record: DataRecord; 
-      targetDates: dayjs.Dayjs[];
-      customTime?: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null;
-    };
+    // The duplicate window is not this popup's: it is opened by the view, and
+    // this popup closes. Only the record to copy is handed over.
+    recordDuplicateRequest: DataRecord;
     recordTimeChange: { record: DataRecord; newTime: string };
     recordCheck: { record: DataRecord; checked: boolean };
     recordColorChange: { record: DataRecord; color: string };
@@ -67,9 +60,6 @@
   // STATE
   // ═══════════════════════════════════════════════════════════════
   
-  let showDuplicatePopup = false;
-  let duplicateRecord: DataRecord | null = null;
-  let duplicateProcessedRecord: ProcessedRecord | null = null;
   let popupElement: HTMLDivElement | null = null;
   let contentElement: HTMLDivElement | null = null;
   let portalContainer: HTMLDivElement | null = null;
@@ -438,33 +428,11 @@
   }
   
   function handleRecordDuplicate(record: DataRecord) {
-    duplicateRecord = record;
-    
-    // Find corresponding ProcessedRecord
-    if (processedData) {
-      duplicateProcessedRecord = processedData.processed.find(pr => pr.record.id === record.id) ?? null;
-    }
-    
-    showDuplicatePopup = true;
-  }
-  
-  function handleDuplicateConfirm(event: CustomEvent<{ 
-    sourceRecord: ProcessedRecord; 
-    targetDates: dayjs.Dayjs[];
-    customTime: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null;
-  }>) {
-    const { targetDates, customTime } = event.detail;
-    
-    if (duplicateRecord) {
-      dispatch('recordDuplicate', { 
-        record: duplicateRecord, 
-        targetDates,
-        customTime 
-      });
-    }
-    showDuplicatePopup = false;
-    duplicateRecord = null;
-    duplicateProcessedRecord = null;
+    // The duplicate window is a window of its own, above this popup. This popup
+    // closes (the scroll lock goes with it) and the view opens the window; the
+    // window must not live in this component, which is destroyed with it.
+    closePopup();
+    dispatch('recordDuplicateRequest', record);
   }
   
   function handleRecordTimeChange(record: DataRecord, newTime: string) {
@@ -618,25 +586,6 @@
       {/if}
     </div>
   </div>
-{/if}
-
-{#if showDuplicatePopup && duplicateProcessedRecord && processedData}
-  <DuplicatePopup
-    visible={showDuplicatePopup}
-    sourceRecord={duplicateProcessedRecord}
-    existingData={processedData}
-    {firstDayOfWeek}
-    displayMode="bars"
-    startHour={7}
-    endHour={21}
-    timezone={config?.timezone || 'local'}
-    on:confirm={handleDuplicateConfirm}
-    on:close={() => { 
-      showDuplicatePopup = false; 
-      duplicateRecord = null;
-      duplicateProcessedRecord = null;
-    }}
-  />
 {/if}
 
 <style>

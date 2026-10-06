@@ -1,8 +1,9 @@
 <script lang="ts">
   import { loadAppLocal, saveAppLocal } from "src/lib/appStorage";
   import dayjs from "dayjs";
-  import { Notice } from "obsidian";
+  import { Notice, TFile } from "obsidian";
   import { createDataRecord } from "src/lib/dataApi";
+  import { buildDuplicateValues, extractNoteBody } from "src/lib/duplicate/duplicateValues";
   import {
     DataFieldType,
     type DataField,
@@ -30,7 +31,7 @@
     getRecordColorContext,
   } from "src/ui/views/helpers";
   import { get } from "svelte/store";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import {
     getFirstDayOfWeek,
     parseDateInTimezone,
@@ -42,7 +43,8 @@
   import { ErrorBoundary } from "src/ui/components/ErrorBoundary";
   import AgendaSidebar from "./components/Timeline/AgendaSidebar.svelte";
   import { DayPopup } from "./components/DayPopup";
-  import type { CalendarConfig, ProcessedCalendarData } from "./types";
+  import { DuplicatePopup } from "./components/DuplicatePopup";
+  import type { CalendarConfig, ProcessedCalendarData, ProcessedRecord } from "./types";
   import type { CalendarInterval } from "./calendar";
   import { processCalendarData } from "./processor";
   import { calendarLogger } from "./logger";
@@ -898,7 +900,23 @@
   let dayPopupRecords: DataRecord[] = [];
   let dayPopupAnchorX: number | undefined = undefined;
   let dayPopupAnchorY: number | undefined = undefined;
-  
+  // The element the day was tapped on: where focus goes back to when the
+  // duplicate window opened from that day's popup closes.
+  let dayTapOrigin: HTMLElement | null = null;
+
+  // Duplicate window state. It lives HERE, not in DayPopup: the day popup
+  // closes the moment the window opens, and a window owned by it would be
+  // destroyed with it.
+  type DuplicateRequest = {
+    record: DataRecord;
+    processed: ProcessedRecord;
+    // The data as it was when the window opened: the window re-reads its
+    // source on every change of this, and a note created meanwhile must not
+    // reset the selection.
+    existing: ProcessedCalendarData;
+  };
+  let duplicateRequest: DuplicateRequest | null = null;
+
   /**
    * Handle day tap/click - opens popup with day's events
    * v6.0: Works on both mobile AND desktop
@@ -909,7 +927,11 @@
   function handleDayTap(date: dayjs.Dayjs, records: DataRecord[], event?: MouseEvent | TouchEvent) {
     dayPopupDate = date;
     dayPopupRecords = records;
-    
+    // Duck-typed: in a popout window the target is not an instance of THIS
+    // bundle's HTMLElement.
+    const tapTarget = event?.target;
+    dayTapOrigin = tapTarget && "closest" in tapTarget ? (tapTarget as HTMLElement) : null;
+
     // Extract click position for desktop popup positioning
     if (event) {
       if ('clientX' in event) {
@@ -1029,35 +1051,34 @@
     try {
       const startFieldName = dateField.name;
       const endFieldName = endDateField?.name;
-      const startDate = parseDateInTimezone(record.values[startFieldName], timezoneValue);
-      const endDate = endFieldName
+      const sourceStart = parseDateInTimezone(record.values[startFieldName], timezoneValue);
+      const sourceEnd = endFieldName
         ? parseDateInTimezone(record.values[endFieldName], timezoneValue)
         : null;
-
-      const spanDays = startDate && endDate
-        ? Math.max(0, endDate.startOf('day').diff(startDate.startOf('day'), 'day'))
-        : 0;
+      // The copy keeps the note's text. Read before anything is created, so a
+      // note that cannot be read fails the whole duplicate instead of leaving
+      // copies without their body.
+      const body = await readSourceBody(record);
 
       for (const targetDate of targetDates) {
         // Create a new record with the same content but different date
         const baseName = record.id.split('/').pop()?.replace('.md', '') || 'note';
-        
-        // Build new date value - use customTime if provided, otherwise use targetDate
-        const hasTimeInField = dateField.typeConfig?.time ?? false;
-        let newStartValue: string;
-        if (customTime && hasTimeInField) {
-          // Apply custom time to target date (only if field supports time)
-          const newStart = targetDate
-            .hour(customTime.startTime.hour())
-            .minute(customTime.startTime.minute());
-          newStartValue = formatDateForProject(newStart, project) ?? newStart.format('YYYY-MM-DD HH:mm');
-        } else {
-          newStartValue = formatDateForProject(targetDate, project) ?? targetDate.format('YYYY-MM-DD');
-        }
-        
-        const newValues: Record<string, unknown> = {
-          ...record.values,
-        };
+
+        // The values of the copy: stored ones only, the chosen time in the
+        // note's own time model, the date in the source's shape, the span kept.
+        const newValues = buildDuplicateValues({
+          values: record.values,
+          fields,
+          dateFieldName: startFieldName,
+          endDateFieldName: endFieldName,
+          startTimeFieldName: config?.startTimeField || 'startTime',
+          endTimeFieldName: config?.endTimeField || 'endTime',
+          sourceStart,
+          sourceEnd,
+          targetDate,
+          customTime: customTime ?? null,
+          dateFormat: project.dateFormat?.writeFormat,
+        });
 
         // When dateField is "name", the date goes into the filename, not frontmatter
         let effectiveName: string;
@@ -1069,30 +1090,15 @@
             ? `${datePrefix} ${nameWithoutDate}_copy`
             : `${datePrefix}_copy`;
         } else {
-          newValues[startFieldName] = newStartValue;
           effectiveName = baseName + '_copy_' + (formatDateForProject(targetDate, project) ?? targetDate.format('YYYY-MM-DD'));
         }
-        
-        // Handle end date
-        if (endFieldName && spanDays > 0) {
-          const hasTimeInEnd = endDateField?.typeConfig?.time ?? false;
-          if (customTime && hasTimeInEnd) {
-            const newEnd = targetDate
-              .add(spanDays, 'day')
-              .hour(customTime.endTime.hour())
-              .minute(customTime.endTime.minute());
-            newValues[endFieldName] = formatDateForProject(newEnd, project) ?? newEnd.format('YYYY-MM-DD HH:mm');
-          } else {
-            newValues[endFieldName] = formatDateForProject(targetDate.add(spanDays, 'day'), project) ?? targetDate.add(spanDays, 'day').format('YYYY-MM-DD');
-          }
-        }
-        
+
         const newRecord = createDataRecord(
           effectiveName,
           project,
           newValues as Record<string, import('src/lib/dataframe/dataframe').Optional<import('src/lib/dataframe/dataframe').DataValue>>
         );
-        await api.addRecord(newRecord, fields, "");
+        await api.addRecord(newRecord, fields, "", body);
       }
       new Notice(get(i18n).t("views.calendar.notices.duplicated", { defaultValue: "Note duplicated to {{count}} date(s)", count: targetDates.length }));
     } catch (error) {
@@ -1101,6 +1107,56 @@
     }
   }
   
+  /**
+   * The text of the source note under its frontmatter. Empty when the record is
+   * not a note in the vault, so a virtual record still duplicates.
+   */
+  async function readSourceBody(record: DataRecord): Promise<string> {
+    const app_instance = get(app);
+    const file = app_instance.vault.getAbstractFileByPath(record.id);
+    if (!(file instanceof TFile)) return "";
+    return extractNoteBody(await app_instance.vault.read(file));
+  }
+
+  /**
+   * The day popup asked for the duplicate window. The popup closes and the
+   * window opens as a layer of its own: it is owned by this view, so closing
+   * the popup cannot take it down.
+   */
+  function handleDayPopupRecordDuplicateRequest(record: DataRecord) {
+    if (dataReadOnly || !processedData) return;
+    const processed = processedData.processed.find((pr) => pr.record.id === record.id);
+    if (!processed) return;
+    duplicateRequest = { record, processed, existing: processedData };
+    showDayPopup = false;
+  }
+
+  function handleDuplicateConfirm(detail: {
+    targetDates: dayjs.Dayjs[];
+    customTime: { startTime: dayjs.Dayjs; endTime: dayjs.Dayjs } | null;
+  }) {
+    if (!duplicateRequest) return;
+    void handleDayPopupRecordDuplicate({
+      record: duplicateRequest.record,
+      targetDates: detail.targetDates,
+      customTime: detail.customTime,
+    });
+  }
+
+  /**
+   * The window closed, by confirm, cancel, Escape or backdrop. Focus goes back
+   * to the control the day was opened from: the popup it would have returned to
+   * is gone, and the trap only restores focus to a control that still exists.
+   */
+  function handleDuplicateClose() {
+    duplicateRequest = null;
+    const origin = dayTapOrigin?.closest<HTMLElement>("button, a[href], input, select, textarea, [tabindex]") ?? null;
+    dayTapOrigin = null;
+    void tick().then(() => {
+      if (origin?.isConnected) origin.focus({ preventScroll: true });
+    });
+  }
+
   async function handleDayPopupRecordCheck(record: DataRecord, checked: boolean) {
     if (dataReadOnly) return;
     if (!booleanField) return;
@@ -2039,8 +2095,6 @@
     checkField={booleanField?.name}
     {getRecordColor}
     eventColorField={config?.eventColorField}
-    processedData={processedData}
-    {firstDayOfWeek}
     visible={showDayPopup}
     anchorX={dayPopupAnchorX}
     anchorY={dayPopupAnchorY}
@@ -2049,11 +2103,28 @@
     on:recordOpenInNewWindow={({ detail }) => handleDayPopupRecordOpenInNewWindow(detail)}
     on:recordSettings={({ detail }) => handleDayPopupRecordSettings(detail)}
     on:recordDelete={({ detail }) => handleDayPopupRecordDelete(detail)}
-    on:recordDuplicate={({ detail }) => handleDayPopupRecordDuplicate(detail)}
+    on:recordDuplicateRequest={({ detail }) => handleDayPopupRecordDuplicateRequest(detail)}
     on:recordCheck={({ detail }) => handleDayPopupRecordCheck(detail.record, detail.checked)}
     on:recordColorChange={({ detail }) => handleDayPopupRecordColorChange(detail.record, detail.color)}
     on:createNote={({ detail }) => handleDayPopupCreateNote(detail)}
   />
+
+  <!-- Duplicate window: owned by this view so it outlives the day popup, and
+       portalled to the body by the component so nothing covers it. -->
+  {#if duplicateRequest}
+    <DuplicatePopup
+      visible={true}
+      sourceRecord={duplicateRequest.processed}
+      existingData={duplicateRequest.existing}
+      {firstDayOfWeek}
+      displayMode="bars"
+      startHour={7}
+      endHour={21}
+      timezone={timezoneValue}
+      on:confirm={({ detail }) => handleDuplicateConfirm(detail)}
+      on:close={handleDuplicateClose}
+    />
+  {/if}
 </ViewLayout>
 </ErrorBoundary>
 
