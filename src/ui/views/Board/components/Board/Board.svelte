@@ -12,7 +12,6 @@
   } from "svelte-dnd-action";
   import { Icon } from "obsidian-svelte";
   import { onDestroy } from "svelte";
-  import { flip } from "svelte/animate";
   import { ignoreHostSwipe } from "src/ui/actions/ignoreHostSwipe";
   import { remAt, rootFontPx, toRem } from "src/ui/utils/cssLength";
 
@@ -81,7 +80,9 @@
   let boardEditing: boolean = false;
   let onEdit = (editing: boolean) => (boardEditing = editing);
 
-  // cards-g1: 0 under reduced motion, as for cards (CardList).
+  // cards-g1: 0 under reduced motion, as for cards (CardList). stab-board: no
+  // per-item `animate:flip` here either (see CardList: it measures every item
+  // on each `consider`); the value is the library's drop animation.
   const flipDurationMs = getAnimationDuration(150);
 
   // Guard: prevent reactive prop updates from resetting DnD state mid-drag
@@ -366,7 +367,6 @@
           data-dnd-width={footprint}
           style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}
           aria-hidden={isShadowPlaceholder(column) ? "true" : undefined}
-          animate:flip={{ duration: flipDurationMs }}
         >
           {#if isShadowPlaceholder(column)}
             <div class="projects--board--column--placeholder" style={`width: ${footprint}; min-width: ${footprint}; max-width: ${footprint};`}></div>
