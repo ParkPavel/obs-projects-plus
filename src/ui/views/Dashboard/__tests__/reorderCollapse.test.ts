@@ -20,7 +20,7 @@ import { SOURCES, TRIGGERS } from "svelte-dnd-action";
 import * as fs from "fs";
 import * as path from "path";
 
-import { createReorderCollapse, REORDER_CLASS } from "../reorderCollapse";
+import { createReorderCollapse, HOLD_VAR, REORDER_CLASS } from "../reorderCollapse";
 
 jest.mock("src/lib/stores/i18n", () => {
   const { writable } = require("svelte/store");
@@ -201,5 +201,22 @@ describe("WidgetGrid reorder state (stab-dash)", () => {
     expect(hidden.length).toBe(items.length);
     expect(hidden.every((el) => el.classList.contains("ppp-widget-content"))).toBe(true);
     expect(canvas.querySelectorAll(".ppp-widget-header").length).toBe(items.length);
+  });
+});
+
+describe("reorderCollapse keeps the canvas height while reordering", () => {
+  it("sets the hold variable on begin and clears it on end", () => {
+    const canvas = document.createElement("div");
+    const tile = document.createElement("div");
+    tile.className = "ppp-widget-host";
+    canvas.appendChild(tile);
+    document.body.appendChild(canvas);
+    canvas.getBoundingClientRect = () => ({ top: 0, left: 0, width: 100, height: 3200, right: 100, bottom: 3200, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    const rc = createReorderCollapse(canvas, () => {});
+    rc.begin(tile);
+    expect(canvas.style.getPropertyValue(HOLD_VAR)).toMatch(/rem$/);
+    rc.end(false);
+    expect(canvas.style.getPropertyValue(HOLD_VAR)).toBe("");
+    canvas.remove();
   });
 });

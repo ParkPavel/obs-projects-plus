@@ -14,9 +14,18 @@
  * the scroll compensation below has to measure the collapsed layout now.
  */
 import { tick } from "svelte";
+import { toRem } from "src/ui/utils/cssLength";
 
 /** The class the canvas carries while tiles are collapsed to headers. */
 export const REORDER_CLASS = "ppp-database-canvas--reordering";
+
+/**
+ * The canvas keeps its pre-collapse height while reordering: collapsing every
+ * tile shortens the page, the browser clamps the scroll position at once, and
+ * the pressed tile then moves out from under the finger before the scroll can
+ * be compensated.
+ */
+export const HOLD_VAR = "--ppp-reorder-hold";
 
 const TILE_SELECTOR = ".ppp-widget-host";
 
@@ -51,6 +60,8 @@ export function createReorderCollapse(
   let scroller: HTMLElement | null = null;
 
   function set(on: boolean): void {
+    if (on) canvas.style.setProperty(HOLD_VAR, toRem(canvas.getBoundingClientRect().height, canvas.ownerDocument));
+    else canvas.style.removeProperty(HOLD_VAR);
     active = on;
     canvas.classList.toggle(REORDER_CLASS, on);
     onChange(on);
