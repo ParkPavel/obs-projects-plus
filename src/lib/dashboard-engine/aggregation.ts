@@ -7,6 +7,7 @@ import type {
 } from "src/lib/dataframe/dataframe";
 import { aggregate, asCheckbox, type RollupFunction } from "src/lib/engine/aggregate";
 import { toNumbers } from "src/lib/engine/numeric";
+import { parseStoredDate } from "src/lib/helpers/dateShape";
 import type {
   AggregationConfig,
   AggregationResult,
@@ -270,8 +271,11 @@ function extractDates(values: (DataValue | undefined | null)[]): Date[] {
     if (v instanceof Date && !isNaN(v.getTime())) {
       result.push(v);
     } else if (typeof v === "string") {
-      const d = new Date(v);
-      if (!isNaN(d.getTime())) result.push(d);
+      // The stored-date reading rule (written order, no rollover); an unknown
+      // spelling falls back to Date as before.
+      const read = parseStoredDate(v);
+      const d = read === undefined ? new Date(v) : read;
+      if (d && !isNaN(d.getTime())) result.push(d);
     }
   }
   return result;
