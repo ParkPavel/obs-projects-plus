@@ -6,6 +6,7 @@ import { get } from "svelte/store";
 import type { DataRecord } from "src/lib/dataframe/dataframe";
 import { i18n } from "src/lib/stores/i18n";
 import { loadAppLocal } from "src/lib/appStorage";
+import { normalizeStoredDate } from "src/lib/helpers/dateShape";
 import type { FirstDayOfWeek } from "src/settings/settings";
 import type { ZoomLevel } from "./types";
 
@@ -77,10 +78,20 @@ export function parseDateInTimezone(
     return null;
   }
 
+  // A stored string is read in the order it is written (`10.04.2026` is the
+  // 10th of April); the zone handling below then applies to that reading.
+  // A day that does not exist is no day, rather than the one it rolls over to.
+  let input: string | Date | dayjs.Dayjs = value;
+  if (typeof value === "string") {
+    const stored = normalizeStoredDate(value);
+    if (stored === null) return null;
+    if (stored !== undefined) input = stored;
+  }
+
   const targetTz = tz && tz !== "local" ? tz : undefined;
   const parsed = targetTz
-    ? dayjs.tz(value, targetTz)
-    : dayjs(value);
+    ? dayjs.tz(input, targetTz)
+    : dayjs(input);
 
   return parsed.isValid() ? parsed : null;
 }
