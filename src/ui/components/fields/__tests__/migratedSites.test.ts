@@ -255,10 +255,26 @@ describe("RelationPickerPopover", () => {
     m.component.$destroy();
   });
 
-  test("a press on an option still picks it", async () => {
+  test("a mouse press keeps focus and its click picks; a click with no press (touch, keyboard) picks too", async () => {
     const m = await mount();
-    press(items(m)[1]!);
+    const pressEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    items(m)[1]!.dispatchEvent(pressEvent);
+    expect(pressEvent.defaultPrevented).toBe(true);
+    expect(m.commits).toEqual([]);
+    items(m)[1]!.click();
     expect(m.commits).toEqual(["[[Beta]]"]);
+    m.component.$destroy();
+
+    const t = await mount();
+    items(t)[2]!.click();
+    expect(t.commits).toEqual(["[[Gamma]]"]);
+    t.component.$destroy();
+  });
+
+  test("Cancel works from a click (touch, keyboard), not only from a mouse press", async () => {
+    const m = await mount();
+    (m.target.querySelector(".ppp-rel-picker-cancel") as HTMLButtonElement).click();
+    expect(m.cancels()).toBe(1);
     m.component.$destroy();
   });
 });

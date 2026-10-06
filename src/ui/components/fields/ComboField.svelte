@@ -315,7 +315,7 @@
     setIcon(node, icon);
     return {
       update(next: string) {
-        node.empty();
+        node.replaceChildren();
         setIcon(node, next);
       },
     };
