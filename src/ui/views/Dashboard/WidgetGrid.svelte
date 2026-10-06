@@ -109,17 +109,19 @@
     node.addEventListener("mousedown", onPress, true);
     node.addEventListener("touchstart", onPress, { capture: true, passive: true });
     node.addEventListener("consider", onConsider);
-    window.addEventListener("mouseup", onRelease);
-    window.addEventListener("touchend", onRelease);
-    window.addEventListener("touchcancel", onRelease);
+    // The canvas's own window: in a popout the release never reaches the main one.
+    const win = node.ownerDocument.defaultView ?? window;
+    win.addEventListener("mouseup", onRelease);
+    win.addEventListener("touchend", onRelease);
+    win.addEventListener("touchcancel", onRelease);
     return {
       destroy() {
         node.removeEventListener("mousedown", onPress, true);
         node.removeEventListener("touchstart", onPress, true);
         node.removeEventListener("consider", onConsider);
-        window.removeEventListener("mouseup", onRelease);
-        window.removeEventListener("touchend", onRelease);
-        window.removeEventListener("touchcancel", onRelease);
+        win.removeEventListener("mouseup", onRelease);
+        win.removeEventListener("touchend", onRelease);
+        win.removeEventListener("touchcancel", onRelease);
         tiles.dispose();
         if (collapse === tiles) collapse = null;
       },

@@ -184,6 +184,33 @@ describe("WidgetGrid reorder state (stab-dash)", () => {
     expect(canvas).not.toHaveClass(REORDER_CLASS);
   });
 
+  it("in a popout, a release in the canvas's own window ends the state", () => {
+    // An iframe has its own window, as an Obsidian popout does.
+    const frame = document.createElement("iframe");
+    document.body.appendChild(frame);
+    const popDoc = frame.contentDocument as Document;
+    const target = popDoc.createElement("div");
+    popDoc.body.appendChild(target);
+    const view = render(WidgetGrid, {
+      target,
+      props: {
+        widgets: items, dndWidgets: items, canDnd: true, readonly: false,
+        frame: { fields: [], records: [] }, displayFrame: { fields: [], records: [] },
+        api: {}, getRecordColor: () => null, fields: [], tableConfig: undefined,
+        primaryDataTableId: "a", fieldPresets: [], activeFieldPresetId: undefined,
+        availableSources: [], rightFrames: new Map(), project: { id: "p", name: "P" },
+      },
+    });
+    const canvas = target.querySelector(".ppp-database-canvas--stack") as HTMLElement;
+    const grip = canvas.querySelector(".ppp-widget-grip") as HTMLElement;
+    grip.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(canvas.classList.contains(REORDER_CLASS)).toBe(true);
+    (popDoc.defaultView as Window).dispatchEvent(new MouseEvent("mouseup"));
+    expect(canvas.classList.contains(REORDER_CLASS)).toBe(false);
+    view.unmount();
+    frame.remove();
+  });
+
   it("ignores a press that is not on a grip", () => {
     const { canvas } = mount();
     (canvas.querySelector(".ppp-widget-content") as HTMLElement).dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
