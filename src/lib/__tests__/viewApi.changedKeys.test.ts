@@ -10,6 +10,7 @@ import { IFile, type IFileSystem } from "src/lib/filesystem/filesystem";
 import { dataFrame } from "src/lib/stores/dataframe";
 import type { DataSource } from "src/lib/datasources";
 import { ViewApi } from "src/lib/viewApi";
+import { updateRecordValues } from "src/lib/datasources/helpers";
 
 const field = (name: string, type: DataFieldType): DataField => ({
   name,
@@ -144,5 +145,29 @@ describe("ViewApi.updateRecords writes per record", () => {
     const spy = jest.spyOn(dataApi, "updateRecords");
     await api.updateRecords([rec("a.md", { source: "new", since, price: 5 })], fields);
     expect(spy.mock.calls[0]?.[2]).toEqual([["source"]]);
+  });
+});
+
+describe("two edits built from the same earlier copy", () => {
+  it("the second does not put back the field the first one wrote", async () => {
+    const { files, api } = setup(["a.md"]);
+    const original = get(dataFrame).records.find((r) => r.id === "a.md")!;
+    // Two editors opened on the same copy: one changes source, the other price.
+    await api.updateRecord(updateRecordValues(original, { source: "new" }), fields);
+    await api.updateRecord(updateRecordValues(original, { price: 9 }), fields);
+    expect(files["a.md"]!.fm).toEqual({ source: "new", since: "10.04.2026", price: 9 });
+    const stored = get(dataFrame).records.find((r) => r.id === "a.md")!;
+    expect(stored.values["source"]).toBe("new");
+    expect(stored.values["price"]).toBe(9);
+  });
+
+  it("the batch path keeps the other edit too", async () => {
+    const { files, api } = setup(["a.md", "b.md"]);
+    const [a, b] = get(dataFrame).records;
+    await api.updateRecord(updateRecordValues(a!, { source: "new" }), fields);
+    await api.updateRecords([updateRecordValues(a!, { price: 9 }), updateRecordValues(b!, { price: 7 })], fields);
+    expect(files["a.md"]!.fm).toEqual({ source: "new", since: "10.04.2026", price: 9 });
+    expect(files["b.md"]!.fm).toEqual({ source: "old", since: "10.04.2026", price: 7 });
+    expect(get(dataFrame).records.find((r) => r.id === "a.md")!.values["source"]).toBe("new");
   });
 });

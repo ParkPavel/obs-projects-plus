@@ -9,6 +9,7 @@ import {
 } from "../dataframe/dataframe";
 import { stripToPath as stripWikiLink } from "src/lib/engine/wikilink";
 import { toNumber } from "src/lib/engine/numeric";
+import { markTouched } from "src/lib/recordDiff";
 
 /**
  * Parses the values for each record based on the detected field types.
@@ -127,7 +128,7 @@ export function updateRecordValues(
   record: Readonly<DataRecord>,
   values: Readonly<DataRecord["values"]>
 ): DataRecord {
-  return { ...record, values: { ...record.values, ...values } };
+  return markTouched({ ...record, values: { ...record.values, ...values } }, Object.keys(values));
 }
 
 export function detectFields(records: DataRecord[]): DataField[] {
