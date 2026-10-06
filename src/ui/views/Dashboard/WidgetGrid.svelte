@@ -256,6 +256,12 @@
   .ppp-database-canvas--reordering :global(.ppp-widget-host > :not(.ppp-widget-header)) {
     display: none;
   }
+  /* …and the canvas keeps its height meanwhile (reorderCollapse HOLD_VAR), so
+     the page does not shorten under the scroll position and the pressed tile
+     stays where the finger is. */
+  .ppp-database-canvas--reordering {
+    min-height: var(--ppp-reorder-hold, 100%);
+  }
 
   /* DG-8 drop target: dashed outline + subtle fill on svelte-dnd-action placeholder */
   :global(.ppp-database-canvas--stack [data-is-dnd-shadow-item-hint]) {
